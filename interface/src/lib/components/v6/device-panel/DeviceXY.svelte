@@ -3,6 +3,7 @@
   import FilterCurve, { type CurveType } from './FilterCurve.svelte';
   import { familyScheme, type DeviceColorScheme } from '$lib/config/devicePresets';
   import { MIN_SEND_INTERVAL_MS } from '$lib/utils/sliderThrottle';
+  import { longestWordLength } from '$lib/utils/fitText';
 
   interface Props {
     xValue?: number;
@@ -294,7 +295,7 @@
 
     <!-- Center title -->
     {#if title}
-      <div class="center-title {titleClass}">{title}</div>
+      <div class="center-title {titleClass}"><span class="fit-label" style:--chars={longestWordLength(title)}>{title}</span></div>
     {/if}
 
     <!-- Rate label (centered, below title) - only show when active (not ghost) -->

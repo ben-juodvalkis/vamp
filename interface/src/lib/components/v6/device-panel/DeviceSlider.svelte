@@ -3,6 +3,7 @@
   import { familyScheme, type DeviceColorScheme } from '$lib/config/devicePresets';
   import MeterVisualization from '$lib/components/v6/looping/MeterVisualizationV6.svelte';
   import { createSliderThrottle } from '$lib/utils/sliderThrottle';
+  import { longestWordLength } from '$lib/utils/fitText';
 
   // Minimal track interface for meter visualization
   interface MeterTrack {
@@ -71,6 +72,8 @@
   let effectiveLabelOrientation = $derived(
     labelOrientation === 'auto' ? orientation : labelOrientation
   );
+  // The label fits along the axis its text runs on (app.css `.fit-label`).
+  let fitClass = $derived(effectiveLabelOrientation === 'vertical' ? 'fit-label-v' : 'fit-label');
 
   // Meter mode has no fill, so it always draws the handle; `handleLine` opts
   // a fill-less slider into the same treatment. When the handle is showing,
@@ -300,7 +303,7 @@
          readable once the fill rises over them. No inverse in meter mode. -->
     {#if title || label}
       <div class="slider-label label-{effectiveLabelOrientation} label-{labelSize}">
-        <span class="slider-label-text">{#if label}{@render label()}{:else}{title}{/if}</span>
+        <span class="slider-label-text"><span class={fitClass} style:--chars={label ? 1 : longestWordLength(title)}>{#if label}{@render label()}{:else}{title}{/if}</span></span>
       </div>
       {#if showFill}
         <div
@@ -308,7 +311,7 @@
           style="clip-path: {inverseClip};"
           aria-hidden="true"
         >
-          <span class="slider-label-text">{#if label}{@render label()}{:else}{title}{/if}</span>
+          <span class="slider-label-text"><span class={fitClass} style:--chars={label ? 1 : longestWordLength(title)}>{#if label}{@render label()}{:else}{title}{/if}</span></span>
         </div>
       {/if}
     {/if}

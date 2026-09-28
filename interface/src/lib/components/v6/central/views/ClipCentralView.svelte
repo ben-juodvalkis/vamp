@@ -43,6 +43,7 @@ import { logger } from '$lib/utils/logger';
 		vmStateAcceptsWrites
 	} from '$lib/services/drumVirtualMacros';
 	import SectionDivider from '../SectionDivider.svelte';
+	import { longestWordLength } from '$lib/utils/fitText';
 
 	let editorActive = $derived(clipEditorStore.active);
 	let trackColor = $derived.by(() => {
@@ -501,7 +502,7 @@ import { logger } from '$lib/utils/logger';
 							disabled={!hasClip}
 							class="btn btn-switch clip-switch font-bold text-base"
 							class:active={warpMode === option.value}
-						>{option.label}</button>
+						><span class="fit-label" style:--chars={longestWordLength(option.label)}>{option.label}</span></button>
 					{/each}
 				</div>
 			{/if}
@@ -685,7 +686,7 @@ import { logger } from '$lib/utils/logger';
 							disabled={!hasClip || isSampling}
 							class="btn btn-well fam-monitor font-bold {isSampling ? 'cursor-wait' : ''}"
 							aria-label="Sample to Simpler"
-						>{#if isSampling}...{:else}<span class="flex flex-col items-center leading-tight btn-caps"><span>to</span><span>Simpler</span></span>{/if}</button>
+						>{#if isSampling}...{:else}<span class="flex flex-col items-center leading-tight btn-caps fit-label" style:--chars={longestWordLength('to Simpler')}><span>to</span><span>Simpler</span></span>{/if}</button>
 					</div>
 				{/if}
 			</div>
@@ -720,7 +721,7 @@ import { logger } from '$lib/utils/logger';
 						onclick={() => handleBaseGridChange(option.value)}
 						disabled={!hasClip}
 						class="btn btn-switch clip-switch font-bold text-base {baseGrid === option.value ? 'active' : ''}"
-					>{option.label}</button>
+					><span class="fit-label" style:--chars={longestWordLength(option.label)}>{option.label}</span></button>
 				{/each}
 			</div>
 		</div>
@@ -918,7 +919,9 @@ import { logger } from '$lib/utils/logger';
 		flex: 1;
 		min-height: 0;
 	}
-	.stacked-switches .btn-switch { padding-inline: 0; min-width: 0; }
+	/* Each switch is its own container, so its `.fit-label` word measures the
+	   button it is in (app.css) — "Complex" in a narrow warp column. */
+	.stacked-switches .btn-switch { padding-inline: 0; min-width: 0; container-type: inline-size; }
 
 	/* Two-row stack for button columns */
 	.stacked-btns {

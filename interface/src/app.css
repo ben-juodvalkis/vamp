@@ -292,6 +292,30 @@
   --type-min: 12px;
 }
 
+/* Length-aware fit. A label that has to fit a box whatever its length (a
+   device name on a pad, a switch's word) takes `.fit-label` and its longest
+   word's length as `--chars` (`longestWordLength`, $lib/utils/fitText). It
+   keeps the size it inherits (`1em`) and is capped at what `--chars`
+   characters can take across its container: nearest ancestor with a
+   container-type, the box less `--fit-pad` (8px) of side room, at 0.6em
+   a character, which is wider than the average character of SF Pro and of
+   the Linux capture fonts. A cap, never a size: wherever the label already
+   fits, nothing changes. It stops at `--type-min`, or at the inherited size
+   if that is smaller; past that the box clips it. `.fit-label-v` is the same
+   for text running vertically, measured along the container's height. */
+.fit-label {
+  font-size: max(
+    min(1em, var(--type-min)),
+    min(1em, calc((100cqw - var(--fit-pad, 8px)) / (var(--chars, 1) * 0.6)))
+  );
+}
+.fit-label-v {
+  font-size: max(
+    min(1em, var(--type-min)),
+    min(1em, calc((100cqh - var(--fit-pad, 8px)) / (var(--chars, 1) * 0.6)))
+  );
+}
+
 @theme inline {
   /* ========================================
      DESIGN TOKENS - UI Design System
