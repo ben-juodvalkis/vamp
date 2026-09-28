@@ -881,7 +881,7 @@ class LoopingSurface(ControlSurface):
             *a,
             **k,
         )
-        logger.info("Looping surface init")
+        logger.info("Vamp surface init")
 
         # Phase 1: bind OSC transport. Bail-out if the port is taken.
         constants = load_constants()

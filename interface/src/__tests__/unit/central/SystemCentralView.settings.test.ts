@@ -89,6 +89,6 @@ describe('SettingsPage', () => {
 	it('reads as the first-run checklist while the Mac has saved nothing', () => {
 		settingsStore.firstRun = true;
 		const { getByText } = render(SettingsPage);
-		expect(getByText(/set up Looping/)).toBeTruthy();
+		expect(getByText(/set up Vamp/)).toBeTruthy();
 	});
 });

@@ -81,7 +81,7 @@
 		<div class="set-list">
 			<div class="set-row" data-surface={surface.state}>
 				<span class="set-row-main">
-					<span class="set-row-label">Looping control surface</span>
+					<span class="set-row-label">Vamp control surface</span>
 					<span class="set-row-sub">{surface.line}</span>
 					{#if heartbeatLine}<span class="set-row-sub">{heartbeatLine}</span>{/if}
 					<span class="set-row-detail">

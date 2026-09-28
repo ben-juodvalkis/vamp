@@ -367,7 +367,7 @@ rm -rf surface/__pycache__
 open -a "Ableton Live 12 Suite"
 ```
 
-Check Live's log for `INFO:looping: - Looping surface init`.
+Check Live's log for `INFO:looping: - Vamp surface init`.
 
 ### 3.3 Step 3 — subscribe + read in the UI
 

@@ -279,7 +279,6 @@ phone. `npm run shot:list`:
 | `session-only` | Strips + clip grid + central view, FX grid off      |
 | `central`      | Strips + central view — the emptiest layout         |
 | `full`         | All four sections + transport header + solo buttons |
-| `connect`      | The `/connect` route                                |
 | `header`       | Transport header on, with the rig's TotalMix faders |
 | `general`      | `header` with TotalMix switched off (the general edition) |
 | `totalmix-down` | `header` with TotalMix on but not answering: faders greyed, saying why |

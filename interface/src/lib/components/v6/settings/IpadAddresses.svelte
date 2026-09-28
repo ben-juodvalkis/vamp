@@ -33,7 +33,7 @@
 		</div>
 	{/if}
 </div>
-<p class="set-note">Type it into Safari on the iPad, then Share → Add to Home Screen to run Looping full screen.</p>
+<p class="set-note">Type it into Safari on the iPad, then Share → Add to Home Screen to run Vamp full screen.</p>
 
 <style>
 	.set-address {

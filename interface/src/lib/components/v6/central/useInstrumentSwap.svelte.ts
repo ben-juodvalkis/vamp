@@ -38,8 +38,8 @@ export interface SwapViewModel {
 }
 
 const HELPER_REASON: Record<string, string> = {
-	'ax-helper-down': 'the Looping AX Helper is not running',
-	'ax-untrusted': 'the Looping AX Helper has no Accessibility grant'
+	'ax-helper-down': 'the AX Helper is not running',
+	'ax-untrusted': 'the AX Helper has no Accessibility grant'
 };
 
 /**

@@ -211,7 +211,8 @@
 
   "network": {
     "localhost": "localhost",
-    "_machineNote": "A Mac's own, in config/constants.local.json and optional: hostname, the Bonjour name the bridge publishes (else this Mac's own), and ipad.wifi, ipad.usbc (the Mac's side of the iPad's USB-C link, listed first in Settings), ipad.usbcPreferred."
+    "_machineNote": "A Mac's own, in config/constants.local.json and optional: hostname, the Bonjour name the bridge publishes (else this Mac's own), and ipad.wifi, ipad.usbcPreferred. ipad.usbc is the Mac's side of the iPad's USB-C link, listed first in Settings; its default is the address INSTALLATION.md has you set.",
+    "ipad": { "usbc": "192.168.100.1" }
   },
 
   "http": {

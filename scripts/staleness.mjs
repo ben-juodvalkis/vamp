@@ -257,14 +257,18 @@ async function runBuild() {
 		return 0;
 	}
 
-	console.log(`🔨 Vite build needed — ${verdict.reason} (fingerprint ${verdict.ms}ms)`);
+	console.log(`🔨 Building the iPad app — about 40 s, and only when the code has changed (${verdict.reason})`);
 
+	// Errors only: a first build used to print ~480 lines of a11y and
+	// chunking warnings, which read as failure to anyone starting the app.
+	// svelte-check and the gate's own build still report them.
 	const started = Date.now();
 	const code = await new Promise((resolve) => {
-		const child = spawn('npm', ['run', 'build'], {
+		const child = spawn('npm', ['run', 'build', '--silent', '--', '--logLevel', 'error'], {
 			cwd: path.join(REPO_ROOT, 'interface'),
 			stdio: 'inherit',
-			shell: false
+			shell: false,
+			env: { ...process.env, NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --disable-warning=ExperimentalWarning`.trim() }
 		});
 		child.on('close', resolve);
 		child.on('error', () => resolve(1));

@@ -96,7 +96,7 @@ describe('SettingsPage foot switch card', () => {
 	it('after a learn that heard nothing, says where the Input is set, and tries again', async () => {
 		surfaceSays(0, 0, -1, '', 'timeout', 0);
 		const { getByText } = render(SettingsPage);
-		expect(getByText(/Looping’s Input in Live’s MIDI settings/)).toBeTruthy();
+		expect(getByText(/Vamp’s Input in Live’s MIDI settings/)).toBeTruthy();
 		await fireEvent.click(getByText('Nothing heard'));
 		expect(send).toHaveBeenLastCalledWith(V3_SESSION_FOOT_SWITCH_LEARN_ADDRESS, [1]);
 	});

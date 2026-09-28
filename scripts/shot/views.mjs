@@ -53,11 +53,6 @@ export const VIEWS = {
 			[P.solo]: '1'
 		}
 	},
-	connect: {
-		description: 'The /connect route.',
-		path: '/connect',
-		prefs: {}
-	},
 	// The feature switches (general-release audit §7b). `features` replaces
 	// the scene's bridge snapshot (`/bridge/features`) for the matching ids;
 	// these three share one layout, so any two of them diff to the switch

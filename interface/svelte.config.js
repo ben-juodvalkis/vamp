@@ -1,4 +1,3 @@
-import adapter from '@sveltejs/adapter-auto';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('@sveltejs/kit').Config} */
@@ -8,8 +7,11 @@ const config = {
 	preprocess: vitePreprocess(),
 
 	kit: {
-		// Using adapter-auto for automatic adapter selection (works with PWA plugin)
-		adapter: adapter(),
+		// The Mac serves the build with `vite preview` (npm run ipad), which
+		// reads `.svelte-kit/output` itself, so no adapter output is needed.
+		// This one writes nothing. adapter-auto warned on every build that it
+		// found no platform, which read as a failure to anyone starting Vamp.
+		adapter: { name: 'vamp-preview', adapt() {} },
 		alias: {
 			// `$config` resolves to repo-root `config/` so deep components
 			// can `import constants from '$config/constants.json'` instead

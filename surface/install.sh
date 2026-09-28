@@ -204,4 +204,4 @@ fi
 echo "      Output stays 'None'. Input stays 'None' too, unless a pedal is on USB:"
 echo "      then Input is the pedal's port, with that port's Track and Remote"
 echo "      switches off in the MIDI Ports list."
-echo "      Check Live's log for: 'INFO:looping: - Looping surface init'."
+echo "      Check Live's log for: 'INFO:looping: - Vamp surface init'."

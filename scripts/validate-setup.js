@@ -182,7 +182,7 @@ function report(failed, warned) {
     log(colors.red, '❌', 'Setup incomplete: fix the ❌ lines above.\n');
     return false;
   }
-  if (warned) log(colors.yellow, '⚠️', 'Setup has warnings (above); starting anyway.\n');
+  if (warned) log(colors.yellow, '⚠️', 'Setup has warnings (above). None of them stops Vamp starting.\n');
   else log(colors.green, '✅', 'Setup looks right.\n');
   return true;
 }

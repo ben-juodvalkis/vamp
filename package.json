@@ -1,7 +1,7 @@
 {
-  "name": "live-looping-interface",
+  "name": "vamp",
   "version": "1.0.0",
-  "description": "Live looping interface with Max4Live integration",
+  "description": "Live looping for Ableton Live, played from an iPad",
   "private": true,
   "_scripts_help": {
     "user-facing": {
@@ -115,7 +115,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "."
+    "url": "https://github.com/ben-juodvalkis/vamp.git"
   },
   "workspaces": [
     "interface",

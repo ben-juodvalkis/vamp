@@ -18,6 +18,9 @@ const constants = require('../interface/bridge/utils/constants').loadConstants()
 
 function getNetworkInterfaces() {
     const interfaces = os.networkInterfaces();
+    // The Mac's side of the USB-C link: the configured address, or a
+    // self-assigned 169.254 one (the rule Settings uses, networkAddresses.ts).
+    const usbcAddress = constants.network?.ipad?.usbc || '';
     const results = {
         wifi: null,
         usbc: null,
@@ -30,8 +33,8 @@ function getNetworkInterfaces() {
 
         iface.forEach(details => {
             if (details.family === 'IPv4' && !details.internal) {
-                // USB-C interface (169.254.x.x) - prioritize this first
-                if (details.address.startsWith('169.254.')) {
+                // USB-C interface - prioritize this first
+                if (details.address === usbcAddress || details.address.startsWith('169.254.')) {
                     results.usbc = `http://${details.address}:8889`;
                 }
                 // WiFi interface (192.168.x.x or 10.x.x.x)
