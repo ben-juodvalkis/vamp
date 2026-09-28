@@ -113,7 +113,7 @@
     "websocket",
     "osc"
   ],
-  "author": "Live Looping Interface",
+  "author": "Ben Juodvalkis",
   "license": "MIT",
   "repository": {
     "type": "git",

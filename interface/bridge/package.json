@@ -1,6 +1,7 @@
 {
   "name": "live-osc-bridge",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "WebSocket-OSC bridge for Max4Live communication",
   "main": "enhanced-osc-bridge.js",
   "scripts": {
