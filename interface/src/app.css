@@ -336,8 +336,11 @@
   --ease-precise: cubic-bezier(0.2, 0, 0, 1);   /* decisive out */
   --ease-settle: cubic-bezier(0.45, 0, 0.15, 1);
 
-  /* Layout (§2.8) — single source for the 120px side rails (kills the triplication) */
-  --sidebar-width: 120px;
+  /* Layout (§2.8) — single source for the side rails (kills the triplication).
+     120px at the iPad Pro's 1366px landscape width and anything wider;
+     narrower screens take 8.8% of the width, down to 72px, so the middle
+     column keeps its share. 8.8vw is 120.2px at 1366, so the cap binds there. */
+  --sidebar-width: clamp(72px, 8.8vw, 120px);
 
   /* Line Heights */
   --leading-tight: 1.2;
@@ -363,8 +366,12 @@
      take a proportional third. The fader's travel is "the strip above
      the name", so a fixed band collapses the two skins' `--vol-travel`
      onto one rule (`100% - band`) instead of a third-based formula plus
-     a flat-grammar override of it. */
-  --strip-band-h: var(--height-comfortable);
+     a flat-grammar override of it.
+
+     56px on the iPad Pro's 1024px-tall landscape screen and anything
+     taller; a shorter screen takes 5.5% of its height, down to the 44px
+     touch floor, so the strip above keeps some room. */
+  --strip-band-h: clamp(var(--height-touch), 5.5vh, var(--height-comfortable));
 
   /* Session mode (ADR-415/416) — how the clip grid divides its row.
 
@@ -764,27 +771,6 @@ html, body {
   /* Prevent iOS Safari elastic scrolling */
   position: fixed;
   overflow: hidden;
-}
-
-/* Optimize touch targets for iPad */
-@media (max-width: 1024px) {
-  /* Ensure minimum 44px touch targets per Apple guidelines */
-  button,
-  [role="button"],
-  input,
-  select,
-  textarea,
-  .touch-target {
-    min-height: 44px;
-    min-width: 44px;
-  }
-
-  /* Enhanced touch feedback */
-  button:active,
-  [role="button"]:active {
-    transform: scale(0.98);
-    transition: transform 0.1s ease;
-  }
 }
 
 /* ========================================

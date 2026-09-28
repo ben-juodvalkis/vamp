@@ -2812,7 +2812,9 @@
 	}
 	:global([data-grammar="flat"]) .category-name {
 		color: var(--foreground);
-		font-size: var(--text-lg);
+		/* 18px on the 120px rail; a narrower rail (a smaller screen) scales
+		   it down so "Recent" still fits on one line. */
+		font-size: min(var(--text-lg), calc(var(--sidebar-width) * 0.17));
 		font-weight: var(--font-weight-medium);
 		text-transform: none;
 		letter-spacing: 0;
