@@ -1,4 +1,4 @@
-"""Peak normalization for captured samples written by looping-recorder.
+"""Peak normalization for captured samples written by Vamp-Recorder.
 
 Two pure functions, no Live API touches — testable in plain CPython:
 

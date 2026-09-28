@@ -1850,7 +1850,7 @@ The mod wheel as a device parameter, held by `Expression Pedal.adg`. Both
 were retired for MidiWheels (above) and stayed behind in Looping; nothing
 loads them.
 
-### `Vamp Devices/looping-recorder/capture-looping.js` — capture engine
+### `Vamp Devices/Vamp-Recorder/capture-looping.js` — capture engine
 
 Live Max v8 JS that drives `[sfrecord~]` to write WAV captures to disk.
 Designed to be shareable as a standalone .amxd — **do not introduce
@@ -1899,7 +1899,7 @@ names a Place after its folder, so the folder's name is what the loads name
   names / orders and grew no logic.
 - `MidiWheels.amxd` - the on-screen wheels' device (above).
 - `random-start/` - the Simpler's Random knob (`random-start.amxd`).
-- `looping-recorder/` - the capture engine (`capture-looping.js`, above).
+- `Vamp-Recorder/` - the capture engine (`capture-looping.js`, above).
 - `Abstractions/manydeferlows.maxpat` - an abstraction the recorder's
   routing chooser uses (so does the owner's Max Utility patch).
 

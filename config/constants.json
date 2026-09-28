@@ -22,7 +22,7 @@
     "waveformMaxBytes": 78643200,
     "waveformStreamingEnabled": true,
     "liveDatabaseDir": "~/Library/Application Support/Ableton/Live Database",
-    "_liveRecordingsDirNote": "Live's temporary folder (Preferences > File & Folder), where Live makes a '<date time> Temp Project' for every unsaved set as it opens. The bridge hands the newest one to looping-recorder.amxd before each capture, so an unsaved set's capture lands in its own project (interface/bridge/handlers/captureRecorder.js). This is Live's default; a Mac that moved the folder in Live's preferences sets its own in constants.local.json. A leading ~/ is the home directory.",
+    "_liveRecordingsDirNote": "Live's temporary folder (Preferences > File & Folder), where Live makes a '<date time> Temp Project' for every unsaved set as it opens. The bridge hands the newest one to Vamp-Recorder.amxd before each capture, so an unsaved set's capture lands in its own project (interface/bridge/handlers/captureRecorder.js). This is Live's default; a Mac that moved the folder in Live's preferences sets its own in constants.local.json. A leading ~/ is the home directory.",
     "liveRecordingsDir": "~/Music/Ableton/Live Recordings"
   },
 
@@ -65,7 +65,7 @@
       "localPort": 11017,
       "remotePort": 11016,
       "host": "127.0.0.1",
-      "description": "looping-recorder.amxd — OSC capture control + state feedback. Bridge sends /capture/{folder,arm,disarm,start,stop,query} to 11016 (device's receive); device replies with /capture/{state,file,error,hello,bye} to 11017 (bridge's receive)."
+      "description": "Vamp-Recorder.amxd — OSC capture control + state feedback. Bridge sends /capture/{folder,arm,disarm,start,stop,query} to 11016 (device's receive); device replies with /capture/{state,file,error,hello,bye} to 11017 (bridge's receive)."
     },
     "backendScope": {
       "_description": "Per-backend overrides of prefix-based routing in interface/bridge/routing/messageRouter.js. Addresses listed under a backend are routed there instead of the default. Entries may be exact addresses (e.g. '/live/test') or prefix globs ending in '*' (e.g. '/looping/v2/*' — matches every address starting with '/looping/v2/'). See Looping's documentation/archive/m4l-to-python/05-migration-plan.md §1 for the three-backend model.",

@@ -59,7 +59,7 @@
 		{ id: 'expressionPedal', label: 'Expression pedal', what: 'The wah pedal and its toe switch' },
 		{ id: 'menubar', label: 'Menu-bar app', what: 'The Mac menu-bar utility' },
 		{ id: 'axHelper', label: 'AX helper', what: 'Reverse, Group, Save As and the held pad’s similar samples' },
-		{ id: 'captureRecorder', label: 'Recorder', what: 'REC: the looping-recorder device on Return A' }
+		{ id: 'captureRecorder', label: 'Recorder', what: 'REC: the Vamp-Recorder device on Return A' }
 	];
 	const featureRows = $derived.by(() => {
 		const named = new Set(FEATURE_ROWS.map((r) => r.id));

@@ -119,7 +119,7 @@ following audit §7b.
   and MidiWheels. Today Permute needs its own Place, because the longest configured root wins.
 - **The default input** `11/12 Guitar Mic` (`audio.defaultInputChannel`). **Done 2026-09-27:**
   optional, unset in the tracked config, so a new audio track keeps Live's default input; the
-  rig's local file keeps its `11/12 Guitar Mic`. It is not in `looping-recorder.amxd` (measured 2026-09-27):
+  rig's local file keeps its `11/12 Guitar Mic`. It is not in `Vamp-Recorder.amxd` (measured 2026-09-27):
   the device's Audio From routing is saved in each set (`MxDInRoutable`), so a fresh insert
   already takes Live's default.
 
@@ -165,7 +165,7 @@ fail with nothing on screen:
   MidiWheels; `random-start.adv` isn't needed (it held the device's own defaults). The rig's
   local override is gone too.
 - **`Digital.adg`,** re-saved (stock Shifter + Redux) (**S**).
-- **A template set** with `looping-recorder.amxd` on Return A, for capture (**M**, needs the rig).
+- **A template set** with `Vamp-Recorder.amxd` on Return A, for capture (**M**, needs the rig).
 - **Something to browse on day one:** Live's Packs and Core Library through Live's index. It
   covers all 82 Packs on the rig, and their presets carry Live's own role tags (measured
   2026-09-26, onboarding.plan.md §5). A starter library isn't needed for this.

@@ -102,7 +102,7 @@
         },
         "liveRecordingsDir": {
           "type": "string",
-          "description": "Live's temporary folder, where it makes a Temp Project for every unsaved set (a leading ~/ is the home directory). The bridge hands the newest one to looping-recorder.amxd before each capture (interface/bridge/handlers/captureRecorder.js). Live's default is ~/Music/Ableton/Live Recordings."
+          "description": "Live's temporary folder, where it makes a Temp Project for every unsaved set (a leading ~/ is the home directory). The bridge hands the newest one to Vamp-Recorder.amxd before each capture (interface/bridge/handlers/captureRecorder.js). Live's default is ~/Music/Ableton/Live Recordings."
         }
       }
     },
@@ -173,7 +173,7 @@
         },
         "loopingRecorder": {
           "$ref": "#/$defs/oscEndpoint",
-          "description": "looping-recorder.amxd OSC capture device — bidirectional control + state feedback and its hello"
+          "description": "Vamp-Recorder.amxd OSC capture device — bidirectional control + state feedback and its hello"
         },
         "backendScope": {
           "type": "object",
@@ -187,7 +187,7 @@
             "loopingRecorder": {
               "type": "array",
               "items": { "type": "string" },
-              "description": "OSC addresses routed to the looping-recorder.amxd capture device. Same glob/exact rules as pythonSurface."
+              "description": "OSC addresses routed to the Vamp-Recorder.amxd capture device. Same glob/exact rules as pythonSurface."
             }
           }
         },

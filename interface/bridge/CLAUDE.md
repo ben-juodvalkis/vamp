@@ -18,7 +18,7 @@ Node.js server that routes messages between browser clients (WebSocket) and Able
 ## Architecture
 
 ```
-Browser (WS:8081) ↔ enhanced-osc-bridge.js ↔ UDP Ports ↔ Python Surface / TotalMix / looping-recorder / MIDI converter
+Browser (WS:8081) ↔ enhanced-osc-bridge.js ↔ UDP Ports ↔ Python Surface / TotalMix / Vamp-Recorder / MIDI converter
 ```
 
 ## Key Files

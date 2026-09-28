@@ -87,7 +87,7 @@ layout (routes, stores, services, components).
 - Routes inbound OSC messages by address pattern to the right UDP
   port (see [`routing/messageRouter.js`](../../interface/bridge/routing/messageRouter.js)).
   The primary backend is the Python Control Surface; the others
-  (MIDI converter, TotalMix, the looping-recorder device) handle
+  (MIDI converter, TotalMix, the Vamp-Recorder device) handle
   specialized traffic they own. An address no rule matches is logged
   and dropped.
 - Owns the ping heartbeat, client liveness watchdog, and dead-
@@ -188,7 +188,7 @@ sub-second 7001 bootstrap below. The surface's own 11020 and 11022 bind
 | 7003 / 9003 | TotalMix FX (Global OSC) | **Only while `features.totalmix` is on** — true on the rig; off, the bridge binds none of the three TotalMix pairs, runs no bootstrap and reads no `osc.totalmix*` block (general-release audit §7b, `docs/reference/toggles.md`). **The bridge now talks to the mixer directly** (ADR-423), on OSC remote controller 3 in Global OSC mode; controller 1 keeps its legacy configuration so the cutover is reversible by one dropdown. Bridge → 7003 writes, mixer → 9003 changes plus an 811-address dump when TotalMix enables the controller. Every value is **dB**. Requires TotalMix FX 2.10+. ⚠️ There is no read verb, and an argument-less message is a *write of 1.0*, not a query. |
 | 7002 / 7001 | TotalMix FX (legacy) | Borrowed for well under a second at bridge startup and then released, to seed the level cache — Global OSC cannot be asked for current state and its dump fires on TotalMix's schedule, not the bridge's. A busy port degrades to an empty cache rather than failing. The one bridge UDP socket on all interfaces: TotalMix's controller 1 sends to `looping-studio-2.local`, which resolves to the LAN address as well as loopback. |
 | 11018 / 11019 | TotalMix M4L device | Bridge ↔ the Max for Live monitor device. The device sends `/totalmix/hello` on load and receives the cached levels back; its `live.gain~` faders and the wire both carry dB. |
-| 11017 / 11016 | Looping Recorder | Bridge ↔ the `looping-recorder` M4L capture device. Opened, routed and scope-mapped by the bridge (`enhanced-osc-bridge.js:128`, `WebSocketServer.js:348`). |
+| 11017 / 11016 | Looping Recorder | Bridge ↔ the `Vamp-Recorder` M4L capture device. Opened, routed and scope-mapped by the bridge (`enhanced-osc-bridge.js:128`, `WebSocketServer.js:348`). |
 | 11030 (output only) | **Permute mute gate** → Max | **Not a bridge port.** The surface sends `/looping/permute/gate <trackIndex> <open>` from its own socket straight to a `udpreceive` inside a Max device on that track — the outbound twin of the foot-trigger row below, and the only wire in this table the bridge never sees. It exists so a device can gate **what it plays** instead of the surface writing a parameter, which costs one Live undo step per step transition. Receivers fail **open** after ~2.5 s of silence. Sole receiver today: the `Skaka Metronome Picker` inside the Skaka Metronome Rack. |
 | 11010 | Foot Trigger (input only) | Legacy/reserved. The Max foot chain fires straight at 11020; the USB-direct path (ADR-422) uses no OSC port at all — the pedal CCs arrive on the surface's MIDI input. |
 | 8081 | WebSocket | Browser clients. |
