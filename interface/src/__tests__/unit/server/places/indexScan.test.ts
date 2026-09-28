@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Reading kinds out of Live's index rows the way the disk scan reads them out
  * of the files (live-index-measurements.md; measured on this Mac 2026-09-26).

@@ -15,6 +15,7 @@ import math
 import os
 import struct
 import tempfile
+import warnings
 import wave
 
 import pytest
@@ -22,7 +23,11 @@ import pytest
 from components import sample_normalize
 
 try:
-    import aifc  # stdlib through 3.12, removed in 3.13
+    # stdlib through 3.12, removed in 3.13 (the ImportError below); it only
+    # writes AIFF fixtures here, so its deprecation notice is noise.
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        import aifc
 except ImportError:
     aifc = None
 

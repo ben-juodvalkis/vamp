@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * The Places service against a scratch library (onboarding.plan.md §6, §10):
  * the seed from the Sidebar root on a first run, the ticks, the catalogs in
