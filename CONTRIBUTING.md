@@ -1,6 +1,6 @@
-# Contributing to Live Looping Interface
+# Contributing to Vamp
 
-Thank you for your interest in contributing to the Live Looping Interface project! This document provides guidelines and information for contributors.
+Thank you for your interest in contributing to Vamp! This document provides guidelines and information for contributors.
 
 ## Table of Contents
 
@@ -24,10 +24,10 @@ This project follows a simple code of conduct:
 ### Prerequisites
 
 Before contributing, ensure you have:
-- macOS 12.0 or later
-- Node.js 18.0 or later
-- Ableton Live 11 or 12 (for testing)
-- Basic understanding of the project architecture (see [documentation/v6-architecture-overview.md](documentation/v6-architecture-overview.md))
+- macOS 13 or later
+- Node.js 22.13 or later
+- Ableton Live 12.4 Suite (for testing)
+- Basic understanding of the project architecture (see [docs/reference/architecture.md](docs/reference/architecture.md))
 
 ### Setting Up Your Development Environment
 
@@ -35,13 +35,13 @@ Before contributing, ensure you have:
 
 2. **Clone your fork:**
    ```bash
-   git clone https://github.com/YOUR-USERNAME/Looping.git
-   cd Looping
+   git clone https://github.com/YOUR-USERNAME/vamp.git
+   cd vamp
    ```
 
 3. **Add upstream remote:**
    ```bash
-   git remote add upstream https://github.com/ben-juodvalkis/Looping.git
+   git remote add upstream https://github.com/ben-juodvalkis/vamp.git
    ```
 
 4. **Install dependencies:**
@@ -53,7 +53,7 @@ Before contributing, ensure you have:
    ```bash
    # config/constants.json is TRACKED: the defaults every Mac shares. Your
    # Mac's own values go in config/constants.local.json (gitignored), laid
-   # over it — see INSTALLATION.md, Step 4.
+   # over it — see INSTALLATION.md, "Your own settings".
    npm run validate
    ```
 
@@ -245,8 +245,8 @@ Major features should be discussed in an issue before implementation to:
 ## Questions?
 
 - **Documentation:** Start with [CLAUDE.md](CLAUDE.md) and files in `docs/`
-- **Setup Issues:** See [documentation/TROUBLESHOOTING.md](documentation/TROUBLESHOOTING.md)
-- **Architecture:** Read [documentation/v6-architecture-overview.md](documentation/v6-architecture-overview.md)
+- **Setup Issues:** See [INSTALLATION.md](INSTALLATION.md#troubleshooting) and [docs/reference/setup.md](docs/reference/setup.md)
+- **Architecture:** Read [docs/reference/architecture.md](docs/reference/architecture.md)
 - **Need help?** Open a discussion issue
 
 ## License

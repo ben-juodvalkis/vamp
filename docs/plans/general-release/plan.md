@@ -199,33 +199,20 @@ fail with nothing on screen:
   and about 190 MB of vendor inventories. See "The `vamp` repo" below.
 - **A dedicated secret scanner on `vamp`'s first commit.** A pattern search of the tree and the reachable
   history found nothing, but no scanner is installed here.
-- **The license.** It's MIT, but reads "Copyright (c) 2025 Live Looping Interface Contributors":
-  name the holder and the year. `interface/` and `interface/bridge/` have no `license` field, and
-  there's no third-party notice (the shadcn-svelte components are MIT).
-- **Third-party content to check:**
-  - Max files in the recorder that look like Ableton's own: `M4L.gain2~.maxpat`,
-    `BrowseRouting.maxpat`, `RoutingObjects.maxpat`
-  - `docs/reference/lom-reference.md`, which says it was scraped from Cycling '74's docs
-  - `owner/Skaka Metronome Rack.adg`: Klevgrand's commercial AU, plus a sample and
-    paths of the owner's
-  - `interface/src/lib/assets/favicon.svg`, which is the Svelte logo
-  - a stray `Presets/MIDI Effects/Max MIDI Effect/Note Generator 3.0.amxd` at the repo root, and
-    `data/ableton-devices.json`, which carries an owner path and which nothing reads
-- **Which docs go:** "The `vamp` repo" below. There are 697 Markdown files, 328 of them ADRs,
-  plus `docs-archive/` (5.3 MB). Owner paths appear in 90 of them, all under `/Users/Shared`, so
-  no personal user name.
-- **The user docs, rewritten** with the real floors: Live 12.4 Suite, macOS 13, Node 22.13+.
-  - `README.md` still says Node 18, Live 11 or 12 and macOS 12. It advertises the Omnisphere/NI
-    browsers, credits AbletonOSC, says USB-C needs no network setup, and has six links to
-    deleted docs.
-  - `INSTALLATION.md` says Node 18 and Live 11, points `placesRoots.permute` at a sibling repo,
-    describes `${PROJECT_ROOT}` placeholders nothing expands, and has five links to missing docs.
-  - `docs/reference/setup.md` carries an "AbletonOSC is still in the tree" banner, keys that don't
-    exist, and Omnisphere/NI as options.
-  - `config/CLAUDE.md` says to copy the example, and that validation checks the schema.
-  - `CHANGELOG.md`'s 1.0.0 lists AbletonOSC and the Omnisphere/NI browsers.
-  - `.github/ISSUE_TEMPLATE/bug_report.md` asks for the AbletonOSC version and links a missing
-    setup guide.
+- **The license: done 2026-09-28.** MIT, © 2025–2026 Ben Juodvalkis; `interface/` and
+  `interface/bridge/` carry `"license": "MIT"`, and `THIRD-PARTY-NOTICES.md` carries
+  shadcn-svelte's MIT notice for the components in `interface/src/lib/components/ui/`.
+- **Third-party content: settled 2026-09-28 (Ben).** The recorder's Max files
+  (`M4L.gain2~.maxpat`, `BrowseRouting.maxpat`, `RoutingObjects.maxpat`) and the Skaka picker and
+  rack are fine to publish. The Cycling '74 scrape `lom-reference.md` is gone: what the rig
+  measured beyond it moved to `docs/reference/live-api-measurements.md`, and the code cites that
+  or Cycling '74's pages. The favicon is the app's own icon, not the Svelte logo. The stray
+  `Note Generator 3.0.amxd` and `data/ableton-devices.json` stayed behind in Looping.
+- **The user docs: rewritten 2026-09-28.** README.md, INSTALLATION.md (the one install path),
+  CONTRIBUTING.md, CHANGELOG.md (restarted for Vamp), the bug-report template and
+  `docs/reference/setup.md` now state Live 12.4 Suite, macOS 13 and Node 22.13+, drop AbletonOSC,
+  the Omnisphere/NI browsers and the dead links, treat the AX helper as the owner's, and state the
+  LAN trust model.
 - **Renames to Vamp:** [naming.md](naming.md) §4. Live lists the surface as Vamp since 2026-09-27; nothing else is renamed yet.
 - **Versions and CI.** There are no tags. The root and bridge say 1.0.0, the interface 0.0.1,
   and the wire protocol is 3.10.0. There's no CI either: the gate is the local pre-push hook, and

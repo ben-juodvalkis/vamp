@@ -28,21 +28,17 @@ What actually happened.
 
 - **macOS Version:** [e.g., macOS 13.2]
 - **Node.js Version:** [run `node --version`]
-- **Ableton Live Version:** [e.g., Live 12 Beta, Live 11 Suite]
-- **AbletonOSC Version:** [V6 or V5]
-- **Browser:** [if applicable]
+- **Ableton Live Version:** [e.g., Live 12.4.2 Suite]
+- **Browser / device:** [e.g., Safari on iPad, Chrome on the Mac]
 
 ## Configuration
 
 - [ ] I have run `npm run validate` successfully
-- [ ] I have followed the setup guide in `documentation/SETUP-GUIDE.md`
+- [ ] I have followed [INSTALLATION.md](../../INSTALLATION.md)
 
-**Configuration details** (anonymize paths):
-```json
-{
-  "projectRoot": "/Users/USERNAME/path/to/project",
-  "abletonApp": "/Applications/Ableton Live XX.app"
-}
+**Output of `npm run validate`** (anonymize paths):
+```
+Paste it here
 ```
 
 ## Error Messages / Logs
@@ -65,5 +61,5 @@ Add any other context about the problem here.
 
 - [ ] I have searched existing issues
 - [ ] I have run `npm run validate`
-- [ ] I have reviewed the troubleshooting guide
+- [ ] I have read INSTALLATION.md's troubleshooting section
 - [ ] I have tested on the latest version

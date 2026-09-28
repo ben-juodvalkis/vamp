@@ -1,12 +1,7 @@
 # Setup
 
-> **Cleanup in flight (2026-04-21).** This doc reflects the
-> Python-surface-only install path. AbletonOSC is still in the tree
-> but no longer required for the v3 wire — final removal is tracked
-> in Looping's `documentation/archive/m4l-to-python-v3/10-cleanup-plan.md`.
-
-Complete setup guide for the Live Looping System on macOS. Estimated
-time: 15–30 minutes.
+The details behind [INSTALLATION.md](../../INSTALLATION.md), which is the install path to follow,
+and more troubleshooting.
 
 Companion: [architecture.md](architecture.md) covers what you're
 wiring up; [preset-library.md](preset-library.md) covers preset
@@ -16,27 +11,22 @@ organization.
 
 ### Required
 
-- **macOS** 13.0 (Ventura) or later — the floor comes from the AX helper's app
-  bundle, which declares `LSMinimumSystemVersion 13.0`
-  (`scripts/install-ax-helper.sh:90`). Everything else runs on 12.0; on
-  Monterey the interface works and §"Looping AX Helper" below does not.
-- **Node.js** 18.0+ — [nodejs.org](https://nodejs.org/)
-- **Ableton Live 12** (Suite recommended; 11 untested post-Python-surface)
-- **`uv`** and **`swiftc`** — for the AX helper only.
-  `scripts/install-ax-helper.sh:66-67` hard-exits without either; `swiftc`
-  comes with the Xcode command line tools (`xcode-select --install`).
+- **macOS** 13.0 (Ventura) or later
+- **Node.js** 22.13+ (`node:sqlite`; `engines` in `package.json` says the same) —
+  [nodejs.org](https://nodejs.org/)
+- **Ableton Live 12.4 Suite**
 
 ### Optional
 
-- **Omnisphere** — patch browser integration
-- **Native Instruments Komplete** — NI browser integration
-- **iPad** with USB-C — touch interface
+- **iPad** with USB-C or Wi-Fi — the touch interface
+- For the owner's AX helper only (`features.axHelper`, §5): **`uv`** and **`swiftc`**
+  (`xcode-select --install`); `scripts/install-ax-helper.sh` hard-exits without either
 
 ## 2. Quick start (experienced users)
 
 ```bash
-git clone <repository-url>
-cd Looping
+git clone https://github.com/ben-juodvalkis/vamp.git
+cd vamp
 npm run setup
 
 # Your Mac's own settings, if any: config/constants.local.json (§4)
@@ -44,8 +34,9 @@ npm run setup
 npm run dev
 ```
 
-Then in Live: **Preferences → Link/Tempo/MIDI → Control Surface →
-Vamp**. Output stays **None**; Input too, unless a pedal is on USB (§5, USB pedal).
+Then in Live: **Settings → Link, Tempo & MIDI → Control Surface →
+Vamp**, and add this checkout's `Vamp Devices` folder as a Place. Output stays **None**; Input
+too, unless a pedal is on USB (§5, USB pedal).
 
 If validation passes and Live's log shows
 `INFO:looping: - Looping surface init`, skip to §7 for iPad.
@@ -56,8 +47,8 @@ If validation passes and Live's log shows
 npm run setup
 ```
 
-Installs deps for the root project, the SvelteKit interface, and the
-enhanced OSC bridge.
+Checks Node, installs the root project and both workspaces (the interface and the bridge),
+links the surface into Live (§5) and runs the setup check (§6).
 
 ## 4. Your own settings (optional)
 
@@ -109,8 +100,11 @@ After install, in Live:
 
 ### USB pedal (optional, ADR-422)
 
-With the pedal on USB instead of Bluetooth+Max, the surface reads its
-MIDI directly:
+With a pedal on USB, the surface reads its MIDI directly. The **foot switch** is a setting:
+point the surface's Input at the pedal (steps 1–3), then **Settings → General → Foot Switch →
+Learn** records its channel, CC and whether it is momentary or latching
+(`logs/foot-switch.json`). The rest of this section is the owner's **expression pedal and wah**,
+which exist only while `features.expressionPedal` is on:
 
 1. In the **Vamp** Control Surface row, set **Input** to the
    pedal's USB MIDI port. **Output** stays **None**.
@@ -119,11 +113,9 @@ MIDI directly:
    into armed tracks / Live's MIDI mapping.
 3. Don't leave a Max patch listening to the same port, or every press
    fires twice.
-4. Defaults match the rig's USB pedal: **channel 10**, trigger switch
-   **CC 23**, wah toe switch **CC 21**, expression **CC 20**. If yours
-   differs, remap `channel` / `footSwitchCC` / `wahToeSwitchCC` /
-   `wahExpressionCC` in `config/constants.json` → `midiPedals`, then
-   restart Live. Set `channel: 0` to listen on all 16 channels if you
+4. The map is the Mac's own, in `config/constants.local.json` → `midiPedals`
+   (`channel`, `wahToeSwitchCC`, `wahExpressionCC`; the owner's rig uses channel 10 and CCs
+   21 / 20), then restart Live. Set `channel: 0` to listen on all 16 channels if you
    don't know what the pedal transmits on.
 5. Verify in `Log.txt`: `MidiPedalInput: ready (channel=10, …)` on
    init, and `src='midi:pedal-input'` lines when pressing the pedal.
@@ -158,7 +150,10 @@ through the browser, slower and with two undo steps on a pad. Re-run it
 after editing a preset; `-- --check` exits 1 when anything differs. See
 `docs/reference/preset-library.md` §8.
 
-### Looping AX Helper (ADR-439)
+### Looping AX Helper (ADR-439) — owner-only
+
+Only while `features.axHelper` is on in `config/constants.local.json`; off, the bridge dials no
+helper and the UI draws none of its controls.
 
 ```bash
 npm run install-ax-helper
@@ -216,14 +211,14 @@ npm run dev
 ```
 
 This:
-1. Validates config.
-2. Cleans temp / cache (`.svelte-kit`, `.vite`).
-3. Generates instrument catalogs.
-4. Copies config files the Python surface reads.
-5. Starts the OSC bridge (port 8081 WS + UDP pairs — see
+1. Runs the setup check.
+2. Stops this checkout's old dev servers and frees their ports (build caches kept).
+3. Starts the OSC bridge (port 8081 WS + UDP pairs — see
    [architecture.md](architecture.md#5-port-map)).
-6. Starts SvelteKit at <http://localhost:3000>.
-7. Opens Ableton Live.
+4. Starts SvelteKit at <http://localhost:3000>. Its server builds the browser's catalog from
+   Live's index as it runs.
+5. Opens the page and Ableton Live (and, with their switches on, the owner's Max patch and
+   menu-bar app). The first run opens Settings as a checklist.
 
 Live's log should show `Looping surface init` and the bridge log
 (`logs/bridge.log`) should show `Bridge process starting` with no
@@ -273,8 +268,8 @@ On the iPad:
 ipconfig getifaddr en0
 ```
 
-Set `network.ipad.wifi` in `constants.json` to the iPad's IP. On the
-iPad open Safari to **http://<mac-ip>:3000**.
+On the iPad open Safari to **http://<mac-ip>:8889** under `npm run ipad`, or
+**http://<mac-ip>:3000** under `npm run dev`. Settings → Connection shows the address.
 
 WiFi works but USB-C is lower-latency and survives network churn —
 prefer it for live performance.
@@ -293,7 +288,6 @@ npm run dev          # Start everything (bridge + interface + surface-ready Live
 npm run ipad         # Same, built for production iPad
 npm run update       # Rebuild UI only, keep bridge + surface alive
 npm run build        # Production build
-npm run check        # Type checking
 npm run test:run     # Unit tests
 npm run cleanup      # Kill dev servers + clear reserved ports (keeps build caches)
 npm run cleanup:caches  # ...and nuke .svelte-kit / .vite / scripts/.cache
@@ -309,11 +303,8 @@ Your own settings are in `config/constants.local.json`, which git ignores.
 
 ### 9.2 `Path doesn't exist` errors
 
-Verify every path in `constants.json`:
-
-```bash
-ls "$(grep instrumentsBase config/constants.json | cut -d'"' -f4)"
-```
+A path in your `config/constants.local.json` points nowhere. The setup check (`npm run validate`)
+names it.
 
 ### 9.3 `Ableton not found`
 
@@ -346,24 +337,19 @@ Live caches Remote Script bytecode. After changing
 
 ### 9.6 `Preset browser is empty`
 
-The rail shows one button per Place in Live's sidebar under `paths.sidebarRoot`
-(`docs/reference/preset-library.md`). An empty rail (Recent alone) means no Places
-catalog was written.
+The rail shows one button per Place ticked in **Settings → Places**; the Places themselves are
+Live's own (its sidebar, the User Library, the Packs, read from `Library.cfg`). An empty rail
+(Recent alone) means nothing is ticked, or no catalog was built.
 
 ```bash
-# 1. Check the Sidebar has Place folders
-ls "$(grep '"sidebarRoot"' config/constants.json | cut -d'"' -f4)"
+# What the server builds for each ticked Place, and whether Live's index and the disk agree
+npm run places:diff
 
-# 2. Regenerate the catalog (FORCE=1 skips the staleness gate)
-npm run places:diff            # what the server builds, and whether Live's index and the disk agree
-
-# 3. Inspect the output: the Places, in Live's order
+# The Places the server lists, in Live's order
 curl -s http://localhost:3000/api/places/index.json | head -c 600
 ```
 
-A folder under the Sidebar that is not a Place in Live's sidebar is still
-listed if `Library.cfg` cannot be read; once it can, only the Places Live shows
-are. Add a folder as a Place by dragging it into Live's browser sidebar.
+A Place added in Live appears in Settings unticked within seconds.
 
 ### 9.7 Port already in use
 
