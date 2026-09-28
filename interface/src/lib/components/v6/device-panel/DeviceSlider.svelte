@@ -496,16 +496,16 @@
      vertical label (tall slider), cqw for a horizontal label (wide slider). Bigger
      min/max than the old fixed 18/30px. */
   .slider-label.label-small.label-vertical .slider-label-text {
-    font-size: clamp(26px, 10cqh, 60px);
+    font-size: clamp(max(var(--type-min), calc(26 * var(--fluid-px))), 10cqh, 60px);
   }
   .slider-label.label-small.label-horizontal .slider-label-text {
-    font-size: clamp(26px, 10cqw, 60px);
+    font-size: clamp(max(var(--type-min), calc(26 * var(--fluid-px))), 10cqw, 60px);
   }
   .slider-label.label-large.label-vertical .slider-label-text {
-    font-size: clamp(38px, 16cqh, 80px);
+    font-size: clamp(max(var(--type-min), calc(38 * var(--fluid-px))), 16cqh, 80px);
   }
   .slider-label.label-large.label-horizontal .slider-label-text {
-    font-size: clamp(38px, 16cqw, 80px);
+    font-size: clamp(max(var(--type-min), calc(38 * var(--fluid-px))), 16cqw, 80px);
   }
 
   /* White-hot handle line (§5.6) — device ink toward white, no shadow. */
@@ -550,16 +550,16 @@
     color: var(--signal-dim);
   }
   :global([data-grammar="flat"]) .slider-label.label-small.label-vertical .slider-label-text {
-    font-size: clamp(20px, 8cqh, 40px);
+    font-size: clamp(max(var(--type-min), calc(20 * var(--fluid-px))), 8cqh, 40px);
   }
   :global([data-grammar="flat"]) .slider-label.label-small.label-horizontal .slider-label-text {
-    font-size: clamp(20px, 8cqw, 40px);
+    font-size: clamp(max(var(--type-min), calc(20 * var(--fluid-px))), 8cqw, 40px);
   }
   :global([data-grammar="flat"]) .slider-label.label-large.label-vertical .slider-label-text {
-    font-size: clamp(24px, 11cqh, 48px);
+    font-size: clamp(max(var(--type-min), calc(24 * var(--fluid-px))), 11cqh, 48px);
   }
   :global([data-grammar="flat"]) .slider-label.label-large.label-horizontal .slider-label-text {
-    font-size: clamp(24px, 11cqw, 48px);
+    font-size: clamp(max(var(--type-min), calc(24 * var(--fluid-px))), 11cqw, 48px);
   }
   :global([data-grammar="flat"]) .slider-handle-segment {
     background-color: var(--flat-handle);

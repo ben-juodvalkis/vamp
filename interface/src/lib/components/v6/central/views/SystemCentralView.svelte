@@ -558,7 +558,7 @@ import { logger } from '$lib/utils/logger';
 
 	/* Large draggable digits (tempo, time sig) */
 	.sys-drag-digit {
-		font-size: clamp(2.25rem, 14cqh, 5rem);
+		font-size: clamp(max(var(--type-min), calc(36 * var(--fluid-px))), 14cqh, 5rem);
 		font-weight: 300;
 		color: var(--sys);
 		text-align: center;
@@ -583,7 +583,7 @@ import { logger } from '$lib/utils/logger';
 	   smaller type because the labels are words ("1/16T"), not numerals,
 	   and they have to survive the narrowest column this card ever gets. */
 	.sys-value-digit {
-		font-size: clamp(1.5rem, 10cqh, 3.5rem);
+		font-size: clamp(max(var(--type-min), calc(24 * var(--fluid-px))), 10cqh, 3.5rem);
 		font-weight: 300;
 		color: var(--sys);
 		text-align: center;
@@ -610,7 +610,7 @@ import { logger } from '$lib/utils/logger';
 	   it without !important). */
 	.sys-sep {
 		color: var(--sys-dim);
-		font-size: clamp(1.5rem, 10cqh, 3.5rem);
+		font-size: clamp(max(var(--type-min), calc(24 * var(--fluid-px))), 10cqh, 3.5rem);
 		font-weight: 200;
 		line-height: 1;
 	}

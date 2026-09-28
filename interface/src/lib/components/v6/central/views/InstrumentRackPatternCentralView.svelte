@@ -430,7 +430,7 @@
     align-items: center;
     justify-content: center;
     gap: clamp(0.75rem, 9cqb, 2rem);
-    font-size: clamp(1.5rem, min(20cqi, 24cqb), 3.5rem);
+    font-size: clamp(max(var(--type-min), calc(24 * var(--fluid-px))), min(20cqi, 24cqb), 3.5rem);
   }
 
   /* The rhythm: a lane across the button, a thin tick at each hit, in the

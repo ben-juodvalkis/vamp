@@ -111,7 +111,7 @@
      from `color.primary`. Rides full brightness even in ghost mode — the ghost
      dim is applied to the filter-curve body, not the label (matches XY/slider). */
   .eq-title {
-    font-size: clamp(26px, 10cqw, 64px);
+    font-size: clamp(max(var(--type-min), calc(26 * var(--fluid-px))), 10cqw, 64px);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;

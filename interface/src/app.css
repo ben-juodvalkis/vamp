@@ -279,6 +279,19 @@
   --central-gap: 0.5rem;
 }
 
+/* Fluid type floors. Text that sizes off its control (cqw/cqh) still needs
+   a floor, and a fixed floor is only right at the size it was tuned for:
+   the iPad Pro's 1366px landscape width. `--fluid-px` is 1px there and at
+   anything wider, and shrinks in proportion below, so a floor written as
+   `max(var(--type-min), calc(20 * var(--fluid-px)))` is exactly 20px on
+   the iPad Pro and 15px on a 1024px screen. `--type-min` is where the
+   shrinking stops; a floor already under it is left as a plain length,
+   since raising it would change the iPad Pro. */
+:root {
+  --fluid-px: min(1px, calc(100vw / 1366));
+  --type-min: 12px;
+}
+
 @theme inline {
   /* ========================================
      DESIGN TOKENS - UI Design System

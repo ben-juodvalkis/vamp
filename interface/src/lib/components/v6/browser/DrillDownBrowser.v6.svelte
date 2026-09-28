@@ -2658,7 +2658,7 @@
 		   the densest preset tile (PRESET_COMFORT) so names shrink with the grid
 		   instead of overflowing it; the cap keeps big folder tiles from getting
 		   oversized. */
-		font-size: clamp(0.92rem, 15cqw, 2.6rem);
+		font-size: clamp(max(var(--type-min), calc(14.72 * var(--fluid-px))), 15cqw, 2.6rem);
 	}
 	.folder-tile .tile-name { font-weight: 800; letter-spacing: -0.02em; }
 

@@ -146,7 +146,7 @@
        common case is unchanged and only the narrow strips, which were
        shouting, now scale down. */
     .regular-track {
-        font-size: clamp(0.938rem, 18.5cqi, 1.375rem);
+        font-size: clamp(max(var(--type-min), calc(15.008 * var(--fluid-px))), 18.5cqi, 1.375rem);
     }
 
     /* Selected track: heavier weight + slightly larger so it stands out */
@@ -155,7 +155,7 @@
     }
 
     .regular-track.is-selected {
-        font-size: clamp(1.063rem, 20cqi, 1.5rem);
+        font-size: clamp(max(var(--type-min), calc(17.008 * var(--fluid-px))), 20cqi, 1.5rem);
     }
 
 </style>

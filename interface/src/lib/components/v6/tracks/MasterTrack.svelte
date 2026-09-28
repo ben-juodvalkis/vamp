@@ -349,7 +349,7 @@
        the third without turning into signage. Sizes live here (not inline)
        so the flat grammar can re-size them by plain specificity. */
     .key-root {
-        font-size: clamp(0.875rem, 62cqh, 2.25rem);
+        font-size: clamp(max(var(--type-min), calc(14 * var(--fluid-px))), 62cqh, 2.25rem);
         font-weight: var(--font-weight-bold);
     }
     .key-band :global(.key-lock) { opacity: 0.7; }

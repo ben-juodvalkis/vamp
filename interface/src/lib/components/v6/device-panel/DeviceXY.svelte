@@ -387,7 +387,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: clamp(26px, 10cqw, 64px);
+    font-size: clamp(max(var(--type-min), calc(26 * var(--fluid-px))), 10cqw, 64px);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -472,7 +472,7 @@
     text-transform: none;
     letter-spacing: 0;
     font-weight: 500;
-    font-size: clamp(20px, 8cqw, 44px);
+    font-size: clamp(max(var(--type-min), calc(20 * var(--fluid-px))), 8cqw, 44px);
     color: var(--foreground);
   }
   :global([data-grammar="flat"]) .xy-container.ghost .center-title {

@@ -791,7 +791,7 @@
     padding: 0.5rem;
   }
   .vm-kit-class {
-    font-size: clamp(1.5rem, 12cqh, 3rem);
+    font-size: clamp(max(var(--type-min), calc(24 * var(--fluid-px))), 12cqh, 3rem);
     font-weight: var(--font-weight-medium);
     letter-spacing: 0.02em;
     line-height: 1.1;
