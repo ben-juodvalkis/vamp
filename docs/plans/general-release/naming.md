@@ -61,15 +61,11 @@ hold marks in its own field.
 
 ## 3. Repo and folders
 
-- **Don't rename this repo.** The fresh public repo ([audit.md](audit.md) §5.2) is created as
-  `vamp`. This one stays `Looping`, private, as the history. Renaming it first would take the
-  name the public repo needs.
-- **Don't move the clone on the owner's Mac yet.** `/Users/Shared/DevWork/GitHub/Looping` is
-  written into `config/constants.json` five times: `projectRoot`, two `placesRoots` and two
-  `devicePath`s. It's also inside the Skaka rack and the AX helper's sealed
-  Info.plist (audit §4a). Live's Remote Scripts link and the Permute and Vamp Devices Places
-  point into it too. The move waits for paths derived from the clone ([plan.md](plan.md) §3) and
-  for loads that name the Place ([onboarding.plan.md](onboarding.plan.md) §6).
+- **Done 2026-09-27:** the fresh repo ([audit.md](audit.md) §5.2) is `vamp`, private until
+  launch. `Looping` stays as it is, private, as the history.
+- **The clone moved 2026-09-28.** The rig runs from `/Users/Shared/DevWork/GitHub/vamp`; the
+  config derives every repo path from the checkout, and the loads name the `Vamp Devices` Place
+  ([plan.md](plan.md) §8). The Skaka rack still points into Looping's checkout, which stays on disk.
 
 ## 4. What to rename, and when
 

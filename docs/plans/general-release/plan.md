@@ -234,66 +234,80 @@ fail with nothing on screen:
 
 ### The `vamp` repo
 
-**Proposed 2026-09-27.** One home for each kind of thing, and the owner's parts in one place, so
-what a stranger runs and what only the rig runs can be seen from the tree:
+**Done 2026-09-27; the rig moved 2026-09-28.** `vamp` (`ben-juodvalkis/vamp`, private until
+launch) was built from Looping's `dbae35ae` with `git archive`, with fresh history, and every
+change lands here now. `Looping` is frozen at that commit as the history; its checkout stays on
+disk because old Live sets and the Skaka rack point into it. Links to what stayed behind point at
+that commit on GitHub.
 
 ```
 vamp/
   README.md  INSTALLATION.md  LICENSE  CHANGELOG.md  CLAUDE.md
-  interface/     the web app and the bridge, as today
-  surface/       the Python control surface (today surface/)
-  Vamp Devices/  the devices the app loads or a user drops in: Permute, MidiWheels, Random
-                 Start, the recorder (today Vamp Devices/). It is the one Place a
-                 user adds in Live
-  owner/         the owner-only parts, off by default: the AX helper, the menubar app, the
-                 Max Utility patch and its scripts (today owner/Max Patches/), the Skaka picker
-                 and rack, the rig probes (today owner/probes/)
-  config/  scripts/
+  interface/     the web app and the bridge (the v6/ and v3/ levels kept, for now)
+  surface/       the Python control surface (was ableton/looping-surface/)
+  Vamp Devices/  what the app loads by itself: Permute, MidiWheels, Random Start, the recorder
+                 and the one abstraction the recorder uses. The one Place a user adds in Live
+  owner/         the owner's rig, off by default: ax-helper/, menubar/, Max Patches/, the
+                 Skaka picker and rack, Track Key Controls (mute-solo-control/), the
+                 Modulation Test prototype, and the rig probes (probes/, was the surface's tools/)
+  config/  scripts/  data/
   docs/
     reference/   architecture, wire protocol, toggles, the LOM, UI architecture, extending
-                 devices, the preset library, the rig smoke test
-    plans/       live plans only: a finished one becomes an ADR, or stays behind
-    adr/         all of them
+                 devices, the preset library, setup, the rig smoke test
+    plans/       general-release/ and clip-automation-warp.plan.md
+    adr/         all 327; the next is 454
 ```
 
 **One Place for the devices** (Ben, 2026-09-27). Everything the app loads by itself goes through
-one Place, loaded by name (`place:<folder>` + the path inside), so setup is one folder added to
-Live's sidebar. Already true here: Permute, MidiWheels and, since 2026-09-27, Random Start load
-through "Vamp Devices". Two rules follow:
-- **Only a user's devices go in it.** The owner's (the Skaka picker, the Max Utility patch) live
-  in `owner/`, so a stranger's sidebar shows nothing they can't use.
-- **Its folder name is what Live shows.** A Place is named after its folder, and the loads
-  name it: `Vamp Devices` in Live's sidebar and in `live_library.M4L_DEVICES_PLACE` and
-  `devicePresets.ts`'s `source`, not `devices`.
+one Place, loaded by name: `place:Vamp Devices` + the path inside (`live_library.M4L_DEVICES_PLACE`,
+`devicePresets.ts`'s `source`). A Place is named after its folder, so the folder is `Vamp Devices`.
+Only a user's devices go in it; the owner's live in `owner/`.
 
-**The ADRs come over, all 328, and numbering carries on from 448.** The code cites them 1,322
-times in 346 files ("ADR-429"), so a public reader needs them. The four un-numbered files in
-`adr/` get numbers or stay behind, and the duplicate numbers 111, 133 and 182 are renamed.
+**The ADRs.** The three un-numbered files became 451–453 (the plan counted four; the fourth was
+`CLAUDE.md`). Of each duplicate pair the one nothing cites was renumbered: 111 → 448
+(name-based transpose), 133 → 449 (duplicate-track prevention, whose header had said ADR-095),
+182 → 450 (Simpler sample gain).
 
-**Stays behind in `Looping`:** both archives (`docs-archive/`, Looping's `documentation/archive/`, but
-for the rig smoke test), the finished audits (code quality, color, swap), the finished plans
-(`browser-places`, `clip-view-mirror`, `current-project/`), `locks/`,
-`data/ableton-devices.json` and its copy in `interface/static/data/`, `owner/Max Patches/simpler-test.js`,
-`scripts/symbol-refs.js` and the stray `Note Generator 3.0.amxd`. Nothing reads any of them.
-This folder (`general-release/`) comes over while its work is open.
+**Stayed behind in `Looping`:** both archives (but the rig smoke test), the finished audits
+(code quality, color, swap), the finished plans (`browser-places`, `clip-view-mirror`,
+`current-project/`), `locks/`, `data/ableton-devices.json` and its copy in
+`interface/static/data/`, `simpler-test.js`, `scripts/symbol-refs.js`, the Note Generators
+(Ben, 2026-09-27), and, decided from what loads them (nothing): `Wah Param Smoother.amxd`,
+`Modwheel Sender.amxd`, `shaker/` and `Abstractions/track-control-ui.maxpat`.
 
-**For Ben to confirm:** the Note Generator devices (`Note Generator.amxd`, `2.0`) and
-`Wah Param Smoother.amxd`. No code loads them; a saved set might.
+**Where the tree differed from this plan (the tree won):** `docs/reference/setup.md`, which no
+list named; `data/`, which comes over but for `ableton-devices.json`; the devices the plan didn't
+name, decided from what loads them (`manydeferlows.maxpat` to `Vamp Devices/`, Track Key Controls
+and Modulation Test to `owner/`); three un-numbered ADRs, not four.
 
-**Open (Ben):**
-- **The owner's parts go public.** One codebase means `owner/` ships in `vamp`, off. The other
-  way is a private overlay repo, which is two trees again.
-- **When to cut over.** Recommended: make `vamp` private soon and do the rest of this plan
-  there, then make it public at launch. Whatever lands in `Looping` after the cutover has to be
-  carried over by hand.
-- **The `v6/` and `v3/` levels** in `interface/src/lib` (180 and 7 files, with no other version
-  beside them) could go in the same move. It's churn in every import, and after launch every
-  path is public.
+**Decided (Ben, 2026-09-27):** `owner/` ships in `vamp`, switched off, with no private overlay
+repo; the `v6/` and `v3/` levels stay for now; fresh history.
 
-**The rig's move** to the `vamp` checkout: `npm run setup` relinks `Remote Scripts/Vamp` (a full
-Live restart), the "Vamp Devices" and Permute Places give way to one `Vamp Devices` Place, and
-`constants.local.json` is copied over. Claude's memory for this project is keyed to the
-`Looping` path and doesn't follow.
+**Checked:** gitleaks 8.30.1 over the tree found no leaks. The gate passed in `vamp` before
+the first push (svelte-check, vitest, both pytest suites, the build); the surface's pytest counts
+match Looping's exactly (2883 passed, 4 skipped).
+
+**The rig, moved 2026-09-28:**
+- `npm run setup` relinked `Remote Scripts/Vamp` to `vamp/surface`, with no warnings. The rig's
+  gitignored state came over byte-identical: `config/constants.local.json`, `config/.ws-secret`,
+  `logs/session-settings.json`, `logs/places.json`, `logs/save-as-counter.json`, `.env`, the
+  Claude launch config and the thumbnail caches. There was no `logs/foot-switch.json` to copy.
+- Live's Places: `Vamp Devices` added, `Permute` and `M4L devices` removed (Ben, by hand;
+  confirmed in `Library.cfg`, 19 Places; `-------------` went too).
+- Live's log after the restart names only vamp paths for the config, the session settings and
+  the three devices, and none of Looping's. Permute, MidiWheels and Random Start each loaded
+  through `user_folders['Vamp Devices']` on scratch tracks, deleted after.
+- The AX helper was rebuilt from `owner/ax-helper` and stayed trusted for Accessibility (same
+  signing identity). The menubar app builds from `owner/menubar`.
+- `npm run ipad` serves from `vamp`, and a fresh page authenticates and shows the set.
+- Claude's memory was copied to `vamp`'s project folder.
+
+**Still pointing into `Looping`:** the Skaka rack and the User Library's symlinks to the picker
+(an edit to `owner/Skaka Metronome Picker/` reaches the rig once the rack is re-saved from this
+folder); the Max Utility patch if Max still has Looping's copy open; any old set.
+
+**Open (Ben):** whether the `@claude` workflows go to the public repo (§7); making the repo
+public at launch.
 
 ## 9. Checks on the rig and a clean Mac (Ben)
 
