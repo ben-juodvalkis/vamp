@@ -5,7 +5,7 @@
  * - Python Control Surface (primary backend for Live)
  * - MIDI Converter (pitch/mod wheel)
  * - TotalMix mixer and its Max device (ADR-423)
- * - looping-recorder capture device
+ * - Vamp-Recorder capture device
  *
  * The Max observer, Omnisphere/NI preset-server and shell-helper ports were
  * removed 2026-09-23 (general-release audit Tier 0): nothing answered on any.
@@ -29,7 +29,7 @@ const { logger } = require('../utils/logger');
  * 2026-09-16; the rest followed, general-release audit §5.3, 2026-09-23).
  *
  * Every peer is on this Mac, measured 2026-09-23 rather than assumed: the Max
- * senders — `Max Utility 1.0.maxpat` → 11019, `looping-recorder.amxd` → 11017
+ * senders — `Max Utility 1.0.maxpat` → 11019, `Vamp-Recorder.amxd` → 11017
  * — all name `udpsend 127.0.0.1`; TotalMix's remote controller 3 has
  * `OSCRemoteHost` 127.0.0.1, and lsof showed its socket connected to
  * 127.0.0.1:9003; the surface replies to `pythonSurface.host`. A peer
@@ -99,7 +99,7 @@ function createUDPPorts(config) {
             remotePort: config.pythonSurface.remotePort
         }),
 
-        // looping-recorder.amxd capture device. Bidirectional:
+        // Vamp-Recorder.amxd capture device. Bidirectional:
         // bridge sends /capture/{arm,start,stop,disarm,query} to
         // :11016; device replies with /capture/{state,file,meter,error}
         // to :11017. Mirror of pythonSurface's pair-direction model.

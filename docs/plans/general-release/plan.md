@@ -119,7 +119,7 @@ following audit §7b.
   and MidiWheels. Today Permute needs its own Place, because the longest configured root wins.
 - **The default input** `11/12 Guitar Mic` (`audio.defaultInputChannel`). **Done 2026-09-27:**
   optional, unset in the tracked config, so a new audio track keeps Live's default input; the
-  rig's local file keeps its `11/12 Guitar Mic`. It is not in `looping-recorder.amxd` (measured 2026-09-27):
+  rig's local file keeps its `11/12 Guitar Mic`. It is not in `Vamp-Recorder.amxd` (measured 2026-09-27):
   the device's Audio From routing is saved in each set (`MxDInRoutable`), so a fresh insert
   already takes Live's default.
 
@@ -165,7 +165,7 @@ fail with nothing on screen:
   MidiWheels; `random-start.adv` isn't needed (it held the device's own defaults). The rig's
   local override is gone too.
 - **`Digital.adg`,** re-saved (stock Shifter + Redux) (**S**).
-- **A template set** with `looping-recorder.amxd` on Return A, for capture (**M**, needs the rig).
+- **A template set** with `Vamp-Recorder.amxd` on Return A, for capture (**M**, needs the rig).
 - **Something to browse on day one:** Live's Packs and Core Library through Live's index. It
   covers all 82 Packs on the rig, and their presets carry Live's own role tags (measured
   2026-09-26, onboarding.plan.md §5). A starter library isn't needed for this.
@@ -221,8 +221,8 @@ fail with nothing on screen:
 
 ### The `vamp` repo
 
-**Done 2026-09-27; the rig moved 2026-09-28.** `vamp` (`ben-juodvalkis/vamp`, private until
-launch) was built from Looping's `dbae35ae` with `git archive`, with fresh history, and every
+**Done 2026-09-27; the rig moved 2026-09-28.** `vamp` (`ben-juodvalkis/vamp`, public since
+2026-09-28) was built from Looping's `dbae35ae` with `git archive`, with fresh history, and every
 change lands here now. `Looping` is frozen at that commit as the history; its checkout stays on
 disk because old Live sets and the Skaka rack point into it. Links to what stayed behind point at
 that commit on GitHub.
@@ -235,7 +235,7 @@ vamp/
   Vamp Devices/  what the app loads by itself: Permute, MidiWheels, Random Start, the recorder
                  and the one abstraction the recorder uses. The one Place a user adds in Live
   owner/         the owner's rig, off by default: ax-helper/, menubar/, Max Patches/, the
-                 Skaka picker and rack, Track Key Controls (mute-solo-control/), the
+                 Skaka picker and rack, Lock Move Knobs (mute-solo-control/), the
                  Modulation Test prototype, and the rig probes (probes/, was the surface's tools/)
   config/  scripts/  data/
   docs/
@@ -264,7 +264,7 @@ Only a user's devices go in it; the owner's live in `owner/`.
 
 **Where the tree differed from this plan (the tree won):** `docs/reference/setup.md`, which no
 list named; `data/`, which comes over but for `ableton-devices.json`; the devices the plan didn't
-name, decided from what loads them (`manydeferlows.maxpat` to `Vamp Devices/`, Track Key Controls
+name, decided from what loads them (`manydeferlows.maxpat` to `Vamp Devices/`, Track Key Controls (since replaced by Lock Move Knobs)
 and Modulation Test to `owner/`); three un-numbered ADRs, not four.
 
 **Decided (Ben, 2026-09-27):** `owner/` ships in `vamp`, switched off, with no private overlay
@@ -293,8 +293,8 @@ match Looping's exactly (2883 passed, 4 skipped).
 (an edit to `owner/Skaka Metronome Picker/` reaches the rig once the rack is re-saved from this
 folder); the Max Utility patch if Max still has Looping's copy open; any old set.
 
-**Open (Ben):** whether the `@claude` workflows go to the public repo (§7); making the repo
-public at launch.
+**Open (Ben):** whether the `@claude` workflows stay (§7). The repo went public on 2026-09-28; they
+fire only once a `CLAUDE_CODE_OAUTH_TOKEN` secret is set, which it isn't.
 
 ## 9. Checks on the rig and a clean Mac (Ben)
 

@@ -69,7 +69,7 @@ export function captureErrorMessage(code: string, detail: string): string {
 		return "Nowhere to record: this set is unsaved and Live's temp project folder wasn't found. Save the set, then record.";
 	}
 	if (code === 'sfrecord-missing') {
-		return 'The recorder device is damaged. Put a fresh looping-recorder on Return A.';
+		return 'The recorder device is damaged. Put a fresh Vamp-Recorder on Return A.';
 	}
 	return detail ? `${code}: ${detail}` : code;
 }

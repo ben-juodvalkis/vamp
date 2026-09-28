@@ -130,7 +130,7 @@ function matchesLoopingRecorder(address) {
 /** @type {RoutingRule[]} */
 const ROUTING_RULES = [
     { target: 'pythonSurface', match: matchesPythonSurface },
-    // Looping-recorder capture device (looping-recorder.amxd).
+    // Looping-recorder capture device (Vamp-Recorder.amxd).
     // /capture/{arm,disarm,start,stop,query} outbound → device on :11016.
     // Inbound /capture/{state,file,meter,error} comes in on :11017 and
     // is broadcast to WS clients via handleIncomingOSC (no router hop).

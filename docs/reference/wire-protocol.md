@@ -579,7 +579,7 @@ LOM raise — detail discriminates).
 Owned by `SimplerLoadComponent`. Two gestures land a sample on a
 Simpler: the clip view's convert button (an audio clip → a new MIDI
 track beside it) and the capture flow (a WAV from
-`looping-recorder.amxd` → a MIDI track the UI already prepared).
+`Vamp-Recorder.amxd` → a MIDI track the UI already prepared).
 Both run the same load-and-swap helper, so both report the same way.
 
 | Address                                          | Dir     | Args                          | Semantics |
@@ -1053,7 +1053,7 @@ dev/ipad script restarts.
 | -------------------------------------- | ------- | ---------------------------- | --------- |
 | `/looping/v3/session/save_as_request`  | Surf→Bridge | `tempo:int, sigNum:int, sigDen:int` | Fired on transport stop during an ipad session. **Bridge-terminated — not relayed to the UI.** The bridge owns the wall clock + a monotonic counter (persisted to `logs/save-as-counter.json`); the dialog Live's LOM cannot open is the AX helper's `save_as_dialog` verb (ADR-439): it raises Live, presses Live's own Save Live Set As menu item, waits for the panel's name field to take focus, writes `NNN_YYYY-MM-DD_<tempo>bpm_<num>-<den>` (e.g. `001_2026-07-06_120bpm_4-4`) into that field through Accessibility and reads it back, stopping **without** pressing Return — the panel stays open for the user to Enter (save) or Escape (decline). No keystroke is sent: measured 2026-09-15, a name posted to Live's process as key events never reached the panel's field. Belt-and-suspenders: the bridge re-checks `LOOPING_SERVER_MODE === 'ipad'` before acting. Accessibility trust is the helper's, not the bridge's launcher's; an untrusted or absent helper is logged as a named error (`ax-untrusted`, `ax-helper-down`) and costs no counter value. |
 
-### 2.15 Capture recorder (looping-recorder.amxd, 2026-09-27)
+### 2.15 Capture recorder (Vamp-Recorder.amxd, 2026-09-27)
 
 REC's device, on Return A, over its own UDP pair (`osc.loopingRecorder`: the
 device listens on 11016, the bridge on 11017, both loopback). Every edition has

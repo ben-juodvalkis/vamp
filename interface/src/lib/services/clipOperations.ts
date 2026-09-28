@@ -285,7 +285,7 @@ function addRecentFromClip(clipPath: string): void {
  * Load a just-captured WAV file into a new Simpler on a prepared MIDI track.
  *
  * Called from captureStore when /capture/file arrives from
- * looping-recorder.amxd. Composes two existing pieces:
+ * Vamp-Recorder.amxd. Composes two existing pieces:
  *
  * 1. `prepareTrack('midi')` — finds or creates an empty MIDI track
  *    (dedup-locked, reuses empty tracks via clipStateStore, returns the
@@ -426,7 +426,7 @@ const AUTO_TRIM_TIMEOUT_MS = 5000;
 
 interface ArmAutoStartMarkerArgs {
 	/** Absolute filesystem path of the sample, when known up front.
-	 * Capture flow has it from looping-recorder's `/capture/file` and
+	 * Capture flow has it from Vamp-Recorder's `/capture/file` and
 	 * uses it to filter both the ack and the echo fallback. Convert
 	 * flow doesn't (clip.file_path is server-side only) and takes
 	 * whatever path its ack reports. */

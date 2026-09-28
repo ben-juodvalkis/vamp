@@ -1,5 +1,5 @@
 /**
- * The capture recorder: looping-recorder.amxd on Return A, behind REC
+ * The capture recorder: Vamp-Recorder.amxd on Return A, behind REC
  * (general-release plan.md §4, `captureRecorder`).
  *
  * Every edition has it — it is our own device and needs only Max for Live —

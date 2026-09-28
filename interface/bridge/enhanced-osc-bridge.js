@@ -12,7 +12,7 @@
  * - MIDI Converter (pitch/mod wheel)
  * - TotalMix mixer and its Max device (ADR-423), while `features.totalmix`
  *   is on (general-release audit §7b; utils/features.js)
- * - looping-recorder capture device
+ * - Vamp-Recorder capture device
  *
  * The Max observer (liveAPI-v6.js), the Omnisphere/NI preset servers and
  * the shell helper were removed 2026-09-23 (general-release audit Tier 0):
@@ -456,11 +456,11 @@ function replayAutoCaptureOverride(value) {
 // check that runs before the message hits handleIncomingOSC. Sources
 // not present here use the bare path.
 const INBOUND_MIDDLEWARE = {
-    // /capture/{state,file,error} from looping-recorder.amxd, and its
+    // /capture/{state,file,error} from Vamp-Recorder.amxd, and its
     // hello/bye, which the recorder handler consumes. Debug level so the
     // once-a-second hello doesn't flood; LOG_LEVEL=DEBUG to see it.
     loopingRecorder: (msg) => {
-        logger.debug('Capture event from looping-recorder', { address: msg.address, args: msg.args });
+        logger.debug('Capture event from Vamp-Recorder', { address: msg.address, args: msg.args });
         return captureRecorder.onDeviceMessage(msg);
     },
     // Returns true when the message is fully consumed bridge-side and

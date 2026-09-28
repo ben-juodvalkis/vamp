@@ -41,7 +41,7 @@
 	let isHolding = $state(false);
 	let holdTriggered = $state(false);
 
-	// The recorder is the looping-recorder device on Return A. Until the
+	// The recorder is the Vamp-Recorder device on Return A. Until the
 	// bridge has heard it say hello, REC is greyed out and says why, instead
 	// of latching "recording" over a device that isn't there
 	// (general-release plan.md §4, `captureRecorder`).

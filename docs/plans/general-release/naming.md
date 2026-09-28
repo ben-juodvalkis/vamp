@@ -61,8 +61,8 @@ hold marks in its own field.
 
 ## 3. Repo and folders
 
-- **Done 2026-09-27:** the fresh repo ([audit.md](audit.md) §5.2) is `vamp`, private until
-  launch. `Looping` stays as it is, private, as the history.
+- **Done 2026-09-27:** the fresh repo ([audit.md](audit.md) §5.2) is `vamp`, public since
+  2026-09-28. `Looping` stays as it is, private, as the history.
 - **The clone moved 2026-09-28.** The rig runs from `/Users/Shared/DevWork/GitHub/vamp`; the
   config derives every repo path from the checkout, and the loads name the `Vamp Devices` Place
   ([plan.md](plan.md) §8). The Skaka rack still points into Looping's checkout, which stays on disk.
@@ -91,9 +91,10 @@ An iPad that already has the icon keeps the old label until it's added to the ho
   the owner's overlay keeps "Looping Presets".
 
 **Keep "looping" internal:**
-- The `/looping/v3/…` wire namespace, `surface/`, `LoopingSurface.py`,
-  `looping-recorder.amxd` and the other file names. Renaming them gains users nothing, and it
-  would mean a wire-protocol change and a lot of test churn.
+- The `/looping/v3/…` wire namespace, `LoopingSurface.py` and the other internal names.
+  Renaming them gains users nothing, and it would mean a wire-protocol change and a lot of test
+  churn. What a user handles is renamed: the surface is `surface/`, linked as Vamp, and the
+  recorder a user drops onto Return A is `Vamp Devices/Vamp-Recorder/` (Ben, 2026-09-28).
 - The AX helper's `appName` and `bundleId` (`scripts/install-ax-helper.sh:30-31`). A new bundle
   id means granting Accessibility again.
 - The `looping-studio` hostname, which plan.md §2 removes anyway.

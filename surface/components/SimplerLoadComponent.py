@@ -309,7 +309,7 @@ class SimplerLoadComponent:
         Capture-flow variant of ``handle_replace_sample``: caller already
         has a prepared MIDI track (typically via the UI's
         ``prepareTrack('midi')``) and a filesystem path to a WAV written
-        by looping-recorder.amxd. No clip resolution, no adjacent-insert
+        by Vamp-Recorder.amxd. No clip resolution, no adjacent-insert
         logic. Delegates to the same ``_load_simpler_onto_track`` helper
         as the clip-path handler.
         """
