@@ -48,7 +48,7 @@ const INSTRUMENT = {
 };
 
 /** Drift's own indices matter to the view; the fixture just fills the rail. */
-function driftTrack(): TrackRecord {
+function driftTrack(voiceMode?: number): TrackRecord {
 	const params = new SvelteMap<string, ParamRecord>();
 	for (let i = 0; i <= 63; i++) {
 		const paramPath = `${DEVICE}/params/${i}`;
@@ -68,7 +68,9 @@ function driftTrack(): TrackRecord {
 		name: 'Drift',
 		className: 'InstrumentVectorDevice',
 		params,
-		properties: new SvelteMap<string, OSCArg>()
+		properties: new SvelteMap<string, OSCArg>(
+			voiceMode === undefined ? [] : [['voice_mode_index', voiceMode]]
+		)
 	};
 	return {
 		trackPath: TRACK,
@@ -174,5 +176,37 @@ describe('DriftCentralView — the level mixer aims the oscillator card', () => 
 		await touchDown(slider(container, 'Noise'));
 
 		expect(shownOsc(container)).toBe(2);
+	});
+});
+
+/**
+ * The voicing group draws only what the voice mode can use (user,
+ * 2026-09-28): Poly has no parameter for the mode slider, so it is not
+ * drawn, and its width goes to the Time and Filter pads.
+ */
+describe('DriftCentralView — the voicing sliders follow the voice mode', () => {
+	function titles(container: HTMLElement): string[] {
+		return Array.from(container.querySelectorAll<HTMLElement>('.voicing-card [role="slider"]')).map(
+			(s) => s.getAttribute('aria-label')?.split(':')[0] ?? ''
+		);
+	}
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		_resetForTests();
+	});
+	afterEach(() => cleanup());
+
+	it.each([
+		[0, ['Drift']],
+		[1, ['Thick', 'Glide', 'Drift']],
+		[2, ['Spread', 'Drift']],
+		[3, ['Strength', 'Drift']]
+	])('voice mode %i draws %j', async (mode, expected) => {
+		replaceTree(GENERATION, [driftTrack(mode)]);
+		selectedTrackStore.handleTrackSelected(0);
+		const { container } = render(DriftCentralView, { props: { instrument: INSTRUMENT } });
+		await tick();
+		expect(titles(container)).toEqual(expected);
 	});
 });

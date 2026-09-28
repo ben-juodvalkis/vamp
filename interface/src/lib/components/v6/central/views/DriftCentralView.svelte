@@ -293,10 +293,10 @@
   //     Mono (1)   → "Thick"     param 59
   //     Stereo (2) → "Spread"    param 57
   //     Unison (3) → "Strength"  param 58
-  //     Poly (0)   → nothing — reads "Voicing", ghosted, writes nothing
+  //     Poly (0)   → nothing — the slider is not drawn
   //
-  // Poly renders anyway rather than disappearing, so the card's height
-  // does not change when the mode does.
+  // Poly hides it (user, 2026-09-28): a ghost that wrote nothing cost the
+  // default mode a slider's width, which the Time and Filter pads needed.
   let stereoSpread = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 57)) ?? 0.5 : 0.5);
   let unisonStrength = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 58)) ?? 0.5 : 0.5);
   let monoThickness = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 59)) ?? 0.5 : 0.5);
@@ -387,7 +387,7 @@
     selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, param), value);
   }
 
-  // Voicing-mode contextual slider — always renders, dims for Poly so layout is stable.
+  // Voicing-mode contextual slider — not drawn in Poly.
   let voicingSliderValue = $derived(
     voiceMode === 1 ? monoThickness :
     voiceMode === 2 ? stereoSpread :
@@ -447,7 +447,7 @@
            oscillators are actually SOUNDING is a different question, and
            the tab says so on its own: an oscillator that is switched off
            reads dim, whether or not it is the one on screen. -->
-      <div class="drift-card osc-card flex-[4.5] min-h-0 flex flex-col gap-(--central-gap)"
+      <div class="drift-card osc-card flex-[2] min-w-[212px] min-h-0 flex flex-col gap-(--central-gap)"
            style="--drift-ink: {oscInk.primary};">
         <!-- The swap pill lies across the top of the oscillator card (user's
              layout, 2026-09-16): the card is the view's leading column. -->
@@ -580,15 +580,10 @@
            is deliberate until asked otherwise: an oscillator at zero is
            the ordinary way to park one, and silently switching it off
            would change what a preset saves. -->
-      <!-- FRAMES OFF, SEAMS IN (2026-09-13). The three groups were
-           tinted, framed cards; each cost a border, an ink wash and
-           8px of padding around controls that are themselves framed
-           boxes. A hairline says the same thing and gives the pads
-           and faders back the height. -->
-      <SectionDivider orientation="vertical" ink={driftInk.primary} />
-
+      <!-- No seam between the oscillator card and the mixer (user,
+           2026-09-28): they are one sources group, which the source
+           colours already say, and the seam's width went to the pads. -->
       <div class="drift-card mixer-card flex-none min-h-0 flex flex-col gap-2" style="--drift-ink: {driftInk.primary};">
-        <div class="drift-title text-xs font-bold tracking-wider text-center" style="color: {driftInk.primary};">Levels</div>
         <div class="flex-1 min-h-0 flex gap-(--central-gap)">
           <!-- Touching either oscillator's level brings ITS card up on the
                left (`onDown`, so the switch lands on the touch rather than
@@ -645,7 +640,7 @@
       <!-- Time over Filter, equal halves of one column, with the filter's
            type switch at its foot: under the pad it belongs to, and below
            both pads rather than inside one, so the two stay the same height. -->
-      <div class="flex-[2] min-h-0 flex flex-col" style="gap: var(--central-gap);">
+      <div class="flex-[3] min-h-0 flex flex-col" style="gap: var(--central-gap);">
         <div class="flex-1 min-h-0">
           <DeviceXY
             xValue={timeXValue}
@@ -689,8 +684,11 @@
            rather than being one of its controls, and the wheels' column
            was the only fixed-width block in the row with height to spare. -->
       <div class="drift-card voicing-card flex-none min-h-0 flex flex-col gap-2" style="--drift-ink: {driftInk.primary};">
-        <!-- Contextual slider — always rendered; ghosted in Poly so layout is stable -->
+        <!-- The mode's own slider, absent in Poly (it has nothing to write
+             there). The card is as wide as the sliders it draws, so
+             switching mode moves the pads' right edge. -->
         <div class="flex-1 min-h-0 flex gap-(--central-gap)">
+          {#if voiceMode !== 0}
           <div class="voicing-slider min-h-0">
             <DeviceSlider
               value={voicingSliderValue}
@@ -705,10 +703,10 @@
               }}
             />
           </div>
+          {/if}
           <!-- Glide sits beside the mode's own parameter because it is
                another property of the voice, and it is drawn only in
-               Mono. The card is sized for three sliders whatever the
-               mode, so its appearing and disappearing moves nothing. -->
+               Mono. -->
           {#if voiceMode === 1}
             <div class="voicing-slider min-h-0">
               <DeviceSlider
@@ -747,7 +745,7 @@
         <div class="grid grid-cols-2 gap-1 flex-none">
           {#each VOICE_MODE_OPTIONS as option}
             <button
-              class="physical-button px-2 py-2 text-xs text-center"
+              class="physical-button mode-button px-1 text-center"
               class:active={voiceMode === option.value}
               style="--btn-tint: {driftInk.primary};"
               onclick={() => {
@@ -760,14 +758,14 @@
           {/each}
         </div>
         <div class="flex-1 min-h-0 flex gap-(--central-gap)">
-          <div class="w-20 h-full">
+          <div class="wheel-col h-full">
             <MidiWheel
               type="pitch"
               onInteraction={handlePitchChange}
               color={pitchInk}
             />
           </div>
-          <div class="w-20 h-full">
+          <div class="wheel-col h-full">
             <MidiWheel
               type="modwheel"
               onInteraction={handleModChange}
@@ -783,12 +781,6 @@
 </div>
 
 <style>
-  /* GRATICULE: section titles are authored mixed-case ("Voice"; "OSC" is
-     an acronym and stays) and up-cased here for the HUD voice. */
-  .drift-title {
-    text-transform: uppercase;
-  }
-
   /* ---- ONE slider width for the whole view (2026-09-12). Nothing here
      used to declare one: every vertical slider was whatever its card's
      flex share happened to divide into, which gave four different
@@ -801,7 +793,7 @@
      56px is the house figure — `--vm-slider-w`, what the Drum Rack view
      gives a vertical slider. A slider is pinned to it and the things
      that genuinely want width (the wave and octave choosers) take what
-     is left. */
+     is left. The wheels take it too. */
   .drift-root {
     --drift-slider-w: 56px;
   }
@@ -880,20 +872,12 @@
     font-size: 0.75rem;
     font-weight: 600;
   }
-  /* The voicing sliders are the ONE exception to the view's fixed slider
-     width (user, 2026-09-12): they divide their card instead, so two
-     modes' worth of controls and three both fill it. The card is a fixed
-     width — sized for the widest case, Mono's three — so the row never
-     reflows when the mode changes; what changes is how wide each slider
-     is inside it, which is the honest reading of "there are two of these
-     now, not three". Everywhere else in this view a slider is pinned,
-     because everywhere else the count does not change. */
+  /* The voicing sliders are pinned like every other (user, 2026-09-28).
+     They used to divide a card sized for Mono's three, which drew Poly's
+     two at 92px beside the mixer's 56. The card is now as wide as its
+     sliders, so a mode change moves the Time/Filter column's edge. */
   .voicing-slider {
-    flex: 1 1 0;
-    min-width: 0;
-  }
-  .voicing-card {
-    width: calc(3 * var(--drift-slider-w) + 2 * var(--central-gap));
+    flex: 0 0 var(--drift-slider-w);
   }
   /* The level mixer: three channels at the view's slider width, and the
      column exactly as wide as them — three sliders, TWO gaps. It said four
@@ -918,6 +902,13 @@
     font-size: 0.75rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
+  }
+  .wheel-col {
+    width: var(--drift-slider-w);
+  }
+  .mode-button {
+    min-height: var(--height-touch);
+    font-size: 0.8125rem;
   }
   .wave-glyph {
     width: 100%;
@@ -1000,14 +991,8 @@
      all flat on their own, and since 2026-09-13 the three section groups
      have no frame of their own either: the seams between them are
      `SectionDivider`s, which carry their own flat fork. What is left here
-     is the TITLE, which keeps the track colour but drops bold, tracking
-     and the upper-casing. Every rule sits under [data-grammar="flat"] /
-     [data-skin]. */
-  :global([data-grammar="flat"]) .drift-title {
-    font-weight: var(--font-weight-medium);
-    letter-spacing: 0;
-    text-transform: none;
-  }
+     is the segmented strips' dividers and the source colours. Every rule
+     sits under [data-grammar="flat"] / [data-skin]. */
   :global([data-grammar="flat"]) .octave-row .device-segment + .device-segment,
   :global([data-grammar="flat"]) .filter-type-row .device-segment + .device-segment {
     border-top: 0;
