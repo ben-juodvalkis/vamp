@@ -67,7 +67,8 @@ merges it with `git merge` (no rebase).
   edition. Start at its `README.md`.
 - `docs/reference/extending-devices.md`: adding a device control (or the
   `add-looping-device` skill)
-- `docs/reference/lom-reference.md`: the Live Object Model as the surface sees it
+- `docs/reference/live-api-measurements.md`: what Live's API does that its docs
+  don't say, measured on the rig. Ask the running Live with the surface's probes
 - `docs/reference/manual-test-checklist.md`: the rig smoke test
 - `docs/adr/`: every decision record. The next number is one past the
   highest file there (454 on 2026-09-27)

@@ -8,7 +8,7 @@
  * the picker UI so the two can't drift.
  *
  * Order is Live's own, coarse → fine. See
- * `docs/reference/lom-reference.md` "Quantization Values".
+ * `docs/reference/live-api-measurements.md` "Quantization values".
  */
 
 export const LAUNCH_QUANTIZATIONS = [

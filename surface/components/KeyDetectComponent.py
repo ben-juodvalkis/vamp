@@ -130,7 +130,7 @@ def _read_loop(clip):
 def _read_notes(clip, start, end):
     """The clip's notes inside ``[start, end)`` as plain dicts, or ``None``
     when the LOM refused. ``get_notes_extended`` is the windowed four-arg
-    form (lom-reference.md); a wrong arity raises TypeError, which is in
+    form (Cycling '74's LOM docs); a wrong arity raises TypeError, which is in
     ``_LOM_ERRORS``."""
     try:
         specs = clip.get_notes_extended(0, 128, start, end - start)

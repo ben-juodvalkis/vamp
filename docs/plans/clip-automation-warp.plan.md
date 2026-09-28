@@ -8,8 +8,8 @@ editing deferred").
 **Status:** Proposed, 2026-09-27. Live's API was measured on the rig first;
 nothing is built. Three decisions below are Ben's to make before design.
 **Owner:** Ben.
-**Measured facts:** `lom-reference.md`, the **Envelope** section and the Clip
-function rows for warp markers. This plan summarizes them; the reference has
+**Measured facts:** `docs/reference/live-api-measurements.md`, the **Envelope** and
+**Clip** sections. This plan summarizes them; the reference has
 the numbers.
 
 ---

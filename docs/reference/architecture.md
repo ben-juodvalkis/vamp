@@ -528,6 +528,6 @@ See [wire-protocol.md §8.6](wire-protocol.md#86-surface-instance-advertisement-
   and WebSocket wire.
 - [ui-architecture.md](ui-architecture.md) — how the SvelteKit
   side is organized.
-- [lom-reference.md](lom-reference.md) — Live Object Model
-  reference the Python surface is written against.
+- [live-api-measurements.md](live-api-measurements.md): what the Live
+  Object Model does that its docs don't say, measured on the rig.
 - [setup.md](setup.md) — install, iPad network, common problems.

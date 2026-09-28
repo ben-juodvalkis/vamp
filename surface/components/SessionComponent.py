@@ -215,7 +215,7 @@ _WIRE_SCALE_NAME = "scale_name"
 
 _VALID_SIG_DENS = (1, 2, 4, 8, 16)
 # ``song.clip_trigger_quantization`` enum bound. Live 12 exposes 14
-# values; see docs/reference/lom-reference.md "Quantization Values".
+# values; see docs/reference/live-api-measurements.md "Quantization values".
 _TRIGGER_QUANT_MAX = 13
 
 # Attrs that must still seed + echo when their LOM listener fails to

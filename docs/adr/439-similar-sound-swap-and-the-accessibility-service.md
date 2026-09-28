@@ -356,7 +356,7 @@ N+1's, which was open question H3. The first run measured `panelMs` 1593 and a
 disturbed.
 
 **Undo steps do not nest.** `begin`/`begin`/write/`end`/write/`end` produced
-**two** undo entries, not one — see `docs/reference/lom-reference.md`. The step
+**two** undo entries, not one — see `docs/reference/live-api-measurements.md`. The step
 this ADR holds open across a swap is therefore not safe against anything else
 that opens and closes its own (a Drum Rack macro move does). The window is now
 bounded at 45 s and measured at 6.8 s cold; the redesign that would remove the

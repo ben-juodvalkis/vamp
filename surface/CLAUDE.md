@@ -737,8 +737,8 @@ lag" bug structurally impossible.
 
 Three LOM traps, all verified against Live 12.4.5b8 by probing the
 running set (`owner/probes/lom_introspect_probe.js` / the generic
-`/looping/probe/lom_introspect` address) — the repo's
-`lom-reference.md` did not list `fold_state` at all:
+`/looping/probe/lom_introspect` address) — Cycling '74's
+LOM docs did not list `fold_state` at all:
 
 1. **`fold_state` raises on a non-foldable track.** Not absent —
    raising. `getattr(track, "fold_state", False)` does *not* swallow
@@ -777,7 +777,7 @@ line, so the next Play resumes at the end of the take with a bar of lead-in
 instead of restarting at 1.1.1. Bar length is `sig_num * 4 / sig_den` beats;
 the math is the pure `compute_rewound_start()` free function next to the
 component. Two facts read off the Live 12 binary's own LOM docstrings, not
-`lom-reference.md`:
+Cycling '74's LOM docs:
 
 - `last_event_time` is "the time of the last set event in the song" with
   **no** display padding — `song_length` is the one that adds extra beats
@@ -1970,7 +1970,7 @@ names a Place after its folder, so the folder's name is what the loads name
 
 - **ES5 only** - no `const`/`let`, no arrow functions, no template literals, no modules
 - Cannot import JSON or external files
-- LOM API docs: `docs/reference/lom-reference.md`
+- LOM API docs: Cycling '74's [LOM reference](https://docs.cycling74.com/apiref/lom/); what the rig measured beyond it is `docs/reference/live-api-measurements.md`
 - Permute (sequencer) lives in this repo since permute ADR-020 (`Vamp Devices/Permute/`); the standalone repo at https://github.com/ben-juodvalkis/permute is frozen at its last tag
 
 ## A Permute inside a drum pad's chain (ADR-435, 2026-09-14)

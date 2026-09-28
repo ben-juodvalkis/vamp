@@ -50,7 +50,7 @@ callback's job — wired in ``LoopingSurface`` — is to:
 
 ## Why a tick poll rather than a listener
 
-[lom-reference.md](../../docs/reference/lom-reference.md) does not
+Cycling '74's LOM docs do not
 document any ``Application`` listener that fires on ``get_document``
 change. The Gate 4c verdict ([06 §2.1]) confirmed the framework
 rebinds ``@listens``-decorated listeners across song load but raw

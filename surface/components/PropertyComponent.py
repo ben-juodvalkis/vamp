@@ -400,8 +400,8 @@ ALLOWLIST: Dict[Tuple[str, str], PropertySpec] = {
         coerce_to_int=True,
     ),
     # Hybrid Reverb — 5 scalar properties, all direct device
-    # attributes. Per LOM HybridReverbDevice (lom-reference.md
-    # §HybridReverbDevice). Driven by the convolution-mode controls in
+    # attributes. Per the LOM's HybridReverbDevice (Cycling '74's LOM
+    # docs). Driven by the convolution-mode controls in
     # ReverbCentralView (category / file selectors, attack / decay
     # envelopes) and the IR size slider in ReverbControl. The
     # non-scalar properties on the same device (`ir_category_list`,
