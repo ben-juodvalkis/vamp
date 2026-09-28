@@ -43,7 +43,7 @@ import { logger } from '$lib/utils/logger';
 		vmStateAcceptsWrites
 	} from '$lib/services/drumVirtualMacros';
 	import SectionDivider from '../SectionDivider.svelte';
-	import { longestWordLength } from '$lib/utils/fitText';
+	import { fitText } from '$lib/utils/fitText';
 
 	let editorActive = $derived(clipEditorStore.active);
 	let trackColor = $derived.by(() => {
@@ -502,7 +502,7 @@ import { logger } from '$lib/utils/logger';
 							disabled={!hasClip}
 							class="btn btn-switch clip-switch font-bold text-base"
 							class:active={warpMode === option.value}
-						><span class="fit-label" style:--chars={longestWordLength(option.label)}>{option.label}</span></button>
+						><span class="fit-label" style:--fit-pad="0px" use:fitText={option.label}>{option.label}</span></button>
 					{/each}
 				</div>
 			{/if}
@@ -686,7 +686,7 @@ import { logger } from '$lib/utils/logger';
 							disabled={!hasClip || isSampling}
 							class="btn btn-well fam-monitor font-bold {isSampling ? 'cursor-wait' : ''}"
 							aria-label="Sample to Simpler"
-						>{#if isSampling}...{:else}<span class="flex flex-col items-center leading-tight btn-caps fit-label" style:--chars={longestWordLength('to Simpler')}><span>to</span><span>Simpler</span></span>{/if}</button>
+						>{#if isSampling}...{:else}<span class="flex flex-col items-center leading-tight btn-caps fit-label" style:--fit-pad="0px" use:fitText={'to Simpler'}><span>to</span><span>Simpler</span></span>{/if}</button>
 					</div>
 				{/if}
 			</div>
@@ -721,7 +721,7 @@ import { logger } from '$lib/utils/logger';
 						onclick={() => handleBaseGridChange(option.value)}
 						disabled={!hasClip}
 						class="btn btn-switch clip-switch font-bold text-base {baseGrid === option.value ? 'active' : ''}"
-					><span class="fit-label" style:--chars={longestWordLength(option.label)}>{option.label}</span></button>
+					><span class="fit-label" style:--fit-pad="0px" use:fitText={option.label}>{option.label}</span></button>
 				{/each}
 			</div>
 		</div>

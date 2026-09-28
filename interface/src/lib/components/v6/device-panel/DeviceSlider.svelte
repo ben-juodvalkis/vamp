@@ -3,7 +3,7 @@
   import { familyScheme, type DeviceColorScheme } from '$lib/config/devicePresets';
   import MeterVisualization from '$lib/components/v6/looping/MeterVisualizationV6.svelte';
   import { createSliderThrottle } from '$lib/utils/sliderThrottle';
-  import { longestWordLength } from '$lib/utils/fitText';
+  import { fitText } from '$lib/utils/fitText';
 
   // Minimal track interface for meter visualization
   interface MeterTrack {
@@ -303,7 +303,7 @@
          readable once the fill rises over them. No inverse in meter mode. -->
     {#if title || label}
       <div class="slider-label label-{effectiveLabelOrientation} label-{labelSize}">
-        <span class="slider-label-text"><span class={fitClass} style:--chars={label ? 1 : longestWordLength(title)}>{#if label}{@render label()}{:else}{title}{/if}</span></span>
+        <span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={title}>{title}</span>{/if}</span>
       </div>
       {#if showFill}
         <div
@@ -311,7 +311,7 @@
           style="clip-path: {inverseClip};"
           aria-hidden="true"
         >
-          <span class="slider-label-text"><span class={fitClass} style:--chars={label ? 1 : longestWordLength(title)}>{#if label}{@render label()}{:else}{title}{/if}</span></span>
+          <span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={title}>{title}</span>{/if}</span>
         </div>
       {/if}
     {/if}
@@ -482,6 +482,14 @@
   /* Ghost: full device tint, no dim — reads clearly on the empty well (matches XY). */
   .slider-container.ghost .slider-label-text {
     color: var(--slider-tint, var(--foreground));
+  }
+
+  /* The fit wrapper (app.css `.fit-label`) hands its size to the text and
+     draws no box of its own, so a label the cap leaves alone lays out
+     exactly as it did without it — "Pitch 0" wraps where it always did. */
+  .slider-label-text > :global(.fit-label),
+  .slider-label-text > :global(.fit-label-v) {
+    display: contents;
   }
 
   /* Vertical label: text runs vertically (bottom to top). */
