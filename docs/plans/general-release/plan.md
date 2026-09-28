@@ -235,7 +235,7 @@ vamp/
   Vamp Devices/  what the app loads by itself: Permute, MidiWheels, Random Start, the recorder
                  and the one abstraction the recorder uses. The one Place a user adds in Live
   owner/         the owner's rig, off by default: ax-helper/, menubar/, Max Patches/, the
-                 Skaka picker and rack, Track Key Controls (mute-solo-control/), the
+                 Skaka picker and rack, Lock Move Knobs (mute-solo-control/), the
                  Modulation Test prototype, and the rig probes (probes/, was the surface's tools/)
   config/  scripts/  data/
   docs/
@@ -264,7 +264,7 @@ Only a user's devices go in it; the owner's live in `owner/`.
 
 **Where the tree differed from this plan (the tree won):** `docs/reference/setup.md`, which no
 list named; `data/`, which comes over but for `ableton-devices.json`; the devices the plan didn't
-name, decided from what loads them (`manydeferlows.maxpat` to `Vamp Devices/`, Track Key Controls
+name, decided from what loads them (`manydeferlows.maxpat` to `Vamp Devices/`, Track Key Controls (since replaced by Lock Move Knobs)
 and Modulation Test to `owner/`); three un-numbered ADRs, not four.
 
 **Decided (Ben, 2026-09-27):** `owner/` ships in `vamp`, switched off, with no private overlay

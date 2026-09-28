@@ -1956,8 +1956,9 @@ names a Place after its folder, so the folder's name is what the loads name
   It is **no longer** in `Looping Presets/Effect Patches/`
   (`paths.effectPresetsBase`), so the interface's effect-patch browser
   does not list it.
-- `mute-solo-control/` - `Track Key Controls.amxd`, a hand-placed device on
-  the rig template's Return A. No code talks to it.
+- `mute-solo-control/` - `Lock Move Knobs.amxd` (running `mute-solo-control.js`), a
+  hand-placed device in the rig template: Track Key Controls' mute/solo keys with the Move's four
+  dials on its face. No code talks to it. It replaced Track Key Controls on 2026-09-28.
 - `Modulation Test.amxd` - the `live.modulate~` prototype
   `docs/plans/clip-automation-warp.plan.md` cites.
 - `Max Patches/` - the Max Utility patch and its scripts
