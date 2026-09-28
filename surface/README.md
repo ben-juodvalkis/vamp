@@ -31,7 +31,7 @@ Symlink this directory into Live's User Library Remote Scripts folder:
 
 Then: Live → Preferences → Link/Tempo/MIDI → pick `Looping` in any
 empty Control Surface slot. Input and Output stay `None`. Check
-Live's log file for the line `Looping surface init` to confirm the
+Live's log file for the line `Vamp surface init` to confirm the
 script loaded. AbletonOSC and the Max4Live observer stay enabled
 alongside — the Python surface is additive throughout the migration.
 

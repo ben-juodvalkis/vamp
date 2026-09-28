@@ -1000,9 +1000,12 @@ function shutdown(signal) {
     logger.info('Shutting down Enhanced OSC Bridge...', { signal });
 
     const steps = [
+        // A published Service has `stop()`, not `destroy()` (bonjour-service
+        // 1.3): calling `destroy` threw on every shutdown and skipped
+        // `bonjour.destroy()`, so the goodbye never went out.
         ['bonjour', () => {
-            wsService?.destroy();
-            httpService?.destroy();
+            wsService?.stop?.();
+            httpService?.stop?.();
             bonjour?.destroy();
         }],
         // Drain any pending batched frames before closing the WS server

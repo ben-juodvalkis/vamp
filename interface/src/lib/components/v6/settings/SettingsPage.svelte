@@ -75,14 +75,17 @@
 			surfaceProtocol: handshakeState.phase === 'accepted' ? handshakeState.negotiatedVersion : null,
 			m4l: places.listing?.m4lDevices ?? null,
 			tickedCount: places.tickedCount,
-			footLearned: session.footSwitch.cc >= 0
+			footLearned: session.footSwitch.cc >= 0,
+			recorderReady: bridgeStatus.feature('captureRecorder').available
 		})
 	);
 	const progress = $derived(firstRunProgress(steps));
 
-	// The Connection tab's mark: a problem outranks a wait.
+	// The Connection tab's mark: a problem outranks a wait. The recorder is
+	// optional, so its absence is its own row's news, not the tab's.
 	const connectionState = $derived.by((): 'ok' | 'waiting' | 'problem' => {
 		const anyUnavailable = Object.keys(bridgeStatus.features).some((id) => {
+			if (id === 'captureRecorder') return false;
 			const f = bridgeStatus.feature(id);
 			return f.enabled && !f.available;
 		});
@@ -161,7 +164,7 @@
 	data-section={current}
 >
 	<header class="set-head">
-		<h1 class="set-title">{setup ? 'Welcome — set up Looping' : 'Settings'}</h1>
+		<h1 class="set-title">{setup ? 'Welcome — set up Vamp' : 'Settings'}</h1>
 		<div class="set-head-actions">
 			{#if finishError}<span class="set-head-error" role="alert">{finishError}</span>{/if}
 			{#if !setup}

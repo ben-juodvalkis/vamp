@@ -3,11 +3,25 @@
 const { networkInterfaces } = require('os');
 
 /**
+ * The Mac's side of the iPad's USB-C link: `network.ipad.usbc` (the address
+ * INSTALLATION.md has you set), else only a self-assigned 169.254 address
+ * counts — the rule Settings uses (`interface/src/lib/server/networkAddresses.ts`).
+ */
+function configuredUsbc() {
+    try {
+        return require('../interface/bridge/utils/constants').loadConstants().network?.ipad?.usbc || '';
+    } catch {
+        return '';
+    }
+}
+
+/**
  * Detect and report available network interfaces for iPad setup
  * Returns WiFi and USB-C interface addresses with clear access URLs
  */
 function detectInterfaces() {
     const interfaces = networkInterfaces();
+    const usbc = configuredUsbc();
     const result = {
         wifi: null,
         usb: null,
@@ -24,15 +38,14 @@ function detectInterfaces() {
 
             const ip = addr.address;
 
+            // USB-C/iPad interface: the configured address, or link-local 169.254.x.x
+            if (ip === usbc || ip.startsWith('169.254.')) {
+                result.usb = { name, ip };
+            }
             // WiFi interface (usually en0 on Mac, starts with 192.168 or 10.x)
-            if ((name.startsWith('en') || name.includes('wifi')) && 
+            else if ((name.startsWith('en') || name.includes('wifi')) &&
                 (ip.startsWith('192.168.') || ip.startsWith('10.'))) {
                 result.wifi = { name, ip };
-            }
-
-            // USB-C/iPad interface (link-local 169.254.x.x)
-            if (ip.startsWith('169.254.')) {
-                result.usb = { name, ip };
             }
         }
     }

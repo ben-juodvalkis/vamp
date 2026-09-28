@@ -222,9 +222,9 @@ describe('Settings on a first run', () => {
 		await waitFor(() => expect(settingsStore.firstRun).toBe(false));
 
 		expect(getByRole('tab', { name: /Setup/ })).toBeTruthy();
-		expect(getByText(/set up Looping/)).toBeTruthy();
+		expect(getByText(/set up Vamp/)).toBeTruthy();
 		expect(queryByRole('button', { name: 'Set up later' })).toBeNull();
 		expect(getByRole('button', { name: 'Finish setup' })).not.toBeDisabled();
-		expect(getByRole('tab', { name: /Setup/ }).textContent).toContain('2/4');
+		expect(getByRole('tab', { name: /Setup/ }).textContent).toContain('1/3');
 	});
 });

@@ -14,6 +14,7 @@
 	import MasterTrack from '$lib/components/v6/tracks/MasterTrack.svelte';
 	import V3ErrorBanner from '$lib/components/v6/session/V3ErrorBanner.svelte';
 	import GroupModeBanner from '$lib/components/v6/session/GroupModeBanner.svelte';
+	import LiveConnectionBanner from '$lib/components/v6/session/LiveConnectionBanner.svelte';
 	import SessionHeaderV6 from '$lib/components/v6/session/SessionHeaderV6.svelte';
 	import SceneRail from '$lib/components/v6/tracks/SceneRail.svelte';
 	import TotalMixStrip from '$lib/components/v6/looping/TotalMixStrip.svelte';
@@ -244,6 +245,10 @@
 
 	<!-- V3 transient error banner (e.g. pool-exhausted) -->
 	<V3ErrorBanner />
+
+	<!-- Live, its surface or the bridge not connected: says so and why,
+	     instead of an empty screen. -->
+	<LiveConnectionBanner />
 
 	<!-- Group mode: a held-modifier gesture that changes what every track
 	     tap means app-wide, so it needs its own persistent, unmissable

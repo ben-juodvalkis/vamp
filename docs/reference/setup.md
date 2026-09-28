@@ -39,7 +39,7 @@ Vamp**, and add this checkout's `Vamp Devices` folder as a Place. Output stays *
 too, unless a pedal is on USB (§5, USB pedal).
 
 If validation passes and Live's log shows
-`INFO:looping: - Looping surface init`, skip to §7 for iPad.
+`INFO:looping: - Vamp surface init`, skip to §7 for iPad.
 
 ## 3. Install dependencies
 
@@ -95,7 +95,7 @@ After install, in Live:
    USB (next step).
 4. Check `~/Library/Preferences/Ableton/Live <version>/Log.txt` for:
    ```
-   INFO:looping: - Looping surface init
+   INFO:looping: - Vamp surface init
    ```
 
 ### USB pedal (optional, ADR-422)
@@ -204,7 +204,7 @@ This:
 5. Opens the page and Ableton Live (and, with their switches on, the owner's Max patch and
    menu-bar app). The first run opens Settings as a checklist.
 
-Live's log should show `Looping surface init` and the bridge log
+Live's log should show `Vamp surface init` and the bridge log
 (`logs/bridge.log`) should show `Bridge process starting` with no
 errors.
 

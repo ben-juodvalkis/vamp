@@ -140,6 +140,7 @@
 </script>
 
 <svelte:head>
+	<title>Vamp</title>
 	<link rel="icon" href={favicon} />
 </svelte:head>
 

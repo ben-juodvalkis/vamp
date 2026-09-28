@@ -81,7 +81,7 @@
 
 <div class="set-section set-places" data-debug="places">
 	{#if places.failed}
-		<p class="set-lead">No listing from the Mac ({places.failed}). Is the Looping server running there?</p>
+		<p class="set-lead">No listing from the Mac ({places.failed}). Is Vamp running there (npm run dev)?</p>
 	{:else if !places.listing}
 		<p class="set-lead">Reading Live’s library…</p>
 	{:else}

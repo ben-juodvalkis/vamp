@@ -99,7 +99,7 @@ function launchPerformanceApps() {
  */
 async function announceReady(abletonLaunchedAt) {
     console.log('\n' + '='.repeat(70));
-    console.log('🎉 iPad Setup Complete!');
+    console.log('🎉 Vamp is serving the iPad app');
 
     // Status page — await the actual bind rather than sleeping and hoping.
     const { ready } = createStatusPage();
@@ -117,17 +117,20 @@ async function announceReady(abletonLaunchedAt) {
 
     console.log('\n📱 iPad Setup Instructions:');
     console.log('   1. Connect iPad via USB-C (recommended)');
-    console.log('   2. Status page and Ableton Live will open automatically');
+    console.log('   2. Live opens by itself; this Mac shows a status page with the addresses');
     console.log('   3. Once: pick Vamp as a Control Surface in Live → Settings → Link, Tempo & MIDI');
     console.log('   4. Use status page URLs for iPad Safari connection:');
 
     displayInterfaces(8889);
 
-    console.log(`\n🎯 Quick Copy iPad URL: http://${bestIP}:8889`);
+    if (bestIP === 'localhost') {
+        console.log('\n📵 No address an iPad can reach: connect it by USB-C, or join this Mac\'s Wi-Fi.');
+    } else {
+        console.log(`\n🎯 Open on the iPad: http://${bestIP}:8889`);
+    }
 
-    console.log('\n⚡ COMPLETE SYSTEM READY!');
-    console.log(`   ✅ OSC Bridge: Port ${constants.osc.webSocket.port}`);
-    console.log('   ✅ iPad Interface: Port 8889');
+    console.log(`\n   Bridge on port ${constants.osc.webSocket.port}, the iPad app on port 8889.`);
+    console.log('   Settings → Connection on the page says whether Live has answered.');
     console.log('='.repeat(70) + '\n');
 
     // The owner's Max patch, only while `features.maxUtilityPatch` is on: a
@@ -196,7 +199,7 @@ async function setupiPad() {
     // Step 3: Prepare the interface. This is the only slow step left, and Live is
     // already booting underneath it. Both halves are fingerprint-gated, so an
     // unchanged tree falls through in about a second.
-    console.log('📦 Preparing interface (catalog + build, both fingerprint-gated)...\n');
+    console.log('📦 Preparing the iPad app...\n');
     const prepCode = await prepareInterface();
     if (prepCode !== 0) {
         console.error(`\n❌ Interface preparation failed (exit ${prepCode}). Not starting servers.`);

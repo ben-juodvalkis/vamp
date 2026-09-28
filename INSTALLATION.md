@@ -42,7 +42,7 @@ LOOPING_USER_LIBRARY="/path/to/User Library" npm run setup
 3. Quit Live and open it again. Live loads a control surface only at startup.
 
 Live's log (`~/Library/Preferences/Ableton/Live <version>/Log.txt`) now has a line reading
-`Looping surface init`.
+`Vamp surface init`.
 
 ## 4. Add the Vamp Devices folder to Live's browser
 
@@ -63,7 +63,7 @@ This runs the setup check, starts the bridge and the web app, and opens the page
 - the Vamp Devices folder is a Place in Live
 - which Places the browser shows (your User Library and every Pack, to start)
 - a foot switch, if you have one
-- what is switched on
+- the recorder on Return A, if you want Capture
 
 Settings stays one tap away afterwards, from the gear in the master track's view.
 
@@ -129,7 +129,7 @@ The `features` switches (all off) are the author's own gear;
 
 ## Troubleshooting
 
-- **The page shows no tracks.** Check that Live's log has `Looping surface init`, that
+- **The page shows no tracks.** Check that Live's log has `Vamp surface init`, that
   `lsof -i :11020` shows Live listening, and read `logs/bridge.log`.
 - **"Vamp" isn't in Live's Control Surface list.** Run `npm run setup` again and read what the
   linking step printed, then restart Live.

@@ -204,6 +204,15 @@ function createWebSocketServer(config, udpPorts, connectionStatus, metrics, heal
     });
 
     httpServer.on('error', (error) => {
+        if (error.code === 'EADDRINUSE') {
+            // Carrying on would leave a bridge with no WebSocket: every page
+            // would sit disconnected with nothing to say why.
+            logger.error(
+                `Port ${config.port} is already in use, so the bridge cannot start. ` +
+                `\`npm run cleanup\` stops a Vamp left running; \`lsof -i :${config.port}\` names anything else.`
+            );
+            process.exit(1);
+        }
         logger.error('HTTP server error', { error: error.message });
     });
 

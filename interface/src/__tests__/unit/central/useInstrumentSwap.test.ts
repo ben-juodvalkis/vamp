@@ -42,7 +42,7 @@ describe('describeSimilar', () => {
 			disabled: true,
 			error: 'ax-helper-down',
 			label: 'ax-helper-down',
-			detail: 'ax-helper-down: the Looping AX Helper is not running'
+			detail: 'ax-helper-down: the AX Helper is not running'
 		});
 		expect(kit({ helper: { state: 'ax-untrusted', detail: 'AXIsProcessTrusted() is false' } })).toMatchObject({
 			disabled: true,

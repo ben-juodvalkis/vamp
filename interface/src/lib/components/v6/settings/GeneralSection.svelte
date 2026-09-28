@@ -173,10 +173,10 @@
 				<span class="set-row-main">
 					{#if footListening}
 						<span class="set-row-label">Press your pedal…</span>
-						<span class="set-row-sub">Listening for it on Looping’s MIDI Input. Tap to cancel.</span>
+						<span class="set-row-sub">Listening for it on Vamp’s MIDI Input. Tap to cancel.</span>
 					{:else if footTimedOut}
 						<span class="set-row-label">Nothing heard</span>
-						<span class="set-row-sub">Set the pedal as Looping’s Input in Live’s MIDI settings, then tap to try again</span>
+						<span class="set-row-sub">Set the pedal as Vamp’s Input in Live’s MIDI settings, then tap to try again</span>
 					{:else}
 						<span class="set-row-label">Learn</span>
 						<span class="set-row-sub">Tap, then press and release your pedal.</span>
@@ -185,7 +185,7 @@
 				{#if footListening}<span class="set-chip on" aria-hidden="true">Listening</span>{/if}
 			</button>
 		</div>
-		<p class="set-note">Any MIDI foot switch works once it is the Looping control surface’s Input, in Live → Settings → Link, Tempo &amp; MIDI.</p>
+		<p class="set-note">Any MIDI foot switch works once it is the Vamp control surface’s Input, in Live → Settings → Link, Tempo &amp; MIDI.</p>
 	</section>
 </div>
 

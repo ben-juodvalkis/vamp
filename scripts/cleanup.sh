@@ -1,5 +1,5 @@
 #!/bin/bash
-# Comprehensive cleanup script for Live Looping Interface
+# Comprehensive cleanup script for Vamp
 # Kills this repo's development servers and clears its reserved ports.
 #
 # Build caches are NOT cleared by default. Deleting interface/.svelte-kit on
@@ -180,7 +180,6 @@ if [ "$LIST_ONLY" = true ]; then
   exit 0
 fi
 
-echo "🧹 Cleaning up all development servers..."
 
 # Wait for pids to actually exit, escalating to SIGKILL.
 #
@@ -231,7 +230,6 @@ reap() {
   return 1
 }
 
-echo "🔪 Killing existing processes (this repo only)..."
 if [ -n "$PROC_PIDS" ]; then
   # Supervisors first, and with SIGKILL. `concurrently --restart-tries -1`
   # never exits on SIGTERM: measured 2026-09-23, it was still alive 8 s after
@@ -255,7 +253,6 @@ if [ -n "$PROC_PIDS" ]; then
   reap "processes" $PROC_PIDS
 fi
 
-echo "🔌 Clearing reserved ports..."
 if [ -n "$PORT_PIDS" ]; then
   echo "$PORT_PIDS" | xargs kill -9 2>/dev/null || true
   reap "port holders" $PORT_PIDS
@@ -288,13 +285,10 @@ if [ "$CLEAR_CACHES" = true ]; then
   rm -rf scripts/.cache 2>/dev/null || true &
   wait
   echo "🗑️  Build caches cleared - next start pays a full rebuild"
-else
-  echo "📦 Build caches kept (staleness is fingerprinted) - nuke with: npm run cleanup:caches"
 fi
 
 if [ -n "$FOREIGN_PIDS" ]; then
-  echo "✅ Cleanup complete - this repo's servers stopped"
+  echo "🧹 Stopped this repo's servers; another app still holds a port (above)"
 else
-  echo "✅ Cleanup complete - all ports cleared"
+  echo "🧹 Stopped this repo's servers and freed its ports"
 fi
-echo "🚀 Ready for clean startup"

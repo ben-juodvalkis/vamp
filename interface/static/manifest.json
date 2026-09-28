@@ -1,6 +1,6 @@
 {
-	"short_name": "Looping",
-	"name": "Live Looping Interface",
+	"short_name": "Vamp",
+	"name": "Vamp",
 	"start_url": "/",
 	"scope": "/",
 	"display": "fullscreen",

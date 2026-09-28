@@ -60,5 +60,7 @@ console.log('  1. In Live → Settings → Link, Tempo & MIDI, pick Vamp as a Co
 console.log('     then quit and reopen Live. Output stays None; Input stays None too,');
 console.log("     unless a pedal is on USB: then Input is the pedal's port, with that port's");
 console.log('     Track and Remote switches off in the MIDI Ports list.');
-console.log('  2. npm run dev. The first run opens Settings on the Mac as a checklist.\n');
+console.log("  2. In Live's browser, Places → Add Folder…, and pick this checkout's");
+console.log('     Vamp Devices folder. Permute and the on-screen wheels load from it.');
+console.log('  3. npm run dev. The first run opens Settings on the Mac as a checklist.\n');
 process.exit(checked);
