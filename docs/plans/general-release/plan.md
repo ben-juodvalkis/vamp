@@ -221,8 +221,8 @@ fail with nothing on screen:
 
 ### The `vamp` repo
 
-**Done 2026-09-27; the rig moved 2026-09-28.** `vamp` (`ben-juodvalkis/vamp`, private until
-launch) was built from Looping's `dbae35ae` with `git archive`, with fresh history, and every
+**Done 2026-09-27; the rig moved 2026-09-28.** `vamp` (`ben-juodvalkis/vamp`, public since
+2026-09-28) was built from Looping's `dbae35ae` with `git archive`, with fresh history, and every
 change lands here now. `Looping` is frozen at that commit as the history; its checkout stays on
 disk because old Live sets and the Skaka rack point into it. Links to what stayed behind point at
 that commit on GitHub.
@@ -293,8 +293,8 @@ match Looping's exactly (2883 passed, 4 skipped).
 (an edit to `owner/Skaka Metronome Picker/` reaches the rig once the rack is re-saved from this
 folder); the Max Utility patch if Max still has Looping's copy open; any old set.
 
-**Open (Ben):** whether the `@claude` workflows go to the public repo (§7); making the repo
-public at launch.
+**Open (Ben):** whether the `@claude` workflows stay (§7). The repo went public on 2026-09-28; they
+fire only once a `CLAUDE_CODE_OAUTH_TOKEN` secret is set, which it isn't.
 
 ## 9. Checks on the rig and a clean Mac (Ben)
 

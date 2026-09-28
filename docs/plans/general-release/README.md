@@ -29,7 +29,7 @@ Checked against `main` at `dd4a89e` on 2026-09-27, with the config layering (pla
 | Config | **Layered** (2026-09-27). The tracked file is the general edition's defaults, every switch off; a Mac's own values go in its gitignored `constants.local.json`, which the bridge, the server, the scripts and the surface lay over it. The rig's local file reproduces its old config exactly. The build compiles only the shared defaults; clients get a Mac's values over `/bridge/machine` (plan.md §3) |
 | Starter content | Nothing ships yet (plan.md §6) |
 | Network | **Done:** inbound UDP binds loopback, and the file routes answer only for library files. **Open:** the LAN trust model (plan.md §7) |
-| Publishing | **The repo is `vamp`** (private, fresh history from Looping `dbae35ae`, 2026-09-27), laid out as plan.md §8 has it, with `owner/` shipping switched off. The rig runs from it since 2026-09-28: the surface, the one `Vamp Devices` Place, the AX helper and the menubar app. Live lists the surface as Vamp. The license, the third-party check and the user docs are done (2026-09-28). Open: going public and the other renames (plan.md §8) |
+| Publishing | **The repo is `vamp`, public since 2026-09-28** (fresh history from Looping `dbae35ae`, 2026-09-27), laid out as plan.md §8 has it, with `owner/` shipping switched off. The rig runs from it since 2026-09-28: the surface, the one `Vamp Devices` Place, the AX helper and the menubar app. Live lists the surface as Vamp. The license, the third-party check and the user docs are done (2026-09-28). Open: the other renames (plan.md §8) |
 | Rig checks outstanding | The Move's TotalMix monitor knobs; foot-switch Learn with the USB pedal (plan.md §9) |
 
 ## How it's being solved
