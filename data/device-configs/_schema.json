@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Live Device Configuration Schema",
+  "description": "JSON schema for Ableton Live device parameter configurations used in selective observer system",
+  "type": "object",
+  "required": ["device_name", "class_name", "parameters"],
+  "properties": {
+    "device_name": {
+      "type": "string",
+      "description": "Display name of the device as shown in Live"
+    },
+    "class_name": {
+      "type": "string", 
+      "description": "Live API class name (e.g., 'Compressor2', 'Operator')"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description of the device"
+    },
+    "version": {
+      "type": "string",
+      "description": "Configuration version for updates",
+      "default": "1.0.0"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["essential", "important", "useful", "optional"],
+      "description": "Overall device priority for observer allocation",
+      "default": "useful"
+    },
+    "parameters": {
+      "type": "object",
+      "description": "Parameter definitions organized by category",
+      "properties": {
+        "essential": {
+          "type": "array",
+          "description": "Critical parameters that must always be observed",
+          "items": { "$ref": "#/definitions/parameter" }
+        },
+        "important": {
+          "type": "array", 
+          "description": "Important parameters observed when capacity allows",
+          "items": { "$ref": "#/definitions/parameter" }
+        },
+        "useful": {
+          "type": "array",
+          "description": "Useful parameters observed in low-priority scenarios",
+          "items": { "$ref": "#/definitions/parameter" }
+        },
+        "optional": {
+          "type": "array",
+          "description": "Optional parameters observed only when abundant capacity",
+          "items": { "$ref": "#/definitions/parameter" }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "definitions": {
+    "parameter": {
+      "type": "object",
+      "required": ["index", "name"],
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Parameter index in Live API (0-based)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Parameter display name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional parameter description"
+        },
+        "range": {
+          "type": "object",
+          "description": "Parameter value range",
+          "properties": {
+            "min": { "type": "number" },
+            "max": { "type": "number" },
+            "default": { "type": "number" }
+          }
+        },
+        "units": {
+          "type": "string",
+          "description": "Parameter units (dB, Hz, %, etc.)"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["continuous", "discrete", "boolean", "enum"],
+          "description": "Parameter value type",
+          "default": "continuous"
+        },
+        "update_rate": {
+          "type": "string",
+          "enum": ["realtime", "moderate", "slow"],
+          "description": "Expected parameter update frequency",
+          "default": "moderate"
+        }
+      }
+    }
+  }
+}

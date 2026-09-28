@@ -1,0 +1,8 @@
+# SwiftPM build artifacts
+LoopingMenuBar/.build/
+LoopingMenuBar/.swiftpm/
+*.xcodeproj
+DerivedData/
+
+# macOS
+.DS_Store

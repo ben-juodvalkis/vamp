@@ -1,0 +1,1221 @@
+@import "tailwindcss";
+
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+@custom-variant light (&:is(.light *));
+/* `flat:` — utilities that apply only under the flat grammar (data-grammar="flat"). */
+@custom-variant flat (&:is([data-grammar="flat"] *));
+
+/* Multi-touch live performance optimizations */
+.main-performance-area {
+  touch-action: manipulation; /* Allow multitouch, block pinch-zoom and double-tap-zoom */
+  overscroll-behavior: none; /* Prevent pull-to-refresh and bounce */
+  -webkit-touch-callout: none; /* Disable text selection callouts */
+  -webkit-user-select: none; /* Disable text selection */
+  user-select: none;
+  /* §3 graticule grid removed — plain --background shows through (set on body). */
+}
+
+/* Allow scrolling in browser and list components */
+.scrollable-area {
+  touch-action: pan-y; /* Allow vertical scrolling only */
+  overscroll-behavior: auto; /* Allow normal scroll behavior */
+  -webkit-user-select: auto; /* Allow text selection in browsers */
+  user-select: auto;
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.129 0.042 264.695);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.129 0.042 264.695);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.129 0.042 264.695);
+  --primary: oklch(0.208 0.042 265.755);
+  --primary-foreground: oklch(0.984 0.003 247.858);
+  --secondary: oklch(0.968 0.007 247.896);
+  --secondary-foreground: oklch(0.208 0.042 265.755);
+  --muted: oklch(0.968 0.007 247.896);
+  --muted-foreground: oklch(0.554 0.046 257.417);
+  --accent: oklch(0.968 0.007 247.896);
+  --accent-foreground: oklch(0.208 0.042 265.755);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.929 0.013 255.508);
+  --input: oklch(0.929 0.013 255.508);
+  --ring: oklch(0.704 0.04 256.788);
+}
+
+/* ========================================
+   GRATICULE — Light theme ("paper instrument": same identity, inverted physics).
+   Warm paper canvas; wells are DARKER than the canvas. Ships dark-first; light
+   gets a dedicated contrast-QA pass (§2.6 / §9). Canvas hex for chrome sync: #F2F0EC.
+   ======================================== */
+.light {
+  /* Surface ladder (§2.6) */
+  --surface-well: oklch(0.90 0.006 90);
+  --canvas: oklch(0.945 0.004 90);
+  --canvas-foreground: var(--foreground);
+  --background: oklch(0.945 0.004 90);
+  --card: oklch(0.97 0.003 90);
+  --card-foreground: var(--foreground);
+  --secondary: oklch(0.92 0.004 90);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.92 0.004 90);
+  --muted-foreground: oklch(0.40 0.015 250);
+  --accent: oklch(0.92 0.004 90);
+  --accent-foreground: var(--foreground);
+  --popover: oklch(0.89 0.004 90);
+  --popover-foreground: var(--foreground);
+  --central-display-default-bg: oklch(0.90 0.006 90);
+  --central-display-default-border: 1px solid var(--line-strong);
+
+  /* Foreground ladder */
+  --foreground: oklch(0.18 0.01 250);
+  --fg-tertiary: oklch(0.50 0.014 250);
+  --signal-dim: oklch(0.52 0.012 250);
+
+  /* Line system — black-alpha hairlines (§2.6) */
+  --line-faint: oklch(0 0 0 / 0.08);
+  --line: oklch(0 0 0 / 0.12);
+  --line-strong: oklch(0 0 0 / 0.18);
+  --border: var(--line);
+  --input: var(--surface-well);
+
+  /* shadcn primary kept (spec omits from the rewrite) */
+  --primary: oklch(0.25 0.06 265);
+  --primary-foreground: oklch(0.965 0.004 265);
+
+  /* Phosphor (light: drop L ~0.12, C ~0.02 for paper contrast) */
+  --phosphor-100: oklch(0.80 0.08 155);
+  --phosphor: oklch(0.60 0.15 155);
+  --phosphor-dim: oklch(0.50 0.10 155);
+  --phosphor-deep: oklch(0.30 0.05 155);
+
+  /* Functional hue base inks (light) — wash/line derived in :root */
+  --act-loop-handle: oklch(0.66 0.12 155);
+  /* Clip playing (ADR-415). Shares the green family with the loop
+     handle — both mean "running" — but sits a touch deeper so a playing
+     cell reads against the loop chrome rather than merging into it. */
+  --act-play: oklch(0.60 0.14 155);
+  --act-quant: oklch(0.62 0.12 300);
+  --act-quant-fill: oklch(0.50 0.17 300 / 0.45);
+  --act-rec: oklch(0.55 0.20 27);
+  --act-rec-bright: oklch(0.60 0.17 25);
+  --act-master: oklch(0.66 0.15 60);
+  --act-monitor: oklch(0.68 0.11 210);
+  --act-solo: oklch(0.55 0.14 245);
+  --act-pitch: oklch(0.50 0.17 262);
+  --act-warn: oklch(0.66 0.13 80);
+
+  --destructive: var(--act-rec);
+  --ring: var(--phosphor-line);
+}
+
+/* ========================================
+   GRATICULE — Dark theme (the performance theme — primary).
+   Near-black surface ladder with a faint cool cast at hue 250 so track inks read
+   true. Signal inks (phosphor / act-*) are the only saturated photons; chrome is
+   hairlines at 6/10/16% white. Canvas hex for chrome sync: #14161B
+   (app.html theme-color, manifest.json, theme.ts). The act/phosphor inks are
+   mirrored on the paint side in utils/paintTokens.ts — KEEP THE TWO IN SYNC (§2.11).
+   ======================================== */
+.dark {
+  /* Surface ladder (§2.1) */
+  --surface-well: oklch(0.12 0.006 250);
+  --canvas: oklch(0.145 0.008 250);
+  --canvas-foreground: var(--foreground);
+  --background: oklch(0.145 0.008 250);
+  --card: oklch(0.195 0.010 250);
+  --card-foreground: var(--foreground);
+  --secondary: oklch(0.235 0.012 250);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.235 0.012 250);
+  --muted-foreground: oklch(0.80 0.012 250);  /* label tier — raised from 0.71; was generally too dim */
+  --accent: oklch(0.235 0.012 250);
+  --accent-foreground: var(--foreground);
+  --popover: oklch(0.26 0.013 250);
+  --popover-foreground: var(--foreground);
+  --central-display-default-bg: oklch(0.125 0.006 250);
+  --central-display-default-border: 1px solid var(--line-strong);
+
+  /* Foreground ladder (§2.1) */
+  --foreground: oklch(0.955 0.004 250);
+  --fg-tertiary: oklch(0.68 0.014 250);  /* axis/grid label tier — raised from 0.56; was generally too dim */
+  --signal-dim: oklch(0.62 0.010 250);
+
+  /* Line system (§2.1) — 6/10/16% white hairlines. Field-visibility fallback:
+     bump to 8/12/18% globally here if 6% dies under True Tone / projector spill. */
+  --line-faint: oklch(1 0 0 / 0.06);
+  --line: oklch(1 0 0 / 0.10);
+  --line-strong: oklch(1 0 0 / 0.16);
+  --border: var(--line);
+  --input: var(--surface-well);
+
+  /* shadcn slate primary kept (spec omits from the rewrite) */
+  --primary: oklch(0.929 0.013 255.508);
+  --primary-foreground: oklch(0.208 0.042 265.755);
+
+  /* Phosphor electric accent (§2.2) — one family; loop/editor/selection merge here */
+  --phosphor-100: oklch(0.92 0.10 155);
+  --phosphor: oklch(0.82 0.17 155);
+  --phosphor-dim: oklch(0.62 0.12 155);
+  --phosphor-deep: oklch(0.35 0.06 155);
+
+  /* Functional hue base inks (§2.3) — wash/line derived in :root */
+  --act-loop-handle: oklch(0.88 0.14 155);
+  /* Clip playing (ADR-415) — see the light-theme twin for the rationale. */
+  --act-play: oklch(0.80 0.16 155);
+  --act-quant: oklch(0.74 0.14 300);
+  --act-quant-fill: oklch(0.58 0.19 300 / 0.45);
+  --act-rec: oklch(0.63 0.22 27);
+  --act-rec-bright: oklch(0.70 0.19 25);
+  --act-master: oklch(0.75 0.16 60);
+  --act-monitor: oklch(0.80 0.13 210);
+  --act-solo: oklch(0.72 0.15 245);
+  --act-pitch: oklch(0.62 0.19 262);
+  --act-warn: oklch(0.78 0.15 80);
+
+  --destructive: var(--act-rec);
+  --ring: var(--phosphor-line);
+}
+
+/* ========================================
+   GRATICULE derived signal tokens (§2.2 / §2.3 recipe).
+   color-mix over the ACTIVE theme's base inks — defined once; var(--act-X)
+   resolves to whichever theme class (.dark / .light) is on the root element.
+   ======================================== */
+:root {
+  --phosphor-wash: color-mix(in oklab, var(--phosphor) 18%, transparent);
+  --phosphor-wash-lo: color-mix(in oklab, var(--phosphor) 10%, transparent);
+  --phosphor-line: color-mix(in oklab, var(--phosphor) 55%, transparent);
+  --editor-accent: var(--phosphor);
+  --loop-accent: var(--phosphor);
+
+  --act-loop: var(--phosphor);
+  --act-loop-wash: var(--phosphor-wash);
+  --act-loop-line: var(--phosphor-line);
+
+  --act-quant-wash: color-mix(in oklab, var(--act-quant) 18%, transparent);
+  --act-quant-line: color-mix(in oklab, var(--act-quant) 55%, transparent);
+  --act-rec-wash: color-mix(in oklab, var(--act-rec) 18%, transparent);
+  --act-rec-line: color-mix(in oklab, var(--act-rec) 55%, transparent);
+  --act-master-wash: color-mix(in oklab, var(--act-master) 18%, transparent);
+  --act-master-line: color-mix(in oklab, var(--act-master) 55%, transparent);
+  --act-monitor-wash: color-mix(in oklab, var(--act-monitor) 18%, transparent);
+  --act-monitor-line: color-mix(in oklab, var(--act-monitor) 55%, transparent);
+  --act-solo-wash: color-mix(in oklab, var(--act-solo) 18%, transparent);
+  --act-solo-line: color-mix(in oklab, var(--act-solo) 55%, transparent);
+  --act-pitch-wash: color-mix(in oklab, var(--act-pitch) 18%, transparent);
+  --act-pitch-line: color-mix(in oklab, var(--act-pitch) 55%, transparent);
+  --act-warn-wash: color-mix(in oklab, var(--act-warn) 18%, transparent);
+  --act-warn-line: color-mix(in oklab, var(--act-warn) 55%, transparent);
+}
+
+/* Cross-cutting chrome tokens (both grammars). GRATICULE values here; the
+   flat grammar block redefines them. Components MUST read these instead of
+   repeating the literals. */
+:root {
+  --playhead: oklch(0.97 0.02 155);                 /* strip + editor playhead */
+  --scrim: oklch(0 0 0 / 0.45);                     /* loading / disabled overlays */
+  --scrim-strong: oklch(0 0 0 / 0.7);
+  --edge-light: inset 0 1px 0 oklch(1 0 0 / 0.04);  /* machined top edge on slabs */
+  --well-shadow: inset 0 1px 0 oklch(0 0 0 / 0.5);  /* recessed well lip */
+}
+
+/* Browser Component Theme Variables */
+:root {
+  /* Browser Component Base Colors (light mode) */
+  --browser-bg-primary: var(--background);
+  --browser-bg-secondary: var(--card);
+  --browser-bg-tertiary: var(--muted);
+  --browser-text-primary: var(--foreground);
+  --browser-text-secondary: var(--muted-foreground);
+  --browser-text-tertiary: oklch(0.6 0.02 270);
+  --browser-border: var(--border);
+}
+
+.light {
+  /* Light mode browser overrides */
+  --browser-text-tertiary: oklch(0.5 0.03 265);
+}
+
+.dark {
+  /* Browser Component Base Colors (dark mode) */
+  --browser-bg-primary: var(--background);
+  --browser-bg-secondary: var(--card);
+  --browser-bg-tertiary: var(--muted);
+  --browser-text-primary: var(--foreground);
+  --browser-text-secondary: var(--muted-foreground);
+  --browser-text-tertiary: oklch(0.45 0.02 270);
+  --browser-border: var(--border);
+}
+
+/* ========================================
+   CENTRAL-VIEW SPACING ROLES (ADR-434)
+   ========================================
+   A central view never picks a spacing size; it picks a ROLE, and its
+   density picks the size:
+     --central-inset  the view's padding against the central frame
+     --central-gap    the space between any two controls, or two groups
+   Spacing INSIDE one control — a chooser's options, a group's title over
+   its body, a button's or badge's contents — is the control's own.
+
+   Standard is 16px. A view whose control COUNT comes from what is loaded
+   (a kit's pads, a rack author's macros) sets data-density="compact" on
+   its root and gets 8px; anything mounted inside it — an effect view on a
+   drum pad — inherits that. Plain custom properties, not @theme: `@theme
+   inline` writes the literal value into each utility, and a density has
+   to be able to override it. Markup uses gap-(--central-gap) and
+   p-(--central-inset); a style block uses var(). */
+:root {
+  --central-inset: 1rem;
+  --central-gap: 1rem;
+}
+
+[data-density='compact'] {
+  --central-inset: 0.5rem;
+  --central-gap: 0.5rem;
+}
+
+@theme inline {
+  /* ========================================
+     DESIGN TOKENS - UI Design System
+     ======================================== */
+
+  /* Spatial System (8pt base grid) */
+  --spacing-xs: 0.25rem;    /* 4px */
+  --spacing-sm: 0.5rem;     /* 8px */
+  --spacing-md: 0.75rem;    /* 12px */
+  --spacing-lg: 1rem;       /* 16px */
+  --spacing-xl: 1.5rem;     /* 24px */
+  --spacing-2xl: 2rem;      /* 32px */
+  --spacing-3xl: 3rem;      /* 48px */
+
+  /* Corner Radius (semantic hierarchy) */
+  --radius-xs: 0.25rem;     /* 4px */
+  --radius-sm: 0.375rem;    /* 6px - interactive controls */
+  --radius-md: 0.5rem;      /* 8px - cards/panels */
+  --radius-lg: 0.75rem;     /* 12px - prominent panels/sliders */
+  --radius-xl: 1rem;        /* 16px - large containers */
+  --radius-2xl: 1.5rem;     /* 24px - extra large containers */
+  --radius-full: 9999px;    /* pill shapes */
+
+  /* Legacy radius (kept for backward compatibility) */
+  --radius: 0.625rem;       /* 10px - original shadcn default */
+
+  /* Typography Scale */
+  --text-2xs: 0.625rem;     /* 10px */
+  --text-xs: 0.75rem;       /* 12px */
+  --text-sm: 0.875rem;      /* 14px */
+  --text-base: 1rem;        /* 16px */
+  --text-lg: 1.125rem;      /* 18px */
+  --text-xl: 1.25rem;       /* 20px */
+  --text-2xl: 1.5rem;       /* 24px */
+  --text-3xl: 2rem;         /* 32px */
+
+  /* Font Weights — MUST live in Tailwind 4's `--font-weight-*` namespace:
+     `--font-*` is the font-FAMILY namespace, and the old `--font-bold: 700`
+     names compiled every `font-bold` utility to the invalid
+     `font-family: 700` (silently dropped) for the app's whole life. */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Font Families (§2.7) — pure system, zero vendored bytes. No ui-rounded. */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, sans-serif;   /* "SF Pro" on-device */
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Motion tokens (§2.10) — NO springs, NO bounce, NO overshoot. Aerospace servos. */
+  --t-fast: 90ms;        /* state acknowledgement: selection, mute, chip toggle */
+  --t-standard: 160ms;   /* fills, settles, ghost->active */
+  --t-deliberate: 240ms; /* loaded sweep, overlay content fade */
+  --t-overlay: 140ms;    /* overlay opacity in; 100ms out */
+  --ease-precise: cubic-bezier(0.2, 0, 0, 1);   /* decisive out */
+  --ease-settle: cubic-bezier(0.45, 0, 0.15, 1);
+
+  /* Layout (§2.8) — single source for the 120px side rails (kills the triplication) */
+  --sidebar-width: 120px;
+
+  /* Line Heights */
+  --leading-tight: 1.2;
+  --leading-normal: 1.4;
+  --leading-relaxed: 1.6;
+
+  /* Touch Target Heights (iPad-optimized) */
+  --height-compact: 2rem;       /* 32px - dense UI only */
+  --height-default: 2.5rem;     /* 40px - secondary controls */
+  --height-touch: 2.75rem;      /* 44px - iOS minimum */
+  --height-comfortable: 3.5rem; /* 56px - frequently-used controls */
+  --height-spacious: 4rem;      /* 64px - gestural controls */
+  --height-xl: 5rem;            /* 80px - extra large targets */
+
+  /* The strip's bottom band (ADR-421). Three controls sit shoulder to
+     shoulder along the bottom edge of the flipped layout — each track's
+     name/mute band, its Solo button, and the TotalMix monitor strip
+     under the master — and they read as one band only if they are one
+     height. That is this token, not three coincidental
+     `--height-comfortable`s: change it here and all three follow.
+
+     It also fixes the name band in BOTH skins, where GRATICULE used to
+     take a proportional third. The fader's travel is "the strip above
+     the name", so a fixed band collapses the two skins' `--vol-travel`
+     onto one rule (`100% - band`) instead of a third-based formula plus
+     a flat-grammar override of it. */
+  --strip-band-h: var(--height-comfortable);
+
+  /* Session mode (ADR-415/416) — how the clip grid divides its row.
+
+     The slot grid and the scene rail are each exactly ONE SECTION of
+     their column (the same share a track strip, the central view or the
+     FX grid gets), and each divides that section into
+     `sceneWindowStore.renderedRows` scene rows plus one stop row. So the
+     row PITCH is not authored here: it is that section divided by the row
+     count, which the grid and the rail each measure from their own box
+     and publish as --session-row-h in px.
+
+     The row COUNT is not authored here either — it lives in
+     `sceneWindowStore` because it scales with how many sections are on
+     screen (4 · 6 · 8), which is a store's job to know, not a
+     stylesheet's.
+
+     Both boxes are the same section, so both arrive at the same pitch and
+     their rows line up by construction — no shared absolute length to
+     keep in sync. It is published in PX because the zones read it back
+     through `getComputedStyle(...).getPropertyValue()` to convert a drag
+     in pixels into a drag in scene rows, and custom properties come back
+     as authored. The fallback below only ever applies before the first
+     measurement lands. */
+  --session-row-h: 56px;        /* pre-measurement fallback only */
+  --session-row-gap: 4px;       /* inset between adjacent slot cells */
+
+  /* The stop row — one button per track at the foot of the clip grid,
+     STOP ALL at the foot of the scene rail — is simply one more row of
+     the grid: same pitch, same inset, so it aims like a clip slot
+     rather than like a strip of chrome. It has no height token of its
+     own; both columns divide their section by (renderedRows + 1) and
+     give it one share. Same divisor on both sides is what keeps their
+     scene rows level. */
+
+  /* Opacity System (semantic transparency) */
+  --opacity-disabled: 0.38;    /* WCAG minimum for disabled states */
+  --opacity-ghost: 0.5;        /* Ghost/inactive device states */
+  --opacity-secondary: 0.6;    /* Secondary text */
+  --opacity-hover: 0.8;        /* Hover states */
+  --opacity-subtle: 0.15;      /* Subtle backgrounds */
+  --opacity-overlay: 0.3;      /* Loading overlays */
+  --opacity-border: 0.12;      /* Subtle borders (kept for straggler consumers) */
+  --opacity-accent: 0.2;       /* Accent backgrounds */
+
+  /* Legacy glassmorphic blur scale — retained ONLY for the not-yet-restyled
+     central views (Simpler/Arp) that still reference it; pruned when they land. */
+  --backdrop-blur-none: 0;
+  --backdrop-blur-sm: 8px;
+  --backdrop-blur-md: 12px;
+  --backdrop-blur-lg: 16px;
+  --backdrop-blur-xl: 20px;
+
+  /* Shadow System for Depth — retained ONLY for not-yet-restyled device controls
+     (DeviceSlider/DeviceXY) + central views still referencing it; pruned when they land. */
+  --shadow-glass-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-glass-md: 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  --shadow-glass-lg: 0 4px 12px -2px rgba(0, 0, 0, 0.15);
+  --shadow-glass-xl: 0 8px 24px -4px rgba(0, 0, 0, 0.2);
+
+  /* Inset Highlights (top edge lighting effect) */
+  --highlight-glass-subtle: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --highlight-glass-medium: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --highlight-glass-strong: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+
+  /* Combined Glass Shadows (drop + inset) */
+  --shadow-glass-combined:
+    var(--shadow-glass-md),
+    var(--highlight-glass-subtle);
+
+  --shadow-glass-combined-hover:
+    var(--shadow-glass-lg),
+    var(--highlight-glass-medium);
+
+  /* Canvas (page-level surface) */
+  --color-canvas: var(--canvas);
+  --color-canvas-foreground: var(--canvas-foreground);
+
+  /* shadcn Color Mappings */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* GRATICULE signal + chrome color utilities (§2) */
+  --color-surface-well: var(--surface-well);
+  --color-line: var(--line);
+  --color-line-faint: var(--line-faint);
+  --color-line-strong: var(--line-strong);
+  --color-fg-tertiary: var(--fg-tertiary);
+  --color-signal-dim: var(--signal-dim);
+  --color-phosphor: var(--phosphor);
+  --color-phosphor-dim: var(--phosphor-dim);
+  --color-act-loop: var(--act-loop);
+  --color-act-quant: var(--act-quant);
+  --color-act-rec: var(--act-rec);
+  --color-act-master: var(--act-master);
+  --color-act-monitor: var(--act-monitor);
+  --color-act-solo: var(--act-solo);
+  --color-act-pitch: var(--act-pitch);
+  --color-act-warn: var(--act-warn);
+}
+
+/* Light mode shadow overrides — retained for the not-yet-restyled survivors above */
+.light {
+  --shadow-glass-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-glass-md: 0 2px 6px -1px rgba(0, 0, 0, 0.08);
+  --shadow-glass-lg: 0 4px 12px -2px rgba(0, 0, 0, 0.1);
+  --shadow-glass-xl: 0 8px 24px -4px rgba(0, 0, 0, 0.12);
+  /* Remove white highlights in light mode - they add noise, not depth */
+  --highlight-glass-subtle: none;
+  --highlight-glass-medium: none;
+  --highlight-glass-strong: none;
+  --shadow-glass-combined: var(--shadow-glass-md);
+  --shadow-glass-combined-hover: var(--shadow-glass-lg);
+}
+
+/* ========================================
+   MACHINED-FLAT MATERIAL (GRATICULE — §3)
+   Opaque surface from the ladder + 1px hairline + one static inset top-light.
+   Zero blur, zero gradient on chrome, zero resting drop-shadow.
+   Class NAMES preserved (19 files / 32 sites); bodies rewritten.
+   ======================================== */
+
+/* Base material — panels float as matte slabs */
+.glass-panel,
+.glass-panel-subtle,
+.glass-panel-medium,
+.glass-panel-heavy {
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.04);   /* machined top edge */
+  transition: background-color var(--t-standard) var(--ease-settle),
+              border-color var(--t-standard) var(--ease-settle);
+}
+
+/* Glass card — track strips. Wash + border derive from --track-color (§2.5);
+   falls back to neutral card when no ink is set (e.g. MasterTrack pre-phase-2). */
+.glass-card {
+  background: color-mix(in oklab, var(--track-color, var(--card)) 12%, var(--card));
+  border: 1px solid color-mix(in oklab, var(--track-color, var(--line)) 55%, transparent);
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.04);
+  transition: background-color var(--t-fast) var(--ease-precise),
+              border-color var(--t-fast) var(--ease-precise);
+}
+
+/* Glass colored — FX slots; accent set per-slot via --accent-primary */
+.glass-colored {
+  background: color-mix(in oklab, var(--accent-primary, var(--card)) 12%, var(--card));
+  border: 1px solid color-mix(in oklab, var(--accent-primary, var(--line)) 55%, transparent);
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.04);
+  transition: background-color var(--t-fast) var(--ease-precise),
+              border-color var(--t-fast) var(--ease-precise);
+}
+
+/* Glass topbar — headers/navigation */
+.glass-topbar {
+  background: var(--secondary);
+  border-bottom: 1px solid var(--line);
+}
+
+/* Glass modal/overlay — opaque popover + the system's ONE ambient drop shadow (§2.9) */
+.glass-modal {
+  background: var(--popover);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 24px 48px oklch(0 0 0 / 0.5), 0 0 0 1px var(--line-strong);
+}
+
+/* Wells (§3) — inset lanes you reach INTO: slider tracks, XY pads, loop/quantize
+   lanes, the editor canvas region, sequencer rows, meter wells, TotalMix cells. */
+.surface-well {
+  background: var(--surface-well);
+  box-shadow: inset 0 1px 0 oklch(0 0 0 / 0.5);
+}
+
+/* Shared device toggle + segmented chrome (§5.5 — extracted from the duplicated
+   SimplerCentralView .physical-button / .warp-segmented and ArpeggiatorCentralView
+   .steps-segmented). Machined-flat: 1px ink hairline, inset top-light, NO blur, NO
+   glow, NO gradient, NO text-shadow. Accent rides --btn-tint (a trackInk()-normalized
+   device ink) set at the call site. Transitions are whitelist-only. */
+.physical-button {
+  position: relative;
+  border: 1px solid color-mix(in oklab, var(--btn-tint) 55%, transparent);
+  border-radius: var(--radius-sm);
+  color: var(--btn-tint);
+  /* OFF reads like the off part of a slider — the recessed well, no ink wash — so
+     the jump to the lit ink fill on .active is high-contrast. */
+  background: var(--surface-well);
+  box-shadow: inset 0 1px 0 oklch(0 0 0 / 0.5);
+  transition: background-color var(--t-fast) var(--ease-precise),
+              border-color var(--t-fast) var(--ease-precise),
+              color var(--t-fast) var(--ease-precise),
+              transform var(--t-fast) var(--ease-precise);
+  cursor: pointer;
+  user-select: none;
+}
+.physical-button:hover:not(.active) {
+  background: color-mix(in oklab, var(--btn-tint) 12%, var(--surface-well));
+}
+.physical-button:active {
+  transform: translateY(1px);
+}
+.physical-button.active {
+  background: color-mix(in oklab, var(--btn-tint) 30%, var(--card));
+  border-color: var(--btn-tint);
+  color: var(--foreground);
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.04);  /* raised slab — pops out of the recessed off-well */
+}
+
+/* Pad chip (issue #491): the pill that names the pad a surface is scoped to
+   — the FX grid's scope chip and the pad pane's heading wore the same face
+   in two component stylesheets (code review, 2026-09-12). Ink via
+   `--chip-ink`, set by the owner from the pad's chain colour; placement
+   stays the owner's. */
+.pad-chip {
+  padding: 2px 8px;
+  border: 1px solid var(--chip-ink, var(--line-strong));
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--chip-ink, var(--foreground));
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+/* Held-by-macro badge (ADR-428): the small pill a virtual-macro slot or the
+   FX-type button wears when Live's macro holds every member. Placement is
+   the owner's (the slot pins it to a corner; the button keeps it in flow). */
+.vm-held-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px 1px 5px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--signal-dim);
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+/* Segmented control — one well-bed container, flat options separated by hairlines;
+   the active option fills with a tint wash. */
+.device-segmented {
+  border: 1px solid color-mix(in oklab, var(--btn-tint) 55%, transparent);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface-well);
+  box-shadow: inset 0 1px 0 oklch(0 0 0 / 0.5);
+}
+.device-segment {
+  border: 0;
+  background: transparent;
+  color: color-mix(in oklab, var(--btn-tint) 60%, transparent);
+  transition: background-color var(--t-fast) var(--ease-precise),
+              color var(--t-fast) var(--ease-precise);
+  cursor: pointer;
+  user-select: none;
+}
+.device-segment + .device-segment {
+  border-top: 1px solid var(--line-faint);
+}
+.device-segment:hover:not(.active) {
+  color: var(--btn-tint);
+  background: color-mix(in oklab, var(--btn-tint) 8%, transparent);
+}
+.device-segment.active {
+  background: color-mix(in oklab, var(--btn-tint) 30%, var(--card));
+  color: var(--foreground);
+}
+/* Drop the divider on the boundary of an active fill so it reaches cleanly. */
+.device-segment.active,
+.device-segment.active + .device-segment {
+  border-top-color: transparent;
+}
+
+/* Numerals — app-wide law (§2.7): mono + tabular figures so live values never
+   jitter horizontally at 30Hz-adjacent rates. */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Corner-bracket HUD signature (§3) — four L-ticks drawn as eight repeating
+   linear-gradients on a pointer-events:none ::after. Reusable across selection /
+   record / focus by setting --bracket-ink. Carries no data-* and never receives
+   pointer events, so it does NOT break elementFromPoint hit-testing. No glow.
+   Introduces NO stacking context on the host (only the ::after animates opacity). */
+.hud-bracket::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  --bracket-ink: var(--phosphor);
+  --b: 14px;   /* arm length */
+  --w: 2px;    /* arm weight (3px is the too-subtle fallback — never a glow) */
+  background:
+    linear-gradient(var(--bracket-ink), var(--bracket-ink)) 0 0 / var(--b) var(--w) no-repeat,
+    linear-gradient(var(--bracket-ink), var(--bracket-ink)) 0 0 / var(--w) var(--b) no-repeat,
+    linear-gradient(var(--bracket-ink), var(--bracket-ink)) 100% 0 / var(--b) var(--w) no-repeat,
+    linear-gradient(var(--bracket-ink), var(--bracket-ink)) 100% 0 / var(--w) var(--b) no-repeat,
+    linear-gradient(var(--bracket-ink), var(--bracket-ink)) 0 100% / var(--b) var(--w) no-repeat,
+    linear-gradient(var(--bracket-ink), var(--bracket-ink)) 0 100% / var(--w) var(--b) no-repeat,
+    linear-gradient(var(--bracket-ink), var(--bracket-ink)) 100% 100% / var(--b) var(--w) no-repeat,
+    linear-gradient(var(--bracket-ink), var(--bracket-ink)) 100% 100% / var(--w) var(--b) no-repeat;
+  opacity: 0;
+  transition: opacity var(--t-fast) var(--ease-precise);
+}
+.hud-bracket.is-active::after { opacity: 1; }
+
+/* Strip playhead (§4.2) — capless 1px phosphor-white, the brightest value in
+   the system; the "glow" is luminance contrast against the well, never a shadow.
+   ONE shared class for TrackClipView + TrackClipMidiView. `left` is written at
+   30Hz and stays UNTRANSITIONED (33ms steps are the design). */
+.strip-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--playhead);
+  pointer-events: none;
+  transform: translateX(-0.5px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* iOS Safari Touch Optimizations - TouchOSC-like behavior */
+* {
+  /* Disable iOS context menus and text selection globally */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+
+  /* Disable iOS tap highlight */
+  -webkit-tap-highlight-color: transparent;
+
+  /* Prevent text selection on double-tap */
+  -webkit-user-drag: none;
+}
+
+/* Re-enable selection for text inputs where needed */
+input,
+textarea,
+[contenteditable],
+[data-allow-select] {
+  -webkit-user-select: auto;
+  user-select: auto;
+  -webkit-touch-callout: default;
+}
+
+html, body {
+  /* Optimize touch performance */
+  touch-action: manipulation;
+
+  /* Prevent iOS Safari bounce/zoom behaviors */
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+
+  /* Prevent zoom on double-tap */
+  -webkit-text-size-adjust: 100%;
+
+  /* Full viewport coverage for PWA */
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+
+  /* Prevent iOS Safari elastic scrolling */
+  position: fixed;
+  overflow: hidden;
+}
+
+/* Optimize touch targets for iPad */
+@media (max-width: 1024px) {
+  /* Ensure minimum 44px touch targets per Apple guidelines */
+  button,
+  [role="button"],
+  input,
+  select,
+  textarea,
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Enhanced touch feedback */
+  button:active,
+  [role="button"]:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+}
+
+/* ========================================
+   DEBUG GUIDELINES (toggleable via System panel)
+   ======================================== */
+
+/* Root container borders */
+.show-debug-borders [data-debug="root"] { border: 2px solid lime !important; }
+.show-debug-borders [data-debug="sidebar"] { border: 2px solid green !important; }
+.show-debug-borders [data-debug="main-area"] { border: 2px solid lightgreen !important; }
+.show-debug-borders [data-debug="panel-wrapper"] { border: 2px solid yellowgreen !important; }
+
+/* TracksPanelV6 borders */
+.show-debug-borders [data-debug="tracks-panel"] { border: 2px solid red !important; }
+.show-debug-borders [data-debug="tracks-container"] { border: 2px solid blue !important; }
+.show-debug-borders [data-debug="tracks-flex"] { border: 2px solid purple !important; }
+.show-debug-borders [data-debug="boundary-line"] { display: block !important; }
+
+/* TrackStrip borders */
+.show-debug-borders [data-debug="track-card"] { border: 2px solid cyan !important; }
+.show-debug-borders [data-debug="track-content"] { border: 2px solid orange !important; }
+
+/* MasterTrack borders */
+.show-debug-borders [data-debug="master-card"] { border: 2px solid magenta !important; }
+.show-debug-borders [data-debug="master-content"] { border: 2px solid hotpink !important; }
+
+/* Hide debug lines by default */
+[data-debug="boundary-line"] { display: none; }
+
+/* ========================================
+   SLOT-AWARE CONTROL STATES
+   Shared styling for ghost/loading/active states
+   Used by BaseDeviceControl and SlotAware components
+
+   Required CSS variables (defined in :root above):
+   - --opacity-ghost: 0.5 (ghost/inactive device states)
+   - --ring: ring color for pending state pulse
+   ======================================== */
+
+/* Ghost state - device not loaded, shows placeholder */
+.slot-ghost {
+  opacity: var(--opacity-ghost);
+}
+
+/* Ghost state colors - neutral gray */
+.slot-ghost-bg {
+  background: color-mix(in srgb, rgb(107, 114, 128), transparent 90%);
+}
+
+.slot-ghost-border {
+  border-color: color-mix(in srgb, rgb(107, 114, 128), transparent 80%);
+}
+
+/* Loading overlay - semi-transparent with animation */
+.slot-loading-overlay {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.slot-loading-pulse {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  animation: slot-undulate 2s ease-in-out infinite;
+}
+
+@keyframes slot-undulate {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.1);
+  }
+}
+
+/* Active state indicator */
+.slot-active {
+  opacity: 1;
+}
+
+/* Pending parameter indicator - subtle pulse */
+.slot-pending {
+  animation: slot-pending-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes slot-pending-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(var(--ring), 0);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(var(--ring), 0.2);
+  }
+}
+
+/* ========================================================================
+   HYBRID SKIN — `data-skin="hybrid"` + `data-grammar="flat"` on <html>,
+   layered over .dark / .light. The flat grammar is Ableton Live 12's visual
+   rulebook (opaque surfaces, 1px dark edges, 2px radii, no shadow/glow/wash,
+   black text on colour, one accent for ON) — the palette is ours: a cooler,
+   darker grey ladder (hue ~250 like GRATICULE), calibrated track inks
+   (trackFormatters TRACK_INK_HYBRID), and the device family keeps its colour
+   on FX tiles. Functional inks match Live's own (orange ON #ffad56, green
+   play #00d38d, red rec #ff5559, blue selection #b0ddeb — from Live's
+   "Default Dark Neutral Medium" theme file) so the iPad and the laptop speak
+   one state language. The `--flat-*` tokens are the grammar's role tokens;
+   a second flat-grammar palette is one more token block.
+   ======================================================================== */
+.dark[data-skin="hybrid"] {
+  --surface-well: #171a1e;
+  --canvas: #1f2126;
+  --background: #1f2126;
+  --card: #2a2d33;
+  --secondary: #383c44;
+  --muted: #383c44;
+  --muted-foreground: #a6aab2;
+  --accent: #383c44;
+  --popover: #30343b;
+  --central-display-default-bg: #30343b;
+  --central-display-default-border: 1px solid var(--line-strong);
+
+  --foreground: #d3d6db;
+  --fg-tertiary: #7f848d;
+  --signal-dim: #7f848d;
+
+  --line-faint: #262930;
+  --line: #1a1c21;
+  --line-strong: #0f1013;
+  --border: var(--line);
+  --input: var(--surface-well);
+
+  --primary: #d3d6db;
+  --primary-foreground: #0f1013;
+
+  --phosphor-100: #ffc98a;
+  --phosphor: #ffad56;
+  --phosphor-dim: #c98540;
+  --phosphor-deep: #6b4722;
+
+  --act-loop-handle: #ffad56;
+  --act-play: #00d38d;
+  --act-quant: #03c3d5;
+  --act-quant-fill: #03c3d573;
+  --act-rec: #ff5559;
+  --act-rec-bright: #ff7276;
+  --act-master: #ffad56;
+  --act-monitor: #03c3d5;
+  --act-solo: #4a7fd0;
+  --act-pitch: #4391e6;
+  --act-warn: #e76942;
+  --destructive: var(--act-rec);
+  --ring: #b0ddeb;
+
+  --browser-bg-primary: #2a2d33;
+  --browser-bg-secondary: #1f2126;
+  --browser-bg-tertiary: #383c44;
+  --browser-text-primary: #d3d6db;
+  --browser-text-secondary: #a6aab2;
+  --browser-text-tertiary: #7f848d;
+  --browser-border: #1a1c21;
+
+  --flat-selection: #b0ddeb;
+  --flat-selection-fg: #070707;
+  --flat-on-fg: #070707;
+  --flat-clip-text: #000000;
+  --flat-clip-border: #1a1c21;
+  --flat-slot-empty: #171a1e;
+  --flat-slot-glyph: #7f848d;
+  --flat-handle: #d3d6db;
+  --flat-solo-fg: #f1f1f1;
+  --flat-deactivated: #5a5e66;
+  --flat-deactivated-fg: #1f2126;
+  --flat-disabled-fg: #6b7078;
+  --flat-meter-bg: #131519;
+  --flat-transport-off: #2a2d33;
+}
+
+.light[data-skin="hybrid"] {
+  /* Cool-neutral paper — lighter and cleaner than Live's mid-grey; wells
+     lighter than panels (Live's rule) so fields read as fields. */
+  --surface-well: #f6f7f9;
+  --canvas: #d5d8dd;
+  --background: #d5d8dd;
+  --card: #e6e8eb;
+  --secondary: #c8ccd2;
+  --muted: #c8ccd2;
+  --muted-foreground: #3f434a;
+  --accent: #c8ccd2;
+  --popover: #edeef1;
+  --central-display-default-bg: #edeef1;
+  --central-display-default-border: 1px solid var(--line-strong);
+
+  --foreground: #14161a;
+  --fg-tertiary: #5c616a;
+  --signal-dim: #5c616a;
+
+  --line-faint: #bfc3c9;
+  --line: #a9aeb6;
+  --line-strong: #7d838c;
+  --border: var(--line);
+  --input: var(--surface-well);
+
+  --primary: #14161a;
+  --primary-foreground: #f6f7f9;
+
+  --phosphor-100: #ffc76a;
+  --phosphor: #f5a524;
+  --phosphor-dim: #c98214;
+  --phosphor-deep: #7a4f0a;
+
+  --act-loop-handle: #f5a524;
+  --act-play: #00c98a;
+  --act-quant: #00a9b8;
+  --act-quant-fill: #00a9b873;
+  --act-rec: #ff4d55;
+  --act-rec-bright: #ff6f75;
+  --act-master: #f5a524;
+  --act-monitor: #00a9b8;
+  --act-solo: #1a7df1;
+  --act-pitch: #2f7fd6;
+  --act-warn: #e8632f;
+  --destructive: var(--act-rec);
+  --ring: #9fd6ea;
+
+  --browser-bg-primary: #e6e8eb;
+  --browser-bg-secondary: #d5d8dd;
+  --browser-bg-tertiary: #c8ccd2;
+  --browser-text-primary: #14161a;
+  --browser-text-secondary: #3f434a;
+  --browser-text-tertiary: #5c616a;
+  --browser-border: #a9aeb6;
+
+  --flat-selection: #9fd6ea;
+  --flat-selection-fg: #121212;
+  --flat-on-fg: #121212;
+  --flat-clip-text: #000000;
+  --flat-clip-border: #7d838c;
+  --flat-slot-empty: #7d838c;
+  --flat-slot-glyph: #5c616a;
+  --flat-handle: #3a3e45;
+  --flat-solo-fg: #121212;
+  --flat-deactivated: #a3a7ae;
+  --flat-deactivated-fg: #3f434a;
+  --flat-disabled-fg: #7d838c;
+  --flat-meter-bg: #b4b8bf;
+  --flat-transport-off: #e6e8eb;
+}
+
+/* ---- Flat grammar (both polarities) --------------------------------------- */
+[data-grammar="flat"] {
+  /* Shape: Live is square-ish. Tailwind's rounded-* utilities and every
+     var(--radius-*) in component CSS read these, so one override lands
+     everywhere. */
+  --radius-xs: 2px;
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 3px;
+  --radius-xl: 4px;
+  --radius-2xl: 4px;
+  --radius: 3px;
+
+  /* Weight: Live sets almost everything regular; bold is rare. */
+  --font-weight-semibold: 500;
+  --font-weight-bold: 600;
+
+  /* No lighting model: no drop shadows, no inset top-lights. */
+  --shadow-glass-sm: none;
+  --shadow-glass-md: none;
+  --shadow-glass-lg: none;
+  --shadow-glass-xl: none;
+  --highlight-glass-subtle: none;
+  --highlight-glass-medium: none;
+  --highlight-glass-strong: none;
+  --shadow-glass-combined: none;
+  --shadow-glass-combined-hover: none;
+  --backdrop-blur-sm: 0;
+  --backdrop-blur-md: 0;
+  --backdrop-blur-lg: 0;
+  --backdrop-blur-xl: 0;
+
+  /* Derived accents follow the orange. */
+  --phosphor-wash: color-mix(in srgb, var(--phosphor) 22%, transparent);
+  --phosphor-wash-lo: color-mix(in srgb, var(--phosphor) 12%, transparent);
+  --phosphor-line: var(--phosphor);
+}
+
+/* Panels: matte slabs, dark hairline, no top-light. */
+[data-grammar="flat"] .glass-panel,
+[data-grammar="flat"] .glass-panel-subtle,
+[data-grammar="flat"] .glass-panel-medium,
+[data-grammar="flat"] .glass-panel-heavy {
+  background: var(--card);
+  border: 1px solid var(--line-strong);
+  box-shadow: none;
+}
+
+/* Track strips: Live's mixer strip is GREY — the colour lives in the title
+   block (see the TrackHeader override), not washed over the strip. */
+[data-grammar="flat"] .glass-card {
+  background: var(--card);
+  border: 1px solid var(--line-strong);
+  box-shadow: none;
+}
+/* !important kept: this overrides TrackStrip.svelte's Graticule
+   `.track-selected`, which is itself !important (it has to beat .glass-card
+   here from another file, where source order isn't guaranteed). */
+[data-grammar="flat"] .track-selected {
+  border-width: 2px !important;
+  border-color: var(--flat-selection) !important;
+  background: var(--popover) !important;
+  /* A second, dimmer line just outside the border. Not a Graticule-style
+     glow — it has a hard edge and no blur, so the strip still reads as a
+     flat mixer channel — but the pair is ~3px of selection ink where a
+     neighbouring strip has 1px of --line-strong, which is what makes the
+     selected column findable at arm's length instead of on inspection.
+     The strip's body stays plain --popover: Live's mixer strip is grey,
+     and the edge is where selection belongs. */
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--flat-selection) 45%, transparent) !important;
+}
+/* Light polarity: --flat-selection (#9fd6ea, a pale cyan) sits close in
+   lightness to this ladder's card/border greys, so the bare 1px ring above
+   all but disappears next to a neighbouring strip's --line-strong edge —
+   confirmed against a real capture, not just the token values. Widen the
+   ring and darken it (mixed toward black, not just the raw token) for a
+   clearly heavier edge; the strip body stays plain --popover, matching the
+   "Live's mixer strip is GREY" rule above rather than adding a wash. Higher
+   specificity than the rule above (class + attribute vs. one attribute)
+   wins outright, no !important race. */
+.light[data-grammar="flat"] .track-selected {
+  border-width: 3px !important;
+  border-color: color-mix(in srgb, var(--flat-selection) 65%, black) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--flat-selection) 45%, black) !important;
+}
+
+/* FX slots: a device is a grey module; the family ink stays as text/arc. */
+[data-grammar="flat"] .glass-colored {
+  background: var(--popover);
+  border: 1px solid var(--line-strong);
+  box-shadow: none;
+}
+/* Hybrid: the device family keeps a whisper of its ink in the module frame
+   (label + value fill carry the rest). */
+[data-skin="hybrid"] .glass-colored {
+  border-color: color-mix(in srgb, var(--accent-primary, var(--line-strong)) 40%, var(--line-strong));
+}
+
+[data-grammar="flat"] .glass-topbar {
+  background: var(--card);
+  border-bottom: 1px solid var(--line-strong);
+}
+[data-grammar="flat"] .glass-modal {
+  background: var(--popover);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 8px 24px oklch(0 0 0 / 0.45);
+}
+[data-grammar="flat"] .surface-well {
+  background: var(--surface-well);
+  box-shadow: none;
+  border: 1px solid var(--line-strong);
+}
+
+/* Toggles: OFF = control field, ON = ChosenDefault fill with dark text —
+   Live's single most recognisable idiom. Device inks step aside for it. */
+[data-grammar="flat"] .physical-button {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--foreground);
+  background: var(--surface-well);
+  box-shadow: none;
+}
+[data-grammar="flat"] .physical-button:hover:not(.active) {
+  background: var(--secondary);
+}
+[data-grammar="flat"] .physical-button.active {
+  background: var(--phosphor);
+  border-color: var(--phosphor);
+  color: var(--flat-on-fg);
+  box-shadow: none;
+}
+/* Light: an ON fill sits at ~1:1 luminance against the light ladder, so
+   the frame has to stay dark for the control's boundary to survive. */
+.light[data-grammar="flat"] .physical-button.active {
+  border-color: var(--line-strong);
+}
+[data-grammar="flat"] .device-segmented {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-well);
+  box-shadow: none;
+}
+[data-grammar="flat"] .device-segment {
+  color: var(--foreground);
+}
+[data-grammar="flat"] .device-segment + .device-segment {
+  border-top: 1px solid var(--line-strong);
+}
+[data-grammar="flat"] .device-segment:hover:not(.active) {
+  color: var(--foreground);
+  background: var(--secondary);
+}
+[data-grammar="flat"] .device-segment.active {
+  background: var(--phosphor);
+  color: var(--flat-on-fg);
+}
+
+/* No HUD brackets, no capless playhead glow. */
+[data-grammar="flat"] .hud-bracket::after { display: none; }
+[data-grammar="flat"] .strip-playhead { background: var(--foreground); }
+[data-grammar="flat"] {
+  --playhead: var(--foreground);
+  --scrim: color-mix(in srgb, var(--background) 55%, transparent);
+  --scrim-strong: color-mix(in srgb, var(--background) 80%, transparent);
+  --edge-light: none;
+  --well-shadow: none;
+}
+
+/* iPad touch-feedback scale stays; nothing else animates differently. */
+
+/* Tailwind's rounded-* utilities inline their value (@theme inline), so the
+   token override above cannot reach them; square them here. rounded-full is
+   left alone — knobs and record dots are round in Live too. */
+[data-grammar="flat"] :is(.rounded, .rounded-xs, .rounded-md, .rounded-lg, .rounded-xl, .rounded-2xl) {
+  border-radius: var(--radius-md);
+}
+[data-grammar="flat"] .rounded-t-lg { border-radius: var(--radius-md) var(--radius-md) 0 0; }
+[data-grammar="flat"] .rounded-b-lg { border-radius: 0 0 var(--radius-md) var(--radius-md); }
+[data-grammar="flat"] .rounded-l-lg { border-radius: var(--radius-md) 0 0 var(--radius-md); }
+[data-grammar="flat"] .rounded-r-lg { border-radius: 0 var(--radius-md) var(--radius-md) 0; }

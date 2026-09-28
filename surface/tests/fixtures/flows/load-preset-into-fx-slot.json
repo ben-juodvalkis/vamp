@@ -1,0 +1,426 @@
+{
+  "flow": "load-preset-into-fx-slot",
+  "captured_at": "2026-04-12-batch-v3",
+  "messages": [
+    {
+      "ts": 1776020425957,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/devices/load",
+      "args": [
+        "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Effect Patches/movement-filter.adv"
+      ]
+    },
+    {
+      "ts": 1776020426531,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/devices/complete_state",
+      "args": [
+        2,
+        1,
+        0,
+        2,
+        "78533",
+        0,
+        "Basic Shapes",
+        "InstrumentMeld",
+        7,
+        8,
+        0,
+        9,
+        0,
+        14,
+        0,
+        15,
+        1,
+        16,
+        0,
+        37,
+        0.0707106813788414,
+        39,
+        0.1866055279970169,
+        0,
+        0,
+        0,
+        "78541",
+        1,
+        "movement-filter",
+        "MxDeviceAudioEffect",
+        12,
+        1,
+        0,
+        2,
+        0,
+        3,
+        10.13841438293457,
+        4,
+        4,
+        5,
+        0.5039370059967041,
+        6,
+        0,
+        7,
+        0,
+        8,
+        0.5,
+        9,
+        1,
+        10,
+        18000,
+        11,
+        0,
+        14,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776020426533,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        10,
+        10446.979817922564
+      ]
+    },
+    {
+      "ts": 1776020426533,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        11,
+        0.05554671757344363
+      ]
+    },
+    {
+      "ts": 1776020426539,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        10,
+        10446.979817922564
+      ]
+    },
+    {
+      "ts": 1776020426540,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        11,
+        0.05554671757344363
+      ]
+    },
+    {
+      "ts": 1776020426556,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        10,
+        10446.979817922564
+      ]
+    },
+    {
+      "ts": 1776020426556,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        11,
+        0.05554671757344363
+      ]
+    },
+    {
+      "ts": 1776020426573,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        10,
+        10446.979817922564
+      ]
+    },
+    {
+      "ts": 1776020426573,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        11,
+        0.05554671757344363
+      ]
+    },
+    {
+      "ts": 1776020426590,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        10,
+        10446.979817922564
+      ]
+    },
+    {
+      "ts": 1776020426591,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        11,
+        0.05554671757344363
+      ]
+    },
+    {
+      "ts": 1776020426606,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        10,
+        10446.979817922564
+      ]
+    },
+    {
+      "ts": 1776020426606,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        11,
+        0.05554671757344363
+      ]
+    },
+    {
+      "ts": 1776020426623,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        10,
+        10446.979817922564
+      ]
+    },
+    {
+      "ts": 1776020426623,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        11,
+        0.05554671757344363
+      ]
+    },
+    {
+      "ts": 1776020426641,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        10,
+        10446.979817922564
+      ]
+    },
+    {
+      "ts": 1776020426642,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        11,
+        0.05554671757344363
+      ]
+    },
+    {
+      "ts": 1776020426656,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        10,
+        10446.979817922564
+      ]
+    },
+    {
+      "ts": 1776020426656,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        11,
+        0.05554671757344363
+      ]
+    },
+    {
+      "ts": 1776020426673,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        10,
+        10446.979817922564
+      ]
+    },
+    {
+      "ts": 1776020426673,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        11,
+        0.05554671757344363
+      ]
+    },
+    {
+      "ts": 1776020426690,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        10,
+        10446.979817922564
+      ]
+    },
+    {
+      "ts": 1776020426690,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        11,
+        0.05554671757344363
+      ]
+    },
+    {
+      "ts": 1776020426706,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        10,
+        10446.979817922564
+      ]
+    },
+    {
+      "ts": 1776020426706,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        11,
+        0.05554671757344363
+      ]
+    },
+    {
+      "ts": 1776020426723,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        10,
+        10446.979817922564
+      ]
+    },
+    {
+      "ts": 1776020426723,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        11,
+        0.05554671757344363
+      ]
+    },
+    {
+      "ts": 1776020426727,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        10,
+        10446.979817922564
+      ]
+    },
+    {
+      "ts": 1776020426727,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        2,
+        1,
+        11,
+        0.05554671757344363
+      ]
+    },
+    {
+      "ts": 1776020434047,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/view/focused_document_view",
+      "args": [
+        "Session"
+      ]
+    }
+  ]
+}

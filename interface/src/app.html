@@ -1,0 +1,51 @@
+<!doctype html>
+<!-- `data-skin` / `data-grammar` are the ONE skin (Hybrid) and are constants:
+     hard-coded here rather than set by a boot script, so the look has no FOUC
+     window and no localStorage dependency. See stores/theme.ts. -->
+<html lang="en" data-skin="hybrid" data-grammar="flat">
+	<head>
+		<meta charset="utf-8" />
+
+		<!-- PWA Manifest -->
+		<link rel="manifest" href="/manifest.json" />
+
+		<!-- PWA Icons -->
+		<link rel="icon" type="image/png" sizes="64x64" href="/pwa-64x64.png" />
+		<link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
+		<link rel="icon" type="image/png" sizes="512x512" href="/pwa-512x512.png" />
+		<link rel="apple-touch-icon" href="/pwa-512x512.png" />
+
+		<!-- PWA Meta Tags -->
+		<meta name="theme-color" content="#1f2126" />
+		<meta name="background-color" content="#1f2126" />
+		<meta name="display" content="fullscreen" />
+
+		<!-- PWA Mobile Support -->
+		<meta name="mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+		<meta name="apple-mobile-web-app-title" content="Looping" />
+		<meta name="apple-touch-fullscreen" content="yes" />
+
+		<!-- Disable iOS Safari UI behaviors for TouchOSC-like experience -->
+		<meta name="format-detection" content="telephone=no" />
+		<meta name="msapplication-tap-highlight" content="no" />
+
+		<!-- Prevent iOS Safari zoom/bounce behaviors -->
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui, viewport-fit=cover" />
+
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<script>
+			// Prevent FOUC by applying theme class before hydration
+			(function() {
+				const theme = localStorage.getItem('theme') || 'dark';
+				const isDark = theme === 'dark' || 
+					(theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+				document.documentElement.classList.add(isDark ? 'dark' : 'light');
+			})();
+		</script>
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>

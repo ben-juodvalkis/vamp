@@ -1,0 +1,109 @@
+{
+  "device_name": "Reverb", 
+  "class_name": "Reverb",
+  "description": "Ableton Live's built-in reverb effect",
+  "version": "1.0.0",
+  "priority": "useful",
+  "parameters": {
+    "essential": [
+      {
+        "index": 0,
+        "name": "PreDelay",
+        "description": "Pre-delay time before reverb",
+        "range": { "min": 0, "max": 250, "default": 0 },
+        "units": "ms", 
+        "type": "continuous",
+        "update_rate": "slow"
+      },
+      {
+        "index": 1,
+        "name": "Room Size",
+        "description": "Virtual room size",
+        "range": { "min": 0, "max": 1, "default": 0.5 },
+        "type": "continuous",
+        "update_rate": "moderate"
+      },
+      {
+        "index": 5,
+        "name": "Dry/Wet",
+        "description": "Dry/wet mix balance",
+        "range": { "min": 0, "max": 1, "default": 0.5 },
+        "units": "%",
+        "type": "continuous", 
+        "update_rate": "realtime"
+      }
+    ],
+    "important": [
+      {
+        "index": 2,
+        "name": "Stereo Image",
+        "description": "Stereo width of reverb",
+        "range": { "min": 0, "max": 120, "default": 120 },
+        "units": "%",
+        "type": "continuous",
+        "update_rate": "moderate"
+      },
+      {
+        "index": 3,
+        "name": "Hi Cut",
+        "description": "High frequency cut filter",
+        "range": { "min": 1000, "max": 20000, "default": 10000 },
+        "units": "Hz",
+        "type": "continuous", 
+        "update_rate": "moderate"
+      },
+      {
+        "index": 4,
+        "name": "Low Cut",
+        "description": "Low frequency cut filter",
+        "range": { "min": 20, "max": 1000, "default": 200 },
+        "units": "Hz",
+        "type": "continuous",
+        "update_rate": "moderate"
+      }
+    ],
+    "useful": [
+      {
+        "index": 6,
+        "name": "Reflect",
+        "description": "Early reflections level",
+        "range": { "min": 0, "max": 1, "default": 0.5 },
+        "type": "continuous",
+        "update_rate": "slow"
+      },
+      {
+        "index": 7,
+        "name": "Diffuse",
+        "description": "Diffusion amount",
+        "range": { "min": 0, "max": 1, "default": 0.625 }, 
+        "type": "continuous",
+        "update_rate": "slow"
+      }
+    ],
+    "optional": [
+      {
+        "index": 8,
+        "name": "Input Processing",
+        "description": "Input signal processing type",
+        "type": "discrete",
+        "update_rate": "slow"
+      },
+      {
+        "index": 9,
+        "name": "Spin",
+        "description": "Modulation/spin amount",
+        "range": { "min": 0, "max": 1, "default": 0.2 },
+        "type": "continuous",
+        "update_rate": "slow"
+      },
+      {
+        "index": 10,
+        "name": "Chorus",
+        "description": "Chorus modulation",
+        "range": { "min": 0, "max": 1, "default": 0 },
+        "type": "continuous",
+        "update_rate": "slow"
+      }
+    ]
+  }
+}

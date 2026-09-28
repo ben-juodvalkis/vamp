@@ -1,0 +1,153 @@
+{
+  "device_name": "Operator",
+  "class_name": "Operator",
+  "description": "Ableton Live's FM synthesis instrument",
+  "version": "1.0.0", 
+  "priority": "essential",
+  "parameters": {
+    "essential": [
+      {
+        "index": 0,
+        "name": "Osc A Level",
+        "description": "Oscillator A output level",
+        "range": { "min": 0, "max": 1, "default": 0.7 },
+        "type": "continuous",
+        "update_rate": "moderate"
+      },
+      {
+        "index": 1,
+        "name": "Osc A Coarse",
+        "description": "Oscillator A coarse tuning",
+        "range": { "min": -48, "max": 48, "default": 0 },
+        "units": "semitones",
+        "type": "discrete",
+        "update_rate": "slow"
+      },
+      {
+        "index": 2,
+        "name": "Osc A Fine",
+        "description": "Oscillator A fine tuning",
+        "range": { "min": -50, "max": 50, "default": 0 },
+        "units": "cents", 
+        "type": "continuous",
+        "update_rate": "slow"
+      }
+    ],
+    "important": [
+      {
+        "index": 8,
+        "name": "Osc B Level", 
+        "description": "Oscillator B output level",
+        "range": { "min": 0, "max": 1, "default": 0 },
+        "type": "continuous",
+        "update_rate": "moderate"
+      },
+      {
+        "index": 9,
+        "name": "Osc B Coarse",
+        "description": "Oscillator B coarse tuning", 
+        "range": { "min": -48, "max": 48, "default": 0 },
+        "units": "semitones",
+        "type": "discrete",
+        "update_rate": "slow"
+      },
+      {
+        "index": 16,
+        "name": "Osc C Level",
+        "description": "Oscillator C output level",
+        "range": { "min": 0, "max": 1, "default": 0 },
+        "type": "continuous", 
+        "update_rate": "moderate"
+      },
+      {
+        "index": 24,
+        "name": "Osc D Level",
+        "description": "Oscillator D output level",
+        "range": { "min": 0, "max": 1, "default": 0 },
+        "type": "continuous",
+        "update_rate": "moderate"
+      },
+      {
+        "index": 26,
+        "name": "Feedback",
+        "description": "FM feedback amount",
+        "range": { "min": 0, "max": 100, "default": 0 },
+        "units": "%",
+        "type": "continuous",
+        "update_rate": "moderate"
+      }
+    ],
+    "useful": [
+      {
+        "index": 32,
+        "name": "LFO Rate",
+        "description": "LFO rate/speed",
+        "range": { "min": 0, "max": 1, "default": 0.5 },
+        "type": "continuous",
+        "update_rate": "moderate"
+      },
+      {
+        "index": 33,
+        "name": "LFO Amount",
+        "description": "LFO modulation amount",
+        "range": { "min": 0, "max": 1, "default": 0 },
+        "type": "continuous",
+        "update_rate": "moderate"
+      },
+      {
+        "index": 40,
+        "name": "Filter Freq",
+        "description": "Filter cutoff frequency",
+        "range": { "min": 20, "max": 20000, "default": 1000 },
+        "units": "Hz",
+        "type": "continuous",
+        "update_rate": "realtime"
+      },
+      {
+        "index": 41,
+        "name": "Filter Res", 
+        "description": "Filter resonance",
+        "range": { "min": 0, "max": 1, "default": 0 },
+        "type": "continuous",
+        "update_rate": "moderate"
+      }
+    ],
+    "optional": [
+      {
+        "index": 48,
+        "name": "Env 1 Attack",
+        "description": "Envelope 1 attack time",
+        "range": { "min": 0, "max": 10, "default": 0.1 },
+        "units": "s",
+        "type": "continuous",
+        "update_rate": "slow"
+      },
+      {
+        "index": 49,
+        "name": "Env 1 Decay",
+        "description": "Envelope 1 decay time",
+        "range": { "min": 0, "max": 10, "default": 0.3 },
+        "units": "s",
+        "type": "continuous",
+        "update_rate": "slow"
+      },
+      {
+        "index": 50,
+        "name": "Env 1 Sustain",
+        "description": "Envelope 1 sustain level",
+        "range": { "min": 0, "max": 1, "default": 0.7 },
+        "type": "continuous", 
+        "update_rate": "slow"
+      },
+      {
+        "index": 51,
+        "name": "Env 1 Release",
+        "description": "Envelope 1 release time",
+        "range": { "min": 0, "max": 10, "default": 0.5 },
+        "units": "s",
+        "type": "continuous",
+        "update_rate": "slow"
+      }
+    ]
+  }
+}

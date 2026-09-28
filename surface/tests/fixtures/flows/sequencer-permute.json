@@ -1,0 +1,784 @@
+{
+  "flow": "sequencer-permute",
+  "captured_at": "2026-04-12-batch-v3",
+  "messages": [
+    {
+      "ts": 1776020580296,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020580369,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3,
+        false
+      ]
+    },
+    {
+      "ts": 1776020580370,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        3,
+        1
+      ]
+    },
+    {
+      "ts": 1776020580371,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020580371,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776020580371,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776020580371,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "arm",
+        0
+      ]
+    },
+    {
+      "ts": 1776020580375,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "name",
+        "chl_prclp_tamb_80_01"
+      ]
+    },
+    {
+      "ts": 1776020580375,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "color",
+        16749734
+      ]
+    },
+    {
+      "ts": 1776020580376,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "volume",
+        0.8500000238418579
+      ]
+    },
+    {
+      "ts": 1776020580376,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/single_track_summary",
+      "args": [
+        4,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776020580376,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/devices/complete_state",
+      "args": [
+        3,
+        0,
+        1,
+        1,
+        "78559",
+        0,
+        "Permute",
+        "MxDeviceAudioEffect",
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776020580376,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020580376,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776020580376,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776020580377,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "arm",
+        0
+      ]
+    },
+    {
+      "ts": 1776020580377,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "name",
+        "chl_prclp_tamb_80_01"
+      ]
+    },
+    {
+      "ts": 1776020580377,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "color",
+        16749734
+      ]
+    },
+    {
+      "ts": 1776020580377,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "volume",
+        0.8500000238418579
+      ]
+    },
+    {
+      "ts": 1776020580377,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/clip/detail",
+      "args": [
+        3,
+        0
+      ]
+    },
+    {
+      "ts": 1776020580377,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/timing_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020580377,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/timing_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020580377,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/quantization_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020580377,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/quantization_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020580378,
+      "dir": "out",
+      "target": "sequencer",
+      "address": "/looping/sequencer/set/state",
+      "args": [
+        78559,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        8,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        8,
+        1,
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "ts": 1776020580378,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/random_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020580378,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/random_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020580379,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/velocity_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020580379,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/velocity_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020580379,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/base",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020580379,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/timing_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020580379,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/quantization_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020580379,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/random_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020580379,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/velocity_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020580381,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/properties/batch",
+      "args": [
+        "loop_start",
+        0,
+        "loop_end",
+        6,
+        "start_marker",
+        0,
+        "end_marker",
+        6,
+        "length",
+        6,
+        "looping",
+        1,
+        "warp_mode",
+        0
+      ]
+    },
+    {
+      "ts": 1776020580381,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/loop_start",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020580381,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/loop_start",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020580382,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/loop_end",
+      "args": [
+        6
+      ]
+    },
+    {
+      "ts": 1776020580382,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/loop_end",
+      "args": [
+        6
+      ]
+    },
+    {
+      "ts": 1776020580383,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/start_marker",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020580383,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/start_marker",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020580384,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/end_marker",
+      "args": [
+        6
+      ]
+    },
+    {
+      "ts": 1776020580385,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/end_marker",
+      "args": [
+        6
+      ]
+    },
+    {
+      "ts": 1776020580385,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/looping",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776020580385,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/looping",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776020580386,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/warp_mode",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020580386,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/warp_mode",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020580387,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/sequencer/state",
+      "args": [
+        3,
+        "set_state_ack",
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        8,
+        1,
+        0,
+        0,
+        -1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        8,
+        1,
+        0,
+        0,
+        -1,
+        0,
+        1
+      ]
+    },
+    {
+      "ts": 1776020580472,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020580476,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3,
+        false
+      ]
+    },
+    {
+      "ts": 1776020580477,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        3,
+        1
+      ]
+    },
+    {
+      "ts": 1776020580628,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020580690,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3,
+        false
+      ]
+    },
+    {
+      "ts": 1776020580692,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776020580692,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020580692,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        2,
+        0
+      ]
+    },
+    {
+      "ts": 1776020580693,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        4,
+        0
+      ]
+    },
+    {
+      "ts": 1776020580800,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        4,
+        "arm",
+        0
+      ]
+    },
+    {
+      "ts": 1776020581480,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/view/focused_document_view",
+      "args": [
+        "Session"
+      ]
+    },
+    {
+      "ts": 1776020583339,
+      "dir": "out",
+      "target": "sequencer",
+      "address": "/looping/sequencer/mute/step",
+      "args": [
+        78559,
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776020583344,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/sequencer/state",
+      "args": [
+        3,
+        "mute_step",
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        8,
+        1,
+        0,
+        0,
+        -1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        8,
+        1,
+        0,
+        0,
+        -1,
+        0,
+        1
+      ]
+    },
+    {
+      "ts": 1776020583344,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/sequencer/mute/position",
+      "args": [
+        -1
+      ]
+    },
+    {
+      "ts": 1776020584075,
+      "dir": "out",
+      "target": "sequencer",
+      "address": "/looping/sequencer/pitch/step",
+      "args": [
+        78559,
+        0,
+        1
+      ]
+    },
+    {
+      "ts": 1776020584079,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/sequencer/state",
+      "args": [
+        3,
+        "pitch_step",
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        8,
+        1,
+        0,
+        0,
+        -1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        8,
+        1,
+        0,
+        0,
+        -1,
+        0,
+        1
+      ]
+    },
+    {
+      "ts": 1776020584079,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/sequencer/pitch/position",
+      "args": [
+        -1
+      ]
+    },
+    {
+      "ts": 1776020593866,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/view/focused_document_view",
+      "args": [
+        "Session"
+      ]
+    }
+  ]
+}

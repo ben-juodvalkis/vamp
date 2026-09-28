@@ -1,0 +1,548 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/looping/config/constants.schema.json",
+  "title": "Looping Configuration Constants",
+  "description": "Schema for project-wide configuration constants used by the Looping live performance system",
+  "type": "object",
+  "required": ["paths", "osc", "network", "http"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of this configuration file"
+    },
+    "features": {
+      "type": "object",
+      "description": "One switch per bespoke subsystem (general-release audit §7b), read once by the bridge (interface/bridge/utils/features.js) and sent to every client as /bridge/features. Only an explicit true turns a subsystem on: false or a missing entry is off. `_`-prefixed keys are documentation.",
+      "properties": {
+        "totalmix": {
+          "type": "boolean",
+          "description": "RME TotalMix monitor link (ADR-423): the bridge's mixer ports and startup bootstrap, and the status-strip monitor bars."
+        },
+        "maxUtilityPatch": {
+          "type": "boolean",
+          "description": "The owner's standalone Max patch (owner/Max Patches/Max Utility 1.0.maxpat): opened by npm run dev and npm run ipad, and the System view's Move Knob switch."
+        },
+        "expressionPedal": {
+          "type": "boolean",
+          "description": "The expression pedal and its toe switch (the midiPedals wah CCs) and the Pedal view's Wah button. Off, the surface claims neither CC. The foot switch is a user setting, not this switch."
+        },
+        "menubar": {
+          "type": "boolean",
+          "description": "The owner's macOS menu-bar app (owner/menubar): built and launched by npm run dev and npm run ipad only while on."
+        },
+        "axHelper": {
+          "type": "boolean",
+          "description": "The Looping AX Helper (ADR-439): the bridge dials it, and the UI draws Reverse, Group and the held pad's similar-sample swap, only while on."
+        }
+      },
+      "patternProperties": {
+        "^_": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "paths": {
+      "type": "object",
+      "description": "File system paths for project resources",
+      "properties": {
+        "_note": {
+          "type": "string",
+          "description": "Important notes about path configuration"
+        },
+        "abletonApp": {
+          "type": "string",
+          "description": "The Live app to open, when it is on this Mac. Otherwise scripts/open-live.js opens the Live whose version names the preferences folder Live wrote last."
+        },
+        "browserBlocker": {
+          "type": "string",
+          "description": "The owner's browser-blocker script, another repo's, started by npm run ipad. Unset, nothing is started."
+        },
+        "userLibraryBase": {
+          "type": "string",
+          "description": "Absolute filesystem root of Ableton's User Library. DeviceLoadComponent strips this prefix from incoming preset paths and descends the browser's user_library tree by the remaining segments."
+        },
+        "instrumentsBase": {
+          "type": "string",
+          "description": "The instrument library's root; sidebarRoot sits inside it. Paths recorded before the Places (<instrumentsBase>/<Vendor>/<Type>/…) and Sidebar paths are both read from it for a category (interface/src/lib/utils/presetPath.ts)."
+        },
+        "effectPresetsBase": {
+          "type": "string",
+          "description": "Base path for effect presets"
+        },
+        "sidebarRoot": {
+          "type": "string",
+          "description": "The browser's library: one folder per rail button, each a Place in Live's sidebar (Looping's documentation/browser-places.plan.md). scripts/generate-places-catalog.ts reads it; without it the browser has no Places."
+        },
+        "abletonPacksBase": {
+          "type": "string",
+          "description": "Absolute filesystem root of Ableton's installed Packs. /api/sample-peaks and /api/similar-samples allow sample files under it (interface/src/lib/server/sampleRoots.ts)."
+        },
+        "placesRoots": {
+          "type": "object",
+          "description": "Mapping of Ableton sidebar Place display names to their filesystem roots. DeviceLoadComponent uses this to resolve preset paths that live outside User Library by descending browser.user_folders.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "waveformMaxBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum on-disk size (bytes) for files the /api/sample-peaks route will decode via the full-decode Path B (compressed: mp3/flac/ogg/m4a). Path A (streaming WAV/AIFF) ignores this cap. Files routed through Path B above this return 413. Sized for the decoded-memory footprint of the largest legitimate Simpler sample; default 75 MB."
+        },
+        "waveformStreamingEnabled": {
+          "type": "boolean",
+          "description": "Feature flag for /api/sample-peaks Path A (streaming PCM peaks for WAV/AIFF/AIFC). When true, uniform-PCM files are processed by reading <=1MB at a time and computing peaks without holding full PCM in memory — decouples cost from file size, eliminates the cap for these formats. When false, all files take the full-decode Path B (legacy behavior). Roll back by flipping to false; Path B remains intact during the rollout window."
+        },
+        "liveDatabaseDir": {
+          "type": "string",
+          "description": "Live's own file-index folder (a leading ~/ is the home directory). /api/similar-samples reads the newest Live-files-<schema>.db in it, read-only, for the similarity vectors Live's indexer stores (ADR-440). Its contents are never written; the open is SQLite's readOnly, not immutable=1, so it does create the -shm/-wal sidecars a WAL reader needs."
+        },
+        "liveRecordingsDir": {
+          "type": "string",
+          "description": "Live's temporary folder, where it makes a Temp Project for every unsaved set (a leading ~/ is the home directory). The bridge hands the newest one to looping-recorder.amxd before each capture (interface/bridge/handlers/captureRecorder.js). Live's default is ~/Music/Ableton/Live Recordings."
+        }
+      }
+    },
+    "timing": {
+      "type": "object",
+      "description": "Timing configuration for various operations",
+      "properties": {
+        "startup": {
+          "type": "object",
+          "description": "npm run ipad startup orchestration",
+          "properties": {
+            "maxPatchMinDelayAfterLiveMs": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Minimum gap between launching Ableton Live and opening the Max Utility patch, so Max initializes against a running Live"
+            }
+          }
+        },
+        "oscMonitoring": {
+          "type": "object",
+          "properties": {
+            "reporting": {
+              "type": "integer",
+              "minimum": 1000,
+              "description": "OSC monitoring report interval in ms"
+            }
+          }
+        },
+        "meterBatching": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Meter update batching interval in ms"
+        },
+        "trackReorderDebounceMs": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Track reorder debounce delay in ms"
+        },
+        "serverPresence": {
+          "type": "object",
+          "description": "Bridge → surface liveness heartbeat cadence + grace window",
+          "properties": {
+            "heartbeatIntervalMs": {
+              "type": "integer",
+              "minimum": 100,
+              "description": "How often the bridge announces liveness to the surface"
+            },
+            "graceWindowMs": {
+              "type": "integer",
+              "minimum": 100,
+              "description": "Max heartbeat age before the surface considers the server gone"
+            }
+          }
+        }
+      }
+    },
+    "osc": {
+      "type": "object",
+      "description": "OSC (Open Sound Control) port configuration",
+      "required": ["pythonSurface", "webSocket"],
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "pythonSurface": {
+          "$ref": "#/$defs/oscEndpoint",
+          "description": "Python Control Surface — m4l-to-python migration Gate 1 onward"
+        },
+        "loopingRecorder": {
+          "$ref": "#/$defs/oscEndpoint",
+          "description": "looping-recorder.amxd OSC capture device — bidirectional control + state feedback and its hello"
+        },
+        "backendScope": {
+          "type": "object",
+          "description": "Per-backend overrides of the default prefix-based routing. Addresses listed here are routed to the named backend instead of falling through to the default. See Looping's documentation/archive/m4l-to-python/05-migration-plan.md §1.",
+          "properties": {
+            "pythonSurface": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "OSC addresses routed to the Python Control Surface. Each entry is either an exact address (e.g. '/live/test') or a prefix glob ending in '*' (e.g. '/looping/v2/*'). Gate 5 introduced the glob form."
+            },
+            "loopingRecorder": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "OSC addresses routed to the looping-recorder.amxd capture device. Same glob/exact rules as pythonSurface."
+            }
+          }
+        },
+        "footTrigger": {
+          "type": "object",
+          "properties": {
+            "port": { "type": "integer" },
+            "host": { "type": "string" },
+            "description": { "type": "string" },
+            "holdThresholdMs": { "type": "integer" }
+          }
+        },
+        "webSocket": {
+          "type": "object",
+          "required": ["port"],
+          "properties": {
+            "port": {
+              "type": "integer",
+              "minimum": 1024,
+              "maximum": 65535,
+              "description": "WebSocket server port (avoid 8080 - causes RSV1 errors)"
+            },
+            "host": {
+              "type": "string",
+              "description": "WebSocket server host binding"
+            },
+            "description": { "type": "string" }
+          }
+        },
+        "messageQueue": {
+          "type": "object",
+          "properties": {
+            "maxSize": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum queued messages before dropping"
+            },
+            "timeout": {
+              "type": "integer",
+              "minimum": 1000,
+              "description": "Message queue timeout in ms"
+            },
+            "description": { "type": "string" }
+          }
+        },
+        "reconnectDelay": {
+          "type": "integer",
+          "minimum": 100,
+          "description": "WebSocket reconnection delay in ms"
+        }
+      }
+    },
+    "network": {
+      "type": "object",
+      "description": "Network configuration",
+      "required": ["localhost"],
+      "properties": {
+        "localhost": {
+          "type": "string",
+          "description": "Localhost identifier"
+        },
+        "hostname": {
+          "type": "string",
+          "description": "Stable hostname for Bonjour/mDNS discovery"
+        },
+        "ipad": {
+          "type": "object",
+          "properties": {
+            "wifi": {
+              "type": "string",
+              "description": "iPad WiFi IP address"
+            },
+            "usbc": {
+              "type": "string",
+              "description": "iPad USB-C network IP address"
+            },
+            "usbcPreferred": {
+              "type": "string",
+              "description": "Preferred USB-C connection"
+            }
+          }
+        }
+      }
+    },
+    "http": {
+      "type": "object",
+      "description": "HTTP server configuration",
+      "required": ["interfacePort"],
+      "properties": {
+        "interfacePort": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 65535,
+          "description": "SvelteKit interface HTTP port"
+        }
+      }
+    },
+    "debug": {
+      "type": "object",
+      "description": "Debug configuration",
+      "properties": {
+        "maxRecentMessages": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum recent messages to keep for debugging"
+        }
+      }
+    },
+    "instruments": {
+      "type": "object",
+      "description": "Instrument-specific configuration",
+      "properties": {
+        "transpose": {
+          "type": "object",
+          "properties": {
+            "parameterNames": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["name", "shiftAmount"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "shiftAmount": { "type": "integer" },
+                  "description": { "type": "string" }
+                }
+              }
+            },
+            "defaultShiftAmount": {
+              "type": "integer",
+              "description": "Default semitone shift amount"
+            }
+          }
+        }
+      }
+    },
+    "devices": {
+      "type": "object",
+      "description": "Device configuration",
+      "properties": {
+        "audioEffectRack": {
+          "type": "object",
+          "properties": {
+            "macroCount": { "type": "integer" },
+            "parameterNameCount": { "type": "integer" },
+            "macroRange": {
+              "type": "object",
+              "properties": {
+                "min": { "type": "integer" },
+                "max": { "type": "integer" }
+              }
+            }
+          }
+        },
+        "sequencer": {
+          "type": "object",
+          "properties": {
+            "devicePath": { "type": "string" },
+            "description": { "type": "string" }
+          }
+        },
+        "randomStart": {
+          "type": "object",
+          "properties": {
+            "devicePath": { "type": "string" },
+            "description": { "type": "string" }
+          }
+        },
+        "wah": {
+          "type": "object",
+          "properties": {
+            "presetPath": { "type": "string" },
+            "className": { "type": "string" },
+            "deviceName": { "type": "string" },
+            "freqMacroIndex": { "type": "integer" },
+            "toggleMacroIndex": { "type": "integer" },
+            "sweepLoadMargin": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 63,
+              "description": "How close to each end of the 0-127 expression-pedal range counts as reaching that end, for the sweep-to-load gesture. 0 demands literal 0 and 127."
+            },
+            "description": { "type": "string" }
+          }
+        },
+        "midiWheels": {
+          "type": "object",
+          "description": "The MidiWheels MIDI effect (2026-09-25): the on-screen pitch/mod wheels (MidiWheelsComponent) and, on MIDI tracks, the expression pedal (WahPedalComponent) drive its parameters. Absent, the wheels do nothing and MIDI tracks get the wah.",
+          "properties": {
+            "devicePath": { "type": "string" },
+            "className": { "type": "string" },
+            "deviceName": { "type": "string" },
+            "modParamIndex": { "type": "integer", "minimum": 1 },
+            "pitchParamIndex": { "type": "integer", "minimum": 1 },
+            "sweepLoadMargin": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 63,
+              "description": "How close to each end of the 0-127 expression-pedal range counts as reaching that end, for the sweep-to-load gesture. 0 demands literal 0 and 127."
+            },
+            "description": { "type": "string" }
+          }
+        }
+      }
+    },
+    "midiPedals": {
+      "type": "object",
+      "description": "MIDI CC map for pedals plugged into the Looping control surface's own MIDI input port (ADR-422)",
+      "properties": {
+        "_description": { "type": "string" },
+        "_channelNote": { "type": "string" },
+        "_footSwitchNote": { "type": "string" },
+        "channel": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16,
+          "description": "MIDI channel the pedal transmits on (1-16); 0 means listen on all 16 channels"
+        },
+        "footSwitchCC": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 127,
+          "description": "Seeds the foot switch on a machine with no saved setting (logs/foot-switch.json). Absent, and nothing saved, there is no foot switch; the System view's Learn sets one."
+        },
+        "wahToeSwitchCC": { "type": "integer", "minimum": 0, "maximum": 127 },
+        "wahExpressionCC": { "type": "integer", "minimum": 0, "maximum": 127 }
+      }
+    },
+    "vendors": {
+      "type": "object",
+      "description": "Vendor-specific UI configuration",
+      "properties": {
+        "special": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "color": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "catalog": {
+      "type": "object",
+      "description": "Places-catalog generation config (scripts/generate-places-catalog.ts)",
+      "properties": {
+        "maxFolderDepth": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Cap folder nesting at this many levels in every Place; deeper folders roll their presets up and de-dupe by name. A Place's Samples folder is exempt."
+        },
+        "places": {
+          "type": "object",
+          "description": "Per-Place tuning, keyed by the Place's sidebar name: maxFolderDepth (overrides the global value), flattenFolders (paths '<Place>/<folder>', ADR-408), keepNestingFolders (breadcrumb label chains, ADR-420) and role (the track role a load records; null for none).",
+          "additionalProperties": {
+            "type": ["object", "string"]
+          }
+        }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "description": "UI configuration",
+      "properties": {
+        "meters": {
+          "type": "object",
+          "properties": {
+            "opacity": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "gestures": {
+          "type": "object",
+          "description": "Touch gesture thresholds shared by the interface and the Move pad script",
+          "properties": {
+            "momentaryHoldMs": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "A press released under this is a tap (latch); at or over it, a hold (momentary)"
+            }
+          }
+        }
+      }
+    },
+    "axHelper": {
+      "type": "object",
+      "description": "Looping AX Helper (ADR-439): the one process that drives Live's UI through macOS Accessibility. Built and registered by `npm run install-ax-helper`; Accessibility trust is granted to that app bundle once, in System Settings.",
+      "required": [
+        "appName",
+        "bundleId",
+        "socketPath"
+      ],
+      "properties": {
+        "appName": {
+          "type": "string",
+          "description": "The .app bundle's name under ~/Applications; the trusted identity TCC records"
+        },
+        "bundleId": {
+          "type": "string",
+          "description": "The bundle identifier the LaunchAgent and the Accessibility grant are keyed on"
+        },
+        "socketPath": {
+          "type": "string",
+          "description": "Owner-only Unix socket the bridge dials (mode 0600 in a 0700 directory) -- whoever can connect can press anything in Live, so never a TCP port"
+        },
+        "messagingTimeoutS": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Per-request AXUIElementSetMessagingTimeout. The cold first kit swap takes ~5 s and the 6 s default returns -25204 although Live completes it"
+        },
+        "requestTimeoutMs": {
+          "type": "integer",
+          "minimum": 1000,
+          "description": "The bridge's own ceiling on one helper reply"
+        },
+        "statusIntervalMs": {
+          "type": "integer",
+          "minimum": 1000,
+          "description": "How often the bridge polls the helper's `status` verb for the presence channel"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "oscEndpoint": {
+      "type": "object",
+      "required": ["localPort", "remotePort", "host"],
+      "properties": {
+        "localPort": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 65535,
+          "description": "Local port for receiving OSC messages"
+        },
+        "remotePort": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 65535,
+          "description": "Remote port for sending OSC messages"
+        },
+        "host": {
+          "type": "string",
+          "description": "Host address (typically 127.0.0.1)"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of this endpoint"
+        }
+      }
+    }
+  }
+}

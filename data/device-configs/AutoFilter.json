@@ -1,0 +1,83 @@
+{
+  "device_name": "Auto Filter",
+  "class_name": "AutoFilter",
+  "description": "Ableton Live's auto filter with envelope follower",
+  "version": "1.0.0",
+  "priority": "useful",
+  "parameters": {
+    "essential": [
+      {
+        "index": 0,
+        "name": "Frequency",
+        "description": "Filter cutoff frequency",
+        "range": { "min": 20, "max": 20000, "default": 1000 },
+        "units": "Hz",
+        "type": "continuous",
+        "update_rate": "realtime"
+      },
+      {
+        "index": 1,
+        "name": "Resonance", 
+        "description": "Filter resonance/Q",
+        "range": { "min": 0, "max": 1, "default": 0 },
+        "type": "continuous",
+        "update_rate": "moderate"
+      },
+      {
+        "index": 7,
+        "name": "Dry/Wet",
+        "description": "Dry/wet mix",
+        "range": { "min": 0, "max": 1, "default": 1 },
+        "units": "%",
+        "type": "continuous",
+        "update_rate": "moderate"
+      }
+    ],
+    "important": [
+      {
+        "index": 2,
+        "name": "Filter Type",
+        "description": "Filter type (LP, HP, BP, Notch)",
+        "type": "discrete",
+        "update_rate": "slow"
+      },
+      {
+        "index": 3,
+        "name": "Env Amount",
+        "description": "Envelope modulation amount",
+        "range": { "min": -1, "max": 1, "default": 0 },
+        "type": "continuous",
+        "update_rate": "moderate"
+      },
+      {
+        "index": 4,
+        "name": "Env Attack",
+        "description": "Envelope attack time",
+        "range": { "min": 0, "max": 2, "default": 0.1 },
+        "units": "s",
+        "type": "continuous",
+        "update_rate": "slow"
+      },
+      {
+        "index": 5,
+        "name": "Env Release",
+        "description": "Envelope release time",
+        "range": { "min": 0, "max": 2, "default": 0.1 },
+        "units": "s",
+        "type": "continuous",
+        "update_rate": "slow"
+      }
+    ],
+    "useful": [
+      {
+        "index": 6,
+        "name": "LFO Amount",
+        "description": "LFO modulation amount",
+        "range": { "min": 0, "max": 1, "default": 0 },
+        "type": "continuous",
+        "update_rate": "moderate"
+      }
+    ],
+    "optional": []
+  }
+}

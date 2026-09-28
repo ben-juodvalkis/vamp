@@ -1,0 +1,1643 @@
+{
+  "flow": "clip-duplicate-loop-delete",
+  "captured_at": "2026-04-12-batch-v3",
+  "messages": [
+    {
+      "ts": 1776020484406,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/live/view/set/selected_track",
+      "args": [
+        2
+      ]
+    },
+    {
+      "ts": 1776020484407,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.6493505239486694
+      ]
+    },
+    {
+      "ts": 1776020484407,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.6485655307769775
+      ]
+    },
+    {
+      "ts": 1776020484412,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/track/query",
+      "args": [
+        2
+      ]
+    },
+    {
+      "ts": 1776020484415,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.6485655307769775
+      ]
+    },
+    {
+      "ts": 1776020484416,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776020484416,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776020484416,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "arm",
+        1
+      ]
+    },
+    {
+      "ts": 1776020484416,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "name",
+        "Basic Shapes"
+      ]
+    },
+    {
+      "ts": 1776020484416,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "color",
+        16149507
+      ]
+    },
+    {
+      "ts": 1776020484416,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "volume",
+        0.850488007068634
+      ]
+    },
+    {
+      "ts": 1776020484429,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.6492121815681458
+      ]
+    },
+    {
+      "ts": 1776020484429,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.6484164595603943
+      ]
+    },
+    {
+      "ts": 1776020484459,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.649211585521698
+      ]
+    },
+    {
+      "ts": 1776020484459,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.6484139561653137
+      ]
+    },
+    {
+      "ts": 1776020484487,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.6492107510566711
+      ]
+    },
+    {
+      "ts": 1776020484488,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.6484138369560242
+      ]
+    },
+    {
+      "ts": 1776020484512,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.6492107510566711
+      ]
+    },
+    {
+      "ts": 1776020484513,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.6484140157699585
+      ]
+    },
+    {
+      "ts": 1776020484538,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.6245397329330444
+      ]
+    },
+    {
+      "ts": 1776020484539,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.623742938041687
+      ]
+    },
+    {
+      "ts": 1776020484568,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.5949344635009766
+      ]
+    },
+    {
+      "ts": 1776020484569,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.5941376686096191
+      ]
+    },
+    {
+      "ts": 1776020484599,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.5643423795700073
+      ]
+    },
+    {
+      "ts": 1776020484599,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.5635455250740051
+      ]
+    },
+    {
+      "ts": 1776020484627,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.5357239246368408
+      ]
+    },
+    {
+      "ts": 1776020484627,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.5349271297454834
+      ]
+    },
+    {
+      "ts": 1776020484651,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.5130265951156616
+      ]
+    },
+    {
+      "ts": 1776020484651,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.5122297406196594
+      ]
+    },
+    {
+      "ts": 1776020484684,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.47947391867637634
+      ]
+    },
+    {
+      "ts": 1776020484684,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.47867709398269653
+      ]
+    },
+    {
+      "ts": 1776020484706,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.4577633738517761
+      ]
+    },
+    {
+      "ts": 1776020484706,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.4569665491580963
+      ]
+    },
+    {
+      "ts": 1776020484734,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.43013182282447815
+      ]
+    },
+    {
+      "ts": 1776020484735,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.42933499813079834
+      ]
+    },
+    {
+      "ts": 1776020484757,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.40743446350097656
+      ]
+    },
+    {
+      "ts": 1776020484758,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.40663763880729675
+      ]
+    },
+    {
+      "ts": 1776020484781,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.384737104177475
+      ]
+    },
+    {
+      "ts": 1776020484781,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.38394030928611755
+      ]
+    },
+    {
+      "ts": 1776020484807,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.35809236764907837
+      ]
+    },
+    {
+      "ts": 1776020484808,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.35729554295539856
+      ]
+    },
+    {
+      "ts": 1776020484827,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.33835551142692566
+      ]
+    },
+    {
+      "ts": 1776020484827,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.33755868673324585
+      ]
+    },
+    {
+      "ts": 1776020484850,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.31565818190574646
+      ]
+    },
+    {
+      "ts": 1776020484850,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.31486135721206665
+      ]
+    },
+    {
+      "ts": 1776020484878,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.28901341557502747
+      ]
+    },
+    {
+      "ts": 1776020484878,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.28821659088134766
+      ]
+    },
+    {
+      "ts": 1776020484909,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.2594081461429596
+      ]
+    },
+    {
+      "ts": 1776020484909,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.2586113214492798
+      ]
+    },
+    {
+      "ts": 1776020484939,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.22980289161205292
+      ]
+    },
+    {
+      "ts": 1776020484939,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.2290060669183731
+      ]
+    },
+    {
+      "ts": 1776020484959,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.2100660353899002
+      ]
+    },
+    {
+      "ts": 1776020484961,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.2092692255973816
+      ]
+    },
+    {
+      "ts": 1776020484978,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.1903291940689087
+      ]
+    },
+    {
+      "ts": 1776020484978,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.18953238427639008
+      ]
+    },
+    {
+      "ts": 1776020484999,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.17059235274791718
+      ]
+    },
+    {
+      "ts": 1776020484999,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.16979554295539856
+      ]
+    },
+    {
+      "ts": 1776020485018,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.15085551142692566
+      ]
+    },
+    {
+      "ts": 1776020485018,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.15005870163440704
+      ]
+    },
+    {
+      "ts": 1776020485048,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.12125024944543839
+      ]
+    },
+    {
+      "ts": 1776020485049,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.12045343220233917
+      ]
+    },
+    {
+      "ts": 1776020485069,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.10052655637264252
+      ]
+    },
+    {
+      "ts": 1776020485069,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.0997297391295433
+      ]
+    },
+    {
+      "ts": 1776020485101,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.06796073913574219
+      ]
+    },
+    {
+      "ts": 1776020485101,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.06716396659612656
+      ]
+    },
+    {
+      "ts": 1776020485130,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.03934227675199509
+      ]
+    },
+    {
+      "ts": 1776020485130,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.038545507937669754
+      ]
+    },
+    {
+      "ts": 1776020485157,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.012697520665824413
+      ]
+    },
+    {
+      "ts": 1776020485157,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0.011900750920176506
+      ]
+    },
+    {
+      "ts": 1776020485183,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485184,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485207,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485207,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485231,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485231,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485257,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485258,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485283,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485283,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485308,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485308,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485334,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485334,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485365,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485365,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485386,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485387,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485415,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485416,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485436,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485437,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485463,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485463,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485487,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485489,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485506,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485506,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485527,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485527,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485552,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485552,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485581,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485581,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485606,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485607,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485631,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485631,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485656,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485656,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485676,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485676,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485699,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485700,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485730,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485730,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485758,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485759,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485790,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485790,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485807,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485807,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485832,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485832,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485858,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485859,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485881,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485881,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485917,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485917,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/clip/duplicate_loop",
+      "args": [
+        2,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485917,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485928,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485929,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485959,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485960,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020485960,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/loop_end",
+      "args": [
+        6
+      ]
+    },
+    {
+      "ts": 1776020485961,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/end_marker",
+      "args": [
+        6
+      ]
+    },
+    {
+      "ts": 1776020485987,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020485987,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020486007,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020486007,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020486034,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020486035,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020486060,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020486061,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020486077,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020486077,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020486101,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020486102,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020486126,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020486126,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020487117,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/view/focused_document_view",
+      "args": [
+        "Session"
+      ]
+    },
+    {
+      "ts": 1776020490062,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/clip_slot/delete_clip",
+      "args": [
+        2,
+        0
+      ]
+    },
+    {
+      "ts": 1776020490246,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/quantization_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020490246,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/timing_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020490247,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/random_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020490247,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/velocity_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020490253,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/clip/detail",
+      "args": [
+        -1,
+        -1
+      ]
+    }
+  ]
+}

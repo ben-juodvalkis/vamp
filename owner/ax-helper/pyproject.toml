@@ -1,0 +1,24 @@
+[project]
+name = "looping-ax-helper"
+version = "1.0.0"
+description = "Looping AX Helper: the one process that drives Live's UI through macOS Accessibility (ADR-439)."
+requires-python = ">=3.12"
+# macOS only, because pyobjc will not build anywhere else. Nothing needs it
+# off a Mac: `ax.PyObjCBackend` is the one class that imports it, lazily, and
+# the tests run on `tests/fake_ax.py`, so on Linux the project resolves
+# without it and the pre-push hook's helper step still runs all of them.
+dependencies = [
+    "pyobjc-framework-ApplicationServices>=11; sys_platform == 'darwin'",
+    "pyobjc-framework-Cocoa>=11; sys_platform == 'darwin'",
+    "pyobjc-framework-Quartz>=11; sys_platform == 'darwin'",
+]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

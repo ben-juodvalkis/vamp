@@ -1,0 +1,2464 @@
+{
+  "flow": "device-move-then-parameter-write",
+  "captured_at": "2026-04-12-batch-v3",
+  "messages": [
+    {
+      "ts": 1776020597852,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/devices/complete_state",
+      "args": [
+        3,
+        0,
+        1,
+        2,
+        "78559",
+        0,
+        "Permute",
+        "MxDeviceAudioEffect",
+        0,
+        0,
+        0,
+        0,
+        "78579",
+        1,
+        "movement-filter",
+        "MxDeviceAudioEffect",
+        12,
+        1,
+        0,
+        2,
+        0,
+        3,
+        10.13841438293457,
+        4,
+        4,
+        5,
+        0.5039370059967041,
+        6,
+        0,
+        7,
+        0,
+        8,
+        0.5,
+        9,
+        1,
+        10,
+        18000,
+        11,
+        0,
+        14,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776020597853,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        1,
+        10,
+        7635.866513107382
+      ]
+    },
+    {
+      "ts": 1776020597853,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        1,
+        11,
+        0.05342560186658182
+      ]
+    },
+    {
+      "ts": 1776020599989,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/devices/load",
+      "args": [
+        "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Effect Patches/movement-tremolo.adv"
+      ]
+    },
+    {
+      "ts": 1776020600519,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/devices/complete_state",
+      "args": [
+        3,
+        0,
+        1,
+        3,
+        "78559",
+        0,
+        "Permute",
+        "MxDeviceAudioEffect",
+        0,
+        0,
+        0,
+        0,
+        "78579",
+        1,
+        "movement-filter",
+        "MxDeviceAudioEffect",
+        12,
+        1,
+        0,
+        2,
+        0,
+        3,
+        10.13841438293457,
+        4,
+        4,
+        5,
+        0.5039370059967041,
+        6,
+        0,
+        7,
+        0,
+        8,
+        0.5,
+        9,
+        1,
+        10,
+        7635.86669921875,
+        11,
+        0.05342560261487961,
+        14,
+        0,
+        0,
+        0,
+        0,
+        "78592",
+        2,
+        "movement-tremolo",
+        "MxDeviceAudioEffect",
+        12,
+        1,
+        0,
+        2,
+        1,
+        3,
+        10.13841438293457,
+        4,
+        4,
+        5,
+        0,
+        6,
+        0,
+        7,
+        0,
+        8,
+        0.5,
+        9,
+        0,
+        10,
+        18000,
+        11,
+        0,
+        14,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776020600528,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        1
+      ]
+    },
+    {
+      "ts": 1776020600529,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        11.916238894373148
+      ]
+    },
+    {
+      "ts": 1776020600529,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        10
+      ]
+    },
+    {
+      "ts": 1776020600532,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        1
+      ]
+    },
+    {
+      "ts": 1776020600532,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        11.916238894373148
+      ]
+    },
+    {
+      "ts": 1776020600532,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        10
+      ]
+    },
+    {
+      "ts": 1776020604087,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/view/focused_document_view",
+      "args": [
+        "Session"
+      ]
+    },
+    {
+      "ts": 1776020607989,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/devices/complete_state",
+      "args": [
+        3,
+        0,
+        1,
+        3,
+        "78559",
+        0,
+        "Permute",
+        "MxDeviceAudioEffect",
+        0,
+        0,
+        0,
+        0,
+        "78579",
+        1,
+        "movement-filter",
+        "MxDeviceAudioEffect",
+        12,
+        1,
+        0,
+        2,
+        0,
+        3,
+        10.13841438293457,
+        4,
+        4,
+        5,
+        0.5039370059967041,
+        6,
+        0,
+        7,
+        0,
+        8,
+        0.5,
+        9,
+        1,
+        10,
+        7635.86669921875,
+        11,
+        0.05342560261487961,
+        14,
+        0,
+        0,
+        0,
+        0,
+        "78592",
+        2,
+        "movement-tremolo",
+        "MxDeviceAudioEffect",
+        12,
+        1,
+        1,
+        2,
+        1,
+        3,
+        11.916238784790039,
+        4,
+        10,
+        5,
+        0,
+        6,
+        0,
+        7,
+        0,
+        8,
+        0.5,
+        9,
+        0,
+        10,
+        18000,
+        11,
+        0,
+        14,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776020609626,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        0.9330257715558383
+      ]
+    },
+    {
+      "ts": 1776020609627,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        10.862796150049357
+      ]
+    },
+    {
+      "ts": 1776020609627,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        9
+      ]
+    },
+    {
+      "ts": 1776020609638,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        0.868119630925867
+      ]
+    },
+    {
+      "ts": 1776020609638,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        10.037176428649774
+      ]
+    },
+    {
+      "ts": 1776020609638,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        8
+      ]
+    },
+    {
+      "ts": 1776020609655,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        0.7775479902428677
+      ]
+    },
+    {
+      "ts": 1776020609655,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        9.0527626960623
+      ]
+    },
+    {
+      "ts": 1776020609655,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        8
+      ]
+    },
+    {
+      "ts": 1776020609673,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        0.7115812917594655
+      ]
+    },
+    {
+      "ts": 1776020609673,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        8.353195952615991
+      ]
+    },
+    {
+      "ts": 1776020609673,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        7
+      ]
+    },
+    {
+      "ts": 1776020609689,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        0.6704846749390179
+      ]
+    },
+    {
+      "ts": 1776020609689,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        8.000411319512997
+      ]
+    },
+    {
+      "ts": 1776020609690,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        7
+      ]
+    },
+    {
+      "ts": 1776020609706,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        0.5838370983137131
+      ]
+    },
+    {
+      "ts": 1776020609706,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        7.436447022046725
+      ]
+    },
+    {
+      "ts": 1776020609707,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        7
+      ]
+    },
+    {
+      "ts": 1776020609721,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        0.49745466115176584
+      ]
+    },
+    {
+      "ts": 1776020609721,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        6.930325216628276
+      ]
+    },
+    {
+      "ts": 1776020609721,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        6
+      ]
+    },
+    {
+      "ts": 1776020609738,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        0.3998303107434511
+      ]
+    },
+    {
+      "ts": 1776020609738,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        6.387642590764505
+      ]
+    },
+    {
+      "ts": 1776020609739,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        6
+      ]
+    },
+    {
+      "ts": 1776020609754,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        0.3080390285290062
+      ]
+    },
+    {
+      "ts": 1776020609755,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        5.8768824723044855
+      ]
+    },
+    {
+      "ts": 1776020609755,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        5
+      ]
+    },
+    {
+      "ts": 1776020609771,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        0.286827871460388
+      ]
+    },
+    {
+      "ts": 1776020609771,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        5.758469068772622
+      ]
+    },
+    {
+      "ts": 1776020609771,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        5
+      ]
+    },
+    {
+      "ts": 1776020609788,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        0.14481917488599017
+      ]
+    },
+    {
+      "ts": 1776020609788,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        4.928483876275091
+      ]
+    },
+    {
+      "ts": 1776020609788,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        5
+      ]
+    },
+    {
+      "ts": 1776020609804,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        0.0632622759571535
+      ]
+    },
+    {
+      "ts": 1776020609804,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        4.433002906657891
+      ]
+    },
+    {
+      "ts": 1776020609805,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        4
+      ]
+    },
+    {
+      "ts": 1776020609821,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.0015908367801462653
+      ]
+    },
+    {
+      "ts": 1776020609821,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        3.992636009652298
+      ]
+    },
+    {
+      "ts": 1776020609822,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        4
+      ]
+    },
+    {
+      "ts": 1776020609838,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.037914943260154876
+      ]
+    },
+    {
+      "ts": 1776020609840,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        3.7118816496654605
+      ]
+    },
+    {
+      "ts": 1776020609840,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        4
+      ]
+    },
+    {
+      "ts": 1776020609854,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.08723088344469199
+      ]
+    },
+    {
+      "ts": 1776020609854,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        3.296616211473072
+      ]
+    },
+    {
+      "ts": 1776020609854,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        3
+      ]
+    },
+    {
+      "ts": 1776020609870,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1168734754480858
+      ]
+    },
+    {
+      "ts": 1776020609870,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        2.9702972469013926
+      ]
+    },
+    {
+      "ts": 1776020609870,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        3
+      ]
+    },
+    {
+      "ts": 1776020609888,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.13458479160038173
+      ]
+    },
+    {
+      "ts": 1776020609888,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        2.710006032686191
+      ]
+    },
+    {
+      "ts": 1776020609888,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        3
+      ]
+    },
+    {
+      "ts": 1776020609904,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.14291017074981438
+      ]
+    },
+    {
+      "ts": 1776020609905,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        2.4761804870023036
+      ]
+    },
+    {
+      "ts": 1776020609905,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        3
+      ]
+    },
+    {
+      "ts": 1776020609921,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.14428889595927452
+      ]
+    },
+    {
+      "ts": 1776020609921,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        2.409879894702205
+      ]
+    },
+    {
+      "ts": 1776020609921,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        3
+      ]
+    },
+    {
+      "ts": 1776020609938,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.171863400148478
+      ]
+    },
+    {
+      "ts": 1776020609939,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        1.815902983437534
+      ]
+    },
+    {
+      "ts": 1776020609939,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        2
+      ]
+    },
+    {
+      "ts": 1776020609954,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.18724148902322613
+      ]
+    },
+    {
+      "ts": 1776020609955,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        1.5422425139848632
+      ]
+    },
+    {
+      "ts": 1776020609955,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        2
+      ]
+    },
+    {
+      "ts": 1776020609971,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.19848340226959382
+      ]
+    },
+    {
+      "ts": 1776020609972,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        1.2448447954370967
+      ]
+    },
+    {
+      "ts": 1776020609972,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        2
+      ]
+    },
+    {
+      "ts": 1776020609987,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.20930109237458905
+      ]
+    },
+    {
+      "ts": 1776020609988,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.9103405725567625
+      ]
+    },
+    {
+      "ts": 1776020609988,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        2
+      ]
+    },
+    {
+      "ts": 1776020610004,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.20930109237458905
+      ]
+    },
+    {
+      "ts": 1776020610005,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.6129428540089935
+      ]
+    },
+    {
+      "ts": 1776020610005,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610021,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.206384558277654
+      ]
+    },
+    {
+      "ts": 1776020610021,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.4317758034441147
+      ]
+    },
+    {
+      "ts": 1776020610021,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610037,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.19174885990030766
+      ]
+    },
+    {
+      "ts": 1776020610037,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.3482861686958433
+      ]
+    },
+    {
+      "ts": 1776020610038,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610054,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.184006787570262
+      ]
+    },
+    {
+      "ts": 1776020610055,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.3242760776571243
+      ]
+    },
+    {
+      "ts": 1776020610055,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610071,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.18018877929791066
+      ]
+    },
+    {
+      "ts": 1776020610072,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.1875822639025993
+      ]
+    },
+    {
+      "ts": 1776020610072,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610088,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610088,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610088,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610104,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610104,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610104,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610121,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610121,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610121,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610138,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610138,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610138,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610154,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610154,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610154,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610170,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610171,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610171,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610187,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610188,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610188,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610204,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610204,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610204,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610221,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610221,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610221,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610238,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610239,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610240,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610256,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610256,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610256,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610272,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610272,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610272,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610288,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610289,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610289,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610304,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610304,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610304,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610321,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610321,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610321,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610338,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610338,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610338,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610355,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610356,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610356,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610372,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610372,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610372,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610388,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610388,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610389,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610405,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610405,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610405,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610422,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610422,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610422,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610439,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610439,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610439,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610455,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610455,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610455,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610472,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610472,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610472,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610489,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610489,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610489,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610505,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610505,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610505,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610521,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610522,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610522,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610539,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610539,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610539,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610554,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610555,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610555,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610571,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610571,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610571,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020610582,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        1,
+        -0.1788630819811221
+      ]
+    },
+    {
+      "ts": 1776020610582,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        3,
+        0.14038060765602828
+      ]
+    },
+    {
+      "ts": 1776020610582,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/device/set/parameter",
+      "args": [
+        3,
+        2,
+        4,
+        1
+      ]
+    }
+  ]
+}

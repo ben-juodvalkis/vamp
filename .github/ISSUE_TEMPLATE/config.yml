@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Question or Discussion
+    url: https://github.com/ben-juodvalkis/vamp/discussions
+    about: Ask questions or discuss ideas with the community
+  - name: Documentation
+    url: https://github.com/ben-juodvalkis/vamp/tree/main/docs
+    about: Read the project documentation and guides

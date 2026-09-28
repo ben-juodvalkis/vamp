@@ -1,0 +1,2665 @@
+{
+  "flow": "connect-to-live",
+  "captured_at": "connect-to-live",
+  "messages": [
+    {
+      "ts": 1776018726634,
+      "dir": "out",
+      "target": "sequencer",
+      "address": "/capture/query",
+      "args": []
+    },
+    {
+      "ts": 1776018726634,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/track/query",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018726635,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/devices/query",
+      "args": []
+    },
+    {
+      "ts": 1776018726635,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/tracks/master/info",
+      "args": []
+    },
+    {
+      "ts": 1776018726635,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/tracks/master/get/volume",
+      "args": []
+    },
+    {
+      "ts": 1776018726635,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/session/query_track_summaries",
+      "args": []
+    },
+    {
+      "ts": 1776018726635,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/tracks/master/observe",
+      "args": []
+    },
+    {
+      "ts": 1776018726635,
+      "dir": "out",
+      "target": "max4Live",
+      "address": "/init",
+      "args": []
+    },
+    {
+      "ts": 1776018726635,
+      "dir": "out",
+      "target": "max4Live",
+      "address": "/ping",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018726834,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/track/query",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018727983,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/query/session",
+      "args": []
+    },
+    {
+      "ts": 1776018727983,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/song/get/root_note",
+      "args": []
+    },
+    {
+      "ts": 1776018727983,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/song/get/scale_name",
+      "args": []
+    },
+    {
+      "ts": 1776018727983,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/song/get/scale_mode",
+      "args": []
+    },
+    {
+      "ts": 1776018727983,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/view/get/selected_track",
+      "args": []
+    },
+    {
+      "ts": 1776018727983,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/view/get/selected_scene",
+      "args": []
+    },
+    {
+      "ts": 1776018727983,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/query/tracks",
+      "args": []
+    },
+    {
+      "ts": 1776018728982,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/view/start_listen/selected_scene",
+      "args": []
+    },
+    {
+      "ts": 1776018730162,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/startup",
+      "args": []
+    },
+    {
+      "ts": 1776018730163,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/application/get/average_process_usage",
+      "args": []
+    },
+    {
+      "ts": 1776018731912,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/volume",
+      "args": [
+        -1,
+        0.8500000238418579
+      ]
+    },
+    {
+      "ts": 1776018731913,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/volume",
+      "args": [
+        -1,
+        0.8500000238418579
+      ]
+    },
+    {
+      "ts": 1776018731914,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776018731915,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776018731915,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/discovered",
+      "args": [
+        -1,
+        "3",
+        "Main",
+        0.8500000238418579
+      ]
+    },
+    {
+      "ts": 1776018731915,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/selected",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018731916,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/selected",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018731916,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/view/focused_document_view",
+      "args": [
+        "Session"
+      ]
+    },
+    {
+      "ts": 1776018731916,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/view/focused_document_view",
+      "args": [
+        "Session"
+      ]
+    },
+    {
+      "ts": 1776018731916,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/view/focused_document_view",
+      "args": [
+        "Session"
+      ]
+    },
+    {
+      "ts": 1776018731917,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/tempo",
+      "args": [
+        75.17045593261719
+      ]
+    },
+    {
+      "ts": 1776018731917,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/tempo",
+      "args": [
+        75.17045593261719
+      ]
+    },
+    {
+      "ts": 1776018731917,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/is_playing",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018731917,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/is_playing",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018731918,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/signature_numerator",
+      "args": [
+        4
+      ]
+    },
+    {
+      "ts": 1776018731918,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/signature_numerator",
+      "args": [
+        4
+      ]
+    },
+    {
+      "ts": 1776018731918,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/signature_denominator",
+      "args": [
+        4
+      ]
+    },
+    {
+      "ts": 1776018731918,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/signature_denominator",
+      "args": [
+        4
+      ]
+    },
+    {
+      "ts": 1776018731918,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/metronome",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018731918,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/metronome",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018731918,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/loop",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018731918,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/loop",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018731918,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/loop_start",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018731918,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/loop_start",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018731918,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/loop_length",
+      "args": [
+        4
+      ]
+    },
+    {
+      "ts": 1776018731918,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/loop_length",
+      "args": [
+        4
+      ]
+    },
+    {
+      "ts": 1776018731918,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/groove_amount",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018731918,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/groove_amount",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018731918,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/session_record",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018731918,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/session_record",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018731918,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/root_note",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018731918,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/root_note",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018731918,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/scale_name",
+      "args": [
+        "Major"
+      ]
+    },
+    {
+      "ts": 1776018731918,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/scale_name",
+      "args": [
+        "Major"
+      ]
+    },
+    {
+      "ts": 1776018731918,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/scale_mode",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018731919,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/scale_mode",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018731919,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/root_note",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018731919,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/scale_name",
+      "args": [
+        "Major"
+      ]
+    },
+    {
+      "ts": 1776018731919,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/scale_mode",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018731919,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/tracks/count",
+      "args": [
+        2
+      ]
+    },
+    {
+      "ts": 1776018731919,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/track/query",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018731920,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776018731920,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776018731920,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776018731920,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776018731920,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776018731921,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776018731921,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "arm",
+        0
+      ]
+    },
+    {
+      "ts": 1776018731921,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "arm",
+        0
+      ]
+    },
+    {
+      "ts": 1776018731921,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "name",
+        "Shaker"
+      ]
+    },
+    {
+      "ts": 1776018731921,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "name",
+        "Shaker"
+      ]
+    },
+    {
+      "ts": 1776018731922,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "color",
+        16149507
+      ]
+    },
+    {
+      "ts": 1776018731922,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "color",
+        16149507
+      ]
+    },
+    {
+      "ts": 1776018731922,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "volume",
+        0.8495290279388428
+      ]
+    },
+    {
+      "ts": 1776018731922,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "volume",
+        0.8495290279388428
+      ]
+    },
+    {
+      "ts": 1776018731923,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776018731923,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776018731923,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776018731923,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776018731924,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776018731924,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776018731924,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "arm",
+        1
+      ]
+    },
+    {
+      "ts": 1776018731924,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "arm",
+        1
+      ]
+    },
+    {
+      "ts": 1776018731925,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "name",
+        "2-Operator"
+      ]
+    },
+    {
+      "ts": 1776018731925,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "name",
+        "2-Operator"
+      ]
+    },
+    {
+      "ts": 1776018731925,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "color",
+        16725558
+      ]
+    },
+    {
+      "ts": 1776018731925,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "color",
+        16725558
+      ]
+    },
+    {
+      "ts": 1776018731926,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "volume",
+        0.850488007068634
+      ]
+    },
+    {
+      "ts": 1776018731926,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "volume",
+        0.850488007068634
+      ]
+    },
+    {
+      "ts": 1776018731926,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/track/query",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018731926,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/track/query",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018731926,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        1
+      ]
+    },
+    {
+      "ts": 1776018731927,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        1
+      ]
+    },
+    {
+      "ts": 1776018731927,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/session/query_single_track",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018731983,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018731986,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018731987,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/view/focused_document_view",
+      "args": [
+        "Session"
+      ]
+    },
+    {
+      "ts": 1776018732034,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/view/focused_document_view",
+      "args": [
+        "Session"
+      ]
+    },
+    {
+      "ts": 1776018732058,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/tracks/count",
+      "args": [
+        2
+      ]
+    },
+    {
+      "ts": 1776018732060,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/selected",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018732060,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/root_note",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018732060,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/scale_name",
+      "args": [
+        "Major"
+      ]
+    },
+    {
+      "ts": 1776018732060,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/scale_mode",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018732063,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776018732063,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776018732063,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776018732063,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "arm",
+        1
+      ]
+    },
+    {
+      "ts": 1776018732063,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "name",
+        "2-Operator"
+      ]
+    },
+    {
+      "ts": 1776018732063,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "color",
+        16725558
+      ]
+    },
+    {
+      "ts": 1776018732063,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "volume",
+        0.850488007068634
+      ]
+    },
+    {
+      "ts": 1776018732063,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        1
+      ]
+    },
+    {
+      "ts": 1776018732066,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776018732066,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776018732067,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776018732067,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "arm",
+        0
+      ]
+    },
+    {
+      "ts": 1776018732067,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "name",
+        "Shaker"
+      ]
+    },
+    {
+      "ts": 1776018732067,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "color",
+        16149507
+      ]
+    },
+    {
+      "ts": 1776018732068,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "volume",
+        0.8495290279388428
+      ]
+    },
+    {
+      "ts": 1776018732068,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776018732068,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776018732068,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776018732069,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "arm",
+        1
+      ]
+    },
+    {
+      "ts": 1776018732069,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "name",
+        "2-Operator"
+      ]
+    },
+    {
+      "ts": 1776018732069,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "color",
+        16725558
+      ]
+    },
+    {
+      "ts": 1776018732069,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "volume",
+        0.850488007068634
+      ]
+    },
+    {
+      "ts": 1776018732069,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/single_track_summary",
+      "args": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776018732072,
+      "dir": "in",
+      "target": "sequencer",
+      "address": "/capture/quantization",
+      "args": [
+        "1 Bar"
+      ]
+    },
+    {
+      "ts": 1776018732072,
+      "dir": "in",
+      "target": "sequencer",
+      "address": "/capture/quantization",
+      "args": [
+        "1 Bar"
+      ]
+    },
+    {
+      "ts": 1776018732074,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/devices/complete_state",
+      "args": [
+        1,
+        1,
+        0,
+        2,
+        "76890",
+        0,
+        "Operator",
+        "Operator",
+        2,
+        29,
+        0,
+        34,
+        0.5445746183395386,
+        0,
+        0,
+        0,
+        "76888",
+        1,
+        "Permute",
+        "MxDeviceAudioEffect",
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776018732074,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/clip/detail",
+      "args": [
+        -1,
+        -1
+      ]
+    },
+    {
+      "ts": 1776018732081,
+      "dir": "out",
+      "target": "sequencer",
+      "address": "/looping/sequencer/set/state",
+      "args": [
+        76888,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        8,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        8,
+        1,
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "ts": 1776018732089,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/sequencer/state",
+      "args": [
+        1,
+        "set_state_ack",
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        8,
+        1,
+        0,
+        0,
+        -1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        8,
+        1,
+        0,
+        0,
+        -1,
+        0,
+        1
+      ]
+    },
+    {
+      "ts": 1776018732702,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0.8905320167541504
+      ]
+    },
+    {
+      "ts": 1776018732702,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.8912005424499512
+      ]
+    },
+    {
+      "ts": 1776018732981,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018732982,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        1
+      ]
+    },
+    {
+      "ts": 1776018732982,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        1
+      ]
+    },
+    {
+      "ts": 1776018733016,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1,
+        true
+      ]
+    },
+    {
+      "ts": 1776018733016,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1,
+        true
+      ]
+    },
+    {
+      "ts": 1776018733016,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1,
+        true
+      ]
+    },
+    {
+      "ts": 1776018733017,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        1
+      ]
+    },
+    {
+      "ts": 1776018733018,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0.8765320181846619
+      ]
+    },
+    {
+      "ts": 1776018733018,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.8771993517875671
+      ]
+    },
+    {
+      "ts": 1776018733065,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0.5715977549552917
+      ]
+    },
+    {
+      "ts": 1776018733065,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.5722651481628418
+      ]
+    },
+    {
+      "ts": 1776018733075,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0.5281767249107361
+      ]
+    },
+    {
+      "ts": 1776018733075,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.5288441181182861
+      ]
+    },
+    {
+      "ts": 1776018733133,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0.5035056471824646
+      ]
+    },
+    {
+      "ts": 1776018733133,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.5041730999946594
+      ]
+    },
+    {
+      "ts": 1776018733185,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0.4521898329257965
+      ]
+    },
+    {
+      "ts": 1776018733186,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.45285725593566895
+      ]
+    },
+    {
+      "ts": 1776018733188,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0.40876880288124084
+      ]
+    },
+    {
+      "ts": 1776018733189,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.4094362258911133
+      ]
+    },
+    {
+      "ts": 1776018733320,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0.3199530243873596
+      ]
+    },
+    {
+      "ts": 1776018733320,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.32062044739723206
+      ]
+    },
+    {
+      "ts": 1776018733384,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0.27061089873313904
+      ]
+    },
+    {
+      "ts": 1776018733384,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.2712783217430115
+      ]
+    },
+    {
+      "ts": 1776018733513,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0.13146616518497467
+      ]
+    },
+    {
+      "ts": 1776018733513,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0.1321335881948471
+      ]
+    },
+    {
+      "ts": 1776018733514,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/startup",
+      "args": []
+    },
+    {
+      "ts": 1776018733515,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/application/get/average_process_usage",
+      "args": []
+    },
+    {
+      "ts": 1776018733813,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776018733813,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776018733982,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018733982,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018733983,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018734328,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776018734328,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776018734329,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776018734329,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776018734394,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776018734398,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776018734399,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776018734399,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776018734400,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1,
+        true
+      ]
+    },
+    {
+      "ts": 1776018734400,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1,
+        true
+      ]
+    },
+    {
+      "ts": 1776018734400,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1,
+        true
+      ]
+    },
+    {
+      "ts": 1776018734400,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        1
+      ]
+    },
+    {
+      "ts": 1776018734400,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        1
+      ]
+    },
+    {
+      "ts": 1776018734400,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        1
+      ]
+    },
+    {
+      "ts": 1776018734983,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018734984,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018734984,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018735548,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1,
+        true
+      ]
+    },
+    {
+      "ts": 1776018735548,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1,
+        true
+      ]
+    },
+    {
+      "ts": 1776018735548,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1,
+        true
+      ]
+    },
+    {
+      "ts": 1776018735550,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776018735550,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776018735550,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776018735555,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776018735556,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/tracks/master/meter",
+      "args": [
+        -1,
+        0
+      ]
+    },
+    {
+      "ts": 1776018757991,
+      "dir": "out",
+      "target": "max4Live",
+      "address": "/init",
+      "args": []
+    },
+    {
+      "ts": 1776018757991,
+      "dir": "out",
+      "target": "max4Live",
+      "address": "/ping",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018758982,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/query/session",
+      "args": []
+    },
+    {
+      "ts": 1776018758983,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/song/get/root_note",
+      "args": []
+    },
+    {
+      "ts": 1776018758983,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/song/get/scale_name",
+      "args": []
+    },
+    {
+      "ts": 1776018758983,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/song/get/scale_mode",
+      "args": []
+    },
+    {
+      "ts": 1776018758983,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/view/get/selected_track",
+      "args": []
+    },
+    {
+      "ts": 1776018758983,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/view/get/selected_scene",
+      "args": []
+    },
+    {
+      "ts": 1776018758983,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/query/tracks",
+      "args": []
+    },
+    {
+      "ts": 1776018758986,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/track/query",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018758987,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/state",
+      "args": [
+        "tempo",
+        75.17045593261719,
+        "is_playing",
+        0,
+        "signature_numerator",
+        4,
+        "signature_denominator",
+        4,
+        "metronome",
+        1,
+        "loop",
+        0,
+        "loop_start",
+        0,
+        "loop_length",
+        4,
+        "groove_amount",
+        1,
+        "session_record",
+        0
+      ]
+    },
+    {
+      "ts": 1776018758989,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/root_note",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018758989,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/scale_name",
+      "args": [
+        "Major"
+      ]
+    },
+    {
+      "ts": 1776018758990,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/scale_mode",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018758990,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/tracks/count",
+      "args": [
+        2
+      ]
+    },
+    {
+      "ts": 1776018758993,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776018758993,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776018758993,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776018758993,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "arm",
+        0
+      ]
+    },
+    {
+      "ts": 1776018758993,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "name",
+        "Shaker"
+      ]
+    },
+    {
+      "ts": 1776018758993,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "color",
+        16149507
+      ]
+    },
+    {
+      "ts": 1776018758993,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "volume",
+        0.8495290279388428
+      ]
+    },
+    {
+      "ts": 1776018758994,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/track/query",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018758994,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/track/query",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018758995,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776018758995,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776018758995,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776018758995,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "arm",
+        0
+      ]
+    },
+    {
+      "ts": 1776018758995,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "name",
+        "Shaker"
+      ]
+    },
+    {
+      "ts": 1776018758995,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "color",
+        16149507
+      ]
+    },
+    {
+      "ts": 1776018758995,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "volume",
+        0.8495290279388428
+      ]
+    },
+    {
+      "ts": 1776018758995,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776018758995,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776018758996,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776018758996,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "arm",
+        1
+      ]
+    },
+    {
+      "ts": 1776018758996,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "name",
+        "2-Operator"
+      ]
+    },
+    {
+      "ts": 1776018758996,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "color",
+        16725558
+      ]
+    },
+    {
+      "ts": 1776018758996,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "volume",
+        0.850488007068634
+      ]
+    },
+    {
+      "ts": 1776018759058,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/view/get/selected_track",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018759061,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/view/get/selected_scene",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018759063,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        1
+      ]
+    },
+    {
+      "ts": 1776018759063,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/track/query",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018759063,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        1
+      ]
+    },
+    {
+      "ts": 1776018759063,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/session/query_single_track",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018759067,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776018759067,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776018759067,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776018759067,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "arm",
+        1
+      ]
+    },
+    {
+      "ts": 1776018759068,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "name",
+        "2-Operator"
+      ]
+    },
+    {
+      "ts": 1776018759068,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "color",
+        16725558
+      ]
+    },
+    {
+      "ts": 1776018759068,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "volume",
+        0.850488007068634
+      ]
+    },
+    {
+      "ts": 1776018759068,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/single_track_summary",
+      "args": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776018759934,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018759958,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1,
+        true
+      ]
+    },
+    {
+      "ts": 1776018759959,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        1
+      ]
+    },
+    {
+      "ts": 1776018759981,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/view/start_listen/selected_scene",
+      "args": []
+    },
+    {
+      "ts": 1776018759981,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018760060,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018760068,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/view/get/selected_scene",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776018760069,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1,
+        true
+      ]
+    },
+    {
+      "ts": 1776018760069,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1,
+        true
+      ]
+    },
+    {
+      "ts": 1776018760069,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        1
+      ]
+    },
+    {
+      "ts": 1776018760069,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        1
+      ]
+    },
+    {
+      "ts": 1776018760221,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018760268,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1,
+        true
+      ]
+    },
+    {
+      "ts": 1776018760269,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776018760990,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018761078,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1,
+        true
+      ]
+    },
+    {
+      "ts": 1776018761079,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        1
+      ]
+    },
+    {
+      "ts": 1776018761981,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776018762078,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        1,
+        true
+      ]
+    },
+    {
+      "ts": 1776018762080,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        0,
+        0
+      ]
+    }
+  ]
+}

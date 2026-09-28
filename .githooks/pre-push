@@ -1,0 +1,4 @@
+#!/bin/sh
+# Pre-push: run the gate (scripts/gate.sh). `npm install` points git here
+# (package.json "prepare": core.hooksPath=.githooks).
+exec sh "$(git rev-parse --show-toplevel)/scripts/gate.sh"

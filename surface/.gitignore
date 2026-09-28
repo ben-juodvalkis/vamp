@@ -1,0 +1,10 @@
+# Raw OSC tap captures and their per-capture boundary files are
+# session-local; the sliced per-flow fixtures under
+# tests/fixtures/flows/ are the committed contract artifacts.
+tests/fixtures/raw/*.ndjson
+tests/fixtures/raw/*.boundaries.json
+
+# Python bytecode / pytest caches
+__pycache__/
+*.pyc
+.pytest_cache/

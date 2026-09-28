@@ -1,0 +1,351 @@
+{
+  "$schema": "./constants.schema.json",
+  "description": "Project-wide configuration constants for the Looping system: the general edition's working defaults, the same on every clone. A Mac's own differences (the owner's switches, paths, hardware maps and library tuning) go in config/constants.local.json, gitignored, which every reader on the Mac lays over this file (interface/bridge/utils/constants.js; general-release plan.md §3). The UI build compiles this file alone.",
+
+  "features": {
+    "_description": "One switch per bespoke subsystem, so the same code runs as this rig and as a general edition on stock Live Suite (docs/plans/general-release/audit.md §7b). true turns a subsystem on; false, or no entry at all, turns it off -- a missing switch is never a default that quietly brings the subsystem back. The bridge reads these once at startup (interface/bridge/utils/features.js) and tells every client over /bridge/features, so flipping one needs a bridge restart and no iPad rebuild. Wired so far: totalmix, maxUtilityPatch and expressionPedal; the rest of §7b's list joins one subsystem at a time.",
+    "_totalmixNote": "RME TotalMix monitor link (ADR-423). Off: the bridge binds none of 9003, 11019 or 7001, runs no startup bootstrap and reads no osc.totalmix* block, and the UI draws no status-strip monitor bars. On: the UI shows them greyed out, with the reason, until the mixer has answered once on either OSC controller.",
+    "totalmix": false,
+    "_maxUtilityPatchNote": "The owner's standalone Max patch, owner/Max Patches/Max Utility 1.0.maxpat: the Ableton Move's knobs and pad hold, the Move's TotalMix knobs, the home-studio piano-pedal looper (CC 67 from any input, any channel, into foot tap/hold), the SoftStep/EV-1 remap. Off: npm run dev and npm run ipad never open Max, and the System view draws no Move Knob switch. A general edition needs no standalone Max at all. The on-screen pitch/mod wheels do not depend on this switch.",
+    "maxUtilityPatch": false,
+    "_expressionPedalNote": "The expression pedal and its toe switch (midiPedals.channel, wahToeSwitchCC, wahExpressionCC) and the Wah they play: the sweep drives Wah.adg on an audio track and MidiWheels' mod wheel on a MIDI track, the toe switch loads or steps it (ADR-422, ADR-445). Off: the surface claims neither CC, so they reach Live like any other MIDI, and the Pedal view draws no Wah button. The foot switch is not part of this: it is a user setting with Learn in the System view.",
+    "expressionPedal": false,
+    "_menubarNote": "The owner's macOS menu-bar app (owner/menubar), which mirrors toggles the System view already has. Off: npm run dev and npm run ipad neither build nor launch it (scripts/launch-menubar.sh exits at once, setup-ipad.js never calls it).",
+    "menubar": false,
+    "_axHelperNote": "The Looping AX Helper (ADR-439), the one process that drives Live's own UI through macOS Accessibility, installed by npm run install-ax-helper. Off: the bridge dials no helper, and the UI draws no Reverse or Group button, a held Drum Sampler pad steps the kit rather than Live's similar samples, and npm run ipad never opens Live's Save As dialog. On: those are greyed out, with the reason, while the helper is not running or has no Accessibility grant.",
+    "axHelper": false
+  },
+
+  "paths": {
+    "_machineNote": "Every path to a Mac's own files is that Mac's, in config/constants.local.json, and optional: abletonApp (else the Live Live's preferences say is in use, scripts/open-live.js), browserBlocker, userLibraryBase (else Live's Library.cfg), instrumentsBase, effectPresetsBase (the FX tiles' presets), sidebarRoot, abletonPacksBase (else Library.cfg).",
+    "_sidebarRootNote": "sidebarRoot, the owner's browser library (Looping's documentation/browser-places.plan.md): one folder per rail button, each added to Live's sidebar as a Place. On a Mac with nothing saved in logs/places.json, the Places under it start ticked. Filled on 2026-09-24 by a one-time copy of the old <instrumentsBase>/<Vendor>/<Type>/ and Audio Samples/<Type>/ folders; its manifest (.looping-places-manifest.json.gz, there) is the alias map that turns a path recorded before the copy into its new one.",
+    "waveformMaxBytes": 78643200,
+    "waveformStreamingEnabled": true,
+    "liveDatabaseDir": "~/Library/Application Support/Ableton/Live Database",
+    "_liveRecordingsDirNote": "Live's temporary folder (Preferences > File & Folder), where Live makes a '<date time> Temp Project' for every unsaved set as it opens. The bridge hands the newest one to looping-recorder.amxd before each capture, so an unsaved set's capture lands in its own project (interface/bridge/handlers/captureRecorder.js). This is Live's default; a Mac that moved the folder in Live's preferences sets its own in constants.local.json. A leading ~/ is the home directory.",
+    "liveRecordingsDir": "~/Music/Ableton/Live Recordings"
+  },
+
+  "timing": {
+    "startup": {
+      "_description": "npm run ipad orchestration. Ableton is launched at t=0, in parallel with the catalog scan and Vite build, so Live's own cold start overlaps the build instead of queueing behind it. The one ordering constraint that survives: the Max Utility patch must not open until Live has had a moment to initialize, or Max reads a CoreMIDI/Live state that isn't there yet.",
+      "maxPatchMinDelayAfterLiveMs": 4000
+    },
+    "oscMonitoring": {
+      "reporting": 30000
+    },
+    "meterBatching": 16,
+    "trackReorderDebounceMs": 100,
+    "routingSettleDelayMs": 100,
+    "serverPresence": {
+      "_description": "Bridge → Python surface liveness heartbeat. The bridge sends /looping/v3/server/heartbeat every heartbeatIntervalMs while `npm run dev`/`ipad` is running; the surface's ServerPresenceComponent treats a gap longer than graceWindowMs as 'server gone' and gates performance-only behaviors (arm-follows-selection) off. graceWindowMs should tolerate ~2 missed beats + UDP jitter.",
+      "heartbeatIntervalMs": 2000,
+      "graceWindowMs": 6000
+    }
+  },
+
+  "osc": {
+    "description": "OSC port configuration for enhanced-osc-bridge.js routing",
+    "permuteGate": {
+      "remotePort": 11030,
+      "host": "127.0.0.1",
+      "description": "Permute mute-lane gate, surface -> Max (2026-09-17). The surface sends /looping/permute/gate <trackIndex:int> <open:int 0|1> straight to a `udpreceive` inside a Max device on that track, with no bridge hop -- the same direct surface<->Max route owner/Max Patches/foot-trigger.js already uses inbound. One-way: nothing replies, so there is no localPort. It exists so a device can gate what it plays without the surface writing to the LOM, which would put an undo step on Live's stack for every step transition. The receiver fails OPEN if nothing arrives for a few seconds and the surface re-sends every second, so a dropped datagram costs a heartbeat rather than a silent instrument mid-set."
+    },
+    "pythonSurface": {
+      "localPort": 11021,
+      "remotePort": 11020,
+      "host": "127.0.0.1",
+      "description": "Python Control Surface (m4l-to-python migration). Bridge sends OSC to 11020 (the surface's receive port); surface replies to 11021 (the bridge's receive port). Gate 1 heartbeat only; Gate 2+ migrate more addresses.",
+    "tcpPort": 11022,
+    "_tcpPortNote": "Bridge<->surface TCP leg (2026-08-31). The surface LISTENS here; the bridge dials in and redials after a Live restart. Length-prefixed frames -- 4-byte big-endian payload length, then the same OSC bytes osc_codec already produces -- so this is a transport swap, not a codec change. Exists to retire the 9216-byte darwin UDP datagram ceiling that every piece of chunking machinery in this tree works around: state/full is 389 KB on a realistic set and ships as 99 chunks with a checksum and a reassembler. UDP (11020/11021) stays live alongside it; fire-and-forget senders on ephemeral ports still need it. Measured 2026-08-31 writing only from the surface's 92.8 Hz pump: 389 KB clears in 1 pump / 0.14 ms, the 1.22 MB pathological case in 3 pumps / 24 ms, both inside one 99.4 ms Live tick.",
+    "drainIntervalMs": 1,
+    "_drainIntervalNote": "Interval of the surface's fast inbound-drain pump (drain_pump.py), which runs transport.poll() off Live.Base.Timer instead of waiting for the ~100ms control tick. NOT milliseconds despite the key name: measured 2026-08-31 on Live 12.4.5b11, interval=1 fires every 10.77ms (92.8 Hz). The name is kept because renaming a constants.json key is a four-language change. 1 is the floor worth asking for -- it lands on Live's own ~100 Hz internal beat. Context: a schedule_message tick is 99.4ms (ten of those beats), so before this pump every inbound command waited a mean 52ms / p99 103ms just to be READ; after, 5.6ms / 10.3ms. That wait was invisible to perf_profiler because its clock starts after the drain. Read the real rate off a running surface via /looping/probe/drain_stats."
+    },
+    "loopingRecorder": {
+      "localPort": 11017,
+      "remotePort": 11016,
+      "host": "127.0.0.1",
+      "description": "looping-recorder.amxd — OSC capture control + state feedback. Bridge sends /capture/{folder,arm,disarm,start,stop,query} to 11016 (device's receive); device replies with /capture/{state,file,error,hello,bye} to 11017 (bridge's receive)."
+    },
+    "backendScope": {
+      "_description": "Per-backend overrides of prefix-based routing in interface/bridge/routing/messageRouter.js. Addresses listed under a backend are routed there instead of the default. Entries may be exact addresses (e.g. '/live/test') or prefix globs ending in '*' (e.g. '/looping/v2/*' — matches every address starting with '/looping/v2/'). See Looping's documentation/archive/m4l-to-python/05-migration-plan.md §1 for the three-backend model.",
+      "pythonSurface": [
+        "/live/test",
+        "/live/song/get/tempo",
+        "/live/song/set/tempo",
+        "/looping/session/tempo",
+        "/looping/protocol/version",
+        "/looping/error",
+        "/looping/v2/*",
+        "/looping/v3/*",
+        "/looping/v3/master/color",
+        "/looping/v3/master/mute",
+        "/looping/v3/master/name",
+        "/looping/v3/master/pan",
+        "/looping/v3/master/volume",
+        "/looping/v3/track/name",
+        "/looping/v3/track/color",
+        "/looping/v3/track/arm",
+        "/looping/v3/track/mute",
+        "/looping/v3/track/solo",
+        "/looping/v3/track/pan",
+        "/looping/v3/track/input_routing_type",
+        "/looping/v3/track/input_routing_channel",
+        "/looping/v3/track/prepare_for_preset",
+        "/looping/v3/track/meter",
+        "/looping/v3/master/meter",
+        "/looping/v3/session/is_playing",
+        "/looping/v3/session/metronome",
+        "/looping/v3/session/session_record",
+        "/looping/v3/session/loop",
+        "/looping/v3/session/loop_start",
+        "/looping/v3/session/loop_length",
+        "/looping/v3/session/signature_num",
+        "/looping/v3/session/signature_den",
+        "/looping/v3/session/scale_root",
+        "/looping/v3/session/scale_name",
+        "/looping/v3/session/scale_mode",
+        "/looping/v3/session/groove_amount",
+        "/looping/v3/session/play_cmd",
+        "/looping/v3/session/stop_cmd",
+        "/looping/v3/session/continue_cmd",
+        "/looping/v3/clip/set/loop_start",
+        "/looping/v3/clip/set/loop_end",
+        "/looping/v3/clip/set/start_marker",
+        "/looping/v3/clip/set/end_marker",
+        "/looping/v3/clip/set/warp_mode",
+        "/looping/v3/clip/set/looping",
+        "/looping/v3/clip/set/pitch_coarse",
+        "/looping/v3/clip/groove/set/base",
+        "/looping/v3/clip/groove/set/timing_amount",
+        "/looping/v3/clip/groove/set/quantization_amount",
+        "/looping/v3/clip/groove/set/random_amount",
+        "/looping/v3/clip/groove/set/velocity_amount",
+        "/looping/v3/device/load",
+        "/looping/v3/simpler/replace_sample",
+        "/looping/v3/simpler/replace_sample_onto_track",
+        "/looping/v3/clip/launch",
+        "/looping/v3/clip/stop",
+        "/looping/v3/clip/delete",
+        "/looping/v3/clip/duplicate",
+        "/looping/v3/clip/transpose",
+        "/looping/v3/scene/launch",
+        "/looping/v3/scene/stop",
+        "/looping/v3/selected_track"
+      ],
+      "loopingRecorder": [
+        "/capture/start",
+        "/capture/stop",
+        "/capture/query"
+      ]
+    },
+    "totalmix": {
+      "localPort": 9003,
+      "remotePort": 7003,
+      "host": "127.0.0.1",
+      "description": "RME TotalMix FX monitor link (ADR-423). The bridge owns the UDP conversation with the mixer: it sends dB writes to TotalMix's incoming port (7003) and receives change + state-dump traffic on its own port (9003). TotalMix side is OSC remote controller 3 in Global OSC mode (Options > Mixer Settings > OSC > Select Controller 3), which leaves controller 1's legacy TouchOSC emulation untouched -- Compatibility (Mode) is per-controller, so this is not a one-way cutover. Requires TotalMix FX 2.10+; 2.03 has no Global OSC at all. WARNING: an argument-less OSC message is a WRITE of 1.0 in this protocol, not a query -- there is no read verb, so never poke an address to read it. Bootstrap comes from TotalMix's own 'Send all data on start (enable)' option.",
+      "channels": {
+        "_description": "Monitor channel -> Global OSC address. Measured against the hardware 2026-08-27, each cross-checked against the legacy protocol's reading of the same fader. Indices are zero-based BY THE LEFT CHANNEL OF THE PAIR (0=AN 1/2, 2=PH 3/4, 4=AS 1/2), which is also why the legacy path's submix 2 is the PH 3/4 headphone submix and not Main.",
+        "room": "/mix/in/1/2/fader",
+        "playback": "/mix/pb/0/2/fader",
+        "click": "/mix/pb/2/2/fader",
+        "phones": "/output/2/volume",
+        "main": "/output/0/volume"
+      },
+      "writable": ["room", "playback", "click", "phones"],
+      "_writableNote": "main mirrors the Control Room main out, which nothing in this system should move.",
+      "minDb": -65,
+      "maxDb": 6,
+      "silenceDb": -300,
+      "_dbNote": "TotalMix's fader bottoms out at -65 dB; below that it reads -oo. Writes at or under minDb are sent as silenceDb (-300) so 'all the way down' is genuinely silent rather than -65 dB."
+    },
+    "totalmixLegacy": {
+      "localPort": 7001,
+      "remotePort": 7002,
+      "host": "127.0.0.1",
+      "description": "One-shot startup bootstrap only (ADR-423). TotalMix OSC remote controller 1, still in legacy TouchOSC-emulation mode, is the ONLY way to ask the mixer for its current levels: Global OSC has no read verb and its state dump fires when TotalMix enables a controller, not when this bridge starts. The bridge provokes one dump per bus row at startup, seeds its level cache, and closes the socket -- so port 7001 is held for well under a second and is not contended for the rest of the run. The read machinery this revives was dangerous in the old Utility patch because it ran continuously while driving dials; here it runs once, serialized, in a process that holds no dials and can clobber nothing.",
+      "settleMs": 180,
+      "dumpWaitMs": 420,
+      "_timingNote": "settleMs after /setSubmix before asserting the bus row; dumpWaitMs to collect the dump that provokes. Measured comfortably above the ~10ms the mixer actually took on loopback.",
+      "reads": {
+        "_description": "channel -> how to read it off the legacy protocol. `bus` is the row to assert, `slot` the 1-based strip in the eight-fader window, `expectName` the trackname that strip MUST report. The legacy bank window is never pinned, so a slot number alone can silently address the wrong channel -- checking the name is what makes this safe, and a mismatch skips the channel rather than seeding a wrong monitor level.",
+        "room":     { "bus": "/1/busInput",    "slot": 2, "expectName": "AN 2" },
+        "playback": { "bus": "/1/busPlayback", "slot": 1, "expectName": "AN 1/2" },
+        "click":    { "bus": "/1/busPlayback", "slot": 2, "expectName": "PH 3/4" },
+        "main":     { "bus": "/1/busOutput",   "slot": 1, "expectName": "Main" },
+        "phones":   { "bus": "/1/busOutput",   "slot": 2, "expectName": "PH 3/4" }
+      },
+      "submix": 2,
+      "_submixNote": "Measured: /setSubmix 2. selects the submix labelled 'PH 3/4'. Confirm against /1/labelSubmix in the dump before trusting a read."
+    },
+    "totalmixDevice": {
+      "localPort": 11019,
+      "remotePort": 11018,
+      "host": "127.0.0.1",
+      "description": "Bridge <-> Max for Live monitor device leg (ADR-423). The device announces itself with /totalmix/hello on load and the bridge replays its cached levels; the device sends dB writes on /totalmix/<channel>. Kept separate from the mixer link so the device never addresses TotalMix directly."
+    },
+    "footTrigger": {
+      "port": 11010,
+      "host": "127.0.0.1",
+      "description": "Foot trigger for session recording (tap) and audio track creation (hold). The port is legacy (reserved; the Max chain fires straight at pythonSurface 11020). holdThresholdMs is the tap/hold boundary read by the surface's MidiPedalInput for the USB-direct pedal path (ADR-422); owner/Max Patches/foot-trigger.js mirrors it hardcoded because Max ES5 can't read JSON.",
+      "holdThresholdMs": 500
+    },
+    "webSocket": {
+      "port": 8081,
+      "host": "0.0.0.0",
+      "description": "WebSocket server for interface communication. NOTE: Port 8080 causes RSV1 protocol errors due to system-level interference (see websocket-rsv1-issue.md)",
+      "auth": {
+        "enabled": true,
+        "saltBytes": 16,
+        "timeoutMs": 5000,
+        "_note": "HMAC-SHA256 challenge on connect (2026-08-31). The server sends a random per-connection salt; the client's first frame must be /bridge/auth carrying HMAC-SHA256(secret, salt) as hex. The secret never crosses the wire. Until a client authenticates its messages are refused and nothing is broadcast to it. THE SECRET IS NOT IN THIS FILE and must never be -- this file is committed. It comes from the LOOPING_WS_SECRET env var, else config/.ws-secret (gitignored, auto-generated on first run, mode 0600). See interface/bridge/utils/wsSecret.js. Scope, honestly: this raises the bar from 'anything that can reach port 8081' to 'anything that can load the app' -- the page fetches the secret from the interface server, which is also on the LAN. Closing that last gap needs per-device pairing, deliberately not the default because a cleared browser cache would lock a performer out mid-session. timeoutMs closes a socket that connects and never authenticates."
+      }
+    },
+    "messageQueue": {
+      "maxSize": 100,
+      "timeout": 10000,
+      "description": "Message queue configuration for OSC communication"
+    },
+    "reconnectDelay": 2000
+  },
+
+  "network": {
+    "localhost": "localhost",
+    "_machineNote": "A Mac's own, in config/constants.local.json and optional: hostname, the Bonjour name the bridge publishes (else this Mac's own), and ipad.wifi, ipad.usbc (the Mac's side of the iPad's USB-C link, listed first in Settings), ipad.usbcPreferred."
+  },
+
+  "http": {
+    "interfacePort": 3000
+  },
+
+  "debug": {
+    "maxRecentMessages": 50
+  },
+
+  "instruments": {
+    "transpose": {
+      "parameterNames": [
+        { "name": "custom e", "shiftAmount": 21, "description": "Komplete Kontrol pitch macro" },
+        { "name": "pitch", "shiftAmount": 16, "description": "Standard pitch macro" },
+        { "name": "transpose", "shiftAmount": 16, "description": "Standard transpose macro" },
+        { "name": "octave", "shiftAmount": 16, "description": "Standard octave macro" },
+        { "name": "tune", "shiftAmount": 16, "description": "Standard tune macro" }
+      ],
+      "defaultShiftAmount": 12
+    }
+  },
+
+  "audio": {
+    "description": "Optional defaultInputChannel: the input new audio tracks record from, as Live names it (\"3/4\", \"11/12 Guitar Mic\"). Unset, as here, a new track keeps Live's own default input. Set one in config/constants.local.json."
+  },
+
+  "midiPedals": {
+    "_description": "MIDI CC map for pedals plugged into the control surface's own MIDI input port (Live prefs → Link/Tempo/MIDI → Control Surface 'Vamp' → Input = the pedal's USB MIDI port; leave that port's Track/Remote switches off). ADR-422: replaces the Max ctlin→OSC bridges — the surface converts these CCs into the same foot tap/hold and wah engage/freq gestures the /looping/v3/foot/* and /looping/v3/wah/* OSC wires carry (both wires stay live as a fallback). Both switches press at value>=64 and release below it (standard MIDI switch convention) \u2014 so a pedal whose \"off\" is a low non-zero value (e.g. 126 on / 1 off) reads correctly. (The Max Utility patch's CC 67 piano-pedal chain, the owner's home-studio looper, edges at > 64.) Hold duration comes from osc.footTrigger.holdThresholdMs.",
+    "_machineNote": "The values are a Mac's own, in config/constants.local.json: channel, footSwitchCC, wahToeSwitchCC, wahExpressionCC.",
+    "_channelNote": "MIDI channel the pedal transmits on, 1-16 as labeled in Live and on the pedal. Only this channel is forwarded and parsed; anything else falls through to the framework untouched. Set to 0 for the pre-ADR-422 omni behavior (all 16 channels, mirroring Max ctlin with no channel argument) if the pedal's channel is unknown.",
+    "_footSwitchNote": "footSwitchCC only SEEDS the foot switch, on a machine that has never saved one: the foot switch is a user setting (System view → Foot Switch: on/off and Learn), persisted to logs/foot-switch.json by the surface's FootSwitchComponent, and once saved that file wins. No footSwitchCC and nothing saved is no foot switch at all. It seeds with this block's channel; Learn records the pedal's own."
+  },
+
+  "devices": {
+    "audioEffectRack": {
+      "macroCount": 16,
+      "parameterNameCount": 17,
+      "macroRange": { "min": 0, "max": 127 }
+    },
+    "sequencer": {
+      "description": "The Permute sequencer (permute ADR-020: the thin Permute and its surface engine are developed here; the permute repo is frozen). The Python TrackPrepareComponent appends it on every successful prepare_for_preset (idempotent — skipped when already present on the chain) so a single round-trip leaves the track ready; FootTriggerComponent appends it inline on hold-create. Since 2026-09-26 its path is the checkout's own Vamp Devices/Permute/Permute.amxd, found by the surface from its own location and loaded through the \"Vamp Devices\" sidebar Place (onboarding.plan.md §6.3), so no devicePath is configured; an older config's devicePath is still honored verbatim."
+    },
+    "midiWheels": {
+      "className": "MxDeviceMidiEffect",
+      "deviceName": "MidiWheels",
+      "modParamIndex": 1,
+      "pitchParamIndex": 2,
+      "sweepLoadMargin": 2,
+      "description": "MidiWheels (2026-09-25): a MIDI effect whose Mod Wheel parameter drives ctlout 1 and whose Pitch Wheel parameter drives xbendout. The on-screen wheels (/looping/v3/wheels/mod 0-127, /looping/v3/wheels/pitch 0-16383, 8192 centre; MidiWheelsComponent) write those two parameters on the selected MIDI track, loading the device there on the first touch; the expression pedal (WahPedalComponent) loads and sweeps the same device on a MIDI track -- the toe switch or a full heel-to-toe rock loads it, the sweep writes the mod wheel, and engage on a track that already has it does nothing (no chains to step). A wah already on the track still wins the pedal. Audio tracks are ignored by the wheels. The device is the checkout's own Vamp Devices/MidiWheels.amxd, found by the surface from its own location and loaded through the 'Vamp Devices' sidebar Place (2026-09-26; an older config's devicePath is honored verbatim). className + deviceName re-find it (Live names a loaded .amxd after its file). parameters[0] is Device On; verify modParamIndex / pitchParamIndex against a live dump before trusting them. sweepLoadMargin is the pedal's sweep-to-load tolerance, as on devices.wah. Remove this block and MIDI tracks get the wah and the wheels do nothing."
+    }
+  },
+
+  "vendors": {
+    "_note": "Role palette (ADR-399). types + special.audio are the track auto-colors: hues sit in the gaps between the GRATICULE functional hues (app.css --act-*: rec 27, master 60, warn 80, loop 155, monitor 210, pitch 262, quant 300) and are pre-clamped to the trackInk dark envelope (OKLCH L 0.70-0.82, C 0.14-0.21) so browser and Live render the same calibrated ink. brands color browser cards only (and the unknown-category fallback).",
+    "special": {
+      "scale": { "color": "#ff9500" },
+      "audio": { "color": "#89ce5f" },
+      "recent": { "color": "#9d4edd" }
+    },
+    "types": {
+      "drum": { "color": "#f36fb8" },
+      "bass": { "color": "#12b2f4" },
+      "fx": { "color": "#d57ce3" },
+      "inst": { "color": "#00cdb9" },
+      "key": { "color": "#ceb92d" },
+      "perc": { "color": "#ff8244" },
+      "synth": { "color": "#8e90ff" }
+    },
+    "brands": {
+      "Ableton": { "color": "#f2cc0d" },
+      "NI": { "color": "#17cfcf" },
+      "Omni": { "color": "#dd3cdd" },
+      "Audio": { "color": "#f2700d" }
+    }
+  },
+
+  "catalog": {
+    "_note": "The browser's Places catalog, built by the interface server at runtime for the Places ticked in Settings (interface/src/lib/server/places/service.ts, since 2026-09-26) and served over /api/places/*. The ticks live in logs/places.json; on a Mac with nothing saved the Places under paths.sidebarRoot are pre-ticked.",
+    "source": "index",
+    "_sourceNote": "Where a Place's catalog is read from: \"disk\" walks the folder and reads each file's kind (today's scan), \"index\" reads Live's own index (Live-files-<schema>.db under paths.liveDatabaseDir), about a hundred times faster, with the disk scan as the fallback whenever the index is missing, another schema, or does not list the Place. index since 2026-09-26, when the rig checks in onboarding.plan.md §10 passed (places:diff identical for the seven Places). The environment variable LOOPING_CATALOG_SOURCE overrides it for one session.",
+    "maxFolderDepth": 2,
+    "_maxFolderDepth_note": "Cap folder nesting at this many levels in every Place (a Place can set its own, below). A folder at exactly this depth (root folders are depth 1) keeps its own presets, absorbs every preset nested below it, drops its subfolders, and de-dupes by name. e.g. Electric(1) \u2192 Rhodes Synth(2) \u2192 sub-genre folders(3+) collapse into one flat list under Rhodes Synth. Each Place's Samples folder is exempt and keeps its full nesting.",
+    "places": {
+      "_note": "Per-Place tuning for the Places catalog, keyed by the Place's name as Live's sidebar shows it. maxFolderDepth overrides the global value above. flattenFolders (ADR-408) collapses a listed folder and everything below it into one flat list on that folder, whatever its depth; paths are the Place's own, '<Place>/<folder>', matched exact-or-prefix on '/' boundaries ('Bass/Acoustic' never matches 'Bass/AcousticX'), and a wrong path is a silent no-op \u2014 check the [FlattenFolder] lines of a generation log. keepNestingFolders (ADR-420) is the inverse: a listed folder and everything below it keep full nesting past the cap; entries are '/'-separated folder labels as the breadcrumb reads them, matched as a run of whole segments anywhere in a folder's path, a keep entry wins over a flatten entry and the cap, and an entry that matches nothing is reported at the end of generation. role is the track role and color a load from the Place records; by default it is read from the Place's name through presetPath's synonym table (Drum \u2192 drum), null for none. The three flattenFolders entries are the old type catalogs' (Omni/Bass/Acoustic, Ableton/Perc/NI Expansions, NI/Perc/NI) under the Places. The tuning itself is a Mac's own library's, in config/constants.local.json."
+    }
+  },
+
+  "ui": {
+    "meters": {
+      "opacity": 0.4
+    },
+    "gestures": {
+      "momentaryHoldMs": 300,
+      "_momentaryHoldMs_note": "ADR-427/432. A press released under this many ms is a tap (latch); at or over it, a hold (momentary). One number for Solo, the pad tiles and the Move pad; owner/Max Patches/move_pad_hold.js mirrors it by hand (Max ES5 cannot read JSON)."
+    },
+    "browser": {
+      "twoColumnThreshold": 6,
+      "threeColumnThreshold": 16,
+      "hoverRetargetThresholdPx": 16,
+      "audioWaveforms": true,
+      "_audioWaveforms_note": "ADR-401. Render a waveform thumbnail behind each sample and clip tile in the browser. When true, scripts/generate-places-catalog.ts bakes low-res peaks into each Place's <id>-samples.json (incremental stat-cache in scripts/.cache/places-peaks-cache.json) and DrillDownBrowser paints them; items without a baked thumbnail (compressed formats, freshly-added files) fall back to a live /api/sample-peaks fetch. Set false to disable both the baking and the render."
+    },
+    "patternSlots": 12,
+    "_patternSlots_note": "Pattern Rack view (instrument-rack-pattern). Macro 1's 0..127 is always cut into this many equal steps — slot i sends round(i * 127 / patternSlots), so 0, 11, 21, 32 … 116 — whatever the rack's 'Pattern N' says. N only sets how many of the slots get a button (capped here), so a given pattern keeps its macro value from rack to rack.",
+    "patternLabels": [
+      "16th",
+      "8th",
+      "4th",
+      "6/4",
+      "Tamb 16th",
+      "Weird",
+      "Clave",
+      "T 16th Shuffle",
+      "16th",
+      "Tambo 2step",
+      "Shaker 2step"
+    ],
+    "_patternRhythms_note": "Pattern Rack view. The rhythm drawn in pattern button i, by index beside patternLabels: `steps` cuts the box into equal steps and a tick sits at each step in `hits` (0-based); a step also in `accents` draws taller. Read off the clip previews of the rack's patterns, accents the user's (2026-09-17); a button with no entry shows its label alone.",
+    "patternRhythms": [
+      { "steps": 16, "hits": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "accents": [0, 4, 8, 12] },
+      { "steps": 8, "hits": [0, 1, 2, 3, 4, 5, 6, 7], "accents": [0, 2, 4, 6] },
+      { "steps": 4, "hits": [0, 1, 2, 3], "accents": [0, 1, 2, 3] },
+      { "steps": 6, "hits": [0, 2, 3, 5], "accents": [0, 3] }
+    ]
+  },
+
+  "axHelper": {
+    "_description": "Looping AX Helper (ADR-439): the one process that drives Live's UI through macOS Accessibility. `npm run install-ax-helper` builds ~/Applications/<appName>.app and its LaunchAgent; Accessibility trust is granted to that app once in System Settings. The bridge dials socketPath (a Unix socket, owner-only). messagingTimeoutS is the per-request AXUIElementSetMessagingTimeout: the cold first kit swap takes ~5 s and the 6 s default returns -25204 although Live completes it. requestTimeoutMs is the bridge's own ceiling on one reply.",
+    "appName": "Looping AX Helper",
+    "bundleId": "local.looping.ax-helper",
+    "socketPath": "~/Library/Application Support/Looping/ax-helper.sock",
+    "messagingTimeoutS": 15,
+    "requestTimeoutMs": 20000,
+    "statusIntervalMs": 5000
+  }
+}

@@ -1,0 +1,18 @@
+# Dev-only deps for the Python Control Surface test harness.
+# The surface itself (once it exists at Gate 0 onward) runs inside
+# Ableton Live's embedded Python and has no pip-installable deps —
+# all its imports are `Live.*` / `ableton.*`, provided by Live at
+# runtime. This file is only for running the fixture-replay harness
+# and future probe tests in CI and on dev machines.
+#
+# Keep this minimal. Anything added here must actually be needed by
+# tests under surface/tests/.
+
+pytest==9.0.3
+
+# Static analysis for tests/test_looping_surface_closures.py, which shells out
+# to `ruff check --select F821` over the whole surface. That test replaced 161
+# lines of hand-rolled scope reconstruction which had a demonstrated false
+# negative: it treated sibling closures as sharing scope, and `__init__` holds
+# eight of them. Without ruff installed the test skips, and the gate is off.
+ruff==0.16.5

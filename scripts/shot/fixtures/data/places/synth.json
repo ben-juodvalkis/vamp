@@ -1,0 +1,181 @@
+{
+ "_comment": "Screenshot-harness fixture (see places/index.json). Aurora Lead and its five neighbours are the swap pill's folder (the alias map sends scene.mjs's SCENE_PRESET, an old-layout path, here), plus two Omnisphere presets and one whose plug-in is not installed, to photograph the plug-in label and the greyed tile.",
+ "metadata": {
+  "placeId": "synth",
+  "name": "Synth",
+  "path": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Synth",
+  "role": "synth",
+  "generatedAt": "2026-08-30T00:00:00.000Z",
+  "totalItems": 12,
+  "kinds": {
+   "instrument-rack": 6,
+   "plugin-instrument": 3,
+   "sample": 3
+  }
+ },
+ "tree": {
+  "presets": [],
+  "folders": {
+   "Lead": {
+    "name": "Lead",
+    "path": "Synth/Lead",
+    "folders": {
+     "Bright": {
+      "name": "Bright",
+      "path": "Synth/Lead/Bright",
+      "folders": {},
+      "presets": [
+       {
+        "name": "Aurora Lead",
+        "path": "Synth/Lead/Bright/Aurora Lead.adg",
+        "fullPath": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Synth/Lead/Bright/Aurora Lead.adg",
+        "type": ".adg",
+        "variants": [
+         "Aurora Lead.adg"
+        ],
+        "kind": "instrument-rack",
+        "vendorColor": "#f2cc0d"
+       },
+       {
+        "name": "Crystal Fifths",
+        "path": "Synth/Lead/Bright/Crystal Fifths.adg",
+        "fullPath": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Synth/Lead/Bright/Crystal Fifths.adg",
+        "type": ".adg",
+        "variants": [
+         "Crystal Fifths.adg"
+        ],
+        "kind": "instrument-rack",
+        "vendorColor": "#f2cc0d"
+       },
+       {
+        "name": "Glass Blade",
+        "path": "Synth/Lead/Bright/Glass Blade.adg",
+        "fullPath": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Synth/Lead/Bright/Glass Blade.adg",
+        "type": ".adg",
+        "variants": [
+         "Glass Blade.adg"
+        ],
+        "kind": "instrument-rack",
+        "vendorColor": "#f2cc0d"
+       },
+       {
+        "name": "Neon Ribbon",
+        "path": "Synth/Lead/Bright/Neon Ribbon.adg",
+        "fullPath": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Synth/Lead/Bright/Neon Ribbon.adg",
+        "type": ".adg",
+        "variants": [
+         "Neon Ribbon.adg"
+        ],
+        "kind": "instrument-rack",
+        "vendorColor": "#f2cc0d"
+       },
+       {
+        "name": "Solar Cut",
+        "path": "Synth/Lead/Bright/Solar Cut.adg",
+        "fullPath": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Synth/Lead/Bright/Solar Cut.adg",
+        "type": ".adg",
+        "variants": [
+         "Solar Cut.adg"
+        ],
+        "kind": "instrument-rack",
+        "vendorColor": "#f2cc0d"
+       },
+       {
+        "name": "Starline",
+        "path": "Synth/Lead/Bright/Starline.adg",
+        "fullPath": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Synth/Lead/Bright/Starline.adg",
+        "type": ".adg",
+        "variants": [
+         "Starline.adg"
+        ],
+        "kind": "instrument-rack",
+        "vendorColor": "#f2cc0d"
+       }
+      ],
+      "vendorColor": "#f2cc0d",
+      "kinds": {
+       "instrument-rack": 6
+      }
+     }
+    },
+    "presets": [],
+    "vendorColor": "#f2cc0d",
+    "kinds": {
+     "instrument-rack": 6
+    }
+   },
+   "Pads": {
+    "name": "Pads",
+    "path": "Synth/Pads",
+    "folders": {
+     "Character": {
+      "name": "Character",
+      "path": "Synth/Pads/Character",
+      "folders": {},
+      "presets": [
+       {
+        "name": "Noisy VHS Tapes",
+        "path": "Synth/Pads/Character/Noisy VHS Tapes.aupreset",
+        "fullPath": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Synth/Pads/Character/Noisy VHS Tapes.aupreset",
+        "type": ".aupreset",
+        "variants": [
+         "Noisy VHS Tapes.aupreset"
+        ],
+        "kind": "plugin-instrument",
+        "vendorColor": "#dd3cdd",
+        "plugin": "Omnisphere",
+        "maker": "Spectrasonics",
+        "installed": true
+       },
+       {
+        "name": "Warm Circuit",
+        "path": "Synth/Pads/Character/Warm Circuit.aupreset",
+        "fullPath": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Synth/Pads/Character/Warm Circuit.aupreset",
+        "type": ".aupreset",
+        "variants": [
+         "Warm Circuit.aupreset"
+        ],
+        "kind": "plugin-instrument",
+        "vendorColor": "#dd3cdd",
+        "plugin": "Omnisphere",
+        "maker": "Spectrasonics",
+        "installed": true
+       },
+       {
+        "name": "Missing Plug-in Pad",
+        "path": "Synth/Pads/Character/Missing Plug-in Pad.aupreset",
+        "fullPath": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Synth/Pads/Character/Missing Plug-in Pad.aupreset",
+        "type": ".aupreset",
+        "variants": [
+         "Missing Plug-in Pad.aupreset"
+        ],
+        "kind": "plugin-instrument",
+        "installed": false
+       }
+      ],
+      "vendorColor": null,
+      "kinds": {
+       "plugin-instrument": 3
+      }
+     }
+    },
+    "presets": [],
+    "vendorColor": null,
+    "kinds": {
+     "plugin-instrument": 3
+    }
+   },
+   "Samples": {
+    "name": "Samples",
+    "path": "Synth/Samples",
+    "folders": {},
+    "presets": [],
+    "vendorColor": "#f2700d",
+    "kinds": {
+     "sample": 3
+    },
+    "external": "synth-samples.json"
+   }
+  }
+ }
+}

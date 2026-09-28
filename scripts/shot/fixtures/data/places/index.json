@@ -1,0 +1,149 @@
+{
+ "_comment": "Screenshot-harness fixture, not a real catalog (the Mac's Places service builds the real one at runtime). The seven Places as Live's sidebar lists them on the rig, 2026-09-24, with their real per-kind counts, so the Places rail can be photographed the same on every machine. Paths come from config/constants.json (tracked), so they are the same on every clone. Only synth.json and synth-samples.json exist as fixtures; every other Place's file is served as an empty catalog.",
+ "metadata": {
+  "generatedAt": "2026-08-30T00:00:00.000Z",
+  "sidebarRoot": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar",
+  "source": "library-cfg",
+  "totalItems": 90816
+ },
+ "places": [
+  {
+   "id": "drum",
+   "name": "Drum",
+   "icon": "Sidebar/Sidebar_Drums",
+   "role": "drum",
+   "file": "drum.json",
+   "totalItems": 13010,
+   "kinds": {
+    "drum-rack": 2075,
+    "instrument-rack": 3,
+    "sample": 9163,
+    "audio-clip": 111,
+    "plugin-instrument": 1658
+   },
+   "path": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Drum",
+   "samplesFile": "drum-samples.json"
+  },
+  {
+   "id": "perc",
+   "name": "Perc",
+   "icon": "Sidebar/Sidebar_Clap",
+   "role": "perc",
+   "file": "perc.json",
+   "totalItems": 2681,
+   "kinds": {
+    "drum-rack": 375,
+    "instrument-rack": 17,
+    "instrument": 366,
+    "sample": 1923
+   },
+   "path": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Perc",
+   "samplesFile": "perc-samples.json"
+  },
+  {
+   "id": "bass",
+   "name": "Bass",
+   "icon": "Sidebar/Sidebar_Strings",
+   "role": "bass",
+   "file": "bass.json",
+   "totalItems": 4556,
+   "kinds": {
+    "plugin-instrument": 2337,
+    "sample": 2145,
+    "audio-clip": 74
+   },
+   "path": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Bass",
+   "samplesFile": "bass-samples.json"
+  },
+  {
+   "id": "fx",
+   "name": "FX",
+   "icon": "Sidebar/Sidebar_FXFolder",
+   "role": "fx",
+   "file": "fx.json",
+   "totalItems": 15926,
+   "kinds": {
+    "instrument-rack": 175,
+    "plugin-instrument": 2957,
+    "sample": 12747,
+    "drum-rack": 47
+   },
+   "path": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/FX",
+   "samplesFile": "fx-samples.json"
+  },
+  {
+   "id": "inst",
+   "name": "Inst",
+   "icon": "Sidebar/Sidebar_Horns",
+   "role": "inst",
+   "file": "inst.json",
+   "totalItems": 28768,
+   "kinds": {
+    "plugin-instrument": 5081,
+    "instrument": 24,
+    "instrument-rack": 635,
+    "sample": 22190,
+    "audio-clip": 451,
+    "clip": 92,
+    "drum-rack": 295
+   },
+   "path": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Inst",
+   "samplesFile": "inst-samples.json"
+  },
+  {
+   "id": "key",
+   "name": "Key",
+   "icon": "Sidebar/Sidebar_Piano",
+   "role": "key",
+   "file": "key.json",
+   "totalItems": 5363,
+   "kinds": {
+    "plugin-instrument": 4025,
+    "instrument": 8,
+    "instrument-rack": 15,
+    "sample": 1315
+   },
+   "path": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Key",
+   "samplesFile": "key-samples.json"
+  },
+  {
+   "id": "synth",
+   "name": "Synth",
+   "icon": "Sidebar/Sidebar_Shapes",
+   "role": "synth",
+   "file": "synth.json",
+   "totalItems": 20512,
+   "kinds": {
+    "instrument": 56,
+    "instrument-rack": 56,
+    "plugin-instrument": 16663,
+    "drum-rack": 250,
+    "sample": 3116,
+    "audio-clip": 371
+   },
+   "path": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Synth",
+   "samplesFile": "synth-samples.json"
+  }
+ ],
+ "aliases": {
+  "rules": [
+   {
+    "from": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Omni/Synth/",
+    "to": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Synth/"
+   },
+   {
+    "from": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Ableton/Synth/",
+    "to": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Synth/"
+   },
+   {
+    "from": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/NI/Synth/",
+    "to": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Synth/"
+   },
+   {
+    "from": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Audio Samples/Synth/",
+    "to": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Synth/Samples/"
+   }
+  ],
+  "exceptions": {}
+ }
+}

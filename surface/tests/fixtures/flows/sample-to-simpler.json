@@ -1,0 +1,3160 @@
+{
+  "flow": "sample-to-simpler",
+  "captured_at": "2026-04-12-batch-v3",
+  "messages": [
+    {
+      "ts": 1776020518237,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/view/focused_document_view",
+      "args": [
+        "Session"
+      ]
+    },
+    {
+      "ts": 1776020519919,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/session/query_track_summaries",
+      "args": []
+    },
+    {
+      "ts": 1776020519919,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/view/get/selected_track",
+      "args": []
+    },
+    {
+      "ts": 1776020519926,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/track_summaries",
+      "args": [
+        3,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020519984,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/view/get/selected_track",
+      "args": [
+        2
+      ]
+    },
+    {
+      "ts": 1776020519984,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/has_midi_input",
+      "args": [
+        2
+      ]
+    },
+    {
+      "ts": 1776020519985,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        2,
+        1
+      ]
+    },
+    {
+      "ts": 1776020520036,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        2
+      ]
+    },
+    {
+      "ts": 1776020520084,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/has_midi_input",
+      "args": [
+        2,
+        true
+      ]
+    },
+    {
+      "ts": 1776020520084,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        2,
+        true
+      ]
+    },
+    {
+      "ts": 1776020520084,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/track/create_audio",
+      "args": [
+        -1
+      ]
+    },
+    {
+      "ts": 1776020520085,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        2,
+        1
+      ]
+    },
+    {
+      "ts": 1776020520187,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        2
+      ]
+    },
+    {
+      "ts": 1776020520231,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/tracks/count",
+      "args": [
+        4
+      ]
+    },
+    {
+      "ts": 1776020520236,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/track/query",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020520256,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776020520256,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776020520256,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "arm",
+        1
+      ]
+    },
+    {
+      "ts": 1776020520256,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "name",
+        "\"Basic Shapes\""
+      ]
+    },
+    {
+      "ts": 1776020520257,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "color",
+        16149507
+      ]
+    },
+    {
+      "ts": 1776020520260,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020520260,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776020520260,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776020520260,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "arm",
+        0
+      ]
+    },
+    {
+      "ts": 1776020520261,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "name",
+        "Shaker"
+      ]
+    },
+    {
+      "ts": 1776020520261,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "color",
+        16149507
+      ]
+    },
+    {
+      "ts": 1776020520261,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        0,
+        "volume",
+        0.8495290279388428
+      ]
+    },
+    {
+      "ts": 1776020520261,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020520262,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776020520262,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776020520262,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "arm",
+        0
+      ]
+    },
+    {
+      "ts": 1776020520262,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "name",
+        "2-Operator"
+      ]
+    },
+    {
+      "ts": 1776020520262,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "color",
+        16725558
+      ]
+    },
+    {
+      "ts": 1776020520263,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        1,
+        "volume",
+        0.850488007068634
+      ]
+    },
+    {
+      "ts": 1776020520390,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        2,
+        1
+      ]
+    },
+    {
+      "ts": 1776020520539,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        2
+      ]
+    },
+    {
+      "ts": 1776020520741,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776020520741,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020520741,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        3,
+        0
+      ]
+    },
+    {
+      "ts": 1776020521677,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/devices/load",
+      "args": [
+        "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Audio Samples/Tambourine/chl_prclp_tamb_80_01.wav"
+      ]
+    },
+    {
+      "ts": 1776020521677,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/view/get/selected_track",
+      "args": []
+    },
+    {
+      "ts": 1776020522178,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/session/query_track_summaries",
+      "args": []
+    },
+    {
+      "ts": 1776020522394,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020522394,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "volume",
+        0.850488007068634
+      ]
+    },
+    {
+      "ts": 1776020522396,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/selected",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020522399,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/track/query",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020522399,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/track/query",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020522399,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        3,
+        1
+      ]
+    },
+    {
+      "ts": 1776020522399,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/session/query_single_track",
+      "args": [
+        2
+      ]
+    },
+    {
+      "ts": 1776020522449,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/created",
+      "args": [
+        "audio",
+        3
+      ]
+    },
+    {
+      "ts": 1776020522450,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020522450,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/live/view/set/selected_track",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020522450,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/cmd/prepare_audio_track/created",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776020522450,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/view/set/focus_view",
+      "args": [
+        "Session"
+      ]
+    },
+    {
+      "ts": 1776020522451,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020522452,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776020522452,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776020522452,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "arm",
+        0
+      ]
+    },
+    {
+      "ts": 1776020522452,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "name",
+        "4-Audio"
+      ]
+    },
+    {
+      "ts": 1776020522452,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "color",
+        16749734
+      ]
+    },
+    {
+      "ts": 1776020522452,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "volume",
+        0.8500000238418579
+      ]
+    },
+    {
+      "ts": 1776020522475,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/track_summaries",
+      "args": [
+        4,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776020522483,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/devices/complete_state",
+      "args": [
+        3,
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020522483,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020522483,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776020522483,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776020522483,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "arm",
+        0
+      ]
+    },
+    {
+      "ts": 1776020522483,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "name",
+        "4-Audio"
+      ]
+    },
+    {
+      "ts": 1776020522483,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "color",
+        16749734
+      ]
+    },
+    {
+      "ts": 1776020522483,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "volume",
+        0.8500000238418579
+      ]
+    },
+    {
+      "ts": 1776020522483,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020522483,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776020522483,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776020522483,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "arm",
+        0
+      ]
+    },
+    {
+      "ts": 1776020522483,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "name",
+        "4-Audio"
+      ]
+    },
+    {
+      "ts": 1776020522484,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "color",
+        16749734
+      ]
+    },
+    {
+      "ts": 1776020522484,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "volume",
+        0.8500000238418579
+      ]
+    },
+    {
+      "ts": 1776020522484,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/single_track_summary",
+      "args": [
+        2,
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020522484,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/devices/complete_state",
+      "args": [
+        3,
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020522484,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/device/get/parameter/value",
+      "args": [
+        2,
+        0,
+        1
+      ]
+    },
+    {
+      "ts": 1776020522484,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/track/query",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020522485,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/device/get/parameter/value",
+      "args": [
+        2,
+        0,
+        2
+      ]
+    },
+    {
+      "ts": 1776020522485,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/device/get/parameter/value",
+      "args": [
+        2,
+        0,
+        3
+      ]
+    },
+    {
+      "ts": 1776020522485,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/device/get/parameter/value",
+      "args": [
+        2,
+        0,
+        4
+      ]
+    },
+    {
+      "ts": 1776020522485,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/device/get/parameter/value",
+      "args": [
+        2,
+        0,
+        5
+      ]
+    },
+    {
+      "ts": 1776020522485,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/device/get/parameter/value",
+      "args": [
+        2,
+        0,
+        6
+      ]
+    },
+    {
+      "ts": 1776020522485,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/device/get/parameter/value",
+      "args": [
+        2,
+        0,
+        7
+      ]
+    },
+    {
+      "ts": 1776020522485,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/device/get/parameter/value",
+      "args": [
+        2,
+        0,
+        8
+      ]
+    },
+    {
+      "ts": 1776020522490,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/clip/detail",
+      "args": [
+        -1,
+        -1
+      ]
+    },
+    {
+      "ts": 1776020522494,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/view/focused_document_view",
+      "args": [
+        "Session"
+      ]
+    },
+    {
+      "ts": 1776020522507,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        2,
+        true
+      ]
+    },
+    {
+      "ts": 1776020522507,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        2,
+        true
+      ]
+    },
+    {
+      "ts": 1776020522507,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/view/get/selected_track",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020522507,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3,
+        false
+      ]
+    },
+    {
+      "ts": 1776020522507,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/device/get/parameter/value",
+      "args": [
+        2,
+        0,
+        1,
+        1
+      ]
+    },
+    {
+      "ts": 1776020522507,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/device/get/parameter/value",
+      "args": [
+        2,
+        0,
+        2,
+        1
+      ]
+    },
+    {
+      "ts": 1776020522507,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/device/get/parameter/value",
+      "args": [
+        2,
+        0,
+        3,
+        0
+      ]
+    },
+    {
+      "ts": 1776020522507,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/device/get/parameter/value",
+      "args": [
+        2,
+        0,
+        4,
+        0
+      ]
+    },
+    {
+      "ts": 1776020522507,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/device/get/parameter/value",
+      "args": [
+        2,
+        0,
+        5,
+        0
+      ]
+    },
+    {
+      "ts": 1776020522508,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/device/get/parameter/value",
+      "args": [
+        2,
+        0,
+        6,
+        0.5
+      ]
+    },
+    {
+      "ts": 1776020522508,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/device/get/parameter/value",
+      "args": [
+        2,
+        0,
+        7,
+        0
+      ]
+    },
+    {
+      "ts": 1776020522508,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/device/get/parameter/value",
+      "args": [
+        2,
+        0,
+        8,
+        0
+      ]
+    },
+    {
+      "ts": 1776020522508,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/name",
+      "args": [
+        3,
+        "chl_prclp_tamb_80_01"
+      ]
+    },
+    {
+      "ts": 1776020522508,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        3,
+        1
+      ]
+    },
+    {
+      "ts": 1776020522508,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        3,
+        1
+      ]
+    },
+    {
+      "ts": 1776020522511,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020522511,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776020522511,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776020522511,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "arm",
+        0
+      ]
+    },
+    {
+      "ts": 1776020522511,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "name",
+        "4-Audio"
+      ]
+    },
+    {
+      "ts": 1776020522511,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "color",
+        16749734
+      ]
+    },
+    {
+      "ts": 1776020522512,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "volume",
+        0.8500000238418579
+      ]
+    },
+    {
+      "ts": 1776020522552,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/input_routing_channel",
+      "args": [
+        3,
+        "11/12 Guitar Mic"
+      ]
+    },
+    {
+      "ts": 1776020522552,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        3,
+        1
+      ]
+    },
+    {
+      "ts": 1776020522559,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020522603,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020522608,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020522713,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/devices/complete_state",
+      "args": [
+        3,
+        0,
+        1,
+        1,
+        "78559",
+        0,
+        "Permute",
+        "MxDeviceAudioEffect",
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776020522716,
+      "dir": "out",
+      "target": "sequencer",
+      "address": "/looping/sequencer/set/state",
+      "args": [
+        78559,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        8,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        8,
+        1,
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "ts": 1776020522733,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3,
+        false
+      ]
+    },
+    {
+      "ts": 1776020522733,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3,
+        false
+      ]
+    },
+    {
+      "ts": 1776020522733,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3,
+        false
+      ]
+    },
+    {
+      "ts": 1776020522734,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        3,
+        1
+      ]
+    },
+    {
+      "ts": 1776020522734,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        3,
+        1
+      ]
+    },
+    {
+      "ts": 1776020522734,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        3,
+        1
+      ]
+    },
+    {
+      "ts": 1776020522740,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "name",
+        "chl_prclp_tamb_80_01"
+      ]
+    },
+    {
+      "ts": 1776020522834,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020522834,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020522875,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/sequencer/state",
+      "args": [
+        3,
+        "set_state_ack",
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        8,
+        1,
+        0,
+        0,
+        -1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        8,
+        1,
+        0,
+        0,
+        -1,
+        0,
+        1
+      ]
+    },
+    {
+      "ts": 1776020522879,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3,
+        false
+      ]
+    },
+    {
+      "ts": 1776020522880,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3,
+        false
+      ]
+    },
+    {
+      "ts": 1776020522880,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        3,
+        1
+      ]
+    },
+    {
+      "ts": 1776020522880,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        3,
+        1
+      ]
+    },
+    {
+      "ts": 1776020522884,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020522986,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3,
+        false
+      ]
+    },
+    {
+      "ts": 1776020522987,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776020522988,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020522989,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        2,
+        0
+      ]
+    },
+    {
+      "ts": 1776020523032,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020523032,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020523086,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3,
+        false
+      ]
+    },
+    {
+      "ts": 1776020523086,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3,
+        false
+      ]
+    },
+    {
+      "ts": 1776020523087,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "arm",
+        0
+      ]
+    },
+    {
+      "ts": 1776020523087,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776020523088,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020523088,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        2,
+        0
+      ]
+    },
+    {
+      "ts": 1776020523088,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/view/set/selected_clip",
+      "args": [
+        3,
+        0
+      ]
+    },
+    {
+      "ts": 1776020523088,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/cmd/prepare_audio_track/success",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776020529401,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/live/view/set/selected_track",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020529407,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/track/query",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020529414,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020529416,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776020529416,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776020529417,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "arm",
+        0
+      ]
+    },
+    {
+      "ts": 1776020529417,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "name",
+        "chl_prclp_tamb_80_01"
+      ]
+    },
+    {
+      "ts": 1776020529417,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "color",
+        16749734
+      ]
+    },
+    {
+      "ts": 1776020529417,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "volume",
+        0.8500000238418579
+      ]
+    },
+    {
+      "ts": 1776020531861,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/live/view/set/selected_track",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020535687,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/live/view/set/selected_track",
+      "args": [
+        2
+      ]
+    },
+    {
+      "ts": 1776020535702,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/selected",
+      "args": [
+        2
+      ]
+    },
+    {
+      "ts": 1776020535705,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/track/query",
+      "args": [
+        2
+      ]
+    },
+    {
+      "ts": 1776020535706,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/track/query",
+      "args": [
+        2
+      ]
+    },
+    {
+      "ts": 1776020535706,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        2,
+        1
+      ]
+    },
+    {
+      "ts": 1776020535707,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/session/query_single_track",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020535757,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        2
+      ]
+    },
+    {
+      "ts": 1776020535825,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020535826,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776020535826,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776020535826,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "arm",
+        0
+      ]
+    },
+    {
+      "ts": 1776020535826,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "name",
+        "Basic Shapes"
+      ]
+    },
+    {
+      "ts": 1776020535826,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "color",
+        16149507
+      ]
+    },
+    {
+      "ts": 1776020535826,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "volume",
+        0.850488007068634
+      ]
+    },
+    {
+      "ts": 1776020535827,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020535827,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776020535827,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776020535827,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "arm",
+        0
+      ]
+    },
+    {
+      "ts": 1776020535827,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "name",
+        "Basic Shapes"
+      ]
+    },
+    {
+      "ts": 1776020535827,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "color",
+        16149507
+      ]
+    },
+    {
+      "ts": 1776020535828,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "volume",
+        0.850488007068634
+      ]
+    },
+    {
+      "ts": 1776020535829,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/single_track_summary",
+      "args": [
+        3,
+        1,
+        1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020535829,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/devices/complete_state",
+      "args": [
+        2,
+        1,
+        0,
+        2,
+        "78533",
+        0,
+        "Basic Shapes",
+        "InstrumentMeld",
+        7,
+        8,
+        0,
+        9,
+        0,
+        14,
+        0,
+        15,
+        1,
+        16,
+        0,
+        37,
+        0.0707106813788414,
+        39,
+        0.1866055279970169,
+        0,
+        0,
+        0,
+        "78541",
+        1,
+        "movement-filter",
+        "MxDeviceAudioEffect",
+        12,
+        1,
+        0,
+        2,
+        0,
+        3,
+        10.13841438293457,
+        4,
+        4,
+        5,
+        0.5039370059967041,
+        6,
+        0,
+        7,
+        0,
+        8,
+        0.5,
+        9,
+        1,
+        10,
+        10446.9794921875,
+        11,
+        0.05554671585559845,
+        14,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776020535830,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/clip/detail",
+      "args": [
+        2,
+        0
+      ]
+    },
+    {
+      "ts": 1776020535832,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/timing_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020535832,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/timing_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020535833,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/quantization_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020535833,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/quantization_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020535834,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/random_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020535834,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/random_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020535834,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/velocity_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020535834,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/velocity_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020535834,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/base",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020535835,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/timing_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020535835,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/quantization_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020535835,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/random_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020535835,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/velocity_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020535836,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/properties/batch",
+      "args": [
+        "loop_start",
+        0,
+        "loop_end",
+        3,
+        "start_marker",
+        0,
+        "end_marker",
+        3,
+        "length",
+        3,
+        "looping",
+        1
+      ]
+    },
+    {
+      "ts": 1776020535837,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/loop_start",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020535837,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/loop_start",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020535837,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/loop_end",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020535837,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/loop_end",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020535838,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/start_marker",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020535838,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/start_marker",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020535839,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/end_marker",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020535839,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/end_marker",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020535840,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/looping",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776020535841,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/looping",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776020535843,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        2,
+        true
+      ]
+    },
+    {
+      "ts": 1776020535844,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        2,
+        1
+      ]
+    },
+    {
+      "ts": 1776020535848,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        2,
+        "arm",
+        1
+      ]
+    },
+    {
+      "ts": 1776020535945,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        2
+      ]
+    },
+    {
+      "ts": 1776020535947,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        2,
+        true
+      ]
+    },
+    {
+      "ts": 1776020535948,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        2,
+        1
+      ]
+    },
+    {
+      "ts": 1776020536099,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        2
+      ]
+    },
+    {
+      "ts": 1776020536156,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        2,
+        true
+      ]
+    },
+    {
+      "ts": 1776020536157,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776020536157,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020536157,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        3,
+        0
+      ]
+    },
+    {
+      "ts": 1776020536450,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/live/view/set/selected_track",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020536463,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/selected",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020536464,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/track/query",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020536465,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/track/query",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020536465,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        3,
+        1
+      ]
+    },
+    {
+      "ts": 1776020536465,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/session/query_single_track",
+      "args": [
+        2
+      ]
+    },
+    {
+      "ts": 1776020536517,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020536590,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020536590,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776020536590,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776020536590,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "arm",
+        0
+      ]
+    },
+    {
+      "ts": 1776020536590,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "name",
+        "chl_prclp_tamb_80_01"
+      ]
+    },
+    {
+      "ts": 1776020536590,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "color",
+        16749734
+      ]
+    },
+    {
+      "ts": 1776020536591,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "volume",
+        0.8500000238418579
+      ]
+    },
+    {
+      "ts": 1776020536592,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "output_meter_left",
+        0
+      ]
+    },
+    {
+      "ts": 1776020536592,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "mute",
+        0
+      ]
+    },
+    {
+      "ts": 1776020536592,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "solo",
+        0
+      ]
+    },
+    {
+      "ts": 1776020536592,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "arm",
+        0
+      ]
+    },
+    {
+      "ts": 1776020536592,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "name",
+        "chl_prclp_tamb_80_01"
+      ]
+    },
+    {
+      "ts": 1776020536592,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "color",
+        16749734
+      ]
+    },
+    {
+      "ts": 1776020536593,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/property",
+      "args": [
+        3,
+        "volume",
+        0.8500000238418579
+      ]
+    },
+    {
+      "ts": 1776020536594,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/single_track_summary",
+      "args": [
+        2,
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020536594,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/devices/complete_state",
+      "args": [
+        3,
+        0,
+        1,
+        1,
+        "78559",
+        0,
+        "Permute",
+        "MxDeviceAudioEffect",
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776020536595,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/clip/detail",
+      "args": [
+        3,
+        0
+      ]
+    },
+    {
+      "ts": 1776020536595,
+      "dir": "out",
+      "target": "sequencer",
+      "address": "/looping/sequencer/set/state",
+      "args": [
+        78559,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        8,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        8,
+        1,
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "ts": 1776020536601,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/assigned",
+      "args": [
+        "78560",
+        8
+      ]
+    },
+    {
+      "ts": 1776020536605,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/timing_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536605,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/timing_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536606,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/quantization_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536606,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/quantization_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536607,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/random_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536607,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/random_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536607,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/velocity_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536608,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/velocity_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536608,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/base",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020536608,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/timing_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536608,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/quantization_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536608,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/random_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536608,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/velocity_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536612,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/timing_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536613,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/timing_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536613,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/quantization_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536613,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/quantization_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536614,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/random_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536614,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/random_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536615,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/velocity_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536615,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/velocity_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536615,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/base",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020536615,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/timing_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536615,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/quantization_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536615,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/random_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536615,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/groove/velocity_amount",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536620,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/properties/batch",
+      "args": [
+        "loop_start",
+        0,
+        "loop_end",
+        6,
+        "start_marker",
+        0,
+        "end_marker",
+        6,
+        "length",
+        6,
+        "looping",
+        1,
+        "warp_mode",
+        0
+      ]
+    },
+    {
+      "ts": 1776020536620,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/loop_start",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536620,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/loop_start",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536621,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/loop_end",
+      "args": [
+        6
+      ]
+    },
+    {
+      "ts": 1776020536621,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/loop_end",
+      "args": [
+        6
+      ]
+    },
+    {
+      "ts": 1776020536622,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/start_marker",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536622,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/start_marker",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536623,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/end_marker",
+      "args": [
+        6
+      ]
+    },
+    {
+      "ts": 1776020536623,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/end_marker",
+      "args": [
+        6
+      ]
+    },
+    {
+      "ts": 1776020536625,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/looping",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776020536625,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/looping",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776020536626,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/warp_mode",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536626,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/clip/property/warp_mode",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020536629,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/sequencer/state",
+      "args": [
+        3,
+        "set_state_ack",
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        8,
+        1,
+        0,
+        0,
+        -1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        8,
+        1,
+        0,
+        0,
+        -1,
+        0,
+        1
+      ]
+    },
+    {
+      "ts": 1776020536630,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3,
+        false
+      ]
+    },
+    {
+      "ts": 1776020536630,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        3,
+        1
+      ]
+    },
+    {
+      "ts": 1776020536733,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020536736,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3,
+        false
+      ]
+    },
+    {
+      "ts": 1776020536737,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        3,
+        1
+      ]
+    },
+    {
+      "ts": 1776020536889,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020536948,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        3,
+        false
+      ]
+    },
+    {
+      "ts": 1776020536950,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776020536950,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020536950,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        2,
+        0
+      ]
+    }
+  ]
+}

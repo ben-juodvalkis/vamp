@@ -1,0 +1,10 @@
+{
+  "_description": "One asset per class for the Gate 4a live run. The driver reads this file and probes `/looping/probe/browser_load [class, hint]` for each entry. A null value means that class is not available on this machine and skips to `n/a` in the result table. Hints are either absolute paths (User Library files) or bare names (Browser tree leaves) — the probe tries `load_item_at_path` first, then traverses by tail-of-path name match.",
+
+  "adv": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Effect Patches/AutoPanLegacy.adv",
+  "adg": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Effect Patches/Digital.adg",
+  "amxd": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Max for Live Files/Audio Interface Detectors.amxd",
+  "au": "Analog Heat",
+  "vst3": "Diva",
+  "sample": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Samples/Recorded/Guitar 0001 [2021-04-17 200424].aif"
+}

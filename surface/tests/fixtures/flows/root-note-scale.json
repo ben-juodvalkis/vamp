@@ -1,0 +1,372 @@
+{
+  "flow": "root-note-scale",
+  "captured_at": "2026-04-12-batch-v3",
+  "messages": [
+    {
+      "ts": 1776020554017,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/song/set/root_note",
+      "args": [
+        5
+      ]
+    },
+    {
+      "ts": 1776020554021,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/root_note",
+      "args": [
+        5
+      ]
+    },
+    {
+      "ts": 1776020554021,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/scale_mode",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776020554021,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/root_note",
+      "args": [
+        5
+      ]
+    },
+    {
+      "ts": 1776020554704,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/song/set/scale_name",
+      "args": [
+        "Dorian #4"
+      ]
+    },
+    {
+      "ts": 1776020554705,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/song/set/scale_name",
+      "args": [
+        "Dorian #4"
+      ]
+    },
+    {
+      "ts": 1776020554717,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/scale_name",
+      "args": [
+        "Dorian #4"
+      ]
+    },
+    {
+      "ts": 1776020554717,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/scale_mode",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776020554717,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/scale_name",
+      "args": [
+        "Dorian #4"
+      ]
+    },
+    {
+      "ts": 1776020554717,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/scale_mode",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776020554717,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/song/scale_name",
+      "args": [
+        "Dorian #4"
+      ]
+    },
+    {
+      "ts": 1776020572421,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/view/get/selected_track",
+      "args": []
+    },
+    {
+      "ts": 1776020572421,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/session/query_track_summaries",
+      "args": []
+    },
+    {
+      "ts": 1776020572430,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/track_summaries",
+      "args": [
+        5,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776020572488,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/view/get/selected_track",
+      "args": [
+        4
+      ]
+    },
+    {
+      "ts": 1776020572489,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/has_midi_input",
+      "args": [
+        4
+      ]
+    },
+    {
+      "ts": 1776020572490,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020572541,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        4
+      ]
+    },
+    {
+      "ts": 1776020572587,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/has_midi_input",
+      "args": [
+        4,
+        true
+      ]
+    },
+    {
+      "ts": 1776020572592,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        4,
+        true
+      ]
+    },
+    {
+      "ts": 1776020572592,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/get/num_scenes",
+      "args": []
+    },
+    {
+      "ts": 1776020572593,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020572686,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/song/get/num_scenes",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776020572688,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/clip_slot/get/has_clip",
+      "args": [
+        4,
+        0
+      ]
+    },
+    {
+      "ts": 1776020572693,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        4
+      ]
+    },
+    {
+      "ts": 1776020572792,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/clip_slot/get/has_clip",
+      "args": [
+        4,
+        0,
+        false
+      ]
+    },
+    {
+      "ts": 1776020572792,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        4,
+        true
+      ]
+    },
+    {
+      "ts": 1776020572793,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arrangement_clips/name",
+      "args": [
+        4
+      ]
+    },
+    {
+      "ts": 1776020572793,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        4,
+        1
+      ]
+    },
+    {
+      "ts": 1776020572887,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arrangement_clips/name",
+      "args": [
+        4
+      ]
+    },
+    {
+      "ts": 1776020572891,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/cmd/prepare_midi_track/reused",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776020572891,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/cmd/prepare_midi_track/success",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776020572943,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        4
+      ]
+    },
+    {
+      "ts": 1776020572990,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/track/get/arm",
+      "args": [
+        4,
+        true
+      ]
+    },
+    {
+      "ts": 1776020572991,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776020572991,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020572992,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        2,
+        0
+      ]
+    },
+    {
+      "ts": 1776020572992,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/track/set/arm",
+      "args": [
+        3,
+        0
+      ]
+    }
+  ]
+}

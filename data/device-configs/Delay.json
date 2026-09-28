@@ -1,0 +1,49 @@
+{
+  "device_name": "Simple Delay",
+  "class_name": "Delay",
+  "description": "Ableton Live's basic delay effect",
+  "version": "1.0.0",
+  "priority": "useful",
+  "parameters": {
+    "essential": [
+      {
+        "index": 0,
+        "name": "Delay Time",
+        "description": "Delay time",
+        "range": { "min": 0, "max": 2, "default": 0.25 },
+        "units": "s",
+        "type": "continuous",
+        "update_rate": "moderate"
+      },
+      {
+        "index": 1,
+        "name": "Feedback",
+        "description": "Delay feedback amount",
+        "range": { "min": 0, "max": 0.95, "default": 0.5 },
+        "type": "continuous",
+        "update_rate": "moderate"
+      },
+      {
+        "index": 3,
+        "name": "Dry/Wet",
+        "description": "Dry/wet mix balance",
+        "range": { "min": 0, "max": 1, "default": 0.5 },
+        "units": "%",
+        "type": "continuous",
+        "update_rate": "moderate"
+      }
+    ],
+    "important": [
+      {
+        "index": 2,
+        "name": "Tone",
+        "description": "High frequency damping",
+        "range": { "min": 0, "max": 1, "default": 0.5 },
+        "type": "continuous",
+        "update_rate": "moderate"
+      }
+    ],
+    "useful": [],
+    "optional": []
+  }
+}

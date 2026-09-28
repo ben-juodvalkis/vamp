@@ -1,0 +1,104 @@
+{
+  "Compressor2": {
+    "properties": {
+      "available_input_routing_channels": {
+        "type": "object",
+        "description": "List of available source channels for sidechain input routing"
+      },
+      "available_input_routing_types": {
+        "type": "object",
+        "description": "List of available source types for sidechain input routing"
+      },
+      "input_routing_channel": {
+        "type": "object",
+        "description": "Currently selected source channel for sidechain input routing"
+      },
+      "input_routing_type": {
+        "type": "object",
+        "description": "Currently selected source type for sidechain input routing"
+      }
+    }
+  },
+  "OriginalSimpler": {
+    "properties": {
+      "playback_mode": {
+        "name": "Playback Mode",
+        "type": "int",
+        "description": "0=Classic, 2=Slicing"
+      },
+      "sample.warp_mode": {
+        "name": "Warp Mode",
+        "type": "int",
+        "description": "0=Beats, 4=Complex, 6=Complex Pro"
+      },
+      "sample.warping": {
+        "name": "Warping",
+        "type": "boolean",
+        "description": "Enable/disable warping"
+      },
+      "sample.slicing_sensitivity": {
+        "name": "Slicing Sensitivity",
+        "type": "float",
+        "description": "Slicing sensitivity 0-1"
+      },
+      "sample.gain": {
+        "name": "Sample Gain",
+        "type": "float",
+        "description": "Sample gain (0-1, 0.5 = unity)"
+      },
+      "sample.start_marker": {
+        "name": "Start Marker",
+        "type": "int",
+        "description": "Start marker position in frames"
+      },
+      "sample.end_marker": {
+        "name": "End Marker",
+        "type": "int",
+        "description": "End marker position in frames"
+      },
+      "sample.length": {
+        "name": "Sample Length",
+        "type": "int",
+        "description": "Total sample length in frames (read-only)"
+      },
+      "sample.file_path": {
+        "name": "Sample File Path",
+        "type": "string",
+        "description": "Absolute filesystem path of the loaded sample (read-only, empty when no sample loaded)"
+      }
+    }
+  },
+  "Drift": {
+    "properties": {
+      "voice_mode_index": {
+        "name": "Voice Mode",
+        "type": "int",
+        "description": "0=Poly, 1=Mono, 2=Stereo, 3=Unison"
+      }
+    }
+  },
+  "Hybrid": {
+    "properties": {
+      "ir_category_index": {
+        "type": "int",
+        "description": "IR category index for convolution reverb"
+      },
+      "ir_file_index": {
+        "type": "int",
+        "description": "IR file index within selected category"
+      },
+      "ir_size_factor": {
+        "type": "float",
+        "description": "IR size factor (0.2-5.0, 1.0 at center) for convolution reverb"
+      },
+      "ir_attack_time": {
+        "type": "float",
+        "description": "IR attack time (0.0-3.0 seconds) for convolution reverb"
+      },
+      "ir_decay_time": {
+        "type": "float",
+        "description": "IR decay time (0.02-20.0 seconds) for convolution reverb"
+      }
+    }
+  }
+}

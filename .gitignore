@@ -1,0 +1,166 @@
+# ============================================================================
+# User-Provided Content
+# ============================================================================
+# Users provide their own preset libraries and audio files.
+# These are user-specific and not portable across systems.
+
+# Audio Unit Presets (Omnisphere, Komplete Kontrol, etc.)
+*.aupreset
+
+# Ableton Live Files (User's sessions and presets)
+*.als
+*.alp
+*.adv
+*.adg
+
+# Audio Files (User's samples and audio content)
+*.wav
+*.aiff
+*.aif
+*.mp3
+*.flac
+*.m4a
+
+# Sample Libraries and Audio Content
+samples/
+audio/
+**/Audio/
+**/Samples/
+
+# Exception: the Skaka Metronome Rack is the owner's metronome, not user
+# content. The interface's Pattern Rack view routes on its first macro's
+# name and drives the five-state picker inside it, and that picker device
+# is checked in at `owner/Skaka Metronome Picker/`.
+!owner/Skaka Metronome Rack.adg
+
+# ============================================================================
+# User-Specific Configuration
+# ============================================================================
+
+# config/constants.json is TRACKED: the general edition's defaults, correct
+# in a fresh clone. A Mac's own differences go in constants.local.json, laid
+# over it by every reader on the Mac (general-release plan.md §3).
+config/constants.local.json
+
+# The config copy the build used to carry (gone 2026-09-26). Still ignored
+# so a checkout that has one left over doesn't commit it; delete it: the
+# build sweeps static/ into every bundle and serves it to the LAN.
+interface/static/config/constants.json
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+config.json
+settings.json
+
+# ============================================================================
+# Generated Files
+# ============================================================================
+# Auto-generated from user's preset collections - not portable across systems.
+
+# Cache and Temporary Data
+data/cache/
+scripts/.cache/
+*.db
+*.db3
+*.sqlite
+*.sqlite3
+
+# Large JSON inventory files from preset extraction
+scripts/preset-extraction/native-instruments/data/kk_complete_inventory.json
+scripts/preset-extraction/spectrasonics/data/metadata/omnisphere_metadata.json
+
+# Generated preset database files
+preset-browsers/native-instruments/data/ni_database.json
+preset-browsers/native-instruments/data/ni_database_backup_*.json
+
+# Generated catalogs. The Places (scripts/generate-places-catalog.ts, from the
+# user's library) have a folder of their own — a new Place writes a new file
+# there. Every other generated JSON here is what the type catalogs retired at the
+# browser-places cutover (2026-09-24) left behind in a checkout: ignored as a
+# glob, so a checkout that still holds them cannot commit them (one `git add -A`
+# did, 548k lines, before this line existed).
+interface/static/data/places/
+interface/static/data/*.json
+!interface/static/
+# Generated status pages
+status/index.html
+
+# ============================================================================
+# Build Artifacts
+# ============================================================================
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Svelte/SvelteKit
+.svelte-kit/
+build/
+dist/
+
+# ============================================================================
+# Development Tools
+# ============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Ableton Project metadata (user-specific, keep local only)
+Ableton Project Info/
+
+# Claude Code — local state stays out (settings.local.json, worktrees/,
+# skills/, launch.json); the shared project settings and the hooks they run
+# are tracked. `.claude/*` rather than `.claude/`, because git cannot re-include
+# a file under an ignored directory.
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# Playwright MCP
+.playwright-mcp/
+pw-console*.txt
+
+# Repo-root screenshots from Playwright walkthroughs (never commit)
+/walkthrough-*.png
+/live-*.png
+/looping-*.png
+/phase*-*.png
+/pr*-*.png
+
+# Headless screenshot harness output (scripts/shot). The scenes under
+# scripts/shot/scenes/ ARE committed — they're small JSON and they're
+# what makes a shot reproducible. The PNGs they produce are not.
+/screenshots/
+
+# Temporary Files
+*.tmp
+*.temp
+
+# WebSocket auth secret — machine-local, auto-generated on first run.
+# Never commit: it is the credential the UI proves it holds.
+config/.ws-secret

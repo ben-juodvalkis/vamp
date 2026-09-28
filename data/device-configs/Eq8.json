@@ -1,0 +1,185 @@
+{
+  "device_name": "EQ Eight",
+  "class_name": "Eq8",
+  "description": "Ableton Live's 8-band parametric equalizer",
+  "version": "1.0.0",
+  "priority": "important", 
+  "parameters": {
+    "essential": [
+      {
+        "index": 0,
+        "name": "1 Frequency A",
+        "description": "Band 1 frequency", 
+        "range": { "min": 20, "max": 20000, "default": 100 },
+        "units": "Hz",
+        "type": "continuous",
+        "update_rate": "moderate"
+      },
+      {
+        "index": 1,
+        "name": "1 Gain A", 
+        "description": "Band 1 gain",
+        "range": { "min": -15, "max": 15, "default": 0 },
+        "units": "dB",
+        "type": "continuous",
+        "update_rate": "realtime"
+      },
+      {
+        "index": 3,
+        "name": "2 Frequency A",
+        "description": "Band 2 frequency",
+        "range": { "min": 20, "max": 20000, "default": 200 },
+        "units": "Hz", 
+        "type": "continuous",
+        "update_rate": "moderate"
+      },
+      {
+        "index": 4,
+        "name": "2 Gain A",
+        "description": "Band 2 gain",
+        "range": { "min": -15, "max": 15, "default": 0 },
+        "units": "dB",
+        "type": "continuous",
+        "update_rate": "realtime"
+      },
+      {
+        "index": 6,
+        "name": "3 Frequency A",
+        "description": "Band 3 frequency", 
+        "range": { "min": 20, "max": 20000, "default": 400 },
+        "units": "Hz",
+        "type": "continuous",
+        "update_rate": "moderate"
+      },
+      {
+        "index": 7,
+        "name": "3 Gain A",
+        "description": "Band 3 gain",
+        "range": { "min": -15, "max": 15, "default": 0 },
+        "units": "dB",
+        "type": "continuous", 
+        "update_rate": "realtime"
+      }
+    ],
+    "important": [
+      {
+        "index": 9,
+        "name": "4 Frequency A",
+        "description": "Band 4 frequency",
+        "range": { "min": 20, "max": 20000, "default": 800 },
+        "units": "Hz",
+        "type": "continuous",
+        "update_rate": "moderate"
+      },
+      {
+        "index": 10,
+        "name": "4 Gain A",
+        "description": "Band 4 gain",
+        "range": { "min": -15, "max": 15, "default": 0 },
+        "units": "dB",
+        "type": "continuous",
+        "update_rate": "realtime"
+      },
+      {
+        "index": 12,
+        "name": "5 Frequency A",
+        "description": "Band 5 frequency",
+        "range": { "min": 20, "max": 20000, "default": 1600 },
+        "units": "Hz", 
+        "type": "continuous",
+        "update_rate": "moderate"
+      },
+      {
+        "index": 13,
+        "name": "5 Gain A",
+        "description": "Band 5 gain",
+        "range": { "min": -15, "max": 15, "default": 0 },
+        "units": "dB",
+        "type": "continuous",
+        "update_rate": "realtime"
+      }
+    ],
+    "useful": [
+      {
+        "index": 2,
+        "name": "1 Resonance A",
+        "description": "Band 1 Q/resonance",
+        "range": { "min": 0.1, "max": 40, "default": 0.7 },
+        "type": "continuous",
+        "update_rate": "slow"
+      },
+      {
+        "index": 5,
+        "name": "2 Resonance A", 
+        "description": "Band 2 Q/resonance",
+        "range": { "min": 0.1, "max": 40, "default": 0.7 },
+        "type": "continuous",
+        "update_rate": "slow"
+      },
+      {
+        "index": 8,
+        "name": "3 Resonance A",
+        "description": "Band 3 Q/resonance",
+        "range": { "min": 0.1, "max": 40, "default": 0.7 },
+        "type": "continuous",
+        "update_rate": "slow"
+      },
+      {
+        "index": 15,
+        "name": "6 Frequency A",
+        "description": "Band 6 frequency",
+        "range": { "min": 20, "max": 20000, "default": 3200 },
+        "units": "Hz",
+        "type": "continuous",
+        "update_rate": "moderate"
+      },
+      {
+        "index": 16,
+        "name": "6 Gain A",
+        "description": "Band 6 gain", 
+        "range": { "min": -15, "max": 15, "default": 0 },
+        "units": "dB",
+        "type": "continuous",
+        "update_rate": "realtime"
+      }
+    ],
+    "optional": [
+      {
+        "index": 18,
+        "name": "7 Frequency A",
+        "description": "Band 7 frequency",
+        "range": { "min": 20, "max": 20000, "default": 6400 },
+        "units": "Hz",
+        "type": "continuous",
+        "update_rate": "moderate"
+      },
+      {
+        "index": 19,
+        "name": "7 Gain A",
+        "description": "Band 7 gain",
+        "range": { "min": -15, "max": 15, "default": 0 },
+        "units": "dB", 
+        "type": "continuous",
+        "update_rate": "realtime"
+      },
+      {
+        "index": 21,
+        "name": "8 Frequency A",
+        "description": "Band 8 frequency",
+        "range": { "min": 20, "max": 20000, "default": 12800 },
+        "units": "Hz",
+        "type": "continuous",
+        "update_rate": "moderate"
+      },
+      {
+        "index": 22,
+        "name": "8 Gain A",
+        "description": "Band 8 gain",
+        "range": { "min": -15, "max": 15, "default": 0 },
+        "units": "dB",
+        "type": "continuous",
+        "update_rate": "realtime"
+      }
+    ]
+  }
+}

@@ -1,0 +1,60 @@
+{
+ "_comment": "Screenshot-harness fixture: the Synth Place's Samples folder (see synth.json's external stub).",
+ "metadata": {
+  "placeId": "synth",
+  "name": "Synth Samples",
+  "generatedAt": "2026-08-30T00:00:00.000Z"
+ },
+ "tree": {
+  "presets": [],
+  "kinds": {
+   "sample": 3
+  },
+  "folders": {
+   "Drone": {
+    "name": "Drone",
+    "path": "Synth/Samples/Drone",
+    "folders": {},
+    "presets": [
+     {
+      "name": "Lone Forest",
+      "path": "Synth/Samples/Drone/Lone Forest.wav",
+      "fullPath": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Synth/Samples/Drone/Lone Forest.wav",
+      "type": ".wav",
+      "variants": [
+       "Lone Forest.wav"
+      ],
+      "kind": "sample",
+      "vendorColor": "#f2700d"
+     },
+     {
+      "name": "Pure Drip",
+      "path": "Synth/Samples/Drone/Pure Drip.wav",
+      "fullPath": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Synth/Samples/Drone/Pure Drip.wav",
+      "type": ".wav",
+      "variants": [
+       "Pure Drip.wav"
+      ],
+      "kind": "sample",
+      "vendorColor": "#f2700d"
+     },
+     {
+      "name": "Slow Tide",
+      "path": "Synth/Samples/Drone/Slow Tide.wav",
+      "fullPath": "/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Synth/Samples/Drone/Slow Tide.wav",
+      "type": ".wav",
+      "variants": [
+       "Slow Tide.wav"
+      ],
+      "kind": "sample",
+      "vendorColor": "#f2700d"
+     }
+    ],
+    "vendorColor": "#f2700d",
+    "kinds": {
+     "sample": 3
+    }
+   }
+  }
+ }
+}

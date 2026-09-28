@@ -1,0 +1,434 @@
+{
+  "flow": "tempo-metronome-signature",
+  "captured_at": "2026-04-12-batch-v3",
+  "messages": [
+    {
+      "ts": 1776020363437,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/track/selected",
+      "args": [
+        -1
+      ]
+    },
+    {
+      "ts": 1776020363444,
+      "dir": "out",
+      "target": "maxObserver",
+      "address": "/looping/session/query_single_track",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776020363451,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/single_track_summary",
+      "args": [
+        1,
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "ts": 1776020363452,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/devices/complete_state",
+      "args": [
+        -1,
+        0,
+        0,
+        1,
+        "76799",
+        0,
+        "Mastering",
+        "AudioEffectGroupDevice",
+        16,
+        1,
+        63.5,
+        2,
+        0,
+        3,
+        64,
+        4,
+        0,
+        5,
+        64,
+        6,
+        0,
+        7,
+        63.5,
+        8,
+        0,
+        9,
+        0,
+        10,
+        0,
+        11,
+        63.5,
+        12,
+        0,
+        13,
+        62,
+        14,
+        0,
+        15,
+        0,
+        16,
+        0,
+        17,
+        "Device On",
+        "Filter Cutoff",
+        "Filter Resonance",
+        "Tape Tone",
+        "Tape Gain",
+        "Drive Color",
+        "Drive Amount",
+        "Redux Filter",
+        "Redux Rate",
+        "Macro 9",
+        "Macro 10",
+        "Reverb Decay",
+        "Reverb Amount",
+        "Echo Time",
+        "Echo Amount",
+        "Smudge",
+        "OTT",
+        0,
+        0
+      ]
+    },
+    {
+      "ts": 1776020364691,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/tempo",
+      "args": [
+        128
+      ]
+    },
+    {
+      "ts": 1776020364707,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/tempo",
+      "args": [
+        127
+      ]
+    },
+    {
+      "ts": 1776020364744,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/tempo",
+      "args": [
+        126
+      ]
+    },
+    {
+      "ts": 1776020364752,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/tempo",
+      "args": [
+        126
+      ]
+    },
+    {
+      "ts": 1776020364760,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/tempo",
+      "args": [
+        124
+      ]
+    },
+    {
+      "ts": 1776020364774,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/tempo",
+      "args": [
+        123
+      ]
+    },
+    {
+      "ts": 1776020364792,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/tempo",
+      "args": [
+        122
+      ]
+    },
+    {
+      "ts": 1776020364809,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/tempo",
+      "args": [
+        121
+      ]
+    },
+    {
+      "ts": 1776020364823,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/tempo",
+      "args": [
+        119
+      ]
+    },
+    {
+      "ts": 1776020364839,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/tempo",
+      "args": [
+        118
+      ]
+    },
+    {
+      "ts": 1776020364861,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/tempo",
+      "args": [
+        118
+      ]
+    },
+    {
+      "ts": 1776020365042,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/tempo",
+      "args": [
+        119
+      ]
+    },
+    {
+      "ts": 1776020365057,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/tempo",
+      "args": [
+        120
+      ]
+    },
+    {
+      "ts": 1776020365060,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/tempo",
+      "args": [
+        120
+      ]
+    },
+    {
+      "ts": 1776020365081,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/tempo",
+      "args": [
+        121
+      ]
+    },
+    {
+      "ts": 1776020365092,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/tempo",
+      "args": [
+        122
+      ]
+    },
+    {
+      "ts": 1776020365107,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/tempo",
+      "args": [
+        124
+      ]
+    },
+    {
+      "ts": 1776020365123,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/tempo",
+      "args": [
+        125
+      ]
+    },
+    {
+      "ts": 1776020365141,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/tempo",
+      "args": [
+        126
+      ]
+    },
+    {
+      "ts": 1776020365158,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/tempo",
+      "args": [
+        127
+      ]
+    },
+    {
+      "ts": 1776020365164,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/tempo",
+      "args": [
+        127
+      ]
+    },
+    {
+      "ts": 1776020365190,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/tempo",
+      "args": [
+        128
+      ]
+    },
+    {
+      "ts": 1776020365259,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/tempo",
+      "args": [
+        128
+      ]
+    },
+    {
+      "ts": 1776020367274,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/signature_numerator",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020367342,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/signature_numerator",
+      "args": [
+        4
+      ]
+    },
+    {
+      "ts": 1776020367429,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/signature_numerator",
+      "args": [
+        4
+      ]
+    },
+    {
+      "ts": 1776020367793,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/signature_numerator",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020367852,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/signature_numerator",
+      "args": [
+        3
+      ]
+    },
+    {
+      "ts": 1776020368917,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/metronome",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020368918,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/get/metronome",
+      "args": []
+    },
+    {
+      "ts": 1776020368978,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/song/get/metronome",
+      "args": [
+        false
+      ]
+    },
+    {
+      "ts": 1776020368980,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/metronome",
+      "args": [
+        0
+      ]
+    },
+    {
+      "ts": 1776020369138,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/set/metronome",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776020369138,
+      "dir": "out",
+      "target": "abletonOSC",
+      "address": "/live/song/get/metronome",
+      "args": []
+    },
+    {
+      "ts": 1776020369179,
+      "dir": "in",
+      "target": "abletonOSC",
+      "address": "/live/song/get/metronome",
+      "args": [
+        true
+      ]
+    },
+    {
+      "ts": 1776020369181,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/looping/session/metronome",
+      "args": [
+        1
+      ]
+    },
+    {
+      "ts": 1776020377365,
+      "dir": "in",
+      "target": "maxObserver",
+      "address": "/view/focused_document_view",
+      "args": [
+        "Session"
+      ]
+    }
+  ]
+}

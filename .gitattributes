@@ -1,0 +1,53 @@
+# ============================================================================
+# Language Statistics Configuration
+# ============================================================================
+# Control what GitHub counts in repository language statistics
+
+# Exclude documentation from language stats
+docs/** linguist-documentation
+*.md linguist-documentation
+
+# Mark generated files (not manually written)
+interface/static/data/*.json linguist-generated
+interface/static/config/*.json linguist-generated
+
+# ============================================================================
+# Line Ending Normalization
+# ============================================================================
+
+# Auto detect text files and normalize line endings to LF
+* text=auto
+
+# Explicitly declare text files
+*.js text
+*.ts text
+*.json text
+*.md text
+*.css text
+*.html text
+*.svelte text
+
+# Shell scripts always use LF
+*.sh text eol=lf
+
+# Declare files that will always have CRLF line endings on checkout
+*.bat text eol=crlf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.wav binary
+*.mp3 binary
+*.aif binary
+*.aiff binary
+*.adg binary
+*.als binary
+*.aupreset binary
+# .amxd/.maxpat carry ~872 KB of device behaviour as plain JSON behind a
+# fixed 32-byte header. Marked binary so a diff does not dump the whole
+# blob; `diff=amxd` gives a readable diff to anyone who configures the
+# textconv (per-clone, like core.hooksPath — see CONTRIBUTING.md).
+*.amxd binary diff=amxd
