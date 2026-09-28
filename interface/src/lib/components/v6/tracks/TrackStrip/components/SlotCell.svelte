@@ -314,9 +314,9 @@ const previewInk = '#000000';
     class:is-pedal-target={pedalTarget && !inert}
     data-slot-index={inert ? undefined : slotIndex}
     style="--slot-ink: {trackColor}; --slot-action-w: {actionWidthPx}px;"
-    role={inert ? undefined : 'button'}
-    tabindex={inert ? undefined : -1}
-    aria-label={inert ? undefined : `Select slot ${slotIndex + 1}${label ? ` — ${label}` : ''}`}
+    {...inert
+        ? {}
+        : { role: 'button', tabindex: -1, 'aria-label': `Select slot ${slotIndex + 1}${label ? ` — ${label}` : ''}` }}
 >
     {#if !inert}
         {#if slotState === 'empty'}

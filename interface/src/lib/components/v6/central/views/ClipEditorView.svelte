@@ -1327,6 +1327,11 @@
 	{#if !hasClip}
 		<div class="state-msg">No clip focused</div>
 	{:else}
+		<!-- role="application" is the ARIA role for a surface that handles its own
+		     pointer and keys, which this is; Svelte's lint counts it as
+		     non-interactive, so both of its complaints are about the role, not
+		     the element. -->
+		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 		<div
 			class="canvas-wrap"
 			style:bottom={isMidi ? `${TOOLBAR_H}px` : undefined}

@@ -123,6 +123,9 @@
     role="slider"
     tabindex="0"
     aria-label="{title}: Angle {(localAngle * 360).toFixed(0)}°, Radius {(localRadius * 100).toFixed(0)}%"
+    aria-valuemin={0}
+    aria-valuemax={360}
+    aria-valuenow={Math.round(localAngle * 360)}
     style="--orb-tint: {color.primary};"
   >
     <svg class="orb-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">

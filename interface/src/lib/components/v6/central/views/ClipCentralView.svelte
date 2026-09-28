@@ -990,7 +990,6 @@ import { logger } from '$lib/utils/logger';
 		background: color-mix(in oklab, var(--fam-color) 30%, var(--card));
 		color: var(--foreground);
 	}
-	.fam-rec { --fam-color: var(--act-rec); }
 	/* Monitor + quant wells follow the focused track (ADR-402); del keeps its
 	   master-red, rec keeps recording-red — both are state/danger signals. */
 	.fam-monitor { --fam-color: var(--clip-track-tint, var(--act-monitor)); }

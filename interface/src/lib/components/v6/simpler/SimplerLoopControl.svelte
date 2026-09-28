@@ -488,6 +488,8 @@
 		aria-label="Sample loop range"
 		aria-valuemin={0}
 		aria-valuemax={1}
+		aria-valuenow={displayStart}
+		aria-valuetext="Start {Math.round(displayStart * 100)}%, length {Math.round(displayLength * 100)}%"
 	>
 		<!-- Outside-loop dim overlays. Each is a full-width div positioned
 		     with transform-only updates so brace drags stay on the GPU

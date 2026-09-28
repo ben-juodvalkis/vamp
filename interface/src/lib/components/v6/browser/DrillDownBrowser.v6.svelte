@@ -2418,6 +2418,7 @@
 		max-width: none;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;  /* cap at two lines, then ellipsize */
+		line-clamp: 2;
 		-webkit-box-orient: vertical;
 		line-height: 1.15;
 	}

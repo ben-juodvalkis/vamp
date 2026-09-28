@@ -140,11 +140,18 @@
   {#snippet children({ sendParam, storePendingParam, triggerLoad, isGhost, isLoading, color, openView })}
     <div
       class="eq-panel relative w-full h-full glass-panel-subtle rounded-lg overflow-hidden"
-      role="group"
-      aria-label="EQ controls"
+      role="button"
+      tabindex="0"
+      aria-label="EQ — open the EQ view"
       onclick={() => {
         // Tap only previews central view - does NOT load device (ADR-167)
         openView();
+      }}
+      onkeydown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openView();
+        }
       }}
     >
       <!-- Title overlay - matches DeviceXY .center-title (fluid size, device tint).

@@ -173,6 +173,8 @@
 		aria-label="Velocity output range"
 		aria-valuemin={1}
 		aria-valuemax={127}
+		aria-valuenow={outLow}
+		aria-valuetext="{outLow}–{outHi}"
 	>
 		<!-- Active range region -->
 		<div
@@ -190,6 +192,10 @@
 			role="slider"
 			tabindex={0}
 			aria-label="Velocity range"
+			aria-valuemin={1}
+			aria-valuemax={127}
+			aria-valuenow={outLow}
+			aria-valuetext="{outLow}–{outHi}"
 		></div>
 
 		<!-- Low handle (bottom) - large touch target -->
