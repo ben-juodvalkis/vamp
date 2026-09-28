@@ -56,7 +56,7 @@ PY_INTROSPECT_ADDRESS = "/looping/probe/py_introspect"
 # 2026-09-10 bumped to 3.8.0 (issue #491): the ``pads/<note>`` path
 # segment and the pad-scoped ``state/full/tree``.
 # 2026-09-15 bumped to 3.9.0 (ADR-439): T record 14 -> 15, ``preset``.
-PROTOCOL_VERSION = "3.11.0"
+PROTOCOL_VERSION = "3.12.0"
 
 
 # --- probe chain grammar ---------------------------------------------------

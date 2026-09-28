@@ -52,7 +52,7 @@ def test_disconnect_idempotent(component):
 def test_protocol_version_is_3_9_0():
     """Must track ``SurfaceHelloComponent.PROTOCOL_VERSION`` and the
     highest entry in ``HandshakeComponent.SUPPORTED_VERSIONS``."""
-    assert PROTOCOL_VERSION == "3.11.0"
+    assert PROTOCOL_VERSION == "3.12.0"
 
     # 3.5.0 (2026-08-31): client-declared ETag — an ``etag:0x...`` token
     # in hello / resync, answered with ``state/full/unchanged`` when the

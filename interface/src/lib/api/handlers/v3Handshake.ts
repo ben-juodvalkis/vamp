@@ -140,7 +140,7 @@ export const V3_STATE_RESYNC_ADDRESS = '/looping/v3/state/resync';
  *  as `looping.preset`; the instrument views' swap control steps from it.
  *  An arity bump with 3.7.0's consequence: surface and UI ship together.
  */
-export const UI_SUPPORTED_VERSIONS: readonly string[] = ['3.11.0'];
+export const UI_SUPPORTED_VERSIONS: readonly string[] = ['3.12.0'];
 
 /** Closed-enum code per [04 §7.2] for the specific error the handshake
  *  can produce. Listed here (not in a generic v3 error module) because

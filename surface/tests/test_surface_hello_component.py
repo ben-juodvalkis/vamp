@@ -50,7 +50,7 @@ def test_send_hello_emits_address_with_three_args(emit, emits):
     assert len(emits) == 1
     addr, args = emits[0]
     assert addr == V3_SURFACE_HELLO_ADDRESS
-    assert args == ("abc123", "3.11.0", 1_700_000_000)
+    assert args == ("abc123", "3.12.0", 1_700_000_000)
 
 
 def test_instance_id_minted_at_construction(emit, emits):

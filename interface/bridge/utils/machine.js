@@ -13,7 +13,7 @@
  * What travels:
  *   paths.instrumentsBase     the folder a preset path recorded before the
  *                             Places is read against (`presetPath.ts`)
- *   paths.effectPresetsBase   the FX tiles' preset folder (`devicePresets.ts`)
+ *   paths.effectPresetsBase   the folder of the FX tiles that are files (`devicePresets.ts`)
  *   paths.m4lDevicesRoot      this checkout's `Vamp Devices`, derived
  *                             from the bridge's own location
  *   totalmix                  the mixer's dB range (`osc.totalmix`), or null

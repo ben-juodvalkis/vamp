@@ -86,6 +86,6 @@ describe('DrumBussCentralView', () => {
 		await tick();
 		expect(container.querySelector('.drum-buss-layout')?.classList.contains('slot-ghost')).toBe(true);
 		await fireEvent.click(container.querySelector('.comp-toggle')!);
-		expect(sendMock).toHaveBeenCalledWith('/looping/v3/device/load', [TRACK, '', DEVICE_PRESETS.drum.presetPath]);
+		expect(sendMock).toHaveBeenCalledWith('/looping/v3/device/load', [TRACK, '', '', 'native:DrumBuss', 'Drum Buss']);
 	});
 });

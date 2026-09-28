@@ -9,7 +9,7 @@ laptop. It was built by a dance accompanist for playing ballet class and is shar
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > **Status: pre-release.** It runs every day on its author's rig. A stranger's first run works,
-> but some of it still expects the author's preset files (see [Known gaps](#known-gaps)).
+> but a few tiles still expect the author's files (see [Known gaps](#known-gaps)).
 
 ## What it does
 
@@ -82,9 +82,10 @@ iPad / browser  ⇄  bridge (WebSocket ⇄ OSC)  ⇄  control surface inside Liv
 
 ## Known gaps
 
-- **Effect tiles need preset files.** Most FX-grid tiles load a preset from the author's library,
-  which doesn't ship yet; on another Mac they don't load. Tiles that insert Live's own device
-  instead are planned ([docs/plans/general-release/plan.md](docs/plans/general-release/plan.md)
+- **Three effect tiles need the author's files.** Digital (a rack of Live devices), Pitch Hack and
+  Chance (Max devices) load from the author's library, which doesn't ship yet; on another Mac
+  they don't load. Every other effect tile inserts Live's own device, set up the way your Live
+  defaults have it ([docs/plans/general-release/plan.md](docs/plans/general-release/plan.md)
   §6).
 - **Some tiles are for the author's plug-ins** (Tremolo, Comb, Smudge, Bass, Pitch, Guitar) and do
   nothing without them.

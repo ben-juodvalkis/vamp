@@ -63,7 +63,7 @@ describe('v3DrumPadHold', () => {
 	it('drops every external hold on a handshake accept, and only those', () => {
 		handleV3DrumPadHold(V3_DRUM_PAD_HOLD_ADDRESS, [RACK, 38, 1]);
 		drumPadScope.press(RACK, 40, 1, 0); // a finger, still down
-		handleV3HandshakeAccept(['3.11.0', 'sess-fresh', 7]);
+		handleV3HandshakeAccept(['3.12.0', 'sess-fresh', 7]);
 		expect(drumPadScope.heldNotes(RACK)).toEqual([40]);
 	});
 

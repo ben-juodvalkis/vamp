@@ -1210,10 +1210,7 @@ def test_load_clip_new_track_load_item_raises(recorder, user_library_base, tmp_p
 # --- pad-targeted loads: devicePath names a drum pad (issue #491, 3.8.0) --------
 
 from components.DeviceLoadComponent import (
-    NATIVE_DEVICE_NAMES,
     PAD_PLACEMENT_TIMEOUT_S,
-    default_preset_path,
-    preset_device_class,
 )
 from tests.support.lom_fakes import (
     FakeChain,
@@ -1718,14 +1715,18 @@ def test_track_level_load_is_unchanged_by_the_pad_path(tmp_path):
     assert rec.errors() == []
 
 
-# --- insert by name (issue #491 follow-up, 2026-09-10) ---------------------
+# --- insert by name (issue #491 follow-up, 2026-09-10; 3.12.0) -------------
 #
-# A native device whose Live user default is byte-identical to the preset
-# is inserted by display name — into the pad's chain or onto the track —
-# renamed to the tile's name inside one undo step, and never touches the
-# browser or Live's selection. Everything else keeps the browser path.
+# A tile that names a native device (``native:<class>``, the tile's name as
+# ``rel``) is inserted by display name — into the pad's chain or onto the
+# track — so the user's own default for it applies, renamed to the tile's
+# name inside one undo step, and never touches a file, the browser or
+# Live's selection. A preset FILE of a native device loads through the
+# browser like any other file.
 
 import gzip
+
+PAD = "tracks/0/devices/0/pads/36"
 
 
 def _adv(device_class: str, user_name: str = "") -> bytes:
@@ -1740,57 +1741,25 @@ def _adv(device_class: str, user_name: str = "") -> bytes:
     return gzip.compress(xml.encode("utf-8"))
 
 
-def _insert_rig(tmp_path, device_class="Delay", file_stem=None, default="same", track_devices=None):
-    """A kit on track 0 (pad 36 = one DrumCell), a User Library holding
-    ``Effects/<stem>.adv`` of ``device_class``, and Live's default for that
-    device ``same`` as the preset, ``different`` or ``missing``."""
+def _native_rig(track_devices=None):
+    """A kit on track 0 (pad 36 = one DrumCell) and a browser that must
+    never be asked."""
     rack = make_rack([FakePad(36, [FakeChain([drumcell()], name="Kick")])])
     track = FakeTrack([rack] if track_devices is None else track_devices, "Drums")
     song = FakeSong(tracks=[track])
-    lib_dir = tmp_path / "User Library"
-    preset_dir = lib_dir / "Effects"
-    preset_dir.mkdir(parents=True)
-    stem = file_stem or NATIVE_DEVICE_NAMES.get(device_class, device_class)
-    preset = preset_dir / ("%s.adv" % stem)
-    preset.write_bytes(_adv(device_class))
-    display = NATIVE_DEVICE_NAMES.get(device_class)
-    if display and default != "missing":
-        dest = default_preset_path(str(lib_dir), device_class, display)
-        os.makedirs(os.path.dirname(dest), exist_ok=True)
-        with open(dest, "wb") as f:
-            f.write(preset.read_bytes() if default == "same" else _adv(device_class, "Other"))
-    item = StubBrowserItem(preset.name, is_loadable=True)
-    lib = StubBrowserItem("User Library", children=[StubBrowserItem("Effects", children=[item])])
-    browser = StubBrowser(user_library=lib)
+    browser = StubBrowser(user_library=StubBrowserItem("User Library", children=[]))
     rec = EmitRecorder()
-    comp = DeviceLoadComponent(song=song, browser=browser, emit=rec, user_library_base=str(lib_dir))
-    return comp, song, rack, browser, rec, str(preset)
+    comp = DeviceLoadComponent(song=song, browser=browser, emit=rec, user_library_base="")
+    return comp, song, rack, browser, rec
 
 
-def test_preset_device_class_reads_the_root_device_and_refuses_the_rest(tmp_path):
-    adv = tmp_path / "Delay.adv"
-    adv.write_bytes(_adv("Delay"))
-    assert preset_device_class(str(adv)) == "Delay"
-    rack = tmp_path / "Guitar.adg"
-    rack.write_bytes(_adv("AudioEffectGroupDevice"))
-    assert preset_device_class(str(rack)) is None  # not an .adv
-    plugin = tmp_path / "Tremolo.aupreset"
-    plugin.write_bytes(b"<?xml version=")
-    assert preset_device_class(str(plugin)) is None
-    junk = tmp_path / "junk.adv"
-    junk.write_bytes(b"not gzip at all")
-    assert preset_device_class(str(junk)) is None
-    assert preset_device_class(str(tmp_path / "absent.adv")) is None
+def _native(target: str, device_class: str, name: str):
+    return ["tracks/0", target, "", "native:" + device_class, name]
 
 
-def test_default_preset_path_splits_midi_from_audio(tmp_path):
-    assert default_preset_path("/lib", "Delay", "Delay") == "/lib/Defaults/Audio Effects/Delay.adv"
-    assert default_preset_path("/lib", "MidiRandom", "Random") == "/lib/Defaults/MIDI Effects/Random.adv"
-
-
-def test_pad_load_inserts_a_native_device_by_name_when_its_default_is_the_preset(tmp_path):
-    comp, song, rack, browser, rec, preset = _insert_rig(tmp_path, "Delay")
-    comp.handle_load(["tracks/0", "tracks/0/devices/0/pads/36", preset], None)
+def test_pad_load_inserts_a_native_device_by_name():
+    comp, song, rack, browser, rec = _native_rig()
+    comp.handle_load(_native(PAD, "Delay", "Delay"), None)
     chain = rack.drum_pads[36].chains[0]
     assert chain.inserts == [("Delay", None)]
     assert [d.name for d in chain.devices] == ["DrumCell", "Delay"]
@@ -1803,20 +1772,27 @@ def test_pad_load_inserts_a_native_device_by_name_when_its_default_is_the_preset
     assert (song.begins, song.ends) == (1, 1)
 
 
-def test_inserted_device_is_renamed_to_the_tile_name(tmp_path):
-    # ``Reverb.adv`` is a Hybrid Reverb: Live inserts it as "Hybrid Reverb",
+def test_inserted_device_is_renamed_to_the_tile_name():
+    # The Reverb tile is a Hybrid Reverb: Live inserts it as "Hybrid Reverb",
     # the tile (and every existing set) knows it as "Reverb".
-    comp, _song, rack, browser, _rec, preset = _insert_rig(tmp_path, "Hybrid", file_stem="Reverb")
-    comp.handle_load(["tracks/0", "tracks/0/devices/0/pads/36", preset], None)
+    comp, _song, rack, browser, _rec = _native_rig()
+    comp.handle_load(_native(PAD, "Hybrid", "Reverb"), None)
     chain = rack.drum_pads[36].chains[0]
     assert chain.inserts == [("Hybrid Reverb", None)]
     assert [(d.class_name, d.name) for d in chain.devices][1] == ("Hybrid", "Reverb")
     assert browser.calls == []
 
 
-def test_track_load_inserts_by_name_too(tmp_path):
-    comp, song, _rack, browser, _rec, preset = _insert_rig(tmp_path, "Delay")
-    comp.handle_load(["tracks/0", "", preset], None)
+def test_no_name_keeps_lives_display_name():
+    comp, song, _rack, _browser, rec = _native_rig()
+    comp.handle_load(_native("", "PhaserNew", ""), None)
+    assert [d.name for d in song.tracks[0].devices][1] == "Phaser-Flanger"
+    assert rec.errors() == []
+
+
+def test_track_load_inserts_by_name_too():
+    comp, song, _rack, browser, _rec = _native_rig()
+    comp.handle_load(_native("", "Delay", "Delay"), None)
     track = song.tracks[0]
     assert track.inserts == [("Delay", None)]
     assert [d.name for d in track.devices] == [" 606 + 808", "Delay"]
@@ -1824,60 +1800,49 @@ def test_track_load_inserts_by_name_too(tmp_path):
     assert song.view.selected_track is None  # a browser load would have had to select the track
 
 
-def test_a_midi_effect_goes_after_the_leading_midi_effects(tmp_path):
+def test_a_midi_effect_goes_after_the_leading_midi_effects():
     arp = FakeDevice("MidiArpeggiator", [], type_=4, name="Arpeggiator")
     inst = FakeDevice("OriginalSimpler", [], type_=1, name="Simpler")
     fx = FakeDevice("Delay", [], type_=2, name="Delay")
-    comp, song, _rack, _browser, _rec, preset = _insert_rig(
-        tmp_path, "MidiRandom", track_devices=[arp, inst, fx],
-    )
-    comp.handle_load(["tracks/0", "", preset], None)
+    comp, song, _rack, _browser, _rec = _native_rig(track_devices=[arp, inst, fx])
+    comp.handle_load(_native("", "MidiRandom", "Random"), None)
     track = song.tracks[0]
     assert track.inserts == [("Random", 1)]
     assert [d.name for d in track.devices] == ["Arpeggiator", "Random", "Simpler", "Delay"]
 
 
-def test_a_missing_default_falls_back_to_the_browser(tmp_path):
-    comp, song, rack, browser, _rec, preset = _insert_rig(tmp_path, "Delay", default="missing")
-    comp.handle_load(["tracks/0", "tracks/0/devices/0/pads/36", preset], None)
-    assert rack.drum_pads[36].chains[0].inserts == []
-    assert browser.calls == ["Delay.adv"]
+def test_an_unknown_class_is_refused_and_touches_nothing():
+    comp, song, _rack, browser, rec = _native_rig()
+    comp.handle_load(_native("", "NoSuchDevice", "Mystery"), None)
+    assert song.tracks[0].inserts == []
+    assert browser.calls == []
     assert (song.begins, song.ends) == (0, 0)
+    assert rec.errors() == [(
+        "/looping/v3/device/load", "load-failed", "native:NoSuchDevice", "unknown-device: NoSuchDevice",
+    )]
 
 
-def test_a_different_default_falls_back_to_the_browser(tmp_path):
-    comp, _song, rack, browser, _rec, preset = _insert_rig(tmp_path, "Delay", default="different")
-    comp.handle_load(["tracks/0", "tracks/0/devices/0/pads/36", preset], None)
-    assert rack.drum_pads[36].chains[0].inserts == []
-    assert browser.calls == ["Delay.adv"]
-
-
-def test_an_insert_that_returns_nothing_falls_back_to_the_browser(tmp_path):
+def test_an_insert_that_returns_nothing_fails_with_the_pad_scope():
     """Live hands back the device it inserted; nothing back means nothing
-    went in, so the browser loads it — once. The old path raised on the
-    rename of ``None``, warned the insert was "not found", and would have
-    loaded a second copy had Live in fact inserted one."""
-    comp, song, rack, browser, rec, preset = _insert_rig(tmp_path, "Delay")
+    went in. The error names the load's source, which the UI's slot reset
+    matches, and the pad scope."""
+    comp, song, rack, browser, rec = _native_rig()
     chain = rack.drum_pads[36].chains[0]
     chain.insert_returns_none = True
-
-    def land(item):  # the browser lands it on the chain, as Live does
-        browser.calls.append(item.name)
-        chain.insert(len(chain.devices), FakeDevice("Delay", [], type_=2, name="Delay"))
-
-    browser.load_item = land
-    comp.handle_load(["tracks/0", "tracks/0/devices/0/pads/36", preset], None)
+    comp.handle_load(_native(PAD, "Delay", "Delay"), None)
     assert chain.inserts == [("Delay", None)]
-    assert browser.calls == ["Delay.adv"]
-    assert [d.name for d in chain.devices] == ["DrumCell", "Delay"]
-    assert rec.errors() == []
+    assert [d.name for d in chain.devices] == ["DrumCell"]
+    assert browser.calls == []
+    assert rec.errors() == [(
+        "/looping/v3/device/load", "load-failed", "native:Delay", "insert-refused;scope=" + PAD,
+    )]
     assert (song.begins, song.ends) == (1, 1)  # the step still closes
 
 
-def test_a_begin_undo_step_that_raises_does_not_stop_the_insert(tmp_path):
-    comp, song, rack, browser, rec, preset = _insert_rig(tmp_path, "Delay")
+def test_a_begin_undo_step_that_raises_does_not_stop_the_insert():
+    comp, song, rack, browser, rec = _native_rig()
     song.raise_on.add("begin")
-    comp.handle_load(["tracks/0", "tracks/0/devices/0/pads/36", preset], None)
+    comp.handle_load(_native(PAD, "Delay", "Delay"), None)
     chain = rack.drum_pads[36].chains[0]
     assert [d.name for d in chain.devices] == ["DrumCell", "Delay"]
     assert browser.calls == []
@@ -1885,42 +1850,54 @@ def test_a_begin_undo_step_that_raises_does_not_stop_the_insert(tmp_path):
     assert (song.begins, song.ends) == (0, 0)  # no step was opened, so none is closed
 
 
-def test_a_refused_insert_falls_back_to_the_browser_and_closes_the_undo_step(tmp_path):
-    comp, song, _rack, browser, rec, preset = _insert_rig(tmp_path, "Delay")
+def test_a_refused_insert_fails_and_closes_the_undo_step():
+    comp, song, _rack, browser, rec = _native_rig()
     song.tracks[0].refuse_insert = True
-    comp.handle_load(["tracks/0", "", preset], None)
+    comp.handle_load(_native("", "Delay", "Delay"), None)
     assert [d.name for d in song.tracks[0].devices] == [" 606 + 808"]
-    assert browser.calls == ["Delay.adv"]
+    assert browser.calls == []
     assert (song.begins, song.ends) == (1, 1)
-    assert rec.errors() == []
+    assert [e[3] for e in rec.errors()] == ["insert-refused"]
 
 
-def test_a_refused_rename_removes_the_insert_and_falls_back_to_the_browser(tmp_path):
+def test_a_refused_rename_removes_the_insert_and_fails():
     """A device left under Live's display name matches no tile — the slot
     would time out and the next drag insert a second copy."""
-    comp, song, _rack, browser, rec, preset = _insert_rig(tmp_path, "Hybrid", file_stem="Reverb")
+    comp, song, _rack, browser, rec = _native_rig()
     song.tracks[0].refuse_rename = True
-    comp.handle_load(["tracks/0", "", preset], None)
+    comp.handle_load(_native("", "Hybrid", "Reverb"), None)
     assert song.tracks[0].inserts == [("Hybrid Reverb", None)]
     assert [d.name for d in song.tracks[0].devices] == [" 606 + 808"]   # the insert is gone again
-    assert browser.calls == ["Reverb.adv"]
+    assert browser.calls == []
     assert (song.begins, song.ends) == (1, 1)
-    assert rec.errors() == []
+    assert [e[3] for e in rec.errors()] == ["insert-refused"]
 
 
-def test_a_non_lom_raise_inside_the_insert_still_closes_the_undo_step(tmp_path):
-    comp, song, _rack, _browser, _rec, preset = _insert_rig(tmp_path, "Delay")
+def test_a_non_lom_raise_inside_the_insert_still_closes_the_undo_step():
+    comp, song, _rack, _browser, _rec = _native_rig()
     song.tracks[0].insert_raises = ValueError("not a LOM error")
     with pytest.raises(ValueError):
-        comp.handle_load(["tracks/0", "", preset], None)
+        comp.handle_load(_native("", "Delay", "Delay"), None)
     assert (song.begins, song.ends) == (1, 1)
 
 
-def test_a_rack_or_plugin_preset_never_takes_the_insert_path(tmp_path):
-    comp, song, _rack, browser, _rec, preset = _insert_rig(tmp_path, "AudioEffectGroupDevice", file_stem="Guitar")
-    comp.handle_load(["tracks/0", "", preset], None)
+def test_a_native_preset_file_loads_through_the_browser(tmp_path):
+    """A user's own preset of a native device is that preset: it is never
+    swapped for the device's default."""
+    rack = make_rack([FakePad(36, [FakeChain([drumcell()], name="Kick")])])
+    song = FakeSong(tracks=[FakeTrack([rack], "Drums")])
+    lib_dir = tmp_path / "User Library"
+    (lib_dir / "Effects").mkdir(parents=True)
+    preset = lib_dir / "Effects" / "My Delay.adv"
+    preset.write_bytes(_adv("Delay"))
+    item = StubBrowserItem(preset.name, is_loadable=True)
+    browser = StubBrowser(user_library=StubBrowserItem(
+        "User Library", children=[StubBrowserItem("Effects", children=[item])],
+    ))
+    comp = DeviceLoadComponent(song=song, browser=browser, emit=EmitRecorder(), user_library_base=str(lib_dir))
+    comp.handle_load(["tracks/0", "", str(preset)], None)
     assert song.tracks[0].inserts == []
-    assert browser.calls == ["Guitar.adv"]
+    assert browser.calls == ["My Delay.adv"]
 
 
 # --- the User Library without paths.userLibraryBase ------------------------

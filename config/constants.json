@@ -17,7 +17,7 @@
   },
 
   "paths": {
-    "_machineNote": "Every path to a Mac's own files is that Mac's, in config/constants.local.json, and optional: abletonApp (else the Live Live's preferences say is in use, scripts/open-live.js), browserBlocker, userLibraryBase (else Live's Library.cfg), instrumentsBase, effectPresetsBase (the FX tiles' presets), sidebarRoot, abletonPacksBase (else Library.cfg).",
+    "_machineNote": "Every path to a Mac's own files is that Mac's, in config/constants.local.json, and optional: abletonApp (else the Live Live's preferences say is in use, scripts/open-live.js), browserBlocker, userLibraryBase (else Live's Library.cfg), instrumentsBase, effectPresetsBase (the presets of the FX tiles that are files: racks, plug-ins, Max devices), sidebarRoot, abletonPacksBase (else Library.cfg).",
     "_sidebarRootNote": "sidebarRoot, the owner's browser library (Looping's documentation/browser-places.plan.md): one folder per rail button, each added to Live's sidebar as a Place. On a Mac with nothing saved in logs/places.json, the Places under it start ticked. Filled on 2026-09-24 by a one-time copy of the old <instrumentsBase>/<Vendor>/<Type>/ and Audio Samples/<Type>/ folders; its manifest (.looping-places-manifest.json.gz, there) is the alias map that turns a path recorded before the copy into its new one.",
     "waveformMaxBytes": 78643200,
     "waveformStreamingEnabled": true,

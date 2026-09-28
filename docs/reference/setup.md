@@ -134,22 +134,6 @@ which exist only while `features.expressionPedal` is on:
 
 Uninstall: `rm "<User Library>/Remote Scripts/Vamp"`.
 
-### Live's device defaults (issue #491)
-
-```bash
-npm run install-device-defaults
-```
-
-Copies the app's effect presets into the User Library's
-`Defaults/Audio Effects` and `Defaults/MIDI Effects` under the names Live
-uses for each device, backing up any default that differs. The surface
-inserts an FX-grid tile's device by name — into a drum pad's chain or
-onto the track, one call, one undo step — only while the default is
-byte-identical to the preset; without this step every load still works,
-through the browser, slower and with two undo steps on a pad. Re-run it
-after editing a preset; `-- --check` exits 1 when anything differs. See
-`docs/reference/preset-library.md` §8.
-
 ### Looping AX Helper (ADR-439) — owner-only
 
 Only while `features.axHelper` is on in `config/constants.local.json`; off, the bridge dials no
@@ -291,7 +275,6 @@ npm run build        # Production build
 npm run test:run     # Unit tests
 npm run cleanup      # Kill dev servers + clear reserved ports (keeps build caches)
 npm run cleanup:caches  # ...and nuke .svelte-kit / .vite / scripts/.cache
-npm run install-device-defaults -- --check  # are Live's device defaults still the app's presets?
 ```
 
 ## 9. Troubleshooting

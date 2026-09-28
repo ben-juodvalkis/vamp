@@ -69,9 +69,6 @@ server modules' `$lib` imports.
 
 ## Rig tools
 
-- `install-device-defaults.mjs` (`npm run install-device-defaults`,
-  `-- --check`): copies the app's effect presets into Live's User Library
-  Defaults, so the surface can insert a tile's device by name.
 - `install-ax-helper.sh` (`npm run install-ax-helper`, `-- --status`): builds,
   signs and loads the AX helper app and its LaunchAgent. Grant it
   Accessibility once in System Settings.

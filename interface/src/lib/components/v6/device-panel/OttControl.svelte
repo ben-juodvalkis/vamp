@@ -26,11 +26,9 @@
    * Unlike the control it replaced this goes through the FX-grid slot,
    * so the column is live on a master that has no Multiband Dynamics
    * yet: the first drag loads one (ADR-167 — a tile loads on its first
-   * drag frame, never on a tap). The preset is the user's own saved default
-   * (`Defaults/Audio Effects/Multiband Dynamics.adv`, mirrored into the
-   * app's Effect Patches folder so `install-device-defaults` has one
-   * source of truth), which is the whole reason a load is worth
-   * offering — an unloaded Multiband Dynamics would be no use.
+   * drag frame, never on a tap). It is inserted by name, so it comes with
+   * the user's own saved default (`Defaults/Audio Effects/Multiband
+   * Dynamics.adv`), which is the whole reason a load is worth offering.
    *
    * Master-only by construction: it has no `fxGridLayout` entry and is
    * mounted by `FXGrid` behind `isMasterTrack`, so no other track can

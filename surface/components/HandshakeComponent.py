@@ -111,8 +111,13 @@ V3_ERROR_ADDRESS = "/looping/v3/error"
 # inside it), so a load names its Place instead of relying on a root typed
 # into the config; an empty preset path is filled in from the Place. Record
 # arities are unchanged; a 3.10.0 surface would refuse the arg counts.
+# 2026-09-28 adds 3.12.0: a ``device/load`` whose ``source`` is
+# ``native:<class>`` inserts that native device by name, with the user's
+# own default, named ``rel`` — the FX tiles' loads, which no longer name a
+# preset file. Arities are unchanged; a 3.11.0 surface would answer
+# ``empty-preset-path``.
 SUPPORTED_VERSIONS: tuple = (
-    "3.11.0", "3.10.0", "3.9.0", "3.8.0", "3.7.0", "3.6.0", "3.5.0", "3.4.0", "3.3.0", "3.2.0", "3.1.0", "3.0.0",
+    "3.12.0", "3.11.0", "3.10.0", "3.9.0", "3.8.0", "3.7.0", "3.6.0", "3.5.0", "3.4.0", "3.3.0", "3.2.0", "3.1.0", "3.0.0",
 )
 
 # Handshake timeout per the [06 §2] decision above.

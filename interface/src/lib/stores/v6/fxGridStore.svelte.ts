@@ -9,7 +9,7 @@
 import { untrack } from 'svelte';
 import { SvelteMap } from 'svelte/reactivity';
 import { send } from '$lib/api/simpleClient';
-import { DEVICE_PRESETS, deviceLoadArgs, resolvePresetPath } from '$lib/config/devicePresets';
+import { DEVICE_PRESETS, deviceLoadArgs, loadKey } from '$lib/config/devicePresets';
 import { slotRegistry } from './slotRegistry.svelte';
 import { selectedTrackStore } from './selectedTrackStore.svelte';
 import { setTrackName } from '$lib/services/trackCommands';
@@ -597,15 +597,16 @@ export class FXGridState {
 	 * waits out the 10s load timeout (or stays `error` forever) and the
 	 * device control's `isGhost || isLoading` interaction gate never
 	 * re-fires a load — the device becomes permanently un-loadable until
-	 * a track change. Matches the failed `presetPath` (carried in the
-	 * `/looping/v3/error` `path` field) against each slot's preset config.
+	 * a track change. Matches the failed load's key (carried in the
+	 * `/looping/v3/error` `path` field: the preset's path, or a native
+	 * device's `native:<class>`) against each slot's config.
 	 */
 	handleLoadFailed(presetPath: string, scope = '') {
 		if (!presetPath) return;
 		if (scope && !this.scoped.has(scope)) return;
 		for (const [key, slot] of this.table(scope).entries()) {
 			const config = this.slotKeyConfig(key);
-			if (!config || resolvePresetPath(config.presetPath) !== presetPath) continue;
+			if (!config || loadKey(config) !== presetPath) continue;
 
 			if (slot.loadTimeout) {
 				clearTimeout(slot.loadTimeout);

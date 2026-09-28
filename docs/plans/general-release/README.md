@@ -27,7 +27,7 @@ Checked against `main` at `dd4a89e` on 2026-09-27, with the config layering (pla
 | The browser | **Done.** On Live's Places since 2026-09-24. Since 2026-09-26: any Place, the User Library or a Pack, ticked in Settings; the catalog built on the Mac while it runs from Live's index (`catalog.source`; the disk scan is the fallback), served at runtime and refreshed within seconds. Loads name their Place (protocol 3.11.0), and machine values reach clients over `/bridge/machine`. Every rig check in [onboarding.plan.md](onboarding.plan.md) §10 passed |
 | A fresh clone | **Starts** (2026-09-27). `npm run setup` installs, links the surface into Live as Vamp and runs the setup check, which guides instead of failing. Measured from a clone whose owner paths point nowhere: it finishes with two warnings, both the owner's preset folders. Open: the owner's config (§3) and the capture fallback folder (§4) (plan.md §2) |
 | Config | **Layered** (2026-09-27). The tracked file is the general edition's defaults, every switch off; a Mac's own values go in its gitignored `constants.local.json`, which the bridge, the server, the scripts and the surface lay over it. The rig's local file reproduces its old config exactly. The build compiles only the shared defaults; clients get a Mac's values over `/bridge/machine` (plan.md §3) |
-| Starter content | Nothing ships yet (plan.md §6) |
+| Starter content | **The 20 stock tiles insert Live's own device** (2026-09-28, protocol 3.12.0): no preset file, each user's own defaults. Digital, Pitch Hack and Chance still load the owner's files (plan.md §6) |
 | Network | **Done:** inbound UDP binds loopback, and the file routes answer only for library files. **Open:** the LAN trust model (plan.md §7) |
 | Publishing | **The repo is `vamp`, public since 2026-09-28** (fresh history from Looping `dbae35ae`, 2026-09-27), laid out as plan.md §8 has it, with `owner/` shipping switched off. The rig runs from it since 2026-09-28: the surface, the one `Vamp Devices` Place, the AX helper and the menubar app. Live lists the surface as Vamp. The license, the third-party check and the user docs are done (2026-09-28). Open: the other renames (plan.md §8) |
 | Rig checks outstanding | The Move's TotalMix monitor knobs; foot-switch Learn with the USB pedal (plan.md §9) |
@@ -64,8 +64,8 @@ Four follow-up tests need Ben at the Mac, because they change the library
    failing (plan.md §2). **Done 2026-09-27**, but for the capture fallback folder, which moves
    with the `captureRecorder` switch.
 4. **The remaining switches,** with visible reasons wherever something can't run (plan.md §4–§5).
-5. **Starter content:** stock tiles insert Live's own device (plan.md §6). The Simpler needs no
-   preset since 2026-09-27.
+5. **Starter content:** stock tiles insert Live's own device, done 2026-09-28 (plan.md §6). The
+   Simpler needs no preset since 2026-09-27. Left: Digital, Pitch Hack and Chance.
 6. **Security:** the trust model, plus two small fixes (plan.md §7).
 7. **Publish:** the fresh public repo, license, docs and renames, then the clean-machine test and
    the demo (plan.md §8–§9).

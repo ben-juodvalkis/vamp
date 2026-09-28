@@ -262,7 +262,7 @@ describe('FXGrid — the grid is the held pad\'s', () => {
 		expect(pad).not.toBeNull();
 		// A first drag frame through the tile's own interaction path.
 		fxGrid.loadDevice('echo', PAD);
-		expect(sendMock).toHaveBeenCalledWith('/looping/v3/device/load', [TRACK, PAD, DEVICE_PRESETS.echo.presetPath]);
+		expect(sendMock).toHaveBeenCalledWith('/looping/v3/device/load', [TRACK, PAD, '', 'native:Echo', 'Echo']);
 		expect(selectedTrackStore.getFxGridSlot('echo', PAD).state).toBe('loading');
 		expect(selectedTrackStore.getFxGridSlot('echo').state).toBe('ghost');
 	});

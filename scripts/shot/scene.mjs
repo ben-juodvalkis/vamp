@@ -35,7 +35,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const PROTOCOL_VERSION = '3.11.0';
+export const PROTOCOL_VERSION = '3.12.0';
 
 /**
  * The feature switches a scene's bridge publishes when it names none
@@ -330,8 +330,8 @@ function driftParams({ osc2On = 1 } = {}) {
  * name-derived default.
  */
 // Not to be confused with `NATIVE_DEVICE_NAMES` in
-// `scripts/install-device-defaults.mjs` + `DeviceLoadComponent.py`, which
-// points the OTHER way — class → display name, for naming a default file —
+// `DeviceLoadComponent.py`, which points the OTHER way — class → display
+// name, the name Live inserts a device by —
 // and has no fallback because most of its rows are unrecoverable from the
 // class string. This one falls back (see `deviceClassName` below), so a row
 // is needed only where Live's class differs from the name's letters; rows
@@ -368,8 +368,8 @@ const DEVICE_CLASS_NAMES = {
 	// every fixture Reverb and Filter tile read ghost while the track
 	// plainly carried one — found 2026-09-10 by measuring the Jazz track's
 	// Reverb label against its Delay's. A pad load (below) names its
-	// device after the preset file, so this is also what makes a loaded
-	// pad effect complete its tile.
+	// device after the tile (a file load after the file), so this is also
+	// what makes a loaded pad effect complete its tile.
 	'Auto Filter': 'AutoFilter2',
 	'Channel EQ': 'ChannelEq',
 	Chorus: 'Chorus2',

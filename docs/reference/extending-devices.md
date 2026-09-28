@@ -80,13 +80,13 @@ in after the MIDI effects already at the chain's head, directly before
 the pad's instrument — which the surface finds by type, so a Random ahead of a DrumCell leaves the kit census
 and every `vm.*` row exactly as they were.
 
-**After adding or editing an effect preset, run
-`npm run install-device-defaults`.** The surface inserts a native
-device by name (one call, one undo step) only while Live's user default
-for it is byte-identical to the preset; until the installer has copied
-the new file into `Defaults/…`, that tile loads through the browser
-instead — correct, just slower and two undo steps on a pad. See
-`docs/reference/preset-library.md` §8.
+**A tile for a single native Live device is `native: true`, with no
+preset file** (protocol 3.12.0). The surface inserts it by name (one
+call, one undo step), so each user gets the device as their own Live
+default has it; its class must be in the surface's
+`NATIVE_DEVICE_NAMES`. A rack, a plug-in preset or a Max device is a
+file and loads through the browser. See
+`docs/reference/preset-library.md` §7.
 
 Authoritative class names live in `data/device-configs.json` — grep
 the top-level keys before guessing (Simpler is `OriginalSimpler`,

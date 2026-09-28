@@ -72,9 +72,8 @@
 	let pitchDecay = $derived(fx.paramValue(PITCH_DECAY_INDEX) ?? 0);
 	// The switch NAMES its state rather than labelling a control that is
 	// on or off: 0 is Mix, 1 is Insert, and there is no third reading, so
-	// the caption is the value. Defaults to Insert (1) — that is how the
-	// Variation preset ships, and a cold slot should read as the routing
-	// you are about to get rather than one nothing ever wrote.
+	// the caption is the value. Reads Insert (1) until the device's own
+	// value arrives.
 	let insertMode = $derived(Math.round(fx.paramValue(ROUTING_INDEX) ?? 1) === 1);
 </script>
 

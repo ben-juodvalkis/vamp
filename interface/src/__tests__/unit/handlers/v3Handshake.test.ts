@@ -80,7 +80,7 @@ describe('sendHandshakeHello', () => {
 		expect(handshakeState.attemptCount).toBe(1);
 	});
 
-	it('advertises 3.11.0 alone', () => {
+	it('advertises 3.12.0 alone', () => {
 		// 3.5.0 briefly made this a two-entry list: it added the
 		// client-declared ETag and touched no record, so decoding a 3.4.0
 		// surface still worked. 3.6.0 takes it back to one entry for a
@@ -93,7 +93,7 @@ describe('sendHandshakeHello', () => {
 		//
 		// 3.7.0 keeps it at one entry for the ordinary reason: the T
 		// record grew a 14th field (`role`), and this parser reads 14.
-		expect(UI_SUPPORTED_VERSIONS).toEqual(['3.11.0']);
+		expect(UI_SUPPORTED_VERSIONS).toEqual(['3.12.0']);
 	});
 
 	it('warns when sender not wired but still bumps attempt', () => {
@@ -119,10 +119,10 @@ describe('handleV3HandshakeAccept', () => {
 		sendHandshakeHello(); // attempt 1
 		emissions = []; // drop the hello emission so we can assert on later sends
 
-		handleV3HandshakeAccept(['3.11.0', 'sess-abc', 7]);
+		handleV3HandshakeAccept(['3.12.0', 'sess-abc', 7]);
 
 		expect(handshakeState.phase).toBe('accepted');
-		expect(handshakeState.negotiatedVersion).toBe('3.11.0');
+		expect(handshakeState.negotiatedVersion).toBe('3.12.0');
 		expect(v3Store.sessionId).toBe('sess-abc');
 		expect(v3Store.generation).toBe(7);
 		// Cold start: attempt === 1, no resync emitted.
@@ -132,14 +132,14 @@ describe('handleV3HandshakeAccept', () => {
 	it('does NOT emit state/resync on reconnect — surface delivers state/full on every accept (PR-3b)', () => {
 		// First attempt — accept cleanly.
 		sendHandshakeHello();
-		handleV3HandshakeAccept(['3.11.0', 'sess-first', 3]);
+		handleV3HandshakeAccept(['3.12.0', 'sess-first', 3]);
 		emissions = [];
 
 		// Simulate WS drop + reconnect: hello goes out again.
 		sendHandshakeHello();
 		emissions = [];
 
-		handleV3HandshakeAccept(['3.11.0', 'sess-second', 12]);
+		handleV3HandshakeAccept(['3.12.0', 'sess-second', 12]);
 
 		expect(handshakeState.phase).toBe('accepted');
 		expect(handshakeState.attemptCount).toBe(2);
@@ -207,7 +207,7 @@ describe('handleV3HandshakeAccept', () => {
 	it('does not adopt another client\'s sessionId', () => {
 		sendHandshakeHello();
 		handleV3HandshakeAccept(['9.9.9', 'other-client-session', 42]);
-		handleV3HandshakeAccept(['3.11.0', 'our-session', 7]);
+		handleV3HandshakeAccept(['3.12.0', 'our-session', 7]);
 
 		expect(handshakeState.phase).toBe('accepted');
 		expect(v3Store.sessionId).toBe('our-session');

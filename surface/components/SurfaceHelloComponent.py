@@ -86,7 +86,7 @@ V3_SURFACE_HELLO_ADDRESS = "/looping/v3/surface/hello"
 # 2026-09-10 bumps to 3.8.0 (issue #491) alongside the ``pads/<note>``
 # path segment and the pad-scoped ``state/full/tree``.
 # 2026-09-15 bumps to 3.9.0 (ADR-439): T record 14 -> 15, appending ``preset``.
-PROTOCOL_VERSION = "3.11.0"
+PROTOCOL_VERSION = "3.12.0"
 
 
 class SurfaceHelloComponent:

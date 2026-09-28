@@ -255,10 +255,12 @@ def test_advertises_3_7_0_down_to_3_0_0():
     from the list would break stale-UI handshake and violate the
     rollback-safety guarantee in phase-7-pr7a-design.md \u00a72.4."""
     assert SUPPORTED_VERSIONS == (
-        "3.11.0", "3.10.0", "3.9.0", "3.8.0", "3.7.0", "3.6.0", "3.5.0", "3.4.0", "3.3.0",
+        "3.12.0", "3.11.0", "3.10.0", "3.9.0", "3.8.0", "3.7.0", "3.6.0", "3.5.0", "3.4.0", "3.3.0",
         "3.2.0", "3.1.0", "3.0.0",
     )
 
+    # 3.12.0 (2026-09-28) is ``device/load``'s ``native:<class>`` source: a
+    # tile names a native device, not a preset file.
     # 3.11.0 (2026-09-26) is the loads that name their Place: two optional
     # trailing args on ``prepare_for_preset`` and ``device/load``.
 

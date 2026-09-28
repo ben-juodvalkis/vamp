@@ -70,7 +70,7 @@
         },
         "effectPresetsBase": {
           "type": "string",
-          "description": "Base path for effect presets"
+          "description": "The folder of the FX tiles that are files (racks, plug-in presets, Max devices); the native tiles insert Live's own device and need none"
         },
         "sidebarRoot": {
           "type": "string",

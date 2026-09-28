@@ -109,7 +109,9 @@ describe('fxGridStore.loadDevice — duplicate-trigger de-dup', () => {
 		expect(loads[0][1]).toEqual([
 			'tracks/0',
 			'',
-			DEVICE_PRESETS.variation.presetPath
+			'',
+			'native:BeatRepeat',
+			'Variation'
 		]);
 	});
 

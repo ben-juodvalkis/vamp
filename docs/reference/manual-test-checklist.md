@@ -105,10 +105,8 @@ unrelated to what you're testing.
       Gtr, Rand Oct and Drum included (2026-09-11). A first DRAG on a
       ghost tile loads that effect INTO the pad
       (confirm in Live's rack: the device sits in the pad's chain, after
-      its instrument, as ONE undo step — the insert-by-name path; if
-      Edit → Undo first leaves it on the track, the default for that
-      device is not the preset: `npm run install-device-defaults --
-      --check`). Rand Oct into a pad lands BEFORE the pad's instrument
+      its instrument, as ONE undo step — the insert-by-name path, with
+      Live's own default for that device). Rand Oct into a pad lands BEFORE the pad's instrument
       and the kit's controls keep working on that pad; Gtr lands after
       it. A tap on a tile opens that effect's view for the pad
       inside the Drum Rack view, under a chip with the pad's name and a

@@ -91,7 +91,7 @@ describe('OttControl', () => {
 		await tick();
 		const loads = sendMock.mock.calls.filter(([addr]) => addr === '/looping/v3/device/load');
 		expect(loads).toHaveLength(1);
-		expect((loads[0][1] as unknown[])[2]).toBe(DEVICE_PRESETS.ott.presetPath);
+		expect((loads[0][1] as unknown[]).slice(2)).toEqual(['', 'native:MultibandDynamics', 'Multiband Dynamics']);
 		expect(selectedTrackStore.getFxGridSlot('ott').state).toBe('loading');
 	});
 });

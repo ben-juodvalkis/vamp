@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('$lib/utils/logger', () => ({ logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
 import { machineStore } from '$lib/stores/machineStore.svelte';
-import { DEVICE_PRESETS, deviceLoadArgs, resolvePresetPath } from '$lib/config/devicePresets';
+import { DEVICE_PRESETS, deviceLoadArgs, loadKey, resolvePresetPath } from '$lib/config/devicePresets';
 import { MIN_DB, MAX_DB, setTotalMixRange } from '$lib/utils/totalmixScale';
 import * as scale from '$lib/utils/totalmixScale';
 import { handleBridgeMessage } from '$lib/api/handlers/miscHandlers';
@@ -28,12 +28,15 @@ describe('machineStore', () => {
 		expect(machineStore.paths).toEqual({ instrumentsBase: '/Lib/Instruments', effectPresetsBase: '/Lib/Effects', m4lDevicesRoot: '/repo/Vamp Devices' });
 	});
 
-	it('resolves an FX tile’s preset path from the snapshot, and sends it on device/load', () => {
-		expect(DEVICE_PRESETS.reverb.presetPath.startsWith('{effectPresetsBase}/')).toBe(true);
-		expect(resolvePresetPath(DEVICE_PRESETS.reverb.presetPath)).toBe('{effectPresetsBase}/Reverb.adv');
+	it('resolves a file tile’s preset path from the snapshot, and sends it on device/load', () => {
+		expect(DEVICE_PRESETS.digital.presetPath).toBe('{effectPresetsBase}/Digital.adg');
+		expect(resolvePresetPath(DEVICE_PRESETS.digital.presetPath!)).toBe('{effectPresetsBase}/Digital.adg');
 		machineStore.update(JSON.stringify({ paths: { instrumentsBase: '', effectPresetsBase: '/Lib/Effects', m4lDevicesRoot: '' }, totalmix: null }));
-		expect(resolvePresetPath(DEVICE_PRESETS.reverb.presetPath)).toBe('/Lib/Effects/Reverb.adv');
-		expect(deviceLoadArgs('tracks/1', '', DEVICE_PRESETS.reverb)).toEqual(['tracks/1', '', '/Lib/Effects/Reverb.adv']);
+		expect(resolvePresetPath(DEVICE_PRESETS.digital.presetPath!)).toBe('/Lib/Effects/Digital.adg');
+		expect(deviceLoadArgs('tracks/1', '', DEVICE_PRESETS.digital)).toEqual(['tracks/1', '', '/Lib/Effects/Digital.adg']);
+		// A native tile names its device, not a file, whatever the snapshot says (3.12.0).
+		expect(deviceLoadArgs('tracks/1', '', DEVICE_PRESETS.reverb)).toEqual(['tracks/1', '', '', 'native:Hybrid', 'Reverb']);
+		expect(loadKey(DEVICE_PRESETS.reverb)).toBe('native:Hybrid');
 		expect(deviceLoadArgs('tracks/1', '', DEVICE_PRESETS.sequencer)).toEqual(['tracks/1', '', '', 'place:Vamp Devices', 'Permute/Permute.amxd']);
 	});
 

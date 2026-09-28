@@ -21,12 +21,13 @@ The load, in order (``handle_load``):
    plain device path is shape- and bounds-checked; empty means the
    track. Errors are ``device-slot-invalid``; a pad's carry
    ``;scope=<padPath>`` so the UI resets the pad's slot, not the track's.
-4. A preset that is not on disk → ``load-failed path-not-found``.
-5. A single native device whose Live user default is byte-identical to
-   the preset is **inserted by name** (``insert_device``, renamed to the
-   file's stem, one undo step; a MIDI effect after the chain's leading
-   MIDI effects) — into the pad's chain or onto the track, with no
-   selection change and no browser.
+4. A native device (3.12.0: ``source`` is ``native:<class>``, ``rel`` the
+   name it takes) is **inserted by name** (``insert_device``, so the
+   user's own default for it applies; renamed to ``rel``, one undo step;
+   a MIDI effect after the chain's leading MIDI effects) — into the
+   pad's chain or onto the track, with no file, no selection change and
+   no browser. Live refusing it → ``load-failed insert-refused``.
+5. A preset that is not on disk → ``load-failed path-not-found``.
 6. Otherwise the browser: for a pad, select the track, the pad and the
    chain's last device, set the track's device insert mode beside the
    selection, ``load_item`` (the preset lands in the pad's chain), put
@@ -47,11 +48,8 @@ Error codes per [04 §7.2]; every pad-load error names its scope.
 
 from __future__ import annotations
 
-import filecmp
-import gzip
 import logging
 import os
-import re
 import time
 from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
@@ -97,8 +95,12 @@ _LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
 
 # Expected positional args on the wire.
 # ``[trackPath, devicePath, presetPath]``, and since 3.11.0 optionally
-# ``[…, source, rel]``: the Place the preset is in and its path inside it.
+# ``[…, source, rel]``: the Place the preset is in and its path inside it —
+# or, since 3.12.0, ``native:<class>`` and the name the device takes.
 _EXPECTED_ARG_COUNTS = (3, 5)
+
+# 3.12.0: the ``source`` of a load that names a native device, not a file.
+NATIVE_SOURCE_PREFIX = "native:"
 
 # Issue #491 (3.8.0) → ADR-437 (2026-09-14): where a pad-targeted browser
 # load landed is checked the moment ``load_item`` returns, and a preset
@@ -132,24 +134,25 @@ TRACK_INSERT_MODE_BESIDE_SELECTION = 2
 # the insert as one undo step — where ``browser.load_item`` lands a preset
 # on the track and the pad path had to move it into the chain on a later
 # tick (two structural republishes, two undo steps, and the track has to be
-# selected first). What an insert cannot do is load a PRESET: it gives the
-# device Live's default for it. So the app's presets are installed as those
-# defaults (``scripts/install-device-defaults.mjs``, into the User
-# Library's ``Defaults/Audio Effects`` / ``Defaults/MIDI Effects``), and
-# the insert path is taken only when the default file is byte-identical to
-# the preset the tile asked for; anything else — a rack, a plug-in preset,
-# a machine without the defaults, an insert Live refuses — loads through
-# the browser exactly as before.
+# selected first). An insert cannot load a preset file: it gives the device
+# the user's own default for it (``Defaults/Audio Effects`` /
+# ``Defaults/MIDI Effects`` in their User Library, else Live's factory
+# settings). Since 3.12.0 that is the point: a tile that names a native
+# device (``native:<class>``) is always inserted, and every user gets the
+# device as they have set it up in Live. Until then the insert was taken
+# only when an installed default was byte-identical to the owner's preset
+# file, which no other Mac had. Racks, plug-in presets and Max devices are
+# files, and load through the browser.
 #
 # Class → display name, measured on 12.4.15b2 by inserting each name and
 # reading ``class_name`` / ``class_display_name``. Keep in step with the
-# installer's table.
+# tiles' ``expectedClassName`` in ``devicePresets.ts``.
 #
-# This map has NO fallback and cannot have one: an unknown class is reported
-# as ``no-display-name`` and skipped. 12 of its 21 rows are not recoverable
-# from the class string by any rule (StereoGain -> Utility, Hybrid -> Hybrid
-# Reverb, Chorus2 -> Chorus-Ensemble, PhaserNew -> Phaser-Flanger), and a
-# guessed name would produce a default file Live silently never reads.
+# This map has NO fallback and cannot have one: an unknown class is refused
+# as ``unknown-device``. 12 of its 21 rows are not recoverable from the
+# class string by any rule (StereoGain -> Utility, Hybrid -> Hybrid Reverb,
+# Chorus2 -> Chorus-Ensemble, PhaserNew -> Phaser-Flanger), and a guessed
+# name is one Live refuses.
 #
 # Not to be confused with ``DEVICE_CLASS_NAMES`` in ``scripts/shot/scene.mjs``,
 # which points the other way (display name -> class, for the screenshot mock)
@@ -179,39 +182,13 @@ NATIVE_DEVICE_NAMES: Dict[str, str] = {
     "MidiChord": "Chord",
 }
 
-_PRESET_ROOT_DEVICE = re.compile(rb"<Ableton\b[^>]*>\s*<([A-Za-z0-9]+)\b")
-
-
-def preset_device_class(preset_path: str) -> Optional[str]:
-    """The device class a single-device ``.adv`` carries — the first
-    element under ``<Ableton>`` (``Delay``, ``Hybrid``, ``MidiRandom``…) —
-    or ``None`` for anything else: a rack ``.adg`` (whose root device is
-    a group, not in the table), a plug-in ``.aupreset``, an unreadable
-    file. Reads the first 4 KB of the gzip; the class is on line two."""
-    if not preset_path.lower().endswith(".adv"):
-        return None
-    try:
-        with gzip.open(preset_path, "rb") as f:
-            head = f.read(4096)
-    except (OSError, EOFError, gzip.BadGzipFile):
-        return None
-    m = _PRESET_ROOT_DEVICE.search(head)
-    return m.group(1).decode("ascii") if m else None
-
-
 def _is_midi_effect_class(device_class: str) -> bool:
-    """Whether a preset's root device class names a MIDI effect. Live's
+    """Whether a native device class names a MIDI effect. Live's
     class names for every MIDI effect start with ``Midi`` (``MidiRandom``,
-    ``MidiArpeggiator``, ``MidiChord``…). This asks about a CLASS read off
-    an ``.adv`` before any device exists; :func:`device_type` asks a live
+    ``MidiArpeggiator``, ``MidiChord``…). This asks about a CLASS a tile
+    names before any device exists; :func:`device_type` asks a live
     device — the two halves of the one placement rule."""
     return device_class.startswith("Midi")
-
-
-def default_preset_path(user_library_base: str, device_class: str, display_name: str) -> str:
-    """Where Live keeps the user default for this device."""
-    kind = "MIDI Effects" if _is_midi_effect_class(device_class) else "Audio Effects"
-    return os.path.join(user_library_base, "Defaults", kind, display_name + ".adv")
 
 
 def _leading_midi_effects(container) -> int:
@@ -243,13 +220,6 @@ def _insert_index(container, device) -> int:
     if device_type(device) == DEVICE_TYPE_MIDI_EFFECT:
         return _leading_midi_effects(container)
     return len(_devices_of(container))
-
-
-def _same_bytes(a: str, b: str) -> bool:
-    try:
-        return filecmp.cmp(a, b, shallow=False)
-    except OSError:
-        return False
 
 
 def _track_ptr_set(song):
@@ -488,13 +458,14 @@ class DeviceLoadComponent:
     def handle_load(self, args, source_addr) -> None:
         """Parse and dispatch a ``/looping/v3/device/load`` message.
 
-        Wire shape: ``[trackPath, devicePath, presetPath]``. The order of
-        operations is the module docstring's list: arg count and the
-        empty preset; the track; the pad (``resolve_pad``, and it must be
-        on ``trackPath``) or the plain device slot; the file on disk; the
-        insert-by-name path when Live's default is the preset; else the
-        browser — ``_load_into_pad`` with its deferred placement check for
-        a pad, select-then-``load_item`` for a track.
+        Wire shape: ``[trackPath, devicePath, presetPath]``, plus
+        ``[source, rel]``. The order of operations is the module
+        docstring's list: arg count and the empty preset; the track; the
+        pad (``resolve_pad``, and it must be on ``trackPath``) or the plain
+        device slot; a native device (``native:<class>``) inserted by name;
+        the file on disk; the browser — ``_load_into_pad`` with its
+        deferred placement check for a pad, select-then-``load_item`` for
+        a track.
 
         Success is silent on the wire for this component — the track's
         or the chain's device-structure listener carries the news once
@@ -523,7 +494,14 @@ class DeviceLoadComponent:
         # them an empty presetPath is filled in from the Place's folder.
         source = _coerce_str(args[3]) if len(args) > 3 else ""
         rel = _coerce_str(args[4]) if len(args) > 4 else ""
-        preset_path = self.absolute_path(preset_path, source, rel)
+        # 3.12.0: a native device names its class, not a file. The source
+        # stands in for the preset path from here on: it is what the error
+        # wire carries back, and what the UI's slot reset matches on.
+        native_class = (
+            source[len(NATIVE_SOURCE_PREFIX):]
+            if source.startswith(NATIVE_SOURCE_PREFIX) else ""
+        )
+        preset_path = source if native_class else self.absolute_path(preset_path, source, rel)
         logger.info(
             "DeviceLoadComponent: coerced trackPath=%r devicePath=%r "
             "presetPath=%r (len=%d) source=%r rel=%r",
@@ -575,6 +553,14 @@ class DeviceLoadComponent:
         # track's same tile loads would reset the wrong one).
         scope_suffix = f";scope={device_path}" if pad_ref is not None else ""
 
+        if native_class:
+            container = pad_ref.chain if pad_ref is not None else track
+            self._load_native(
+                container, native_class, rel, device_path or track_path,
+                preset_path, scope_suffix,
+            )
+            return
+
         # Cheap filesystem pre-check — stale UI catalog entries should
         # fail in microseconds, not after an exhaustive browser walk.
         # Non-existent paths short-circuit to ``path-not-found``.
@@ -589,15 +575,6 @@ class DeviceLoadComponent:
                 detail="path-not-found" + scope_suffix,
             )
             return
-
-        # A native device whose Live default IS this preset is inserted by
-        # name — into the pad's chain or onto the track — and that is the
-        # whole load. Everything else goes through the browser below.
-        plan = self._native_insert_plan(preset_path)
-        if plan is not None:
-            container = pad_ref.chain if pad_ref is not None else track
-            if self._insert_native(container, plan, device_path or track_path):
-                return
 
         item = self._resolve_browser_item(preset_path, source, rel)
         if item is None:
@@ -672,35 +649,41 @@ class DeviceLoadComponent:
 
     # --- insert by name (issue #491 follow-up) ---------------------------
 
-    def _native_insert_plan(self, preset_path: str) -> Optional[Tuple[str, str, bool]]:
-        """``(display_name, device_name, is_midi)`` when ``preset_path`` is a
-        native device whose user default is byte-identical to it, else
-        ``None`` — the browser load is then the right path. ``device_name``
-        is what the device must be called afterwards: the preset file's
-        basename, the name Live gives a browser load and the one the FX
-        grid matches its tile on (``Reverb``, not ``Hybrid Reverb``)."""
-        device_class = preset_device_class(preset_path)
-        display = NATIVE_DEVICE_NAMES.get(device_class) if device_class else None
+    def _load_native(
+        self, container, device_class: str, device_name: str,
+        scope_label: str, key: str, scope_suffix: str,
+    ) -> None:
+        """Insert the native device ``device_class`` into ``container`` (a
+        track or a pad's chain) by Live's display name, so the user's own
+        default for it applies, named ``device_name`` (the tile's name;
+        Live's display name when empty). ``key`` is what the error wire
+        names: the load's ``native:<class>`` source."""
+        display = NATIVE_DEVICE_NAMES.get(device_class)
         if not display:
-            return None
-        default = default_preset_path(self._user_library_base, device_class, display)
-        if not _same_bytes(default, preset_path):
-            logger.info(
-                "DeviceLoadComponent: Live's default for %r is not %r; loading through the browser",
-                display, preset_path,
+            logger.warning(
+                "DeviceLoadComponent: no display name for native class %r", device_class,
             )
-            return None
-        device_name = os.path.splitext(os.path.basename(preset_path))[0]
-        return display, device_name, device_class.startswith("Midi")
+            self._emit_error(
+                V3_ERROR_LOAD_FAILED,
+                path=key,
+                detail="unknown-device: %s%s" % (device_class, scope_suffix),
+            )
+            return
+        plan = (display, device_name or display, _is_midi_effect_class(device_class))
+        if not self._insert_native(container, plan, scope_label):
+            self._emit_error(
+                V3_ERROR_LOAD_FAILED,
+                path=key,
+                detail="insert-refused" + scope_suffix,
+            )
 
     def _insert_native(self, container, plan: Tuple[str, str, bool], scope_label: str) -> bool:
         """``container.insert_device(display_name)`` — a track or a drum
         chain — renamed to the tile's name, inside one undo step. A MIDI
         effect goes after the chain's leading MIDI effects (Live refuses one
         behind an instrument or an audio effect); an audio effect goes at
-        the end. Returns ``False`` when Live refuses the insert, so the
-        caller can load through the browser instead; the undo step is
-        closed either way."""
+        the end. Returns ``False`` when Live refuses the insert; the undo
+        step is closed either way."""
         display, device_name, is_midi = plan
         index: Optional[int] = _leading_midi_effects(container) if is_midi else None
         began = self._begin_undo_step()
@@ -716,19 +699,15 @@ class DeviceLoadComponent:
                 )
             except _LOM_ERRORS as e:
                 logger.warning(
-                    "DeviceLoadComponent: insert_device(%r) into %s raised %s: %s; loading through the browser",
+                    "DeviceLoadComponent: insert_device(%r) into %s raised %s: %s",
                     display, scope_label, type(e).__name__, e,
                 )
                 return False
             if device is None:
                 # Live returns the device it inserted; nothing back means
-                # nothing went in. Load through the browser rather than
-                # try to rename a device that does not exist — the old
-                # path raised on ``None.name``, warned that the insert
-                # "was not found", and then loaded a second copy through
-                # the browser if Live had in fact inserted one.
+                # nothing went in, and there is nothing to rename.
                 logger.warning(
-                    "DeviceLoadComponent: insert_device(%r) into %s returned nothing; loading through the browser",
+                    "DeviceLoadComponent: insert_device(%r) into %s returned nothing",
                     display, scope_label,
                 )
                 return False
@@ -738,11 +717,10 @@ class DeviceLoadComponent:
             except _LOM_ERRORS as e:
                 # A device left under Live's display name matches no tile:
                 # the slot would time out and the next drag insert a second
-                # copy. Take it out again — still inside this undo step —
-                # and let the browser path name it after the file.
+                # copy. Take it out again, still inside this undo step.
                 logger.warning(
                     "DeviceLoadComponent: renaming the inserted %r to %r raised %s: %s; "
-                    "removing it and loading through the browser",
+                    "removing it",
                     display, device_name, type(e).__name__, e,
                 )
                 self._remove_inserted(container, device)
@@ -750,7 +728,7 @@ class DeviceLoadComponent:
         finally:
             self._end_undo_step(began)
         logger.info(
-            "DeviceLoadComponent: inserted %r by name as %r into %s%s (its default is the preset)",
+            "DeviceLoadComponent: inserted %r by name as %r into %s%s",
             display, device_name, scope_label, "" if index is None else " at %d" % index,
         )
         return True

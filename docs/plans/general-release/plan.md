@@ -143,18 +143,16 @@ fail with nothing on screen:
 
 ## 6. Starter content
 
-- **Stock tiles insert Live's own device when no preset file exists** (**M**, recommended). 20
-  tiles are stock Live devices: Echo, Auto Filter, Compressor, Gate, Multiband Dynamics, Glue
-  Compressor, Saturator, Variation (Beat Repeat), Channel EQ, Drum Buss, Pedal, Utility, Redux,
-  Reverb (Hybrid Reverb), Phaser, Chorus, Arpeggiator, Random, Velocity and Chord.
-  - **Moving the file check (`DeviceLoadComponent.py`) is not enough.** The device class is read
-    from the preset file itself, so the tile must supply it (the UI already has
-    `expectedClassName`). The device must also be renamed to the tile's name where Live's
-    differs: Variation, Reverb, Phaser and Chorus.
-  - **Insert-by-name exists only on `/looping/v3/device/load`.** `load_into_track`, which track
-    prep, Permute, random-start, the wah and MidiWheels use, never tries it.
-  - The owner's tuned presets become an optional pack. `npm run install-device-defaults` (issue
-    #491) doesn't change this, because it copies from preset files a stranger doesn't have.
+- **Stock tiles insert Live's own device:** done 2026-09-28 (protocol 3.12.0, needs a Live
+  restart). The 20 tiles that are stock Live devices (Echo, Auto Filter, Compressor, Gate,
+  Multiband Dynamics, Glue Compressor, Saturator, Variation (Beat Repeat), Channel EQ, Drum
+  Buss, Pedal, Utility, Redux, Reverb (Hybrid Reverb), Phaser, Chorus, Arpeggiator, Random,
+  Velocity and Chord) name no preset file: the tile sends `native:<class>` and its name, and
+  the surface inserts the device by name, always, so every user gets it as their own Live
+  default has it (Ben, 2026-09-28: trust each user's defaults). The owner's tuned presets are
+  his Live defaults already. `install-device-defaults` is gone. `load_into_track` needed
+  nothing: none of its callers loads a native tile. Still files: Digital (below), Pitch Hack
+  and Chance (Max devices), Wah and Vocal (racks), and the plug-in tiles.
 - **A Simpler without a preset:** done 2026-09-27. Record → Simpler, clip → Simpler, the
   browser's Simpler mode and capture insert a Simpler by name (this Mac's default Simpler, else
   Live's factory one) in place of any instrument the track came with; `Empty Simpler.adv` and

@@ -32,7 +32,7 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SCENES_DIR = join(REPO_ROOT, 'scripts', 'shot', 'scenes');
 
 /** Mirrors `UI_SUPPORTED_VERSIONS` — we must negotiate like the real UI. */
-const UI_SUPPORTED_VERSIONS = ['3.11.0'];
+const UI_SUPPORTED_VERSIONS = ['3.12.0'];
 
 /**
  * Session scalars worth freezing. These arrive as init-emits after

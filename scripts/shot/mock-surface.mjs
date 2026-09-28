@@ -518,7 +518,12 @@ export async function startMockSurface({
 					// presence is re-emitted, and the pad's bundle is re-sent
 					// to a client holding its row. A track-level load still
 					// sits unanswered — that needs Live.
-					const [, devicePath, presetPath] = args;
+					// A native device (3.12.0) names its class and the name it
+					// takes instead of a file; the device is named for the tile,
+					// which the class table maps back to its class.
+					const [, devicePath, filePath, source, rel] = args;
+					const native = typeof source === 'string' && source.startsWith('native:');
+					const presetPath = native ? rel : filePath;
 					const pad = parsePadPath(devicePath);
 					if (!pad || typeof presetPath !== 'string') {
 						log(`unhandled ${address}${typeof devicePath === 'string' && devicePath ? ` into ${devicePath}` : ''}`);

@@ -1468,24 +1468,23 @@ nothing on the wire could name one. ADR-430.
   `vm.padFx` and re-emits and re-watches every subscribed pad. It never
   republishes the song and **never feeds `on_device_added`** — the
   Simpler init rules and the random-start prepend would fire per pad.
-- **`device/load` reads its `devicePath` at last** — and, since the
-  same day's follow-up, **inserts a native device by name**
-  (`Chain.insert_device` / `Track.insert_device`, Live 12.3+, measured on
-  12.4.15b2): when the preset is a single native device (its class is
-  the `.adv`'s root element — `Delay`, `Hybrid`, `AutoFilter2`…, mapped
-  to Live's display name by `NATIVE_DEVICE_NAMES`) AND Live's user
-  default for that device (`<User Library>/Defaults/Audio Effects/
-  <display name>.adv` — `Defaults/MIDI Effects/` for a MIDI effect — put
-  there by `npm run install-device-defaults`)
-  is byte-identical to the preset, the surface calls `insert_device`
-  with the display name (a MIDI effect at the index after the leading
-  MIDI effects), renames the device to the preset file's basename
-  (`Reverb`, not `Hybrid Reverb` — the tile's name) and wraps both in
-  one undo step: in place, one call, no track republish, no selection
-  change. Live applies user defaults to an `insert_device` exactly as to
-  its own browser, which is what makes the tile still get its preset.
-  **The browser path is the fallback** for racks, plug-in presets, a
-  missing or different default, and an insert Live refuses: select the
+- **`device/load` reads its `devicePath` at last** — and **inserts a
+  native device by name** (`Chain.insert_device` / `Track.insert_device`,
+  Live 12.3+, measured on 12.4.15b2). Since protocol 3.12.0 (2026-09-28)
+  a tile names the device, not a file: `source` `native:<class>`
+  (`Delay`, `Hybrid`, `AutoFilter2`…, mapped to Live's display name by
+  `NATIVE_DEVICE_NAMES`) and `rel` the tile's name. The surface calls
+  `insert_device` with the display name (a MIDI effect at the index after
+  the leading MIDI effects), renames the device to `rel` (`Reverb`, not
+  `Hybrid Reverb`) and wraps both in one undo step: in place, one call,
+  no track republish, no selection change. Live applies the user's own
+  default for the device (`<User Library>/Defaults/Audio Effects/<display
+  name>.adv`) to an `insert_device` exactly as to its own browser, so each
+  user gets the device as they have set it up. A refusal is `load-failed`
+  `insert-refused`, with no browser fallback. Until 3.12.0 the insert was
+  taken only when that default was byte-identical to the owner's preset
+  file. **The browser path** is for files — racks, plug-in presets, Max
+  devices, a user's own preset: select the
   track, `rack.view.selected_drum_pad = pad`, the chain's last device
   (`song.view.select_device` — Live inserts a browser load after the
   selected device), set the track's device insert mode beside the

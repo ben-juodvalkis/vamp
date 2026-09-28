@@ -360,7 +360,7 @@ def test_3_5_0_is_still_negotiable():
     it grew ``preset``); 3.5.0 stays in the tuple because that is a
     different question from whether a client can still negotiate it.
     """
-    assert SUPPORTED_VERSIONS[0] == "3.11.0"
+    assert SUPPORTED_VERSIONS[0] == "3.12.0"
     assert "3.5.0" in SUPPORTED_VERSIONS
 
 

@@ -191,31 +191,22 @@ Live's User Library itself can live anywhere; the surface's install script
 (`surface/install.sh`) finds it by parsing `Library.cfg`. See
 [setup.md §5](setup.md#5-install-the-python-control-surface).
 
-## 7. Live's device defaults are the app's presets
+## 7. The native tiles use Live's device defaults
 
 Live keeps a per-device *user default* under the User Library —
 `Defaults/Audio Effects/<display name>.adv`, `Defaults/MIDI Effects/…` —
 and applies it whenever that device is created by name: from Live's own
 browser, and from the LOM's `insert_device` (measured 2026-09-10 on
-12.4.15b2). The surface uses that to load an FX-grid tile's device
-**by name** into a drum pad's chain or onto the track in one call, with
-one undo step and no selection change — but only when the default file is
-byte-identical to the tile's preset, so the tile still gets *its* settings.
-Everything else (racks, plug-in presets, a machine without the defaults)
-keeps loading through the browser.
-
-```bash
-npm run install-device-defaults            # install / refresh
-npm run install-device-defaults -- --check # exit 1 if any default is missing or differs
-```
-
-It installs every single-device `.adv` that `devicePresets.ts` names,
-under the display name Live reports for its class (`Reverb.adv` is a
-Hybrid Reverb, so it lands as `Hybrid Reverb.adv`; the surface renames the
-inserted device back to `Reverb`). A default that already exists and
-differs is backed up to `<User Library>/Looping Test/defaults-backup-<date>/`
-first. Re-run it after editing any effect preset, or the surface quietly
-goes back to the browser path for that device.
+12.4.15b2). Since protocol 3.12.0 (2026-09-28) the 20 FX-grid tiles that
+are single native devices (`native: true` in `devicePresets.ts`) name no
+preset file: the surface inserts the device **by name** into a drum pad's
+chain or onto the track, in one call, with one undo step and no selection
+change, and renames it to the tile's name (a Hybrid Reverb becomes
+`Reverb`). Each user gets the device as their own default has it, else
+Live's factory settings. To change what a tile loads, change the device's
+default in Live (right-click its title bar → Save as Default Preset).
+Racks, plug-in presets and Max devices are files, and load through the
+browser from `paths.effectPresetsBase` or the Vamp Devices Place.
 
 ## 8. Troubleshooting
 

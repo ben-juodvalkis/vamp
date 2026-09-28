@@ -117,7 +117,7 @@ describe('a scoped slot', () => {
 
 	it('loads with the pad as the target and never renames the track', async () => {
 		await selectedTrackStore.loadFxGridDevice('reverb', PAD);
-		expect(sendMock).toHaveBeenCalledWith('/looping/v3/device/load', [TRACK, PAD, reverbConfig.presetPath]);
+		expect(sendMock).toHaveBeenCalledWith('/looping/v3/device/load', [TRACK, PAD, '', 'native:Hybrid', 'Reverb']);
 		expect(selectedTrackStore.getFxGridSlot('reverb', PAD).state).toBe('loading');
 		expect(selectedTrackStore.getFxGridSlot('reverb').state).toBe('ghost'); // the track's slot is untouched
 		await selectedTrackStore.loadFxGridDevice('guitar', PAD);
@@ -155,17 +155,17 @@ describe('a scoped slot', () => {
 		// A failure drops it too.
 		await selectedTrackStore.loadFxGridDevice('echo', PAD);
 		expect(fxGrid.loadingPadScopes()).toEqual([PAD]);
-		fxGrid.handleLoadFailed(DEVICE_PRESETS.echo.presetPath, PAD);
+		fxGrid.handleLoadFailed('native:Echo', PAD);
 		expect(fxGrid.loadingPadScopes()).toEqual([]);
 	});
 
 	it('a failure carrying the scope resets that scope alone', async () => {
 		await selectedTrackStore.loadFxGridDevice('reverb', PAD);
 		await selectedTrackStore.loadFxGridDevice('reverb');
-		fxGrid.handleLoadFailed(reverbConfig.presetPath, PAD);
+		fxGrid.handleLoadFailed('native:Hybrid', PAD);
 		expect(selectedTrackStore.getFxGridSlot('reverb', PAD).state).toBe('ghost');
 		expect(selectedTrackStore.getFxGridSlot('reverb').state).toBe('loading');
-		fxGrid.handleLoadFailed(reverbConfig.presetPath, `${RACK}/pads/40`); // a scope never touched: nothing
+		fxGrid.handleLoadFailed('native:Hybrid', `${RACK}/pads/40`); // a scope never touched: nothing
 		expect(selectedTrackStore.getFxGridSlot('reverb').state).toBe('loading');
 	});
 

@@ -35,18 +35,36 @@ export function resolvePresetPath(presetPath: string): string {
 /**
  * The `/looping/v3/device/load` arguments for a preset: `[trackPath,
  * devicePath, presetPath]`, plus `[source, rel]` when the preset names its
- * Place (3.11.0).
+ * Place (3.11.0). A native device sends no path, `native:<class>` and the
+ * name it takes (3.12.0).
  */
-export function deviceLoadArgs(trackPath: string, devicePath: string, preset: Pick<DevicePresetConfig, 'presetPath' | 'source' | 'rel'>): string[] {
-  const presetPath = resolvePresetPath(preset.presetPath);
+type LoadFields = Pick<DevicePresetConfig, 'presetPath' | 'source' | 'rel' | 'native' | 'expectedClassName' | 'defaultName'>;
+
+export function deviceLoadArgs(trackPath: string, devicePath: string, preset: LoadFields): string[] {
+  if (preset.native) return [trackPath, devicePath, '', loadKey(preset), preset.defaultName];
+  const presetPath = resolvePresetPath(preset.presetPath ?? '');
   return preset.source && preset.rel
     ? [trackPath, devicePath, presetPath, preset.source, preset.rel]
     : [trackPath, devicePath, presetPath];
 }
 
+/**
+ * What the surface names a failed load by, on `/looping/v3/error`'s `path`:
+ * a native device's `native:<class>` source (3.12.0), else the preset's
+ * path on the Mac.
+ */
+export function loadKey(preset: Pick<DevicePresetConfig, 'presetPath' | 'native' | 'expectedClassName'>): string {
+  return preset.native ? `native:${preset.expectedClassName}` : resolvePresetPath(preset.presetPath ?? '');
+}
+
 export interface DevicePresetConfig {
-  /** The preset file. Empty when `source` and `rel` name it instead (the surface fills the path in). */
-  presetPath: string;
+  /** The preset file. Empty when `source` and `rel` name it instead (the surface fills the path in); absent on a native device. */
+  presetPath?: string;
+  /** A native Live device, inserted by name (protocol 3.12.0): the user's
+   *  own default for it applies and no preset file is involved.
+   *  `expectedClassName` names the device, `defaultName` what it is called
+   *  once in. Racks, plug-in presets and Max devices are files. */
+  native?: boolean;
   /** A load that names its Place (protocol 3.11.0): `place:<name>` and the path inside it. */
   source?: string;
   rel?: string;
@@ -152,14 +170,14 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   echo: {
     // Replaced the Delay tile 2026-09-14 (user's call).
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Echo.adv',
+    native: true,
     defaultName: 'Echo',
     expectedClassName: 'Echo',
     color: familyScheme('timeSpace')
   },
   filter: {
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Auto Filter.adv',
+    native: true,
     defaultName: 'Auto Filter',
     expectedClassName: 'AutoFilter2',
     curveType: 'lowpass',
@@ -167,7 +185,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   },
   compressor: {
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Compressor.adv',
+    native: true,
     defaultName: 'Compressor',
     expectedClassName: 'Compressor2',
     gridSlot: false,                    // Virtual device
@@ -176,7 +194,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   },
   gate: {
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Gate.adv',
+    native: true,
     defaultName: 'Gate',
     expectedClassName: 'Gate',
     gridSlot: false,                    // Virtual device
@@ -184,7 +202,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     color: familyScheme('dynamics')
   },
   ott: {
-    presetPath: '{effectPresetsBase}/Multiband Dynamics.adv',
+    native: true,
     defaultName: 'Multiband Dynamics',
     expectedClassName: 'MultibandDynamics',
     gridSlot: false,                    // Master-only: the fx1 column, not a layout entry
@@ -193,7 +211,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   },
   squash: {
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Glue Compressor.adv',
+    native: true,
     defaultName: 'Glue Compressor',
     expectedClassName: 'GlueCompressor',
     gridSlot: false,                    // Virtual device
@@ -202,7 +220,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   },
   saturator: {
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Saturator.adv',
+    native: true,
     defaultName: 'Saturator',
     expectedClassName: 'Saturator',
     centralViewGroup: 'pedal',          // Tapping its grid tile opens PedalCentralView
@@ -210,14 +228,14 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   },
   variation: {
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Variation.adv',
+    native: true,
     defaultName: 'Variation',
     expectedClassName: 'BeatRepeat',
     color: familyScheme('timeSpace')
   },
   eq: {
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Channel EQ.adv',
+    native: true,
     defaultName: 'Channel EQ',
     expectedClassName: 'ChannelEq',
     curveType: 'eq',
@@ -228,14 +246,14 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     // kick with its own is the ordinary case (user, 2026-09-11; the tile
     // shipped inert under a pad scope for a day).
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Drum Buss.adv',
+    native: true,
     defaultName: 'Drum Buss',
     expectedClassName: 'DrumBuss',
     color: familyScheme('distortion')
   },
   pedal: {
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Pedal.adv',
+    native: true,
     defaultName: 'Pedal',
     expectedClassName: 'Pedal',
     color: familyScheme('distortion')
@@ -250,14 +268,14 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   arpeggiator: {
     // MIDI effects go BEFORE the pad's instrument; the surface inserts them at the chain's head (2026-09-11).
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Arpeggiator.adv',
+    native: true,
     defaultName: 'Arpeggiator',
     expectedClassName: 'MidiArpeggiator',
     color: familyScheme('pitchSeq')
   },
   utility: {
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Utility.adv',
+    native: true,
     defaultName: 'Utility',
     expectedClassName: 'StereoGain',
     trackTint: true,                    // Wears the focused track's ink (ADR-400)
@@ -272,7 +290,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   },
   redux: {
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Redux.adv',
+    native: true,
     defaultName: 'Redux',
     expectedClassName: 'Redux2',
     gridSlot: false,                    // Virtual device
@@ -281,7 +299,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   },
   reverb: {
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Reverb.adv',
+    native: true,
     defaultName: 'Reverb',
     expectedClassName: 'Hybrid',
     color: familyScheme('timeSpace')
@@ -320,7 +338,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   },
   phaser: {
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Phaser.adv',
+    native: true,
     defaultName: 'Phaser',
     expectedClassName: 'PhaserNew',
     gridSlot: false,                    // Virtual device
@@ -370,7 +388,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   // Virtual Smudge Device
   chorus: {
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Chorus.adv',
+    native: true,
     defaultName: 'Chorus',
     expectedClassName: 'Chorus2',
     color: familyScheme('modulation')
@@ -379,7 +397,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   random: {
     // MIDI effect: inserted at the head of the pad's chain (2026-09-11).
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Random.adv',
+    native: true,
     defaultName: 'Random',
     expectedClassName: 'MidiRandom',
     color: familyScheme('pitchSeq')
@@ -387,7 +405,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   velocity: {
     // MIDI effect: inserted at the head of the pad's chain (2026-09-11).
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Velocity.adv',
+    native: true,
     defaultName: 'Velocity',
     expectedClassName: 'MidiVelocity',
     gridSlot: false,
@@ -397,7 +415,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   chord: {
     // MIDI effect: inserted at the head of the pad's chain (2026-09-11).
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Chord.adv',
+    native: true,
     defaultName: 'Chord',
     expectedClassName: 'MidiChord',
     gridSlot: false,
