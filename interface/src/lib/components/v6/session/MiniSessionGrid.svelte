@@ -55,6 +55,8 @@
     import { session } from '$lib/stores/session.svelte';
     import { v3Store } from '$lib/stores/v3/normalized.svelte';
     import { clipStateStore } from '$lib/stores/v6/clipStateStore.svelte';
+    import { clipEditorStore } from '$lib/stores/v6/clipEditorStore.svelte';
+    import { groupGestureStore } from '$lib/stores/v6/groupGestureStore.svelte';
     import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
     import { paintModeReactive } from '$lib/utils/paintMode.svelte';
     import { press } from '$lib/actions/press';
@@ -74,6 +76,20 @@
     // to draw then, and an empty grid of dashed cells would read as "the
     // set is empty" rather than "you are on master".
     const hasTrack = $derived(trackIndex >= 0);
+
+    // A body tap here aims the pedal exactly as the full grid's does, and
+    // on a slot holding a clip it also opens that clip's note view beside
+    // this column: the mini is already the "which clip" list, so picking
+    // one shows it. An empty slot has nothing to show and only selects.
+    function openSlot(slotIndex: number, slotPath: string) {
+        selectSlot(trackIndex, slotIndex);
+        // Mid group gesture the tap only toggles the track into the group.
+        if (groupGestureStore.active) return;
+        const state = v3Store.tracks.get(trackPath)?.slots.get(slotPath)?.state;
+        if (!state || state === 'empty') return;
+        focusSlot(trackIndex, slotPath);
+        clipEditorStore.set(true);
+    }
     const trackPath = $derived(`tracks/${trackIndex}`);
     const record = $derived(hasTrack ? v3Store.tracks.get(trackPath) : undefined);
     const trackName = $derived(record?.name ?? (hasTrack ? `Track ${trackIndex + 1}` : 'Master'));
@@ -167,7 +183,7 @@
                     {trackIndex}
                     {isGroup}
                     markSelectedTrack={false}
-                    onSelect={(slotIndex) => selectSlot(trackIndex, slotIndex)}
+                    onSelect={openSlot}
                     onAction={(slotIndex, slotPath, slotState) =>
                         actOnSlot(trackIndex, slotIndex, slotPath, slotState)}
                     onFocus={(slotPath) => focusSlot(trackIndex, slotPath)}

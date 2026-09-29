@@ -80,6 +80,12 @@ V3_CLIP_LOAD_FILE_ADDRESS = "/looping/v3/clip/load_file"
 V3_CLIP_SET_COLOR_ADDRESS = "/looping/v3/clip/set/color"
 
 V3_CLIP_CREATED_ADDRESS = "/looping/v3/clip/created"
+
+# Live's own clip panel. Whenever the app makes a clip the one in play —
+# picks it in a session grid, long-presses it, records it, duplicates or
+# drops a file into it — Live's Detail view switches to that clip too, so
+# the Mac screen shows what the iPad is working on.
+CLIP_DETAIL_VIEW = "Detail/Clip"
 V3_CLIP_REMOVED_ADDRESS = "/looping/v3/clip/removed"
 
 # Launch-queued state: the slot has been fired but the transport
@@ -245,6 +251,11 @@ class ClipsComponent:
             (``"clip-created"``, ``"clip-removed"``, …) and advancing
             the shared generation counter. Invoked from the per-slot
             ``has_clip`` listener (pr7b-5).
+        application: ``Live.Application``, for ``view.show_view``;
+            without it the clip panel is never switched.
+        schedule_next_tick: runs a callable outside the listener that
+            asked for it. A clip appearing reaches us inside Live's
+            ``has_clip`` notification, where LOM writes are refused.
     """
 
     def __init__(
@@ -252,10 +263,18 @@ class ClipsComponent:
         song,
         emit: Callable[[str, tuple], None],
         advance_generation: Callable[[str], None],
+        application=None,
+        schedule_next_tick: Optional[Callable[[Callable[[], None]], None]] = None,
     ) -> None:
         self._song = song
         self._emit = emit
         self._advance_generation = advance_generation
+        self._application = application
+        self._schedule_next_tick = schedule_next_tick
+        # The slot the app just asked for a clip in (a record, a
+        # duplicate, a file drop). When its clip appears, Live's clip
+        # panel shows it. One at a time: the latest request wins.
+        self._reveal_on_create: Optional[str] = None
         self._disconnected = False
         # Per-slot ``has_clip`` listener bookkeeping. Key is the slotPath
         # (stable for the listener's lifetime since structural change
@@ -325,6 +344,9 @@ class ClipsComponent:
         slot = self._resolve_slot_or_error(V3_CLIP_LAUNCH_ADDRESS, slot_path)
         if slot is None:
             return
+        if not self._slot_has_clip_safe(slot):
+            # An armed empty slot records: show the take once it exists.
+            self._reveal_on_create = slot_path
         try:
             slot.fire()
         except _LOM_ERRORS as e:
@@ -453,6 +475,67 @@ class ClipsComponent:
                     type(e).__name__, str(e)[:80],
                 ),
             )
+            return
+        self._show_clip_view()
+
+    def reveal_slot(self, slot) -> None:
+        """Show ``slot``'s clip in Live's clip panel. Empty slot: no-op.
+
+        Makes it ``song.view.detail_clip`` (skipped when it already is,
+        so the focused-clip channel doesn't re-emit for nothing) and
+        switches Live's Detail view to Clip. Best-effort throughout:
+        this is what the Mac screen shows, never what the iPad relies
+        on, so a refusal is logged, not put on the wire.
+        """
+        if self._disconnected:
+            return
+        if not self._slot_has_clip_safe(slot):
+            return
+        try:
+            clip = slot.clip
+        except _LOM_ERRORS:
+            return
+        if clip is None:
+            return
+        view = self._song.view
+        try:
+            if not path_resolver.same_lom_handle(view.detail_clip, clip):
+                view.detail_clip = clip
+        except _LOM_ERRORS as e:
+            logger.info(
+                "ClipsComponent: reveal detail_clip write raised: %s: %s",
+                type(e).__name__, e,
+            )
+            return
+        self._show_clip_view()
+
+    def _show_clip_view(self) -> None:
+        if self._application is None:
+            return
+        try:
+            self._application.view.show_view(CLIP_DETAIL_VIEW)
+        except _LOM_ERRORS as e:
+            logger.info(
+                "ClipsComponent: show_view(%s) raised: %s: %s",
+                CLIP_DETAIL_VIEW, type(e).__name__, e,
+            )
+
+    def _should_reveal_new_clip(self, slot, slot_path: str) -> bool:
+        """A clip just appeared here: is it the one in play?
+
+        Yes when the app asked for it (``_reveal_on_create``) or when
+        it landed in the highlighted slot — the pedal's target, which
+        is how a pedal record or a clip dropped on the selection
+        arrives.
+        """
+        if slot_path == self._reveal_on_create:
+            self._reveal_on_create = None
+            return True
+        try:
+            highlighted = self._song.view.highlighted_clip_slot
+        except _LOM_ERRORS:
+            return False
+        return path_resolver.same_lom_handle(highlighted, slot)
 
     def handle_delete(self, args, source_addr) -> None:
         """``[slotPath]`` — delete clip at slot.
@@ -589,6 +672,8 @@ class ClipsComponent:
             )
             return
         track = track_result.obj
+        # Before the call: Live may notify has_clip from inside it.
+        self._reveal_on_create = dest_slot_path
         try:
             track.duplicate_clip_slot(src_idx)
         except _LOM_ERRORS as e:
@@ -811,6 +896,7 @@ class ClipsComponent:
                 )
                 return
 
+        self._reveal_on_create = resolved_slot_path
         try:
             slot.create_audio_clip(file_path)
         except _LOM_ERRORS as e:
@@ -1146,6 +1232,12 @@ class ClipsComponent:
                 "ClipsComponent: emit %s %s failed: %s",
                 address, slot_path, e,
             )
+        if (
+            has_clip
+            and self._schedule_next_tick is not None
+            and self._should_reveal_new_clip(slot, slot_path)
+        ):
+            self._schedule_next_tick(lambda: self.reveal_slot(slot))
         # In-process fanout. After the wire emit so other components
         # observe the same ordering UI clients do.
         for cb in self._has_clip_callbacks:

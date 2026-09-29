@@ -222,8 +222,13 @@ class SelectedTrackComponent:
         schedule_state_full: Callable[[str], None],
         schedule_delayed: Callable[[int, Callable[[], None]], None],
         should_handle_move_volume_knob: Optional[Callable[[], bool]] = None,
+        on_slot_selected: Optional[Callable[[object], None]] = None,
     ):
         self._song = song
+        # Called with the slot a ``selected_clip`` highlighted, so the
+        # clip in it comes up in Live's clip panel
+        # (``ClipsComponent.reveal_slot``).
+        self._on_slot_selected = on_slot_selected
         self._emit = emit
         self._schedule_state_full = schedule_state_full
         self._schedule_delayed = schedule_delayed
@@ -649,6 +654,9 @@ class SelectedTrackComponent:
                     type(e).__name__, str(e)[:80],
                 ),
             )
+            return
+        if self._on_slot_selected is not None:
+            self._on_slot_selected(slots[scene_index])
 
     # --- Move encoder relative-volume handler ----------------------------
 

@@ -741,13 +741,14 @@
 	// ── MIDI note editing (M4) ───────────────────────────────────────
 	// Two modes (plan M5 will add marquee/quantize): 'select' (drag a note
 	// to move pitch+time, drag its right edge to resize, tap to select →
-	// Delete removes) and 'draw' (tap an empty lane to add a note).
+	// Delete removes) and 'draw' (tap an empty lane to add a note, tap a
+	// note to erase it).
 	// Optimistic-apply to focusedNotesStore, emit the write, reconcile on
 	// the surface's notes/changed re-pull (own-write echo suppressed —
 	// see the notes effect above + clipRichNotesService.markLocalWrite).
 	type EditMode = 'select' | 'draw';
 	// Draw by default (the user's call, 2026-09-25) — notes can still be
-	// grabbed, moved and resized in Draw; only an empty-lane tap differs.
+	// grabbed, moved and resized in Draw; only a tap that doesn't move differs.
 	let editMode = $state<EditMode>('draw');
 	// Multi-select (M5): the set of selected note ids. Reassigned (not
 	// mutated in place) so Svelte 5 tracks it. Tap = replace, shift/⌘-tap
@@ -758,7 +759,7 @@
 
 	// Drop stale selection when the focused clip changes. Without this,
 	// a selection from clip A persists into clip B — the toolbar shows a
-	// stale count and Delete/transpose/quantize fire clip A's note ids
+	// stale count and Delete/quantize fire clip A's note ids
 	// against clip B (Live's ids are session-monotonic, so a collision is
 	// possible). Mirrors the optimisticLoop clear on path change.
 	$effect(() => {
@@ -805,6 +806,8 @@
 		startClientY: number;
 		members: NoteDragMember[];
 		moved: boolean;
+		// Grabbed with shift / ⌘ / ctrl: a selection gesture, never an erase.
+		additive: boolean;
 	} | null>(null);
 
 	function gridBeatsForSnap(): number {
@@ -907,7 +910,8 @@
 			startClientX: event.clientX,
 			startClientY: event.clientY,
 			members,
-			moved: false
+			moved: false,
+			additive
 		};
 
 		beginGesture(onNoteDragMove, onNoteDragEnd);
@@ -965,8 +969,13 @@
 		noteDrag = null;
 		heldFoldLanes = null;
 		if (drag === null || clipPath === null) return;
-		// A drag that never moved = a tap → selection only, no write.
-		if (!drag.moved) return;
+		// A drag that never moved = a tap. In Draw it erases the note under
+		// the finger, as Live's draw mode does (the user's call,
+		// 2026-09-29); in Select it only selected, so there is no write.
+		if (!drag.moved) {
+			if (editMode === 'draw' && !drag.additive) deleteNote(drag.anchorId);
+			return;
+		}
 		// Batch-modify every moved member in one wire message (coalesced —
 		// no per-pointer-move OSC flood). Real ids only.
 		const specs = [];
@@ -1020,6 +1029,15 @@
 		focusedNotesStore.optimisticRemove(ids); // optimistic, batch
 		sendRemoveNotes(clipPath, ids);
 		sendSelectNotes(clipPath, []); // nothing selected after delete
+	}
+
+	function deleteNote(noteId: number) {
+		if (clipPath === null) return;
+		const next = new Set(selectedIds);
+		next.delete(noteId);
+		applySelection(next);
+		focusedNotesStore.optimisticRemove([noteId]);
+		sendRemoveNotes(clipPath, [noteId]);
 	}
 
 	function handleEditorKey(event: KeyboardEvent) {
@@ -1203,32 +1221,6 @@
 		if (specs.length > 0) sendModifyNotes(clipPath, specs);
 	}
 
-	// --- group transpose (M5 polish) ─────────────────────────────────
-	// Shift every selected note's pitch by ``semitones`` (±1 = semitone,
-	// ±12 = octave), clamped to [0,127], as one batch modify. Notes that
-	// would clamp still move the rest. Distinct from /clip/transpose,
-	// which shifts the WHOLE clip; this is selection-scoped.
-	function transposeSelected(semitones: number) {
-		if (clipPath === null || selectedIds.size === 0) return;
-		const specs = [];
-		for (const id of selectedIds) {
-			const n = focusedNotesStore.get(id);
-			if (!n || n.noteId < 0) continue;
-			const newPitch = Math.max(0, Math.min(127, n.pitch + semitones));
-			if (newPitch === n.pitch) continue; // already at the rail
-			focusedNotesStore.optimisticModify(id, { pitch: newPitch }); // optimistic
-			specs.push({
-				noteId: n.noteId,
-				pitch: newPitch,
-				startBeats: n.startBeats,
-				durationBeats: n.durationBeats,
-				velocity: n.velocity,
-				mute: n.mute
-			});
-		}
-		if (specs.length > 0) sendModifyNotes(clipPath, specs);
-	}
-
 	// --- duplicate (M5) ──────────────────────────────────────────────
 	// Duplicate the selected notes one grid-step (or their own span) later
 	// via the M5 duplicate endpoint → clip.duplicate_notes_by_id. The
@@ -1237,8 +1229,17 @@
 		if (clipPath === null || selectedIds.size === 0) return;
 		const ids = [...selectedIds].filter((id) => id >= 0);
 		if (ids.length === 0) return;
-		sendDuplicateNotes(clipPath, ids)
-			.then((newIds) => {
+		const path = clipPath;
+		sendDuplicateNotes(path, ids)
+			.then(async (newIds) => {
+				// Unlike add/move/delete there is no optimistic copy to draw —
+				// only Live knows where the copies landed — and the write
+				// marks itself local, so the notes/changed echo that would
+				// re-pull is suppressed. Pull the notes now, or the copies
+				// show in the strip thumbnails but never here.
+				const fresh = await requestRichNotes(path);
+				if (focusedNotesStore.clipPath !== path) return;
+				focusedNotesStore.reconcile(path, fresh);
 				if (newIds.length > 0) applySelection(new Set(newIds));
 			})
 			.catch((err: Error) => {
@@ -1527,7 +1528,7 @@
 			{/if}
 		</div>
 
-		<!-- MIDI edit toolbar: mode · grid · transpose · ops. Own pointer
+		<!-- MIDI edit toolbar: mode · grid · ops. Own pointer
 		     surface, outside the pan/zoom canvas. -->
 		{#if isMidi}
 			<div class="edit-toolbar" style:height="{TOOLBAR_H}px">
@@ -1583,43 +1584,6 @@
 
 				<span class="toolbar-sep"></span>
 
-				<!-- Group transpose (selection-scoped): octave + semitone. -->
-				<button
-					class="edit-chip"
-					disabled={selectedCount === 0}
-					onclick={() => transposeSelected(12)}
-					title="Octave up (selected)"
-				>
-					+oct
-				</button>
-				<button
-					class="edit-chip"
-					disabled={selectedCount === 0}
-					onclick={() => transposeSelected(-12)}
-					title="Octave down (selected)"
-				>
-					−oct
-				</button>
-				<button
-					class="edit-chip"
-					disabled={selectedCount === 0}
-					onclick={() => transposeSelected(1)}
-					title="Semitone up (selected)"
-					data-narrow
-				>
-					+1
-				</button>
-				<button
-					class="edit-chip"
-					disabled={selectedCount === 0}
-					onclick={() => transposeSelected(-1)}
-					title="Semitone down (selected)"
-					data-narrow
-				>
-					−1
-				</button>
-
-				<span class="toolbar-sep"></span>
 
 				<button
 					class="edit-chip"

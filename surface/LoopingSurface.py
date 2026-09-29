@@ -1627,6 +1627,8 @@ class LoopingSurface(ControlSurface):
             should_handle_move_volume_knob=(
                 self._session_settings_component.should_handle_move_volume_knob
             ),
+            # Built later; looked up when a clip is selected.
+            on_slot_selected=lambda slot: self._clips_component.reveal_slot(slot),
         )
         # ROW 2-F4 (2026-04-21): /looping/v3/track/select [trackPath]
         # is the sibling write for the selected_track observer.
@@ -1758,6 +1760,8 @@ class LoopingSurface(ControlSurface):
             song=self.song,
             emit=self._transport.send,
             advance_generation=self._generation_component.advance,
+            application=self.application,
+            schedule_next_tick=self._schedule_next_tick,
         )
         # Cross-component fanout (ADR-363): PlayheadComponent owns the
         # track strip's render context, but ClipsComponent owns the

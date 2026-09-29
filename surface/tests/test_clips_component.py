@@ -1905,3 +1905,142 @@ def test_set_color_bad_arg_count(component, emits):
     _orig, code, _path, detail = payload
     assert code == V3_ERROR_WRITE_REJECTED
     assert detail.startswith("arg-count:")
+
+
+# --- Live's clip panel follows the clip in play ---------------------------
+
+
+class StubAppView:
+    def __init__(self):
+        self.shown: List[str] = []
+
+    def show_view(self, name):
+        self.shown.append(name)
+
+
+class StubApp:
+    def __init__(self):
+        self.view = StubAppView()
+
+
+@pytest.fixture
+def ticks() -> list:
+    return []
+
+
+@pytest.fixture
+def app() -> StubApp:
+    return StubApp()
+
+
+@pytest.fixture
+def revealing(emits, app, ticks):
+    """A component wired to Live's clip panel, with a next-tick queue
+    the test runs by hand (a has_clip notification must not write)."""
+    return ClipsComponent(
+        song=StubSong(), emit=lambda a, b: emits.append((a, b)),
+        advance_generation=lambda r: None,
+        application=app, schedule_next_tick=ticks.append,
+    )
+
+
+def _run_ticks(ticks):
+    while ticks:
+        ticks.pop(0)()
+
+
+def _record_into(slot):
+    slot.has_clip = True
+    slot.clip = StubClip()
+    slot.fire_has_clip_listeners()
+
+
+def test_reveal_slot_focuses_the_clip_and_shows_clip_view(revealing, app):
+    slot = revealing._song.tracks[0].clip_slots[1]
+    slot.has_clip = True
+    slot.clip = StubClip()
+
+    revealing.reveal_slot(slot)
+
+    assert revealing._song.view.detail_clip is slot.clip
+    assert app.view.shown == ["Detail/Clip"]
+
+
+def test_reveal_slot_on_empty_slot_changes_nothing(revealing, app):
+    revealing.reveal_slot(revealing._song.tracks[0].clip_slots[0])
+
+    assert revealing._song.view.detail_clip is None
+    assert app.view.shown == []
+
+
+def test_focus_shows_clip_view(revealing, app):
+    slot = revealing._song.tracks[0].clip_slots[1]
+    slot.has_clip = True
+    slot.clip = StubClip()
+
+    revealing.handle_focus(args=("tracks/0/slots/1",), source_addr=None)
+
+    assert app.view.shown == ["Detail/Clip"]
+
+
+def test_recording_into_a_launched_empty_slot_shows_the_take(revealing, app, ticks):
+    slot = revealing._song.tracks[1].clip_slots[2]
+
+    revealing.handle_launch(args=("tracks/1/slots/2",), source_addr=None)
+    _record_into(slot)
+    # Not from inside Live's notification.
+    assert app.view.shown == []
+    _run_ticks(ticks)
+
+    assert revealing._song.view.detail_clip is slot.clip
+    assert app.view.shown == ["Detail/Clip"]
+
+
+def test_clip_appearing_in_the_highlighted_slot_is_shown(revealing, app, ticks):
+    """The pedal records into the highlighted slot without a launch wire."""
+    slot = revealing._song.tracks[0].clip_slots[3]
+    revealing._song.view.highlighted_clip_slot = slot
+
+    _record_into(slot)
+    _run_ticks(ticks)
+
+    assert revealing._song.view.detail_clip is slot.clip
+    assert app.view.shown == ["Detail/Clip"]
+
+
+def test_clip_appearing_elsewhere_is_left_alone(revealing, app, ticks):
+    revealing._song.view.highlighted_clip_slot = revealing._song.tracks[0].clip_slots[0]
+
+    _record_into(revealing._song.tracks[1].clip_slots[1])
+    _run_ticks(ticks)
+
+    assert revealing._song.view.detail_clip is None
+    assert app.view.shown == []
+
+
+def test_duplicate_shows_the_copy(revealing, app, ticks):
+    track = revealing._song.tracks[0]
+    src = track.clip_slots[0]
+    src.has_clip = True
+    src.clip = StubClip()
+
+    revealing.handle_duplicate(
+        args=("tracks/0/slots/0", "tracks/0/slots/1"), source_addr=None,
+    )
+    track.clip_slots[1].fire_has_clip_listeners()
+    _run_ticks(ticks)
+
+    assert revealing._song.view.detail_clip is track.clip_slots[1].clip
+    assert app.view.shown == ["Detail/Clip"]
+
+
+def test_launching_a_clip_that_exists_asks_for_no_reveal(revealing, app, ticks):
+    """Only an empty slot's launch waits for a clip; the grid's select
+    already showed a clip that was there."""
+    slot = revealing._song.tracks[0].clip_slots[1]
+    slot.has_clip = True
+    slot.clip = StubClip()
+
+    revealing.handle_launch(args=("tracks/0/slots/1",), source_addr=None)
+
+    assert revealing._reveal_on_create is None
