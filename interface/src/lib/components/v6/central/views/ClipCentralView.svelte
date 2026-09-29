@@ -12,6 +12,7 @@ import { logger } from '$lib/utils/logger';
 	} from '$lib/api/handlers/v3Clip';
 	import { sampleClipToSimpler, duplicateLoop, duplicateClipToNextSlot, transposeClipUp, transposeClipDown, transposeDeviceUp, transposeDeviceDown, reverseFocusedAudioClip, setAudioClipPitch, setAudioClipGain, roundGainDisplay } from '$lib/services/clipOperations';
 	import { duplicateTrackAndReset } from '$lib/services/trackOperations';
+	import { selectSlot, focusSlot } from '$lib/components/v6/tracks/composables/slotActions';
 	import { groupGestureStore } from '$lib/stores/v6/groupGestureStore.svelte';
 	import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
 	import { shouldRestoreOnRelease } from '$lib/components/v6/tracks/TrackStrip/utils/momentaryPress';
@@ -236,9 +237,15 @@ import { logger } from '$lib/utils/logger';
 		return slot?.state === 'empty';
 	});
 
+	// The copy becomes the selection: the pedal aims at it and the clip view
+	// shows it. Both writes queue behind the duplicate on the same wire, so
+	// Live has made the clip by the time they land.
 	function handleDuplicateClip() {
-		if (!hasClip || !nextSlotEmpty) return;
+		if (!clipIndices || !nextSlotEmpty) return;
+		const { track, scene } = clipIndices;
 		duplicateClipToNextSlot();
+		selectSlot(track, scene + 1);
+		focusSlot(track, `tracks/${track}/slots/${scene + 1}`);
 	}
 
 	let deleteClipHolding = $state(false);
