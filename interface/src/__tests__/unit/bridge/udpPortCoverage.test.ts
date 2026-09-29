@@ -168,10 +168,22 @@ function configured(localPort?: number): Record<string, unknown> {
 	);
 }
 
-/** A non-loopback IPv4 address of this machine, when it has one (a sandbox may not). */
-const LAN_ADDRESS = Object.values(networkInterfaces())
+/**
+ * A non-loopback IPv4 address of this machine, when it has one (a sandbox
+ * may not). A VPN's point-to-point address is passed over while a real one
+ * exists: Tailscale's (100.64.0.0/10, on a utun interface) came first on
+ * one Mac, and a datagram to it did not reliably come back, so the positive
+ * control failed under the full gate's load and passed alone.
+ */
+const isCgnat = (address: string) => {
+	const [a, b] = address.split('.').map(Number);
+	return a === 100 && b >= 64 && b <= 127;
+};
+const LAN_CANDIDATES = Object.values(networkInterfaces())
 	.flat()
-	.find((info) => info?.family === 'IPv4' && !info.internal)?.address;
+	.filter((info) => info?.family === 'IPv4' && !info.internal)
+	.map((info) => info!.address);
+const LAN_ADDRESS = LAN_CANDIDATES.find((address) => !isCgnat(address)) ?? LAN_CANDIDATES[0];
 
 /** `/probe` with no arguments, as OSC: the address and the `,` type tag, each NUL-padded to 4. */
 const PROBE = Buffer.from('/probe\0\0,\0\0\0', 'binary');
