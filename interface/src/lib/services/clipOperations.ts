@@ -27,6 +27,7 @@
 
 import {
 	send,
+	sendClipDuplicate,
 	sendClipDuplicateRegion,
 } from '$lib/api/simpleClient';
 import {
@@ -149,6 +150,22 @@ export async function duplicateLoop(): Promise<void> {
 		address: '/looping/v3/clip/duplicate_region',
 	});
 	sendClipDuplicateRegion(slotPath);
+}
+
+/**
+ * Copy the focused clip into the next slot down on the same track
+ * (``/looping/v3/clip/duplicate`` → ``Track.duplicate_clip_slot``).
+ * The surface refuses an occupied or missing next slot, so callers
+ * offer this only when that slot is empty.
+ */
+export function duplicateClipToNextSlot(): void {
+	const ctx = getClipContext();
+	if (!ctx.detailClipIndices) {
+		logger.warn('No detail clip selected for duplication', { component: 'clipOperations' });
+		return;
+	}
+	const { track, scene } = ctx.detailClipIndices;
+	sendClipDuplicate(`tracks/${track}/slots/${scene}`, `tracks/${track}/slots/${scene + 1}`);
 }
 
 // Note: quantizeNotes() removed (Phase 8 PR-8b) — never had a backend handler.

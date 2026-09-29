@@ -10,7 +10,7 @@ import { logger } from '$lib/utils/logger';
 		V3_CLIP_SET_LOOP_END_ADDRESS,
 		V3_CLIP_SET_WARP_MODE_ADDRESS
 	} from '$lib/api/handlers/v3Clip';
-	import { sampleClipToSimpler, duplicateLoop, transposeClipUp, transposeClipDown, transposeDeviceUp, transposeDeviceDown, reverseFocusedAudioClip, setAudioClipPitch, setAudioClipGain, roundGainDisplay } from '$lib/services/clipOperations';
+	import { sampleClipToSimpler, duplicateLoop, duplicateClipToNextSlot, transposeClipUp, transposeClipDown, transposeDeviceUp, transposeDeviceDown, reverseFocusedAudioClip, setAudioClipPitch, setAudioClipGain, roundGainDisplay } from '$lib/services/clipOperations';
 	import { duplicateTrackAndReset } from '$lib/services/trackOperations';
 	import { groupGestureStore } from '$lib/stores/v6/groupGestureStore.svelte';
 	import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
@@ -225,6 +225,20 @@ import { logger } from '$lib/utils/logger';
 		} finally {
 			isDuplicatingLoop = false;
 		}
+	}
+
+	// Dup Clip copies into the next slot down, which Live only does when
+	// that slot exists and is empty; otherwise the button greys out.
+	let nextSlotEmpty = $derived.by(() => {
+		if (!clipIndices) return false;
+		const { track, scene } = clipIndices;
+		const slot = v3Store.tracks.get(`tracks/${track}`)?.slots.get(`tracks/${track}/slots/${scene + 1}`);
+		return slot?.state === 'empty';
+	});
+
+	function handleDuplicateClip() {
+		if (!hasClip || !nextSlotEmpty) return;
+		duplicateClipToNextSlot();
 	}
 
 	let deleteClipHolding = $state(false);
@@ -631,7 +645,7 @@ import { logger } from '$lib/utils/logger';
 		<div class="col col-6">
 			<!-- Without the AX helper there is no Reverse, and to Simpler
 			     takes the audio column's whole height. -->
-			<div class="stacked-btns" class:single={trackType !== 'audio' || !axOn}>
+			<div class="stacked-btns" class:single={trackType !== 'midi' && (trackType !== 'audio' || !axOn)}>
 				{#if trackType !== 'audio' || axOn}
 				<div class="btn-cell">
 					{#if trackType === 'midi'}
@@ -651,6 +665,16 @@ import { logger } from '$lib/utils/logger';
 							>{#if isReversing}...{:else}<span class="flex items-center justify-center gap-1 btn-caps"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 19l-7-7 7-7M19 12H4" /></svg>Rev</span>{/if}</button>
 					{/if}
 				</div>
+				{/if}
+				{#if trackType === 'midi'}
+					<div class="btn-cell">
+						<button
+							onclick={handleDuplicateClip}
+							disabled={!hasClip || !nextSlotEmpty}
+							class="btn btn-well fam-monitor"
+							aria-label="Duplicate clip to the next slot"
+						>Dup Clip</button>
+					</div>
 				{/if}
 				{#if trackType === 'audio'}
 					<div class="btn-cell">
