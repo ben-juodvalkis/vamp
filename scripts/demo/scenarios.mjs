@@ -468,6 +468,9 @@ export const SCENARIOS = {
 				caption: 'Velocity lets the groove shape the accents too.',
 				drag: { target: T.slider('Velocity'), path: [[0.5, 0.85], [0.5, 0.4]], beats: 3 }
 			},
+			// Choosing a groove file loads it through Live's browser, which Live
+			// then shows; put Live's window back to tracks and devices.
+			{ at: '38.3', do: (live) => live.invoke('app', 'view.hide_view', ['Browser']) },
 
 			{ at: '39.1', chapter: 'Add a bass', box: T.rail('Bass'), tap: T.rail('Bass'), caption: 'Now a bass: Bass, Drift, Deep Bass.', note: 'The same three taps, and it lands on a track of its own.' },
 			{ at: '39.3', box: T.folder('Drift'), tap: T.folder('Drift') },
