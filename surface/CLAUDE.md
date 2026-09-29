@@ -1759,10 +1759,16 @@ tick later), False after a redo that empties the stack and after a fresh
 write — so a redo waiting keeps Follow on, none is a hand (unless the key is
 Follow's own, the last redo). Our own writes are read back: `applied` is 1
 only when Live holds the key after.
+Selecting a clip is neither: Live 12 applies the selected clip's own scale
+(set from the song's when it was recorded) to the song. A key change that
+arrives with a `detail_clip` / `highlighted_clip_slot` change and equals the
+selected clip's scale keeps Follow on; when the replaced key was Follow's,
+Follow writes it back onto the song and stamps the clip, one undo step.
 
 Measured on Live 12.4.15b3 before building: `Song.root_note` /
 `scale_name` / `scale_mode` are settable from Python (1–2 ms a write), the
-same four properties exist per clip, and **an unknown scale name does not
+same four properties exist per clip (selecting a clip applies its scale
+to the song, measured on 12.4.15b2), and **an unknown scale name does not
 raise — Live silently switches to Major**, which is why `SessionComponent`
 now validates names against `LIVE_SCALE_NAMES`. The 35 interval tables in
 `key_detect.py` were read back by setting each name and restoring.
