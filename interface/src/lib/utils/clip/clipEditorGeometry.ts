@@ -229,6 +229,28 @@ export function clientDeltaToPitchDelta(
 	return Math.round((clientDeltaPx / contentHeightPx) * laneCount(win));
 }
 
+/** Width of a note's resize handle, in px back from its right edge. */
+export const NOTE_RESIZE_EDGE_PX = 14;
+
+/**
+ * Does a grab at `localX` on a note drawn from `noteX` to `noteEndX`
+ * resize it rather than move it? Only on the handle at its right edge,
+ * and only on a note wide enough to leave a body three handles wide: on
+ * the iPad an eighth note is ~55px and a sixteenth ~30px, and a fixed
+ * handle took a quarter to half of them, so a move grabbed there changed
+ * the note's length instead. A narrower note only moves; zoom in to
+ * stretch it.
+ */
+export function grabResizesNote(
+	localX: number,
+	noteX: number,
+	noteEndX: number,
+	edgePx = NOTE_RESIZE_EDGE_PX
+): boolean {
+	if (noteEndX - noteX < edgePx * 3) return false;
+	return noteEndX - localX <= edgePx;
+}
+
 /** Pan a beat window by a beat delta, clamped to `[0, totalBeats]`. */
 export function panBeatWindow(win: BeatWindow, deltaBeats: number, totalBeats: number): BeatWindow {
 	return clampBeatWindow(

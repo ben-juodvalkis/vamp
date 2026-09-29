@@ -14,6 +14,8 @@ import {
 	clientDeltaToPitchDelta,
 	foldLanes,
 	shiftPitch,
+	grabResizesNote,
+	NOTE_RESIZE_EDGE_PX,
 	defaultBeatWindow,
 	defaultPitchWindow,
 	MIDI_PITCH_MIN,
@@ -269,5 +271,22 @@ describe('clipEditorGeometry — fold', () => {
 		expect(pitchToY(65, empty, 120)).toBe(pitchToY(65, PWIN, 120));
 		expect(shiftPitch(60, 3, empty)).toBe(63);
 		expect(shiftPitch(126, 5, PWIN)).toBe(127); // unfolded clamps to MIDI
+	});
+});
+
+describe('grabResizesNote — a move never becomes a length change', () => {
+	it('resizes a wide note only on its right-edge handle', () => {
+		// 100px note: the right 14px resize, the rest moves.
+		expect(grabResizesNote(95, 0, 100)).toBe(true);
+		expect(grabResizesNote(100 - NOTE_RESIZE_EDGE_PX, 0, 100)).toBe(true);
+		expect(grabResizesNote(80, 0, 100)).toBe(false);
+		expect(grabResizesNote(10, 0, 100)).toBe(false);
+	});
+
+	it('only moves a note narrower than three handles, wherever it is grabbed', () => {
+		// An eighth (~55px) keeps a handle; a sixteenth (~30px) does not.
+		expect(grabResizesNote(52, 0, 55)).toBe(true);
+		expect(grabResizesNote(28, 0, 30)).toBe(false);
+		expect(grabResizesNote(41, 0, 41)).toBe(false);
 	});
 });

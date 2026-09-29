@@ -66,6 +66,7 @@
 		clientDeltaToPitchDelta,
 		foldLanes,
 		shiftPitch,
+		grabResizesNote,
 		defaultBeatWindow,
 		defaultPitchWindow,
 		type BeatWindow,
@@ -785,9 +786,6 @@
 		const i = GRID_DENOMS.indexOf(gridDenom as (typeof GRID_DENOMS)[number]);
 		gridDenom = GRID_DENOMS[(i + 1) % GRID_DENOMS.length];
 	}
-	// Edge-resize hit zone in px from the note's right edge.
-	const RESIZE_EDGE_PX = 14;
-
 	// Drag state for a note move/resize gesture. ``members`` snapshots the
 	// pre-drag pitch/start/duration of every selected note so a group move
 	// applies the same delta to all of them; ``anchorId`` is the grabbed
@@ -885,10 +883,7 @@
 		const noteX = beatToX(note.startBeats, beatWindow, contentW);
 		const noteEndX = beatToX(note.startBeats + note.durationBeats, beatWindow, contentW);
 		const localX = noteEventLocalX(event);
-		const kind: NoteDragKind =
-			noteEndX - localX <= RESIZE_EDGE_PX && noteEndX - noteX > RESIZE_EDGE_PX
-				? 'resize'
-				: 'move';
+		const kind: NoteDragKind = grabResizesNote(localX, noteX, noteEndX) ? 'resize' : 'move';
 
 		// Snapshot every selected note's pre-drag geometry for a group move.
 		const members: NoteDragMember[] = [];
@@ -928,9 +923,13 @@
 		if (event.cancelable) event.preventDefault();
 		const deltaBeats = clientDeltaToBeatDelta(event.clientX - noteDrag.startClientX, contentW, beatWindow);
 		const grid = gridBeatsForSnap();
-		if (Math.abs(event.clientX - noteDrag.startClientX) > 2 ||
-			Math.abs(event.clientY - noteDrag.startClientY) > 2) {
+		const dx = event.clientX - noteDrag.startClientX;
+		const dy = event.clientY - noteDrag.startClientY;
+		if (!noteDrag.moved && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) {
 			noteDrag.moved = true;
+			// A drag off the resize handle that sets off up or down is a
+			// pitch move: a resize would ignore the pitch and snap the length.
+			if (noteDrag.kind === 'resize' && Math.abs(dy) > Math.abs(dx)) noteDrag.kind = 'move';
 		}
 
 		if (noteDrag.kind === 'resize') {
