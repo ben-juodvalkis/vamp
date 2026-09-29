@@ -64,6 +64,8 @@
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 	import { press, type PressOptions, type PressReleaseInfo } from '$lib/actions';
+	import { fitText } from '$lib/utils/fitText';
+	import { clampLines } from '$lib/utils/clampLines';
 	import RecordButton from '$lib/components/v6/controls/RecordButton.svelte';
 
 	import { TrackPrepManager, loadPresetWithVariant, replaceAudioClip } from './utils/presetLoader';
@@ -1586,7 +1588,7 @@
 		{#if audioWaveformsEnabled && isAudioThumbnailType(p.type)}
 			<BrowserPresetWaveform preset={p} />
 		{/if}
-		<span class="tile-name">{p.name}</span>
+		<span class="tile-name" use:fitText={p.name} use:clampLines>{p.name}</span>
 		{#if subLabel}
 			<span class="tile-plugin">{subLabel}</span>
 		{/if}
@@ -1630,6 +1632,12 @@
      bar climbs and through the reveal. The count means nothing beside a preset's
      name, so it steps aside while one shows. -->
 {#snippet folderTile(name: string)}
+	{@const label =
+		pickedFolder === name && pickedName
+			? pickedName
+			: chargingFolder === name && chargingName
+				? chargingName
+				: name}
 	<button
 		class="card folder-tile"
 		class:charging={chargingFolder === name}
@@ -1653,13 +1661,7 @@
 		<!-- Three labels, most-committed first: the post-fire
 		     reveal, then the speculative pick showing while the
 		     bar climbs, then the folder's own name. -->
-		<span class="tile-name"
-			>{pickedFolder === name && pickedName
-				? pickedName
-				: chargingFolder === name && chargingName
-					? chargingName
-					: name}</span
-		>
+		<span class="tile-name" use:fitText={label} use:clampLines>{label}</span>
 	</button>
 {/snippet}
 
@@ -2754,8 +2756,26 @@
 		/* Scales with the tile: cqw = 1% of the tile's width. The floor is sized to
 		   the densest preset tile (PRESET_COMFORT) so names shrink with the grid
 		   instead of overflowing it; the cap keeps big folder tiles from getting
-		   oversized. */
-		font-size: clamp(max(var(--type-min), calc(14.72 * var(--fluid-px))), 15cqw, 2.6rem);
+		   oversized. A word wider than the tile ("Platyrhynchos)") caps it lower
+		   again, to what that word can take (`use:fitText` measures it as
+		   --fit-em; 100cqw is the tile's content box), down to --type-min. */
+		font-size: max(
+			var(--type-min),
+			min(
+				clamp(max(var(--type-min), calc(14.72 * var(--fluid-px))), 15cqw, 2.6rem),
+				calc(100cqw / var(--fit-em, 0.001))
+			)
+		);
+		/* As many lines as the tile has room for (`use:clampLines`), the last
+		   ending in an ellipsis. Centered and unclamped, a long name spilled out
+		   of both edges and lost its first line — the words that tell two
+		   neighbors apart. */
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: var(--clamp-lines, none);
+		line-clamp: var(--clamp-lines, none);
+		overflow: hidden;
+		overflow-wrap: anywhere;
 	}
 	.folder-tile .tile-name { font-weight: 800; letter-spacing: -0.02em; }
 
