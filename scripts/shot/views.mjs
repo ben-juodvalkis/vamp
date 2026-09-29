@@ -158,8 +158,22 @@ export const TOURS = {
 				steps: [selectTrack(3)]
 			},
 			{ name: 'clip-session', view: 'session', description: 'Clip view with CLIPS on — no mini column' },
-			// The pencil's note editor: Fold on (its default) and off.
-			{ name: 'clip-notes', description: 'Note editor (the pencil), Fold on', steps: [{ click: '.editor-toggle' }] },
+			// The pencil's note editor: Fold on (its default) and off. With the
+			// clip grid off it keeps the mini session column on its left.
+			{ name: 'clip-notes', description: 'Note editor (the pencil), Fold on, the mini session column beside it', steps: [{ click: '.editor-toggle' }] },
+			{
+				name: 'clip-notes-session',
+				view: 'session',
+				description: 'Note editor with CLIPS on — no mini column, the editor full width',
+				steps: [{ click: '.editor-toggle' }]
+			},
+			// A body tap on a mini slot holding a clip focuses it and opens the
+			// editor; the second slot is a stopped clip in the default scene.
+			{
+				name: 'clip-mini-tap',
+				description: 'A tap on a mini slot holding a clip opens the note editor on it',
+				steps: [{ click: '.col-mini [data-slot-index="1"]' }]
+			},
 			{
 				name: 'clip-notes-unfolded',
 				description: 'Note editor, Fold off',

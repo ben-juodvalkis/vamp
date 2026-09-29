@@ -447,7 +447,11 @@ import { logger } from '$lib/utils/logger';
 			<div class="editor-cell"><ClipEditorView color={trackColor} /></div>
 		</div>
 	{:else if editorActive}
-		<ClipEditorView color={trackColor} />
+		<!-- Same inset as every other central view, the mini branch above
+		     included; without it the editor ran to the panel's edges. -->
+		<div class="editor-full h-full w-full p-(--central-inset)">
+			<ClipEditorView color={trackColor} />
+		</div>
 	{:else}
 
 <!--
@@ -887,6 +891,7 @@ import { logger } from '$lib/utils/logger';
 	.outer.has-mini .col-4 { grid-column: 8; }
 	.outer.has-mini .col-2 { grid-column: 9; }
 	.outer.has-mini .col-1 { grid-column: 10; }
+	.editor-full { position: relative; min-width: 0; min-height: 0; }
 	.editor-cell { grid-column: 3 / -1; grid-row: 1; min-width: 0; min-height: 0; position: relative; }
 
 	/* Full-height stack of 3 switch buttons (warp modes) */
