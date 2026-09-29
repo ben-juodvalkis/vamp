@@ -176,9 +176,9 @@ export const SCENARIOS = {
 		tempo: 96,
 		// Clip grid hidden, FX grid shown: the layout the iPad ships with.
 		prefs: { [PREFS.session]: '0', [PREFS.fx]: '1' },
-		// Live's window, in points: the transport bar, the track columns and
-		// the device chain, without the empty session area to their right.
-		liveCrop: { x: 0, y: 0, w: 1090, h: 826 },
+		// Live's window sized to the frame's pane (about 1.3 : 1 without its
+		// status bar), so all of it shows: no crop but the status bar.
+		liveWindow: { w: 1090, h: 856 },
 		// Live's one bare MIDI track, the way a new set opens.
 		set: { empty: true, key: { root: 0, scale: 'Major' } },
 		intro: { title: 'Vamp', subtitle: 'Live looping for Ableton Live, played from an iPad.' },
@@ -273,7 +273,7 @@ export const SCENARIOS = {
 		tempo: 96,
 		// The session clip grid AND the FX grid: all four sections.
 		prefs: { [PREFS.session]: '1', [PREFS.fx]: '1' },
-		liveCrop: { x: 0, y: 0, w: 1090, h: 826 },
+		liveWindow: { w: 1090, h: 856 },
 		// Live 12 puts its default "Swing 16ths 66" groove on every new MIDI
 		// clip; each run starts it at Live's own settings.
 		set: {
@@ -445,17 +445,17 @@ export const SCENARIOS = {
 				at: '31.1',
 				box: T.area('[data-debug="groove-tiles"]'),
 				boxLabel: 'Grooves',
-				caption: "Each tile is one of Live's grooves, drawn as its timing.",
-				note: 'Choose which ones appear in Settings → Grooves.'
+				caption: 'Each tile is a groove, drawn as its timing.',
+				note: 'Live’s own or your own: pick which appear in Settings → Grooves.'
 			},
 			{
 				at: '32.2',
-				box: T.groove('Swing 16ths 73'),
-				boxLabel: 'Swing 16ths 73',
-				tap: T.groove('Swing 16ths 73'),
-				caption: 'Swing 16ths 73: every other sixteenth lands late.',
+				box: T.groove('User: Swing 16ths'),
+				boxLabel: 'Swing 16ths',
+				tap: T.groove('User: Swing 16ths'),
+				caption: 'Swing 16ths: every other sixteenth lands late.',
 				note: 'Listen to the hi-hats.',
-				until: grooveIs(0, 0, 'Swing 16ths 73')
+				until: grooveIs(0, 0, 'User: Swing 16ths')
 			},
 			{
 				at: '33.3',
@@ -467,12 +467,12 @@ export const SCENARIOS = {
 			},
 			{
 				at: '35.4',
-				box: T.groove('Hip Hop Late 8ths'),
-				boxLabel: 'Hip Hop Late 8ths',
-				tap: T.groove('Hip Hop Late 8ths'),
-				caption: 'Or another feel: Hip Hop Late 8ths.',
+				box: T.groove('User: Swing 8ths'),
+				boxLabel: 'Swing 8ths',
+				tap: T.groove('User: Swing 8ths'),
+				caption: 'Or swing the eighths instead.',
 				note: 'The clip keeps its Quantize and Amount when it changes groove.',
-				until: grooveIs(0, 0, 'Hip Hop Late 8ths')
+				until: grooveIs(0, 0, 'User: Swing 8ths')
 			},
 			{
 				at: '37.2',
@@ -730,15 +730,38 @@ export const SCENARIOS = {
 				live: null
 			},
 			{ at: '92.3', box: T.area('.grid-pitch-steps'), boxLabel: 'Pitch steps', taps: [T.step('pitch', 3), T.step('pitch', 7)], caption: 'Pitch steps jump the bass an octave.' },
-			{ at: '94.3', box: T.strip(2, 'permute'), boxLabel: 'Permute band', tap: T.strip(2, 'permute'), caption: 'On the keys…' },
-			{ at: '95.2', box: T.area('.grid-mute-steps'), boxLabel: 'Mute steps', taps: [T.step('mute', 1), T.step('mute', 3), T.step('mute', 6)], caption: '…mute steps chop the chords.' },
+			{
+				at: '94.2',
+				box: T.area('[title^="Pitch length"]'),
+				boxLabel: 'Length',
+				caption: 'Length: how many steps play before the lane repeats.',
+				note: 'Shorter than the loop, the pattern lands somewhere new each time round.',
+				drag: { target: T.area('[title^="Pitch length"]'), path: [[0.5, 0.4], [0.5, 0.74]], beats: 2 }
+			},
+			{
+				at: '95.4',
+				box: T.area('[title^="Pitch rate"]'),
+				boxLabel: 'Rate',
+				caption: 'Rate: how fast the steps run.',
+				drag: { target: T.area('[title^="Pitch rate"]'), path: [[0.5, 0.7], [0.5, 0.3]], beats: 2 }
+			},
+			{ at: '97.2', box: T.strip(2, 'permute'), boxLabel: 'Permute band', tap: T.strip(2, 'permute'), caption: 'On the keys…' },
+			{ at: '98.1', box: T.area('.grid-mute-steps'), boxLabel: 'Mute steps', taps: [T.step('mute', 1), T.step('mute', 3), T.step('mute', 6)], caption: '…mute steps chop the chords.' },
+			{
+				at: '99.4',
+				box: T.area('[title^="Mute rate"]'),
+				boxLabel: 'Rate',
+				caption: 'Each lane has its own length and rate.',
+				note: 'Here the mute lane runs faster than the pitch lane.',
+				drag: { target: T.area('[title^="Mute rate"]'), path: [[0.5, 0.65], [0.5, 0.45]], beats: 2 }
+			},
 
 			// The bass, not the drums: selecting a clip gives Live the clip's
 			// own scale, and the drums were recorded while the set was still
 			// C major, so selecting them would undo Key Follow (and switch it
 			// off, as a key set by hand).
 			{
-				at: '98.1',
+				at: '101.1',
 				chapter: 'Launch and stop',
 				box: T.gridSlot(1, 0, 'action'),
 				boxLabel: 'Stop',
@@ -747,7 +770,7 @@ export const SCENARIOS = {
 				until: stopped(1, 0)
 			},
 			{
-				at: '100.1',
+				at: '103.1',
 				box: T.gridSlot(1, 0, 'action'),
 				boxLabel: 'Launch',
 				tap: T.gridSlot(1, 0, 'action'),
@@ -756,19 +779,19 @@ export const SCENARIOS = {
 			},
 
 			{
-				at: '102.1',
+				at: '105.1',
 				chapter: 'Mix',
 				box: T.area('.track-col[data-track-index="2"]'),
 				boxLabel: 'Keys strip',
 				caption: 'Drag a strip to set its volume…',
 				drag: { target: T.strip(2, 'device'), path: [[0.5, 0.3], [0.5, 0.75]], beats: 3 }
 			},
-			{ at: '103.3', caption: '…and back up.', drag: { target: T.strip(2, 'device'), path: [[0.5, 0.6], [0.5, 0.15]], beats: 3 } },
-			{ at: '105.2', box: T.name(1), boxLabel: 'Name: mute', tap: T.name(1), caption: 'Tap a name to mute the track…', until: muted(1, true) },
-			{ at: '107.1', box: T.name(1), boxLabel: 'Name: mute', tap: T.name(1), caption: '…and again to bring it back.', until: muted(1, false) },
-			{ at: '108.3', box: null, caption: 'Everything you saw was played on the iPad.' }
+			{ at: '106.3', caption: '…and back up.', drag: { target: T.strip(2, 'device'), path: [[0.5, 0.6], [0.5, 0.15]], beats: 3 } },
+			{ at: '108.2', box: T.name(1), boxLabel: 'Name: mute', tap: T.name(1), caption: 'Tap a name to mute the track…', until: muted(1, true) },
+			{ at: '110.1', box: T.name(1), boxLabel: 'Name: mute', tap: T.name(1), caption: '…and again to bring it back.', until: muted(1, false) },
+			{ at: '111.3', box: null, caption: 'Everything you saw was played on the iPad.' }
 		],
-		end: '111.1',
+		end: '114.1',
 		result: [looping(0, 0), looping(1, 0), looping(2, 0)]
 	},
 

@@ -170,19 +170,25 @@ async function reset(live, oldCount) {
 	for (let i = 0; i < oldCount; i++) await live.invoke('song', 'delete_track', [0]);
 	if (set.groove) {
 		// The groove pool is the set's, not a track's, so deleting tracks
-		// leaves the last run's Shuffle and Q on it. Put the named groove
-		// back to its settings (Groove.Base: 1 = eighths, 3 = sixteenths).
+		// leaves the last run's amounts on its default groove. Put the named
+		// groove back when the pool has it (Groove.Base: 1 = eighths, 3 =
+		// sixteenths). A set whose grooves were chosen by hand is left alone;
+		// the surface now gives a clip its own groove on the first write, so
+		// the shared one no longer drifts between runs anyway.
 		const names = (await live.read('song', ['groove_pool.grooves.*name']))['groove_pool.grooves.*name'];
 		const i = names.indexOf(set.groove.name);
-		if (i < 0) throw new Error(`no groove "${set.groove.name}" in the pool (${names.join(', ')})`);
-		const g = `groove_pool.grooves[${i}]`;
-		await live.set('song', [
-			[`${g}.base`, set.groove.base],
-			[`${g}.timing_amount`, set.groove.timing],
-			[`${g}.quantization_amount`, set.groove.quantization],
-			[`${g}.random_amount`, 0],
-			[`${g}.velocity_amount`, 0]
-		]);
+		if (i < 0) {
+			log(`groove: no "${set.groove.name}" in the pool (${names.join(', ')}); leaving the pool as it is`);
+		} else {
+			const g = `groove_pool.grooves[${i}]`;
+			await live.set('song', [
+				[`${g}.base`, set.groove.base],
+				[`${g}.timing_amount`, set.groove.timing],
+				[`${g}.quantization_amount`, set.groove.quantization],
+				[`${g}.random_amount`, 0],
+				[`${g}.velocity_amount`, 0]
+			]);
+		}
 	}
 	if (set.key) {
 		// Writing the key is a hand-set key to Key Follow, which turns itself
@@ -192,6 +198,16 @@ async function reset(live, oldCount) {
 		await live.set('song', [['root_note', set.key.root], ['scale_name', set.key.scale]]);
 		await wait(500);
 		live.send('/looping/v3/session/key_follow', [1]);
+	}
+	// Live's window at the size the frame's pane is shaped for, so the whole
+	// window shows uncropped (System Events; needs the window in this Space).
+	if (scenario.liveWindow) {
+		const { w, h } = scenario.liveWindow;
+		try {
+			execFileSync('osascript', ['-e', `tell application "System Events" to tell process "Live" to set size of window 1 to {${w}, ${h}}`], { stdio: 'pipe' });
+		} catch (e) {
+			log(`warning: could not size Live's window to ${w}×${h} (${String(e.stderr ?? e.message).trim()})`);
+		}
 	}
 	// Live's own window: no browser, the session and the device chain.
 	await live.invoke('app', 'view.hide_view', ['Browser']).catch(() => {});
