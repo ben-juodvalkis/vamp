@@ -197,7 +197,7 @@ const PROBE = Buffer.from('/probe\0\0,\0\0\0', 'binary');
  * dropped everything, not that the bind refused it.
  */
 describe.runIf(LAN_ADDRESS)('the loopback bind, on real sockets', () => {
-	it(`drops a datagram sent to ${LAN_ADDRESS} and takes one sent to 127.0.0.1`, async () => {
+	it(`drops a datagram sent to ${LAN_ADDRESS} and takes one sent to 127.0.0.1`, async (ctx) => {
 		const ports = createPorts(configured(0));
 		const control = dgram.createSocket('udp4');
 		const sender = dgram.createSocket('udp4');
@@ -230,7 +230,12 @@ describe.runIf(LAN_ADDRESS)('the loopback bind, on real sockets', () => {
 			await send(LAN_ADDRESS as string, control.address().port);
 			for (const name of EXPECTED) await send(LAN_ADDRESS as string, ports[name].socket.address().port);
 			await settle();
-			expect(received.get('control'), 'positive control: the LAN datagram never arrived at all').toBe(1);
+			// No control means this machine's network dropped the LAN datagram
+			// before any socket saw it (macOS's firewall in stealth mode did,
+			// under the pre-push gate's load): the test can say nothing about
+			// the bind then, so it is skipped rather than failed.
+			if (!received.has('control')) return ctx.skip();
+			expect(received.get('control'), 'positive control: the LAN datagram arrived more than once').toBe(1);
 			expect(EXPECTED.filter((name) => received.has(name)), 'reached over the LAN address').toEqual([]);
 
 			for (const name of EXPECTED) await send('127.0.0.1', ports[name].socket.address().port);
