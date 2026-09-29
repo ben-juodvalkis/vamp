@@ -31,6 +31,9 @@ class ClipGrooveStore {
 	private _randomAmount = $state<number>(0);
 	private _velocityAmount = $state<number>(0);
 	private _file = $state<string>('');
+	// Whether the surface has said, for this focus, whether the clip has a
+	// groove — until it has, `hasGroove` false means "not known yet".
+	private _known = $state<boolean>(false);
 
 	// Reactive getters
 	get hasGroove(): boolean {
@@ -54,6 +57,9 @@ class ClipGrooveStore {
 	get file(): string {
 		return this._file;
 	}
+	get hasGrooveKnown(): boolean {
+		return this._known;
+	}
 
 	// Derived
 	get baseGridLabel(): string {
@@ -69,12 +75,14 @@ class ClipGrooveStore {
 		this._file = name;
 	}
 
-	/** A tile tap: shown at once, before the surface's echo. */
+	/** A tile tap: shown at once, before the surface's echo. The clip has a groove from here on. */
 	chooseFile(name: string) {
 		this._file = name;
+		this._hasGroove = true;
 	}
 
 	handleHasGroove(value: boolean) {
+		this._known = true;
 		this._hasGroove = value;
 	}
 
@@ -110,6 +118,7 @@ class ClipGrooveStore {
 		this._randomAmount = 0;
 		this._velocityAmount = 0;
 		this._file = '';
+		this._known = false;
 	}
 }
 

@@ -7,12 +7,17 @@
 	 * Touching it also opens the Groove view in the central display
 	 * (2026-09-29), the clip's groove: which file it swings to, Random,
 	 * Velocity and Amount. The well wears the selection edge while that
-	 * view is up, so the two read as one control.
+	 * view is up, so the two read as one control. On a clip with no groove
+	 * the touch also puts it on the view's first tile at Amount 0
+	 * (`services/grooveChooser`).
 	 */
 	import { send } from '$lib/api/simpleClient';
 	import { browser } from '$app/environment';
 	import { clipGrooveStore } from '$lib/stores/v6/clipGrooveStore.svelte';
+	import { onMount } from 'svelte';
 	import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
+	import { groovesStore } from '$lib/stores/v6/groovesStore.svelte';
+	import { loadFirstGrooveIfNone } from '$lib/services/grooveChooser';
 	import { focusPlayingClipOnSelectedTrack } from '$lib/components/v6/tracks/composables/slotActions';
 	import { createSliderThrottle } from '$lib/utils/sliderThrottle';
 	import { drag as dragAction, type DragInfo } from '$lib/actions/drag';
@@ -30,6 +35,11 @@
 	let displayValue = $derived(optimisticValue ?? quantizationAmount);
 
 	let grooveViewUp = $derived(centralDisplayStore.view.type === 'groove');
+
+	// The tiles, so a touch on a clip with no groove knows the first one.
+	onMount(() => {
+		if (!groovesStore.listing) void groovesStore.refresh();
+	});
 
 	// Calculate handle position percentage (inverted for vertical - 0 at bottom, 100 at top)
 	let handlePercentage = $derived(100 - (displayValue / 100) * 100);
@@ -89,6 +99,8 @@
 			// very first touch both aims and sets.
 			gestureClipPath = focusPlayingClipOnSelectedTrack({ showClip: false });
 			centralDisplayStore.setView('groove');
+			// Ahead of the first quantize write, so that write lands on it.
+			loadFirstGrooveIfNone(gestureClipPath);
 			isDragging = true;
 			throttle.start();
 		},
