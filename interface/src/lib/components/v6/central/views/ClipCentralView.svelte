@@ -429,7 +429,24 @@ import { logger } from '$lib/utils/logger';
 		{/if}
 	</button>
 
-	{#if editorActive}
+	<!-- The mini session column and its seam, shared by both modes so the
+	     clip list stays put when the toggle swaps what sits beside it. -->
+	{#snippet miniColumn()}
+		<div class="col col-mini">
+			<MiniSessionGrid />
+		</div>
+		<div class="seam seam-mini"><SectionDivider orientation="vertical" /></div>
+	{/snippet}
+
+	{#if editorActive && miniSession}
+		<!-- The editor keeps the mini column: the same grid as the rail
+		     below, so the column is exactly as wide in both modes, with the
+		     editor across everything the rail's controls would take. -->
+		<div class="outer has-mini h-full w-full p-(--central-inset)">
+			{#if browser}{@render miniColumn()}{/if}
+			<div class="editor-cell"><ClipEditorView color={trackColor} /></div>
+		</div>
+	{:else if editorActive}
 		<ClipEditorView color={trackColor} />
 	{:else}
 
@@ -466,15 +483,10 @@ import { logger } from '$lib/utils/logger';
 		     rail is acting on, so it reads before them, not after. The
 		     editor-toggle chip floats over the rail's top-RIGHT corner, so
 		     nothing here has to keep width clear for it. -->
-		{#if miniSession}
-			<div class="col col-mini">
-				<MiniSessionGrid />
-			</div>
-			<!-- Subject | the controls that act on it. Only with the mini up:
-			     with the full clip grid on, the rail opens on those controls
-			     and there is nothing to its left to separate from. -->
-			<div class="seam seam-mini"><SectionDivider orientation="vertical" /></div>
-		{/if}
+		<!-- Subject | the controls that act on it. The seam comes only with
+		     the mini: with the full clip grid on, the rail opens on those
+		     controls and there is nothing to its left to separate from. -->
+		{#if miniSession}{@render miniColumn()}{/if}
 
 		<!-- Col 1: CHANCE (MIDI) | warp modes (audio) -->
 		<div class="col col-1 transition-opacity duration-200 {trackType === 'midi' ? (permuteDevice === null ? 'opacity-30' : 'opacity-100') : (!hasClip ? 'opacity-30' : 'opacity-100')}">
@@ -875,6 +887,7 @@ import { logger } from '$lib/utils/logger';
 	.outer.has-mini .col-4 { grid-column: 8; }
 	.outer.has-mini .col-2 { grid-column: 9; }
 	.outer.has-mini .col-1 { grid-column: 10; }
+	.editor-cell { grid-column: 3 / -1; grid-row: 1; min-width: 0; min-height: 0; position: relative; }
 
 	/* Full-height stack of 3 switch buttons (warp modes) */
 	/* `minmax(0, 1fr)`, not the implicit `auto` column: auto sizes to the
