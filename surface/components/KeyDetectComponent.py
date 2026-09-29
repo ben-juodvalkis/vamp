@@ -54,6 +54,15 @@ the ``scale_information`` listener and is classified a tick later, when
 Live's undo history has settled: a redo waiting (``song.can_redo``) means
 history navigation, which keeps Follow on; otherwise the key is Follow's
 own (a redo that emptied the stack) or a hand's, which turns Follow off.
+
+Selecting a clip is neither. Live 12 clips carry their own scale (set from
+the song's when recorded), and selecting one — a tap on any clip cell in
+the interface writes ``highlighted_clip_slot`` / ``detail_clip`` — makes
+Live apply that clip's scale to the song (measured on 12.4.15b2). A key
+change that arrives with a selection change and equals the selected clip's
+scale is Live following the selection: Follow stays on, and when the key it
+replaced was Follow's own, Follow writes that key back onto the song and
+onto the clip, so selecting the clip again changes nothing.
 """
 
 from __future__ import annotations
@@ -221,9 +230,14 @@ class KeyDetectComponent:
         self._writing = False
         self._last_written = None
         self._last_seen = self._current_key()
-        # A key change inside Live waiting for its classification tick.
+        # A key change inside Live waiting for its classification tick, and
+        # the key it replaced.
         self._pending_key = None
+        self._key_before = None
         self._classify_pending = False
+        # The selected clip moved since the last tick (``_on_selection``).
+        self._selection_moved = False
+        self._settle_pending = False
         # Follow passes: one pending per lane, a forced one after Follow
         # turns on, the tracks whose notes changed, and what the last pass
         # analyzed — ``{clip key: {"path", "loop", "role", "clip", "fp"}}``.
@@ -233,6 +247,7 @@ class KeyDetectComponent:
         self._analyzed = {}
         self._last_broadcast = None
         self._scale_listener_bound = self._bind_scale_listener()
+        self._selection_listeners = self._bind_selection_listeners()
         if self._following():
             # What is playing when the surface starts is not news.
             self._analyzed = self._snapshot(use_cache=False)
@@ -356,7 +371,9 @@ class KeyDetectComponent:
         self._analyzed = {}
         self._dirty.clear()
         self._pending_key = None
+        self._key_before = None
         self._classify_pending = False
+        self._selection_moved = False
         self._force = False
 
     def _schedule(self, delay_ms, fn, what):
@@ -445,12 +462,13 @@ class KeyDetectComponent:
         key = self._current_key()
         if key is None or key == self._last_seen:
             return  # a mode-only change, our own write, or nothing we can read
-        self._last_seen = key
+        before, self._last_seen = self._last_seen, key
         if not self._following():
             return
         self._pending_key = key
         if self._classify_pending:
             return
+        self._key_before = before
         self._classify_pending = True
         if not self._schedule(CLASSIFY_DELAY_MS, self._classify, "a key classification"):
             self._classify_pending = False
@@ -463,7 +481,18 @@ class KeyDetectComponent:
             return
         self._classify_pending = False
         key, self._pending_key = self._pending_key, None
+        before, self._key_before = self._key_before, None
+        selection, self._selection_moved = self._selection_moved, False
         if key is None or self._disconnected or not self._following():
+            return
+        clip = self._selected_clip_in(key) if selection else None
+        if clip is not None:
+            logger.info(
+                "KeyDetect: key followed the selected clip (%s): still following", key_name(key),
+            )
+            if before is not None and before == self._last_written:
+                logger.info("KeyDetect: %s back on the song and the clip", key_name(before))
+                self._apply({"root": before[0], "scale": before[1]}, stamp=clip)
             return
         if self._can_redo():
             logger.info(
@@ -474,6 +503,75 @@ class KeyDetectComponent:
             return  # the redo that lands back on Follow's own key
         logger.info("KeyDetect: key set by hand in Live (%s): follow off", key_name(key))
         self._lock()
+
+    # --- the selected clip ----------------------------------------------------
+
+    def _view(self):
+        try:
+            return self._song.view
+        except _LOM_ERRORS:
+            return None
+
+    def _bind_selection_listeners(self):
+        """``detail_clip`` and ``highlighted_clip_slot`` on ``song.view``: the
+        interface writes one or the other on a clip tap. Returns the names
+        bound."""
+        view = self._view()
+        bound = []
+        for name in ("detail_clip", "highlighted_clip_slot"):
+            add = getattr(view, f"add_{name}_listener", None)
+            if not callable(add):
+                continue
+            try:
+                add(self._on_selection)
+                bound.append(name)
+            except _LOM_ERRORS as e:
+                logger.warning("KeyDetect: add_%s_listener failed: %s", name, e)
+        return bound
+
+    def _on_selection(self):
+        """The selected clip moved (a notification: mark and schedule only).
+        Live applies the clip's scale inside the same action, so the key
+        change, if any, is in the same batch; the mark lasts until the tick
+        after, or until the classification it belongs to reads it."""
+        if self._disconnected:
+            return
+        self._selection_moved = True
+        if self._settle_pending:
+            return
+        self._settle_pending = True
+        if not self._schedule(CLASSIFY_DELAY_MS, self._settle_selection, "a selection settle"):
+            self._settle_pending = False
+
+    def _settle_selection(self):
+        self._settle_pending = False
+        if not self._classify_pending:
+            self._selection_moved = False
+
+    def _selected_clip_in(self, key):
+        """The selected clip — the detail clip, else the highlighted slot's —
+        whose own scale is ``key``; ``None`` when none is."""
+        view = self._view()
+        candidates = []
+        try:
+            candidates.append(view.detail_clip)
+        except _LOM_ERRORS:
+            pass
+        try:
+            slot = view.highlighted_clip_slot
+            if slot is not None and bool(slot.has_clip):
+                candidates.append(slot.clip)
+        except _LOM_ERRORS:
+            pass
+        for clip in candidates:
+            if clip is None:
+                continue
+            try:
+                if (int(clip.root_note), str(clip.scale_name)) == key:
+                    return clip
+            except _LOM_ERRORS:
+                continue
+        return None
 
     def _can_redo(self):
         try:
@@ -574,10 +672,11 @@ class KeyDetectComponent:
 
     # --- the write ----------------------------------------------------------
 
-    def _apply(self, result):
+    def _apply(self, result, stamp=None):
         """Root, scale name, scale mode on — through the session handlers
         when there are any (validation + echo), else straight to the song —
-        inside one undo step. True only when Live reads the key back."""
+        inside one undo step. True only when Live reads the key back.
+        ``stamp``, a clip, gets the same root and scale name first."""
         root, scale = int(result["root"]), str(result["scale"])
         song = self._song
         opened = False
@@ -588,6 +687,12 @@ class KeyDetectComponent:
                 opened = True
             except _LOM_ERRORS as e:
                 logger.warning("KeyDetect: begin_undo_step raised: %s", e)
+            if stamp is not None:
+                try:
+                    stamp.root_note = root
+                    stamp.scale_name = scale
+                except _LOM_ERRORS as e:
+                    logger.warning("KeyDetect: writing %s to the clip raised: %s", key_name((root, scale)), e)
             try:
                 if self._session is not None:
                     self._session.handle_set_scale_root((root,), None)
@@ -617,7 +722,8 @@ class KeyDetectComponent:
         return True
 
     def disconnect(self):
-        """Drop the song listener and every pending pass; safe to call twice."""
+        """Drop the song and view listeners and every pending pass; safe to
+        call twice."""
         if self._disconnected:
             return
         self._disconnected = True
@@ -630,3 +736,12 @@ class KeyDetectComponent:
                 except _LOM_ERRORS:
                     pass
             self._scale_listener_bound = False
+        view = self._view() if self._selection_listeners else None
+        for name in self._selection_listeners:
+            remove = getattr(view, f"remove_{name}_listener", None)
+            if callable(remove):
+                try:
+                    remove(self._on_selection)
+                except _LOM_ERRORS:
+                    pass
+        self._selection_listeners = []

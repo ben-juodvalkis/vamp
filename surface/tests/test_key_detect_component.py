@@ -2,9 +2,10 @@
 
 The stubs model what the design leans on: clips with a LOM identity
 (``_live_ptr``), a song whose key writes fire ``scale_information`` the way
-Live's do, Live's redo stack (``can_redo``), writes Live refuses, and the
+Live's do, Live's redo stack (``can_redo``), writes Live refuses, the
 playhead's change hook (``on_playing_change``), which a test calls by hand
-where Live would.
+where Live would, and a selection that applies the clip's own scale to the
+song, as Live 12's does.
 """
 
 from __future__ import annotations
@@ -43,6 +44,8 @@ class StubClip:
         self.is_recording = recording
         self._raise = raise_on_notes
         self.calls = []
+        # Live 12's per-clip scale, set from the song's when recorded.
+        self.root_note, self.scale_name = 0, "Major"
 
     def get_notes_extended(self, from_pitch, pitch_span, from_time, time_span):
         self.calls.append((from_pitch, pitch_span, from_time, time_span))
@@ -100,6 +103,49 @@ class RaisingTrack:
         raise RuntimeError("touchy")
 
 
+class StubView:
+    """``song.view``: selecting a clip moves ``detail_clip`` and the highlight
+    and applies the clip's scale to the song, as Live 12 does."""
+
+    def __init__(self, song):
+        self.song = song
+        self.detail_clip = None
+        self.highlighted_clip_slot = None
+        self.listeners = {"detail_clip": [], "highlighted_clip_slot": []}
+
+    def add_detail_clip_listener(self, cb):
+        self.listeners["detail_clip"].append(cb)
+
+    def remove_detail_clip_listener(self, cb):
+        self.listeners["detail_clip"].remove(cb)
+
+    def add_highlighted_clip_slot_listener(self, cb):
+        self.listeners["highlighted_clip_slot"].append(cb)
+
+    def remove_highlighted_clip_slot_listener(self, cb):
+        self.listeners["highlighted_clip_slot"].remove(cb)
+
+    def select(self, clip, scale_first=False):
+        """A clip tap. ``scale_first``: Live's scale notification arrives before
+        the selection's (the order is Live's, so both are tested)."""
+        self.detail_clip = clip
+        self.highlighted_clip_slot = StubSlot(clip)
+        key = (clip.root_note, clip.scale_name)
+        moves = key != (self.song._root, self.song._scale)
+
+        def apply_scale():
+            if moves:
+                self.song.key_moves_in_live(*key)
+
+        if scale_first:
+            apply_scale()
+        for cbs in self.listeners.values():
+            for cb in list(cbs):
+                cb()
+        if not scale_first:
+            apply_scale()
+
+
 class StubSong:
     """Key writes fire ``scale_information`` synchronously, as Live's do; a
     write to an attribute in ``refuse`` raises, as Live's can."""
@@ -113,6 +159,7 @@ class StubSong:
         self.refuse = set()
         self.undo = []
         self._scale_listeners = []
+        self.view = StubView(self)
 
     @property
     def root_note(self):
@@ -419,9 +466,11 @@ def test_a_six_eight_bar_is_three_quarter_notes(emits):
 def test_disconnect_is_idempotent_and_drops_the_song_listener(emits):
     song, comp, *_ = _rig(emits, [])
     assert len(song._scale_listeners) == 1
+    assert all(len(cbs) == 1 for cbs in song.view.listeners.values())
     comp.disconnect()
     comp.disconnect()
     assert song._scale_listeners == []
+    assert all(cbs == [] for cbs in song.view.listeners.values())
 
 
 # --- a hand on the wire -------------------------------------------------------
@@ -737,3 +786,66 @@ def test_moving_a_loop_to_other_material_counts_as_a_new_loop(emits):
     last = _replies(emits)[-1]
     assert "1 re-looped" in last["reasons"]
     assert (song.root_note, song.scale_name) != (0, "Minor")
+
+
+# --- a selected clip's own scale (Live 12) ---------------------------------------
+
+def _older_clip(root=2, scale="Major"):
+    """A drum clip recorded while the song was in another key."""
+    clip = StubClip([StubNote(36, 0.0, 0.2)])
+    clip.root_note, clip.scale_name = root, scale
+    return clip
+
+
+@pytest.mark.parametrize("scale_first", [False, True])
+def test_selecting_a_clip_in_an_older_key_keeps_follow_and_its_key(emits, scale_first):
+    """The rig on 2026-09-29: Follow wrote the key, a tap on an older clip
+    made Live apply that clip's scale, and Follow read it as a hand."""
+    song, _comp, settings, sched = _following_c_minor(emits)
+    clip = _older_clip()
+    song.view.select(clip, scale_first=scale_first)
+    assert (song.root_note, song.scale_name) == (2, "Major")     # Live followed the clip
+    sched.run()
+    assert settings.key_follow is True and settings.calls == []
+    assert (song.root_note, song.scale_name) == (0, "Minor")     # Follow's key back
+    assert (clip.root_note, clip.scale_name) == (0, "Minor")     # and on the clip
+    assert song.undo == ["begin", "end", "begin", "end"]
+    song.view.select(clip)                                       # again: nothing moves
+    sched.run()
+    assert (song.root_note, song.scale_name) == (0, "Minor")
+    assert song.undo == ["begin", "end", "begin", "end"]
+
+
+def test_selecting_a_clip_when_the_key_is_not_follows_leaves_it(emits):
+    """Follow on but nothing written yet: the key Live replaced was nobody's,
+    so Live's own behavior stands and Follow stays on."""
+    song, _comp, settings, sched, _bass, _keys_track = _follow(emits)
+    clip = _older_clip()
+    song.view.select(clip)
+    sched.run()
+    assert settings.key_follow is True
+    assert (song.root_note, song.scale_name) == (2, "Major") and song.undo == []
+    assert (clip.root_note, clip.scale_name) == (2, "Major")
+
+
+def test_a_hand_in_live_with_a_clip_selected_is_still_a_hand(emits):
+    """The selection is long settled; Live also writes the chooser's key into
+    the selected clip. No selection moved with it, so it is a hand."""
+    song, _comp, settings, sched = _following_c_minor(emits)
+    clip = _older_clip(0, "Minor")
+    song.view.select(clip)                                       # same key: nothing fires
+    sched.run()
+    clip.root_note, clip.scale_name = 9, "Minor"
+    song.key_moves_in_live(9, "Minor")
+    sched.run()
+    assert settings.key_follow is False
+    assert (song.root_note, song.scale_name) == (9, "Minor")
+
+
+def test_a_key_change_the_selected_clip_does_not_explain_is_a_hand(emits):
+    song, _comp, settings, sched = _following_c_minor(emits)
+    clip = _older_clip(0, "Minor")
+    song.view.select(clip)
+    song.key_moves_in_live(9, "Minor")                           # same batch, other key
+    sched.run()
+    assert settings.key_follow is False
