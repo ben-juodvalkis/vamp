@@ -14,25 +14,38 @@ const CLAP = 39;
 const HAT = 42;
 const OPEN = 46;
 
+// Sixteenth hats, accented on the beat and the "and", so a sixteenth
+// swing is plain to hear; the open hat takes the last "a" of each bar.
+const HAT_ACCENT = [96, 46, 72, 52];
 const hats = [];
-for (let i = 0; i < 16; i++) {
-	const beat = i / 2;
-	if (beat === 7.5) continue;
-	hats.push([beat, 0.25, [HAT], i % 2 ? 58 : 84]);
+for (let i = 0; i < 32; i++) {
+	const beat = i / 4;
+	if (beat === 3.75 || beat === 7.75) continue;
+	hats.push([beat, 0.2, [HAT], HAT_ACCENT[i % 4]]);
 }
 
 export const DRUMS = [
-	[0, 0.5, [KICK], 112],
-	[1.5, 0.5, [KICK], 96],
-	[2.5, 0.5, [KICK], 104],
-	[4, 0.5, [KICK], 112],
-	[5.5, 0.5, [KICK], 96],
-	[6.75, 0.25, [KICK], 90],
-	[1, 0.5, [SNARE], 108],
-	[3, 0.5, [SNARE], 108],
-	[5, 0.5, [SNARE], 108],
-	[7, 0.5, [SNARE, CLAP], 112],
-	[7.5, 0.5, [OPEN], 80],
+	// kick: one, the "and" of two, three; the second bar pushes into four
+	[0, 0.5, [KICK], 114],
+	[1.5, 0.25, [KICK], 92],
+	[2, 0.5, [KICK], 108],
+	[2.75, 0.25, [KICK], 84],
+	[4, 0.5, [KICK], 114],
+	[5.5, 0.25, [KICK], 92],
+	[6, 0.5, [KICK], 108],
+	[6.75, 0.25, [KICK], 88],
+	[7.25, 0.25, [KICK], 80],
+	// snare on two and four, with ghost notes around it
+	[1, 0.5, [SNARE], 110],
+	[1.75, 0.2, [SNARE], 38],
+	[3, 0.5, [SNARE], 110],
+	[3.5, 0.2, [SNARE], 34],
+	[5, 0.5, [SNARE], 110],
+	[5.25, 0.2, [SNARE], 36],
+	[5.75, 0.2, [SNARE], 40],
+	[7, 0.5, [SNARE, CLAP], 114],
+	[3.75, 0.25, [OPEN], 82],
+	[7.75, 0.25, [OPEN], 86],
 	...hats
 ];
 
