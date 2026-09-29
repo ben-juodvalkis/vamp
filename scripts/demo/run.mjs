@@ -168,6 +168,22 @@ async function reset(live, oldCount) {
 		await live.set(path, [['name', t.name]]);
 	}
 	for (let i = 0; i < oldCount; i++) await live.invoke('song', 'delete_track', [0]);
+	if (set.groove) {
+		// The groove pool is the set's, not a track's, so deleting tracks
+		// leaves the last run's Shuffle and Q on it. Put the named groove
+		// back to its settings (Groove.Base: 1 = eighths, 3 = sixteenths).
+		const names = (await live.read('song', ['groove_pool.grooves.*name']))['groove_pool.grooves.*name'];
+		const i = names.indexOf(set.groove.name);
+		if (i < 0) throw new Error(`no groove "${set.groove.name}" in the pool (${names.join(', ')})`);
+		const g = `groove_pool.grooves[${i}]`;
+		await live.set('song', [
+			[`${g}.base`, set.groove.base],
+			[`${g}.timing_amount`, set.groove.timing],
+			[`${g}.quantization_amount`, set.groove.quantization],
+			[`${g}.random_amount`, 0],
+			[`${g}.velocity_amount`, 0]
+		]);
+	}
 	if (set.key) {
 		// Writing the key is a hand-set key to Key Follow, which turns itself
 		// off; a tick later (it classifies the write off song.can_redo) turn
@@ -205,7 +221,7 @@ async function openInterface(clock) {
 			/* storage disabled */
 		}
 	}, scenario.prefs ?? {});
-	await context.addInitScript({ path: join(REPO_ROOT, 'scripts', 'demo', 'touches.js') });
+	await context.addInitScript({ path: join(REPO_ROOT, 'scripts', 'demo', 'overlay.js') });
 	watchSongTime(page, clock);
 
 	// Fit the iPad's 1366×1024 into the screen: the window is as large as
@@ -266,18 +282,27 @@ async function boxOf(page, target, timeoutMs = 3000) {
 				const r = cell.getBoundingClientRect();
 				const a = cell.querySelector('.slot-action')?.getBoundingClientRect();
 				if (t.grid.part === 'action') return a && { x: a.left, y: a.top, w: a.width, h: a.height };
+				if (t.grid.part === 'cell') return { x: r.left, y: r.top, w: r.width, h: r.height };
 				const left = a ? a.right : r.left;
 				return { x: left, y: r.top, w: r.right - left, h: r.height };
 			}
+			const hits = [];
 			for (const el of document.querySelectorAll(t.css)) {
 				if (t.text != null) {
 					const label = (t.textCss ? el.querySelector(t.textCss) : el)?.textContent?.trim();
 					if (label !== t.text) continue;
 				}
 				const r = visible(el);
-				if (r) return { x: r.left, y: r.top, w: r.width, h: r.height };
+				if (r) hits.push(r);
+				if (r && !t.all) break;
 			}
-			return null;
+			if (!hits.length) return null;
+			// `all`: the union of every match (a region made of several parts).
+			const x0 = Math.min(...hits.map((r) => r.left));
+			const y0 = Math.min(...hits.map((r) => r.top));
+			const x1 = Math.max(...hits.map((r) => r.right));
+			const y1 = Math.max(...hits.map((r) => r.bottom));
+			return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
 		}, target);
 		if (box) return box;
 		if (Date.now() > deadline) throw new Error(`nothing to touch: ${target.label}`);
@@ -312,23 +337,55 @@ function findWindows(bounds) {
 
 /** How far ahead of its beat a phrase goes to the recorder. */
 const PHRASE_LEAD_MS = 300;
+/** How far ahead of its beat a step's box appears and the ring glides to its target. */
+const LEAD_MS = 560;
+
+async function pointOf(ui, target, [fx, fy] = [0.5, 0.5]) {
+	const b = await boxOf(ui.page, target);
+	return { x: b.x + fx * b.w, y: b.y + fy * b.h };
+}
+
+const approach = (ui, p) => ui.page.evaluate(({ x, y }) => window.__demo?.approach(x, y), p);
+
+/** Spotlight the union of the targets (or clear it with null). */
+async function setBox(ui, box, label, timeoutMs = 3000) {
+	if (!box) return ui.page.evaluate(() => window.__demo?.box(null));
+	const rects = [];
+	for (const t of Array.isArray(box) ? box : [box]) rects.push(await boxOf(ui.page, t, timeoutMs));
+	await ui.page.evaluate(({ rects, label }) => window.__demo?.box(rects, label), { rects, label });
+}
+
+/**
+ * A touch often changes the view under the box (the browser opens, a
+ * folder is entered, a preset loads and the browser closes). A moment
+ * later, move the box to where its targets are now, or drop it if they
+ * are gone, so it never frames whatever took their place.
+ */
+function refreshBox(ui, step) {
+	if (!step.box) return;
+	setTimeout(() => {
+		setBox(ui, step.box, step.boxLabel, 0).catch(() => setBox(ui, null).catch(() => {}));
+	}, 450);
+}
 
 const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
 
+/** One finger on a target: a tap, or a hold of `target.hold` ms. */
 async function tap(ui, fingers, target) {
-	const b = await boxOf(ui.page, target);
-	const x = (b.x + b.w / 2) * ui.scale;
-	const y = (b.y + b.h / 2) * ui.scale;
+	const p = await pointOf(ui, target, target.at);
+	const x = p.x * ui.scale;
+	const y = p.y * ui.scale;
+	const hold = target.hold ?? 90;
 	if (target.pointer === 'mouse') {
 		const m = { x, y, button: 'left', clickCount: 1 };
 		await ui.cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
 		await ui.cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', ...m });
-		await wait(90);
+		await wait(hold);
 		await ui.cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...m });
 		return;
 	}
 	const id = await fingers.down(x, y);
-	await wait(90);
+	await wait(hold);
 	await fingers.up(id);
 }
 
@@ -422,8 +479,18 @@ async function main() {
 		let chapter = null;
 		let chapterIndex = 0;
 		let caption = null;
+		let note = null;
+		let liveBox = null;
 		for (const [i, step] of scenario.steps.entries()) {
 			const beat = beatOf(step.at);
+			// The box, and the ring gliding to the first thing touched, come a
+			// little ahead of the beat, so the touch itself lands on it.
+			const touches = step.tap ?? step.taps?.[0] ?? step.drag?.target;
+			if (touches || 'box' in step) {
+				await clock.until(beat - LEAD_MS / clock.msPerBeat);
+				if ('box' in step) await setBox(ui, step.box, step.boxLabel);
+				if (touches) await approach(ui, await pointOf(ui, touches, step.drag ? step.drag.path[0] : touches.at));
+			}
 			// A phrase is handed to the recorder ahead of its beat (it times
 			// the notes itself), so a slow step before it cannot delay it.
 			if (step.play) {
@@ -437,20 +504,29 @@ async function main() {
 				chapter = step.chapter;
 				chapterIndex += 1;
 			}
-			if (step.caption) caption = step.caption;
+			if (step.caption) {
+				caption = step.caption;
+				note = step.note ?? null;
+			}
+			if ('live' in step) liveBox = step.live;
 			const t = await rec.mark(step.at);
-			take.steps.push({ at: step.at, t, chapter, index: chapterIndex, caption });
+			take.steps.push({ at: step.at, t, chapter, index: chapterIndex, caption, note, live: liveBox });
 			const what = step.tap?.label ?? step.drag?.target.label ?? (step.taps ? `${step.taps.length} taps` : step.play ? 'phrase' : step.do ? 'do' : '');
 			log(`${step.at.padEnd(5)} ${what.padEnd(26)} ${typeof step.caption === 'string' ? step.caption : ''}`);
 
 			if (step.tap) await tap(ui, fingers, step.tap);
 			if (step.taps) {
-				for (const target of step.taps) {
+				for (const [k, target] of step.taps.entries()) {
+					if (k > 0) {
+						await approach(ui, await pointOf(ui, target, target.at));
+						await wait(300);
+					}
 					await tap(ui, fingers, target);
-					await wait(clock.msPerBeat / 2 - 90);
+					await wait(Math.max(0, clock.msPerBeat - 390));
 				}
 			}
 			if (step.drag) await drag(ui, fingers, clock, step.drag);
+			if (touches) refreshBox(ui, step);
 			if (step.do) await step.do(live, vars);
 			if (step.until) {
 				const next = scenario.steps[i + 1]?.at ?? scenario.end;
@@ -478,7 +554,10 @@ async function main() {
 		if (rec) await rec.stop().catch(() => rec.kill());
 		await live.invoke('song', 'stop_playing').catch(() => {});
 		// Captions that quote the take (the key Live ended up in) are filled in now.
-		for (const s of take.steps) if (typeof s.caption === 'function') s.caption = s.caption(vars);
+		for (const s of take.steps) {
+			if (typeof s.caption === 'function') s.caption = s.caption(vars);
+			if (typeof s.note === 'function') s.note = s.note(vars);
+		}
 		take.vars = vars;
 		writeFileSync(join(outDir, 'take.json'), JSON.stringify(take, null, '\t'));
 		live.close();

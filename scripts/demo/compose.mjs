@@ -34,9 +34,24 @@ export function cuesOf(take, start, end) {
 	for (const s of take.steps) {
 		if (!s.caption) continue;
 		const last = cues.at(-1);
-		if (last && last.text === s.caption && last.chapter === s.chapter) continue;
+		if (last && last.text === s.caption && last.chapter === s.chapter && last.note === (s.note ?? null)) continue;
 		if (last) last.to = s.t - start;
-		cues.push({ index: s.index, chapter: s.chapter, text: s.caption, from: s.t - start, to: end - start });
+		cues.push({ index: s.index, chapter: s.chapter, text: s.caption, note: s.note ?? null, from: s.t - start, to: end - start });
+	}
+	return cues;
+}
+
+/** Steps → boxes on Live's pane: `{ rect: {x,y,w,h} in Live's window points, label }` while it holds. */
+function liveCuesOf(take, start, end) {
+	const cues = [];
+	let current = 'none';
+	for (const s of take.steps) {
+		const key = JSON.stringify(s.live ?? null);
+		if (key === current) continue;
+		current = key;
+		const last = cues.at(-1);
+		if (last && last.to === end - start) last.to = s.t - start;
+		if (s.live) cues.push({ box: s.live, from: s.t - start, to: end - start });
 	}
 	return cues;
 }
@@ -70,15 +85,27 @@ export async function compose({ dir, take, log = () => {} }) {
 	const body = end - start;
 	const total = INTRO + body + OUTRO;
 	const cues = cuesOf(take, start, end);
+	// Live's window points → canvas pixels, through the crop and the pane's scale.
+	const k = L.live.w / liveCrop.w;
+	const liveCues = liveCuesOf(take, start, end).map((c) => ({
+		...c,
+		label: c.box.label,
+		rect: {
+			x: Math.round(L.live.x + (c.box.x * live.scale - liveCrop.x) * k),
+			y: Math.round(L.live.y + (c.box.y * live.scale - liveCrop.y) * k),
+			w: Math.round(c.box.w * live.scale * k),
+			h: Math.round(c.box.h * live.scale * k)
+		}
+	}));
 	writeFileSync(
 		join(dir, 'captions.vtt'),
-		`WEBVTT\n\n${cues.map((c) => `${vttTime(INTRO + c.from)} --> ${vttTime(INTRO + c.to)}\n${c.chapter ? `${c.chapter}: ` : ''}${c.text}\n`).join('\n')}`
+		`WEBVTT\n\n${cues.map((c) => `${vttTime(INTRO + c.from)} --> ${vttTime(INTRO + c.to)}\n${c.chapter ? `${c.chapter}: ` : ''}${c.text}${c.note ? `\n${c.note}` : ''}\n`).join('\n')}`
 	);
 
 	const assetDir = join(dir, 'assets');
 	mkdirSync(assetDir, { recursive: true });
 	log('drawing the frame and captions…');
-	const A = await renderAssets(assetDir, L, { captions: cues, intro: take.intro, outro: take.outro });
+	const A = await renderAssets(assetDir, L, { captions: cues, intro: take.intro, outro: take.outro, liveBoxes: liveCues });
 
 	const still = (path, seconds) => ['-loop', '1', '-framerate', String(FPS), '-t', seconds.toFixed(3), '-i', path];
 	const inputs = ['-i', join(dir, 'raw.mov')];
@@ -88,6 +115,8 @@ export async function compose({ dir, take, log = () => {} }) {
 	inputs.push(...still(A.intro, INTRO)); // 4
 	inputs.push(...still(A.outro, OUTRO)); // 5
 	cues.forEach((c, i) => inputs.push(...still(A.captions[i], c.to - c.from))); // 6…
+	const liveBase = 6 + cues.length;
+	liveCues.forEach((c, i) => inputs.push(...still(A.liveBoxes[i], c.to - c.from)));
 
 	const shift = `setpts=PTS-STARTPTS+${INTRO}/TB`;
 	const f = [
@@ -102,6 +131,14 @@ export async function compose({ dir, take, log = () => {} }) {
 		`[v1][live]overlay=${L.live.x}:${L.live.y}:eof_action=repeat[v2]`
 	];
 	let last = 'v2';
+	liveCues.forEach((c, i) => {
+		const d = c.to - c.from;
+		f.push(
+			`[${liveBase + i}:v]format=rgba,fade=t=in:st=0:d=${FADE}:alpha=1,fade=t=out:st=${Math.max(0, d - FADE).toFixed(3)}:d=${FADE}:alpha=1,setpts=PTS-STARTPTS+${(INTRO + c.from).toFixed(3)}/TB[lb${i}]`,
+			`[${last}][lb${i}]overlay=0:0:eof_action=pass[lv${i}]`
+		);
+		last = `lv${i}`;
+	});
 	cues.forEach((c, i) => {
 		const d = c.to - c.from;
 		const fadeOut = Math.max(0, d - FADE);

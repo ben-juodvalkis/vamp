@@ -82,17 +82,34 @@ function maskHtml(w, h, radius) {
 		div{width:${w}px;height:${h}px;border-radius:${radius}px;background:#fff}</style></head><body><div></div></body></html>`;
 }
 
-function captionHtml(L, { index, chapter, text }) {
+function captionHtml(L, { index, chapter, text, note }) {
 	const num = index == null ? '' : `<span class="num">${String(index).padStart(2, '0')}</span>`;
 	return page(
 		`<div class="cap" style="${box(L.caption)}">
 			<div class="chapter">${num}${escape(chapter ?? '')}</div>
 			<div class="text">${escape(text)}</div>
+			${note ? `<div class="note">${escape(note)}</div>` : ''}
 		</div>`,
-		`.cap { position:absolute; display:flex; flex-direction:column; justify-content:center; gap:12px; }
+		`.cap { position:absolute; display:flex; flex-direction:column; justify-content:center; gap:10px; }
 		.chapter { font-size:18px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:${ACCENT}; }
 		.num { color:#6b6f79; margin-right:16px; letter-spacing:.08em; }
-		.text { font-size:42px; font-weight:600; letter-spacing:-.01em; color:#f4f4f6; line-height:1.15; }`
+		.text { font-size:40px; font-weight:600; letter-spacing:-.01em; color:#f4f4f6; line-height:1.15; }
+		.note { font-size:26px; font-weight:450; color:#a3a7b0; line-height:1.3; max-width:1500px; }`
+	);
+}
+
+/** A box on Live's pane: `r` in canvas pixels, clipped to the pane, the rest of the pane dimmed. */
+function liveBoxHtml(L, r, label) {
+	const x = r.x - L.live.x;
+	const y = r.y - L.live.y;
+	return page(
+		`<div class="pane" style="${box(L.live)}">
+			<div class="spot" style="left:${x}px;top:${y}px;width:${r.w}px;height:${r.h}px"></div>
+		</div>
+		${label ? `<div class="tag" style="left:${Math.max(L.live.x + 6, Math.min(r.x, L.live.x + L.live.w - 240))}px;top:${r.y - 40 < L.live.y ? r.y + r.h + 8 : r.y - 40}px">${escape(label)}</div>` : ''}`,
+		`.pane { position:absolute; overflow:hidden; border-radius:${L.liveRadius}px; }
+		.spot { position:absolute; border-radius:8px; box-shadow: 0 0 0 3px ${ACCENT}, 0 0 22px 4px rgba(242,180,107,.35), 0 0 0 200vmax rgba(6,7,10,.5); }
+		.tag { position:absolute; padding:6px 12px 7px; border-radius:8px; background:${ACCENT}; color:#1b1307; font:700 17px ${FONT}; white-space:nowrap; box-shadow:0 6px 18px rgba(0,0,0,.45); }`
 	);
 }
 
@@ -117,7 +134,7 @@ function escape(s) {
  * Every still the clip needs: the background, two corner masks, one PNG
  * per caption and the two cards. Returns their paths.
  */
-export async function renderAssets(dir, L, { captions, intro, outro }) {
+export async function renderAssets(dir, L, { captions, intro, outro, liveBoxes = [] }) {
 	const browser = await chromium.launch();
 	const ctx = await browser.newContext({ viewport: { width: CANVAS.w, height: CANVAS.h }, deviceScaleFactor: 1 });
 	const p = await ctx.newPage();
@@ -139,10 +156,12 @@ export async function renderAssets(dir, L, { captions, intro, outro }) {
 			clip: { x: 0, y: 0, width: L.live.w, height: L.live.h }
 		}),
 		captions: [],
+		liveBoxes: [],
 		intro: await shot(cardHtml(intro), 'card-intro.png', { transparent: false }),
 		outro: await shot(cardHtml(outro), 'card-outro.png', { transparent: false })
 	};
 	for (const [i, c] of captions.entries()) out.captions.push(await shot(captionHtml(L, c), `caption-${i}.png`));
+	for (const [i, b] of liveBoxes.entries()) out.liveBoxes.push(await shot(liveBoxHtml(L, b.rect, b.label), `live-box-${i}.png`));
 	await browser.close();
 	return out;
 }
