@@ -18,6 +18,7 @@
 //
 // Built by scripts/demo/recorder.mjs into scripts/.cache/demo/.
 
+import AppKit
 import AVFoundation
 import CoreGraphics
 import CoreMIDI
@@ -442,7 +443,11 @@ func midiOnly() {
 
 switch args.first {
 case "list": Task { await listWindows() }
-case "record": Task { await record() }
+case "record":
+    // A capture stream needs a window-server connection, which a bare CLI
+    // never makes (CGS_REQUIRE_INIT asserts). An app with no Dock icon has one.
+    NSApplication.shared.setActivationPolicy(.prohibited)
+    Task { await record() }
 case "midi": midiOnly()
 default:
     FileHandle.standardError.write(Data("usage: demo-recorder list | record --out <f.mov> --window <id>… [--audio-pid <pid>] [--fps n] [--midi name] | midi\n".utf8))

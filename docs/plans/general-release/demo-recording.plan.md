@@ -6,8 +6,17 @@ with captions, visible touches and Live's audio. Clips are recorded by a script 
 scenario definitions, and a docs page per feature is generated from the same definitions.
 Re-running it after a change refreshes the gallery.
 
-**Status:** proposed 2026-09-23. Revised 2026-09-28 (below); Phase 0 under way in
-`scripts/demo/`.
+**Status:** proposed 2026-09-23. Revised 2026-09-28 (below). **Phase 0 passed on
+2026-09-28** on Ben's home Mac (`npm run demo:record`, `scripts/demo/`): `record-and-layer`
+end to end, a 19 s side-by-side MP4 with finger circles, captions and Live's audio. Measured:
+- ScreenCaptureKit records Live's window while it sits in **another Space**, not on screen:
+  no fixed layout, no dedicated display needed.
+- Per-app audio took Live's output directly (Live on the Mac's own output here; the RME on
+  the rig is still to check).
+- Live lists **Vamp Demo** as a MIDI input with Track on, untouched.
+- Steps land within a few ms of their beat; the recorded clips match the phrase note for
+  note.
+- Not yet measured: the reset's time, and the rig.
 **Owner:** Ben.
 
 **Related:**
