@@ -1343,6 +1343,29 @@ def test_handle_select_clip_sets_highlighted_clip_slot(
     assert errors == []
 
 
+def test_handle_select_clip_hands_the_slot_to_on_slot_selected(
+    captured_emits, state_full_calls, scheduler,
+):
+    """The grid tap's slot goes on to Live's clip panel; a rejected
+    select hands nothing on."""
+    t0 = StubTrack(tid=100, name="t0")
+    slots = _attach_clip_slots(t0, num_slots=4)
+    song = SelStubSong(tracks=[t0], selected_track=t0)
+    selected = []
+    comp = SelectedTrackComponent(
+        song=song,
+        emit=lambda addr, args: captured_emits.append((addr, args)),
+        schedule_state_full=lambda path: None,
+        schedule_delayed=scheduler,
+        on_slot_selected=selected.append,
+    )
+
+    comp.handle_select_clip(["tracks/0", 2], source_addr=None)
+    comp.handle_select_clip(["tracks/0", 9], source_addr=None)
+
+    assert selected == [slots[2]]
+
+
 def test_handle_select_clip_out_of_range_rejects_not_found(
     captured_emits, state_full_calls, scheduler,
 ):
