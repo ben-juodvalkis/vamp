@@ -10,6 +10,10 @@
 	 *
 	 * The Logic and Notator grooves and a few others are in Ableton's binary
 	 * format, which the Mac cannot read, so they show without a picture.
+	 *
+	 * "Your grooves" come first: the `.agr` files in the User Library's
+	 * `Grooves` folder, named `User: <file>` so each can be ticked beside a
+	 * Core Library groove of the same name.
 	 */
 	import { onMount, untrack } from 'svelte';
 	import { Check, ChevronRight, Search, X } from 'lucide-svelte';
@@ -23,7 +27,7 @@
 	});
 
 	let filter = $state('');
-	let open = $state<Record<string, boolean>>({ [SHOWN_GROUP]: true, 'Swing/Basic': true });
+	let open = $state<Record<string, boolean>>({ [SHOWN_GROUP]: true, User: true, 'Swing/Basic': true });
 	let shown = $state.raw<string[]>([]);
 
 	$effect(() => {
@@ -117,11 +121,12 @@
 						<ul class="set-groove-grid" id="set-grooves-{g.id}" data-debug="grooves-{g.id}">
 							{#each g.files as f (f.name)}
 								{@const ticked = tickedSet.has(f.name)}
-								<li class="set-groove" data-groove={f.name} data-ticked={ticked}>
+								<li class="set-groove" class:blocked={!!f.blocked} data-groove={f.name} data-ticked={ticked}>
 									<label class="set-groove-tick">
 										<input
 											type="checkbox"
 											checked={ticked}
+											disabled={!!f.blocked}
 											onclick={(e) => {
 												if (groovesStore.saving) e.preventDefault();
 											}}
@@ -131,7 +136,9 @@
 										<span class="set-check" aria-hidden="true"><Check class="set-check-icon" /></span>
 										<span class="set-groove-main">
 											<span class="set-row-label set-groove-name">{f.name}</span>
-											{#if f.events?.length}
+											{#if f.blocked}
+												<span class="set-groove-nopic">{f.blocked}</span>
+											{:else if f.events?.length}
 												<span class="set-groove-pic"><GroovePicture events={f.events} /></span>
 											{:else if f.events === null}
 												<span class="set-groove-nopic">No picture: Live’s own format</span>
@@ -147,7 +154,12 @@
 			{/if}
 		{/each}
 
-		<p class="set-note">From Live’s Core Library ({groovesStore.listing.root}).</p>
+		<p class="set-note">
+			From Live’s Core Library ({groovesStore.listing.root}){#if groovesStore.listing.userRoot}
+				and your User Library ({groovesStore.listing.userRoot}){/if}. To add one of your own, extract it from a clip in
+			Live (right-click the clip → Extract Groove), then save it from the Groove Pool into your User Library’s Grooves
+			folder; it shows up here as “User: …” the next time this page opens.
+		</p>
 	{/if}
 </div>
 
@@ -332,6 +344,16 @@
 		background: var(--phosphor);
 		border-color: var(--phosphor);
 		color: var(--flat-on-fg);
+	}
+	.set-groove.blocked .set-groove-tick {
+		cursor: not-allowed;
+	}
+	.set-groove.blocked .set-groove-name {
+		color: var(--flat-disabled-fg);
+	}
+	.set-groove-tick input:disabled + .set-check {
+		background: transparent;
+		border-style: dashed;
 	}
 	.set-groove-tick input:focus-visible + .set-check {
 		outline: 2px solid var(--ring);

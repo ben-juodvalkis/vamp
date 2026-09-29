@@ -20,6 +20,14 @@
  * Percussion, 9 Style, 1 Utility, measured 2026-09-29): those carry no grid
  * and no picture rather than a guessed one.
  *
+ * **Your own grooves** are the `.agr` files in the User Library's `Grooves`
+ * folder (Live's `Library.cfg` says where the User Library is), in any
+ * subfolder, listed first as "Your grooves" and named `User: <file>` so each
+ * can be ticked beside a Core Library groove of the same name. That folder is
+ * re-read on every listing, so a groove saved from Live shows up on the next
+ * visit. A name holding `·`, `#` or `/` cannot be carried by the pool's naming
+ * and is listed but cannot be ticked.
+ *
  * **Which are ticked** is saved on the Mac in `logs/grooves.json`, IN TICK
  * ORDER — the order is the Groove view's tile order — the way the Places'
  * ticks are saved in `logs/places.json`. Nothing saved is a first run, which
@@ -30,7 +38,8 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { logger } from '$lib/utils/logger';
-import { GROOVE_GROUPS, type GrooveEvent, type GrooveFile, type GroovesListing } from '$lib/types/grooves';
+import { GROOVE_GROUPS, USER_GROOVE_PREFIX, type GrooveEvent, type GrooveFile, type GroovesListing } from '$lib/types/grooves';
+import { readLiveLibrary } from './places/liveLibrary';
 import { configPath, repoRoot } from './runtimeConfig';
 
 export { GROOVE_GROUPS, type GrooveEvent, type GrooveFile, type GroovesListing };
@@ -101,8 +110,9 @@ export function parseAgr(bytes: Buffer): { grid: string | null; events: GrooveEv
 	return { grid, events };
 }
 
-/** Every `.agr` under `root`, grouped by the folder it sits in, in Settings' order. */
-export function readGrooveLibrary(root: string): GrooveFile[] {
+/** Every `.agr` under `root`, grouped by the folder it sits in, in Settings' order —
+ *  or, with `user`, all in one "User" group and named `User: <file>`. */
+export function readGrooveLibrary(root: string, { user = false }: { user?: boolean } = {}): GrooveFile[] {
 	const files: GrooveFile[] = [];
 	const walk = (dir: string, group: string) => {
 		let names: string[];
@@ -127,11 +137,24 @@ export function readGrooveLibrary(root: string): GrooveFile[] {
 				} catch {
 					parsed = null;
 				}
-				files.push({ name: n.slice(0, -4), group, grid: parsed?.grid ?? null, events: parsed ? parsed.events : null });
+				const stem = n.slice(0, -4);
+				const file: GrooveFile = {
+					name: user ? USER_GROOVE_PREFIX + stem : stem,
+					group: user ? 'User' : group,
+					grid: parsed?.grid ?? null,
+					events: parsed ? parsed.events : null
+				};
+				if (/[·#/]/.test(stem)) file.blocked = 'Rename it without “·” or “#” to use it';
+				files.push(file);
 			}
 		}
 	};
 	walk(root, '');
+	if (user) {
+		// One file per name: the first found, as the surface's lookup finds it.
+		const seen = new Set<string>();
+		return files.filter((f) => !seen.has(f.name) && !!seen.add(f.name));
+	}
 	const rank = (g: string) => {
 		const i = GROOVE_GROUPS.findIndex((x) => x.id === g);
 		return i < 0 ? GROOVE_GROUPS.length : i;
@@ -160,6 +183,12 @@ export function grooveRoot(): string | null {
 	return existsSync(root) ? root : null;
 }
 
+/** The User Library's `Grooves` folder, or null. */
+export function userGrooveRoot(): string | null {
+	const lib = readLiveLibrary();
+	return lib.userLibrary ? join(lib.userLibrary, 'Grooves') : null;
+}
+
 export function readGrooveTicks(file: string): { ticked: string[]; firstRun: boolean } {
 	try {
 		if (!existsSync(file)) return { ticked: [...DEFAULT_TICKS], firstRun: true };
@@ -184,11 +213,13 @@ let library: { root: string; files: GrooveFile[] } | null = null;
 /** The listing, the library read once per `Grooves` folder. */
 export function groovesListing(
 	root: string | null = grooveRoot(),
-	ticksFile: string = join(repoRoot(), 'logs', 'grooves.json')
+	ticksFile: string = join(repoRoot(), 'logs', 'grooves.json'),
+	userRoot: string | null = userGrooveRoot()
 ): GroovesListing {
 	if (root && library?.root !== root) library = { root, files: readGrooveLibrary(root) };
-	const files = root && library ? library.files : [];
-	const names = new Set(files.map((f) => f.name));
+	const mine = userRoot && existsSync(userRoot) ? readGrooveLibrary(userRoot, { user: true }) : [];
+	const files = [...mine, ...(root && library ? library.files : [])];
+	const names = new Set(files.filter((f) => !f.blocked).map((f) => f.name));
 	const { ticked, firstRun } = readGrooveTicks(ticksFile);
-	return { root, files, ticked: ticked.filter((n) => names.has(n)), firstRun };
+	return { root, userRoot, files, ticked: ticked.filter((n) => names.has(n)), firstRun };
 }

@@ -1717,8 +1717,9 @@ class LoopingSurface(ControlSurface):
             if loader is None:
                 return "no device loader"
             if pattern:
-                # The groove chooser's pattern: its file from the Core Library.
-                return loader.load_core_groove(pattern)
+                # The groove chooser's pattern: its file, from the Core
+                # Library or (``User: …``) the User Library.
+                return loader.load_groove_by_name(pattern)
             return loader.load_groove(
                 groove_path,
                 source=live_library.m4l_source(), rel=live_library.GROOVE_REL,

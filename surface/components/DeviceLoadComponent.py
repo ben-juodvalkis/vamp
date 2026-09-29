@@ -104,6 +104,10 @@ NATIVE_SOURCE_PREFIX = "native:"
 
 # Live's Core Library, as its browser lists it: one of ``browser.packs``.
 CORE_LIBRARY_SOURCE = "pack:Core Library"
+# A groove of the user's own — a file in their User Library's ``Grooves``
+# folder — is named ``User: <file>`` on the wire and in the pool, so it can
+# sit beside a Core Library groove of the same name.
+USER_GROOVE_PREFIX = "User: "
 
 # Issue #491 (3.8.0) → ADR-437 (2026-09-14): where a pad-targeted browser
 # load landed is checked the moment ``load_item`` returns, and a preset
@@ -1030,10 +1034,11 @@ class DeviceLoadComponent:
             return "not-in-browser: %r" % (path,)
         return self._load_groove_item(item)
 
-    def load_core_groove(self, name: str) -> Optional[str]:
-        """Load the Core Library groove file called ``name`` (``Swing 16ths
-        57``, no extension) into the Groove Pool. ``None`` when the load
-        ran, else a short detail string.
+    def load_groove_by_name(self, name: str) -> Optional[str]:
+        """Load the groove file called ``name`` (``Swing 16ths 57``, no
+        extension) into the Groove Pool: from the Core Library, or from the
+        User Library's ``Grooves`` folder for ``User: <file>``. ``None``
+        when the load ran, else a short detail string.
 
         Live's browser lists the Core Library as a Pack
         (``browser.packs`` → ``Core Library`` → ``Grooves`` → ``Swing`` /
@@ -1044,7 +1049,10 @@ class DeviceLoadComponent:
         """
         if not name or "/" in name:
             return "bad-groove-name: %r" % (name,)
-        item = self._browser_cache.find_leaf(CORE_LIBRARY_SOURCE, "Grooves", name + ".agr")
+        source = CORE_LIBRARY_SOURCE
+        if name.startswith(USER_GROOVE_PREFIX):
+            source, name = "library", name[len(USER_GROOVE_PREFIX):]
+        item = self._browser_cache.find_leaf(source, "Grooves", name + ".agr")
         if item is None:
             return "not-in-browser: %r" % (name,)
         return self._load_groove_item(item)

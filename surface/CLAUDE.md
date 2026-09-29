@@ -740,7 +740,10 @@ entry's name** — `<track> <scene> · <pattern> #<pathHash>` for a claim,
 `unassigned-<idx> · <pattern>` for a free one (`GroovePoolComponent`,
 `parse_groove_name`) — since a claim used to rename it `Clip_<pathHash>` and
 erase it. Ownership is the hash; the label is for a person reading Live's pool.
-A free groove is reused only for its own pattern. `/looping/v3/clip/groove/file`
+A free groove is reused only for its own pattern. A groove of the user's own is
+named `User: <file>` (`USER_GROOVE_PREFIX`) and loaded from the User Library's
+`Grooves` folder (`find_leaf("library", …)`), so it can sit beside a Core Library
+file of the same name. `/looping/v3/clip/groove/file`
 echoes the focused clip's pattern (`""` when none is named). What was measured
 is in `docs/reference/live-api-measurements.md` ("Groove pool and groove files").
 Tests: `tests/test_groove_component.py`, `tests/test_groove_pool_component.py`.

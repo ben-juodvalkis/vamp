@@ -123,3 +123,42 @@ describe.skipIf(!existsSync(LIVE_GROOVES))('the Core Library on this Mac', () =>
 		expect(groovesListing(LIVE_GROOVES, ticks).ticked).toEqual(['Swing 8ths 73', 'Swing 16ths 57']);
 	});
 });
+
+describe('your own grooves', () => {
+	it('lists the User Library’s grooves as “User: <file>”, first, beside a Core groove of the same name', () => {
+		const core = mkdtempSync(join(tmpdir(), 'grooves-core-'));
+		mkdirSync(join(core, 'Swing', 'Basic'), { recursive: true });
+		writeFileSync(join(core, 'Swing', 'Basic', 'Swing 16.agr'), agr([0, 0.25]));
+		const mine = mkdtempSync(join(tmpdir(), 'grooves-user-'));
+		mkdirSync(join(mine, 'Old'));
+		writeFileSync(join(mine, 'Swing 16.agr'), agr([0, 0.3]));
+		writeFileSync(join(mine, 'Old', 'Late #2.agr'), agr([0, 0.3]));
+		const ticks = join(mkdtempSync(join(tmpdir(), 'grooves-ut-')), 'grooves.json');
+		writeGrooveTicks(ticks, ['User: Swing 16', 'Swing 16', 'User: Late #2']);
+
+		const l = groovesListing(core, ticks, mine);
+		expect(l.userRoot).toBe(mine);
+		expect(l.files.map((f) => [f.group, f.name, !!f.blocked])).toEqual([
+			['User', 'User: Late #2', true],
+			['User', 'User: Swing 16', false],
+			['Swing/Basic', 'Swing 16', false]
+		]);
+		// A name the pool cannot carry is listed, never ticked.
+		expect(l.ticked).toEqual(['User: Swing 16', 'Swing 16']);
+	});
+
+	it('has no user group without a User Library', () => {
+		const ticks = join(mkdtempSync(join(tmpdir(), 'grooves-ut-')), 'grooves.json');
+		expect(groovesListing(null, ticks, null)).toMatchObject({ files: [], userRoot: null });
+	});
+});
+
+const MY_GROOVES = '/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Grooves';
+
+describe.skipIf(!existsSync(MY_GROOVES))('the User Library on this Mac', () => {
+	it('lists its grooves as User: …, all readable', () => {
+		const files = readGrooveLibrary(MY_GROOVES, { user: true });
+		expect(files.map((f) => f.name)).toEqual(expect.arrayContaining(['User: Swing 16', 'User: Swing 8']));
+		expect(files.every((f) => f.group === 'User' && f.events !== null)).toBe(true);
+	});
+});

@@ -1945,7 +1945,7 @@ def test_no_user_library_anywhere_is_empty_not_dot(recorder):
 # --- load_core_groove: the groove chooser (2026-09-29) ---------------------
 
 
-def test_load_core_groove_loads_the_file_by_name(song, recorder, user_library_base):
+def test_load_groove_by_name_loads_a_core_library_file(song, recorder, user_library_base):
     groove = StubBrowserItem("Swing 16ths 57.agr", is_loadable=True)
     core = StubBrowserItem("Core Library", children=[
         StubBrowserItem("Grooves", children=[
@@ -1956,10 +1956,33 @@ def test_load_core_groove_loads_the_file_by_name(song, recorder, user_library_ba
     browser.packs = StubBrowserItem("Packs", children=[core])
     c = DeviceLoadComponent(song=song, browser=browser, emit=recorder, user_library_base=user_library_base)
     try:
-        assert c.load_core_groove("Swing 16ths 57") is None
+        assert c.load_groove_by_name("Swing 16ths 57") is None
         assert browser.calls == ["Swing 16ths 57.agr"]
-        assert c.load_core_groove("Swing 16ths 99").startswith("not-in-browser")
-        assert c.load_core_groove("a/b").startswith("bad-groove-name")
+        assert c.load_groove_by_name("Swing 16ths 99").startswith("not-in-browser")
+        assert c.load_groove_by_name("a/b").startswith("bad-groove-name")
         assert browser.calls == ["Swing 16ths 57.agr"]
+    finally:
+        c.disconnect()
+
+
+def test_load_groove_by_name_loads_a_user_groove_from_the_user_library(song, recorder, user_library_base):
+    """``User: Swing 16`` is the User Library's ``Grooves/Swing 16.agr``, not
+    the Core Library's file of that name."""
+    mine = StubBrowserItem("Swing 16.agr", is_loadable=True)
+    theirs = StubBrowserItem("Swing 16.agr", is_loadable=True)
+    browser = StubBrowser(user_library=StubBrowserItem("User Library", children=[
+        StubBrowserItem("Grooves", children=[mine]),
+    ]))
+    browser.packs = StubBrowserItem("Packs", children=[StubBrowserItem("Core Library", children=[
+        StubBrowserItem("Grooves", children=[theirs]),
+    ])])
+    loaded = []
+    browser.load_item = loaded.append
+    c = DeviceLoadComponent(song=song, browser=browser, emit=recorder, user_library_base=user_library_base)
+    try:
+        assert c.load_groove_by_name("User: Swing 16") is None
+        assert c.load_groove_by_name("Swing 16") is None
+        assert loaded == [mine, theirs]
+        assert c.load_groove_by_name("User: Nope").startswith("not-in-browser")
     finally:
         c.disconnect()

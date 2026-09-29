@@ -1070,3 +1070,21 @@ def test_leaving_a_shared_core_groove_keeps_its_pattern(captured_emits):
     mine = song.groove_pool._grooves[-1]
     assert mine.name == "t0 2 · Swing 16ths 66 #" + path_hash("tracks/0/slots/1/clip")
     assert mine.quantization_amount == 30.0
+
+
+def test_set_file_takes_a_user_groove_by_its_prefixed_name(captured_emits):
+    """``User: Swing 16`` is the user's own file: the claim and the echo carry
+    the prefix, so it never passes for the Core Library's groove of that name."""
+    core_free = GrooveWithListeners(name="unassigned-0 · Swing 16")
+    song, clip, pool = _chooser_song(core_free)
+    calls = []
+    _pc, gc = _make_minting(song, pool, captured_emits, calls)
+    captured_emits.clear()
+
+    gc.handle_set_file(args=(CLIP, "User: Swing 16"), source_addr=None)
+
+    assert calls == ["User: Swing 16"]
+    g = pool._grooves[-1]
+    assert g.name == "Bass 2 · User: Swing 16 #" + path_hash(CLIP)
+    assert core_free.name == "unassigned-0 · Swing 16"
+    assert _file_emits(captured_emits)[-1] == (CLIP, "User: Swing 16")
