@@ -176,6 +176,14 @@ unrelated to what you're testing.
       pitch step moves every pad +12 and back; Seq Engine OFF restores
       pitch, mutes and temperature. With it OFF a fat Permute's own steps
       still light the strip
+- [ ] **Groove chooser:** touch Q on a playing MIDI clip → Quantize moves
+      as before, the central view shows the Groove view and the Q well
+      takes the blue edge; a clip with no groove lights the first tile at
+      Amount 0. Tap another tile → Live's Groove Pool shows the clip's
+      groove as `<track> <scene> · <file> #<hash>`, and Quantize, Amount,
+      Random and Velocity are unchanged. Raise Amount → the lit tile's
+      picture moves from straight to the pattern and the clip swings.
+      Settings → Grooves: tick one → it joins the tiles at the end
 
 ## 7 · Capture
 

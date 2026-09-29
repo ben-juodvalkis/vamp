@@ -727,6 +727,27 @@ is empty — such loads now reject with `track-not-found / empty-path`,
 making the "instrument lands on wrong track during selection echo
 lag" bug structurally impossible.
 
+## The groove chooser (2026-09-29, issue #1)
+
+Live's API cannot set a groove's pattern, so `/looping/v3/clip/groove/set/file
+[clipPath, name]` (`GrooveComponent.handle_set_file`) puts a clip on a Core
+Library groove file by claiming a groove that holds it: a free one of that
+pattern, else one loaded by name (`DeviceLoadComponent.load_core_groove` →
+`BrowserCache.find_leaf("pack:Core Library", "Grooves", name + ".agr")`). It
+then writes the clip's four amounts back, because a loaded file brings its own,
+and names the groove it left free again. **The pattern lives in the pool
+entry's name** — `<track> <scene> · <pattern> #<pathHash>` for a claim,
+`unassigned-<idx> · <pattern>` for a free one (`GroovePoolComponent`,
+`parse_groove_name`) — since a claim used to rename it `Clip_<pathHash>` and
+erase it. Ownership is the hash; the label is for a person reading Live's pool.
+A free groove is reused only for its own pattern. A groove of the user's own is
+named `User: <file>` (`USER_GROOVE_PREFIX`) and loaded from the User Library's
+`Grooves` folder (`find_leaf("library", …)`), so it can sit beside a Core Library
+file of the same name. `/looping/v3/clip/groove/file`
+echoes the focused clip's pattern (`""` when none is named). What was measured
+is in `docs/reference/live-api-measurements.md` ("Groove pool and groove files").
+Tests: `tests/test_groove_component.py`, `tests/test_groove_pool_component.py`.
+
 ## Group Tracks (ADR-410, 2026-07-27)
 
 `TrackMetadataComponent` owns the fold wire —

@@ -8,7 +8,7 @@
  */
 import { logger } from '$lib/utils/logger';
 
-export type CentralViewType = 'device' | 'instrument' | 'clip' | 'permute' | 'config' | 'track' | 'default' | 'custom' | 'debug' | 'system';
+export type CentralViewType = 'device' | 'instrument' | 'clip' | 'permute' | 'groove' | 'config' | 'track' | 'default' | 'custom' | 'debug' | 'system';
 
 export interface CentralViewData {
 	type: CentralViewType;
@@ -32,9 +32,9 @@ class CentralDisplayStore {
 	 * Set the current view
 	 */
 	setView(type: CentralViewType, subType?: string, data?: any, title?: string, wide?: boolean) {
-		// Auto-set wide=true for instrument, clip, and permute views if not explicitly specified
+		// Auto-set wide=true for instrument, clip, permute and groove views if not explicitly specified
 		if (wide === undefined) {
-			wide = type === 'instrument' || type === 'clip' || type === 'permute';
+			wide = type === 'instrument' || type === 'clip' || type === 'permute' || type === 'groove';
 		}
 
 		const newView: CentralViewData = {

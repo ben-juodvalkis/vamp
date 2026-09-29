@@ -12,6 +12,10 @@
  *  - `timing_amount` / `quantization_amount` / `random_amount` /
  *    `velocity_amount` → amount fields (float 0–100)
  *
+ * `file` is the groove file the clip's groove holds (`Swing 16ths 57`), `""`
+ * when none is known — the Groove view's lit tile. A tile tap sets it at
+ * once (`chooseFile`) and the surface's echo confirms or corrects it.
+ *
  * `hasGroove` flips on assignment and back off on unassign (either
  * pool-return-on-delete or the clip losing its groove in Live). The
  * focused-clipPath listener in [session.svelte.ts] calls `clearAll()`
@@ -26,6 +30,10 @@ class ClipGrooveStore {
 	private _quantizationAmount = $state<number>(0);
 	private _randomAmount = $state<number>(0);
 	private _velocityAmount = $state<number>(0);
+	private _file = $state<string>('');
+	// Whether the surface has said, for this focus, whether the clip has a
+	// groove — until it has, `hasGroove` false means "not known yet".
+	private _known = $state<boolean>(false);
 
 	// Reactive getters
 	get hasGroove(): boolean {
@@ -46,6 +54,12 @@ class ClipGrooveStore {
 	get velocityAmount(): number {
 		return this._velocityAmount;
 	}
+	get file(): string {
+		return this._file;
+	}
+	get hasGrooveKnown(): boolean {
+		return this._known;
+	}
 
 	// Derived
 	get baseGridLabel(): string {
@@ -57,7 +71,18 @@ class ClipGrooveStore {
 
 	// Message handlers
 
+	handleFile(name: string) {
+		this._file = name;
+	}
+
+	/** A tile tap: shown at once, before the surface's echo. The clip has a groove from here on. */
+	chooseFile(name: string) {
+		this._file = name;
+		this._hasGroove = true;
+	}
+
 	handleHasGroove(value: boolean) {
+		this._known = true;
 		this._hasGroove = value;
 	}
 
@@ -92,6 +117,8 @@ class ClipGrooveStore {
 		this._quantizationAmount = 0;
 		this._randomAmount = 0;
 		this._velocityAmount = 0;
+		this._file = '';
+		this._known = false;
 	}
 }
 

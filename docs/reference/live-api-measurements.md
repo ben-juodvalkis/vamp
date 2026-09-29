@@ -77,6 +77,26 @@ The UI reaches the LOM only through the surface, over the v3 wire ([wire-protoco
 - **`beat_to_sample_time` / `sample_to_beat_time`** work in samples, not the seconds a WarpMarker
   uses: divide by `sample_rate`.
 
+## Groove pool and groove files
+
+Measured on Live 12.4.15b2–b4, 2026-09-29 (issue #1, the groove chooser).
+
+- **The API cannot create, copy, delete or re-pattern a groove.** `GroovePool` is `grooves` and
+  its listener; a `Groove` is `name`, `base` and the four amounts. `clip.groove = None` raises
+  `ArgumentError`: a groove can be replaced on a clip, never removed.
+- **`browser.load_item(<.agr>)` appends a new pool entry every call**, synchronously, named after
+  the file (`Swing 16ths 57`), attached to no clip. It carries the file's own amounts (the Core
+  Library's Swing files: Timing 100, the rest 0) and its grid as `base`.
+- **The Core Library is a Pack to the browser** (`browser.packs` → `Core Library` → `Grooves` →
+  `Swing/{Basic,Logic,MPC,Notator,SP 1200}`, `Style`, `Percussion`, `Utility`), though
+  `Library.cfg` lists no slice for it. Names keep `.agr`. All 219 files are loadable, the binary
+  ones included. Walking the whole Core Library (7,517 items) took 66 ms; a load, 14 ms.
+- **A pool entry takes any name**, `·` and `#` included, and reads it back as written.
+- **`.agr` on disk:** gzipped or plain XML with `<Grid Value=…>` (0 1/4, 1 1/8, 2 1/8T, 3 1/16,
+  4 1/16T, 5 1/32), `<MidiNoteEvent Time=… Velocity=…>` and the four amounts — except 103 of the
+  219, in Ableton's binary format (magic `ab1e5678`): all of Logic and Notator, 9 MPC,
+  10 Percussion, 9 Style, 1 Utility. File names are unique across the 219.
+
 ## Envelope
 
 `Live.Envelope.Envelope`, from `Clip.automation_envelope(param)` / `create_automation_envelope(param)`.

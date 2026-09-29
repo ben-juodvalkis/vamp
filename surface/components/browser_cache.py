@@ -229,6 +229,54 @@ class BrowserCache:
         logger.warning("BrowserCache: unknown source %r", source)
         return None
 
+    def find_leaf(self, source: str, folder: str, leaf: str) -> Optional[object]:
+        """The loadable item named ``leaf`` anywhere under ``folder`` at the
+        top of ``source`` — ``pack:<name>`` or ``library`` (the User
+        Library) — or ``None``. For a file known by name alone: a groove the
+        chooser names (``pack:Core Library`` or ``library``, ``Grooves``,
+        ``Swing 16ths 57.agr``) sits one or two folders down.
+
+        Only that folder is walked, once (the Core Library's ``Grooves``
+        is 219 files; the whole Core Library, 7,517 items, walked in 66 ms,
+        measured 2026-09-29); a miss walks it again after the cooldown, so
+        a groove saved since is found.
+        """
+        key = "%s/%s" % (source, folder)
+        want = browser_name(leaf)
+        for attempt in (0, 1):
+            if attempt == 0 and not self._built.get(key):
+                self._build_folder(key, source, folder)
+            elif attempt == 1:
+                if self._clock() - self._built_at.get(key, 0.0) < REBUILD_COOLDOWN_S:
+                    break
+                self._build_folder(key, source, folder)
+            for segments, item in self._caches.get(key, {}).items():
+                if segments and segments[-1] == want:
+                    return item
+        logger.warning("BrowserCache: %r not found under %s", leaf, key)
+        return None
+
+    def _build_folder(self, key: str, source: str, folder: str) -> None:
+        self._built[key] = True
+        self._built_at[key] = self._clock()
+        self._caches[key] = {}
+        if source == SOURCE_LIBRARY:
+            top = self._resolve_root_node("user_library", None)
+        elif source.startswith(SOURCE_PACK_PREFIX):
+            top = self._resolve_root_node(key, None, source[len(SOURCE_PACK_PREFIX):])
+        else:
+            return
+        if top is None:
+            return
+        node = self._find_top(top, browser_name(folder), key)
+        if node is None:
+            return
+        try:
+            self._walk(node, (), self._caches[key], key)
+        except _LOM_ERRORS as e:
+            logger.warning("BrowserCache: walk of %s raised: %s: %s", key, type(e).__name__, e)
+        logger.info("BrowserCache: built %s with %d entries", key, len(self._caches[key]))
+
     def root_path(self, source: str) -> Optional[str]:
         """The folder a ``source`` names on disk, or ``None``."""
         if source == SOURCE_LIBRARY:

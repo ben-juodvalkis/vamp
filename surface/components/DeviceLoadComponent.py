@@ -102,6 +102,13 @@ _EXPECTED_ARG_COUNTS = (3, 5)
 # 3.12.0: the ``source`` of a load that names a native device, not a file.
 NATIVE_SOURCE_PREFIX = "native:"
 
+# Live's Core Library, as its browser lists it: one of ``browser.packs``.
+CORE_LIBRARY_SOURCE = "pack:Core Library"
+# A groove of the user's own — a file in their User Library's ``Grooves``
+# folder — is named ``User: <file>`` on the wire and in the pool, so it can
+# sit beside a Core Library groove of the same name.
+USER_GROOVE_PREFIX = "User: "
+
 # Issue #491 (3.8.0) → ADR-437 (2026-09-14): where a pad-targeted browser
 # load landed is checked the moment ``load_item`` returns, and a preset
 # Live has not shown yet is looked for again on every fast tick — the
@@ -1025,6 +1032,32 @@ class DeviceLoadComponent:
         item = self._resolve_browser_item(path, source, rel)
         if item is None:
             return "not-in-browser: %r" % (path,)
+        return self._load_groove_item(item)
+
+    def load_groove_by_name(self, name: str) -> Optional[str]:
+        """Load the groove file called ``name`` (``Swing 16ths 57``, no
+        extension) into the Groove Pool: from the Core Library, or from the
+        User Library's ``Grooves`` folder for ``User: <file>``. ``None``
+        when the load ran, else a short detail string.
+
+        Live's browser lists the Core Library as a Pack
+        (``browser.packs`` → ``Core Library`` → ``Grooves`` → ``Swing`` /
+        ``Style`` / ``Percussion`` / ``Utility``), though ``Library.cfg``
+        does not; the file is found there by name, so no path to the Live
+        app is needed (measured 2026-09-29 on 12.4.15b4: all 219 loadable,
+        and a load appends a pool entry named after the file).
+        """
+        if not name or "/" in name:
+            return "bad-groove-name: %r" % (name,)
+        source = CORE_LIBRARY_SOURCE
+        if name.startswith(USER_GROOVE_PREFIX):
+            source, name = "library", name[len(USER_GROOVE_PREFIX):]
+        item = self._browser_cache.find_leaf(source, "Grooves", name + ".agr")
+        if item is None:
+            return "not-in-browser: %r" % (name,)
+        return self._load_groove_item(item)
+
+    def _load_groove_item(self, item) -> Optional[str]:
         try:
             self._browser.load_item(item)
         except _LOM_ERRORS as e:
