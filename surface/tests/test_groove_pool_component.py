@@ -187,8 +187,8 @@ def test_assign_renames_then_links(captured_emits):
     returned = c.assign_groove_to_clip(clip, clip_path)
 
     assert returned is g0
-    # Rename landed as a claim: no track to name it by, so "Clip".
-    assert g0.name == "Clip #" + path_hash(clip_path)
+    # Rename landed with the Clip_<hash> form.
+    assert g0.name == "Clip_" + path_hash(clip_path)
     # Link landed: clip.groove now points at the groove object.
     assert clip.groove is g0
 
@@ -336,7 +336,7 @@ def test_orphaned_claim_is_reclaimed_before_minting(captured_emits):
     got = c.assign_groove_to_clip(clip, "tracks/0/slots/1/clip")
 
     assert got is orphan
-    assert orphan.name == "Clip #" + path_hash("tracks/0/slots/1/clip")
+    assert orphan.name == "Clip_" + path_hash("tracks/0/slots/1/clip")
     assert clip.linked is orphan
     assert calls == []
 
@@ -354,7 +354,7 @@ def test_mints_when_every_groove_is_linked(captured_emits):
     assert calls == [1]
     assert len(pool._grooves) == 2
     assert got is pool._grooves[1]
-    assert got.name == "Clip #" + path_hash("tracks/0/slots/1/clip")
+    assert got.name == "Clip_" + path_hash("tracks/0/slots/1/clip")
     assert clip.linked is got
 
 
@@ -437,101 +437,3 @@ def test_is_owned_by():
     assert not is_owned_by("Swing 16ths 66", path)
     assert not is_owned_by("unassigned-3", path)
     assert not is_owned_by(None, path)
-
-
-# --- names that carry the pattern (2026-09-29) ------------------------------
-
-from components.GroovePoolComponent import (  # noqa: E402
-    claim_name,
-    free_name,
-    parse_groove_name,
-    pattern_of,
-)
-
-
-def test_parse_groove_name():
-    h = path_hash("tracks/0/slots/0/clip")
-    assert parse_groove_name("Bass 3 · Swing 16ths 57 #" + h) == ("claim", "Swing 16ths 57", h)
-    assert parse_groove_name("Bass 3 #" + h) == ("claim", None, h)
-    assert parse_groove_name("Clip_" + h) == ("claim", None, h)
-    assert parse_groove_name("Clip_12345") == ("claim", None, "12345")
-    assert parse_groove_name("unassigned-4") == ("free", None, None)
-    assert parse_groove_name("unassigned-4 · Swing 8ths 61") == ("free", "Swing 8ths 61", None)
-    assert parse_groove_name("Swing 16ths 66") == ("other", "Swing 16ths 66", None)
-    assert parse_groove_name(None) == ("other", None, None)
-    assert pattern_of("Clip #" + h) is None
-
-
-def test_claim_name_reads_and_cleans_its_label():
-    path = "tracks/0/slots/0/clip"
-    h = path_hash(path)
-    assert claim_name("Keys  1", "Swing 16ths 57", path) == "Keys 1 · Swing 16ths 57 #" + h
-    assert claim_name("A·B #2", None, path) == "A B 2 #" + h
-    assert claim_name("", None, path) == "Clip #" + h
-    assert parse_groove_name(claim_name("x · y", "Swing 16ths 57", path)).pattern == "Swing 16ths 57"
-    assert free_name(7, "Swing 16ths 57") == "unassigned-7 · Swing 16ths 57"
-
-
-def test_is_owned_by_the_new_names():
-    path = "tracks/0/slots/0/clip"
-    assert is_owned_by("Bass 1 · Swing 16ths 57 #" + path_hash(path), path)
-    assert is_owned_by("Bass 1 #" + path_hash(path), path)
-    assert not is_owned_by("Bass 2 #" + path_hash("tracks/0/slots/1/clip"), path)
-    assert not is_owned_by("unassigned-1 · Swing 16ths 57", path)
-
-
-class NamedTrack(Track):
-    def __init__(self, name, *clips):
-        super().__init__(*clips)
-        self.name = name
-
-
-def test_claim_is_named_for_track_and_scene(captured_emits):
-    free = StubGroove("unassigned-0")
-    pool = StubGroovePool(grooves=[free])
-    song = SongWithTracks(pool, [NamedTrack("Drums", None, None, None)])
-    c = GroovePoolComponent(song=song, emit=lambda *a: None)
-    c.assign_groove_to_clip(LinkedClip(), "tracks/0/slots/2/clip")
-    assert free.name == "Drums 3 #" + path_hash("tracks/0/slots/2/clip")
-
-
-def test_an_orphan_of_another_pattern_is_not_reused(captured_emits):
-    orphan = StubGroove("Keys 1 · Swing 8ths 61 #aaaaaaaa")
-    pool = StubGroovePool(grooves=[orphan])
-    song = SongWithTracks(pool, [NamedTrack("Bass", None)])
-    calls = []
-
-    def mint(pattern=None):
-        calls.append(pattern)
-        pool._grooves.append(StubGroove(pattern or "Vamp Groove"))
-
-    c = GroovePoolComponent(song=song, emit=lambda *a: None, mint=mint)
-    got = c.assign_groove_to_clip(LinkedClip(), "tracks/0/slots/0/clip")
-    assert calls == [None] and got is not orphan
-    got2 = c.assign_groove_to_clip(LinkedClip(), "tracks/0/slots/0/clip", pattern="Swing 8ths 61")
-    assert got2 is orphan and calls == [None]
-
-
-def test_not_strict_falls_back_to_the_default(captured_emits):
-    free = StubGroove("unassigned-0")
-    pool = StubGroovePool(grooves=[free])
-    song = SongWithTracks(pool, [NamedTrack("Bass", None)])
-    c = GroovePoolComponent(song=song, emit=lambda *a: None, mint=lambda pattern=None: "not-in-browser")
-    got = c.assign_groove_to_clip(LinkedClip(), "tracks/0/slots/0/clip", pattern="My Groove", strict=False)
-    assert got is free and free.name == "Bass 1 #" + path_hash("tracks/0/slots/0/clip")
-    with pytest.raises(PoolExhausted):
-        c.assign_groove_to_clip(LinkedClip(), "tracks/0/slots/0/clip", pattern="My Groove")
-
-
-def test_return_and_release_keep_the_pattern(captured_emits):
-    path = "tracks/0/slots/0/clip"
-    a = StubGroove("x")
-    claimed = StubGroove("Bass 1 · Swing 16ths 57 #" + path_hash(path))
-    pool = StubGroovePool(grooves=[a, claimed])
-    c = _make_component(PoolStubSong(pool=pool), captured_emits)
-    assert c.return_groove_to_pool(path) is True
-    assert claimed.name == "unassigned-1 · Swing 16ths 57"
-
-    claimed.name = "Bass 1 · Swing 8ths 61 #" + path_hash(path)
-    assert c.release(claimed) is True
-    assert claimed.name == "unassigned-1 · Swing 8ths 61"

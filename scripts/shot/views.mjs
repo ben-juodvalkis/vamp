@@ -166,10 +166,6 @@ export const TOURS = {
 				steps: [{ click: '.editor-toggle' }, { click: '.edit-chip:has-text("Fold")' }]
 			},
 			{ name: 'permute', description: 'Permute (Bass)', steps: [openPermute(1)] },
-			// Touching Q opens it; the tiles are the Mac's own ticks
-			// (`logs/grooves.json`, else the twelve defaults) from Live's Core
-			// Library — on a Mac without Live there are none to draw.
-			{ name: 'groove', description: 'Groove view (touch Q): the ticked grooves, Random · Velocity · Amount', steps: [{ click: '[aria-label="Quantization amount"]' }] },
 			{ name: 'system', description: 'Master track — the System view: Transport, Follow Key, Sections', steps: [{ click: '[data-debug="master-card"]' }] },
 			{
 				name: 'fx-pedal-general',
@@ -282,11 +278,6 @@ export const TOURS = {
 				name: 'settings-places-filter',
 				description: 'Settings → Places, filtered to "drum"',
 				steps: [...SETTINGS_OPEN, { click: '[data-tab="places"]' }, { fill: '.set-filter input', text: 'drum' }]
-			},
-			{
-				name: 'settings-grooves',
-				description: 'Settings → Grooves — Live’s groove files, the Groove view’s first',
-				steps: [...SETTINGS_OPEN, { click: '[data-tab="grooves"]' }]
 			},
 			{
 				name: 'settings-connection',

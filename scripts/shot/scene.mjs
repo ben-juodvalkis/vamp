@@ -1389,12 +1389,7 @@ export function buildDefaultScene({ trackCount = DEFAULT_TRACKS.length } = {}) {
 			// photographed at all (ADR-440). Vox's "Verse" rather than the
 			// Guitar's only clip, which is RECORDING: `clip/swap_file` refuses
 			// one of those, so the pill would be photographing a refusal.
-			'/looping/v3/clip/focused': ['tracks/4/slots/1/clip'],
-			// Its groove, for the Groove view (opened by touching Q): on one of
-			// the default tiles, at the approved design's Amount of 60.
-			'/looping/v3/clip/groove/has_groove': ['tracks/4/slots/1/clip', 1],
-			'/looping/v3/clip/groove/file': ['tracks/4/slots/1/clip', 'Swing MPC 3000 16ths 74'],
-			'/looping/v3/clip/groove/property': ['tracks/4/slots/1/clip', 'timing_amount', 60.0]
+			'/looping/v3/clip/focused': ['tracks/4/slots/1/clip']
 		},
 		// The AX helper's state as the BRIDGE publishes it (`/bridge/ax_helper`),
 		// which is what gates the Drum Rack's kit/pad pill. Part of the scene so

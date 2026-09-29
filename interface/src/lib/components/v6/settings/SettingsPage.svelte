@@ -10,7 +10,6 @@
 	 *   Setup       the first-run checklist, only while this visit began as one
 	 *   General     Behavior, Appearance, Foot Switch (`GeneralSection`)
 	 *   Places      a tick per folder Live lists (`PlacesCard`)
-	 *   Grooves     a tick per groove file for the Groove view (`GroovesSection`)
 	 *   Connection  Live's surface, the address to open on the iPad, the
 	 *               features and why any is unavailable (`ConnectionSection`)
 	 *
@@ -31,11 +30,9 @@
 	import { handshakeState } from '$lib/stores/v3/handshakeState.svelte';
 	import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
 	import { session } from '$lib/stores/session.svelte';
-	import { SlidersHorizontal, FolderOpen, AudioLines, Cable, ListChecks, X } from 'lucide-svelte';
+	import { SlidersHorizontal, FolderOpen, Cable, ListChecks, X } from 'lucide-svelte';
 	import GeneralSection from './GeneralSection.svelte';
 	import PlacesCard from './PlacesCard.svelte';
-	import GroovesSection from './GroovesSection.svelte';
-	import { groovesStore } from '$lib/stores/v6/groovesStore.svelte';
 	import ConnectionSection from './ConnectionSection.svelte';
 	import FirstRunCard from './FirstRunCard.svelte';
 	import { createPlacesListing } from './placesListing.svelte';
@@ -102,7 +99,6 @@
 		...(setup ? [{ id: 'setup' as const, label: 'Setup', icon: ListChecks }] : []),
 		{ id: 'general', label: 'General', icon: SlidersHorizontal },
 		{ id: 'places', label: 'Places', icon: FolderOpen },
-		{ id: 'grooves', label: 'Grooves', icon: AudioLines },
 		{ id: 'connection', label: 'Connection', icon: Cable }
 	]);
 	const current = $derived<SettingsSection>(tabs.some((t) => t.id === settingsStore.section) ? settingsStore.section : 'general');
@@ -213,8 +209,6 @@
 						<span class="set-tab-badge" aria-label="{progress.done} of {progress.total} steps done">{progress.done}/{progress.total}</span>
 					{:else if tab.id === 'places' && places.listing}
 						<span class="set-tab-badge" aria-label="{places.tickedCount} shown in the browser">{places.tickedCount}</span>
-					{:else if tab.id === 'grooves' && groovesStore.listing}
-						<span class="set-tab-badge" aria-label="{groovesStore.ticked.length} in the Groove view">{groovesStore.ticked.length}</span>
 					{:else if tab.id === 'connection'}
 						<span class="set-tab-dot" data-state={connectionState} role="img" aria-label={CONNECTION_STATE_LABEL[connectionState]}></span>
 					{/if}
@@ -232,9 +226,6 @@
 		</div>
 		<div class="set-panel set-panel-wide" role="tabpanel" id="set-panel-places" aria-labelledby="set-tab-places" hidden={current !== 'places'} data-debug="settings-places">
 			<PlacesCard {places} />
-		</div>
-		<div class="set-panel set-panel-wide" role="tabpanel" id="set-panel-grooves" aria-labelledby="set-tab-grooves" hidden={current !== 'grooves'} data-debug="settings-grooves">
-			<GroovesSection />
 		</div>
 		<div class="set-panel" role="tabpanel" id="set-panel-connection" aria-labelledby="set-tab-connection" hidden={current !== 'connection'} data-debug="settings-connection">
 			<ConnectionSection {addresses} addressState={macState} />
@@ -428,8 +419,8 @@
 	.set-panel[hidden] {
 		display: none;
 	}
-	/* Everything but Places and Grooves reads as one column; those spend the width on
-	   more columns of cards. */
+	/* Everything but Places reads as one column; Places spends the width on
+	   more columns of folders. */
 	.set-panel > :global(*) {
 		max-width: 46rem;
 	}

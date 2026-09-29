@@ -17,7 +17,7 @@
  * where you left it.
  */
 
-export type SettingsSection = 'setup' | 'general' | 'places' | 'grooves' | 'connection';
+export type SettingsSection = 'setup' | 'general' | 'places' | 'connection';
 
 function createSettingsStore() {
 	let open = $state(false);

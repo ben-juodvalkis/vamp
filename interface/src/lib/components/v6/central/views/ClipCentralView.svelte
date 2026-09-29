@@ -10,6 +10,10 @@ import { logger } from '$lib/utils/logger';
 		V3_CLIP_SET_LOOP_END_ADDRESS,
 		V3_CLIP_SET_WARP_MODE_ADDRESS
 	} from '$lib/api/handlers/v3Clip';
+	import {
+		V3_CLIP_GROOVE_SET_BASE_ADDRESS,
+		V3_CLIP_GROOVE_SET_TIMING_AMOUNT_ADDRESS,
+	} from '$lib/api/handlers/v3ClipGroove';
 	import { sampleClipToSimpler, duplicateLoop, transposeClipUp, transposeClipDown, transposeDeviceUp, transposeDeviceDown, reverseFocusedAudioClip, setAudioClipPitch, setAudioClipGain, roundGainDisplay } from '$lib/services/clipOperations';
 	import { duplicateTrackAndReset } from '$lib/services/trackOperations';
 	import { groupGestureStore } from '$lib/stores/v6/groupGestureStore.svelte';
@@ -18,6 +22,7 @@ import { logger } from '$lib/utils/logger';
 	import { press, type PressReleaseInfo } from '$lib/actions/press';
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import RecordButton from '$lib/components/v6/controls/RecordButton.svelte';
+	import { clipGrooveStore } from '$lib/stores/v6/clipGrooveStore.svelte';
 	import { currentInstrumentStore } from '$lib/stores/v6/currentInstrumentStore.svelte';
 	import { sequencerStore } from '$lib/stores/v6/sequencerStore.svelte';
 	import { browser } from '$app/environment';
@@ -169,6 +174,8 @@ import { logger } from '$lib/utils/logger';
 	let gain = $derived(clipPropertiesStore.gain);
 	let gainDisplay = $derived(roundGainDisplay(clipPropertiesStore.gainDisplay));
 
+	let timingAmount = $derived(clipGrooveStore.timingAmount);
+	let baseGrid = $derived(clipGrooveStore.baseGrid);
 
 	let trackMeterLevel = $derived.by(() => {
 		const trackIndex = session.selectedTrackIndex;
@@ -177,11 +184,29 @@ import { logger } from '$lib/utils/logger';
 		return meter?.left ?? 0;
 	});
 
+	const baseGridOptions = [
+		{ value: 1, label: '1/8' },
+		{ value: 2, label: '1/8T' },
+		{ value: 3, label: '1/16' }
+	];
+
 	const warpModeOptions = [
 		{ value: 0, label: 'Beats' },
 		{ value: 4, label: 'Complex' },
 		{ value: 6, label: 'Pro' }
 	];
+
+	function handleBaseGridChange(value: number) {
+		const clipPath = requireFocusedClip();
+		if (!clipPath) return;
+		send(V3_CLIP_GROOVE_SET_BASE_ADDRESS, [clipPath, value]);
+	}
+
+	function handleTimingChange(value: number) {
+		const clipPath = requireFocusedClip();
+		if (!clipPath) return;
+		send(V3_CLIP_GROOVE_SET_TIMING_AMOUNT_ADDRESS, [clipPath, value]);
+	}
 
 	function setWarpMode(mode: number) {
 		const clipPath = requireFocusedClip();
@@ -375,8 +400,8 @@ import { logger } from '$lib/utils/logger';
 
 	// Mini session column (the leading one). Shown whenever the performer
 	// wants it and the FULL clip grid is not up — see
-	// uiPrefsStore.miniSessionActive. The rail is 7 columns without it and
-	// 8 with it, and the seven shift right by one to open column 1.
+	// uiPrefsStore.miniSessionActive. The rail is 9 columns without it and
+	// 10 with it, and the nine shift right by one to open column 1.
 	let miniSession = $derived(uiPrefsStore.miniSessionActive);
 
 	let permuteDevice = $derived(sequencerStore.device);
@@ -413,7 +438,7 @@ import { logger } from '$lib/utils/logger';
 	{:else}
 
 <!--
-	7 equal columns plus one hairline seam track, each always grid-placed
+	9 equal columns plus two hairline seam tracks, each always grid-placed
 	by number (the class names are the DOM's order, not the screen's — see
 	the `.col-N { grid-column }` table for where each one actually lands):
 	Col 1: REC top + Delete bottom
@@ -422,17 +447,19 @@ import { logger } from '$lib/utils/logger';
 	Col 4: Replace top + Dup/Simpler bottom
 	Col 5: TEMP slider (MIDI) | GAIN slider (audio) — full height
 	Col 6: CHANCE slider (MIDI) | warp mode buttons (audio) — full height
+	Col 7: SHUFFLE — full height
+	Col 8: base grid — full height
 	Col 9: Dup Trk — full height (hold to duplicate the whole track)
 
 	Plus, when the full clip grid is hidden, a mini session view in the
 	LEADING column — the selected track's clip slots, twice the width of
 	every column above. It belongs HERE rather than in the FX grid because
 	everything else in this rail is already about the clip you are
-	looking at: Chance and Temp shape it, REC and Delete replace
+	looking at: Chance, Temp and Shuffle shape it, REC and Delete replace
 	it, and the mini says WHICH one, and lets you pick another. It reads
 	first for the same reason: the subject before what acts on it.
 
-	The rail grows 7 → 8 columns while it is up and every column above
+	The rail grows 9 → 10 columns while it is up and every column above
 	shifts one to the right (`.outer.has-mini`), so their left-to-right
 	order is exactly what it was.
 -->
@@ -665,11 +692,39 @@ import { logger } from '$lib/utils/logger';
 			</div>
 		</div>
 
+		<!-- Col 7: SHUFFLE — full height -->
 		<!-- Replace/Dup Trk, REC/Delete and the loop arrows act on the track
 		     and the clip; Loop X2, ±12, Temp and Chance shape what the clip
 		     plays. Ten columns at one pitch and one grammar read as one
 		     undifferentiated rail until the seams landed (2026-09-13). -->
 		<div class="seam seam-a"><SectionDivider orientation="vertical" /></div>
+
+		<!-- ...and Shuffle sits with the base grid picker, not with Temp and
+		     Chance: it swings the notes against that grid, so the two are one
+		     timing group (user's call, 2026-09-13). -->
+		<div class="seam seam-b"><SectionDivider orientation="vertical" /></div>
+
+		<div class="col col-7 transition-opacity duration-200 {!hasClip ? 'opacity-30' : 'opacity-100'}">
+			<DeviceSlider
+				value={timingAmount / 100}
+				title="Shuffle"
+				color={trackScheme}
+				onInteraction={(val) => handleTimingChange(val * 100)}
+			/>
+		</div>
+
+		<!-- Col 8: base grid — full height -->
+		<div class="col col-8 transition-opacity duration-200 {!hasClip ? 'opacity-30' : 'opacity-100'}">
+			<div class="stacked-switches">
+				{#each baseGridOptions as option}
+					<button
+						onclick={() => handleBaseGridChange(option.value)}
+						disabled={!hasClip}
+						class="btn btn-switch clip-switch font-bold text-base {baseGrid === option.value ? 'active' : ''}"
+					><span class="fit-label" style:--fit-pad="0px" use:fitText={option.label}>{option.label}</span></button>
+				{/each}
+			</div>
+		</div>
 
 		<!-- Col 9: Dup Trk top + Group bottom. Dup Trk had the column to
 		     itself from 2026-09-13, when Replace left for the swap pill in the
@@ -790,19 +845,18 @@ import { logger } from '$lib/utils/logger';
 		background: color-mix(in oklab, var(--editor-accent) 12%, transparent);
 	}
 
-	/* 7 equal columns, always fixed positions regardless of track type, plus
-	   the `auto` seam track that groups them (2026-09-13):
-	     Replace/Dup Trk · REC/Del · nav | Loop X2 · ±12 · Temp · Chance
-	   The seam is `auto`, so a track is a hairline wide and the seven
+	/* 9 equal columns, always fixed positions regardless of track type, plus
+	   the two `auto` seam tracks that group them (2026-09-13):
+	     Replace/Dup Trk · REC/Del · nav | Loop X2 · ±12 · Temp · Chance | Shuffle · grid
+	   The seams are `auto`, so a track is a hairline wide and the nine
 	   content columns still divide the rest evenly. Regrouped on the user's
 	   call the same day: what acts on the track or the clip | what shapes
 	   what the clip plays (Loop X2 or Reverse, ±12 or the audio pitch
-	   slider, Temp, Chance). Timing — Shuffle and the base grid it swung
-	   against — left for the Groove view on 2026-09-29, and the rail was
-	   divided again among the seven. */
+	   slider, Temp, Chance) | timing (Shuffle, and the base grid it swings
+	   against). */
 	.outer {
 		display: grid;
-		grid-template-columns: repeat(3, 1fr) auto repeat(4, 1fr);
+		grid-template-columns: repeat(3, 1fr) auto repeat(4, 1fr) auto repeat(2, 1fr);
 		grid-template-rows: 1fr;
 		gap: var(--central-gap);
 		min-height: 0;
@@ -820,18 +874,21 @@ import { logger } from '$lib/utils/logger';
 	.col-4 { grid-column: 6; }
 	.col-2 { grid-column: 7; }
 	.col-1 { grid-column: 8; }
+	.seam-b { grid-column: 9; }
+	.col-7 { grid-column: 10; }
+	.col-8 { grid-column: 11; }
 
 	/* The mini session view's own column — the LEADING one, twice as wide
 	   as every other column in the rail (2fr, the user's call 2026-09-25:
 	   at 1fr the clip names were too cramped to read).
-	   `.outer` grows 7 → 8 only while the mini is up (`.has-mini`), and
-	   the seven below all shift one to the right to make room. They are
+	   `.outer` grows 9 → 10 only while the mini is up (`.has-mini`), and
+	   the nine below all shift one to the right to make room. They are
 	   re-declared rather than made relative because `grid-column` takes a
 	   literal integer — `calc()` on a grid line is not something to rely on
 	   in iPad Safari — and because a table of literal numbers is what the
 	   rest of this block already is. */
 	.outer.has-mini {
-		grid-template-columns: 2fr auto repeat(3, 1fr) auto repeat(4, 1fr);
+		grid-template-columns: 2fr auto repeat(3, 1fr) auto repeat(4, 1fr) auto repeat(2, 1fr);
 	}
 
 	.col-mini { grid-column: 1; }
@@ -844,8 +901,11 @@ import { logger } from '$lib/utils/logger';
 	.outer.has-mini .col-4 { grid-column: 8; }
 	.outer.has-mini .col-2 { grid-column: 9; }
 	.outer.has-mini .col-1 { grid-column: 10; }
+	.outer.has-mini .seam-b { grid-column: 11; }
+	.outer.has-mini .col-7 { grid-column: 12; }
+	.outer.has-mini .col-8 { grid-column: 13; }
 
-	/* Full-height stack of 3 switch buttons (warp modes) */
+	/* Full-height stack of 3 switch buttons (warp modes / base grid) */
 	/* `minmax(0, 1fr)`, not the implicit `auto` column: auto sizes to the
 	   widest label's min-content, so "Complex" held the warp column wider
 	   than its share once the mini column went 2fr and pushed it into the

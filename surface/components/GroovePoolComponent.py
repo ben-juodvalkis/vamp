@@ -28,37 +28,15 @@ first entry whose ``name`` starts with ``"unassigned-"``. Returns
 the ``Groove`` object or ``None`` if the pool is fully claimed.
 Mirrors ``liveAPI-v6.js:4720-4738``.
 
-``assign_groove_to_clip(clip, clip_path, pattern=None)`` —
-rename-then-link atom:
+``assign_groove_to_clip(clip, clip_path)`` — rename-then-link
+atom:
 
-1. Find a free groove holding ``pattern``: an ``unassigned-*`` entry,
-   else a claim no clip in the set links any more, else a fresh one
-   minted through the browser — ``pattern``'s own file from Live's Core
-   Library, or ``Vamp Devices/Grooves/Vamp Groove.agr`` for the default
-   (``pattern`` None). None of the three → ``PoolExhausted``.
-2. Rename it to the claim (below).
+1. Find a free groove: an ``unassigned-*`` entry, else a ``Clip_*``
+   entry no clip in the set links any more, else a fresh one minted
+   by loading ``Vamp Devices/Grooves/Vamp Groove.agr`` through the
+   browser. None of the three → ``PoolExhausted``.
+2. Rename it to ``Clip_<pathHash>`` (the claim).
 3. Assign it to ``clip.groove`` (the link).
-
-Names (2026-09-29, the groove chooser)
---------------------------------------
-
-Live's API cannot read a groove's pattern, and a claim used to rename a
-groove ``Clip_<pathHash>``, which erased which file it came from. The
-name now carries it, and says whose it is in words:
-
-    claim   ``<track> <scene> · <pattern> #<pathHash>``
-            ``<track> <scene> #<pathHash>`` (the default pattern)
-    free    ``unassigned-<idx> · <pattern>`` / ``unassigned-<idx>``
-
-``<pattern>`` is the groove file's name without ``.agr`` (``Swing 16ths
-57``): the 219 in the Core Library are unique by name. The label is
-cosmetic — it is refreshed on every claim and goes stale when a track is
-renamed; ownership is the hash alone. A legacy ``Clip_<pathHash>`` or
-``Clip_<liveId>`` claim is still owned, with no known pattern, as is a
-template's ``unassigned-*`` entry. Any other name (a groove loaded by
-hand, Live's default groove for new MIDI clips) is its own pattern.
-A free groove is reused only for its own pattern, so a clip is never
-handed another clip's swing.
 
 Minting (2026-09-29) is why a set no longer needs hundreds of
 ``unassigned-*`` grooves loaded ahead of time. The LOM cannot create,
@@ -75,10 +53,10 @@ loop makes the critical section effectively atomic. See
 [design §8].
 
 ``return_groove_to_pool(clip_path)`` — the inverse verb. Looks
-up the groove ``clip_path`` claims and renames it back to
-``unassigned-<idx>`` (where ``idx`` is its position in the pool —
-matches M4L's naming convention so legacy tools reading the pool name
-remain correct), keeping its pattern.
+up the groove currently named ``Clip_<pathHash(clip_path)>``,
+renames it back to ``unassigned-<idx>`` (where ``idx`` is its
+position in the pool — matches M4L's naming convention so legacy
+tools reading the pool name remain correct).
 
 ``path_hash(clip_path)`` — deterministic 8-char hash used for
 the tag. ``hashlib.sha1(clip_path.encode("utf-8")).hexdigest()[:8]``.
@@ -104,8 +82,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import re
-from typing import Callable, NamedTuple, Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 logger = logging.getLogger("looping")
 
@@ -116,54 +93,7 @@ _LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
 
 
 _UNASSIGNED_PREFIX = "unassigned-"
-
-# Between a claim's label and its pattern, and before a free groove's pattern.
-_PATTERN_SEP = " · "
-_CLAIM_RE = re.compile(r"^(?P<label>[^·#]*?)(?: · (?P<pattern>[^·#]+?))? #(?P<hash>[0-9a-f]{8})$")
-_FREE_RE = re.compile(r"^unassigned-\d+(?: · (?P<pattern>[^·#]+?))?$")
-_LEGACY_RE = re.compile(r"^Clip_(?P<tag>[0-9a-f]{8}|\d+)$")
-_LABEL_MAX = 32
-
-
-class GrooveName(NamedTuple):
-    """What a pool entry's name says (see "Names" above)."""
-
-    #: ``claim``, ``free`` or ``other``.
-    kind: str
-    #: The groove file it holds, or None when the name does not say.
-    pattern: Optional[str]
-    #: The claiming clip's path hash; a legacy ``Clip_<liveId>`` carries digits.
-    tag: Optional[str] = None
-
-
-def parse_groove_name(name: Optional[str]) -> GrooveName:
-    if not name:
-        return GrooveName("other", None)
-    m = _CLAIM_RE.match(name)
-    if m:
-        return GrooveName("claim", m.group("pattern"), m.group("hash"))
-    m = _LEGACY_RE.match(name)
-    if m:
-        return GrooveName("claim", None, m.group("tag"))
-    if name.startswith(_UNASSIGNED_PREFIX):
-        m = _FREE_RE.match(name)
-        return GrooveName("free", m.group("pattern") if m else None)
-    return GrooveName("other", name)
-
-
-def pattern_of(name: Optional[str]) -> Optional[str]:
-    """The groove file a pool entry holds, as far as its name says."""
-    return parse_groove_name(name).pattern
-
-
-def claim_name(label: str, pattern: Optional[str], clip_path: str) -> str:
-    label = " ".join(label.replace("·", " ").replace("#", " ").split())[:_LABEL_MAX].strip() or "Clip"
-    mid = _PATTERN_SEP + pattern if pattern else ""
-    return "%s%s #%s" % (label, mid, path_hash(clip_path))
-
-
-def free_name(idx: int, pattern: Optional[str]) -> str:
-    return _UNASSIGNED_PREFIX + str(idx) + (_PATTERN_SEP + pattern if pattern else "")
+_CLIP_TAG_PREFIX = "Clip_"
 
 
 _SETTINGS = (
@@ -263,17 +193,16 @@ def clip_groove_id(clip) -> Optional[int]:
 def is_owned_by(name: Optional[str], clip_path: str) -> bool:
     """Whether a groove named ``name`` is ``clip_path``'s own.
 
-    Its own is a claim ending ``#<pathHash(clip_path)>`` (or the older
-    ``Clip_<pathHash>``), or a legacy M4L claim ``Clip_<liveId>`` (all
-    digits), which cannot be traced to a path. Anything else — a preset
-    dragged in by hand, Live 12.1's default groove for new MIDI clips, a
-    duplicated clip still sharing the original's claim — belongs to
-    someone else.
+    Its own is ``Clip_<pathHash(clip_path)>``, or a legacy M4L claim
+    ``Clip_<liveId>`` (all digits), which cannot be traced to a path.
+    Anything else — a preset dragged in by hand, Live 12.1's default
+    groove for new MIDI clips, a duplicated clip still sharing the
+    original's ``Clip_<hash>`` — belongs to someone else.
     """
-    parsed = parse_groove_name(name)
-    if parsed.kind != "claim" or parsed.tag is None:
+    if not name or not name.startswith(_CLIP_TAG_PREFIX):
         return False
-    return parsed.tag == path_hash(clip_path) or parsed.tag.isdigit()
+    tag = name[len(_CLIP_TAG_PREFIX):]
+    return tag == path_hash(clip_path) or tag.isdigit()
 
 
 def path_hash(clip_path: str) -> str:
@@ -296,12 +225,10 @@ class GroovePoolComponent:
             unused (pool has no UI-visible state of its own; all
             UI emits flow through GrooveComponent) but kept for
             symmetry with sibling components and future use.
-        mint: ``(pattern=None) -> Optional[str]`` — loads one groove
-            file into the pool: ``pattern``'s from the Core Library, or
-            the default file when called with no argument; returns an
-            error string, or ``None`` when the load ran. ``None``
-            (tests, a Live without a browser) means the pool never
-            grows on its own.
+        mint: ``() -> Optional[str]`` — loads one groove file into
+            the pool; returns an error string, or ``None`` when the
+            load ran. ``None`` (tests, a Live without a browser)
+            means the pool never grows on its own.
 
     Lifecycle:
         ``__init__`` attaches the ``groove_pool.grooves`` list
@@ -312,7 +239,7 @@ class GroovePoolComponent:
         self,
         song,
         emit: Callable[[str, tuple], None],
-        mint: Optional[Callable[..., Optional[str]]] = None,
+        mint: Optional[Callable[[], Optional[str]]] = None,
     ):
         self._song = song
         self._emit = emit
@@ -361,33 +288,32 @@ class GroovePoolComponent:
 
     # --- pool scan + verbs -------------------------------------------------
 
-    def find_unassigned_groove(self, pattern: Optional[str] = None):
-        """Return first ``unassigned-*`` groove holding ``pattern``, or None.
+    def find_unassigned_groove(self):
+        """Return first ``unassigned-*`` groove, or None.
 
         Linear scan of ``pool.grooves`` in list order. Matches
         M4L's ``findUnassignedGroove`` (liveAPI-v6.js:4720) so
         the pool walk stays predictable across the migration.
-        ``pattern`` None is the default: a template's plain
-        ``unassigned-<idx>``.
 
         Skips:
-        - claims, new and legacy.
+        - ``Clip_<pathHash>`` entries (v3 claims).
+        - ``Clip_<liveId>`` entries (legacy M4L claims).
         - Any other name not starting with ``unassigned-`` (e.g.
           Ableton preset grooves dragged in from the browser).
-        - a free groove holding another pattern.
         """
         grooves = self._safe_grooves_list()
         if grooves is None:
             return None
         for groove in grooves:
-            parsed = parse_groove_name(self._safe_read_name(groove))
-            if parsed.kind == "free" and parsed.pattern == pattern:
+            name = self._safe_read_name(groove)
+            if name is None:
+                continue
+            if name.startswith(_UNASSIGNED_PREFIX):
                 return groove
         return None
 
-    def find_orphaned_groove(self, pattern: Optional[str] = None):
-        """Return a claimed groove holding ``pattern`` that no clip in the
-        set links, or None.
+    def find_orphaned_groove(self):
+        """Return a ``Clip_*`` groove no clip in the set links, or None.
 
         A claim outlives its clip when the clip goes without ever being
         focused (the module's known gap), or moves to another slot and
@@ -397,11 +323,10 @@ class GroovePoolComponent:
         grooves = self._safe_grooves_list()
         if not grooves:
             return None
-        claimed = []
-        for g in grooves:
-            parsed = parse_groove_name(self._safe_read_name(g))
-            if parsed.kind == "claim" and parsed.pattern == pattern:
-                claimed.append(g)
+        claimed = [
+            g for g in grooves
+            if (self._safe_read_name(g) or "").startswith(_CLIP_TAG_PREFIX)
+        ]
         if not claimed:
             return None
         linked = self._linked_groove_ids()
@@ -412,9 +337,8 @@ class GroovePoolComponent:
                 return groove
         return None
 
-    def mint_groove(self, pattern: Optional[str] = None):
-        """Load one groove file into the pool and return the new entry:
-        ``pattern``'s, or the default one.
+    def mint_groove(self):
+        """Load one groove file into the pool and return the new entry.
 
         None when there is no minter, the load failed, or the pool did
         not grow. The new entry is the one whose identity the pool did
@@ -427,7 +351,7 @@ class GroovePoolComponent:
             return None
         known = {live_id(g) for g in before}
         try:
-            err = self._mint(pattern) if pattern else self._mint()
+            err = self._mint()
         except Exception as e:  # a failed load must not take the write down
             err = "%s: %s" % (type(e).__name__, e)
         if err:
@@ -447,17 +371,12 @@ class GroovePoolComponent:
         )
         return None
 
-    def assign_groove_to_clip(
-        self, clip, clip_path: str, inherit=None,
-        pattern: Optional[str] = None, strict: bool = True,
-    ):
-        """Rename-then-link: claim a free groove holding ``pattern`` for ``clip``.
+    def assign_groove_to_clip(self, clip, clip_path: str, inherit=None):
+        """Rename-then-link: claim a free groove for ``clip``.
 
         Order is critical. See [design §8]:
-        1. Find a free groove: unassigned, else orphaned, else minted,
-           each holding ``pattern`` (None: the default). If none, raise
-           PoolExhausted — or, with ``strict`` False, try the default
-           pattern before raising.
+        1. Find a free groove: unassigned, else orphaned, else minted.
+           If none, raise PoolExhausted.
         2. Rename the groove (the claim). If this raises, nothing
            is linked; rollback is a no-op.
         3. Assign the groove to the clip (the link). If this raises,
@@ -470,16 +389,18 @@ class GroovePoolComponent:
 
         Returns the assigned groove object on success.
         """
-        groove = self._free_groove(pattern)
-        if groove is None and pattern and not strict:
-            pattern = None
-            groove = self._free_groove(None)
+        # ``is None``, not ``or``: a LOM object defines ``__bool__``.
+        groove = self.find_unassigned_groove()
+        if groove is None:
+            groove = self.find_orphaned_groove()
+        if groove is None:
+            groove = self.mint_groove()
         if groove is None:
             raise PoolExhausted(clip_path)
         if inherit is not None:
             _copy_settings(inherit, groove)
 
-        new_name = claim_name(self._label_for(clip_path), pattern, clip_path)
+        new_name = _CLIP_TAG_PREFIX + path_hash(clip_path)
         try:
             groove.name = new_name
         except _LOM_ERRORS as e:
@@ -501,40 +422,6 @@ class GroovePoolComponent:
 
         return groove
 
-    def _free_groove(self, pattern: Optional[str]):
-        # ``is None``, not ``or``: a LOM object defines ``__bool__``.
-        groove = self.find_unassigned_groove(pattern)
-        if groove is None:
-            groove = self.find_orphaned_groove(pattern)
-        if groove is None:
-            groove = self.mint_groove(pattern)
-        return groove
-
-    def release(self, groove) -> bool:
-        """Name ``groove`` free again, keeping its pattern — the groove a
-        clip just left for another pattern. False when Live refused."""
-        grooves = self._safe_grooves_list() or []
-        gid = live_id(groove)
-        idx = next((i for i, g in enumerate(grooves) if live_id(g) == gid), len(grooves))
-        try:
-            groove.name = free_name(idx, pattern_of(groove.name))
-        except _LOM_ERRORS as e:
-            logger.warning("GroovePoolComponent release rename raised: %s", e)
-            return False
-        return True
-
-    def _label_for(self, clip_path: str) -> str:
-        """``<track name> <scene number>`` for a Session clip, for a person
-        reading Live's Groove Pool; ``Clip`` when the path says no more."""
-        parts = clip_path.split("/")
-        if len(parts) >= 4 and parts[0] == "tracks" and parts[2] == "slots":
-            try:
-                track = list(self._song.tracks)[int(parts[1])]
-                return "%s %d" % (track.name, int(parts[3]) + 1)
-            except (_LOM_ERRORS + (ValueError, IndexError)):
-                pass
-        return "Clip"
-
     def return_groove_to_pool(self, clip_path: str) -> bool:
         """Rename ``Clip_<pathHash(clip_path)>`` back to ``unassigned-<idx>``.
 
@@ -547,7 +434,7 @@ class GroovePoolComponent:
         naming convention so external tools reading names stay
         correct.
         """
-        target_tag = path_hash(clip_path)
+        target_tag = _CLIP_TAG_PREFIX + path_hash(clip_path)
         grooves = self._safe_grooves_list()
         if grooves is None:
             return False
@@ -555,9 +442,8 @@ class GroovePoolComponent:
             name = self._safe_read_name(groove)
             if name is None:
                 continue
-            parsed = parse_groove_name(name)
-            if parsed.kind == "claim" and parsed.tag == target_tag:
-                new_name = free_name(idx, parsed.pattern)
+            if name == target_tag:
+                new_name = _UNASSIGNED_PREFIX + str(idx)
                 try:
                     groove.name = new_name
                 except _LOM_ERRORS as e:
