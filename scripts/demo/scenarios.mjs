@@ -139,6 +139,13 @@ export const grooveIs = (t, s, pattern) => ({
 	test: (r) => typeof r['clip.groove.name'] === 'string' && r['clip.groove.name'].includes(pattern)
 });
 
+/** The clip's groove Amount (timing_amount, 0..100) is at least `min`. */
+export const grooveAmountAtLeast = (t, s, min) => ({
+	what: `track ${t} slot ${s} groove Amount >= ${min}`,
+	read: (live) => slotRead(live, t, s, ['clip.groove.timing_amount']),
+	test: (r) => r['clip.groove.timing_amount'] >= min
+});
+
 export const hasDevice = (t, className) => ({
 	what: `track ${t} has ${className}`,
 	read: (live) => live.read('song', ['tracks.*name']).then(async (s) =>
@@ -281,12 +288,15 @@ export const SCENARIOS = {
 		// The session clip grid AND the FX grid: all four sections.
 		prefs: { [PREFS.session]: '1', [PREFS.fx]: '1' },
 		liveWindow: { w: 1090, h: 856 },
-		// Live 12 puts its default "Swing 16ths 66" groove on every new MIDI
-		// clip; each run starts it at Live's own settings.
+		// Live 12 auto-loads the set's groove ("Swing 16ths 66") onto every
+		// new MIDI clip (the Groove Pool's Auto Load Groove), and this set's
+		// Global Groove Amount is 100 %, so at Live's Timing of 100 every loop
+		// would swing fully the moment it is recorded. Each run starts that
+		// groove straight (Timing 0); the Groove chapter adds the swing.
 		set: {
 			empty: true,
 			key: { root: 0, scale: 'Major' },
-			groove: { name: 'Swing 16ths 66', base: 3, timing: 100, quantization: 0 }
+			groove: { name: 'Swing 16ths 66', base: 3, timing: 0, quantization: 0 }
 		},
 		intro: { title: 'Vamp', subtitle: 'Live looping for Ableton Live, played from an iPad.' },
 		outro: {
@@ -468,33 +478,45 @@ export const SCENARIOS = {
 				box: T.groove('User: Swing 16ths'),
 				boxLabel: 'Swing 16ths',
 				tap: T.groove('User: Swing 16ths'),
-				caption: 'Swing 16ths: every other sixteenth lands late.',
-				note: 'Listen to the hi-hats.',
+				caption: 'Pick a groove: Swing 16ths.',
+				note: 'Then its Amount sets how much you hear.',
 				until: grooveIs(0, 0, 'User: Swing 16ths')
 			},
+			// Two drags: the slider moves by the whole gesture from its start,
+			// so one drag down-then-up nets out; two land the same way whatever
+			// Amount the groove started at.
 			{
-				at: '33.3',
+				at: '33.2',
 				box: T.slider('Amount'),
 				boxLabel: 'Amount',
-				caption: 'Amount runs from straight to the full swing.',
+				caption: 'Amount at the bottom: straight…',
+				drag: { target: T.slider('Amount'), path: [[0.5, 0.1], [0.5, 1.0]], beats: 2 }
+			},
+			{
+				at: '34.2',
+				box: T.slider('Amount'),
+				boxLabel: 'Amount',
+				caption: '…raise it and the hi-hats swing.',
 				note: "The tile's picture follows it.",
-				drag: { target: T.slider('Amount'), path: [[0.5, 0.2], [0.5, 0.95], [0.5, 0.95], [0.5, 0.25]], beats: 7 }
+				drag: { target: T.slider('Amount'), path: [[0.5, 0.9], [0.5, 0.2]], beats: 3 },
+				until: grooveAmountAtLeast(0, 0, 50)
 			},
 			{
 				at: '35.4',
 				box: T.groove('User: Swing 8ths'),
 				boxLabel: 'Swing 8ths',
 				tap: T.groove('User: Swing 8ths'),
-				caption: 'Or swing the eighths instead.',
+				caption: 'Or swing the eighths instead…',
 				note: 'The clip keeps its Quantize and Amount when it changes groove.',
 				until: grooveIs(0, 0, 'User: Swing 8ths')
 			},
 			{
 				at: '37.2',
-				box: T.slider('Velocity'),
-				boxLabel: 'Velocity',
-				caption: 'Velocity lets the groove shape the accents too.',
-				drag: { target: T.slider('Velocity'), path: [[0.5, 0.85], [0.5, 0.4]], beats: 3 }
+				box: T.groove('User: Swing 16ths'),
+				boxLabel: 'Swing 16ths',
+				tap: T.groove('User: Swing 16ths'),
+				caption: '…and back to Swing 16ths, which suits this loop.',
+				until: grooveIs(0, 0, 'User: Swing 16ths')
 			},
 			// Choosing a groove file loads it through Live's browser, which Live
 			// then shows; put Live's window back to tracks and devices.
@@ -808,7 +830,7 @@ export const SCENARIOS = {
 		],
 		end: '114.1',
 		// D minor still: selecting the drum clip (recorded in C major) did not undo Key Follow.
-		result: [looping(0, 0), looping(1, 0), looping(2, 0), keyIs(2, 'Minor')]
+		result: [looping(0, 0), looping(1, 0), looping(2, 0), keyIs(2, 'Minor'), grooveAmountAtLeast(0, 0, 50)]
 	},
 
 	'record-and-layer': {
