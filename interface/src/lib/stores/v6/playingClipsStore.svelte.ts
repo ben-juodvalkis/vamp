@@ -166,6 +166,18 @@ export function applyPlayingSlot(args: {
 		prior.filePath === args.filePath &&
 		prior.isAudioClip === args.isAudioClip;
 	if (!sameClip) playheadPositions.delete(args.trackPath);
+	else {
+		// Keep the position, but not a status the frame contradicts:
+		// `liveStatus` reads this map first, and after a clip stop (Live's
+		// `playing_slot_index` -2, re-sent as the same slot with status 0)
+		// no playhead tick follows to correct it. The cell then stayed
+		// "playing", so a tap on it sent another stop and the clip could
+		// not be relaunched from its slot.
+		const pos = playheadPositions.get(args.trackPath);
+		if (pos !== undefined && pos.status !== args.status) {
+			playheadPositions.set(args.trackPath, { positionBeats: pos.positionBeats, status: args.status });
+		}
+	}
 	// Drop the prior clipPath→trackPath mapping (if any) — the track
 	// is rotating to a new slot. Done before re-set so a same-path
 	// re-emit lands on a clean slate.

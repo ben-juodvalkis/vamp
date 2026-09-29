@@ -144,6 +144,31 @@ describe('playingClipsStore', () => {
 			expect(playingClipsStore.position('tracks/0')).toBe(0);
 		});
 
+		it('takes the status of a re-sent frame for the same clip (a clip stop)', () => {
+			// Live stops the clip (playing_slot_index -2) and the surface re-sends
+			// the same slot with status 0. No playhead tick follows, so the frame
+			// is the only word: the live status must read stopped, or the grid
+			// keeps painting "playing" and a tap stops instead of relaunching.
+			const slot = (status: number) =>
+				applyPlayingSlot({
+					trackPath: 'tracks/1',
+					slotIdx: 0,
+					isAudioClip: false,
+					filePath: '',
+					lengthBeats: 8,
+					loopStartBeats: 0,
+					loopEndBeats: 8,
+					looping: true,
+					status
+				});
+			slot(1);
+			applyPlayhead({ trackPath: 'tracks/1', slotIdx: 0, positionBeats: 5.5, status: 1 });
+			expect(playingClipsStore.liveStatus('tracks/1')).toBe(1);
+			slot(0);
+			expect(playingClipsStore.liveStatus('tracks/1')).toBe(0);
+			expect(playingClipsStore.position('tracks/1')).toBeCloseTo(5.5, 5);
+		});
+
 		it('drops late fires from a slot the UI has already rotated past', () => {
 			applyPlayingSlot({
 				trackPath: 'tracks/0',
