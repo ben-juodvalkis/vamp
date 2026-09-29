@@ -48,6 +48,14 @@ describe('focusedNotesStore', () => {
 		expect(focusedNotesStore.loadState).toBe('error');
 	});
 
+	it('setLoading on another clip drops the last clip\'s notes; a re-pull keeps them', () => {
+		focusedNotesStore.reconcile(CLIP, [note(1, 60)]);
+		focusedNotesStore.setLoading(CLIP);
+		expect(focusedNotesStore.count).toBe(1);
+		focusedNotesStore.setLoading('tracks/9/clip_slots/9/clip');
+		expect(focusedNotesStore.count).toBe(0);
+	});
+
 	describe('optimistic edits', () => {
 		beforeEach(() => {
 			focusedNotesStore.reconcile(CLIP, [note(1, 60), note(2, 64)]);

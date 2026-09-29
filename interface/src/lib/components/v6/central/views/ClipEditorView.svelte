@@ -46,6 +46,8 @@
 		type ClipSample
 	} from '$lib/services/clipSampleService';
 	import { v3Store } from '$lib/stores/v3/normalized.svelte';
+	import { selectedDrumRack } from '$lib/services/deviceViewRouter.svelte';
+	import { parseVmMembers, padTileLabels, VM } from '$lib/services/drumVirtualMacros';
 	import { slotOfClip } from '$lib/services/clipSimilarSwap.svelte';
 	import { paintPeaks, peakSpan } from '$lib/utils/waveformPaint';
 	import { paintTokens, paintMode, withAlpha } from '$lib/utils/paintTokens';
@@ -98,6 +100,7 @@
 
 	const CENTRAL_BINS = 1024;
 	const PITCH_AXIS_W = 36; // piano-key gutter width (px)
+	const DRUM_PITCH_AXIS_W = 80; // wide enough for a pad's name
 	const TIME_AXIS_H = 18; // bar/beat ruler height (px)
 	const VELOCITY_LANE_H = 56; // velocity-lane strip height (px, MIDI only)
 	const TOOLBAR_H = 56; // MIDI edit-toolbar band under the roll (px): 44 px chips + padding
@@ -131,6 +134,28 @@
 	let focusedTrackPath = $derived(
 		clipIndices !== null ? `tracks/${clipIndices.track}` : ''
 	);
+	// ── Drum Rack pad names for the gutter ───────────────────────────
+	// A clip on a Drum Rack track names its lanes after the pads, with the
+	// labels the pad grid wears (`padTileLabels`: the kit's shared words
+	// dropped). Only when the focused clip is on the selected track, whose
+	// instrument `selectedDrumRack` reads.
+	let drumRackPath = $derived.by(() => {
+		if (!isMidi || focusedTrackPath !== selectedTrackStore.selectedTrackPath) return undefined;
+		return selectedDrumRack()?.rackPath;
+	});
+	$effect(() => {
+		if (!drumRackPath) return;
+		return selectedTrackStore.subscribeProperty(drumRackPath, VM.members);
+	});
+	let padLabels = $derived.by((): Map<number, string> => {
+		const out = new Map<number, string>();
+		if (!drumRackPath) return out;
+		const census = parseVmMembers(selectedTrackStore.propertyValue(drumRackPath, VM.members));
+		for (const [note, text] of padTileLabels(census?.pads ?? [])) if (text.label) out.set(note, text.label);
+		return out;
+	});
+	let pitchAxisW = $derived(padLabels.size > 0 ? DRUM_PITCH_AXIS_W : PITCH_AXIS_W);
+
 	let playingEntry = $derived<PlayingClipEntry | undefined>(
 		focusedTrackPath ? playingClipsStore.get(focusedTrackPath) : undefined
 	);
@@ -350,13 +375,14 @@
 		// Reference bottomReserve so the roll height recomputes when the
 		// lane appears/disappears (MIDI↔audio focus change).
 		const reserve = bottomReserve;
+		const axisW = pitchAxisW;
 		const ro = new ResizeObserver(() => {
-			contentW = Math.max(0, el.clientWidth - PITCH_AXIS_W);
+			contentW = Math.max(0, el.clientWidth - axisW);
 			contentH = Math.max(0, el.clientHeight - TIME_AXIS_H - reserve);
 			containerH = el.clientHeight;
 		});
 		ro.observe(el);
-		contentW = Math.max(0, el.clientWidth - PITCH_AXIS_W);
+		contentW = Math.max(0, el.clientWidth - axisW);
 		containerH = el.clientHeight;
 		contentH = Math.max(0, el.clientHeight - TIME_AXIS_H - reserve);
 		return () => ro.disconnect();
@@ -567,7 +593,7 @@
 	function localCoords(e: PointerEvent | Touch): { x: number; y: number } {
 		const rect = containerRef?.getBoundingClientRect();
 		if (!rect) return { x: 0, y: 0 };
-		return contentLocal(e.clientX, e.clientY, rect, PITCH_AXIS_W, TIME_AXIS_H);
+		return contentLocal(e.clientX, e.clientY, rect, pitchAxisW, TIME_AXIS_H);
 	}
 
 	const activePointers = new Map<number, { x: number; y: number }>();
@@ -645,7 +671,7 @@
 		e.preventDefault();
 		const rect = containerRef?.getBoundingClientRect();
 		const localX = rect
-			? contentLocal(e.clientX, e.clientY, rect, PITCH_AXIS_W, TIME_AXIS_H).x
+			? contentLocal(e.clientX, e.clientY, rect, pitchAxisW, TIME_AXIS_H).x
 			: contentW / 2;
 		const anchorFrac = Math.min(1, Math.max(0, localX / contentW));
 		const factor = e.deltaY > 0 ? 1.15 : 1 / 1.15;
@@ -915,7 +941,7 @@
 	function noteEventLocalX(e: PointerEvent): number {
 		const rect = containerRef?.getBoundingClientRect();
 		if (!rect) return 0;
-		return contentLocal(e.clientX, e.clientY, rect, PITCH_AXIS_W, TIME_AXIS_H).x;
+		return contentLocal(e.clientX, e.clientY, rect, pitchAxisW, TIME_AXIS_H).x;
 	}
 
 	function onNoteDragMove(event: PointerEvent) {
@@ -1061,7 +1087,7 @@
 		if (editMode !== 'draw' || !isMidi || clipPath === null || contentW <= 0) return;
 		const rect = containerRef?.getBoundingClientRect();
 		if (!rect) return;
-		const { x: localX, y: localY } = contentLocal(event.clientX, event.clientY, rect, PITCH_AXIS_W, TIME_AXIS_H);
+		const { x: localX, y: localY } = contentLocal(event.clientX, event.clientY, rect, pitchAxisW, TIME_AXIS_H);
 		if (localX < 0 || localY < 0 || localX > contentW || localY > contentH) return;
 		const grid = gridBeatsForSnap();
 		const startBeats = Math.max(0, snapToGrid(xToBeat(localX, beatWindow, contentW), grid));
@@ -1086,7 +1112,7 @@
 		if (event.cancelable) event.preventDefault();
 		const rect = containerRef?.getBoundingClientRect();
 		if (!rect) return;
-		const localX = contentLocal(event.clientX, event.clientY, rect, PITCH_AXIS_W, TIME_AXIS_H).x;
+		const localX = contentLocal(event.clientX, event.clientY, rect, pitchAxisW, TIME_AXIS_H).x;
 		const grid = gridBeatsForSnap();
 		const endBeats = snapToGrid(xToBeat(localX, beatWindow, contentW), grid);
 		const dur = Math.max(grid, endBeats - drawNote.startBeats);
@@ -1348,7 +1374,7 @@
 			onkeydown={handleEditorKey}
 		>
 			<!-- Time ruler (top) -->
-			<div class="time-ruler" style="left: {PITCH_AXIS_W}px; height: {TIME_AXIS_H}px;">
+			<div class="time-ruler" style="left: {pitchAxisW}px; height: {TIME_AXIS_H}px;">
 				{#each gridLines as line (line.x)}
 					<div
 						class="ruler-tick"
@@ -1363,14 +1389,15 @@
 
 			<!-- Pitch gutter (left, MIDI only) -->
 			{#if isMidi}
-				<div class="pitch-gutter" style="top: {TIME_AXIS_H}px; width: {PITCH_AXIS_W}px;">
+				<div class="pitch-gutter" style="top: {TIME_AXIS_H}px; width: {pitchAxisW}px;">
 					{#each pitchLanes as lane (lane.pitch)}
 						<div
 							class="key"
 							class:black={lane.black}
 							style="top: {lane.y}px; height: {lane.h}px;"
 						>
-							{#if folded || lane.pitch % 12 === 0}<span class="key-label">{pitchName(lane.pitch)}</span>{/if}
+							{#if padLabels.has(lane.pitch)}<span class="key-label pad-label">{padLabels.get(lane.pitch)}</span>
+							{:else if folded || lane.pitch % 12 === 0}<span class="key-label">{pitchName(lane.pitch)}</span>{/if}
 						</div>
 					{/each}
 				</div>
@@ -1379,7 +1406,7 @@
 			<!-- Content area -->
 			<div
 				class="content"
-				style="left: {PITCH_AXIS_W}px; top: {TIME_AXIS_H}px; width: {contentW}px; height: {contentH}px;"
+				style="left: {pitchAxisW}px; top: {TIME_AXIS_H}px; width: {contentW}px; height: {contentH}px;"
 			>
 				<!-- Vertical gridlines -->
 				{#each gridLines as line (line.x)}
@@ -1507,7 +1534,7 @@
 			{#if velocityLaneShown}
 				<div
 					class="velocity-lane"
-					style="left: {PITCH_AXIS_W}px; height: {VELOCITY_LANE_H}px; width: {contentW}px;"
+					style="left: {pitchAxisW}px; height: {VELOCITY_LANE_H}px; width: {contentW}px;"
 				>
 					{#each velBars as bar (bar.noteId)}
 						<div
@@ -1735,6 +1762,12 @@
 		font-size: 8px;
 		line-height: 1;
 		color: var(--fg-tertiary);
+	}
+	.pad-label {
+		min-width: 0;
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
 	}
 
 	.content {

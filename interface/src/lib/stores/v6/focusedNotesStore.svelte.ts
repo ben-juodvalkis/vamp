@@ -51,7 +51,13 @@ class FocusedNotesStore {
 		return this._byId.get(noteId);
 	}
 
+	/**
+	 * A different clip drops the last one's notes: held through the load,
+	 * they drew (and folded to) pitches the new clip may not play at all.
+	 * A re-pull of the same clip keeps them on screen.
+	 */
 	setLoading(clipPath: string): void {
+		if (clipPath !== this._clipPath) this._byId = new Map();
 		this._clipPath = clipPath;
 		this._loadState = 'loading';
 	}
