@@ -2,14 +2,11 @@
   /**
    * Instrument Rack Central View
    *
-   * Dynamic layout based on parameter naming:
-   * - Macros with shared first word (e.g., "Filter Cut" + "Filter Res") → XY pad
-   * - Unpaired macros → individual sliders
-   * - MIDI wheels lead the row, under the swap pill (2026-09-16)
+   * One slider per named macro; the MIDI wheels lead the row, under the
+   * swap pill (2026-09-16).
    */
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
-  import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import SectionDivider from '../SectionDivider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
   import MidiWheel from '../../midi/MidiWheel.svelte';
@@ -21,7 +18,7 @@
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
   import { PITCH_COLOR, MOD_COLOR, getControlColor } from '$lib/config/devicePresets';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
-  import { macroGroupTitle } from '$lib/utils/macroLayoutUtils';
+  import { buildMacroLayout } from '$lib/utils/macroLayoutUtils';
 
   // Import constants
   import constants from '$config/constants.json';
@@ -39,24 +36,6 @@
   // Returns `undefined` on cold start — same "show ghost" posture as
   // the v2 .find() it replaces.
   let device = $derived(selectedTrackStore.devicesByPath[deviceIndex]);
-
-  // Types for dynamic layout
-  type SliderControl = {
-    type: 'slider';
-    macroIndex: number; // 1-based
-    name: string;
-  };
-
-  type XYControl = {
-    type: 'xy';
-    xMacroIndex: number; // 1-based
-    yMacroIndex: number; // 1-based
-    title: string; // The shared first word
-    xName: string; // Full name for X axis
-    yName: string; // Full name for Y axis
-  };
-
-  type ControlLayout = (SliderControl | XYControl)[];
 
   // Device configuration constants (use audioEffectRack config - same macro structure)
   const MACRO_COUNT = constants.devices.audioEffectRack?.macroCount ?? 16;
@@ -80,77 +59,7 @@
     device ? selectedTrackStore.paramNamesForDevice(device) : []
   );
 
-  // Helper to clean parameter names (strip leading number prefix like "103 ")
-  function cleanParameterName(name: string): string {
-    const match = name.match(/^\d+\s+(.+)$/);
-    return match ? match[1] : name;
-  }
-
-  // Extract the first word from a parameter name (for grouping)
-  function getFirstWord(name: string): string {
-    const cleaned = cleanParameterName(name);
-    const firstWord = cleaned.split(/\s+/)[0];
-    return firstWord.toLowerCase();
-  }
-
-  // Check if a macro name is "empty" (should be skipped)
-  function isEmptyMacroName(name: string | undefined | null): boolean {
-    if (!name) return true;
-    if (name === '.' || name === '-') return true;
-    if (/^Macro\s*\d+$/i.test(cleanParameterName(name))) return true;
-    return false;
-  }
-
-  // Build dynamic layout based on parameter names
-  // Sequential pairs with matching first word become XY pads, others become sliders
-  function buildLayout(names: string[]): ControlLayout {
-    const layout: ControlLayout = [];
-    const processed = new Set<number>();
-
-    // Iterate through macros in order, looking for sequential pairs
-    for (let idx = 1; idx <= MACRO_COUNT; idx++) {
-      if (processed.has(idx)) continue;
-
-      const name = names[idx];
-      if (isEmptyMacroName(name)) continue;
-
-      const firstWord = getFirstWord(name);
-      const nextIdx = idx + 1;
-      const nextName = names[nextIdx];
-
-      // Check if next macro has matching first word (sequential pair)
-      if (
-        nextIdx <= MACRO_COUNT &&
-        !isEmptyMacroName(nextName) &&
-        getFirstWord(nextName) === firstWord
-      ) {
-        // Create XY pad from sequential pair
-        layout.push({
-          type: 'xy',
-          xMacroIndex: idx,
-          yMacroIndex: nextIdx,
-          title: macroGroupTitle(name),
-          xName: cleanParameterName(name),
-          yName: cleanParameterName(nextName)
-        });
-        processed.add(idx);
-        processed.add(nextIdx);
-      } else {
-        // Single macro - becomes slider
-        layout.push({
-          type: 'slider',
-          macroIndex: idx,
-          name: cleanParameterName(name)
-        });
-        processed.add(idx);
-      }
-    }
-
-    return layout;
-  }
-
-  // Derived layout based on current parameter names
-  const controlLayout = $derived(buildLayout(parameterNames));
+  const controlLayout = $derived(buildMacroLayout(parameterNames, 1, MACRO_COUNT));
 
   // Update all macro values in single effect
   $effect(() => {
@@ -170,16 +79,6 @@
     if (device) {
       selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, paramIndex), normalizedValue * MACRO_MAX);
     }
-  }
-
-  // XY interaction handler (generic for any macro pair)
-  function handleXYInteraction(xMacroIndex: number, yMacroIndex: number, x: number, y: number) {
-    if (!device) return;
-    // XY component uses 0-1 range, convert to 0-127
-    const xPath = selectedTrackStore.paramPath(device, xMacroIndex);
-    const yPath = selectedTrackStore.paramPath(device, yMacroIndex);
-    selectedTrackStore.setParamValue(xPath, x * MACRO_MAX);
-    selectedTrackStore.setParamValue(yPath, y * MACRO_MAX);
   }
 
   // Get normalized value (0-1) for a macro index
@@ -234,31 +133,18 @@
              two sat the same gap apart as two macros do (2026-09-13). -->
         <SectionDivider orientation="vertical" />
 
-        <!-- Dynamic controls (XY pads and sliders based on macro naming) -->
+        <!-- One slider per named macro -->
         {#if controlLayout.length > 0}
           {#each controlLayout as control, i}
-            {#if control.type === 'xy'}
-              <div class="control-slot xy-slot">
-                <DeviceXY
-                  xValue={getNormalizedValue(control.xMacroIndex)}
-                  yValue={getNormalizedValue(control.yMacroIndex)}
-                  title={control.title}
-                  titleClass="text-2xl font-bold"
-                  onInteraction={(x, y) => handleXYInteraction(control.xMacroIndex, control.yMacroIndex, x, y)}
-                  color={ctlInk(i)}
-                />
-              </div>
-            {:else}
-              <div class="control-slot slider-slot">
-                <DeviceSlider
-                  value={getNormalizedValue(control.macroIndex)}
-                  title={control.name}
-                  orientation="vertical"
-                  color={ctlInk(i)}
-                  onInteraction={(val) => handleSliderChange(control.macroIndex, val)}
-                />
-              </div>
-            {/if}
+            <div class="control-slot slider-slot">
+              <DeviceSlider
+                value={getNormalizedValue(control.macroIndex)}
+                title={control.name}
+                orientation="vertical"
+                color={ctlInk(i)}
+                onInteraction={(val) => handleSliderChange(control.macroIndex, val)}
+              />
+            </div>
           {/each}
         {:else}
           <!-- No used macros yet (loading or none configured) -->
@@ -295,11 +181,6 @@
   .slider-slot {
     flex: 1 1 0;
     min-width: 40px;
-  }
-
-  .xy-slot {
-    flex: 2 1 0;
-    aspect-ratio: 1;
   }
 
   /* The wheels and the pill over them: exactly two slider shares, so a wheel

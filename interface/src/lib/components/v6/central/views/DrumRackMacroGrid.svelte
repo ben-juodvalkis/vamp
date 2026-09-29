@@ -1,27 +1,17 @@
 <script lang="ts">
   /**
-   * Drum Rack macro grid — the plugin-pad mode of DrumRackCentralView.
-   *
-   * Displays used drum rack macros in a dynamic grid (range: 0-127)
-   * Checks all 16 macros but only shows ones with meaningful names
-   * (hides "Macro X", ".", "-" named parameters)
+   * Drum Rack macro grid — the `macro-grid` mode of DrumRackCentralView:
+   * one slider per mapped macro of the rack's own, in macro order, named
+   * as Live names it (0-127).
    *
    * Mounted by `DrumRackCentralView` when the surface's `vm.members`
-   * census reports plugin-hosted pads (`AuPluginDevice` / `PluginDevice`
-   * — the Komplete Kontrol kits): those pads have no virtual-macro
-   * bindings, so the rack's own macros are the only handle on them.
-   * Not a registry view (ADR-428, Milestone 1b): it used to be
-   * `DrumRackKompleteKontrolCentralView`, chosen by macro *names*
-   * (anything but FX1/FX2 on macros 1–2), which sent every Simpler and
-   * Sampler kit here too — and on an unmapped kit these sliders move
-   * nothing.
-   *
-   * Use case: Drum racks with Komplete Kontrol instruments mapped to macros 1-16
-   *
-   * Transitional: Komplete Kontrol is being removed from the rig (user's
-   * decision, 2026-09-07). When that migration lands this mode has no
-   * kit left to serve and can be deleted together with the
-   * `komplete-kontrol` instrument type.
+   * census says the rack's own macros are mapped (the kit's author has
+   * already chosen its controls), or that its pads are plugin-hosted
+   * (`AuPluginDevice` / `PluginDevice`), where the rack's macros are the
+   * only handle there is. Which macros are mapped is Live's own
+   * `RackDevice.macros_mapped`, never read off the names: a mapped macro
+   * may keep its default "Macro N" name. Not a registry view (ADR-428,
+   * Milestone 1b), so it deliberately drops the `*CentralView` suffix.
    */
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
@@ -34,9 +24,11 @@
 
   interface Props {
     instrument?: InstrumentInfo | null;
+    /** The mapped macros as 1-based parameter indices (`mappedMacroIndices`). */
+    mapped?: readonly number[];
   }
 
-  let { instrument }: Props = $props();
+  let { instrument, mapped = [] }: Props = $props();
 
   // Track reactive state
   let deviceIndex = $derived(instrument?.deviceIndex ?? 0);
@@ -46,7 +38,7 @@
   // the v2 .find() it replaces.
   let device = $derived(selectedTrackStore.devicesByPath[deviceIndex]);
 
-  // Drum Rack + Komplete Kontrol color scheme — distortion family (the
+  // Drum Rack color scheme — distortion family (the
   // drum-rack theme on the gap wheel, ADR-400; matches DrumRackCentralView).
   const drumRackKKColor = familyScheme('distortion');
 
@@ -74,23 +66,7 @@
     return match ? match[1] : name;
   }
 
-  // Check if a macro is actually used (has a meaningful name)
-  function isMacroUsed(name: string | undefined, paramIndex: number): boolean {
-    if (!name || name === '.' || name === '-') return false;
-    // Check for default "Macro X" names
-    if (/^Macro \d+$/.test(name)) return false;
-    return true;
-  }
-
-  // 16 macro parameters (indices 1-16) - we check all 16 but only show used ones
-  const ALL_MACRO_PARAMS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
-
-  // Filter to only macros that are actually used
-  let usedMacros = $derived(
-    ALL_MACRO_PARAMS.filter(paramIndex =>
-      isMacroUsed(parameterNames[paramIndex], paramIndex)
-    )
-  );
+  let usedMacros = $derived(mapped.filter((paramIndex) => paramIndex < parameterNames.length));
 
   // Single row with dynamic column count matching macro count
   let gridCols = $derived(usedMacros.length);
@@ -104,7 +80,7 @@
 
 <div class="h-full w-full flex flex-col">
   {#if instrument}
-    <!-- Macros grid (only shows used macros, dynamic rows based on count) -->
+    <!-- One slider per mapped macro -->
     {#if usedMacros.length > 0}
       <div
         class="flex-1 min-h-0 grid gap-(--central-gap)"
@@ -125,13 +101,12 @@
         {/each}
       </div>
     {:else}
-      <!-- No used macros yet (loading or none configured) -->
+      <!-- Nothing mapped, or the census has not said yet -->
       <div class="flex-1 flex items-center justify-center text-muted-foreground">
-        <p class="text-sm">Loading macros...</p>
+        <p class="text-sm">No mapped macros</p>
       </div>
     {/if}
   {:else}
-    <!-- Default state when no Komplete Kontrol drum rack present -->
-    <DeviceEmptyState glyph="🥁🎹" message="Load a drum rack with mapped Komplete Kontrol macros" color={drumRackKKInk.primary} />
+    <DeviceEmptyState glyph="🥁" message="Load a drum rack" color={drumRackKKInk.primary} />
   {/if}
 </div>

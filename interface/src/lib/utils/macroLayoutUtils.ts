@@ -1,14 +1,9 @@
 /**
  * Macro Layout Utilities
  *
- * Shared logic for building dynamic layouts from Audio Effect Rack macro names.
- * Used by GuitarCentralView and AudioEffectRackCentralView.
- *
- * Grouping Logic:
- * - Macros with the same first word are grouped together
- * - Groups of 2+ macros: First two become an XY pad, rest become sliders
- * - Single macros: Become individual sliders
- * - Empty/unnamed macros (`.`, `-`, `Macro N`): Skipped
+ * Shared logic for building a rack's macro layout from its macro names:
+ * one slider per named macro, in rack order. Empty/unnamed macros (`.`,
+ * `-`, `Macro N`) are skipped. Used by every rack view.
  */
 
 // Types for dynamic layout
@@ -18,16 +13,7 @@ export type SliderControl = {
   name: string;
 };
 
-export type XYControl = {
-  type: 'xy';
-  xMacroIndex: number;
-  yMacroIndex: number;
-  title: string;
-  xName: string;
-  yName: string;
-};
-
-export type ControlLayout = (SliderControl | XYControl)[];
+export type ControlLayout = SliderControl[];
 
 /**
  * Clean parameter names by stripping leading number prefix (e.g., "1 Drive" → "Drive")
@@ -35,27 +21,6 @@ export type ControlLayout = (SliderControl | XYControl)[];
 export function cleanParameterName(name: string): string {
   const match = name.match(/^\d+\s+(.+)$/);
   return match ? match[1] : name;
-}
-
-/**
- * Extract the first word from a parameter name (for grouping)
- */
-export function getFirstWord(name: string): string {
-  const cleaned = cleanParameterName(name);
-  const firstWord = cleaned.split(/\s+/)[0];
-  return firstWord.toLowerCase();
-}
-
-/**
- * XY-pad title for a macro group: the group's first word as the user
- * cased it, with the initial letter capitalised ("filter cut" → "Filter",
- * "LFO Rate" → "LFO"). Titles are authored mixed-case throughout the UI —
- * GRATICULE up-cases them in CSS (DeviceXY .center-title), the flat
- * grammar shows them as written.
- */
-export function macroGroupTitle(name: string): string {
-  const firstWord = cleanParameterName(name).split(/\s+/)[0];
-  return firstWord.charAt(0).toUpperCase() + firstWord.slice(1);
 }
 
 /**
@@ -146,13 +111,12 @@ export function patternGridShape(
 }
 
 /**
- * Build dynamic layout based on parameter names.
- * Groups macros by first word - sequential pairs become XY pads, others become sliders.
+ * One slider per named macro between `startIndex` and `endIndex`, in rack
+ * order.
  *
  * @param names - Array of parameter names (index 0 is typically device on/off, macros start at index 1)
  * @param startIndex - First macro index to consider (1-based, e.g., 1 for all macros, 2 to skip first)
  * @param endIndex - Last macro index to consider (1-based, inclusive)
- * @returns Array of control definitions (sliders and XY pads)
  */
 export function buildMacroLayout(
   names: string[],
@@ -160,47 +124,11 @@ export function buildMacroLayout(
   endIndex: number = 16
 ): ControlLayout {
   const layout: ControlLayout = [];
-  const processed = new Set<number>();
-
-  // Iterate through macros in order, looking for sequential pairs
   for (let idx = startIndex; idx <= endIndex; idx++) {
-    if (processed.has(idx)) continue;
-
     const name = names[idx];
     if (isEmptyMacroName(name)) continue;
-
-    const firstWord = getFirstWord(name);
-    const nextIdx = idx + 1;
-    const nextName = names[nextIdx];
-
-    // Check if next macro has matching first word (sequential pair)
-    if (
-      nextIdx <= endIndex &&
-      !isEmptyMacroName(nextName) &&
-      getFirstWord(nextName) === firstWord
-    ) {
-      // Create XY pad from sequential pair
-      layout.push({
-        type: 'xy',
-        xMacroIndex: idx,
-        yMacroIndex: nextIdx,
-        title: macroGroupTitle(name),
-        xName: cleanParameterName(name),
-        yName: cleanParameterName(nextName)
-      });
-      processed.add(idx);
-      processed.add(nextIdx);
-    } else {
-      // Single macro - becomes slider
-      layout.push({
-        type: 'slider',
-        macroIndex: idx,
-        name: cleanParameterName(name)
-      });
-      processed.add(idx);
-    }
+    layout.push({ type: 'slider', macroIndex: idx, name: cleanParameterName(name) });
   }
-
   return layout;
 }
 

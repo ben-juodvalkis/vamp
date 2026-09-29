@@ -2,14 +2,10 @@
 	/**
 	 * Audio Effect Rack Central View - Dynamic Macro Layout
 	 *
-	 * Dynamic layout based on parameter naming:
-	 * - Macros with shared first word (e.g., "Filter Cut" + "Filter Res") → XY pad
-	 * - Unpaired macros → individual sliders
-	 * - Empty/unnamed macros are skipped
+	 * One slider per named macro; empty/unnamed macros are skipped.
 	 */
 	import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
-	import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
 	import { familyScheme, type DeviceColorScheme } from '$lib/config/devicePresets';
 	import { buildMacroLayout, cleanParameterName, type ControlLayout } from '$lib/utils/macroLayoutUtils';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
@@ -86,15 +82,6 @@
 		}
 	}
 
-	// XY interaction handler
-	function handleXYInteraction(xMacroIndex: number, yMacroIndex: number, x: number, y: number) {
-		if (!audioEffectRack) return;
-		const xPath = selectedTrackStore.paramPath(audioEffectRack, xMacroIndex);
-		const yPath = selectedTrackStore.paramPath(audioEffectRack, yMacroIndex);
-		selectedTrackStore.setParamValue(xPath, x * MACRO_MAX);
-		selectedTrackStore.setParamValue(yPath, y * MACRO_MAX);
-	}
-
 </script>
 
 {#if audioEffectRack}
@@ -103,28 +90,15 @@
 		{#if controlLayout.length > 0}
 			<div class="controls-panel">
 				{#each controlLayout as control}
-					{#if control.type === 'xy'}
-						<div class="control-slot xy-slot">
-							<DeviceXY
-								xValue={getNormalizedValue(control.xMacroIndex)}
-								yValue={getNormalizedValue(control.yMacroIndex)}
-								title={control.title}
-								titleClass="text-2xl font-bold"
-								onInteraction={(x, y) => handleXYInteraction(control.xMacroIndex, control.yMacroIndex, x, y)}
-								color={effectiveColor}
-							/>
-						</div>
-					{:else}
-						<div class="control-slot slider-slot">
-							<DeviceSlider
-								value={getNormalizedValue(control.macroIndex)}
-								title={control.name}
-								orientation="vertical"
-								color={effectiveColor}
-								onInteraction={(val) => handleSliderChange(control.macroIndex, val)}
-							/>
-						</div>
-					{/if}
+					<div class="control-slot slider-slot">
+						<DeviceSlider
+							value={getNormalizedValue(control.macroIndex)}
+							title={control.name}
+							orientation="vertical"
+							color={effectiveColor}
+							onInteraction={(val) => handleSliderChange(control.macroIndex, val)}
+						/>
+					</div>
 				{/each}
 			</div>
 		{:else}
@@ -182,10 +156,6 @@
 		min-width: 40px;
 	}
 
-	.xy-slot {
-		flex: 2 1 0;
-		aspect-ratio: 1;
-	}
 
 	/* Fallback grid layout for unnamed macros */
 	.macro-grid {

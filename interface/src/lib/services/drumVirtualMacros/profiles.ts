@@ -5,7 +5,7 @@
  * draws. Pure functions over the parsed census (`./wire`).
  */
 
-import { buildMacroLayout } from '$lib/utils/macroLayoutUtils';
+import { cleanParameterName } from '$lib/utils/macroLayoutUtils';
 import {
 	EMPTY_CENSUS,
 	type VmFunction,
@@ -121,6 +121,14 @@ export function vmStateAcceptsWrites(state: VmState): boolean {
 }
 
 /**
+ * The Drum Rack's own macros that are mapped, as 1-based parameter indices
+ * (parameter 0 is Device On) — the sliders the `macro-grid` profile draws.
+ */
+export function mappedMacroIndices(members: VmMembers | null | undefined): number[] {
+	return members?.mappedMacros ?? [];
+}
+
+/**
  * Whether the kit's pads are plugin-hosted (Komplete Kontrol): true when any
  * pad instrument is an AU / VST plugin. Such a kit keeps the macro-grid
  * experience; the virtual macros have no member on it. A census that has
@@ -154,7 +162,8 @@ export function hasPluginPads(members: VmMembers | null | undefined): boolean {
  *                  kit's real transpose is the "Transpose" macro if it has
  *                  one. A nested-rack kit with no named macro at all stays
  *                  `pitch-only`, wearing the "Instrument Rack" card.
- * - `macro-grid` — the rack's own macros (plugin-hosted pads).
+ * - `macro-grid` — one slider per mapped macro of the rack's own (a rack
+ *                  with mapped macros, or plugin-hosted pads).
  */
 export type KitProfile = 'full' | 'pitch-only' | 'sampler' | 'simpler' | 'rack-macros' | 'macro-grid';
 
@@ -215,7 +224,7 @@ export function profileForPadClass(className: string | null, kit: KitProfile): K
 }
 
 export function kitProfile(members: VmMembers | null | undefined): KitProfile {
-	if (hasPluginPads(members)) return 'macro-grid';
+	if (members?.hasMacroMappings || hasPluginPads(members)) return 'macro-grid';
 	const dominant = dominantPadClass(members);
 	if (dominant === null || dominant === 'DrumCell') return 'full';
 	if (dominant === INSTRUMENT_RACK_PAD_CLASS && (members?.macros.length ?? 0) > 0) return 'rack-macros';
@@ -233,37 +242,17 @@ export const SIMPLER_PAD_CLASS = 'OriginalSimpler';
 /** The pad class whose kits get the `rack-macros` profile. */
 export const INSTRUMENT_RACK_PAD_CLASS = 'InstrumentGroupDevice';
 
-/** One control of the `rack-macros` layout. `name`s are the wire names (verbatim macro names). */
-export type RackMacroControl =
-	| { type: 'slider'; name: string; label: string }
-	| { type: 'xy'; title: string; xName: string; yName: string; xLabel: string; yLabel: string };
+/** One control of the `rack-macros` layout. `name` is the wire name (the verbatim macro name). */
+export type RackMacroControl = { type: 'slider'; name: string; label: string };
 
 /**
- * The `rack-macros` layout from the census: the pad racks' macro names in
- * rack order, two consecutive names sharing a first word pairing into an
- * XY pad ("Pitch Attack" + "Pitch Amount" → a "Pitch" pad), every other
- * name a slider — the Instrument Rack view's own rule
- * (`buildMacroLayout`), applied to names instead of parameter indices.
- * The macro `pitch` binds through (`pitchMacro`) is left out: the Trnsp
- * slider stands in its place, in semitones.
+ * The `rack-macros` layout from the census: one slider per pad-rack macro
+ * name, in rack order. The macro `pitch` binds through (`pitchMacro`) is
+ * left out: the Trnsp slider stands in its place, in semitones.
  */
 export function rackMacroLayout(members: VmMembers | null | undefined): RackMacroControl[] {
 	const names = (members?.macros ?? []).map((m) => m.name).filter((name) => name !== members?.pitchMacro);
-	if (names.length === 0) return [];
-	// buildMacroLayout indexes macros from 1 (index 0 is a rack's Device On).
-	const layout = buildMacroLayout(['', ...names], 1, names.length);
-	return layout.map((control) =>
-		control.type === 'xy'
-			? {
-					type: 'xy',
-					title: control.title,
-					xName: names[control.xMacroIndex - 1],
-					yName: names[control.yMacroIndex - 1],
-					xLabel: control.xName,
-					yLabel: control.yName
-				}
-			: { type: 'slider', name: names[control.macroIndex - 1], label: control.name }
-	);
+	return names.map((name) => ({ type: 'slider', name, label: cleanParameterName(name) }));
 }
 
 /**

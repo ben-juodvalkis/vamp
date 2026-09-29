@@ -1401,7 +1401,7 @@ properties `vm.fx1`, `vm.fx2`, `vm.fxType`, `vm.attack`, `vm.decay`,
   counts on its own. `_resolve` walks each pad once
   (`pad_devices` → `first_instrument`, `drum_vm_resolve`) for both the census and the
   bindings. The UI (`interface/src/lib/services/drumVirtualMacros.ts`)
-  routes on `padClasses` (plugin pads → macro grid), dims a function
+  routes on `padClasses` and `mappedMacros` (plugin pads or a rack with mapped macros → one slider per mapped macro), dims a function
   with `members == 0` and shows one with `held == members` read-only —
   by decision no name-based macro fallback for a held function.
 - **Sampler's `parameters` list is dynamic** (measured 2026-09-07): a

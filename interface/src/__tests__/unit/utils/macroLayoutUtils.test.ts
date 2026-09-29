@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   cleanParameterName,
-  getFirstWord,
-  macroGroupTitle,
   isEmptyMacroName,
   buildMacroLayout,
   patternCountFromName,
@@ -12,8 +10,7 @@ import {
   patternGridShape,
   pickerSlotValue,
   pickerSlotAt,
-  type SliderControl,
-  type XYControl
+  type SliderControl
 } from '$lib/utils/macroLayoutUtils';
 
 describe('macroLayoutUtils', () => {
@@ -32,38 +29,6 @@ describe('macroLayoutUtils', () => {
       expect(cleanParameterName('')).toBe('');
       expect(cleanParameterName('123')).toBe('123'); // Just a number, no space
       expect(cleanParameterName('1  Double Space')).toBe('Double Space'); // Whitespace after number stripped
-    });
-  });
-
-  describe('getFirstWord', () => {
-    it('should extract first word and lowercase it', () => {
-      expect(getFirstWord('Filter Cut')).toBe('filter');
-      expect(getFirstWord('DELAY Time')).toBe('delay');
-    });
-
-    it('should handle single word names', () => {
-      expect(getFirstWord('Drive')).toBe('drive');
-    });
-
-    it('should strip number prefix before extracting', () => {
-      expect(getFirstWord('1 Filter Cut')).toBe('filter');
-      expect(getFirstWord('8 Reverb Mix')).toBe('reverb');
-    });
-
-    it('should handle multiple spaces', () => {
-      expect(getFirstWord('Filter  Cut  Res')).toBe('filter');
-    });
-  });
-
-  describe('macroGroupTitle', () => {
-    it('should capitalise the first word and keep the rest as authored', () => {
-      expect(macroGroupTitle('Filter Cut')).toBe('Filter');
-      expect(macroGroupTitle('filter cut')).toBe('Filter');
-      expect(macroGroupTitle('LFO Rate')).toBe('LFO');
-    });
-
-    it('should strip number prefix first', () => {
-      expect(macroGroupTitle('1 delay time')).toBe('Delay');
     });
   });
 
@@ -113,45 +78,15 @@ describe('macroLayoutUtils', () => {
       expect(sliders[2].name).toBe('Tone');
     });
 
-    it('should create XY pad for macros with shared first word', () => {
+    it('should keep macros that share a first word as separate sliders', () => {
       const names = ['Device On', 'Filter Cut', 'Filter Res', 'Drive'];
       const layout = buildMacroLayout(names, 1, 3);
 
-      expect(layout).toHaveLength(2);
-
-      const xy = layout[0] as XYControl;
-      expect(xy.type).toBe('xy');
-      expect(xy.title).toBe('Filter');
-      expect(xy.xMacroIndex).toBe(1);
-      expect(xy.yMacroIndex).toBe(2);
-      expect(xy.xName).toBe('Filter Cut');
-      expect(xy.yName).toBe('Filter Res');
-
-      const slider = layout[1] as SliderControl;
-      expect(slider.type).toBe('slider');
-      expect(slider.name).toBe('Drive');
-    });
-
-    it('should handle groups of 3+ macros (XY + sliders)', () => {
-      const names = ['Device On', 'Delay Time', 'Delay Fb', 'Delay Mix', 'Drive'];
-      const layout = buildMacroLayout(names, 1, 4);
-
-      expect(layout).toHaveLength(3);
-
-      const xy = layout[0] as XYControl;
-      expect(xy.type).toBe('xy');
-      expect(xy.title).toBe('Delay');
-      expect(xy.xMacroIndex).toBe(1);
-      expect(xy.yMacroIndex).toBe(2);
-
-      const slider1 = layout[1] as SliderControl;
-      expect(slider1.type).toBe('slider');
-      expect(slider1.name).toBe('Delay Mix');
-      expect(slider1.macroIndex).toBe(3);
-
-      const slider2 = layout[2] as SliderControl;
-      expect(slider2.type).toBe('slider');
-      expect(slider2.name).toBe('Drive');
+      expect(layout).toEqual([
+        { type: 'slider', macroIndex: 1, name: 'Filter Cut' },
+        { type: 'slider', macroIndex: 2, name: 'Filter Res' },
+        { type: 'slider', macroIndex: 3, name: 'Drive' }
+      ]);
     });
 
     it('should skip empty/unnamed macros', () => {
@@ -167,17 +102,6 @@ describe('macroLayoutUtils', () => {
       expect(sliders[1].macroIndex).toBe(5);
     });
 
-    it('should maintain order by first macro index', () => {
-      // Later group should still come second if its first macro comes later
-      const names = ['Device On', 'Drive', 'Filter Cut', 'Filter Res', 'Mix'];
-      const layout = buildMacroLayout(names, 1, 4);
-
-      expect(layout).toHaveLength(3);
-      expect((layout[0] as SliderControl).macroIndex).toBe(1); // Drive
-      expect((layout[1] as XYControl).xMacroIndex).toBe(2);    // Filter XY
-      expect((layout[2] as SliderControl).macroIndex).toBe(4); // Mix
-    });
-
     it('should respect startIndex and endIndex boundaries', () => {
       const names = ['Device On', 'Macro1', 'Filter Cut', 'Filter Res', 'Drive', 'Tone', 'Mix', 'Depth', 'Amount'];
 
@@ -185,9 +109,7 @@ describe('macroLayoutUtils', () => {
       const layout = buildMacroLayout(names, 2, 8);
 
       // Should include indices 2-8 only
-      const allIndices = layout.flatMap(c =>
-        c.type === 'xy' ? [c.xMacroIndex, c.yMacroIndex] : [c.macroIndex]
-      );
+      const allIndices = layout.map((c) => c.macroIndex);
 
       expect(allIndices.every(i => i >= 2 && i <= 8)).toBe(true);
       expect(allIndices).not.toContain(1);
@@ -204,13 +126,7 @@ describe('macroLayoutUtils', () => {
       const names = ['Device On', '1 Filter Cut', '2 Filter Res', '3 Drive'];
       const layout = buildMacroLayout(names, 1, 3);
 
-      expect(layout).toHaveLength(2);
-
-      const xy = layout[0] as XYControl;
-      expect(xy.type).toBe('xy');
-      expect(xy.title).toBe('Filter');
-      expect(xy.xName).toBe('Filter Cut'); // Cleaned
-      expect(xy.yName).toBe('Filter Res'); // Cleaned
+      expect(layout.map((c) => c.name)).toEqual(['Filter Cut', 'Filter Res', 'Drive']);
     });
 
     it('should handle empty names array', () => {
@@ -230,21 +146,6 @@ describe('macroLayoutUtils', () => {
       expect((layout[1] as SliderControl).macroIndex).toBe(5);
     });
 
-    it('should create multiple XY pads for different groups', () => {
-      const names = ['Device On', 'Filter Cut', 'Filter Res', 'Delay Time', 'Delay Fb', 'Drive'];
-      const layout = buildMacroLayout(names, 1, 5);
-
-      expect(layout).toHaveLength(3);
-
-      const filterXY = layout[0] as XYControl;
-      expect(filterXY.title).toBe('Filter');
-
-      const delayXY = layout[1] as XYControl;
-      expect(delayXY.title).toBe('Delay');
-
-      const driveSlider = layout[2] as SliderControl;
-      expect(driveSlider.name).toBe('Drive');
-    });
   });
 
   describe('pattern rack slots', () => {

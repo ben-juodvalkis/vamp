@@ -26,7 +26,6 @@
    */
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
-  import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import SectionDivider from '../SectionDivider.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
@@ -36,7 +35,7 @@
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import { claimSwapHost } from '../swapHost.svelte';
   import { press } from '$lib/actions/press';
-  import { macroGroupTitle, patternCountFromName, pickerSlotValue, pickerSlotAt } from '$lib/utils/macroLayoutUtils';
+  import { buildMacroLayout, patternCountFromName, pickerSlotValue, pickerSlotAt } from '$lib/utils/macroLayoutUtils';
 
   // Import constants
   import constants from '$config/constants.json';
@@ -59,24 +58,6 @@
   // Returns `undefined` on cold start — same "show ghost" posture as
   // the v2 .find() it replaces.
   let device = $derived(selectedTrackStore.devicesByPath[deviceIndex]);
-
-  // Types for dynamic layout
-  type SliderControl = {
-    type: 'slider';
-    macroIndex: number; // 1-based
-    name: string;
-  };
-
-  type XYControl = {
-    type: 'xy';
-    xMacroIndex: number; // 1-based
-    yMacroIndex: number; // 1-based
-    title: string; // The shared first word
-    xName: string; // Full name for X axis
-    yName: string; // Full name for Y axis
-  };
-
-  type ControlLayout = (SliderControl | XYControl)[];
 
   // Device configuration constants
   const MACRO_COUNT = constants.devices.audioEffectRack?.macroCount ?? 16;
@@ -163,71 +144,8 @@
   // The picker state macro 1 currently sits on: 0 auto, 1-4 the patterns.
   let selectedState = $derived(() => pickerSlotAt(macroValues[0], PICKER_STATES, MACRO_MAX));
 
-  // Helper to clean parameter names
-  function cleanParameterName(name: string): string {
-    const match = name.match(/^\d+\s+(.+)$/);
-    return match ? match[1] : name;
-  }
-
-  function getFirstWord(name: string): string {
-    const cleaned = cleanParameterName(name);
-    const firstWord = cleaned.split(/\s+/)[0];
-    return firstWord.toLowerCase();
-  }
-
-  function isEmptyMacroName(name: string | undefined | null): boolean {
-    if (!name) return true;
-    if (name === '.' || name === '-') return true;
-    if (/^Macro\s*\d+$/i.test(cleanParameterName(name))) return true;
-    return false;
-  }
-
-  // Build layout for macros 3-16 (macro 1 is the pattern selector, macro 2 the Offset button)
-  function buildLayout(names: string[]): ControlLayout {
-    const layout: ControlLayout = [];
-    const processed = new Set<number>();
-
-    // Start from macro 3 (macro 1 is Pattern XX, macro 2 is Offset)
-    for (let idx = 3; idx <= MACRO_COUNT; idx++) {
-      if (processed.has(idx)) continue;
-
-      const name = names[idx];
-      if (isEmptyMacroName(name)) continue;
-
-      const firstWord = getFirstWord(name);
-      const nextIdx = idx + 1;
-      const nextName = names[nextIdx];
-
-      // Check for sequential pair with matching first word -> XY pad
-      if (
-        nextIdx <= MACRO_COUNT &&
-        !isEmptyMacroName(nextName) &&
-        getFirstWord(nextName) === firstWord
-      ) {
-        layout.push({
-          type: 'xy',
-          xMacroIndex: idx,
-          yMacroIndex: nextIdx,
-          title: macroGroupTitle(name),
-          xName: cleanParameterName(name),
-          yName: cleanParameterName(nextName)
-        });
-        processed.add(idx);
-        processed.add(nextIdx);
-      } else {
-        layout.push({
-          type: 'slider',
-          macroIndex: idx,
-          name: cleanParameterName(name)
-        });
-        processed.add(idx);
-      }
-    }
-
-    return layout;
-  }
-
-  const controlLayout = $derived(buildLayout(parameterNames));
+  // Macros 3-16 (macro 1 is the pattern selector, macro 2 the Offset button).
+  const controlLayout = $derived(buildMacroLayout(parameterNames, 3, MACRO_COUNT));
 
   // Update macro values
   $effect(() => {
@@ -254,15 +172,6 @@
     }
   }
 
-  // Handle XY changes
-  function handleXYInteraction(xMacroIndex: number, yMacroIndex: number, x: number, y: number) {
-    if (!device) return;
-    const xPath = selectedTrackStore.paramPath(device, xMacroIndex);
-    const yPath = selectedTrackStore.paramPath(device, yMacroIndex);
-    selectedTrackStore.setParamValue(xPath, x * MACRO_MAX);
-    selectedTrackStore.setParamValue(yPath, y * MACRO_MAX);
-  }
-
   function getNormalizedValue(macroIndex: number): number {
     return macroValues[macroIndex - 1] / MACRO_MAX;
   }
@@ -278,11 +187,11 @@
   }
 
   // The picker takes the row's width after the sliders, each slider keeping
-  // a twelfth of it (an XY pad two) — so a rack with no other macros is all
+  // a twelfth of it — so a rack with no other macros is all
   // picker. Its shape is fixed at 3 x 2, so nothing is measured: Offbeat and
   // Auto keep the same corners at every width.
   const ROW_UNITS = 12;
-  let sliderUnits = $derived(controlLayout.reduce((n, c) => n + (c.type === 'xy' ? 2 : 1), 0));
+  let sliderUnits = $derived(controlLayout.length);
   let gridGrow = $derived(Math.max(ROW_UNITS - sliderUnits, 6));
 </script>
 
@@ -354,30 +263,17 @@
         <SectionDivider orientation="vertical" />
       {/if}
 
-      <!-- Dynamic controls (XY pads and sliders for macros 3-16) -->
+      <!-- A slider for each named macro 3-16 -->
       {#each controlLayout as control, i}
-        {#if control.type === 'xy'}
-          <div class="control-slot xy-slot">
-            <DeviceXY
-              xValue={getNormalizedValue(control.xMacroIndex)}
-              yValue={getNormalizedValue(control.yMacroIndex)}
-              title={control.title}
-              titleClass="text-2xl font-bold"
-              onInteraction={(x, y) => handleXYInteraction(control.xMacroIndex, control.yMacroIndex, x, y)}
-              color={ctlInk(i)}
-            />
-          </div>
-        {:else}
-          <div class="control-slot slider-slot">
-            <DeviceSlider
-              value={getNormalizedValue(control.macroIndex)}
-              title={control.name}
-              orientation="vertical"
-              color={ctlInk(i)}
-              onInteraction={(val) => handleSliderChange(control.macroIndex, val)}
-            />
-          </div>
-        {/if}
+        <div class="control-slot slider-slot">
+          <DeviceSlider
+            value={getNormalizedValue(control.macroIndex)}
+            title={control.name}
+            orientation="vertical"
+            color={ctlInk(i)}
+            onInteraction={(val) => handleSliderChange(control.macroIndex, val)}
+          />
+        </div>
       {/each}
 
     </div>
@@ -479,10 +375,6 @@
     min-width: 40px;
   }
 
-  .xy-slot {
-    flex: 2 1 0;
-    aspect-ratio: 1;
-  }
 
   /* ---- Live skin (flat grammar) ------------------------------------
      Pattern buttons wear the focused track's ink (ADR-402) and keep it

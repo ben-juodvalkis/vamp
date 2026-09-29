@@ -54,7 +54,7 @@ function census(functions: Record<string, { members: number; held: number }>, pa
 	return JSON.stringify({
 		family: false,
 		functions: fns,
-		hasMacroMappings: Object.values(fns).some((f) => f.held > 0),
+		hasMacroMappings: false,
 		padClasses: { DrumCell: 24 },
 		padCount: 24,
 		pads: pads.map((p) => ({ ...p, class: 'DrumCell', color: 0x85961f }))

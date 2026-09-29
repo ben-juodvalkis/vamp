@@ -12,6 +12,7 @@
  * {"padCount": 32,
  *  "padClasses": {"OriginalSimpler": 31, "MultiSampler": 1},
  *  "hasMacroMappings": true,
+ *  "mappedMacros": [1, 2],
  *  "family": false,
  *  "functions": {"pitch": {"members": 32, "held": 32}, "start": {"members": 31, "held": 0}, …}}
  * ```
@@ -31,9 +32,8 @@
  *   no member for any of the seven — the parameters they bind sit inside
  *   the racks, macro-held — but every pad carries a rack with named
  *   macros, so the census lists those names (`macros`, in rack order)
- *   and the view renders them the way the Instrument Rack view renders a
- *   rack on the track: one control per name, a shared first word pairing
- *   two names into an XY pad, each writing `vm.macro.<name>`, which the
+ *   and the view renders one slider per name, each writing
+ *   `vm.macro.<name>`, which the
  *   surface fans out to every pad rack's macro of that name
  *   (`rack-macros`, 2026-09-07). The Drum Rack's own top-level macros
  *   are not used: on such kits they are named but unmapped. The pad
@@ -43,23 +43,21 @@
  *   macro's place, so the sequencer's octave, the ±12 buttons and the
  *   FX-grid Pitch all move the same knob in semitones.
  *
- * - **Which experience.** Pads hosted by a plugin (`AuPluginDevice` /
- *   `PluginDevice` — the Komplete Kontrol kits) have no bindings at all; the
- *   rack's own macros are the only handle on them, so those kits keep the
- *   macro grid, and their FX-grid Pitch slider and ±12 buttons are inert.
- *   Transitional (user's decision, 2026-09-07): Komplete Kontrol is being
- *   removed from the rig, so no plugin-pad binding or name-based fallback
- *   will be written; the macro-grid mode leaves with that migration. Every
- *   native pad type (DrumCell, Simpler, Sampler, mixed) gets the
- *   virtual-macro controls. The decision is made from the pad classes,
- *   never from macro names.
+ * - **Which experience.** A Drum Rack whose own macros are mapped
+ *   (`hasMacroMappings`) shows one slider per mapped macro
+ *   (`mappedMacros`) and nothing else — the kit's author has already
+ *   chosen its controls (user's decision, 2026-09-29). So do pads hosted by
+ *   a plugin (`AuPluginDevice` / `PluginDevice`), which have no bindings at
+ *   all: the rack's own macros are the only handle on them, and their
+ *   FX-grid Pitch slider and ±12 buttons are inert. Every other native kit
+ *   (DrumCell, Simpler, Sampler, mixed) gets the virtual-macro controls.
  * - **Non-member.** A function the kit has no member parameter for (FX on a
  *   Simpler kit, Start on a Sampler kit) renders dimmed and inert.
  * - **Held.** A function every member of which is macro-held
  *   (`is_enabled == False`) renders read-only with a "held by macro" state;
- *   the surface would skip every write anyway. A still-mapped non-family kit
- *   shows the function held until the kit is unmapped — by decision there is
- *   no name-based macro fallback. **Partially held** (measured on the rig:
+ *   the surface would skip every write anyway (a pad rack's own macro can
+ *   hold its pad's parameters). By decision there is no name-based macro
+ *   fallback. **Partially held** (measured on the rig:
  *   the Jazz kit's Transpose macro maps its 31 Simplers and leaves the
  *   Sampler pad free, so pitch reads 31 held of 32) stays live — the
  *   surface moves the free members — and wears the same badge with the
@@ -278,6 +276,8 @@ export interface VmMembers {
 	padCount: number;
 	padClasses: Record<string, number>;
 	hasMacroMappings: boolean;
+	/** The Drum Rack's own mapped macros (`RackDevice.macros_mapped`) as 1-based parameter indices; empty when none is, or from a surface that does not send it. */
+	mappedMacros: number[];
 	family: boolean;
 	functions: Record<VmFunction, VmFunctionCensus>;
 	/** The pad racks' named macros in rack order; empty on any kit without nested racks. */
@@ -374,6 +374,9 @@ export function parseVmMembers(raw: unknown): VmMembers | null {
 		padCount: toCount(obj.padCount),
 		padClasses,
 		hasMacroMappings: obj.hasMacroMappings === true,
+		mappedMacros: Array.isArray(obj.mappedMacros)
+			? obj.mappedMacros.filter((i: unknown): i is number => typeof i === 'number' && Number.isInteger(i) && i >= 1 && i <= 16)
+			: [],
 		family: obj.family === true,
 		functions,
 		macros,

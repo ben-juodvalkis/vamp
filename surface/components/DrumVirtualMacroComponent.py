@@ -920,6 +920,7 @@ class DrumVirtualMacroComponent:
             {"padCount": 32,
              "padClasses": {"OriginalSimpler": 31, "MultiSampler": 1},
              "hasMacroMappings": true,
+             "mappedMacros": [1, 2],
              "family": false,
              "functions": {"pitch": {"members": 32, "held": 32}, ...}}
 
@@ -930,7 +931,12 @@ class DrumVirtualMacroComponent:
         ``functions`` counts member *parameters* per function and how
         many of them are macro-held (``is_enabled == False``). A kit with
         ``held == members`` for a function is read-only for it; one with
-        ``members == 0`` has nothing to move.
+        ``members == 0`` has nothing to move. ``mappedMacros`` lists
+        the macros ``RackDevice.macros_mapped`` flags, 1-based (a macro's
+        parameter index; 0 is Device On) and short, since the census is
+        near the datagram cap: the view draws one slider per mapped macro,
+        by the flag and never by the name, since a mapped macro can keep its
+        default "Macro N" name.
         """
         functions: Dict[str, Dict[str, int]] = {}
         for fn in FUNCTIONS.values():
@@ -954,6 +960,7 @@ class DrumVirtualMacroComponent:
             "padCount": st.pad_count,
             "padClasses": dict(st.pad_classes),
             "hasMacroMappings": bool(st.has_macro_mappings),
+            "mappedMacros": [i + 1 for i, m in enumerate(st.macros_mapped) if m],
             "family": bool(st.family),
             "functions": functions,
             "macros": macros,

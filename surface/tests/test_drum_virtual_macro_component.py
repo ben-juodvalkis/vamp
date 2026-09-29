@@ -1027,6 +1027,9 @@ def test_members_census_on_a_mapped_jazz_shaped_kit(comp):
     assert m["padCount"] == 3
     assert m["padClasses"] == {"OriginalSimpler": 2, "MultiSampler": 1}
     assert m["hasMacroMappings"] is True
+    # One flag per macro, as Live reports it: the view draws a slider for
+    # each mapped one, whatever it is named.
+    assert m["mappedMacros"] == [1, 2]
     assert m["family"] is False
     f = m["functions"]
     assert f["pitch"] == {"members": 3, "held": 3}
@@ -1081,6 +1084,7 @@ def test_members_held_follows_macros_mapped(comp, emits):
     assert len(emitted) == 1
     m2 = json.loads(emitted[0][2])
     assert m2["hasMacroMappings"] is False
+    assert m2["mappedMacros"] == []
     assert m2["functions"]["pitch"] == {"members": 2, "held": 0}
     assert m2["functions"]["fx1"] == {"members": 20, "held": 0}
 

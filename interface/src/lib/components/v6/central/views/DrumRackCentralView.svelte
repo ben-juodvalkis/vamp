@@ -34,6 +34,7 @@
     VM_PITCH_MAX,
     combineVmStates,
     kitClassSummary,
+    mappedMacroIndices,
     padGridNotes,
     profileFunctions,
     profileForPadClass,
@@ -163,6 +164,7 @@
   );
   let kitSummary = $derived(kitClassSummary(members));
   let macroLayout = $derived(rackMacroLayout(members));
+  let mappedMacros = $derived(mappedMacroIndices(members));
 
   // A rack hot-swapped in place keeps its device path, so a latch could
   // outlive the pad it named. Prune it whenever the census changes.
@@ -448,8 +450,7 @@
          same place whatever the kit is: Gain the first slider after the
          pads, Filter the last pad (user, 2026-09-27: "gain to be the same
          on both, and it to be the leftmost slider"). Neither is drawn on a
-         macro-grid kit — a plugin pad's level and filter are not ours to
-         reach, and the rack's macros are the only handle it has. On the
+         macro-grid kit: the rack's mapped macros are its controls. On the
          lead grid `grid-area` places them; in the flex row this markup
          order does. -->
     {#if scopedProfile !== 'macro-grid'}
@@ -462,11 +463,12 @@
       class:vm-controls-flat={lead !== null}
     >
     {#if scopedProfile === 'macro-grid'}
-      <!-- Plugin-hosted pads: the rack's own macros are the only handle. -->
-      <DrumRackMacroGrid {instrument} />
+      <!-- A rack with mapped macros (or plugin-hosted pads): one slider per
+           mapped macro, and nothing else. -->
+      <DrumRackMacroGrid {instrument} mapped={mappedMacros} />
     {:else if scopedProfile === 'rack-macros'}
-      <!-- Nested-rack kits: one control per pad-rack macro name, in the
-           Instrument Rack view's row. Each writes vm.macro.<name>. -->
+      <!-- Nested-rack kits: one slider per pad-rack macro name. Each writes
+           vm.macro.<name>. -->
       <RackMacrosRow
         layout={macroLayout}
         value={(name) => vm.value(`macro.${name}`) ?? 0}

@@ -5,23 +5,18 @@
    * Self-contained central view that queries its own slot state.
    * Renders immediately with ghost/loading/active states.
    *
-   * Dynamic layout based on parameter naming:
-   * - Macros with shared first word (e.g., "Filter Cut" + "Filter Res") → XY pad
-   * - Unpaired macros → individual sliders
+   * One slider per named macro:
    * - Macro 1 (drive) is rendered on its own, ahead of the dynamic layout,
    *   which still runs over 2-8. It used to be left out because the FX
    *   grid's Gtr tile owned it, and this view was the only place the rest
    *   of the rack could be reached. That tile left the grid on 2026-09-15
    *   (the ten-column cut) for `PedalCentralView`, so the rack's own view
    *   would otherwise have been the one surface that could NOT move its
-   *   first macro. Kept OUT of `buildMacroLayout` deliberately: macro 1
-   *   sharing a first word with macro 2 would silently fold the two into
-   *   an XY pad and reshuffle a layout that is working.
+   *   first macro.
    */
 
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
-  import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
   import type { DeviceColorScheme } from '$lib/config/devicePresets';
   import {
     buildMacroLayout,
@@ -201,11 +196,6 @@
     const raw = parameterNames[DRIVE_MACRO];
     return isEmptyMacroName(raw) ? 'Drive' : cleanParameterName(raw);
   });
-
-  function handleXYInteraction(xMacroIndex: number, yMacroIndex: number, x: number, y: number) {
-    fx.sendParam(xMacroIndex, x * MACRO_MAX);
-    fx.sendParam(yMacroIndex, y * MACRO_MAX);
-  }
 </script>
 
 <!-- The Bass panel is a snippet because both branches below (named macros /
@@ -324,32 +314,17 @@
       <SectionDivider orientation="vertical" ink={effectiveColor.primary} />
       {@render drivePanel()}
       {#each controlLayout as control}
-        {#if control.type === 'xy'}
-          <div class="control-slot xy-slot">
-            <DeviceXY
-              xValue={getNormalizedValue(control.xMacroIndex)}
-              yValue={getNormalizedValue(control.yMacroIndex)}
-              title={control.title}
-              titleClass="text-2xl font-bold"
-              onInteraction={(x, y) => handleXYInteraction(control.xMacroIndex, control.yMacroIndex, x, y)}
-              onTap={() => fx.loadIfGhost()}
-              isGhost={fx.isGhost}
-              color={effectiveColor}
-            />
-          </div>
-        {:else}
-          <div class="control-slot slider-slot">
-            <DeviceSlider
-              value={getNormalizedValue(control.macroIndex)}
-              title={control.name}
-              orientation="vertical"
-              isGhost={fx.isGhost}
-              color={effectiveColor}
-              onTap={() => fx.loadIfGhost()}
-              onInteraction={(val) => handleSliderChange(control.macroIndex, val)}
-            />
-          </div>
-        {/if}
+        <div class="control-slot slider-slot">
+          <DeviceSlider
+            value={getNormalizedValue(control.macroIndex)}
+            title={control.name}
+            orientation="vertical"
+            isGhost={fx.isGhost}
+            color={effectiveColor}
+            onTap={() => fx.loadIfGhost()}
+            onInteraction={(val) => handleSliderChange(control.macroIndex, val)}
+          />
+        </div>
       {/each}
     </div>
   {:else}
@@ -506,10 +481,6 @@
     font-weight: 600;
   }
 
-  .xy-slot {
-    flex: 2 1 0;
-    aspect-ratio: 1;
-  }
 
   .is-ghost {
     opacity: 0.85;
@@ -534,13 +505,11 @@
   }
 
   /* ---- Live skin (flat grammar): no whole-view opacity dim for the ghost
-     state — the controls inside carry it on their own field (DeviceSlider /
-     DeviceXY ghost = --signal-dim label + --flat-disabled-fg fill under
-     flat), so a second 0.85 wash over the top only muddies the ladder.
-     Everything else here is a bare flex wrapper around DeviceSlider /
-     DeviceXY (already flat) — no frame / shadow / wash re-added; the
-     `titleClass="text-2xl font-bold"` on the XY pads is already out-ranked
-     by DeviceXY's own flat .center-title rule. Graticule is untouched —
+     state — the controls inside carry it on their own field (DeviceSlider
+     ghost = --signal-dim label + --flat-disabled-fg fill under flat), so a
+     second 0.85 wash over the top only muddies the ladder. Everything else
+     here is a bare flex wrapper around DeviceSlider (already flat) — no
+     frame / shadow / wash re-added. Graticule is untouched —
      every rule sits under [data-grammar="flat"]. */
   :global([data-grammar="flat"]) .is-ghost {
     opacity: 1;
