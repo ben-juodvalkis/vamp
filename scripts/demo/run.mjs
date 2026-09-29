@@ -486,8 +486,12 @@ async function main() {
 			// The box, and the ring gliding to the first thing touched, come a
 			// little ahead of the beat, so the touch itself lands on it.
 			const touches = step.tap ?? step.taps?.[0] ?? step.drag?.target;
-			if (touches || 'box' in step) {
+			if (touches || 'box' in step || step.liveView) {
 				await clock.until(beat - LEAD_MS / clock.msPerBeat);
+				// Live's lower panel: the clip (its notes) or the device chain.
+				if (step.liveView) {
+					await live.invoke('app', 'view.show_view', [step.liveView === 'clip' ? 'Detail/Clip' : 'Detail/DeviceChain']);
+				}
 				if ('box' in step) await setBox(ui, step.box, step.boxLabel);
 				if (touches) await approach(ui, await pointOf(ui, touches, step.drag ? step.drag.path[0] : touches.at));
 			}

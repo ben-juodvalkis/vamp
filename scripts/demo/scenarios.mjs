@@ -84,6 +84,8 @@ export const LIVE = {
 	track: (i, label) => ({ x: 8 + 95 * i, y: 60, w: 94, h: 562, label }),
 	clip: (i, slot, label) => ({ x: 8 + 95 * i, y: 78 + 18 * slot, w: 94, h: 20, label }),
 	devices: (label) => ({ x: 8, y: 628, w: 1078, h: 196, label }),
+	/** Live's lower panel, whichever view it shows (the clip, or the device chain). */
+	detail: (label) => ({ x: 8, y: 628, w: 1078, h: 196, label }),
 	key: (label) => ({ x: 402, y: 25, w: 144, h: 25, label })
 };
 
@@ -111,6 +113,12 @@ export const looping = (t, s) => ({
 	what: `track ${t} slot ${s} looping`,
 	read: (live) => slotRead(live, t, s, ['has_clip', 'is_playing', 'is_recording']),
 	test: (r) => r.has_clip && r.is_playing && !r.is_recording
+});
+
+export const slotHasClip = (t, s) => ({
+	what: `track ${t} slot ${s} has a clip`,
+	read: (live) => slotRead(live, t, s, ['has_clip']),
+	test: (r) => r.has_clip === true
 });
 
 export const stopped = (t, s) => ({
@@ -376,7 +384,8 @@ export const SCENARIOS = {
 				tap: T.gridSlot(0, 0, 'action'),
 				caption: 'Tap the dot to record.',
 				note: "Recording waits for the next bar: Live's launch quantization.",
-				live: LIVE.clip(0, 0, 'Recording')
+				liveView: 'clip',
+				live: LIVE.detail('The notes, as Live records them')
 			},
 			{ at: '21.1', play: DRUMS, until: recording(0, 0) },
 			{ at: '21.3', caption: 'Play.', note: 'From any MIDI keyboard or controller: the armed track takes what you play.' },
@@ -389,7 +398,7 @@ export const SCENARIOS = {
 				note: 'It loops at exactly the length you played: two bars.'
 			},
 			{ at: '23.1', until: looping(0, 0) },
-			{ at: '23.3', box: T.gridSlot(0, 0, 'cell'), boxLabel: 'Looping', caption: 'Recorded, and looping.', live: LIVE.clip(0, 0, 'The clip') },
+			{ at: '23.3', box: T.gridSlot(0, 0, 'cell'), boxLabel: 'Looping', caption: 'Recorded, and looping.', live: LIVE.detail("The loop, in Live's clip view") },
 
 			{
 				at: '24.2',
@@ -398,6 +407,7 @@ export const SCENARIOS = {
 				boxLabel: 'Instrument band',
 				tap: T.strip(0, 'device'),
 				caption: "A strip's middle band opens its instrument's view.",
+				liveView: 'devices',
 				live: null
 			},
 			// Live's Core kits map eight rack macros, and a kit with mapped macros
@@ -420,7 +430,8 @@ export const SCENARIOS = {
 				tap: T.hold(T.gridSlot(0, 0, 'body')),
 				caption: 'Hold a clip to focus it.',
 				note: "The central view shows that clip's tools.",
-				live: null
+				liveView: 'clip',
+				live: LIVE.detail('The clip in Live, groove and all')
 			},
 			{
 				at: '29.3',
@@ -483,10 +494,11 @@ export const SCENARIOS = {
 				boxLabel: 'Drift view',
 				caption: "Drift's view: oscillators, envelope time, filter, and wheels.",
 				note: 'Each of Live’s instruments gets a view laid out for it.',
+				liveView: 'devices',
 				live: LIVE.devices('Drift in Live')
 			},
 			{ at: '43.2', box: T.gridSlot(1, 0, 'cell'), boxLabel: 'Clip slot', tap: T.gridSlot(1, 0, 'body'), caption: 'Select the bass’s first slot…', live: LIVE.track(1, 'Armed'), until: armed(1) },
-			{ at: '44.3', box: T.gridSlot(1, 0, 'action'), boxLabel: 'Record', tap: T.gridSlot(1, 0, 'action'), caption: '…and record over the drums.' },
+			{ at: '44.3', box: T.gridSlot(1, 0, 'action'), boxLabel: 'Record', tap: T.gridSlot(1, 0, 'action'), caption: '…and record over the drums.', liveView: 'clip', live: LIVE.detail('The bass notes, as Live records them') },
 			{ at: '45.1', play: BASS, until: recording(1, 0) },
 			{ at: '45.3', caption: 'Play.' },
 			{ at: '46.3', box: T.gridSlot(1, 0, 'action'), boxLabel: 'Close the loop', tap: T.gridSlot(1, 0, 'action'), caption: 'Close the loop.' },
@@ -496,6 +508,7 @@ export const SCENARIOS = {
 				box: T.xy('Filter'),
 				boxLabel: 'Filter',
 				caption: 'Open up the bass’s filter.',
+				liveView: 'devices',
 				live: LIVE.devices('Drift in Live'),
 				drag: { target: T.xy('Filter'), path: [[0.35, 0.55], [0.7, 0.4]], beats: 4 }
 			},
@@ -520,10 +533,11 @@ export const SCENARIOS = {
 				boxLabel: "Electric's controls",
 				caption: 'Hammer and fork shape the tone.',
 				note: 'Two XY pads: stiffness and noise, tine colour and decay.',
+				liveView: 'devices',
 				live: LIVE.devices('Electric in Live')
 			},
 			{ at: '56.2', box: T.gridSlot(2, 0, 'cell'), boxLabel: 'Clip slot', tap: T.gridSlot(2, 0, 'body'), caption: 'Select, record…', live: null, until: armed(2) },
-			{ at: '56.4', box: T.gridSlot(2, 0, 'action'), boxLabel: 'Record', tap: T.gridSlot(2, 0, 'action') },
+			{ at: '56.4', box: T.gridSlot(2, 0, 'action'), boxLabel: 'Record', tap: T.gridSlot(2, 0, 'action'), liveView: 'clip', live: LIVE.detail('The chords, as Live records them') },
 			{ at: '57.1', play: KEYS, caption: '…play the chords…', until: recording(2, 0) },
 			{ at: '58.3', box: T.gridSlot(2, 0, 'action'), boxLabel: 'Close the loop', tap: T.gridSlot(2, 0, 'action'), caption: '…and close the loop.' },
 			{ at: '59.1', until: looping(2, 0) },
@@ -533,6 +547,8 @@ export const SCENARIOS = {
 				boxLabel: 'Pitch wheel',
 				caption: 'Bend the chords with the pitch wheel.',
 				note: 'It springs back when you let go.',
+				liveView: 'devices',
+				live: LIVE.devices('The wheels device, added on first touch'),
 				drag: { target: T.wheel('Pitch'), path: [[0.5, 0.5], [0.5, 0.82], [0.5, 0.5]], beats: 4 }
 			},
 
@@ -542,31 +558,88 @@ export const SCENARIOS = {
 				box: T.gridSlot(2, 0, 'cell'),
 				boxLabel: 'Hold to focus',
 				tap: T.hold(T.gridSlot(2, 0, 'body')),
-				caption: 'Focus the keys clip…'
+				caption: 'Focus the keys clip…',
+				liveView: 'clip',
+				live: LIVE.detail('The keys clip in Live')
 			},
-			{ at: '63.3', box: T.button('+12'), boxLabel: '+12', tap: T.button('+12'), caption: '…and +12 moves it up an octave.', note: 'The notes themselves move; the loop plays on.' },
-			{ at: '65.3', box: T.button('−12'), boxLabel: '−12', tap: T.button('−12'), caption: '−12 brings it back down.' },
-
 			{
-				at: '67.1',
+				at: '63.3',
+				box: T.button('Dup Clip'),
+				boxLabel: 'Dup Clip',
+				tap: T.button('Dup Clip'),
+				caption: '…Dup Clip copies it into the next slot, and focuses the copy.',
+				live: LIVE.clip(2, 1, 'The copy'),
+				until: slotHasClip(2, 1)
+			},
+			{
+				at: '65.1',
+				box: T.button('+12'),
+				boxLabel: '+12',
+				tap: T.button('+12'),
+				caption: '+12 moves the copy up an octave.',
+				note: 'The notes themselves move; watch them in Live.',
+				live: LIVE.detail("The copy's notes, an octave up")
+			},
+			{
+				at: '66.3',
+				box: T.gridSlot(2, 1, 'action'),
+				boxLabel: 'Launch',
+				tap: T.gridSlot(2, 1, 'action'),
+				caption: 'Launch the copy: at the next bar the keys jump an octave.',
+				live: null,
+				until: looping(2, 1)
+			},
+			{
+				at: '68.2',
 				box: T.slider('Chance'),
 				boxLabel: 'Chance',
 				caption: 'Chance: how likely each note is to play.',
 				note: 'Pull it down and notes start to drop out, differently on every pass.',
-				drag: { target: T.slider('Chance'), path: [[0.5, 0.1], [0.5, 0.6], [0.5, 0.6], [0.5, 0.1]], beats: 8 }
+				drag: { target: T.slider('Chance'), path: [[0.5, 0.1], [0.5, 0.6], [0.5, 0.6], [0.5, 0.1]], beats: 7 }
 			},
 			{
-				at: '69.3',
+				at: '70.3',
 				box: T.slider('Temp'),
 				boxLabel: 'Temp',
 				caption: 'Temp: how far the notes wander in pitch.',
 				note: "Both belong to the track's Permute, so they shape whatever loop it plays.",
-				drag: { target: T.slider('Temp'), path: [[0.5, 0.9], [0.5, 0.45], [0.5, 0.45], [0.5, 0.9]], beats: 8 }
+				drag: { target: T.slider('Temp'), path: [[0.5, 0.9], [0.5, 0.45], [0.5, 0.45], [0.5, 0.9]], beats: 7 }
+			},
+			{
+				at: '72.4',
+				box: T.area('.editor-toggle'),
+				boxLabel: 'Notes',
+				tap: T.area('.editor-toggle'),
+				caption: "The pencil opens the clip's notes.",
+				note: 'Draw mode: tap an empty spot to add a note, tap a note to erase it.',
+				live: LIVE.detail('The same clip, in Live')
+			},
+			{
+				at: '74.1',
+				box: T.area('[aria-label="Clip editor"]'),
+				boxLabel: 'Note editor',
+				tap: { ...T.area('[aria-label="Draw note"]'), at: [0.86, 0.35] },
+				caption: 'Tap to add a note…'
+			},
+			{
+				at: '75.2',
+				tap: T.area('[aria-label="MIDI note"]'),
+				caption: '…tap a note to erase it.'
+			},
+			{
+				at: '76.2',
+				box: T.gridSlot(2, 0, 'action'),
+				boxLabel: 'Launch',
+				tap: T.gridSlot(2, 0, 'action'),
+				caption: 'And back to the first clip at the next bar.',
+				live: null,
+				until: looping(2, 0)
 			},
 
 			{
-				at: '72.1',
+				at: '78.1',
 				chapter: 'Effects by touch',
+				liveView: 'devices',
 				box: T.tile('fx12'),
 				boxLabel: 'Reverb',
 				caption: 'Drag a tile: Live inserts the effect, and your finger sets it.',
@@ -575,7 +648,7 @@ export const SCENARIOS = {
 				drag: { target: T.tile('fx12'), path: [[0.5, 0.6], [0.62, 0.22]], beats: 4 }
 			},
 			{
-				at: '73.3',
+				at: '79.3',
 				box: T.area('[data-debug="middle-panel"]'),
 				boxLabel: 'Reverb view',
 				tap: T.tile('fx12'),
@@ -583,7 +656,7 @@ export const SCENARIOS = {
 				note: "Every setting Live's reverb has: its types, its space, its decay."
 			},
 			{
-				at: '75.1',
+				at: '81.1',
 				box: T.button('Shimmer'),
 				boxLabel: 'Shimmer',
 				tap: T.button('Shimmer'),
@@ -591,7 +664,7 @@ export const SCENARIOS = {
 				note: 'A reverb that shifts its tail up in pitch.'
 			},
 			{
-				at: '76.3',
+				at: '82.3',
 				box: T.tile('fx11'),
 				boxLabel: 'Echo',
 				caption: '…then drag in Echo.',
@@ -600,21 +673,21 @@ export const SCENARIOS = {
 				drag: { target: T.tile('fx11'), path: [[0.4, 0.6], [0.52, 0.34]], beats: 3 }
 			},
 			{
-				at: '77.4',
+				at: '83.4',
 				box: T.area('[data-debug="middle-panel"]'),
 				boxLabel: 'Echo view',
 				tap: T.tile('fx11'),
 				caption: "Echo's view: time, filter, modulation and levels."
 			},
 			{
-				at: '79.1',
+				at: '85.1',
 				box: T.slider('Feedback'),
 				boxLabel: 'Feedback',
 				caption: 'More feedback, longer trails.',
 				drag: { target: T.slider('Feedback'), path: [[0.5, 0.7], [0.5, 0.35]], beats: 3 }
 			},
 			{
-				at: '80.3',
+				at: '86.3',
 				box: T.strip(1, 'device'),
 				boxLabel: 'Bass',
 				tap: T.strip(1, 'device'),
@@ -623,7 +696,7 @@ export const SCENARIOS = {
 				live: null
 			},
 			{
-				at: '81.3',
+				at: '87.3',
 				box: T.tile('fx5'),
 				boxLabel: 'Pedal',
 				caption: '…drive it through Pedal…',
@@ -631,14 +704,14 @@ export const SCENARIOS = {
 				drag: { target: T.tile('fx5'), path: [[0.5, 0.65], [0.56, 0.3]], beats: 3 }
 			},
 			{
-				at: '82.4',
+				at: '88.4',
 				box: T.area('[data-debug="middle-panel"]'),
 				boxLabel: 'Pedal view',
 				tap: T.tile('fx5'),
 				caption: '…and pick the pedal in its view.'
 			},
 			{
-				at: '83.3',
+				at: '89.3',
 				box: T.button('Fuzz'),
 				boxLabel: 'Fuzz',
 				tap: T.button('Fuzz'),
@@ -647,7 +720,7 @@ export const SCENARIOS = {
 			},
 
 			{
-				at: '85.2',
+				at: '91.2',
 				chapter: 'Permute',
 				box: T.strip(1, 'permute'),
 				boxLabel: 'Permute band',
@@ -656,16 +729,16 @@ export const SCENARIOS = {
 				note: "It runs on every track, transposing and muting what's playing.",
 				live: null
 			},
-			{ at: '86.3', box: T.area('.grid-pitch-steps'), boxLabel: 'Pitch steps', taps: [T.step('pitch', 3), T.step('pitch', 7)], caption: 'Pitch steps jump the bass an octave.' },
-			{ at: '88.3', box: T.strip(2, 'permute'), boxLabel: 'Permute band', tap: T.strip(2, 'permute'), caption: 'On the keys…' },
-			{ at: '89.2', box: T.area('.grid-mute-steps'), boxLabel: 'Mute steps', taps: [T.step('mute', 1), T.step('mute', 3), T.step('mute', 6)], caption: '…mute steps chop the chords.' },
+			{ at: '92.3', box: T.area('.grid-pitch-steps'), boxLabel: 'Pitch steps', taps: [T.step('pitch', 3), T.step('pitch', 7)], caption: 'Pitch steps jump the bass an octave.' },
+			{ at: '94.3', box: T.strip(2, 'permute'), boxLabel: 'Permute band', tap: T.strip(2, 'permute'), caption: 'On the keys…' },
+			{ at: '95.2', box: T.area('.grid-mute-steps'), boxLabel: 'Mute steps', taps: [T.step('mute', 1), T.step('mute', 3), T.step('mute', 6)], caption: '…mute steps chop the chords.' },
 
 			// The bass, not the drums: selecting a clip gives Live the clip's
 			// own scale, and the drums were recorded while the set was still
 			// C major, so selecting them would undo Key Follow (and switch it
 			// off, as a key set by hand).
 			{
-				at: '92.1',
+				at: '98.1',
 				chapter: 'Launch and stop',
 				box: T.gridSlot(1, 0, 'action'),
 				boxLabel: 'Stop',
@@ -674,7 +747,7 @@ export const SCENARIOS = {
 				until: stopped(1, 0)
 			},
 			{
-				at: '94.1',
+				at: '100.1',
 				box: T.gridSlot(1, 0, 'action'),
 				boxLabel: 'Launch',
 				tap: T.gridSlot(1, 0, 'action'),
@@ -683,19 +756,19 @@ export const SCENARIOS = {
 			},
 
 			{
-				at: '96.1',
+				at: '102.1',
 				chapter: 'Mix',
 				box: T.area('.track-col[data-track-index="2"]'),
 				boxLabel: 'Keys strip',
 				caption: 'Drag a strip to set its volume…',
 				drag: { target: T.strip(2, 'device'), path: [[0.5, 0.3], [0.5, 0.75]], beats: 3 }
 			},
-			{ at: '97.3', caption: '…and back up.', drag: { target: T.strip(2, 'device'), path: [[0.5, 0.6], [0.5, 0.15]], beats: 3 } },
-			{ at: '99.2', box: T.name(1), boxLabel: 'Name: mute', tap: T.name(1), caption: 'Tap a name to mute the track…', until: muted(1, true) },
-			{ at: '101.1', box: T.name(1), boxLabel: 'Name: mute', tap: T.name(1), caption: '…and again to bring it back.', until: muted(1, false) },
-			{ at: '102.3', box: null, caption: 'Everything you saw was played on the iPad.' }
+			{ at: '103.3', caption: '…and back up.', drag: { target: T.strip(2, 'device'), path: [[0.5, 0.6], [0.5, 0.15]], beats: 3 } },
+			{ at: '105.2', box: T.name(1), boxLabel: 'Name: mute', tap: T.name(1), caption: 'Tap a name to mute the track…', until: muted(1, true) },
+			{ at: '107.1', box: T.name(1), boxLabel: 'Name: mute', tap: T.name(1), caption: '…and again to bring it back.', until: muted(1, false) },
+			{ at: '108.3', box: null, caption: 'Everything you saw was played on the iPad.' }
 		],
-		end: '105.1',
+		end: '111.1',
 		result: [looping(0, 0), looping(1, 0), looping(2, 0)]
 	},
 
