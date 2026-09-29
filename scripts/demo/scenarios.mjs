@@ -198,8 +198,8 @@ export const SCENARIOS = {
 			{ at: '8.3', chapter: 'Shape the sound', caption: 'Every instrument gets its own controls.', tap: T.strip(0, 'device') },
 			{
 				at: '9.2',
-				caption: "Sweep the whole kit's filter.",
-				drag: { target: T.xy('Filter'), path: [[0.55, 0.5], [0.12, 0.62], [0.12, 0.62], [0.6, 0.45]], beats: 6 }
+				caption: 'Drive the whole kit with one of its macros.',
+				drag: { target: T.slider('Drive Amount'), path: [[0.5, 0.85], [0.5, 0.2], [0.5, 0.2], [0.5, 0.8]], beats: 6 }
 			},
 
 			{ at: '11.1', chapter: 'Add a bass', caption: 'Load a bass.', tap: T.rail('Bass') },
@@ -400,14 +400,16 @@ export const SCENARIOS = {
 				caption: "A strip's middle band opens its instrument's view.",
 				live: null
 			},
+			// Live's Core kits map eight rack macros, and a kit with mapped macros
+			// shows one slider per macro (ADR-454).
 			{
 				at: '25.2',
-				box: T.xy('Filter'),
-				boxLabel: 'Kit filter',
-				caption: 'Drag an XY pad: filter across, resonance up.',
-				note: 'Every drum in the kit follows the one gesture.',
-				live: LIVE.devices('The kit in Live'),
-				drag: { target: T.xy('Filter'), path: [[0.55, 0.5], [0.12, 0.62], [0.12, 0.62], [0.6, 0.45]], beats: 6 }
+				box: T.slider('Drive Amount'),
+				boxLabel: 'Drive Amount',
+				caption: "This kit has its own macros, so its view is a slider for each.",
+				note: 'Drive Amount puts grit on the whole kit. Unmap them in Live and Vamp’s kit controls return.',
+				live: LIVE.devices("The kit's macros in Live"),
+				drag: { target: T.slider('Drive Amount'), path: [[0.5, 0.85], [0.5, 0.2], [0.5, 0.2], [0.5, 0.8]], beats: 6 }
 			},
 
 			{
