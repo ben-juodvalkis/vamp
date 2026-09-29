@@ -1012,6 +1012,25 @@ class DeviceLoadComponent:
 
     # --- public load helper (callable from other components) -------------
 
+    def load_groove(self, path: str, source: str = "", rel: str = "") -> Optional[str]:
+        """Load a groove file (``.agr``) into the set's Groove Pool.
+        Returns ``None`` when the load ran, or a short detail string.
+
+        ``GroovePoolComponent``'s minter. ``browser.load_item`` on a
+        groove appends a new pool entry and applies it to no clip, so
+        nothing is selected first.
+        """
+        if not path or not os.path.isfile(path):
+            return "path-not-found: %r" % (path,)
+        item = self._resolve_browser_item(path, source, rel)
+        if item is None:
+            return "not-in-browser: %r" % (path,)
+        try:
+            self._browser.load_item(item)
+        except _LOM_ERRORS as e:
+            return "%s: %s" % (type(e).__name__, str(e)[:120])
+        return None
+
     def load_into_track(
         self, track, preset_path: str, at_head: bool = False,
         source: str = "", rel: str = "",

@@ -515,13 +515,16 @@ Groove (focus-scoped, mirrors ClipPropertiesComponent):
 | -------------------------------------------------- | ------- | ------------------------------------------------- | --------- |
 | `/looping/v3/clip/groove/has_groove`               | Surf→UI | `clipPath:string, value:bool`                     | Focused clip has a linked groove. |
 | `/looping/v3/clip/groove/property`                 | Surf→UI | `clipPath:string, name:string, value:number`      | Per-amount echo. `name ∈ {base, timing_amount, quantization_amount, random_amount, velocity_amount}`. |
-| `/looping/v3/clip/groove/set/base`                 | UI→Surf | `clipPath:string, value:int, generation:int?`     | `clip.groove.base` (int ∈ {1,2,3}). Assign-on-first-write from `unassigned-*` pool entry. |
+| `/looping/v3/clip/groove/set/base`                 | UI→Surf | `clipPath:string, value:int, generation:int?`     | `clip.groove.base` (int ∈ {1,2,3}). Assign-on-first-write: an `unassigned-*` entry, an orphaned `Clip_*`, or one minted from `Vamp Devices/Grooves/Vamp Groove.agr`. |
 | `/looping/v3/clip/groove/set/timing_amount`        | UI→Surf | `clipPath:string, value:float, generation:int?`   | `clip.groove.timing_amount` (0–100). |
 | `/looping/v3/clip/groove/set/quantization_amount`  | UI→Surf | `clipPath:string, value:float, generation:int?`   | `clip.groove.quantization_amount`. |
 | `/looping/v3/clip/groove/set/random_amount`        | UI→Surf | `clipPath:string, value:float, generation:int?`   | `clip.groove.random_amount`. |
 | `/looping/v3/clip/groove/set/velocity_amount`      | UI→Surf | `clipPath:string, value:float, generation:int?`   | `clip.groove.velocity_amount`. |
 
-Pool exhaustion (no `unassigned-*` entries) surfaces as
+A clip on a groove that is not its own and that another clip also links
+(Live 12.1's default groove for new MIDI clips) takes one of its own on
+the first write, starting from the shared groove's settings. Pool
+exhaustion (nothing free and the mint failed) surfaces as
 `/looping/v3/error` with code `pool-exhausted`.
 
 ### 2.8 Device / preset load
@@ -1587,7 +1590,7 @@ bound and components wired. No re-fire on UI reconnect.
 | `generation-stale`           | Write arrived with a generation less than surface's current. See §4.2. |
 | `write-rejected`             | Surface refused the write for a typed reason in `detail` (`"automation-locked"`, `"param-read-only"`, `"property-read-only"`, `"property-not-allowed"`). Not retryable until the condition changes. |
 | `path-not-supported`         | Path grammar-valid but implementation doesn't support this suffix (e.g. `chains/...`, `returns/...`). |
-| `pool-exhausted`             | GroovePoolComponent couldn't find an `unassigned-*` entry during assign-on-first-write. |
+| `pool-exhausted`             | GroovePoolComponent found no free groove (`unassigned-*` or orphaned `Clip_*`) and could not mint one during assign-on-first-write. |
 | `device-slot-invalid`        | `devicePath` out of range for the target track's device chain. |
 | `load-failed`                | `/device/load`, `/clip/load_file` or `/clip/swap_file` failed inside Live — any `_LOM_ERRORS` exception, empty `presetPath` (device load), a native insert Live refuses or a class it has no name for (device load, `path` `native:<class>`, `detail` `insert-refused` or `unknown-device: <class>`), or `ClipSlot.create_audio_clip` raise (clip load or swap; a swap's `detail` ends "the old file is back" or "the slot is empty"). `detail` carries exception class + truncated message, or `"empty-preset-path"`. Not retryable without fixing the underlying asset. |
 | `clip-not-audio`             | `/clip/swap_file` against a MIDI clip, which has no file to swap. Carried on the swap's reply, not on `/looping/v3/error`. |

@@ -578,14 +578,17 @@ def test_first_write_on_grooveless_focused_claims_and_emits(
 def test_pool_exhausted_emits_v3_error_and_does_not_persist(
     captured_emits,
 ):
-    """Only one pool entry, already claimed → first write on
-    a different clip triggers pool-exhausted."""
+    """Only one pool entry, claimed by a clip that still links it, and
+    no minter → first write on a different clip triggers
+    pool-exhausted."""
     g0 = GrooveWithListeners(name="Clip_abcdef00")
     pool = StubGroovePool(grooves=[g0])
 
     t0 = StubTrack(tid=100, name="t0")
+    c0 = GrooveBackedClip(cid=500, name="c0")
+    c0._link_groove(g0)                                  # not orphaned
     c1 = GrooveBackedClip(cid=501, name="c1")            # grooveless
-    t0.clip_slots = [StubClipSlot(clip=None), StubClipSlot(clip=c1)]
+    t0.clip_slots = [StubClipSlot(clip=c0), StubClipSlot(clip=c1)]
     song = GrooveStubSong(tracks=[t0], groove_pool=pool)
     song.view._detail_clip = c1
     _pc, gc = _make(song, captured_emits)
@@ -798,3 +801,85 @@ def test_v3_wrapper_groove_object_shape_second_write_no_reclaim(
 
     # g_other stays pristine — the bug would have renamed it too.
     assert g_other.name == "Swing16"
+
+
+# --- a groove that is someone else's (2026-09-29) --------------------------
+
+
+def _two_clips_on(groove, g_free):
+    c0 = GrooveBackedClip(cid=500, name="c0")
+    c1 = GrooveBackedClip(cid=501, name="c1")
+    c0._link_groove(groove)
+    c1._link_groove(groove)
+    t0 = StubTrack(tid=100, name="t0")
+    t0.clip_slots = [StubClipSlot(clip=c0), StubClipSlot(clip=c1)]
+    pool = StubGroovePool(grooves=[groove, g_free])
+    return GrooveStubSong(tracks=[t0], groove_pool=pool), c0, c1
+
+
+def test_write_on_a_shared_default_groove_claims_one_of_its_own(captured_emits):
+    """Live 12.1 puts its default groove on every new MIDI clip. A write
+    must move only the clip it names: that clip takes a free groove,
+    starting from the shared one's settings, and the shared one keeps
+    its own."""
+    shared = GrooveWithListeners(
+        name="Swing 16ths 66", base=3, timing_amount=100.0,
+        quantization_amount=0.0, random_amount=0.0, velocity_amount=0.0,
+    )
+    g_free = GrooveWithListeners(name="unassigned-1")
+    song, c0, c1 = _two_clips_on(shared, g_free)
+    song.view._detail_clip = c1
+    _pc, gc = _make(song, captured_emits)
+
+    gc.handle_set_quantization_amount(
+        args=("tracks/0/slots/1/clip", 30.0), source_addr=None,
+    )
+
+    assert shared.quantization_amount == 0.0
+    assert shared.name == "Swing 16ths 66"
+    assert g_free.name == "Clip_" + path_hash("tracks/0/slots/1/clip")
+    assert c1.groove == ("id", id(g_free))
+    assert c0.groove == ("id", id(shared))
+    # Inherited, then the write on top.
+    assert (g_free.base, g_free.timing_amount, g_free.quantization_amount) == (3, 100.0, 30.0)
+
+
+def test_write_on_a_preset_only_this_clip_links_stays_in_place(captured_emits):
+    """A preset the user put on one clip keeps its pattern: written in place."""
+    preset = GrooveWithListeners(name="MPC 16 Swing-62")
+    g_free = GrooveWithListeners(name="unassigned-1")
+    c1 = GrooveBackedClip(cid=501, name="c1")
+    c1._link_groove(preset)
+    t0 = StubTrack(tid=100, name="t0")
+    t0.clip_slots = [StubClipSlot(clip=None), StubClipSlot(clip=c1)]
+    song = GrooveStubSong(tracks=[t0], groove_pool=StubGroovePool(grooves=[preset, g_free]))
+    song.view._detail_clip = c1
+    _pc, gc = _make(song, captured_emits)
+
+    gc.handle_set_timing_amount(args=("tracks/0/slots/1/clip", 42.0), source_addr=None)
+
+    assert preset.timing_amount == 42.0
+    assert c1.groove == ("id", id(preset))
+    assert g_free.name == "unassigned-1"
+
+
+def test_duplicate_sharing_the_originals_claim_takes_its_own(captured_emits):
+    """A duplicated clip links the original's ``Clip_<hash>``; writing the
+    copy must not move the original."""
+    original = GrooveWithListeners(
+        name="Clip_" + path_hash("tracks/0/slots/0/clip"), timing_amount=10.0,
+    )
+    g_free = GrooveWithListeners(name="unassigned-1")
+    song, c0, c1 = _two_clips_on(original, g_free)
+    song.view._detail_clip = c1
+    _pc, gc = _make(song, captured_emits)
+
+    gc.handle_set_timing_amount(args=("tracks/0/slots/1/clip", 70.0), source_addr=None)
+
+    assert original.timing_amount == 10.0
+    assert g_free.timing_amount == 70.0
+    assert c1.groove == ("id", id(g_free))
+
+    # The original still writes its own groove in place.
+    gc.handle_set_timing_amount(args=("tracks/0/slots/0/clip", 20.0), source_addr=None)
+    assert original.timing_amount == 20.0

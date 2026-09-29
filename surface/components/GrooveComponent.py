@@ -112,7 +112,12 @@ import math
 from typing import Callable, Dict, Optional, Tuple
 
 from . import path_resolver
-from .GroovePoolComponent import GroovePoolComponent, PoolExhausted
+from .GroovePoolComponent import (
+    GroovePoolComponent,
+    PoolExhausted,
+    clip_groove_id,
+    is_owned_by,
+)
 
 logger = logging.getLogger("looping")
 
@@ -169,54 +174,9 @@ _AMOUNT_NAMES: Tuple[str, ...] = tuple(n for n, _ in _AMOUNT_ATTRS)
 _WIRE_TYPE_FOR: Dict[str, str] = {n: wt for n, wt in _AMOUNT_ATTRS}
 
 
-def _groove_id_of(clip) -> Optional[int]:
-    """Return the live-ptr id of the groove linked to ``clip``, or None.
-
-    Live 12's ``clip.groove`` returns different shapes depending on
-    API path:
-
-    * The ``ableton.v3`` wrapper returns the ``Groove.Groove`` object
-      directly (or ``None`` for no groove).
-    * Older raw LOM access returns an ``("id", N)`` tuple where
-      ``N == 0`` means no groove.
-    * Test stubs return a plain int or ``("id", int)``.
-
-    We normalize all three to a 31-bit-masked live-ptr so the result
-    lines up with ``_safe_int_id(groove)`` from the pool walk.
-    """
-    try:
-        raw = clip.groove
-    except _LOM_ERRORS:
-        return None
-    if raw is None:
-        return None
-    # Groove object (real Live 12 v3 wrapper path).
-    live_ptr = getattr(raw, "_live_ptr", None)
-    if live_ptr is not None:
-        try:
-            v = int(live_ptr) & 0x7FFFFFFF
-        except (TypeError, ValueError):
-            return None
-        return v if v != 0 else None
-    # ``("id", N)`` tuple (raw LOM path) or bare int (test stub).
-    if not raw:
-        return None
-    try:
-        if hasattr(raw, "__len__") and len(raw) == 2:
-            gid = raw[1]
-        else:
-            gid = raw
-    except TypeError:
-        gid = raw
-    try:
-        gid_int = int(gid)
-    except (TypeError, ValueError):
-        return None
-    if gid_int == 0:
-        return None
-    # Mask to 31 bits so comparisons line up with `_safe_int_id`
-    # (which OSC-safes live-ptrs via ``& 0x7FFFFFFF``).
-    return gid_int & 0x7FFFFFFF
+# One helper for "which groove does this clip link", shared with the pool's
+# orphan walk (moved there 2026-09-29; the old name stays for callers).
+_groove_id_of = clip_groove_id
 
 
 # --- component ------------------------------------------------------------
@@ -276,6 +236,10 @@ class GrooveComponent:
 
         # ``(key, context) -> True`` once warned, for de-dupe.
         self._warned: set = set()
+
+        # ``(clipPath, grooveId)`` found linked by no other clip; see
+        # ``_is_shared``. Cleared on every focus change.
+        self._unshared: set = set()
 
         # Song-scoped detail_clip listener. Attach on ``song.view``
         # — independent of ClipPropertiesComponent's listener
@@ -361,6 +325,7 @@ class GrooveComponent:
                 self._safe_emit_has_groove(prev_path, False)
 
         # --- 5. Update focus state before emits ---
+        self._unshared.clear()
         self._focused_clip = new_clip if new_path is not None else None
         self._focused_path = new_path if new_path is not None else None
         self._focused_track = new_track
@@ -686,9 +651,19 @@ class GrooveComponent:
         persist the amount.
         """
         groove = self._resolve_groove_for_clip(clip)
+        inherit = None
+        if groove is not None and self._is_shared(clip, clip_path, groove):
+            # Not this clip's own and another clip links it too — Live
+            # 12.1's default groove for new MIDI clips, a preset shared by
+            # hand, a duplicate still on the original's claim. Writing it
+            # would move every clip on it, so this clip takes a groove of
+            # its own, starting from the shared one's settings.
+            inherit, groove = groove, None
         if groove is None:
             try:
-                groove = self._pool.assign_groove_to_clip(clip, clip_path)
+                groove = self._pool.assign_groove_to_clip(
+                    clip, clip_path, inherit=inherit,
+                )
             except PoolExhausted:
                 logger.warning(
                     "GrooveComponent %s: pool-exhausted for %r; "
@@ -736,6 +711,32 @@ class GrooveComponent:
             raw = self._safe_read_groove_attr(groove, attr_name, "write-echo")
             if raw is not None:
                 self._emit_amount(attr_name, raw)
+
+    def _is_shared(self, clip, clip_path: str, groove) -> bool:
+        """Whether ``groove`` is someone else's that another clip links.
+
+        A groove that is not the clip's own but that only this clip
+        links (a preset the user put on it) is written in place: taking
+        a fresh one would lose the preset's pattern. The walk runs only
+        for such a groove, and its "not shared" answer is kept per
+        clip path + groove so a slider drag walks once, not per tick.
+        """
+        try:
+            name = groove.name
+        except _LOM_ERRORS:
+            return False
+        if is_owned_by(name, clip_path):
+            return False
+        gid = _groove_id_of(clip)
+        if gid is None:
+            return False
+        key = (clip_path, gid)
+        if key in self._unshared:
+            return False
+        if self._pool.linked_elsewhere(clip, gid):
+            return True
+        self._unshared.add(key)
+        return False
 
     def _is_new_focused_groove(self, groove) -> bool:
         """True if ``groove`` is not the currently-cached focused groove.

@@ -33,6 +33,7 @@ import pytest
 from components.GroovePoolComponent import (
     GroovePoolComponent,
     PoolExhausted,
+    is_owned_by,
     path_hash,
 )
 
@@ -273,3 +274,166 @@ def test_disconnect_detaches_listener_and_is_idempotent(captured_emits):
     # Second call is a no-op.
     c.disconnect()
     assert not pool.has_listener()
+
+
+# --- orphan reclaim + mint (2026-09-29) -----------------------------------
+
+
+class LinkedClip:
+    """A clip in a slot, linking ``groove`` (or nothing). Reads back the
+    raw LOM ``("id", N)`` shape; ``linked`` is the object last written."""
+
+    def __init__(self, groove=None):
+        self.linked = groove
+
+    @property
+    def groove(self):
+        return ("id", id(self.linked) if self.linked is not None else 0)
+
+    @groove.setter
+    def groove(self, value):
+        self.linked = value
+
+
+class Slot:
+    def __init__(self, clip=None):
+        self.clip = clip
+        self.has_clip = clip is not None
+
+
+class Track:
+    def __init__(self, *clips):
+        self.clip_slots = [Slot(c) for c in clips]
+
+
+class SongWithTracks(PoolStubSong):
+    def __init__(self, pool, tracks):
+        super().__init__(pool=pool)
+        self.tracks = tracks
+
+
+def _minting(pool, calls, name="Vamp Groove", err=None):
+    """A minter that appends one groove to ``pool``, as the browser load does."""
+    def mint():
+        calls.append(1)
+        if err:
+            return err
+        pool._grooves.append(StubGroove(name))
+        return None
+    return mint
+
+
+def test_orphaned_claim_is_reclaimed_before_minting(captured_emits):
+    """A ``Clip_*`` groove no clip links is reused; the minter is not called."""
+    held = StubGroove("Clip_aaaaaaaa")
+    orphan = StubGroove("Clip_bbbbbbbb")
+    pool = StubGroovePool(grooves=[held, orphan])
+    song = SongWithTracks(pool, [Track(LinkedClip(held), None)])
+    calls = []
+    c = GroovePoolComponent(song=song, emit=lambda *a: None, mint=_minting(pool, calls))
+
+    clip = LinkedClip()
+    got = c.assign_groove_to_clip(clip, "tracks/0/slots/1/clip")
+
+    assert got is orphan
+    assert orphan.name == "Clip_" + path_hash("tracks/0/slots/1/clip")
+    assert clip.linked is orphan
+    assert calls == []
+
+
+def test_mints_when_every_groove_is_linked(captured_emits):
+    held = StubGroove("Clip_aaaaaaaa")
+    pool = StubGroovePool(grooves=[held])
+    song = SongWithTracks(pool, [Track(LinkedClip(held), None)])
+    calls = []
+    c = GroovePoolComponent(song=song, emit=lambda *a: None, mint=_minting(pool, calls))
+
+    clip = LinkedClip()
+    got = c.assign_groove_to_clip(clip, "tracks/0/slots/1/clip")
+
+    assert calls == [1]
+    assert len(pool._grooves) == 2
+    assert got is pool._grooves[1]
+    assert got.name == "Clip_" + path_hash("tracks/0/slots/1/clip")
+    assert clip.linked is got
+
+
+def test_mints_into_an_empty_pool(captured_emits):
+    """No template grooves at all — the general edition's case."""
+    pool = StubGroovePool(grooves=[])
+    song = SongWithTracks(pool, [Track(None)])
+    calls = []
+    c = GroovePoolComponent(song=song, emit=lambda *a: None, mint=_minting(pool, calls))
+
+    clip = LinkedClip()
+    got = c.assign_groove_to_clip(clip, "tracks/0/slots/0/clip")
+
+    assert calls == [1]
+    assert clip.linked is got
+
+
+def test_failed_mint_raises_pool_exhausted(captured_emits):
+    pool = StubGroovePool(grooves=[])
+    song = SongWithTracks(pool, [Track(None)])
+    calls = []
+    c = GroovePoolComponent(
+        song=song, emit=lambda *a: None,
+        mint=_minting(pool, calls, err="not-in-browser"),
+    )
+    clip = LinkedClip()
+    with pytest.raises(PoolExhausted):
+        c.assign_groove_to_clip(clip, "tracks/0/slots/0/clip")
+    assert clip.linked is None
+
+
+def test_mint_that_does_not_grow_the_pool_raises_pool_exhausted(captured_emits):
+    pool = StubGroovePool(grooves=[])
+    song = SongWithTracks(pool, [Track(None)])
+    c = GroovePoolComponent(song=song, emit=lambda *a: None, mint=lambda: None)
+    with pytest.raises(PoolExhausted):
+        c.assign_groove_to_clip(LinkedClip(), "tracks/0/slots/0/clip")
+
+
+def test_inherit_copies_the_five_settings(captured_emits):
+    class G(StubGroove):
+        def __init__(self, name, **kw):
+            super().__init__(name)
+            self.base, self.timing_amount = kw.get("base", 2), kw.get("timing_amount", 0.0)
+            self.quantization_amount = kw.get("quantization_amount", 0.0)
+            self.random_amount = kw.get("random_amount", 0.0)
+            self.velocity_amount = kw.get("velocity_amount", 0.0)
+
+    shared = G("Swing 16ths 66", base=3, timing_amount=100.0,
+               quantization_amount=20.0, random_amount=5.0, velocity_amount=40.0)
+    free = G("unassigned-1")
+    pool = StubGroovePool(grooves=[shared, free])
+    c = _make_component(PoolStubSong(pool=pool), captured_emits)
+
+    got = c.assign_groove_to_clip(LinkedClip(shared), "tracks/0/slots/0/clip", inherit=shared)
+
+    assert got is free
+    assert (free.base, free.timing_amount, free.quantization_amount,
+            free.random_amount, free.velocity_amount) == (3, 100.0, 20.0, 5.0, 40.0)
+    assert shared.name == "Swing 16ths 66"
+
+
+def test_linked_elsewhere(captured_emits):
+    g = StubGroove("Swing 16ths 66")
+    a, b = LinkedClip(g), LinkedClip(g)
+    pool = StubGroovePool(grooves=[g])
+    song = SongWithTracks(pool, [Track(a, b)])
+    c = _make_component(song, captured_emits)
+    gid = id(g) & 0x7FFFFFFF
+    assert c.linked_elsewhere(a, gid) is True
+    b.groove = None
+    assert c.linked_elsewhere(a, gid) is False
+
+
+def test_is_owned_by():
+    path = "tracks/0/slots/0/clip"
+    assert is_owned_by("Clip_" + path_hash(path), path)
+    assert is_owned_by("Clip_12345", path)                  # legacy M4L claim
+    assert not is_owned_by("Clip_" + path_hash("tracks/0/slots/1/clip"), path)
+    assert not is_owned_by("Swing 16ths 66", path)
+    assert not is_owned_by("unassigned-3", path)
+    assert not is_owned_by(None, path)

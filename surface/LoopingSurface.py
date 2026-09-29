@@ -1705,8 +1705,23 @@ class LoopingSurface(ControlSurface):
         # `emit_on_accept` is a no-op; GrooveComponent re-emits
         # has_groove + 5 amount values on handshake accept (wired
         # into _emit_on_accept_chain below).
+        # The pool mints a groove through the browser when it has none
+        # free (2026-09-29), so a set needs no ``unassigned-*`` grooves
+        # loaded ahead of time. DeviceLoadComponent owns the browser
+        # cache and is built later, so the closure finds it at call time.
+        groove_path = live_library.device_path(live_library.GROOVE_REL)
+
+        def mint_groove():
+            loader = getattr(self, "_device_load_component", None)
+            if loader is None:
+                return "no device loader"
+            return loader.load_groove(
+                groove_path,
+                source=live_library.m4l_source(), rel=live_library.GROOVE_REL,
+            )
+
         self._groove_pool_component = GroovePoolComponent(
-            song=self.song, emit=self._transport.send,
+            song=self.song, emit=self._transport.send, mint=mint_groove,
         )
         self._groove_component = GrooveComponent(
             song=self.song,

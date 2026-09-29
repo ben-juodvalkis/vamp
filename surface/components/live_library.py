@@ -172,6 +172,8 @@ def m4l_devices_root() -> str:
 SEQUENCER_REL = os.path.join("Permute", "Permute.amxd")
 MIDI_WHEELS_REL = "MidiWheels.amxd"
 RANDOM_START_REL = os.path.join("random-start", "random-start.amxd")
+#: The groove minted into the Groove Pool when a clip needs one of its own.
+GROOVE_REL = os.path.join("Grooves", "Vamp Groove.agr")
 
 
 def m4l_source() -> str:
