@@ -3,11 +3,16 @@
 	 * VerticalQuantizeControl - Vertical quantization slider
 	 * Simplified: tap or drag anywhere to set value
 	 * Uses requestAnimationFrame-based throttling for smooth response.
+	 *
+	 * Touching it also opens the Groove view in the central display
+	 * (2026-09-29), the clip's groove: which file it swings to, Random,
+	 * Velocity and Amount. The well wears the selection edge while that
+	 * view is up, so the two read as one control.
 	 */
 	import { send } from '$lib/api/simpleClient';
 	import { browser } from '$app/environment';
 	import { clipGrooveStore } from '$lib/stores/v6/clipGrooveStore.svelte';
-	import { clipDisplayCoordinator } from '$lib/services/clipDisplayCoordinator.svelte';
+	import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
 	import { focusPlayingClipOnSelectedTrack } from '$lib/components/v6/tracks/composables/slotActions';
 	import { createSliderThrottle } from '$lib/utils/sliderThrottle';
 	import { drag as dragAction, type DragInfo } from '$lib/actions/drag';
@@ -23,6 +28,8 @@
 
 	// Use optimistic value during drag, otherwise use actual value
 	let displayValue = $derived(optimisticValue ?? quantizationAmount);
+
+	let grooveViewUp = $derived(centralDisplayStore.view.type === 'groove');
 
 	// Calculate handle position percentage (inverted for vertical - 0 at bottom, 100 at top)
 	let handlePercentage = $derived(100 - (displayValue / 100) * 100);
@@ -41,7 +48,6 @@
 	function setQuantization(value: number) {
 		if (!gestureClipPath) return;
 		send(V3_CLIP_GROOVE_SET_QUANTIZATION_AMOUNT_ADDRESS, [gestureClipPath, value]);
-		clipDisplayCoordinator.showCurrentClip();
 	}
 
 	// Frame-synchronized throttle for smooth updates
@@ -81,7 +87,8 @@
 			// view and this slider's own readout follow. Q needs no clip
 			// data to write — the value is the finger's position — so the
 			// very first touch both aims and sets.
-			gestureClipPath = focusPlayingClipOnSelectedTrack();
+			gestureClipPath = focusPlayingClipOnSelectedTrack({ showClip: false });
+			centralDisplayStore.setView('groove');
 			isDragging = true;
 			throttle.start();
 		},
@@ -105,6 +112,7 @@
 	<div
 		bind:this={containerRef}
 		class="relative w-full h-full rounded-lg select-none transition-colors duration-100 cursor-pointer quantize-container"
+		class:groove-up={grooveViewUp}
 		style="overflow: hidden; z-index: 10;"
 		use:dragAction={quantizeDrag}
 		role="slider"
@@ -175,6 +183,10 @@
 	:global([data-grammar="flat"]) .quantize-container {
 		border: 1px solid var(--line-strong);
 		border-radius: 2px;
+	}
+	/* The Groove view is up: the selection edge, Live's blue. */
+	:global([data-grammar="flat"]) .quantize-container.groove-up {
+		border: 2px solid var(--flat-selection);
 	}
 	:global([data-grammar="flat"]) .quantize-fill {
 		background-color: var(--act-monitor);

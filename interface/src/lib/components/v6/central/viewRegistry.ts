@@ -54,6 +54,7 @@ interface ViewRegistry {
 	system: LazyComponent;
 	clip: LazyComponent;
 	permute: LazyComponent;
+	groove: LazyComponent;
 }
 
 /**
@@ -130,6 +131,9 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 	system: () => import('./views/SystemCentralView.svelte'),
 	clip: () => import('./views/ClipCentralView.svelte'),
 	permute: () => import('./views/PermuteCentralView.svelte'),
+	// Opened by touching Q in the right sidebar (2026-09-29): the ticked
+	// grooves as tiles, and the focused clip's Random, Velocity and Amount.
+	groove: () => import('./views/GrooveCentralView.svelte'),
 };
 
 /**
@@ -178,8 +182,8 @@ export function resolveViewComponent(
 		return CENTRAL_VIEW_REGISTRY.default;
 	}
 
-	// Handle top-level views (default, system, clip, permute)
-	if (type === 'default' || type === 'system' || type === 'clip' || type === 'permute') {
+	// Handle top-level views (default, system, clip, permute, groove)
+	if (type === 'default' || type === 'system' || type === 'clip' || type === 'permute' || type === 'groove') {
 		return CENTRAL_VIEW_REGISTRY[type];
 	}
 

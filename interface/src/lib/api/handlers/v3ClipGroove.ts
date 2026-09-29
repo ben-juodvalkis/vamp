@@ -1,16 +1,18 @@
 /**
  * v3 Clip Groove handler (PR-5e2)
  *
- * Consumes the two inbound wire addresses owned by the Python Control
+ * Consumes the three inbound wire addresses owned by the Python Control
  * Surface's `GrooveComponent`:
  *
  *   Surf → UI   /looping/v3/clip/groove/has_groove   [clipPath, bool]
  *   Surf → UI   /looping/v3/clip/groove/property     [clipPath, name, value]
+ *   Surf → UI   /looping/v3/clip/groove/file         [clipPath, name]
  *
  * `has_groove` flips the scalar `clipGrooveStore.hasGroove` so the UI
  * can distinguish "no groove assigned yet" from "groove at 0". `property`
  * routes `base`/`timing_amount`/`quantization_amount`/`random_amount`/
- * `velocity_amount` into the scalar store.
+ * `velocity_amount` into the scalar store. `file` names the groove file the
+ * clip's groove holds (`""` for none known) — the Groove view's lit tile.
  *
  * Both addresses are gated by `session.focusedClipPath` — the Python
  * surface's 5 amount listeners are focus-scoped, but a listener firing
@@ -26,6 +28,7 @@ import { toNumber, toString } from './oscTypeHelpers';
 
 export const V3_CLIP_GROOVE_HAS_GROOVE_ADDRESS = '/looping/v3/clip/groove/has_groove';
 export const V3_CLIP_GROOVE_PROPERTY_ADDRESS = '/looping/v3/clip/groove/property';
+export const V3_CLIP_GROOVE_FILE_ADDRESS = '/looping/v3/clip/groove/file';
 
 // Write addresses (UI → Surf). Re-exported so senders don't rebuild string literals.
 export const V3_CLIP_GROOVE_SET_BASE_ADDRESS = '/looping/v3/clip/groove/set/base';
@@ -37,11 +40,14 @@ export const V3_CLIP_GROOVE_SET_RANDOM_AMOUNT_ADDRESS =
 	'/looping/v3/clip/groove/set/random_amount';
 export const V3_CLIP_GROOVE_SET_VELOCITY_AMOUNT_ADDRESS =
 	'/looping/v3/clip/groove/set/velocity_amount';
+/** Put the clip on a Core Library groove file, by name (the Groove view's tiles). */
+export const V3_CLIP_GROOVE_SET_FILE_ADDRESS = '/looping/v3/clip/groove/set/file';
 
 export function isV3ClipGrooveAddress(address: string): boolean {
 	return (
 		address === V3_CLIP_GROOVE_HAS_GROOVE_ADDRESS ||
-		address === V3_CLIP_GROOVE_PROPERTY_ADDRESS
+		address === V3_CLIP_GROOVE_PROPERTY_ADDRESS ||
+		address === V3_CLIP_GROOVE_FILE_ADDRESS
 	);
 }
 
@@ -59,6 +65,17 @@ export function handleV3ClipGroove(address: string, args: OSCArg[]): void {
 		const value = args[1];
 		const hasGroove = value === true || value === 1 || value === '1';
 		clipGrooveStore.handleHasGroove(hasGroove);
+		return;
+	}
+
+	if (address === V3_CLIP_GROOVE_FILE_ADDRESS) {
+		// args: [clipPath, name]
+		if (args.length < 2) {
+			logger.warn('v3 clip/groove/file wrong arity', { args });
+			return;
+		}
+		if (toString(args[0]) !== session.focusedClipPath) return;
+		clipGrooveStore.handleFile(toString(args[1]));
 		return;
 	}
 
