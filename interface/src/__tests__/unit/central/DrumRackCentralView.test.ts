@@ -95,13 +95,20 @@ const INSTRUMENT = {
 	devicePath: DEVICE
 };
 
-function census(padClasses: Record<string, number>, functions: Record<string, { members: number; held: number }>) {
+// `held` is a pad's own macro holding a parameter; the Drum Rack's own
+// macros are unmapped unless `mappedMacros` names some.
+function census(
+	padClasses: Record<string, number>,
+	functions: Record<string, { members: number; held: number }>,
+	mappedMacros: number[] = []
+) {
 	const fns: Record<string, { members: number; held: number }> = {};
 	for (const fn of VM_FUNCTIONS) fns[fn] = functions[fn] ?? { members: 0, held: 0 };
 	return JSON.stringify({
 		family: false,
 		functions: fns,
-		hasMacroMappings: Object.values(fns).some((f) => f.held > 0),
+		hasMacroMappings: mappedMacros.length > 0,
+		mappedMacros,
 		padClasses,
 		padCount: Object.values(padClasses).reduce((a, b) => a + b, 0)
 	});
@@ -119,7 +126,7 @@ const JAZZ = census(
 		gain: { members: 32, held: 0 }
 	}
 );
-const KOMPLETE = census({ AuPluginDevice: 16 }, {});
+const KOMPLETE = census({ AuPluginDevice: 16 }, {}, [1, 2]);
 // `Ethnic Drums` as the rig reads it: every pad a nested Instrument Rack
 // with seven named macros; pitch binds through Transpose (live), Room on
 // 20 of the 32 pads only. Release is held here to exercise the badge.
@@ -201,7 +208,7 @@ const JAZZ_RIG = census(
 
 function drumTrack(properties: Record<string, OSCArg>): TrackRecord {
 	const params = new SvelteMap<string, ParamRecord>();
-	['Device On', 'FX1', 'FX2'].forEach((name, i) => {
+	['Device On', 'FX1', 'FX2', 'Macro 3'].forEach((name, i) => {
 		const paramPath = `${DEVICE}/params/${i}`;
 		params.set(paramPath, { paramPath, name, displayName: name, min: 0, max: 127, value: 0, unit: '' });
 	});
@@ -280,12 +287,29 @@ describe('DrumRackCentralView — mode from the census', () => {
 		await tick();
 		expect(container.querySelector('[data-vm-mode]')?.getAttribute('data-vm-mode')).toBe('macro-grid');
 		expect(container.querySelectorAll('.vm-slot')).toHaveLength(0);
-		// The macro grid reads the rack's macros: FX1 / FX2 are named, so two sliders.
+		// The macro grid draws the rack's mapped macros: FX1 and FX2.
 		expect(container.querySelectorAll('.device-slider')).toHaveLength(2);
 
 		await setCensus(DRUMCELL);
 		expect(container.querySelector('[data-vm-mode]')?.getAttribute('data-vm-mode')).toBe('full');
 		expect(container.querySelectorAll('.vm-slot')).toHaveLength(6);
+	});
+
+	it('shows a slider for each mapped macro of the rack and nothing else, whatever the macro is named', async () => {
+		seed({ 'vm.members': census({ DrumCell: 24 }, Object.fromEntries(VM_FUNCTIONS.map((fn) => [fn, LIVE_24])), [1, 3]) });
+		const { container } = render(DrumRackCentralView, { props: { instrument: INSTRUMENT } });
+		await tick();
+		expect(container.querySelector('[data-vm-mode]')?.getAttribute('data-vm-mode')).toBe('macro-grid');
+		// No virtual-macro controls: no Gain, Trnsp, FX or Filter.
+		expect(container.querySelectorAll('.vm-slot')).toHaveLength(0);
+		const titles = Array.from(container.querySelectorAll('.device-slider')).map((el) => el.textContent?.trim());
+		expect(titles).toHaveLength(2);
+		expect(titles[0]).toContain('FX1');
+		expect(titles[1]).toContain('Macro 3'); // mapped but never renamed: still drawn
+
+		// Unmapped in Live: the census re-emits and the kit's own controls return.
+		await setCensus(DRUMCELL);
+		expect(container.querySelector('[data-vm-mode]')?.getAttribute('data-vm-mode')).toBe('full');
 	});
 
 	it('shows an Operator kit its class and Trnsp only, a Simpler kit the Simpler row, and a Sampler kit the Sampler row', async () => {
@@ -573,7 +597,7 @@ describe('DrumRackCentralView — rack macros on a nested-rack kit', () => {
 		vi.restoreAllMocks();
 	});
 
-	it('lays the kit out as one control per macro name, Pitch paired into an XY pad, Trnsp in the transpose macro\'s place', async () => {
+	it('lays the kit out as one slider per macro name, Trnsp in the transpose macro\'s place', async () => {
 		seed(ETHNIC_VALUES);
 		const { container } = render(DrumRackCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
@@ -585,12 +609,12 @@ describe('DrumRackCentralView — rack macros on a nested-rack kit', () => {
 			'Attack',
 			'Release',
 			'Osc',
-			'Pitch Attack|Pitch Amount',
+			'Pitch Attack',
+			'Pitch Amount',
 			'Room',
 			null // Filter — no member on a nested-rack kit, so ghosted
 		]);
-		expect(container.querySelectorAll('.device-slider')).toHaveLength(6); // four macros + Trnsp + Gain; the XY pad is a slider role too
-		expect(container.textContent).toContain('Pitch');
+		expect(container.querySelectorAll('.device-slider')).toHaveLength(8); // six macros + Trnsp + Gain
 		expect(container.querySelector('[data-vm-function="pitch"]')?.textContent).toContain('Trnsp');
 		expect(stateOf(container, 'Trnsp')).toBe('live');
 		expect(slider(container, 'Trnsp').getAttribute('aria-valuenow')).toBe('-7');
@@ -615,7 +639,7 @@ describe('DrumRackCentralView — rack macros on a nested-rack kit', () => {
 		expect(stateOf(container, 'Release')).toBe('held');
 		expect(stateOf(container, 'Attack')).toBe('live');
 		expect(stateOf(container, 'Room')).toBe('live');
-		expect(stateOf(container, 'Pitch')).toBe('live');
+		expect(stateOf(container, 'Pitch Amount')).toBe('live');
 		const held = container.querySelector('.vm-slot.vm-held');
 		expect(held?.getAttribute('data-vm-macro')).toBe('Release');
 		expect(held?.querySelector('.vm-held-badge')?.textContent?.trim()).toBe('macro');

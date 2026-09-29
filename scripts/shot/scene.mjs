@@ -411,8 +411,8 @@ export function deviceClassName(name) {
  * function (fx1 is ten per DrumCell pad, fx2 nine, the rest one) and how
  * many of them are macro-held.
  */
-function vmMembers({ padCount, padClasses, hasMacroMappings, family, functions, macros = [], pitchMacro = null, pads = [] }) {
-	return JSON.stringify({ family, functions, hasMacroMappings, macros, padClasses, padCount, pads, pitchMacro });
+function vmMembers({ padCount, padClasses, hasMacroMappings, mappedMacros = [], family, functions, macros = [], pitchMacro = null, pads = [] }) {
+	return JSON.stringify({ family, functions, hasMacroMappings, macros, mappedMacros, padClasses, padCount, pads, pitchMacro });
 }
 
 /**
@@ -480,17 +480,9 @@ const DRUMCELL_KIT_MEMBERS = vmMembers({
  * one Sampler, macro 1 = Transpose and macro 2 = Release driving every
  * pad. One pad carries an Eq8 after its Simpler — the surface skips the
  * effect and still counts the pad, which is why the census reads 31
- * Simplers and not 30. What the view must show on it (the pitch-only
- * profile a Simpler-dominant kit gets, user's decision 2026-09-07):
- *
- * - the kit card: "Simpler", detail "31 Simpler · 1 Sampler";
- * - Trnsp PARTIALLY HELD, "31/32 macro" — the Transpose macro maps the
- *   31 Simplers and leaves the Sampler pad free (measured on the rig,
- *   2026-09-07), so the slider stays live for that one pad and the badge
- *   says why the rest sit still. No name-based fallback, by decision: it
- *   stays that way until the kit is unmapped. (`50s Autumn` as shipped is
- *   the fully held case — pitch 32/32, read-only "macro".)
- * - no FX, Time or Start controls — filled in later.
+ * Simplers and not 30. The rack's macros are mapped, so the view shows
+ * one slider per mapped macro — Transpose and Release — and none of its
+ * own controls (user's decision, 2026-09-29).
  *
  * The census still carries the per-function counts a fuller profile
  * would use (start 31/0, attack/decay 32/0, fx 0).
@@ -503,6 +495,7 @@ const JAZZ_KIT_MEMBERS = vmMembers({
 	padClasses: { OriginalSimpler: 31, MultiSampler: 1 },
 	pads: [...kitPads(36, 31, 'OriginalSimpler'), { note: 67, name: 'Brush Swirl', class: 'MultiSampler' }],
 	hasMacroMappings: true,
+	mappedMacros: [1, 2],
 	family: false,
 	functions: {
 		fx1: { members: 0, held: 0 },

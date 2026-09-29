@@ -262,11 +262,14 @@ Key rules:
 - **`vm.members` — the census (ADR-428 Milestone 1b).** A read-only
   computed row beside the fixed functions, same provider, a JSON
   **string** on the wire:
-  `{"padCount":32,"padClasses":{"OriginalSimpler":31,"MultiSampler":1},"hasMacroMappings":true,"family":false,"functions":{"pitch":{"members":32,"held":32},"start":{"members":31,"held":0},…},"macros":[]}`
+  `{"padCount":32,"padClasses":{"OriginalSimpler":31,"MultiSampler":1},"hasMacroMappings":true,"mappedMacros":[1,2],"family":false,"functions":{"pitch":{"members":32,"held":32},"start":{"members":31,"held":0},…},"macros":[]}`
   — `padCount` = pads carrying a chain; `padClasses` = histogram of the
   first instrument's `class_name` on each populated pad (bound or not,
   so a Komplete Kontrol kit reads `AuPluginDevice`); `hasMacroMappings`
-  = Live's flag; `family` = the pipeline FX1/FX2 fingerprint;
+  = Live's flag; `mappedMacros` = the rack's own mapped macros
+  (`RackDevice.macros_mapped`) as 1-based parameter indices, `[]` when
+  none is — the Drum Rack view draws one slider per entry and nothing
+  else (2026-09-29); `family` = the pipeline FX1/FX2 fingerprint;
   `functions.<fn>` = member *parameters* resolved for the function and
   how many of them are macro-held (`is_enabled == False`); `macros` =
   the pad racks' named macros on a kit of nested Instrument Racks (see

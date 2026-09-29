@@ -32,6 +32,7 @@ import {
 	INSTRUMENT_RACK_PAD_CLASS,
 	clampVmPitch,
 	rackMacroLayout,
+	mappedMacroIndices,
 	vmMacroCensus,
 	vmMacroCoverageBadge,
 	vmMacroHeldBadge,
@@ -289,11 +290,13 @@ describe('kit profile — the view lays itself out by the dominant pad class', (
 		expect(padClassLabel('SomethingNew')).toBe('SomethingNew');
 	});
 
-	it('gives DrumCell kits (and no census) the full controls, Simpler kits the Simpler row, Sampler kits the Sampler row, plugin pads the macro grid', () => {
+	it('gives DrumCell kits (and no census) the full controls, Simpler kits the Simpler row, Sampler kits the Sampler row, plugin pads and mapped racks the macro grid', () => {
 		expect(kitProfile(null)).toBe('full');
 		expect(kitProfile(parseVmMembers(census()))).toBe('full');
 		expect(kitProfile(parseVmMembers(census({ padClasses: {} })))).toBe('full');
-		expect(kitProfile(parseVmMembers(JAZZ))).toBe('simpler');
+		// The Jazz kit ships with its rack's macros mapped: those are its controls.
+		expect(kitProfile(parseVmMembers(JAZZ))).toBe('macro-grid');
+		expect(kitProfile(parseVmMembers(census({ hasMacroMappings: true, padClasses: { DrumCell: 24 } })))).toBe('macro-grid');
 		expect(kitProfile(parseVmMembers(census({ padClasses: { OriginalSimpler: 16 } })))).toBe('simpler');
 		expect(kitProfile(parseVmMembers(census({ padClasses: { MultiSampler: 32 } })))).toBe('sampler');
 		// The Jazz kit's one Sampler pad does not outvote its 31 Simplers.
@@ -412,34 +415,32 @@ describe('rack macros — a kit of nested Instrument Racks (2026-09-07)', () => 
 		expect(vmMacroCoverageBadge(null, 'Room')).toBeNull();
 	});
 
-	it('lays the names out like the Instrument Rack view: a shared first word pairs into an XY pad', () => {
+	it('lays the names out one slider each, in rack order', () => {
 		// Transpose is the pitch macro: Trnsp stands in for it, so it is not in the row.
 		expect(rackMacroLayout(parseVmMembers(ETHNIC))).toEqual([
 			{ type: 'slider', name: 'Attack', label: 'Attack' },
 			{ type: 'slider', name: 'Release', label: 'Release' },
 			{ type: 'slider', name: 'Osc', label: 'Osc' },
-			{ type: 'xy', title: 'Pitch', xName: 'Pitch Attack', yName: 'Pitch Amount', xLabel: 'Pitch Attack', yLabel: 'Pitch Amount' },
+			{ type: 'slider', name: 'Pitch Attack', label: 'Pitch Attack' },
+			{ type: 'slider', name: 'Pitch Amount', label: 'Pitch Amount' },
 			{ type: 'slider', name: 'Room', label: 'Room' }
 		]);
 		// Without a pitch macro every name is in the row.
 		const noPitch = census({ macros: ETHNIC_MACROS, pitchMacro: null });
-		expect(rackMacroLayout(parseVmMembers(noPitch)).map((c) => (c.type === 'xy' ? c.title : c.name))).toEqual([
-			'Attack',
-			'Release',
-			'Transpose',
-			'Osc',
-			'Pitch',
-			'Room'
-		]);
+		expect(rackMacroLayout(parseVmMembers(noPitch)).map((c) => c.name)).toEqual(ETHNIC_MACROS.map((m) => m.name));
 		expect(rackMacroLayout(null)).toEqual([]);
 		expect(rackMacroLayout(parseVmMembers(JAZZ))).toEqual([]);
 		// The wire name is the verbatim macro name even when the label is cleaned.
 		expect(rackMacroLayout(parseVmMembers(census({ macros: [{ name: '1 Drive', members: 2, held: 0 }] })))).toEqual([
 			{ type: 'slider', name: '1 Drive', label: 'Drive' }
 		]);
-		// Three names sharing a word: the first two pair, the third is a slider.
-		const filter = census({ macros: ['Filter Cut', 'Filter Res', 'Filter Drive'].map((name) => ({ name, members: 2, held: 0 })) });
-		expect(rackMacroLayout(parseVmMembers(filter)).map((c) => c.type)).toEqual(['xy', 'slider']);
+	});
+
+	it('reads the mapped macros off the census, and none from a surface that does not send them', () => {
+		expect(mappedMacroIndices(parseVmMembers(census({ hasMacroMappings: true, mappedMacros: [1, 3, 16] })))).toEqual([1, 3, 16]);
+		expect(mappedMacroIndices(parseVmMembers(census({ mappedMacros: [0, 17, 'x', 2.5, 4] })))).toEqual([4]);
+		expect(mappedMacroIndices(parseVmMembers(census()))).toEqual([]);
+		expect(mappedMacroIndices(null)).toEqual([]);
 	});
 });
 
