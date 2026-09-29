@@ -17,6 +17,24 @@ end to end, a 19 s side-by-side MP4 with finger circles, captions and Live's aud
 - Steps land within a few ms of their beat; the recorded clips match the phrase note for
   note.
 - Not yet measured: the reset's time, and the rig.
+
+**The `tour` scenario, 2026-09-28** (`npm run demo:record -- tour --yes`, 87 s): an empty set
+to drums, bass and keys, loaded from the browser, recorded from the clip view (clip grid
+hidden, FX grid shown), the kit filter, Key Follow, Reverb, Echo and Pedal from the FX grid,
+Permute steps, and a mute. Three takes in a row came back the same. The composed frame
+(`scripts/demo/design.mjs`) puts the interface in an iPad bezel beside a crop of Live's
+window, with numbered chapters in a lower third and title and closing cards. Learned on
+the way:
+- The runner taps **folder tiles with a mouse-type pointer**. A touch tap opens the folder on
+  finger-up, and the click Chromium synthesizes afterwards lands on the preset tile that
+  appeared under the finger, loading it. Whether iPad Safari does the same is unchecked.
+- **Stamp virtual-MIDI notes with the host time.** Live 12.4 recorded 0-stamped notes ("now")
+  for an hour, then silently dropped every one.
+- **Writing Live's key turns Key Follow off** (a hand-set key). The reset turns it back on
+  over `/looping/v3/session/key_follow`, after the old tracks are gone.
+- **Track 0 is never a load target** (`TrackPrepareComponent._decide`), so from Live's one
+  empty track the first kit lands on track 2. The scenario deletes the empty track once the
+  kit is in.
 **Owner:** Ben.
 
 **Related:**

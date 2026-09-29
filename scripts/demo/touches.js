@@ -26,7 +26,8 @@
 	window.addEventListener(
 		'pointerdown',
 		(e) => {
-			if (e.pointerType !== 'touch') return;
+			// Touch, and the runner's mouse-type finger (folder tiles, see run.mjs).
+			if (e.pointerType !== 'touch' && e.pointerType !== 'mouse') return;
 			const dot = document.createElement('div');
 			Object.assign(dot.style, {
 				position: 'absolute',

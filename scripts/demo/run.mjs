@@ -2,19 +2,21 @@
 /**
  * Record a demo scenario against the real Live: the interface in a
  * Chromium window at iPad Pro size with finger circles, Live's window, and
- * Live's audio, into one side-by-side clip.
- * docs/plans/general-release/demo-recording.plan.md has the design.
+ * Live's audio, into one composed clip with captions.
+ * docs/plans/general-release/demo-recording.plan.md has the design;
+ * scenarios.mjs has the scenarios and the step format.
  *
  *   npm run demo:record -- [scenario] [options]
  *
  *   --list           The scenarios.
  *   --url <url>      The interface (default http://127.0.0.1:<http.interfacePort>).
  *   --no-record      Play the take without capturing (no Screen Recording
- *                    permission needed): rehearses the steps and the phrase.
+ *                    permission needed): rehearses the steps and the phrases.
  *   --yes            Reset a set that has clips in it. The reset REPLACES
  *                    every track of the open set, so without this it refuses
  *                    unless the set is empty of clips.
  *   --keep-open      Leave the browser up after the take.
+ *   --compose-only   Recompose the last take from its raw.mov and take.json.
  *
  * Needs Live running with the Vamp surface, and the bridge and interface
  * up (`npm run dev` or `npm run ipad`). Output: screenshots/demos/<id>/.
@@ -22,13 +24,13 @@
 
 import { chromium } from 'playwright';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { argv, exit } from 'node:process';
 import { Fingers } from '../shot/fingers.mjs';
 import { REPO_ROOT } from '../shot/stack.mjs';
-import { VIEWS, DEFAULT_VIEWPORT } from '../shot/views.mjs';
+import { DEFAULT_VIEWPORT } from '../shot/views.mjs';
 import { compose } from './compose.mjs';
 import { Live, constants } from './live.mjs';
 import { listWindows, startMidiOnly, startRecording } from './recorder.mjs';
@@ -48,7 +50,7 @@ if (flag('list')) {
 	exit(0);
 }
 
-const scenarioId = args.find((a, i) => !a.startsWith('--') && !args[i - 1]?.match(/^--(url)$/)) ?? 'record-and-layer';
+const scenarioId = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--url') ?? 'tour';
 const scenario = SCENARIOS[scenarioId];
 if (!scenario) {
 	console.error(`[demo] no scenario "${scenarioId}" (--list)`);
@@ -140,13 +142,15 @@ async function preflight(live) {
 
 /**
  * The set, built through the LOM: the scenario's tracks with stock
- * devices inserted by name, the old tracks deleted, transport and
+ * devices inserted by name (or, for `set.empty`, the one bare MIDI track a
+ * new Live set opens with), the old tracks deleted, transport, key and
  * quantization pinned. No .als, no save sheet.
  */
 async function reset(live, oldCount) {
+	const set = scenario.set;
 	await live.invoke('song', 'stop_playing');
 	await live.invoke('song', 'stop_all_clips');
-	await live.set('song', [
+	const song = [
 		['tempo', scenario.tempo],
 		['clip_trigger_quantization', 4], // 1 bar
 		['midi_recording_quantization', 5], // 1/16: absorbs the phrase's jitter
@@ -154,14 +158,29 @@ async function reset(live, oldCount) {
 		['session_record', false],
 		['record_mode', false],
 		['current_song_time', 0]
-	]);
-	for (const [i, t] of scenario.tracks.entries()) {
+	];
+	await live.set('song', song);
+	const tracks = set.empty ? [{ name: '1-MIDI' }] : set.tracks;
+	for (const [i, t] of tracks.entries()) {
 		await live.invoke('song', 'create_midi_track', [-1]);
 		const path = `tracks/${oldCount + i}`;
-		await live.invoke(path, 'insert_device', [t.device]);
+		if (t.device) await live.invoke(path, 'insert_device', [t.device]);
 		await live.set(path, [['name', t.name]]);
 	}
 	for (let i = 0; i < oldCount; i++) await live.invoke('song', 'delete_track', [0]);
+	if (set.key) {
+		// Writing the key is a hand-set key to Key Follow, which turns itself
+		// off; a tick later (it classifies the write off song.can_redo) turn
+		// it back on, as the Follow switch in the UI would. After the old
+		// tracks are gone: turning Follow on runs a pass over what is there.
+		await live.set('song', [['root_note', set.key.root], ['scale_name', set.key.scale]]);
+		await wait(500);
+		live.send('/looping/v3/session/key_follow', [1]);
+	}
+	// Live's own window: no browser, the session and the device chain.
+	await live.invoke('app', 'view.hide_view', ['Browser']).catch(() => {});
+	await live.invoke('app', 'view.show_view', ['Session']).catch(() => {});
+	await live.invoke('app', 'view.show_view', ['Detail/DeviceChain']).catch(() => {});
 	const after = await live.read('song', ['tracks.*name', 'count_in_duration']);
 	if (after.count_in_duration) log(`warning: Live's count-in is on (${after.count_in_duration}); takes will start late`);
 	log(`set: ${after['tracks.*name'].join(', ')} at ${scenario.tempo} BPM`);
@@ -178,7 +197,6 @@ async function openInterface(clock) {
 		args: [`--app=${url}`, '--window-size=1000,800', '--hide-scrollbars']
 	});
 	const page = context.pages()[0] ?? (await context.waitForEvent('page'));
-	const prefs = VIEWS[scenario.view ?? 'session-only'].prefs;
 	await context.addInitScript((prefs) => {
 		try {
 			for (const [k, v] of Object.entries(prefs)) localStorage.setItem(k, v);
@@ -186,7 +204,7 @@ async function openInterface(clock) {
 		} catch {
 			/* storage disabled */
 		}
-	}, prefs);
+	}, scenario.prefs ?? {});
 	await context.addInitScript({ path: join(REPO_ROOT, 'scripts', 'demo', 'touches.js') });
 	watchSongTime(page, clock);
 
@@ -215,38 +233,56 @@ async function openInterface(clock) {
 	await cdp.send('Browser.setWindowBounds', { windowId, bounds });
 	await cdp.send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 0, mobile: false, scale });
 	await page.reload();
-	await page.waitForSelector('.slots-row .slot-cell[data-slot-index="0"]', { timeout: 20_000 });
+	await page.waitForSelector('.track-col[data-track-index="0"]', { timeout: 20_000 });
+	await page.waitForTimeout(1500);
 	const got = (await cdp.send('Browser.getWindowBounds', { windowId })).bounds;
 	log(`interface: ${W}×${H} drawn at ×${scale} in a ${got.width}×${got.height} window`);
 	return { context, page, cdp, scale, chrome: geo.chrome, bounds: got, profile };
 }
 
-/** A point on a clip cell, in page (CSS) pixels. */
-async function cellPoint(page, { track, slot, part }) {
-	const p = await page.evaluate(
-		({ track, slot, part }) => {
-			const col = document.querySelector(`.track-col[data-track-index="${track}"]`);
-			if (!col) return { error: `track ${track} is not on screen` };
-			const c = col.getBoundingClientRect();
-			const cx = c.left + c.width / 2;
-			const cell = [...document.querySelectorAll(`.slots-row .slot-cell[data-slot-index="${slot}"]`)].find((el) => {
+/**
+ * A target's box, in page (CSS) pixels. Waits for it to exist, since the
+ * next thing to tap is often still arriving (a browser level, a new strip).
+ */
+async function boxOf(page, target, timeoutMs = 3000) {
+	const deadline = Date.now() + timeoutMs;
+	for (;;) {
+		const box = await page.evaluate((t) => {
+			const visible = (el) => {
 				const r = el.getBoundingClientRect();
-				return r.left <= cx && cx <= r.right;
-			});
-			if (!cell) return { error: `track ${track} slot ${slot} is not on screen` };
-			const r = cell.getBoundingClientRect();
-			const a = cell.querySelector('.slot-action')?.getBoundingClientRect();
-			if (part === 'action') {
-				if (!a) return { error: `track ${track} slot ${slot} has no action strip` };
-				return { x: a.left + a.width / 2, y: a.top + a.height / 2 };
+				return r.width > 0 && r.height > 0 ? r : null;
+			};
+			if (t.grid) {
+				// The full session grid: the cell under the track's column.
+				const col = document.querySelector(`.track-col[data-track-index="${t.grid.track}"]`);
+				if (!col) return null;
+				const c = col.getBoundingClientRect();
+				const cx = c.left + c.width / 2;
+				const cell = [...document.querySelectorAll(`.slots-row .slot-cell[data-slot-index="${t.grid.slot}"]`)].find((el) => {
+					const r = el.getBoundingClientRect();
+					return r.left <= cx && cx <= r.right;
+				});
+				if (!cell) return null;
+				const r = cell.getBoundingClientRect();
+				const a = cell.querySelector('.slot-action')?.getBoundingClientRect();
+				if (t.grid.part === 'action') return a && { x: a.left, y: a.top, w: a.width, h: a.height };
+				const left = a ? a.right : r.left;
+				return { x: left, y: r.top, w: r.right - left, h: r.height };
 			}
-			const left = a ? a.right : r.left;
-			return { x: left + (r.right - left) / 2, y: r.top + r.height / 2 };
-		},
-		{ track, slot, part }
-	);
-	if (p.error) throw new Error(p.error);
-	return p;
+			for (const el of document.querySelectorAll(t.css)) {
+				if (t.text != null) {
+					const label = (t.textCss ? el.querySelector(t.textCss) : el)?.textContent?.trim();
+					if (label !== t.text) continue;
+				}
+				const r = visible(el);
+				if (r) return { x: r.left, y: r.top, w: r.width, h: r.height };
+			}
+			return null;
+		}, target);
+		if (box) return box;
+		if (Date.now() > deadline) throw new Error(`nothing to touch: ${target.label}`);
+		await wait(100);
+	}
 }
 
 // ---- windows to record ---------------------------------------------------
@@ -264,19 +300,59 @@ function findWindows(bounds) {
 	);
 	if (!browser) throw new Error(`could not find the interface's window at ${JSON.stringify(bounds)}`);
 	const livePid = Number(execFileSync('pgrep', ['-x', 'Live'], { encoding: 'utf8' }).trim().split('\n')[0]);
+	// Live's main window is its largest titled one; it may sit in another Space.
 	const live = windows
-		.filter((w) => w.pid === livePid && w.onScreen && w.frame[2] > 400)
+		.filter((w) => w.pid === livePid && w.title && w.frame[2] > 400 && w.frame[3] > 300)
 		.sort((a, b) => b.frame[2] * b.frame[3] - a.frame[2] * a.frame[3])[0];
 	if (!live) throw new Error("could not find Live's main window (is it minimized?)");
 	return { browser, live, livePid };
 }
 
-// ---- the take ------------------------------------------------------------
+// ---- gestures ------------------------------------------------------------------
 
-async function tap(ui, fingers, spec) {
-	const p = await cellPoint(ui.page, spec);
-	const id = await fingers.down(p.x * ui.scale, p.y * ui.scale);
-	await wait(110);
+/** How far ahead of its beat a phrase goes to the recorder. */
+const PHRASE_LEAD_MS = 300;
+
+const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
+
+async function tap(ui, fingers, target) {
+	const b = await boxOf(ui.page, target);
+	const x = (b.x + b.w / 2) * ui.scale;
+	const y = (b.y + b.h / 2) * ui.scale;
+	if (target.pointer === 'mouse') {
+		const m = { x, y, button: 'left', clickCount: 1 };
+		await ui.cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
+		await ui.cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', ...m });
+		await wait(90);
+		await ui.cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...m });
+		return;
+	}
+	const id = await fingers.down(x, y);
+	await wait(90);
+	await fingers.up(id);
+}
+
+/** A finger down on the path's first point, moved through the rest, eased per segment. */
+async function drag(ui, fingers, clock, { target, path, beats }) {
+	const b = await boxOf(ui.page, target);
+	const at = ([fx, fy]) => [(b.x + fx * b.w) * ui.scale, (b.y + fy * b.h) * ui.scale];
+	const total = beats * clock.msPerBeat;
+	const segments = path.length - 1;
+	const id = await fingers.down(...at(path[0]));
+	for (let s = 0; s < segments; s++) {
+		const [x0, y0] = at(path[s]);
+		const [x1, y1] = at(path[s + 1]);
+		const ms = total / segments;
+		const t0 = performance.now();
+		for (;;) {
+			const t = Math.min(1, (performance.now() - t0) / ms);
+			const k = ease(t);
+			await fingers.move(id, x0 + (x1 - x0) * k, y0 + (y1 - y0) * k);
+			if (t >= 1) break;
+			await wait(16);
+		}
+	}
+	await wait(60);
 	await fingers.up(id);
 }
 
@@ -296,7 +372,14 @@ function schedulePhrase(rec, clock, atBeat, phrase) {
 	rec.midi(events);
 }
 
+// ---- the take ------------------------------------------------------------
+
 async function main() {
+	if (flag('compose-only')) {
+		const take = JSON.parse(readFileSync(join(outDir, 'take.json'), 'utf8'));
+		log(`clip: ${await compose({ dir: outDir, take, log })}`);
+		return;
+	}
 	const live = new Live();
 	await live.open();
 	const oldCount = await preflight(live);
@@ -305,8 +388,18 @@ async function main() {
 	const clock = new SongClock(scenario.tempo);
 	const ui = await openInterface(clock);
 	const fingers = new Fingers(ui.cdp);
+	const vars = {};
 	let rec;
-	const take = { scenario: scenarioId, title: scenario.title, tempo: scenario.tempo, steps: [], url };
+	const take = {
+		scenario: scenarioId,
+		title: scenario.title,
+		tempo: scenario.tempo,
+		intro: scenario.intro,
+		outro: scenario.outro,
+		liveCrop: scenario.liveCrop,
+		steps: [],
+		url
+	};
 	try {
 		if (record) {
 			const w = findWindows(ui.bounds);
@@ -326,15 +419,39 @@ async function main() {
 		await live.invoke('song', 'start_playing');
 		take.startMark = await rec.mark('transport');
 
+		let chapter = null;
+		let chapterIndex = 0;
+		let caption = null;
 		for (const [i, step] of scenario.steps.entries()) {
 			const beat = beatOf(step.at);
+			// A phrase is handed to the recorder ahead of its beat (it times
+			// the notes itself), so a slow step before it cannot delay it.
+			if (step.play) {
+				const early = await clock.until(beat - PHRASE_LEAD_MS / clock.msPerBeat);
+				if (early > PHRASE_LEAD_MS - 20) throw new Error(`step ${i + 1} (${step.at}): no time to schedule its phrase`);
+				schedulePhrase(rec, clock, beat, step.play);
+			}
 			const late = await clock.until(beat);
-			if (late > clock.msPerBeat / 2) throw new Error(`step ${i + 1} (${step.caption}) ran ${Math.round(late)} ms late`);
-			const t = await rec.mark(step.caption);
-			take.steps.push({ at: step.at, caption: step.caption, t });
-			log(`${step.at.padEnd(4)} ${step.caption}`);
+			if (late > clock.msPerBeat / 2) log(`warning: step ${i + 1} (${step.at}) ran ${Math.round(late)} ms late`);
+			if (step.chapter) {
+				chapter = step.chapter;
+				chapterIndex += 1;
+			}
+			if (step.caption) caption = step.caption;
+			const t = await rec.mark(step.at);
+			take.steps.push({ at: step.at, t, chapter, index: chapterIndex, caption });
+			const what = step.tap?.label ?? step.drag?.target.label ?? (step.taps ? `${step.taps.length} taps` : step.play ? 'phrase' : step.do ? 'do' : '');
+			log(`${step.at.padEnd(5)} ${what.padEnd(26)} ${typeof step.caption === 'string' ? step.caption : ''}`);
+
 			if (step.tap) await tap(ui, fingers, step.tap);
-			if (step.play) schedulePhrase(rec, clock, beat, step.play);
+			if (step.taps) {
+				for (const target of step.taps) {
+					await tap(ui, fingers, target);
+					await wait(clock.msPerBeat / 2 - 90);
+				}
+			}
+			if (step.drag) await drag(ui, fingers, clock, step.drag);
+			if (step.do) await step.do(live, vars);
 			if (step.until) {
 				const next = scenario.steps[i + 1]?.at ?? scenario.end;
 				const budget = clock.timeOf(beatOf(next)) - performance.now() + clock.msPerBeat;
@@ -355,10 +472,14 @@ async function main() {
 	} catch (e) {
 		take.ok = false;
 		take.error = e.message;
+		await ui.page.screenshot({ path: join(outDir, 'failed.png') }).catch(() => {});
 		throw e;
 	} finally {
 		if (rec) await rec.stop().catch(() => rec.kill());
 		await live.invoke('song', 'stop_playing').catch(() => {});
+		// Captions that quote the take (the key Live ended up in) are filled in now.
+		for (const s of take.steps) if (typeof s.caption === 'function') s.caption = s.caption(vars);
+		take.vars = vars;
 		writeFileSync(join(outDir, 'take.json'), JSON.stringify(take, null, '\t'));
 		live.close();
 		if (!flag('keep-open')) {
@@ -368,8 +489,7 @@ async function main() {
 	}
 
 	if (record) {
-		const clip = await compose({ dir: outDir, take, log });
-		log(`clip: ${clip}`);
+		log(`clip: ${await compose({ dir: outDir, take, log })}`);
 	} else {
 		log('rehearsal passed (--no-record: nothing captured)');
 	}

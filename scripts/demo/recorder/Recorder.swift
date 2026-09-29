@@ -89,9 +89,13 @@ final class MidiSource {
         defer { raw.deallocate() }
         let list = raw.bindMemory(to: MIDIPacketList.self, capacity: 1)
         var packet: UnsafeMutablePointer<MIDIPacket>? = MIDIPacketListInit(list)
+        // Stamped with the host time, not 0 ("now"): Live 12.4 recorded
+        // 0-stamped notes for a while and then silently dropped every one
+        // (2026-09-28); host-stamped ones it always records.
+        let now = mach_absolute_time()
         for bytes in messages {
             guard let p = packet else { break }
-            packet = MIDIPacketListAdd(list, size, p, 0, bytes.count, bytes)
+            packet = MIDIPacketListAdd(list, size, p, now, bytes.count, bytes)
         }
         MIDIReceived(source, list)
     }

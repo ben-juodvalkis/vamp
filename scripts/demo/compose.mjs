@@ -1,26 +1,24 @@
 /**
- * The side-by-side clip, from the recorder's one file (plan §1):
+ * The finished clip, from the recorder's one file and design.mjs's stills:
  *
- *   ┌─────────────────────┬─────────────────────┐
- *   │ interface  960×720  │ Live       960×720  │
- *   ├─────────────────────┴─────────────────────┤
- *   │ caption                           1920×360│
- *   └───────────────────────────────────────────┘
+ *   intro card ─▶ the take (interface in its bezel, Live beside it,
+ *                 a lower-third caption per step, fading) ─▶ outro card
  *
- * This ffmpeg has no drawtext, so captions are drawn by Chromium into PNGs
- * and overlaid, each while its step is current. The same timings go to a
- * WebVTT sidecar for the docs page. Trimmed to a beat before the first
- * gesture; audio loudness-normalized.
+ * This ffmpeg has no drawtext, so all type is drawn by Chromium into PNGs
+ * and faded in and out here. The same caption timings go to a WebVTT
+ * sidecar. Audio: Live's output, delayed under the intro, loudness-
+ * normalized.
  */
 
-import { chromium } from 'playwright';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { CANVAS, layout, renderAssets } from './design.mjs';
 
-const PANE = { w: 960, h: 720 };
-const OUT = { w: 1920, h: 1080 };
-const BG = '0x111214';
+const FPS = 60;
+const INTRO = 3.2;
+const OUTRO = 3.6;
+const FADE = 0.35;
 
 const vttTime = (s) => {
 	const ms = Math.max(0, Math.round(s * 1000));
@@ -30,82 +28,111 @@ const vttTime = (s) => {
 	return `${h}:${m}:${sec}.${String(ms % 1000).padStart(3, '0')}`;
 };
 
-async function renderCaptions(dir, cues) {
-	const browser = await chromium.launch();
-	const page = await browser.newPage({ viewport: { width: OUT.w, height: OUT.h - PANE.h } });
-	const files = [];
-	for (const [i, cue] of cues.entries()) {
-		await page.setContent(`<!doctype html><body style="margin:0;background:#111214;height:100vh;display:flex;align-items:center;justify-content:center;font:600 54px -apple-system,system-ui,sans-serif;color:#f2f2f2;letter-spacing:.01em">${cue.text.replace(/</g, '&lt;')}</body>`);
-		const file = join(dir, `caption-${i}.png`);
-		await page.screenshot({ path: file });
-		files.push(file);
+/** Steps → caption cues on the take's clock (seconds from `start`), merged where a caption holds. */
+export function cuesOf(take, start, end) {
+	const cues = [];
+	for (const s of take.steps) {
+		if (!s.caption) continue;
+		const last = cues.at(-1);
+		if (last && last.text === s.caption && last.chapter === s.chapter) continue;
+		if (last) last.to = s.t - start;
+		cues.push({ index: s.index, chapter: s.chapter, text: s.caption, from: s.t - start, to: end - start });
 	}
-	await browser.close();
-	return files;
+	return cues;
 }
 
 export async function compose({ dir, take, log = () => {} }) {
-	const video = take.tracks.filter((t) => t.kind === 'video');
-	const [ipad, live] = video;
+	const [ipad, live] = take.tracks.filter((t) => t.kind === 'video');
 	const hasAudio = take.tracks.some((t) => t.kind === 'audio');
 
-	// The interface's capture includes the window's title bar; the page is
-	// the iPad-sized box under it.
+	// The interface's capture has the window's title bar on top; the page is the box under it.
 	const cs = ipad.scale;
-	const crop = {
+	const ipadCrop = {
 		x: 0,
 		y: Math.round(take.ipad.chromePts * cs),
 		w: Math.min(ipad.width, Math.round(1366 * take.ipad.scale * cs)),
 		h: Math.min(ipad.height - Math.round(take.ipad.chromePts * cs), Math.round(1024 * take.ipad.scale * cs))
 	};
+	// Live: the scenario's crop of its window (points), else all of it but
+	// the status bar.
+	const c = take.liveCrop ?? { x: 0, y: 0, w: live.width / live.scale, h: live.height / live.scale - 22 };
+	const px = (v) => Math.round(v * live.scale);
+	const liveCrop = {
+		x: px(c.x),
+		y: px(c.y),
+		w: Math.min(live.width - px(c.x), px(c.w)) & ~1,
+		h: Math.min(live.height - px(c.y), px(c.h)) & ~1
+	};
+	const L = layout(liveCrop.w / liveCrop.h);
 
-	const beat = 60 / take.tempo;
-	const start = Math.max(0, take.steps[0].t - beat);
+	const start = Math.max(0, take.steps[0].t - 60 / take.tempo);
 	const end = take.endMark;
-	const cues = take.steps.map((s, i) => ({
-		text: s.caption,
-		from: s.t - start,
-		to: (take.steps[i + 1]?.t ?? end) - start
-	}));
+	const body = end - start;
+	const total = INTRO + body + OUTRO;
+	const cues = cuesOf(take, start, end);
 	writeFileSync(
 		join(dir, 'captions.vtt'),
-		`WEBVTT\n\n${cues.map((c) => `${vttTime(c.from)} --> ${vttTime(c.to)}\n${c.text}\n`).join('\n')}`
+		`WEBVTT\n\n${cues.map((c) => `${vttTime(INTRO + c.from)} --> ${vttTime(INTRO + c.to)}\n${c.chapter ? `${c.chapter}: ` : ''}${c.text}\n`).join('\n')}`
 	);
 
-	const capDir = join(dir, 'captions');
-	mkdirSync(capDir, { recursive: true });
-	const pngs = await renderCaptions(capDir, cues);
+	const assetDir = join(dir, 'assets');
+	mkdirSync(assetDir, { recursive: true });
+	log('drawing the frame and captions…');
+	const A = await renderAssets(assetDir, L, { captions: cues, intro: take.intro, outro: take.outro });
 
-	const fit = `scale=${PANE.w}:${PANE.h}:force_original_aspect_ratio=decrease,pad=${PANE.w}:${PANE.h}:(ow-iw)/2:(oh-ih)/2:color=${BG}`;
-	const filters = [
-		`color=c=${BG}:s=${OUT.w}x${OUT.h}:r=60,trim=duration=${end - start}[bg]`,
-		`[0:v:0]trim=start=${start}:end=${end},setpts=PTS-STARTPTS,crop=${crop.w}:${crop.h}:${crop.x}:${crop.y},${fit}[ipad]`,
-		`[0:v:1]trim=start=${start}:end=${end},setpts=PTS-STARTPTS,${fit}[live]`,
-		`[bg][ipad]overlay=0:0:eof_action=repeat[l1]`,
-		`[l1][live]overlay=${PANE.w}:0:eof_action=repeat[l2]`
+	const still = (path, seconds) => ['-loop', '1', '-framerate', String(FPS), '-t', seconds.toFixed(3), '-i', path];
+	const inputs = ['-i', join(dir, 'raw.mov')];
+	inputs.push(...still(A.background, total)); // 1
+	inputs.push(...still(A.screenMask, total)); // 2
+	inputs.push(...still(A.liveMask, total)); // 3
+	inputs.push(...still(A.intro, INTRO)); // 4
+	inputs.push(...still(A.outro, OUTRO)); // 5
+	cues.forEach((c, i) => inputs.push(...still(A.captions[i], c.to - c.from))); // 6…
+
+	const shift = `setpts=PTS-STARTPTS+${INTRO}/TB`;
+	const f = [
+		`[1:v]format=rgba[bg]`,
+		`[0:v:0]trim=start=${start}:end=${end},${shift},crop=${ipadCrop.w}:${ipadCrop.h}:${ipadCrop.x}:${ipadCrop.y},scale=${L.screen.w}:${L.screen.h}:flags=lanczos,format=rgba[s0]`,
+		`[2:v]format=gray[m0]`,
+		`[s0][m0]alphamerge[ipad]`,
+		`[0:v:1]trim=start=${start}:end=${end},${shift},crop=${liveCrop.w}:${liveCrop.h}:${liveCrop.x}:${liveCrop.y},scale=${L.live.w}:${L.live.h}:flags=lanczos,format=rgba[l0]`,
+		`[3:v]format=gray[m1]`,
+		`[l0][m1]alphamerge[live]`,
+		`[bg][ipad]overlay=${L.screen.x}:${L.screen.y}:eof_action=repeat[v1]`,
+		`[v1][live]overlay=${L.live.x}:${L.live.y}:eof_action=repeat[v2]`
 	];
-	let last = 'l2';
+	let last = 'v2';
 	cues.forEach((c, i) => {
-		filters.push(`[${last}][${i + 1}:v]overlay=0:${PANE.h}:enable='between(t,${c.from.toFixed(3)},${c.to.toFixed(3)})'[c${i}]`);
+		const d = c.to - c.from;
+		const fadeOut = Math.max(0, d - FADE);
+		f.push(
+			`[${6 + i}:v]format=rgba,fade=t=in:st=0:d=${FADE}:alpha=1,fade=t=out:st=${fadeOut.toFixed(3)}:d=${FADE}:alpha=1,setpts=PTS-STARTPTS+${(INTRO + c.from).toFixed(3)}/TB[cap${i}]`,
+			`[${last}][cap${i}]overlay=0:0:eof_action=pass[c${i}]`
+		);
 		last = `c${i}`;
 	});
-	filters.push(`[${last}]fps=60,format=yuv420p[v]`);
+	f.push(
+		`[4:v]format=rgba,fade=t=out:st=${INTRO - 0.7}:d=0.7:alpha=1[intro]`,
+		`[${last}][intro]overlay=0:0:eof_action=pass[v3]`,
+		`[5:v]format=rgba,fade=t=in:st=0:d=0.8:alpha=1,setpts=PTS-STARTPTS+${(INTRO + body).toFixed(3)}/TB[outro]`,
+		`[v3][outro]overlay=0:0:eof_action=pass,fps=${FPS},format=yuv420p[v]`
+	);
 	if (hasAudio) {
-		filters.push(`[0:a:0]atrim=start=${start}:end=${end},asetpts=PTS-STARTPTS,loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000[a]`);
+		f.push(
+			`[0:a:0]atrim=start=${start}:end=${end},asetpts=PTS-STARTPTS,afade=t=out:st=${(body - 0.4).toFixed(3)}:d=0.4,loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000,adelay=${Math.round(INTRO * 1000)}:all=1,apad[a]`
+		);
 	}
 
 	const out = join(dir, `${take.scenario}.mp4`);
-	const ffArgs = ['-y', '-hide_banner', '-loglevel', 'error', '-i', join(dir, 'raw.mov')];
-	for (const p of pngs) ffArgs.push('-loop', '1', '-i', p);
-	ffArgs.push('-filter_complex', filters.join(';'), '-map', '[v]');
+	const ffArgs = ['-y', '-hide_banner', '-loglevel', 'error', ...inputs, '-filter_complex', f.join(';'), '-map', '[v]'];
 	if (hasAudio) ffArgs.push('-map', '[a]', '-c:a', 'aac_at', '-b:a', '192k');
-	ffArgs.push('-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-t', String(end - start), '-movflags', '+faststart', out);
+	ffArgs.push('-c:v', 'libx264', '-preset', 'slow', '-crf', '17', '-t', total.toFixed(3), '-movflags', '+faststart', out);
 	log('composing…');
 	execFileSync('ffmpeg', ffArgs, { stdio: 'inherit' });
-	execFileSync('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-ss', String(Math.min(4, (end - start) / 2)), '-i', out, '-frames:v', '1', join(dir, 'poster.png')]);
+	execFileSync('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-ss', String(INTRO + Math.min(8, body / 2)), '-i', out, '-frames:v', '1', join(dir, 'poster.png')]);
 	writeFileSync(
 		join(dir, 'meta.json'),
-		JSON.stringify({ scenario: take.scenario, title: take.title, duration: end - start, captions: cues }, null, '\t')
+		JSON.stringify({ scenario: take.scenario, title: take.title, duration: total, canvas: CANVAS, captions: cues }, null, '\t')
 	);
 	return out;
 }

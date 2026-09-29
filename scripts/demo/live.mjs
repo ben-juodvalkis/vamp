@@ -133,6 +133,18 @@ export class Live {
 		return reply;
 	}
 
+	/**
+	 * A plain wire message to the surface (fire and forget), as the UI would
+	 * send it; its echo goes to the bridge, not here. For the few settings
+	 * the probes cannot reach, e.g. `/looping/v3/session/key_follow`.
+	 */
+	send(address, args = []) {
+		this.#port.send({
+			address,
+			args: args.map((v) => (typeof v === 'number' && Number.isInteger(v) ? { type: 'i', value: v } : str(v)))
+		});
+	}
+
 	/** Poll a read until `test` passes. A timeout is a failed take. */
 	async until(what, read, test, { timeoutMs = 10_000, everyMs = 100 } = {}) {
 		const deadline = Date.now() + timeoutMs;
