@@ -21,8 +21,13 @@ describe('drillDownModel — screenKind', () => {
 		expect(screenKind(false, ['Perc'])).toBe('categories');
 	});
 
-	it('shows folders when subfolders exist (strict one-type-per-screen)', () => {
+	it('shows folders when subfolders exist and nothing else', () => {
 		expect(screenKind(true, ['Perc', 'Damage'])).toBe('folders');
+		expect(screenKind(true, ['Perc', 'Damage'], 0)).toBe('folders');
+	});
+
+	it('shows folders then presets when a level holds both', () => {
+		expect(screenKind(true, ['Owls'], 218)).toBe('mixed');
 	});
 
 	it('shows presets only at a leaf level (no subfolders)', () => {

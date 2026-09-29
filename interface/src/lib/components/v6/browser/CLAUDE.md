@@ -164,8 +164,13 @@ Touch-first (iPad Safari).
     so the pin applies identically. The random pick used to inline its own copy
     that never passed `replaceTrackPath` — while armed, it silently ignored
     replace mode and prepped a separate track.
-- **One layer per screen (strict).** Folder tiles → deeper folders → preset tiles;
-  a level with subfolders shows folders only, a leaf shows presets (`screenKind`).
+- **One layer per screen.** Folder tiles → deeper folders → preset tiles; a
+  leaf shows presets (`screenKind`). A level holding subfolders AND presets of
+  its own is `mixed` (2026-09-28, Ben's call): its folders first, then its
+  presets under one header ("Presets" / "Samples", hold for a random pick), on
+  one preset-density ruler in one windowed scroller — the grouped screen's
+  machinery with the folders as a headerless first section. Until then those
+  presets were hidden (FX › Nature › Animals › Birds hid 218 samples).
 - **Depth-cap-flattened presets are re-grouped by origin folder (ADR-403).** The
   generator's `capFolderDepth` (`scripts/catalogShape.ts`) collapses folders past `catalog.maxFolderDepth`
   into one flat list but each preset keeps its physical `path`; the browser

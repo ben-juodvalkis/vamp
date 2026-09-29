@@ -1,8 +1,9 @@
 /**
  * Drill-down browser model helpers (pure).
  *
- * The drill-down browser shows exactly ONE layer per screen (strict
- * one-type-per-screen — folders OR presets, never mixed). These helpers decide
+ * The drill-down browser shows ONE layer per screen — a level's folders, or a
+ * leaf's presets; a level holding both shows its folders first and its own
+ * presets after them (`screenKind`'s `mixed`). These helpers decide
  * what the current screen should render from the loaded folders/presets, and
  * build the breadcrumb trail for the top bar.
  *
@@ -10,7 +11,7 @@
  * harness (mirrors the style of the other `utils/*.ts` helpers in this dir).
  */
 
-export type ScreenKind = 'categories' | 'folders' | 'presets';
+export type ScreenKind = 'categories' | 'folders' | 'presets' | 'mixed';
 
 /**
  * A single tappable breadcrumb segment.
@@ -26,18 +27,19 @@ export interface Crumb {
 /**
  * Decide which screen to render.
  *
- * Strict one-type-per-screen (per design decision): if any subfolders exist at
- * this level we show the FOLDER screen, ignoring any loose presets that also
- * live at the same level. Only a folder with zero subfolders shows its presets.
- * This is the predictable-navigation trade-off the user chose — occasionally an
- * extra tap, never a mixed screen.
+ * A level with subfolders and no presets of its own shows folders; a leaf shows
+ * presets. A level holding both is `mixed`: its folders first, then its own
+ * presets under a header, in one scroll (2026-09-28, the user's call). It used
+ * to show the folders alone, which left those presets unreachable by tap.
  *
- * @param hasVendor  whether a top-level category/vendor is selected
- * @param folders    subfolder names at the current path
+ * @param hasVendor    whether a top-level category/vendor is selected
+ * @param folders      subfolder names at the current path
+ * @param presetCount  presets directly at the current path
  */
-export function screenKind(hasVendor: boolean, folders: string[]): ScreenKind {
+export function screenKind(hasVendor: boolean, folders: string[], presetCount = 0): ScreenKind {
 	if (!hasVendor) return 'categories';
-	return folders.length > 0 ? 'folders' : 'presets';
+	if (folders.length === 0) return 'presets';
+	return presetCount > 0 ? 'mixed' : 'folders';
 }
 
 /**

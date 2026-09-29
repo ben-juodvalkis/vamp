@@ -13,7 +13,8 @@
     - `createRevealController` for reveal-then-close after a load
 
   Interaction decisions (locked with the user):
-    - Strict one-type-per-screen (folders OR presets, never mixed) — `screenKind`.
+    - One layer per screen — folders, or a leaf's presets; a level holding both
+      shows its folders first and its own presets after them — `screenKind`.
     - Cross-column drag is dropped; hold-a-folder → random preset is kept
       (now 500ms under the house rising fill — see HOLD_TO_RANDOM_MS), and a
       grouped screen's section headers take the same hold for a random preset
@@ -173,7 +174,7 @@
 	 * switch's Simpler or Audio half). Set when a level commits, so a replace
 	 * that flips the switch can still tell what the performer was looking at.
 	 */
-	let paneAmongSamples = false;
+	let paneAmongSamples = $state(false);
 
 	const vendors = $derived.by(() => {
 		const list = [...placeVendors];
@@ -250,7 +251,7 @@
 	const clipUnavailableForCurrent = $derived(!placeHas(selectedVendorId, CLIP_GROUPS));
 	const midiUnavailableForCurrent = $derived(!placeHas(selectedVendorId, PRESET_GROUPS));
 
-	const screen = $derived(screenKind(!!selectedVendorId, folders));
+	const screen = $derived(screenKind(!!selectedVendorId, folders, presets.length));
 	const crumbs = $derived(
 		buildCrumbs(findVendorById(vendors, selectedVendorId)?.name ?? null, currentPath)
 	);
@@ -274,6 +275,9 @@
 	// --section-gap so the solver and the stylesheet can't drift apart.
 	const SECTION_HEADER_H = 44;
 	const SECTION_GAP = 16;
+	// The hold key of a mixed level's preset header — a path separator no
+	// folder name can contain, so it never lights a folder tile's charge.
+	const HERE_KEY = '/here';
 
 	// Re-cluster a depth-cap-flattened preset list into its original subfolders
 	// (from each preset's surviving physical `path`). Only meaningful with 2+
@@ -307,12 +311,32 @@
 	const PRESET_COMFORT = { gap: GRID_GAP, minTile: 112, minTileHeight: 78, targetAspect: 1.5 };
 
 	const gridLayout = $derived.by(() => {
-		const count = isScale ? 0 : screen === 'folders' ? folders.length : presets.length;
+		const count = isScale
+			? 0
+			: screen === 'folders'
+				? folders.length
+				: screen === 'mixed'
+					? folders.length + presets.length
+					: presets.length;
 		if (!count || stageWidth <= 0 || stageHeight <= 0) {
 			return { columns: 2, rows: 1, scrolls: false, tileWidth: 0, tileHeight: 0 };
 		}
 		const width = stageWidth - GRID_PADDING * 2;
 		const height = stageHeight - GRID_PADDING * 2;
+		if (screen === 'mixed') {
+			// Folders, then the level's own presets under one header: two
+			// sections on ONE ruler, at the preset grid's density, so a folder
+			// tile and a preset tile are the same size and share columns.
+			return computeGroupedGridLayout({
+				width,
+				height,
+				groups: [folders.length, presets.length],
+				headerCount: 1,
+				headerHeight: SECTION_HEADER_H,
+				sectionGap: SECTION_GAP,
+				...PRESET_COMFORT
+			});
+		}
 		if (screen === 'presets' && useGroupedPresets) {
 			// Sectioned layout: same solver scoring, but rows round up per section
 			// and headers consume fixed chrome — so grouped tiles keep exactly the
@@ -364,6 +388,27 @@
 	let groupedWindow = $state<GroupedVirtualWindow>({ sections: [], topPad: 0, bottomPad: 0 });
 
 	function updateWindows() {
+		if (screen === 'mixed') {
+			// Two windowing sections: the folders (headerless, the grid pad on
+			// top, like the loose bucket) and the presets under their header.
+			// Windowed like any grouped screen — a level can hold hundreds of
+			// samples beside one subfolder (FX › Nature › Animals › Birds: 218).
+			const next = computeGroupedVisibleWindow({
+				scrollTop: groupedScrollEl?.scrollTop ?? 0,
+				viewportHeight: stageHeight,
+				sections: [
+					{ count: folders.length, headerHeight: 0, leadPad: GRID_PADDING },
+					{ count: presets.length, headerHeight: SECTION_HEADER_H }
+				],
+				columns: gridLayout.columns,
+				tileHeight: gridLayout.tileHeight,
+				gap: GRID_GAP,
+				sectionGap: SECTION_GAP,
+				overscanRows: OVERSCAN_ROWS
+			});
+			if (!groupedWindowsEqual(next, untrack(() => groupedWindow))) groupedWindow = next;
+			return;
+		}
 		if (screen !== 'presets') return;
 		if (useGroupedPresets) {
 			const next = computeGroupedVisibleWindow({
@@ -471,12 +516,12 @@
 			const nextColors = adapter.getFolderColors
 				? await adapter.getFolderColors(selectedVendor, path).catch(() => ({}))
 				: {};
-			// Only fetch presets when this is a leaf level (strict one-type-per-screen).
+			// Every level's own presets, beside its folders too: a level holding
+			// both shows them after its folders (`screenKind`'s `mixed`).
 			// Uncapped on purpose (ADR-404): the adapters' default limit of 200 was
 			// silently hiding everything past it in a big flat sample folder. Row
 			// windowing bounds the DOM, so the full listing is safe to hold.
-			const nextPresets =
-				nextFolders.length === 0 ? await adapter.getPresets(selectedVendor, path, Infinity) : [];
+			const nextPresets = await adapter.getPresets(selectedVendor, path, Infinity);
 			if (token !== navToken) return; // superseded by a newer navigation
 			const restoreKey = pendingRestoreKey;
 			pendingRestoreKey = null;
@@ -1584,7 +1629,44 @@
      tile's charge: the same rising fill, the name swapped for the pick while the
      bar climbs and through the reveal. The count means nothing beside a preset's
      name, so it steps aside while one shows. -->
-{#snippet sectionHead(folder: string, sectionPresets: Preset[])}
+{#snippet folderTile(name: string)}
+	<button
+		class="card folder-tile"
+		class:charging={chargingFolder === name}
+		class:picked={pickedFolder === name}
+		style="--k: {folderColors[name] || activeColor};"
+		onpointerdown={() => startFolderPress(name)}
+		onpointerup={() => endFolderPress(name)}
+		onpointerleave={cancelFolderPress}
+		onpointercancel={cancelFolderPress}
+	>
+		{#if chargingFolder === name}
+			<!-- Same rising fill as ClipCentralView's hold gates,
+			     duration bound inline to the timer that fires so the
+			     bar cannot finish early or late. -->
+			<div
+				class="hold-fill"
+				aria-hidden="true"
+				style="animation-duration: {HOLD_TO_RANDOM_MS}ms;"
+			></div>
+		{/if}
+		<!-- Three labels, most-committed first: the post-fire
+		     reveal, then the speculative pick showing while the
+		     bar climbs, then the folder's own name. -->
+		<span class="tile-name"
+			>{pickedFolder === name && pickedName
+				? pickedName
+				: chargingFolder === name && chargingName
+					? chargingName
+					: name}</span
+		>
+	</button>
+{/snippet}
+
+<!-- `folder` keys the hold's charge and reveal; `label` is what the header
+     reads when that is not the key (a mixed level's presets, keyed apart from
+     every folder name on the same screen). -->
+{#snippet sectionHead(folder: string, sectionPresets: Preset[], label: string = folder)}
 	{@const pick =
 		pickedFolder === folder && pickedName
 			? pickedName
@@ -1605,7 +1687,7 @@
 				style="animation-duration: {HOLD_TO_RANDOM_MS}ms;"
 			></span>
 		{/if}
-		<span class="section-name">{pick ?? folder}</span>
+		<span class="section-name">{pick ?? label}</span>
 		{#if pick === null}
 			<span class="section-count">{sectionPresets.length}</span>
 		{/if}
@@ -1834,42 +1916,53 @@
 							style="--cols: {gridLayout.columns}; --tile-h: {gridLayout.tileHeight}px;"
 						>
 							{#each folders as name (name)}
-								<button
-									class="card folder-tile"
-									class:charging={chargingFolder === name}
-									class:picked={pickedFolder === name}
-									style="--k: {folderColors[name] || activeColor};"
-									onpointerdown={() => startFolderPress(name)}
-									onpointerup={() => endFolderPress(name)}
-									onpointerleave={cancelFolderPress}
-									onpointercancel={cancelFolderPress}
-								>
-									{#if chargingFolder === name}
-										<!-- Same rising fill as ClipCentralView's hold gates,
-										     duration bound inline to the timer that fires so the
-										     bar cannot finish early or late. -->
-										<div
-											class="hold-fill"
-											aria-hidden="true"
-											style="animation-duration: {HOLD_TO_RANDOM_MS}ms;"
-										></div>
-									{/if}
-									<!-- Three labels, most-committed first: the post-fire
-									     reveal, then the speculative pick showing while the
-									     bar climbs, then the folder's own name. -->
-									<span class="tile-name"
-										>{pickedFolder === name && pickedName
-											? pickedName
-											: chargingFolder === name && chargingName
-												? chargingName
-												: name}</span
-									>
-								</button>
+								{@render folderTile(name)}
 							{/each}
 						</div>
 						{#if !loading && folders.length === 0}
 							<div class="empty">Nothing here.</div>
 						{/if}
+					</div>
+				{:else if screen === 'mixed'}
+					<!-- A level holding folders AND presets of its own: the folders
+					     first, then the presets under one header, on one ruler in one
+					     scroller — the grouped screen's machinery, with the folder
+					     block as its headerless first section. -->
+					<div
+						class="layer grouped-layer"
+						style="--header-h: {SECTION_HEADER_H}px; --section-gap: {SECTION_GAP}px;"
+					>
+						{#key `${selectedVendor}:${currentPath.join('/')}`}
+						<div class="grouped-scroll" bind:this={groupedScrollEl} onscroll={scheduleWindowUpdate}>
+							{#if groupedWindow.topPad > 0}
+								<div class="window-spacer" style="height: {groupedWindow.topPad}px"></div>
+							{/if}
+							{#each groupedWindow.sections as sw (sw.section)}
+								<section class="preset-section" class:loose={sw.section === 0}>
+									{#if sw.section === 1}
+										{@render sectionHead(HERE_KEY, presets, paneAmongSamples ? 'Samples' : 'Presets')}
+									{/if}
+									<div
+										class="adaptive-grid sectioned"
+										style="--cols: {gridLayout.columns}; --tile-h: {gridLayout.tileHeight}px; padding-top: {sw.topPad}px; padding-bottom: {sw.bottomPad}px;"
+									>
+										{#if sw.section === 0}
+											{#each folders.slice(sw.start, sw.end) as name (name)}
+												{@render folderTile(name)}
+											{/each}
+										{:else}
+											{#each presets.slice(sw.start, sw.end) as p (p.path)}
+												{@render presetTile(p)}
+											{/each}
+										{/if}
+									</div>
+								</section>
+							{/each}
+							{#if groupedWindow.bottomPad > 0}
+								<div class="window-spacer" style="height: {groupedWindow.bottomPad}px"></div>
+							{/if}
+						</div>
+						{/key}
 					</div>
 				{:else if useGroupedPresets}
 					<!-- Flattened presets, re-grouped under their original folders
@@ -2611,6 +2704,9 @@
 		   enough that 14px of padding would eat a whole line of the name. */
 		padding: var(--spacing-sm);
 	}
+	/* A mixed level's folders sit on the preset ruler, at preset size — so they
+	   take the preset tile's padding too, or a long name loses a line to it. */
+	.adaptive-grid.sectioned .folder-tile { padding: var(--spacing-sm); }
 	.preset-tile:hover { background: color-mix(in oklab, var(--k) 68%, var(--browser-bg-secondary, #1d2027)); }
 	.preset-tile.loaded {
 		box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--k) 30%, white),
