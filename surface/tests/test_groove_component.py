@@ -562,9 +562,7 @@ def test_first_write_on_grooveless_focused_claims_and_emits(
         source_addr=None,
     )
     # Pool's first unassigned-* (g_free) is now claimed.
-    assert env["g_free"].name == "Clip_" + path_hash(
-        "tracks/0/slots/1/clip",
-    )
+    assert env["g_free"].name.endswith(" #" + path_hash("tracks/0/slots/1/clip"))
     # Clip now points at that groove and the write landed.
     assert env["g_free"].quantization_amount == 30.0
     # has_groove=true emitted on first-write.
@@ -837,7 +835,7 @@ def test_write_on_a_shared_default_groove_claims_one_of_its_own(captured_emits):
 
     assert shared.quantization_amount == 0.0
     assert shared.name == "Swing 16ths 66"
-    assert g_free.name == "Clip_" + path_hash("tracks/0/slots/1/clip")
+    assert g_free.name.endswith(" #" + path_hash("tracks/0/slots/1/clip"))
     assert c1.groove == ("id", id(g_free))
     assert c0.groove == ("id", id(shared))
     # Inherited, then the write on top.
@@ -883,3 +881,192 @@ def test_duplicate_sharing_the_originals_claim_takes_its_own(captured_emits):
     # The original still writes its own groove in place.
     gc.handle_set_timing_amount(args=("tracks/0/slots/0/clip", 20.0), source_addr=None)
     assert original.timing_amount == 20.0
+
+
+# --- the groove chooser: set/file + the file echo (2026-09-29) --------------
+
+from components.GrooveComponent import (  # noqa: E402
+    V3_CLIP_GROOVE_FILE_ADDRESS,
+    V3_CLIP_GROOVE_SET_FILE_ADDRESS,
+)
+
+
+def _file_emits(emits):
+    return [e[1] for e in emits if e[0] == V3_CLIP_GROOVE_FILE_ADDRESS]
+
+
+def _chooser_song(*grooves, linked=None):
+    """One track "Bass", clip in slot 1 (scene 2), linking ``linked``."""
+    clip = GrooveBackedClip(cid=601, name="c")
+    if linked is not None:
+        clip._link_groove(linked)
+    track = StubTrack(tid=100, name="Bass")
+    track.clip_slots = [StubClipSlot(clip=None), StubClipSlot(clip=clip)]
+    pool = StubGroovePool(grooves=list(grooves))
+    song = GrooveStubSong(tracks=[track], groove_pool=pool)
+    song.view._detail_clip = clip
+    return song, clip, pool
+
+
+def _make_minting(song, pool, captured_emits, calls):
+    """Pool + GrooveComponent whose minter loads a file as Live does: a new
+    entry named after it, Timing 100 and the rest 0."""
+    def mint(pattern=None):
+        calls.append(pattern)
+        if pattern == "Missing":
+            return "not-in-browser"
+        pool._grooves.append(GrooveWithListeners(
+            name=pattern or "Vamp Groove", base=3, timing_amount=100.0 if pattern else 0.0,
+        ))
+        return None
+    emit = lambda addr, args: captured_emits.append((addr, args))
+    pool_comp = GroovePoolComponent(song=song, emit=emit, mint=mint)
+    return pool_comp, GrooveComponent(song=song, emit=emit, pool=pool_comp)
+
+
+CLIP = "tracks/0/slots/1/clip"
+
+
+def test_set_file_on_a_clip_with_no_groove_loads_the_file_and_is_heard(captured_emits):
+    song, clip, pool = _chooser_song()
+    calls = []
+    _pc, gc = _make_minting(song, pool, captured_emits, calls)
+    captured_emits.clear()
+
+    gc.handle_set_file(args=(CLIP, "Swing 16ths 57"), source_addr=None)
+
+    assert calls == ["Swing 16ths 57"]
+    g = pool._grooves[-1]
+    assert g.name == "Bass 2 · Swing 16ths 57 #" + path_hash(CLIP)
+    assert clip.groove == ("id", id(g))
+    assert (g.timing_amount, g.quantization_amount, g.random_amount, g.velocity_amount) == (100.0, 0.0, 0.0, 0.0)
+    assert _file_emits(captured_emits)[-1] == (CLIP, "Swing 16ths 57")
+
+
+def test_set_file_keeps_the_clips_amounts_and_frees_the_groove_it_left(captured_emits):
+    own = GrooveWithListeners(
+        name="Bass 2 · Swing 8ths 61 #" + path_hash(CLIP),
+        quantization_amount=40.0, timing_amount=30.0, random_amount=5.0, velocity_amount=20.0,
+    )
+    song, clip, pool = _chooser_song(own, linked=own)
+    calls = []
+    _pc, gc = _make_minting(song, pool, captured_emits, calls)
+
+    gc.handle_set_file(args=(CLIP, "Swing 16ths 57"), source_addr=None)
+
+    new = pool._grooves[-1]
+    assert clip.groove == ("id", id(new))
+    assert (new.quantization_amount, new.timing_amount, new.random_amount, new.velocity_amount) == (40.0, 30.0, 5.0, 20.0)
+    # The file's own base (its grid) stays.
+    assert new.base == 3
+    assert own.name == "unassigned-0 · Swing 8ths 61"
+
+
+def test_set_file_reuses_a_free_groove_of_that_pattern_only(captured_emits):
+    other = GrooveWithListeners(name="unassigned-0 · Swing 8ths 61")
+    plain = GrooveWithListeners(name="unassigned-1")
+    same = GrooveWithListeners(name="unassigned-2 · Swing 16ths 57")
+    song, clip, pool = _chooser_song(other, plain, same)
+    calls = []
+    _pc, gc = _make_minting(song, pool, captured_emits, calls)
+
+    gc.handle_set_file(args=(CLIP, "Swing 16ths 57"), source_addr=None)
+
+    assert calls == []
+    assert clip.groove == ("id", id(same))
+    assert other.name == "unassigned-0 · Swing 8ths 61"
+    assert plain.name == "unassigned-1"
+
+
+def test_set_file_to_the_pattern_it_is_on_changes_nothing(captured_emits):
+    own = GrooveWithListeners(name="Bass 2 · Swing 16ths 57 #" + path_hash(CLIP), timing_amount=12.0)
+    song, clip, pool = _chooser_song(own, linked=own)
+    calls = []
+    _pc, gc = _make_minting(song, pool, captured_emits, calls)
+    captured_emits.clear()
+
+    gc.handle_set_file(args=(CLIP, "Swing 16ths 57"), source_addr=None)
+
+    assert calls == []
+    assert clip.groove == ("id", id(own))
+    assert own.timing_amount == 12.0
+    assert _file_emits(captured_emits) == [(CLIP, "Swing 16ths 57")]
+
+
+def test_set_file_leaves_a_shared_groove_alone(captured_emits):
+    """Live's default groove on two clips: the tapped one moves, the other
+    keeps it, and the shared groove keeps its name."""
+    shared = GrooveWithListeners(name="Swing 16ths 66", timing_amount=100.0)
+    song, c0, c1 = _two_clips_on(shared, GrooveWithListeners(name="unassigned-9"))
+    song.view._detail_clip = c1
+    calls = []
+    _pc, gc = _make_minting(song, song.groove_pool, captured_emits, calls)
+
+    gc.handle_set_file(args=("tracks/0/slots/1/clip", "Swing 16ths 57"), source_addr=None)
+
+    assert shared.name == "Swing 16ths 66"
+    assert c0.groove == ("id", id(shared))
+    assert c1.groove != ("id", id(shared))
+
+
+def test_set_file_that_cannot_load_is_an_error_and_moves_nothing(captured_emits):
+    own = GrooveWithListeners(name="Bass 2 · Swing 8ths 61 #" + path_hash(CLIP))
+    song, clip, pool = _chooser_song(own, linked=own)
+    calls = []
+    _pc, gc = _make_minting(song, pool, captured_emits, calls)
+    captured_emits.clear()
+
+    gc.handle_set_file(args=(CLIP, "Missing"), source_addr=None)
+
+    assert clip.groove == ("id", id(own))
+    errors = [e[1] for e in captured_emits if e[0] == V3_ERROR_ADDRESS]
+    assert errors == [(V3_CLIP_GROOVE_SET_FILE_ADDRESS, "pool-exhausted", CLIP, "No groove file Missing")]
+
+
+@pytest.mark.parametrize("bad", ["", "  ", "a/b", "x #12345678", "a · b", 5])
+def test_set_file_rejects_a_bad_name(captured_emits, bad):
+    song, clip, pool = _chooser_song()
+    calls = []
+    _pc, gc = _make_minting(song, pool, captured_emits, calls)
+    gc.handle_set_file(args=(CLIP, bad), source_addr=None)
+    assert calls == [] and clip.groove == ("id", 0)
+
+
+def test_focus_echoes_the_file_the_groove_holds(captured_emits):
+    own = GrooveWithListeners(name="Bass 2 · SP 1200 8ths 71 #" + path_hash(CLIP))
+    song, clip, pool = _chooser_song(own, linked=own)
+    _pc, gc = _make(song, captured_emits)
+    assert _file_emits(captured_emits)[-1] == (CLIP, "SP 1200 8ths 71")
+
+    captured_emits.clear()
+    gc.emit_on_accept()
+    assert _file_emits(captured_emits) == [(CLIP, "SP 1200 8ths 71")]
+
+
+def test_focus_echoes_no_file_for_no_groove_or_an_old_claim(captured_emits):
+    song, clip, pool = _chooser_song()
+    _make(song, captured_emits)
+    assert _file_emits(captured_emits)[-1] == (CLIP, "")
+
+    captured_emits.clear()
+    old = GrooveWithListeners(name="Clip_" + path_hash(CLIP))
+    song, clip, pool = _chooser_song(old, linked=old)
+    _make(song, captured_emits)
+    assert _file_emits(captured_emits)[-1] == (CLIP, "")
+
+
+def test_leaving_a_shared_core_groove_keeps_its_pattern(captured_emits):
+    """A Q write on a clip sharing Live's default groove claims a groove of
+    the same file, so the swing it plays and the lit tile stay."""
+    shared = GrooveWithListeners(name="Swing 16ths 66", timing_amount=100.0)
+    song, c0, c1 = _two_clips_on(shared, GrooveWithListeners(name="unassigned-9"))
+    song.view._detail_clip = c1
+    calls = []
+    _pc, gc = _make_minting(song, song.groove_pool, captured_emits, calls)
+
+    gc.handle_set_quantization_amount(args=("tracks/0/slots/1/clip", 30.0), source_addr=None)
+
+    assert calls == ["Swing 16ths 66"]
+    mine = song.groove_pool._grooves[-1]
+    assert mine.name == "t0 2 · Swing 16ths 66 #" + path_hash("tracks/0/slots/1/clip")
+    assert mine.quantization_amount == 30.0

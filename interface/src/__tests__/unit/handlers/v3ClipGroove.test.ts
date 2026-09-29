@@ -32,7 +32,8 @@ const { mockSessionState, mockStore } = vi.hoisted(() => {
 	const state = { focusedClipPath: null as string | null };
 	const store = {
 		handleHasGroove: vi.fn(),
-		handleGrooveProperty: vi.fn()
+		handleGrooveProperty: vi.fn(),
+		handleFile: vi.fn()
 	};
 	return { mockSessionState: state, mockStore: store };
 });
@@ -58,7 +59,9 @@ import {
 	V3_CLIP_GROOVE_SET_TIMING_AMOUNT_ADDRESS,
 	V3_CLIP_GROOVE_SET_QUANTIZATION_AMOUNT_ADDRESS,
 	V3_CLIP_GROOVE_SET_RANDOM_AMOUNT_ADDRESS,
-	V3_CLIP_GROOVE_SET_VELOCITY_AMOUNT_ADDRESS
+	V3_CLIP_GROOVE_SET_VELOCITY_AMOUNT_ADDRESS,
+	V3_CLIP_GROOVE_FILE_ADDRESS,
+	V3_CLIP_GROOVE_SET_FILE_ADDRESS
 } from '$lib/api/handlers/v3ClipGroove';
 
 describe('v3ClipGroove handler', () => {
@@ -217,6 +220,22 @@ describe('v3ClipGroove handler', () => {
 				'base'
 			]);
 			expect(mockStore.handleGrooveProperty).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('clip/groove/file (the groove chooser, 2026-09-29)', () => {
+		it('is inbound; set/file is not', () => {
+			expect(isV3ClipGrooveAddress(V3_CLIP_GROOVE_FILE_ADDRESS)).toBe(true);
+			expect(isV3ClipGrooveAddress(V3_CLIP_GROOVE_SET_FILE_ADDRESS)).toBe(false);
+			expect(V3_CLIP_GROOVE_SET_FILE_ADDRESS).toBe('/looping/v3/clip/groove/set/file');
+		});
+
+		it('names the focused clip\'s groove file and drops another clip\'s', () => {
+			mockSessionState.focusedClipPath = 'tracks/0/slots/1/clip';
+			handleV3ClipGroove(V3_CLIP_GROOVE_FILE_ADDRESS, ['tracks/0/slots/2/clip', 'Swing 8ths 73']);
+			expect(mockStore.handleFile).not.toHaveBeenCalled();
+			handleV3ClipGroove(V3_CLIP_GROOVE_FILE_ADDRESS, ['tracks/0/slots/1/clip', 'Swing 16ths 57']);
+			expect(mockStore.handleFile).toHaveBeenCalledWith('Swing 16ths 57');
 		});
 	});
 });

@@ -170,8 +170,11 @@ export function stopTrack(trackIndex: number): void {
  * Returns the resolved `clipPath` (the address the control writes to),
  * or null when there is nothing to act on — no selected track, or that
  * track is not playing or recording anything.
+ *
+ * Focusing through the fallback shows the clip view, unless `showClip` is
+ * false: the Q slider and the Groove view keep the Groove view up.
  */
-export function focusPlayingClipOnSelectedTrack(): string | null {
+export function focusPlayingClipOnSelectedTrack({ showClip = true }: { showClip?: boolean } = {}): string | null {
 	const focused = session.focusedClipPath;
 	if (focused) return focused;
 
@@ -196,7 +199,7 @@ export function focusPlayingClipOnSelectedTrack(): string | null {
 	// confirms this or overrides it.
 	session.selectSceneOptimistically(entry.slotIdx);
 	sendClipFocus(slotPath);
-	clipDisplayCoordinator.showCurrentClip();
+	if (showClip) clipDisplayCoordinator.showCurrentClip();
 
 	return `${slotPath}/clip`;
 }

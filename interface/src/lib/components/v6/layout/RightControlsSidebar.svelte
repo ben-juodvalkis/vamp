@@ -10,6 +10,7 @@
 	 * Each section aligns with a main content row
 	 */
 	import { clipDisplayCoordinator } from '$lib/services/clipDisplayCoordinator.svelte';
+	import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
 	import { focusPlayingClipOnSelectedTrack } from '$lib/components/v6/tracks/composables/slotActions';
 	import { press } from '$lib/actions/press';
 
@@ -43,6 +44,12 @@
 		// real loop. (`focusPlayingClipOnSelectedTrack` shows the clip
 		// itself on that path; with a clip already focused it is a no-op
 		// and the call below is the whole behavior, unchanged.)
+		// The quantize row shows the Groove view, as a touch on Q does.
+		if (section === 'quantize') {
+			focusPlayingClipOnSelectedTrack({ showClip: false });
+			centralDisplayStore.setView('groove');
+			return;
+		}
 		focusPlayingClipOnSelectedTrack();
 		clipDisplayCoordinator.showCurrentClip();
 	}

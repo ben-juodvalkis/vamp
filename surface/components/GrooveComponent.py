@@ -16,6 +16,10 @@ Wire contract per [04 §3.6] and
                   [clipPath, name, value]
     Surf → UI   /looping/v3/clip/groove/has_groove
                   [clipPath, bool]
+    UI → Surf   /looping/v3/clip/groove/set/file
+                  [clipPath, name]
+    Surf → UI   /looping/v3/clip/groove/file
+                  [clipPath, name]
     Surf → UI   /looping/v3/error
                   [triggering_address, "pool-exhausted",
                    clip_path, detail]
@@ -95,6 +99,20 @@ Every LOM read/write/listener attach is wrapped in
 Merge-gate rule #9 — ``Boost.Python.ArgumentError`` is a
 TypeError subclass. Warnings de-dupe via ``_warn_once``.
 
+The groove chooser — ``set/file`` (2026-09-29)
+-----------------------------------------------
+
+Live's API cannot set a groove's pattern. ``set/file`` puts the clip on
+the Core Library groove file ``name`` (``Swing 16ths 57``) by claiming a
+groove that holds it — a free one of that pattern, else one freshly
+loaded — then writes the clip's own Quantize, Timing, Random and
+Velocity back onto it, since a loaded file brings its own (Timing 100,
+the rest 0, measured). A clip with no groove takes Timing 100 and the
+rest 0, so the tap is heard. The groove it leaves, if it was the clip's
+own claim, is named free again with its pattern kept. ``file`` echoes
+the pattern the focused clip's groove holds, ``""`` for none or one the
+pool's names do not say (see GroovePoolComponent, "Names").
+
 Validation
 ----------
 
@@ -117,6 +135,8 @@ from .GroovePoolComponent import (
     PoolExhausted,
     clip_groove_id,
     is_owned_by,
+    live_id,
+    pattern_of,
 )
 
 logger = logging.getLogger("looping")
@@ -132,6 +152,7 @@ _LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
 
 V3_CLIP_GROOVE_PROPERTY_ADDRESS = "/looping/v3/clip/groove/property"
 V3_CLIP_GROOVE_HAS_GROOVE_ADDRESS = "/looping/v3/clip/groove/has_groove"
+V3_CLIP_GROOVE_FILE_ADDRESS = "/looping/v3/clip/groove/file"
 V3_ERROR_ADDRESS = "/looping/v3/error"
 
 V3_CLIP_GROOVE_SET_BASE_ADDRESS = (
@@ -149,9 +170,21 @@ V3_CLIP_GROOVE_SET_RANDOM_AMOUNT_ADDRESS = (
 V3_CLIP_GROOVE_SET_VELOCITY_AMOUNT_ADDRESS = (
     "/looping/v3/clip/groove/set/velocity_amount"
 )
+V3_CLIP_GROOVE_SET_FILE_ADDRESS = "/looping/v3/clip/groove/set/file"
 
 # Pool-exhausted closed-enum code per [04 §7.2].
 _ERROR_POOL_EXHAUSTED = "pool-exhausted"
+
+# What ``set/file`` carries over from the groove a clip leaves; a clip
+# with none starts from these, so the pattern is heard at once.
+_CARRIED_AMOUNTS = (
+    "quantization_amount", "timing_amount", "random_amount", "velocity_amount",
+)
+_FRESH_AMOUNTS = {
+    "quantization_amount": 0.0, "timing_amount": 100.0,
+    "random_amount": 0.0, "velocity_amount": 0.0,
+}
+_FILE_NAME_MAX = 128
 
 
 # --- attribute table ------------------------------------------------------
@@ -340,12 +373,14 @@ class GrooveComponent:
         groove = self._resolve_groove_for_clip(self._focused_clip)
         if groove is None:
             self._safe_emit_has_groove(self._focused_path, False)
+            self._emit_file(None)
             return
 
         self._focused_groove = groove
         self._attach_amount_listeners(groove)
         self._safe_emit_has_groove(self._focused_path, True)
         self._emit_all_amounts(groove, "refocus")
+        self._emit_file(groove)
 
     def _read_detail_clip(self):
         if self._view is None:
@@ -568,6 +603,22 @@ class GrooveComponent:
                 continue
             self._emit_amount(attr_name, raw)
 
+    def _emit_file(self, groove) -> None:
+        """``file [focusedPath, pattern]`` — ``""`` for no groove, or one
+        whose name does not say."""
+        if self._focused_path is None:
+            return
+        name = ""
+        if groove is not None:
+            try:
+                name = pattern_of(groove.name) or ""
+            except _LOM_ERRORS as e:
+                self._warn_once("groove.name", "file-read", e)
+        try:
+            self._emit(V3_CLIP_GROOVE_FILE_ADDRESS, (self._focused_path, name))
+        except Exception as e:
+            logger.warning("GrooveComponent file emit failed: %s", e)
+
     def emit_on_accept(self) -> None:
         """Re-emit ``has_groove`` + amounts after handshake accept.
 
@@ -580,6 +631,7 @@ class GrooveComponent:
         self._safe_emit_has_groove(self._focused_path, has)
         if has:
             self._emit_all_amounts(self._focused_groove, "on_accept")
+        self._emit_file(self._focused_groove)
 
     # --- write handlers ----------------------------------------------------
 
@@ -660,9 +712,19 @@ class GrooveComponent:
             # its own, starting from the shared one's settings.
             inherit, groove = groove, None
         if groove is None:
+            # Leaving a shared groove, the clip keeps its pattern when the
+            # Core Library has it (Live's default groove is a file there);
+            # else, like a clip with none, it takes the default.
+            pattern = None
+            if inherit is not None:
+                try:
+                    pattern = pattern_of(inherit.name)
+                except _LOM_ERRORS:
+                    pattern = None
             try:
                 groove = self._pool.assign_groove_to_clip(
                     clip, clip_path, inherit=inherit,
+                    pattern=pattern, strict=False,
                 )
             except PoolExhausted:
                 logger.warning(
@@ -693,11 +755,7 @@ class GrooveComponent:
         # True-rebinds on every tick, producing a storm of
         # has_groove/property re-seeds that clobber the UI.
         if self._focused_path == clip_path and self._is_new_focused_groove(groove):
-            self._detach_amount_listeners()
-            self._focused_groove = groove
-            self._attach_amount_listeners(groove)
-            self._safe_emit_has_groove(clip_path, True)
-            self._emit_all_amounts(groove, "first-write")
+            self._rebind_focused(groove, "first-write")
             return
 
         # Write-path echo for attrs Live 12 doesn't expose a listener
@@ -711,6 +769,75 @@ class GrooveComponent:
             raw = self._safe_read_groove_attr(groove, attr_name, "write-echo")
             if raw is not None:
                 self._emit_amount(attr_name, raw)
+
+    def _rebind_focused(self, groove, context: str) -> None:
+        """The focused clip is on ``groove`` now: listen to it and re-seed
+        the UI (has_groove, the amounts, the file)."""
+        self._detach_amount_listeners()
+        self._focused_groove = groove
+        self._attach_amount_listeners(groove)
+        self._safe_emit_has_groove(self._focused_path, True)
+        self._emit_all_amounts(groove, context)
+        self._emit_file(groove)
+
+    def handle_set_file(self, args, source_addr):
+        """``set/file [clipPath, name]`` — put the clip on the Core Library
+        groove file ``name``, keeping its amounts (module docstring)."""
+        clip, path = self._parse_clip_from_args(args, "file")
+        if clip is None:
+            return None
+        name = args[1] if len(args) > 1 else None
+        if (not isinstance(name, str) or not name.strip() or len(name) > _FILE_NAME_MAX
+                or any(c in name for c in "/·#")):
+            logger.warning("GrooveComponent set file: bad name %r; rejecting", name)
+            return None
+        name = name.strip()
+
+        current = self._resolve_groove_for_clip(clip)
+        current_name = None
+        amounts = dict(_FRESH_AMOUNTS)
+        if current is not None:
+            try:
+                current_name = current.name
+            except _LOM_ERRORS:
+                current_name = None
+            gid = live_id(current)
+            if (pattern_of(current_name) == name
+                    and not self._pool.linked_elsewhere(clip, gid)):
+                # Already on it, and no other clip shares it.
+                if self._focused_path == path:
+                    self._emit_file(current)
+                return None
+            for attr in _CARRIED_AMOUNTS:
+                raw = self._safe_read_groove_attr(current, attr, "file-carry")
+                if raw is not None:
+                    amounts[attr] = raw
+
+        try:
+            groove = self._pool.assign_groove_to_clip(clip, path, pattern=name)
+        except PoolExhausted:
+            logger.warning("GrooveComponent set file: no groove %r for %r", name, path)
+            self._emit_pool_exhausted_error(
+                V3_CLIP_GROOVE_SET_FILE_ADDRESS, path,
+                detail="No groove file %s" % name,
+            )
+            return None
+        except _LOM_ERRORS as e:
+            logger.warning("GrooveComponent set file raised: %s (path=%r)", e, path)
+            return None
+
+        for attr in _CARRIED_AMOUNTS:
+            self._write_groove_attr(groove, attr, amounts[attr])
+
+        # The groove left behind: this clip's own claim, linked by no other
+        # clip, is free again, still holding its pattern.
+        if (current is not None and is_owned_by(current_name, path)
+                and not self._pool.linked_elsewhere(clip, live_id(current))):
+            self._pool.release(current)
+
+        if self._focused_path == path:
+            self._rebind_focused(groove, "file")
+        return None
 
     def _is_shared(self, clip, clip_path: str, groove) -> bool:
         """Whether ``groove`` is someone else's that another clip links.
@@ -760,6 +887,7 @@ class GrooveComponent:
 
     def _emit_pool_exhausted_error(
         self, set_address: str, clip_path: str,
+        detail: str = "Pool has 0 unassigned grooves",
     ) -> None:
         try:
             self._emit(
@@ -768,7 +896,7 @@ class GrooveComponent:
                     set_address,
                     _ERROR_POOL_EXHAUSTED,
                     clip_path,
-                    "Pool has 0 unassigned grooves",
+                    detail,
                 ),
             )
         except Exception as e:

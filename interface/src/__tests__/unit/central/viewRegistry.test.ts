@@ -62,7 +62,7 @@ function allEntries(): Array<[string, () => Promise<unknown>]> {
 	for (const [sub, thunk] of Object.entries(CENTRAL_VIEW_REGISTRY.instrument)) {
 		out.push([`instrument:${sub}`, thunk]);
 	}
-	for (const top of ['default', 'system', 'clip', 'permute'] as const) {
+	for (const top of ['default', 'system', 'clip', 'permute', 'groove'] as const) {
 		out.push([top, CENTRAL_VIEW_REGISTRY[top]]);
 	}
 	return out;
@@ -168,7 +168,7 @@ describe('viewRegistry — resolution', () => {
 	});
 
 	it('resolves each top-level view to itself', () => {
-		for (const top of ['default', 'system', 'clip', 'permute'] as const) {
+		for (const top of ['default', 'system', 'clip', 'permute', 'groove'] as const) {
 			expect(resolveViewComponent(top)).toBe(CENTRAL_VIEW_REGISTRY[top]);
 		}
 	});

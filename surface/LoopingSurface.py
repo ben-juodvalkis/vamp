@@ -217,6 +217,7 @@ from .components.GenerationComponent import GenerationComponent
 from .components.GrooveComponent import (
     GrooveComponent,
     V3_CLIP_GROOVE_SET_BASE_ADDRESS,
+    V3_CLIP_GROOVE_SET_FILE_ADDRESS,
     V3_CLIP_GROOVE_SET_QUANTIZATION_AMOUNT_ADDRESS,
     V3_CLIP_GROOVE_SET_RANDOM_AMOUNT_ADDRESS,
     V3_CLIP_GROOVE_SET_TIMING_AMOUNT_ADDRESS,
@@ -1711,10 +1712,13 @@ class LoopingSurface(ControlSurface):
         # cache and is built later, so the closure finds it at call time.
         groove_path = live_library.device_path(live_library.GROOVE_REL)
 
-        def mint_groove():
+        def mint_groove(pattern=None):
             loader = getattr(self, "_device_load_component", None)
             if loader is None:
                 return "no device loader"
+            if pattern:
+                # The groove chooser's pattern: its file from the Core Library.
+                return loader.load_core_groove(pattern)
             return loader.load_groove(
                 groove_path,
                 source=live_library.m4l_source(), rel=live_library.GROOVE_REL,
@@ -1739,6 +1743,8 @@ class LoopingSurface(ControlSurface):
              self._groove_component.handle_set_random_amount),
             (V3_CLIP_GROOVE_SET_VELOCITY_AMOUNT_ADDRESS,
              self._groove_component.handle_set_velocity_amount),
+            (V3_CLIP_GROOVE_SET_FILE_ADDRESS,
+             self._groove_component.handle_set_file),
         ):
             self._transport.add_handler(address, handler)
 

@@ -515,17 +515,31 @@ Groove (focus-scoped, mirrors ClipPropertiesComponent):
 | -------------------------------------------------- | ------- | ------------------------------------------------- | --------- |
 | `/looping/v3/clip/groove/has_groove`               | Surf→UI | `clipPath:string, value:bool`                     | Focused clip has a linked groove. |
 | `/looping/v3/clip/groove/property`                 | Surf→UI | `clipPath:string, name:string, value:number`      | Per-amount echo. `name ∈ {base, timing_amount, quantization_amount, random_amount, velocity_amount}`. |
-| `/looping/v3/clip/groove/set/base`                 | UI→Surf | `clipPath:string, value:int, generation:int?`     | `clip.groove.base` (int ∈ {1,2,3}). Assign-on-first-write: an `unassigned-*` entry, an orphaned `Clip_*`, or one minted from `Vamp Devices/Grooves/Vamp Groove.agr`. |
+| `/looping/v3/clip/groove/file`                     | Surf→UI | `clipPath:string, name:string`                    | The groove file the focused clip's groove holds (`Swing 16ths 57`, a Core Library `.agr`'s name without the extension), as far as the pool entry's name says; `""` for no groove, a template's `unassigned-*`, the default `Vamp Groove` or a legacy `Clip_*` claim. Sent on focus, on handshake accept, and after any write that changes the clip's groove. Since 2026-09-29. |
+| `/looping/v3/clip/groove/set/file`                 | UI→Surf | `clipPath:string, name:string`                    | Put the clip on the Core Library groove file `name` (the Groove view's tiles). Takes a free groove holding that pattern (`unassigned-<idx> · <name>`, or an orphaned claim of it), else loads the file from the Core Library through Live's browser (`browser.packs` → `Core Library` → `Grooves`, found by name). Then writes the clip's Quantize, Timing, Random and Velocity onto it, since a loaded file brings its own; a clip with no groove gets Timing 100, the rest 0. The file's grid (`base`) is kept. The groove the clip left, when it was the clip's own claim and no other clip links it, is named `unassigned-<idx> · <its pattern>`. Already on `name` and unshared: no change, `file` re-echoed. A name that is empty, over 128 characters or holds `/`, `·` or `#` is dropped. A file Live's browser does not list: `/looping/v3/error` `pool-exhausted`, detail `No groove file <name>`, nothing moved. Since 2026-09-29. |
+| `/looping/v3/clip/groove/set/base`                 | UI→Surf | `clipPath:string, value:int, generation:int?`     | `clip.groove.base` (int ∈ {1,2,3}). Assign-on-first-write (below). No UI sender since the Groove view (2026-09-29): a groove's grid comes with its file. |
 | `/looping/v3/clip/groove/set/timing_amount`        | UI→Surf | `clipPath:string, value:float, generation:int?`   | `clip.groove.timing_amount` (0–100). |
 | `/looping/v3/clip/groove/set/quantization_amount`  | UI→Surf | `clipPath:string, value:float, generation:int?`   | `clip.groove.quantization_amount`. |
 | `/looping/v3/clip/groove/set/random_amount`        | UI→Surf | `clipPath:string, value:float, generation:int?`   | `clip.groove.random_amount`. |
 | `/looping/v3/clip/groove/set/velocity_amount`      | UI→Surf | `clipPath:string, value:float, generation:int?`   | `clip.groove.velocity_amount`. |
 
+**Assign-on-first-write.** An amount write on a clip with no groove
+claims one: an `unassigned-<idx>` entry, else an orphaned claim with no
+pattern named, else one minted from `Vamp Devices/Grooves/Vamp Groove.agr`.
 A clip on a groove that is not its own and that another clip also links
 (Live 12.1's default groove for new MIDI clips) takes one of its own on
-the first write, starting from the shared groove's settings. Pool
-exhaustion (nothing free and the mint failed) surfaces as
+the first write, starting from the shared groove's settings, and of the
+shared groove's file when the Core Library has one of that name (else the
+default). Pool exhaustion (nothing free and the mint failed) surfaces as
 `/looping/v3/error` with code `pool-exhausted`.
+
+**Pool entry names (2026-09-29).** A claim is `<track> <scene> · <pattern>
+#<pathHash>` (`Bass 3 · Swing 16ths 57 #1a2b3c4d`), or `<track> <scene>
+#<pathHash>` when it holds the default; a free groove is `unassigned-<idx>`
+or `unassigned-<idx> · <pattern>`. Ownership is the hash; the label is for
+reading Live's Groove Pool and is refreshed on every claim. The older
+`Clip_<pathHash>` and M4L `Clip_<liveId>` claims are still owned. A free
+groove is reused only for the pattern it holds.
 
 ### 2.8 Device / preset load
 

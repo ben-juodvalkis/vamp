@@ -229,6 +229,33 @@ class BrowserCache:
         logger.warning("BrowserCache: unknown source %r", source)
         return None
 
+    def find_leaf(self, source: str, folder: str, leaf: str) -> Optional[object]:
+        """The loadable item named ``leaf`` anywhere under ``folder`` at the
+        top of ``source`` (``pack:<name>``), or ``None``. For a file known by
+        name alone: a groove the chooser names (``pack:Core Library``,
+        ``Grooves``, ``Swing 16ths 57.agr``) sits one or two folders down.
+
+        The first call walks the Pack (measured 2026-09-29: the Core
+        Library, 7,517 items, in 66 ms); later calls read the cache.
+        """
+        if not source.startswith(SOURCE_PACK_PREFIX):
+            return None
+        name = source[len(SOURCE_PACK_PREFIX):]
+        root_label = "packs[%r]" % name
+        want = (browser_name(folder), browser_name(leaf))
+        for attempt in (0, 1):
+            if attempt == 0 and not self._built.get(root_label):
+                self._build_root(root_label, None, name)
+            elif attempt == 1:
+                if self._clock() - self._built_at.get(root_label, 0.0) < REBUILD_COOLDOWN_S:
+                    break
+                self._build_root(root_label, None, name)
+            for key, item in self._caches.get(root_label, {}).items():
+                if key and key[0] == want[0] and key[-1] == want[1]:
+                    return item
+        logger.warning("BrowserCache: %r not found under %s/%s", leaf, root_label, folder)
+        return None
+
     def root_path(self, source: str) -> Optional[str]:
         """The folder a ``source`` names on disk, or ``None``."""
         if source == SOURCE_LIBRARY:

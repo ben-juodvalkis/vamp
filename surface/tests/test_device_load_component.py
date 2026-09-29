@@ -1940,3 +1940,26 @@ def test_no_user_library_anywhere_is_empty_not_dot(recorder):
     )
     assert c._user_library_base == ""
     c.disconnect()
+
+
+# --- load_core_groove: the groove chooser (2026-09-29) ---------------------
+
+
+def test_load_core_groove_loads_the_file_by_name(song, recorder, user_library_base):
+    groove = StubBrowserItem("Swing 16ths 57.agr", is_loadable=True)
+    core = StubBrowserItem("Core Library", children=[
+        StubBrowserItem("Grooves", children=[
+            StubBrowserItem("Swing", children=[StubBrowserItem("Basic", children=[groove])]),
+        ]),
+    ])
+    browser = StubBrowser()
+    browser.packs = StubBrowserItem("Packs", children=[core])
+    c = DeviceLoadComponent(song=song, browser=browser, emit=recorder, user_library_base=user_library_base)
+    try:
+        assert c.load_core_groove("Swing 16ths 57") is None
+        assert browser.calls == ["Swing 16ths 57.agr"]
+        assert c.load_core_groove("Swing 16ths 99").startswith("not-in-browser")
+        assert c.load_core_groove("a/b").startswith("bad-groove-name")
+        assert browser.calls == ["Swing 16ths 57.agr"]
+    finally:
+        c.disconnect()
