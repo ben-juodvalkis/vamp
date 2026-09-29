@@ -77,16 +77,17 @@ export const T = {
 
 /**
  * Regions of Live's window, in its points, for boxes on Live's pane
- * (measured on Live 12.4 with its browser hidden: track columns 95 pt
- * apart from x 8, clip rows 18 pt from y 78, the device chain from y 628).
+ * (measured on Live 12.4 at 1090 x 856, its browser hidden and the clip view
+ * stacked over the device chain: track columns 95 pt apart from x 8, clip
+ * rows 18 pt from y 78, the clip view from y 345, the devices from y 628).
  */
 export const LIVE = {
-	track: (i, label) => ({ x: 8 + 95 * i, y: 60, w: 94, h: 562, label }),
+	track: (i, label) => ({ x: 8 + 95 * i, y: 60, w: 94, h: 280, label }),
 	clip: (i, slot, label) => ({ x: 8 + 95 * i, y: 78 + 18 * slot, w: 94, h: 20, label }),
-	devices: (label) => ({ x: 8, y: 628, w: 1078, h: 196, label }),
-	/** Live's lower panel, whichever view it shows (the clip, or the device chain). */
-	detail: (label) => ({ x: 8, y: 628, w: 1078, h: 196, label }),
-	key: (label) => ({ x: 402, y: 25, w: 144, h: 25, label })
+	devices: (label) => ({ x: 8, y: 628, w: 1072, h: 194, label }),
+	/** Live's clip view: the clip's properties and its notes. */
+	detail: (label) => ({ x: 8, y: 345, w: 1072, h: 280, label }),
+	key: (label) => ({ x: 392, y: 26, w: 144, h: 24, label })
 };
 
 // ---- conditions on Live ----------------------------------------------------
@@ -364,12 +365,20 @@ export const SCENARIOS = {
 			// kit sits first, as it would have on a set with no tracks.
 			{ at: '16.3', box: null, do: (live) => live.invoke('song', 'delete_track', [0]) },
 			{
-				at: '17.2',
+				at: '17.1',
+				box: T.strip(0, 'device'),
+				boxLabel: 'Drum icon',
+				tap: T.strip(0, 'device'),
+				caption: 'Tap the drum icon on its strip…',
+				note: "The middle band of a strip opens its instrument's controls.",
+				liveView: 'devices',
+				live: LIVE.devices('The Drum Rack in Live')
+			},
+			{
+				at: '18.1',
 				box: T.area('[data-debug="middle-panel"]'),
 				boxLabel: 'Drum Rack view',
-				caption: "The kit's controls open in the central view.",
-				note: 'Sliders and XY pads shape every drum in the kit at once.',
-				live: LIVE.devices('The Drum Rack in Live')
+				caption: "…and the kit's controls open in the central view."
 			},
 
 			{
@@ -410,9 +419,9 @@ export const SCENARIOS = {
 				at: '24.2',
 				chapter: 'Shape the sound',
 				box: T.strip(0, 'device'),
-				boxLabel: 'Instrument band',
+				boxLabel: 'Drum icon',
 				tap: T.strip(0, 'device'),
-				caption: "A strip's middle band opens its instrument's view.",
+				caption: "Tap the drum icon again to get back to the kit's controls.",
 				liveView: 'devices',
 				live: null
 			},

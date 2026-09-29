@@ -212,10 +212,19 @@ async function reset(live, oldCount) {
 	// Live's own window: no browser, the session and the device chain.
 	await live.invoke('app', 'view.hide_view', ['Browser']).catch(() => {});
 	await live.invoke('app', 'view.show_view', ['Session']).catch(() => {});
-	await live.invoke('app', 'view.show_view', ['Detail/DeviceChain']).catch(() => {});
+	await showBothDetailViews(live);
 	const after = await live.read('song', ['tracks.*name', 'count_in_duration']);
 	if (after.count_in_duration) log(`warning: Live's count-in is on (${after.count_in_duration}); takes will start late`);
 	log(`set: ${after['tracks.*name'].join(', ')} at ${scenario.tempo} BPM`);
+}
+
+/**
+ * Live's clip view and device chain at once: show_view never hides the
+ * other, and with both up Live 12 stacks the clip (notes) over the devices.
+ */
+async function showBothDetailViews(live) {
+	await live.invoke('app', 'view.show_view', ['Detail/Clip']).catch(() => {});
+	await live.invoke('app', 'view.show_view', ['Detail/DeviceChain']).catch(() => {});
 }
 
 // ---- the interface window ------------------------------------------------
@@ -504,10 +513,10 @@ async function main() {
 			const touches = step.tap ?? step.taps?.[0] ?? step.drag?.target;
 			if (touches || 'box' in step || step.liveView) {
 				await clock.until(beat - LEAD_MS / clock.msPerBeat);
-				// Live's lower panel: the clip (its notes) or the device chain.
-				if (step.liveView) {
-					await live.invoke('app', 'view.show_view', [step.liveView === 'clip' ? 'Detail/Clip' : 'Detail/DeviceChain']);
-				}
+				// Live's lower panel: asked for both, Live 12 stacks the clip
+				// (its notes) over the device chain. Asked again at these steps
+				// in case something in between showed only one.
+				if (step.liveView) await showBothDetailViews(live);
 				if ('box' in step) await setBox(ui, step.box, step.boxLabel);
 				if (touches) await approach(ui, await pointOf(ui, touches, step.drag ? step.drag.path[0] : touches.at));
 			}
