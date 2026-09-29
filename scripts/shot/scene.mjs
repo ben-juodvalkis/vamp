@@ -1293,10 +1293,20 @@ export function buildDefaultScene({ trackCount = DEFAULT_TRACKS.length } = {}) {
 	// rack's devicePath — what the mock answers `vm.padFx` and a pad's
 	// `vm.padChain.<note>` bundle from, and grows on a pad load.
 	const padRacks = {};
+	// Every track Permute's step position, frozen mid-bar: the telemetry
+	// wire the view's playhead rides, which a shot never showed without it.
+	// Mute on step 7 (an OFF step on Bass), pitch on step 3 (an ON one),
+	// so one shot photographs the marker on both.
+	const permuteSteps = [];
 	roster.forEach((track, index) => {
 		const trackPath = `tracks/${index}`;
 		pushTrack(treeArgs, trackPath, track);
 		pushDevices(treeArgs, trackPath, track.devices ?? [], deviceProperties, padRacks);
+		(track.devices ?? []).forEach((entry, deviceIndex) => {
+			if ((typeof entry === 'string' ? entry : entry.name) === 'Permute') {
+				permuteSteps.push({ devicePath: `${trackPath}/devices/${deviceIndex}`, mute: 6, pitch: 2 });
+			}
+		});
 		pushSlots(treeArgs, trackPath, track.clips);
 		for (const [slotIdx, clip] of Object.entries(track.clips ?? {})) {
 			clipLengths[`${trackPath}/slots/${slotIdx}/clip`] = clip.length ?? 8;
@@ -1401,6 +1411,7 @@ export function buildDefaultScene({ trackCount = DEFAULT_TRACKS.length } = {}) {
 		features: structuredClone(DEFAULT_FEATURES),
 		treeArgs,
 		playing,
+		permuteSteps,
 		clipLengths,
 		audioClips,
 		deviceProperties,

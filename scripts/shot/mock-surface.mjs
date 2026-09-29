@@ -260,6 +260,10 @@ export async function startMockSurface({
 	 * which is exactly the state a session view most needs to show.
 	 */
 	const sendPlayingSlots = (ws) => {
+		for (const { devicePath, mute, pitch } of resolved.permuteSteps ?? []) {
+			send(ws, '/looping/v3/permute/step', [devicePath, 'mute', mute]);
+			send(ws, '/looping/v3/permute/step', [devicePath, 'pitch', pitch]);
+		}
 		for (const { trackPath, slotIdx, isAudio, lengthBeats, status } of resolved.playing ?? []) {
 			send(ws, '/looping/v3/track/playing_slot', [
 				trackPath,

@@ -447,27 +447,24 @@
      used to share these tones; the look is preserved here as the
      authoritative grid. */
 
-  /* Unified current-step playhead (§5.7) — base seq color fill + a brighter
-     inset border, NO glow. Mute rides the track ink, pitch rides --act-pitch;
-     both flow through the single --seq-color set on the container. */
+  /* Current-step playhead (§5.7), built to be read at a glance from a
+     distance: a thick near-white frame on whichever step is playing, and
+     the step itself lit — an ON step brightens toward white, an OFF step
+     turns a neutral lit grey (an ink wash read as a darker ON step). A 1px frame
+     vanished against the orange / blue blocks (2026-09-29). Mute rides the
+     track ink, pitch rides --act-pitch; both flow through --seq-color. */
   :global(.seq-enabled-step) {
     background: var(--seq-color);
   }
-  :global(.current-enabled-stopped) {
-    background: color-mix(in srgb, var(--seq-color), white 30%);
-    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--seq-color), black 20%);
-  }
+  :global(.current-enabled-stopped),
   :global(.current-enabled-playing) {
-    background: color-mix(in srgb, var(--seq-color), white 40%);
-    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--seq-color), black 10%);
+    background: color-mix(in srgb, var(--seq-color), white 45%);
+    box-shadow: inset 0 0 0 4px var(--foreground);
   }
-  :global(.current-disabled-stopped) {
-    background: color-mix(in srgb, var(--muted), transparent 40%);
-    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--seq-color), black 25%);
-  }
+  :global(.current-disabled-stopped),
   :global(.current-disabled-playing) {
-    background: color-mix(in srgb, var(--muted), transparent 30%);
-    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--seq-color), black 15%);
+    background: color-mix(in srgb, var(--foreground) 30%, var(--surface-well));
+    box-shadow: inset 0 0 0 4px var(--foreground);
   }
 
   /* Length / rate boxes and the step row: a recessed well; the box frames
@@ -500,9 +497,9 @@
 
   /* ---- Live skin: the step row is a ControlBackground well in a 1px dark
      frame; an OFF step is the bare well, an ON step a SOLID block of the
-     row ink (track colour / FreezeColor blue), and the current step wears a
-     crisp 1px SelectionBackground frame instead of the whitened fill + dark
-     inset ring. Length / rate boxes are the same field with a solid value
+     row ink (track colour / FreezeColor blue); the current step keeps the
+     same thick bright frame as above (a 1px SelectionBackground frame was
+     too faint to find mid-song). Length / rate boxes are the same field with a solid value
      fill; the inline ink-mix frames give way to the dark control frame. */
   :global([data-grammar="flat"]) .seq-ctrl,
   :global([data-grammar="flat"]) .seq-grid {
@@ -530,12 +527,12 @@
   }
   :global([data-grammar="flat"]) .step-cell.current-enabled-stopped,
   :global([data-grammar="flat"]) .step-cell.current-enabled-playing {
-    background: var(--seq-color);
-    box-shadow: inset 0 0 0 1px var(--flat-selection);
+    background: color-mix(in srgb, var(--seq-color), white 45%);
+    box-shadow: inset 0 0 0 4px var(--foreground);
   }
   :global([data-grammar="flat"]) .step-cell.current-disabled-stopped,
   :global([data-grammar="flat"]) .step-cell.current-disabled-playing {
-    background: var(--surface-well);
-    box-shadow: inset 0 0 0 1px var(--flat-selection);
+    background: color-mix(in srgb, var(--foreground) 30%, var(--surface-well));
+    box-shadow: inset 0 0 0 4px var(--foreground);
   }
 </style>
