@@ -468,10 +468,11 @@ const INBOUND_MIDDLEWARE = {
     pythonSurface: (msg) => {
         if (handleSaveAsRequestIfNeeded(msg)) return true;
         // show_for_swap/ack and pad_names/reply answer the swap orchestrator.
-        if (drumSwap.onSurfaceMessage(msg)) return true;
+        // Both handlers are null while features.axHelper is off.
+        if (drumSwap?.onSurfaceMessage(msg)) return true;
         // record_suspend/ack and record_resume/ack answer the Group gesture's
         // record-mode bracket.
-        if (groupTracks.onSurfaceMessage(msg)) return true;
+        if (groupTracks?.onSurfaceMessage(msg)) return true;
         announcePythonSurfaceIfNeeded(msg);
         // auto_capture emits: replay a remembered user override over a
         // fresh surface's mode re-seed (ADR-405). The emit itself still
