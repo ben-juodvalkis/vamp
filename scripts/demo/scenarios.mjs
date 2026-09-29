@@ -126,8 +126,8 @@ export const stopped = (t, s) => ({
  */
 export const grooveIs = (t, s, pattern) => ({
 	what: `track ${t} slot ${s} on groove ${pattern}`,
-	read: (live) => slotRead(live, t, s, ['groove.name']),
-	test: (r) => typeof r['groove.name'] === 'string' && r['groove.name'].includes(pattern)
+	read: (live) => slotRead(live, t, s, ['clip.groove.name']),
+	test: (r) => typeof r['clip.groove.name'] === 'string' && r['clip.groove.name'].includes(pattern)
 });
 
 export const hasDevice = (t, className) => ({
