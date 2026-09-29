@@ -6,7 +6,8 @@ with captions, visible touches and Live's audio. Clips are recorded by a script 
 scenario definitions, and a docs page per feature is generated from the same definitions.
 Re-running it after a change refreshes the gallery.
 
-**Status:** proposed 2026-09-23. Nothing built yet.
+**Status:** proposed 2026-09-23. Revised 2026-09-28 (below); Phase 0 under way in
+`scripts/demo/`.
 **Owner:** Ben.
 
 **Related:**
@@ -18,11 +19,28 @@ Re-running it after a change refreshes the gallery.
 **Decided (2026-09-23 discussion):**
 1. **Side by side with Live.** The gallery shows the gesture and its result in Live, so
    gallery clips are recorded on the real rig, not the mock.
-2. **OBS is the recorder**, driven by the scenario runner over its WebSocket API (built into
-   OBS since v28).
+2. ~~**OBS is the recorder**~~, replaced 2026-09-28 by decision 5.
 3. **An interface-only variant stays automatic.** The same scenarios run silently against the
    mock on GitHub, as a regression check and a fallback reference.
 4. **The hero video (hands on the iPad) is filmed by hand.** No automation for that one.
+
+**Decided (2026-09-28 discussion):**
+5. **The recorder is a small Swift tool in the repo** (`scripts/demo/recorder/`), not OBS.
+   It records Live's window and the interface's window through ScreenCaptureKit, picked by
+   window, not by screen position, plus Live's own audio, into one file on one clock. ffmpeg
+   lays out the side-by-side clip from settings in the repo. So a take is rebuilt from git
+   alone: no OBS install, no scenes, crops or password living in OBS's settings, and no
+   window that must sit at a fixed spot. The cost is a few hundred lines of Swift and no
+   live preview.
+6. **MIDI tracks first.** A looper records whatever comes in, and on the rig that is the
+   guitar mic, so an unattended take would record the room. The first scenarios loop MIDI
+   instead: the recorder also opens a virtual MIDI port, **Vamp Demo**, and the scenario
+   plays its phrase into it, as a performer's keyboard would. The same notes every run, and
+   no extra track on screen. Audio looping waits for a fixed audio source (open question 7).
+7. **Steps name a beat as well as a wait.** A wait on Live's state proves a step worked; a
+   beat makes every run sound the same. A step can say "at bar 3" and the runner holds it
+   until then, reading the song position off the page's own socket. Live's launch and record
+   quantization absorb what jitter is left.
 
 ---
 
@@ -89,14 +107,18 @@ published lie.
    - The display is **awake and unlocked**. Screen capture needs it, and a locked screen
      blocks window-level Accessibility and an Apple-event quit of Live.
    - Exactly **one bridge** is running (two fight over the surface's TCP slot).
-   - OBS is up with its WebSocket enabled.
+   - The recorder is built and has Screen Recording permission.
    - The demo set is loaded.
    - The runner keeps the display awake for the run (`caffeinate`).
 2. **Reset:**
    - Reload the scenario's set, answering Live's save sheet with Don't Save through the AX
      helper.
+   - Or, tried first in Phase 0, **build the set through the LOM**: create the scenario's MIDI
+     tracks, insert stock devices by name (`track.insert_device`), set tempo and quantization,
+     delete everything else. No `.als` in the repo, no save sheet, and only stock devices by
+     construction (§4).
    - Wait for the surface handshake and the first full state.
-   - Measure the reload time in Phase 0. If it's slow, group scenarios that share a set.
+   - Measure the reset time in Phase 0. If it's slow, group scenarios that share a set.
 3. **Camera:** point Live at the result, using wires that exist today:
    - `/looping/v3/view/focus [viewName]` (`ViewComponent`: Session, Arranger, Detail,
      Detail/Clip, Detail/DeviceChain, Browser)
@@ -104,16 +126,18 @@ published lie.
    - `/looping/v3/device/select`
    - or the probe driver's `set song view.selected_track ← {"$ref": "tracks[N]"}`
 
-   Then set the crop on Live's pane in OBS.
+   The crop on Live's pane is the compositor's, set per scenario.
 4. **Record:**
-   - Start recording in OBS.
-   - Play the steps into the interface. Two-finger gestures go through CDP
-     `Input.dispatchTouchEvent`, reusing the `Fingers` class from `scripts/shot/multitouch.mjs`
-     with a `hasTouch` context. Drags go through `page.mouse`.
+   - Start the recorder on Live's window, the interface's window and Live's audio.
+   - Play the steps into the interface, each at its beat (decision 7). Taps and two-finger
+     gestures go through CDP `Input.dispatchTouchEvent` (the `Fingers` class from
+     `scripts/shot/multitouch.mjs`), so the finger overlay sees real touches.
+   - Play the scenario's MIDI phrase into the recorder's **Vamp Demo** port.
    - Set each step's caption as it plays.
    - Wait on each step's condition.
    - After the result check passes and the dwell elapses, stop recording.
 5. **Post:**
+   - ffmpeg lays out the side-by-side clip from the recorder's one file.
    - Trim to the first gesture minus a beat.
    - Two-pass `loudnorm` on the audio, encoded with `aac_at`.
    - Write the VTT from the step timestamps, the poster frame and the metadata.
@@ -126,9 +150,11 @@ published lie.
 
 **The interface pane:**
 - The runner launches its own **headed** Chromium through the repo's `playwright`, as an `--app`
-  window (no browser chrome) sized to 1366×1024 CSS pixels, at a fixed screen position that
-  OBS captures.
-- It points at the real interface **by IP**, `http://127.0.0.1:8889`. A `localhost` origin
+  window (no browser chrome) sized to 1366×1024 CSS pixels. The recorder finds it by its
+  process, wherever it sits. `--force-device-scale-factor` sets how many screen pixels that
+  takes, so it fits beside Live on a small display.
+- It points at the real interface **by IP**, `http://127.0.0.1:8889` (or `:3000` under
+  `npm run dev`). A `localhost` origin
   tries `looping-studio.local` first and stalls about 20 s (see `scripts/shot/README.md`,
   `--no-mock`).
 - **Finger circles** are drawn by an overlay the runner injects with `addInitScript`, fed from
@@ -191,15 +217,17 @@ The Live-side waits are skipped there; the mock's inbound recorder (`startMockSu
 ## 7. Phases
 
 **Phase 0: measure on the rig before building anything.**
-- OBS captures Live's window and the Chromium `--app` window side by side, at stable positions.
-- **Audio:** does OBS's application audio capture take Live's output directly, or does it need
-  the RME loopback as an input device? Pick whichever is clean. Application capture is
+- The recorder captures Live's window and the Chromium `--app` window by window, with
+  neither needing a fixed position. Does it still capture a window that is partly covered?
+- **Audio:** does ScreenCaptureKit's per-app capture take Live's output directly, including
+  when Live plays through the RME rather than the Mac's default output? If not, fall back to
+  a Core Audio process tap, then to the RME loopback as an input device. Per-app capture is
   preferred, because it would also work on a stranger's Mac.
-- **OBS from Node:** connect with a password, start and stop recording, set a scene item's
-  crop, update a text source.
-- **Timings:** how long a set reload takes; the latency from gesture to visible result in
-  Live.
-- **One hand-written scenario end to end** ("launch a clip"), producing the side-by-side MP4
+- **MIDI:** does Live see the recorder's **Vamp Demo** port with Track input on, or must it be
+  ticked once in Live's MIDI settings?
+- **Timings:** how long a reset takes; the latency from gesture to visible result in Live.
+- **One hand-written scenario end to end** (`record-and-layer`: record a MIDI loop on one
+  track, close it, record a second on another track over it), producing the side-by-side MP4
   with sound and finger circles. That's the go/no-go for the design.
 
 **Phase 1: scenario format and runner.** Preflight, reset, camera, steps, waits, record, post.
@@ -239,6 +267,10 @@ Three scenarios.
 4. **Recording location:** a dedicated Space or display on your Mac, or a spare Mac?
 5. **Captions:** a sidecar file only, or also burned in?
 6. **Interface-only clips:** publish them, or keep them as test artifacts only?
+7. **Audio looping:** where a fixed audio source comes from (decision 6). Likely a source
+   track playing a fixed phrase, fed inside Live into the looping track, with its own output
+   silenced. It has to fit how Auto-Arm and the pedal's hold set a track's input, and it puts
+   an extra strip on screen.
 
 ---
 
@@ -251,7 +283,7 @@ Three scenarios.
   check fails the take.
 - **A modal dialog mid-run** stops Live's control thread. Mitigation: check it at preflight
   and between scenarios.
-- **Permissions:** OBS needs Screen Recording, and application audio capture may need more. The
-  OBS WebSocket password is kept gitignored, the way `config/.ws-secret` is.
+- **Permissions:** the recorder needs Screen Recording, granted to the app that launches it
+  (Terminal, or Claude). Per-app audio capture may need more.
 - **What's on screen is published.** Mitigation: a dedicated Space or display, Do Not Disturb,
   and a review step before anything goes public.

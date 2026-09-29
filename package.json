@@ -20,6 +20,7 @@
       "shot:tour": "Capture every state of a named tour (views.mjs TOURS) in ONE boot, plus a labeled contact sheet. `npm run shot:tour -- central` shoots every central view; `-- --list`, `--only <text>`, `--full`. Drives a warm `vite dev` (left running; `npm run shot:stop`), or the last production build with `--prod`.",
       "multitouch": "Synthetic multitouch harness \u2014 replays N concurrent CDP touch streams against the real UI on the mock stack and asserts on what reached the surface. `npm run multitouch -- --list`; see scripts/shot/README.md.",
       "multitouch:webkit": "The same harness on Playwright's WebKit \u2014 a second engine, closer to the iPad. Runs the tap-only scenarios (WebKit has no multi-finger input: CDP is Chromium-only and page.touchscreen is tap and nothing else) and SKIPS the rest rather than reporting them green.",
+      "demo:record": "Record a demo scenario against the real Live: the interface at iPad size with finger circles beside Live's window, with Live's audio, into screenshots/demos/<id>/. `-- --list`; `--no-record` rehearses without capture. Needs Live, the bridge and the interface running. docs/plans/general-release/demo-recording.plan.md.",
       "validate": "The setup check, which dev and ipad run first: Node, dependencies, the config, which Live opens, and whether Live has this checkout as Vamp. Fails only on what stops the app starting."
     },
     "recovery": {
@@ -80,6 +81,7 @@
     "shot:serve": "node scripts/shot/shot.mjs --interactive",
     "shot:tour": "node scripts/shot/tour.mjs",
     "shot:stop": "node scripts/shot/stack.mjs stop-dev",
+    "demo:record": "node scripts/demo/run.mjs",
     "build": "cd interface && npm run build",
     "lint": "eslint 'interface/bridge/**/*.js'",
     "gate": "sh scripts/gate.sh",
