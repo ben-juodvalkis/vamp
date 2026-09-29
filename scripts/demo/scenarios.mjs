@@ -146,6 +146,12 @@ export const hasDevice = (t, className) => ({
 	test: (r) => r['devices.*class_name'].includes(className)
 });
 
+export const keyIs = (root, scale) => ({
+	what: `Live's key is ${root}/${scale}`,
+	read: (live) => live.read('song', ['root_note', 'scale_name']),
+	test: (r) => r.root_note === root && r.scale_name === scale
+});
+
 export const muted = (t, on) => ({
 	what: `track ${t} ${on ? 'muted' : 'unmuted'}`,
 	read: (live) => live.read(`tracks/${t}`, ['mute']),
@@ -756,26 +762,26 @@ export const SCENARIOS = {
 				drag: { target: T.area('[title^="Mute rate"]'), path: [[0.5, 0.65], [0.5, 0.45]], beats: 2 }
 			},
 
-			// The bass, not the drums: selecting a clip gives Live the clip's
-			// own scale, and the drums were recorded while the set was still
-			// C major, so selecting them would undo Key Follow (and switch it
-			// off, as a key set by hand).
+			// The drums were recorded while the set was still C major, and
+			// selecting a clip gives Live that clip's scale; since 077b86f Key
+			// Follow keeps its key (and stays on) through that, which this
+			// chapter exercises.
 			{
 				at: '101.1',
 				chapter: 'Launch and stop',
-				box: T.gridSlot(1, 0, 'action'),
+				box: T.gridSlot(0, 0, 'action'),
 				boxLabel: 'Stop',
-				tap: T.gridSlot(1, 0, 'action'),
+				tap: T.gridSlot(0, 0, 'action'),
 				caption: 'Tap a playing clip to stop it at the next bar.',
-				until: stopped(1, 0)
+				until: stopped(0, 0)
 			},
 			{
 				at: '103.1',
-				box: T.gridSlot(1, 0, 'action'),
+				box: T.gridSlot(0, 0, 'action'),
 				boxLabel: 'Launch',
-				tap: T.gridSlot(1, 0, 'action'),
+				tap: T.gridSlot(0, 0, 'action'),
 				caption: 'Tap again to bring it back in.',
-				until: looping(1, 0)
+				until: looping(0, 0)
 			},
 
 			{
@@ -792,7 +798,8 @@ export const SCENARIOS = {
 			{ at: '111.3', box: null, caption: 'Everything you saw was played on the iPad.' }
 		],
 		end: '114.1',
-		result: [looping(0, 0), looping(1, 0), looping(2, 0)]
+		// D minor still: selecting the drum clip (recorded in C major) did not undo Key Follow.
+		result: [looping(0, 0), looping(1, 0), looping(2, 0), keyIs(2, 'Minor')]
 	},
 
 	'record-and-layer': {
