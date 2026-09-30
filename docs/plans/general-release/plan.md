@@ -172,10 +172,13 @@ fail with nothing on screen:
 
 ## 7. Security
 
-- **The trust model (Ben).** Anyone on the same network who can open the page can drive Live:
-  `/api/ws-auth` answers any caller, and the WebSocket checks no origin. Through the AX helper
-  that includes real clicks and a ⌘G on the Mac. For v1: document it, ship the AX helper off,
-  and add pairing later. (The AX helper ships off since 2026-09-27, §4.) The README says nothing about it today.
+- **The trust model: device pairing** (Ben, 2026-09-30; **M**). Anyone on the same network who
+  can open the page can drive Live: `/api/ws-auth` answers any caller, and the WebSocket checks
+  no origin. Through the AX helper that includes real clicks and a ⌘G on the Mac (it ships off
+  since 2026-09-27, §4). Decided: the cable and the Mac are trusted, a device on Wi-Fi pairs once
+  with a code or an Allow, on by default. The design is
+  [security.plan.md](security.plan.md). The README and [SECURITY.md](../../../SECURITY.md) state
+  today's model (2026-09-30).
 - **Delete `/api/ws-auth`'s salt-less branch** (**S**). It returns the raw secret to anyone who
   asks, and its own comment says nothing in the tree uses it.
 - **Auth on unless explicitly off** (**S**). A config with a WebSocket block but no `auth` block

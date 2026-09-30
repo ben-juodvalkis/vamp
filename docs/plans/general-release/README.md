@@ -106,9 +106,12 @@ Four follow-up tests need Ben at the Mac, because they change the library
   the rig moved onto it on 2026-09-28 (plan.md §8).
 - **2026-09-28:** the recorder's Max files and the Skaka picker and rack are fine to publish; the
   Cycling '74 LOM scrape goes, keeping the rig's own measurements (plan.md §8).
+- **2026-09-30:** devices on Wi-Fi pair once, with a code shown on the Mac or an Allow on a
+  trusted screen; the USB-C link and the Mac itself are trusted. On by default
+  ([security.plan.md](security.plan.md)).
 
 **Open, for Ben:**
-- The trust model on shared Wi-Fi (plan.md §7).
+- Where Allow appears when a device pairs ([security.plan.md](security.plan.md)).
 - Which plug-in tiles a stranger sees, and whether stock tiles insert Live's device when no
   preset exists (plan.md §4, §6).
 - Whether the `@claude` workflows go to the public repo (plan.md §7).
@@ -123,6 +126,7 @@ Four follow-up tests need Ben at the Mac, because they change the library
 | [live-index-measurements.md](live-index-measurements.md) | What Live's index holds and how fast it reads, measured on the Mac on 2026-09-26 |
 | [audit.md](audit.md) | The 2026-09-23 audit: the inventory and analysis behind the plan. Code and config cite its sections ("general-release audit §7b"), so its numbering stays |
 | [naming.md](naming.md) | The public name, domains, and what to rename when |
+| [security.plan.md](security.plan.md) | Device pairing: who is trusted, the code and Allow, not getting locked out |
 | [demo-recording.plan.md](demo-recording.plan.md) | The demo gallery (not started) |
 | [../browser-places.plan.md](https://github.com/ben-juodvalkis/Looping/blob/dbae35ae/documentation/browser-places.plan.md) | The Places browser (done 2026-09-24). Its Phase 0 measured what Live reports about Places |
 | [../toggles.md](../../reference/toggles.md) | What each feature switch does today |
