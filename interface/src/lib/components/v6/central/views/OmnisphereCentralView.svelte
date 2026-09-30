@@ -140,18 +140,10 @@
          columns before the seam: the ORB column takes one, the envelopes two,
          each XY pad one; then the seam and the MIDI wheels. -->
     <div class="h-full w-full grid grid-rows-2 gap-(--central-gap) p-(--central-inset)" style="grid-template-columns: repeat(5, 1fr) auto 1fr;">
-      <!-- Col 1, both rows: the swap pill, the FX toggle under it, then the
-           ORB taking the rest of the column. -->
+      <!-- Col 1, both rows: the swap pill (a long name wraps), then the ORB
+           taking the rest of the column. -->
       <div class="flex flex-col gap-(--central-gap) min-h-0 row-span-2">
-        <HostedSwapPill />
-        <button
-          class="physical-button omni-fx w-full h-12 shrink-0 text-xl font-bold"
-          class:active={fxIsOn}
-          style="--btn-tint: {omniInk.primary};"
-          onclick={handleFxToggle}
-        >
-          FX
-        </button>
+        <HostedSwapPill wrap />
         <div class="flex-1 min-h-0">
           <OrbControl
             angle={orbAngleValue}
@@ -165,7 +157,8 @@
 
       <!-- Col 2, both rows: the envelopes. Amp over filter, on one ruler, so
            each amp stage stands over the same filter stage; the filter's
-           Amount takes the fifth column, which the amp row leaves empty. -->
+           Amount takes the fifth column, and FX stands over it in the amp
+           row's (user's layout, 2026-09-29). -->
       <div class="omni-envelopes min-w-0 min-h-0 col-span-2 row-span-2">
         <span class="omni-env-title" style="color: {omniInk.primary}; grid-column: 1 / 5;">Amp Env</span>
         {#each AMP_ENV as stage (stage.index)}
@@ -179,6 +172,14 @@
             />
           </div>
         {/each}
+        <button
+          class="physical-button omni-fx w-full h-full min-h-0 text-xl font-bold"
+          class:active={fxIsOn}
+          style="--btn-tint: {omniInk.primary}; grid-column: 5; grid-row: 2;"
+          onclick={handleFxToggle}
+        >
+          FX
+        </button>
         <span class="omni-env-title" style="color: {omniInk.primary}; grid-column: 1 / 6; grid-row: 3; margin-top: var(--central-gap);">Filter Env</span>
         {#each FILTER_ENV as stage (stage.index)}
           <div class="min-w-0 min-h-0" style="grid-row: 4;">
