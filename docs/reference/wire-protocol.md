@@ -525,6 +525,9 @@ Groove (focus-scoped, mirrors ClipPropertiesComponent):
 | `/looping/v3/clip/groove/set/quantization_amount`  | UI→Surf | `clipPath:string, value:float, generation:int?`   | `clip.groove.quantization_amount`. |
 | `/looping/v3/clip/groove/set/random_amount`        | UI→Surf | `clipPath:string, value:float, generation:int?`   | `clip.groove.random_amount`. |
 | `/looping/v3/clip/groove/set/velocity_amount`      | UI→Surf | `clipPath:string, value:float, generation:int?`   | `clip.groove.velocity_amount`. |
+| `/looping/v3/groove/added`                         | Surf→Bridge | —                                             | The surface loaded a groove into the pool (a mint). Live ticks the Groove Pool's "Auto Load Groove" box on a groove loaded into an empty pool, and every clip recorded after takes that groove; the LOM cannot reach the box, so the bridge presses every ticked one off through the AX helper (`handlers/grooveAutoLoadOff.js`, only while `features.axHelper` is on). Consumed by the bridge, never relayed. Since 2026-09-29. |
+| `/looping/v3/groove/browser`                       | Bridge→Surf | `id:string, visible:int`                      | Show (1) or hide (0) Live's Browser: the Auto Load box is in Live's window only while it shows. |
+| `/looping/v3/groove/browser/ack`                   | Surf→Bridge | `id:string, wasVisible:int`                   | Whether the Browser was showing before (`-1`: the LOM call raised). Consumed by the bridge. |
 
 **Assign-on-first-write.** An amount write on a clip with no groove
 claims one: an `unassigned-<idx>` entry, else an orphaned claim with no

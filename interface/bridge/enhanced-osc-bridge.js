@@ -314,6 +314,27 @@ const groupTracks = !features.isEnabled('axHelper') ? null : createLiveGroupTrac
     }
 });
 
+// Live ticks the Groove Pool's Auto Load Groove box on the first groove in a
+// pool, and every clip recorded after takes that groove; Ben never wants it.
+// The surface announces each groove it adds and this presses the box off
+// through the AX helper. Null while `features.axHelper` is off.
+const { createGrooveAutoLoadOff, GROOVE_ADDED_ADDRESS } = require('./handlers/grooveAutoLoadOff');
+const grooveAutoLoadOff = !features.isEnabled('axHelper') ? null : createGrooveAutoLoadOff({
+    axHelper,
+    logger,
+    // Same tagging discipline as the swap orchestrator's sendToSurface.
+    sendToSurface: (address, args) => {
+        const port = udpPorts.pythonSurface;
+        if (!port) throw new Error('python surface port is not open');
+        port.send({
+            address,
+            args: args.map((value) => (typeof value === 'number'
+                ? { type: Number.isInteger(value) ? 'i' : 'f', value }
+                : { type: 's', value: String(value) }))
+        });
+    }
+});
+
 const { httpServer, wss } = createWebSocketServer(
     // Thread the launch mode through so the WS server can announce it to
     // each client on connect (see /bridge/server_mode). Merged, not mutated,
@@ -473,6 +494,9 @@ const INBOUND_MIDDLEWARE = {
         // record_suspend/ack and record_resume/ack answer the Group gesture's
         // record-mode bracket.
         if (groupTracks?.onSurfaceMessage(msg)) return true;
+        // groove/added and groove/browser/ack: Auto Load Groove kept off.
+        if (grooveAutoLoadOff?.onSurfaceMessage(msg)) return true;
+        if (msg.address === GROOVE_ADDED_ADDRESS) return true;   // the bridge's alone, switch off or on
         announcePythonSurfaceIfNeeded(msg);
         // auto_capture emits: replay a remembered user override over a
         // fresh surface's mode re-seed (ADR-405). The emit itself still

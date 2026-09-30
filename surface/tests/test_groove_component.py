@@ -36,7 +36,12 @@ from typing import Dict, List, Optional
 
 import pytest
 
-from components.GroovePoolComponent import GroovePoolComponent, path_hash
+from components.GroovePoolComponent import (
+    V3_GROOVE_ADDED_ADDRESS,
+    V3_GROOVE_BROWSER_ACK_ADDRESS,
+    GroovePoolComponent,
+    path_hash,
+)
 from components.GrooveComponent import (
     GrooveComponent,
     V3_CLIP_GROOVE_HAS_GROOVE_ADDRESS,
@@ -1088,3 +1093,57 @@ def test_set_file_takes_a_user_groove_by_its_prefixed_name(captured_emits):
     assert g.name == "Bass 2 · User: Swing 16 #" + path_hash(CLIP)
     assert core_free.name == "unassigned-0 · Swing 16"
     assert _file_emits(captured_emits)[-1] == (CLIP, "User: Swing 16")
+
+
+# --- Live's Auto Load Groove box (2026-09-29) --------------------------------
+
+
+def test_a_minted_groove_is_announced_for_the_bridge(captured_emits):
+    """Live ticks Auto Load Groove on a groove loaded into an empty pool;
+    the bridge unticks it on this announcement."""
+    song, _clip, pool = _chooser_song()
+    _pc, gc = _make_minting(song, pool, captured_emits, [])
+
+    gc.handle_set_file(args=(CLIP, "Swing 16ths 57"), source_addr=None)
+
+    assert (V3_GROOVE_ADDED_ADDRESS, ()) in captured_emits
+
+
+def test_a_groove_reused_from_the_pool_is_not_announced(captured_emits):
+    same = GrooveWithListeners(name="unassigned-0 · Swing 16ths 57")
+    song, _clip, pool = _chooser_song(same)
+    _pc, gc = _make_minting(song, pool, captured_emits, [])
+
+    gc.handle_set_file(args=(CLIP, "Swing 16ths 57"), source_addr=None)
+
+    assert all(addr != V3_GROOVE_ADDED_ADDRESS for addr, _ in captured_emits)
+
+
+class _StubAppView:
+    def __init__(self, visible):
+        self.visible = visible
+
+    def is_view_visible(self, name):
+        assert name == "Browser"
+        return self.visible
+
+    def show_view(self, name):
+        self.visible = True
+
+    def hide_view(self, name):
+        self.visible = False
+
+
+def test_browser_verb_shows_and_hides_and_acks_what_it_found(captured_emits):
+    view = _StubAppView(visible=False)
+    emit = lambda addr, args: captured_emits.append((addr, args))
+    pc = GroovePoolComponent(song=GrooveStubSong(tracks=[], groove_pool=StubGroovePool(grooves=[])),
+                             emit=emit, app_view=lambda: view)
+
+    pc.handle_browser(("r1", 1))
+    assert view.visible is True
+    pc.handle_browser(("r2", 0))
+    assert view.visible is False
+
+    acks = [a for addr, a in captured_emits if addr == V3_GROOVE_BROWSER_ACK_ADDRESS]
+    assert acks == [("r1", 0), ("r2", 1)]

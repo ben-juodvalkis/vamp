@@ -223,7 +223,10 @@ from .components.GrooveComponent import (
     V3_CLIP_GROOVE_SET_TIMING_AMOUNT_ADDRESS,
     V3_CLIP_GROOVE_SET_VELOCITY_AMOUNT_ADDRESS,
 )
-from .components.GroovePoolComponent import GroovePoolComponent
+from .components.GroovePoolComponent import (
+    GroovePoolComponent,
+    V3_GROOVE_BROWSER_ADDRESS,
+)
 from .components.HandshakeComponent import (
     HandshakeComponent,
     V3_HANDSHAKE_HELLO_ADDRESS,
@@ -1729,6 +1732,10 @@ class LoopingSurface(ControlSurface):
 
         self._groove_pool_component = GroovePoolComponent(
             song=self.song, emit=self._transport.send, mint=mint_groove,
+            app_view=lambda: Live.Application.get_application().view,
+        )
+        self._transport.add_handler(
+            V3_GROOVE_BROWSER_ADDRESS, self._groove_pool_component.handle_browser,
         )
         self._groove_component = GrooveComponent(
             song=self.song,

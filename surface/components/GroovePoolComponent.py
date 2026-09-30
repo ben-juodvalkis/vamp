@@ -115,6 +115,16 @@ logger = logging.getLogger("looping")
 _LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
 
 
+# Live ticks the Groove Pool's "Auto Load Groove" box on a groove loaded
+# into an empty pool (measured 2026-09-29), and every clip recorded after
+# that takes the groove. The LOM cannot reach the box, so the bridge
+# unticks it through the AX helper on this announcement; the box is only
+# in Live's window while the Browser shows, hence the browser verb.
+V3_GROOVE_ADDED_ADDRESS = "/looping/v3/groove/added"
+V3_GROOVE_BROWSER_ADDRESS = "/looping/v3/groove/browser"
+V3_GROOVE_BROWSER_ACK_ADDRESS = "/looping/v3/groove/browser/ack"
+
+
 _UNASSIGNED_PREFIX = "unassigned-"
 
 # Between a claim's label and its pattern, and before a free groove's pattern.
@@ -313,10 +323,12 @@ class GroovePoolComponent:
         song,
         emit: Callable[[str, tuple], None],
         mint: Optional[Callable[..., Optional[str]]] = None,
+        app_view: Optional[Callable[[], object]] = None,
     ):
         self._song = song
         self._emit = emit
         self._mint = mint
+        self._app_view = app_view
         self._disconnected = False
 
         # ``(key, context) -> True`` once warned, for de-dupe.
@@ -440,12 +452,33 @@ class GroovePoolComponent:
                     "GroovePoolComponent: minted a groove (pool %d -> %d)",
                     len(before), len(after),
                 )
+                self._emit(V3_GROOVE_ADDED_ADDRESS, ())
                 return groove
         logger.warning(
             "GroovePoolComponent: mint ran but the pool did not grow (%d)",
             len(after),
         )
         return None
+
+    def handle_browser(self, args, source_addr=None) -> None:
+        """``/looping/v3/groove/browser [id, visible]``: show (1) or hide (0)
+        Live's Browser, acked ``[id, was_visible]`` so the bridge can put
+        back what it found."""
+        if len(args) < 2 or self._app_view is None:
+            return
+        request_id, visible = str(args[0]), bool(args[1])
+        was = -1
+        try:
+            view = self._app_view()
+            was = 1 if view.is_view_visible("Browser") else 0
+            if visible and not was:
+                view.show_view("Browser")
+            elif not visible and was:
+                view.hide_view("Browser")
+        except _LOM_ERRORS as e:
+            logger.warning("GroovePoolComponent: browser %s failed: %s",
+                           "show" if visible else "hide", e)
+        self._emit(V3_GROOVE_BROWSER_ACK_ADDRESS, (request_id, was))
 
     def assign_groove_to_clip(
         self, clip, clip_path: str, inherit=None,
