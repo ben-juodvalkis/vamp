@@ -1245,6 +1245,11 @@ export const PROPERTY_DEFAULTS = Object.freeze({
 	'vm.pad.38.start': 0.6,
 	'vm.pad.38.pitch': 12,
 	'vm.pad.38.gain': 0.72,
+	// The pad mixer column beside the held pads: 36 at 0 dB, 38 muted and down.
+	'vm.pad.36.chainVolume': 0.85,
+	'vm.pad.36.chainMute': 0,
+	'vm.pad.38.chainVolume': 0.55,
+	'vm.pad.38.chainMute': 1,
 	'vm.fx1': 0.62,
 	'vm.fx2': 0.3,
 	'vm.fxType': 3,

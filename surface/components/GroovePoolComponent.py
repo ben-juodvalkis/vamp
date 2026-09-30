@@ -115,6 +115,16 @@ logger = logging.getLogger("looping")
 _LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
 
 
+# Live ticks the Groove Pool's "Auto Load Groove" box on the groove loaded
+# into an empty pool, and every clip recorded after takes it; a later load
+# leaves the tick where it is (rig, 2026-09-29). The LOM cannot reach the
+# box, so the first groove Vamp loads into an empty pool is this one, every
+# amount 0: the clips Live puts on it sound as they were played, and Vamp
+# reads a clip on it as having no groove.
+BLANK_NAME = "Vamp Groove"
+_AMOUNTS = ("quantization_amount", "timing_amount", "random_amount", "velocity_amount")
+
+
 _UNASSIGNED_PREFIX = "unassigned-"
 
 # Between a claim's label and its pattern, and before a free groove's pattern.
@@ -128,7 +138,7 @@ _LABEL_MAX = 32
 class GrooveName(NamedTuple):
     """What a pool entry's name says (see "Names" above)."""
 
-    #: ``claim``, ``free`` or ``other``.
+    #: ``claim``, ``free``, ``blank`` (Live's auto-load target) or ``other``.
     kind: str
     #: The groove file it holds, or None when the name does not say.
     pattern: Optional[str]
@@ -139,6 +149,8 @@ class GrooveName(NamedTuple):
 def parse_groove_name(name: Optional[str]) -> GrooveName:
     if not name:
         return GrooveName("other", None)
+    if name == BLANK_NAME:
+        return GrooveName("blank", None)
     m = _CLAIM_RE.match(name)
     if m:
         return GrooveName("claim", m.group("pattern"), m.group("hash"))
@@ -425,6 +437,9 @@ class GroovePoolComponent:
         before = self._safe_grooves_list()
         if before is None:
             return None
+        if not before:
+            self._mint_blank()
+            before = self._safe_grooves_list() or []
         known = {live_id(g) for g in before}
         try:
             err = self._mint(pattern) if pattern else self._mint()
@@ -446,6 +461,28 @@ class GroovePoolComponent:
             len(after),
         )
         return None
+
+    def _mint_blank(self) -> None:
+        """Load the default file into the empty pool as ``BLANK_NAME``, every
+        amount 0, so Live's auto-load tick lands on a groove that does
+        nothing (``BLANK_NAME`` above)."""
+        try:
+            err = self._mint()
+        except Exception as e:  # a failed load must not take the write down
+            err = "%s: %s" % (type(e).__name__, e)
+        grooves = self._safe_grooves_list() or []
+        if err or not grooves:
+            logger.warning("GroovePoolComponent: blank groove not loaded: %s", err or "pool did not grow")
+            return
+        blank = grooves[0]
+        try:
+            blank.name = BLANK_NAME
+            for attr in _AMOUNTS:
+                setattr(blank, attr, 0.0)
+        except _LOM_ERRORS as e:
+            logger.warning("GroovePoolComponent: blank groove not set: %s", e)
+            return
+        logger.info("GroovePoolComponent: loaded %r for Live's auto-load", BLANK_NAME)
 
     def assign_groove_to_clip(
         self, clip, clip_path: str, inherit=None,

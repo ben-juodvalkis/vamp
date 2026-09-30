@@ -257,7 +257,10 @@ from .drum_vm_functions import (
     _LOM_ERRORS,
     BOUND_CLASSES,
     CENSUS_BYTES_SOFT_CAP,
+    CENSUS_SILENT_FUNCTIONS,
     CHAIN_VOLUME_NAME,
+    PAD_CHAIN_CLASS_NAME,
+    PAD_MUTE_NAME,
     DEV_EPSILON,
     DEV_VOTE_DP,
     EDIT_ABSORB_DELAY_MS,
@@ -307,6 +310,7 @@ from .drum_vm_resolve import (
     is_pipeline_family,
     make_member,
     pad_chain_volume,
+    PadMuteParam,
     pad_color,
     pad_devices,
     pad_label,
@@ -940,6 +944,8 @@ class DrumVirtualMacroComponent:
         """
         functions: Dict[str, Dict[str, int]] = {}
         for fn in FUNCTIONS.values():
+            if fn.name in CENSUS_SILENT_FUNCTIONS:
+                continue
             ms = st.members.get(fn.name) or []
             functions[fn.name] = {
                 "members": len(ms),
@@ -1184,6 +1190,15 @@ class DrumVirtualMacroComponent:
                     # ``chains[0].color`` 8754719 = #85961f on the Croydon kit.
                     "color": pad_color(pad),
                 })
+                # The pad's own mixer strip, whatever its instrument.
+                chain_volume = pad_chain_volume(pad)
+                if chain_volume is not None:
+                    members["chainVolume"].append(make_member(
+                        chain_volume, note, PAD_CHAIN_CLASS_NAME, CHAIN_VOLUME_NAME,
+                    ))
+                members["chainMute"].append(make_member(
+                    PadMuteParam(pad), note, PAD_CHAIN_CLASS_NAME, PAD_MUTE_NAME,
+                ))
             if found is None:
                 continue
             inst, cls = found
@@ -2292,6 +2307,24 @@ class DrumVirtualMacroComponent:
                     continue
                 st.member_listeners.append((m.param, cb))
                 budget -= 1
+        # A pad's mute made in Live (its M button, the chain list's
+        # activator) re-emits that pad's ``chainMute`` row, so the column
+        # beside the held pads follows. Absolute, no deviation to absorb:
+        # the listener only schedules the emit (2026-09-29).
+        for m in st.members.get("chainMute") or ():
+            if m.note < 0 or budget <= 0:
+                continue
+            cb = self._make_pad_mute_callback(st, m.note)
+            try:
+                m.param.add_value_listener(cb)
+            except _LOM_ERRORS as e:
+                self._warn_once(
+                    st.device_path, "memberlistener:chainMute",
+                    "add_mute_listener raised: %s" % e,
+                )
+                continue
+            st.member_listeners.append((m.param, cb))
+            budget -= 1
         logger.debug(
             "DrumVirtualMacroComponent: %s watching %d member parameter(s)",
             st.device_path, len(st.member_listeners),
@@ -2360,6 +2393,33 @@ class DrumVirtualMacroComponent:
             st.edited.add(function)
             self._schedule_absorb(st)
         return _on_member_value
+
+    def _make_pad_mute_callback(self, st: _RackState, note: int) -> Callable[[], None]:
+        def _on_pad_mute():
+            if self._disconnected or not self._is_held(st):
+                return
+            if self._schedule_delayed is None:
+                self._emit_pad_mute(st, note)
+                return
+            try:
+                self._schedule_delayed(0, lambda: self._emit_pad_mute(st, note))
+            except Exception as e:
+                logger.warning(
+                    "DrumVirtualMacroComponent: schedule_delayed failed: %s", e,
+                )
+        return _on_pad_mute
+
+    def _emit_pad_mute(self, st: _RackState, note: int) -> None:
+        """Re-emit one pad's ``chainMute`` row, if someone is watching it."""
+        if self._disconnected or not self._is_held(st):
+            return
+        function = "pad.%d.chainMute" % note
+        if function not in st.subscribed:
+            return
+        self._safe_emit(
+            V3_PROPERTY_VALUE_ADDRESS,
+            (st.device_path, PROPERTY_PREFIX + function, self._pad_read(st, note, "chainMute")),
+        )
 
     def _schedule_absorb(self, st: _RackState) -> None:
         if st.absorb_scheduled:

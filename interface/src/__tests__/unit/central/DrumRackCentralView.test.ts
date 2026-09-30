@@ -1026,7 +1026,7 @@ describe('DrumRackCentralView — the pad grid and hold-to-scope', () => {
 		// While held, the profile's functions are subscribed for that pad.
 		const rows = propertyWireCalls('/looping/v3/property/subscribe').filter((n) => n.startsWith('vm.pad.38.'));
 		expect(rows.sort()).toEqual([
-			'vm.pad.38.attack', 'vm.pad.38.decay', 'vm.pad.38.filterFreq',
+			'vm.pad.38.attack', 'vm.pad.38.chainMute', 'vm.pad.38.chainVolume', 'vm.pad.38.decay', 'vm.pad.38.filterFreq',
 			'vm.pad.38.filterRes', 'vm.pad.38.fx1', 'vm.pad.38.fx2', 'vm.pad.38.fxType',
 			'vm.pad.38.gain', 'vm.pad.38.pitch', 'vm.pad.38.start'
 		]);
@@ -1035,6 +1035,30 @@ describe('DrumRackCentralView — the pad grid and hold-to-scope', () => {
 		await tick();
 		expect(scopeOf(container)).toBeNull();
 		expect(tile(container, 38).classList.contains('pad-held')).toBe(false);
+	});
+
+	it('a held pad draws its chain mute and volume beside the pads; the mute writes that pad', async () => {
+		const { container } = await mounted({
+			'vm.members': DRUMCELL_WITH_PADS,
+			'vm.selectedPad': 36,
+			'vm.pad.38.chainMute': 0,
+			'vm.pad.38.chainVolume': 0.85
+		});
+		expect(container.querySelector('.pad-mixer')).toBeNull();
+		padPointer(tile(container, 38), 'pointerdown', 7);
+		await tick();
+		const mute = container.querySelector('.pad-mute') as HTMLElement;
+		expect(mute).not.toBeNull();
+		expect(mute.getAttribute('aria-pressed')).toBe('false');
+		sets().length = 0;
+		mute.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 9, bubbles: true }));
+		window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 9, bubbles: true }));
+		await tick();
+		expect(sets()).toContainEqual([DEVICE, 'vm.pad.38.chainMute', 1, GENERATION]);
+		holdPast();
+		padPointer(tile(container, 38), 'pointerup', 7);
+		await tick();
+		expect(container.querySelector('.pad-mixer')).toBeNull();
 	});
 
 	it("while held, a control shows the pad's own value and a drag writes that pad's row, not the kit's", async () => {

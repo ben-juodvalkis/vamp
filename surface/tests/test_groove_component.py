@@ -36,7 +36,11 @@ from typing import Dict, List, Optional
 
 import pytest
 
-from components.GroovePoolComponent import GroovePoolComponent, path_hash
+from components.GroovePoolComponent import (
+    BLANK_NAME,
+    GroovePoolComponent,
+    path_hash,
+)
 from components.GrooveComponent import (
     GrooveComponent,
     V3_CLIP_GROOVE_HAS_GROOVE_ADDRESS,
@@ -935,7 +939,8 @@ def test_set_file_on_a_clip_with_no_groove_loads_the_file_and_is_heard(captured_
 
     gc.handle_set_file(args=(CLIP, "Swing 16ths 57"), source_addr=None)
 
-    assert calls == ["Swing 16ths 57"]
+    # An empty pool takes the blank first (Auto Load Groove, below).
+    assert calls == [None, "Swing 16ths 57"]
     g = pool._grooves[-1]
     assert g.name == "Bass 2 · Swing 16ths 57 #" + path_hash(CLIP)
     assert clip.groove == ("id", id(g))
@@ -1088,3 +1093,57 @@ def test_set_file_takes_a_user_groove_by_its_prefixed_name(captured_emits):
     assert g.name == "Bass 2 · User: Swing 16 #" + path_hash(CLIP)
     assert core_free.name == "unassigned-0 · Swing 16"
     assert _file_emits(captured_emits)[-1] == (CLIP, "User: Swing 16")
+
+
+# --- Live's Auto Load Groove box (2026-09-29) --------------------------------
+
+
+def test_the_first_groove_in_an_empty_pool_is_a_blank_one(captured_emits):
+    """Live ticks Auto Load Groove on the groove loaded into an empty pool:
+    that one is the blank, every amount 0, and the clip's groove goes in
+    second."""
+    song, clip, pool = _chooser_song()
+    calls = []
+    _pc, gc = _make_minting(song, pool, captured_emits, calls)
+
+    gc.handle_set_file(args=(CLIP, "Swing 16ths 57"), source_addr=None)
+
+    assert calls == [None, "Swing 16ths 57"]
+    blank, real = pool._grooves
+    assert blank.name == BLANK_NAME
+    assert (blank.quantization_amount, blank.timing_amount,
+            blank.random_amount, blank.velocity_amount) == (0.0, 0.0, 0.0, 0.0)
+    assert clip.groove == ("id", id(real))
+
+
+def test_no_blank_when_the_pool_has_grooves(captured_emits):
+    other = GrooveWithListeners(name="unassigned-0 · Swing 8ths 61")
+    song, _clip, pool = _chooser_song(other)
+    calls = []
+    _pc, gc = _make_minting(song, pool, captured_emits, calls)
+
+    gc.handle_set_file(args=(CLIP, "Swing 16ths 57"), source_addr=None)
+
+    assert calls == ["Swing 16ths 57"]
+    assert all(g.name != BLANK_NAME for g in pool._grooves)
+
+
+def test_a_clip_on_the_blank_reads_as_no_groove_and_a_write_leaves_it_alone(captured_emits):
+    """Live puts every new clip on the blank. Vamp shows none, and a write
+    takes the clip a groove of its own; the blank stays at 0."""
+    blank = GrooveWithListeners(
+        name=BLANK_NAME, timing_amount=0.0, quantization_amount=0.0,
+        random_amount=0.0, velocity_amount=0.0,
+    )
+    song, clip, pool = _chooser_song(blank, linked=blank)
+    _pc, gc = _make_minting(song, pool, captured_emits, [])
+    captured_emits.clear()
+
+    gc.handle_set_timing_amount(args=(CLIP, 40.0), source_addr=None)
+
+    assert blank.timing_amount == 0.0
+    assert blank.name == BLANK_NAME
+    own = pool._grooves[-1]
+    assert own is not blank
+    assert clip.groove == ("id", id(own))
+    assert own.timing_amount == 40.0

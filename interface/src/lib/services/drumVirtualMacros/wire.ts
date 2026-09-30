@@ -85,6 +85,8 @@ export const VM = {
 	filterFreq: 'vm.filterFreq',
 	filterRes: 'vm.filterRes',
 	gain: 'vm.gain',
+	chainVolume: 'vm.chainVolume',
+	chainMute: 'vm.chainMute',
 	members: 'vm.members',
 	/** Live's selected pad on the rack, as a MIDI note (2026-09-08). Read, write, and re-emitted when Live's selection moves. */
 	selectedPad: 'vm.selectedPad'
@@ -131,7 +133,19 @@ export type VmFunction =
 	| 'spread'
 	| 'filterFreq'
 	| 'filterRes'
-	| 'gain';
+	| 'gain'
+	| PadMixerFunction;
+
+/**
+ * The pad's own mixer strip (2026-09-29): its first chain's volume (0..1,
+ * 0.85 = 0 dB) and `DrumPad.mute` (0 / 1). Every pad with a chain is a
+ * member whatever its instrument, so the census leaves them out, and they
+ * are drawn only beside held pads — read and written as pad rows, never
+ * subscribed as kit rows (so not in `VM_FUNCTIONS`).
+ */
+export type PadMixerFunction = 'chainVolume' | 'chainMute';
+
+export const PAD_MIXER_FUNCTIONS: readonly PadMixerFunction[] = ['chainVolume', 'chainMute'];
 
 export const VM_FUNCTIONS: readonly VmFunction[] = [
 	'fx1',
@@ -426,7 +440,7 @@ export type VmValueKind = 't' | 'pitch' | 'enum';
 
 export function vmValueKind(fn: string): VmValueKind {
 	if (fn === 'pitch') return 'pitch';
-	if (fn === 'fxType') return 'enum';
+	if (fn === 'fxType' || fn === 'chainMute') return 'enum';
 	return 't';
 }
 

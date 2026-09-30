@@ -161,6 +161,11 @@ RACK_NON_MACRO_PARAMS = frozenset(("Device On", "Chain Selector"))
 #: What Live calls a chain's mixer volume — the ``gain`` member on a
 #: nested-rack pad. Recorded for the census, never looked up by name.
 CHAIN_VOLUME_NAME = "Chain Volume"
+#: The member name of a pad's ``chainMute`` (``DrumPad.mute``).
+PAD_MUTE_NAME = "Mute"
+#: The class a pad's own mixer members are recorded under: they belong to
+#: the pad, not to its instrument.
+PAD_CHAIN_CLASS_NAME = "DrumPad"
 MACRO_SLOTS = 16
 #: A macro still wearing Live's default name (or the ``.`` / ``-`` the
 #: library uses for "unused") is not a control; same rule as the
@@ -350,7 +355,20 @@ FUNCTIONS: Dict[str, VirtualMacro] = {
         "OriginalSimpler": ("Volume",),
         "MultiSampler": ("Volume",),
     }),
+    # The pad's own mixer strip (2026-09-29, user's request: "a small chain
+    # mute and volume control" beside the held pads). Every pad with a chain
+    # is a member whatever its instrument, so the bindings are empty and the
+    # members are added in ``_rebuild_members``: ``chainVolume`` is
+    # ``chains[0].mixer_device.volume`` (0..1, 0.85 = 0 dB), ``chainMute``
+    # the ``DrumPad.mute`` switch (0 / 1) through :class:`PadMuteParam`.
+    "chainVolume": VirtualMacro("chainVolume", KIND_T, 0, {}),
+    "chainMute": VirtualMacro("chainMute", KIND_ENUM, 0, {}),
 }
+
+#: Functions the ``vm.members`` census leaves out: every pad with a chain
+#: is a member of the pad's own mixer strip, so the counts say nothing, and
+#: the census sits near the datagram cap (a 92-pad kit crossed it).
+CENSUS_SILENT_FUNCTIONS = frozenset(("chainVolume", "chainMute"))
 
 #: Wire property names, in table order.
 PROPERTY_NAMES: Tuple[str, ...] = tuple(
