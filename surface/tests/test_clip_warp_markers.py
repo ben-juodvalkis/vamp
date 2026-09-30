@@ -64,6 +64,19 @@ class AudioClip:
         for cb in list(self.listeners["warp_markers"]):
             cb()
 
+    def add_warp_marker(self, marker):
+        if self.move_raises:
+            raise RuntimeError("refused")
+        self._markers.append(marker)
+        self._markers.sort(key=lambda m: m.beat_time)
+        for cb in list(self.listeners["warp_markers"]):
+            cb()
+
+    def remove_warp_marker(self, beat_time):
+        self._markers = [m for m in self._markers if m.beat_time != beat_time]
+        for cb in list(self.listeners["warp_markers"]):
+            cb()
+
     def __getattr__(self, name):
         for prefix, op in (("add_", "add"), ("remove_", "remove")):
             if name.startswith(prefix) and name.endswith("_listener"):
@@ -86,7 +99,10 @@ def setup():
     song = ClipStubSong(tracks=[track])
     song.view._detail_clip = clip
     emits = []
-    comp = ClipPropertiesComponent(song=song, emit=lambda a, args: emits.append((a, args)))
+    comp = ClipPropertiesComponent(
+        song=song, emit=lambda a, args: emits.append((a, args)),
+        warp_marker=lambda sample_time, beat_time: Marker(beat_time, sample_time),
+    )
     return comp, clip, song, emits
 
 
@@ -193,3 +209,58 @@ def test_emit_on_accept_resends_the_markers(setup):
     emits.clear()
     comp.emit_on_accept()
     assert marker_emits(emits) == [(PATH, 1, 8.0, *flat(MARKERS))]
+
+
+def beats(clip):
+    return [m.beat_time for m in clip.warp_markers]
+
+
+def test_add_pins_the_sample_time_to_the_beat_and_echoes(setup):
+    comp, clip, _song, emits = setup
+    emits.clear()
+    comp.handle_add_warp_marker((PATH, 1.25, 2.5), None)
+    assert (2.5, 1.25) in [(m.beat_time, m.sample_time) for m in clip.warp_markers]
+    assert marker_emits(emits)[-1][5:7] == (2.5, 1.25)
+
+
+@pytest.mark.parametrize("args", [
+    (PATH, -0.1, 2.0),
+    (PATH, 1.0, 4.0005),  # a marker is already there
+    (PATH, float("nan"), 2.0),
+    (PATH, 1.0),
+])
+def test_add_rejects(setup, args):
+    comp, clip, _song, _emits = setup
+    comp.handle_add_warp_marker(args, None)
+    assert beats(clip) == [0.0, 4.0, 8.0, 8.03125]
+
+
+def test_add_that_live_refuses_still_echoes(setup):
+    comp, clip, _song, emits = setup
+    clip.move_raises = True
+    emits.clear()
+    comp.handle_add_warp_marker((PATH, 1.0, 2.0), None)
+    assert marker_emits(emits) == [(PATH, 1, 8.0, *flat(MARKERS))]
+
+
+def test_remove_takes_an_inner_marker(setup):
+    comp, clip, _song, emits = setup
+    emits.clear()
+    comp.handle_remove_warp_marker((PATH, 4.0003), None)
+    assert beats(clip) == [0.0, 8.0, 8.03125]
+    assert marker_emits(emits)
+
+
+@pytest.mark.parametrize("beat", [0.0, 8.0, 8.03125, 5.0])
+def test_remove_refuses_the_ends_the_hidden_marker_and_nothing(setup, beat):
+    comp, clip, _song, _emits = setup
+    comp.handle_remove_warp_marker((PATH, beat), None)
+    assert beats(clip) == [0.0, 4.0, 8.0, 8.03125]
+
+
+def test_add_and_remove_need_a_warped_clip(setup):
+    comp, clip, _song, _emits = setup
+    clip.set_warping(False)
+    comp.handle_add_warp_marker((PATH, 1.0, 2.0), None)
+    comp.handle_remove_warp_marker((PATH, 4.0), None)
+    assert beats(clip) == [0.0, 4.0, 8.0, 8.03125]

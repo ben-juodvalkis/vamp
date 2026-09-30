@@ -15,6 +15,12 @@
  * grows, prefer a `?worker` import pattern over the
  * `import.meta.url` URL form so the bundler tracks the file.
  *
+ * **`&transients=1`** answers `{ transients: seconds[], source }` instead:
+ * Live's own onsets from the `.asd` beside the file (`source: 'live'`,
+ * asdOnsets.ts) or, without them, onsetDetector.js over a fine envelope
+ * (`'detected'`); `'none'` when neither can be had. The clip editor snaps
+ * a new warp marker to them.
+ *
  * **Only the sample library and Live projects.** A path outside the roots in
  * `$lib/server/sampleRoots` is a 403 before the file is opened; this
  * route used to decode whatever absolute path a LAN host named (general-release
@@ -25,9 +31,11 @@
 import { error, json, type RequestHandler } from '@sveltejs/kit';
 import { realpath, stat, readFile, open } from 'node:fs/promises';
 import { findFirstTransient } from './transientDetector.js';
-import { probeFormat } from './formatProbe.js';
+import { probeFormat, probeSampleRate } from './formatProbe.js';
 import { streamPcmPeaks } from './streamingPcmPeaks.js';
 import { readAsdOverview } from './asdOverview.js';
+import { readAsdOnsets } from './asdOnsets.js';
+import { detectOnsets, HOP_FRAMES } from './onsetDetector.js';
 import { isAlc, resolveAlc } from './alcResolver.js';
 import { isAllowedSamplePath, normalizeSamplePath } from '$lib/server/sampleRoots';
 import { logger } from '$lib/utils/logger';
@@ -179,6 +187,66 @@ function reduceToPeaks(
 	return { peaks, bins: safeBins };
 }
 
+type TransientResponse = { transients: number[]; source: 'live' | 'detected' | 'none' };
+const transientCache = new Map<string, TransientResponse>();
+
+async function transientsFor(paths: string[], real: string, size: number): Promise<TransientResponse> {
+	let sampleRate = 0;
+	let frames = 0;
+	let envelope: [number, number][] | null = null;
+	if (streamingEnabled()) {
+		let fd: Awaited<ReturnType<typeof open>> | null = null;
+		try {
+			fd = await open(real, 'r');
+			const info = await probeFormat(fd, size);
+			if (info) {
+				sampleRate = info.sampleRate;
+				frames = info.totalFrames;
+				const live = await readAsdOnsets(paths, frames);
+				if (live) return { transients: live.map((f) => f / sampleRate), source: 'live' };
+				const hops = Math.max(1, Math.ceil(frames / HOP_FRAMES));
+				envelope = (await streamPcmPeaks(fd, info, hops, 0)).peaks;
+			}
+		} catch (e) {
+			logger.warn('sample-transients-streaming', { path: real, reason: (e as Error).message });
+		} finally {
+			if (fd) await fd.close().catch(() => {});
+		}
+	}
+	if (!envelope && !(sampleRate > 0)) {
+		// Audio we cannot stream (compressed, or Ableton's protected
+		// AIFC): Live's onsets need only the rate its header declares.
+		let fd: Awaited<ReturnType<typeof open>> | null = null;
+		try {
+			fd = await open(real, 'r');
+			const header = await probeSampleRate(fd, size);
+			if (header) {
+				const live = await readAsdOnsets(paths, header.frames);
+				if (live) return { transients: live.map((f) => f / header.sampleRate), source: 'live' };
+			}
+		} catch {
+			// fall through to a decode
+		} finally {
+			if (fd) await fd.close().catch(() => {});
+		}
+	}
+	if (!envelope && size <= waveformMaxBytes()) {
+		try {
+			const audio = await (await getDecode())(await readFile(real));
+			sampleRate = audio.sampleRate;
+			frames = audio.channelData[0]?.length ?? 0;
+			const live = await readAsdOnsets(paths, frames);
+			if (live) return { transients: live.map((f) => f / sampleRate), source: 'live' };
+			envelope = reduceToPeaks(audio, Math.max(1, Math.ceil(frames / HOP_FRAMES))).peaks;
+		} catch {
+			// Undecodable (Ableton's protected pack audio): nothing to detect on.
+		}
+	}
+	if (!envelope || !(sampleRate > 0)) return { transients: [], source: 'none' };
+	const hopSeconds = frames / envelope.length / sampleRate;
+	return { transients: detectOnsets(envelope, hopSeconds), source: 'detected' };
+}
+
 export const GET: RequestHandler = async ({ url }) => {
 	const rawPath = url.searchParams.get('path');
 	if (!rawPath) throw error(400, 'missing path param');
@@ -236,6 +304,17 @@ export const GET: RequestHandler = async ({ url }) => {
 		throw error(404, 'file not found');
 	}
 	if (!st.isFile()) throw error(400, 'path is not a regular file');
+
+	if (url.searchParams.get('transients') === '1') {
+		const key = `${real}:${st.mtimeMs}`;
+		let answer = transientCache.get(key);
+		if (!answer) {
+			answer = await transientsFor([...new Set([sourcePath, real])], real, st.size);
+			transientCache.set(key, answer);
+			if (transientCache.size > CACHE_MAX) transientCache.delete(transientCache.keys().next().value!);
+		}
+		return json(answer);
+	}
 
 	const cacheKey = `${real}:${st.mtimeMs}:${bins}`;
 	const cached = cacheGet(cacheKey);

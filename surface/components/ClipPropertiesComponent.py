@@ -15,6 +15,8 @@ Wire contract per [04 §3.6]:
     Surf → UI   /looping/v3/clip/warp_markers [clipPath, warping, fileSeconds,
                                                beat0, sec0, beat1, sec1, …]
     UI → Surf   /looping/v3/clip/warp_marker/move [clipPath, beatTime, distance]
+    UI → Surf   /looping/v3/clip/warp_marker/add [clipPath, sampleTime, beatTime]
+    UI → Surf   /looping/v3/clip/warp_marker/remove [clipPath, beatTime]
 
 Focus-scoped observation
 ------------------------
@@ -90,6 +92,13 @@ where it is (measured, ``docs/reference/live-api-measurements.md``). The
 ``_MARKER_MATCH_BEATS`` and Live's own value is passed on, because Live
 wants the exact beat time. Live clamps a move past a neighbor short of
 it, without an error, and the echo reports where it really landed.
+
+``warp_marker/add`` builds ``Live.Clip.WarpMarker(sample_time, beat_time)``
+(sample time first, seconds; a dict raises) and adds it; one that would
+cross a neighbor raises, which is logged. ``warp_marker/remove`` refuses
+the first and last markers the UI draws (Live's hidden trailing one is
+not drawn): the API would remove the first, Live's own UI will not.
+None of the three leaves an undo step in Live (measured for the move).
 
 Cold-start / handshake-accept re-emit
 -------------------------------------
@@ -173,6 +182,8 @@ V3_CLIP_SET_GAIN_ADDRESS = "/looping/v3/clip/set/gain"
 
 V3_CLIP_WARP_MARKERS_ADDRESS = "/looping/v3/clip/warp_markers"
 V3_CLIP_WARP_MARKER_MOVE_ADDRESS = "/looping/v3/clip/warp_marker/move"
+V3_CLIP_WARP_MARKER_ADD_ADDRESS = "/looping/v3/clip/warp_marker/add"
+V3_CLIP_WARP_MARKER_REMOVE_ADDRESS = "/looping/v3/clip/warp_marker/remove"
 
 
 # --- attribute table ------------------------------------------------------
@@ -217,6 +228,24 @@ _ATTR_NAMES: Tuple[str, ...] = tuple(name for name, _ in _ATTRS)
 _WARP_ATTRS: Tuple[str, ...] = ("warp_markers", "warping")
 # How far the UI's beatTime may sit from a marker's and still name it.
 _MARKER_MATCH_BEATS = 1e-3
+# Live's hidden trailing marker sits 1/32 beat past the last drawn one.
+_HIDDEN_MARKER_BEATS = 1.0 / 32
+
+
+def _default_warp_marker(sample_time: float, beat_time: float):
+    """``Live.Clip.WarpMarker``, imported when first used (not under pytest)."""
+    import Live  # noqa: PLC0415 — only importable inside Live
+
+    return Live.Clip.WarpMarker(sample_time, beat_time)
+
+
+def _drawn_markers(markers: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
+    """The markers minus Live's hidden trailing one (the UI's ``shownMarkers``)."""
+    if len(markers) >= 2:
+        gap = markers[-1][0] - markers[-2][0]
+        if 0 < gap <= _HIDDEN_MARKER_BEATS + _MARKER_MATCH_BEATS:
+            return markers[:-1]
+    return list(markers)
 _WIRE_TYPE_FOR: Dict[str, str] = {name: wt for name, wt in _ATTRS}
 
 
@@ -245,8 +274,10 @@ class ClipPropertiesComponent:
     V3_CLIP_PROPERTY_ADDRESS = V3_CLIP_PROPERTY_ADDRESS
     ATTRS = _ATTRS
 
-    def __init__(self, song, emit, permute=None):
+    def __init__(self, song, emit, permute=None, warp_marker=None):
         self._song = song
+        # ``(sample_time, beat_time) -> WarpMarker``; tests pass their own.
+        self._warp_marker = warp_marker or _default_warp_marker
         self._emit = emit
         # ``SequencerComponent`` (``held_gain`` / ``adopt_gain``), or None.
         self._permute = permute
@@ -791,6 +822,95 @@ class ClipPropertiesComponent:
         # where Live holds the marker.
         if path_resolver.same_lom_handle(clip, self._focused_clip):
             self._emit_warp_markers()
+        return None
+
+    def _warp_write_target(self, args, name: str, arity: int):
+        """Resolve ``args[0]`` and parse ``arity`` finite floats after it,
+        on a warped clip. ``(clip, floats)`` or ``(None, None)``."""
+        clip, _path = self._parse_clip_from_args(args, name)
+        if clip is None:
+            return None, None
+        try:
+            values = [float(args[i]) for i in range(1, arity + 1)]
+        except (IndexError, TypeError, ValueError):
+            logger.warning("ClipPropertiesComponent %s: bad args %r", name, args)
+            return None, None
+        if not all(math.isfinite(v) for v in values):
+            logger.warning("ClipPropertiesComponent %s: non-finite %r", name, args)
+            return None, None
+        if not self._safe_read_attr(clip, "warping", "%s-read" % name):
+            logger.warning("ClipPropertiesComponent %s: clip not warped", name)
+            return None, None
+        return clip, values
+
+    def _echo_markers_for(self, clip) -> None:
+        if path_resolver.same_lom_handle(clip, self._focused_clip):
+            self._emit_warp_markers()
+
+    def handle_add_warp_marker(self, args, source_addr):
+        """``/looping/v3/clip/warp_marker/add [clipPath, sampleTime, beatTime]``.
+
+        Adds a marker pinning ``sampleTime`` (seconds into the file) to
+        ``beatTime``. Rejected: a negative time, a beat already holding a
+        marker (within ``_MARKER_MATCH_BEATS``); Live raises for one that
+        would cross a neighbor. The markers are echoed either way.
+        """
+        clip, values = self._warp_write_target(args, "warp_marker/add", 2)
+        if clip is None:
+            return None
+        sample_time, beat = values
+        if sample_time < 0.0:
+            logger.warning(
+                "ClipPropertiesComponent warp_marker/add: negative time %r", args,
+            )
+            return None
+        if any(abs(b - beat) <= _MARKER_MATCH_BEATS
+               for b, _s in self._read_warp_markers(clip)):
+            logger.warning(
+                "ClipPropertiesComponent warp_marker/add: a marker is at %.6f",
+                beat,
+            )
+            return None
+        try:
+            clip.add_warp_marker(self._warp_marker(sample_time, beat))
+        except (_LOM_ERRORS + (ValueError,)) as e:
+            logger.warning(
+                "ClipPropertiesComponent add_warp_marker(%.6f s, %.6f) "
+                "raised: %s", sample_time, beat, e,
+            )
+        self._echo_markers_for(clip)
+        return None
+
+    def handle_remove_warp_marker(self, args, source_addr):
+        """``/looping/v3/clip/warp_marker/remove [clipPath, beatTime]``.
+
+        Removes the marker at ``beatTime`` (matched as for a move). The
+        first and last drawn markers are refused.
+        """
+        clip, values = self._warp_write_target(args, "warp_marker/remove", 1)
+        if clip is None:
+            return None
+        drawn = _drawn_markers(self._read_warp_markers(clip))
+        exact = None
+        for i, (marker_beat, _sec) in enumerate(drawn):
+            if abs(marker_beat - values[0]) <= _MARKER_MATCH_BEATS:
+                if 0 < i < len(drawn) - 1:
+                    exact = marker_beat
+                break
+        if exact is None:
+            logger.warning(
+                "ClipPropertiesComponent warp_marker/remove: no removable "
+                "marker at %.6f", values[0],
+            )
+            return None
+        try:
+            clip.remove_warp_marker(exact)
+        except _LOM_ERRORS as e:
+            logger.warning(
+                "ClipPropertiesComponent remove_warp_marker(%.6f) raised: %s",
+                exact, e,
+            )
+        self._echo_markers_for(clip)
         return None
 
     # --- handler helpers ---------------------------------------------------

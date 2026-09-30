@@ -60,6 +60,10 @@ export const V3_CLIP_SET_PITCH_FINE_ADDRESS = '/looping/v3/clip/set/pitch_fine';
 export const V3_CLIP_SET_GAIN_ADDRESS = '/looping/v3/clip/set/gain';
 /** `[clipPath, beatTime, distance]` — move one warp marker by `distance` beats. */
 export const V3_CLIP_WARP_MARKER_MOVE_ADDRESS = '/looping/v3/clip/warp_marker/move';
+/** `[clipPath, sampleTime, beatTime]` — add a marker pinning file seconds to a beat. */
+export const V3_CLIP_WARP_MARKER_ADD_ADDRESS = '/looping/v3/clip/warp_marker/add';
+/** `[clipPath, beatTime]` — remove the marker at that beat. */
+export const V3_CLIP_WARP_MARKER_REMOVE_ADDRESS = '/looping/v3/clip/warp_marker/remove';
 
 export function isV3ClipAddress(address: string): boolean {
 	return (

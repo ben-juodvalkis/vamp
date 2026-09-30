@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+	addTarget,
+	beatToSec,
+	canRemove,
 	dragTarget,
 	markerBounds,
 	moveMarker,
@@ -63,5 +66,33 @@ describe('warpMarkers', () => {
 		expect(moved[1]).toEqual({ beat: 9, sec: 4 });
 		expect(moved[2].beat).toBeCloseTo(9 + 1 / 32);
 		expect(moved[0]).toBe(FRESH[0]);
+	});
+
+	describe('adding and removing', () => {
+		// 120 BPM: 2 beats a second.
+		const SHOWN = FRESH.slice(0, 2);
+
+		it('maps beats back to seconds', () => {
+			expect(beatToSec(SHOWN, 3)).toBeCloseTo(1.5);
+		});
+
+		it('snaps a double-tap to the nearest transient, where it plays now', () => {
+			expect(addTarget(SHOWN, [1.0, 1.54, 2.0], 3.02, 0.125, 1 / 64)).toEqual({ beat: 3.08, sec: 1.54 });
+		});
+
+		it('adds at the tap itself with no transient near it', () => {
+			const t = addTarget(SHOWN, [1.0], 5, 0.125, 1 / 64)!;
+			expect(t.beat).toBe(5);
+			expect(t.sec).toBeCloseTo(2.5);
+		});
+
+		it('adds nothing on top of a marker', () => {
+			expect(addTarget(SHOWN, [], 8.001, 0.125, 1 / 64)).toBeNull();
+		});
+
+		it('keeps the first and last drawn markers', () => {
+			const three = [SHOWN[0], { beat: 4, sec: 2 }, SHOWN[1]];
+			expect([0, 1, 2].map((i) => canRemove(three, i))).toEqual([false, true, false]);
+		});
 	});
 });

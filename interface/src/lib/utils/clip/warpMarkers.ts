@@ -116,3 +116,73 @@ export function moveMarker(
 		return m;
 	});
 }
+
+/** Clip beats → file seconds, the inverse of `secToBeat`. */
+export function beatToSec(shown: readonly WarpMarker[], beat: number): number | null {
+	const n = shown.length;
+	if (n < 2) return null;
+	let i = 0;
+	if (beat >= shown[n - 1].beat) i = n - 2;
+	else if (beat > shown[0].beat) {
+		while (i < n - 2 && beat > shown[i + 1].beat) i++;
+	}
+	const a = shown[i];
+	const b = shown[i + 1];
+	const db = b.beat - a.beat;
+	if (!(db > 0)) return a.sec;
+	return a.sec + ((beat - a.beat) / db) * (b.sec - a.sec);
+}
+
+/**
+ * Where a double-tap at `tapBeat` adds a marker: on the transient nearest
+ * the tap when one lies within `snapBeats`, at the beat that transient
+ * plays on now — so adding it changes nothing heard until it is dragged —
+ * else at the tap itself. Null when a marker already sits within
+ * `minGap`, or there is no line to place it by.
+ */
+export function addTarget(
+	shown: readonly WarpMarker[],
+	transientSecs: readonly number[],
+	tapBeat: number,
+	snapBeats: number,
+	minGap: number
+): WarpMarker | null {
+	let target: WarpMarker | null = null;
+	let bestGap = snapBeats;
+	for (const sec of transientSecs) {
+		const beat = secToBeat(shown, sec);
+		if (beat === null) break;
+		const gap = Math.abs(beat - tapBeat);
+		if (gap <= bestGap) {
+			bestGap = gap;
+			target = { beat, sec };
+		}
+	}
+	if (!target) {
+		const sec = beatToSec(shown, tapBeat);
+		if (sec === null || sec < 0) return null;
+		target = { beat: tapBeat, sec };
+	}
+	const t = target;
+	if (shown.some((m) => Math.abs(m.beat - t.beat) < minGap)) return null;
+	return t;
+}
+
+/** Only the markers between the first and last drawn can be removed. */
+export function canRemove(shown: readonly WarpMarker[], index: number): boolean {
+	return index > 0 && index < shown.length - 1;
+}
+
+/** `markers` with `marker` in beat order (the optimistic picture of an add). */
+export function insertMarker(markers: readonly WarpMarker[], marker: WarpMarker): WarpMarker[] {
+	return [...markers, marker].sort((a, b) => a.beat - b.beat);
+}
+
+/** `markers` without the one at `beat` (the optimistic picture of a remove). */
+export function withoutMarker(markers: readonly WarpMarker[], beat: number): WarpMarker[] {
+	return markers.filter((m) => Math.abs(m.beat - beat) > 1e-9);
+}
+
+/** Two taps this close in time and place are a double-tap. */
+export const DOUBLE_TAP_MS = 350;
+export const DOUBLE_TAP_PX = 24;
