@@ -43,7 +43,8 @@ const { mockSessionState, mockHandleFocusedClipPath, mockStore } = vi.hoisted(()
 		handleLoopEnabled: vi.fn(),
 		handlePitchCoarse: vi.fn(),
 		handleGain: vi.fn(),
-		handleGainDisplay: vi.fn()
+		handleGainDisplay: vi.fn(),
+		handleWarpMarkers: vi.fn()
 	};
 	return { mockSessionState: state, mockHandleFocusedClipPath: handler, mockStore: store };
 });
@@ -72,7 +73,9 @@ import {
 	V3_CLIP_SET_END_MARKER_ADDRESS,
 	V3_CLIP_SET_WARP_MODE_ADDRESS,
 	V3_CLIP_SET_LOOPING_ADDRESS,
-	V3_CLIP_SET_PITCH_COARSE_ADDRESS
+	V3_CLIP_SET_PITCH_COARSE_ADDRESS,
+	V3_CLIP_WARP_MARKERS_ADDRESS,
+	V3_CLIP_WARP_MARKER_MOVE_ADDRESS
 } from '$lib/api/handlers/v3Clip';
 
 describe('v3Clip handler', () => {
@@ -209,6 +212,36 @@ describe('v3Clip handler', () => {
 			mockSessionState.focusedClipPath = 'tracks/2/slots/3/clip';
 			handleV3Clip(V3_CLIP_PROPERTY_ADDRESS, ['tracks/2/slots/3/clip', 'loop_end', 8]);
 			expect(mockStore.handleLoopEnd).toHaveBeenCalledWith(8);
+		});
+	});
+
+	describe('clip/warp_markers', () => {
+		const PATH = 'tracks/0/slots/0/clip';
+
+		it('is inbound; the move is outbound', () => {
+			expect(isV3ClipAddress(V3_CLIP_WARP_MARKERS_ADDRESS)).toBe(true);
+			expect(isV3ClipAddress(V3_CLIP_WARP_MARKER_MOVE_ADDRESS)).toBe(false);
+		});
+
+		it('hands the focused clip its markers as beat/second pairs', () => {
+			mockSessionState.focusedClipPath = PATH;
+			handleV3Clip(V3_CLIP_WARP_MARKERS_ADDRESS, [PATH, 1, 8, 0, 0, 4, 2]);
+			expect(mockStore.handleWarpMarkers).toHaveBeenCalledWith(true, 8, [
+				{ beat: 0, sec: 0 },
+				{ beat: 4, sec: 2 }
+			]);
+		});
+
+		it('drops markers for a clip that is no longer focused', () => {
+			mockSessionState.focusedClipPath = 'tracks/1/slots/0/clip';
+			handleV3Clip(V3_CLIP_WARP_MARKERS_ADDRESS, [PATH, 1, 8, 0, 0]);
+			expect(mockStore.handleWarpMarkers).not.toHaveBeenCalled();
+		});
+
+		it('drops a message too short to carry the header', () => {
+			mockSessionState.focusedClipPath = PATH;
+			handleV3Clip(V3_CLIP_WARP_MARKERS_ADDRESS, [PATH, 1]);
+			expect(mockStore.handleWarpMarkers).not.toHaveBeenCalled();
 		});
 	});
 });

@@ -30,6 +30,7 @@ import { clipPropertiesStore } from '$lib/stores/v6/clipPropertiesStore.svelte';
 import { patchLoopWindowFromProperty } from '$lib/stores/v6/playingClipsStore.svelte';
 import { triggeredSlotsStore } from '$lib/stores/v6/triggeredSlotsStore.svelte';
 import { toNumber, toString } from './oscTypeHelpers';
+import { parseWarpMarkers } from '$lib/utils/clip/warpMarkers';
 
 export const V3_CLIP_FOCUSED_ADDRESS = '/looping/v3/clip/focused';
 export const V3_CLIP_PROPERTY_ADDRESS = '/looping/v3/clip/property';
@@ -40,6 +41,11 @@ export const V3_CLIP_PROPERTY_ADDRESS = '/looping/v3/clip/property';
  * out on its own.
  */
 export const V3_CLIP_TRIGGERED_ADDRESS = '/looping/v3/clip/triggered';
+/**
+ * The focused audio clip's warp markers:
+ * `[clipPath, warping, fileSeconds, beat0, sec0, beat1, sec1, …]`.
+ */
+export const V3_CLIP_WARP_MARKERS_ADDRESS = '/looping/v3/clip/warp_markers';
 
 // Write addresses (UI → Surf). Re-exported from one place so senders
 // don't rebuild the string literals.
@@ -52,12 +58,15 @@ export const V3_CLIP_SET_LOOPING_ADDRESS = '/looping/v3/clip/set/looping';
 export const V3_CLIP_SET_PITCH_COARSE_ADDRESS = '/looping/v3/clip/set/pitch_coarse';
 export const V3_CLIP_SET_PITCH_FINE_ADDRESS = '/looping/v3/clip/set/pitch_fine';
 export const V3_CLIP_SET_GAIN_ADDRESS = '/looping/v3/clip/set/gain';
+/** `[clipPath, beatTime, distance]` — move one warp marker by `distance` beats. */
+export const V3_CLIP_WARP_MARKER_MOVE_ADDRESS = '/looping/v3/clip/warp_marker/move';
 
 export function isV3ClipAddress(address: string): boolean {
 	return (
 		address === V3_CLIP_FOCUSED_ADDRESS ||
 		address === V3_CLIP_PROPERTY_ADDRESS ||
-		address === V3_CLIP_TRIGGERED_ADDRESS
+		address === V3_CLIP_TRIGGERED_ADDRESS ||
+		address === V3_CLIP_WARP_MARKERS_ADDRESS
 	);
 }
 
@@ -69,6 +78,21 @@ export function handleV3Clip(address: string, args: OSCArg[]): void {
 			return;
 		}
 		triggeredSlotsStore.set(toString(args[0]), toNumber(args[1]) === 1);
+		return;
+	}
+
+	if (address === V3_CLIP_WARP_MARKERS_ADDRESS) {
+		if (args.length < 3) {
+			logger.warn('v3 clip/warp_markers wrong arity', { args });
+			return;
+		}
+		// Same late-echo rule as clip/property.
+		if (toString(args[0]) !== session.focusedClipPath) return;
+		clipPropertiesStore.handleWarpMarkers(
+			toNumber(args[1]) === 1,
+			toNumber(args[2]),
+			parseWarpMarkers(args.slice(3).map(toNumber))
+		);
 		return;
 	}
 
