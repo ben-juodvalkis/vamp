@@ -1714,8 +1714,8 @@
 					<div class="marker marker-start" style="left: {markerStartX}px;"></div>
 					<div class="marker marker-end" style="left: {markerEndX}px;"></div>
 					<!-- Warp markers: a line through the waveform and a grip at
-					     its foot, the grip alone taking the finger so the rest
-					     of the canvas still pans. -->
+					     its head and its foot, the grips alone taking the finger
+					     so the rest of the canvas still pans. -->
 					{#each warpHandles as handle (handle.index)}
 						<div
 							class="warp-marker"
@@ -1723,14 +1723,16 @@
 							style="left: {handle.x}px;"
 						>
 							<div class="warp-line"></div>
-							<div
-								class="warp-grip"
-								role="slider"
-								tabindex="-1"
-								aria-label="Warp marker"
-								aria-valuenow={handle.beat}
-								onpointerdown={(e) => startWarpDrag(e, handle.index)}
-							></div>
+							{#each ['top', 'bottom'] as end (end)}
+								<div
+									class="warp-grip {end}"
+									role="slider"
+									tabindex="-1"
+									aria-label="Warp marker"
+									aria-valuenow={handle.beat}
+									onpointerdown={(e) => startWarpDrag(e, handle.index)}
+								></div>
+							{/each}
 						</div>
 					{/each}
 				{/if}
@@ -2276,10 +2278,10 @@
 		background: var(--phosphor-100);
 	}
 
-	/* Warp markers: the line takes no pointer; the grip at the foot is a
-	   28×36 touch target, above the braces (z 6; the grip alone, so a
-	   brace sharing its x is still grabbable above it) — a clip's start
-	   and end markers usually sit exactly on the loop edges. */
+	/* Warp markers: the line takes no pointer; a grip at each end is a
+	   28×36 touch target, above the braces (z 6; the grips alone, so a
+	   brace sharing its x is still grabbable between them) — a clip's
+	   start and end markers usually sit exactly on the loop edges. */
 	.warp-marker {
 		position: absolute;
 		top: 0;
@@ -2298,7 +2300,6 @@
 	}
 	.warp-grip {
 		position: absolute;
-		bottom: 0;
 		left: -14px;
 		width: 28px;
 		height: 36px;
@@ -2306,15 +2307,26 @@
 		touch-action: none;
 		cursor: ew-resize;
 	}
+	.warp-grip.top {
+		top: 0;
+	}
+	.warp-grip.bottom {
+		bottom: 0;
+	}
 	.warp-grip::after {
 		content: '';
 		position: absolute;
-		bottom: 4px;
 		left: 9px;
 		width: 10px;
 		height: 14px;
 		border-radius: 2px;
 		background: var(--act-warn);
+	}
+	.warp-grip.top::after {
+		top: 4px;
+	}
+	.warp-grip.bottom::after {
+		bottom: 4px;
 	}
 	.warp-marker.dragging .warp-line {
 		background: var(--act-warn);
