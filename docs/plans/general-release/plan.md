@@ -179,10 +179,10 @@ fail with nothing on screen:
   with a code or an Allow, on by default. The design is
   [security.plan.md](security.plan.md). The README and [SECURITY.md](../../../SECURITY.md) state
   today's model (2026-09-30).
-- **Delete `/api/ws-auth`'s salt-less branch** (**S**). It returns the raw secret to anyone who
-  asks, and its own comment says nothing in the tree uses it.
-- **Auth on unless explicitly off** (**S**). A config with a WebSocket block but no `auth` block
-  runs unauthenticated with only a warning. The example is such a config.
+- **Delete `/api/ws-auth`'s salt-less branch: done 2026-09-30.** A request with no salt is a 400.
+- **Auth on unless explicitly off: done 2026-09-30.** Only `auth.enabled: false` turns the gate
+  off; a missing block or an unreadable config keeps it on. The same day the bridge started
+  refusing a browser page from another origin (security.plan.md).
 - **Stop copying the whole config into the served static folder** (**S**; it falls out of the
   runtime move). Any browser on the LAN can read it at `/config/constants.json`.
 - **The rig.** Audit §5.3's pf rule covers the Max and TotalMix receivers, which can't bind

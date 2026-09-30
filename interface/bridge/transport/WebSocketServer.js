@@ -22,6 +22,7 @@ const {
     proofMatches,
     makeSalt
 } = require('../utils/wsSecret');
+const { originAllowed } = require('../utils/originCheck');
 
 // --- WebSocket auth ------------------------------------------------------
 //
@@ -36,15 +37,27 @@ const AUTH_ADDRESS = '/bridge/auth';
 /** Server -> client: the verdict, so the UI can show a real error. */
 const AUTH_RESULT_ADDRESS = '/bridge/auth/result';
 
-const authConfig = (() => {
+/**
+ * The auth block, on unless it says `enabled: false`. A config with no
+ * `auth` block, or one that can't be read, used to run with no gate at
+ * all; now the gate is only ever off because someone wrote that down.
+ */
+function resolveAuthConfig(readAuth) {
+    let auth;
     try {
-        const { loadConstants } = require('../utils/constants');
-        return loadConstants().osc.webSocket.auth || {};
+        auth = readAuth();
     } catch (e) {
-        logger.error('Could not read WS auth config; auth disabled', { error: e.message });
-        return {};
+        logger.error('Could not read WS auth config; auth stays on', { error: e.message });
+        auth = undefined;
     }
-})();
+    const block = auth && typeof auth === 'object' ? auth : {};
+    return { ...block, enabled: block.enabled !== false };
+}
+
+const authConfig = resolveAuthConfig(() => {
+    const { loadConstants } = require('../utils/constants');
+    return loadConstants().osc.webSocket.auth;
+});
 
 const authSaltBytes = authConfig.saltBytes || 16;
 const authTimeoutMs = authConfig.timeoutMs || 5000;
@@ -185,7 +198,17 @@ function createWebSocketServer(config, udpPorts, connectionStatus, metrics, heal
         // between the bridge and an OOM from one held socket. 64 KB is an
         // order of magnitude above the largest legitimate inbound frame
         // (a `/bridge/batch` of writes).
-        maxPayload: 64 * 1024
+        maxPayload: 64 * 1024,
+        // A page from another site gets a 403 before any challenge
+        // (utils/originCheck.js).
+        verifyClient: (info) => {
+            if (originAllowed(info.origin)) return true;
+            logger.warn('Refused a WebSocket from another origin', {
+                origin: info.origin,
+                remote: info.req.socket.remoteAddress
+            });
+            return false;
+        }
     });
 
     logger.info('Creating HTTP+WebSocket server', {
@@ -856,7 +879,7 @@ module.exports = {
     AUTH_RESULT_ADDRESS,
     __testing: {
         routeMessageToUDP, handleMessage, dispatchClientMessage, handleBatch,
-        handleAuth, isAuthRequired: () => authRequired,
+        handleAuth, isAuthRequired: () => authRequired, resolveAuthConfig,
         expectedProofFor: (salt) => computeProof(authSecret, salt)
     }
 };

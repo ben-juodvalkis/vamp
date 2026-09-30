@@ -249,3 +249,69 @@ describe('auth gate on outbound broadcasts', () => {
 		expect(legacy.sent).toHaveLength(1);
 	});
 });
+
+// --- which pages may connect -------------------------------------------------
+
+describe('origin check', () => {
+	let originAllowed: (origin: string | undefined) => boolean;
+	beforeEach(() => {
+		({ originAllowed } = nodeRequire('../../../../bridge/utils/originCheck.js'));
+	});
+
+	it('lets Vamp’s own pages connect: localhost, an IP address, a .local name', () => {
+		for (const origin of [
+			'http://localhost:3000',
+			'http://127.0.0.1:8889',
+			'http://192.168.100.1:8889',
+			'http://10.43.156.117:8889',
+			'http://169.254.216.140:8889',
+			'http://[::1]:3000',
+			'http://Looping-Studio-2.local:8889',
+			'https://vamp.localhost'
+		]) {
+			expect(originAllowed(origin), origin).toBe(true);
+		}
+	});
+
+	it('lets a client outside a browser connect, since it sends no Origin', () => {
+		expect(originAllowed(undefined)).toBe(true);
+		expect(originAllowed('')).toBe(true);
+	});
+
+	it('refuses a page from any other site, including one rebinding its name to the Mac', () => {
+		for (const origin of [
+			'http://evil.example',
+			'https://attacker.com:8889',
+			'http://localhost.evil.example',
+			'http://local',
+			'null',
+			'file://',
+			'chrome-extension://abcdef',
+			'not a url'
+		]) {
+			expect(originAllowed(origin), origin).toBe(false);
+		}
+	});
+});
+
+describe('auth config', () => {
+	it('is on unless the config says enabled: false', () => {
+		const { resolveAuthConfig } = server.__testing;
+		expect(resolveAuthConfig(() => ({ enabled: true, timeoutMs: 1 }))).toEqual({
+			enabled: true,
+			timeoutMs: 1
+		});
+		expect(resolveAuthConfig(() => ({ enabled: false })).enabled).toBe(false);
+	});
+
+	it('stays on with no auth block, or a config that cannot be read', () => {
+		const { resolveAuthConfig } = server.__testing;
+		expect(resolveAuthConfig(() => undefined).enabled).toBe(true);
+		expect(resolveAuthConfig(() => ({ saltBytes: 8 }))).toEqual({ saltBytes: 8, enabled: true });
+		expect(
+			resolveAuthConfig(() => {
+				throw new Error('unreadable');
+			}).enabled
+		).toBe(true);
+	});
+});

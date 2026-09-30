@@ -31,7 +31,8 @@ connection with a fresh random value and accepts only an answer signed with a se
 never crosses the network (`interface/bridge/utils/wsSecret.js`). But the page has to get that
 answer from somewhere, and it asks the web server (`/api/ws-auth`), which signs for any caller.
 So the check keeps out stray tabs, port scanners and anything that isn't Vamp, but not a person
-who opens the page.
+who opens the page. The bridge also refuses a browser page served from any other website, so a
+site you visit can't reach it through your browser.
 
 **Vamp-Recorder's port** is a Max `udpreceive`, which can't be limited to the Mac. A device on
 the network can arm, start and stop a capture and choose the folder it records into.

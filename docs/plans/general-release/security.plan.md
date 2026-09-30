@@ -1,6 +1,7 @@
 # Device Pairing
 
-**Designed 2026-09-30; not started.** What is exposed today, and why, is
+**Designed 2026-09-30. The smaller fixes but the recorder's port are done the same day; pairing
+is not started.** What is exposed today, and why, is
 [../../../SECURITY.md](../../../SECURITY.md). This plan closes the main gap: a device on the same
 network can drive Live because `/api/ws-auth` signs the bridge's challenge for any caller.
 
@@ -13,12 +14,12 @@ network can drive Live because `/api/ws-auth` signs the bridge's challenge for a
 - **Both ways to approve** (Ben, 2026-09-30): type a code shown on the Mac, or tap **Allow** on a
   screen that is already trusted. Either one completes the pairing.
 - **Pairing is on by default in the general edition** (Ben, 2026-09-30). A switch turns it off.
-- **Proposed: the code appears in Live's status bar.** The surface is loaded whenever Vamp works,
-  so it can always show it. A Max device can't: Vamp-Recorder is optional, and the others sit
-  on tracks.
-- **Proposed: Allow appears as a banner on trusted screens only,** never as a macOS dialog. A
-  dialog would come up over Live whenever anyone on venue Wi-Fi opened the page, and take Live's
-  keyboard focus mid-song.
+- **The code appears in Live's status bar** (Ben, 2026-09-30). The surface is loaded whenever
+  Vamp works, so it can always show it. A Max device can't: Vamp-Recorder is optional, and the
+  others sit on tracks.
+- **Allow appears as a banner on trusted screens only,** never as a macOS dialog (Ben,
+  2026-09-30). A dialog would come up over Live whenever anyone on venue Wi-Fi opened the page,
+  and take Live's keyboard focus mid-song.
 
 ## The main idea
 
@@ -106,14 +107,17 @@ don't trust.
 
 ## Smaller fixes, independent of pairing
 
-- **Delete `/api/ws-auth`'s salt-less branch** (**S**). It returns the raw secret, and nothing
-  in the tree asks for it (plan.md §7).
-- **The bridge checks `Origin`** on the WebSocket upgrade, allowing only the page's own origins
-  (**S**). The web server already refuses unknown host names (Vite's `allowedHosts`: localhost,
-  IP addresses, `.local`), which blocks DNS rebinding against 8889 and 3000; the bridge checks
-  nothing.
-- **Auth fails closed** (**S**). `WebSocketServer.js` turns auth off when the config can't be
-  read, and when it has no `auth` block (plan.md §7).
+- **`/api/ws-auth`'s salt-less branch: deleted** (2026-09-30). It returned the raw secret, and
+  nothing in the tree asked for it. A request with no salt is a 400 (`wsAuthRoute.test.ts`).
+- **The bridge checks `Origin`: done** (2026-09-30, `interface/bridge/utils/originCheck.js`). A
+  browser page from anywhere but localhost, an IP address or a `.local` name gets a 401 on the
+  upgrade, before any challenge. That is the web server's own rule (Vite's `allowedHosts`),
+  which already blocked DNS rebinding against 8889 and 3000. A client with no `Origin` (the
+  menu-bar app, the scripts) still has to pass the challenge.
+- **Auth on unless explicitly off: done** (2026-09-30). A config with no `auth` block, or one
+  the bridge can't read, used to run with no gate; now only `enabled: false` turns it off. A
+  secret that can't be made still fails open, as before: that is the deliberate stage trade in
+  `WebSocketServer.js`.
 - **Vamp-Recorder's port** (**M**). Max's `udpreceive` listens on every interface and can't see
   who sent a message, so anyone on the network can drive a capture. Either the bridge adds a
   per-session token the device checks, or the device learns its commands another way. The rig
@@ -121,7 +125,7 @@ don't trust.
 
 ## Order
 
-1. The smaller fixes. No Live restart.
+1. The smaller fixes. Done 2026-09-30 but the recorder's port. No Live restart.
 2. Trust by address, the pairing screen, the code and Allow, the gate on the API routes (**M**).
    A protocol bump and a Live restart.
 3. **Settings → Devices** on a trusted screen: each device's name and last use, **Forget**, and

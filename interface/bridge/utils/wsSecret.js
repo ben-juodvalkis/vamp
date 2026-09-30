@@ -12,11 +12,10 @@
  * It raises the bar from **"anything that can reach port 8081"** to
  * **"anything that can load the app"**. It is not a defence against a
  * determined attacker already on the LAN, because the UI is a browser
- * page and the page has to obtain the secret somehow — it fetches it
- * from the interface server, which is also on the LAN. Closing that
- * last gap needs per-device pairing (show a code on the Mac, type it
- * on the iPad, keep it in localStorage), which is a real option but
- * one with real failure modes on stage, so it is not the default.
+ * page and the page has to answer somehow — it has the interface server
+ * sign the salt (`/api/ws-auth`), and that server is also on the LAN.
+ * Closing that last gap is device pairing, decided 2026-09-30 and not
+ * built yet (docs/plans/general-release/security.plan.md).
  *
  * What it does buy, concretely: stray clients, stale tabs from another
  * machine, port scanners, and anything on the network that is not the
