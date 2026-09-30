@@ -257,7 +257,10 @@ from .drum_vm_functions import (
     _LOM_ERRORS,
     BOUND_CLASSES,
     CENSUS_BYTES_SOFT_CAP,
+    CENSUS_SILENT_FUNCTIONS,
     CHAIN_VOLUME_NAME,
+    PAD_CHAIN_CLASS_NAME,
+    PAD_MUTE_NAME,
     DEV_EPSILON,
     DEV_VOTE_DP,
     EDIT_ABSORB_DELAY_MS,
@@ -307,6 +310,7 @@ from .drum_vm_resolve import (
     is_pipeline_family,
     make_member,
     pad_chain_volume,
+    PadMuteParam,
     pad_color,
     pad_devices,
     pad_label,
@@ -940,6 +944,8 @@ class DrumVirtualMacroComponent:
         """
         functions: Dict[str, Dict[str, int]] = {}
         for fn in FUNCTIONS.values():
+            if fn.name in CENSUS_SILENT_FUNCTIONS:
+                continue
             ms = st.members.get(fn.name) or []
             functions[fn.name] = {
                 "members": len(ms),
@@ -1184,6 +1190,15 @@ class DrumVirtualMacroComponent:
                     # ``chains[0].color`` 8754719 = #85961f on the Croydon kit.
                     "color": pad_color(pad),
                 })
+                # The pad's own mixer strip, whatever its instrument.
+                chain_volume = pad_chain_volume(pad)
+                if chain_volume is not None:
+                    members["chainVolume"].append(make_member(
+                        chain_volume, note, PAD_CHAIN_CLASS_NAME, CHAIN_VOLUME_NAME,
+                    ))
+                members["chainMute"].append(make_member(
+                    PadMuteParam(pad), note, PAD_CHAIN_CLASS_NAME, PAD_MUTE_NAME,
+                ))
             if found is None:
                 continue
             inst, cls = found

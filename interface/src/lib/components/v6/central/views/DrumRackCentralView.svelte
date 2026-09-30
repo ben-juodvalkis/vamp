@@ -12,6 +12,7 @@
   import DrumCellControlsRow from './drum/DrumCellControlsRow.svelte';
   import RackMacrosRow from './drum/RackMacrosRow.svelte';
   import PadFxPane from './drum/PadFxPane.svelte';
+  import PadMixerColumn from './drum/PadMixerColumn.svelte';
   import { fxScopeFor } from '../fxScope';
   import { useDrumVm } from '../useDrumVm.svelte';
   import { usePadChainRows } from '../usePadChainRows.svelte';
@@ -35,6 +36,7 @@
     combineVmStates,
     kitClassSummary,
     mappedMacroIndices,
+    PAD_MIXER_FUNCTIONS,
     padGridNotes,
     profileFunctions,
     profileForPadClass,
@@ -146,7 +148,7 @@
   // while held, so its rows are what is opened.
   const vm = useDrumVm(() => devicePath, {
     padNotes: () => clip.clipNotes ?? [],
-    functions: () => profileFunctions(scopedProfile, vm.macroNames)
+    functions: () => [...profileFunctions(scopedProfile, vm.macroNames), ...PAD_MIXER_FUNCTIONS]
   });
 
   let members = $derived(vm.members);
@@ -235,6 +237,13 @@
         ? scopedProfile
         : null
   );
+
+  // The held pads' own mixer strip (2026-09-29): drawn right of the pads
+  // while anything is scoped, the scoped pad's rows read and every held
+  // pad written through the scope rule.
+  function padMixerRaw(fn: 'chainVolume' | 'chainMute'): number | null | undefined {
+    return scopeNote === null ? undefined : vm.padRaw(scopeNote, fn);
+  }
 
   function onPadPress(note: number, pointerId: number) {
     if (!devicePath) return;
@@ -435,6 +444,15 @@
           onRelease={onPadRelease}
         />
       </div>
+      {#if scopeNote !== null}
+        <PadMixerColumn
+          volume={padMixerRaw('chainVolume')}
+          muted={padMixerRaw('chainMute')}
+          color={controlInk}
+          onVolume={(value) => vm.write('chainVolume', value)}
+          onMute={(value) => vm.write('chainMute', value)}
+        />
+      {/if}
       <!-- The pads pick WHAT you are moving; everything right of the seam
            moves it. Without the hairline the tiles ran straight into Gain
            at the same gap that separates two sliders, so nothing said the

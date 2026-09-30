@@ -107,6 +107,37 @@ def pad_chain_volume(pad):
         return None
 
 
+class PadMuteParam:
+    """``DrumPad.mute`` dressed as a two-state ``DeviceParameter`` (0 / 1),
+    so the ``chainMute`` function writes, reads and seeds it through the
+    same member path as every parameter. It is a property with its own
+    listener pair on the LOM, not a parameter."""
+
+    __slots__ = ("pad",)
+    min = 0.0
+    max = 1.0
+    is_quantized = True
+    is_enabled = True
+    name = "Mute"
+
+    def __init__(self, pad):
+        self.pad = pad
+
+    @property
+    def value(self):
+        return 1 if self.pad.mute else 0
+
+    @value.setter
+    def value(self, v):
+        self.pad.mute = bool(v)
+
+    def add_value_listener(self, cb):
+        self.pad.add_mute_listener(cb)
+
+    def remove_value_listener(self, cb):
+        self.pad.remove_mute_listener(cb)
+
+
 def first_instrument(devices):
     """``(device, class_name)`` of the first instrument on the chain —
     bound or not — or ``None`` when the chain carries only effects.

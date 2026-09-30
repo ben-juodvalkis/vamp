@@ -8,6 +8,7 @@
 import { cleanParameterName } from '$lib/utils/macroLayoutUtils';
 import {
 	EMPTY_CENSUS,
+	PAD_MIXER_FUNCTIONS,
 	type VmFunction,
 	type VmFunctionCensus,
 	type VmMacroCensus,
@@ -38,6 +39,8 @@ function censusState(census: VmFunctionCensus | undefined): VmState {
 /** The state of one function from the census (`unknown` without one). */
 export function vmFunctionState(members: VmMembers | null | undefined, fn: VmFunction): VmState {
 	if (!members) return 'unknown';
+	// Every pad with a chain has a mixer strip; the census does not count them.
+	if ((PAD_MIXER_FUNCTIONS as readonly string[]).includes(fn)) return 'live';
 	return censusState(members.functions[fn]);
 }
 

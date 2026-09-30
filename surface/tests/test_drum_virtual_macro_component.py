@@ -140,6 +140,7 @@ def test_property_names_and_legacy_indices():
         "vm.fx1", "vm.fx2", "vm.fxType", "vm.pitch", "vm.attack", "vm.decay", "vm.start",
         "vm.release", "vm.oscAmount", "vm.oscCoarse", "vm.pitchEnvAmount", "vm.pitchEnvAttack",
         "vm.sustain", "vm.spread", "vm.filterFreq", "vm.filterRes", "vm.gain",
+        "vm.chainVolume", "vm.chainMute",
     )
     legacy = {name: fn.legacy_macro for name, fn in FUNCTIONS.items()}
     assert legacy == {
@@ -148,6 +149,7 @@ def test_property_names_and_legacy_indices():
         "oscAmount": 0, "oscCoarse": 0, "pitchEnvAmount": 0, "pitchEnvAttack": 0,
         "sustain": 0, "spread": 0, "filterFreq": 0, "filterRes": 0,
         "gain": 0,   # none of the later functions ever had one
+        "chainVolume": 0, "chainMute": 0,
     }
     # Sustain and Spread are both sample instruments' (the Simpler kit's
     # Time pad and Trnsp use attack / release / pitch, bound long since).
@@ -195,6 +197,8 @@ def test_resolves_drumcell_members_by_name(comp):
         "release": 0, "oscAmount": 0, "oscCoarse": 0, "pitchEnvAmount": 0, "pitchEnvAttack": 0,
         # filterFreq counts the switch AND the amount, like oscAmount.
         "sustain": 0, "spread": 0, "filterFreq": 4, "filterRes": 2, "gain": 2,
+        # The pad's own mixer strip: every pad with a chain.
+        "chainVolume": 2, "chainMute": 2,
     }
     assert st.member_pads == 2
     assert st.family is True
@@ -323,6 +327,29 @@ def test_gain_keeps_the_kits_balance(comp):
     assert param(rack.drum_pads[38].chains[0].devices[0], "Volume").value == pytest.approx(
         -36.0 + (0.5 + delta) * 72.0
     )
+
+
+def test_chain_volume_and_mute_move_one_pad(comp):
+    # The pad's own mixer strip (2026-09-29): every pad with a chain is a
+    # member whatever its instrument, and a pad row moves that pad alone.
+    rack = unmapped_kit(3)
+    ok, stored, _ = comp.write(rack, PATH, "pad.37.chainVolume", 0.4)
+    assert (ok, stored) == (True, 0.4)
+    assert rack.drum_pads[37].chains[0].mixer_device.volume.writes == [pytest.approx(0.4)]
+    assert rack.drum_pads[36].chains[0].mixer_device.volume.writes == []
+    assert comp.read(rack, PATH, "pad.37.chainVolume") == pytest.approx(0.4)
+
+    assert comp.read(rack, PATH, "pad.38.chainMute") == 0
+    ok, stored, _ = comp.write(rack, PATH, "pad.38.chainMute", 1)
+    assert (ok, stored) == (True, 1)
+    assert rack.drum_pads[38].mute is True
+    assert rack.drum_pads[36].mute is False
+    assert comp.read(rack, PATH, "pad.38.chainMute") == 1
+    comp.write(rack, PATH, "pad.38.chainMute", 0)
+    assert rack.drum_pads[38].mute is False
+    # Neither rides the census: the counts would say nothing.
+    census = json.loads(comp.read(rack, PATH, "members"))
+    assert "chainVolume" not in census["functions"] and "chainMute" not in census["functions"]
 
 
 def test_gain_on_a_nested_rack_kit_is_the_pad_chain_volume(comp):
@@ -2512,7 +2539,8 @@ def test_a_mapped_kit_carries_no_deviations_and_no_member_listeners(comp):
     rack = mapped_kit(2)
     comp.read(rack, PATH, "decay")
     assert comp.debug_state(PATH)["deviations"] == {}
-    assert comp.debug_state(PATH)["watching"] == 0
+    # Only the pads' chain volumes, which no macro holds.
+    assert comp.debug_state(PATH)["watching"] == 2
     assert param(cells(rack)[0], "Decay").listeners == []
 
 

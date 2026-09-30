@@ -272,6 +272,15 @@ class FakePad:
         # Live: the chain's name on a populated pad, the note name on an
         # empty one ("E2" measured on the rig for pad 52).
         self.name = name if name is not None else ("Pad %d" % note if chains else "N%d" % note)
+        # ``DrumPad.mute`` and its listener pair (the pad's M button).
+        self.mute = False
+        self.mute_listeners: List = []
+
+    def add_mute_listener(self, cb):
+        self.mute_listeners.append(cb)
+
+    def remove_mute_listener(self, cb):
+        self.mute_listeners.remove(cb)
 
 
 class FakeRackView:

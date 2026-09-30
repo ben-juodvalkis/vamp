@@ -206,6 +206,13 @@ export const TOURS = {
 				...(name === 'utility' ? { layout: { centered: 'x' } } : {})
 			})),
 			{ name: 'drumrack-drumcell', description: 'Drum Rack, DrumCell kit (Drums)', steps: [openInstrument(0)] },
+			// The held pads' mixer strip (2026-09-29): Kick latched, its chain
+			// mute and volume in a thin column right of the pads.
+			{
+				name: 'drumrack-pad-mixer',
+				description: 'Drum Rack, Kick latched — the pad’s chain mute and volume beside the pads',
+				steps: [openInstrument(0), { click: '.pad-tile[data-note="36"]' }]
+			},
 			// The swap pill's OTHER branch (ADR-439). On a held Drum Sampler pad
 			// the pill is gated on the bridge's `/bridge/ax_helper`, and the mock
 			// hardcoded `ready`, so the state a rig without `npm run

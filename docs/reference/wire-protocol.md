@@ -231,6 +231,12 @@ Key rules:
   through its own range: DrumCell 0..1, Simpler and Sampler −36..36 dB;
   on a kit of nested Instrument Racks the pad's own **chain volume**
   instead, and on a plugin-hosted kit nothing);
+  `vm.chainVolume` (the pad's `chains[0].mixer_device.volume`, 0..1,
+  0.85 = 0 dB) and `vm.chainMute` (`DrumPad.mute`, `int` 0/1) — the
+  pad's own mixer strip, 2026-09-29, a member on every pad with a chain
+  whatever its instrument, left out of the `vm.members` census, read and
+  written as pad rows (`vm.pad.<note>.chainVolume`); a mute made in Live
+  is not listened for;
   a section's switch is the function's first member and turns on above
   1/127 of travel like FX On —
   `vm.start` (`float` 0..1), `vm.fxType` (`int` 0..8) and `vm.pitch`
