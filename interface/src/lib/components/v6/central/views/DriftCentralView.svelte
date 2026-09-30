@@ -876,8 +876,12 @@
      They used to divide a card sized for Mono's three, which drew Poly's
      two at 92px beside the mixer's 56. The card is now as wide as its
      sliders, so a mode change moves the Time/Filter column's edge. */
+  /* The explicit width is for WebKit: it sizes the content-wide card from
+     its sliders' widths, not their flex-basis, so without one the card
+     came out narrow on the iPad and the sliders spilled under the wheels. */
   .voicing-slider {
     flex: 0 0 var(--drift-slider-w);
+    width: var(--drift-slider-w);
   }
   /* The level mixer: three channels at the view's slider width, and the
      column exactly as wide as them — three sliders, TWO gaps. It said four
