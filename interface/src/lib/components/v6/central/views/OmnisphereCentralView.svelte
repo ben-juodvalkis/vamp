@@ -4,6 +4,7 @@
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import OrbControl from '../../device-panel/OrbControl.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
+  import EnvelopeEditor, { type EnvelopeStage } from '../../device-panel/EnvelopeEditor.svelte';
   import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import SectionDivider from '../SectionDivider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
@@ -56,23 +57,26 @@
   let orbAngleValue = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 25)) ?? 0.5 : 0.5);
   let orbRadiusValue = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 26)) ?? 0.5 : 0.5);
 
-  // The two envelopes, one slider a stage (user's layout, 2026-09-29: they
-  // replaced the Time pad, which drove amp attack and release as one XY).
-  // Parameter slots: amp A-D-S-R are 8-11, filter A-D-S-R 13-16, and the
-  // filter envelope's amount is 5.
-  const AMP_ENV = [
-    { title: 'A', index: 8 },
-    { title: 'D', index: 9 },
-    { title: 'S', index: 10 },
-    { title: 'R', index: 11 }
-  ];
-  const FILTER_ENV = [
-    { title: 'A', index: 13 },
-    { title: 'D', index: 14 },
-    { title: 'S', index: 15 },
-    { title: 'R', index: 16 },
-    { title: 'Amt', index: 5 }
-  ];
+  // The two envelopes, each an ADSR drawn as Live draws one (user's layout,
+  // 2026-09-29: sliders first, then the curve). They replaced the Time pad,
+  // which drove amp attack and release as one XY. Parameter slots: amp
+  // A-D-S-R are 8-11, filter A-D-S-R 13-16, the filter envelope's amount 5.
+  const AMP_ENV: Record<EnvelopeStage, number> = { attack: 8, decay: 9, sustain: 10, release: 11 };
+  const FILTER_ENV: Record<EnvelopeStage, number> = { attack: 13, decay: 14, sustain: 15, release: 16 };
+  const FILTER_ENV_AMOUNT = 5;
+
+  function paramDisplay(index: number): string | undefined {
+    return device ? selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(device, index)) : undefined;
+  }
+
+  function envDisplays(env: Record<EnvelopeStage, number>) {
+    return {
+      attack: paramDisplay(env.attack),
+      decay: paramDisplay(env.decay),
+      sustain: paramDisplay(env.sustain),
+      release: paramDisplay(env.release)
+    };
+  }
 
   function paramValue(index: number): number {
     return device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, index)) ?? 0.5 : 0.5;
@@ -154,24 +158,25 @@
         />
       </div>
 
-      <!-- Cols 2-3: the envelopes. Amp over filter, on one ruler, so each amp
-           stage stands over the same filter stage; the filter's Amount takes
-           the fifth column, and FX stands over it in the amp row's. It shares
+      <!-- Cols 2-3: the envelopes, amp over filter, each an editable curve;
+           the filter's Amount takes the fifth column, and FX stands over it
+           in the amp row's. It shares
            the view's rows (subgrid), so its names sit in the header and
            middle rows and its sliders start level with the pads. -->
       <div class="omni-envelopes min-w-0 min-h-0" style="grid-column: 2 / 4; grid-row: 1 / 5;">
         <span class="omni-env-title" style="color: {omniInk.primary}; grid-column: 1 / 5; grid-row: 1;">Amp Env</span>
-        {#each AMP_ENV as stage (stage.index)}
-          <div class="min-w-0 min-h-0" style="grid-row: 2;">
-            <DeviceSlider
-              value={paramValue(stage.index)}
-              title={stage.title}
-              orientation="vertical"
-              color={omniInk}
-              onInteraction={(value) => writeParam(stage.index, value)}
-            />
-          </div>
-        {/each}
+        <div class="min-w-0 min-h-0" style="grid-column: 1 / 5; grid-row: 2;">
+          <EnvelopeEditor
+            title="Amp Envelope"
+            attack={paramValue(AMP_ENV.attack)}
+            decay={paramValue(AMP_ENV.decay)}
+            sustain={paramValue(AMP_ENV.sustain)}
+            release={paramValue(AMP_ENV.release)}
+            displays={envDisplays(AMP_ENV)}
+            color={omniInk}
+            onChange={(stage, value) => writeParam(AMP_ENV[stage], value)}
+          />
+        </div>
         <button
           class="physical-button omni-fx w-full h-full min-h-0 text-xl font-bold"
           class:active={fxIsOn}
@@ -181,17 +186,27 @@
           FX
         </button>
         <span class="omni-env-title" style="color: {omniInk.primary}; grid-column: 1 / 6; grid-row: 3;">Filter Env</span>
-        {#each FILTER_ENV as stage (stage.index)}
-          <div class="min-w-0 min-h-0" style="grid-row: 4;">
-            <DeviceSlider
-              value={paramValue(stage.index)}
-              title={stage.title}
-              orientation="vertical"
-              color={omniInk}
-              onInteraction={(value) => writeParam(stage.index, value)}
-            />
-          </div>
-        {/each}
+        <div class="min-w-0 min-h-0" style="grid-column: 1 / 5; grid-row: 4;">
+          <EnvelopeEditor
+            title="Filter Envelope"
+            attack={paramValue(FILTER_ENV.attack)}
+            decay={paramValue(FILTER_ENV.decay)}
+            sustain={paramValue(FILTER_ENV.sustain)}
+            release={paramValue(FILTER_ENV.release)}
+            displays={envDisplays(FILTER_ENV)}
+            color={omniInk}
+            onChange={(stage, value) => writeParam(FILTER_ENV[stage], value)}
+          />
+        </div>
+        <div class="min-w-0 min-h-0" style="grid-column: 5; grid-row: 4;">
+          <DeviceSlider
+            value={paramValue(FILTER_ENV_AMOUNT)}
+            title="Amt"
+            orientation="vertical"
+            color={omniInk}
+            onInteraction={(value) => writeParam(FILTER_ENV_AMOUNT, value)}
+          />
+        </div>
       </div>
 
       <!-- Cols 4-5, header: the swap pill, one line across both pads. -->
@@ -323,7 +338,7 @@
      [data-grammar="flat"]. */
   /* Amp title, amp stages, filter title, filter stages — the view's rows.
      Amount's column is
-     narrower: it is one knob beside a set, not a fifth stage. */
+     narrower: it is one control beside a curve. */
   .omni-grid {
     grid-template-columns: repeat(5, minmax(0, 1fr)) auto minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 1fr);
