@@ -3,6 +3,8 @@
  * Manages clip loop, warp, and other properties
  */
 
+import type { WarpMarker } from '$lib/utils/clip/warpMarkers';
+
 export interface LoopSettings {
 	enabled: boolean;
 	start: number;
@@ -34,6 +36,13 @@ class ClipPropertiesStore {
 	// Live's own text for the gain (`Clip.gain_display_string`, "-6.0 dB"):
 	// the 0..1 value is not linear in dB. "" until the surface sends one.
 	private _gainDisplay = $state<string>('');
+	// The focused audio clip's warp markers (`clip/warp_markers`), Live's
+	// hidden trailing one included; [] when unwarped, MIDI or not yet sent.
+	private _warpMarkers = $state.raw<WarpMarker[]>([]);
+	private _warpFileSeconds = $state<number>(0);
+	// Bumped on every `clip/warp_markers`, so a drag can wait for the echo
+	// of its own move even when the list comes back unchanged.
+	private _warpMarkersVersion = $state<number>(0);
 
 
 	// Reactive getters
@@ -84,6 +93,15 @@ class ClipPropertiesStore {
 	}
 	get gainDisplay(): string {
 		return this._gainDisplay;
+	}
+	get warpMarkers(): WarpMarker[] {
+		return this._warpMarkers;
+	}
+	get warpFileSeconds(): number {
+		return this._warpFileSeconds;
+	}
+	get warpMarkersVersion(): number {
+		return this._warpMarkersVersion;
 	}
 	get clipType(): 'audio' | 'midi' | null {
 		if (this._isAudioClip === null) return null;
@@ -169,6 +187,13 @@ class ClipPropertiesStore {
 		this._gainDisplay = text;
 	}
 
+	handleWarpMarkers(warping: boolean, fileSeconds: number, markers: WarpMarker[]) {
+		this._warpEnabled = warping;
+		this._warpFileSeconds = fileSeconds;
+		this._warpMarkers = warping ? markers : [];
+		this._warpMarkersVersion++;
+	}
+
 	// Handle batch properties update
 	handleBatchProperties(properties: Record<string, any>) {
 		if ('loop_start' in properties) this._loopStart = properties.loop_start;
@@ -228,6 +253,8 @@ class ClipPropertiesStore {
 		this._pitchFine = 0;
 		this._gain = 1;
 		this._gainDisplay = '';
+		this._warpMarkers = [];
+		this._warpFileSeconds = 0;
 	}
 }
 

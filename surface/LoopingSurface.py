@@ -128,6 +128,9 @@ from .components.ClipPropertiesComponent import (
     V3_CLIP_SET_GAIN_ADDRESS,
     V3_CLIP_SET_START_MARKER_ADDRESS,
     V3_CLIP_SET_WARP_MODE_ADDRESS,
+    V3_CLIP_WARP_MARKER_ADD_ADDRESS,
+    V3_CLIP_WARP_MARKER_MOVE_ADDRESS,
+    V3_CLIP_WARP_MARKER_REMOVE_ADDRESS,
 )
 from .components.ClipsComponent import (
     ClipsComponent,
@@ -1588,6 +1591,12 @@ class LoopingSurface(ControlSurface):
              self._clip_properties_component.handle_set_pitch_fine),
             (V3_CLIP_SET_GAIN_ADDRESS,
              self._clip_properties_component.handle_set_gain),
+            (V3_CLIP_WARP_MARKER_MOVE_ADDRESS,
+             self._clip_properties_component.handle_move_warp_marker),
+            (V3_CLIP_WARP_MARKER_ADD_ADDRESS,
+             self._clip_properties_component.handle_add_warp_marker),
+            (V3_CLIP_WARP_MARKER_REMOVE_ADDRESS,
+             self._clip_properties_component.handle_remove_warp_marker),
         ):
             self._transport.add_handler(address, handler)
 

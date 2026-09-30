@@ -227,3 +227,41 @@ describe('paintPeaks', () => {
 		expect(heights('perceptual')).toBeGreaterThan(20);
 	});
 });
+
+describe('paintPeaks with a warp placement', () => {
+	it('lays each bar where the markers put its slice of the file', () => {
+		// 4 bins over a file whose first half plays over beats 0..1 and
+		// second half over beats 1..4 (a marker at the midpoint, beat 1).
+		const place = (f: number) => (f <= 0.5 ? f * 2 : 1 + (f - 0.5) * 6);
+		const { ctx, rects } = fakeCtx();
+		paintPeaks(ctx, flat(4), 400, 100, {
+			span: { start: 0, end: 4 },
+			view: { start: 0, end: 4 },
+			place,
+			amplitude: 'linear',
+			headroom: 1,
+			ink: () => 'ink'
+		});
+		expect(rects.map((r) => [r.x, r.w])).toEqual([
+			[0, 50],
+			[50, 50],
+			[100, 150],
+			[250, 150]
+		]);
+	});
+
+	it('skips bars that fall outside the view', () => {
+		const place = (f: number) => f * 8;
+		const { ctx, rects } = fakeCtx();
+		paintPeaks(ctx, flat(8), 100, 100, {
+			span: { start: 0, end: 8 },
+			view: { start: 2, end: 4 },
+			place,
+			amplitude: 'linear',
+			headroom: 1,
+			ink: () => 'ink'
+		});
+		expect(rects).toHaveLength(2);
+		expect(rects[0].x).toBe(0);
+	});
+});

@@ -63,6 +63,48 @@ export async function probeFormat(
 	return null;
 }
 
+/**
+ * The sample rate a WAV or AIFF header declares, and (AIFF) its frame
+ * count, whatever the encoding — including the compressed audio
+ * `probeFormat` refuses (Ableton's protected `able` AIFC). The transient
+ * route needs it to turn Live's `.asd` onset frames into seconds.
+ */
+export async function probeSampleRate(
+	fd: FileHandle,
+	sizeBytes: number
+): Promise<{ sampleRate: number; frames: number } | null> {
+	if (sizeBytes < 12) return null;
+	const head = Buffer.alloc(Math.min(HEAD_BYTES, sizeBytes));
+	const { bytesRead } = await fd.read(head, 0, head.length, 0);
+	if (bytesRead < 12) return null;
+	const tag = head.toString('ascii', 0, 4);
+	const subTag = head.toString('ascii', 8, 12);
+	const wav = tag === 'RIFF' && subTag === 'WAVE';
+	const aiff = tag === 'FORM' && (subTag === 'AIFF' || subTag === 'AIFC');
+	if (!wav && !aiff) return null;
+	let off = 12;
+	while (off + 8 <= bytesRead) {
+		const id = head.toString('ascii', off, off + 4);
+		const chunkSize = wav ? head.readUInt32LE(off + 4) : head.readUInt32BE(off + 4);
+		const bodyOff = off + 8;
+		if (wav && id === 'fmt ' && bodyOff + 8 <= bytesRead) {
+			const sampleRate = head.readUInt32LE(bodyOff + 4);
+			return sampleRate >= 1 && sampleRate <= 768000 ? { sampleRate, frames: Infinity } : null;
+		}
+		if (aiff && id === 'COMM' && bodyOff + 18 <= bytesRead) {
+			const frames = head.readUInt32BE(bodyOff + 2);
+			const sampleRate = read80BitFloat(head, bodyOff + 8);
+			return Number.isFinite(sampleRate) && sampleRate >= 1 && sampleRate <= 768000
+				? { sampleRate, frames: frames || Infinity }
+				: null;
+		}
+		const advance = bodyOff + chunkSize + (chunkSize & 1);
+		if (advance <= off) return null;
+		off = advance;
+	}
+	return null;
+}
+
 function parseWav(
 	head: Buffer,
 	bytesRead: number,

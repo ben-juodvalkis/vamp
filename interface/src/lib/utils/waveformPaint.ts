@@ -110,6 +110,13 @@ export interface PaintPeaksOptions {
 	/** Fraction of the half-height the loudest bar reaches. */
 	headroom: number;
 	/**
+	 * Where a point of the file lands on the view's time axis, for a file
+	 * that is not laid out evenly across `span` — a warped clip, placed
+	 * through its warp markers. `fraction` is 0 at the file's first sample
+	 * and 1 at its last; must be increasing. Absent: evenly across `span`.
+	 */
+	place?: (fraction: number) => number;
+	/**
 	 * Fill for one bar. `x0` / `x1` are its UNROUNDED canvas-pixel edges, so
 	 * an in-loop test reads the same fractional position it always did.
 	 */
@@ -131,7 +138,9 @@ export function paintPeaks(
 	height: number,
 	opts: PaintPeaksOptions
 ): void {
-	const range = peakBinRange(peaks.length, opts.span, opts.view);
+	const count = peaks.length;
+	const place = opts.place;
+	const range = place ? placedBinRange(count, place, opts.view) : peakBinRange(count, opts.span, opts.view);
 	if (!range || width <= 0 || height <= 0) return;
 	const { binStart, binEnd } = range;
 
@@ -148,9 +157,12 @@ export function paintPeaks(
 
 	const mid = height / 2;
 	const ampScale = mid * opts.headroom;
-	const binTime = (opts.span.end - opts.span.start) / peaks.length;
+	const binTime = (opts.span.end - opts.span.start) / count;
 	const pxPerTime = width / (opts.view.end - opts.view.start);
-	const xAt = (bin: number) => (opts.span.start + bin * binTime - opts.view.start) * pxPerTime;
+	const timeAt = place
+		? (bin: number) => place(bin / count)
+		: (bin: number) => opts.span.start + bin * binTime;
+	const xAt = (bin: number) => (timeAt(bin) - opts.view.start) * pxPerTime;
 
 	for (let i = binStart; i < binEnd; i++) {
 		const [min, max] = peaks[i];
@@ -163,4 +175,18 @@ export function paintPeaks(
 		ctx.fillStyle = opts.ink(x0, x1);
 		ctx.fillRect(left, Math.floor(y1), Math.max(1, right - left), Math.max(1, y2 - y1));
 	}
+}
+
+/** `peakBinRange` for a file placed by `place` rather than evenly. */
+function placedBinRange(
+	count: number,
+	place: (fraction: number) => number,
+	view: TimeRange
+): { binStart: number; binEnd: number } | null {
+	if (count <= 0 || !(view.end > view.start)) return null;
+	let binStart = 0;
+	while (binStart < count && place((binStart + 1) / count) <= view.start) binStart++;
+	let binEnd = count;
+	while (binEnd > binStart && place((binEnd - 1) / count) >= view.end) binEnd--;
+	return binEnd > binStart ? { binStart, binEnd } : null;
 }

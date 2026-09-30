@@ -86,8 +86,25 @@
 		V3_CLIP_SET_LOOP_START_ADDRESS,
 		V3_CLIP_SET_LOOP_END_ADDRESS,
 		V3_CLIP_SET_PITCH_COARSE_ADDRESS,
-		V3_CLIP_SET_GAIN_ADDRESS
+		V3_CLIP_SET_GAIN_ADDRESS,
+		V3_CLIP_WARP_MARKER_MOVE_ADDRESS,
+		V3_CLIP_WARP_MARKER_ADD_ADDRESS,
+		V3_CLIP_WARP_MARKER_REMOVE_ADDRESS
 	} from '$lib/api/handlers/v3Clip';
+	import {
+		addTarget,
+		canRemove,
+		dragTarget,
+		insertMarker,
+		moveMarker,
+		secToBeat,
+		shownMarkers,
+		withoutMarker,
+		DOUBLE_TAP_MS,
+		DOUBLE_TAP_PX,
+		type WarpMarker
+	} from '$lib/utils/clip/warpMarkers';
+	import { getTransients } from '$lib/services/clipTransientsService';
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import { logger } from '$lib/utils/logger';
 
@@ -299,6 +316,40 @@
 		};
 	});
 
+	// ── Warp markers (audio, warped) ─────────────────────────────────
+	// Live's markers for the focused clip, or the drag's own picture of
+	// them from the finger's first move until the surface echoes the move.
+	let optimisticMarkers = $state.raw<WarpMarker[] | null>(null);
+	let displayMarkers = $derived(optimisticMarkers ?? clipPropertiesStore.warpMarkers);
+	let shownWarpMarkers = $derived(isAudio ? shownMarkers(displayMarkers) : []);
+	// Where each point of the file lands in clip beats, through the
+	// markers, so the waveform stretches between them as Live plays it.
+	// Undefined (evenly across the file's span) when unwarped or unknown.
+	let warpPlace = $derived.by(() => {
+		const shown = shownWarpMarkers;
+		const seconds = clipPropertiesStore.warpFileSeconds;
+		if (shown.length < 2 || !(seconds > 0)) return undefined;
+		return (fraction: number) => secToBeat(shown, fraction * seconds) ?? 0;
+	});
+
+	// The file's transients (seconds) — Live's own from its `.asd`, else the
+	// server's detector — drawn as ticks on the ruler and snapped to by a
+	// double-tap there. Only for a warped clip: an unwarped one has no
+	// markers to add to.
+	let transientSecs = $state.raw<number[]>([]);
+	$effect(() => {
+		const path = isAudio && clipPropertiesStore.warpMarkers.length > 0 ? wavFilePath : '';
+		transientSecs = [];
+		if (!path) return;
+		let cancelled = false;
+		getTransients(path).then((secs) => {
+			if (!cancelled) transientSecs = secs;
+		});
+		return () => {
+			cancelled = true;
+		};
+	});
+
 	// ── View windows (zoom/scroll state) ─────────────────────────────
 	let beatWindow = $state<BeatWindow>({ startBeats: 0, endBeats: 4 });
 	let pitchWindow = $state<PitchWindow>({ lowPitch: 48, highPitch: 72 });
@@ -502,6 +553,7 @@
 		const fileStart = fileStartBeats;
 		const fileEnd = fileEndBeats;
 		const colorStyle = color;
+		const place = warpPlace;
 		if (w <= 0 || h <= 0) return;
 
 		const dpr = window.devicePixelRatio || 1;
@@ -533,6 +585,7 @@
 		paintPeaks(ctx, data.peaks, canvas.width, canvas.height, {
 			span: peakSpan(fileStart, fileEnd, total),
 			view: { start: win.startBeats, end: win.endBeats },
+			place,
 			amplitude: 'perceptual',
 			headroom: 0.9,
 			ink: (x0) => (!looped || (x0 >= braceStartPx && x0 < braceEndPx) ? inkGrad : dim)
@@ -567,6 +620,24 @@
 	let braceLoopEndX = $derived(beatToX(displayLoopEnd, beatWindow, contentW));
 	let markerStartX = $derived(beatToX(startMarker, beatWindow, contentW));
 	let markerEndX = $derived(beatToX(endMarker, beatWindow, contentW));
+
+	let transientTicks = $derived.by(() => {
+		const shown = shownWarpMarkers;
+		if (shown.length < 2 || contentW <= 0) return [];
+		const out: number[] = [];
+		for (const sec of transientSecs) {
+			const beat = secToBeat(shown, sec);
+			if (beat === null || beat < beatWindow.startBeats || beat > beatWindow.endBeats) continue;
+			out.push(beatToX(beat, beatWindow, contentW));
+		}
+		return out;
+	});
+
+	let warpHandles = $derived(
+		shownWarpMarkers
+			.map((m, index) => ({ index, beat: m.beat, x: beatToX(m.beat, beatWindow, contentW) }))
+			.filter((h) => h.x >= -12 && h.x <= contentW + 12)
+	);
 
 	// ── Playhead overlay ─────────────────────────────────────────────
 	let playheadX = $derived(
@@ -735,6 +806,161 @@
 		}
 		braceDragging = null;
 	}
+
+	// ── Warp marker drag ─────────────────────────────────────────────
+	// A marker's grip at the foot of the waveform drags its BEAT; its
+	// audio point stays (Live's move_warp_marker). Snapped to a 16th and
+	// held between its neighbors. Drawn optimistically while the finger
+	// moves; ONE move goes to Live on release (one undo step), and the
+	// picture holds until the surface's echo replaces it.
+	const WARP_GRID_BEATS = 0.25;
+	const WARP_MIN_GAP_BEATS = 1 / 64;
+	const WARP_ECHO_TIMEOUT_MS = 2000;
+	let warpDragIndex = $state<number | null>(null);
+	let warpDragStartClientX = 0;
+	let warpDragFromBeat = 0;
+	let warpDragTo = 0;
+	let warpDragShown: WarpMarker[] = [];
+	let warpDragAll: WarpMarker[] = [];
+	let warpEchoAfter = $state<number | null>(null);
+	let warpEchoTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function startWarpDrag(event: PointerEvent, index: number) {
+		if (!hasClip || contentW <= 0) return;
+		if (event.cancelable) event.preventDefault();
+		event.stopPropagation();
+		if (gripDoubleTapped(index)) return;
+		warpDragAll = clipPropertiesStore.warpMarkers;
+		warpDragShown = shownMarkers(warpDragAll);
+		const marker = warpDragShown[index];
+		if (!marker) return;
+		warpDragIndex = index;
+		warpDragStartClientX = event.clientX;
+		warpDragFromBeat = marker.beat;
+		warpDragTo = marker.beat;
+		warpEchoAfter = null;
+		beginGesture(onWarpDragMove, onWarpDragEnd);
+	}
+
+	function onWarpDragMove(event: PointerEvent) {
+		if (warpDragIndex === null || contentW <= 0) return;
+		if (event.cancelable) event.preventDefault();
+		const delta = clientDeltaToBeatDelta(event.clientX - warpDragStartClientX, contentW, beatWindow);
+		warpDragTo = dragTarget(
+			warpDragShown,
+			warpDragIndex,
+			warpDragFromBeat + delta,
+			WARP_GRID_BEATS,
+			WARP_MIN_GAP_BEATS
+		);
+		optimisticMarkers = moveMarker(warpDragAll, warpDragFromBeat, warpDragTo);
+	}
+
+	function onWarpDragEnd() {
+		const index = warpDragIndex;
+		warpDragIndex = null;
+		const distance = warpDragTo - warpDragFromBeat;
+		if (clipPath === null || Math.abs(distance) < 1e-6) {
+			optimisticMarkers = null;
+			noteGripTap(index);
+			return;
+		}
+		lastGripTap = null;
+		sendWarpEdit(V3_CLIP_WARP_MARKER_MOVE_ADDRESS, [clipPath, warpDragFromBeat, distance], optimisticMarkers);
+	}
+
+	/**
+	 * Send one marker edit and draw `picture` until the surface's
+	 * `warp_markers` echo replaces it. A surface that never answers (one
+	 * Live has not restarted into) must not leave a marker drawn where
+	 * Live does not have it, so the picture also lapses on a timer.
+	 */
+	function sendWarpEdit(address: string, args: (string | number)[], picture: WarpMarker[] | null) {
+		optimisticMarkers = picture;
+		warpEchoAfter = clipPropertiesStore.warpMarkersVersion;
+		send(address, args);
+		if (warpEchoTimer) clearTimeout(warpEchoTimer);
+		warpEchoTimer = setTimeout(() => {
+			warpEchoTimer = null;
+			if (warpDragIndex === null) {
+				optimisticMarkers = null;
+				warpEchoAfter = null;
+			}
+		}, WARP_ECHO_TIMEOUT_MS);
+	}
+
+	// ── Double-tap a grip: remove that marker ────────────────────────
+	// The first tap is a drag that never moved; a second landing on the
+	// same marker within DOUBLE_TAP_MS removes it instead of dragging.
+	// Live's first and last drawn markers stay (Live's UI keeps them too).
+	let lastGripTap: { beat: number; at: number } | null = null;
+
+	function noteGripTap(index: number | null) {
+		const marker = index === null ? undefined : warpDragShown[index];
+		lastGripTap = marker ? { beat: marker.beat, at: performance.now() } : null;
+	}
+
+	function gripDoubleTapped(index: number): boolean {
+		const marker = shownWarpMarkers[index];
+		const prev = lastGripTap;
+		lastGripTap = null;
+		if (!marker || !prev || performance.now() - prev.at > DOUBLE_TAP_MS) return false;
+		if (Math.abs(prev.beat - marker.beat) > 1e-9 || clipPath === null) return false;
+		if (canRemove(shownWarpMarkers, index)) {
+			sendWarpEdit(
+				V3_CLIP_WARP_MARKER_REMOVE_ADDRESS,
+				[clipPath, marker.beat],
+				withoutMarker(clipPropertiesStore.warpMarkers, marker.beat)
+			);
+		}
+		return true;
+	}
+
+	// ── Double-tap the ruler: add a marker at the nearest transient ──
+	const TRANSIENT_SNAP_BEATS = 0.125;
+	let lastRulerTap: { x: number; at: number } | null = null;
+
+	function handleRulerPointerDown(e: PointerEvent) {
+		if (!isAudio || shownWarpMarkers.length < 2 || clipPath === null || contentW <= 0) return;
+		const x = e.clientX - (e.currentTarget as HTMLElement).getBoundingClientRect().left;
+		const now = performance.now();
+		const prev = lastRulerTap;
+		if (!prev || now - prev.at > DOUBLE_TAP_MS || Math.abs(prev.x - x) > DOUBLE_TAP_PX) {
+			lastRulerTap = { x, at: now };
+			return;
+		}
+		lastRulerTap = null;
+		const target = addTarget(
+			shownWarpMarkers,
+			transientSecs,
+			xToBeat(x, beatWindow, contentW),
+			TRANSIENT_SNAP_BEATS,
+			WARP_MIN_GAP_BEATS
+		);
+		if (!target) return;
+		sendWarpEdit(
+			V3_CLIP_WARP_MARKER_ADD_ADDRESS,
+			[clipPath, target.sec, target.beat],
+			insertMarker(clipPropertiesStore.warpMarkers, target)
+		);
+	}
+
+	// The echo landed: Live's own markers take over.
+	$effect(() => {
+		const version = clipPropertiesStore.warpMarkersVersion;
+		if (warpEchoAfter === null || version <= warpEchoAfter) return;
+		warpEchoAfter = null;
+		optimisticMarkers = null;
+	});
+	// A new clip drops any picture of the old one's markers.
+	$effect(() => {
+		void clipPath;
+		optimisticMarkers = null;
+		warpEchoAfter = null;
+	});
+	onDestroy(() => {
+		if (warpEchoTimer) clearTimeout(warpEchoTimer);
+	});
 
 	function commitLoop(range: LoopRange, prev: LoopRange): void {
 		if (clipPath === null) return;
@@ -1374,7 +1600,16 @@
 			onkeydown={handleEditorKey}
 		>
 			<!-- Time ruler (top) -->
-			<div class="time-ruler" style="left: {pitchAxisW}px; height: {TIME_AXIS_H}px;">
+			<!-- Double-tap to add a warp marker (audio, warped). -->
+			<div
+				class="time-ruler"
+				class:warp-ruler={isAudio && shownWarpMarkers.length >= 2}
+				style="left: {pitchAxisW}px; height: {TIME_AXIS_H}px;"
+				onpointerdown={handleRulerPointerDown}
+			>
+				{#each transientTicks as x, i (i)}
+					<div class="transient-tick" style="left: {x}px;"></div>
+				{/each}
 				{#each gridLines as line (line.x)}
 					<div
 						class="ruler-tick"
@@ -1478,6 +1713,28 @@
 				{#if isAudio}
 					<div class="marker marker-start" style="left: {markerStartX}px;"></div>
 					<div class="marker marker-end" style="left: {markerEndX}px;"></div>
+					<!-- Warp markers: a line through the waveform and a grip at
+					     its head and its foot, the grips alone taking the finger
+					     so the rest of the canvas still pans. -->
+					{#each warpHandles as handle (handle.index)}
+						<div
+							class="warp-marker"
+							class:dragging={warpDragIndex === handle.index}
+							style="left: {handle.x}px;"
+						>
+							<div class="warp-line"></div>
+							{#each ['top', 'bottom'] as end (end)}
+								<div
+									class="warp-grip {end}"
+									role="slider"
+									tabindex="-1"
+									aria-label="Warp marker"
+									aria-valuenow={handle.beat}
+									onpointerdown={(e) => startWarpDrag(e, handle.index)}
+								></div>
+							{/each}
+						</div>
+					{/each}
 				{/if}
 
 				<!-- Loop braces (dedicated draggable handles — M2) -->
@@ -1710,6 +1967,22 @@
 		top: 0;
 		right: 0;
 		border-bottom: 1px solid var(--line);
+	}
+
+	/* Double-tap target for a new warp marker: no double-tap zoom. */
+	.time-ruler.warp-ruler {
+		touch-action: manipulation;
+		cursor: copy;
+	}
+	/* A transient a new marker would snap to: a short tick from the
+	   ruler's foot, in the warp markers' ink, fainter than the grid. */
+	.transient-tick {
+		position: absolute;
+		bottom: 0;
+		height: 55%;
+		width: 1px;
+		background: color-mix(in oklab, var(--act-warn) 45%, transparent);
+		pointer-events: none;
 	}
 
 	/* Tick weights = the line ladder (§5.4): bars strong, beats standard. */
@@ -2002,6 +2275,63 @@
 	/* Drag = brighter phosphor; NO glow (GRATICULE bans glows). */
 	.brace-handle.dragging .brace-line,
 	.brace-handle.dragging .brace-line::before {
+		background: var(--phosphor-100);
+	}
+
+	/* Warp markers: the line takes no pointer; a grip at each end is a
+	   28×36 touch target, above the braces (z 6; the grips alone, so a
+	   brace sharing its x is still grabbable between them) — a clip's
+	   start and end markers usually sit exactly on the loop edges. */
+	.warp-marker {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		width: 0;
+		pointer-events: none;
+		z-index: 7;
+	}
+	.warp-line {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: -0.5px;
+		width: 1px;
+		background: color-mix(in oklab, var(--act-warn) 55%, transparent);
+	}
+	.warp-grip {
+		position: absolute;
+		left: -14px;
+		width: 28px;
+		height: 36px;
+		pointer-events: auto;
+		touch-action: none;
+		cursor: ew-resize;
+	}
+	.warp-grip.top {
+		top: 0;
+	}
+	.warp-grip.bottom {
+		bottom: 0;
+	}
+	.warp-grip::after {
+		content: '';
+		position: absolute;
+		left: 9px;
+		width: 10px;
+		height: 14px;
+		border-radius: 2px;
+		background: var(--act-warn);
+	}
+	.warp-grip.top::after {
+		top: 4px;
+	}
+	.warp-grip.bottom::after {
+		bottom: 4px;
+	}
+	.warp-marker.dragging .warp-line {
+		background: var(--act-warn);
+	}
+	.warp-marker.dragging .warp-grip::after {
 		background: var(--phosphor-100);
 	}
 

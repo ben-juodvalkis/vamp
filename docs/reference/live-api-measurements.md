@@ -67,6 +67,9 @@ The UI reaches the LOM only through the surface, over the v3 wire ([wire-protoco
 - **`move_warp_marker(beat_time, distance)`** moves it by `distance` beats and leaves its audio
   point put. A move past a neighbor is clamped just short of it, with no error. Moving the end
   marker carries the hidden marker 1/32 beat after it.
+  **It leaves no undo step** (12.4.15b5, 2026-09-30): moved 7 → 8 from Python, then `song.undo()`
+  reverted the step before it and left the marker at 8. `add_warp_markers_listener` exists and fires
+  on it, so an observer sees the move.
 - **`remove_warp_marker(beat_time)`** needs exactly `beat_time` (4.1 misses a marker at 4.09:
   `RuntimeError`). The first marker can be removed, which Live's UI refuses.
 - **`automation_envelope(param)`**: the clip's [Envelope](#envelope) for a parameter, or `None` if
