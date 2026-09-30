@@ -13,8 +13,8 @@ running Live: open it in Safari on the iPad over USB-C or Wi-Fi, or in a browser
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Status: pre-release.** It runs every day on its author's rig. A stranger's first run works,
-> but a few tiles still expect the author's files (see [Known gaps](#known-gaps)).
+> **Status: released.** It runs every day on its author's rig and is ready for yours. A few tiles
+> still expect the author's files (see [Known gaps](#known-gaps)).
 
 ## What it does
 
