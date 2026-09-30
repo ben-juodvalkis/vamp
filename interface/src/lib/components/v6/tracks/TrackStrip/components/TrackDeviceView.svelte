@@ -26,7 +26,6 @@
 
 	import {
 		AudioWaveform,
-		Disc3,
 		Drum,
 		Gauge,
 		Guitar,
@@ -45,6 +44,7 @@
 		HARP,
 		KEYBOARD,
 		SAXOPHONE,
+		SAMPLER,
 		SHAKER,
 		SIMPLER,
 		SYNTH,
@@ -97,7 +97,7 @@
 		trumpet: TRUMPET,
 		saxophone: SAXOPHONE,
 		harp: HARP,
-		sampler: Disc3,
+		sampler: SAMPLER,
 		simpler: SIMPLER,
 		drum: Drum,
 		shaker: SHAKER,

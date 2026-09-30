@@ -208,3 +208,30 @@ export const SIMPLER: IconNode = [
 	['circle', { cx: '19', cy: '18.5', r: '2.6' }],
 	['path', { d: 'M19 18.5 20.8 16.7' }]
 ];
+
+/**
+ * One sample zone starting at `x` on the line `y`: a start marker, then a
+ * hit that decays. The marker is what keeps three zones in a row reading as
+ * three samples rather than one line.
+ */
+function zone(x: number, y: number): IconNode {
+	const a = [1.5, -1.3, 0.9, -0.6, 0.3];
+	const d = a.map((amp, i) => `${x + 0.4 + 0.75 * (i + 1)} ${y + amp}`).join(' ');
+	return [
+		['path', { d: `M${x} ${y - 1.7}V${y + 1.7}` }],
+		['path', { d: `M${x} ${y}H${x + 0.4}L${d} ${x + 4.6} ${y}` }]
+	];
+}
+
+/**
+ * Sampler: a multisample — three sample zones stepping up across a key map,
+ * framed like the Simpler's display, over a shallow keyboard. The Simpler
+ * mark is one sample over knobs; this one is many samples laid across keys.
+ */
+export const SAMPLER: IconNode = [
+	['rect', { x: '1.5', y: '2.5', width: '21', height: '11', rx: '1.5' }],
+	...zone(4, 10.3),
+	...zone(9.7, 8),
+	...zone(15.4, 5.7),
+	...octave(16, 6)
+];

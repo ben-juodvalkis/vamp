@@ -439,6 +439,15 @@ describe('trackDeviceGlance', () => {
 			expect(glanceFor(filed('Ableton/Perc/Shaker Lite/Shakers.adg'), patterns).glyph).toBe('shaker');
 		});
 
+		it('draws the Sampler mark on a Sampler, filed or not, in place of its knob', () => {
+			const sampler = device('tracks/0/devices/0', 'Sampler', 'MultiSampler', paramsUpTo(30, 0.5));
+			for (const recorded of [{}, { role: 'key' }]) {
+				const glance = glanceFor(recorded, sampler);
+				expect(glance.mode).toBe('glyph');
+				expect(glance.glyph).toBe('sampler');
+			}
+		});
+
 		it('draws the Simpler mark on a Simpler, filed or not, in place of its knob', () => {
 			const simpler = device('tracks/0/devices/0', 'Simpler', 'OriginalSimpler', paramsUpTo(30, 0.5));
 			for (const recorded of [{}, { role: 'key' }]) {
