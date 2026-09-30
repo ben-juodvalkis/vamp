@@ -276,6 +276,7 @@ describe('the new Simpler on screen', () => {
 		expect(selectTrackByIndex).not.toHaveBeenCalled();
 
 		handleV3SimplerReplaced([CONVERT, 'tracks/1/devices/0', WAV]);
+		await settle();
 
 		expect(instrumentDisplayCoordinator.requestInstrumentView).toHaveBeenCalledTimes(1);
 		expect(selectTrackByIndex).toHaveBeenCalledWith(1);
@@ -287,6 +288,7 @@ describe('the new Simpler on screen', () => {
 		expect(selectTrackByIndex).not.toHaveBeenCalled();
 
 		handleV3SimplerReplaced([CAPTURE, 'tracks/3/devices/1', WAV]);
+		await settle();
 
 		expect(instrumentDisplayCoordinator.requestInstrumentView).toHaveBeenCalledTimes(1);
 		expect(selectTrackByIndex).toHaveBeenCalledWith(3);

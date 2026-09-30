@@ -45,8 +45,6 @@ import { recentInstrumentsStore } from '$lib/stores/v6/recentInstrumentsStore.sv
 import { requestSample } from './clipSampleService';
 import { logger } from '$lib/utils/logger';
 import { getClipContext } from './clipContext';
-import { instrumentDisplayCoordinator } from './instrumentDisplayCoordinator.svelte';
-import { selectTrackByIndex } from '$lib/components/v6/tracks/composables/useTrackData.svelte';
 
 // Re-exports: transpose / pitch / device-parameter ops live in
 // clipTranspose.ts now (audit #2 split). Surface them here so the
@@ -265,7 +263,7 @@ export async function sampleClipToSimpler(): Promise<void> {
 		flow: 'convert',
 		originAddress: V3_SIMPLER_REPLACE_SAMPLE_ADDRESS,
 		onResolved: (devicePath, resolvedPath) => {
-			showNewSimpler(devicePath);
+			void showNewSimpler(devicePath);
 			recentInstrumentsStore.addSample(
 				deriveSampleDisplayName(resolvedPath),
 				resolvedPath,
@@ -365,7 +363,7 @@ export async function loadCaptureIntoSimpler(
 		flow: 'capture',
 		originAddress: V3_SIMPLER_REPLACE_SAMPLE_ONTO_TRACK_ADDRESS,
 		onResolved: (devicePath, resolvedPath) => {
-			showNewSimpler(devicePath);
+			void showNewSimpler(devicePath);
 			recentInstrumentsStore.addSample(
 				deriveSampleDisplayName(resolvedPath),
 				resolvedPath,
@@ -388,12 +386,21 @@ export async function loadCaptureIntoSimpler(
  * before the select, so the coordinator shows the instrument view off
  * whichever device-list update carries the Simpler — and, for a capture,
  * once the capture goes idle.
+ *
+ * Both modules are imported at call time, never statically: each already
+ * imports this one (through `captureStore`), and a static import back closed
+ * the loop — in the production bundle `selectedTrackStore` was read before
+ * it was initialized and every page load was a 500 (2026-09-30).
  */
-function showNewSimpler(devicePath: string): void {
+async function showNewSimpler(devicePath: string): Promise<void> {
 	const match = /^tracks\/(\d+)\//.exec(devicePath);
 	if (!match) return;
+	const [{ instrumentDisplayCoordinator }, { selectTrackByIndex }] = await Promise.all([
+		import('./instrumentDisplayCoordinator.svelte'),
+		import('$lib/components/v6/tracks/composables/useTrackData.svelte')
+	]);
 	instrumentDisplayCoordinator.requestInstrumentView();
-	void selectTrackByIndex(Number(match[1]));
+	await selectTrackByIndex(Number(match[1]));
 }
 
 /**
