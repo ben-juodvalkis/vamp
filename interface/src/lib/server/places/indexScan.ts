@@ -31,6 +31,7 @@
  * or a Place the `places` table does not list.
  */
 import { DatabaseSync } from 'node:sqlite';
+import { createHash } from 'node:crypto';
 import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ItemKind } from '$lib/utils/placeKinds';
@@ -91,7 +92,7 @@ export function openIndex(file: string): IndexHandle {
 	}
 }
 
-interface IndexRow {
+export interface IndexRow {
 	file_id: number;
 	parent_id: number;
 	name: string;
@@ -204,18 +205,37 @@ export interface IndexScanResult {
 	rows: number;
 }
 
-/**
- * Everything under the folder `rootId`, as the raw (unshaped, unsorted) tree
- * `diskScan.scanPlace` would return for the same folder. `rootPath` is the
- * folder on disk (the Place's path), `placeName` the tree's root label.
- */
-export function scanIndexPlace(h: IndexHandle, rootId: number, rootPath: string, placeName: string, opts: IndexScanOptions): IndexScanResult {
-	const rows = h.db
+/** Every index row under the folder `rootId`: what `scanIndexPlace` builds from. */
+export function indexRowsOf(h: IndexHandle, rootId: number): IndexRow[] {
+	return h.db
 		.prepare(
 			`SELECT f.file_id, f.parent_id, f.name, f.file_type, f.subtype, f.device_type, f.device_id, f.mod_date, f.file_size
 			 FROM ancestors a JOIN files f ON f.file_id = a.file_id WHERE a.ancestor_id = ?`
 		)
 		.all(rootId) as unknown as IndexRow[];
+}
+
+/**
+ * A fingerprint of a Place's rows. Live writes its index every couple of
+ * seconds while it runs, mostly for folders no Place holds; rows that match
+ * the last build's are the same catalog, so nothing is rebuilt.
+ */
+export function indexRowsFingerprint(rows: IndexRow[]): string {
+	const hash = createHash('sha1');
+	for (const r of rows) {
+		hash.update(`${r.file_id}\t${r.parent_id}\t${r.name}\t${r.file_type}\t${r.subtype}\t${r.device_type}\t${r.device_id ?? ''}\t${r.mod_date ?? ''}\t${r.file_size ?? ''}\n`);
+	}
+	return hash.digest('hex');
+}
+
+/**
+ * Everything under the folder `rootId`, as the raw (unshaped, unsorted) tree
+ * `diskScan.scanPlace` would return for the same folder. `rootPath` is the
+ * folder on disk (the Place's path), `placeName` the tree's root label.
+ * `prefetched` is `indexRowsOf`'s answer when the caller already read it.
+ */
+export function scanIndexPlace(h: IndexHandle, rootId: number, rootPath: string, placeName: string, opts: IndexScanOptions, prefetched?: IndexRow[]): IndexScanResult {
+	const rows = prefetched ?? indexRowsOf(h, rootId);
 	const byParent = new Map<number, IndexRow[]>();
 	for (const r of rows) {
 		let list = byParent.get(r.parent_id);

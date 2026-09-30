@@ -54,7 +54,7 @@ import {
 	type PlaceItem,
 	type PlaceTuning
 } from './diskScan';
-import { findLiveDatabase, openIndex, placeFileId, scanIndexPlace, type IndexHandle } from './indexScan';
+import { findLiveDatabase, indexRowsFingerprint, indexRowsOf, openIndex, placeFileId, scanIndexPlace, type IndexHandle } from './indexScan';
 import { MANIFEST_NAME, readManifest } from './placesManifest';
 import { bakeThumbnails } from './audioThumbnailCache';
 
@@ -201,6 +201,8 @@ export class PlacesService {
 	private kindCache: KindCache | null = null;
 	private lastDbStamp = '';
 	private rebuildQueued = false;
+	/** Whether this rebuild pass scanned a Place (rather than finding every one current). */
+	private scanned = false;
 	private baking = false;
 	private bakeChild: ChildProcess | null = null;
 	private aliasCache: { file: string; mtimeMs: number; aliases: PlaceAliasMap } | null = null;
@@ -384,7 +386,10 @@ export class PlacesService {
 		} finally {
 			index?.db.close();
 		}
-		if (this.kindCache) saveKindCache(join(this.cacheDir, 'places-kind-cache.json'), this.kindCache);
+		// Only a pass that scanned can have taught the kind cache anything; it is
+		// 13 MB on the rig, too much to rewrite on every poll.
+		if (this.kindCache && this.scanned) saveKindCache(join(this.cacheDir, 'places-kind-cache.json'), this.kindCache);
+		this.scanned = false;
 		logger.info('places: catalogs ready', {
 			component: 'places',
 			why,
@@ -419,21 +424,28 @@ export class PlacesService {
 		// Live's indexer touches anywhere. The Place's name, icon and id are
 		// in it too, so a Place renamed in Live is served under its new name.
 		const identity = `${s.name}:${s.icon}:${id}:${s.path}:${JSON.stringify(tuning)}`;
-		const stamp = index ? `index:${this.lastDbStamp}:${identity}` : `disk:${identity}:${this.diskStamp(s.path)}`;
+		// An index build is stamped with a fingerprint of the Place's own rows,
+		// not the index's write time: Live writes its index every couple of
+		// seconds while it runs, and rebuilding all seven Places on each write
+		// held the server's only thread ~95% of the time (every iPad request
+		// waited ~1.7 s behind it, 2026-09-29). Reading the rows costs ~0.1 s.
+		const rootId = index ? placeFileId(index, s.path) : null;
+		const rows = index && rootId !== null ? indexRowsOf(index, rootId) : null;
+		const stamp = rows ? `index:${indexRowsFingerprint(rows)}:${identity}` : index ? `index:${this.lastDbStamp}:${identity}` : `disk:${identity}:${this.diskStamp(s.path)}`;
 		const have = this.catalogs.get(s.key);
 		if (have && have.stamp === stamp) return null;
 		const cached = this.readCache(s.key, stamp);
 		if (cached) return cached;
 
 		const t = Date.now();
+		this.scanned = true;
 		let raw: PlaceFolder | null = null;
 		let source: CatalogSource = 'disk';
 		if (index) {
-			const rootId = placeFileId(index, s.path);
 			if (rootId !== null) {
 				try {
 					if (!this.kindCache) this.kindCache = loadKindCache(join(this.cacheDir, 'places-kind-cache.json'));
-					raw = scanIndexPlace(index, rootId, s.path, s.name, { ...ctx, kindCache: this.kindCache }).tree;
+					raw = scanIndexPlace(index, rootId, s.path, s.name, { ...ctx, kindCache: this.kindCache }, rows ?? undefined).tree;
 					source = 'index';
 				} catch (err) {
 					logger.warn('places: index scan failed, using the disk', { component: 'places', place: s.name, err: String(err) });
