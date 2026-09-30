@@ -114,7 +114,6 @@ Four follow-up tests need Ben at the Mac, because they change the library
 - Where Allow appears when a device pairs ([security.plan.md](security.plan.md)).
 - Which plug-in tiles a stranger sees, and whether stock tiles insert Live's device when no
   preset exists (plan.md §4, §6).
-- Whether the `@claude` workflows go to the public repo (plan.md §7).
 - A USPTO search, and a domain ([naming.md](naming.md)).
 
 ## The documents

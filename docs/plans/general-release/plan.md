@@ -188,8 +188,8 @@ fail with nothing on screen:
 - **The rig.** Audit §5.3's pf rule covers the Max and TotalMix receivers, which can't bind
   loopback: 7001–7003, 11016, 11018 and 11030. (11004 went with the Max patch's wheel section on
   2026-09-25.) It needs `sudo` and a check from a second device.
-- **The `@claude` GitHub workflow** fires on any comment containing `@claude`, with no author
-  check of its own. Decide whether it goes to the public repo (Ben).
+- **The `@claude` GitHub workflows: removed 2026-09-30** (Ben). Both failed for want of a
+  `CLAUDE_CODE_OAUTH_TOKEN` secret, and the comment one had no author check of its own.
 
 ## 8. Publishing
 
@@ -294,8 +294,7 @@ match Looping's exactly (2883 passed, 4 skipped).
 (an edit to `owner/Skaka Metronome Picker/` reaches the rig once the rack is re-saved from this
 folder); the Max Utility patch if Max still has Looping's copy open; any old set.
 
-**Open (Ben):** whether the `@claude` workflows stay (§7). The repo went public on 2026-09-28; they
-fire only once a `CLAUDE_CODE_OAUTH_TOKEN` secret is set, which it isn't.
+**The `@claude` workflows are gone** (Ben, 2026-09-30; §7). The repo has no GitHub Actions.
 
 ## 9. Checks on the rig and a clean Mac (Ben)
 
