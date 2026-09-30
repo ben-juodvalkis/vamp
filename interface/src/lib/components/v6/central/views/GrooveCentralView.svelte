@@ -17,7 +17,8 @@
 	 *
 	 * Sliders on the right edge, Amount outermost (the user's call): Random,
 	 * Velocity and Amount — `random_amount`, `velocity_amount`,
-	 * `timing_amount` on the clip's groove. The lit tile's picture moves from
+	 * `timing_amount` on the clip's groove. A clip with no groove takes the
+	 * first tile on its first move, as Q does (`services/grooveChooser`). The lit tile's picture moves from
 	 * straight (Amount 0) to the file's pattern (Amount 100); the others show
 	 * the whole pattern. A file Live stores in its binary format has no
 	 * picture.
@@ -33,6 +34,7 @@
 	import { clipGrooveStore } from '$lib/stores/v6/clipGrooveStore.svelte';
 	import { groovesStore } from '$lib/stores/v6/groovesStore.svelte';
 	import { settingsStore } from '$lib/stores/v6/settingsStore.svelte';
+	import { loadFirstGrooveIfNone } from '$lib/services/grooveChooser';
 	import { session } from '$lib/stores/session.svelte';
 	import { focusPlayingClipOnSelectedTrack } from '$lib/components/v6/tracks/composables/slotActions';
 	import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
@@ -93,6 +95,9 @@
 	function write(address: string, value: number) {
 		const path = targetClip();
 		if (!path) return;
+		// A clip with no groove (or on Live's auto-load Vamp Groove, which
+		// reads as none) takes the first tile before the write, as Q does.
+		loadFirstGrooveIfNone(path);
 		send(address, [path, Math.max(0, Math.min(100, value))]);
 	}
 </script>
