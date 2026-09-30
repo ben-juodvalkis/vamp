@@ -366,6 +366,14 @@ def test_a_mute_made_in_live_re_emits_the_watched_pad_row(comp, emits):
     assert rack.drum_pads[37].mute_listeners == []
 
 
+def test_a_chain_volume_moved_in_live_re_emits_the_watched_pad_row(comp, emits):
+    rack = unmapped_kit(3)
+    comp.subscribe(rack, PATH, "pad.37.chainVolume")
+    emits.clear()
+    hand_edit(rack.drum_pads[37].chains[0].mixer_device.volume, 0.4)
+    assert values(emits, "vm.pad.37.chainVolume") == [(PATH, "vm.pad.37.chainVolume", pytest.approx(0.4))]
+
+
 def test_gain_on_a_nested_rack_kit_is_the_pad_chain_volume(comp):
     # The pads' Samplers sit inside the racks where no name lookup
     # reaches them, so gain binds the DRUM PAD's own chain volume
