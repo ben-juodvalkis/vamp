@@ -45,6 +45,21 @@ describe('clipGrooveStore', () => {
 			clipGrooveStore.handleHasGroove(false);
 			expect(clipGrooveStore.hasGroove).toBe(false);
 		});
+
+		it('zeroes the amounts and the file when the clip has no groove', () => {
+			clipGrooveStore.handleHasGroove(true);
+			clipGrooveStore.handleFile('Swing 16ths 57');
+			clipGrooveStore.handleGrooveProperty('quantization_amount', 80);
+			clipGrooveStore.handleGrooveProperty('timing_amount', 60);
+			clipGrooveStore.handleGrooveProperty('random_amount', 30);
+			clipGrooveStore.handleGrooveProperty('velocity_amount', 20);
+			clipGrooveStore.handleHasGroove(false);
+			expect(clipGrooveStore.quantizationAmount).toBe(0);
+			expect(clipGrooveStore.timingAmount).toBe(0);
+			expect(clipGrooveStore.randomAmount).toBe(0);
+			expect(clipGrooveStore.velocityAmount).toBe(0);
+			expect(clipGrooveStore.file).toBe('');
+		});
 	});
 
 	describe('handleGrooveProperty routing', () => {

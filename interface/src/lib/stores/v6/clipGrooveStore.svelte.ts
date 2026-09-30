@@ -84,6 +84,16 @@ class ClipGrooveStore {
 	handleHasGroove(value: boolean) {
 		this._known = true;
 		this._hasGroove = value;
+		// No groove, no amounts: the surface sends none with a `false`, so
+		// whatever the last groove said (this clip's before it lost it, or
+		// an earlier echo) would otherwise stay on Q and the sliders.
+		if (!value) {
+			this._timingAmount = 0;
+			this._quantizationAmount = 0;
+			this._randomAmount = 0;
+			this._velocityAmount = 0;
+			this._file = '';
+		}
 	}
 
 	handleGrooveProperty(name: string, value: number) {

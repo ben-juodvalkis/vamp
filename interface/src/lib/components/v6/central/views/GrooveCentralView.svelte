@@ -5,10 +5,11 @@
 	 * (`VerticalQuantizeControl`), whose well wears the selection edge while
 	 * this is up.
 	 *
-	 * Tiles: the grooves ticked in Settings → Grooves, in tick order, four
-	 * across and three rows to the view; more than twelve scroll (the user's
-	 * call — tiles stay the size of the approved design, a finger's target).
-	 * Each shows its name, grid and timing picture. The clip's current groove
+	 * Tiles: the grooves ticked in Settings → Grooves, in tick order, laid out
+	 * by the browser's own grid solver (`computeGridLayout`): a few grooves
+	 * grow to fill the view, many hold at a finger's target (the approved
+	 * design's size) and scroll. Each shows its name, grid and timing picture,
+	 * the picture taller as the tile is. The clip's current groove
 	 * is lit in phosphor. A tap puts the clip on that groove file
 	 * (`/looping/v3/clip/groove/set/file`; the surface keeps the clip's
 	 * Quantize and amounts), with the same focus fallback Q uses: the clip
@@ -37,6 +38,7 @@
 	import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import GroovePicture from '$lib/components/v6/clips/GroovePicture.svelte';
+	import { computeGridLayout } from '$lib/components/v6/browser/utils/drillDownModel';
 	import SectionDivider from '../SectionDivider.svelte';
 
 	onMount(() => {
@@ -44,6 +46,32 @@
 	});
 
 	const tiles = $derived(groovesStore.tickedFiles);
+
+	// The browser's tile solver: tiles fill the host, and only once filling
+	// would shrink them below the floors do they hold there and scroll. The
+	// floors are the approved design's tile (four across, three down on the
+	// iPad), so twelve or more look exactly as they did.
+	const TILE_GAP = 12;
+	const TILE_COMFORT = { gap: TILE_GAP, minTile: 140, minTileHeight: 84, targetAspect: 1.5 };
+	let hostEl = $state<HTMLDivElement | undefined>(undefined);
+	let hostW = $state(0);
+	let hostH = $state(0);
+	$effect(() => {
+		if (!hostEl) return;
+		const measure = () => {
+			hostW = hostEl!.clientWidth;
+			hostH = hostEl!.clientHeight;
+		};
+		measure();
+		const ro = new ResizeObserver(measure);
+		ro.observe(hostEl);
+		return () => ro.disconnect();
+	});
+	const layout = $derived(
+		tiles.length && hostW > 0 && hostH > 0
+			? computeGridLayout({ width: hostW, height: hostH, count: tiles.length, ...TILE_COMFORT })
+			: null
+	);
 	const lit = $derived(clipGrooveStore.hasGroove ? clipGrooveStore.file : '');
 	// The clip view's own fallback, for a cold start with no track record yet.
 	const FALLBACK_SCHEME = { primary: 'var(--act-quant)', secondary: 'var(--act-quant-wash)', accent: 'var(--act-quant)' } as const;
@@ -70,7 +98,7 @@
 </script>
 
 <div class="groove-view p-(--central-inset)" style:--groove-ink={scheme.primary} data-debug="groove-view">
-	<div class="tiles-host">
+	<div class="tiles-host" bind:this={hostEl}>
 		{#if groovesStore.failed && !groovesStore.listing}
 			<p class="groove-note">No grooves from the Mac ({groovesStore.failed}).</p>
 		{:else if groovesStore.listing && tiles.length === 0}
@@ -81,7 +109,15 @@
 				</button>
 			</div>
 		{:else}
-			<div class="tiles" class:dim={!hasClip} data-debug="groove-tiles">
+			<div
+				class="tiles"
+				class:dim={!hasClip}
+				class:solved={!!layout}
+				style:--tile-gap="{TILE_GAP}px"
+				style:--cols={layout?.columns}
+				style:--tile-h={layout ? `${layout.tileHeight}px` : undefined}
+				data-debug="groove-tiles"
+			>
 				{#each tiles as g (g.name)}
 					{@const on = g.name === lit}
 					<button
@@ -158,16 +194,14 @@
 		transition: opacity 0.2s;
 	}
 
-	/* Three rows fill the view; a fourth scrolls in. The row height comes
-	   from the host's own height (a size container), so a tile keeps the
-	   design's size whether there are twelve or forty. */
+	/* Columns and row height come from the solver (`--cols` / `--tile-h`);
+	   until the host has been measured, the design's four by three. */
 	.tiles-host {
 		container-type: size;
 		min-width: 0;
 		min-height: 0;
 	}
 	.tiles {
-		--tile-gap: 0.75rem;
 		display: grid;
 		grid-template-columns: repeat(4, minmax(0, 1fr));
 		grid-auto-rows: calc((100cqh - 2 * var(--tile-gap)) / 3);
@@ -176,6 +210,10 @@
 		overflow-y: auto;
 		overscroll-behavior: contain;
 		-webkit-overflow-scrolling: touch;
+	}
+	.tiles.solved {
+		grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+		grid-auto-rows: var(--tile-h);
 	}
 	.tile {
 		display: flex;
@@ -193,7 +231,9 @@
 		text-align: left;
 		cursor: pointer;
 		--groove-tick: var(--groove-ink);
-		--groove-pic-h: 1.5rem;
+		/* The picture takes what the name and padding leave: 1.5rem at the
+		   design's size, taller as the solver grows the tile. */
+		--groove-pic-h: clamp(1.5rem, calc(var(--tile-h, 0px) - 3.875rem), 6rem);
 	}
 	.tile.on {
 		background: var(--phosphor);

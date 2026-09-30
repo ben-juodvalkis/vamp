@@ -23,8 +23,8 @@
 	import { drag as dragAction, type DragInfo } from '$lib/actions/drag';
 	import { V3_CLIP_GROOVE_SET_QUANTIZATION_AMOUNT_ADDRESS } from '$lib/api/handlers/v3ClipGroove';
 
-	// Use store values with $derived for automatic reactivity
-	let quantizationAmount = $derived(clipGrooveStore.quantizationAmount);
+	// A clip with no groove (or no clip at all) has no quantize: Q reads 0.
+	let quantizationAmount = $derived(clipGrooveStore.hasGroove ? clipGrooveStore.quantizationAmount : 0);
 
 	// UI state
 	let containerRef = $state<HTMLElement | null>(null);
