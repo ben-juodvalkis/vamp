@@ -288,3 +288,29 @@ describe('TotalMix levels for a client that joins after the bootstrap', () => {
 		expect(frames.filter(isLevel)).toEqual([]);
 	});
 });
+
+describe('a page from another site', () => {
+	/** Resolve with the HTTP status an upgrade carrying this Origin gets, or 101 if it opens. */
+	function upgradeStatus(port: number, origin: string): Promise<number> {
+		return new Promise((resolve, reject) => {
+			const ws = new WebSocket(`ws://127.0.0.1:${port}`, { origin });
+			ws.on('open', () => {
+				ws.close();
+				resolve(101);
+			});
+			ws.on('unexpected-response', (_req: unknown, res: { statusCode: number }) => resolve(res.statusCode));
+			ws.on('error', (err: Error) => {
+				if (!/Unexpected server response/.test(err.message)) reject(err);
+			});
+		});
+	}
+
+	it('is refused before the challenge, while Vamp’s own page connects', async () => {
+		// A website that points its own name at the Mac (DNS rebinding)
+		// would come in with its own Origin; the browser won't let it lie.
+		const h = await startServer();
+		expect(await upgradeStatus(h.port, 'http://evil.example')).toBe(401);
+		expect(await upgradeStatus(h.port, 'http://192.168.100.1:8889')).toBe(101);
+		expect(h.errors.map((e) => e.message)).toEqual([]);
+	});
+});

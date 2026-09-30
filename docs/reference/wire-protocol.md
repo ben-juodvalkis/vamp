@@ -1356,6 +1356,13 @@ knew the port could drive Live and read the whole Set.
 | `/bridge/auth` | UI→Bridge | `proof:string` | `HMAC-SHA256(secret, salt)`, hex. Must be the client's first substantive frame. |
 | `/bridge/auth/result` | Bridge→UI | `ok:int, detail:string?` | `1` on success. `0` closes the socket with code 4403; the detail is deliberately uninformative. |
 
+**Before any of this, the upgrade's `Origin` is checked** (2026-09-30,
+`interface/bridge/utils/originCheck.js`). A browser page from anywhere but
+localhost, an IP address or a `.local` name (the interface server's own
+`allowedHosts`) gets a 401 and no challenge, which shuts out a website
+that points its own name at the Mac. A client with no `Origin` (the
+menu-bar app, the shot and perf scripts) goes on to the challenge.
+
 Until a client authenticates, the bridge **refuses its commands and
 sends it no broadcasts**. Both halves matter — refusing only commands
 would still leak the Set to anything that opened a socket, which is the
@@ -1373,13 +1380,17 @@ end up with auth enabled and no secret.
 
 **What this is worth, honestly.** It raises the bar from *anything that
 can reach port 8081* to *anything that can load the app* — the browser
-fetches the secret from `/api/ws-auth` on the interface server, which is
-also on the LAN. It stops stray clients, stale tabs from another
-machine, and port scanners; it is not a defence against a determined
-attacker already on the network. Closing that gap needs per-device
-pairing (a code shown on the Mac, typed on the iPad, held in
-localStorage), which is deliberately not the default because a cleared
-browser cache would then lock a performer out mid-session.
+has `/api/ws-auth` on the interface server sign the salt
+(`?salt=<hex>` → `{ proof }`; a request with no salt is a 400 since
+2026-09-30), and that server is also on the LAN. It stops stray clients,
+stale tabs from another machine, and port scanners; it is not a defence
+against a determined attacker already on the network. Closing that gap
+is device pairing, decided 2026-09-30 and not built yet
+([security.plan.md](../plans/general-release/security.plan.md)).
+
+**The gate is on unless `auth.enabled` is `false`** (2026-09-30). A
+config with no `auth` block, or one the bridge can't read, runs with the
+gate on and the default salt size and timeout.
 
 Clients that must authenticate: the web UI
 (`WebSocketConnection.ts`) and the Swift menu-bar app

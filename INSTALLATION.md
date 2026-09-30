@@ -85,7 +85,7 @@ run it full screen. It is laid out for landscape.
   address>:8889`.
 
 **Anyone on the same network who can open the page can drive Live.** Use USB-C or a network you
-trust.
+trust. [SECURITY.md](SECURITY.md) says what is exposed and what is coming.
 
 ## 7. Optional
 

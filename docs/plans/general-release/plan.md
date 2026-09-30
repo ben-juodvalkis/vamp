@@ -172,21 +172,24 @@ fail with nothing on screen:
 
 ## 7. Security
 
-- **The trust model (Ben).** Anyone on the same network who can open the page can drive Live:
-  `/api/ws-auth` answers any caller, and the WebSocket checks no origin. Through the AX helper
-  that includes real clicks and a ⌘G on the Mac. For v1: document it, ship the AX helper off,
-  and add pairing later. (The AX helper ships off since 2026-09-27, §4.) The README says nothing about it today.
-- **Delete `/api/ws-auth`'s salt-less branch** (**S**). It returns the raw secret to anyone who
-  asks, and its own comment says nothing in the tree uses it.
-- **Auth on unless explicitly off** (**S**). A config with a WebSocket block but no `auth` block
-  runs unauthenticated with only a warning. The example is such a config.
+- **The trust model: device pairing** (Ben, 2026-09-30; **M**). Anyone on the same network who
+  can open the page can drive Live: `/api/ws-auth` answers any caller, and the WebSocket checks
+  no origin. Through the AX helper that includes real clicks and a ⌘G on the Mac (it ships off
+  since 2026-09-27, §4). Decided: the cable and the Mac are trusted, a device on Wi-Fi pairs once
+  with a code or an Allow, on by default. The design is
+  [security.plan.md](security.plan.md). The README and [SECURITY.md](../../../SECURITY.md) state
+  today's model (2026-09-30).
+- **Delete `/api/ws-auth`'s salt-less branch: done 2026-09-30.** A request with no salt is a 400.
+- **Auth on unless explicitly off: done 2026-09-30.** Only `auth.enabled: false` turns the gate
+  off; a missing block or an unreadable config keeps it on. The same day the bridge started
+  refusing a browser page from another origin (security.plan.md).
 - **Stop copying the whole config into the served static folder** (**S**; it falls out of the
   runtime move). Any browser on the LAN can read it at `/config/constants.json`.
 - **The rig.** Audit §5.3's pf rule covers the Max and TotalMix receivers, which can't bind
   loopback: 7001–7003, 11016, 11018 and 11030. (11004 went with the Max patch's wheel section on
   2026-09-25.) It needs `sudo` and a check from a second device.
-- **The `@claude` GitHub workflow** fires on any comment containing `@claude`, with no author
-  check of its own. Decide whether it goes to the public repo (Ben).
+- **The `@claude` GitHub workflows: removed 2026-09-30** (Ben). Both failed for want of a
+  `CLAUDE_CODE_OAUTH_TOKEN` secret, and the comment one had no author check of its own.
 
 ## 8. Publishing
 
@@ -291,8 +294,7 @@ match Looping's exactly (2883 passed, 4 skipped).
 (an edit to `owner/Skaka Metronome Picker/` reaches the rig once the rack is re-saved from this
 folder); the Max Utility patch if Max still has Looping's copy open; any old set.
 
-**Open (Ben):** whether the `@claude` workflows stay (§7). The repo went public on 2026-09-28; they
-fire only once a `CLAUDE_CODE_OAUTH_TOKEN` secret is set, which it isn't.
+**The `@claude` workflows are gone** (Ben, 2026-09-30; §7). The repo has no GitHub Actions.
 
 ## 9. Checks on the rig and a clean Mac (Ben)
 

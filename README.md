@@ -104,7 +104,8 @@ iPad / browser  ⇄  bridge (WebSocket ⇄ OSC)  ⇄  control surface inside Liv
 - **Some tiles are for the author's plug-ins** (Tremolo, Comb, Smudge, Bass, Pitch, Guitar) and do
   nothing without them.
 - **Your network is trusted.** Anyone on the same network who can open the page can drive your
-  Live set. Use the USB-C link or a network you trust.
+  Live set. Use the USB-C link or a network you trust. Device pairing is planned: see
+  [SECURITY.md](SECURITY.md).
 
 ## Documentation
 
@@ -114,6 +115,8 @@ iPad / browser  ⇄  bridge (WebSocket ⇄ OSC)  ⇄  control surface inside Liv
 - [docs/reference/architecture.md](docs/reference/architecture.md): processes, ports and message
   flow
 - [docs/reference/toggles.md](docs/reference/toggles.md): what each feature switch does
+- [SECURITY.md](SECURITY.md): what your network can reach, playing safely, and reporting a
+  vulnerability
 - [CONTRIBUTING.md](CONTRIBUTING.md): working on the code
 
 ## License
