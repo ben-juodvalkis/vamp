@@ -272,6 +272,11 @@ const tapOn = (target) => ({ tap: target });
 /** A control in the central view by position, for views whose labels depend on what is loaded. */
 const nthIn = (css, nth) => ({ css: `[data-debug="middle-panel"] ${css}`, nth, label: `${css} #${nth}` });
 
+/** A button in the note editor's toolbar, by its text. */
+const EDITCHIP = (text) => ({ css: '.edit-toolbar button.edit-chip', text, label: `editor ${text}` });
+/** The nth note drawn in the note editor. */
+const NOTEAT = (nth) => ({ css: '[aria-label="MIDI note"]', nth, label: `note #${nth}` });
+
 /** Give a track an empty clip, so Vamp's next load goes to a new track instead of replacing this one's instrument. */
 const usedTrack = (t) => (live) => live.invoke(`tracks/${t}`, 'clip_slots[0].create_clip', [4]);
 
@@ -1401,6 +1406,76 @@ export const SCENARIOS = {
 		],
 		end: '28.1',
 		result: [hasDevice(3, 'OriginalSimpler'), looping(2, 0)]
+	},
+
+	notes: {
+		...SITE,
+		title: 'Note editor',
+		blurb: "The clip's notes in the central view: move, lengthen, select, duplicate, quantize and set velocity.",
+		// Off camera, the clip and FX grids go, so the central view (and the
+		// editor in it) takes half the screen.
+		setup: [
+			...BAND,
+			{ at: '17.2', tap: T.master },
+			{ at: '17.3', tap: T.sysSwitch('Clips') },
+			{ at: '17.4', tap: T.sysSwitch('FX') }
+		],
+		steps: [
+			{
+				at: '18.2',
+				chapter: 'Note editor',
+				box: T.strip(2, 'clip'),
+				boxLabel: 'Clip',
+				tap: T.strip(2, 'clip'),
+				caption: "Open a track's clip.",
+				liveView: 'clip',
+				live: LIVE.detail('The keys clip in Live')
+			},
+			{
+				at: '19.3',
+				box: T.area('.editor-toggle'),
+				boxLabel: 'Notes',
+				tap: T.area('.editor-toggle'),
+				caption: "The pencil opens the clip's notes.",
+				note: "The same notes as Live's clip view."
+			},
+			{ at: '21.2', box: EDITCHIP('Fold'), boxLabel: 'Fold', tap: EDITCHIP('Fold'), caption: 'Fold shows only the pitches the clip plays.', note: null },
+			{
+				at: '22.3',
+				box: NOTEAT(0),
+				boxLabel: 'Note',
+				caption: 'Drag a note to move it in time or pitch.',
+				drag: { target: NOTEAT(0), path: [[0.3, 0.5], [0.3, -1.6], [1.3, -1.6]], beats: 3 }
+			},
+			{
+				at: '24.2',
+				box: NOTEAT(2),
+				boxLabel: 'Note end',
+				caption: 'Drag its end to change its length.',
+				drag: { target: NOTEAT(2), path: [[0.96, 0.5], [1.5, 0.5]], beats: 2 }
+			},
+			{ at: '25.3', box: EDITCHIP('Select'), boxLabel: 'Select', tap: EDITCHIP('Select'), caption: 'Select mode: drag a box around notes.' },
+			{
+				at: '26.2',
+				box: T.area('[aria-label="Clip editor"]'),
+				boxLabel: 'Select',
+				drag: { target: T.area('[aria-label="Select notes"]'), path: [[0.02, 0.05], [0.3, 0.95]], beats: 2 }
+			},
+			{ at: '27.3', box: EDITCHIP('Duplicate'), boxLabel: 'Duplicate', tap: EDITCHIP('Duplicate'), caption: 'Duplicate copies the selected notes.' },
+			{ at: '29.1', box: EDITCHIP('Quantize'), boxLabel: 'Quantize', tap: EDITCHIP('Quantize'), caption: 'Quantize snaps them to the grid.', note: 'Tap the grid button to change its size.' },
+			{
+				at: '30.2',
+				box: T.area('[aria-label="Note velocity"]'),
+				boxLabel: 'Velocity',
+				caption: 'Drag in the velocity lane to change how hard a note plays.',
+				note: null,
+				drag: { target: T.area('[aria-label="Note velocity"]'), path: [[0.5, 0.5], [0.5, 1.4]], beats: 2 }
+			},
+			{ at: '31.3', box: T.area('.editor-toggle'), boxLabel: 'Notes', tap: T.area('.editor-toggle'), caption: 'Tap the pencil again to go back to the clip tools.', note: null },
+			{ at: '33.1', box: null }
+		],
+		end: '33.3',
+		result: [looping(2, 0)]
 	},
 
 	'instrument-views': {
