@@ -6,6 +6,11 @@ Vamp turns an iPad into a touch surface for performing with Live: record and lau
 and load instruments, shape sounds and effects, and sequence variations, without looking at the
 laptop. It was built by a dance accompanist for playing ballet class and is shared as is.
 
+There's no app to install and nothing from the App Store. Vamp is a web page served from the Mac
+running Live: open it in Safari on the iPad over USB-C or Wi-Fi, or in a browser on the Mac itself.
+
+![Recording a loop: tap an empty slot, tap its dot, play, and tap again to close the loop. Vamp on the iPad at left, Ableton Live at right.](docs/readme/record-a-loop.gif)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > **Status: pre-release.** It runs every day on its author's rig. A stranger's first run works,
@@ -27,6 +32,15 @@ laptop. It was built by a dance accompanist for playing ballet class and is shar
 - **Capture:** record what you just played and turn it into a Simpler instrument.
 - **Key detection:** Live's key follows the loops you are playing.
 - **A foot switch,** any MIDI footswitch, taught with Learn in Settings.
+
+<p>
+  <img src="docs/readme/simpler.jpg" width="49%" alt="Simpler's view: the sample waveform above pads for pitch, time, fade and gain">
+  <img src="docs/readme/operator.jpg" width="49%" alt="Operator's view: envelope, feedback, time and tone sliders">
+  <img src="docs/readme/drift.jpg" width="49%" alt="Drift's view: filter, shape and envelope controls">
+  <img src="docs/readme/reverb.jpg" width="49%" alt="The Reverb effect's view, opened from its tile">
+</p>
+
+**[Watch the five-minute walkthrough and a clip of every feature →](https://benjuodvalkis.com/other/vamp)**
 
 ## Requirements
 
