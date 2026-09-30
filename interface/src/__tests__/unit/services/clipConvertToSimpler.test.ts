@@ -65,7 +65,16 @@ vi.mock('$lib/stores/v6/selectedTrackStore.svelte', () => ({
 	}
 }));
 
+vi.mock('$lib/services/instrumentDisplayCoordinator.svelte', () => ({
+	instrumentDisplayCoordinator: { requestInstrumentView: vi.fn() }
+}));
+vi.mock('$lib/components/v6/tracks/composables/useTrackData.svelte', () => ({
+	selectTrackByIndex: vi.fn(async () => {})
+}));
+
 import { send } from '$lib/api/simpleClient';
+import { instrumentDisplayCoordinator } from '$lib/services/instrumentDisplayCoordinator.svelte';
+import { selectTrackByIndex } from '$lib/components/v6/tracks/composables/useTrackData.svelte';
 import { recentInstrumentsStore } from '$lib/stores/v6/recentInstrumentsStore.svelte';
 import { requestSample } from '$lib/services/clipSampleService';
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
@@ -257,6 +266,30 @@ describe('sampleClipToSimpler — the clip view convert', () => {
 		await settle();
 
 		expect(selectedTrackStore.setParamValue).not.toHaveBeenCalled();
+	});
+});
+
+describe('the new Simpler on screen', () => {
+	it('selects the converted track and asks for its instrument view', async () => {
+		await sampleClipToSimpler();
+		await settle();
+		expect(selectTrackByIndex).not.toHaveBeenCalled();
+
+		handleV3SimplerReplaced([CONVERT, 'tracks/1/devices/0', WAV]);
+
+		expect(instrumentDisplayCoordinator.requestInstrumentView).toHaveBeenCalledTimes(1);
+		expect(selectTrackByIndex).toHaveBeenCalledWith(1);
+	});
+
+	it('selects the capture track once its Simpler is loaded', async () => {
+		await loadCaptureIntoSimpler(WAV);
+		await settle();
+		expect(selectTrackByIndex).not.toHaveBeenCalled();
+
+		handleV3SimplerReplaced([CAPTURE, 'tracks/3/devices/1', WAV]);
+
+		expect(instrumentDisplayCoordinator.requestInstrumentView).toHaveBeenCalledTimes(1);
+		expect(selectTrackByIndex).toHaveBeenCalledWith(3);
 	});
 });
 

@@ -45,6 +45,8 @@ import { recentInstrumentsStore } from '$lib/stores/v6/recentInstrumentsStore.sv
 import { requestSample } from './clipSampleService';
 import { logger } from '$lib/utils/logger';
 import { getClipContext } from './clipContext';
+import { instrumentDisplayCoordinator } from './instrumentDisplayCoordinator.svelte';
+import { selectTrackByIndex } from '$lib/components/v6/tracks/composables/useTrackData.svelte';
 
 // Re-exports: transpose / pitch / device-parameter ops live in
 // clipTranspose.ts now (audit #2 split). Surface them here so the
@@ -262,7 +264,8 @@ export async function sampleClipToSimpler(): Promise<void> {
 	armAutoStartMarker({
 		flow: 'convert',
 		originAddress: V3_SIMPLER_REPLACE_SAMPLE_ADDRESS,
-		onResolved: (_devicePath, resolvedPath) => {
+		onResolved: (devicePath, resolvedPath) => {
+			showNewSimpler(devicePath);
 			recentInstrumentsStore.addSample(
 				deriveSampleDisplayName(resolvedPath),
 				resolvedPath,
@@ -361,7 +364,8 @@ export async function loadCaptureIntoSimpler(
 		filePath,
 		flow: 'capture',
 		originAddress: V3_SIMPLER_REPLACE_SAMPLE_ONTO_TRACK_ADDRESS,
-		onResolved: (_devicePath, resolvedPath) => {
+		onResolved: (devicePath, resolvedPath) => {
+			showNewSimpler(devicePath);
 			recentInstrumentsStore.addSample(
 				deriveSampleDisplayName(resolvedPath),
 				resolvedPath,
@@ -374,6 +378,22 @@ export async function loadCaptureIntoSimpler(
 	// Live-capture callers (captureStore) ignore the return — the
 	// fire-and-forget contract is unchanged.
 	return prepareResult;
+}
+
+/**
+ * Select the track a sample just landed on and show its Simpler (user,
+ * 2026-09-30): after a convert or a capture the new Simpler is the thing to
+ * play. The surface inserts it with `insert_device`, which selects nothing,
+ * so without this the view stayed on the source clip. The request is armed
+ * before the select, so the coordinator shows the instrument view off
+ * whichever device-list update carries the Simpler — and, for a capture,
+ * once the capture goes idle.
+ */
+function showNewSimpler(devicePath: string): void {
+	const match = /^tracks\/(\d+)\//.exec(devicePath);
+	if (!match) return;
+	instrumentDisplayCoordinator.requestInstrumentView();
+	void selectTrackByIndex(Number(match[1]));
 }
 
 /**

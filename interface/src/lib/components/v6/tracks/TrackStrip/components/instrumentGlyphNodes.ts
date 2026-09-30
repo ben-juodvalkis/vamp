@@ -190,3 +190,21 @@ export const HAND_DRUM: IconNode = [
 	['path', { d: 'M9.6 13.2A2.4 .6 0 0 0 14.4 13.2' }],
 	['path', { d: 'M6.3 6.6 8.6 11 10.3 5.8 12 11.4 13.7 5.8 15.4 11 17.7 6.6' }]
 ];
+
+/**
+ * Simpler: its own central view in miniature — a framed waveform display
+ * over a row of three knobs, so it reads as half sample, half synth. Kin to
+ * the Synth mark (knobs over keys) without being mistaken for it: the knobs
+ * here sit below, and carry pointers. The waveform is a hit that decays, a
+ * sample's shape rather than an oscillator's.
+ */
+export const SIMPLER: IconNode = [
+	['rect', { x: '1.5', y: '2.5', width: '21', height: '11', rx: '1.5' }],
+	['path', { d: 'M3.5 8H5L6 4.5 7 11.5 8 5.5 9 10.5 10 6.5 11 9.5 12 7 13 9 14 7.5 15 8.5 16 7.8 17 8.2 18 8H20.5' }],
+	['circle', { cx: '5', cy: '18.5', r: '2.6' }],
+	['path', { d: 'M5 18.5 3.3 20.2' }],
+	['circle', { cx: '12', cy: '18.5', r: '2.6' }],
+	['path', { d: 'M12 18.5V15.9' }],
+	['circle', { cx: '19', cy: '18.5', r: '2.6' }],
+	['path', { d: 'M19 18.5 20.8 16.7' }]
+];

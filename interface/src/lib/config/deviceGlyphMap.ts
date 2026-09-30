@@ -28,6 +28,7 @@ export type DeviceGlyph =
 	| 'saxophone'
 	| 'harp'
 	| 'sampler'
+	| 'simpler'
 	| 'drum'
 	| 'shaker'
 	| 'filter'
@@ -105,7 +106,7 @@ export const INSTRUMENT_GLYPHS: Readonly<Partial<Record<InstrumentType, DeviceGl
 	// in place of a knob (user, 2026-09-17) — see useTrackDevice's mode rule.
 	'instrument-rack-pattern': 'shaker',
 	sampler: 'sampler',
-	simpler: 'sampler',
+	simpler: 'simpler',
 	'komplete-kontrol': 'keys',
 	omnisphere: 'keys',
 	plugin: 'keys',

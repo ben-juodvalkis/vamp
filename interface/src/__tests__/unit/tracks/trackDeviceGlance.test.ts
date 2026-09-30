@@ -230,7 +230,7 @@ describe('trackDeviceGlance', () => {
 		expect(glance.glyph).toBe('keys');
 	});
 
-	it("reads an audio track's Simpler as a sampler rather than a mystery device", () => {
+	it("reads an audio track's Simpler as a Simpler rather than a mystery device", () => {
 		// The rig has no `DEVICE_PRESETS` entry for a Simpler, so the
 		// preset table says nothing; the class does.
 		replaceTree(1, [
@@ -240,7 +240,7 @@ describe('trackDeviceGlance', () => {
 			])
 		]);
 
-		expect(trackDeviceGlance('tracks/1').glyph).toBe('sampler');
+		expect(trackDeviceGlance('tracks/1').glyph).toBe('simpler');
 	});
 
 	it('reads a control and normalizes it by the P record range', () => {
@@ -437,6 +437,15 @@ describe('trackDeviceGlance', () => {
 				{ name: 'Pattern 16', value: 0 }
 			]);
 			expect(glanceFor(filed('Ableton/Perc/Shaker Lite/Shakers.adg'), patterns).glyph).toBe('shaker');
+		});
+
+		it('draws the Simpler mark on a Simpler, filed or not, in place of its knob', () => {
+			const simpler = device('tracks/0/devices/0', 'Simpler', 'OriginalSimpler', paramsUpTo(30, 0.5));
+			for (const recorded of [{}, { role: 'key' }]) {
+				const glance = glanceFor(recorded, simpler);
+				expect(glance.mode).toBe('glyph');
+				expect(glance.glyph).toBe('simpler');
+			}
 		});
 
 		it('never gives an audio track a category mark', () => {

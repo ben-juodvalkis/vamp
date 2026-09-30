@@ -359,6 +359,9 @@ const DEVICE_CLASS_NAMES = {
 	'Ethnic Drums': 'DrumGroupDevice',
 	// The fourth: a Sampler kit.
 	'50s Autumn': 'DrumGroupDevice',
+	// Simpler's LOM class. Name-derived ('Simpler') is no instrument class, so
+	// the Texture strip drew the generic note instead of the Simpler mark.
+	Simpler: 'OriginalSimpler',
 	// The classes Live reports for the app's own effect presets — the
 	// `expectedClassName` column of `devicePresets.ts`, each verified on
 	// the rig: the Reverb preset is a Hybrid Reverb saved as "Reverb",

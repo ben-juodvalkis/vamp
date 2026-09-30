@@ -398,10 +398,13 @@ export function trackDeviceGlance(trackPath: string): TrackDeviceGlance {
 		// decides the mark (user, 2026-09-18) — the drum included, which a
 		// Drum Rack no longer earns by its class alone — and only a track
 		// with no category mark falls back to its first control.
-		const categoryGlyph =
-			instrumentType === 'instrument-rack-pattern' ? null : glyphForCategory(category, folders);
+		// A Simpler draws its own mark the same way, whatever it was filed
+		// under: a picture of its central view, the waveform over knobs
+		// (user, 2026-09-30).
+		const ownMark = instrumentType === 'instrument-rack-pattern' || instrumentType === 'simpler';
+		const categoryGlyph = ownMark ? null : glyphForCategory(category, folders);
 		const mode: TrackDeviceMode =
-			instrumentType === 'instrument-rack-pattern' || categoryGlyph
+			ownMark || categoryGlyph
 				? 'glyph'
 				: controls.length > 0
 					? 'knobs'
