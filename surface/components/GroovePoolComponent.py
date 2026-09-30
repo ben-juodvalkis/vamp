@@ -115,14 +115,14 @@ logger = logging.getLogger("looping")
 _LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
 
 
-# Live ticks the Groove Pool's "Auto Load Groove" box on a groove loaded
-# into an empty pool (measured 2026-09-29), and every clip recorded after
-# that takes the groove. The LOM cannot reach the box, so the bridge
-# unticks it through the AX helper on this announcement; the box is only
-# in Live's window while the Browser shows, hence the browser verb.
-V3_GROOVE_ADDED_ADDRESS = "/looping/v3/groove/added"
-V3_GROOVE_BROWSER_ADDRESS = "/looping/v3/groove/browser"
-V3_GROOVE_BROWSER_ACK_ADDRESS = "/looping/v3/groove/browser/ack"
+# Live ticks the Groove Pool's "Auto Load Groove" box on the groove loaded
+# into an empty pool, and every clip recorded after takes it; a later load
+# leaves the tick where it is (rig, 2026-09-29). The LOM cannot reach the
+# box, so the first groove Vamp loads into an empty pool is this one, every
+# amount 0: the clips Live puts on it sound as they were played, and Vamp
+# reads a clip on it as having no groove.
+BLANK_NAME = "Vamp Groove"
+_AMOUNTS = ("quantization_amount", "timing_amount", "random_amount", "velocity_amount")
 
 
 _UNASSIGNED_PREFIX = "unassigned-"
@@ -138,7 +138,7 @@ _LABEL_MAX = 32
 class GrooveName(NamedTuple):
     """What a pool entry's name says (see "Names" above)."""
 
-    #: ``claim``, ``free`` or ``other``.
+    #: ``claim``, ``free``, ``blank`` (Live's auto-load target) or ``other``.
     kind: str
     #: The groove file it holds, or None when the name does not say.
     pattern: Optional[str]
@@ -149,6 +149,8 @@ class GrooveName(NamedTuple):
 def parse_groove_name(name: Optional[str]) -> GrooveName:
     if not name:
         return GrooveName("other", None)
+    if name == BLANK_NAME:
+        return GrooveName("blank", None)
     m = _CLAIM_RE.match(name)
     if m:
         return GrooveName("claim", m.group("pattern"), m.group("hash"))
@@ -323,12 +325,10 @@ class GroovePoolComponent:
         song,
         emit: Callable[[str, tuple], None],
         mint: Optional[Callable[..., Optional[str]]] = None,
-        app_view: Optional[Callable[[], object]] = None,
     ):
         self._song = song
         self._emit = emit
         self._mint = mint
-        self._app_view = app_view
         self._disconnected = False
 
         # ``(key, context) -> True`` once warned, for de-dupe.
@@ -437,6 +437,9 @@ class GroovePoolComponent:
         before = self._safe_grooves_list()
         if before is None:
             return None
+        if not before:
+            self._mint_blank()
+            before = self._safe_grooves_list() or []
         known = {live_id(g) for g in before}
         try:
             err = self._mint(pattern) if pattern else self._mint()
@@ -452,7 +455,6 @@ class GroovePoolComponent:
                     "GroovePoolComponent: minted a groove (pool %d -> %d)",
                     len(before), len(after),
                 )
-                self._emit(V3_GROOVE_ADDED_ADDRESS, ())
                 return groove
         logger.warning(
             "GroovePoolComponent: mint ran but the pool did not grow (%d)",
@@ -460,25 +462,27 @@ class GroovePoolComponent:
         )
         return None
 
-    def handle_browser(self, args, source_addr=None) -> None:
-        """``/looping/v3/groove/browser [id, visible]``: show (1) or hide (0)
-        Live's Browser, acked ``[id, was_visible]`` so the bridge can put
-        back what it found."""
-        if len(args) < 2 or self._app_view is None:
-            return
-        request_id, visible = str(args[0]), bool(args[1])
-        was = -1
+    def _mint_blank(self) -> None:
+        """Load the default file into the empty pool as ``BLANK_NAME``, every
+        amount 0, so Live's auto-load tick lands on a groove that does
+        nothing (``BLANK_NAME`` above)."""
         try:
-            view = self._app_view()
-            was = 1 if view.is_view_visible("Browser") else 0
-            if visible and not was:
-                view.show_view("Browser")
-            elif not visible and was:
-                view.hide_view("Browser")
+            err = self._mint()
+        except Exception as e:  # a failed load must not take the write down
+            err = "%s: %s" % (type(e).__name__, e)
+        grooves = self._safe_grooves_list() or []
+        if err or not grooves:
+            logger.warning("GroovePoolComponent: blank groove not loaded: %s", err or "pool did not grow")
+            return
+        blank = grooves[0]
+        try:
+            blank.name = BLANK_NAME
+            for attr in _AMOUNTS:
+                setattr(blank, attr, 0.0)
         except _LOM_ERRORS as e:
-            logger.warning("GroovePoolComponent: browser %s failed: %s",
-                           "show" if visible else "hide", e)
-        self._emit(V3_GROOVE_BROWSER_ACK_ADDRESS, (request_id, was))
+            logger.warning("GroovePoolComponent: blank groove not set: %s", e)
+            return
+        logger.info("GroovePoolComponent: loaded %r for Live's auto-load", BLANK_NAME)
 
     def assign_groove_to_clip(
         self, clip, clip_path: str, inherit=None,

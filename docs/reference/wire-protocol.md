@@ -525,9 +525,14 @@ Groove (focus-scoped, mirrors ClipPropertiesComponent):
 | `/looping/v3/clip/groove/set/quantization_amount`  | UI→Surf | `clipPath:string, value:float, generation:int?`   | `clip.groove.quantization_amount`. |
 | `/looping/v3/clip/groove/set/random_amount`        | UI→Surf | `clipPath:string, value:float, generation:int?`   | `clip.groove.random_amount`. |
 | `/looping/v3/clip/groove/set/velocity_amount`      | UI→Surf | `clipPath:string, value:float, generation:int?`   | `clip.groove.velocity_amount`. |
-| `/looping/v3/groove/added`                         | Surf→Bridge | —                                             | The surface loaded a groove into the pool (a mint). Live ticks the Groove Pool's "Auto Load Groove" box on a groove loaded into an empty pool, and every clip recorded after takes that groove; the LOM cannot reach the box, so the bridge presses every ticked one off through the AX helper (`handlers/grooveAutoLoadOff.js`, only while `features.axHelper` is on). Consumed by the bridge, never relayed. Since 2026-09-29. |
-| `/looping/v3/groove/browser`                       | Bridge→Surf | `id:string, visible:int`                      | Show (1) or hide (0) Live's Browser: the Auto Load box is in Live's window only while it shows. |
-| `/looping/v3/groove/browser/ack`                   | Surf→Bridge | `id:string, wasVisible:int`                   | Whether the Browser was showing before (`-1`: the LOM call raised). Consumed by the bridge. |
+
+**Live's Auto Load Groove.** Live ticks the Groove Pool's Auto Load box
+on the groove loaded into an empty pool and puts every clip recorded after
+on it; the LOM cannot reach the box. So the first groove the surface loads
+into an empty pool is `Vamp Groove` with every amount 0: Live's new clips
+land on a groove that does nothing, and the surface reads a clip on it as
+having no groove (`has_groove` false, `file` `""`). The clip's own groove
+goes in second (since 2026-09-29).
 
 **Assign-on-first-write.** An amount write on a clip with no groove
 claims one: an `unassigned-<idx>` entry, else an orphaned claim with no

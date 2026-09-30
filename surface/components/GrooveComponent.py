@@ -131,6 +131,7 @@ from typing import Callable, Dict, Optional, Tuple
 
 from . import path_resolver
 from .GroovePoolComponent import (
+    BLANK_NAME,
     GroovePoolComponent,
     PoolExhausted,
     clip_groove_id,
@@ -465,6 +466,12 @@ class GrooveComponent:
             return None
         for groove in grooves:
             if self._groove_matches_id(groove, gid):
+                # Live's auto-load put the clip on the blank: no groove.
+                try:
+                    if groove.name == BLANK_NAME:
+                        return None
+                except _LOM_ERRORS:
+                    pass
                 return groove
         # Tuple pointed at an id the pool doesn't have — treat as
         # grooveless. This can happen if pool mutates between read

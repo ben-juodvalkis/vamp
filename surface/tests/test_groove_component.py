@@ -37,8 +37,7 @@ from typing import Dict, List, Optional
 import pytest
 
 from components.GroovePoolComponent import (
-    V3_GROOVE_ADDED_ADDRESS,
-    V3_GROOVE_BROWSER_ACK_ADDRESS,
+    BLANK_NAME,
     GroovePoolComponent,
     path_hash,
 )
@@ -940,7 +939,8 @@ def test_set_file_on_a_clip_with_no_groove_loads_the_file_and_is_heard(captured_
 
     gc.handle_set_file(args=(CLIP, "Swing 16ths 57"), source_addr=None)
 
-    assert calls == ["Swing 16ths 57"]
+    # An empty pool takes the blank first (Auto Load Groove, below).
+    assert calls == [None, "Swing 16ths 57"]
     g = pool._grooves[-1]
     assert g.name == "Bass 2 · Swing 16ths 57 #" + path_hash(CLIP)
     assert clip.groove == ("id", id(g))
@@ -1098,52 +1098,52 @@ def test_set_file_takes_a_user_groove_by_its_prefixed_name(captured_emits):
 # --- Live's Auto Load Groove box (2026-09-29) --------------------------------
 
 
-def test_a_minted_groove_is_announced_for_the_bridge(captured_emits):
-    """Live ticks Auto Load Groove on a groove loaded into an empty pool;
-    the bridge unticks it on this announcement."""
-    song, _clip, pool = _chooser_song()
-    _pc, gc = _make_minting(song, pool, captured_emits, [])
+def test_the_first_groove_in_an_empty_pool_is_a_blank_one(captured_emits):
+    """Live ticks Auto Load Groove on the groove loaded into an empty pool:
+    that one is the blank, every amount 0, and the clip's groove goes in
+    second."""
+    song, clip, pool = _chooser_song()
+    calls = []
+    _pc, gc = _make_minting(song, pool, captured_emits, calls)
 
     gc.handle_set_file(args=(CLIP, "Swing 16ths 57"), source_addr=None)
 
-    assert (V3_GROOVE_ADDED_ADDRESS, ()) in captured_emits
+    assert calls == [None, "Swing 16ths 57"]
+    blank, real = pool._grooves
+    assert blank.name == BLANK_NAME
+    assert (blank.quantization_amount, blank.timing_amount,
+            blank.random_amount, blank.velocity_amount) == (0.0, 0.0, 0.0, 0.0)
+    assert clip.groove == ("id", id(real))
 
 
-def test_a_groove_reused_from_the_pool_is_not_announced(captured_emits):
-    same = GrooveWithListeners(name="unassigned-0 · Swing 16ths 57")
-    song, _clip, pool = _chooser_song(same)
-    _pc, gc = _make_minting(song, pool, captured_emits, [])
+def test_no_blank_when_the_pool_has_grooves(captured_emits):
+    other = GrooveWithListeners(name="unassigned-0 · Swing 8ths 61")
+    song, _clip, pool = _chooser_song(other)
+    calls = []
+    _pc, gc = _make_minting(song, pool, captured_emits, calls)
 
     gc.handle_set_file(args=(CLIP, "Swing 16ths 57"), source_addr=None)
 
-    assert all(addr != V3_GROOVE_ADDED_ADDRESS for addr, _ in captured_emits)
+    assert calls == ["Swing 16ths 57"]
+    assert all(g.name != BLANK_NAME for g in pool._grooves)
 
 
-class _StubAppView:
-    def __init__(self, visible):
-        self.visible = visible
+def test_a_clip_on_the_blank_reads_as_no_groove_and_a_write_leaves_it_alone(captured_emits):
+    """Live puts every new clip on the blank. Vamp shows none, and a write
+    takes the clip a groove of its own; the blank stays at 0."""
+    blank = GrooveWithListeners(
+        name=BLANK_NAME, timing_amount=0.0, quantization_amount=0.0,
+        random_amount=0.0, velocity_amount=0.0,
+    )
+    song, clip, pool = _chooser_song(blank, linked=blank)
+    _pc, gc = _make_minting(song, pool, captured_emits, [])
+    captured_emits.clear()
 
-    def is_view_visible(self, name):
-        assert name == "Browser"
-        return self.visible
+    gc.handle_set_timing_amount(args=(CLIP, 40.0), source_addr=None)
 
-    def show_view(self, name):
-        self.visible = True
-
-    def hide_view(self, name):
-        self.visible = False
-
-
-def test_browser_verb_shows_and_hides_and_acks_what_it_found(captured_emits):
-    view = _StubAppView(visible=False)
-    emit = lambda addr, args: captured_emits.append((addr, args))
-    pc = GroovePoolComponent(song=GrooveStubSong(tracks=[], groove_pool=StubGroovePool(grooves=[])),
-                             emit=emit, app_view=lambda: view)
-
-    pc.handle_browser(("r1", 1))
-    assert view.visible is True
-    pc.handle_browser(("r2", 0))
-    assert view.visible is False
-
-    acks = [a for addr, a in captured_emits if addr == V3_GROOVE_BROWSER_ACK_ADDRESS]
-    assert acks == [("r1", 0), ("r2", 1)]
+    assert blank.timing_amount == 0.0
+    assert blank.name == BLANK_NAME
+    own = pool._grooves[-1]
+    assert own is not blank
+    assert clip.groove == ("id", id(own))
+    assert own.timing_amount == 40.0

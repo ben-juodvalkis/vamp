@@ -368,7 +368,10 @@ def test_mints_into_an_empty_pool(captured_emits):
     clip = LinkedClip()
     got = c.assign_groove_to_clip(clip, "tracks/0/slots/0/clip")
 
-    assert calls == [1]
+    # First the zeroed Vamp Groove Live's Auto Load ticks, then the clip's.
+    assert calls == [1, 1]
+    assert pool._grooves[0].name == "Vamp Groove"
+    assert got is pool._grooves[1]
     assert clip.linked is got
 
 
