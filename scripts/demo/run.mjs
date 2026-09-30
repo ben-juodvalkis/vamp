@@ -599,6 +599,13 @@ async function main() {
 			const what = step.tap?.label ?? step.drag?.target.label ?? (step.taps ? `${step.taps.length} taps` : step.play ? 'phrase' : step.do ? 'do' : '');
 			log(`${step.setup ? '·' : ' '}${step.at.padEnd(5)} ${what.padEnd(26)} ${typeof step.caption === 'string' ? step.caption : ''}`);
 
+			// Off camera: a fresh page forgets where the browser was, so the next
+			// load starts at a Place's top level.
+			if (step.reload) {
+				await ui.page.reload();
+				await ui.page.waitForSelector('.track-col[data-track-index="0"]', { timeout: 20_000 });
+				await wait(1200);
+			}
 			if (step.tap) await tap(ui, fingers, step.tap);
 			if (step.taps) {
 				for (const [k, target] of step.taps.entries()) {

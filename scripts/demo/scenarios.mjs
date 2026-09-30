@@ -84,6 +84,8 @@ export const T = {
 	/** The main track's Launch Q value, and a choice in its picker. */
 	launchQ: { css: '[data-debug="middle-panel"] .sys-value-digit', label: 'Launch Q' },
 	quantChip: (text) => ({ css: '.quant-chip', text, label: `Launch Q ${text}` }),
+	/** The browser's mode switch: 'Instrument' | 'Simpler' | 'Clip'. */
+	seg: (name) => ({ css: '.seg-switch[aria-label="Browse mode"] button.seg', text: name, label: `mode ${name}` }),
 	/** The same target held for `ms` instead of tapped. */
 	hold: (target, ms = 700) => ({ ...target, hold: ms, label: `hold ${target.label}` })
 };
@@ -269,6 +271,9 @@ const sweep = (target, from, to, beats = 3) => ({ drag: { target, path: [from, t
 const tapOn = (target) => ({ tap: target });
 /** A control in the central view by position, for views whose labels depend on what is loaded. */
 const nthIn = (css, nth) => ({ css: `[data-debug="middle-panel"] ${css}`, nth, label: `${css} #${nth}` });
+
+/** Give a track an empty clip, so Vamp's next load goes to a new track instead of replacing this one's instrument. */
+const usedTrack = (t) => (live) => live.invoke(`tracks/${t}`, 'clip_slots[0].create_clip', [4]);
 
 /** Drop every device on a track after its first (the effects a gallery piece added). */
 const clearEffects = (t) => async (live) => {
@@ -729,23 +734,7 @@ export const SCENARIOS = {
 				until: looping(2, 1)
 			},
 			{
-				at: '68.2',
-				box: T.slider('Chance'),
-				boxLabel: 'Chance',
-				caption: "Chance: the probability that each note plays.",
-				note: "Lower values drop more notes.",
-				drag: { target: T.slider('Chance'), path: [[0.5, 0.1], [0.5, 0.6], [0.5, 0.6], [0.5, 0.1]], beats: 7 }
-			},
-			{
-				at: '70.3',
-				box: T.slider('Temp'),
-				boxLabel: 'Temp',
-				caption: "Temp: random pitch variation.",
-				note: "Chance and Temp are part of the track's Permute.",
-				drag: { target: T.slider('Temp'), path: [[0.5, 0.9], [0.5, 0.45], [0.5, 0.45], [0.5, 0.9]], beats: 7 }
-			},
-			{
-				at: '72.4',
+				at: '68.1',
 				box: T.area('.editor-toggle'),
 				boxLabel: 'Notes',
 				tap: T.area('.editor-toggle'),
@@ -754,19 +743,20 @@ export const SCENARIOS = {
 				live: LIVE.detail('The same clip, in Live')
 			},
 			{
-				at: '74.1',
+				at: '69.2',
 				box: T.area('[aria-label="Clip editor"]'),
 				boxLabel: 'Note editor',
 				tap: { ...T.area('[aria-label="Draw note"]'), at: [0.86, 0.35] },
 				caption: "Add a note."
 			},
 			{
-				at: '75.2',
+				at: '70.2',
 				tap: T.area('[aria-label="MIDI note"]'),
 				caption: "Delete a note."
 			},
+			{ at: '71.1', box: T.area('.editor-toggle'), boxLabel: 'Notes', tap: T.area('.editor-toggle'), caption: 'Tap the pencil again to close the editor.', note: null },
 			{
-				at: '76.2',
+				at: '72.1',
 				box: T.gridSlot(2, 0, 'action'),
 				boxLabel: 'Launch',
 				tap: T.gridSlot(2, 0, 'action'),
@@ -774,9 +764,52 @@ export const SCENARIOS = {
 				live: null,
 				until: looping(2, 0)
 			},
+			// Chance and Temp on the drums, where they are easiest to hear: Temp
+			// moves hits onto other pads.
+			{
+				at: '73.2',
+				box: T.gridSlot(0, 0, 'cell'),
+				boxLabel: 'Hold',
+				tap: T.hold(T.gridSlot(0, 0, 'body')),
+				caption: 'Hold the drum clip to show its tools.',
+				liveView: 'clip',
+				live: LIVE.detail('The drum clip in Live')
+			},
+			{
+				at: '74.2',
+				box: T.slider('Chance'),
+				boxLabel: 'Chance',
+				caption: "Chance: the probability that each note plays.",
+				note: "Lower values drop more notes.",
+				drag: { target: T.slider('Chance'), path: [[0.5, 0.1], [0.5, 0.6], [0.5, 0.6], [0.5, 0.1]], beats: 6 }
+			},
+			{
+				at: '76.1',
+				box: T.area('.loop-container'),
+				boxLabel: 'Loop',
+				caption: 'Drag the loop down to two beats.',
+				note: 'The loop brace sets which part of the clip plays.',
+				drag: { target: T.area('.loop-container'), path: [[0.5, 0.03], [0.5, 0.75]], beats: 2 }
+			},
+			{
+				at: '77.1',
+				box: T.slider('Temp'),
+				boxLabel: 'Temp',
+				caption: "Temp: random pitch variation.",
+				note: "On drums, notes move to other pads. Chance and Temp are part of the track's Permute.",
+				drag: { target: T.slider('Temp'), path: [[0.5, 0.9], [0.5, 0.4], [0.5, 0.4], [0.5, 0.4], [0.5, 0.9]], beats: 8 }
+			},
+			{
+				at: '79.3',
+				box: T.area('.loop-container'),
+				boxLabel: 'Loop',
+				caption: 'Drag the loop back to two bars.',
+				note: null,
+				drag: { target: T.area('.loop-container'), path: [[0.5, 0.75], [0.5, 0.02]], beats: 2 }
+			},
 
 			{
-				at: '78.1',
+				at: '82.1',
 				chapter: "Effects",
 				liveView: 'devices',
 				box: T.tile('fx12'),
@@ -787,7 +820,7 @@ export const SCENARIOS = {
 				drag: { target: T.tile('fx12'), path: [[0.5, 0.6], [0.62, 0.22]], beats: 4 }
 			},
 			{
-				at: '79.3',
+				at: '83.3',
 				box: T.area('[data-debug="middle-panel"]'),
 				boxLabel: "Reverb",
 				tap: T.tile('fx12'),
@@ -795,7 +828,7 @@ export const SCENARIOS = {
 				note: null
 			},
 			{
-				at: '81.1',
+				at: '85.1',
 				box: T.button('Shimmer'),
 				boxLabel: 'Shimmer',
 				tap: T.button('Shimmer'),
@@ -803,7 +836,7 @@ export const SCENARIOS = {
 				note: "Shimmer shifts the reverb tail up in pitch."
 			},
 			{
-				at: '82.3',
+				at: '86.3',
 				box: T.tile('fx11'),
 				boxLabel: 'Echo',
 				caption: "Drag Echo.",
@@ -812,21 +845,21 @@ export const SCENARIOS = {
 				drag: { target: T.tile('fx11'), path: [[0.4, 0.6], [0.52, 0.34]], beats: 3 }
 			},
 			{
-				at: '83.4',
+				at: '87.4',
 				box: T.area('[data-debug="middle-panel"]'),
 				boxLabel: "Echo",
 				tap: T.tile('fx11'),
 				caption: "Echo's controls: time, filter, modulation and levels."
 			},
 			{
-				at: '85.1',
+				at: '89.1',
 				box: T.slider('Feedback'),
 				boxLabel: 'Feedback',
 				caption: "Raise Feedback.",
 				drag: { target: T.slider('Feedback'), path: [[0.5, 0.7], [0.5, 0.35]], beats: 3 }
 			},
 			{
-				at: '86.3',
+				at: '90.3',
 				box: T.strip(1, 'device'),
 				boxLabel: "Bass",
 				tap: T.strip(1, 'device'),
@@ -835,7 +868,7 @@ export const SCENARIOS = {
 				live: null
 			},
 			{
-				at: '87.3',
+				at: '91.3',
 				box: T.tile('fx5'),
 				boxLabel: 'Pedal',
 				caption: "Drag Pedal.",
@@ -843,14 +876,14 @@ export const SCENARIOS = {
 				drag: { target: T.tile('fx5'), path: [[0.5, 0.65], [0.56, 0.3]], beats: 3 }
 			},
 			{
-				at: '88.4',
+				at: '92.4',
 				box: T.area('[data-debug="middle-panel"]'),
 				boxLabel: "Pedal",
 				tap: T.tile('fx5'),
 				caption: "Tap Pedal to open its controls."
 			},
 			{
-				at: '89.3',
+				at: '93.3',
 				box: T.button('Fuzz'),
 				boxLabel: 'Fuzz',
 				tap: T.button('Fuzz'),
@@ -859,7 +892,7 @@ export const SCENARIOS = {
 			},
 
 			{
-				at: '91.2',
+				at: '95.2',
 				chapter: 'Permute',
 				box: T.strip(1, 'permute'),
 				boxLabel: "Permute",
@@ -868,9 +901,9 @@ export const SCENARIOS = {
 				note: "Permute is a step sequencer. It transposes and mutes the playing clip.",
 				live: null
 			},
-			{ at: '92.3', box: T.area('.grid-pitch-steps'), boxLabel: 'Pitch steps', taps: [T.step('pitch', 3), T.step('pitch', 7)], caption: "Pitch steps transpose the bass by an octave." },
+			{ at: '96.3', box: T.area('.grid-pitch-steps'), boxLabel: 'Pitch steps', taps: [T.step('pitch', 3), T.step('pitch', 7)], caption: "Pitch steps transpose the bass by an octave." },
 			{
-				at: '94.2',
+				at: '98.2',
 				box: T.area('[title^="Pitch length"]'),
 				boxLabel: 'Length',
 				caption: "Length: the number of steps before the lane repeats.",
@@ -878,16 +911,16 @@ export const SCENARIOS = {
 				drag: { target: T.area('[title^="Pitch length"]'), path: [[0.5, 0.4], [0.5, 0.74]], beats: 2 }
 			},
 			{
-				at: '95.4',
+				at: '99.4',
 				box: T.area('[title^="Pitch rate"]'),
 				boxLabel: 'Rate',
 				caption: "Rate: the step speed.",
 				drag: { target: T.area('[title^="Pitch rate"]'), path: [[0.5, 0.7], [0.5, 0.3]], beats: 2 }
 			},
-			{ at: '97.2', box: T.strip(2, 'permute'), boxLabel: "Permute", tap: T.strip(2, 'permute'), caption: "Open Permute on the keys." },
-			{ at: '98.1', box: T.area('.grid-mute-steps'), boxLabel: 'Mute steps', taps: [T.step('mute', 1), T.step('mute', 3), T.step('mute', 6)], caption: "Mute steps silence the chords on those steps." },
+			{ at: '101.2', box: T.strip(2, 'permute'), boxLabel: "Permute", tap: T.strip(2, 'permute'), caption: "Open Permute on the keys." },
+			{ at: '102.1', box: T.area('.grid-mute-steps'), boxLabel: 'Mute steps', taps: [T.step('mute', 1), T.step('mute', 3), T.step('mute', 6)], caption: "Mute steps silence the chords on those steps." },
 			{
-				at: '99.4',
+				at: '103.4',
 				box: T.area('[title^="Mute rate"]'),
 				boxLabel: 'Rate',
 				caption: "Each lane has its own length and rate.",
@@ -900,7 +933,7 @@ export const SCENARIOS = {
 			// Follow keeps its key (and stays on) through that, which this
 			// chapter exercises.
 			{
-				at: '101.1',
+				at: '105.1',
 				chapter: 'Launch and stop',
 				box: T.gridSlot(0, 0, 'action'),
 				boxLabel: 'Stop',
@@ -909,7 +942,7 @@ export const SCENARIOS = {
 				until: stopped(0, 0)
 			},
 			{
-				at: '103.1',
+				at: '107.1',
 				box: T.gridSlot(0, 0, 'action'),
 				boxLabel: 'Launch',
 				tap: T.gridSlot(0, 0, 'action'),
@@ -918,19 +951,19 @@ export const SCENARIOS = {
 			},
 
 			{
-				at: '105.1',
+				at: '109.1',
 				chapter: 'Mix',
 				box: T.area('.track-col[data-track-index="2"]'),
 				boxLabel: "Keys track",
 				caption: "Drag a track down to lower its volume.",
 				drag: { target: T.strip(2, 'device'), path: [[0.5, 0.3], [0.5, 0.75]], beats: 3 }
 			},
-			{ at: '106.3', caption: "Drag up to raise it.", drag: { target: T.strip(2, 'device'), path: [[0.5, 0.6], [0.5, 0.15]], beats: 3 } },
-			{ at: '108.2', box: T.name(1), boxLabel: "Mute", tap: T.name(1), caption: "Tap a track name to mute it.", until: muted(1, true) },
-			{ at: '110.1', box: T.name(1), boxLabel: "Mute", tap: T.name(1), caption: "Tap again to unmute.", until: muted(1, false) },
-			{ at: '111.3', box: null, caption: "All of this was done on the iPad." }
+			{ at: '110.3', caption: "Drag up to raise it.", drag: { target: T.strip(2, 'device'), path: [[0.5, 0.6], [0.5, 0.15]], beats: 3 } },
+			{ at: '112.2', box: T.name(1), boxLabel: "Mute", tap: T.name(1), caption: "Tap a track name to mute it.", until: muted(1, true) },
+			{ at: '114.1', box: T.name(1), boxLabel: "Mute", tap: T.name(1), caption: "Tap again to unmute.", until: muted(1, false) },
+			{ at: '115.3', box: null, caption: "All of this was done on the iPad." }
 		],
-		end: '114.1',
+		end: '118.1',
 		// D minor still: selecting the drum clip (recorded in C major) did not undo Key Follow.
 		result: [looping(0, 0), looping(1, 0), looping(2, 0), keyIs(2, 'Minor'), grooveAmountAtLeast(0, 0, 50)]
 	},
@@ -991,6 +1024,79 @@ export const SCENARIOS = {
 		],
 		end: '29.2',
 		result: [looping(0, 0), looping(1, 0), looping(2, 0)]
+	},
+
+	browser: {
+		...SITE,
+		tempo: 120,
+		title: 'Browser',
+		blurb: 'Loading a kit, an audio loop and a sample from the browser.',
+		prefs: { ...SITE.prefs, 'browserModeStore.sourceMode': 'instruments' },
+		setup: undefined,
+		steps: [
+			{
+				at: '2.1',
+				chapter: 'Browser',
+				box: T.area('.vendor-buttons.places-rail'),
+				boxLabel: 'Places',
+				caption: 'The browser has a button for each Place.',
+				note: "Places are the folders in Live's browser sidebar."
+			},
+			{ at: '3.2', box: T.rail('Drum'), boxLabel: 'Drum', tap: T.rail('Drum'), caption: 'Tap a Place to open it.', note: null },
+			{
+				at: '4.2',
+				box: T.area('.seg-switch[aria-label="Browse mode"]'),
+				boxLabel: 'Mode',
+				caption: 'Choose what to load: Instrument, Simpler or Clip.'
+			},
+			{ at: '5.3', box: T.folder('Drum Machines'), boxLabel: 'Folder', tap: T.folder('Drum Machines'), caption: 'Instrument: presets, such as drum kits.' },
+			{
+				at: '6.3',
+				box: T.preset('909 Core Kit'),
+				boxLabel: 'Preset',
+				tap: T.preset('909 Core Kit'),
+				caption: 'Tap a preset. It loads on a new track.',
+				live: LIVE.tracks(2, 'The new track in Live'),
+				until: hasDevice(1, 'DrumGroupDevice')
+			},
+			{ at: '8.1', box: null, live: null, do: (live) => live.invoke('song', 'delete_track', [0]) },
+			{ at: '8.3', box: T.rail('Perc'), boxLabel: 'Perc', tap: T.rail('Perc'), caption: 'Clip: audio loops and samples.' },
+			{ at: '9.3', box: T.seg('Clip'), boxLabel: 'Clip', tap: T.seg('Clip') },
+			{
+				at: '10.3',
+				box: T.preset('Akeem Groove 120 bpm'),
+				boxLabel: 'Loop',
+				tap: T.preset('Akeem Groove 120 bpm'),
+				caption: 'Tap a loop. It loads as a clip on a new audio track.',
+				live: LIVE.tracks(2, 'The new audio track in Live'),
+				until: slotHasClip(1, 0)
+			},
+			{
+				at: '12.2',
+				box: T.gridSlot(1, 0, 'action'),
+				boxLabel: 'Launch',
+				tap: T.gridSlot(1, 0, 'action'),
+				caption: 'Tap it to launch it.',
+				note: 'Live warps the loop to the song tempo.',
+				live: LIVE.clip(1, 0, 'The loop in Live'),
+				until: looping(1, 0)
+			},
+			{ at: '14.2', box: T.rail('Synth'), boxLabel: 'Synth', tap: T.rail('Synth'), caption: 'Simpler: a sample goes into Simpler on a new MIDI track.', note: null, live: null },
+			{ at: '15.2', box: T.seg('Simpler'), boxLabel: 'Simpler', tap: T.seg('Simpler') },
+			{
+				at: '16.2',
+				box: T.preset('Synth Swell F'),
+				boxLabel: 'Sample',
+				tap: T.preset('Synth Swell F'),
+				live: LIVE.devices('Simpler, with the sample, in Live'),
+				liveView: 'devices',
+				until: hasDevice(2, 'OriginalSimpler')
+			},
+			{ at: '18.1', box: T.area('[data-debug="middle-panel"]'), boxLabel: 'Simpler', caption: 'Play it.', play: LEAD },
+			{ at: '20.1', box: null, caption: 'Play it.' }
+		],
+		end: '20.3',
+		result: [looping(1, 0), hasDevice(0, 'DrumGroupDevice'), hasDevice(2, 'OriginalSimpler')]
 	},
 
 	'main-track': {
@@ -1248,6 +1354,55 @@ export const SCENARIOS = {
 		result: [looping(0, 0), looping(1, 0), looping(2, 0), slotHasClip(2, 1), muted(0, false)]
 	},
 
+	recorder: {
+		...SITE,
+		title: 'Record to Simpler',
+		blurb: "Recording a track's sound through the Vamp Recorder on Return A into Simpler.",
+		steps: [
+			{
+				at: '18.1',
+				chapter: 'Record to Simpler',
+				box: T.strip(2, 'clip'),
+				boxLabel: 'Keys',
+				tap: T.strip(2, 'clip'),
+				caption: 'Select the track to record.',
+				note: 'Its clip view opens in the middle.'
+			},
+			{
+				at: '19.3',
+				box: { css: '[data-debug="middle-panel"] button.record-button', label: 'REC' },
+				boxLabel: 'REC',
+				tap: { css: '[data-debug="middle-panel"] button.record-button', label: 'REC' },
+				caption: "Tap REC to record the track's sound.",
+				note: 'The Vamp Recorder on Return A records it.'
+			},
+			{ at: '20.3', caption: 'Recording.', note: null },
+			{
+				at: '22.1',
+				box: { css: '[data-debug="middle-panel"] button.record-button', label: 'REC' },
+				boxLabel: 'REC',
+				tap: { css: '[data-debug="middle-panel"] button.record-button', label: 'REC' },
+				caption: 'Tap REC again to stop.',
+				note: 'The recording goes into Simpler on a new MIDI track.',
+				until: hasDevice(3, 'OriginalSimpler')
+			},
+			{
+				at: '24.1',
+				box: T.area('[data-debug="middle-panel"]'),
+				boxLabel: 'Simpler',
+				tap: T.strip(3, 'device'),
+				caption: 'Simpler holds the recording.',
+				note: null,
+				liveView: 'devices',
+				live: LIVE.devices('Simpler, with the recording, in Live')
+			},
+			{ at: '25.1', caption: 'Play it from a keyboard.', play: LEAD },
+			{ at: '27.1', box: null }
+		],
+		end: '28.1',
+		result: [hasDevice(3, 'OriginalSimpler'), looping(2, 0)]
+	},
+
 	'instrument-views': {
 		title: 'Instrument views',
 		blurb: "Each instrument's central view, played and adjusted: one short clip each.",
@@ -1256,18 +1411,32 @@ export const SCENARIOS = {
 		liveWindow: { w: 1090, h: 856 },
 		set: { empty: true, key: { root: 2, scale: 'Minor' } },
 		crop: T.area('[data-debug="middle-panel"]'),
-		// A Simpler preset with its sample and the 909 kit come through the
-		// browser; the rest are Live's instruments inserted bare.
+		// Presets come through the browser (a sample for Simpler and Sampler,
+		// three kinds of kit), each on the track
+		// after the last; Live's other instruments are inserted bare.
 		setup: [
 			{ at: '1.2', tap: T.rail('Key') },
 			{ at: '1.4', tap: T.folder('Simpler') },
 			{ at: '2.2', tap: T.preset('Grand Piano Single Sample'), until: hasDevice(1, 'OriginalSimpler') },
-			{ at: '3.3', do: (live) => live.invoke('song', 'delete_track', [0]) },
-			{ at: '4.1', tap: T.rail('Drum') },
-			{ at: '4.3', tap: T.folder('Drum Machines') },
-			{ at: '5.2', tap: T.preset('909 Core Kit'), until: hasDevice(1, 'DrumGroupDevice') },
+			{ at: '3.2', do: async (live) => (await live.invoke('song', 'delete_track', [0]), usedTrack(0)(live)) },
+			...[
+				['Drum', 'Drum Machines', '909 Core Kit', 'DrumGroupDevice'],
+				['Drum', 'Drum Machines', '606 + 808', 'DrumGroupDevice'],
+				['Drum', 'Sampled', 'Aquarium Groove', 'DrumGroupDevice'],
+				['Bass', 'Sampler', 'Analogue Bass', 'MultiSampler']
+			].flatMap(([place, folder, preset, className], k) => {
+				const bar = 4 + 4 * k;
+				return [
+					{ at: `${bar + 1}.1`, tap: T.rail(place) },
+					// The browser reopens where it was in this Place; the root crumb goes back to its top level.
+					{ at: `${bar + 1}.3`, tap: { css: '.crumbs button.crumb.root', pointer: 'mouse', label: 'crumb root' } },
+					{ at: `${bar + 2}.1`, tap: T.folder(folder) },
+					{ at: `${bar + 2}.3`, tap: T.preset(preset), until: hasDevice(1 + k, className) },
+					{ at: `${bar + 3}.2`, do: usedTrack(1 + k) }
+				];
+			}),
 			{
-				at: '6.2',
+				at: '24.3',
 				do: async (live) => {
 					for (const d of ['Drift', 'Electric', 'Operator', 'Wavetable', 'Meld', 'Collision']) {
 						await live.invoke('song', 'create_midi_track', [-1]);
@@ -1276,53 +1445,26 @@ export const SCENARIOS = {
 						await live.set(`tracks/${n - 1}`, [['name', d]]);
 					}
 				},
-				until: hasDevice(7, 'Collision')
-			}
+				until: hasDevice(10, 'Collision')
+			},
+			// Open every view once, off camera, so none is still loading when its piece starts.
+			{ at: '26.3', taps: Array.from({ length: 11 }, (_, t) => T.strip(t, 'device')) }
 		],
 		steps: [
-			...piece(8, 'Simpler', {
-				open: { tap: T.strip(0, 'device') },
-				phrase: KEYS,
-				moves: [sweep(nthIn('.xy-container', 0), [0.3, 0.7], [0.7, 0.3]), up(nthIn('.slider-container', 0)), down(nthIn('.slider-container', 1))]
-			}),
-			...piece(12, 'Drum Rack', {
-				open: { tap: T.strip(1, 'device') },
-				phrase: DRUMS,
-				moves: [up(T.slider('Drive Amount')), down(nthIn('.slider-container', 1)), up(nthIn('.slider-container', 2))]
-			}),
-			...piece(16, 'Drift', {
-				open: { tap: T.strip(2, 'device') },
-				phrase: BASS,
-				moves: [sweep(T.xy('Filter'), [0.25, 0.7], [0.8, 0.35]), up(T.slider('Shape')), sweep(T.xy('Time'), [0.3, 0.6], [0.7, 0.3])]
-			}),
-			...piece(20, 'Electric', {
-				open: { tap: T.strip(3, 'device') },
-				phrase: KEYS,
-				moves: [sweep(T.xy('Hammer'), [0.3, 0.7], [0.7, 0.3]), sweep(T.xy('Fork'), [0.7, 0.6], [0.3, 0.3]), { drag: { target: T.wheel('Pitch'), path: [[0.5, 0.5], [0.5, 0.82], [0.5, 0.5]], beats: 3 } }]
-			}),
-			...piece(24, 'Operator', {
-				open: { tap: T.strip(4, 'device') },
-				phrase: LEAD,
-				moves: [up(T.slider('Feedback')), down(T.slider('Tone')), up(T.slider('Time'))]
-			}),
-			...piece(28, 'Wavetable', {
-				open: { tap: T.strip(5, 'device') },
-				phrase: KEYS,
-				moves: [sweep(T.xy('OSC 1'), [0.2, 0.6], [0.8, 0.4]), sweep(T.xy('OSC 2'), [0.7, 0.7], [0.3, 0.3]), down(T.slider('A'))]
-			}),
-			...piece(32, 'Meld', {
-				open: { tap: T.strip(6, 'device') },
-				phrase: KEYS,
-				moves: [sweep(T.xy('Macro'), [0.3, 0.7], [0.7, 0.3]), sweep(T.xy('Filter'), [0.2, 0.5], [0.8, 0.3]), sweep(T.xy('Time'), [0.3, 0.3], [0.7, 0.7])]
-			}),
-			...piece(36, 'Collision', {
-				open: { tap: T.strip(7, 'device') },
-				phrase: LEAD,
-				moves: [sweep(T.xy('Res 1'), [0.2, 0.6], [0.8, 0.3]), sweep(T.xy('Res 1'), [0.8, 0.3], [0.4, 0.7]), { drag: { target: T.wheel('Mod'), path: [[0.5, 0.9], [0.5, 0.3]], beats: 3 } }]
-			}),
-			{ at: '40.1', cut: true }
+			...piece(31, 'Simpler', { open: { tap: T.strip(0, 'device') }, phrase: KEYS, moves: [sweep(nthIn('.xy-container', 0), [0.3, 0.7], [0.7, 0.3]), up(nthIn('.slider-container', 0)), down(nthIn('.slider-container', 1))] }),
+			...piece(35, 'Drum Rack: macros', { open: { tap: T.strip(1, 'device') }, phrase: DRUMS, moves: [up(T.slider('Drive Amount')), down(nthIn('.slider-container', 1)), up(nthIn('.slider-container', 2))] }),
+			...piece(39, 'Drum Rack: Drum Sampler', { open: { tap: T.strip(2, 'device') }, phrase: DRUMS, moves: [down(T.slider('Gain')), sweep(T.xy('Filter'), [0.3, 0.7], [0.7, 0.3]), sweep(T.xy('Time'), [0.3, 0.3], [0.7, 0.7])] }),
+			...piece(43, 'Drum Rack: Sampler', { open: { tap: T.strip(3, 'device') }, phrase: DRUMS, moves: [up(nthIn('.slider-container', 0)), down(nthIn('.slider-container', 1)), up(nthIn('.slider-container', 2))] }),
+			...piece(47, 'Sampler', { open: { tap: T.strip(4, 'device') }, phrase: BASS, moves: [sweep(T.xy('Filter'), [0.3, 0.7], [0.7, 0.3]), sweep(T.xy('Osc'), [0.3, 0.3], [0.7, 0.6]), up(T.slider('Gain'))] }),
+			...piece(51, 'Drift', { open: { tap: T.strip(5, 'device') }, phrase: BASS, moves: [sweep(T.xy('Filter'), [0.25, 0.7], [0.8, 0.35]), up(T.slider('Shape')), sweep(T.xy('Time'), [0.3, 0.6], [0.7, 0.3])] }),
+			...piece(55, 'Electric', { open: { tap: T.strip(6, 'device') }, phrase: KEYS, moves: [sweep(T.xy('Hammer'), [0.3, 0.7], [0.7, 0.3]), sweep(T.xy('Fork'), [0.7, 0.6], [0.3, 0.3]), { drag: { target: T.wheel('Pitch'), path: [[0.5, 0.5], [0.5, 0.82], [0.5, 0.5]], beats: 3 } }] }),
+			...piece(59, 'Operator', { open: { tap: T.strip(7, 'device') }, phrase: LEAD, moves: [up(T.slider('Feedback')), down(T.slider('Tone')), up(T.slider('Time'))] }),
+			...piece(63, 'Wavetable', { open: { tap: T.strip(8, 'device') }, phrase: KEYS, moves: [sweep(T.xy('OSC 1'), [0.2, 0.6], [0.8, 0.4]), sweep(T.xy('OSC 2'), [0.7, 0.7], [0.3, 0.3]), down(T.slider('A'))] }),
+			...piece(67, 'Meld', { open: { tap: T.strip(9, 'device') }, phrase: KEYS, moves: [sweep(T.xy('Macro'), [0.3, 0.7], [0.7, 0.3]), sweep(T.xy('Filter'), [0.2, 0.5], [0.8, 0.3]), sweep(T.xy('Time'), [0.3, 0.3], [0.7, 0.7])] }),
+			...piece(71, 'Collision', { open: { tap: T.strip(10, 'device') }, phrase: LEAD, moves: [sweep(T.xy('Res 1'), [0.2, 0.6], [0.8, 0.3]), sweep(T.xy('Res 1'), [0.8, 0.3], [0.4, 0.7]), { drag: { target: T.wheel('Mod'), path: [[0.5, 0.9], [0.5, 0.3]], beats: 3 } }] }),
+			{ at: '75.1', cut: true }
 		],
-		end: '40.3',
+		end: '75.3',
 		result: []
 	},
 
