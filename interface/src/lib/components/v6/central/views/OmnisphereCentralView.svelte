@@ -136,10 +136,10 @@
 
 <div class="h-full w-full">
   {#if instrument}
-    <!-- Main content grid, the user's layout (2026-09-29): the ORB column
-         (swap pill, FX, ORB), the two envelopes stacked, the four XY pads in
-         a 2 x 2, then the seam and the MIDI wheels. -->
-    <div class="h-full w-full grid grid-rows-2 gap-(--central-gap) p-(--central-inset)" style="grid-template-columns: 2fr 2fr 1.5fr 1.5fr auto 1fr;">
+    <!-- Main content grid, the user's layout (2026-09-29): five equal
+         columns before the seam: the ORB column takes one, the envelopes two,
+         each XY pad one; then the seam and the MIDI wheels. -->
+    <div class="h-full w-full grid grid-rows-2 gap-(--central-gap) p-(--central-inset)" style="grid-template-columns: repeat(5, 1fr) auto 1fr;">
       <!-- Col 1, both rows: the swap pill, the FX toggle under it, then the
            ORB taking the rest of the column. -->
       <div class="flex flex-col gap-(--central-gap) min-h-0 row-span-2">
@@ -166,7 +166,7 @@
       <!-- Col 2, both rows: the envelopes. Amp over filter, on one ruler, so
            each amp stage stands over the same filter stage; the filter's
            Amount takes the fifth column, which the amp row leaves empty. -->
-      <div class="omni-envelopes min-w-0 min-h-0 row-span-2">
+      <div class="omni-envelopes min-w-0 min-h-0 col-span-2 row-span-2">
         <span class="omni-env-title" style="color: {omniInk.primary}; grid-column: 1 / 5;">Amp Env</span>
         {#each AMP_ENV as stage (stage.index)}
           <div class="min-w-0 min-h-0" style="grid-row: 2;">
