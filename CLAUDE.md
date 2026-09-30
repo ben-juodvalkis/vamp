@@ -40,8 +40,9 @@ menubar app, Max patch, Skaka picker and rack, rig probes), `config/`,
 5. Tell Ben what behaves differently now, and whether it needs a Live restart.
 
 Ask first before force-push, `reset --hard`, rewriting pushed commits or
-deleting branches. Cloud sessions push their own branch; the next Mac session
-merges it with `git merge` (no rebase).
+deleting branches. Cloud sessions push their own branch and stop there. A Mac
+session merges a cloud branch only when Ben asks for that branch, with
+`git merge` (no rebase); it never picks up cloud branches on its own.
 
 ## Seeing it work
 
