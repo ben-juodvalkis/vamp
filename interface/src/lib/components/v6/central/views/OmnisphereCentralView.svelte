@@ -65,6 +65,10 @@
   const FILTER_ENV: Record<EnvelopeStage, number> = { attack: 13, decay: 14, sustain: 15, release: 16 };
   const FILTER_ENV_AMOUNT = 5;
 
+  // Which envelope the curve shows. The view's own, so it starts on Amp.
+  let envMode = $state<'amp' | 'filter'>('amp');
+  let env = $derived(envMode === 'amp' ? AMP_ENV : FILTER_ENV);
+
   function paramDisplay(index: number): string | undefined {
     return device ? selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(device, index)) : undefined;
   }
@@ -142,13 +146,13 @@
   {#if instrument}
     <!-- Main content grid, the user's layout (2026-09-29): five equal
          columns before the seam: the ORB takes one, the envelopes two, each
-         XY pad one; then the seam and the MIDI wheels. Four rows: a header
-         (the envelope's name, and the swap pill over the XY pads), the top
-         controls, the filter envelope's name, the bottom controls. Every
-         control in a band starts on the same line, whatever sits above it. -->
+         XY pad one; then the seam and the MIDI wheels. Three rows: a header
+         (the Amp | Filter switch, and the swap pill over the XY pads), then
+         two rows of controls. Every control starts on the same line under
+         the header. -->
     <div class="omni-grid h-full w-full grid gap-(--central-gap) p-(--central-inset)">
       <!-- Col 1, under the header: the ORB. -->
-      <div class="min-h-0" style="grid-column: 1; grid-row: 2 / 5;">
+      <div class="min-h-0" style="grid-column: 1; grid-row: 2 / 4;">
         <OrbControl
           angle={orbAngleValue}
           radius={orbRadiusValue}
@@ -158,24 +162,46 @@
         />
       </div>
 
-      <!-- Cols 2-3: the envelopes, amp over filter, each an editable curve;
-           the filter's Amount takes the fifth column, and FX stands over it
-           in the amp row's. It shares
-           the view's rows (subgrid), so its names sit in the header and
-           middle rows and its sliders start level with the pads. -->
-      <div class="omni-envelopes min-w-0 min-h-0" style="grid-column: 2 / 4; grid-row: 1 / 5;">
-        <span class="omni-env-title" style="color: {omniInk.primary}; grid-column: 1 / 5; grid-row: 1;">Amp Env</span>
-        <div class="min-w-0 min-h-0" style="grid-column: 1 / 5; grid-row: 2;">
-          <EnvelopeEditor
-            title="Amp Envelope"
-            attack={paramValue(AMP_ENV.attack)}
-            decay={paramValue(AMP_ENV.decay)}
-            sustain={paramValue(AMP_ENV.sustain)}
-            release={paramValue(AMP_ENV.release)}
-            displays={envDisplays(AMP_ENV)}
-            color={omniInk}
-            onChange={(stage, value) => writeParam(AMP_ENV[stage], value)}
-          />
+      <!-- Cols 2-3: one envelope at a time, full height, the Amp | Filter
+           switch over it in the header (user's layout, 2026-09-29). FX stands
+           at the top of the fifth column and the filter's Amount at its foot;
+           Amount stays live under either envelope. It shares the view's rows
+           (subgrid), so the switch sits level with the swap pill and the curve
+           starts level with the pads. -->
+      <div class="omni-envelopes min-w-0 min-h-0" style="grid-column: 2 / 4; grid-row: 1 / 4;">
+        <div
+          class="device-segmented omni-env-switch grid grid-cols-2 min-w-0"
+          style="--btn-tint: {omniInk.primary}; grid-column: 1 / 5; grid-row: 1;"
+          role="radiogroup"
+          aria-label="Envelope"
+        >
+          {#each [['amp', 'Amp'], ['filter', 'Filter']] as [mode, label] (mode)}
+            <button
+              class="device-segment text-base font-bold"
+              class:active={envMode === mode}
+              role="radio"
+              aria-checked={envMode === mode}
+              onclick={() => (envMode = mode as 'amp' | 'filter')}
+            >
+              {label}
+            </button>
+          {/each}
+        </div>
+        <div class="min-w-0 min-h-0" style="grid-column: 1 / 5; grid-row: 2 / 4;">
+          <!-- Keyed, so a switch mid-drag drops the held handle rather than
+               carrying it onto the other envelope's parameters. -->
+          {#key envMode}
+            <EnvelopeEditor
+              title={envMode === 'amp' ? 'Amp Envelope' : 'Filter Envelope'}
+              attack={paramValue(env.attack)}
+              decay={paramValue(env.decay)}
+              sustain={paramValue(env.sustain)}
+              release={paramValue(env.release)}
+              displays={envDisplays(env)}
+              color={omniInk}
+              onChange={(stage, value) => writeParam(env[stage], value)}
+            />
+          {/key}
         </div>
         <button
           class="physical-button omni-fx w-full h-full min-h-0 text-xl font-bold"
@@ -185,20 +211,7 @@
         >
           FX
         </button>
-        <span class="omni-env-title" style="color: {omniInk.primary}; grid-column: 1 / 6; grid-row: 3;">Filter Env</span>
-        <div class="min-w-0 min-h-0" style="grid-column: 1 / 5; grid-row: 4;">
-          <EnvelopeEditor
-            title="Filter Envelope"
-            attack={paramValue(FILTER_ENV.attack)}
-            decay={paramValue(FILTER_ENV.decay)}
-            sustain={paramValue(FILTER_ENV.sustain)}
-            release={paramValue(FILTER_ENV.release)}
-            displays={envDisplays(FILTER_ENV)}
-            color={omniInk}
-            onChange={(stage, value) => writeParam(FILTER_ENV[stage], value)}
-          />
-        </div>
-        <div class="min-w-0 min-h-0" style="grid-column: 5; grid-row: 4;">
+        <div class="min-w-0 min-h-0" style="grid-column: 5; grid-row: 3;">
           <DeviceSlider
             value={paramValue(FILTER_ENV_AMOUNT)}
             title="Amt"
@@ -238,8 +251,8 @@
         />
       </div>
 
-      <!-- Col 4, bottom: FILTER XY Pad, level with the filter envelope. -->
-      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 4; grid-row: 4;">
+      <!-- Col 4, bottom: FILTER XY Pad -->
+      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 4; grid-row: 3;">
         <DeviceXY
           xValue={filterXValue}
           yValue={filterYValue}
@@ -251,7 +264,7 @@
       </div>
 
       <!-- Col 5, bottom: VIBRATO XY Pad -->
-      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 5; grid-row: 4;">
+      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 5; grid-row: 3;">
         <DeviceXY
           xValue={vibratoXValue}
           yValue={vibratoYValue}
@@ -265,12 +278,12 @@
       <!-- The wheels send MIDI, not Omnisphere parameters: a seam divides the
            device from them, as in every instrument view (2026-09-13). The
            wrapper spans every row — SectionDivider takes no class of its own. -->
-      <div class="flex min-h-0" style="grid-column: 6; grid-row: 1 / 5;">
+      <div class="flex min-h-0" style="grid-column: 6; grid-row: 1 / 4;">
         <SectionDivider orientation="vertical" />
       </div>
 
       <!-- Col 7, every row: MIDI Wheels -->
-      <div class="flex flex-col min-h-0" style="grid-column: 7; grid-row: 1 / 5;">
+      <div class="flex flex-col min-h-0" style="grid-column: 7; grid-row: 1 / 4;">
         <MidiWheelsPanel />
       </div>
 
@@ -336,12 +349,11 @@
      (already the flat field / ChosenDefault ON) whose bold literal settles
      to medium. Graticule is untouched — the rule sits under
      [data-grammar="flat"]. */
-  /* Amp title, amp stages, filter title, filter stages — the view's rows.
-     Amount's column is
-     narrower: it is one control beside a curve. */
+  /* The switch, then the curve down the view's other two rows. Amount's
+     column is narrower: it is one control beside a curve. */
   .omni-grid {
     grid-template-columns: repeat(5, minmax(0, 1fr)) auto minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
   }
 
   .omni-envelopes {
@@ -351,19 +363,18 @@
     column-gap: var(--central-gap);
   }
 
-  /* The eyebrow every named group in a central view wears (EnvelopeGroup's). */
-  .omni-env-title {
-    align-self: center;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    text-align: center;
-    white-space: nowrap;
+  /* The shared segmented chrome divides its options top to bottom; these two
+     sit side by side, so the hairline goes between them instead. */
+  .omni-env-switch {
+    height: var(--height-touch, 44px);
   }
-
-  :global([data-grammar="flat"]) .omni-env-title {
-    letter-spacing: normal;
-    font-weight: var(--font-weight-medium);
+  .omni-env-switch :global(.device-segment + .device-segment) {
+    border-top: 0;
+    border-left: 1px solid var(--line-faint);
+  }
+  :global([data-grammar="flat"]) .omni-env-switch :global(.device-segment + .device-segment) {
+    border-top: 0;
+    border-left: 1px solid var(--line-strong);
   }
 
   :global([data-grammar="flat"]) .omni-fx {
