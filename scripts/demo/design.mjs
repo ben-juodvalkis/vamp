@@ -21,8 +21,21 @@ import { join } from 'node:path';
 
 export const CANVAS = { w: 1920, h: 1080 };
 
-/** Where the recorded windows land, in canvas pixels. */
-export function layout(liveAspect) {
+/**
+ * Where the recorded windows land, in canvas pixels. `frame` 'ipad': the
+ * interface alone, larger, with the captions in a column beside it (a clip
+ * about the interface itself, where Live has nothing to show).
+ */
+export function layout(liveAspect, frame = 'both') {
+	if (frame === 'ipad') {
+		const bezel = 18;
+		const screen = { w: 1067, h: 800 };
+		const device = { x: 64, y: Math.round((CANVAS.h - screen.h - 2 * bezel) / 2) + 16, w: screen.w + 2 * bezel, h: screen.h + 2 * bezel };
+		Object.assign(screen, { x: device.x + bezel, y: device.y + bezel });
+		const capX = device.x + device.w + 72;
+		const caption = { x: capX, y: device.y, w: CANVAS.w - capX - 72, h: device.h };
+		return { screen, device, live: null, caption, bezel, screenRadius: 20, deviceRadius: 38, liveRadius: 12 };
+	}
 	const margin = 56;
 	const bezel = 18;
 	const top = 96;
@@ -58,9 +71,9 @@ function backgroundHtml(L) {
 	return page(
 		`<div class="bg"></div>
 		<div class="label" style="left:${L.device.x + 4}px;top:${L.device.y - 40}px">Vamp <span>on iPad</span></div>
-		<div class="label" style="left:${L.live.x + 2}px;top:${L.device.y - 40}px">Ableton Live</div>
+		${L.live ? `<div class="label" style="left:${L.live.x + 2}px;top:${L.device.y - 40}px">Ableton Live</div>` : ''}
 		<div class="device" style="${box(L.device)}"><div class="glass" style="left:${L.bezel}px;top:${L.bezel}px;width:${L.screen.w}px;height:${L.screen.h}px"></div></div>
-		<div class="liveshadow" style="${box(L.live)}"></div>`,
+		${L.live ? `<div class="liveshadow" style="${box(L.live)}"></div>` : ''}`,
 		`.bg { position:absolute; inset:0;
 			background:
 				radial-gradient(1200px 800px at 30% 38%, #23262d 0%, rgba(20,21,25,0) 70%),
@@ -151,7 +164,7 @@ export async function renderAssets(dir, L, { captions, intro, outro, liveBoxes =
 			transparent: false,
 			clip: { x: 0, y: 0, width: L.screen.w, height: L.screen.h }
 		}),
-		liveMask: await shot(maskHtml(L.live.w, L.live.h, L.liveRadius), 'mask-live.png', {
+		liveMask: !L.live ? null : await shot(maskHtml(L.live.w, L.live.h, L.liveRadius), 'mask-live.png', {
 			transparent: false,
 			clip: { x: 0, y: 0, width: L.live.w, height: L.live.h }
 		}),

@@ -31,7 +31,7 @@ import { argv, exit } from 'node:process';
 import { Fingers } from '../shot/fingers.mjs';
 import { REPO_ROOT } from '../shot/stack.mjs';
 import { DEFAULT_VIEWPORT } from '../shot/views.mjs';
-import { compose } from './compose.mjs';
+import { compose, composePieces } from './compose.mjs';
 import { Live, constants } from './live.mjs';
 import { listWindows, startMidiOnly, startRecording } from './recorder.mjs';
 import { SCENARIOS } from './scenarios.mjs';
@@ -319,9 +319,14 @@ async function boxOf(page, target, timeoutMs = 3000) {
 				}
 				const r = visible(el);
 				if (r) hits.push(r);
-				if (r && !t.all) break;
+				if (r && !t.all && t.nth == null) break;
 			}
 			if (!hits.length) return null;
+			// `nth`: the nth visible match (the second XY pad of a view).
+			if (t.nth != null) {
+				const r = hits[t.nth];
+				return r ? { x: r.left, y: r.top, w: r.width, h: r.height } : null;
+			}
 			// `all`: the union of every match (a region made of several parts).
 			const x0 = Math.min(...hits.map((r) => r.left));
 			const y0 = Math.min(...hits.map((r) => r.top));
@@ -458,12 +463,46 @@ function schedulePhrase(rec, clock, atBeat, phrase) {
 	rec.midi(events);
 }
 
+/**
+ * A recomposed take gets the scenario's words as they are now: captions,
+ * notes, chapters and Live boxes are re-derived from the scenario's steps,
+ * the same way the take derived them, so a wording change needs no
+ * reshoot. Only when the steps still line up with the take's.
+ */
+function recaption(take) {
+	const steps = scenario.steps;
+	take.frame = scenario.frame;
+	if (steps.length !== take.steps.length || steps.some((s, i) => s.at !== take.steps[i].at)) {
+		log('the scenario has changed its steps since this take; keeping its captions');
+		return;
+	}
+	let chapter = null;
+	let index = 0;
+	let caption = null;
+	let note = null;
+	let live = null;
+	for (const [i, s] of steps.entries()) {
+		if (s.chapter) {
+			chapter = s.chapter;
+			index += 1;
+		}
+		if (s.caption) {
+			caption = typeof s.caption === 'function' ? s.caption(take.vars ?? {}) : s.caption;
+			note = typeof s.note === 'function' ? s.note(take.vars ?? {}) : (s.note ?? null);
+		}
+		if ('live' in s) live = s.live;
+		Object.assign(take.steps[i], { chapter, index, caption, note, live });
+	}
+}
+
 // ---- the take ------------------------------------------------------------
 
 async function main() {
 	if (flag('compose-only')) {
 		const take = JSON.parse(readFileSync(join(outDir, 'take.json'), 'utf8'));
-		log(`clip: ${await compose({ dir: outDir, take, log })}`);
+		recaption(take);
+		if (take.crop) composePieces({ dir: outDir, take, log });
+		else log(`clip: ${await compose({ dir: outDir, take, log })}`);
 		return;
 	}
 	const live = new Live();
@@ -483,6 +522,7 @@ async function main() {
 		intro: scenario.intro,
 		outro: scenario.outro,
 		liveCrop: scenario.liveCrop,
+		frame: scenario.frame,
 		steps: [],
 		url
 	};
@@ -539,6 +579,9 @@ async function main() {
 			if (late > clock.msPerBeat / 2) log(`warning: step ${i + 1} (${step.at}) ran ${Math.round(late)} ms late`);
 			if (step.setup) {
 				// nothing for the clip to show
+			} else if (step.cut) {
+				// between the pieces of a cut-up take: in no chapter
+				chapter = null;
 			} else if (step.chapter) {
 				chapter = step.chapter;
 				chapterIndex += 1;
@@ -548,6 +591,9 @@ async function main() {
 				note = step.note ?? null;
 			}
 			if ('live' in step && !step.setup) liveBox = step.live;
+			// A take cut into pieces is cropped to one region of the
+			// interface, measured once the setup is done.
+			if (scenario.crop && !step.setup && !take.crop) take.crop = await boxOf(ui.page, scenario.crop);
 			const t = await rec.mark(step.at);
 			if (!step.setup) take.steps.push({ at: step.at, t, chapter, index: chapterIndex, caption, note, live: liveBox });
 			const what = step.tap?.label ?? step.drag?.target.label ?? (step.taps ? `${step.taps.length} taps` : step.play ? 'phrase' : step.do ? 'do' : '');
@@ -606,7 +652,9 @@ async function main() {
 		}
 	}
 
-	if (record) {
+	if (record && take.crop) {
+		composePieces({ dir: outDir, take, log });
+	} else if (record) {
 		log(`clip: ${await compose({ dir: outDir, take, log })}`);
 	} else {
 		log('rehearsal passed (--no-record: nothing captured)');

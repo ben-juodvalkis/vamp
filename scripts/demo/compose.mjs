@@ -81,7 +81,7 @@ export async function compose({ dir, take, log = () => {} }) {
 		w: Math.min(live.width - px(c.x), px(c.w)) & ~1,
 		h: Math.min(live.height - px(c.y), px(c.h)) & ~1
 	};
-	const L = layout(liveCrop.w / liveCrop.h);
+	const L = layout(liveCrop.w / liveCrop.h, take.frame);
 
 	const start = Math.max(0, take.steps[0].t - 60 / take.tempo);
 	const end = take.endMark;
@@ -89,8 +89,8 @@ export async function compose({ dir, take, log = () => {} }) {
 	const total = INTRO + body + OUTRO;
 	const cues = cuesOf(take, start, end);
 	// Live's window points → canvas pixels, through the crop and the pane's scale.
-	const k = L.live.w / liveCrop.w;
-	const liveCues = liveCuesOf(take, start, end).map((c) => ({
+	const k = L.live ? L.live.w / liveCrop.w : 1;
+	const liveCues = (L.live ? liveCuesOf(take, start, end) : []).map((c) => ({
 		...c,
 		label: c.box.label,
 		rect: {
@@ -114,7 +114,7 @@ export async function compose({ dir, take, log = () => {} }) {
 	const inputs = ['-i', join(dir, 'raw.mov')];
 	inputs.push(...still(A.background, total)); // 1
 	inputs.push(...still(A.screenMask, total)); // 2
-	inputs.push(...still(A.liveMask, total)); // 3
+	inputs.push(...still(A.liveMask ?? A.screenMask, total)); // 3 (unused without Live's pane)
 	inputs.push(...still(A.intro, Math.max(INTRO, 0.1))); // 4
 	inputs.push(...still(A.outro, Math.max(OUTRO, 0.1))); // 5
 	cues.forEach((c, i) => inputs.push(...still(A.captions[i], c.to - c.from))); // 6…
@@ -127,13 +127,18 @@ export async function compose({ dir, take, log = () => {} }) {
 		`[0:v:0]trim=start=${start}:end=${end},${shift},crop=${ipadCrop.w}:${ipadCrop.h}:${ipadCrop.x}:${ipadCrop.y},scale=${L.screen.w}:${L.screen.h}:flags=lanczos,format=rgba[s0]`,
 		`[2:v]format=gray[m0]`,
 		`[s0][m0]alphamerge[ipad]`,
-		`[0:v:1]trim=start=${start}:end=${end},${shift},crop=${liveCrop.w}:${liveCrop.h}:${liveCrop.x}:${liveCrop.y},scale=${L.live.w}:${L.live.h}:flags=lanczos,format=rgba[l0]`,
-		`[3:v]format=gray[m1]`,
-		`[l0][m1]alphamerge[live]`,
-		`[bg][ipad]overlay=${L.screen.x}:${L.screen.y}:eof_action=repeat[v1]`,
-		`[v1][live]overlay=${L.live.x}:${L.live.y}:eof_action=repeat[v2]`
+		`[bg][ipad]overlay=${L.screen.x}:${L.screen.y}:eof_action=repeat[v1]`
 	];
-	let last = 'v2';
+	let last = 'v1';
+	if (L.live) {
+		f.push(
+			`[0:v:1]trim=start=${start}:end=${end},${shift},crop=${liveCrop.w}:${liveCrop.h}:${liveCrop.x}:${liveCrop.y},scale=${L.live.w}:${L.live.h}:flags=lanczos,format=rgba[l0]`,
+			`[3:v]format=gray[m1]`,
+			`[l0][m1]alphamerge[live]`,
+			`[v1][live]overlay=${L.live.x}:${L.live.y}:eof_action=repeat[v2]`
+		);
+		last = 'v2';
+	}
 	liveCues.forEach((c, i) => {
 		const d = c.to - c.from;
 		f.push(
@@ -183,4 +188,59 @@ export async function compose({ dir, take, log = () => {} }) {
 		JSON.stringify({ scenario: take.scenario, title: take.title, duration: total, canvas: CANVAS, captions: cues }, null, '\t')
 	);
 	return out;
+}
+
+/**
+ * A take cut into pieces (a scenario with `crop`): one short clip per
+ * chapter, cropped to one region of the interface (`take.crop`, CSS px),
+ * with no frame, captions or cards. The site labels each piece itself.
+ * A chapter runs from its first step to the next step outside it (a
+ * `cut` step or the next chapter).
+ */
+export function composePieces({ dir, take, width = 1280, log = () => {} }) {
+	const [ipad] = take.tracks.filter((t) => t.kind === 'video');
+	const hasAudio = take.tracks.some((t) => t.kind === 'audio');
+	const k = take.ipad.scale * ipad.scale;
+	const even = (v) => Math.round(v / 2) * 2;
+	const crop = {
+		x: even(take.crop.x * k),
+		y: even(take.ipad.chromePts * ipad.scale + take.crop.y * k),
+		w: even(take.crop.w * k),
+		h: even(take.crop.h * k)
+	};
+	const height = even((width * crop.h) / crop.w);
+	const pieces = [];
+	for (const [i, s] of take.steps.entries()) {
+		if (!s.chapter) continue;
+		const last = pieces.at(-1);
+		if (last && last.index === s.index && last.open) continue;
+		const next = take.steps.slice(i + 1).find((n) => n.index !== s.index || !n.chapter);
+		pieces.push({ index: s.index, chapter: s.chapter, from: Math.max(0, s.t - 0.3), to: next ? next.t : take.endMark, open: true });
+	}
+	const out = join(dir, 'pieces');
+	mkdirSync(out, { recursive: true });
+	const made = [];
+	for (const p of pieces) {
+		const slug = p.chapter.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+		const d = p.to - p.from;
+		const file = join(out, `${slug}.mp4`);
+		const f = [
+			`[0:v:0]trim=start=${p.from}:end=${p.to},setpts=PTS-STARTPTS,crop=${crop.w}:${crop.h}:${crop.x}:${crop.y},scale=${width}:${height}:flags=lanczos,fade=t=in:st=0:d=0.25,fade=t=out:st=${(d - 0.3).toFixed(3)}:d=0.3,fps=${FPS},format=yuv420p[v]`
+		];
+		const args = ['-y', '-hide_banner', '-loglevel', 'error', '-i', join(dir, 'raw.mov')];
+		if (hasAudio) {
+			f.push(
+				`[0:a:0]atrim=start=${p.from}:end=${p.to},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.2,afade=t=out:st=${(d - 0.4).toFixed(3)}:d=0.4,loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000[a]`
+			);
+		}
+		args.push('-filter_complex', f.join(';'), '-map', '[v]');
+		if (hasAudio) args.push('-map', '[a]', '-c:a', 'aac_at', '-b:a', '128k');
+		args.push('-c:v', 'libx264', '-preset', 'slow', '-crf', '24', '-t', d.toFixed(3), '-movflags', '+faststart', file);
+		execFileSync('ffmpeg', args, { stdio: 'inherit' });
+		execFileSync('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-ss', (d * 0.6).toFixed(3), '-i', file, '-frames:v', '1', '-q:v', '4', file.replace(/\.mp4$/, '.jpg')]);
+		log(`piece: ${file} (${d.toFixed(1)} s)`);
+		made.push({ chapter: p.chapter, file, duration: d });
+	}
+	writeFileSync(join(out, 'pieces.json'), JSON.stringify({ scenario: take.scenario, crop: take.crop, width, height, pieces: made }, null, '\t'));
+	return made;
 }
