@@ -84,3 +84,6 @@ export const LEAD = [
 	[5.5, 1.5, [81], 90],
 	[7.25, 0.5, [79], 80]
 ];
+
+/** The chords an octave up, for a second take on the keys. */
+export const KEYS_UP = KEYS.map(([beat, length, notes, velocity]) => [beat, length, notes.map((n) => n + 12), velocity]);

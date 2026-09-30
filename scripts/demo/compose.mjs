@@ -16,8 +16,9 @@ import { join } from 'node:path';
 import { CANVAS, layout, renderAssets } from './design.mjs';
 
 const FPS = 60;
-const INTRO = 3.2;
-const OUTRO = 3.6;
+// Title cards, when the scenario has them; a clip for the site has none.
+const INTRO_CARD = 3.2;
+const OUTRO_CARD = 3.6;
 const FADE = 0.35;
 
 const vttTime = (s) => {
@@ -58,6 +59,8 @@ function liveCuesOf(take, start, end) {
 
 export async function compose({ dir, take, log = () => {} }) {
 	const [ipad, live] = take.tracks.filter((t) => t.kind === 'video');
+	const INTRO = take.intro ? INTRO_CARD : 0;
+	const OUTRO = take.outro ? OUTRO_CARD : 0;
 	const hasAudio = take.tracks.some((t) => t.kind === 'audio');
 
 	// The interface's capture has the window's title bar on top; the page is the box under it.
@@ -105,15 +108,15 @@ export async function compose({ dir, take, log = () => {} }) {
 	const assetDir = join(dir, 'assets');
 	mkdirSync(assetDir, { recursive: true });
 	log('drawing the frame and captions…');
-	const A = await renderAssets(assetDir, L, { captions: cues, intro: take.intro, outro: take.outro, liveBoxes: liveCues });
+	const A = await renderAssets(assetDir, L, { captions: cues, intro: take.intro ?? { title: '' }, outro: take.outro ?? { title: '' }, liveBoxes: liveCues });
 
 	const still = (path, seconds) => ['-loop', '1', '-framerate', String(FPS), '-t', seconds.toFixed(3), '-i', path];
 	const inputs = ['-i', join(dir, 'raw.mov')];
 	inputs.push(...still(A.background, total)); // 1
 	inputs.push(...still(A.screenMask, total)); // 2
 	inputs.push(...still(A.liveMask, total)); // 3
-	inputs.push(...still(A.intro, INTRO)); // 4
-	inputs.push(...still(A.outro, OUTRO)); // 5
+	inputs.push(...still(A.intro, Math.max(INTRO, 0.1))); // 4
+	inputs.push(...still(A.outro, Math.max(OUTRO, 0.1))); // 5
 	cues.forEach((c, i) => inputs.push(...still(A.captions[i], c.to - c.from))); // 6…
 	const liveBase = 6 + cues.length;
 	liveCues.forEach((c, i) => inputs.push(...still(A.liveBoxes[i], c.to - c.from)));
@@ -148,12 +151,20 @@ export async function compose({ dir, take, log = () => {} }) {
 		);
 		last = `c${i}`;
 	});
-	f.push(
-		`[4:v]format=rgba,fade=t=out:st=${INTRO - 0.7}:d=0.7:alpha=1[intro]`,
-		`[${last}][intro]overlay=0:0:eof_action=pass[v3]`,
-		`[5:v]format=rgba,fade=t=in:st=0:d=0.8:alpha=1,setpts=PTS-STARTPTS+${(INTRO + body).toFixed(3)}/TB[outro]`,
-		`[v3][outro]overlay=0:0:eof_action=pass,fps=${FPS},format=yuv420p[v]`
-	);
+	if (INTRO) {
+		f.push(`[4:v]format=rgba,fade=t=out:st=${INTRO - 0.7}:d=0.7:alpha=1[intro]`, `[${last}][intro]overlay=0:0:eof_action=pass[v3]`);
+		last = 'v3';
+	}
+	if (OUTRO) {
+		f.push(
+			`[5:v]format=rgba,fade=t=in:st=0:d=0.8:alpha=1,setpts=PTS-STARTPTS+${(INTRO + body).toFixed(3)}/TB[outro]`,
+			`[${last}][outro]overlay=0:0:eof_action=pass[v4]`
+		);
+		last = 'v4';
+	}
+	// Without cards, the clip fades up from and down to black.
+	const fades = [!INTRO && 'fade=t=in:st=0:d=0.4', !OUTRO && `fade=t=out:st=${(total - 0.5).toFixed(3)}:d=0.5`].filter(Boolean);
+	f.push(`[${last}]${[...fades, `fps=${FPS}`, 'format=yuv420p'].join(',')}[v]`);
 	if (hasAudio) {
 		f.push(
 			`[0:a:0]atrim=start=${start}:end=${end},asetpts=PTS-STARTPTS,afade=t=out:st=${(body - 0.4).toFixed(3)}:d=0.4,loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000,adelay=${Math.round(INTRO * 1000)}:all=1,apad[a]`

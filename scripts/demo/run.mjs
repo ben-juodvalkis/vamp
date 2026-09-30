@@ -415,9 +415,13 @@ async function tap(ui, fingers, target) {
 }
 
 /** A finger down on the path's first point, moved through the rest, eased per segment. */
-async function drag(ui, fingers, clock, { target, path, beats }) {
+async function drag(ui, fingers, clock, { target, path, beats, px = false }) {
 	const b = await boxOf(ui.page, target);
-	const at = ([fx, fy]) => [(b.x + fx * b.w) * ui.scale, (b.y + fy * b.h) * ui.scale];
+	// `px`: the path is CSS pixels from the target's centre, for a control
+	// whose value is so many pixels of travel (the tempo digits).
+	const at = px
+		? ([dx, dy]) => [(b.x + b.w / 2 + dx) * ui.scale, (b.y + b.h / 2 + dy) * ui.scale]
+		: ([fx, fy]) => [(b.x + fx * b.w) * ui.scale, (b.y + fy * b.h) * ui.scale];
 	const total = beats * clock.msPerBeat;
 	const segments = path.length - 1;
 	const id = await fingers.down(...at(path[0]));
@@ -506,7 +510,11 @@ async function main() {
 		let caption = null;
 		let note = null;
 		let liveBox = null;
-		for (const [i, step] of scenario.steps.entries()) {
+		// A scenario's `setup` plays first, on the same clock and through the
+		// same fingers, but is not part of the clip: the clip starts at the
+		// first of its `steps` (compose trims to the take's steps).
+		const all = [...(scenario.setup ?? []).map((s) => ({ ...s, setup: true })), ...scenario.steps];
+		for (const [i, step] of all.entries()) {
 			const beat = beatOf(step.at);
 			// The box, and the ring gliding to the first thing touched, come a
 			// little ahead of the beat, so the touch itself lands on it.
@@ -518,7 +526,7 @@ async function main() {
 				// in case something in between showed only one.
 				if (step.liveView) await showBothDetailViews(live);
 				if ('box' in step) await setBox(ui, step.box, step.boxLabel);
-				if (touches) await approach(ui, await pointOf(ui, touches, step.drag ? step.drag.path[0] : touches.at));
+				if (touches) await approach(ui, await pointOf(ui, touches, step.drag ? (step.drag.px ? [0.5, 0.5] : step.drag.path[0]) : touches.at));
 			}
 			// A phrase is handed to the recorder ahead of its beat (it times
 			// the notes itself), so a slow step before it cannot delay it.
@@ -529,19 +537,21 @@ async function main() {
 			}
 			const late = await clock.until(beat);
 			if (late > clock.msPerBeat / 2) log(`warning: step ${i + 1} (${step.at}) ran ${Math.round(late)} ms late`);
-			if (step.chapter) {
+			if (step.setup) {
+				// nothing for the clip to show
+			} else if (step.chapter) {
 				chapter = step.chapter;
 				chapterIndex += 1;
 			}
-			if (step.caption) {
+			if (step.caption && !step.setup) {
 				caption = step.caption;
 				note = step.note ?? null;
 			}
-			if ('live' in step) liveBox = step.live;
+			if ('live' in step && !step.setup) liveBox = step.live;
 			const t = await rec.mark(step.at);
-			take.steps.push({ at: step.at, t, chapter, index: chapterIndex, caption, note, live: liveBox });
+			if (!step.setup) take.steps.push({ at: step.at, t, chapter, index: chapterIndex, caption, note, live: liveBox });
 			const what = step.tap?.label ?? step.drag?.target.label ?? (step.taps ? `${step.taps.length} taps` : step.play ? 'phrase' : step.do ? 'do' : '');
-			log(`${step.at.padEnd(5)} ${what.padEnd(26)} ${typeof step.caption === 'string' ? step.caption : ''}`);
+			log(`${step.setup ? '·' : ' '}${step.at.padEnd(5)} ${what.padEnd(26)} ${typeof step.caption === 'string' ? step.caption : ''}`);
 
 			if (step.tap) await tap(ui, fingers, step.tap);
 			if (step.taps) {
@@ -558,7 +568,7 @@ async function main() {
 			if (touches) refreshBox(ui, step);
 			if (step.do) await step.do(live, vars);
 			if (step.until) {
-				const next = scenario.steps[i + 1]?.at ?? scenario.end;
+				const next = all[i + 1]?.at ?? scenario.end;
 				const budget = clock.timeOf(beatOf(next)) - performance.now() + clock.msPerBeat;
 				await live.until(step.until.what, () => step.until.read(live), step.until.test, {
 					timeoutMs: Math.max(budget, 1500)

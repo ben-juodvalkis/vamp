@@ -15,17 +15,21 @@
  *   taps     several targets, one after another
  *   drag     { target, path: [[fx, fy], …], beats }: a finger down at the
  *            path's first point and moved through the rest, in fractions
- *            of the target's box, over `beats`
+ *            of the target's box, over `beats`; with `px: true` the path
+ *            is CSS pixels from the box's centre, starting at [0, 0]
  *   play     [[beat, lengthBeats, notes, velocity], …]: the performer's
  *            phrase, into the recorder's Vamp Demo MIDI port
  *   do       async (live, vars) => …: a direct LOM action or read
  *   until    a condition on Live (below)
  *
+ * A scenario's `setup` steps run first, the same way, off camera: the
+ * clip starts at its first `steps` entry.
+ *
  * The interface is driven only by touch; `do` is for the runner's own
  * bookkeeping (reading the key for a caption, tidying the set).
  */
 
-import { BASS, DRUMS, KEYS } from './phrases.mjs';
+import { BASS, DRUMS, KEYS, KEYS_UP } from './phrases.mjs';
 
 // ---- targets: where a finger lands ----------------------------------------
 // Each is { css, text?, within?, index? } resolved in the page: the first
@@ -71,6 +75,15 @@ export const T = {
 	groove: (name) => ({ css: `[data-debug="groove-view"] button.tile[data-groove="${name}"]`, label: `groove ${name}` }),
 	/** An on-screen wheel: 'Pitch' | 'Mod'. */
 	wheel: (name) => ({ css: `.wheel-container[aria-label="${name} wheel"]`, label: `${name} wheel` }),
+	/** The main track's strip: its meter, and its fader. */
+	master: { css: '[data-debug="master-card"]', label: 'main track' },
+	/** A switch in the main track's view, by its name: 'Click', 'Follow Key', 'Header', 'FX', 'Clips', 'Solo'. */
+	sysSwitch: (name) => ({ css: '[data-debug="middle-panel"] button.sys-switch', text: name, textCss: '.sys-switch-label', label: `switch ${name}` }),
+	/** The main track's tempo digits. */
+	tempo: { css: '[data-debug="middle-panel"] .sys-drag-digit', label: 'tempo' },
+	/** The main track's Launch Q value, and a choice in its picker. */
+	launchQ: { css: '[data-debug="middle-panel"] .sys-value-digit', label: 'Launch Q' },
+	quantChip: (text) => ({ css: '.quant-chip', text, label: `Launch Q ${text}` }),
 	/** The same target held for `ms` instead of tapped. */
 	hold: (target, ms = 700) => ({ ...target, hold: ms, label: `hold ${target.label}` })
 };
@@ -87,7 +100,15 @@ export const LIVE = {
 	devices: (label) => ({ x: 8, y: 628, w: 1072, h: 194, label }),
 	/** Live's clip view: the clip's properties and its notes. */
 	detail: (label) => ({ x: 8, y: 345, w: 1072, h: 280, label }),
-	key: (label) => ({ x: 392, y: 26, w: 144, h: 24, label })
+	key: (label) => ({ x: 392, y: 26, w: 144, h: 24, label }),
+	/** Several tracks' columns at once. */
+	tracks: (n, label) => ({ x: 8, y: 60, w: 95 * n - 1, h: 280, label }),
+	/** The control bar: tempo, metronome, launch quantization. */
+	tempo: (label) => ({ x: 136, y: 27, w: 48, h: 20, label }),
+	metronome: (label) => ({ x: 300, y: 27, w: 38, h: 20, label }),
+	quant: (label) => ({ x: 339, y: 27, w: 52, h: 20, label }),
+	/** The Main track, at the right of the session. */
+	main: (label) => ({ x: 976, y: 60, w: 104, h: 280, label })
 };
 
 // ---- conditions on Live ----------------------------------------------------
@@ -160,6 +181,17 @@ export const keyIs = (root, scale) => ({
 	test: (r) => r.root_note === root && r.scale_name === scale
 });
 
+/** A song attribute (`tempo`, `metronome`, `clip_trigger_quantization`) passes `test`. */
+export const song = (attr, test, what) => ({
+	what: `song ${attr} ${what}`,
+	read: (live) => live.read('song', [attr]),
+	test: (r) => test(r[attr])
+});
+
+/** Live's launch quantization: its enum's index, or its name as the probe prints it (`Song.Quantization.q_bar`). */
+export const launchQIs = (index, name) =>
+	song('clip_trigger_quantization', (v) => v === index || String(v).endsWith(`.${name}`), `= ${name}`);
+
 export const muted = (t, on) => ({
 	what: `track ${t} ${on ? 'muted' : 'unmuted'}`,
 	read: (live) => live.read(`tracks/${t}`, ['mute']),
@@ -180,7 +212,51 @@ export const readKey = async (live, vars) => {
 
 const PREFS = {
 	session: 'uiPrefsStore.sessionMode',
-	fx: 'uiPrefsStore.showFxGrid'
+	fx: 'uiPrefsStore.showFxGrid',
+	header: 'uiPrefsStore.showTransportHeader',
+	solo: 'uiPrefsStore.showSoloButtons'
+};
+
+/**
+ * Off camera: an empty set built into three loops (a 909 kit, a Drift bass,
+ * an electric piano) the way the walkthrough builds it, so a site clip
+ * opens on a band already playing. Ends looping at 17.1.
+ */
+const BAND = [
+	{ at: '1.2', tap: T.rail('Drum') },
+	{ at: '1.4', tap: T.folder('Drum Machines') },
+	{ at: '2.2', tap: T.preset('909 Core Kit'), until: hasDevice(1, 'DrumGroupDevice') },
+	{ at: '3.3', do: (live) => live.invoke('song', 'delete_track', [0]) },
+	{ at: '4.1', tap: T.gridSlot(0, 0, 'body'), until: armed(0) },
+	{ at: '4.3', tap: T.gridSlot(0, 0, 'action') },
+	{ at: '5.1', play: DRUMS, until: recording(0, 0) },
+	{ at: '6.3', tap: T.gridSlot(0, 0, 'action') },
+	{ at: '7.1', until: looping(0, 0) },
+	{ at: '7.2', tap: T.rail('Bass') },
+	{ at: '7.4', tap: T.folder('Drift') },
+	{ at: '8.2', tap: T.preset('Deep Bass'), until: hasDevice(1, 'Drift') },
+	{ at: '9.2', tap: T.gridSlot(1, 0, 'body'), until: armed(1) },
+	{ at: '9.4', tap: T.gridSlot(1, 0, 'action') },
+	{ at: '10.1', play: BASS, until: recording(1, 0) },
+	{ at: '11.3', tap: T.gridSlot(1, 0, 'action') },
+	{ at: '12.1', until: looping(1, 0) },
+	{ at: '12.2', tap: T.rail('Key') },
+	{ at: '12.4', tap: T.folder('Electric') },
+	{ at: '13.2', tap: T.preset('E-Piano MKI Mellow'), until: hasDevice(2, 'LoungeLizard') },
+	{ at: '14.2', tap: T.gridSlot(2, 0, 'body'), until: armed(2) },
+	{ at: '14.4', tap: T.gridSlot(2, 0, 'action') },
+	{ at: '15.1', play: KEYS, until: recording(2, 0) },
+	{ at: '16.3', tap: T.gridSlot(2, 0, 'action') },
+	{ at: '17.1', until: looping(2, 0) }
+];
+
+/** What every site clip shares: the full layout, a band set up off camera, no title cards. */
+const SITE = {
+	tempo: 96,
+	prefs: { [PREFS.session]: '1', [PREFS.fx]: '1', [PREFS.header]: '0', [PREFS.solo]: '0' },
+	liveWindow: { w: 1090, h: 856 },
+	set: { empty: true, key: { root: 0, scale: 'Major' } },
+	setup: BAND
 };
 
 export const SCENARIOS = {
@@ -831,6 +907,263 @@ export const SCENARIOS = {
 		end: '114.1',
 		// D minor still: selecting the drum clip (recorded in C major) did not undo Key Follow.
 		result: [looping(0, 0), looping(1, 0), looping(2, 0), keyIs(2, 'Minor'), grooveAmountAtLeast(0, 0, 50)]
+	},
+
+	// ---- clips for the site: one part of the screen each ----------------
+
+	'main-track': {
+		...SITE,
+		title: 'The main track',
+		blurb: "The main track's strip and its view: the song's tempo, launch grid, click and key, and which sections are on screen.",
+		steps: [
+			{
+				at: '18.1',
+				chapter: 'Main track',
+				box: T.master,
+				boxLabel: 'Main track',
+				caption: "The main track's strip, at the end of the tracks.",
+				note: 'Its meter is the whole mix, on its way out of Live.',
+				liveView: 'devices',
+				live: LIVE.main('Main, in Live')
+			},
+			{
+				at: '19.3',
+				box: T.area('[data-debug="middle-panel"]'),
+				boxLabel: 'Main track view',
+				tap: T.master,
+				caption: "Tap it for the song's own settings.",
+				note: "The transport on the left; what's on screen on the right.",
+				live: null
+			},
+			{
+				at: '21.2',
+				box: T.tempo,
+				boxLabel: 'Tempo',
+				caption: 'Drag the tempo up…',
+				note: 'A tenth of a BPM per pixel. The time signature drags the same way.',
+				live: LIVE.tempo("Live's tempo"),
+				drag: { target: T.tempo, px: true, path: [[0, 0], [0, -100]], beats: 3 },
+				until: song('tempo', (v) => v >= 104, '>= 104')
+			},
+			{
+				at: '23.2',
+				box: T.tempo,
+				boxLabel: 'Tempo',
+				caption: '…and back down.',
+				drag: { target: T.tempo, px: true, path: [[0, 0], [0, 100]], beats: 3 },
+				until: song('tempo', (v) => Math.round(v) === 96, '= 96')
+			},
+			{
+				at: '25.2',
+				box: T.launchQ,
+				boxLabel: 'Launch Q',
+				tap: T.launchQ,
+				caption: 'Launch Q: the grid clips launch and record on.',
+				note: 'Everything you tap lands on the next line of it.',
+				live: LIVE.quant("Live's launch quantization")
+			},
+			{
+				at: '26.2',
+				box: T.area('.quant-modal'),
+				boxLabel: 'Launch Q',
+				tap: T.quantChip('2 Bar'),
+				caption: 'Two bars: launches wait for the next pair of bars.',
+				until: launchQIs(3, 'q_2_bars')
+			},
+			{ at: '27.4', box: T.launchQ, boxLabel: 'Launch Q', tap: T.launchQ, caption: 'Back to one bar.' },
+			{ at: '28.2', box: T.area('.quant-modal'), tap: T.quantChip('1 Bar'), until: launchQIs(4, 'q_bar') },
+			{
+				at: '29.3',
+				box: T.sysSwitch('Click'),
+				boxLabel: 'Click',
+				tap: T.sysSwitch('Click'),
+				caption: "Click turns Live's metronome on…",
+				live: LIVE.metronome("Live's metronome"),
+				until: song('metronome', (v) => v === true, 'on')
+			},
+			{ at: '31.3', box: T.sysSwitch('Click'), boxLabel: 'Click', tap: T.sysSwitch('Click'), caption: '…and off.', until: song('metronome', (v) => v === false, 'off') },
+			{
+				at: '33.1',
+				box: T.area('.sys-sections'),
+				boxLabel: 'Sections',
+				caption: "Sections: choose what's on screen.",
+				note: 'Listed in the order they sit down the screen.',
+				live: null
+			},
+			{
+				at: '34.2',
+				box: T.sysSwitch('Clips'),
+				boxLabel: 'Clips',
+				tap: T.sysSwitch('Clips'),
+				caption: 'Clips off: the session grid folds away…',
+				note: "The selected track's slots stay, beside its clip view."
+			},
+			{ at: '36.2', box: T.sysSwitch('FX'), boxLabel: 'FX', tap: T.sysSwitch('FX'), caption: '…FX off: the central view takes the room…', note: null },
+			{
+				at: '38.2',
+				box: T.sysSwitch('Header'),
+				boxLabel: 'Header',
+				tap: T.sysSwitch('Header'),
+				caption: '…and Header on: the transport across the top.',
+				note: 'Tempo, play, the metronome and stop-all.'
+			},
+			{
+				at: '40.2',
+				box: T.area('.sys-sections'),
+				boxLabel: 'Sections',
+				taps: [T.sysSwitch('Header'), T.sysSwitch('FX'), T.sysSwitch('Clips')],
+				caption: 'Back to the full layout.',
+				note: 'Vamp remembers the layout on this iPad.'
+			},
+			{
+				at: '42.2',
+				box: T.master,
+				boxLabel: 'Main fader',
+				caption: 'The main strip is also the main fader: down…',
+				note: null,
+				live: LIVE.main("Main's volume in Live"),
+				drag: { target: T.master, path: [[0.5, 0.3], [0.5, 0.55]], beats: 3 }
+			},
+			{ at: '43.4', box: T.master, boxLabel: 'Main fader', caption: '…and back up.', drag: { target: T.master, path: [[0.5, 0.55], [0.5, 0.3]], beats: 3 } },
+			{
+				at: '45.2',
+				box: T.sysSwitch('Follow Key'),
+				boxLabel: 'Follow Key',
+				caption: "Follow Key: Vamp keeps Live's key on what's playing.",
+				note: 'It re-reads the loops after every take. Off, the key stays where you set it.',
+				live: LIVE.key("Live's key")
+			},
+			{ at: '47.2', box: T.area('.sys-gear'), boxLabel: 'Settings', caption: 'The gear opens Settings.', note: 'Places, grooves, the foot switch and the rest.', live: null }
+		],
+		end: '48.4',
+		result: [
+			looping(0, 0),
+			looping(1, 0),
+			looping(2, 0),
+			song('tempo', (v) => Math.round(v) === 96, '= 96'),
+			song('metronome', (v) => v === false, 'off'),
+			launchQIs(4, 'q_bar')
+		]
+	},
+
+	'track-strips': {
+		...SITE,
+		title: 'Track strips',
+		blurb: "A strip per track: its clip, its instrument and its Permute, its fader and its mute, and its clip slots above it.",
+		steps: [
+			{
+				at: '18.1',
+				chapter: 'Track strips',
+				box: T.area('.track-col', true),
+				boxLabel: 'Track strips',
+				caption: 'Along the bottom, a strip per track.',
+				note: "Each in its track's colour from Live, under its column of clip slots.",
+				liveView: 'devices',
+				live: LIVE.tracks(3, 'The same tracks in Live')
+			},
+			{
+				at: '20.1',
+				box: T.strip(1, 'clip'),
+				boxLabel: 'Clip band',
+				tap: T.strip(1, 'clip'),
+				caption: "The top band selects the track and opens its clip.",
+				note: "The clip's tools in the central view; its notes in Live.",
+				liveView: 'clip',
+				live: LIVE.detail('The bass clip in Live')
+			},
+			{
+				at: '22.1',
+				box: T.strip(1, 'device'),
+				boxLabel: 'Instrument band',
+				tap: T.strip(1, 'device'),
+				caption: 'The middle band opens its instrument.',
+				note: "Drift here. Each of Live's instruments gets a view laid out for it.",
+				liveView: 'devices',
+				live: LIVE.devices('Drift in Live')
+			},
+			{
+				at: '24.1',
+				box: T.strip(1, 'permute'),
+				boxLabel: 'Permute band',
+				tap: T.strip(1, 'permute'),
+				caption: "The bottom band opens Permute, the track's step sequencer.",
+				note: null,
+				live: null
+			},
+			{
+				at: '26.1',
+				box: T.area('.track-col[data-track-index="2"]'),
+				boxLabel: 'Keys strip',
+				caption: 'The whole strip is its fader: drag it down…',
+				note: 'Anywhere on the strip. A drag never jumps; it moves from where the level is.',
+				live: LIVE.track(2, 'Its volume in Live'),
+				drag: { target: T.strip(2, 'device'), path: [[0.5, 0.3], [0.5, 0.75]], beats: 3 }
+			},
+			{ at: '27.3', caption: '…and back up.', note: null, drag: { target: T.strip(2, 'device'), path: [[0.5, 0.6], [0.5, 0.15]], beats: 3 } },
+			{
+				at: '29.2',
+				box: T.name(0),
+				boxLabel: 'Name',
+				tap: T.name(0),
+				caption: 'Tap a name to mute the track…',
+				live: LIVE.track(0, 'Muted in Live'),
+				until: muted(0, true)
+			},
+			{ at: '31.1', box: T.name(0), boxLabel: 'Name', tap: T.name(0), caption: '…and again to bring it back.', until: muted(0, false) },
+			{
+				at: '32.2',
+				box: T.gridSlot(1, 0, 'action'),
+				boxLabel: 'Stop',
+				tap: T.gridSlot(1, 0, 'action'),
+				caption: "Tap a playing clip's button to stop it on the next bar…",
+				note: "Launch Q is one bar, so you can tap early and it still lands.",
+				live: LIVE.clip(1, 0, 'The clip in Live'),
+				until: stopped(1, 0)
+			},
+			{ at: '34.2', box: T.gridSlot(1, 0, 'action'), boxLabel: 'Launch', tap: T.gridSlot(1, 0, 'action'), caption: '…and again to bring it back in.', note: null, until: looping(1, 0) },
+			{
+				at: '36.2',
+				box: T.gridSlot(2, 1, 'cell'),
+				boxLabel: 'Empty slot',
+				tap: T.gridSlot(2, 1, 'body'),
+				caption: 'Tap an empty slot: its track is selected and armed…',
+				note: 'Arming follows the track you select.',
+				live: LIVE.track(2, 'Armed in Live'),
+				until: armed(2)
+			},
+			{
+				at: '37.3',
+				box: T.gridSlot(2, 1, 'action'),
+				boxLabel: 'Record',
+				tap: T.gridSlot(2, 1, 'action'),
+				caption: '…tap its dot, and it records from the next bar.',
+				note: null,
+				liveView: 'clip',
+				live: LIVE.detail('The new take, as Live records it')
+			},
+			{ at: '38.1', play: KEYS_UP, caption: 'Play.', until: recording(2, 1) },
+			{
+				at: '39.3',
+				box: T.gridSlot(2, 1, 'action'),
+				boxLabel: 'Close the loop',
+				tap: T.gridSlot(2, 1, 'action'),
+				caption: 'Tap again: the new loop plays in place of the old one.',
+				note: 'One clip plays per track, as in Live.'
+			},
+			{ at: '40.1', until: looping(2, 1) },
+			{
+				at: '41.2',
+				box: T.gridSlot(2, 0, 'action'),
+				boxLabel: 'Launch',
+				tap: T.gridSlot(2, 0, 'action'),
+				caption: 'Tap the first one to switch back on the next bar.',
+				note: null,
+				live: LIVE.clip(2, 0, 'Back to the first clip'),
+				until: looping(2, 0)
+			}
+		],
+		end: '43.3',
+		result: [looping(0, 0), looping(1, 0), looping(2, 0), slotHasClip(2, 1), muted(0, false)]
 	},
 
 	'record-and-layer': {
