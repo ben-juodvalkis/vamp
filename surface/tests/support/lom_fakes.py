@@ -282,6 +282,12 @@ class FakePad:
     def remove_mute_listener(self, cb):
         self.mute_listeners.remove(cb)
 
+    def set_mute_in_live(self, muted):
+        """A mute made in Live's own UI: the property moves and fires."""
+        self.mute = bool(muted)
+        for cb in list(self.mute_listeners):
+            cb()
+
 
 class FakeRackView:
     """``DrumGroupDevice.view``: ``selected_drum_pad`` (a pad object) with

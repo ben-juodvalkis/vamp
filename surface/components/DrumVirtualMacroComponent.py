@@ -2307,6 +2307,24 @@ class DrumVirtualMacroComponent:
                     continue
                 st.member_listeners.append((m.param, cb))
                 budget -= 1
+        # A pad's mute made in Live (its M button, the chain list's
+        # activator) re-emits that pad's ``chainMute`` row, so the column
+        # beside the held pads follows. Absolute, no deviation to absorb:
+        # the listener only schedules the emit (2026-09-29).
+        for m in st.members.get("chainMute") or ():
+            if m.note < 0 or budget <= 0:
+                continue
+            cb = self._make_pad_mute_callback(st, m.note)
+            try:
+                m.param.add_value_listener(cb)
+            except _LOM_ERRORS as e:
+                self._warn_once(
+                    st.device_path, "memberlistener:chainMute",
+                    "add_mute_listener raised: %s" % e,
+                )
+                continue
+            st.member_listeners.append((m.param, cb))
+            budget -= 1
         logger.debug(
             "DrumVirtualMacroComponent: %s watching %d member parameter(s)",
             st.device_path, len(st.member_listeners),
@@ -2375,6 +2393,33 @@ class DrumVirtualMacroComponent:
             st.edited.add(function)
             self._schedule_absorb(st)
         return _on_member_value
+
+    def _make_pad_mute_callback(self, st: _RackState, note: int) -> Callable[[], None]:
+        def _on_pad_mute():
+            if self._disconnected or not self._is_held(st):
+                return
+            if self._schedule_delayed is None:
+                self._emit_pad_mute(st, note)
+                return
+            try:
+                self._schedule_delayed(0, lambda: self._emit_pad_mute(st, note))
+            except Exception as e:
+                logger.warning(
+                    "DrumVirtualMacroComponent: schedule_delayed failed: %s", e,
+                )
+        return _on_pad_mute
+
+    def _emit_pad_mute(self, st: _RackState, note: int) -> None:
+        """Re-emit one pad's ``chainMute`` row, if someone is watching it."""
+        if self._disconnected or not self._is_held(st):
+            return
+        function = "pad.%d.chainMute" % note
+        if function not in st.subscribed:
+            return
+        self._safe_emit(
+            V3_PROPERTY_VALUE_ADDRESS,
+            (st.device_path, PROPERTY_PREFIX + function, self._pad_read(st, note, "chainMute")),
+        )
 
     def _schedule_absorb(self, st: _RackState) -> None:
         if st.absorb_scheduled:

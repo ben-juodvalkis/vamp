@@ -236,7 +236,7 @@ Key rules:
   pad's own mixer strip, 2026-09-29, a member on every pad with a chain
   whatever its instrument, left out of the `vm.members` census, read and
   written as pad rows (`vm.pad.<note>.chainVolume`); a mute made in Live
-  is not listened for;
+  re-emits that pad's watched `chainMute` row;
   a section's switch is the function's first member and turns on above
   1/127 of travel like FX On —
   `vm.start` (`float` 0..1), `vm.fxType` (`int` 0..8) and `vm.pitch`

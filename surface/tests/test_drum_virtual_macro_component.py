@@ -352,6 +352,20 @@ def test_chain_volume_and_mute_move_one_pad(comp):
     assert "chainVolume" not in census["functions"] and "chainMute" not in census["functions"]
 
 
+def test_a_mute_made_in_live_re_emits_the_watched_pad_row(comp, emits):
+    rack = unmapped_kit(3)
+    comp.subscribe(rack, PATH, "pad.37.chainMute")
+    emits.clear()
+    rack.drum_pads[37].set_mute_in_live(True)
+    assert values(emits, "vm.pad.37.chainMute") == [(PATH, "vm.pad.37.chainMute", 1)]
+    # An unwatched pad's mute emits nothing.
+    rack.drum_pads[36].set_mute_in_live(True)
+    assert values(emits, "vm.pad.36.chainMute") == []
+    # Released, the listeners go with the state.
+    comp.unsubscribe(PATH, "pad.37.chainMute")
+    assert rack.drum_pads[37].mute_listeners == []
+
+
 def test_gain_on_a_nested_rack_kit_is_the_pad_chain_volume(comp):
     # The pads' Samplers sit inside the racks where no name lookup
     # reaches them, so gain binds the DRUM PAD's own chain volume
@@ -2539,8 +2553,8 @@ def test_a_mapped_kit_carries_no_deviations_and_no_member_listeners(comp):
     rack = mapped_kit(2)
     comp.read(rack, PATH, "decay")
     assert comp.debug_state(PATH)["deviations"] == {}
-    # Only the pads' chain volumes, which no macro holds.
-    assert comp.debug_state(PATH)["watching"] == 2
+    # Only the pads' own mixer strips (volume and mute), which no macro holds.
+    assert comp.debug_state(PATH)["watching"] == 4
     assert param(cells(rack)[0], "Decay").listeners == []
 
 
