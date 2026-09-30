@@ -33,7 +33,9 @@ function createGrooveAutoLoadOff({
     axHelper,
     logger,
     sendToSurface,
-    settleMs = 200,
+    pollMs = 150,
+    rowWaitMs = 5000,
+    tickWaitMs = 600,
     surfaceTimeoutMs = 2000,
     sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 }) {
@@ -80,20 +82,22 @@ function createGrooveAutoLoadOff({
     async function turnOff() {
         let boxes = await readBoxes();
         let shownBrowser = false;
-        if (boxes === null) {
-            shownBrowser = (await setBrowser(1)) === 0;
-            await sleep(settleMs);
-            boxes = await readBoxes();
-        }
+        if (boxes === null) shownBrowser = (await setBrowser(1)) === 0;
         try {
+            // Live draws a new row late: over 2 s for the first groove in an
+            // empty pool (rig, 2026-09-29), and it may tick the box a moment
+            // after the row appears. Poll for a row, then for a tick.
+            for (let waited = 0; boxes === null && waited < rowWaitMs; waited += pollMs) {
+                await sleep(pollMs);
+                boxes = await readBoxes();
+            }
+            for (let waited = 0; boxes !== null && !boxes.includes(true) && waited < tickWaitMs; waited += pollMs) {
+                await sleep(pollMs);
+                boxes = (await readBoxes()) || [];
+            }
             if (boxes === null) {
                 logger.warn("Auto Load Groove: the Groove Pool is not in Live's window; left as it is");
                 return;
-            }
-            // Live may tick the box a moment after the load: read once more.
-            if (!boxes.includes(true)) {
-                await sleep(settleMs);
-                boxes = (await readBoxes()) || [];
             }
             const ticked = boxes.flatMap((on, index) => (on ? [index] : []));
             for (const index of ticked) {

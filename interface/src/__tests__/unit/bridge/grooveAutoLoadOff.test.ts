@@ -42,7 +42,7 @@ function rig({ boxes, browser }: { boxes: boolean[]; browser: boolean }) {
 		queueMicrotask(() => handler.onSurfaceMessage({ address: GROOVE_BROWSER_ACK_ADDRESS, args: [args[0], was] }));
 	};
 	const logger = { info() {}, warn: (m: string) => warnings.push(m) };
-	handler = createGrooveAutoLoadOff({ axHelper, logger, sendToSurface, settleMs: 0, sleep: async () => {} });
+	handler = createGrooveAutoLoadOff({ axHelper, logger, sendToSurface, sleep: async () => {} });
 	return { live, calls, warnings, handler };
 }
 
@@ -69,7 +69,36 @@ describe('grooveAutoLoadOff', () => {
 		handler.onSurfaceMessage({ address: GROOVE_ADDED_ADDRESS });
 		await handler.idle();
 		expect(live.boxes).toEqual([false]);
-		expect(calls).toEqual(['list', 'list']);
+		// One read, then 600 ms of polling for a late tick.
+		expect(calls).toEqual(['list', 'list', 'list', 'list', 'list']);
+	});
+
+	it('waits for the row of the first groove in an empty pool, drawn late', async () => {
+		const { live, calls } = rig({ boxes: [], browser: true });
+		const draw = [false, false, false];   // three reads before Live draws the row
+		const reads = { n: 0 };
+		const helper = {
+			async request(verb: string, args: { index?: number }) {
+				calls.push(verb === 'press' ? `press ${args.index}` : verb);
+				if (verb === 'press') live.boxes[args.index!] = !live.boxes[args.index!];
+				if (verb === 'list' && reads.n++ < draw.length) {
+					throw Object.assign(new Error('missing'), { code: 'ax-control-missing' });
+				}
+				if (live.boxes.length === 0) live.boxes = [true];
+				return { elements: live.boxes.map((on) => ({ value: on ? 1 : 0 })) };
+			}
+		};
+		const late = createGrooveAutoLoadOff({
+			axHelper: helper,
+			logger: { info() {}, warn() {} },
+			sendToSurface: (_a: string, args: unknown[]) =>
+				queueMicrotask(() => late.onSurfaceMessage({ address: GROOVE_BROWSER_ACK_ADDRESS, args: [args[0], 1] })),
+			sleep: async () => {}
+		});
+		late.onSurfaceMessage({ address: GROOVE_ADDED_ADDRESS });
+		await late.idle();
+		expect(live.boxes).toEqual([false]);
+		expect(calls).toEqual(['list', 'list', 'list', 'list', 'press 0', 'list']);
 	});
 
 	it('a helper that is down is a warning, and the next add still runs', async () => {
@@ -78,7 +107,6 @@ describe('grooveAutoLoadOff', () => {
 			axHelper: { request: async () => Promise.reject(Object.assign(new Error('down'), { code: 'ax-helper-down' })) },
 			logger: { info() {}, warn: (m: string) => warnings.push(m) },
 			sendToSurface: () => {},
-			settleMs: 0,
 			sleep: async () => {}
 		});
 		down.onSurfaceMessage({ address: GROOVE_ADDED_ADDRESS });
