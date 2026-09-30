@@ -137,30 +137,30 @@
 <div class="h-full w-full">
   {#if instrument}
     <!-- Main content grid, the user's layout (2026-09-29): five equal
-         columns before the seam: the ORB column takes one, the envelopes two,
-         each XY pad one; then the seam and the MIDI wheels. -->
-    <div class="h-full w-full grid grid-rows-2 gap-(--central-gap) p-(--central-inset)" style="grid-template-columns: repeat(5, 1fr) auto 1fr;">
-      <!-- Col 1, both rows: the swap pill (a long name wraps), then the ORB
-           taking the rest of the column. -->
-      <div class="flex flex-col gap-(--central-gap) min-h-0 row-span-2">
-        <HostedSwapPill wrap />
-        <div class="flex-1 min-h-0">
-          <OrbControl
-            angle={orbAngleValue}
-            radius={orbRadiusValue}
-            title="Orb"
-            onInteraction={handleOrbInteraction}
-            color={omniInk}
-          />
-        </div>
+         columns before the seam: the ORB takes one, the envelopes two, each
+         XY pad one; then the seam and the MIDI wheels. Four rows: a header
+         (the envelope's name, and the swap pill over the XY pads), the top
+         controls, the filter envelope's name, the bottom controls. Every
+         control in a band starts on the same line, whatever sits above it. -->
+    <div class="omni-grid h-full w-full grid gap-(--central-gap) p-(--central-inset)">
+      <!-- Col 1, under the header: the ORB. -->
+      <div class="min-h-0" style="grid-column: 1; grid-row: 2 / 5;">
+        <OrbControl
+          angle={orbAngleValue}
+          radius={orbRadiusValue}
+          title="Orb"
+          onInteraction={handleOrbInteraction}
+          color={omniInk}
+        />
       </div>
 
-      <!-- Col 2, both rows: the envelopes. Amp over filter, on one ruler, so
-           each amp stage stands over the same filter stage; the filter's
-           Amount takes the fifth column, and FX stands over it in the amp
-           row's (user's layout, 2026-09-29). -->
-      <div class="omni-envelopes min-w-0 min-h-0 col-span-2 row-span-2">
-        <span class="omni-env-title" style="color: {omniInk.primary}; grid-column: 1 / 5;">Amp Env</span>
+      <!-- Cols 2-3: the envelopes. Amp over filter, on one ruler, so each amp
+           stage stands over the same filter stage; the filter's Amount takes
+           the fifth column, and FX stands over it in the amp row's. It shares
+           the view's rows (subgrid), so its names sit in the header and
+           middle rows and its sliders start level with the pads. -->
+      <div class="omni-envelopes min-w-0 min-h-0" style="grid-column: 2 / 4; grid-row: 1 / 5;">
+        <span class="omni-env-title" style="color: {omniInk.primary}; grid-column: 1 / 5; grid-row: 1;">Amp Env</span>
         {#each AMP_ENV as stage (stage.index)}
           <div class="min-w-0 min-h-0" style="grid-row: 2;">
             <DeviceSlider
@@ -180,7 +180,7 @@
         >
           FX
         </button>
-        <span class="omni-env-title" style="color: {omniInk.primary}; grid-column: 1 / 6; grid-row: 3; margin-top: var(--central-gap);">Filter Env</span>
+        <span class="omni-env-title" style="color: {omniInk.primary}; grid-column: 1 / 6; grid-row: 3;">Filter Env</span>
         {#each FILTER_ENV as stage (stage.index)}
           <div class="min-w-0 min-h-0" style="grid-row: 4;">
             <DeviceSlider
@@ -194,8 +194,13 @@
         {/each}
       </div>
 
-      <!-- Col 3, Row 1: UNISON XY Pad -->
-      <div class="flex flex-col min-h-0 min-w-0">
+      <!-- Cols 4-5, header: the swap pill, one line across both pads. -->
+      <div class="flex flex-col justify-center min-w-0" style="grid-column: 4 / 6; grid-row: 1;">
+        <HostedSwapPill />
+      </div>
+
+      <!-- Col 4, top: UNISON XY Pad -->
+      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 4; grid-row: 2;">
         <DeviceXY
           xValue={unisonXValue}
           yValue={unisonYValue}
@@ -206,8 +211,8 @@
         />
       </div>
 
-      <!-- Col 4, Row 1: SPACE XY Pad -->
-      <div class="flex flex-col min-h-0 min-w-0">
+      <!-- Col 5, top: SPACE XY Pad -->
+      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 5; grid-row: 2;">
         <DeviceXY
           xValue={ambianceXValue}
           yValue={ambianceYValue}
@@ -218,20 +223,8 @@
         />
       </div>
 
-      <!-- The wheels send MIDI, not Omnisphere parameters: a seam divides the
-           device from them, as in every instrument view (2026-09-13). The
-           wrapper spans both rows — SectionDivider takes no class of its own. -->
-      <div class="flex min-h-0 row-span-2">
-        <SectionDivider orientation="vertical" />
-      </div>
-
-      <!-- Col 6, both rows: MIDI Wheels -->
-      <div class="flex flex-col min-h-0 row-span-2">
-        <MidiWheelsPanel />
-      </div>
-
-      <!-- Col 3, Row 2: FILTER XY Pad -->
-      <div class="flex flex-col min-h-0 min-w-0">
+      <!-- Col 4, bottom: FILTER XY Pad, level with the filter envelope. -->
+      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 4; grid-row: 4;">
         <DeviceXY
           xValue={filterXValue}
           yValue={filterYValue}
@@ -242,8 +235,8 @@
         />
       </div>
 
-      <!-- Col 4, Row 2: VIBRATO XY Pad -->
-      <div class="flex flex-col min-h-0 min-w-0">
+      <!-- Col 5, bottom: VIBRATO XY Pad -->
+      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 5; grid-row: 4;">
         <DeviceXY
           xValue={vibratoXValue}
           yValue={vibratoYValue}
@@ -252,6 +245,18 @@
           onInteraction={handleVibratoXYInteraction}
           color={omniInk}
         />
+      </div>
+
+      <!-- The wheels send MIDI, not Omnisphere parameters: a seam divides the
+           device from them, as in every instrument view (2026-09-13). The
+           wrapper spans every row — SectionDivider takes no class of its own. -->
+      <div class="flex min-h-0" style="grid-column: 6; grid-row: 1 / 5;">
+        <SectionDivider orientation="vertical" />
+      </div>
+
+      <!-- Col 7, every row: MIDI Wheels -->
+      <div class="flex flex-col min-h-0" style="grid-column: 7; grid-row: 1 / 5;">
+        <MidiWheelsPanel />
       </div>
 
       <!-- EQ Sliders commented out for now
@@ -316,18 +321,24 @@
      (already the flat field / ChosenDefault ON) whose bold literal settles
      to medium. Graticule is untouched — the rule sits under
      [data-grammar="flat"]. */
-  /* Amp title, amp stages, filter title, filter stages. Amount's column is
+  /* Amp title, amp stages, filter title, filter stages — the view's rows.
+     Amount's column is
      narrower: it is one knob beside a set, not a fifth stage. */
+  .omni-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+
   .omni-envelopes {
     display: grid;
     grid-template-columns: repeat(4, 1fr) 0.8fr;
-    grid-template-rows: auto 1fr auto 1fr;
+    grid-template-rows: subgrid;
     column-gap: var(--central-gap);
-    row-gap: var(--spacing-xs);
   }
 
   /* The eyebrow every named group in a central view wears (EnvelopeGroup's). */
   .omni-env-title {
+    align-self: center;
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.05em;

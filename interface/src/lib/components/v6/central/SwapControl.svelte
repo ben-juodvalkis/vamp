@@ -54,12 +54,6 @@
     disabled?: boolean;
     error?: string | null;
     ink?: string | null;
-    /**
-     * Lying flat only: a name too long for the pill wraps to a second line and
-     * the pill grows to hold it, instead of ending in an ellipsis. For a view
-     * that hosts the pill over a narrow column (Omnisphere's, 2026-09-29).
-     */
-    wrap?: boolean;
     /** The mounted view's `data-density`, mirrored so the pill's inset is the view's. */
     density?: string | null;
     orientation?: 'vertical' | 'horizontal';
@@ -79,7 +73,6 @@
     ink = null,
     density = null,
     orientation = 'vertical',
-    wrap = false,
     onPrev,
     onNext,
     onOpen = null
@@ -115,7 +108,6 @@
   data-orientation={orientation}
   data-swap-state={swapState}
   data-density={density ?? undefined}
-  data-wrap={wrap && flat ? '' : undefined}
 >
   <div
     class="swap-pill"
@@ -300,27 +292,6 @@
     padding: 0 0.5rem;
     writing-mode: horizontal-tb;
     transform: none;
-  }
-  /* Wrapping: at least a touch row tall, taller when the name takes two
-     lines; a name longer than two lines still ends in an ellipsis. It breaks
-     between words, a word only when it alone is wider than the space — and a
-     step smaller, since the arrows' touch targets leave the name ~66px over
-     Omnisphere's column. */
-  [data-orientation='horizontal'][data-wrap] .swap-pill {
-    height: auto;
-    min-height: var(--height-touch, 44px);
-  }
-  [data-orientation='horizontal'][data-wrap] .swap-name {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    align-self: center;
-    padding: 0.375rem 0.5rem;
-    white-space: normal;
-    font-size: 0.875rem;
-    line-height: 1.2;
-    overflow-wrap: break-word;
   }
   /* A pill too narrow to name anything — over a single column of drum pads
      it is 68px, less than the padding that keeps the name clear of the

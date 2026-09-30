@@ -11,13 +11,6 @@
   import SwapControl from './SwapControl.svelte';
   import { claimSwapHost } from './swapHost.svelte';
 
-  interface Props {
-    /** Let a long name wrap to two lines (SwapControl's `wrap`). */
-    wrap?: boolean;
-  }
-
-  let { wrap = false }: Props = $props();
-
   const host = claimSwapHost();
   let pill = $derived(host?.pill ?? null);
 </script>
@@ -25,7 +18,6 @@
 {#if pill?.model}
   <SwapControl
     orientation="horizontal"
-    {wrap}
     scopeLabel={pill.model.scopeLabel}
     label={pill.model.label}
     detail={pill.model.detail}
