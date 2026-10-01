@@ -84,6 +84,8 @@ classify() {
         interface/src/*) CLS="types vitest build serve" ;;
         # Read by no test (sourceBytes' NUL walk aside, covered below).
         *.md|docs/*|LICENSE) CLS="" ;;
+        # The screenshot rig: it makes PNGs, and no test imports or reads it.
+        scripts/shot/*) CLS="" ;;
         interface/*) CLS="types vitest build serve" ;;
         # config/, scripts/, data/, the rest of owner/, package files, the
         # hook and this script: read across suites, so everything.
@@ -296,8 +298,13 @@ serve_build() {
 }
 
 if [ -n "$VITEST_RELATED" ]; then
+    # fsModuleCache keeps compiled modules on disk between runs: the related
+    # run of a one-file interface push measured 14.3 s without it and 9.5 s
+    # warm (2026-10-01), nearly all of it compiling the app the tests import.
+    # Experimental in vitest 4, so only here: a whole run (by hand, daily, CI)
+    # compiles fresh and would catch a stale cache within a day.
     # shellcheck disable=SC2086 # one word per test path (none hold a space)
-    step vitest sh -c 'cd interface && LOOPING_KIT_OUT_DIR=.svelte-kit/gate-vitest npm exec --no -- vitest related --run --passWithNoTests '"$VITEST_ARGS"
+    step vitest sh -c 'cd interface && LOOPING_KIT_OUT_DIR=.svelte-kit/gate-vitest npm exec --no -- vitest related --run --passWithNoTests --experimental.fsModuleCache '"$VITEST_ARGS"
 else
     step vitest sh -c 'cd interface && LOOPING_KIT_OUT_DIR=.svelte-kit/gate-vitest npm run test:run --silent'
 fi
