@@ -13,10 +13,10 @@ import { logger } from '$lib/utils/logger';
   import { selectDevice, moveDeviceToTop, moveDeviceToEnd } from '$lib/services/deviceMoveService';
   import { openDeviceView } from '$lib/services/deviceViewRouter.svelte';
   import { readFxScope } from '$lib/components/v6/central/fxScope';
-  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
-  import ArrowRight from 'lucide-svelte/icons/arrow-right';
-  import Check from 'lucide-svelte/icons/check';
-  import X from 'lucide-svelte/icons/x';
+  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+  import ArrowRight from '@lucide/svelte/icons/arrow-right';
+  import Check from '@lucide/svelte/icons/check';
+  import X from '@lucide/svelte/icons/x';
 
   interface Props {
     // Either position (for grid devices) OR slotKey (for virtual devices - backward compat)

@@ -13,7 +13,7 @@
     import { drag } from '$lib/components/v6/parameters/actions/dragAction';
     import { press } from '$lib/actions/press';
     import { HOLD_MS } from '$lib/actions';
-    import Lock from 'lucide-svelte/icons/lock';
+    import Lock from '@lucide/svelte/icons/lock';
     import { V3_SESSION_SCALE_DETECT_ADDRESS } from '$lib/api/handlers/v3Session';
 
     interface Props {

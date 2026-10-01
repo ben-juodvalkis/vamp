@@ -16,10 +16,10 @@
 	 * Core Library groove of the same name.
 	 */
 	import { onMount, untrack } from 'svelte';
-	import Check from 'lucide-svelte/icons/check';
-	import ChevronRight from 'lucide-svelte/icons/chevron-right';
-	import Search from 'lucide-svelte/icons/search';
-	import X from 'lucide-svelte/icons/x';
+	import Check from '@lucide/svelte/icons/check';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import Search from '@lucide/svelte/icons/search';
+	import X from '@lucide/svelte/icons/x';
 	import { groovesStore } from '$lib/stores/v6/groovesStore.svelte';
 	import GroovePicture from '$lib/components/v6/clips/GroovePicture.svelte';
 	import type { GrooveFile } from '$lib/types/grooves';

@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * Draws a lucide icon node, as lucide's own `Icon` does (@lucide/svelte
-   * 0.515, ISC). A copy, because the package exports `Icon` only from its
+   * 0.543, ISC). A copy, because the package exports `Icon` only from its
    * index, and importing the index made the build compile all ~1,600 icons.
    */
   import type { IconNode } from '@lucide/svelte';

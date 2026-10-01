@@ -6,7 +6,7 @@
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import SectionDivider from '../SectionDivider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
-  import Repeat from 'lucide-svelte/icons/repeat';
+  import Repeat from '@lucide/svelte/icons/repeat';
   import { logger } from '$lib/utils/logger';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { CHARTREUSE_SCHEME } from '$lib/config/devicePresets';
