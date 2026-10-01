@@ -244,6 +244,7 @@
       value={getNormalizedValue(DRIVE_MACRO)}
       title={driveName}
       orientation="vertical"
+      labelOrientation="horizontal"
       isGhost={fx.isGhost}
       color={effectiveColor}
       onTap={() => fx.loadIfGhost()}
@@ -324,8 +325,9 @@
         <div class="bass-fader">
           <DeviceSlider
             value={bassValue}
-            title="Octave mix"
+            title="Oct mix"
             orientation="vertical"
+            labelOrientation="horizontal"
             labelSize="small"
             isGhost={bass.isGhost}
             color={bassInk}
@@ -393,6 +395,7 @@
               value={getNormalizedValue(control.macroIndex)}
               title={control.name}
               orientation="vertical"
+              labelOrientation="horizontal"
               isGhost={fx.isGhost}
               color={effectiveColor}
               onTap={() => fx.loadIfGhost()}
@@ -418,6 +421,7 @@
             value={getNormalizedValue(paramIndex)}
             title={`Macro ${paramIndex}`}
             orientation="vertical"
+            labelOrientation="horizontal"
             isGhost={fx.isGhost}
             color={effectiveColor}
             onTap={() => fx.loadIfGhost()}
