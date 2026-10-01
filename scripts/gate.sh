@@ -260,13 +260,16 @@ serve_build() {
     date +%s >"$LOGS/serve.start"
     if [ "$(cat "$LOGS/build.rc")" != 0 ]; then echo "the build failed; nothing to serve"; return 1; fi
     cd interface
-    LOOPING_GATE_SERVE=1 LOOPING_KIT_OUT_DIR=.svelte-kit/gate-build \
+    NO_COLOR=1 LOOPING_GATE_SERVE=1 LOOPING_KIT_OUT_DIR=.svelte-kit/gate-build \
         ../node_modules/.bin/vite preview --port 0 --host 127.0.0.1 >"$LOGS/preview.log" 2>&1 &
     pid=$!
     url=""
     i=0
     while [ $i -lt 60 ]; do
-        url=$(sed -n 's/.*Local:[^h]*\(http:[^ ]*\).*/\1/p' "$LOGS/preview.log" | head -n 1)
+        # Colour codes stripped too: CI forces colour (FORCE_COLOR) over
+        # NO_COLOR, and they split `Local:` (the first CI run failed on it).
+        url=$(tr -d '\033' <"$LOGS/preview.log" | sed 's/\[[0-9;]*m//g' \
+            | sed -n 's/.*Local:[^h]*\(http:[^ ]*\).*/\1/p' | head -n 1)
         [ -z "$url" ] || break
         kill -0 $pid 2>/dev/null || break
         sleep 0.5

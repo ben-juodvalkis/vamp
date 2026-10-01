@@ -37,7 +37,7 @@ jobs:
 
       # uv drives the surface venv and the AX helper's tests (which fetch
       # their own Python 3.12 from its pyproject).
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
 
       # The root install covers both workspaces. Not `npm run setup`: it
       # links the surface into Live, which only a Mac has.
