@@ -136,9 +136,9 @@ const SLOT = { empty: 0, hasClip: 1, playing: 2, recording: 3 };
  * 2026-09-14: all 0..1 but L 16th, 1..16); the rest are fillers that keep
  * those indices where the real device has them.
  */
-/** Guitar.adg's eight macros as the rack names them (read from the preset 2026-09-30), 0..127. */
+/** Guitar.adg's eight macros as the rack names them (read from the running rack 2026-10-01), 0..127. */
 function guitarRackParams() {
-	const names = ['Gain', 'Drive', 'Fuzz', 'Spring', 'Tremolo Rate', 'Tremolo Amount', 'Room', 'Macro 8'];
+	const names = ['Gain', 'Drive', 'Fuzz', 'Spring', 'Tremolo Rate', 'Tremolo Amount', 'Room', 'Dirty/Clean'];
 	const values = [70, 40, 20, 30, 64, 50, 25, 0];
 	return [['Device On', 'On', 0, 1, 1, ''], ...names.map((n, i) => [n, n, 0, 127, values[i], ''])];
 }

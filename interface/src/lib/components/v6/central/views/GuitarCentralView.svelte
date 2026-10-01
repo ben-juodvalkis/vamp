@@ -196,7 +196,25 @@
     { title: 'Tremolo', x: /^trem\w*\s+rate$/i, y: /^trem\w*\s+(amount|depth)$/i }
   ];
 
-  const layoutItems = $derived(pairMacros(controlLayout, XY_PAIRS));
+  // DIRTY/CLEAN — macro 8 is a two-way switch, not a sweep: it drives the
+  // chain selector of a rack holding two TONE3000 chains, and Live labels
+  // it 0 below the midpoint and 1 above (measured 2026-10-01). The low half
+  // is Dirty, the high half Clean, in the order the rack's own name gives.
+  // Found by name, like the XY pairs, so a rack without it keeps a slider.
+  const TONE_MACRO = 8;
+  let hasToneSwitch = $derived(/dirty|clean/i.test(parameterNames[TONE_MACRO] ?? ''));
+  let toneClean = $derived(getNormalizedValue(TONE_MACRO) >= 0.5);
+
+  function setTone(clean: boolean) {
+    fx.sendParam(TONE_MACRO, clean ? MACRO_MAX : MACRO_MIN);
+  }
+
+  const layoutItems = $derived(
+    pairMacros(
+      hasToneSwitch ? controlLayout.filter((c) => c.macroIndex !== TONE_MACRO) : controlLayout,
+      XY_PAIRS
+    )
+  );
 
   function getNormalizedValue(macroIndex: number): number {
     const value = macroValues[macroIndex - 1] ?? MACRO_MIN;
@@ -231,6 +249,27 @@
       onTap={() => fx.loadIfGhost()}
       onInteraction={(val) => handleSliderChange(DRIVE_MACRO, val)}
     />
+  </div>
+{/snippet}
+
+{#snippet toneSwitch()}
+  <div class="control-slot tone-slot" style="--btn-tint: {effectiveColor.primary};">
+    <button
+      class="physical-button tone-btn"
+      class:active={!toneClean}
+      aria-pressed={!toneClean}
+      onclick={() => setTone(false)}
+    >
+      Dirty
+    </button>
+    <button
+      class="physical-button tone-btn"
+      class:active={toneClean}
+      aria-pressed={toneClean}
+      onclick={() => setTone(true)}
+    >
+      Clean
+    </button>
   </div>
 {/snippet}
 
@@ -362,6 +401,9 @@
           </div>
         {/if}
       {/each}
+      {#if hasToneSwitch}
+        {@render toneSwitch()}
+      {/if}
     </div>
   {:else}
     <!-- Fallback: drive, then simple sliders for macros 2-8, when no names yet -->
@@ -505,6 +547,22 @@
   }
   .bass-move-btn.move-err {
     color: var(--act-rec);
+  }
+
+  /* Dirty over Clean, one slider column wide, splitting its height the way
+     the Bass panel's Amp / +12 pair does. */
+  .tone-slot {
+    flex: 1 1 0;
+    min-width: 56px;
+    flex-direction: column;
+    gap: var(--central-gap);
+  }
+
+  .tone-btn {
+    flex: 1 1 0;
+    min-height: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
   }
 
   .bass-fader {
