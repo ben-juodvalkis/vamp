@@ -31,7 +31,8 @@ menubar app, Max patch, Skaka picker and rack, rig probes), `config/`,
 3. Commit your own files by path (`git add <paths>`, never `-A`): another
    session may be editing this checkout. The commit message is the record of
    what changed and why.
-4. `git push origin main`, without asking. The pre-push hook is the gate
+4. Push only when Ben asks; otherwise stop at the commit and say it is
+   unpushed. Then `git push origin main`. The pre-push hook is the gate
    (`scripts/gate.sh`, up to ~40 s): svelte-check, vitest, both pytest
    suites, the production build and a page load from it, at once, limited to
    the steps the pushed files reach (a docs-only push runs none; a full run
@@ -44,7 +45,8 @@ menubar app, Max patch, Skaka picker and rack, rig probes), `config/`,
 5. Tell Ben what behaves differently now, and whether it needs a Live restart.
 
 Ask first before force-push, `reset --hard`, rewriting pushed commits or
-deleting branches. Cloud sessions push their own branch and stop there.
+deleting branches. Cloud sessions push their own branch (when asked) and
+stop there.
 
 Never merge another branch into `main` unless Ben says to merge that branch.
 To test a cloud branch Ben names, `git fetch origin` and `git checkout` it;
