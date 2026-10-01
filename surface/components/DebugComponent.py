@@ -39,6 +39,7 @@ LOM_INVOKE_ADDRESS = "/looping/probe/lom_invoke"
 LOM_SET_ADDRESS = "/looping/probe/lom_set"
 SONG_TIME_PROBE_ADDRESS = "/looping/probe/song_time_probe"
 PY_INTROSPECT_ADDRESS = "/looping/probe/py_introspect"
+RELOAD_ON_RESELECT_ADDRESS = "/looping/probe/reload_on_reselect"
 # No _REPLY constants: the OSC transport auto-replies on the request
 # address, so the request constants above are also the reply addresses.
 
@@ -196,9 +197,13 @@ class DebugComponent:
     ``disconnect()`` for symmetry with the other components.
     """
 
-    def __init__(self, emit, registry=None):
+    def __init__(self, emit, registry=None, request_reload=None):
         self._emit = emit
         self._registry = registry
+        # The package's ``request_reload`` (surface/__init__.py), passed in
+        # because this module is imported as ``components.*`` under pytest,
+        # where a relative import of the package would not resolve.
+        self._request_reload = request_reload
         self._disconnected = False
         # /looping/probe/song_time_probe state (issue #489 measurement 6).
         self._song_time_cb = None
@@ -636,6 +641,32 @@ class DebugComponent:
         return r.obj, None
 
     # --- /looping/probe/py_introspect ------------------------------------
+
+    # --- /looping/probe/reload_on_reselect ---------------------------------
+
+    def handle_reload_on_reselect(self, args, source_addr):
+        """Arm a fresh import of the surface for its next instance.
+
+        Reply: ``/looping/probe/reload_on_reselect [json_str]`` with
+        ``{"armed": bool, "loaded": n}``, ``loaded`` being how many of the
+        package's modules the next instance will import afresh. Nothing
+        changes until the surface is re-selected in Live's Settings (or a
+        set is opened): Live then disconnects this instance and calls
+        ``create_instance``, which purges and re-imports
+        (``surface/__init__.py``). Args are ignored.
+        """
+        import json
+
+        if self._request_reload is None:
+            reply = {"armed": False, "error": "no request_reload wired"}
+        else:
+            reply = {"armed": True, "loaded": self._request_reload()}
+            logger.info(
+                "reload_on_reselect: armed (%d modules); re-select the surface in Settings",
+                reply["loaded"],
+            )
+        self._emit(RELOAD_ON_RESELECT_ADDRESS, (json.dumps(reply),))
+        return None
 
     def handle_py_introspect(self, args, source_addr):
         """Import a module (or take the ``app`` root) and dir what a chain reaches.

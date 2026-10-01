@@ -166,6 +166,7 @@ from .components.RecordSuspendComponent import (
     V3_GROUP_RECORD_RESUME_ADDRESS,
     V3_GROUP_RECORD_SUSPEND_ADDRESS,
 )
+from . import request_reload
 from .components.DebugComponent import (
     DebugComponent,
     LOM_INTROSPECT_ADDRESS,
@@ -174,6 +175,7 @@ from .components.DebugComponent import (
     SONG_TIME_PROBE_ADDRESS,
     PY_INTROSPECT_ADDRESS,
     PROTOCOL_VERSION_ADDRESS,
+    RELOAD_ON_RESELECT_ADDRESS,
     REGISTRY_DUMP_ADDRESS,
     REGISTRY_PROBE_RESOLVE_ADDRESS,
 )
@@ -997,6 +999,7 @@ class LoopingSurface(ControlSurface):
         self._debug_component = DebugComponent(
             emit=self._transport.send,
             registry=self._lom_listeners,
+            request_reload=request_reload,
         )
         self._transport.add_handler(
             PROTOCOL_VERSION_ADDRESS,
@@ -1037,6 +1040,13 @@ class LoopingSurface(ControlSurface):
         self._transport.add_handler(
             PY_INTROSPECT_ADDRESS,
             self._debug_component.handle_py_introspect,
+        )
+        # Probe-only: arm a fresh import for the next instance, so a
+        # re-select in Settings runs edited code without a Live restart
+        # (surface/__init__.py).
+        self._transport.add_handler(
+            RELOAD_ON_RESELECT_ADDRESS,
+            self._debug_component.handle_reload_on_reselect,
         )
         # Phase 2 PR-2b: v3 state/full emitter. Walks the LOM with
         # path_resolver.compose_* to produce positional paths rather

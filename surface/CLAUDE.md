@@ -2,7 +2,11 @@
 
 **Before you change the surface:**
 
-- Live loads it once: a change runs only after a full Live restart.
+- Live loads it once: a change runs only after a full Live restart. The
+  `reload_on_reselect` probe (below; `{"kind":"reload"}`, then re-select
+  the surface in Live's Settings) re-imports it without one; not yet
+  confirmed on the rig, and not for `__init__.py`, the transports or
+  `disconnect`.
 - A component imports its siblings relatively (`from . import path_resolver`,
   `from .key_detect import …`). The absolute `from components.x import` form
   passes pytest, because the tests put the surface root on `sys.path`, and
@@ -1791,6 +1795,7 @@ its own address back to the sender. Driver:
 | `/looping/probe/song_time_probe` | `start` / `stats` / `stop` | cadence of the `Song.current_song_time` listener — count, Hz, interval mean / p50 / p95 / p99 / max / min, beat delta. Measured 65.8 Hz; the number behind ADR-429's clock decision. |
 | `/looping/probe/sequencer_stats` | `reset?` | the sequencer engine's apply-lag distribution and tick maxima (`SequencerComponent.handle_stats`). |
 | `/looping/probe/py_introspect` | `module, chain, dir_regex` | imports a module (`Live.Browser`, `Live.SimplerDevice`) or takes the `app` root (the Application instance), walks the chain, replies `{resolved_type, value_repr, doc, enum, dir_total, dir, truncated}`. `enum` is `{name: int}` for a Boost.Python enum (`Live.Browser.FilterType`). Trimmed to fit a datagram — `truncated` says so; narrow with the regex. For API-surface questions no song path reaches. |
+| `/looping/probe/reload_on_reselect` | none | arms a fresh import of the surface for its next instance → `{armed, loaded}`. Nothing changes until the surface is re-selected in Live's Settings (or a set is opened): `create_instance` then drops the package's modules from `sys.modules` and imports the edited files (`surface/__init__.py`; Log.txt: `reload_on_reselect: purged N modules`). One-shot. The old instance's `disconnect` is what tears down, so a change to it, to the transports or to `__init__.py` still needs a restart. |
 
 `path` is a v3 LOM path (`tracks/<N>`, `tracks/<N>/devices/<M>`,
 `tracks/<N>/slots/<M>/clip`, `master`, …), `song`, or `app` (Live's

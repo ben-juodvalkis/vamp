@@ -10,6 +10,7 @@
 //   {"kind":"set","path":"tracks/1/devices/0","sets":[["parameters[4].value",63.5],["view.selected_drum_pad",{"$ref":"drum_pads[36]"}]],"undo":0}
 //   {"kind":"songtime","cmd":"start|stats|stop"}
 //   {"kind":"py","module":"Live.Browser | app","chain":"FilterType","dir":"regex"}
+//   {"kind":"reload"}   arm a fresh surface import; then re-select the surface in Settings
 //
 // Chain grammar (DebugComponent._walk_chain): dotted attributes, `name[N]`
 // indexing, `*name` maps an attribute over a list. Keep a request under
@@ -23,8 +24,10 @@ const results = [];
 function sendNext() {
   if (i >= reqs.length) { u.close(); console.log(JSON.stringify(results)); process.exit(0); }
   const r = reqs[i];
-  const addr = r.kind === 'invoke' ? '/looping/probe/lom_invoke' : r.kind === 'set' ? '/looping/probe/lom_set' : r.kind === 'songtime' ? '/looping/probe/song_time_probe' : r.kind === 'py' ? '/looping/probe/py_introspect' : '/looping/probe/lom_introspect';
-  const args = r.kind === 'py'
+  const addr = r.kind === 'invoke' ? '/looping/probe/lom_invoke' : r.kind === 'set' ? '/looping/probe/lom_set' : r.kind === 'songtime' ? '/looping/probe/song_time_probe' : r.kind === 'py' ? '/looping/probe/py_introspect' : r.kind === 'reload' ? '/looping/probe/reload_on_reselect' : '/looping/probe/lom_introspect';
+  const args = r.kind === 'reload'
+    ? []
+    : r.kind === 'py'
     ? [r.module || '', r.chain || '', r.dir || ''].map(v => ({ type: 's', value: v }))
     : r.kind === 'invoke'
     ? [r.path, r.method, r.observe || '', r.args ? JSON.stringify(r.args) : ''].map(v => ({ type: 's', value: v }))
