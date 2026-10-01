@@ -369,6 +369,10 @@ function instrumentSwapStates() {
 		['simpler', 'Simpler', 'OriginalSimpler'],
 		['instrument-rack', 'Instrument Rack', 'InstrumentGroupDevice',
 			macros(['Cutoff', 'Resonance', 'Attack', 'Release', 'Drive', 'Space', 'Macro 7', 'Macro 8'])],
+		// Two macros whose first word is XY play as one pad, placed where
+		// the first was — Attack between them stays a slider after it.
+		['instrument-rack-xy', 'Instrument Rack', 'InstrumentGroupDevice',
+			macros(['XY Cutoff', 'Attack', 'XY Res', 'Release', 'Drive', 'Space', 'Macro 7', 'Macro 8'])],
 		// The picker is a fixed 2 x 3 whatever the rack names, so these two
 		// differ only in what the sliders beside it do. Both say "Pattern 4":
 		// the real rack (Skaka Metronome Rack) has four patterns, and the

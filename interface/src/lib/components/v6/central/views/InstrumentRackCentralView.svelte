@@ -7,6 +7,7 @@
    */
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
+  import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import SectionDivider from '../SectionDivider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
   import MidiWheel from '../../midi/MidiWheel.svelte';
@@ -18,7 +19,7 @@
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
   import { PITCH_COLOR, MOD_COLOR, getControlColor } from '$lib/config/devicePresets';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
-  import { buildMacroLayout } from '$lib/utils/macroLayoutUtils';
+  import { buildMacroLayout, pairXYPrefixedMacros } from '$lib/utils/macroLayoutUtils';
 
   // Import constants
   import constants from '$config/constants.json';
@@ -60,6 +61,9 @@
   );
 
   const controlLayout = $derived(buildMacroLayout(parameterNames, 1, MACRO_COUNT));
+  // Macros whose first word is "XY" pair up into pads (the rack's own
+  // convention, named in Live): "XY Cutoff" + "XY Res" → a Cutoff/Res pad.
+  const layoutItems = $derived(pairXYPrefixedMacros(controlLayout));
 
   // Update all macro values in single effect
   $effect(() => {
@@ -135,16 +139,31 @@
 
         <!-- One slider per named macro -->
         {#if controlLayout.length > 0}
-          {#each controlLayout as control, i}
-            <div class="control-slot slider-slot">
-              <DeviceSlider
-                value={getNormalizedValue(control.macroIndex)}
-                title={control.name}
-                orientation="vertical"
-                color={ctlInk(i)}
-                onInteraction={(val) => handleSliderChange(control.macroIndex, val)}
-              />
-            </div>
+          {#each layoutItems as item, i}
+            {#if item.kind === 'xy'}
+              <div class="control-slot xy-slot">
+                <DeviceXY
+                  xValue={getNormalizedValue(item.x.macroIndex)}
+                  yValue={getNormalizedValue(item.y.macroIndex)}
+                  title={item.title}
+                  color={ctlInk(i)}
+                  onInteraction={(x, y) => {
+                    handleSliderChange(item.x.macroIndex, x);
+                    handleSliderChange(item.y.macroIndex, y);
+                  }}
+                />
+              </div>
+            {:else}
+              <div class="control-slot slider-slot">
+                <DeviceSlider
+                  value={getNormalizedValue(item.control.macroIndex)}
+                  title={item.control.name}
+                  orientation="vertical"
+                  color={ctlInk(i)}
+                  onInteraction={(val) => handleSliderChange(item.control.macroIndex, val)}
+                />
+              </div>
+            {/if}
           {/each}
         {:else}
           <!-- No used macros yet (loading or none configured) -->
@@ -181,6 +200,12 @@
   .slider-slot {
     flex: 1 1 0;
     min-width: 40px;
+  }
+
+  /* An XY pad stands in for two macros, so it takes their two columns. */
+  .xy-slot {
+    flex: 2 1 var(--central-gap);
+    min-width: 80px;
   }
 
   /* The wheels and the pill over them: exactly two slider shares, so a wheel

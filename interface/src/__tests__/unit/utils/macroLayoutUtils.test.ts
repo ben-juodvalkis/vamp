@@ -10,6 +10,8 @@ import {
   patternGridShape,
   pickerSlotValue,
   pickerSlotAt,
+  pairMacros,
+  pairXYPrefixedMacros,
   type SliderControl
 } from '$lib/utils/macroLayoutUtils';
 
@@ -269,6 +271,40 @@ describe('macroLayoutUtils', () => {
     it('uses one row before the area is measured', () => {
       expect(patternGridShape(4, 0, 0)).toEqual({ rows: 1, cols: 4 });
       expect(patternGridShape(0, 1000, 330)).toEqual({ rows: 0, cols: 0 });
+    });
+  });
+
+  describe('XY pairing', () => {
+    const layoutOf = (names: string[]) => buildMacroLayout(['Device On', ...names], 1, names.length);
+    const shape = (items: ReturnType<typeof pairMacros>) =>
+      items.map((i) => (i.kind === 'xy' ? `${i.title}:${i.x.macroIndex}x${i.y.macroIndex}` : i.control.name));
+
+    it('pairs XY-prefixed macros in order, titled by the rest of their names', () => {
+      const items = pairXYPrefixedMacros(layoutOf(['Attack', 'XY Cutoff', 'Release', 'XY Res']));
+      expect(shape(items)).toEqual(['Attack', 'Cutoff/Res:2x4', 'Release']);
+    });
+
+    it('makes two pads from four XY macros and leaves a fifth as a slider', () => {
+      const items = pairXYPrefixedMacros(layoutOf(['XY A', 'XY B', 'XY C', 'XY D', 'XY E']));
+      expect(shape(items)).toEqual(['A/B:1x2', 'C/D:3x4', 'XY E']);
+    });
+
+    it('only matches XY as a whole first word', () => {
+      const items = pairXYPrefixedMacros(layoutOf(['XYZ', 'Xylo Tone', 'xy Pan', 'Width']));
+      expect(shape(items)).toEqual(['XYZ', 'Xylo Tone', 'xy Pan', 'Width']);
+    });
+
+    it('pairs by rule only when both names are present', () => {
+      const rules = [{ title: 'Tremolo', x: /^tremolo rate$/i, y: /^tremolo amount$/i }];
+      expect(shape(pairMacros(layoutOf(['Gain', 'Tremolo Rate', 'Tremolo Amount']), rules))).toEqual([
+        'Gain',
+        'Tremolo:2x3'
+      ]);
+      expect(shape(pairMacros(layoutOf(['Gain', 'Tremolo Rate', 'Depth']), rules))).toEqual([
+        'Gain',
+        'Tremolo Rate',
+        'Depth'
+      ]);
     });
   });
 });

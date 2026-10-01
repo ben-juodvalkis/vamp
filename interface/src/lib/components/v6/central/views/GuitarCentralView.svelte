@@ -23,7 +23,9 @@
     buildMacroLayout,
     cleanParameterName,
     isEmptyMacroName,
-    type ControlLayout
+    pairMacros,
+    type ControlLayout,
+    type XYPairRule
   } from '$lib/utils/macroLayoutUtils';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { useBassChainPosition } from '$lib/components/v6/central/useBassChainPosition.svelte';
@@ -186,35 +188,12 @@
   // Rate, 6 Tremolo Amount) so a rack that renames or drops one falls back
   // to plain sliders instead of driving the wrong knob. The pad sits where
   // its first macro's slider was.
-  const XY_PAIRS = [
+  const XY_PAIRS: XYPairRule[] = [
     { title: 'Drive/Fuzz', x: /^drive$/i, y: /^fuzz$/i },
     { title: 'Tremolo', x: /^trem\w*\s+rate$/i, y: /^trem\w*\s+(amount|depth)$/i }
   ];
 
-  type SliderItem = ControlLayout[number];
-  type LayoutItem =
-    | { kind: 'slider'; control: SliderItem }
-    | { kind: 'xy'; title: string; x: SliderItem; y: SliderItem };
-
-  const layoutItems = $derived.by<LayoutItem[]>(() => {
-    const paired = new Map<number, LayoutItem>();
-    const consumed = new Set<number>();
-    for (const pair of XY_PAIRS) {
-      const x = controlLayout.find((c) => pair.x.test(c.name));
-      const y = controlLayout.find((c) => pair.y.test(c.name));
-      if (!x || !y) continue;
-      paired.set(Math.min(x.macroIndex, y.macroIndex), { kind: 'xy', title: pair.title, x, y });
-      consumed.add(x.macroIndex);
-      consumed.add(y.macroIndex);
-    }
-    const items: LayoutItem[] = [];
-    for (const control of controlLayout) {
-      const pad = paired.get(control.macroIndex);
-      if (pad) items.push(pad);
-      else if (!consumed.has(control.macroIndex)) items.push({ kind: 'slider', control });
-    }
-    return items;
-  });
+  const layoutItems = $derived(pairMacros(controlLayout, XY_PAIRS));
 
   function getNormalizedValue(macroIndex: number): number {
     const value = macroValues[macroIndex - 1] ?? MACRO_MIN;

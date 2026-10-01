@@ -132,6 +132,69 @@ export function buildMacroLayout(
   return layout;
 }
 
+/** One cell of a macro row: a slider, or an XY pad standing in for two macros. */
+export type MacroLayoutItem =
+  | { kind: 'slider'; control: SliderControl }
+  | { kind: 'xy'; title: string; x: SliderControl; y: SliderControl };
+
+/** Two macros, found by name, that play as one XY pad (X first). */
+export type XYPairRule = { title: string; x: RegExp; y: RegExp };
+
+/**
+ * Fold macro pairs into XY pads. Each pad sits where the earlier of its two
+ * macros was; anything unpaired stays a slider. A rule pairs only when BOTH
+ * of its names are present, so a rack that renames or drops one falls back
+ * to plain sliders rather than driving the wrong macro.
+ */
+export function pairMacros(layout: ControlLayout, rules: XYPairRule[]): MacroLayoutItem[] {
+  const pads: { title: string; x: SliderControl; y: SliderControl }[] = [];
+  for (const rule of rules) {
+    const x = layout.find((c) => rule.x.test(c.name));
+    const y = layout.find((c) => rule.y.test(c.name));
+    if (x && y && x !== y) pads.push({ title: rule.title, x, y });
+  }
+  return foldPads(layout, pads);
+}
+
+const XY_PREFIX = /^xy\s+/i;
+
+/**
+ * The rack's own XY convention: a macro whose first word is "XY" pairs with
+ * the next one that also starts "XY", in macro order — the first is X, the
+ * second Y. The pad is titled by the rest of both names ("XY Cutoff" +
+ * "XY Res" → "Cutoff/Res"). A lone XY macro stays a slider under its name.
+ */
+export function pairXYPrefixedMacros(layout: ControlLayout): MacroLayoutItem[] {
+  const tagged = layout.filter((c) => XY_PREFIX.test(c.name));
+  const pads: { title: string; x: SliderControl; y: SliderControl }[] = [];
+  for (let i = 0; i + 1 < tagged.length; i += 2) {
+    const [x, y] = [tagged[i], tagged[i + 1]];
+    const title = [x, y].map((c) => c.name.replace(XY_PREFIX, '').trim()).filter(Boolean).join('/');
+    pads.push({ title: title || 'XY', x, y });
+  }
+  return foldPads(layout, pads);
+}
+
+function foldPads(
+  layout: ControlLayout,
+  pads: { title: string; x: SliderControl; y: SliderControl }[]
+): MacroLayoutItem[] {
+  const at = new Map<number, MacroLayoutItem>();
+  const used = new Set<number>();
+  for (const pad of pads) {
+    at.set(Math.min(pad.x.macroIndex, pad.y.macroIndex), { kind: 'xy', ...pad });
+    used.add(pad.x.macroIndex);
+    used.add(pad.y.macroIndex);
+  }
+  const items: MacroLayoutItem[] = [];
+  for (const control of layout) {
+    const pad = at.get(control.macroIndex);
+    if (pad) items.push(pad);
+    else if (!used.has(control.macroIndex)) items.push({ kind: 'slider', control });
+  }
+  return items;
+}
+
 /**
  * Macro value that selects state `index` of an `states`-position picker —
  * the Skaka Metronome Picker's five-state `live.tab` on macro 1.
