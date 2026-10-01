@@ -32,7 +32,7 @@
     },
     "internal": {
       "lint": "ESLint over interface/bridge/** \u2014 one rule, no-undef. The gate runs it inside vitest (bridgeLintGate.test.ts); see eslint.config.mjs for the narrow scope.",
-      "gate": "The pre-push gate by hand (scripts/gate.sh): svelte-check, vitest, both pytest suites and the production build, all at once, ~40 s. By hand it runs all five; a push runs only the steps its changed files reach.",
+      "gate": "The pre-push gate by hand (scripts/gate.sh): svelte-check, vitest, both pytest suites and the production build, all at once, ~40 s, then loads `/` from the build (a 500 fails it). By hand it runs everything; a push runs only the steps its changed files reach, skips steps that already passed on the same files, and runs everything at least daily. GATE_PLAN=1 prints the plan.",
       "test:ax-helper": "The Looping AX Helper's tests (owner/ax-helper/tests), part of the gate. Its own uv invocation because the installed helper's env is synced --no-dev and has no pytest, so `cd owner/ax-helper && pytest` is command-not-found.",
       "check:touch": "Guard the pointer invariant (ADR-427): no touches[0]/changedTouches[0] anywhere in interface/src/lib, no onclick under the five performance-surface directories. The gate runs it inside vitest (touchDialects.test.ts); masks comments and strings so the components' own notes about the old dialects don't trip it.",
       "places:diff": "Build every ticked Place from Live's index and from the disk scan and report every item the two disagree on (onboarding.plan.md \u00a710). -- --all for every folder Live lists, -- --name <Place> for one. Exit 1 on a difference, 2 when the index is unreadable.",

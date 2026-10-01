@@ -5,13 +5,17 @@ Automation, run from the repo root through `npm run`.
 ## The gate
 
 - `gate.sh`: the pre-push gate (`npm run gate` runs it by hand). svelte-check,
-  vitest, surface pytest, AX-helper pytest and the production build, at once,
-  ~40 s. It tests the working tree. Each SvelteKit step gets its own outDir
-  (`LOOPING_KIT_OUT_DIR`) because each rewrites the generated files when it
-  starts. A push runs only the steps its changed files reach (the path
-  rules are in the script; docs-only runs a NUL check and nothing else);
-  `npm run gate` or `GATE_ALL=1` runs all five. A new test that reads a file
-  outside its own tree means updating those rules.
+  vitest, surface pytest, AX-helper pytest, the production build, and a serve
+  step that starts the build and asks for `/` (a 500 fails it), at once,
+  ~40 s when all run. It tests the working tree. Each SvelteKit step gets its
+  own outDir (`LOOPING_KIT_OUT_DIR`) because each rewrites the generated files
+  when it starts. A push runs only the steps its changed files reach
+  (`classify` in the script; docs-only runs a NUL check and nothing else),
+  skips a step that already passed on the same files (`.git/gate/`), and runs
+  only the vitest files related to the changed sources plus those reading the
+  disk. `npm run gate`, `GATE_ALL=1`, or a push with no full pass in 24 h runs
+  everything whole. `GATE_PLAN=1` prints the plan without running it. A new
+  test that reads a file in another tree means a line in `classify`.
 - A build that dies on `ENOENT … service-worker.js` is hiding its real
   error: the server build produced nothing (a Svelte compile error, a bad CSS
   class). Run svelte-check on the changed files before blaming caches.

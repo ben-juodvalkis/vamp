@@ -8,4 +8,7 @@
 import { building } from '$app/environment';
 import { placesService } from '$lib/server/places/service';
 
-if (!building) placesService();
+// The gate's serve step (scripts/gate.sh) loads `/` from the build for a few
+// seconds and stops it: no Places scan, and no writes to the caches the real
+// server on :8889 shares.
+if (!building && !process.env.LOOPING_GATE_SERVE) placesService();
