@@ -61,6 +61,8 @@
       value={squashAmount}
       title="Glue"
       orientation="vertical"
+      labelOrientation="horizontal"
+      labelSize="small"
       min={0}
       max={1}
       {isGhost}
