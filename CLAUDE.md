@@ -31,8 +31,9 @@ menubar app, Max patch, Skaka picker and rack, rig probes), `config/`,
    session may be editing this checkout. The commit message is the record of
    what changed and why.
 4. `git push origin main`, without asking. The pre-push hook is the whole
-   gate (`scripts/gate.sh`, ~40 s): svelte-check, vitest, both pytest suites
-   and the production build, at once. Never `--no-verify`.
+   gate (`scripts/gate.sh`, up to ~40 s): svelte-check, vitest, both pytest
+   suites and the production build, at once, limited to the steps the pushed
+   files reach (a docs-only push runs none). Never `--no-verify`.
    - Rejected because origin moved: `git pull --no-rebase origin main`, push again.
    - A test you didn't touch fails: run that file alone. If it passes, push
      again and name the test in your summary. If it's another session's work
