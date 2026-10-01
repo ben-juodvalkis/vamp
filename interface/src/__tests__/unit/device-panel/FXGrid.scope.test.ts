@@ -143,7 +143,7 @@ describe('FXGrid — the grid is the held pad\'s', () => {
 		// racks load through the browser and are moved into the chain, the
 		// MIDI effects go in at the chain's head, the Drum Buss by name.
 		expect(container.querySelectorAll('.device-unscoped').length).toBe(0);
-		for (const title of ['Rand Oct', 'Drum', 'Squash']) {
+		for (const title of ['Rand Oct', 'Drum', 'Glue']) {
 			expect(tileFor(container, title).classList.contains('device-ghost'), title).toBe(true);
 		}
 
@@ -163,8 +163,8 @@ describe('FXGrid — the grid is the held pad\'s', () => {
 			const c = tile!.closest<HTMLElement>('[data-cell]')!;
 			return [c.dataset.col, c.dataset.row, c.dataset.span, c.dataset.rowSpan].join('/');
 		};
-		// col/row/span/rowSpan: Squash and Gain are separate full-height columns.
-		expect(cellOf('Squash')).toBe('11/1/1/2');
+		// col/row/span/rowSpan: Glue and Gain are separate full-height columns.
+		expect(cellOf('Glue')).toBe('11/1/1/2');
 		expect(cellOf('Gain')).toBe('12/1/1/2');
 		// MIDI: Rand Oct and Variation are full height too.
 		expect(cellOf('Rand Oct')).toBe('1/1/1/2');
@@ -172,8 +172,8 @@ describe('FXGrid — the grid is the held pad\'s', () => {
 		expect(container.textContent).not.toContain('Gtr');
 		drumPadScope.press(RACK, 38, 1, 0);
 		await tick();
-		expect(tileFor(container, 'Squash').getAttribute('data-fx-scope')).toBe('38');
-		expect(tileFor(container, 'Squash').classList.contains('device-unscoped')).toBe(false);
+		expect(tileFor(container, 'Glue').getAttribute('data-fx-scope')).toBe('38');
+		expect(tileFor(container, 'Glue').classList.contains('device-unscoped')).toBe(false);
 		drumPadScope.release(1, 'up', 500);
 	});
 

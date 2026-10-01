@@ -52,14 +52,14 @@
 <BaseDeviceControl
   {...position ? { position } : { slotKey: 'squash' as const }}
   {device}
-  title="Squash"
+  title="Glue"
   showMoveToTop={true}
   showMoveToEnd={true}
 >
   {#snippet children({ sendParam, storePendingParam, triggerLoad, handleTap, isGhost, isLoading, color, openView })}
     <DeviceSlider
       value={squashAmount}
-      title="Squash"
+      title="Glue"
       orientation="vertical"
       min={0}
       max={1}

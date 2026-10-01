@@ -126,7 +126,7 @@ const FX_TILES = [
 	['Filter', 'filter', 'Auto Filter'],
 	['Pedal', 'pedal', 'Pedal + Saturator + Digital + Redux'],
 	['Drum', 'drum-buss', 'Drum Buss'],
-	['Squash', 'squash', 'Squash + Compressor'],
+	['Glue', 'squash', 'Glue (the Squash slot) + Compressor'],
 	['Gain', 'utility', 'Utility / Gate (the Gain tile)'],
 	['Var', 'variation', 'Variation'],
 	['Chorus', 'chorus', 'Chorus: Smudge, Comb, Phaser'],
