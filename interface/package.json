@@ -47,7 +47,7 @@
 		"audio-decode": "^3.10.1",
 		"lucide-svelte": "^0.543.0"
 	},
-	"//optionalDependencies": "Per-platform native binaries for lightningcss and @tailwindcss/oxide (transitive deps of vite / @tailwindcss/vite). Pinned exact so every platform's variant is recorded in the lockfile; each package's os/cpu guard makes npm install only the host's match. Keep these versions in sync with the transitively-resolved versions when vite/tailwind are bumped — verify with `npm ls lightningcss @tailwindcss/oxide`.",
+	"//optionalDependencies": "Per-platform native binaries for lightningcss, @tailwindcss/oxide and @rolldown/binding (transitive deps of vite / @tailwindcss/vite). Pinned exact so every platform's variant is recorded in the lockfile; each package's os/cpu guard makes npm install only the host's match. Keep these versions in sync with the transitively-resolved versions when vite/tailwind are bumped — verify with `npm ls lightningcss @tailwindcss/oxide rolldown`. npm 11 drops an unpinned one from the lockfile on install (vite 8: \"Cannot find native binding\").",
 	"optionalDependencies": {
 		"@tailwindcss/oxide-darwin-arm64": "4.3.3",
 		"@tailwindcss/oxide-darwin-x64": "4.3.3",
@@ -64,6 +64,24 @@
 		"lightningcss-linux-x64-gnu": "1.33.0",
 		"lightningcss-linux-x64-musl": "1.33.0",
 		"lightningcss-win32-arm64-msvc": "1.33.0",
-		"lightningcss-win32-x64-msvc": "1.33.0"
+		"lightningcss-win32-x64-msvc": "1.33.0",
+		"@rolldown/binding-android-arm-eabi": "1.2.12",
+		"@rolldown/binding-android-arm64": "1.2.12",
+		"@rolldown/binding-darwin-arm64": "1.2.12",
+		"@rolldown/binding-darwin-x64": "1.2.12",
+		"@rolldown/binding-freebsd-x64": "1.2.12",
+		"@rolldown/binding-linux-arm-gnueabihf": "1.2.12",
+		"@rolldown/binding-linux-arm64-gnu": "1.2.12",
+		"@rolldown/binding-linux-arm64-musl": "1.2.12",
+		"@rolldown/binding-linux-ppc64-gnu": "1.2.12",
+		"@rolldown/binding-linux-s390x-gnu": "1.2.12",
+		"@rolldown/binding-linux-x64-gnu": "1.2.12",
+		"@rolldown/binding-linux-x64-musl": "1.2.12",
+		"@rolldown/binding-openharmony-arm64": "1.2.12",
+		"@rolldown/binding-win32-arm64-msvc": "1.2.12",
+		"@rolldown/binding-win32-x64-msvc": "1.2.12",
+		"lightningcss-android-arm64": "1.33.0",
+		"lightningcss-freebsd-x64": "1.33.0",
+		"lightningcss-linux-arm-gnueabihf": "1.33.0"
 	}
 }
