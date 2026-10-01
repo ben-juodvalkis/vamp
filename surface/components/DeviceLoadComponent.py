@@ -156,7 +156,7 @@ TRACK_INSERT_MODE_BESIDE_SELECTION = 2
 # tiles' ``expectedClassName`` in ``devicePresets.ts``.
 #
 # This map has NO fallback and cannot have one: an unknown class is refused
-# as ``unknown-device``. 12 of its 21 rows are not recoverable from the
+# as ``unknown-device``. 13 of its 22 rows are not recoverable from the
 # class string by any rule (StereoGain -> Utility, Hybrid -> Hybrid Reverb,
 # Chorus2 -> Chorus-Ensemble, PhaserNew -> Phaser-Flanger), and a guessed
 # name is one Live refuses.
@@ -179,6 +179,7 @@ NATIVE_DEVICE_NAMES: Dict[str, str] = {
     "DrumBuss": "Drum Buss",
     "Pedal": "Pedal",
     "StereoGain": "Utility",
+    "AutoPan": "Auto Pan Legacy",  # inserts as "Tremolo (Legacy)" (2026-10-01); renamed to the tile's name
     "Redux2": "Redux",
     "Hybrid": "Hybrid Reverb",
     "PhaserNew": "Phaser-Flanger",

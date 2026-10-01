@@ -259,11 +259,9 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     color: familyScheme('distortion')
   },
   tremolo: {
-    // Auto Pan Legacy. Live refuses it by name ("Device Auto Pan not
-    // found", 2026-10-01), so it is a file; the loaded device takes the
-    // file's name, which is what the tile matches.
+    // Auto Pan Legacy, inserted by its display name (measured 2026-10-01).
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Auto Pan Legacy.adv',
+    native: true,
     defaultName: 'Auto Pan Legacy',
     expectedClassName: 'AutoPan',
     color: familyScheme('modulation')
