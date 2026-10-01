@@ -619,6 +619,16 @@
      upper-cases them (§8.1). The panel frame and the AMP button are
      .glass-panel-subtle / .physical-button, which already carry their own
      flat forks in app.css — nothing to re-add here. */
+  /* One ink per device, as Auto Pan and the Drum Buss do: a lit button
+     takes its device's ink (Bass violet, Guitar orange) rather than the
+     house --phosphor, which put a third colour in the view. */
+  :global([data-grammar="flat"]) .bass-btn.active,
+  :global([data-grammar="flat"]) .tone-btn.active {
+    background: var(--btn-tint);
+    border-color: var(--btn-tint);
+    color: var(--flat-on-fg);
+  }
+
   :global([data-grammar="flat"]) .bass-title {
     text-transform: none;
     letter-spacing: normal;

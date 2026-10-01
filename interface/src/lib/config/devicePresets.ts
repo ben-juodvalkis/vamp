@@ -384,7 +384,9 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     presetPath: '{effectPresetsBase}/audio-browser/Bass.aupreset',
     defaultName: 'Helix Native',
     expectedClassName: 'AuPluginDevice',
-    color: familyScheme('distortion')
+    // Violet, not the Guitar's orange (2026-10-01): it shares the Guitar
+    // view, and its own ink is what tells its controls apart there.
+    color: familyScheme('pitchSeq')
   },
   // Virtual Smudge Device
   chorus: {
