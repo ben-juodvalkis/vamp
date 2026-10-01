@@ -580,18 +580,38 @@ import { logger } from '$lib/utils/logger';
 			 slider could reflect — transpose there shifts the notes). -->
 		<div class="col col-4 transition-opacity duration-200 {trackType === 'audio' && !hasClip ? 'opacity-30' : 'opacity-100'}">
 			{#if trackType === 'audio'}
-				<DeviceSlider
-					value={pitchCoarseDisplay}
-					title={pitchLabel}
-					orientation="vertical"
-					labelOrientation="horizontal"
-					color={trackScheme}
-					min={-AUDIO_CLIP_PITCH_RANGE}
-					max={AUDIO_CLIP_PITCH_RANGE}
-					centerOrigin={true}
-					centerValue={0}
-					onInteraction={(val) => setAudioClipPitch(val)}
-				/>
+				<!-- Thirds: +12 over the slider over −12. The buttons jump
+					 the slider an octave and stop at its ends. -->
+				<div class="stacked-btns thirds">
+					<div class="btn-cell">
+						<button
+							onclick={() => setAudioClipPitch(pitchCoarseDisplay + 12)}
+							disabled={!hasClip || pitchCoarseDisplay >= AUDIO_CLIP_PITCH_RANGE}
+							class="btn btn-well fam-quant"
+						>+12</button>
+					</div>
+					<div class="slider-cell">
+						<DeviceSlider
+							value={pitchCoarseDisplay}
+							title={pitchLabel}
+							orientation="vertical"
+							labelOrientation="horizontal"
+							color={trackScheme}
+							min={-AUDIO_CLIP_PITCH_RANGE}
+							max={AUDIO_CLIP_PITCH_RANGE}
+							centerOrigin={true}
+							centerValue={0}
+							onInteraction={(val) => setAudioClipPitch(val)}
+						/>
+					</div>
+					<div class="btn-cell">
+						<button
+							onclick={() => setAudioClipPitch(pitchCoarseDisplay - 12)}
+							disabled={!hasClip || pitchCoarseDisplay <= -AUDIO_CLIP_PITCH_RANGE}
+							class="btn btn-well fam-quant"
+						>−12</button>
+					</div>
+				</div>
 			{:else}
 				<div class="stacked-btns">
 					<div class="btn-cell">
@@ -925,6 +945,8 @@ import { logger } from '$lib/utils/logger';
 	/* One button the column's full height (Loop X2 / Reverse since it left
 	   Replace behind) — same cell machinery, one row. */
 	.stacked-btns.single { grid-template-rows: 1fr; }
+	.stacked-btns.thirds { grid-template-rows: 1fr 1fr 1fr; }
+	.slider-cell { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 
 	/* Each cell centres its button — container-type:size lets the button use cqw/cqh */
 	.btn-cell {
