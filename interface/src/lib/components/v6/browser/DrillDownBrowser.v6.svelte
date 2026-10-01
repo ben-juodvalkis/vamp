@@ -112,6 +112,9 @@
 	// same rising `.hold-fill` ClipCentralView's Delete / Replace Inst / Dup Trk
 	// holds wear — one hold idiom across the app instead of two.
 	const HOLD_TO_RANDOM_MS = 500;
+	// How long a hold runs before the speculative pick's name shows. A tap to
+	// drill in lifts well inside this, so it never flashes a preset name.
+	const PICK_SHOW_AFTER_MS = 250;
 
 	// How long the picked folder tile wears the preset's name — AND, on the
 	// random path only, how long the browser stays up before closing.
@@ -1083,6 +1086,11 @@
 	 * screen has no preset tiles).
 	 */
 	let chargingPresetPath = $state<string | null>(null);
+	/** False until the hold passes PICK_SHOW_AFTER_MS; gates both of the above. */
+	let pickShowDue = $state(false);
+	let pickShowTimer: ReturnType<typeof setTimeout> | null = null;
+	const shownChargingName = $derived(pickShowDue ? chargingName : null);
+	const shownChargingPresetPath = $derived(pickShowDue ? chargingPresetPath : null);
 	let pickedFolder = $state<string | null>(null);
 	let pickedName = $state<string | null>(null);
 	let pickRevealTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1103,6 +1111,12 @@
 		chargingFolder = null;
 		chargingName = null;
 		chargingPresetPath = null;
+		clearPickShow();
+	}
+
+	function clearPickShow() {
+		if (pickShowTimer) { clearTimeout(pickShowTimer); pickShowTimer = null; }
+		pickShowDue = false;
 	}
 
 	/** Retire the pick reveal — the tile goes back to being a folder. */
@@ -1161,6 +1175,11 @@
 
 	/** Mount the charge on `name`'s tile or header, for the press `token`. */
 	function armCharge(name: string, token: number) {
+		clearPickShow();
+		pickShowTimer = setTimeout(() => {
+			pickShowTimer = null;
+			if (token === pressToken) pickShowDue = true;
+		}, PICK_SHOW_AFTER_MS);
 		if (chargingFolder === name) {
 			// Re-pressing a tile that is STILL charging — its previous press fired
 			// and that pick is either in flight or on screen. Assigning the value
@@ -1472,6 +1491,7 @@
 		if (pickRevealTimer) { clearTimeout(pickRevealTimer); pickRevealTimer = null; }
 		clearDetectPending();
 		if (chargeRaf) cancelAnimationFrame(chargeRaf);
+		if (pickShowTimer) clearTimeout(pickShowTimer);
 		clearPostLoadClose();
 		clearTimeout(pressTimer!);
 		// Guarded: onDestroy also runs during SSR, where cAF doesn't exist (and
@@ -1575,7 +1595,7 @@
 	{@const subLabel = notInstalled ? 'Not installed' : (p.plugin ?? (effect ? 'Effect' : null))}
 	<button
 		class="card preset-tile"
-		class:loaded={(chargingPresetPath ?? browserNavigationStore.loadedPresetPath) === p.path}
+		class:loaded={(shownChargingPresetPath ?? browserNavigationStore.loadedPresetPath) === p.path}
 		class:unavailable={notInstalled || effect}
 		class:has-plugin={!!subLabel}
 		style="--k: {p.vendorColor || activeColor};"
@@ -1637,8 +1657,8 @@
 	{@const label =
 		pickedFolder === name && pickedName
 			? pickedName
-			: chargingFolder === name && chargingName
-				? chargingName
+			: chargingFolder === name && shownChargingName
+				? shownChargingName
 				: name}
 	<button
 		class="card folder-tile"
@@ -1674,8 +1694,8 @@
 	{@const pick =
 		pickedFolder === folder && pickedName
 			? pickedName
-			: chargingFolder === folder && chargingName
-				? chargingName
+			: chargingFolder === folder && shownChargingName
+				? shownChargingName
 				: null}
 	<h3
 		class="section-head"

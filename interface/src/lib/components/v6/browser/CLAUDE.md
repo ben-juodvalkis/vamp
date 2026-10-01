@@ -215,7 +215,9 @@ Touch-first (iPad Safari).
     makes the 500ms a decision rather than a wait: you read what you're about to
     get and can still back out by lifting off early. The fire **awaits that same
     promise** rather than rolling again — the name you read is always the preset
-    you get. On a cold `/api/places/<id>.json` the name may not arrive before the
+    you get. The name waits `PICK_SHOW_AFTER_MS` (250ms) into the hold before
+    showing (the section-header pick's tile lights on the same delay), so a
+    tap that drills in never flashes a preset name. On a cold `/api/places/<id>.json` the name may not arrive before the
     fire, and the tile just goes straight to `.picked`; that is the only case
     where the pick is unreadable in advance.
     Speculating on every folder press costs one catalog read that a drill-in
