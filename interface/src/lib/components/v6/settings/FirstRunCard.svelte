@@ -12,7 +12,8 @@
 	 * nothing. A tick saves too, so once one is made there is only Finish.
 	 */
 	import { settingsStore } from '$lib/stores/v6/settingsStore.svelte';
-	import { Check, ChevronRight } from 'lucide-svelte';
+	import Check from 'lucide-svelte/icons/check';
+	import ChevronRight from 'lucide-svelte/icons/chevron-right';
 	import IpadAddresses from './IpadAddresses.svelte';
 	import type { FirstRunStep } from './firstRunSteps';
 	import type { IpadAddress } from './ipadAddress';

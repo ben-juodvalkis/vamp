@@ -31,7 +31,12 @@
 	import { handshakeState } from '$lib/stores/v3/handshakeState.svelte';
 	import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
 	import { session } from '$lib/stores/session.svelte';
-	import { SlidersHorizontal, FolderOpen, AudioLines, Cable, ListChecks, X } from 'lucide-svelte';
+	import SlidersHorizontal from 'lucide-svelte/icons/sliders-horizontal';
+	import FolderOpen from 'lucide-svelte/icons/folder-open';
+	import AudioLines from 'lucide-svelte/icons/audio-lines';
+	import Cable from 'lucide-svelte/icons/cable';
+	import ListChecks from 'lucide-svelte/icons/list-checks';
+	import X from 'lucide-svelte/icons/x';
 	import GeneralSection from './GeneralSection.svelte';
 	import PlacesCard from './PlacesCard.svelte';
 	import GroovesSection from './GroovesSection.svelte';

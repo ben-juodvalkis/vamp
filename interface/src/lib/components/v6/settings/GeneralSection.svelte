@@ -21,7 +21,9 @@
 		V3_SESSION_FOOT_SWITCH_LEARN_ADDRESS
 	} from '$lib/api/handlers/v3Session';
 	import { theme, resolvedTheme, themeActions, type Theme } from '$lib/stores/theme';
-	import { Sun, Moon, Monitor } from 'lucide-svelte';
+	import Sun from 'lucide-svelte/icons/sun';
+	import Moon from 'lucide-svelte/icons/moon';
+	import Monitor from 'lucide-svelte/icons/monitor';
 
 	// --- Behavior ---------------------------------------------------------
 	const behaviorToggles: {

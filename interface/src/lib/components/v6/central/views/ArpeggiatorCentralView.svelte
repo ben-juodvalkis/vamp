@@ -12,7 +12,10 @@
   import { logger } from '$lib/utils/logger';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import VelocityRangeBrace from '../../controls/VelocityRangeBrace.svelte';
-  import { ArrowLeft, ArrowRight, Check, X } from 'lucide-svelte';
+  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+  import ArrowRight from 'lucide-svelte/icons/arrow-right';
+  import Check from 'lucide-svelte/icons/check';
+  import X from 'lucide-svelte/icons/x';
   import { selectDevice, moveDeviceToTop, moveDeviceToEnd } from '$lib/services/deviceMoveService';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';

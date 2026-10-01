@@ -13,7 +13,7 @@ import { logger } from '$lib/utils/logger';
 	import { LAUNCH_QUANTIZATIONS, getLaunchQuantizationName } from '$lib/data/launchQuantization';
 	import { uiPrefsStore } from '$lib/stores/v6/uiPrefsStore.svelte';
 	import { settingsStore } from '$lib/stores/v6/settingsStore.svelte';
-	import { Settings } from 'lucide-svelte';
+	import Settings from 'lucide-svelte/icons/settings';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 	import { drag as dragAction, type DragInfo, type DragOptions } from '$lib/actions/drag';

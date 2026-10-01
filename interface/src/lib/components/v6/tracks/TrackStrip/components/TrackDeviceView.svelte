@@ -24,19 +24,17 @@
 	 * full view, where they can be moved.
 	 */
 
-	import {
-		AudioWaveform,
-		Drum,
-		Gauge,
-		Guitar,
-		Icon,
-		Mic,
-		Music,
-		Piano,
-		SlidersHorizontal,
-		Waves,
-		Zap
-	} from '@lucide/svelte';
+	import AudioWaveform from '@lucide/svelte/icons/audio-waveform';
+	import Drum from '@lucide/svelte/icons/drum';
+	import Gauge from '@lucide/svelte/icons/gauge';
+	import Guitar from '@lucide/svelte/icons/guitar';
+	import IconNodeGlyph from './IconNodeGlyph.svelte';
+	import Mic from '@lucide/svelte/icons/mic';
+	import Music from '@lucide/svelte/icons/music';
+	import Piano from '@lucide/svelte/icons/piano';
+	import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
+	import Waves from '@lucide/svelte/icons/waves';
+	import Zap from '@lucide/svelte/icons/zap';
 	import type { TrackDeviceGlance } from '../../composables/useTrackDevice.svelte';
 	import type { DeviceGlyph } from '$lib/config/deviceGlyphMap';
 	import {
@@ -83,7 +81,7 @@
 				: (glance.name ?? '')
 	);
 
-	// Lucide components, or icon nodes drawn through lucide's `Icon` — the
+	// Lucide components, or icon nodes drawn through `IconNodeGlyph` — the
 	// marks lucide has no icon for, drawn in `instrumentGlyphNodes`.
 	const GLYPHS = {
 		guitar: Guitar,
@@ -156,7 +154,7 @@
 	{:else if glance.mode === 'glyph'}
 		<div class="glyph" aria-hidden="true">
 			{#if Array.isArray(mark)}
-				<Icon iconNode={mark} />
+				<IconNodeGlyph iconNode={mark} />
 			{:else}
 				{@const Glyph = mark}
 				<Glyph />

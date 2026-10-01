@@ -23,7 +23,9 @@
 -->
 <script lang="ts">
 	import { onMount, onDestroy, untrack } from 'svelte';
-	import { Lock, LockOpen, X } from 'lucide-svelte';
+	import Lock from 'lucide-svelte/icons/lock';
+	import LockOpen from 'lucide-svelte/icons/lock-open';
+	import X from 'lucide-svelte/icons/x';
 
 	import { send } from '$lib/api/simpleClient';
 	import {

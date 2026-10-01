@@ -38,7 +38,7 @@
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import EnvelopeGroup from './EnvelopeGroup.svelte';
-  import { Lock } from '@lucide/svelte';
+  import Lock from '@lucide/svelte/icons/lock';
   import {
     VM_PITCH_MIN,
     VM_PITCH_MAX,

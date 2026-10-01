@@ -18,7 +18,10 @@
 	 * unmounted drive) is listed greyed and cannot be ticked.
 	 */
 	import { untrack } from 'svelte';
-	import { Check, ChevronRight, Search, X } from 'lucide-svelte';
+	import Check from 'lucide-svelte/icons/check';
+	import ChevronRight from 'lucide-svelte/icons/chevron-right';
+	import Search from 'lucide-svelte/icons/search';
+	import X from 'lucide-svelte/icons/x';
 	import type { PlacesSource } from '$lib/services/placesLive';
 	import type { PlacesListingState } from './placesListing.svelte';
 	import { groupPlaces, parentPath, settleTicks, type PlacesGroupId } from './placesGroups';

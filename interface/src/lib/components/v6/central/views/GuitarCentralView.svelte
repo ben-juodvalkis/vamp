@@ -32,7 +32,10 @@
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import { selectDevice, moveDeviceToTop, moveDeviceToEnd } from '$lib/services/deviceMoveService';
-  import { ArrowLeft, ArrowRight, Check, X } from 'lucide-svelte';
+  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+  import ArrowRight from 'lucide-svelte/icons/arrow-right';
+  import Check from 'lucide-svelte/icons/check';
+  import X from 'lucide-svelte/icons/x';
   import { logger } from '$lib/utils/logger';
   import SectionDivider from '../SectionDivider.svelte';
 

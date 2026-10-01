@@ -18,7 +18,7 @@
    * tests and the shot recipes read.
    */
   import type { Snippet } from 'svelte';
-  import { Lock } from '@lucide/svelte';
+  import Lock from '@lucide/svelte/icons/lock';
   import type { VmState } from '$lib/services/drumVirtualMacros';
 
   interface Props {
