@@ -129,6 +129,10 @@ Ableton Project Info/
 .claude/*
 !.claude/settings.json
 !.claude/hooks/
+# The one shared skill: device-dump (reads a device off the running Live).
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/device-dump/
 
 # IDE
 .vscode/
