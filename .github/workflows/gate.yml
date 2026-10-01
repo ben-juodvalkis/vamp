@@ -1,0 +1,57 @@
+# CI: the pre-push gate, whole, on GitHub's machines, after every push.
+#
+# The local gate (scripts/gate.sh, run by .githooks/pre-push) narrows itself:
+# it skips steps a push's files cannot reach, steps that already passed on the
+# same files, and vitest files unrelated to the change. This runs the same
+# script with GATE_ALL=1 on a clean checkout, so it catches what that
+# narrowing, a stale cache, or one Mac's local setup would hide. It reports
+# after the push; it does not block one.
+#
+# The setup mirrors .claude/hooks/session-start.sh (a Linux container that
+# runs the same gate).
+
+name: gate
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: gate-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # uv drives the surface venv and the AX helper's tests (which fetch
+      # their own Python 3.12 from its pyproject).
+      - uses: astral-sh/setup-uv@v6
+
+      # The root install covers both workspaces. Not `npm run setup`: it
+      # links the surface into Live, which only a Mac has.
+      - run: npm ci --no-audit --no-fund
+
+      # Live's embedded Python is 3.11; the surface's tests run on the same.
+      - name: surface venv
+        working-directory: surface
+        run: |
+          uv venv --quiet --python 3.11 .venv
+          uv pip install --quiet --python .venv/bin/python3 -r requirements-dev.txt
+
+      # lsof: vitest's cleanupScoping.test.ts lists processes through it.
+      - run: command -v lsof || sudo apt-get install -y -qq lsof
+
+      - name: gate (everything)
+        run: GATE_ALL=1 sh scripts/gate.sh

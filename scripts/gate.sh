@@ -20,8 +20,10 @@
 # when they start, so after one shared sync each gets its own outDir
 # (LOOPING_KIT_OUT_DIR, read by interface/svelte.config.js).
 #
-# What runs. There is no CI behind this gate, so every narrowing below errs
-# toward running.
+# What runs. Every narrowing below errs toward running: this hook is what
+# stops a broken push. CI (.github/workflows/gate.yml) runs this script with
+# GATE_ALL=1 after each push, which catches a narrowing that was wrong only
+# afterwards.
 #   - A push runs the steps its changed files reach (classify, below). The
 #     hook hands git's pre-push lines (`<local ref> <local sha> <remote ref>
 #     <remote sha>`) on stdin; the changed files are each pushed range plus

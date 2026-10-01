@@ -30,11 +30,12 @@ menubar app, Max patch, Skaka picker and rack, rig probes), `config/`,
 3. Commit your own files by path (`git add <paths>`, never `-A`): another
    session may be editing this checkout. The commit message is the record of
    what changed and why.
-4. `git push origin main`, without asking. The pre-push hook is the whole
-   gate (`scripts/gate.sh`, up to ~40 s): svelte-check, vitest, both pytest
+4. `git push origin main`, without asking. The pre-push hook is the gate
+   (`scripts/gate.sh`, up to ~40 s): svelte-check, vitest, both pytest
    suites, the production build and a page load from it, at once, limited to
    the steps the pushed files reach (a docs-only push runs none; a full run
-   at least daily). Never `--no-verify`.
+   at least daily). Never `--no-verify`. GitHub Actions then runs it whole
+   (`.github/workflows/gate.yml`); a red run there is a broken `main` to fix.
    - Rejected because origin moved: `git pull --no-rebase origin main`, push again.
    - A test you didn't touch fails: run that file alone. If it passes, push
      again and name the test in your summary. If it's another session's work

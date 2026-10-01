@@ -63,8 +63,9 @@ Before contributing, ensure you have:
    ```
    `npm run setup` sets this automatically via the root `prepare`
    script. If it prints nothing, run `git config core.hooksPath .githooks`.
-   This hook is the project's only gate — there is no CI that runs tests or
-   builds — so a clone without it pushes unverified.
+   This hook is what stops a broken push. GitHub Actions runs the same gate
+   in full after every push (`.github/workflows/gate.yml`), but only reports:
+   a clone without the hook pushes unverified and finds out afterwards.
 
 7. **Optional: make `.amxd` devices diffable:**
    ```bash
