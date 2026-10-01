@@ -136,6 +136,13 @@ const SLOT = { empty: 0, hasClip: 1, playing: 2, recording: 3 };
  * 2026-09-14: all 0..1 but L 16th, 1..16); the rest are fillers that keep
  * those indices where the real device has them.
  */
+/** Guitar.adg's eight macros as the rack names them (read from the preset 2026-09-30), 0..127. */
+function guitarRackParams() {
+	const names = ['Gain', 'Drive', 'Fuzz', 'Spring', 'Tremolo Rate', 'Tremolo Amount', 'Room', 'Macro 8'];
+	const values = [70, 40, 20, 30, 64, 50, 25, 0];
+	return [['Device On', 'On', 0, 1, 1, ''], ...names.map((n, i) => [n, n, 0, 127, values[i], ''])];
+}
+
 function echoParams() {
 	const p = Array.from({ length: 53 }, (_, i) => [`Param ${i}`, `P${i}`, 0, 1, 0, '']);
 	p[0] = ['Device On', 'On', 0, 1, 1, ''];
@@ -387,6 +394,9 @@ const DEVICE_CLASS_NAMES = {
 	// Bass panel reads ghost on every shot and its reorder arrows (which
 	// need a resolved device) can never be photographed.
 	'Helix Native': 'AuPluginDevice',
+	// The Guitar rack is an Audio Effect Rack; without the entry its slot
+	// reads ghost and GuitarCentralView never draws the named macros.
+	Guitar: 'AudioEffectGroupDevice',
 	Utility: 'StereoGain',
 	Variation: 'BeatRepeat',
 	// The MIDI effects, so a pad load of one is typed 4 and placed before
@@ -868,7 +878,9 @@ const DEFAULT_TRACKS = [
 		kind: 'audio',
 		arm: 1,
 		volume: 0.7,
-		devices: ['Auto Filter', 'Echo', 'Helix Native'],
+		// The Guitar rack carries Guitar.adg's own macro names, so
+		// GuitarCentralView's Drive/Fuzz and Tremolo pads can be shot.
+		devices: ['Auto Filter', 'Echo', 'Helix Native', { name: 'Guitar', params: guitarRackParams() }],
 		clips: {
 			0: { name: 'Loop 1', length: 8, state: SLOT.recording }
 		}

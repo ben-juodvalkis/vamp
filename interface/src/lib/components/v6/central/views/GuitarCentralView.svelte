@@ -17,6 +17,7 @@
 
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
+  import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
   import type { DeviceColorScheme } from '$lib/config/devicePresets';
   import {
     buildMacroLayout,
@@ -180,6 +181,41 @@
     }
   });
 
+  // XY PAIRS — two macros that play as one gesture share a pad, found by
+  // the rack's own macro names (Guitar.adg: 2 Drive, 3 Fuzz, 5 Tremolo
+  // Rate, 6 Tremolo Amount) so a rack that renames or drops one falls back
+  // to plain sliders instead of driving the wrong knob. The pad sits where
+  // its first macro's slider was.
+  const XY_PAIRS = [
+    { title: 'Drive/Fuzz', x: /^drive$/i, y: /^fuzz$/i },
+    { title: 'Tremolo', x: /^trem\w*\s+rate$/i, y: /^trem\w*\s+(amount|depth)$/i }
+  ];
+
+  type SliderItem = ControlLayout[number];
+  type LayoutItem =
+    | { kind: 'slider'; control: SliderItem }
+    | { kind: 'xy'; title: string; x: SliderItem; y: SliderItem };
+
+  const layoutItems = $derived.by<LayoutItem[]>(() => {
+    const paired = new Map<number, LayoutItem>();
+    const consumed = new Set<number>();
+    for (const pair of XY_PAIRS) {
+      const x = controlLayout.find((c) => pair.x.test(c.name));
+      const y = controlLayout.find((c) => pair.y.test(c.name));
+      if (!x || !y) continue;
+      paired.set(Math.min(x.macroIndex, y.macroIndex), { kind: 'xy', title: pair.title, x, y });
+      consumed.add(x.macroIndex);
+      consumed.add(y.macroIndex);
+    }
+    const items: LayoutItem[] = [];
+    for (const control of controlLayout) {
+      const pad = paired.get(control.macroIndex);
+      if (pad) items.push(pad);
+      else if (!consumed.has(control.macroIndex)) items.push({ kind: 'slider', control });
+    }
+    return items;
+  });
+
   function getNormalizedValue(macroIndex: number): number {
     const value = macroValues[macroIndex - 1] ?? MACRO_MIN;
     return value / MACRO_MAX;
@@ -313,18 +349,36 @@
       {@render bassPanel()}
       <SectionDivider orientation="vertical" ink={effectiveColor.primary} />
       {@render drivePanel()}
-      {#each controlLayout as control}
-        <div class="control-slot slider-slot">
-          <DeviceSlider
-            value={getNormalizedValue(control.macroIndex)}
-            title={control.name}
-            orientation="vertical"
-            isGhost={fx.isGhost}
-            color={effectiveColor}
-            onTap={() => fx.loadIfGhost()}
-            onInteraction={(val) => handleSliderChange(control.macroIndex, val)}
-          />
-        </div>
+      {#each layoutItems as item}
+        {#if item.kind === 'xy'}
+          <div class="control-slot xy-slot">
+            <DeviceXY
+              xValue={getNormalizedValue(item.x.macroIndex)}
+              yValue={getNormalizedValue(item.y.macroIndex)}
+              title={item.title}
+              isGhost={fx.isGhost}
+              color={effectiveColor}
+              onTap={() => fx.loadIfGhost()}
+              onInteraction={(x, y) => {
+                handleSliderChange(item.x.macroIndex, x);
+                handleSliderChange(item.y.macroIndex, y);
+              }}
+            />
+          </div>
+        {:else}
+          {@const control = item.control}
+          <div class="control-slot slider-slot">
+            <DeviceSlider
+              value={getNormalizedValue(control.macroIndex)}
+              title={control.name}
+              orientation="vertical"
+              isGhost={fx.isGhost}
+              color={effectiveColor}
+              onTap={() => fx.loadIfGhost()}
+              onInteraction={(val) => handleSliderChange(control.macroIndex, val)}
+            />
+          </div>
+        {/if}
       {/each}
     </div>
   {:else}
@@ -379,6 +433,12 @@
   .slider-slot {
     flex: 1 1 0;
     min-width: 40px;
+  }
+
+  /* An XY pad stands in for two sliders, so it takes their two columns. */
+  .xy-slot {
+    flex: 2 1 0;
+    min-width: 80px;
   }
 
   /* Bass is a PANEL, not a bare fader: its two controls belong to a device

@@ -198,6 +198,11 @@ export const TOURS = {
 				description: 'Guitar (via the Pedal view, which carries its tile)',
 				steps: [openTile('Pedal'), { click: '.guitar-column .device-control' }]
 			},
+			{
+				name: 'fx-guitar-loaded',
+				description: 'Guitar on the Guitar track, where the rack is loaded: the Drive/Fuzz and Tremolo XY pads',
+				steps: [selectTrack(3), openTile('Pedal'), { click: '.guitar-column .device-control' }]
+			},
 			...FX_TILES.map(([label, name, description]) => ({
 				name: `fx-${name}`,
 				description,
