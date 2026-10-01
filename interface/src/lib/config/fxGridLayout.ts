@@ -17,7 +17,7 @@ import { DEVICE_PRESETS, type DevicePresetConfig } from './devicePresets';
 // Import all device control components
 import AutoFilterControl from '$lib/components/v6/device-panel/AutoFilterControl.svelte';
 import EQControl from '$lib/components/v6/device-panel/EQControl.svelte';
-import MovementTremoloControl from '$lib/components/v6/device-panel/MovementTremoloControl.svelte';
+import AutoPanControl from '$lib/components/v6/device-panel/AutoPanControl.svelte';
 import EchoControl from '$lib/components/v6/device-panel/EchoControl.svelte';
 import VariationControl from '$lib/components/v6/device-panel/VariationControl.svelte';
 import DrumBussControl from '$lib/components/v6/device-panel/DrumBussControl.svelte';
@@ -191,7 +191,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
     position: 'fx10',
     col: 5,
     deviceType: 'tremolo',
-    component: MovementTremoloControl,
+    component: AutoPanControl,
     span: 2,
     row: 2,
     config: DEVICE_PRESETS.tremolo

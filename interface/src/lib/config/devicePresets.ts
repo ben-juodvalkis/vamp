@@ -259,10 +259,13 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     color: familyScheme('distortion')
   },
   tremolo: {
+    // Auto Pan Legacy. Live refuses it by name ("Device Auto Pan not
+    // found", 2026-10-01), so it is a file; the loaded device takes the
+    // file's name, which is what the tile matches.
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Tremolo.aupreset',
-    defaultName: 'Tremolo',
-    expectedClassName: 'AuPluginDevice',
+    presetPath: '{effectPresetsBase}/Auto Pan Legacy.adv',
+    defaultName: 'Auto Pan Legacy',
+    expectedClassName: 'AutoPan',
     color: familyScheme('modulation')
   },
   arpeggiator: {

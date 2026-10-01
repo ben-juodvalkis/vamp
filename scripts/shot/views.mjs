@@ -130,7 +130,7 @@ const FX_TILES = [
 	['Gain', 'utility', 'Utility / Gate (the Gain tile)'],
 	['Var', 'variation', 'Variation'],
 	['Chorus', 'chorus', 'Chorus: Smudge, Comb, Phaser'],
-	['Tremolo', 'tremolo', 'Movement Tremolo'],
+	['Auto Pan', 'tremolo', 'Auto Pan Legacy (the Tremolo slot)'],
 	['Echo', 'echo', 'Echo'],
 	['Reverb', 'reverb', 'Reverb']
 ];

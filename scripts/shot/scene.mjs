@@ -388,7 +388,7 @@ const DEVICE_CLASS_NAMES = {
 	Phaser: 'PhaserNew',
 	Redux: 'Redux2',
 	Reverb: 'Hybrid',
-	Tremolo: 'AuPluginDevice',
+	'Auto Pan Legacy': 'AutoPan',
 	// The Bass preset is a Helix Native plug-in, and GuitarCentralView's
 	// `bass` slot matches it on name AND class — without the entry the
 	// Bass panel reads ghost on every shot and its reorder arrows (which
@@ -729,6 +729,23 @@ const DEVICE_PARAMS = {
 	// Input/Output, 29-32 the HP/LP filter, 33-36 + 39/40 the LFO, 52 Dry Wet), so
 	// the vector runs out to 52 with plausible fillers between.
 	Echo: echoParams(),
+	// The Tremolo slot's Auto Pan Legacy, read by INDEX (autoPanParams.ts):
+	// the full vector as the rig reported it 2026-10-01.
+	'Auto Pan Legacy': [
+		['Device On', 'On', 0, 1, 1, ''],
+		['LFO Type', 'LFO Type', 0, 1, 1, ''],
+		['Amount', 'Amount', 0, 1, 0.6, ''],
+		['Frequency', 'Freq', 0, 1, 0.5, ''],
+		['Sync Rate', 'Rate', 0, 21, 6, ''],
+		['Phase', 'Phase', 0, 360, 0, ''],
+		['Spin', 'Spin', 0, 0.5, 0, ''],
+		['Stereo Mode', 'Stereo', 0, 1, 0, ''],
+		['Offset', 'Offset', 0, 360, 0, ''],
+		['Waveform', 'Wave', 0, 3, 0, ''],
+		['Shape', 'Shape', 0, 1, 0, ''],
+		['Width (Random)', 'Width', 0, 1, 0, ''],
+		['Invert', 'Invert', 0, 1, 0, '']
+	],
 	Saturator: [
 		['Drive', 'Drive', 0, 36, 8.5, 'dB'],
 		['Output', 'Out', -36, 36, -1.5, 'dB']
@@ -817,7 +834,7 @@ const DEFAULT_TRACKS = [
 		// Pad 50 — one of the pads the playing clip draws — carries an Echo
 		// on its own chain (issue #491): hold it and the grid's Echo tile
 		// reads active while every other tile reads ghost.
-		devices: [{ name: 'Drum-Rack', padChains: { 50: ['Echo'] } }, 'Compressor'],
+		devices: [{ name: 'Drum-Rack', padChains: { 50: ['Echo'] } }, 'Compressor', 'Auto Pan Legacy'],
 		clips: {
 			0: { name: 'Kick 4/4', length: 4, state: SLOT.playing },
 			1: { name: 'Break A', length: 8 },

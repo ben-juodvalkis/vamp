@@ -533,7 +533,7 @@ export async function startMockSurface({
 						log(`unhandled ${address}${typeof devicePath === 'string' && devicePath ? ` into ${devicePath}` : ''}`);
 						return;
 					}
-					// A plug-in preset (Tremolo — `AuPluginDevice`) goes through
+					// A plug-in preset (`AuPluginDevice`) goes through
 					// Live's browser on the surface, and the mock has none: it
 					// answers the scoped `load-failed` the surface sends for a
 					// preset the browser cannot find, so a recipe can photograph

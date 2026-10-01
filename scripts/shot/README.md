@@ -587,12 +587,13 @@ flag on both sides of any comparison you intend to cite.
   #491): the mock grows that pad's chain and re-emits presence and the
   pad's bundle, because the tile's loading → active flip is the state
   the pad-scope recipes exist to photograph. The one simulated *failure*
-  is the same load of a plug-in preset (Tremolo, `AuPluginDevice` in the
+  is the same load of a plug-in preset (a device `AuPluginDevice` in the
   class table): the surface would go through Live's browser for it and
   the mock has none, so it answers the scoped `load-failed`
   (`not-in-browser;scope=<padPath>`) and the tile falls back from loading
-  to ghost for that pad alone — `--drag '.device-control:has-text("Tremolo")'`
-  under a latch photographs it.
+  to ghost for that pad alone. Since the Tremolo slot became Auto Pan
+  Legacy (2026-10-01) no grid tile loads a plug-in, so no recipe reaches
+  it from the grid.
 
 ## Playing it with several fingers — `npm run multitouch`
 
