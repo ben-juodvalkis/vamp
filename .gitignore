@@ -123,16 +123,13 @@ dist/
 Ableton Project Info/
 
 # Claude Code — local state stays out (settings.local.json, worktrees/,
-# skills/, launch.json); the shared project settings and the hooks they run
-# are tracked. `.claude/*` rather than `.claude/`, because git cannot re-include
-# a file under an ignored directory.
+# launch.json); the shared project settings, the hooks they run and the
+# project's skills are tracked. `.claude/*` rather than `.claude/`, because
+# git cannot re-include a file under an ignored directory.
 .claude/*
 !.claude/settings.json
 !.claude/hooks/
-# The one shared skill: device-dump (reads a device off the running Live).
 !.claude/skills/
-.claude/skills/*
-!.claude/skills/device-dump/
 
 # IDE
 .vscode/
