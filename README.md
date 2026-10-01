@@ -5,6 +5,7 @@ Live looping for Ableton Live, played from an iPad.
 Vamp turns an iPad into a touch surface for performing with Live: record and launch loops, browse
 and load instruments, shape sounds and effects, and sequence variations, without looking at the
 laptop. It was built by a dance accompanist for playing ballet class and is shared as is.
+More about it at [benjuodvalkis.com/other/vamp](https://benjuodvalkis.com/other/vamp).
 
 There's no app to install and nothing from the App Store. Vamp is a web page served from the Mac
 running Live: open it in Safari on the iPad over USB-C or Wi-Fi, or in a browser on the Mac itself.
