@@ -3,9 +3,13 @@
 # hand. It tests the working tree, so commit what you mean to push.
 #
 # Six steps, at once (~40 s on the Mac when all run, the length of vitest):
-#   types    svelte-check (`npm run check`). The only step that type-checks:
-#            vite build and vitest strip types, which is how 6c9db850 shipped
-#            a crash svelte-check was reporting.
+#   types    svelte-check. The only step that type-checks: vite build and
+#            vitest strip types, which is how 6c9db850 shipped a crash
+#            svelte-check was reporting. A push runs `npm run check`
+#            (--incremental --tsgo: a disk cache and the native TypeScript
+#            preview, ~4 s where tsc takes ~20); a full run, CI's included,
+#            runs `npm run check:full`, plain tsc, so the preview is never
+#            the only judge for long.
 #   vitest   the interface suite; it also runs ESLint's no-undef over the
 #            bridge (bridgeLintGate.test.ts).
 #   surface  the Python control surface's pytest.
@@ -297,7 +301,8 @@ if [ -n "$VITEST_RELATED" ]; then
 else
     step vitest sh -c 'cd interface && LOOPING_KIT_OUT_DIR=.svelte-kit/gate-vitest npm run test:run --silent'
 fi
-step types   sh -c 'cd interface && LOOPING_KIT_OUT_DIR=.svelte-kit/gate-check npm run check --silent -- --threshold error'
+if [ -n "$FULL" ]; then TYPES_SCRIPT=check:full; else TYPES_SCRIPT=check; fi
+step types   sh -c 'cd interface && LOOPING_KIT_OUT_DIR=.svelte-kit/gate-check npm run '"$TYPES_SCRIPT"' --silent -- --threshold error'
 step surface sh -c 'cd surface && { [ -x .venv/bin/python3 ] && PY=.venv/bin/python3 || PY=python3; } && "$PY" -m pytest -q'
 step ax      npm run test:ax-helper --silent
 step build   sh -c 'LOOPING_KIT_OUT_DIR=.svelte-kit/gate-build npm run build --silent'

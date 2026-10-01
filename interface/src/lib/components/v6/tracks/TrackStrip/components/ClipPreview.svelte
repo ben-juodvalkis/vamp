@@ -249,7 +249,7 @@
 	     This boundary keeps such a failure to the one strip that caused
 	     it. A dead preview is a cosmetic loss; a dead scheduler ends the
 	     performance. -->
-	<svelte:boundary onerror={(error) => reportBoundaryError('ClipPreview', error)}>
+	<svelte:boundary onerror={(error: unknown) => reportBoundaryError('ClipPreview', error)}>
 		{#if isAudio}
 			{#if wavLooping && showLoopBand}
 				<!-- Loop band (§4.5) — static ink-wash behind the waveform,

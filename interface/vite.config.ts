@@ -1,7 +1,7 @@
 import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { fileURLToPath } from 'node:url';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 import constants from '../config/constants.json';
 import type { Plugin } from 'vite';
@@ -38,6 +38,13 @@ function revalidateOptimizedDeps(): Plugin {
 		}
 	};
 }
+
+/** Tests that load the repo's CommonJS scripts or run ESLint: plain threads (see `projects`). */
+const NODE_TOOL_TESTS = [
+	'src/__tests__/unit/scripts/openLive.test.ts',
+	'src/__tests__/unit/scripts/openMaxPatch.test.ts',
+	'src/__tests__/unit/bridge/bridgeLintGate.test.ts'
+];
 
 export default defineConfig({
 	test: {
@@ -77,12 +84,31 @@ export default defineConfig({
 				)
 			}
 		],
-		include: ['src/**/*.{test,spec}.{js,ts}'],
-		// Worker threads, not the default child processes (2026-09-25):
-		// 40.7 s -> 32.7 s for the same 2822 tests, all passing, most of it
-		// in module import and transform. Per-file isolation is unchanged.
+		// Two pools (2026-10-01). Worker threads replaced child processes on
+		// 2026-09-25 (40.7 s -> 32.7 s); `vmThreads` goes further, 147 s ->
+		// 87 s for the same 2862 tests on a 4-core cloud container, all
+		// passing, three runs, two in shuffled file order. It keeps each
+		// file in a fresh VM context (isolation as before) but reuses the
+		// worker, so the import and environment setup that dominate this
+		// suite are paid less often. A few tests load CommonJS scripts with
+		// a shebang or run ESLint, which a VM context rejects ("Invalid or
+		// unexpected token", "Invalid URL"): those stay on plain threads.
 		// A test cannot call process.chdir() in a worker thread.
-		pool: 'threads',
+		projects: [
+			{
+				extends: true,
+				test: { name: 'node-tools', include: NODE_TOOL_TESTS, pool: 'threads' }
+			},
+			{
+				extends: true,
+				test: {
+					name: 'app',
+					include: ['src/**/*.{test,spec}.{js,ts}'],
+					exclude: [...configDefaults.exclude, ...NODE_TOOL_TESTS],
+					pool: 'vmThreads'
+				}
+			}
+		],
 		environment: 'jsdom',
 		globals: true,
 		setupFiles: ['src/__tests__/setup.ts'],
