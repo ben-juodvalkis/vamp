@@ -4,7 +4,6 @@
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import OrbControl from '../../device-panel/OrbControl.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
-  import EnvelopeEditor, { type EnvelopeStage } from '../../device-panel/EnvelopeEditor.svelte';
   import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import SectionDivider from '../SectionDivider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
@@ -57,30 +56,27 @@
   let orbAngleValue = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 25)) ?? 0.5 : 0.5);
   let orbRadiusValue = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 26)) ?? 0.5 : 0.5);
 
-  // The two envelopes, each an ADSR drawn as Live draws one (user's layout,
-  // 2026-09-29: sliders first, then the curve). They replaced the Time pad,
-  // which drove amp attack and release as one XY. Parameter slots: amp
-  // A-D-S-R are 8-11, filter A-D-S-R 13-16, the filter envelope's amount 5.
-  const AMP_ENV: Record<EnvelopeStage, number> = { attack: 8, decay: 9, sustain: 10, release: 11 };
-  const FILTER_ENV: Record<EnvelopeStage, number> = { attack: 13, decay: 14, sustain: 15, release: 16 };
+  // The two envelopes, each four plain sliders, A-D-S-R (user's call,
+  // 2026-10-01: the drawn curve's handles were too fiddly for a finger).
+  // Parameter slots: amp A-D-S-R are 8-11, filter A-D-S-R 13-16, the filter
+  // envelope's amount 5.
+  const AMP_ENV = [['A', 8], ['D', 9], ['S', 10], ['R', 11]] as const;
+  const FILTER_ENV = [['A', 13], ['D', 14], ['S', 15], ['R', 16]] as const;
   const FILTER_ENV_AMOUNT = 5;
 
-  // Which envelope the curve shows. The view's own, so it starts on Amp.
+  // Which envelope the sliders drive. The view's own, so it starts on Amp.
   let envMode = $state<'amp' | 'filter'>('amp');
   let env = $derived(envMode === 'amp' ? AMP_ENV : FILTER_ENV);
 
-  function paramDisplay(index: number): string | undefined {
-    return device ? selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(device, index)) : undefined;
-  }
-
-  function envDisplays(env: Record<EnvelopeStage, number>) {
-    return {
-      attack: paramDisplay(env.attack),
-      decay: paramDisplay(env.decay),
-      sustain: paramDisplay(env.sustain),
-      release: paramDisplay(env.release)
-    };
-  }
+  // Color says which envelope is up (user's call, 2026-10-01): Amp wears the
+  // theme's ON orange on the switch and its sliders; Filter wears the track's
+  // ink on both, as the rest of the view does.
+  const AMP_INK = {
+    primary: 'var(--phosphor)',
+    secondary: 'color-mix(in oklab, var(--phosphor) 10%, transparent)',
+    accent: 'var(--phosphor)'
+  };
+  let envInk = $derived(envMode === 'amp' ? AMP_INK : omniInk);
 
   function paramValue(index: number): number {
     return device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, index)) ?? 0.5 : 0.5;
@@ -175,13 +171,13 @@
       <!-- Cols 2-3: one envelope at a time, full height, the Amp | Filter
            switch over it in the header (user's layout, 2026-09-29). Under
            Filter the envelope's Amount stands full height in the fifth
-           column; under Amp the curve takes that column too. It shares the
+           column; under Amp the four sliders take that column too. It shares the
            view's rows (subgrid), so the switch sits level with the swap pill
-           and the curve starts level with the pads. -->
+           and the sliders start level with the pads. -->
       <div class="omni-envelopes min-w-0 min-h-0" style="grid-column: 2 / 4; grid-row: 1 / 4;">
         <div
           class="device-segmented omni-env-switch grid grid-cols-2 min-w-0"
-          style="--btn-tint: {omniInk.primary}; grid-column: 1 / 6; grid-row: 1;"
+          style="--btn-tint: {envInk.primary}; grid-column: 1 / 6; grid-row: 1;"
           role="radiogroup"
           aria-label="Envelope"
         >
@@ -197,20 +193,23 @@
             </button>
           {/each}
         </div>
-        <div class="min-w-0 min-h-0" style="grid-column: {envMode === 'filter' ? '1 / 5' : '1 / 6'}; grid-row: 2 / 4;">
-          <!-- Keyed, so a switch mid-drag drops the held handle rather than
+        <div
+          class="omni-env-sliders min-w-0 min-h-0"
+          style="grid-column: {envMode === 'filter' ? '1 / 5' : '1 / 6'}; grid-row: 2 / 4;"
+        >
+          <!-- Keyed, so a switch mid-drag drops the held slider rather than
                carrying it onto the other envelope's parameters. -->
           {#key envMode}
-            <EnvelopeEditor
-              title={envMode === 'amp' ? 'Amp Envelope' : 'Filter Envelope'}
-              attack={paramValue(env.attack)}
-              decay={paramValue(env.decay)}
-              sustain={paramValue(env.sustain)}
-              release={paramValue(env.release)}
-              displays={envDisplays(env)}
-              color={omniInk}
-              onChange={(stage, value) => writeParam(env[stage], value)}
-            />
+            {#each env as [label, index] (index)}
+              <DeviceSlider
+                value={paramValue(index)}
+                title={label}
+                orientation="vertical"
+                labelOrientation="horizontal"
+                color={envInk}
+                onInteraction={(value) => writeParam(index, value)}
+              />
+            {/each}
           {/key}
         </div>
         {#if envMode === 'filter'}
@@ -367,6 +366,12 @@
     column-gap: var(--central-gap);
   }
 
+  .omni-env-sliders {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    column-gap: var(--central-gap);
+  }
+
   /* The shared segmented chrome divides its options top to bottom; these two
      sit side by side, so the hairline goes between them instead. */
   .omni-env-switch {
@@ -379,6 +384,12 @@
   :global([data-grammar="flat"]) .omni-env-switch :global(.device-segment + .device-segment) {
     border-top: 0;
     border-left: 1px solid var(--line-strong);
+  }
+
+  /* The flat grammar fills every ON segment with its orange; here the fill
+     follows the envelope's ink instead. */
+  :global([data-grammar="flat"]) .omni-env-switch :global(.device-segment.active) {
+    background: var(--btn-tint);
   }
 
   :global([data-grammar="flat"]) .omni-fx {

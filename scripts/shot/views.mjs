@@ -356,6 +356,9 @@ function instrumentSwapStates() {
 		['electric', 'Electric', 'LoungeLizard'],
 		['meld', 'Meld', 'InstrumentMeld'],
 		['omnisphere', 'Omnisphere', 'AuPluginDevice'],
+		// Filter up: the switch and sliders take the track's ink, not Amp's orange.
+		['omnisphere-filter', 'Omnisphere', 'AuPluginDevice', undefined,
+			[{ click: '.omni-env-switch .device-segment:last-child' }]],
 		// The Sampler as the rig lists it (read off a running Sampler,
 		// 2026-09-27): what the view binds by name, at the ranges and values
 		// Live reported — Osc and the pitch envelope off, so only their
