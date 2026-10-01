@@ -167,8 +167,11 @@ function adjustClipPitch(semitones: number): void {
 	send(V3_CLIP_SET_PITCH_COARSE_ADDRESS, [clipPath, next]);
 }
 
+/** The audio-clip PITCH slider's reach either side of 0, in semitones. */
+export const AUDIO_CLIP_PITCH_RANGE = 24;
+
 /**
- * Set an audio clip's pitch_coarse to an ABSOLUTE value in [-12, +12],
+ * Set an audio clip's pitch_coarse to an ABSOLUTE value in [-24, +24],
  * snapped to whole semitones. Backs the audio-clip PITCH slider in
  * ClipCentralView (which replaced the old ±12 octave buttons for audio).
  *
@@ -177,7 +180,7 @@ function adjustClipPitch(semitones: number): void {
  * `/looping/v3/clip/property pitch_coarse` echo (the echo later confirms
  * the same value — a no-op). No-ops when the rounded target already
  * matches the current value, which also pulls an out-of-range value
- * (pitch_coarse spans ±48 on the wire) back into the slider's ±12 range.
+ * (pitch_coarse spans ±48 on the wire) back into the slider's ±24 range.
  *
  * Audio only — MIDI clips have no absolute clip-transpose state a slider
  * could reflect (transpose there physically shifts notes), so they keep
@@ -186,7 +189,7 @@ function adjustClipPitch(semitones: number): void {
 export function setAudioClipPitch(semitones: number): void {
 	const clipPath = requireFocusedClip({ component: 'clipTranspose', op: 'setAudioClipPitch' });
 	if (!clipPath) return;
-	const clamped = Math.max(-12, Math.min(12, Math.round(semitones)));
+	const clamped = Math.max(-AUDIO_CLIP_PITCH_RANGE, Math.min(AUDIO_CLIP_PITCH_RANGE, Math.round(semitones)));
 	if (clamped === clipPropertiesStore.pitchCoarse) return;
 	clipPropertiesStore.handlePitchCoarse(clamped);
 	send(V3_CLIP_SET_PITCH_COARSE_ADDRESS, [clipPath, clamped]);

@@ -4,18 +4,18 @@
  * Backs the audio-clip PITCH slider in ClipCentralView (PR #451). The
  * contract this locks down:
  *
- *  1. CLAMP+ROUND — the wire value must be a whole int in [-12, +12].
+ *  1. CLAMP+ROUND — the wire value must be a whole int in [-24, +24].
  *     `pitch_coarse` is an absolute int the Python surface *rejects*
  *     (not clamps) if non-integer or out of range, so the
- *     `Math.max(-12, Math.min(12, Math.round(x)))` is load-bearing, not
- *     cosmetic. It narrows to the slider's ±12 window (the parameter
+ *     the clamp to ±AUDIO_CLIP_PITCH_RANGE is load-bearing, not
+ *     cosmetic. It narrows to the slider's ±24 window (the parameter
  *     itself spans ±48).
  *  2. OPTIMISTIC APPLY — writes `clipPropertiesStore.pitchCoarse` before
  *     the send so the slider tracks the finger without waiting for the
  *     surface's property echo (same apply+send pairing as trackCommands).
  *  3. NO-OP GUARD — skips the send when the rounded target already
  *     matches the current value (dedup during a drag), while still
- *     pulling an out-of-range backing value into the ±12 window.
+ *     pulling an out-of-range backing value into the ±24 window.
  *  4. FOCUS GATE — no focused clip → no send, no store write.
  *
  * Uses the REAL clipPropertiesStore (a self-contained runes singleton):
@@ -69,22 +69,22 @@ describe('clipTranspose.setAudioClipPitch', () => {
 		mockSessionState.focusedClipPath = CLIP;
 	});
 
-	describe('clamp to the slider range [-12, +12]', () => {
-		it('clamps above +12 and still sends', () => {
-			setAudioClipPitch(13);
-			expect(sendMock).toHaveBeenCalledWith(PITCH_ADDR, [CLIP, 12]);
-			expect(clipPropertiesStore.pitchCoarse).toBe(12);
+	describe('clamp to the slider range [-24, +24]', () => {
+		it('clamps above +24 and still sends', () => {
+			setAudioClipPitch(25);
+			expect(sendMock).toHaveBeenCalledWith(PITCH_ADDR, [CLIP, 24]);
+			expect(clipPropertiesStore.pitchCoarse).toBe(24);
 		});
 
-		it('clamps below -12 and still sends', () => {
-			setAudioClipPitch(-13);
-			expect(sendMock).toHaveBeenCalledWith(PITCH_ADDR, [CLIP, -12]);
-			expect(clipPropertiesStore.pitchCoarse).toBe(-12);
+		it('clamps below -24 and still sends', () => {
+			setAudioClipPitch(-25);
+			expect(sendMock).toHaveBeenCalledWith(PITCH_ADDR, [CLIP, -24]);
+			expect(clipPropertiesStore.pitchCoarse).toBe(-24);
 		});
 
-		it('clamps a far-out value (parameter spans ±48) into ±12', () => {
+		it('clamps a far-out value (parameter spans ±48) into ±24', () => {
 			setAudioClipPitch(48);
-			expect(sendMock).toHaveBeenCalledWith(PITCH_ADDR, [CLIP, 12]);
+			expect(sendMock).toHaveBeenCalledWith(PITCH_ADDR, [CLIP, 24]);
 		});
 
 		it('passes an in-range value through unchanged', () => {
@@ -110,14 +110,14 @@ describe('clipTranspose.setAudioClipPitch', () => {
 			expect(sendMock).toHaveBeenCalledWith(PITCH_ADDR, [CLIP, -5]);
 		});
 
-		it('rounds-then-clamps at the +12 boundary (11.5 -> 12)', () => {
-			setAudioClipPitch(11.5);
-			expect(sendMock).toHaveBeenCalledWith(PITCH_ADDR, [CLIP, 12]);
+		it('rounds-then-clamps at the +24 boundary (23.5 -> 24)', () => {
+			setAudioClipPitch(23.5);
+			expect(sendMock).toHaveBeenCalledWith(PITCH_ADDR, [CLIP, 24]);
 		});
 
-		it('rounds-then-clamps just over the boundary (12.5 -> 13 -> 12)', () => {
-			setAudioClipPitch(12.5);
-			expect(sendMock).toHaveBeenCalledWith(PITCH_ADDR, [CLIP, 12]);
+		it('rounds-then-clamps just over the boundary (24.5 -> 25 -> 24)', () => {
+			setAudioClipPitch(24.5);
+			expect(sendMock).toHaveBeenCalledWith(PITCH_ADDR, [CLIP, 24]);
 		});
 
 		it('always sends an integer on the wire', () => {
@@ -154,10 +154,10 @@ describe('clipTranspose.setAudioClipPitch', () => {
 			// Simulate an outside-the-UI value (e.g. a set beyond the slider
 			// window). First touch at the top of the slider must send even
 			// though the wire target equals the slider max.
-			clipPropertiesStore.handlePitchCoarse(24);
-			setAudioClipPitch(12);
-			expect(sendMock).toHaveBeenCalledWith(PITCH_ADDR, [CLIP, 12]);
-			expect(clipPropertiesStore.pitchCoarse).toBe(12);
+			clipPropertiesStore.handlePitchCoarse(36);
+			setAudioClipPitch(24);
+			expect(sendMock).toHaveBeenCalledWith(PITCH_ADDR, [CLIP, 24]);
+			expect(clipPropertiesStore.pitchCoarse).toBe(24);
 		});
 	});
 

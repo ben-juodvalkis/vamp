@@ -18,7 +18,6 @@
 	 */
 
 	import { onDestroy } from 'svelte';
-	import { familyScheme } from '$lib/config/devicePresets';
 	import { session } from '$lib/stores/session.svelte';
 	import { clipPropertiesStore } from '$lib/stores/v6/clipPropertiesStore.svelte';
 	import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
@@ -85,8 +84,6 @@
 	import {
 		V3_CLIP_SET_LOOP_START_ADDRESS,
 		V3_CLIP_SET_LOOP_END_ADDRESS,
-		V3_CLIP_SET_PITCH_COARSE_ADDRESS,
-		V3_CLIP_SET_GAIN_ADDRESS,
 		V3_CLIP_WARP_MARKER_MOVE_ADDRESS,
 		V3_CLIP_WARP_MARKER_ADD_ADDRESS,
 		V3_CLIP_WARP_MARKER_REMOVE_ADDRESS
@@ -105,7 +102,6 @@
 		type WarpMarker
 	} from '$lib/utils/clip/warpMarkers';
 	import { getTransients } from '$lib/services/clipTransientsService';
-	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import { logger } from '$lib/utils/logger';
 
 	interface Props {
@@ -972,23 +968,6 @@
 		if (Math.abs(range.end - prev.end) >= 1e-3) {
 			send(V3_CLIP_SET_LOOP_END_ADDRESS, [clipPath, range.end]);
 		}
-	}
-
-	// ── Audio continuous controls (M2): pitch + gain ─────────────────
-	let pitchCoarse = $derived(clipPropertiesStore.pitchCoarse);
-	let gain = $derived(clipPropertiesStore.gain);
-
-	function handlePitchInteraction(value: number) {
-		if (clipPath === null) return;
-		const next = Math.round(value);
-		clipPropertiesStore.handlePitchCoarse(next); // optimistic
-		send(V3_CLIP_SET_PITCH_COARSE_ADDRESS, [clipPath, next]);
-	}
-
-	function handleGainInteraction(value: number) {
-		if (clipPath === null) return;
-		clipPropertiesStore.handleGain(value); // optimistic
-		send(V3_CLIP_SET_GAIN_ADDRESS, [clipPath, value]);
 	}
 
 	// ── MIDI note editing (M4) ───────────────────────────────────────
@@ -1895,33 +1874,6 @@
 			</div>
 		{/if}
 
-		<!-- Audio continuous controls (M2) — own pointer surface, outside
-		     the pan/zoom canvas. Pitch (coarse semitones) + clip gain. -->
-		{#if isAudio}
-			<div class="audio-controls">
-				<div class="audio-control">
-					<DeviceSlider
-						value={pitchCoarse}
-						title="Pitch"
-						min={-48}
-						max={48}
-						centerValue={0}
-						color={familyScheme('pitchSeq')}
-						onInteraction={handlePitchInteraction}
-					/>
-				</div>
-				<div class="audio-control">
-					<DeviceSlider
-						value={gain}
-						title="Gain"
-						min={0}
-						max={1}
-						color={familyScheme('dynamics')}
-						onInteraction={handleGainInteraction}
-					/>
-				</div>
-			</div>
-		{/if}
 	{/if}
 </div>
 
@@ -1931,26 +1883,6 @@
 		position: relative;
 		overflow: hidden;
 		background: var(--surface-well);
-	}
-
-	.audio-controls {
-		position: absolute;
-		right: 8px;
-		top: 8px;
-		bottom: 8px;
-		width: 116px;
-		display: flex;
-		gap: var(--spacing-sm);
-		z-index: 15;
-		pointer-events: none; /* let the strip background pass through; children opt back in */
-	}
-	.audio-control {
-		flex: 1;
-		min-width: 0;
-		pointer-events: auto;
-		border-radius: var(--radius-sm);
-		background: var(--secondary);
-		padding: 2px;
 	}
 
 	.canvas-wrap {
@@ -2397,9 +2329,6 @@
 		--clip-grid-beat: color-mix(in srgb, var(--foreground) 10%, var(--surface-well));
 		--clip-grid-bar: color-mix(in srgb, var(--foreground) 24%, var(--surface-well));
 		border: 1px solid var(--line-strong);
-	}
-	:global([data-grammar="flat"]) .audio-control {
-		background: var(--popover); /* DetailViewBackground pad under the slider */
 	}
 	:global([data-grammar="flat"]) .time-ruler {
 		border-bottom-color: var(--line-strong);

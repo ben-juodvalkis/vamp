@@ -81,12 +81,23 @@
     // on a slot holding a clip it also opens that clip's note view beside
     // this column: the mini is already the "which clip" list, so picking
     // one shows it. An empty slot has nothing to show and only selects.
+    // Tapping the clip whose editor is already open closes it, back to
+    // the clip controls.
     function openSlot(slotIndex: number, slotPath: string) {
+        const focused = session.focusedClipIndices;
+        const editorOpenOnThis =
+            clipEditorStore.active &&
+            focused?.track === trackIndex &&
+            focused?.scene === slotIndex;
         selectSlot(trackIndex, slotIndex);
         // Mid group gesture the tap only toggles the track into the group.
         if (groupGestureStore.active) return;
         const state = v3Store.tracks.get(trackPath)?.slots.get(slotPath)?.state;
         if (!state || state === 'empty') return;
+        if (editorOpenOnThis) {
+            clipEditorStore.set(false);
+            return;
+        }
         focusSlot(trackIndex, slotPath);
         clipEditorStore.set(true);
     }

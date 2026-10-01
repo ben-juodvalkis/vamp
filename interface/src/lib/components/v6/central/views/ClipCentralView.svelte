@@ -11,6 +11,7 @@ import { logger } from '$lib/utils/logger';
 		V3_CLIP_SET_WARP_MODE_ADDRESS
 	} from '$lib/api/handlers/v3Clip';
 	import { sampleClipToSimpler, duplicateLoop, duplicateClipToNextSlot, transposeClipUp, transposeClipDown, transposeDeviceUp, transposeDeviceDown, reverseFocusedAudioClip, setAudioClipPitch, setAudioClipGain, roundGainDisplay } from '$lib/services/clipOperations';
+	import { AUDIO_CLIP_PITCH_RANGE } from '$lib/services/clipTranspose';
 	import { duplicateTrackAndReset } from '$lib/services/trackOperations';
 	import { selectSlot, focusSlot } from '$lib/components/v6/tracks/composables/slotActions';
 	import { groupGestureStore } from '$lib/stores/v6/groupGestureStore.svelte';
@@ -155,9 +156,9 @@ import { logger } from '$lib/utils/logger';
 
 	// Audio-clip PITCH slider — replaces the ±12 octave buttons for audio.
 	// Bound to the clip's absolute pitch_coarse (clipPropertiesStore),
-	// clamped to the slider's −12..+12 semitone range for display. The
+	// clamped to the slider's −24..+24 semitone range for display. The
 	// setter rounds to whole semitones and optimistically updates the store.
-	let pitchCoarseDisplay = $derived(Math.max(-12, Math.min(12, clipPropertiesStore.pitchCoarse)));
+	let pitchCoarseDisplay = $derived(Math.max(-AUDIO_CLIP_PITCH_RANGE, Math.min(AUDIO_CLIP_PITCH_RANGE, clipPropertiesStore.pitchCoarse)));
 	let pitchLabel = $derived.by(() => {
 		const n = Math.round(pitchCoarseDisplay);
 		return n === 0 ? 'Pitch 0' : `Pitch ${n > 0 ? '+' : ''}${n}`;
@@ -573,7 +574,7 @@ import { logger } from '$lib/utils/logger';
 			</div>
 		</div>
 
-		<!-- Col 4: PITCH — audio gets a vertical −12..+12 semitone slider
+		<!-- Col 4: PITCH — audio gets a vertical −24..+24 semitone slider
 			 (absolute pitch_coarse, whole-semitone steps); MIDI keeps the
 			 relative ±12 octave buttons (no absolute clip-transpose state a
 			 slider could reflect — transpose there shifts the notes). -->
@@ -585,8 +586,8 @@ import { logger } from '$lib/utils/logger';
 					orientation="vertical"
 					labelOrientation="horizontal"
 					color={trackScheme}
-					min={-12}
-					max={12}
+					min={-AUDIO_CLIP_PITCH_RANGE}
+					max={AUDIO_CLIP_PITCH_RANGE}
 					centerOrigin={true}
 					centerValue={0}
 					onInteraction={(val) => setAudioClipPitch(val)}
