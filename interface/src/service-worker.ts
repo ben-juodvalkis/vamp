@@ -53,6 +53,14 @@ sw.addEventListener('fetch', (event) => {
 
 	const url = new URL(event.request.url);
 
+	// The API goes straight to the server, never through this worker. A
+	// worker whose fetch failed (a server restarted under it) answered
+	// `/api/ws-auth` with its own "Offline" 503 while the server was
+	// answering fine, and the page sat at "Waiting for Live" until the
+	// worker was unregistered. A cached API answer is wrong anyway: an
+	// auth proof or a catalog is only good live.
+	if (url.origin !== sw.location.origin || url.pathname.startsWith('/api/')) return;
+
 	// Cache-first for app assets
 	if (ASSETS.includes(url.pathname)) {
 		event.respondWith(
