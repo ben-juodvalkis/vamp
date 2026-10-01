@@ -23,7 +23,8 @@ menubar app, Max patch, Skaka picker and rack, rig probes), `config/`,
    on the rig; on Ben's home computer, clone `ben-juodvalkis/vamp` beside the
    old Looping checkout.
    No feature branches, worktrees or PRs. If the session started in a
-   worktree, use the checkout by absolute path instead.
+   worktree, use the checkout by absolute path instead. At session start,
+   `git pull --ff-only origin main`.
 2. While iterating, run only the tests for what you changed:
    `cd interface && npx vitest run <path>`,
    `cd surface && .venv/bin/python3 -m pytest -q tests/<file>`.
@@ -43,9 +44,12 @@ menubar app, Max patch, Skaka picker and rack, rig probes), `config/`,
 5. Tell Ben what behaves differently now, and whether it needs a Live restart.
 
 Ask first before force-push, `reset --hard`, rewriting pushed commits or
-deleting branches. Cloud sessions push their own branch and stop there. A Mac
-session merges a cloud branch only when Ben asks for that branch, with
-`git merge` (no rebase); it never picks up cloud branches on its own.
+deleting branches. Cloud sessions push their own branch and stop there.
+
+Never merge another branch into `main` unless Ben says to merge that branch.
+To test a cloud branch Ben names, `git fetch origin` and `git checkout` it;
+that is all. Say that the checkout is now on that branch (other sessions
+share it), and switch back to `main` when Ben is done testing.
 
 ## Seeing it work
 
