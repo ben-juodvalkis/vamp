@@ -78,7 +78,9 @@ export function selectSlot(
  *                               ends the take and loops it — the
  *                               looper's "close the loop", where a stop
  *                               would end it without looping)
- *   playing          → stop
+ *   playing          → launch  (re-fires it from the top on the next
+ *                               quantize boundary; stopping a track is
+ *                               the stop cell's job)
  *
  * It selects first, for the same reason the body tap does: firing a
  * slot the pedal is not aimed at would leave the next stomp acting
@@ -97,10 +99,6 @@ export function actOnSlot(
 	// strip would fire a clip while the performer is only trying to group.
 	if (interceptForGroupGesture(trackIndex)) return;
 	selectSlot(trackIndex, slotIndex, options);
-	if (slotState === 'playing') {
-		sendClipStop(`tracks/${trackIndex}`);
-		return;
-	}
 	sendClipLaunch(slotPath);
 	// Start the queued pulse on the gesture, not on the answer.
 	// Everything that confirms a launch is remote — the wire, the LOM

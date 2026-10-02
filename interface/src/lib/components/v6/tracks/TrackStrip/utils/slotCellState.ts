@@ -66,7 +66,7 @@ export function deriveSlotCellState(
  *   empty               –  `fire()` on an empty slot of an unarmed track
  *                          records nothing, and a red dot there promised
  *                          a take the press could not deliver
- *   playing             ■  stop
+ *   playing             ▶  re-fire (the stop cell below the column stops)
  *   has_clip            ▶  play
  *   recording           ▶  end the take and loop it (NOT ■ — firing a
  *                          recording session clip is how a looper closes
@@ -81,6 +81,5 @@ export function deriveSlotCellState(
  */
 export function slotActionGlyph(slotState: SlotState, canRecord: boolean): string {
 	if (slotState === 'empty') return canRecord ? '\u25cf' : '\u2013';
-	if (slotState === 'playing') return '\u25a0';
 	return '\u25b6';
 }

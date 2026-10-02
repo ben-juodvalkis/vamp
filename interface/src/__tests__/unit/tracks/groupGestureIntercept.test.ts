@@ -120,6 +120,12 @@ describe('the session clip grid bypasses its own side effects too', () => {
 		expect(sendClipLaunch).toHaveBeenCalledWith('tracks/2/slots/0');
 	});
 
+	it('actOnSlot re-fires a playing clip rather than stopping it', () => {
+		actOnSlot(2, 0, 'tracks/2/slots/0', 'playing');
+		expect(sendClipLaunch).toHaveBeenCalledWith('tracks/2/slots/0');
+		expect(sendClipStop).not.toHaveBeenCalled();
+	});
+
 	it('focusSlot never switches the central view while grouping', () => {
 		active = true;
 		focusSlot(2, 'tracks/2/slots/0');

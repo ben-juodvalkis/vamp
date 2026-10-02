@@ -100,7 +100,8 @@ describe('slotActionGlyph', () => {
 	it('is unaffected by arm state once the slot holds a clip', () => {
 		for (const canRecord of [true, false]) {
 			expect(slotActionGlyph('has_clip', canRecord)).toBe('▶');
-			expect(slotActionGlyph('playing', canRecord)).toBe('■');
+			// Re-fire, not stop: the column's stop cell is the stop.
+			expect(slotActionGlyph('playing', canRecord)).toBe('▶');
 			// Fire, not stop: closing a take is how a looper keeps it.
 			expect(slotActionGlyph('recording', canRecord)).toBe('▶');
 		}
