@@ -11,7 +11,7 @@
 	 * design's size) and scroll. Each shows its timing picture as a thin strip
 	 * along the top, and its name large in the middle with the grid under it
 	 * (a user groove's `User: ` prefix dropped). The clip's current groove
-	 * is lit in phosphor. A tap puts the clip on that groove file
+	 * is lit in the view's ink (the selected track's color, as the sliders). A tap puts the clip on that groove file
 	 * (`/looping/v3/clip/groove/set/file`; the surface keeps the clip's
 	 * Quantize and amounts), with the same focus fallback Q uses: the clip
 	 * running on the selected track.
@@ -249,8 +249,8 @@
 		--groove-pic-h: 1rem;
 	}
 	.tile.on {
-		background: var(--phosphor);
-		border-color: var(--phosphor);
+		background: var(--groove-ink);
+		border-color: var(--groove-ink);
 		color: var(--flat-on-fg);
 		--groove-tick: var(--flat-on-fg);
 		--groove-line: color-mix(in srgb, var(--flat-on-fg) 20%, transparent);
