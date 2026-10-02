@@ -76,12 +76,12 @@ The entire `TrackStrip` is a vertical volume fader:
 - **Tap the Name = mute** (latching only, does NOT select the track). Tapping
   Clip or Permute selects the track and shows that central view (Clip→Clip
   view, Permute→Permute view).
-- **Standalone Solo button** (`uiPrefsStore.showSoloButtons`, default off;
-  toggled from SystemCentralView's Sections card): a real button BELOW the
-  Card on every non-master strip, fully outside the gesture machine
-  (`touch-action: none` — drags on it do nothing). Solo toggles at true
-  finger-down, no select; release <300ms latches, release ≥300ms restores
-  the pre-press state (momentary) — ADR-414.
+- **Two fingers on the fader = solo** (2026-10-01; the standalone Solo
+  button, ADR-414, is gone). Solo toggles when the second finger lands
+  while the first is still a candidate tap, no select; release <300ms
+  latches, release ≥300ms restores the pre-press state (momentary). A
+  soloed strip wears a blue wash. With the Group button held, two fingers
+  add the track to the group instead.
 - Gestures use `window` `pointermove`/`pointerup` listeners for the press
   duration — not `setPointerCapture`, which drops `pointerup` on desktop
   Chrome when the reactive subtree re-renders mid-drag.

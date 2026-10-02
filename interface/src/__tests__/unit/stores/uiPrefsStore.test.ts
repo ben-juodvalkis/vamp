@@ -1,45 +1,13 @@
 /**
  * Tests for uiPrefsStore — persistent UI display toggles.
  *
- * `showSoloButtons` gates the optional Solo band on every TrackStrip
- * (toggled from SystemCentralView's Sections card). These lock the
- * default-off / toggle / persist contract the strip relies on.
+ * These lock the default / toggle / persist contract of each display
+ * pref the layout relies on.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
 
 import { uiPrefsStore } from '$lib/stores/v6/uiPrefsStore.svelte';
-
-describe('uiPrefsStore showSoloButtons', () => {
-	beforeEach(() => {
-		// Reset shared singleton + persisted key between tests.
-		uiPrefsStore.showSoloButtons = false;
-		localStorage.removeItem('uiPrefsStore.showSoloButtons');
-	});
-
-	it('defaults to hidden — strips stay minimal until the performer opts in', () => {
-		expect(uiPrefsStore.showSoloButtons).toBe(false);
-	});
-
-	it('toggles hidden ↔ shown', () => {
-		uiPrefsStore.toggleSoloButtons();
-		expect(uiPrefsStore.showSoloButtons).toBe(true);
-		uiPrefsStore.toggleSoloButtons();
-		expect(uiPrefsStore.showSoloButtons).toBe(false);
-	});
-
-	it('persists the preference to localStorage', () => {
-		uiPrefsStore.showSoloButtons = true;
-		expect(localStorage.getItem('uiPrefsStore.showSoloButtons')).toBe('1');
-		uiPrefsStore.showSoloButtons = false;
-		expect(localStorage.getItem('uiPrefsStore.showSoloButtons')).toBe('0');
-	});
-
-	it('persists via toggle too, not only the setter', () => {
-		uiPrefsStore.toggleSoloButtons();
-		expect(localStorage.getItem('uiPrefsStore.showSoloButtons')).toBe('1');
-	});
-});
 
 describe('uiPrefsStore sessionMode', () => {
 	beforeEach(() => {

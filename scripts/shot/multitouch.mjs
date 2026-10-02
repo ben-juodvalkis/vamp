@@ -196,9 +196,7 @@ function expectEqual(actual, wanted, message) {
  * `trackCount` swaps the mock's scene for a different size. It costs a mock
  * restart, so only ask for it when the track count is the thing under
  * test: the crowded-row scenarios, because the strips row does not become
- * a scroller until the fourteenth track, and the Solo scenarios, because a
- * strip under 110px hides its Solo button and the default twelve are all
- * under it (`SOLO_TRACK_COUNT`).
+ * a scroller until the fourteenth track.
  *
  * `needs` says what input the scenario requires:
  *
@@ -211,9 +209,6 @@ function expectEqual(actual, wanted, message) {
  *                           does nothing there, so a passing tap is
  *                           proof the control moved onto the primitive.
  */
-/** Few enough tracks that every strip is wide enough to show its Solo button. */
-const SOLO_TRACK_COUNT = 8;
-
 const SCENARIOS = [
 	// ---- Single trusted tap. Runs on both engines. ------------------------
 	{
@@ -241,32 +236,6 @@ const SCENARIOS = [
 					.map((m) => m.args[0]),
 				['tracks/2'],
 				'a tap on the name must mute exactly that track, once'
-			);
-		}
-	},
-
-	{
-		name: 'tap-solos',
-		view: 'full',
-		trackCount: SOLO_TRACK_COUNT,
-		needs: 'tap',
-		description: 'one trusted tap on Solo latches it',
-		async run({ page, tap, sent, reset }) {
-			expectEqual(
-				await touchActionOf(page, '.solo-button'),
-				'none',
-				'Solo owns its gesture outright'
-			);
-			const solo = await centreOf(page, '.solo-button', 2);
-			reset();
-			await tap(solo.x, solo.y);
-			await wait(200);
-			expectEqual(
-				sent()
-					.filter((m) => m.address === '/looping/v3/track/solo')
-					.map((m) => m.args[0]),
-				['tracks/2'],
-				'a short tap latches — one write, no restore'
 			);
 		}
 	},
@@ -416,33 +385,29 @@ const SCENARIOS = [
 	},
 
 	{
-		name: 'solo-while-muting',
+		name: 'two-finger-solo-while-muting',
 		view: 'full',
-		trackCount: SOLO_TRACK_COUNT,
-		description: 'a held Solo and a mute tap on another strip are independent',
+		description: 'a two-finger solo held on one strip and a mute tap on another are independent',
 		async run({ page, fingers, sent, reset }) {
-			expectEqual(
-				await touchActionOf(page, '.solo-button'),
-				'none',
-				'Solo owns its gesture outright, so nothing may pan on it'
-			);
-
-			const solo = await centreOf(page, '.solo-button', 0);
+			const card = await centreOf(page, '[data-debug="track-card"]', 0);
 			const name = await centreOf(page, '.header-name', 2);
 			reset();
 
-			// Solo fires at finger-down and stays latched while held.
-			const held = await fingers.down(solo.x, solo.y);
+			// The chord fires at the second finger and stays latched while held.
+			const fa = await fingers.down(card.x - 10, card.y);
+			await wait(30);
+			const fb = await fingers.down(card.x + 10, card.y);
 			await wait(60);
-			const afterSolo = sent().filter((m) => m.address === '/looping/v3/track/solo');
 			expectEqual(
-				afterSolo.map((m) => m.args),
+				sent()
+					.filter((m) => m.address === '/looping/v3/track/solo')
+					.map((m) => m.args),
 				[['tracks/0', 1]],
-				'Solo must fire at finger-down, once'
+				'the chord must solo at the second finger, once'
 			);
 
-			// The other hand mutes a different strip. The solo press is
-			// still open and must not notice.
+			// The other hand mutes a different strip. The chord is still
+			// open and must not notice.
 			await fingers.tap(name.x, name.y);
 			await wait(120);
 			expectEqual(
@@ -450,67 +415,36 @@ const SCENARIOS = [
 					.filter((m) => m.address === '/looping/v3/track/mute')
 					.map((m) => m.args[0]),
 				['tracks/2'],
-				'the second finger must mute its own track'
-			);
-			expectEqual(
-				sent().filter((m) => m.address === '/looping/v3/track/solo').length,
-				1,
-				'the other hand must not end the solo press'
+				'the other hand must mute its own track'
 			);
 
 			// Under the hold threshold, so the release latches: no restore.
-			await fingers.up(held);
+			await fingers.up(fa);
+			await fingers.up(fb);
 			await wait(120);
 			expectEqual(
 				sent()
 					.filter((m) => m.address === '/looping/v3/track/solo')
 					.map((m) => m.args),
 				[['tracks/0', 1]],
-				'a short release latches the down-toggle'
+				'a short release latches the solo'
 			);
 		}
 	},
 
 	{
-		name: 'solo-momentary',
+		name: 'two-finger-solos-on-two-strips',
 		view: 'full',
-		trackCount: SOLO_TRACK_COUNT,
-		description: 'holding Solo past the threshold restores on release',
+		description: 'two-finger solos on two strips at once are two independent chords',
 		async run({ page, fingers, sent, reset }) {
-			const solo = await centreOf(page, '.solo-button', 1);
+			const a = await centreOf(page, '[data-debug="track-card"]', 0);
+			const b = await centreOf(page, '[data-debug="track-card"]', 2);
 			reset();
-			const id = await fingers.down(solo.x, solo.y);
-			// SOLO_HOLD_MS is 300; 600 clears it with room to spare so a
-			// throttled headless clock cannot land the test on the wrong
-			// side of the boundary. The exact boundary is a unit test's
-			// job (`soloPress.test.ts`), not this harness's.
-			await wait(600);
-			await fingers.up(id);
-			await wait(120);
-			expectEqual(
-				sent()
-					.filter((m) => m.address === '/looping/v3/track/solo')
-					.map((m) => m.args),
-				[
-					['tracks/1', 1],
-					['tracks/1', 0]
-				],
-				'a long release must restore the captured pre-press state'
-			);
-		}
-	},
-
-	{
-		name: 'two-solos',
-		view: 'full',
-		trackCount: SOLO_TRACK_COUNT,
-		description: 'two Solo buttons held at once are two independent presses',
-		async run({ page, fingers, sent, reset }) {
-			const a = await centreOf(page, '.solo-button', 0);
-			const b = await centreOf(page, '.solo-button', 2);
-			reset();
-			const fa = await fingers.down(a.x, a.y);
-			const fb = await fingers.down(b.x, b.y);
+			const a1 = await fingers.down(a.x - 10, a.y);
+			const b1 = await fingers.down(b.x - 10, b.y);
+			await wait(30);
+			const a2 = await fingers.down(a.x + 10, a.y);
+			const b2 = await fingers.down(b.x + 10, b.y);
 			await wait(60);
 			expectEqual(
 				sent()
@@ -520,13 +454,13 @@ const SCENARIOS = [
 					['tracks/0', 1],
 					['tracks/2', 1]
 				],
-				'both Solos must fire'
+				'both chords must solo their own strip'
 			);
-			// Lift them in the OPPOSITE order to the one they landed in —
-			// the case a `changedTouches[0]` reader gets wrong, because it
-			// would credit the first release to the first finger.
-			await fingers.up(fb);
-			await fingers.up(fa);
+			// Lift in the opposite order to the landing.
+			await fingers.up(b2);
+			await fingers.up(a2);
+			await fingers.up(b1);
+			await fingers.up(a1);
 			await wait(120);
 			expectEqual(
 				sent().filter((m) => m.address === '/looping/v3/track/solo').length,

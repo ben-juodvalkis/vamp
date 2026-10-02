@@ -129,7 +129,6 @@ surface knows they exist.
 
 | Toggle | Storage key | Default | Gates | Set from |
 |---|---|---|---|---|
-| `showSoloButtons` | `uiPrefsStore.showSoloButtons` | off | Standalone Solo button under every non-master strip (ADR-414) | SystemCentralView → Sections card |
 | `sessionMode` | `uiPrefsStore.sessionMode` | off | Session clip-grid section — main-area section 2, scene rail in the matching sidebar row (ADR-415/416) | **CLIPS** button, SystemCentralView → Sections card |
 | `showFxGrid` | `uiPrefsStore.showFxGrid` | **on** | FX-grid section — main-area section 4, clip loop brace in the matching sidebar row | **FX** button, SystemCentralView → Sections card |
 | `showTransportHeader` | `uiPrefsStore.showTransportHeader` | off | Slim transport header across the top (tempo, transport, STOP ALL, time signature, metronome). **Independent of the section toggles** — any combination is legal | SystemCentralView → Sections card |
@@ -140,8 +139,10 @@ ADR-421), the Drum Rack view's pad column (`showDrumPads`, PADS) and the
 strips' device band (`showDeviceBand`, INST). All four were default on,
 and each is now always on: `uiPrefsStore` still answers them, with
 `true`, so the layout code reads them unchanged, and an older install's
-stored `'0'` is ignored. The Sections card lists Header · FX · Clips ·
-Solo, top to bottom, the order they sit on the screen.
+stored `'0'` is ignored. The Sections card lists Header · FX · Clips,
+top to bottom, the order they sit on the screen. The Solo row (and the
+per-strip Solo button it showed) went 2026-10-01: two fingers on a strip
+solo it.
 
 ### The section stack (ADR-416)
 
@@ -164,8 +165,7 @@ top, central view, clip grid, track strips against the bottom edge of the
 screen — where, on a 12.9" iPad on a stand, the hands actually are. The
 right sidebar takes the same reversal, so master · scene rail · quantize
 · loop brace still line up row for row with the main area. Inside each
-strip only the name band moves (to the foot of the card, above that
-track's Solo button); Clip stays above Permute, because that pair is a
+strip only the name band moves (to the foot of the card); Clip stays above Permute, because that pair is a
 reading order rather than a stack.
 
 Order-only is what makes it cheap: `flex-direction: column-reverse` (and
@@ -246,9 +246,8 @@ you flip its neighbours is harder to read than one that simply remembers
 what you asked for.
 
 **Where the switches live.** The **Sections** list in the master-track
-central view (`SystemCentralView`), four rows ordered the way the things
-they control sit down the flipped screen: Header (top edge) · FX · Clips
-· Solo (inside the strips, bottom edge). Each row says its name and its
+central view (`SystemCentralView`), three rows ordered the way the things
+they control sit down the flipped screen: Header (top edge) · FX · Clips. Each row says its name and its
 state (an On/Off chip), the Settings page's grammar (2026-09-26).
 
 They started at the foot of the *right* sidebar, but every row over there

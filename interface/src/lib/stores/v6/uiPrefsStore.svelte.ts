@@ -4,10 +4,9 @@
  * Everything here survives reloads via localStorage, same guarded
  * read/write pattern as browserModeStore.
  *
- * `showSoloButtons` — when true, every regular TrackStrip shows a
- * standalone Solo button under its card. Off by default: solo is a
- * mixing gesture, not a looping one, so the strips stay minimal until
- * the performer opts in from SystemCentralView's Sections card.
+ * There is no Solo-button switch (2026-10-01): two fingers on a strip's
+ * fader solo it, so the button and its `showSoloButtons` pref are gone.
+ * An old install's stored key is simply never read again.
  *
  * **Fixed, not preferences (Ben, 2026-09-26): `showCentralView`,
  * `flipLayout`, `showDrumPads` and `showDeviceBand`.** Each was a switch
@@ -50,8 +49,7 @@
  * downward, and the clip grid's stop row stays at the foot of its
  * section (which under the flip puts it directly above the strips it
  * stops). Only chrome that has a "top" and a "bottom" moves: each track
- * strip's title band goes to the foot of its card, landing next to the
- * Solo button that already lived there, and a group's bracket arm grows
+ * strip's title band goes to the foot of its card, and a group's bracket arm grows
  * out of the BOTTOM of its strip so arm and title still read as one
  * block.
  *
@@ -71,7 +69,6 @@
  * slider included, since it obeys the same hold).
  */
 
-const SHOW_SOLO_BUTTONS_STORAGE_KEY = 'uiPrefsStore.showSoloButtons';
 const SESSION_MODE_STORAGE_KEY = 'uiPrefsStore.sessionMode';
 const SHOW_FX_GRID_STORAGE_KEY = 'uiPrefsStore.showFxGrid';
 const SHOW_TRANSPORT_HEADER_STORAGE_KEY = 'uiPrefsStore.showTransportHeader';
@@ -108,23 +105,11 @@ function readBoolFromStorageDefaultOn(key: string): boolean {
 }
 
 function createUiPrefsStore() {
-	let showSoloButtons = $state(readBoolFromStorage(SHOW_SOLO_BUTTONS_STORAGE_KEY));
 	let sessionMode = $state(readBoolFromStorage(SESSION_MODE_STORAGE_KEY));
 	let showFxGrid = $state(readBoolFromStorageDefaultOn(SHOW_FX_GRID_STORAGE_KEY));
 	let showTransportHeader = $state(readBoolFromStorage(SHOW_TRANSPORT_HEADER_STORAGE_KEY));
 
 	return {
-		get showSoloButtons(): boolean {
-			return showSoloButtons;
-		},
-		set showSoloButtons(value: boolean) {
-			showSoloButtons = value;
-			writeStringToStorage(SHOW_SOLO_BUTTONS_STORAGE_KEY, value ? '1' : '0');
-		},
-		toggleSoloButtons() {
-			this.showSoloButtons = !showSoloButtons;
-		},
-
 		get sessionMode(): boolean {
 			return sessionMode;
 		},

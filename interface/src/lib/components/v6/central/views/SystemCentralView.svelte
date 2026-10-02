@@ -182,14 +182,14 @@ import { logger } from '$lib/utils/logger';
 	// The "what is on screen" switches, in the order the things they
 	// control sit DOWN the (flipped) screen (Ben, 2026-09-26): the
 	// transport header on the top edge, the FX grid under it, the clip
-	// grid above the strips, and Solo inside the strips on the bottom
-	// edge. Reading order is layout order, so the list is a picture of the
-	// screen it builds. All four are persisted display prefs; none touch
+	// grid above the strips. Reading order is layout order, so the list is
+	// a picture of the screen it builds. All three are persisted display prefs; none touch
 	// Live.
 	//
 	// VIEW, PADS, FLIP and INST are gone (Ben, 2026-09-26): the central
 	// view, the Drum Rack's pad column, the flipped stack and the strips'
-	// device band are simply always on (`uiPrefsStore`).
+	// device band are simply always on (`uiPrefsStore`). SOLO went
+	// 2026-10-01: two fingers on a strip solo it, so there is no button.
 	//
 	// There is no MINI row. The mini session column — the selected
 	// track's clip slots in the clip view's leading rail column — used to
@@ -218,13 +218,6 @@ import { logger } from '$lib/utils/logger';
 			title: 'Show the session clip grid above the track strips',
 			on: () => uiPrefsStore.sessionMode,
 			toggle: () => uiPrefsStore.toggleSessionMode()
-		},
-		{
-			label: 'Solo',
-			ariaLabel: 'Show Solo buttons on track strips',
-			title: 'Show a Solo button on every track strip',
-			on: () => uiPrefsStore.showSoloButtons,
-			toggle: () => uiPrefsStore.toggleSoloButtons()
 		}
 	];
 
@@ -781,7 +774,7 @@ import { logger } from '$lib/utils/logger';
 		background: var(--surface-well);
 	}
 
-	/* Toggle boxes (Click, Follow Key, Solo / Header, the
+	/* Toggle boxes (Click, Follow Key, Header, the
 	   launch-quantization chips): the shared flat toggle. */
 	:global([data-grammar="flat"]) .sys-toggle-box {
 		text-transform: none;
