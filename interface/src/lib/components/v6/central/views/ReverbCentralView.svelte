@@ -1,16 +1,33 @@
 <script lang="ts">
   /**
-   * ReverbCentralView - Slot-Aware Version
+   * ReverbCentralView — the Hybrid Reverb, what the Reverb tile opens.
    *
-   * Self-contained central view that queries its own slot state.
-   * Renders immediately with ghost/loading/active states.
-   * Supports both Convolution and Algorithmic reverb modes.
+   *   [types 2×5] | [the tail, an XY pad] | [the algorithm's own] [room · output]
    *
-   * NO {#if device} gate - always renders, handles its own state.
-   * NO props required - queries selectedTrackStore directly.
+   * The left picker chooses which reverb: five convolution IRs, five
+   * algorithms. Convolution draws its IR time pad. An algorithm (2026-10-02
+   * redesign) draws:
+   *
+   * - The tail (`reverb/ReverbPortrait`): every band of the reverb ringing
+   *   out, highs at the back, on a time axis from the dry hit. Dragging it is
+   *   the Reverb tile's gesture — across is Decay (the tail ends under the
+   *   handle), up is Dry/Wet — and every other control below bends the
+   *   picture the way it bends the sound.
+   * - The algorithm's own controls, signature first, and Freeze + Freeze In
+   *   on the bottom row, always in the same place.
+   * - What every algorithm shares: Size, Predelay (ms, or 16ths with Sync)
+   *   and its Feedback, the algorithm's Delay, Stereo with Bass Mono, and
+   *   Vintage with the EQ switch.
+   *
+   * Every control reads its value in Live's own format at rest, from the
+   * curves in `hybridReverbParams.ts` (measured on the rig): the surface
+   * sends Live's display strings only while a write is in flight.
+   *
+   * NO {#if device} gate — always renders, handles its own ghost state.
    */
 
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
+  import { session } from '$lib/stores/session.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
@@ -18,7 +35,38 @@
   import { deviceInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import SectionDivider from '../SectionDivider.svelte';
-  import { toRaw, toPosition, LIVE_DEFAULTS } from '$lib/components/v6/device-panel/hybridReverbParams';
+  import ReverbPortrait from './reverb/ReverbPortrait.svelte';
+  import { xToTime, wetPathDb, type TailInput } from './reverb/tailPortrait';
+  import {
+    HYBRID,
+    LIVE_DEFAULTS,
+    ROUTING_ALGORITHM,
+    ROUTING_CONVOLUTION,
+    EQ_SLOPES_DB,
+    VINTAGE_MAX,
+    algoDelaySeconds,
+    algorithmFor,
+    bassMult,
+    bassXHz,
+    controlPosition,
+    controlRaw,
+    decaySeconds,
+    decayValue,
+    eqFreqHz,
+    eqGainDb,
+    eqQ,
+    feedbackGain,
+    hzLabel,
+    percentLabel,
+    predelaySeconds,
+    prismMult,
+    prismXOverHz,
+    shimmerSemitones,
+    sixteenthsLabel,
+    tidesRateBeats,
+    timeLabel,
+    vintageLabel
+  } from '$lib/components/v6/device-panel/hybridReverbParams';
 
   const fx = useFxGridSlot('reverb');
 
@@ -65,7 +113,7 @@
 
   // Current color, derived from the normalized twin, tracking reverb mode/type.
   let currentColor = $derived.by(() => {
-    if (reverbMode === 3) {
+    if (reverbMode === ROUTING_CONVOLUTION) {
       // Convolution mode - find active type
       for (let i = 0; i < CONVOLUTION_TYPES.length; i++) {
         if (isConvolutionTypeActive(i)) {
@@ -95,48 +143,17 @@
     { name: 'Prism', param6: 4 }
   ];
 
-  // Parameter configurations for each algorithmic type
-  const ALGORITHMIC_PARAMS = {
-    0: [ // Hall
-      { index: 11, name: 'Size' },
-      { index: 12, name: 'Damping' },
-      { index: 14, name: 'Mod' },
-      { index: 15, name: 'Shape' },
-      { index: 16, name: 'Bass' }
-    ],
-    1: [ // Quartz
-      { index: 11, name: 'Size' },
-      { index: 12, name: 'Damping' },
-      { index: 14, name: 'Mod' },
-      { index: 13, name: 'Diffusion' },
-      { index: 25, name: 'Distance' }
-    ],
-    2: [ // Shimmer
-      { index: 11, name: 'Size' },
-      { index: 12, name: 'Damping' },
-      { index: 14, name: 'Mod' },
-      { index: 13, name: 'Diffusion' },
-      { index: 19, name: 'Pitch' },
-      { index: 18, name: 'Shimmer' }
-    ],
-    3: [ // Tides
-      { index: 11, name: 'Size' },
-      { index: 12, name: 'Damping' },
-      { index: 20, name: 'Tide' },
-      { index: 21, name: 'Rate' },
-      { index: 22, name: 'Wave' },
-      { index: 23, name: 'Phase' }
-    ],
-    4: [ // Prism
-      { index: 11, name: 'Size' },
-      { index: 27, name: 'Low' },
-      { index: 26, name: 'High' }
-    ]
-  };
+  /** A parameter's raw value, or Live's default before the device answers. */
+  function raw(index: number): number {
+    return fx.paramValue(index) ?? LIVE_DEFAULTS[index] ?? 0;
+  }
+  const on = (index: number) => raw(index) >= 0.5;
+  const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
   // All parameter/property values as $derived - always reactive to store changes
-  let reverbMode = $derived(fx.paramValue(48) ?? 2);
-  let algorithmicType = $derived(fx.paramValue(6) ?? 0);
+  let reverbMode = $derived(raw(HYBRID.routing));
+  let algorithmicType = $derived(raw(HYBRID.algoType));
+  let algorithm = $derived(algorithmFor(algorithmicType));
   let irCategoryIndex = $derived<number>(
     (fx.devicePath ? selectedTrackStore.propertyValue(fx.devicePath, 'ir_category_index') as number | undefined : undefined) ?? 0
   );
@@ -166,27 +183,17 @@
     return () => releases.forEach((fn) => fn());
   });
 
-  // Parameter value cache as $derived (algorithmic params, snapshot per render)
-  let parameterValues = $derived.by(() => {
-    const newValues = new Map<number, number>();
-    Object.values(ALGORITHMIC_PARAMS).flat().forEach(param => {
-      const raw = fx.paramValue(param.index) ?? LIVE_DEFAULTS[param.index] ?? 0.5;
-      newValues.set(param.index, toPosition(param.index, raw));
-    });
-    return newValues;
-  });
-
   // Helper functions to check if a specific type is active
   function isConvolutionTypeActive(index: number): boolean {
-    return reverbMode === 3 && 
-           CONVOLUTION_TYPES[index] && 
-           CONVOLUTION_TYPES[index].ir_category === irCategoryIndex && 
+    return reverbMode === ROUTING_CONVOLUTION &&
+           CONVOLUTION_TYPES[index] &&
+           CONVOLUTION_TYPES[index].ir_category === irCategoryIndex &&
            CONVOLUTION_TYPES[index].ir_file === irFileIndex;
   }
 
   function isAlgorithmicTypeActive(index: number): boolean {
-    return reverbMode === 2 && 
-           ALGORITHMIC_TYPES[index] && 
+    return reverbMode === ROUTING_ALGORITHM &&
+           ALGORITHMIC_TYPES[index] &&
            ALGORITHMIC_TYPES[index].param6 === algorithmicType;
   }
 
@@ -197,22 +204,17 @@
   function handleReverbTypeChange(typeIndex: number) {
     if (typeIndex < 5) {
       const type = CONVOLUTION_TYPES[typeIndex];
-      fx.sendParam(48, 3);
+      fx.sendParam(HYBRID.routing, ROUTING_CONVOLUTION);
       if (fx.device && fx.devicePath) {
         selectedTrackStore.setPropertyValue(fx.devicePath, 'ir_category_index', type.ir_category);
         selectedTrackStore.setPropertyValue(fx.devicePath, 'ir_file_index', type.ir_file);
       }
     } else {
       const type = ALGORITHMIC_TYPES[typeIndex - 5];
-      fx.sendParam(48, 2);
-      fx.sendParam(6, type.param6);
+      fx.sendParam(HYBRID.routing, ROUTING_ALGORITHM);
+      fx.sendParam(HYBRID.algoType, type.param6);
     }
   }
-
-  // Get current algorithmic parameters to display
-  let currentAlgorithmicParams = $derived(
-    reverbMode === 2 ? ALGORITHMIC_PARAMS[algorithmicType as keyof typeof ALGORITHMIC_PARAMS] || [] : []
-  );
 
   // Convert 0-1 slider value to IR attack time (0.0-3.0 seconds)
   function mapToIRAttackTime(sliderValue: number): number {
@@ -235,25 +237,177 @@
     return Math.max(0, Math.min(1, (decayTime - 0.02) / (20.0 - 0.02)));
   }
 
-  // The slider is 0..1; Ti Rate takes a 0..29 step, so it goes through toRaw.
-  function handleParameterChange(paramIndex: number, value: number) {
-    fx.sendParam(paramIndex, toRaw(paramIndex, value));
+  // ── The algorithm ─────────────────────────────────────────────────────
+
+  let synced = $derived(on(HYBRID.predelaySync));
+  /** A sixteenth at the song's tempo, seconds. */
+  let sixteenth = $derived(15 / (session.tempo > 0 ? session.tempo : 120));
+  let predelay = $derived(synced ? raw(HYBRID.predelay16th) * sixteenth : predelaySeconds(raw(HYBRID.predelay)));
+  // Live keeps one Feedback per Predelay mode.
+  let feedbackIndex = $derived(synced ? HYBRID.predelayFb16th : HYBRID.predelayFb);
+  let algoDelay = $derived(algoDelaySeconds(raw(HYBRID.algoDelay)));
+  let decay = $derived(decaySeconds(raw(HYBRID.decay)));
+  let wet = $derived(clamp01(raw(HYBRID.dryWet)));
+  let frozen = $derived(on(HYBRID.freeze));
+
+  let wetPath = $derived(
+    wetPathDb({
+      eqOn: on(HYBRID.eqOn),
+      loType: Math.round(raw(HYBRID.eqLoType)),
+      loHz: eqFreqHz(raw(HYBRID.eqLoFreq)),
+      loGainDb: eqGainDb(raw(HYBRID.eqLoGain)),
+      loSlopeDb: EQ_SLOPES_DB[Math.min(9, Math.max(0, Math.round(raw(HYBRID.eqLoSlope))))],
+      peaks: [
+        { hz: eqFreqHz(raw(HYBRID.eqPeak1Freq)), gainDb: eqGainDb(raw(HYBRID.eqPeak1Gain)), q: eqQ(raw(HYBRID.eqPeak1Q)) },
+        { hz: eqFreqHz(raw(HYBRID.eqPeak2Freq)), gainDb: eqGainDb(raw(HYBRID.eqPeak2Gain)), q: eqQ(raw(HYBRID.eqPeak2Q)) }
+      ],
+      hiType: Math.round(raw(HYBRID.eqHiType)),
+      hiHz: eqFreqHz(raw(HYBRID.eqHiFreq)),
+      hiGainDb: eqGainDb(raw(HYBRID.eqHiGain)),
+      hiSlopeDb: EQ_SLOPES_DB[Math.min(9, Math.max(0, Math.round(raw(HYBRID.eqHiSlope))))],
+      send: clamp01(raw(HYBRID.sendGain))
+    })
+  );
+
+  let tail = $derived<TailInput>({
+    algo: algorithm.key,
+    decay,
+    onset: predelay + algoDelay,
+    echoSpacing: predelay,
+    feedback: feedbackGain(raw(feedbackIndex)),
+    size: raw(HYBRID.size),
+    damping: raw(HYBRID.damping),
+    diffusion: raw(HYBRID.diffusion),
+    mod: raw(HYBRID.mod),
+    shape: raw(HYBRID.hallShape),
+    bassMult: bassMult(raw(HYBRID.hallBassMult)),
+    bassX: bassXHz(raw(HYBRID.hallBassX)),
+    lowDamp: raw(HYBRID.quartzLowDamp),
+    distance: raw(HYBRID.quartzDistance),
+    shimmer: raw(HYBRID.shimmer),
+    pitch: shimmerSemitones(raw(HYBRID.shimmerPitch)),
+    tide: raw(HYBRID.tide),
+    tidePeriod: tidesRateBeats(raw(HYBRID.tidesRate)) * 4 * sixteenth,
+    wave: raw(HYBRID.tidesWave),
+    lowMult: prismMult(raw(HYBRID.prismLowMult)),
+    highMult: prismMult(raw(HYBRID.prismHighMult)),
+    xOver: prismXOverHz(raw(HYBRID.prismXOver)),
+    freeze: frozen,
+    wet,
+    levelDb: wetPath,
+    vintage: Math.round(raw(HYBRID.vintage))
+  });
+
+  let readouts = $derived([
+    { name: 'Decay', value: frozen ? 'Frozen' : timeLabel(decay) },
+    { name: 'Dry/Wet', value: percentLabel(wet * 100) }
+  ]);
+
+  let crossoverLabel = $derived(
+    algorithm.key === 'darkHall'
+      ? `Bass X ${hzLabel(tail.bassX)}`
+      : algorithm.key === 'prism'
+        ? `X-Over ${hzLabel(tail.xOver)}`
+        : undefined
+  );
+
+  /** The tail pad: X is where the tail ends, so Decay is that time less the onset. */
+  function moveTail(x: number, y: number) {
+    fx.sendParam(HYBRID.decay, decayValue(xToTime(x) - tail.onset));
+    fx.sendParam(HYBRID.dryWet, clamp01(y));
   }
 
-  // Build a slider title that appends Live's GUI-formatted value
-  // (per ADR-352) when available. Returns the bare name when the
-  // surface hasn't sent a display fire for this param yet — happens
-  // only during active interaction. Algorithmic params have natural
-  // units (Size: ratio, Damping: %, Mod: Hz, Rate: 1/4 etc.) so the
-  // appended string substantially clarifies the slider during drag.
-  // IR Attack/Decay are properties, not params, and don't ride the
-  // param/display address — they intentionally stay as the bare XY
-  // pad until property-display lands as a separate piece of work.
-  function sliderTitle(paramIndex: number, baseName: string): string {
-    const display = fx.paramDisplay(paramIndex);
-    return display ? `${baseName} · ${display}` : baseName;
+  function toggle(index: number) {
+    fx.sendParam(index, on(index) ? 0 : 1);
   }
+
+  /** A shared-column slider: its 0..1 position, Live's label, and its write. */
+  interface Row {
+    key: string;
+    name: string;
+    position: number;
+    label: string;
+    write: (t: number) => void;
+    chip?: { name: string; index: number };
+  }
+
+  let shared = $derived<Row[]>([
+    {
+      key: 'size',
+      name: 'Size',
+      position: raw(HYBRID.size),
+      label: percentLabel(raw(HYBRID.size) * 100),
+      write: (t) => fx.sendParam(HYBRID.size, clamp01(t))
+    },
+    synced
+      ? {
+          key: 'predelay',
+          name: 'Predelay',
+          position: raw(HYBRID.predelay16th) / 16,
+          label: sixteenthsLabel(raw(HYBRID.predelay16th)),
+          write: (t) => fx.sendParam(HYBRID.predelay16th, Math.round(clamp01(t) * 16)),
+          chip: { name: 'Sync', index: HYBRID.predelaySync }
+        }
+      : {
+          key: 'predelay',
+          name: 'Predelay',
+          position: raw(HYBRID.predelay),
+          label: timeLabel(predelay),
+          write: (t) => fx.sendParam(HYBRID.predelay, clamp01(t)),
+          chip: { name: 'Sync', index: HYBRID.predelaySync }
+        },
+    {
+      key: 'feedback',
+      name: 'Feedback',
+      position: raw(feedbackIndex),
+      label: percentLabel(feedbackGain(raw(feedbackIndex)) * 100),
+      write: (t) => fx.sendParam(feedbackIndex, clamp01(t))
+    },
+    {
+      key: 'delay',
+      name: 'Delay',
+      position: raw(HYBRID.algoDelay),
+      label: timeLabel(algoDelay),
+      write: (t) => fx.sendParam(HYBRID.algoDelay, clamp01(t))
+    },
+    {
+      key: 'stereo',
+      name: 'Stereo',
+      position: raw(HYBRID.width),
+      label: percentLabel(raw(HYBRID.width) * 200),
+      write: (t) => fx.sendParam(HYBRID.width, clamp01(t)),
+      chip: { name: 'Mono', index: HYBRID.bassMono }
+    },
+    {
+      key: 'vintage',
+      name: 'Vintage',
+      position: raw(HYBRID.vintage) / VINTAGE_MAX,
+      label: vintageLabel(raw(HYBRID.vintage)),
+      write: (t) => fx.sendParam(HYBRID.vintage, Math.round(clamp01(t) * VINTAGE_MAX)),
+      chip: { name: 'EQ', index: HYBRID.eqOn }
+    }
+  ]);
 </script>
+
+<!-- A row's label: Live's name on the left, its value on the right. Drawn in
+     both of the slider's label layers, so it flips on the fill. -->
+{#snippet rowLabel(name: string, value: string)}
+  <span class="row-label"><span class="row-name">{name}</span><span class="row-value">{value}</span></span>
+{/snippet}
+
+{#snippet chip(name: string, index: number, title?: string)}
+  <button
+    class="physical-button reverb-chip"
+    class:active={on(index)}
+    style="--btn-tint: {currentColor.primary};"
+    aria-pressed={on(index)}
+    title={title ?? name}
+    data-reverb-switch={index}
+    onclick={() => toggle(index)}
+  >
+    {name}
+  </button>
+{/snippet}
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
 <div class="h-full w-full overflow-hidden relative">
@@ -276,6 +430,7 @@
                   class="physical-button text-sm h-12 px-2 flex-1 font-semibold tracking-wide"
                   class:active={isConvolutionTypeActive(index)}
                   style="--btn-tint: {typeColor.primary};"
+                  data-reverb-type={type.name}
                   onclick={() => handleReverbTypeChange(index)}
                 >
                   {type.name}
@@ -291,6 +446,7 @@
                   class="physical-button text-sm h-12 px-2 flex-1 font-semibold tracking-wide"
                   class:active={isAlgorithmicTypeActive(index)}
                   style="--btn-tint: {typeColor.primary};"
+                  data-reverb-type={type.name}
                   onclick={() => handleReverbTypeChange(index + 5)}
                 >
                   {type.name}
@@ -305,51 +461,94 @@
              nothing between them until the hairline landed (2026-09-13). -->
         <SectionDivider orientation="vertical" />
 
-        <!-- Reverb Parameter Section -->
-        <div class="flex flex-col gap-(--central-gap) min-h-0">
+        {#if reverbMode === ROUTING_CONVOLUTION}
+          <!-- Convolution mode - IR timing XY control -->
+          <div class="min-h-0">
+            <DeviceXY
+              xValue={irAttackTimeToSlider(irAttackTime)}
+              yValue={irDecayTimeToSlider(irDecayTime)}
+              title="IR Time"
+              isGhost={fx.isGhost}
+              color={currentColor}
+              onInteraction={(x, y) => {
+                // Do nothing during drag - just for DeviceXY compatibility
+              }}
+              onRelease={(x, y) => {
+                if (fx.devicePath) {
+                  const attackTime = mapToIRAttackTime(x);
+                  const decayTime = mapToIRDecayTime(y);
+                  selectedTrackStore.setPropertyValue(fx.devicePath, 'ir_attack_time', attackTime);
+                  selectedTrackStore.setPropertyValue(fx.devicePath, 'ir_decay_time', decayTime);
+                }
+              }}
+            />
+          </div>
+        {:else}
+          <div class="algo-layout" data-reverb-algorithm={algorithm.key}>
+            <ReverbPortrait
+              input={tail}
+              name={algorithm.name}
+              blurb={algorithm.blurb}
+              {readouts}
+              {crossoverLabel}
+              color={currentColor}
+              isGhost={fx.isGhost}
+              onMove={moveTail}
+              onTap={() => fx.loadIfGhost()}
+            />
 
-          <!-- Dynamic parameter controls -->
-          {#if reverbMode === 3}
-            <!-- Convolution mode - IR timing XY control -->
-            <div class="flex-1 min-h-0">
-              <DeviceXY
-                xValue={irAttackTimeToSlider(irAttackTime)}
-                yValue={irDecayTimeToSlider(irDecayTime)}
-                title="IR Time"
-                isGhost={fx.isGhost}
-                color={currentColor}
-                onInteraction={(x, y) => {
-                  // Do nothing during drag - just for DeviceXY compatibility
-                }}
-                onRelease={(x, y) => {
-                  if (fx.devicePath) {
-                    const attackTime = mapToIRAttackTime(x);
-                    const decayTime = mapToIRDecayTime(y);
-                    selectedTrackStore.setPropertyValue(fx.devicePath, 'ir_attack_time', attackTime);
-                    selectedTrackStore.setPropertyValue(fx.devicePath, 'ir_decay_time', decayTime);
-                  }
-                }}
-              />
-            </div>
-          {:else}
-            <!-- Algorithmic mode - show parameter sliders in one row -->
-            <div class="flex-1 min-h-0 flex gap-(--central-gap)">
-              {#each currentAlgorithmicParams as param}
-                <div class="flex-1 min-w-0">
+            <SectionDivider orientation="vertical" />
+
+            <!-- The algorithm's own controls; Freeze on the bottom row. -->
+            <div class="algo-col" data-reverb-own>
+              {#each algorithm.controls as control (control.index)}
+                {#snippet ownLabel()}{@render rowLabel(control.name, control.label(raw(control.index)))}{/snippet}
+                <div class="row">
                   <DeviceSlider
-                    value={parameterValues.get(param.index) ?? 0.5}
-                    title={sliderTitle(param.index, param.name)}
-                    orientation="vertical"
+                    value={controlPosition(control, raw(control.index))}
+                    title="{control.name} {control.label(raw(control.index))}"
+                    label={ownLabel}
+                    orientation="horizontal"
                     labelOrientation="horizontal"
+                    labelSize="small"
+                    isGhost={fx.isGhost}
                     color={currentColor}
-                    onInteraction={(value) => handleParameterChange(param.index, value)}
+                    onTap={() => fx.loadIfGhost()}
+                    onInteraction={(t) => fx.sendParam(control.index, controlRaw(control, t))}
                   />
                 </div>
               {/each}
+              <div class="row chips freeze-row">
+                {@render chip('Freeze', HYBRID.freeze)}
+                {@render chip('In', HYBRID.freezeIn, 'Freeze In: new input still feeds the frozen tail')}
+              </div>
             </div>
-          {/if}
 
-        </div>
+            <!-- What every algorithm shares. -->
+            <div class="algo-col" data-reverb-shared>
+              {#each shared as row (row.key)}
+                {#snippet sharedLabel()}{@render rowLabel(row.name, row.label)}{/snippet}
+                <div class="row" class:with-chip={row.chip}>
+                  <DeviceSlider
+                    value={row.position}
+                    title="{row.name} {row.label}"
+                    label={sharedLabel}
+                    orientation="horizontal"
+                    labelOrientation="horizontal"
+                    labelSize="small"
+                    isGhost={fx.isGhost}
+                    color={currentColor}
+                    onTap={() => fx.loadIfGhost()}
+                    onInteraction={row.write}
+                  />
+                  {#if row.chip}
+                    {@render chip(row.chip.name, row.chip.index)}
+                  {/if}
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/if}
 
     </div>
 
@@ -357,6 +556,72 @@
 </div>
 
 <style>
+  /* The tail takes what the two columns leave. Six rows a column, the
+     algorithm's own five (Prism's three) over Freeze, so a row sits level
+     with its neighbour across the seam. */
+  .algo-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto 196px 196px;
+    gap: var(--central-gap);
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  .algo-col {
+    display: grid;
+    grid-template-rows: repeat(6, minmax(0, 1fr));
+    gap: var(--spacing-sm);
+    min-height: 0;
+    min-width: 0;
+  }
+
+  .row {
+    min-height: 0;
+    min-width: 0;
+  }
+  .row.with-chip {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 48px;
+    gap: var(--spacing-sm);
+  }
+  .freeze-row {
+    grid-row: 6;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 56px;
+    gap: var(--spacing-sm);
+  }
+
+  .row-label {
+    position: absolute;
+    inset: 0 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    text-transform: none;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+  .row-name {
+    font-weight: 400;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .row-value {
+    font-weight: var(--font-weight-medium);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .reverb-chip {
+    min-height: 0;
+    min-width: 0;
+    height: 100%;
+    padding: 0 0.25rem;
+    font-size: 0.875rem;
+  }
+
   /* ---- Live skin (flat grammar): the reverb-type tabs are Live's plain
      radio buttons — regular/medium weight, no tracking (app.css already
      gives .physical-button its flat control field and ChosenDefault ON
@@ -370,5 +635,15 @@
   :global([data-grammar="flat"]) .physical-button {
     font-weight: var(--font-weight-medium);
     letter-spacing: 0;
+  }
+  /* One ink for the algorithm: a lit switch wears its colour rather than
+     the house --phosphor, as the Echo view's Sync does. */
+  :global([data-grammar="flat"]) .reverb-chip.active {
+    background: var(--btn-tint);
+    border-color: var(--btn-tint);
+    color: var(--flat-on-fg);
+  }
+  :global([data-grammar="flat"]) .reverb-chip:not(.active) {
+    color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
   }
 </style>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { onDestroy, type Snippet } from 'svelte';
   import FilterCurve, { type CurveType } from './FilterCurve.svelte';
   import { familyScheme, type DeviceColorScheme } from '$lib/config/devicePresets';
   import { MIN_SEND_INTERVAL_MS } from '$lib/utils/sliderThrottle';
@@ -20,6 +20,10 @@
     curveType?: CurveType;
     color?: DeviceColorScheme;
     invertResonance?: boolean;
+    // Drawn under the handle and the title, filling the pad: a picture of
+    // what the two axes do (the Reverb view's tail). Visual only — give it
+    // `pointer-events: none`; the pad keeps the gesture.
+    background?: Snippet;
   }
 
   let {
@@ -36,7 +40,8 @@
     showCurve = false,
     curveType = 'lowpass',
     color = familyScheme('utility'),
-    invertResonance = false
+    invertResonance = false,
+    background
   }: Props = $props();
 
   let isDragging = $state(false);
@@ -281,6 +286,8 @@
     aria-valuemax="1"
     style="--xy-border: {isGhost ? 'var(--line)' : color.primary}; --xy-tint: {color.primary};"
   >
+    {#if background}{@render background()}{/if}
+
     <!-- Filter curve visualization -->
     {#if showCurve}
       <FilterCurve

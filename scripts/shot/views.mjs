@@ -208,6 +208,29 @@ export const TOURS = {
 				// The Gate pad is centred across its view, on purpose.
 				...(name === 'utility' ? { layout: { centered: 'x' } } : {})
 			})),
+			// The Hybrid Reverb on Pad (track 5): the rig's full parameter vector
+			// (a Quartz), one state per algorithm the picker's tap leaves it on,
+			// each with the drag that shows what that algorithm is about. A
+			// slider drag is relative: +dx of its ~196 px moves it dx/196.
+			...[
+				['Hall', 'Bass Mult raised: the lows below Bass X ring longer', [{ drag: '[aria-label^="Bass Mult"]', by: [36, 0] }]],
+				['Quartz', 'Diffusion down: the tail breaks into its echoes', [{ drag: '[aria-label^="Diffusion"]', by: [-170, 0] }]],
+				['Shimmer', 'Pitch +12: the energy climbs an octave a pass', []],
+				['Tides', 'Rate 1/4: the bands ripple out of step', [{ drag: '[aria-label^="Rate"]', by: [-40, 0] }]],
+				['Prism', 'Low Mult up, High Mult down: the lows outlast the highs', [
+					{ drag: '[aria-label^="Low Mult"]', by: [60, 0] },
+					{ drag: '[aria-label^="High Mult"]', by: [-50, 0] }
+				]]
+			].map(([algo, what, drags]) => ({
+				name: `fx-reverb-${algo.toLowerCase()}`,
+				description: `Reverb, ${algo}. ${what}`,
+				steps: [selectTrack(5), openTile('Reverb'), { click: `[data-reverb-type="${algo}"]` }, ...drags]
+			})),
+			{
+				name: 'fx-reverb-frozen',
+				description: 'Reverb, Hall with Freeze on: every band holds to the edge',
+				steps: [selectTrack(5), openTile('Reverb'), { click: '[data-reverb-type="Hall"]' }, { click: '[data-reverb-switch="8"]' }]
+			},
 			{ name: 'drumrack-drumcell', description: 'Drum Rack, DrumCell kit (Drums)', steps: [openInstrument(0)] },
 			// The held pads' mixer strip (2026-09-29): Kick latched, its chain
 			// mute and volume in a thin column right of the pads.
