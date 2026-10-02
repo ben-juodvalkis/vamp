@@ -171,3 +171,22 @@ export function resTFrom(value: number | undefined, range: { min: number; max: n
 export function resValueFor(t: number, range: { min: number; max: number } | undefined): number {
 	return range && range.max > range.min ? lerp(range.min, range.max, t) : clamp01(t);
 }
+
+/**
+ * Input and Output in dB, from their raw 0..1 values. Measured on the rig
+ * (2026-10-02, Echo on 12.4.15b5, `str_for_value` at 45 points): Input Gain
+ * is linear, -40..+40 dB; Output is 40·log10(2v), -inf..+12 dB, 0 dB at 0.5.
+ */
+export const inputGainDb = (v: number) => 80 * clamp01(v) - 40;
+export const outputGainDb = (v: number) => 40 * Math.log10(2 * clamp01(v));
+export const outputGainFor = (db: number) => clamp01(Math.pow(10, db / 40) / 2);
+
+/**
+ * Where Output goes when Input moves: down by exactly the dB Input went up,
+ * from where Output stood when the drag began, so the level out of Echo
+ * holds. Anchored to the drag's start (not the last frame) so a drag that
+ * pins Output at a rail and comes back lands Output where it began.
+ */
+export function compensatedOutput(outputAtDown: number, inputAtDown: number, input: number): number {
+	return outputGainFor(outputGainDb(outputAtDown) - (inputGainDb(input) - inputGainDb(inputAtDown)));
+}

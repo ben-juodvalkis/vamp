@@ -7,6 +7,10 @@ import { describe, it, expect } from 'vitest';
 import {
 	ECHO,
 	ECHO_LFO,
+	compensatedOutput,
+	inputGainDb,
+	outputGainDb,
+	outputGainFor,
 	lfoFreqLabel,
 	lfoRateLabel,
 	lfoRateT,
@@ -59,5 +63,31 @@ describe('Echo time', () => {
 
 	it("the tile's Y moves feedback 0..1 and mix at half", () => {
 		expect(ECHO.feedbackMixWrites(1)).toEqual([[ECHO.feedback, 1], [ECHO.mix, 0.5]]);
+	});
+});
+
+describe('Input / Output gain link', () => {
+	// Live's labels, sampled 2026-10-02 on 12.4.15b5.
+	it('reads Input and Output in dB as Live does', () => {
+		for (const [v, db] of [[0, -40], [0.25, -20], [0.5, 0], [0.611111, 8.9], [1, 40]]) {
+			expect(inputGainDb(v)).toBeCloseTo(db, 0);
+		}
+		for (const [v, db] of [[0.005, -80], [0.05, -40], [0.25, -12], [0.3, -8.9], [0.5, 0], [0.75, 7.0], [1, 12]]) {
+			expect(outputGainDb(v)).toBeCloseTo(db, 0);
+		}
+		expect(outputGainDb(0)).toBe(-Infinity);
+	});
+
+	it('moves Output down by the dB Input goes up, from where Output stood', () => {
+		// Input 0 dB → +10 dB; Output from +4.6 dB (0.65) → -5.4 dB.
+		const out = compensatedOutput(0.65, 0.5, 0.625);
+		expect(outputGainDb(out)).toBeCloseTo(outputGainDb(0.65) - 10, 6);
+	});
+
+	it('pins at a rail and comes back to where Output began', () => {
+		expect(compensatedOutput(0.9, 0.5, 0)).toBe(1);
+		expect(compensatedOutput(0.9, 0.5, 0.5)).toBeCloseTo(0.9, 9);
+		expect(outputGainFor(-Infinity)).toBe(0);
+		expect(compensatedOutput(0, 0.5, 0)).toBe(0);
 	});
 });

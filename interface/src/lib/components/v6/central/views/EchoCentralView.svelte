@@ -33,6 +33,7 @@
 		ECHO,
 		ECHO_LFO,
 		ECHO_LFO_WAVES,
+		compensatedOutput,
 		freqTFrom,
 		freqValueFor,
 		lfoRateLabel,
@@ -136,6 +137,18 @@
 	}
 	let input = $derived(fullT(ECHO.inputGain));
 	let output = $derived(fullT(ECHO.outputGain));
+
+	// Input drags Output the other way, dB for dB, from wherever Output
+	// stands (user, 2026-10-02); Output moves alone. Both rails are 0..1.
+	let gainsAtDown = { input: 0.5, output: 0.5 };
+	function inputDown() {
+		gainsAtDown = { input, output };
+	}
+	function inputMoved(t: number) {
+		echo.sendParam(ECHO.inputGain, fullValue(ECHO.inputGain, t));
+		const out = compensatedOutput(gainsAtDown.output, gainsAtDown.input, t);
+		echo.sendParam(ECHO.outputGain, fullValue(ECHO.outputGain, out));
+	}
 	let feedback = $derived(t01(echo.paramValue(ECHO.feedback)));
 	let mix = $derived(t01(echo.paramValue(ECHO.mix)));
 
@@ -347,7 +360,8 @@
 			isGhost={echo.isGhost}
 			color={echo.color}
 			onTap={() => echo.loadIfGhost()}
-			onInteraction={(t) => echo.sendParam(ECHO.inputGain, fullValue(ECHO.inputGain, t))}
+			onDown={inputDown}
+			onInteraction={inputMoved}
 		/>
 	</div>
 
