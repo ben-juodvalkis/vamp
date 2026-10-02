@@ -19,7 +19,7 @@
 
 	const ticks = $derived(
 		events.map((e, i) => {
-			const straight = i / 8;
+			const straight = i / events.length;
 			const x = straight + ((e.x - straight) * amount) / 100;
 			return { left: Math.max(0, Math.min(1, x)) * 100, height: Math.max(MIN_HEIGHT, Math.round(e.v * 100)) };
 		})

@@ -40,6 +40,12 @@ describe('parseAgr', () => {
 		expect(p.events[2].x).toBeCloseTo(0.997 / 4);
 	});
 
+	it('spreads a groove of fewer than 8 notes over the whole picture', () => {
+		// Four quarters: one per beat, on every other line — not the first half.
+		const p = parseAgr(Buffer.from(agr([0, 1, 2, 3])))!;
+		expect(p.events.map((e) => e.x)).toEqual([0, 0.25, 0.5, 0.75]);
+	});
+
 	it('maps 1 / 3 / 5 to 1/8, 1/16, 1/32', () => {
 		const grid = (g: number) => parseAgr(Buffer.from(agr([0, 0.5], { grid: g })))!.grid;
 		expect([grid(1), grid(3), grid(5)]).toEqual(['1/8', '1/16', '1/32']);

@@ -13,9 +13,11 @@
  * **What a card shows.** A `.agr` is a small MIDI clip plus the groove's
  * settings, gzipped or plain XML: `<Grid Value=…>` (1 = 1/8, 3 = 1/16, 5 = 1/32)
  * and `<MidiNoteEvent Time=… Velocity=…>`. The picture is its first 8 note
- * events, x = time / span and height = velocity / 127, where span is 8 steps
- * of the step the notes themselves keep (the seventh gap rounded to a power of
- * two of a beat: `Hip Hop Late 8ths` is gridded 1/16 but plays 8ths). 103 of
+ * events, x = time / span and height = velocity / 127, where span is one step
+ * per event of the step the notes themselves keep (their mean gap rounded to a
+ * power of two of a beat: `Hip Hop Late 8ths` is gridded 1/16 but plays 8ths),
+ * so a groove of fewer notes still spans the picture (four quarters land on
+ * every other line, not in the first half). 103 of
  * the 219 are in Ableton's binary format (all of Logic and Notator, 9 MPC, 10
  * Percussion, 9 Style, 1 Utility, measured 2026-09-29): those carry no grid
  * and no picture rather than a guessed one.
@@ -102,7 +104,7 @@ export function parseAgr(bytes: Buffer): { grid: string | null; events: GrooveEv
 
 	const gap = (first[first.length - 1].t - first[0].t) / (first.length - 1);
 	const step = gap > 0 ? 2 ** Math.round(Math.log2(gap)) : 0.25;
-	const span = PICTURE_EVENTS * step;
+	const span = first.length * step;
 	const events = first.map((n) => ({
 		x: Math.min(1, Math.max(0, n.t / span)),
 		v: Math.min(1, Math.max(0, n.vel / 127))
