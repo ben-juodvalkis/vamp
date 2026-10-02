@@ -610,3 +610,119 @@ describe('independence across instances', () => {
 		expect(b.rec.taps).toEqual([{ x: 200, y: 100 }]);
 	});
 });
+
+describe('two-finger chord', () => {
+	function chordHarness(claim = true) {
+		const ends: Array<{ reason: string; elapsedMs: number }> = [];
+		let starts = 0;
+		const h = harness({
+			onChordStart: () => {
+				starts++;
+				return claim;
+			},
+			onChordEnd: (info: { reason: string; elapsedMs: number }) => ends.push(info)
+		});
+		return { ...h, ends, starts: () => starts };
+	}
+
+	it('claims a second finger while the first is still a candidate tap', () => {
+		const { rec, gestures, ends, starts } = chordHarness();
+		press(gestures, 50, 100, 1);
+		press(gestures, 60, 100, 2);
+		expect(starts()).toBe(1);
+		release(50, 100, 1);
+		release(60, 100, 2);
+		// The first finger's tap is dropped: the chord replaced it.
+		expect(rec.taps).toHaveLength(0);
+		expect(ends).toHaveLength(1);
+		expect(ends[0].reason).toBe('up');
+	});
+
+	it('ends only when the LAST finger lifts, and movement is not a fader', () => {
+		const { rec, gestures, ends } = chordHarness();
+		press(gestures, 50, 100, 1);
+		press(gestures, 60, 100, 2);
+		release(50, 100, 1);
+		expect(ends).toHaveLength(0);
+		move(60, 40, 2);
+		expect(rec.dragStart).toBe(0);
+		expect(rec.moves).toHaveLength(0);
+		release(60, 40, 2);
+		expect(ends).toHaveLength(1);
+	});
+
+	it('reports elapsed time from the chord start', () => {
+		const now = vi.spyOn(performance, 'now');
+		now.mockReturnValue(1000);
+		const { gestures, ends } = chordHarness();
+		press(gestures, 50, 100, 1);
+		now.mockReturnValue(1040);
+		press(gestures, 60, 100, 2);
+		now.mockReturnValue(1940);
+		release(50, 100, 1);
+		release(60, 100, 2);
+		expect(ends[0].elapsedMs).toBe(900);
+		now.mockRestore();
+	});
+
+	it('a cancelled finger makes the whole chord a cancel', () => {
+		const { gestures, ends } = chordHarness();
+		press(gestures, 50, 100, 1);
+		press(gestures, 60, 100, 2);
+		release(50, 100, 1, 'pointercancel');
+		release(60, 100, 2);
+		expect(ends[0].reason).toBe('cancel');
+	});
+
+	it('never interrupts a first finger already dragging the fader', () => {
+		const { rec, gestures, starts } = chordHarness();
+		press(gestures, 50, 100, 1);
+		move(50, 100 - TOUCH_DRAG_THRESHOLD - 2, 1);
+		expect(rec.dragStart).toBe(1);
+		press(gestures, 60, 100, 2);
+		expect(starts()).toBe(0);
+		release(50, 60, 1);
+		expect(rec.dragEnd).toBe(1);
+	});
+
+	it('a declined chord leaves the first finger as it was', () => {
+		const { rec, gestures, ends } = chordHarness(false);
+		press(gestures, 50, 100, 1);
+		press(gestures, 60, 100, 2);
+		release(60, 100, 2);
+		release(50, 100, 1);
+		expect(rec.taps).toEqual([{ x: 50, y: 100 }]);
+		expect(ends).toHaveLength(0);
+	});
+
+	it('a third finger joins the chord', () => {
+		const { gestures, ends } = chordHarness();
+		press(gestures, 50, 100, 1);
+		press(gestures, 60, 100, 2);
+		press(gestures, 70, 100, 3);
+		release(50, 100, 1);
+		release(60, 100, 2);
+		expect(ends).toHaveLength(0);
+		release(70, 100, 3);
+		expect(ends).toHaveLength(1);
+	});
+
+	it('unmounting mid-chord ends it as a teardown', () => {
+		const { gestures, ends } = chordHarness();
+		press(gestures, 50, 100, 1);
+		press(gestures, 60, 100, 2);
+		gestures.destroy();
+		expect(ends[0].reason).toBe('teardown');
+	});
+
+	it('a fresh single tap works after a chord', () => {
+		const { rec, gestures } = chordHarness();
+		press(gestures, 50, 100, 1);
+		press(gestures, 60, 100, 2);
+		release(50, 100, 1);
+		release(60, 100, 2);
+		press(gestures, 50, 100, 4);
+		release(50, 100, 4);
+		expect(rec.taps).toEqual([{ x: 50, y: 100 }]);
+	});
+});

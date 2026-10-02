@@ -537,6 +537,76 @@ const SCENARIOS = [
 	},
 
 	{
+		name: 'two-finger-solo-latches',
+		view: 'full',
+		description: 'two fingers on a fader solo the track, a quick lift latches, nothing selects or moves',
+		async run({ page, fingers, sent, reset }) {
+			const card = await centreOf(page, '[data-debug="track-card"]', 3);
+			reset();
+			const fa = await fingers.down(card.x - 12, card.y);
+			await wait(30);
+			const fb = await fingers.down(card.x + 12, card.y);
+			await wait(60);
+			expectEqual(
+				sent()
+					.filter((m) => m.address === '/looping/v3/track/solo')
+					.map((m) => m.args),
+				[['tracks/3', 1]],
+				'the second finger must solo the track, before anything lifts'
+			);
+			// Lift the first finger early: the chord holds until the last.
+			await fingers.up(fa);
+			await wait(60);
+			await fingers.up(fb);
+			await wait(120);
+			const writes = sent().map((m) => m.address);
+			expectEqual(
+				writes.filter((a) => a === '/looping/v3/track/solo').length,
+				1,
+				'a quick release latches; nothing restores'
+			);
+			expect(
+				!writes.some((a) => a.includes('volume') || a.includes('select')),
+				`the chord must not reach the fader or select; sent ${JSON.stringify(writes)}`
+			);
+			expect(
+				await page.evaluate(
+					() => !!document.querySelectorAll('[data-debug="track-card"]')[3]?.querySelector('.solo-tint')
+				),
+				'the soloed strip must wear the tint'
+			);
+		}
+	},
+
+	{
+		name: 'two-finger-solo-momentary',
+		view: 'full',
+		description: 'two fingers held past the threshold solo only while held',
+		async run({ page, fingers, sent, reset }) {
+			const card = await centreOf(page, '[data-debug="track-card"]', 3);
+			reset();
+			const fa = await fingers.down(card.x - 12, card.y);
+			await wait(30);
+			const fb = await fingers.down(card.x + 12, card.y);
+			// Threshold is 300; 600 clears it, as in `solo-momentary`.
+			await wait(600);
+			await fingers.up(fa);
+			await fingers.up(fb);
+			await wait(120);
+			expectEqual(
+				sent()
+					.filter((m) => m.address === '/looping/v3/track/solo')
+					.map((m) => m.args),
+				[
+					['tracks/3', 1],
+					['tracks/3', 0]
+				],
+				'a long two-finger hold must restore on release'
+			);
+		}
+	},
+
+	{
 		name: 'volume-and-mute',
 		view: 'full',
 		description: 'a volume drag on one strip survives a mute on another',

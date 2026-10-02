@@ -11,9 +11,9 @@
 	 *
 	 * Fixed-position, same recipe as `V3ErrorBanner`, but persistent for as
 	 * long as the gesture is open rather than a timed toast — it IS the
-	 * mode indicator, not a notification about one. `--phosphor` is the flat
-	 * grammar's own "on" ink, the same one `TrackStrip`'s tapped-track ring
-	 * uses, so the banner and the rings it's naming read as one system.
+	 * mode indicator, not a notification about one. `--act-group` green is
+	 * the Group button's ink, the same one `TrackStrip`'s tapped-track ring
+	 * and wash use, so the banner and the rings it's naming read as one system.
 	 *
 	 * Also the answer to "how do you cancel a latched gesture" — there is
 	 * no drag-off once the finger has already left the button, so this is
@@ -48,22 +48,22 @@
 {/if}
 
 <style>
-	/* GRATICULE: same slab-and-shadow recipe as V3ErrorBanner, in phosphor
+	/* GRATICULE: same slab-and-shadow recipe as V3ErrorBanner, in group green
 	   rather than the alert ink — this names a mode, not a problem. */
 	.group-mode-banner {
 		border-radius: var(--radius-md);
 		background: var(--popover);
-		border: 1px solid var(--phosphor);
+		border: 1px solid var(--act-group);
 		color: var(--foreground);
-		box-shadow: 0 24px 48px oklch(0 0 0 / 0.5), 0 0 0 1px var(--phosphor);
+		box-shadow: 0 24px 48px oklch(0 0 0 / 0.5), 0 0 0 1px var(--act-group);
 	}
 	.group-mode-count {
-		color: var(--phosphor);
+		color: var(--act-group);
 		min-width: 1.5em;
 		text-align: center;
 	}
 	.group-mode-title {
-		color: var(--phosphor);
+		color: var(--act-group);
 	}
 	.group-mode-cancel {
 		color: var(--fg-tertiary);
@@ -73,7 +73,7 @@
 	}
 
 	/* Flat grammar (ui-architecture §8.1): a DetailViewBackground panel —
-	   2px corners, no drop shadow, the phosphor frame kept as the state
+	   2px corners, no drop shadow, the green frame kept as the state
 	   read, title at normal case/medium weight rather than tracked caps. */
 	:global([data-grammar="flat"]) .group-mode-banner {
 		border-radius: 2px;

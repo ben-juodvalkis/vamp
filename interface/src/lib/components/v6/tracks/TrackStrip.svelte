@@ -133,6 +133,12 @@
     // than drawing the same content twice.
     let sessionMode = $derived(uiPrefsStore.sessionMode);
     let isSoloed = $derived(trackData.track.solo === true);
+    // The whole strip wears solo, not only the button: the button is off by
+    // default, and two fingers on the fader solo with no button to light.
+    let stripSoloed = $derived(isSoloed && !isMaster);
+    let isGroupTapped = $derived(
+        groupGestureStore.active && groupGestureStore.memberPaths.has(trackPath)
+    );
 
     // The device band. A group strip never gets one — it takes the other
     // markup branch below, whose card is already spoken for by body + fold,
@@ -213,6 +219,9 @@
     // guarantees no pan can ever start here, and the teardown, so none of
     // the three can drift away from the others.
     let soloRestoreTo: boolean | null = null;
+    // The two-finger solo on the fader keeps its own: the button and a
+    // chord can be held at once, and each must restore what IT found.
+    let chordSoloRestoreTo: boolean | null = null;
 
     const soloPress: PressOptions = $derived({
         // Zero delay. Safe precisely because `touch-action: none` means a
@@ -474,7 +483,26 @@
             throttle.push(localVolume);
         },
         onDragEnd: () => throttle.flush(),
-        onTap: ({ x, y }) => dispatchSectionTap(x, y)
+        onTap: ({ x, y }) => dispatchSectionTap(x, y),
+        // Two fingers on the fader = the Solo button, release rule and all.
+        // The held Group button outranks it: there two fingers are a tap,
+        // and a tap means "add this track to the group".
+        onChordStart: () => {
+            if (groupGestureStore.active) {
+                groupGestureStore.tap(trackPath, trackData.track.name);
+                return true;
+            }
+            if (isMaster) return false;
+            chordSoloRestoreTo = isSoloed;
+            setTrackSolo(trackPath, !isSoloed);
+            return true;
+        },
+        onChordEnd: ({ reason, elapsedMs }) => {
+            if (chordSoloRestoreTo !== null && shouldRestoreOnRelease({ elapsedMs, reason })) {
+                setTrackSolo(trackPath, chordSoloRestoreTo);
+            }
+            chordSoloRestoreTo = null;
+        }
     });
 
     let isDragging = $derived(gestures.isDragging);
@@ -603,7 +631,7 @@
 >
 <Card
     bind:ref={card}
-    class="glass-card hud-bracket touch-manipulation min-h-0 py-0 {trackData.isSelected ? 'track-selected' : ''} {bracketActive ? 'is-active' : ''} {trackData.permuteMutedNow ? 'permute-silenced' : ''} {isPending ? 'is-loading' : ''} {justLanded ? 'is-landed' : ''} {groupGestureStore.active && groupGestureStore.memberPaths.has(trackPath) ? 'group-tapped' : ''}"
+    class="glass-card hud-bracket touch-manipulation min-h-0 py-0 {trackData.isSelected ? 'track-selected' : ''} {bracketActive ? 'is-active' : ''} {trackData.permuteMutedNow ? 'permute-silenced' : ''} {isPending ? 'is-loading' : ''} {justLanded ? 'is-landed' : ''} {isGroupTapped ? 'group-tapped' : ''}"
     data-debug="track-card"
     style="min-width: 0; flex: 1 1 0; gap: var(--strip-gap); --bracket-ink: {bracketInk}; --landing-pulse-ms: {LANDING_PULSE_MS}ms; padding: 0; border-radius: var(--strip-radius, var(--radius-md)); container-type: inline-size; position: relative; overflow: hidden; display: flex; flex-direction: column; touch-action: {faderTouchAction};"
     role="slider"
@@ -617,6 +645,16 @@
     <div class="meter-bg">
         <MeterVisualization {trackIndex} track={trackData.track} color={trackData.trackColor} />
     </div>
+
+    <!-- Solo tint: a wash over the meter and a ring inside the border, so it
+         composes with selection and permute-silenced instead of fighting
+         their backgrounds. Follows Live's solo state, however it was set. -->
+    {#if stripSoloed}
+        <div class="solo-tint" aria-hidden="true"></div>
+    {/if}
+    {#if isGroupTapped}
+        <div class="group-tint" aria-hidden="true"></div>
+    {/if}
 
     {#if isGroup}
         <!-- Group body: no clip. Tap selects the group. -->
@@ -788,6 +826,7 @@
 <div class="header-block" class:is-flipped={flipLayout} class:is-selected={trackData.isSelected}>
     <div
         class="header-name"
+        class:is-soloed={stripSoloed}
         role="button"
         tabindex="-1"
         aria-label="{trackData.track.mute ? 'Unmute' : 'Mute'} track {trackData.track.name}"
@@ -1097,6 +1136,8 @@
         min-height: 0;
         cursor: pointer;
         -webkit-tap-highlight-color: transparent;
+        /* Anchors the solo tint's ::after. */
+        position: relative;
         /* Inner size container, for TrackHeader's fluid name size alone.
            The name has always been authored in `cqi` ("scales with its
            container") but has had no container since it moved out of the
@@ -1212,6 +1253,32 @@
        (light --act-solo is calibrated dark, L 0.55). */
     :global(.light) .solo-button.is-soloed {
         color: var(--act-solo);
+    }
+
+    /* Soloed strip: an act-solo wash laid OVER the sections (z 2, under
+       the volume ticks, which follow it in the DOM) plus an inset ring.
+       Over, not under: the clip, device and permute wells are opaque, so a
+       wash beneath them only showed in the seams. Translucent, so the
+       content still reads through it, and it composes with selection and
+       permute-silenced rather than fighting their backgrounds. */
+    .solo-tint {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 2;
+        border-radius: inherit;
+        background: color-mix(in oklab, var(--act-solo) 32%, transparent);
+        box-shadow: inset 0 0 0 2px var(--act-solo);
+    }
+
+    .header-name.is-soloed::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        border-radius: var(--strip-radius, var(--radius-md));
+        background: color-mix(in oklab, var(--act-solo) 45%, transparent);
+        box-shadow: inset 0 0 0 2px var(--act-solo);
     }
 
     /* Meter visualization sits behind everything. */
@@ -1375,17 +1442,29 @@
                     box-shadow 75ms var(--ease-precise);
     }
 
-    /* A track pending in the held Group gesture: `--phosphor`, the flat
-       grammar's own "ON" ink, deliberately distinct from `.track-selected`'s
+    /* A track pending in the held Group gesture: `--act-group` green,
+       the Group button's own ink, deliberately distinct from `.track-selected`'s
        track-colored ring — this is "will be grouped", not "this is the
        track you're looking at", and the two can be true at once (the anchor
        is usually both). No transition: taps should feel immediate, matching
        Live's own real-time selection this mirrors. */
     :global(.group-tapped) {
         border-width: 2px !important;
-        border-color: var(--phosphor) !important;
-        box-shadow: 0 0 0 1px var(--phosphor),
-                    0 0 10px color-mix(in oklab, var(--phosphor) 50%, transparent) !important;
+        border-color: var(--act-group) !important;
+        box-shadow: 0 0 0 1px var(--act-group),
+                    0 0 10px color-mix(in oklab, var(--act-group) 50%, transparent) !important;
+    }
+
+    /* And a green wash, laid over the sections like the solo tint, so a
+       gathered strip reads from across the row and not only by its ring.
+       After .solo-tint in the DOM: grouping is the gesture in progress. */
+    .group-tint {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 2;
+        border-radius: inherit;
+        background: var(--act-group-wash);
     }
 
     /* Light theme: the same recipe reads much weaker on paper than on
