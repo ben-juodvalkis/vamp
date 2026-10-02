@@ -140,6 +140,8 @@
 
 	// Input drags Output the other way, dB for dB, from wherever Output
 	// stands (user, 2026-10-02); Output moves alone. Both rails are 0..1.
+	// Half speed: a full-height drag covers half of either rail (user, 2026-10-02).
+	const GAIN_SENSITIVITY = 0.5;
 	let gainsAtDown = { input: 0.5, output: 0.5 };
 	function inputDown() {
 		gainsAtDown = { input, output };
@@ -354,6 +356,7 @@
 		<DeviceSlider
 			value={input}
 			title="Input"
+			sensitivity={GAIN_SENSITIVITY}
 			orientation="vertical"
 			labelOrientation="horizontal"
 			labelSize="small"
@@ -369,6 +372,7 @@
 		<DeviceSlider
 			value={output}
 			title="Output"
+			sensitivity={GAIN_SENSITIVITY}
 			orientation="vertical"
 			labelOrientation="horizontal"
 			labelSize="small"

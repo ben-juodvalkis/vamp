@@ -90,7 +90,8 @@ describe('EchoCentralView Input/Output', () => {
 		pointer(input, 'pointerup', 50, 150);
 		const w = written();
 		const inNow = w.get(ECHO.inputGain)!;
-		expect(inNow).toBeGreaterThan(0.5);
+		// 50 px of a 400 px rail at half speed: 0.5 + 0.0625.
+		expect(inNow).toBeCloseTo(0.5625, 6);
 		const rise = inputGainDb(inNow) - inputGainDb(0.5);
 		expect(outputGainDb(w.get(ECHO.outputGain)!)).toBeCloseTo(outputGainDb(0.65) - rise, 6);
 	});
@@ -104,6 +105,7 @@ describe('EchoCentralView Input/Output', () => {
 		pointer(output, 'pointerup', 50, 150);
 		const w = written();
 		expect(w.has(ECHO.outputGain)).toBe(true);
+		expect(w.get(ECHO.outputGain)).toBeCloseTo(0.7125, 6); // half speed too
 		expect(w.has(ECHO.inputGain)).toBe(false);
 	});
 });

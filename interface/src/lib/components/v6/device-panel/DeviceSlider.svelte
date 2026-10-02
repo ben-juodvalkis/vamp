@@ -41,6 +41,9 @@
     max?: number;
     centerOrigin?: boolean;  // If true, fill expands from center (for bipolar controls like gain)
     centerValue?: number;    // The value that represents center (default: midpoint of min/max)
+    // Drag speed: the share of the rail one full slider length travels.
+    // Below 1 for a wide rail that wants finer moves (Echo's Input, 80 dB).
+    sensitivity?: number;
     // Draw the split handle line (two rail-pinned segments with a gap for the
     // label) instead of a solid fill. Implied by `track` — meter mode has no
     // fill to read position from, so it always needs the handle. Set it
@@ -68,6 +71,7 @@
     max = 1,
     centerOrigin = false,
     centerValue,
+    sensitivity = 1,
     handleLine = false,
     track = null,
     trackIndex = 0,
@@ -215,7 +219,7 @@
     // Calculate delta from start position
     const currentPointer = orientation === 'vertical' ? event.clientY : event.clientX;
     const size = orientation === 'vertical' ? rect.height : rect.width;
-    const delta = (currentPointer - startPointer) / size;
+    const delta = ((currentPointer - startPointer) / size) * sensitivity;
 
     // Apply delta to start value (invert for vertical)
     const normalizedDelta = orientation === 'vertical' ? -delta : delta;
