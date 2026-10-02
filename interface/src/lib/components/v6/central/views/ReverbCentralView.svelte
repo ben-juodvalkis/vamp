@@ -18,6 +18,7 @@
   import { deviceInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import SectionDivider from '../SectionDivider.svelte';
+  import { toRaw, toPosition, LIVE_DEFAULTS } from '$lib/components/v6/device-panel/hybridReverbParams';
 
   const fx = useFxGridSlot('reverb');
 
@@ -169,7 +170,8 @@
   let parameterValues = $derived.by(() => {
     const newValues = new Map<number, number>();
     Object.values(ALGORITHMIC_PARAMS).flat().forEach(param => {
-      newValues.set(param.index, fx.paramValue(param.index) ?? 0.5);
+      const raw = fx.paramValue(param.index) ?? LIVE_DEFAULTS[param.index] ?? 0.5;
+      newValues.set(param.index, toPosition(param.index, raw));
     });
     return newValues;
   });
@@ -233,8 +235,9 @@
     return Math.max(0, Math.min(1, (decayTime - 0.02) / (20.0 - 0.02)));
   }
 
+  // The slider is 0..1; Ti Rate takes a 0..29 step, so it goes through toRaw.
   function handleParameterChange(paramIndex: number, value: number) {
-    fx.sendParam(paramIndex, value);
+    fx.sendParam(paramIndex, toRaw(paramIndex, value));
   }
 
   // Build a slider title that appends Live's GUI-formatted value
