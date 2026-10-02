@@ -114,8 +114,8 @@
 	// 7 Reverse, 8 Int Var. Dry / Wet, Coarse and Recycle are Max int
 	// params, so every write is rounded. Defaults are what Pitch Hack.adv
 	// saves: dry, no shift, Rate 1/8, no recycle.
-	// Pad: X = Rate, Y = Recycle. Pitch and Mix are sliders of their own —
-	// Mix was on Y with Recycle at first; the user split it out (2026-09-23).
+	// Pad: X = Rate, Y = Mix. Pitch and Recycle (titled Feedback) are
+	// sliders of their own.
 	const PITCH_HACK_PARAMS = {
 		mix:     { index: 2, max: 100, default: 0 },
 		pitch:   { index: 3, min: -36, max: 36, default: 0 },
@@ -136,12 +136,12 @@
 			pitchHack.paramValue(PITCH_HACK_PARAMS.rate.index) ?? PITCH_HACK_PARAMS.rate.default
 		)))
 	);
-	let pitchHackRecycle = $derived(
-		(pitchHack.paramValue(PITCH_HACK_PARAMS.recycle.index) ?? PITCH_HACK_PARAMS.recycle.default) /
-			PITCH_HACK_PARAMS.recycle.max
-	);
 	let pitchHackMix = $derived(
-		pitchHack.paramValue(PITCH_HACK_PARAMS.mix.index) ?? PITCH_HACK_PARAMS.mix.default
+		(pitchHack.paramValue(PITCH_HACK_PARAMS.mix.index) ?? PITCH_HACK_PARAMS.mix.default) /
+			PITCH_HACK_PARAMS.mix.max
+	);
+	let pitchHackRecycle = $derived(
+		pitchHack.paramValue(PITCH_HACK_PARAMS.recycle.index) ?? PITCH_HACK_PARAMS.recycle.default
 	);
 	let pitchHackPitch = $derived(
 		pitchHack.paramValue(PITCH_HACK_PARAMS.pitch.index) ?? PITCH_HACK_PARAMS.pitch.default
@@ -152,9 +152,9 @@
 	});
 
 	function sendPitchHackXY(x: number, y: number) {
-		const { rate, recycle } = PITCH_HACK_PARAMS;
+		const { rate, mix } = PITCH_HACK_PARAMS;
 		pitchHack.sendParam(rate.index, Math.round(Math.max(0, Math.min(1, x)) * rate.max));
-		pitchHack.sendParam(recycle.index, Math.round(Math.max(0, Math.min(1, y)) * recycle.max));
+		pitchHack.sendParam(mix.index, Math.round(Math.max(0, Math.min(1, y)) * mix.max));
 	}
 
 	function sendPitchHackPitch(semitones: number) {
@@ -162,9 +162,9 @@
 		pitchHack.sendParam(index, Math.max(min, Math.min(max, Math.round(semitones))));
 	}
 
-	function sendPitchHackMix(percent: number) {
-		const { index, max } = PITCH_HACK_PARAMS.mix;
-		pitchHack.sendParam(index, Math.max(0, Math.min(max, Math.round(percent))));
+	function sendPitchHackRecycle(amount: number) {
+		const { index, max } = PITCH_HACK_PARAMS.recycle;
+		pitchHack.sendParam(index, Math.max(0, Math.min(max, Math.round(amount))));
 	}
 </script>
 
@@ -231,14 +231,14 @@
 	<SectionDivider orientation="vertical" ink={pitchHackInk.primary} />
 
 	<!-- Pitch Hack (virtual device) — X: Rate (24 steps, the division is the
-	     pad's readout), Y: Recycle. The two sliders beside it are the same
-	     device's Coarse shift and Dry / Wet. -->
+	     pad's readout), Y: Dry / Wet. The two sliders beside it are the same
+	     device's Coarse shift and Recycle. -->
 	<div class="device-wrapper">
 		<BaseDeviceControl slotKey="pitchHack" device={pitchHack.device} title="Pitch Hack" disableCentralViewOnTap={true} showMoveToTop={true} showMoveToEnd={true}>
 			{#snippet children({ handleTap })}
 				<DeviceXY
 					xValue={pitchHackRate / PITCH_HACK_PARAMS.rate.max}
-					yValue={pitchHackRecycle}
+					yValue={pitchHackMix}
 					title="Pitch Hack"
 					rateLabel={PITCH_HACK_RATES[pitchHackRate]}
 					isGhost={pitchHack.isGhost}
@@ -270,16 +270,16 @@
 
 	<div class="device-wrapper">
 		<DeviceSlider
-			value={pitchHackMix}
-			title="Mix"
+			value={pitchHackRecycle}
+			title="Feedback"
 			orientation="vertical"
 			labelOrientation="horizontal"
 			isGhost={pitchHack.isGhost}
 			color={pitchHackInk}
 			min={0}
-			max={PITCH_HACK_PARAMS.mix.max}
+			max={PITCH_HACK_PARAMS.recycle.max}
 			onTap={() => pitchHack.loadIfGhost()}
-			onInteraction={sendPitchHackMix}
+			onInteraction={sendPitchHackRecycle}
 		/>
 	</div>
 
@@ -288,7 +288,7 @@
 <style>
 	.chorus-central-layout {
 		display: grid;
-		/* smudge | comb · comb LFO | phaser | pitch hack · pitch · mix.
+		/* smudge | comb · comb LFO | phaser | pitch hack · pitch · feedback.
 		   Each seam is an `auto` track as wide as its hairline, so the five
 		   pads still share the rest evenly; each slider is a third of a pad. */
 		grid-template-columns: 1fr auto 1fr 1fr auto 1fr auto 1fr 0.35fr 0.35fr;
