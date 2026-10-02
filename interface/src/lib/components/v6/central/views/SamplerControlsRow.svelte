@@ -114,6 +114,7 @@
       value={t(control, atRest)}
       {title}
       orientation="vertical"
+      labelOrientation="horizontal"
       {color}
       isGhost={state === 'none'}
       onInteraction={(value) => write(control, value)}
@@ -200,6 +201,7 @@
   >
     <DeviceSlider
       value={t('pitch', 0)}
+      labelOrientation="horizontal"
       title="Trnsp"
       {color}
       min={VM_PITCH_MIN}

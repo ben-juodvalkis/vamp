@@ -155,6 +155,7 @@
     <VmSlot state={startState} class="vm-slot-start flex-1 flex flex-col" badge={badges.start}>
       <DeviceSlider
         value={t('start', 0.5)}
+        labelOrientation="horizontal"
         title="Start"
         {color}
         isGhost={startState === 'none'}
@@ -171,6 +172,7 @@
     <VmSlot state={pitchState} class="vm-slot-pitch flex-1 flex flex-col" badge={badges.pitch}>
       <DeviceSlider
         value={t('pitch', 0)}
+        labelOrientation="horizontal"
         title="Trnsp"
         {color}
         min={VM_PITCH_MIN}

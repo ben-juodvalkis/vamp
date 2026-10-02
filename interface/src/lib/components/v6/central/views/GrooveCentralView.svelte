@@ -150,6 +150,7 @@
 	<div class="slider" class:dim={!hasClip}>
 		<DeviceSlider
 			value={clipGrooveStore.randomAmount / 100}
+			labelOrientation="horizontal"
 			title="Random"
 			color={scheme}
 			onInteraction={(v) => write(V3_CLIP_GROOVE_SET_RANDOM_AMOUNT_ADDRESS, v * 100)}
@@ -158,6 +159,7 @@
 	<div class="slider" class:dim={!hasClip}>
 		<DeviceSlider
 			value={clipGrooveStore.velocityAmount / 100}
+			labelOrientation="horizontal"
 			title="Velocity"
 			color={scheme}
 			onInteraction={(v) => write(V3_CLIP_GROOVE_SET_VELOCITY_AMOUNT_ADDRESS, v * 100)}
@@ -166,6 +168,7 @@
 	<div class="slider" class:dim={!hasClip}>
 		<DeviceSlider
 			value={clipGrooveStore.timingAmount / 100}
+			labelOrientation="horizontal"
 			title="Amount"
 			color={scheme}
 			onInteraction={(v) => write(V3_CLIP_GROOVE_SET_TIMING_AMOUNT_ADDRESS, v * 100)}

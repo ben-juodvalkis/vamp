@@ -211,6 +211,12 @@
   --act-pitch-line: color-mix(in oklab, var(--act-pitch) 55%, transparent);
   --act-warn-wash: color-mix(in oklab, var(--act-warn) 18%, transparent);
   --act-warn-line: color-mix(in oklab, var(--act-warn) 55%, transparent);
+
+  /* Grouping tracks wears green, in every skin: the Group button, the
+     strips it has gathered, its banner. Play's green, since no skin has a
+     second one, and the two never sit on the same control. */
+  --act-group: var(--act-play);
+  --act-group-wash: color-mix(in oklab, var(--act-group) 22%, transparent);
 }
 
 /* Cross-cutting chrome tokens (both grammars). GRATICULE values here; the

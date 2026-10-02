@@ -160,6 +160,7 @@
                 value={envelopeValues[i]}
                 title={stage.title}
                 orientation="vertical"
+                labelOrientation="horizontal"
                 color={operatorInk}
                 onInteraction={(value) => writeEnv(stage.index, value)}
               />
@@ -173,6 +174,7 @@
           value={feedbackValue}
           title="Feedback"
           orientation="vertical"
+          labelOrientation="horizontal"
           color={operatorInk}
           onInteraction={handleFeedbackInteraction}
         />
@@ -183,6 +185,7 @@
           value={timeValue}
           title="Time"
           orientation="vertical"
+          labelOrientation="horizontal"
           color={operatorInk}
           min={-100}
           max={100}
@@ -197,6 +200,7 @@
           value={toneValue}
           title="Tone"
           orientation="vertical"
+          labelOrientation="horizontal"
           color={operatorInk}
           onInteraction={handleToneInteraction}
         />

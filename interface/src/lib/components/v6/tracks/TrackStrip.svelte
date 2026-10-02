@@ -123,16 +123,17 @@
     // on in Ableton — NOT the per-beat Permute mute-step state.
     let dimmed = $derived(trackData.track.mute);
 
-    // Optional Solo button (uiPrefsStore.showSoloButtons, toggled from
-    // SystemCentralView's Sections card). Off by default; never on the
-    // master strip — Live's master has no solo.
-    let showSolo = $derived(uiPrefsStore.showSoloButtons && !isMaster);
-
     // In session mode the clip grid draws this track's clips a third
     // below, so the strip's own Clip section drops its preview rather
     // than drawing the same content twice.
     let sessionMode = $derived(uiPrefsStore.sessionMode);
     let isSoloed = $derived(trackData.track.solo === true);
+    // The whole strip wears solo: there is no Solo button (two fingers on
+    // the fader solo), so the strip is the only place it can show.
+    let stripSoloed = $derived(isSoloed && !isMaster);
+    let isGroupTapped = $derived(
+        groupGestureStore.active && groupGestureStore.memberPaths.has(trackPath)
+    );
 
     // The device band. A group strip never gets one — it takes the other
     // markup branch below, whose card is already spoken for by body + fold,
@@ -164,9 +165,7 @@
 
     // Flipped stack (ADR-421, default ON). The strips row sits at the
     // bottom of the screen, so the Name band moves to the FOOT of the
-    // card, landing directly above the Solo button that already lived
-    // there — title and its button end up together at the bottom edge,
-    // nearest the hands.
+    // card, at the bottom edge nearest the hands.
     //
     // ONLY the name moves. Clip stays above Permute in both layouts:
     // that pair is a reading order, not a stack — you look at what the
@@ -177,9 +176,7 @@
     //
     // `order` also leaves the markup, the tap dispatch below
     // (`elementFromPoint` → `[data-section]`) and every section's flex
-    // share untouched. Two more things deliberately do NOT move: the
-    // Solo button, which is outside the Card and must stay under the
-    // title; and the card's own top-edge treatments (the glass
+    // share untouched. The card's own top-edge treatments (the glass
     // highlight, the REC label), which belong to the card as an object
     // rather than to the running order of its sections.
     //
@@ -188,56 +185,12 @@
     // flag goes.
     let flipLayout = $derived(uiPrefsStore.flipLayout);
 
-    // ---- Standalone Solo button (ADR-414) ---------------------------------
-    //
-    // The Solo button lives in the header block but outside the Card's
-    // gesture machine: a press on it can never become the volume fader or the
-    // row scroll, so there is nothing to disambiguate and the toggle fires at
-    // TRUE finger-down — zero delay, no intent gate. The press then only
-    // decides what release means, read from elapsed time at release (no timer
-    // — nothing changes at the threshold itself):
-    //   release < MOMENTARY_HOLD_MS → latch: the down-toggle stands
-    //   release ≥ MOMENTARY_HOLD_MS → momentary: release restores the captured
-    //                            pre-press state (holding a soloed track is
-    //                            momentary UNsolo, symmetrically)
-    // The restore writes the CAPTURED value, not a second toggle, so a
-    // surface echo or another client flipping solo mid-press can't leave
-    // the restore inverted. Cancel restores too — safe for a latch meant as
-    // a tap (net no-op) and correct for an interrupted hold — and so does an
-    // unmount, which is the failure that used to leave a track soloed with
-    // no finger on it and nothing left to undo it.
-    //
-    // ADR-427: this is `use:press` now rather than hand-rolled window
-    // listeners. Same model — it was already the correct one — but the
-    // action owns the pointerId filtering, the `touch-action: none` that
-    // guarantees no pan can ever start here, and the teardown, so none of
-    // the three can drift away from the others.
-    let soloRestoreTo: boolean | null = null;
-
-    const soloPress: PressOptions = $derived({
-        // Zero delay. Safe precisely because `touch-action: none` means a
-        // row pan can never begin on this button, so a down-toggle is never
-        // undone by a cancel the performer didn't ask for.
-        fireOn: 'down' as const,
-        touchAction: 'none',
-        // No slop: the button owns the gesture outright, so travel across it
-        // is still this press. A stray abandonment here would read as solo
-        // flickering under a hand that never left the button.
-        slop: 0,
-        // The button sits inside the header block, which is a sibling of the
-        // Card — but a press here must never reach anything else either way.
-        stopPropagation: true,
-        onPress: () => {
-            soloRestoreTo = isSoloed;
-            setTrackSolo(trackPath, !isSoloed);
-        },
-        onRelease: ({ reason, elapsedMs }) => {
-            if (soloRestoreTo !== null && shouldRestoreOnRelease({ elapsedMs, reason })) {
-                setTrackSolo(trackPath, soloRestoreTo);
-            }
-            soloRestoreTo = null;
-        }
-    });
+    // Two fingers on the fader solo (see `onChordStart` below): tap
+    // latches, hold is momentary, the release rule the Solo button had
+    // (ADR-414) before two fingers replaced it. The restore writes the
+    // CAPTURED value, not a second toggle, so a surface echo or another
+    // client flipping solo mid-press can't leave it inverted.
+    let chordSoloRestoreTo: boolean | null = null;
 
     // ---- Mute: timing and momentary hold (ADR-427 addenda 1–3) -----------
     //
@@ -474,7 +427,26 @@
             throttle.push(localVolume);
         },
         onDragEnd: () => throttle.flush(),
-        onTap: ({ x, y }) => dispatchSectionTap(x, y)
+        onTap: ({ x, y }) => dispatchSectionTap(x, y),
+        // Two fingers on the fader solo the track.
+        // The held Group button outranks it: there two fingers are a tap,
+        // and a tap means "add this track to the group".
+        onChordStart: () => {
+            if (groupGestureStore.active) {
+                groupGestureStore.tap(trackPath, trackData.track.name);
+                return true;
+            }
+            if (isMaster) return false;
+            chordSoloRestoreTo = isSoloed;
+            setTrackSolo(trackPath, !isSoloed);
+            return true;
+        },
+        onChordEnd: ({ reason, elapsedMs }) => {
+            if (chordSoloRestoreTo !== null && shouldRestoreOnRelease({ elapsedMs, reason })) {
+                setTrackSolo(trackPath, chordSoloRestoreTo);
+            }
+            chordSoloRestoreTo = null;
+        }
     });
 
     let isDragging = $derived(gestures.isDragging);
@@ -496,7 +468,7 @@
     // Effect teardown, not onDestroy: onDestroy also runs during SSR, where
     // `window` is undefined.
     //
-    // Solo is NOT closed here any more. `use:press` owns that: an action's
+    // Mute is NOT closed here. `use:press` owns that: an action's
     // `destroy` runs when its node goes away, and it closes every open press
     // with reason `teardown` before dropping its listeners. That is the whole
     // structural argument for actions over hand-wired handlers — the teardown
@@ -603,7 +575,7 @@
 >
 <Card
     bind:ref={card}
-    class="glass-card hud-bracket touch-manipulation min-h-0 py-0 {trackData.isSelected ? 'track-selected' : ''} {bracketActive ? 'is-active' : ''} {trackData.permuteMutedNow ? 'permute-silenced' : ''} {isPending ? 'is-loading' : ''} {justLanded ? 'is-landed' : ''} {groupGestureStore.active && groupGestureStore.memberPaths.has(trackPath) ? 'group-tapped' : ''}"
+    class="glass-card hud-bracket touch-manipulation min-h-0 py-0 {trackData.isSelected ? 'track-selected' : ''} {bracketActive ? 'is-active' : ''} {trackData.permuteMutedNow ? 'permute-silenced' : ''} {isPending ? 'is-loading' : ''} {justLanded ? 'is-landed' : ''} {isGroupTapped ? 'group-tapped' : ''}"
     data-debug="track-card"
     style="min-width: 0; flex: 1 1 0; gap: var(--strip-gap); --bracket-ink: {bracketInk}; --landing-pulse-ms: {LANDING_PULSE_MS}ms; padding: 0; border-radius: var(--strip-radius, var(--radius-md)); container-type: inline-size; position: relative; overflow: hidden; display: flex; flex-direction: column; touch-action: {faderTouchAction};"
     role="slider"
@@ -617,6 +589,16 @@
     <div class="meter-bg">
         <MeterVisualization {trackIndex} track={trackData.track} color={trackData.trackColor} />
     </div>
+
+    <!-- Solo tint: a wash over the sections and a ring inside the border, so it
+         composes with selection and permute-silenced instead of fighting
+         their backgrounds. Follows Live's solo state, however it was set. -->
+    {#if stripSoloed}
+        <div class="solo-tint" aria-hidden="true"></div>
+    {/if}
+    {#if isGroupTapped}
+        <div class="group-tint" aria-hidden="true"></div>
+    {/if}
 
     {#if isGroup}
         <!-- Group body: no clip. Tap selects the group. -->
@@ -728,7 +710,7 @@
 </Card>
 </div>
 
-<!-- Header block (name/mute + Solo) — a SIBLING of the Card, not a section
+<!-- Header block (name/mute) — a SIBLING of the Card, not a section
      inside it, taking the strip's remaining third. Out here it is outside
      the volume fader: the Card owns "drag anywhere = volume", and while the
      name lived inside it a mute tap that slid 6px silently changed the level
@@ -788,6 +770,7 @@
 <div class="header-block" class:is-flipped={flipLayout} class:is-selected={trackData.isSelected}>
     <div
         class="header-name"
+        class:is-soloed={stripSoloed}
         role="button"
         tabindex="-1"
         aria-label="{trackData.track.mute ? 'Unmute' : 'Mute'} track {trackData.track.name}"
@@ -806,20 +789,6 @@
         />
     </div>
 
-    <!-- Solo shares the header third with the name when it is shown: a
-         column beside the name rather than a band of its own height, so
-         turning solos on never moves Clip and Permute. Narrow strips hide
-         it (see the style block). -->
-    {#if showSolo}
-        <button
-            type="button"
-            class="solo-button"
-            class:is-soloed={isSoloed}
-            aria-label="{isSoloed ? 'Unsolo' : 'Solo'} track {trackData.track.name}"
-            aria-pressed={isSoloed}
-            use:press={soloPress}
-        >S</button>
-    {/if}
 </div>
 </div>
 
@@ -944,12 +913,9 @@
         opacity: 1;
     }
 
-    /* Column wrapper: Card on top (takes the leftover height), standalone
-       Solo button below. min-width:0 keeps the column shrinkable inside
-       TracksPanelV6's grid, exactly as the Card root was. */
     /* The strip is three equal thirds again, but only two of them are in
        the Card: Clip and Permute (the fader) inside it, the header block
-       (mute + Solo) outside as a sibling. One `--strip-gap` for both levels
+       (mute) outside as a sibling. One `--strip-gap` for both levels
        so the three read as one regular stack rather than two systems. */
     .strip-col {
         /* The browser rail beside the strips stacks one `.button-group` per
@@ -963,16 +929,9 @@
         height: 100%;
         min-width: 0;
         gap: var(--strip-gap);
-        /* Size container for the whole strip. The header block below asks
-           this how wide the strip is to decide whether Solo fits beside the
-           name at all — the answer has to be the STRIP's width,
-           not the header's, or the query would be self-referential (the
-           block's own width is what the query changes).
-
-           A strip's width is set by how many tracks are in the set, so this
-           is genuinely a container question and not a viewport one: eight
-           tracks are wide on any screen, eighteen are narrow on all of
-           them. */
+        /* Size container for the whole strip: a strip's width is set by how
+           many tracks are in the set, so width rules are container
+           questions, not viewport ones. */
         container-type: inline-size;
     }
 
@@ -1026,9 +985,7 @@
         top: calc(-1 * var(--strip-gap));
     }
 
-    /* One third of the column, whether or not Solo is in it. Mute and Solo
-       sit side by side, each the FULL height of the third: both keep the
-       dimension a thumb actually misses on. */
+    /* One third of the column: the name (mute), full height. */
     .header-block {
         flex: 1 1 0;
         min-height: 0;
@@ -1038,49 +995,6 @@
         gap: var(--strip-gap);
     }
 
-    /* Solo takes a fixed column rather than a half: it is one glyph and the
-       name is a word, so an even split would waste the strip's spare width
-       on the "S". Floored at the 36px the session grid's action strip uses
-       for the same reason, capped so a four-track set doesn't hand it a
-       90px slab. */
-    .header-block .solo-button {
-        flex: 0 0 clamp(36px, 28%, 56px);
-    }
-
-    /* Narrow strips drop Solo instead of making room for it.
-
-       110px is where the name still has a box worth reading once Solo has
-       taken its column: it catches eight tracks (~119px columns with both
-       rails showing). Ten or more would leave the name ~50px beside the
-       button. The old answer was to stack Solo above the name, which halved
-       both into ~33px bands — under the touch floor on the busiest control
-       of the strip, to keep a secondary one. The name (mute) keeps the
-       whole third; Solo comes back as soon as the strips widen.
-
-       Hidden, not unmounted: a Solo held while the row reflows still
-       releases, since `use:press` listens for the release on `window`. */
-    @container (max-width: 109.98px) {
-        .header-block .solo-button {
-            display: none;
-        }
-    }
-
-    /* An open group's arm grows sideways out of the group strip's foot (its
-       head, unflipped), and in that corner Solo — the trailing column — is
-       what it would run into. `--arm-clearance` is set by TracksPanelV6 on
-       the group's column only (the arm's height plus the gap its members
-       keep under it), so Solo ends level with the member strips and clears
-       the arm by the same gap they do. The name keeps its full height: it
-       is the part of the strip the arm's outline continues from. */
-    .header-block.is-flipped .solo-button {
-        margin-bottom: var(--arm-clearance, 0px);
-    }
-
-    /* UNREACHABLE since 2026-09-26 (flipLayout is pinned on). */
-    .header-block:not(.is-flipped) .solo-button {
-        margin-top: var(--arm-clearance, 0px);
-    }
-
     /* Unflipped (strips on TOP) the header leads the column; the flipped
        default keeps its source order at the foot, nearest the hands.
        UNREACHABLE since 2026-09-26 (flipLayout is pinned on). */
@@ -1088,48 +1002,39 @@
         order: -1;
     }
 
-    /* The name takes whatever width Solo's column leaves; with Solo off (or
-       hidden on a narrow strip) it is the only child and takes the whole
-       third. The block's footprint is the same either way, which is the
-       point: turning solos on must not push Clip and Permute around. */
     .header-name {
         flex: 1 1 0;
         min-height: 0;
         cursor: pointer;
         -webkit-tap-highlight-color: transparent;
+        /* Anchors the solo tint's ::after. */
+        position: relative;
         /* Inner size container, for TrackHeader's fluid name size alone.
            The name has always been authored in `cqi` ("scales with its
            container") but has had no container since it moved out of the
            Card — `cqi` with no container falls back to the VIEWPORT, so
            every name sat pinned at its clamp maximum no matter how narrow
            its strip. This is the box it is actually painted in, and it is
-           the right one in both header layouts: when Solo takes a column
-           beside it the name box shrinks and the type follows it down,
-           with no second rule to keep in sync. */
+           the right one in both header layouts. */
         container-type: inline-size;
     }
 
     /* ---- Selection, outside the Card ------------------------------------
        The Card carries the selection edge (`.track-selected`), but the
-       Card is only the fader — mute and Solo are siblings below it, and
-       until now they wore nothing. A selected strip was therefore outlined
+       Card is only the fader — the name (mute) is a sibling below it, and
+       until now it wore nothing. A selected strip was therefore outlined
        for two thirds of its height and bare for the last third, which is
        exactly the third the eye goes to (the name is how you identify a
        track). Both blocks take the same ink at the same weight, so the
        column reads as one lit object top to bottom.
 
        `inset` box-shadow rather than a real border: the name block is a
-       solid track-colour slab in the shipped skin and the Solo button is a
-       1px outline, so a border swap would move their contents by a pixel
+       solid track-colour slab in the shipped skin, so a border swap would
+       move its contents by a pixel
        every time the selection changed. An inset ring is drawn inside the
        existing box and costs no layout. */
     .header-block.is-selected .header-name {
         box-shadow: inset 0 0 0 2px var(--sel-ink);
-    }
-
-    .header-block.is-selected .solo-button {
-        box-shadow: inset 0 0 0 2px var(--sel-ink);
-        border-color: var(--sel-ink);
     }
 
     /* Graticule wears the track's own ink, matching that skin's
@@ -1142,15 +1047,6 @@
 
     :global([data-grammar='flat']) .header-block {
         --sel-ink: var(--flat-selection);
-    }
-
-    /* A lit Solo already fills with --act-solo; a selection ring in the
-       neutral ink on top of it muddies both signals. Selection is legible
-       from the name slab and the Card either side, so let Solo keep saying
-       the one thing only it can say. */
-    .header-block.is-selected .solo-button.is-soloed {
-        box-shadow: none;
-        border-color: var(--act-solo);
     }
 
     /* GRATICULE only: the title is transparent ink, so once it left the Card
@@ -1167,51 +1063,30 @@
         border-radius: var(--strip-radius, var(--radius-md));
     }
 
-    /* Solo button (ADR-414) — now a column of the header third rather than
-       a sibling below the Card. It runs `use:press` and stops the
-       pointer event before the Card sees it, so it is still outside the
-       gesture machine in every way that matters: no volume drag, no row
-       scroll, no section tap. Solo is a global mixer state, so it wears the
-       act-solo ink, not the track ink — a soloed strip must read the same
-       across every track color.
-
-       `touch-action` is NOT declared here. The action writes it onto this
-       node (`none`, so no pan ever starts on the button, which is also what
-       keeps pointercancel away in normal use), and a second declaration in
-       the stylesheet is exactly the drift that broke mute: CSS and handler
-       authored in different places, agreeing until one of them moved. One
-       author, one place. */
-    .solo-button {
-        /* Width comes from `.header-block .solo-button` above; height is
-           the whole header third. */
-        min-height: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 1px solid var(--line-strong);
-        border-radius: var(--radius-sm);
-        background: transparent;
-        color: var(--signal-dim);
-        font-size: 0.9375rem;
-        font-weight: var(--font-weight-bold);
-        line-height: 1;
-        -webkit-tap-highlight-color: transparent;
-        transition: background-color 90ms var(--ease-precise),
-                    border-color 90ms var(--ease-precise),
-                    color 90ms var(--ease-precise);
+    /* Soloed strip: an act-solo wash laid OVER the sections (z 2, under
+       the volume ticks, which follow it in the DOM) plus an inset ring.
+       Over, not under: the clip, device and permute wells are opaque, so a
+       wash beneath them only showed in the seams. Translucent, so the
+       content still reads through it, and it composes with selection and
+       permute-silenced rather than fighting their backgrounds. */
+    .solo-tint {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 2;
+        border-radius: inherit;
+        background: color-mix(in oklab, var(--act-solo) 32%, transparent);
+        box-shadow: inset 0 0 0 2px var(--act-solo);
     }
 
-    .solo-button.is-soloed {
-        background: var(--act-solo-wash);
-        border-color: var(--act-solo);
-        color: color-mix(in oklab, var(--act-solo) 70%, white);
-    }
-
-    /* Light theme: the white-hot mix lightens the glyph INTO the light
-       wash. The lit S must darken on paper, so it rides the full ink
-       (light --act-solo is calibrated dark, L 0.55). */
-    :global(.light) .solo-button.is-soloed {
-        color: var(--act-solo);
+    .header-name.is-soloed::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        border-radius: var(--strip-radius, var(--radius-md));
+        background: color-mix(in oklab, var(--act-solo) 45%, transparent);
+        box-shadow: inset 0 0 0 2px var(--act-solo);
     }
 
     /* Meter visualization sits behind everything. */
@@ -1375,17 +1250,29 @@
                     box-shadow 75ms var(--ease-precise);
     }
 
-    /* A track pending in the held Group gesture: `--phosphor`, the flat
-       grammar's own "ON" ink, deliberately distinct from `.track-selected`'s
+    /* A track pending in the held Group gesture: `--act-group` green,
+       the Group button's own ink, deliberately distinct from `.track-selected`'s
        track-colored ring — this is "will be grouped", not "this is the
        track you're looking at", and the two can be true at once (the anchor
        is usually both). No transition: taps should feel immediate, matching
        Live's own real-time selection this mirrors. */
     :global(.group-tapped) {
         border-width: 2px !important;
-        border-color: var(--phosphor) !important;
-        box-shadow: 0 0 0 1px var(--phosphor),
-                    0 0 10px color-mix(in oklab, var(--phosphor) 50%, transparent) !important;
+        border-color: var(--act-group) !important;
+        box-shadow: 0 0 0 1px var(--act-group),
+                    0 0 10px color-mix(in oklab, var(--act-group) 50%, transparent) !important;
+    }
+
+    /* And a green wash, laid over the sections like the solo tint, so a
+       gathered strip reads from across the row and not only by its ring.
+       After .solo-tint in the DOM: grouping is the gesture in progress. */
+    .group-tint {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 2;
+        border-radius: inherit;
+        background: var(--act-group-wash);
     }
 
     /* Light theme: the same recipe reads much weaker on paper than on
@@ -1425,8 +1312,8 @@
 
     /* ---- Flat grammar: flat mixer strip. Selection is the panel body
        lightening (handled in app.css .track-selected override); the
-       fader handle is Live's grey ControlFillHandle; Solo lit = solid
-       ChosenPreListen blue with dark glyph; no tracked micro-labels. */
+       fader handle is Live's grey ControlFillHandle; no tracked
+       micro-labels. */
     :global([data-grammar="flat"]) .vol-tick {
         background: var(--flat-handle);
         width: 14px;
@@ -1439,18 +1326,6 @@
         border-style: solid !important;
         border-color: var(--line-strong) !important;
         background: color-mix(in srgb, var(--card) 70%, var(--background)) !important;
-    }
-    :global([data-grammar="flat"]) .solo-button {
-        border-radius: 2px;
-        background: var(--surface-well);
-        border-color: var(--line-strong);
-        color: var(--foreground);
-        font-weight: var(--font-weight-medium);
-    }
-    :global([data-grammar="flat"]) .solo-button.is-soloed {
-        background: var(--act-solo);
-        border-color: var(--line-strong);
-        color: var(--flat-solo-fg);
     }
     :global([data-grammar="flat"]) .rec-label {
         text-transform: none;

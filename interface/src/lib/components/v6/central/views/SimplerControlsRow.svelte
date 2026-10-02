@@ -80,6 +80,7 @@
   >
     <DeviceSlider
       value={t('pitch', 0)}
+      labelOrientation="horizontal"
       title="Trnsp"
       {color}
       min={VM_PITCH_MIN}

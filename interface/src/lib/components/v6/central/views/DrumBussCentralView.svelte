@@ -122,6 +122,7 @@
         value={trim}
         title="Trim"
         orientation="vertical"
+        labelOrientation="horizontal"
         labelSize="small"
         isGhost={drum.isGhost}
         color={drumInk}
@@ -162,6 +163,7 @@
       value={drive}
       title="Drive"
       orientation="vertical"
+      labelOrientation="horizontal"
       labelSize="small"
       isGhost={drum.isGhost}
       color={drumInk}
@@ -174,6 +176,7 @@
       value={crunch}
       title="Crunch"
       orientation="vertical"
+      labelOrientation="horizontal"
       labelSize="small"
       isGhost={drum.isGhost}
       color={drumInk}
@@ -186,6 +189,7 @@
       value={damp}
       title="Damp"
       orientation="vertical"
+      labelOrientation="horizontal"
       labelSize="small"
       isGhost={drum.isGhost}
       color={drumInk}

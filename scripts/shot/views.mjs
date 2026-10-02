@@ -21,7 +21,6 @@
 export const DEFAULT_VIEWPORT = { width: 1366, height: 1024 };
 
 const P = {
-	solo: 'uiPrefsStore.showSoloButtons',
 	session: 'uiPrefsStore.sessionMode',
 	fx: 'uiPrefsStore.showFxGrid',
 	transport: 'uiPrefsStore.showTransportHeader'
@@ -45,12 +44,11 @@ export const VIEWS = {
 		prefs: { [P.fx]: '0' }
 	},
 	full: {
-		description: 'All four sections plus transport header and solo buttons.',
+		description: 'All four sections plus the transport header.',
 		prefs: {
 			[P.session]: '1',
 			[P.fx]: '1',
-			[P.transport]: '1',
-			[P.solo]: '1'
+			[P.transport]: '1'
 		}
 	},
 	// The feature switches (general-release audit §7b). `features` replaces

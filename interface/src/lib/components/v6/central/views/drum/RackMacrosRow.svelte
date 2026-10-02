@@ -54,6 +54,7 @@
         value={value(control.name)}
         title={control.label}
         orientation="vertical"
+        labelOrientation="horizontal"
         {color}
         isGhost={sliderState === 'none'}
         onInteraction={(t) => onWrite(control.name, t)}

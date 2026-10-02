@@ -370,6 +370,7 @@
   <VmSlot state={gainState} class="flex-1 flex flex-col" fn="gain" badge={vm.badge('gain')}>
     <DeviceSlider
       value={vm.value('gain') ?? 0.5}
+      labelOrientation="horizontal"
       title="Gain"
       color={controlInk}
       isGhost={gainState === 'none'}
@@ -384,6 +385,7 @@
   <VmSlot state={pitchState} class="flex-1 flex flex-col" badge={vm.badge('pitch')}>
     <DeviceSlider
       value={vm.value('pitch') ?? 0}
+      labelOrientation="horizontal"
       title="Trnsp"
       color={controlInk}
       min={VM_PITCH_MIN}

@@ -337,6 +337,7 @@
                     value={parameterValues.get(param.index) ?? 0.5}
                     title={sliderTitle(param.index, param.name)}
                     orientation="vertical"
+                    labelOrientation="horizontal"
                     color={currentColor}
                     onInteraction={(value) => handleParameterChange(param.index, value)}
                   />

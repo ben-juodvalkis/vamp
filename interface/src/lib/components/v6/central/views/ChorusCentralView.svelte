@@ -256,7 +256,7 @@
 			value={pitchHackPitch}
 			title={pitchHackPitchLabel}
 			orientation="vertical"
-			labelOrientation="vertical"
+			labelOrientation="horizontal"
 			isGhost={pitchHack.isGhost}
 			color={pitchHackInk}
 			min={PITCH_HACK_PARAMS.pitch.min}
@@ -273,7 +273,7 @@
 			value={pitchHackMix}
 			title="Mix"
 			orientation="vertical"
-			labelOrientation="vertical"
+			labelOrientation="horizontal"
 			isGhost={pitchHack.isGhost}
 			color={pitchHackInk}
 			min={0}

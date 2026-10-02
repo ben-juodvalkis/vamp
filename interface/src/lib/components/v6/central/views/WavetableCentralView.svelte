@@ -248,6 +248,7 @@
                 value={envelopeValues[i]}
                 title={stage.title}
                 orientation="vertical"
+                labelOrientation="horizontal"
                 color={wavetableInk}
                 onInteraction={(value) => writeEnv(stage.index, stage.fallback, value)}
               />

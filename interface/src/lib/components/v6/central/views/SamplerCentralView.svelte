@@ -198,6 +198,7 @@
         <VmSlot state={gainState} class="sampler-gain flex flex-col min-w-0" fn="gain">
           <DeviceSlider
             value={valueAt(GAIN) ?? 0.5}
+            labelOrientation="horizontal"
             title="Gain"
             color={samplerInk}
             isGhost={gainState === 'none'}

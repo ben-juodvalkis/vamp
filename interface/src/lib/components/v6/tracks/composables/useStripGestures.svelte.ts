@@ -172,6 +172,24 @@ export interface StripGestureConfig {
 	 * `DragInput.crossInert`.
 	 */
 	crossAxisLive?: () => boolean;
+	/**
+	 * A second finger landed on this region while the first was still a
+	 * candidate tap: not yet a drag, a row scroll or a slip. Return true to
+	 * claim the two as one chord. The first finger's press is then dropped
+	 * without a tap, and every finger on the region belongs to the chord
+	 * until the last one lifts ({@link onChordEnd}).
+	 *
+	 * Return false (or leave unset) and the second finger is ignored, as
+	 * it always was. A first finger already moving the fader is never
+	 * interrupted: the chord is only offered while nothing has happened yet.
+	 */
+	onChordStart?: () => boolean;
+	/**
+	 * The claimed chord is over. `up` when the last finger lifted cleanly;
+	 * `cancel` if the browser claimed any of its fingers; `teardown` if the
+	 * region unmounted under it. `elapsedMs` runs from the chord's start.
+	 */
+	onChordEnd?: (info: { reason: 'up' | 'cancel' | 'teardown'; elapsedMs: number }) => void;
 }
 
 /**
@@ -202,7 +220,8 @@ export function useStripGestures(config: StripGestureConfig) {
 	 * instance owns at most one finger at a time, but every instance can
 	 * own its own finger in parallel (multitouch across strips — volume +
 	 * mute on many tracks at once). A second finger on the SAME instance
-	 * is ignored until the first releases.
+	 * is ignored until the first releases, unless the caller claims it as
+	 * a chord (`onChordStart`), which then owns both outside the machine.
 	 *
 	 * `e.isPrimary` is NOT used and never was: it is true only for the
 	 * first finger of the whole gesture session, which would lock out
@@ -221,6 +240,23 @@ export function useStripGestures(config: StripGestureConfig) {
 	let lastX = 0;
 	let longPressTimer: ReturnType<typeof setTimeout> | null = null;
 
+	// True from `down` to `pressend`: the open press could still be a tap,
+	// which is the only time a second finger may turn it into a chord.
+	let pressCandidate = false;
+
+	// The claimed two-finger chord. Lives beside the machine rather than in
+	// it: the machine owns one finger per instance, and the chord's job is
+	// precisely to take the gesture away from it.
+	let chord: { pointers: Set<number>; startAt: number; cancelled: boolean } | null = null;
+
+	function endChord(reason: 'up' | 'cancel' | 'teardown') {
+		if (!chord) return;
+		const elapsedMs = performance.now() - chord.startAt;
+		const finalReason = reason === 'up' && chord.cancelled ? 'cancel' : reason;
+		chord = null;
+		config.onChordEnd?.({ reason: finalReason, elapsedMs });
+	}
+
 	function clearLongPressTimer() {
 		if (longPressTimer !== null) {
 			clearTimeout(longPressTimer);
@@ -233,9 +269,11 @@ export function useStripGestures(config: StripGestureConfig) {
 			const d = ev.drag;
 			switch (ev.type) {
 				case 'down':
+					pressCandidate = true;
 					config.onDown?.({ x: d.downX, y: d.downY, event: e as PointerEvent });
 					break;
 				case 'pressend':
+					pressCandidate = false;
 					config.onPressEnd?.();
 					break;
 				case 'start':
@@ -288,12 +326,17 @@ export function useStripGestures(config: StripGestureConfig) {
 		}
 		if (machine.openCount === 0) {
 			clearLongPressTimer();
-			detach();
+			if (!chord) detach();
 			scroller = null;
 		}
 	}
 
 	function handlePointerMove(e: PointerEvent) {
+		if (chord?.pointers.has(e.pointerId)) {
+			// The chord owns these fingers outright: no fader, no scroll.
+			if (e.cancelable) e.preventDefault();
+			return;
+		}
 		if (!machine.isActive(e.pointerId)) return;
 		const events = machine.move({
 			pointerId: e.pointerId,
@@ -310,6 +353,17 @@ export function useStripGestures(config: StripGestureConfig) {
 	}
 
 	function handlePointerUp(e: PointerEvent) {
+		if (chord?.pointers.has(e.pointerId)) {
+			if (e.type === 'pointercancel') chord.cancelled = true;
+			chord.pointers.delete(e.pointerId);
+			// The chord ends with the LAST finger, so one lifted early
+			// neither ends it nor turns the other back into a fader.
+			if (chord.pointers.size === 0) {
+				endChord('up');
+				if (machine.openCount === 0) detach();
+			}
+			return;
+		}
 		if (!machine.isActive(e.pointerId)) return;
 		const input = {
 			pointerId: e.pointerId,
@@ -336,7 +390,25 @@ export function useStripGestures(config: StripGestureConfig) {
 		/** Bind to the gesture element's `onpointerdown`. */
 		handlePointerDown(e: PointerEvent): void {
 			const el = config.getElement();
-			if (!el || machine.openCount > 0) return;
+			if (!el) return;
+			if (chord) {
+				// A third finger joins the chord rather than starting a fader.
+				chord.pointers.add(e.pointerId);
+				return;
+			}
+			if (machine.openCount > 0) {
+				if (!pressCandidate || !config.onChordStart?.()) return;
+				const first = machine.activePointers();
+				chord = {
+					pointers: new Set([...first, e.pointerId]),
+					startAt: performance.now(),
+					cancelled: false
+				};
+				// Drop the first finger's press without a tap. Teardown
+				// emits `pressend` and nothing else for an undecided press.
+				drain(machine.teardown(performance.now()), null);
+				return;
+			}
 			elementHeight = el.getBoundingClientRect().height;
 			dragging = false;
 			const events = machine.down({
@@ -386,6 +458,7 @@ export function useStripGestures(config: StripGestureConfig) {
 		 */
 		destroy(): void {
 			drain(machine.teardown(performance.now()), null);
+			endChord('teardown');
 			clearLongPressTimer();
 			detach();
 			dragging = false;

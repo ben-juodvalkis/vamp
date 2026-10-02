@@ -77,7 +77,7 @@ export const T = {
 	wheel: (name) => ({ css: `.wheel-container[aria-label="${name} wheel"]`, label: `${name} wheel` }),
 	/** The main track's strip: its meter, and its fader. */
 	master: { css: '[data-debug="master-card"]', label: 'main track' },
-	/** A switch in the main track's view, by its name: 'Click', 'Follow Key', 'Header', 'FX', 'Clips', 'Solo'. */
+	/** A switch in the main track's view, by its name: 'Click', 'Follow Key', 'Header', 'FX', 'Clips'. */
 	sysSwitch: (name) => ({ css: '[data-debug="middle-panel"] button.sys-switch', text: name, textCss: '.sys-switch-label', label: `switch ${name}` }),
 	/** The main track's tempo digits. */
 	tempo: { css: '[data-debug="middle-panel"] .sys-drag-digit', label: 'tempo' },
@@ -215,8 +215,7 @@ export const readKey = async (live, vars) => {
 const PREFS = {
 	session: 'uiPrefsStore.sessionMode',
 	fx: 'uiPrefsStore.showFxGrid',
-	header: 'uiPrefsStore.showTransportHeader',
-	solo: 'uiPrefsStore.showSoloButtons'
+	header: 'uiPrefsStore.showTransportHeader'
 };
 
 /**
@@ -289,7 +288,7 @@ const clearEffects = (t) => async (live) => {
 /** What every site clip shares: the full layout, a band set up off camera, no title cards. */
 const SITE = {
 	tempo: 96,
-	prefs: { [PREFS.session]: '1', [PREFS.fx]: '1', [PREFS.header]: '0', [PREFS.solo]: '0' },
+	prefs: { [PREFS.session]: '1', [PREFS.fx]: '1', [PREFS.header]: '0' },
 	liveWindow: { w: 1090, h: 856 },
 	set: { empty: true, key: { root: 0, scale: 'Major' } },
 	setup: BAND
@@ -1482,7 +1481,7 @@ export const SCENARIOS = {
 		title: 'Instrument views',
 		blurb: "Each instrument's central view, played and adjusted: one short clip each.",
 		tempo: 96,
-		prefs: { [PREFS.session]: '0', [PREFS.fx]: '0', [PREFS.header]: '0', [PREFS.solo]: '0' },
+		prefs: { [PREFS.session]: '0', [PREFS.fx]: '0', [PREFS.header]: '0' },
 		liveWindow: { w: 1090, h: 856 },
 		set: { empty: true, key: { root: 2, scale: 'Minor' } },
 		crop: T.area('[data-debug="middle-panel"]'),
@@ -1547,7 +1546,7 @@ export const SCENARIOS = {
 		title: 'Effect views',
 		blurb: 'Each effect tile dragged onto a drum loop, then its central view: one short clip each.',
 		tempo: 96,
-		prefs: { [PREFS.session]: '0', [PREFS.fx]: '1', [PREFS.header]: '0', [PREFS.solo]: '0' },
+		prefs: { [PREFS.session]: '0', [PREFS.fx]: '1', [PREFS.header]: '0' },
 		liveWindow: { w: 1090, h: 856 },
 		set: { empty: true, key: { root: 2, scale: 'Minor' } },
 		crop: T.area('[data-debug="devices-panel"], [data-debug="middle-panel"]', true),

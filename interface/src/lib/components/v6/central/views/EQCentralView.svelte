@@ -94,6 +94,7 @@
       <div class="flex-1 w-full">
         <DeviceSlider
           value={outputGainValue}
+          labelOrientation="horizontal"
           title={Math.round(outputGainValue * 100) + '%'}
           isGhost={fx.isGhost}
           color={fx.isGhost ? ghostInk : fxInk}

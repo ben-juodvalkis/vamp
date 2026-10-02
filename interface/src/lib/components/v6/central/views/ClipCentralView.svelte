@@ -499,6 +499,7 @@ import { logger } from '$lib/utils/logger';
 			{#if trackType === 'midi'}
 				<DeviceSlider
 					value={chance}
+					labelOrientation="horizontal"
 					title="Chance"
 					color={trackScheme}
 					onInteraction={(val) => permuteDevice
@@ -527,6 +528,7 @@ import { logger } from '$lib/utils/logger';
 			{#if trackType === 'midi'}
 				<DeviceSlider
 					value={temperature}
+					labelOrientation="horizontal"
 					title="Temp"
 					color={trackScheme}
 					onInteraction={(val) => {
@@ -794,7 +796,7 @@ import { logger } from '$lib/utils/logger';
 						use:press={{ onDown: handleGroupDown, onRelease: handleGroupRelease, touchAction: 'none', disabled: isCommitting || !!axReason }}
 						disabled={isCommitting || !!axReason}
 						title={axReason || undefined}
-						class="btn btn-switch dup-trk-btn clip-switch relative overflow-hidden font-bold text-base {groupGestureStore.active ? 'active' : ''} {isCommitting ? 'cursor-wait' : ''}"
+						class="btn btn-switch dup-trk-btn clip-switch group-btn relative overflow-hidden font-bold text-base {groupGestureStore.active ? 'active' : ''} {isCommitting ? 'cursor-wait' : ''}"
 					>
 						<span class="relative z-10 flex items-center justify-center btn-caps" aria-label={groupGestureStore.latched ? 'Group tracks — tap tracks, then tap here to finish' : 'Group tracks — hold, tap other tracks, release (or tap once to keep tapping with one finger)'}>
 							{#if isCommitting}
@@ -1109,6 +1111,22 @@ import { logger } from '$lib/utils/logger';
 		border-color: var(--phosphor);
 		background: var(--phosphor);
 		color: var(--flat-on-fg);
+	}
+
+	/* Group is coded green (`--act-group`), not the track ink or the flat
+	   skin's orange ON: the same green the strips it gathers and the banner
+	   wear, so the button reads as the source of that mode. Off = green
+	   glyph on the usual field; on = solid green. After the flat rules so
+	   it wins them at equal specificity. */
+	.clip-switch.group-btn,
+	:global([data-grammar="flat"]) .clip-switch.group-btn {
+		color: var(--act-group);
+	}
+	.clip-switch.group-btn.active,
+	:global([data-grammar="flat"]) .clip-switch.group-btn.active {
+		border-color: var(--act-group);
+		background: var(--act-group);
+		color: var(--flat-on-fg, var(--card));
 	}
 
 	/* Switch buttons (toggles/radio) are squares */

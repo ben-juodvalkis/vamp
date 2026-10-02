@@ -109,6 +109,7 @@
         <div class="control-slot slider-slot">
           <DeviceSlider
             value={getParamValue(paramIndex)}
+            labelOrientation="horizontal"
             title={parameterNames[paramIndex - 1] ? cleanParameterName(parameterNames[paramIndex - 1]) : `Param ${paramIndex}`}
             color={kompleteKontrolInk}
             onInteraction={(value) => {
