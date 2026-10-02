@@ -568,9 +568,7 @@ import { logger } from '$lib/utils/logger';
 						class="btn btn-well fam-quant"
 						aria-label="Clip left"
 					>
-						<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7-7 7" />
-						</svg>
+						<!-- The clip halved: the arrow moves one loop edge in to the half it keeps --><svg class="w-12 h-12" fill="none" viewBox="0 0 36 24"><path d="M3 3.5H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M16 1l3 2.5-3 2.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><rect x="20" y="8" width="14" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="22.5" y="15" width="4" height="2.5" rx="0.75" fill="currentColor" /><rect x="28" y="11" width="4.5" height="2.5" rx="0.75" fill="currentColor" /></svg>
 					</button>
 				</div>
 			</div>
@@ -675,9 +673,7 @@ import { logger } from '$lib/utils/logger';
 						class="btn btn-well fam-quant"
 						aria-label="Clip right"
 					>
-						<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7 7-7" />
-						</svg>
+						<!-- The clip halved: the arrow moves one loop edge in to the half it keeps --><svg class="w-12 h-12" fill="none" viewBox="0 0 36 24"><path d="M17 3.5H33" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M20 1l-3 2.5 3 2.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><rect x="2" y="8" width="14" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="4.5" y="15" width="4" height="2.5" rx="0.75" fill="currentColor" /><rect x="10" y="11" width="4.5" height="2.5" rx="0.75" fill="currentColor" /></svg>
 					</button>
 				</div>
 			</div>
@@ -701,7 +697,7 @@ import { logger } from '$lib/utils/logger';
 							disabled={!hasClip || isDuplicatingLoop}
 							class="btn btn-well fam-monitor {isDuplicatingLoop ? 'cursor-wait' : ''}"
 							aria-label="Duplicate loop"
-						>{isDuplicatingLoop ? '...' : 'Loop X2'}</button>
+						><!-- The loop and its copy appended after it, the loop end pushed out over it: the loop doubled -->{#if isDuplicatingLoop}...{:else}<svg class="w-12 h-12" fill="none" viewBox="0 0 36 24"><path d="M16 3.5H33" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M30 1l3 2.5-3 2.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><rect x="2" y="8" width="14" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="4.5" y="15" width="4" height="2.5" rx="0.75" fill="currentColor" /><rect x="10" y="11" width="4.5" height="2.5" rx="0.75" fill="currentColor" /><rect x="20" y="8" width="14" height="13" rx="1.5" stroke="currentColor" stroke-width="2" stroke-dasharray="2.5 2" /><rect x="22.5" y="15" width="4" height="2.5" rx="0.75" fill="currentColor" fill-opacity="0.55" /><rect x="28" y="11" width="4.5" height="2.5" rx="0.75" fill="currentColor" fill-opacity="0.55" /></svg>{/if}</button>
 					{:else if trackType === 'audio'}
 							<button
 								onclick={handleReverseClip}
@@ -720,7 +716,7 @@ import { logger } from '$lib/utils/logger';
 							disabled={!hasClip || !nextSlotEmpty}
 							class="btn btn-well fam-monitor"
 							aria-label="Duplicate clip to the next slot"
-						>Dup Clip</button>
+						><!-- Dup Trk's mark at slot scale and upright: the clip copied into the slot below --><svg class="w-12 h-12" fill="none" viewBox="0 0 32 28"><rect x="5" y="1.5" width="22" height="9" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="8" y="4.5" width="5" height="3" rx="0.75" fill="currentColor" /><rect x="14.5" y="4.5" width="3.5" height="3" rx="0.75" fill="currentColor" /><rect x="19.5" y="4.5" width="4.5" height="3" rx="0.75" fill="currentColor" /><path d="M16 12.5v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" /><path d="M12.5 14.5l3.5 3 3.5-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><rect x="5" y="19.5" width="22" height="7" rx="1.5" stroke="currentColor" stroke-width="2" stroke-dasharray="2.5 2" /><rect x="8" y="21.5" width="5" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" /><rect x="14.5" y="21.5" width="3.5" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" /><rect x="19.5" y="21.5" width="4.5" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" /></svg></button>
 					</div>
 				{/if}
 				{#if trackType === 'audio'}

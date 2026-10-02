@@ -712,9 +712,9 @@ export const SCENARIOS = {
 			},
 			{
 				at: '63.3',
-				box: T.button('Dup Clip'),
+				box: T.area('[data-debug="middle-panel"] button[aria-label="Duplicate clip to the next slot"]'),
 				boxLabel: 'Dup Clip',
-				tap: T.button('Dup Clip'),
+				tap: T.area('[data-debug="middle-panel"] button[aria-label="Duplicate clip to the next slot"]'),
 				caption: "Dup Clip copies the clip into the next slot.", note: "The copy is selected.",
 				live: LIVE.clip(2, 1, 'The copy'),
 				until: slotHasClip(2, 1)
