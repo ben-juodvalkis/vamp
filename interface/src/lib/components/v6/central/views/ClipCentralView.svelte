@@ -568,7 +568,7 @@ import { logger } from '$lib/utils/logger';
 						class="btn btn-well fam-quant"
 						aria-label="Clip left"
 					>
-						<!-- The clip, with the loop bar over the half that keeps looping --><svg class="w-12 h-12" fill="none" viewBox="0 0 36 24"><rect x="20" y="2" width="14" height="3" rx="1" fill="currentColor" /><rect x="2" y="8" width="14" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="4.5" y="15" width="4" height="2.5" rx="0.75" fill="currentColor" /><rect x="10" y="11" width="4.5" height="2.5" rx="0.75" fill="currentColor" /><rect x="20" y="8" width="14" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="22.5" y="15" width="4" height="2.5" rx="0.75" fill="currentColor" /><rect x="28" y="11" width="4.5" height="2.5" rx="0.75" fill="currentColor" /></svg>
+						<!-- The clip, with the loop bar over the half that keeps looping --><svg class="w-12 h-12" fill="none" viewBox="0 0 36 24"><rect x="20" y="2" width="14" height="3" rx="1" fill="currentColor" /><rect x="2" y="8" width="32" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="6" y="15" width="6" height="2.5" rx="0.75" fill="currentColor" /><rect x="13" y="11" width="5" height="2.5" rx="0.75" fill="currentColor" /><rect x="20" y="16" width="6" height="2.5" rx="0.75" fill="currentColor" /><rect x="27" y="12" width="4.5" height="2.5" rx="0.75" fill="currentColor" /></svg>
 					</button>
 				</div>
 			</div>
@@ -673,7 +673,7 @@ import { logger } from '$lib/utils/logger';
 						class="btn btn-well fam-quant"
 						aria-label="Clip right"
 					>
-						<!-- The clip, with the loop bar over the half that keeps looping --><svg class="w-12 h-12" fill="none" viewBox="0 0 36 24"><rect x="2" y="2" width="14" height="3" rx="1" fill="currentColor" /><rect x="2" y="8" width="14" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="4.5" y="15" width="4" height="2.5" rx="0.75" fill="currentColor" /><rect x="10" y="11" width="4.5" height="2.5" rx="0.75" fill="currentColor" /><rect x="20" y="8" width="14" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="22.5" y="15" width="4" height="2.5" rx="0.75" fill="currentColor" /><rect x="28" y="11" width="4.5" height="2.5" rx="0.75" fill="currentColor" /></svg>
+						<!-- The clip, with the loop bar over the half that keeps looping --><svg class="w-12 h-12" fill="none" viewBox="0 0 36 24"><rect x="2" y="2" width="14" height="3" rx="1" fill="currentColor" /><rect x="2" y="8" width="32" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="6" y="15" width="6" height="2.5" rx="0.75" fill="currentColor" /><rect x="13" y="11" width="5" height="2.5" rx="0.75" fill="currentColor" /><rect x="20" y="16" width="6" height="2.5" rx="0.75" fill="currentColor" /><rect x="27" y="12" width="4.5" height="2.5" rx="0.75" fill="currentColor" /></svg>
 					</button>
 				</div>
 			</div>
