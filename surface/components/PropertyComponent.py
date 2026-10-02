@@ -403,10 +403,7 @@ ALLOWLIST: Dict[Tuple[str, str], PropertySpec] = {
     # attributes. Per the LOM's HybridReverbDevice (Cycling '74's LOM
     # docs). Driven by the convolution-mode controls in
     # ReverbCentralView (category / file selectors, attack / decay
-    # envelopes) and the IR size slider in ReverbControl. The
-    # non-scalar properties on the same device (`ir_category_list`,
-    # `ir_file_list`) stay out of the allowlist — they're list-shaped,
-    # which the day-one wire codec doesn't carry.
+    # envelopes) and the IR size slider in ReverbControl.
     ("Hybrid", "ir_category_index"): PropertySpec(
         listener_path="", attr_name="ir_category_index", writable=True,
         coerce_to_int=True,
@@ -423,6 +420,25 @@ ALLOWLIST: Dict[Tuple[str, str], PropertySpec] = {
     ),
     ("Hybrid", "ir_size_factor"): PropertySpec(
         listener_path="", attr_name="ir_size_factor", writable=True,
+    ),
+    # Whether Attack and Decay shape the IR at all: the Reverb view's IR
+    # display draws their envelope only when they do (2026-10-02).
+    ("Hybrid", "ir_time_shaping_on"): PropertySpec(
+        listener_path="", attr_name="ir_time_shaping_on", writable=True,
+        coerce_bool_to_int=True,
+    ),
+    # The IR names, as Live lists them (2026-10-02): StringVectors, so
+    # JSON arrays of strings on the wire, read-only. The Reverb view reads
+    # ``list[index]`` to find the IR file on disk and draw it. Live offers
+    # a listener for ``ir_file_list`` (it changes with the category) and
+    # none for ``ir_category_list``, which is fixed: a cold read only.
+    ("Hybrid", "ir_category_list"): PropertySpec(
+        listener_path="", attr_name="ir_category_list", writable=False,
+        coerce_dict_to_json=True,
+    ),
+    ("Hybrid", "ir_file_list"): PropertySpec(
+        listener_path="", attr_name="ir_file_list", writable=False,
+        coerce_dict_to_json=True,
     ),
     # Compressor — sidechain routing pair; both dict-shaped on the LOM
     # (per LOM reference §CompressorDevice). PR-3.5.7-impl-followup-b

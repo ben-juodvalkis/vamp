@@ -11,6 +11,15 @@ vi.mock('$lib/api/simpleClient', () => ({ send: vi.fn() }));
 vi.mock('$lib/utils/logger', () => ({
 	logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 }));
+// The IR's waveform: one decaying shape for any file, 2 s long.
+vi.mock('$lib/services/clipWaveformService', () => ({
+	getPeaks: vi.fn(async () => ({
+		peaks: Array.from({ length: 16 }, (_, i) => [-(1 - i / 16), 1 - i / 16]),
+		bins: 16,
+		seconds: 2
+	})),
+	cancelPeaks: vi.fn()
+}));
 
 import { render, cleanup, fireEvent } from '@testing-library/svelte';
 import { tick } from 'svelte';
@@ -34,14 +43,20 @@ const DEVICE = `${TRACK}/devices/0`;
 /** The rails that are not 0..1, as the rig reported them. */
 const MAX: Record<number, number> = { 3: 16, 6: 4, 21: 29, 36: 9, 46: 9, 48: 3, 50: 4 };
 
-function hybrid(values: Record<number, number> = {}): DeviceRecord {
+function hybrid(values: Record<number, number> = {}, properties: Record<string, unknown> = {}): DeviceRecord {
 	const params = new SvelteMap<string, ParamRecord>();
 	for (let i = 0; i <= 53; i++) {
 		const paramPath = `${DEVICE}/params/${i}`;
 		const value = values[i] ?? LIVE_DEFAULTS[i] ?? 0;
 		params.set(paramPath, { paramPath, name: `P${i}`, displayName: `P${i}`, min: 0, max: MAX[i] ?? 1, value, unit: '' });
 	}
-	return { devicePath: DEVICE, name: 'Reverb', className: 'Hybrid', params, properties: new SvelteMap() };
+	return {
+		devicePath: DEVICE,
+		name: 'Reverb',
+		className: 'Hybrid',
+		params,
+		properties: new SvelteMap(Object.entries(properties)) as DeviceRecord['properties']
+	};
 }
 
 function track(devices: DeviceRecord[]): TrackRecord {
@@ -53,8 +68,8 @@ function track(devices: DeviceRecord[]): TrackRecord {
 	};
 }
 
-async function mount(values: Record<number, number> = {}) {
-	replaceTree(3, [track([hybrid(values)])]);
+async function mount(values: Record<number, number> = {}, properties: Record<string, unknown> = {}) {
+	replaceTree(3, [track([hybrid(values, properties)])]);
 	selectedTrackStore.handleTrackSelected(0);
 	fxGrid.resetForTrackChange();
 	const view = render(ReverbCentralView);
@@ -164,9 +179,42 @@ describe('ReverbCentralView, the EQ tab', () => {
 });
 
 describe('ReverbCentralView, convolution', () => {
-	it('keeps the IR Time pad and draws no tail', async () => {
-		const c = await mount({ 48: 3 });
+	// Live's names, as the surface sends them (JSON arrays), on Springs #0.
+	const SPRING = {
+		ir_category_list: JSON.stringify(['Early_Reflections', 'Real_Places', 'Chambers_and_Large_Rooms', 'Made_for_Drums', 'Halls', 'Plates', 'Springs']),
+		ir_file_list: JSON.stringify(['Awesome Stereo Spring', 'Berlin Spring']),
+		ir_category_index: 6,
+		ir_file_index: 0,
+		ir_attack_time: 0,
+		ir_decay_time: 20,
+		ir_size_factor: 1,
+		ir_time_shaping_on: 1
+	};
+	const PATH = '/Applications/Ableton Live 12 Beta.app/Contents/App-Resources/Builtin/Samples/Hybrid/ImpulseResponses/Hybrid_Springs_Awesome Stereo Spring.aif';
+
+	afterEach(() => vi.unstubAllGlobals());
+
+	it('draws the loaded IR from Live’s file, named in Live’s words', async () => {
+		const fetchMock = vi.fn(async () => new Response(JSON.stringify({ files: [{ channel: 'mono', path: PATH }] })));
+		vi.stubGlobal('fetch', fetchMock);
+		const c = await mount({ 48: 3 }, SPRING);
 		expect(c.querySelector('[data-reverb-portrait]')).toBeNull();
-		expect(c.textContent).toContain('IR Time');
+		expect(fetchMock).toHaveBeenCalledWith('/api/reverb-ir?category=Springs&file=Awesome%20Stereo%20Spring');
+		await vi.waitFor(() => expect(c.querySelectorAll('[data-reverb-ir] .ir-display path').length).toBeGreaterThan(0));
+		const ir = c.querySelector('[data-reverb-ir]');
+		expect(ir?.textContent).toContain('Awesome Stereo Spring');
+		expect(ir?.textContent).toContain('Springs');
+		expect(ir?.textContent).toContain('Decay 20.0 s');
+	});
+
+	it('says so when the IR has no file here (a User IR)', async () => {
+		vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ files: [] }))));
+		const c = await mount({ 48: 3 }, {
+			...SPRING,
+			ir_category_list: JSON.stringify(['Early_Reflections', 'User']),
+			ir_file_list: JSON.stringify(['My Room']),
+			ir_category_index: 1
+		});
+		await vi.waitFor(() => expect(c.querySelector('[data-reverb-ir]')?.textContent).toContain('A User IR: no picture from here'));
 	});
 });

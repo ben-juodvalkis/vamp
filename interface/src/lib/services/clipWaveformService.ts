@@ -23,12 +23,15 @@ import { logger } from '$lib/utils/logger';
 export interface PeakData {
 	peaks: [number, number][];
 	bins: number;
+	/**
+	 * The file's length in seconds, when the server could decode it
+	 * (`frames / sampleRate`); absent for an `.asd`-overview answer, which
+	 * carries neither. The Reverb view's IR display spans its axis by it.
+	 */
+	seconds?: number;
 }
 
-interface CacheEntry {
-	peaks: [number, number][];
-	bins: number;
-}
+type CacheEntry = PeakData;
 
 interface InflightEntry {
 	promise: Promise<PeakData | null>;
@@ -106,7 +109,7 @@ export async function getPeaks(
 		const cached = cache.get(key);
 		if (cached !== undefined) {
 			recordHit(key, cached);
-			return { peaks: cached.peaks, bins: cached.bins };
+			return { ...cached };
 		}
 
 		const existing = inflight.get(key);
@@ -158,11 +161,17 @@ async function fetchPeaks(
 			});
 			return null;
 		}
-		const data = (await response.json()) as { peaks: [number, number][]; bins: number };
+		const data = (await response.json()) as {
+			peaks: [number, number][];
+			bins: number;
+			frames?: number;
+			sampleRate?: number;
+		};
 		const entry: CacheEntry = { peaks: data.peaks, bins: data.bins };
+		if (data.frames && data.sampleRate) entry.seconds = data.frames / data.sampleRate;
 		cache.set(cacheKey(filePath, bins), entry);
 		evictLRU();
-		return { peaks: entry.peaks, bins: entry.bins };
+		return { ...entry };
 	} catch (err) {
 		if ((err as { name?: string })?.name === 'AbortError') {
 			return null;

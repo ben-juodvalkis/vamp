@@ -69,6 +69,7 @@ import {
 	buildDefaultScene,
 	DEFAULT_FEATURES,
 	PROPERTY_DEFAULTS,
+	HYBRID_IR_LISTS,
 	SCENE_ETAG,
 	PROTOCOL_VERSION,
 	vmPadFx,
@@ -561,6 +562,10 @@ export async function startMockSurface({
 					const [devicePath, propertyName, value] = args;
 					if (typeof devicePath === 'string' && typeof propertyName === 'string' && value !== undefined) {
 						send(ws, '/looping/v3/property/value', [devicePath, propertyName, value]);
+						// A Hybrid's new IR category: Live re-sends the category's
+						// file names (its `ir_file_list` listener), measured.
+						const files = propertyName === 'ir_category_index' ? HYBRID_IR_LISTS.files[Math.round(Number(value))] : null;
+						if (files) send(ws, '/looping/v3/property/value', [devicePath, 'ir_file_list', JSON.stringify(files)]);
 					}
 					return;
 				}

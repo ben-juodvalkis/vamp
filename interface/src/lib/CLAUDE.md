@@ -14,7 +14,7 @@ Main application code for the looping interface. Uses **Svelte 5 runes** (`$stat
 | `utils/` | Shared utilities (logger, performance, formatters) |
 | `config/` | Device presets, FX grid layout, unified device configs |
 | `types/` | TypeScript type definitions (device, osc) |
-| `server/` | Server-only modules (SvelteKit refuses to bundle `$lib/server` into the page). `sampleRoots.ts` is the gate on `/api/sample-peaks` and `/api/similar-samples`: a sample file under the library, Live's own Places/packs/Core Libraries (read from `Library.cfg` and `/Applications`), the capture folder, or a Live project — anything else is a 403 |
+| `server/` | Server-only modules (SvelteKit refuses to bundle `$lib/server` into the page). `sampleRoots.ts` is the gate on `/api/sample-peaks` and `/api/similar-samples`: a sample file under the library, Live's own Places/packs/Core Libraries and Hybrid Reverb IRs (read from `Library.cfg` and `/Applications`), the capture folder, or a Live project — anything else is a 403 |
 
 ## Actions (`actions/`) — the pointer primitive
 

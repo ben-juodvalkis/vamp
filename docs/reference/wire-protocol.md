@@ -213,7 +213,9 @@ Key rules:
   sample.warping, sample.slicing_sensitivity, sample.gain,
   sample.start_marker, sample.end_marker, sample.length,
   sample.file_path, sample.slices}`, Drift's `{voice_mode_index}`,
-  Hybrid Reverb's 5 scalar IR properties, Compressor2's sidechain
+  Hybrid Reverb's 5 scalar IR properties plus `ir_time_shaping_on` (0/1)
+  and the read-only `ir_category_list` / `ir_file_list` (JSON arrays of
+  Live's names, a stereo IR listed as `<Name> LR`), Compressor2's sidechain
   routing pair, and the Drum Rack's fourteen **virtual macros** plus their
   `vm.members` census (below).
 - **Computed rows — Drum Rack virtual macros (ADR-428).** On a

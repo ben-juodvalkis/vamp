@@ -16,7 +16,9 @@
  *   browser's Places), `abletonPacksBase` and every `placesRoots` value;
  * - **Live's own library, read from Live** — the Places, the User Library and
  *   the installed packs in the newest `Library.cfg`, and the Core Library of
- *   every Live app in `/Applications`;
+ *   every Live app in `/Applications`, and its Hybrid Reverb impulse responses
+ *   (`Builtin/Samples/Hybrid/ImpulseResponses`, the Reverb view's IR display,
+ *   2026-10-02);
  * - **a Live project** — any folder holding `Ableton Project Info`, which is how
  *   Live marks one: a saved set's folder, where its recordings and the
  *   recorder's captures land, and the temp project an unsaved set records
@@ -128,19 +130,25 @@ export function isInsideLiveProject(
 	return false;
 }
 
-/** The Core Library inside every Live app in `appsDir`, plus `extraApps`. */
-export function coreLibraryRoots(appsDir: string, extraApps: readonly string[] = []): string[] {
+/** Every Live app in `appsDir`, plus `extraApps`. */
+export function liveApps(appsDir: string, extraApps: readonly string[] = []): string[] {
 	let names: string[] = [];
 	try {
 		names = readdirSync(appsDir);
 	} catch {
 		// No apps folder: only the configured app counts.
 	}
-	const apps = [
-		...names.filter((n) => /^Ableton Live\b.*\.app$/.test(n)).map((n) => join(appsDir, n)),
-		...extraApps
-	];
-	return apps.map((app) => join(app, 'Contents', 'App-Resources', 'Core Library'));
+	return [...names.filter((n) => /^Ableton Live\b.*\.app$/.test(n)).map((n) => join(appsDir, n)), ...extraApps];
+}
+
+/** The Core Library inside every Live app in `appsDir`, plus `extraApps`. */
+export function coreLibraryRoots(appsDir: string, extraApps: readonly string[] = []): string[] {
+	return liveApps(appsDir, extraApps).map((app) => join(app, 'Contents', 'App-Resources', 'Core Library'));
+}
+
+/** Where a Live app keeps Hybrid Reverb's own impulse responses. */
+export function hybridIrFolder(app: string): string {
+	return join(app, 'Contents', 'App-Resources', 'Builtin', 'Samples', 'Hybrid', 'ImpulseResponses');
 }
 
 function expandHome(p: string): string {
@@ -171,7 +179,12 @@ function readRoots(): string[] {
 		}
 	}
 	const apps = paths?.abletonApp ? [paths.abletonApp] : [];
-	const roots = [...configuredRoots(paths), ...fromLive, ...coreLibraryRoots(APPLICATIONS_DIR, apps)]
+	const roots = [
+		...configuredRoots(paths),
+		...fromLive,
+		...coreLibraryRoots(APPLICATIONS_DIR, apps),
+		...liveApps(APPLICATIONS_DIR, apps).map(hybridIrFolder)
+	]
 		.map(expandHome)
 		.filter((r) => r.startsWith('/') && comparable(r) !== '/');
 	return [...new Set(roots)];

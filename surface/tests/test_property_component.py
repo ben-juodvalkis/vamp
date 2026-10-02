@@ -827,13 +827,18 @@ def test_allowlist_contains_documented_drift_key():
 
 
 def test_allowlist_contains_documented_hybrid_reverb_keys():
-    """Followup-a (2026-04-16): 5 scalar properties on Hybrid Reverb."""
+    """Followup-a (2026-04-16): 5 scalar properties on Hybrid Reverb;
+    2026-10-02: the two IR name lists and time shaping, for the Reverb
+    view's IR display."""
     expected = {
         "ir_category_index",
         "ir_file_index",
         "ir_attack_time",
         "ir_decay_time",
         "ir_size_factor",
+        "ir_category_list",
+        "ir_file_list",
+        "ir_time_shaping_on",
     }
     actual = {prop for (cls, prop) in ALLOWLIST if cls == "Hybrid"}
     assert actual == expected
@@ -852,6 +857,78 @@ def test_hybrid_reverb_props_are_writable_scalar():
         assert spec.writable is True
         assert spec.coerce_bool_to_int is False
         assert spec.listener_path == ""
+
+
+class _StubStringVector:
+    """Live's ``StringVector``: iterable, not a list."""
+
+    def __init__(self, items):
+        self._items = list(items)
+
+    def __iter__(self):
+        return iter(self._items)
+
+
+class StubHybrid(_StubDevice):
+    """Hybrid Reverb with the two IR name lists as Live has them: only
+    ``ir_file_list`` (and the indices) offer a listener."""
+
+    _observable = ("ir_category_index", "ir_file_index", "ir_file_list")
+
+    def __init__(self):
+        self.class_name = "Hybrid"
+        self.parameters = []
+        self.ir_category_index = 0
+        self.ir_file_index = 0
+        self._files = {0: ["Ableton Studio Mid", "Blue Room"], 1: ["Berliner Hall", "Soft Hall"]}
+
+    @property
+    def ir_category_list(self):
+        return _StubStringVector(["Early Reflections", "Halls"])
+
+    @property
+    def ir_file_list(self):
+        return _StubStringVector(self._files[self.ir_category_index])
+
+
+def test_hybrid_time_shaping_is_a_writable_bool():
+    spec = ALLOWLIST[("Hybrid", "ir_time_shaping_on")]
+    assert spec.writable is True
+    assert spec.coerce_bool_to_int is True
+
+
+def test_hybrid_ir_lists_are_read_only_json():
+    for key in ("ir_category_list", "ir_file_list"):
+        spec = ALLOWLIST[("Hybrid", key)]
+        assert spec.writable is False
+        assert spec.coerce_dict_to_json is True
+        assert spec.listener_path == ""
+
+
+def test_hybrid_ir_lists_subscribe_as_json_arrays(emits, generation):
+    hybrid = StubHybrid()
+    comp = PropertyComponent(
+        song=StubSong(tracks=[StubTrack(tid=300, devices=[hybrid])]),
+        emit=lambda a, args: emits.append((a, args)),
+    )
+    comp.set_generation(generation)
+
+    comp.handle_subscribe(args=("tracks/0/devices/0", "ir_category_list"), source_addr=None)
+    comp.handle_subscribe(args=("tracks/0/devices/0", "ir_file_list"), source_addr=None)
+    values = [args for (addr, args) in emits if addr == V3_PROPERTY_VALUE_ADDRESS]
+    assert [(name, json.loads(raw)) for (_dp, name, raw) in values] == [
+        ("ir_category_list", ["Early Reflections", "Halls"]),
+        ("ir_file_list", ["Ableton Studio Mid", "Blue Room"]),
+    ]
+    # The category list has no listener in Live: a cold read only.
+    assert hybrid.listeners_for("ir_category_list") == []
+    assert len(hybrid.listeners_for("ir_file_list")) == 1
+
+    # A new category: Live fires the file list's listener; the new names go out.
+    hybrid.ir_category_index = 1
+    hybrid.fire("ir_file_list")
+    values = [args for (addr, args) in emits if addr == V3_PROPERTY_VALUE_ADDRESS]
+    assert json.loads(values[-1][2]) == ["Berliner Hall", "Soft Hall"]
 
 
 def test_simpler_keys_use_lom_class_name_not_display_name():

@@ -38,6 +38,15 @@ import { fileURLToPath } from 'node:url';
 export const PROTOCOL_VERSION = '3.12.0';
 
 /**
+ * Hybrid Reverb's IR names as Live lists them, read off the rig
+ * (fixtures/hybrid-ir-lists.json): the two list properties answer from it,
+ * and the mock re-sends a category's file names when the IR category is set.
+ */
+export const HYBRID_IR_LISTS = JSON.parse(
+	readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'hybrid-ir-lists.json'), 'utf8')
+);
+
+/**
  * The feature switches a scene's bridge publishes when it names none
  * (`/bridge/features [json]`, general-release audit §7b): the rig's, every
  * switch on and answering, so a scene captured before the switches existed
@@ -1318,6 +1327,16 @@ function pushSlots(args, trackPath, clips) {
  * kit.
  */
 export const PROPERTY_DEFAULTS = Object.freeze({
+	// Every Hybrid Reverb: Live's IR lists, its first IR, a fresh device's
+	// shaping (attack 0, decay at its 20 s top, size 100 %, shaping on).
+	ir_category_list: JSON.stringify(HYBRID_IR_LISTS.categories),
+	ir_file_list: JSON.stringify(HYBRID_IR_LISTS.files[0]),
+	ir_category_index: 0,
+	ir_file_index: 0,
+	ir_attack_time: 0,
+	ir_decay_time: 20,
+	ir_size_factor: 1,
+	ir_time_shaping_on: 1,
 	// Live's selected pad, and one pad's own values off the kit values (the
 	// Drums kit answers by name): a `--hold '.pad-tile[data-note="38"]'`
 	// shot photographs the controls re-adjusting to pad 38.

@@ -247,6 +247,29 @@ export const TOURS = {
 					{ click: '[data-reverb-own] [data-reverb-switch="43"]' }
 				]
 			},
+			// Convolution: the IR the button loads, drawn from Live's own file
+			// (`/api/reverb-ir` reads this Mac's Live app; a Mac without one shows
+			// "No picture for this IR"), then shaped by a drag on its pad.
+			{
+				name: 'fx-reverb-ir-spring',
+				description: 'Reverb, Spring: Live’s “Awesome Stereo Spring” IR, unshaped',
+				steps: [selectTrack(5), openTile('Reverb'), { click: '[data-reverb-type="Spring"]' }]
+			},
+			{
+				name: 'fx-reverb-ir-plate',
+				description: 'Reverb, Plate: Live’s “Classic Plate 1” IR',
+				steps: [selectTrack(5), openTile('Reverb'), { click: '[data-reverb-type="Plate"]' }]
+			},
+			{
+				name: 'fx-reverb-ir-shaped',
+				description: 'Reverb, Spring, the pad dragged right and down: Attack fades it in, Decay cuts the tail',
+				steps: [
+					selectTrack(5),
+					openTile('Reverb'),
+					{ click: '[data-reverb-type="Spring"]' },
+					{ drag: '[data-reverb-ir] .xy-container', by: [60, 190] }
+				]
+			},
 			{
 				name: 'fx-reverb-frozen',
 				description: 'Reverb, Hall with Freeze on: every band holds to the edge',

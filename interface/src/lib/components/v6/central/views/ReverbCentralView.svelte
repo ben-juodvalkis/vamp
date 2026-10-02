@@ -44,6 +44,8 @@
   import SectionDivider from '../SectionDivider.svelte';
   import ReverbPortrait from './reverb/ReverbPortrait.svelte';
   import ReverbEqEditor from './reverb/ReverbEqEditor.svelte';
+  import ReverbIrDisplay from './reverb/ReverbIrDisplay.svelte';
+  import { useReverbIr } from './reverb/useReverbIr.svelte';
   import { xToTime, type TailInput } from './reverb/tailPortrait';
   import { eqBands, wetLevelDb, type EqBand, type EqBandKey } from './reverb/reverbEq';
   import {
@@ -177,6 +179,33 @@
   let irDecayTime = $derived<number>(
     (fx.devicePath ? selectedTrackStore.propertyValue(fx.devicePath, 'ir_decay_time') as number | undefined : undefined) ?? 0.02
   );
+  let irSizeFactor = $derived<number>(
+    (fx.devicePath ? selectedTrackStore.propertyValue(fx.devicePath, 'ir_size_factor') as number | undefined : undefined) ?? 1
+  );
+  // Unknown (a surface from before 2026-10-02 does not send it): shaping on,
+  // Live's default.
+  let irShaping = $derived<boolean>(
+    ((fx.devicePath ? selectedTrackStore.propertyValue(fx.devicePath, 'ir_time_shaping_on') as number | undefined : undefined) ?? 1) !== 0
+  );
+
+  /** A JSON-string property (Live's IR name lists) as an array of names. */
+  function nameList(name: string): string[] {
+    const value = fx.devicePath ? selectedTrackStore.propertyValue(fx.devicePath, name) : undefined;
+    if (Array.isArray(value)) return value as string[];
+    if (typeof value !== 'string') return [];
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  let irCategoryName = $derived(nameList('ir_category_list')[irCategoryIndex] ?? '');
+  let irFileName = $derived(nameList('ir_file_list')[irFileIndex] ?? '');
+  // The loaded IR's waveform, from Live's own file.
+  const ir = useReverbIr(() => ({ category: irCategoryName, file: irFileName }));
+  /** Where a finger on the IR pad is, before its release writes Attack and Decay. */
+  let irPreview = $state<{ x: number; y: number } | null>(null);
 
   // Mount property subscriptions: refcount manager fires the
   // wire-level subscribe on first acquire, unsubscribe on last
@@ -189,7 +218,11 @@
       selectedTrackStore.subscribeProperty(path, 'ir_category_index'),
       selectedTrackStore.subscribeProperty(path, 'ir_file_index'),
       selectedTrackStore.subscribeProperty(path, 'ir_attack_time'),
-      selectedTrackStore.subscribeProperty(path, 'ir_decay_time')
+      selectedTrackStore.subscribeProperty(path, 'ir_decay_time'),
+      selectedTrackStore.subscribeProperty(path, 'ir_size_factor'),
+      selectedTrackStore.subscribeProperty(path, 'ir_time_shaping_on'),
+      selectedTrackStore.subscribeProperty(path, 'ir_category_list'),
+      selectedTrackStore.subscribeProperty(path, 'ir_file_list')
     ];
     return () => releases.forEach((fn) => fn());
   });
@@ -532,18 +565,20 @@
         <SectionDivider orientation="vertical" />
 
         {#if reverbMode === ROUTING_CONVOLUTION}
-          <!-- Convolution mode - IR timing XY control -->
-          <div class="min-h-0">
+          <!-- Convolution mode: the loaded IR, its Attack (across) and Decay (up)
+               on the pad. The writes still wait for the release — the picture
+               follows the finger meanwhile. -->
+          <div class="min-h-0" data-reverb-ir>
             <DeviceXY
               xValue={irAttackTimeToSlider(irAttackTime)}
               yValue={irDecayTimeToSlider(irDecayTime)}
-              title="IR Time"
               isGhost={fx.isGhost}
               color={currentColor}
               onInteraction={(x, y) => {
-                // Do nothing during drag - just for DeviceXY compatibility
+                irPreview = { x, y };
               }}
               onRelease={(x, y) => {
+                irPreview = null;
                 if (fx.devicePath) {
                   const attackTime = mapToIRAttackTime(x);
                   const decayTime = mapToIRDecayTime(y);
@@ -551,7 +586,22 @@
                   selectedTrackStore.setPropertyValue(fx.devicePath, 'ir_decay_time', decayTime);
                 }
               }}
-            />
+            >
+              {#snippet background()}
+                <ReverbIrDisplay
+                  wave={ir.wave}
+                  status={ir.status}
+                  category={irCategoryName}
+                  file={irFileName}
+                  attack={irPreview ? mapToIRAttackTime(irPreview.x) : irAttackTime}
+                  decay={irPreview ? mapToIRDecayTime(irPreview.y) : irDecayTime}
+                  size={irSizeFactor}
+                  shaping={irShaping}
+                  color={currentColor}
+                  isGhost={fx.isGhost}
+                />
+              {/snippet}
+            </DeviceXY>
           </div>
         {:else}
           <div class="algo-layout" data-reverb-algorithm={algorithm.key}>
