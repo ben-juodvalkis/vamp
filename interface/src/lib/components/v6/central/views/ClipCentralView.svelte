@@ -499,6 +499,7 @@ import { logger } from '$lib/utils/logger';
 			{#if trackType === 'midi'}
 				<DeviceSlider
 					value={chance}
+					labelOrientation="horizontal"
 					title="Chance"
 					color={trackScheme}
 					onInteraction={(val) => permuteDevice
@@ -527,6 +528,7 @@ import { logger } from '$lib/utils/logger';
 			{#if trackType === 'midi'}
 				<DeviceSlider
 					value={temperature}
+					labelOrientation="horizontal"
 					title="Temp"
 					color={trackScheme}
 					onInteraction={(val) => {

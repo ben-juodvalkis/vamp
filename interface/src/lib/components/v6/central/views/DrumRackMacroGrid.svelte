@@ -92,6 +92,7 @@
               value={getParamValue(paramIndex) / 127}
               title={cleanParameterName(parameterNames[paramIndex])}
               orientation="vertical"
+              labelOrientation="horizontal"
               color={drumRackKKInk}
               onInteraction={(value) => {
                 handleParameterChange(paramIndex, Math.round(value * 127));

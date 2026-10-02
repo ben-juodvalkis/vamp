@@ -202,7 +202,7 @@
 			value={morphAmount}
 			title="Morph"
 			orientation="vertical"
-			labelOrientation="vertical"
+			labelOrientation="horizontal"
 			isGhost={fx.isGhost}
 			color={lfoInk}
 			onInteraction={(value) => {
@@ -291,7 +291,7 @@
 			value={drive}
 			title="Drive"
 			orientation="vertical"
-			labelOrientation="vertical"
+			labelOrientation="horizontal"
 			isGhost={fx.isGhost}
 			color={fxInk}
 			onInteraction={(value) => {
@@ -338,7 +338,7 @@
 			value={mix}
 			title="Mix"
 			orientation="vertical"
-			labelOrientation="vertical"
+			labelOrientation="horizontal"
 			isGhost={fx.isGhost}
 			color={fxInk}
 			onInteraction={(value) => {

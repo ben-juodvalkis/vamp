@@ -159,6 +159,7 @@
                   value={getNormalizedValue(item.control.macroIndex)}
                   title={item.control.name}
                   orientation="vertical"
+                  labelOrientation="horizontal"
                   color={ctlInk(i)}
                   onInteraction={(val) => handleSliderChange(item.control.macroIndex, val)}
                 />

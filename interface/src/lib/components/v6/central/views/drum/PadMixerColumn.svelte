@@ -52,6 +52,7 @@
   <div class="pad-volume">
     <DeviceSlider
       value={volume ?? 0.85}
+      labelOrientation="horizontal"
       title="Vol"
       {color}
       isGhost={volumeGhost}

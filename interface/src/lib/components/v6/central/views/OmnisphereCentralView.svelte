@@ -218,6 +218,7 @@
               value={paramValue(FILTER_ENV_AMOUNT)}
               title="Amt"
               orientation="vertical"
+              labelOrientation="horizontal"
               color={omniInk}
               onInteraction={(value) => writeParam(FILTER_ENV_AMOUNT, value)}
             />
@@ -297,6 +298,7 @@
             value={eqLoValue}
             title="LO"
             orientation="vertical"
+            labelOrientation="horizontal"
             color={omnisphereColor}
             onInteraction={(value) => {
               if (!device) return;
@@ -309,6 +311,7 @@
             value={eqMidValue}
             title="MID"
             orientation="vertical"
+            labelOrientation="horizontal"
             color={omnisphereColor}
             onInteraction={(value) => {
               if (!device) return;
@@ -321,6 +324,7 @@
             value={eqHiValue}
             title="HI"
             orientation="vertical"
+            labelOrientation="horizontal"
             color={omnisphereColor}
             onInteraction={(value) => {
               if (!device) return;

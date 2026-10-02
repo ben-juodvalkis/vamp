@@ -223,6 +223,7 @@
 				value={timeT}
 				title="Time {timeLabel}"
 				orientation="vertical"
+				labelOrientation="horizontal"
 				labelSize="small"
 				isGhost={echo.isGhost}
 				color={echo.color}
@@ -287,6 +288,7 @@
 				value={lfoRate}
 				title="Rate {lfoLabel}"
 				orientation="vertical"
+				labelOrientation="horizontal"
 				labelSize="small"
 				isGhost={echo.isGhost}
 				color={echo.color}
@@ -310,6 +312,7 @@
 			value={lfoToTime}
 			title="LFO > Time"
 			orientation="vertical"
+			labelOrientation="horizontal"
 			labelSize="small"
 			isGhost={echo.isGhost}
 			color={echo.color}
@@ -323,6 +326,7 @@
 			value={lfoToFilter}
 			title="LFO > Filter"
 			orientation="vertical"
+			labelOrientation="horizontal"
 			labelSize="small"
 			isGhost={echo.isGhost}
 			color={echo.color}
@@ -338,6 +342,7 @@
 			value={input}
 			title="Input"
 			orientation="vertical"
+			labelOrientation="horizontal"
 			labelSize="small"
 			isGhost={echo.isGhost}
 			color={echo.color}
@@ -351,6 +356,7 @@
 			value={output}
 			title="Output"
 			orientation="vertical"
+			labelOrientation="horizontal"
 			labelSize="small"
 			isGhost={echo.isGhost}
 			color={echo.color}
@@ -364,6 +370,7 @@
 			value={feedback}
 			title="Feedback"
 			orientation="vertical"
+			labelOrientation="horizontal"
 			labelSize="small"
 			isGhost={echo.isGhost}
 			color={echo.color}
@@ -377,6 +384,7 @@
 			value={mix}
 			title="Mix"
 			orientation="vertical"
+			labelOrientation="horizontal"
 			labelSize="small"
 			isGhost={echo.isGhost}
 			color={echo.color}

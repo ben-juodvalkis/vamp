@@ -308,6 +308,7 @@
           value={glueThreshold}
           title="Threshold"
           orientation="vertical"
+          labelOrientation="horizontal"
           min={GLUE_THRESHOLD_MIN}
           max={GLUE_THRESHOLD_MAX}
           isGhost={squash.isGhost}
@@ -321,6 +322,7 @@
           value={glueOutput}
           title="Output"
           orientation="vertical"
+          labelOrientation="horizontal"
           min={GLUE_OUTPUT_MIN}
           max={GLUE_OUTPUT_MAX}
           isGhost={squash.isGhost}
@@ -413,6 +415,7 @@
         value={makeupGainValue}
         title="Output"
         orientation="vertical"
+        labelOrientation="horizontal"
         min={MAKEUP_GAIN_MIN}
         max={MAKEUP_GAIN_MAX}
         isGhost={compressor.isGhost}

@@ -95,6 +95,7 @@
 							value={getNormalizedValue(control.macroIndex)}
 							title={control.name}
 							orientation="vertical"
+							labelOrientation="horizontal"
 							color={effectiveColor}
 							onInteraction={(val) => handleSliderChange(control.macroIndex, val)}
 						/>
@@ -111,6 +112,7 @@
 					<div class="macro-control">
 						<DeviceSlider
 							value={macroValue / MACRO_MAX}
+							labelOrientation="horizontal"
 							title={paramName}
 							color={effectiveColor}
 							onInteraction={(val) => handleSliderChange(paramIndex, val * MACRO_MAX)}
