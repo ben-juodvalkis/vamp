@@ -150,6 +150,11 @@
     // Always true (FLIP went 2026-09-26; uiPrefsStore pins it).
     let flipLayout = $derived(uiPrefsStore.flipLayout);
 
+    // The fader's grow share against the key band's one — the strips'
+    // `cardBands` rule (TrackStrip), so the key band is exactly as tall as
+    // their name bands: three with the device band on, two without.
+    const cardBands = $derived(uiPrefsStore.showDeviceBand ? 3 : 2);
+
 
     /**
      * Master select — a tap anywhere on the Card.
@@ -194,12 +199,12 @@
     class="glass-card master-track transition-colors duration-100 touch-manipulation cursor-pointer {isSelected ? 'master-selected' : ''}"
     data-debug="master-card"
     bind:ref={masterCard}
-    style="--track-color: var(--act-master); flex: 2 2 var(--strip-gap); min-height: 0; padding: 0; border-radius: var(--radius-md); container-type: inline-size; position: relative; overflow: hidden;"
+    style="--track-color: var(--act-master); flex: {cardBands} {cardBands} calc(var(--strip-gap) * {cardBands - 1}); min-height: 0; padding: 0; border-radius: var(--radius-md); container-type: inline-size; position: relative; overflow: hidden;"
     aria-label="Master Track"
 >
     <!-- The Card IS the fader now — meter behind, drag surface over it,
-         nothing else in it. Two grow shares against the key band's one,
-         the same split the strips use, so the master fader ends on the
+         nothing else in it. `cardBands` grow shares against the key band's
+         one, the same split the strips use, so the master fader ends on the
          line the track cards end on. -->
     <MeterVisualization
         trackIndex={MASTER_INDEX}
