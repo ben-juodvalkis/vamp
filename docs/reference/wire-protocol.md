@@ -714,9 +714,9 @@ MIDI port is assigned as the Looping control surface's MIDI Input, and
 the surface's `MidiPedalInput` converts the foot-switch CC
 (`constants.midiPedals.footSwitchCC`, **23** on
 `constants.midiPedals.channel` **10**) into tap/hold itself — including
-the tap/hold timing (`osc.footTrigger.holdThresholdMs`, 500ms). CCs on
+the tap/hold timing (`osc.footTrigger.holdThresholdMs`, 650ms). CCs on
 any other channel are not claimed and fall through to the framework. **Fallback**: the legacy Max chain
-(`owner/Max Patches/foot-trigger.js`, same 500ms timing hardcoded) fires two
+(`owner/Max Patches/foot-trigger.js`, same 650ms timing hardcoded) fires two
 arg-free OSC wires at the surface. Both paths call the same
 `FootTriggerComponent` handlers, so the wires below remain live:
 

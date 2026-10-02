@@ -1082,7 +1082,7 @@ the pedal CCs itself — no Max, no OSC hop:
   measured off the USB pedal 2026-08-27; 67 / 82 / 11 were the retired
   Bluetooth rig's, and CC 67 lives on in the Max Utility patch as the
   owner's piano-pedal looper). The hold boundary is
-  `constants.osc.footTrigger.holdThresholdMs` (500) — foot-trigger.js
+  `constants.osc.footTrigger.holdThresholdMs` (650) — foot-trigger.js
   mirrors it hardcoded because Max ES5 can't read JSON. A collision
   (the same CC on overlapping channels) keeps the first mapping (foot →
   toe → expression) with a WARN; an out-of-range `channel` falls back to

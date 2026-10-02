@@ -188,7 +188,7 @@
       "port": 11010,
       "host": "127.0.0.1",
       "description": "Foot trigger for session recording (tap) and audio track creation (hold). The port is legacy (reserved; the Max chain fires straight at pythonSurface 11020). holdThresholdMs is the tap/hold boundary read by the surface's MidiPedalInput for the USB-direct pedal path (ADR-422); owner/Max Patches/foot-trigger.js mirrors it hardcoded because Max ES5 can't read JSON.",
-      "holdThresholdMs": 500
+      "holdThresholdMs": 650
     },
     "webSocket": {
       "port": 8081,

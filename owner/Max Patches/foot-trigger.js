@@ -49,7 +49,7 @@ outlets = 1;
 
 // ─── Config ──────────────────────────────────────────────────────────────
 
-const HOLD_MS = 500;
+const HOLD_MS = 650;
 
 const ADDR_TAP = "/looping/v3/foot/tap";
 const ADDR_HOLD = "/looping/v3/foot/hold";

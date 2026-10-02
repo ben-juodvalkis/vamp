@@ -138,7 +138,7 @@ assigned as the Looping control surface's MIDI **Input** in Live's
 preferences, the surface's own `MidiPedalInput`
 (`surface/components/midi_pedal_input.py`) receives
 the CCs directly. The USB pedal sends everything on **MIDI channel
-10**: trigger switch **CC 23** (incl. the 500ms tap/hold timer), wah
+10**: trigger switch **CC 23** (incl. the 650ms tap/hold timer), wah
 toe switch **CC 21**, wah expression **CC 20**. The foot switch is a user
 setting learned from the System view (`FootSwitchComponent`, persisted to
 `logs/foot-switch.json`; `midiPedals.footSwitchCC` only seeds it); the wah
@@ -158,7 +158,7 @@ so a piano's pedal taps and holds with nothing else plugged in. Both routes
 call the same Python gesture handlers:
 
 - **[owner/Max Patches/foot-trigger.js](../Max%20Patches/foot-trigger.js)** —
-  reads the foot-switch input, applies a 500ms tap/hold timer, and
+  reads the foot-switch input, applies a 650ms tap/hold timer, and
   sends `/looping/v3/foot/tap` or `/looping/v3/foot/hold` directly
   to the Python surface (UDP 11020). No bridge hop.
 - **[owner/Max Patches/midi-remap.js](../Max%20Patches/midi-remap.js)** —

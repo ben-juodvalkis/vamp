@@ -43,7 +43,7 @@ Tap/hold state machine — a faithful port of ``foot-trigger.js``:
 
 - press starts a hold check scheduled at ``holdThresholdMs`` (from
   ``constants.osc.footTrigger``, the value ADR-326 parked there; the
-  Max file hardcodes 500 only because Max ES5 can't read JSON);
+  Max file hardcodes 650 only because Max ES5 can't read JSON);
 - the check firing while the pedal is still down emits **hold** and
   suppresses the following release's tap (``holdFired`` in the JS);
 - release before the check emits **tap** — unless the press has already
@@ -105,7 +105,7 @@ _OMNI_CHANNEL = 0
 
 # Fallback when ``osc.footTrigger.holdThresholdMs`` is missing. Matches
 # HOLD_MS in foot-trigger.js.
-_DEFAULT_HOLD_THRESHOLD_MS = 500
+_DEFAULT_HOLD_THRESHOLD_MS = 650
 
 # Press threshold for both switches — see module docstring.
 _FOOT_PRESS_MIN = 64
@@ -200,7 +200,7 @@ class MidiPedalInput:
             ``LoopingSurface`` via ``config_loader.load()``). Reads
             ``midiPedals.{channel,wahToeSwitchCC,wahExpressionCC}`` for
             the wah (falling back to the rig's channel 10 / 21 / 20) and
-            ``osc.footTrigger.holdThresholdMs`` (500ms).
+            ``osc.footTrigger.holdThresholdMs`` (650ms).
         foot_mapping: The foot switch (``FootMapping``), or ``None`` for
             none. Changed at runtime with ``set_foot_mapping``.
         on_foot_tap / on_foot_hold / on_wah_engage: arg-free gesture
