@@ -889,6 +889,83 @@ def test_audio_pitch_coarse_clamps_at_the_rail_and_comes_back():
     assert clip.pitch_coarse == 40
 
 
+def simpler(transpose=0.0):
+    return FakeDevice("Simpler", "OriginalSimpler", [FakeParam("Device On", 1.0), FakeParam("Transpose", transpose)])
+
+
+def test_simpler_route_moves_transpose_not_the_notes():
+    sim = simpler(-5.0)
+    dev = pitch_pattern([1])
+    clip = FakeClip(notes=[FakeNote(1, 60)])
+    track = FakeTrack([sim, dev], slots=[FakeSlot(clip)], playing_slot_index=0)
+    song = FakeSong([track])
+    comp, rec, clock = build(song)
+    inst = comp.stats()["instances"][0]
+    assert inst["route"] == "simpler" and inst["simpler"]["path"] == "tracks/0/devices/0"
+    play_to(song, comp, clock, 0.0)          # step 0 off: nothing written
+    assert sim.param("Transpose").value == -5.0
+    play_to(song, comp, clock, 1.0)          # step 1 on
+    assert sim.param("Transpose").value == 7.0
+    assert clip.pitches() == [60] and clip.applies == 0
+    play_to(song, comp, clock, 2.0)          # step 2 off
+    assert sim.param("Transpose").value == -5.0
+    assert clip.pitches() == [60] and clip.applies == 0
+
+
+def test_simpler_route_needs_no_clip_adopts_a_repitch_and_restores_on_stop():
+    sim = simpler(0.0)
+    dev = pitch_pattern([1])
+    song = FakeSong([FakeTrack([sim, dev])])
+    comp, rec, clock = build(song)
+    play_to(song, comp, clock, 0.0)
+    play_to(song, comp, clock, 1.0)
+    assert sim.param("Transpose").value == 12.0
+    sim.param("Transpose").value = 15.0      # the user turns it while shifted
+    play_to(song, comp, clock, 2.0)
+    assert sim.param("Transpose").value == 3.0
+    play_to(song, comp, clock, 9.0)          # step 1 again, from the new home
+    assert sim.param("Transpose").value == 15.0
+    song.is_playing = False
+    comp.tick()
+    assert sim.param("Transpose").value == 3.0
+    assert comp.stats()["instances"][0]["simpler"]["written"] is None
+
+
+def test_simpler_route_clamps_at_the_rail_and_comes_back():
+    sim = simpler(40.0)
+    dev = pitch_pattern([0])
+    song = FakeSong([FakeTrack([sim, dev])])
+    comp, rec, clock = build(song)
+    play_to(song, comp, clock, 0.0)
+    assert sim.param("Transpose").value == 48.0
+    comp.disconnect()
+    assert sim.param("Transpose").value == 40.0
+
+
+def test_simpler_inside_an_instrument_rack_is_the_clip_route():
+    rack = FakeDevice("Rack", "InstrumentGroupDevice", chains=[FakeChain([simpler()])])
+    dev = pitch_pattern([0])
+    clip = FakeClip(notes=[FakeNote(1, 60)])
+    track = FakeTrack([rack, dev], slots=[FakeSlot(clip)], playing_slot_index=0)
+    song = FakeSong([track])
+    comp, rec, clock = build(song)
+    assert comp.stats()["instances"][0]["route"] == "clip"
+    play_to(song, comp, clock, 0.0)
+    assert clip.pitches() == [72]
+
+
+def test_a_drum_rack_wins_over_a_simpler_on_the_same_track():
+    kit = FakeDevice("Kit", "DrumGroupDevice")
+    sim = simpler(0.0)
+    dev = pitch_pattern([0])
+    song = FakeSong([FakeTrack([kit, sim, dev])])
+    vm = FakeDrumVM()
+    comp, rec, clock = build(song, drum_vm=vm)
+    assert comp.stats()["instances"][0]["route"] == "drum"
+    play_to(song, comp, clock, 0.0)
+    assert vm.shifts() == [12] and sim.param("Transpose").value == 0.0
+
+
 def test_note_write_failure_leaves_the_state_unapplied():
     dev = pitch_pattern([0])
     clip = FakeClip(notes=[FakeNote(1, 60)])

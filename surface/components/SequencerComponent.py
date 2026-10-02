@@ -87,8 +87,13 @@ name** (issue #489 addendum, the user's rule):
   ``pitch = clamp(global + offsets[note] + shift)`` per member, through
   the same fan-out / legacy-macro / undo path as ``vm.pitch``; the UI
   never sees the term. Needs no clip, so it applies with none playing.
-- a melodic MIDI instrument (an Instrument Rack without a Drum Rack
-  follows this path) → every note of the playing clip moves up by the
+- the track's instrument *is a Simpler* (a top-level ``OriginalSimpler``)
+  → the Simpler's own ``Transpose`` (−48..48) moves +12 relative to what
+  it had, clamped, and back, the notes untouched; the restore adopts a
+  re-pitch the user made while shifted, as the audio rule does. Needs no
+  clip either.
+- any other melodic MIDI instrument (an Instrument Rack without a Drum
+  Rack follows this path, a Simpler inside one too) → every note of the playing clip moves up by the
   octave through ``apply_note_modifications`` (ids preserved); each note
   remembers its own delta (clamped at 127) and moves back by exactly
   that, so notes added while shifted keep the pitch they were recorded
@@ -252,6 +257,8 @@ KIND_PITCH = "pitch"
 KINDS = (KIND_MUTE, KIND_PITCH)
 
 DRUM_RACK_CLASS_NAME = "DrumGroupDevice"
+SIMPLER_CLASS_NAME = "OriginalSimpler"
+SIMPLER_TRANSPOSE_NAME = "Transpose"
 INSTRUMENT_RACK_CLASS_NAME = "InstrumentGroupDevice"
 OCTAVE_SEMITONES = 12
 MIDI_PITCH_MAX = 127
@@ -395,6 +402,7 @@ class _Instance:
         "slot_idx", "clip_state", "pending_restore", "retired_path",
         "drum_shift", "rack", "rack_path", "solo_last", "chance_dirty",
         "temperature_dirty", "temperature_last", "pad_note", "own_listeners",
+        "simpler_id", "simpler_path", "simpler_param", "simpler_home", "simpler_written",
     )
 
     def __init__(
@@ -423,6 +431,14 @@ class _Instance:
         self.rack_path = ""
         # Pitch shift term the drum path currently holds (0 or 12).
         self.drum_shift = 0
+        # Pitch routing when the track's instrument is a Simpler: its
+        # ``Transpose`` parameter, and while shifted what it held before
+        # (``simpler_home``) and what the engine wrote (``simpler_written``).
+        self.simpler_id: Optional[int] = None
+        self.simpler_path = ""
+        self.simpler_param = None
+        self.simpler_home: Optional[int] = None
+        self.simpler_written: Optional[int] = None
         # The track's solo state as last seen (the mute override).
         self.solo_last = False
         # The Chance slider moved since the last apply (set from the value
@@ -445,7 +461,7 @@ class _Instance:
         """Anything applied or any sequencer past its idle step?"""
         if self.mute.current_step >= 0 or self.pitch.current_step >= 0:
             return True
-        if self.drum_shift:
+        if self.drum_shift or self.simpler_written is not None:
             return True
         cs = self.clip_state
         return cs is not None and cs.dirty()
@@ -695,10 +711,56 @@ class SequencerComponent:
     def _resolve_route(self, inst: _Instance) -> None:
         """Find the Drum Rack the track's instrument contains, if any
         (``find_track_drum_rack``: top-level, or nested one level down in
-        an Instrument Rack). Everything else — melodic instruments, plain
-        Instrument Racks, audio tracks — is the clip path."""
+        an Instrument Rack); failing that, a top-level Simpler. Everything
+        else — other melodic instruments, plain Instrument Racks, audio
+        tracks — is the clip path."""
         rack, rack_path = find_track_drum_rack(inst.track, "tracks/%d" % inst.track_idx)
         self._set_rack(inst, rack, rack_path)
+        simpler, simpler_path = (None, "") if rack is not None else self._find_simpler(inst)
+        self._set_simpler(inst, simpler, simpler_path)
+
+    def _find_simpler(self, inst: _Instance) -> Tuple[Optional[object], str]:
+        for di, dev in enumerate(self._safe_devices(inst.track)):
+            if self._safe_class_name(dev) == SIMPLER_CLASS_NAME:
+                return dev, "tracks/%d/devices/%d" % (inst.track_idx, di)
+        return None, ""
+
+    def _set_simpler(self, inst: _Instance, simpler, simpler_path: str) -> None:
+        """Record the Simpler an instance's pitch goes to and hold its
+        ``Transpose`` by name. A different Simpler (or none) while one is
+        held shifted drops the held state unwritten: this may run inside a
+        structural notification, and the old device is usually gone."""
+        sid = _safe_int_id(simpler) if simpler is not None else None
+        param = None
+        if simpler is not None:
+            try:
+                plist = list(simpler.parameters or ())
+            except _LOM_ERRORS as e:
+                self._warn_once(inst.device_path, "simpler_params", "Simpler parameters read raised: %s" % e)
+                plist = []
+            for p in plist:
+                try:
+                    if p.name == SIMPLER_TRANSPOSE_NAME:
+                        param = p
+                        break
+                except _LOM_ERRORS:
+                    continue
+            if param is None:
+                self._warn_once(inst.device_path, "simpler_transpose", "Simpler has no Transpose; clip route used")
+                sid, simpler_path = None, ""
+        if sid != inst.simpler_id:
+            logger.info(
+                "SequencerComponent: %s pitch route %s", inst.device_path,
+                "simpler transpose at %s" % simpler_path if sid is not None
+                else ("drum rack" if inst.rack is not None else "clip (notes / pitch_coarse)"),
+            )
+            if inst.simpler_written is not None:
+                logger.info("SequencerComponent: %s held Simpler shift dropped (route changed)", inst.device_path)
+            inst.simpler_home = None
+            inst.simpler_written = None
+        inst.simpler_id = sid
+        inst.simpler_path = simpler_path
+        inst.simpler_param = param if sid is not None else None
 
     def _set_rack(self, inst: _Instance, rack, rack_path: str) -> None:
         """Record the rack an instance's pitch goes to — the one its track
@@ -1084,6 +1146,9 @@ class SequencerComponent:
         if inst.rack is not None:
             self._set_drum_shift(inst, OCTAVE_SEMITONES if shifted else 0)
             return
+        if inst.simpler_param is not None:
+            self._shift_simpler(inst, shifted)
+            return
         cs = inst.clip_state
         if cs is None:
             # Nothing playing: the wanted state lives in ``pitch.last_value``
@@ -1108,6 +1173,43 @@ class SequencerComponent:
                 self._drum_vm.set_sequencer_shift(inst.rack, inst.rack_path, shift)
         except Exception as e:
             self._warn_once(inst.device_path, "drum_shift", "sequencer shift raised: %s: %s" % (type(e).__name__, e))
+
+    def _shift_simpler(self, inst: _Instance, on: bool) -> None:
+        """The Simpler's ``Transpose`` +12 relative to its own value,
+        clamped ±48, and back; the restore adopts a re-pitch made while
+        shifted (the audio rule)."""
+        if on == (inst.simpler_written is not None):
+            return
+        param = inst.simpler_param
+        cur = self._read_value(param)
+        if cur is None:
+            self._warn_once(inst.device_path, "simpler_read", "Simpler Transpose read failed")
+            return
+        cur = int(round(cur))
+        if on:
+            written = self._clamp_coarse(cur + OCTAVE_SEMITONES)
+            if not self._write_simpler(inst, written):
+                return
+            inst.simpler_home = cur
+            inst.simpler_written = written
+        else:
+            home = inst.simpler_home if inst.simpler_home is not None else cur - OCTAVE_SEMITONES
+            if cur != inst.simpler_written:
+                # The user re-pitched the Simpler while we held it shifted:
+                # the same delta moves home.
+                home += cur - inst.simpler_written
+            if not self._write_simpler(inst, self._clamp_coarse(home)):
+                return
+            inst.simpler_home = None
+            inst.simpler_written = None
+
+    def _write_simpler(self, inst: _Instance, value: int) -> bool:
+        try:
+            inst.simpler_param.value = float(value)
+            return True
+        except _LOM_ERRORS as e:
+            self._warn_once(inst.device_path, "simpler_write", "Simpler Transpose write raised: %s" % e)
+            return False
 
     def _set_clip_pitch(self, inst: _Instance, cs: _ClipState, shifted: bool) -> None:
         if cs.is_audio:
@@ -1301,6 +1403,10 @@ class SequencerComponent:
         self._emit_gate(inst, True)
         if inst.drum_shift:
             self._set_drum_shift(inst, 0)
+        if inst.simpler_written is not None and inst.simpler_param is not None:
+            self._shift_simpler(inst, False)
+        inst.simpler_home = None
+        inst.simpler_written = None
         cs = inst.clip_state
         if cs is not None and cs.dirty():
             logger.debug(
@@ -1334,7 +1440,7 @@ class SequencerComponent:
         if old is not None and old.base_model is not None:
             self._temp_restore(inst, old)
         if new is not None:
-            if inst.rack is None and inst.pitch.last_value == 1:
+            if inst.rack is None and inst.simpler_param is None and inst.pitch.last_value == 1:
                 self._set_clip_pitch(inst, new, True)
             if inst.mute.last_value == 0:
                 self._set_clip_mute(inst, new, True)
@@ -1885,7 +1991,10 @@ class SequencerComponent:
             cs = inst.clip_state
             instances.append({
                 "path": inst.device_path,
-                "route": "pad" if inst.pad_note is not None else ("drum" if inst.rack is not None else "clip"),
+                "route": "pad" if inst.pad_note is not None else (
+                    "drum" if inst.rack is not None else ("simpler" if inst.simpler_param is not None else "clip")),
+                "simpler": ({"path": inst.simpler_path, "home": inst.simpler_home, "written": inst.simpler_written}
+                            if inst.simpler_param is not None else None),
                 "pad": inst.pad_note,
                 "rack": inst.rack_path,
                 "drum_shift": inst.drum_shift,
