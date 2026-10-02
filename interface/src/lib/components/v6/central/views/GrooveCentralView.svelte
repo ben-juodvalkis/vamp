@@ -16,8 +16,8 @@
 	 * Quantize and amounts), with the same focus fallback Q uses: the clip
 	 * running on the selected track.
 	 *
-	 * Sliders on the right edge, Amount outermost (the user's call): Random,
-	 * Velocity and Amount — `random_amount`, `velocity_amount`,
+	 * Sliders either side of the tiles: Random and Velocity on the left,
+	 * Amount on the right — `random_amount`, `velocity_amount`,
 	 * `timing_amount` on the clip's groove. A clip with no groove takes the
 	 * first tile on its first move, as Q does (`services/grooveChooser`). The lit tile's picture moves from
 	 * straight (Amount 0) to the file's pattern (Amount 100); the others show
@@ -110,6 +110,26 @@
 </script>
 
 <div class="groove-view p-(--central-inset)" style:--groove-ink={scheme.primary} data-debug="groove-view">
+	<div class="slider" class:dim={!hasClip}>
+		<DeviceSlider
+			value={clipGrooveStore.randomAmount / 100}
+			labelOrientation="horizontal"
+			title="Random"
+			color={scheme}
+			onInteraction={(v) => write(V3_CLIP_GROOVE_SET_RANDOM_AMOUNT_ADDRESS, v * 100)}
+		/>
+	</div>
+	<div class="slider" class:dim={!hasClip}>
+		<DeviceSlider
+			value={clipGrooveStore.velocityAmount / 100}
+			labelOrientation="horizontal"
+			title="Velocity"
+			color={scheme}
+			onInteraction={(v) => write(V3_CLIP_GROOVE_SET_VELOCITY_AMOUNT_ADDRESS, v * 100)}
+		/>
+	</div>
+	<div class="seam"><SectionDivider orientation="vertical" /></div>
+
 	<div class="tiles-host" bind:this={hostEl}>
 		{#if groovesStore.failed && !groovesStore.listing}
 			<p class="groove-note">No grooves from the Mac ({groovesStore.failed}).</p>
@@ -154,24 +174,7 @@
 
 	<div class="seam"><SectionDivider orientation="vertical" /></div>
 
-	<div class="slider" class:dim={!hasClip}>
-		<DeviceSlider
-			value={clipGrooveStore.randomAmount / 100}
-			labelOrientation="horizontal"
-			title="Random"
-			color={scheme}
-			onInteraction={(v) => write(V3_CLIP_GROOVE_SET_RANDOM_AMOUNT_ADDRESS, v * 100)}
-		/>
-	</div>
-	<div class="slider" class:dim={!hasClip}>
-		<DeviceSlider
-			value={clipGrooveStore.velocityAmount / 100}
-			labelOrientation="horizontal"
-			title="Velocity"
-			color={scheme}
-			onInteraction={(v) => write(V3_CLIP_GROOVE_SET_VELOCITY_AMOUNT_ADDRESS, v * 100)}
-		/>
-	</div>
+
 	<div class="slider" class:dim={!hasClip}>
 		<DeviceSlider
 			value={clipGrooveStore.timingAmount / 100}
@@ -186,7 +189,7 @@
 <style>
 	.groove-view {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto repeat(3, 5.5rem);
+		grid-template-columns: repeat(2, 5.5rem) auto minmax(0, 1fr) auto 5.5rem;
 		grid-template-rows: minmax(0, 1fr);
 		gap: var(--central-gap);
 		height: 100%;
