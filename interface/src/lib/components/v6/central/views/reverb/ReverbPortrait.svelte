@@ -11,8 +11,6 @@
 
 	interface Props {
 		input: TailInput;
-		name: string;
-		blurb: string;
 		/** Name and value pairs, top-right: Decay, Dry/Wet. */
 		readouts: { name: string; value: string }[];
 		crossoverLabel?: string;
@@ -22,7 +20,7 @@
 		onTap?: () => void;
 	}
 
-	let { input, name, blurb, readouts, crossoverLabel, color, isGhost = false, onMove, onTap }: Props = $props();
+	let { input, readouts, crossoverLabel, color, isGhost = false, onMove, onTap }: Props = $props();
 
 	let portrait = $derived(tailPortrait(input));
 
@@ -80,11 +78,6 @@
 						<line class="dry" x1={X(timeToX(0))} x2={X(timeToX(0))} y1={Y(BASE_BOTTOM)} y2={Y(BASE_BOTTOM + portrait.dry)} />
 					{/if}
 				</svg>
-
-				<div class="head">
-					<span class="name">{name}</span>
-					<span class="blurb">{blurb}</span>
-				</div>
 
 				<div class="readouts">
 					{#each readouts as r (r.name)}
@@ -203,32 +196,6 @@
 		vector-effect: non-scaling-stroke;
 	}
 
-	.head {
-		position: absolute;
-		top: 0.5rem;
-		left: 0.75rem;
-		display: flex;
-		align-items: baseline;
-		gap: 0.5rem;
-		white-space: nowrap;
-	}
-	.name {
-		font-size: 0.875rem;
-		font-weight: var(--font-weight-medium);
-		color: var(--ink);
-	}
-	.blurb {
-		font-size: 0.75rem;
-		color: var(--muted-foreground);
-	}
-	/* The pad is DeviceXY's query container. Narrow — a drum pad's pane — the
-	   blurb gives way to the readouts beside it. */
-	@container (max-width: 400px) {
-		.blurb {
-			display: none;
-		}
-	}
-
 	.readouts {
 		position: absolute;
 		top: 0.5rem;
@@ -265,5 +232,12 @@
 		font-size: 0.6875rem;
 		color: var(--fg-tertiary);
 		white-space: nowrap;
+	}
+	/* Narrow — a drum pad's pane — the tabs take the top-left corner's
+	   whole width, so the readout steps down beneath them. */
+	@container (max-width: 330px) {
+		.readouts {
+			top: 2.75rem;
+		}
 	}
 </style>

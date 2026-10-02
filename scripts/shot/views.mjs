@@ -226,6 +226,27 @@ export const TOURS = {
 				description: `Reverb, ${algo}. ${what}`,
 				steps: [selectTrack(5), openTile('Reverb'), { click: `[data-reverb-type="${algo}"]` }, ...drags]
 			})),
+			// The EQ tab (2026-10-02): the rig's own EQ — Lo Cut at 121 Hz, 18 dB,
+			// Hi Shelf at 5 kHz — then shaped by dragging the handles, as a finger
+			// would, and the Hi end switched to a cut.
+			{
+				name: 'fx-reverb-eq',
+				description: 'Reverb, EQ tab: the rig’s EQ — Lo Cut 121 Hz 18 dB, the peaks flat, Hi Shelf 5 kHz',
+				steps: [selectTrack(5), openTile('Reverb'), { click: '[data-reverb-type="Hall"]' }, { click: '[data-reverb-tab="eq"]' }]
+			},
+			{
+				name: 'fx-reverb-eq-shaped',
+				description: 'Reverb, EQ tab: Peak 1 dragged up, Peak 2 down and higher, the Hi end switched to Cut',
+				steps: [
+					selectTrack(5),
+					openTile('Reverb'),
+					{ click: '[data-reverb-type="Hall"]' },
+					{ click: '[data-reverb-tab="eq"]' },
+					{ drag: '[data-eq-band="peak1"]', by: [-20, -45] },
+					{ drag: '[data-eq-band="peak2"]', by: [40, 35] },
+					{ click: '[data-reverb-own] [data-reverb-switch="43"]' }
+				]
+			},
 			{
 				name: 'fx-reverb-frozen',
 				description: 'Reverb, Hall with Freeze on: every band holds to the edge',

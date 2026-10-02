@@ -55,7 +55,7 @@ export interface TailInput {
 	freeze: boolean;
 	/** Dry/Wet, 0..1. */
 	wet: number;
-	/** The wet path's gain at a frequency, in dB: EQ and Send. 0 = flat. */
+	/** The wet path's gain at a frequency, in dB: EQ and Send (`reverbEq.wetLevelDb`). 0 = flat. */
 	levelDb: (hz: number) => number;
 	/** 0 Off … 4 Extreme. */
 	vintage: number;
@@ -359,46 +359,5 @@ export function tailPortrait(input: TailInput): TailPortrait {
 		tailEndX: timeToX(input.onset + input.decay),
 		crossover: xoHz === null ? null : { hz: xoHz, y: hzToBase(xoHz) },
 		climb
-	};
-}
-
-// ── The wet path's EQ and Send, as a gain per frequency ────────────────
-
-export interface WetPath {
-	eqOn: boolean;
-	/** 0 Cut, 1 Shelf, for each end. */
-	loType: number;
-	loHz: number;
-	loGainDb: number;
-	loSlopeDb: number;
-	peaks: { hz: number; gainDb: number; q: number }[];
-	hiType: number;
-	hiHz: number;
-	hiGainDb: number;
-	hiSlopeDb: number;
-	/** Send, linear 0..1. */
-	send: number;
-}
-
-/**
- * The gain the EQ and Send put on the reverb at a frequency, in dB. A cut
- * is a Butterworth magnitude of the slope's order (-3 dB at the corner);
- * shelves and peaks are drawn shapes, close enough to read as Live's.
- */
-export function wetPathDb(path: WetPath): (hz: number) => number {
-	const sendDb = path.send > 0 ? 20 * Math.log10(path.send) : -60;
-	return (hz) => {
-		let db = sendDb;
-		if (!path.eqOn) return db;
-		db +=
-			path.loType === 0
-				? -10 * Math.log10(1 + Math.pow(path.loHz / hz, path.loSlopeDb / 3))
-				: path.loGainDb * (1 - smooth(Math.log2(hz / path.loHz) + 0.5));
-		for (const p of path.peaks) db += p.gainDb * Math.exp(-Math.pow(Math.log2(hz / p.hz) * p.q * 1.4, 2));
-		db +=
-			path.hiType === 0
-				? -10 * Math.log10(1 + Math.pow(hz / path.hiHz, path.hiSlopeDb / 3))
-				: path.hiGainDb * smooth(Math.log2(hz / path.hiHz) + 0.5);
-		return db;
 	};
 }

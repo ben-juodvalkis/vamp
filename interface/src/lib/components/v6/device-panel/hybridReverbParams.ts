@@ -45,6 +45,7 @@ export const HYBRID = {
 	prismLowMult: 27,
 	prismXOver: 28,
 	eqOn: 31,
+	eqPreAlgo: 32,
 	eqLoType: 33,
 	eqLoFreq: 34,
 	eqLoGain: 35,
@@ -169,6 +170,15 @@ export function hzLabel(hz: number): string {
 export const multLabel = (x: number) => `${Math.round(x * 100)} %`;
 export const pitchLabel = (st: number) => `${st.toFixed(2)} st`;
 export const degreeLabel = (deg: number) => `${deg < 9.95 ? deg.toFixed(1) : Math.round(deg).toFixed(0)}°`;
+/** EQ gains: whole dB from 10 up, one decimal below ("-12 dB", "-6.0 dB"). */
+export function eqGainLabel(db: number): string {
+	return `${Math.abs(db) < 9.95 ? db.toFixed(1) : Math.round(db).toFixed(0)} dB`;
+}
+/** Live rounds a tie up ("1.08" at 1.075), where toFixed's binary float may not. */
+export const eqQLabel = (q: number) => (Math.round(q * 100 + 1e-6) / 100).toFixed(2);
+export const eqSlopeLabel = (stepValue: number) => `${EQ_SLOPES_DB[step(stepValue, EQ_SLOPES_DB.length - 1)]} dB`;
+/** EQ Lo Type / Hi Type, by value. */
+export const EQ_TYPE_LABELS = ['Cut', 'Shelf'] as const;
 export const sixteenthsLabel = (n: number) => `${step(n, 16)} / 16`;
 export const vintageLabel = (v: number) => VINTAGE_LABELS[step(v, VINTAGE_MAX)];
 export const shapeLabel = (raw: number) => sig3(clamp01(raw) * 100);
@@ -318,6 +328,7 @@ export const LIVE_DEFAULTS: Readonly<Record<number, number>> = {
 	[HYBRID.prismLowMult]: 0.588592,
 	[HYBRID.prismXOver]: 0.264455,
 	[HYBRID.eqOn]: 1,
+	[HYBRID.eqPreAlgo]: 0,
 	[HYBRID.eqLoType]: 0,
 	[HYBRID.eqLoFreq]: 0.200687,
 	[HYBRID.eqLoGain]: 0.5,

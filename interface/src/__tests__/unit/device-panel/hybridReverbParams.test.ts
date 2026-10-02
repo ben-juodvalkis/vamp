@@ -11,6 +11,12 @@ import {
 	decaySeconds,
 	decayValue,
 	degreeLabel,
+	eqFreqHz,
+	eqGainDb,
+	eqGainLabel,
+	eqQ,
+	eqQLabel,
+	eqSlopeLabel,
 	feedbackGain,
 	hzLabel,
 	multLabel,
@@ -107,6 +113,21 @@ describe('Hybrid Reverb curves reproduce Live’s labels', () => {
 		for (const [v, label] of pitch) expect(pitchLabel(shimmerSemitones(v)), `Pitch ${v}`).toBe(label);
 		const phase: [number, string][] = [[0, '0.0°'], [0.25, '45°'], [0.5, '90°'], [0.75, '135°'], [1, '180°']];
 		for (const [v, label] of phase) expect(degreeLabel(v * 180), `Phase ${v}`).toBe(label);
+	});
+
+	it('the EQ’s rails', () => {
+		const freq: [number, string][] = [
+			[0, '20.0 Hz'], [0.25, '112 Hz'], [0.5, '632 Hz'], [0.75, '3.56 kHz'], [1, '20.0 kHz'],
+			[0.260081, '121 Hz'], [0.514689, '700 Hz'], [0.62502, '1.50 kHz'], [0.799313, '5.00 kHz']
+		];
+		for (const [v, label] of freq) expect(hzLabel(eqFreqHz(v)), `EQ freq ${v}`).toBe(label);
+		const gain: [number, string][] = [[0, '-12 dB'], [0.25, '-6.0 dB'], [0.5, '0.0 dB'], [0.75, '6.0 dB'], [1, '12 dB']];
+		for (const [v, label] of gain) expect(eqGainLabel(eqGainDb(v)), `EQ gain ${v}`).toBe(label);
+		const q: [number, string][] = [[0, '0.10'], [0.25, '1.08'], [0.5, '2.05'], [0.75, '3.03'], [1, '4.00'], [0.155668, '0.71']];
+		for (const [v, label] of q) expect(eqQLabel(eqQ(v)), `EQ Q ${v}`).toBe(label);
+		expect([0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(eqSlopeLabel)).toEqual([
+			'6 dB', '12 dB', '18 dB', '24 dB', '36 dB', '48 dB', '60 dB', '72 dB', '84 dB', '96 dB'
+		]);
 	});
 
 	it('the stepped rails', () => {

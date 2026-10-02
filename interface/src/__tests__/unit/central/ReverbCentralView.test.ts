@@ -90,7 +90,7 @@ describe('ReverbCentralView, an algorithm', () => {
 			'Size 50 %', 'Predelay 10.0 ms', 'Feedback 0.0 %', 'Delay 0.00 ms', 'Stereo 100 %', 'Vintage Off'
 		]);
 		const switches = [...c.querySelectorAll('[data-reverb-shared] [data-reverb-switch]')].map((b) => b.textContent?.trim());
-		expect(switches).toEqual(['Sync', 'Mono', 'EQ']);
+		expect(switches).toEqual(['Sync', 'Mono']);
 	});
 
 	it('draws Prism’s three, and Tides’ Rate as Live’s note value', async () => {
@@ -121,6 +121,45 @@ describe('ReverbCentralView, an algorithm', () => {
 		await fireEvent.click(c.querySelector('[data-reverb-type="Tides"]')!);
 		expect(sendMock).toHaveBeenCalledWith('/looping/v3/param/set', [`${DEVICE}/params/48`, 2, 3]);
 		expect(sendMock).toHaveBeenCalledWith('/looping/v3/param/set', [`${DEVICE}/params/6`, 3, 3]);
+	});
+});
+
+describe('ReverbCentralView, the EQ tab', () => {
+	// The rig's EQ (2026-10-02): Lo Cut 121 Hz at 18 dB, Hi Shelf at 5 kHz.
+	const RIG_EQ = { 33: 0, 34: 0.26008063554763794, 36: 2, 43: 1, 44: 0.7993133068084717 };
+
+	it('swaps the tail for the EQ and the algorithm’s column for the EQ’s, keeping Freeze', async () => {
+		const c = await mount({ 6: 0, ...RIG_EQ });
+		await fireEvent.click(c.querySelector('[data-reverb-tab="eq"]')!);
+		expect(c.querySelector('[data-reverb-eq]')).not.toBeNull();
+		expect(c.querySelector('[data-reverb-portrait]')).toBeNull();
+		expect(labels(c.querySelector('[data-reverb-own]'))).toEqual([
+			'Lo Slope 18 dB', 'Peak 1 Q 0.71', 'Peak 2 Q 0.71', 'Hi Gain 0.0 dB'
+		]);
+		const own = [...c.querySelectorAll('[data-reverb-own] [data-reverb-switch]')].map((b) => b.textContent?.trim());
+		expect(own).toEqual(['Cut', 'Shelf', 'On', 'Pre Algo', 'Freeze', 'In']);
+		expect(c.querySelector('[data-reverb-eq]')?.getAttribute('aria-label')).toBe('Reverb EQ: Lo Cut 121 Hz · 18 dB');
+
+		await fireEvent.click(c.querySelector('[data-reverb-tab="reverb"]')!);
+		expect(labels(c.querySelector('[data-reverb-own]'))[0]).toBe('Shape 50.0');
+	});
+
+	it('switches an end between Cut and Shelf, and the EQ on and before the algorithm', async () => {
+		const c = await mount(RIG_EQ);
+		await fireEvent.click(c.querySelector('[data-reverb-tab="eq"]')!);
+		await fireEvent.click(c.querySelector('[data-reverb-own] [data-reverb-switch="33"]')!);
+		expect(sendMock).toHaveBeenCalledWith('/looping/v3/param/set', [`${DEVICE}/params/33`, 1, 3]);
+		await fireEvent.click(c.querySelector('[data-reverb-own] [data-reverb-switch="31"]')!);
+		expect(sendMock).toHaveBeenCalledWith('/looping/v3/param/set', [`${DEVICE}/params/31`, 0, 3]);
+		await fireEvent.click(c.querySelector('[data-reverb-own] [data-reverb-switch="32"]')!);
+		expect(sendMock).toHaveBeenCalledWith('/looping/v3/param/set', [`${DEVICE}/params/32`, 1, 3]);
+	});
+
+	it('names the EQ off on its curve', async () => {
+		const c = await mount({ ...RIG_EQ, 31: 0 });
+		await fireEvent.click(c.querySelector('[data-reverb-tab="eq"]')!);
+		expect(c.querySelector('[data-reverb-eq]')?.classList.contains('off')).toBe(true);
+		expect(c.querySelector('[data-reverb-eq]')?.getAttribute('aria-label')).toBe('Reverb EQ: EQ Off');
 	});
 });
 

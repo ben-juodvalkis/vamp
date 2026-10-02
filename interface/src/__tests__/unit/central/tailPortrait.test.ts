@@ -10,11 +10,15 @@ import {
 	TIME_TICKS,
 	tailPortrait,
 	timeToX,
-	wetPathDb,
 	xToTime,
 	type Ridge,
 	type TailInput
 } from '$lib/components/v6/central/views/reverb/tailPortrait';
+import { eqBands, wetLevelDb } from '$lib/components/v6/central/views/reverb/reverbEq';
+import { HYBRID, LIVE_DEFAULTS } from '$lib/components/v6/device-panel/hybridReverbParams';
+
+/** Live's value per parameter: the defaults, with these changed. */
+const rawWith = (values: Record<number, number>) => (i: number) => values[i] ?? LIVE_DEFAULTS[i] ?? 0;
 
 const BASE: TailInput = {
 	algo: 'darkHall',
@@ -149,21 +153,18 @@ describe('tone', () => {
 	});
 
 	it('the EQ’s low cut sinks the lowest band', () => {
-		const cut = wetPathDb({
-			eqOn: true, loType: 0, loHz: 200, loGainDb: 0, loSlopeDb: 24, peaks: [],
-			hiType: 1, hiHz: 5000, hiGainDb: 0, hiSlopeDb: 12, send: 1
-		});
+		// Lo Cut at 200 Hz (the rail is 20·1000^v), 24 dB; everything else flat.
+		const bands = eqBands(rawWith({ [HYBRID.eqLoType]: 0, [HYBRID.eqLoFreq]: 1 / 3, [HYBRID.eqLoSlope]: 3, [HYBRID.eqHiType]: 1 }));
+		const cut = wetLevelDb(bands, true, 1);
 		expect(cut(60)).toBeLessThan(-30);
 		expect(Math.abs(cut(1000))).toBeLessThan(0.5);
 		const p = draw({ levelDb: cut });
 		expect(Math.max(...band(p, 0).ys) - band(p, 0).base).toBeLessThan(Math.max(...band(p, 7).ys) - band(p, 7).base);
 	});
 
-	it('the EQ switched off, or Send at 0 dB, leaves the bands alone', () => {
-		const off = wetPathDb({
-			eqOn: false, loType: 0, loHz: 2000, loGainDb: 0, loSlopeDb: 96, peaks: [],
-			hiType: 0, hiHz: 100, hiGainDb: 0, hiSlopeDb: 96, send: 1
-		});
+	it('the EQ switched off, at Send 0 dB, leaves the bands alone', () => {
+		const bands = eqBands(rawWith({ [HYBRID.eqLoFreq]: 0.66, [HYBRID.eqLoSlope]: 9, [HYBRID.eqHiType]: 0, [HYBRID.eqHiFreq]: 0.25 }));
+		const off = wetLevelDb(bands, false, 1);
 		expect(off(60)).toBe(0);
 		expect(off(10000)).toBe(0);
 	});

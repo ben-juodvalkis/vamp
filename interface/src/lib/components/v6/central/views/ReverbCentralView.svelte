@@ -17,7 +17,14 @@
    *   on the bottom row, always in the same place.
    * - What every algorithm shares: Size, Predelay (ms, or 16ths with Sync)
    *   and its Feedback, the algorithm's Delay, Stereo with Bass Mono, and
-   *   Vintage with the EQ switch.
+   *   Vintage.
+   *
+   * Two tabs on the picture, as Live's device has: the algorithm's (the
+   * tail) and EQ (2026-10-02). The EQ tab draws the reverb's own EQ as a
+   * curve with a handle per band (`reverb/ReverbEqEditor`), and the column
+   * beside it trades the algorithm's controls for what the curve does not
+   * hold: each end's Cut or Shelf with its Slope or Gain, the peaks' Q, the
+   * EQ's On and Pre Algo. Freeze keeps its row on both tabs.
    *
    * Every control reads its value in Live's own format at rest, from the
    * curves in `hybridReverbParams.ts` (measured on the rig): the surface
@@ -36,13 +43,15 @@
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import SectionDivider from '../SectionDivider.svelte';
   import ReverbPortrait from './reverb/ReverbPortrait.svelte';
-  import { xToTime, wetPathDb, type TailInput } from './reverb/tailPortrait';
+  import ReverbEqEditor from './reverb/ReverbEqEditor.svelte';
+  import { xToTime, type TailInput } from './reverb/tailPortrait';
+  import { eqBands, wetLevelDb, type EqBand, type EqBandKey } from './reverb/reverbEq';
   import {
     HYBRID,
     LIVE_DEFAULTS,
     ROUTING_ALGORITHM,
     ROUTING_CONVOLUTION,
-    EQ_SLOPES_DB,
+    EQ_TYPE_LABELS,
     VINTAGE_MAX,
     algoDelaySeconds,
     algorithmFor,
@@ -52,9 +61,11 @@
     controlRaw,
     decaySeconds,
     decayValue,
-    eqFreqHz,
     eqGainDb,
+    eqGainLabel,
     eqQ,
+    eqQLabel,
+    eqSlopeLabel,
     feedbackGain,
     hzLabel,
     percentLabel,
@@ -250,24 +261,10 @@
   let wet = $derived(clamp01(raw(HYBRID.dryWet)));
   let frozen = $derived(on(HYBRID.freeze));
 
-  let wetPath = $derived(
-    wetPathDb({
-      eqOn: on(HYBRID.eqOn),
-      loType: Math.round(raw(HYBRID.eqLoType)),
-      loHz: eqFreqHz(raw(HYBRID.eqLoFreq)),
-      loGainDb: eqGainDb(raw(HYBRID.eqLoGain)),
-      loSlopeDb: EQ_SLOPES_DB[Math.min(9, Math.max(0, Math.round(raw(HYBRID.eqLoSlope))))],
-      peaks: [
-        { hz: eqFreqHz(raw(HYBRID.eqPeak1Freq)), gainDb: eqGainDb(raw(HYBRID.eqPeak1Gain)), q: eqQ(raw(HYBRID.eqPeak1Q)) },
-        { hz: eqFreqHz(raw(HYBRID.eqPeak2Freq)), gainDb: eqGainDb(raw(HYBRID.eqPeak2Gain)), q: eqQ(raw(HYBRID.eqPeak2Q)) }
-      ],
-      hiType: Math.round(raw(HYBRID.eqHiType)),
-      hiHz: eqFreqHz(raw(HYBRID.eqHiFreq)),
-      hiGainDb: eqGainDb(raw(HYBRID.eqHiGain)),
-      hiSlopeDb: EQ_SLOPES_DB[Math.min(9, Math.max(0, Math.round(raw(HYBRID.eqHiSlope))))],
-      send: clamp01(raw(HYBRID.sendGain))
-    })
-  );
+  // The reverb's own EQ: its tab draws it, and the tail draws its gain per band.
+  let eq = $derived(eqBands(raw));
+  let eqOn = $derived(on(HYBRID.eqOn));
+  let wetPath = $derived(wetLevelDb(eq, eqOn, clamp01(raw(HYBRID.sendGain))));
 
   let tail = $derived<TailInput>({
     algo: algorithm.key,
@@ -329,6 +326,8 @@
     label: string;
     write: (t: number) => void;
     chip?: { name: string; index: number };
+    /** An EQ end's Cut / Shelf parameter: a chip naming the type. */
+    type?: number;
   }
 
   let shared = $derived<Row[]>([
@@ -383,16 +382,87 @@
       name: 'Vintage',
       position: raw(HYBRID.vintage) / VINTAGE_MAX,
       label: vintageLabel(raw(HYBRID.vintage)),
-      write: (t) => fx.sendParam(HYBRID.vintage, Math.round(clamp01(t) * VINTAGE_MAX)),
-      chip: { name: 'EQ', index: HYBRID.eqOn }
+      write: (t) => fx.sendParam(HYBRID.vintage, Math.round(clamp01(t) * VINTAGE_MAX))
     }
   ]);
+
+  /** What the picture shows: the tail, or the reverb's EQ — Live's two tabs. */
+  let panel = $state<'reverb' | 'eq'>('reverb');
+  /** The EQ band last touched: lit on the curve, named in its readout. */
+  let eqFocus = $state<EqBandKey>('lo');
+
+  /**
+   * The EQ tab's column: what the curve does not hold. An end in Cut has a
+   * Slope and no Gain; in Shelf, a Gain and no Slope (Live manual) — the
+   * row is whichever applies, beside the chip that switches the type.
+   */
+  let eqRows = $derived.by<Row[]>(() => {
+    const end = (b: EqBand): Row =>
+      b.kind === 'cut'
+        ? {
+            key: b.key,
+            name: `${b.name} Slope`,
+            position: b.slope / 9,
+            label: eqSlopeLabel(b.slope),
+            write: (t) => fx.sendParam(b.slopeIndex ?? 0, Math.round(clamp01(t) * 9)),
+            type: b.typeIndex ?? undefined
+          }
+        : {
+            key: b.key,
+            name: `${b.name} Gain`,
+            position: b.gain,
+            label: eqGainLabel(eqGainDb(b.gain)),
+            write: (t) => fx.sendParam(b.gainIndex, clamp01(t)),
+            type: b.typeIndex ?? undefined
+          };
+    const peakQ = (b: EqBand): Row => ({
+      key: b.key,
+      name: `${b.name} Q`,
+      position: b.q,
+      label: eqQLabel(eqQ(b.q)),
+      write: (t) => fx.sendParam(b.qIndex ?? 0, clamp01(t))
+    });
+    const [lo, peak1, peak2, hi] = eq;
+    return [end(lo), peakQ(peak1), peakQ(peak2), end(hi)];
+  });
 </script>
 
 <!-- A row's label: Live's name on the left, its value on the right. Drawn in
      both of the slider's label layers, so it flips on the fill. -->
 {#snippet rowLabel(name: string, value: string)}
   <span class="row-label"><span class="row-name">{name}</span><span class="row-value">{value}</span></span>
+{/snippet}
+
+{#snippet typeChip(index: number)}
+  <button
+    class="physical-button reverb-chip"
+    style="--btn-tint: {currentColor.primary};"
+    title="Cut or Shelf"
+    data-reverb-switch={index}
+    onclick={() => toggle(index)}
+  >
+    {EQ_TYPE_LABELS[on(index) ? 1 : 0]}
+  </button>
+{/snippet}
+
+{#snippet sliderRow(row: Row)}
+  {#snippet label()}{@render rowLabel(row.name, row.label)}{/snippet}
+  <div class="row" class:with-chip={row.chip || row.type !== undefined}>
+    <DeviceSlider
+      value={row.position}
+      title="{row.name} {row.label}"
+      {label}
+      orientation="horizontal"
+      labelOrientation="horizontal"
+      labelSize="small"
+      isGhost={fx.isGhost}
+      color={currentColor}
+      onTap={() => fx.loadIfGhost()}
+      onInteraction={row.write}
+    />
+    {#if row.chip}{@render chip(row.chip.name, row.chip.index)}{/if}
+    {#if row.type !== undefined}{@render typeChip(row.type)}{/if}
+  </div>
 {/snippet}
 
 {#snippet chip(name: string, index: number, title?: string)}
@@ -485,22 +555,71 @@
           </div>
         {:else}
           <div class="algo-layout" data-reverb-algorithm={algorithm.key}>
-            <ReverbPortrait
-              input={tail}
-              name={algorithm.name}
-              blurb={algorithm.blurb}
-              {readouts}
-              {crossoverLabel}
-              color={currentColor}
-              isGhost={fx.isGhost}
-              onMove={moveTail}
-              onTap={() => fx.loadIfGhost()}
-            />
+            <div class="picture" data-reverb-panel={panel}>
+              {#if panel === 'eq'}
+                <ReverbEqEditor
+                  bands={eq}
+                  on={eqOn}
+                  color={currentColor}
+                  isGhost={fx.isGhost}
+                  selected={eqFocus}
+                  onSelect={(key) => (eqFocus = key)}
+                  onWrite={(index, value) => fx.sendParam(index, value)}
+                />
+              {:else}
+                <ReverbPortrait
+                  input={tail}
+                  {readouts}
+                  {crossoverLabel}
+                  color={currentColor}
+                  isGhost={fx.isGhost}
+                  onMove={moveTail}
+                  onTap={() => fx.loadIfGhost()}
+                />
+              {/if}
+              <!-- Live's two tabs; the first wears the algorithm's name. -->
+              <div class="picture-tabs" role="tablist" aria-label="Reverb picture">
+                <button
+                  role="tab"
+                  class="physical-button picture-tab"
+                  class:active={panel === 'reverb'}
+                  aria-selected={panel === 'reverb'}
+                  style="--btn-tint: {currentColor.primary};"
+                  data-reverb-tab="reverb"
+                  onclick={() => (panel = 'reverb')}
+                >
+                  {algorithm.name}
+                </button>
+                <button
+                  role="tab"
+                  class="physical-button picture-tab"
+                  class:active={panel === 'eq'}
+                  aria-selected={panel === 'eq'}
+                  style="--btn-tint: {currentColor.primary};"
+                  data-reverb-tab="eq"
+                  onclick={() => (panel = 'eq')}
+                >
+                  EQ
+                </button>
+                {#if panel === 'reverb'}
+                  <span class="picture-blurb">{algorithm.blurb}</span>
+                {/if}
+              </div>
+            </div>
 
             <SectionDivider orientation="vertical" />
 
-            <!-- The algorithm's own controls; Freeze on the bottom row. -->
+            <!-- The algorithm's own controls, or the EQ's; Freeze on the bottom row. -->
             <div class="algo-col" data-reverb-own>
+              {#if panel === 'eq'}
+                {#each eqRows as row (row.key)}
+                  {@render sliderRow(row)}
+                {/each}
+                <div class="row chips pair-row">
+                  {@render chip('On', HYBRID.eqOn, 'EQ On')}
+                  {@render chip('Pre Algo', HYBRID.eqPreAlgo, 'Pre Algo: the EQ before the algorithm, not after both engines')}
+                </div>
+              {:else}
               {#each algorithm.controls as control (control.index)}
                 {#snippet ownLabel()}{@render rowLabel(control.name, control.label(raw(control.index)))}{/snippet}
                 <div class="row">
@@ -518,6 +637,7 @@
                   />
                 </div>
               {/each}
+              {/if}
               <div class="row chips freeze-row">
                 {@render chip('Freeze', HYBRID.freeze)}
                 {@render chip('In', HYBRID.freezeIn, 'Freeze In: new input still feeds the frozen tail')}
@@ -527,24 +647,7 @@
             <!-- What every algorithm shares. -->
             <div class="algo-col" data-reverb-shared>
               {#each shared as row (row.key)}
-                {#snippet sharedLabel()}{@render rowLabel(row.name, row.label)}{/snippet}
-                <div class="row" class:with-chip={row.chip}>
-                  <DeviceSlider
-                    value={row.position}
-                    title="{row.name} {row.label}"
-                    label={sharedLabel}
-                    orientation="horizontal"
-                    labelOrientation="horizontal"
-                    labelSize="small"
-                    isGhost={fx.isGhost}
-                    color={currentColor}
-                    onTap={() => fx.loadIfGhost()}
-                    onInteraction={row.write}
-                  />
-                  {#if row.chip}
-                    {@render chip(row.chip.name, row.chip.index)}
-                  {/if}
-                </div>
+                {@render sliderRow(row)}
               {/each}
             </div>
           </div>
@@ -585,6 +688,11 @@
     grid-template-columns: minmax(0, 1fr) 48px;
     gap: var(--spacing-sm);
   }
+  .pair-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--spacing-sm);
+  }
   .freeze-row {
     grid-row: 6;
     display: grid;
@@ -614,6 +722,44 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* The picture's frame: the tail or the EQ, Live's two tabs over its corner. */
+  .picture {
+    position: relative;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    container-type: inline-size;
+  }
+  .picture-tabs {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .picture-tab {
+    min-height: 0;
+    height: 2rem;
+    padding: 0 0.625rem;
+    font-size: 0.8125rem;
+    white-space: nowrap;
+  }
+  .picture-blurb {
+    margin-left: 0.375rem;
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  /* Narrow — a drum pad's pane — the blurb gives way to the readouts. */
+  @container (max-width: 330px) {
+    .picture-blurb {
+      display: none;
+    }
+  }
+
   .reverb-chip {
     min-height: 0;
     min-width: 0;
@@ -638,12 +784,14 @@
   }
   /* One ink for the algorithm: a lit switch wears its colour rather than
      the house --phosphor, as the Echo view's Sync does. */
-  :global([data-grammar="flat"]) .reverb-chip.active {
+  :global([data-grammar="flat"]) .reverb-chip.active,
+  :global([data-grammar="flat"]) .picture-tab.active {
     background: var(--btn-tint);
     border-color: var(--btn-tint);
     color: var(--flat-on-fg);
   }
-  :global([data-grammar="flat"]) .reverb-chip:not(.active) {
+  :global([data-grammar="flat"]) .reverb-chip:not(.active),
+  :global([data-grammar="flat"]) .picture-tab:not(.active) {
     color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
   }
 </style>
