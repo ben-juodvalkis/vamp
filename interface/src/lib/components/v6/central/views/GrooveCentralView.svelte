@@ -8,8 +8,9 @@
 	 * Tiles: the grooves ticked in Settings → Grooves, in tick order, laid out
 	 * by the browser's own grid solver (`computeGridLayout`): a few grooves
 	 * grow to fill the view, many hold at a finger's target (the approved
-	 * design's size) and scroll. Each shows its name, grid and timing picture,
-	 * the picture taller as the tile is. The clip's current groove
+	 * design's size) and scroll. Each shows its timing picture as a thin strip
+	 * along the top, and its name large in the middle with the grid under it
+	 * (a user groove's `User: ` prefix dropped). The clip's current groove
 	 * is lit in phosphor. A tap puts the clip on that groove file
 	 * (`/looping/v3/clip/groove/set/file`; the surface keeps the clip's
 	 * Quantize and amounts), with the same focus fallback Q uses: the clip
@@ -35,6 +36,7 @@
 	import { groovesStore } from '$lib/stores/v6/groovesStore.svelte';
 	import { settingsStore } from '$lib/stores/v6/settingsStore.svelte';
 	import { loadFirstGrooveIfNone } from '$lib/services/grooveChooser';
+	import { USER_GROOVE_PREFIX } from '$lib/types/grooves';
 	import { session } from '$lib/stores/session.svelte';
 	import { focusPlayingClipOnSelectedTrack } from '$lib/components/v6/tracks/composables/slotActions';
 	import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
@@ -85,6 +87,11 @@
 		return focusPlayingClipOnSelectedTrack({ showClip: false });
 	}
 
+	/** A user groove's tile drops the `User: ` its name carries on the wire. */
+	function shownName(name: string): string {
+		return name.startsWith(USER_GROOVE_PREFIX) ? name.slice(USER_GROOVE_PREFIX.length) : name;
+	}
+
 	function choose(name: string) {
 		const path = targetClip();
 		if (!path) return;
@@ -132,13 +139,13 @@
 						onclick={() => choose(g.name)}
 						data-groove={g.name}
 					>
-						<span class="tile-top">
-							<span class="tile-name">{g.name}</span>
-							{#if g.grid}<span class="tile-grid">{g.grid}</span>{/if}
-						</span>
 						{#if g.events?.length}
 							<GroovePicture events={g.events} amount={on ? clipGrooveStore.timingAmount : 100} />
 						{/if}
+						<span class="tile-label">
+							<span class="tile-name">{shownName(g.name)}</span>
+							{#if g.grid}<span class="tile-grid">{g.grid}</span>{/if}
+						</span>
 					</button>
 				{/each}
 			</div>
@@ -226,7 +233,6 @@
 	.tile {
 		display: flex;
 		flex-direction: column;
-		justify-content: space-between;
 		gap: 0.375rem;
 		min-width: 0;
 		min-height: 0;
@@ -236,12 +242,11 @@
 		border-radius: 2px;
 		color: var(--foreground);
 		font: inherit;
-		text-align: left;
+		text-align: center;
 		cursor: pointer;
 		--groove-tick: var(--groove-ink);
-		/* The picture takes what the name and padding leave: 1.5rem at the
-		   design's size, taller as the solver grows the tile. */
-		--groove-pic-h: clamp(1.5rem, calc(var(--tile-h, 0px) - 3.875rem), 6rem);
+		/* The picture is a strip along the top; the name takes the rest. */
+		--groove-pic-h: 1rem;
 	}
 	.tile.on {
 		background: var(--phosphor);
@@ -254,16 +259,21 @@
 		outline: 2px solid var(--ring);
 		outline-offset: 1px;
 	}
-	.tile-top {
+	.tile-label {
+		flex: 1;
 		display: flex;
-		align-items: flex-start;
-		gap: 0.5rem;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 0.25rem;
 		min-width: 0;
+		min-height: 0;
 	}
+	/* Large, and larger as the solver grows the tile. */
 	.tile-name {
-		font-size: 0.9375rem;
+		font-size: clamp(1.25rem, calc(var(--tile-h, 0px) * 0.17), 2.25rem);
 		font-weight: 600;
-		line-height: 1.15;
+		line-height: 1.1;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
 		line-clamp: 2;
@@ -271,9 +281,8 @@
 		overflow: hidden;
 	}
 	.tile-grid {
-		margin-left: auto;
 		flex: none;
-		font-size: 0.75rem;
+		font-size: 0.8125rem;
 		font-family: ui-monospace, 'SF Mono', Menlo, monospace;
 		color: var(--muted-foreground);
 	}
