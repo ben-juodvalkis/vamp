@@ -10,7 +10,8 @@
 import { getPeaks } from '$lib/services/clipWaveformService';
 import { logger } from '$lib/utils/logger';
 
-export const IR_BINS = 512;
+/** Fine enough that the start, which the log axis spreads out, is not blocky. */
+export const IR_BINS = 2048;
 
 export interface IrWave {
 	channels: { channel: 'mono' | 'L' | 'R'; peaks: [number, number][] }[];

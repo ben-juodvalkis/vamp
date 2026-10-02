@@ -118,6 +118,18 @@ export const shimmerSemitones = (v: number) => -12 + 24 * clamp01(v);
 /** Predelay Feedback (either mode), 0..95 %. */
 export const feedbackGain = (v: number) => 0.95 * clamp01(v);
 
+/**
+ * The convolution IR's Size (`ir_size_factor`), a property, not a
+ * parameter: Live clamps it to 0.2..5 (measured by write-and-restore,
+ * 2026-10-02). A slider spans it on a log scale, so 100 % sits mid-rail and
+ * halving and doubling are the same distance either side.
+ */
+export const IR_SIZE_MIN = 0.2;
+export const IR_SIZE_MAX = 5;
+export const irSizeFactor = (position: number) => IR_SIZE_MIN * Math.pow(IR_SIZE_MAX / IR_SIZE_MIN, clamp01(position));
+export const irSizePosition = (factor: number) =>
+	clamp01(Math.log(clamp(factor, IR_SIZE_MIN, IR_SIZE_MAX) / IR_SIZE_MIN) / Math.log(IR_SIZE_MAX / IR_SIZE_MIN));
+
 // ── Ti Rate, a note value ──────────────────────────────────────────────
 
 export const TIDES_RATE_LABELS = [

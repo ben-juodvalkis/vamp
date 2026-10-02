@@ -2,13 +2,15 @@
 	/**
 	 * The convolution pad's picture (`irDisplay.ts`): the loaded IR rising
 	 * from a baseline — the top half of its waveform, and for a stereo IR the
-	 * louder of L and R at each moment — time across as Size stretches it. Faint, the file as it is; in the device's ink, the
+	 * louder of L and R at each moment — time across as Size stretches it,
+	 * logarithmic past its first thirtieth (the pad's Attack rides the same
+	 * axis). Faint, the file as it is; in the device's ink, the
 	 * IR as Attack and Decay leave it, with their envelope dashed over it.
 	 * Drawn under DeviceXY's handle, whose drag is Attack across and Decay up.
 	 */
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
 	import { percentLabel, timeLabel } from '$lib/components/v6/device-panel/hybridReverbParams';
-	import { categoryLabel, irLabel, irShape, louder, tickLabel, timeTicks } from './irDisplay';
+	import { IR_X0, IR_X1, axisTicks, categoryLabel, irLabel, irShape, louder, tickLabel, timeX } from './irDisplay';
 	import type { IrStatus, IrWave } from './useReverbIr.svelte';
 
 	interface Props {
@@ -22,12 +24,18 @@
 		shaping: boolean;
 		color: DeviceColorScheme;
 		isGhost?: boolean;
+		/**
+		 * Seconds the axis spans: the view's, which the pad's handle shares —
+		 * held while Size is dragged, so the IR stretches and shrinks under the
+		 * finger. Unset, the axis fits the IR.
+		 */
+		axisSpan?: number | null;
 	}
 
-	let { wave, status, category, file, attack, decay, size, shaping, color, isGhost = false }: Props = $props();
+	let { wave, status, category, file, attack, decay, size, shaping, color, isGhost = false, axisSpan = null }: Props = $props();
 
-	const X0 = 0.035;
-	const X1 = 0.985;
+	const X0 = IR_X0;
+	const X1 = IR_X1;
 	/** The baseline, above the time axis, and the height a full-scale IR reaches. */
 	const BASE = 0.11;
 	const RISE = 0.68;
@@ -36,16 +44,17 @@
 	let shape = $derived(
 		wave ? irShape(wave.channels.map((c) => c.peaks), wave.seconds, size, attack, decay, shaping) : null
 	);
-	let ticks = $derived(shape && shape.span > 0 ? timeTicks(shape.span) : []);
+	let axis = $derived(axisSpan ?? shape?.span ?? 0);
+	let ticks = $derived(axis > 0 ? axisTicks(axis) : []);
 
 	const X = (x: number) => (x * 1000).toFixed(1);
 	const Y = (y: number) => ((1 - y) * 1000).toFixed(1);
-	const xAt = (t: number, span: number) => X0 + ((X1 - X0) * t) / span;
+	const xAt = (t: number, span: number) => timeX(t, span);
 
 	/** An outline rising from the baseline; closed along it for a fill. */
 	function outline(heights: number[], close: boolean): string {
 		if (!shape) return '';
-		const pts = heights.map((h, i) => `${X(xAt(shape!.times[i], shape!.span))} ${Y(BASE + RISE * h)}`);
+		const pts = heights.map((h, i) => `${X(xAt(shape!.times[i], axis))} ${Y(BASE + RISE * h)}`);
 		return close ? `M${X(X0)} ${Y(BASE)}L${pts.join('L')}L${X(X1)} ${Y(BASE)}Z` : `M${pts.join('L')}`;
 	}
 	let raw = $derived(shape ? louder(shape.raw) : []);
@@ -64,7 +73,7 @@
 	{#if shape}
 		<svg viewBox="0 0 1000 1000" preserveAspectRatio="none">
 			{#each ticks as t (t)}
-				<line class="tick" x1={X(xAt(t, shape.span))} x2={X(xAt(t, shape.span))} y1={Y(BASE - 0.025)} y2={Y(BASE)} />
+				<line class="tick" x1={X(xAt(t, axis))} x2={X(xAt(t, axis))} y1={Y(BASE - 0.025)} y2={Y(BASE)} />
 			{/each}
 			<line class="centre" x1={X(X0)} x2={X(X1)} y1={Y(BASE)} y2={Y(BASE)} />
 			<path class="raw" d={outline(raw, true)} />
@@ -75,7 +84,7 @@
 			{/if}
 		</svg>
 		{#each ticks as t (t)}
-			<span class="tick-label" style="left: {xAt(t, shape.span) * 100}%;">{tickLabel(t)}</span>
+			<span class="tick-label" style="left: {xAt(t, axis) * 100}%;">{tickLabel(t)}</span>
 		{/each}
 	{:else if missingText}
 		<span class="missing">{missingText}</span>

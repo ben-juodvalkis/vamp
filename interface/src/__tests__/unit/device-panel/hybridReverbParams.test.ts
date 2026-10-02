@@ -19,6 +19,8 @@ import {
 	eqSlopeLabel,
 	feedbackGain,
 	hzLabel,
+	irSizeFactor,
+	irSizePosition,
 	multLabel,
 	percentLabel,
 	pitchLabel,
@@ -139,6 +141,17 @@ describe('Hybrid Reverb curves reproduce Live’s labels', () => {
 		expect(tidesRateLabel(16)).toBe('1/4');
 		expect(tidesRateLabel(22)).toBe('1');
 		expect(tidesRateLabel(29)).toBe('4 D');
+	});
+});
+
+describe('IR Size', () => {
+	it('spans Live’s 0.2..5 on a log rail, 100 % mid-way', () => {
+		expect(irSizeFactor(0)).toBeCloseTo(0.2, 9);
+		expect(irSizeFactor(0.5)).toBeCloseTo(1, 9);
+		expect(irSizeFactor(1)).toBeCloseTo(5, 9);
+		expect(irSizeFactor(0.25)).toBeCloseTo(1 / irSizeFactor(0.75) * 1, 9);
+		for (const f of [0.2, 0.5, 1, 1.1428, 3, 5]) expect(irSizeFactor(irSizePosition(f))).toBeCloseTo(f, 9);
+		expect(irSizePosition(9)).toBe(1);
 	});
 });
 

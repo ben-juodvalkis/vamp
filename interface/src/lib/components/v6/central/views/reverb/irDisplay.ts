@@ -23,6 +23,84 @@ export function irLabel(file: string): { name: string; stereo: boolean } {
 
 export const DB_RANGE = 48;
 
+/** Where the picture's time axis starts and ends across the pad. */
+export const IR_X0 = 0.035;
+export const IR_X1 = 0.985;
+
+/**
+ * The time axis: linear for the first thirtieth of the IR, logarithmic
+ * past it (`ln(1 + 30·t/span) / ln 31`), so the first milliseconds — where
+ * Attack works, and an IR's early reflections — get room, and the tail
+ * still fits. Its shape depends only on t/span, whatever the IR's length.
+ */
+const KNEE = 30;
+export function timeX(t: number, span: number): number {
+	const u = Math.max(0, t) / span;
+	return IR_X0 + ((IR_X1 - IR_X0) * Math.log1p(KNEE * u)) / Math.log1p(KNEE);
+}
+export function xTime(x: number, span: number): number {
+	const f = (x - IR_X0) / (IR_X1 - IR_X0);
+	return (span * Math.expm1(Math.max(0, f) * Math.log1p(KNEE))) / KNEE;
+}
+
+/** Round times for the axis — 0, then whichever stand far enough apart on it. */
+export function axisTicks(span: number): number[] {
+	const candidates = [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20];
+	const ticks = [0];
+	let lastX = timeX(0, span);
+	for (const t of candidates) {
+		if (t > span * 1.0001) break;
+		const x = timeX(t, span);
+		if (x - lastX >= 0.09) {
+			ticks.push(t);
+			lastX = x;
+		}
+	}
+	return ticks;
+}
+
+// ── The pad: Attack across, Decay up, fitted to the IR ─────────────────
+// Live's rails, measured by write-and-restore (2026-10-02): Attack 0..3 s,
+// Decay 0.02..20 s. Linear over those, a short IR left most of the pad
+// doing nothing — on a 0.3 s IR every Decay above ~1 s barely touched it,
+// 95 % of the travel. So the pad fits the IR as Size stretches it (`axis`
+// seconds): Attack runs along the picture's own time axis, the handle at
+// the attack time on the waveform — the axis is logarithmic past its first
+// thirtieth, so short attacks get the room, and the pad ends where the IR
+// does — and Decay is logarithmic from a twentieth of the IR to four times
+// it: past that the envelope barely touches the IR (a 250 ms IR: 1 s). A
+// Decay above the rail (a fresh device's 20 s) parks the handle at the top.
+
+export const IR_ATTACK_MAX = 3;
+export const IR_DECAY_MIN = 0.02;
+export const IR_DECAY_MAX = 20;
+
+const clampTo = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+/** The pad's x (0..1 across it) for an Attack, on the picture's time axis. */
+export function attackX(attack: number, axis: number): number {
+	return clampTo(timeX(attack, axis), 0, 1);
+}
+/** The Attack at a pad x, within Live's 0..3 s. */
+export function attackAt(x: number, axis: number): number {
+	return clampTo(xTime(x, axis), 0, IR_ATTACK_MAX);
+}
+
+/** The Decay rail for an IR this long: a twentieth of it to four times it, within Live's range. */
+export const decayFloor = (axis: number) => clampTo(axis / 20, IR_DECAY_MIN, 1);
+export const decayTop = (axis: number) => clampTo(axis * 4, 0.1, IR_DECAY_MAX);
+
+/** The pad's y (0..1 up) for a Decay. */
+export function decayY(decay: number, axis: number): number {
+	const lo = decayFloor(axis);
+	return clampTo(Math.log(Math.max(decay, lo) / lo) / Math.log(decayTop(axis) / lo), 0, 1);
+}
+/** The Decay at a pad y. */
+export function decayAt(y: number, axis: number): number {
+	const lo = decayFloor(axis);
+	return clampTo(lo * Math.pow(decayTop(axis) / lo, clampTo(y, 0, 1)), IR_DECAY_MIN, IR_DECAY_MAX);
+}
+
 /** A linear amplitude (0..1) to a height on the 48 dB scale (0..1). */
 export function ampHeight(amp: number): number {
 	if (!(amp > 0)) return 0;
@@ -33,15 +111,6 @@ export function ampHeight(amp: number): number {
 export function envelopeDb(t: number, attack: number, decay: number): number {
 	const rise = attack > 0 && t < attack ? 20 * Math.log10(Math.max(1e-6, t / attack)) : 0;
 	return rise - (60 * t) / Math.max(0.001, decay);
-}
-
-/** Round ticks for a span of seconds: three to six of them, 0 included. */
-export function timeTicks(span: number): number[] {
-	const steps = [0.01, 0.02, 0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10, 20];
-	const step = steps.find((s) => span / s <= 5) ?? 50;
-	const ticks: number[] = [];
-	for (let t = 0; t <= span + 1e-9; t += step) ticks.push(Math.round(t * 1000) / 1000);
-	return ticks;
 }
 
 export const tickLabel = (t: number) => (t === 0 ? '0' : t < 1 ? `${Math.round(t * 1000)} ms` : `${t} s`);

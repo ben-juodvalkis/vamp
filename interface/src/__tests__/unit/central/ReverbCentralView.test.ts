@@ -207,6 +207,85 @@ describe('ReverbCentralView, convolution', () => {
 		expect(ir?.textContent).toContain('Decay 20.0 s');
 	});
 
+	describe('Attack, Decay and Size reach Live on release only', () => {
+		// Every change makes Live recalculate the IR; a stream of them hangs it.
+		const pointer = (el: Element, type: string, x: number, y: number) => {
+			const ev = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y });
+			Object.defineProperty(ev, 'pointerId', { value: 1 });
+			el.dispatchEvent(ev);
+		};
+		const propertySets = () => sendMock.mock.calls.filter(([addr]) => addr === '/looping/v3/property/set');
+
+		beforeEach(() => {
+			vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ files: [] }))));
+			HTMLElement.prototype.setPointerCapture = vi.fn();
+			HTMLElement.prototype.releasePointerCapture = vi.fn();
+			vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+				x: 0, y: 0, top: 0, left: 0, right: 400, bottom: 300, width: 400, height: 300, toJSON: () => ({})
+			} as DOMRect);
+		});
+		afterEach(() => vi.restoreAllMocks());
+
+		it('the IR pad: nothing while it drags, Attack and Decay once when it lets go', async () => {
+			const c = await mount({ 48: 3 }, SPRING);
+			const pad = c.querySelector('[data-reverb-ir] .xy-container')!;
+			pointer(pad, 'pointerdown', 10, 10);
+			pointer(pad, 'pointermove', 60, 80);
+			pointer(pad, 'pointermove', 100, 120);
+			await new Promise((r) => setTimeout(r, 50));
+			expect(propertySets()).toHaveLength(0);
+			pointer(pad, 'pointerup', 100, 120);
+			expect(propertySets().map(([, args]) => (args as unknown[])[1])).toEqual(['ir_attack_time', 'ir_decay_time']);
+		});
+
+		it('the Size slider: nothing while it drags, the size once when it lets go', async () => {
+			const c = await mount({ 48: 3 }, SPRING);
+			const size = c.querySelector('[data-reverb-ir-size] [role="slider"]')!;
+			expect(size.getAttribute('aria-label')).toMatch(/^Size 100 %/);
+			pointer(size, 'pointerdown', 10, 150);
+			pointer(size, 'pointermove', 10, 120);
+			pointer(size, 'pointermove', 10, 90);
+			await new Promise((r) => setTimeout(r, 50));
+			expect(propertySets()).toHaveLength(0);
+			expect(c.querySelector('[data-reverb-ir]')?.textContent).toContain('Size 190 %'); // the picture follows
+			pointer(size, 'pointerup', 10, 90);
+			const sets = propertySets();
+			expect(sets).toHaveLength(1);
+			const [, [path, name, value]] = sets[0] as [string, [string, string, number]];
+			expect([path, name]).toEqual([DEVICE, 'ir_size_factor']);
+			expect(value).toBeCloseTo(1.904, 3); // 60 px up a 300 px rail: 0.5 → 0.7, and 0.2 · 25^0.7
+		});
+	});
+
+	it('holds the axis while Size drags, so the IR stretches under the finger, then fits it again', async () => {
+		vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ files: [{ channel: 'mono', path: PATH }] }))));
+		HTMLElement.prototype.setPointerCapture = vi.fn();
+		HTMLElement.prototype.releasePointerCapture = vi.fn();
+		const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+			x: 0, y: 0, top: 0, left: 0, right: 400, bottom: 300, width: 400, height: 300, toJSON: () => ({})
+		} as DOMRect);
+		const pointer = (el: Element, type: string, y: number) => {
+			const ev = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: 10, clientY: y });
+			Object.defineProperty(ev, 'pointerId', { value: 1 });
+			el.dispatchEvent(ev);
+		};
+		const c = await mount({ 48: 3 }, SPRING);
+		const ticks = () => [...c.querySelectorAll('[data-reverb-ir] .tick-label')].map((t) => t.textContent);
+		await vi.waitFor(() => expect(ticks().at(-1)).toBe('2 s')); // a 2 s IR at 100 %
+		const before = ticks();
+		const size = c.querySelector('[data-reverb-ir-size] [role="slider"]')!;
+		pointer(size, 'pointerdown', 150);
+		pointer(size, 'pointermove', 90);
+		await new Promise((r) => setTimeout(r, 50));
+		expect(c.querySelector('[data-reverb-ir]')?.textContent).toContain('Size 190 %');
+		expect(ticks()).toEqual(before); // the axis held
+		pointer(size, 'pointerup', 90);
+		await tick();
+		expect(ticks()).not.toEqual(before); // fitted to 3.8 s
+		expect(ticks().at(-1)).toBe('2 s');
+		rect.mockRestore();
+	});
+
 	it('says so when the IR has no file here (a User IR)', async () => {
 		vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ files: [] }))));
 		const c = await mount({ 48: 3 }, {

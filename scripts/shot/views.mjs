@@ -271,6 +271,26 @@ export const TOURS = {
 				]
 			},
 			{
+				name: 'fx-reverb-ir-short',
+				description: 'Reverb, Short (an early-reflections IR) shaped by a drag: the pad fitted to a short IR',
+				steps: [
+					selectTrack(5),
+					openTile('Reverb'),
+					{ click: '[data-reverb-type="Short"]' },
+					{ drag: '[data-reverb-ir] .xy-container', by: [80, 120] }
+				]
+			},
+			{
+				name: 'fx-reverb-ir-size',
+				description: 'Reverb, Spring with Size dragged up: the IR stretched over a longer axis',
+				steps: [
+					selectTrack(5),
+					openTile('Reverb'),
+					{ click: '[data-reverb-type="Spring"]' },
+					{ drag: '[data-reverb-ir-size] [role="slider"]', by: [0, -60] }
+				]
+			},
+			{
 				name: 'fx-reverb-frozen',
 				description: 'Reverb, Hall with Freeze on: every band holds to the edge',
 				steps: [selectTrack(5), openTile('Reverb'), { click: '[data-reverb-type="Hall"]' }, { click: '[data-reverb-switch="8"]' }]

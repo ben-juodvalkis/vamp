@@ -46,6 +46,7 @@
   import ReverbEqEditor from './reverb/ReverbEqEditor.svelte';
   import ReverbIrDisplay from './reverb/ReverbIrDisplay.svelte';
   import { useReverbIr } from './reverb/useReverbIr.svelte';
+  import { IR_ATTACK_MAX, attackAt, attackX, decayAt, decayY } from './reverb/irDisplay';
   import { xToTime, type TailInput } from './reverb/tailPortrait';
   import { eqBands, wetLevelDb, type EqBand, type EqBandKey } from './reverb/reverbEq';
   import {
@@ -55,6 +56,8 @@
     ROUTING_CONVOLUTION,
     EQ_TYPE_LABELS,
     VINTAGE_MAX,
+    irSizeFactor,
+    irSizePosition,
     algoDelaySeconds,
     algorithmFor,
     bassMult,
@@ -181,7 +184,7 @@
   let irDecayTime = $derived<number>(
     (fx.devicePath ? selectedTrackStore.propertyValue(fx.devicePath, 'ir_decay_time') as number | undefined : undefined) ?? 0.02
   );
-  let irSizeFactor = $derived<number>(
+  let irSizeValue = $derived<number>(
     (fx.devicePath ? selectedTrackStore.propertyValue(fx.devicePath, 'ir_size_factor') as number | undefined : undefined) ?? 1
   );
   // Unknown (a surface from before 2026-10-02 does not send it): shaping on,
@@ -208,6 +211,23 @@
   const ir = useReverbIr(() => ({ category: irCategoryName, file: irFileName }));
   /** Where a finger on the IR pad is, before its release writes Attack and Decay. */
   let irPreview = $state<{ x: number; y: number } | null>(null);
+  /**
+   * The Size slider's position while it is dragged. Attack, Decay and Size
+   * are written on release only: Live recalculates the IR on every change,
+   * and a stream of them hangs it.
+   */
+  let irSizePreview = $state<number | null>(null);
+  /** Size as the picture and the readout show it: the finger's while it drags. */
+  let irSizeShown = $derived(irSizePreview !== null ? irSizeFactor(irSizePreview) : irSizeValue);
+  /** The IR picture's axis, held at its span from before a Size drag until the release. */
+  let irAxisHeld = $state<number | null>(null);
+  /**
+   * The seconds the IR pad and its picture span: the IR as Size stretches
+   * it (Live's 3 s Attack rail until the file is read). The pad's Attack
+   * and Decay are fitted to it (`reverb/irDisplay.ts`), so a short IR does
+   * not leave most of the pad doing nothing.
+   */
+  let irAxis = $derived(irAxisHeld ?? (ir.wave && ir.wave.seconds > 0 ? ir.wave.seconds * irSizeShown : IR_ATTACK_MAX));
 
   // Mount property subscriptions: refcount manager fires the
   // wire-level subscribe on first acquire, unsubscribe on last
@@ -260,27 +280,6 @@
       fx.sendParam(HYBRID.routing, ROUTING_ALGORITHM);
       fx.sendParam(HYBRID.algoType, type.param6);
     }
-  }
-
-  // Convert 0-1 slider value to IR attack time (0.0-3.0 seconds)
-  function mapToIRAttackTime(sliderValue: number): number {
-    const clamped = Math.max(0, Math.min(1, sliderValue));
-    return clamped * 3.0; // Linear mapping: 0-1 -> 0.0-3.0
-  }
-
-  // Convert 0-1 slider value to IR decay time (0.02-20.0 seconds)
-  function mapToIRDecayTime(sliderValue: number): number {
-    const clamped = Math.max(0, Math.min(1, sliderValue));
-    return 0.02 + clamped * (20.0 - 0.02); // Linear mapping: 0-1 -> 0.02-20.0
-  }
-
-  // Convert IR timing values back to 0-1 for display
-  function irAttackTimeToSlider(attackTime: number): number {
-    return Math.max(0, Math.min(1, attackTime / 3.0));
-  }
-
-  function irDecayTimeToSlider(decayTime: number): number {
-    return Math.max(0, Math.min(1, (decayTime - 0.02) / (20.0 - 0.02)));
   }
 
   // ── The algorithm ─────────────────────────────────────────────────────
@@ -568,12 +567,13 @@
 
         {#if reverbMode === ROUTING_CONVOLUTION}
           <!-- Convolution mode: the loaded IR, its Attack (across) and Decay (up)
-               on the pad. The writes still wait for the release — the picture
-               follows the finger meanwhile. -->
+               on the pad, its Size beside it. The writes still wait for the
+               release — the picture follows the finger meanwhile. -->
+          <div class="ir-layout">
           <div class="min-h-0" data-reverb-ir>
             <DeviceXY
-              xValue={irAttackTimeToSlider(irAttackTime)}
-              yValue={irDecayTimeToSlider(irDecayTime)}
+              xValue={attackX(irAttackTime, irAxis)}
+              yValue={decayY(irDecayTime, irAxis)}
               isGhost={fx.isGhost}
               color={currentColor}
               onInteraction={(x, y) => {
@@ -582,10 +582,8 @@
               onRelease={(x, y) => {
                 irPreview = null;
                 if (fx.devicePath) {
-                  const attackTime = mapToIRAttackTime(x);
-                  const decayTime = mapToIRDecayTime(y);
-                  selectedTrackStore.setPropertyValue(fx.devicePath, 'ir_attack_time', attackTime);
-                  selectedTrackStore.setPropertyValue(fx.devicePath, 'ir_decay_time', decayTime);
+                  selectedTrackStore.setPropertyValue(fx.devicePath, 'ir_attack_time', attackAt(x, irAxis));
+                  selectedTrackStore.setPropertyValue(fx.devicePath, 'ir_decay_time', decayAt(y, irAxis));
                 }
               }}
             >
@@ -595,15 +593,42 @@
                   status={ir.status}
                   category={irCategoryName}
                   file={irFileName}
-                  attack={irPreview ? mapToIRAttackTime(irPreview.x) : irAttackTime}
-                  decay={irPreview ? mapToIRDecayTime(irPreview.y) : irDecayTime}
-                  size={irSizeFactor}
+                  attack={irPreview ? attackAt(irPreview.x, irAxis) : irAttackTime}
+                  decay={irPreview ? decayAt(irPreview.y, irAxis) : irDecayTime}
+                  size={irSizeShown}
+                  axisSpan={irAxis}
                   shaping={irShaping}
                   color={currentColor}
                   isGhost={fx.isGhost}
                 />
               {/snippet}
             </DeviceXY>
+          </div>
+          {#snippet sizeLabel()}
+            <span class="stacked-label"><span>Size</span><span class="row-value">{percentLabel(irSizeShown * 100)}</span></span>
+          {/snippet}
+          <div class="ir-size" data-reverb-ir-size>
+            <DeviceSlider
+              value={irSizePreview ?? irSizePosition(irSizeValue)}
+              title="Size {percentLabel(irSizeShown * 100)}"
+              label={sizeLabel}
+              orientation="vertical"
+              labelOrientation="horizontal"
+              labelSize="small"
+              isGhost={fx.isGhost}
+              color={currentColor}
+              onTap={() => fx.loadIfGhost()}
+              onInteraction={(t) => {
+                if (irSizePreview === null && ir.wave) irAxisHeld = ir.wave.seconds * irSizeValue;
+                irSizePreview = t;
+              }}
+              onRelease={(t) => {
+                irSizePreview = null;
+                irAxisHeld = null;
+                if (fx.devicePath) selectedTrackStore.setPropertyValue(fx.devicePath, 'ir_size_factor', irSizeFactor(t));
+              }}
+            />
+          </div>
           </div>
         {:else}
           <div class="algo-layout" data-reverb-algorithm={algorithm.key}>
@@ -740,6 +765,29 @@
     grid-template-columns: minmax(0, 1fr) 48px;
     gap: var(--spacing-sm);
   }
+  /* Convolution: the IR pad, and its Size at a slider's width beside it. */
+  .ir-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 96px;
+    gap: var(--central-gap);
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+  }
+  .ir-size {
+    min-height: 0;
+  }
+  /* A vertical slider's label: the name over its value. */
+  .stacked-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+    font-size: 0.8125rem;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
   .pair-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

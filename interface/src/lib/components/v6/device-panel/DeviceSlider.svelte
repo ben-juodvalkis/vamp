@@ -19,6 +19,11 @@
     // does. `title` still names the slider for assistive tech.
     label?: Snippet;
     onInteraction?: (value: number) => void;
+    // Fired once when a drag ends, with where it left the slider — never on a
+    // tap, nor when the drag ended where it began. For a write that should
+    // land once rather than every frame: the Reverb's IR Size, whose IR
+    // Attack/Decay pad already writes on release.
+    onRelease?: (value: number) => void;
     onTap?: () => void;
     // Fired at TRUE finger-down, before any movement or tap/drag verdict.
     // For a host that wants the touch itself to mean something — switching
@@ -51,6 +56,7 @@
     title = "",
     label,
     onInteraction,
+    onRelease,
     onTap,
     onDown,
     isGhost = false,
@@ -196,6 +202,8 @@
 
     // Send final value immediately
     throttle.flush();
+
+    if (onRelease && !isTap && localValue !== startValue) onRelease(localValue);
   }
 
   function updatePositionRelative(event: PointerEvent) {
