@@ -1,14 +1,14 @@
 <script lang="ts">
 	/**
-	 * The convolution pad's picture (`irDisplay.ts`): the loaded IR, L above
-	 * the centre line and R below it (a mono IR mirrors), time across as
-	 * Size stretches it. Faint, the file as it is; in the device's ink, the
+	 * The convolution pad's picture (`irDisplay.ts`): the loaded IR rising
+	 * from a baseline — the top half of its waveform, and for a stereo IR the
+	 * louder of L and R at each moment — time across as Size stretches it. Faint, the file as it is; in the device's ink, the
 	 * IR as Attack and Decay leave it, with their envelope dashed over it.
 	 * Drawn under DeviceXY's handle, whose drag is Attack across and Decay up.
 	 */
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
 	import { percentLabel, timeLabel } from '$lib/components/v6/device-panel/hybridReverbParams';
-	import { categoryLabel, irLabel, irShape, tickLabel, timeTicks } from './irDisplay';
+	import { categoryLabel, irLabel, irShape, louder, tickLabel, timeTicks } from './irDisplay';
 	import type { IrStatus, IrWave } from './useReverbIr.svelte';
 
 	interface Props {
@@ -28,8 +28,9 @@
 
 	const X0 = 0.035;
 	const X1 = 0.985;
-	const MID = 0.46;
-	const HALF = 0.32;
+	/** The baseline, above the time axis, and the height a full-scale IR reaches. */
+	const BASE = 0.11;
+	const RISE = 0.68;
 
 	let label = $derived(irLabel(file));
 	let shape = $derived(
@@ -41,14 +42,14 @@
 	const Y = (y: number) => ((1 - y) * 1000).toFixed(1);
 	const xAt = (t: number, span: number) => X0 + ((X1 - X0) * t) / span;
 
-	/** One half's outline: up from the centre line (+1) or down (-1). */
-	function half(heights: number[], sign: 1 | -1, close: boolean): string {
+	/** An outline rising from the baseline; closed along it for a fill. */
+	function outline(heights: number[], close: boolean): string {
 		if (!shape) return '';
-		const pts = heights.map((h, i) => `${X(xAt(shape!.times[i], shape!.span))} ${Y(MID + sign * HALF * h)}`);
-		return close ? `M${X(X0)} ${Y(MID)}L${pts.join('L')}L${X(X1)} ${Y(MID)}Z` : `M${pts.join('L')}`;
+		const pts = heights.map((h, i) => `${X(xAt(shape!.times[i], shape!.span))} ${Y(BASE + RISE * h)}`);
+		return close ? `M${X(X0)} ${Y(BASE)}L${pts.join('L')}L${X(X1)} ${Y(BASE)}Z` : `M${pts.join('L')}`;
 	}
-	/** The upper half is L (or mono); the lower is R, or mono again. */
-	const lower = (s: number[][]) => s[1] ?? s[0];
+	let raw = $derived(shape ? louder(shape.raw) : []);
+	let shaped = $derived(shape ? louder(shape.shaped) : []);
 
 	let missingText = $derived(
 		status === 'missing'
@@ -63,27 +64,19 @@
 	{#if shape}
 		<svg viewBox="0 0 1000 1000" preserveAspectRatio="none">
 			{#each ticks as t (t)}
-				<line class="tick" x1={X(xAt(t, shape.span))} x2={X(xAt(t, shape.span))} y1={Y(0.085)} y2={Y(0.105)} />
+				<line class="tick" x1={X(xAt(t, shape.span))} x2={X(xAt(t, shape.span))} y1={Y(BASE - 0.025)} y2={Y(BASE)} />
 			{/each}
-			<line class="centre" x1={X(X0)} x2={X(X1)} y1={Y(MID)} y2={Y(MID)} />
-			<path class="raw" d={half(shape.raw[0], 1, true)} />
-			<path class="raw" d={half(lower(shape.raw), -1, true)} />
-			<path class="shaped" d={half(shape.shaped[0], 1, true)} />
-			<path class="shaped" d={half(lower(shape.shaped), -1, true)} />
-			<path class="shaped-line" d={half(shape.shaped[0], 1, false)} />
-			<path class="shaped-line" d={half(lower(shape.shaped), -1, false)} />
+			<line class="centre" x1={X(X0)} x2={X(X1)} y1={Y(BASE)} y2={Y(BASE)} />
+			<path class="raw" d={outline(raw, true)} />
+			<path class="shaped" d={outline(shaped, true)} />
+			<path class="shaped-line" d={outline(shaped, false)} />
 			{#if shape.envelope}
-				<path class="envelope" d={half(shape.envelope, 1, false)} />
-				<path class="envelope" d={half(shape.envelope, -1, false)} />
+				<path class="envelope" d={outline(shape.envelope, false)} />
 			{/if}
 		</svg>
 		{#each ticks as t (t)}
 			<span class="tick-label" style="left: {xAt(t, shape.span) * 100}%;">{tickLabel(t)}</span>
 		{/each}
-		{#if wave && wave.channels.length > 1}
-			<span class="side" style="bottom: {(MID + HALF) * 100}%;">L</span>
-			<span class="side" style="bottom: {(MID - HALF) * 100}%;">R</span>
-		{/if}
 	{:else if missingText}
 		<span class="missing">{missingText}</span>
 	{/if}
@@ -161,13 +154,6 @@
 		font-size: 0.6875rem;
 		color: var(--fg-tertiary);
 		white-space: nowrap;
-	}
-	.side {
-		position: absolute;
-		left: 0.5rem;
-		transform: translateY(50%);
-		font-size: 0.6875rem;
-		color: var(--fg-tertiary);
 	}
 	.missing {
 		position: absolute;

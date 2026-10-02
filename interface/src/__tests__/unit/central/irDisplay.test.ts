@@ -9,6 +9,7 @@ import {
 	envelopeDb,
 	irLabel,
 	irShape,
+	louder,
 	tickLabel,
 	timeTicks
 } from '$lib/components/v6/central/views/reverb/irDisplay';
@@ -45,6 +46,14 @@ describe('the time axis', () => {
 		expect(tickLabel(0)).toBe('0');
 		expect(tickLabel(0.5)).toBe('500 ms');
 		expect(tickLabel(2)).toBe('2 s');
+	});
+});
+
+describe('one half for a stereo IR', () => {
+	it('takes the louder of L and R at each moment', () => {
+		expect(louder([[0.2, 0.9, 0.1], [0.5, 0.3, 0.1]])).toEqual([0.5, 0.9, 0.1]);
+		expect(louder([[0.4, 0.6]])).toEqual([0.4, 0.6]);
+		expect(louder([])).toEqual([]);
 	});
 });
 

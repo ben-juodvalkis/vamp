@@ -94,7 +94,7 @@
       1: familyScheme('rackVoice'),   // Drum — rose
       2: CHARTREUSE_SCHEME,           // Spring — chartreuse
       3: familyScheme('pitchSeq'),    // Plate — violet
-      4: familyScheme('timeSpace')    // Church — teal
+      4: familyScheme('timeSpace')    // Wood — teal
     },
     // Algorithmic types
     algorithmic: {
@@ -145,7 +145,9 @@
     { name: 'Drum', ir_category: 3, ir_file: 7 },
     { name: 'Spring', ir_category: 6, ir_file: 0 },
     { name: 'Plate', ir_category: 5, ir_file: 0 },
-    { name: 'Church', ir_category: 2, ir_file: 10 }
+    // Chambers_and_Large_Rooms #10 is "Large Wood Room" (measured 2026-10-02);
+    // the button read "Church" until then.
+    { name: 'Wood', ir_category: 2, ir_file: 10 }
   ];
 
   const ALGORITHMIC_TYPES = [

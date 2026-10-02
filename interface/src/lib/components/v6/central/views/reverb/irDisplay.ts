@@ -46,6 +46,12 @@ export function timeTicks(span: number): number[] {
 
 export const tickLabel = (t: number) => (t === 0 ? '0' : t < 1 ? `${Math.round(t * 1000)} ms` : `${t} s`);
 
+/** One channel from several: the louder at each bin (a stereo IR's L and R). */
+export function louder(channels: readonly number[][]): number[] {
+	if (!channels.length) return [];
+	return channels[0].map((_, i) => Math.max(...channels.map((c) => c[i] ?? 0)));
+}
+
 export interface IrShape {
 	/** Each bin's time, seconds from the start of the stretched IR. */
 	times: number[];
