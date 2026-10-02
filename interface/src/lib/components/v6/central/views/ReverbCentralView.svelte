@@ -46,7 +46,17 @@
   import ReverbEqEditor from './reverb/ReverbEqEditor.svelte';
   import ReverbIrDisplay from './reverb/ReverbIrDisplay.svelte';
   import { useReverbIr } from './reverb/useReverbIr.svelte';
-  import { IR_ATTACK_MAX, attackAt, attackX, decayAt, decayY } from './reverb/irDisplay';
+  import {
+    IR_ATTACK_MAX,
+    attackAt,
+    attackAtPosition,
+    attackPosition,
+    attackX,
+    categoryLabel,
+    decayAt,
+    decayY,
+    irLabel
+  } from './reverb/irDisplay';
   import { xToTime, type TailInput } from './reverb/tailPortrait';
   import { eqBands, wetLevelDb, type EqBand, type EqBandKey } from './reverb/reverbEq';
   import {
@@ -209,8 +219,20 @@
   let irFileName = $derived(nameList('ir_file_list')[irFileIndex] ?? '');
   // The loaded IR's waveform, from Live's own file.
   const ir = useReverbIr(() => ({ category: irCategoryName, file: irFileName }));
-  /** Where a finger on the IR pad is, before its release writes Attack and Decay. */
-  let irPreview = $state<{ x: number; y: number } | null>(null);
+  /**
+   * Attack and Decay while a finger moves them — on the pad or on their
+   * sliders, which follow each other — before the release writes them.
+   */
+  let irAttackPreview = $state<number | null>(null);
+  let irDecayPreview = $state<number | null>(null);
+  let irAttackShown = $derived(irAttackPreview ?? irAttackTime);
+  let irDecayShown = $derived(irDecayPreview ?? irDecayTime);
+  /** The IR's name and category, beside the picture's tabs. */
+  let irTitle = $derived(
+    irFileName && irFileName !== '<empty>'
+      ? `${irLabel(irFileName).name} · ${categoryLabel(irCategoryName)}`
+      : categoryLabel(irCategoryName)
+  );
   /**
    * The Size slider's position while it is dragged. Attack, Decay and Size
    * are written on release only: Live recalculates the IR on every change,
@@ -359,6 +381,11 @@
     position: number;
     label: string;
     write: (t: number) => void;
+    /**
+     * Set for a value Live should get once, on release (the IR's): `write`
+     * then only previews while the finger moves, and this writes.
+     */
+    commit?: (t: number) => void;
     chip?: { name: string; index: number };
     /** An EQ end's Cut / Shelf parameter: a chip naming the type. */
     type?: number;
@@ -417,6 +444,69 @@
       position: raw(HYBRID.vintage) / VINTAGE_MAX,
       label: vintageLabel(raw(HYBRID.vintage)),
       write: (t) => fx.sendParam(HYBRID.vintage, Math.round(clamp01(t) * VINTAGE_MAX))
+    }
+  ]);
+
+  let isConvolution = $derived(reverbMode === ROUTING_CONVOLUTION);
+
+  /**
+   * Convolution's shared column: what the device has besides its engines —
+   * the algorithm's own Size and Delay do nothing to an IR — and Dry/Wet,
+   * which the algorithm's pad carries and the IR pad (Attack × Decay) does not.
+   */
+  let convolutionShared = $derived<Row[]>([
+    ...shared.filter((r) => r.key !== 'size' && r.key !== 'delay'),
+    {
+      key: 'drywet',
+      name: 'Dry/Wet',
+      position: wet,
+      label: percentLabel(wet * 100),
+      write: (t) => fx.sendParam(HYBRID.dryWet, clamp01(t))
+    }
+  ]);
+
+  function writeIr(name: string, value: number) {
+    if (fx.devicePath) selectedTrackStore.setPropertyValue(fx.devicePath, name, value);
+  }
+
+  /** Convolution's own column: the IR's Attack, Decay and Size, fitted to it, written on release. */
+  let irRows = $derived<Row[]>([
+    {
+      key: 'ir-attack',
+      name: 'Attack',
+      position: attackPosition(irAttackShown, irAxis),
+      label: timeLabel(irAttackShown),
+      write: (t) => (irAttackPreview = attackAtPosition(t, irAxis)),
+      commit: (t) => {
+        irAttackPreview = null;
+        writeIr('ir_attack_time', attackAtPosition(t, irAxis));
+      }
+    },
+    {
+      key: 'ir-decay',
+      name: 'Decay',
+      position: decayY(irDecayShown, irAxis),
+      label: timeLabel(irDecayShown),
+      write: (t) => (irDecayPreview = decayAt(t, irAxis)),
+      commit: (t) => {
+        irDecayPreview = null;
+        writeIr('ir_decay_time', decayAt(t, irAxis));
+      }
+    },
+    {
+      key: 'ir-size',
+      name: 'Size',
+      position: irSizePreview ?? irSizePosition(irSizeValue),
+      label: percentLabel(irSizeShown * 100),
+      write: (t) => {
+        if (irSizePreview === null && ir.wave) irAxisHeld = ir.wave.seconds * irSizeValue;
+        irSizePreview = t;
+      },
+      commit: (t) => {
+        irSizePreview = null;
+        irAxisHeld = null;
+        writeIr('ir_size_factor', irSizeFactor(t));
+      }
     }
   ]);
 
@@ -493,6 +583,7 @@
       color={currentColor}
       onTap={() => fx.loadIfGhost()}
       onInteraction={row.write}
+      onRelease={row.commit}
     />
     {#if row.chip}{@render chip(row.chip.name, row.chip.index)}{/if}
     {#if row.type !== undefined}{@render typeChip(row.type)}{/if}
@@ -565,138 +656,113 @@
              nothing between them until the hairline landed (2026-09-13). -->
         <SectionDivider orientation="vertical" />
 
-        {#if reverbMode === ROUTING_CONVOLUTION}
-          <!-- Convolution mode: the loaded IR, its Attack (across) and Decay (up)
-               on the pad, its Size beside it. The writes still wait for the
-               release — the picture follows the finger meanwhile. -->
-          <div class="ir-layout">
-          <div class="min-h-0" data-reverb-ir>
-            <DeviceXY
-              xValue={attackX(irAttackTime, irAxis)}
-              yValue={decayY(irDecayTime, irAxis)}
-              isGhost={fx.isGhost}
-              color={currentColor}
-              onInteraction={(x, y) => {
-                irPreview = { x, y };
-              }}
-              onRelease={(x, y) => {
-                irPreview = null;
-                if (fx.devicePath) {
-                  selectedTrackStore.setPropertyValue(fx.devicePath, 'ir_attack_time', attackAt(x, irAxis));
-                  selectedTrackStore.setPropertyValue(fx.devicePath, 'ir_decay_time', decayAt(y, irAxis));
-                }
-              }}
-            >
-              {#snippet background()}
-                <ReverbIrDisplay
-                  wave={ir.wave}
-                  status={ir.status}
-                  category={irCategoryName}
-                  file={irFileName}
-                  attack={irPreview ? attackAt(irPreview.x, irAxis) : irAttackTime}
-                  decay={irPreview ? decayAt(irPreview.y, irAxis) : irDecayTime}
-                  size={irSizeShown}
-                  axisSpan={irAxis}
-                  shaping={irShaping}
-                  color={currentColor}
+        <div class="algo-layout" data-reverb-algorithm={isConvolution ? 'convolution' : algorithm.key}>
+          <div class="picture" data-reverb-panel={panel}>
+            {#if panel === 'eq'}
+              <ReverbEqEditor
+                bands={eq}
+                on={eqOn}
+                color={currentColor}
+                isGhost={fx.isGhost}
+                selected={eqFocus}
+                onSelect={(key) => (eqFocus = key)}
+                onWrite={(index, value) => fx.sendParam(index, value)}
+              />
+            {:else if isConvolution}
+              <!-- The loaded IR: Attack across, Decay up, fitted to it. The writes
+                   wait for the release — Live recalculates the IR on every change,
+                   and a stream of them hangs it — while the picture follows. -->
+              <div class="ir-pad" data-reverb-ir>
+                <DeviceXY
+                  xValue={attackX(irAttackShown, irAxis)}
+                  yValue={decayY(irDecayShown, irAxis)}
                   isGhost={fx.isGhost}
-                />
-              {/snippet}
-            </DeviceXY>
-          </div>
-          {#snippet sizeLabel()}
-            <span class="stacked-label"><span>Size</span><span class="row-value">{percentLabel(irSizeShown * 100)}</span></span>
-          {/snippet}
-          <div class="ir-size" data-reverb-ir-size>
-            <DeviceSlider
-              value={irSizePreview ?? irSizePosition(irSizeValue)}
-              title="Size {percentLabel(irSizeShown * 100)}"
-              label={sizeLabel}
-              orientation="vertical"
-              labelOrientation="horizontal"
-              labelSize="small"
-              isGhost={fx.isGhost}
-              color={currentColor}
-              onTap={() => fx.loadIfGhost()}
-              onInteraction={(t) => {
-                if (irSizePreview === null && ir.wave) irAxisHeld = ir.wave.seconds * irSizeValue;
-                irSizePreview = t;
-              }}
-              onRelease={(t) => {
-                irSizePreview = null;
-                irAxisHeld = null;
-                if (fx.devicePath) selectedTrackStore.setPropertyValue(fx.devicePath, 'ir_size_factor', irSizeFactor(t));
-              }}
-            />
-          </div>
-          </div>
-        {:else}
-          <div class="algo-layout" data-reverb-algorithm={algorithm.key}>
-            <div class="picture" data-reverb-panel={panel}>
-              {#if panel === 'eq'}
-                <ReverbEqEditor
-                  bands={eq}
-                  on={eqOn}
                   color={currentColor}
-                  isGhost={fx.isGhost}
-                  selected={eqFocus}
-                  onSelect={(key) => (eqFocus = key)}
-                  onWrite={(index, value) => fx.sendParam(index, value)}
-                />
-              {:else}
-                <ReverbPortrait
-                  input={tail}
-                  {readouts}
-                  {crossoverLabel}
-                  color={currentColor}
-                  isGhost={fx.isGhost}
-                  onMove={moveTail}
-                  onTap={() => fx.loadIfGhost()}
-                />
-              {/if}
-              <!-- Live's two tabs; the first wears the algorithm's name. -->
-              <div class="picture-tabs" role="tablist" aria-label="Reverb picture">
-                <button
-                  role="tab"
-                  class="physical-button picture-tab"
-                  class:active={panel === 'reverb'}
-                  aria-selected={panel === 'reverb'}
-                  style="--btn-tint: {currentColor.primary};"
-                  data-reverb-tab="reverb"
-                  onclick={() => (panel = 'reverb')}
+                  onInteraction={(x, y) => {
+                    irAttackPreview = attackAt(x, irAxis);
+                    irDecayPreview = decayAt(y, irAxis);
+                  }}
+                  onRelease={(x, y) => {
+                    irAttackPreview = null;
+                    irDecayPreview = null;
+                    writeIr('ir_attack_time', attackAt(x, irAxis));
+                    writeIr('ir_decay_time', decayAt(y, irAxis));
+                  }}
                 >
-                  {algorithm.name}
-                </button>
-                <button
-                  role="tab"
-                  class="physical-button picture-tab"
-                  class:active={panel === 'eq'}
-                  aria-selected={panel === 'eq'}
-                  style="--btn-tint: {currentColor.primary};"
-                  data-reverb-tab="eq"
-                  onclick={() => (panel = 'eq')}
-                >
-                  EQ
-                </button>
-                {#if panel === 'reverb'}
-                  <span class="picture-blurb">{algorithm.blurb}</span>
-                {/if}
+                  {#snippet background()}
+                    <ReverbIrDisplay
+                      wave={ir.wave}
+                      status={ir.status}
+                      category={irCategoryName}
+                      attack={irAttackShown}
+                      decay={irDecayShown}
+                      size={irSizeShown}
+                      axisSpan={irAxis}
+                      shaping={irShaping}
+                      color={currentColor}
+                      isGhost={fx.isGhost}
+                    />
+                  {/snippet}
+                </DeviceXY>
               </div>
+            {:else}
+              <ReverbPortrait
+                input={tail}
+                {readouts}
+                {crossoverLabel}
+                color={currentColor}
+                isGhost={fx.isGhost}
+                onMove={moveTail}
+                onTap={() => fx.loadIfGhost()}
+              />
+            {/if}
+            <!-- Live's two tabs; the first wears the algorithm's name, or "IR". -->
+            <div class="picture-tabs" role="tablist" aria-label="Reverb picture">
+              <button
+                role="tab"
+                class="physical-button picture-tab"
+                class:active={panel === 'reverb'}
+                aria-selected={panel === 'reverb'}
+                style="--btn-tint: {currentColor.primary};"
+                data-reverb-tab="reverb"
+                onclick={() => (panel = 'reverb')}
+              >
+                {isConvolution ? 'IR' : algorithm.name}
+              </button>
+              <button
+                role="tab"
+                class="physical-button picture-tab"
+                class:active={panel === 'eq'}
+                aria-selected={panel === 'eq'}
+                style="--btn-tint: {currentColor.primary};"
+                data-reverb-tab="eq"
+                onclick={() => (panel = 'eq')}
+              >
+                EQ
+              </button>
+              {#if panel === 'reverb'}
+                <span class="picture-blurb">{isConvolution ? irTitle : algorithm.blurb}</span>
+              {/if}
             </div>
+          </div>
 
-            <SectionDivider orientation="vertical" />
+          <SectionDivider orientation="vertical" />
 
-            <!-- The algorithm's own controls, or the EQ's; Freeze on the bottom row. -->
-            <div class="algo-col" data-reverb-own>
-              {#if panel === 'eq'}
-                {#each eqRows as row (row.key)}
-                  {@render sliderRow(row)}
-                {/each}
-                <div class="row chips pair-row">
-                  {@render chip('On', HYBRID.eqOn, 'EQ On')}
-                  {@render chip('Pre Algo', HYBRID.eqPreAlgo, 'Pre Algo: the EQ before the algorithm, not after both engines')}
-                </div>
-              {:else}
+          <!-- The engine's own controls, or the EQ's; an algorithm's Freeze on the bottom row. -->
+          <div class="algo-col" data-reverb-own>
+            {#if panel === 'eq'}
+              {#each eqRows as row (row.key)}
+                {@render sliderRow(row)}
+              {/each}
+              <div class="row chips pair-row">
+                {@render chip('On', HYBRID.eqOn, 'EQ On')}
+                {@render chip('Pre Algo', HYBRID.eqPreAlgo, 'Pre Algo: the EQ before the algorithm, not after both engines')}
+              </div>
+            {:else if isConvolution}
+              {#each irRows as row (row.key)}
+                {@render sliderRow(row)}
+              {/each}
+            {:else}
               {#each algorithm.controls as control (control.index)}
                 {#snippet ownLabel()}{@render rowLabel(control.name, control.label(raw(control.index)))}{/snippet}
                 <div class="row">
@@ -714,21 +780,22 @@
                   />
                 </div>
               {/each}
-              {/if}
+            {/if}
+            {#if !isConvolution}
               <div class="row chips freeze-row">
                 {@render chip('Freeze', HYBRID.freeze)}
                 {@render chip('In', HYBRID.freezeIn, 'Freeze In: new input still feeds the frozen tail')}
               </div>
-            </div>
-
-            <!-- What every algorithm shares. -->
-            <div class="algo-col" data-reverb-shared>
-              {#each shared as row (row.key)}
-                {@render sliderRow(row)}
-              {/each}
-            </div>
+            {/if}
           </div>
-        {/if}
+
+          <!-- What the device has besides its engines. -->
+          <div class="algo-col" data-reverb-shared>
+            {#each isConvolution ? convolutionShared : shared as row (row.key)}
+              {@render sliderRow(row)}
+            {/each}
+          </div>
+        </div>
 
     </div>
 
@@ -765,27 +832,10 @@
     grid-template-columns: minmax(0, 1fr) 48px;
     gap: var(--spacing-sm);
   }
-  /* Convolution: the IR pad, and its Size at a slider's width beside it. */
-  .ir-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 96px;
-    gap: var(--central-gap);
+  .ir-pad {
     height: 100%;
     min-height: 0;
     min-width: 0;
-  }
-  .ir-size {
-    min-height: 0;
-  }
-  /* A vertical slider's label: the name over its value. */
-  .stacked-label {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.125rem;
-    font-size: 0.8125rem;
-    text-transform: none;
-    letter-spacing: 0;
   }
 
   .pair-row {

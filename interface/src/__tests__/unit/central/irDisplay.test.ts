@@ -68,6 +68,25 @@ describe('the time axis', () => {
 		expect(tickLabel(0.05)).toBe('50 ms');
 		expect(tickLabel(2)).toBe('2 s');
 	});
+
+	it('leaves room for every label on a narrow pad, and none off its edge', () => {
+		// The Spring IR (4.14 s) on the iPad's 372 px pad: "100 ms" and
+		// "200 ms" stood 36 px apart and read as one word.
+		const span = 4.14;
+		const width = 372;
+		const ticks = axisTicks(span, width);
+		expect(ticks).toContain(0.1);
+		expect(ticks).not.toContain(0.2);
+		for (let i = 1; i < ticks.length; i++) {
+			const apart = (timeX(ticks[i], span) - timeX(ticks[i - 1], span)) * width;
+			const room = ((tickLabel(ticks[i]).length + tickLabel(ticks[i - 1]).length) * 6.5) / 2 + 8;
+			expect(apart).toBeGreaterThanOrEqual(room);
+		}
+		// A 500 ms IR's last round time sits on the right edge, where its
+		// label would hang half off the pad.
+		expect(axisTicks(0.5)).toContain(0.5);
+		expect(axisTicks(0.5, width)).not.toContain(0.5);
+	});
 });
 
 describe('the pad, fitted to the IR', () => {

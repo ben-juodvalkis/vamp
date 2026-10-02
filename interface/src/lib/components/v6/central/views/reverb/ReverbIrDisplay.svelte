@@ -9,15 +9,14 @@
 	 * Drawn under DeviceXY's handle, whose drag is Attack across and Decay up.
 	 */
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
-	import { percentLabel, timeLabel } from '$lib/components/v6/device-panel/hybridReverbParams';
-	import { IR_X0, IR_X1, axisTicks, categoryLabel, irLabel, irShape, louder, tickLabel, timeX } from './irDisplay';
+	import { IR_X0, IR_X1, axisTicks, irShape, louder, tickLabel, timeX } from './irDisplay';
 	import type { IrStatus, IrWave } from './useReverbIr.svelte';
 
 	interface Props {
 		wave: IrWave | null;
 		status: IrStatus;
+		/** Live's category: a User IR names why there is no picture. */
 		category: string;
-		file: string;
 		attack: number;
 		decay: number;
 		size: number;
@@ -32,7 +31,7 @@
 		axisSpan?: number | null;
 	}
 
-	let { wave, status, category, file, attack, decay, size, shaping, color, isGhost = false, axisSpan = null }: Props = $props();
+	let { wave, status, category, attack, decay, size, shaping, color, isGhost = false, axisSpan = null }: Props = $props();
 
 	const X0 = IR_X0;
 	const X1 = IR_X1;
@@ -40,12 +39,27 @@
 	const BASE = 0.11;
 	const RISE = 0.68;
 
-	let label = $derived(irLabel(file));
 	let shape = $derived(
 		wave ? irShape(wave.channels.map((c) => c.peaks), wave.seconds, size, attack, decay, shaping) : null
 	);
 	let axis = $derived(axisSpan ?? shape?.span ?? 0);
-	let ticks = $derived(axis > 0 ? axisTicks(axis) : []);
+	/** The picture's width, px: the ticks leave room for their labels in it. */
+	let root = $state<HTMLDivElement | null>(null);
+	let width = $state(0);
+	let ticks = $derived(axis > 0 ? axisTicks(axis, width) : []);
+
+	$effect(() => {
+		const el = root;
+		if (!el || typeof ResizeObserver === 'undefined') return;
+		const measure = () => {
+			const w = el.getBoundingClientRect().width;
+			if (w > 0) width = w;
+		};
+		measure();
+		const ro = new ResizeObserver(measure);
+		ro.observe(el);
+		return () => ro.disconnect();
+	});
 
 	const X = (x: number) => (x * 1000).toFixed(1);
 	const Y = (y: number) => ((1 - y) * 1000).toFixed(1);
@@ -69,7 +83,7 @@
 	);
 </script>
 
-<div class="ir-display" class:ghost={isGhost} style="--ink: {color.primary};" aria-hidden="true">
+<div class="ir-display" class:ghost={isGhost} style="--ink: {color.primary};" aria-hidden="true" bind:this={root}>
 	{#if shape}
 		<svg viewBox="0 0 1000 1000" preserveAspectRatio="none">
 			{#each ticks as t (t)}
@@ -90,19 +104,7 @@
 		<span class="missing">{missingText}</span>
 	{/if}
 
-	<div class="head">
-		<span class="name">{label.name || 'IR'}</span>
-		{#if category}
-			<span class="category">{categoryLabel(category)}{label.stereo ? ' · Stereo' : ''}</span>
-		{/if}
-	</div>
-
-	<div class="readouts">
-		<span class="readout"><span class="readout-name">Attack</span> {timeLabel(attack)}</span>
-		<span class="readout"><span class="readout-name">Decay</span> {timeLabel(decay)}</span>
-		<span class="readout"><span class="readout-name">Size</span> {percentLabel(size * 100)}</span>
-		{#if !shaping}<span class="readout-name">Envelope off</span>{/if}
-	</div>
+	{#if !shaping}<span class="note">Envelope off</span>{/if}
 </div>
 
 <style>
@@ -174,48 +176,11 @@
 		white-space: nowrap;
 	}
 
-	.head {
+	.note {
 		position: absolute;
-		top: 0.5rem;
-		left: 0.75rem;
-		display: flex;
-		align-items: baseline;
-		gap: 0.5rem;
-		white-space: nowrap;
-	}
-	.name {
-		font-size: 0.875rem;
-		font-weight: var(--font-weight-medium);
-		color: var(--ink);
-	}
-	.category {
-		font-size: 0.75rem;
-		color: var(--muted-foreground);
-	}
-
-	.readouts {
-		position: absolute;
-		top: 0.5rem;
+		top: 0.75rem;
 		right: 0.75rem;
-		display: flex;
-		flex-direction: column;
-		align-items: flex-end;
-		gap: 0.125rem;
-		font-size: 0.8125rem;
-		font-weight: var(--font-weight-medium);
-		font-variant-numeric: tabular-nums;
-		color: var(--foreground);
-		white-space: nowrap;
-	}
-	.readout-name {
 		font-size: 0.75rem;
-		font-weight: 400;
 		color: var(--muted-foreground);
-	}
-	/* Narrow — a drum pad's pane — the category gives way to the readouts. */
-	@container (max-width: 330px) {
-		.category {
-			display: none;
-		}
 	}
 </style>

@@ -46,7 +46,6 @@
 	);
 
 	const HZ = Array.from({ length: 200 }, (_, i) => 20 * Math.pow(1000, i / 199));
-	const GRID_HZ = [50, 100, 200, 500, 1000, 2000, 5000, 10000];
 	const HZ_TICKS = [
 		{ hz: 100, label: '100' },
 		{ hz: 1000, label: '1k' },
@@ -140,12 +139,8 @@
 	use:drag={{ commit: 'either', onDown: down, onMove: move, onEnd: end }}
 >
 	<svg viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
-		{#each GRID_HZ as hz (hz)}
-			<line class="grid" x1={X(hzX(hz))} x2={X(hzX(hz))} y1={Y(dbY(-24))} y2={Y(dbY(12))} />
-		{/each}
-		{#each DB_TICKS as db (db)}
-			<line class="grid" class:zero={db === 0} x1="0" x2="1000" y1={Y(dbY(db))} y2={Y(dbY(db))} />
-		{/each}
+		<!-- No grid (the user's call): 0 dB alone, the line every gain is read from. -->
+		<line class="zero" x1="0" x2="1000" y1={Y(dbY(0))} y2={Y(dbY(0))} />
 		<path class="eq-fill" d={fillPath} />
 		<path class="focus-curve" d={focusPath} />
 		<path class="eq-curve" d={curvePath} />
@@ -205,13 +200,10 @@
 		opacity: 0.4;
 	}
 
-	.grid {
-		stroke: var(--line);
+	.zero {
+		stroke: var(--line-strong);
 		stroke-width: 1;
 		vector-effect: non-scaling-stroke;
-	}
-	.grid.zero {
-		stroke: var(--line-strong);
 	}
 	.eq-fill {
 		fill: color-mix(in oklab, var(--ink) 16%, transparent);

@@ -43,16 +43,34 @@ export function xTime(x: number, span: number): number {
 	return (span * Math.expm1(Math.max(0, f) * Math.log1p(KNEE))) / KNEE;
 }
 
-/** Round times for the axis — 0, then whichever stand far enough apart on it. */
-export function axisTicks(span: number): number[] {
+export const tickLabel = (t: number) => (t === 0 ? '0' : t < 1 ? `${Math.round(t * 1000)} ms` : `${t} s`);
+
+/** A tick label's width: the axis's 11px type runs ~6.3px a character (measured off the shots). */
+const LABEL_CHAR_PX = 6.5;
+const LABEL_GAP_PX = 8;
+const labelPx = (t: number) => tickLabel(t).length * LABEL_CHAR_PX;
+
+/**
+ * Round times for the axis — 0, then whichever stand far enough apart on
+ * it. On a pad `width` px across, also far enough apart for their labels
+ * not to run together, and none whose label would run off the right edge:
+ * at the iPad's 372px, the Spring IR's "100 ms" and "200 ms" stood 36px
+ * apart and read as one word. Unmeasured (`width` 0), the spacing alone.
+ */
+export function axisTicks(span: number, width = 0): number[] {
 	const candidates = [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20];
 	const ticks = [0];
+	let last = 0;
 	let lastX = timeX(0, span);
 	for (const t of candidates) {
 		if (t > span * 1.0001) break;
 		const x = timeX(t, span);
-		if (x - lastX >= 0.09) {
+		const apart = x - lastX >= 0.09;
+		const legible = width <= 0 || (x - lastX) * width >= (labelPx(last) + labelPx(t)) / 2 + LABEL_GAP_PX;
+		const fits = width <= 0 || x * width + labelPx(t) / 2 <= width;
+		if (apart && legible && fits) {
 			ticks.push(t);
+			last = t;
 			lastX = x;
 		}
 	}
@@ -86,6 +104,15 @@ export function attackAt(x: number, axis: number): number {
 	return clampTo(xTime(x, axis), 0, IR_ATTACK_MAX);
 }
 
+/** A slider's position (0..1) for an Attack — the pad's x without its margins. */
+export function attackPosition(attack: number, axis: number): number {
+	return clampTo((timeX(attack, axis) - IR_X0) / (IR_X1 - IR_X0), 0, 1);
+}
+/** The Attack at a slider position. */
+export function attackAtPosition(position: number, axis: number): number {
+	return attackAt(IR_X0 + (IR_X1 - IR_X0) * clampTo(position, 0, 1), axis);
+}
+
 /** The Decay rail for an IR this long: a twentieth of it to four times it, within Live's range. */
 export const decayFloor = (axis: number) => clampTo(axis / 20, IR_DECAY_MIN, 1);
 export const decayTop = (axis: number) => clampTo(axis * 4, 0.1, IR_DECAY_MAX);
@@ -112,8 +139,6 @@ export function envelopeDb(t: number, attack: number, decay: number): number {
 	const rise = attack > 0 && t < attack ? 20 * Math.log10(Math.max(1e-6, t / attack)) : 0;
 	return rise - (60 * t) / Math.max(0.001, decay);
 }
-
-export const tickLabel = (t: number) => (t === 0 ? '0' : t < 1 ? `${Math.round(t * 1000)} ms` : `${t} s`);
 
 /** One channel from several: the louder at each bin (a stereo IR's L and R). */
 export function louder(channels: readonly number[][]): number[] {

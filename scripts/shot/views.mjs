@@ -287,8 +287,13 @@ export const TOURS = {
 					selectTrack(5),
 					openTile('Reverb'),
 					{ click: '[data-reverb-type="Spring"]' },
-					{ drag: '[data-reverb-ir-size] [role="slider"]', by: [0, -60] }
+					{ drag: '[data-reverb-own] [role="slider"][aria-label^="Size"]', by: [60, 0] }
 				]
+			},
+			{
+				name: 'fx-reverb-ir-eq',
+				description: 'Reverb, Spring on its EQ tab: the same editor and EQ rows as an algorithm’s',
+				steps: [selectTrack(5), openTile('Reverb'), { click: '[data-reverb-type="Spring"]' }, { click: '[data-reverb-tab="eq"]' }]
 			},
 			{
 				name: 'fx-reverb-frozen',
