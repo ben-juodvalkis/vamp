@@ -153,13 +153,13 @@ describe('trackDeviceGlance', () => {
 
 	it('leaves the view type null for a device the rig draws no view for', () => {
 		replaceTree(1, [
-			track('tracks/1', 'audio', [device('tracks/1/devices/0', 'Saturn 2', 'AuPluginDevice')])
+			track('tracks/1', 'audio', [device('tracks/1/devices/0', 'Blur', 'MxDeviceAudioEffect')])
 		]);
 
 		const glance = trackDeviceGlance('tracks/1');
 
 		expect(glance.kind).toBe('device');
-		expect(glance.name).toBe('Saturn 2');
+		expect(glance.name).toBe('Blur');
 		// `smudge` is a real preset, but it has no entry in the device view
 		// registry (it is a lane of the Chorus view, not a view of its own)
 		// — the band still names it and still selects the track.

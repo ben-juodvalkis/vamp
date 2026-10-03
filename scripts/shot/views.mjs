@@ -127,7 +127,7 @@ const FX_TILES = [
 	['Glue', 'squash', 'Glue (the Squash slot) + Compressor'],
 	['Gain', 'utility', 'Utility / Gate (the Gain tile)'],
 	['Var', 'variation', 'Variation'],
-	['Chorus', 'chorus', 'Chorus: Smudge, Comb, Phaser'],
+	['Chorus', 'chorus', 'Chorus: Blur, Comb, Phaser'],
 	['Auto Pan', 'tremolo', 'Auto Pan Legacy (the Tremolo slot)'],
 	['Echo', 'echo', 'Echo'],
 	['Reverb', 'reverb', 'Reverb']

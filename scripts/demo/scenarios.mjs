@@ -1566,7 +1566,7 @@ export const SCENARIOS = {
 				['Auto Filter', 'fx4', [tapOn(T.button('HP')), sweep(T.xy('LFO'), [0.3, 0.6], [0.7, 0.3])]],
 				['Pedal', 'fx5', [tapOn(T.button('Fuzz')), up(T.slider('Drive'))]],
 				['Drum Buss', 'fx6', [sweep(T.xy('Boom'), [0.3, 0.7], [0.7, 0.3]), up(T.slider('Crunch'))]],
-				['Chorus', 'fx9', [sweep(T.xy('Smudge'), [0.3, 0.7], [0.7, 0.3]), sweep(T.xy('Phaser'), [0.3, 0.3], [0.7, 0.7])]],
+				['Chorus', 'fx9', [up(T.slider('Blur')), sweep(T.xy('Phaser'), [0.3, 0.3], [0.7, 0.7])]],
 				['Beat Repeat', 'fx8', [tapOn(T.button('1/8')), up(nthIn('.slider-container', 0))]],
 				['Glue Compressor', 'squash', [down(T.slider('Threshold')), up(T.slider('Output'))]]
 			].flatMap(([name, cell, moves], k) =>

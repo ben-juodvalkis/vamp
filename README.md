@@ -102,7 +102,7 @@ iPad / browser  ⇄  bridge (WebSocket ⇄ OSC)  ⇄  control surface inside Liv
   they don't load. Every other effect tile inserts Live's own device, set up the way your Live
   defaults have it ([docs/plans/general-release/plan.md](docs/plans/general-release/plan.md)
   §6).
-- **Some tiles are for the author's plug-ins** (Tremolo, Comb, Smudge, Bass, Pitch, Guitar) and do
+- **Some tiles are for the author's plug-ins** (Tremolo, Comb, Bass, Pitch, Guitar) and do
   nothing without them.
 - **Your network is trusted.** Anyone on the same network who can open the page can drive your
   Live set. Use the USB-C link or a network you trust. Device pairing is planned: see

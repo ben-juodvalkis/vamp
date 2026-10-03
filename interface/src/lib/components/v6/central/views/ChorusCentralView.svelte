@@ -4,7 +4,7 @@
 	 *
 	 * Self-contained central view that queries its own slot state.
 	 * Renders immediately with ghost/loading/active states.
-	 * Displays Smudge, Comb, Comb LFO, Phaser and Pitch Hack controls.
+	 * Displays Blur, Comb, Comb LFO, Phaser and Pitch Hack controls.
 	 *
 	 * Contains virtual devices (smudge, comb, phaser, pitchHack) which have
 	 * their own ghost states.
@@ -170,12 +170,12 @@
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
 <div class="chorus-central-layout relative">
-	<!-- Smudge Control (virtual device - handles its own slot state) -->
+	<!-- Blur's dry/wet (the `smudge` slot; virtual device - handles its own slot state) -->
 	<div class="device-wrapper">
 		<SmudgeControl device={smudge.device} />
 	</div>
 
-	<!-- Seams fall on the DEVICE boundaries, not between every pad: Smudge |
+	<!-- Seams fall on the DEVICE boundaries, not between every pad: Blur |
 	     Comb + its LFO | Phaser. The four pads are the same size and three
 	     wear the same ink, so without them the two Comb pads read as two
 	     devices and the Phaser as a third Comb (2026-09-13, ADR-433). -->
@@ -206,7 +206,7 @@
 	<SectionDivider orientation="vertical" ink={phaserInk.primary} />
 
 	<!-- Phaser (virtual device) — X: LFO speed, Y: feedback. Wrapped in
-	     BaseDeviceControl like Smudge and Comb so it carries the same
+	     BaseDeviceControl like Blur and Comb so it carries the same
 	     move-to-first / move-to-last arrows. -->
 	<div class="device-wrapper">
 		<BaseDeviceControl slotKey="phaser" device={phaser.device} title="Phaser" disableCentralViewOnTap={true} showMoveToTop={true} showMoveToEnd={true}>
@@ -288,10 +288,10 @@
 <style>
 	.chorus-central-layout {
 		display: grid;
-		/* smudge | comb · comb LFO | phaser | pitch hack · pitch · feedback.
-		   Each seam is an `auto` track as wide as its hairline, so the five
+		/* blur | comb · comb LFO | phaser | pitch hack · pitch · feedback.
+		   Each seam is an `auto` track as wide as its hairline, so the four
 		   pads still share the rest evenly; each slider is a third of a pad. */
-		grid-template-columns: 1fr auto 1fr 1fr auto 1fr auto 1fr 0.35fr 0.35fr;
+		grid-template-columns: 0.35fr auto 1fr 1fr auto 1fr auto 1fr 0.35fr 0.35fr;
 		height: 100%;
 		width: 100%;
 		padding: var(--central-inset);

@@ -361,13 +361,21 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     color: familyScheme('pitchSeq')     // A pitch shifter — function over host view
   },
   smudge: {
+    // Blur ships in the repo beside Permute and loads the same way, through
+    // the "Vamp Devices" Place. It is a Max freeze-looper: two voices take
+    // turns holding a 45 ms slice of the input under long crossfades. It took
+    // this slot from the owner's Saturn 2 preset (2026-10-03), so the tile no
+    // longer needs a plug-in. The name is load-bearing: Permute and Pitch
+    // Hack are MxDeviceAudioEffect too.
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Smudge.aupreset',
-    defaultName: 'Saturn 2',
-    expectedClassName: 'AuPluginDevice',
+    presetPath: '',
+    source: 'place:Vamp Devices',
+    rel: 'Blur/Blur.amxd',
+    defaultName: 'Blur',
+    expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
     centralViewGroup: 'chorus',         // Belongs to ChorusCentralView
-    color: familyScheme('distortion')   // Saturn is a saturator — its ink says so even inside the Chorus view
+    color: familyScheme('distortion')   // Kept from the Saturn tile: its ink tells it apart inside the Chorus view
   },
   // New grid devices to replace saturator slot
   guitar: {
