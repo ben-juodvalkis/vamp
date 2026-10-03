@@ -75,7 +75,7 @@ export interface FXGridSlotConfig {
  *
  * 2026-09-15, later the same day (ADR-438 addendum): the single-column
  * tiles became full-height columns. Both kinds are twelve columns, so the
- * XY tiles and the TotalMix ruler in +page.svelte never move when the
+ * XY tiles and the TotalMix ruler in layouts/default/Layout.svelte never move when the
  * selected track changes kind. Squash and the audio Guitar have no entries;
  * FXGrid places them from SQUASH_CELL and AUDIO_GUITAR_CELL below.
  *
@@ -101,7 +101,7 @@ export interface FXGridSlotConfig {
  * Same day, Squash (the Glue Compressor's one-finger threshold + makeup)
  * left the Gain / Utility view for the top half of the Gain column —
  * FXGrid splits fx7 the way it splits fx1 — so the grid stays at eleven
- * columns and the TotalMix status strip's ruler in +page.svelte with it.
+ * columns and the TotalMix status strip's ruler in layouts/default/Layout.svelte with it.
  *
  * Note: Arpeggiator and Bass are virtual devices (not in grid, accessed via central views)
  */
@@ -216,7 +216,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   }
 ];
 
-/** The grid's column count. The TotalMix status strip in +page.svelte repeats it by hand. */
+/** The grid's column count. The TotalMix status strip in layouts/default/Layout.svelte repeats it by hand. */
 export const FX_GRID_COLUMNS = 12;
 
 /** Which placement a grid uses. Master and group tracks use MIDI's. */

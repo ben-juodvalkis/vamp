@@ -17,7 +17,7 @@
    *
    * Architecture:
    * - Layout defined in fxGridLayout.ts (11 slots, explicit cells on a
-   *   12-column ruler the TotalMix status strip in +page.svelte shares)
+   *   12-column ruler the TotalMix status strip in layouts/default/Layout.svelte shares)
    * - Each slot has: position, deviceType, component, span, rowSpan, config
    * - `device` per slot is resolved via selectedTrackStore.getFxGridSlot
    *   (FXGridState), which reads v3 `devicesByPath` and matches on
@@ -188,7 +188,7 @@
      family inks, so this and the chip are what say the grid is the pad's.
      An outline, not a border: it takes no layout and moves no tile. Drawn
      INSIDE the box — the FX section is a scroller (`overflow: auto` in
-     +page.svelte) and the grid fills it edge to edge, so anything painted
+     layouts/default/Layout.svelte) and the grid fills it edge to edge, so anything painted
      outside the box is clipped; the first cut had a 3px offset and no
      frame ever reached a capture. */
   .fx-grid.fx-scoped {

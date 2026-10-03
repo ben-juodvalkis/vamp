@@ -95,7 +95,7 @@ the row has nothing to scroll.
 ## Entry Points
 
 - `routes/+layout.svelte` - Root layout: theme, WebSocket connection, service init
-- `routes/+page.svelte` - Main UI with 5-panel layout (browser, tracks, middle, central display, right sidebar)
+- `routes/+page.svelte` - Mounts `layouts/default/Layout.svelte`: the main UI with 5-panel layout (browser, tracks, middle, central display, right sidebar)
 
 ## Conventions
 

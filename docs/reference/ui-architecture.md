@@ -23,7 +23,8 @@ contract this UI speaks.
 interface/src/
 ├── routes/
 │   ├── +layout.svelte          # Root layout — theme, WebSocket, service init
-│   └── +page.svelte            # Main UI — 5-panel layout; flex column
+│   └── +page.svelte            # Mounts lib/layouts/default/Layout.svelte,
+│                               #   the main UI — 5-panel layout; flex column
 │                               #   (optional transport header over the
 │                               #   3-column row), rows carry explicit
 │                               #   flex-grow so session mode can animate

@@ -249,7 +249,7 @@
 
 <style>
 	/* The page covers the whole app, the safe-area status strip included
-	   (z-index 1001 in +page.svelte; the expanded browser is 1000): setup is
+	   (z-index 1001 in layouts/default/Layout.svelte; the expanded browser is 1000): setup is
 	   not something you do mid-set with one eye on the strips. Its own top
 	   inset clears the iPad's status bar in a home-screen web app. */
 	.set-page {

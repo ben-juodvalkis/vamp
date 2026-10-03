@@ -890,7 +890,7 @@ const SCENARIOS = [
 			// and the name band goes back to deferring to the pan.
 			const geom = await page.evaluate(() => {
 				// `.tracks-panel` by CLASS: `data-debug="tracks-panel"` is on an
-				// outer wrapper in +page.svelte as well, and that one is not
+				// outer wrapper in layouts/default/Layout.svelte as well, and that one is not
 				// the scroller.
 				const el = document.querySelector('.tracks-panel');
 				const row = document.querySelector('[data-debug="tracks-row"]');

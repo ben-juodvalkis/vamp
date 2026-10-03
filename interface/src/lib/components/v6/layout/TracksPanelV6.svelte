@@ -189,7 +189,7 @@
 	// The panel is therefore worth TWO sections of the main-area stack
 	// when session mode is on — its two rows plus the gap between them
 	// are exactly the strips' section + the grid's section — which
-	// `+page.svelte` buys with `flex: 2 1 var(--spacing-lg)` (ADR-416).
+	// `layouts/default/Layout.svelte` buys with `flex: 2 1 var(--spacing-lg)` (ADR-416).
 	let sessionMode = $derived(uiPrefsStore.sessionMode);
 
 	// The grid row's own column template. Identical to the strips' except

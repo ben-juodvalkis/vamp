@@ -271,7 +271,7 @@ describe('FXGrid — the grid is the held pad\'s', () => {
 /**
  * The column arithmetic, pinned (2026-09-15, twelve columns).
  *
- * The TotalMix status strip's ruler in `+page.svelte` is hard-coupled to the
+ * The TotalMix status strip's ruler in `layouts/default/Layout.svelte` is hard-coupled to the
  * column count with no shared constant, deliberately, so the count is worth
  * a test on this side. Every cell is placed explicitly, and both track kinds
  * must tile the same twelve-by-two grid exactly: no gap, no overlap, no

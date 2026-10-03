@@ -267,7 +267,7 @@
 
          Two things used to share it. The TotalMix mirror took it whenever
          the transport header wasn't carrying it, and moved to the
-         safe-area status strip (`+page.svelte`), which is always on screen
+         safe-area status strip (`layouts/default/Layout.svelte`), which is always on screen
          and costs the layout nothing. A `.key-spacer` held the strips'
          Solo half so the band couldn't grow past their name bands; that
          went too, deliberately — a full-height key readout is worth more
