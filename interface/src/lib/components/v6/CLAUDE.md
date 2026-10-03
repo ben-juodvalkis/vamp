@@ -37,7 +37,8 @@ The strip is a flex column of **three** sections: **Name** (`TrackHeader`, tap =
   `npm run multitouch` replays concurrent fingers against the real
   components; §13 of the manual test checklist is the iPad half, which
   no harness here can answer
-- OSC communication goes through `$lib/api/simpleClient.ts`
+- Writes to Live go through the named commands in `$lib/services/` (`trackCommands`, `clipCommands`, `sessionCommands`, `deviceParams` …), never `$lib/api/simpleClient.ts`: `npm run check:writes` fails on a component that imports it
+- The reusable controls are exported, one paragraph each, from `blocks/index.ts`; `docs/reference/blocks.md` is generated from it (`npm run blocks:catalog`)
 - **The skin.** There is ONE skin, **Hybrid**, and it is not a choice: `data-skin="hybrid"` (palette token block) and `data-grammar="flat"` (the flat grammar) are hard-coded on `<html>` in `app.html`. Every component with its own chrome carries a `:global([data-grammar="flat"]) …` block at the end of its `<style>` (Tailwind utilities via the `flat:` variant), following the **flat-grammar cookbook** in `docs/reference/ui-architecture.md` §8.1 — flat surfaces, 1px `--line-strong` edges, 2px radii, no glow/wash/shadow, OFF = `--surface-well` field / ON = `--phosphor` + `--flat-on-fg`, `var(--playhead)` / `var(--scrim)` / `var(--edge-light)` / `var(--well-shadow)` instead of literals, titles authored mixed-case. New components need their flat block in the same PR. The retired GRATICULE skin is still the base token layer Hybrid overrides — see Looping's `documentation/archive/graticule-skin.md`.
 
 ## Adding New Device Views
