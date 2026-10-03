@@ -2,7 +2,7 @@
 	import { captureStore } from '$lib/stores/v6/captureStore.svelte';
 	import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
 	import { prepareForPreset } from '$lib/services/trackPreparation';
-	import { send } from '$lib/api/simpleClient';
+	import { setTrackSend } from '$lib/services/trackCommands';
 	import { onDestroy } from 'svelte';
 
 	// Shared record button — used both at the top of the browser rail
@@ -62,7 +62,7 @@
 	function armTrackSend(on: boolean) {
 		const index = on ? armTrackIndex : sendArmedIndex;
 		if (index == null || index < 0) return;
-		send('/looping/v3/track/send', [`tracks/${index}`, 0, on ? 1.0 : 0.0]);
+		setTrackSend(`tracks/${index}`, 0, on ? 1.0 : 0.0);
 		sendArmedIndex = on ? index : null;
 	}
 

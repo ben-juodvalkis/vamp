@@ -11,7 +11,6 @@
 	 * the touch also puts it on the view's first tile at Amount 0
 	 * (`services/grooveChooser`).
 	 */
-	import { send } from '$lib/api/simpleClient';
 	import { browser } from '$app/environment';
 	import { clipGrooveStore } from '$lib/stores/v6/clipGrooveStore.svelte';
 	import { onMount } from 'svelte';
@@ -21,7 +20,7 @@
 	import { focusPlayingClipOnSelectedTrack } from '$lib/components/v6/tracks/composables/slotActions';
 	import { createSliderThrottle } from '$lib/utils/sliderThrottle';
 	import { drag as dragAction, type DragInfo } from '$lib/actions/drag';
-	import { V3_CLIP_GROOVE_SET_QUANTIZATION_AMOUNT_ADDRESS } from '$lib/api/handlers/v3ClipGroove';
+	import { setClipGrooveQuantizationAmount } from '$lib/services/clipCommands';
 
 	// A clip with no groove (or no clip at all) has no quantize: Q reads 0.
 	let quantizationAmount = $derived(clipGrooveStore.hasGroove ? clipGrooveStore.quantizationAmount : 0);
@@ -57,7 +56,7 @@
 	// first-write happens server-side in GrooveComponent.
 	function setQuantization(value: number) {
 		if (!gestureClipPath) return;
-		send(V3_CLIP_GROOVE_SET_QUANTIZATION_AMOUNT_ADDRESS, [gestureClipPath, value]);
+		setClipGrooveQuantizationAmount(gestureClipPath, value);
 	}
 
 	// Frame-synchronized throttle for smooth updates

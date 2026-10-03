@@ -23,7 +23,8 @@ import { session } from '$lib/stores/session.svelte';
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { instrumentDisplayCoordinator } from '$lib/services/instrumentDisplayCoordinator.svelte';
 import { setTrackMute } from '$lib/services/trackCommands';
-import { send, sendSelectClip } from '$lib/api/simpleClient';
+import { sendSelectClip } from '$lib/services/clipCommands';
+import { selectTrack } from '$lib/services/trackCommands';
 import { playingClipsStore } from '$lib/stores/v6/playingClipsStore.svelte';
 import { TRACK_DEFAULTS, MASTER_TRACK_DEFAULTS } from '../TrackStrip/utils/trackConstants';
 import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
@@ -192,7 +193,7 @@ export async function selectTrackByIndex(
         : -1;
     if (playingSlot >= 0) session.selectSceneOptimistically(playingSlot);
 
-    await send('/looping/v3/track/select', [isMaster ? 'master' : `tracks/${trackIndex}`]);
+    await selectTrack(isMaster ? 'master' : `tracks/${trackIndex}`);
     if (playingSlot >= 0) sendSelectClip(`tracks/${trackIndex}`, playingSlot);
     onTrackSelect?.(trackIndex);
     if (wasAlreadySelected && showInstrumentView) {

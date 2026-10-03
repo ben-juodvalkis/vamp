@@ -27,6 +27,7 @@ import { deviceInk } from '$lib/utils/formatters/trackFormatters';
 import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 import { selectedTrackInk } from '$lib/utils/selectedTrackInk';
 import { readFxScope, type FxScope } from './fxScope';
+import { sendParam } from '$lib/services/deviceParams';
 
 // Every SlotKey has a DEVICE_PRESETS config, so this is a should-never-happen
 // guard, not a per-view styling hook (views must not pass their own copies).
@@ -115,17 +116,10 @@ export function useFxGridSlot(
 		return selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(device, paramIndex));
 	}
 
-	function sendParam(paramIndex: number, value: number): void {
-		if (isGhost || isLoading) {
-			selectedTrackStore.storePendingParam(slotKey, paramIndex, value, scopeKey);
-			// De-dup lives in the slot (`loadState`), not here — several
-			// consumers share one slot. See fxGridStore.loadDevice.
-			if (isGhost) {
-				selectedTrackStore.loadFxGridDevice(slotKey, scopeKey);
-			}
-		} else if (device) {
-			selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, paramIndex), value);
-		}
+	// A ghost or loading slot holds the write until its device arrives
+	// (services/deviceParams).
+	function writeParam(paramIndex: number, value: number): void {
+		void sendParam({ device, pending: { slotKey, scopeKey, isGhost, isLoading } }, paramIndex, value);
 	}
 
 	function loadIfGhost(): void {
@@ -144,7 +138,7 @@ export function useFxGridSlot(
 		get color() { return color; },
 		paramValue,
 		paramDisplay,
-		sendParam,
+		sendParam: writeParam,
 		loadIfGhost
 	};
 }

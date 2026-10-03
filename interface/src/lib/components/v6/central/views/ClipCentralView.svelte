@@ -4,12 +4,12 @@ import { logger } from '$lib/utils/logger';
 	import { clipReverseStore } from '$lib/stores/clipReverse.svelte';
 	import { session, requireFocusedClip } from '$lib/stores/session.svelte';
 	import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
-	import { send, sendClipDelete } from '$lib/api/simpleClient';
 	import {
-		V3_CLIP_SET_LOOP_START_ADDRESS,
-		V3_CLIP_SET_LOOP_END_ADDRESS,
-		V3_CLIP_SET_WARP_MODE_ADDRESS
-	} from '$lib/api/handlers/v3Clip';
+		sendClipDelete,
+		setClipLoopStart,
+		setClipLoopEnd,
+		setClipWarpMode
+	} from '$lib/services/clipCommands';
 	import { sampleClipToSimpler, duplicateLoop, duplicateClipToNextSlot, transposeClipUp, transposeClipDown, transposeDeviceUp, transposeDeviceDown, reverseFocusedAudioClip, setAudioClipPitch, setAudioClipGain, roundGainDisplay } from '$lib/services/clipOperations';
 	import { AUDIO_CLIP_PITCH_RANGE } from '$lib/services/clipTranspose';
 	import { duplicateTrackAndReset } from '$lib/services/trackOperations';
@@ -74,7 +74,7 @@ import { logger } from '$lib/utils/logger';
 		const loopStart = clipPropertiesStore.loopStart;
 		const loopEnd = clipPropertiesStore.loopEnd;
 		const newEnd = loopStart + (loopEnd - loopStart) / 2;
-		send(V3_CLIP_SET_LOOP_END_ADDRESS, [clipPath, newEnd]);
+		setClipLoopEnd(clipPath, newEnd);
 	}
 
 	function halveLoopFromStart() {
@@ -83,7 +83,7 @@ import { logger } from '$lib/utils/logger';
 		const loopStart = clipPropertiesStore.loopStart;
 		const loopEnd = clipPropertiesStore.loopEnd;
 		const newStart = loopEnd - (loopEnd - loopStart) / 2;
-		send(V3_CLIP_SET_LOOP_START_ADDRESS, [clipPath, newStart]);
+		setClipLoopStart(clipPath, newStart);
 	}
 
 	let warpMode = $derived(clipPropertiesStore.warpMode);
@@ -189,7 +189,7 @@ import { logger } from '$lib/utils/logger';
 	function setWarpMode(mode: number) {
 		const clipPath = requireFocusedClip();
 		if (!clipPath) return;
-		send(V3_CLIP_SET_WARP_MODE_ADDRESS, [clipPath, mode]);
+		setClipWarpMode(clipPath, mode);
 	}
 
 	let isSampling = $state(false);

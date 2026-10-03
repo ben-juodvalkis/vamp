@@ -1,8 +1,7 @@
 <script lang="ts">
     import { Card } from '$lib/components/ui/card';
     import MeterVisualization from '$lib/components/v6/looping/MeterVisualizationV6.svelte';
-    import { send } from '$lib/api/simpleClient';
-    import { setMasterVolume } from '$lib/services/trackCommands';
+    import { setMasterVolume, selectTrack } from '$lib/services/trackCommands';
     import { session } from '$lib/stores/session.svelte';
     import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
     import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
@@ -14,7 +13,7 @@
     import { press } from '$lib/actions/press';
     import { HOLD_MS } from '$lib/actions';
     import Lock from '@lucide/svelte/icons/lock';
-    import { V3_SESSION_SCALE_DETECT_ADDRESS } from '$lib/api/handlers/v3Session';
+    import { detectKey } from '$lib/services/sessionCommands';
 
     interface Props {
         onSelect?: () => void;
@@ -129,7 +128,7 @@
      * is the same verb with the reasons on show.
      */
     function handleHeaderHold() {
-        send(V3_SESSION_SCALE_DETECT_ADDRESS, [1]);
+        detectKey();
     }
 
     // Handle selection (Python v3 wire — ROW 2-F4)
@@ -140,7 +139,7 @@
         if (interceptForGroupGesture(MASTER_INDEX, true)) return;
         session.selectTrackOptimistically(MASTER_INDEX);
         selectedTrackStore.handleTrackSelected(MASTER_INDEX);
-        send('/looping/v3/track/select', ['master']);
+        selectTrack('master');
         onSelect?.();
     }
 

@@ -38,7 +38,6 @@
   import EnvelopeGroup from './EnvelopeGroup.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
   import MidiWheel from '../../midi/MidiWheel.svelte';
-  import { send } from '$lib/api/simpleClient';
   import { sendPitchWheel, sendModWheel } from '$lib/api/midiWheels';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';

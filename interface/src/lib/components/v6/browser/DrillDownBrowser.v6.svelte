@@ -27,14 +27,13 @@
 	import LockOpen from '@lucide/svelte/icons/lock-open';
 	import X from '@lucide/svelte/icons/x';
 
-	import { send } from '$lib/api/simpleClient';
 	import {
-		V3_SESSION_SCALE_ROOT_ADDRESS,
-		V3_SESSION_SCALE_NAME_ADDRESS,
-		V3_SESSION_SCALE_MODE_ADDRESS,
-		V3_SESSION_SCALE_DETECT_ADDRESS,
-		V3_SESSION_KEY_FOLLOW_ADDRESS
-	} from '$lib/api/handlers/v3Session';
+		pickRootNote,
+		pickScaleName,
+		pickKey,
+		detectKey as sendDetectKey,
+		setKeyFollow
+	} from '$lib/services/sessionCommands';
 	import {
 		getPlacesIndex,
 		isPlaceVendorId,
@@ -912,22 +911,18 @@
 	// any client, before the write — so a pick locks the key without this
 	// component saying so, and a pick of the key already set locks too.
 	function selectRootNote(index: number) {
-		send(V3_SESSION_SCALE_ROOT_ADDRESS, [index]);
-		send(V3_SESSION_SCALE_MODE_ADDRESS, [1]);
+		pickRootNote(index);
 	}
 	function selectScaleName(scaleName: string) {
-		send(V3_SESSION_SCALE_NAME_ADDRESS, [scaleName]);
-		send(V3_SESSION_SCALE_MODE_ADDRESS, [1]);
+		pickScaleName(scaleName);
 	}
 	// Root and scale together — the runner-up chip: one write each, one mode.
 	function applyKey(root: number, scaleName: string) {
-		send(V3_SESSION_SCALE_ROOT_ADDRESS, [root]);
-		send(V3_SESSION_SCALE_NAME_ADDRESS, [scaleName]);
-		send(V3_SESSION_SCALE_MODE_ADDRESS, [1]);
+		pickKey(root, scaleName);
 	}
 	// Follow / Locked. Turning Follow back on makes the surface detect at once.
 	function toggleFollow() {
-		send(V3_SESSION_KEY_FOLLOW_ADDRESS, [session.keyFollowEnabled ? 0 : 1]);
+		setKeyFollow(!session.keyFollowEnabled);
 	}
 
 	// ADR-446: ask the surface for the key of what is launched and set it at
@@ -960,7 +955,7 @@
 			detectTimer = null;
 			detectSentAt = 0;
 		}, DETECT_TIMEOUT_MS);
-		send(V3_SESSION_SCALE_DETECT_ADDRESS, [1]);
+		sendDetectKey();
 	}
 	function clearDetectPending() {
 		if (detectTimer) {

@@ -99,5 +99,5 @@ the row has nothing to scroll.
 
 ## Conventions
 
-- All OSC communication goes through `simpleClient.ts`
+- Components write to Live through the named commands in `services/` (`trackCommands`, `clipCommands`, `sessionCommands`, `deviceParams` …), never `simpleClient.ts` directly; `npm run check:writes` fails on a component that imports it. The services send through `simpleClient.ts`
 - See `interface/CLAUDE.md` for tech stack conventions (Svelte 5 runes, Tailwind 4, shadcn-svelte)

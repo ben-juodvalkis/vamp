@@ -18,7 +18,7 @@ import {
 	sendClipStop,
 	sendClipFocus,
 	sendSelectClip
-} from '$lib/api/simpleClient';
+} from '$lib/services/clipCommands';
 import { clipDisplayCoordinator } from '$lib/services/clipDisplayCoordinator.svelte';
 import { session } from '$lib/stores/session.svelte';
 import { playingClipsStore } from '$lib/stores/v6/playingClipsStore.svelte';

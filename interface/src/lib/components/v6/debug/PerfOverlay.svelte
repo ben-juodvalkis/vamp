@@ -17,7 +17,7 @@
 	 * so production users don't pay for it.
 	 */
 	import { onMount, onDestroy } from 'svelte';
-	import { getConnectionStatus } from '$lib/api/simpleClient';
+	import { getConnectionStatus } from '$lib/services/connection';
 
 	let heapMb = $state<string | null>(null);
 	let connection = $state<{ connected: boolean; method: string; url?: string }>({

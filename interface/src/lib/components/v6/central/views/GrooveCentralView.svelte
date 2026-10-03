@@ -25,13 +25,12 @@
 	 * picture.
 	 */
 	import { onMount } from 'svelte';
-	import { send } from '$lib/api/simpleClient';
 	import {
-		V3_CLIP_GROOVE_SET_FILE_ADDRESS,
-		V3_CLIP_GROOVE_SET_RANDOM_AMOUNT_ADDRESS,
-		V3_CLIP_GROOVE_SET_TIMING_AMOUNT_ADDRESS,
-		V3_CLIP_GROOVE_SET_VELOCITY_AMOUNT_ADDRESS
-	} from '$lib/api/handlers/v3ClipGroove';
+		setClipGrooveFile,
+		setClipGrooveRandomAmount,
+		setClipGrooveTimingAmount,
+		setClipGrooveVelocityAmount
+	} from '$lib/services/clipCommands';
 	import { clipGrooveStore } from '$lib/stores/v6/clipGrooveStore.svelte';
 	import { groovesStore } from '$lib/stores/v6/groovesStore.svelte';
 	import { settingsStore } from '$lib/stores/v6/settingsStore.svelte';
@@ -96,16 +95,16 @@
 		const path = targetClip();
 		if (!path) return;
 		if (path === session.focusedClipPath) clipGrooveStore.chooseFile(name);
-		send(V3_CLIP_GROOVE_SET_FILE_ADDRESS, [path, name]);
+		setClipGrooveFile(path, name);
 	}
 
-	function write(address: string, value: number) {
+	function write(set: (clipPath: string, value: number) => void, value: number) {
 		const path = targetClip();
 		if (!path) return;
 		// A clip with no groove (or on Live's auto-load Vamp Groove, which
 		// reads as none) takes the first tile before the write, as Q does.
 		loadFirstGrooveIfNone(path);
-		send(address, [path, Math.max(0, Math.min(100, value))]);
+		set(path, Math.max(0, Math.min(100, value)));
 	}
 </script>
 
@@ -116,7 +115,7 @@
 			labelOrientation="horizontal"
 			title="Random"
 			color={scheme}
-			onInteraction={(v) => write(V3_CLIP_GROOVE_SET_RANDOM_AMOUNT_ADDRESS, v * 100)}
+			onInteraction={(v) => write(setClipGrooveRandomAmount, v * 100)}
 		/>
 	</div>
 	<div class="slider" class:dim={!hasClip}>
@@ -125,7 +124,7 @@
 			labelOrientation="horizontal"
 			title="Velocity"
 			color={scheme}
-			onInteraction={(v) => write(V3_CLIP_GROOVE_SET_VELOCITY_AMOUNT_ADDRESS, v * 100)}
+			onInteraction={(v) => write(setClipGrooveVelocityAmount, v * 100)}
 		/>
 	</div>
 	<div class="seam"><SectionDivider orientation="vertical" /></div>
@@ -181,7 +180,7 @@
 			labelOrientation="horizontal"
 			title="Amount"
 			color={scheme}
-			onInteraction={(v) => write(V3_CLIP_GROOVE_SET_TIMING_AMOUNT_ADDRESS, v * 100)}
+			onInteraction={(v) => write(setClipGrooveTimingAmount, v * 100)}
 		/>
 	</div>
 </div>

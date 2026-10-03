@@ -40,7 +40,7 @@
     import { v3Store } from '$lib/stores/v3/normalized.svelte';
     import { session } from '$lib/stores/session.svelte';
     import { useStripGestures } from './composables/useStripGestures.svelte';
-    import { sendSceneLaunch, sendSelectClip } from '$lib/api/simpleClient';
+    import { sendSceneLaunch, sendSelectClip } from '$lib/services/clipCommands';
     import {
         actionStripWidth,
         isInActionStrip

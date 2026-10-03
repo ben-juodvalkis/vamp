@@ -2,14 +2,14 @@
 import { logger } from '$lib/utils/logger';
 	import { Button } from '$lib/components/ui/button';
 	import { session } from '$lib/stores/session.svelte';
-	import { send } from '$lib/api/simpleClient';
 	import {
-		V3_SESSION_METRONOME_ADDRESS,
-		V3_SESSION_SIGNATURE_NUM_ADDRESS,
-		V3_SESSION_SIGNATURE_DEN_ADDRESS,
-		V3_SESSION_CLIP_TRIGGER_QUANT_ADDRESS,
-		V3_SESSION_KEY_FOLLOW_ADDRESS
-	} from '$lib/api/handlers/v3Session';
+		toggleMetronome as sendMetronomeToggle,
+		setTempo,
+		setSignatureNumerator,
+		setSignatureDenominator,
+		setClipTriggerQuantization,
+		setKeyFollow
+	} from '$lib/services/sessionCommands';
 	import { LAUNCH_QUANTIZATIONS, getLaunchQuantizationName } from '$lib/data/launchQuantization';
 	import { uiPrefsStore } from '$lib/stores/v6/uiPrefsStore.svelte';
 	import { settingsStore } from '$lib/stores/v6/settingsStore.svelte';
@@ -61,7 +61,7 @@ import { logger } from '$lib/utils/logger';
 			if (newNumerator !== lastTimeSignatureValue) {
 				lastTimeSignatureValue = newNumerator;
 				logger.debug('Setting numerator', { component: 'SystemCentralView', value: newNumerator });
-				send(V3_SESSION_SIGNATURE_NUM_ADDRESS, [newNumerator]);
+				setSignatureNumerator(newNumerator);
 			}
 		} else if (timeSignatureDragMode === 'denominator') {
 			const currentIndex = validDenominators.indexOf(dragStartDenominator);
@@ -72,7 +72,7 @@ import { logger } from '$lib/utils/logger';
 			if (newDenominator !== lastTimeSignatureValue) {
 				lastTimeSignatureValue = newDenominator;
 				logger.debug('Setting denominator', { component: 'SystemCentralView', value: newDenominator });
-				send(V3_SESSION_SIGNATURE_DEN_ADDRESS, [newDenominator]);
+				setSignatureDenominator(newDenominator);
 			}
 		}
 	}
@@ -115,8 +115,7 @@ import { logger } from '$lib/utils/logger';
 			if (newTempo !== lastTempoValue) {
 				lastTempoValue = newTempo;
 				logger.debug('Setting tempo', { component: 'SystemCentralView', value: newTempo });
-				session.setTempoOptimistically(newTempo);
-				send('/live/song/set/tempo', [newTempo]);
+				setTempo(newTempo);
 			}
 		},
 		onEnd: () => {
@@ -142,8 +141,7 @@ import { logger } from '$lib/utils/logger';
 		launchQuantOpen = false;
 		if (value === session.clipTriggerQuantization) return;
 		logger.debug('Setting launch quantization', { component: 'SystemCentralView', value });
-		session.setClipTriggerQuantizationOptimistically(value);
-		send(V3_SESSION_CLIP_TRIGGER_QUANT_ADDRESS, [value]);
+		setClipTriggerQuantization(value);
 	}
 
 	function onModalKeydown(event: KeyboardEvent) {
@@ -160,8 +158,7 @@ import { logger } from '$lib/utils/logger';
 	function toggleMetronome() {
 		const newState = session.metronome ? 0 : 1;
 		logger.debug('Toggling metronome', { component: 'SystemCentralView', currentState: session.metronome, newState });
-		session.toggleMetronomeOptimistically();
-		send(V3_SESSION_METRONOME_ADDRESS, [newState]);
+		sendMetronomeToggle();
 	}
 
 	// Follow Key stays beside Transport: it is musical (the key follows the
@@ -224,9 +221,9 @@ import { logger } from '$lib/utils/logger';
 	function toggleKeyFollow() {
 		const current = session.keyFollowEnabled;
 		logger.debug('Toggling session setting', {
-			component: 'SystemCentralView', address: V3_SESSION_KEY_FOLLOW_ADDRESS, from: current
+			component: 'SystemCentralView', setting: 'key_follow', from: current
 		});
-		send(V3_SESSION_KEY_FOLLOW_ADDRESS, [current ? 0 : 1]);
+		setKeyFollow(!current);
 	}
 </script>
 

@@ -3,7 +3,6 @@
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import SectionDivider from '../SectionDivider.svelte';
   import MidiWheel from '../../midi/MidiWheel.svelte';
-  import { send } from '$lib/api/simpleClient';
   import { sendPitchWheel, sendModWheel } from '$lib/api/midiWheels';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';

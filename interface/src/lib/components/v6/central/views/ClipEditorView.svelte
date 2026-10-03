@@ -80,14 +80,13 @@
 		type DragHandle,
 		type LoopRange
 	} from '$lib/utils/clip/clipGesture';
-	import { send } from '$lib/api/simpleClient';
 	import {
-		V3_CLIP_SET_LOOP_START_ADDRESS,
-		V3_CLIP_SET_LOOP_END_ADDRESS,
-		V3_CLIP_WARP_MARKER_MOVE_ADDRESS,
-		V3_CLIP_WARP_MARKER_ADD_ADDRESS,
-		V3_CLIP_WARP_MARKER_REMOVE_ADDRESS
-	} from '$lib/api/handlers/v3Clip';
+		setClipLoopStart,
+		setClipLoopEnd,
+		moveWarpMarker,
+		addWarpMarker,
+		removeWarpMarker
+	} from '$lib/services/clipCommands';
 	import {
 		addTarget,
 		canRemove,
@@ -862,7 +861,8 @@
 			return;
 		}
 		lastGripTap = null;
-		sendWarpEdit(V3_CLIP_WARP_MARKER_MOVE_ADDRESS, [clipPath, warpDragFromBeat, distance], optimisticMarkers);
+		const path = clipPath;
+		sendWarpEdit(() => moveWarpMarker(path, warpDragFromBeat, distance), optimisticMarkers);
 	}
 
 	/**
@@ -871,10 +871,10 @@
 	 * Live has not restarted into) must not leave a marker drawn where
 	 * Live does not have it, so the picture also lapses on a timer.
 	 */
-	function sendWarpEdit(address: string, args: (string | number)[], picture: WarpMarker[] | null) {
+	function sendWarpEdit(write: () => void, picture: WarpMarker[] | null) {
 		optimisticMarkers = picture;
 		warpEchoAfter = clipPropertiesStore.warpMarkersVersion;
-		send(address, args);
+		write();
 		if (warpEchoTimer) clearTimeout(warpEchoTimer);
 		warpEchoTimer = setTimeout(() => {
 			warpEchoTimer = null;
@@ -903,9 +903,9 @@
 		if (!marker || !prev || performance.now() - prev.at > DOUBLE_TAP_MS) return false;
 		if (Math.abs(prev.beat - marker.beat) > 1e-9 || clipPath === null) return false;
 		if (canRemove(shownWarpMarkers, index)) {
+			const path = clipPath;
 			sendWarpEdit(
-				V3_CLIP_WARP_MARKER_REMOVE_ADDRESS,
-				[clipPath, marker.beat],
+				() => removeWarpMarker(path, marker.beat),
 				withoutMarker(clipPropertiesStore.warpMarkers, marker.beat)
 			);
 		}
@@ -934,9 +934,9 @@
 			WARP_MIN_GAP_BEATS
 		);
 		if (!target) return;
+		const path = clipPath;
 		sendWarpEdit(
-			V3_CLIP_WARP_MARKER_ADD_ADDRESS,
-			[clipPath, target.sec, target.beat],
+			() => addWarpMarker(path, target.sec, target.beat),
 			insertMarker(clipPropertiesStore.warpMarkers, target)
 		);
 	}
@@ -963,10 +963,10 @@
 		// Only emit edges that actually moved (avoids a redundant
 		// start-marker side-effect write when only the end moved).
 		if (Math.abs(range.start - prev.start) >= 1e-3) {
-			send(V3_CLIP_SET_LOOP_START_ADDRESS, [clipPath, range.start]);
+			setClipLoopStart(clipPath, range.start);
 		}
 		if (Math.abs(range.end - prev.end) >= 1e-3) {
-			send(V3_CLIP_SET_LOOP_END_ADDRESS, [clipPath, range.end]);
+			setClipLoopEnd(clipPath, range.end);
 		}
 	}
 

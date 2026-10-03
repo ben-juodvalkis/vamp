@@ -20,8 +20,8 @@ import {
     type TrackType,
     type PrepareResult,
 } from '$lib/services/trackPreparation';
-import { send } from '$lib/api/simpleClient';
-import { setTrackName } from '$lib/services/trackCommands';
+import { loadFileIntoSlot } from '$lib/services/clipCommands';
+import { selectTrack, setTrackName } from '$lib/services/trackCommands';
 import { loadCaptureIntoSimpler } from '$lib/services/clipOperations';
 import {
     applyAutoColorOnPrepareAck,
@@ -263,7 +263,7 @@ async function loadAudioClipFromPath(
         });
     } else {
         const prep = await prepareForPreset('audio', '');
-        send('/looping/v3/clip/load_file', [prep.trackPath, '', finalPath]);
+        loadFileIntoSlot(prep.trackPath, '', finalPath);
         setTrackName(prep.trackPath, preset.name);
         landPresetOnTrack({
             trackPath: prep.trackPath,
@@ -424,7 +424,7 @@ export async function replaceAudioClip(
 
     // Select target track (v3 path-addressed)
     const trackPath = `tracks/${trackIndex}`;
-    await send('/looping/v3/track/select', [trackPath]);
+    await selectTrack(trackPath);
 
     const finalPath = preset.fullPath;
 
@@ -434,7 +434,7 @@ export async function replaceAudioClip(
     // absolute paths — unlike /looping/v3/device/load's Browser walk,
     // which cannot resolve raw audio leaves under user_library.
     const slotPath = `${trackPath}/slots/${clipIndex}`;
-    await send('/looping/v3/clip/load_file', [trackPath, slotPath, finalPath]);
+    await loadFileIntoSlot(trackPath, slotPath, finalPath);
 
     logger.debug('Audio clip replaced', { component: 'presetLoader' });
 }

@@ -12,6 +12,7 @@ import { logger } from '$lib/utils/logger';
   import { selectedTrackInk } from '$lib/utils/selectedTrackInk';
   import { selectDevice, moveDeviceToTop, moveDeviceToEnd } from '$lib/services/deviceMoveService';
   import { openDeviceView } from '$lib/services/deviceViewRouter.svelte';
+  import { sendParam } from '$lib/services/deviceParams';
   import { readFxScope } from '$lib/components/v6/central/fxScope';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import ArrowRight from '@lucide/svelte/icons/arrow-right';
@@ -150,13 +151,10 @@ import { logger } from '$lib/utils/logger';
     }
   }
 
-  // Send parameter change using selectedTrackStore
-  async function sendParam(paramIndex: number, value: number) {
-    if (device) {
-      await selectedTrackStore.setParamValue(
-        selectedTrackStore.paramPath(device, paramIndex), value
-      );
-    }
+  // Send parameter change (services/deviceParams). No slot argument: a
+  // tile with no device drops the write and stores pending values itself.
+  async function writeParam(paramIndex: number, value: number) {
+    await sendParam({ device }, paramIndex, value);
   }
 
   // Store a pending parameter that will be applied when device loads —
@@ -281,7 +279,7 @@ import { logger } from '$lib/utils/logger';
   data-fx-scope={fxScope ? fxScope.note : undefined}
   style="--accent-primary: {color.primary};"
 >
-    {@render children({ device, sendParam, storePendingParam, isGhost, isLoading, triggerLoad, handleTap, openView, color })}
+    {@render children({ device, sendParam: writeParam, storePendingParam, isGhost, isLoading, triggerLoad, handleTap, openView, color })}
 
   <!-- Device micro-label (§5.6 — the FX zone's instrument signature). Off by
        default; opt in per-control via showHeadline. -->

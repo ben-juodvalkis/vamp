@@ -12,14 +12,13 @@
 	import { logger } from '$lib/utils/logger';
 	import { session } from '$lib/stores/session.svelte';
 	import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
-	import { send } from '$lib/api/simpleClient';
 	import {
-		V3_SESSION_AUTO_ARM_ADDRESS,
-		V3_SESSION_MOVE_VOLUME_KNOB_ADDRESS,
-		V3_SESSION_AUTO_CAPTURE_ADDRESS,
-		V3_SESSION_FOOT_SWITCH_ENABLED_ADDRESS,
-		V3_SESSION_FOOT_SWITCH_LEARN_ADDRESS
-	} from '$lib/api/handlers/v3Session';
+		setAutoArm,
+		setAutoCapture,
+		setMoveVolumeKnob,
+		setFootSwitchEnabled,
+		setFootSwitchLearn
+	} from '$lib/services/sessionCommands';
 	import { theme, resolvedTheme, themeActions, type Theme } from '$lib/stores/theme';
 	import Sun from '@lucide/svelte/icons/sun';
 	import Moon from '@lucide/svelte/icons/moon';
@@ -29,7 +28,7 @@
 	const behaviorToggles: {
 		key: string;
 		label: string;
-		address: string;
+		set: (on: boolean) => void;
 		what: string;
 		enabled: () => boolean;
 		shown?: () => boolean;
@@ -37,21 +36,21 @@
 		{
 			key: 'auto_arm',
 			label: 'Auto-Arm',
-			address: V3_SESSION_AUTO_ARM_ADDRESS,
+			set: setAutoArm,
 			what: 'Arms the track you select, and disarms the one before.',
 			enabled: () => session.autoArmEnabled
 		},
 		{
 			key: 'auto_capture',
 			label: 'Auto Rec',
-			address: V3_SESSION_AUTO_CAPTURE_ADDRESS,
+			set: setAutoCapture,
 			what: 'Arms arrangement recording when you press play, and asks to Save As when you stop.',
 			enabled: () => session.autoCaptureEnabled
 		},
 		{
 			key: 'move_volume_knob',
 			label: 'Move Knob',
-			address: V3_SESSION_MOVE_VOLUME_KNOB_ADDRESS,
+			set: setMoveVolumeKnob,
 			what: 'Ableton Move’s knobs set the volume of the selected track or drum chain.',
 			enabled: () => session.moveVolumeKnobEnabled,
 			// The Move reaches the surface only through the owner's Max patch,
@@ -60,9 +59,9 @@
 		}
 	];
 
-	function toggleBehavior(address: string, current: boolean) {
-		logger.debug('Toggling session setting', { component: 'SettingsPage', address, from: current });
-		send(address, [current ? 0 : 1]);
+	function toggleBehavior(key: string, set: (on: boolean) => void, current: boolean) {
+		logger.debug('Toggling session setting', { component: 'SettingsPage', key, from: current });
+		set(!current);
 	}
 
 	// --- Appearance -------------------------------------------------------
@@ -93,11 +92,11 @@
 	);
 
 	function toggleFootSwitch() {
-		send(V3_SESSION_FOOT_SWITCH_ENABLED_ADDRESS, [foot.enabled ? 0 : 1]);
+		setFootSwitchEnabled(!foot.enabled);
 	}
 
 	function toggleFootLearn() {
-		send(V3_SESSION_FOOT_SWITCH_LEARN_ADDRESS, [footListening ? 0 : 1]);
+		setFootSwitchLearn(!footListening);
 	}
 </script>
 
@@ -109,7 +108,7 @@
 				<button
 					class="set-row set-row-button"
 					aria-pressed={t.enabled()}
-					onclick={() => toggleBehavior(t.address, t.enabled())}
+					onclick={() => toggleBehavior(t.key, t.set, t.enabled())}
 					data-setting={t.key}
 				>
 					<span class="set-row-main">

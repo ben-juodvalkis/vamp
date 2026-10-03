@@ -24,16 +24,15 @@
    */
   import { logger } from '$lib/utils/logger';
   import { session } from '$lib/stores/session.svelte.js';
-  import { send } from '$lib/api/simpleClient.js';
   import { press } from '$lib/actions/press';
   import { drag as dragAction, type DragInfo, type DragOptions } from '$lib/actions/drag';
   import {
-    V3_SESSION_PLAY_CMD_ADDRESS,
-    V3_SESSION_STOP_CMD_ADDRESS,
-    V3_SESSION_METRONOME_ADDRESS,
-    V3_SESSION_SIGNATURE_NUM_ADDRESS,
-    V3_SESSION_SIGNATURE_DEN_ADDRESS
-  } from '$lib/api/handlers/v3Session';
+    toggleTransport as sendTransportToggle,
+    toggleMetronome as sendMetronomeToggle,
+    setTempo as sendTempo,
+    setSignatureNumerator,
+    setSignatureDenominator
+  } from '$lib/services/sessionCommands';
 
   /**
    * Metronome / session-record marks.
@@ -53,23 +52,18 @@
 
   // Control functions
   function toggleTransport() {
-    const address = session.isPlaying ? V3_SESSION_STOP_CMD_ADDRESS : V3_SESSION_PLAY_CMD_ADDRESS;
-    logger.debug(`Transport: ${session.isPlaying ? 'Stopping' : 'Starting'} playback via ${address}`, { component: 'SessionHeaderV6' });
-    session.toggleTransportOptimistically();
-    send(address, []);
+    logger.debug(`Transport: ${session.isPlaying ? 'Stopping' : 'Starting'} playback`, { component: 'SessionHeaderV6' });
+    sendTransportToggle();
   }
 
   function toggleMetronome() {
-    const newState = session.metronome ? 0 : 1;
-    logger.debug(`Metronome: ${session.metronome ? 'Turning OFF' : 'Turning ON'} via ${V3_SESSION_METRONOME_ADDRESS} [${newState}]`, { component: 'SessionHeaderV6' });
-    session.toggleMetronomeOptimistically();
-    send(V3_SESSION_METRONOME_ADDRESS, [newState]);
+    logger.debug(`Metronome: ${session.metronome ? 'Turning OFF' : 'Turning ON'}`, { component: 'SessionHeaderV6' });
+    sendMetronomeToggle();
   }
 
   function setTempo(bpm: number) {
     if (bpm >= 20 && bpm <= 999) {
-      session.setTempoOptimistically(bpm);
-      send('/live/song/set/tempo', [bpm]);
+      sendTempo(bpm);
     }
   }
 
@@ -126,7 +120,7 @@
       if (newNumerator !== lastTimeSignatureValue) {
         lastTimeSignatureValue = newNumerator;
         logger.debug(`Setting numerator to ${newNumerator} (integer, from raw: ${rawValue.toFixed(2)})`, { component: 'SessionHeaderV6' });
-        send(V3_SESSION_SIGNATURE_NUM_ADDRESS, [newNumerator]);
+        setSignatureNumerator(newNumerator);
       }
     } else if (timeSignatureDragMode === 'denominator') {
       // Valid denominators: 1, 2, 4, 8, 16
@@ -140,7 +134,7 @@
       if (newDenominator !== lastTimeSignatureValue) {
         lastTimeSignatureValue = newDenominator;
         logger.debug(`Setting denominator to ${newDenominator} (integer, index: ${newIndex})`, { component: 'SessionHeaderV6' });
-        send(V3_SESSION_SIGNATURE_DEN_ADDRESS, [newDenominator]);
+        setSignatureDenominator(newDenominator);
       }
     }
   }

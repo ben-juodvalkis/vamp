@@ -216,6 +216,28 @@ export function setTrackFoldState(trackPath: string, folded: boolean): void {
 }
 
 // ---------------------------------------------------------------------------
+// Selection and sends (no optimistic apply here)
+// ---------------------------------------------------------------------------
+
+const V3_TRACK_SELECT_ADDRESS = '/looping/v3/track/select';
+const V3_TRACK_SEND_ADDRESS = '/looping/v3/track/send';
+
+/**
+ * Select a track in Live: `tracks/<N>` or `'master'`. The optimistic half
+ * (`session.selectTrackOptimistically`, `selectedTrackStore.handleTrackSelected`)
+ * stays with the caller, which knows whether the track was already
+ * selected; this is the wire write alone.
+ */
+export function selectTrack(trackPath: string): void {
+	send(V3_TRACK_SELECT_ADDRESS, [trackPath]);
+}
+
+/** Set a track's send `sendIndex` (0 = Send A) to `value` (0..1). */
+export function setTrackSend(trackPath: string, sendIndex: number, value: number): void {
+	send(V3_TRACK_SEND_ADDRESS, [trackPath, sendIndex, value]);
+}
+
+// ---------------------------------------------------------------------------
 // Notes on commands not yet added
 // ---------------------------------------------------------------------------
 //

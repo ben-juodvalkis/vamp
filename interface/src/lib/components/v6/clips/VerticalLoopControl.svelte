@@ -12,12 +12,8 @@
 	 * - Uses requestAnimationFrame-based throttling for smooth response
 	 */
 	import { session, requireFocusedClip } from '$lib/stores/session.svelte';
-	import { send } from '$lib/api/simpleClient';
 	import { clipPropertiesStore } from '$lib/stores/v6/clipPropertiesStore.svelte';
-	import {
-		V3_CLIP_SET_LOOP_START_ADDRESS,
-		V3_CLIP_SET_LOOP_END_ADDRESS
-	} from '$lib/api/handlers/v3Clip';
+	import { setClipLoopStart, setClipLoopEnd } from '$lib/services/clipCommands';
 	import { clipDisplayCoordinator } from '$lib/services/clipDisplayCoordinator.svelte';
 	import { drag as dragAction, type DragInfo, type DragOptions } from '$lib/actions/drag';
 	import { createSliderThrottle } from '$lib/utils/sliderThrottle';
@@ -107,7 +103,7 @@
 		if (import.meta.env.DEV) {
 			logger.debug(`Setting loop_start to ${value}`, { component: 'VerticalLoopControl' });
 		}
-		send(V3_CLIP_SET_LOOP_START_ADDRESS, [clipPath, value]);
+		setClipLoopStart(clipPath, value);
 	}
 
 	function setLoopEnd(value: number) {
@@ -117,7 +113,7 @@
 		if (import.meta.env.DEV) {
 			logger.debug(`Setting loop_end to ${value}`, { component: 'VerticalLoopControl' });
 		}
-		send(V3_CLIP_SET_LOOP_END_ADDRESS, [clipPath, value]);
+		setClipLoopEnd(clipPath, value);
 	}
 
 	// Frame-synchronized throttle for smooth loop start updates
