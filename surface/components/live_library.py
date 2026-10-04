@@ -172,6 +172,9 @@ def m4l_devices_root() -> str:
 SEQUENCER_REL = os.path.join("Permute", "Permute.amxd")
 MIDI_WHEELS_REL = "MidiWheels.amxd"
 RANDOM_START_REL = os.path.join("random-start", "random-start.amxd")
+#: The wah rack the pedal and the Pedal view's Wah button load (2026-10-03;
+#: it was ``devices.wah.presetPath`` in the User Library before).
+WAH_REL = os.path.join("Wah", "Wah.adg")
 #: The groove minted into the Groove Pool when a clip needs one of its own.
 GROOVE_REL = os.path.join("Grooves", "Vamp Groove.agr")
 

@@ -797,7 +797,8 @@ selection change, or a device-list change (the sweep always follows the
 track in view — ADR-407 revision).
 
 Target devices, parameter indices, match keys and sweep tolerance come from
-`constants.devices.wah` (`presetPath` / `className` / `deviceName` /
+`constants.devices.wah` (`presetPath`, optional: else the checkout's
+`Vamp Devices/Wah/Wah.adg` / `className` / `deviceName` /
 `freqMacroIndex` / `toggleMacroIndex` / `sweepLoadMargin`) and
 `constants.devices.midiWheels` (`devicePath` / `className` / `deviceName` /
 `modParamIndex` / `sweepLoadMargin`), so the mapping is tunable without a

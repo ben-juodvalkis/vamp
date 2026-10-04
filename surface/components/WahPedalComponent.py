@@ -133,6 +133,7 @@ from __future__ import annotations
 import logging
 from typing import Callable, Optional, Tuple
 
+from . import live_library
 from .MidiWheelsComponent import (
     CONFIG_KEY as MIDI_WHEELS_CONFIG_KEY,
     read_midi_wheels_config,
@@ -281,6 +282,13 @@ class _PedalTarget:
         )
 
 
+def wah_preset_path(cfg) -> str:
+    """The wah rack's path: ``devices.wah.presetPath`` when the config
+    carries one, else the checkout's ``Vamp Devices/Wah/Wah.adg``, else ''."""
+    configured = cfg.get("presetPath") if isinstance(cfg, dict) else None
+    return live_library.device_path(live_library.WAH_REL, configured)
+
+
 class WahPedalComponent:
     """Handles the two pedal gesture wires.
 
@@ -325,6 +333,9 @@ class WahPedalComponent:
             "wah", devices.get("wah"),
             _DEFAULT_WAH_CLASS_NAME, _DEFAULT_WAH_DEVICE_NAME, at_head=True,
         )
+        # The checkout's own Wah (2026-10-03): ``Vamp Devices/Wah/Wah.adg``,
+        # found from this file. A configured ``presetPath`` still wins.
+        self._wah.preset_path = wah_preset_path(devices.get("wah"))
         # ADR-445: the MIDI-track target exists only when configured. A rig
         # without ``devices.midiWheels`` keeps the pre-ADR-445 behavior — the
         # wah on every track.

@@ -282,13 +282,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     trackTint: true,                    // Wears the focused track's ink (ADR-400)
     color: familyScheme('utility')
   },
-  pitch: {
-    padScoped: true,
-    presetPath: '{effectPresetsBase}/Pitch-Helix.adg',
-    defaultName: 'Pitch-Helix',
-    expectedClassName: 'AudioEffectGroupDevice',
-    color: familyScheme('pitchSeq')
-  },
   redux: {
     padScoped: true,
     native: true,
@@ -320,8 +313,12 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     color: familyScheme('pitchSeq')
   },
   digital: {
+    // Ships in the repo, in Vamp Devices, and loads through that Place
+    // like Blur (2026-10-03; the User Library's Effect Patches before).
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Digital.adg',
+    presetPath: '',
+    source: 'place:Vamp Devices',
+    rel: 'Digital/Digital.adg',
     defaultName: 'Digital',
     expectedClassName: 'AudioEffectGroupDevice',
     gridSlot: false,                    // Virtual device
@@ -329,8 +326,12 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     color: familyScheme('distortion')
   },
   comb: {
+    // In Vamp Devices since 2026-10-03, like Digital. A u-he Zebrify preset:
+    // without the plug-in Live loads a placeholder.
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Comb.aupreset',
+    presetPath: '',
+    source: 'place:Vamp Devices',
+    rel: 'Comb/Comb.aupreset',
     defaultName: 'Zebrify',
     expectedClassName: 'AuPluginDevice',
     gridSlot: false,                    // Virtual device
@@ -352,8 +353,11 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     // through the browser — a Max device has no insert-by-name path — and
     // Live names it after the .adv. The name is load-bearing: Permute is an
     // MxDeviceAudioEffect too.
+    // In Vamp Devices since 2026-10-03, like Digital.
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Pitch Hack.adv',
+    presetPath: '',
+    source: 'place:Vamp Devices',
+    rel: 'Pitch Hack/Pitch Hack.adv',
     defaultName: 'Pitch Hack',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
@@ -406,8 +410,11 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     // (0..1 over -12..+12 semitones), measured off the running device.
     // It took the Bass panel's place there when the Bass tile moved to the
     // Bass Amp rack. No tile of its own: the view is its only control.
+    // The preset ships in Vamp Devices and loads through that Place.
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Octave.aupreset',
+    presetPath: '',
+    source: 'place:Vamp Devices',
+    rel: 'Octave/Octave.aupreset',
     defaultName: 'Helix Native',
     expectedClassName: 'AuPluginDevice',
     gridSlot: false,                    // Virtual device
@@ -469,8 +476,13 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     color: familyScheme('pitchSeq')
   },
   wah: {
+    // In Vamp Devices since 2026-10-03, like Digital. The surface finds
+    // the same file for the pedal (`live_library.WAH_REL`), and its path is
+    // what lands the rack at the head of the chain.
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Wah.adg',
+    presetPath: '',
+    source: 'place:Vamp Devices',
+    rel: 'Wah/Wah.adg',
     defaultName: 'Wah',
     expectedClassName: 'AudioEffectGroupDevice',
     gridSlot: false,                    // Virtual device
@@ -478,8 +490,10 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     color: familyScheme('filter')       // A wah IS a filter — function over host view
   },
   vocal: {
+    // No control loads it: the entry is how a track's device band knows a
+    // Vocal rack (its mic glyph). The preset is not shipped (2026-10-03).
     padScoped: true,
-    presetPath: '{effectPresetsBase}/audio-browser/Vocal.adg',
+    presetPath: '',
     defaultName: 'Vocal',
     expectedClassName: 'AudioEffectGroupDevice',
     gridSlot: false,                    // Virtual device

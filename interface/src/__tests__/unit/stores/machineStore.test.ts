@@ -29,11 +29,13 @@ describe('machineStore', () => {
 	});
 
 	it('resolves a file tile’s preset path from the snapshot, and sends it on device/load', () => {
-		expect(DEVICE_PRESETS.digital.presetPath).toBe('{effectPresetsBase}/Digital.adg');
-		expect(resolvePresetPath(DEVICE_PRESETS.digital.presetPath!)).toBe('{effectPresetsBase}/Digital.adg');
+		expect(DEVICE_PRESETS.guitar.presetPath).toBe('{effectPresetsBase}/Guitar.adg');
+		expect(resolvePresetPath(DEVICE_PRESETS.guitar.presetPath!)).toBe('{effectPresetsBase}/Guitar.adg');
 		machineStore.update(JSON.stringify({ paths: { instrumentsBase: '', effectPresetsBase: '/Lib/Effects', m4lDevicesRoot: '' }, totalmix: null }));
-		expect(resolvePresetPath(DEVICE_PRESETS.digital.presetPath!)).toBe('/Lib/Effects/Digital.adg');
-		expect(deviceLoadArgs('tracks/1', '', DEVICE_PRESETS.digital)).toEqual(['tracks/1', '', '/Lib/Effects/Digital.adg']);
+		expect(resolvePresetPath(DEVICE_PRESETS.guitar.presetPath!)).toBe('/Lib/Effects/Guitar.adg');
+		expect(deviceLoadArgs('tracks/1', '', DEVICE_PRESETS.guitar)).toEqual(['tracks/1', '', '/Lib/Effects/Guitar.adg']);
+		// A preset shipped in Vamp Devices names the Place; the surface fills the path in.
+		expect(deviceLoadArgs('tracks/1', '', DEVICE_PRESETS.digital)).toEqual(['tracks/1', '', '', 'place:Vamp Devices', 'Digital/Digital.adg']);
 		// A native tile names its device, not a file, whatever the snapshot says (3.12.0).
 		expect(deviceLoadArgs('tracks/1', '', DEVICE_PRESETS.reverb)).toEqual(['tracks/1', '', '', 'native:Hybrid', 'Reverb']);
 		expect(loadKey(DEVICE_PRESETS.reverb)).toBe('native:Hybrid');

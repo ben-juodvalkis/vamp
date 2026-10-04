@@ -33,6 +33,16 @@ audio/
 # is checked in at `owner/Skaka Metronome Picker/`.
 !owner/Skaka Metronome Rack.adg
 
+# Exception: the presets the app loads ship in Vamp Devices, beside the Max
+# devices, and load through that Place (2026-10-03). Only the ones that are
+# the owner's own work: racks embedding someone else's content (TONE3000
+# captures, third-party Max devices) stay in the User Library.
+!Vamp Devices/Digital/Digital.adg
+!Vamp Devices/Pitch Hack/Pitch Hack.adv
+!Vamp Devices/Wah/Wah.adg
+!Vamp Devices/Comb/Comb.aupreset
+!Vamp Devices/Octave/Octave.aupreset
+
 # ============================================================================
 # User-Specific Configuration
 # ============================================================================

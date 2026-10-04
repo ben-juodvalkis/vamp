@@ -211,7 +211,7 @@ describe('PedalCentralView', () => {
 		await tick();
 		// The track's path, no pad scope, the wah preset — the FX tiles' own
 		// load, so the surface places it at the head of the audio effects.
-		expect(send).toHaveBeenCalledWith('/looping/v3/device/load', [TRACK, '', DEVICE_PRESETS.wah.presetPath]);
+		expect(send).toHaveBeenCalledWith('/looping/v3/device/load', [TRACK, '', '', 'place:Vamp Devices', 'Wah/Wah.adg']);
 		expect(send).not.toHaveBeenCalledWith('/looping/v3/device/delete', expect.anything());
 	});
 
