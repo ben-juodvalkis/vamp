@@ -72,9 +72,8 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 		'arpeggiator': () => import('./views/ArpeggiatorCentralView.svelte'),
 		'audio-effect-rack': () => import('./views/AudioEffectRackCentralView.svelte'),
 		// The Bass tile (audio tracks' fx1 column, 2026-09-14): its type is
-		// `bass`, its view the Guitar rack's — the Bass panel beside those
-		// macros IS this slot, with the Amp and +12 toggles the tile has no
-		// room for. Aliased here the way `random` aliases the Arpeggiator's
+		// `bass`, its view the Guitar rack's. A Helix Native band (`octave`)
+		// opens the same view, whose Octave panel is that slot. Aliased here the way `random` aliases the Arpeggiator's
 		// and `squash` the Utility's; without an entry the tap resolved to
 		// the placeholder view.
 		'bass': () => import('./views/GuitarCentralView.svelte'),
@@ -86,6 +85,7 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 		'eq': () => import('./views/EQCentralView.svelte'),
 		'filter': () => import('./views/AutoFilterCentralView.svelte'),
 		'guitar': () => import('./views/GuitarCentralView.svelte'),
+		'octave': () => import('./views/GuitarCentralView.svelte'),
 		'pedal': () => import('./views/PedalCentralView.svelte'),
 		'pitch': () => import('./views/PitchHelixCentralView.svelte'),
 		// The Rand Oct tile: its type is `random`, its view the Arpeggiator's

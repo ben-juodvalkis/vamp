@@ -390,14 +390,28 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     // Same as Guitar: a rack, through the browser and into the chain. It was
     // a Helix Native preset until 2026-10-03; the rack (Octave Pedal → Glue
     // Compressor → TONE3000) shows one macro, the mix, which is all the
-    // tile and the Guitar view's Bass panel drive. Live names it after the
-    // .adg, which is how the slot re-finds it.
+    // tile drives; no view repeats it. Live names it after the .adg, which
+    // is how the slot re-finds it.
     padScoped: true,
     presetPath: '{effectPresetsBase}/Bass Amp.adg',
     defaultName: 'Bass Amp',
     expectedClassName: 'AudioEffectGroupDevice',
     // Violet, not the Guitar's orange (2026-10-01): it shares the Guitar
     // view, and its own ink is what tells its controls apart there.
+    color: familyScheme('pitchSeq')
+  },
+  octave: {
+    // The Guitar view's Octave panel (2026-10-03): a Helix Native set up
+    // as an octave pedal, two knobs on the wire — 1 the mix, 2 the pitch
+    // (0..1 over -12..+12 semitones), measured off the running device.
+    // It took the Bass panel's place there when the Bass tile moved to the
+    // Bass Amp rack. No tile of its own: the view is its only control.
+    padScoped: true,
+    presetPath: '{effectPresetsBase}/audio-browser/Octave.aupreset',
+    defaultName: 'Helix Native',
+    expectedClassName: 'AuPluginDevice',
+    gridSlot: false,                    // Virtual device
+    centralViewGroup: 'guitar',         // Belongs to GuitarCentralView
     color: familyScheme('pitchSeq')
   },
   // Virtual Smudge Device

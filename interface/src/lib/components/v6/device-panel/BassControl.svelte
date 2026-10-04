@@ -17,9 +17,8 @@
    * audio (`fxGridStore.loadDevice` renames the track "Bass" on an audio
    * track and leaves a MIDI track's name alone).
    *
-   * The device is the `bass` slot — the `Bass Amp.adg` rack — whose other
-   * face is the Bass panel in `GuitarCentralView` (the same fader). Param 1
-   * is the rack's one visible macro, the mix, rail 0..127, resting at 0 so
+   * The device is the `bass` slot — the `Bass Amp.adg` rack — and this
+   * tile is its only control (no view repeats the fader). Param 1 is the rack's one visible macro, the mix, rail 0..127, resting at 0 so
    * the tile reads empty until it is reached for. The tile names the DEVICE
    * the way every other tile does (Gtr, Drum, Squash).
    *

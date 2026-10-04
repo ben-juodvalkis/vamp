@@ -403,6 +403,8 @@ const DEVICE_CLASS_NAMES = {
 	// on every shot and its reorder arrows (which need a resolved device)
 	// can never be photographed.
 	'Bass Amp': 'AudioEffectGroupDevice',
+	// The Octave panel's slot is a Helix Native, matched the same way.
+	'Helix Native': 'AuPluginDevice',
 	// The Guitar rack is an Audio Effect Rack; without the entry its slot
 	// reads ghost and GuitarCentralView never draws the named macros.
 	Guitar: 'AudioEffectGroupDevice',
@@ -959,7 +961,7 @@ const DEFAULT_TRACKS = [
 		volume: 0.7,
 		// The Guitar rack carries Guitar.adg's own macro names, so
 		// GuitarCentralView's Drive/Fuzz and Tremolo pads can be shot.
-		devices: ['Auto Filter', 'Echo', 'Bass Amp', { name: 'Guitar', params: guitarRackParams() }],
+		devices: ['Helix Native', 'Auto Filter', 'Echo', 'Bass Amp', { name: 'Guitar', params: guitarRackParams() }],
 		clips: {
 			0: { name: 'Loop 1', length: 8, state: SLOT.recording }
 		}

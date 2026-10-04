@@ -38,6 +38,9 @@
   import X from '@lucide/svelte/icons/x';
   import { logger } from '$lib/utils/logger';
   import SectionDivider from '../SectionDivider.svelte';
+  import { drag } from '$lib/actions';
+  import type { DragInfo } from '$lib/actions/drag';
+  import { segmentIndex, scrubBoxOf, type ScrubBox } from '$lib/utils/segmentScrub';
 
   /** Macro 1 is drawn by `drivePanel`; the dynamic layout starts after it. */
   const DRIVE_MACRO = 1;
@@ -55,56 +58,96 @@
   let { color }: Props = $props();
 
   const fx = useFxGridSlot('guitar');
-  const bass = useFxGridSlot('bass');
+  const octave = useFxGridSlot('octave');
 
-  // The Bass Amp rack shows one macro, the mix (param 1, 0..127) — the
-  // same control as the BassControl tile. The Helix Native's Amp and +12
-  // toggles went with it (2026-10-03).
-  const BASS_MIX_PARAM = 1;
-  let bassValue = $derived(bass.paramValue(BASS_MIX_PARAM) ?? MACRO_MIN);
+  // ===== OCTAVE =====
+  // A Helix Native set up as an octave pedal (2026-10-03), in the panel
+  // the Bass had until the Bass tile moved to the Bass Amp rack — whose
+  // mix the FX grid's Bass tile drives, so nothing of it is repeated
+  // here. Two knobs, measured off the running device: 1 the mix (0..1),
+  // 2 the pitch, 0..1 over -12..+12 semitones. The pitch is a four-way
+  // tab rather than a fader: the four intervals are the only useful
+  // stops, listed top-down as they draw. +12 is the preset's own.
+  const OCTAVE_MIX_PARAM = 1;
+  const OCTAVE_PITCH_PARAM = 2;
+  const PITCH_STEPS = [
+    { label: '+12', value: 1 },
+    { label: '+7', value: 19 / 24 },
+    { label: '-5', value: 7 / 24 },
+    { label: '-12', value: 0 }
+  ];
+  let octaveMix = $derived(octave.paramValue(OCTAVE_MIX_PARAM) ?? 0);
+  let octavePitch = $derived(octave.paramValue(OCTAVE_PITCH_PARAM) ?? 1);
+  // The step nearest the device's value, so a pitch set by hand in the
+  // plug-in still lights the closest stop.
+  let pitchStep = $derived(
+    PITCH_STEPS.reduce(
+      (best, step, i) =>
+        Math.abs(step.value - octavePitch) < Math.abs(PITCH_STEPS[best].value - octavePitch) ? i : best,
+      0
+    )
+  );
 
-  // ===== BASS CHAIN POSITION =====
-  // A browser load lands at the END of the chain and the Bass belongs at
-  // its head; `useBassChainPosition` is that one-shot rule, shared with
-  // the `BassControl` tile in the audio track's fx1 column since
-  // 2026-09-14 (it was a local `let` + `$effect` here before the tile
-  // needed the same twenty lines). Arm the move before any gesture that
-  // might load.
-  const bassChain = useBassChainPosition(bass, 'GuitarCentralView');
-  const armBassLoad = () => bassChain.arm();
+  // A browser load lands at the END of the chain; an octave pedal belongs
+  // at its head, ahead of the amp. `useBassChainPosition` is that one-shot
+  // rule (the Bass tile's too). Arm it before any gesture that might load.
+  const octaveChain = useBassChainPosition(octave, 'GuitarCentralView');
+  const armOctaveLoad = () => octaveChain.arm();
+
+  function setPitch(step: number) {
+    armOctaveLoad();
+    octave.sendParam(OCTAVE_PITCH_PARAM, PITCH_STEPS[step].value);
+  }
+
+  // The tab SCRUBS, like the Glue stepped rows in SquashCentralView: the
+  // stack owns one pointer and resolves the step under it from geometry,
+  // so a finger slides between intervals. The box is measured at press.
+  let pitchBox: ScrubBox | null = null;
+
+  function pitchScrub(clientY: number) {
+    if (!pitchBox) return;
+    const step = segmentIndex(clientY, pitchBox.top, pitchBox.height, PITCH_STEPS.length);
+    if (step === pitchStep && !octave.isGhost) return;
+    setPitch(step);
+  }
+
+  function pitchDown(info: DragInfo) {
+    pitchBox = scrubBoxOf(info.event?.currentTarget as Element | null);
+    pitchScrub(info.y);
+  }
 
   // The reorder arrows are the TRACK chain's, the same rule
   // `BaseDeviceControl` states: a pad's chain is its instrument and an
   // effect or two, so "first position" there would put an audio effect
-  // ahead of the instrument. Hidden under a scope — and `armBassLoad`
+  // ahead of the instrument. Hidden under a scope — and `armOctaveLoad`
   // declines to arm there for the same reason.
-  let showBassMove = $derived(bass.device !== null && bass.scope === null);
+  let showOctaveMove = $derived(octave.device !== null && octave.scope === null);
 
-  let isMovingBassLeft = $state(false);
-  let moveBassLeftResult = $state<'idle' | 'success' | 'error'>('idle');
-  let isMovingBassRight = $state(false);
-  let moveBassRightResult = $state<'idle' | 'success' | 'error'>('idle');
+  let isMovingOctaveLeft = $state(false);
+  let moveOctaveLeftResult = $state<'idle' | 'success' | 'error'>('idle');
+  let isMovingOctaveRight = $state(false);
+  let moveOctaveRightResult = $state<'idle' | 'success' | 'error'>('idle');
 
   function moveButtonClasses(isMoving: boolean, result: 'idle' | 'success' | 'error') {
-    const base = 'bass-move-btn rounded transition-colors duration-200';
+    const base = 'octave-move-btn rounded transition-colors duration-200';
     if (result === 'success') return `${base} move-ok`;
     if (result === 'error') return `${base} move-err`;
     if (isMoving) return `${base} text-muted-foreground`;
     return `${base} text-muted-foreground hover:text-foreground cursor-pointer`;
   }
 
-  async function moveBass(edge: 'top' | 'end') {
-    const path = bass.devicePath;
-    const busy = edge === 'top' ? isMovingBassLeft : isMovingBassRight;
+  async function moveOctave(edge: 'top' | 'end') {
+    const path = octave.devicePath;
+    const busy = edge === 'top' ? isMovingOctaveLeft : isMovingOctaveRight;
     if (busy || !path) return;
-    if (edge === 'top') isMovingBassLeft = true;
-    else isMovingBassRight = true;
+    if (edge === 'top') isMovingOctaveLeft = true;
+    else isMovingOctaveRight = true;
     const settle = (result: 'success' | 'error') => {
-      if (edge === 'top') moveBassLeftResult = result;
-      else moveBassRightResult = result;
+      if (edge === 'top') moveOctaveLeftResult = result;
+      else moveOctaveRightResult = result;
       setTimeout(() => {
-        if (edge === 'top') moveBassLeftResult = 'idle';
-        else moveBassRightResult = 'idle';
+        if (edge === 'top') moveOctaveLeftResult = 'idle';
+        else moveOctaveRightResult = 'idle';
       }, 1000);
     };
     try {
@@ -112,15 +155,15 @@
       await selectDevice(path);
       settle('success');
     } catch (error) {
-      logger.error('Failed to move the bass device', {
+      logger.error('Failed to move the octave device', {
         component: 'GuitarCentralView',
         edge,
         error
       });
       settle('error');
     } finally {
-      if (edge === 'top') isMovingBassLeft = false;
-      else isMovingBassRight = false;
+      if (edge === 'top') isMovingOctaveLeft = false;
+      else isMovingOctaveRight = false;
     }
   }
 
@@ -130,10 +173,10 @@
     secondary: fx.color.secondary,
     accent: trackInk(fx.color.accent, paintModeReactive())
   });
-  let bassInk = $derived({
-    primary: trackInk(bass.color.primary, paintModeReactive()),
-    secondary: bass.color.secondary,
-    accent: trackInk(bass.color.accent, paintModeReactive())
+  let octaveInk = $derived({
+    primary: trackInk(octave.color.primary, paintModeReactive()),
+    secondary: octave.color.secondary,
+    accent: trackInk(octave.color.accent, paintModeReactive())
   });
 
   let rawEffectiveColor = $derived(color ?? fx.color);
@@ -212,8 +255,8 @@
   });
 </script>
 
-<!-- The Bass panel is a snippet because both branches below (named macros /
-     unnamed fallback) render the identical column — it belongs to the `bass`
+<!-- The Octave panel is a snippet because both branches below (named macros /
+     unnamed fallback) render the identical column — it belongs to the `octave`
      slot, not to the Guitar rack's macro layout, so nothing about it changes
      between the two. -->
 {#snippet drivePanel()}
@@ -252,46 +295,46 @@
   </div>
 {/snippet}
 
-{#snippet bassPanel()}
-  <div class="control-slot bass-slot">
-    <div class="bass-panel" style="--btn-tint: {bassInk.primary};">
+{#snippet octavePanel()}
+  <div class="control-slot octave-slot">
+    <div class="octave-panel" style="--btn-tint: {octaveInk.primary};">
       <!-- The arrows FLANK the title rather than sitting absolute in the
            panel's corners the way BaseDeviceControl's do: this column is
            112px at its narrowest and a corner button would land on top of
            the label. Left = head of the chain, right = end, the same
            bearing they have on every FX tile. -->
-      <div class="bass-head">
-        {#if showBassMove}
+      <div class="octave-head">
+        {#if showOctaveMove}
           <button
-            class={moveButtonClasses(isMovingBassLeft, moveBassLeftResult)}
-            onclick={() => moveBass('top')}
-            disabled={isMovingBassLeft || moveBassLeftResult !== 'idle'}
-            aria-label="Move bass device to first position"
+            class={moveButtonClasses(isMovingOctaveLeft, moveOctaveLeftResult)}
+            onclick={() => moveOctave('top')}
+            disabled={isMovingOctaveLeft || moveOctaveLeftResult !== 'idle'}
+            aria-label="Move octave device to first position"
           >
-            {#if isMovingBassLeft}
+            {#if isMovingOctaveLeft}
               <div class="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full"></div>
-            {:else if moveBassLeftResult === 'success'}
+            {:else if moveOctaveLeftResult === 'success'}
               <Check class="w-3 h-3" />
-            {:else if moveBassLeftResult === 'error'}
+            {:else if moveOctaveLeftResult === 'error'}
               <X class="w-3 h-3" />
             {:else}
               <ArrowLeft class="w-3 h-3" />
             {/if}
           </button>
         {/if}
-        <span class="bass-title" style="color: {bassInk.primary};">Bass</span>
-        {#if showBassMove}
+        <span class="octave-title" style="color: {octaveInk.primary};">Octave</span>
+        {#if showOctaveMove}
           <button
-            class={moveButtonClasses(isMovingBassRight, moveBassRightResult)}
-            onclick={() => moveBass('end')}
-            disabled={isMovingBassRight || moveBassRightResult !== 'idle'}
-            aria-label="Move bass device to last position"
+            class={moveButtonClasses(isMovingOctaveRight, moveOctaveRightResult)}
+            onclick={() => moveOctave('end')}
+            disabled={isMovingOctaveRight || moveOctaveRightResult !== 'idle'}
+            aria-label="Move octave device to last position"
           >
-            {#if isMovingBassRight}
+            {#if isMovingOctaveRight}
               <div class="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full"></div>
-            {:else if moveBassRightResult === 'success'}
+            {:else if moveOctaveRightResult === 'success'}
               <Check class="w-3 h-3" />
-            {:else if moveBassRightResult === 'error'}
+            {:else if moveOctaveRightResult === 'error'}
               <X class="w-3 h-3" />
             {:else}
               <ArrowRight class="w-3 h-3" />
@@ -299,26 +342,51 @@
           </button>
         {/if}
       </div>
-      <div class="bass-fader">
-        <DeviceSlider
-          value={bassValue}
-          title="Mix"
-          orientation="vertical"
-          labelOrientation="horizontal"
-          labelSize="small"
-          isGhost={bass.isGhost}
-          color={bassInk}
-          min={MACRO_MIN}
-          max={MACRO_MAX}
-          onTap={() => {
-            armBassLoad();
-            bass.loadIfGhost();
+      <div class="octave-body">
+        <div class="octave-fader">
+          <DeviceSlider
+            value={octaveMix}
+            title="Mix"
+            orientation="vertical"
+            labelOrientation="horizontal"
+            labelSize="small"
+            isGhost={octave.isGhost}
+            color={octaveInk}
+            min={0}
+            max={1}
+            onTap={() => {
+              armOctaveLoad();
+              octave.loadIfGhost();
+            }}
+            onInteraction={(val) => {
+              armOctaveLoad();
+              octave.sendParam(OCTAVE_MIX_PARAM, val);
+            }}
+          />
+        </div>
+        <!-- The house segmented control (app.css .device-segmented), the
+             Glue stepped rows' component stood upright: +12 at the top,
+             -12 at the bottom. -->
+        <div
+          class="device-segmented pitch-stack"
+          class:is-ghost-tab={octave.isGhost}
+          style="grid-template-rows: repeat({PITCH_STEPS.length}, 1fr);"
+          use:drag={{
+            commit: 'immediate',
+            onDown: (info) => pitchDown(info),
+            onMove: (info) => pitchScrub(info.y)
           }}
-          onInteraction={(val) => {
-            armBassLoad();
-            bass.sendParam(BASS_MIX_PARAM, val);
-          }}
-        />
+        >
+          {#each PITCH_STEPS as step, i}
+            <button
+              class="device-segment pitch-step num"
+              class:active={!octave.isGhost && pitchStep === i}
+              aria-label="Octave pitch {step.label}"
+              aria-pressed={!octave.isGhost && pitchStep === i}
+              onclick={() => setPitch(i)}
+            >{step.label}</button>
+          {/each}
+        </div>
       </div>
     </div>
   </div>
@@ -327,7 +395,7 @@
 <div class="guitar-central-layout relative" class:is-ghost={fx.isGhost}>
   {#if controlLayout.length > 0}
     <div class="controls-panel">
-      {@render bassPanel()}
+      {@render octavePanel()}
       <SectionDivider orientation="vertical" ink={effectiveColor.primary} />
       {@render drivePanel()}
       {#each layoutItems as item}
@@ -369,7 +437,7 @@
   {:else}
     <!-- Fallback: drive, then simple sliders for macros 2-8, when no names yet -->
     <div class="controls-panel">
-      {@render bassPanel()}
+      {@render octavePanel()}
       <SectionDivider orientation="vertical" ink={effectiveColor.primary} />
       {@render drivePanel()}
       {#each { length: MACRO_END - MACRO_START + 1 } as _, i}
@@ -427,20 +495,20 @@
     min-width: 80px;
   }
 
-  /* Bass is a PANEL, not a bare fader: its fader belongs to a device that
-     is not the Guitar rack every other column reads from, so its own title
-     and ink say "different device". One fader wide since the Amp / +12
-     toggles left (2026-10-03), with room for the arrows beside the title. */
-  .bass-slot {
-    flex: 1 1 0;
-    min-width: 72px;
+  /* Octave is a PANEL, not a bare fader: its controls belong to a device
+     that is not the Guitar rack every other column reads from, so its own
+     title and ink say "different device". Two columns wide — the Mix fader
+     and the pitch tab each get a full slider column. */
+  .octave-slot {
+    flex: 2 1 0;
+    min-width: 112px;
   }
 
-  /* Frame off (2026-09-13): the Bass slot keeps its own title and ink,
+  /* Frame off (2026-09-13): the Octave slot keeps its own title and ink,
      and the seam between it and the Guitar rack's macros is the
      `SectionDivider` beside it rather than a box around this one. Without
      the card's padding the fader runs the full height of the band. */
-  .bass-panel {
+  .octave-panel {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-sm);
@@ -454,7 +522,7 @@
   /* Title row: the two reorder arrows flank the label, which keeps the
      label centred in the column whether the arrows are drawn or not —
      the spans either side are equal and both `flex: 1 1 0`. */
-  .bass-head {
+  .octave-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -466,7 +534,7 @@
   /* The house eyebrow for a named group in a central view: 0.75rem,
      centred, the size Squash's and Drift's titles already were. It was
      0.625rem in rotated-label territory and read as fine print. */
-  .bass-title {
+  .octave-title {
     font-size: 0.75rem;
     letter-spacing: 0.05em;
     font-weight: 700;
@@ -475,22 +543,22 @@
     min-width: 0;
   }
 
-  .bass-move-btn {
+  .octave-move-btn {
     display: flex;
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
     padding: 2px;
   }
-  .bass-move-btn:disabled {
+  .octave-move-btn:disabled {
     cursor: default;
   }
   /* Status inks are tokens in every skin, the same pair
      `BaseDeviceControl` and the Arpeggiator view flash. */
-  .bass-move-btn.move-ok {
+  .octave-move-btn.move-ok {
     color: var(--act-play);
   }
-  .bass-move-btn.move-err {
+  .octave-move-btn.move-err {
     color: var(--act-rec);
   }
 
@@ -509,10 +577,38 @@
     font-weight: 600;
   }
 
-  .bass-fader {
+  .octave-body {
+    display: flex;
+    flex-direction: row;
+    gap: var(--central-gap);
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .octave-fader {
     flex: 1 1 0;
     min-width: 0;
     min-height: 0;
+  }
+
+  .pitch-stack {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+  }
+
+  /* The stack owns the pointer; the steps are its face. Keyboard focus
+     and Enter still activate one. */
+  .pitch-step {
+    pointer-events: none;
+    min-height: 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .is-ghost-tab {
+    opacity: var(--opacity-ghost);
   }
 
 
@@ -555,15 +651,16 @@
      .glass-panel-subtle / .physical-button, which already carry their own
      flat forks in app.css — nothing to re-add here. */
   /* One ink per device, as Auto Pan and the Drum Buss do: a lit button
-     takes its device's ink (Bass violet, Guitar orange) rather than the
+     takes its device's ink (Octave violet, Guitar orange) rather than the
      house --phosphor, which put a third colour in the view. */
-  :global([data-grammar="flat"]) .tone-btn.active {
+  :global([data-grammar="flat"]) .tone-btn.active,
+  :global([data-grammar="flat"]) .pitch-step.active {
     background: var(--btn-tint);
     border-color: var(--btn-tint);
     color: var(--flat-on-fg);
   }
 
-  :global([data-grammar="flat"]) .bass-title {
+  :global([data-grammar="flat"]) .octave-title {
     text-transform: none;
     letter-spacing: normal;
   }
