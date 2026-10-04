@@ -53,7 +53,7 @@ export const CHARACTER_DEVICE_KEYS: readonly string[] = ['guitar', 'bass', 'voca
 /** `DEVICE_PRESETS` key → glyph. Anything unlisted draws the generic mark. */
 export const DEVICE_GLYPHS: Readonly<Record<string, DeviceGlyph>> = {
 	guitar: 'guitar',
-	bass: 'guitar', // the Helix Native amp sim — an amp is a guitar's mark here
+	bass: 'guitar', // the Bass Amp rack — an amp is a guitar's mark here
 	vocal: 'mic',
 
 	filter: 'filter',

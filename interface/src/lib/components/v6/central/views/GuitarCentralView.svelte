@@ -57,33 +57,11 @@
   const fx = useFxGridSlot('guitar');
   const bass = useFxGridSlot('bass');
 
-  let bassValue = $derived(bass.paramValue(1) ?? 1.0);
-
-  // AMP — one button over three Helix params (2/3/4), which move together:
-  // there is no single "amp on" parameter on the plugin, so the button IS
-  // the abstraction. Reads param 2 as the group's state and defaults to ON,
-  // because that is how the Bass preset ships and a cold slot (no v3 value
-  // yet, or a ghost device) should show the sound you are about to get
-  // rather than an off state that was never written.
-  const AMP_PARAMS = [2, 3, 4];
-  let ampOn = $derived((bass.paramValue(AMP_PARAMS[0]) ?? 1) > 0.5);
-
-  function toggleAmp() {
-    armBassLoad();
-    const next = ampOn ? 0 : 1;
-    for (const index of AMP_PARAMS) bass.sendParam(index, next);
-  }
-
-  // +12 — the octave-up voice (param 5), a single param and OFF by default:
-  // unlike AMP it is an addition to the sound, so a cold slot should not
-  // claim it is already on.
-  const OCTAVE_UP_PARAM = 5;
-  let octaveUpOn = $derived((bass.paramValue(OCTAVE_UP_PARAM) ?? 0) > 0.5);
-
-  function toggleOctaveUp() {
-    armBassLoad();
-    bass.sendParam(OCTAVE_UP_PARAM, octaveUpOn ? 0 : 1);
-  }
+  // The Bass Amp rack shows one macro, the mix (param 1, 0..127) — the
+  // same control as the BassControl tile. The Helix Native's Amp and +12
+  // toggles went with it (2026-10-03).
+  const BASS_MIX_PARAM = 1;
+  let bassValue = $derived(bass.paramValue(BASS_MIX_PARAM) ?? MACRO_MIN);
 
   // ===== BASS CHAIN POSITION =====
   // A browser load lands at the END of the chain and the Bass belongs at
@@ -321,46 +299,26 @@
           </button>
         {/if}
       </div>
-      <div class="bass-body">
-        <div class="bass-fader">
-          <DeviceSlider
-            value={bassValue}
-            title="Oct mix"
-            orientation="vertical"
-            labelOrientation="horizontal"
-            labelSize="small"
-            isGhost={bass.isGhost}
-            color={bassInk}
-            min={0}
-            max={1}
-            onTap={() => {
-              armBassLoad();
-              bass.loadIfGhost();
-            }}
-            onInteraction={(val) => {
-              armBassLoad();
-              bass.sendParam(1, val);
-            }}
-          />
-        </div>
-        <div class="bass-buttons">
-          <button
-            class="physical-button bass-btn"
-            class:active={ampOn}
-            aria-pressed={ampOn}
-            onclick={toggleAmp}
-          >
-            Amp
-          </button>
-          <button
-            class="physical-button bass-btn"
-            class:active={octaveUpOn}
-            aria-pressed={octaveUpOn}
-            onclick={toggleOctaveUp}
-          >
-            +12
-          </button>
-        </div>
+      <div class="bass-fader">
+        <DeviceSlider
+          value={bassValue}
+          title="Mix"
+          orientation="vertical"
+          labelOrientation="horizontal"
+          labelSize="small"
+          isGhost={bass.isGhost}
+          color={bassInk}
+          min={MACRO_MIN}
+          max={MACRO_MAX}
+          onTap={() => {
+            armBassLoad();
+            bass.loadIfGhost();
+          }}
+          onInteraction={(val) => {
+            armBassLoad();
+            bass.sendParam(BASS_MIX_PARAM, val);
+          }}
+        />
       </div>
     </div>
   </div>
@@ -469,15 +427,13 @@
     min-width: 80px;
   }
 
-  /* Bass is a PANEL, not a bare fader: its two controls belong to a device
-     that is not the Guitar rack every other column reads from, so the frame
-     is what says "different device" before the label does. Sized like a
-     slider column (it holds one fader) plus the button's own band. */
+  /* Bass is a PANEL, not a bare fader: its fader belongs to a device that
+     is not the Guitar rack every other column reads from, so its own title
+     and ink say "different device". One fader wide since the Amp / +12
+     toggles left (2026-10-03), with room for the arrows beside the title. */
   .bass-slot {
-    /* Two columns wide — the fader and the button stack each get a full
-       slider column, so neither is squeezed into a half-width lane. */
-    flex: 2 1 0;
-    min-width: 112px;
+    flex: 1 1 0;
+    min-width: 72px;
   }
 
   /* Frame off (2026-09-13): the Bass slot keeps its own title and ink,
@@ -493,22 +449,7 @@
     min-height: 0;
   }
 
-  .bass-body {
-    display: flex;
-    flex-direction: row;
-    gap: var(--central-gap);
-    flex: 1 1 0;
-    min-height: 0;
-  }
 
-  .bass-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: var(--central-gap);
-    flex: 1 1 0;
-    min-width: 0;
-    min-height: 0;
-  }
 
   /* Title row: the two reorder arrows flank the label, which keeps the
      label centred in the column whether the arrows are drawn or not —
@@ -553,8 +494,7 @@
     color: var(--act-rec);
   }
 
-  /* Dirty over Clean, one slider column wide, splitting its height the way
-     the Bass panel's Amp / +12 pair does. */
+  /* Dirty over Clean, one slider column wide, its height split evenly. */
   .tone-slot {
     flex: 1 1 0;
     min-width: 56px;
@@ -575,15 +515,6 @@
     min-height: 0;
   }
 
-  /* The two toggles split the button column evenly rather than sitting at a
-     fixed touch height: the view is a full central section, so an even split
-     is always well above the 44px floor and reads as one pair. */
-  .bass-btn {
-    flex: 1 1 0;
-    min-height: 0;
-    font-size: 0.8125rem;
-    font-weight: 600;
-  }
 
 
   .is-ghost {
@@ -626,7 +557,6 @@
   /* One ink per device, as Auto Pan and the Drum Buss do: a lit button
      takes its device's ink (Bass violet, Guitar orange) rather than the
      house --phosphor, which put a third colour in the view. */
-  :global([data-grammar="flat"]) .bass-btn.active,
   :global([data-grammar="flat"]) .tone-btn.active {
     background: var(--btn-tint);
     border-color: var(--btn-tint);

@@ -387,11 +387,15 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     color: familyScheme('distortion')
   },
   bass: {
-    // Same as Guitar: a plug-in preset, through the browser and into the chain (2026-09-11).
+    // Same as Guitar: a rack, through the browser and into the chain. It was
+    // a Helix Native preset until 2026-10-03; the rack (Octave Pedal → Glue
+    // Compressor → TONE3000) shows one macro, the mix, which is all the
+    // tile and the Guitar view's Bass panel drive. Live names it after the
+    // .adg, which is how the slot re-finds it.
     padScoped: true,
-    presetPath: '{effectPresetsBase}/audio-browser/Bass.aupreset',
-    defaultName: 'Helix Native',
-    expectedClassName: 'AuPluginDevice',
+    presetPath: '{effectPresetsBase}/Bass Amp.adg',
+    defaultName: 'Bass Amp',
+    expectedClassName: 'AudioEffectGroupDevice',
     // Violet, not the Guitar's orange (2026-10-01): it shares the Guitar
     // view, and its own ink is what tells its controls apart there.
     color: familyScheme('pitchSeq')

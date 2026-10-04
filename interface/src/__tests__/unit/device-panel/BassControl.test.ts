@@ -67,8 +67,8 @@ function audioTrack(): TrackRecord {
 	};
 }
 
-/** The Helix Native the `bass` slot matches on: className + name. */
-function helix(): DeviceRecord {
+/** The Bass Amp rack the `bass` slot matches on: className + name. */
+function bassAmp(): DeviceRecord {
 	return {
 		devicePath: BASS_PATH,
 		name: DEVICE_PRESETS.bass.defaultName,
@@ -81,7 +81,7 @@ function helix(): DeviceRecord {
 /** Land a Bass device on the track, the way a load's `state/full` would. */
 function bassArrives(): void {
 	const track = audioTrack();
-	track.devices.set(BASS_PATH, helix());
+	track.devices.set(BASS_PATH, bassAmp());
 	replaceTree(4, [track]);
 }
 
@@ -273,7 +273,7 @@ describe('BassControl', () => {
 		await tick();
 		expect(loads()).toHaveLength(0);
 		expect(moves()).toHaveLength(0);
-		// The drag writes the octave mix straight at the device it found.
+		// The drag writes the mix straight at the device it found.
 		const writes = sendMock.mock.calls.filter(([addr]) => addr === '/looping/v3/param/set');
 		expect(writes.length).toBeGreaterThan(0);
 		expect((writes[0][1] as unknown[])[0]).toBe(`${BASS_PATH}/params/1`);

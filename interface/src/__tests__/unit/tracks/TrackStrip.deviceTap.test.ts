@@ -110,7 +110,7 @@ describe('TrackStrip — a tap on the device band opens the chain head\'s view',
 			track('audio', [
 				device(`${TRACK}/devices/0`, 'Auto Filter', 'AutoFilter2'),
 				device(`${TRACK}/devices/1`, 'Echo', 'Echo'),
-				device(`${TRACK}/devices/2`, 'Helix Native', 'AuPluginDevice')
+				device(`${TRACK}/devices/2`, 'Bass Amp', 'AudioEffectGroupDevice')
 			])
 		]);
 		const { container } = render(TrackStrip, { props: { trackIndex: TRACK_INDEX } });

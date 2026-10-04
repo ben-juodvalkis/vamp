@@ -126,7 +126,7 @@ describe('fxGridStore.loadDevice — guitar/bass rename guard', () => {
 
 		await fxGrid.loadDevice('bass');
 
-		// Bass is the Helix Native plugin (defaultName "Helix Native"), so
+		// Bass is the Bass Amp rack (defaultName "Bass Amp"), so
 		// the rename uses the literal "Bass" rather than config.defaultName.
 		expect(setTrackNameMock).toHaveBeenCalledTimes(1);
 		expect(setTrackNameMock).toHaveBeenCalledWith('tracks/0', 'Bass');

@@ -134,7 +134,7 @@ describe('trackDeviceGlance', () => {
 			track('tracks/1', 'audio', [
 				device('tracks/1/devices/0', 'Auto Filter', 'AutoFilter2'),
 				device('tracks/1/devices/1', 'Delay', 'Delay'),
-				device('tracks/1/devices/2', 'Helix Native', 'AuPluginDevice')
+				device('tracks/1/devices/2', 'Bass Amp', 'AudioEffectGroupDevice')
 			])
 		]);
 
@@ -167,19 +167,18 @@ describe('trackDeviceGlance', () => {
 	});
 
 	it('opens the Guitar view for a Bass at the chain head', () => {
-		// The example above used to be the Helix Native, back when `bass`
-		// had no registry entry. It gained one with the Bass tile in the
-		// audio track's fx1 column (2026-09-14), so a bass track's device
-		// band now opens the view carrying the Amp and +12 toggles instead
-		// of falling back to the clip view.
+		// `bass` gained a registry entry with the Bass tile in the audio
+		// track's fx1 column (2026-09-14), so a bass track's device band
+		// opens the view carrying the Bass mix fader instead of falling
+		// back to the clip view.
 		replaceTree(1, [
-			track('tracks/1', 'audio', [device('tracks/1/devices/0', 'Helix Native', 'AuPluginDevice')])
+			track('tracks/1', 'audio', [device('tracks/1/devices/0', 'Bass Amp', 'AudioEffectGroupDevice')])
 		]);
 
 		const glance = trackDeviceGlance('tracks/1');
 
 		expect(glance.kind).toBe('device');
-		expect(glance.name).toBe('Helix Native');
+		expect(glance.name).toBe('Bass Amp');
 		expect(glance.deviceViewType).toBe('bass');
 	});
 
@@ -459,7 +458,7 @@ describe('trackDeviceGlance', () => {
 
 		it('never gives an audio track a category mark', () => {
 			replaceTree(1, [
-				track('tracks/1', 'audio', [device('tracks/1/devices/0', 'Helix Native', 'AuPluginDevice')], {
+				track('tracks/1', 'audio', [device('tracks/1/devices/0', 'Bass Amp', 'AudioEffectGroupDevice')], {
 					role: 'key'
 				})
 			]);

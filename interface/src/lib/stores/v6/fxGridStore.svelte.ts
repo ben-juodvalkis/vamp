@@ -502,7 +502,7 @@ export class FXGridState {
 		// TrackMetadataComponent. Only regular-track paths are writable;
 		// master is `path-not-supported` on the Python side and we skip
 		// the send so the wire stays clean.
-		// Bass uses the Helix Native plugin (defaultName), so we label
+		// The Bass rack's name is "Bass Amp" (defaultName), so we label
 		// the track "Bass" directly instead of reusing config.defaultName.
 		// Only audio tracks are renamed — adding a guitar/bass effect to a
 		// MIDI track (e.g. a Mic track) leaves its existing name intact.
