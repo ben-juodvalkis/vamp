@@ -1,14 +1,15 @@
 <script lang="ts">
   /**
    * DrumCellControlsRow — the `full` profile's row: a DrumCell kit's FX
-   * pad (with the FX-type button at its foot), the Time pad, Start, and
-   * Trnsp while the FX grid is switched off (ADR-428; split out of the
-   * Drum Rack view on 2026-09-10, issue #491 E0).
+   * pad (titled with the current FX type) over a 3x3 of the nine types,
+   * the Time pad over the view's Filter pad, Start and Trnsp (ADR-428;
+   * split out of the Drum Rack view on 2026-09-10, issue #491 E0;
+   * columns stacked 2026-10-04).
    *
    * A dumb row, the shape `SimplerControlsRow` and `SamplerControlsRow`
    * already have: it takes values, states and badges and reports a write;
    * the parent decides what a write means (the kit, or the held pads) and
-   * owns the FX-type picker, which dims the WHOLE view when open.
+   * hands in its Filter pad as a snippet.
    *
    * One ruler for the whole row (2026-09-12, user's call: "each XY should
    * be equal width and the sliders be half width of the XY"). The row's
@@ -23,7 +24,7 @@
   import DeviceXY from '../../../device-panel/DeviceXY.svelte';
   import DeviceSlider from '../../../device-panel/DeviceSlider.svelte';
   import VmSlot from './VmSlot.svelte';
-  import Lock from '@lucide/svelte/icons/lock';
+  import type { Snippet } from 'svelte';
   import {
     VM_PITCH_MIN,
     VM_PITCH_MAX,
@@ -46,12 +47,11 @@
     /** Per slot: the "held by macro" text, or nothing. */
     badges?: Partial<Record<DrumCellRowSlot, string | null>>;
     color: DeviceColorScheme;
-    /** The FX type names, in index order — the button shows the current one. */
+    /** The FX type names, in index order — one button each. */
     fxTypes: readonly string[];
     onWrite: (control: DrumCellRowControl, value: number) => void;
-    /** A tap on the FX-type button; the parent opens its picker. */
-    onOpenFxPicker: () => void;
-    fxPickerOpen?: boolean;
+    /** The view's Filter pad, drawn under the Time pad. */
+    filter?: Snippet;
   }
 
   let {
@@ -61,8 +61,7 @@
     color,
     fxTypes,
     onWrite,
-    onOpenFxPicker,
-    fxPickerOpen = false
+    filter
   }: Props = $props();
 
   function t(control: DrumCellRowControl, atRest: number): number {
@@ -86,69 +85,70 @@
 </script>
 
 <div class="flex-1 flex gap-(--central-gap) min-h-0 vm-full-row">
-  <!-- FX XY pad. SWAPPED on purpose: X is FX2 (character), Y is FX1 (amount). -->
-  <VmSlot state={fxState} class="vm-slot-fx min-w-0 h-full" badge={badges.fx}>
-    <DeviceXY
-      xValue={t('fx2', 0.5)}
-      yValue={t('fx1', 0.5)}
-      title="FX"
-      onInteraction={(x, y) => {
-        write('fx2', x);
-        write('fx1', y);
-      }}
-      {color}
-      isGhost={fxState === 'none'}
-    />
-    <!-- The current FX type, and the way to change it. Sits over the
-         pad's bottom-left corner; the pad's own drag never starts there
-         because the button takes the pointer (`stopPropagation` on the
-         down). A `use:press`, not an `onclick`: this row is worked with a
-         pad held under another finger, the multi-pointer case ADR-427
-         exists for. -->
-    <button
-      type="button"
-      class="fx-type-button physical-button"
-      class:fx-type-none={fxTypeState === 'none'}
-      class:fx-type-held={fxTypeState === 'held'}
-      style="--btn-tint: {color.primary};"
-      aria-label="FX type: {fxTypes[selectedFxType] ?? 'FX'}"
-      aria-haspopup="dialog"
-      aria-expanded={fxPickerOpen}
-      aria-disabled={!vmStateAcceptsWrites(fxTypeState)}
-      data-vm-state={fxTypeState}
-      use:press={{
-        onPress: () => {
-          if (vmStateAcceptsWrites(fxTypeState)) onOpenFxPicker();
-        },
-        stopPropagation: true,
-        touchAction: 'none'
-      }}
-    >
-      {fxTypes[selectedFxType] ?? 'FX'}
-    </button>
-    {#if badges.fxType}
-      <span class="fx-type-badge">
-        <span class="vm-held-badge" aria-label="held by macro">
-          <Lock size={9} strokeWidth={2.5} aria-hidden="true" />{badges.fxType}
-        </span>
-      </span>
-    {/if}
-  </VmSlot>
+  <!-- The FX column: the FX pad over its nine types as a 3x3 of buttons
+       (user, 2026-10-04), each half the column, so the type grid sits
+       level with the Filter pad beside it. -->
+  <div class="vm-full-col vm-full-col-fx">
+    <!-- FX XY pad. SWAPPED on purpose: X is FX2 (character), Y is FX1 (amount). -->
+    <VmSlot state={fxState} class="vm-slot-fx min-w-0" badge={badges.fx}>
+      <DeviceXY
+        xValue={t('fx2', 0.5)}
+        yValue={t('fx1', 0.5)}
+        title={fxTypes[selectedFxType] ?? 'FX'}
+        onInteraction={(x, y) => {
+          write('fx2', x);
+          write('fx1', y);
+        }}
+        {color}
+        isGhost={fxState === 'none'}
+      />
+    </VmSlot>
 
-  <!-- Time XY pad: attack across, decay up. -->
-  <VmSlot state={timeState} class="vm-slot-time min-w-0 h-full" badge={badges.time}>
-    <DeviceXY
-      xValue={t('attack', 0.5)}
-      yValue={t('decay', 0.5)}
-      title="Time"
-      onInteraction={(x, y) => {
-        write('attack', x);
-        write('decay', y);
-      }}
-      {color}
-      isGhost={timeState === 'none'}
-    />
-  </VmSlot>
+    <!-- The FX type, one button per effect — the Drift waveform grid's
+         buttons. A `use:press` each, not an `onclick`: this row is worked
+         with a pad held under another finger, the multi-pointer case
+         ADR-427 exists for. A choice writes through the scope rule, so
+         with a pad held it is that pad's type. -->
+    <VmSlot state={fxTypeState} class="vm-slot-fx-type min-w-0" fn="fxType" badge={badges.fxType}>
+      <div class="fx-type-grid" role="group" aria-label="FX type">
+        {#each fxTypes as fxTypeName, index}
+          <button
+            type="button"
+            class="physical-button fx-type-option"
+            class:active={selectedFxType === index}
+            style="--btn-tint: {color.primary};"
+            aria-pressed={selectedFxType === index}
+            use:press={{ onPress: () => write('fxType', index), touchAction: 'none' }}
+          >
+            {fxTypeName}
+          </button>
+        {/each}
+      </div>
+    </VmSlot>
+  </div>
+
+  <!-- The Time column: the Time pad (attack across, decay up) over the
+       view's Filter pad (user, 2026-10-04). -->
+  <div class="vm-full-col vm-full-col-time">
+    <VmSlot state={timeState} class="vm-slot-time min-w-0" badge={badges.time}>
+      <DeviceXY
+        xValue={t('attack', 0.5)}
+        yValue={t('decay', 0.5)}
+        title="Time"
+        onInteraction={(x, y) => {
+          write('attack', x);
+          write('decay', y);
+        }}
+        {color}
+        isGhost={timeState === 'none'}
+      />
+    </VmSlot>
+    {#if filter}
+      <div class="vm-full-filter">
+        {@render filter()}
+      </div>
+    {/if}
+  </div>
 
   <!-- Start and Trnsp: slider-width slots. -->
   <div class="flex gap-(--central-gap) h-full vm-full-sliders">
@@ -188,22 +188,40 @@
 
 <style>
   /* ---- The full (DrumCell) row lays out on the VIEW's grid, not its own:
-     both wrappers are `display: contents`, so every pad and slider here is
-     a cell beside the view's pads, Filter pad and Gain slider. This row
-     only NAMES its cells; the view's template places them and sizes them —
-     a pad 2fr, a slider 1fr (2026-09-12) — pads · Gain · Trnsp · Start
-     under the swap pill, then FX · Time · Filter (user, 2026-09-16). */
+     both wrappers are `display: contents`, so the two columns and the
+     sliders here are cells beside the view's pads and Gain slider. This row
+     only NAMES its cells; the view's template places and sizes them —
+     pads · Gain · Trnsp · Start under the swap pill, then the FX column
+     (FX pad over the type grid) and the Time column (Time pad over Filter)
+     (user, 2026-10-04). Each column is two equal halves, so the type grid
+     and the Filter pad sit level. */
   .vm-full-row {
     display: contents;
   }
-  .vm-full-row > :global(.vm-slot) {
+  .vm-full-col {
+    display: flex;
+    flex-direction: column;
+    gap: var(--central-gap);
+    min-width: 0;
+    min-height: 0;
+  }
+  .vm-full-col > :global(*) {
+    flex: 1 1 0;
+    min-height: 0;
     min-width: 0;
   }
-  .vm-full-row > :global(.vm-slot-fx) {
+  .vm-full-col-fx {
     grid-area: fx;
   }
-  .vm-full-row > :global(.vm-slot-time) {
+  .vm-full-col-time {
     grid-area: time;
+  }
+  .vm-full-filter {
+    display: flex;
+  }
+  .vm-full-filter > :global(.vm-slot) {
+    flex: 1 1 0;
+    min-width: 0;
   }
   .vm-full-sliders {
     display: contents;
@@ -218,50 +236,42 @@
     grid-area: trnsp;
   }
 
-  /* ---- FX type: one round button at the foot of the FX pad (layout
-     pass, 2026-09-08). The button wears the pad's ink; `none` ghosts it,
-     `held` keeps it readable but inert. */
-  .fx-type-button {
-    position: absolute;
-    left: 10px;
-    bottom: 10px;
-    z-index: 2;
-    width: 58px;
-    height: 58px;
-    padding: 0 4px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: var(--font-weight-medium);
-    letter-spacing: 0.02em;
-    line-height: 1.1;
-    overflow: hidden;
+  /* ---- FX type: nine buttons, 3x3, filling the slot. */
+  .fx-type-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    gap: var(--spacing-sm, 6px);
+    height: 100%;
+    min-height: 0;
+  }
+  .fx-type-option {
     display: flex;
     align-items: center;
     justify-content: center;
-    text-align: center;
-    pointer-events: auto;
+    padding: 2px;
+    min-width: 0;
+    min-height: 0;
+    font-size: 0.8125rem;
+    line-height: 1.1;
+    overflow: hidden;
   }
-  .fx-type-button.fx-type-none {
-    opacity: var(--opacity-ghost);
-    pointer-events: none;
-  }
-  .fx-type-button.fx-type-held {
-    pointer-events: none;
-  }
-  .fx-type-badge {
-    position: absolute;
-    left: 6px;
-    bottom: 72px;
-  }
-  /* ---- Live skin (flat grammar): the FX-type button wears the focused
-     track's ink (ADR-402) as label and, when active, solid fill — never
-     the GRATICULE wash/glow. Tailwind `font-semibold` comes down to medium;
-     Live never bolds a pad. */
+  /* ---- Live skin (flat grammar): the FX-type buttons wear the focused
+     track's ink (ADR-402) as label and, when active, solid fill with Live's
+     ClipText — never the GRATICULE wash/glow. Live never bolds a pad. */
   :global([data-grammar="flat"]) .physical-button {
     font-weight: var(--font-weight-medium);
     color: var(--btn-tint, var(--foreground));
   }
+  :global([data-grammar="flat"]) .physical-button.active {
+    background: var(--btn-tint, var(--phosphor));
+    border-color: var(--btn-tint, var(--phosphor));
+    color: var(--flat-clip-text);
+  }
   :global(.light[data-grammar="flat"]) .physical-button:not(.active) {
     color: color-mix(in oklab, var(--btn-tint, var(--foreground)) 55%, var(--foreground));
+  }
+  :global(.light[data-grammar="flat"]) .physical-button.active {
+    border-color: var(--line-strong);
   }
 </style>

@@ -272,7 +272,7 @@ describe('DrumRackCentralView — mode from the census', () => {
 		await tick();
 		const root = container.querySelector('[data-vm-mode]');
 		expect(root?.getAttribute('data-vm-mode')).toBe('full');
-		expect(container.querySelectorAll('.vm-slot')).toHaveLength(6); // FX, Time, Start, Trnsp, Filter, Gain
+		expect(container.querySelectorAll('.vm-slot')).toHaveLength(7); // FX, FX type, Time, Filter, Start, Trnsp, Gain
 		for (const slot of Array.from(container.querySelectorAll('.vm-slot'))) {
 			expect(slot.getAttribute('data-vm-state')).toBe('unknown');
 			expect(slot.classList.contains('vm-none')).toBe(false);
@@ -292,7 +292,7 @@ describe('DrumRackCentralView — mode from the census', () => {
 
 		await setCensus(DRUMCELL);
 		expect(container.querySelector('[data-vm-mode]')?.getAttribute('data-vm-mode')).toBe('full');
-		expect(container.querySelectorAll('.vm-slot')).toHaveLength(6);
+		expect(container.querySelectorAll('.vm-slot')).toHaveLength(7);
 	});
 
 	it('shows a slider for each mapped macro of the rack and nothing else, whatever the macro is named', async () => {
@@ -410,13 +410,13 @@ describe('DrumRackCentralView — control states on the Jazz kit', () => {
 		const { container } = render(DrumRackCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
 
-		expect(container.querySelector('.fx-type-button')?.getAttribute('data-vm-state')).toBe('none'); // the FX-type button
+		expect(container.querySelector('[data-vm-function="fxType"]')?.getAttribute('data-vm-state')).toBe('none'); // the FX-type grid
 		expect(stateOf(container, 'Time')).toBe('live');
 		expect(stateOf(container, 'Start')).toBe('live');
 		expect(stateOf(container, 'Trnsp')).toBe('held');
 
 		const none = Array.from(container.querySelectorAll('.vm-slot.vm-none'));
-		expect(none).toHaveLength(2); // the FX XY and Filter; the type button ghosts itself, and this census binds gain
+		expect(none).toHaveLength(3); // the FX XY, its type grid and Filter; this census binds gain
 		const held = Array.from(container.querySelectorAll('.vm-slot.vm-held'));
 		expect(held).toHaveLength(1);
 		expect(held[0].textContent).toContain('Trnsp');
@@ -502,40 +502,25 @@ describe('DrumRackCentralView — writes follow the states', () => {
 			.map(([, args]) => args);
 	}
 
-	it('the FX type is one round button naming the current type; its picker writes vm.fxType and closes; a kit without the function ghosts it', async () => {
+	it('the FX type is a 3x3 of the nine types under the FX pad, which takes the chosen name; a press writes vm.fxType; a kit without the function ghosts it', async () => {
 		seed({ 'vm.members': DRUMCELL, 'vm.fxType': 0 });
 		const { container } = render(DrumRackCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
-		const button = container.querySelector<HTMLButtonElement>('.fx-type-button')!;
-		expect(button.textContent?.trim()).toBe('Stretch');
-		expect(container.querySelector('.fx-type-picker')).toBeNull();
-		expect(container.querySelectorAll('.vm-controls .physical-button')).toHaveLength(1); // no 3×3 grid in the row
-		tap(button);
-		await tick();
-		const picker = container.querySelector('.fx-type-picker')!;
-		expect(picker).not.toBeNull();
-		const options = Array.from(picker.querySelectorAll<HTMLButtonElement>('.fx-type-option'));
+		const options = Array.from(container.querySelectorAll<HTMLButtonElement>('.fx-type-option'));
 		expect(options.map((o) => o.textContent?.trim())).toEqual(['Stretch', 'Loop', 'Pitch', 'Punch', '8-Bit', 'FM', 'Ring', 'Sub', 'Noise']);
+		expect(options.map((o) => o.getAttribute('aria-pressed'))).toEqual(['true', ...Array(8).fill('false')]);
+		expect(container.querySelector('.vm-slot-fx')?.textContent).toContain('Stretch'); // the pad is titled with the type
 		tap(options[3]);
 		await tick();
 		expect(propertySets()).toEqual([[DEVICE, 'vm.fxType', 3, GENERATION]]);
-		expect(container.querySelector('.fx-type-picker')).toBeNull(); // a choice closes it
-		expect(button.textContent?.trim()).toBe('Punch'); // the optimistic write shows at once
-		// The scrim closes it without a write.
-		tap(button);
-		await tick();
-		tap(container.querySelector('.fx-type-scrim')); // the press-catcher behind the grid
-		await tick();
-		expect(container.querySelector('.fx-type-picker')).toBeNull();
-		expect(propertySets()).toHaveLength(1);
+		expect(options[3].getAttribute('aria-pressed')).toBe('true'); // the optimistic write shows at once
+		expect(container.querySelector('.vm-slot-fx')?.textContent).toContain('Punch');
 
 		await setCensus(CELL_MIXED_STATES);
-		expect(button.getAttribute('aria-disabled')).toBe('true');
-		expect(button.classList.contains('fx-type-none')).toBe(true);
-		tap(button);
+		expect(container.querySelector('[data-vm-function="fxType"]')?.getAttribute('data-vm-state')).toBe('none');
+		tap(options[5]);
 		await tick();
-		expect(container.querySelector('.fx-type-picker')).toBeNull(); // no member: nothing to pick
-		expect(propertySets()).toHaveLength(1);
+		expect(propertySets()).toHaveLength(1); // no member: nothing to write
 	});
 });
 
@@ -956,8 +941,8 @@ describe('DrumRackCentralView — the pad grid and hold-to-scope', () => {
 		expect(tile(container, 36).style.getPropertyValue('--pad-fg')).toBe('#141414');
 		expect(tile(container, 38).classList.contains('pad-colored')).toBe(false);
 		expect(tile(container, 38).style.getPropertyValue('--pad-fill')).toBe('');
-		// The controls are still there, beside the grid.
-		expect(container.querySelectorAll('.vm-controls .vm-slot')).toHaveLength(4);
+		// The controls are still there, beside the grid (Filter stacked under Time).
+		expect(container.querySelectorAll('.vm-controls .vm-slot')).toHaveLength(6);
 	});
 
 	it('starts a second column at the fifth pad, four down the first, lowest at the foot', async () => {
@@ -1136,8 +1121,6 @@ describe('DrumRackCentralView — the pad grid and hold-to-scope', () => {
 		padPointer(tile(container, 42), 'pointerdown', 4);
 		await tick();
 		sendMock.mockClear();
-		tap(container.querySelector('.fx-type-button'));
-		await tick();
 		const punch = Array.from(container.querySelectorAll<HTMLButtonElement>('.fx-type-option')).find((b) => b.textContent?.trim() === 'Punch')!;
 		tap(punch);
 		expect(sets()).toEqual([[DEVICE, 'vm.pad.42.fxType', 3, GENERATION]]);
@@ -1559,12 +1542,12 @@ describe('DrumRackCentralView — Trnsp whether or not the FX grid is on', () =>
 		const { container } = render(DrumRackCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
 		expect(container.querySelector('[data-vm-mode]')?.getAttribute('data-vm-mode')).toBe('full');
-		expect(container.querySelectorAll('.vm-controls .vm-slot')).toHaveLength(4);
+		expect(container.querySelectorAll('.vm-controls .vm-slot')).toHaveLength(6);
 		expect(slider(container, 'Trnsp').getAttribute('aria-valuenow')).toBe('-7');
 		expect(container.querySelector('[role="slider"][aria-label^="Start"]')).not.toBeNull();
 		uiPrefsStore.showFxGrid = false;
 		await tick();
-		expect(container.querySelectorAll('.vm-controls .vm-slot')).toHaveLength(4);
+		expect(container.querySelectorAll('.vm-controls .vm-slot')).toHaveLength(6);
 		expect(slider(container, 'Trnsp').getAttribute('aria-valuenow')).toBe('-7');
 	});
 });

@@ -28,7 +28,6 @@
   import { familyScheme, schemeFromInk } from '$lib/config/devicePresets';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
-  import { press } from '$lib/actions';
   import {
     VM,
     VM_PITCH_MIN,
@@ -317,20 +316,6 @@
   let gainState = $derived(vm.state('gain'));
   let pitchState = $derived(vm.state('pitch'));
 
-  // The FX-type picker: the nine DrumCell effects, over this view only
-  // (the launch-quantization picker's idiom: absolute inside this view's
-  // own box, so it dims this section only). Choosing closes it, and the
-  // write goes through the scope rule — so with a pad held it is that
-  // pad's type that changes.
-  let fxPickerOpen = $state(false);
-  let selectedFxType = $derived(Math.max(0, Math.min(FX_TYPES.length - 1, Math.round(vm.value('fxType') ?? 0))));
-  function chooseFxType(typeIndex: number) {
-    vm.write('fxType', typeIndex);
-    fxPickerOpen = false;
-  }
-  function onPickerKey(e: KeyboardEvent) {
-    if (e.key === 'Escape') fxPickerOpen = false;
-  }
 </script>
 
 {#snippet filterSlot()}
@@ -404,7 +389,6 @@
   data-vm-mode={instrument ? profile : undefined}
   data-vm-scope={scopeNote ?? undefined}
   data-vm-pane={paneType ?? undefined}
-  data-fx-picker={fxPickerOpen ? 'open' : undefined}
 >
   {#if instrument}
   <div
@@ -533,8 +517,8 @@
         </div>
       </div>
     {:else}
-      <!-- DrumCell kits: FX pad (with the type button at its foot), Time
-           pad, Start and Trnsp. -->
+      <!-- DrumCell kits: FX pad over the FX-type grid, Time pad over
+           Filter, Start and Trnsp. -->
       <DrumCellControlsRow
         values={cellValues}
         states={cellStates}
@@ -542,13 +526,13 @@
         color={controlInk}
         fxTypes={FX_TYPES}
         onWrite={(control, value) => vm.write(control, value)}
-        onOpenFxPicker={() => (fxPickerOpen = true)}
-        {fxPickerOpen}
+        filter={filterSlot}
       />
     {/if}
     </div>
-    <!-- The Filter pad closes the row (see Gain above). -->
-    {#if scopedProfile !== 'macro-grid'}
+    <!-- The Filter pad closes the row (see Gain above); a DrumCell kit
+         stacks it under its Time pad instead. -->
+    {#if scopedProfile !== 'macro-grid' && scopedProfile !== 'full'}
       {#if scopedProfile === 'rack-macros'}
         <!-- A nested-rack kit's controls are the macros its author named;
              Filter is a function every kit gets. Same ink, same size — only
@@ -561,39 +545,6 @@
     {/if}
     {/if}
   </div>
-  {#if fxPickerOpen}
-    <!-- The FX-type picker: the nine DrumCell effects, over this view
-         only. A tap on the scrim, Escape, or a choice closes it. Every
-         press is a `use:press` (ADR-427): the picker is opened with a pad
-         held under another finger, and a second finger's `click` is not
-         something iOS promises. The scrim is a SIBLING behind the grid,
-         not the grid's parent, so a press on an option (or in the gaps
-         between them) never reaches it — the `stopPropagation` the old
-         `onclick` pair needed is the DOM shape now. -->
-    <div
-      class="fx-type-picker"
-      role="dialog"
-      aria-label="Choose FX type"
-      tabindex="-1"
-      onkeydown={onPickerKey}
-    >
-      <div class="fx-type-scrim" use:press={{ onPress: () => (fxPickerOpen = false), touchAction: 'none' }}></div>
-      <div class="fx-type-picker-grid">
-        {#each FX_TYPES as fxTypeName, index}
-          <button
-            type="button"
-            class="physical-button fx-type-option text-lg font-semibold"
-            class:active={selectedFxType === index}
-            style="--btn-tint: {controlInk.primary};"
-            aria-pressed={selectedFxType === index}
-            use:press={{ onPress: () => chooseFxType(index), touchAction: 'none' }}
-          >
-            {fxTypeName}
-          </button>
-        {/each}
-      </div>
-    </div>
-  {/if}
   {:else}
     <!-- Default state when no drum rack is present -->
     <DeviceEmptyState glyph="🥁" message="Load a Drum Rack to access controls" color={controlInk.primary} />
@@ -719,20 +670,22 @@
     grid-area: gain;
     width: auto;
   }
-  /* DrumCell: pads · Gain · Trnsp · Start under the pill, then FX · Time ·
-     Filter — Trnsp and Start moved left of the FX pad beside Gain (user,
-     2026-09-16; they closed the row since 2026-09-12). */
+  /* DrumCell: pads · Gain · Trnsp · Start under the pill, then two
+     columns — FX over its type grid, Time over Filter (user, 2026-10-04).
+     The two columns split the three pads' 6fr, so Gain, Trnsp and Start
+     stay on the other kits' pixels. */
   .vm-lead-grid[data-vm-lead='full'] {
+    grid-template-columns: auto repeat(3, minmax(0, 1fr)) repeat(2, minmax(0, 3fr));
     grid-template-areas:
-      'pill pill  pill  pill  fx time filter'
-      'pads gain  trnsp start fx time filter';
+      'pill pill  pill  pill  fx time'
+      'pads gain  trnsp start fx time';
   }
   /* UNREACHABLE since 2026-09-26 (showDrumPads is pinned on). */
   .vm-lead-grid[data-vm-lead='full']:not(.vm-lead-pads) {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) repeat(3, minmax(0, 2fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr)) repeat(2, minmax(0, 3fr));
     grid-template-areas:
-      'pill pill  pill  fx time filter'
-      'gain trnsp start fx time filter';
+      'pill pill  pill  fx time'
+      'gain trnsp start fx time';
   }
   /* Sampler (the Abbey Road kits): the DrumCell's cells, one for one — Spread
      where Start is, Osc over Pitch where FX is, the Amp Envelope's A and R
@@ -756,40 +709,6 @@
   }
   .vm-lead-grid[data-vm-lead='simpler'] :global(.simpler-row) {
     display: contents;
-  }
-
-  /* ---- The FX-type picker: absolute inside this view's box — it dims
-     this section only. */
-  .fx-type-picker {
-    position: absolute;
-    inset: 0;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--scrim, oklch(0 0 0 / 0.6));
-  }
-  /* The press-catcher behind the grid: the dialog's whole box, under the
-     grid in stacking order, so a press anywhere off the grid closes. */
-  .fx-type-scrim {
-    position: absolute;
-    inset: 0;
-  }
-  .fx-type-picker-grid {
-    position: relative;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-rows: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    width: min(60%, 420px);
-    aspect-ratio: 3 / 2;
-    padding: 8px;
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-sm);
-    background: var(--card);
-  }
-  .fx-type-option {
-    min-height: 44px;
   }
 
   /* ---- Kit card (pitch-only profile) --------------------------------
@@ -827,7 +746,7 @@
   }
 
   /* ---- Live skin (flat grammar) ------------------------------------
-     The picker's pads wear the focused track's ink (ADR-402) and keep it
+     The FX-type buttons wear the focused track's ink (ADR-402) and keep it
      under the flat grammar — as label and solid fill, never as the
      GRATICULE wash/glow: an unselected pad is a control field (1px dark
      frame, from the shared .physical-button flat base in app.css) with
