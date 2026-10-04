@@ -407,7 +407,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     // It took the Bass panel's place there when the Bass tile moved to the
     // Bass Amp rack. No tile of its own: the view is its only control.
     padScoped: true,
-    presetPath: '{effectPresetsBase}/audio-browser/Octave.aupreset',
+    presetPath: '{effectPresetsBase}/Octave.aupreset',
     defaultName: 'Helix Native',
     expectedClassName: 'AuPluginDevice',
     gridSlot: false,                    // Virtual device
