@@ -326,14 +326,18 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     color: familyScheme('distortion')
   },
   comb: {
-    // In Vamp Devices since 2026-10-03, like Digital. A u-he Zebrify preset:
-    // without the plug-in Live loads a placeholder.
+    // Comb ships in the repo beside Blur and loads the same way, through the
+    // "Vamp Devices" Place. It is a Max rebuild of the owner's Zebrify
+    // "Dissonant" comb patch (four cross-fed delays with a level limiter),
+    // and took this slot from that plug-in preset (2026-10-05), so the tile
+    // no longer needs a plug-in. The name is load-bearing: Blur, Permute and
+    // Pitch Hack are MxDeviceAudioEffect too.
     padScoped: true,
     presetPath: '',
     source: 'place:Vamp Devices',
-    rel: 'Comb/Comb.aupreset',
-    defaultName: 'Zebrify',
-    expectedClassName: 'AuPluginDevice',
+    rel: 'Comb/Comb.amxd',
+    defaultName: 'Comb',
+    expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
     centralViewGroup: 'smudge',         // Belongs to SmudgeCentralView
     color: familyScheme('modulation')

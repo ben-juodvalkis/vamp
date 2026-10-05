@@ -4,7 +4,7 @@
 	 *
 	 * Self-contained central view that queries its own slot state.
 	 * Renders immediately with ghost/loading/active states.
-	 * Displays Blur, Comb, Comb LFO, Phaser and Pitch Hack controls.
+	 * Displays Blur, Comb, Phaser and Pitch Hack controls.
 	 *
 	 * Contains virtual devices (smudge, comb, phaser, pitchHack) which have
 	 * their own ghost states.
@@ -45,28 +45,13 @@
 		accent: trackInk(pitchHack.color.accent, paintModeReactive())
 	});
 
-	// Initial UI state before the first param echo lands. This was a lookup
-	// into data/device-configs.json with 0.5 as the `?? fallback` — but that
-	// file's AuPluginDevice:Zebrify entry only carries params 1-3, so param 4
-	// missed and the fallback was the only value it ever produced.
-	const lfoParam1Default = 0.5;
-	const lfoParam2Default = 0.5;
-
-	let lfoParam1 = $derived(comb.paramValue(4) ?? lfoParam1Default);
-	let lfoParam2 = $derived(((comb.paramValue(5) ?? lfoParam2Default) - 0.5) * 2);
-
-	// Y-axis maps the 0-1 UI range to the device's 0.5-1 parameter range.
-	function mapYToParam(yValue: number): number {
-		return 0.5 + (yValue * 0.5);
-	}
-
 	// ── Phaser (Phaser-Flanger) ────────────────────────────────────────────
 	// X = LFO speed (param 3), Y = feedback (param 25). Both indices and
 	// both ranges were read off the shipped preset
 	// (Effect Patches/Phaser.adv → PhaserNew, each parameter's
 	// MidiControllerRange), not from device docs: Speed is 0.01–40 Hz in
 	// Live's own units and Feedback tops out at 0.99, so neither axis is a
-	// pass-through the way the Comb LFO's AU params are.
+	// pass-through.
 	const PHASER_PARAMS = {
 		speed:    { index: 3,  min: 0.01, max: 40,   default: 0.1486274302 },
 		feedback: { index: 25, min: 0,    max: 0.99, default: 0 }
@@ -175,32 +160,16 @@
 		<SmudgeControl device={smudge.device} />
 	</div>
 
-	<!-- Seams fall on the DEVICE boundaries, not between every pad: Blur |
-	     Comb + its LFO | Phaser. The four pads are the same size and three
-	     wear the same ink, so without them the two Comb pads read as two
-	     devices and the Phaser as a third Comb (2026-09-13, ADR-433). -->
+	<!-- Seams fall on the DEVICE boundaries: Blur | Comb | Phaser. The pads
+	     are the same size and two wear the same ink, so without them the
+	     Phaser reads as a second Comb (2026-09-13, ADR-433). -->
 	<SectionDivider orientation="vertical" ink={fxInk.primary} />
 
-	<!-- Main Comb Control (virtual device - handles its own slot state) -->
+	<!-- Comb (virtual device - handles its own slot state). The Zebrify
+	     preset's second pad, "Comb LFO", went with the plug-in (2026-10-05):
+	     the Max device has no LFO. -->
 	<div class="device-wrapper">
 		<CombControl device={comb.device} />
-	</div>
-
-	<!-- Comb LFO Control (additional parameters) -->
-	<div class="device-wrapper">
-		<DeviceXY
-			xValue={lfoParam1}
-			yValue={lfoParam2}
-			title="Comb LFO"
-			isGhost={comb.isGhost}
-			showCurve={false}
-			color={fxInk}
-			onTap={() => comb.loadIfGhost()}
-			onInteraction={(x, y) => {
-				comb.sendParam(4, x);
-				comb.sendParam(5, mapYToParam(y));
-			}}
-		/>
 	</div>
 
 	<SectionDivider orientation="vertical" ink={phaserInk.primary} />
@@ -288,10 +257,10 @@
 <style>
 	.chorus-central-layout {
 		display: grid;
-		/* blur | comb · comb LFO | phaser | pitch hack · pitch · feedback.
-		   Each seam is an `auto` track as wide as its hairline, so the four
+		/* blur | comb | phaser | pitch hack · pitch · feedback.
+		   Each seam is an `auto` track as wide as its hairline, so the three
 		   pads still share the rest evenly; each slider is a third of a pad. */
-		grid-template-columns: 0.35fr auto 1fr 1fr auto 1fr auto 1fr 0.35fr 0.35fr;
+		grid-template-columns: 0.35fr auto 1fr auto 1fr auto 1fr 0.35fr 0.35fr;
 		height: 100%;
 		width: 100%;
 		padding: var(--central-inset);
