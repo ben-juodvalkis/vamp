@@ -82,6 +82,8 @@ export const VM = {
 	pitchEnvAmount: 'vm.pitchEnvAmount',
 	pitchEnvAttack: 'vm.pitchEnvAttack',
 	spread: 'vm.spread',
+	/** Sampler's `Sample Selector`, 0..127 (2026-10-04). */
+	selector: 'vm.selector',
 	filterFreq: 'vm.filterFreq',
 	filterRes: 'vm.filterRes',
 	gain: 'vm.gain',
@@ -131,6 +133,7 @@ export type VmFunction =
 	| 'pitchEnvAmount'
 	| 'pitchEnvAttack'
 	| 'spread'
+	| 'selector'
 	| 'filterFreq'
 	| 'filterRes'
 	| 'gain'
@@ -162,6 +165,7 @@ export const VM_FUNCTIONS: readonly VmFunction[] = [
 	'pitchEnvAmount',
 	'pitchEnvAttack',
 	'spread',
+	'selector',
 	'filterFreq',
 	'filterRes',
 	'gain'
@@ -194,6 +198,7 @@ export type SamplerRowControl =
 	| 'decay'
 	| 'sustain'
 	| 'spread'
+	| 'selector'
 	| 'pitch';
 
 /** The row's slots, for badges: two pads share a slot with their pair. */
@@ -205,6 +210,7 @@ export type SamplerRowSlot =
 	| 'sustain'
 	| 'release'
 	| 'spread'
+	| 'selector'
 	| 'pitch';
 
 /** The Sampler parameter each control drives, by name — the same names the surface binds on a pad. */
@@ -218,6 +224,7 @@ export const SAMPLER_ROW_PARAM_NAMES: Readonly<Record<SamplerRowControl, string>
 	decay: 'Ve Decay',
 	sustain: 'Ve Sustain',
 	spread: 'Spread',
+	selector: 'Sample Selector',
 	pitch: 'Transpose'
 };
 

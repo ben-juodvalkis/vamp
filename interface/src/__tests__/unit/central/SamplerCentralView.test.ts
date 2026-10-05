@@ -144,6 +144,7 @@ describe('SamplerCentralView — the Sampler row by name', () => {
 		expect(slider(container, 'R').getAttribute('aria-valuenow')).toBe('0.345'); // Ve Release
 		expect(slider(container, 'Pitch').getAttribute('aria-label')).toBe('Pitch: X 0%, Y 75%'); // Pe Attack 0 across, +24 st on ±48 up
 		expect(slider(container, 'Spread').getAttribute('aria-valuenow')).toBe('0.25'); // 25 of 100
+		expect(container.querySelector('[data-vm-function="selector"]')).toBeNull(); // a kit's control only
 		expect(slider(container, 'S').getAttribute('aria-valuenow')).toBe('1'); // Ve Sustain
 		expect(slider(container, 'Trnsp').getAttribute('aria-valuenow')).toBe('-16');
 		expect(container.querySelectorAll('.midi-wheel')).toHaveLength(2);

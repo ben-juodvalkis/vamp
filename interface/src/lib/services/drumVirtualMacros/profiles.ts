@@ -297,6 +297,7 @@ export function profileFunctions(profile: KitProfile, macroNames: readonly strin
 				'decay',
 				'sustain',
 				'spread',
+				'selector',
 				'pitch',
 				'filterFreq',
 				'filterRes',

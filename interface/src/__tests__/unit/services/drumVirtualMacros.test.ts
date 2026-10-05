@@ -122,6 +122,7 @@ describe('drumVirtualMacros — wire names', () => {
 			'vm.pitchEnvAmount',
 			'vm.pitchEnvAttack',
 			'vm.spread',
+			'vm.selector',
 			'vm.filterFreq',
 			'vm.filterRes',
 			'vm.gain',

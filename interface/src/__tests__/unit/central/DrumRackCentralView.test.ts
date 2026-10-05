@@ -173,6 +173,7 @@ const SAMPLER_ROW_LIVE = {
 	pitchEnvAmount: { members: 64, held: 0 },
 	pitchEnvAttack: { members: 32, held: 0 },
 	spread: { members: 32, held: 0 },
+	selector: { members: 32, held: 0 },
 	gain: { members: 32, held: 0 },
 	filterFreq: { members: 64, held: 0 }, // the switch and the amount, like oscAmount
 	filterRes: { members: 32, held: 0 }
@@ -345,7 +346,7 @@ describe('DrumRackCentralView — mode from the census', () => {
 		await setCensus(AUTUMN_UNMAPPED);
 		expect(container.querySelector('[data-vm-mode]')?.getAttribute('data-vm-mode')).toBe('sampler');
 		expect(container.querySelector('.vm-kit-card')).toBeNull();
-		expect(container.querySelectorAll('.vm-slot')).toHaveLength(8); // the Sampler row on a kit: Gain, Osc, Pitch, A, R, Spread, Trnsp, Filter
+		expect(container.querySelectorAll('.vm-slot')).toHaveLength(9); // the Sampler row on a kit: Gain, Osc, Pitch, A, R, Spread, Select, Trnsp, Filter
 		expect(stateOf(container, 'A')).toBe('live');
 		expect(stateOf(container, 'R')).toBe('live');
 		expect(stateOf(container, 'Trnsp')).toBe('live');
@@ -380,6 +381,7 @@ describe('DrumRackCentralView — mode from the census', () => {
 				'vm.pitchEnvAttack',
 				'vm.release',
 				'vm.selectedPad',
+				'vm.selector',
 				'vm.spread',
 				'vm.start',
 				'vm.sustain'
@@ -698,7 +700,7 @@ describe('DrumRackCentralView — the Sampler row on a Sampler kit', () => {
 		vi.restoreAllMocks();
 	});
 
-	it('draws the Sampler row on a kit: Osc and Pitch pads, the A/R envelope card, Spread, Trnsp — Decay and Sustain hidden', async () => {
+	it('draws the Sampler row on a kit: Osc and Pitch pads, the A/R envelope card, Spread, Select, Trnsp — Decay and Sustain hidden', async () => {
 		seed({
 			'vm.members': AUTUMN_UNMAPPED,
 			'vm.oscAmount': 0.3,
@@ -710,6 +712,7 @@ describe('DrumRackCentralView — the Sampler row on a Sampler kit', () => {
 			'vm.decay': 0.58,
 			'vm.sustain': 1,
 			'vm.spread': 0.25,
+			'vm.selector': 0.4,
 			'vm.pitch': 3
 		});
 		const { container } = render(DrumRackCentralView, { props: { instrument: INSTRUMENT } });
@@ -723,6 +726,7 @@ describe('DrumRackCentralView — the Sampler row on a Sampler kit', () => {
 			'attack',
 			'release',
 			'spread',
+			'selector',
 			'pitch',
 			'filterFreq|filterRes'
 		]);
@@ -737,6 +741,8 @@ describe('DrumRackCentralView — the Sampler row on a Sampler kit', () => {
 		expect(container.querySelector('[data-vm-function="decay"]')).toBeNull();
 		expect(container.querySelector('[data-vm-function="sustain"]')).toBeNull();
 		expect(slider(container, 'Spread').getAttribute('aria-valuenow')).toBe('0.25');
+		// Sampler's Sample Selector, fanned out to every pad (2026-10-04).
+		expect(slider(container, 'Select').getAttribute('aria-valuenow')).toBe('0.4');
 		expect(slider(container, 'Trnsp').getAttribute('aria-valuenow')).toBe('3');
 		expect(container.querySelectorAll('.midi-wheel')).toHaveLength(0); // a kit is not played with the wheels
 		expect(container.querySelectorAll('.vm-controls button')).toHaveLength(0); // no FX type grid
@@ -757,6 +763,7 @@ describe('DrumRackCentralView — the Sampler row on a Sampler kit', () => {
 		await tick();
 		expect(container.querySelector('[data-vm-function="oscAmount|oscCoarse"]')?.getAttribute('data-vm-state')).toBe('none');
 		expect(container.querySelector('[data-vm-function="spread"]')?.getAttribute('data-vm-state')).toBe('none');
+		expect(container.querySelector('[data-vm-function="selector"]')?.getAttribute('data-vm-state')).toBe('none');
 		expect(container.querySelector('[data-vm-function="attack"]')?.getAttribute('data-vm-state')).toBe('live');
 		expect(container.querySelector('[data-vm-function="release"]')?.getAttribute('data-vm-state')).toBe('live');
 	});

@@ -303,6 +303,13 @@ FUNCTIONS: Dict[str, VirtualMacro] = {
         "OriginalSimpler": ("Spread",),
         "MultiSampler": ("Spread",),
     }),
+    # Sampler's Sample Selector (2026-10-04, user's request): which zone
+    # of the Sel editor plays, 0..127. Bound by name — the request named
+    # index 27, and the rig's `50s Autumn` Sampler lists it at 3 (27 is
+    # `Oe R < Vel` there), so the index differs per variant.
+    "selector": VirtualMacro("selector", KIND_T, 0, {
+        "MultiSampler": ("Sample Selector",),
+    }),
     # The filter, as one XY pad (2026-09-09, user's request): cutoff
     # across, resonance up. Names read off the running rig, not the
     # indices the request named — those differ per Sampler variant, which

@@ -204,7 +204,7 @@
             onInteraction={(value) => writeAt(GAIN, value)}
           />
         </VmSlot>
-        <SamplerControlsRow {values} {states} color={samplerInk} onWrite={write} />
+        <SamplerControlsRow {values} {states} color={samplerInk} hidden={['selector']} onWrite={write} />
         <!-- Cutoff across, resonance up, as on a kit. -->
         <VmSlot state={filterState} class="sampler-filter min-w-0 h-full" fn="filterFreq|filterRes">
           <DeviceXY

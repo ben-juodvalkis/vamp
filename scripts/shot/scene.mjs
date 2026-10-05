@@ -675,6 +675,7 @@ const AUTUMN_KIT_MEMBERS = vmMembers({
 		pitchEnvAmount: { members: 64, held: 0 },
 		pitchEnvAttack: { members: 32, held: 0 },
 		spread: { members: 32, held: 0 },
+		selector: { members: 32, held: 0 },
 		// One `Volume` per Sampler, -36..36 dB (2026-09-08).
 		gain: { members: 32, held: 0 },
 		filterFreq: { members: 64, held: 0 },
@@ -702,6 +703,7 @@ const AUTUMN_KIT_PROPERTIES = Object.freeze({
 	'vm.pitchEnvAmount': 0.75,
 	'vm.pitchEnvAttack': 0.72,
 	'vm.spread': 0.25,
+	'vm.selector': 0.4,
 	'vm.gain': 0.46,
 	'vm.pad.38.gain': 0.3,
 	'vm.filterFreq': 0.8,

@@ -9,7 +9,7 @@
    *
    * Its cells (user's layout, 2026-09-07; the envelope rebuilt 2026-09-12):
    *
-   *   [Osc over Pitch]  [Amp Envelope: A D S R]  Spread  Trnsp
+   *   [Osc over Pitch]  [Amp Envelope: A D S R]  Spread  Select  Trnsp
    *
    * Both hosts lay them out on their own grid, where `.sampler-row` is
    * `display: contents` and each cell names its `grid-area` — on the
@@ -63,7 +63,8 @@
      * Sliders to leave out. A Sampler KIT hides Decay and Sustain (user's
      * call, 2026-09-08 — on the Abbey Road kits the amp envelope's middle
      * is not what a performer reaches for); the single-Sampler view keeps
-     * them. The pads and Trnsp are not hideable.
+     * them; the single-Sampler view hides Select. The pads and Trnsp are
+     * not hideable.
      */
     hidden?: readonly SamplerRowControl[];
   }
@@ -93,6 +94,7 @@
   let sustainState = $derived(stateOf('sustain'));
   let releaseState = $derived(stateOf('release'));
   let spreadState = $derived(stateOf('spread'));
+  let selectorState = $derived(stateOf('selector'));
   let pitchState = $derived(stateOf('pitch'));
 </script>
 
@@ -192,6 +194,9 @@
     </EnvelopeGroup>
   </div>
   {#if !hide.has('spread')}{@render slider('spread', 'Spread', spreadState, badges.spread, 0)}{/if}
+  <!-- Sample Selector (0..127): which zone of the Sel editor plays. A
+       kit's control (2026-10-04); the single-Sampler view hides it. -->
+  {#if !hide.has('selector')}{@render slider('selector', 'Select', selectorState, badges.selector, 0)}{/if}
   <div
     class="vm-slot slider-column min-w-0 flex flex-col"
     class:vm-none={pitchState === 'none'}
@@ -225,6 +230,9 @@
   }
   .slider-column[data-vm-function='spread'] {
     grid-area: spread;
+  }
+  .slider-column[data-vm-function='selector'] {
+    grid-area: sel;
   }
   .vm-slot[data-vm-function='pitch'] {
     grid-area: trnsp;

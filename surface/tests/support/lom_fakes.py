@@ -477,6 +477,7 @@ def sampler(enabled=True, transpose=0.0, osc_on=True, pe_on=True):
     first enabled; a real Sampler lists everything."""
     params = [
         FakeParam("Device On", 1.0, 0, 1, quantized=True),
+        FakeParam("Sample Selector", 0.0, 0.0, 127.0, enabled=enabled),
         FakeParam("Osc On", 1.0 if osc_on else 0.0, 0, 1, quantized=True, enabled=enabled),
     ]
     if osc_on:

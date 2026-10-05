@@ -282,7 +282,7 @@
     pitch: vm.badge('pitch')
   });
 
-  const SAMPLER_ROW = ['oscAmount', 'oscCoarse', 'pitchEnvAmount', 'pitchEnvAttack', 'attack', 'release', 'decay', 'sustain', 'spread', 'pitch'] as const;
+  const SAMPLER_ROW = ['oscAmount', 'oscCoarse', 'pitchEnvAmount', 'pitchEnvAttack', 'attack', 'release', 'decay', 'sustain', 'spread', 'selector', 'pitch'] as const;
   let samplerValues = $derived(
     Object.fromEntries(SAMPLER_ROW.map((fn) => [fn, vm.value(fn)])) as Partial<Record<SamplerRowControl, number>>
   );
@@ -297,6 +297,7 @@
     sustain: vm.badge('sustain'),
     release: vm.badge('release'),
     spread: vm.badge('spread'),
+    selector: vm.badge('selector'),
     pitch: vm.badge('pitch')
   });
 
@@ -691,10 +692,13 @@
      where Start is, Osc over Pitch where FX is, the Amp Envelope's A and R
      where Time is (both are the amp envelope's times), Filter last. Until
      2026-09-27 this kit put Osc / Pitch first and Gain at the far right. */
+  /* Select (the Sample Selector, 2026-10-04) is a fourth slider after
+     Spread, so this kit's columns are a tenth narrower than the others'. */
   .vm-lead-grid[data-vm-lead='sampler'] {
+    grid-template-columns: auto repeat(4, minmax(0, 1fr)) repeat(3, minmax(0, 2fr));
     grid-template-areas:
-      'pill pill pill  pill   osc env filter'
-      'pads gain trnsp spread osc env filter';
+      'pill pill pill  pill   pill osc env filter'
+      'pads gain trnsp spread sel  osc env filter';
   }
   .vm-lead-grid[data-vm-lead='sampler'] :global(.sampler-row) {
     display: contents;

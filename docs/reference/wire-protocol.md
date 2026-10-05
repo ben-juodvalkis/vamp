@@ -225,7 +225,7 @@ Key rules:
   `vm.sustain` (`Ve Sustain`), `vm.oscAmount` (`Osc On` + `O Volume`),
   `vm.oscCoarse` (`O Coarse`, −2..48), `vm.pitchEnvAmount` (`Pe On` +
   `Pe < Env`, −48..48 — center is no envelope), `vm.pitchEnvAttack`
-  (`Pe Attack`), `vm.spread` (`Spread`, 0..100) — Sampler only, except `sustain` and `spread`, which Simpler carries too, 2026-09-07;
+  (`Pe Attack`), `vm.spread` (`Spread`, 0..100) — Sampler only, except `sustain` and `spread`, which Simpler carries too, 2026-09-07; `vm.selector` (`Sample Selector`, 0..127, Sampler only, bound by name — its index differs per Sampler variant, 2026-10-04);
   `vm.filterFreq` (`Filter On`/`F On` + `Filter Freq`) and `vm.filterRes`
   (`Filter Res`, whose max is **1.25** on a Simpler) — the filter as one
   XY pad, 2026-09-09, its switch turning on and never off;

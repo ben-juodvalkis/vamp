@@ -139,7 +139,7 @@ def test_property_names_and_legacy_indices():
     assert PROPERTY_NAMES == (
         "vm.fx1", "vm.fx2", "vm.fxType", "vm.pitch", "vm.attack", "vm.decay", "vm.start",
         "vm.release", "vm.oscAmount", "vm.oscCoarse", "vm.pitchEnvAmount", "vm.pitchEnvAttack",
-        "vm.sustain", "vm.spread", "vm.filterFreq", "vm.filterRes", "vm.gain",
+        "vm.sustain", "vm.spread", "vm.selector", "vm.filterFreq", "vm.filterRes", "vm.gain",
         "vm.chainVolume", "vm.chainMute",
     )
     legacy = {name: fn.legacy_macro for name, fn in FUNCTIONS.items()}
@@ -147,7 +147,7 @@ def test_property_names_and_legacy_indices():
         "fx1": 1, "fx2": 2, "fxType": 3, "pitch": 4, "attack": 9, "decay": 10, "start": 11,
         "release": 0,   # no pipeline macro ever drove a release
         "oscAmount": 0, "oscCoarse": 0, "pitchEnvAmount": 0, "pitchEnvAttack": 0,
-        "sustain": 0, "spread": 0, "filterFreq": 0, "filterRes": 0,
+        "sustain": 0, "spread": 0, "selector": 0, "filterFreq": 0, "filterRes": 0,
         "gain": 0,   # none of the later functions ever had one
         "chainVolume": 0, "chainMute": 0,
     }
@@ -155,6 +155,7 @@ def test_property_names_and_legacy_indices():
     # Time pad and Trnsp use attack / release / pitch, bound long since).
     assert FUNCTIONS["sustain"].bindings == {"OriginalSimpler": ("Ve Sustain",), "MultiSampler": ("Ve Sustain",)}
     assert FUNCTIONS["spread"].bindings == {"OriginalSimpler": ("Spread",), "MultiSampler": ("Spread",)}
+    assert FUNCTIONS["selector"].bindings == {"MultiSampler": ("Sample Selector",)}
     # The Sampler row binds the section switch first, then the amount.
     assert FUNCTIONS["oscAmount"].bindings == {"MultiSampler": ("Osc On", "O Volume")}
     assert FUNCTIONS["pitchEnvAmount"].bindings == {"MultiSampler": ("Pe On", "Pe < Env")}
@@ -196,7 +197,7 @@ def test_resolves_drumcell_members_by_name(comp):
         "fx1": 20, "fx2": 18, "fxType": 2, "pitch": 2, "attack": 2, "decay": 2, "start": 2,
         "release": 0, "oscAmount": 0, "oscCoarse": 0, "pitchEnvAmount": 0, "pitchEnvAttack": 0,
         # filterFreq counts the switch AND the amount, like oscAmount.
-        "sustain": 0, "spread": 0, "filterFreq": 4, "filterRes": 2, "gain": 2,
+        "sustain": 0, "spread": 0, "selector": 0, "filterFreq": 4, "filterRes": 2, "gain": 2,
         # The pad's own mixer strip: every pad with a chain.
         "chainVolume": 2, "chainMute": 2,
     }
@@ -1057,6 +1058,7 @@ def test_members_census_on_a_drumcell_kit(comp):
         "oscAmount": {"members": 0, "held": 0}, "oscCoarse": {"members": 0, "held": 0},
         "pitchEnvAmount": {"members": 0, "held": 0}, "pitchEnvAttack": {"members": 0, "held": 0},
         "sustain": {"members": 0, "held": 0}, "spread": {"members": 0, "held": 0},
+        "selector": {"members": 0, "held": 0},
         "filterFreq": {"members": 6, "held": 0}, "filterRes": {"members": 3, "held": 0},
         "gain": {"members": 3, "held": 0},
     }
@@ -2174,6 +2176,7 @@ def test_sampler_row_functions_resolve_on_a_sampler_kit_only(comp):
     assert f["pitchEnvAttack"] == {"members": 2, "held": 0}
     assert f["sustain"] == {"members": 3, "held": 0}          # the Simpler has these too
     assert f["spread"] == {"members": 3, "held": 0}
+    assert f["selector"] == {"members": 2, "held": 0}         # Sampler only
     assert f["release"] == {"members": 3, "held": 0}
 
 
@@ -2182,12 +2185,14 @@ def test_sampler_row_seeds_from_the_amounts_not_the_switches(comp):
     sp(rack, 36, "O Volume")._value = 0.3
     sp(rack, 36, "Pe < Env")._value = 24.0
     sp(rack, 36, "Spread")._value = 25.0
+    sp(rack, 36, "Sample Selector")._value = 63.5
     assert comp.read(rack, PATH, "oscAmount") == pytest.approx(0.3)
     assert comp.read(rack, PATH, "oscCoarse") == pytest.approx(3.0 / 50.0)   # 1.0 on −2..48
     assert comp.read(rack, PATH, "pitchEnvAmount") == pytest.approx(0.75)    # +24 st on ±48
     assert comp.read(rack, PATH, "pitchEnvAttack") == pytest.approx(0.31)
     assert comp.read(rack, PATH, "sustain") == pytest.approx(1.0)
     assert comp.read(rack, PATH, "spread") == pytest.approx(0.25)
+    assert comp.read(rack, PATH, "selector") == pytest.approx(0.5)            # 63.5 on 0..127
 
 
 def test_sampler_row_writes_through_each_ranges_and_switches_follow_the_amount(comp):
@@ -2214,6 +2219,9 @@ def test_sampler_row_writes_through_each_ranges_and_switches_follow_the_amount(c
     assert sp(rack, 36, "O Coarse").writes == [pytest.approx(48.0)]
     comp.write(rack, PATH, "spread", 0.5)
     assert sp(rack, 36, "Spread").writes == [pytest.approx(50.0)]
+    comp.write(rack, PATH, "selector", 0.5)
+    for note in (36, 37):
+        assert sp(rack, note, "Sample Selector").writes == [pytest.approx(63.5)]   # 0..127
     comp.write(rack, PATH, "sustain", 0.75)
     assert sp(rack, 36, "Ve Sustain").writes == [pytest.approx(0.75)]
     # The Drum Rack's own macros are never touched.
