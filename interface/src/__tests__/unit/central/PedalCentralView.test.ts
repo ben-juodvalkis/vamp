@@ -39,7 +39,6 @@ import {
 import PedalCentralView from '$lib/components/v6/central/views/PedalCentralView.svelte';
 import { send } from '$lib/api/simpleClient';
 import { DEVICE_PRESETS } from '$lib/config/devicePresets';
-import { HOLD_MS } from '$lib/actions';
 import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
 
 const TRACK = 'tracks/0';
@@ -82,7 +81,7 @@ function guitarRack(ampSwitch = 0): DeviceRecord {
 	};
 }
 
-function wahRack(): DeviceRecord {
+function wahRack(pedal = 0): DeviceRecord {
 	// Device On plus the two macros the pedal component drives (freq, chain
 	// selector) — the shape `Wah.adg` takes once loaded, under the class and
 	// name the wah slot matches on.
@@ -91,7 +90,7 @@ function wahRack(): DeviceRecord {
 		const paramPath = `${WAH}/params/${i}`;
 		params.set(paramPath, {
 			paramPath, name: i === 0 ? 'Device On' : `Macro ${i}`, displayName: i === 0 ? 'Device On' : `Macro ${i}`,
-			min: 0, max: i === 0 ? 1 : 127, value: i === 0 ? 1 : 0, unit: ''
+			min: 0, max: i === 0 ? 1 : 127, value: i === 0 ? 1 : i === 1 ? pedal : 0, unit: ''
 		});
 	}
 	return {
@@ -190,7 +189,7 @@ describe('PedalCentralView', () => {
 		seed([saturator({}), guitarRack()]);
 		const { container } = render(PedalCentralView);
 		await tick();
-		const tile = container.querySelector('.guitar-section .device-control');
+		const tile = container.querySelector('.left-stack .device-control');
 		expect(tile?.classList.contains('device-ghost')).toBe(false);
 		expect(tile?.textContent).toContain('Gtr');
 		const pads = Array.from(container.querySelectorAll('.guitar-xy-stack .guitar-xy'));
@@ -204,7 +203,7 @@ describe('PedalCentralView', () => {
 		seed([saturator({}), guitarRack()], true);
 		const { container } = render(PedalCentralView);
 		await tick();
-		expect(container.querySelector('.guitar-section .device-control')).toBeNull();
+		expect(container.querySelector('.left-stack .device-control')).toBeNull();
 		expect(container.querySelectorAll('.guitar-xy-stack .guitar-xy').length).toBe(2);
 	});
 
@@ -224,7 +223,7 @@ describe('PedalCentralView', () => {
 		const { container } = render(PedalCentralView);
 		await tick();
 		expect(
-			container.querySelector('.guitar-section .device-control')?.classList.contains('device-ghost')
+			container.querySelector('.left-stack .device-control')?.classList.contains('device-ghost')
 		).toBe(true);
 	});
 
@@ -235,7 +234,7 @@ describe('PedalCentralView', () => {
 		centralDisplayStore.setView('device', 'pedal');
 		const { container } = render(PedalCentralView);
 		await tick();
-		const el = container.querySelector<HTMLElement>('.guitar-section .device-control [role="slider"]');
+		const el = container.querySelector<HTMLElement>('.left-stack .device-control [role="slider"]');
 		expect(el).not.toBeNull();
 		el!.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10 }));
 		el!.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 10, clientY: 10 }));
@@ -243,70 +242,46 @@ describe('PedalCentralView', () => {
 		expect(centralDisplayStore.isViewActive('device', 'pedal')).toBe(true);
 	});
 
-	it('carries a Wah button right after the Guitar, ghosted on a track without one', async () => {
+	it('stacks the Gain over the Wah slider in the left column', async () => {
 		seed([saturator({}), guitarRack()]);
 		const { container } = render(PedalCentralView);
 		await tick();
 		const columns = container.querySelectorAll('.pedal-central-layout > .column');
-		const wahAt = Array.from(columns).findIndex((c) => c.classList.contains('wah-column'));
-		expect(columns[wahAt - 1].classList.contains('guitar-section')).toBe(true);
-		const button = container.querySelector<HTMLButtonElement>('.wah-column .wah-button');
-		expect(button).not.toBeNull();
-		expect(button!.textContent?.trim()).toBe('Wah');
-		expect(button!.classList.contains('active')).toBe(false);
-		expect(button!.getAttribute('aria-pressed')).toBe('false');
-		expect((container.querySelector('.wah-column') as HTMLElement).style.opacity).toContain('--opacity-ghost');
+		expect(columns[0].classList.contains('left-stack')).toBe(true);
+		const cells = columns[0].querySelectorAll('.left-cell');
+		expect(cells.length).toBe(2);
+		expect(cells[0].textContent).toContain('Gtr');
+		expect(cells[1].classList.contains('wah-cell')).toBe(true);
+		expect(slider(container, 'Wah')).toBeDefined();
 	});
 
-	it('lights the Wah button while the track carries a wah', async () => {
-		seed([saturator({}), guitarRack(), wahRack()]);
+	it('leaves the Wah alone in the left column on an audio track', async () => {
+		seed([saturator({})], true);
 		const { container } = render(PedalCentralView);
 		await tick();
-		const button = container.querySelector<HTMLButtonElement>('.wah-column .wah-button');
-		expect(button!.classList.contains('active')).toBe(true);
-		expect(button!.getAttribute('aria-pressed')).toBe('true');
-		expect((container.querySelector('.wah-column') as HTMLElement).style.opacity).toBe('');
+		const cells = container.querySelectorAll('.left-stack .left-cell');
+		expect(cells.length).toBe(1);
+		expect(cells[0].classList.contains('wah-cell')).toBe(true);
+	});
+
+	it('shows the Wah pedal macro\'s value on its slider', async () => {
+		seed([saturator({}), wahRack(127)]);
+		const { container } = render(PedalCentralView);
+		await tick();
+		expect(slider(container, 'Wah')!.getAttribute('aria-valuenow')).toBe('1');
 	});
 
 	it('a tap on a ghost Wah loads Wah.adg onto the selected track through device/load', async () => {
+		HTMLElement.prototype.setPointerCapture = vi.fn();
+		HTMLElement.prototype.releasePointerCapture = vi.fn();
 		seed([saturator({})]);
 		const { container } = render(PedalCentralView);
 		await tick();
-		const button = container.querySelector<HTMLElement>('.wah-column .wah-button')!;
-		button.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10 }));
-		button.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 10, clientY: 10 }));
+		const el = slider(container, 'Wah')!;
+		el.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10 }));
+		el.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 10, clientY: 10 }));
 		await tick();
-		// The track's path, no pad scope, the wah preset — the FX tiles' own
-		// load, so the surface places it at the head of the audio effects.
 		expect(send).toHaveBeenCalledWith('/looping/v3/device/load', [TRACK, '', '', 'place:Vamp Devices', 'Wah/Wah.adg']);
-		expect(send).not.toHaveBeenCalledWith('/looping/v3/device/delete', expect.anything());
-	});
-
-	it('a tap on a present Wah loads nothing; a hold removes it through device/delete', async () => {
-		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] });
-		try {
-			seed([saturator({}), wahRack()]);
-			const { container } = render(PedalCentralView);
-			await tick();
-			const button = container.querySelector<HTMLElement>('.wah-column .wah-button')!;
-
-			// A tap: the slot is not a ghost, so there is nothing to load.
-			button.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10 }));
-			button.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 10, clientY: 10 }));
-			await tick();
-			expect(send).not.toHaveBeenCalled();
-
-			// A hold: the press reports a hold at HOLD_MS while the finger is
-			// still down, and the release after it fires no tap.
-			button.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10 }));
-			vi.advanceTimersByTime(HOLD_MS + 20);
-			expect(send).toHaveBeenCalledWith('/looping/v3/device/delete', [WAH]);
-			button.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 10, clientY: 10 }));
-			await tick();
-			expect(send).toHaveBeenCalledTimes(1);
-		} finally {
-			vi.useRealTimers();
-		}
 	});
 
 	it('keeps a tap on the Pedal pad inside this view', async () => {

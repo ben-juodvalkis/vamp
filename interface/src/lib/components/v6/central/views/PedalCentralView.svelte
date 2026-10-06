@@ -34,14 +34,11 @@
    * Room and has no control. On an audio track the FX grid's Gtr column
    * already draws Gain, so the view leaves it out.
    *
-   * The Wah is the last column (ADR-445, 2026-09-19): one button, because
-   * the wah has no tile and no view — the expression pedal is how it is
-   * played, and this button is its only door on the iPad. Tap loads
-   * `Wah.adg` onto the selected track at the head of its audio effects, the
-   * pedal's own placement (`device/load` lands the wah preset there since
-   * the same change); the pedal then drives it — on a synth track too, where
-   * it otherwise drives the Expression Pedal rack. Hold removes the wah and
-   * hands the pedal back. Lit while the track carries one.
+   * The Wah (ADR-445, 2026-09-19) has no tile and no view of its own — the
+   * expression pedal is how it is played. Since 2026-10-05 it is a slider on
+   * the macro the pedal sweeps, under the Guitar's Gain in the left column
+   * (a load/remove button before). A tap on a ghost loads `Wah.adg` at the
+   * head of the track's audio effects, the pedal's own placement.
    *
    * NO {#if device} gate - always renders, handles its own state.
    * NO props required - queries selectedTrackStore directly.
@@ -56,8 +53,6 @@
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-  import { press, HOLD_MS, type PressOptions } from '$lib/actions';
-  import { deleteDevice } from '$lib/services/deviceMoveService';
   import SectionDivider from '../SectionDivider.svelte';
   import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
 
@@ -154,41 +149,64 @@
     accent: trackInk(wah.color.accent, paintModeReactive())
   });
 
-  // Tap loads when the slot is a ghost (a no-op while loading or present);
-  // hold removes the wah when the track has one. `press` never fires
-  // `onPress` for a press that reported a hold, so a long press cannot load
-  // back what it just removed. `touch-action: none`: the button owns the
-  // gesture — there is nothing to scroll here.
-  const wahPress: PressOptions = {
-    holdMs: HOLD_MS,
-    touchAction: 'none',
-    onPress: () => wah.loadIfGhost(),
-    onHold: () => {
-      const path = wah.devicePath;
-      if (path) void deleteDevice(path);
-    }
-  };
+  // The Wah is a slider on the macro the expression pedal sweeps (2026-10-05,
+  // a load/remove button before): Wah.adg's Macro 1, which the rack names
+  // "Pedal", 0..127 — the surface's `devices.wah.freqMacroIndex`. A tap on a
+  // ghost loads Wah.adg, a drag loads it and writes; the surface puts it at
+  // the head of the audio effects either way.
+  const WAH_PEDAL_MACRO = 1;
+  let wahValue = $derived((wah.paramValue(WAH_PEDAL_MACRO) ?? 0) / MACRO_MAX);
 
-  let wahTitle = $derived(
-    wah.device
-      ? 'Wah on this track — the expression pedal drives it. Hold to remove.'
-      : 'Tap to load the Wah onto this track; the expression pedal then drives it.'
+  // The left column: the Guitar's Gain over the Wah, each half its height,
+  // either one alone at full height. Its grid track and seam exist only
+  // while it holds something.
+  const showLeftColumn = $derived(showGuitarGain || showWah);
+  const gridColumns = $derived(
+    (showLeftColumn ? 'auto auto ' : '') +
+      'minmax(0, 1fr) auto minmax(min-content, 2fr) auto auto auto auto auto minmax(0, 1fr)'
   );
 </script>
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
-<div class="pedal-central-layout relative" class:no-wah={!showWah}>
+<div class="pedal-central-layout relative" style="grid-template-columns: {gridColumns};">
+  {#if showLeftColumn}
+    <!-- COLUMN 0: the Guitar's Gain (MIDI tracks only — on audio the grid's
+         Gtr column draws it) over the Wah, the macro the expression pedal
+         sweeps (only while features.expressionPedal is on). -->
+    <div class="column left-stack">
+      {#if showGuitarGain}
+        <div class="left-cell">
+          <GuitarControl device={guitar.device} disableCentralViewOnTap={true} />
+        </div>
+      {/if}
+      {#if showWah}
+        <div class="left-cell wah-cell">
+          <DeviceSlider
+            value={wahValue}
+            title="Wah"
+            orientation="vertical"
+            labelOrientation="horizontal"
+            labelSize="small"
+            isGhost={wah.isGhost}
+            color={wahInk}
+            onTap={() => wah.loadIfGhost()}
+            onInteraction={(v) => wah.sendParam(WAH_PEDAL_MACRO, v * MACRO_MAX)}
+          />
+        </div>
+      {/if}
+    </div>
+
+    <SectionDivider orientation="vertical" ink={pedalInk.primary} />
+  {/if}
+
   <!-- COLUMN 1: the Pedal's XY — the old grid tile, mounted standalone; a
-       tap goes nowhere because this view is its home. -->
+       tap goes nowhere because this view is its home — over its type
+       switch, laid out across (2026-10-05). -->
   <div class="column pedal-xy-column">
     <div class="xy-wrapper flex-1">
       <PedalControl device={fx.device} disableCentralViewOnTap={true} />
     </div>
-  </div>
-
-  <!-- COLUMN 2: Pedal type tabs (stacked vertically, full height) -->
-  <div class="column pedal-column" style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
-    <div class="pedal-type-buttons">
+    <div class="pedal-type-buttons" style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
       {#each PEDAL_TYPE_OPTIONS as option}
         <button
           class="physical-button w-full px-2 text-xs text-center font-medium"
@@ -206,16 +224,9 @@
        introduces (the Chorus rule, user's call, 2026-09-13). -->
   <SectionDivider orientation="vertical" ink={guitarInk.primary} />
 
-  <!-- COLUMN 3: the Guitar rack. Gain is the grid tile mounted standalone
-       (a drag on a ghost loads Guitar.adg); on an audio track the grid's
-       own Gtr column draws it, so it is left out here. Then the Spring/Room
-       pad over the Tremolo pad, and the Dirty/Clean switch. -->
+  <!-- COLUMN 3: the Guitar rack's Spring/Room pad over its Tremolo pad, and
+       the Dirty/Clean switch. Its Gain is in the left column. -->
   <div class="column guitar-section">
-    {#if showGuitarGain}
-      <div class="guitar-slider">
-        <GuitarControl device={guitar.device} disableCentralViewOnTap={true} />
-      </div>
-    {/if}
     <!-- Two pads stacked: Spring (X) / Room (Y) over Tremolo, rate (X) /
          amount (Y) (user, 2026-10-05). -->
     <div class="guitar-xy-stack">
@@ -267,30 +278,6 @@
       >Clean</button>
     </div>
   </div>
-
-  {#if showWah}
-    <!-- The Wah is a fifth device on this page, so it takes a seam of its own
-         in its own ink — the filter family the wah preset wears. -->
-    <SectionDivider orientation="vertical" ink={wahInk.primary} />
-
-    <!-- COLUMN 4: the Wah button (ADR-445). Tap loads Wah.adg onto the
-         selected track at the head of its audio effects, hold removes it.
-         Ghost-dim while the track has none, like every other empty slot here;
-         lit (the ChosenDefault ON fill) while it does. -->
-    <div class="column wah-column" style={wah.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
-      <button
-        class="physical-button wah-button w-full px-2 text-xs text-center font-medium"
-        class:active={wah.device !== null}
-        class:loading={wah.isLoading}
-        style="--btn-tint: {wahInk.primary};"
-        aria-pressed={wah.device !== null}
-        title={wahTitle}
-        use:press={wahPress}
-      >
-        Wah
-      </button>
-    </div>
-  {/if}
 
   <!-- The Saturator's two faders: its XY is the grid tile that opened this
        view. -->
@@ -354,23 +341,18 @@
 <style>
   .pedal-central-layout {
     display: grid;
-    /* pedal XY · pedal-type tabs | guitar (gain · spring/room pad over
-       tremolo pad · dirty/clean) | wah | saturator output · mix | shifter | redux.
-       The faders column is as wide as its two sliders need, the tabs as
-       wide as their labels, the Shifter and the Wah one slider wide each,
+    /* gain over wah | pedal XY over pedal-type tabs | guitar (spring/room pad
+       over tremolo pad · dirty/clean) | saturator output · mix | shifter
+       | redux.
+       The faders column is as wide as its two sliders need, the Shifter and the Gain/Wah column one slider wide,
        each seam as wide as its hairline; the Guitar section never below
        its content, and the Pedal and Redux pads share the rest. */
-    grid-template-columns: minmax(0, 1fr) auto auto minmax(min-content, 2fr) auto auto auto auto auto auto auto minmax(0, 1fr);
+    /* grid-template-columns comes from `gridColumns`: the left column and
+       its seam are two `auto` tracks that exist only while it does. */
     height: 100%;
     width: 100%;
     padding: var(--central-inset);
     gap: var(--central-gap);
-  }
-
-  /* No wah (features.expressionPedal off): its seam and column go, and so
-     must their two tracks — an empty explicit track still takes a gap. */
-  .pedal-central-layout.no-wah {
-    grid-template-columns: minmax(0, 1fr) auto auto minmax(min-content, 2fr) auto auto auto auto auto minmax(0, 1fr);
   }
 
   .column {
@@ -446,24 +428,27 @@
     font-weight: 600;
   }
 
-  /* The Wah button: one slider wide too, the column's full height, its
-     label centred — the pedal-type tabs' shape, one tab tall. */
-  .wah-column {
+  /* Gain over Wah: one slider wide, each half the column's height, or the
+     whole of it alone. */
+  .left-stack {
     width: var(--vm-slider-w, 56px);
   }
 
-  .wah-button {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .pedal-type-buttons {
+  .left-cell {
+    flex: 1 1 0;
+    min-height: 0;
     display: flex;
     flex-direction: column;
+  }
+
+  /* Drive · Distort · Fuzz across the foot of the Pedal pad, one row a
+     slider-label tall. */
+  .pedal-type-buttons {
+    display: flex;
+    flex-direction: row;
     gap: var(--spacing-xs);
-    flex: 1;
+    flex: 0 0 auto;
+    height: 3rem;
   }
 
   .pedal-type-buttons button {

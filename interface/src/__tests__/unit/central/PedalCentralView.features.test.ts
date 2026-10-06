@@ -1,5 +1,5 @@
 /**
- * The Pedal view's Wah button follows the bridge's `expressionPedal` switch
+ * The Pedal view's Wah slider follows the bridge's `expressionPedal` switch
  * (general-release audit §7b). The wah is played by the owner's expression
  * pedal and nothing else, so with the switch off — and before the bridge has
  * said anything — there is no Wah to load.
@@ -42,7 +42,7 @@ describe('PedalCentralView and the expressionPedal switch', () => {
 
 	it('draws the Wah with the pedal switched on', () => {
 		pedal(true);
-		const { getByText } = render(PedalCentralView);
-		expect(getByText('Wah')).toBeTruthy();
+		const { getAllByText } = render(PedalCentralView);
+		expect(getAllByText('Wah').length).toBeGreaterThan(0);
 	});
 });
