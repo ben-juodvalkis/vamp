@@ -506,6 +506,7 @@
         <DeviceSlider
           value={transposeValue}
           title={transposeLabel}
+          icon="transpose"
           orientation="vertical"
           labelOrientation="horizontal"
           color={simplerInk}
@@ -533,6 +534,9 @@
             xValue={attackValue}
             yValue={releaseValue}
             title="Time"
+            icon="envelope"
+            xIcon="attack"
+            yIcon="release"
             onInteraction={handleTimeXYInteraction}
             color={simplerInk}
           />
@@ -541,6 +545,9 @@
             xValue={slicingParam33}
             yValue={slicingParam35}
             title="Time"
+            icon="envelope"
+            xIcon="attack"
+            yIcon="release"
             onInteraction={handleSlicingTimeXYInteraction}
             color={simplerInk}
           />
@@ -554,6 +561,7 @@
           <DeviceSlider
             value={slicingSensitivity}
             title="Sens"
+            icon="slice"
             orientation="vertical"
             labelOrientation="horizontal"
             color={simplerInk}
@@ -568,6 +576,7 @@
           <DeviceSlider
             value={fadeValue}
             title="Fade"
+            icon="fade"
             orientation="vertical"
             labelOrientation="horizontal"
             color={simplerInk}
@@ -584,6 +593,7 @@
         <DeviceSlider
           value={sampleGain}
           title="Gain"
+          icon="gain"
           orientation="vertical"
           labelOrientation="horizontal"
           color={simplerInk}
@@ -648,6 +658,7 @@
           <DeviceSlider
             value={randomAmountValue}
             title="Random"
+            icon="dice"
             orientation="vertical"
             labelOrientation="horizontal"
             color={simplerInk}

@@ -60,8 +60,8 @@
   // 2026-10-01: the drawn curve's handles were too fiddly for a finger).
   // Parameter slots: amp A-D-S-R are 8-11, filter A-D-S-R 13-16, the filter
   // envelope's amount 5.
-  const AMP_ENV = [['A', 8], ['D', 9], ['S', 10], ['R', 11]] as const;
-  const FILTER_ENV = [['A', 13], ['D', 14], ['S', 15], ['R', 16]] as const;
+  const AMP_ENV = [['A', 8, 'attack'], ['D', 9, 'decay'], ['S', 10, 'sustain'], ['R', 11, 'release']] as const;
+  const FILTER_ENV = [['A', 13, 'attack'], ['D', 14, 'decay'], ['S', 15, 'sustain'], ['R', 16, 'release']] as const;
   const FILTER_ENV_AMOUNT = 5;
 
   // Which envelope the sliders drive. The view's own, so it starts on Amp.
@@ -200,10 +200,11 @@
           <!-- Keyed, so a switch mid-drag drops the held slider rather than
                carrying it onto the other envelope's parameters. -->
           {#key envMode}
-            {#each env as [label, index] (index)}
+            {#each env as [label, index, glyph] (index)}
               <DeviceSlider
                 value={paramValue(index)}
                 title={label}
+                icon={glyph}
                 orientation="vertical"
                 labelOrientation="horizontal"
                 color={envInk}
@@ -217,6 +218,7 @@
             <DeviceSlider
               value={paramValue(FILTER_ENV_AMOUNT)}
               title="Amt"
+              icon="depth"
               orientation="vertical"
               labelOrientation="horizontal"
               color={omniInk}
@@ -237,6 +239,7 @@
           xValue={unisonXValue}
           yValue={unisonYValue}
           title="Unison"
+          icon="unison"
           titleClass="text-2xl font-bold"
           onInteraction={handleUnisonXYInteraction}
           color={omniInk}
@@ -249,6 +252,7 @@
           xValue={ambianceXValue}
           yValue={ambianceYValue}
           title="Space"
+          icon="reverb"
           titleClass="text-2xl font-bold"
           onInteraction={handleAmbianceXYInteraction}
           color={omniInk}
@@ -261,6 +265,7 @@
           xValue={filterXValue}
           yValue={filterYValue}
           title="Filter"
+          icon="filter"
           titleClass="text-2xl font-bold"
           onInteraction={handleFilterXYInteraction}
           color={omniInk}
@@ -273,6 +278,7 @@
           xValue={vibratoXValue}
           yValue={vibratoYValue}
           title="Vibrato"
+          icon="lfo"
           titleClass="text-2xl font-bold"
           onInteraction={handleVibratoXYInteraction}
           color={omniInk}
@@ -297,6 +303,7 @@
           <DeviceSlider
             value={eqLoValue}
             title="LO"
+            icon="low"
             orientation="vertical"
             labelOrientation="horizontal"
             color={omnisphereColor}
@@ -310,6 +317,7 @@
           <DeviceSlider
             value={eqMidValue}
             title="MID"
+            icon="tone"
             orientation="vertical"
             labelOrientation="horizontal"
             color={omnisphereColor}
@@ -323,6 +331,7 @@
           <DeviceSlider
             value={eqHiValue}
             title="HI"
+            icon="high"
             orientation="vertical"
             labelOrientation="horizontal"
             color={omnisphereColor}

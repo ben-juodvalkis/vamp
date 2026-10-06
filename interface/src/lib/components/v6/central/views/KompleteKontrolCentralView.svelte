@@ -1,6 +1,7 @@
 <script lang="ts">
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
+  import { glyphForName } from '$lib/config/controlGlyphMap';
   import MidiWheel from '../../midi/MidiWheel.svelte';
   import { sendPitchWheel, sendModWheel } from '$lib/api/midiWheels';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
@@ -106,11 +107,13 @@
     <!-- 8 sliders + 2 MIDI wheels in equal-width flex layout -->
     <div class="controls-panel">
       {#each SLIDER_PARAMS as paramIndex (paramIndex)}
+        {@const name = parameterNames[paramIndex - 1] ? cleanParameterName(parameterNames[paramIndex - 1]) : `Param ${paramIndex}`}
         <div class="control-slot slider-slot">
           <DeviceSlider
             value={getParamValue(paramIndex)}
             labelOrientation="horizontal"
-            title={parameterNames[paramIndex - 1] ? cleanParameterName(parameterNames[paramIndex - 1]) : `Param ${paramIndex}`}
+            title={name}
+            icon={glyphForName(name)}
             color={kompleteKontrolInk}
             onInteraction={(value) => {
               if (!device) return;

@@ -8,6 +8,7 @@
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
+  import { glyphForName } from '$lib/config/controlGlyphMap';
   import SectionDivider from '../SectionDivider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
   import MidiWheel from '../../midi/MidiWheel.svelte';
@@ -145,6 +146,8 @@
                   xValue={getNormalizedValue(item.x.macroIndex)}
                   yValue={getNormalizedValue(item.y.macroIndex)}
                   title={item.title}
+                  xIcon={glyphForName(item.x.name)}
+                  yIcon={glyphForName(item.y.name)}
                   color={ctlInk(i)}
                   onInteraction={(x, y) => {
                     handleSliderChange(item.x.macroIndex, x);
@@ -157,6 +160,7 @@
                 <DeviceSlider
                   value={getNormalizedValue(item.control.macroIndex)}
                   title={item.control.name}
+                  icon={glyphForName(item.control.name)}
                   orientation="vertical"
                   labelOrientation="horizontal"
                   color={ctlInk(i)}

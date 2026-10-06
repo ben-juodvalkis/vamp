@@ -37,6 +37,7 @@
    */
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
+  import type { ControlGlyphName } from '$lib/config/controlGlyphMap';
   import EnvelopeGroup from './EnvelopeGroup.svelte';
   import Lock from '@lucide/svelte/icons/lock';
   import {
@@ -104,7 +105,7 @@
   </span>
 {/snippet}
 
-{#snippet slider(control: SamplerRowControl, title: string, state: VmState, badge: string | null | undefined, atRest: number)}
+{#snippet slider(control: SamplerRowControl, title: string, icon: ControlGlyphName, state: VmState, badge: string | null | undefined, atRest: number)}
   <div
     class="vm-slot slider-column min-w-0 flex flex-col"
     class:vm-none={state === 'none'}
@@ -115,6 +116,7 @@
     <DeviceSlider
       value={t(control, atRest)}
       {title}
+      {icon}
       orientation="vertical"
       labelOrientation="horizontal"
       {color}
@@ -147,6 +149,9 @@
         xValue={t('oscCoarse', 0)}
         yValue={t('oscAmount', 0)}
         title="Osc"
+        icon="oscillator"
+        xIcon="tune"
+        yIcon="depth"
         {color}
         isGhost={oscState === 'none'}
         onInteraction={(x, y) => {
@@ -167,6 +172,9 @@
         xValue={t('pitchEnvAttack', 0.5)}
         yValue={t('pitchEnvAmount', 0.5)}
         title="Pitch"
+        icon="pitchdrop"
+        xIcon="attack"
+        yIcon="depth"
         {color}
         isGhost={pitchEnvState === 'none'}
         onInteraction={(x, y) => {
@@ -187,16 +195,16 @@
        and R. -->
   <div class="envelope-column min-w-0 h-full flex gap-(--central-gap)">
     <EnvelopeGroup ink={color.primary}>
-      {@render slider('attack', 'A', attackState, badges.attack, 0.5)}
-      {#if !hide.has('decay')}{@render slider('decay', 'D', decayState, badges.decay, 0.5)}{/if}
-      {#if !hide.has('sustain')}{@render slider('sustain', 'S', sustainState, badges.sustain, 1)}{/if}
-      {@render slider('release', 'R', releaseState, badges.release, 0.5)}
+      {@render slider('attack', 'A', 'attack', attackState, badges.attack, 0.5)}
+      {#if !hide.has('decay')}{@render slider('decay', 'D', 'decay', decayState, badges.decay, 0.5)}{/if}
+      {#if !hide.has('sustain')}{@render slider('sustain', 'S', 'sustain', sustainState, badges.sustain, 1)}{/if}
+      {@render slider('release', 'R', 'release', releaseState, badges.release, 0.5)}
     </EnvelopeGroup>
   </div>
-  {#if !hide.has('spread')}{@render slider('spread', 'Spread', spreadState, badges.spread, 0)}{/if}
+  {#if !hide.has('spread')}{@render slider('spread', 'Spread', 'width', spreadState, badges.spread, 0)}{/if}
   <!-- Sample Selector (0..127): which zone of the Sel editor plays. A
        kit's control (2026-10-04); the single-Sampler view hides it. -->
-  {#if !hide.has('selector')}{@render slider('selector', 'Select', selectorState, badges.selector, 0)}{/if}
+  {#if !hide.has('selector')}{@render slider('selector', 'Select', 'select', selectorState, badges.selector, 0)}{/if}
   <div
     class="vm-slot slider-column min-w-0 flex flex-col"
     class:vm-none={pitchState === 'none'}
@@ -208,6 +216,7 @@
       value={t('pitch', 0)}
       labelOrientation="horizontal"
       title="Trnsp"
+      icon="transpose"
       {color}
       min={VM_PITCH_MIN}
       max={VM_PITCH_MAX}

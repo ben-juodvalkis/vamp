@@ -94,6 +94,9 @@
             xValue={res1DecayValue}
             yValue={res1MaterialValue}
             title="Res 1"
+            icon="resonator"
+            xIcon="decay"
+            yIcon="tone"
             onInteraction={handleRes1Interaction}
             color={collisionInk}
           />
@@ -105,6 +108,9 @@
             xValue={res2DecayValue}
             yValue={res2MaterialValue}
             title="Res 2"
+            icon="resonator"
+            xIcon="decay"
+            yIcon="tone"
             onInteraction={handleRes2Interaction}
             color={collisionInk}
           />

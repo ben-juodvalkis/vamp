@@ -82,6 +82,7 @@
       value={t('pitch', 0)}
       labelOrientation="horizontal"
       title="Trnsp"
+      icon="transpose"
       {color}
       min={VM_PITCH_MIN}
       max={VM_PITCH_MAX}
@@ -105,6 +106,9 @@
       xValue={t('attack', 0.5)}
       yValue={t('release', 0.5)}
       title="Time"
+      icon="envelope"
+      xIcon="attack"
+      yIcon="release"
       {color}
       isGhost={timeState === 'none'}
       onInteraction={(x, y) => {

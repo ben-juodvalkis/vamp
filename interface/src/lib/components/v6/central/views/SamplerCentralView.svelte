@@ -199,6 +199,7 @@
             value={valueAt(GAIN) ?? 0.5}
             labelOrientation="horizontal"
             title="Gain"
+            icon="gain"
             color={samplerInk}
             isGhost={gainState === 'none'}
             onInteraction={(value) => writeAt(GAIN, value)}
@@ -211,6 +212,9 @@
             xValue={valueAt(FILTER_FREQ) ?? 1}
             yValue={valueAt(FILTER_RES) ?? 0}
             title="Filter"
+            icon="filter"
+            xIcon="cutoff"
+            yIcon="resonance"
             color={samplerInk}
             isGhost={filterState === 'none'}
             onInteraction={(x, y) => {

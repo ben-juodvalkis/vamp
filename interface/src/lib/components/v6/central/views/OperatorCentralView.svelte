@@ -73,10 +73,10 @@
   // so this is right whatever they turn out to be, and a no-op on the two
   // that were already 0..1.
   const ENVELOPE = [
-    { index: AE_ATTACK, title: 'A', atRest: 0.5 },
-    { index: AE_DECAY, title: 'D', atRest: 0.5 },
-    { index: AE_SUSTAIN, title: 'S', atRest: 1 },
-    { index: AE_RELEASE, title: 'R', atRest: 0.5 }
+    { index: AE_ATTACK, title: 'A', icon: 'attack', atRest: 0.5 },
+    { index: AE_DECAY, title: 'D', icon: 'decay', atRest: 0.5 },
+    { index: AE_SUSTAIN, title: 'S', icon: 'sustain', atRest: 1 },
+    { index: AE_RELEASE, title: 'R', icon: 'release', atRest: 0.5 }
   ] as const;
 
   function envValue(index: number, atRest: number): number {
@@ -158,6 +158,7 @@
               <DeviceSlider
                 value={envelopeValues[i]}
                 title={stage.title}
+                icon={stage.icon}
                 orientation="vertical"
                 labelOrientation="horizontal"
                 color={operatorInk}
@@ -172,6 +173,7 @@
         <DeviceSlider
           value={feedbackValue}
           title="Feedback"
+          icon="feedback"
           orientation="vertical"
           labelOrientation="horizontal"
           color={operatorInk}
@@ -183,6 +185,7 @@
         <DeviceSlider
           value={timeValue}
           title="Time"
+          icon="envelope"
           orientation="vertical"
           labelOrientation="horizontal"
           color={operatorInk}
@@ -198,6 +201,7 @@
         <DeviceSlider
           value={toneValue}
           title="Tone"
+          icon="tone"
           orientation="vertical"
           labelOrientation="horizontal"
           color={operatorInk}

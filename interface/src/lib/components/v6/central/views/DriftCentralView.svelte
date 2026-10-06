@@ -544,6 +544,7 @@
             <DeviceSlider
               value={oscShape}
               title="Shape"
+              icon="shape"
               orientation="horizontal"
               labelSize="small"
               isGhost={!oscOn}
@@ -594,6 +595,7 @@
             <DeviceSlider
               value={osc1Gain}
               title="Osc 1"
+              icon="oscillator"
               orientation="vertical"
               labelSize="small"
               isGhost={!osc1On}
@@ -606,6 +608,7 @@
             <DeviceSlider
               value={osc2Gain}
               title="Osc 2"
+              icon="oscillator"
               orientation="vertical"
               labelSize="small"
               isGhost={!osc2On}
@@ -618,6 +621,7 @@
             <DeviceSlider
               value={noiseGain}
               title="Noise"
+              icon="noise"
               orientation="vertical"
               labelSize="small"
               isGhost={!noiseOn}
@@ -646,6 +650,7 @@
             xValue={timeXValue}
             yValue={timeYValue}
             title="Time"
+            icon="envelope"
             onInteraction={handleTimeXYInteraction}
             color={driftInk}
           />
@@ -655,6 +660,9 @@
             xValue={cutoffValue}
             yValue={resonanceValue}
             title="Filter"
+            icon="filter"
+            xIcon="cutoff"
+            yIcon="resonance"
             onInteraction={handleFilterXYInteraction}
             color={driftInk}
           />
@@ -693,6 +701,7 @@
             <DeviceSlider
               value={voicingSliderValue}
               title={voicingSliderTitle}
+              icon="unison"
               orientation="vertical"
               labelSize="small"
               isGhost={voiceMode === 0}
@@ -712,6 +721,7 @@
               <DeviceSlider
                 value={glideValue}
                 title="Glide"
+                icon="glide"
                 orientation="vertical"
                 labelSize="small"
                 color={driftInk}
@@ -723,6 +733,7 @@
             <DeviceSlider
               value={driftValue}
               title="Drift"
+              icon="drift"
               orientation="vertical"
               labelSize="small"
               color={driftInk}

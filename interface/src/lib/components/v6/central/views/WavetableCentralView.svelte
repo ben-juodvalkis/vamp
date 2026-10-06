@@ -85,10 +85,10 @@
   // the rig, which is exactly why the range is asked for rather than
   // assumed.
   const ENVELOPE = [
-    { index: 39, title: 'A', fallback: { min: 0, max: 20 }, atRest: 0 },
-    { index: 40, title: 'D', fallback: { min: 0, max: 20 }, atRest: 0 },
-    { index: 45, title: 'S', fallback: { min: 0, max: 1 }, atRest: 1 },
-    { index: 41, title: 'R', fallback: { min: 0.0015, max: 20 }, atRest: 0.0015 }
+    { index: 39, title: 'A', icon: 'attack', fallback: { min: 0, max: 20 }, atRest: 0 },
+    { index: 40, title: 'D', icon: 'decay', fallback: { min: 0, max: 20 }, atRest: 0 },
+    { index: 45, title: 'S', icon: 'sustain', fallback: { min: 0, max: 1 }, atRest: 1 },
+    { index: 41, title: 'R', icon: 'release', fallback: { min: 0.0015, max: 20 }, atRest: 0.0015 }
   ] as const;
 
   const norm = (raw: number, min: number, max: number) =>
@@ -208,6 +208,9 @@
             xValue={osc1Effect2}
             yValue={osc1Position}
             title="OSC 1"
+            icon="oscillator"
+            xIcon="shape"
+            yIcon="wavetable"
             onInteraction={handleOsc1XY}
             color={wavetableInk}
           />
@@ -227,6 +230,9 @@
           xValue={osc2Effect2}
           yValue={osc2Position}
           title="OSC 2"
+          icon="oscillator"
+          xIcon="shape"
+          yIcon="wavetable"
           isGhost={!osc2On}
           onInteraction={handleOsc2XY}
           color={wavetableInk}
@@ -246,6 +252,7 @@
               <DeviceSlider
                 value={envelopeValues[i]}
                 title={stage.title}
+                icon={stage.icon}
                 orientation="vertical"
                 labelOrientation="horizontal"
                 color={wavetableInk}

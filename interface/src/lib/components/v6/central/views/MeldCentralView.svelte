@@ -137,6 +137,7 @@
             xValue={macro1}
             yValue={macro2}
             title="Macro"
+            icon="macro"
             onInteraction={handleMacroXYInteraction}
             color={meldInk}
           />
@@ -165,6 +166,9 @@
           xValue={cutoff}
           yValue={resonance}
           title="Filter"
+          icon="filter"
+          xIcon="cutoff"
+          yIcon="resonance"
           onInteraction={handleFilterXYInteraction}
           color={meldInk}
         />
@@ -175,6 +179,7 @@
           xValue={timeX}
           yValue={timeY}
           title="Time"
+          icon="envelope"
           onInteraction={handleTimeXYInteraction}
           color={meldInk}
         />
