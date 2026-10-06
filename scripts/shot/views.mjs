@@ -122,7 +122,7 @@ const FX_TILES = [
 	['Rand Oct', 'random', 'Arpeggiator view (the Rand Oct tile)'],
 	['EQ', 'eq', 'EQ Eight'],
 	['Filter', 'filter', 'Auto Filter'],
-	['Pedal', 'pedal', 'Pedal + Saturator + Digital + Redux'],
+	['Saturator', 'pedal', 'Saturator tile → Pedal XY + Saturator faders + Digital + Redux'],
 	['Drum', 'drum-buss', 'Drum Buss'],
 	['Glue', 'squash', 'Glue (the Squash slot) + Compressor'],
 	['Gain', 'utility', 'Utility / Gate (the Gain tile)'],
@@ -187,19 +187,19 @@ export const TOURS = {
 				name: 'fx-pedal-general',
 				description: 'Pedal view, expression pedal switched off — no Wah column',
 				features: { expressionPedal: { enabled: false, available: false, reason: '' } },
-				steps: [openTile('Pedal')]
+				steps: [openTile('Saturator')]
 			},
 			// Guitar is two hops now: its tile left the grid for the Pedal
 			// view's last column (2026-09-15), which is also its only door.
 			{
 				name: 'fx-guitar',
 				description: 'Guitar (via the Pedal view, which carries its tile)',
-				steps: [openTile('Pedal'), { click: '.guitar-column .device-control' }]
+				steps: [openTile('Saturator'), { click: '.guitar-column .device-control' }]
 			},
 			{
 				name: 'fx-guitar-loaded',
 				description: 'Guitar on the Guitar track, where the rack is loaded: the Drive/Fuzz and Tremolo XY pads',
-				steps: [selectTrack(3), openTile('Pedal'), { click: '.guitar-column .device-control' }]
+				steps: [selectTrack(3), openTile('Saturator'), { click: '.guitar-column .device-control' }]
 			},
 			...FX_TILES.map(([label, name, description]) => ({
 				name: `fx-${name}`,

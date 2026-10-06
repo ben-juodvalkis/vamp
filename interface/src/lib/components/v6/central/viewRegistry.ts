@@ -87,6 +87,7 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 		'guitar': () => import('./views/GuitarCentralView.svelte'),
 		'octave': () => import('./views/ChorusCentralView.svelte'),
 		'pedal': () => import('./views/PedalCentralView.svelte'),
+		'saturator': () => import('./views/PedalCentralView.svelte'), // the Saturator tile's view (fx5, 2026-10-05), which holds the Pedal's XY
 		// The Rand Oct tile: its type is `random`, its view the Arpeggiator's
 		// (the MIDI-effects family — arpeggiator, velocity and chord slots).
 		// The tile used to name that view itself; since every tile opens its

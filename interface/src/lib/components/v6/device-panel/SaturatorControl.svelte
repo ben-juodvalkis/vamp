@@ -7,7 +7,7 @@
   interface Props {
     device: DeviceRecord | null;
     position?: import('$lib/config/fxGridLayout').PositionKey;
-    /** Inside the Pedal view a tap has nowhere to go: it is already home. */
+    /** Under a host that is already its view, a tap has nowhere to go. */
     disableCentralViewOnTap?: boolean;
   }
 
@@ -55,9 +55,9 @@
   );
 </script>
 
-<!-- A column of PedalCentralView again since 2026-09-10 (ADR-431), after two
-     weeks as a grid tile (2026-08-22); the Drum Buss has that tile now. The
-     view mounts it with `slotKey`; `position` stays for any grid host. -->
+<!-- The fx5 grid tile again since 2026-10-05 (it was a column of
+     PedalCentralView from 2026-09-10, ADR-431); the tile opens that view.
+     `slotKey` stays for a standalone mount. -->
 <BaseDeviceControl
   {...position ? { position } : { slotKey: 'saturator' as const }}
   {device}

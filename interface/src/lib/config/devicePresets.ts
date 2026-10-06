@@ -223,7 +223,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Saturator',
     expectedClassName: 'Saturator',
-    centralViewGroup: 'pedal',          // Tapping its grid tile opens PedalCentralView
+    centralViewGroup: 'pedal',          // Its grid tile (fx5, 2026-10-05) opens PedalCentralView
     color: familyScheme('distortion')
   },
   variation: {
@@ -256,6 +256,8 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Pedal',
     expectedClassName: 'Pedal',
+    gridSlot: false,                    // Virtual device: its XY is a column of PedalCentralView (2026-10-05)
+    centralViewGroup: 'pedal',
     color: familyScheme('distortion')
   },
   tremolo: {

@@ -22,7 +22,7 @@ import EchoControl from '$lib/components/v6/device-panel/EchoControl.svelte';
 import VariationControl from '$lib/components/v6/device-panel/VariationControl.svelte';
 import DrumBussControl from '$lib/components/v6/device-panel/DrumBussControl.svelte';
 import RandomControl from '$lib/components/v6/device-panel/RandomControl.svelte';
-import PedalControl from '$lib/components/v6/device-panel/PedalControl.svelte';
+import SaturatorControl from '$lib/components/v6/device-panel/SaturatorControl.svelte';
 import ChorusControl from '$lib/components/v6/device-panel/ChorusControl.svelte';
 import ReverbControl from '$lib/components/v6/device-panel/ReverbControl.svelte';
 import UtilityControl from '$lib/components/v6/device-panel/UtilityControl.svelte';
@@ -68,7 +68,7 @@ export interface FXGridSlotConfig {
  *
  *   MIDI / master  col 1 Rand Oct (OTT on master), full height
  *                  col 2 Variation, full height
- *                  cols 3-10 EQ, Filter, Pedal, Drum over Chorus, Tremolo, Echo, Reverb
+ *                  cols 3-10 EQ, Filter, Saturator, Drum over Chorus, Tremolo, Echo, Reverb
  *                  col 11 Squash, full height · col 12 Gain, full height
  *   audio          col 1 Guitar, full height · col 2 Bass over Variation
  *                  cols 3-12 identical
@@ -102,6 +102,10 @@ export interface FXGridSlotConfig {
  * left the Gain / Utility view for the top half of the Gain column —
  * FXGrid splits fx7 the way it splits fx1 — so the grid stays at eleven
  * columns and the TotalMix status strip's ruler in layouts/default/Layout.svelte with it.
+ *
+ * 2026-10-05: the Saturator and the Pedal swapped places — the Saturator's
+ * XY is the grid tile again, and the Pedal's XY moved into the view the
+ * tile opens (PedalCentralView), beside its type tabs.
  *
  * Note: Arpeggiator and Bass are virtual devices (not in grid, accessed via central views)
  */
@@ -138,11 +142,11 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   {
     position: 'fx5',
     col: 7,
-    deviceType: 'pedal',
-    component: PedalControl,
+    deviceType: 'saturator',
+    component: SaturatorControl,
     span: 2,
     row: 1,
-    config: DEVICE_PRESETS.pedal
+    config: DEVICE_PRESETS.saturator
   },
   {
     position: 'fx6',

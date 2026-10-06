@@ -6,17 +6,16 @@
    * Renders immediately with ghost/loading/active states.
    * Displays pedal controls with virtual devices (digital, redux).
    *
-   * The Saturator is back (2026-09-10, ADR-431): its XY — the FX-grid
-   * tile, mounted here standalone — and its four parameters on faders
-   * (Drive, Color Hi, Output, Mix — what SaturatorCentralView broke out
-   * before it went). The Drum Buss, once column 1 here and then a rail
-   * beside the instrument views (ADR-424), is a grid tile with its own
-   * view now.
+   * 2026-10-05: the Saturator and the Pedal traded places. The Saturator's
+   * XY is the FX grid's fx5 tile, and a tap on it opens this view; the
+   * Pedal's XY is mounted here standalone, beside its type tabs. Of the
+   * Saturator's faders only Output and Mix stay — Drive and Color Hi are
+   * the tile's two axes.
    *
    * The Guitar came the same way on 2026-09-15, when the FX grid went to
    * ten columns: the amp rack's drive slider is mounted standalone like the
-   * Saturator. Unlike the Saturator its tap is NOT disabled — the Saturator
-   * is home here, the Guitar is not, and this mount is the only door left to
+   * Pedal. Unlike the Pedal its tap is NOT disabled — the Pedal is home
+   * here, the Guitar is not, and this mount is the only door left to
    * `GuitarCentralView` on a MIDI track.
    *
    * The Wah is the last column (ADR-445, 2026-09-19): one button, because
@@ -34,7 +33,7 @@
 
   import DigitalControl from '$lib/components/v6/device-panel/DigitalControl.svelte';
   import ReduxControl from '$lib/components/v6/device-panel/ReduxControl.svelte';
-  import SaturatorControl from '$lib/components/v6/device-panel/SaturatorControl.svelte';
+  import PedalControl from '$lib/components/v6/device-panel/PedalControl.svelte';
   import GuitarControl from '$lib/components/v6/device-panel/GuitarControl.svelte';
   import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
@@ -66,12 +65,11 @@
   });
 
   // Index, label, and the value a fader rests at before the device answers.
-  // Indices match the tile's PARAM_CONFIG (1 / 8 / 10 / 11); 10 was confirmed
-  // as Output against the running device (2026-08-22). Nothing is remapped:
-  // what a fader shows is what the device stores.
+  // Indices match the tile's PARAM_CONFIG (10 / 11); 10 was confirmed as
+  // Output against the running device (2026-08-22). Nothing is remapped:
+  // what a fader shows is what the device stores. Drive (1) and Color Hi
+  // (8) have no fader: they are the grid tile's two axes (2026-10-05).
   const SATURATOR_FADERS = [
-    { index: 1, title: 'Drive', fallback: 0.5 },
-    { index: 8, title: 'Color Hi', fallback: 0.5 },
     { index: 10, title: 'Output', fallback: 1 },
     { index: 11, title: 'Mix', fallback: 1 }
   ] as const;
@@ -153,21 +151,42 @@
     </div>
   </div>
 
-  <!-- The Saturator starts here: its pad and its four faders are one device,
-       and the three pads are the same size in the same distortion ink, so
-       without this line the Saturator's pad read as a third sibling of
-       Digital and Redux (user's call, 2026-09-13). -->
-  <SectionDivider orientation="vertical" ink={saturatorInk.primary} />
+  <!-- The Pedal starts here: its pad and its type tabs are one device, and
+       the three pads are the same size in the same distortion ink, so
+       without this line its pad read as a third sibling of Digital and
+       Redux (user's call, 2026-09-13). -->
+  <SectionDivider orientation="vertical" ink={pedalInk.primary} />
 
-  <!-- COLUMN 3: the Saturator's XY — the grid tile, mounted standalone; a
+  <!-- COLUMN 3: the Pedal's XY — the old grid tile, mounted standalone; a
        tap goes nowhere because this view is its home. -->
-  <div class="column saturator-column">
+  <div class="column pedal-xy-column">
     <div class="xy-wrapper flex-1">
-      <SaturatorControl device={saturator.device} disableCentralViewOnTap={true} />
+      <PedalControl device={fx.device} disableCentralViewOnTap={true} />
     </div>
   </div>
 
-  <!-- COLUMN 4: the Saturator's four parameters, one fader each -->
+  <!-- COLUMN 4: Pedal type tabs (stacked vertically, full height) -->
+  <div class="column pedal-column" style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
+    <div class="pedal-type-buttons">
+      {#each PEDAL_TYPE_OPTIONS as option}
+        <button
+          class="physical-button w-full px-2 text-xs text-center font-medium"
+          class:active={pedalType === option.value}
+          style="--btn-tint: {pedalInk.primary};"
+          onclick={() => selectPedalType(option.value)}
+        >
+          {option.label}
+        </button>
+      {/each}
+    </div>
+  </div>
+
+  <!-- The Saturator's two faders: its XY is the grid tile that opened this
+       view. The tabs and the faders are narrow stacks of the same width,
+       so without a line between them they read as one device (2026-09-13). -->
+  <SectionDivider orientation="vertical" ink={saturatorInk.primary} />
+
+  <!-- COLUMN 5: the Saturator's Output and Mix, one fader each -->
   <div class="column saturator-faders" style={saturator.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
     {#each SATURATOR_FADERS as fader (fader.index)}
       <div class="slider-col">
@@ -185,29 +204,6 @@
         />
       </div>
     {/each}
-  </div>
-
-  <!-- Everything right of this seam is the Pedal itself. The Saturator's
-       faders and the type tabs are both narrow stacks of the same width, so
-       without a line between them they read as one control group belonging
-       to one device (2026-09-13). -->
-  <SectionDivider orientation="vertical" ink={pedalInk.primary} />
-
-  <!-- COLUMN 5: Pedal Controls -->
-  <div class="column pedal-column" style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
-    <!-- Pedal Type Tabs (stacked vertically, full height) -->
-    <div class="pedal-type-buttons">
-      {#each PEDAL_TYPE_OPTIONS as option}
-        <button
-          class="physical-button w-full px-2 text-xs text-center font-medium"
-          class:active={pedalType === option.value}
-          style="--btn-tint: {pedalInk.primary};"
-          onclick={() => selectPedalType(option.value)}
-        >
-          {option.label}
-        </button>
-      {/each}
-    </div>
   </div>
 
   <!-- The Guitar is a fourth device on this page, so it takes a seam of its
@@ -252,8 +248,8 @@
 <style>
   .pedal-central-layout {
     display: grid;
-    /* digital | redux | saturator XY · saturator faders | pedal-type tabs
-       | guitar drive | wah. The faders column is as wide as its four
+    /* digital | redux | pedal XY · pedal-type tabs | saturator faders
+       | guitar drive | wah. The faders column is as wide as its two
        sliders need, the tabs as wide as their labels, the Guitar and the
        Wah one slider wide each, each seam as wide as its hairline; the
        three pads share the rest. */
@@ -287,9 +283,9 @@
     flex-direction: row;
   }
 
-  /* Four faders at the Drum Rack view's slider width; the label runs up
+  /* Two faders at the Drum Rack view's slider width; the label runs up
      the fader (as Gain's does there) — at this width a horizontal
-     "Output" clips and "Color Hi" wraps. */
+     "Output" clips. */
   .slider-col {
     width: var(--vm-slider-w, 56px);
     min-height: 0;

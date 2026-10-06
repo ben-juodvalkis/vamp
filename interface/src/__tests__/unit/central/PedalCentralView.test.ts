@@ -1,9 +1,10 @@
 /**
- * PedalCentralView (ADR-431): seven columns — Digital, Redux, the Saturator's
- * XY, its four faders, the pedal-type tabs, since the ten-column FX-grid cut
- * (2026-09-15) the Guitar amp rack's drive slider, and since ADR-445
- * (2026-09-19) the Wah button. The Saturator reads its own device and a tap
- * on its pad stays in this view.
+ * PedalCentralView (ADR-431): seven columns — Digital, Redux, the Pedal's
+ * XY and its type tabs (since 2026-10-05, when the Saturator's XY became the
+ * fx5 grid tile that opens this view), the Saturator's Output and Mix
+ * faders, since the ten-column FX-grid cut (2026-09-15) the Guitar amp
+ * rack's drive slider, and since ADR-445 (2026-09-19) the Wah button. The
+ * Pedal reads its own device and a tap on its pad stays in this view.
  *
  * The Guitar is the opposite case, and the reason it is pinned here: its tap
  * must LEAVE, because this mount is the only door left to GuitarCentralView
@@ -44,6 +45,16 @@ const TRACK = 'tracks/0';
 const SAT = `${TRACK}/devices/0`;
 const GTR = `${TRACK}/devices/1`;
 const WAH = `${TRACK}/devices/2`;
+const PEDAL = `${TRACK}/devices/3`;
+
+function pedal(): DeviceRecord {
+	const params = new SvelteMap<string, ParamRecord>();
+	for (let i = 0; i <= 9; i++) {
+		const paramPath = `${PEDAL}/params/${i}`;
+		params.set(paramPath, { paramPath, name: `P${i}`, displayName: `P${i}`, min: 0, max: 1, value: 0, unit: '' });
+	}
+	return { devicePath: PEDAL, name: 'Pedal', className: 'Pedal', params, properties: new SvelteMap() };
+}
 
 function saturator(values: Record<number, number>): DeviceRecord {
 	const params = new SvelteMap<string, ParamRecord>();
@@ -120,23 +131,29 @@ afterEach(() => {
 });
 
 describe('PedalCentralView', () => {
-	it('carries the Saturator pad and its four faders beside Digital, Redux and the pedal tabs', async () => {
-		seed([saturator({ 1: 0.75, 8: 0.2, 10: 1, 11: 1 })]);
+	it('carries the Pedal pad and tabs, and only the Saturator\'s Output and Mix faders', async () => {
+		seed([saturator({ 1: 0.75, 8: 0.2, 10: 1, 11: 1 }), pedal()]);
 		const { container } = render(PedalCentralView);
 		await tick();
-		expect(container.querySelector('.saturator-column .device-control')).not.toBeNull();
-		expect(container.querySelector('.saturator-column .device-control')?.classList.contains('device-ghost')).toBe(false);
-		for (const title of ['Drive', 'Color Hi', 'Output', 'Mix']) {
+		expect(container.querySelector('.pedal-xy-column .device-control')).not.toBeNull();
+		expect(container.querySelector('.pedal-xy-column .device-control')?.classList.contains('device-ghost')).toBe(false);
+		// No Saturator pad here: that is the grid tile.
+		expect(container.textContent).not.toContain('Saturator');
+		for (const title of ['Output', 'Mix']) {
 			expect(slider(container, title), title).toBeDefined();
+		}
+		// Drive and Color Hi are the tile's two axes, not faders.
+		for (const title of ['Drive', 'Color Hi']) {
+			expect(slider(container, title), title).toBeUndefined();
 		}
 		expect(container.textContent).toContain('Distort');
 	});
 
-	it('ghosts the Saturator columns on a track without one', async () => {
+	it('ghosts the Pedal pad and the Saturator faders on a track without either', async () => {
 		seed([]);
 		const { container } = render(PedalCentralView);
 		await tick();
-		expect(container.querySelector('.saturator-column .device-control')?.classList.contains('device-ghost')).toBe(true);
+		expect(container.querySelector('.pedal-xy-column .device-control')?.classList.contains('device-ghost')).toBe(true);
 		expect((container.querySelector('.saturator-faders') as HTMLElement).style.opacity).toContain('--opacity-ghost');
 	});
 
@@ -161,8 +178,8 @@ describe('PedalCentralView', () => {
 	});
 
 	it('lets a tap on the Guitar slider LEAVE for the Guitar view', async () => {
-		// The one behaviour that separates it from the Saturator beside it:
-		// this view is the Saturator's home and only the Guitar's doorway.
+		// The one behaviour that separates it from the Pedal pad:
+		// this view is the Pedal's home and only the Guitar's doorway.
 		HTMLElement.prototype.setPointerCapture = vi.fn();
 		HTMLElement.prototype.releasePointerCapture = vi.fn();
 		seed([saturator({}), guitarRack()]);
@@ -242,15 +259,15 @@ describe('PedalCentralView', () => {
 		}
 	});
 
-	it('keeps a tap on the Saturator pad inside this view', async () => {
+	it('keeps a tap on the Pedal pad inside this view', async () => {
 		// jsdom has no pointer capture; the pad asks for it on every press.
 		HTMLElement.prototype.setPointerCapture = vi.fn();
 		HTMLElement.prototype.releasePointerCapture = vi.fn();
-		seed([saturator({})]);
+		seed([pedal()]);
 		centralDisplayStore.setView('device', 'pedal');
 		const { container } = render(PedalCentralView);
 		await tick();
-		const pad = container.querySelector<HTMLElement>('.saturator-column .xy-container');
+		const pad = container.querySelector<HTMLElement>('.pedal-xy-column .xy-container');
 		expect(pad).not.toBeNull();
 		pad!.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10 }));
 		pad!.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 10, clientY: 10 }));

@@ -6,10 +6,12 @@
 
   interface Props {
     device: DeviceRecord | null;
-    position: import('$lib/config/fxGridLayout').PositionKey;
+    position?: import('$lib/config/fxGridLayout').PositionKey;
+    /** Inside the Pedal view a tap has nowhere to go: it is already home. */
+    disableCentralViewOnTap?: boolean;
   }
 
-  let { device, position }: Props = $props();
+  let { device, position, disableCentralViewOnTap = false }: Props = $props();
 
   const PARAM_CONFIG = {
     type: {
@@ -53,7 +55,17 @@
   );
 </script>
 
-<BaseDeviceControl {position} {device} title="Pedal" showMoveToTop={true} showMoveToEnd={true}>
+<!-- A column of PedalCentralView since 2026-10-05, when it traded places
+     with the Saturator's grid tile. The view mounts it with `slotKey`;
+     `position` stays for any grid host. -->
+<BaseDeviceControl
+  {...position ? { position } : { slotKey: 'pedal' as const }}
+  {device}
+  title="Pedal"
+  {disableCentralViewOnTap}
+  showMoveToTop={true}
+  showMoveToEnd={true}
+>
   {#snippet children({ sendParam, storePendingParam, triggerLoad, handleTap, isGhost, isLoading, color, openView })}
     <DeviceXY
       xValue={midValue}

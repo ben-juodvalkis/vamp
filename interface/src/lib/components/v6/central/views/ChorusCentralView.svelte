@@ -158,6 +158,14 @@
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
 <div class="chorus-central-layout relative">
+	<!-- Octave (Polyphonic Pitch Shifter), moved here from the Guitar view
+	     2026-10-05: the pitch controls lead the view. -->
+	<div class="device-wrapper">
+		<OctavePanel />
+	</div>
+
+	<SectionDivider orientation="vertical" ink={octaveInk} />
+
 	<!-- Blur's dry/wet (the `smudge` slot; virtual device - handles its own slot state) -->
 	<div class="device-wrapper">
 		<SmudgeControl device={smudge.device} />
@@ -255,24 +263,16 @@
 		/>
 	</div>
 
-	<!-- Octave (Polyphonic Pitch Shifter), moved here from the Guitar view
-	     2026-10-05 so the pitch devices sit together: Mix fader + interval tab. -->
-	<SectionDivider orientation="vertical" ink={octaveInk} />
-
-	<div class="device-wrapper">
-		<OctavePanel />
-	</div>
-
 </div>
 
 <style>
 	.chorus-central-layout {
 		display: grid;
-		/* blur | comb | phaser | pitch hack · pitch · feedback | octave.
+		/* octave | blur | comb | phaser | pitch hack · pitch · feedback.
 		   Each seam is an `auto` track as wide as its hairline, so the three
 		   pads still share the rest evenly; each slider is a third of a pad,
 		   and Octave (its fader and its tab) is two sliders wide. */
-		grid-template-columns: 0.35fr auto 1fr auto 1fr auto 1fr 0.35fr 0.35fr auto 0.7fr;
+		grid-template-columns: 0.7fr auto 0.35fr auto 1fr auto 1fr auto 1fr 0.35fr 0.35fr;
 		height: 100%;
 		width: 100%;
 		padding: var(--central-inset);
