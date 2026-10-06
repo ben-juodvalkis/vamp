@@ -149,6 +149,31 @@ describe('PedalCentralView', () => {
 		expect(container.textContent).toContain('Distort');
 	});
 
+	it('carries a Shifter fader in place of the Digital pad', async () => {
+		seed([]);
+		const { container } = render(PedalCentralView);
+		await tick();
+		expect(container.textContent).not.toContain('Digital');
+		const columns = container.querySelectorAll('.pedal-central-layout > .column');
+		expect(columns[0].classList.contains('shifter-column')).toBe(true);
+		expect(slider(container, 'Shifter')).toBeDefined();
+	});
+
+	it('a tap on a ghost Shifter loads Live\'s Shifter', async () => {
+		HTMLElement.prototype.setPointerCapture = vi.fn();
+		HTMLElement.prototype.releasePointerCapture = vi.fn();
+		seed([]);
+		const { container } = render(PedalCentralView);
+		await tick();
+		const el = slider(container, 'Shifter')!;
+		el.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10 }));
+		el.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 10, clientY: 10 }));
+		await tick();
+		const loads = vi.mocked(send).mock.calls.filter(([addr]) => addr === '/looping/v3/device/load');
+		expect(loads.length).toBe(1);
+		expect(JSON.stringify(loads[0][1])).toContain('Shifter');
+	});
+
 	it('ghosts the Pedal pad and the Saturator faders on a track without either', async () => {
 		seed([]);
 		const { container } = render(PedalCentralView);

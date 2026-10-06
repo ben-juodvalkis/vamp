@@ -396,6 +396,7 @@ const DEVICE_CLASS_NAMES = {
 	'Glue Compressor': 'GlueCompressor',
 	Phaser: 'PhaserNew',
 	Redux: 'Redux2',
+	Shifter: 'Shifter',
 	Reverb: 'Hybrid',
 	'Auto Pan Legacy': 'AutoPan',
 	// The Bass Amp is a rack, and GuitarCentralView's `bass` slot matches

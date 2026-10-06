@@ -72,7 +72,7 @@ A tap on the Bass tile opens **`GuitarCentralView`**, which `viewRegistry` alias
 
 **Grid re-deal history.** 2026-08-22: Pitch-Helix left the grid (its central view is still registered and reachable) and the Saturator took a tile for two weeks; `fx1`/`fx2` swapped so `RandomControl` held the tall column and `GuitarControl` the single cell. 2026-09-10 (ADR-431): **the Drum Buss took that tile** — `DrumBussControl.svelte` (`fx6`, transients across, dry/wet up — the Drum XY the instrument-view rail carried, ADR-424; the rail is deleted) opens `DrumBussCentralView` (the Comp switch + the Boom XY) — and **the Saturator went back into `PedalCentralView`** as its XY plus its four parameters on faders; `SaturatorCentralView` is gone and `device/saturator` is no longer registered. Same day, Squash took the top of the Gain column. The Drum tile is `padScoped` (since 2026-09-11; it shipped inert under a scope for a day) — a kick with its own Drum Buss is the ordinary case, and the insert-by-name path puts one straight into the pad's chain.
 
-Row 1 now reads **fx1 · EQ · Filter · Pedal · Drum · Squash-over-Gain**; row 2 reads **Var · Chorus · Tremolo · Echo · Reverb** (plus the Gain column). The Pedal view is six columns: digital · redux · saturator XY · saturator faders · pedal-type tabs · **guitar drive**.
+Row 1 now reads **fx1 · EQ · Filter · Saturator · Drum · Squash-over-Gain**; row 2 reads **Var · Chorus · Tremolo · Echo · Reverb** (plus the Gain column). The Saturator tile opens the Pedal view: shifter fader · redux · pedal XY · pedal-type tabs · saturator Output/Mix · **guitar drive** · wah.
 
 ### Parameter reads (post-ADR-359)
 

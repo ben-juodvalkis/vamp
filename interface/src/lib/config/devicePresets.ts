@@ -284,6 +284,18 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     trackTint: true,                    // Wears the focused track's ink (ADR-400)
     color: familyScheme('utility')
   },
+  shifter: {
+    // Live's Shifter, one fader in PedalCentralView (2026-10-05, in place
+    // of the Digital rack's XY): 18 RM Coarse, written with 32 Mode = Ring
+    // on load. Class and indices measured off the running device.
+    padScoped: true,
+    native: true,
+    defaultName: 'Shifter',
+    expectedClassName: 'Shifter',
+    gridSlot: false,                    // Virtual device
+    centralViewGroup: 'pedal',          // Belongs to PedalCentralView
+    color: familyScheme('distortion')
+  },
   redux: {
     padScoped: true,
     native: true,

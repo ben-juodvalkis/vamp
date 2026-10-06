@@ -181,6 +181,7 @@ NATIVE_DEVICE_NAMES: Dict[str, str] = {
     "StereoGain": "Utility",
     "AutoPan": "Auto Pan Legacy",  # inserts as "Tremolo (Legacy)" (2026-10-01); renamed to the tile's name
     "Redux2": "Redux",
+    "Shifter": "Shifter",
     "Hybrid": "Hybrid Reverb",
     "PhaserNew": "Phaser-Flanger",
     "Chorus2": "Chorus-Ensemble",

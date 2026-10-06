@@ -4,7 +4,14 @@
    *
    * Self-contained central view that queries its own slot state.
    * Renders immediately with ghost/loading/active states.
-   * Displays pedal controls with virtual devices (digital, redux).
+   * Displays pedal controls with virtual devices (shifter, redux).
+   *
+   * The Shifter is its first column (2026-10-05, in place of the Digital
+   * rack's XY): one fader on Live's Shifter, param 18 RM Coarse over
+   * 0..0.75 — measured off the running device, 0 = 1.00 Hz, 0.25 = 10 Hz,
+   * 0.5 = 100 Hz, 0.75 = 1.00 kHz. RM Coarse is heard only in Ring mode
+   * (32 Mode: 0 Pitch, 1 Freq, 2 Ring), so a gesture that loads the
+   * Shifter also sets Ring.
    *
    * 2026-10-05: the Saturator and the Pedal traded places. The Saturator's
    * XY is the FX grid's fx5 tile, and a tap on it opens this view; the
@@ -31,7 +38,6 @@
    * NO props required - queries selectedTrackStore directly.
    */
 
-  import DigitalControl from '$lib/components/v6/device-panel/DigitalControl.svelte';
   import ReduxControl from '$lib/components/v6/device-panel/ReduxControl.svelte';
   import PedalControl from '$lib/components/v6/device-panel/PedalControl.svelte';
   import GuitarControl from '$lib/components/v6/device-panel/GuitarControl.svelte';
@@ -45,7 +51,7 @@
   import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
 
   const fx = useFxGridSlot('pedal');
-  const digital = useFxGridSlot('digital');
+  const shifter = useFxGridSlot('shifter');
   const redux = useFxGridSlot('redux');
   const saturator = useFxGridSlot('saturator');
   const guitar = useFxGridSlot('guitar');
@@ -57,6 +63,23 @@
   // its button exists only while `features.expressionPedal` is on — off, the
   // surface does not even listen for the pedal (general-release audit §7b).
   const showWah = $derived(bridgeStatus.isFeatureOn('expressionPedal'));
+
+  const SHIFTER_RM_COARSE = 18;
+  const SHIFTER_RM_MAX = 0.75;
+  const SHIFTER_MODE = 32;
+  const SHIFTER_MODE_RING = 2;
+
+  let shifterInk = $derived({
+    primary: trackInk(shifter.color.primary, paintModeReactive()),
+    secondary: shifter.color.secondary,
+    accent: trackInk(shifter.color.accent, paintModeReactive())
+  });
+
+  // A ghost slot's first write loads the Shifter; Ring goes with it as a
+  // pending write, so the fader is heard the moment the device lands.
+  function armShifterLoad() {
+    if (shifter.isGhost) shifter.sendParam(SHIFTER_MODE, SHIFTER_MODE_RING);
+  }
 
   let saturatorInk = $derived({
     primary: trackInk(saturator.color.primary, paintModeReactive()),
@@ -132,16 +155,28 @@
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
 <div class="pedal-central-layout relative" class:no-wah={!showWah}>
-  <!-- COLUMN 1: Digital/Shifter Controls -->
-  <div class="column digital-column">
-    <div class="xy-wrapper flex-1">
-      <DigitalControl device={digital.device} />
-    </div>
+  <!-- COLUMN 1: the Shifter's ring-mod frequency, one fader. A tap on a
+       ghost loads it; a drag loads it and writes the value. -->
+  <div class="column shifter-column">
+    <DeviceSlider
+      value={Math.min(shifter.paramValue(SHIFTER_RM_COARSE) ?? SHIFTER_RM_MAX, SHIFTER_RM_MAX)}
+      title="Shifter"
+      orientation="vertical"
+      labelOrientation="vertical"
+      isGhost={shifter.isGhost}
+      color={shifterInk}
+      min={0}
+      max={SHIFTER_RM_MAX}
+      onTap={() => armShifterLoad()}
+      onInteraction={(v) => {
+        armShifterLoad();
+        shifter.sendParam(SHIFTER_RM_COARSE, v);
+      }}
+    />
   </div>
 
-  <!-- Digital and Redux are two devices too — same size, same ink as the
-       Saturator beside them — so every device boundary gets its seam, the
-       Chorus rule (user's call, 2026-09-13). -->
+  <!-- Every device boundary gets its seam, the Chorus rule (user's call,
+       2026-09-13). -->
   <SectionDivider orientation="vertical" ink={redux.color.primary} />
 
   <!-- COLUMN 2: Redux Controls -->
@@ -248,12 +283,12 @@
 <style>
   .pedal-central-layout {
     display: grid;
-    /* digital | redux | pedal XY · pedal-type tabs | saturator faders
+    /* shifter | redux | pedal XY · pedal-type tabs | saturator faders
        | guitar drive | wah. The faders column is as wide as its two
-       sliders need, the tabs as wide as their labels, the Guitar and the
-       Wah one slider wide each, each seam as wide as its hairline; the
-       three pads share the rest. */
-    grid-template-columns: 1fr auto 1fr auto 1fr auto auto auto auto auto auto auto;
+       sliders need, the tabs as wide as their labels, the Shifter, the
+       Guitar and the Wah one slider wide each, each seam as wide as its hairline; the
+       two pads share the rest. */
+    grid-template-columns: auto auto 1fr auto 1fr auto auto auto auto auto auto auto;
     height: 100%;
     width: 100%;
     padding: var(--central-inset);
@@ -263,7 +298,7 @@
   /* No wah (features.expressionPedal off): its seam and column go, and so
      must their two tracks — an empty explicit track still takes a gap. */
   .pedal-central-layout.no-wah {
-    grid-template-columns: 1fr auto 1fr auto 1fr auto auto auto auto auto;
+    grid-template-columns: auto auto 1fr auto 1fr auto auto auto auto auto;
   }
 
   .column {
@@ -291,7 +326,8 @@
     min-height: 0;
   }
 
-  /* One slider wide, like the Saturator's faders beside it. */
+  /* One slider wide, like the Saturator's faders. */
+  .shifter-column,
   .guitar-column {
     width: var(--vm-slider-w, 56px);
   }
