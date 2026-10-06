@@ -28,7 +28,6 @@
 	const smudge = useFxGridSlot('smudge');
 	const phaser = useFxGridSlot('phaser');
 	const pitchHack = useFxGridSlot('pitchHack');
-	const octave = useFxGridSlot('octave');
 
 	// GRATICULE (§5.5): calibrate the slot palette through trackInk at injection.
 	let fxInk = $derived({
@@ -41,7 +40,6 @@
 		secondary: phaser.color.secondary,
 		accent: trackInk(phaser.color.accent, paintModeReactive())
 	});
-	let octaveInk = $derived(trackInk(octave.color.primary, paintModeReactive()));
 	let pitchHackInk = $derived({
 		primary: trackInk(pitchHack.color.primary, paintModeReactive()),
 		secondary: pitchHack.color.secondary,
@@ -159,53 +157,9 @@
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
 <div class="chorus-central-layout relative">
 	<!-- Octave (Polyphonic Pitch Shifter), moved here from the Guitar view
-	     2026-10-05: the pitch controls lead the view. -->
+	     2026-10-05: the pitch devices (Octave, then Pitch Hack) lead the view. -->
 	<div class="device-wrapper">
 		<OctavePanel />
-	</div>
-
-	<SectionDivider orientation="vertical" ink={octaveInk} />
-
-	<!-- Blur's dry/wet (the `smudge` slot; virtual device - handles its own slot state) -->
-	<div class="device-wrapper">
-		<SmudgeControl device={smudge.device} />
-	</div>
-
-	<!-- Seams fall on the DEVICE boundaries: Blur | Comb | Phaser. The pads
-	     are the same size and two wear the same ink, so without them the
-	     Phaser reads as a second Comb (2026-09-13, ADR-433). -->
-	<SectionDivider orientation="vertical" ink={fxInk.primary} />
-
-	<!-- Comb (virtual device - handles its own slot state). The Zebrify
-	     preset's second pad, "Comb LFO", went with the plug-in (2026-10-05):
-	     the Max device has no LFO. -->
-	<div class="device-wrapper">
-		<CombControl device={comb.device} />
-	</div>
-
-	<SectionDivider orientation="vertical" ink={phaserInk.primary} />
-
-	<!-- Phaser (virtual device) — X: LFO speed, Y: feedback. Wrapped in
-	     BaseDeviceControl like Blur and Comb so it carries the same
-	     move-to-first / move-to-last arrows. -->
-	<div class="device-wrapper">
-		<BaseDeviceControl slotKey="phaser" device={phaser.device} title="Phaser" disableCentralViewOnTap={true} showMoveToTop={true} showMoveToEnd={true}>
-			{#snippet children({ handleTap })}
-				<DeviceXY
-					xValue={phaserSpeed}
-					yValue={phaserFeedback}
-					title="Phaser"
-					isGhost={phaser.isGhost}
-					showCurve={false}
-					color={phaserInk}
-					onTap={() => (phaser.isGhost ? phaser.loadIfGhost() : handleTap())}
-					onInteraction={(x, y) => {
-						phaser.sendParam(PHASER_PARAMS.speed.index, normalizedToSpeed(x));
-						phaser.sendParam(PHASER_PARAMS.feedback.index, normalizedToFeedback(y));
-					}}
-				/>
-			{/snippet}
-		</BaseDeviceControl>
 	</div>
 
 	<SectionDivider orientation="vertical" ink={pitchHackInk.primary} />
@@ -263,16 +217,61 @@
 		/>
 	</div>
 
+	<SectionDivider orientation="vertical" ink={fxInk.primary} />
+
+	<!-- Blur's dry/wet (the `smudge` slot; virtual device - handles its own slot state) -->
+	<div class="device-wrapper">
+		<SmudgeControl device={smudge.device} />
+	</div>
+
+	<!-- Seams fall on the DEVICE boundaries: Blur | Comb | Phaser. The pads
+	     are the same size and two wear the same ink, so without them the
+	     Phaser reads as a second Comb (2026-09-13, ADR-433). -->
+	<SectionDivider orientation="vertical" ink={fxInk.primary} />
+
+	<!-- Comb (virtual device - handles its own slot state). The Zebrify
+	     preset's second pad, "Comb LFO", went with the plug-in (2026-10-05):
+	     the Max device has no LFO. -->
+	<div class="device-wrapper">
+		<CombControl device={comb.device} />
+	</div>
+
+	<SectionDivider orientation="vertical" ink={phaserInk.primary} />
+
+	<!-- Phaser (virtual device) — X: LFO speed, Y: feedback. Wrapped in
+	     BaseDeviceControl like Blur and Comb so it carries the same
+	     move-to-first / move-to-last arrows. -->
+	<div class="device-wrapper">
+		<BaseDeviceControl slotKey="phaser" device={phaser.device} title="Phaser" disableCentralViewOnTap={true} showMoveToTop={true} showMoveToEnd={true}>
+			{#snippet children({ handleTap })}
+				<DeviceXY
+					xValue={phaserSpeed}
+					yValue={phaserFeedback}
+					title="Phaser"
+					isGhost={phaser.isGhost}
+					showCurve={false}
+					color={phaserInk}
+					onTap={() => (phaser.isGhost ? phaser.loadIfGhost() : handleTap())}
+					onInteraction={(x, y) => {
+						phaser.sendParam(PHASER_PARAMS.speed.index, normalizedToSpeed(x));
+						phaser.sendParam(PHASER_PARAMS.feedback.index, normalizedToFeedback(y));
+					}}
+				/>
+			{/snippet}
+		</BaseDeviceControl>
+	</div>
+
+
 </div>
 
 <style>
 	.chorus-central-layout {
 		display: grid;
-		/* octave | blur | comb | phaser | pitch hack · pitch · feedback.
+		/* octave | pitch hack · pitch · feedback | blur | comb | phaser.
 		   Each seam is an `auto` track as wide as its hairline, so the three
 		   pads still share the rest evenly; each slider is a third of a pad,
 		   and Octave (its fader and its tab) is two sliders wide. */
-		grid-template-columns: 0.7fr auto 0.35fr auto 1fr auto 1fr auto 1fr 0.35fr 0.35fr;
+		grid-template-columns: 0.7fr auto 1fr 0.35fr 0.35fr auto 0.35fr auto 1fr auto 1fr;
 		height: 100%;
 		width: 100%;
 		padding: var(--central-inset);
