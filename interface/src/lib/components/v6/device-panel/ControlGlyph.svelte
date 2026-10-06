@@ -238,8 +238,9 @@
     <circle cx="10" cy="22" r="2" fill="currentColor" stroke="none" />
     <circle cx="22" cy="22" r="2" fill="currentColor" stroke="none" />
   {:else if name === 'chance'}
-    <circle cx="16" cy="16" r="12" />
-    <path d="M16 16 V4 A12 12 0 1 1 5.6 22 Z" fill="currentColor" stroke="none" />
+    <circle cx="9.5" cy="9.5" r="4.5" />
+    <circle cx="22.5" cy="22.5" r="4.5" />
+    <path d="M25 5 L7 27" />
   {:else if name === 'randvel'}
     <path d="M5 27 V15 M10 27 V7 M15 27 V19 M20 27 V10 M25 27 V22" stroke-width="3" />
   {:else if name === 'velocity'}
