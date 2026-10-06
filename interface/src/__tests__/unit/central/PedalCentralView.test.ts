@@ -155,10 +155,13 @@ describe('PedalCentralView', () => {
 		const { container } = render(PedalCentralView);
 		await tick();
 		expect(container.textContent).not.toContain('Digital');
-		// Shifter then Redux close the view on the right (2026-10-05).
+		// Shifter, then Output · Mix over Redux, close the view on the right (2026-10-05).
 		const columns = container.querySelectorAll('.pedal-central-layout > .column');
 		expect(columns[columns.length - 2].classList.contains('shifter-column')).toBe(true);
-		expect(columns[columns.length - 1].classList.contains('redux-column')).toBe(true);
+		const last = columns[columns.length - 1];
+		expect(last.classList.contains('sat-redux-column')).toBe(true);
+		expect(last.children[0].classList.contains('saturator-faders')).toBe(true);
+		expect(last.children[1].classList.contains('redux-column')).toBe(true);
 		expect(slider(container, 'Shifter')).toBeDefined();
 	});
 

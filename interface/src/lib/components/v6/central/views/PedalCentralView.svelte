@@ -161,9 +161,22 @@
   // either one alone at full height. Its grid track and seam exist only
   // while it holds something.
   const showLeftColumn = $derived(showGuitarGain || showWah);
+  // One unit per slider, two per XY pad, every seam its hairline: the
+  // tracks share the width in that ratio and nothing has a fixed size
+  // (user, 2026-10-05). The Guitar section is `display: contents`, so each
+  // of its controls is a track of its own and a pad comes out exactly two
+  // sliders wide; Output and Mix split a pad-wide column between them.
+  const SLIDER = 'minmax(0, 1fr)';
+  const XY = 'minmax(0, 2fr)';
+  const SEAM = 'auto';
   const gridColumns = $derived(
-    (showLeftColumn ? 'auto auto ' : '') +
-      'minmax(0, 1fr) auto minmax(min-content, 2fr) auto auto auto auto auto minmax(0, 1fr)'
+    [
+      ...(showLeftColumn ? [SLIDER, SEAM] : []), // gain over wah
+      XY, SEAM, // pedal pad over its type switch
+      XY, SLIDER, SEAM, // spring/room over tremolo · dirty/clean
+      SLIDER, SEAM, // shifter
+      XY // output · mix over redux
+    ].join(' ')
   );
 </script>
 
@@ -226,10 +239,10 @@
 
   <!-- COLUMN 3: the Guitar rack's Spring/Room pad over its Tremolo pad, and
        the Dirty/Clean switch. Its Gain is in the left column. -->
-  <div class="column guitar-section">
+  <div class="guitar-section">
     <!-- Two pads stacked: Spring (X) / Room (Y) over Tremolo, rate (X) /
          amount (Y) (user, 2026-10-05). -->
-    <div class="guitar-xy-stack">
+    <div class="column guitar-xy-stack">
       <div class="guitar-xy">
         <DeviceXY
           xValue={gtrValue(GTR.spring)}
@@ -261,7 +274,7 @@
         />
       </div>
     </div>
-    <div class="guitar-slider tone-stack" style={guitar.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
+    <div class="column tone-stack" style={guitar.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
       <button
         class="physical-button tone-btn"
         class:active={!guitar.isGhost && !gtrClean}
@@ -279,34 +292,9 @@
     </div>
   </div>
 
-  <!-- The Saturator's two faders: its XY is the grid tile that opened this
-       view. -->
-  <SectionDivider orientation="vertical" ink={saturatorInk.primary} />
-
-  <!-- COLUMN 5: the Saturator's Output and Mix, one fader each -->
-  <div class="column saturator-faders" style={saturator.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
-    {#each SATURATOR_FADERS as fader (fader.index)}
-      <div class="slider-col">
-        <DeviceSlider
-          value={saturator.paramValue(fader.index) ?? fader.fallback}
-          title={fader.title}
-          orientation="vertical"
-          labelOrientation="vertical"
-          isGhost={saturator.isGhost}
-          color={saturatorInk}
-          min={0}
-          max={1}
-          onTap={() => saturator.loadIfGhost()}
-          onInteraction={(v) => saturator.sendParam(fader.index, v)}
-        />
-      </div>
-    {/each}
-  </div>
-
-
   <SectionDivider orientation="vertical" ink={shifterInk.primary} />
 
-  <!-- COLUMN 6: the Shifter's ring-mod frequency, one fader. A tap on a
+  <!-- COLUMN 4: the Shifter's ring-mod frequency, one fader. A tap on a
        ghost loads it; a drag loads it and writes the value. -->
   <div class="column shifter-column">
     <DeviceSlider
@@ -326,15 +314,34 @@
     />
   </div>
 
-  <SectionDivider orientation="vertical" ink={redux.color.primary} />
+  <!-- COLUMN 5: the Saturator's Output and Mix side by side over the Redux
+       pad, the column two sliders wide (user, 2026-10-05). Its XY is the
+       grid tile that opened this view. -->
+  <SectionDivider orientation="vertical" ink={saturatorInk.primary} />
 
-  <!-- COLUMN 7: Redux, at the right end (2026-10-05) -->
-  <div class="column redux-column">
-    <div class="xy-wrapper flex-1">
+  <div class="column sat-redux-column">
+    <div class="saturator-faders" style={saturator.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
+      {#each SATURATOR_FADERS as fader (fader.index)}
+        <div class="slider-col">
+          <DeviceSlider
+            value={saturator.paramValue(fader.index) ?? fader.fallback}
+            title={fader.title}
+            orientation="vertical"
+            labelOrientation="vertical"
+            isGhost={saturator.isGhost}
+            color={saturatorInk}
+            min={0}
+            max={1}
+            onTap={() => saturator.loadIfGhost()}
+            onInteraction={(v) => saturator.sendParam(fader.index, v)}
+          />
+        </div>
+      {/each}
+    </div>
+    <div class="xy-wrapper redux-column">
       <ReduxControl device={redux.device} />
     </div>
   </div>
-
 
 </div>
 
@@ -342,13 +349,10 @@
   .pedal-central-layout {
     display: grid;
     /* gain over wah | pedal XY over pedal-type tabs | guitar (spring/room pad
-       over tremolo pad · dirty/clean) | saturator output · mix | shifter
-       | redux.
-       The faders column is as wide as its two sliders need, the Shifter and the Gain/Wah column one slider wide,
-       each seam as wide as its hairline; the Guitar section never below
-       its content, and the Pedal and Redux pads share the rest. */
-    /* grid-template-columns comes from `gridColumns`: the left column and
-       its seam are two `auto` tracks that exist only while it does. */
+       over tremolo pad · dirty/clean) | shifter | saturator output · mix
+       over redux.
+       grid-template-columns comes from `gridColumns`: a slider is one
+       share of the width, a pad two, a seam its hairline. */
     height: 100%;
     width: 100%;
     padding: var(--central-inset);
@@ -368,57 +372,37 @@
     min-height: 0;
   }
 
-  .saturator-faders {
-    flex-direction: row;
-  }
-
-  /* Two faders at the Drum Rack view's slider width; the label runs up
-     the fader (as Gain's does there) — at this width a horizontal
-     "Output" clips. */
-  .slider-col {
-    width: var(--vm-slider-w, 56px);
-    min-height: 0;
-  }
-
-  /* One slider wide, like the Saturator's faders. */
-  .shifter-column {
-    width: var(--vm-slider-w, 56px);
-  }
-
-  /* The Guitar rack: a row of its own inside one grid track, so the Gain
-     column can drop out on an audio track without the grid's tracks
-     shifting. Sliders one slider wide, the Tremolo pad takes the rest. */
+  /* A wrapper only: its controls are tracks of the grid itself. */
   .guitar-section {
-    flex-direction: row;
+    display: contents;
   }
 
-  .guitar-slider {
-    width: var(--vm-slider-w, 56px);
-    flex: 0 0 auto;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* The pads' floor is what keeps the section's min-content honest: below
-     it the grid would squeeze them to a sliver and push the row into the
-     Wah. Stacked, each takes half the height. */
-  .guitar-xy-stack {
+  /* Output · Mix over Redux, each half the column's height; the two
+     faders split its width with the same gap as the grid's, so each is
+     one slider wide. */
+  .saturator-faders {
     flex: 1 1 0;
-    min-width: 160px;
     min-height: 0;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: var(--central-gap);
+  }
+
+  /* Every grid item may shrink below its content: the fr ratio, not the
+     content, sets the widths. */
+  .column {
+    min-width: 0;
+  }
+
+  .slider-col {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 0;
   }
 
   .guitar-xy {
     flex: 1 1 0;
     min-height: 0;
-  }
-
-  .tone-stack {
-    gap: var(--central-gap);
   }
 
   .tone-btn {
@@ -428,12 +412,7 @@
     font-weight: 600;
   }
 
-  /* Gain over Wah: one slider wide, each half the column's height, or the
-     whole of it alone. */
-  .left-stack {
-    width: var(--vm-slider-w, 56px);
-  }
-
+  /* Gain over Wah: each half the column's height, or the whole of it alone. */
   .left-cell {
     flex: 1 1 0;
     min-height: 0;
