@@ -245,13 +245,15 @@ describe('PedalCentralView', () => {
 		expect(centralDisplayStore.isViewActive('device', 'pedal')).toBe(true);
 	});
 
-	it('heads the Guitar group with the Gain over the Wah, after the Pedal', async () => {
+	it('heads the Guitar group with Dirty/Clean, then the Gain over the Wah, after the Pedal', async () => {
 		seed([saturator({}), guitarRack()]);
 		const { container } = render(PedalCentralView);
 		await tick();
 		const columns = container.querySelectorAll('.pedal-central-layout > .column');
 		expect(columns[0].classList.contains('pedal-xy-column')).toBe(true);
-		const stack = container.querySelector('.guitar-section')!.firstElementChild!;
+		const group = container.querySelector('.guitar-section')!.children;
+		expect(group[0].classList.contains('tone-stack')).toBe(true);
+		const stack = group[1];
 		expect(stack.classList.contains('left-stack')).toBe(true);
 		const cells = stack.querySelectorAll('.left-cell');
 		expect(cells.length).toBe(2);
