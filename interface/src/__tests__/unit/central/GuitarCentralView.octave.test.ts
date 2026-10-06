@@ -1,9 +1,9 @@
 /**
- * GuitarCentralView's Octave panel: a Helix Native set up as an octave
- * pedal. The device dump of the running plug-in (2026-10-03) lists two
- * knobs, `1: Knob 01 0..1` (the mix) and `2: Knob 02 0..1` (the pitch,
- * -12..+12 semitones; it read `0.791667=0.79` at +7). The pitch is a
- * four-way tab, top to bottom +12 (1), +7 (19/24), -5 (7/24), -12 (0).
+ * GuitarCentralView's Octave panel: Ben's Polyphonic Pitch Shifter, saved
+ * as Octave.amxd. The device dump of the running device (2026-10-05) lists
+ * `1: Semitones -12..12` (labels `-12 st` .. `+12 st`) and `2: Mix 0..100`.
+ * The pitch is a four-way tab, top to bottom +12, +7, -5, -12, written as
+ * raw semitones.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -22,18 +22,15 @@ import GuitarCentralView from '$lib/components/v6/central/views/GuitarCentralVie
 import { send } from '$lib/api/simpleClient';
 
 const TRACK = 'tracks/0';
-const HELIX = `${TRACK}/devices/0`;
+const OCTAVE = `${TRACK}/devices/0`;
 
-function helix(pitch: number): DeviceRecord {
+function octaveDevice(pitch: number): DeviceRecord {
 	const params = new SvelteMap<string, ParamRecord>();
-	[['Device On', 1], ['Knob 01', 0], ['Knob 02', pitch]].forEach(([name, value], i) => {
-		const paramPath = `${HELIX}/params/${i}`;
-		params.set(paramPath, {
-			paramPath, name: name as string, displayName: name as string,
-			min: 0, max: 1, value: value as number, unit: ''
-		});
+	([['Device On', 0, 1, 1], ['Semitones', -12, 12, pitch], ['Mix', 0, 100, 50]] as const).forEach(([name, min, max, value], i) => {
+		const paramPath = `${OCTAVE}/params/${i}`;
+		params.set(paramPath, { paramPath, name, displayName: name, min, max, value, unit: '' });
 	});
-	return { devicePath: HELIX, name: 'Helix Native', className: 'AuPluginDevice', params, properties: new SvelteMap() };
+	return { devicePath: OCTAVE, name: 'Octave', className: 'MxDeviceAudioEffect', params, properties: new SvelteMap() };
 }
 
 function seed(device: DeviceRecord) {
@@ -53,7 +50,7 @@ const tabs = (container: HTMLElement) =>
 
 function pitchWrites(): unknown[] {
 	return vi.mocked(send).mock.calls
-		.filter(([, args]) => Array.isArray(args) && args.includes(`${HELIX}/params/2`))
+		.filter(([, args]) => Array.isArray(args) && args.includes(`${OCTAVE}/params/1`))
 		.map(([, args]) => (args as unknown[])[1]);
 }
 
@@ -65,18 +62,18 @@ afterEach(() => cleanup());
 
 describe('GuitarCentralView Octave pitch tab', () => {
 	it('draws +12, +7, -5, -12 top to bottom and lights the device\'s step', async () => {
-		seed(helix(19 / 24));
+		seed(octaveDevice(7));
 		const { container } = render(GuitarCentralView);
 		await tick();
 		expect(tabs(container).map((b) => b.textContent?.trim())).toEqual(['+12', '+7', '-5', '-12']);
 		expect(tabs(container).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false', 'false']);
 	});
 
-	it('writes each interval\'s value to Knob 02', async () => {
-		seed(helix(1));
+	it('writes each interval to Semitones as raw semitones', async () => {
+		seed(octaveDevice(12));
 		const { container } = render(GuitarCentralView);
 		await tick();
 		for (const b of tabs(container)) await fireEvent.click(b);
-		expect(pitchWrites()).toEqual([1, 19 / 24, 7 / 24, 0]);
+		expect(pitchWrites()).toEqual([12, 7, -5, -12]);
 	});
 });

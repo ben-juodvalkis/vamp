@@ -409,18 +409,20 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     color: familyScheme('pitchSeq')
   },
   octave: {
-    // The Guitar view's Octave panel (2026-10-03): a Helix Native set up
-    // as an octave pedal, two knobs on the wire — 1 the mix, 2 the pitch
-    // (0..1 over -12..+12 semitones), measured off the running device.
-    // It took the Bass panel's place there when the Bass tile moved to the
-    // Bass Amp rack. No tile of its own: the view is its only control.
-    // The preset ships in Vamp Devices and loads through that Place.
+    // The Guitar view's Octave panel: Ben's Polyphonic Pitch Shifter
+    // (2026-10-05, in place of a Helix Native preset), the frozen 0.1.0
+    // Max device from the BensPolyphonicPitchShifter repo, so it carries
+    // `polypitch~` inside and needs no Max package. Saved as Octave.amxd,
+    // so Live names it "Octave"; the name is load-bearing, since Comb,
+    // Blur and Permute are MxDeviceAudioEffect too. Measured off the
+    // running device: 1 Semitones (-12..12), 2 Mix (0..100). No tile of
+    // its own: the view is its only control.
     padScoped: true,
     presetPath: '',
     source: 'place:Vamp Devices',
-    rel: 'Octave/Octave.aupreset',
-    defaultName: 'Helix Native',
-    expectedClassName: 'AuPluginDevice',
+    rel: 'Octave/Octave.amxd',
+    defaultName: 'Octave',
+    expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
     centralViewGroup: 'guitar',         // Belongs to GuitarCentralView
     color: familyScheme('pitchSeq')

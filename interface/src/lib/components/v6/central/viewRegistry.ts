@@ -72,7 +72,7 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 		'arpeggiator': () => import('./views/ArpeggiatorCentralView.svelte'),
 		'audio-effect-rack': () => import('./views/AudioEffectRackCentralView.svelte'),
 		// The Bass tile (audio tracks' fx1 column, 2026-09-14): its type is
-		// `bass`, its view the Guitar rack's. A Helix Native band (`octave`)
+		// `bass`, its view the Guitar rack's. An Octave band (`octave`)
 		// opens the same view, whose Octave panel is that slot. Aliased here the way `random` aliases the Arpeggiator's
 		// and `squash` the Utility's; without an entry the tap resolved to
 		// the placeholder view.

@@ -61,23 +61,24 @@
   const octave = useFxGridSlot('octave');
 
   // ===== OCTAVE =====
-  // A Helix Native set up as an octave pedal (2026-10-03), in the panel
-  // the Bass had until the Bass tile moved to the Bass Amp rack — whose
-  // mix the FX grid's Bass tile drives, so nothing of it is repeated
-  // here. Two knobs, measured off the running device: 1 the mix (0..1),
-  // 2 the pitch, 0..1 over -12..+12 semitones. The pitch is a four-way
-  // tab rather than a fader: the four intervals are the only useful
-  // stops, listed top-down as they draw. +12 is the preset's own.
-  const OCTAVE_MIX_PARAM = 1;
-  const OCTAVE_PITCH_PARAM = 2;
+  // Ben's Polyphonic Pitch Shifter (2026-10-05; a Helix Native before),
+  // in the panel the Bass had until the Bass tile moved to the Bass Amp
+  // rack — whose mix the FX grid's Bass tile drives, so nothing of it is
+  // repeated here. Two knobs, measured off the running device:
+  // 1 Semitones, -12..12 in whole steps; 2 Mix, 0..100, where 50 is dry
+  // and shifted both at full level and 100 the shifted sound alone. The
+  // pitch is a four-way tab rather than a fader: the four intervals are
+  // the only useful stops, listed top-down as they draw.
+  const OCTAVE_PITCH_PARAM = 1;
+  const OCTAVE_MIX_PARAM = 2;
   const PITCH_STEPS = [
-    { label: '+12', value: 1 },
-    { label: '+7', value: 19 / 24 },
-    { label: '-5', value: 7 / 24 },
-    { label: '-12', value: 0 }
+    { label: '+12', value: 12 },
+    { label: '+7', value: 7 },
+    { label: '-5', value: -5 },
+    { label: '-12', value: -12 }
   ];
   let octaveMix = $derived(octave.paramValue(OCTAVE_MIX_PARAM) ?? 0);
-  let octavePitch = $derived(octave.paramValue(OCTAVE_PITCH_PARAM) ?? 1);
+  let octavePitch = $derived(octave.paramValue(OCTAVE_PITCH_PARAM) ?? 12);
   // The step nearest the device's value, so a pitch set by hand in the
   // plug-in still lights the closest stop.
   let pitchStep = $derived(
@@ -353,7 +354,7 @@
             isGhost={octave.isGhost}
             color={octaveInk}
             min={0}
-            max={1}
+            max={100}
             onTap={() => {
               armOctaveLoad();
               octave.loadIfGhost();

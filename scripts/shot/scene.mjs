@@ -403,8 +403,8 @@ const DEVICE_CLASS_NAMES = {
 	// on every shot and its reorder arrows (which need a resolved device)
 	// can never be photographed.
 	'Bass Amp': 'AudioEffectGroupDevice',
-	// The Octave panel's slot is a Helix Native, matched the same way.
-	'Helix Native': 'AuPluginDevice',
+	// The Octave panel's slot is a Max device, matched the same way.
+	Octave: 'MxDeviceAudioEffect',
 	// The Guitar rack is an Audio Effect Rack; without the entry its slot
 	// reads ghost and GuitarCentralView never draws the named macros.
 	Guitar: 'AudioEffectGroupDevice',
@@ -819,6 +819,12 @@ const DEVICE_PARAMS = {
 	// The Max device really does carry exactly these two, in this order:
 	// its one `live.dial` plus the Device On every device has. The view
 	// addresses Chance by INDEX (1), so the pair has to be listed.
+	// The Octave pitch shifter's first three, as the running device names them.
+	Octave: [
+		['Device On', 'On', 0, 1, 1, ''],
+		['Semitones', 'Semitones', -12, 12, 12, ''],
+		['Mix', 'Mix', 0, 100, 50, '%']
+	],
 	'Note Chance': [
 		['Device On', 'On', 0, 1, 1, ''],
 		['Chance', 'Chance', 0, 100, 72, '%']
@@ -963,7 +969,7 @@ const DEFAULT_TRACKS = [
 		volume: 0.7,
 		// The Guitar rack carries Guitar.adg's own macro names, so
 		// GuitarCentralView's Drive/Fuzz and Tremolo pads can be shot.
-		devices: ['Helix Native', 'Auto Filter', 'Echo', 'Bass Amp', { name: 'Guitar', params: guitarRackParams() }],
+		devices: ['Octave', 'Auto Filter', 'Echo', 'Bass Amp', { name: 'Guitar', params: guitarRackParams() }],
 		clips: {
 			0: { name: 'Loop 1', length: 8, state: SLOT.recording }
 		}
