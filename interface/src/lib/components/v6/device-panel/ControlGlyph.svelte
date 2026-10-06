@@ -83,8 +83,6 @@
     <rect x="7" y="3" width="18" height="26" rx="2.5" />
     <circle cx="12" cy="9" r="2.2" />
     <circle cx="20" cy="9" r="2.2" />
-    <circle cx="16" cy="14.5" r=".9" fill="currentColor" />
-    <circle cx="16" cy="22" r="3.4" />
   {:else if name === 'amp'}
     <rect x="3" y="6" width="26" height="21" rx="2" />
     <path d="M3 11 H29" />
