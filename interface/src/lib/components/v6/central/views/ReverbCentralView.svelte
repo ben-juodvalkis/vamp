@@ -50,6 +50,7 @@
   import { useReverbIr } from './reverb/useReverbIr.svelte';
   import {
     IR_ATTACK_MAX,
+    IR_TOP,
     attackAt,
     attackAtPosition,
     attackPosition,
@@ -710,11 +711,13 @@
             {:else if isConvolution}
               <!-- The loaded IR: Attack across, Decay up, fitted to it. The writes
                    wait for the release — Live recalculates the IR on every change,
-                   and a stream of them hangs it — while the picture follows. -->
+                   and a stream of them hangs it — while the picture follows. The
+                   handle climbs no higher than a full-scale IR, under the tabs. -->
               <div class="ir-pad" data-reverb-ir>
                 <DeviceXY
                   xValue={attackX(irAttackShown, irAxis)}
                   yValue={decayY(irDecayShown, irAxis)}
+                  yTop={IR_TOP}
                   xIcon="attack"
                   isGhost={fx.isGhost}
                   color={currentColor}

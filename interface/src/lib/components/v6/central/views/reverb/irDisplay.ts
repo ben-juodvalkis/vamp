@@ -26,6 +26,11 @@ export const DB_RANGE = 48;
 /** Where the picture's time axis starts and ends across the pad. */
 export const IR_X0 = 0.035;
 export const IR_X1 = 0.985;
+/** The picture's baseline, above the time axis, and the height a full-scale IR reaches. */
+export const IR_BASE = 0.11;
+export const IR_RISE = 0.68;
+/** The top of a full-scale IR: the pad's handle climbs no higher. */
+export const IR_TOP = IR_BASE + IR_RISE;
 
 /**
  * The time axis: linear for the first thirtieth of the IR, logarithmic

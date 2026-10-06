@@ -9,7 +9,7 @@
 	 * Drawn under DeviceXY's handle, whose drag is Attack across and Decay up.
 	 */
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
-	import { IR_X0, IR_X1, axisTicks, irShape, louder, tickLabel, timeX } from './irDisplay';
+	import { IR_BASE, IR_RISE, IR_X0, IR_X1, axisTicks, irShape, louder, tickLabel, timeX } from './irDisplay';
 	import type { IrStatus, IrWave } from './useReverbIr.svelte';
 
 	interface Props {
@@ -35,9 +35,8 @@
 
 	const X0 = IR_X0;
 	const X1 = IR_X1;
-	/** The baseline, above the time axis, and the height a full-scale IR reaches. */
-	const BASE = 0.11;
-	const RISE = 0.68;
+	const BASE = IR_BASE;
+	const RISE = IR_RISE;
 
 	let shape = $derived(
 		wave ? irShape(wave.channels.map((c) => c.peaks), wave.seconds, size, attack, decay, shaping) : null
