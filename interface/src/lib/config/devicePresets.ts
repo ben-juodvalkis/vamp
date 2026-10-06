@@ -438,7 +438,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Octave',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'guitar',         // Belongs to GuitarCentralView
+    centralViewGroup: 'chorus',         // Belongs to ChorusCentralView (OctavePanel)
     color: familyScheme('pitchSeq')
   },
   // Virtual Smudge Device
@@ -506,7 +506,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Wah',
     expectedClassName: 'AudioEffectGroupDevice',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'guitar',         // Belongs to GuitarCentralView
+    centralViewGroup: 'pedal',          // Its button is in PedalCentralView
     color: familyScheme('filter')       // A wah IS a filter — function over host view
   },
   vocal: {

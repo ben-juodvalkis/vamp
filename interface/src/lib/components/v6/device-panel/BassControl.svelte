@@ -26,7 +26,8 @@
    * `SquashControl` and `OttControl` — and `FXGrid` mounts it behind
    * `isAudioTrack`, so no other track reaches it.
    *
-   * A tap opens `GuitarCentralView`, which the registry aliases to `bass`
+   * A tap opens `PedalCentralView` (the Guitar rack's controls, since
+   * 2026-10-05), which the registry aliases to `bass`
    * for exactly this reason: an unregistered type resolves to the
    * placeholder view (the defect a830a7a fixed for `random` and the
    * 2026-09-12 review caught on `ott`).

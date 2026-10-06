@@ -6,9 +6,10 @@
  * rack's drive slider, and since ADR-445 (2026-09-19) the Wah button. The
  * Pedal reads its own device and a tap on its pad stays in this view.
  *
- * The Guitar is the opposite case, and the reason it is pinned here: its tap
- * must LEAVE, because this mount is the only door left to GuitarCentralView
- * on a MIDI track once the Gtr tile left the grid.
+ * Since 2026-10-05 the Guitar rack's whole face is here too (GuitarCentralView
+ * is gone): Gain (the tile, MIDI tracks only — on audio the grid's Gtr column
+ * draws it), Spring, the Tremolo pad, Room and Dirty/Clean, on Guitar.adg's
+ * macros 1-6.
  *
  * The Wah has no tile and no view of its own — the expression pedal plays
  * it — so this button is its only door on the iPad: a tap loads Wah.adg onto
@@ -65,15 +66,16 @@ function saturator(values: Record<number, number>): DeviceRecord {
 	return { devicePath: SAT, name: 'Saturator', className: 'Saturator', params, properties: new SvelteMap() };
 }
 
-function guitarRack(): DeviceRecord {
+function guitarRack(ampSwitch = 0): DeviceRecord {
 	const params = new SvelteMap<string, ParamRecord>();
-	for (let i = 0; i <= 8; i++) {
+	const names = ['Device On', 'Gain', 'Spring', 'Trem Rate', 'Trem Amount', 'Room', 'Amp Switch', 'Room', 'Macro 8'];
+	names.forEach((name, i) => {
 		const paramPath = `${GTR}/params/${i}`;
 		params.set(paramPath, {
-			paramPath, name: `Macro ${i}`, displayName: `Macro ${i}`,
-			min: 0, max: 127, value: 0, unit: ''
+			paramPath, name, displayName: name,
+			min: 0, max: i === 0 ? 1 : 127, value: i === 6 ? ampSwitch : 0, unit: ''
 		});
-	}
+	});
 	return {
 		devicePath: GTR, name: 'Guitar', className: 'AudioEffectGroupDevice',
 		params, properties: new SvelteMap()
@@ -98,10 +100,10 @@ function wahRack(): DeviceRecord {
 	};
 }
 
-function seed(devices: DeviceRecord[]) {
+function seed(devices: DeviceRecord[], audio = false) {
 	const t: TrackRecord = {
 		trackPath: TRACK, name: 'Keys', color: 0xfff034, mute: false, solo: false, arm: false,
-		hasMidiInput: true, hasAudioInput: false, hasArrangementClips: false,
+		hasMidiInput: !audio, hasAudioInput: audio, hasArrangementClips: false,
 		isFoldable: false, foldState: false, groupTrackIndex: -1, role: '',
 		devices: new SvelteMap(devices.map((d) => [d.devicePath, d])), slots: new SvelteMap()
 	};
@@ -154,8 +156,10 @@ describe('PedalCentralView', () => {
 		const { container } = render(PedalCentralView);
 		await tick();
 		expect(container.textContent).not.toContain('Digital');
+		// Shifter then Redux close the view on the right (2026-10-05).
 		const columns = container.querySelectorAll('.pedal-central-layout > .column');
-		expect(columns[0].classList.contains('shifter-column')).toBe(true);
+		expect(columns[columns.length - 2].classList.contains('shifter-column')).toBe(true);
+		expect(columns[columns.length - 1].classList.contains('redux-column')).toBe(true);
 		expect(slider(container, 'Shifter')).toBeDefined();
 	});
 
@@ -182,49 +186,70 @@ describe('PedalCentralView', () => {
 		expect((container.querySelector('.saturator-faders') as HTMLElement).style.opacity).toContain('--opacity-ghost');
 	});
 
-	it('carries the Guitar rack\'s drive slider as its last column', async () => {
+	it('carries the Guitar rack: Gain, Spring, the Tremolo pad, Room and Dirty/Clean', async () => {
 		seed([saturator({}), guitarRack()]);
 		const { container } = render(PedalCentralView);
 		await tick();
-		const tile = container.querySelector('.guitar-column .device-control');
-		expect(tile).not.toBeNull();
-		// A real device on the track, so the tile is live rather than ghost.
+		const tile = container.querySelector('.guitar-section .device-control');
 		expect(tile?.classList.contains('device-ghost')).toBe(false);
 		expect(tile?.textContent).toContain('Gtr');
+		for (const title of ['Spring', 'Room']) expect(slider(container, title), title).toBeDefined();
+		expect(container.querySelector('.guitar-section')?.textContent).toContain('Tremolo');
+		const tone = Array.from(container.querySelectorAll<HTMLButtonElement>('.guitar-section .tone-btn'));
+		expect(tone.map((b) => b.textContent?.trim())).toEqual(['Dirty', 'Clean']);
+		expect(tone.map((b) => b.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
 	});
 
-	it('ghosts the Guitar column on a track with no amp rack', async () => {
+	it('leaves Gain out on an audio track, where the grid draws it', async () => {
+		seed([saturator({}), guitarRack()], true);
+		const { container } = render(PedalCentralView);
+		await tick();
+		expect(container.querySelector('.guitar-section .device-control')).toBeNull();
+		expect(slider(container, 'Spring')).toBeDefined();
+	});
+
+	it('lights Clean above the midpoint, and Dirty writes macro 6 to 0', async () => {
+		seed([saturator({}), guitarRack(127)]);
+		const { container } = render(PedalCentralView);
+		await tick();
+		const tone = Array.from(container.querySelectorAll<HTMLButtonElement>('.guitar-section .tone-btn'));
+		expect(tone[1].getAttribute('aria-pressed')).toBe('true');
+		tone[0].click();
+		await tick();
+		expect(send).toHaveBeenCalledWith(expect.any(String), expect.arrayContaining([`${GTR}/params/6`, 0]));
+	});
+
+	it('ghosts the Guitar section on a track with no amp rack', async () => {
 		seed([saturator({})]);
 		const { container } = render(PedalCentralView);
 		await tick();
 		expect(
-			container.querySelector('.guitar-column .device-control')?.classList.contains('device-ghost')
+			container.querySelector('.guitar-section .device-control')?.classList.contains('device-ghost')
 		).toBe(true);
 	});
 
-	it('lets a tap on the Guitar slider LEAVE for the Guitar view', async () => {
-		// The one behaviour that separates it from the Pedal pad:
-		// this view is the Pedal's home and only the Guitar's doorway.
+	it('keeps a tap on the Gain slider inside this view', async () => {
 		HTMLElement.prototype.setPointerCapture = vi.fn();
 		HTMLElement.prototype.releasePointerCapture = vi.fn();
 		seed([saturator({}), guitarRack()]);
 		centralDisplayStore.setView('device', 'pedal');
 		const { container } = render(PedalCentralView);
 		await tick();
-		const el = container.querySelector<HTMLElement>('.guitar-column [role="slider"]');
+		const el = container.querySelector<HTMLElement>('.guitar-section .device-control [role="slider"]');
 		expect(el).not.toBeNull();
 		el!.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10 }));
 		el!.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 10, clientY: 10 }));
 		await tick();
-		expect(centralDisplayStore.isViewActive('device', 'guitar')).toBe(true);
+		expect(centralDisplayStore.isViewActive('device', 'pedal')).toBe(true);
 	});
 
-	it('carries a Wah button as its last column, ghosted on a track without one', async () => {
+	it('carries a Wah button right after the Guitar, ghosted on a track without one', async () => {
 		seed([saturator({}), guitarRack()]);
 		const { container } = render(PedalCentralView);
 		await tick();
 		const columns = container.querySelectorAll('.pedal-central-layout > .column');
-		expect(columns[columns.length - 1].classList.contains('wah-column')).toBe(true);
+		const wahAt = Array.from(columns).findIndex((c) => c.classList.contains('wah-column'));
+		expect(columns[wahAt - 1].classList.contains('guitar-section')).toBe(true);
 		const button = container.querySelector<HTMLButtonElement>('.wah-column .wah-button');
 		expect(button).not.toBeNull();
 		expect(button!.textContent?.trim()).toBe('Wah');

@@ -145,10 +145,10 @@ const SLOT = { empty: 0, hasClip: 1, playing: 2, recording: 3 };
  * 2026-09-14: all 0..1 but L 16th, 1..16); the rest are fillers that keep
  * those indices where the real device has them.
  */
-/** Guitar.adg's eight macros as the rack names them (read from the running rack 2026-10-01), 0..127. */
+/** Guitar.adg's six visible macros as the saved preset names them (2026-10-05), 0..127. */
 function guitarRackParams() {
-	const names = ['Gain', 'Drive', 'Fuzz', 'Spring', 'Tremolo Rate', 'Tremolo Amount', 'Room', 'Dirty/Clean'];
-	const values = [70, 40, 20, 30, 64, 50, 25, 0];
+	const names = ['Gain', 'Spring', 'Trem Rate', 'Trem Amount', 'Room', 'Amp Switch'];
+	const values = [70, 30, 64, 50, 25, 0];
 	return [['Device On', 'On', 0, 1, 1, ''], ...names.map((n, i) => [n, n, 0, 127, values[i], ''])];
 }
 
@@ -399,7 +399,7 @@ const DEVICE_CLASS_NAMES = {
 	Shifter: 'Shifter',
 	Reverb: 'Hybrid',
 	'Auto Pan Legacy': 'AutoPan',
-	// The Bass Amp is a rack, and GuitarCentralView's `bass` slot matches
+	// The Bass Amp is a rack, and the Bass tile's `bass` slot matches
 	// it on name AND class — without the entry the Bass panel reads ghost
 	// on every shot and its reorder arrows (which need a resolved device)
 	// can never be photographed.
@@ -407,7 +407,7 @@ const DEVICE_CLASS_NAMES = {
 	// The Octave panel's slot (Chorus view) is a Max device, matched the same way.
 	Octave: 'MxDeviceAudioEffect',
 	// The Guitar rack is an Audio Effect Rack; without the entry its slot
-	// reads ghost and GuitarCentralView never draws the named macros.
+	// reads ghost and the Pedal view's Guitar section draws nothing live.
 	Guitar: 'AudioEffectGroupDevice',
 	Utility: 'StereoGain',
 	Variation: 'BeatRepeat',
@@ -969,7 +969,7 @@ const DEFAULT_TRACKS = [
 		arm: 1,
 		volume: 0.7,
 		// The Guitar rack carries Guitar.adg's own macro names, so
-		// GuitarCentralView's Drive/Fuzz and Tremolo pads can be shot.
+		// the Pedal view's Guitar section (Spring, Tremolo pad, Room, Dirty/Clean) can be shot.
 		devices: ['Octave', 'Auto Filter', 'Echo', 'Bass Amp', { name: 'Guitar', params: guitarRackParams() }],
 		clips: {
 			0: { name: 'Loop 1', length: 8, state: SLOT.recording }

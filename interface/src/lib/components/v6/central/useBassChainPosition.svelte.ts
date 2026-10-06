@@ -12,7 +12,7 @@
  * is async, so the device does not exist yet when we ask for it.
  *
  * Two controls drive that slot now — the Bass panel in
- * `GuitarCentralView` and the `BassControl` tile in the audio track's fx1
+ * `OctavePanel` and the `BassControl` tile in the audio track's fx1
  * column (2026-09-14) — so the rule lives here rather than in either of
  * them. It was a view-local `let` + `$effect` until the tile needed the
  * same twenty lines.

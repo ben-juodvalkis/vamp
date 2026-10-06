@@ -5,7 +5,7 @@
   import DeviceSlider from './DeviceSlider.svelte';
 
   /**
-   * Guitar Control — the Guitar.adg amp rack's Macro 1 (drive), as one
+   * Guitar Control — the Guitar.adg amp rack's Macro 1 (Gain), as one
    * slider.
    *
    * On AUDIO tracks it is a full-height FX grid column again, at the far
@@ -15,11 +15,9 @@
    * the same distortion family, and the Pedal view is where a hand already
    * goes for drive.
    *
-   * That mount is also the rack's DOOR: a tap still opens
-   * `GuitarCentralView` (macros 2-8, plus Macro 1 there too since the same
-   * change), which no other surface reaches on a MIDI track — the audio
-   * track's device band opens its chain head's view, and the Bass tile
-   * only answers on audio.
+   * The rack's other macros live in `PedalCentralView` too since
+   * 2026-10-05 (GuitarCentralView is gone): a tap on the grid column opens
+   * that view, and the view's own mount sets `disableCentralViewOnTap`.
    *
    * No layout entry any more, so `slotKey` resolves its own `guitar` slot,
    * the way `SquashControl`, `BassControl` and `OttControl` do. `position`
@@ -28,9 +26,11 @@
   interface Props {
     device?: DeviceRecord | null;
     position?: import('$lib/config/fxGridLayout').PositionKey;
+    /** Inside the Pedal view a tap has nowhere to go: it is already home. */
+    disableCentralViewOnTap?: boolean;
   }
 
-  let { device = null, position }: Props = $props();
+  let { device = null, position, disableCentralViewOnTap = false }: Props = $props();
 
   // Macro 1 rests at 0 — Guitar.adg stores Manual=0 for it, so an untouched or
   // not-yet-loaded device reads the floor, matching what the central view shows
@@ -63,6 +63,7 @@
   {...position ? { position } : { slotKey: 'guitar' as const }}
   {device}
   title="Guitar"
+  {disableCentralViewOnTap}
   showMoveToTop={true}
   showMoveToEnd={true}
 >

@@ -189,17 +189,13 @@ export const TOURS = {
 				features: { expressionPedal: { enabled: false, available: false, reason: '' } },
 				steps: [openTile('Saturator')]
 			},
-			// Guitar is two hops now: its tile left the grid for the Pedal
-			// view's last column (2026-09-15), which is also its only door.
-			{
-				name: 'fx-guitar',
-				description: 'Guitar (via the Pedal view, which carries its tile)',
-				steps: [openTile('Saturator'), { click: '.guitar-column .device-control' }]
-			},
+			// The Guitar rack's controls are the Pedal view's Guitar section
+			// (2026-10-05). On the Guitar track (an audio track) the rack is
+			// loaded and its Gain is the grid's Gtr column, so the view leaves it out.
 			{
 				name: 'fx-guitar-loaded',
-				description: 'Guitar on the Guitar track, where the rack is loaded: the Drive/Fuzz and Tremolo XY pads',
-				steps: [selectTrack(3), openTile('Saturator'), { click: '.guitar-column .device-control' }]
+				description: 'Pedal view on the Guitar track: the Guitar section live — Spring, Tremolo pad, Room, Dirty/Clean',
+				steps: [selectTrack(3), openTile('Saturator')]
 			},
 			...FX_TILES.map(([label, name, description]) => ({
 				name: `fx-${name}`,

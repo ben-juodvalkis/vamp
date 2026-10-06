@@ -25,6 +25,15 @@
    * here, the Guitar is not, and this mount is the only door left to
    * `GuitarCentralView` on a MIDI track.
    *
+   * 2026-10-05: the Guitar rack's whole face lives here now and
+   * GuitarCentralView is gone — the Gtr tile (the grid's on audio tracks,
+   * this view's Gain on MIDI) opens this view. Guitar.adg's six visible
+   * macros, read from the saved preset: 1 Gain, 2 Spring, 3 Trem Rate,
+   * 4 Trem Amount, 5 Room, 6 Amp Switch (Live labels it 0 below the
+   * midpoint and 1 above: Dirty, Clean). Macro 7 is a hidden duplicate
+   * Room and has no control. On an audio track the FX grid's Gtr column
+   * already draws Gain, so the view leaves it out.
+   *
    * The Wah is the last column (ADR-445, 2026-09-19): one button, because
    * the wah has no tile and no view — the expression pedal is how it is
    * played, and this button is its only door on the iPad. Tap loads
@@ -41,6 +50,8 @@
   import ReduxControl from '$lib/components/v6/device-panel/ReduxControl.svelte';
   import PedalControl from '$lib/components/v6/device-panel/PedalControl.svelte';
   import GuitarControl from '$lib/components/v6/device-panel/GuitarControl.svelte';
+  import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
+  import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
@@ -123,6 +134,14 @@
     accent: trackInk(guitar.color.accent, paintModeReactive())
   });
 
+  // Guitar.adg's macros (see the header). Macros are 0..127 on the wire.
+  const GTR = { spring: 2, tremRate: 3, tremAmount: 4, room: 5, ampSwitch: 6 } as const;
+  const MACRO_MAX = 127;
+  const showGuitarGain = $derived(selectedTrackStore.trackType !== 'audio');
+  const gtrValue = (macro: number) => (guitar.paramValue(macro) ?? 0) / MACRO_MAX;
+  const sendGtr = (macro: number, normalized: number) => guitar.sendParam(macro, normalized * MACRO_MAX);
+  let gtrClean = $derived(gtrValue(GTR.ampSwitch) >= 0.5);
+
   let pedalType = $derived(fx.paramValue(1) ?? 0);
 
   function selectPedalType(typeValue: number) {
@@ -159,44 +178,7 @@
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
 <div class="pedal-central-layout relative" class:no-wah={!showWah}>
-  <!-- COLUMN 1: the Shifter's ring-mod frequency, one fader. A tap on a
-       ghost loads it; a drag loads it and writes the value. -->
-  <div class="column shifter-column">
-    <DeviceSlider
-      value={Math.min(shifter.paramValue(SHIFTER_RM_COARSE) ?? 0, SHIFTER_RM_MAX)}
-      title="Shifter"
-      orientation="vertical"
-      labelOrientation="vertical"
-      isGhost={shifter.isGhost}
-      color={shifterInk}
-      min={0}
-      max={SHIFTER_RM_MAX}
-      onTap={() => armShifterLoad()}
-      onInteraction={(v) => {
-        armShifterLoad();
-        shifter.sendParam(SHIFTER_RM_COARSE, v);
-      }}
-    />
-  </div>
-
-  <!-- Every device boundary gets its seam, the Chorus rule (user's call,
-       2026-09-13). -->
-  <SectionDivider orientation="vertical" ink={redux.color.primary} />
-
-  <!-- COLUMN 2: Redux Controls -->
-  <div class="column redux-column">
-    <div class="xy-wrapper flex-1">
-      <ReduxControl device={redux.device} />
-    </div>
-  </div>
-
-  <!-- The Pedal starts here: its pad and its type tabs are one device, and
-       the three pads are the same size in the same distortion ink, so
-       without this line its pad read as a third sibling of Digital and
-       Redux (user's call, 2026-09-13). -->
-  <SectionDivider orientation="vertical" ink={pedalInk.primary} />
-
-  <!-- COLUMN 3: the Pedal's XY — the old grid tile, mounted standalone; a
+  <!-- COLUMN 1: the Pedal's XY — the old grid tile, mounted standalone; a
        tap goes nowhere because this view is its home. -->
   <div class="column pedal-xy-column">
     <div class="xy-wrapper flex-1">
@@ -204,7 +186,7 @@
     </div>
   </div>
 
-  <!-- COLUMN 4: Pedal type tabs (stacked vertically, full height) -->
+  <!-- COLUMN 2: Pedal type tabs (stacked vertically, full height) -->
   <div class="column pedal-column" style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
     <div class="pedal-type-buttons">
       {#each PEDAL_TYPE_OPTIONS as option}
@@ -220,9 +202,103 @@
     </div>
   </div>
 
+  <!-- Every device boundary gets a seam in the ink of the device it
+       introduces (the Chorus rule, user's call, 2026-09-13). -->
+  <SectionDivider orientation="vertical" ink={guitarInk.primary} />
+
+  <!-- COLUMN 3: the Guitar rack. Gain is the grid tile mounted standalone
+       (a drag on a ghost loads Guitar.adg); on an audio track the grid's
+       own Gtr column draws it, so it is left out here. Then Spring, the
+       Tremolo pad (X rate, Y amount), Room and the Dirty/Clean switch. -->
+  <div class="column guitar-section">
+    {#if showGuitarGain}
+      <div class="guitar-slider">
+        <GuitarControl device={guitar.device} disableCentralViewOnTap={true} />
+      </div>
+    {/if}
+    <div class="guitar-slider">
+      <DeviceSlider
+        value={gtrValue(GTR.spring)}
+        title="Spring"
+        orientation="vertical"
+        labelOrientation="vertical"
+        isGhost={guitar.isGhost}
+        color={guitarInk}
+        onTap={() => guitar.loadIfGhost()}
+        onInteraction={(v) => sendGtr(GTR.spring, v)}
+      />
+    </div>
+    <div class="guitar-xy">
+      <DeviceXY
+        xValue={gtrValue(GTR.tremRate)}
+        yValue={gtrValue(GTR.tremAmount)}
+        title="Tremolo"
+        isGhost={guitar.isGhost}
+        showCurve={false}
+        color={guitarInk}
+        onTap={() => guitar.loadIfGhost()}
+        onInteraction={(x, y) => {
+          sendGtr(GTR.tremRate, x);
+          sendGtr(GTR.tremAmount, y);
+        }}
+      />
+    </div>
+    <div class="guitar-slider">
+      <DeviceSlider
+        value={gtrValue(GTR.room)}
+        title="Room"
+        orientation="vertical"
+        labelOrientation="vertical"
+        isGhost={guitar.isGhost}
+        color={guitarInk}
+        onTap={() => guitar.loadIfGhost()}
+        onInteraction={(v) => sendGtr(GTR.room, v)}
+      />
+    </div>
+    <div class="guitar-slider tone-stack" style={guitar.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
+      <button
+        class="physical-button tone-btn"
+        class:active={!guitar.isGhost && !gtrClean}
+        aria-pressed={!guitar.isGhost && !gtrClean}
+        style="--btn-tint: {guitarInk.primary};"
+        onclick={() => sendGtr(GTR.ampSwitch, 0)}
+      >Dirty</button>
+      <button
+        class="physical-button tone-btn"
+        class:active={!guitar.isGhost && gtrClean}
+        aria-pressed={!guitar.isGhost && gtrClean}
+        style="--btn-tint: {guitarInk.primary};"
+        onclick={() => sendGtr(GTR.ampSwitch, 1)}
+      >Clean</button>
+    </div>
+  </div>
+
+  {#if showWah}
+    <!-- The Wah is a fifth device on this page, so it takes a seam of its own
+         in its own ink — the filter family the wah preset wears. -->
+    <SectionDivider orientation="vertical" ink={wahInk.primary} />
+
+    <!-- COLUMN 4: the Wah button (ADR-445). Tap loads Wah.adg onto the
+         selected track at the head of its audio effects, hold removes it.
+         Ghost-dim while the track has none, like every other empty slot here;
+         lit (the ChosenDefault ON fill) while it does. -->
+    <div class="column wah-column" style={wah.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
+      <button
+        class="physical-button wah-button w-full px-2 text-xs text-center font-medium"
+        class:active={wah.device !== null}
+        class:loading={wah.isLoading}
+        style="--btn-tint: {wahInk.primary};"
+        aria-pressed={wah.device !== null}
+        title={wahTitle}
+        use:press={wahPress}
+      >
+        Wah
+      </button>
+    </div>
+  {/if}
+
   <!-- The Saturator's two faders: its XY is the grid tile that opened this
-       view. The tabs and the faders are narrow stacks of the same width,
-       so without a line between them they read as one device (2026-09-13). -->
+       view. -->
   <SectionDivider orientation="vertical" ink={saturatorInk.primary} />
 
   <!-- COLUMN 5: the Saturator's Output and Mix, one fader each -->
@@ -245,54 +321,51 @@
     {/each}
   </div>
 
-  <!-- The Guitar is a fourth device on this page, so it takes a seam of its
-       own in its own ink — the same rule the Saturator and the Pedal keep
-       above. -->
-  <SectionDivider orientation="vertical" ink={guitarInk.primary} />
 
-  <!-- COLUMN 6: the Guitar amp rack's drive, the grid tile mounted
-       standalone. A tap opens GuitarCentralView (macros 2-8 and Macro 1),
-       and a drag on a ghost still loads Guitar.adg — both behaviours come
-       with the tile, which is why this is the tile and not a bare fader. -->
-  <div class="column guitar-column">
-    <GuitarControl device={guitar.device} />
+  <SectionDivider orientation="vertical" ink={shifterInk.primary} />
+
+  <!-- COLUMN 6: the Shifter's ring-mod frequency, one fader. A tap on a
+       ghost loads it; a drag loads it and writes the value. -->
+  <div class="column shifter-column">
+    <DeviceSlider
+      value={Math.min(shifter.paramValue(SHIFTER_RM_COARSE) ?? 0, SHIFTER_RM_MAX)}
+      title="Shifter"
+      orientation="vertical"
+      labelOrientation="vertical"
+      isGhost={shifter.isGhost}
+      color={shifterInk}
+      min={0}
+      max={SHIFTER_RM_MAX}
+      onTap={() => armShifterLoad()}
+      onInteraction={(v) => {
+        armShifterLoad();
+        shifter.sendParam(SHIFTER_RM_COARSE, v);
+      }}
+    />
   </div>
 
-  {#if showWah}
-    <!-- The Wah is a fifth device on this page, so it takes a seam of its own
-         in its own ink — the filter family the wah preset wears. -->
-    <SectionDivider orientation="vertical" ink={wahInk.primary} />
+  <SectionDivider orientation="vertical" ink={redux.color.primary} />
 
-    <!-- COLUMN 7: the Wah button (ADR-445). Tap loads Wah.adg onto the
-         selected track at the head of its audio effects, hold removes it.
-         Ghost-dim while the track has none, like every other empty slot here;
-         lit (the ChosenDefault ON fill) while it does. -->
-    <div class="column wah-column" style={wah.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
-      <button
-        class="physical-button wah-button w-full px-2 text-xs text-center font-medium"
-        class:active={wah.device !== null}
-        class:loading={wah.isLoading}
-        style="--btn-tint: {wahInk.primary};"
-        aria-pressed={wah.device !== null}
-        title={wahTitle}
-        use:press={wahPress}
-      >
-        Wah
-      </button>
+  <!-- COLUMN 7: Redux, at the right end (2026-10-05) -->
+  <div class="column redux-column">
+    <div class="xy-wrapper flex-1">
+      <ReduxControl device={redux.device} />
     </div>
-  {/if}
+  </div>
+
 
 </div>
 
 <style>
   .pedal-central-layout {
     display: grid;
-    /* shifter | redux | pedal XY · pedal-type tabs | saturator faders
-       | guitar drive | wah. The faders column is as wide as its two
-       sliders need, the tabs as wide as their labels, the Shifter, the
-       Guitar and the Wah one slider wide each, each seam as wide as its hairline; the
-       two pads share the rest. */
-    grid-template-columns: auto auto 1fr auto 1fr auto auto auto auto auto auto auto;
+    /* pedal XY · pedal-type tabs | guitar (gain · spring · tremolo pad ·
+       room · dirty/clean) | wah | saturator output · mix | shifter | redux.
+       The faders column is as wide as its two sliders need, the tabs as
+       wide as their labels, the Shifter and the Wah one slider wide each,
+       each seam as wide as its hairline; the Guitar section never below
+       its content, and the Pedal and Redux pads share the rest. */
+    grid-template-columns: minmax(0, 1fr) auto auto minmax(min-content, 2fr) auto auto auto auto auto auto auto minmax(0, 1fr);
     height: 100%;
     width: 100%;
     padding: var(--central-inset);
@@ -302,7 +375,7 @@
   /* No wah (features.expressionPedal off): its seam and column go, and so
      must their two tracks — an empty explicit track still takes a gap. */
   .pedal-central-layout.no-wah {
-    grid-template-columns: auto auto 1fr auto 1fr auto auto auto auto auto;
+    grid-template-columns: minmax(0, 1fr) auto auto minmax(min-content, 2fr) auto auto auto auto auto minmax(0, 1fr);
   }
 
   .column {
@@ -331,9 +404,43 @@
   }
 
   /* One slider wide, like the Saturator's faders. */
-  .shifter-column,
-  .guitar-column {
+  .shifter-column {
     width: var(--vm-slider-w, 56px);
+  }
+
+  /* The Guitar rack: a row of its own inside one grid track, so the Gain
+     column can drop out on an audio track without the grid's tracks
+     shifting. Sliders one slider wide, the Tremolo pad takes the rest. */
+  .guitar-section {
+    flex-direction: row;
+  }
+
+  .guitar-slider {
+    width: var(--vm-slider-w, 56px);
+    flex: 0 0 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* The pad's floor is what keeps the section's min-content honest: below
+     it the grid would squeeze the pad to a sliver and push the row into
+     the Wah. */
+  .guitar-xy {
+    flex: 1 1 0;
+    min-width: 160px;
+    min-height: 0;
+  }
+
+  .tone-stack {
+    gap: var(--central-gap);
+  }
+
+  .tone-btn {
+    flex: 1 1 0;
+    min-height: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
   }
 
   /* The Wah button: one slider wide too, the column's full height, its
