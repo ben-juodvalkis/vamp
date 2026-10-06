@@ -33,6 +33,11 @@
     icon?: ControlGlyphName;
     xIcon?: ControlGlyphName;
     yIcon?: ControlGlyphName;
+    // How high the handle travels, as a fraction of the pad: a Y of 1 parks
+    // it there, and a drag the pad's height × yTop long spans the full Y.
+    // Under 1 when the top of the pad belongs to something else (the Reverb
+    // view's tabs and readouts over its tail).
+    yTop?: number;
   }
 
   let {
@@ -53,7 +58,8 @@
     background,
     icon,
     xIcon,
-    yIcon
+    yIcon,
+    yTop = 1
   }: Props = $props();
 
   let isDragging = $state(false);
@@ -263,7 +269,7 @@
 
     // Convert pixel delta to normalized coordinates (0-1)
     const deltaX = fingerDeltaX / cachedRect.width;
-    const deltaY = -fingerDeltaY / cachedRect.height; // Invert Y (up = positive)
+    const deltaY = -fingerDeltaY / (cachedRect.height * yTop); // Invert Y (up = positive)
 
     // Apply delta to initial dot position and clamp to bounds
     const x = Math.max(0, Math.min(1, initialDotX + deltaX));
@@ -346,7 +352,7 @@
     <div
       class="xy-handle"
       class:dragging={isDragging}
-      style="left: {localX * 100}%; bottom: {localY * 100}%; --handle-ink: {color.primary};"
+      style="left: {localX * 100}%; bottom: {localY * yTop * 100}%; --handle-ink: {color.primary};"
     ></div>
   </div>
 

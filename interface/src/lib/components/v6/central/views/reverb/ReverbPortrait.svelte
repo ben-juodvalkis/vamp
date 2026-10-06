@@ -3,7 +3,8 @@
 	 * The Reverb view's picture of the tail (`tailPortrait.ts`) on an XY pad:
 	 * the pad's X is where the tail ends (Decay), its Y is Dry/Wet — the
 	 * Reverb tile's two axes, so a drag here does what a drag on the tile
-	 * does, and the picture shows it happen.
+	 * does, and the picture shows it happen. Full wet parks the handle at the
+	 * top of the stack, below the tabs and readouts over the pad's top.
 	 */
 	import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
@@ -53,7 +54,7 @@
 </script>
 
 <div class="reverb-portrait" class:ghost={isGhost} style="--ink: {color.primary};" data-reverb-portrait={input.algo}>
-	<DeviceXY xValue={portrait.tailEndX} yValue={input.wet} {color} {isGhost} onInteraction={onMove} {onTap}>
+	<DeviceXY xValue={portrait.tailEndX} yValue={input.wet} yTop={STACK_TOP} {color} {isGhost} onInteraction={onMove} {onTap}>
 		{#snippet background()}
 			<div class="picture" aria-hidden="true">
 				<svg viewBox="0 0 1000 1000" preserveAspectRatio="none">
