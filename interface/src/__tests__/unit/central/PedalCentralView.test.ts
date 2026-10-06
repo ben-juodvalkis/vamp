@@ -186,15 +186,15 @@ describe('PedalCentralView', () => {
 		expect((container.querySelector('.saturator-faders') as HTMLElement).style.opacity).toContain('--opacity-ghost');
 	});
 
-	it('carries the Guitar rack: Gain, Spring, the Tremolo pad, Room and Dirty/Clean', async () => {
+	it('carries the Guitar rack: Gain, the Spring/Room pad over the Tremolo pad, and Dirty/Clean', async () => {
 		seed([saturator({}), guitarRack()]);
 		const { container } = render(PedalCentralView);
 		await tick();
 		const tile = container.querySelector('.guitar-section .device-control');
 		expect(tile?.classList.contains('device-ghost')).toBe(false);
 		expect(tile?.textContent).toContain('Gtr');
-		for (const title of ['Spring', 'Room']) expect(slider(container, title), title).toBeDefined();
-		expect(container.querySelector('.guitar-section')?.textContent).toContain('Tremolo');
+		const pads = Array.from(container.querySelectorAll('.guitar-xy-stack .guitar-xy'));
+		expect(pads.map((p) => p.textContent)).toEqual([expect.stringContaining('Spring/Room'), expect.stringContaining('Tremolo')]);
 		const tone = Array.from(container.querySelectorAll<HTMLButtonElement>('.guitar-section .tone-btn'));
 		expect(tone.map((b) => b.textContent?.trim())).toEqual(['Dirty', 'Clean']);
 		expect(tone.map((b) => b.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
@@ -205,7 +205,7 @@ describe('PedalCentralView', () => {
 		const { container } = render(PedalCentralView);
 		await tick();
 		expect(container.querySelector('.guitar-section .device-control')).toBeNull();
-		expect(slider(container, 'Spring')).toBeDefined();
+		expect(container.querySelectorAll('.guitar-xy-stack .guitar-xy').length).toBe(2);
 	});
 
 	it('lights Clean above the midpoint, and Dirty writes macro 6 to 0', async () => {

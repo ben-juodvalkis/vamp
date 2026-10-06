@@ -208,52 +208,47 @@
 
   <!-- COLUMN 3: the Guitar rack. Gain is the grid tile mounted standalone
        (a drag on a ghost loads Guitar.adg); on an audio track the grid's
-       own Gtr column draws it, so it is left out here. Then Spring, the
-       Tremolo pad (X rate, Y amount), Room and the Dirty/Clean switch. -->
+       own Gtr column draws it, so it is left out here. Then the Spring/Room
+       pad over the Tremolo pad, and the Dirty/Clean switch. -->
   <div class="column guitar-section">
     {#if showGuitarGain}
       <div class="guitar-slider">
         <GuitarControl device={guitar.device} disableCentralViewOnTap={true} />
       </div>
     {/if}
-    <div class="guitar-slider">
-      <DeviceSlider
-        value={gtrValue(GTR.spring)}
-        title="Spring"
-        orientation="vertical"
-        labelOrientation="vertical"
-        isGhost={guitar.isGhost}
-        color={guitarInk}
-        onTap={() => guitar.loadIfGhost()}
-        onInteraction={(v) => sendGtr(GTR.spring, v)}
-      />
-    </div>
-    <div class="guitar-xy">
-      <DeviceXY
-        xValue={gtrValue(GTR.tremRate)}
-        yValue={gtrValue(GTR.tremAmount)}
-        title="Tremolo"
-        isGhost={guitar.isGhost}
-        showCurve={false}
-        color={guitarInk}
-        onTap={() => guitar.loadIfGhost()}
-        onInteraction={(x, y) => {
-          sendGtr(GTR.tremRate, x);
-          sendGtr(GTR.tremAmount, y);
-        }}
-      />
-    </div>
-    <div class="guitar-slider">
-      <DeviceSlider
-        value={gtrValue(GTR.room)}
-        title="Room"
-        orientation="vertical"
-        labelOrientation="vertical"
-        isGhost={guitar.isGhost}
-        color={guitarInk}
-        onTap={() => guitar.loadIfGhost()}
-        onInteraction={(v) => sendGtr(GTR.room, v)}
-      />
+    <!-- Two pads stacked: Spring (X) / Room (Y) over Tremolo, rate (X) /
+         amount (Y) (user, 2026-10-05). -->
+    <div class="guitar-xy-stack">
+      <div class="guitar-xy">
+        <DeviceXY
+          xValue={gtrValue(GTR.spring)}
+          yValue={gtrValue(GTR.room)}
+          title="Spring/Room"
+          isGhost={guitar.isGhost}
+          showCurve={false}
+          color={guitarInk}
+          onTap={() => guitar.loadIfGhost()}
+          onInteraction={(x, y) => {
+            sendGtr(GTR.spring, x);
+            sendGtr(GTR.room, y);
+          }}
+        />
+      </div>
+      <div class="guitar-xy">
+        <DeviceXY
+          xValue={gtrValue(GTR.tremRate)}
+          yValue={gtrValue(GTR.tremAmount)}
+          title="Tremolo"
+          isGhost={guitar.isGhost}
+          showCurve={false}
+          color={guitarInk}
+          onTap={() => guitar.loadIfGhost()}
+          onInteraction={(x, y) => {
+            sendGtr(GTR.tremRate, x);
+            sendGtr(GTR.tremAmount, y);
+          }}
+        />
+      </div>
     </div>
     <div class="guitar-slider tone-stack" style={guitar.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
       <button
@@ -359,8 +354,8 @@
 <style>
   .pedal-central-layout {
     display: grid;
-    /* pedal XY · pedal-type tabs | guitar (gain · spring · tremolo pad ·
-       room · dirty/clean) | wah | saturator output · mix | shifter | redux.
+    /* pedal XY · pedal-type tabs | guitar (gain · spring/room pad over
+       tremolo pad · dirty/clean) | wah | saturator output · mix | shifter | redux.
        The faders column is as wide as its two sliders need, the tabs as
        wide as their labels, the Shifter and the Wah one slider wide each,
        each seam as wide as its hairline; the Guitar section never below
@@ -423,12 +418,20 @@
     flex-direction: column;
   }
 
-  /* The pad's floor is what keeps the section's min-content honest: below
-     it the grid would squeeze the pad to a sliver and push the row into
-     the Wah. */
-  .guitar-xy {
+  /* The pads' floor is what keeps the section's min-content honest: below
+     it the grid would squeeze them to a sliver and push the row into the
+     Wah. Stacked, each takes half the height. */
+  .guitar-xy-stack {
     flex: 1 1 0;
     min-width: 160px;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--central-gap);
+  }
+
+  .guitar-xy {
+    flex: 1 1 0;
     min-height: 0;
   }
 
