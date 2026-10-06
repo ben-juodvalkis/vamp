@@ -143,21 +143,16 @@
     <!-- Main content grid, the user's layout (2026-09-29): five equal
          columns before the seam: the ORB takes one, the envelopes two, each
          XY pad one; then the seam and the MIDI wheels. Three rows: a header
-         (FX over the ORB, the Amp | Filter switch, and the swap pill over the
+         (the swap pill over the ORB, the Amp | Filter switch, and FX over the
          XY pads), then
          two rows of controls. Every control starts on the same line under
          the header. -->
     <div class="omni-grid h-full w-full grid gap-(--central-gap) p-(--central-inset)">
-      <!-- Col 1: FX in the header, the ORB under it (user's layout,
-           2026-09-29). -->
-      <button
-        class="physical-button omni-fx w-full min-w-0 text-xl font-bold"
-        class:active={fxIsOn}
-        style="--btn-tint: {omniInk.primary}; grid-column: 1; grid-row: 1; height: var(--height-touch, 44px);"
-        onclick={handleFxToggle}
-      >
-        FX
-      </button>
+      <!-- Col 1: the swap pill in the header, top-left as in every
+           instrument view (2026-10-06), the ORB under it. -->
+      <div class="flex flex-col justify-center min-w-0" style="grid-column: 1; grid-row: 1;">
+        <HostedSwapPill />
+      </div>
       <div class="min-h-0" style="grid-column: 1; grid-row: 2 / 4;">
         <OrbControl
           angle={orbAngleValue}
@@ -172,7 +167,7 @@
            switch over it in the header (user's layout, 2026-09-29). Under
            Filter the envelope's Amount stands full height in the fifth
            column; under Amp the four sliders take that column too. It shares the
-           view's rows (subgrid), so the switch sits level with the swap pill
+           view's rows (subgrid), so the switch sits level with the swap pill and FX
            and the sliders start level with the pads. -->
       <div class="omni-envelopes min-w-0 min-h-0" style="grid-column: 2 / 4; grid-row: 1 / 4;">
         <div
@@ -228,10 +223,15 @@
         {/if}
       </div>
 
-      <!-- Cols 4-5, header: the swap pill, one line across both pads. -->
-      <div class="flex flex-col justify-center min-w-0" style="grid-column: 4 / 6; grid-row: 1;">
-        <HostedSwapPill />
-      </div>
+      <!-- Cols 4-5, header: FX, one line across both pads. -->
+      <button
+        class="physical-button omni-fx w-full min-w-0 text-xl font-bold"
+        class:active={fxIsOn}
+        style="--btn-tint: {omniInk.primary}; grid-column: 4 / 6; grid-row: 1; height: var(--height-touch, 44px);"
+        onclick={handleFxToggle}
+      >
+        FX
+      </button>
 
       <!-- Col 4, top: UNISON XY Pad -->
       <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 4; grid-row: 2;">

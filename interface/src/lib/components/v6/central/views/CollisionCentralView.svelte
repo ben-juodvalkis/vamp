@@ -10,6 +10,7 @@
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
   import { PITCH_COLOR, MOD_COLOR, familyScheme } from '$lib/config/devicePresets';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
+  import HostedSwapPill from '../HostedSwapPill.svelte';
 
   interface Props {
     instrument?: InstrumentInfo | null;
@@ -86,39 +87,48 @@
 
 <div class="h-full w-full overflow-hidden relative">
   {#if instrument && device}
-    <!-- Two resonator XY pads side by side, hidden when off -->
+    <!-- Two resonator XY pads side by side, hidden when off; the swap pill
+         lies across the top of the first one shown, top-left as in every
+         instrument view. -->
     <div class="h-full w-full p-(--central-inset) flex items-center justify-center gap-(--central-gap)">
       {#if res1On}
-        <div class="flex-1 h-full">
-          <DeviceXY
-            xValue={res1DecayValue}
-            yValue={res1MaterialValue}
-            title="Res 1"
-            icon="resonator"
-            xIcon="decay"
-            yIcon="tone"
-            onInteraction={handleRes1Interaction}
-            color={collisionInk}
-          />
+        <div class="flex-1 h-full min-w-0 flex flex-col gap-(--central-gap)">
+          <HostedSwapPill />
+          <div class="flex-1 min-h-0">
+            <DeviceXY
+              xValue={res1DecayValue}
+              yValue={res1MaterialValue}
+              title="Res 1"
+              icon="resonator"
+              xIcon="decay"
+              yIcon="tone"
+              onInteraction={handleRes1Interaction}
+              color={collisionInk}
+            />
+          </div>
         </div>
       {/if}
       {#if res2On}
-        <div class="flex-1 h-full">
-          <DeviceXY
-            xValue={res2DecayValue}
-            yValue={res2MaterialValue}
-            title="Res 2"
-            icon="resonator"
-            xIcon="decay"
-            yIcon="tone"
-            onInteraction={handleRes2Interaction}
-            color={collisionInk}
-          />
+        <div class="flex-1 h-full min-w-0 flex flex-col gap-(--central-gap)">
+          {#if !res1On}<HostedSwapPill />{/if}
+          <div class="flex-1 min-h-0">
+            <DeviceXY
+              xValue={res2DecayValue}
+              yValue={res2MaterialValue}
+              title="Res 2"
+              icon="resonator"
+              xIcon="decay"
+              yIcon="tone"
+              onInteraction={handleRes2Interaction}
+              color={collisionInk}
+            />
+          </div>
         </div>
       {/if}
       {#if !res1On && !res2On}
-        <div class="flex-1 text-center text-muted-foreground">
-          <p>No resonators active</p>
+        <div class="flex-1 h-full flex flex-col gap-(--central-gap) text-center text-muted-foreground">
+          <HostedSwapPill />
+          <p class="flex-1 flex items-center justify-center">No resonators active</p>
         </div>
       {/if}
       <!-- The wheels send MIDI, not Collision parameters: a seam divides them

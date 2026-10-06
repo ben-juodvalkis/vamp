@@ -10,6 +10,7 @@
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
   import { PITCH_COLOR, MOD_COLOR } from '$lib/config/devicePresets';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
+  import HostedSwapPill from '../HostedSwapPill.svelte';
 
   interface Props {
     instrument?: InstrumentInfo | null;
@@ -92,17 +93,23 @@
     <!-- Layout: Hammer XY + Fork XY | MIDI wheels — the seam divides the
          device from the wheels, which send MIDI (2026-09-13). -->
     <div class="h-full w-full p-(--central-inset) grid gap-(--central-gap)" style="grid-template-columns: 1fr 1fr auto auto;">
-      <!-- Hammer XY: Stiffness (X) / Noise (Y) -->
-      <DeviceXY
-        xValue={hammerStiffness}
-        yValue={hammerNoise}
-        title="Hammer"
-        icon="hammer"
-        xIcon="tone"
-        yIcon="noise"
-        onInteraction={handleHammerXYInteraction}
-        color={electricInk}
-      />
+      <!-- Hammer XY: Stiffness (X) / Noise (Y), the swap pill lying across
+           the top of its column, top-left as in every instrument view. -->
+      <div class="min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
+        <HostedSwapPill />
+        <div class="flex-1 min-h-0">
+          <DeviceXY
+            xValue={hammerStiffness}
+            yValue={hammerNoise}
+            title="Hammer"
+            icon="hammer"
+            xIcon="tone"
+            yIcon="noise"
+            onInteraction={handleHammerXYInteraction}
+            color={electricInk}
+          />
+        </div>
+      </div>
 
       <!-- Fork XY: Tine Color (X) / Tine Decay (Y) -->
       <DeviceXY
