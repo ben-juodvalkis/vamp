@@ -4,9 +4,9 @@
 	 *
 	 * Self-contained central view that queries its own slot state.
 	 * Renders immediately with ghost/loading/active states.
-	 * Displays Blur, Comb, Phaser, Pitch Hack and Octave controls.
+	 * Displays Octave, GlitchLoop, Blur, Comb and Phaser controls.
 	 *
-	 * Contains virtual devices (smudge, comb, phaser, pitchHack, octave) which have
+	 * Contains virtual devices (smudge, comb, phaser, glitchLoop, octave) which have
 	 * their own ghost states.
 	 * NO {#if device} gate - always renders, handles its own state.
 	 * NO props required - queries selectedTrackStore directly.
@@ -29,7 +29,7 @@
 	const comb = useFxGridSlot('comb');
 	const smudge = useFxGridSlot('smudge');
 	const phaser = useFxGridSlot('phaser');
-	const pitchHack = useFxGridSlot('pitchHack');
+	const glitchLoop = useFxGridSlot('glitchLoop');
 
 	// GRATICULE (§5.5): calibrate the slot palette through trackInk at injection.
 	let fxInk = $derived({
@@ -42,10 +42,10 @@
 		secondary: phaser.color.secondary,
 		accent: trackInk(phaser.color.accent, paintModeReactive())
 	});
-	let pitchHackInk = $derived({
-		primary: trackInk(pitchHack.color.primary, paintModeReactive()),
-		secondary: pitchHack.color.secondary,
-		accent: trackInk(pitchHack.color.accent, paintModeReactive())
+	let glitchLoopInk = $derived({
+		primary: trackInk(glitchLoop.color.primary, paintModeReactive()),
+		secondary: glitchLoop.color.secondary,
+		accent: trackInk(glitchLoop.color.accent, paintModeReactive())
 	});
 
 	// ── Phaser (Phaser-Flanger) ────────────────────────────────────────────
@@ -95,76 +95,21 @@
 		)
 	);
 
-	// ── Pitch Hack (Creative Extensions, Max) ──────────────────────────────
-	// Indices and rails read off the running device on 2026-09-23
-	// (parameters.*name/min/max): 0 Device On, 1 Cents, 2 Dry / Wet 0–100,
-	// 3 Coarse ±36 st, 4 Level, 5 Rate 0–23 (quantized), 6 Recycle 0–95,
-	// 7 Reverse, 8 Int Var. Dry / Wet, Coarse and Recycle are Max int
-	// params, so every write is rounded. Defaults are what Pitch Hack.adv
-	// saves: dry, no shift, Rate 1/8, no recycle.
-	// Pad: X = Rate, Y = Mix. Pitch and Recycle (titled Feedback) are
-	// sliders of their own.
-	const PITCH_HACK_PARAMS = {
-		mix:     { index: 2, max: 100, default: 0 },
-		pitch:   { index: 3, min: -36, max: 36, default: 0 },
-		rate:    { index: 5, max: 23, default: 10 },
-		recycle: { index: 6, max: 95, default: 0 }
+	// ── GlitchLoop (the owner's PitchLoop89 build, Max) ────────────────────
+	// Took Pitch Hack's place 2026-10-06; one slider for now, more to come.
+	// Dry/Wet is param 7, 0–100, read off the running device by the user
+	// (2026-10-06). The device opens at 50, PitchLoop89's own default.
+	const GLITCH_LOOP_PARAMS = {
+		mix: { index: 7, max: 100, default: 50 }
 	};
 
-	// Rate's value_items on the running device, index = parameter value.
-	// Identical to the patch's own parameter_enum.
-	const PITCH_HACK_RATES = [
-		'1/128', '1/64', '1/32T', '1/64D', '1/32', '1/16T', '1/32D', '1/16',
-		'1/8T', '1/16D', '1/8', '1/4T', '1/8D', '1/4', '1/2T', '1/4D',
-		'1/2', '1/1T', '1/2D', '1/1', '1/1D', '2/1', '3/1', '4/1'
-	];
-
-	let pitchHackRate = $derived(
-		Math.max(0, Math.min(PITCH_HACK_PARAMS.rate.max, Math.round(
-			pitchHack.paramValue(PITCH_HACK_PARAMS.rate.index) ?? PITCH_HACK_PARAMS.rate.default
-		)))
-	);
-	let pitchHackMix = $derived(
-		(pitchHack.paramValue(PITCH_HACK_PARAMS.mix.index) ?? PITCH_HACK_PARAMS.mix.default) /
-			PITCH_HACK_PARAMS.mix.max
-	);
-	let pitchHackRecycle = $derived(
-		pitchHack.paramValue(PITCH_HACK_PARAMS.recycle.index) ?? PITCH_HACK_PARAMS.recycle.default
-	);
-	let pitchHackPitch = $derived(
-		pitchHack.paramValue(PITCH_HACK_PARAMS.pitch.index) ?? PITCH_HACK_PARAMS.pitch.default
-	);
-	// Pitch is three stops, not a sweep (user, 2026-10-05): -12, 0, +12,
-	// left to right under the pad, written as raw Coarse semitones. The lit
-	// stop is the one nearest the device's value, so a shift set by hand in
-	// Live still lights the closest.
-	const PITCH_HACK_STEPS = [
-		{ label: '-12', value: -12 },
-		{ label: '0', value: 0 },
-		{ label: '+12', value: 12 }
-	];
-	let pitchHackStep = $derived(
-		PITCH_HACK_STEPS.reduce(
-			(best, step, i) =>
-				Math.abs(step.value - pitchHackPitch) < Math.abs(PITCH_HACK_STEPS[best].value - pitchHackPitch) ? i : best,
-			0
-		)
+	let glitchLoopMix = $derived(
+		glitchLoop.paramValue(GLITCH_LOOP_PARAMS.mix.index) ?? GLITCH_LOOP_PARAMS.mix.default
 	);
 
-	function sendPitchHackXY(x: number, y: number) {
-		const { rate, mix } = PITCH_HACK_PARAMS;
-		pitchHack.sendParam(rate.index, Math.round(Math.max(0, Math.min(1, x)) * rate.max));
-		pitchHack.sendParam(mix.index, Math.round(Math.max(0, Math.min(1, y)) * mix.max));
-	}
-
-	function sendPitchHackPitch(semitones: number) {
-		const { index, min, max } = PITCH_HACK_PARAMS.pitch;
-		pitchHack.sendParam(index, Math.max(min, Math.min(max, Math.round(semitones))));
-	}
-
-	function sendPitchHackRecycle(amount: number) {
-		const { index, max } = PITCH_HACK_PARAMS.recycle;
-		pitchHack.sendParam(index, Math.max(0, Math.min(max, Math.round(amount))));
+	function sendGlitchLoopMix(amount: number) {
+		const { index, max } = GLITCH_LOOP_PARAMS.mix;
+		glitchLoop.sendParam(index, Math.max(0, Math.min(max, amount)));
 	}
 </script>
 
@@ -176,59 +121,23 @@
 		<OctavePanel />
 	</div>
 
-	<SectionDivider orientation="vertical" ink={pitchHackInk.primary} />
+	<SectionDivider orientation="vertical" ink={glitchLoopInk.primary} />
 
-	<!-- Pitch Hack (virtual device) — X: Rate (24 steps, the division is the
-	     pad's readout), Y: Dry / Wet. The two sliders beside it are the same
-	     device's Coarse shift and Recycle. -->
-	<div class="device-wrapper pad">
-		<BaseDeviceControl slotKey="pitchHack" device={pitchHack.device} title="Pitch Hack" disableCentralViewOnTap={true} showMoveToTop={true} showMoveToEnd={true}>
-			{#snippet children({ handleTap })}
-				<DeviceXY
-					xValue={pitchHackRate / PITCH_HACK_PARAMS.rate.max}
-					yValue={pitchHackMix}
-					title="Pitch Hack"
-					icon="pitchhack"
-					xIcon="rate"
-					yIcon="mix"
-					rateLabel={PITCH_HACK_RATES[pitchHackRate]}
-					isGhost={pitchHack.isGhost}
-					showCurve={false}
-					color={pitchHackInk}
-					onTap={() => (pitchHack.isGhost ? pitchHack.loadIfGhost() : handleTap())}
-					onInteraction={sendPitchHackXY}
-				/>
-			{/snippet}
-		</BaseDeviceControl>
-		<!-- Pitch: -12 / 0 / +12 across the foot of the pad, like the Pedal's
-		     type switch (user, 2026-10-05). -->
-		<div class="pitch-hack-row" style={pitchHack.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
-			{#each PITCH_HACK_STEPS as step, i}
-				<button
-					class="physical-button w-full px-2 text-xs text-center font-medium"
-					class:active={!pitchHack.isGhost && pitchHackStep === i}
-					style="--btn-tint: {pitchHackInk.primary};"
-					aria-label="Pitch Hack pitch {step.label}"
-					aria-pressed={!pitchHack.isGhost && pitchHackStep === i}
-					onclick={() => sendPitchHackPitch(step.value)}
-				>{step.label}</button>
-			{/each}
-		</div>
-	</div>
-
+	<!-- GlitchLoop (virtual device): its Dry/Wet, in Pitch Hack's old place
+	     (2026-10-06). -->
 	<div class="device-wrapper">
 		<DeviceSlider
-			value={pitchHackRecycle}
-			title="Feedback"
-			icon="feedback"
+			value={glitchLoopMix}
+			title="GlitchLoop"
+			icon="mix"
 			orientation="vertical"
 			labelOrientation="horizontal"
-			isGhost={pitchHack.isGhost}
-			color={pitchHackInk}
+			isGhost={glitchLoop.isGhost}
+			color={glitchLoopInk}
 			min={0}
-			max={PITCH_HACK_PARAMS.recycle.max}
-			onTap={() => pitchHack.loadIfGhost()}
-			onInteraction={sendPitchHackRecycle}
+			max={GLITCH_LOOP_PARAMS.mix.max}
+			onTap={() => glitchLoop.loadIfGhost()}
+			onInteraction={sendGlitchLoopMix}
 		/>
 	</div>
 
@@ -288,15 +197,14 @@
 <style>
 	.chorus-central-layout {
 		display: grid;
-		/* octave | pitch hack (pad over its -12/0/+12 row) · feedback | blur
-		   | comb over phaser.
+		/* octave | glitchloop mix | blur | comb over phaser.
 		   One equal track per slider, a seam its hairline; a pad (and the
 		   Octave panel, its fader and its tab) spans two tracks, so it is
 		   exactly two sliders and the gap between them, and every control
 		   grows with the view (user, 2026-10-05). */
 		grid-template-columns:
 			repeat(2, minmax(0, 1fr)) auto
-			repeat(3, minmax(0, 1fr)) auto
+			minmax(0, 1fr) auto
 			minmax(0, 1fr) auto
 			repeat(2, minmax(0, 1fr));
 		height: 100%;
@@ -327,20 +235,4 @@
 		flex-direction: column;
 	}
 
-	/* -12 · 0 · +12 under the Pitch Hack pad, one row a slider-label tall. */
-	.pitch-hack-row {
-		display: flex;
-		flex-direction: row;
-		gap: var(--spacing-xs);
-		flex: 0 0 auto;
-		height: 3rem;
-		margin-top: var(--central-gap);
-	}
-
-	.pitch-hack-row button {
-		flex: 1;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
 </style>

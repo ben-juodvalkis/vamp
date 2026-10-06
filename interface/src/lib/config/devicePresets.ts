@@ -379,8 +379,24 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Pitch Hack',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'chorus',         // Belongs to ChorusCentralView
+    centralViewGroup: undefined,        // No view since GlitchLoop took its place (2026-10-06)
     color: familyScheme('pitchSeq')     // A pitch shifter — function over host view
+  },
+  glitchLoop: {
+    // GlitchLoop: PitchLoop89 with built-in mod slots, built by the owner's
+    // glitchloop repo (dist/GlitchLoop.amxd). It embeds Ableton's PitchLoop89
+    // patch, so it stays out of this public repo and loads from the owner's
+    // Effect Patches folder, where the file is a hard link to the glitchloop
+    // build. Took Pitch Hack's place in the Chorus view (2026-10-06). The
+    // name is load-bearing: Blur, Permute and Pitch Hack are
+    // MxDeviceAudioEffect too.
+    padScoped: true,
+    presetPath: '{effectPresetsBase}/GlitchLoop.amxd',
+    defaultName: 'GlitchLoop',
+    expectedClassName: 'MxDeviceAudioEffect',
+    gridSlot: false,                    // Virtual device
+    centralViewGroup: 'chorus',         // Belongs to ChorusCentralView
+    color: familyScheme('pitchSeq')     // A pitch shifter, like Pitch Hack
   },
   smudge: {
     // Blur ships in the repo beside Permute and loads the same way, through

@@ -65,6 +65,7 @@ export const DEVICE_GLYPHS: Readonly<Record<string, DeviceGlyph>> = {
 	reverb: 'space',
 	variation: 'space',
 	pitchHack: 'space', // a pitch-shifting delay: its taps live in time
+	glitchLoop: 'space', // PitchLoop89, a pitch-shifting delay like Pitch Hack
 
 	compressor: 'dynamics',
 	squash: 'dynamics',
