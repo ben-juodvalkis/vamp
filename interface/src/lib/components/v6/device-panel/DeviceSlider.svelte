@@ -318,7 +318,7 @@
          (device tint, matching the XY label); the inverse copy is clipped to the
          filled region (inline clip-path) and uses an on-fill ink so letters stay
          readable once the fill rises over them. No inverse in meter mode. -->
-    {#if title || label}
+    {#if title || label || icon}
       <div class="slider-label label-{effectiveLabelOrientation} label-{labelSize}">
         {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={title}>{title}</span>{/if}</span>
       </div>

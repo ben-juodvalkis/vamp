@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { ControlGlyphName } from './ControlGlyph.svelte';
   import type { DeviceRecord } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import BaseDeviceControl from './BaseDeviceControl.svelte';
@@ -6,9 +7,13 @@
 
   interface Props {
     device: DeviceRecord | null;
+    // Marks for what the control does (the central view passes them).
+    icon?: ControlGlyphName;
+    xIcon?: ControlGlyphName;
+    yIcon?: ControlGlyphName;
   }
 
-  let { device }: Props = $props();
+  let { device, icon, xIcon, yIcon }: Props = $props();
 
   // Parameter configuration for Gate
   const PARAM_CONFIG = {
@@ -45,6 +50,9 @@
       xValue={releaseValue}
       yValue={thresholdValue}
       title="Gate"
+      {icon}
+      {xIcon}
+      {yIcon}
       {isGhost}
       {color}
       showCurve={false}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { ControlGlyphName } from './ControlGlyph.svelte';
   import type { DeviceRecord } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import BaseDeviceControl from './BaseDeviceControl.svelte';
@@ -6,9 +7,11 @@
 
   interface Props {
     device: DeviceRecord | null;
+    // Marks for what the control does (the central view passes them).
+    icon?: ControlGlyphName;
   }
 
-  let { device }: Props = $props();
+  let { device, icon }: Props = $props();
 
   // Parameter configuration from device-configs.json
   // Compressor2 only has threshold defined
@@ -37,6 +40,7 @@
     <DeviceSlider
       value={thresholdValue}
       title="Comp"
+      {icon}
       labelOrientation="horizontal"
       labelSize="small"
       {isGhost}
