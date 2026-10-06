@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, type Snippet } from 'svelte';
+  import { onDestroy, type Component, type Snippet } from 'svelte';
   import { familyScheme, type DeviceColorScheme } from '$lib/config/devicePresets';
   import MeterVisualization from '$lib/components/v6/looping/MeterVisualizationV6.svelte';
   import { createSliderThrottle } from '$lib/utils/sliderThrottle';
@@ -18,6 +18,9 @@
     // layers, so ink it with currentColor and it flips on the fill like text
     // does. `title` still names the slider for assistive tech.
     label?: Snippet;
+    // A mark for what the slider does, drawn above the label in both label
+    // layers (so it inverts on the fill like the text). A Lucide icon.
+    icon?: Component<any>;
     onInteraction?: (value: number) => void;
     // Fired once when a drag ends, with where it left the slider — never on a
     // tap, nor when the drag ended where it began. For a write that should
@@ -58,6 +61,7 @@
     value = 0,
     title = "",
     label,
+    icon: Icon,
     onInteraction,
     onRelease,
     onTap,
@@ -315,7 +319,7 @@
          readable once the fill rises over them. No inverse in meter mode. -->
     {#if title || label}
       <div class="slider-label label-{effectiveLabelOrientation} label-{labelSize}">
-        <span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={title}>{title}</span>{/if}</span>
+        {#if Icon}<span class="slider-icon" aria-hidden="true"><Icon strokeWidth={1.75} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={title}>{title}</span>{/if}</span>
       </div>
       {#if showFill}
         <div
@@ -323,7 +327,7 @@
           style="clip-path: {inverseClip};"
           aria-hidden="true"
         >
-          <span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={title}>{title}</span>{/if}</span>
+          {#if Icon}<span class="slider-icon" aria-hidden="true"><Icon strokeWidth={1.75} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={title}>{title}</span>{/if}</span>
         </div>
       {/if}
     {/if}
@@ -474,6 +478,25 @@
     pointer-events: none;
     z-index: 10;
   }
+  .slider-label {
+    flex-direction: column;
+    gap: 0.4em;
+  }
+  .slider-icon {
+    display: flex;
+    flex: 0 0 auto;
+    width: clamp(16px, 30cqw, 34px);
+    aspect-ratio: 1;
+    color: color-mix(in oklab, var(--slider-tint, var(--foreground)) 70%, transparent);
+  }
+  :global([data-grammar="flat"]) .slider-icon {
+    color: var(--foreground);
+  }
+  .slider-icon :global(svg) {
+    width: 100%;
+    height: 100%;
+  }
+
   /* Inverse copy sits above the base, clipped to the filled region. */
   .slider-label.slider-label--inverse {
     z-index: 11;
@@ -488,11 +511,13 @@
     color: color-mix(in oklab, var(--slider-tint, var(--foreground)) 70%, transparent);
   }
   /* On-fill ink — dark, reads on top of the bright device-color fill. */
-  .slider-label--inverse .slider-label-text {
+  .slider-label--inverse .slider-label-text,
+  .slider-label--inverse .slider-icon {
     color: var(--card);
   }
   /* Ghost: full device tint, no dim — reads clearly on the empty well (matches XY). */
-  .slider-container.ghost .slider-label-text {
+  .slider-container.ghost .slider-label-text,
+  .slider-container.ghost .slider-icon {
     color: var(--slider-tint, var(--foreground));
   }
 
@@ -566,10 +591,12 @@
     font-weight: 500;
     color: var(--foreground);
   }
-  :global([data-grammar="flat"]) .slider-label--inverse .slider-label-text {
+  :global([data-grammar="flat"]) .slider-label--inverse .slider-label-text,
+  :global([data-grammar="flat"]) .slider-label--inverse .slider-icon {
     color: var(--flat-on-fg);
   }
-  :global([data-grammar="flat"]) .slider-container.ghost .slider-label-text {
+  :global([data-grammar="flat"]) .slider-container.ghost .slider-label-text,
+  :global([data-grammar="flat"]) .slider-container.ghost .slider-icon {
     color: var(--signal-dim);
   }
   :global([data-grammar="flat"]) .slider-label.label-small.label-vertical .slider-label-text {
@@ -590,18 +617,22 @@
 
   /* Hybrid skin: Live's grammar, but the device family keeps its voice —
      label in the device ink (its fill already is), on the flat grey module. */
-  :global([data-skin="hybrid"]) .slider-label-text {
+  :global([data-skin="hybrid"]) .slider-label-text,
+  :global([data-skin="hybrid"]) .slider-icon {
     color: var(--slider-tint, var(--foreground));
   }
   /* Light: the fill envelope (L .66–.80) is too pale for TEXT on paper —
      pull the label toward the foreground, hue kept. */
-  :global(.light[data-skin="hybrid"]) .slider-label-text {
+  :global(.light[data-skin="hybrid"]) .slider-label-text,
+  :global(.light[data-skin="hybrid"]) .slider-icon {
     color: color-mix(in oklab, var(--slider-tint, var(--foreground)) 55%, var(--foreground));
   }
-  :global([data-skin="hybrid"]) .slider-label--inverse .slider-label-text {
+  :global([data-skin="hybrid"]) .slider-label--inverse .slider-label-text,
+  :global([data-skin="hybrid"]) .slider-label--inverse .slider-icon {
     color: var(--flat-on-fg);
   }
-  :global([data-skin="hybrid"]) .slider-container.ghost .slider-label-text {
+  :global([data-skin="hybrid"]) .slider-container.ghost .slider-label-text,
+  :global([data-skin="hybrid"]) .slider-container.ghost .slider-icon {
     color: color-mix(in srgb, var(--slider-tint, var(--foreground)) 70%, var(--signal-dim));
   }
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Component } from 'svelte';
 	import type { DeviceRecord } from '$lib/stores/v6/selectedTrackStore.svelte';
 	import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 	import BaseDeviceControl from './BaseDeviceControl.svelte';
@@ -6,9 +7,14 @@
 
 	interface Props {
 		device: DeviceRecord | null;
+		// Marks for what the control does (the central views pass them; the
+		// grid tile draws none).
+		icon?: Component<any>;
+		xIcon?: Component<any>;
+		yIcon?: Component<any>;
 	}
 
-	let { device }: Props = $props();
+	let { device, icon, xIcon, yIcon }: Props = $props();
 
 	// Comb (`Vamp Devices/Comb/Comb.amxd`), a Max rebuild of the owner's
 	// Zebrify "Dissonant" comb patch (2026-10-05). Its parameters, in Live's
@@ -53,6 +59,9 @@
 			{xValue}
 			{yValue}
 			title="Comb"
+			{icon}
+			{xIcon}
+			{yIcon}
 			{isGhost}
 			{color}
 			showCurve={false}

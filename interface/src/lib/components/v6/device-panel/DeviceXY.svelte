@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { onDestroy, type Snippet } from 'svelte';
+  import { onDestroy, type Component, type Snippet } from 'svelte';
+  import ArrowRight from '@lucide/svelte/icons/arrow-right';
+  import ArrowUp from '@lucide/svelte/icons/arrow-up';
   import FilterCurve, { type CurveType } from './FilterCurve.svelte';
   import { familyScheme, type DeviceColorScheme } from '$lib/config/devicePresets';
   import { MIN_SEND_INTERVAL_MS } from '$lib/utils/sliderThrottle';
@@ -24,6 +26,12 @@
     // what the two axes do (the Reverb view's tail). Visual only — give it
     // `pointer-events: none`; the pad keeps the gesture.
     background?: Snippet;
+    // A mark for what the pad does, drawn above the title, and one for each
+    // axis: X in the bottom-right corner, Y in the top-left, each with its
+    // arrow. Lucide icons; visual only, the title still names the pad.
+    icon?: Component<any>;
+    xIcon?: Component<any>;
+    yIcon?: Component<any>;
   }
 
   let {
@@ -41,7 +49,10 @@
     curveType = 'lowpass',
     color = familyScheme('utility'),
     invertResonance = false,
-    background
+    background,
+    icon: Icon,
+    xIcon: XIcon,
+    yIcon: YIcon
   }: Props = $props();
 
   let isDragging = $state(false);
@@ -302,7 +313,18 @@
 
     <!-- Center title -->
     {#if title}
-      <div class="center-title {titleClass}"><span class="fit-label" use:fitText={title}>{title}</span></div>
+      <div class="center-title {titleClass}">
+        {#if Icon}<span class="title-icon" aria-hidden="true"><Icon strokeWidth={1.75} /></span>{/if}
+        <span class="fit-label" use:fitText={title}>{title}</span>
+      </div>
+    {/if}
+
+    <!-- Axis marks: what moving across and up does. -->
+    {#if XIcon}
+      <div class="axis-mark axis-x" aria-hidden="true"><XIcon strokeWidth={2} /><ArrowRight strokeWidth={2} /></div>
+    {/if}
+    {#if YIcon}
+      <div class="axis-mark axis-y" aria-hidden="true"><ArrowUp strokeWidth={2} /><YIcon strokeWidth={2} /></div>
     {/if}
 
     <!-- Rate label (centered, below title) - only show when active (not ghost) -->
@@ -403,6 +425,60 @@
     user-select: none;
     z-index: 1;
     color: color-mix(in oklab, var(--xy-tint, var(--foreground)) 70%, transparent);
+  }
+
+  .center-title {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15em;
+  }
+
+  .title-icon {
+    display: flex;
+    width: 1.4em;
+    height: 1.4em;
+  }
+  .title-icon :global(svg),
+  .axis-mark :global(svg) {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Axis marks sit in the corners the handle rarely parks in for long, small
+     and quieter than the title: a hint, not a label. */
+  .axis-mark {
+    position: absolute;
+    display: flex;
+    gap: 2px;
+    height: clamp(14px, 6cqw, 24px);
+    pointer-events: none;
+    user-select: none;
+    z-index: 1;
+    color: color-mix(in oklab, var(--xy-tint, var(--foreground)) 55%, transparent);
+  }
+  .axis-mark :global(svg) {
+    width: auto;
+    aspect-ratio: 1;
+  }
+  .axis-x {
+    right: 6px;
+    bottom: 6px;
+    flex-direction: row;
+  }
+  .axis-y {
+    left: 6px;
+    top: 6px;
+    flex-direction: column;
+    height: auto;
+    width: clamp(14px, 6cqw, 24px);
+  }
+  .axis-y :global(svg) {
+    width: 100%;
+    height: auto;
+  }
+  :global([data-grammar="flat"]) .axis-mark {
+    color: var(--signal-dim);
   }
 
   /* Ghost label stays legible (§5.6): full device tint (not white, not dimmed) and

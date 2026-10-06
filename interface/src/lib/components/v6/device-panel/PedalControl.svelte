@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Component } from 'svelte';
   import type { DeviceRecord } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import BaseDeviceControl from './BaseDeviceControl.svelte';
@@ -9,9 +10,14 @@
     position?: import('$lib/config/fxGridLayout').PositionKey;
     /** Inside the Pedal view a tap has nowhere to go: it is already home. */
     disableCentralViewOnTap?: boolean;
+    // Marks for what the control does (the central views pass them; the
+    // grid tile draws none).
+    icon?: Component<any>;
+    xIcon?: Component<any>;
+    yIcon?: Component<any>;
   }
 
-  let { device, position, disableCentralViewOnTap = false }: Props = $props();
+  let { device, position, disableCentralViewOnTap = false, icon, xIcon, yIcon }: Props = $props();
 
   const PARAM_CONFIG = {
     type: {
@@ -71,6 +77,9 @@
       xValue={midValue}
       yValue={gainDryWetValue}
       title="Pedal"
+      {icon}
+      {xIcon}
+      {yIcon}
       {isGhost}
       {color}
       onTap={handleTap}

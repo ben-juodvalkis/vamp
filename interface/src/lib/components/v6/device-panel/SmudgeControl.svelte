@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Component } from 'svelte';
 	import type { DeviceRecord } from '$lib/stores/v6/selectedTrackStore.svelte';
 	import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 	import BaseDeviceControl from './BaseDeviceControl.svelte';
@@ -6,9 +7,12 @@
 
 	interface Props {
 		device: DeviceRecord | null;
+		// Marks for what the control does (the central views pass them; the
+		// grid tile draws none).
+		icon?: Component<any>;
 	}
 
-	let { device }: Props = $props();
+	let { device, icon }: Props = $props();
 
 	// Blur (`Vamp Devices/Blur/Blur.amxd`), read off the running device on
 	// 2026-10-03 (parameters.*name/min/max): 0 Device On, 1 Drive 0–100,
@@ -33,6 +37,7 @@
 		<DeviceSlider
 			value={mixValue}
 			title="Blur"
+			{icon}
 			orientation="vertical"
 			labelOrientation="horizontal"
 			{isGhost}

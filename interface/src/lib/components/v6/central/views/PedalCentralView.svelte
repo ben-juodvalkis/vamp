@@ -55,6 +55,23 @@
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import SectionDivider from '../SectionDivider.svelte';
   import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
+  // What each control does, at a glance (user, 2026-10-06). A pad also
+  // marks its axes: X in the bottom-right corner, Y in the top-left.
+  import Flame from '@lucide/svelte/icons/flame';
+  import AudioWaveform from '@lucide/svelte/icons/audio-waveform';
+  import Gauge from '@lucide/svelte/icons/gauge';
+  import Guitar from '@lucide/svelte/icons/guitar';
+  import Footprints from '@lucide/svelte/icons/footprints';
+  import Waves from '@lucide/svelte/icons/waves';
+  import Spline from '@lucide/svelte/icons/spline';
+  import House from '@lucide/svelte/icons/house';
+  import Activity from '@lucide/svelte/icons/activity';
+  import Timer from '@lucide/svelte/icons/timer';
+  import Sparkles from '@lucide/svelte/icons/sparkles';
+  import Orbit from '@lucide/svelte/icons/orbit';
+  import Volume2 from '@lucide/svelte/icons/volume-2';
+  import Droplet from '@lucide/svelte/icons/droplet';
+  import Grid3x3 from '@lucide/svelte/icons/grid-3x3';
 
   const fx = useFxGridSlot('pedal');
   const shifter = useFxGridSlot('shifter');
@@ -103,8 +120,8 @@
   // what a fader shows is what the device stores. Drive (1) and Color Hi
   // (8) have no fader: they are the grid tile's two axes (2026-10-05).
   const SATURATOR_FADERS = [
-    { index: 10, title: 'Output', fallback: 1 },
-    { index: 11, title: 'Mix', fallback: 1 }
+    { index: 10, title: 'Output', fallback: 1, icon: Volume2 },
+    { index: 11, title: 'Mix', fallback: 1, icon: Droplet }
   ] as const;
 
   // GRATICULE (§2.4 / §5.5): normalize the pedal palette through trackInk
@@ -188,7 +205,7 @@
        switch, laid out across (2026-10-05). -->
   <div class="column pad pedal-xy-column">
     <div class="xy-wrapper flex-1">
-      <PedalControl device={fx.device} disableCentralViewOnTap={true} />
+      <PedalControl device={fx.device} disableCentralViewOnTap={true} icon={Flame} xIcon={AudioWaveform} yIcon={Gauge} />
     </div>
     <div class="pedal-type-buttons" style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
       {#each PEDAL_TYPE_OPTIONS as option}
@@ -219,7 +236,7 @@
       <div class="column left-stack">
         {#if showGuitarGain}
           <div class="left-cell">
-            <GuitarControl device={guitar.device} disableCentralViewOnTap={true} />
+            <GuitarControl device={guitar.device} disableCentralViewOnTap={true} icon={Guitar} />
           </div>
         {/if}
         {#if showWah}
@@ -227,6 +244,7 @@
             <DeviceSlider
               value={wahValue}
               title="Wah"
+              icon={Footprints}
               orientation="vertical"
               labelOrientation="horizontal"
               labelSize="small"
@@ -247,6 +265,9 @@
           xValue={gtrValue(GTR.spring)}
           yValue={gtrValue(GTR.room)}
           title="Spring/Room"
+          icon={Waves}
+          xIcon={Spline}
+          yIcon={House}
           isGhost={guitar.isGhost}
           showCurve={false}
           color={guitarInk}
@@ -262,6 +283,9 @@
           xValue={gtrValue(GTR.tremRate)}
           yValue={gtrValue(GTR.tremAmount)}
           title="Tremolo"
+          icon={Activity}
+          xIcon={Timer}
+          yIcon={Gauge}
           isGhost={guitar.isGhost}
           showCurve={false}
           color={guitarInk}
@@ -280,14 +304,14 @@
         aria-pressed={!guitar.isGhost && !gtrClean}
         style="--btn-tint: {guitarInk.primary};"
         onclick={() => sendGtr(GTR.ampSwitch, 0)}
-      >Dirty</button>
+      ><Flame class="tone-icon" aria-hidden="true" />Dirty</button>
       <button
         class="physical-button tone-btn"
         class:active={!guitar.isGhost && gtrClean}
         aria-pressed={!guitar.isGhost && gtrClean}
         style="--btn-tint: {guitarInk.primary};"
         onclick={() => sendGtr(GTR.ampSwitch, 1)}
-      >Clean</button>
+      ><Sparkles class="tone-icon" aria-hidden="true" />Clean</button>
     </div>
   </div>
 
@@ -299,6 +323,7 @@
     <DeviceSlider
       value={Math.min(shifter.paramValue(SHIFTER_RM_COARSE) ?? 0, SHIFTER_RM_MAX)}
       title="Shifter"
+      icon={Orbit}
       orientation="vertical"
       labelOrientation="vertical"
       isGhost={shifter.isGhost}
@@ -325,6 +350,7 @@
           <DeviceSlider
             value={saturator.paramValue(fader.index) ?? fader.fallback}
             title={fader.title}
+            icon={fader.icon}
             orientation="vertical"
             labelOrientation="vertical"
             isGhost={saturator.isGhost}
@@ -338,7 +364,7 @@
       {/each}
     </div>
     <div class="xy-wrapper redux-column">
-      <ReduxControl device={redux.device} />
+      <ReduxControl device={redux.device} icon={Grid3x3} />
     </div>
   </div>
 
@@ -409,10 +435,20 @@
   }
 
   .tone-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4em;
     flex: 1 1 0;
     min-height: 0;
     font-size: 0.8125rem;
     font-weight: 600;
+  }
+
+  .tone-btn :global(.tone-icon) {
+    width: 1.75em;
+    height: 1.75em;
   }
 
   /* Gain over Wah: each half the column's height, or the whole of it alone. */

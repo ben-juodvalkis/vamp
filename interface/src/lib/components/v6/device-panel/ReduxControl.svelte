@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Component } from 'svelte';
 	import type { DeviceRecord } from '$lib/stores/v6/selectedTrackStore.svelte';
 	import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 	import BaseDeviceControl from './BaseDeviceControl.svelte';
@@ -6,9 +7,14 @@
 
 	interface Props {
 		device: DeviceRecord | null;
+		// Marks for what the control does (the central views pass them; the
+		// grid tile draws none).
+		icon?: Component<any>;
+		xIcon?: Component<any>;
+		yIcon?: Component<any>;
 	}
 
-	let { device }: Props = $props();
+	let { device, icon, xIcon, yIcon }: Props = $props();
 
 	// Parameter configuration for Redux2 effect
 	// X axis: param 8, range 0-1, default 0.5
@@ -51,6 +57,9 @@
 			{xValue}
 			{yValue}
 			title="Redux"
+			{icon}
+			{xIcon}
+			{yIcon}
 			{isGhost}
 			{color}
 			showCurve={false}
