@@ -60,6 +60,14 @@
 	const octaveChain = useBassChainPosition(octave, 'OctavePanel');
 	const armOctaveLoad = () => octaveChain.arm();
 
+	// The device saves -12 as its Semitones; a load from here starts an
+	// octave UP instead (user, 2026-10-05). On a ghost slot the write is
+	// pending and rides the load. A pitch tap writes its own value instead.
+	const OCTAVE_LOAD_PITCH = 12;
+	function loadOctaveUp() {
+		if (octave.isGhost) octave.sendParam(OCTAVE_PITCH_PARAM, OCTAVE_LOAD_PITCH);
+	}
+
 	function setPitch(step: number) {
 		armOctaveLoad();
 		octave.sendParam(OCTAVE_PITCH_PARAM, PITCH_STEPS[step].value);
@@ -193,10 +201,11 @@
 				max={100}
 				onTap={() => {
 					armOctaveLoad();
-					octave.loadIfGhost();
+					loadOctaveUp();
 				}}
 				onInteraction={(val) => {
 					armOctaveLoad();
+					loadOctaveUp();
 					octave.sendParam(OCTAVE_MIX_PARAM, val);
 				}}
 			/>
