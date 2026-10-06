@@ -114,6 +114,7 @@
 			value={clipGrooveStore.randomAmount / 100}
 			labelOrientation="horizontal"
 			title="Random"
+			icon="dice"
 			color={scheme}
 			onInteraction={(v) => write(setClipGrooveRandomAmount, v * 100)}
 		/>
@@ -123,6 +124,7 @@
 			value={clipGrooveStore.velocityAmount / 100}
 			labelOrientation="horizontal"
 			title="Velocity"
+			icon="velocity"
 			color={scheme}
 			onInteraction={(v) => write(setClipGrooveVelocityAmount, v * 100)}
 		/>
@@ -179,6 +181,7 @@
 			value={clipGrooveStore.timingAmount / 100}
 			labelOrientation="horizontal"
 			title="Amount"
+			icon="swing"
 			color={scheme}
 			onInteraction={(v) => write(setClipGrooveTimingAmount, v * 100)}
 		/>

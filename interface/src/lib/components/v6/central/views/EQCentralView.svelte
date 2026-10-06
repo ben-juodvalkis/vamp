@@ -96,6 +96,7 @@
           value={outputGainValue}
           labelOrientation="horizontal"
           title={Math.round(outputGainValue * 100) + '%'}
+          icon="output"
           isGhost={fx.isGhost}
           color={fx.isGhost ? ghostInk : fxInk}
           onInteraction={(val) => {

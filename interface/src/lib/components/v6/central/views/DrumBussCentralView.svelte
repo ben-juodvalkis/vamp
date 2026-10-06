@@ -121,6 +121,7 @@
       <DeviceSlider
         value={trim}
         title="Trim"
+        icon="gain"
         orientation="vertical"
         labelOrientation="horizontal"
         labelSize="small"
@@ -162,6 +163,7 @@
     <DeviceSlider
       value={drive}
       title="Drive"
+      icon="drive"
       orientation="vertical"
       labelOrientation="horizontal"
       labelSize="small"
@@ -175,6 +177,7 @@
     <DeviceSlider
       value={crunch}
       title="Crunch"
+      icon="crunch"
       orientation="vertical"
       labelOrientation="horizontal"
       labelSize="small"
@@ -188,6 +191,7 @@
     <DeviceSlider
       value={damp}
       title="Damp"
+      icon="cutoff"
       orientation="vertical"
       labelOrientation="horizontal"
       labelSize="small"
@@ -205,6 +209,7 @@
       xValue={boomDecay}
       yValue={boomAmount}
       title="Boom"
+      icon="boom" xIcon="decay" yIcon="depth"
       isGhost={drum.isGhost}
       showCurve={false}
       color={drumInk}

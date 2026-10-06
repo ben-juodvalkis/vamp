@@ -397,6 +397,7 @@
       <DeviceSlider
         value={rateValue / 13}
         title={rateTitle}
+        icon="rate"
         orientation="vertical"
         labelOrientation="horizontal"
         labelSize="small"
@@ -436,6 +437,7 @@
     <DeviceSlider
       value={gateValue / 200}
       title={gateTitle}
+      icon="notelength"
       orientation="vertical"
       labelOrientation="horizontal"
       labelSize="small"
@@ -464,6 +466,7 @@
     <DeviceSlider
       value={velocityRandom / 127}
       title="Rand Vel"
+      icon="randvel"
       orientation="vertical"
       labelOrientation="horizontal"
       labelSize="small"
@@ -512,6 +515,7 @@
     <DeviceSlider
       value={chanceValue / CHANCE_MAX}
       title={chanceTitle}
+      icon="chance"
       orientation="vertical"
       labelOrientation="horizontal"
       labelSize="small"

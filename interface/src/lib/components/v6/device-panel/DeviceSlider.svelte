@@ -483,10 +483,18 @@
     flex-direction: column;
     gap: 0.4em;
   }
+  /* A wide, short slider (a horizontal fader, a short grid cell) puts the
+     icon beside its label, not above it, where it would push the label out. */
+  @container (min-aspect-ratio: 3/2) {
+    .slider-label {
+      flex-direction: row;
+    }
+  }
+  /* Sized to whichever side is short, so it always fits beside the label. */
   .slider-icon {
     display: flex;
     flex: 0 0 auto;
-    width: clamp(20px, 60cqw, 72px);
+    width: min(60cqw, 45cqh, 72px);
     aspect-ratio: 1;
     color: color-mix(in oklab, var(--slider-tint, var(--foreground)) 70%, transparent);
   }

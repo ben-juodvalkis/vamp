@@ -10,6 +10,7 @@
 	import { buildMacroLayout, cleanParameterName, type ControlLayout } from '$lib/utils/macroLayoutUtils';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+	import { glyphForName } from '$lib/config/controlGlyphMap';
 	import DeviceEmptyState from '../DeviceEmptyState.svelte';
 
 	// Import constants
@@ -94,6 +95,7 @@
 						<DeviceSlider
 							value={getNormalizedValue(control.macroIndex)}
 							title={control.name}
+							icon={glyphForName(control.name)}
 							orientation="vertical"
 							labelOrientation="horizontal"
 							color={effectiveColor}
@@ -114,6 +116,7 @@
 							value={macroValue / MACRO_MAX}
 							labelOrientation="horizontal"
 							title={paramName}
+							icon={glyphForName(paramName)}
 							color={effectiveColor}
 							onInteraction={(val) => handleSliderChange(paramIndex, val * MACRO_MAX)}
 						/>

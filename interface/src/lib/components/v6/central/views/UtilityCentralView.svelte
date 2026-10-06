@@ -29,7 +29,7 @@
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
 <div class="utility-central-layout relative">
   <div class="device-wrapper gate-section">
-    <GateControl device={gate.device} />
+    <GateControl device={gate.device} icon="gate" xIcon="release" yIcon="threshold" />
   </div>
 </div>
 

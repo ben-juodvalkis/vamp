@@ -501,6 +501,7 @@ import { logger } from '$lib/utils/logger';
 					value={chance}
 					labelOrientation="horizontal"
 					title="Chance"
+					icon="chance"
 					color={trackScheme}
 					onInteraction={(val) => permuteDevice
 						? sequencerStore.handleChanceChange(val)
@@ -530,6 +531,7 @@ import { logger } from '$lib/utils/logger';
 					value={temperature}
 					labelOrientation="horizontal"
 					title="Temp"
+					icon="temperature"
 					color={trackScheme}
 					onInteraction={(val) => {
 						if (temperatureInert) return;
@@ -542,6 +544,7 @@ import { logger } from '$lib/utils/logger';
 				<DeviceSlider
 					value={gain}
 					title="Gain"
+					icon="gain"
 					labelOrientation="horizontal"
 					color={trackScheme}
 					onInteraction={(val) => setAudioClipGain(val)}
@@ -594,6 +597,7 @@ import { logger } from '$lib/utils/logger';
 						<DeviceSlider
 							value={pitchCoarseDisplay}
 							title={pitchLabel}
+							icon="transpose"
 							orientation="vertical"
 							labelOrientation="horizontal"
 							color={trackScheme}

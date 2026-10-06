@@ -307,6 +307,7 @@
         <DeviceSlider
           value={glueThreshold}
           title="Threshold"
+          icon="threshold"
           orientation="vertical"
           labelOrientation="horizontal"
           min={GLUE_THRESHOLD_MIN}
@@ -321,6 +322,7 @@
         <DeviceSlider
           value={glueOutput}
           title="Output"
+          icon="output"
           orientation="vertical"
           labelOrientation="horizontal"
           min={GLUE_OUTPUT_MIN}
@@ -386,6 +388,7 @@
         <DeviceSlider
           value={cutoffValue}
           title="Cutoff"
+          icon="cutoff"
           orientation="horizontal"
           min={CUTOFF_MIN}
           max={CUTOFF_MAX}
@@ -414,6 +417,7 @@
       <DeviceSlider
         value={makeupGainValue}
         title="Output"
+        icon="output"
         orientation="vertical"
         labelOrientation="horizontal"
         min={MAKEUP_GAIN_MIN}
@@ -427,7 +431,7 @@
 
       <!-- Compressor Control (virtual device - handles its own slot state) -->
       <div class="device-wrapper compressor-wrapper">
-        <CompressorControl device={compressor.device} />
+        <CompressorControl device={compressor.device} icon="compress" />
       </div>
     </div>
   </section>

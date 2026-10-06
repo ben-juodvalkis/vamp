@@ -54,6 +54,7 @@
       value={volume ?? 0.85}
       labelOrientation="horizontal"
       title="Vol"
+      icon="gain"
       {color}
       isGhost={volumeGhost}
       onInteraction={(value) => {

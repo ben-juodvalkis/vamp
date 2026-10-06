@@ -15,6 +15,7 @@
    */
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
+  import { glyphForName } from '$lib/config/controlGlyphMap';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { familyScheme } from '$lib/config/devicePresets';
@@ -91,6 +92,7 @@
             <DeviceSlider
               value={getParamValue(paramIndex) / 127}
               title={cleanParameterName(parameterNames[paramIndex])}
+              icon={glyphForName(cleanParameterName(parameterNames[paramIndex]))}
               orientation="vertical"
               labelOrientation="horizontal"
               color={drumRackKKInk}

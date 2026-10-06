@@ -53,6 +53,7 @@
 		xValue={param3Value}
 		yValue={param4Value}
 		title={lfoTitle}
+		icon="lfo"
 		isGhost={fx.isGhost}
 		showCurve={false}
 		color={effectiveColor}

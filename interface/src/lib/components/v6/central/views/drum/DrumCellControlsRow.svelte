@@ -35,6 +35,13 @@
   } from '$lib/services/drumVirtualMacros';
   import type { DeviceColorScheme } from '$lib/config/devicePresets';
   import { press } from '$lib/actions';
+  import type { ControlGlyphName } from '$lib/config/controlGlyphMap';
+
+  // The FX pad's icon by the selected type's name; Sub is Drum Sampler's sub-boom.
+  const FX_TYPE_ICONS: Record<string, ControlGlyphName> = {
+    Stretch: 'stretch', Loop: 'loop', Pitch: 'transpose', Punch: 'punch', '8-Bit': 'redux',
+    FM: 'fm', Ring: 'ringmod', Sub: 'boom', Noise: 'noise'
+  };
 
   export type DrumCellRowControl = 'fx1' | 'fx2' | 'fxType' | 'attack' | 'decay' | 'start' | 'pitch';
   export type DrumCellRowSlot = 'fx' | 'fxType' | 'time' | 'start' | 'pitch';
@@ -95,6 +102,7 @@
         xValue={t('fx2', 0.5)}
         yValue={t('fx1', 0.5)}
         title={fxTypes[selectedFxType] ?? 'FX'}
+        icon={FX_TYPE_ICONS[fxTypes[selectedFxType]]}
         onInteraction={(x, y) => {
           write('fx2', x);
           write('fx1', y);
@@ -135,6 +143,9 @@
         xValue={t('attack', 0.5)}
         yValue={t('decay', 0.5)}
         title="Time"
+        icon="envelope"
+        xIcon="attack"
+        yIcon="decay"
         onInteraction={(x, y) => {
           write('attack', x);
           write('decay', y);
@@ -157,6 +168,7 @@
         value={t('start', 0.5)}
         labelOrientation="horizontal"
         title="Start"
+        icon="start"
         {color}
         isGhost={startState === 'none'}
         onInteraction={(value) => write('start', value)}
@@ -174,6 +186,7 @@
         value={t('pitch', 0)}
         labelOrientation="horizontal"
         title="Trnsp"
+        icon="transpose"
         {color}
         min={VM_PITCH_MIN}
         max={VM_PITCH_MAX}

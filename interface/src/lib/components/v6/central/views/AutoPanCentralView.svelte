@@ -92,6 +92,7 @@
     <DeviceSlider
       value={rateValue}
       title={rateLabel}
+      icon="rate"
       orientation="vertical"
       labelOrientation="horizontal"
       isGhost={fx.isGhost}

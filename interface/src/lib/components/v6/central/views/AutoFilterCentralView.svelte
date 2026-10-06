@@ -201,6 +201,7 @@
 		<DeviceSlider
 			value={morphAmount}
 			title="Morph"
+			icon="morph"
 			orientation="vertical"
 			labelOrientation="horizontal"
 			isGhost={fx.isGhost}
@@ -217,6 +218,7 @@
 			xValue={1 - lfoTime}
 			yValue={lfoAmount}
 			title={lfoTitle}
+			icon="lfo" xIcon="rate" yIcon="depth"
 			isGhost={fx.isGhost}
 			showCurve={false}
 			color={lfoInk}
@@ -290,6 +292,7 @@
 		<DeviceSlider
 			value={drive}
 			title="Drive"
+			icon="drive"
 			orientation="vertical"
 			labelOrientation="horizontal"
 			isGhost={fx.isGhost}
@@ -337,6 +340,7 @@
 		<DeviceSlider
 			value={mix}
 			title="Mix"
+			icon="mix"
 			orientation="vertical"
 			labelOrientation="horizontal"
 			isGhost={fx.isGhost}

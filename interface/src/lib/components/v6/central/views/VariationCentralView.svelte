@@ -121,6 +121,7 @@
 				<DeviceSlider
 					value={amount / AMOUNT_MAX}
 					title="Random"
+					icon="dice"
 					orientation="horizontal"
 					labelOrientation="horizontal"
 					isGhost={fx.isGhost}
@@ -164,6 +165,7 @@
 		<div class="flex-1 min-h-0">
 			<DeviceSlider
 				value={pitchDecay}
+				icon="pitchdrop"
 				orientation="vertical"
 				labelOrientation="horizontal"
 				isGhost={fx.isGhost}

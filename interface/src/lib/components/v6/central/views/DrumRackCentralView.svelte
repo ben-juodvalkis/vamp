@@ -335,6 +335,9 @@
       xValue={vm.value('filterFreq') ?? 1}
       yValue={vm.value('filterRes') ?? 0}
       title="Filter"
+      icon="filter"
+      xIcon="cutoff"
+      yIcon="resonance"
       color={controlInk}
       isGhost={filterState === 'none'}
       onInteraction={(x, y) => {
@@ -358,6 +361,7 @@
       value={vm.value('gain') ?? 0.5}
       labelOrientation="horizontal"
       title="Gain"
+      icon="gain"
       color={controlInk}
       isGhost={gainState === 'none'}
       onInteraction={(value) => vm.write('gain', value)}
@@ -373,6 +377,7 @@
       value={vm.value('pitch') ?? 0}
       labelOrientation="horizontal"
       title="Trnsp"
+      icon="transpose"
       color={controlInk}
       min={VM_PITCH_MIN}
       max={VM_PITCH_MAX}

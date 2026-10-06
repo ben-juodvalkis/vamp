@@ -237,6 +237,7 @@
 			<DeviceSlider
 				value={timeT}
 				title="Time {timeLabel}"
+				icon="delay"
 				orientation="vertical"
 				labelOrientation="horizontal"
 				labelSize="small"
@@ -302,6 +303,7 @@
 			<DeviceSlider
 				value={lfoRate}
 				title="Rate {lfoLabel}"
+				icon="rate"
 				orientation="vertical"
 				labelOrientation="horizontal"
 				labelSize="small"
@@ -326,6 +328,7 @@
 		<DeviceSlider
 			value={lfoToTime}
 			title="LFO > Time"
+			icon="lfo"
 			orientation="vertical"
 			labelOrientation="horizontal"
 			labelSize="small"
@@ -340,6 +343,7 @@
 		<DeviceSlider
 			value={lfoToFilter}
 			title="LFO > Filter"
+			icon="cutoff"
 			orientation="vertical"
 			labelOrientation="horizontal"
 			labelSize="small"
@@ -356,6 +360,7 @@
 		<DeviceSlider
 			value={input}
 			title="Input"
+			icon="gain"
 			sensitivity={GAIN_SENSITIVITY}
 			orientation="vertical"
 			labelOrientation="horizontal"
@@ -372,6 +377,7 @@
 		<DeviceSlider
 			value={output}
 			title="Output"
+			icon="output"
 			sensitivity={GAIN_SENSITIVITY}
 			orientation="vertical"
 			labelOrientation="horizontal"
@@ -387,6 +393,7 @@
 		<DeviceSlider
 			value={feedback}
 			title="Feedback"
+			icon="feedback"
 			orientation="vertical"
 			labelOrientation="horizontal"
 			labelSize="small"
@@ -401,6 +408,7 @@
 		<DeviceSlider
 			value={mix}
 			title="Mix"
+			icon="mix"
 			orientation="vertical"
 			labelOrientation="horizontal"
 			labelSize="small"

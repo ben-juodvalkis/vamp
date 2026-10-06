@@ -11,6 +11,7 @@
    */
   import type { Snippet } from 'svelte';
   import DeviceSlider from '../../../device-panel/DeviceSlider.svelte';
+  import { glyphForName } from '$lib/config/controlGlyphMap';
   import VmSlot from './VmSlot.svelte';
   import type { RackMacroControl, VmState } from '$lib/services/drumVirtualMacros';
   import type { DeviceColorScheme } from '$lib/config/devicePresets';
@@ -53,6 +54,7 @@
       <DeviceSlider
         value={value(control.name)}
         title={control.label}
+        icon={glyphForName(control.label)}
         orientation="vertical"
         labelOrientation="horizontal"
         {color}
