@@ -163,11 +163,12 @@
   const showLeftColumn = $derived(showGuitarGain || showWah);
   // One unit per slider, two per XY pad, every seam its hairline: the
   // tracks share the width in that ratio and nothing has a fixed size
-  // (user, 2026-10-05). The Guitar section is `display: contents`, so each
-  // of its controls is a track of its own and a pad comes out exactly two
-  // sliders wide; Output and Mix split a pad-wide column between them.
+  // (user, 2026-10-05). A pad spans two slider tracks, so it is exactly two
+  // sliders and the gap between them. The Guitar section is `display:
+  // contents`, so each of its controls is a grid item of its own; Output and
+  // Mix split a pad-wide column with the same gap.
   const SLIDER = 'minmax(0, 1fr)';
-  const XY = 'minmax(0, 2fr)';
+  const XY = 'minmax(0, 1fr) minmax(0, 1fr)'; // two slider tracks; a pad spans both
   const SEAM = 'auto';
   const gridColumns = $derived(
     [
@@ -185,7 +186,7 @@
   <!-- COLUMN 1: the Pedal's XY — the old grid tile, mounted standalone; a
        tap goes nowhere because this view is its home — over its type
        switch, laid out across (2026-10-05). -->
-  <div class="column pedal-xy-column">
+  <div class="column pad pedal-xy-column">
     <div class="xy-wrapper flex-1">
       <PedalControl device={fx.device} disableCentralViewOnTap={true} />
     </div>
@@ -240,7 +241,7 @@
     {/if}
     <!-- Two pads stacked: Spring (X) / Room (Y) over Tremolo, rate (X) /
          amount (Y) (user, 2026-10-05). -->
-    <div class="column guitar-xy-stack">
+    <div class="column pad guitar-xy-stack">
       <div class="guitar-xy">
         <DeviceXY
           xValue={gtrValue(GTR.spring)}
@@ -317,7 +318,7 @@
        grid tile that opened this view. -->
   <SectionDivider orientation="vertical" ink={saturatorInk.primary} />
 
-  <div class="column sat-redux-column">
+  <div class="column pad sat-redux-column">
     <div class="saturator-faders" style={saturator.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
       {#each SATURATOR_FADERS as fader (fader.index)}
         <div class="slider-col">
@@ -368,6 +369,10 @@
   .xy-wrapper {
     flex: 1;
     min-height: 0;
+  }
+
+  .pad {
+    grid-column: span 2;
   }
 
   /* A wrapper only: its controls are tracks of the grid itself. */

@@ -158,7 +158,7 @@
 <div class="chorus-central-layout relative">
 	<!-- Octave (Polyphonic Pitch Shifter), moved here from the Guitar view
 	     2026-10-05: the pitch devices (Octave, then Pitch Hack) lead the view. -->
-	<div class="device-wrapper">
+	<div class="device-wrapper pad">
 		<OctavePanel />
 	</div>
 
@@ -167,7 +167,7 @@
 	<!-- Pitch Hack (virtual device) — X: Rate (24 steps, the division is the
 	     pad's readout), Y: Dry / Wet. The two sliders beside it are the same
 	     device's Coarse shift and Recycle. -->
-	<div class="device-wrapper">
+	<div class="device-wrapper pad">
 		<BaseDeviceControl slotKey="pitchHack" device={pitchHack.device} title="Pitch Hack" disableCentralViewOnTap={true} showMoveToTop={true} showMoveToEnd={true}>
 			{#snippet children({ handleTap })}
 				<DeviceXY
@@ -232,7 +232,7 @@
 	<!-- Comb (virtual device - handles its own slot state). The Zebrify
 	     preset's second pad, "Comb LFO", went with the plug-in (2026-10-05):
 	     the Max device has no LFO. -->
-	<div class="device-wrapper">
+	<div class="device-wrapper pad">
 		<CombControl device={comb.device} />
 	</div>
 
@@ -241,7 +241,7 @@
 	<!-- Phaser (virtual device) — X: LFO speed, Y: feedback. Wrapped in
 	     BaseDeviceControl like Blur and Comb so it carries the same
 	     move-to-first / move-to-last arrows. -->
-	<div class="device-wrapper">
+	<div class="device-wrapper pad">
 		<BaseDeviceControl slotKey="phaser" device={phaser.device} title="Phaser" disableCentralViewOnTap={true} showMoveToTop={true} showMoveToEnd={true}>
 			{#snippet children({ handleTap })}
 				<DeviceXY
@@ -268,10 +268,16 @@
 	.chorus-central-layout {
 		display: grid;
 		/* octave | pitch hack · pitch · feedback | blur | comb | phaser.
-		   Each seam is an `auto` track as wide as its hairline, so the three
-		   pads still share the rest evenly; each slider is a third of a pad,
-		   and Octave (its fader and its tab) is two sliders wide. */
-		grid-template-columns: 0.7fr auto 1fr 0.35fr 0.35fr auto 0.35fr auto 1fr auto 1fr;
+		   One equal track per slider, a seam its hairline; a pad (and the
+		   Octave panel, its fader and its tab) spans two tracks, so it is
+		   exactly two sliders and the gap between them, and every control
+		   grows with the view (user, 2026-10-05). */
+		grid-template-columns:
+			repeat(2, minmax(0, 1fr)) auto
+			repeat(4, minmax(0, 1fr)) auto
+			minmax(0, 1fr) auto
+			repeat(2, minmax(0, 1fr)) auto
+			repeat(2, minmax(0, 1fr));
 		height: 100%;
 		width: 100%;
 		padding: var(--central-inset);
@@ -282,5 +288,10 @@
 		display: flex;
 		flex-direction: column;
 		min-height: 0;
+		min-width: 0;
+	}
+
+	.pad {
+		grid-column: span 2;
 	}
 </style>
