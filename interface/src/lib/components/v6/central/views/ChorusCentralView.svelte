@@ -132,10 +132,22 @@
 	let pitchHackPitch = $derived(
 		pitchHack.paramValue(PITCH_HACK_PARAMS.pitch.index) ?? PITCH_HACK_PARAMS.pitch.default
 	);
-	let pitchHackPitchLabel = $derived.by(() => {
-		const n = Math.round(pitchHackPitch);
-		return n === 0 ? 'Pitch 0' : `Pitch ${n > 0 ? '+' : ''}${n}`;
-	});
+	// Pitch is three stops, not a sweep (user, 2026-10-05): -12, 0, +12,
+	// left to right under the pad, written as raw Coarse semitones. The lit
+	// stop is the one nearest the device's value, so a shift set by hand in
+	// Live still lights the closest.
+	const PITCH_HACK_STEPS = [
+		{ label: '-12', value: -12 },
+		{ label: '0', value: 0 },
+		{ label: '+12', value: 12 }
+	];
+	let pitchHackStep = $derived(
+		PITCH_HACK_STEPS.reduce(
+			(best, step, i) =>
+				Math.abs(step.value - pitchHackPitch) < Math.abs(PITCH_HACK_STEPS[best].value - pitchHackPitch) ? i : best,
+			0
+		)
+	);
 
 	function sendPitchHackXY(x: number, y: number) {
 		const { rate, mix } = PITCH_HACK_PARAMS;
@@ -183,23 +195,20 @@
 				/>
 			{/snippet}
 		</BaseDeviceControl>
-	</div>
-
-	<div class="device-wrapper">
-		<DeviceSlider
-			value={pitchHackPitch}
-			title={pitchHackPitchLabel}
-			orientation="vertical"
-			labelOrientation="horizontal"
-			isGhost={pitchHack.isGhost}
-			color={pitchHackInk}
-			min={PITCH_HACK_PARAMS.pitch.min}
-			max={PITCH_HACK_PARAMS.pitch.max}
-			centerOrigin={true}
-			centerValue={0}
-			onTap={() => pitchHack.loadIfGhost()}
-			onInteraction={sendPitchHackPitch}
-		/>
+		<!-- Pitch: -12 / 0 / +12 across the foot of the pad, like the Pedal's
+		     type switch (user, 2026-10-05). -->
+		<div class="pitch-hack-row" style={pitchHack.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
+			{#each PITCH_HACK_STEPS as step, i}
+				<button
+					class="physical-button w-full px-2 text-xs text-center font-medium"
+					class:active={!pitchHack.isGhost && pitchHackStep === i}
+					style="--btn-tint: {pitchHackInk.primary};"
+					aria-label="Pitch Hack pitch {step.label}"
+					aria-pressed={!pitchHack.isGhost && pitchHackStep === i}
+					onclick={() => sendPitchHackPitch(step.value)}
+				>{step.label}</button>
+			{/each}
+		</div>
 	</div>
 
 	<div class="device-wrapper">
@@ -229,54 +238,57 @@
 	     Phaser reads as a second Comb (2026-09-13, ADR-433). -->
 	<SectionDivider orientation="vertical" ink={fxInk.primary} />
 
-	<!-- Comb (virtual device - handles its own slot state). The Zebrify
-	     preset's second pad, "Comb LFO", went with the plug-in (2026-10-05):
-	     the Max device has no LFO. -->
-	<div class="device-wrapper pad">
-		<CombControl device={comb.device} />
+	<!-- Comb over Phaser, one pad-wide column, each half its height
+	     (user, 2026-10-05); a horizontal seam between the two devices. -->
+	<div class="device-wrapper pad pad-stack">
+		<!-- Comb (virtual device - handles its own slot state). The Zebrify
+		     preset's second pad, "Comb LFO", went with the plug-in (2026-10-05):
+		     the Max device has no LFO. -->
+		<div class="stack-cell">
+			<CombControl device={comb.device} />
+		</div>
+
+		<SectionDivider orientation="horizontal" ink={phaserInk.primary} />
+
+		<!-- Phaser (virtual device) — X: LFO speed, Y: feedback. Wrapped in
+		     BaseDeviceControl like Blur and Comb so it carries the same
+		     move-to-first / move-to-last arrows. -->
+		<div class="stack-cell">
+			<BaseDeviceControl slotKey="phaser" device={phaser.device} title="Phaser" disableCentralViewOnTap={true} showMoveToTop={true} showMoveToEnd={true}>
+				{#snippet children({ handleTap })}
+					<DeviceXY
+						xValue={phaserSpeed}
+						yValue={phaserFeedback}
+						title="Phaser"
+						isGhost={phaser.isGhost}
+						showCurve={false}
+						color={phaserInk}
+						onTap={() => (phaser.isGhost ? phaser.loadIfGhost() : handleTap())}
+						onInteraction={(x, y) => {
+							phaser.sendParam(PHASER_PARAMS.speed.index, normalizedToSpeed(x));
+							phaser.sendParam(PHASER_PARAMS.feedback.index, normalizedToFeedback(y));
+						}}
+					/>
+				{/snippet}
+			</BaseDeviceControl>
+		</div>
 	</div>
-
-	<SectionDivider orientation="vertical" ink={phaserInk.primary} />
-
-	<!-- Phaser (virtual device) — X: LFO speed, Y: feedback. Wrapped in
-	     BaseDeviceControl like Blur and Comb so it carries the same
-	     move-to-first / move-to-last arrows. -->
-	<div class="device-wrapper pad">
-		<BaseDeviceControl slotKey="phaser" device={phaser.device} title="Phaser" disableCentralViewOnTap={true} showMoveToTop={true} showMoveToEnd={true}>
-			{#snippet children({ handleTap })}
-				<DeviceXY
-					xValue={phaserSpeed}
-					yValue={phaserFeedback}
-					title="Phaser"
-					isGhost={phaser.isGhost}
-					showCurve={false}
-					color={phaserInk}
-					onTap={() => (phaser.isGhost ? phaser.loadIfGhost() : handleTap())}
-					onInteraction={(x, y) => {
-						phaser.sendParam(PHASER_PARAMS.speed.index, normalizedToSpeed(x));
-						phaser.sendParam(PHASER_PARAMS.feedback.index, normalizedToFeedback(y));
-					}}
-				/>
-			{/snippet}
-		</BaseDeviceControl>
-	</div>
-
 
 </div>
 
 <style>
 	.chorus-central-layout {
 		display: grid;
-		/* octave | pitch hack · pitch · feedback | blur | comb | phaser.
+		/* octave | pitch hack (pad over its -12/0/+12 row) · feedback | blur
+		   | comb over phaser.
 		   One equal track per slider, a seam its hairline; a pad (and the
 		   Octave panel, its fader and its tab) spans two tracks, so it is
 		   exactly two sliders and the gap between them, and every control
 		   grows with the view (user, 2026-10-05). */
 		grid-template-columns:
 			repeat(2, minmax(0, 1fr)) auto
-			repeat(4, minmax(0, 1fr)) auto
+			repeat(3, minmax(0, 1fr)) auto
 			minmax(0, 1fr) auto
-			repeat(2, minmax(0, 1fr)) auto
 			repeat(2, minmax(0, 1fr));
 		height: 100%;
 		width: 100%;
@@ -293,5 +305,33 @@
 
 	.pad {
 		grid-column: span 2;
+	}
+
+	.pad-stack {
+		gap: var(--central-gap);
+	}
+
+	.stack-cell {
+		flex: 1 1 0;
+		min-height: 0;
+		display: flex;
+		flex-direction: column;
+	}
+
+	/* -12 · 0 · +12 under the Pitch Hack pad, one row a slider-label tall. */
+	.pitch-hack-row {
+		display: flex;
+		flex-direction: row;
+		gap: var(--spacing-xs);
+		flex: 0 0 auto;
+		height: 3rem;
+		margin-top: var(--central-gap);
+	}
+
+	.pitch-hack-row button {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 </style>
