@@ -37,6 +37,8 @@
   import { session } from '$lib/stores/session.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
+  import ControlGlyph from '../../device-panel/ControlGlyph.svelte';
+  import type { ControlGlyphName } from '$lib/config/controlGlyphMap';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { familyScheme, CHARTREUSE_SCHEME } from '$lib/config/devicePresets';
   import { deviceInk } from '$lib/utils/formatters/trackFormatters';
@@ -520,6 +522,42 @@
    * Slope and no Gain; in Shelf, a Gain and no Slope (Live manual) — the
    * row is whichever applies, beside the chip that switches the type.
    */
+  /** A row's glyph, by the name the row wears (shared, IR, EQ and the algorithms' own). */
+  const ROW_GLYPHS: Record<string, ControlGlyphName> = {
+    Size: 'size',
+    // Predelay draws none: beside its Sync chip the glyph would cut the name.
+    Feedback: 'feedback',
+    Delay: 'delay',
+    Stereo: 'width',
+    Vintage: 'vintage',
+    'Dry/Wet': 'mix',
+    Attack: 'attack',
+    Decay: 'decay',
+    'Lo Slope': 'highpass',
+    'Hi Slope': 'cutoff',
+    'Lo Gain': 'low',
+    'Hi Gain': 'high',
+    'Peak 1 Q': 'q',
+    'Peak 2 Q': 'q',
+    Shape: 'shape',
+    'Bass Mult': 'low',
+    'Bass X': 'crossover',
+    Damping: 'cutoff',
+    Mod: 'lfo',
+    Distance: 'size',
+    Diffusion: 'diffusion',
+    'Lo Damp': 'low',
+    Shimmer: 'shimmer',
+    Pitch: 'transpose',
+    Tide: 'waves',
+    Rate: 'rate',
+    Wave: 'shape',
+    Phase: 'phase',
+    'Low Mult': 'low',
+    'High Mult': 'high',
+    'X-Over': 'crossover'
+  };
+
   let eqRows = $derived.by<Row[]>(() => {
     const end = (b: EqBand): Row =>
       b.kind === 'cut'
@@ -554,7 +592,8 @@
 <!-- A row's label: Live's name on the left, its value on the right. Drawn in
      both of the slider's label layers, so it flips on the fill. -->
 {#snippet rowLabel(name: string, value: string)}
-  <span class="row-label"><span class="row-name">{name}</span><span class="row-value">{value}</span></span>
+  {@const glyph = ROW_GLYPHS[name]}
+  <span class="row-label"><span class="row-name">{#if glyph}<span class="row-glyph"><ControlGlyph name={glyph} /></span>{/if}{name}</span><span class="row-value">{value}</span></span>
 {/snippet}
 
 {#snippet typeChip(index: number)}
@@ -676,6 +715,7 @@
                 <DeviceXY
                   xValue={attackX(irAttackShown, irAxis)}
                   yValue={decayY(irDecayShown, irAxis)}
+                  xIcon="attack"
                   isGhost={fx.isGhost}
                   color={currentColor}
                   onInteraction={(x, y) => {
@@ -866,6 +906,14 @@
     font-weight: 400;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  /* The row's glyph, just before its name, in the label's ink so it flips on the fill too. */
+  .row-glyph {
+    display: inline-block;
+    width: 1.1em;
+    height: 1.1em;
+    margin-right: 0.3em;
+    vertical-align: -0.25em;
   }
   .row-value {
     font-weight: var(--font-weight-medium);
