@@ -73,7 +73,7 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 		'audio-effect-rack': () => import('./views/AudioEffectRackCentralView.svelte'),
 		// The Bass tile (audio tracks' fx1 column, 2026-09-14): its type is
 		// `bass`, its view the Guitar rack's. An Octave band (`octave`)
-		// opens the same view, whose Octave panel is that slot. Aliased here the way `random` aliases the Arpeggiator's
+		// opens the Chorus view, whose Octave panel is that slot. Aliased here the way `random` aliases the Arpeggiator's
 		// and `squash` the Utility's; without an entry the tap resolved to
 		// the placeholder view.
 		'bass': () => import('./views/GuitarCentralView.svelte'),
@@ -85,7 +85,7 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 		'eq': () => import('./views/EQCentralView.svelte'),
 		'filter': () => import('./views/AutoFilterCentralView.svelte'),
 		'guitar': () => import('./views/GuitarCentralView.svelte'),
-		'octave': () => import('./views/GuitarCentralView.svelte'),
+		'octave': () => import('./views/ChorusCentralView.svelte'),
 		'pedal': () => import('./views/PedalCentralView.svelte'),
 		// The Rand Oct tile: its type is `random`, its view the Arpeggiator's
 		// (the MIDI-effects family — arpeggiator, velocity and chord slots).

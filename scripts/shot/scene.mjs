@@ -403,7 +403,7 @@ const DEVICE_CLASS_NAMES = {
 	// on every shot and its reorder arrows (which need a resolved device)
 	// can never be photographed.
 	'Bass Amp': 'AudioEffectGroupDevice',
-	// The Octave panel's slot is a Max device, matched the same way.
+	// The Octave panel's slot (Chorus view) is a Max device, matched the same way.
 	Octave: 'MxDeviceAudioEffect',
 	// The Guitar rack is an Audio Effect Rack; without the entry its slot
 	// reads ghost and GuitarCentralView never draws the named macros.

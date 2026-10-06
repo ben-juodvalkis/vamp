@@ -409,7 +409,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     color: familyScheme('pitchSeq')
   },
   octave: {
-    // The Guitar view's Octave panel: Ben's Polyphonic Pitch Shifter
+    // The Chorus view's Octave panel: Ben's Polyphonic Pitch Shifter
     // (2026-10-05, in place of a Helix Native preset), the frozen 0.1.0
     // Max device from the BensPolyphonicPitchShifter repo, so it carries
     // `polypitch~` inside and needs no Max package. Saved as Octave.amxd,

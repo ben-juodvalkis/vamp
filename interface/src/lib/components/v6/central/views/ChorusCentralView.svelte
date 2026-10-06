@@ -4,9 +4,9 @@
 	 *
 	 * Self-contained central view that queries its own slot state.
 	 * Renders immediately with ghost/loading/active states.
-	 * Displays Blur, Comb, Phaser and Pitch Hack controls.
+	 * Displays Blur, Comb, Phaser, Pitch Hack and Octave controls.
 	 *
-	 * Contains virtual devices (smudge, comb, phaser, pitchHack) which have
+	 * Contains virtual devices (smudge, comb, phaser, pitchHack, octave) which have
 	 * their own ghost states.
 	 * NO {#if device} gate - always renders, handles its own state.
 	 * NO props required - queries selectedTrackStore directly.
@@ -21,12 +21,14 @@
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 	import SectionDivider from '../SectionDivider.svelte';
+	import OctavePanel from '../OctavePanel.svelte';
 
 	const fx = useFxGridSlot('chorus');
 	const comb = useFxGridSlot('comb');
 	const smudge = useFxGridSlot('smudge');
 	const phaser = useFxGridSlot('phaser');
 	const pitchHack = useFxGridSlot('pitchHack');
+	const octave = useFxGridSlot('octave');
 
 	// GRATICULE (§5.5): calibrate the slot palette through trackInk at injection.
 	let fxInk = $derived({
@@ -39,6 +41,7 @@
 		secondary: phaser.color.secondary,
 		accent: trackInk(phaser.color.accent, paintModeReactive())
 	});
+	let octaveInk = $derived(trackInk(octave.color.primary, paintModeReactive()));
 	let pitchHackInk = $derived({
 		primary: trackInk(pitchHack.color.primary, paintModeReactive()),
 		secondary: pitchHack.color.secondary,
@@ -252,15 +255,24 @@
 		/>
 	</div>
 
+	<!-- Octave (Polyphonic Pitch Shifter), moved here from the Guitar view
+	     2026-10-05 so the pitch devices sit together: Mix fader + interval tab. -->
+	<SectionDivider orientation="vertical" ink={octaveInk} />
+
+	<div class="device-wrapper">
+		<OctavePanel />
+	</div>
+
 </div>
 
 <style>
 	.chorus-central-layout {
 		display: grid;
-		/* blur | comb | phaser | pitch hack · pitch · feedback.
+		/* blur | comb | phaser | pitch hack · pitch · feedback | octave.
 		   Each seam is an `auto` track as wide as its hairline, so the three
-		   pads still share the rest evenly; each slider is a third of a pad. */
-		grid-template-columns: 0.35fr auto 1fr auto 1fr auto 1fr 0.35fr 0.35fr;
+		   pads still share the rest evenly; each slider is a third of a pad,
+		   and Octave (its fader and its tab) is two sliders wide. */
+		grid-template-columns: 0.35fr auto 1fr auto 1fr auto 1fr 0.35fr 0.35fr auto 0.7fr;
 		height: 100%;
 		width: 100%;
 		padding: var(--central-inset);

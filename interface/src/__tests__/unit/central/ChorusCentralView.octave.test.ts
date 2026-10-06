@@ -1,5 +1,5 @@
 /**
- * GuitarCentralView's Octave panel: Ben's Polyphonic Pitch Shifter, saved
+ * ChorusCentralView's Octave panel (OctavePanel.svelte, moved from the Guitar view 2026-10-05): Ben's Polyphonic Pitch Shifter, saved
  * as Octave.amxd. The device dump of the running device (2026-10-05) lists
  * `1: Semitones -12..12` (labels `-12 st` .. `+12 st`) and `2: Mix 0..100`.
  * The pitch is a four-way tab, top to bottom +12, +7, -5, -12, written as
@@ -18,7 +18,7 @@ import { tick } from 'svelte';
 import { SvelteMap } from 'svelte/reactivity';
 import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { replaceTree, _resetForTests, type TrackRecord, type DeviceRecord, type ParamRecord } from '$lib/stores/v3/normalized.svelte';
-import GuitarCentralView from '$lib/components/v6/central/views/GuitarCentralView.svelte';
+import ChorusCentralView from '$lib/components/v6/central/views/ChorusCentralView.svelte';
 import { send } from '$lib/api/simpleClient';
 
 const TRACK = 'tracks/0';
@@ -60,10 +60,10 @@ beforeEach(() => {
 });
 afterEach(() => cleanup());
 
-describe('GuitarCentralView Octave pitch tab', () => {
+describe('ChorusCentralView Octave pitch tab', () => {
 	it('draws +12, +7, -5, -12 top to bottom and lights the device\'s step', async () => {
 		seed(octaveDevice(7));
-		const { container } = render(GuitarCentralView);
+		const { container } = render(ChorusCentralView);
 		await tick();
 		expect(tabs(container).map((b) => b.textContent?.trim())).toEqual(['+12', '+7', '-5', '-12']);
 		expect(tabs(container).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false', 'false']);
@@ -71,7 +71,7 @@ describe('GuitarCentralView Octave pitch tab', () => {
 
 	it('writes each interval to Semitones as raw semitones', async () => {
 		seed(octaveDevice(12));
-		const { container } = render(GuitarCentralView);
+		const { container } = render(ChorusCentralView);
 		await tick();
 		for (const b of tabs(container)) await fireEvent.click(b);
 		expect(pitchWrites()).toEqual([12, 7, -5, -12]);
