@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Component } from 'svelte';
+  import type { ControlGlyphName } from './ControlGlyph.svelte';
   import type { DeviceRecord } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import BaseDeviceControl from './BaseDeviceControl.svelte';
@@ -31,7 +31,7 @@
     disableCentralViewOnTap?: boolean;
     // Marks for what the control does (the central views pass them; the
     // grid tile draws none).
-    icon?: Component<any>;
+    icon?: ControlGlyphName;
   }
 
   let { device = null, position, disableCentralViewOnTap = false, icon }: Props = $props();

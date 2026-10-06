@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { onDestroy, type Component, type Snippet } from 'svelte';
+  import { onDestroy, type Snippet } from 'svelte';
+  import ControlGlyph, { type ControlGlyphName } from './ControlGlyph.svelte';
   import ArrowRight from '@lucide/svelte/icons/arrow-right';
   import ArrowUp from '@lucide/svelte/icons/arrow-up';
   import FilterCurve, { type CurveType } from './FilterCurve.svelte';
@@ -28,10 +29,10 @@
     background?: Snippet;
     // A mark for what the pad does, drawn above the title, and one for each
     // axis: X in the bottom-right corner, Y in the top-left, each with its
-    // arrow. Lucide icons; visual only, the title still names the pad.
-    icon?: Component<any>;
-    xIcon?: Component<any>;
-    yIcon?: Component<any>;
+    // arrow. Visual only, the title still names the pad.
+    icon?: ControlGlyphName;
+    xIcon?: ControlGlyphName;
+    yIcon?: ControlGlyphName;
   }
 
   let {
@@ -50,9 +51,9 @@
     color = familyScheme('utility'),
     invertResonance = false,
     background,
-    icon: Icon,
-    xIcon: XIcon,
-    yIcon: YIcon
+    icon,
+    xIcon,
+    yIcon
   }: Props = $props();
 
   let isDragging = $state(false);
@@ -314,17 +315,17 @@
     <!-- Center title -->
     {#if title}
       <div class="center-title {titleClass}">
-        {#if Icon}<span class="title-icon" aria-hidden="true"><Icon strokeWidth={1.75} /></span>{/if}
+        {#if icon}<span class="title-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}
         <span class="fit-label" use:fitText={title}>{title}</span>
       </div>
     {/if}
 
     <!-- Axis marks: what moving across and up does. -->
-    {#if XIcon}
-      <div class="axis-mark axis-x" aria-hidden="true"><XIcon strokeWidth={2} /><ArrowRight strokeWidth={2} /></div>
+    {#if xIcon}
+      <div class="axis-mark axis-x" aria-hidden="true"><ControlGlyph name={xIcon} strokeWidth={2.25} /><ArrowRight class="axis-arrow" strokeWidth={2} /></div>
     {/if}
-    {#if YIcon}
-      <div class="axis-mark axis-y" aria-hidden="true"><ArrowUp strokeWidth={2} /><YIcon strokeWidth={2} /></div>
+    {#if yIcon}
+      <div class="axis-mark axis-y" aria-hidden="true"><ArrowUp class="axis-arrow" strokeWidth={2} /><ControlGlyph name={yIcon} strokeWidth={2.25} /></div>
     {/if}
 
     <!-- Rate label (centered, below title) - only show when active (not ghost) -->
@@ -436,8 +437,8 @@
 
   .title-icon {
     display: flex;
-    width: 1.4em;
-    height: 1.4em;
+    width: 2.6em;
+    height: 2.6em;
   }
   .title-icon :global(svg),
   .axis-mark :global(svg) {
@@ -451,7 +452,7 @@
     position: absolute;
     display: flex;
     gap: 2px;
-    height: clamp(14px, 6cqw, 24px);
+    height: clamp(20px, 9cqw, 40px);
     pointer-events: none;
     user-select: none;
     z-index: 1;
@@ -471,11 +472,21 @@
     top: 6px;
     flex-direction: column;
     height: auto;
-    width: clamp(14px, 6cqw, 24px);
+    width: clamp(20px, 9cqw, 40px);
   }
   .axis-y :global(svg) {
     width: 100%;
     height: auto;
+  }
+  .axis-mark {
+    align-items: center;
+    opacity: 1;
+  }
+  .axis-x :global(.axis-arrow) {
+    height: 55%;
+  }
+  .axis-y :global(.axis-arrow) {
+    width: 55%;
   }
   :global([data-grammar="flat"]) .axis-mark {
     color: var(--signal-dim);

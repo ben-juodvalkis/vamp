@@ -20,7 +20,6 @@
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import ArrowRight from '@lucide/svelte/icons/arrow-right';
 	import Check from '@lucide/svelte/icons/check';
-	import Droplet from '@lucide/svelte/icons/droplet';
 	import X from '@lucide/svelte/icons/x';
 	import { logger } from '$lib/utils/logger';
 	import { drag } from '$lib/actions';
@@ -193,7 +192,7 @@
 			<DeviceSlider
 				value={octaveMix}
 				title="Mix"
-				icon={Droplet}
+				icon="mix"
 				orientation="vertical"
 				labelOrientation="horizontal"
 				labelSize="small"

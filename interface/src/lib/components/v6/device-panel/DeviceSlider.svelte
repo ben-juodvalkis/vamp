@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { onDestroy, type Component, type Snippet } from 'svelte';
+  import { onDestroy, type Snippet } from 'svelte';
+  import ControlGlyph, { type ControlGlyphName } from './ControlGlyph.svelte';
   import { familyScheme, type DeviceColorScheme } from '$lib/config/devicePresets';
   import MeterVisualization from '$lib/components/v6/looping/MeterVisualizationV6.svelte';
   import { createSliderThrottle } from '$lib/utils/sliderThrottle';
@@ -19,8 +20,8 @@
     // does. `title` still names the slider for assistive tech.
     label?: Snippet;
     // A mark for what the slider does, drawn above the label in both label
-    // layers (so it inverts on the fill like the text). A Lucide icon.
-    icon?: Component<any>;
+    // layers (so it inverts on the fill like the text).
+    icon?: ControlGlyphName;
     onInteraction?: (value: number) => void;
     // Fired once when a drag ends, with where it left the slider — never on a
     // tap, nor when the drag ended where it began. For a write that should
@@ -61,7 +62,7 @@
     value = 0,
     title = "",
     label,
-    icon: Icon,
+    icon,
     onInteraction,
     onRelease,
     onTap,
@@ -319,7 +320,7 @@
          readable once the fill rises over them. No inverse in meter mode. -->
     {#if title || label}
       <div class="slider-label label-{effectiveLabelOrientation} label-{labelSize}">
-        {#if Icon}<span class="slider-icon" aria-hidden="true"><Icon strokeWidth={1.75} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={title}>{title}</span>{/if}</span>
+        {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={title}>{title}</span>{/if}</span>
       </div>
       {#if showFill}
         <div
@@ -327,7 +328,7 @@
           style="clip-path: {inverseClip};"
           aria-hidden="true"
         >
-          {#if Icon}<span class="slider-icon" aria-hidden="true"><Icon strokeWidth={1.75} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={title}>{title}</span>{/if}</span>
+          {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={title}>{title}</span>{/if}</span>
         </div>
       {/if}
     {/if}
@@ -485,7 +486,7 @@
   .slider-icon {
     display: flex;
     flex: 0 0 auto;
-    width: clamp(16px, 30cqw, 34px);
+    width: clamp(20px, 60cqw, 72px);
     aspect-ratio: 1;
     color: color-mix(in oklab, var(--slider-tint, var(--foreground)) 70%, transparent);
   }

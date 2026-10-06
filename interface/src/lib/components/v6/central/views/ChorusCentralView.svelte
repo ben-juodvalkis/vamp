@@ -22,16 +22,8 @@
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 	import SectionDivider from '../SectionDivider.svelte';
 	import OctavePanel from '../OctavePanel.svelte';
-	// What each control does, at a glance (user, 2026-10-06). A pad also
-	// marks its axes: X in the bottom-right corner, Y in the top-left.
-	import Shuffle from '@lucide/svelte/icons/shuffle';
-	import Timer from '@lucide/svelte/icons/timer';
-	import Droplet from '@lucide/svelte/icons/droplet';
-	import Repeat from '@lucide/svelte/icons/repeat';
-	import CloudFog from '@lucide/svelte/icons/cloud-fog';
-	import AudioLines from '@lucide/svelte/icons/audio-lines';
-	import Music from '@lucide/svelte/icons/music';
-	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+	// What each control does, at a glance (user, 2026-10-06): ControlGlyph's
+	// drawn marks. A pad also marks its axes, X bottom-right, Y top-left.
 
 	const fx = useFxGridSlot('chorus');
 	const comb = useFxGridSlot('comb');
@@ -196,9 +188,9 @@
 					xValue={pitchHackRate / PITCH_HACK_PARAMS.rate.max}
 					yValue={pitchHackMix}
 					title="Pitch Hack"
-					icon={Shuffle}
-					xIcon={Timer}
-					yIcon={Droplet}
+					icon="pitchhack"
+					xIcon="rate"
+					yIcon="mix"
 					rateLabel={PITCH_HACK_RATES[pitchHackRate]}
 					isGhost={pitchHack.isGhost}
 					showCurve={false}
@@ -228,7 +220,7 @@
 		<DeviceSlider
 			value={pitchHackRecycle}
 			title="Feedback"
-			icon={Repeat}
+			icon="feedback"
 			orientation="vertical"
 			labelOrientation="horizontal"
 			isGhost={pitchHack.isGhost}
@@ -244,7 +236,7 @@
 
 	<!-- Blur's dry/wet (the `smudge` slot; virtual device - handles its own slot state) -->
 	<div class="device-wrapper">
-		<SmudgeControl device={smudge.device} icon={CloudFog} />
+		<SmudgeControl device={smudge.device} icon="blur" />
 	</div>
 
 	<!-- Seams fall on the DEVICE boundaries: Blur | Comb | Phaser. The pads
@@ -259,7 +251,7 @@
 		     preset's second pad, "Comb LFO", went with the plug-in (2026-10-05):
 		     the Max device has no LFO. -->
 		<div class="stack-cell">
-			<CombControl device={comb.device} icon={AudioLines} xIcon={Music} yIcon={Repeat} />
+			<CombControl device={comb.device} icon="comb" xIcon="tune" yIcon="feedback" />
 		</div>
 
 		<SectionDivider orientation="horizontal" ink={phaserInk.primary} />
@@ -274,9 +266,9 @@
 						xValue={phaserSpeed}
 						yValue={phaserFeedback}
 						title="Phaser"
-						icon={RefreshCw}
-						xIcon={Timer}
-						yIcon={Repeat}
+						icon="phaser"
+						xIcon="rate"
+						yIcon="feedback"
 						isGhost={phaser.isGhost}
 						showCurve={false}
 						color={phaserInk}
