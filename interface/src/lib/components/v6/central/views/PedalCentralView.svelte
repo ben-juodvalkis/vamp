@@ -77,8 +77,12 @@
 
   // A ghost slot's first write loads the Shifter; Ring goes with it as a
   // pending write, so the fader is heard the moment the device lands.
+  // RM Coarse starts at 0 (1 Hz) rather than Live's 0.75 (user, 2026-10-05):
+  // a tap writes it, a drag writes its own value after.
   function armShifterLoad() {
-    if (shifter.isGhost) shifter.sendParam(SHIFTER_MODE, SHIFTER_MODE_RING);
+    if (!shifter.isGhost) return;
+    shifter.sendParam(SHIFTER_MODE, SHIFTER_MODE_RING);
+    shifter.sendParam(SHIFTER_RM_COARSE, 0);
   }
 
   let saturatorInk = $derived({
@@ -159,7 +163,7 @@
        ghost loads it; a drag loads it and writes the value. -->
   <div class="column shifter-column">
     <DeviceSlider
-      value={Math.min(shifter.paramValue(SHIFTER_RM_COARSE) ?? SHIFTER_RM_MAX, SHIFTER_RM_MAX)}
+      value={Math.min(shifter.paramValue(SHIFTER_RM_COARSE) ?? 0, SHIFTER_RM_MAX)}
       title="Shifter"
       orientation="vertical"
       labelOrientation="vertical"
