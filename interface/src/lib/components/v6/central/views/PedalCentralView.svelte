@@ -157,8 +157,8 @@
   const WAH_PEDAL_MACRO = 1;
   let wahValue = $derived((wah.paramValue(WAH_PEDAL_MACRO) ?? 0) / MACRO_MAX);
 
-  // The left column: the Guitar's Gain over the Wah, each half its height,
-  // either one alone at full height. Its grid track and seam exist only
+  // The Gain-over-Wah column, at the head of the Guitar group: each half
+  // its height, either one alone at full height. Its grid track exists only
   // while it holds something.
   const showLeftColumn = $derived(showGuitarGain || showWah);
   // One unit per slider, two per XY pad, every seam its hairline: the
@@ -171,8 +171,8 @@
   const SEAM = 'auto';
   const gridColumns = $derived(
     [
-      ...(showLeftColumn ? [SLIDER, SEAM] : []), // gain over wah
       XY, SEAM, // pedal pad over its type switch
+      ...(showLeftColumn ? [SLIDER] : []), // gain over wah, heading the guitar group
       XY, SLIDER, SEAM, // spring/room over tremolo · dirty/clean
       SLIDER, SEAM, // shifter
       XY // output · mix over redux
@@ -182,36 +182,6 @@
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
 <div class="pedal-central-layout relative" style="grid-template-columns: {gridColumns};">
-  {#if showLeftColumn}
-    <!-- COLUMN 0: the Guitar's Gain (MIDI tracks only — on audio the grid's
-         Gtr column draws it) over the Wah, the macro the expression pedal
-         sweeps (only while features.expressionPedal is on). -->
-    <div class="column left-stack">
-      {#if showGuitarGain}
-        <div class="left-cell">
-          <GuitarControl device={guitar.device} disableCentralViewOnTap={true} />
-        </div>
-      {/if}
-      {#if showWah}
-        <div class="left-cell wah-cell">
-          <DeviceSlider
-            value={wahValue}
-            title="Wah"
-            orientation="vertical"
-            labelOrientation="horizontal"
-            labelSize="small"
-            isGhost={wah.isGhost}
-            color={wahInk}
-            onTap={() => wah.loadIfGhost()}
-            onInteraction={(v) => wah.sendParam(WAH_PEDAL_MACRO, v * MACRO_MAX)}
-          />
-        </div>
-      {/if}
-    </div>
-
-    <SectionDivider orientation="vertical" ink={pedalInk.primary} />
-  {/if}
-
   <!-- COLUMN 1: the Pedal's XY — the old grid tile, mounted standalone; a
        tap goes nowhere because this view is its home — over its type
        switch, laid out across (2026-10-05). -->
@@ -240,6 +210,34 @@
   <!-- COLUMN 3: the Guitar rack's Spring/Room pad over its Tremolo pad, and
        the Dirty/Clean switch. Its Gain is in the left column. -->
   <div class="guitar-section">
+    {#if showLeftColumn}
+      <!-- The Guitar's Gain (MIDI tracks only — on audio the grid's Gtr
+           column draws it) over the Wah, the macro the expression pedal
+           sweeps (only while features.expressionPedal is on): the head of the
+           Guitar group, no seam between (user, 2026-10-05). -->
+      <div class="column left-stack">
+        {#if showGuitarGain}
+          <div class="left-cell">
+            <GuitarControl device={guitar.device} disableCentralViewOnTap={true} />
+          </div>
+        {/if}
+        {#if showWah}
+          <div class="left-cell wah-cell">
+            <DeviceSlider
+              value={wahValue}
+              title="Wah"
+              orientation="vertical"
+              labelOrientation="horizontal"
+              labelSize="small"
+              isGhost={wah.isGhost}
+              color={wahInk}
+              onTap={() => wah.loadIfGhost()}
+              onInteraction={(v) => wah.sendParam(WAH_PEDAL_MACRO, v * MACRO_MAX)}
+            />
+          </div>
+        {/if}
+      </div>
+    {/if}
     <!-- Two pads stacked: Spring (X) / Room (Y) over Tremolo, rate (X) /
          amount (Y) (user, 2026-10-05). -->
     <div class="column guitar-xy-stack">
@@ -348,8 +346,8 @@
 <style>
   .pedal-central-layout {
     display: grid;
-    /* gain over wah | pedal XY over pedal-type tabs | guitar (spring/room pad
-       over tremolo pad · dirty/clean) | shifter | saturator output · mix
+    /* pedal XY over pedal-type tabs | guitar (gain over wah · spring/room
+       pad over tremolo pad · dirty/clean) | shifter | saturator output · mix
        over redux.
        grid-template-columns comes from `gridColumns`: a slider is one
        share of the width, a pad two, a seam its hairline. */

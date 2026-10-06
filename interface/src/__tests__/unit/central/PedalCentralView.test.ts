@@ -245,13 +245,15 @@ describe('PedalCentralView', () => {
 		expect(centralDisplayStore.isViewActive('device', 'pedal')).toBe(true);
 	});
 
-	it('stacks the Gain over the Wah slider in the left column', async () => {
+	it('heads the Guitar group with the Gain over the Wah, after the Pedal', async () => {
 		seed([saturator({}), guitarRack()]);
 		const { container } = render(PedalCentralView);
 		await tick();
 		const columns = container.querySelectorAll('.pedal-central-layout > .column');
-		expect(columns[0].classList.contains('left-stack')).toBe(true);
-		const cells = columns[0].querySelectorAll('.left-cell');
+		expect(columns[0].classList.contains('pedal-xy-column')).toBe(true);
+		const stack = container.querySelector('.guitar-section')!.firstElementChild!;
+		expect(stack.classList.contains('left-stack')).toBe(true);
+		const cells = stack.querySelectorAll('.left-cell');
 		expect(cells.length).toBe(2);
 		expect(cells[0].textContent).toContain('Gtr');
 		expect(cells[1].classList.contains('wah-cell')).toBe(true);
