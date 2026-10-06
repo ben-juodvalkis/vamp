@@ -176,8 +176,9 @@
   const gridColumns = $derived(
     [
       XY, SEAM, // pedal pad over its type switch
-      ...(showLeftColumn ? [SLIDER] : []), // gain over wah, heading the guitar group
-      XY, SLIDER, SEAM, // spring/room over tremolo · dirty/clean
+      SLIDER, // dirty/clean, heading the guitar group
+      ...(showLeftColumn ? [SLIDER] : []), // gain over wah
+      XY, SEAM, // spring/room over tremolo
       SLIDER, SEAM, // shifter
       XY // output · mix over redux
     ].join(' ')
@@ -211,14 +212,32 @@
        introduces (the Chorus rule, user's call, 2026-09-13). -->
   <SectionDivider orientation="vertical" ink={guitarInk.primary} />
 
-  <!-- COLUMN 3: the Guitar rack's Spring/Room pad over its Tremolo pad, and
-       the Dirty/Clean switch. Its Gain is in the left column. -->
+  <!-- COLUMN 3: the Guitar rack — the Dirty/Clean switch, then its Gain
+       over the Wah, then its Spring/Room pad over its Tremolo pad. -->
   <div class="guitar-section">
+    <!-- Dirty / Clean, the amp's voice, lead the Guitar group (user,
+         2026-10-06). -->
+    <div class="column tone-stack" style={guitar.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
+      <button
+        class="physical-button tone-btn"
+        class:active={!guitar.isGhost && !gtrClean}
+        aria-pressed={!guitar.isGhost && !gtrClean}
+        style="--btn-tint: {guitarInk.primary};"
+        onclick={() => sendGtr(GTR.ampSwitch, 0)}
+      ><span class="tone-icon"><ControlGlyph name="dirty" /></span>Dirty</button>
+      <button
+        class="physical-button tone-btn"
+        class:active={!guitar.isGhost && gtrClean}
+        aria-pressed={!guitar.isGhost && gtrClean}
+        style="--btn-tint: {guitarInk.primary};"
+        onclick={() => sendGtr(GTR.ampSwitch, 1)}
+      ><span class="tone-icon"><ControlGlyph name="clean" /></span>Clean</button>
+    </div>
     {#if showLeftColumn}
       <!-- The Guitar's Gain (MIDI tracks only — on audio the grid's Gtr
            column draws it) over the Wah, the macro the expression pedal
            sweeps (only while features.expressionPedal is on): the head of the
-           Guitar group, no seam between (user, 2026-10-05). -->
+           Guitar's controls, no seam between (user, 2026-10-05). -->
       <div class="column left-stack">
         {#if showGuitarGain}
           <div class="left-cell">
@@ -283,22 +302,6 @@
         />
       </div>
     </div>
-    <div class="column tone-stack" style={guitar.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
-      <button
-        class="physical-button tone-btn"
-        class:active={!guitar.isGhost && !gtrClean}
-        aria-pressed={!guitar.isGhost && !gtrClean}
-        style="--btn-tint: {guitarInk.primary};"
-        onclick={() => sendGtr(GTR.ampSwitch, 0)}
-      ><span class="tone-icon"><ControlGlyph name="dirty" /></span>Dirty</button>
-      <button
-        class="physical-button tone-btn"
-        class:active={!guitar.isGhost && gtrClean}
-        aria-pressed={!guitar.isGhost && gtrClean}
-        style="--btn-tint: {guitarInk.primary};"
-        onclick={() => sendGtr(GTR.ampSwitch, 1)}
-      ><span class="tone-icon"><ControlGlyph name="clean" /></span>Clean</button>
-    </div>
   </div>
 
   <SectionDivider orientation="vertical" ink={shifterInk.primary} />
@@ -359,8 +362,8 @@
 <style>
   .pedal-central-layout {
     display: grid;
-    /* pedal XY over pedal-type tabs | guitar (gain over wah · spring/room
-       pad over tremolo pad · dirty/clean) | shifter | saturator output · mix
+    /* pedal XY over pedal-type tabs | guitar (dirty/clean · gain over wah ·
+       spring/room pad over tremolo pad) | shifter | saturator output · mix
        over redux.
        grid-template-columns comes from `gridColumns`: a slider is one
        share of the width, a pad two, a seam its hairline. */
