@@ -535,8 +535,6 @@
             yValue={releaseValue}
             title="Time"
             icon="envelope"
-            xIcon="attack"
-            yIcon="release"
             onInteraction={handleTimeXYInteraction}
             color={simplerInk}
           />
@@ -546,8 +544,6 @@
             yValue={slicingParam35}
             title="Time"
             icon="envelope"
-            xIcon="attack"
-            yIcon="release"
             onInteraction={handleSlicingTimeXYInteraction}
             color={simplerInk}
           />

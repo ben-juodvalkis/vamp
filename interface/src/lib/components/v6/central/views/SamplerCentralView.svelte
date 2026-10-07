@@ -213,8 +213,6 @@
             yValue={valueAt(FILTER_RES) ?? 0}
             title="Filter"
             icon="filter"
-            xIcon="cutoff"
-            yIcon="resonance"
             color={samplerInk}
             isGhost={filterState === 'none'}
             onInteraction={(x, y) => {

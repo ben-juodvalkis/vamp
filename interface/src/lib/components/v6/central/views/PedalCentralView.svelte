@@ -56,7 +56,7 @@
   import SectionDivider from '../SectionDivider.svelte';
   import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
   // What each control does, at a glance (user, 2026-10-06): ControlGlyph's
-  // drawn marks. A pad also marks its axes, X bottom-right, Y top-left.
+  // drawn marks.
   import ControlGlyph from '$lib/components/v6/device-panel/ControlGlyph.svelte';
 
   const fx = useFxGridSlot('pedal');
@@ -192,7 +192,7 @@
        switch, laid out across (2026-10-05). -->
   <div class="column pad pedal-xy-column">
     <div class="xy-wrapper flex-1" class:slot-ghost={fx.isGhost}>
-      <PedalControl device={fx.device} disableCentralViewOnTap={true} icon="pedal" xIcon="tone" yIcon="drive" />
+      <PedalControl device={fx.device} disableCentralViewOnTap={true} icon="pedal" />
     </div>
     <div class="pedal-type-buttons" style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
       {#each PEDAL_TYPE_OPTIONS as option}
@@ -271,8 +271,6 @@
           yValue={gtrValue(GTR.room)}
           title="Spring/Room"
           icon="reverb"
-          xIcon="spring"
-          yIcon="room"
           isGhost={guitar.isGhost}
           showCurve={false}
           color={guitarInk}
@@ -289,8 +287,6 @@
           yValue={gtrValue(GTR.tremAmount)}
           title="Tremolo"
           icon="tremolo"
-          xIcon="rate"
-          yIcon="depth"
           isGhost={guitar.isGhost}
           showCurve={false}
           color={guitarInk}

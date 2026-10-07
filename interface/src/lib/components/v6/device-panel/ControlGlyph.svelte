@@ -4,8 +4,7 @@
    * not what the device is called (user, 2026-10-06: "draw custom images").
    * A tremolo is a wave whose loudness swells, drive a clipped wave, a comb
    * its notched response, feedback a train of fading echoes, an envelope
-   * stage its segment lit on the ADSR shape. Axis glyphs (rate, depth,
-   * tune, cutoff, …) mark what an XY pad's X and Y move.
+   * stage its segment lit on the ADSR shape.
    *
    * 32×32, stroked in currentColor so a mark inverts on a slider's fill like
    * its label does. The curves are sampled, so edit the paths, not the

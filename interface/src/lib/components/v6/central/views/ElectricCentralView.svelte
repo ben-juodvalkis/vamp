@@ -103,8 +103,6 @@
             yValue={hammerNoise}
             title="Hammer"
             icon="hammer"
-            xIcon="tone"
-            yIcon="noise"
             onInteraction={handleHammerXYInteraction}
             color={electricInk}
           />
@@ -117,8 +115,6 @@
         yValue={forkTineDecay}
         title="Fork"
         icon="tune"
-        xIcon="tone"
-        yIcon="decay"
         onInteraction={handleForkXYInteraction}
         color={electricInk}
       />

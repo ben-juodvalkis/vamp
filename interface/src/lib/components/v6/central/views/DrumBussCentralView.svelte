@@ -209,7 +209,7 @@
       xValue={boomDecay}
       yValue={boomAmount}
       title="Boom"
-      icon="boom" xIcon="decay" yIcon="depth"
+      icon="boom"
       isGhost={drum.isGhost}
       showCurve={false}
       color={drumInk}

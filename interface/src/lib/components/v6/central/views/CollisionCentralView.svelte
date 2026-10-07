@@ -100,8 +100,6 @@
               yValue={res1MaterialValue}
               title="Res 1"
               icon="resonator"
-              xIcon="decay"
-              yIcon="tone"
               onInteraction={handleRes1Interaction}
               color={collisionInk}
             />
@@ -117,8 +115,6 @@
               yValue={res2MaterialValue}
               title="Res 2"
               icon="resonator"
-              xIcon="decay"
-              yIcon="tone"
               onInteraction={handleRes2Interaction}
               color={collisionInk}
             />

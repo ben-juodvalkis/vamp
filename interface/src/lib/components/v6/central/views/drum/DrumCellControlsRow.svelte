@@ -144,8 +144,6 @@
         yValue={t('decay', 0.5)}
         title="Time"
         icon="envelope"
-        xIcon="attack"
-        yIcon="decay"
         onInteraction={(x, y) => {
           write('attack', x);
           write('decay', y);

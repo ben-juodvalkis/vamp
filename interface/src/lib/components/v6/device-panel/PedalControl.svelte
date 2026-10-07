@@ -13,11 +13,9 @@
     // Marks for what the control does (the central views pass them; the
     // grid tile draws none).
     icon?: ControlGlyphName;
-    xIcon?: ControlGlyphName;
-    yIcon?: ControlGlyphName;
   }
 
-  let { device, position, disableCentralViewOnTap = false, icon, xIcon, yIcon }: Props = $props();
+  let { device, position, disableCentralViewOnTap = false, icon }: Props = $props();
 
   const PARAM_CONFIG = {
     type: {
@@ -78,8 +76,6 @@
       yValue={gainDryWetValue}
       title="Pedal"
       {icon}
-      {xIcon}
-      {yIcon}
       {isGhost}
       {color}
       onTap={handleTap}
