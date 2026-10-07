@@ -17,9 +17,21 @@
 
 import type { OSCArg } from '$lib/types/osc';
 import { logger } from '$lib/utils/logger';
-import { applyTotalMix } from '$lib/stores/v3/totalmix.svelte';
+import { applyTotalMix, applyTotalMixMeters } from '$lib/stores/v3/totalmix.svelte';
 
 const V3_TOTALMIX_PREFIX = '/looping/v3/totalmix/';
+
+/** The five live signal meters as one frame, in channel order (dB). */
+export const V3_TOTALMIX_METERS_ADDRESS = '/looping/v3/totalmix_meters';
+
+export function handleV3TotalMixMeters(args: OSCArg[]): void {
+	const frame = args.map(toNumber);
+	if (frame.some((db) => db === null)) {
+		logger.warn('v3 totalmix meters non-numeric frame', { args });
+		return;
+	}
+	applyTotalMixMeters(frame as number[]);
+}
 
 export function isV3TotalMixAddress(address: string): boolean {
 	return address.startsWith(V3_TOTALMIX_PREFIX);

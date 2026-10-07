@@ -10,7 +10,11 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, cleanup } from '@testing-library/svelte';
 import TotalMixStrip from '$lib/components/v6/looping/TotalMixStrip.svelte';
-import { applyTotalMix, __resetTotalMixStoreForTests } from '$lib/stores/v3/totalmix.svelte';
+import {
+	applyTotalMix,
+	applyTotalMixMeters,
+	__resetTotalMixStoreForTests
+} from '$lib/stores/v3/totalmix.svelte';
 
 const REASON = 'TotalMix not answering';
 
@@ -42,5 +46,23 @@ describe('TotalMixStrip (the status-strip mirror)', () => {
 	it('draws no faders', () => {
 		const { container } = render(TotalMixStrip);
 		expect(container.querySelectorAll('[role="slider"]')).toHaveLength(0);
+	});
+
+	it('fills with the signal meter and marks the fader with a line', () => {
+		// −65..+6 dB: −29.5 dB is half the bar, +6 the end of it.
+		applyTotalMix('room', 6);
+		applyTotalMixMeters([-29.5, -300, -300, -300, -300]);
+		const { container } = render(TotalMixStrip);
+		const room = container.querySelector('[data-channel="room"]') as HTMLElement;
+		expect((room.querySelector('.tmh-mask') as HTMLElement).style.width).toBe('50%');
+		expect((room.querySelector('.tmh-fader') as HTMLElement).style.left).toBe('100%');
+		const playback = container.querySelector('[data-channel="playback"]') as HTMLElement;
+		expect((playback.querySelector('.tmh-mask') as HTMLElement).style.width).toBe('100%');
+	});
+
+	it('draws no line for a fader never heard from', () => {
+		applyTotalMixMeters([-10, -10, -10, -10, -10]);
+		const { container } = render(TotalMixStrip);
+		expect(container.querySelector('[data-channel="click"] .tmh-fader')).toBeNull();
 	});
 });

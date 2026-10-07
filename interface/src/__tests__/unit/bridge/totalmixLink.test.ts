@@ -224,3 +224,41 @@ describe('channels', () => {
 		]);
 	});
 });
+
+describe('meters', () => {
+	// The mixer sends nothing for a silent channel (measured 2026-10-07), so
+	// silence is a reading going stale, not a message.
+	it('takes only the measured level addresses and leaves the faders alone', () => {
+		const link = createTotalMixLink();
+		expect(link.meterFromMixer('/level/in/1', [-30], 0)).toBe(true);
+		expect(link.meterFromMixer('/level/in/0', [-30], 0)).toBe(false);
+		expect(link.meterFromMixer('/mix/in/1/2/fader', [-30], 0)).toBe(false);
+		expect(link.get('room')).toBeUndefined();
+	});
+
+	it('frames the five channels in order, the louder side of a pair', () => {
+		const link = createTotalMixLink();
+		link.meterFromMixer('/level/in/1', [-30.04], 0);
+		link.meterFromMixer('/level/pb/0', [-20], 0);
+		link.meterFromMixer('/level/pb/1', [-12.5], 0);
+		link.meterFromMixer('/level/out/3', [-40], 0);
+		expect(link.meterFrame(10)).toEqual([-30, -12.5, SILENCE_DB, -40, SILENCE_DB]);
+	});
+
+	it('reads a level the mixer stopped sending as silence', () => {
+		const link = createTotalMixLink();
+		link.meterFromMixer('/level/in/1', [-30], 0);
+		expect(link.meterFrame(300)?.[0]).toBe(-30);
+		expect(link.meterFrame(301)?.[0]).toBe(SILENCE_DB);
+	});
+
+	it('sends no frame when nothing moved', () => {
+		const link = createTotalMixLink();
+		expect(link.meterFrame(0)).toEqual(Array(5).fill(SILENCE_DB));
+		expect(link.meterFrame(33)).toBe(null);
+		link.meterFromMixer('/level/in/1', [-30], 40);
+		expect(link.meterFrame(66)).not.toBe(null);
+		link.meterFromMixer('/level/in/1', [-30.01], 80);
+		expect(link.meterFrame(99)).toBe(null);
+	});
+});

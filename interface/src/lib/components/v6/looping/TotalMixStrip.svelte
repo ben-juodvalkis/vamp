@@ -1,14 +1,17 @@
 <script lang="ts">
 	/**
 	 * TotalMix monitor strip: five read-only bars in the safe-area status
-	 * strip, mirroring the RME TotalMix levels the bridge relays from the
-	 * mixer (`/looping/v3/totalmix/<channel>`). Nothing here writes: the
-	 * mixer is driven from TotalMix itself and the Move's knobs.
+	 * strip, each showing one RME TotalMix channel two ways. The FILL is the
+	 * live signal meter (`/looping/v3/totalmix_meters`, 30 fps from the
+	 * bridge); the thin LINE is where the channel's fader sits
+	 * (`/looping/v3/totalmix/<channel>`). Nothing here writes: the mixer is
+	 * driven from TotalMix itself and the Move's knobs.
 	 *
-	 * Values land via `handleV3TotalMix` → `totalmixStore`; this strip
-	 * derives off `totalmixStore.get(channel)`. Store values are **dB**
-	 * (ADR-423); the 0..1 the fill needs comes from `dbToFraction`,
-	 * which owns that curve so the wire never has to.
+	 * Both are **dB** (ADR-423) on the same −65..+6 scale, so a line at the
+	 * meter's edge means the signal sits at the fader's own level. The 0..1
+	 * comes from `dbToFraction`, which owns that curve so the wire never has
+	 * to. With the mixer's Send Level off no meter frame comes and the fill
+	 * stays empty; the line still says where the fader is.
 	 *
 	 * **Legibility over the fill.** The word is drawn TWICE, the inverse
 	 * copy clipped to exactly the filled region and inked for on-fill —
@@ -16,7 +19,7 @@
 	 * level has swept past flips ink at the boundary instead of
 	 * disappearing into the bright end of the ramp.
 	 */
-	import { totalmixStore } from '$lib/stores/v3/totalmix.svelte';
+	import { totalmixMeters, totalmixStore } from '$lib/stores/v3/totalmix.svelte';
 	import { dbToFraction, MIN_DB } from '$lib/utils/totalmixScale';
 
 	interface Props {
@@ -49,14 +52,19 @@
 	];
 
 	const cells = $derived(
-		CHANNELS.map(({ channel, label }) => ({
-			channel,
-			label,
-			// A channel never heard from renders empty rather than at some
-			// invented level — an unknown monitor level must not look like
-			// a real one.
-			level: Math.round(dbToFraction(totalmixStore.get(channel) ?? MIN_DB) * 100)
-		}))
+		CHANNELS.map(({ channel, label }) => {
+			// A fader never heard from draws no line rather than one at some
+			// invented level — an unknown monitor level must not look like a
+			// real one. A meter never heard from is simply an empty fill.
+			const fader = totalmixStore.get(channel);
+			return {
+				channel,
+				label,
+				level: Math.round(dbToFraction(fader ?? MIN_DB) * 100),
+				known: fader !== undefined,
+				meter: Math.round(dbToFraction(totalmixMeters.get(channel) ?? MIN_DB) * 1000) / 10
+			};
+		})
 	);
 </script>
 
@@ -75,14 +83,14 @@
 	aria-label={unavailable ? `TotalMix levels: ${unavailableReason}` : 'TotalMix levels'}
 	aria-disabled={unavailable || undefined}
 >
-	{#each cells as { channel, label, level } (channel)}
+	{#each cells as { channel, label, level, known, meter } (channel)}
 		<div
 			class="tmh-item"
 			data-channel={channel}
 			aria-label={unavailable ? `${channel}: ${unavailableReason}` : `${channel}: ${level}%`}
 			title={unavailable ? unavailableReason : undefined}
 		>
-			<div class="tmh-mask" style={`width: ${100 - level}%;`}></div>
+			<div class="tmh-mask" style={`width: ${100 - meter}%;`}></div>
 			<span class="tmh-label">{label}</span>
 			<!-- Inverse copy, clipped to the filled region — the same trick
 			     `DeviceSlider` uses, turned on its
@@ -92,8 +100,12 @@
 			     instead of disappearing into the bright end of the ramp. -->
 			<span
 				class="tmh-label tmh-label--inverse"
-				style={`clip-path: inset(0 ${100 - level}% 0 0);`}
+				style={`clip-path: inset(0 ${100 - meter}% 0 0);`}
 				aria-hidden="true">{label}</span>
+			<!-- The fader's position, over everything so the meter never hides it. -->
+			{#if known}
+				<div class="tmh-fader" style={`left: ${level}%;`} aria-hidden="true"></div>
+			{/if}
 		</div>
 	{/each}
 </div>
@@ -104,7 +116,8 @@
 		background: var(--surface-well);
 	}
 	.tmh-strip.is-unavailable .tmh-mask,
-	.tmh-strip.is-unavailable .tmh-label--inverse {
+	.tmh-strip.is-unavailable .tmh-label--inverse,
+	.tmh-strip.is-unavailable .tmh-fader {
 		display: none;
 	}
 	.tmh-strip.is-unavailable .tmh-label {
@@ -156,6 +169,24 @@
 		background: var(--surface-well);
 		transition: width 0.08s linear;
 	}
+	/* The fader line: 2px of label ink with a 1px dark edge either side, so
+	   it reads on the empty well and on the bright end of either ramp. Moves
+	   only when a fader does, so no transition. `translateX(-50%)` centres it
+	   on its level; at 0% and 100% the item's overflow clips half of it. */
+	.tmh-fader {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		width: 2px;
+		transform: translateX(-50%);
+		background: var(--foreground);
+		box-shadow:
+			1px 0 0 var(--card),
+			-1px 0 0 var(--card);
+		z-index: 2;
+		pointer-events: none;
+	}
+
 	/* Centred, so the flip lands mid-word as the level crosses the middle —
 	   which is the whole reason the two-copy trick is worth its second
 	   element. Never wrap: the bar is one line tall. */

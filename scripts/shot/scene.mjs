@@ -1485,6 +1485,11 @@ export function buildDefaultScene({ trackCount = DEFAULT_TRACKS.length } = {}) {
 			'/looping/v3/totalmix/click': [-56.5],
 			'/looping/v3/totalmix/phones': [0.3],
 			'/looping/v3/totalmix/main': [-26.0],
+			// The live meters, one frame in channel order (room, playback,
+			// click, phones, main). Room and Track sound above their fader
+			// line, Phones below it, and Click and Main are silent: what the
+			// rig's mixer sent on 2026-10-07, when silence sent nothing.
+			'/looping/v3/totalmix_meters': [-28.0, -9.5, -300, -18.0, -300],
 			'/looping/v3/session/metronome': [0],
 			'/looping/v3/session/session_record': [0],
 			'/looping/v3/session/loop': [0],

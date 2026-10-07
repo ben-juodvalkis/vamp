@@ -152,6 +152,17 @@
         "phones": "/output/2/volume",
         "main": "/output/0/volume"
       },
+      "meters": {
+        "_description": "Monitor channel -> the mixer's live signal-level addresses, a stereo pair as two (the bar shows the louder). Measured 2026-10-07 with 'Send Level' on for controller 3: one dB float per address, ~22 per second per sounding channel, and NOTHING for a silent one -- so a level not refreshed within meterStaleMs is taken as silence. Same zero-based-by-left-channel indexing as the fader map.",
+        "room": ["/level/in/1"],
+        "playback": ["/level/pb/0", "/level/pb/1"],
+        "click": ["/level/pb/2", "/level/pb/3"],
+        "phones": ["/level/out/2", "/level/out/3"],
+        "main": ["/level/out/0", "/level/out/1"]
+      },
+      "meterFrameMs": 33,
+      "meterStaleMs": 300,
+      "_meterNote": "The bridge folds the meter stream (~190 messages/s, most of them channels nobody shows) into one /looping/v3/totalmix_meters frame of five dB values every meterFrameMs, sent only when a value moved.",
       "writable": ["room", "playback", "click", "phones"],
       "_writableNote": "main mirrors the Control Room main out, which nothing in this system should move.",
       "minDb": -65,

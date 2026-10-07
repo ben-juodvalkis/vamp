@@ -383,7 +383,7 @@ export async function startMockSurface({
 						// Monitor levels only come from a mixer the bridge has
 						// heard: switched off, or on and not answering, the real
 						// bridge has none to send.
-						if (addr.startsWith('/looping/v3/totalmix/') && !totalmixAnswering) continue;
+						if (addr.startsWith('/looping/v3/totalmix') && !totalmixAnswering) continue;
 						send(ws, addr, values);
 					}
 					sendStateFull(ws, 'accept');

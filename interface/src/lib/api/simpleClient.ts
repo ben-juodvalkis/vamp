@@ -90,7 +90,12 @@ import {
 	isV3PermuteStepAddress
 } from './handlers/v3PermuteStep';
 import { handleV3DrumPadHold, isV3DrumPadHoldAddress } from './handlers/v3DrumPadHold';
-import { handleV3TotalMix, isV3TotalMixAddress } from './handlers/v3TotalMix';
+import {
+	handleV3TotalMix,
+	handleV3TotalMixMeters,
+	isV3TotalMixAddress,
+	V3_TOTALMIX_METERS_ADDRESS
+} from './handlers/v3TotalMix';
 import { handleV3Session, isV3SessionAddress } from './handlers/v3Session';
 import { handleV3Clip, isV3ClipAddress } from './handlers/v3Clip';
 import {
@@ -222,6 +227,10 @@ function routeMessage(address: string, args: OSCArg[]): void {
 	}
 	if (isV3TotalMixAddress(address)) {
 		handleV3TotalMix(address, args);
+		return;
+	}
+	if (address === V3_TOTALMIX_METERS_ADDRESS) {
+		handleV3TotalMixMeters(args);
 		return;
 	}
 	if (isV3SessionAddress(address)) {

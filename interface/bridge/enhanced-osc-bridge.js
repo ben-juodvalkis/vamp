@@ -493,6 +493,10 @@ const INBOUND_MIDDLEWARE = {
         // Any packet at all means the mixer is there. A no-op once it is
         // known, so the ~811-address dump costs nothing extra.
         features.setAvailability('totalmix', true);
+        // The live signal meters, ~190 messages a second with Send Level on.
+        // They go to the link's per-address readings and leave on the
+        // meter tick as one frame, never one broadcast each.
+        if (totalmixLink.meterFromMixer(msg.address, msg.args || [], Date.now())) return true;
         const level = totalmixLink.fromMixer(msg.address, msg.args || []);
         if (level) relayTotalMixLevel(level);
         return true;
@@ -569,6 +573,20 @@ function replayTotalMixToDevice() {
  * safe outcome of failure is simply an empty cache. Any level that arrives
  * from the mixer meanwhile wins over the seed.
  */
+/**
+ * Send the five monitor meters to the browsers as one frame, every
+ * `meterFrameMs` (30 fps). The link returns null when nothing moved, so a
+ * silent or meter-less mixer sends nothing. Browsers only: the Max device
+ * shows no meters. Unref'd so the tick never holds a shutting-down bridge open.
+ */
+function startTotalMixMeterTick() {
+    const frameMs = constants.osc.totalmix.meterFrameMs ?? 33;
+    setInterval(() => {
+        const frame = totalmixLink.meterFrame(Date.now());
+        if (frame) handleIncomingOSC({ address: totalmixLink.METERS_ADDRESS, args: frame }, 'totalmix');
+    }, frameMs).unref();
+}
+
 function bootstrapTotalMixLevels() {
     bootstrapFromLegacy({
         logger,
@@ -743,7 +761,10 @@ startPerformanceReporting();
 // Learn the mixer's current monitor levels once, now that the UDP ports
 // exist. Asynchronous and unawaited — see bootstrapTotalMixLevels. Skipped
 // with the link: a bridge whose `totalmix` switch is off never touches 7001.
-if (totalmixLink) bootstrapTotalMixLevels();
+if (totalmixLink) {
+    bootstrapTotalMixLevels();
+    startTotalMixMeterTick();
+}
 
 // Bridge profiler — only does anything when BRIDGE_PROFILE=1. Reads
 // the live WebSocket client count via a closure so the profiler stays

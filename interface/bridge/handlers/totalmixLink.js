@@ -42,6 +42,8 @@ const WRITE_PREFIX = '/totalmix/';
 const HELLO_ADDRESS = '/totalmix/hello';
 /** Address levels are broadcast to WS clients and the device on. */
 const BROADCAST_PREFIX = '/looping/v3/totalmix/';
+/** Address the five live signal meters go to WS clients on, as one frame. */
+const METERS_ADDRESS = '/looping/v3/totalmix_meters';
 
 /**
  * `osc.totalmix` from constants.json, read when it is asked for and never
@@ -122,10 +124,29 @@ function createTotalMixLink({ logger, config = readTotalMixConfig() } = {}) {
     /** @type {Map<string, number>} last dB heard per channel, this process's lifetime */
     const levels = new Map();
 
+    // Live signal meters. The mixer sends one dB float per `/level/...`
+    // address while that channel sounds and nothing while it is silent, so
+    // each reading carries the time it arrived and a stale one reads as
+    // silence. A stereo pair is two addresses; the channel shows the louder.
+    const METERS = Object.fromEntries(
+        Object.entries(config.meters || {}).filter(([key]) => !key.startsWith('_'))
+    );
+    const METER_ADDRESS_TO_CHANNEL = new Map(
+        Object.entries(METERS).flatMap(([channel, addresses]) =>
+            addresses.map((address) => [address, channel])
+        )
+    );
+    const METER_STALE_MS = config.meterStaleMs ?? 300;
+    /** @type {Map<string, {db: number, at: number}>} per meter address */
+    const meterReadings = new Map();
+    /** The last frame sent, so an unchanged one is not sent again. */
+    let lastMeterFrame = null;
+
     return {
         HELLO_ADDRESS,
         WRITE_PREFIX,
         BROADCAST_PREFIX,
+        METERS_ADDRESS,
 
         /** Channel names in a stable order, for replay and tests. */
         channels: () => Object.keys(CHANNELS),
@@ -180,6 +201,47 @@ function createTotalMixLink({ logger, config = readTotalMixConfig() } = {}) {
             }
             levels.set(channel, db);
             return { channel, db, address: BROADCAST_PREFIX + channel };
+        },
+
+        /**
+         * Take one live-level message from the mixer, if it is one of the
+         * meters a channel shows. Returns whether it was.
+         *
+         * @param {string} address e.g. '/level/pb/0'
+         * @param {Array} args [db]
+         * @param {number} now ms
+         * @returns {boolean}
+         */
+        meterFromMixer(address, args, now) {
+            if (!METER_ADDRESS_TO_CHANNEL.has(address)) return false;
+            const db = parseDb(args);
+            if (db !== null) meterReadings.set(address, { db, at: now });
+            return true;
+        },
+
+        /**
+         * The five channels' current meter levels, in `channels()` order, to
+         * 0.1 dB — or null when nothing moved since the last frame returned,
+         * so a silent mixer costs the iPad nothing. A channel with no reading
+         * fresher than `meterStaleMs` is `silenceDb`.
+         *
+         * @param {number} now ms
+         * @returns {number[]|null}
+         */
+        meterFrame(now) {
+            const frame = Object.keys(CHANNELS).map((channel) => {
+                let loudest = LIMITS.silenceDb;
+                for (const address of METERS[channel] || []) {
+                    const reading = meterReadings.get(address);
+                    if (reading && now - reading.at <= METER_STALE_MS && reading.db > loudest) {
+                        loudest = reading.db;
+                    }
+                }
+                return Math.round(loudest * 10) / 10;
+            });
+            if (lastMeterFrame && frame.every((db, i) => db === lastMeterFrame[i])) return null;
+            lastMeterFrame = frame;
+            return frame;
         },
 
         /**
@@ -238,5 +300,6 @@ module.exports = {
     parseDb,
     HELLO_ADDRESS,
     WRITE_PREFIX,
-    BROADCAST_PREFIX
+    BROADCAST_PREFIX,
+    METERS_ADDRESS
 };
