@@ -337,4 +337,12 @@
 		min-height: 0;
 		min-width: 0;
 	}
+
+	/* One ink per device: a lit mode takes GlitchLoop's own ink rather than
+	   the house --phosphor, as Octave's column does. */
+	:global([data-grammar="flat"]) .glitch-pitch .device-segment.active {
+		background: var(--btn-tint);
+		border-color: var(--btn-tint);
+		color: var(--flat-on-fg);
+	}
 </style>
