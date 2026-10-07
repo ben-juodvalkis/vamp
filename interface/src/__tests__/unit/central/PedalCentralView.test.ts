@@ -136,16 +136,18 @@ describe('PedalCentralView', () => {
 		seed([saturator({ 1: 0.75, 8: 0.2, 10: 1, 11: 1 }), pedal()]);
 		const { container } = render(PedalCentralView);
 		await tick();
-		expect(container.querySelector('.pedal-xy-column .device-control')).not.toBeNull();
-		expect(container.querySelector('.pedal-xy-column .device-control')?.classList.contains('device-ghost')).toBe(false);
+		expect(container.querySelector('.pedal-column .pedal-tone .eq-panel')).not.toBeNull();
+		expect(container.querySelector('.pedal-column .pedal-tone')?.classList.contains('slot-ghost')).toBe(false);
+		expect(container.querySelector('.pedal-column .pedal-drive [role="slider"]')).not.toBeNull();
 		// No Saturator pad here: that is the grid tile.
 		expect(container.textContent).not.toContain('Saturator');
 		for (const title of ['Output', 'Mix']) {
 			expect(slider(container, title), title).toBeDefined();
 		}
 		// Drive and Color Hi are the tile's two axes, not faders.
+		const satFaders = container.querySelector<HTMLElement>('.saturator-faders')!;
 		for (const title of ['Drive', 'Color Hi']) {
-			expect(slider(container, title), title).toBeUndefined();
+			expect(slider(satFaders, title), title).toBeUndefined();
 		}
 		expect(container.textContent).toContain('Distort');
 	});
@@ -184,7 +186,8 @@ describe('PedalCentralView', () => {
 		seed([]);
 		const { container } = render(PedalCentralView);
 		await tick();
-		expect(container.querySelector('.pedal-xy-column .device-control')?.classList.contains('device-ghost')).toBe(true);
+		expect(container.querySelector('.pedal-column .pedal-tone')?.classList.contains('slot-ghost')).toBe(true);
+		expect(container.querySelector('.pedal-column .pedal-drive')?.classList.contains('slot-ghost')).toBe(true);
 		expect((container.querySelector('.saturator-faders') as HTMLElement).style.opacity).toContain('--opacity-ghost');
 	});
 
@@ -250,7 +253,7 @@ describe('PedalCentralView', () => {
 		const { container } = render(PedalCentralView);
 		await tick();
 		const columns = container.querySelectorAll('.pedal-central-layout > .column');
-		expect(columns[0].classList.contains('pedal-xy-column')).toBe(true);
+		expect(columns[0].classList.contains('pedal-column')).toBe(true);
 		const group = container.querySelector('.guitar-section')!.children;
 		expect(group[0].classList.contains('tone-stack')).toBe(true);
 		const stack = group[1];
@@ -291,7 +294,7 @@ describe('PedalCentralView', () => {
 		expect(send).toHaveBeenCalledWith('/looping/v3/device/load', [TRACK, '', '', 'place:Vamp Devices', 'Wah/Wah.adg']);
 	});
 
-	it('keeps a tap on the Pedal pad inside this view', async () => {
+	it('keeps a tap on the Pedal tone pad inside this view', async () => {
 		// jsdom has no pointer capture; the pad asks for it on every press.
 		HTMLElement.prototype.setPointerCapture = vi.fn();
 		HTMLElement.prototype.releasePointerCapture = vi.fn();
@@ -299,11 +302,53 @@ describe('PedalCentralView', () => {
 		centralDisplayStore.setView('device', 'pedal');
 		const { container } = render(PedalCentralView);
 		await tick();
-		const pad = container.querySelector<HTMLElement>('.pedal-xy-column .xy-container');
+		const pad = container.querySelector<HTMLElement>('.pedal-tone .eq-panel');
 		expect(pad).not.toBeNull();
-		pad!.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10 }));
-		pad!.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 10, clientY: 10 }));
+		pad!.click();
 		await tick();
 		expect(centralDisplayStore.isViewActive('device', 'pedal')).toBe(true);
+		expect(vi.mocked(send).mock.calls.filter(([addr]) => addr === '/looping/v3/device/load')).toEqual([]);
+	});
+
+	it('drags the Pedal\'s Bass on the tone pad\'s left third, in Live\'s -1..1', async () => {
+		HTMLElement.prototype.setPointerCapture = vi.fn();
+		HTMLElement.prototype.releasePointerCapture = vi.fn();
+		seed([pedal()]);
+		const { container } = render(PedalCentralView);
+		await tick();
+		const low = container.querySelector<HTMLElement>('.pedal-tone [data-band="low"]')!;
+		low.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 100 }));
+		low.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 10, clientY: 50, buttons: 1 }));
+		low.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 10, clientY: 50 }));
+		await tick();
+		// Bass rests at 0 (flat, the pad's middle); 50px up is half the range: +1.
+		expect(send).toHaveBeenCalledWith(expect.any(String), expect.arrayContaining([`${PEDAL}/params/4`, 1]));
+	});
+
+	it('writes Drive and Dry/Wet together from the one Drive slider', async () => {
+		seed([pedal()]);
+		const { container } = render(PedalCentralView);
+		await tick();
+		const drive = container.querySelector<HTMLElement>('.pedal-drive [role="slider"]')!;
+		const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+			x: 0, y: 0, top: 0, left: 0, right: 100, bottom: 400, width: 100, height: 400, toJSON: () => ({})
+		} as DOMRect);
+		const at = (type: string, y: number) =>
+			drive.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: 1, clientX: 50, clientY: y, buttons: type === 'pointerup' ? 0 : 1 }));
+		at('pointerdown', 300);
+		at('pointermove', 280);
+		at('pointermove', 100);
+		await new Promise((r) => setTimeout(r, 50));
+		at('pointerup', 100);
+		rect.mockRestore();
+		const writes = (index: number) =>
+			vi.mocked(send).mock.calls
+				.map(([, args]) => args as unknown[])
+				.filter((a) => a.includes(`${PEDAL}/params/${index}`))
+				.map((a) => a[a.indexOf(`${PEDAL}/params/${index}`) + 1] as number);
+		const drv = writes(2);
+		expect(drv.length).toBeGreaterThan(0);
+		expect(drv.at(-1)).toBeGreaterThan(0);
+		expect(writes(9).at(-1)).toBe(drv.at(-1));
 	});
 });

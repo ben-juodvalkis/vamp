@@ -15,7 +15,8 @@
    *
    * 2026-10-05: the Saturator and the Pedal traded places. The Saturator's
    * XY is the FX grid's fx5 tile, and a tap on it opens this view; the
-   * Pedal's XY is mounted here standalone, beside its type tabs. Of the
+   * Pedal is mounted here, beside its type tabs — since 2026-10-07 its tone
+   * stack on the EQ tile's pad and one Drive/Mix slider. Of the
    * Saturator's faders only Output and Mix stay — Drive and Color Hi are
    * the tile's two axes.
    *
@@ -45,7 +46,7 @@
    */
 
   import ReduxControl from '$lib/components/v6/device-panel/ReduxControl.svelte';
-  import PedalControl from '$lib/components/v6/device-panel/PedalControl.svelte';
+  import ToneCurvePad from '$lib/components/v6/device-panel/ToneCurvePad.svelte';
   import GuitarControl from '$lib/components/v6/device-panel/GuitarControl.svelte';
   import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
@@ -142,6 +143,20 @@
 
   let pedalType = $derived(fx.paramValue(1) ?? 0);
 
+  // The Pedal's tone stack on the EQ tile's pad (user, 2026-10-07), and its
+  // Drive and Dry/Wet together on one slider, as the old pad's Y was.
+  // Indices and ranges measured off the running device: 2 Drive 0..1,
+  // 4 Bass / 5 Mid / 6 Treble -1..1 (0 flat), 7 Mid Freq quantized
+  // Low · Mid · High, 9 Dry/Wet 0..1. The pad's X snaps to Mid Freq's three
+  // steps; the curve's mid band sits at 100 Hz / 1 kHz / 10 kHz for them,
+  // a picture only — Live does not say what the three frequencies are.
+  const PEDAL = { drive: 2, bass: 4, mid: 5, treble: 6, midFreq: 7, dryWet: 9 } as const;
+  const MID_FREQ_STEPS = 2;
+  const toneValue = (index: number) => ((fx.paramValue(index) ?? 0) + 1) / 2;
+  const sendTone = (index: number, normalized: number) => fx.sendParam(index, normalized * 2 - 1);
+  let pedalMidFreq = $derived((fx.paramValue(PEDAL.midFreq) ?? 1) / MID_FREQ_STEPS);
+  let pedalDrive = $derived(fx.paramValue(PEDAL.drive) ?? 0);
+
   function selectPedalType(typeValue: number) {
     fx.sendParam(1, typeValue);
   }
@@ -175,7 +190,7 @@
   const SEAM = 'auto';
   const gridColumns = $derived(
     [
-      XY, SEAM, // pedal pad over its type switch
+      XY, SLIDER, SEAM, // pedal tone pad and drive slider over its type switch
       SLIDER, // dirty/clean, heading the guitar group
       ...(showLeftColumn ? [SLIDER] : []), // gain over wah
       XY, SEAM, // spring/room over tremolo
@@ -187,12 +202,47 @@
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
 <div class="pedal-central-layout relative" style="grid-template-columns: {gridColumns};">
-  <!-- COLUMN 1: the Pedal's XY — the old grid tile, mounted standalone; a
-       tap goes nowhere because this view is its home — over its type
-       switch, laid out across (2026-10-05). -->
-  <div class="column pad pedal-xy-column">
-    <div class="xy-wrapper flex-1" class:slot-ghost={fx.isGhost}>
-      <PedalControl device={fx.device} disableCentralViewOnTap={true} icon="pedal" xIcon="tone" yIcon="drive" />
+  <!-- COLUMN 1: the Pedal — its tone stack on the EQ tile's pad beside
+       one Drive/Mix slider, over its type switch laid out across. -->
+  <div class="column pedal-column">
+    <div class="pedal-tone" class:slot-ghost={fx.isGhost}>
+      <ToneCurvePad
+        title="Tone"
+        ariaLabel="Pedal tone: bass, mid and treble"
+        low={toneValue(PEDAL.bass)}
+        mid={toneValue(PEDAL.mid)}
+        midFreq={pedalMidFreq}
+        high={toneValue(PEDAL.treble)}
+        isGhost={fx.isGhost}
+        color={pedalInk}
+        curveColor={pedalInk.primary}
+        onTap={() => fx.loadIfGhost()}
+        onLow={(v) => sendTone(PEDAL.bass, v)}
+        onHigh={(v) => sendTone(PEDAL.treble, v)}
+        onMid={(x, y) => {
+          const step = Math.round(x * MID_FREQ_STEPS);
+          if (step !== fx.paramValue(PEDAL.midFreq)) fx.sendParam(PEDAL.midFreq, step);
+          sendTone(PEDAL.mid, y);
+        }}
+      />
+    </div>
+    <div class="pedal-drive" class:slot-ghost={fx.isGhost}>
+      <DeviceSlider
+        value={pedalDrive}
+        title="Drive"
+        icon="drive"
+        orientation="vertical"
+        labelOrientation="vertical"
+        isGhost={fx.isGhost}
+        color={pedalInk}
+        min={0}
+        max={1}
+        onTap={() => fx.loadIfGhost()}
+        onInteraction={(v) => {
+          fx.sendParam(PEDAL.drive, v);
+          fx.sendParam(PEDAL.dryWet, v);
+        }}
+      />
     </div>
     <div class="pedal-type-buttons" style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
       {#each PEDAL_TYPE_OPTIONS as option}
@@ -388,6 +438,33 @@
 
   .pad {
     grid-column: span 2;
+  }
+
+  /* The Pedal: the tone pad on two slider tracks and Drive on one, on the
+     view's own tracks (subgrid), the type switch across all three. */
+  .pedal-column {
+    grid-column: span 3;
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    row-gap: var(--central-gap);
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .pedal-tone {
+    grid-column: span 2;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .pedal-drive {
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .pedal-column .pedal-type-buttons {
+    grid-column: 1 / -1;
   }
 
   /* A wrapper only: its controls are tracks of the grid itself. */
