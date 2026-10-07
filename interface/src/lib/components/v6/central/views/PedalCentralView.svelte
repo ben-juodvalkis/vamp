@@ -181,12 +181,15 @@
   // its height, either one alone at full height. Its grid track exists only
   // while it holds something.
   const showLeftColumn = $derived(showGuitarGain || showWah);
+  // The Guitar group's width in tracks, so its name can span all of it:
+  // Dirty/Clean, Gain over Wah when shown, and the pads' two.
+  const guitarSpan = $derived(showLeftColumn ? 4 : 3);
   // One unit per slider, two per XY pad, every seam its hairline: the
   // tracks share the width in that ratio and nothing has a fixed size
   // (user, 2026-10-05). A pad spans two slider tracks, so it is exactly two
-  // sliders and the gap between them. The Guitar section is `display:
-  // contents`, so each of its controls is a grid item of its own; Output and
-  // Mix split a pad-wide column with the same gap.
+  // sliders and the gap between them. The Pedal and Guitar groups are
+  // subgrids, so each of their controls is still one track of this grid;
+  // Output and Mix split a pad-wide column with the same gap.
   const SLIDER = 'minmax(0, 1fr)';
   const XY = 'minmax(0, 1fr) minmax(0, 1fr)'; // two slider tracks; a pad spans both
   const SEAM = 'auto';
@@ -207,6 +210,10 @@
   <!-- COLUMN 1: the Pedal — its tone stack on the EQ tile's pad beside
        one Drive/Mix slider, over its type switch laid out across. -->
   <div class="column pedal-column">
+    <span
+      class="group-eyebrow"
+      style="color: {pedalInk.primary};{fx.isGhost ? ' opacity: var(--opacity-ghost);' : ''}"
+    >Pedal</span>
     <div class="pedal-tone" class:slot-ghost={fx.isGhost}>
       <ToneCurvePad
         title="Tone"
@@ -267,7 +274,11 @@
 
   <!-- COLUMN 3: the Guitar rack — the Dirty/Clean switch, then its Gain
        over the Wah, then its Spring/Room pad over its Tremolo pad. -->
-  <div class="guitar-section">
+  <div class="guitar-section" style="grid-column: span {guitarSpan};">
+    <span
+      class="group-eyebrow"
+      style="color: {guitarInk.primary};{guitar.isGhost ? ' opacity: var(--opacity-ghost);' : ''}"
+    >Guitar Amp</span>
     <!-- Dirty / Clean, the amp's voice, lead the Guitar group (user,
          2026-10-06). -->
     <div class="column tone-stack" style={guitar.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
@@ -445,7 +456,7 @@
     grid-column: span 3;
     display: grid;
     grid-template-columns: subgrid;
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     row-gap: var(--central-gap);
     min-width: 0;
     min-height: 0;
@@ -466,9 +477,34 @@
     grid-column: 1 / -1;
   }
 
-  /* A wrapper only: its controls are tracks of the grid itself. */
+  /* The Guitar group on the view's own tracks (subgrid), like the Pedal:
+     its name across the top, its controls below, each still one track of
+     the grid. The span comes from `guitarSpan`. */
   .guitar-section {
-    display: contents;
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: auto minmax(0, 1fr);
+    row-gap: var(--central-gap);
+    min-width: 0;
+    min-height: 0;
+  }
+
+  /* The eyebrow every named group in a central view wears (EnvelopeGroup's),
+     across the group's full width. Its gap to the controls it names is the
+     control's own (--spacing-xs), not the view's. */
+  .group-eyebrow {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    margin-bottom: calc(var(--spacing-xs) - var(--central-gap));
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-align: center;
+    white-space: nowrap;
+  }
+  :global([data-grammar="flat"]) .group-eyebrow {
+    letter-spacing: normal;
+    font-weight: var(--font-weight-medium);
   }
 
   /* Output · Mix over Redux, each half the column's height; the two
