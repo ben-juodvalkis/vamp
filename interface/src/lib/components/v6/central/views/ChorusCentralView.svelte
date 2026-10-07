@@ -105,8 +105,34 @@
 	// named by the user 2026-10-07; unloaded, it draws 0 the same way.
 	const GLITCH_LOOP_PARAMS = {
 		mix: { index: 7, max: 100, default: 0 },
-		feedback: { index: 9, max: 120, default: 0 }
+		feedback: { index: 9, max: 120, default: 0 },
+		pitchLeft: { index: 5, default: 0 },
+		pitchRight: { index: 6, default: 0 }
 	};
+
+	// Pitch: Off · Up · Spread (user, 2026-10-07), written to Pitch L and
+	// Pitch R (params 5 and 6, ±24 st, integers) as raw semitones. The lit
+	// mode is the one both values match exactly; a pitch set by hand in
+	// Live lights none.
+	const GLITCH_PITCH_MODES = [
+		{ label: 'Off', left: 0, right: 0 },
+		{ label: 'Up', left: 12, right: 12 },
+		{ label: 'Spread', left: -12, right: 12 }
+	];
+	let glitchPitchLeft = $derived(
+		Math.round(glitchLoop.paramValue(GLITCH_LOOP_PARAMS.pitchLeft.index) ?? GLITCH_LOOP_PARAMS.pitchLeft.default)
+	);
+	let glitchPitchRight = $derived(
+		Math.round(glitchLoop.paramValue(GLITCH_LOOP_PARAMS.pitchRight.index) ?? GLITCH_LOOP_PARAMS.pitchRight.default)
+	);
+	let glitchPitchMode = $derived(
+		GLITCH_PITCH_MODES.findIndex((m) => m.left === glitchPitchLeft && m.right === glitchPitchRight)
+	);
+
+	function sendGlitchPitchMode(mode: (typeof GLITCH_PITCH_MODES)[number]) {
+		glitchLoop.sendParam(GLITCH_LOOP_PARAMS.pitchLeft.index, mode.left);
+		glitchLoop.sendParam(GLITCH_LOOP_PARAMS.pitchRight.index, mode.right);
+	}
 
 	let glitchLoopMix = $derived(
 		glitchLoop.paramValue(GLITCH_LOOP_PARAMS.mix.index) ?? GLITCH_LOOP_PARAMS.mix.default
@@ -137,38 +163,58 @@
 
 	<SectionDivider orientation="vertical" ink={glitchLoopInk.primary} />
 
-	<!-- GlitchLoop (virtual device): its Dry/Wet and Feedback, in Pitch
-	     Hack's old place (2026-10-06). -->
-	<div class="device-wrapper" class:slot-ghost={glitchLoop.isGhost}>
-		<DeviceSlider
-			value={glitchLoopMix}
-			title="GlitchLoop"
-			icon="mix"
-			orientation="vertical"
-			labelOrientation="horizontal"
-			isGhost={glitchLoop.isGhost}
-			color={glitchLoopInk}
-			min={0}
-			max={GLITCH_LOOP_PARAMS.mix.max}
-			onTap={() => glitchLoop.loadIfGhost()}
-			onInteraction={sendGlitchLoopMix}
-		/>
-	</div>
-
-	<div class="device-wrapper" class:slot-ghost={glitchLoop.isGhost}>
-		<DeviceSlider
-			value={glitchLoopFeedback}
-			title="Feedback"
-			icon="feedback"
-			orientation="vertical"
-			labelOrientation="horizontal"
-			isGhost={glitchLoop.isGhost}
-			color={glitchLoopInk}
-			min={0}
-			max={GLITCH_LOOP_PARAMS.feedback.max}
-			onTap={() => glitchLoop.loadIfGhost()}
-			onInteraction={sendGlitchLoopFeedback}
-		/>
+	<!-- GlitchLoop (virtual device): its Dry/Wet and Feedback side by side,
+	     over its Off · Up · Spread pitch bar, in Pitch Hack's old place
+	     (2026-10-06). -->
+	<div class="device-wrapper pad glitch-group" class:slot-ghost={glitchLoop.isGhost}>
+		<div class="glitch-sliders">
+			<div class="device-wrapper">
+				<DeviceSlider
+					value={glitchLoopMix}
+					title="GlitchLoop"
+					icon="mix"
+					orientation="vertical"
+					labelOrientation="horizontal"
+					isGhost={glitchLoop.isGhost}
+					color={glitchLoopInk}
+					min={0}
+					max={GLITCH_LOOP_PARAMS.mix.max}
+					onTap={() => glitchLoop.loadIfGhost()}
+					onInteraction={sendGlitchLoopMix}
+				/>
+			</div>
+			<div class="device-wrapper">
+				<DeviceSlider
+					value={glitchLoopFeedback}
+					title="Feedback"
+					icon="feedback"
+					orientation="vertical"
+					labelOrientation="horizontal"
+					isGhost={glitchLoop.isGhost}
+					color={glitchLoopInk}
+					min={0}
+					max={GLITCH_LOOP_PARAMS.feedback.max}
+					onTap={() => glitchLoop.loadIfGhost()}
+					onInteraction={sendGlitchLoopFeedback}
+				/>
+			</div>
+		</div>
+		<div
+			class="device-segmented glitch-pitch"
+			style="--btn-tint: {glitchLoopInk.primary};"
+			role="group"
+			aria-label="GlitchLoop pitch"
+		>
+			{#each GLITCH_PITCH_MODES as mode, i}
+				<button
+					class="device-segment text-sm font-medium"
+					class:active={!glitchLoop.isGhost && glitchPitchMode === i}
+					aria-label="GlitchLoop pitch {mode.label}"
+					aria-pressed={!glitchLoop.isGhost && glitchPitchMode === i}
+					onclick={() => (glitchLoop.isGhost ? glitchLoop.loadIfGhost() : sendGlitchPitchMode(mode))}
+				>{mode.label}</button>
+			{/each}
+		</div>
 	</div>
 
 	<SectionDivider orientation="vertical" ink={fxInk.primary} />
@@ -227,7 +273,8 @@
 <style>
 	.chorus-central-layout {
 		display: grid;
-		/* octave | glitchloop mix · feedback | blur | comb over phaser.
+		/* octave | glitchloop (mix · feedback over its pitch bar) | blur
+		   | comb over phaser.
 		   One equal track per slider, a seam its hairline; a pad (and the
 		   Octave panel, its fader and its tab) spans two tracks, so it is
 		   exactly two sliders and the gap between them, and every control
@@ -265,4 +312,33 @@
 		flex-direction: column;
 	}
 
+
+	/* GlitchLoop: its two sliders share the pad's two tracks, the pitch bar
+	   runs under both, one row a slider-label tall. */
+	.glitch-sliders {
+		flex: 1 1 0;
+		min-height: 0;
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: var(--central-gap);
+	}
+
+	.glitch-pitch {
+		flex: 0 0 auto;
+		height: 3rem;
+		margin-top: var(--central-gap);
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	/* The house segmented control divides with border-top; side by side it
+	   wants border-left. */
+	.glitch-pitch .device-segment + .device-segment {
+		border-top: 0;
+		border-left: 1px solid var(--line-faint);
+	}
+	.glitch-pitch .device-segment.active,
+	.glitch-pitch .device-segment.active + .device-segment {
+		border-left-color: transparent;
+	}
 </style>
