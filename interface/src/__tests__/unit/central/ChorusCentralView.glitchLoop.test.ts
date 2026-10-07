@@ -1,6 +1,7 @@
 /**
- * ChorusCentralView's GlitchLoop: one slider, its Dry/Wet (param 7, 0–100,
- * read off the running device 2026-10-06), in Pitch Hack's old place.
+ * ChorusCentralView's GlitchLoop: its Dry/Wet (param 7, 0–100, read off the
+ * running device 2026-10-06) and Feedback L (param 9, 0–120), in Pitch
+ * Hack's old place.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -20,12 +21,13 @@ import ChorusCentralView from '$lib/components/v6/central/views/ChorusCentralVie
 const TRACK = 'tracks/0';
 const GL = `${TRACK}/devices/0`;
 
-function glitchLoop(mix: number): DeviceRecord {
+function glitchLoop(mix: number, feedback = 0): DeviceRecord {
 	const params = new SvelteMap<string, ParamRecord>();
 	for (let i = 0; i < 10; i++) {
 		const paramPath = `${GL}/params/${i}`;
-		const [name, value] = i === 7 ? ['DryWet', mix] : [`P${i}`, 0];
-		params.set(paramPath, { paramPath, name, displayName: name, min: 0, max: 100, value, unit: '' });
+		const [name, value, max] =
+			i === 7 ? ['DryWet', mix, 100] : i === 9 ? ['Feedback L', feedback, 120] : [`P${i}`, 0, 100];
+		params.set(paramPath, { paramPath, name, displayName: name, min: 0, max, value, unit: '' });
 	}
 	return { devicePath: GL, name: 'GlitchLoop', className: 'MxDeviceAudioEffect', params, properties: new SvelteMap() };
 }
@@ -42,10 +44,11 @@ function seed(device: DeviceRecord) {
 	fxGrid.resetForTrackChange();
 }
 
-const glitchSlider = (container: HTMLElement) =>
+const sliderTitled = (container: HTMLElement, title: string) =>
 	Array.from(container.querySelectorAll<HTMLElement>('[role="slider"]')).find((s) =>
-		s.getAttribute('aria-label')?.startsWith('GlitchLoop:')
+		s.getAttribute('aria-label')?.startsWith(`${title}:`)
 	);
+const glitchSlider = (container: HTMLElement) => sliderTitled(container, 'GlitchLoop');
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -62,6 +65,16 @@ describe('ChorusCentralView GlitchLoop', () => {
 		expect(s).toBeDefined();
 		expect(s?.getAttribute('aria-valuenow')).toBe('30');
 		expect(s?.getAttribute('aria-valuemax')).toBe('100');
+	});
+
+	it('shows GlitchLoop Feedback L (param 9) on a 0–120 slider', async () => {
+		seed(glitchLoop(30, 46));
+		const { container } = render(ChorusCentralView);
+		await tick();
+		const s = sliderTitled(container, 'Feedback');
+		expect(s).toBeDefined();
+		expect(s?.getAttribute('aria-valuenow')).toBe('46');
+		expect(s?.getAttribute('aria-valuemax')).toBe('120');
 	});
 
 	it('no longer draws Pitch Hack controls', async () => {
