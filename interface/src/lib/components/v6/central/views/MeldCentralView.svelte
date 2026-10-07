@@ -167,8 +167,6 @@
           yValue={resonance}
           title="Filter"
           icon="filter"
-          xIcon="cutoff"
-          yIcon="resonance"
           onInteraction={handleFilterXYInteraction}
           color={meldInk}
         />

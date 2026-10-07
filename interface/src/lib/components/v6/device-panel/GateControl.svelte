@@ -9,11 +9,9 @@
     device: DeviceRecord | null;
     // Marks for what the control does (the central view passes them).
     icon?: ControlGlyphName;
-    xIcon?: ControlGlyphName;
-    yIcon?: ControlGlyphName;
   }
 
-  let { device, icon, xIcon, yIcon }: Props = $props();
+  let { device, icon }: Props = $props();
 
   // Parameter configuration for Gate
   const PARAM_CONFIG = {
@@ -51,8 +49,6 @@
       yValue={thresholdValue}
       title="Gate"
       {icon}
-      {xIcon}
-      {yIcon}
       {isGhost}
       {color}
       showCurve={false}

@@ -10,11 +10,9 @@
 		// Marks for what the control does (the central views pass them; the
 		// grid tile draws none).
 		icon?: ControlGlyphName;
-		xIcon?: ControlGlyphName;
-		yIcon?: ControlGlyphName;
 	}
 
-	let { device, icon, xIcon, yIcon }: Props = $props();
+	let { device, icon }: Props = $props();
 
 	// Parameter configuration for Redux2 effect
 	// X axis: param 8, range 0-1, default 0.5
@@ -58,8 +56,6 @@
 			{yValue}
 			title="Redux"
 			{icon}
-			{xIcon}
-			{yIcon}
 			{isGhost}
 			{color}
 			showCurve={false}

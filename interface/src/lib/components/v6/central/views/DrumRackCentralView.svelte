@@ -336,8 +336,6 @@
       yValue={vm.value('filterRes') ?? 0}
       title="Filter"
       icon="filter"
-      xIcon="cutoff"
-      yIcon="resonance"
       color={controlInk}
       isGhost={filterState === 'none'}
       onInteraction={(x, y) => {

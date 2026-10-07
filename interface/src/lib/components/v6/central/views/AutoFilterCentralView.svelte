@@ -215,7 +215,7 @@
 			xValue={1 - lfoTime}
 			yValue={lfoAmount}
 			title={lfoTitle}
-			icon="lfo" xIcon="rate" yIcon="depth"
+			icon="lfo"
 			isGhost={fx.isGhost}
 			showCurve={false}
 			color={lfoInk}

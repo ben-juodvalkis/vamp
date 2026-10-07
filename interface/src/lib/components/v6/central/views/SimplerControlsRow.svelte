@@ -107,8 +107,6 @@
       yValue={t('release', 0.5)}
       title="Time"
       icon="envelope"
-      xIcon="attack"
-      yIcon="release"
       {color}
       isGhost={timeState === 'none'}
       onInteraction={(x, y) => {

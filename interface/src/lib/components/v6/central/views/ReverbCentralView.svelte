@@ -718,7 +718,6 @@
                   xValue={attackX(irAttackShown, irAxis)}
                   yValue={decayY(irDecayShown, irAxis)}
                   yTop={IR_TOP}
-                  xIcon="attack"
                   isGhost={fx.isGhost}
                   color={currentColor}
                   onInteraction={(x, y) => {

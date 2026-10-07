@@ -1,8 +1,6 @@
 <script lang="ts">
   import { onDestroy, type Snippet } from 'svelte';
   import ControlGlyph, { type ControlGlyphName } from './ControlGlyph.svelte';
-  import ArrowRight from '@lucide/svelte/icons/arrow-right';
-  import ArrowUp from '@lucide/svelte/icons/arrow-up';
   import FilterCurve, { type CurveType } from './FilterCurve.svelte';
   import { familyScheme, type DeviceColorScheme } from '$lib/config/devicePresets';
   import { MIN_SEND_INTERVAL_MS } from '$lib/utils/sliderThrottle';
@@ -27,12 +25,9 @@
     // what the two axes do (the Reverb view's tail). Visual only — give it
     // `pointer-events: none`; the pad keeps the gesture.
     background?: Snippet;
-    // A mark for what the pad does, drawn above the title, and one for each
-    // axis: X in the bottom-right corner, Y in the top-left, each with its
-    // arrow. Visual only, the title still names the pad.
+    // A mark for what the pad does, drawn above the title. Visual only, the
+    // title still names the pad.
     icon?: ControlGlyphName;
-    xIcon?: ControlGlyphName;
-    yIcon?: ControlGlyphName;
     // How high the handle travels, as a fraction of the pad: a Y of 1 parks
     // it there, and a drag the pad's height × yTop long spans the full Y.
     // Under 1 when the top of the pad belongs to something else (the Reverb
@@ -57,8 +52,6 @@
     invertResonance = false,
     background,
     icon,
-    xIcon,
-    yIcon,
     yTop = 1
   }: Props = $props();
 
@@ -326,13 +319,6 @@
       </div>
     {/if}
 
-    <!-- Axis marks: what moving across and up does. -->
-    {#if xIcon}
-      <div class="axis-mark axis-x" aria-hidden="true"><ControlGlyph name={xIcon} strokeWidth={2.25} /><ArrowRight class="axis-arrow" strokeWidth={2} /></div>
-    {/if}
-    {#if yIcon}
-      <div class="axis-mark axis-y" aria-hidden="true"><ArrowUp class="axis-arrow" strokeWidth={2} /><ControlGlyph name={yIcon} strokeWidth={2.25} /></div>
-    {/if}
 
     <!-- Rate label (centered, below title) - only show when active (not ghost) -->
     {#if rateLabel && !isGhost}
@@ -446,57 +432,11 @@
     width: 2.6em;
     height: 2.6em;
   }
-  .title-icon :global(svg),
-  .axis-mark :global(svg) {
+  .title-icon :global(svg) {
     width: 100%;
     height: 100%;
   }
 
-  /* Axis marks sit in the corners the handle rarely parks in for long, small
-     and quieter than the title: a hint, not a label. */
-  .axis-mark {
-    position: absolute;
-    display: flex;
-    gap: 2px;
-    height: clamp(20px, 9cqw, 40px);
-    pointer-events: none;
-    user-select: none;
-    z-index: 1;
-    color: color-mix(in oklab, var(--xy-tint, var(--foreground)) 55%, transparent);
-  }
-  .axis-mark :global(svg) {
-    width: auto;
-    aspect-ratio: 1;
-  }
-  .axis-x {
-    right: 6px;
-    bottom: 6px;
-    flex-direction: row;
-  }
-  .axis-y {
-    left: 6px;
-    top: 6px;
-    flex-direction: column;
-    height: auto;
-    width: clamp(20px, 9cqw, 40px);
-  }
-  .axis-y :global(svg) {
-    width: 100%;
-    height: auto;
-  }
-  .axis-mark {
-    align-items: center;
-    opacity: 1;
-  }
-  .axis-x :global(.axis-arrow) {
-    height: 55%;
-  }
-  .axis-y :global(.axis-arrow) {
-    width: 55%;
-  }
-  :global([data-grammar="flat"]) .axis-mark {
-    color: var(--signal-dim);
-  }
 
   /* Ghost label stays legible (§5.6): full device tint (not white, not dimmed) and
      not part of the per-element ghost dim above — so an empty slot reads clearly at

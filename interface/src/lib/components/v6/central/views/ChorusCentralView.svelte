@@ -23,7 +23,7 @@
 	import SectionDivider from '../SectionDivider.svelte';
 	import OctavePanel from '../OctavePanel.svelte';
 	// What each control does, at a glance (user, 2026-10-06): ControlGlyph's
-	// drawn marks. A pad also marks its axes, X bottom-right, Y top-left.
+	// drawn marks.
 
 	const fx = useFxGridSlot('chorus');
 	const comb = useFxGridSlot('comb');
@@ -270,7 +270,7 @@
 		     preset's second pad, "Comb LFO", went with the plug-in (2026-10-05):
 		     the Max device has no LFO. -->
 		<div class="stack-cell" class:slot-ghost={comb.isGhost}>
-			<CombControl device={comb.device} icon="comb" xIcon="tune" yIcon="feedback" />
+			<CombControl device={comb.device} icon="comb" />
 		</div>
 
 		<SectionDivider orientation="horizontal" ink={phaserInk.primary} />
@@ -286,8 +286,6 @@
 						yValue={phaserFeedback}
 						title="Phaser"
 						icon="phaser"
-						xIcon="rate"
-						yIcon="feedback"
 						isGhost={phaser.isGhost}
 						showCurve={false}
 						color={phaserInk}

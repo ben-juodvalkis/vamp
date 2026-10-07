@@ -146,8 +146,6 @@
                   xValue={getNormalizedValue(item.x.macroIndex)}
                   yValue={getNormalizedValue(item.y.macroIndex)}
                   title={item.title}
-                  xIcon={glyphForName(item.x.name)}
-                  yIcon={glyphForName(item.y.name)}
                   color={ctlInk(i)}
                   onInteraction={(x, y) => {
                     handleSliderChange(item.x.macroIndex, x);

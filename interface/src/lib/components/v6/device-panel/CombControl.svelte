@@ -10,11 +10,9 @@
 		// Marks for what the control does (the central views pass them; the
 		// grid tile draws none).
 		icon?: ControlGlyphName;
-		xIcon?: ControlGlyphName;
-		yIcon?: ControlGlyphName;
 	}
 
-	let { device, icon, xIcon, yIcon }: Props = $props();
+	let { device, icon }: Props = $props();
 
 	// Comb (`Vamp Devices/Comb/Comb.amxd`), a Max rebuild of the owner's
 	// Zebrify "Dissonant" comb patch (2026-10-05). Its parameters, in Live's
@@ -60,8 +58,6 @@
 			{yValue}
 			title="Comb"
 			{icon}
-			{xIcon}
-			{yIcon}
 			{isGhost}
 			{color}
 			showCurve={false}

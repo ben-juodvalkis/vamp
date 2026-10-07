@@ -661,8 +661,6 @@
             yValue={resonanceValue}
             title="Filter"
             icon="filter"
-            xIcon="cutoff"
-            yIcon="resonance"
             onInteraction={handleFilterXYInteraction}
             color={driftInk}
           />

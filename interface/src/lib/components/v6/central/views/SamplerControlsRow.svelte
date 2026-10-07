@@ -150,8 +150,6 @@
         yValue={t('oscAmount', 0)}
         title="Osc"
         icon="oscillator"
-        xIcon="tune"
-        yIcon="depth"
         {color}
         isGhost={oscState === 'none'}
         onInteraction={(x, y) => {
@@ -173,8 +171,6 @@
         yValue={t('pitchEnvAmount', 0.5)}
         title="Pitch"
         icon="pitchdrop"
-        xIcon="attack"
-        yIcon="depth"
         {color}
         isGhost={pitchEnvState === 'none'}
         onInteraction={(x, y) => {
