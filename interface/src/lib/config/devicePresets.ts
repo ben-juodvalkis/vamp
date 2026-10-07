@@ -241,6 +241,20 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     curveType: 'eq',
     color: familyScheme('filter')
   },
+  bloom: {
+    // oeksound bloom, an AU tonal balancer, beside the Channel EQ in the EQ
+    // view (2026-10-06). The plug-in is the owner's, so the preset loads from
+    // the owner's Effect Patches folder; without the plug-in Live loads a
+    // placeholder. Live names it "bloom" and reports AuPluginDevice, read off
+    // the running device.
+    padScoped: true,
+    presetPath: '{effectPresetsBase}/bloom.aupreset',
+    defaultName: 'bloom',
+    expectedClassName: 'AuPluginDevice',
+    gridSlot: false,                    // Virtual device
+    centralViewGroup: 'eq',             // Belongs to EQCentralView
+    color: familyScheme('filter')       // A tonal balancer, the EQ's family
+  },
   drum: {
     // A Drum Buss belongs on a single pad as much as on the track — a
     // kick with its own is the ordinary case (user, 2026-09-11; the tile

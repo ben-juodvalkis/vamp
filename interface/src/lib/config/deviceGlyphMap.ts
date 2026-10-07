@@ -59,6 +59,7 @@ export const DEVICE_GLYPHS: Readonly<Record<string, DeviceGlyph>> = {
 
 	filter: 'filter',
 	eq: 'filter',
+	bloom: 'filter', // a tonal balancer, beside the EQ
 	wah: 'filter',
 
 	echo: 'space',

@@ -4,7 +4,8 @@
    *
    * Self-contained central view that queries its own slot state.
    * Renders immediately with ghost/loading/active states.
-   * Displays Channel EQ output gain slider.
+   * Displays Channel EQ output gain slider, and beside it oeksound bloom's
+   * Amount and four band levels (2026-10-06).
    *
    * NO {#if device} gate - always renders, handles its own state.
    * NO props required - queries selectedTrackStore directly.
@@ -15,8 +16,10 @@
   import { deviceInk } from '$lib/utils/formatters/trackFormatters';
   import { familyScheme } from '$lib/config/devicePresets';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+  import SectionDivider from '../SectionDivider.svelte';
 
   const fx = useFxGridSlot('eq');
+  const bloom = useFxGridSlot('bloom');
 
   // GRATICULE (§5.5): calibrated slot ink for live controls (deviceInk —
   // neutral-safe, byte no-op on the chokepoint's already-inked scheme).
@@ -64,10 +67,30 @@
   function toggleLowCut() {
     fx.sendParam(PARAM_CONFIG.lowCut, lowCutEnabled ? 0 : 1);
   }
+
+  let bloomInk = $derived({
+    primary: deviceInk(bloom.color.primary, paintModeReactive()),
+    secondary: bloom.color.secondary,
+    accent: deviceInk(bloom.color.accent, paintModeReactive())
+  });
+
+  // bloom's parameters, read off the running plug-in (2026-10-06): every one
+  // 0..1. Amount rests at 0.5; the four band levels ("level N (main/ch1)")
+  // rest at 0.5, which is 0 dB, so they fill from the centre.
+  const BLOOM_SLIDERS = [
+    { index: 1, title: 'Amount', icon: 'depth', bipolar: false },
+    { index: 2, title: 'Lo', icon: 'boom', bipolar: true },
+    { index: 3, title: 'Mid', icon: 'tone', bipolar: true },
+    { index: 4, title: 'Hi Mid', icon: 'tone', bipolar: true },
+    { index: 5, title: 'Hi', icon: 'noise', bipolar: true }
+  ] as const;
+  const BLOOM_REST = 0.5;
 </script>
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
-<div class="h-full w-full flex flex-col items-center justify-center p-(--central-inset) relative" class:slot-ghost={fx.isGhost}>
+<div class="h-full w-full flex p-(--central-inset) gap-(--central-gap)">
+<!-- Channel EQ: Low Cut, the name, Output. -->
+<div class="flex-1 min-w-0 h-full flex flex-col items-center justify-center relative" class:slot-ghost={fx.isGhost}>
   <!-- Centered EQ label matching DeviceXY standard -->
   <div
     class="eq-title absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-2xl font-bold uppercase tracking-wider pointer-events-none select-none z-10 dark:text-white/90 light:text-foreground/80"
@@ -108,11 +131,45 @@
 
 </div>
 
+<SectionDivider orientation="vertical" ink={bloomInk.primary} />
+
+<!-- bloom: Amount, then its four band levels. A tap on a ghost loads it; a
+     drag loads it and writes. -->
+<div class="bloom-group h-full flex gap-(--central-gap)" class:slot-ghost={bloom.isGhost}>
+  {#each BLOOM_SLIDERS as s (s.index)}
+    <div class="bloom-slider h-full min-w-0">
+      <DeviceSlider
+        value={bloom.paramValue(s.index) ?? BLOOM_REST}
+        title={s.title}
+        icon={s.icon}
+        orientation="vertical"
+        labelOrientation="horizontal"
+        centerOrigin={s.bipolar}
+        centerValue={s.bipolar ? BLOOM_REST : undefined}
+        isGhost={bloom.isGhost}
+        color={bloom.isGhost ? ghostInk : bloomInk}
+        min={0}
+        max={1}
+        onTap={() => bloom.loadIfGhost()}
+        onInteraction={(v) => bloom.sendParam(s.index, v)}
+      />
+    </div>
+  {/each}
+</div>
+</div>
+
 <style>
   /* GRATICULE: control labels are authored mixed-case ("Low Cut", "Output")
      and up-cased here for the HUD voice. */
   .eq-label {
     text-transform: uppercase;
+  }
+
+  .bloom-group {
+    flex: 0 0 auto;
+  }
+  .bloom-slider {
+    width: 5rem;
   }
 
   /* ---- Live skin (flat grammar): the centred "EQ" is Live's device-name
