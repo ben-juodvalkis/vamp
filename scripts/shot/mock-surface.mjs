@@ -265,6 +265,11 @@ export async function startMockSurface({
 			send(ws, '/looping/v3/permute/step', [devicePath, 'mute', mute]);
 			send(ws, '/looping/v3/permute/step', [devicePath, 'pitch', pitch]);
 		}
+		// One still frame per Tone Shaper, as its device would send through the
+		// bridge; the view draws nothing of the spectrum or the curve without.
+		for (const { devicePath, levels, gains } of resolved.toneShaperFrames ?? []) {
+			send(ws, '/toneshaper/frame', [devicePath, ...levels, ...gains]);
+		}
 		for (const { trackPath, slotIdx, isAudio, lengthBeats, status } of resolved.playing ?? []) {
 			send(ws, '/looping/v3/track/playing_slot', [
 				trackPath,

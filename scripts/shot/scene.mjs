@@ -406,6 +406,8 @@ const DEVICE_CLASS_NAMES = {
 	'Bass Amp': 'AudioEffectGroupDevice',
 	// The Octave panel's slot (Chorus view) is a Max device, matched the same way.
 	Octave: 'MxDeviceAudioEffect',
+	// So is the Tone Shaper's (EQ view).
+	"Ben's Adaptive Tone Shaper": 'MxDeviceAudioEffect',
 	// The Guitar rack is an Audio Effect Rack; without the entry its slot
 	// reads ghost and the Pedal view's Guitar section draws nothing live.
 	Guitar: 'AudioEffectGroupDevice',
@@ -723,6 +725,23 @@ const DEVICE_PARAMS = {
 		mute: [1, 1, 0, 1, 1, 1, 0, 1],
 		pitch: [0, 0, 1, 0, 0, 1, 0, 0]
 	}),
+	// Read off the running device (2026-10-07). Amount up, a lows boost and a
+	// highs cut, the hi-mids moved down, ECO on, so every control reads
+	// off its rest.
+	"Ben's Adaptive Tone Shaper": [
+		['Device On', 'Device On', 0, 1, 1, ''],
+		['Amount', 'Amount', 0, 10, 6.5, ''],
+		['Lows', 'Lows', -10, 10, 3, ''],
+		['Lo-mids', 'Lo-mids', -10, 10, 0, ''],
+		['Hi-mids', 'Hi-mids', -10, 10, -1.5, ''],
+		['Highs', 'Highs', -10, 10, -4, ''],
+		['Latency', 'Latency', 0, 1, 1, ''],
+		['Quality', 'Quality', 0, 1, 1, ''],
+		['Lows Hz', 'Lows Hz', 27, 350, 100, 'Hz'],
+		['Lo-mids Hz', 'Lo-mids Hz', 62, 1000, 350, 'Hz'],
+		['Hi-mids Hz', 'Hi-mids Hz', 750, 10000, 2200, 'Hz'],
+		['Highs Hz', 'Highs Hz', 2500, 20000, 6300, 'Hz']
+	],
 	'Auto Filter': [
 		['Frequency', 'Freq', 20, 20000, 8400, 'Hz'],
 		['Resonance', 'Res', 0, 1, 0.28, ''],
@@ -907,7 +926,10 @@ const DEFAULT_TRACKS = [
 		// Pad 50 — one of the pads the playing clip draws — carries an Echo
 		// on its own chain (issue #491): hold it and the grid's Echo tile
 		// reads active while every other tile reads ghost.
-		devices: [{ name: 'Drum-Rack', padChains: { 50: ['Echo'] } }, 'Compressor', 'Auto Pan Legacy'],
+		// The Tone Shaper is here so the EQ view (shot on this, the default
+		// track) photographs its graph live: handles off their rests, and a
+		// frame (`toneShaperFrames`) for the spectrum and the curve.
+		devices: [{ name: 'Drum-Rack', padChains: { 50: ['Echo'] } }, 'Compressor', 'Auto Pan Legacy', "Ben's Adaptive Tone Shaper"],
 		clips: {
 			0: { name: 'Kick 4/4', length: 4, state: SLOT.playing },
 			1: { name: 'Break A', length: 8 },
@@ -1418,13 +1440,28 @@ export function buildDefaultScene({ trackCount = DEFAULT_TRACKS.length } = {}) {
 	// Mute on step 7 (an OFF step on Bass), pitch on step 3 (an ON one),
 	// so one shot photographs the marker on both.
 	const permuteSteps = [];
+	// Every Tone Shaper's frame (`/toneshaper/frame`): the spectrum it hears
+	// and the curve it applies, which its device sends thirty times a second
+	// and which no view shows without — one still frame each, a pink-ish
+	// slope with a body bump against a curve that leans the other way.
+	const toneShaperFrames = [];
 	roster.forEach((track, index) => {
 		const trackPath = `tracks/${index}`;
 		pushTrack(treeArgs, trackPath, track);
 		pushDevices(treeArgs, trackPath, track.devices ?? [], deviceProperties, padRacks);
 		(track.devices ?? []).forEach((entry, deviceIndex) => {
-			if ((typeof entry === 'string' ? entry : entry.name) === 'Permute') {
+			const name = typeof entry === 'string' ? entry : entry.name;
+			if (name === 'Permute') {
 				permuteSteps.push({ devicePath: `${trackPath}/devices/${deviceIndex}`, mute: 6, pitch: 2 });
+			}
+			if (name === "Ben's Adaptive Tone Shaper") {
+				const bands = Array.from({ length: 59 }, (_, b) => b);
+				const bump = (b, at, width) => Math.exp(-(((b - at) / width) ** 2));
+				toneShaperFrames.push({
+					devicePath: `${trackPath}/devices/${deviceIndex}`,
+					levels: bands.map((b) => -30 - b * 0.6 + 9 * bump(b, 14, 5) + 4 * bump(b, 36, 4)),
+					gains: bands.map((b) => 1.5 - 4 * bump(b, 14, 6) + 3 * bump(b, 44, 7) - 2.5 * bump(b, 36, 4))
+				});
 			}
 		});
 		pushSlots(treeArgs, trackPath, track.clips);
@@ -1532,6 +1569,7 @@ export function buildDefaultScene({ trackCount = DEFAULT_TRACKS.length } = {}) {
 		treeArgs,
 		playing,
 		permuteSteps,
+		toneShaperFrames,
 		clipLengths,
 		audioClips,
 		deviceProperties,

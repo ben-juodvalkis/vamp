@@ -4,8 +4,8 @@
    *
    * Self-contained central view that queries its own slot state.
    * Renders immediately with ghost/loading/active states.
-   * Displays Channel EQ output gain slider, and beside it oeksound bloom's
-   * Amount and four band levels (2026-10-06).
+   * Displays Channel EQ output gain slider, and beside it Ben's Adaptive Tone
+   * Shaper's graph (2026-10-07; oeksound bloom's sliders the day before).
    *
    * NO {#if device} gate - always renders, handles its own state.
    * NO props required - queries selectedTrackStore directly.
@@ -16,10 +16,13 @@
   import { deviceInk } from '$lib/utils/formatters/trackFormatters';
   import { familyScheme } from '$lib/config/devicePresets';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+  import { toneShaperStore } from '$lib/stores/v3/toneShaper.svelte';
   import SectionDivider from '../SectionDivider.svelte';
+  import ToneShaperGraph from './eq/ToneShaperGraph.svelte';
+  import { TS_PARAM, TS_HANDLE } from './eq/toneShaper';
 
   const fx = useFxGridSlot('eq');
-  const bloom = useFxGridSlot('bloom');
+  const ts = useFxGridSlot('toneShaper');
 
   // GRATICULE (§5.5): calibrated slot ink for live controls (deviceInk —
   // neutral-safe, byte no-op on the chokepoint's already-inked scheme).
@@ -68,30 +71,34 @@
     fx.sendParam(PARAM_CONFIG.lowCut, lowCutEnabled ? 0 : 1);
   }
 
-  let bloomInk = $derived({
-    primary: deviceInk(bloom.color.primary, paintModeReactive()),
-    secondary: bloom.color.secondary,
-    accent: deviceInk(bloom.color.accent, paintModeReactive())
+  let tsInk = $derived({
+    primary: deviceInk(ts.color.primary, paintModeReactive()),
+    secondary: ts.color.secondary,
+    accent: deviceInk(ts.color.accent, paintModeReactive())
   });
 
-  // bloom's parameters, read off the running plug-in (2026-10-06): every one
-  // 0..1. The four band levels ("level N (main/ch1)") rest at 0.5, which is
-  // 0 dB, so they fill from the centre. `rest` is what an unloaded bloom
-  // draws: Amount 0, the user's call (2026-10-06), the bands flat.
-  const BLOOM_CENTER = 0.5;
-  const BLOOM_SLIDERS = [
-    { index: 1, title: 'Amount', icon: 'depth', bipolar: false, rest: 0 },
-    { index: 2, title: 'Lo', icon: 'lowshelf', bipolar: true, rest: BLOOM_CENTER },
-    { index: 3, title: 'Mid', icon: 'lowbell', bipolar: true, rest: BLOOM_CENTER },
-    { index: 4, title: 'Hi Mid', icon: 'highbell', bipolar: true, rest: BLOOM_CENTER },
-    { index: 5, title: 'Hi', icon: 'highshelf', bipolar: true, rest: BLOOM_CENTER }
-  ] as const;
+  // The Tone Shaper's parameters in their own units (`TS_PARAM`). Unloaded
+  // it draws Amount 0 (the user's call for bloom, 2026-10-06), the handles
+  // flat at their rest centers, ZERO on, as the device loads.
+  let tsAmount = $derived(ts.paramValue(TS_PARAM.amount) ?? 0);
+  let tsLevels = $derived(TS_HANDLE.map((_, i) => ts.paramValue(TS_PARAM.levels[i]) ?? 0));
+  let tsHz = $derived(TS_HANDLE.map((h, i) => ts.paramValue(TS_PARAM.hz[i]) ?? h.rest));
+  let tsZero = $derived((ts.paramValue(TS_PARAM.latency) ?? 1) >= 0.5);
+  let tsEco = $derived((ts.paramValue(TS_PARAM.quality) ?? 0) >= 0.5);
+  let tsFrame = $derived(ts.devicePath ? toneShaperStore.get(ts.devicePath) : undefined);
+
+  // Tell the bridge which device's frames to relay: this one's while the
+  // view is up, none when it goes.
+  $effect(() => {
+    toneShaperStore.watch(ts.devicePath ?? '');
+    return () => toneShaperStore.watch('');
+  });
 </script>
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
 <div class="h-full w-full flex p-(--central-inset) gap-(--central-gap)">
 <!-- Channel EQ: Low Cut, the name, Output. -->
-<div class="flex-1 min-w-0 h-full flex flex-col items-center justify-center relative" class:slot-ghost={fx.isGhost}>
+<div class="eq-group h-full flex flex-col items-center justify-center relative" class:slot-ghost={fx.isGhost}>
   <!-- Centered EQ label matching DeviceXY standard -->
   <div
     class="eq-title absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-2xl font-bold uppercase tracking-wider pointer-events-none select-none z-10 dark:text-white/90 light:text-foreground/80"
@@ -132,32 +139,25 @@
 
 </div>
 
-<SectionDivider orientation="vertical" ink={bloomInk.primary} />
+<SectionDivider orientation="vertical" ink={tsInk.primary} />
 
-<!-- bloom: its name over Amount and its four band levels. A tap on a ghost
-     loads it; a drag loads it and writes. -->
-<div class="bloom-group h-full flex flex-col" class:slot-ghost={bloom.isGhost}>
-  <span class="bloom-title" style="color: {bloomInk.primary};">bloom</span>
-  <div class="bloom-sliders flex-1 min-h-0 flex gap-(--central-gap)">
-  {#each BLOOM_SLIDERS as s (s.index)}
-    <div class="bloom-slider h-full min-w-0">
-      <DeviceSlider
-        value={bloom.paramValue(s.index) ?? s.rest}
-        title={s.title}
-        icon={s.icon}
-        orientation="vertical"
-        labelOrientation="horizontal"
-        centerOrigin={s.bipolar}
-        centerValue={s.bipolar ? BLOOM_CENTER : undefined}
-        isGhost={bloom.isGhost}
-        color={bloom.isGhost ? ghostInk : bloomInk}
-        min={0}
-        max={1}
-        onTap={() => bloom.loadIfGhost()}
-        onInteraction={(v) => bloom.sendParam(s.index, v)}
-      />
-    </div>
-  {/each}
+<!-- The Tone Shaper: its name over its graph. A tap on a ghost loads it; a
+     drag loads it and writes. -->
+<div class="ts-group h-full flex-1 min-w-0 flex flex-col" class:slot-ghost={ts.isGhost}>
+  <span class="ts-title" style="color: {tsInk.primary};">Tone Shaper</span>
+  <div class="flex-1 min-h-0">
+    <ToneShaperGraph
+      frame={tsFrame}
+      amount={tsAmount}
+      levels={tsLevels}
+      hz={tsHz}
+      zero={tsZero}
+      eco={tsEco}
+      color={ts.isGhost ? ghostInk : tsInk}
+      isGhost={ts.isGhost}
+      onWrite={(index, value) => ts.sendParam(index, value)}
+      onTap={() => ts.loadIfGhost()}
+    />
   </div>
 </div>
 </div>
@@ -169,25 +169,26 @@
     text-transform: uppercase;
   }
 
-  .bloom-group {
-    flex: 0 0 auto;
+  /* The Channel EQ keeps a fixed width; the graph takes the rest. */
+  .eq-group {
+    flex: 0 0 16rem;
+  }
+  .ts-group {
     gap: var(--spacing-xs);
   }
-  /* The eyebrow every named group in a central view wears (EnvelopeGroup's).
-     "bloom" is the plug-in's own lower-case name, so it is not up-cased. */
-  .bloom-title {
+  /* The eyebrow every named group in a central view wears (EnvelopeGroup's). */
+  .ts-title {
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.05em;
+    text-transform: uppercase;
     text-align: center;
     white-space: nowrap;
   }
-  :global([data-grammar="flat"]) .bloom-title {
+  :global([data-grammar="flat"]) .ts-title {
     letter-spacing: normal;
+    text-transform: none;
     font-weight: var(--font-weight-medium);
-  }
-  .bloom-slider {
-    width: 5rem;
   }
 
   /* ---- Live skin (flat grammar): the centred "EQ" is Live's device-name

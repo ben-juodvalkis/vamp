@@ -88,7 +88,7 @@ iPad / browser  ⇄  bridge (WebSocket ⇄ OSC)  ⇄  control surface inside Liv
 - **`surface/`**: a Python control surface Live loads as "Vamp". It does everything that touches
   Live.
 - **`Vamp Devices/`**: the Max for Live devices the app loads for you (Permute, the wheels,
-  Random Start, the recorder). It is the one folder you add to Live's sidebar.
+  Random Start, the recorder, the Tone Shaper). It is the one folder you add to Live's sidebar.
 - **`owner/`**: parts of the author's own rig (a macOS accessibility helper, a menu-bar app, a
   Max patch for the Ableton Move, test probes). They are switched off unless
   `config/constants.local.json` turns them on; nothing here needs them.

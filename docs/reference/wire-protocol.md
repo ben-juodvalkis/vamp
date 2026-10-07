@@ -1117,6 +1117,25 @@ Live's temp project for an unsaved one.
 | `/capture/error` | Device→UI | `code:string, detail:string` | A refused start. `no-project-folder`: the set is unsaved and no temp project was named; `sfrecord-missing`: the patch has lost its `sfrecord~`. The UI shows it in the error banner, ends its pending start and turns back down the Send A the tap turned up. |
 | `/capture/meter` | Device→UI | `level:float` | 0–1. The device's meter chain is unwired today, so it never arrives. |
 
+### 2.16 Tone Shaper frames (Vamp Devices/ToneShaper, 2026-10-07)
+
+Ben's Adaptive Tone Shaper's graph in the EQ view (`ToneShaperGraph`) draws
+two things the LOM never carries: the spectrum the device hears and the curve
+it is applying. The device sends them itself, over its own UDP port
+(`osc.toneShaper`: every instance sends to 11032; nothing goes back), the way
+the capture recorder has one. Its eleven parameters (Amount, the four tone
+levels, Latency, Quality, the four centers in Hz; `TS_PARAM` in
+`views/eq/toneShaper.ts`) ride `param/value` and `param/set` like any
+device's. The device names itself by the path grammar of §1
+(`tracks/0/devices/1`), read from Live once a second; an instance inside a
+drum pad's chain names Live's `chains/N` form, which no view matches, so a
+pad's Tone Shaper has its handles on the iPad but not its spectrum.
+
+| Address | Dir | Args | Semantics |
+| ------- | --- | ---- | --------- |
+| `/toneshaper/frame` | Device→UI | `devicePath:string, levels:float×59, gains:float×59` | Thirty a second from every instance: the input's level and the gain being applied, per sixth-octave band from 25 Hz to 20 kHz, in dB (levels are relative; the graph scales them to the loudest). **Relayed only for a watched path** (`interface/bridge/handlers/toneShaper.js`); the rest stop at the bridge, unlogged. ~620 bytes a datagram. |
+| `/toneshaper/watch` | UI→Bridge | `devicePath:string` | **Bridge-terminated.** This client is looking at that device's graph; `''` for none. One per client; a client's watch ends with its socket. The EQ view sends it as it mounts and whenever its slot's device changes, and `''` as it unmounts. |
+
 ## 3. state/full tree args layout
 
 `tree_args` is an enum-prefixed sequence of records. Each record
