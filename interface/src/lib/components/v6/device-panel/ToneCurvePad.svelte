@@ -26,18 +26,21 @@
     ariaLabel?: string;
     // The curve's ink; FilterCurve's own (the filter family's) when unset.
     curveColor?: string;
+    // Where the curve draws the mid band for a midFreq of 0..1. The EQ's
+    // default sweeps 100 Hz..10 kHz.
+    midFreqHz?: (midFreq: number) => number;
     onTap?: () => void;
     onLow?: (value: number) => void;
     onHigh?: (value: number) => void;
     onMid?: (freq: number, gain: number) => void;
   }
 
-  let { title, low, mid, midFreq, high, isGhost = false, color, ariaLabel, curveColor, onTap, onLow, onHigh, onMid }: Props = $props();
+  let { title, low, mid, midFreq, high, isGhost = false, color, ariaLabel, curveColor, midFreqHz = (f) => Math.pow(10, 2 + f * 2), onTap, onLow, onHigh, onMid }: Props = $props();
 
   // The curve is a picture of the three bands, ±12 dB across the range.
   let bands = $derived([
     { freq: 120, gain: (low - 0.5) * 24, q: 0.71, type: 'lowshelf' },
-    { freq: Math.pow(10, 2 + midFreq * 2), gain: (mid - 0.5) * 24, q: 0.5, type: 'peak' },
+    { freq: midFreqHz(midFreq), gain: (mid - 0.5) * 24, q: 0.5, type: 'peak' },
     { freq: 4500, gain: (high - 0.5) * 24, q: 0.4, type: 'highshelf' }
   ]);
 

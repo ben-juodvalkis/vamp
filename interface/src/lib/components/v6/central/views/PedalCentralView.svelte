@@ -148,10 +148,12 @@
   // Indices and ranges measured off the running device: 2 Drive 0..1,
   // 4 Bass / 5 Mid / 6 Treble -1..1 (0 flat), 7 Mid Freq quantized
   // Low · Mid · High, 9 Dry/Wet 0..1. The pad's X snaps to Mid Freq's three
-  // steps; the curve's mid band sits at 100 Hz / 1 kHz / 10 kHz for them,
-  // a picture only — Live does not say what the three frequencies are.
+  // steps; the curve draws them an octave apart, 315 Hz / 630 Hz /
+  // 1.26 kHz, all inside the pad's middle third (user, 2026-10-07) — a
+  // picture only: Live does not say what the three frequencies are.
   const PEDAL = { drive: 2, bass: 4, mid: 5, treble: 6, midFreq: 7, dryWet: 9 } as const;
   const MID_FREQ_STEPS = 2;
+  const pedalMidFreqHz = (f: number) => 630 * Math.pow(2, (f - 0.5) * 2);
   const toneValue = (index: number) => ((fx.paramValue(index) ?? 0) + 1) / 2;
   const sendTone = (index: number, normalized: number) => fx.sendParam(index, normalized * 2 - 1);
   let pedalMidFreq = $derived((fx.paramValue(PEDAL.midFreq) ?? 1) / MID_FREQ_STEPS);
@@ -216,6 +218,7 @@
         isGhost={fx.isGhost}
         color={pedalInk}
         curveColor={pedalInk.primary}
+        midFreqHz={pedalMidFreqHz}
         onTap={() => fx.loadIfGhost()}
         onLow={(v) => sendTone(PEDAL.bass, v)}
         onHigh={(v) => sendTone(PEDAL.treble, v)}
