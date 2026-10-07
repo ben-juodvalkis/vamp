@@ -13,11 +13,10 @@
 	 * to. With the mixer's Send Level off no meter frame comes and the fill
 	 * stays empty; the line still says where the fader is.
 	 *
-	 * **Legibility over the fill.** The word is drawn TWICE, the inverse
-	 * copy clipped to exactly the filled region and inked for on-fill —
-	 * the same trick `DeviceSlider` uses for its labels, so a word the
-	 * level has swept past flips ink at the boundary instead of
-	 * disappearing into the bright end of the ramp.
+	 * **Dim on purpose.** The meter is a glance, not a readout: a veil
+	 * over the ramp lets only part of its colour through, so a moving fill
+	 * never pulls the eye off the set. That dimness is also why the word is
+	 * drawn once in plain ink — it reads over the dim fill as over the well.
 	 */
 	import { totalmixMeters, totalmixStore } from '$lib/stores/v3/totalmix.svelte';
 	import { dbToFraction, MIN_DB } from '$lib/utils/totalmixScale';
@@ -92,16 +91,6 @@
 		>
 			<div class="tmh-mask" style={`width: ${100 - meter}%;`}></div>
 			<span class="tmh-label">{label}</span>
-			<!-- Inverse copy, clipped to the filled region — the same trick
-			     `DeviceSlider` uses, turned on its
-			     side. `inset(0 <uncovered>% 0 0)` measures from the RIGHT,
-			     which is what puts the flip exactly on the fill's edge, so
-			     a word the level has swept past changes ink mid-letter
-			     instead of disappearing into the bright end of the ramp. -->
-			<span
-				class="tmh-label tmh-label--inverse"
-				style={`clip-path: inset(0 ${100 - meter}% 0 0);`}
-				aria-hidden="true">{label}</span>
 			<!-- The fader's position, over everything so the meter never hides it. -->
 			{#if known}
 				<div class="tmh-fader" style={`left: ${level}%;`} aria-hidden="true"></div>
@@ -115,8 +104,8 @@
 	.tmh-strip.is-unavailable .tmh-item {
 		background: var(--surface-well);
 	}
+	.tmh-strip.is-unavailable .tmh-item::before,
 	.tmh-strip.is-unavailable .tmh-mask,
-	.tmh-strip.is-unavailable .tmh-label--inverse,
 	.tmh-strip.is-unavailable .tmh-fader {
 		display: none;
 	}
@@ -159,6 +148,16 @@
 			var(--act-monitor) 100%
 		);
 	}
+	/* The veil that keeps the meter quiet: the well's own colour over the
+	   whole ramp, so the fill shows about 40% of it. One number to turn up
+	   or down. Painted first, so the mask, the word and the line sit over it. */
+	.tmh-item::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: var(--surface-well);
+		opacity: 0.6;
+	}
 	/* Eats the ramp from the right. `.tmh-mask` is the 30Hz node — the width
 	   write is what animates; keep ONLY the sanctioned 0.08s smoothing. */
 	.tmh-mask {
@@ -170,7 +169,7 @@
 		transition: width 0.08s linear;
 	}
 	/* The fader line: 2px of label ink with a 1px dark edge either side, so
-	   it reads on the empty well and on the bright end of either ramp. Moves
+	   it reads on the empty well and on the fill alike. Moves
 	   only when a fader does, so no transition. `translateX(-50%)` centres it
 	   on its level; at 0% and 100% the item's overflow clips half of it. */
 	.tmh-fader {
@@ -187,9 +186,7 @@
 		pointer-events: none;
 	}
 
-	/* Centred, so the flip lands mid-word as the level crosses the middle —
-	   which is the whole reason the two-copy trick is worth its second
-	   element. Never wrap: the bar is one line tall. */
+	/* Centred. Never wrap: the bar is one line tall. */
 	.tmh-label {
 		position: absolute;
 		inset: 0;
@@ -205,13 +202,6 @@
 		user-select: none;
 		color: var(--foreground);
 	}
-	/* On-fill ink: dark, so it reads against the bright end of the ramp.
-	   Sits above the base copy; the clip is inline. */
-	.tmh-label--inverse {
-		color: var(--card);
-		z-index: 1;
-	}
-
 	/* Live skin: Live's VU ramp instead of the act-monitor one, squarer
 	   corners, lighter label. The ramp spans the track, so no height maths. */
 	:global([data-grammar="flat"]) .tmh-item {
@@ -230,11 +220,6 @@
 	:global([data-grammar="flat"]) .tmh-label {
 		font-weight: var(--font-weight-medium);
 	}
-	/* Live's dark-on-chosen ink for the part the level has covered. */
-	:global([data-grammar="flat"]) .tmh-label--inverse {
-		color: var(--flat-on-fg);
-	}
-
 	/* Unavailable, flat: the cookbook's disabled rule — the same field in
 	   the disabled ink, never an opacity dim — and no VU ramp on a bar that
 	   has no level to show. */
