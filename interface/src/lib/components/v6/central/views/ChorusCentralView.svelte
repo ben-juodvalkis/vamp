@@ -98,9 +98,11 @@
 	// ── GlitchLoop (the owner's PitchLoop89 build, Max) ────────────────────
 	// Took Pitch Hack's place 2026-10-06; one slider for now, more to come.
 	// Dry/Wet is param 7, 0–100, read off the running device by the user
-	// (2026-10-06). The device opens at 50, PitchLoop89's own default.
+	// (2026-10-06). The device opens at 50, PitchLoop89's own default, but
+	// an unloaded slot draws 0, the user's call (2026-10-06): an empty slot
+	// adds nothing.
 	const GLITCH_LOOP_PARAMS = {
-		mix: { index: 7, max: 100, default: 50 }
+		mix: { index: 7, max: 100, default: 0 }
 	};
 
 	let glitchLoopMix = $derived(
@@ -125,7 +127,7 @@
 
 	<!-- GlitchLoop (virtual device): its Dry/Wet, in Pitch Hack's old place
 	     (2026-10-06). -->
-	<div class="device-wrapper">
+	<div class="device-wrapper" class:slot-ghost={glitchLoop.isGhost}>
 		<DeviceSlider
 			value={glitchLoopMix}
 			title="GlitchLoop"
@@ -144,7 +146,7 @@
 	<SectionDivider orientation="vertical" ink={fxInk.primary} />
 
 	<!-- Blur's dry/wet (the `smudge` slot; virtual device - handles its own slot state) -->
-	<div class="device-wrapper">
+	<div class="device-wrapper" class:slot-ghost={smudge.isGhost}>
 		<SmudgeControl device={smudge.device} icon="blur" />
 	</div>
 
@@ -159,7 +161,7 @@
 		<!-- Comb (virtual device - handles its own slot state). The Zebrify
 		     preset's second pad, "Comb LFO", went with the plug-in (2026-10-05):
 		     the Max device has no LFO. -->
-		<div class="stack-cell">
+		<div class="stack-cell" class:slot-ghost={comb.isGhost}>
 			<CombControl device={comb.device} icon="comb" xIcon="tune" yIcon="feedback" />
 		</div>
 
@@ -168,7 +170,7 @@
 		<!-- Phaser (virtual device) — X: LFO speed, Y: feedback. Wrapped in
 		     BaseDeviceControl like Blur and Comb so it carries the same
 		     move-to-first / move-to-last arrows. -->
-		<div class="stack-cell">
+		<div class="stack-cell" class:slot-ghost={phaser.isGhost}>
 			<BaseDeviceControl slotKey="phaser" device={phaser.device} title="Phaser" disableCentralViewOnTap={true} showMoveToTop={true} showMoveToEnd={true}>
 				{#snippet children({ handleTap })}
 					<DeviceXY

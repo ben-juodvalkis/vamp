@@ -71,10 +71,9 @@
   <!-- Centered EQ label matching DeviceXY standard -->
   <div
     class="eq-title absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-2xl font-bold uppercase tracking-wider pointer-events-none select-none z-10 dark:text-white/90 light:text-foreground/80"
-    style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}
   >EQ</div>
 
-  <div class="w-full h-full flex justify-between" style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
+  <div class="w-full h-full flex justify-between">
     <!-- Left: Low Cut Toggle -->
     <div class="w-24 flex flex-col items-center gap-2">
       <div class="eq-label text-xs text-muted-foreground font-medium">Low Cut</div>

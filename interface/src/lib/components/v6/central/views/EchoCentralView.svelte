@@ -231,7 +231,8 @@
 	</svg>
 {/snippet}
 
-<div class="echo-layout">
+<!-- An unloaded Echo dims as one: every control here is the one device. -->
+<div class="echo-layout" class:slot-ghost={echo.isGhost}>
 	<div class="col slider-over-switch">
 		<div class="slider-part">
 			<DeviceSlider
@@ -250,7 +251,7 @@
 		<button
 			class="physical-button echo-switch w-full font-bold"
 			class:active={synced}
-			style="--btn-tint: {echo.color.primary};{echo.isGhost ? ' opacity: var(--opacity-ghost);' : ''}"
+			style="--btn-tint: {echo.color.primary};"
 			aria-pressed={synced}
 			onclick={toggleSync}
 		>
@@ -260,7 +261,6 @@
 
 	<div
 		class="col filter-graph"
-		class:ghost={echo.isGhost}
 		style="--curve-color: {echo.color.primary};"
 		role="slider"
 		aria-label="Filter: high-pass {Math.round(hpT * 100)}%, low-pass {Math.round(lpT * 100)}%"
@@ -278,7 +278,6 @@
 
 	<div
 		class="col wave-grid"
-		style={echo.isGhost ? 'opacity: var(--opacity-ghost);' : ''}
 		data-echo-lfo-wave
 		bind:this={waveGrid}
 		use:drag={{ commit: 'immediate', onDown: waveScrubDown, onMove: (i) => waveAt(i.x, i.y) }}
@@ -316,7 +315,7 @@
 		<button
 			class="physical-button echo-switch w-full font-bold"
 			class:active={lfoSynced}
-			style="--btn-tint: {echo.color.primary};{echo.isGhost ? ' opacity: var(--opacity-ghost);' : ''}"
+			style="--btn-tint: {echo.color.primary};"
 			aria-pressed={lfoSynced}
 			onclick={toggleLfoSync}
 		>
@@ -490,9 +489,6 @@
 		border-radius: 2px;
 		background: var(--surface-well);
 		cursor: crosshair;
-	}
-	.filter-graph.ghost {
-		opacity: var(--opacity-ghost);
 	}
 	.graph-title {
 		position: absolute;

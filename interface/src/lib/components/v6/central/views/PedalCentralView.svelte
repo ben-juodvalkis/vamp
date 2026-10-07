@@ -191,7 +191,7 @@
        tap goes nowhere because this view is its home — over its type
        switch, laid out across (2026-10-05). -->
   <div class="column pad pedal-xy-column">
-    <div class="xy-wrapper flex-1">
+    <div class="xy-wrapper flex-1" class:slot-ghost={fx.isGhost}>
       <PedalControl device={fx.device} disableCentralViewOnTap={true} icon="pedal" xIcon="tone" yIcon="drive" />
     </div>
     <div class="pedal-type-buttons" style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
@@ -240,12 +240,12 @@
            Guitar's controls, no seam between (user, 2026-10-05). -->
       <div class="column left-stack">
         {#if showGuitarGain}
-          <div class="left-cell">
+          <div class="left-cell" class:slot-ghost={guitar.isGhost}>
             <GuitarControl device={guitar.device} disableCentralViewOnTap={true} icon="amp" />
           </div>
         {/if}
         {#if showWah}
-          <div class="left-cell wah-cell">
+          <div class="left-cell wah-cell" class:slot-ghost={wah.isGhost}>
             <DeviceSlider
               value={wahValue}
               title="Wah"
@@ -264,7 +264,7 @@
     {/if}
     <!-- Two pads stacked: Spring (X) / Room (Y) over Tremolo, rate (X) /
          amount (Y) (user, 2026-10-05). -->
-    <div class="column pad guitar-xy-stack">
+    <div class="column pad guitar-xy-stack" class:slot-ghost={guitar.isGhost}>
       <div class="guitar-xy">
         <DeviceXY
           xValue={gtrValue(GTR.spring)}
@@ -308,7 +308,7 @@
 
   <!-- COLUMN 4: the Shifter's ring-mod frequency, one fader. A tap on a
        ghost loads it; a drag loads it and writes the value. -->
-  <div class="column shifter-column">
+  <div class="column shifter-column" class:slot-ghost={shifter.isGhost}>
     <DeviceSlider
       value={Math.min(shifter.paramValue(SHIFTER_RM_COARSE) ?? 0, SHIFTER_RM_MAX)}
       title="Shifter"
@@ -352,7 +352,7 @@
         </div>
       {/each}
     </div>
-    <div class="xy-wrapper redux-column">
+    <div class="xy-wrapper redux-column" class:slot-ghost={redux.isGhost}>
       <ReduxControl device={redux.device} icon="redux" />
     </div>
   </div>

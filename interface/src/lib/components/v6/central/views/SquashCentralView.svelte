@@ -303,7 +303,7 @@
     <div class="glue-body">
       <!-- Live's own direction: up is a higher threshold, i.e. less
            squash — the opposite of the tile, whose up is MORE. -->
-      <div class="glue-slider">
+      <div class="glue-slider" class:slot-ghost={squash.isGhost}>
         <DeviceSlider
           value={glueThreshold}
           title="Threshold"
@@ -318,7 +318,7 @@
           onInteraction={(value) => squash.sendParam(GLUE_THRESHOLD_PARAM, value)}
         />
       </div>
-      <div class="glue-slider">
+      <div class="glue-slider" class:slot-ghost={squash.isGhost}>
         <DeviceSlider
           value={glueOutput}
           title="Output"

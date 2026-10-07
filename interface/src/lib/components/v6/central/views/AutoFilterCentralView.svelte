@@ -156,7 +156,6 @@
 	<!-- Col 1 — LFO shapes 1-4 (vertical stack) -->
 	<div
 		class="flex-[1] min-h-0 flex flex-col gap-1"
-		style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}
 	>
 		{#each LFO_SHAPE_OPTIONS.slice(0, 4) as option}
 			<button
@@ -176,7 +175,6 @@
 	<!-- Col 2 — LFO shapes 5-8 (vertical stack) -->
 	<div
 		class="flex-[1] min-h-0 flex flex-col gap-1"
-		style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}
 	>
 		{#each LFO_SHAPE_OPTIONS.slice(4, 8) as option}
 			<button
@@ -196,7 +194,6 @@
 	<!-- Col 3 — vertical MORPH slider -->
 	<div
 		class="flex-[1] min-h-0"
-		style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}
 	>
 		<DeviceSlider
 			value={morphAmount}
@@ -256,7 +253,6 @@
 	<!-- Col 6 — Filter types 1-5 (vertical stack) -->
 	<div
 		class="flex-[1] min-h-0 flex flex-col gap-1"
-		style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}
 	>
 		{#each FILTER_TYPES.slice(0, 5) as type}
 			<button
@@ -273,7 +269,6 @@
 	<!-- Col 7 — Filter types 6-10 (vertical stack) -->
 	<div
 		class="flex-[1] min-h-0 flex flex-col gap-1"
-		style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}
 	>
 		{#each FILTER_TYPES.slice(5, 10) as type}
 			<button
@@ -288,7 +283,7 @@
 	</div>
 
 	<!-- Col 8 — Drive vertical slider -->
-	<div class="flex-[1] h-full" style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
+	<div class="flex-[1] h-full">
 		<DeviceSlider
 			value={drive}
 			title="Drive"
@@ -307,7 +302,6 @@
 	<!-- Col 9 — Circuit buttons + Slope toggle -->
 	<div
 		class="flex-[1] h-full flex flex-col gap-1"
-		style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}
 	>
 		{#each CIRCUIT_OPTIONS as option}
 			<button
@@ -336,7 +330,7 @@
 
 	<!-- Col 10 — Mix (Dry/Wet). Last because it is the device's last stage:
 	     Live's own panel ends on Output, Soft Clip and Dry/Wet. -->
-	<div class="flex-[1] h-full" style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
+	<div class="flex-[1] h-full">
 		<DeviceSlider
 			value={mix}
 			title="Mix"

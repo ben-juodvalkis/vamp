@@ -81,7 +81,6 @@
 	<!-- Interval (param 2) -->
 	<div
 		class="flex-1 flex flex-col min-h-0"
-		style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}
 	>
 		<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Interval</div>
 		<div class="flex-1 flex flex-col gap-1 min-h-0">
@@ -101,7 +100,6 @@
 	<!-- Grid (param 4) -->
 	<div
 		class="flex-1 flex flex-col min-h-0"
-		style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}
 	>
 		<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Grid</div>
 		<div class="flex-1 flex flex-col gap-1 min-h-0">
@@ -135,7 +133,6 @@
 	<!-- Gate (param 8) -->
 	<div
 		class="flex-1 flex flex-col min-h-0"
-		style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}
 	>
 		<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Length</div>
 		<div class="flex-1 flex flex-col gap-1 min-h-0">
@@ -159,7 +156,6 @@
 	<!-- Pitch Decay (float 0-1) + triplets toggle -->
 	<div
 		class="flex-1 flex flex-col min-h-0"
-		style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}
 	>
 		<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Pitch Decay</div>
 		<div class="flex-1 min-h-0">
@@ -182,7 +178,6 @@
 	     finger targets in the view. -->
 	<div
 		class="flex-1 flex flex-col min-h-0"
-		style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}
 	>
 		<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Mode</div>
 		<div class="flex-1 flex flex-col gap-1 min-h-0">

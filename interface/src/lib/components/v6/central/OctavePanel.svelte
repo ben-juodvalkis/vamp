@@ -188,7 +188,7 @@
 		{/if}
 	</div>
 	<div class="octave-body">
-		<div class="octave-fader">
+		<div class="octave-fader" class:slot-ghost={octave.isGhost}>
 			<DeviceSlider
 				value={octaveMix}
 				title="Mix"

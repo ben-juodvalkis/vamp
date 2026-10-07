@@ -393,7 +393,7 @@
       Sync
     </button>
     <!-- Rate slider -->
-    <div class="flex-1">
+    <div class="flex-1" class:slot-ghost={arp.isGhost}>
       <DeviceSlider
         value={rateValue / 13}
         title={rateTitle}
@@ -433,7 +433,7 @@
   </div>
 
   <!-- ARP Gate slider (controls arpeggiator gate parameter) -->
-  <div class="flex-1">
+  <div class="flex-1" class:slot-ghost={arp.isGhost}>
     <DeviceSlider
       value={gateValue / 200}
       title={gateTitle}
@@ -462,7 +462,7 @@
   <SectionDivider orientation="vertical" ink={velocity.color.primary} />
 
   <!-- Velocity Random slider -->
-  <div class="flex-1">
+  <div class="flex-1" class:slot-ghost={velocity.isGhost}>
     <DeviceSlider
       value={velocityRandom / 127}
       title="Rand Vel"
@@ -511,7 +511,7 @@
   <!-- Note Chance: the odds an incoming note survives. A drag loads the
        device if the slot is a ghost; so does a tap, which has no value of
        its own to send (DeviceSlider drags are relative). -->
-  <div class="flex-1">
+  <div class="flex-1" class:slot-ghost={chance.isGhost}>
     <DeviceSlider
       value={chanceValue / CHANCE_MAX}
       title={chanceTitle}
