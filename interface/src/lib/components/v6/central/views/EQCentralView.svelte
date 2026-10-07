@@ -75,16 +75,17 @@
   });
 
   // bloom's parameters, read off the running plug-in (2026-10-06): every one
-  // 0..1. Amount rests at 0.5; the four band levels ("level N (main/ch1)")
-  // rest at 0.5, which is 0 dB, so they fill from the centre.
+  // 0..1. The four band levels ("level N (main/ch1)") rest at 0.5, which is
+  // 0 dB, so they fill from the centre. `rest` is what an unloaded bloom
+  // draws: Amount 0, the user's call (2026-10-06), the bands flat.
+  const BLOOM_CENTER = 0.5;
   const BLOOM_SLIDERS = [
-    { index: 1, title: 'Amount', icon: 'depth', bipolar: false },
-    { index: 2, title: 'Lo', icon: 'lowshelf', bipolar: true },
-    { index: 3, title: 'Mid', icon: 'lowbell', bipolar: true },
-    { index: 4, title: 'Hi Mid', icon: 'highbell', bipolar: true },
-    { index: 5, title: 'Hi', icon: 'highshelf', bipolar: true }
+    { index: 1, title: 'Amount', icon: 'depth', bipolar: false, rest: 0 },
+    { index: 2, title: 'Lo', icon: 'lowshelf', bipolar: true, rest: BLOOM_CENTER },
+    { index: 3, title: 'Mid', icon: 'lowbell', bipolar: true, rest: BLOOM_CENTER },
+    { index: 4, title: 'Hi Mid', icon: 'highbell', bipolar: true, rest: BLOOM_CENTER },
+    { index: 5, title: 'Hi', icon: 'highshelf', bipolar: true, rest: BLOOM_CENTER }
   ] as const;
-  const BLOOM_REST = 0.5;
 </script>
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
@@ -141,13 +142,13 @@
   {#each BLOOM_SLIDERS as s (s.index)}
     <div class="bloom-slider h-full min-w-0">
       <DeviceSlider
-        value={bloom.paramValue(s.index) ?? BLOOM_REST}
+        value={bloom.paramValue(s.index) ?? s.rest}
         title={s.title}
         icon={s.icon}
         orientation="vertical"
         labelOrientation="horizontal"
         centerOrigin={s.bipolar}
-        centerValue={s.bipolar ? BLOOM_REST : undefined}
+        centerValue={s.bipolar ? BLOOM_CENTER : undefined}
         isGhost={bloom.isGhost}
         color={bloom.isGhost ? ghostInk : bloomInk}
         min={0}

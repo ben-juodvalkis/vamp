@@ -75,6 +75,11 @@ describe('EQCentralView bloom', () => {
 		const { container } = render(EQCentralView);
 		await tick();
 		expect(container.querySelector('.bloom-group')?.classList.contains('slot-ghost')).toBe(true);
-		expect(Object.keys(sliders(container))).toHaveLength(5);
+		const s = sliders(container);
+		expect(Object.keys(s)).toHaveLength(5);
+		// Unloaded, Amount draws 0 and the bands sit flat at the centre.
+		expect(['Amount', 'Lo', 'Mid', 'Hi Mid', 'Hi'].map((k) => s[k].getAttribute('aria-valuenow'))).toEqual(
+			['0', '0.5', '0.5', '0.5', '0.5']
+		);
 	});
 });
