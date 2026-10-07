@@ -25,13 +25,15 @@ const GL = `${TRACK}/devices/0`;
 
 function glitchLoop(mix: number, feedback = 0, pitch: [number, number] = [0, 0]): DeviceRecord {
 	const params = new SvelteMap<string, ParamRecord>();
-	for (let i = 0; i < 10; i++) {
+	for (let i = 0; i < 83; i++) {
 		const paramPath = `${GL}/params/${i}`;
 		const [name, value, min, max] =
 			i === 5 ? ['Pitch L', pitch[0], -24, 24]
 			: i === 6 ? ['Pitch R', pitch[1], -24, 24]
 			: i === 7 ? ['DryWet', mix, 0, 100]
 			: i === 9 ? ['Feedback L', feedback, 0, 120]
+			: i === 81 ? ['Segment L', 20, 0.1, 50]
+			: i === 82 ? ['Segment R', 20, 0.1, 50]
 			: [`P${i}`, 0, 0, 100];
 		params.set(paramPath, { paramPath, name, displayName: name, min, max, value, unit: '' });
 	}
@@ -81,6 +83,15 @@ describe('ChorusCentralView GlitchLoop', () => {
 		expect(s).toBeDefined();
 		expect(s?.getAttribute('aria-valuenow')).toBe('46');
 		expect(s?.getAttribute('aria-valuemax')).toBe('120');
+	});
+
+	it('shows Size on Segment L (param 81, 0.1–50)', async () => {
+		seed(glitchLoop(0));
+		const { container } = render(ChorusCentralView);
+		await tick();
+		const s = sliderTitled(container, 'Size');
+		expect(s?.getAttribute('aria-valuenow')).toBe('20');
+		expect(s?.getAttribute('aria-valuemax')).toBe('50');
 	});
 
 	const pitchButtons = (container: HTMLElement) =>

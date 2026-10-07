@@ -107,7 +107,13 @@
 		mix: { index: 7, max: 100, default: 0 },
 		feedback: { index: 9, max: 120, default: 0 },
 		pitchLeft: { index: 5, default: 0 },
-		pitchRight: { index: 6, default: 0 }
+		pitchRight: { index: 6, default: 0 },
+		// Size: Segment L and R (params 81, 82, 0.1–50) written together
+		// (user, 2026-10-07); the slider reads L. Segment is an exponent dial
+		// in the device, so Live's value runs along the knob's travel and the
+		// slider feels like the knob.
+		sizeLeft: { index: 81, min: 0.1, max: 50 },
+		sizeRight: { index: 82 }
 	};
 
 	// Pitch: Off · Up · Spread (user, 2026-10-07), written to Pitch L and
@@ -148,6 +154,17 @@
 		glitchLoop.sendParam(index, Math.max(0, Math.min(max, amount)));
 	}
 
+	let glitchLoopSize = $derived(
+		glitchLoop.paramValue(GLITCH_LOOP_PARAMS.sizeLeft.index) ?? GLITCH_LOOP_PARAMS.sizeLeft.min
+	);
+
+	function sendGlitchLoopSize(amount: number) {
+		const { index, min, max } = GLITCH_LOOP_PARAMS.sizeLeft;
+		const value = Math.max(min, Math.min(max, amount));
+		glitchLoop.sendParam(index, value);
+		glitchLoop.sendParam(GLITCH_LOOP_PARAMS.sizeRight.index, value);
+	}
+
 	function sendGlitchLoopFeedback(amount: number) {
 		const { index, max } = GLITCH_LOOP_PARAMS.feedback;
 		glitchLoop.sendParam(index, Math.max(0, Math.min(max, amount)));
@@ -164,7 +181,7 @@
 
 	<SectionDivider orientation="vertical" ink={glitchLoopInk.primary} />
 
-	<!-- GlitchLoop (virtual device): its Dry/Wet and Feedback, then its
+	<!-- GlitchLoop (virtual device): its Dry/Wet, Feedback and Size, then its
 	     Up · Spread · Off pitch column, in Pitch Hack's old place
 	     (2026-10-06). -->
 	<div class="glitch-group" class:slot-ghost={glitchLoop.isGhost}>
@@ -197,6 +214,21 @@
 					max={GLITCH_LOOP_PARAMS.feedback.max}
 					onTap={() => glitchLoop.loadIfGhost()}
 					onInteraction={sendGlitchLoopFeedback}
+				/>
+			</div>
+			<div class="device-wrapper">
+				<DeviceSlider
+					value={glitchLoopSize}
+					title="Size"
+					icon="size"
+					orientation="vertical"
+					labelOrientation="horizontal"
+					isGhost={glitchLoop.isGhost}
+					color={glitchLoopInk}
+					min={GLITCH_LOOP_PARAMS.sizeLeft.min}
+					max={GLITCH_LOOP_PARAMS.sizeLeft.max}
+					onTap={() => glitchLoop.loadIfGhost()}
+					onInteraction={sendGlitchLoopSize}
 				/>
 			</div>
 		</div>
@@ -275,7 +307,7 @@
 <style>
 	.chorus-central-layout {
 		display: grid;
-		/* octave | glitchloop mix · feedback · pitch column | blur
+		/* octave | glitchloop mix · feedback · size · pitch column | blur
 		   | comb over phaser.
 		   One equal track per slider, a seam its hairline; a pad (and the
 		   Octave panel, its fader and its tab) spans two tracks, so it is
@@ -283,7 +315,7 @@
 		   grows with the view (user, 2026-10-05). */
 		grid-template-columns:
 			repeat(2, minmax(0, 1fr)) auto
-			repeat(3, minmax(0, 1fr)) auto
+			repeat(4, minmax(0, 1fr)) auto
 			minmax(0, 1fr) auto
 			repeat(2, minmax(0, 1fr));
 		height: 100%;
@@ -315,9 +347,9 @@
 	}
 
 
-	/* GlitchLoop: two sliders and the pitch column, a track each. */
+	/* GlitchLoop: three sliders and the pitch column, a track each. */
 	.glitch-group {
-		grid-column: span 3;
+		grid-column: span 4;
 		display: grid;
 		grid-template-columns: subgrid;
 		min-height: 0;
@@ -325,7 +357,7 @@
 	}
 
 	.glitch-sliders {
-		grid-column: span 2;
+		grid-column: span 3;
 		min-height: 0;
 		display: grid;
 		grid-template-columns: subgrid;
