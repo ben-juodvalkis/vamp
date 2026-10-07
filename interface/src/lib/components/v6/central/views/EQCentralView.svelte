@@ -79,10 +79,10 @@
   // rest at 0.5, which is 0 dB, so they fill from the centre.
   const BLOOM_SLIDERS = [
     { index: 1, title: 'Amount', icon: 'depth', bipolar: false },
-    { index: 2, title: 'Lo', icon: 'boom', bipolar: true },
-    { index: 3, title: 'Mid', icon: 'tone', bipolar: true },
-    { index: 4, title: 'Hi Mid', icon: 'tone', bipolar: true },
-    { index: 5, title: 'Hi', icon: 'noise', bipolar: true }
+    { index: 2, title: 'Lo', icon: 'lowshelf', bipolar: true },
+    { index: 3, title: 'Mid', icon: 'lowbell', bipolar: true },
+    { index: 4, title: 'Hi Mid', icon: 'highbell', bipolar: true },
+    { index: 5, title: 'Hi', icon: 'highshelf', bipolar: true }
   ] as const;
   const BLOOM_REST = 0.5;
 </script>
@@ -133,9 +133,11 @@
 
 <SectionDivider orientation="vertical" ink={bloomInk.primary} />
 
-<!-- bloom: Amount, then its four band levels. A tap on a ghost loads it; a
-     drag loads it and writes. -->
-<div class="bloom-group h-full flex gap-(--central-gap)" class:slot-ghost={bloom.isGhost}>
+<!-- bloom: its name over Amount and its four band levels. A tap on a ghost
+     loads it; a drag loads it and writes. -->
+<div class="bloom-group h-full flex flex-col" class:slot-ghost={bloom.isGhost}>
+  <span class="bloom-title" style="color: {bloomInk.primary};">bloom</span>
+  <div class="bloom-sliders flex-1 min-h-0 flex gap-(--central-gap)">
   {#each BLOOM_SLIDERS as s (s.index)}
     <div class="bloom-slider h-full min-w-0">
       <DeviceSlider
@@ -155,6 +157,7 @@
       />
     </div>
   {/each}
+  </div>
 </div>
 </div>
 
@@ -167,6 +170,20 @@
 
   .bloom-group {
     flex: 0 0 auto;
+    gap: var(--spacing-xs);
+  }
+  /* The eyebrow every named group in a central view wears (EnvelopeGroup's).
+     "bloom" is the plug-in's own lower-case name, so it is not up-cased. */
+  .bloom-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-align: center;
+    white-space: nowrap;
+  }
+  :global([data-grammar="flat"]) .bloom-title {
+    letter-spacing: normal;
+    font-weight: var(--font-weight-medium);
   }
   .bloom-slider {
     width: 5rem;

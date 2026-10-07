@@ -124,6 +124,21 @@
   {:else if name === 'high'}
     <path d="M3 20 H13 C18 20 19 9 24 9 H29" />
     <path d="M3 25 H29" opacity=".3" />
+  {:else if name === 'lowshelf'}
+    <!-- EQ band curves, each a boost over a flat response (bloom's bands,
+         2026-10-06): a shelf lifts everything past its corner, a bell one
+         region; the bells sit off-centre so low and high read apart. -->
+    <path d="M3 8 H7 C12 8 13 20 18 20 H29" />
+    <path d="M3 25 H29" opacity=".3" />
+  {:else if name === 'lowbell'}
+    <path d="M3 20 H5 C9 20 9 8 11.5 8 C14 8 14 20 18 20 H29" />
+    <path d="M3 25 H29" opacity=".3" />
+  {:else if name === 'highbell'}
+    <path d="M3 20 H14 C18 20 18 8 20.5 8 C23 8 23 20 27 20 H29" />
+    <path d="M3 25 H29" opacity=".3" />
+  {:else if name === 'highshelf'}
+    <path d="M3 20 H14 C19 20 20 8 25 8 H29" />
+    <path d="M3 25 H29" opacity=".3" />
   {:else if name === 'q'}
     <path d="M3 22 H12 C14.5 22 14.5 6 16 6 C17.5 6 17.5 22 20 22 H29" />
     <path d="M9 27 H23 M11.5 24.5 L9 27 L11.5 29.5 M20.5 24.5 L23 27 L20.5 29.5" />
