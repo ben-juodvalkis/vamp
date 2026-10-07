@@ -114,10 +114,11 @@
 	// Pitch R (params 5 and 6, ±24 st, integers) as raw semitones. The lit
 	// mode is the one both values match exactly; a pitch set by hand in
 	// Live lights none.
+	// Top to bottom, like Octave's column: Up, Spread, Off.
 	const GLITCH_PITCH_MODES = [
-		{ label: 'Off', left: 0, right: 0 },
 		{ label: 'Up', left: 12, right: 12 },
-		{ label: 'Spread', left: -12, right: 12 }
+		{ label: 'Spread', left: -12, right: 12 },
+		{ label: 'Off', left: 0, right: 0 }
 	];
 	let glitchPitchLeft = $derived(
 		Math.round(glitchLoop.paramValue(GLITCH_LOOP_PARAMS.pitchLeft.index) ?? GLITCH_LOOP_PARAMS.pitchLeft.default)
@@ -163,10 +164,10 @@
 
 	<SectionDivider orientation="vertical" ink={glitchLoopInk.primary} />
 
-	<!-- GlitchLoop (virtual device): its Dry/Wet and Feedback side by side,
-	     over its Off · Up · Spread pitch bar, in Pitch Hack's old place
+	<!-- GlitchLoop (virtual device): its Dry/Wet and Feedback, then its
+	     Up · Spread · Off pitch column, in Pitch Hack's old place
 	     (2026-10-06). -->
-	<div class="device-wrapper pad glitch-group" class:slot-ghost={glitchLoop.isGhost}>
+	<div class="glitch-group" class:slot-ghost={glitchLoop.isGhost}>
 		<div class="glitch-sliders">
 			<div class="device-wrapper">
 				<DeviceSlider
@@ -201,6 +202,7 @@
 		</div>
 		<div
 			class="device-segmented glitch-pitch"
+			style:grid-template-rows="repeat({GLITCH_PITCH_MODES.length}, 1fr)"
 			style="--btn-tint: {glitchLoopInk.primary};"
 			role="group"
 			aria-label="GlitchLoop pitch"
@@ -273,7 +275,7 @@
 <style>
 	.chorus-central-layout {
 		display: grid;
-		/* octave | glitchloop (mix · feedback over its pitch bar) | blur
+		/* octave | glitchloop mix · feedback · pitch column | blur
 		   | comb over phaser.
 		   One equal track per slider, a seam its hairline; a pad (and the
 		   Octave panel, its fader and its tab) spans two tracks, so it is
@@ -281,7 +283,7 @@
 		   grows with the view (user, 2026-10-05). */
 		grid-template-columns:
 			repeat(2, minmax(0, 1fr)) auto
-			repeat(2, minmax(0, 1fr)) auto
+			repeat(3, minmax(0, 1fr)) auto
 			minmax(0, 1fr) auto
 			repeat(2, minmax(0, 1fr));
 		height: 100%;
@@ -313,32 +315,26 @@
 	}
 
 
-	/* GlitchLoop: its two sliders share the pad's two tracks, the pitch bar
-	   runs under both, one row a slider-label tall. */
+	/* GlitchLoop: two sliders and the pitch column, a track each. */
+	.glitch-group {
+		grid-column: span 3;
+		display: grid;
+		grid-template-columns: subgrid;
+		min-height: 0;
+		min-width: 0;
+	}
+
 	.glitch-sliders {
-		flex: 1 1 0;
+		grid-column: span 2;
 		min-height: 0;
 		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: var(--central-gap);
+		grid-template-columns: subgrid;
 	}
 
+	/* The house segmented control upright, like Octave's pitch column. */
 	.glitch-pitch {
-		flex: 0 0 auto;
-		height: 3rem;
-		margin-top: var(--central-gap);
 		display: grid;
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-	}
-
-	/* The house segmented control divides with border-top; side by side it
-	   wants border-left. */
-	.glitch-pitch .device-segment + .device-segment {
-		border-top: 0;
-		border-left: 1px solid var(--line-faint);
-	}
-	.glitch-pitch .device-segment.active,
-	.glitch-pitch .device-segment.active + .device-segment {
-		border-left-color: transparent;
+		min-height: 0;
+		min-width: 0;
 	}
 </style>

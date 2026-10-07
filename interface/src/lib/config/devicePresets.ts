@@ -410,7 +410,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
     centralViewGroup: 'chorus',         // Belongs to ChorusCentralView
-    color: familyScheme('pitchSeq')     // A pitch shifter, like Pitch Hack
+    color: familyScheme('distortion')   // Orange (user, 2026-10-07): violet sat too close to Octave beside it
   },
   smudge: {
     // Blur ships in the repo beside Permute and loads the same way, through

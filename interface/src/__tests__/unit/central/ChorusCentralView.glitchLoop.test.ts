@@ -1,7 +1,7 @@
 /**
  * ChorusCentralView's GlitchLoop: its Dry/Wet (param 7, 0–100, read off the
  * running device 2026-10-06), Feedback L (param 9, 0–120) and an
- * Off · Up · Spread pitch bar over Pitch L/R (params 5/6), in Pitch Hack's
+ * Up · Spread · Off pitch column over Pitch L/R (params 5/6), in Pitch Hack's
  * old place.
  */
 
@@ -86,12 +86,12 @@ describe('ChorusCentralView GlitchLoop', () => {
 	const pitchButtons = (container: HTMLElement) =>
 		Array.from(container.querySelectorAll<HTMLButtonElement>('.glitch-pitch button'));
 
-	it('draws Off, Up, Spread and lights the one the device matches', async () => {
+	it('draws Up, Spread, Off top to bottom and lights the one the device matches', async () => {
 		seed(glitchLoop(0, 0, [-12, 12]));
 		const { container } = render(ChorusCentralView);
 		await tick();
-		expect(pitchButtons(container).map((b) => b.textContent?.trim())).toEqual(['Off', 'Up', 'Spread']);
-		expect(pitchButtons(container).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'false', 'true']);
+		expect(pitchButtons(container).map((b) => b.textContent?.trim())).toEqual(['Up', 'Spread', 'Off']);
+		expect(pitchButtons(container).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false']);
 	});
 
 	it('lights none when the pitch was set some other way', async () => {
@@ -110,8 +110,8 @@ describe('ChorusCentralView GlitchLoop', () => {
 				.filter(([, args]) => Array.isArray(args) && args.includes(`${GL}/params/${i}`))
 				.map(([, args]) => (args as unknown[])[1]);
 		for (const b of pitchButtons(container)) await fireEvent.click(b);
-		expect(written(5)).toEqual([0, 12, -12]);
-		expect(written(6)).toEqual([0, 12, 12]);
+		expect(written(5)).toEqual([12, -12, 0]);
+		expect(written(6)).toEqual([12, 12, 0]);
 	});
 
 	it('no longer draws Pitch Hack controls', async () => {
