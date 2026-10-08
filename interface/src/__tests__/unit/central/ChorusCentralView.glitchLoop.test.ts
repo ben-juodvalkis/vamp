@@ -124,12 +124,4 @@ describe('ChorusCentralView GlitchLoop', () => {
 		expect(written(5)).toEqual([12, -12, 0]);
 		expect(written(6)).toEqual([12, 12, 0]);
 	});
-
-	it('no longer draws Pitch Hack controls', async () => {
-		seed(glitchLoop(0));
-		const { container } = render(ChorusCentralView);
-		await tick();
-		expect(container.querySelector('.pitch-hack-row')).toBeNull();
-		expect(container.textContent).not.toContain('Pitch Hack');
-	});
 });

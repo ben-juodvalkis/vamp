@@ -399,7 +399,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Pitch Hack',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: undefined,        // No view since GlitchLoop took its place (2026-10-06)
+    centralViewGroup: 'chorus',         // Back as one Rate column (2026-10-08)
     color: familyScheme('pitchSeq')     // A pitch shifter — function over host view
   },
   glitchLoop: {

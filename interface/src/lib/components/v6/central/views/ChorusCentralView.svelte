@@ -4,9 +4,9 @@
 	 *
 	 * Self-contained central view that queries its own slot state.
 	 * Renders immediately with ghost/loading/active states.
-	 * Displays Octave, GlitchLoop, Blur, Comb and Phaser controls.
+	 * Displays Octave, Pitch Hack, GlitchLoop, Blur, Comb and Phaser controls.
 	 *
-	 * Contains virtual devices (smudge, comb, phaser, glitchLoop, octave) which have
+	 * Contains virtual devices (smudge, comb, phaser, pitchHack, glitchLoop, octave) which have
 	 * their own ghost states.
 	 * NO {#if device} gate - always renders, handles its own state.
 	 * NO props required - queries selectedTrackStore directly.
@@ -29,6 +29,7 @@
 	const comb = useFxGridSlot('comb');
 	const smudge = useFxGridSlot('smudge');
 	const phaser = useFxGridSlot('phaser');
+	const pitchHack = useFxGridSlot('pitchHack');
 	const glitchLoop = useFxGridSlot('glitchLoop');
 
 	// GRATICULE (§5.5): calibrate the slot palette through trackInk at injection.
@@ -41,6 +42,11 @@
 		primary: trackInk(phaser.color.primary, paintModeReactive()),
 		secondary: phaser.color.secondary,
 		accent: trackInk(phaser.color.accent, paintModeReactive())
+	});
+	let pitchHackInk = $derived({
+		primary: trackInk(pitchHack.color.primary, paintModeReactive()),
+		secondary: pitchHack.color.secondary,
+		accent: trackInk(pitchHack.color.accent, paintModeReactive())
 	});
 	let glitchLoopInk = $derived({
 		primary: trackInk(glitchLoop.color.primary, paintModeReactive()),
@@ -94,6 +100,38 @@
 			phaser.paramValue(PHASER_PARAMS.feedback.index) ?? PHASER_PARAMS.feedback.default
 		)
 	);
+
+	// ── Pitch Hack (Creative Extensions, Max) ──────────────────────────────
+	// Back 2026-10-08 as one upright column of Rate stops (user): a tap
+	// loads the device if it is not there, sets its Rate and puts Dry / Wet
+	// at full, so the device is always heard once it is touched. Indices read
+	// off the running device 2026-09-23: Dry / Wet is param 2 (0–100), Rate
+	// is param 5, an index into its value_items:
+	// 7 = 1/16, 10 = 1/8, 13 = 1/4, 16 = 1/2, 19 = 1/1.
+	// The lit stop is the one Rate matches exactly; a rate set by hand in
+	// Live lights none.
+	const PITCH_HACK_PARAMS = {
+		mix: { index: 2, max: 100 },
+		rate: { index: 5 }
+	};
+	const PITCH_HACK_RATES = [
+		{ label: '1', rate: 19 },
+		{ label: '1/2', rate: 16 },
+		{ label: '1/4', rate: 13 },
+		{ label: '1/8', rate: 10 },
+		{ label: '1/16', rate: 7 }
+	];
+	let pitchHackRate = $derived(pitchHack.paramValue(PITCH_HACK_PARAMS.rate.index));
+	let pitchHackStop = $derived(
+		pitchHackRate === undefined ? -1 : PITCH_HACK_RATES.findIndex((r) => r.rate === Math.round(pitchHackRate!))
+	);
+
+	// On a ghost slot both writes wait for the device and the first
+	// triggers its load (useFxGridSlot).
+	function sendPitchHackRate(rate: number) {
+		pitchHack.sendParam(PITCH_HACK_PARAMS.rate.index, rate);
+		pitchHack.sendParam(PITCH_HACK_PARAMS.mix.index, PITCH_HACK_PARAMS.mix.max);
+	}
 
 	// ── GlitchLoop (the owner's PitchLoop89 build, Max) ────────────────────
 	// Took Pitch Hack's place 2026-10-06; one slider for now, more to come.
@@ -177,6 +215,29 @@
 	     2026-10-05: the pitch devices (Octave, then Pitch Hack) lead the view. -->
 	<div class="device-wrapper pad">
 		<OctavePanel />
+	</div>
+
+	<SectionDivider orientation="vertical" ink={pitchHackInk.primary} />
+
+	<!-- Pitch Hack (virtual device): one column of Rate stops, 1 to 1/16
+	     top to bottom; a tap loads it and opens its mix (2026-10-08). -->
+	<div
+		class="device-segmented pitch-hack-rate"
+		class:slot-ghost={pitchHack.isGhost}
+		style:grid-template-rows="repeat({PITCH_HACK_RATES.length}, 1fr)"
+		style="--btn-tint: {pitchHackInk.primary};"
+		role="group"
+		aria-label="Pitch Hack rate"
+	>
+		{#each PITCH_HACK_RATES as stop, i}
+			<button
+				class="device-segment text-sm font-medium"
+				class:active={!pitchHack.isGhost && pitchHackStop === i}
+				aria-label="Pitch Hack rate {stop.label}"
+				aria-pressed={!pitchHack.isGhost && pitchHackStop === i}
+				onclick={() => sendPitchHackRate(stop.rate)}
+			>{stop.label}</button>
+		{/each}
 	</div>
 
 	<SectionDivider orientation="vertical" ink={glitchLoopInk.primary} />
@@ -305,7 +366,7 @@
 <style>
 	.chorus-central-layout {
 		display: grid;
-		/* octave | glitchloop mix · feedback · size · pitch column | blur
+		/* octave | pitch hack rate column | glitchloop mix · feedback · size · pitch column | blur
 		   | comb over phaser.
 		   One equal track per slider, a seam its hairline; a pad (and the
 		   Octave panel, its fader and its tab) spans two tracks, so it is
@@ -313,6 +374,7 @@
 		   grows with the view (user, 2026-10-05). */
 		grid-template-columns:
 			repeat(2, minmax(0, 1fr)) auto
+			minmax(0, 1fr) auto
 			repeat(4, minmax(0, 1fr)) auto
 			minmax(0, 1fr) auto
 			repeat(2, minmax(0, 1fr));
@@ -362,7 +424,8 @@
 	}
 
 	/* The house segmented control upright, like Octave's pitch column. */
-	.glitch-pitch {
+	.glitch-pitch,
+	.pitch-hack-rate {
 		display: grid;
 		min-height: 0;
 		min-width: 0;
@@ -370,7 +433,8 @@
 
 	/* One ink per device: a lit mode takes GlitchLoop's own ink rather than
 	   the house --phosphor, as Octave's column does. */
-	:global([data-grammar="flat"]) .glitch-pitch .device-segment.active {
+	:global([data-grammar="flat"]) .glitch-pitch .device-segment.active,
+	:global([data-grammar="flat"]) .pitch-hack-rate .device-segment.active {
 		background: var(--btn-tint);
 		border-color: var(--btn-tint);
 		color: var(--flat-on-fg);
