@@ -233,24 +233,28 @@
 	 * drag surface: a press within `BRACE_GRAB_PX` of a brace line takes
 	 * that brace — the nearer one when both are in reach, so close braces
 	 * split the gap instead of End always winning — and a press elsewhere
-	 * inside the loop moves the range. This also keeps the grab zone whole
-	 * at the sample's edges, where the braces sit by default and the track
-	 * clips anything that would hang outside it.
+	 * inside the loop moves the range. At the sample's edges, where the
+	 * braces sit by default, only the inside half of the zone exists, so
+	 * the reach is sized for that half to clear a 44px touch target.
+	 * Inside the loop a brace reaches at most a third of the loop's width,
+	 * so a narrow loop keeps its middle third for moving the range.
 	 */
-	const BRACE_GRAB_PX = 36;
+	const BRACE_GRAB_PX = 48;
 	function hitTest(clientX: number): 'start' | 'end' | 'range' | null {
 		if (!containerRef) return null;
 		const rect = containerRef.getBoundingClientRect();
 		const x = clientX - rect.left;
 		const startX = displayStart * rect.width;
 		const endX = displayEnd * rect.width;
+		const inside = x > startX && x < endX;
+		const reach = inside ? Math.min(BRACE_GRAB_PX, (endX - startX) / 3) : BRACE_GRAB_PX;
 		const toStart = Math.abs(x - startX);
 		const toEnd = Math.abs(x - endX);
-		if (Math.min(toStart, toEnd) <= BRACE_GRAB_PX) {
+		if (Math.min(toStart, toEnd) <= reach) {
 			if (toStart === toEnd) return x <= startX ? 'start' : 'end';
 			return toStart < toEnd ? 'start' : 'end';
 		}
-		return x > startX && x < endX ? 'range' : null;
+		return inside ? 'range' : null;
 	}
 
 	function braceDrag(): DragOptions {

@@ -79,27 +79,49 @@ afterEach(() => {
 });
 
 describe('SimplerLoopControl brace grab', () => {
-	it('grabs Start 30px in from the sample head, where it sits by default', async () => {
-		const w = await dragFrom(0, 1, 30);
+	it('grabs Start 46px in from the sample head, where it sits by default', async () => {
+		const w = await dragFrom(0, 1, 46);
 		expect(w.start).toEqual([0.05]);
 		expect(w.length).toEqual([0.95]);
 	});
 
-	it('grabs End 30px in from the sample tail', async () => {
-		const w = await dragFrom(0, 0.5, 170); // End line at 200px
+	it('grabs End 46px in from the sample tail', async () => {
+		const w = await dragFrom(0, 1, WIDTH - 46);
 		expect(w.start).toEqual([]);
-		expect(w.length).toEqual([0.55]);
+		expect(w.length).toEqual([]); // already at 1; a rightward drag clamps there
+		cleanup();
+		const left = await dragFrom(0, 0.5, 154); // End line at 200px
+		expect(left.start).toEqual([]);
+		expect(left.length).toEqual([0.55]);
 	});
 
-	it('gives close braces the nearer one, not always End', async () => {
+	it('keeps the middle third of a narrow loop for moving the range', async () => {
+		// 120px..210px: each brace reaches 30px inward.
+		const w = await dragFrom(0.3, 0.225, 165);
+		expect(w.start.length).toBe(1);
+		expect(w.start[0]).toBeCloseTo(0.35);
+		expect(w.length).toEqual([]);
+		cleanup();
+		const outside = await dragFrom(0.3, 0.225, 75); // 45px left of Start
+		expect(outside.start.length).toBe(1);
+		expect(outside.start[0]).toBeCloseTo(0.35);
+		expect(outside.length[0]).toBeCloseTo(0.175);
+	});
+
+	it('lets close braces each be grabbed from outside, not always End', async () => {
 		// Start at 160px, End at 200px.
-		const nearStart = await dragFrom(0.4, 0.1, 178);
+		const nearStart = await dragFrom(0.4, 0.1, 150);
 		expect(nearStart.start).toEqual([0.45]);
 		cleanup();
-		const nearEnd = await dragFrom(0.4, 0.1, 182);
+		const nearEnd = await dragFrom(0.4, 0.1, 210);
 		expect(nearEnd.start).toEqual([]);
 		expect(nearEnd.length.length).toBe(1);
 		expect(nearEnd.length[0]).toBeCloseTo(0.15);
+		cleanup();
+		const middle = await dragFrom(0.4, 0.1, 180);
+		expect(middle.start.length).toBe(1);
+		expect(middle.start[0]).toBeCloseTo(0.45);
+		expect(middle.length).toEqual([]);
 	});
 
 	it('moves the whole range from the middle of the loop', async () => {
