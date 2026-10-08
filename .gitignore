@@ -175,3 +175,7 @@ pw-console*.txt
 # WebSocket auth secret — machine-local, auto-generated on first run.
 # Never commit: it is the credential the UI proves it holds.
 config/.ws-secret
+
+# midi-hub-max clone (its own repo) and the link Max loads
+/owner/Max Patches/midi-hub-max/
+/owner/Max Patches/midi-hub.js
