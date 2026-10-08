@@ -31,8 +31,6 @@
 		sendRemoveNotes,
 		sendModifyNotes,
 		sendAddNotes,
-		sendSelectNotes,
-		sendDuplicateNotes,
 		shouldSuppressReconcile,
 		type RichNote
 	} from '$lib/services/clipRichNotesService';
@@ -115,7 +113,7 @@
 	const DRUM_PITCH_AXIS_W = 80; // wide enough for a pad's name
 	const TIME_AXIS_H = 18; // bar/beat ruler height (px)
 	const VELOCITY_LANE_H = 56; // velocity-lane strip height (px, MIDI only)
-	const TOOLBAR_H = 56; // MIDI edit-toolbar band under the roll (px): 44 px chips + padding
+	const TOOLBAR_W = 96; // MIDI edit-toolbar column beside the roll (px), so the roll keeps the full height
 
 	// ── Focused clip identity ────────────────────────────────────────
 	let clipPath = $derived(session.focusedClipPath);
@@ -971,33 +969,16 @@
 	}
 
 	// ── MIDI note editing (M4) ───────────────────────────────────────
-	// Two modes (plan M5 will add marquee/quantize): 'select' (drag a note
-	// to move pitch+time, drag its right edge to resize, tap to select →
-	// Delete removes) and 'draw' (tap an empty lane to add a note, tap a
-	// note to erase it).
+	// One mode, no selection (the user's call, 2026-10-07: a selection
+	// needs Shift/⌘ the iPad doesn't have, and the Select/Draw toggle was
+	// a mode to keep track of mid-set). A tap on empty grid draws a note
+	// (drag right to set its length); a drag on a note moves it (pitch +
+	// time) or, from its right edge, resizes it; a DOUBLE-tap on a note
+	// erases it, so a near-miss single tap can't delete one. Quantize acts
+	// on the whole clip.
 	// Optimistic-apply to focusedNotesStore, emit the write, reconcile on
 	// the surface's notes/changed re-pull (own-write echo suppressed —
 	// see the notes effect above + clipRichNotesService.markLocalWrite).
-	type EditMode = 'select' | 'draw';
-	// Draw by default (the user's call, 2026-09-25) — notes can still be
-	// grabbed, moved and resized in Draw; only a tap that doesn't move differs.
-	let editMode = $state<EditMode>('draw');
-	// Multi-select (M5): the set of selected note ids. Reassigned (not
-	// mutated in place) so Svelte 5 tracks it. Tap = replace, shift/⌘-tap
-	// = toggle-add, marquee drag = box-select. Mirrored to Live's piano
-	// roll as a batch (M6 sendSelectNotes takes an id array).
-	let selectedIds = $state<Set<number>>(new Set());
-	let selectedCount = $derived(selectedIds.size);
-
-	// Drop stale selection when the focused clip changes. Without this,
-	// a selection from clip A persists into clip B — the toolbar shows a
-	// stale count and Delete/quantize fire clip A's note ids
-	// against clip B (Live's ids are session-monotonic, so a collision is
-	// possible). Mirrors the optimisticLoop clear on path change.
-	$effect(() => {
-		void clipPath;
-		selectedIds = new Set();
-	});
 
 	// Snap grid (M5 polish): a UI-chosen division of a beat (a quarter
 	// note = 1 beat). `gridDenom` is the note value (4=1/4, 8=1/8, …);
@@ -1017,27 +998,23 @@
 		const i = GRID_DENOMS.indexOf(gridDenom as (typeof GRID_DENOMS)[number]);
 		gridDenom = GRID_DENOMS[(i + 1) % GRID_DENOMS.length];
 	}
-	// Drag state for a note move/resize gesture. ``members`` snapshots the
-	// pre-drag pitch/start/duration of every selected note so a group move
-	// applies the same delta to all of them; ``anchorId`` is the grabbed
-	// note (drives resize + the move/resize kind decision).
+	// Drag state for a note move/resize gesture: the grabbed note and its
+	// pre-drag geometry.
 	type NoteDragKind = 'move' | 'resize';
-	interface NoteDragMember {
+	let noteDrag = $state<{
+		kind: NoteDragKind;
 		noteId: number;
+		startClientX: number;
+		startClientY: number;
 		startBeats: number;
 		startPitch: number;
 		startDuration: number;
-	}
-	let noteDrag = $state<{
-		kind: NoteDragKind;
-		anchorId: number;
-		startClientX: number;
-		startClientY: number;
-		members: NoteDragMember[];
 		moved: boolean;
-		// Grabbed with shift / ⌘ / ctrl: a selection gesture, never an erase.
-		additive: boolean;
 	} | null>(null);
+
+	// Double-tap a note: erase it. The first tap is a drag that never
+	// moved; a second on the same note within DOUBLE_TAP_MS removes it.
+	let lastNoteTap: { noteId: number; at: number } | null = null;
 
 	function gridBeatsForSnap(): number {
 		// The UI-chosen snap grid (toolbar selector), in beats.
@@ -1045,7 +1022,7 @@
 	}
 
 	// --- gesture document-listener lifecycle ─────────────────────────
-	// Every drag gesture (note/brace/marquee/velocity/draw) attaches
+	// Every drag gesture (note/brace/velocity/draw) attaches
 	// document-level pointermove/up/cancel listeners. They normally tear
 	// down in the gesture's own end handler, but if the component unmounts
 	// mid-drag (editor toggled away during a drag) the listeners would
@@ -1096,48 +1073,22 @@
 		const note = focusedNotesStore.get(noteId);
 		if (!note) return;
 
-		// Selection semantics on grab:
-		//  - shift / ⌘ / ctrl tap: toggle this note in/out of the set.
-		//  - tap on an already-selected note: keep the set (group drag).
-		//  - tap on an unselected note: replace selection with just it.
-		const additive = event.shiftKey || event.metaKey || event.ctrlKey;
-		if (additive) {
-			toggleInSelection(noteId);
-		} else if (!selectedIds.has(noteId)) {
-			selectOnly(noteId);
-		}
-		// If the grabbed note ended up deselected (additive toggle-off),
-		// there's nothing to drag.
-		if (!selectedIds.has(noteId)) return;
-
-		// Decide move vs resize from where in the anchor note was grabbed.
+		// Decide move vs resize from where in the note it was grabbed.
 		const noteX = beatToX(note.startBeats, beatWindow, contentW);
 		const noteEndX = beatToX(note.startBeats + note.durationBeats, beatWindow, contentW);
 		const localX = noteEventLocalX(event);
 		const kind: NoteDragKind = grabResizesNote(localX, noteX, noteEndX) ? 'resize' : 'move';
 
-		// Snapshot every selected note's pre-drag geometry for a group move.
-		const members: NoteDragMember[] = [];
-		for (const id of selectedIds) {
-			const n = focusedNotesStore.get(id);
-			if (!n) continue;
-			members.push({
-				noteId: id,
-				startBeats: n.startBeats,
-				startPitch: n.pitch,
-				startDuration: n.durationBeats
-			});
-		}
-
 		heldFoldLanes = liveFoldLanes;
 		noteDrag = {
 			kind,
-			anchorId: noteId,
+			noteId,
 			startClientX: event.clientX,
 			startClientY: event.clientY,
-			members,
-			moved: false,
-			additive
+			startBeats: note.startBeats,
+			startPitch: note.pitch,
+			startDuration: note.durationBeats,
+			moved: false
 		};
 
 		beginGesture(onNoteDragMove, onNoteDragEnd);
@@ -1164,33 +1115,17 @@
 		}
 
 		if (noteDrag.kind === 'resize') {
-			// Resize: same snapped duration delta applied to every member.
-			const anchor = noteDrag.members.find((m) => m.noteId === noteDrag!.anchorId);
-			const base = anchor ? anchor.startDuration : 0;
-			const snappedDur = Math.max(grid, snapToGrid(base + deltaBeats, grid));
-			const durDelta = snappedDur - base;
-			for (const m of noteDrag.members) {
-				focusedNotesStore.optimisticModify(m.noteId, {
-					durationBeats: Math.max(grid, m.startDuration + durDelta)
-				});
-			}
+			const snappedDur = Math.max(grid, snapToGrid(noteDrag.startDuration + deltaBeats, grid));
+			focusedNotesStore.optimisticModify(noteDrag.noteId, { durationBeats: snappedDur });
 		} else {
-			// Move: snap the anchor's start, derive the beat delta from it,
-			// apply the same delta + pitch delta to every member.
-			const anchor = noteDrag.members.find((m) => m.noteId === noteDrag!.anchorId);
-			const anchorBase = anchor ? anchor.startBeats : 0;
-			const anchorNewStart = Math.max(0, snapToGrid(anchorBase + deltaBeats, grid));
-			const beatDelta = anchorNewStart - anchorBase;
 			// Negate: dragging down (larger clientY) lowers pitch.
 			// Folded, the delta counts shown lanes and `shiftPitch` steps
-			// each member to a neighbouring shown pitch.
+			// to a neighbouring shown pitch.
 			const deltaPitch = -clientDeltaToPitchDelta(event.clientY - noteDrag.startClientY, contentH, viewPitchWindow);
-			for (const m of noteDrag.members) {
-				focusedNotesStore.optimisticModify(m.noteId, {
-					startBeats: Math.max(0, m.startBeats + beatDelta),
-					pitch: shiftPitch(m.startPitch, deltaPitch, viewPitchWindow)
-				});
-			}
+			focusedNotesStore.optimisticModify(noteDrag.noteId, {
+				startBeats: Math.max(0, snapToGrid(noteDrag.startBeats + deltaBeats, grid)),
+				pitch: shiftPitch(noteDrag.startPitch, deltaPitch, viewPitchWindow)
+			});
 		}
 	}
 
@@ -1199,89 +1134,39 @@
 		noteDrag = null;
 		heldFoldLanes = null;
 		if (drag === null || clipPath === null) return;
-		// A drag that never moved = a tap. In Draw it erases the note under
-		// the finger, as Live's draw mode does (the user's call,
-		// 2026-09-29); in Select it only selected, so there is no write.
 		if (!drag.moved) {
-			if (editMode === 'draw' && !drag.additive) deleteNote(drag.anchorId);
+			const prev = lastNoteTap;
+			const now = performance.now();
+			if (prev && prev.noteId === drag.noteId && now - prev.at <= DOUBLE_TAP_MS) {
+				lastNoteTap = null;
+				deleteNote(drag.noteId);
+			} else {
+				lastNoteTap = { noteId: drag.noteId, at: now };
+			}
 			return;
 		}
-		// Batch-modify every moved member in one wire message (coalesced —
-		// no per-pointer-move OSC flood). Real ids only.
-		const specs = [];
-		for (const m of drag.members) {
-			const n = focusedNotesStore.get(m.noteId);
-			if (!n || n.noteId < 0) continue;
-			specs.push({
+		lastNoteTap = null;
+		const n = focusedNotesStore.get(drag.noteId);
+		if (!n || n.noteId < 0) return;
+		sendModifyNotes(clipPath, [
+			{
 				noteId: n.noteId,
 				pitch: n.pitch,
 				startBeats: n.startBeats,
 				durationBeats: n.durationBeats,
 				velocity: n.velocity,
 				mute: n.mute
-			});
-		}
-		if (specs.length > 0) sendModifyNotes(clipPath, specs);
-	}
-
-	// --- selection set helpers (M5 multi-select) ---------------------
-	// Apply a new selection set locally AND mirror it to Live's piano
-	// roll (M6). Only real (>= 0) ids go upstream — a temp negative id
-	// (freshly-drawn note awaiting its real id) is held locally and
-	// pushed once `notes/added` swaps it.
-	function applySelection(ids: Set<number>) {
-		selectedIds = ids;
-		if (clipPath === null) return;
-		const realIds = [...ids].filter((id) => id >= 0);
-		sendSelectNotes(clipPath, realIds); // empty array clears in Live
-	}
-
-	function selectOnly(noteId: number) {
-		applySelection(new Set([noteId]));
-	}
-
-	function toggleInSelection(noteId: number) {
-		const next = new Set(selectedIds);
-		if (next.has(noteId)) next.delete(noteId);
-		else next.add(noteId);
-		applySelection(next);
-	}
-
-	function clearSelection() {
-		if (selectedIds.size === 0) return;
-		applySelection(new Set());
-	}
-
-	function deleteSelectedNotes() {
-		if (clipPath === null || selectedIds.size === 0) return;
-		const ids = [...selectedIds];
-		selectedIds = new Set();
-		focusedNotesStore.optimisticRemove(ids); // optimistic, batch
-		sendRemoveNotes(clipPath, ids);
-		sendSelectNotes(clipPath, []); // nothing selected after delete
+			}
+		]);
 	}
 
 	function deleteNote(noteId: number) {
 		if (clipPath === null) return;
-		const next = new Set(selectedIds);
-		next.delete(noteId);
-		applySelection(next);
 		focusedNotesStore.optimisticRemove([noteId]);
 		sendRemoveNotes(clipPath, [noteId]);
 	}
 
-	function handleEditorKey(event: KeyboardEvent) {
-		if (!isMidi) return;
-		if ((event.key === 'Delete' || event.key === 'Backspace') && selectedIds.size > 0) {
-			event.preventDefault();
-			deleteSelectedNotes();
-		} else if (event.key === 'Escape' && selectedIds.size > 0) {
-			event.preventDefault();
-			clearSelection();
-		}
-	}
-
-	// Draw-on-empty-grid (draw mode). Pointerdown mints a temp note at the
+	// Draw-on-empty-grid. Pointerdown mints a temp note at the
 	// grid cell; DRAGGING right extends its duration (snapped, ≥ one cell);
 	// pointerup commits the add with the final length. A plain tap (no
 	// drag) commits a one-cell note. The wire send is deferred to
@@ -1289,7 +1174,7 @@
 	let drawNote = $state<{ tempId: number; startBeats: number; pitch: number } | null>(null);
 
 	function handleGridTap(event: PointerEvent) {
-		if (editMode !== 'draw' || !isMidi || clipPath === null || contentW <= 0) return;
+		if (!isMidi || clipPath === null || contentW <= 0) return;
 		const rect = containerRef?.getBoundingClientRect();
 		if (!rect) return;
 		const { x: localX, y: localY } = contentLocal(event.clientX, event.clientY, rect, pitchAxisW, TIME_AXIS_H);
@@ -1306,7 +1191,6 @@
 			velocity: 100,
 			mute: false
 		});
-		selectedIds = new Set([tempId]); // local-only until the real id arrives
 		drawNote = { tempId, startBeats, pitch };
 
 		beginGesture(onDrawDragMove, commitDrawNote);
@@ -1343,11 +1227,7 @@
 			}
 		])
 			.then((newIds) => {
-				if (newIds.length > 0) {
-					focusedNotesStore.swapTempId(tempId, newIds[0]);
-					// Real Live id now exists — mirror selection upstream.
-					if (selectedIds.has(tempId)) selectOnly(newIds[0]);
-				}
+				if (newIds.length > 0) focusedNotesStore.swapTempId(tempId, newIds[0]);
 			})
 			.catch((err: Error) => {
 				logger.debug('ClipEditorView: add note failed', {
@@ -1358,87 +1238,19 @@
 			});
 	}
 
-	// --- marquee box-select (M5) ─────────────────────────────────────
-	// A drag on empty grid in Select mode draws a rubber-band box; on
-	// release, every note intersecting it is selected (additive when
-	// shift/⌘ held). Lives on a dedicated catcher layer so it never
-	// tangles with the canvas pan/zoom surface.
-	let marquee = $state<{
-		x0: number;
-		y0: number;
-		x1: number;
-		y1: number;
-		additive: boolean;
-		baseIds: Set<number>;
-	} | null>(null);
-	let marqueeRect = $derived(
-		marquee
-			? {
-					left: Math.min(marquee.x0, marquee.x1),
-					top: Math.min(marquee.y0, marquee.y1),
-					width: Math.abs(marquee.x1 - marquee.x0),
-					height: Math.abs(marquee.y1 - marquee.y0)
-				}
-			: null
-	);
-
-	function startMarquee(event: PointerEvent) {
-		if (editMode !== 'select' || !isMidi || clipPath === null || contentW <= 0) return;
-		event.stopPropagation();
-		if (event.cancelable) event.preventDefault();
-		const { x, y } = localCoords(event);
-		const additive = event.shiftKey || event.metaKey || event.ctrlKey;
-		marquee = { x0: x, y0: y, x1: x, y1: y, additive, baseIds: new Set(selectedIds) };
-
-		beginGesture((e) => {
-			if (marquee === null) return;
-			const p = localCoords(e);
-			marquee = { ...marquee, x1: p.x, y1: p.y };
-		}, finishMarquee);
-	}
-
-	function finishMarquee() {
-		const m = marquee;
-		marquee = null;
-		if (m === null) return;
-		const left = Math.min(m.x0, m.x1);
-		const right = Math.max(m.x0, m.x1);
-		const top = Math.min(m.y0, m.y1);
-		const bottom = Math.max(m.y0, m.y1);
-		// A click (no drag) on empty grid clears the selection.
-		if (right - left < 3 && bottom - top < 3) {
-			if (!m.additive) clearSelection();
-			return;
-		}
-		const hits = new Set<number>(m.additive ? m.baseIds : []);
-		const laneH = laneHeight(viewPitchWindow, contentH);
-		for (const n of notes) {
-			const nx = beatToX(n.startBeats, beatWindow, contentW);
-			const nxEnd = beatToX(n.startBeats + n.durationBeats, beatWindow, contentW);
-			const ny = pitchToY(n.pitch, viewPitchWindow, contentH);
-			const nyEnd = ny + laneH;
-			// AABB intersection test.
-			if (nxEnd >= left && nx <= right && nyEnd >= top && ny <= bottom) {
-				hits.add(n.noteId);
-			}
-		}
-		applySelection(hits);
-	}
-
 	// --- quantize (M5) ───────────────────────────────────────────────
 	// Live's Clip has no `quantize` LOM method (SelectionProbe dump), so
-	// quantize is client-side: snap each selected note's start to the grid
-	// and batch-modify. No new wire.
-	function quantizeSelected() {
-		if (clipPath === null || selectedIds.size === 0) return;
+	// quantize is client-side: snap every note's start in the clip to the
+	// grid and batch-modify. No new wire.
+	function quantizeClip() {
+		if (clipPath === null) return;
 		const grid = gridBeatsForSnap();
 		const specs = [];
-		for (const id of selectedIds) {
-			const n = focusedNotesStore.get(id);
-			if (!n || n.noteId < 0) continue;
+		for (const n of notes) {
+			if (n.noteId < 0) continue;
 			const snapped = Math.max(0, snapToGrid(n.startBeats, grid));
 			if (Math.abs(snapped - n.startBeats) < 1e-6) continue; // already on grid
-			focusedNotesStore.optimisticModify(id, { startBeats: snapped }); // optimistic
+			focusedNotesStore.optimisticModify(n.noteId, { startBeats: snapped }); // optimistic
 			specs.push({
 				noteId: n.noteId,
 				pitch: n.pitch,
@@ -1451,40 +1263,9 @@
 		if (specs.length > 0) sendModifyNotes(clipPath, specs);
 	}
 
-	// --- duplicate (M5) ──────────────────────────────────────────────
-	// Duplicate the selected notes one grid-step (or their own span) later
-	// via the M5 duplicate endpoint → clip.duplicate_notes_by_id. The
-	// surface replies notes/added with the new ids; we select those.
-	function duplicateSelected() {
-		if (clipPath === null || selectedIds.size === 0) return;
-		const ids = [...selectedIds].filter((id) => id >= 0);
-		if (ids.length === 0) return;
-		const path = clipPath;
-		sendDuplicateNotes(path, ids)
-			.then(async (newIds) => {
-				// Unlike add/move/delete there is no optimistic copy to draw —
-				// only Live knows where the copies landed — and the write
-				// marks itself local, so the notes/changed echo that would
-				// re-pull is suppressed. Pull the notes now, or the copies
-				// show in the strip thumbnails but never here.
-				const fresh = await requestRichNotes(path);
-				if (focusedNotesStore.clipPath !== path) return;
-				focusedNotesStore.reconcile(path, fresh);
-				if (newIds.length > 0) applySelection(new Set(newIds));
-			})
-			.catch((err: Error) => {
-				logger.debug('ClipEditorView: duplicate failed', {
-					clipPath,
-					error: err.message
-				});
-			});
-	}
-
 	// --- velocity lane (M5, plan decision 9) ─────────────────────────
 	// A strip under the roll, one bar per visible note (height ∝ velocity).
-	// Vertical drag on a bar sets that note's velocity; if the dragged
-	// note is part of the current multi-selection, ALL selected notes get
-	// the same velocity (group edit). Pitch-drag (on the roll) and
+	// Vertical drag on a bar sets that note's velocity. Pitch-drag (on the roll) and
 	// velocity-drag (here) stay spatially separate — no modifier needed.
 	const VELOCITY_MAX = 127;
 	let velBars = $derived.by(() => {
@@ -1514,11 +1295,7 @@
 		if (clipPath === null) return;
 		event.stopPropagation();
 		if (event.cancelable) event.preventDefault();
-		// Drag the whole selection if this bar's note is selected, else
-		// just this one (and make it the selection).
-		const ids = selectedIds.has(noteId) ? [...selectedIds] : [noteId];
-		if (!selectedIds.has(noteId)) selectOnly(noteId);
-		velDrag = { ids };
+		velDrag = { ids: [noteId] };
 		applyVelocity(event.clientY);
 
 		beginGesture((e) => applyVelocity(e.clientY), commitVelocity);
@@ -1565,7 +1342,7 @@
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 		<div
 			class="canvas-wrap"
-			style:bottom={isMidi ? `${TOOLBAR_H}px` : undefined}
+			style:right={isMidi ? `${TOOLBAR_W}px` : undefined}
 			bind:this={containerRef}
 			role="application"
 			aria-label="Clip editor"
@@ -1576,7 +1353,6 @@
 			onpointercancel={endPointer}
 			onpointerleave={endPointer}
 			onwheel={handleWheel}
-			onkeydown={handleEditorKey}
 		>
 			<!-- Time ruler (top) -->
 			<!-- Double-tap to add a warp marker (audio, warped). -->
@@ -1635,38 +1411,19 @@
 						{/if}
 					{/each}
 
-					<!-- Draw-mode tap catcher (M4): sits above the grid, below
-					     the notes, so a tap on an empty lane mints a note while
-					     taps on a note still hit the note's own handler. -->
-					{#if editMode === 'draw'}
-						<div
-							class="draw-catcher"
-							role="button"
-							tabindex="-1"
-							aria-label="Draw note"
-							onpointerdown={(e) => {
-								e.stopPropagation();
-								handleGridTap(e);
-							}}
-						></div>
-					{:else}
-						<!-- Select-mode marquee catcher: a drag on empty grid
-						     box-selects; below notes (z 2 < 4) so note taps
-						     still hit the note. -->
-						<div
-							class="marquee-catcher"
-							role="button"
-							tabindex="-1"
-							aria-label="Select notes"
-							onpointerdown={startMarquee}
-						></div>
-						{#if marqueeRect}
-							<div
-								class="marquee-box"
-								style="left: {marqueeRect.left}px; top: {marqueeRect.top}px; width: {marqueeRect.width}px; height: {marqueeRect.height}px;"
-							></div>
-						{/if}
-					{/if}
+					<!-- Draw tap catcher (M4): sits above the grid, below the
+					     notes, so a tap on an empty lane mints a note while taps
+					     on a note still hit the note's own handler. -->
+					<div
+						class="draw-catcher"
+						role="button"
+						tabindex="-1"
+						aria-label="Draw note"
+						onpointerdown={(e) => {
+							e.stopPropagation();
+							handleGridTap(e);
+						}}
+					></div>
 
 					<!-- Notes -->
 					{#if notesLoadState === 'loading' && notes.length === 0}
@@ -1675,7 +1432,6 @@
 						{#each visibleNotes as note (note.key)}
 							<div
 								class="note"
-								class:selected={selectedIds.has(note.noteId)}
 								style="left: {note.x}px; width: {note.w}px; top: {note.y}px; height: {note.h}px; background: {noteColor(note.velocity)};"
 								role="button"
 								tabindex="-1"
@@ -1775,7 +1531,6 @@
 					{#each velBars as bar (bar.noteId)}
 						<div
 							class="vel-bar"
-							class:selected={selectedIds.has(bar.noteId)}
 							style="left: {bar.x}px; width: {bar.w}px; height: {(bar.velocity / VELOCITY_MAX) * 100}%; background: {noteColor(bar.velocity)};"
 							role="slider"
 							tabindex="-1"
@@ -1790,10 +1545,10 @@
 			{/if}
 		</div>
 
-		<!-- MIDI edit toolbar: mode · grid · ops. Own pointer
-		     surface, outside the pan/zoom canvas. -->
+		<!-- MIDI edit toolbar: a column beside the roll, so the roll takes
+		     the full height. Own pointer surface, outside the pan/zoom canvas. -->
 		{#if isMidi}
-			<div class="edit-toolbar" style:height="{TOOLBAR_H}px">
+			<div class="edit-toolbar" style:width="{TOOLBAR_W}px">
 				<button
 					class="edit-chip"
 					class:active={fold}
@@ -1805,28 +1560,9 @@
 
 				<span class="toolbar-sep"></span>
 
-				<button
-					class="edit-chip"
-					class:active={editMode === 'select'}
-					onclick={() => (editMode = 'select')}
-					title="Select / move notes"
-				>
-					Select
-				</button>
-				<button
-					class="edit-chip"
-					class:active={editMode === 'draw'}
-					onclick={() => (editMode = 'draw')}
-					title="Draw notes"
-				>
-					Draw
-				</button>
-
-				<span class="toolbar-sep"></span>
-
 				<!-- Snap grid selector (M5 polish): cycles 1/4·1/8·1/16·1/32
-				     and a triplet toggle. Drives snap, draw length, and the
-				     visible gridlines. -->
+				     and a triplet toggle. Drives snap, draw length, quantize
+				     and the visible gridlines. -->
 				<button
 					class="edit-chip grid-chip"
 					onclick={cycleGrid}
@@ -1839,37 +1575,19 @@
 					class:active={gridTriplet}
 					onclick={() => (gridTriplet = !gridTriplet)}
 					title="Triplet grid"
-					data-narrow
 				>
-					T
+					Triplet
 				</button>
 
 				<span class="toolbar-sep"></span>
 
-
 				<button
 					class="edit-chip"
-					disabled={selectedCount === 0}
-					onclick={quantizeSelected}
-					title="Quantize selected notes to grid"
+					disabled={notes.length === 0}
+					onclick={quantizeClip}
+					title="Quantize every note in the clip to the grid"
 				>
 					Quantize
-				</button>
-				<button
-					class="edit-chip"
-					disabled={selectedCount === 0}
-					onclick={duplicateSelected}
-					title="Duplicate selected notes"
-				>
-					Duplicate
-				</button>
-				<button
-					class="edit-chip delete"
-					disabled={selectedCount === 0}
-					onclick={deleteSelectedNotes}
-					title="Delete selected notes"
-				>
-					Delete{selectedCount > 1 ? ` (${selectedCount})` : ''}
 				</button>
 			</div>
 		{/if}
@@ -2001,7 +1719,7 @@
 	}
 
 	/* Editor stacking order (content layer), low → high:
-	   loop-region (1) < draw-catcher (2) < note (4) < note.selected (5)
+	   loop-region (1) < draw-catcher (2) < note (4)
 	   < brace-handle (6) < playhead (7).
 	   Notes MUST sit above the loop-region: the region spans the whole
 	   loop window, so without this a note tap inside the loop hits
@@ -2010,7 +1728,7 @@
 		position: absolute;
 		border-radius: 2px;
 		min-height: 2px;
-		/* Interactive in M4 — own pointer handler for move/resize/select.
+		/* Interactive in M4 — own pointer handler for move/resize/erase.
 		   touch-action:none so a note drag doesn't scroll the page. */
 		pointer-events: auto;
 		touch-action: none;
@@ -2018,14 +1736,7 @@
 		z-index: 4;
 		box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--background), transparent 40%);
 	}
-	.note.selected {
-		box-shadow:
-			inset 0 0 0 1px color-mix(in srgb, var(--background), transparent 40%),
-			0 0 0 1px white;
-		z-index: 5;
-	}
-
-	/* Draw-mode tap catcher: transparent, fills the content area, above
+	/* Draw tap catcher: transparent, fills the content area, above
 	   the loop-region so a draw-tap anywhere in the loop window mints a
 	   note. Notes sit above it (z 4 > 2) so tapping an existing note in
 	   draw mode hits the note, not the catcher. */
@@ -2035,23 +1746,6 @@
 		z-index: 2;
 		cursor: crosshair;
 		touch-action: none;
-	}
-
-	/* Select-mode marquee catcher: same layer as draw-catcher (z 2),
-	   below notes so note taps win; a drag on empty grid box-selects. */
-	.marquee-catcher {
-		position: absolute;
-		inset: 0;
-		z-index: 2;
-		cursor: default;
-		touch-action: none;
-	}
-	.marquee-box {
-		position: absolute;
-		z-index: 6;
-		border: 1px solid var(--phosphor);
-		background: var(--phosphor-wash);
-		pointer-events: none;
 	}
 
 	/* Velocity lane: bottom strip, bars grow upward from the baseline. */
@@ -2071,40 +1765,30 @@
 		touch-action: none;
 		box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--background), transparent 50%);
 	}
-	.vel-bar.selected {
-		box-shadow:
-			inset 0 0 0 1px color-mix(in srgb, var(--background), transparent 50%),
-			0 0 0 1px white;
-	}
-
-	/* Its own band under the roll (the canvas stops TOOLBAR_H short of the
-	   bottom), not an overlay on the velocity lane. Chips share the width
-	   evenly at a 44 px touch height — at 11 px type and ~16 px tall they
-	   were too small to hit on the iPad. */
+	/* Its own column beside the roll (the canvas stops TOOLBAR_W short of
+	   the right edge), so the roll keeps the full height. Chips stack at a
+	   44 px touch floor and share the height. The top is padded clear of
+	   ClipCentralView's editor-toggle chip, which floats over this corner. */
 	.edit-toolbar {
 		position: absolute;
-		left: 8px;
+		top: 0;
+		right: 0;
 		bottom: 0;
-		right: 8px;
 		display: flex;
+		flex-direction: column;
 		flex-wrap: nowrap;
-		align-items: center;
 		gap: var(--spacing-xs);
+		padding: 32px 0 0 8px;
 		z-index: 20;
 		pointer-events: none; /* chips opt back in; gaps pass through */
 	}
 	.edit-toolbar > * {
 		pointer-events: auto;
 	}
-	/* One-character labels give their width to the long ones ("Duplicate"). */
-	.edit-chip[data-narrow] {
-		flex-grow: 0.6;
-	}
 	.toolbar-sep {
-		width: 1px;
-		height: 44px;
+		height: 1px;
 		flex: none;
-		margin: 0 3px;
+		margin: 3px 0;
 		background: var(--line);
 		pointer-events: none;
 	}
@@ -2116,8 +1800,8 @@
 	}
 	.edit-chip {
 		flex: 1 1 0;
-		min-width: 0;
-		height: 44px;
+		min-height: 44px;
+		max-height: 72px;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -2134,9 +1818,6 @@
 		background: color-mix(in oklab, var(--phosphor) 25%, transparent);
 		color: var(--foreground);
 		border-color: var(--phosphor);
-	}
-	.edit-chip.delete {
-		color: color-mix(in srgb, var(--act-rec), var(--muted-foreground) 30%);
 	}
 	.edit-chip:disabled {
 		opacity: 0.4;
@@ -2348,20 +2029,10 @@
 	:global([data-grammar="flat"]) .gridline.bar {
 		background: var(--clip-grid-bar);
 	}
-	/* Notes: solid ink, ClipBorder frame; selected = SelectionBackground
-	   frame (inner border + 1px outline stands in for the white ring). */
+	/* Notes: solid ink, ClipBorder frame. */
 	:global([data-grammar="flat"]) .note {
 		box-shadow: none;
 		border: 1px solid var(--flat-clip-border);
-	}
-	:global([data-grammar="flat"]) .note.selected {
-		box-shadow: none;
-		border-color: var(--flat-selection);
-		outline: 1px solid var(--flat-selection);
-	}
-	:global([data-grammar="flat"]) .marquee-box {
-		border-color: var(--flat-selection);
-		background: color-mix(in srgb, var(--flat-selection) 14%, transparent);
 	}
 	:global([data-grammar="flat"]) .velocity-lane {
 		background: var(--surface-well);
@@ -2372,11 +2043,6 @@
 		box-shadow: none;
 		border: 1px solid var(--flat-clip-border);
 		border-bottom-width: 0;
-	}
-	:global([data-grammar="flat"]) .vel-bar.selected {
-		box-shadow: none;
-		border-color: var(--flat-selection);
-		outline: 1px solid var(--flat-selection);
 	}
 	:global([data-grammar="flat"]) .toolbar-sep {
 		background: var(--line-strong);
@@ -2396,9 +2062,6 @@
 	   the frame stays dark for the chip's boundary to survive. */
 	:global(.light[data-grammar="flat"]) .edit-chip.active {
 		border-color: var(--line-strong);
-	}
-	:global([data-grammar="flat"]) .edit-chip.delete {
-		color: var(--act-rec);
 	}
 	:global([data-grammar="flat"]) .edit-chip:disabled {
 		opacity: 1;
