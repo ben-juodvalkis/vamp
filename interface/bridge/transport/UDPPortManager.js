@@ -108,6 +108,18 @@ function createUDPPorts(config) {
             localPort: config.loopingRecorder.localPort,
             remoteAddress: config.loopingRecorder.host,
             remotePort: config.loopingRecorder.remotePort
+        }),
+
+        // Ben's Adaptive Tone Shaper devices (Vamp Devices/ToneShaper). Inbound
+        // only: every instance sends /toneshaper/frame to :11032, thirty a
+        // second; the bridge relays the one a client watches
+        // (handlers/toneShaper.js). Nothing is sent back, so remotePort is
+        // unused.
+        toneShaper: new osc.UDPPort({
+            localAddress: INBOUND_BIND_ADDRESS,
+            localPort: config.toneShaper.localPort,
+            remoteAddress: config.toneShaper.host,
+            remotePort: config.toneShaper.remotePort
         })
     };
 

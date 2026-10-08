@@ -192,6 +192,11 @@ const OSC_CONFIG = {
         remotePort: constants.osc.loopingRecorder.remotePort,
         host: constants.osc.loopingRecorder.host
     },
+    toneShaper: {
+        localPort: constants.osc.toneShaper.localPort,
+        remotePort: constants.osc.toneShaper.remotePort,
+        host: constants.osc.toneShaper.host
+    },
     // The TotalMix pair only exists with the link: an endpoint left out of
     // this object is never constructed by UDPPortManager, so never bound.
     ...(totalmixLink && {
@@ -255,6 +260,12 @@ const captureRecorder = createCaptureRecorder({
     recordingsDir: (constants.paths || {}).liveRecordingsDir,
     sendToDevice: (msg) => udpPorts.loopingRecorder?.send(msg)
 });
+
+// Ben's Adaptive Tone Shaper's graph (handlers/toneShaper.js): every instance
+// in the set streams its spectrum and curve here; only the one a client
+// watches goes on to the clients.
+const { createToneShaper } = require('./handlers/toneShaper');
+const toneShaper = createToneShaper();
 
 // Similar-sound swap (ADR-439 phase 3). The bridge orchestrates every hop: the
 // surface runs on Live's main thread, which is where an AX press is serviced,
@@ -330,7 +341,8 @@ const { httpServer, wss } = createWebSocketServer(
     groupTracks,
     features,
     machine,
-    captureRecorder);
+    captureRecorder,
+    toneShaper);
 wssRef = wss;
 
 // Surf→UI broadcast batcher. Wraps the per-client fan-out so a burst
@@ -463,6 +475,10 @@ const INBOUND_MIDDLEWARE = {
         logger.debug('Capture event from Vamp-Recorder', { address: msg.address, args: msg.args });
         return captureRecorder.onDeviceMessage(msg);
     },
+    // /toneshaper/frame from every Tone Shaper device, thirty a second each;
+    // the handler drops the ones no client is looking at. Not logged, even
+    // at debug: the rate would bury everything else.
+    toneShaper: (msg) => toneShaper.onDeviceMessage(msg),
     // Returns true when the message is fully consumed bridge-side and
     // must NOT be relayed to the UI (currently only save_as_request).
     pythonSurface: (msg) => {
@@ -631,6 +647,7 @@ function bootstrapTotalMixLevels() {
 // its switch has a link to feed.
 const INBOUND_SOURCES = [
     'loopingRecorder',
+    'toneShaper',
     'pythonSurface',
     ...(totalmixLink ? ['totalmix', 'totalmixDevice'] : [])
 ];

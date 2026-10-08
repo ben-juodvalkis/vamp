@@ -241,19 +241,25 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     curveType: 'eq',
     color: familyScheme('filter')
   },
-  bloom: {
-    // oeksound bloom, an AU tonal balancer, beside the Channel EQ in the EQ
-    // view (2026-10-06). The plug-in is the owner's, so the preset loads from
-    // the owner's Effect Patches folder; without the plug-in Live loads a
-    // placeholder. Live names it "bloom" and reports AuPluginDevice, read off
-    // the running device.
+  toneShaper: {
+    // Ben's Adaptive Tone Shaper, beside the Channel EQ in the EQ view
+    // (2026-10-07; oeksound bloom's sliders stood there the day before). Our
+    // own Max for Live device, shipped in Vamp Devices and loaded through
+    // that Place like Octave. Its graph (ToneShaperGraph) is the whole view
+    // of it; the spectrum and the curve come from the device itself over
+    // `/toneshaper/frame`, not from the LOM. Parameters, read off the
+    // running device: 1 Amount 0..10, 2..5 Lows / Lo-mids / Hi-mids / Highs
+    // -10..10, 6 Latency (1 = zero), 7 Quality (1 = eco), 8..11 the four
+    // centers in Hz. Live names a loaded .amxd after its file.
     padScoped: true,
-    presetPath: '{effectPresetsBase}/bloom.aupreset',
-    defaultName: 'bloom',
-    expectedClassName: 'AuPluginDevice',
+    presetPath: '',
+    source: 'place:Vamp Devices',
+    rel: "ToneShaper/Ben's Adaptive Tone Shaper.amxd",
+    defaultName: "Ben's Adaptive Tone Shaper",
+    expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
     centralViewGroup: 'eq',             // Belongs to EQCentralView
-    color: familyScheme('filter')       // A tonal balancer, the EQ's family
+    color: familyScheme('filter')       // A tone balancer, the EQ's family
   },
   drum: {
     // A Drum Buss belongs on a single pad as much as on the track — a

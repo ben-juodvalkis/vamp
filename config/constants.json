@@ -67,6 +67,12 @@
       "host": "127.0.0.1",
       "description": "Vamp-Recorder.amxd — OSC capture control + state feedback. Bridge sends /capture/{folder,arm,disarm,start,stop,query} to 11016 (device's receive); device replies with /capture/{state,file,error,hello,bye} to 11017 (bridge's receive)."
     },
+    "toneShaper": {
+      "localPort": 11032,
+      "remotePort": 11033,
+      "host": "127.0.0.1",
+      "description": "Ben's Adaptive Tone Shaper (Vamp Devices/ToneShaper, 2026-10-07). Every instance in the set sends /toneshaper/frame <devicePath> <59 levels dB> <59 gains dB> to 11032 (the bridge's receive) thirty times a second: the spectrum it hears and the curve it applies, which Live's API does not carry. The bridge relays only the device a client watches (/toneshaper/watch, bridge-terminated; interface/bridge/handlers/toneShaper.js). One-way: nothing is sent to a device, so remotePort is reserved and unused. The port is written into the device by its generator (the Tone Shaper repo's max/tools/maxpatch.py, FRAME_PORT): change both."
+    },
     "backendScope": {
       "_description": "Per-backend overrides of prefix-based routing in interface/bridge/routing/messageRouter.js. Addresses listed under a backend are routed there instead of the default. Entries may be exact addresses (e.g. '/live/test') or prefix globs ending in '*' (e.g. '/looping/v2/*' — matches every address starting with '/looping/v2/'). See Looping's documentation/archive/m4l-to-python/05-migration-plan.md §1 for the three-backend model.",
       "pythonSurface": [

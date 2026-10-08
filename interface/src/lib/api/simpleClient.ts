@@ -85,6 +85,7 @@ import {
 	isV3MasterMetadataAddress
 } from './handlers/v3MasterMetadata';
 import { handleV3Meter, isV3MeterAddress } from './handlers/v3Meter';
+import { handleToneShaperFrame, isToneShaperAddress } from './handlers/toneShaperFrame';
 import {
 	handleV3PermuteStep,
 	isV3PermuteStepAddress
@@ -304,6 +305,12 @@ function routeMessage(address: string, args: OSCArg[]): void {
 	// Priority 2.5: Capture Messages (/capture/*)
 	if (address.startsWith('/capture/')) {
 		captureStore.handleMessage(address, args);
+		return;
+	}
+
+	// The Tone Shaper's frames (/toneshaper/*), from its device through the bridge.
+	if (isToneShaperAddress(address)) {
+		handleToneShaperFrame(address, args);
 		return;
 	}
 

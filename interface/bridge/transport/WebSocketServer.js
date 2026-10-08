@@ -168,7 +168,7 @@ function replayTotalMixToClient(ws, totalmixLink, clientId) {
  *   (handlers/captureRecorder.js), which hands the device its folder before a start
  * @returns {Object} { httpServer, wss }
  */
-function createWebSocketServer(config, udpPorts, connectionStatus, metrics, healthMonitor, captureOverride, totalmixLink, axHelper = null, drumSwap = null, groupTracks = null, features = null, machine = null, captureRecorder = null) {
+function createWebSocketServer(config, udpPorts, connectionStatus, metrics, healthMonitor, captureOverride, totalmixLink, axHelper = null, drumSwap = null, groupTracks = null, features = null, machine = null, captureRecorder = null, toneShaper = null) {
 
     // Launch mode ("dev" | "ipad"), announced to each client on connect via
     // /bridge/server_mode so WS clients (e.g. the menu-bar utility) can show
@@ -270,7 +270,8 @@ function createWebSocketServer(config, udpPorts, connectionStatus, metrics, heal
             groupTracks,
             features,
             machine,
-            captureRecorder
+            captureRecorder,
+            toneShaper
         });
     });
 
@@ -284,7 +285,7 @@ function createWebSocketServer(config, udpPorts, connectionStatus, metrics, heal
  * @param {Object} context - Context object with dependencies
  */
 function handleConnection(ws, request, context) {
-    const { udpPorts, connectionStatus, metrics, wss, healthMonitor, serverMode, captureOverride, totalmixLink, axHelper, drumSwap, groupTracks, features, machine, captureRecorder } = context;
+    const { udpPorts, connectionStatus, metrics, wss, healthMonitor, serverMode, captureOverride, totalmixLink, axHelper, drumSwap, groupTracks, features, machine, captureRecorder, toneShaper } = context;
 
     // Generate unique client ID
     const clientId = `client_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -459,13 +460,16 @@ function handleConnection(ws, request, context) {
             drumSwap,
             groupTracks,
             // Hands the recorder its folder ahead of a /capture/start.
-            captureRecorder
+            captureRecorder,
+            // Remembers which Tone Shaper device this client is looking at.
+            toneShaper
         });
     });
 
     ws.on('close', () => {
         logger.info('Browser client disconnected', { clientId: ws.clientId });
         healthMonitor?.onClientDisconnect(ws.clientId);
+        toneShaper?.forget(ws.clientId);
     });
 }
 
@@ -603,11 +607,20 @@ function handleCaptureStartCmd(_ws, message, context) {
     );
 }
 
+// `/toneshaper/watch [devicePath]`: this client is looking at that Tone
+// Shaper device's graph (`''` for none), so the bridge relays its frames
+// (handlers/toneShaper.js). Bridge-terminated; the device is never told.
+function handleToneShaperWatchCmd(_ws, message, context) {
+    const path = message.args && message.args[0];
+    context.toneShaper?.watch(context.clientId, typeof path === 'string' ? path : '');
+}
+
 // Address-keyed handlers (exact-match): control-plane messages that
 // don't go through the subscription/route flow.
 const ADDRESS_HANDLERS = {
     '/capture/start':     handleCaptureStartCmd,
     '/capture/arm':       handleCaptureStartCmd,
+    '/toneshaper/watch':  handleToneShaperWatchCmd,
     '/bridge/client_log': handleClientLog,
     '/cmd/clip/reverse':  handleClipReverseCmd,
     '/looping/v3/drum/swap_similar': handleDrumSwapSimilarCmd,
