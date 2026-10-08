@@ -85,13 +85,11 @@ describe('ChorusCentralView GlitchLoop', () => {
 		expect(s?.getAttribute('aria-valuemax')).toBe('120');
 	});
 
-	it('shows Size on Segment L (param 81, 0.1–50)', async () => {
+	it('has no Size slider since 2026-10-08', async () => {
 		seed(glitchLoop(0));
 		const { container } = render(ChorusCentralView);
 		await tick();
-		const s = sliderTitled(container, 'Size');
-		expect(s?.getAttribute('aria-valuenow')).toBe('20');
-		expect(s?.getAttribute('aria-valuemax')).toBe('50');
+		expect(sliderTitled(container, 'Size')).toBeUndefined();
 	});
 
 	const pitchButtons = (container: HTMLElement) =>

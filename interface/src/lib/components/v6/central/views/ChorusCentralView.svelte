@@ -22,6 +22,9 @@
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 	import SectionDivider from '../SectionDivider.svelte';
 	import OctavePanel from '../OctavePanel.svelte';
+	import { drag } from '$lib/actions';
+	import type { DragInfo } from '$lib/actions/drag';
+	import { segmentIndex, scrubBoxOf, type ScrubBox } from '$lib/utils/segmentScrub';
 	// What each control does, at a glance (user, 2026-10-06): ControlGlyph's
 	// drawn marks.
 
@@ -102,7 +105,8 @@
 	);
 
 	// ── Pitch Hack (Creative Extensions, Max) ──────────────────────────────
-	// Back 2026-10-08 as one upright column of Rate stops (user): a tap
+	// Back 2026-10-08 as one upright tab of Rate stops (user), drawn and
+	// scrubbed like the Octave's pitch tab beside it: a tap
 	// loads the device if it is not there, sets its Rate and puts Dry / Wet
 	// at full, so the device is always heard once it is touched. Indices read
 	// off the running device 2026-09-23: Dry / Wet is param 2 (0–100), Rate
@@ -133,6 +137,23 @@
 		pitchHack.sendParam(PITCH_HACK_PARAMS.mix.index, PITCH_HACK_PARAMS.mix.max);
 	}
 
+	// The tab SCRUBS, like the Octave's: the stack owns one pointer and
+	// resolves the stop under it from geometry, so a finger slides between
+	// rates. The box is measured at press.
+	let pitchHackBox: ScrubBox | null = null;
+
+	function pitchHackScrub(clientY: number) {
+		if (!pitchHackBox) return;
+		const i = segmentIndex(clientY, pitchHackBox.top, pitchHackBox.height, PITCH_HACK_RATES.length);
+		if (i === pitchHackStop && !pitchHack.isGhost) return;
+		sendPitchHackRate(PITCH_HACK_RATES[i].rate);
+	}
+
+	function pitchHackDown(info: DragInfo) {
+		pitchHackBox = scrubBoxOf(info.event?.currentTarget as Element | null);
+		pitchHackScrub(info.y);
+	}
+
 	// ── GlitchLoop (the owner's PitchLoop89 build, Max) ────────────────────
 	// Took Pitch Hack's place 2026-10-06; one slider for now, more to come.
 	// Dry/Wet is param 7, 0–100, read off the running device by the user
@@ -145,13 +166,7 @@
 		mix: { index: 7, max: 100, default: 0 },
 		feedback: { index: 9, max: 120, default: 0 },
 		pitchLeft: { index: 5, default: 0 },
-		pitchRight: { index: 6, default: 0 },
-		// Size: Segment L and R (params 81, 82, 0.1–50) written together
-		// (user, 2026-10-07); the slider reads L. Segment is an exponent dial
-		// in the device, so Live's value runs along the knob's travel and the
-		// slider feels like the knob.
-		sizeLeft: { index: 81, min: 0.1, max: 50 },
-		sizeRight: { index: 82 }
+		pitchRight: { index: 6, default: 0 }
 	};
 
 	// Pitch: Off · Up · Spread (user, 2026-10-07), written to Pitch L and
@@ -192,17 +207,6 @@
 		glitchLoop.sendParam(index, Math.max(0, Math.min(max, amount)));
 	}
 
-	let glitchLoopSize = $derived(
-		glitchLoop.paramValue(GLITCH_LOOP_PARAMS.sizeLeft.index) ?? GLITCH_LOOP_PARAMS.sizeLeft.min
-	);
-
-	function sendGlitchLoopSize(amount: number) {
-		const { index, min, max } = GLITCH_LOOP_PARAMS.sizeLeft;
-		const value = Math.max(min, Math.min(max, amount));
-		glitchLoop.sendParam(index, value);
-		glitchLoop.sendParam(GLITCH_LOOP_PARAMS.sizeRight.index, value);
-	}
-
 	function sendGlitchLoopFeedback(amount: number) {
 		const { index, max } = GLITCH_LOOP_PARAMS.feedback;
 		glitchLoop.sendParam(index, Math.max(0, Math.min(max, amount)));
@@ -219,30 +223,38 @@
 
 	<SectionDivider orientation="vertical" ink={pitchHackInk.primary} />
 
-	<!-- Pitch Hack (virtual device): one column of Rate stops, 1 to 1/16
-	     top to bottom; a tap loads it and opens its mix (2026-10-08). -->
-	<div
-		class="device-segmented pitch-hack-rate"
-		class:slot-ghost={pitchHack.isGhost}
-		style:grid-template-rows="repeat({PITCH_HACK_RATES.length}, 1fr)"
-		style="--btn-tint: {pitchHackInk.primary};"
-		role="group"
-		aria-label="Pitch Hack rate"
-	>
-		{#each PITCH_HACK_RATES as stop, i}
-			<button
-				class="device-segment text-sm font-medium"
-				class:active={!pitchHack.isGhost && pitchHackStop === i}
-				aria-label="Pitch Hack rate {stop.label}"
-				aria-pressed={!pitchHack.isGhost && pitchHackStop === i}
-				onclick={() => sendPitchHackRate(stop.rate)}
-			>{stop.label}</button>
-		{/each}
+	<!-- Pitch Hack (virtual device): its title over one tab of Rate stops,
+	     1 to 1/16 top to bottom, the Octave's tab beside it as the model; a
+	     tap loads it and opens its mix (2026-10-08). -->
+	<div class="device-wrapper pitch-hack" style="--btn-tint: {pitchHackInk.primary};">
+		<span class="column-title" style="color: {pitchHackInk.primary};">Pitch Hack</span>
+		<div
+			class="device-segmented pitch-hack-rate"
+			class:is-ghost-tab={pitchHack.isGhost}
+			style:grid-template-rows="repeat({PITCH_HACK_RATES.length}, 1fr)"
+			role="group"
+			aria-label="Pitch Hack rate"
+			use:drag={{
+				commit: 'immediate',
+				onDown: (info) => pitchHackDown(info),
+				onMove: (info) => pitchHackScrub(info.y)
+			}}
+		>
+			{#each PITCH_HACK_RATES as stop, i}
+				<button
+					class="device-segment rate-step num"
+					class:active={!pitchHack.isGhost && pitchHackStop === i}
+					aria-label="Pitch Hack rate {stop.label}"
+					aria-pressed={!pitchHack.isGhost && pitchHackStop === i}
+					onclick={() => sendPitchHackRate(stop.rate)}
+				>{stop.label}</button>
+			{/each}
+		</div>
 	</div>
 
 	<SectionDivider orientation="vertical" ink={glitchLoopInk.primary} />
 
-	<!-- GlitchLoop (virtual device): its Dry/Wet, Feedback and Size, then its
+	<!-- GlitchLoop (virtual device): its Dry/Wet and Feedback, then its
 	     Up · Spread · Off pitch column, in Pitch Hack's old place
 	     (2026-10-06). -->
 	<div class="glitch-group" class:slot-ghost={glitchLoop.isGhost}>
@@ -275,21 +287,6 @@
 					max={GLITCH_LOOP_PARAMS.feedback.max}
 					onTap={() => glitchLoop.loadIfGhost()}
 					onInteraction={sendGlitchLoopFeedback}
-				/>
-			</div>
-			<div class="device-wrapper">
-				<DeviceSlider
-					value={glitchLoopSize}
-					title="Size"
-					icon="size"
-					orientation="vertical"
-					labelOrientation="horizontal"
-					isGhost={glitchLoop.isGhost}
-					color={glitchLoopInk}
-					min={GLITCH_LOOP_PARAMS.sizeLeft.min}
-					max={GLITCH_LOOP_PARAMS.sizeLeft.max}
-					onTap={() => glitchLoop.loadIfGhost()}
-					onInteraction={sendGlitchLoopSize}
 				/>
 			</div>
 		</div>
@@ -366,7 +363,7 @@
 <style>
 	.chorus-central-layout {
 		display: grid;
-		/* octave | pitch hack rate column | glitchloop mix · feedback · size · pitch column | blur
+		/* octave | pitch hack rate tab | glitchloop mix · feedback · pitch column | blur
 		   | comb over phaser.
 		   One equal track per slider, a seam its hairline; a pad (and the
 		   Octave panel, its fader and its tab) spans two tracks, so it is
@@ -375,7 +372,7 @@
 		grid-template-columns:
 			repeat(2, minmax(0, 1fr)) auto
 			minmax(0, 1fr) auto
-			repeat(4, minmax(0, 1fr)) auto
+			repeat(3, minmax(0, 1fr)) auto
 			minmax(0, 1fr) auto
 			repeat(2, minmax(0, 1fr));
 		height: 100%;
@@ -407,9 +404,9 @@
 	}
 
 
-	/* GlitchLoop: three sliders and the pitch column, a track each. */
+	/* GlitchLoop: two sliders and the pitch column, a track each. */
 	.glitch-group {
-		grid-column: span 4;
+		grid-column: span 3;
 		display: grid;
 		grid-template-columns: subgrid;
 		min-height: 0;
@@ -417,15 +414,14 @@
 	}
 
 	.glitch-sliders {
-		grid-column: span 3;
+		grid-column: span 2;
 		min-height: 0;
 		display: grid;
 		grid-template-columns: subgrid;
 	}
 
 	/* The house segmented control upright, like Octave's pitch column. */
-	.glitch-pitch,
-	.pitch-hack-rate {
+	.glitch-pitch {
 		display: grid;
 		min-height: 0;
 		min-width: 0;
@@ -438,5 +434,45 @@
 		background: var(--btn-tint);
 		border-color: var(--btn-tint);
 		color: var(--flat-on-fg);
+	}
+
+	/* Pitch Hack: the Octave panel's title row and tab, one track wide. */
+	.pitch-hack {
+		gap: var(--spacing-sm);
+	}
+
+	/* The house eyebrow, as the Octave panel's title. */
+	.column-title {
+		flex: 0 0 auto;
+		min-height: 1rem;
+		font-size: 0.75rem;
+		letter-spacing: 0.05em;
+		font-weight: 700;
+		text-align: center;
+	}
+
+	:global([data-grammar="flat"]) .column-title {
+		text-transform: none;
+		letter-spacing: normal;
+	}
+
+	.pitch-hack-rate {
+		flex: 1 1 0;
+		min-height: 0;
+		min-width: 0;
+		display: grid;
+	}
+
+	/* The stack owns the pointer; the stops are its face. Keyboard focus
+	   and Enter still activate one. */
+	.rate-step {
+		pointer-events: none;
+		min-height: 0;
+		font-size: 1rem;
+		font-weight: 600;
+	}
+
+	.is-ghost-tab {
+		opacity: var(--opacity-ghost);
 	}
 </style>
