@@ -227,13 +227,39 @@
 	 * what `documentDrag.ts` was lifted from — and it is gone because the
 	 * action owns its own teardown, not because it was wrong.
 	 */
-	function braceDrag(type: 'start' | 'end' | 'range'): DragOptions {
+	/**
+	 * Which brace a press grabs, decided from where it landed rather than
+	 * from which element sits under the finger. The whole track is one
+	 * drag surface: a press within `BRACE_GRAB_PX` of a brace line takes
+	 * that brace — the nearer one when both are in reach, so close braces
+	 * split the gap instead of End always winning — and a press elsewhere
+	 * inside the loop moves the range. This also keeps the grab zone whole
+	 * at the sample's edges, where the braces sit by default and the track
+	 * clips anything that would hang outside it.
+	 */
+	const BRACE_GRAB_PX = 36;
+	function hitTest(clientX: number): 'start' | 'end' | 'range' | null {
+		if (!containerRef) return null;
+		const rect = containerRef.getBoundingClientRect();
+		const x = clientX - rect.left;
+		const startX = displayStart * rect.width;
+		const endX = displayEnd * rect.width;
+		const toStart = Math.abs(x - startX);
+		const toEnd = Math.abs(x - endX);
+		if (Math.min(toStart, toEnd) <= BRACE_GRAB_PX) {
+			if (toStart === toEnd) return x <= startX ? 'start' : 'end';
+			return toStart < toEnd ? 'start' : 'end';
+		}
+		return x > startX && x < endX ? 'range' : null;
+	}
+
+	function braceDrag(): DragOptions {
 		return {
 			commit: 'immediate',
 			touchAction: 'none',
 			stopPropagation: true,
-			onStart: () => {
-				isDragging = type;
+			onStart: ({ downX }: DragInfo) => {
+				isDragging = hitTest(downX);
 				dragStartValues = { start: sampleStart, length: sampleLength };
 			},
 			onMove: ({ dx }: DragInfo) => applyDrag(dx),
@@ -282,9 +308,7 @@
 		}
 	}
 
-	const rangeDrag: DragOptions = $derived(braceDrag('range'));
-	const startHandleDrag: DragOptions = $derived(braceDrag('start'));
-	const endHandleDrag: DragOptions = $derived(braceDrag('end'));
+	const trackDrag: DragOptions = braceDrag();
 
 	// Fetch waveform peaks when the loaded sample's path changes. Empty
 	// path → no fetch (Simpler with no sample). Routed through
@@ -475,14 +499,16 @@
 </script>
 
 <div class="w-full h-full flex items-center">
-	<!-- Loop Range Track. The track itself is full-width (no side margins);
-	     the 48px handle touch areas overflow past the track edges so the
-	     visible thin-line affordance lines up with the track edge while
-	     the hit area extends ~24px further outward. -->
+	<!-- Loop Range Track: the one drag surface for both braces and the
+	     range (`hitTest` picks which). The region and handle divs below
+	     are paint and keyboard focus only. -->
 	<div
 		bind:this={containerRef}
 		class="loop-track relative w-full h-full bg-muted rounded-lg select-none transition-all duration-200 overflow-hidden"
+		class:cursor-ew-resize={isDragging === 'start' || isDragging === 'end'}
+		class:cursor-grabbing={isDragging === 'range'}
 		style="touch-action: none; --loop-ink: {color.primary};"
+		use:dragAction={trackDrag}
 		role="slider"
 		tabindex={0}
 		aria-label="Sample loop range"
@@ -536,12 +562,9 @@
 		     Sits BELOW the canvas so the orange waveform reads at full
 		     brightness over the green tint. -->
 		<div
-			class="loop-region absolute inset-y-0 rounded-md shadow-lg border-2"
+			class="loop-region absolute inset-y-0 rounded-md shadow-lg border-2 pointer-events-none"
 			class:is-dragging={isDragging === 'range'}
-			class:cursor-grab={!isDragging}
-			class:cursor-grabbing={isDragging === 'range'}
 			style="left: {startPercentage}%; width: {widthPercentage}%;"
-			use:dragAction={rangeDrag}
 			onkeydown={handleRangeKeydown}
 			role="slider"
 			tabindex={0}
@@ -560,14 +583,11 @@
 			class="absolute inset-0 w-full h-full pointer-events-none rounded-lg"
 		></canvas>
 
-		<!-- Start handle. Outer div is the 48px-wide touch target
-		     (transparent, no visual). Inner div is a thin vertical line
-		     centered in the touch target — that's the visible affordance. -->
+		<!-- Start handle: the brace line plus a grip tab. Focusable for
+		     the arrow keys; touches go to the track's `hitTest`. -->
 		<div
-			class="absolute inset-y-0 w-12 -ml-6 flex items-center justify-center cursor-ew-resize"
-			class:scale-110={isDragging === 'start'}
+			class="absolute inset-y-0 w-12 -ml-6 flex items-center justify-center pointer-events-none"
 			style="left: {startPercentage}%;"
-			use:dragAction={startHandleDrag}
 			onkeydown={handleStartKeydown}
 			role="slider"
 			tabindex={0}
@@ -580,15 +600,18 @@
 				class="loop-handle-line w-0.5 h-full pointer-events-none"
 				class:is-dragging={isDragging === 'start'}
 			></div>
+			<!-- Grip tab, on the inside of the brace so the track's edge
+			     never clips it. -->
+			<div
+				class="loop-handle-grip absolute top-1/2 -translate-y-1/2 left-1/2 w-2 h-10 pointer-events-none"
+				class:is-dragging={isDragging === 'start'}
+			></div>
 		</div>
 
-		<!-- End handle. Same pattern as start: 48px touch target, thin
-		     vertical line affordance. -->
+		<!-- End handle. Same pattern as start, tab on the left. -->
 		<div
-			class="absolute inset-y-0 w-12 -ml-6 flex items-center justify-center cursor-ew-resize"
-			class:scale-110={isDragging === 'end'}
+			class="absolute inset-y-0 w-12 -ml-6 flex items-center justify-center pointer-events-none"
 			style="left: {endPercentage}%;"
-			use:dragAction={endHandleDrag}
 			onkeydown={handleEndKeydown}
 			role="slider"
 			tabindex={0}
@@ -599,6 +622,12 @@
 		>
 			<div
 				class="loop-handle-line w-0.5 h-full pointer-events-none"
+				class:is-dragging={isDragging === 'end'}
+			></div>
+			<!-- Grip tab, on the inside of the brace so the track's edge
+			     never clips it. -->
+			<div
+				class="loop-handle-grip absolute top-1/2 -translate-y-1/2 right-1/2 w-2 h-10 pointer-events-none"
 				class:is-dragging={isDragging === 'end'}
 			></div>
 		</div>
@@ -630,6 +659,13 @@
 		background-color: color-mix(in srgb, var(--loop-ink) 85%, transparent);
 	}
 	.loop-handle-line.is-dragging {
+		background-color: var(--loop-ink);
+	}
+	.loop-handle-grip {
+		background-color: color-mix(in srgb, var(--loop-ink) 85%, transparent);
+		border-radius: 2px;
+	}
+	.loop-handle-grip.is-dragging {
 		background-color: var(--loop-ink);
 	}
 
@@ -664,7 +700,9 @@
 		background-color: color-mix(in srgb, var(--loop-ink) 18%, transparent);
 	}
 	:global([data-grammar="flat"]) .loop-handle-line,
-	:global([data-grammar="flat"]) .loop-handle-line.is-dragging {
+	:global([data-grammar="flat"]) .loop-handle-line.is-dragging,
+	:global([data-grammar="flat"]) .loop-handle-grip,
+	:global([data-grammar="flat"]) .loop-handle-grip.is-dragging {
 		background-color: var(--loop-ink); /* 85% ink */
 	}
 </style>
