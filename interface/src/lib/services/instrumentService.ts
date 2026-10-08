@@ -16,6 +16,7 @@
 import type { Device } from '$lib/types/device';
 import type { DeviceRecord } from '$lib/stores/v3/normalized.svelte';
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
+import { isPatternRackMacroName } from '$lib/utils/macroLayoutUtils';
 // PR-3.5.4 (2026-04-16): the legacy parameterOSCService round-trip is
 // gone. `identifyInstrumentTypeAsync` now reads parameter names
 // synchronously from `selectedTrackStore.paramNamesForDevice(device)`,
@@ -43,7 +44,7 @@ export interface InstrumentInfo {
 export type InstrumentType =
   | 'drumrack'        // DrumGroupDevice — any pad type; the view picks its mode from vm.members
   | 'instrument-rack' // InstrumentGroupDevice (instrument rack)
-  | 'instrument-rack-pattern' // InstrumentGroupDevice with "Pattern XX" as first macro
+  | 'instrument-rack-pattern' // Instrument or Audio Effect Rack with "Pattern XX" as first macro
   | 'operator'        // Operator
   | 'analog'          // Analog
   | 'wavetable'       // Wavetable
@@ -115,6 +116,30 @@ class InstrumentService {
   }
 
   /**
+   * The pattern rack on an audio track: a top-level Audio Effect Rack whose
+   * macro 1 reads "Pattern N" — in practice the Shaker track, whose rack
+   * holds the Shaker Loop Chooser (macro 1 its pattern switch, which fires
+   * the track's loop clips). An audio track has no instrument, so this is
+   * the one rack it can open the Pattern Rack view for; the MIDI-track
+   * Instrument Rack goes through {@link findInstrumentInDeviceList}.
+   */
+  findPatternRackInDeviceList(devices: DeviceRecord[]): InstrumentInfo | null {
+    for (let i = 0; i < devices.length; i++) {
+      const device = devices[i];
+      if (device.className !== 'AudioEffectGroupDevice') continue;
+      if (!isPatternRackMacroName([...device.params.values()][1]?.name)) continue;
+      return {
+        deviceIndex: i,
+        className: device.className,
+        name: device.name,
+        type: 'instrument',
+        devicePath: device.devicePath
+      };
+    }
+    return null;
+  }
+
+  /**
    * Identify the specific type of instrument for UI rendering
    * Single source of truth for type mapping
    * NOTE: This is the synchronous fallback - use identifyInstrumentTypeAsync for nested detection
@@ -167,11 +192,14 @@ class InstrumentService {
   async identifyInstrumentTypeAsync(info: InstrumentInfo, trackIndex: number): Promise<InstrumentType> {
     const { className } = info;
 
-    // For instrument racks, check if first macro is "Pattern XX" (pattern selector)
-    if (className === 'InstrumentGroupDevice') {
+    // For racks, check if first macro is "Pattern XX" (pattern selector). An
+    // Audio Effect Rack only arrives here as an audio track's pattern rack
+    // (`findPatternRackInDeviceList`).
+    if (className === 'InstrumentGroupDevice' || className === 'AudioEffectGroupDevice') {
+      const notPattern = className === 'InstrumentGroupDevice' ? 'instrument-rack' : 'unknown';
       const paramNames = await this.resolveParamNames(info);
       if (!paramNames) {
-        return 'instrument-rack';
+        return notPattern;
       }
       const macro1 = paramNames[1];
 
@@ -180,7 +208,7 @@ class InstrumentService {
         return 'instrument-rack-pattern';
       }
 
-      return 'instrument-rack';
+      return notPattern;
     }
 
     // For all other instruments, use synchronous detection

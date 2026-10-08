@@ -53,6 +53,7 @@ vi.mock('$lib/stores/v6/centralDisplayStore.svelte', () => {
 vi.mock('$lib/services/instrumentService', () => ({
 	instrumentService: {
 		findInstrumentInDeviceList: vi.fn(),
+		findPatternRackInDeviceList: vi.fn(),
 		identifyInstrumentTypeAsync: vi.fn()
 	}
 }));
@@ -67,6 +68,7 @@ const setViewDirect = (centralDisplayStore as unknown as {
 }).__setViewDirect;
 const findInstrument = instrumentService.findInstrumentInDeviceList as unknown as ReturnType<typeof vi.fn>;
 const identifyType = instrumentService.identifyInstrumentTypeAsync as unknown as ReturnType<typeof vi.fn>;
+const findPatternRack = instrumentService.findPatternRackInDeviceList as unknown as ReturnType<typeof vi.fn>;
 
 const INSTRUMENT = { name: 'Wavetable', className: 'InstrumentVector' };
 // The coordinator only counts devices and hands them to instrumentService,
@@ -172,6 +174,16 @@ describe('instrumentDisplayCoordinator — instrument view request', () => {
 		findInstrument.mockReturnValue(INSTRUMENT);
 		await update(5, 'midi', DEVICES);
 		expect(setView).not.toHaveBeenCalled();
+	});
+
+	it('opens the Pattern Rack view on an audio track that holds a pattern rack (the Shaker)', async () => {
+		await settleOn(3, { type: 'system' });
+
+		const rack = { name: 'Audio Effect Rack', className: 'AudioEffectGroupDevice', devicePath: 'tracks/0/devices/0' };
+		findPatternRack.mockReturnValue(rack);
+		await update(0, 'audio', [rack] as never[]);
+		expect(setView).toHaveBeenCalledWith('instrument', 'instrument-rack-pattern', { instrument: rack });
+		expect(setView).not.toHaveBeenCalledWith('clip', undefined, null, 'Clip');
 	});
 
 	it('expires rather than hijacking a much later selection', async () => {

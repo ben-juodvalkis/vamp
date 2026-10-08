@@ -320,6 +320,32 @@ describe('trackDeviceGlance', () => {
 		expect(trackDeviceGlance('tracks/4').glyph).toBe('shaker');
 	});
 
+	it("opens the Pattern Rack view for an audio track's Audio Effect Rack named \"Pattern N\" (the Shaker)", () => {
+		replaceTree(1, [
+			track('tracks/0', 'audio', [
+				device('tracks/0/devices/0', 'Audio Effect Rack', 'AudioEffectGroupDevice', [
+					{ name: 'Device On', value: 1 },
+					{ name: 'Pattern 4', value: 0 },
+					{ name: 'Offbeat', value: 0 }
+				])
+			]),
+			track('tracks/1', 'audio', [
+				device('tracks/1/devices/0', 'Audio Effect Rack', 'AudioEffectGroupDevice', [
+					{ name: 'Device On', value: 1 },
+					{ name: 'Macro 1', value: 0 }
+				])
+			])
+		]);
+
+		const shaker = trackDeviceGlance('tracks/0');
+		expect(shaker.kind).toBe('instrument');
+		expect(shaker.instrumentType).toBe('instrument-rack-pattern');
+		expect(shaker.instrumentViewType).toBe('instrument-rack-pattern');
+		expect(shaker.glyph).toBe('shaker');
+		// Any other audio rack is still just the chain head, not an instrument.
+		expect(trackDeviceGlance('tracks/1').kind).not.toBe('instrument');
+	});
+
 	it('draws the INSTRUMENT, not the effects after it', () => {
 		replaceTree(1, [
 			track('tracks/6', 'midi', [

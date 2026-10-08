@@ -214,7 +214,10 @@ function canHoldInstrument(track: TrackRecord | undefined): boolean {
  * another from the coordinator.
  */
 function refineInstrumentType(instrument: InstrumentInfo, base: InstrumentType): InstrumentType {
-	if (instrument.className !== 'InstrumentGroupDevice' || !instrument.devicePath) return base;
+	const rack =
+		instrument.className === 'InstrumentGroupDevice' ||
+		instrument.className === 'AudioEffectGroupDevice';
+	if (!rack || !instrument.devicePath) return base;
 	const record = v3Store.deviceByPath.get(instrument.devicePath);
 	if (!record) return base;
 	const macro1 = [...record.params.values()][1]?.name;
@@ -358,9 +361,12 @@ export function trackDeviceGlance(trackPath: string): TrackDeviceGlance {
 	const track = v3Store.tracks.get(trackPath);
 	const devices = track ? [...track.devices.values()] : [];
 
+	// An audio track's one "instrument" is a pattern rack (the Shaker's).
 	const instrument = canHoldInstrument(track)
 		? instrumentService.findInstrumentInDeviceList(devices)
-		: null;
+		: track && !track.isFoldable
+			? instrumentService.findPatternRackInDeviceList(devices)
+			: null;
 	// `findInstrumentInDeviceList` returns the chain-FIRST instrument and
 	// its path; with none, the chain-first device stands in, which is the
 	// same rule one step down.

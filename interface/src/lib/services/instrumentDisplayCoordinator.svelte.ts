@@ -193,12 +193,21 @@ class InstrumentDisplayCoordinator {
       return;
     }
 
-    // AUDIO TRACK: Always show clip view
+    // AUDIO TRACK: clip view, unless it holds a pattern rack (the Shaker)
     if (trackType === 'audio') {
-      logger.debug('Audio track detected - showing clip view', { component: 'instrumentDisplayCoordinator' });
-      // An audio track never carries an instrument — clip view is the right
-      // answer even if a request is armed, so retire it.
+      // An audio track never carries an instrument — retire any armed request.
       this.instrumentViewRequestedAt = null;
+      const patternRack = instrumentService.findPatternRackInDeviceList(devices);
+      if (patternRack) {
+        logger.debug('Audio track with a pattern rack', { component: 'instrumentDisplayCoordinator', patternRack });
+        this.currentInstrument = patternRack;
+        currentInstrumentStore.setInstrument(patternRack, 'instrument-rack-pattern');
+        if (isNewTrack || centralDisplayStore.view.type === 'instrument') {
+          centralDisplayStore.setView('instrument', 'instrument-rack-pattern', { instrument: patternRack });
+        }
+        return;
+      }
+      logger.debug('Audio track detected - showing clip view', { component: 'instrumentDisplayCoordinator' });
       this.currentInstrument = null;
       currentInstrumentStore.clear();
       if (isNewTrack) {
@@ -278,8 +287,13 @@ class InstrumentDisplayCoordinator {
     const trackIndex = selectedTrackStore.trackIndex;
     const trackType = selectedTrackStore.trackType;
 
-    // Audio tracks always show clip view
+    // Audio tracks show clip view, unless they hold a pattern rack (the Shaker)
     if (trackType === 'audio') {
+      const patternRack = instrumentService.findPatternRackInDeviceList(selectedTrackStore.devicesByPath);
+      if (patternRack) {
+        centralDisplayStore.setView('instrument', 'instrument-rack-pattern', { instrument: patternRack });
+        return;
+      }
       logger.debug('Audio track - showing clip view', { component: 'instrumentDisplayCoordinator' });
       centralDisplayStore.setView('clip', undefined, null, 'Clip');
       return;
