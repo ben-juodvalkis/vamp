@@ -66,6 +66,10 @@
 		foldLanes,
 		shiftPitch,
 		grabResizesNote,
+		noteInCell,
+		nearestSpan,
+		formatBeatPosition,
+		formatNoteLength,
 		defaultBeatWindow,
 		defaultPitchWindow,
 		type BeatWindow,
@@ -100,6 +104,7 @@
 	} from '$lib/utils/clip/warpMarkers';
 	import { getTransients } from '$lib/services/clipTransientsService';
 	import { logger } from '$lib/utils/logger';
+	import { MOMENTARY_HOLD_MS } from '$lib/components/v6/tracks/TrackStrip/utils/momentaryPress';
 
 	interface Props {
 		/** Track color for note/waveform tinting. */
@@ -1180,8 +1185,17 @@
 		const { x: localX, y: localY } = contentLocal(event.clientX, event.clientY, rect, pitchAxisW, TIME_AXIS_H);
 		if (localX < 0 || localY < 0 || localX > contentW || localY > contentH) return;
 		const grid = gridBeatsForSnap();
-		const startBeats = Math.max(0, snapToGrid(xToBeat(localX, beatWindow, contentW), grid));
+		const tapBeats = xToBeat(localX, beatWindow, contentW);
 		const pitch = Math.max(0, Math.min(127, Math.round(yToPitch(localY, viewPitchWindow, contentH))));
+		// A note thinner than its grid cell is hit across the whole cell, so
+		// a short note takes a fingertip without the cells beside it, where
+		// the next note goes, losing anything.
+		const hit = noteInCell(notes, pitch, tapBeats, grid);
+		if (hit !== null) {
+			startNoteDrag(event, hit);
+			return;
+		}
+		const startBeats = Math.max(0, snapToGrid(tapBeats, grid));
 		const tempId = focusedNotesStore.nextTempId();
 		focusedNotesStore.optimisticAdd({
 			noteId: tempId,
@@ -1291,6 +1305,14 @@
 		return velocityFromY(clientY, rect.top, containerH, VELOCITY_LANE_H, VELOCITY_MAX);
 	}
 
+	// A touch anywhere in the lane takes the nearest bar within half a
+	// fingertip: a short note's bar can be 3px wide.
+	function handleVelocityLaneDown(event: PointerEvent) {
+		const left = (event.currentTarget as HTMLElement).getBoundingClientRect().left;
+		const i = nearestSpan(event.clientX - left, velBars);
+		if (i !== null) startVelocityDrag(event, velBars[i].noteId);
+	}
+
 	function startVelocityDrag(event: PointerEvent, noteId: number) {
 		if (clipPath === null) return;
 		event.stopPropagation();
@@ -1329,6 +1351,157 @@
 		}
 		if (specs.length > 0) sendModifyNotes(clipPath, specs);
 	}
+
+	// ── Note-name gestures (the pitch gutter) ────────────────────────
+	// A press on a note name still pans like the rest of the canvas. Two
+	// gestures of its own ride on top:
+	//  - double-tap: delete every note on that pitch;
+	//  - hold, then drag up or down: scale every note on that pitch's
+	//    velocity, up louder, keeping their relative dynamics.
+	// "Held" is decided when the finger first moves past the slop, by how
+	// long it has been down, never by a timer: page timers are clamped to
+	// ~1 s on the rig. The highlight that says "held" is a CSS delay.
+	const KEY_SLOP_PX = 8;
+	const VEL_DOUBLING_PX = 120; // drag this far up to double the velocities
+	let keyPress = $state<{
+		pointerId: number;
+		pitch: number;
+		x: number;
+		y: number;
+		at: number;
+		moved: boolean;
+	} | null>(null);
+	let velScale = $state<{
+		pitch: number;
+		factor: number;
+		members: { noteId: number; velocity: number }[];
+	} | null>(null);
+	let lastKeyTap: { pitch: number; at: number } | null = null;
+
+	function handleKeyDown(event: PointerEvent, pitch: number) {
+		if (!isMidi || clipPath === null || keyPress !== null) return;
+		keyPress = {
+			pointerId: event.pointerId,
+			pitch,
+			x: event.clientX,
+			y: event.clientY,
+			at: performance.now(),
+			moved: false
+		};
+		beginGesture(onKeyMove, onKeyEnd);
+	}
+
+	function onKeyMove(event: PointerEvent) {
+		const kp = keyPress;
+		if (kp === null || event.pointerId !== kp.pointerId) return;
+		const dy = event.clientY - kp.y;
+		if (velScale === null) {
+			if (Math.hypot(event.clientX - kp.x, dy) <= KEY_SLOP_PX) return;
+			kp.moved = true;
+			if (performance.now() - kp.at < MOMENTARY_HOLD_MS) {
+				// A drag straight away is a pan; leave it to the canvas.
+				keyPress = null;
+				return;
+			}
+			// Held, then moved: take the finger off the pan and undo the
+			// few px it panned inside the slop.
+			if (activePointers.delete(kp.pointerId) && activePointers.size === 0) {
+				dragKind = null;
+				beatWindow = { ...dragStartBeatWindow };
+				pitchWindow = { ...dragStartPitchWindow };
+			}
+			velScale = {
+				pitch: kp.pitch,
+				factor: 1,
+				members: notes
+					.filter((n) => n.pitch === kp.pitch && n.noteId >= 0)
+					.map((n) => ({ noteId: n.noteId, velocity: n.velocity }))
+			};
+		}
+		if (event.cancelable) event.preventDefault();
+		const factor = Math.pow(2, -dy / VEL_DOUBLING_PX);
+		velScale.factor = factor;
+		for (const m of velScale.members) {
+			focusedNotesStore.optimisticModify(m.noteId, { velocity: scaledVelocity(m.velocity, factor) });
+		}
+	}
+
+	function scaledVelocity(velocity: number, factor: number): number {
+		return Math.max(1, Math.min(VELOCITY_MAX, Math.round(velocity * factor)));
+	}
+
+	function onKeyEnd() {
+		const kp = keyPress;
+		const vs = velScale;
+		keyPress = null;
+		velScale = null;
+		if (kp === null || clipPath === null) return;
+		if (vs !== null) {
+			const specs = [];
+			for (const m of vs.members) {
+				const n = focusedNotesStore.get(m.noteId);
+				if (!n || n.velocity === m.velocity) continue;
+				specs.push({
+					noteId: n.noteId,
+					pitch: n.pitch,
+					startBeats: n.startBeats,
+					durationBeats: n.durationBeats,
+					velocity: n.velocity,
+					mute: n.mute
+				});
+			}
+			if (specs.length > 0) sendModifyNotes(clipPath, specs);
+			return;
+		}
+		// A tap: not moved, and not held (a hold that lets go is nothing).
+		const now = performance.now();
+		if (kp.moved || now - kp.at >= MOMENTARY_HOLD_MS) {
+			lastKeyTap = null;
+			return;
+		}
+		const prev = lastKeyTap;
+		if (prev && prev.pitch === kp.pitch && now - prev.at <= DOUBLE_TAP_MS) {
+			lastKeyTap = null;
+			deletePitch(kp.pitch);
+		} else {
+			lastKeyTap = { pitch: kp.pitch, at: now };
+		}
+	}
+
+	function deletePitch(pitch: number) {
+		if (clipPath === null) return;
+		const ids = notes.filter((n) => n.pitch === pitch).map((n) => n.noteId);
+		if (ids.length === 0) return;
+		focusedNotesStore.optimisticRemove(ids);
+		const real = ids.filter((id) => id >= 0);
+		if (real.length > 0) sendRemoveNotes(clipPath, real);
+	}
+
+	// ── Drag readout ─────────────────────────────────────────────────
+	// The finger covers the note it moves, so while a note is dragged or
+	// drawn its pitch, position and length show above it.
+	const READOUT_LIFT_PX = 40;
+	let dragReadout = $derived.by(() => {
+		if (velScale !== null) {
+			const lane = pitchLanes.find((l) => l.pitch === velScale!.pitch);
+			const pct = Math.round(velScale.factor * 100);
+			return {
+				text: `${padLabels.get(velScale.pitch) ?? pitchName(velScale.pitch)} · velocity ${pct}%`,
+				x: 0,
+				y: Math.max(2, (lane?.y ?? 0) - READOUT_LIFT_PX)
+			};
+		}
+		const id = noteDrag?.moved ? noteDrag.noteId : (drawNote?.tempId ?? null);
+		if (id === null) return null;
+		const box = visibleNotes.find((v) => v.noteId === id);
+		const n = focusedNotesStore.get(id);
+		if (!box || !n) return null;
+		return {
+			text: `${pitchName(n.pitch)} · ${formatBeatPosition(n.startBeats, beatsPerBar)} · ${formatNoteLength(n.durationBeats)}`,
+			x: Math.max(0, Math.min(contentW, box.x)),
+			y: Math.max(2, box.y - READOUT_LIFT_PX)
+		};
+	});
 </script>
 
 <div class="clip-editor h-full w-full">
@@ -1379,12 +1552,16 @@
 
 			<!-- Pitch gutter (left, MIDI only) -->
 			{#if isMidi}
-				<div class="pitch-gutter" style="top: {TIME_AXIS_H}px; width: {pitchAxisW}px;">
+				<div class="pitch-gutter" style="top: {TIME_AXIS_H}px; width: {pitchAxisW}px; --key-hold-ms: {MOMENTARY_HOLD_MS}ms;">
 					{#each pitchLanes as lane (lane.pitch)}
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
 							class="key"
 							class:black={lane.black}
+							class:pressed={keyPress?.pitch === lane.pitch && !keyPress.moved}
+							class:scaling={velScale?.pitch === lane.pitch}
 							style="top: {lane.y}px; height: {lane.h}px;"
+							onpointerdown={(e) => handleKeyDown(e, lane.pitch)}
 						>
 							{#if padLabels.has(lane.pitch)}<span class="key-label pad-label">{padLabels.get(lane.pitch)}</span>
 							{:else if folded || lane.pitch % 12 === 0}<span class="key-label">{pitchName(lane.pitch)}</span>{/if}
@@ -1499,6 +1676,15 @@
 					>
 						<div class="brace-line"></div>
 					</div>
+					<div
+						class="brace-grip"
+						style="left: {braceLoopStartX}px;"
+						role="slider"
+						tabindex="-1"
+						aria-label="Loop start"
+						aria-valuenow={Math.round(displayLoopStart)}
+						onpointerdown={(e) => startBraceDrag(e, 'start')}
+					></div>
 					<!-- End handle -->
 					<div
 						class="brace-handle brace-end"
@@ -1512,6 +1698,19 @@
 					>
 						<div class="brace-line"></div>
 					</div>
+					<div
+						class="brace-grip"
+						style="left: {braceLoopEndX}px;"
+						role="slider"
+						tabindex="-1"
+						aria-label="Loop end"
+						aria-valuenow={Math.round(displayLoopEnd)}
+						onpointerdown={(e) => startBraceDrag(e, 'end')}
+					></div>
+				{/if}
+
+				{#if dragReadout}
+					<div class="drag-readout num" style="left: {dragReadout.x}px; top: {dragReadout.y}px;">{dragReadout.text}</div>
 				{/if}
 
 				<!-- Playhead -->
@@ -1524,9 +1723,11 @@
 			     sets velocity. Aligned with the content's x via the pitch
 			     gutter offset; sits in the reserved bottom strip. -->
 			{#if velocityLaneShown}
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
 					class="velocity-lane"
 					style="left: {pitchAxisW}px; height: {VELOCITY_LANE_H}px; width: {contentW}px;"
+					onpointerdown={handleVelocityLaneDown}
 				>
 					{#each velBars as bar (bar.noteId)}
 						<div
@@ -1680,6 +1881,22 @@
 	.key.black {
 		background: var(--canvas);
 	}
+	/* Held long enough to scale velocities: lights after the hold time,
+	   with no JS timer (page timers are clamped on the rig). */
+	.key.pressed {
+		animation: key-held 1ms linear var(--key-hold-ms, 300ms) forwards;
+	}
+	.key.scaling {
+		background: var(--phosphor);
+	}
+	.key.scaling .key-label {
+		color: var(--flat-on-fg, var(--background));
+	}
+	@keyframes key-held {
+		to {
+			background: color-mix(in oklab, var(--phosphor) 45%, var(--secondary));
+		}
+	}
 	.key-label {
 		font-family: var(--font-mono);
 		font-size: 8px;
@@ -1719,8 +1936,8 @@
 	}
 
 	/* Editor stacking order (content layer), low → high:
-	   loop-region (1) < draw-catcher (2) < note (4)
-	   < brace-handle (6) < playhead (7).
+	   loop-region (1) < draw-catcher (2) < brace-handle (3) < note (4)
+	   < brace-grip (6) < playhead (7) < drag-readout (8).
 	   Notes MUST sit above the loop-region: the region spans the whole
 	   loop window, so without this a note tap inside the loop hits
 	   "Move loop" instead of selecting the note (caught in live test). */
@@ -1752,6 +1969,7 @@
 	.velocity-lane {
 		position: absolute;
 		bottom: 0;
+		touch-action: none;
 		overflow: hidden;
 		border-top: 1px solid var(--line);
 		background: var(--line-faint);
@@ -1855,19 +2073,44 @@
 
 	/* Draggable edge handle: a thin visible line centered in a wide
 	   transparent hit zone so it's findable on touch. */
+	/* A fingertip wide, but UNDER the notes (z 3 < 4): a note at the loop
+	   start would otherwise lose the half of itself the brace overlaps.
+	   The grip at the top (z 6) keeps the brace grabbable when notes
+	   cover the rest of its height. */
 	.brace-handle {
 		position: absolute;
 		top: 0;
 		bottom: 0;
-		width: 22px;
-		margin-left: -11px;
+		width: 44px;
+		margin-left: -22px;
 		display: flex;
 		justify-content: center;
 		cursor: ew-resize;
 		touch-action: none;
-		/* Above notes so the loop start/end edges stay grabbable even
-		   when a note sits right at the brace. */
+		z-index: 3;
+	}
+	.brace-grip {
+		position: absolute;
+		top: 0;
+		width: 44px;
+		height: 44px;
+		margin-left: -22px;
+		cursor: ew-resize;
+		touch-action: none;
 		z-index: 6;
+	}
+	.drag-readout {
+		position: absolute;
+		z-index: 8;
+		padding: 2px 6px;
+		border-radius: 2px;
+		font-size: 13px;
+		line-height: 1.4;
+		white-space: nowrap;
+		color: var(--foreground);
+		background: var(--surface-well);
+		border: 1px solid var(--line-strong);
+		pointer-events: none;
 	}
 	.brace-line {
 		width: 2px;
@@ -1913,9 +2156,9 @@
 	}
 	.warp-grip {
 		position: absolute;
-		left: -14px;
-		width: 28px;
-		height: 36px;
+		left: -22px;
+		width: 44px;
+		height: 44px;
 		pointer-events: auto;
 		touch-action: none;
 		cursor: ew-resize;
@@ -1929,7 +2172,7 @@
 	.warp-grip::after {
 		content: '';
 		position: absolute;
-		left: 9px;
+		left: 17px;
 		width: 10px;
 		height: 14px;
 		border-radius: 2px;

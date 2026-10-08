@@ -308,3 +308,85 @@ export function defaultPitchWindow(pitches: number[], minLanes = 12): PitchWindo
 	}
 	return clampPitchWindow({ lowPitch: lo, highPitch: hi });
 }
+
+// ── Touch targets ────────────────────────────────────────────────────
+// A fingertip is ~44px. What the editor DRAWS stays thin; what it lets a
+// finger hit is sized here.
+
+/** Half a fingertip: how far past a thin target a touch still lands on it. */
+export const TOUCH_SLOP_PX = 22;
+
+/**
+ * The note a tap on empty grid lands on, if any: one on the tapped pitch
+ * whose span overlaps the grid cell the tap is in. A note thinner than
+ * its cell is hit across the whole cell, and a tap in a cell no note
+ * touches still draws, so the bigger target never takes the space where
+ * the next note goes. The note with the most overlap wins.
+ */
+export function noteInCell(
+	notes: readonly { noteId: number; pitch: number; startBeats: number; durationBeats: number }[],
+	pitch: number,
+	tapBeats: number,
+	gridBeats: number
+): number | null {
+	if (gridBeats <= 0) return null;
+	const cellStart = Math.floor(tapBeats / gridBeats + 1e-9) * gridBeats;
+	const cellEnd = cellStart + gridBeats;
+	let best: number | null = null;
+	let bestOverlap = 0;
+	for (const n of notes) {
+		if (n.pitch !== pitch) continue;
+		const overlap = Math.min(cellEnd, n.startBeats + n.durationBeats) - Math.max(cellStart, n.startBeats);
+		if (overlap > bestOverlap + 1e-9) {
+			best = n.noteId;
+			bestOverlap = overlap;
+		}
+	}
+	return best;
+}
+
+/**
+ * Which of `spans` (left edge + width, px) a touch at `x` lands on: one
+ * it falls inside, else the nearest within `slop` px of an edge. For the
+ * velocity lane, where a bar can be 3px wide and nothing else competes
+ * for the space between bars.
+ */
+export function nearestSpan(
+	x: number,
+	spans: readonly { x: number; w: number }[],
+	slop = TOUCH_SLOP_PX
+): number | null {
+	let best: number | null = null;
+	let bestDist = Infinity;
+	for (let i = 0; i < spans.length; i++) {
+		const { x: left, w } = spans[i];
+		const dist = x < left ? left - x : x > left + w ? x - (left + w) : 0;
+		if (dist <= slop && dist < bestDist) {
+			best = i;
+			bestDist = dist;
+		}
+	}
+	return best;
+}
+
+/** Bar.beat.sixteenth (1-based) of a clip position in beats. */
+export function formatBeatPosition(beats: number, beatsPerBar: number): string {
+	const b = Math.max(0, beats) + 1e-6;
+	const bar = Math.floor(b / beatsPerBar) + 1;
+	const beat = Math.floor(b % beatsPerBar) + 1;
+	const sixteenth = Math.floor((b % 1) * 4) + 1;
+	return `${bar}.${beat}.${sixteenth}`;
+}
+
+/**
+ * A note length as a note value (a beat is a quarter): 1/16, 3/8, 1,
+ * 2 … and triplet values as their true fraction (1/24 is a 1/16T).
+ */
+export function formatNoteLength(beats: number): string {
+	const whole = beats / 4;
+	for (const d of [1, 2, 4, 8, 16, 32, 64, 3, 6, 12, 24, 48, 96]) {
+		const n = Math.round(whole * d);
+		if (n > 0 && Math.abs(n - whole * d) < 1e-6) return d === 1 ? `${n}` : `${n}/${d}`;
+	}
+	return `${Math.round(beats * 100) / 100} beats`;
+}

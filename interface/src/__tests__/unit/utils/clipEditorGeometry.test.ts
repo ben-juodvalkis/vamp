@@ -21,7 +21,12 @@ import {
 	MIDI_PITCH_MIN,
 	MIDI_PITCH_MAX,
 	type BeatWindow,
-	type PitchWindow
+	type PitchWindow,
+	noteInCell,
+	nearestSpan,
+	formatBeatPosition,
+	formatNoteLength,
+	TOUCH_SLOP_PX
 } from '$lib/utils/clip/clipEditorGeometry';
 
 const WIN: BeatWindow = { startBeats: 0, endBeats: 8 };
@@ -288,5 +293,60 @@ describe('grabResizesNote — a move never becomes a length change', () => {
 		expect(grabResizesNote(52, 0, 55)).toBe(true);
 		expect(grabResizesNote(28, 0, 30)).toBe(false);
 		expect(grabResizesNote(41, 0, 41)).toBe(false);
+	});
+});
+
+describe('noteInCell — a thin note is hit across its grid cell', () => {
+	const notes = [
+		{ noteId: 1, pitch: 60, startBeats: 0, durationBeats: 0.125 }, // a 1/32 in the first 1/16 cell
+		{ noteId: 2, pitch: 60, startBeats: 0.5, durationBeats: 0.25 },
+		{ noteId: 3, pitch: 62, startBeats: 0.25, durationBeats: 0.25 }
+	];
+	it('hits a note anywhere in a cell it overlaps, on its own pitch', () => {
+		expect(noteInCell(notes, 60, 0.2, 0.25)).toBe(1);
+		expect(noteInCell(notes, 60, 0.74, 0.25)).toBe(2);
+		expect(noteInCell(notes, 62, 0.3, 0.25)).toBe(3);
+	});
+	it('leaves an empty cell to draw in, even right beside a note', () => {
+		expect(noteInCell(notes, 60, 0.3, 0.25)).toBe(null); // the cell after note 1
+		expect(noteInCell(notes, 61, 0.1, 0.25)).toBe(null); // the lane above
+	});
+	it('prefers the note covering more of the cell', () => {
+		const two = [
+			{ noteId: 7, pitch: 60, startBeats: 0, durationBeats: 0.3 },
+			{ noteId: 8, pitch: 60, startBeats: 0.3, durationBeats: 1 }
+		];
+		expect(noteInCell(two, 60, 0.26, 0.25)).toBe(8); // cell 0.25..0.5: 7 covers .05, 8 covers .2
+		expect(noteInCell(two, 60, 0.1, 0.25)).toBe(7); // cell 0..0.25: only 7
+	});
+});
+
+describe('nearestSpan — a 3px velocity bar takes a fingertip', () => {
+	const bars = [
+		{ x: 10, w: 3 },
+		{ x: 40, w: 3 }
+	];
+	it('takes a touch inside a bar, else the nearest within the slop', () => {
+		expect(nearestSpan(11, bars)).toBe(0);
+		expect(nearestSpan(30, bars)).toBe(1); // 10px from bar 1, 17 from bar 0
+		expect(nearestSpan(26, bars)).toBe(0); // 13 from bar 0, 14 from bar 1
+	});
+	it('takes nothing farther than the slop', () => {
+		expect(nearestSpan(100, bars)).toBe(null);
+		expect(nearestSpan(43 + TOUCH_SLOP_PX + 1, bars)).toBe(null);
+	});
+});
+
+describe('drag readout formatting', () => {
+	it('names a position as bar.beat.sixteenth', () => {
+		expect(formatBeatPosition(0, 4)).toBe('1.1.1');
+		expect(formatBeatPosition(5.75, 4)).toBe('2.2.4');
+		expect(formatBeatPosition(3, 3)).toBe('2.1.1');
+	});
+	it('names a length as a note value', () => {
+		expect(formatNoteLength(0.25)).toBe('1/16');
+		expect(formatNoteLength(1.5)).toBe('3/8');
+		expect(formatNoteLength(4)).toBe('1');
+		expect(formatNoteLength(1 / 6)).toBe('1/24');
 	});
 });
