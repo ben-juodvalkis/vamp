@@ -223,11 +223,11 @@
 
 	<SectionDivider orientation="vertical" ink={pitchHackInk.primary} />
 
-	<!-- Pitch Hack (virtual device): its title over one tab of Rate stops,
+	<!-- Pitch Hack (virtual device), titled Reverse (user, 2026-10-08), over one tab of Rate stops,
 	     1 to 1/16 top to bottom, the Octave's tab beside it as the model; a
 	     tap loads it and opens its mix (2026-10-08). -->
 	<div class="device-wrapper pitch-hack" style="--btn-tint: {pitchHackInk.primary};">
-		<span class="column-title" style="color: {pitchHackInk.primary};">Pitch Hack</span>
+		<span class="column-title" style="color: {pitchHackInk.primary};">Reverse</span>
 		<div
 			class="device-segmented pitch-hack-rate"
 			class:is-ghost-tab={pitchHack.isGhost}
