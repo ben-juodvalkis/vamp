@@ -1128,7 +1128,10 @@
 			// to a neighbouring shown pitch.
 			const deltaPitch = -clientDeltaToPitchDelta(event.clientY - noteDrag.startClientY, contentH, viewPitchWindow);
 			focusedNotesStore.optimisticModify(noteDrag.noteId, {
-				startBeats: Math.max(0, snapToGrid(noteDrag.startBeats + deltaBeats, grid)),
+				// The MOVE snaps to whole grid steps, not the landing spot, so
+				// an off-grid note keeps its offset from the grid and a drag
+				// that is only up or down leaves its timing alone.
+				startBeats: Math.max(0, noteDrag.startBeats + snapToGrid(deltaBeats, grid)),
 				pitch: shiftPitch(noteDrag.startPitch, deltaPitch, viewPitchWindow)
 			});
 		}
