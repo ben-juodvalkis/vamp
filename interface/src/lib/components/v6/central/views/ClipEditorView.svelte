@@ -682,7 +682,7 @@
 	let pinchCenterX = 0;
 	let pinchCenterY = 0;
 
-	function localCoords(e: PointerEvent | Touch): { x: number; y: number } {
+	function localCoords(e: { clientX: number; clientY: number }): { x: number; y: number } {
 		const rect = containerRef?.getBoundingClientRect();
 		if (!rect) return { x: 0, y: 0 };
 		return contentLocal(e.clientX, e.clientY, rect, pitchAxisW, TIME_AXIS_H);
@@ -705,14 +705,59 @@
 			dragStartBeatWindow = { ...beatWindow };
 			dragStartPitchWindow = { ...pitchWindow };
 		} else if (activePointers.size === 2) {
-			dragKind = 'pinch';
-			const pts = Array.from(activePointers.values());
-			pinchStartDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
-			pinchCenterX = (pts[0].x + pts[1].x) / 2;
-			pinchCenterY = (pts[0].y + pts[1].y) / 2;
-			dragStartBeatWindow = { ...beatWindow };
-			dragStartPitchWindow = { ...pitchWindow };
+			beginPinch();
 		}
+	}
+
+	function beginPinch() {
+		dragKind = 'pinch';
+		const pts = Array.from(activePointers.values());
+		pinchStartDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
+		pinchCenterX = (pts[0].x + pts[1].x) / 2;
+		pinchCenterY = (pts[0].y + pts[1].y) / 2;
+		dragStartBeatWindow = { ...beatWindow };
+		dragStartPitchWindow = { ...pitchWindow };
+	}
+
+	// ── A second finger on the grid is a pinch ───────────────────────
+	// The grid and the notes take a finger for themselves (draw, move),
+	// so a pinch landing there used to draw two notes. The first finger's
+	// edit is recorded here; a second finger landing anywhere on the grid
+	// while it — or a pan — is down cancels that edit (nothing has reached
+	// Live: a draw and a move write on release) and both fingers zoom.
+	let editGesture: {
+		id: number;
+		x: number;
+		y: number;
+		teardown: () => void;
+		revert: () => void;
+	} | null = null;
+
+	function joinsPinch(event: PointerEvent): boolean {
+		if (editGesture === null && activePointers.size === 0) return false;
+		event.stopPropagation();
+		if (event.cancelable) event.preventDefault();
+		const first = editGesture;
+		if (first !== null) {
+			editGesture = null;
+			first.teardown();
+			first.revert();
+			lastNoteTap = null;
+			activePointers.set(first.id, localCoords({ clientX: first.x, clientY: first.y }));
+		}
+		activePointers.set(event.pointerId, localCoords(event));
+		if (activePointers.size >= 2) beginPinch();
+		return true;
+	}
+
+	/** Track the editing finger's position; false for any other finger. */
+	function isEditPointer(event: PointerEvent): boolean {
+		const g = editGesture;
+		if (g === null) return true;
+		if (event.pointerId !== g.id) return false;
+		g.x = event.clientX;
+		g.y = event.clientY;
+		return true;
 	}
 
 	function handlePointerMove(e: PointerEvent) {
@@ -1061,13 +1106,14 @@
 	/**
 	 * Attach a drag gesture's move/end listeners with leak-safe teardown.
 	 * ``onMove`` runs on pointermove; ``onEnd`` runs once on pointerup/
-	 * cancel (or on component destroy). Returns nothing — the gesture is
-	 * self-cleaning.
+	 * cancel (or on component destroy). Self-cleaning; the returned
+	 * teardown drops it early without running ``onEnd`` (a pinch taking
+	 * over).
 	 */
 	function beginGesture(
 		onMove: (e: PointerEvent) => void,
 		onEnd: () => void
-	): void {
+	): () => void {
 		const move = (e: PointerEvent) => onMove(e);
 		let done = false;
 		const teardown = () => {
@@ -1086,6 +1132,7 @@
 		document.addEventListener('pointerup', end);
 		document.addEventListener('pointercancel', end);
 		activeGestureTeardowns.add(teardown);
+		return teardown;
 	}
 
 	onDestroy(() => {
@@ -1096,6 +1143,7 @@
 
 	function startNoteDrag(event: PointerEvent, noteId: number) {
 		if (!isMidi || clipPath === null) return;
+		if (joinsPinch(event)) return;
 		event.stopPropagation();
 		if (event.cancelable) event.preventDefault();
 		const note = focusedNotesStore.get(noteId);
@@ -1119,7 +1167,19 @@
 			moved: false
 		};
 
-		beginGesture(onNoteDragMove, onNoteDragEnd);
+		const teardown = beginGesture(onNoteDragMove, onNoteDragEnd);
+		const start = { startBeats: note.startBeats, pitch: note.pitch, durationBeats: note.durationBeats };
+		editGesture = {
+			id: event.pointerId,
+			x: event.clientX,
+			y: event.clientY,
+			teardown,
+			revert: () => {
+				focusedNotesStore.optimisticModify(noteId, start);
+				noteDrag = null;
+				heldFoldLanes = null;
+			}
+		};
 	}
 
 	function noteEventLocalX(e: PointerEvent): number {
@@ -1130,6 +1190,7 @@
 
 	function onNoteDragMove(event: PointerEvent) {
 		if (noteDrag === null || contentW <= 0 || contentH <= 0) return;
+		if (!isEditPointer(event)) return;
 		if (event.cancelable) event.preventDefault();
 		const deltaBeats = clientDeltaToBeatDelta(event.clientX - noteDrag.startClientX, contentW, beatWindow);
 		const grid = gridBeatsForSnap();
@@ -1161,6 +1222,7 @@
 	}
 
 	function onNoteDragEnd() {
+		editGesture = null;
 		const drag = noteDrag;
 		noteDrag = null;
 		heldFoldLanes = null;
@@ -1206,6 +1268,7 @@
 
 	function handleGridTap(event: PointerEvent) {
 		if (!isMidi || clipPath === null || contentW <= 0) return;
+		if (joinsPinch(event)) return;
 		const rect = containerRef?.getBoundingClientRect();
 		if (!rect) return;
 		const { x: localX, y: localY } = contentLocal(event.clientX, event.clientY, rect, pitchAxisW, TIME_AXIS_H);
@@ -1233,11 +1296,22 @@
 		});
 		drawNote = { tempId, startBeats, pitch };
 
-		beginGesture(onDrawDragMove, commitDrawNote);
+		const teardown = beginGesture(onDrawDragMove, commitDrawNote);
+		editGesture = {
+			id: event.pointerId,
+			x: event.clientX,
+			y: event.clientY,
+			teardown,
+			revert: () => {
+				focusedNotesStore.optimisticRemove([tempId]);
+				drawNote = null;
+			}
+		};
 	}
 
 	function onDrawDragMove(event: PointerEvent) {
 		if (drawNote === null || contentW <= 0) return;
+		if (!isEditPointer(event)) return;
 		if (event.cancelable) event.preventDefault();
 		const rect = containerRef?.getBoundingClientRect();
 		if (!rect) return;
@@ -1249,6 +1323,7 @@
 	}
 
 	function commitDrawNote() {
+		editGesture = null;
 		const dn = drawNote;
 		drawNote = null;
 		if (dn === null || clipPath === null) return;
