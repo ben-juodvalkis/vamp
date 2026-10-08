@@ -131,18 +131,20 @@ export function yToPitch(y: number, win: PitchWindow, heightPx: number): number 
 
 /**
  * Clamp a beat window so it never inverts and never escapes
- * `[0, totalBeats]`. A degenerate `totalBeats <= 0` collapses to a
- * unit window so downstream divisions stay finite.
+ * `[rangeStart, totalBeats]` — the clip editor passes the clip's start
+ * and end markers, so it never zooms or pans past them. A degenerate
+ * range collapses to a unit window so downstream divisions stay finite.
  */
-export function clampBeatWindow(win: BeatWindow, totalBeats: number): BeatWindow {
-	if (totalBeats <= 0) return { startBeats: 0, endBeats: 1 };
+export function clampBeatWindow(win: BeatWindow, totalBeats: number, rangeStart = 0): BeatWindow {
+	const range = totalBeats - rangeStart;
+	if (range <= 0) return { startBeats: rangeStart, endBeats: rangeStart + 1 };
 	let span = win.endBeats - win.startBeats;
-	if (span <= 0) span = totalBeats;
-	span = Math.min(span, totalBeats);
+	if (span <= 0) span = range;
+	span = Math.min(span, range);
 	let start = win.startBeats;
-	if (start < 0) start = 0;
+	if (start < rangeStart) start = rangeStart;
 	if (start + span > totalBeats) start = totalBeats - span;
-	if (start < 0) start = 0;
+	if (start < rangeStart) start = rangeStart;
 	return { startBeats: start, endBeats: start + span };
 }
 
@@ -170,13 +172,14 @@ export function zoomBeatWindow(
 	win: BeatWindow,
 	factor: number,
 	anchorFraction: number,
-	totalBeats: number
+	totalBeats: number,
+	rangeStart = 0
 ): BeatWindow {
 	const span = win.endBeats - win.startBeats;
 	const anchorBeat = win.startBeats + span * anchorFraction;
 	const newSpan = span * factor;
 	const newStart = anchorBeat - newSpan * anchorFraction;
-	return clampBeatWindow({ startBeats: newStart, endBeats: newStart + newSpan }, totalBeats);
+	return clampBeatWindow({ startBeats: newStart, endBeats: newStart + newSpan }, totalBeats, rangeStart);
 }
 
 /**
@@ -252,10 +255,16 @@ export function grabResizesNote(
 }
 
 /** Pan a beat window by a beat delta, clamped to `[0, totalBeats]`. */
-export function panBeatWindow(win: BeatWindow, deltaBeats: number, totalBeats: number): BeatWindow {
+export function panBeatWindow(
+	win: BeatWindow,
+	deltaBeats: number,
+	totalBeats: number,
+	rangeStart = 0
+): BeatWindow {
 	return clampBeatWindow(
 		{ startBeats: win.startBeats + deltaBeats, endBeats: win.endBeats + deltaBeats },
-		totalBeats
+		totalBeats,
+		rangeStart
 	);
 }
 

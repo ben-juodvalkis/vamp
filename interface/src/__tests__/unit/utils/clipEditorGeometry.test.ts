@@ -350,3 +350,17 @@ describe('drag readout formatting', () => {
 		expect(formatNoteLength(1 / 6)).toBe('1/24');
 	});
 });
+
+describe('the view never leaves the clip markers', () => {
+	// Start marker at beat 2, end marker at beat 10.
+	it('zooming out stops at the markers', () => {
+		expect(zoomBeatWindow({ startBeats: 4, endBeats: 8 }, 10, 0.5, 10, 2)).toEqual({ startBeats: 2, endBeats: 10 });
+	});
+	it('panning stops at either marker', () => {
+		expect(panBeatWindow({ startBeats: 3, endBeats: 5 }, -5, 10, 2)).toEqual({ startBeats: 2, endBeats: 4 });
+		expect(panBeatWindow({ startBeats: 3, endBeats: 5 }, 20, 10, 2)).toEqual({ startBeats: 8, endBeats: 10 });
+	});
+	it('a view wider than the markers is narrowed to them', () => {
+		expect(clampBeatWindow({ startBeats: 0, endBeats: 16 }, 10, 2)).toEqual({ startBeats: 2, endBeats: 10 });
+	});
+});

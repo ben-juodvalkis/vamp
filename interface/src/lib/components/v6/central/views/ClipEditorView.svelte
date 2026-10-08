@@ -17,7 +17,7 @@
 	 * this view never auto-switches itself in.
 	 */
 
-	import { onDestroy } from 'svelte';
+	import { onDestroy, untrack } from 'svelte';
 	import { session } from '$lib/stores/session.svelte';
 	import { clipPropertiesStore } from '$lib/stores/v6/clipPropertiesStore.svelte';
 	import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
@@ -243,6 +243,16 @@
 	let totalBeats = $derived(
 		Math.max(endMarker, loopEnd, clipPropertiesStore.clipLength, fileEndBeats, 4)
 	);
+	// What the view may show: the clip's start and end markers — never
+	// zoomed or panned past them (the user's call, 2026-10-07) — widened
+	// to the loop only where it reaches past a marker, so a loop brace is
+	// never off-screen. `totalBeats` above stays the brace's and the
+	// waveform fallback's reach.
+	let viewStart = $derived(Math.max(0, Math.min(startMarker, loopStart)));
+	let viewEnd = $derived.by(() => {
+		const end = Math.max(endMarker, loopEnd);
+		return end > viewStart ? end : viewStart + Math.max(clipPropertiesStore.clipLength, 4);
+	});
 	// No playhead on a stopped clip — only one Live is playing (or holds as
 	// playing while the transport is stopped) has a position worth drawing.
 	let livePosition = $derived(
@@ -351,6 +361,18 @@
 	// ── View windows (zoom/scroll state) ─────────────────────────────
 	let beatWindow = $state<BeatWindow>({ startBeats: 0, endBeats: 4 });
 	let pitchWindow = $state<PitchWindow>({ lowPitch: 48, highPitch: 72 });
+	// A marker moved in Live narrows the range under the view: pull the
+	// view back inside it. Keyed on the range alone.
+	$effect(() => {
+		const start = viewStart;
+		const end = viewEnd;
+		untrack(() => {
+			const next = clampBeatWindow(beatWindow, end, start);
+			if (next.startBeats !== beatWindow.startBeats || next.endBeats !== beatWindow.endBeats) {
+				beatWindow = next;
+			}
+		});
+	});
 	// Re-seed default windows when the focused clip changes (path or type).
 	let lastSeedKey = $state<string>('');
 	$effect(() => {
@@ -365,7 +387,8 @@
 				loopEndBeats: loopEnd,
 				lengthBeats: totalBeats
 			}),
-			totalBeats
+			viewEnd,
+			viewStart
 		);
 		if (isMidi) {
 			pitchWindow = defaultPitchWindow(notes.map((n) => n.pitch));
@@ -701,7 +724,7 @@
 		if (dragKind === 'pan' && activePointers.size === 1) {
 			// Inverse-drag: window moves opposite the finger, so negate.
 			const deltaBeats = -clientDeltaToBeatDelta(x - dragStartX, contentW, dragStartBeatWindow);
-			beatWindow = panBeatWindow(dragStartBeatWindow, deltaBeats, totalBeats);
+			beatWindow = panBeatWindow(dragStartBeatWindow, deltaBeats, viewEnd, viewStart);
 			if (isMidi && !folded) {
 				const deltaPitch = clientDeltaToPitchDelta(y - dragStartY, contentH, dragStartPitchWindow);
 				pitchWindow = clampPitchWindow({
@@ -714,7 +737,7 @@
 			const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
 			const factor = pinchStartDist / dist; // fingers apart → factor<1 → zoom in
 			const anchorFrac = Math.min(1, Math.max(0, pinchCenterX / contentW));
-			beatWindow = zoomBeatWindow(dragStartBeatWindow, factor, anchorFrac, totalBeats);
+			beatWindow = zoomBeatWindow(dragStartBeatWindow, factor, anchorFrac, viewEnd, viewStart);
 			if (isMidi && !folded) {
 				const anchorPitchFrac = Math.min(1, Math.max(0, pinchCenterY / contentH));
 				pitchWindow = zoomPitchWindow(dragStartPitchWindow, factor, anchorPitchFrac);
@@ -744,7 +767,7 @@
 			: contentW / 2;
 		const anchorFrac = Math.min(1, Math.max(0, localX / contentW));
 		const factor = e.deltaY > 0 ? 1.15 : 1 / 1.15;
-		beatWindow = zoomBeatWindow(beatWindow, factor, anchorFrac, totalBeats);
+		beatWindow = zoomBeatWindow(beatWindow, factor, anchorFrac, viewEnd, viewStart);
 	}
 
 	// ── Brace handle drag (dedicated elements, ClipLoopControlV6 style) ──
