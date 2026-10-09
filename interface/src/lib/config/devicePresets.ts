@@ -205,8 +205,8 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Multiband Dynamics',
     expectedClassName: 'MultibandDynamics',
-    gridSlot: false,                    // Master-only: the fx1 column, not a layout entry
-    trackTint: true,                    // Wears master's ink, like the controls it stands in for
+    gridSlot: false,                    // Virtual device
+    centralViewGroup: 'utility',        // Mid band's Below Threshold/Ratio in UtilityCentralView (2026-10-09)
     color: familyScheme('dynamics')
   },
   squash: {

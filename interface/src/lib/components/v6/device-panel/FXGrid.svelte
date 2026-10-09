@@ -3,7 +3,6 @@
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import BassControl from './BassControl.svelte';
   import GuitarControl from './GuitarControl.svelte';
-  import OttControl from './OttControl.svelte';
   import SquashControl from './SquashControl.svelte';
   import { provideFxScope } from '$lib/components/v6/central/fxScope';
   import { usePadChainRows } from '$lib/components/v6/central/usePadChainRows.svelte';
@@ -90,9 +89,9 @@
   // moves when the selected track changes kind.
   const isAudioTrack = $derived(selectedTrackStore.trackType === 'audio');
 
-  // Master takes OTT in that slot, for the same reason: no MIDI for Rand
-  // Oct, and no clip of its own (the Mastering rack OTT replaced is the
-  // tile's history, below).
+  // Master leaves that slot empty: no MIDI for Rand Oct. It held the OTT
+  // tile (a Multiband Dynamics Amount slider) until 2026-10-09; the
+  // device's controls are in the Gain view now, on every track.
   // Keyed off the track index, not trackType — master reports neither
   // hasMidiInput nor hasAudioInput, so trackType is null there.
   const isMasterTrack = $derived(selectedTrackStore.trackIndex === -1);
@@ -148,11 +147,7 @@
       {@const cell = cellFor(slot, gridKind)}
       <div data-cell={slot.position} data-col={cell.col} data-row={cell.row} data-span={cell.span} data-row-span={cell.rowSpan} style={cellStyle(cell)}>
         {#if slot.position === 'fx1' && isMasterTrack}
-          <!-- Master track: fx1 is the Multiband Dynamics Amount knob
-               (OTT). It replaced the Mastering rack's first named macro on
-               2026-09-11. Master-only: OttControl has no layout entry, so
-               this branch is its only mount. -->
-          <OttControl />
+          <!-- Master track: fx1 is empty (the OTT tile left 2026-10-09). -->
         {:else if slot.position === 'fx1' && isAudioTrack}
           <!-- Audio track: fx1 is the Bass, the one grid device only useful
                on audio, whose other face is the Bass panel in the Guitar

@@ -551,9 +551,8 @@ flag on both sides of any comparison you intend to cite.
 - **A device the fixture does not carry photographs as a ghost, and a ghost
   proves almost nothing.** The stock scene's master track carries `Mastering`
   and `Compressor` only (`pushDevices(treeArgs, 'master', …)`, `scene.mjs`), so
-  a capture of master's fx1 column shows `OttControl` as a **ghost**. That still
-  proves something — the `isMasterTrack` branch mounts and takes the whole
-  column — but nothing whatever about the value it draws. To photograph a device
+  a capture of a device the fixture lacks shows it as a **ghost**, which proves
+  the control mounts but nothing whatever about the value it draws. To photograph a device
   the fixture lacks, add it to that track's list. **Whether you also need a
   `DEVICE_CLASS_NAMES` row depends on the name, and most of the time you do
   not:** `deviceClassName()` falls back to the device name with non-letters

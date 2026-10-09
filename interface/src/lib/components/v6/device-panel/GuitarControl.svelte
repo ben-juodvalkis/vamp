@@ -21,7 +21,7 @@
    * that view, and the view's own mount sets `disableCentralViewOnTap`.
    *
    * No layout entry any more, so `slotKey` resolves its own `guitar` slot,
-   * the way `SquashControl`, `BassControl` and `OttControl` do. `position`
+   * the way `SquashControl` and `BassControl` do. `position`
    * is still accepted so a future grid mount needs no change here.
    */
   interface Props {

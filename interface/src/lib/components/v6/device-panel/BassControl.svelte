@@ -23,7 +23,7 @@
    * the way every other tile does (Gtr, Drum, Squash).
    *
    * It has no `fxGridLayout` entry — `slotKey` resolves its own slot, like
-   * `SquashControl` and `OttControl` — and `FXGrid` mounts it behind
+   * `SquashControl` — and `FXGrid` mounts it behind
    * `isAudioTrack`, so no other track reaches it.
    *
    * A tap opens `PedalCentralView` (the Guitar rack's controls, since

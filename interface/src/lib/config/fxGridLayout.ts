@@ -66,7 +66,7 @@ export interface FXGridSlotConfig {
  * 11 slots on a TWELVE-column, two-row grid, every cell placed explicitly
  * (`col` / `row` / `span` / `rowSpan`) so placement can differ by track kind:
  *
- *   MIDI / master  col 1 Rand Oct (OTT on master), full height
+ *   MIDI / master  col 1 Rand Oct (empty on master), full height
  *                  col 2 Variation, full height
  *                  cols 3-10 EQ, Filter, Saturator, Drum over Chorus, Tremolo, Echo, Reverb
  *                  col 11 Squash, full height · col 12 Gain, full height

@@ -35,9 +35,8 @@ All controls use the modular `handleTap` from BaseDeviceControl:
   design change, not a forgotten call.
 
 A tile whose type has no registered view passes
-`disableCentralViewOnTap` (OTT is the one such tile, 2026-09-12): the
-router resolves an unknown type to the placeholder view, which on master
-would swap the System view out from under the tile.
+`disableCentralViewOnTap`: the router resolves an unknown type to the
+placeholder view.
 
 ### Component Types
 - **DeviceXY**: For 2-parameter controls (most FX)
@@ -48,13 +47,13 @@ See the full guide for complete implementation patterns, parameter mapping, and 
 
 ### The fx1 column — one slot, three track types (ADR-438)
 
-**The grid is TWELVE columns, every cell placed explicitly** (2026-09-15, ADR-438 addendum). `fxGridLayout.ts` gives each entry `col` / `row` / `span` / `rowSpan`; `cellFor(slot, kind)` moves two of them on audio, and `SQUASH_CELL` / `AUDIO_GUITAR_CELL` place the two tiles with no entry. **MIDI and master:** Rand Oct (OTT on master) and Variation full height in columns 1–2, the four XY pairs over the other four in 3–10, Squash and Gain full height in 11–12. **Audio:** the Guitar full height in column 1, the Bass (in fx1's slot) over Variation in column 2, the rest identical. Both kinds tile the same 12×2 grid, so the XY tiles and the TotalMix status strip's ruler in `layouts/default/Layout.svelte` (hard-coupled to the column count, no shared constant) never move when the track changes kind; `FXGrid.scope.test.ts` pins the tiling for both.
+**The grid is TWELVE columns, every cell placed explicitly** (2026-09-15, ADR-438 addendum). `fxGridLayout.ts` gives each entry `col` / `row` / `span` / `rowSpan`; `cellFor(slot, kind)` moves two of them on audio, and `SQUASH_CELL` / `AUDIO_GUITAR_CELL` place the two tiles with no entry. **MIDI and master:** Rand Oct (empty on master) and Variation full height in columns 1–2, the four XY pairs over the other four in 3–10, Squash and Gain full height in 11–12. **Audio:** the Guitar full height in column 1, the Bass (in fx1's slot) over Variation in column 2, the rest identical. Both kinds tile the same 12×2 grid, so the XY tiles and the TotalMix status strip's ruler in `layouts/default/Layout.svelte` (hard-coupled to the column count, no shared constant) never move when the track changes kind; `FXGrid.scope.test.ts` pins the tiling for both.
 
 `fx1` holds a different control per track type, and on audio the Guitar joins the left edge. All three branches live in `FXGrid.svelte`, and none of the three has a `fxGridLayout` entry except the MIDI one:
 
 - **MIDI → Rand Oct**, the layout entry's own `RandomControl`.
-- **Audio → `BassControl.svelte`** when `selectedTrackStore.trackType === 'audio'`. The `bass` slot — the `Bass Amp.adg` rack, this tile its only control — param **1**, its one macro (the mix), rail 0..127, resting at **0** (see the fill note below). It is the one device on the grid that is *only* useful on audio: `fxGridStore.loadDevice` renames the track "Bass" on an audio track and leaves a MIDI track's name alone. `slotKey="bass"`, like Squash and OTT.
-- **Master → `OttControl.svelte`** when `selectedTrackStore.trackIndex === -1` (master reports neither `hasMidiInput` nor `hasAudioInput`, so `trackType` is `null` there and the audio branch never catches it). The **Multiband Dynamics** Amount knob — param **6** (`GlobalAmount`, rail 0..1), measured off the `.adv`; the device's nested `<SideChain>` sits at child 60, after every flat param, so nothing at or below 6 drifts the way `Compressor2`'s indices do. It goes through the FX-grid slot (`slotKey="ott"`), so a master carrying no Multiband Dynamics yet shows a ghost the first DRAG loads — a tap opens nothing (`ott` has no registered view, so the tile passes `disableCentralViewOnTap`; before 2026-09-12 a tap swapped the System view for the placeholder). Master-only by construction: no layout entry, so this branch is its only mount. It replaced `MasterRackControl.svelte` (deleted), which drove the first *named* macro of an Audio Effect Rack called `Mastering` — not how this rig masters any more (user's call). `AudioEffectRackCentralView` is untouched and still reachable from its own tiles.
+- **Audio → `BassControl.svelte`** when `selectedTrackStore.trackType === 'audio'`. The `bass` slot — the `Bass Amp.adg` rack, this tile its only control — param **1**, its one macro (the mix), rail 0..127, resting at **0** (see the fill note below). It is the one device on the grid that is *only* useful on audio: `fxGridStore.loadDevice` renames the track "Bass" on an audio track and leaves a MIDI track's name alone. `slotKey="bass"`, like Squash.
+- **Master → empty.** The OTT tile (a Multiband Dynamics Amount slider) left on 2026-10-09; the device's Mid Below Threshold, Below Ratio and Output are sliders in `UtilityCentralView` (the Gain view) on every track, slot `ott`, indices in `multibandParams.ts`.
 
 **Squash and Gain are separate full-height columns** (11 and 12): `SquashControl.svelte` (the Glue Compressor's threshold + makeup on one 0..1 slider, indices 1 and 3 measured off the `.adv`, no layout entry, resolving its own `squash` slot through `slotKey`) and the Gain tile. A tap on Squash opens the Gain / Utility view (registered as `device/squash`). They shared one split column from 2026-09-10 until the twelve-column refinement.
 
