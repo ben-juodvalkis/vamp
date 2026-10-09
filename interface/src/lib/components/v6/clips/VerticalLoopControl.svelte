@@ -412,9 +412,6 @@
 					</div>
 				</div>
 			</div>
-			<!-- Precomputed start/end beat labels beside the handles (§4.5, free). -->
-			<span class="num handle-beat" style="bottom: {startPercentage}%;" aria-hidden="true">{formatBeats(displayStart)}</span>
-			<span class="num handle-beat" style="bottom: {endPercentage}%;" aria-hidden="true">{formatBeats(displayEnd)}</span>
 		{:else}
 			<!-- No clip selected state - empty label -->
 		{/if}
@@ -460,17 +457,6 @@
 	}
 	.loop-container.recording .loop-length-display.inside-loop {
 		color: var(--flat-on-fg, var(--background));
-	}
-
-	/* Precomputed beat labels at the handle heights (§4.5). */
-	.handle-beat {
-		position: absolute;
-		right: 4px;
-		transform: translateY(50%);
-		z-index: 110;
-		pointer-events: none;
-		font-size: var(--text-2xs);
-		color: var(--act-loop);
 	}
 
 	/* Transitions enabled by default, disabled during drag. The background-color
@@ -527,8 +513,7 @@
 		border-radius: 0;
 	}
 	:global([data-grammar="flat"]) .loop-length-display.inside-loop,
-	:global([data-grammar="flat"]) .loop-length-display.outside-loop,
-	:global([data-grammar="flat"]) .handle-beat {
+	:global([data-grammar="flat"]) .loop-length-display.outside-loop {
 		color: var(--foreground);
 	}
 	/* Flat-grammar leftovers (cookbook §8.1): the grip lines on the handle
