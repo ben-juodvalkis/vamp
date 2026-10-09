@@ -11,7 +11,7 @@
 	import MiddlePanelV6 from '$lib/components/v6/layout/MiddlePanelV6.svelte';
 	import DrillDownBrowser from '$lib/components/v6/browser/DrillDownBrowser.v6.svelte';
 	import RightControlsSidebar from '$lib/components/v6/layout/RightControlsSidebar.svelte';
-	import MasterTrack from '$lib/components/v6/tracks/MasterTrack.svelte';
+	import MiniSessionGrid from '$lib/components/v6/session/MiniSessionGrid.svelte';
 	import V3ErrorBanner from '$lib/components/v6/session/V3ErrorBanner.svelte';
 	import GroupModeBanner from '$lib/components/v6/session/GroupModeBanner.svelte';
 	import LiveConnectionBanner from '$lib/components/v6/session/LiveConnectionBanner.svelte';
@@ -63,6 +63,7 @@
 	// free space before the grow shares divide it. That lands on the same
 	// section height as the single-share rows at ANY section count.
 	let sessionMode = $derived(uiPrefsStore.sessionMode);
+	let miniSessionActive = $derived(uiPrefsStore.miniSessionActive);
 	// Always true: the VIEW switch went 2026-09-26 and uiPrefsStore pins it.
 	// The central rows' `row-hidden` below is UNREACHABLE since 2026-09-26; kept, not
 	// deleted, until the flag itself goes.
@@ -88,7 +89,7 @@
 	let totalmixOn = $derived(bridgeStatus.isFeatureOn('totalmix'));
 	let totalmixUnavailable = $derived(bridgeStatus.unavailableReason('totalmix'));
 
-	// The sidebar mirrors the stack 1:1 — master / scene rail / groove
+	// The sidebar mirrors the stack 1:1 — mini session / scene rail / groove
 	// quantize / loop brace — which is what keeps the two columns' row
 	// edges together with no measurement: same visible-row count, same
 	// gap count, same even split.
@@ -187,7 +188,7 @@
 			</div>
 		</div>
 
-		<!-- Right: Master + Controls Sidebar. One row per main-area section,
+		<!-- Right: Mini session + Controls Sidebar. One row per main-area section,
 		     shown and hidden by the same flags, so the two columns' row edges
 		     agree by construction rather than by measurement. -->
 		<div
@@ -196,16 +197,15 @@
 			data-debug="right-sidebar"
 			style="gap: var(--spacing-lg);"
 		>
-			<!-- Section 1: the master strip, level with the track strips.
-			     Always visible, like the strips. Nothing else rides in this
-			     section: the TotalMix mirror was here as its own first row
-			     (which took height off the top of the master column), then
-			     inside MasterTrack's key block, and is now in the status
-			     strip — where it costs this column nothing at all. -->
-			<div class="min-h-0 layout-row section">
-				<MasterTrack
-					onSelect={() => logger.debug('Master selected', { component: 'page' })}
-				/>
+			<!-- Section 1, level with the track strips: the mini session
+			     column — the selected track's clips. The master strip that
+			     lived here is now the last column of the strips row
+			     (TracksPanelV6). With CLIPS on the full grid and the scene
+			     rail already show every clip, so the box stays empty. -->
+			<div class="min-h-0 layout-row section flex flex-col" data-debug="mini-session">
+				{#if miniSessionActive}
+					<MiniSessionGrid />
+				{/if}
 			</div>
 
 			<!-- Section 2: the scene-launch rail, level with the clip grid —

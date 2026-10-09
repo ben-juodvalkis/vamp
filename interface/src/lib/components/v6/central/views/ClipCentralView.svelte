@@ -32,7 +32,6 @@ import { logger } from '$lib/utils/logger';
 	import { rgbToHex } from '$lib/utils/formatters/trackFormatters';
 	import { selectedTrackInk, selectedTrackScheme } from '$lib/utils/selectedTrackInk';
 	import ClipEditorView from './ClipEditorView.svelte';
-	import MiniSessionGrid from '$lib/components/v6/session/MiniSessionGrid.svelte';
 	import { uiPrefsStore } from '$lib/stores/v6/uiPrefsStore.svelte';
 	import {
 		VM,
@@ -396,11 +395,6 @@ import { logger } from '$lib/utils/logger';
 				(trackType === 'midi' && instrumentType === 'instrument-rack')
 	);
 
-	// Mini session column (the leading one). Shown whenever the performer
-	// wants it and the FULL clip grid is not up — see
-	// uiPrefsStore.miniSessionActive. The rail is 7 columns without it and
-	// 8 with it, and the seven shift right by one to open column 1.
-	let miniSession = $derived(uiPrefsStore.miniSessionActive);
 
 	let permuteDevice = $derived(sequencerStore.device);
 	let chance = $derived(sequencerStore.chance);
@@ -431,26 +425,9 @@ import { logger } from '$lib/utils/logger';
 		{/if}
 	</button>
 
-	<!-- The mini session column and its seam, shared by both modes so the
-	     clip list stays put when the toggle swaps what sits beside it. -->
-	{#snippet miniColumn()}
-		<div class="col col-mini">
-			<MiniSessionGrid />
-		</div>
-		<div class="seam seam-mini"><SectionDivider orientation="vertical" /></div>
-	{/snippet}
-
-	{#if editorActive && miniSession}
-		<!-- The editor keeps the mini column: the same grid as the rail
-		     below, so the column is exactly as wide in both modes, with the
-		     editor across everything the rail's controls would take. -->
-		<div class="outer has-mini h-full w-full p-(--central-inset)">
-			{#if browser}{@render miniColumn()}{/if}
-			<div class="editor-cell"><ClipEditorView color={trackColor} /></div>
-		</div>
-	{:else if editorActive}
-		<!-- Same inset as every other central view, the mini branch above
-		     included; without it the editor ran to the panel's edges. -->
+	{#if editorActive}
+		<!-- Same inset as every other central view; without it the editor ran
+		     to the panel's edges. -->
 		<div class="editor-full h-full w-full p-(--central-inset)">
 			<ClipEditorView color={trackColor} />
 		</div>
@@ -467,32 +444,9 @@ import { logger } from '$lib/utils/logger';
 	Col 5: TEMP slider (MIDI) | GAIN slider (audio) — full height
 	Col 6: CHANCE slider (MIDI) | warp mode buttons (audio) — full height
 	Col 9: Dup Trk — full height (hold to duplicate the whole track)
-
-	Plus, when the full clip grid is hidden, a mini session view in the
-	LEADING column — the selected track's clip slots, twice the width of
-	every column above. It belongs HERE rather than in the FX grid because
-	everything else in this rail is already about the clip you are
-	looking at: Chance and Temp shape it, REC and Delete replace
-	it, and the mini says WHICH one, and lets you pick another. It reads
-	first for the same reason: the subject before what acts on it.
-
-	The rail grows 7 → 8 columns while it is up and every column above
-	shifts one to the right (`.outer.has-mini`), so their left-to-right
-	order is exactly what it was.
 -->
-<div class="outer h-full w-full p-(--central-inset)" class:has-mini={miniSession}>
+<div class="outer h-full w-full p-(--central-inset)">
 	{#if browser}
-
-		<!-- Col 1: mini session view — the selected track's clips. One
-		     column, twice the width of every fader and button column
-		     beside it, on the LEADING edge: it says which clip the rest of the
-		     rail is acting on, so it reads before them, not after. The
-		     editor-toggle chip floats over the rail's top-RIGHT corner, so
-		     nothing here has to keep width clear for it. -->
-		<!-- Subject | the controls that act on it. The seam comes only with
-		     the mini: with the full clip grid on, the rail opens on those
-		     controls and there is nothing to its left to separate from. -->
-		{#if miniSession}{@render miniColumn()}{/if}
 
 		<!-- Col 1: CHANCE (MIDI) | warp modes (audio) -->
 		<div class="col col-1 transition-opacity duration-200 {trackType === 'midi' ? (permuteDevice === null ? 'opacity-30' : 'opacity-100') : (!hasClip ? 'opacity-30' : 'opacity-100')}">
@@ -892,37 +846,12 @@ import { logger } from '$lib/utils/logger';
 	.col-2 { grid-column: 7; }
 	.col-1 { grid-column: 8; }
 
-	/* The mini session view's own column — the LEADING one, twice as wide
-	   as every other column in the rail (2fr, the user's call 2026-09-25:
-	   at 1fr the clip names were too cramped to read).
-	   `.outer` grows 7 → 8 only while the mini is up (`.has-mini`), and
-	   the seven below all shift one to the right to make room. They are
-	   re-declared rather than made relative because `grid-column` takes a
-	   literal integer — `calc()` on a grid line is not something to rely on
-	   in iPad Safari — and because a table of literal numbers is what the
-	   rest of this block already is. */
-	.outer.has-mini {
-		grid-template-columns: 2fr auto repeat(3, 1fr) auto repeat(4, 1fr);
-	}
-
-	.col-mini { grid-column: 1; }
-	.outer.has-mini .seam-mini { grid-column: 2; }
-	.outer.has-mini .col-9 { grid-column: 3; }
-	.outer.has-mini .col-3 { grid-column: 4; }
-	.outer.has-mini .col-5 { grid-column: 5; }
-	.outer.has-mini .seam-a { grid-column: 6; }
-	.outer.has-mini .col-6 { grid-column: 7; }
-	.outer.has-mini .col-4 { grid-column: 8; }
-	.outer.has-mini .col-2 { grid-column: 9; }
-	.outer.has-mini .col-1 { grid-column: 10; }
 	.editor-full { position: relative; min-width: 0; min-height: 0; }
-	.editor-cell { grid-column: 3 / -1; grid-row: 1; min-width: 0; min-height: 0; position: relative; }
 
 	/* Full-height stack of 3 switch buttons (warp modes) */
 	/* `minmax(0, 1fr)`, not the implicit `auto` column: auto sizes to the
 	   widest label's min-content, so "Complex" held the warp column wider
-	   than its share once the mini column went 2fr and pushed it into the
-	   seam beside it. The buttons drop their side padding for the same
+	   than its share and pushed it into the seam beside it. The buttons drop their side padding for the same
 	   reason — the label gets the whole cell. */
 	.stacked-switches {
 		display: grid;

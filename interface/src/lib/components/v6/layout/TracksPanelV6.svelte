@@ -3,6 +3,7 @@
 	import constants from '$config/constants.json';
 	import { logger } from '$lib/utils/logger';
 	import TrackStrip from '$lib/components/v6/tracks/TrackStrip.svelte';
+	import MasterTrack from '$lib/components/v6/tracks/MasterTrack.svelte';
 	import SlotGrid from '$lib/components/v6/tracks/TrackStrip/components/SlotGrid.svelte';
 	import { uiPrefsStore } from '$lib/stores/v6/uiPrefsStore.svelte';
 	import type { SlotState } from '$lib/stores/v3/normalized.svelte';
@@ -63,8 +64,14 @@
 	// overrides are UNREACHABLE since 2026-09-26, kept until the flag goes.
 	let flipLayout = $derived(uiPrefsStore.flipLayout);
 
+	// One column per visible track plus the master's, last, so the master
+	// strip is a strip like the others: same width, same row, same scroller.
+	// The clip grid's rows share the template, so its master column is
+	// simply empty.
+	let columnCount = $derived(visibleTracks.length + 1);
+
 	let rowStyle = $derived(
-		`grid-template-columns: repeat(${Math.max(visibleTracks.length, 1)}, minmax(var(--track-min-w), 1fr));` +
+		`grid-template-columns: repeat(${columnCount}, minmax(var(--track-min-w), 1fr));` +
 			` grid-template-rows: ${
 				layout.bandCount > 0
 					? flipLayout
@@ -196,7 +203,7 @@
 	// it never carries band rows — a group's bracket arm is chrome over
 	// the strips, and has no counterpart among the clip columns.
 	let slotRowStyle = $derived(
-		`grid-template-columns: repeat(${Math.max(visibleTracks.length, 1)}, minmax(var(--track-min-w), 1fr));`
+		`grid-template-columns: repeat(${columnCount}, minmax(var(--track-min-w), 1fr));`
 	);
 
 	// Row pitch, measured rather than authored: the grid is one section
@@ -471,8 +478,7 @@
 				<div
 					class="track-col"
 					class:is-first={col === 0}
-					class:is-last={col === visibleTracks.length - 1}
-					data-track-index={trackIndex}
+										data-track-index={trackIndex}
 					style="grid-column: {col + 1}; grid-row: {stripRow(
 						layout.offsets[col]
 					)};{bandHeadCols.has(col)
@@ -484,6 +490,15 @@
 					<TrackStrip {trackIndex} onTrackSelect={handleTrackSelect} {rowScrolls} />
 				</div>
 			{/each}
+			<!-- The master, last, the full height of the row: no group can
+			     hold it, so no arm ever shortens it. -->
+			<div
+				class="track-col master-track-col"
+				data-track-index="-1"
+				style="grid-column: {columnCount}; grid-row: 1 / -1;"
+			>
+				<MasterTrack />
+			</div>
 		</div>
 
 		<!-- Session clip grid (ADR-415) — a second grid row in THIS scroller,
@@ -780,20 +795,16 @@
 		--fader-slop-right: calc(var(--strip-gutter) / 2);
 	}
 
-	/* Not past the row's own ends, where there is no gutter to share. It
-	   matters at the right-hand end: a slop hanging past the LAST column
-	   is scrollable overflow of this panel, so the row would scroll by
-	   half a gutter and `rowScrolls` would read true — putting every name
-	   band back on the release-wait mute. Classes set from the column
-	   index rather than `:first-/:last-of-type`: the bracket arms share
-	   this row, and a DOM-order selector would break the day one more
-	   kind of child joins them. */
+	/* Not past the row's left end, where there is no gutter to share.
+	   The right-hand end is the master's column, which has no slop, so
+	   the last track's right slop always lands in a real gutter. (A slop
+	   hanging past the row's end is scrollable overflow: the row would
+	   scroll by half a gutter and `rowScrolls` would read true — putting
+	   every name band back on the release-wait mute.) Class set from the
+	   column index rather than `:first-of-type`: the bracket arms share
+	   this row. */
 	.track-col.is-first {
 		--fader-slop-left: 0px;
-	}
-
-	.track-col.is-last {
-		--fader-slop-right: 0px;
 	}
 
 	/* Group bracket ("panhandle", ADR-413): the arm that grows out of the

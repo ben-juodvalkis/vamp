@@ -1,7 +1,8 @@
 <script lang="ts">
     /**
-     * Mini session view — the selected track's clip column, living in
-     * the CLIP central view.
+     * Mini session view — the selected track's clip column, in the right
+     * sidebar beside the track strips (it lived in the CLIP central view
+     * until the master strip joined the strips row and freed this box).
      *
      * The full clip grid (ADR-415) is a whole section of the main-area
      * stack, so switching CLIPS off buys back a third of the screen and
@@ -53,6 +54,7 @@
     import SlotGrid from '$lib/components/v6/tracks/TrackStrip/components/SlotGrid.svelte';
     import { sceneWindowStore } from '$lib/stores/v6/sceneWindowStore.svelte';
     import { session } from '$lib/stores/session.svelte';
+    import { uiPrefsStore } from '$lib/stores/v6/uiPrefsStore.svelte';
     import { v3Store } from '$lib/stores/v3/normalized.svelte';
     import { clipStateStore } from '$lib/stores/v6/clipStateStore.svelte';
     import { clipEditorStore } from '$lib/stores/v6/clipEditorStore.svelte';
@@ -127,7 +129,14 @@
      */
     let stopPressed = $state(false);
     const renderedRows = $derived(sceneWindowStore.renderedRows);
-    const rowPitchPx = $derived(renderedRows > 0 ? gridBoxHeightPx / (renderedRows + 1) : 0);
+    // The stop button is no longer a row of this box (it is the column's
+    // name band, below), so the scene rows divide the whole of it.
+    const rowPitchPx = $derived(renderedRows > 0 ? gridBoxHeightPx / renderedRows : 0);
+
+    // The strips' own split (TrackStrip's `cardBands`): the clips take the
+    // bands a strip's Card takes, the stop takes the name band's one, so
+    // the stop lands level with the track names and the master's key.
+    const cardBands = $derived(uiPrefsStore.showDeviceBand ? 3 : 2);
 
     $effect(() => {
         const el = gridBoxEl;
@@ -180,7 +189,12 @@
     const showThumb = $derived(sceneWindowStore.sceneCount > sceneWindowStore.visibleCount);
 </script>
 
-<div class="mini-session" data-debug="mini-session" style="--mini-ink: {ink};">
+<div class="mini-col">
+<div
+    class="mini-session"
+    data-debug="mini-session"
+    style="--mini-ink: {ink}; flex: {cardBands} {cardBands} calc(var(--strip-gap) * {cardBands - 1});"
+>
     {#if hasTrack}
         <div
             class="mini-body"
@@ -209,32 +223,6 @@
                     </div>
                 {/if}
             </div>
-
-            <!-- One more row at the grid's own pitch, exactly like the
-                 full grid's per-track stop row. Outside the gesture zone
-                 above, so it is a plain button with no drag to
-                 disambiguate. -->
-            <button
-                type="button"
-                class="mini-stop"
-                class:is-pressed={stopPressed}
-                data-debug="mini-session-stop"
-                aria-label="Stop clips on {trackName}"
-                use:press={{
-                    onPress: () => stopTrack(trackIndex),
-                    touchAction: 'none',
-                    // Acknowledge the finger. `:active` alone did not: this
-                    // button sits inside the clip rail's own gesture region,
-                    // and WebKit drops `:active` the moment anything else
-                    // claims an interest in the press. The cells above it
-                    // already light this way (`is-pressed`, SlotCell), so
-                    // the whole column now answers a touch the same way.
-                    onDown: () => (stopPressed = true),
-                    onRelease: () => (stopPressed = false)
-                }}
-            >
-                <span aria-hidden="true">■</span>
-            </button>
         </div>
     {:else}
         <!-- Master has no clip slots. Say so rather than drawing an empty
@@ -245,16 +233,52 @@
     {/if}
 </div>
 
+<!-- The stop, as the column's name band: the same share of the section
+     a strip's name takes, so it sits level with the track names. Outside
+     the gesture zone above, so it is a plain button with no drag to
+     disambiguate. -->
+{#if hasTrack}
+    <button
+        type="button"
+        class="mini-stop"
+        class:is-pressed={stopPressed}
+        style="--mini-ink: {ink};"
+        data-debug="mini-session-stop"
+        aria-label="Stop clips on {trackName}"
+        use:press={{
+            onPress: () => stopTrack(trackIndex),
+            touchAction: 'none',
+            // Acknowledge the finger: WebKit drops `:active` the moment
+            // anything else claims an interest in the press. The cells
+            // above light the same way (`is-pressed`, SlotCell).
+            onDown: () => (stopPressed = true),
+            onRelease: () => (stopPressed = false)
+        }}
+    >
+        <span aria-hidden="true">■</span>
+    </button>
+{:else}
+    <div class="mini-stop-spacer" aria-hidden="true"></div>
+{/if}
+</div>
+
 <style>
-    /* Sized by its host cell — the LEADING column of ClipCentralView's
-       control rail, at that rail's own pitch, so it is as wide as every
-       fader and button column beside it. The frame is the slots' own, so
-       the column reads as one of the rail's tiles rather than as a panel
-       that wandered in. No title row: the cells wear the track ink and
-       the rail is already about the selected track, so naming it again
-       spent a row of height on something the column beside it says. */
-    .mini-session {
+    /* Sized by its host — the right sidebar's box level with the track
+       strips. The frame is the slots' own. No title row: the cells wear
+       the track ink, so naming the track again spent a row of height on
+       something the strips already say. */
+    /* The strip's column, at the strip's gap (`.strip-col`), so the seam
+       above the stop is the seam above a track name. */
+    .mini-col {
+        --strip-gap: var(--spacing-xs);
         height: 100%;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: var(--strip-gap);
+    }
+
+    .mini-session {
         min-height: 0;
         display: flex;
         flex-direction: column;
@@ -266,8 +290,8 @@
         overflow: hidden;
     }
 
-    /* The measured box: scene rows plus the stop row. Nothing else may
-       go in here — anything that shortens it changes the pitch. */
+    /* The measured box: the scene rows. Nothing else may go in here —
+       anything that shortens it changes the pitch. */
     .mini-body {
         flex: 1 1 0;
         min-height: 0;
@@ -281,24 +305,19 @@
         min-height: 0;
     }
 
-    /* Same share of the box as one scene row, so the stop cell is the
-       same size as the clip cells above it. */
+    /* The name band's share of the column (one, against the clips'
+       `cardBands`), so it is exactly as tall as a track's name/mute. */
+    .mini-stop,
+    .mini-stop-spacer {
+        flex: 1 1 0;
+        min-height: 0;
+    }
+
     .mini-stop {
-        /* A full row minus the inset the cells keep between themselves —
-           SlotCell's own sizing rule. It has to be the FLEX BASIS, not a
-           `height`: in a flex column the basis is the main size, so a
-           basis of the full pitch beside a height of pitch-minus-gap
-           silently won, and the stop cell drew one gap taller than every
-           clip slot above it (88px cells under a 92px stop at 1366×1024).
-           The height stays as a belt-and-braces declaration for any
-           context where this box is not a flex item. */
-        flex: 0 0 calc(var(--session-row-h) - var(--session-row-gap));
         display: flex;
         align-items: center;
         justify-content: center;
         min-width: 0;
-        min-height: 0;
-        height: calc(var(--session-row-h) - var(--session-row-gap));
         padding: 0;
         border: 1px solid color-mix(in oklab, var(--mini-ink) 40%, transparent);
         border-radius: var(--radius-sm);
@@ -306,7 +325,7 @@
            is where a clip goes quiet, not a danger control. */
         background: color-mix(in oklab, var(--mini-ink) 10%, var(--card));
         color: color-mix(in oklab, var(--mini-ink) 70%, var(--foreground));
-        font-size: 0.9375rem;
+        font-size: 1.25rem;
         line-height: 1;
         cursor: pointer;
         -webkit-tap-highlight-color: transparent;

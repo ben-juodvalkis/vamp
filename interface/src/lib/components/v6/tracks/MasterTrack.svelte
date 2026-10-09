@@ -344,14 +344,14 @@
     }
 
     /* Column wrapper — the master's answer to `.strip-col`, and it takes
-       that component's gap verbatim (`--spacing-xs`): the master sits in
-       the same row as the strips, so the seam between its fader and its
+       that component's gap verbatim (`--spacing-xs`): the master is the
+       last column of the strips row (`TracksPanelV6`), so the seam between its fader and its
        key band has to be the seam between a strip's card and its name. */
     .master-col {
         --strip-gap: var(--spacing-xs);
         display: flex;
         flex-direction: column;
-        width: var(--sidebar-width);
+        width: 100%;
         height: 100%;
         min-width: 0;
         gap: var(--strip-gap);
