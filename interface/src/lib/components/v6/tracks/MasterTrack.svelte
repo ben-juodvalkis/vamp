@@ -309,7 +309,7 @@
         aria-valuenow={session.timeSignature.numerator}
     >
         <span class="sig-num num">{session.timeSignature.numerator}</span>
-        <span class="sig-bar" aria-hidden="true"></span>
+        <span class="sig-slash" aria-hidden="true"></span>
         <span class="sig-den num">{session.timeSignature.denominator}</span>
     </div>
 
@@ -434,16 +434,24 @@
     /* Time signature, stacked like a score: numerator over denominator. */
     .sig-num,
     .sig-den {
-        font-size: clamp(max(var(--type-min), calc(12 * var(--fluid-px))), min(34cqh, 40cqw), 1.75rem);
+        font-size: clamp(max(var(--type-min), calc(12 * var(--fluid-px))), min(46cqh, 34cqw), 2rem);
         font-weight: var(--font-weight-bold);
         line-height: 1;
     }
-    .sig-bar {
-        width: min(50%, 2rem);
-        height: 2px;
-        margin: 0.1em 0;
+    /* A diagonal fraction: numerator raised, denominator lowered, a
+       slanted slash between them, all on one row. */
+    .sig-band {
+        flex-direction: row;
+        gap: 0.15em;
+    }
+    .sig-num { align-self: center; transform: translateY(-28%); }
+    .sig-den { align-self: center; transform: translateY(28%); }
+    .sig-slash {
+        width: 2px;
+        height: min(70cqh, 3.5rem);
         background: currentColor;
         opacity: 0.6;
+        transform: rotate(24deg);
     }
     .sig-band.active .sig-num { text-decoration: underline; text-underline-offset: 0.15em; }
 
