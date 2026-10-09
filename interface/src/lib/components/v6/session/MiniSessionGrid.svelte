@@ -57,7 +57,6 @@
     import { uiPrefsStore } from '$lib/stores/v6/uiPrefsStore.svelte';
     import { v3Store } from '$lib/stores/v3/normalized.svelte';
     import { clipStateStore } from '$lib/stores/v6/clipStateStore.svelte';
-    import { clipEditorStore } from '$lib/stores/v6/clipEditorStore.svelte';
     import { groupGestureStore } from '$lib/stores/v6/groupGestureStore.svelte';
     import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
     import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -80,28 +79,16 @@
     const hasTrack = $derived(trackIndex >= 0);
 
     // A body tap here aims the pedal exactly as the full grid's does, and
-    // on a slot holding a clip it also opens that clip's note view beside
-    // this column: the mini is already the "which clip" list, so picking
-    // one shows it. An empty slot has nothing to show and only selects.
-    // Tapping the clip whose editor is already open closes it, back to
-    // the clip controls.
+    // on a slot holding a clip it also focuses that clip, so the clip
+    // view's editor shows it. An empty slot has nothing to show and only
+    // selects.
     function openSlot(slotIndex: number, slotPath: string) {
-        const focused = session.focusedClipIndices;
-        const editorOpenOnThis =
-            clipEditorStore.active &&
-            focused?.track === trackIndex &&
-            focused?.scene === slotIndex;
         selectSlot(trackIndex, slotIndex);
         // Mid group gesture the tap only toggles the track into the group.
         if (groupGestureStore.active) return;
         const state = v3Store.tracks.get(trackPath)?.slots.get(slotPath)?.state;
         if (!state || state === 'empty') return;
-        if (editorOpenOnThis) {
-            clipEditorStore.set(false);
-            return;
-        }
         focusSlot(trackIndex, slotPath);
-        clipEditorStore.set(true);
     }
     const trackPath = $derived(`tracks/${trackIndex}`);
     const record = $derived(hasTrack ? v3Store.tracks.get(trackPath) : undefined);

@@ -17,7 +17,6 @@
     import { useStripGestures } from './composables/useStripGestures.svelte';
     import { playingClipsStore } from '$lib/stores/v6/playingClipsStore.svelte';
     import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
-    import { clipEditorStore } from '$lib/stores/v6/clipEditorStore.svelte';
     import { instrumentDisplayCoordinator } from '$lib/services/instrumentDisplayCoordinator.svelte';
     import { openDeviceView, openScopedPermutePane } from '$lib/services/deviceViewRouter.svelte';
     import { groupGestureStore } from '$lib/stores/v6/groupGestureStore.svelte';
@@ -298,12 +297,6 @@
 
     // Section taps select the track, then route Central View to that section.
     function selectThen(view: 'permute' | 'clip') {
-        // A Clip tap on the strip whose Clip view is already up flips that
-        // view between its controls and the note/audio editor, as a second
-        // tap on a clip in the mini session column does. Read before the
-        // select below, which is what makes it "already".
-        const clipViewUp =
-            view === 'clip' && trackData.isSelected && centralDisplayStore.view.type === 'clip';
         instrumentDisplayCoordinator.suppressAutoViewSwitch();
         trackData.handleSelect({ showInstrumentView: false });
         // A pad held or latched on this track's Drum Rack (ADR-435): the
@@ -313,10 +306,6 @@
         // another track clears every scope first, so this only ever answers
         // for the selected track's own rack.
         if (view === 'permute' && openScopedPermutePane()) return;
-        if (clipViewUp) {
-            clipEditorStore.toggle();
-            return;
-        }
         centralDisplayStore.setView(view, undefined, null, view === 'permute' ? 'Permute' : 'Clip');
     }
 

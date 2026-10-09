@@ -6,8 +6,6 @@ import { logger } from '$lib/utils/logger';
 	import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 	import {
 		sendClipDelete,
-		setClipLoopStart,
-		setClipLoopEnd,
 		setClipWarpMode
 	} from '$lib/services/clipCommands';
 	import { sampleClipToSimpler, duplicateLoop, duplicateClipToNextSlot, transposeClipUp, transposeClipDown, transposeDeviceUp, transposeDeviceDown, reverseFocusedAudioClip, setAudioClipPitch, setAudioClipGain, roundGainDisplay } from '$lib/services/clipOperations';
@@ -25,14 +23,10 @@ import { logger } from '$lib/utils/logger';
 	import { browser } from '$app/environment';
 	import { onDestroy } from 'svelte';
 	import { meterStore } from '$lib/stores/v3/meters.svelte';
-	import Pencil from '@lucide/svelte/icons/pencil';
-	import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
-	import { clipEditorStore } from '$lib/stores/v6/clipEditorStore.svelte';
 	import { v3Store } from '$lib/stores/v3/normalized.svelte';
 	import { rgbToHex } from '$lib/utils/formatters/trackFormatters';
 	import { selectedTrackInk, selectedTrackScheme } from '$lib/utils/selectedTrackInk';
 	import ClipEditorView from './ClipEditorView.svelte';
-	import { uiPrefsStore } from '$lib/stores/v6/uiPrefsStore.svelte';
 	import {
 		VM,
 		parseVmMembers,
@@ -42,7 +36,6 @@ import { logger } from '$lib/utils/logger';
 	import SectionDivider from '../SectionDivider.svelte';
 	import { fitText } from '$lib/utils/fitText';
 
-	let editorActive = $derived(clipEditorStore.active);
 	let trackColor = $derived.by(() => {
 		const path = selectedTrackStore.selectedTrackPath;
 		if (!path) return undefined;
@@ -66,24 +59,6 @@ import { logger } from '$lib/utils/logger';
 	const CLIP_FALLBACK_SCHEME = { primary: 'var(--act-quant)', secondary: 'var(--act-quant-wash)', accent: 'var(--act-quant)' } as const;
 	let trackScheme = $derived(selectedTrackScheme() ?? CLIP_FALLBACK_SCHEME);
 	let trackTint = $derived(trackScheme.primary);
-
-	function halveLoopFromEnd() {
-		const clipPath = requireFocusedClip();
-		if (!clipPath) return;
-		const loopStart = clipPropertiesStore.loopStart;
-		const loopEnd = clipPropertiesStore.loopEnd;
-		const newEnd = loopStart + (loopEnd - loopStart) / 2;
-		setClipLoopEnd(clipPath, newEnd);
-	}
-
-	function halveLoopFromStart() {
-		const clipPath = requireFocusedClip();
-		if (!clipPath) return;
-		const loopStart = clipPropertiesStore.loopStart;
-		const loopEnd = clipPropertiesStore.loopEnd;
-		const newStart = loopEnd - (loopEnd - loopStart) / 2;
-		setClipLoopStart(clipPath, newStart);
-	}
 
 	let warpMode = $derived(clipPropertiesStore.warpMode);
 	let instrumentType = $derived(currentInstrumentStore.type);
@@ -405,112 +380,98 @@ import { logger } from '$lib/utils/logger';
 </script>
 
 <!--
-	Manual device↔clip-editor toggle (clip-view-mirror decision 8):
-	the clip central area shows EITHER the editor canvas OR the button
-	rail, never both. Focusing a clip never auto-switches; the user taps
-	the toggle. The toggle chip floats top-right in both modes.
+	One clip view: the note / audio editor across the left, and a narrow
+	rail of clip controls down its right edge (2026-10-09, the user's
+	call). It used to be either the editor or a full-width rail of big
+	buttons, swapped by a toggle; now both are always on screen.
+
+	The rail, left to right:
+	  Dup Trk / Group · REC / Delete | Loop X2 or Rev · ±12 or Pitch · Temp over Chance
+	(audio: Gain over the warp modes in the last column). The two buttons
+	that halved the loop are gone: the editor's loop braces do that job.
 -->
 <div class="clip-central-root h-full w-full relative" style="--clip-track-wash: {trackWash}; --clip-track-tint: {trackTint};">
-	<button
-		class="editor-toggle"
-		class:active={editorActive}
-		onclick={() => clipEditorStore.toggle()}
-		title={editorActive ? 'Show clip controls' : 'Show clip editor'}
-		aria-label={editorActive ? 'Show clip controls' : 'Show clip editor'}
-	>
-		{#if editorActive}
-			<SlidersHorizontal class="w-4 h-4" />
-		{:else}
-			<Pencil class="w-4 h-4" />
-		{/if}
-	</button>
-
-	{#if editorActive}
-		<!-- Same inset as every other central view; without it the editor ran
-		     to the panel's edges. -->
-		<div class="editor-full h-full w-full p-(--central-inset)">
-			<ClipEditorView color={trackColor} />
-		</div>
-	{:else}
-
-<!--
-	7 equal columns plus one hairline seam track, each always grid-placed
-	by number (the class names are the DOM's order, not the screen's — see
-	the `.col-N { grid-column }` table for where each one actually lands):
-	Col 1: REC top + Delete bottom
-	Col 2: clip> top + −12 bottom
-	Col 3: clip< top + +12 bottom
-	Col 4: Replace top + Dup/Simpler bottom
-	Col 5: TEMP slider (MIDI) | GAIN slider (audio) — full height
-	Col 6: CHANCE slider (MIDI) | warp mode buttons (audio) — full height
-	Col 9: Dup Trk — full height (hold to duplicate the whole track)
--->
 <div class="outer h-full w-full p-(--central-inset)">
+	<div class="editor-cell"><ClipEditorView color={trackColor} /></div>
+	<div class="seam seam-editor"><SectionDivider orientation="vertical" /></div>
+
 	{#if browser}
-
-		<!-- Col 1: CHANCE (MIDI) | warp modes (audio) -->
-		<div class="col col-1 transition-opacity duration-200 {trackType === 'midi' ? (permuteDevice === null ? 'opacity-30' : 'opacity-100') : (!hasClip ? 'opacity-30' : 'opacity-100')}">
-			{#if trackType === 'midi'}
-				<DeviceSlider
-					value={chance}
-					labelOrientation="horizontal"
-					title="Chance"
-					icon="chance"
-					color={trackScheme}
-					onInteraction={(val) => permuteDevice
-						? sequencerStore.handleChanceChange(val)
-						: sequencerStore.handleChanceChangeGhost(val)
-					}
-				/>
-			{:else if trackType === 'audio'}
-				<div class="stacked-switches">
-					{#each warpModeOptions as option}
-						<button
-							onclick={() => setWarpMode(option.value)}
-							disabled={!hasClip}
-							class="btn btn-switch clip-switch font-bold text-base"
-							class:active={warpMode === option.value}
-						><span class="fit-label" style:--fit-pad="0px" use:fitText={option.label}>{option.label}</span></button>
-					{/each}
+		<!-- Dup Trk top + Group bottom: both restructure the set around the
+		     track you are looking at. -->
+		<div class="col col-track">
+			<!-- Without the AX helper there is no Group, and Dup Trk takes the
+			     column's whole height. -->
+			<div class="stacked-btns" class:single={!axOn}>
+				<div class="btn-cell">
+					<button
+						onpointerdown={handleDupTrackStart}
+						onpointerup={handleDupTrackEnd}
+						onpointerleave={handleDupTrackEnd}
+						onpointercancel={handleDupTrackEnd}
+						disabled={isDuplicatingTrack}
+						class="btn btn-switch dup-trk-btn clip-switch relative overflow-hidden font-bold text-base {dupTrackHolding ? 'active' : ''} {isDuplicatingTrack ? 'cursor-wait' : ''}"
+					>
+						{#if dupTrackHolding}<div class="hold-fill" style="animation-duration:{DUP_TRACK_HOLD_DURATION}ms; background: color-mix(in oklab, var(--clip-track-tint, var(--act-quant)) 30%, transparent);"></div>{/if}
+						<span class="relative z-10 flex items-center justify-center btn-caps" aria-label="Duplicate track">
+							{#if isDuplicatingTrack}
+								...
+							{:else if dupTrackHolding}
+								Hold...
+							{:else}
+								<!-- Source track lane copied down to a duplicate lane (with notes + a + cue) -->
+								<svg class="w-9 h-9" fill="none" viewBox="0 0 32 28" style="transform: rotate(-90deg)">
+									<!-- source lane -->
+									<rect x="3" y="1.5" width="26" height="9" rx="1.5" stroke="currentColor" stroke-width="2" />
+									<rect x="6" y="4.5" width="6" height="3" rx="0.75" fill="currentColor" />
+									<rect x="14" y="4.5" width="4" height="3" rx="0.75" fill="currentColor" />
+									<rect x="20" y="4.5" width="6" height="3" rx="0.75" fill="currentColor" />
+									<!-- duplicate arrow -->
+									<path d="M16 12.5v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+									<path d="M12.5 14.5l3.5 3 3.5-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+									<!-- duplicate lane -->
+									<rect x="3" y="19.5" width="26" height="9" rx="1.5" stroke="currentColor" stroke-width="2" stroke-dasharray="2.5 2" />
+									<rect x="6" y="22.5" width="6" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" />
+									<rect x="14" y="22.5" width="4" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" />
+									<rect x="20" y="22.5" width="6" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" />
+								</svg>
+							{/if}
+						</span>
+					</button>
 				</div>
-			{/if}
+				{#if axOn}
+				<div class="btn-cell">
+					<button
+						use:press={{ onDown: handleGroupDown, onRelease: handleGroupRelease, touchAction: 'none', disabled: isCommitting || !!axReason }}
+						disabled={isCommitting || !!axReason}
+						title={axReason || undefined}
+						class="btn btn-switch dup-trk-btn clip-switch group-btn relative overflow-hidden font-bold text-base {groupGestureStore.active ? 'active' : ''} {isCommitting ? 'cursor-wait' : ''}"
+					>
+						<span class="relative z-10 flex items-center justify-center btn-caps" aria-label={groupGestureStore.latched ? 'Group tracks — tap tracks, then tap here to finish' : 'Group tracks — hold, tap other tracks, release (or tap once to keep tapping with one finger)'}>
+							{#if isCommitting}
+								...
+							{:else if groupGestureStore.active}
+								{groupGestureStore.memberPaths.size}
+							{:else}
+								<!-- Two lanes gathered inside one bracket: the group track -->
+								<svg class="w-9 h-9" fill="none" viewBox="0 0 32 28" style="transform: rotate(-90deg)">
+									<!-- the bracket that closes around them -->
+									<path d="M9 3H5.5A1.5 1.5 0 0 0 4 4.5v19A1.5 1.5 0 0 0 5.5 25H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+									<!-- the tracks it gathers -->
+									<rect x="13" y="5" width="15" height="7" rx="1.5" stroke="currentColor" stroke-width="2" />
+									<rect x="13" y="16" width="15" height="7" rx="1.5" stroke="currentColor" stroke-width="2" />
+									<rect x="16" y="7.5" width="5" height="2" rx="0.5" fill="currentColor" />
+									<rect x="16" y="18.5" width="5" height="2" rx="0.5" fill="currentColor" />
+								</svg>
+							{/if}
+						</span>
+					</button>
+				</div>
+				{/if}
+			</div>
 		</div>
 
-		<!-- Col 2: TEMP (MIDI) | GAIN (audio), beside Pitch: the two faders
-		     that set how the clip sounds. to Simpler moved under Rev for it
-		     (2026-09-27). Temp is dimmed and inert under a pad scope (ADR-435). -->
-		<div class="col col-2 transition-opacity duration-200 {trackType === 'midi' ? ((permuteDevice === null || temperatureInert) ? 'opacity-30' : 'opacity-100') : (!hasClip ? 'opacity-30' : 'opacity-100')}" data-temperature-inert={temperatureInert ? '' : undefined}>
-			{#if trackType === 'midi'}
-				<DeviceSlider
-					value={temperature}
-					labelOrientation="horizontal"
-					title="Temp"
-					icon="temperature"
-					color={trackScheme}
-					onInteraction={(val) => {
-						if (temperatureInert) return;
-						(permuteDevice
-							? sequencerStore.handleTemperatureChange
-							: sequencerStore.handleTemperatureChangeGhost)(val);
-					}}
-				/>
-			{:else if trackType === 'audio'}
-				<DeviceSlider
-					value={gain}
-					title="Gain"
-					icon="gain"
-					labelOrientation="horizontal"
-					color={trackScheme}
-					onInteraction={(val) => setAudioClipGain(val)}
-				>
-					{#snippet label()}<span class="flex flex-col items-center leading-tight"><span>Gain</span>{#if gainDisplay}<span class="gain-db">{gainDisplay}</span>{/if}</span>{/snippet}
-				</DeviceSlider>
-			{/if}
-		</div>
-
-		<!-- Col 3: REC top + > bottom. Delete and > traded places on the
-		     user's call (2026-09-13): Delete now sits over < in col 5. -->
-		<div class="col col-3">
+		<!-- REC top + Delete bottom. -->
+		<div class="col col-rec">
 			<div class="stacked-btns">
 				<div class="btn-cell">
 					<RecordButton
@@ -520,22 +481,88 @@ import { logger } from '$lib/utils/logger';
 				</div>
 				<div class="btn-cell">
 					<button
-						onclick={halveLoopFromStart}
+						onpointerdown={handleDeleteClipStart}
+						onpointerup={handleDeleteClipEnd}
+						onpointerleave={handleDeleteClipEnd}
+						onpointercancel={handleDeleteClipEnd}
 						disabled={!hasClip}
-						class="btn btn-well fam-quant"
-						aria-label="Clip left"
+						class="btn btn-well fam-del relative overflow-hidden {deleteClipHolding ? 'is-active' : ''}"
 					>
-						<!-- The clip, with the loop bar over the half that keeps looping --><svg class="w-12 h-12" fill="none" viewBox="0 0 36 24"><rect x="20" y="2" width="14" height="3" rx="1" fill="currentColor" /><rect x="2" y="8" width="32" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="6" y="15" width="6" height="2.5" rx="0.75" fill="currentColor" /><rect x="13" y="11" width="5" height="2.5" rx="0.75" fill="currentColor" /><rect x="20" y="16" width="6" height="2.5" rx="0.75" fill="currentColor" /><rect x="27" y="12" width="4.5" height="2.5" rx="0.75" fill="currentColor" /></svg>
+						{#if deleteClipHolding}<div class="hold-fill" style="animation-duration:{HOLD_DURATION}ms; background: color-mix(in oklab, var(--act-master), transparent 70%);"></div>{/if}
+						<span class="relative z-10 flex items-center justify-center btn-caps" aria-label="Delete clip">
+							{#if deleteClipHolding}
+								Hold...
+							{:else}
+								<!-- Wide clip box with MIDI note bars, big red X overlaid -->
+								<svg class="w-9 h-9" fill="none" viewBox="0 0 36 24">
+									<rect x="2" y="4" width="32" height="16" rx="2" stroke="currentColor" stroke-width="2" />
+									<rect x="6" y="12" width="6" height="2.5" rx="0.75" fill="currentColor" />
+									<rect x="13" y="8" width="5" height="2.5" rx="0.75" fill="currentColor" />
+									<rect x="19" y="14" width="7" height="2.5" rx="0.75" fill="currentColor" />
+									<rect x="24" y="10" width="5" height="2.5" rx="0.75" fill="currentColor" />
+									<line x1="9" y1="3" x2="27" y2="21" style="stroke: var(--act-rec)" stroke-width="3" stroke-linecap="round" />
+									<line x1="27" y1="3" x2="9" y2="21" style="stroke: var(--act-rec)" stroke-width="3" stroke-linecap="round" />
+								</svg>
+							{/if}
+						</span>
 					</button>
 				</div>
 			</div>
 		</div>
 
-		<!-- Col 4: PITCH — audio gets a vertical −24..+24 semitone slider
-			 (absolute pitch_coarse, whole-semitone steps); MIDI keeps the
-			 relative ±12 octave buttons (no absolute clip-transpose state a
-			 slider could reflect — transpose there shifts the notes). -->
-		<div class="col col-4 transition-opacity duration-200 {trackType === 'audio' && !hasClip ? 'opacity-30' : 'opacity-100'}">
+		<!-- What acts on the track and the clip | what shapes what it plays. -->
+		<div class="seam seam-a"><SectionDivider orientation="vertical" /></div>
+
+		<!-- Loop X2 + Dup Clip (MIDI) / Rev + to Simpler (audio). -->
+		<div class="col col-loop">
+			<!-- Without the AX helper there is no Reverse, and to Simpler
+			     takes the audio column's whole height. -->
+			<div class="stacked-btns" class:single={trackType !== 'midi' && (trackType !== 'audio' || !axOn)}>
+				{#if trackType !== 'audio' || axOn}
+				<div class="btn-cell">
+					{#if trackType === 'midi'}
+						<button
+							onclick={handleDuplicateLoop}
+							disabled={!hasClip || isDuplicatingLoop}
+							class="btn btn-well fam-monitor {isDuplicatingLoop ? 'cursor-wait' : ''}"
+							aria-label="Duplicate loop"
+						><!-- The loop and its copy appended after it, one loop bar across both: the loop doubled -->{#if isDuplicatingLoop}...{:else}<svg class="w-9 h-9" fill="none" viewBox="0 0 36 24"><rect x="2" y="2" width="32" height="3" rx="1" fill="currentColor" /><rect x="2" y="8" width="14" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="4.5" y="15" width="4" height="2.5" rx="0.75" fill="currentColor" /><rect x="10" y="11" width="4.5" height="2.5" rx="0.75" fill="currentColor" /><rect x="20" y="8" width="14" height="13" rx="1.5" stroke="currentColor" stroke-width="2" stroke-dasharray="2.5 2" /><rect x="22.5" y="15" width="4" height="2.5" rx="0.75" fill="currentColor" fill-opacity="0.55" /><rect x="28" y="11" width="4.5" height="2.5" rx="0.75" fill="currentColor" fill-opacity="0.55" /></svg>{/if}</button>
+					{:else if trackType === 'audio'}
+							<button
+								onclick={handleReverseClip}
+								disabled={!hasClip || isReversing || !!axReason}
+								class="btn btn-well fam-monitor font-bold {isReversing ? 'cursor-wait' : ''}"
+								aria-label={axReason ? `Reverse clip — ${axReason}` : 'Reverse clip'}
+								title={axReason || undefined}
+							>{#if isReversing}...{:else}<span class="flex items-center justify-center gap-1 btn-caps"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 19l-7-7 7-7M19 12H4" /></svg>Rev</span>{/if}</button>
+					{/if}
+				</div>
+				{/if}
+				{#if trackType === 'midi'}
+					<div class="btn-cell">
+						<button
+							onclick={handleDuplicateClip}
+							disabled={!hasClip || !nextSlotEmpty}
+							class="btn btn-well fam-monitor"
+							aria-label="Duplicate clip to the next slot"
+						><!-- Dup Trk's mark at slot scale and upright: the clip copied into the slot below --><svg class="w-9 h-9" fill="none" viewBox="0 0 32 28"><rect x="5" y="1.5" width="22" height="9" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="8" y="4.5" width="5" height="3" rx="0.75" fill="currentColor" /><rect x="14.5" y="4.5" width="3.5" height="3" rx="0.75" fill="currentColor" /><rect x="19.5" y="4.5" width="4.5" height="3" rx="0.75" fill="currentColor" /><path d="M16 12.5v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" /><path d="M12.5 14.5l3.5 3 3.5-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><rect x="5" y="19.5" width="22" height="7" rx="1.5" stroke="currentColor" stroke-width="2" stroke-dasharray="2.5 2" /><rect x="8" y="21.5" width="5" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" /><rect x="14.5" y="21.5" width="3.5" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" /><rect x="19.5" y="21.5" width="4.5" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" /></svg></button>
+					</div>
+				{/if}
+				{#if trackType === 'audio'}
+					<div class="btn-cell">
+						<button
+							onclick={handleSampleToSimpler}
+							disabled={!hasClip || isSampling}
+							class="btn btn-well fam-monitor font-bold {isSampling ? 'cursor-wait' : ''}"
+							aria-label="Sample to Simpler"
+						>{#if isSampling}...{:else}<span class="flex flex-col items-center leading-tight btn-caps fit-label" style:--fit-pad="0px" use:fitText={'to Simpler'}><span>to</span><span>Simpler</span></span>{/if}</button>
+					</div>
+				{/if}
+			</div>
+		</div>
+
+		<!-- ±12 (MIDI) / +12 · Pitch · −12 (audio). -->
+		<div class="col col-pitch transition-opacity duration-200 {trackType === 'audio' && !hasClip ? 'opacity-30' : 'opacity-100'}">
 			{#if trackType === 'audio'}
 				<!-- Thirds: +12 over the slider over −12. The buttons jump
 					 the slider an octave and stop at its ends. -->
@@ -590,195 +617,68 @@ import { logger } from '$lib/utils/logger';
 			{/if}
 		</div>
 
-		<!-- Col 5: Delete top + < bottom (both track types). The loop-halving
-			 arrows used to share cols 4/5 with the transpose buttons, then were
-			 stacked together to free a full column for the PITCH slider; since
-			 2026-09-13 > sits under REC in col 3 and Delete took its place. -->
-		<div class="col col-5">
-			<div class="stacked-btns">
-				<div class="btn-cell">
-					<button
-						onpointerdown={handleDeleteClipStart}
-						onpointerup={handleDeleteClipEnd}
-						onpointerleave={handleDeleteClipEnd}
-						onpointercancel={handleDeleteClipEnd}
-						disabled={!hasClip}
-						class="btn btn-well fam-del relative overflow-hidden {deleteClipHolding ? 'is-active' : ''}"
-					>
-						{#if deleteClipHolding}<div class="hold-fill" style="animation-duration:{HOLD_DURATION}ms; background: color-mix(in oklab, var(--act-master), transparent 70%);"></div>{/if}
-						<span class="relative z-10 flex items-center justify-center btn-caps" aria-label="Delete clip">
-							{#if deleteClipHolding}
-								Hold...
-							{:else}
-								<!-- Wide clip box with MIDI note bars, big red X overlaid -->
-								<svg class="w-12 h-12" fill="none" viewBox="0 0 36 24">
-									<rect x="2" y="4" width="32" height="16" rx="2" stroke="currentColor" stroke-width="2" />
-									<rect x="6" y="12" width="6" height="2.5" rx="0.75" fill="currentColor" />
-									<rect x="13" y="8" width="5" height="2.5" rx="0.75" fill="currentColor" />
-									<rect x="19" y="14" width="7" height="2.5" rx="0.75" fill="currentColor" />
-									<rect x="24" y="10" width="5" height="2.5" rx="0.75" fill="currentColor" />
-									<line x1="9" y1="3" x2="27" y2="21" style="stroke: var(--act-rec)" stroke-width="3" stroke-linecap="round" />
-									<line x1="27" y1="3" x2="9" y2="21" style="stroke: var(--act-rec)" stroke-width="3" stroke-linecap="round" />
-								</svg>
-							{/if}
-						</span>
-					</button>
+		<!-- Temp over Chance (MIDI) / Gain over the warp modes (audio): the
+		     two that set how the clip sounds, sharing one column. Temp is
+		     dimmed and inert under a pad scope (ADR-435). -->
+		<div class="col col-shape">
+			{#if trackType === 'midi'}
+				<div class="half transition-opacity duration-200 {(permuteDevice === null || temperatureInert) ? 'opacity-30' : 'opacity-100'}" data-temperature-inert={temperatureInert ? '' : undefined}>
+					<DeviceSlider
+						value={temperature}
+						labelOrientation="horizontal"
+						title="Temp"
+						icon="temperature"
+						color={trackScheme}
+						onInteraction={(val) => {
+							if (temperatureInert) return;
+							(permuteDevice
+								? sequencerStore.handleTemperatureChange
+								: sequencerStore.handleTemperatureChangeGhost)(val);
+						}}
+					/>
 				</div>
-				<div class="btn-cell">
-					<button
-						onclick={halveLoopFromEnd}
-						disabled={!hasClip}
-						class="btn btn-well fam-quant"
-						aria-label="Clip right"
-					>
-						<!-- The clip, with the loop bar over the half that keeps looping --><svg class="w-12 h-12" fill="none" viewBox="0 0 36 24"><rect x="2" y="2" width="14" height="3" rx="1" fill="currentColor" /><rect x="2" y="8" width="32" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="6" y="15" width="6" height="2.5" rx="0.75" fill="currentColor" /><rect x="13" y="11" width="5" height="2.5" rx="0.75" fill="currentColor" /><rect x="20" y="16" width="6" height="2.5" rx="0.75" fill="currentColor" /><rect x="27" y="12" width="4.5" height="2.5" rx="0.75" fill="currentColor" /></svg>
-					</button>
+				<div class="half transition-opacity duration-200 {permuteDevice === null ? 'opacity-30' : 'opacity-100'}">
+					<DeviceSlider
+						value={chance}
+						labelOrientation="horizontal"
+						title="Chance"
+						icon="chance"
+						color={trackScheme}
+						onInteraction={(val) => permuteDevice
+							? sequencerStore.handleChanceChange(val)
+							: sequencerStore.handleChanceChangeGhost(val)
+						}
+					/>
 				</div>
-			</div>
-		</div>
-
-		<!-- Col 6: Loop X2 (MIDI) full height / Reverse top + to Simpler
-		     bottom (audio). Its Replace button moved up to share Dup Trk's
-		     column (user's call, 2026-09-13): Replace and Dup Trk act on the
-		     track, Loop X2 and Reverse change what the clip plays, so this one
-		     crossed seam-a to Temp and Chance. to Simpler joined Rev when Gain
-		     took its column (2026-09-27): both are one-tap audio transforms. -->
-		<div class="col col-6">
-			<!-- Without the AX helper there is no Reverse, and to Simpler
-			     takes the audio column's whole height. -->
-			<div class="stacked-btns" class:single={trackType !== 'midi' && (trackType !== 'audio' || !axOn)}>
-				{#if trackType !== 'audio' || axOn}
-				<div class="btn-cell">
-					{#if trackType === 'midi'}
-						<button
-							onclick={handleDuplicateLoop}
-							disabled={!hasClip || isDuplicatingLoop}
-							class="btn btn-well fam-monitor {isDuplicatingLoop ? 'cursor-wait' : ''}"
-							aria-label="Duplicate loop"
-						><!-- The loop and its copy appended after it, one loop bar across both: the loop doubled -->{#if isDuplicatingLoop}...{:else}<svg class="w-12 h-12" fill="none" viewBox="0 0 36 24"><rect x="2" y="2" width="32" height="3" rx="1" fill="currentColor" /><rect x="2" y="8" width="14" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="4.5" y="15" width="4" height="2.5" rx="0.75" fill="currentColor" /><rect x="10" y="11" width="4.5" height="2.5" rx="0.75" fill="currentColor" /><rect x="20" y="8" width="14" height="13" rx="1.5" stroke="currentColor" stroke-width="2" stroke-dasharray="2.5 2" /><rect x="22.5" y="15" width="4" height="2.5" rx="0.75" fill="currentColor" fill-opacity="0.55" /><rect x="28" y="11" width="4.5" height="2.5" rx="0.75" fill="currentColor" fill-opacity="0.55" /></svg>{/if}</button>
-					{:else if trackType === 'audio'}
+			{:else if trackType === 'audio'}
+				<div class="half transition-opacity duration-200 {!hasClip ? 'opacity-30' : 'opacity-100'}">
+					<DeviceSlider
+						value={gain}
+						title="Gain"
+						icon="gain"
+						labelOrientation="horizontal"
+						color={trackScheme}
+						onInteraction={(val) => setAudioClipGain(val)}
+					>
+						{#snippet label()}<span class="flex flex-col items-center leading-tight"><span>Gain</span>{#if gainDisplay}<span class="gain-db">{gainDisplay}</span>{/if}</span>{/snippet}
+					</DeviceSlider>
+				</div>
+				<div class="half transition-opacity duration-200 {!hasClip ? 'opacity-30' : 'opacity-100'}">
+					<div class="stacked-switches">
+						{#each warpModeOptions as option}
 							<button
-								onclick={handleReverseClip}
-								disabled={!hasClip || isReversing || !!axReason}
-								class="btn btn-well fam-monitor font-bold {isReversing ? 'cursor-wait' : ''}"
-								aria-label={axReason ? `Reverse clip — ${axReason}` : 'Reverse clip'}
-								title={axReason || undefined}
-							>{#if isReversing}...{:else}<span class="flex items-center justify-center gap-1 btn-caps"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 19l-7-7 7-7M19 12H4" /></svg>Rev</span>{/if}</button>
-					{/if}
-				</div>
-				{/if}
-				{#if trackType === 'midi'}
-					<div class="btn-cell">
-						<button
-							onclick={handleDuplicateClip}
-							disabled={!hasClip || !nextSlotEmpty}
-							class="btn btn-well fam-monitor"
-							aria-label="Duplicate clip to the next slot"
-						><!-- Dup Trk's mark at slot scale and upright: the clip copied into the slot below --><svg class="w-12 h-12" fill="none" viewBox="0 0 32 28"><rect x="5" y="1.5" width="22" height="9" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="8" y="4.5" width="5" height="3" rx="0.75" fill="currentColor" /><rect x="14.5" y="4.5" width="3.5" height="3" rx="0.75" fill="currentColor" /><rect x="19.5" y="4.5" width="4.5" height="3" rx="0.75" fill="currentColor" /><path d="M16 12.5v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" /><path d="M12.5 14.5l3.5 3 3.5-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><rect x="5" y="19.5" width="22" height="7" rx="1.5" stroke="currentColor" stroke-width="2" stroke-dasharray="2.5 2" /><rect x="8" y="21.5" width="5" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" /><rect x="14.5" y="21.5" width="3.5" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" /><rect x="19.5" y="21.5" width="4.5" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" /></svg></button>
+								onclick={() => setWarpMode(option.value)}
+								disabled={!hasClip}
+								class="btn btn-switch clip-switch font-bold text-base"
+								class:active={warpMode === option.value}
+							><span class="fit-label" style:--fit-pad="0px" use:fitText={option.label}>{option.label}</span></button>
+						{/each}
 					</div>
-				{/if}
-				{#if trackType === 'audio'}
-					<div class="btn-cell">
-						<button
-							onclick={handleSampleToSimpler}
-							disabled={!hasClip || isSampling}
-							class="btn btn-well fam-monitor font-bold {isSampling ? 'cursor-wait' : ''}"
-							aria-label="Sample to Simpler"
-						>{#if isSampling}...{:else}<span class="flex flex-col items-center leading-tight btn-caps fit-label" style:--fit-pad="0px" use:fitText={'to Simpler'}><span>to</span><span>Simpler</span></span>{/if}</button>
-					</div>
-				{/if}
-			</div>
-		</div>
-
-		<!-- Replace/Dup Trk, REC/Delete and the loop arrows act on the track
-		     and the clip; Loop X2, ±12, Temp and Chance shape what the clip
-		     plays. Ten columns at one pitch and one grammar read as one
-		     undifferentiated rail until the seams landed (2026-09-13). -->
-		<div class="seam seam-a"><SectionDivider orientation="vertical" /></div>
-
-		<!-- Col 9: Dup Trk top + Group bottom. Dup Trk had the column to
-		     itself from 2026-09-13, when Replace left for the swap pill in the
-		     instrument and clip views (ADR-442); Group joined it because they
-		     are the same gesture on the same subject — both restructure the
-		     set around the track you are looking at. Dup Trk is still a timed
-		     800ms hold; Group is a sustained modifier instead (hold = tap
-		     other track strips to add them, release = commit) — see
-		     groupGestureStore and TrackStrip's dispatchSectionTap. -->
-		<div class="col col-9">
-			<!-- Without the AX helper there is no Group, and Dup Trk takes the
-			     column's whole height. -->
-			<div class="stacked-btns" class:single={!axOn}>
-				<div class="btn-cell">
-					<button
-						onpointerdown={handleDupTrackStart}
-						onpointerup={handleDupTrackEnd}
-						onpointerleave={handleDupTrackEnd}
-						onpointercancel={handleDupTrackEnd}
-						disabled={isDuplicatingTrack}
-						class="btn btn-switch dup-trk-btn clip-switch relative overflow-hidden font-bold text-base {dupTrackHolding ? 'active' : ''} {isDuplicatingTrack ? 'cursor-wait' : ''}"
-					>
-						{#if dupTrackHolding}<div class="hold-fill" style="animation-duration:{DUP_TRACK_HOLD_DURATION}ms; background: color-mix(in oklab, var(--clip-track-tint, var(--act-quant)) 30%, transparent);"></div>{/if}
-						<span class="relative z-10 flex items-center justify-center btn-caps" aria-label="Duplicate track">
-							{#if isDuplicatingTrack}
-								...
-							{:else if dupTrackHolding}
-								Hold...
-							{:else}
-								<!-- Source track lane copied down to a duplicate lane (with notes + a + cue) -->
-								<svg class="w-12 h-12" fill="none" viewBox="0 0 32 28" style="transform: rotate(-90deg)">
-									<!-- source lane -->
-									<rect x="3" y="1.5" width="26" height="9" rx="1.5" stroke="currentColor" stroke-width="2" />
-									<rect x="6" y="4.5" width="6" height="3" rx="0.75" fill="currentColor" />
-									<rect x="14" y="4.5" width="4" height="3" rx="0.75" fill="currentColor" />
-									<rect x="20" y="4.5" width="6" height="3" rx="0.75" fill="currentColor" />
-									<!-- duplicate arrow -->
-									<path d="M16 12.5v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-									<path d="M12.5 14.5l3.5 3 3.5-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-									<!-- duplicate lane -->
-									<rect x="3" y="19.5" width="26" height="9" rx="1.5" stroke="currentColor" stroke-width="2" stroke-dasharray="2.5 2" />
-									<rect x="6" y="22.5" width="6" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" />
-									<rect x="14" y="22.5" width="4" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" />
-									<rect x="20" y="22.5" width="6" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" />
-								</svg>
-							{/if}
-						</span>
-					</button>
 				</div>
-				{#if axOn}
-				<div class="btn-cell">
-					<button
-						use:press={{ onDown: handleGroupDown, onRelease: handleGroupRelease, touchAction: 'none', disabled: isCommitting || !!axReason }}
-						disabled={isCommitting || !!axReason}
-						title={axReason || undefined}
-						class="btn btn-switch dup-trk-btn clip-switch group-btn relative overflow-hidden font-bold text-base {groupGestureStore.active ? 'active' : ''} {isCommitting ? 'cursor-wait' : ''}"
-					>
-						<span class="relative z-10 flex items-center justify-center btn-caps" aria-label={groupGestureStore.latched ? 'Group tracks — tap tracks, then tap here to finish' : 'Group tracks — hold, tap other tracks, release (or tap once to keep tapping with one finger)'}>
-							{#if isCommitting}
-								...
-							{:else if groupGestureStore.active}
-								{groupGestureStore.memberPaths.size}
-							{:else}
-								<!-- Two lanes gathered inside one bracket: the group track -->
-								<svg class="w-12 h-12" fill="none" viewBox="0 0 32 28" style="transform: rotate(-90deg)">
-									<!-- the bracket that closes around them -->
-									<path d="M9 3H5.5A1.5 1.5 0 0 0 4 4.5v19A1.5 1.5 0 0 0 5.5 25H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-									<!-- the tracks it gathers -->
-									<rect x="13" y="5" width="15" height="7" rx="1.5" stroke="currentColor" stroke-width="2" />
-									<rect x="13" y="16" width="15" height="7" rx="1.5" stroke="currentColor" stroke-width="2" />
-									<rect x="16" y="7.5" width="5" height="2" rx="0.5" fill="currentColor" />
-									<rect x="16" y="18.5" width="5" height="2" rx="0.5" fill="currentColor" />
-								</svg>
-							{/if}
-						</span>
-					</button>
-				</div>
-				{/if}
-			</div>
+			{/if}
 		</div>
-
 	{/if}
 </div>
-	{/if}
 </div>
 
 <style>
@@ -787,47 +687,13 @@ import { logger } from '$lib/utils/logger';
 		background: var(--clip-track-wash); /* faint track wash (lifted off inline) */
 	}
 
-	.editor-toggle {
-		position: absolute;
-		top: 6px;
-		right: 6px;
-		z-index: 20;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 30px;
-		height: 30px;
-		border-radius: var(--radius-sm);
-		border: 1px solid color-mix(in srgb, var(--foreground), transparent 70%);
-		background: color-mix(in srgb, var(--background), transparent 10%);
-		color: var(--muted-foreground);
-		touch-action: manipulation;
-		cursor: pointer;
-		transition: background-color 0.15s, border-color 0.15s, color 0.15s;
-	}
-	.editor-toggle:hover {
-		color: var(--foreground);
-		border-color: color-mix(in srgb, var(--foreground), transparent 40%);
-	}
-	.editor-toggle.active {
-		color: var(--editor-accent);
-		border-color: var(--editor-accent);
-		background: color-mix(in oklab, var(--editor-accent) 12%, transparent);
-	}
-
-	/* 7 equal columns, always fixed positions regardless of track type, plus
-	   the `auto` seam track that groups them (2026-09-13):
-	     Replace/Dup Trk · REC/Del · nav | Loop X2 · ±12 · Temp · Chance
-	   The seam is `auto`, so a track is a hairline wide and the seven
-	   content columns still divide the rest evenly. Regrouped on the user's
-	   call the same day: what acts on the track or the clip | what shapes
-	   what the clip plays (Loop X2 or Reverse, ±12 or the audio pitch
-	   slider, Temp, Chance). Timing — Shuffle and the base grid it swung
-	   against — left for the Groove view on 2026-09-29, and the rail was
-	   divided again among the seven. */
+	/* The editor takes whatever width the rail leaves. The rail is five
+	   narrow columns at one fixed width (`--rail-w`) with two hairline
+	   seams: editor | Dup Trk · REC | Loop · Pitch · Temp/Chance. */
 	.outer {
+		--rail-w: 4.5rem;
 		display: grid;
-		grid-template-columns: repeat(3, 1fr) auto repeat(4, 1fr);
+		grid-template-columns: minmax(0, 1fr) auto repeat(2, var(--rail-w)) auto repeat(3, var(--rail-w));
 		grid-template-rows: 1fr;
 		gap: var(--central-gap);
 		min-height: 0;
@@ -837,16 +703,17 @@ import { logger } from '$lib/utils/logger';
 
 	.col { min-height: 0; min-width: 0; display: flex; flex-direction: column; grid-row: 1; }
 	.seam { grid-row: 1; display: flex; align-items: stretch; }
-	.col-9 { grid-column: 1; }
-	.col-3 { grid-column: 2; }
-	.col-5 { grid-column: 3; }
-	.seam-a { grid-column: 4; }
-	.col-6 { grid-column: 5; }
-	.col-4 { grid-column: 6; }
-	.col-2 { grid-column: 7; }
-	.col-1 { grid-column: 8; }
+	.editor-cell { grid-column: 1; grid-row: 1; min-width: 0; min-height: 0; position: relative; }
+	.seam-editor { grid-column: 2; }
+	.col-track { grid-column: 3; }
+	.col-rec { grid-column: 4; }
+	.seam-a { grid-column: 5; }
+	.col-loop { grid-column: 6; }
+	.col-pitch { grid-column: 7; }
+	.col-shape { grid-column: 8; gap: var(--central-gap); }
 
-	.editor-full { position: relative; min-width: 0; min-height: 0; }
+	/* Temp over Chance (Gain over warp on audio): two equal halves. */
+	.half { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
 
 	/* Full-height stack of 3 switch buttons (warp modes) */
 	/* `minmax(0, 1fr)`, not the implicit `auto` column: auto sizes to the
@@ -876,7 +743,9 @@ import { logger } from '$lib/utils/logger';
 	/* One button the column's full height (Loop X2 / Reverse since it left
 	   Replace behind) — same cell machinery, one row. */
 	.stacked-btns.single { grid-template-rows: 1fr; }
-	.stacked-btns.thirds { grid-template-rows: 1fr 1fr 1fr; }
+	/* +12 · Pitch · −12: the slider takes half the column, so its label
+	   still fits in a rail this narrow. */
+	.stacked-btns.thirds { grid-template-rows: 1fr 2fr 1fr; }
 	.slider-cell { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 
 	/* Each cell centres its button — container-type:size lets the button use cqw/cqh */
@@ -896,7 +765,7 @@ import { logger } from '$lib/utils/logger';
 		height: min(100cqw, 100cqh);
 		border: 1px solid;
 		font-weight: 700;
-		font-size: 1.5rem;
+		font-size: 1.125rem;
 		transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 		touch-action: manipulation;
 		cursor: pointer;
@@ -966,28 +835,17 @@ import { logger } from '$lib/utils/logger';
 	:global([data-grammar="flat"]) .clip-central-root {
 		background: transparent; /* no track wash */
 	}
-	:global([data-grammar="flat"]) .editor-toggle {
-		border-radius: 2px;
-		border-color: var(--line-strong);
-		background: var(--surface-well);
-		color: var(--foreground);
-	}
-	:global([data-grammar="flat"]) .editor-toggle.active {
-		background: var(--phosphor);
-		border-color: var(--phosphor);
-		color: var(--flat-on-fg);
-	}
 	:global([data-grammar="flat"]) .btn {
 		border-radius: 2px;
 		width: 100%;
 		height: 100%;
 		font-weight: var(--font-weight-medium);
-		font-size: 1.125rem;
+		font-size: 0.9375rem;
 	}
 	:global([data-grammar="flat"]) .btn-caps { text-transform: none; }
 	/* The warp labels keep the `text-base` they ask for: at the flat .btn's
 	   1.125rem "Complex" is wider than its column (see .stacked-switches). */
-	:global([data-grammar="flat"]) .stacked-switches .btn-switch { font-size: 1rem; }
+	:global([data-grammar="flat"]) .stacked-switches .btn-switch { font-size: 0.8125rem; }
 	:global([data-grammar="flat"]) .btn-well {
 		background: var(--surface-well);
 		border: 1px solid var(--line-strong);
@@ -1023,8 +881,7 @@ import { logger } from '$lib/utils/logger';
 	/* Light: ON fills sit at ~1:1 luminance against the light ladder, so the
 	   frame stays dark. */
 	:global(.light[data-grammar="flat"]) .btn-well.is-active,
-	:global(.light[data-grammar="flat"]) .clip-switch.active,
-	:global(.light[data-grammar="flat"]) .editor-toggle.active {
+	:global(.light[data-grammar="flat"]) .clip-switch.active {
 		border-color: var(--line-strong);
 	}
 	:global([data-grammar="flat"]) .clip-switch {
