@@ -282,7 +282,7 @@ export const session = {
     return `${_timeSignature.numerator}/${_timeSignature.denominator}`;
   },
   get tempoString(): string {
-    return `${_tempo.toFixed(1)} BPM`;
+    return `${Math.round(_tempo)} BPM`;
   },
   /**
    * Song position as Live's own transport readout: `bar.beat.sixteenth`,
