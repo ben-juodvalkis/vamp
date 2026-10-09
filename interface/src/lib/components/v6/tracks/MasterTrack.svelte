@@ -448,7 +448,7 @@
     .sig-den { align-self: center; transform: translateY(28%); }
     .sig-slash {
         width: 2px;
-        height: min(70cqh, 3.5rem);
+        height: min(48cqh, 2.4rem);
         background: currentColor;
         opacity: 0.6;
         transform: rotate(24deg);
