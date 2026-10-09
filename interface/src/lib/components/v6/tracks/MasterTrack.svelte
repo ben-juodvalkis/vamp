@@ -309,6 +309,7 @@
         aria-valuenow={session.timeSignature.numerator}
     >
         <span class="sig-num num">{session.timeSignature.numerator}</span>
+        <span class="sig-bar" aria-hidden="true"></span>
         <span class="sig-den num">{session.timeSignature.denominator}</span>
     </div>
 
@@ -404,7 +405,15 @@
        safe — the type grows with the container and then stops, so it fills
        the third without turning into signage. Sizes live here (not inline)
        so the flat grammar can re-size them by plain specificity. */
-    .sig-band { cursor: ns-resize; }
+    /* The time signature reads as the key's negative — outlined in the
+       master colour on the dark ground, where the key is a solid block in
+       it — so the two halves read as two controls, not one split label. */
+    .sig-band {
+        cursor: ns-resize;
+        background: var(--card);
+        box-shadow: inset 0 0 0 2px var(--act-master);
+        color: var(--act-master);
+    }
     .key-root-line {
         display: flex;
         align-items: center;
@@ -429,7 +438,13 @@
         font-weight: var(--font-weight-bold);
         line-height: 1;
     }
-    .sig-den { opacity: 0.8; }
+    .sig-bar {
+        width: min(50%, 2rem);
+        height: 2px;
+        margin: 0.1em 0;
+        background: currentColor;
+        opacity: 0.6;
+    }
     .sig-band.active .sig-num { text-decoration: underline; text-underline-offset: 0.15em; }
 
     /* Fader handle: white-hot act-master dash at the volume height. */
@@ -453,8 +468,12 @@
        the strips' name band already has in this skin — a solid block in the
        track's own colour with Live's ClipText on it — so the master ends the
        row of name bands rather than interrupting it. */
-    :global([data-grammar="flat"]) .key-band,
     :global([data-grammar="flat"]) .sig-band {
+        background: var(--card);
+        color: var(--act-master);
+        border-radius: 0;
+    }
+    :global([data-grammar="flat"]) .key-band {
         background: var(--act-master);
         color: var(--flat-clip-text);
         border-radius: 0;
