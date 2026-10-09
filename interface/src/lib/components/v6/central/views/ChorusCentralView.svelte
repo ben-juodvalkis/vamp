@@ -156,14 +156,16 @@
 
 	// ── GlitchLoop (the owner's PitchLoop89 build, Max) ────────────────────
 	// Took Pitch Hack's place 2026-10-06; one slider for now, more to come.
-	// Dry/Wet is param 7, 0–100, read off the running device by the user
-	// (2026-10-06). The device opens at 50, PitchLoop89's own default, but
-	// an unloaded slot draws 0, the user's call (2026-10-06): an empty slot
-	// adds nothing. Feedback is param 9, the left channel's (Feedback L,
+	// The main slider is Max Mix (param 29, 0–100; 2026-10-09), the ceiling
+	// GlitchLoop scales its Dry/Wet and Mod 5's random Dry/Wet jumps into,
+	// not Dry/Wet itself (param 7). Live lists the device's parameters by
+	// long name, so MixMax sits after MIDIGlide (28). The device opens at
+	// 100, but an unloaded slot draws 0, the user's call (2026-10-06): an
+	// empty slot adds nothing. Feedback is param 9, the left channel's (Feedback L,
 	// 0–120 %; Live lists the device's parameters by long name, so R is 10),
 	// named by the user 2026-10-07; unloaded, it draws 0 the same way.
 	const GLITCH_LOOP_PARAMS = {
-		mix: { index: 7, max: 100, default: 0 },
+		mix: { index: 29, max: 100, default: 0 },
 		feedback: { index: 9, max: 120, default: 0 },
 		pitchLeft: { index: 5, default: 0 },
 		pitchRight: { index: 6, default: 0 }

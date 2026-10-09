@@ -1,6 +1,6 @@
 /**
- * ChorusCentralView's GlitchLoop: its Dry/Wet (param 7, 0–100, read off the
- * running device 2026-10-06), Feedback L (param 9, 0–120) and an
+ * ChorusCentralView's GlitchLoop: its Max Mix (param 29, 0–100, the ceiling
+ * on the device's Dry/Wet since 2026-10-09), Feedback L (param 9, 0–120) and an
  * Up · Spread · Off pitch column over Pitch L/R (params 5/6), in Pitch Hack's
  * old place.
  */
@@ -23,17 +23,16 @@ import { send } from '$lib/api/simpleClient';
 const TRACK = 'tracks/0';
 const GL = `${TRACK}/devices/0`;
 
-function glitchLoop(mix: number, feedback = 0, pitch: [number, number] = [0, 0]): DeviceRecord {
+function glitchLoop(mixMax: number, feedback = 0, pitch: [number, number] = [0, 0], dryWet = 50): DeviceRecord {
 	const params = new SvelteMap<string, ParamRecord>();
-	for (let i = 0; i < 83; i++) {
+	for (let i = 0; i < 106; i++) {
 		const paramPath = `${GL}/params/${i}`;
 		const [name, value, min, max] =
 			i === 5 ? ['Pitch L', pitch[0], -24, 24]
 			: i === 6 ? ['Pitch R', pitch[1], -24, 24]
-			: i === 7 ? ['DryWet', mix, 0, 100]
+			: i === 7 ? ['Dry/Wet', dryWet, 0, 100]
 			: i === 9 ? ['Feedback L', feedback, 0, 120]
-			: i === 81 ? ['Segment L', 20, 0.1, 50]
-			: i === 82 ? ['Segment R', 20, 0.1, 50]
+			: i === 29 ? ['Max Mix', mixMax, 0, 100]
 			: [`P${i}`, 0, 0, 100];
 		params.set(paramPath, { paramPath, name, displayName: name, min, max, value, unit: '' });
 	}
@@ -65,14 +64,41 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe('ChorusCentralView GlitchLoop', () => {
-	it('shows GlitchLoop Dry/Wet (param 7) on a 0–100 slider', async () => {
-		seed(glitchLoop(30));
+	it('shows GlitchLoop Max Mix (param 29), not Dry/Wet, on a 0–100 slider', async () => {
+		seed(glitchLoop(30, 0, [0, 0], 80));
 		const { container } = render(ChorusCentralView);
 		await tick();
 		const s = glitchSlider(container);
 		expect(s).toBeDefined();
 		expect(s?.getAttribute('aria-valuenow')).toBe('30');
 		expect(s?.getAttribute('aria-valuemax')).toBe('100');
+	});
+
+	it('dragging the GlitchLoop slider writes Max Mix (29) and leaves Dry/Wet (7) alone', async () => {
+		seed(glitchLoop(30));
+		const { container } = render(ChorusCentralView);
+		await tick();
+		HTMLElement.prototype.setPointerCapture = vi.fn();
+		HTMLElement.prototype.releasePointerCapture = vi.fn();
+		const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+			x: 0, y: 0, top: 0, left: 0, right: 100, bottom: 400, width: 100, height: 400, toJSON: () => ({})
+		} as DOMRect);
+		const s = glitchSlider(container)!;
+		const pointer = (type: string, y: number) => {
+			const ev = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: 50, clientY: y });
+			Object.defineProperty(ev, 'pointerId', { value: 1 });
+			s.dispatchEvent(ev);
+		};
+		pointer('pointerdown', 200);
+		pointer('pointermove', 150);
+		await new Promise((r) => setTimeout(r, 50));
+		pointer('pointerup', 150);
+		rect.mockRestore();
+		const paths = vi.mocked(send).mock.calls.flatMap(([, args]) =>
+			Array.isArray(args) ? args.filter((x) => typeof x === 'string' && x.startsWith(`${GL}/params/`)) : []
+		);
+		expect(paths).toContain(`${GL}/params/29`);
+		expect(paths).not.toContain(`${GL}/params/7`);
 	});
 
 	it('shows GlitchLoop Feedback L (param 9) on a 0–120 slider', async () => {
