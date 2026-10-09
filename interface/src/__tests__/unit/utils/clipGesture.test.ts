@@ -4,6 +4,7 @@ import {
 	snapToGrid,
 	loopBraceGridBeats,
 	recordingBars,
+	recordingBeat,
 	clamp,
 	applyLoopDrag,
 	pxDeltaToBeats
@@ -190,5 +191,26 @@ describe('clipGesture — recordingBars', () => {
 		expect(recordingBars(-2, 4)).toBe(1);
 		expect(recordingBars(NaN, 4)).toBe(1);
 		expect(recordingBars(8, 0)).toBe(1);
+	});
+});
+
+describe('clipGesture — recordingBeat', () => {
+	it('reads the beat of its bar the playhead is in', () => {
+		expect(recordingBeat(0, 4)).toBe(1);
+		expect(recordingBeat(0.5, 4)).toBe(1);
+		expect(recordingBeat(1, 4)).toBe(1); // on the beat line, still beat 1
+		expect(recordingBeat(1.25, 4)).toBe(2);
+		expect(recordingBeat(4, 4)).toBe(4); // agrees with recordingBars' bar 1
+		expect(recordingBeat(4.25, 4)).toBe(1);
+		expect(recordingBeat(15.9, 4)).toBe(4);
+	});
+	it('counts beats of the meter', () => {
+		expect(recordingBeat(3.5, 3)).toBe(1);
+		expect(recordingBeat(5.5, 3)).toBe(3);
+	});
+	it('falls back to beat 1 on bad input', () => {
+		expect(recordingBeat(-2, 4)).toBe(1);
+		expect(recordingBeat(NaN, 4)).toBe(1);
+		expect(recordingBeat(8, 0)).toBe(1);
 	});
 });

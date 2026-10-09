@@ -76,6 +76,17 @@ export function recordingBars(recordedBeats: number, beatsPerBar: number): numbe
 	return Math.max(1, Math.ceil(recordedBeats / beatsPerBar - 1e-6));
 }
 
+/**
+ * The beat of its bar the playhead is in while a take records, 1-based,
+ * on the same rule as `recordingBars`: a bar or beat line belongs to the
+ * beat that ends there, so 4.0 beats in 4/4 reads bar 1 beat 4.
+ */
+export function recordingBeat(position: number, beatsPerBar: number): number {
+	if (!(beatsPerBar > 0) || !(position > 0)) return 1;
+	const beats = Math.max(1, Math.ceil(position - 1e-6));
+	return ((beats - 1) % Math.round(beatsPerBar)) + 1;
+}
+
 /** Clamp `v` to `[lo, hi]` (returns `lo` if the range is inverted). */
 export function clamp(v: number, lo: number, hi: number): number {
 	if (hi < lo) return lo;

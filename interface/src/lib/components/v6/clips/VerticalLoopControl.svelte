@@ -18,7 +18,7 @@
 	import { clipDisplayCoordinator } from '$lib/services/clipDisplayCoordinator.svelte';
 	import { drag as dragAction, type DragInfo, type DragOptions } from '$lib/actions/drag';
 	import { createSliderThrottle } from '$lib/utils/sliderThrottle';
-	import { loopBraceGridBeats, recordingBars, snapToGrid } from '$lib/utils/clip/clipGesture';
+	import { loopBraceGridBeats, recordingBars, recordingBeat, snapToGrid } from '$lib/utils/clip/clipGesture';
 	import { playingClipsStore } from '$lib/stores/v6/playingClipsStore.svelte';
 
 	// Constants
@@ -85,19 +85,24 @@
 	// points mean nothing until it closes, so the length comes from the
 	// playhead; the maximum holds an overdub, whose position wraps, at its
 	// loop length rather than dropping back to 1 each pass.
+	// The beat comes from where the playhead is now, so an overdub's beat
+	// keeps counting round while its bar holds.
 	let recordedBeats = $state(0);
+	let recordingPosition = $state(0);
 	$effect(() => {
 		if (!isRecording || !focusedTrackPath) {
 			recordedBeats = 0;
+			recordingPosition = 0;
 			return;
 		}
 		const pos = playingClipsStore.position(focusedTrackPath);
+		recordingPosition = pos;
 		if (pos > untrack(() => recordedBeats)) recordedBeats = pos;
 	});
 
 	let lengthLabel = $derived(
 		isRecording
-			? String(recordingBars(recordedBeats, beatsPerBar))
+			? `${recordingBars(recordedBeats, beatsPerBar)}.${recordingBeat(recordingPosition, beatsPerBar)}`
 			: formatBeats(displayEnd - displayStart)
 	);
 
