@@ -3,6 +3,7 @@ import {
 	hitTestRange,
 	snapToGrid,
 	loopBraceGridBeats,
+	recordingBars,
 	clamp,
 	applyLoopDrag,
 	pxDeltaToBeats
@@ -170,5 +171,24 @@ describe('clipGesture — applyLoopDrag', () => {
 		// end 6.0 + 0.6 = 6.6, snapped to grid 1 → 7.
 		const e = applyLoopDrag({ ...base, handle: 'end', deltaBeats: 0.6, gridBeats: 1 });
 		expect(e.end).toBe(7);
+	});
+});
+
+describe('clipGesture — recordingBars', () => {
+	it('reads the bar the playhead is in', () => {
+		expect(recordingBars(0, 4)).toBe(1);
+		expect(recordingBars(0.5, 4)).toBe(1);
+		expect(recordingBars(4, 4)).toBe(1); // on the bar line, still one bar
+		expect(recordingBars(4.0000001, 4)).toBe(1);
+		expect(recordingBars(4.25, 4)).toBe(2);
+		expect(recordingBars(15.9, 4)).toBe(4);
+	});
+	it('counts bars of the meter', () => {
+		expect(recordingBars(3.5, 3)).toBe(2);
+	});
+	it('falls back to one bar on bad input', () => {
+		expect(recordingBars(-2, 4)).toBe(1);
+		expect(recordingBars(NaN, 4)).toBe(1);
+		expect(recordingBars(8, 0)).toBe(1);
 	});
 });
