@@ -149,9 +149,9 @@
   const denominatorDrag: DragOptions = $derived(timeSignatureDrag('denominator'));
 
   /**
-   * Song position as bar and beat, whole numbers (Ben, 2026-10-09: no
-   * decimals). `bar.beat.sixteenth` read as a decimal number, and the
-   * sixteenth flickering at 10 Hz is not something to read mid-set.
+   * Song position as `bar.beat` (Ben, 2026-10-09): Live's reading without
+   * the sixteenth, which flickered at 10 Hz and is not something to read
+   * mid-set.
    */
   const beatsPerBar = $derived(session.timeSignature.numerator || 4);
   const songTime = $derived(Math.max(0, session.currentTime));
@@ -232,13 +232,10 @@
       <span class="hdr-caption">Time</span>
     </div>
 
-    <!-- Song position: bar and beat, each a whole number with its name. -->
+    <!-- Song position: bar.beat, Live's reading without the sixteenth. -->
     <div class="hdr-field is-readout" aria-label="Song position: bar {bar}, beat {beat}">
-      <span class="hdr-value">{bar}</span>
-      <span class="hdr-caption">Bar</span>
-      <span class="hdr-gap" aria-hidden="true"></span>
-      <span class="hdr-value">{beat}</span>
-      <span class="hdr-caption">Beat</span>
+      <span class="hdr-value">{bar}.{beat}</span>
+      <span class="hdr-caption">Position</span>
     </div>
 
     <!-- Metronome: a switch row, the System view's Click. -->
@@ -371,9 +368,6 @@
     line-height: 1;
     color: var(--muted-foreground);
     white-space: nowrap;
-  }
-  .hdr-gap {
-    width: 0.75rem;
   }
 
   .hdr-digit {
