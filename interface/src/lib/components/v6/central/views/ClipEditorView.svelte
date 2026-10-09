@@ -105,13 +105,21 @@
 	import { getTransients } from '$lib/services/clipTransientsService';
 	import { logger } from '$lib/utils/logger';
 	import { MOMENTARY_HOLD_MS } from '$lib/components/v6/tracks/TrackStrip/utils/momentaryPress';
+	import type { Snippet } from 'svelte';
 
 	interface Props {
 		/** Track color for note/waveform tinting. */
 		color?: string;
+		/**
+		 * The host's clip actions (Delete, Loop X2, Dup Clip), drawn at the
+		 * foot of the edit toolbar. Give them `class="edit-chip"` to wear
+		 * the toolbar's chip. With these the toolbar shows on an audio clip
+		 * too, holding only them.
+		 */
+		tools?: Snippet;
 	}
 
-	let { color }: Props = $props();
+	let { color, tools }: Props = $props();
 
 	const CENTRAL_BINS = 1024;
 	const PITCH_AXIS_W = 36; // piano-key gutter width (px)
@@ -137,6 +145,7 @@
 	});
 	let isAudio = $derived(clipType === 'audio');
 	let isMidi = $derived(clipType === 'midi');
+	let showToolbar = $derived(isMidi || !!tools);
 
 	// ── Loop / markers (focused clip, always live via clipPropertiesStore)
 	let loopStart = $derived(clipPropertiesStore.loopStart);
@@ -1616,7 +1625,7 @@
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 		<div
 			class="canvas-wrap"
-			style:right={isMidi ? `${TOOLBAR_W}px` : undefined}
+			style:right={showToolbar ? `${TOOLBAR_W}px` : undefined}
 			bind:this={containerRef}
 			role="application"
 			aria-label="Clip editor"
@@ -1849,8 +1858,9 @@
 
 		<!-- MIDI edit toolbar: a column beside the roll, so the roll takes
 		     the full height. Own pointer surface, outside the pan/zoom canvas. -->
-		{#if isMidi}
+		{#if showToolbar}
 			<div class="edit-toolbar" style:width="{TOOLBAR_W}px">
+				{#if isMidi}
 				<button
 					class="edit-chip"
 					class:active={fold}
@@ -1891,6 +1901,12 @@
 				>
 					Quantize
 				</button>
+				{/if}
+
+				{#if tools}
+					{#if isMidi}<span class="toolbar-sep"></span>{/if}
+					{@render tools()}
+				{/if}
 			</div>
 		{/if}
 
@@ -2113,13 +2129,17 @@
 	}
 	/* Not `.grid`: that is Tailwind's display:grid utility, and it pinned
 	   the label to the top of the chip. */
-	.edit-chip.grid-chip {
+	.edit-toolbar :global(.edit-chip.grid-chip) {
 		text-align: center;
 		font-variant-numeric: tabular-nums;
 	}
-	.edit-chip {
+	/* Chips share the column's height evenly. With the clip view's Delete,
+	   Loop X2 and Dup Clip below the editing chips there are seven, so the
+	   floor is 28px rather than the 44px touch floor: at 44 the last ones
+	   fell off the bottom of a one-third section. */
+	.edit-toolbar :global(.edit-chip) {
 		flex: 1 1 0;
-		min-height: 44px;
+		min-height: 28px;
 		max-height: 72px;
 		white-space: nowrap;
 		overflow: hidden;
@@ -2133,12 +2153,12 @@
 		border: 1px solid var(--line);
 		cursor: pointer;
 	}
-	.edit-chip.active {
+	.edit-toolbar :global(.edit-chip.active) {
 		background: color-mix(in oklab, var(--phosphor) 25%, transparent);
 		color: var(--foreground);
 		border-color: var(--phosphor);
 	}
-	.edit-chip:disabled {
+	.edit-toolbar :global(.edit-chip:disabled) {
 		opacity: 0.4;
 		cursor: default;
 	}
@@ -2391,23 +2411,23 @@
 	:global([data-grammar="flat"]) .toolbar-sep {
 		background: var(--line-strong);
 	}
-	:global([data-grammar="flat"]) .edit-chip {
+	:global([data-grammar="flat"]) .edit-toolbar :global(.edit-chip) {
 		border-radius: 2px;
 		border-color: var(--line-strong);
 		background: var(--surface-well);
 		color: var(--foreground);
 	}
-	:global([data-grammar="flat"]) .edit-chip.active {
+	:global([data-grammar="flat"]) .edit-toolbar :global(.edit-chip.active) {
 		background: var(--phosphor);
 		border-color: var(--phosphor);
 		color: var(--flat-on-fg);
 	}
 	/* Light: an ON fill sits at ~1:1 luminance against the light ladder, so
 	   the frame stays dark for the chip's boundary to survive. */
-	:global(.light[data-grammar="flat"]) .edit-chip.active {
+	:global(.light[data-grammar="flat"]) .edit-toolbar :global(.edit-chip.active) {
 		border-color: var(--line-strong);
 	}
-	:global([data-grammar="flat"]) .edit-chip:disabled {
+	:global([data-grammar="flat"]) .edit-toolbar :global(.edit-chip:disabled) {
 		opacity: 1;
 		color: var(--flat-disabled-fg);
 	}
@@ -2423,5 +2443,10 @@
 	}
 	:global([data-grammar="flat"]) .marker {
 		background: var(--act-warn); /* solid, no alpha */
+	}
+	/* A host chip that destroys something (the clip view's Delete) keeps
+	   the danger red in both skins. */
+	.edit-toolbar :global(.edit-chip.danger:not(:disabled)) {
+		color: var(--act-rec);
 	}
 </style>

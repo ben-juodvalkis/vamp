@@ -386,13 +386,45 @@ import { logger } from '$lib/utils/logger';
 	buttons, swapped by a toggle; now both are always on screen.
 
 	The rail, left to right:
-	  Dup Trk / Group · REC / Delete | Loop X2 or Rev · ±12 or Pitch · Temp over Chance
-	(audio: Gain over the warp modes in the last column). The two buttons
+	  Dup Trk / Group · REC | (audio: Rev / to Simpler) · ±12 or Pitch · Temp over Chance
+	(audio: Gain over the warp modes in the last column). Delete, Loop X2
+	and Dup Clip are chips in the editor's own toolbar. The two buttons
 	that halved the loop are gone: the editor's loop braces do that job.
 -->
 <div class="clip-central-root h-full w-full relative" style="--clip-track-wash: {trackWash}; --clip-track-tint: {trackTint};">
-<div class="outer h-full w-full p-(--central-inset)">
-	<div class="editor-cell"><ClipEditorView color={trackColor} /></div>
+<div class="outer h-full w-full p-(--central-inset)" class:no-loop={trackType !== 'audio'}>
+	<!-- Delete, Loop X2 and Dup Clip act on the clip in the editor, so they
+	     sit in its toolbar, under Fold · grid · Triplet · Quantize. Delete
+	     is still an 800ms hold. -->
+	{#snippet clipTools()}
+		<button
+			onpointerdown={handleDeleteClipStart}
+			onpointerup={handleDeleteClipEnd}
+			onpointerleave={handleDeleteClipEnd}
+			onpointercancel={handleDeleteClipEnd}
+			disabled={!hasClip}
+			class="edit-chip danger relative overflow-hidden"
+			aria-label="Delete clip (hold)"
+		>
+			{#if deleteClipHolding}<div class="hold-fill" style="animation-duration:{HOLD_DURATION}ms; background: color-mix(in oklab, var(--act-rec), transparent 60%);"></div>{/if}
+			<span class="relative z-10">{deleteClipHolding ? 'Hold…' : 'Delete'}</span>
+		</button>
+		{#if trackType === 'midi'}
+			<button
+				onclick={handleDuplicateLoop}
+				disabled={!hasClip || isDuplicatingLoop}
+				class="edit-chip"
+				aria-label="Duplicate loop"
+			>{isDuplicatingLoop ? '…' : 'Loop ×2'}</button>
+			<button
+				onclick={handleDuplicateClip}
+				disabled={!hasClip || !nextSlotEmpty}
+				class="edit-chip"
+				aria-label="Duplicate clip to the next slot"
+			>Dup Clip</button>
+		{/if}
+	{/snippet}
+	<div class="editor-cell"><ClipEditorView color={trackColor} tools={clipTools} /></div>
 	<div class="seam seam-editor"><SectionDivider orientation="vertical" /></div>
 
 	{#if browser}
@@ -470,42 +502,14 @@ import { logger } from '$lib/utils/logger';
 			</div>
 		</div>
 
-		<!-- REC top + Delete bottom. -->
+		<!-- REC, the column's full height. -->
 		<div class="col col-rec">
-			<div class="stacked-btns">
+			<div class="stacked-btns single">
 				<div class="btn-cell">
 					<RecordButton
 						armTrackIndex={session.selectedTrackIndex}
 						meterLevel={trackMeterLevel}
 					/>
-				</div>
-				<div class="btn-cell">
-					<button
-						onpointerdown={handleDeleteClipStart}
-						onpointerup={handleDeleteClipEnd}
-						onpointerleave={handleDeleteClipEnd}
-						onpointercancel={handleDeleteClipEnd}
-						disabled={!hasClip}
-						class="btn btn-well fam-del relative overflow-hidden {deleteClipHolding ? 'is-active' : ''}"
-					>
-						{#if deleteClipHolding}<div class="hold-fill" style="animation-duration:{HOLD_DURATION}ms; background: color-mix(in oklab, var(--act-master), transparent 70%);"></div>{/if}
-						<span class="relative z-10 flex items-center justify-center btn-caps" aria-label="Delete clip">
-							{#if deleteClipHolding}
-								Hold...
-							{:else}
-								<!-- Wide clip box with MIDI note bars, big red X overlaid -->
-								<svg class="w-9 h-9" fill="none" viewBox="0 0 36 24">
-									<rect x="2" y="4" width="32" height="16" rx="2" stroke="currentColor" stroke-width="2" />
-									<rect x="6" y="12" width="6" height="2.5" rx="0.75" fill="currentColor" />
-									<rect x="13" y="8" width="5" height="2.5" rx="0.75" fill="currentColor" />
-									<rect x="19" y="14" width="7" height="2.5" rx="0.75" fill="currentColor" />
-									<rect x="24" y="10" width="5" height="2.5" rx="0.75" fill="currentColor" />
-									<line x1="9" y1="3" x2="27" y2="21" style="stroke: var(--act-rec)" stroke-width="3" stroke-linecap="round" />
-									<line x1="27" y1="3" x2="9" y2="21" style="stroke: var(--act-rec)" stroke-width="3" stroke-linecap="round" />
-								</svg>
-							{/if}
-						</span>
-					</button>
 				</div>
 			</div>
 		</div>
@@ -513,21 +517,14 @@ import { logger } from '$lib/utils/logger';
 		<!-- What acts on the track and the clip | what shapes what it plays. -->
 		<div class="seam seam-a"><SectionDivider orientation="vertical" /></div>
 
-		<!-- Loop X2 + Dup Clip (MIDI) / Rev + to Simpler (audio). -->
+		<!-- Rev + to Simpler (audio only; a MIDI clip's Loop X2 and Dup Clip
+		     are in the editor's toolbar). Without the AX helper there is no
+		     Reverse, and to Simpler takes the column's whole height. -->
+		{#if trackType === 'audio'}
 		<div class="col col-loop">
-			<!-- Without the AX helper there is no Reverse, and to Simpler
-			     takes the audio column's whole height. -->
-			<div class="stacked-btns" class:single={trackType !== 'midi' && (trackType !== 'audio' || !axOn)}>
-				{#if trackType !== 'audio' || axOn}
+			<div class="stacked-btns" class:single={!axOn}>
+				{#if axOn}
 				<div class="btn-cell">
-					{#if trackType === 'midi'}
-						<button
-							onclick={handleDuplicateLoop}
-							disabled={!hasClip || isDuplicatingLoop}
-							class="btn btn-well fam-monitor {isDuplicatingLoop ? 'cursor-wait' : ''}"
-							aria-label="Duplicate loop"
-						><!-- The loop and its copy appended after it, one loop bar across both: the loop doubled -->{#if isDuplicatingLoop}...{:else}<svg class="w-9 h-9" fill="none" viewBox="0 0 36 24"><rect x="2" y="2" width="32" height="3" rx="1" fill="currentColor" /><rect x="2" y="8" width="14" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="4.5" y="15" width="4" height="2.5" rx="0.75" fill="currentColor" /><rect x="10" y="11" width="4.5" height="2.5" rx="0.75" fill="currentColor" /><rect x="20" y="8" width="14" height="13" rx="1.5" stroke="currentColor" stroke-width="2" stroke-dasharray="2.5 2" /><rect x="22.5" y="15" width="4" height="2.5" rx="0.75" fill="currentColor" fill-opacity="0.55" /><rect x="28" y="11" width="4.5" height="2.5" rx="0.75" fill="currentColor" fill-opacity="0.55" /></svg>{/if}</button>
-					{:else if trackType === 'audio'}
 							<button
 								onclick={handleReverseClip}
 								disabled={!hasClip || isReversing || !!axReason}
@@ -535,31 +532,19 @@ import { logger } from '$lib/utils/logger';
 								aria-label={axReason ? `Reverse clip — ${axReason}` : 'Reverse clip'}
 								title={axReason || undefined}
 							>{#if isReversing}...{:else}<span class="flex items-center justify-center gap-1 btn-caps"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 19l-7-7 7-7M19 12H4" /></svg>Rev</span>{/if}</button>
-					{/if}
 				</div>
 				{/if}
-				{#if trackType === 'midi'}
-					<div class="btn-cell">
-						<button
-							onclick={handleDuplicateClip}
-							disabled={!hasClip || !nextSlotEmpty}
-							class="btn btn-well fam-monitor"
-							aria-label="Duplicate clip to the next slot"
-						><!-- Dup Trk's mark at slot scale and upright: the clip copied into the slot below --><svg class="w-9 h-9" fill="none" viewBox="0 0 32 28"><rect x="5" y="1.5" width="22" height="9" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="8" y="4.5" width="5" height="3" rx="0.75" fill="currentColor" /><rect x="14.5" y="4.5" width="3.5" height="3" rx="0.75" fill="currentColor" /><rect x="19.5" y="4.5" width="4.5" height="3" rx="0.75" fill="currentColor" /><path d="M16 12.5v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" /><path d="M12.5 14.5l3.5 3 3.5-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><rect x="5" y="19.5" width="22" height="7" rx="1.5" stroke="currentColor" stroke-width="2" stroke-dasharray="2.5 2" /><rect x="8" y="21.5" width="5" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" /><rect x="14.5" y="21.5" width="3.5" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" /><rect x="19.5" y="21.5" width="4.5" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" /></svg></button>
-					</div>
-				{/if}
-				{#if trackType === 'audio'}
-					<div class="btn-cell">
+				<div class="btn-cell">
 						<button
 							onclick={handleSampleToSimpler}
 							disabled={!hasClip || isSampling}
 							class="btn btn-well fam-monitor font-bold {isSampling ? 'cursor-wait' : ''}"
 							aria-label="Sample to Simpler"
 						>{#if isSampling}...{:else}<span class="flex flex-col items-center leading-tight btn-caps fit-label" style:--fit-pad="0px" use:fitText={'to Simpler'}><span>to</span><span>Simpler</span></span>{/if}</button>
-					</div>
-				{/if}
+				</div>
 			</div>
 		</div>
+		{/if}
 
 		<!-- ±12 (MIDI) / +12 · Pitch · −12 (audio). -->
 		<div class="col col-pitch transition-opacity duration-200 {trackType === 'audio' && !hasClip ? 'opacity-30' : 'opacity-100'}">
@@ -687,9 +672,9 @@ import { logger } from '$lib/utils/logger';
 		background: var(--clip-track-wash); /* faint track wash (lifted off inline) */
 	}
 
-	/* The editor takes whatever width the rail leaves. The rail is five
-	   narrow columns at one fixed width (`--rail-w`) with two hairline
-	   seams: editor | Dup Trk · REC | Loop · Pitch · Temp/Chance. */
+	/* The editor takes whatever width the rail leaves. The rail is narrow
+	   columns at one fixed width (`--rail-w`) with two hairline seams:
+	   editor | Dup Trk · REC | (audio: Rev) · Pitch · Temp/Chance. */
 	.outer {
 		--rail-w: 4.5rem;
 		display: grid;
@@ -711,6 +696,13 @@ import { logger } from '$lib/utils/logger';
 	.col-loop { grid-column: 6; }
 	.col-pitch { grid-column: 7; }
 	.col-shape { grid-column: 8; gap: var(--central-gap); }
+	/* MIDI: no Rev / to Simpler column, so Pitch and Temp/Chance move left. */
+	.outer.no-loop {
+		grid-template-columns: minmax(0, 1fr) auto repeat(2, var(--rail-w)) auto repeat(2, var(--rail-w));
+	}
+	.outer.no-loop .col-pitch { grid-column: 6; }
+	.outer.no-loop .col-shape { grid-column: 7; }
+
 
 	/* Temp over Chance (Gain over warp on audio): two equal halves. */
 	.half { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
@@ -799,15 +791,10 @@ import { logger } from '$lib/utils/logger';
 	.btn-well:hover:not(:disabled) {
 		background: color-mix(in oklab, var(--fam-color) 12%, var(--surface-well));
 	}
-	.btn-well.is-active {
-		background: color-mix(in oklab, var(--fam-color) 30%, var(--card));
-		color: var(--foreground);
-	}
-	/* Monitor + quant wells follow the focused track (ADR-402); del keeps its
-	   master-red, rec keeps recording-red — both are state/danger signals. */
+	/* Monitor + quant wells follow the focused track (ADR-402); REC keeps
+	   its recording red, a state signal. */
 	.fam-monitor { --fam-color: var(--clip-track-tint, var(--act-monitor)); }
 	.fam-quant { --fam-color: var(--clip-track-tint, var(--act-quant)); }
-	.fam-del { --fam-color: color-mix(in oklab, var(--act-master), black 40%); }
 
 	/* Track-tinted switch/action buttons (ADR-402) — warp, base grid, Dup Trk,
 	   to-Simpler. Everything in the rail except REC + Delete wears the track's
@@ -855,19 +842,12 @@ import { logger } from '$lib/utils/logger';
 	:global([data-grammar="flat"]) .btn-well:hover:not(:disabled) {
 		background: var(--secondary);
 	}
-	:global([data-grammar="flat"]) .btn-well.is-active {
-		background: var(--phosphor);
-		border-color: var(--phosphor);
-		color: var(--flat-on-fg);
-	}
-	:global([data-grammar="flat"]) .fam-del.btn-well { color: var(--act-rec); }
 	/* Disabled = Live's idiom (ControlOffDisabledForeground on the same
 	   field), not opacity — a half-transparent orange reads as a tan wash. */
 	:global([data-grammar="flat"]) .btn:disabled {
 		opacity: 1;
 		color: var(--flat-disabled-fg);
 	}
-	:global([data-grammar="flat"]) .btn-well.is-active:disabled,
 	:global([data-grammar="flat"]) .clip-switch.active:disabled {
 		background: #868686;         /* ViewCheckControlDisabledOn */
 		border-color: #868686;
@@ -880,7 +860,6 @@ import { logger } from '$lib/utils/logger';
 	}
 	/* Light: ON fills sit at ~1:1 luminance against the light ladder, so the
 	   frame stays dark. */
-	:global(.light[data-grammar="flat"]) .btn-well.is-active,
 	:global(.light[data-grammar="flat"]) .clip-switch.active {
 		border-color: var(--line-strong);
 	}
