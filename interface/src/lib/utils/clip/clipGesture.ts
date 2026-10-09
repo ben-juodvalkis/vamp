@@ -64,6 +64,18 @@ export function loopBraceGridBeats(clipBeats: number, beatsPerBar: number): numb
 	return Number.isInteger(grid) || Number.isInteger(1 / grid) ? grid : 1;
 }
 
+/**
+ * The bar count the loop brace shows while a take records: the bar the
+ * playhead is in, so it reads 1 through the first bar and ticks up as each
+ * bar line passes. That is the length a 1-bar-quantized close would give.
+ * `recordedBeats` is the furthest playhead position the take has reached.
+ */
+export function recordingBars(recordedBeats: number, beatsPerBar: number): number {
+	if (!(beatsPerBar > 0) || !(recordedBeats > 0)) return 1;
+	// Tolerance so a position read back as 4.0000001 beats is still bar 1.
+	return Math.max(1, Math.ceil(recordedBeats / beatsPerBar - 1e-6));
+}
+
 /** Clamp `v` to `[lo, hi]` (returns `lo` if the range is inverted). */
 export function clamp(v: number, lo: number, hi: number): number {
 	if (hi < lo) return lo;
