@@ -247,7 +247,7 @@ import { logger } from '$lib/utils/logger';
 		onclick={() => settingsStore.openSettings()}
 		data-debug="settings-gear"
 	>
-		<Settings class="h-4 w-4" />
+		<Settings class="h-6 w-6" />
 	</button>
 
 	<!-- Two groups in the Settings page's grammar (Ben, 2026-09-26): a quiet
@@ -285,7 +285,7 @@ import { logger } from '$lib/utils/logger';
 					<div class="sys-field select-none">
 						<div class="flex items-center justify-center min-w-0">
 							<button
-								class="sys-drag-digit"
+								class="sys-drag-digit sys-num"
 								class:active={timeSignatureDragMode === 'numerator'}
 								use:dragAction={numeratorDrag}
 							>
@@ -293,7 +293,7 @@ import { logger } from '$lib/utils/logger';
 							</button>
 							<span class="sys-sep">/</span>
 							<button
-								class="sys-drag-digit"
+								class="sys-drag-digit sys-den"
 								class:active={timeSignatureDragMode === 'denominator'}
 								use:dragAction={denominatorDrag}
 							>
@@ -426,8 +426,8 @@ import { logger } from '$lib/utils/logger';
 	   because the groups had lost their frames; the lists are frames again. */
 	.sys-section-label {
 		padding-inline: 0.125rem;
-		font-size: 0.8125rem;
-		line-height: 1rem;
+		font-size: 1rem;
+		line-height: 1.25rem;
 		font-weight: var(--font-weight-medium);
 		color: var(--muted-foreground);
 	}
@@ -458,6 +458,25 @@ import { logger } from '$lib/utils/logger';
 		background: var(--surface-well);
 		border: 1px solid var(--line-strong);
 		border-radius: var(--radius-md);
+		/* The anchor for the digits' hit areas below. */
+		position: relative;
+	}
+	/* Each value's touch target is its whole field, not the digits drawn
+	   in it (Ben, 2026-10-09): the button stays its own size so its hover
+	   and drag wash still sit on the number, and an invisible ::after
+	   stretches its hit area over the field. The time signature splits
+	   its field down the middle — numerator left, denominator right. */
+	.sys-field :is(.sys-drag-digit, .sys-value-digit)::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+	}
+	.sys-field .sys-drag-digit.sys-num::after {
+		right: 50%;
+	}
+	.sys-field .sys-drag-digit.sys-den::after {
+		left: 50%;
 	}
 	.sys-list {
 		display: flex;
@@ -489,7 +508,7 @@ import { logger } from '$lib/utils/logger';
 		background: transparent;
 		border: 0;
 		color: var(--foreground);
-		font-size: 0.9375rem;
+		font-size: 1.125rem;
 		font-weight: var(--font-weight-medium);
 		text-align: left;
 		cursor: pointer;
@@ -524,7 +543,7 @@ import { logger } from '$lib/utils/logger';
 		flex-shrink: 0;
 		min-width: 3.25rem;
 		padding: 0.25rem 0.625rem;
-		font-size: 0.8125rem;
+		font-size: 1rem;
 		font-weight: var(--font-weight-medium);
 		text-align: center;
 		color: var(--muted-foreground);
@@ -540,7 +559,7 @@ import { logger } from '$lib/utils/logger';
 
 	/* Shared label style */
 	.sys-label {
-		font-size: 0.75rem;
+		font-size: 0.9375rem;
 		text-transform: uppercase;
 		letter-spacing: 0.1em;
 		color: var(--sys-dim);
@@ -638,15 +657,16 @@ import { logger } from '$lib/utils/logger';
 
 	/* The gear: Settings' door, in the view's top-right corner (Ben,
 	   2026-09-26: it sat in Transport's corner, over the Launch Q field).
-	   Its 44px box (the touch floor) is centered on the section labels'
-	   line and hangs in the view's inset, so it crosses the Sections grid
-	   by a sliver of View's corner at most. */
+	   Its 52px box, over the 44px touch floor (Ben, 2026-10-09: bigger),
+	   is centered on the section labels' line and hangs in the view's
+	   inset, so it crosses the Sections list by a corner at most. */
 	.sys-gear {
 		position: absolute;
-		top: calc(var(--central-inset) + 0.5rem - var(--height-touch) / 2);
-		right: calc(var(--central-inset) + 0.5rem - var(--height-touch) / 2);
-		width: var(--height-touch);
-		height: var(--height-touch);
+		--gear-box: 3.25rem;
+		top: calc(var(--central-inset) + 0.625rem - var(--gear-box) / 2);
+		right: calc(var(--central-inset) + 0.875rem - var(--gear-box) / 2);
+		width: var(--gear-box);
+		height: var(--gear-box);
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
@@ -704,7 +724,7 @@ import { logger } from '$lib/utils/logger';
 
 	.quant-close {
 		padding: var(--spacing-sm) var(--spacing-xl);
-		font-size: 0.75rem;
+		font-size: 0.875rem;
 		min-height: 2.75rem; /* 44px — iPad minimum touch target */
 	}
 
@@ -719,7 +739,7 @@ import { logger } from '$lib/utils/logger';
 
 	.quant-chip {
 		padding: var(--spacing-sm) var(--spacing-xs);
-		font-size: 0.875rem;
+		font-size: 1rem;
 		letter-spacing: 0.05em;
 		min-height: 3.25rem; /* comfortably over the 44px iPad minimum */
 		white-space: nowrap;

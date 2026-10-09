@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { logger } from '$lib/utils/logger';
 	/**
 	 * VerticalLoopControl - Vertical clip loop control for 120px sidebar
@@ -17,7 +18,7 @@
 	import { clipDisplayCoordinator } from '$lib/services/clipDisplayCoordinator.svelte';
 	import { drag as dragAction, type DragInfo, type DragOptions } from '$lib/actions/drag';
 	import { createSliderThrottle } from '$lib/utils/sliderThrottle';
-	import { loopBraceGridBeats, snapToGrid } from '$lib/utils/clip/clipGesture';
+	import { loopBraceGridBeats, recordingBars, snapToGrid } from '$lib/utils/clip/clipGesture';
 	import { playingClipsStore } from '$lib/stores/v6/playingClipsStore.svelte';
 
 	// Constants
@@ -70,26 +71,44 @@
 		return parseFloat(bars.toFixed(2)).toString();
 	}
 
-	let lengthLabel = $derived(formatBeats(displayEnd - displayStart));
-
-	// Check if the center of the component (50%) falls within the loop region
-	// Used to adapt the text color for readability
-	let centerIsInsideLoop = $derived(startPercentage <= 50 && endPercentage >= 50);
-
-	// Record-mirror (§4.5): the loop region tint crossfades act-loop → act-rec
-	// while the focused track records. Free data off liveStatus (0/1/2), no new wire.
+	// Record-mirror (§4.5): while the selected track records, the brace is one
+	// solid red block and the readout counts the take's bars as they pass.
+	// Free data off the playhead channel (status 0/1/2 and position), no new wire.
 	let focusedTrackPath = $derived(
 		session.selectedTrackIndex >= 0 ? `tracks/${session.selectedTrackIndex}` : null
 	);
 	let isRecording = $derived(
 		focusedTrackPath ? playingClipsStore.liveStatus(focusedTrackPath) === 2 : false
 	);
-	let regionBg = $derived(
+
+	// The furthest the playhead has reached this take. A take's own loop
+	// points mean nothing until it closes, so the length comes from the
+	// playhead; the maximum holds an overdub, whose position wraps, at its
+	// loop length rather than dropping back to 1 each pass.
+	let recordedBeats = $state(0);
+	$effect(() => {
+		if (!isRecording || !focusedTrackPath) {
+			recordedBeats = 0;
+			return;
+		}
+		const pos = playingClipsStore.position(focusedTrackPath);
+		if (pos > untrack(() => recordedBeats)) recordedBeats = pos;
+	});
+
+	let lengthLabel = $derived(
 		isRecording
-			? 'var(--act-rec-wash)'
-			: isDragging === 'range'
-				? 'color-mix(in oklab, var(--act-loop) 28%, transparent)'
-				: 'var(--act-loop-wash)'
+			? String(recordingBars(recordedBeats, beatsPerBar))
+			: formatBeats(displayEnd - displayStart)
+	);
+
+	// Check if the center of the component (50%) falls within the loop region
+	// Used to adapt the text color for readability
+	let centerIsInsideLoop = $derived(startPercentage <= 50 && endPercentage >= 50);
+
+	let regionBg = $derived(
+		isDragging === 'range'
+			? 'color-mix(in oklab, var(--act-loop) 28%, transparent)'
+			: 'var(--act-loop-wash)'
 	);
 
 	// Send loop parameter changes to the Python Control Surface.
@@ -237,7 +256,7 @@
 			commit: 'immediate',
 			touchAction: 'none',
 			stopPropagation: true,
-			disabled: !hasClip,
+			disabled: !hasClip || isRecording,
 			onStart: () => beginDrag(type),
 			onMove: ({ dy }: DragInfo) => applyDrag(dy),
 			onEnd: ({ reason }) => {
@@ -294,13 +313,23 @@
 		style="overflow: hidden; z-index: 10;"
 		class:cursor-ns-resize={hasClip}
 		class:cursor-not-allowed={!hasClip}
-		class:opacity-30={!hasClip}
+		class:opacity-30={!hasClip && !isRecording}
+		class:recording={isRecording}
 		use:dragAction={deadZoneDrag}
 		role="application"
 		aria-label="Loop range controls. Tap to show clip, or drag: above loop moves end, below moves start"
 		aria-disabled={!hasClip}
 	>
-		{#if hasClip}
+		{#if isRecording}
+			<!-- Recording: the whole lane is the take, its bar count growing. -->
+			<span
+				class="absolute inset-0 flex items-center justify-center font-bold num pointer-events-none select-none z-[200] loop-length-display inside-loop"
+				style="--len-chars: {lengthLabel.length};"
+			>
+				{lengthLabel}
+			</span>
+			<div class="absolute inset-0 loop-region recording" aria-hidden="true"></div>
+		{:else if hasClip}
 			<!-- Loop length display - centered on entire component, color adapts to background -->
 			<span
 				class="absolute inset-0 flex items-center justify-center font-bold num pointer-events-none select-none z-[200] loop-length-display"
@@ -317,7 +346,7 @@
 				class:cursor-grab={hasClip}
 				class:cursor-grabbing={isDragging === 'range'}
 				class:dragging={isDragging !== null}
-				style="--loop-region-bg: {regionBg}; --loop-region-line: {isRecording ? 'var(--act-rec-line)' : 'var(--act-loop-line)'}; bottom: {startPercentage}%; height: {Math.max(0, endPercentage - startPercentage)}%; z-index: 50;"
+				style="--loop-region-bg: {regionBg}; --loop-region-line: var(--act-loop-line); bottom: {startPercentage}%; height: {Math.max(0, endPercentage - startPercentage)}%; z-index: 50;"
 				use:dragAction={regionDrag}
 				role="button"
 				tabindex="-1"
@@ -383,9 +412,6 @@
 					</div>
 				</div>
 			</div>
-			<!-- Precomputed start/end beat labels beside the handles (§4.5, free). -->
-			<span class="num handle-beat" style="bottom: {startPercentage}%;" aria-hidden="true">{formatBeats(displayStart)}</span>
-			<span class="num handle-beat" style="bottom: {endPercentage}%;" aria-hidden="true">{formatBeats(displayEnd)}</span>
 		{:else}
 			<!-- No clip selected state - empty label -->
 		{/if}
@@ -421,15 +447,16 @@
 		color: var(--act-loop);
 	}
 
-	/* Precomputed beat labels at the handle heights (§4.5). */
-	.handle-beat {
-		position: absolute;
-		right: 4px;
-		transform: translateY(50%);
-		z-index: 110;
-		pointer-events: none;
-		font-size: var(--text-2xs);
-		color: var(--act-loop);
+	/* Recording: the lane is one solid red block, the count in dark ink. */
+	.loop-container.recording {
+		border-color: var(--act-rec);
+	}
+	.loop-region.recording {
+		background-color: var(--act-rec);
+		border: none;
+	}
+	.loop-container.recording .loop-length-display.inside-loop {
+		color: var(--flat-on-fg, var(--background));
 	}
 
 	/* Transitions enabled by default, disabled during drag. The background-color
@@ -471,13 +498,22 @@
 		border: 1px solid #919191;            /* LoopColor */
 		border-radius: 0;
 	}
+	:global([data-grammar="flat"]) .loop-container.recording {
+		border-color: var(--act-rec);
+	}
+	:global([data-grammar="flat"]) .loop-region.recording {
+		background-color: var(--act-rec);
+		border: none;
+	}
+	:global([data-grammar="flat"]) .loop-container.recording .loop-length-display {
+		color: var(--flat-on-fg);
+	}
 	:global([data-grammar="flat"]) .loop-handle-bar {
 		background-color: var(--flat-handle);
 		border-radius: 0;
 	}
 	:global([data-grammar="flat"]) .loop-length-display.inside-loop,
-	:global([data-grammar="flat"]) .loop-length-display.outside-loop,
-	:global([data-grammar="flat"]) .handle-beat {
+	:global([data-grammar="flat"]) .loop-length-display.outside-loop {
 		color: var(--foreground);
 	}
 	/* Flat-grammar leftovers (cookbook §8.1): the grip lines on the handle

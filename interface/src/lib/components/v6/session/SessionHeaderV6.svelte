@@ -33,22 +33,9 @@
     setSignatureNumerator,
     setSignatureDenominator
   } from '$lib/services/sessionCommands';
+  import Play from '@lucide/svelte/icons/play';
+  import Pause from '@lucide/svelte/icons/pause';
 
-  /**
-   * Metronome / session-record marks.
-   *
-   * Text characters in BOTH skins now, not emoji under GRATICULE. An
-   * emoji ignores `color`, so the OFF metronome rendered as a bright
-   * white ⚪ — the loudest thing in a bar full of dim captions, saying
-   * "off" in the visual language of "on". These take currentColor, so
-   * off is signal-dim and on is the control's own ink.
-   *
-   * A note rather than a second circle for the metronome: it sat beside
-   * the record indicator, both drawn as circles, and at a glance the
-   * pair was unreadable.
-   */
-  const METRONOME_GLYPH = '\u266a';
-  const RECORD_GLYPH = '\u25cf';
 
   // Control functions
   function toggleTransport() {
@@ -94,14 +81,14 @@
     touchAction: 'none',
     onStart: () => {
       isDragging = true;
-      dragStartTempo = session.tempo;
+      dragStartTempo = Math.round(session.tempo);
     },
     /** `dy` is pixels travelled UP from the press point. */
     onMove: ({ dy }: DragInfo) => {
       const sensitivity = 0.5; // BPM per pixel
       const newTempo = Math.max(20, Math.min(999, dragStartTempo + dy * sensitivity));
-      // Round to 1 decimal place
-      setTempo(Math.round(newTempo * 10) / 10);
+      // Whole BPM, as the master view writes and as the header reads.
+      setTempo(Math.round(newTempo));
     },
     onEnd: () => {
       isDragging = false;
@@ -161,15 +148,65 @@
   const numeratorDrag: DragOptions = $derived(timeSignatureDrag('numerator'));
   const denominatorDrag: DragOptions = $derived(timeSignatureDrag('denominator'));
 
+  /**
+   * Song position as `bar.beat` (Ben, 2026-10-09): Live's reading without
+   * the sixteenth, which flickered at 10 Hz and is not something to read
+   * mid-set.
+   */
+  const beatsPerBar = $derived(session.timeSignature.numerator || 4);
+  const songTime = $derived(Math.max(0, session.currentTime));
+  const bar = $derived(Math.floor(songTime / beatsPerBar) + 1);
+  const beat = $derived(Math.floor(songTime % beatsPerBar) + 1);
+
+  /**
+   * The line sweeping the Position field once a bar. Song time arrives at
+   * 10 Hz, which steps visibly, so while the transport runs the line is
+   * extrapolated between updates from the tempo (capped at a quarter
+   * second past the last one, so a stalled wire freezes rather than runs
+   * on). Written straight to the element's transform each frame: one
+   * compositor-only property, no reactive churn at 60 Hz.
+   */
+  let sweepEl = $state<HTMLElement | null>(null);
+  let anchorBeats = 0;
+  let anchorAt = 0;
+
+  $effect(() => {
+    anchorBeats = Math.max(0, session.currentTime);
+    anchorAt = performance.now();
+  });
+
+  function paintSweep(beats: number) {
+    if (!sweepEl) return;
+    const phase = (beats % beatsPerBar) / beatsPerBar;
+    sweepEl.style.transform = `translateX(${(phase * 100).toFixed(3)}%)`;
+  }
+
+  $effect(() => {
+    const playing = session.isPlaying;
+    const bpm = session.tempo;
+    void beatsPerBar;
+    if (!sweepEl) return;
+    if (!playing) {
+      paintSweep(songTime);
+      return;
+    }
+    let raf = 0;
+    const frame = () => {
+      const elapsed = Math.min((performance.now() - anchorAt) / 1000, 0.25);
+      paintSweep(anchorBeats + (elapsed * bpm) / 60);
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  });
+
 </script>
 
-<!-- Slim transport header (ADR-415), rebuilt as ONE full-width band.
-     It used to be three shadcn clusters — left, centre, right — marooned
-     in whitespace, wearing variant colours (`default` = a slate fill)
-     that carry no meaning in either palette. Now it is a row of cells at
-     one height and one grammar, the same value-over-caption idiom the
-     master view's Transport card uses, so the bar reads as part of the
-     instrument rather than a toolbar bolted to the top of it.
+<!-- Slim transport header (ADR-415), one full-width band in the master
+     view's grammar (Ben, 2026-10-09: fit the rest of the UI): values in
+     framed fields with their caption beside them, the two switches as
+     rows that say their name and wear an On/Off chip, as the System view's
+     Click and Follow Key do. Whole numbers only: tempo and position.
 
      Fixed height so enabling it compresses the flex rows below rather
      than reflowing them. -->
@@ -177,10 +214,10 @@
   <div class="hdr-row">
 
     <!-- Transport. The one control that changes what you HEAR, so it
-         takes the play ink when running (never a neutral fill). -->
+         takes the play ink when running. -->
     <button
       type="button"
-      class="hdr-btn hdr-glyph role-transport"
+      class="hdr-btn role-transport"
       class:is-on={session.isPlaying}
       data-on={session.isPlaying}
       data-role="transport"
@@ -188,8 +225,12 @@
       aria-label={session.isPlaying ? 'Pause transport' : 'Start transport'}
       title={session.isPlaying ? 'Pause' : 'Play'}
     >
-      <span class="hdr-value">{session.isPlaying ? '⏸' : '▶'}</span>
-      <span class="hdr-caption">{session.isPlaying ? 'Pause' : 'Play'}</span>
+      {#if session.isPlaying}
+        <Pause class="hdr-icon" aria-hidden="true" />
+      {:else}
+        <Play class="hdr-icon" aria-hidden="true" />
+      {/if}
+      <span class="hdr-btn-label">{session.isPlaying ? 'Pause' : 'Play'}</span>
     </button>
 
     <!-- Tempo — drag to change, same address the master view writes. -->
@@ -198,23 +239,23 @@
       class:is-active={isDragging}
       role="slider"
       aria-label="Tempo"
-      aria-valuenow={session.tempo}
+      aria-valuenow={Math.round(session.tempo)}
       aria-valuemin={20}
       aria-valuemax={999}
       tabindex="0"
       use:dragAction={tempoDrag}
       title="Drag up/down to change tempo"
     >
-      <span class="hdr-value num">{session.tempo.toFixed(1)}</span>
+      <span class="hdr-value">{Math.round(session.tempo)}</span>
       <span class="hdr-caption">BPM</span>
     </div>
 
     <!-- Time signature — two independent drag digits in one field. -->
     <div class="hdr-field is-split">
-      <span class="hdr-value num">
+      <span class="hdr-value">
         <button
           type="button"
-          class="hdr-digit"
+          class="hdr-digit is-num"
           class:is-active={isDraggingTimeSignature && timeSignatureDragMode === 'numerator'}
           aria-label="Time signature numerator"
           use:dragAction={numeratorDrag}
@@ -223,7 +264,7 @@
         <span class="hdr-sep">/</span>
         <button
           type="button"
-          class="hdr-digit"
+          class="hdr-digit is-den"
           class:is-active={isDraggingTimeSignature && timeSignatureDragMode === 'denominator'}
           aria-label="Time signature denominator"
           use:dragAction={denominatorDrag}
@@ -233,18 +274,24 @@
       <span class="hdr-caption">Time</span>
     </div>
 
-    <!-- Song position. The one readout that moves on its own, so it
-         takes the width the old layout spent on empty space. -->
-    <div class="hdr-field is-wide">
-      <span class="hdr-value num">{session.currentTimeString}</span>
+    <!-- Song position: bar.beat, Live's reading without the sixteenth. -->
+    <div class="hdr-field is-readout" aria-label="Song position: bar {bar}, beat {beat}">
+      <span class="hdr-value">{bar}.{beat}</span>
       <span class="hdr-caption">Position</span>
+      <!-- Where in the bar: a tick per beat along the foot, and a line
+           that sweeps the field once a bar. -->
+      <span class="hdr-bar" aria-hidden="true">
+        {#each { length: beatsPerBar } as _, i (i)}
+          <span class="hdr-tick" class:is-downbeat={i === 0} style:left="{(i / beatsPerBar) * 100}%"></span>
+        {/each}
+        <span class="hdr-sweep" bind:this={sweepEl}><span class="hdr-sweep-line"></span></span>
+      </span>
     </div>
 
-    <!-- Metronome: a state, not a value — phosphor when on, the same
-         neutral accent the section switches use. -->
+    <!-- Metronome: a switch row, the System view's Click. -->
     <button
       type="button"
-      class="hdr-btn hdr-glyph role-metronome"
+      class="hdr-switch role-metronome"
       class:is-on={session.metronome}
       data-on={session.metronome}
       data-role="metronome"
@@ -253,23 +300,22 @@
       aria-label={session.metronome ? 'Turn metronome off' : 'Turn metronome on'}
       title="Metronome"
     >
-      <span class="hdr-value">{METRONOME_GLYPH}</span>
-      <span class="hdr-caption">Click</span>
+      <span class="hdr-switch-label">Click</span>
+      <span class="hdr-chip" aria-hidden="true">{session.metronome ? 'On' : 'Off'}</span>
     </button>
 
     <!-- Session overdub: an INDICATOR, not a control (nothing here
-         writes it), so it is a lit field rather than a button — record
-         red when armed, dark when not. -->
+         writes it) — the same row, but no press, and its On is record red. -->
     <div
-      class="hdr-btn hdr-glyph role-record is-readonly"
+      class="hdr-switch role-record is-readonly"
       class:is-on={session.sessionRecord}
       data-on={session.sessionRecord}
       role="status"
       aria-label={session.sessionRecord ? 'Session overdub on' : 'Session overdub off'}
       title="Session overdub"
     >
-      <span class="hdr-value">{RECORD_GLYPH}</span>
-      <span class="hdr-caption">Rec</span>
+      <span class="hdr-switch-label">Overdub</span>
+      <span class="hdr-chip" aria-hidden="true">{session.sessionRecord ? 'On' : 'Off'}</span>
     </div>
 
   </div>
@@ -277,52 +323,39 @@
 
 <style>
   /* ~56px: slim enough to cost the rows below almost nothing, tall
-     enough that every cell clears the 44px touch floor app.css enforces
-     under max-width:1024px. */
+     enough that every cell clears the 44px touch floor. */
   .session-header {
     height: 56px;
     flex-shrink: 0;
     width: 100%;
     padding: 0 var(--spacing-sm);
     background: var(--card);
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--line-strong);
   }
 
-  /* ONE band, not three clusters. Glyph buttons take a fixed touch
-     square; the three readouts share everything left over, so the bar
-     fills the width at any window size instead of leaving a lake of
-     empty chrome down the middle. Position gets the biggest share — it
-     is the only thing here that moves on its own. */
+  /* ONE band. Play and the two switches take fixed widths; the three
+     readouts share everything left over. */
   .hdr-row {
     height: 100%;
     display: grid;
     grid-template-columns:
-      minmax(var(--height-touch), 0.75fr)
-      minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1.3fr)
-      minmax(var(--height-touch), 0.75fr) minmax(var(--height-touch), 0.65fr);
+      minmax(6.5rem, 0.7fr)
+      minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.3fr)
+      minmax(8rem, 0.8fr) minmax(9rem, 0.85fr);
     align-items: stretch;
     gap: var(--spacing-xs);
     padding: var(--spacing-xs) 0;
   }
 
-  /* Shared cell chrome: a field in a 1px frame, the same material the
-     master view's Transport card uses. No shadcn variants — their slate
-     `default` fill means nothing in either palette, which is how the
-     play button ended up reading as a pale grey pill. */
+  /* The master view's value field: a well in a 1px frame. */
   .hdr-btn,
-  .hdr-field {
+  .hdr-field,
+  .hdr-switch {
     min-width: 0;
     display: flex;
-    flex-direction: row;
-    /* Centred, not baseline-aligned: `baseline` puts the flex line at
-       the top of a 44px cell, which left every value hugging the cell's
-       upper edge. */
     align-items: center;
-    justify-content: center;
-    gap: 0.4em;
     border: 1px solid var(--line-strong);
-    border-radius: var(--radius-sm);
-    background: transparent;
+    border-radius: var(--radius-md);
     color: var(--foreground);
     -webkit-tap-highlight-color: transparent;
     transition:
@@ -331,189 +364,208 @@
       color 90ms var(--ease-precise);
   }
 
-  .hdr-btn {
-    cursor: pointer;
-    padding: 0;
-  }
-
-  .hdr-btn.is-readonly {
-    cursor: default;
-  }
-
-  /* Transport glyphs are text characters, and at shadcn's `sm` they came
-     out ~8px tall. Live's transport marks are the largest thing in its
-     bar; these are sized to be legible from a stand. */
-  .hdr-glyph {
-    font-size: 1.125rem;
-    line-height: 1;
-  }
-
-  .hdr-btn:hover:not(.is-readonly) {
-    background: color-mix(in oklab, var(--foreground) 8%, transparent);
-  }
-
-  /* A value over its caption — the master view's readout idiom, so the
-     header and the System card teach the same thing twice. The label
-     sits BESIDE the value, not under it: the bar is 56px tall and a
-     stacked pair spent that height on two small things, where one line
-     lets the value read at size. The glyph cells wear a label too — a
-     bar of seven cells where two are unlabelled circles is two cells
-     you have to remember rather than read. */
   .hdr-field {
+    justify-content: center;
+    gap: 0.5rem;
+    background: var(--surface-well);
     cursor: ns-resize;
     user-select: none;
     -webkit-user-select: none;
   }
-
-  .hdr-field.is-wide {
+  .hdr-field.is-readout {
     cursor: default;
+    position: relative;
+    overflow: hidden;
   }
-
+  /* The value and its caption stay above the sweep. */
+  .hdr-field.is-readout > .hdr-value,
+  .hdr-field.is-readout > .hdr-caption {
+    position: relative;
+    z-index: 1;
+  }
+  .hdr-bar {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .hdr-tick {
+    position: absolute;
+    bottom: 0;
+    width: 1px;
+    height: 0.375rem;
+    background: var(--line-strong);
+  }
+  .hdr-tick.is-downbeat {
+    display: none; /* the field's own left edge is the downbeat */
+  }
+  /* A full-width layer translated by the bar's phase, so 100% is the
+     field's width; the line rides its left edge. */
+  .hdr-sweep {
+    position: absolute;
+    inset: 0;
+    will-change: transform;
+  }
+  .hdr-sweep-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 2px;
+    background: var(--playhead);
+    opacity: 0.55;
+  }
+  /* Tempo's whole field is its drag target already; the time signature's
+     two digits stretch theirs over the field the same way the master
+     view's do — numerator the left half, denominator the right. */
+  .hdr-field.is-split {
+    position: relative;
+  }
+  .hdr-field.is-split .hdr-digit::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+  }
+  .hdr-field.is-split .hdr-digit.is-num::after {
+    left: 0;
+    right: 50%;
+  }
+  .hdr-field.is-split .hdr-digit.is-den::after {
+    left: 50%;
+    right: 0;
+  }
   .hdr-field.is-active,
   .hdr-digit.is-active {
-    background: color-mix(in oklab, var(--foreground) 12%, transparent);
+    background: var(--secondary);
   }
 
+  /* Values read like the master view's digits: the body face, regular
+     weight, tabular figures so they don't jitter as they change. */
   .hdr-value {
-    font-size: 1rem;
-    font-weight: var(--font-weight-medium);
-    line-height: 1;
     display: flex;
     align-items: center;
     gap: 2px;
+    font-size: 1.375rem;
+    font-weight: var(--font-weight-regular);
+    font-variant-numeric: tabular-nums lining-nums;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .hdr-caption {
+    font-size: 0.8125rem;
+    font-weight: var(--font-weight-medium);
+    line-height: 1;
+    color: var(--muted-foreground);
     white-space: nowrap;
   }
 
-  /* Inside a LIT cell the caption rides the control's own ink — on the
-     flat skin's solid ChosenPlay fill the dim token was grey text on
-     green, the one unreadable thing in the bar. */
-  .hdr-btn.is-on .hdr-caption {
-    color: inherit;
-    opacity: 0.8;
-  }
-
-  .hdr-caption {
-    font-size: 0.5625rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    line-height: 1;
-    color: var(--signal-dim);
-  }
-
-  /* The two time-signature digits drag independently, so each is its own
-     target inside the one field rather than the field being split into
-     two boxes (which is what made the old header's centre cluster read
-     as four unrelated chips). */
   .hdr-digit {
     border: 0;
     background: transparent;
     color: inherit;
     font: inherit;
-    padding: 0 3px;
-    border-radius: 2px;
+    padding: 0.25rem 0.25rem;
+    border-radius: var(--radius-sm);
     cursor: ns-resize;
   }
-
   .hdr-sep {
-    color: var(--signal-dim);
-  }
-
-
-  /* State inks, matching the rest of the surface: play = act-play,
-     metronome = the neutral phosphor the section switches use, session
-     overdub = act-rec. Each is a wash + full-ink frame, never a fill
-     that swallows the glyph. */
-  .role-transport.is-on {
-    background: color-mix(in oklab, var(--act-play) 22%, transparent);
-    border-color: var(--act-play);
-    color: color-mix(in oklab, var(--act-play) 70%, white);
-  }
-
-  .role-metronome.is-on {
-    background: color-mix(in oklab, var(--phosphor) 18%, transparent);
-    border-color: color-mix(in oklab, var(--phosphor) 60%, transparent);
-    color: color-mix(in oklab, var(--phosphor) 75%, white);
-  }
-
-  .role-record.is-on {
-    background: color-mix(in oklab, var(--act-rec) 22%, transparent);
-    border-color: var(--act-rec);
-    color: color-mix(in oklab, var(--act-rec) 75%, white);
-  }
-
-  /* Off-state overdub is a dim mark, not a lit one — the glyph should
-     not compete with the metronome beside it when nothing is armed. */
-  .role-record:not(.is-on) {
-    color: var(--signal-dim);
-  }
-
-  :global(.light) .role-transport.is-on {
-    color: var(--act-play);
-  }
-  :global(.light) .role-metronome.is-on {
-    color: var(--phosphor);
-  }
-  :global(.light) .role-record.is-on {
-    color: var(--act-rec);
-  }
-
-  /* Flat grammar: Live's control bar. Every cell is a ControlBackground
-     field in a 1px frame with 2px corners and no shadow; a lit control
-     is a SOLID ink with a dark glyph (Live has no washes), which is the
-     one place this skin and GRATICULE genuinely diverge. */
-  :global([data-grammar="flat"]) .session-header {
-    background: var(--card);
-    border-bottom: 1px solid var(--line-strong);
-  }
-
-  :global([data-grammar="flat"]) .hdr-btn,
-  :global([data-grammar="flat"]) .hdr-field {
-    background: var(--surface-well);
-    border: 1px solid var(--line-strong);
-    border-radius: 2px;
-    color: var(--foreground);
-  }
-
-  :global([data-grammar="flat"]) .hdr-caption {
-    letter-spacing: 0;
-    text-transform: none;
     color: var(--muted-foreground);
-    font-size: 0.625rem;
+    font-weight: 200;
   }
 
-  :global([data-grammar="flat"]) .hdr-btn.is-on .hdr-caption {
-    color: inherit;
-    opacity: 0.85;
+  /* Play: an icon and its word, lit in the play ink while running. */
+  .hdr-btn {
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0 var(--spacing-md);
+    background: var(--surface-well);
+    cursor: pointer;
+    font-size: 0.9375rem;
+    font-weight: var(--font-weight-medium);
   }
-
-  :global([data-grammar="flat"]) .hdr-field.is-active,
-  :global([data-grammar="flat"]) .hdr-digit.is-active {
-    background: var(--secondary);
+  .hdr-btn :global(.hdr-icon) {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
   }
-
-  :global([data-grammar="flat"]) .role-transport.is-on {
+  .role-transport.is-on {
     background: var(--act-play);
     border-color: var(--act-play);
     color: var(--flat-on-fg);
   }
+  .role-transport.is-on :global(.hdr-icon) {
+    fill: currentColor;
+  }
 
-  :global([data-grammar="flat"]) .role-metronome.is-on {
+  /* Switches: the System view's row — name on the left, On/Off chip on
+     the right; On in Live's orange (record red for overdub), Off a well. */
+  .hdr-switch {
+    justify-content: space-between;
+    gap: var(--spacing-md);
+    padding: 0 var(--spacing-md);
+    background: var(--card);
+    font-size: 0.9375rem;
+    font-weight: var(--font-weight-medium);
+    text-align: left;
+    cursor: pointer;
+  }
+  .hdr-switch.is-readonly {
+    cursor: default;
+  }
+  .hdr-switch-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .hdr-chip {
+    flex-shrink: 0;
+    min-width: 3rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: var(--font-weight-medium);
+    text-align: center;
+    color: var(--muted-foreground);
+    background: var(--surface-well);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+  }
+  .role-metronome.is-on .hdr-chip {
+    color: var(--flat-on-fg);
     background: var(--phosphor);
     border-color: var(--phosphor);
-    color: var(--flat-on-fg);
   }
-
-  :global([data-grammar="flat"]) .role-record.is-on {
+  .role-record.is-on .hdr-chip {
+    color: var(--flat-on-fg);
     background: var(--act-rec);
     border-color: var(--act-rec);
-    color: var(--flat-on-fg);
   }
 
-  /* Light flat: a lit fill sits near the ladder's own luminance, so the
-     frame stays dark or the control loses its boundary. */
+  .hdr-btn:active,
+  .hdr-switch:not(.is-readonly):active {
+    background: var(--secondary);
+  }
+  .role-transport.is-on:active {
+    background: var(--act-play);
+  }
+  @media (hover: hover) {
+    .hdr-btn:not(.is-on):hover,
+    .hdr-switch:not(.is-readonly):hover {
+      background: var(--secondary);
+    }
+  }
+  .hdr-btn:focus-visible,
+  .hdr-switch:focus-visible,
+  .hdr-field:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
+  }
+
+  /* Flat grammar: the rules above are already written in it (fields in a
+     1px frame, ON a solid ink with dark text). Light: a lit fill sits
+     near the ladder's own luminance, so its frame stays dark. */
   :global(.light[data-grammar="flat"]) .role-transport.is-on,
-  :global(.light[data-grammar="flat"]) .role-metronome.is-on,
-  :global(.light[data-grammar="flat"]) .role-record.is-on {
+  :global(.light[data-grammar="flat"]) .hdr-switch.is-on .hdr-chip {
     border-color: var(--line-strong);
   }
 </style>
