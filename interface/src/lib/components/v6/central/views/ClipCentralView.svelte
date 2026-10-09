@@ -34,6 +34,7 @@ import { logger } from '$lib/utils/logger';
 		vmStateAcceptsWrites
 	} from '$lib/services/drumVirtualMacros';
 	import SectionDivider from '../SectionDivider.svelte';
+	import X from '@lucide/svelte/icons/x';
 	import { fitText } from '$lib/utils/fitText';
 
 	let trackColor = $derived.by(() => {
@@ -387,44 +388,48 @@ import { logger } from '$lib/utils/logger';
 
 	The rail, left to right:
 	  Dup Trk / Group · REC | (audio: Rev / to Simpler) · ±12 or Pitch · Temp over Chance
-	(audio: Gain over the warp modes in the last column). Delete, Loop X2
-	and Dup Clip are chips in the editor's own toolbar. The two buttons
+	(audio: Gain over the warp modes in the last column). Loop X2 and Dup
+	Clip are a column of the editor's own toolbar; Delete is the red X on
+	the editor's top-left corner. The two buttons
 	that halved the loop are gone: the editor's loop braces do that job.
 -->
 <div class="clip-central-root h-full w-full relative" style="--clip-track-wash: {trackWash}; --clip-track-tint: {trackTint};">
 <div class="outer h-full w-full p-(--central-inset)" class:no-loop={trackType !== 'audio'}>
-	<!-- Delete, Loop X2 and Dup Clip act on the clip in the editor, so they
-	     sit in its toolbar, under Fold · grid · Triplet · Quantize. Delete
-	     is still an 800ms hold. -->
+	<!-- Loop X2 and Dup Clip act on the clip in the editor, so they are a
+	     column of its toolbar, beside Fold · grid · Triplet · Quantize. -->
 	{#snippet clipTools()}
+		<button
+			onclick={handleDuplicateLoop}
+			disabled={!hasClip || isDuplicatingLoop}
+			class="edit-chip"
+			aria-label="Duplicate loop"
+		>{isDuplicatingLoop ? '…' : 'Loop ×2'}</button>
+		<button
+			onclick={handleDuplicateClip}
+			disabled={!hasClip || !nextSlotEmpty}
+			class="edit-chip"
+			aria-label="Duplicate clip to the next slot"
+		>Dup Clip</button>
+	{/snippet}
+	<div class="editor-cell">
+		<ClipEditorView color={trackColor} tools={trackType === 'midi' ? clipTools : undefined} />
+		<!-- Delete: a red X on the editor's top-left corner, over the clip
+		     it deletes. Still an 800ms hold; the fill shows the hold. -->
 		<button
 			onpointerdown={handleDeleteClipStart}
 			onpointerup={handleDeleteClipEnd}
 			onpointerleave={handleDeleteClipEnd}
 			onpointercancel={handleDeleteClipEnd}
 			disabled={!hasClip}
-			class="edit-chip danger relative overflow-hidden"
+			class="delete-x"
+			class:holding={deleteClipHolding}
 			aria-label="Delete clip (hold)"
+			title="Hold to delete the clip"
 		>
-			{#if deleteClipHolding}<div class="hold-fill" style="animation-duration:{HOLD_DURATION}ms; background: color-mix(in oklab, var(--act-rec), transparent 60%);"></div>{/if}
-			<span class="relative z-10">{deleteClipHolding ? 'Hold…' : 'Delete'}</span>
+			{#if deleteClipHolding}<div class="hold-fill" style="animation-duration:{HOLD_DURATION}ms; background: color-mix(in oklab, var(--act-rec), transparent 55%);"></div>{/if}
+			<X class="relative z-10 w-6 h-6" strokeWidth={3} />
 		</button>
-		{#if trackType === 'midi'}
-			<button
-				onclick={handleDuplicateLoop}
-				disabled={!hasClip || isDuplicatingLoop}
-				class="edit-chip"
-				aria-label="Duplicate loop"
-			>{isDuplicatingLoop ? '…' : 'Loop ×2'}</button>
-			<button
-				onclick={handleDuplicateClip}
-				disabled={!hasClip || !nextSlotEmpty}
-				class="edit-chip"
-				aria-label="Duplicate clip to the next slot"
-			>Dup Clip</button>
-		{/if}
-	{/snippet}
-	<div class="editor-cell"><ClipEditorView color={trackColor} tools={clipTools} /></div>
+	</div>
 	<div class="seam seam-editor"><SectionDivider orientation="vertical" /></div>
 
 	{#if browser}
@@ -702,6 +707,30 @@ import { logger } from '$lib/utils/logger';
 	}
 	.outer.no-loop .col-pitch { grid-column: 6; }
 	.outer.no-loop .col-shape { grid-column: 7; }
+
+	/* Delete: a red X over the editor's top-left corner (the corner of the
+	   ruler and the key gutter), a 40px square so a finger can hold it. */
+	.delete-x {
+		position: absolute;
+		top: 0;
+		left: 0;
+		z-index: 30;
+		width: 40px;
+		height: 40px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		overflow: hidden;
+		border-radius: var(--radius-sm);
+		border: 1px solid var(--line-strong);
+		background: var(--surface-well);
+		color: var(--act-rec);
+		cursor: pointer;
+		touch-action: manipulation;
+	}
+	.delete-x:disabled { color: var(--flat-disabled-fg, var(--muted-foreground)); cursor: default; }
+	.delete-x.holding { border-color: var(--act-rec); }
+	:global([data-grammar="flat"]) .delete-x { border-radius: 2px; }
 
 
 	/* Temp over Chance (Gain over warp on audio): two equal halves. */

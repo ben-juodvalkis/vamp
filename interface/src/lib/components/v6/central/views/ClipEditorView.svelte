@@ -111,10 +111,9 @@
 		/** Track color for note/waveform tinting. */
 		color?: string;
 		/**
-		 * The host's clip actions (Delete, Loop X2, Dup Clip), drawn at the
-		 * foot of the edit toolbar. Give them `class="edit-chip"` to wear
-		 * the toolbar's chip. With these the toolbar shows on an audio clip
-		 * too, holding only them.
+		 * The host's clip actions (Loop X2, Dup Clip), drawn as a second
+		 * column of the edit toolbar. Give them `class="edit-chip"` to wear
+		 * the toolbar's chip.
 		 */
 		tools?: Snippet;
 	}
@@ -146,6 +145,10 @@
 	let isAudio = $derived(clipType === 'audio');
 	let isMidi = $derived(clipType === 'midi');
 	let showToolbar = $derived(isMidi || !!tools);
+	// One chip column for the editing chips (MIDI), one for the host's
+	// clip actions; the roll gives up a column's width for each.
+	let toolbarCols = $derived((isMidi ? 1 : 0) + (tools ? 1 : 0));
+	let toolbarW = $derived(toolbarCols * TOOLBAR_W);
 
 	// ── Loop / markers (focused clip, always live via clipPropertiesStore)
 	let loopStart = $derived(clipPropertiesStore.loopStart);
@@ -1063,16 +1066,14 @@
 	// see the notes effect above + clipRichNotesService.markLocalWrite).
 
 	// Snap grid (M5 polish): a UI-chosen division of a beat (a quarter
-	// note = 1 beat). `gridDenom` is the note value (4=1/4, 8=1/8, …);
-	// `gridTriplet` shrinks the cell to 2/3 for triplet feel. Self-
+	// note = 1 beat). `gridDenom` is the note value (4=1/4, 8=1/8, …). Self-
 	// consistent with the editor's own gridlines (we don't mirror Live's
 	// grid_quantization — see ADR-382). One grid cell in beats:
-	//   beats = (4 / gridDenom) * (gridTriplet ? 2/3 : 1)
+	//   beats = 4 / gridDenom
 	const GRID_DENOMS = [4, 8, 16, 32] as const;
 	let gridDenom = $state<number>(16);
-	let gridTriplet = $state<boolean>(false);
-	let gridBeats = $derived((4 / gridDenom) * (gridTriplet ? 2 / 3 : 1));
-	let gridLabel = $derived(`1/${gridDenom}${gridTriplet ? 'T' : ''}`);
+	let gridBeats = $derived(4 / gridDenom);
+	let gridLabel = $derived(`1/${gridDenom}`);
 	// Default duration for a drawn note: one grid cell.
 	let drawDuration = $derived(gridBeats);
 
@@ -1625,7 +1626,7 @@
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 		<div
 			class="canvas-wrap"
-			style:right={showToolbar ? `${TOOLBAR_W}px` : undefined}
+			style:right={showToolbar ? `${toolbarW}px` : undefined}
 			bind:this={containerRef}
 			role="application"
 			aria-label="Clip editor"
@@ -1859,8 +1860,9 @@
 		<!-- MIDI edit toolbar: a column beside the roll, so the roll takes
 		     the full height. Own pointer surface, outside the pan/zoom canvas. -->
 		{#if showToolbar}
-			<div class="edit-toolbar" style:width="{TOOLBAR_W}px">
+			<div class="edit-toolbar" style:width="{toolbarW}px">
 				{#if isMidi}
+				<div class="tool-col">
 				<button
 					class="edit-chip"
 					class:active={fold}
@@ -1872,23 +1874,15 @@
 
 				<span class="toolbar-sep"></span>
 
-				<!-- Snap grid selector (M5 polish): cycles 1/4·1/8·1/16·1/32
-				     and a triplet toggle. Drives snap, draw length, quantize
-				     and the visible gridlines. -->
+				<!-- Snap grid selector (M5 polish): cycles 1/4·1/8·1/16·1/32.
+				     Drives snap, draw length, quantize and the visible
+				     gridlines. -->
 				<button
 					class="edit-chip grid-chip"
 					onclick={cycleGrid}
 					title="Snap grid (tap to cycle)"
 				>
 					{gridLabel}
-				</button>
-				<button
-					class="edit-chip"
-					class:active={gridTriplet}
-					onclick={() => (gridTriplet = !gridTriplet)}
-					title="Triplet grid"
-				>
-					Triplet
 				</button>
 
 				<span class="toolbar-sep"></span>
@@ -1901,11 +1895,14 @@
 				>
 					Quantize
 				</button>
+				</div>
 				{/if}
 
+				<!-- The host's clip actions, a column of their own. -->
 				{#if tools}
-					{#if isMidi}<span class="toolbar-sep"></span>{/if}
-					{@render tools()}
+					<div class="tool-col">
+						{@render tools()}
+					</div>
 				{/if}
 			</div>
 		{/if}
@@ -2100,25 +2097,36 @@
 		touch-action: none;
 		box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--background), transparent 50%);
 	}
-	/* Its own column beside the roll (the canvas stops TOOLBAR_W short of
-	   the right edge), so the roll keeps the full height. Chips stack at a
-	   44 px touch floor and share the height. The top is padded clear of
-	   ClipCentralView's editor-toggle chip, which floats over this corner. */
+	/* Its own columns beside the roll (the canvas stops `toolbarW` short
+	   of the right edge), so the roll keeps the full height. Chips stack at
+	   a 44 px touch floor and share each column's height. */
 	.edit-toolbar {
 		position: absolute;
 		top: 0;
 		right: 0;
 		bottom: 0;
 		display: flex;
-		flex-direction: column;
-		flex-wrap: nowrap;
+		flex-direction: row;
 		gap: var(--spacing-xs);
 		padding: 32px 0 0 8px;
 		z-index: 20;
 		pointer-events: none; /* chips opt back in; gaps pass through */
 	}
-	.edit-toolbar > * {
+	/* Two columns side by side: the editing chips, then the host's clip
+	   actions. Each stacks its own chips. */
+	.tool-col {
+		flex: 1 1 0;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		flex-wrap: nowrap;
+		gap: var(--spacing-xs);
+	}
+	.tool-col > :global(*) {
 		pointer-events: auto;
+	}
+	.tool-col > :global(.toolbar-sep) {
+		pointer-events: none;
 	}
 	.toolbar-sep {
 		height: 1px;
@@ -2133,13 +2141,9 @@
 		text-align: center;
 		font-variant-numeric: tabular-nums;
 	}
-	/* Chips share the column's height evenly. With the clip view's Delete,
-	   Loop X2 and Dup Clip below the editing chips there are seven, so the
-	   floor is 28px rather than the 44px touch floor: at 44 the last ones
-	   fell off the bottom of a one-third section. */
 	.edit-toolbar :global(.edit-chip) {
 		flex: 1 1 0;
-		min-height: 28px;
+		min-height: 44px;
 		max-height: 72px;
 		white-space: nowrap;
 		overflow: hidden;
@@ -2443,10 +2447,5 @@
 	}
 	:global([data-grammar="flat"]) .marker {
 		background: var(--act-warn); /* solid, no alpha */
-	}
-	/* A host chip that destroys something (the clip view's Delete) keeps
-	   the danger red in both skins. */
-	.edit-toolbar :global(.edit-chip.danger:not(:disabled)) {
-		color: var(--act-rec);
 	}
 </style>
