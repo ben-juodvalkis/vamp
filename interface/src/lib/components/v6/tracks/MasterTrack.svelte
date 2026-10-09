@@ -243,10 +243,10 @@
     />
 
     <!-- The strip's name. Its name band holds the key and time signature,
-         so the name rides the top of the card instead — Live's own name
-         for the track ("Main" in Live 12). Under the drag overlay and
-         inert, so it never takes a press from the fader. -->
-    <span class="master-label" aria-hidden="true">{masterTrack.name}</span>
+         so the name rides the top of the card instead. Always "Main",
+         whatever Live calls the track. Under the drag overlay and inert,
+         so it never takes a press from the fader. -->
+    <span class="master-label" aria-hidden="true">Main</span>
 
     <!-- Volume control overlay — drag action + optimistic update
          matches TrackVolumeMeter, so master fader behaves like
