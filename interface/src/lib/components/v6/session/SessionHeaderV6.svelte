@@ -158,6 +158,48 @@
   const bar = $derived(Math.floor(songTime / beatsPerBar) + 1);
   const beat = $derived(Math.floor(songTime % beatsPerBar) + 1);
 
+  /**
+   * The line sweeping the Position field once a bar. Song time arrives at
+   * 10 Hz, which steps visibly, so while the transport runs the line is
+   * extrapolated between updates from the tempo (capped at a quarter
+   * second past the last one, so a stalled wire freezes rather than runs
+   * on). Written straight to the element's transform each frame: one
+   * compositor-only property, no reactive churn at 60 Hz.
+   */
+  let sweepEl = $state<HTMLElement | null>(null);
+  let anchorBeats = 0;
+  let anchorAt = 0;
+
+  $effect(() => {
+    anchorBeats = Math.max(0, session.currentTime);
+    anchorAt = performance.now();
+  });
+
+  function paintSweep(beats: number) {
+    if (!sweepEl) return;
+    const phase = (beats % beatsPerBar) / beatsPerBar;
+    sweepEl.style.transform = `translateX(${(phase * 100).toFixed(3)}%)`;
+  }
+
+  $effect(() => {
+    const playing = session.isPlaying;
+    const bpm = session.tempo;
+    void beatsPerBar;
+    if (!sweepEl) return;
+    if (!playing) {
+      paintSweep(songTime);
+      return;
+    }
+    let raf = 0;
+    const frame = () => {
+      const elapsed = Math.min((performance.now() - anchorAt) / 1000, 0.25);
+      paintSweep(anchorBeats + (elapsed * bpm) / 60);
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  });
+
 </script>
 
 <!-- Slim transport header (ADR-415), one full-width band in the master
@@ -236,6 +278,14 @@
     <div class="hdr-field is-readout" aria-label="Song position: bar {bar}, beat {beat}">
       <span class="hdr-value">{bar}.{beat}</span>
       <span class="hdr-caption">Position</span>
+      <!-- Where in the bar: a tick per beat along the foot, and a line
+           that sweeps the field once a bar. -->
+      <span class="hdr-bar" aria-hidden="true">
+        {#each { length: beatsPerBar } as _, i (i)}
+          <span class="hdr-tick" class:is-downbeat={i === 0} style:left="{(i / beatsPerBar) * 100}%"></span>
+        {/each}
+        <span class="hdr-sweep" bind:this={sweepEl}><span class="hdr-sweep-line"></span></span>
+      </span>
     </div>
 
     <!-- Metronome: a switch row, the System view's Click. -->
@@ -324,6 +374,45 @@
   }
   .hdr-field.is-readout {
     cursor: default;
+    position: relative;
+    overflow: hidden;
+  }
+  /* The value and its caption stay above the sweep. */
+  .hdr-field.is-readout > .hdr-value,
+  .hdr-field.is-readout > .hdr-caption {
+    position: relative;
+    z-index: 1;
+  }
+  .hdr-bar {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .hdr-tick {
+    position: absolute;
+    bottom: 0;
+    width: 1px;
+    height: 0.375rem;
+    background: var(--line-strong);
+  }
+  .hdr-tick.is-downbeat {
+    display: none; /* the field's own left edge is the downbeat */
+  }
+  /* A full-width layer translated by the bar's phase, so 100% is the
+     field's width; the line rides its left edge. */
+  .hdr-sweep {
+    position: absolute;
+    inset: 0;
+    will-change: transform;
+  }
+  .hdr-sweep-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 2px;
+    background: var(--playhead);
+    opacity: 0.55;
   }
   /* Tempo's whole field is its drag target already; the time signature's
      two digits stretch theirs over the field the same way the master
