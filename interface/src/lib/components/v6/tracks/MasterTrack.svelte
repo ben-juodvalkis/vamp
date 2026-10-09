@@ -242,6 +242,12 @@
         topInset={0}
     />
 
+    <!-- The strip's name. Its name band holds the key and time signature,
+         so the name rides the top of the card instead — Live's own name
+         for the track ("Main" in Live 12). Under the drag overlay and
+         inert, so it never takes a press from the fader. -->
+    <span class="master-label" aria-hidden="true">{masterTrack.name}</span>
+
     <!-- Volume control overlay — drag action + optimistic update
          matches TrackVolumeMeter, so master fader behaves like
          a regular track fader (8 ms debounce, 0.5 sensitivity). -->
@@ -454,6 +460,25 @@
         transform: rotate(24deg);
     }
     .sig-band.active .sig-num { text-decoration: underline; text-underline-offset: 0.15em; }
+
+    /* Name on the card's top edge, sized off the strip's width like the
+       track names, so it fits a narrow column without wrapping. */
+    .master-label {
+        position: absolute;
+        top: 0.5rem;
+        left: 0;
+        right: 0;
+        z-index: 5;
+        text-align: center;
+        font-size: clamp(0.75rem, 18cqw, 1rem);
+        font-weight: var(--font-weight-medium);
+        color: var(--act-master);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding-inline: 2px;
+        pointer-events: none;
+    }
 
     /* Fader handle: white-hot act-master dash at the volume height. */
     .master-vol-handle {
