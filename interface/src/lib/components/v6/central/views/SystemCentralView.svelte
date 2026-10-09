@@ -426,8 +426,8 @@ import { logger } from '$lib/utils/logger';
 	   because the groups had lost their frames; the lists are frames again. */
 	.sys-section-label {
 		padding-inline: 0.125rem;
-		font-size: 0.8125rem;
-		line-height: 1rem;
+		font-size: 1rem;
+		line-height: 1.25rem;
 		font-weight: var(--font-weight-medium);
 		color: var(--muted-foreground);
 	}
@@ -508,7 +508,7 @@ import { logger } from '$lib/utils/logger';
 		background: transparent;
 		border: 0;
 		color: var(--foreground);
-		font-size: 0.9375rem;
+		font-size: 1.125rem;
 		font-weight: var(--font-weight-medium);
 		text-align: left;
 		cursor: pointer;
@@ -543,7 +543,7 @@ import { logger } from '$lib/utils/logger';
 		flex-shrink: 0;
 		min-width: 3.25rem;
 		padding: 0.25rem 0.625rem;
-		font-size: 0.8125rem;
+		font-size: 1rem;
 		font-weight: var(--font-weight-medium);
 		text-align: center;
 		color: var(--muted-foreground);
@@ -559,7 +559,7 @@ import { logger } from '$lib/utils/logger';
 
 	/* Shared label style */
 	.sys-label {
-		font-size: 0.75rem;
+		font-size: 0.9375rem;
 		text-transform: uppercase;
 		letter-spacing: 0.1em;
 		color: var(--sys-dim);
@@ -663,8 +663,8 @@ import { logger } from '$lib/utils/logger';
 	.sys-gear {
 		position: absolute;
 		--gear-box: 3.25rem;
-		top: calc(var(--central-inset) + 0.5rem - var(--gear-box) / 2);
-		right: calc(var(--central-inset) + 0.75rem - var(--gear-box) / 2);
+		top: calc(var(--central-inset) + 0.625rem - var(--gear-box) / 2);
+		right: calc(var(--central-inset) + 0.875rem - var(--gear-box) / 2);
 		width: var(--gear-box);
 		height: var(--gear-box);
 		display: inline-flex;
@@ -724,7 +724,7 @@ import { logger } from '$lib/utils/logger';
 
 	.quant-close {
 		padding: var(--spacing-sm) var(--spacing-xl);
-		font-size: 0.75rem;
+		font-size: 0.875rem;
 		min-height: 2.75rem; /* 44px — iPad minimum touch target */
 	}
 
@@ -739,7 +739,7 @@ import { logger } from '$lib/utils/logger';
 
 	.quant-chip {
 		padding: var(--spacing-sm) var(--spacing-xs);
-		font-size: 0.875rem;
+		font-size: 1rem;
 		letter-spacing: 0.05em;
 		min-height: 3.25rem; /* comfortably over the 44px iPad minimum */
 		white-space: nowrap;
