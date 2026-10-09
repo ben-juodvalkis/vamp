@@ -14,13 +14,26 @@
         "boxes": [
             {
                 "box": {
+                    "id": "obj-127",
+                    "maxclass": "toggle",
+                    "numinlets": 1,
+                    "numoutlets": 1,
+                    "outlettype": [ "int" ],
+                    "parameter_enable": 0,
+                    "patching_rect": [ 392.0, 529.0, 24.0, 24.0 ],
+                    "presentation": 1,
+                    "presentation_rect": [ 0.0, 0.0, 24.0, 24.0 ]
+                }
+            },
+            {
+                "box": {
                     "id": "obj-129",
                     "maxclass": "message",
                     "numinlets": 2,
                     "numoutlets": 1,
                     "outlettype": [ "" ],
                     "patching_rect": [ 976.0, 387.0, 50.0, 22.0 ],
-                    "text": "-25."
+                    "text": "-2.8"
                 }
             },
             {
@@ -178,7 +191,7 @@
                     "numoutlets": 1,
                     "outlettype": [ "" ],
                     "patching_rect": [ -279.0, 303.0, 50.0, 76.0 ],
-                    "text": "/looping/v3/move/pad_hold 78 0"
+                    "text": "/looping/v3/move/pad_hold 80 0"
                 }
             },
             {
@@ -215,7 +228,7 @@
                     "numoutlets": 1,
                     "outlettype": [ "" ],
                     "patching_rect": [ -495.0, 327.0, 50.0, 22.0 ],
-                    "text": "1 69 72"
+                    "text": "1 16 0"
                 }
             },
             {
@@ -270,7 +283,7 @@
                     "numoutlets": 1,
                     "outlettype": [ "" ],
                     "patching_rect": [ -464.0, 301.0, 98.0000029206276, 22.0 ],
-                    "text": "1 68 57"
+                    "text": "1 0 0"
                 }
             },
             {
@@ -2077,7 +2090,7 @@
                                     "numoutlets": 1,
                                     "outlettype": [ "" ],
                                     "patching_rect": [ 908.0, 577.0, 51.0, 35.0 ],
-                                    "text": "noteoff 1 65 0"
+                                    "text": "noteoff 1 72 0"
                                 }
                             },
                             {
