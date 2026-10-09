@@ -13,7 +13,8 @@
     import { press } from '$lib/actions/press';
     import { HOLD_MS } from '$lib/actions';
     import Lock from '@lucide/svelte/icons/lock';
-    import { detectKey } from '$lib/services/sessionCommands';
+    import { detectKey, setSignatureNumerator } from '$lib/services/sessionCommands';
+    import { drag as dragAction, type DragInfo, type DragOptions } from '$lib/actions/drag';
 
     interface Props {
         onSelect?: () => void;
@@ -130,6 +131,36 @@
     function handleHeaderHold() {
         detectKey();
     }
+
+    /**
+     * Time-signature half of the key band — drag up/down to set the
+     * numerator (1–32), 20 px a step, the System view's numerator drag
+     * (ADR-427) at the same feel. Echo-confirmed: the readout moves when
+     * Live answers. The denominator stays in the System view.
+     */
+    let sigDragging = $state(false);
+    let sigDragStart = 4;
+    let sigLastSent: number | null = null;
+
+    const numeratorDrag: DragOptions = {
+        commit: 'immediate',
+        touchAction: 'none',
+        onStart: () => {
+            sigDragging = true;
+            sigDragStart = session.timeSignature.numerator;
+            sigLastSent = null;
+        },
+        onMove: ({ dy }: DragInfo) => {
+            const next = Math.max(1, Math.min(32, Math.round(sigDragStart + dy * 0.05)));
+            if (next !== sigLastSent && next !== session.timeSignature.numerator) {
+                sigLastSent = next;
+                setSignatureNumerator(next);
+            }
+        },
+        onEnd: () => {
+            sigDragging = false;
+        }
+    };
 
     // Handle selection (Python v3 wire — ROW 2-F4)
     function handleSelect() {
@@ -255,13 +286,31 @@
         }}
         aria-label="Current key: {session.rootNoteName} {session.scaleDisplayName}{session.keyFollowEnabled ? ', following the loops' : ', locked'}. Tap to open key signature browser, hold to detect the key"
     >
-        <span class="key-root num">{session.rootNoteName}</span>
+        <span class="key-root-line">
+            <span class="key-root num">{session.rootNoteName}</span>
+            {#if !session.keyFollowEnabled}
+                <!-- ADR-447: a hand set this key; Follow is off until the picker says otherwise. -->
+                <Lock size={12} class="key-lock" aria-hidden="true" />
+            {/if}
+        </span>
         <span class="key-scale">{SCALE_ABBREVIATIONS[session.scaleDisplayName] || session.scaleDisplayName}</span>
-        {#if !session.keyFollowEnabled}
-            <!-- ADR-447: a hand set this key; Follow is off until the picker says otherwise. -->
-            <Lock size={12} class="key-lock" aria-hidden="true" />
-        {/if}
     </button>
+
+    <!-- Time signature: the band's right half. Drag sets the numerator. -->
+    <div
+        class="sig-band"
+        class:active={sigDragging}
+        use:dragAction={numeratorDrag}
+        role="slider"
+        tabindex={-1}
+        aria-label="Time signature {session.timeSignatureString}. Drag up or down to change the beats per bar"
+        aria-valuemin={1}
+        aria-valuemax={32}
+        aria-valuenow={session.timeSignature.numerator}
+    >
+        <span class="sig-num num">{session.timeSignature.numerator}</span>
+        <span class="sig-den num">{session.timeSignature.denominator}</span>
+    </div>
 
     <!-- Nothing else in the block: the key band IS the third.
 
@@ -313,7 +362,7 @@
         flex: 1 1 0;
         min-height: 0;
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         gap: var(--strip-gap);
     }
 
@@ -324,20 +373,23 @@
         order: -1;
     }
 
-    /* The whole third, always — it is the block's only child now.
-       `container-type: size` makes that height queryable, so the readout
-       below sizes off it in `cqh` and grows to fill rather than sitting
-       small in a taller band. */
-    .key-band {
+    /* The left half of the third: key on the left, time signature on the
+       right. `container-type: size` makes each half queryable, so the
+       readouts size off it in `cqh`/`cqw` and grow to fill rather than
+       sitting small in a taller band. */
+    .key-band,
+    .sig-band {
         flex: 1 1 0;
         min-height: 0;
-        width: 100%;
+        min-width: 0;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 0.35em;
+        gap: 0.1em;
         overflow: hidden;
         cursor: pointer;
+        user-select: none;
         border: none;
         background: transparent;
         border-radius: var(--radius-md);
@@ -352,16 +404,33 @@
        safe — the type grows with the container and then stops, so it fills
        the third without turning into signage. Sizes live here (not inline)
        so the flat grammar can re-size them by plain specificity. */
+    .sig-band { cursor: ns-resize; }
+    .key-root-line {
+        display: flex;
+        align-items: center;
+        gap: 0.2em;
+    }
     .key-root {
-        font-size: clamp(max(var(--type-min), calc(14 * var(--fluid-px))), 62cqh, 2.25rem);
+        font-size: clamp(max(var(--type-min), calc(14 * var(--fluid-px))), min(40cqh, 40cqw), 2rem);
         font-weight: var(--font-weight-bold);
     }
     .key-band :global(.key-lock) { opacity: 0.7; }
     .key-scale {
-        font-size: clamp(0.625rem, 34cqh, 1.125rem);
+        font-size: clamp(0.625rem, min(24cqh, 16cqw), 1rem);
         font-weight: var(--font-weight-medium);
         opacity: 0.8;
+        white-space: nowrap;
     }
+
+    /* Time signature, stacked like a score: numerator over denominator. */
+    .sig-num,
+    .sig-den {
+        font-size: clamp(max(var(--type-min), calc(12 * var(--fluid-px))), min(34cqh, 40cqw), 1.75rem);
+        font-weight: var(--font-weight-bold);
+        line-height: 1;
+    }
+    .sig-den { opacity: 0.8; }
+    .sig-band.active .sig-num { text-decoration: underline; text-underline-offset: 0.15em; }
 
     /* Fader handle: white-hot act-master dash at the volume height. */
     .master-vol-handle {
@@ -384,7 +453,8 @@
        the strips' name band already has in this skin — a solid block in the
        track's own colour with Live's ClipText on it — so the master ends the
        row of name bands rather than interrupting it. */
-    :global([data-grammar="flat"]) .key-band {
+    :global([data-grammar="flat"]) .key-band,
+    :global([data-grammar="flat"]) .sig-band {
         background: var(--act-master);
         color: var(--flat-clip-text);
         border-radius: 0;
