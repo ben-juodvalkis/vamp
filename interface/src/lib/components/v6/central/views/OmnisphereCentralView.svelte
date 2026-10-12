@@ -143,9 +143,9 @@
     <!-- Main content grid, the user's layout (2026-10-12): six equal
          columns before the seam, in three equal sections: the four XY pads
          take two, the ORB two (2026-10-12), the envelopes two; then the seam and the MIDI wheels. Three rows: a
-         header (the swap pill over the pads, FX over the ORB, the Amp |
-         Filter switch over the envelopes), then two rows of controls. Every
-         control starts on the same line under the header. -->
+         header (the swap pill over the pads, the Amp | Filter switch over
+         the envelopes, FX over the wheels), then two rows of controls. The
+         ORB takes all three rows, full height (2026-10-12). -->
     <div class="omni-grid h-full w-full grid gap-(--central-gap) p-(--central-inset)">
       <!-- Cols 1-2, header: the swap pill, top-left as in every instrument
            view (2026-10-06), over the pads. -->
@@ -153,16 +153,8 @@
         <HostedSwapPill />
       </div>
 
-      <!-- Cols 3-4: FX in the header, the ORB under it. -->
-      <button
-        class="physical-button omni-fx w-full min-w-0 text-xl font-bold"
-        class:active={fxIsOn}
-        style="--btn-tint: {omniInk.primary}; grid-column: 3 / 5; grid-row: 1; height: var(--height-touch, 44px);"
-        onclick={handleFxToggle}
-      >
-        FX
-      </button>
-      <div class="min-h-0" style="grid-column: 3 / 5; grid-row: 2 / 4;">
+      <!-- Cols 3-4, every row: the ORB. -->
+      <div class="min-h-0" style="grid-column: 3 / 5; grid-row: 1 / 4;">
         <OrbControl
           angle={orbAngleValue}
           radius={orbRadiusValue}
@@ -291,8 +283,16 @@
         <SectionDivider orientation="vertical" />
       </div>
 
-      <!-- Col 8, every row: MIDI Wheels -->
-      <div class="flex flex-col min-h-0" style="grid-column: 8; grid-row: 1 / 4;">
+      <!-- Col 8: FX in the header, the MIDI Wheels under it. -->
+      <button
+        class="physical-button omni-fx w-full min-w-0 text-xl font-bold"
+        class:active={fxIsOn}
+        style="--btn-tint: {omniInk.primary}; grid-column: 8; grid-row: 1; height: var(--height-touch, 44px);"
+        onclick={handleFxToggle}
+      >
+        FX
+      </button>
+      <div class="flex flex-col min-h-0" style="grid-column: 8; grid-row: 2 / 4;">
         <MidiWheelsPanel />
       </div>
 
