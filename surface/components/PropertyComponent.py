@@ -135,6 +135,18 @@ from .DrumPadChainComponent import (
 from .DrumPadChainComponent import (
     is_pad_chain_property as is_drum_pad_chain_property,
 )
+from .RackChainNamesComponent import (
+    CHAIN_NAMES_KEY as RACK_CHAIN_NAMES_KEY,
+)
+from .RackChainNamesComponent import (
+    CHAIN_NAMES_PROPERTY as RACK_CHAIN_NAMES_PROPERTY,
+)
+from .RackChainNamesComponent import (
+    PROVIDER_NAME as RACK_CHAINS_PROVIDER,
+)
+from .RackChainNamesComponent import (
+    RACK_CLASS_NAME as RACK_CHAINS_CLASS_NAME,
+)
 
 # ADR-350: Live's v3 framework hands out a fresh Python wrapper per read, so
 # ``is`` comparison against a stored handle always fails at runtime even when
@@ -237,18 +249,12 @@ class PropertySpec:
     may be set: the provider does its own coercion and there is no LOM
     listener to attach — subscribe asks the provider to bind, set hands
     the provider the value and echoes what it stored.
-
-    ``item_attr`` (2026-10-12) maps a list-valued attribute to one field
-    of each item before the JSON coercion: ``chains`` read with
-    ``item_attr="name"`` is the rack's chain names, where ``_jsonable``
-    alone would stringify each ``Chain``. Read-only rows only; requires
-    ``coerce_dict_to_json``.
     """
 
     __slots__ = (
         "listener_path", "attr_name", "writable",
         "coerce_bool_to_int", "coerce_to_int", "coerce_dict_to_json",
-        "resolve_via_vector", "cascade_to", "computed", "item_attr",
+        "resolve_via_vector", "cascade_to", "computed",
     )
 
     def __init__(
@@ -262,7 +268,6 @@ class PropertySpec:
         resolve_via_vector: Optional[str] = None,
         cascade_to: Optional[Tuple[str, ...]] = None,
         computed: Optional[str] = None,
-        item_attr: Optional[str] = None,
     ) -> None:
         self.listener_path = listener_path
         self.attr_name = attr_name
@@ -305,11 +310,6 @@ class PropertySpec:
             raise ValueError(
                 "PropertySpec: resolve_via_vector requires coerce_dict_to_json"
             )
-        if item_attr and (not coerce_dict_to_json or writable):
-            raise ValueError(
-                "PropertySpec: item_attr is for read-only JSON rows"
-            )
-        self.item_attr = item_attr
         self.computed = computed
         if computed and (
             listener_path or coerce_bool_to_int or coerce_to_int
@@ -473,15 +473,6 @@ ALLOWLIST: Dict[Tuple[str, str], PropertySpec] = {
         writable=True, coerce_dict_to_json=True,
         resolve_via_vector="available_input_routing_types",
     ),
-    # An Audio Effect Rack's chain names, in chain order (2026-10-12): a
-    # JSON array of strings, read-only. The Pedal view titles the Wah
-    # slider with the chain its Macro 2 (the toe switch's chain selector)
-    # selects. ``chains`` fires on a chain added or removed, not on a
-    # rename: a renamed chain shows its new name from the next subscribe.
-    ("AudioEffectGroupDevice", "chain_names"): PropertySpec(
-        listener_path="", attr_name="chains", writable=False,
-        coerce_dict_to_json=True, item_attr="name",
-    ),
 }
 
 # Drum Rack virtual macros (ADR-428). One computed row per function in
@@ -517,6 +508,15 @@ ALLOWLIST[(DRUM_RACK_CLASS_NAME, DRUM_VM_SELECTED_PAD_PROPERTY)] = PropertySpec(
 ALLOWLIST[(DRUM_RACK_CLASS_NAME, DRUM_PAD_FX_PROPERTY)] = PropertySpec(
     listener_path="", attr_name=DRUM_PAD_FX_KEY, writable=False,
     computed=DRUM_PAD_CHAIN_PROVIDER,
+)
+
+# An Audio Effect Rack's chain names (2026-10-12): read-only JSON array,
+# from the ``rack_chains`` provider, which follows chains added, removed
+# and renamed. The Pedal view titles the Wah slider with the chain the toe
+# switch's Macro 2 selects.
+ALLOWLIST[(RACK_CHAINS_CLASS_NAME, RACK_CHAIN_NAMES_PROPERTY)] = PropertySpec(
+    listener_path="", attr_name=RACK_CHAIN_NAMES_KEY, writable=False,
+    computed=RACK_CHAINS_PROVIDER,
 )
 
 # The rack-macro family: ``vm.macro.<name>`` on a Drum Rack, one computed
@@ -746,15 +746,6 @@ def _read_property_value(device, spec: PropertySpec):
         # ADR-002 amendment. ``_jsonable`` handles the LOM proxy/vector
         # case (``RoutingType`` / ``RoutingTypeVector``) that
         # ``default=str`` mis-serialized as a repr string.
-        if spec.item_attr:
-            try:
-                value = [getattr(item, spec.item_attr) for item in value]
-            except Exception as e:
-                logger.debug(
-                    "PropertyComponent: read %s[].%s raised: %s",
-                    spec.attr_name, spec.item_attr, e,
-                )
-                return None
         try:
             return json.dumps(_jsonable(value))
         except (TypeError, ValueError) as e:

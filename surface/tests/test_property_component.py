@@ -931,61 +931,6 @@ def test_hybrid_ir_lists_subscribe_as_json_arrays(emits, generation):
     assert json.loads(values[-1][2]) == ["Berliner Hall", "Soft Hall"]
 
 
-class _StubChain:
-    def __init__(self, name):
-        self.name = name
-
-
-class StubAudioRack(_StubDevice):
-    """An Audio Effect Rack (the Wah): ``chains`` observable, each chain
-    carrying its own ``name``."""
-
-    _observable = ("chains",)
-
-    def __init__(self, names):
-        self.class_name = "AudioEffectGroupDevice"
-        self.parameters = []
-        self.chains = [_StubChain(n) for n in names]
-
-
-def test_audio_rack_chain_names_are_read_only_json():
-    spec = ALLOWLIST[("AudioEffectGroupDevice", "chain_names")]
-    assert spec.writable is False
-    assert spec.attr_name == "chains"
-    assert spec.item_attr == "name"
-
-
-def test_audio_rack_chain_names_subscribe_and_follow_chains(emits, generation):
-    rack = StubAudioRack(["Wah", "Volume", "Ring"])
-    comp = PropertyComponent(
-        song=StubSong(tracks=[StubTrack(tid=301, devices=[rack])]),
-        emit=lambda a, args: emits.append((a, args)),
-    )
-    comp.set_generation(generation)
-
-    comp.handle_subscribe(args=("tracks/0/devices/0", "chain_names"), source_addr=None)
-    values = [args for (addr, args) in emits if addr == V3_PROPERTY_VALUE_ADDRESS]
-    assert values[-1][1] == "chain_names"
-    assert json.loads(values[-1][2]) == ["Wah", "Volume", "Ring"]
-    assert len(rack.listeners_for("chains")) == 1
-
-    # A chain added in Live: the chains listener fires, the new list goes out.
-    rack.chains.append(_StubChain("Fuzz"))
-    rack.fire("chains")
-    values = [args for (addr, args) in emits if addr == V3_PROPERTY_VALUE_ADDRESS]
-    assert json.loads(values[-1][2]) == ["Wah", "Volume", "Ring", "Fuzz"]
-
-
-def test_item_attr_requires_a_read_only_json_row():
-    with pytest.raises(ValueError):
-        PropertySpec(listener_path="", attr_name="chains", writable=False, item_attr="name")
-    with pytest.raises(ValueError):
-        PropertySpec(
-            listener_path="", attr_name="chains", writable=True,
-            coerce_dict_to_json=True, item_attr="name",
-        )
-
-
 def test_simpler_keys_use_lom_class_name_not_display_name():
     """ADR-002 followup-a-fix: Live's class_name is ``OriginalSimpler``,
     not the display-name ``Simpler``. The 2026-04-16 Playwright

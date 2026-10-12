@@ -252,6 +252,10 @@ from .components.DrumVirtualMacroComponent import (
     DrumVirtualMacroComponent,
     PROVIDER_NAME as DRUM_VM_PROVIDER_NAME,
 )
+from .components.RackChainNamesComponent import (
+    PROVIDER_NAME as RACK_CHAINS_PROVIDER_NAME,
+    RackChainNamesComponent,
+)
 from .components.DrumPadChainComponent import (
     DrumPadChainComponent,
     PROVIDER_NAME as DRUM_PAD_CHAIN_PROVIDER_NAME,
@@ -1400,12 +1404,20 @@ class LoopingSurface(ControlSurface):
             on_param_value_changed=_on_param_value_changed_fanout,
         )
 
+        # An Audio Effect Rack's chain names (2026-10-12), for the Wah
+        # slider's title: follows chains added, removed and renamed.
+        self._rack_chain_names_component = RackChainNamesComponent(
+            emit=self._transport.send,
+            schedule_delayed=self._schedule_delayed,
+        )
+
         self._property_component = PropertyComponent(
             song=self.song, emit=self._transport.send,
             schedule_delayed=self._schedule_delayed,
             computed_providers={
                 DRUM_VM_PROVIDER_NAME: self._drum_vm_component,
                 DRUM_PAD_CHAIN_PROVIDER_NAME: self._drum_pad_chain_component,
+                RACK_CHAINS_PROVIDER_NAME: self._rack_chain_names_component,
             },
         )
         self._property_component.set_generation(self._generation_component)
@@ -3018,6 +3030,9 @@ class LoopingSurface(ControlSurface):
             self._drum_vm_component.disconnect()
             self._drum_pad_chain_component.disconnect()
             self._drum_vm_component = None
+        if getattr(self, "_rack_chain_names_component", None) is not None:
+            self._rack_chain_names_component.disconnect()
+            self._rack_chain_names_component = None
         if getattr(self, "_property_component", None) is not None:
             self._property_component.disconnect()
             self._property_component = None

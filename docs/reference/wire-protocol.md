@@ -217,8 +217,8 @@ Key rules:
   and the read-only `ir_category_list` / `ir_file_list` (JSON arrays of
   Live's names, a stereo IR listed as `<Name> LR`), Compressor2's sidechain
   routing pair, an Audio Effect Rack's read-only `chain_names` (a JSON array
-  of its chains' names in chain order, re-sent when a chain is added or
-  removed, not on a rename — the Pedal view titles the Wah slider with the
+  of its chains' names in chain order, re-sent when a chain is added,
+  removed or renamed — the Pedal view titles the Wah slider with the
   chain Macro 2 selects, 2026-10-12), and the Drum Rack's fourteen **virtual macros** plus their
   `vm.members` census (below).
 - **Computed rows — Drum Rack virtual macros (ADR-428).** On a
