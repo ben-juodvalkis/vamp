@@ -152,10 +152,11 @@
         class="orb-handle"
       />
 
-      <!-- Title in center -->
+      <!-- Title low in the disc, clear of the handle at its default (angle and
+           radius at half, just below center; 2026-10-12). -->
       <text
         x="50"
-        y="50"
+        y="87"
         text-anchor="middle"
         dominant-baseline="middle"
         fill="white"
