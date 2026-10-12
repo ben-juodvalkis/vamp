@@ -39,7 +39,9 @@
    * expression pedal is how it is played. Since 2026-10-05 it is a slider on
    * the macro the pedal sweeps, under the Guitar's Gain in the left column
    * (a load/remove button before). A tap on a ghost loads `Wah.adg` at the
-   * head of the track's audio effects, the pedal's own placement.
+   * head of the track's audio effects, the pedal's own placement. Since
+   * 2026-10-12 the slider is titled with the chain the toe switch selected
+   * (Wah · Volume · Ring), read from the rack's `chain_names` property.
    *
    * NO {#if device} gate - always renders, handles its own state.
    * NO props required - queries selectedTrackStore directly.
@@ -177,6 +179,36 @@
   const WAH_PEDAL_MACRO = 1;
   let wahValue = $derived((wah.paramValue(WAH_PEDAL_MACRO) ?? 0) / MACRO_MAX);
 
+  // The slider is titled with the chain the toe switch has selected
+  // (2026-10-12): Macro 2 is mapped across the rack's chain selector, and
+  // the toe switch steps it through the chains at even spacing — 3 chains
+  // at 0 / 64 / 127 — so the chain is the macro's position rounded to the
+  // nearest of those steps (the surface's `_step_values`). The names are
+  // the rack's own (`chain_names`, Wah · Volume · Ring in Wah.adg).
+  const WAH_CHAIN_MACRO = 2;
+  let wahChainNames = $derived.by(() => {
+    const value = wah.devicePath ? selectedTrackStore.propertyValue(wah.devicePath, 'chain_names') : undefined;
+    if (typeof value !== 'string') return [];
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.map(String) : [];
+    } catch {
+      return [];
+    }
+  });
+  let wahTitle = $derived.by(() => {
+    const names = wahChainNames;
+    if (wah.isGhost || names.length === 0) return 'Wah';
+    const t = (wah.paramValue(WAH_CHAIN_MACRO) ?? 0) / MACRO_MAX;
+    const index = Math.min(names.length - 1, Math.max(0, Math.round(t * (names.length - 1))));
+    return names[index] || 'Wah';
+  });
+  $effect(() => {
+    const path = wah.devicePath;
+    if (!path || !showWah) return;
+    return selectedTrackStore.subscribeProperty(path, 'chain_names');
+  });
+
   // The Gain-over-Wah column, at the head of the Guitar group: each half
   // its height, either one alone at full height. Its grid track exists only
   // while it holds something.
@@ -312,7 +344,7 @@
           <div class="left-cell wah-cell" class:slot-ghost={wah.isGhost}>
             <DeviceSlider
               value={wahValue}
-              title="Wah"
+              title={wahTitle}
               icon="wah"
               orientation="vertical"
               labelOrientation="horizontal"

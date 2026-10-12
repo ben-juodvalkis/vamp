@@ -216,7 +216,10 @@ Key rules:
   Hybrid Reverb's 5 scalar IR properties plus `ir_time_shaping_on` (0/1)
   and the read-only `ir_category_list` / `ir_file_list` (JSON arrays of
   Live's names, a stereo IR listed as `<Name> LR`), Compressor2's sidechain
-  routing pair, and the Drum Rack's fourteen **virtual macros** plus their
+  routing pair, an Audio Effect Rack's read-only `chain_names` (a JSON array
+  of its chains' names in chain order, re-sent when a chain is added or
+  removed, not on a rename — the Pedal view titles the Wah slider with the
+  chain Macro 2 selects, 2026-10-12), and the Drum Rack's fourteen **virtual macros** plus their
   `vm.members` census (below).
 - **Computed rows — Drum Rack virtual macros (ADR-428).** On a
   `DrumGroupDevice`, `vm.fx1`, `vm.fx2`, `vm.attack`, `vm.decay`, `vm.release`

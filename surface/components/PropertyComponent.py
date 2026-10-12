@@ -237,12 +237,18 @@ class PropertySpec:
     may be set: the provider does its own coercion and there is no LOM
     listener to attach — subscribe asks the provider to bind, set hands
     the provider the value and echoes what it stored.
+
+    ``item_attr`` (2026-10-12) maps a list-valued attribute to one field
+    of each item before the JSON coercion: ``chains`` read with
+    ``item_attr="name"`` is the rack's chain names, where ``_jsonable``
+    alone would stringify each ``Chain``. Read-only rows only; requires
+    ``coerce_dict_to_json``.
     """
 
     __slots__ = (
         "listener_path", "attr_name", "writable",
         "coerce_bool_to_int", "coerce_to_int", "coerce_dict_to_json",
-        "resolve_via_vector", "cascade_to", "computed",
+        "resolve_via_vector", "cascade_to", "computed", "item_attr",
     )
 
     def __init__(
@@ -256,6 +262,7 @@ class PropertySpec:
         resolve_via_vector: Optional[str] = None,
         cascade_to: Optional[Tuple[str, ...]] = None,
         computed: Optional[str] = None,
+        item_attr: Optional[str] = None,
     ) -> None:
         self.listener_path = listener_path
         self.attr_name = attr_name
@@ -298,6 +305,11 @@ class PropertySpec:
             raise ValueError(
                 "PropertySpec: resolve_via_vector requires coerce_dict_to_json"
             )
+        if item_attr and (not coerce_dict_to_json or writable):
+            raise ValueError(
+                "PropertySpec: item_attr is for read-only JSON rows"
+            )
+        self.item_attr = item_attr
         self.computed = computed
         if computed and (
             listener_path or coerce_bool_to_int or coerce_to_int
@@ -460,6 +472,15 @@ ALLOWLIST: Dict[Tuple[str, str], PropertySpec] = {
         listener_path="", attr_name="input_routing_type",
         writable=True, coerce_dict_to_json=True,
         resolve_via_vector="available_input_routing_types",
+    ),
+    # An Audio Effect Rack's chain names, in chain order (2026-10-12): a
+    # JSON array of strings, read-only. The Pedal view titles the Wah
+    # slider with the chain its Macro 2 (the toe switch's chain selector)
+    # selects. ``chains`` fires on a chain added or removed, not on a
+    # rename: a renamed chain shows its new name from the next subscribe.
+    ("AudioEffectGroupDevice", "chain_names"): PropertySpec(
+        listener_path="", attr_name="chains", writable=False,
+        coerce_dict_to_json=True, item_attr="name",
     ),
 }
 
@@ -725,6 +746,15 @@ def _read_property_value(device, spec: PropertySpec):
         # ADR-002 amendment. ``_jsonable`` handles the LOM proxy/vector
         # case (``RoutingType`` / ``RoutingTypeVector``) that
         # ``default=str`` mis-serialized as a repr string.
+        if spec.item_attr:
+            try:
+                value = [getattr(item, spec.item_attr) for item in value]
+            except Exception as e:
+                logger.debug(
+                    "PropertyComponent: read %s[].%s raised: %s",
+                    spec.attr_name, spec.item_attr, e,
+                )
+                return None
         try:
             return json.dumps(_jsonable(value))
         except (TypeError, ValueError) as e:

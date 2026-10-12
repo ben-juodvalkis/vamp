@@ -948,9 +948,10 @@ nothing):
   audit item 33); the Pedal view's button is the one UI door, and it sends
   the same `device/load [trackPath, "", presetPath]` the tiles do rather
   than an `engage` — the button knows its `trackPath`, the pedal does not,
-  and the ADR-350 selection-lag bug must stay impossible. The chain count
-  never reaches the wire (`RackDevice.chains` isn't in the v3 record), so no
-  UI could compute the step table; stepping stays the toe switch's.
+  and the ADR-350 selection-lag bug must stay impossible. Stepping stays the
+  toe switch's. The chains are not in the v3 record; their names reach the UI
+  only as the rack's `chain_names` property (2026-10-12), which the Pedal
+  view reads to title the Wah slider with the chain Macro 2 selects.
 - `/looping/v3/wah/freq [0-127]` — write the rack's value macro (Macro 1,
   `freqMacroIndex`). Value is the raw macro value clamped to `[param.min,
   param.max]` (0-127 CC → 0-127 macro, 1:1). **The sweep is scoped to the

@@ -31,11 +31,13 @@ import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.sv
 import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
 import {
 	replaceTree,
+	applyPropertyValue,
 	_resetForTests,
 	type TrackRecord,
 	type DeviceRecord,
 	type ParamRecord
 } from '$lib/stores/v3/normalized.svelte';
+import { _refcountForTest } from '$lib/stores/v3/propertySubscriptions.svelte';
 import PedalCentralView from '$lib/components/v6/central/views/PedalCentralView.svelte';
 import { send } from '$lib/api/simpleClient';
 import { DEVICE_PRESETS } from '$lib/config/devicePresets';
@@ -81,7 +83,7 @@ function guitarRack(ampSwitch = 0): DeviceRecord {
 	};
 }
 
-function wahRack(pedal = 0): DeviceRecord {
+function wahRack(pedal = 0, chain = 0): DeviceRecord {
 	// Device On plus the two macros the pedal component drives (freq, chain
 	// selector) — the shape `Wah.adg` takes once loaded, under the class and
 	// name the wah slot matches on.
@@ -90,7 +92,7 @@ function wahRack(pedal = 0): DeviceRecord {
 		const paramPath = `${WAH}/params/${i}`;
 		params.set(paramPath, {
 			paramPath, name: i === 0 ? 'Device On' : `Macro ${i}`, displayName: i === 0 ? 'Device On' : `Macro ${i}`,
-			min: 0, max: i === 0 ? 1 : 127, value: i === 0 ? 1 : i === 1 ? pedal : 0, unit: ''
+			min: 0, max: i === 0 ? 1 : 127, value: i === 0 ? 1 : i === 1 ? pedal : chain, unit: ''
 		});
 	}
 	return {
@@ -292,6 +294,30 @@ describe('PedalCentralView', () => {
 		const { container } = render(PedalCentralView);
 		await tick();
 		expect(slider(container, 'Wah')!.getAttribute('aria-valuenow')).toBe('1');
+	});
+
+	it('titles the Wah slider with the chain Macro 2 selects, and subscribes the names', async () => {
+		seed([saturator({}), wahRack(0, 64)]);
+		const { container } = render(PedalCentralView);
+		await tick();
+		expect(_refcountForTest(WAH, 'chain_names')).toBe(1);
+		// No names yet (a surface that does not send them): the plain title.
+		expect(slider(container, 'Wah')).toBeDefined();
+		applyPropertyValue(WAH, 'chain_names', JSON.stringify(['Wah', 'Volume', 'Ring']));
+		await tick();
+		expect(slider(container, 'Volume')).toBeDefined();
+		expect(slider(container, 'Wah')).toBeUndefined();
+	});
+
+	it('names the first and last chains at the ends of Macro 2', async () => {
+		for (const [chain, name] of [[0, 'Wah'], [127, 'Ring']] as const) {
+			seed([saturator({}), wahRack(0, chain)]);
+			applyPropertyValue(WAH, 'chain_names', JSON.stringify(['Wah', 'Volume', 'Ring']));
+			const { container } = render(PedalCentralView);
+			await tick();
+			expect(slider(container, name), name).toBeDefined();
+			cleanup();
+		}
 	});
 
 	it('a tap on a ghost Wah loads Wah.adg onto the selected track through device/load', async () => {
