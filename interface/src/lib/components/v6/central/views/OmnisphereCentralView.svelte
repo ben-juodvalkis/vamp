@@ -140,20 +140,29 @@
 
 <div class="h-full w-full">
   {#if instrument}
-    <!-- Main content grid, the user's layout (2026-09-29): five equal
-         columns before the seam: the ORB takes one, the envelopes two, each
-         XY pad one; then the seam and the MIDI wheels. Three rows: a header
-         (the swap pill over the ORB, the Amp | Filter switch, and FX over the
-         XY pads), then
-         two rows of controls. Every control starts on the same line under
-         the header. -->
+    <!-- Main content grid, the user's layout (2026-10-12): five equal
+         columns before the seam: the four XY pads take two, the ORB one, the
+         envelopes two; then the seam and the MIDI wheels. Three rows: a
+         header (the swap pill over the pads, FX over the ORB, the Amp |
+         Filter switch over the envelopes), then two rows of controls. Every
+         control starts on the same line under the header. -->
     <div class="omni-grid h-full w-full grid gap-(--central-gap) p-(--central-inset)">
-      <!-- Col 1: the swap pill in the header, top-left as in every
-           instrument view (2026-10-06), the ORB under it. -->
-      <div class="flex flex-col justify-center min-w-0" style="grid-column: 1; grid-row: 1;">
+      <!-- Cols 1-2, header: the swap pill, top-left as in every instrument
+           view (2026-10-06), over the pads. -->
+      <div class="flex flex-col justify-center min-w-0" style="grid-column: 1 / 3; grid-row: 1;">
         <HostedSwapPill />
       </div>
-      <div class="min-h-0" style="grid-column: 1; grid-row: 2 / 4;">
+
+      <!-- Col 3: FX in the header, the ORB under it. -->
+      <button
+        class="physical-button omni-fx w-full min-w-0 text-xl font-bold"
+        class:active={fxIsOn}
+        style="--btn-tint: {omniInk.primary}; grid-column: 3; grid-row: 1; height: var(--height-touch, 44px);"
+        onclick={handleFxToggle}
+      >
+        FX
+      </button>
+      <div class="min-h-0" style="grid-column: 3; grid-row: 2 / 4;">
         <OrbControl
           angle={orbAngleValue}
           radius={orbRadiusValue}
@@ -163,13 +172,13 @@
         />
       </div>
 
-      <!-- Cols 2-3: one envelope at a time, full height, the Amp | Filter
+      <!-- Cols 4-5: one envelope at a time, full height, the Amp | Filter
            switch over it in the header (user's layout, 2026-09-29). Under
            Filter the envelope's Amount stands full height in the fifth
            column; under Amp the four sliders take that column too. It shares the
            view's rows (subgrid), so the switch sits level with the swap pill and FX
            and the sliders start level with the pads. -->
-      <div class="omni-envelopes min-w-0 min-h-0" style="grid-column: 2 / 4; grid-row: 1 / 4;">
+      <div class="omni-envelopes min-w-0 min-h-0" style="grid-column: 4 / 6; grid-row: 1 / 4;">
         <div
           class="device-segmented omni-env-switch grid grid-cols-2 min-w-0"
           style="--btn-tint: {envInk.primary}; grid-column: 1 / 6; grid-row: 1;"
@@ -223,18 +232,8 @@
         {/if}
       </div>
 
-      <!-- Cols 4-5, header: FX, one line across both pads. -->
-      <button
-        class="physical-button omni-fx w-full min-w-0 text-xl font-bold"
-        class:active={fxIsOn}
-        style="--btn-tint: {omniInk.primary}; grid-column: 4 / 6; grid-row: 1; height: var(--height-touch, 44px);"
-        onclick={handleFxToggle}
-      >
-        FX
-      </button>
-
-      <!-- Col 4, top: UNISON XY Pad -->
-      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 4; grid-row: 2;">
+      <!-- Col 1, top: UNISON XY Pad -->
+      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 1; grid-row: 2;">
         <DeviceXY
           xValue={unisonXValue}
           yValue={unisonYValue}
@@ -246,8 +245,8 @@
         />
       </div>
 
-      <!-- Col 5, top: SPACE XY Pad -->
-      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 5; grid-row: 2;">
+      <!-- Col 2, top: SPACE XY Pad -->
+      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 2; grid-row: 2;">
         <DeviceXY
           xValue={ambianceXValue}
           yValue={ambianceYValue}
@@ -259,8 +258,8 @@
         />
       </div>
 
-      <!-- Col 4, bottom: FILTER XY Pad -->
-      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 4; grid-row: 3;">
+      <!-- Col 1, bottom: FILTER XY Pad -->
+      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 1; grid-row: 3;">
         <DeviceXY
           xValue={filterXValue}
           yValue={filterYValue}
@@ -272,8 +271,8 @@
         />
       </div>
 
-      <!-- Col 5, bottom: VIBRATO XY Pad -->
-      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 5; grid-row: 3;">
+      <!-- Col 2, bottom: VIBRATO XY Pad -->
+      <div class="flex flex-col min-h-0 min-w-0" style="grid-column: 2; grid-row: 3;">
         <DeviceXY
           xValue={vibratoXValue}
           yValue={vibratoYValue}
