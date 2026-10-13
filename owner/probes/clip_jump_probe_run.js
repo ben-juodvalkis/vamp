@@ -124,10 +124,12 @@ async function main() {
         : clip0.loop_start + (barInLoop === 0 ? bar : 0);
       const fired = await jumpProbe('jump', method, value);
       // A scrub waits for the launch quantization while held, so hold it
-      // a quarter beat past the next bar line before letting go.
+      // a beat past the next bar line before letting go: an audio clip
+      // takes ~0.6 beat (175 BPM) to act on a jump, and a quarter beat
+      // released it first.
       if (method === 'scrub') {
         const phase = ((fired.fire.song_time % bar) + bar) % bar;
-        await sleep((bar - phase + 0.25) * msPerBeat);
+        await sleep((bar - phase + 1) * msPerBeat);
         await jumpProbe('stop_scrub');
       }
       await sleep(2 * bar * msPerBeat + 300);
