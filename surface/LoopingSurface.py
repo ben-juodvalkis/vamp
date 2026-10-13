@@ -173,6 +173,7 @@ from .components.DebugComponent import (
     LOM_INVOKE_ADDRESS,
     LOM_SET_ADDRESS,
     SONG_TIME_PROBE_ADDRESS,
+    CLIP_JUMP_PROBE_ADDRESS,
     PY_INTROSPECT_ADDRESS,
     PROTOCOL_VERSION_ADDRESS,
     RELOAD_ON_RESELECT_ADDRESS,
@@ -1039,6 +1040,11 @@ class LoopingSurface(ControlSurface):
         self._transport.add_handler(
             SONG_TIME_PROBE_ADDRESS,
             self._debug_component.handle_song_time_probe,
+        )
+        # Probe-only: where a jump inside a playing clip lands.
+        self._transport.add_handler(
+            CLIP_JUMP_PROBE_ADDRESS,
+            self._debug_component.handle_clip_jump_probe,
         )
         # Probe-only: module / Application-level dir, for API-surface
         # questions no song path reaches (Live.Browser, FilterType …).

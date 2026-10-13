@@ -40,6 +40,7 @@ LOM_SET_ADDRESS = "/looping/probe/lom_set"
 SONG_TIME_PROBE_ADDRESS = "/looping/probe/song_time_probe"
 PY_INTROSPECT_ADDRESS = "/looping/probe/py_introspect"
 RELOAD_ON_RESELECT_ADDRESS = "/looping/probe/reload_on_reselect"
+CLIP_JUMP_PROBE_ADDRESS = "/looping/probe/clip_jump_probe"
 # No _REPLY constants: the OSC transport auto-replies on the request
 # address, so the request constants above are also the reply addresses.
 
@@ -208,6 +209,11 @@ class DebugComponent:
         # /looping/probe/song_time_probe state (issue #489 measurement 6).
         self._song_time_cb = None
         self._song_time_samples = None
+        # /looping/probe/clip_jump_probe state.
+        self._jump_clip = None
+        self._jump_cb = None
+        self._jump_samples = None
+        self._jump_fires = []
         logger.info("DebugComponent: probe v2 ready (index/map/set/song_time)")
 
     # --- /looping/protocol/version ----------------------------------------
@@ -947,6 +953,131 @@ class DebugComponent:
         except Exception as e:
             logger.warning("song_time_probe detach failed: %s", e)
 
+    # --- /looping/probe/clip_jump_probe ----------------------------------
+
+    def handle_clip_jump_probe(self, args, source_addr):
+        """When does a jump inside a playing clip land?
+
+        Args: ``[cmd:str, ...]``:
+
+        - ``start, clipPath`` attaches a ``playing_position`` listener to
+          the clip that records ``(monotonic, current_song_time,
+          playing_position)`` per fire. The callback only reads.
+        - ``jump, method, value`` calls ``clip.move_playing_pos(value)``
+          (``method`` ``move``, relative beats) or ``clip.scrub(value)``
+          (``scrub``, absolute clip beats) from this handler, i.e. on the
+          control tick rather than inside a notification, and records the
+          song time it was called at.
+        - ``stop_scrub`` calls ``clip.stop_scrub()``.
+        - ``stats`` replies with every discontinuity in the recording:
+          a loop wrap or a jump, each bracketed by the song times of the
+          last sample before it and the first after, with that song
+          time's place in the bar, plus the fires and the song's
+          ``clip_trigger_quantization`` and signature.
+        - ``stop`` detaches.
+
+        DESTRUCTIVE only in that ``jump`` moves a playing clip.
+        """
+        import json
+        import time
+        cmd = str(args[0]) if args else "stats"
+        payload = {"cmd": cmd, "error": None}
+        if self._registry is None:
+            payload["error"] = "no registry"
+            return (json.dumps(payload),)
+        song = self._registry._song
+        if cmd == "start":
+            if self._jump_cb is not None:
+                payload["error"] = "already running"
+                return (json.dumps(payload),)
+            path = str(args[1]) if len(args) > 1 else ""
+            clip, err = self._resolve_introspect_path(path)
+            if err is not None:
+                payload["error"] = err
+                return (json.dumps(payload),)
+            samples = collections.deque(maxlen=20000)
+
+            def cb():
+                try:
+                    samples.append((time.monotonic(),
+                                    float(song.current_song_time),
+                                    float(clip.playing_position)))
+                except Exception:
+                    pass
+
+            try:
+                clip.add_playing_position_listener(cb)
+            except Exception as e:
+                payload["error"] = "attach: %s: %s" % (type(e).__name__, e)
+                return (json.dumps(payload),)
+            self._jump_clip = clip
+            self._jump_cb = cb
+            self._jump_samples = samples
+            self._jump_fires = []
+            payload["started"] = 1
+        elif cmd in ("jump", "stop_scrub"):
+            clip = self._jump_clip
+            if clip is None:
+                payload["error"] = "not started"
+                return (json.dumps(payload),)
+            method = str(args[1]) if len(args) > 1 else "move"
+            value = float(args[2]) if len(args) > 2 else 0.0
+            fire = {"cmd": cmd, "method": method, "value": value,
+                    "t": time.monotonic(),
+                    "song_time": float(song.current_song_time),
+                    "playing_position": float(clip.playing_position),
+                    "error": None}
+            try:
+                if cmd == "stop_scrub":
+                    clip.stop_scrub()
+                elif method == "scrub":
+                    clip.scrub(value)
+                else:
+                    clip.move_playing_pos(value)
+            except Exception as e:
+                fire["error"] = "%s: %s" % (type(e).__name__, e)
+            fire["playing_position_after_call"] = float(clip.playing_position)
+            self._jump_fires.append(fire)
+            payload["fire"] = fire
+        elif cmd == "stop":
+            self._detach_clip_jump_probe()
+            payload["stopped"] = 1
+        else:
+            try:
+                bar = (float(song.signature_numerator) * 4.0
+                       / float(song.signature_denominator))
+                payload["quantization"] = str(song.clip_trigger_quantization)
+                payload["tempo"] = float(song.tempo)
+            except Exception as e:
+                payload["error"] = "song read: %s: %s" % (type(e).__name__, e)
+                bar = 4.0
+            loop_len = None
+            clip = self._jump_clip
+            if clip is not None:
+                try:
+                    loop_len = float(clip.loop_end) - float(clip.loop_start)
+                except Exception:
+                    pass
+            samples = list(self._jump_samples or ())
+            payload["count"] = len(samples)
+            payload["running"] = 1 if self._jump_cb is not None else 0
+            payload["bar_beats"] = bar
+            payload["loop_len"] = loop_len
+            payload["fires"] = self._jump_fires
+            payload["events"] = _clip_jumps(samples, loop_len, bar)
+        return (json.dumps(payload),)
+
+    def _detach_clip_jump_probe(self) -> None:
+        clip, cb = self._jump_clip, self._jump_cb
+        self._jump_clip = None
+        self._jump_cb = None
+        if clip is None or cb is None:
+            return
+        try:
+            clip.remove_playing_position_listener(cb)
+        except Exception as e:
+            logger.warning("clip_jump_probe detach failed: %s", e)
+
     # --- lifecycle --------------------------------------------------------
 
     def disconnect(self) -> None:
@@ -954,3 +1085,36 @@ class DebugComponent:
             return
         self._disconnected = True
         self._detach_song_time_probe()
+        self._detach_clip_jump_probe()
+
+
+def _clip_jumps(samples, loop_len, bar, tol=0.1):
+    """The discontinuities in ``(t, song_time, playing_position)`` samples.
+
+    Between two samples a clip at the song's tempo advances as far as the
+    song does; any other step is a wrap (back by the loop length) or a
+    jump. Each event is bracketed by the samples either side of it, since
+    the listener fires ~65 times a second and the instant itself falls
+    somewhere between.
+    """
+    events = []
+    for (t1, st1, pp1), (t2, st2, pp2) in zip(samples, samples[1:]):
+        step = (pp2 - pp1) - (st2 - st1)
+        if abs(step) <= tol:
+            continue
+        kind = "jump"
+        if loop_len and abs(step + loop_len) <= tol:
+            kind = "wrap"
+        phase = st2 % bar
+        events.append({
+            "kind": kind,
+            "step_beats": round(step, 4),
+            "t_before": t1, "t_after": t2,
+            "song_time_before": round(st1, 4),
+            "song_time_after": round(st2, 4),
+            "pos_before": round(pp1, 4), "pos_after": round(pp2, 4),
+            "bar_phase_after": round(phase, 4),
+            # Signed: negative is short of the nearest bar line.
+            "from_bar_line": round(phase if phase <= bar / 2 else phase - bar, 4),
+        })
+    return events

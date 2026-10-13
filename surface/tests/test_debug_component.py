@@ -605,3 +605,64 @@ def test_app_root_without_live_is_a_resolve_error(monkeypatch):
 def test_py_introspect_address_is_a_wire_constant():
     from components.DebugComponent import PY_INTROSPECT_ADDRESS
     assert PY_INTROSPECT_ADDRESS == "/looping/probe/py_introspect"
+
+
+# --- clip_jump_probe ----------------------------------------------------------
+
+
+def test_clip_jumps_tells_a_wrap_from_a_jump():
+    from components.DebugComponent import _clip_jumps
+
+    # 4-bar loop at 4/4. Song runs 0 → 8; the clip jumps back a bar at
+    # song beat 4.0, then wraps from 16 to 0.
+    samples = [
+        (0.0, 3.9, 3.9), (0.1, 4.02, 0.02),        # jump −4 landing at 4.02
+        (0.2, 15.95, 11.95), (0.3, 16.05, 12.05),  # steady
+        (0.4, 19.98, 15.98), (0.5, 20.03, 0.03),   # wrap
+    ]
+    ev = _clip_jumps(samples, loop_len=16.0, bar=4.0)
+    assert [e["kind"] for e in ev] == ["jump", "wrap"]
+    assert ev[0]["step_beats"] == -4.0
+    assert ev[0]["from_bar_line"] == 0.02
+    assert ev[1]["from_bar_line"] == 0.03
+
+
+def test_clip_jump_probe_records_fires_and_detaches():
+    import json
+
+    class _Clip:
+        def __init__(self):
+            self.playing_position = 2.0
+            self.loop_start, self.loop_end = 0.0, 16.0
+            self.cb = None
+            self.moves = []
+
+        def add_playing_position_listener(self, cb):
+            self.cb = cb
+
+        def remove_playing_position_listener(self, cb):
+            assert cb is self.cb
+            self.cb = None
+
+        def move_playing_pos(self, beats):
+            self.moves.append(beats)
+
+    class _Song:
+        current_song_time = 2.0
+        signature_numerator, signature_denominator = 4, 4
+        clip_trigger_quantization = "q_bar"
+        tempo = 120.0
+
+    clip = _Clip()
+    comp = _set_component(clip, _Song())
+    r = json.loads(comp.handle_clip_jump_probe(
+        args=("start", "tracks/0/slots/0/clip"), source_addr=None)[0])
+    assert r["started"] == 1 and clip.cb is not None
+    clip.cb()
+    r = json.loads(comp.handle_clip_jump_probe(
+        args=("jump", "move", -4.0), source_addr=None)[0])
+    assert clip.moves == [-4.0] and r["fire"]["error"] is None
+    r = json.loads(comp.handle_clip_jump_probe(args=("stats",), source_addr=None)[0])
+    assert r["count"] == 1 and len(r["fires"]) == 1 and r["bar_beats"] == 4.0
+    comp.disconnect()
+    assert clip.cb is None
