@@ -97,13 +97,13 @@ iPad / browser  ⇄  bridge (WebSocket ⇄ OSC)  ⇄  control surface inside Liv
 
 ## Known gaps
 
-- **Three effect tiles need the author's files.** Digital (a rack of Live devices), Pitch Hack and
-  Chance (Max devices) load from the author's library, which doesn't ship yet; on another Mac
-  they don't load. Every other effect tile inserts Live's own device, set up the way your Live
-  defaults have it ([docs/plans/general-release/plan.md](docs/plans/general-release/plan.md)
+- **Four effects need the author's files.** The Guitar and Bass amp racks (each embeds an amp
+  capture), GlitchLoop in the Chorus view (built on Ableton's PitchLoop89 patch) and Chance in
+  the Arpeggiator view (a third-party Max device) load from the author's library, which this
+  public repo can't ship; on another Mac they don't load. Every other effect inserts Live's own
+  device, set up the way your Live defaults have it, or loads one of Vamp's own devices from
+  `Vamp Devices/` ([docs/plans/general-release/plan.md](docs/plans/general-release/plan.md)
   §6).
-- **Some tiles are for the author's plug-ins** (Tremolo, Bass, Pitch, Guitar) and do
-  nothing without them.
 - **Your network is trusted.** Anyone on the same network who can open the page can drive your
   Live set. Use the USB-C link or a network you trust. Device pairing is planned: see
   [SECURITY.md](SECURITY.md).

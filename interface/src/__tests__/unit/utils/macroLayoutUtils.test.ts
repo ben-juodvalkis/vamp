@@ -10,7 +10,6 @@ import {
   patternGridShape,
   pickerSlotValue,
   pickerSlotAt,
-  pairMacros,
   pairXYPrefixedMacros,
   type SliderControl
 } from '$lib/utils/macroLayoutUtils';
@@ -276,7 +275,7 @@ describe('macroLayoutUtils', () => {
 
   describe('XY pairing', () => {
     const layoutOf = (names: string[]) => buildMacroLayout(['Device On', ...names], 1, names.length);
-    const shape = (items: ReturnType<typeof pairMacros>) =>
+    const shape = (items: ReturnType<typeof pairXYPrefixedMacros>) =>
       items.map((i) => (i.kind === 'xy' ? `${i.title}:${i.x.macroIndex}x${i.y.macroIndex}` : i.control.name));
 
     it('pairs XY-prefixed macros in order, titled by the rest of their names', () => {
@@ -292,19 +291,6 @@ describe('macroLayoutUtils', () => {
     it('only matches XY as a whole first word', () => {
       const items = pairXYPrefixedMacros(layoutOf(['XYZ', 'Xylo Tone', 'xy Pan', 'Width']));
       expect(shape(items)).toEqual(['XYZ', 'Xylo Tone', 'xy Pan', 'Width']);
-    });
-
-    it('pairs by rule only when both names are present', () => {
-      const rules = [{ title: 'Tremolo', x: /^tremolo rate$/i, y: /^tremolo amount$/i }];
-      expect(shape(pairMacros(layoutOf(['Gain', 'Tremolo Rate', 'Tremolo Amount']), rules))).toEqual([
-        'Gain',
-        'Tremolo:2x3'
-      ]);
-      expect(shape(pairMacros(layoutOf(['Gain', 'Tremolo Rate', 'Depth']), rules))).toEqual([
-        'Gain',
-        'Tremolo Rate',
-        'Depth'
-      ]);
     });
   });
 });

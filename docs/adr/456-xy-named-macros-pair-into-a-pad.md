@@ -37,8 +37,8 @@ are untouched.
 
 The Guitar rack's pads came through `pairMacros`, a fold by exact name
 rules (`XYPairRule`). They live in the Pedal view since GuitarCentralView
-folded into it (ADR-457), which draws its Tremolo pad itself.
-`pairMacros` has no caller left outside its unit tests.
+folded into it (ADR-457), which draws its Tremolo pad itself, so
+`pairMacros` had no caller left and was removed (2026-10-13).
 
 ## Consequences
 - A rack author gets a pad by naming two macros, with no code change, and

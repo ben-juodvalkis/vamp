@@ -137,25 +137,6 @@ export type MacroLayoutItem =
   | { kind: 'slider'; control: SliderControl }
   | { kind: 'xy'; title: string; x: SliderControl; y: SliderControl };
 
-/** Two macros, found by name, that play as one XY pad (X first). */
-export type XYPairRule = { title: string; x: RegExp; y: RegExp };
-
-/**
- * Fold macro pairs into XY pads. Each pad sits where the earlier of its two
- * macros was; anything unpaired stays a slider. A rule pairs only when BOTH
- * of its names are present, so a rack that renames or drops one falls back
- * to plain sliders rather than driving the wrong macro.
- */
-export function pairMacros(layout: ControlLayout, rules: XYPairRule[]): MacroLayoutItem[] {
-  const pads: { title: string; x: SliderControl; y: SliderControl }[] = [];
-  for (const rule of rules) {
-    const x = layout.find((c) => rule.x.test(c.name));
-    const y = layout.find((c) => rule.y.test(c.name));
-    if (x && y && x !== y) pads.push({ title: rule.title, x, y });
-  }
-  return foldPads(layout, pads);
-}
-
 const XY_PREFIX = /^xy\s+/i;
 
 /**
