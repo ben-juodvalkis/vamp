@@ -3,7 +3,10 @@
 ## Status
 **Accepted** (2026-09-10). Supersedes the placement half of ADR-424 — the
 role-gated `DrumBussRail` on instrument views — and the 2026-08-22 grid
-re-deal that gave the Saturator a tile.
+re-deal that gave the Saturator a tile. Its Saturator half is superseded by
+[ADR-457](457-saturator-tile-pedal-view-holds-the-guitar.md) (2026-10-05):
+the Saturator's XY is the grid tile again and the Pedal moves into its view.
+The Drum Buss tile and view stand.
 
 ## Context
 

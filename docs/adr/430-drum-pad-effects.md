@@ -5,7 +5,11 @@
 **Accepted** (2026-09-10). Implements issue #491 as amended by its
 design review; follows ADR-428 (virtual macros, per-pad rows, the pad
 grid, hold-to-scope, tap-to-latch) and the #489 M2 item "chain grammar
-scoped to the selected pad". Protocol 3.7.0 → **3.8.0**.
+scoped to the selected pad". Protocol 3.7.0 → **3.8.0**. The native-default
+half (`install-device-defaults`, insert by name only when the default is
+byte-identical) is superseded by
+[ADR-458](458-native-fx-tiles-insert-with-each-users-defaults.md) (3.12.0,
+2026-09-28): a native tile always inserts by name, with the user's default.
 
 ## Context
 

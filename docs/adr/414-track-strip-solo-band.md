@@ -1,7 +1,11 @@
 # ADR-414: Standalone Solo Button Below Track Strips — Down-Fire, Tap-Latch / Hold-Momentary
 
 ## Status
-**Accepted**
+**Superseded** by [ADR-455](455-two-fingers-on-a-strip-solo-it.md)
+(2026-10-01): the Solo button is gone; two fingers on a strip solo it.
+The release rule below (tap latches, hold is momentary) carries forward.
+
+Accepted before that.
 
 ## Context
 

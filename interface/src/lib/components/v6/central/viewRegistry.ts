@@ -66,8 +66,8 @@ interface ViewRegistry {
 export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 	// Device views - organized alphabetically for maintainability
 	// 'drum' is the Drum Buss (ADR-431): the Drum XY is a grid tile, this
-	// view holds Boom and the Comp switch. The Saturator has no view of its
-	// own any more — its XY and faders live inside the Pedal view.
+	// view holds Boom and the Comp switch. The Saturator's XY is a grid tile
+	// and its view is the Pedal view, which keeps its Output and Mix (ADR-457).
 	device: {
 		'arpeggiator': () => import('./views/ArpeggiatorCentralView.svelte'),
 		'audio-effect-rack': () => import('./views/AudioEffectRackCentralView.svelte'),

@@ -2,7 +2,9 @@
 
 ## Status
 **Accepted** (2026-09-29). Supersedes ADR-428's rule that a still-mapped kit
-shows its functions "held by macro" until the kit is unmapped.
+shows its functions "held by macro" until the kit is unmapped. Decision 3 is
+amended by [ADR-456](456-xy-named-macros-pair-into-a-pad.md) (2026-09-30):
+on the Instrument Rack, macros named "XY …" pair into a pad.
 
 ## Context
 The Drum Rack central view picks its layout from the pad classes in the
