@@ -70,11 +70,20 @@ async function main() {
   const song0 = await read('song', ['clip_trigger_quantization', 'signature_numerator',
     'signature_denominator', 'tempo', 'is_playing']);
   const clip0 = await read(clipPath, ['is_playing', 'loop_start', 'loop_end', 'looping', 'is_midi_clip']);
+  // Live reports the enum by name (`Song.Quantization.q_bar`); the setter
+  // takes its number, and the restore must write a number.
+  const QUANT_ENUM = ['q_no_q', 'q_8_bars', 'q_4_bars', 'q_2_bars', 'q_bar', 'q_half',
+    'q_half_triplet', 'q_quarter', 'q_quarter_triplet', 'q_eight', 'q_eight_triplet',
+    'q_sixtenth', 'q_sixtenth_triplet', 'q_thirtytwoth'];
+  const baseQuant = typeof song0.clip_trigger_quantization === 'number'
+    ? song0.clip_trigger_quantization
+    : QUANT_ENUM.indexOf(String(song0.clip_trigger_quantization).split('.').pop());
+  if (baseQuant < 0) throw new Error('unknown quantization ' + song0.clip_trigger_quantization);
   const bar = song0.signature_numerator * 4 / song0.signature_denominator;
   const msPerBeat = 60000 / song0.tempo;
   const loopLen = clip0.loop_end - clip0.loop_start;
   console.log(`song: ${song0.signature_numerator}/${song0.signature_denominator} at ${song0.tempo} BPM, ` +
-    `quantization ${QUANT_NAMES[song0.clip_trigger_quantization] || song0.clip_trigger_quantization}`);
+    `quantization ${QUANT_NAMES[baseQuant]}`);
   console.log(`clip: loop ${clip0.loop_start}–${clip0.loop_end} (${loopLen / bar} bars), ` +
     `${clip0.is_midi_clip ? 'MIDI' : 'audio'}, ${clip0.is_playing ? 'playing' : 'not playing'}`);
   if (loopLen < 2 * bar) throw new Error('the clip loop needs at least two bars');
@@ -114,7 +123,13 @@ async function main() {
         ? (barInLoop === 0 ? bar : -bar)
         : clip0.loop_start + (barInLoop === 0 ? bar : 0);
       const fired = await jumpProbe('jump', method, value);
-      if (method === 'scrub') { await sleep(60); await jumpProbe('stop_scrub'); }
+      // A scrub waits for the launch quantization while held, so hold it
+      // a quarter beat past the next bar line before letting go.
+      if (method === 'scrub') {
+        const phase = ((fired.fire.song_time % bar) + bar) % bar;
+        await sleep((bar - phase + 0.25) * msPerBeat);
+        await jumpProbe('stop_scrub');
+      }
       await sleep(2 * bar * msPerBeat + 300);
       const stats = await jumpProbe('stats');
       await jumpProbe('stop');
@@ -122,7 +137,9 @@ async function main() {
       await sleep(200);
     }
   } finally {
-    await setSong([['clip_trigger_quantization', song0.clip_trigger_quantization]]);
+    const back = await setSong([['clip_trigger_quantization', baseQuant]]);
+    const w = (back.writes || [])[0] || {};
+    console.log(`quantization restored: ${w.after || 'FAILED ' + (w.error || JSON.stringify(back))}`);
     if (launched) await req('/looping/probe/lom_invoke', [clipPath, 'stop', '', '']);
     await jumpProbe('stop').catch(() => {});
   }
