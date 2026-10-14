@@ -319,12 +319,8 @@
          the transport header wasn't carrying it, and moved to the
          safe-area status strip (`layouts/default/Layout.svelte`), which is always on screen
          and costs the layout nothing. A `.key-spacer` held the strips'
-         Solo half so the band couldn't grow past their name bands; that
-         went too, deliberately — a full-height key readout is worth more
-         than the seam under it lining up with the name/Solo split, and the
-         readout scales off `cqh` so the extra height becomes bigger type
-         rather than more air. With Solo OFF (the default) nothing changes:
-         the band already took the whole third. -->
+         Solo half, back when a strip had a Solo button (ADR-414, gone with
+         ADR-455); it went too. The readout scales off `cqh`. -->
 </div>
 </div>
 
@@ -357,8 +353,7 @@
         gap: var(--strip-gap);
     }
 
-    /* One third of the column, whether or not the strips are showing Solo —
-       the same share `.header-block` takes on a strip. */
+    /* The same share of the column `.header-block` takes on a strip. */
     .key-block {
         flex: 1 1 0;
         min-height: 0;

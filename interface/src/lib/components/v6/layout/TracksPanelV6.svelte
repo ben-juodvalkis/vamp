@@ -124,58 +124,6 @@
 		setTrackFoldState(`tracks/${groupIndex}`, true);
 	}
 
-	// How far each arm reaches back into its own group's column, in px.
-	//
-	// The arm grows out of the group's NAME block, and the name is not always
-	// the column's full width: with Solo shown the button takes a column on
-	// the name's right, lifted clear of the arm by `--arm-clearance`. An arm
-	// that started at the column edge left a hole under Solo, between the
-	// name and the arm. So the arm reaches back under Solo to the name's own
-	// right edge — 0 when Solo is off or hidden on a narrow strip.
-	//
-	// Measured rather than derived: the name's width is Solo's
-	// `clamp(36px, 28%, 56px)` plus a gap, gated by a container query on the
-	// strip, and repeating that here would be a second copy that drifts. The
-	// name box resizes whenever the answer changes (a column resize moves
-	// Solo's width by less than the column's, a Solo toggle or hide moves it
-	// outright), so observing it is enough.
-	//
-	// Keyed on the group indices alone, so a record update that re-derives
-	// `bands` — a fader drag, a rename — doesn't tear the observer down.
-	let bandHeadKey = $derived(layout.bands.map((b) => b.groupIndex).join(','));
-	let armReach = $state<Record<number, number>>({});
-
-	$effect(() => {
-		const key = bandHeadKey;
-		const el = panelEl;
-		if (!el || !key || typeof ResizeObserver === 'undefined') {
-			armReach = {};
-			return;
-		}
-		const heads = key.split(',').map((groupIndex) => {
-			const col = el.querySelector<HTMLElement>(`.track-col[data-track-index="${groupIndex}"]`);
-			return { groupIndex: Number(groupIndex), col, name: col?.querySelector<HTMLElement>('.header-name') };
-		});
-		const measure = () => {
-			const next: Record<number, number> = {};
-			for (const { groupIndex, col, name } of heads) {
-				if (!col || !name) continue;
-				next[groupIndex] = Math.max(
-					0,
-					col.getBoundingClientRect().right - name.getBoundingClientRect().right
-				);
-			}
-			armReach = next;
-		};
-		measure();
-		const ro = new ResizeObserver(measure);
-		for (const { col, name } of heads) {
-			if (col) ro.observe(col);
-			if (name) ro.observe(name);
-		}
-		return () => ro.disconnect();
-	});
-
 	// ---- Session clip grid (ADR-415) --------------------------------------
 	//
 	// The clip grid is a SECOND grid row inside this panel, not a separate
@@ -435,9 +383,8 @@
 		<div class="tracks-row" data-debug="tracks-row" style={rowStyle}>
 			{#each bands as band (band.groupIndex)}
 				<!-- Placed over the MEMBER columns only; a negative left margin
-				     then pulls it back across the column gap, under the group's
-				     Solo button when it has one, and 2px into the group's name
-				     block, so it covers the name's right edge for the arm's
+				     then pulls it back across the column gap and 2px into the
+				     group's name block, so it covers the name's right edge for the arm's
 				     height — at rest and at selection's 2px width — and the two
 				     outlines join without a seam.
 
@@ -454,7 +401,7 @@
 					data-group-index={band.groupIndex}
 					style="grid-column: {band.start + 2} / span {band.span - 1}; grid-row: {bandRow(
 						band.band
-					)}; --band-ink: {band.ink}; --arm-reach: {armReach[band.groupIndex] ?? 0}px;"
+					)}; --band-ink: {band.ink};"
 					aria-label="Fold group {band.name}"
 					use:press={{
 						onPress: () => foldGroup(band.groupIndex),
@@ -465,9 +412,7 @@
 			{#each visibleTracks as trackIndex, col (trackIndex)}
 				<!-- A group's strip squares only its top-right corner, where
 				     its arm grows out. Member strips keep their full rounded
-				     outline — they hang below the arm, they don't fuse to it.
-				     `--arm-clearance` lifts the group's Solo button off the
-				     arm, level with the members' own ends. -->
+				     outline — they hang below the arm, they don't fuse to it. -->
 				<div
 					class="track-col"
 					class:is-first={col === 0}
@@ -477,8 +422,8 @@
 						layout.offsets[col]
 					)};{bandHeadCols.has(col)
 						? flipLayout
-							? ' --strip-radius: var(--radius-md) var(--radius-md) 0 var(--radius-md); --arm-clearance: calc(var(--group-band-h) + var(--group-band-gap));'
-							: ' --strip-radius: var(--radius-md) 0 var(--radius-md) var(--radius-md); --arm-clearance: calc(var(--group-band-h) + var(--group-band-gap));'
+							? ' --strip-radius: var(--radius-md) var(--radius-md) 0 var(--radius-md);'
+							: ' --strip-radius: var(--radius-md) 0 var(--radius-md) var(--radius-md);'
 						: ''}"
 				>
 					<TrackStrip {trackIndex} onTrackSelect={handleTrackSelect} {rowScrolls} />
@@ -828,10 +773,8 @@
 		/* 2px into the group's name block: enough to cover its right edge at
 		   the join in BOTH states — 1px at rest, 2px while the selection ring
 		   widens it. The extra pixel at rest lands on the name's own fill,
-		   which the arm's background matches, so it can't show.
-		   `--arm-reach` carries it back under a Solo button to where the name
-		   actually ends (measured in the script; 0 with Solo off). */
-		margin-left: calc(-1 * var(--spacing-lg) - var(--arm-reach, 0px) - 2px);
+		   which the arm's background matches, so it can't show. */
+		margin-left: calc(-1 * var(--spacing-lg) - 2px);
 		border: 1px solid color-mix(in oklab, var(--band-ink) 55%, transparent);
 		border-left: none;
 		border-radius: 0 var(--radius-md) var(--radius-md) 0;
