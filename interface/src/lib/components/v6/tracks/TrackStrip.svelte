@@ -607,6 +607,9 @@
     {#if stripSoloed}
         <div class="solo-tint" aria-hidden="true"></div>
     {/if}
+    {#if isRecording}
+        <div class="rec-tint" aria-hidden="true"></div>
+    {/if}
     {#if isGroupTapped}
         <div class="group-tint" aria-hidden="true"></div>
     {/if}
@@ -1088,6 +1091,18 @@
         border-radius: inherit;
         background: color-mix(in oklab, var(--act-solo) 32%, transparent);
         box-shadow: inset 0 0 0 2px var(--act-solo);
+    }
+
+    /* Recording strip: the same recipe in act-rec red, after .solo-tint in
+       the DOM so a soloed strip that records reads as recording. */
+    .rec-tint {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 2;
+        border-radius: inherit;
+        background: color-mix(in oklab, var(--act-rec) 32%, transparent);
+        box-shadow: inset 0 0 0 2px var(--act-rec);
     }
 
     .header-name.is-soloed::after {
