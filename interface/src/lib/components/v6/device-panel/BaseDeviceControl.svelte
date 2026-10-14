@@ -14,6 +14,7 @@ import { logger } from '$lib/utils/logger';
   import { openDeviceView } from '$lib/services/deviceViewRouter.svelte';
   import { sendParam } from '$lib/services/deviceParams';
   import { readFxScope } from '$lib/components/v6/central/fxScope';
+  import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import ArrowRight from '@lucide/svelte/icons/arrow-right';
   import Check from '@lucide/svelte/icons/check';
@@ -106,7 +107,10 @@ import { logger } from '$lib/utils/logger';
   // is the rule, kept for the preset that opts out next.
   const getFxScope = readFxScope();
   let fxScope = $derived(getFxScope());
-  let scopeKey = $derived(fxScope?.padPath ?? '');
+  // A held track strip (track hold) scopes the tile to that track when no
+  // pad does: a pad pane's scope is the narrower one and wins.
+  let trackHeld = $derived(fxScope === null && trackHoldScope.active);
+  let scopeKey = $derived(fxScope?.padPath ?? trackHoldScope.scopeKey());
   let unscopable = $derived(fxScope !== null && !DEVICE_PRESETS[deviceType]?.padScoped);
 
   // Get slot state from selectedTrackStore (works for both position and device type)
@@ -136,6 +140,7 @@ import { logger } from '$lib/utils/logger';
     if (unscopable) return;
     if (isGhost) {
       selectedTrackStore.loadFxGridDevice(key, scopeKey);
+      if (trackHeld) trackHoldScope.loadOnFollowers(key);
       openView();
     }
   }
@@ -145,8 +150,10 @@ import { logger } from '$lib/utils/logger';
     if (unscopable) return;
     openView();
 
-    // Select device for appointed device system (blue hand)
-    if (device) {
+    // Select device for appointed device system (blue hand). Not under a
+    // track hold: selecting a device on another track would select that
+    // track in Live, which is exactly what the hold is there to avoid.
+    if (device && !trackHeld) {
       await selectDevice(device.devicePath);
     }
   }
@@ -163,6 +170,7 @@ import { logger } from '$lib/utils/logger';
   function storePendingParam(paramIndex: number, value: number) {
     if (unscopable) return;
     selectedTrackStore.storePendingParam(key, paramIndex, value, scopeKey);
+    if (trackHeld) trackHoldScope.storePendingOnFollowers(key, paramIndex, value);
   }
 
   // Pending parameters are drained by FXGridState's $effect.root watcher,
@@ -297,7 +305,7 @@ import { logger } from '$lib/utils/logger';
   <!-- The reorder arrows are the TRACK chain's (issue #491): a pad's chain
        is its instrument and an effect or two, and "first position" there
        would put an audio effect ahead of the instrument. Hidden under a scope. -->
-  {#if showMoveToTop && device && fxScope === null}
+  {#if showMoveToTop && device && fxScope === null && !trackHeld}
     <button
       class={buttonClasses()}
       onclick={handleMoveToTop}
@@ -316,7 +324,7 @@ import { logger } from '$lib/utils/logger';
     </button>
   {/if}
 
-  {#if showMoveToEnd && device && fxScope === null}
+  {#if showMoveToEnd && device && fxScope === null && !trackHeld}
     <button
       class={buttonEndClasses()}
       onclick={handleMoveToEnd}

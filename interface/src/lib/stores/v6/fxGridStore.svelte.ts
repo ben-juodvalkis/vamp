@@ -16,6 +16,7 @@ import { setTrackName } from '$lib/services/trackCommands';
 import type { PositionKey, DeviceTypeKey } from '$lib/config/fxGridLayout';
 import type { DeviceRecord } from '$lib/stores/v3/normalized.svelte';
 import { parsePadPath, scopeKeyOf } from '$lib/utils/padPaths';
+import { isTrackScopeKey, trackOfDevicePath } from '$lib/utils/trackScopePaths';
 import { setNewDeviceHook, v3Store } from '$lib/stores/v3/normalized.svelte';
 import {
 	armParam,
@@ -56,6 +57,11 @@ export interface FXGridDependencies {
 	getDevices: () => DeviceRecord[];
 	/** The devices inside one drum pad's chain (issue #491), by pad path. */
 	getPadDevices: (padPath: string) => DeviceRecord[];
+	/**
+	 * The top-level devices on any track, by track path — a held track's
+	 * scope (track hold): the grid edits a track that is not selected.
+	 */
+	getTrackDevices?: (trackPath: string) => DeviceRecord[];
 	/** Compose a canonical paramPath from a candidate device + paramIndex */
 	paramPath: (device: FXGridCandidateDevice, paramIndex: number) => string;
 	/** Write a parameter value by paramPath (path-keyed API, PR-3.5.1) */
@@ -172,7 +178,7 @@ export class FXGridState {
 		setNewDeviceHook((device) => {
 			const slotKey = this.matchDeviceToSlot(device);
 			if (!slotKey) return undefined;
-			const speculative = consumeSpeculative(speculativeKey(scopeKeyOf(device.devicePath), slotKey));
+			const speculative = consumeSpeculative(speculativeKey(this.scopeOfDevice(device.devicePath), slotKey));
 			if (!speculative || speculative.size === 0) return undefined;
 			// Send OSC writes so Live applies the user's intent. The arm
 			// inside setParamValue suppresses the echo that would
@@ -337,7 +343,7 @@ export class FXGridState {
 				// The track's devices, and every subscribed pad's (issue #491):
 				// a pad-scoped load completes against the pad's own map.
 				const devices = [...this.deps.getDevices()];
-				for (const padPath of this.scoped.keys()) devices.push(...this.deps.getPadDevices(padPath));
+				for (const scope of this.scoped.keys()) devices.push(...this.devicesIn(scope));
 				// Built from the list in one expression, not an empty `new Set()` filled
 				// in the loop: esbuild tags an empty `new Set()` `/* @__PURE__ */`, and
 				// Svelte's server build strips this effect body but leaves that tag
@@ -396,7 +402,20 @@ export class FXGridState {
 
 	/** The devices a scope's slots match against. */
 	private devicesIn(scope: string): DeviceRecord[] {
-		return scope ? this.deps.getPadDevices(scope) : this.deps.getDevices();
+		if (!scope) return this.deps.getDevices();
+		if (isTrackScopeKey(scope)) return this.deps.getTrackDevices?.(scope) ?? [];
+		return this.deps.getPadDevices(scope);
+	}
+
+	/**
+	 * The slot table a device belongs to: its pad's, a held track's (any
+	 * track that is not the selected one), or `''` — the selected track.
+	 */
+	private scopeOfDevice(devicePath: string): string {
+		const pad = scopeKeyOf(devicePath);
+		if (pad) return pad;
+		const track = trackOfDevicePath(devicePath);
+		return track && track !== selectedTrackStore.selectedTrackPath ? track : '';
 	}
 
 	private initializeSlots() {
@@ -492,6 +511,12 @@ export class FXGridState {
 		// The second argument is the pad path under a scope (issue #491,
 		// 3.8.0): the surface loads INTO that pad's chain. Empty, the load
 		// lands on the track as it always has.
+		// A held track's scope (track hold) loads onto THAT track, at its top
+		// level, and never renames it: its type is not the selected track's.
+		if (isTrackScopeKey(scope)) {
+			await send('/looping/v3/device/load', deviceLoadArgs(scope, '', config));
+			return;
+		}
 		await send('/looping/v3/device/load', deviceLoadArgs(selectedTrackStore.selectedTrackPath, scope, config));
 		if (scope) return; // a pad's effect never renames the track
 
@@ -540,7 +565,7 @@ export class FXGridState {
 		// A device arriving inside a pad chain completes that pad's slot,
 		// never the track's — a track-level Reverb landing while a pad-scope
 		// Reverb load is pending must not complete the wrong slot (issue #491).
-		const scope = scopeKeyOf(device.devicePath);
+		const scope = this.scopeOfDevice(device.devicePath);
 		if (scope && !this.scoped.has(scope)) return;
 		for (const [key, slot] of this.table(scope).entries()) {
 			const config = this.slotKeyConfig(key);

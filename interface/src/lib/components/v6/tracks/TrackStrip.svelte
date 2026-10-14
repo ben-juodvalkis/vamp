@@ -21,6 +21,7 @@
     import { instrumentDisplayCoordinator } from '$lib/services/instrumentDisplayCoordinator.svelte';
     import { openDeviceView, openScopedPermutePane } from '$lib/services/deviceViewRouter.svelte';
     import { groupGestureStore } from '$lib/stores/v6/groupGestureStore.svelte';
+    import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
 
     // Volume write path + throttle (same contract TrackVolumeMeter used)
     import {
@@ -135,6 +136,10 @@
     let isGroupTapped = $derived(
         groupGestureStore.active && groupGestureStore.memberPaths.has(trackPath)
     );
+
+    // Track hold: a finger resting on this strip makes the FX grid this
+    // track's without selecting it (trackHoldScope). Lit while held.
+    let isHoldTarget = $derived(trackHoldScope.isHeld(trackPath));
 
     // The device band. A group strip never gets one — it takes the other
     // markup branch below, whose card is already spoken for by body + fold,
@@ -439,6 +444,15 @@
         },
         onDragEnd: () => throttle.flush(),
         onTap: ({ x, y }) => dispatchSectionTap(x, y),
+        // Rest a finger on the strip: the FX grid edits this track without
+        // selecting it, for as long as the finger stays (trackHoldScope).
+        // The held finger is parked — it no longer moves the fader. Not
+        // while the Group button is held: there a press means "group".
+        onLongPress: ({ pointerId }) => {
+            if (pointerId === undefined || groupGestureStore.active) return;
+            trackHoldScope.press(trackPath, pointerId);
+        },
+        onLongPressEnd: ({ pointerId }) => trackHoldScope.release(pointerId),
         // Two fingers on the fader solo the track.
         // The held Group button outranks it: there two fingers are a tap,
         // and a tap means "add this track to the group".
@@ -586,7 +600,7 @@
 >
 <Card
     bind:ref={card}
-    class="glass-card hud-bracket touch-manipulation min-h-0 py-0 {trackData.isSelected ? 'track-selected' : ''} {bracketActive ? 'is-active' : ''} {trackData.permuteMutedNow ? 'permute-silenced' : ''} {isPending ? 'is-loading' : ''} {justLanded ? 'is-landed' : ''} {isGroupTapped ? 'group-tapped' : ''}"
+    class="glass-card hud-bracket touch-manipulation min-h-0 py-0 {trackData.isSelected ? 'track-selected' : ''} {bracketActive ? 'is-active' : ''} {trackData.permuteMutedNow ? 'permute-silenced' : ''} {isPending ? 'is-loading' : ''} {justLanded ? 'is-landed' : ''} {isGroupTapped ? 'group-tapped' : ''} {isHoldTarget ? 'hold-target' : ''}"
     data-debug="track-card"
     style="min-width: 0; flex: 1 1 0; gap: var(--strip-gap); --bracket-ink: {bracketInk}; --landing-pulse-ms: {LANDING_PULSE_MS}ms; padding: 0; border-radius: var(--strip-radius, var(--radius-md)); container-type: inline-size; position: relative; overflow: hidden; display: flex; flex-direction: column; touch-action: {faderTouchAction};"
     role="slider"
@@ -612,6 +626,9 @@
     {/if}
     {#if isGroupTapped}
         <div class="group-tint" aria-hidden="true"></div>
+    {/if}
+    {#if isHoldTarget}
+        <div class="hold-tint" aria-hidden="true" data-hold-target={trackPath}></div>
     {/if}
 
     {#if isGroup}
@@ -1292,6 +1309,17 @@
     /* And a green wash, laid over the sections like the solo tint, so a
        gathered strip reads from across the row and not only by its ring.
        After .solo-tint in the DOM: grouping is the gesture in progress. */
+    /* Track hold: the strip the FX grid is editing — a ring in the track's
+       own ink, the same ink the grid's frame and chip wear. */
+    .hold-tint {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 2;
+        border-radius: inherit;
+        box-shadow: inset 0 0 0 2px var(--track-color);
+        background: color-mix(in srgb, var(--track-color) 14%, transparent);
+    }
     .group-tint {
         position: absolute;
         inset: 0;

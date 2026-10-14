@@ -23,6 +23,7 @@
 
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import type { DeviceRecord, SlotKey } from '$lib/stores/v6/selectedTrackStore.svelte';
+import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
 
 export interface ParamTarget {
 	device: DeviceRecord | null | undefined;
@@ -41,14 +42,25 @@ export function sendParam(target: ParamTarget, paramIndex: number, value: number
 	const { device, pending } = target;
 	if (pending && (pending.isGhost || pending.isLoading)) {
 		selectedTrackStore.storePendingParam(pending.slotKey, paramIndex, value, pending.scopeKey);
+		const fansOut = pending.scopeKey === trackHoldScope.scopeKey() && trackHoldScope.active;
+		if (fansOut) trackHoldScope.storePendingOnFollowers(pending.slotKey, paramIndex, value);
 		// De-dup lives in the slot (`loadState`), not here — several
 		// consumers share one slot. See fxGridStore.loadDevice.
 		if (pending.isGhost) {
 			selectedTrackStore.loadFxGridDevice(pending.slotKey, pending.scopeKey);
+			if (fansOut) trackHoldScope.loadOnFollowers(pending.slotKey);
 		}
 		return;
 	}
 	if (device) {
-		return selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, paramIndex), value);
+		const path = selectedTrackStore.paramPath(device, paramIndex);
+		// Several strips held (track hold): the other held tracks' copies of
+		// this device move by the same delta. Read before the write moves it.
+		const prev = selectedTrackStore.paramValueArmed(path);
+		const written = selectedTrackStore.setParamValue(path, value);
+		trackHoldScope.fanOut(device, paramIndex, prev, value, (p, v) => {
+			void selectedTrackStore.setParamValue(p, v);
+		});
+		return written;
 	}
 }

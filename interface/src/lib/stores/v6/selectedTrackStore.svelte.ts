@@ -732,6 +732,7 @@ export const selectedTrackStore = new SelectedTrackStore();
 export const fxGrid = new FXGridState({
 	getDevices: () => selectedTrackStore.devicesByPath,
 	getPadDevices: (padPath) => selectedTrackStore.padDevices(padPath),
+	getTrackDevices: (trackPath) => Array.from(v3Store.tracks.get(trackPath)?.devices.values() ?? []),
 	paramPath: (device, paramIndex) => selectedTrackStore.paramPath(device, paramIndex),
 	setParamValue: (paramPath, value) => selectedTrackStore.setParamValue(paramPath, value),
 	holdPadChain: (padPath) => {

@@ -88,6 +88,8 @@ export interface StripTapInfo {
 	x: number;
 	y: number;
 	event: PointerEvent;
+	/** The finger's pointer id. */
+	pointerId?: number;
 }
 
 export interface StripGestureConfig {
@@ -133,6 +135,14 @@ export interface StripGestureConfig {
 	 * gesture, and jitter under the threshold is still a press.
 	 */
 	onLongPress?: (info: StripTapInfo) => void;
+	/**
+	 * The finger that fired {@link onLongPress} lifted (or the browser
+	 * took it, or the region unmounted, or a second finger turned the
+	 * press into a chord). Setting this also PARKS a held finger: once a
+	 * press has fired as a hold, its later travel drives no drag — a thumb
+	 * resting on a strip to hold it must not ride the fader.
+	 */
+	onLongPressEnd?: (info: { pointerId: number }) => void;
 	/** Long-press duration override; defaults to {@link LONG_PRESS_MS}. */
 	longPressMs?: number;
 	/**
@@ -249,6 +259,19 @@ export function useStripGestures(config: StripGestureConfig) {
 	// precisely to take the gesture away from it.
 	let chord: { pointers: Set<number>; startAt: number; cancelled: boolean } | null = null;
 
+	// Pointers that fired as a hold and have not lifted yet.
+	const heldPointers = new Set<number>();
+	const parkAfterHold = config.onLongPressEnd !== undefined;
+
+	function endHold(pointerId: number) {
+		if (!heldPointers.delete(pointerId)) return;
+		config.onLongPressEnd?.({ pointerId });
+	}
+
+	function endAllHolds() {
+		for (const id of [...heldPointers]) endHold(id);
+	}
+
 	function endChord(reason: 'up' | 'cancel' | 'teardown') {
 		if (!chord) return;
 		const elapsedMs = performance.now() - chord.startAt;
@@ -267,6 +290,10 @@ export function useStripGestures(config: StripGestureConfig) {
 	function drain(events: DragEvent[], e: PointerEvent | null) {
 		for (const ev of events) {
 			const d = ev.drag;
+			// A parked hold: the finger is holding the strip, not the fader.
+			if (parkAfterHold && d.held && (ev.type === 'start' || ev.type === 'move' || ev.type === 'end')) {
+				continue;
+			}
 			switch (ev.type) {
 				case 'down':
 					pressCandidate = true;
@@ -309,10 +336,12 @@ export function useStripGestures(config: StripGestureConfig) {
 					}
 					break;
 				case 'hold':
+					heldPointers.add(d.pointerId);
 					config.onLongPress?.({
 						x: d.downX,
 						y: d.downY,
-						event: e as PointerEvent
+						event: e as PointerEvent,
+						pointerId: d.pointerId
 					});
 					break;
 				case 'tap':
@@ -372,6 +401,7 @@ export function useStripGestures(config: StripGestureConfig) {
 			now: performance.now()
 		};
 		drain(e.type === 'pointercancel' ? machine.cancel(input) : machine.up(input), e);
+		endHold(e.pointerId);
 	}
 
 	function attach() {
@@ -407,6 +437,7 @@ export function useStripGestures(config: StripGestureConfig) {
 				// Drop the first finger's press without a tap. Teardown
 				// emits `pressend` and nothing else for an undecided press.
 				drain(machine.teardown(performance.now()), null);
+				endAllHolds();
 				return;
 			}
 			elementHeight = el.getBoundingClientRect().height;
@@ -458,6 +489,7 @@ export function useStripGestures(config: StripGestureConfig) {
 		 */
 		destroy(): void {
 			drain(machine.teardown(performance.now()), null);
+			endAllHolds();
 			endChord('teardown');
 			clearLongPressTimer();
 			detach();

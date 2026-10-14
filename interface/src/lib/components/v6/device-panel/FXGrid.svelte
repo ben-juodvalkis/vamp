@@ -1,6 +1,8 @@
 <script lang="ts">
   import { FX_GRID_LAYOUT, SQUASH_CELL, AUDIO_GUITAR_CELL, cellFor, cellStyle } from '$lib/config/fxGridLayout';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
+  import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
+  import { v3Store } from '$lib/stores/v3/normalized.svelte';
   import BassControl from './BassControl.svelte';
   import GuitarControl from './GuitarControl.svelte';
   import SquashControl from './SquashControl.svelte';
@@ -54,8 +56,12 @@
   // — or the pad's values never show and every release snaps the dot
   // back to the track's (found 2026-09-11 on the rig: an Auto Filter on
   // the kick pad moved in Live but its XY jumped home on every lift).
-  const scope = $derived(activeDrumRackScope());
-  const scopeKey = $derived(scope?.padPath ?? '');
+  // A held track strip (track hold) outranks a held pad: the grid is that
+  // track's, top level, and no pad scope applies.
+  const heldTracks = $derived(trackHoldScope.heldTracks());
+  const heldTrack = $derived(heldTracks.length ? v3Store.tracks.get(heldTracks[0]) ?? null : null);
+  const scope = $derived(heldTracks.length ? null : activeDrumRackScope());
+  const scopeKey = $derived(scope?.padPath ?? trackHoldScope.scopeKey());
 
   const slot1Device = $derived(selectedTrackStore.getFxGridSlot(FX_GRID_LAYOUT[0].position, scopeKey).device);
   const slot2Device = $derived(selectedTrackStore.getFxGridSlot(FX_GRID_LAYOUT[1].position, scopeKey).device);
@@ -87,14 +93,20 @@
   // full height. Audio: the Guitar full height, then the Bass (in fx1's
   // slot) over Variation. Both are twelve columns, so nothing to the right
   // moves when the selected track changes kind.
-  const isAudioTrack = $derived(selectedTrackStore.trackType === 'audio');
+  // Under a track hold the HELD track's kind decides, so its Bass/Guitar
+  // column is the one it has.
+  const isAudioTrack = $derived(
+    heldTrack
+      ? !heldTrack.isFoldable && !heldTrack.hasMidiInput && heldTrack.hasAudioInput
+      : selectedTrackStore.trackType === 'audio'
+  );
 
   // Master leaves that slot empty: no MIDI for Rand Oct. It held the OTT
   // tile (a Multiband Dynamics Amount slider) until 2026-10-09; the
   // device's controls are in the Gain view now, on every track.
   // Keyed off the track index, not trackType — master reports neither
   // hasMidiInput nor hasAudioInput, so trackType is null there.
-  const isMasterTrack = $derived(selectedTrackStore.trackIndex === -1);
+  const isMasterTrack = $derived(heldTrack ? heldTrack.trackPath === 'master' : selectedTrackStore.trackIndex === -1);
   const gridKind = $derived(isAudioTrack ? ('audio' as const) : ('midi' as const));
 
   provideFxScope(() => scope);
@@ -111,12 +123,19 @@
   // (`watchLoadingPads`), not here, so it needs no section on screen.
 
   const scopeInk = $derived(
-    scope && scope.color !== null ? trackInk(rgbToHex(scope.color), paintModeReactive()) : null
+    heldTrack
+      ? trackInk(rgbToHex(heldTrack.color), paintModeReactive())
+      : scope && scope.color !== null ? trackInk(rgbToHex(scope.color), paintModeReactive()) : null
   );
-  const scopeLabel = $derived(scope ? padTileLabel(scope.name) || `Pad ${scope.note}` : '');
+  const scopeLabel = $derived(
+    heldTrack
+      ? `${heldTrack.name}${heldTracks.length > 1 ? ` ×${heldTracks.length}` : ''}`
+      : scope ? padTileLabel(scope.name) || `Pad ${scope.note}` : ''
+  );
+  const scoped = $derived(scope !== null || heldTrack !== null);
 </script>
 
-<div class="w-full h-full" data-fx-scope={scope?.note} style={scopeInk ? `--scope-ink: ${scopeInk}` : undefined}>
+<div class="w-full h-full" data-fx-scope={scope?.note} data-fx-track-scope={heldTrack?.trackPath} style={scopeInk ? `--scope-ink: ${scopeInk}` : undefined}>
   <!-- 12-column grid, 2 rows, every cell placed explicitly (cellFor in
        fxGridLayout.ts): the two leftmost columns are arranged differently
        on audio and MIDI, and auto-placement cannot do both from one DOM
@@ -133,7 +152,7 @@
 
        It is NOT bounded by label wrapping - "Rand Oct" going to two lines is
        fine, so do not treat the wrap point as a cap if you revisit this. -->
-  <div class="h-full grid grid-cols-12 grid-rows-2 gap-2 fx-grid" class:fx-scoped={scope !== null}>
+  <div class="h-full grid grid-cols-12 grid-rows-2 gap-2 fx-grid" class:fx-scoped={scoped}>
     {#if isAudioTrack}
       <!-- Audio: the Guitar rack's drive, full height at the far left
            (2026-09-15). On MIDI it is reached through the Pedal view's last
@@ -165,7 +184,11 @@
     <div data-cell="squash" data-col={SQUASH_CELL.col} data-row={SQUASH_CELL.row} data-span={SQUASH_CELL.span} data-row-span={SQUASH_CELL.rowSpan} style={cellStyle(SQUASH_CELL)}>
       <SquashControl device={squashDevice} />
     </div>
-    {#if scope}
+    {#if heldTrack}
+      <!-- Track hold: whose grid this is while a strip is held, and how
+           many tracks the controls fan out to. -->
+      <div class="pad-chip fx-scope-chip" aria-label="FX grid scoped to track {heldTrack.name}">{scopeLabel}</div>
+    {:else if scope}
       <!-- The scope chip: whose grid this is, while a pad is held or latched.
            Out of flow — a grid item, however placed, steals its cell from
            the auto-placed tiles and pushes them into a third row. The grid

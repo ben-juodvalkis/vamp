@@ -24,6 +24,7 @@ import { currentInstrumentStore } from '$lib/stores/v6/currentInstrumentStore.sv
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
 import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
+import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
 import { parseVmMembers, VM } from '$lib/services/drumVirtualMacros';
 import { fxScopeFor, type FxScope } from '$lib/components/v6/central/fxScope';
 import type { InstrumentInfo } from '$lib/services/instrumentService';
@@ -97,7 +98,9 @@ export function openScopedPermutePane(): boolean {
  */
 export function openDeviceView(deviceType: string, data?: unknown): void {
 	const rack = selectedDrumRack();
-	if (rack && drumPadScope.scopeNote(rack.rackPath) !== null) {
+	// A held track strip outranks a pad: the grid is another track's then,
+	// and its views open top-level against that track.
+	if (rack && !trackHoldScope.active && drumPadScope.scopeNote(rack.rackPath) !== null) {
 		if (drumPadScope.pane(rack.rackPath) !== deviceType) drumPadScope.setPane(rack.rackPath, deviceType);
 		if (!centralDisplayStore.isViewActive('instrument', 'drumrack')) {
 			centralDisplayStore.setView('instrument', 'drumrack', { instrument: rack.instrument });

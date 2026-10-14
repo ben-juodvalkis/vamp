@@ -27,6 +27,7 @@ import { deviceInk } from '$lib/utils/formatters/trackFormatters';
 import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 import { selectedTrackInk } from '$lib/utils/selectedTrackInk';
 import { readFxScope, type FxScope } from './fxScope';
+import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
 import { sendParam } from '$lib/services/deviceParams';
 
 // Every SlotKey has a DEVICE_PRESETS config, so this is a should-never-happen
@@ -77,7 +78,8 @@ export function useFxGridSlot(
 	// is read here, at init; the scope itself is reactive.
 	const getScope = readFxScope();
 	const scope = $derived(getScope());
-	const scopeKey = $derived(scope?.padPath ?? '');
+	// No pad scope: a held track strip (track hold) scopes the view to that track.
+	const scopeKey = $derived(scope?.padPath ?? trackHoldScope.scopeKey());
 	const slot = $derived(selectedTrackStore.getFxGridSlot(slotKey, scopeKey));
 	const device = $derived(slot.device);
 	const devicePath = $derived(device?.devicePath);
@@ -125,6 +127,7 @@ export function useFxGridSlot(
 	function loadIfGhost(): void {
 		if (isGhost) {
 			selectedTrackStore.loadFxGridDevice(slotKey, scopeKey);
+			if (!scope && trackHoldScope.active) trackHoldScope.loadOnFollowers(slotKey);
 		}
 	}
 
