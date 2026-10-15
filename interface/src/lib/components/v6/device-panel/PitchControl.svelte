@@ -2,13 +2,15 @@
 	/**
 	 * PitchControl — the Pitch tile (2026-10-15, the user's design): an XY
 	 * over the Octave device (`octave` slot). X is the interval, snapped to
-	 * the Octave panel's four stops, low to high left to right (-12, -5, +7,
-	 * +12); Y is Mix. A tap opens the Pitch view (Octave and Pitch Hack). It
-	 * has no layout entry: `slotKey` resolves its own slot, as Squash does.
+	 * four stops, low to high left to right (-12, -5, +7, +12); Y is Mix.
+	 * The interval reads at the pad's foot in semitones, as the device has
+	 * it (a value set by hand in Live shows as is). A tap opens the Pitch
+	 * view (Pitch Hack's controls). It has no layout entry: `slotKey`
+	 * resolves its own slot, as Squash does.
 	 *
 	 * A browser load lands at the END of the chain and an octave pedal
-	 * belongs at its head, so a gesture that may load arms the same one-shot
-	 * move the Octave panel arms (`useBassChainPosition`).
+	 * belongs at its head, so a gesture that may load arms the one-shot
+	 * move the Bass tile uses too (`useBassChainPosition`).
 	 */
 
 	import type { DeviceRecord } from '$lib/stores/v6/selectedTrackStore.svelte';
@@ -43,6 +45,9 @@
 		const i = STOPS.reduce((best, v, k) => (Math.abs(v - pitch!) < Math.abs(STOPS[best] - pitch!) ? k : best), 0);
 		return (i + 0.5) / STOPS.length;
 	});
+	let intervalLabel = $derived(
+		pitch === undefined ? undefined : `${Math.round(pitch) > 0 ? '+' : ''}${Math.round(pitch)}`
+	);
 	let yValue = $derived(
 		device
 			? (selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, OCTAVE_MIX_PARAM)) ?? 0) / OCTAVE_MIX_MAX
@@ -56,6 +61,7 @@
 			{xValue}
 			{yValue}
 			title="Pitch"
+			rateLabel={isGhost ? undefined : intervalLabel}
 			{isGhost}
 			{color}
 			showCurve={false}
