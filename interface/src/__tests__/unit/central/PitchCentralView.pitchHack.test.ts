@@ -1,7 +1,10 @@
 /**
- * PitchCentralView's Pitch Hack: one column of Rate stops, 1 to 1/16 top
- * to bottom (2026-10-08). A stop writes Rate (param 5, an index into the
- * device's value_items) and puts Dry / Wet (param 2) at 100.
+ * PitchCentralView, Pitch Hack's controls (2026-10-15): Mix, Reverse,
+ * Recycle and Int Var sliders, a Coarse column and the Rate column (1 to
+ * 1/16 top to bottom; Rate is param 5, an index into the device's
+ * value_items). A step writes its own param only; the step that loads the
+ * device also puts Dry / Wet (param 2) at 100. The fixture is the
+ * parameter list dumped off the running Live.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -22,9 +25,9 @@ import { send } from '$lib/api/simpleClient';
 const TRACK = 'tracks/0';
 const PH = `${TRACK}/devices/0`;
 
-function pitchHack(rate: number): DeviceRecord {
+function pitchHack(rate: number, coarse = 0, mix = 0): DeviceRecord {
 	const params = new SvelteMap<string, ParamRecord>();
-	([['Device On', 0, 1, 1], ['Cents', -50, 50, 0], ['Dry / Wet', 0, 100, 0], ['Coarse', -36, 36, 0], ['Level', 0, 1, 1], ['Rate', 0, 23, rate]] as const).forEach(([name, min, max, value], i) => {
+	([['Device On', 0, 1, 1], ['Cents', -99, 99, 0], ['Dry / Wet', 0, 100, mix], ['Coarse', -36, 36, coarse], ['Level', -96, 0, 0], ['Rate', 0, 23, rate], ['Recycle', 0, 95, 0], ['Reverse', 0, 100, 0], ['Int Var', 0, 24, 0]] as const).forEach(([name, min, max, value], i) => {
 		const paramPath = `${PH}/params/${i}`;
 		params.set(paramPath, { paramPath, name, displayName: name, min, max, value, unit: '' });
 	});
@@ -45,6 +48,10 @@ function seed(device: DeviceRecord) {
 
 const stops = (container: HTMLElement) =>
 	Array.from(container.querySelectorAll<HTMLButtonElement>('.pitch-hack-rate button'));
+const coarseSteps = (container: HTMLElement) =>
+	Array.from(container.querySelectorAll<HTMLButtonElement>('.pitch-hack-coarse button'));
+const sliderTitles = (container: HTMLElement) =>
+	Array.from(container.querySelectorAll<HTMLElement>('[role="slider"]')).map((s) => s.getAttribute('aria-label')?.split(':')[0]);
 
 const written = (param: number) =>
 	vi.mocked(send).mock.calls
@@ -66,12 +73,32 @@ describe('PitchCentralView Pitch Hack rate column', () => {
 		expect(stops(container).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'false', 'false', 'true', 'false']);
 	});
 
-	it('writes each stop to Rate and puts Dry / Wet at full', async () => {
-		seed(pitchHack(0));
+	it('writes each stop to Rate and leaves Dry / Wet to its slider', async () => {
+		seed(pitchHack(0, 0, 40));
 		const { container } = render(PitchCentralView);
 		await tick();
 		for (const b of stops(container)) await fireEvent.click(b);
 		expect(written(5)).toEqual([19, 16, 13, 10, 7]);
-		expect(written(2)).toEqual([100, 100, 100, 100, 100]);
+		expect(written(2)).toEqual([]);
+	});
+});
+
+describe('PitchCentralView Pitch Hack controls', () => {
+	it('draws Mix, Reverse, Recycle and Int Var, and no Octave control', async () => {
+		seed(pitchHack(13));
+		const { container } = render(PitchCentralView);
+		await tick();
+		expect(sliderTitles(container)).toEqual(['Mix', 'Reverse', 'Recycle', 'Int Var']);
+		expect(container.textContent).not.toContain('Octave');
+	});
+
+	it('draws Coarse +12 to -12, lights the device\'s step and writes raw semitones', async () => {
+		seed(pitchHack(13, 7));
+		const { container } = render(PitchCentralView);
+		await tick();
+		expect(coarseSteps(container).map((b) => b.textContent?.trim())).toEqual(['+12', '+7', '0', '-5', '-12']);
+		expect(coarseSteps(container).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false', 'false', 'false']);
+		for (const b of coarseSteps(container)) await fireEvent.click(b);
+		expect(written(3)).toEqual([12, 7, 0, -5, -12]);
 	});
 });
