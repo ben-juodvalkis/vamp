@@ -3,36 +3,52 @@
 	 * GlitchCentralView — the Glitch tile's view (2026-10-15, the user's
 	 * design). Two devices, a seam between them:
 	 *
-	 *   GlitchLoop  Dry/Wet · Feedback · the Up/Spread/Off pitch column,
-	 *               which lived in the Chorus view until today. Resolved by
-	 *               parameter NAME (`glitchLoopParams.ts`).
-	 *   Variation   (Beat Repeat) the Var slider that was its FX-grid tile
-	 *               (Chance, param 1), then what was VariationCentralView:
-	 *               Interval (param 2), Grid (param 4) with the Random amount
-	 *               (param 6) on its spare row, Length (param 8), a seam,
-	 *               Pitch Decay (param 10), and Mode — the routing switch
-	 *               (param 12) over Triplets (param 5).
+	 *   GlitchLoop  its Play page, mirrored: the preset bank, Clock as an
+	 *               eleven-step column, the loop macros on three XY pads
+	 *               (Length × Reach, Tone × Repeats, Drift × Chaos), Mix,
+	 *               and the FX (Drive × Space on a pad, Duck and Glue on
+	 *               sliders, Freeze). No Mod Hold (the user's call). Pairs
+	 *               agreed with the glitchloop side: what one hand moves
+	 *               together; Duck and Glue stay apart. A bipolar macro's
+	 *               noon is the pad's middle, "as the preset set it".
+	 *   Variation   (Beat Repeat) the Var slider (Chance, param 1) and its
+	 *               controls: Interval (2), Grid (4) with the Random amount
+	 *               (6) on its spare row, Length (8), Pitch Decay (10), and
+	 *               Mode, the routing switch (12) over Triplets (5).
 	 *
-	 * The Variation's radio strips expose only the musically useful values
-	 * of each int param; the device still accepts their full ranges.
-	 * Triplets is a Grid parameter but stays in Mode, past the seam, so the
-	 * Grid column keeps its four-row rhythm (2026-09-13).
+	 * GlitchLoop's parameters resolve by name (`glitchLoopParams.ts`). Its
+	 * presets are not parameters (the device keeps them out of Live's undo
+	 * and storage), so the bank comes from glitchloop's own generated file
+	 * (`GET /api/glitchloop/presets`) and a press writes the preset's
+	 * values by name in one undo step (`sendParamsByName`). The lit preset
+	 * is the one the device's values match.
 	 *
 	 * Self-contained: queries its own slots, takes no props, and renders
 	 * through ghost/loading/active without a `{#if device}` gate.
 	 */
 
+	import { onMount } from 'svelte';
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
+	import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
 	import SectionDivider from '$lib/components/v6/central/SectionDivider.svelte';
 	import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
 	import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
+	import { sendParamsByName } from '$lib/services/deviceParams';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+	import { logger } from '$lib/utils/logger';
+	import { drag } from '$lib/actions';
+	import type { DragInfo } from '$lib/actions/drag';
+	import { segmentIndex, scrubBoxOf, type ScrubBox } from '$lib/utils/segmentScrub';
 	import {
-		GLITCH_LOOP_PARAMS,
-		GLITCH_PITCH_MODES,
+		CLOCK_LABELS,
+		CLOCK_NOON,
 		glitchLoopIndex,
-		type GlitchLoopParam
+		toUnit,
+		fromUnit,
+		matchingPreset,
+		type GlitchLoopParam,
+		type GlitchLoopPresets
 	} from '$lib/components/v6/device-panel/glitchLoopParams';
 
 	const glitchLoop = useFxGridSlot('glitchLoop');
@@ -51,37 +67,80 @@
 	});
 
 	// ── GlitchLoop ─────────────────────────────────────────────────────────
-	let glitchNames = $derived(glitchLoop.device ? selectedTrackStore.paramNamesForDevice(glitchLoop.device) : []);
-	const gIndex = (key: GlitchLoopParam) => glitchLoopIndex(glitchNames, key);
-	const gValue = (key: GlitchLoopParam) => glitchLoop.paramValue(gIndex(key));
+	let names = $derived(glitchLoop.device ? selectedTrackStore.paramNamesForDevice(glitchLoop.device) : []);
+	const gIndex = (key: GlitchLoopParam) => glitchLoopIndex(names, key);
+	// An unloaded slot draws a macro at noon and an amount at 0: what a
+	// fresh device holds.
+	const unit = (key: GlitchLoopParam, fallback: number) => {
+		const v = glitchLoop.paramValue(gIndex(key));
+		return v === undefined ? fallback : toUnit(key, v);
+	};
+	const send = (key: GlitchLoopParam, t: number) => glitchLoop.sendParam(gIndex(key), fromUnit(key, t));
 
-	// An unloaded slot draws 0, the user's call (2026-10-06): an empty slot
-	// adds nothing.
-	let glitchMix = $derived(gValue('mix') ?? 0);
-	let glitchFeedback = $derived(gValue('feedbackLeft') ?? 0);
-	let glitchPitchLeft = $derived(Math.round(gValue('pitchLeft') ?? 0));
-	let glitchPitchRight = $derived(Math.round(gValue('pitchRight') ?? 0));
-	// The lit mode is the one both values match exactly; a pitch set by hand
-	// in Live lights none.
-	let glitchPitchMode = $derived(
-		GLITCH_PITCH_MODES.findIndex((m) => m.left === glitchPitchLeft && m.right === glitchPitchRight)
-	);
+	const PADS = [
+		{ title: 'Length Reach', x: 'length', y: 'reach' },
+		{ title: 'Tone Repeats', x: 'tone', y: 'repeats' },
+		{ title: 'Drift Chaos', x: 'drift', y: 'chaos' }
+	] as const satisfies readonly { title: string; x: GlitchLoopParam; y: GlitchLoopParam }[];
 
-	function sendGlitchMix(amount: number) {
-		glitchLoop.sendParam(gIndex('mix'), Math.max(0, Math.min(GLITCH_LOOP_PARAMS.mix.max, amount)));
+	const NOON = 0.5;
+	const fallbackOf = (key: GlitchLoopParam) => (key === 'chaos' ? 0 : NOON);
+
+	let clock = $derived(Math.round(glitchLoop.paramValue(gIndex('clock')) ?? CLOCK_NOON));
+	let freeze = $derived(Math.round(glitchLoop.paramValue(gIndex('freeze')) ?? 0) === 1);
+
+	// Clock, top to bottom 64k to 2k. The column SCRUBS: it owns one pointer
+	// and resolves the step under it from geometry.
+	const CLOCK_STEPS = CLOCK_LABELS.map((label, value) => ({ label, value })).reverse();
+	let clockBox: ScrubBox | null = null;
+
+	function clockScrub(clientY: number) {
+		if (!clockBox) return;
+		const step = CLOCK_STEPS[segmentIndex(clientY, clockBox.top, clockBox.height, CLOCK_STEPS.length)];
+		if (step.value === clock && !glitchLoop.isGhost) return;
+		glitchLoop.sendParam(gIndex('clock'), step.value);
 	}
 
-	// Both channels, so the slider is the loop's feedback rather than its
-	// left side's (the old device's slider wrote Feedback L alone).
-	function sendGlitchFeedback(amount: number) {
-		const value = Math.max(0, Math.min(GLITCH_LOOP_PARAMS.feedbackLeft.max, amount));
-		glitchLoop.sendParam(gIndex('feedbackLeft'), value);
-		glitchLoop.sendParam(gIndex('feedbackRight'), value);
+	function clockDown(info: DragInfo) {
+		clockBox = scrubBoxOf(info.event?.currentTarget as Element | null);
+		clockScrub(info.y);
 	}
 
-	function sendGlitchPitchMode(mode: (typeof GLITCH_PITCH_MODES)[number]) {
-		glitchLoop.sendParam(gIndex('pitchLeft'), mode.left);
-		glitchLoop.sendParam(gIndex('pitchRight'), mode.right);
+	// ── Presets ────────────────────────────────────────────────────────────
+	let presets = $state<GlitchLoopPresets | null>(null);
+
+	onMount(() => {
+		fetch('/api/glitchloop/presets')
+			.then((r) => (r.ok ? r.json() : null))
+			.then((body) => {
+				if (body && Array.isArray(body.bank) && body.presets) presets = body as GlitchLoopPresets;
+			})
+			.catch((error) => logger.warn('GlitchLoop presets unavailable', { component: 'GlitchCentralView', error }));
+	});
+
+	let litPreset = $derived.by(() => {
+		const device = glitchLoop.device;
+		if (!presets || !device) return -1;
+		const byName = new Map<string, number>();
+		names.forEach((n, i) => {
+			if (!byName.has(n)) byName.set(n, i);
+		});
+		return matchingPreset(presets, (name) => {
+			const i = byName.get(name);
+			if (i === undefined) return undefined;
+			const value = glitchLoop.paramValue(i);
+			const range = selectedTrackStore.paramRange(selectedTrackStore.paramPath(device, i));
+			return value === undefined || !range ? undefined : { value, ...range };
+		});
+	});
+
+	function loadPreset(name: string) {
+		const path = glitchLoop.devicePath;
+		if (!presets || !path) {
+			glitchLoop.loadIfGhost();
+			return;
+		}
+		sendParamsByName(path, presets.presets[name]);
 	}
 
 	// ── Variation (Beat Repeat) ────────────────────────────────────────────
@@ -123,22 +182,116 @@
 	let amount = $derived(variation.paramValue(AMOUNT_INDEX) ?? 0);
 	let gate = $derived(variation.paramValue(GATE_INDEX) ?? 0);
 	let pitchDecay = $derived(variation.paramValue(PITCH_DECAY_INDEX) ?? 0);
-	// The switch NAMES its state rather than labelling a control that is on
-	// or off: 0 is Mix, 1 is Insert, and there is no third reading, so the
-	// caption is the value. Reads Insert (1) until the device's own value
-	// arrives.
+	// The switch NAMES its state: 0 is Mix, 1 is Insert. Reads Insert (1)
+	// until the device's own value arrives.
 	let insertMode = $derived(Math.round(variation.paramValue(ROUTING_INDEX) ?? 1) === 1);
 </script>
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
-<div class="glitch-central-layout relative">
+<div class="glitch-central-layout relative" data-density="compact">
 	<!-- ===== GlitchLoop ===== -->
-	<section class="group" style="--panel-ink: {glitchInk.primary};">
+	<section class="group" style="--panel-ink: {glitchInk.primary}; --btn-tint: {glitchInk.primary};">
 		<div class="group-title text-xs font-bold tracking-wider">GlitchLoop</div>
-		<div class="glitch-body" class:slot-ghost={glitchLoop.isGhost}>
-			<div class="device-wrapper">
+		<div class="glitch-body">
+			<!-- The preset bank, top to bottom in the device's order. -->
+			<div class="presets" class:is-ghost-tab={glitchLoop.isGhost} role="group" aria-label="GlitchLoop presets">
+				{#if presets}
+					{#each presets.bank as name, i}
+						<button
+							class="physical-button preset-btn"
+							class:active={!glitchLoop.isGhost && litPreset === i}
+							aria-pressed={!glitchLoop.isGhost && litPreset === i}
+							onclick={() => loadPreset(name)}
+						>{name}</button>
+					{/each}
+				{/if}
+			</div>
+
+			<!-- Clock, 64k at the top; noon (12k) marked. -->
+			<div
+				class="device-segmented clock-stack"
+				class:is-ghost-tab={glitchLoop.isGhost}
+				style:grid-template-rows="repeat({CLOCK_STEPS.length}, 1fr)"
+				role="group"
+				aria-label="GlitchLoop clock"
+				use:drag={{ commit: 'immediate', onDown: clockDown, onMove: (info) => clockScrub(info.y) }}
+			>
+				{#each CLOCK_STEPS as step}
+					<button
+						class="device-segment clock-step num"
+						class:noon={step.value === CLOCK_NOON}
+						class:active={!glitchLoop.isGhost && clock === step.value}
+						aria-label="Clock {step.label}"
+						aria-pressed={!glitchLoop.isGhost && clock === step.value}
+						onclick={() => glitchLoop.sendParam(gIndex('clock'), step.value)}
+					>{step.label}</button>
+				{/each}
+			</div>
+
+			<!-- The loop macros, a pad each pair. -->
+			{#each PADS as pad, i}
+				<div class="pad macro-pad" style:grid-column="{3 + 2 * i} / span 2" class:slot-ghost={glitchLoop.isGhost}>
+					<DeviceXY
+						xValue={unit(pad.x, fallbackOf(pad.x))}
+						yValue={unit(pad.y, fallbackOf(pad.y))}
+						title={pad.title}
+						isGhost={glitchLoop.isGhost}
+						showCurve={false}
+						color={glitchInk}
+						onTap={() => glitchLoop.loadIfGhost()}
+						onInteraction={(x, y) => {
+							send(pad.x, x);
+							send(pad.y, y);
+						}}
+					/>
+				</div>
+			{/each}
+
+			<!-- The FX: Drive × Space, Duck, Glue, Freeze. -->
+			<div class="pad fx-pad" class:slot-ghost={glitchLoop.isGhost}>
+				<DeviceXY
+					xValue={unit('drive', NOON)}
+					yValue={unit('space', 0)}
+					title="Drive Space"
+					isGhost={glitchLoop.isGhost}
+					showCurve={false}
+					color={glitchInk}
+					onTap={() => glitchLoop.loadIfGhost()}
+					onInteraction={(x, y) => {
+						send('drive', x);
+						send('space', y);
+					}}
+				/>
+			</div>
+			{#each [{ key: 'duck', title: 'Duck', col: 5 }, { key: 'glue', title: 'Glue', col: 6 }] as const as s}
+				<div class="fx-slider" style:grid-column="{s.col}" class:slot-ghost={glitchLoop.isGhost}>
+					<DeviceSlider
+						value={unit(s.key, 0)}
+						title={s.title}
+						orientation="vertical"
+						labelOrientation="horizontal"
+						labelSize="small"
+						isGhost={glitchLoop.isGhost}
+						color={glitchInk}
+						min={0}
+						max={1}
+						onTap={() => glitchLoop.loadIfGhost()}
+						onInteraction={(t) => send(s.key, t)}
+					/>
+				</div>
+			{/each}
+			<button
+				class="physical-button freeze-btn"
+				class:active={!glitchLoop.isGhost && freeze}
+				class:is-ghost-tab={glitchLoop.isGhost}
+				aria-pressed={!glitchLoop.isGhost && freeze}
+				onclick={() => (glitchLoop.isGhost ? glitchLoop.loadIfGhost() : glitchLoop.sendParam(gIndex('freeze'), freeze ? 0 : 1))}
+			>Freeze</button>
+
+			<!-- Mix (Dry/Wet), full height. -->
+			<div class="mix" class:slot-ghost={glitchLoop.isGhost}>
 				<DeviceSlider
-					value={glitchMix}
+					value={unit('mix', 0)}
 					title="Mix"
 					icon="mix"
 					orientation="vertical"
@@ -146,42 +299,10 @@
 					isGhost={glitchLoop.isGhost}
 					color={glitchInk}
 					min={0}
-					max={GLITCH_LOOP_PARAMS.mix.max}
+					max={1}
 					onTap={() => glitchLoop.loadIfGhost()}
-					onInteraction={sendGlitchMix}
+					onInteraction={(t) => send('mix', t)}
 				/>
-			</div>
-			<div class="device-wrapper">
-				<DeviceSlider
-					value={glitchFeedback}
-					title="Feedback"
-					icon="feedback"
-					orientation="vertical"
-					labelOrientation="horizontal"
-					isGhost={glitchLoop.isGhost}
-					color={glitchInk}
-					min={0}
-					max={GLITCH_LOOP_PARAMS.feedbackLeft.max}
-					onTap={() => glitchLoop.loadIfGhost()}
-					onInteraction={sendGlitchFeedback}
-				/>
-			</div>
-			<div
-				class="device-segmented glitch-pitch"
-				style:grid-template-rows="repeat({GLITCH_PITCH_MODES.length}, 1fr)"
-				style="--btn-tint: {glitchInk.primary};"
-				role="group"
-				aria-label="GlitchLoop pitch"
-			>
-				{#each GLITCH_PITCH_MODES as mode, i}
-					<button
-						class="device-segment text-sm font-medium"
-						class:active={!glitchLoop.isGhost && glitchPitchMode === i}
-						aria-label="GlitchLoop pitch {mode.label}"
-						aria-pressed={!glitchLoop.isGhost && glitchPitchMode === i}
-						onclick={() => (glitchLoop.isGhost ? glitchLoop.loadIfGhost() : sendGlitchPitchMode(mode))}
-					>{mode.label}</button>
-				{/each}
 			</div>
 		</div>
 	</section>
@@ -208,13 +329,12 @@
 				/>
 			</div>
 
-			<!-- Interval (param 2) -->
 			<div class="var-col">
 				<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Interval</div>
 				<div class="var-stack">
 					{#each INTERVAL_OPTIONS as option}
 						<button
-							class="physical-button var-btn flex-1 px-2 text-2xl font-bold flex items-center justify-center"
+							class="physical-button var-btn"
 							class:active={Math.round(interval) === option.value}
 							style="--btn-tint: {varInk.primary};"
 							onclick={() => variation.sendParam(INTERVAL_INDEX, option.value)}
@@ -223,13 +343,12 @@
 				</div>
 			</div>
 
-			<!-- Grid (param 4), the Random amount (param 6) on its spare row -->
 			<div class="var-col">
 				<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Grid</div>
 				<div class="var-stack">
 					{#each GRID_OPTIONS as option}
 						<button
-							class="physical-button var-btn flex-1 px-2 text-2xl font-bold flex items-center justify-center"
+							class="physical-button var-btn"
 							class:active={Math.round(grid) === option.value}
 							style="--btn-tint: {varInk.primary};"
 							onclick={() => variation.sendParam(GRID_INDEX, option.value)}
@@ -238,7 +357,7 @@
 					<div class="flex-1 min-h-0">
 						<DeviceSlider
 							value={amount / AMOUNT_MAX}
-							title="Random"
+							title="Rnd"
 							orientation="horizontal"
 							labelOrientation="horizontal"
 							labelSize="small"
@@ -250,13 +369,12 @@
 				</div>
 			</div>
 
-			<!-- Length (param 8) -->
 			<div class="var-col">
 				<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Length</div>
 				<div class="var-stack">
 					{#each GATE_OPTIONS as option}
 						<button
-							class="physical-button var-btn flex-1 px-2 text-2xl font-bold flex items-center justify-center"
+							class="physical-button var-btn"
 							class:active={Math.round(gate) === option.value}
 							style="--btn-tint: {varInk.primary};"
 							onclick={() => variation.sendParam(GATE_INDEX, option.value)}
@@ -265,13 +383,8 @@
 				</div>
 			</div>
 
-			<!-- The division pickers left of here; what the repeats sound like
-			     and where they go right of it (2026-09-13). -->
-			<SectionDivider orientation="vertical" />
-
-			<!-- Pitch Decay (float 0-1) -->
 			<div class="var-col">
-				<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Pitch Decay</div>
+				<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Decay</div>
 				<div class="flex-1 min-h-0">
 					<DeviceSlider
 						value={pitchDecay}
@@ -285,24 +398,22 @@
 				</div>
 			</div>
 
-			<!-- Mode: routing switch (param 12) over triplets (param 5), the
-			     column split evenly between the two. -->
 			<div class="var-col">
 				<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Mode</div>
 				<div class="var-stack">
 					<button
-						class="physical-button var-btn flex-1 px-2 text-base font-bold flex items-center justify-center"
+						class="physical-button var-btn"
 						class:active={insertMode}
 						aria-pressed={insertMode}
 						style="--btn-tint: {varInk.primary};"
 						onclick={() => variation.sendParam(ROUTING_INDEX, insertMode ? 0 : 1)}
 					>{insertMode ? 'Insert' : 'Mix'}</button>
 					<button
-						class="physical-button var-btn flex-1 px-2 text-base font-bold flex items-center justify-center"
+						class="physical-button var-btn"
 						class:active={triplets}
 						style="--btn-tint: {varInk.primary};"
 						onclick={() => variation.sendParam(TRIPLETS_INDEX, triplets ? 1 : 0)}
-					>Triplets</button>
+					>Trip</button>
 				</div>
 			</div>
 		</div>
@@ -312,10 +423,9 @@
 <style>
 	.glitch-central-layout {
 		display: grid;
-		/* glitchloop (mix · feedback · pitch) | seam | variation (var ·
-		   interval · grid · length | seam | pitch decay · mode). One equal
-		   track per control, so a slider here is a slider anywhere. */
-		grid-template-columns: minmax(0, 3fr) auto minmax(0, 6fr);
+		/* glitchloop | seam | variation. GlitchLoop's ten tracks to the
+		   Variation's six, one equal track per control. */
+		grid-template-columns: minmax(0, 10fr) auto minmax(0, 6fr);
 		height: 100%;
 		width: 100%;
 		padding: var(--central-inset);
@@ -325,7 +435,7 @@
 	.group {
 		display: flex;
 		flex-direction: column;
-		gap: var(--spacing-sm);
+		gap: var(--spacing-xs);
 		min-width: 0;
 		min-height: 0;
 	}
@@ -337,21 +447,104 @@
 		color: var(--panel-ink);
 	}
 
-	.glitch-body,
+	/* presets · clock · three pads (two tracks each) · mix, over two rows;
+	   row 2 under the pads: Drive × Space, Duck, Glue, Freeze. */
+	.glitch-body {
+		flex: 1;
+		min-height: 0;
+		min-width: 0;
+		display: grid;
+		grid-template-columns: minmax(0, 1.4fr) repeat(8, minmax(0, 1fr));
+		grid-template-rows: repeat(2, minmax(0, 1fr));
+		gap: var(--central-gap);
+	}
+
+	.presets {
+		grid-column: 1;
+		grid-row: 1 / span 2;
+		display: grid;
+		grid-auto-rows: minmax(0, 1fr);
+		gap: 0.25rem;
+		min-height: 0;
+	}
+
+	.preset-btn {
+		min-height: 0;
+		padding: 0 0.375rem;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		line-height: 1.1;
+		white-space: normal;
+	}
+
+	.clock-stack {
+		grid-column: 2;
+		grid-row: 1 / span 2;
+		display: grid;
+		min-height: 0;
+		min-width: 0;
+	}
+
+	/* The stack owns the pointer; the steps are its face. */
+	.clock-step {
+		pointer-events: none;
+		min-height: 0;
+		font-size: 0.75rem;
+		font-weight: 600;
+	}
+
+	/* Noon: the neutral step's label underlined. */
+	.clock-step.noon {
+		text-decoration: underline;
+		text-underline-offset: 3px;
+	}
+
+	.pad,
+	.fx-slider,
+	.mix {
+		min-width: 0;
+		min-height: 0;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.macro-pad {
+		grid-row: 1;
+	}
+
+	.fx-pad {
+		grid-column: 3 / span 2;
+		grid-row: 2;
+	}
+
+	.fx-slider {
+		grid-row: 2;
+	}
+
+	.freeze-btn {
+		grid-column: 7 / span 2;
+		grid-row: 2;
+		min-height: 0;
+		font-size: 1rem;
+		font-weight: 600;
+	}
+
+	.mix {
+		grid-column: 9;
+		grid-row: 1 / span 2;
+	}
+
+	.is-ghost-tab {
+		opacity: var(--opacity-ghost);
+	}
+
 	.var-body {
 		flex: 1;
 		min-height: 0;
 		min-width: 0;
 		display: grid;
+		grid-template-columns: repeat(6, minmax(0, 1fr));
 		gap: var(--central-gap);
-	}
-
-	.glitch-body {
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-	}
-
-	.var-body {
-		grid-template-columns: repeat(4, minmax(0, 1fr)) auto repeat(2, minmax(0, 1fr));
 	}
 
 	.device-wrapper,
@@ -370,11 +563,12 @@
 		gap: 0.25rem;
 	}
 
-	/* The house segmented control upright, like Octave's pitch column. */
-	.glitch-pitch {
-		display: grid;
+	.var-btn {
+		flex: 1;
 		min-height: 0;
-		min-width: 0;
+		padding: 0 0.25rem;
+		font-size: 1rem;
+		font-weight: 700;
 	}
 
 	/* GRATICULE: column headers and button labels are authored mixed-case
@@ -385,9 +579,8 @@
 	}
 
 	/* ---- Live skin (flat grammar) ------------------------------------ */
-	/* One ink per device: a lit mode takes GlitchLoop's own ink rather than
-	   the house --phosphor, as Octave's column does. */
-	:global([data-grammar="flat"]) .glitch-pitch .device-segment.active {
+	/* One ink per device: a lit step takes GlitchLoop's own ink. */
+	:global([data-grammar="flat"]) .clock-stack .device-segment.active {
 		background: var(--btn-tint);
 		border-color: var(--btn-tint);
 		color: var(--flat-on-fg);
@@ -407,6 +600,8 @@
 		opacity: 1;
 		color: var(--muted-foreground);
 	}
+	:global([data-grammar="flat"]) .preset-btn,
+	:global([data-grammar="flat"]) .freeze-btn,
 	:global([data-grammar="flat"]) .var-body .physical-button {
 		font-weight: var(--font-weight-medium);
 	}

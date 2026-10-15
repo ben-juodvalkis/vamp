@@ -459,3 +459,86 @@ def test_v3_set_does_not_mark_hot_on_resolution_failure(component, generation):
         source_addr=None,
     )
     assert mut.hot_paths == []
+
+
+# --- handle_set_device_params ---------------------------------------------
+
+
+class _UndoSong(StubSong):
+    """A StubSong that counts undo steps."""
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.undo = []
+
+    def begin_undo_step(self):
+        self.undo.append("begin")
+
+    def end_undo_step(self):
+        self.undo.append("end")
+
+
+@pytest.fixture
+def preset_device():
+    params = [
+        StubParam(pid=901, name="Device On", value=1.0, min_v=0.0, max_v=1.0),
+        StubParam(pid=902, name="Segment L", value=7.0, min_v=0.1, max_v=50.0),
+        StubParam(pid=903, name="Hi Cut L", value=12000.0, min_v=100.0, max_v=20000.0),
+        StubParam(pid=904, name="Routing", value=2.0, min_v=0.0, max_v=2.0),
+    ]
+    song = _UndoSong(tracks=[StubTrack(tid=100, devices=[StubDevice(did=900, params=params)])])
+    gen = GenerationComponent()
+    emits = []
+    comp = DevicesComponent(song=song, emit=lambda a, args: emits.append((a, args)))
+    comp.set_generation(gen)
+    return comp, song, params, gen, emits
+
+
+def _params_set(comp, values, gen, path="tracks/0/devices/0"):
+    import json
+    comp.handle_set_device_params(args=(path, json.dumps(values), gen.current), source_addr=None)
+
+
+def test_device_params_writes_by_name_in_one_undo_step(preset_device):
+    comp, song, params, gen, emits = preset_device
+    _params_set(comp, {"Segment L": 12.5, "Hi Cut L": 8000.0}, gen)
+    assert params[1].value == pytest.approx(12.5)
+    assert params[2].value == pytest.approx(8000.0)
+    assert song.undo == ["begin", "end"]
+    assert emits == []
+
+
+def test_device_params_skips_values_live_already_holds(preset_device):
+    comp, song, params, gen, _ = preset_device
+    _params_set(comp, {"Segment L": 7.0 + 1e-9, "Routing": 2.0}, gen)
+    assert song.undo == []
+
+
+def test_device_params_skips_unknown_names_and_non_finite(preset_device):
+    comp, song, params, gen, _ = preset_device
+    _params_set(comp, {"Nope": 1.0, "Segment L": "nan", "Routing": 1.0}, gen)
+    assert params[1].value == pytest.approx(7.0)
+    assert params[3].value == pytest.approx(1.0)
+    assert song.undo == ["begin", "end"]
+
+
+def test_device_params_clamps_into_range(preset_device):
+    comp, _song, params, gen, _ = preset_device
+    _params_set(comp, {"Hi Cut L": 99999.0}, gen)
+    assert params[2].value == pytest.approx(20000.0)
+
+
+def test_device_params_generation_stale(preset_device):
+    comp, song, params, gen, emits = preset_device
+    gen.advance("test")
+    import json
+    comp.handle_set_device_params(args=("tracks/0/devices/0", json.dumps({"Routing": 0.0}), gen.current - 1), source_addr=None)
+    assert params[3].value == pytest.approx(2.0)
+    assert emits and emits[0][1][1] == V3_ERROR_GENERATION_STALE
+
+
+def test_device_params_bad_json_and_missing_device(preset_device):
+    comp, _song, _params, gen, emits = preset_device
+    comp.handle_set_device_params(args=("tracks/0/devices/0", "{not json", gen.current), source_addr=None)
+    _params_set(comp, {"Routing": 0.0}, gen, path="tracks/0/devices/5")
+    assert [e[1][1] for e in emits] == [V3_ERROR_WRITE_REJECTED, V3_ERROR_PATH_NOT_FOUND]

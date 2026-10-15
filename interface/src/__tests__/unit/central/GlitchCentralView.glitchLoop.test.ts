@@ -1,10 +1,10 @@
 /**
- * GlitchCentralView's GlitchLoop (2026-10-15): Mix (Dry/Wet, 0–100),
- * Feedback (L and R together, 0–120) and an Up · Spread · Off pitch column
- * over Pitch L/R, all found by parameter NAME. The fixture is the
- * 153-parameter build measured on the rig (Clock 13, Pitch L/R 14/15,
- * Dry/Wet 19, Feedback L/R 23/24); one case shifts every index to show the
- * names, not the positions, decide.
+ * GlitchCentralView's GlitchLoop (2026-10-15): the device's Play page —
+ * the preset bank, Clock, the macro pads, Mix and the FX — found by
+ * parameter NAME. The fixture is the 153-parameter build measured on the
+ * rig; one case shifts every index to show the names, not the positions,
+ * decide. Presets come from `GET /api/glitchloop/presets` (stubbed fetch)
+ * and a press writes them in one `device/params/set`.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -20,20 +20,21 @@ import { SvelteMap } from 'svelte/reactivity';
 import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { replaceTree, _resetForTests, type TrackRecord, type DeviceRecord, type ParamRecord } from '$lib/stores/v3/normalized.svelte';
 import GlitchCentralView from '$lib/components/v6/central/views/GlitchCentralView.svelte';
+import { matchingPreset, type GlitchLoopPresets } from '$lib/components/v6/device-panel/glitchLoopParams';
 import { send } from '$lib/api/simpleClient';
 
 const TRACK = 'tracks/0';
 const GL = `${TRACK}/devices/0`;
 
-const AT = { pitchL: 14, pitchR: 15, dryWet: 19, feedbackL: 23, feedbackR: 24 };
+const AT = { clock: 13, dryWet: 19, freeze: 132, segL: 136, routing: 135 };
 
-function glitchLoop(dryWet = 0, feedback = 0, pitch: [number, number] = [0, 0], shift = 0): DeviceRecord {
+function glitchLoop(values: Partial<Record<keyof typeof AT, number>> = {}, shift = 0): DeviceRecord {
 	const named: Record<number, [string, number, number, number]> = {
-		[AT.pitchL + shift]: ['Pitch L', pitch[0], -24, 24],
-		[AT.pitchR + shift]: ['Pitch R', pitch[1], -24, 24],
-		[AT.dryWet + shift]: ['Dry/Wet', dryWet, 0, 100],
-		[AT.feedbackL + shift]: ['Feedback L', feedback, 0, 120],
-		[AT.feedbackR + shift]: ['Feedback R', feedback, 0, 120]
+		[AT.clock + shift]: ['Clock', values.clock ?? 5, 0, 10],
+		[AT.dryWet + shift]: ['Dry/Wet', values.dryWet ?? 0, 0, 100],
+		[AT.freeze + shift]: ['Freeze', values.freeze ?? 0, 0, 1],
+		[AT.routing + shift]: ['Routing', values.routing ?? 2, 0, 2],
+		[AT.segL + shift]: ['Segment L', values.segL ?? 7, 0.1, 50]
 	};
 	const params = new SvelteMap<string, ParamRecord>();
 	for (let i = 0; i < 153 + shift; i++) {
@@ -56,99 +57,99 @@ function seed(device: DeviceRecord) {
 	fxGrid.resetForTrackChange();
 }
 
-const sliderTitled = (container: HTMLElement, title: string) =>
-	Array.from(container.querySelectorAll<HTMLElement>('[role="slider"]')).find((s) =>
-		s.getAttribute('aria-label')?.startsWith(`${title}:`)
-	);
-const mixSlider = (container: HTMLElement) => sliderTitled(container, 'Mix');
+const PRESETS: GlitchLoopPresets = {
+	bank: ['Memories', 'Bloop Steps'],
+	presets: {
+		Memories: { 'Segment L': 7, Routing: 2 },
+		'Bloop Steps': { 'Segment L': 12, Routing: 1 }
+	},
+	untouched: ['Dry/Wet', 'Clock', 'Freeze']
+};
+
+const written = (i: number) =>
+	vi.mocked(send).mock.calls
+		.filter(([addr, args]) => addr === '/looping/v3/param/set' && Array.isArray(args) && args[0] === `${GL}/params/${i}`)
+		.map(([, args]) => (args as unknown[])[1]);
+
+const buttons = (container: HTMLElement, selector: string) =>
+	Array.from(container.querySelectorAll<HTMLButtonElement>(selector));
+
+async function settle() {
+	for (let i = 0; i < 5; i++) await tick();
+	await new Promise((r) => setTimeout(r, 0));
+	await tick();
+}
 
 beforeEach(() => {
 	vi.clearAllMocks();
 	_resetForTests();
+	vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => PRESETS })));
 });
-afterEach(() => cleanup());
-
-const written = (i: number) =>
-	vi.mocked(send).mock.calls
-		.filter(([, args]) => Array.isArray(args) && args.includes(`${GL}/params/${i}`))
-		.map(([, args]) => (args as unknown[])[1]);
-
-function drag(el: HTMLElement) {
-	HTMLElement.prototype.setPointerCapture = vi.fn();
-	HTMLElement.prototype.releasePointerCapture = vi.fn();
-	const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
-		x: 0, y: 0, top: 0, left: 0, right: 100, bottom: 400, width: 100, height: 400, toJSON: () => ({})
-	} as DOMRect);
-	const pointer = (type: string, y: number) => {
-		const ev = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: 50, clientY: y });
-		Object.defineProperty(ev, 'pointerId', { value: 1 });
-		el.dispatchEvent(ev);
-	};
-	return (async () => {
-		pointer('pointerdown', 200);
-		pointer('pointermove', 150);
-		await new Promise((r) => setTimeout(r, 50));
-		pointer('pointerup', 150);
-		rect.mockRestore();
-	})();
-}
+afterEach(() => {
+	cleanup();
+	vi.unstubAllGlobals();
+});
 
 describe('GlitchCentralView GlitchLoop', () => {
-	it('shows Dry/Wet on the 0–100 Mix slider', async () => {
-		seed(glitchLoop(30));
+	it('draws Clock 64k to 2k, lights the device\'s detent and writes it by name', async () => {
+		seed(glitchLoop({ clock: 7 }, 9));
 		const { container } = render(GlitchCentralView);
-		await tick();
-		const s = mixSlider(container);
-		expect(s?.getAttribute('aria-valuenow')).toBe('30');
-		expect(s?.getAttribute('aria-valuemax')).toBe('100');
+		await settle();
+		const steps = buttons(container, '.clock-stack button');
+		expect(steps.map((b) => b.textContent?.trim())).toEqual(['64k', '48k', '32k', '24k', '16k', '12k', '8k', '6k', '4k', '3k', '2k']);
+		expect(steps.findIndex((b) => b.getAttribute('aria-pressed') === 'true')).toBe(3);
+		await fireEvent.click(steps[0]);
+		expect(written(AT.clock + 9)).toEqual([10]);
+		expect(written(AT.clock)).toEqual([]);
 	});
 
-	it('finds Dry/Wet by name when the build has moved it', async () => {
-		seed(glitchLoop(30, 0, [0, 0], 7));
+	it('toggles Freeze', async () => {
+		seed(glitchLoop({ freeze: 0 }));
 		const { container } = render(GlitchCentralView);
-		await tick();
-		expect(mixSlider(container)?.getAttribute('aria-valuenow')).toBe('30');
-		await drag(mixSlider(container)!);
-		expect(written(AT.dryWet + 7).length).toBeGreaterThan(0);
-		expect(written(AT.dryWet)).toEqual([]);
+		await settle();
+		await fireEvent.click(buttons(container, '.freeze-btn')[0]);
+		expect(written(AT.freeze)).toEqual([1]);
 	});
 
-	it('shows Feedback L on a 0–120 slider and writes both channels', async () => {
-		seed(glitchLoop(0, 46));
+	it('has no Mod Hold control', async () => {
+		seed(glitchLoop());
 		const { container } = render(GlitchCentralView);
-		await tick();
-		const s = sliderTitled(container, 'Feedback')!;
-		expect(s.getAttribute('aria-valuenow')).toBe('46');
-		expect(s.getAttribute('aria-valuemax')).toBe('120');
-		await drag(s);
-		expect(written(AT.feedbackL).length).toBeGreaterThan(0);
-		expect(written(AT.feedbackR)).toEqual(written(AT.feedbackL));
+		await settle();
+		expect(container.textContent).not.toMatch(/Hold/);
 	});
 
-	const pitchButtons = (container: HTMLElement) =>
-		Array.from(container.querySelectorAll<HTMLButtonElement>('.glitch-pitch button'));
-
-	it('draws Up, Spread, Off top to bottom and lights the one the device matches', async () => {
-		seed(glitchLoop(0, 0, [-12, 12]));
+	it('lists the bank and lights the preset the device matches', async () => {
+		seed(glitchLoop({ segL: 7, routing: 2 }));
 		const { container } = render(GlitchCentralView);
-		await tick();
-		expect(pitchButtons(container).map((b) => b.textContent?.trim())).toEqual(['Up', 'Spread', 'Off']);
-		expect(pitchButtons(container).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false']);
+		await settle();
+		const presets = buttons(container, '.preset-btn');
+		expect(presets.map((b) => b.textContent?.trim())).toEqual(['Memories', 'Bloop Steps']);
+		expect(presets.map((b) => b.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
 	});
 
-	it('lights none when the pitch was set some other way', async () => {
-		seed(glitchLoop(0, 0, [7, 0]));
+	it('writes a preset in one device/params/set, by name', async () => {
+		seed(glitchLoop());
 		const { container } = render(GlitchCentralView);
-		await tick();
-		expect(pitchButtons(container).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'false', 'false']);
+		await settle();
+		await fireEvent.click(buttons(container, '.preset-btn')[1]);
+		const calls = vi.mocked(send).mock.calls.filter(([addr]) => addr === '/looping/v3/device/params/set');
+		expect(calls).toHaveLength(1);
+		const [path, values] = calls[0][1] as [string, string, number];
+		expect(path).toBe(GL);
+		expect(JSON.parse(values)).toEqual({ 'Segment L': 12, Routing: 1 });
+	});
+});
+
+describe('matchingPreset', () => {
+	const read = (held: Record<string, number>) => (name: string) =>
+		name in held ? { value: held[name], min: 0, max: 100 } : undefined;
+
+	it('matches within 1e-5 of the range and not beyond', () => {
+		expect(matchingPreset(PRESETS, read({ 'Segment L': 12.0005, Routing: 1 }))).toBe(1);
+		expect(matchingPreset(PRESETS, read({ 'Segment L': 12.01, Routing: 1 }))).toBe(-1);
 	});
 
-	it('writes each mode to Pitch L and Pitch R', async () => {
-		seed(glitchLoop(0));
-		const { container } = render(GlitchCentralView);
-		await tick();
-		for (const b of pitchButtons(container)) await fireEvent.click(b);
-		expect(written(AT.pitchL)).toEqual([12, -12, 0]);
-		expect(written(AT.pitchR)).toEqual([12, 12, 0]);
+	it('matches nothing when a preset\'s parameter is missing', () => {
+		expect(matchingPreset(PRESETS, read({ 'Segment L': 7 }))).toBe(-1);
 	});
 });

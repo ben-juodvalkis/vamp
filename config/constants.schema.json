@@ -72,6 +72,10 @@
           "type": "string",
           "description": "The folder of the FX tiles that are files (racks, plug-in presets, Max devices); the native tiles insert Live's own device and need none"
         },
+        "glitchLoopRoot": {
+          "type": "string",
+          "description": "The owner's glitchloop checkout. The Glitch view's presets are read from its max/glitchloop_presets.json (GET /api/glitchloop/presets); unset, the view shows no presets."
+        },
         "sidebarRoot": {
           "type": "string",
           "description": "The browser's library: one folder per rail button, each a Place in Live's sidebar (Looping's documentation/browser-places.plan.md). scripts/generate-places-catalog.ts reads it; without it the browser has no Places."

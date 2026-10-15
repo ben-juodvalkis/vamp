@@ -404,15 +404,18 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   },
   glitchLoop: {
     // GlitchLoop: PitchLoop89 with built-in mod slots, built by the owner's
-    // glitchloop repo (dist/GlitchLoop.amxd). Its engine is a port of
-    // PitchLoop89, so it stays out of this public repo and loads from the
-    // owner's Effect Patches folder, which must hold the current build (a
-    // rebuild replaces dist's file, so a hard link to it goes stale). The
-    // Glitch tile and view drive it by parameter name (glitchLoopParams.ts),
-    // since 2026-10-15. The name is load-bearing: Blur, Permute and Pitch
-    // Hack are MxDeviceAudioEffect too.
+    // glitchloop repo. Its engine is a port of PitchLoop89, so it stays out
+    // of this public repo: glitchloop's build copies dist/GlitchLoop.amxd
+    // into Vamp Devices/GlitchLoop/ (gitignored) and it loads through that
+    // Place (2026-10-15, the user's call). Live's browser lists no symlink
+    // (measured: a linked folder never appeared, a real one within 20 s),
+    // and a copy elsewhere went stale. The Glitch tile and view drive it by
+    // parameter name (glitchLoopParams.ts). The name is load-bearing: Blur,
+    // Permute and Pitch Hack are MxDeviceAudioEffect too.
     padScoped: true,
-    presetPath: '{effectPresetsBase}/GlitchLoop.amxd',
+    presetPath: '',
+    source: 'place:Vamp Devices',
+    rel: 'GlitchLoop/GlitchLoop.amxd',
     defaultName: 'GlitchLoop',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device

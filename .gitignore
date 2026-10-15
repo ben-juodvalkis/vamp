@@ -43,6 +43,11 @@ audio/
 !Vamp Devices/Comb/Comb.aupreset
 !Vamp Devices/Octave/Octave.aupreset
 
+# GlitchLoop is the owner's private device (its engine is a port of
+# PitchLoop89): the glitchloop repo's build copies it here so it loads
+# through the Vamp Devices Place, and it never enters this repo.
+Vamp Devices/GlitchLoop/
+
 # ============================================================================
 # User-Specific Configuration
 # ============================================================================

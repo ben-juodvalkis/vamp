@@ -24,6 +24,8 @@
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import type { DeviceRecord, SlotKey } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
+import { v3Store } from '$lib/stores/v3/normalized.svelte';
+import { send } from '$lib/api/simpleClient';
 
 export interface ParamTarget {
 	device: DeviceRecord | null | undefined;
@@ -63,4 +65,18 @@ export function sendParam(target: ParamTarget, paramIndex: number, value: number
 		});
 		return written;
 	}
+}
+
+/**
+ * Several of one device's parameters by name, as one undo step in Live:
+ * `/looping/v3/device/params/set [devicePath, valuesJson, generation]`.
+ * The surface writes only the values Live does not already hold; the
+ * value echoes bring the store up to date. Dropped with no generation
+ * yet, as `setParamValue` drops a write before state/full. GlitchLoop's
+ * presets are the first sender (2026-10-15).
+ */
+export function sendParamsByName(devicePath: string, values: Record<string, number>): void {
+	const generation = v3Store.generation;
+	if (generation === null || generation === undefined) return;
+	send('/looping/v3/device/params/set', [devicePath, JSON.stringify(values), generation]);
 }

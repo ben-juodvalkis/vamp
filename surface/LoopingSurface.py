@@ -186,6 +186,7 @@ from .components.DeviceLoadComponent import (
 )
 from .components.DevicesComponent import (
     DevicesComponent,
+    V3_DEVICE_PARAMS_SET_ADDRESS,
     V3_PARAM_QUERY_ADDRESS,
     V3_PARAM_SET_ADDRESS,
     V3_STATE_RESYNC_ADDRESS,
@@ -791,6 +792,10 @@ class LoopingSurface(ControlSurface):
         self._transport.add_handler(
             V3_PARAM_QUERY_ADDRESS,
             self._devices_component.handle_v3_param_query,
+        )
+        self._transport.add_handler(
+            V3_DEVICE_PARAMS_SET_ADDRESS,
+            self._devices_component.handle_set_device_params,
         )
         self._transport.add_handler(
             V3_STATE_RESYNC_ADDRESS,

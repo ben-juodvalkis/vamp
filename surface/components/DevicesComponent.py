@@ -9,6 +9,11 @@ wire contract:
   ``/looping/v3/error [..., "generation-stale", ...]``.
 - ``/looping/v3/param/query [path]`` → ``/looping/v3/param/value
   [path, value]`` — point query used sparingly for UI cold-start.
+- ``/looping/v3/device/params/set [devicePath, valuesJson, generation]``
+  — several of one device's parameters by NAME in one undo step, only
+  those that differ (2026-10-15: GlitchLoop's presets, which the device
+  keeps out of Live's parameters, applied the way its own bank applies
+  them).
 - ``/looping/v3/state/resync`` (no args) → re-emit the current
   state/full bundle via the injected callback. UI asks when it
   suspects cache tear.
@@ -44,7 +49,9 @@ clamp so a miscalibrated slider surfaces loudly.
 
 from __future__ import annotations
 
+import json
 import logging
+import math
 from typing import Optional
 
 try:
@@ -53,7 +60,7 @@ except ImportError:  # pytest imports these flat — see osc_transport.py
     from V3StateFullComponent import extract_etag
 
 from .LOMListeners import _safe_int_id
-from .path_resolver import ResolveStatus, resolve_param
+from .path_resolver import ResolveStatus, resolve_device, resolve_param
 
 logger = logging.getLogger("looping")
 
@@ -61,6 +68,13 @@ logger = logging.getLogger("looping")
 V3_PARAM_SET_ADDRESS = "/looping/v3/param/set"
 V3_PARAM_QUERY_ADDRESS = "/looping/v3/param/query"
 V3_PARAM_VALUE_ADDRESS = "/looping/v3/param/value"
+V3_DEVICE_PARAMS_SET_ADDRESS = "/looping/v3/device/params/set"
+
+# A value within this fraction of the parameter's range of what Live holds
+# is not written: the preset already has it.
+DEVICE_PARAMS_SAME_FRACTION = 1e-6
+
+_LOM_ERRORS = (RuntimeError, AttributeError, TypeError)
 V3_STATE_RESYNC_ADDRESS = "/looping/v3/state/resync"
 V3_ERROR_ADDRESS = "/looping/v3/error"
 
@@ -281,6 +295,116 @@ class DevicesComponent:
             self._mutation.mark_hot(path)
         self._write(parameter, value, where="v3", param_id=pid)
         return None
+
+    # --- /looping/v3/device/params/set ------------------------------------
+
+    def handle_set_device_params(self, args, source_addr):
+        """``/looping/v3/device/params/set [devicePath, valuesJson, generation]``.
+
+        ``valuesJson`` is a JSON object ``{parameterName: value}`` in the
+        parameter's own units, names as Live reports them (``name``, the
+        short name on a Max device). Each value is compared with what Live
+        holds and only those that differ are written, inside one undo step,
+        so a preset is one Cmd-Z and nothing Live already holds is touched.
+        A name the device does not list, or a non-finite value, is skipped
+        and counted in the log line. No suppression: the value listeners'
+        echoes are how the UI learns what was written.
+
+        Errors as ``param/set``: ``write-rejected`` for bad args,
+        ``generation-stale``, ``path-not-found`` / ``path-not-supported``.
+        """
+        addr = V3_DEVICE_PARAMS_SET_ADDRESS
+        if self._disconnected:
+            return None
+        if len(args) < 3:
+            self._emit_v3_error(
+                addr, V3_ERROR_WRITE_REJECTED, path="",
+                detail="expected [devicePath, valuesJson, generation]",
+            )
+            return None
+        path = self._coerce_str(args[0])
+        try:
+            values = json.loads(self._coerce_str(args[1]))
+            ui_gen = int(args[2])
+        except (TypeError, ValueError) as e:
+            self._emit_v3_error(addr, V3_ERROR_WRITE_REJECTED, path=path, detail="coerce failed: %s" % e)
+            return None
+        if not isinstance(values, dict):
+            self._emit_v3_error(addr, V3_ERROR_WRITE_REJECTED, path=path, detail="values is not an object")
+            return None
+        if self._generation is None:
+            self._emit_v3_error(addr, V3_ERROR_WRITE_REJECTED, path=path, detail="surface misconfigured")
+            return None
+        if self._generation.is_stale(ui_gen):
+            self._emit_v3_error(
+                addr, V3_ERROR_GENERATION_STALE, path=path,
+                detail="ui=%d, surf=%d" % (ui_gen, self._generation.current),
+            )
+            return None
+
+        r = resolve_device(self._song, path)
+        if r.status is ResolveStatus.NOT_SUPPORTED:
+            self._emit_v3_error(addr, V3_ERROR_PATH_NOT_SUPPORTED, path=path, detail=r.detail)
+            return None
+        if r.status is not ResolveStatus.OK:
+            self._emit_v3_error(addr, V3_ERROR_PATH_NOT_FOUND, path=path, detail=r.detail)
+            return None
+
+        by_name = {}
+        try:
+            for parameter in list(r.obj.parameters):
+                by_name.setdefault(str(parameter.name), parameter)
+        except _LOM_ERRORS as e:
+            self._emit_v3_error(addr, V3_ERROR_PATH_NOT_FOUND, path=path, detail="parameters: %s" % e)
+            return None
+
+        writes = []
+        unknown = 0
+        for name, raw in values.items():
+            parameter = by_name.get(str(name))
+            try:
+                value = float(raw)
+            except (TypeError, ValueError):
+                value = float("nan")
+            if parameter is None or not math.isfinite(value):
+                unknown += 1
+                continue
+            try:
+                current = float(parameter.value)
+                span = abs(float(parameter.max) - float(parameter.min))
+            except (_LOM_ERRORS + (ValueError,)):
+                writes.append((parameter, value))
+                continue
+            if abs(current - value) > DEVICE_PARAMS_SAME_FRACTION * (span or 1.0):
+                writes.append((parameter, value))
+
+        began = bool(writes) and self._begin_undo_step()
+        try:
+            for parameter, value in writes:
+                self._write(parameter, value, where="device-params", param_id=None)
+        finally:
+            if began:
+                self._end_undo_step()
+        logger.info(
+            "device/params/set %s: %d written, %d already held, %d skipped",
+            path, len(writes), len(values) - len(writes) - unknown, unknown,
+        )
+        return None
+
+    def _begin_undo_step(self) -> bool:
+        """Open an undo step; ``False`` when Live refused or has none."""
+        try:
+            self._song.begin_undo_step()
+        except _LOM_ERRORS as e:
+            logger.warning("DevicesComponent: begin_undo_step raised %s: %s", type(e).__name__, e)
+            return False
+        return True
+
+    def _end_undo_step(self) -> None:
+        try:
+            self._song.end_undo_step()
+        except _LOM_ERRORS as e:
+            logger.warning("DevicesComponent: end_undo_step raised %s: %s", type(e).__name__, e)
 
     # --- /looping/v3/param/query ------------------------------------------
 
