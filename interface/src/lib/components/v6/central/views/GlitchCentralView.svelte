@@ -3,11 +3,12 @@
 	 * GlitchCentralView — the Glitch tile's view (2026-10-15, the user's
 	 * design). Two devices, a seam between them:
 	 *
-	 *   GlitchLoop  its Play page, mirrored: the preset bank, Clock as an
-	 *               eleven-step column, the loop macros on three XY pads
-	 *               (Length × Reach, Tone × Repeats, Drift × Chaos), Mix,
-	 *               and the FX (Drive × Space on a pad, Duck and Glue on
-	 *               sliders, Freeze). No Mod Hold (the user's call). Pairs
+	 *   GlitchLoop  its Play page, mirrored: the preset bank, the loop
+	 *               macros on three XY pads (Length × Reach, Tone × Repeats,
+	 *               Drift × Chaos) and the FX (Drive × Space on a pad, Duck
+	 *               and Glue on sliders). Clock and Mix are the Glitch
+	 *               tile's axes, so the view leaves them out, and there is
+	 *               no Freeze or Mod Hold (the user's calls). Pairs
 	 *               agreed with the glitchloop side: what one hand moves
 	 *               together; Duck and Glue stay apart. A bipolar macro's
 	 *               noon is the pad's middle, "as the preset set it".
@@ -37,12 +38,7 @@
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 	import { logger } from '$lib/utils/logger';
-	import { drag } from '$lib/actions';
-	import type { DragInfo } from '$lib/actions/drag';
-	import { segmentIndex, scrubBoxOf, type ScrubBox } from '$lib/utils/segmentScrub';
 	import {
-		CLOCK_LABELS,
-		CLOCK_NOON,
 		glitchLoopIndex,
 		toUnit,
 		fromUnit,
@@ -86,25 +82,6 @@
 	const NOON = 0.5;
 	const fallbackOf = (key: GlitchLoopParam) => (key === 'chaos' ? 0 : NOON);
 
-	let clock = $derived(Math.round(glitchLoop.paramValue(gIndex('clock')) ?? CLOCK_NOON));
-	let freeze = $derived(Math.round(glitchLoop.paramValue(gIndex('freeze')) ?? 0) === 1);
-
-	// Clock, top to bottom 64k to 2k. The column SCRUBS: it owns one pointer
-	// and resolves the step under it from geometry.
-	const CLOCK_STEPS = CLOCK_LABELS.map((label, value) => ({ label, value })).reverse();
-	let clockBox: ScrubBox | null = null;
-
-	function clockScrub(clientY: number) {
-		if (!clockBox) return;
-		const step = CLOCK_STEPS[segmentIndex(clientY, clockBox.top, clockBox.height, CLOCK_STEPS.length)];
-		if (step.value === clock && !glitchLoop.isGhost) return;
-		glitchLoop.sendParam(gIndex('clock'), step.value);
-	}
-
-	function clockDown(info: DragInfo) {
-		clockBox = scrubBoxOf(info.event?.currentTarget as Element | null);
-		clockScrub(info.y);
-	}
 
 	// ── Presets ────────────────────────────────────────────────────────────
 	let presets = $state<GlitchLoopPresets | null>(null);
@@ -207,30 +184,9 @@
 				{/if}
 			</div>
 
-			<!-- Clock, 64k at the top; noon (12k) marked. -->
-			<div
-				class="device-segmented clock-stack"
-				class:is-ghost-tab={glitchLoop.isGhost}
-				style:grid-template-rows="repeat({CLOCK_STEPS.length}, 1fr)"
-				role="group"
-				aria-label="GlitchLoop clock"
-				use:drag={{ commit: 'immediate', onDown: clockDown, onMove: (info) => clockScrub(info.y) }}
-			>
-				{#each CLOCK_STEPS as step}
-					<button
-						class="device-segment clock-step num"
-						class:noon={step.value === CLOCK_NOON}
-						class:active={!glitchLoop.isGhost && clock === step.value}
-						aria-label="Clock {step.label}"
-						aria-pressed={!glitchLoop.isGhost && clock === step.value}
-						onclick={() => glitchLoop.sendParam(gIndex('clock'), step.value)}
-					>{step.label}</button>
-				{/each}
-			</div>
-
 			<!-- The loop macros, a pad each pair. -->
 			{#each PADS as pad, i}
-				<div class="pad macro-pad" style:grid-column="{3 + 2 * i} / span 2" class:slot-ghost={glitchLoop.isGhost}>
+				<div class="pad macro-pad" style:grid-column="{2 + 2 * i} / span 2" class:slot-ghost={glitchLoop.isGhost}>
 					<DeviceXY
 						xValue={unit(pad.x, fallbackOf(pad.x))}
 						yValue={unit(pad.y, fallbackOf(pad.y))}
@@ -247,7 +203,7 @@
 				</div>
 			{/each}
 
-			<!-- The FX: Drive × Space, Duck, Glue, Freeze. -->
+			<!-- The FX: Drive × Space, then Duck and Glue, two tracks each. -->
 			<div class="pad fx-pad" class:slot-ghost={glitchLoop.isGhost}>
 				<DeviceXY
 					xValue={unit('drive', NOON)}
@@ -263,8 +219,8 @@
 					}}
 				/>
 			</div>
-			{#each [{ key: 'duck', title: 'Duck', col: 5 }, { key: 'glue', title: 'Glue', col: 6 }] as const as s}
-				<div class="fx-slider" style:grid-column="{s.col}" class:slot-ghost={glitchLoop.isGhost}>
+			{#each [{ key: 'duck', title: 'Duck', col: 4 }, { key: 'glue', title: 'Glue', col: 6 }] as const as s}
+				<div class="fx-slider" style:grid-column="{s.col} / span 2" class:slot-ghost={glitchLoop.isGhost}>
 					<DeviceSlider
 						value={unit(s.key, 0)}
 						title={s.title}
@@ -280,30 +236,6 @@
 					/>
 				</div>
 			{/each}
-			<button
-				class="physical-button freeze-btn"
-				class:active={!glitchLoop.isGhost && freeze}
-				class:is-ghost-tab={glitchLoop.isGhost}
-				aria-pressed={!glitchLoop.isGhost && freeze}
-				onclick={() => (glitchLoop.isGhost ? glitchLoop.loadIfGhost() : glitchLoop.sendParam(gIndex('freeze'), freeze ? 0 : 1))}
-			>Freeze</button>
-
-			<!-- Mix (Dry/Wet), full height. -->
-			<div class="mix" class:slot-ghost={glitchLoop.isGhost}>
-				<DeviceSlider
-					value={unit('mix', 0)}
-					title="Mix"
-					icon="mix"
-					orientation="vertical"
-					labelOrientation="horizontal"
-					isGhost={glitchLoop.isGhost}
-					color={glitchInk}
-					min={0}
-					max={1}
-					onTap={() => glitchLoop.loadIfGhost()}
-					onInteraction={(t) => send('mix', t)}
-				/>
-			</div>
 		</div>
 	</section>
 
@@ -423,9 +355,9 @@
 <style>
 	.glitch-central-layout {
 		display: grid;
-		/* glitchloop | seam | variation. GlitchLoop's ten tracks to the
-		   Variation's six, one equal track per control. */
-		grid-template-columns: minmax(0, 10fr) auto minmax(0, 6fr);
+		/* glitchloop | seam | variation. GlitchLoop's seven and a half
+		   tracks to the Variation's six, one equal track per control. */
+		grid-template-columns: minmax(0, 7.6fr) auto minmax(0, 6fr);
 		height: 100%;
 		width: 100%;
 		padding: var(--central-inset);
@@ -447,14 +379,14 @@
 		color: var(--panel-ink);
 	}
 
-	/* presets · clock · three pads (two tracks each) · mix, over two rows;
-	   row 2 under the pads: Drive × Space, Duck, Glue, Freeze. */
+	/* presets · three pads (two tracks each), over two rows; row 2 under
+	   the pads: Drive × Space, Duck, Glue. */
 	.glitch-body {
 		flex: 1;
 		min-height: 0;
 		min-width: 0;
 		display: grid;
-		grid-template-columns: minmax(0, 1.4fr) repeat(8, minmax(0, 1fr));
+		grid-template-columns: minmax(0, 1.6fr) repeat(6, minmax(0, 1fr));
 		grid-template-rows: repeat(2, minmax(0, 1fr));
 		gap: var(--central-gap);
 	}
@@ -477,31 +409,8 @@
 		white-space: normal;
 	}
 
-	.clock-stack {
-		grid-column: 2;
-		grid-row: 1 / span 2;
-		display: grid;
-		min-height: 0;
-		min-width: 0;
-	}
-
-	/* The stack owns the pointer; the steps are its face. */
-	.clock-step {
-		pointer-events: none;
-		min-height: 0;
-		font-size: 0.75rem;
-		font-weight: 600;
-	}
-
-	/* Noon: the neutral step's label underlined. */
-	.clock-step.noon {
-		text-decoration: underline;
-		text-underline-offset: 3px;
-	}
-
 	.pad,
-	.fx-slider,
-	.mix {
+	.fx-slider {
 		min-width: 0;
 		min-height: 0;
 		display: flex;
@@ -513,25 +422,12 @@
 	}
 
 	.fx-pad {
-		grid-column: 3 / span 2;
+		grid-column: 2 / span 2;
 		grid-row: 2;
 	}
 
 	.fx-slider {
 		grid-row: 2;
-	}
-
-	.freeze-btn {
-		grid-column: 7 / span 2;
-		grid-row: 2;
-		min-height: 0;
-		font-size: 1rem;
-		font-weight: 600;
-	}
-
-	.mix {
-		grid-column: 9;
-		grid-row: 1 / span 2;
 	}
 
 	.is-ghost-tab {
@@ -579,12 +475,6 @@
 	}
 
 	/* ---- Live skin (flat grammar) ------------------------------------ */
-	/* One ink per device: a lit step takes GlitchLoop's own ink. */
-	:global([data-grammar="flat"]) .clock-stack .device-segment.active {
-		background: var(--btn-tint);
-		border-color: var(--btn-tint);
-		color: var(--flat-on-fg);
-	}
 	/* Live sets control text medium, keeps authored case, and does not
 	   letterspace its section legends; headers are plain secondary text. */
 	:global([data-grammar="flat"]) .group-title {
@@ -601,7 +491,6 @@
 		color: var(--muted-foreground);
 	}
 	:global([data-grammar="flat"]) .preset-btn,
-	:global([data-grammar="flat"]) .freeze-btn,
 	:global([data-grammar="flat"]) .var-body .physical-button {
 		font-weight: var(--font-weight-medium);
 	}

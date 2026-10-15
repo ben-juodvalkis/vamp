@@ -23,8 +23,7 @@ export const GLITCH_LOOP_PARAMS = {
 	drive: { name: 'Drive', index: 17, min: -100, max: 100 },
 	space: { name: 'Space', index: 140, min: 0, max: 100 },
 	duck: { name: 'Duck', index: 20, min: 0, max: 100 },
-	glue: { name: 'Glue', index: 27, min: 0, max: 100 },
-	freeze: { name: 'Freeze', index: 132, min: 0, max: 1 }
+	glue: { name: 'Glue', index: 27, min: 0, max: 100 }
 } as const;
 
 export type GlitchLoopParam = keyof typeof GLITCH_LOOP_PARAMS;
@@ -46,10 +45,6 @@ export function fromUnit(key: GlitchLoopParam, t: number): number {
 	const { min, max } = GLITCH_LOOP_PARAMS[key];
 	return min + Math.min(1, Math.max(0, t)) * (max - min);
 }
-
-/** Clock's eleven detents as Live labels them, 0 to 10; 5 (12k) is noon, neutral. */
-export const CLOCK_LABELS = ['2k', '3k', '4k', '6k', '8k', '12k', '16k', '24k', '32k', '48k', '64k'] as const;
-export const CLOCK_NOON = 5;
 
 /**
  * The preset bank glitchloop's params.py generates (`GET

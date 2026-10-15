@@ -1,6 +1,7 @@
 /**
  * GlitchCentralView's GlitchLoop (2026-10-15): the device's Play page —
- * the preset bank, Clock, the macro pads, Mix and the FX — found by
+ * the preset bank, the macro pads and the FX (Clock and Mix are the
+ * tile's) — found by
  * parameter NAME. The fixture is the 153-parameter build measured on the
  * rig; one case shifts every index to show the names, not the positions,
  * decide. Presets come from `GET /api/glitchloop/presets` (stubbed fetch)
@@ -20,7 +21,7 @@ import { SvelteMap } from 'svelte/reactivity';
 import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { replaceTree, _resetForTests, type TrackRecord, type DeviceRecord, type ParamRecord } from '$lib/stores/v3/normalized.svelte';
 import GlitchCentralView from '$lib/components/v6/central/views/GlitchCentralView.svelte';
-import { matchingPreset, type GlitchLoopPresets } from '$lib/components/v6/device-panel/glitchLoopParams';
+import { matchingPreset, glitchLoopIndex, type GlitchLoopPresets } from '$lib/components/v6/device-panel/glitchLoopParams';
 import { send } from '$lib/api/simpleClient';
 
 const TRACK = 'tracks/0';
@@ -91,31 +92,12 @@ afterEach(() => {
 });
 
 describe('GlitchCentralView GlitchLoop', () => {
-	it('draws Clock 64k to 2k, lights the device\'s detent and writes it by name', async () => {
-		seed(glitchLoop({ clock: 7 }, 9));
-		const { container } = render(GlitchCentralView);
-		await settle();
-		const steps = buttons(container, '.clock-stack button');
-		expect(steps.map((b) => b.textContent?.trim())).toEqual(['64k', '48k', '32k', '24k', '16k', '12k', '8k', '6k', '4k', '3k', '2k']);
-		expect(steps.findIndex((b) => b.getAttribute('aria-pressed') === 'true')).toBe(3);
-		await fireEvent.click(steps[0]);
-		expect(written(AT.clock + 9)).toEqual([10]);
-		expect(written(AT.clock)).toEqual([]);
-	});
-
-	it('toggles Freeze', async () => {
-		seed(glitchLoop({ freeze: 0 }));
-		const { container } = render(GlitchCentralView);
-		await settle();
-		await fireEvent.click(buttons(container, '.freeze-btn')[0]);
-		expect(written(AT.freeze)).toEqual([1]);
-	});
-
-	it('has no Mod Hold control', async () => {
+	it('leaves Clock and Mix to the tile, and has no Freeze or Mod Hold', async () => {
 		seed(glitchLoop());
 		const { container } = render(GlitchCentralView);
 		await settle();
-		expect(container.textContent).not.toMatch(/Hold/);
+		expect(container.querySelector('[aria-label^="Mix:"]')).toBeNull();
+		expect(container.textContent).not.toMatch(/Clock|Freeze|Hold/);
 	});
 
 	it('lists the bank and lights the preset the device matches', async () => {
@@ -137,6 +119,15 @@ describe('GlitchCentralView GlitchLoop', () => {
 		const [path, values] = calls[0][1] as [string, string, number];
 		expect(path).toBe(GL);
 		expect(JSON.parse(values)).toEqual({ 'Segment L': 12, Routing: 1 });
+	});
+});
+
+describe('glitchLoopIndex', () => {
+	it('finds a parameter by name wherever the build put it, else the measured index', () => {
+		const names = Array.from({ length: 160 }, (_, i) => `P${i}`);
+		names[29] = 'Duck';
+		expect(glitchLoopIndex(names, 'duck')).toBe(29);
+		expect(glitchLoopIndex([], 'duck')).toBe(20);
 	});
 });
 
