@@ -160,6 +160,17 @@
               "description": "Max heartbeat age before the surface considers the server gone"
             }
           }
+        },
+        "performanceCapture": {
+          "type": "object",
+          "description": "Auto-capture's Save As on transport stop",
+          "properties": {
+            "minSaveTakeMs": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Shortest take, in ms from the Play that armed record, that Stop offers for save"
+            }
+          }
         }
       }
     },

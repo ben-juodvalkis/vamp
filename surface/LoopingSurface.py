@@ -324,7 +324,10 @@ from .components.ServerPresenceComponent import (
     compose_auto_arm_gate,
     compose_key_follow_gate,
 )
-from .components.PerformanceCaptureComponent import PerformanceCaptureComponent
+from .components.PerformanceCaptureComponent import (
+    DEFAULT_MIN_SAVE_TAKE_SECONDS,
+    PerformanceCaptureComponent,
+)
 from .components.SurfaceHelloComponent import SurfaceHelloComponent
 from .components.TrackMetadataComponent import (
     TrackMetadataComponent,
@@ -712,6 +715,11 @@ class LoopingSurface(ControlSurface):
         # launch-mode-derived, then user-overridable — see compose_capture_
         # gate). Constructed after SessionSettings so its gate reference is
         # live. Purely edge-driven (no accept-seed).
+        min_take_ms = (
+            constants.get("timing", {})
+            .get("performanceCapture", {})
+            .get("minSaveTakeMs")
+        )
         self._performance_capture_component = PerformanceCaptureComponent(
             song=self.song,
             emit=self._transport.send,
@@ -720,6 +728,11 @@ class LoopingSurface(ControlSurface):
             # notification (Live: "Changes cannot be triggered by
             # notifications") — defer them to the next tick.
             schedule_delayed=self._schedule_delayed,
+            min_save_take_s=(
+                float(min_take_ms) / 1000.0
+                if isinstance(min_take_ms, (int, float))
+                else DEFAULT_MIN_SAVE_TAKE_SECONDS
+            ),
         )
 
     def _setup_v3_protocol_core(self) -> None:

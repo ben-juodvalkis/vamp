@@ -16,7 +16,8 @@ server (not ``npm run dev``, not when nothing is running):
   to the bridge, which pops Live's native Save As dialog pre-typed with a
   counter/date/tempo/meter name for the user to accept or decline. (Live's
   LOM has no Save As verb — the dialog is OS keystroke automation the
-  bridge owns.)
+  bridge owns.) A take shorter than 30 s (``minSaveTakeMs``, wall clock
+  from the Play that armed it) skips the Save As; the rest still runs.
 
 Start-marker rewind
 -------------------
@@ -67,6 +68,7 @@ from __future__ import annotations
 
 import logging
 import math
+import time
 from typing import Callable, Optional
 
 from .ServerPresenceComponent import compose_capture_gate
@@ -82,6 +84,11 @@ V3_SESSION_SAVE_AS_REQUEST_ADDRESS = "/looping/v3/session/save_as_request"
 # parked on Stop, in bars. One bar of lead-in is enough to play against and
 # is the most the next (record-armed) take can safely overwrite.
 BARS_BEFORE_LAST_EVENT = 1
+
+# A take shorter than this is not offered for save: Stop still disarms and
+# rewinds, but no Save As dialog. Overridden by
+# ``timing.performanceCapture.minSaveTakeMs``.
+DEFAULT_MIN_SAVE_TAKE_SECONDS = 30.0
 
 
 def compute_rewound_start(last_event_time, sig_num, sig_den,
@@ -134,6 +141,8 @@ class PerformanceCaptureComponent:
         emit: Callable[..., None],
         session_settings,
         schedule_delayed: Optional[Callable[[int, Callable[[], None]], None]] = None,
+        min_save_take_s: float = DEFAULT_MIN_SAVE_TAKE_SECONDS,
+        clock: Callable[[], float] = time.monotonic,
     ):
         self._song = song
         self._emit = emit
@@ -152,6 +161,11 @@ class PerformanceCaptureComponent:
         # set on a gated Play. Cleanup on Stop keys off this, not the
         # gate, so a presence lapse mid-take can't strand record_mode=1.
         self._armed_by_us = False
+        # Wall-clock length a take must reach before Stop offers Save As,
+        # measured from the Play that armed it.
+        self._min_save_take_s = float(min_save_take_s)
+        self._clock = clock
+        self._armed_at: Optional[float] = None
 
         # Seed the edge-detector from current state so the first listener
         # fire only acts on a real transition.
@@ -210,9 +224,22 @@ class PerformanceCaptureComponent:
             # presence would strand record_mode=1 and silently drop the
             # take the feature exists to save.
             if self._armed_by_us:
+                took = self._take_seconds()
                 self._disarm_record()
                 self._rewind_start_marker()
-                self._request_save_as()
+                if took is None or took >= self._min_save_take_s:
+                    self._request_save_as()
+                else:
+                    logger.info(
+                        "PerformanceCapture: transport stop after %.1fs "
+                        "(< %.0fs) → no save_as_request",
+                        took, self._min_save_take_s,
+                    )
+
+    def _take_seconds(self) -> Optional[float]:
+        if self._armed_at is None:
+            return None
+        return self._clock() - self._armed_at
 
     # --- actions ---------------------------------------------------------
 
@@ -235,6 +262,7 @@ class PerformanceCaptureComponent:
         # so a Stop that lands before the deferred arm still runs cleanup and
         # offers the take for save. The deferred write reconciles record_mode.
         self._armed_by_us = True
+        self._armed_at = self._clock()
         logger.info("PerformanceCapture: transport start → arming arrangement record")
         self._defer(self._apply_record_mode_1)
 

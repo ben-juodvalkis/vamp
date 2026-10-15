@@ -795,6 +795,9 @@ recomputes hidden strips from the group tree it already holds.
 disarms it, rewinds the Arrangement start marker, and emits
 `/looping/v3/session/save_as_request [tempo, sigNum, sigDen]` to the bridge
 (which pops Live's native Save As dialog — Live's LOM has no save-as verb).
+A take shorter than `timing.performanceCapture.minSaveTakeMs` (30 s, wall
+clock from the Play that armed it) still disarms and rewinds but sends no
+save-as request.
 
 **Start-marker rewind on stop (2026-08-19).** The Stop edge also parks
 `song.start_time` one bar before `song.last_event_time`, floored to a bar

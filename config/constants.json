@@ -41,6 +41,10 @@
       "_description": "Bridge → Python surface liveness heartbeat. The bridge sends /looping/v3/server/heartbeat every heartbeatIntervalMs while `npm run dev`/`ipad` is running; the surface's ServerPresenceComponent treats a gap longer than graceWindowMs as 'server gone' and gates performance-only behaviors (arm-follows-selection) off. graceWindowMs should tolerate ~2 missed beats + UDP jitter.",
       "heartbeatIntervalMs": 2000,
       "graceWindowMs": 6000
+    },
+    "performanceCapture": {
+      "_description": "Auto-capture's Save As on Stop: a take shorter than minSaveTakeMs (wall clock from the Play that armed record) still disarms and rewinds, but pops no Save As dialog.",
+      "minSaveTakeMs": 30000
     }
   },
 

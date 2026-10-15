@@ -111,8 +111,11 @@ def emit():
 def _make(song, emit, ipad=True):
     # ``ipad`` names the resolved gate value for continuity with the
     # pre-toggle tests; it maps to SessionSettings.should_auto_capture().
+    # min_save_take_s=0: these tests stop instantly; the 30 s minimum has
+    # its own tests below.
     return PerformanceCaptureComponent(
         song=song, emit=emit, session_settings=FakeCaptureGate(ipad),
+        min_save_take_s=0.0,
     )
 
 
@@ -172,7 +175,7 @@ def test_presence_lapse_mid_take_still_disarms_and_saves(song, emit):
     cleanup + save-as must still fire (ownership, not gate)."""
     gate = FakeCaptureGate(on=True)
     comp = PerformanceCaptureComponent(
-        song=song, emit=emit, session_settings=gate,
+        song=song, emit=emit, session_settings=gate, min_save_take_s=0.0,
     )
     song.set_playing(True)
     assert song.record_mode == 1  # armed while gate on
@@ -213,7 +216,7 @@ def test_play_while_gate_off_then_on_at_stop_does_nothing(song, emit):
 def _make_deferred(song, emit, sched, ipad=True):
     return PerformanceCaptureComponent(
         song=song, emit=emit, session_settings=FakeCaptureGate(ipad),
-        schedule_delayed=sched,
+        schedule_delayed=sched, min_save_take_s=0.0,
     )
 
 
@@ -412,3 +415,61 @@ def test_disconnect_before_deferred_rewind_is_noop(emit):
     comp.disconnect()
     sched.flush()
     assert song.start_time == 0.0
+
+
+# --- minimum take length before Save As -------------------------------------
+
+
+class FakeClock:
+    def __init__(self):
+        self.now = 1000.0
+
+    def __call__(self):
+        return self.now
+
+
+def _make_timed(song, emit, clock, min_s=30.0):
+    return PerformanceCaptureComponent(
+        song=song, emit=emit, session_settings=FakeCaptureGate(True),
+        min_save_take_s=min_s, clock=clock,
+    )
+
+
+def test_default_minimum_is_30_seconds():
+    from components.PerformanceCaptureComponent import (
+        DEFAULT_MIN_SAVE_TAKE_SECONDS,
+    )
+    assert DEFAULT_MIN_SAVE_TAKE_SECONDS == 30.0
+
+
+def test_short_take_disarms_and_rewinds_but_does_not_save(emit):
+    song = FakeSong(last_event_time=64.0)
+    clock = FakeClock()
+    _make_timed(song, emit, clock)
+    song.set_playing(True)
+    clock.now += 29.9
+    song.set_playing(False)
+    assert emit.calls == []
+    assert song.record_mode == 0
+    assert song.start_time == 60.0
+
+
+def test_take_of_30_seconds_or_more_saves(song, emit):
+    clock = FakeClock()
+    _make_timed(song, emit, clock)
+    song.set_playing(True)
+    clock.now += 30.0
+    song.set_playing(False)
+    assert emit.calls == [(V3_SESSION_SAVE_AS_REQUEST_ADDRESS, [120, 4, 4])]
+
+
+def test_each_take_is_timed_from_its_own_play(song, emit):
+    clock = FakeClock()
+    _make_timed(song, emit, clock)
+    song.set_playing(True)
+    clock.now += 45.0
+    song.set_playing(False)   # long take → save
+    song.set_playing(True)
+    clock.now += 5.0
+    song.set_playing(False)   # short take → no save
+    assert len(emit.calls) == 1
