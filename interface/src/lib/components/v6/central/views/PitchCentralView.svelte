@@ -26,7 +26,6 @@
 	import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-	import SectionDivider from '../SectionDivider.svelte';
 	import { drag } from '$lib/actions';
 	import type { DragInfo } from '$lib/actions/drag';
 	import { segmentIndex, scrubBoxOf, type ScrubBox } from '$lib/utils/segmentScrub';
@@ -136,8 +135,6 @@
 		</div>
 	{/each}
 
-	<SectionDivider orientation="vertical" ink={ink.primary} />
-
 	<!-- Coarse, +12 to -12 top to bottom. -->
 	<div class="device-wrapper column">
 		<span class="column-title" style="color: {ink.primary};">Coarse</span>
@@ -196,9 +193,9 @@
 <style>
 	.pitch-central-layout {
 		display: grid;
-		/* mix · reverse · recycle · int var | seam | coarse · rate: one equal
-		   track per control across the whole view. */
-		grid-template-columns: repeat(4, minmax(0, 1fr)) auto repeat(2, minmax(0, 1fr));
+		/* mix · reverse · recycle · int var · coarse · rate: one equal track
+		   per control across the whole view, no seam (one device). */
+		grid-template-columns: repeat(6, minmax(0, 1fr));
 		height: 100%;
 		width: 100%;
 		padding: var(--central-inset);
