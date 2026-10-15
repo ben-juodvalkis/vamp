@@ -198,7 +198,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Gate',
     expectedClassName: 'Gate',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'utility',        // Belongs to UtilityCentralView
+    centralViewGroup: 'squash',         // In SquashCentralView since 2026-10-15
     color: familyScheme('dynamics')
   },
   ott: {
@@ -206,7 +206,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Multiband Dynamics',
     expectedClassName: 'MultibandDynamics',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'utility',        // Mid band's Below Threshold/Ratio in UtilityCentralView (2026-10-09)
+    centralViewGroup: 'squash',         // Mid band's Below Threshold/Ratio, in SquashCentralView since 2026-10-15
     color: familyScheme('dynamics')
   },
   squash: {

@@ -124,8 +124,7 @@ const FX_TILES = [
 	['Filter', 'filter', 'Auto Filter'],
 	['Saturator', 'pedal', 'Saturator tile → Pedal XY + Saturator faders + Digital + Redux'],
 	['Drum', 'drum-buss', 'Drum Buss'],
-	['Glue', 'squash', 'Glue (the Squash slot) + Compressor'],
-	['Gain', 'utility', 'Utility / Gate (the Gain tile)'],
+	['Glue', 'squash', 'Glue (the Squash slot), Gate, Multiband + Compressor'],
 	['Var', 'variation', 'Variation'],
 	['Chorus', 'chorus', 'Chorus: Octave, Pitch Hack, GlitchLoop, Blur, Comb, Phaser'],
 	['Auto Pan', 'tremolo', 'Auto Pan Legacy (the Tremolo slot)'],
@@ -200,9 +199,7 @@ export const TOURS = {
 			...FX_TILES.map(([label, name, description]) => ({
 				name: `fx-${name}`,
 				description,
-				steps: [openTile(label)],
-				// The Gate pad is centred across its view, on purpose.
-				...(name === 'utility' ? { layout: { centered: 'x' } } : {})
+				steps: [openTile(label)]
 			})),
 			// The Hybrid Reverb on Pad (track 5): the rig's full parameter vector
 			// (a Quartz), one state per algorithm the picker's tap leaves it on,

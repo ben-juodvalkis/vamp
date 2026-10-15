@@ -99,7 +99,7 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 		'redux': () => import('./views/ReduxCentralView.svelte'),
 		'reverb': () => import('./views/ReverbCentralView.svelte'),
 		'tremolo': () => import('./views/AutoPanCentralView.svelte'), // Auto Pan Legacy in the Tremolo slot (2026-10-01)
-		'utility': () => import('./views/UtilityCentralView.svelte'), // the Gain tile's view — the Gate, since the compressor moved to Squash (2026-09-11)
+		'utility': () => import('./views/SquashCentralView.svelte'), // the Gain tile's view: its Gate and Multiband moved into the dynamics view (2026-10-15)
 		'squash': () => import('./views/SquashCentralView.svelte'), // the dynamics view; the Squash tile itself is the grid column above it
 		'variation': () => import('./views/VariationCentralView.svelte'),
 	},

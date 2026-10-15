@@ -17,21 +17,34 @@
    * half `SquashControl` cannot reach. That tile — a full-height FX-grid
    * column of its own (ADR-431 addendum), directly above this view — is
    * one finger over threshold+makeup together, which is the performance
-   * gesture. Threshold, output, attack, release and ratio are the settings
-   * behind it, and they live here. Threshold and output are deliberately
-   * reachable from both: the column moves them together as one squash
-   * amount, these two sliders set each outright (Threshold added beside
-   * Output, user, 2026-09-16).
+   * gesture. Threshold and output are the settings behind it, and they
+   * live here, each set outright (Threshold added beside Output, user,
+   * 2026-09-16).
+   *
+   * The Gate and the Multiband Dynamics sliders (the Mid band's Below
+   * Threshold and Below Ratio, and the device's Output) came here from
+   * `UtilityCentralView` on 2026-10-15, the user's call, in the place of
+   * the Glue Compressor's Attack, Release and Ratio rows, which went. The
+   * Gain tile opens this view too now.
    */
 
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import CompressorControl from '../../device-panel/CompressorControl.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import SectionDivider from '../SectionDivider.svelte';
+  import GateControl from '../../device-panel/GateControl.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
-  import { drag } from '$lib/actions';
-  import type { DragInfo } from '$lib/actions/drag';
-  import { segmentIndex, scrubBoxOf, type ScrubBox } from '$lib/utils/segmentScrub';
+  import {
+    MB_BELOW_THRESHOLD_MID,
+    MB_THRESHOLD_MIN,
+    MB_THRESHOLD_MAX,
+    MB_BELOW_RATIO_MID,
+    MB_OUTPUT,
+    MB_OUTPUT_MIN,
+    MB_OUTPUT_MAX,
+    ratioFromSlider,
+    sliderFromRatio
+  } from '../../device-panel/multibandParams';
 
   const compressor = useFxGridSlot('compressor');
 
@@ -52,9 +65,6 @@
   // so unlike Compressor2 nothing here drifts.
   //   1 = Threshold -40..0 dB — SquashControl drives it too
   //   3 = Makeup  0..20 dB   — "Output"; SquashControl drives it too
-  //   4 = Attack  0..6       stepped, ms
-  //   5 = Ratio   0..2       stepped
-  //   6 = Release 0..6       stepped, s (last step is Auto)
   const squash = useFxGridSlot('squash');
 
   const GLUE_THRESHOLD_PARAM = 1;
@@ -63,20 +73,10 @@
   const GLUE_OUTPUT_PARAM = 3;
   const GLUE_OUTPUT_MIN = 0;
   const GLUE_OUTPUT_MAX = 20;
-  const GLUE_ATTACK_PARAM = 4;
-  const GLUE_RATIO_PARAM = 5;
-  const GLUE_RELEASE_PARAM = 6;
-
-  // Live's own legends. The LOM value for a stepped param IS the step
-  // index, so these are labels only — never a lookup the writer goes
-  // through.
-  const ATTACK_LABELS = ['.01', '.1', '.3', '1', '3', '10', '30'];
-  const RELEASE_LABELS = ['.1', '.2', '.4', '.6', '.8', '1.2', 'A'];
-  const RATIO_LABELS = ['2', '4', '10'];
 
   // Pre-echo fallbacks are the .adv's own stored defaults, so a ghost
   // draws the preset it would load rather than a wrong zero.
-  const squashDefaults = { threshold: 0, output: 0, attack: 3, ratio: 1, release: 3 };
+  const squashDefaults = { threshold: 0, output: 0 };
 
   // ADR-400: these controls drive the Glue Compressor, so they wear its
   // ink, not the Compressor2 ink the rest of the view carries. Both are
@@ -85,55 +85,15 @@
 
   let glueThreshold = $derived(squash.paramValue(GLUE_THRESHOLD_PARAM) ?? squashDefaults.threshold);
   let glueOutput = $derived(squash.paramValue(GLUE_OUTPUT_PARAM) ?? squashDefaults.output);
-  let glueAttack = $derived(Math.round(squash.paramValue(GLUE_ATTACK_PARAM) ?? squashDefaults.attack));
-  let glueRatio = $derived(Math.round(squash.paramValue(GLUE_RATIO_PARAM) ?? squashDefaults.ratio));
-  let glueRelease = $derived(Math.round(squash.paramValue(GLUE_RELEASE_PARAM) ?? squashDefaults.release));
 
-  // The inverse label layer, clipped to the lit segment — `DeviceSlider`'s
-  // trick, with a discrete segment standing in for a travelling fill. The
-  // bar is contiguous (no gaps between segments), which is what makes
-  // these percentages land exactly on the segment's edges rather than
-  // near them. Out of range → fully clipped, i.e. no inverse copy.
-  /**
-   * The stepped rows SCRUB (user, 2026-09-12), the same gesture Drift's
-   * octave strip has: the row owns one pointer through `use:drag`
-   * (ADR-427) and resolves which step is under it from geometry, so a
-   * finger slides across the whole range instead of tapping each step —
-   * and the hairlines between steps belong to a step rather than being
-   * dead bands.
-   *
-   * The box is measured at press time from the pointerdown's own
-   * `currentTarget`, keyed by param: the three rows are separate nodes
-   * with separate machines, so two fingers on two rows are two live
-   * gestures and one shared box would be the wrong one for one of them.
-   *
-   * The CURRENT step is re-read from the slot on every frame rather than
-   * captured in the closure, because `use:drag` takes its options once
-   * and a captured value would go stale the moment the scrub moved it.
-   */
-  const steppedBoxes = new Map<number, ScrubBox>();
+  // ===== GATE and MULTIBAND DYNAMICS — two more slots =====
+  const gate = useFxGridSlot('gate');
+  const multiband = useFxGridSlot('ott');
 
-  function steppedScrub(param: number, count: number, clientX: number) {
-    const box = steppedBoxes.get(param);
-    if (!box) return;
-    const step = segmentIndex(clientX, box.left, box.width, count);
-    if (step === Math.round(squash.paramValue(param) ?? -1)) return;
-    squash.sendParam(param, step);
-  }
-
-  function steppedDown(param: number, count: number, info: DragInfo) {
-    const box = scrubBoxOf(info.event?.currentTarget as Element | null);
-    if (box) steppedBoxes.set(param, box);
-    else steppedBoxes.delete(param);
-    steppedScrub(param, count, info.x);
-  }
-
-  function stepClip(step: number, count: number): string {
-    if (!Number.isInteger(step) || step < 0 || step >= count) return 'inset(0 100% 0 0)';
-    const left = (step / count) * 100;
-    const right = 100 - ((step + 1) / count) * 100;
-    return `inset(0 ${right}% 0 ${left}%)`;
-  }
+  // A ghost draws Live's factory defaults (the dump's `default`s).
+  let mbThreshold = $derived(multiband.paramValue(MB_BELOW_THRESHOLD_MID) ?? -60);
+  let mbRatioPos = $derived(sliderFromRatio(multiband.paramValue(MB_BELOW_RATIO_MID) ?? 0));
+  let mbOutput = $derived(multiband.paramValue(MB_OUTPUT) ?? 0);
 
   // Mount property subscriptions inline (per useFxGridSlot contract).
   // The $effect re-runs when devicePath changes; teardown releases
@@ -294,10 +254,8 @@
      `SectionDivider` says with one line. -->
 <div class="squash-central-layout relative">
   <!-- ===== Panel 1 — Glue Compressor (Squash) =====
-       Threshold and Output, then the three stepped settings. A stepped param's LOM
-       value IS its step index, so the writer sends `step` directly and
-       the label array is presentation only. `sendParam` is
-       fire-and-forget on a ghost — it queues and triggers the load. -->
+       Threshold and Output. `sendParam` is fire-and-forget on a ghost —
+       it queues and triggers the load. -->
   <section class="dyn-panel glue-panel" style="--panel-ink: {squash.isGhost ? IDLE_SCHEME.primary : squashInk.primary};">
     <div class="panel-title text-xs font-bold tracking-wider">Squash</div>
     <div class="glue-body">
@@ -333,10 +291,75 @@
           onInteraction={(value) => squash.sendParam(GLUE_OUTPUT_PARAM, value)}
         />
       </div>
-      <div class="glue-rows">
-        {@render steppedRow('Attack', ATTACK_LABELS, glueAttack, GLUE_ATTACK_PARAM)}
-        {@render steppedRow('Release', RELEASE_LABELS, glueRelease, GLUE_RELEASE_PARAM)}
-        {@render steppedRow('Ratio', RATIO_LABELS, glueRatio, GLUE_RATIO_PARAM)}
+    </div>
+  </section>
+
+  <SectionDivider orientation="vertical" />
+
+  <!-- ===== Gate ===== -->
+  <section class="dyn-panel gate-panel" style="--panel-ink: {gate.isGhost ? IDLE_SCHEME.primary : gate.color.primary};">
+    <div class="panel-title text-xs font-bold tracking-wider">Gate</div>
+    <div class="device-wrapper gate-body" class:slot-ghost={gate.isGhost}>
+      <GateControl device={gate.device} icon="gate" />
+    </div>
+  </section>
+
+  <SectionDivider orientation="vertical" />
+
+  <!-- ===== Multiband Dynamics: the Mid band's Below Threshold and
+       Below Ratio, and the device's Output. A ghost loads it on the first
+       drag, inserted by name with the user's own default. ===== -->
+  <section class="dyn-panel mb-panel" data-device="multiband" style="--panel-ink: {multiband.isGhost ? IDLE_SCHEME.primary : multiband.color.primary};">
+    <div class="panel-title text-xs font-bold tracking-wider">Multiband</div>
+    <div class="mb-body">
+      <div class="mb-slider" class:slot-ghost={multiband.isGhost}>
+        <DeviceSlider
+          value={mbThreshold}
+          title="Threshold"
+          icon="threshold"
+          orientation="vertical"
+          labelOrientation="horizontal"
+          min={MB_THRESHOLD_MIN}
+          max={MB_THRESHOLD_MAX}
+          isGhost={multiband.isGhost}
+          color={multiband.color}
+          onTap={() => multiband.loadIfGhost()}
+          onInteraction={(value) => multiband.sendParam(MB_BELOW_THRESHOLD_MID, value)}
+        />
+      </div>
+      <!-- 0 sits at the middle: the bottom half is -3..0, the top 0..1. -->
+      <div class="mb-slider" class:slot-ghost={multiband.isGhost}>
+        <DeviceSlider
+          value={mbRatioPos}
+          title="Ratio"
+          orientation="vertical"
+          labelOrientation="horizontal"
+          min={0}
+          max={1}
+          centerOrigin={true}
+          centerValue={0.5}
+          isGhost={multiband.isGhost}
+          color={multiband.color}
+          onTap={() => multiband.loadIfGhost()}
+          onInteraction={(value) => multiband.sendParam(MB_BELOW_RATIO_MID, ratioFromSlider(value))}
+        />
+      </div>
+      <div class="mb-slider" class:slot-ghost={multiband.isGhost}>
+        <DeviceSlider
+          value={mbOutput}
+          title="Output"
+          icon="output"
+          orientation="vertical"
+          labelOrientation="horizontal"
+          min={MB_OUTPUT_MIN}
+          max={MB_OUTPUT_MAX}
+          centerOrigin={true}
+          centerValue={0}
+          isGhost={multiband.isGhost}
+          color={multiband.color}
+          onTap={() => multiband.loadIfGhost()}
+          onInteraction={(value) => multiband.sendParam(MB_OUTPUT, value)}
+        />
       </div>
     </div>
   </section>
@@ -437,58 +460,13 @@
   </section>
 </div>
 
-<!-- One setting as a horizontal bar: the NAME reads inside the control
-     and the steps are positions, not numbers (user's call, 2026-09-11).
-     Live's legends are still the truth about what each step is, so they
-     ride on `title` and in the accessible name — available to a hover
-     and to a screen reader, off the glass. Three steps therefore draw
-     three wide segments and seven draw seven narrow ones, which is the
-     resolution of the control read as width. -->
-{#snippet steppedRow(label: string, labels: string[], current: number, param: number)}
-  {@const ink = squash.isGhost ? IDLE_SCHEME.primary : squashInk.primary}
-  <div class="stepped-row" style={squash.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
-    <div
-      class="device-segmented stepped-stack"
-      style="--btn-tint: {ink}; grid-template-columns: repeat({labels.length}, 1fr);"
-      use:drag={{
-        commit: 'immediate',
-        onDown: (info) => steppedDown(param, labels.length, info),
-        onMove: (info) => steppedScrub(param, labels.length, info.x)
-      }}
-    >
-      {#each labels as stepLabel, step}
-        <button
-          class="device-segment stepped-step"
-          class:active={current === step}
-          title={stepLabel}
-          aria-label="{label} {stepLabel}"
-          aria-pressed={current === step}
-          onclick={() => squash.sendParam(param, step)}
-        ></button>
-      {/each}
-      <!-- Two stacked copies of the name: the base reads on the unlit
-           segments, the inverse is clipped to the lit one and inked for
-           on-fill, so the word flips ink at the segment's edge instead of
-           disappearing into it. -->
-      <div class="stepped-label text-lg font-bold tracking-wider" style="color: {ink};">{label}</div>
-      <div
-        class="stepped-label stepped-label--inverse text-lg font-bold tracking-wider"
-        style="clip-path: {stepClip(current, labels.length)};"
-        aria-hidden="true"
-      >{label}</div>
-    </div>
-  </div>
-{/snippet}
-
 <style>
   .squash-central-layout {
     display: grid;
-    /* squash | seam | compressor. The compressor group carries three
-       sections to the squash group's five narrower ones, hence the wider
-       share; the middle track is the hairline's own width. Squash went
-       2.4fr → 3fr with the Threshold slider, so its Output kept most of
-       its width. */
-    grid-template-columns: 3fr auto 3.9fr;
+    /* squash | seam | gate | seam | multiband | seam | compressor. The
+       Gate and Multiband groups took the width the Glue Compressor's
+       Attack/Release/Ratio rows had (2026-10-15). */
+    grid-template-columns: 1.6fr auto 1.6fr auto 2.4fr auto 3.9fr;
     height: 100%;
     width: 100%;
     padding: var(--central-inset);
@@ -525,9 +503,27 @@
     gap: var(--central-gap);
   }
 
-  /* threshold | output | the three stacked setting bars. */
+  /* threshold | output */
   .glue-body {
-    grid-template-columns: 1fr 1fr 2.6fr;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .mb-body {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--central-gap);
+  }
+
+  .gate-body {
+    flex: 1;
+  }
+
+  .mb-slider {
+    min-width: 0;
+    min-height: 0;
   }
 
   .glue-rows {
@@ -600,60 +596,6 @@
     min-height: 0;
   }
 
-  .stepped-row {
-    flex: 1;
-    min-height: 0;
-    min-width: 0;
-    display: flex;
-  }
-
-  /* The house segmented control (app.css §.device-segmented) turned on its
-     side: it divides with `border-top` between siblings, a horizontal bar
-     wants `border-left`. Contiguous by construction — the label's clip
-     math is in bar percentages, so a gap between segments would put the
-     ink flip a gap's width away from the edge it belongs to.
-     Steps share the width, so Ratio's three are wider than Attack's
-     seven — the target size reads the resolution of the control. */
-  .stepped-stack {
-    position: relative;
-    flex: 1;
-    min-width: 0;
-    display: grid;
-  }
-
-  .stepped-step {
-    min-width: 0;
-  }
-
-  /* The row owns the pointer; the steps are its face. Keyboard focus and
-     Enter still activate one. */
-  .stepped-step {
-    pointer-events: none;
-  }
-  .stepped-stack .device-segment + .device-segment {
-    border-top: 0;
-    border-left: 1px solid var(--line-faint);
-  }
-  .stepped-stack .device-segment.active,
-  .stepped-stack .device-segment.active + .device-segment {
-    border-left-color: transparent;
-  }
-
-  /* Name layers. Kept un-rotated so the clip-path is in screen space. */
-  .stepped-label {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-    z-index: 10;
-  }
-  .stepped-label--inverse {
-    z-index: 11;
-    color: var(--flat-on-fg);
-  }
-
   /* Adaptive grid for sidechain buttons - rows/cols set via inline style */
   .sidechain-grid {
     display: grid;
@@ -688,20 +630,10 @@
     opacity: 1;
     color: var(--flat-disabled-fg);
   }
-  /* Same two corrections for the glue stacks: Live sets control text
-     medium and does not letterspace its section legends. */
-  :global([data-grammar="flat"]) .panel-title,
-  :global([data-grammar="flat"]) .stepped-label {
+  /* Live sets control text medium and does not letterspace its section
+     legends. */
+  :global([data-grammar="flat"]) .panel-title {
     font-weight: var(--font-weight-medium);
     letter-spacing: 0;
-  }
-  /* The flat grammar divides its segments with --line-strong. */
-  :global([data-grammar="flat"]) .stepped-stack .device-segment + .device-segment {
-    border-top: 0;
-    border-left: 1px solid var(--line-strong);
-  }
-  :global([data-grammar="flat"]) .stepped-stack .device-segment.active,
-  :global([data-grammar="flat"]) .stepped-stack .device-segment.active + .device-segment {
-    border-left-color: transparent;
   }
 </style>

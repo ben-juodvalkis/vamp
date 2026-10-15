@@ -53,7 +53,7 @@ See the full guide for complete implementation patterns, parameter mapping, and 
 
 - **MIDI → Rand Oct**, the layout entry's own `RandomControl`.
 - **Audio → `BassControl.svelte`** when `selectedTrackStore.trackType === 'audio'`. The `bass` slot — the `Bass Amp.adg` rack, this tile its only control — param **1**, its one macro (the mix), rail 0..127, resting at **0** (see the fill note below). It is the one device on the grid that is *only* useful on audio: `fxGridStore.loadDevice` renames the track "Bass" on an audio track and leaves a MIDI track's name alone. `slotKey="bass"`, like Squash.
-- **Master → empty.** The OTT tile (a Multiband Dynamics Amount slider) left on 2026-10-09; the device's Mid Below Threshold, Below Ratio and Output are sliders in `UtilityCentralView` (the Gain view) on every track, slot `ott`, indices in `multibandParams.ts`.
+- **Master → empty.** The OTT tile (a Multiband Dynamics Amount slider) left on 2026-10-09; the device's Mid Below Threshold, Below Ratio and Output are sliders in `SquashCentralView` (the Glue view, which the Gain tile opens too since 2026-10-15) on every track, slot `ott`, indices in `multibandParams.ts`.
 
 **Squash and Gain are separate full-height columns** (11 and 12): `SquashControl.svelte` (the Glue Compressor's threshold + makeup on one 0..1 slider, indices 1 and 3 measured off the `.adv`, no layout entry, resolving its own `squash` slot through `slotKey`) and the Gain tile. A tap on Squash opens the Gain / Utility view (registered as `device/squash`). They shared one split column from 2026-09-10 until the twelve-column refinement.
 
