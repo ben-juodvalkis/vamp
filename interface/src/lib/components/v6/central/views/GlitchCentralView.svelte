@@ -4,9 +4,10 @@
 	 * design). Two devices, a seam between them:
 	 *
 	 *   GlitchLoop  its Play page, mirrored: the preset bank, the loop
-	 *               macros on three XY pads (Length × Reach, Tone × Repeats,
-	 *               Drift × Chaos) and the FX (Drive × Space on a pad, Duck
-	 *               and Glue on sliders). Clock and Mix are the Glitch
+	 *               macros and Drive × Space on four XY pads, two by two
+	 *               (Length × Reach, Tone × Repeats over Drive × Space,
+	 *               Drift × Chaos), and Duck and Glue on full-height
+	 *               sliders. Clock and Mix are the Glitch
 	 *               tile's axes, so the view leaves them out, and there is
 	 *               no Freeze or Mod Hold (the user's calls). Pairs
 	 *               agreed with the glitchloop side: what one hand moves
@@ -73,14 +74,16 @@
 	};
 	const send = (key: GlitchLoopParam, t: number) => glitchLoop.sendParam(gIndex(key), fromUnit(key, t));
 
+	// Two by two: the loop on top, Drive × Space and Drift × Chaos under it.
 	const PADS = [
-		{ title: 'Length Reach', x: 'length', y: 'reach' },
-		{ title: 'Tone Repeats', x: 'tone', y: 'repeats' },
-		{ title: 'Drift Chaos', x: 'drift', y: 'chaos' }
-	] as const satisfies readonly { title: string; x: GlitchLoopParam; y: GlitchLoopParam }[];
+		{ title: 'Length Reach', x: 'length', y: 'reach', col: 2, row: 1 },
+		{ title: 'Tone Repeats', x: 'tone', y: 'repeats', col: 4, row: 1 },
+		{ title: 'Drive Space', x: 'drive', y: 'space', col: 2, row: 2 },
+		{ title: 'Drift Chaos', x: 'drift', y: 'chaos', col: 4, row: 2 }
+	] as const satisfies readonly { title: string; x: GlitchLoopParam; y: GlitchLoopParam; col: number; row: number }[];
 
 	const NOON = 0.5;
-	const fallbackOf = (key: GlitchLoopParam) => (key === 'chaos' ? 0 : NOON);
+	const fallbackOf = (key: GlitchLoopParam) => (key === 'chaos' || key === 'space' ? 0 : NOON);
 
 
 	// ── Presets ────────────────────────────────────────────────────────────
@@ -184,9 +187,9 @@
 				{/if}
 			</div>
 
-			<!-- The loop macros, a pad each pair. -->
-			{#each PADS as pad, i}
-				<div class="pad macro-pad" style:grid-column="{2 + 2 * i} / span 2" class:slot-ghost={glitchLoop.isGhost}>
+			<!-- The macros and Drive × Space, a pad each pair. -->
+			{#each PADS as pad}
+				<div class="pad" style:grid-column="{pad.col} / span 2" style:grid-row={pad.row} class:slot-ghost={glitchLoop.isGhost}>
 					<DeviceXY
 						xValue={unit(pad.x, fallbackOf(pad.x))}
 						yValue={unit(pad.y, fallbackOf(pad.y))}
@@ -203,24 +206,9 @@
 				</div>
 			{/each}
 
-			<!-- The FX: Drive × Space, then Duck and Glue, two tracks each. -->
-			<div class="pad fx-pad" class:slot-ghost={glitchLoop.isGhost}>
-				<DeviceXY
-					xValue={unit('drive', NOON)}
-					yValue={unit('space', 0)}
-					title="Drive Space"
-					isGhost={glitchLoop.isGhost}
-					showCurve={false}
-					color={glitchInk}
-					onTap={() => glitchLoop.loadIfGhost()}
-					onInteraction={(x, y) => {
-						send('drive', x);
-						send('space', y);
-					}}
-				/>
-			</div>
-			{#each [{ key: 'duck', title: 'Duck', col: 4 }, { key: 'glue', title: 'Glue', col: 6 }] as const as s}
-				<div class="fx-slider" style:grid-column="{s.col} / span 2" class:slot-ghost={glitchLoop.isGhost}>
+			<!-- Duck and Glue, full height. -->
+			{#each [{ key: 'duck', title: 'Duck', col: 6 }, { key: 'glue', title: 'Glue', col: 7 }] as const as s}
+				<div class="fx-slider" style:grid-column={s.col} class:slot-ghost={glitchLoop.isGhost}>
 					<DeviceSlider
 						value={unit(s.key, 0)}
 						title={s.title}
@@ -379,8 +367,8 @@
 		color: var(--panel-ink);
 	}
 
-	/* presets · three pads (two tracks each), over two rows; row 2 under
-	   the pads: Drive × Space, Duck, Glue. */
+	/* presets · four pads two by two (two tracks each) · Duck · Glue,
+	   over two rows. */
 	.glitch-body {
 		flex: 1;
 		min-height: 0;
@@ -417,17 +405,8 @@
 		flex-direction: column;
 	}
 
-	.macro-pad {
-		grid-row: 1;
-	}
-
-	.fx-pad {
-		grid-column: 2 / span 2;
-		grid-row: 2;
-	}
-
 	.fx-slider {
-		grid-row: 2;
+		grid-row: 1 / span 2;
 	}
 
 	.is-ghost-tab {
