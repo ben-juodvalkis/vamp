@@ -399,23 +399,24 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Pitch Hack',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'chorus',         // Back as one Rate column (2026-10-08)
+    centralViewGroup: 'pitch',          // In PitchCentralView since 2026-10-15
     color: familyScheme('pitchSeq')     // A pitch shifter — function over host view
   },
   glitchLoop: {
     // GlitchLoop: PitchLoop89 with built-in mod slots, built by the owner's
-    // glitchloop repo (dist/GlitchLoop.amxd). It embeds Ableton's PitchLoop89
-    // patch, so it stays out of this public repo and loads from the owner's
-    // Effect Patches folder, where the file is a hard link to the glitchloop
-    // build. Took Pitch Hack's place in the Chorus view (2026-10-06). The
-    // name is load-bearing: Blur, Permute and Pitch Hack are
-    // MxDeviceAudioEffect too.
+    // glitchloop repo (dist/GlitchLoop.amxd). Its engine is a port of
+    // PitchLoop89, so it stays out of this public repo and loads from the
+    // owner's Effect Patches folder, which must hold the current build (a
+    // rebuild replaces dist's file, so a hard link to it goes stale). The
+    // Glitch tile and view drive it by parameter name (glitchLoopParams.ts),
+    // since 2026-10-15. The name is load-bearing: Blur, Permute and Pitch
+    // Hack are MxDeviceAudioEffect too.
     padScoped: true,
     presetPath: '{effectPresetsBase}/GlitchLoop.amxd',
     defaultName: 'GlitchLoop',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'chorus',         // Belongs to ChorusCentralView
+    centralViewGroup: 'glitch',         // The Glitch tile and its view (2026-10-15)
     color: familyScheme('rackVoice')    // Rose (user, 2026-10-07): violet sat too close to Octave, and Comb and Phaser here are magenta
   },
   smudge: {
@@ -474,7 +475,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Octave',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'chorus',         // Belongs to ChorusCentralView (OctavePanel)
+    centralViewGroup: 'pitch',          // The Pitch tile and its view (2026-10-15)
     color: familyScheme('pitchSeq')
   },
   // Virtual Smudge Device

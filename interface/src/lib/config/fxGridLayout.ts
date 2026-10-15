@@ -44,7 +44,7 @@ export interface FXGridSlotConfig {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   component: Component<any>;
 
-  /** First grid column (1-based) on the ten-column ruler, MIDI/master placement */
+  /** First grid column (1-based) on the twelve-column ruler, MIDI/master placement */
   col: number;
 
   /** Grid column span (1 or 2) */
@@ -66,14 +66,22 @@ export interface FXGridSlotConfig {
 /**
  * FX Grid Layout
  *
- * 11 slots on a TEN-column, two-row grid, every cell placed explicitly
+ * 11 slots on a TWELVE-column, two-row grid, every cell placed explicitly
  * (`col` / `row` / `span` / `rowSpan`) so placement can differ by track kind:
  *
  *   MIDI / master  col 1 Rand Oct (empty on master), full height
- *                  cols 2-9 EQ, Filter, Saturator, Drum over Chorus, Tremolo, Echo, Reverb
- *                  col 10 Squash over Gain
+ *                  cols 2-11 row 1: EQ, Filter, Saturator, Drum, Tremolo (Auto Pan)
+ *                            row 2: Pitch, Glitch, Chorus, Echo, Reverb
+ *                  col 12 Squash over Gain
  *   audio          col 1 Guitar over Bass
- *                  cols 2-10 identical
+ *                  cols 2-12 identical
+ *
+ * 2026-10-15, later the same day: the two freed columns became one more XY
+ * pair, back to twelve columns and the XY width they had before: Pitch (the
+ * Octave, PITCH_CELL) and Glitch (GlitchLoop, GLITCH_CELL) lead row 2, and
+ * Tremolo moved up to close row 1 (the user's order). Neither new tile has
+ * a layout entry; each resolves its own slot through `slotKey`, as Squash
+ * does.
  *
  * 2026-10-15 (the user's call): twelve columns became ten. Squash and Gain
  * share one column, Squash on top, and Variation is hidden for now
@@ -169,7 +177,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
     // Gain: the bottom of the last column, under Squash (SQUASH_CELL),
     // 2026-10-15. Each had a full-height column from 2026-09-15.
     position: 'fx7',
-    col: 10,
+    col: 12,
     deviceType: 'utility',
     component: UtilityControl,
     span: 1,
@@ -194,7 +202,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx9',
-    col: 2,
+    col: 6,
     deviceType: 'chorus',
     component: ChorusControl,
     span: 2,
@@ -203,16 +211,16 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx10',
-    col: 4,
+    col: 10,
     deviceType: 'tremolo',
     component: AutoPanControl,
     span: 2,
-    row: 2,
+    row: 1,
     config: DEVICE_PRESETS.tremolo
   },
   {
     position: 'fx11',
-    col: 6,
+    col: 8,
     deviceType: 'echo',
     component: EchoControl,
     span: 2,
@@ -221,7 +229,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx12',
-    col: 8,
+    col: 10,
     deviceType: 'reverb',
     component: ReverbControl,
     span: 2,
@@ -231,12 +239,12 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
 ];
 
 /** The grid's column count. The TotalMix status strip in layouts/default/Layout.svelte repeats it by hand. */
-export const FX_GRID_COLUMNS = 10;
+export const FX_GRID_COLUMNS = 12;
 
 /** Which placement a grid uses. Master and group tracks use MIDI's. */
 export type GridTrackKind = 'midi' | 'audio';
 
-/** One cell on the ten-by-two grid: 1-based start column and row, plus spans. */
+/** One cell on the twelve-by-two grid: 1-based start column and row, plus spans. */
 export interface GridCell {
   col: number;
   row: 1 | 2;
@@ -245,7 +253,13 @@ export interface GridCell {
 }
 
 /** Squash: the top of the last column, over Gain, on every track. No layout entry. */
-export const SQUASH_CELL: GridCell = { col: 10, row: 1, span: 1, rowSpan: 1 };
+export const SQUASH_CELL: GridCell = { col: 12, row: 1, span: 1, rowSpan: 1 };
+
+/** Pitch (the Octave): the first XY of row 2, under EQ, on every track. No layout entry. */
+export const PITCH_CELL: GridCell = { col: 2, row: 2, span: 2, rowSpan: 1 };
+
+/** Glitch (GlitchLoop): beside Pitch, under Filter, on every track. No layout entry. */
+export const GLITCH_CELL: GridCell = { col: 4, row: 2, span: 2, rowSpan: 1 };
 
 /** The Guitar rack's drive: the top of the first column, over the Bass, audio tracks only. No layout entry. */
 export const AUDIO_GUITAR_CELL: GridCell = { col: 1, row: 1, span: 1, rowSpan: 1 };

@@ -1,5 +1,5 @@
 /**
- * ChorusCentralView's Pitch Hack: one column of Rate stops, 1 to 1/16 top
+ * PitchCentralView's Pitch Hack: one column of Rate stops, 1 to 1/16 top
  * to bottom (2026-10-08). A stop writes Rate (param 5, an index into the
  * device's value_items) and puts Dry / Wet (param 2) at 100.
  */
@@ -16,7 +16,7 @@ import { tick } from 'svelte';
 import { SvelteMap } from 'svelte/reactivity';
 import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { replaceTree, _resetForTests, type TrackRecord, type DeviceRecord, type ParamRecord } from '$lib/stores/v3/normalized.svelte';
-import ChorusCentralView from '$lib/components/v6/central/views/ChorusCentralView.svelte';
+import PitchCentralView from '$lib/components/v6/central/views/PitchCentralView.svelte';
 import { send } from '$lib/api/simpleClient';
 
 const TRACK = 'tracks/0';
@@ -57,10 +57,10 @@ beforeEach(() => {
 });
 afterEach(() => cleanup());
 
-describe('ChorusCentralView Pitch Hack rate column', () => {
+describe('PitchCentralView Pitch Hack rate column', () => {
 	it('draws 1 to 1/16 and lights the stop Rate matches', async () => {
 		seed(pitchHack(10));
-		const { container } = render(ChorusCentralView);
+		const { container } = render(PitchCentralView);
 		await tick();
 		expect(stops(container).map((b) => b.textContent?.trim())).toEqual(['1', '1/2', '1/4', '1/8', '1/16']);
 		expect(stops(container).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'false', 'false', 'true', 'false']);
@@ -68,7 +68,7 @@ describe('ChorusCentralView Pitch Hack rate column', () => {
 
 	it('writes each stop to Rate and puts Dry / Wet at full', async () => {
 		seed(pitchHack(0));
-		const { container } = render(ChorusCentralView);
+		const { container } = render(PitchCentralView);
 		await tick();
 		for (const b of stops(container)) await fireEvent.click(b);
 		expect(written(5)).toEqual([19, 16, 13, 10, 7]);

@@ -326,7 +326,7 @@
 		z-index: 1001;
 		overflow: hidden;
 		display: grid;
-			grid-template-columns: repeat(10, minmax(0, 1fr));
+			grid-template-columns: repeat(12, minmax(0, 1fr));
 		gap: 0.5rem;
 		/* Stretch, not center: each bar takes the strip's height now that
 		   the label lives inside it, less a 2px breather top and bottom so
@@ -347,14 +347,13 @@
 	     phones   → Saturator             (6–7)
 	     main     → Drum                  (8–9)
 
-	   Column 10 (Squash over Gain) stays clear, as the level columns always
-	   have: five channels do not tile a grid that keeps them back.
+	   Columns 10–12 (Auto Pan, Squash over Gain) stay clear: five channels
+	   do not tile a grid that keeps them back.
 
-	   The grid is ten columns again since 2026-10-15 (Variation hidden,
-	   Squash and Gain sharing a column), so Room is one column wide: the
-	   left column is Rand Oct on MIDI and the Guitar over the Bass on audio,
-	   and no bar straddles a tile seam, which is the one thing this ruler
-	   exists to prevent.
+	   Since 2026-10-15 the left edge is one column (Rand Oct on MIDI, the
+	   Guitar over the Bass on audio), so Room is one column wide and no bar
+	   straddles a tile seam, which is the one thing this ruler exists to
+	   prevent.
 
 	   One collision worth knowing: iPadOS draws its multitasking pill at
 	   roughly 677–699pt in landscape, which lands inside the Filter

@@ -26,7 +26,7 @@ import { send } from '$lib/api/simpleClient';
 // `FX_GRID_LAYOUT` undefined while `slotRegistry` initialises.
 import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.svelte';
 import FXGrid from '$lib/components/v6/device-panel/FXGrid.svelte';
-import { FX_GRID_LAYOUT, FX_GRID_COLUMNS, SQUASH_CELL, AUDIO_GUITAR_CELL, cellFor, type GridCell } from '$lib/config/fxGridLayout';
+import { FX_GRID_LAYOUT, FX_GRID_COLUMNS, SQUASH_CELL, PITCH_CELL, GLITCH_CELL, AUDIO_GUITAR_CELL, cellFor, type GridCell } from '$lib/config/fxGridLayout';
 import { currentInstrumentStore } from '$lib/stores/v6/currentInstrumentStore.svelte';
 import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
 import { setPropertySender } from '$lib/stores/v3/propertySubscriptions.svelte';
@@ -157,15 +157,18 @@ describe('FXGrid — the grid is the held pad\'s', () => {
 	it('stands Squash over Gain in one column, and a pad can scope Squash', async () => {
 		const { container } = render(FXGrid);
 		await tick();
-		expect(container.querySelector('.fx-grid')?.classList.contains('grid-cols-10')).toBe(true);
+		expect(container.querySelector('.fx-grid')?.classList.contains('grid-cols-12')).toBe(true);
 		const cellOf = (title: string) => {
 			const tile = Array.from(container.querySelectorAll<HTMLElement>('.device-control')).find((t) => t.textContent?.includes(title));
 			const c = tile!.closest<HTMLElement>('[data-cell]')!;
 			return [c.dataset.col, c.dataset.row, c.dataset.span, c.dataset.rowSpan].join('/');
 		};
-		// col/row/span/rowSpan: Glue over Gain in the last column.
-		expect(cellOf('Glue')).toBe('10/1/1/1');
-		expect(cellOf('Gain')).toBe('10/2/1/1');
+		// col/row/span/rowSpan: Glue over Gain in the last column; Pitch
+		// and Glitch lead row 2.
+		expect(cellOf('Glue')).toBe('12/1/1/1');
+		expect(cellOf('Gain')).toBe('12/2/1/1');
+		expect(cellOf('Pitch')).toBe('2/2/2/1');
+		expect(cellOf('Glitch')).toBe('4/2/2/1');
 		// MIDI: Rand Oct is full height; Variation is hidden for now.
 		expect(cellOf('Rand Oct')).toBe('1/1/1/2');
 		expect(Array.from(container.querySelectorAll('.device-control')).some((t) => t.textContent?.includes('Var'))).toBe(false);
@@ -269,19 +272,19 @@ describe('FXGrid — the grid is the held pad\'s', () => {
 });
 
 /**
- * The column arithmetic, pinned (2026-10-15, ten columns).
+ * The column arithmetic, pinned (2026-10-15, twelve columns).
  *
  * The TotalMix status strip's ruler in `layouts/default/Layout.svelte` is hard-coupled to the
  * column count with no shared constant, deliberately, so the count is worth
  * a test on this side. Every cell is placed explicitly, and both track kinds
- * must tile the same ten-by-two grid exactly: no gap, no overlap, no
+ * must tile the same twelve-by-two grid exactly: no gap, no overlap, no
  * implicit third row. That is what keeps the XY tiles and the ruler still
  * when the selected track changes kind.
  */
-describe('the FX grid layout is ten columns wide', () => {
+describe('the FX grid layout is twelve columns wide', () => {
 	function occupancy(kind: 'midi' | 'audio') {
 		const cells: Array<[string, GridCell]> = FX_GRID_LAYOUT.filter((s) => !s.hidden).map((s) => [s.deviceType as string, cellFor(s, kind)]);
-		cells.push(['squash', SQUASH_CELL]);
+		cells.push(['squash', SQUASH_CELL], ['pitch', PITCH_CELL], ['glitch', GLITCH_CELL]);
 		if (kind === 'audio') cells.push(['guitar', AUDIO_GUITAR_CELL]);
 		const grid: string[][] = [0, 1].map(() => Array(FX_GRID_COLUMNS).fill(''));
 		for (const [name, c] of cells) {
@@ -301,7 +304,10 @@ describe('the FX grid layout is ten columns wide', () => {
 		const grid = occupancy('midi');
 		expect(grid.flat().every(Boolean)).toBe(true);
 		expect([grid[0][0], grid[1][0]]).toEqual(['random', 'random']);
-		expect([grid[0][9], grid[1][9]]).toEqual(['squash', 'utility']);
+		// The user's order (2026-10-15).
+		expect(grid[0].slice(1, 11).filter((_, i) => i % 2 === 0)).toEqual(['eq', 'filter', 'saturator', 'drum', 'tremolo']);
+		expect(grid[1].slice(1, 11).filter((_, i) => i % 2 === 0)).toEqual(['pitch', 'glitch', 'chorus', 'echo', 'reverb']);
+		expect([grid[0][11], grid[1][11]]).toEqual(['squash', 'utility']);
 		expect(grid.flat()).not.toContain('variation');
 	});
 
@@ -310,7 +316,7 @@ describe('the FX grid layout is ten columns wide', () => {
 		expect(grid.flat().every(Boolean)).toBe(true);
 		// fx1's slot holds the Bass on audio.
 		expect([grid[0][0], grid[1][0]]).toEqual(['guitar', 'random']);
-		expect([grid[0][9], grid[1][9]]).toEqual(['squash', 'utility']);
+		expect([grid[0][11], grid[1][11]]).toEqual(['squash', 'utility']);
 	});
 
 	it('keeps every XY tile in the same place on both kinds', () => {

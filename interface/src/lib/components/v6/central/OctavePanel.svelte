@@ -2,13 +2,12 @@
 	/**
 	 * OctavePanel — the `octave` slot: Ben's Polyphonic Pitch Shifter
 	 * (2026-10-05; a Helix Native before). Lived in GuitarCentralView until
-	 * 2026-10-05, when it moved to the Chorus view beside Pitch Hack.
+	 * 2026-10-05, then in the Chorus view beside Pitch Hack, and since
+	 * 2026-10-15 in the Pitch view, which the Pitch tile opens.
 	 *
-	 * Two knobs, measured off the running device: 1 Semitones, -12..12 in
-	 * whole steps; 2 Mix, 0..100, where 50 is dry and shifted both at full
-	 * level and 100 the shifted sound alone. The pitch is a four-way tab
-	 * rather than a fader: the four intervals are the only useful stops,
-	 * listed top-down as they draw.
+	 * Two knobs (`octaveParams.ts`): Semitones and Mix. The pitch is a
+	 * four-way tab rather than a fader: the four intervals are the only
+	 * useful stops, listed top-down as they draw.
 	 */
 
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
@@ -25,28 +24,22 @@
 	import { drag } from '$lib/actions';
 	import type { DragInfo } from '$lib/actions/drag';
 	import { segmentIndex, scrubBoxOf, type ScrubBox } from '$lib/utils/segmentScrub';
+	import {
+		OCTAVE_PITCH_PARAM,
+		OCTAVE_MIX_PARAM,
+		OCTAVE_PITCH_STEPS,
+		OCTAVE_LOAD_PITCH,
+		nearestOctaveStep
+	} from '../device-panel/octaveParams';
 
 	const octave = useFxGridSlot('octave');
 
-	const OCTAVE_PITCH_PARAM = 1;
-	const OCTAVE_MIX_PARAM = 2;
-	const PITCH_STEPS = [
-		{ label: '+12', value: 12 },
-		{ label: '+7', value: 7 },
-		{ label: '-5', value: -5 },
-		{ label: '-12', value: -12 }
-	];
+	const PITCH_STEPS = OCTAVE_PITCH_STEPS;
 	let octaveMix = $derived(octave.paramValue(OCTAVE_MIX_PARAM) ?? 0);
 	let octavePitch = $derived(octave.paramValue(OCTAVE_PITCH_PARAM) ?? 12);
 	// The step nearest the device's value, so a pitch set by hand in the
 	// plug-in still lights the closest stop.
-	let pitchStep = $derived(
-		PITCH_STEPS.reduce(
-			(best, step, i) =>
-				Math.abs(step.value - octavePitch) < Math.abs(PITCH_STEPS[best].value - octavePitch) ? i : best,
-			0
-		)
-	);
+	let pitchStep = $derived(nearestOctaveStep(octavePitch));
 
 	let octaveInk = $derived({
 		primary: trackInk(octave.color.primary, paintModeReactive()),
@@ -63,7 +56,6 @@
 	// The device saves -12 as its Semitones; a load from here starts an
 	// octave UP instead (user, 2026-10-05). On a ghost slot the write is
 	// pending and rides the load. A pitch tap writes its own value instead.
-	const OCTAVE_LOAD_PITCH = 12;
 	function loadOctaveUp() {
 		if (octave.isGhost) octave.sendParam(OCTAVE_PITCH_PARAM, OCTAVE_LOAD_PITCH);
 	}

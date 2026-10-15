@@ -142,15 +142,18 @@ describe('the audio track\'s fx1 column', () => {
 
 		// The clip-pitch slider went with the split — it lives in the Clip
 		// view, which the strip's Clip band opens in one tap.
-		expect(container.textContent).not.toContain('Pitch');
+		// The Pitch tile (the Octave, 2026-10-15) is the only Pitch on it.
+		const pitchTiles = Array.from(container.querySelectorAll<HTMLElement>('.device-control'))
+			.filter((t) => t.textContent?.includes('Pitch'));
+		expect(pitchTiles.map((t) => t.closest<HTMLElement>('[data-cell]')?.dataset.cell)).toEqual(['pitch']);
 
 		// Rand Oct is the MIDI track's tile, never audio's.
 		const titles = Array.from(container.querySelectorAll<HTMLElement>('.device-control'))
 			.map((t) => t.textContent ?? '');
 		expect(titles.some((t) => t.includes('Rand Oct'))).toBe(false);
 
-		// Ten columns on audio as on MIDI; the TotalMix ruler rides on it.
-		expect(container.querySelector('.fx-grid')?.classList.contains('grid-cols-10')).toBe(true);
+		// Twelve columns on audio as on MIDI; the TotalMix ruler rides on it.
+		expect(container.querySelector('.fx-grid')?.classList.contains('grid-cols-12')).toBe(true);
 	});
 
 	it('does not draw on a MIDI track, which keeps Rand Oct in that slot', async () => {
