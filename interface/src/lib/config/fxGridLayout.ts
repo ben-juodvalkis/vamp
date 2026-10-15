@@ -44,7 +44,7 @@ export interface FXGridSlotConfig {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   component: Component<any>;
 
-  /** First grid column (1-based) on the twelve-column ruler, MIDI/master placement */
+  /** First grid column (1-based) on the ten-column ruler, MIDI/master placement */
   col: number;
 
   /** Grid column span (1 or 2) */
@@ -58,20 +58,28 @@ export interface FXGridSlotConfig {
 
   /** Device preset configuration (derived from DEVICE_PRESETS) */
   config: DevicePresetConfig;
+
+  /** Optional: kept in the layout (its slot still resolves) but not drawn */
+  hidden?: boolean;
 }
 
 /**
  * FX Grid Layout
  *
- * 11 slots on a TWELVE-column, two-row grid, every cell placed explicitly
+ * 11 slots on a TEN-column, two-row grid, every cell placed explicitly
  * (`col` / `row` / `span` / `rowSpan`) so placement can differ by track kind:
  *
  *   MIDI / master  col 1 Rand Oct (empty on master), full height
- *                  col 2 Variation, full height
- *                  cols 3-10 EQ, Filter, Saturator, Drum over Chorus, Tremolo, Echo, Reverb
- *                  col 11 Squash, full height · col 12 Gain, full height
- *   audio          col 1 Guitar, full height · col 2 Bass over Variation
- *                  cols 3-12 identical
+ *                  cols 2-9 EQ, Filter, Saturator, Drum over Chorus, Tremolo, Echo, Reverb
+ *                  col 10 Squash over Gain
+ *   audio          col 1 Guitar over Bass
+ *                  cols 2-10 identical
+ *
+ * 2026-10-15 (the user's call): twelve columns became ten. Squash and Gain
+ * share one column, Squash on top, and Variation is hidden for now
+ * (`hidden`, so it comes back by deleting one line). On audio the Guitar
+ * stacks over the Bass in column 1, so every kind is one column at the left
+ * and the XY tiles stand on the same columns whichever kind is selected.
  *
  * 2026-09-15, later the same day (ADR-438 addendum): the single-column
  * tiles became full-height columns. Both kinds are twelve columns, so the
@@ -123,7 +131,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx3',
-    col: 3,
+    col: 2,
     deviceType: 'eq',
     component: EQControl,
     span: 2,
@@ -132,7 +140,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx4',
-    col: 5,
+    col: 4,
     deviceType: 'filter',
     component: AutoFilterControl,
     span: 2,
@@ -141,7 +149,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx5',
-    col: 7,
+    col: 6,
     deviceType: 'saturator',
     component: SaturatorControl,
     span: 2,
@@ -150,7 +158,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx6',
-    col: 9,
+    col: 8,
     deviceType: 'drum',
     component: DrumBussControl,
     span: 2,
@@ -158,23 +166,25 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
     config: DEVICE_PRESETS.drum
   },
   {
-    // Gain: a full-height column of its own (2026-09-15). Squash, which
-    // shared this column from 2026-09-10 (ADR-431 addendum), is the
-    // full-height column to its left, placed by SQUASH_CELL.
+    // Gain: the bottom of the last column, under Squash (SQUASH_CELL),
+    // 2026-10-15. Each had a full-height column from 2026-09-15.
     position: 'fx7',
-    col: 12,
+    col: 10,
     deviceType: 'utility',
     component: UtilityControl,
     span: 1,
-    rowSpan: 2,
-    row: 1,
+    rowSpan: 1,
+    row: 2,
     config: DEVICE_PRESETS.utility
   },
 
-  // ===== ROW 2 (Variation, above, is full height from row 1) =====
+  // ===== ROW 2 =====
   {
+    // Variation: hidden for now (2026-10-15, the user's call); its column
+    // went to the XY tiles. Delete `hidden` and give it a cell to bring it back.
     position: 'fx8',
     col: 2,
+    hidden: true,
     deviceType: 'variation',
     component: VariationControl,
     span: 1,
@@ -184,7 +194,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx9',
-    col: 3,
+    col: 2,
     deviceType: 'chorus',
     component: ChorusControl,
     span: 2,
@@ -193,7 +203,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx10',
-    col: 5,
+    col: 4,
     deviceType: 'tremolo',
     component: AutoPanControl,
     span: 2,
@@ -202,7 +212,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx11',
-    col: 7,
+    col: 6,
     deviceType: 'echo',
     component: EchoControl,
     span: 2,
@@ -211,7 +221,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx12',
-    col: 9,
+    col: 8,
     deviceType: 'reverb',
     component: ReverbControl,
     span: 2,
@@ -221,12 +231,12 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
 ];
 
 /** The grid's column count. The TotalMix status strip in layouts/default/Layout.svelte repeats it by hand. */
-export const FX_GRID_COLUMNS = 12;
+export const FX_GRID_COLUMNS = 10;
 
 /** Which placement a grid uses. Master and group tracks use MIDI's. */
 export type GridTrackKind = 'midi' | 'audio';
 
-/** One cell on the twelve-by-two grid: 1-based start column and row, plus spans. */
+/** One cell on the ten-by-two grid: 1-based start column and row, plus spans. */
 export interface GridCell {
   col: number;
   row: 1 | 2;
@@ -234,20 +244,18 @@ export interface GridCell {
   rowSpan: 1 | 2;
 }
 
-/** Squash: full height beside Gain, on every track. No layout entry. */
-export const SQUASH_CELL: GridCell = { col: 11, row: 1, span: 1, rowSpan: 2 };
+/** Squash: the top of the last column, over Gain, on every track. No layout entry. */
+export const SQUASH_CELL: GridCell = { col: 10, row: 1, span: 1, rowSpan: 1 };
 
-/** The Guitar rack's drive: full height at the far left, audio tracks only. No layout entry. */
-export const AUDIO_GUITAR_CELL: GridCell = { col: 1, row: 1, span: 1, rowSpan: 2 };
+/** The Guitar rack's drive: the top of the first column, over the Bass, audio tracks only. No layout entry. */
+export const AUDIO_GUITAR_CELL: GridCell = { col: 1, row: 1, span: 1, rowSpan: 1 };
 
 /**
- * Audio moves the two slots MIDI stands full height in columns 1-2: the
- * Guitar takes column 1, so fx1 (the Bass on audio) sits over Variation in
- * column 2. Every other slot is placed the same on both kinds.
+ * Audio moves fx1 (the Bass there) under the Guitar in column 1. Every
+ * other slot is placed the same on both kinds.
  */
 const AUDIO_CELLS: Partial<Record<PositionKey, GridCell>> = {
-  fx1: { col: 2, row: 1, span: 1, rowSpan: 1 },
-  fx8: { col: 2, row: 2, span: 1, rowSpan: 1 }
+  fx1: { col: 1, row: 2, span: 1, rowSpan: 1 }
 };
 
 /** Where a layout slot sits for a track kind. */

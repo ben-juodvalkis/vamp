@@ -120,7 +120,7 @@ afterEach(() => {
 });
 
 describe('the audio track\'s fx1 column', () => {
-	it('is the Guitar full height, then the Bass over Variation, with no clip-pitch slider', async () => {
+	it('is the Guitar over the Bass, with no clip-pitch slider', async () => {
 		const { container } = render(FXGrid);
 		await tick();
 
@@ -128,18 +128,17 @@ describe('the audio track\'s fx1 column', () => {
 			.find((t) => t.textContent?.includes('Bass'));
 		expect(bassTile).toBeDefined();
 
-		// Audio puts the Guitar full height in column 1 and the Bass over
-		// Variation in column 2 (2026-09-15). col/row/span/rowSpan:
+		// Audio stands the Guitar over the Bass in column 1 (2026-10-15).
+		// col/row/span/rowSpan:
 		const cell = (el: Element) => {
 			const c = el.closest<HTMLElement>('[data-cell]')!;
 			return [c.dataset.col, c.dataset.row, c.dataset.span, c.dataset.rowSpan].join('/');
 		};
-		expect(cell(bassTile!)).toBe('2/1/1/1');
+		expect(cell(bassTile!)).toBe('1/2/1/1');
 		const tiles = Array.from(container.querySelectorAll<HTMLElement>('.device-control'));
 		const gtr = tiles.find((t) => t.textContent?.includes('Gtr'));
 		expect(gtr).toBeDefined();
-		expect(cell(gtr!)).toBe('1/1/1/2');
-		expect(cell(tiles.find((t) => t.textContent?.includes('Var'))!)).toBe('2/2/1/1');
+		expect(cell(gtr!)).toBe('1/1/1/1');
 
 		// The clip-pitch slider went with the split — it lives in the Clip
 		// view, which the strip's Clip band opens in one tap.
@@ -150,8 +149,8 @@ describe('the audio track\'s fx1 column', () => {
 			.map((t) => t.textContent ?? '');
 		expect(titles.some((t) => t.includes('Rand Oct'))).toBe(false);
 
-		// Twelve columns on audio as on MIDI; the TotalMix ruler rides on it.
-		expect(container.querySelector('.fx-grid')?.classList.contains('grid-cols-12')).toBe(true);
+		// Ten columns on audio as on MIDI; the TotalMix ruler rides on it.
+		expect(container.querySelector('.fx-grid')?.classList.contains('grid-cols-10')).toBe(true);
 	});
 
 	it('does not draw on a MIDI track, which keeps Rand Oct in that slot', async () => {

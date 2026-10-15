@@ -18,7 +18,7 @@
    *
    * Architecture:
    * - Layout defined in fxGridLayout.ts (11 slots, explicit cells on a
-   *   12-column ruler the TotalMix status strip in layouts/default/Layout.svelte shares)
+   *   10-column ruler the TotalMix status strip in layouts/default/Layout.svelte shares)
    * - Each slot has: position, deviceType, component, span, rowSpan, config
    * - `device` per slot is resolved via selectedTrackStore.getFxGridSlot
    *   (FXGridState), which reads v3 `devicesByPath` and matches on
@@ -89,10 +89,10 @@
   const guitarDevice = $derived(selectedTrackStore.getFxGridSlot('guitar', scopeKey).device);
 
   // Track kind decides two things (2026-09-15): what fx1 holds, and how the
-  // two leftmost columns are arranged. MIDI: Rand Oct and Variation, each
-  // full height. Audio: the Guitar full height, then the Bass (in fx1's
-  // slot) over Variation. Both are twelve columns, so nothing to the right
-  // moves when the selected track changes kind.
+  // leftmost column is arranged. MIDI: Rand Oct, full height. Audio: the
+  // Guitar over the Bass (in fx1's slot), since 2026-10-15. Both are ten
+  // columns, so nothing to the right moves when the selected track changes
+  // kind.
   // Under a track hold the HELD track's kind decides, so its Bass/Guitar
   // column is the one it has.
   const isAudioTrack = $derived(
@@ -136,11 +136,12 @@
 </script>
 
 <div class="w-full h-full" data-fx-scope={scope?.note} data-fx-track-scope={heldTrack?.trackPath} style={scopeInk ? `--scope-ink: ${scopeInk}` : undefined}>
-  <!-- 12-column grid, 2 rows, every cell placed explicitly (cellFor in
-       fxGridLayout.ts): the two leftmost columns are arranged differently
-       on audio and MIDI, and auto-placement cannot do both from one DOM
-       order. Squash and Gain are full height on every track; on MIDI so are
-       Rand Oct and Variation, on audio the Guitar (2026-09-15).
+  <!-- 10-column grid, 2 rows, every cell placed explicitly (cellFor in
+       fxGridLayout.ts): the leftmost column is arranged differently on
+       audio and MIDI, and auto-placement cannot do both from one DOM
+       order. Squash stands over Gain in the last column on every track;
+       on MIDI Rand Oct is full height, on audio the Guitar stands over the
+       Bass (2026-10-15).
 
        gap-2 (8px) is deliberate, on the app's interior ladder (16 frames a
        panel, 8 separates tiles inside one, 4 separates rows inside a tile).
@@ -152,16 +153,17 @@
 
        It is NOT bounded by label wrapping - "Rand Oct" going to two lines is
        fine, so do not treat the wrap point as a cap if you revisit this. -->
-  <div class="h-full grid grid-cols-12 grid-rows-2 gap-2 fx-grid" class:fx-scoped={scoped}>
+  <div class="h-full grid grid-cols-10 grid-rows-2 gap-2 fx-grid" class:fx-scoped={scoped}>
     {#if isAudioTrack}
-      <!-- Audio: the Guitar rack's drive, full height at the far left
-           (2026-09-15). On MIDI it is reached through the Pedal view's last
+      <!-- Audio: the Guitar rack's drive, over the Bass at the far left
+           (2026-10-15). On MIDI it is reached through the Pedal view's last
            column instead. GuitarControl resolves its own `guitar` slot. -->
       <div data-cell="guitar" data-col={AUDIO_GUITAR_CELL.col} data-row={AUDIO_GUITAR_CELL.row} data-span={AUDIO_GUITAR_CELL.span} data-row-span={AUDIO_GUITAR_CELL.rowSpan} style={cellStyle(AUDIO_GUITAR_CELL)}>
         <GuitarControl device={guitarDevice} />
       </div>
     {/if}
     {#each FX_GRID_LAYOUT as slot, i (slot.position)}
+      {#if !slot.hidden}
       {@const Component = slot.component}
       {@const cell = cellFor(slot, gridKind)}
       <div data-cell={slot.position} data-col={cell.col} data-row={cell.row} data-span={cell.span} data-row-span={cell.rowSpan} style={cellStyle(cell)}>
@@ -177,10 +179,10 @@
           <Component device={devices[i]} position={slot.position} />
         {/if}
       </div>
+      {/if}
     {/each}
-    <!-- Squash, the Glue Compressor's one-finger threshold + makeup: a
-         full-height column of its own beside Gain since 2026-09-15 (it rode
-         the top half of the Gain column from 2026-09-10). -->
+    <!-- Squash, the Glue Compressor's one-finger threshold + makeup: the
+         top of the last column, over Gain (2026-10-15). -->
     <div data-cell="squash" data-col={SQUASH_CELL.col} data-row={SQUASH_CELL.row} data-span={SQUASH_CELL.span} data-row-span={SQUASH_CELL.rowSpan} style={cellStyle(SQUASH_CELL)}>
       <SquashControl device={squashDevice} />
     </div>

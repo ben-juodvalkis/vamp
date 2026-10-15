@@ -326,7 +326,7 @@
 		z-index: 1001;
 		overflow: hidden;
 		display: grid;
-			grid-template-columns: repeat(12, minmax(0, 1fr));
+			grid-template-columns: repeat(10, minmax(0, 1fr));
 		gap: 0.5rem;
 		/* Stretch, not center: each bar takes the strip's height now that
 		   the label lives inside it, less a 2px breather top and bottom so
@@ -341,21 +341,20 @@
 	   a statement about which tile each monitor belongs over, and
 	   `nth-child` would re-point it silently if the channel order moved.
 
-	     room     → the two left columns  (1–2)
-	     playback → EQ                    (3–4)
-	     click    → Filter                (5–6)
-	     phones   → Pedal                 (7–8)
-	     main     → Drum                  (9–10)
+	     room     → the left column       (1)
+	     playback → EQ                    (2–3)
+	     click    → Filter                (4–5)
+	     phones   → Saturator             (6–7)
+	     main     → Drum                  (8–9)
 
-	   Columns 11–12 (Squash, Gain) stay clear, as the level columns always
+	   Column 10 (Squash over Gain) stays clear, as the level columns always
 	   have: five channels do not tile a grid that keeps them back.
 
-	   Every bar is two columns again (2026-09-15, twelve columns). Room was
-	   one column wide for the few hours the grid was ten: the two left
-	   columns are one XY width together on every track kind (Rand Oct +
-	   Variation on MIDI, Guitar + Bass/Variation on audio), so no bar
-	   straddles a tile seam, which is the one thing this ruler exists to
-	   prevent.
+	   The grid is ten columns again since 2026-10-15 (Variation hidden,
+	   Squash and Gain sharing a column), so Room is one column wide: the
+	   left column is Rand Oct on MIDI and the Guitar over the Bass on audio,
+	   and no bar straddles a tile seam, which is the one thing this ruler
+	   exists to prevent.
 
 	   One collision worth knowing: iPadOS draws its multitasking pill at
 	   roughly 677–699pt in landscape, which lands inside the Filter
@@ -363,19 +362,19 @@
 	   the battery cluster (~1270–1359pt) both fall outside the FX grid's
 	   152–1214pt band, so this ruler clears them by construction. */
 	.status-strip :global([data-channel='room']) {
-		grid-column: 1 / span 2;
+		grid-column: 1 / span 1;
 	}
 	.status-strip :global([data-channel='playback']) {
-		grid-column: 3 / span 2;
+		grid-column: 2 / span 2;
 	}
 	.status-strip :global([data-channel='click']) {
-		grid-column: 5 / span 2;
+		grid-column: 4 / span 2;
 	}
 	.status-strip :global([data-channel='phones']) {
-		grid-column: 7 / span 2;
+		grid-column: 6 / span 2;
 	}
 	.status-strip :global([data-channel='main']) {
-		grid-column: 9 / span 2;
+		grid-column: 8 / span 2;
 	}
 
 	.section {
