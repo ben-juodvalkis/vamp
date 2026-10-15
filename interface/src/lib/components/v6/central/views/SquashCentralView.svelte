@@ -312,21 +312,6 @@
   <section class="dyn-panel mb-panel" data-device="multiband" style="--panel-ink: {multiband.isGhost ? IDLE_SCHEME.primary : multiband.color.primary};">
     <div class="panel-title text-xs font-bold tracking-wider">Multiband</div>
     <div class="mb-body">
-      <div class="mb-slider" class:slot-ghost={multiband.isGhost}>
-        <DeviceSlider
-          value={mbThreshold}
-          title="Threshold"
-          icon="threshold"
-          orientation="vertical"
-          labelOrientation="horizontal"
-          min={MB_THRESHOLD_MIN}
-          max={MB_THRESHOLD_MAX}
-          isGhost={multiband.isGhost}
-          color={multiband.color}
-          onTap={() => multiband.loadIfGhost()}
-          onInteraction={(value) => multiband.sendParam(MB_BELOW_THRESHOLD_MID, value)}
-        />
-      </div>
       <!-- 0 sits at the middle: the bottom half is -3..0, the top 0..1. -->
       <div class="mb-slider" class:slot-ghost={multiband.isGhost}>
         <DeviceSlider
@@ -342,6 +327,21 @@
           color={multiband.color}
           onTap={() => multiband.loadIfGhost()}
           onInteraction={(value) => multiband.sendParam(MB_BELOW_RATIO_MID, ratioFromSlider(value))}
+        />
+      </div>
+      <div class="mb-slider" class:slot-ghost={multiband.isGhost}>
+        <DeviceSlider
+          value={mbThreshold}
+          title="Threshold"
+          icon="threshold"
+          orientation="vertical"
+          labelOrientation="horizontal"
+          min={MB_THRESHOLD_MIN}
+          max={MB_THRESHOLD_MAX}
+          isGhost={multiband.isGhost}
+          color={multiband.color}
+          onTap={() => multiband.loadIfGhost()}
+          onInteraction={(value) => multiband.sendParam(MB_BELOW_THRESHOLD_MID, value)}
         />
       </div>
       <div class="mb-slider" class:slot-ghost={multiband.isGhost}>
