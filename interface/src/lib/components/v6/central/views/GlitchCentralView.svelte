@@ -473,4 +473,19 @@
 	:global([data-grammar="flat"]) .var-body .physical-button {
 		font-weight: var(--font-weight-medium);
 	}
+	/* The presets wear GlitchLoop's ink as its pads' titles do (user,
+	   2026-10-15): the name in the device ink, the lit one filled with it,
+	   as the Pitch Hack columns light a step, rather than the house
+	   --phosphor. */
+	:global([data-skin="hybrid"]) .preset-btn {
+		color: var(--btn-tint);
+	}
+	:global(.light[data-skin="hybrid"]) .preset-btn {
+		color: color-mix(in oklab, var(--btn-tint) 55%, var(--foreground));
+	}
+	:global([data-grammar="flat"]) .preset-btn.active {
+		background: var(--btn-tint);
+		border-color: var(--btn-tint);
+		color: var(--flat-on-fg);
+	}
 </style>
