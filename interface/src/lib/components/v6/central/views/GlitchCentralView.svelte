@@ -15,8 +15,9 @@
 	 *               noon is the pad's middle, "as the preset set it".
 	 *   Variation   (Beat Repeat) the Var slider (Chance, param 1) and its
 	 *               controls: Interval (2), Grid (4) with the Random amount
-	 *               (6) on its spare row, Length (8), Pitch Decay (10), and
-	 *               Mode, the routing switch (12) over Triplets (5).
+	 *               (6) on its spare row, Length (8), and
+	 *               Mode, the routing switch (12) over Triplets (5). Pitch
+	 *               Decay (10) is not drawn (the user's call, 2026-10-15).
 	 *
 	 * GlitchLoop's parameters resolve by name (`glitchLoopParams.ts`). Its
 	 * presets are not parameters (the device keeps them out of Live's undo
@@ -130,7 +131,6 @@
 	const TRIPLETS_INDEX = 5;     // bool 0/1
 	const AMOUNT_INDEX = 6;       // int 0-10
 	const GATE_INDEX = 8;         // int 0-18
-	const PITCH_DECAY_INDEX = 10; // float 0-1
 	const ROUTING_INDEX = 12;     // bool 0/1 — 0 = Mix, 1 = Insert
 
 	const AMOUNT_MAX = 10;
@@ -161,7 +161,6 @@
 	let triplets = $derived(Math.round(variation.paramValue(TRIPLETS_INDEX) ?? 0) === 0);
 	let amount = $derived(variation.paramValue(AMOUNT_INDEX) ?? 0);
 	let gate = $derived(variation.paramValue(GATE_INDEX) ?? 0);
-	let pitchDecay = $derived(variation.paramValue(PITCH_DECAY_INDEX) ?? 0);
 	// The switch NAMES its state: 0 is Mix, 1 is Insert. Reads Insert (1)
 	// until the device's own value arrives.
 	let insertMode = $derived(Math.round(variation.paramValue(ROUTING_INDEX) ?? 1) === 1);
@@ -304,21 +303,6 @@
 			</div>
 
 			<div class="var-col">
-				<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Decay</div>
-				<div class="flex-1 min-h-0">
-					<DeviceSlider
-						value={pitchDecay}
-						icon="pitchdrop"
-						orientation="vertical"
-						labelOrientation="horizontal"
-						isGhost={variation.isGhost}
-						color={varInk}
-						onInteraction={(value) => variation.sendParam(PITCH_DECAY_INDEX, value)}
-					/>
-				</div>
-			</div>
-
-			<div class="var-col">
 				<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Mode</div>
 				<div class="var-stack">
 					<button
@@ -344,8 +328,8 @@
 	.glitch-central-layout {
 		display: grid;
 		/* glitchloop | seam | variation. GlitchLoop's seven and a half
-		   tracks to the Variation's six, one equal track per control. */
-		grid-template-columns: minmax(0, 7.6fr) auto minmax(0, 6fr);
+		   tracks to the Variation's five, one equal track per control. */
+		grid-template-columns: minmax(0, 7.6fr) auto minmax(0, 5fr);
 		height: 100%;
 		width: 100%;
 		padding: var(--central-inset);
@@ -418,7 +402,7 @@
 		min-height: 0;
 		min-width: 0;
 		display: grid;
-		grid-template-columns: repeat(6, minmax(0, 1fr));
+		grid-template-columns: repeat(5, minmax(0, 1fr));
 		gap: var(--central-gap);
 	}
 
