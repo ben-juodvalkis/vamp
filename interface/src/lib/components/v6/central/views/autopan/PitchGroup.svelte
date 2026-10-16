@@ -12,8 +12,9 @@
 	 * belongs at its head, so an Octave gesture that may load arms the
 	 * one-shot move the tile armed (`useBassChainPosition`).
 	 *
-	 * Two columns: the Octave stacks its interval row over a flat Mix
-	 * slider; Pitch Hack stands its Rate column and Mix slider upright. Its root is `display: contents`, so the columns and
+	 * Two columns, each under one title with its two controls upright side
+	 * by side: the Octave (titled Pitch) its interval column and Mix
+	 * slider, Pitch Hack (titled Reverse) its Rate column and Mix slider. Its root is `display: contents`, so the columns and
 	 * seams are grid items of AutoPanCentralView, which owns the tracks.
 	 *
 	 * Pitch Hack (Creative Extensions, Max), measured off the running Live
@@ -69,8 +70,8 @@
 		rate: { index: 5 }
 	};
 
-	// Low to high, left to right.
-	const INTERVAL_STEPS = [...OCTAVE_PITCH_STEPS].sort((a, b) => a.value - b.value);
+	// High to low, top to bottom.
+	const INTERVAL_STEPS = [...OCTAVE_PITCH_STEPS].sort((a, b) => b.value - a.value);
 
 	// Slow to fast, top to bottom.
 	const RATES = [
@@ -111,16 +112,14 @@
 		octave.sendParam(index, v);
 	}
 
-	// Every row SCRUBS, like the Octave's tab did: the row owns one
+	// Every column SCRUBS, like the Octave's tab did: the column owns one
 	// pointer and resolves the step under it from geometry, so a finger
-	// slides between steps. The box is measured at press, per row.
+	// slides between steps. The box is measured at press, per column.
 	// Keyed by column name: the Octave's and Pitch Hack's params share indices.
 	const boxes = new Map<string, ScrubBox | null>();
 
 	interface Column {
 		key: string;
-		/** The axis the steps run along: the Octave's row, Pitch Hack's column. */
-		axis: 'x' | 'y';
 		slot: FxGridSlotHandle;
 		index: number;
 		values: number[];
@@ -130,9 +129,7 @@
 	function scrub(c: Column, current: number, info: DragInfo) {
 		const box = boxes.get(c.key);
 		if (!box) return;
-		const i = c.axis === 'x'
-			? segmentIndex(info.x, box.left, box.width, c.values.length)
-			: segmentIndex(info.y, box.top, box.height, c.values.length);
+		const i = segmentIndex(info.y, box.top, box.height, c.values.length);
 		if (i === current && !c.slot.isGhost) return;
 		c.write(c.index, c.values[i]);
 	}
@@ -143,11 +140,11 @@
 	}
 
 	const INTERVAL: Column = {
-		key: 'interval', axis: 'x', slot: octave, index: OCTAVE_PITCH_PARAM,
+		key: 'interval', slot: octave, index: OCTAVE_PITCH_PARAM,
 		values: INTERVAL_STEPS.map((s) => s.value), write: sendOctave
 	};
 	const RATE: Column = {
-		key: 'rate', axis: 'y', slot: pitchHack, index: PH.rate.index,
+		key: 'rate', slot: pitchHack, index: PH.rate.index,
 		values: RATES.map((r) => r.rate), write: send
 	};
 
@@ -157,99 +154,103 @@
 <div class="pitch-group">
 	<SectionDivider orientation="vertical" ink={octaveInk.primary} />
 
-	<!-- The Octave: its interval over its Mix. -->
+	<!-- The Octave, titled Pitch: its interval and Mix upright side by side. -->
 	<div class="stack" style="--btn-tint: {octaveInk.primary};">
-		<div class="cell steps">
-			<span class="row-title" style="color: {octaveInk.primary};">Octave</span>
-			<div
-				class="device-segmented step-row octave-interval"
-				class:is-ghost-tab={octave.isGhost}
-				style:grid-template-columns="repeat({INTERVAL_STEPS.length}, 1fr)"
-				role="group"
-				aria-label="Octave interval"
-				use:drag={{
-					commit: 'immediate',
-					onDown: (info) => down(INTERVAL, intervalStep, info),
-					onMove: (info) => scrub(INTERVAL, intervalStep, info)
-				}}
-			>
-				{#each INTERVAL_STEPS as step, i}
-					<button
-						class="device-segment step num"
-						class:active={!octave.isGhost && intervalStep === i}
-						aria-label="Octave interval {step.label}"
-						aria-pressed={!octave.isGhost && intervalStep === i}
-						onclick={() => sendOctave(OCTAVE_PITCH_PARAM, step.value)}
-					>{step.label}</button>
-				{/each}
+		<span class="row-title" style="color: {octaveInk.primary};">Pitch</span>
+		<div class="pair">
+			<div class="cell">
+				<div
+					class="device-segmented step-col octave-interval"
+					class:is-ghost-tab={octave.isGhost}
+					style:grid-template-rows="repeat({INTERVAL_STEPS.length}, 1fr)"
+					role="group"
+					aria-label="Octave interval"
+					use:drag={{
+						commit: 'immediate',
+						onDown: (info) => down(INTERVAL, intervalStep, info),
+						onMove: (info) => scrub(INTERVAL, intervalStep, info)
+					}}
+				>
+					{#each INTERVAL_STEPS as step, i}
+						<button
+							class="device-segment step num"
+							class:active={!octave.isGhost && intervalStep === i}
+							aria-label="Octave interval {step.label}"
+							aria-pressed={!octave.isGhost && intervalStep === i}
+							onclick={() => sendOctave(OCTAVE_PITCH_PARAM, step.value)}
+						>{step.label}</button>
+					{/each}
+				</div>
 			</div>
-		</div>
 
-		<div class="cell octave-mix" class:slot-ghost={octave.isGhost}>
-			<DeviceSlider
-				value={octave.paramValue(OCTAVE_MIX_PARAM) ?? 0}
-				title="Mix"
-				icon="mix"
-				orientation="horizontal"
-				labelOrientation="horizontal"
-				isGhost={octave.isGhost}
-				color={octaveInk}
-				min={0}
-				max={OCTAVE_MIX_MAX}
-				onTap={() => {
-					if (!octave.isGhost) return;
-					octaveChain.arm();
-					octave.loadIfGhost();
-				}}
-				onInteraction={(v) => sendOctave(OCTAVE_MIX_PARAM, Math.max(0, Math.min(OCTAVE_MIX_MAX, v)))}
-			/>
+			<div class="cell octave-mix" class:slot-ghost={octave.isGhost}>
+				<DeviceSlider
+					value={octave.paramValue(OCTAVE_MIX_PARAM) ?? 0}
+					title="Mix"
+					icon="mix"
+					orientation="vertical"
+					labelOrientation="horizontal"
+					isGhost={octave.isGhost}
+					color={octaveInk}
+					min={0}
+					max={OCTAVE_MIX_MAX}
+					onTap={() => {
+						if (!octave.isGhost) return;
+						octaveChain.arm();
+						octave.loadIfGhost();
+					}}
+					onInteraction={(v) => sendOctave(OCTAVE_MIX_PARAM, Math.max(0, Math.min(OCTAVE_MIX_MAX, v)))}
+				/>
+			</div>
 		</div>
 	</div>
 
 	<SectionDivider orientation="vertical" ink={ink.primary} />
 
-	<!-- Pitch Hack: Rate and Mix, upright side by side. -->
-	<div class="stack side-by-side" style="--btn-tint: {ink.primary};">
-		<div class="cell steps">
-			<span class="row-title" style="color: {ink.primary};">Rate</span>
-			<div
-				class="device-segmented step-col pitch-hack-rate"
-				class:is-ghost-tab={pitchHack.isGhost}
-				style:grid-template-rows="repeat({RATES.length}, 1fr)"
-				role="group"
-				aria-label="Pitch Hack rate"
-				use:drag={{
-					commit: 'immediate',
-					onDown: (info) => down(RATE, rateStop, info),
-					onMove: (info) => scrub(RATE, rateStop, info)
-				}}
-			>
-				{#each RATES as stop, i}
-					<button
-						class="device-segment step num"
-						class:active={!pitchHack.isGhost && rateStop === i}
-						aria-label="Pitch Hack rate {stop.label}"
-						aria-pressed={!pitchHack.isGhost && rateStop === i}
-						onclick={() => send(PH.rate.index, stop.rate)}
-					>{stop.label}</button>
-				{/each}
+	<!-- Pitch Hack, titled Reverse: Rate and Mix upright side by side. -->
+	<div class="stack" style="--btn-tint: {ink.primary};">
+		<span class="row-title" style="color: {ink.primary};">Reverse</span>
+		<div class="pair">
+			<div class="cell">
+				<div
+					class="device-segmented step-col pitch-hack-rate"
+					class:is-ghost-tab={pitchHack.isGhost}
+					style:grid-template-rows="repeat({RATES.length}, 1fr)"
+					role="group"
+					aria-label="Pitch Hack rate"
+					use:drag={{
+						commit: 'immediate',
+						onDown: (info) => down(RATE, rateStop, info),
+						onMove: (info) => scrub(RATE, rateStop, info)
+					}}
+				>
+					{#each RATES as stop, i}
+						<button
+							class="device-segment step num"
+							class:active={!pitchHack.isGhost && rateStop === i}
+							aria-label="Pitch Hack rate {stop.label}"
+							aria-pressed={!pitchHack.isGhost && rateStop === i}
+							onclick={() => send(PH.rate.index, stop.rate)}
+						>{stop.label}</button>
+					{/each}
+				</div>
 			</div>
-		</div>
 
-		<div class="cell pitch-hack-mix" class:slot-ghost={pitchHack.isGhost}>
-			<DeviceSlider
-				value={pitchHack.paramValue(PH.mix.index) ?? 0}
-				title="Mix"
-				icon="mix"
-				orientation="vertical"
-				labelOrientation="horizontal"
-				isGhost={pitchHack.isGhost}
-				color={ink}
-				min={0}
-				max={PH.mix.max}
-				onTap={() => pitchHack.loadIfGhost()}
-				onInteraction={(v) => pitchHack.sendParam(PH.mix.index, Math.max(0, Math.min(PH.mix.max, v)))}
-			/>
+			<div class="cell pitch-hack-mix" class:slot-ghost={pitchHack.isGhost}>
+				<DeviceSlider
+					value={pitchHack.paramValue(PH.mix.index) ?? 0}
+					title="Mix"
+					icon="mix"
+					orientation="vertical"
+					labelOrientation="horizontal"
+					isGhost={pitchHack.isGhost}
+					color={ink}
+					min={0}
+					max={PH.mix.max}
+					onTap={() => pitchHack.loadIfGhost()}
+					onInteraction={(v) => pitchHack.sendParam(PH.mix.index, Math.max(0, Math.min(PH.mix.max, v)))}
+				/>
+			</div>
 		</div>
 	</div>
 </div>
@@ -275,9 +276,6 @@
 		min-width: 0;
 	}
 
-	.steps {
-		gap: var(--spacing-xs, 4px);
-	}
 
 	/* The house eyebrow. */
 	.row-title {
@@ -294,12 +292,15 @@
 		letter-spacing: normal;
 	}
 
-	/* Pitch Hack's two controls stand upright, side by side. */
-	.side-by-side {
-		flex-direction: row;
+	/* Under each title, the device's two controls stand upright side by side. */
+	.pair {
+		flex: 1 1 0;
+		min-height: 0;
+		min-width: 0;
+		display: flex;
+		gap: var(--central-gap);
 	}
 
-	.step-row,
 	.step-col {
 		flex: 1 1 0;
 		min-height: 0;
@@ -324,7 +325,7 @@
 
 	/* One ink per device: a lit step takes its device's own ink rather than
 	   the house --phosphor. */
-	:global([data-grammar="flat"]) :is(.step-row, .step-col) .device-segment.active {
+	:global([data-grammar="flat"]) .step-col .device-segment.active {
 		background: var(--btn-tint);
 		border-color: var(--btn-tint);
 		color: var(--flat-on-fg);

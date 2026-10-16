@@ -4,7 +4,7 @@
  * Rate is param 5, an index into the device's value_items), and no
  * Coarse, Reverse, Recycle or Int Var. A step writes its own param only; the step
  * that loads the device also puts Dry / Wet (param 2) at 100. The Octave,
- * the Pitch tile until then: an interval row of the tile's four stops
+ * the Pitch tile until then: an interval column of the tile's four stops
  * and a Mix slider. The fixtures are the parameter lists dumped off the
  * running Live.
  */
@@ -112,14 +112,16 @@ describe('Auto Pan view: the Pitch family', () => {
 		expect(container.querySelector('.octave-mix [role="slider"]')).not.toBeNull();
 	});
 
-	it("draws the Octave's interval -12 to +12, lights the device's step and writes semitones", async () => {
+	it("draws the Octave's interval +12 to -12 under a Pitch title, lights the device's step and writes semitones", async () => {
 		seed(pitchHack(13), octave(-5, 30));
 		const { container } = render(AutoPanCentralView);
 		await tick();
-		expect(intervalSteps(container).map((b) => b.textContent?.trim())).toEqual(['-12', '-5', '+7', '+12']);
-		expect(intervalSteps(container).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false', 'false']);
+		expect(intervalSteps(container).map((b) => b.textContent?.trim())).toEqual(['+12', '+7', '-5', '-12']);
+		expect(intervalSteps(container).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'false', 'true', 'false']);
+		expect(container.querySelector('.octave-interval')?.closest('.stack')?.querySelector('.row-title')?.textContent).toBe('Pitch');
+		expect(container.querySelector('.pitch-hack-rate')?.closest('.stack')?.querySelector('.row-title')?.textContent).toBe('Reverse');
 		for (const b of intervalSteps(container)) await fireEvent.click(b);
-		expect(writtenTo(OCT, 1)).toEqual([-12, -5, 7, 12]);
+		expect(writtenTo(OCT, 1)).toEqual([12, 7, -5, -12]);
 		// A loaded Octave's Mix is the slider's: a step leaves it alone.
 		expect(writtenTo(OCT, 2)).toEqual([]);
 	});
