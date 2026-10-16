@@ -102,7 +102,7 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 		'tremolo': () => import('./views/AutoPanCentralView.svelte'), // Auto Pan Legacy in the Tremolo slot (2026-10-01)
 		'utility': () => import('./views/SquashCentralView.svelte'), // the Gain tile's view: its Gate and Multiband moved into the dynamics view (2026-10-15)
 		'squash': () => import('./views/SquashCentralView.svelte'), // the dynamics view; the Squash tile itself is the grid column above it
-		'variation': () => import('./views/GlitchCentralView.svelte'), // its controls joined GlitchLoop's (2026-10-15)
+		'variation': () => import('./views/VariationCentralView.svelte'), // its own view again (2026-10-15, the user's call)
 	},
 
 	// Instrument views - organized alphabetically

@@ -153,8 +153,8 @@ describe('the audio track\'s fx1 column', () => {
 			.map((t) => t.textContent ?? '');
 		expect(titles.some((t) => t.includes('Rand Oct'))).toBe(false);
 
-		// Ten columns on audio as on MIDI; the TotalMix ruler rides on it.
-		expect(container.querySelector('.fx-grid')?.classList.contains('grid-cols-10')).toBe(true);
+		// Twelve columns on audio as on MIDI; the TotalMix ruler rides on it.
+		expect(container.querySelector('.fx-grid')?.classList.contains('grid-cols-12')).toBe(true);
 	});
 
 	it('does not draw on a MIDI track, which keeps Rand Oct in that slot', async () => {
