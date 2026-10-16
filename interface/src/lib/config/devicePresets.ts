@@ -399,8 +399,8 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Pitch Hack',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'pitch',          // In PitchCentralView since 2026-10-15
-    color: familyScheme('pitchSeq')     // A pitch shifter — function over host view
+    centralViewGroup: 'pitch',          // The Auto Pan view's Reverse column since 2026-10-15
+    color: familyScheme('timeSpace')    // Echo and Reverb's teal (user, 2026-10-15), apart from the Pitch column's violet
   },
   glitchLoop: {
     // GlitchLoop: PitchLoop89 with built-in mod slots, built by the owner's
