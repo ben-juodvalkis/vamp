@@ -71,10 +71,15 @@ export interface FXGridSlotConfig {
  *
  *   MIDI / master  col 1 Rand Oct (empty on master), full height
  *                  cols 2-11 row 1: EQ, Filter, Saturator, Drum, Tremolo (Auto Pan)
- *                            row 2: Pitch, Glitch, Chorus, Echo, Reverb
+ *                            row 2: (empty), Glitch, (empty), Echo, Reverb
  *                  col 12 Squash over Gain
  *   audio          col 1 Guitar over Bass
  *                  cols 2-12 identical
+ *
+ * 2026-10-15, last: the Chorus and Pitch tiles left the grid, their XYs
+ * and their views now inside the Auto Pan view (the user's call). Chorus
+ * keeps its `hidden` entry so its slot resolves; Pitch had none. Their two
+ * cells stay empty, every other tile on its columns.
  *
  * 2026-10-15, later the same day: the two freed columns became one more XY
  * pair, back to twelve columns and the XY width they had before: Pitch (the
@@ -201,8 +206,11 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
     config: DEVICE_PRESETS.variation
   },
   {
+    // Chorus: its XY lives in the Auto Pan view since 2026-10-15 (the
+    // user's call). `hidden` keeps the slot resolving there.
     position: 'fx9',
     col: 6,
+    hidden: true,
     deviceType: 'chorus',
     component: ChorusControl,
     span: 2,
@@ -254,9 +262,6 @@ export interface GridCell {
 
 /** Squash: the top of the last column, over Gain, on every track. No layout entry. */
 export const SQUASH_CELL: GridCell = { col: 12, row: 1, span: 1, rowSpan: 1 };
-
-/** Pitch (the Octave): the first XY of row 2, under EQ, on every track. No layout entry. */
-export const PITCH_CELL: GridCell = { col: 2, row: 2, span: 2, rowSpan: 1 };
 
 /** Glitch (GlitchLoop): beside Pitch, under Filter, on every track. No layout entry. */
 export const GLITCH_CELL: GridCell = { col: 4, row: 2, span: 2, rowSpan: 1 };

@@ -11,9 +11,10 @@
  * surface knows the bass slot exists. The move cannot be inline: the load
  * is async, so the device does not exist yet when we ask for it.
  *
- * Two tiles use it: the Bass tile (`BassControl`, the audio track's fx1
- * column, 2026-09-14) and the Pitch tile (`PitchControl`, 2026-10-15),
- * whose Octave belongs at the head of the chain too. It was a view-local
+ * Two controls use it: the Bass tile (`BassControl`, the audio track's fx1
+ * column, 2026-09-14) and the Octave's controls in the Auto Pan view
+ * (`views/autopan/PitchGroup`, the Pitch tile until 2026-10-15), whose
+ * Octave belongs at the head of the chain too. It was a view-local
  * `let` + `$effect` until a second control needed the same twenty lines.
  *
  * `arm()` is called by the gesture that MIGHT load, before the write that

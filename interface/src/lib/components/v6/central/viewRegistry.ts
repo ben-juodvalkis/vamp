@@ -73,13 +73,12 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 		'audio-effect-rack': () => import('./views/AudioEffectRackCentralView.svelte'),
 		// The Bass tile (audio tracks' fx1 column, 2026-09-14): its type is
 		// `bass`, its view the Guitar rack's — PedalCentralView since
-		// GuitarCentralView folded into it (2026-10-05). An Octave band
-		// (`octave`) opens the Chorus view, whose Octave panel is that slot.
+		// GuitarCentralView folded into it (2026-10-05).
 		// Aliased here the way `random` aliases the Arpeggiator's and
 		// `squash` the Utility's; without an entry the tap resolved to the
 		// placeholder view.
 		'bass': () => import('./views/PedalCentralView.svelte'),
-		'chorus': () => import('./views/ChorusCentralView.svelte'),
+		'chorus': () => import('./views/AutoPanCentralView.svelte'), // the Chorus family joined Auto Pan's view (2026-10-15)
 		'compressor': () => import('./views/SquashCentralView.svelte'), // Compressor controls live in the Squash (dynamics) view
 		'digital': () => import('./views/DigitalCentralView.svelte'),
 		'drum': () => import('./views/DrumBussCentralView.svelte'),
@@ -87,8 +86,8 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 		'eq': () => import('./views/EQCentralView.svelte'),
 		'filter': () => import('./views/AutoFilterCentralView.svelte'),
 		'guitar': () => import('./views/PedalCentralView.svelte'), // the Guitar rack's controls live there (2026-10-05)
-		'octave': () => import('./views/PitchCentralView.svelte'), // the Pitch tile's slot (2026-10-15)
-		'pitchHack': () => import('./views/PitchCentralView.svelte'),
+		'octave': () => import('./views/AutoPanCentralView.svelte'), // the Pitch family joined Auto Pan's view (2026-10-15)
+		'pitchHack': () => import('./views/AutoPanCentralView.svelte'),
 		'glitchLoop': () => import('./views/GlitchCentralView.svelte'), // the Glitch tile's slot (2026-10-15)
 		'pedal': () => import('./views/PedalCentralView.svelte'),
 		'saturator': () => import('./views/PedalCentralView.svelte'), // the Saturator tile's view (fx5, 2026-10-05), which holds the Pedal's XY

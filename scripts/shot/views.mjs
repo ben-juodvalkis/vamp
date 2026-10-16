@@ -125,10 +125,8 @@ const FX_TILES = [
 	['Saturator', 'pedal', 'Saturator tile → Pedal XY + Saturator faders + Digital + Redux'],
 	['Drum', 'drum-buss', 'Drum Buss'],
 	['Glue', 'squash', 'Glue (the Squash slot), Gate, Multiband + Compressor'],
-	['Chorus', 'chorus', 'Chorus: Blur, Comb, Phaser'],
-	['Pitch', 'pitch', 'Pitch: Octave + Pitch Hack (the Octave slot)'],
 	['Glitch', 'glitch', 'Glitch: GlitchLoop + Variation (the GlitchLoop slot)'],
-	['Auto Pan', 'tremolo', 'Auto Pan Legacy (the Tremolo slot)'],
+	['Auto Pan', 'tremolo', 'Auto Pan Legacy (the Tremolo slot) + the Chorus and Pitch families'],
 	['Echo', 'echo', 'Echo'],
 	['Reverb', 'reverb', 'Reverb']
 ];

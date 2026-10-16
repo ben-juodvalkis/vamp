@@ -4,6 +4,13 @@
    * full-rail slider, the Sync / Free switch, and the LFO's shape as a
    * vertical tab of four drawn waveforms. Amount is the grid tile's Y.
    * Parameters and labels are in `autoPanParams.ts`, measured on the rig.
+   *
+   * Since 2026-10-15 (the user's call) the view also holds the Chorus and
+   * Pitch families, whose tiles left the grid: the Chorus XY, Blur, Comb
+   * and Phaser (`autopan/ChorusGroup`), then the Octave's interval column
+   * and Mix slider (the Pitch XY, split in two) and Pitch Hack's Mix,
+   * Coarse and Rate (`autopan/PitchGroup`). The groups' roots are
+   * `display: contents`, so one grid here holds every track and seam.
    */
   import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
@@ -22,6 +29,8 @@
     frequencyLabel,
     type ShapeKey
   } from '$lib/components/v6/device-panel/autoPanParams';
+  import ChorusGroup from './autopan/ChorusGroup.svelte';
+  import PitchGroup from './autopan/PitchGroup.svelte';
 
   const fx = useFxGridSlot('tremolo');
 
@@ -141,12 +150,22 @@
       </button>
     {/each}
   </div>
+
+  <ChorusGroup />
+  <PitchGroup />
 </div>
 
 <style>
   .autopan-layout {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    /* Auto Pan: rate · sync · shape, a slider's track each.
+       Chorus family: seam · Chorus XY · seam · Blur · seam · Comb · seam · Phaser.
+       Pitch family: seam · Octave interval · Mix · seam · Pitch Hack Mix · Coarse · Rate.
+       A pad is two slider tracks, a seam its hairline. */
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr))
+      auto minmax(0, 2fr) auto minmax(0, 1fr) auto minmax(0, 2fr) auto minmax(0, 2fr)
+      auto repeat(2, minmax(0, 1fr)) auto repeat(3, minmax(0, 1fr));
     gap: var(--central-gap);
     height: 100%;
     width: 100%;
@@ -160,7 +179,7 @@
   }
 
   .sync-toggle {
-    font-size: 2.25rem;
+    font-size: 1rem;
     text-transform: uppercase;
   }
 
