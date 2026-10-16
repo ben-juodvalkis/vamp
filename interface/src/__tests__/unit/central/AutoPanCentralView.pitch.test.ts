@@ -1,10 +1,10 @@
 /**
  * The Pitch family in the Auto Pan view (2026-10-15). Pitch Hack: a Mix
- * slider, a Coarse column and the Rate column (1 to 1/16 top to bottom;
+ * slider and the Rate column (1 to 1/16 top to bottom;
  * Rate is param 5, an index into the device's value_items), and no
- * Reverse, Recycle or Int Var. A step writes its own param only; the step
+ * Coarse, Reverse, Recycle or Int Var. A step writes its own param only; the step
  * that loads the device also puts Dry / Wet (param 2) at 100. The Octave,
- * the Pitch tile until then: an interval column of the tile's four stops
+ * the Pitch tile until then: an interval row of the tile's four stops
  * and a Mix slider. The fixtures are the parameter lists dumped off the
  * running Live.
  */
@@ -99,36 +99,29 @@ describe('Auto Pan view: Pitch Hack rate column', () => {
 });
 
 describe('Auto Pan view: the Pitch family', () => {
-	it('draws a Mix slider for the Octave and for Pitch Hack, and no Reverse, Recycle or Int Var', async () => {
+	it('draws a Mix slider for the Octave and for Pitch Hack, and no Coarse, Reverse, Recycle or Int Var', async () => {
 		seed(pitchHack(13), octave(7));
 		const { container } = render(AutoPanCentralView);
 		await tick();
 		const titles = sliderTitles(container);
 		expect(titles.filter((t) => t === 'Mix')).toHaveLength(2);
 		for (const gone of ['Reverse', 'Recycle', 'Int Var']) expect(titles).not.toContain(gone);
+		expect(coarseSteps(container)).toEqual([]);
+		expect(container.textContent).not.toContain('Coarse');
 		expect(container.querySelector('.pitch-hack-mix [role="slider"]')).not.toBeNull();
 		expect(container.querySelector('.octave-mix [role="slider"]')).not.toBeNull();
 	});
 
-	it("draws the Octave's interval +12 to -12, lights the device's step and writes semitones", async () => {
+	it("draws the Octave's interval -12 to +12, lights the device's step and writes semitones", async () => {
 		seed(pitchHack(13), octave(-5, 30));
 		const { container } = render(AutoPanCentralView);
 		await tick();
-		expect(intervalSteps(container).map((b) => b.textContent?.trim())).toEqual(['+12', '+7', '-5', '-12']);
-		expect(intervalSteps(container).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'false', 'true', 'false']);
+		expect(intervalSteps(container).map((b) => b.textContent?.trim())).toEqual(['-12', '-5', '+7', '+12']);
+		expect(intervalSteps(container).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false', 'false']);
 		for (const b of intervalSteps(container)) await fireEvent.click(b);
-		expect(writtenTo(OCT, 1)).toEqual([12, 7, -5, -12]);
+		expect(writtenTo(OCT, 1)).toEqual([-12, -5, 7, 12]);
 		// A loaded Octave's Mix is the slider's: a step leaves it alone.
 		expect(writtenTo(OCT, 2)).toEqual([]);
 	});
 
-	it('draws Coarse +12 to -12, lights the device\'s step and writes raw semitones', async () => {
-		seed(pitchHack(13, 7));
-		const { container } = render(AutoPanCentralView);
-		await tick();
-		expect(coarseSteps(container).map((b) => b.textContent?.trim())).toEqual(['+12', '+7', '0', '-5', '-12']);
-		expect(coarseSteps(container).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false', 'false', 'false']);
-		for (const b of coarseSteps(container)) await fireEvent.click(b);
-		expect(written(3)).toEqual([12, 7, 0, -5, -12]);
-	});
 });

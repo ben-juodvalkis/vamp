@@ -19,7 +19,7 @@
    *
    * Architecture:
    * - Layout defined in fxGridLayout.ts (11 slots, explicit cells on a
-   *   12-column ruler the TotalMix status strip in layouts/default/Layout.svelte shares)
+   *   10-column ruler the TotalMix status strip in layouts/default/Layout.svelte shares)
    * - Each slot has: position, deviceType, component, span, rowSpan, config
    * - `device` per slot is resolved via selectedTrackStore.getFxGridSlot
    *   (FXGridState), which reads v3 `devicesByPath` and matches on
@@ -93,7 +93,7 @@
 
   // Track kind decides two things (2026-09-15): what fx1 holds, and how the
   // leftmost column is arranged. MIDI: Rand Oct, full height. Audio: the
-  // Guitar over the Bass (in fx1's slot), since 2026-10-15. Both are twelve
+  // Guitar over the Bass (in fx1's slot), since 2026-10-15. Both are ten
   // columns, so nothing to the right moves when the selected track changes
   // kind.
   // Under a track hold the HELD track's kind decides, so its Bass/Guitar
@@ -139,10 +139,10 @@
 </script>
 
 <div class="w-full h-full" data-fx-scope={scope?.note} data-fx-track-scope={heldTrack?.trackPath} style={scopeInk ? `--scope-ink: ${scopeInk}` : undefined}>
-  <!-- 12-column grid, 2 rows, every cell placed explicitly (cellFor in
+  <!-- 10-column grid, 2 rows, every cell placed explicitly (cellFor in
        fxGridLayout.ts): the leftmost column is arranged differently on
        audio and MIDI, and auto-placement cannot do both from one DOM
-       order. Glitch is row 2's second tile and Squash stands over Gain at the
+       order. Auto Pan and Glitch lead row 2 and Squash stands over Gain at the
        right on every track; on MIDI Rand Oct is full height, on audio the Guitar
        stands over the Bass (2026-10-15).
 
@@ -156,7 +156,7 @@
 
        It is NOT bounded by label wrapping - "Rand Oct" going to two lines is
        fine, so do not treat the wrap point as a cap if you revisit this. -->
-  <div class="h-full grid grid-cols-12 grid-rows-2 gap-2 fx-grid" class:fx-scoped={scoped}>
+  <div class="h-full grid grid-cols-10 grid-rows-2 gap-2 fx-grid" class:fx-scoped={scoped}>
     {#if isAudioTrack}
       <!-- Audio: the Guitar rack's drive, over the Bass at the far left
            (2026-10-15). On MIDI it is reached through the Pedal view's last
@@ -186,8 +186,7 @@
     {/each}
     <!-- Squash, the Glue Compressor's one-finger threshold + makeup: the
          top of the last column, over Gain (2026-10-15). -->
-    <!-- Glitch (GlitchLoop), row 2, 2026-10-15. The Pitch tile left for the
-         Auto Pan view the same day; its cell stays empty. -->
+    <!-- Glitch (GlitchLoop), beside Auto Pan in row 2, 2026-10-15. -->
     <div data-cell="glitch" data-col={GLITCH_CELL.col} data-row={GLITCH_CELL.row} data-span={GLITCH_CELL.span} data-row-span={GLITCH_CELL.rowSpan} style={cellStyle(GLITCH_CELL)}>
       <GlitchControl device={glitchLoopDevice} />
     </div>

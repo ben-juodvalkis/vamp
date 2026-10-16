@@ -326,7 +326,7 @@
 		z-index: 1001;
 		overflow: hidden;
 		display: grid;
-			grid-template-columns: repeat(12, minmax(0, 1fr));
+			grid-template-columns: repeat(10, minmax(0, 1fr));
 		gap: 0.5rem;
 		/* Stretch, not center: each bar takes the strip's height now that
 		   the label lives inside it, less a 2px breather top and bottom so
@@ -347,8 +347,8 @@
 	     phones   → Saturator             (6–7)
 	     main     → Drum                  (8–9)
 
-	   Columns 10–12 (Auto Pan, Squash over Gain) stay clear: five channels
-	   do not tile a grid that keeps them back.
+	   Column 10 (Squash over Gain) stays clear: five channels do not tile
+	   a grid that keeps it back.
 
 	   Since 2026-10-15 the left edge is one column (Rand Oct on MIDI, the
 	   Guitar over the Bass on audio), so Room is one column wide and no bar

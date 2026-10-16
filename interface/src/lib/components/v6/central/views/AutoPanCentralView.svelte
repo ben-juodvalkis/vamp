@@ -1,16 +1,17 @@
 <script lang="ts">
   /**
    * Auto Pan Legacy in the Tremolo slot (2026-10-01): the rate on one
-   * full-rail slider, the Sync / Free switch, and the LFO's shape as a
-   * vertical tab of four drawn waveforms. Amount is the grid tile's Y.
+   * full-rail slider, the LFO's shape as a tab of four drawn waveforms,
+   * and the Sync / Free switch, stacked in one column. Amount is the grid tile's Y.
    * Parameters and labels are in `autoPanParams.ts`, measured on the rig.
    *
    * Since 2026-10-15 (the user's call) the view also holds the Chorus and
    * Pitch families, whose tiles left the grid: the Chorus XY, Blur, Comb
    * and Phaser (`autopan/ChorusGroup`), then the Octave's interval column
    * and Mix slider (the Pitch XY, split in two) and Pitch Hack's Mix,
-   * Coarse and Rate (`autopan/PitchGroup`). The groups' roots are
-   * `display: contents`, so one grid here holds every track and seam.
+   * Coarse and Rate (`autopan/PitchGroup`). Every family is a column,
+   * its controls stacked so none is narrow; the groups' roots are
+   * `display: contents`, so one grid here holds every column and seam.
    */
   import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
@@ -70,21 +71,21 @@
   }
 
   /**
-   * The tab scrubs on Y like the Drum Buss's drive type: the column owns
-   * the pointer and resolves the step from geometry, and only a step edge
-   * reaches Live.
+   * The tab scrubs on X (a row since 2026-10-15; on Y like the Drum Buss's
+   * drive type before): the row owns the pointer and resolves the step
+   * from geometry, and only a step edge reaches Live.
    */
   let shapeStrip = $state<HTMLElement | null>(null);
   let shapeBox: ScrubBox | null = null;
 
-  function shapeAt(clientY: number) {
+  function shapeAt(clientX: number) {
     if (!shapeBox) return;
-    writeShape(segmentIndex(clientY, shapeBox.top, shapeBox.height, SHAPES.length));
+    writeShape(segmentIndex(clientX, shapeBox.left, shapeBox.width, SHAPES.length));
   }
 
   function shapeDown(info: DragInfo) {
     shapeBox = scrubBoxOf(shapeStrip);
-    shapeAt(info.y);
+    shapeAt(info.x);
   }
 
   /** One cycle each, Drift's glyph grammar: peak y=2, floor y=10, midline 6. */
@@ -96,59 +97,64 @@
   };
 </script>
 
-<div class="autopan-layout" class:slot-ghost={fx.isGhost} style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
-  <div class="col">
-    <DeviceSlider
-      value={rateValue}
-      title={rateLabel}
-      icon="rate"
-      orientation="vertical"
-      labelOrientation="horizontal"
-      isGhost={fx.isGhost}
-      color={fxInk}
-      onInteraction={writeRate}
-    />
-  </div>
+<div class="autopan-layout">
+  <!-- Auto Pan: rate, shape and Sync stacked in one column (2026-10-15).
+       Only this column dims while Auto Pan is a ghost; the other families
+       keep their own ghost states. -->
+  <div class="stack autopan-col" class:slot-ghost={fx.isGhost} style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
+    <div class="row">
+      <DeviceSlider
+        value={rateValue}
+        title={rateLabel}
+        icon="rate"
+        orientation="horizontal"
+        labelOrientation="horizontal"
+        isGhost={fx.isGhost}
+        color={fxInk}
+        onInteraction={writeRate}
+      />
+    </div>
 
-  <div class="col">
-    <button
-      class="physical-button sync-toggle w-full h-full font-bold"
-      class:active={isSynced}
-      style="--btn-tint: {fxInk.primary};"
-      onclick={toggleSync}
+    <div
+      class="row device-segmented shape-tab"
+      style="--btn-tint: {fxInk.primary}; grid-template-columns: repeat({SHAPES.length}, 1fr);"
+      bind:this={shapeStrip}
+      use:drag={{ commit: 'immediate', onDown: shapeDown, onMove: (i) => shapeAt(i.x) }}
     >
-      {isSynced ? 'Sync' : 'Free'}
-    </button>
-  </div>
+      {#each SHAPES as s, step}
+        <button
+          class="device-segment shape-step"
+          class:active={currentShape === step}
+          title={s.label}
+          aria-label="Shape {s.label}"
+          aria-pressed={currentShape === step}
+          onclick={() => writeShape(step)}
+        >
+          <svg class="shape-glyph" viewBox="0 0 24 12" aria-hidden="true" focusable="false">
+            <path
+              d={GLYPHS[s.key]}
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              vector-effect="non-scaling-stroke"
+            />
+          </svg>
+        </button>
+      {/each}
+    </div>
 
-  <div
-    class="col device-segmented shape-tab"
-    style="--btn-tint: {fxInk.primary}; grid-template-rows: repeat({SHAPES.length}, 1fr);"
-    bind:this={shapeStrip}
-    use:drag={{ commit: 'immediate', onDown: shapeDown, onMove: (i) => shapeAt(i.y) }}
-  >
-    {#each SHAPES as s, step}
+    <div class="row">
       <button
-        class="device-segment shape-step"
-        class:active={currentShape === step}
-        title={s.label}
-        aria-label="Shape {s.label}"
-        aria-pressed={currentShape === step}
-        onclick={() => writeShape(step)}
+        class="physical-button sync-toggle w-full h-full font-bold"
+        class:active={isSynced}
+        style="--btn-tint: {fxInk.primary};"
+        onclick={toggleSync}
       >
-        <svg class="shape-glyph" viewBox="0 0 24 12" aria-hidden="true" focusable="false">
-          <path
-            d={GLYPHS[s.key]}
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.6"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            vector-effect="non-scaling-stroke"
-          />
-        </svg>
+        {isSynced ? 'Sync' : 'Free'}
       </button>
-    {/each}
+    </div>
   </div>
 
   <ChorusGroup />
@@ -156,47 +162,55 @@
 </div>
 
 <style>
+  /* Five columns, each a device family stacked top to bottom (2026-10-15,
+     the user's call: no control so narrow): Auto Pan | Chorus over Blur |
+     Comb over Phaser | the Octave | Pitch Hack. A seam is its hairline. */
   .autopan-layout {
     display: grid;
-    /* Auto Pan: rate · sync · shape, a slider's track each.
-       Chorus family: seam · Chorus XY · seam · Blur · seam · Comb · seam · Phaser.
-       Pitch family: seam · Octave interval · Mix · seam · Pitch Hack Mix · Coarse · Rate.
-       A pad is two slider tracks, a seam its hairline. */
     grid-template-columns:
-      repeat(3, minmax(0, 1fr))
-      auto minmax(0, 2fr) auto minmax(0, 1fr) auto minmax(0, 2fr) auto minmax(0, 2fr)
-      auto repeat(2, minmax(0, 1fr)) auto repeat(3, minmax(0, 1fr));
+      minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr)
+      auto minmax(0, 1fr) auto minmax(0, 1fr);
     gap: var(--central-gap);
     height: 100%;
     width: 100%;
     padding: var(--central-inset);
   }
 
-  .col {
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--central-gap);
     min-height: 0;
     min-width: 0;
-    height: 100%;
+  }
+
+  .row {
+    flex: 1 1 0;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   .sync-toggle {
-    font-size: 1rem;
+    font-size: 1.25rem;
     text-transform: uppercase;
   }
 
   .shape-tab {
     display: grid;
   }
-  /* The column owns the pointer; the steps are its face. Keyboard focus
+  /* The row owns the pointer; the steps are its face. Keyboard focus
      and Enter still activate one. */
   .shape-step {
     pointer-events: none;
-    min-height: 0;
+    min-width: 0;
     display: flex;
     align-items: center;
     justify-content: center;
   }
   .shape-glyph {
-    width: min(60%, 7rem);
+    width: min(70%, 3rem);
     height: auto;
     overflow: visible;
   }
@@ -206,7 +220,7 @@
     text-transform: none;
   }
 
-  /* One ink for the view, as the Drum Buss does: the lit switch and the
+  /* One ink for the device, as the Drum Buss does: the lit switch and the
      lit shape take the device's ink rather than the house --phosphor. */
   :global([data-grammar="flat"]) .sync-toggle.active,
   :global([data-grammar="flat"]) .shape-tab .device-segment.active {

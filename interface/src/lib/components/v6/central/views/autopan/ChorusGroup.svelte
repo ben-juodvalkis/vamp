@@ -4,8 +4,9 @@
 	 * the user's call): the Chorus XY that was the grid tile, then Blur's
 	 * dry/wet, Comb and Phaser, which were the Chorus view.
 	 *
-	 * Its root is `display: contents`, so every control and seam is a grid
-	 * item of AutoPanCentralView, which owns the tracks.
+	 * Two columns, Chorus over Blur and Comb over Phaser, stacked so no
+	 * control is narrow. Its root is `display: contents`, so the columns
+	 * and seams are grid items of AutoPanCentralView, which owns the tracks.
 	 *
 	 * Contains virtual devices (smudge, comb, phaser) which have their own
 	 * ghost states. NO {#if device} gate - always renders, handles its own
@@ -91,55 +92,61 @@
 </script>
 
 <div class="chorus-group">
-	<!-- Seams fall on the DEVICE boundaries: Chorus | Blur | Comb | Phaser.
-	     The pads are the same size and two wear the same ink, so without
-	     them the Phaser reads as a second Comb (2026-09-13, ADR-433). -->
 	<SectionDivider orientation="vertical" ink={chorusInk} />
 
-	<!-- The Chorus XY, the grid tile until 2026-10-15. -->
-	<div class="cell" class:slot-ghost={chorus.isGhost}>
-		<ChorusControl device={chorus.device} position={chorusPosition} />
-	</div>
+	<!-- Chorus over Blur. Seams fall on the DEVICE boundaries, across a
+	     column where devices stack. -->
+	<div class="stack">
+		<!-- The Chorus XY, the grid tile until 2026-10-15. -->
+		<div class="cell pad" class:slot-ghost={chorus.isGhost}>
+			<ChorusControl device={chorus.device} position={chorusPosition} />
+		</div>
 
-	<SectionDivider orientation="vertical" ink={smudgeInk} />
+		<SectionDivider orientation="horizontal" ink={smudgeInk} />
 
-	<!-- Blur's dry/wet (the `smudge` slot; virtual device - handles its own slot state) -->
-	<div class="cell" class:slot-ghost={smudge.isGhost}>
-		<SmudgeControl device={smudge.device} icon="blur" />
+		<!-- Blur's dry/wet (the `smudge` slot; virtual device - handles its own slot state) -->
+		<div class="cell fader" class:slot-ghost={smudge.isGhost}>
+			<SmudgeControl device={smudge.device} icon="blur" orientation="horizontal" />
+		</div>
 	</div>
 
 	<SectionDivider orientation="vertical" ink={combInk} />
 
-	<!-- Comb (virtual device - handles its own slot state). The Max device
-	     has no LFO. -->
-	<div class="cell" class:slot-ghost={comb.isGhost}>
-		<CombControl device={comb.device} icon="comb" />
-	</div>
+	<!-- Comb over Phaser. The pads are the same size and two wear the same
+	     ink, so without the seam the Phaser reads as a second Comb
+	     (2026-09-13, ADR-433). -->
+	<div class="stack">
+		<!-- Comb (virtual device - handles its own slot state). The Max
+		     device has no LFO. -->
+		<div class="cell pad" class:slot-ghost={comb.isGhost}>
+			<CombControl device={comb.device} icon="comb" />
+		</div>
 
-	<SectionDivider orientation="vertical" ink={phaserInk.primary} />
+		<SectionDivider orientation="horizontal" ink={phaserInk.primary} />
 
-	<!-- Phaser (virtual device) — X: LFO speed, Y: feedback. Wrapped in
-	     BaseDeviceControl like Blur and Comb so it carries the same
-	     move-to-first / move-to-last arrows. -->
-	<div class="cell" class:slot-ghost={phaser.isGhost}>
-		<BaseDeviceControl slotKey="phaser" device={phaser.device} title="Phaser" disableCentralViewOnTap={true} showMoveToTop={true} showMoveToEnd={true}>
-			{#snippet children({ handleTap })}
-				<DeviceXY
-					xValue={phaserSpeed}
-					yValue={phaserFeedback}
-					title="Phaser"
-					icon="phaser"
-					isGhost={phaser.isGhost}
-					showCurve={false}
-					color={phaserInk}
-					onTap={() => (phaser.isGhost ? phaser.loadIfGhost() : handleTap())}
-					onInteraction={(x, y) => {
-						phaser.sendParam(PHASER_PARAMS.speed.index, normalizedToSpeed(x));
-						phaser.sendParam(PHASER_PARAMS.feedback.index, normalizedToFeedback(y));
-					}}
-				/>
-			{/snippet}
-		</BaseDeviceControl>
+		<!-- Phaser (virtual device) — X: LFO speed, Y: feedback. Wrapped in
+		     BaseDeviceControl like Blur and Comb so it carries the same
+		     move-to-first / move-to-last arrows. -->
+		<div class="cell pad" class:slot-ghost={phaser.isGhost}>
+			<BaseDeviceControl slotKey="phaser" device={phaser.device} title="Phaser" disableCentralViewOnTap={true} showMoveToTop={true} showMoveToEnd={true}>
+				{#snippet children({ handleTap })}
+					<DeviceXY
+						xValue={phaserSpeed}
+						yValue={phaserFeedback}
+						title="Phaser"
+						icon="phaser"
+						isGhost={phaser.isGhost}
+						showCurve={false}
+						color={phaserInk}
+						onTap={() => (phaser.isGhost ? phaser.loadIfGhost() : handleTap())}
+						onInteraction={(x, y) => {
+							phaser.sendParam(PHASER_PARAMS.speed.index, normalizedToSpeed(x));
+							phaser.sendParam(PHASER_PARAMS.feedback.index, normalizedToFeedback(y));
+						}}
+					/>
+				{/snippet}
+			</BaseDeviceControl>
+		</div>
 	</div>
 </div>
 
@@ -148,10 +155,26 @@
 		display: contents;
 	}
 
+	.stack {
+		display: flex;
+		flex-direction: column;
+		gap: var(--central-gap);
+		min-height: 0;
+		min-width: 0;
+	}
+
 	.cell {
 		display: flex;
 		flex-direction: column;
 		min-height: 0;
 		min-width: 0;
+	}
+
+	/* A pad takes two shares of the column, a flat fader one. */
+	.pad {
+		flex: 2 1 0;
+	}
+	.fader {
+		flex: 1 1 0;
 	}
 </style>

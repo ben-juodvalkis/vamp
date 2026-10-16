@@ -10,9 +10,11 @@
 		// Marks for what the control does (the central views pass them; the
 		// grid tile draws none).
 		icon?: ControlGlyphName;
+		// Lying flat in the Auto Pan view's Chorus column (2026-10-15).
+		orientation?: 'vertical' | 'horizontal';
 	}
 
-	let { device, icon }: Props = $props();
+	let { device, icon, orientation = 'vertical' }: Props = $props();
 
 	// Blur (`Vamp Devices/Blur/Blur.amxd`), read off the running device on
 	// 2026-10-03 (parameters.*name/min/max): 0 Device On, 1 Drive 0–100,
@@ -38,7 +40,7 @@
 			value={mixValue}
 			title="Blur"
 			{icon}
-			orientation="vertical"
+			{orientation}
 			labelOrientation="horizontal"
 			{isGhost}
 			{color}
