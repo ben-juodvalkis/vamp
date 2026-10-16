@@ -472,4 +472,17 @@
 		border-color: var(--btn-tint);
 		color: var(--flat-on-fg);
 	}
+	/* Variation's tabs wear the Var slider's ink the same way (user,
+	   2026-10-15). */
+	:global([data-skin="hybrid"]) .var-btn {
+		color: var(--btn-tint);
+	}
+	:global(.light[data-skin="hybrid"]) .var-btn {
+		color: color-mix(in oklab, var(--btn-tint) 55%, var(--foreground));
+	}
+	:global([data-grammar="flat"]) .var-btn.active {
+		background: var(--btn-tint);
+		border-color: var(--btn-tint);
+		color: var(--flat-on-fg);
+	}
 </style>
