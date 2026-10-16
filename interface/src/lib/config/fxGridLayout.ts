@@ -44,7 +44,7 @@ export interface FXGridSlotConfig {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   component: Component<any>;
 
-  /** First grid column (1-based) on the twelve-column ruler, MIDI/master placement */
+  /** First grid column (1-based) on the ten-column ruler, MIDI/master placement */
   col: number;
 
   /** Grid column span (1 or 2) */
@@ -66,20 +66,15 @@ export interface FXGridSlotConfig {
 /**
  * FX Grid Layout
  *
- * 11 slots on a TWELVE-column, two-row grid, every cell placed explicitly
+ * 11 slots on a TEN-column, two-row grid, every cell placed explicitly
  * (`col` / `row` / `span` / `rowSpan`) so placement can differ by track kind:
  *
  *   MIDI / master  col 1 Rand Oct (empty on master), full height
- *                  col 2 Variation (the Var slider), full height
- *                  cols 3-10 row 1: EQ, Filter, Saturator, Drum
- *                            row 2: Tremolo (Auto Pan), Glitch, Echo, Reverb
- *                  col 11 Squash, col 12 Gain, each full height
+ *                  cols 2-9 row 1: EQ, Filter, Saturator, Drum
+ *                           row 2: Tremolo (Auto Pan), Glitch, Echo, Reverb
+ *                  col 10 Squash over Gain
  *   audio          col 1 Guitar over Bass
- *                  cols 2-12 identical
- *
- * 2026-10-15, later still (the user's call): Variation is back, full
- * height right of Rand Oct, with its own view again, and Squash and Gain
- * each have a full-height column, Squash on the left: twelve columns.
+ *                  cols 2-10 identical
  *
  * 2026-10-15, last: the Chorus and Pitch tiles left the grid, their XYs
  * and their views now inside the Auto Pan view (the user's call). Chorus
@@ -150,7 +145,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx3',
-    col: 3,
+    col: 2,
     deviceType: 'eq',
     component: EQControl,
     span: 2,
@@ -159,7 +154,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx4',
-    col: 5,
+    col: 4,
     deviceType: 'filter',
     component: AutoFilterControl,
     span: 2,
@@ -168,7 +163,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx5',
-    col: 7,
+    col: 6,
     deviceType: 'saturator',
     component: SaturatorControl,
     span: 2,
@@ -177,7 +172,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx6',
-    col: 9,
+    col: 8,
     deviceType: 'drum',
     component: DrumBussControl,
     span: 2,
@@ -185,24 +180,25 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
     config: DEVICE_PRESETS.drum
   },
   {
-    // Gain: the last column, full height, with Squash full height to its
-    // left (SQUASH_CELL), 2026-10-15, as from 2026-09-15.
+    // Gain: the bottom of the last column, under Squash (SQUASH_CELL),
+    // 2026-10-15. Each had a full-height column from 2026-09-15.
     position: 'fx7',
-    col: 12,
+    col: 10,
     deviceType: 'utility',
     component: UtilityControl,
     span: 1,
-    rowSpan: 2,
-    row: 1,
+    rowSpan: 1,
+    row: 2,
     config: DEVICE_PRESETS.utility
   },
 
   // ===== ROW 2 =====
   {
-    // Variation: the Var slider, full height right of Rand Oct (back on
-    // 2026-10-15, the user's call, with its own view again).
+    // Variation: hidden for now (2026-10-15, the user's call); its column
+    // went to the XY tiles. Delete `hidden` and give it a cell to bring it back.
     position: 'fx8',
     col: 2,
+    hidden: true,
     deviceType: 'variation',
     component: VariationControl,
     span: 1,
@@ -214,7 +210,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
     // Chorus: its XY lives in the Auto Pan view since 2026-10-15 (the
     // user's call). `hidden` keeps the slot resolving there.
     position: 'fx9',
-    col: 7,
+    col: 6,
     hidden: true,
     deviceType: 'chorus',
     component: ChorusControl,
@@ -226,7 +222,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
     // Auto Pan leads row 2 since 2026-10-15 (the user's call), in the
     // Pitch tile's old cell.
     position: 'fx10',
-    col: 3,
+    col: 2,
     deviceType: 'tremolo',
     component: AutoPanControl,
     span: 2,
@@ -235,7 +231,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx11',
-    col: 7,
+    col: 6,
     deviceType: 'echo',
     component: EchoControl,
     span: 2,
@@ -244,7 +240,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx12',
-    col: 9,
+    col: 8,
     deviceType: 'reverb',
     component: ReverbControl,
     span: 2,
@@ -254,12 +250,12 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
 ];
 
 /** The grid's column count. The TotalMix status strip in layouts/default/Layout.svelte repeats it by hand. */
-export const FX_GRID_COLUMNS = 12;
+export const FX_GRID_COLUMNS = 10;
 
 /** Which placement a grid uses. Master and group tracks use MIDI's. */
 export type GridTrackKind = 'midi' | 'audio';
 
-/** One cell on the twelve-by-two grid: 1-based start column and row, plus spans. */
+/** One cell on the ten-by-two grid: 1-based start column and row, plus spans. */
 export interface GridCell {
   col: number;
   row: 1 | 2;
@@ -268,10 +264,10 @@ export interface GridCell {
 }
 
 /** Squash: the top of the last column, over Gain, on every track. No layout entry. */
-export const SQUASH_CELL: GridCell = { col: 11, row: 1, span: 1, rowSpan: 2 };
+export const SQUASH_CELL: GridCell = { col: 10, row: 1, span: 1, rowSpan: 1 };
 
 /** Glitch (GlitchLoop): beside Pitch, under Filter, on every track. No layout entry. */
-export const GLITCH_CELL: GridCell = { col: 5, row: 2, span: 2, rowSpan: 1 };
+export const GLITCH_CELL: GridCell = { col: 4, row: 2, span: 2, rowSpan: 1 };
 
 /** The Guitar rack's drive: the top of the first column, over the Bass, audio tracks only. No layout entry. */
 export const AUDIO_GUITAR_CELL: GridCell = { col: 1, row: 1, span: 1, rowSpan: 1 };
