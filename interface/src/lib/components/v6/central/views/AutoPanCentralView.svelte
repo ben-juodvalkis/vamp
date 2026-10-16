@@ -102,11 +102,11 @@
        Only this column dims while Auto Pan is a ghost; the other families
        keep their own ghost states. -->
   <div class="stack autopan-col" class:slot-ghost={fx.isGhost} style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
+    <span class="col-title" style="color: {fxInk.primary};">Auto Pan</span>
     <div class="row">
       <DeviceSlider
         value={rateValue}
         title={rateLabel}
-        icon="rate"
         orientation="horizontal"
         labelOrientation="horizontal"
         isGhost={fx.isGhost}
@@ -190,6 +190,20 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
+  }
+
+  /* The house eyebrow, naming the column's device. */
+  .col-title {
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    text-align: center;
+  }
+  :global([data-grammar="flat"]) .col-title {
+    text-transform: none;
+    letter-spacing: normal;
   }
 
   .sync-toggle {
