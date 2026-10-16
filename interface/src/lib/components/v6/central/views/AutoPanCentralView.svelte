@@ -1,8 +1,8 @@
 <script lang="ts">
   /**
    * Auto Pan Legacy in the Tremolo slot (2026-10-01): the rate on one
-   * full-rail slider, the LFO's shape as a tab of four drawn waveforms,
-   * and the Sync / Free switch, stacked in one column. Amount is the grid tile's Y.
+   * full-rail slider under a small Sync / Free switch, and beside it the
+   * LFO's shape as a vertical tab of four drawn waveforms. Amount is the grid tile's Y.
    * Parameters and labels are in `autoPanParams.ts`, measured on the rig.
    *
    * Since 2026-10-15 (the user's call) the view also holds the Chorus and
@@ -71,21 +71,21 @@
   }
 
   /**
-   * The tab scrubs on X (a row since 2026-10-15; on Y like the Drum Buss's
-   * drive type before): the row owns the pointer and resolves the step
-   * from geometry, and only a step edge reaches Live.
+   * The tab scrubs on Y like the Drum Buss's drive type: the column owns
+   * the pointer and resolves the step from geometry, and only a step edge
+   * reaches Live.
    */
   let shapeStrip = $state<HTMLElement | null>(null);
   let shapeBox: ScrubBox | null = null;
 
-  function shapeAt(clientX: number) {
+  function shapeAt(clientY: number) {
     if (!shapeBox) return;
-    writeShape(segmentIndex(clientX, shapeBox.left, shapeBox.width, SHAPES.length));
+    writeShape(segmentIndex(clientY, shapeBox.top, shapeBox.height, SHAPES.length));
   }
 
   function shapeDown(info: DragInfo) {
     shapeBox = scrubBoxOf(shapeStrip);
-    shapeAt(info.x);
+    shapeAt(info.y);
   }
 
   /** One cycle each, Drift's glyph grammar: peak y=2, floor y=10, midline 6. */
@@ -103,57 +103,59 @@
        keep their own ghost states. -->
   <div class="stack autopan-col" class:slot-ghost={fx.isGhost} style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
     <span class="col-title" style="color: {fxInk.primary};">Auto Pan</span>
-    <div class="row">
-      <DeviceSlider
-        value={rateValue}
-        title={rateLabel}
-        orientation="horizontal"
-        labelOrientation="horizontal"
-        isGhost={fx.isGhost}
-        color={fxInk}
-        onInteraction={writeRate}
-      />
-    </div>
-
-    <div
-      class="row device-segmented shape-tab"
-      style="--btn-tint: {fxInk.primary}; grid-template-columns: repeat({SHAPES.length}, 1fr);"
-      bind:this={shapeStrip}
-      use:drag={{ commit: 'immediate', onDown: shapeDown, onMove: (i) => shapeAt(i.x) }}
-    >
-      {#each SHAPES as s, step}
+    <div class="pair">
+      <!-- Sync, small, over the rate it switches. -->
+      <div class="rate-col">
         <button
-          class="device-segment shape-step"
-          class:active={currentShape === step}
-          title={s.label}
-          aria-label="Shape {s.label}"
-          aria-pressed={currentShape === step}
-          onclick={() => writeShape(step)}
+          class="physical-button sync-toggle w-full font-bold"
+          class:active={isSynced}
+          style="--btn-tint: {fxInk.primary};"
+          onclick={toggleSync}
         >
-          <svg class="shape-glyph" viewBox="0 0 24 12" aria-hidden="true" focusable="false">
-            <path
-              d={GLYPHS[s.key]}
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.6"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              vector-effect="non-scaling-stroke"
-            />
-          </svg>
+          {isSynced ? 'Sync' : 'Free'}
         </button>
-      {/each}
-    </div>
+        <div class="rate-slider">
+          <DeviceSlider
+            value={rateValue}
+            title={rateLabel}
+            orientation="vertical"
+            labelOrientation="horizontal"
+            isGhost={fx.isGhost}
+            color={fxInk}
+            onInteraction={writeRate}
+          />
+        </div>
+      </div>
 
-    <div class="row">
-      <button
-        class="physical-button sync-toggle w-full h-full font-bold"
-        class:active={isSynced}
-        style="--btn-tint: {fxInk.primary};"
-        onclick={toggleSync}
+      <div
+        class="device-segmented shape-tab"
+        style="--btn-tint: {fxInk.primary}; grid-template-rows: repeat({SHAPES.length}, 1fr);"
+        bind:this={shapeStrip}
+        use:drag={{ commit: 'immediate', onDown: shapeDown, onMove: (i) => shapeAt(i.y) }}
       >
-        {isSynced ? 'Sync' : 'Free'}
-      </button>
+        {#each SHAPES as s, step}
+          <button
+            class="device-segment shape-step"
+            class:active={currentShape === step}
+            title={s.label}
+            aria-label="Shape {s.label}"
+            aria-pressed={currentShape === step}
+            onclick={() => writeShape(step)}
+          >
+            <svg class="shape-glyph" viewBox="0 0 24 12" aria-hidden="true" focusable="false">
+              <path
+                d={GLYPHS[s.key]}
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                vector-effect="non-scaling-stroke"
+              />
+            </svg>
+          </button>
+        {/each}
+      </div>
     </div>
   </div>
 
@@ -184,10 +186,27 @@
     min-width: 0;
   }
 
-  .row {
+  /* Under the title, the rate and the shape stand upright side by side. */
+  .pair {
     flex: 1 1 0;
     min-height: 0;
     min-width: 0;
+    display: flex;
+    gap: var(--central-gap);
+  }
+
+  .rate-col {
+    flex: 1 1 0;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm, 8px);
+  }
+
+  .rate-slider {
+    flex: 1 1 0;
+    min-height: 0;
     display: flex;
     flex-direction: column;
   }
@@ -206,12 +225,18 @@
     letter-spacing: normal;
   }
 
+  /* Small: one touch row over the slider. */
   .sync-toggle {
-    font-size: 1.25rem;
+    flex: 0 0 var(--height-touch, 44px);
+    min-height: 0;
+    font-size: 0.875rem;
     text-transform: uppercase;
   }
 
   .shape-tab {
+    flex: 1 1 0;
+    min-height: 0;
+    min-width: 0;
     display: grid;
   }
   /* The row owns the pointer; the steps are its face. Keyboard focus
@@ -219,6 +244,7 @@
   .shape-step {
     pointer-events: none;
     min-width: 0;
+    min-height: 0;
     display: flex;
     align-items: center;
     justify-content: center;
