@@ -51,6 +51,8 @@ import type { OSCArg } from '$lib/types/osc';
 import { logger } from '$lib/utils/logger';
 import { reconcileEcho, resetParamArming } from './paramArming.svelte';
 import { clearHeldEtags } from '$lib/api/handlers/stateFullEtagStore';
+import { handleClipNotesChanged } from '$lib/services/clipNotesService';
+import { invalidateSample } from '$lib/services/clipSampleService';
 
 // ============================================
 // Constants
@@ -464,12 +466,13 @@ export function mergeSubtreeAtPath(
 	const prev = tracks.get(scope);
 	if (!prev) {
 		tracks.set(scope, scopedTrack);
+		forgetTrackClips(scopedTrack);
 		prunePadMapsWithoutRack();
 		return;
 	}
 	// Recurse into the nested Maps on `prev` so ADR-003 identity survives.
 	reconcileDevices(prev.devices, scopedTrack.devices);
-	reconcileSlots(prev.slots, scopedTrack.slots);
+	reconcileSlots(prev.slots, scopedTrack.slots, prev.name !== scopedTrack.name);
 	prunePadMapsWithoutRack();
 	const scalarsEqual =
 		prev.name === scopedTrack.name &&
@@ -555,13 +558,17 @@ function reconcileTracks(
 		const prev = existing.get(inc.trackPath);
 		if (!prev) {
 			existing.set(inc.trackPath, inc);
+			forgetTrackClips(inc);
 			continue;
 		}
 		// Always recurse into the nested Maps — their reactive `.set()`
 		// signals fire from inside the helpers. Critically, we pass
 		// `prev`'s nested Maps so their identity survives the call.
 		reconcileDevices(prev.devices, inc.devices);
-		reconcileSlots(prev.slots, inc.slots);
+		// A different track at this path (an insert, a delete, a group
+		// or a drag above it): every clip under it may be a different
+		// clip at the same path, even one whose name and length match.
+		reconcileSlots(prev.slots, inc.slots, prev.name !== inc.name);
 		// Scalar fields: re-insert only if something changed, so
 		// track-level `$derived` consumers see the signal. Reuses prev's
 		// `.devices` / `.slots` references to preserve their identity.
@@ -596,8 +603,10 @@ function reconcileTracks(
 			});
 		}
 	}
-	for (const trackPath of existing.keys()) {
-		if (!seen.has(trackPath)) existing.delete(trackPath);
+	for (const [trackPath, gone] of existing) {
+		if (seen.has(trackPath)) continue;
+		forgetTrackClips(gone);
+		existing.delete(trackPath);
 	}
 }
 
@@ -787,9 +796,31 @@ function reconcileParams(
  * preserved when `clipPath` matches; clip properties Map is reconciled
  * structurally. See ADR-003.
  */
+/**
+ * A clip path is a POSITION (`tracks/N/slots/M/clip`), and the notes and
+ * sample caches are keyed by it. When the clip at a position is no longer
+ * the one that was there, drop what both caches hold for it; the notes
+ * side also tells every mounted view of that path to re-pull, which is
+ * how the strip's clip third and the grid cell redraw without a remount.
+ * Without this a track reorder left each strip drawing the notes of the
+ * clip that used to sit at its index.
+ */
+function forgetClipContents(clipPath: string): void {
+	handleClipNotesChanged('', clipPath);
+	invalidateSample(clipPath);
+}
+
+/** A track that appears at, or leaves, a path: forget every clip under it. */
+function forgetTrackClips(track: TrackRecord): void {
+	for (const slot of track.slots.values()) {
+		if (slot.clip) forgetClipContents(slot.clip.clipPath);
+	}
+}
+
 function reconcileSlots(
 	existing: Map<string, SlotRecord>,
-	incoming: Map<string, SlotRecord>
+	incoming: Map<string, SlotRecord>,
+	trackReplaced = false
 ): void {
 	const seen = new Set<string>();
 	for (const [slotPath, inc] of incoming) {
@@ -797,7 +828,20 @@ function reconcileSlots(
 		const prev = existing.get(slotPath);
 		if (!prev) {
 			existing.set(slotPath, inc);
+			if (inc.clip) forgetClipContents(inc.clip.clipPath);
 			continue;
+		}
+		if (
+			prev.clip &&
+			(trackReplaced ||
+				!inc.clip ||
+				prev.clip.clipPath !== inc.clip.clipPath ||
+				prev.clip.name !== inc.clip.name ||
+				prev.clip.length !== inc.clip.length)
+		) {
+			forgetClipContents(prev.clip.clipPath);
+		} else if (!prev.clip && inc.clip) {
+			forgetClipContents(inc.clip.clipPath);
 		}
 		// Reconcile clip first so we can build the merged record in one
 		// re-insert if anything changed.
