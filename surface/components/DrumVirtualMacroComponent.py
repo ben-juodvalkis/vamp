@@ -2126,9 +2126,11 @@ class DrumVirtualMacroComponent:
             return None
 
     def _select_pad(self, st: _RackState, value) -> Tuple[bool, object, str]:
-        """``vm.selectedPad`` set: select ``drum_pads[note]`` in Live. The
-        rack's own listener then re-emits the row, so Live's UI and every
-        other client follow."""
+        """``vm.selectedPad`` set: select ``drum_pads[note]`` in Live and
+        open the rack's Show/Hide Devices toggle, so Live shows the pad's
+        chain (selecting a pad leaves the toggle shut, measured 2026-10-19).
+        The rack's own listener then re-emits the row, so Live's UI and
+        every other client follow."""
         v = _float_or_none(value)
         if v is None:
             return False, None, "bad pad note %r" % (value,)
@@ -2142,6 +2144,11 @@ class DrumVirtualMacroComponent:
             st.device.view.selected_drum_pad = pad
         except _LOM_ERRORS as e:
             return False, None, "selected_drum_pad write raised: %s" % e
+        try:
+            if not st.device.view.is_showing_chain_devices:
+                st.device.view.is_showing_chain_devices = True
+        except _LOM_ERRORS:
+            pass  # the pad is selected; a shut toggle costs only the view
         return True, note, ""
 
     # --- change listeners -------------------------------------------------

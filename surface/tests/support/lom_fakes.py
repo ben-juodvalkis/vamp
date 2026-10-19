@@ -293,11 +293,14 @@ class FakeRackView:
     """``DrumGroupDevice.view``: ``selected_drum_pad`` (a pad object) with
     the ``add_/remove_selected_drum_pad_listener`` pair Live 12 exposes
     (verified on the rig 2026-09-08). Setting the pad fires the listeners,
-    as Live does for our own writes too."""
+    as Live does for our own writes too. ``is_showing_chain_devices`` is
+    the rack's Show/Hide Devices toggle; selecting a pad leaves it alone
+    (measured 2026-10-19)."""
 
     def __init__(self, pad=None):
         self._pad = pad
         self.listeners: List = []
+        self.is_showing_chain_devices = False
 
     @property
     def selected_drum_pad(self):

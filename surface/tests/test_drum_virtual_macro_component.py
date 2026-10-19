@@ -2851,6 +2851,16 @@ def test_selected_pad_write_selects_in_live_and_the_listener_re_emits(comp, emit
     assert rack.view.selected_drum_pad is rack.drum_pads[100]
 
 
+def test_selected_pad_write_opens_the_racks_chain_devices(comp):
+    """A pad picked on the iPad shows its chain's devices in Live: the
+    rack's Show/Hide Devices toggle opens, and a bad note leaves it shut."""
+    rack = unmapped_kit(2)
+    assert comp.write(rack, PATH, SELECTED_PAD_KEY, 999)[0] is False
+    assert rack.view.is_showing_chain_devices is False
+    assert comp.write(rack, PATH, SELECTED_PAD_KEY, 37)[0] is True
+    assert rack.view.is_showing_chain_devices is True
+
+
 def test_selected_pad_write_rejects_bad_notes(comp):
     rack = unmapped_kit(1)
     for bad in ("x", None, 128, -1):
