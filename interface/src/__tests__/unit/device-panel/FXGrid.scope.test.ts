@@ -314,11 +314,11 @@ describe('the FX grid layout is ten columns wide', () => {
 		expect(grid.flat()).not.toContain('variation');
 	});
 
-	it('tiles both rows exactly on audio: the Guitar over the Bass, Squash over Gain', () => {
+	it('tiles both rows exactly on audio: the Bass over the Guitar, Squash over Gain', () => {
 		const grid = occupancy('audio');
 		expect(grid.flat().every(Boolean)).toBe(true);
 		// fx1's slot holds the Bass on audio.
-		expect([grid[0][0], grid[1][0]]).toEqual(['guitar', 'random']);
+		expect([grid[0][0], grid[1][0]]).toEqual(['random', 'guitar']);
 		expect([grid[0][9], grid[1][9]]).toEqual(['squash', 'utility']);
 	});
 

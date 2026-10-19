@@ -120,7 +120,7 @@ afterEach(() => {
 });
 
 describe('the audio track\'s fx1 column', () => {
-	it('is the Guitar over the Bass, with no clip-pitch slider', async () => {
+	it('is the Bass over the Guitar, with no clip-pitch slider', async () => {
 		const { container } = render(FXGrid);
 		await tick();
 
@@ -128,17 +128,17 @@ describe('the audio track\'s fx1 column', () => {
 			.find((t) => t.textContent?.includes('Bass'));
 		expect(bassTile).toBeDefined();
 
-		// Audio stands the Guitar over the Bass in column 1 (2026-10-15).
+		// Audio stands the Bass over the Guitar in column 1 (2026-10-19).
 		// col/row/span/rowSpan:
 		const cell = (el: Element) => {
 			const c = el.closest<HTMLElement>('[data-cell]')!;
 			return [c.dataset.col, c.dataset.row, c.dataset.span, c.dataset.rowSpan].join('/');
 		};
-		expect(cell(bassTile!)).toBe('1/2/1/1');
+		expect(cell(bassTile!)).toBe('1/1/1/1');
 		const tiles = Array.from(container.querySelectorAll<HTMLElement>('.device-control'));
 		const gtr = tiles.find((t) => t.textContent?.includes('Gtr'));
 		expect(gtr).toBeDefined();
-		expect(cell(gtr!)).toBe('1/1/1/1');
+		expect(cell(gtr!)).toBe('1/2/1/1');
 
 		// The clip-pitch slider went with the split — it lives in the Clip
 		// view, which the strip's Clip band opens in one tap.

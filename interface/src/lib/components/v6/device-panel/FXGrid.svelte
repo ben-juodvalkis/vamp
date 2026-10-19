@@ -93,7 +93,7 @@
 
   // Track kind decides two things (2026-09-15): what fx1 holds, and how the
   // leftmost column is arranged. MIDI: Rand Oct, full height. Audio: the
-  // Guitar over the Bass (in fx1's slot), since 2026-10-15. Both are ten
+  // Bass (in fx1's slot) over the Guitar, since 2026-10-19. Both are ten
   // columns, so nothing to the right moves when the selected track changes
   // kind.
   // Under a track hold the HELD track's kind decides, so its Bass/Guitar
@@ -144,7 +144,7 @@
        audio and MIDI, and auto-placement cannot do both from one DOM
        order. Auto Pan and Glitch lead row 2 and Squash stands over Gain at the
        right on every track; on MIDI Rand Oct is full height, on audio the Guitar
-       stands over the Bass (2026-10-15).
+       stands under the Bass (2026-10-19).
 
        gap-2 (8px) is deliberate, on the app's interior ladder (16 frames a
        panel, 8 separates tiles inside one, 4 separates rows inside a tile).
@@ -158,8 +158,8 @@
        fine, so do not treat the wrap point as a cap if you revisit this. -->
   <div class="h-full grid grid-cols-10 grid-rows-2 gap-2 fx-grid" class:fx-scoped={scoped}>
     {#if isAudioTrack}
-      <!-- Audio: the Guitar rack's drive, over the Bass at the far left
-           (2026-10-15). On MIDI it is reached through the Pedal view's last
+      <!-- Audio: the Guitar rack's drive, under the Bass at the far left
+           (2026-10-19). On MIDI it is reached through the Pedal view's last
            column instead. GuitarControl resolves its own `guitar` slot. -->
       <div data-cell="guitar" data-col={AUDIO_GUITAR_CELL.col} data-row={AUDIO_GUITAR_CELL.row} data-span={AUDIO_GUITAR_CELL.span} data-row-span={AUDIO_GUITAR_CELL.rowSpan} style={cellStyle(AUDIO_GUITAR_CELL)}>
         <GuitarControl device={guitarDevice} />

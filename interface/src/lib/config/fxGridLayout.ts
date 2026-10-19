@@ -73,7 +73,7 @@ export interface FXGridSlotConfig {
  *                  cols 2-9 row 1: EQ, Filter, Saturator, Drum
  *                           row 2: Tremolo (Auto Pan), Glitch, Echo, Reverb
  *                  col 10 Squash over Gain
- *   audio          col 1 Guitar over Bass
+ *   audio          col 1 Bass over Guitar
  *                  cols 2-10 identical
  *
  * 2026-10-15, last: the Chorus and Pitch tiles left the grid, their XYs
@@ -269,15 +269,15 @@ export const SQUASH_CELL: GridCell = { col: 10, row: 1, span: 1, rowSpan: 1 };
 /** Glitch (GlitchLoop): beside Pitch, under Filter, on every track. No layout entry. */
 export const GLITCH_CELL: GridCell = { col: 4, row: 2, span: 2, rowSpan: 1 };
 
-/** The Guitar rack's drive: the top of the first column, over the Bass, audio tracks only. No layout entry. */
-export const AUDIO_GUITAR_CELL: GridCell = { col: 1, row: 1, span: 1, rowSpan: 1 };
+/** The Guitar rack's drive: the bottom of the first column, under the Bass, audio tracks only. No layout entry. */
+export const AUDIO_GUITAR_CELL: GridCell = { col: 1, row: 2, span: 1, rowSpan: 1 };
 
 /**
- * Audio moves fx1 (the Bass there) under the Guitar in column 1. Every
+ * Audio moves fx1 (the Bass there) over the Guitar in column 1 (2026-10-19). Every
  * other slot is placed the same on both kinds.
  */
 const AUDIO_CELLS: Partial<Record<PositionKey, GridCell>> = {
-  fx1: { col: 1, row: 2, span: 1, rowSpan: 1 }
+  fx1: { col: 1, row: 1, span: 1, rowSpan: 1 }
 };
 
 /** Where a layout slot sits for a track kind. */
