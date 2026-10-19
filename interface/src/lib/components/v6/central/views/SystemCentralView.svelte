@@ -251,9 +251,10 @@ import { logger } from '$lib/utils/logger';
 	</button>
 
 	<!-- Two groups in the Settings page's grammar (Ben, 2026-09-26): a quiet
-	     title over each, the transport's values in fields, and every switch
-	     a row that says its name and its state — On in Live's orange, Off a
-	     frame — rather than a block that is orange or not. The setup that
+	     title over each, the transport's values in fields. Every switch is
+	     one cell that IS the switch, lit Live's orange while on and a well
+	     while off (2026-10-19, the transport header's grammar; until then a
+	     row carried its name beside an On/Off chip). The setup that
 	     used to share this row (Behavior, Appearance, Foot Switch) lives in
 	     the full-page Settings behind the gear in the corner (plan.md §11).
 	     The launch-quantization strip used to take a second row for 14
@@ -321,13 +322,11 @@ import { logger } from '$lib/utils/logger';
 				</div>
 
 				<div class="sys-list sys-list-row">
-					<button class="sys-switch" aria-pressed={session.metronome} onclick={toggleMetronome}>
+					<button class="sys-switch" class:on={session.metronome} aria-pressed={session.metronome} onclick={toggleMetronome}>
 						<span class="sys-switch-label">Click</span>
-						<span class="sys-chip" class:on={session.metronome} aria-hidden="true">{session.metronome ? 'On' : 'Off'}</span>
 					</button>
-					<button class="sys-switch" aria-pressed={session.keyFollowEnabled} title={keyFollowTitle} onclick={toggleKeyFollow}>
+					<button class="sys-switch" class:on={session.keyFollowEnabled} aria-pressed={session.keyFollowEnabled} title={keyFollowTitle} onclick={toggleKeyFollow}>
 						<span class="sys-switch-label">Follow Key</span>
-						<span class="sys-chip" class:on={session.keyFollowEnabled} aria-hidden="true">{session.keyFollowEnabled ? 'On' : 'Off'}</span>
 					</button>
 				</div>
 			</div>
@@ -342,6 +341,7 @@ import { logger } from '$lib/utils/logger';
 				{#each surfaceToggles as t (t.label)}
 					<button
 						class="sys-switch"
+						class:on={t.on()}
 						aria-pressed={t.on()}
 						aria-label={t.ariaLabel}
 						title={t.title}
@@ -349,7 +349,6 @@ import { logger } from '$lib/utils/logger';
 						data-section-switch={t.label.toLowerCase()}
 					>
 						<span class="sys-switch-label">{t.label}</span>
-						<span class="sys-chip" class:on={t.on()} aria-hidden="true">{t.on() ? 'On' : 'Off'}</span>
 					</button>
 				{/each}
 			</div>
@@ -413,8 +412,8 @@ import { logger } from '$lib/utils/logger';
 	}
 
 	/* ---- The Settings page's grammar (2026-09-26) ----
-	   A quiet title over each group; values in fields; every switch a row
-	   carrying its name and its state. */
+	   A quiet title over each group; values in fields; every switch one cell,
+	   lit while on. */
 	.sys-group {
 		display: flex;
 		flex-direction: column;
@@ -478,14 +477,13 @@ import { logger } from '$lib/utils/logger';
 	.sys-field .sys-drag-digit.sys-den::after {
 		left: 50%;
 	}
+	/* A stack of switches, each its own framed cell (2026-10-19, the
+	   transport header's grammar): the whole cell is the switch. */
 	.sys-list {
 		display: flex;
 		flex-direction: column;
+		gap: var(--spacing-xs);
 		min-height: 0;
-		background: var(--card);
-		border: 1px solid var(--line-strong);
-		border-radius: var(--radius-md);
-		overflow: hidden;
 	}
 	/* Click and Follow Key side by side, one touch row tall: sized off the
 	   view's height like the digits, never under the 44px floor. */
@@ -502,25 +500,31 @@ import { logger } from '$lib/utils/logger';
 		min-height: 0;
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		gap: var(--spacing-md);
-		padding: 0 var(--spacing-lg);
-		background: transparent;
-		border: 0;
-		color: var(--foreground);
+		justify-content: center;
+		padding: 0 var(--spacing-sm);
+		background: var(--surface-well);
+		border: 1px solid var(--line-strong);
+		border-radius: var(--radius-md);
+		color: var(--muted-foreground);
 		font-size: 1.125rem;
 		font-weight: var(--font-weight-medium);
-		text-align: left;
 		cursor: pointer;
+		transition:
+			background-color 90ms var(--ease-precise),
+			border-color 90ms var(--ease-precise),
+			color 90ms var(--ease-precise);
 	}
-	.sys-switch + .sys-switch {
-		border-top: 1px solid var(--line-strong);
+	/* ON: the cell lit solid in Live's orange, dark text; OFF a well with
+	   its name in muted ink. */
+	.sys-switch.on {
+		color: var(--flat-on-fg);
+		background: var(--phosphor);
+		border-color: var(--phosphor);
 	}
-	.sys-list-row .sys-switch + .sys-switch {
-		border-top: 0;
-		border-left: 1px solid var(--line-strong);
+	:global(.light[data-grammar="flat"]) .sys-switch.on {
+		border-color: var(--line-strong);
 	}
-	.sys-switch:active {
+	.sys-switch:not(.on):active {
 		background: var(--secondary);
 	}
 	.sys-switch:focus-visible {
@@ -528,7 +532,7 @@ import { logger } from '$lib/utils/logger';
 		outline-offset: -2px;
 	}
 	@media (hover: hover) {
-		.sys-switch:hover {
+		.sys-switch:not(.on):hover {
 			background: var(--secondary);
 		}
 	}
@@ -537,24 +541,6 @@ import { logger } from '$lib/utils/logger';
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-	}
-	/* A switch's state: ON is Live's orange, OFF a well. */
-	.sys-chip {
-		flex-shrink: 0;
-		min-width: 3.25rem;
-		padding: 0.25rem 0.625rem;
-		font-size: 1rem;
-		font-weight: var(--font-weight-medium);
-		text-align: center;
-		color: var(--muted-foreground);
-		background: var(--surface-well);
-		border: 1px solid var(--line-strong);
-		border-radius: var(--radius-sm);
-	}
-	.sys-chip.on {
-		color: var(--flat-on-fg);
-		background: var(--phosphor);
-		border-color: var(--phosphor);
 	}
 
 	/* Shared label style */
