@@ -374,7 +374,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
     centralViewGroup: 'smudge',         // Belongs to SmudgeCentralView
-    color: familyScheme('modulation')
+    color: familyScheme('dynamics')     // Gold (user, 2026-10-19): the Auto Pan view's columns read apart, not four magentas
   },
   phaser: {
     padScoped: true,
@@ -383,7 +383,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     expectedClassName: 'PhaserNew',
     gridSlot: false,                    // Virtual device
     centralViewGroup: 'chorus',         // Belongs to ChorusCentralView
-    color: familyScheme('modulation')
+    color: familyScheme('rackVoice')    // Rose under the Comb's gold (user, 2026-10-19)
   },
   pitchHack: {
     // Creative Extensions' Max pitch-shifting delay. The .adv is a preset of
@@ -487,7 +487,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Chorus',
     expectedClassName: 'Chorus2',
-    color: familyScheme('modulation')
+    color: familyScheme('filter')       // Azure beside Auto Pan's magenta (user, 2026-10-19)
   },
   // Virtual Arpeggiator Devices
   random: {
