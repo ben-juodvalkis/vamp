@@ -204,9 +204,14 @@
 
 <!-- Slim transport header (ADR-415), one full-width band in the master
      view's grammar (Ben, 2026-10-09: fit the rest of the UI): values in
-     framed fields with their caption beside them, the two switches as
-     rows that say their name and wear an On/Off chip, as the System view's
-     Click and Follow Key do. Whole numbers only: tempo and position.
+     framed fields with their caption beside them. Whole numbers only:
+     tempo and position.
+
+     Laid on the page's own columns (Ben, 2026-10-19): Play over the
+     browser rail, Overdub over the right sidebar, and the four cells
+     between them on the FX grid's ten-column ruler, so every edge lands
+     on an edge below it. Click and Overdub are each ONE lit cell, the
+     whole cell the switch, rather than a name beside an On/Off chip.
 
      Fixed height so enabling it compresses the flex rows below rather
      than reflowing them. -->
@@ -232,6 +237,8 @@
       {/if}
       <span class="hdr-btn-label">{session.isPlaying ? 'Pause' : 'Play'}</span>
     </button>
+
+    <div class="hdr-ruler">
 
     <!-- Tempo — drag to change, same address the master view writes. -->
     <div
@@ -288,7 +295,7 @@
       </span>
     </div>
 
-    <!-- Metronome: a switch row, the System view's Click. -->
+    <!-- Metronome: the whole cell is the switch, lit while on. -->
     <button
       type="button"
       class="hdr-switch role-metronome"
@@ -301,11 +308,12 @@
       title="Metronome"
     >
       <span class="hdr-switch-label">Click</span>
-      <span class="hdr-chip" aria-hidden="true">{session.metronome ? 'On' : 'Off'}</span>
     </button>
 
+    </div>
+
     <!-- Session overdub: an INDICATOR, not a control (nothing here
-         writes it) — the same row, but no press, and its On is record red. -->
+         writes it) — the same cell, but no press, and its On is record red. -->
     <div
       class="hdr-switch role-record is-readonly"
       class:is-on={session.sessionRecord}
@@ -315,37 +323,49 @@
       title="Session overdub"
     >
       <span class="hdr-switch-label">Overdub</span>
-      <span class="hdr-chip" aria-hidden="true">{session.sessionRecord ? 'On' : 'Off'}</span>
     </div>
 
   </div>
 </div>
 
 <style>
-  /* ~56px: slim enough to cost the rows below almost nothing, tall
-     enough that every cell clears the 44px touch floor. */
+  /* 52px: slim enough to cost the rows below almost nothing, tall
+     enough that every cell clears the 44px touch floor. No card of its
+     own: the cells sit straight on the page, edge to edge with the
+     columns below them. */
   .session-header {
-    height: 56px;
+    height: 52px;
     flex-shrink: 0;
     width: 100%;
-    padding: 0 var(--spacing-sm);
-    background: var(--card);
-    border-bottom: 1px solid var(--line-strong);
   }
 
-  /* ONE band. Play and the two switches take fixed widths; the three
-     readouts share everything left over. */
+  /* The page's three columns: a sidebar, the middle, a sidebar, at the
+     layout's own 16px gap (`Layout.svelte`'s main row). */
   .hdr-row {
     height: 100%;
     display: grid;
-    grid-template-columns:
-      minmax(6.5rem, 0.7fr)
-      minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.3fr)
-      minmax(8rem, 0.8fr) minmax(9rem, 0.85fr);
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--sidebar-width);
     align-items: stretch;
-    gap: var(--spacing-xs);
-    padding: var(--spacing-xs) 0;
+    gap: var(--spacing-lg);
   }
+
+  /* The FX grid's ruler (`FXGrid.svelte`: ten equal columns, 8px gap),
+     the same one the status strip runs. Each cell spans whole tiles:
+       tempo    → Rand Oct + EQ   (1–3)
+       time     → Filter          (4–5)
+       position → Saturator, Drum (6–9)
+       click    → Squash / Gain   (10)
+     If the FX grid's column count or gap changes, this changes with it. */
+  .hdr-ruler {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+  .hdr-ruler > :nth-child(1) { grid-column: 1 / span 3; }
+  .hdr-ruler > :nth-child(2) { grid-column: 4 / span 2; }
+  .hdr-ruler > :nth-child(3) { grid-column: 6 / span 4; }
+  .hdr-ruler > :nth-child(4) { grid-column: 10 / span 1; }
 
   /* The master view's value field: a well in a 1px frame. */
   .hdr-btn,
@@ -497,16 +517,16 @@
     fill: currentColor;
   }
 
-  /* Switches: the System view's row — name on the left, On/Off chip on
-     the right; On in Live's orange (record red for overdub), Off a well. */
+  /* Switches: the whole cell is the switch. Off a well with its name in
+     muted ink; On the cell lit solid (phosphor, record red for overdub)
+     with dark text, the flat grammar's ON. */
   .hdr-switch {
-    justify-content: space-between;
-    gap: var(--spacing-md);
-    padding: 0 var(--spacing-md);
-    background: var(--card);
+    justify-content: center;
+    padding: 0 var(--spacing-sm);
+    background: var(--surface-well);
+    color: var(--muted-foreground);
     font-size: 0.9375rem;
     font-weight: var(--font-weight-medium);
-    text-align: left;
     cursor: pointer;
   }
   .hdr-switch.is-readonly {
@@ -518,39 +538,24 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .hdr-chip {
-    flex-shrink: 0;
-    min-width: 3rem;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.8125rem;
-    font-weight: var(--font-weight-medium);
-    text-align: center;
-    color: var(--muted-foreground);
-    background: var(--surface-well);
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-sm);
-  }
-  .role-metronome.is-on .hdr-chip {
+  .role-metronome.is-on {
     color: var(--flat-on-fg);
     background: var(--phosphor);
     border-color: var(--phosphor);
   }
-  .role-record.is-on .hdr-chip {
+  .role-record.is-on {
     color: var(--flat-on-fg);
     background: var(--act-rec);
     border-color: var(--act-rec);
   }
 
-  .hdr-btn:active,
-  .hdr-switch:not(.is-readonly):active {
+  .hdr-btn:not(.is-on):active,
+  .hdr-switch:not(.is-readonly):not(.is-on):active {
     background: var(--secondary);
-  }
-  .role-transport.is-on:active {
-    background: var(--act-play);
   }
   @media (hover: hover) {
     .hdr-btn:not(.is-on):hover,
-    .hdr-switch:not(.is-readonly):hover {
+    .hdr-switch:not(.is-readonly):not(.is-on):hover {
       background: var(--secondary);
     }
   }
@@ -565,7 +570,7 @@
      1px frame, ON a solid ink with dark text). Light: a lit fill sits
      near the ladder's own luminance, so its frame stays dark. */
   :global(.light[data-grammar="flat"]) .role-transport.is-on,
-  :global(.light[data-grammar="flat"]) .hdr-switch.is-on .hdr-chip {
+  :global(.light[data-grammar="flat"]) .hdr-switch.is-on {
     border-color: var(--line-strong);
   }
 </style>
