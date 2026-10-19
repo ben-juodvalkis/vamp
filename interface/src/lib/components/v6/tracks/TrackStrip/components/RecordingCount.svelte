@@ -66,7 +66,7 @@
 	.recording-count span {
 		font-weight: 700;
 		line-height: 1;
-		font-size: min(2.5rem, calc((100cqw - 0.5rem) / (var(--len-chars) * 0.6)));
+		font-size: min(1.5rem, calc((100cqw - 0.5rem) / (var(--len-chars) * 0.6)));
 		color: var(--foreground);
 	}
 </style>
