@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
 	import { logger } from '$lib/utils/logger';
 	/**
 	 * VerticalLoopControl - Vertical clip loop control for 120px sidebar
@@ -18,7 +17,7 @@
 	import { clipDisplayCoordinator } from '$lib/services/clipDisplayCoordinator.svelte';
 	import { drag as dragAction, type DragInfo, type DragOptions } from '$lib/actions/drag';
 	import { createSliderThrottle } from '$lib/utils/sliderThrottle';
-	import { loopBraceGridBeats, recordingBars, recordingBeat, snapToGrid } from '$lib/utils/clip/clipGesture';
+	import { loopBraceGridBeats, snapToGrid } from '$lib/utils/clip/clipGesture';
 	import { playingClipsStore } from '$lib/stores/v6/playingClipsStore.svelte';
 
 	// Constants
@@ -72,8 +71,8 @@
 	}
 
 	// Record-mirror (§4.5): while the selected track records, the brace is one
-	// solid red block and the readout counts the take's bars as they pass.
-	// Free data off the playhead channel (status 0/1/2 and position), no new wire.
+	// solid red block. The take's bar count is on the strip's clip section
+	// (RecordingCount) since 2026-10-19.
 	let focusedTrackPath = $derived(
 		session.selectedTrackIndex >= 0 ? `tracks/${session.selectedTrackIndex}` : null
 	);
@@ -81,30 +80,7 @@
 		focusedTrackPath ? playingClipsStore.liveStatus(focusedTrackPath) === 2 : false
 	);
 
-	// The furthest the playhead has reached this take. A take's own loop
-	// points mean nothing until it closes, so the length comes from the
-	// playhead; the maximum holds an overdub, whose position wraps, at its
-	// loop length rather than dropping back to 1 each pass.
-	// The beat comes from where the playhead is now, so an overdub's beat
-	// keeps counting round while its bar holds.
-	let recordedBeats = $state(0);
-	let recordingPosition = $state(0);
-	$effect(() => {
-		if (!isRecording || !focusedTrackPath) {
-			recordedBeats = 0;
-			recordingPosition = 0;
-			return;
-		}
-		const pos = playingClipsStore.position(focusedTrackPath);
-		recordingPosition = pos;
-		if (pos > untrack(() => recordedBeats)) recordedBeats = pos;
-	});
-
-	let lengthLabel = $derived(
-		isRecording
-			? `${recordingBars(recordedBeats, beatsPerBar)}.${recordingBeat(recordingPosition, beatsPerBar)}`
-			: formatBeats(displayEnd - displayStart)
-	);
+	let lengthLabel = $derived(formatBeats(displayEnd - displayStart));
 
 	// Check if the center of the component (50%) falls within the loop region
 	// Used to adapt the text color for readability
@@ -326,13 +302,7 @@
 		aria-disabled={!hasClip}
 	>
 		{#if isRecording}
-			<!-- Recording: the whole lane is the take, its bar count growing. -->
-			<span
-				class="absolute inset-0 flex items-center justify-center font-bold num pointer-events-none select-none z-[200] loop-length-display inside-loop"
-				style="--len-chars: {lengthLabel.length};"
-			>
-				{lengthLabel}
-			</span>
+			<!-- Recording: the whole lane is the take; its count is on the strip. -->
 			<div class="absolute inset-0 loop-region recording" aria-hidden="true"></div>
 		{:else if hasClip}
 			<!-- Loop length display - centered on entire component, color adapts to background -->
@@ -452,16 +422,13 @@
 		color: var(--act-loop);
 	}
 
-	/* Recording: the lane is one solid red block, the count in dark ink. */
+	/* Recording: the lane is one solid red block. */
 	.loop-container.recording {
 		border-color: var(--act-rec);
 	}
 	.loop-region.recording {
 		background-color: var(--act-rec);
 		border: none;
-	}
-	.loop-container.recording .loop-length-display.inside-loop {
-		color: var(--flat-on-fg, var(--background));
 	}
 
 	/* Transitions enabled by default, disabled during drag. The background-color
@@ -509,9 +476,6 @@
 	:global([data-grammar="flat"]) .loop-region.recording {
 		background-color: var(--act-rec);
 		border: none;
-	}
-	:global([data-grammar="flat"]) .loop-container.recording .loop-length-display {
-		color: var(--flat-on-fg);
 	}
 	:global([data-grammar="flat"]) .loop-handle-bar {
 		background-color: var(--flat-handle);

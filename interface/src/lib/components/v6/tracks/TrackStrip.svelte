@@ -5,6 +5,7 @@
     import TrackHeader from './TrackStrip/components/TrackHeader.svelte';
     import MiniSequencer from './TrackStrip/components/MiniSequencer.svelte';
     import TrackClipView from './TrackStrip/components/TrackClipView.svelte';
+    import RecordingCount from './TrackStrip/components/RecordingCount.svelte';
     import TrackDeviceView from './TrackStrip/components/TrackDeviceView.svelte';
     import MeterVisualization from '$lib/components/v6/looping/MeterVisualizationV6.svelte';
 
@@ -674,6 +675,7 @@
             {:else}
                 <div class="clip-empty"></div>
             {/if}
+            <RecordingCount {trackPath} />
         </div>
 
         <!-- Device band: the instrument's central view in miniature —
