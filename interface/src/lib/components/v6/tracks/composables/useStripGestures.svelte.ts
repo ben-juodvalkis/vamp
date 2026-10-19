@@ -132,17 +132,25 @@ export interface StripGestureConfig {
 	 * reads as a tap that did the wrong thing.
 	 *
 	 * Only committing to an axis cancels it: a drag is a different
-	 * gesture, and jitter under the threshold is still a press.
+	 * gesture, and jitter under the threshold is still a press — unless
+	 * {@link holdWhileDragging} is set.
 	 */
 	onLongPress?: (info: StripTapInfo) => void;
 	/**
 	 * The finger that fired {@link onLongPress} lifted (or the browser
 	 * took it, or the region unmounted, or a second finger turned the
-	 * press into a chord). Setting this also PARKS a held finger: once a
-	 * press has fired as a hold, its later travel drives no drag — a thumb
-	 * resting on a strip to hold it must not ride the fader.
+	 * press into a chord).
 	 */
 	onLongPressEnd?: (info: { pointerId: number }) => void;
+	/**
+	 * The long press is a matter of time alone: a press still down at
+	 * {@link longPressMs} fires it whether it rested or is already a
+	 * vertical drag, and a held finger keeps driving the drag. Only a row
+	 * scroll rules it out. Default false. TrackStrip sets it: past the
+	 * threshold a strip scopes the FX grid while its finger stays the
+	 * fader.
+	 */
+	holdWhileDragging?: boolean;
 	/** Long-press duration override; defaults to {@link LONG_PRESS_MS}. */
 	longPressMs?: number;
 	/**
@@ -240,7 +248,8 @@ export function useStripGestures(config: StripGestureConfig) {
 	const machine = createDragMachine({
 		commit: 'y',
 		threshold: config.threshold,
-		holdMs: config.onLongPress ? (config.longPressMs ?? LONG_PRESS_MS) : undefined
+		holdMs: config.onLongPress ? (config.longPressMs ?? LONG_PRESS_MS) : undefined,
+		holdWhileDragging: config.holdWhileDragging
 	});
 
 	// Element height, measured once at press time so a drag that resizes
@@ -261,7 +270,6 @@ export function useStripGestures(config: StripGestureConfig) {
 
 	// Pointers that fired as a hold and have not lifted yet.
 	const heldPointers = new Set<number>();
-	const parkAfterHold = config.onLongPressEnd !== undefined;
 
 	function endHold(pointerId: number) {
 		if (!heldPointers.delete(pointerId)) return;
@@ -290,10 +298,6 @@ export function useStripGestures(config: StripGestureConfig) {
 	function drain(events: DragEvent[], e: PointerEvent | null) {
 		for (const ev of events) {
 			const d = ev.drag;
-			// A parked hold: the finger is holding the strip, not the fader.
-			if (parkAfterHold && d.held && (ev.type === 'start' || ev.type === 'move' || ev.type === 'end')) {
-				continue;
-			}
 			switch (ev.type) {
 				case 'down':
 					pressCandidate = true;

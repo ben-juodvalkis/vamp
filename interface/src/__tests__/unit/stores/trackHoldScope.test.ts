@@ -5,7 +5,7 @@
  * Pins the store's rules (primary = first pressed, relative fan-out, the
  * gesture pin), the FX-grid slot tables resolving and loading against a
  * held track, the write path's fan-out, and the strip wiring: a hold
- * after the long-press threshold, a held finger that no longer rides the
+ * after the long-press threshold, a held finger that still rides the
  * fader, and the release.
  */
 
@@ -229,7 +229,7 @@ describe('track hold — the strip', () => {
 		});
 	});
 
-	it('a held finger is parked: travel after the hold moves no volume', () => {
+	it('a held finger still rides the fader, and keeps the hold while it does', () => {
 		vi.useFakeTimers();
 		const { card } = mount(2);
 		card.dispatchEvent(pointer('pointerdown', 40, 100));
@@ -237,20 +237,37 @@ describe('track hold — the strip', () => {
 		window.dispatchEvent(pointer('pointermove', 40, 60));
 		window.dispatchEvent(pointer('pointermove', 40, 30));
 		vi.advanceTimersByTime(100);
+		expect(trackHoldScope.heldTracks()).toEqual(['tracks/2']);
 		window.dispatchEvent(pointer('pointerup', 40, 30));
-		expect(volumeWrites()).toEqual([]);
+		expect(volumeWrites().length).toBeGreaterThan(0);
+		expect(trackHoldScope.active).toBe(false);
+		expect(selectedTrackStore.selectedTrackPath).toBe('tracks/0');
 	});
 
-	it('a drag before the threshold is still the fader', () => {
+	it('a fader drag that lasts past the threshold holds the track', () => {
 		vi.useFakeTimers();
 		const { card } = mount(2);
 		card.dispatchEvent(pointer('pointerdown', 40, 100));
 		window.dispatchEvent(pointer('pointermove', 40, 80));
 		window.dispatchEvent(pointer('pointermove', 40, 60));
+		expect(trackHoldScope.active).toBe(false);
 		vi.advanceTimersByTime(LONG_PRESS_MS + 10);
+		expect(trackHoldScope.heldTracks()).toEqual(['tracks/2']);
 		window.dispatchEvent(pointer('pointermove', 40, 40));
 		vi.advanceTimersByTime(100);
 		window.dispatchEvent(pointer('pointerup', 40, 40));
+		expect(trackHoldScope.active).toBe(false);
+		expect(volumeWrites().length).toBeGreaterThan(0);
+	});
+
+	it('a quick fader drag released before the threshold holds nothing', () => {
+		vi.useFakeTimers();
+		const { card } = mount(2);
+		card.dispatchEvent(pointer('pointerdown', 40, 100));
+		window.dispatchEvent(pointer('pointermove', 40, 60));
+		vi.advanceTimersByTime(100);
+		window.dispatchEvent(pointer('pointerup', 40, 60));
+		vi.advanceTimersByTime(LONG_PRESS_MS);
 		expect(trackHoldScope.active).toBe(false);
 		expect(volumeWrites().length).toBeGreaterThan(0);
 	});

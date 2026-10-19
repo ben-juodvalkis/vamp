@@ -445,10 +445,11 @@
         },
         onDragEnd: () => throttle.flush(),
         onTap: ({ x, y }) => dispatchSectionTap(x, y),
-        // Rest a finger on the strip: the FX grid edits this track without
-        // selecting it, for as long as the finger stays (trackHoldScope).
-        // The held finger is parked — it no longer moves the fader. Not
+        // A press past the threshold, resting or riding the fader: the FX
+        // grid edits this track without selecting it, for as long as the
+        // finger stays (trackHoldScope). The finger stays the fader. Not
         // while the Group button is held: there a press means "group".
+        holdWhileDragging: true,
         onLongPress: ({ pointerId }) => {
             if (pointerId === undefined || groupGestureStore.active) return;
             trackHoldScope.press(trackPath, pointerId);

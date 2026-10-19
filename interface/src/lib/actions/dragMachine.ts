@@ -172,6 +172,14 @@ export interface DragMachineConfig {
 	touchThreshold?: number;
 	/** Hold threshold in ms. Undefined = this gesture has no hold. */
 	holdMs?: number;
+	/**
+	 * The hold is a matter of time alone: a press still down at `holdMs`
+	 * holds whether it rested or is already dragging. Only a cross-axis
+	 * commit (a row scroll) rules it out. Default false — travel past the
+	 * threshold cancels the hold. The strip fader sets it: a held strip
+	 * scopes the FX grid while its finger keeps riding the fader.
+	 */
+	holdWhileDragging?: boolean;
 	/** See {@link PressMachineConfig.multiPointer}. Default false. */
 	multiPointer?: boolean;
 }
@@ -193,6 +201,7 @@ export interface DragMachine {
 export function createDragMachine(config: DragMachineConfig = {}): DragMachine {
 	const commit = config.commit ?? 'y';
 	const holdMs = config.holdMs;
+	const holdWhileDragging = config.holdWhileDragging ?? false;
 	const multiPointer = config.multiPointer ?? false;
 
 	// An explicit override applies to every pointer type; otherwise touch
@@ -380,7 +389,10 @@ export function createDragMachine(config: DragMachineConfig = {}): DragMachine {
 				// different gesture, and jitter under the threshold is
 				// still a press. A slip past it on an inert cross axis is
 				// travel too, even though it committed to nothing.
-				if (record.held || record.mode !== 'undecided' || entry.slipped) continue;
+				if (record.held) continue;
+				if (holdWhileDragging) {
+					if (record.mode === 'cross') continue;
+				} else if (record.mode !== 'undecided' || entry.slipped) continue;
 				if (now - record.downAt >= holdMs) {
 					record.held = true;
 					events.push({ type: 'hold', drag: record });

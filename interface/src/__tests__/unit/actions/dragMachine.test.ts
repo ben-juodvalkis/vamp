@@ -194,6 +194,29 @@ describe('createDragMachine — tap, hold and cancel', () => {
 		expect(m.tick(600)).toEqual([]);
 	});
 
+	it('holdWhileDragging: a drag still down at the threshold holds, and keeps dragging', () => {
+		const m = createDragMachine({ commit: 'y', holdMs: 500, threshold: 10, holdWhileDragging: true });
+		m.down({ pointerId: 1, x: 0, y: 0, now: 0 });
+		m.move({ pointerId: 1, x: 0, y: -40, now: 100 });
+		expect(types(m.tick(600))).toEqual(['hold']);
+		expect(types(m.move({ pointerId: 1, x: 0, y: -60, now: 650 }))).toEqual(['move']);
+		expect(types(m.up({ pointerId: 1, x: 0, y: -60, now: 700 }))).toEqual(['end']);
+	});
+
+	it('holdWhileDragging: a held rest that then moves becomes a drag', () => {
+		const m = createDragMachine({ commit: 'y', holdMs: 500, threshold: 10, holdWhileDragging: true });
+		m.down({ pointerId: 1, x: 0, y: 0, now: 0 });
+		expect(types(m.tick(500))).toEqual(['hold']);
+		expect(types(m.move({ pointerId: 1, x: 0, y: -40, now: 600 }))).toEqual(['pressend', 'start', 'move']);
+	});
+
+	it('holdWhileDragging: a row scroll never holds', () => {
+		const m = createDragMachine({ commit: 'y', holdMs: 500, threshold: 10, holdWhileDragging: true });
+		m.down({ pointerId: 1, x: 0, y: 0, now: 0 });
+		m.move({ pointerId: 1, x: 40, y: 0, now: 100 });
+		expect(m.tick(600)).toEqual([]);
+	});
+
 	it('closes the press exactly once, whichever way it ends', () => {
 		const committed = createDragMachine({ commit: 'y', threshold: 10 });
 		committed.down({ pointerId: 1, x: 0, y: 0, now: 0 });
