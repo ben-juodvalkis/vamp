@@ -235,3 +235,63 @@ export const SAMPLER: IconNode = [
 	...zone(15.4, 5.7),
 	...octave(16, 6)
 ];
+
+/*
+ * The instruments' own marks — drawn when the preset recorded no category
+ * to draw (user, 2026-10-20: one mark per instrument, no knob).
+ */
+
+/** Omnisphere: its ORB — the outer ring and the dot at its center. */
+export const ORB: IconNode = [
+	['circle', { cx: '12', cy: '12', r: '9' }],
+	['circle', { cx: '12', cy: '12', r: '1.3', fill: 'currentColor' }]
+];
+
+/** Drift: one sawtooth, three teeth. */
+export const SAW: IconNode = [['path', { d: 'M2 17 8.67 7V17L15.33 7V17L22 7V17' }]];
+
+/**
+ * Wavetable: three single cycles stacked front to back, a sine at the front
+ * morphing through a rounded ramp into a saw at the back — a table's frames.
+ */
+function sineCycle(x: number, y: number): string {
+	return `M${x} ${y}q3.5 -7 7 0t7 0`;
+}
+function morphCycle(x: number, y: number): string {
+	return `M${x} ${y}C${x + 4} ${y - 3} ${x + 6} ${y - 4.5} ${x + 7.2} ${y - 2.5}S${x + 8} ${y + 3.5} ${x + 10} ${y + 3}S${x + 12.5} ${y + 1} ${x + 14} ${y}`;
+}
+function sawCycle(x: number, y: number): string {
+	return `M${x} ${y}L${x + 7} ${y - 3.5}V${y + 3.5}L${x + 14} ${y}`;
+}
+export const WAVETABLE: IconNode = [
+	['path', { d: sawCycle(8, 6), opacity: '0.45' }],
+	['path', { d: morphCycle(5, 12), opacity: '0.7' }],
+	['path', { d: sineCycle(2, 18) }]
+];
+
+/** Meld: two overlapping circles, its two engines. */
+export const MELD: IconNode = [
+	['circle', { cx: '8.5', cy: '12', r: '6' }],
+	['circle', { cx: '15.5', cy: '12', r: '6' }]
+];
+
+/** Operator: four operator boxes, linked. */
+export const OPERATOR: IconNode = [
+	['rect', { x: '3.5', y: '3.5', width: '6', height: '6', rx: '1' }],
+	['rect', { x: '14.5', y: '3.5', width: '6', height: '6', rx: '1' }],
+	['rect', { x: '3.5', y: '14.5', width: '6', height: '6', rx: '1' }],
+	['rect', { x: '14.5', y: '14.5', width: '6', height: '6', rx: '1' }],
+	['path', { d: 'M9.5 6.5h5M6.5 9.5v5M17.5 9.5v5' }]
+];
+
+/** Collision: a beater — a stick on the diagonal with a round head. */
+export const BEATER: IconNode = [
+	['path', { d: 'M3.5 20.5 14.4 9.6' }],
+	['circle', { cx: '16.6', cy: '7.4', r: '3.1' }]
+];
+
+/** Electric: a tuning fork, the tine an electric piano's hammer strikes. */
+export const TINE: IconNode = [['path', { d: 'M8 2.5V11q0 4.5 4 4.5t4-4.5V2.5M12 15.5v6' }]];
+
+/** Analog: a square wave. */
+export const SQUARE: IconNode = [['path', { d: 'M2 15.5H5.5V8.5H11V15.5H16.5V8.5H22' }]];

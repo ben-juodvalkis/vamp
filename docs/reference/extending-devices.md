@@ -274,9 +274,9 @@ jobs moved. The **track strip's device band** (`TrackDeviceView`, PR #496)
 opens the view, and the parameter is reached in the view itself.
 
 So adding a new instrument type needs no grid work: register its central
-view (§2) and give it a glance entry in
-`interface/src/lib/config/instrumentGlanceMap.ts` so the strip's band
-draws its four leading controls. `instrumentSliderMap.ts` is gone — see
+view (§2) and give it a mark in `INSTRUMENT_GLYPHS`
+(`interface/src/lib/config/deviceGlyphMap.ts`, drawn in the strip's
+`instrumentGlyphNodes.ts`) so the strip's band draws it. `instrumentSliderMap.ts` is gone — see
 ADR-438 for what replaced it.
 
 ### 3.1 Step 1 — extend the allowlist

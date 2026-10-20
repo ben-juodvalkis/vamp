@@ -4,15 +4,13 @@
  *
  * `trackDeviceGlance` is the whole decision: which device the band
  * stands for, WHICH PICTURE it draws (the mark of the category an
- * instrument's preset came from, a knob, a glyph, or nothing), which
- * controls that knob
- * read, and what a tap opens. What is pinned here is what would be wrong
- * on a strip if it broke — the head is the chain-FIRST instrument (not
- * just any device), an audio track falls back to its chain head and
- * never claims a plug-in as its instrument, the view type a tap opens
- * resolves only for devices the rig actually draws a view for, and a
- * control's value is normalized by the P record's own min/max rather
- * than assumed to be 0..1.
+ * instrument's preset came from, the instrument's own mark, a device's
+ * glyph, or nothing), and what a tap opens. What is pinned here is what
+ * would be wrong on a strip if it broke — the head is the chain-FIRST
+ * instrument (not just any device), an audio track falls back to its
+ * chain head and never claims a plug-in as its instrument, and the view
+ * type a tap opens resolves only for devices the rig actually draws a
+ * view for.
  *
  * It reads only the v3 tree, which is the point: the band is live on
  * every track without subscribing to anything.
@@ -86,20 +84,6 @@ function track(
 		devices: new SvelteMap<string, DeviceRecord>(devices.map((d) => [d.devicePath, d])),
 		slots: new SvelteMap()
 	};
-}
-
-/** Enough leading params that index 21 (Drift's "Osc 1 Shape") exists. */
-function paramsUpTo(index: number, value: number, range?: { min: number; max: number }): ParamSpec[] {
-	const out: ParamSpec[] = [];
-	for (let i = 0; i <= index; i++) {
-		out.push({
-			name: i === 0 ? 'Device On' : `P${i}`,
-			value: i === index ? value : 0,
-			min: i === index ? range?.min : undefined,
-			max: i === index ? range?.max : undefined
-		});
-	}
-	return out;
 }
 
 beforeEach(() => {
@@ -226,7 +210,7 @@ describe('trackDeviceGlance', () => {
 
 		expect(glance.deviceViewType).toBeNull();
 		expect(glance.ink).toBeNull();
-		expect(glance.glyph).toBe('keys');
+		expect(glance.glyph).toBe('plug');
 	});
 
 	it("reads an audio track's Simpler as a Simpler rather than a mystery device", () => {
@@ -242,59 +226,25 @@ describe('trackDeviceGlance', () => {
 		expect(trackDeviceGlance('tracks/1').glyph).toBe('simpler');
 	});
 
-	it('reads a control and normalizes it by the P record range', () => {
-		// Drift's shape knob is param 21 ("Osc 1 Shape"). Give the record a
-		// −1..1 range so a plain "value as fraction" read would be wrong.
-		replaceTree(1, [
-			track('tracks/2', 'midi', [
-				device('tracks/2/devices/0', 'Drift', 'Drift', paramsUpTo(21, 0.5, { min: -1, max: 1 }))
-			])
-		]);
+	it.each([
+		['Omnisphere', 'AuPluginDevice', 'orb'],
+		['Drift', 'Drift', 'saw'],
+		['Wavetable', 'InstrumentVector', 'wavetable'],
+		['Meld', 'InstrumentMeld', 'meld'],
+		['Operator', 'Operator', 'operator'],
+		['Collision', 'Collision', 'beater'],
+		['Electric', 'LoungeLizard', 'tine'],
+		['Analog', 'Analog', 'square'],
+		['Komplete Kontrol', 'AuPluginDevice', 'plug'],
+		['Serum', 'AuPluginDevice', 'plug'],
+		['Stack', 'InstrumentGroupDevice', 'device']
+	])('draws %s (%s) with no recorded category as its own mark, the %s', (name, className, glyph) => {
+		replaceTree(1, [track('tracks/2', 'midi', [device('tracks/2/devices/0', name, className)])]);
 
 		const glance = trackDeviceGlance('tracks/2');
 
-		expect(glance.instrumentType).toBe('drift');
-		expect(glance.mode).toBe('knobs');
-		const shape = glance.controls.find((c) => c.label === 'Shp');
-		expect(shape?.value).toBeCloseTo(0.75);
-	});
-
-	it('falls back to a glyph for an instrument that lists none of its controls', () => {
-		// An Operator with nothing at 8 / 26 / 29 / 34 — a device whose
-		// parameters have not landed yet. The band must draw SOMETHING;
-		// collapsing to nothing reads as a rendering fault.
-		replaceTree(1, [
-			track('tracks/3', 'midi', [device('tracks/3/devices/0', 'Operator', 'Operator')])
-		]);
-
-		const glance = trackDeviceGlance('tracks/3');
-
-		expect(glance.controls).toEqual([]);
 		expect(glance.mode).toBe('glyph');
-		expect(glance.glyph).toBe('keys');
-	});
-
-	it('skips macros Live never named, and keeps the ones it did', () => {
-		// A rack draws its macros; a bare "Macro 5" says nothing a strip
-		// has room for, so the walk passes over it to the next named one.
-		replaceTree(1, [
-			track('tracks/3', 'midi', [
-				device('tracks/3/devices/0', 'Stack', 'InstrumentGroupDevice', [
-					{ name: 'Device On', value: 1 },
-					{ name: 'Macro 1', value: 0.2 },
-					{ name: 'Drive', value: 0.5 },
-					{ name: 'Macro 3', value: 0.9 },
-					{ name: 'Filter Freq', value: 0.25 }
-				])
-			])
-		]);
-
-		const glance = trackDeviceGlance('tracks/3');
-
-		expect(glance.mode).toBe('knobs');
-		// Both are squeezed to four: "Drive" → "Drv", "Filter Freq" → "Fltr".
-		expect(glance.controls.map((c) => c.label)).toEqual(['Drv', 'Fltr']);
-		expect(glance.controls[0].value).toBeCloseTo(0.5);
+		expect(glance.glyph).toBe(glyph);
 	});
 
 	it('splits the Instrument Rack pattern variant off the first macro name', () => {
@@ -365,9 +315,7 @@ describe('trackDeviceGlance', () => {
 
 		expect(glance.name).toBe('Wavetable');
 		expect(glance.headPath).toBe('tracks/6/devices/0');
-		// Wavetable's table names index 4 as its position knob.
-		expect(glance.controls.map((c) => c.label)).toEqual(['Pos']);
-		expect(glance.controls[0].value).toBeCloseTo(0.6);
+		expect(glance.glyph).toBe('wavetable');
 	});
 
 	it('reports an empty chain as a ghost rather than inventing a head', () => {
@@ -379,7 +327,6 @@ describe('trackDeviceGlance', () => {
 		expect(glance.mode).toBe('ghost');
 		expect(glance.name).toBeNull();
 		expect(glance.headPath).toBeNull();
-		expect(glance.controls).toEqual([]);
 	});
 
 	it('reports a ghost for a track the tree has not seen yet', () => {
@@ -432,9 +379,9 @@ describe('trackDeviceGlance', () => {
 			expect(glanceFor(filed('NI/Perc/NI/Cuba/Cuba.adg'), kit).glyph).toBe('hand-drum');
 		});
 
-		it('leaves FX on the knob until FX has a mark', () => {
-			const drift = device('tracks/0/devices/0', 'Drift', 'Drift', paramsUpTo(21, 0.5));
-			expect(glanceFor(filed('Ableton/FX/Location/Rain.adg'), drift).mode).toBe('knobs');
+		it('draws FX as a sparkle, whatever the instrument', () => {
+			const drift = device('tracks/0/devices/0', 'Drift', 'Drift');
+			expect(glanceFor(filed('Ableton/FX/Location/Rain.adg'), drift).glyph).toBe('fx');
 		});
 
 		it('falls back to the recorded role when no preset is recorded', () => {
@@ -451,9 +398,9 @@ describe('trackDeviceGlance', () => {
 			);
 		});
 
-		it('keeps the knob for a track that recorded no category', () => {
-			const drift = device('tracks/0/devices/0', 'Drift', 'Drift', paramsUpTo(21, 0.5));
-			expect(glanceFor({}, drift).mode).toBe('knobs');
+		it("draws the instrument's own mark for a track that recorded no category", () => {
+			expect(glanceFor({}).glyph).toBe('orb');
+			expect(glanceFor({}, device('tracks/0/devices/0', 'Drift', 'Drift')).glyph).toBe('saw');
 		});
 
 		it('keeps the shaker on the pattern rack whatever it was filed under', () => {
@@ -464,8 +411,8 @@ describe('trackDeviceGlance', () => {
 			expect(glanceFor(filed('Ableton/Perc/Shaker Lite/Shakers.adg'), patterns).glyph).toBe('shaker');
 		});
 
-		it('draws the Sampler mark on a Sampler, filed or not, in place of its knob', () => {
-			const sampler = device('tracks/0/devices/0', 'Sampler', 'MultiSampler', paramsUpTo(30, 0.5));
+		it('draws the Sampler mark on a Sampler, filed or not, whatever it was filed under', () => {
+			const sampler = device('tracks/0/devices/0', 'Sampler', 'MultiSampler');
 			for (const recorded of [{}, { role: 'key' }]) {
 				const glance = glanceFor(recorded, sampler);
 				expect(glance.mode).toBe('glyph');
@@ -473,8 +420,8 @@ describe('trackDeviceGlance', () => {
 			}
 		});
 
-		it('draws the Simpler mark on a Simpler, filed or not, in place of its knob', () => {
-			const simpler = device('tracks/0/devices/0', 'Simpler', 'OriginalSimpler', paramsUpTo(30, 0.5));
+		it('draws the Simpler mark on a Simpler, filed or not, whatever it was filed under', () => {
+			const simpler = device('tracks/0/devices/0', 'Simpler', 'OriginalSimpler');
 			for (const recorded of [{}, { role: 'key' }]) {
 				const glance = glanceFor(recorded, simpler);
 				expect(glance.mode).toBe('glyph');

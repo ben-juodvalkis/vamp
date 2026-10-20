@@ -7,21 +7,17 @@
 	 *
 	 *   glyph  one mark for what kind of thing is on the track: for an
 	 *          instrument, the category its preset came from (a keyboard,
-	 *          a djembe, an upright bass, …); the pattern rack's shaker;
-	 *          the guitar track's guitar
-	 *   knobs  an instrument with no category mark — one knob: the first
-	 *          control its central view leads with, at the position it is
-	 *          actually at
+	 *          a djembe, an upright bass, …), else the instrument's own
+	 *          (Omnisphere's orb, Drift's saw, …); the pattern rack's
+	 *          shaker; the guitar track's guitar
 	 *   ghost  an empty chain
 	 *
-	 * No text, deliberately (user, 2026-09-14). The device's name and the
-	 * controls' labels ride the band's `title` instead, which is a
-	 * tooltip and costs no pixels.
+	 * No text, deliberately (user, 2026-09-14). The device's name rides
+	 * the band's `title` instead, which is a tooltip and costs no pixels.
 	 *
 	 * Presentational only; `TrackStrip` owns every pointer gesture, the
-	 * same contract `MiniSequencer` and `TrackClipView` keep — the knobs
-	 * are a reading, not a control. A tap anywhere in the band opens the
-	 * full view, where they can be moved.
+	 * same contract `MiniSequencer` and `TrackClipView` keep. A tap
+	 * anywhere in the band opens the full view.
 	 */
 
 	import AudioWaveform from '@lucide/svelte/icons/audio-waveform';
@@ -31,24 +27,33 @@
 	import IconNodeGlyph from './IconNodeGlyph.svelte';
 	import Mic from '@lucide/svelte/icons/mic';
 	import Music from '@lucide/svelte/icons/music';
-	import Piano from '@lucide/svelte/icons/piano';
+	import Plug from '@lucide/svelte/icons/plug';
 	import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
+	import Sparkles from '@lucide/svelte/icons/sparkles';
 	import Waves from '@lucide/svelte/icons/waves';
 	import Zap from '@lucide/svelte/icons/zap';
 	import type { TrackDeviceGlance } from '../../composables/useTrackDevice.svelte';
 	import type { DeviceGlyph } from '$lib/config/deviceGlyphMap';
 	import {
+		BEATER,
 		HAND_DRUM,
 		HARP,
 		KEYBOARD,
+		MELD,
+		OPERATOR,
+		ORB,
+		SAW,
 		SAXOPHONE,
 		SAMPLER,
 		SHAKER,
 		SIMPLER,
+		SQUARE,
 		SYNTH,
+		TINE,
 		TRUMPET,
 		UPRIGHT_BASS,
-		VIOLIN
+		VIOLIN,
+		WAVETABLE
 	} from './instrumentGlyphNodes';
 	interface Props {
 		glance: TrackDeviceGlance;
@@ -71,22 +76,14 @@
 				: (glance.ink ?? color ?? 'var(--signal-dim)')
 	);
 
-	// The whole band's readout, as a tooltip: the device, then what the
-	// knob is showing when one is drawn. Nothing here is drawn.
-	let title = $derived(
-		glance.mode === 'ghost'
-			? 'No devices on this track'
-			: glance.mode === 'knobs' && glance.controls.length > 0
-				? `${glance.name} — ${glance.controls[0].label}`
-				: (glance.name ?? '')
-	);
+	// The device's name, as a tooltip. Nothing here is drawn.
+	let title = $derived(glance.mode === 'ghost' ? 'No devices on this track' : (glance.name ?? ''));
 
 	// Lucide components, or icon nodes drawn through `IconNodeGlyph` — the
 	// marks lucide has no icon for, drawn in `instrumentGlyphNodes`.
 	const GLYPHS = {
 		guitar: Guitar,
 		mic: Mic,
-		keys: Piano,
 		keyboard: KEYBOARD,
 		synth: SYNTH,
 		'upright-bass': UPRIGHT_BASS,
@@ -97,6 +94,16 @@
 		harp: HARP,
 		sampler: SAMPLER,
 		simpler: SIMPLER,
+		orb: ORB,
+		saw: SAW,
+		wavetable: WAVETABLE,
+		meld: MELD,
+		operator: OPERATOR,
+		beater: BEATER,
+		tine: TINE,
+		square: SQUARE,
+		plug: Plug,
+		fx: Sparkles,
 		drum: Drum,
 		shaker: SHAKER,
 		filter: AudioWaveform,
@@ -109,49 +116,10 @@
 	} as const satisfies Record<DeviceGlyph, unknown>;
 
 	const mark = $derived(GLYPHS[glance.glyph]);
-
-	/**
-	 * Knob geometry. One 270° sweep opening downward — the arc every
-	 * rotary in the rig draws — as a dashed circle so the value is one
-	 * `stroke-dasharray` and needs no path maths per frame.
-	 */
-	const R = 15;
-	const SWEEP = 0.75; // 270° of the circle
-	const CIRCUMFERENCE = 2 * Math.PI * R;
-	const TRACK_LENGTH = CIRCUMFERENCE * SWEEP;
-
-	/** The pointer's tip for a 0..1 value, on the same 270° opening downward. */
-	function pointer(value: number): { x: number; y: number } {
-		const angle = (135 + value * 270) * (Math.PI / 180);
-		return { x: 20 + Math.cos(angle) * R, y: 20 + Math.sin(angle) * R };
-	}
 </script>
 
 <div class="track-device-view" class:dimmed style="--head-ink: {headInk};" {title}>
-	{#if glance.mode === 'knobs'}
-		<div class="knobs">
-			{#each glance.controls.slice(0, 1) as control (control.paramPath)}
-				{@const tip = pointer(control.value)}
-				<svg class="knob" viewBox="0 0 40 40" aria-hidden="true">
-					<circle
-						class="knob-track"
-						cx="20"
-						cy="20"
-						r={R}
-						stroke-dasharray="{TRACK_LENGTH} {CIRCUMFERENCE}"
-					/>
-					<circle
-						class="knob-value"
-						cx="20"
-						cy="20"
-						r={R}
-						stroke-dasharray="{TRACK_LENGTH * control.value} {CIRCUMFERENCE}"
-					/>
-					<line class="knob-pointer" x1="20" y1="20" x2={tip.x} y2={tip.y} />
-				</svg>
-			{/each}
-		</div>
-	{:else if glance.mode === 'glyph'}
+	{#if glance.mode === 'glyph'}
 		<div class="glyph" aria-hidden="true">
 			{#if Array.isArray(mark)}
 				<IconNodeGlyph iconNode={mark} />
@@ -182,57 +150,8 @@
 		--band-rest-opacity: 0.85;
 	}
 
-	.knobs,
 	.glyph {
 		opacity: var(--band-rest-opacity);
-	}
-
-	/* ---- knobs ---------------------------------------------------- */
-
-	/* One knob, sized like a glyph (user, 2026-09-14, after 2x2 and four
-	   in a row): the first control, a mark the size of the icons beside it. */
-	.knobs {
-		height: 100%;
-		aspect-ratio: 1;
-		max-width: 100%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		min-width: 0;
-	}
-
-	.knob {
-		width: 100%;
-		aspect-ratio: 1;
-		min-width: 0;
-		min-height: 0;
-		overflow: visible;
-	}
-
-	.knob-track {
-		fill: none;
-		stroke: var(--line);
-		/* Units of the 40-unit viewBox, which draws ~50px wide: 0.8 ≈ 1px,
-		   the icons' line. Not non-scaling-stroke, because the dash arrays
-		   that draw the value are in these units too. */
-		stroke-width: 0.8;
-		transform: rotate(135deg);
-		transform-origin: 20px 20px;
-	}
-
-	.knob-value {
-		fill: none;
-		stroke: var(--head-ink);
-		stroke-width: 0.8;
-		stroke-linecap: butt;
-		transform: rotate(135deg);
-		transform-origin: 20px 20px;
-	}
-
-	.knob-pointer {
-		stroke: color-mix(in srgb, var(--head-ink), white 25%);
-		stroke-width: 0.8;
-		stroke-linecap: round;
 	}
 
 	/* ---- glyph ------------------------------------------------------ */
@@ -263,16 +182,12 @@
 	.glyph.ghost {
 		border-radius: var(--radius-sm);
 		border: 1px dashed color-mix(in srgb, var(--muted-foreground), transparent 70%);
-		/* Squarer than a knob and emptier than a glyph: nothing is here. */
+		/* Wider and emptier than a glyph: nothing is here. */
 		aspect-ratio: 1.6;
 	}
 
 	/* Muted: the ink already greys to --signal-dim; drop a notch further. */
 	.track-device-view.dimmed {
 		--band-rest-opacity: 0.5;
-	}
-
-	:global([data-grammar='flat']) .knob-track {
-		stroke: var(--line-strong);
 	}
 </style>

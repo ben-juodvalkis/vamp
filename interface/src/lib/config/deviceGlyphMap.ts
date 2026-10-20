@@ -4,10 +4,11 @@
  *
  * The band is wordless by design (user, 2026-09-14: "I don't think I want
  * any text in these instrument things"). An instrument draws the mark of
- * the CATEGORY its preset came from (`glyphForCategory`), else its first
- * control as a knob; everything else draws ONE mark that says what kind of
- * thing is on the track — a guitar on a guitar track being the case that
- * asked for this.
+ * the CATEGORY its preset came from (`glyphForCategory`), else its own
+ * mark (`glyphForInstrument`: Omnisphere's orb, Drift's saw, …; user,
+ * 2026-10-20, in place of a knob); everything else draws ONE mark that
+ * says what kind of thing is on the track — a guitar on a guitar track
+ * being the case that asked for this.
  *
  * Keys are `DEVICE_PRESETS` keys (the rig's own device vocabulary) plus a
  * few instrument types; the view maps each glyph name to its icon.
@@ -18,7 +19,6 @@ import type { InstrumentType } from '$lib/services/instrumentService';
 export type DeviceGlyph =
 	| 'guitar'
 	| 'mic'
-	| 'keys'
 	| 'keyboard'
 	| 'synth'
 	| 'upright-bass'
@@ -29,6 +29,16 @@ export type DeviceGlyph =
 	| 'harp'
 	| 'sampler'
 	| 'simpler'
+	| 'orb'
+	| 'saw'
+	| 'wavetable'
+	| 'meld'
+	| 'operator'
+	| 'beater'
+	| 'tine'
+	| 'square'
+	| 'plug'
+	| 'fx'
 	| 'drum'
 	| 'shaker'
 	| 'filter'
@@ -97,9 +107,9 @@ export const DEVICE_GLYPHS: Readonly<Record<string, DeviceGlyph>> = {
 };
 
 /**
- * Glyph for an instrument the band could not draw controls for — a
- * plug-in whose parameters the rig does not know, a rack with nothing
- * mapped. Keyed loosely: what family of sound-source is it.
+ * Glyph for an instrument whose preset recorded no category: the
+ * instrument's own mark. A rack is only "an instrument" — what it holds
+ * is anyone's guess — and a plug-in the rig does not know is a plug.
  */
 export const INSTRUMENT_GLYPHS: Readonly<Partial<Record<InstrumentType, DeviceGlyph>>> = {
 	// Not the drum: the drum is the Drum CATEGORY's mark (user, 2026-09-18),
@@ -109,11 +119,19 @@ export const INSTRUMENT_GLYPHS: Readonly<Partial<Record<InstrumentType, DeviceGl
 	// The pattern rack plays shaker and tambourine loops, and draws this mark
 	// in place of a knob (user, 2026-09-17) — see useTrackDevice's mode rule.
 	'instrument-rack-pattern': 'shaker',
+	'instrument-rack': 'device',
 	sampler: 'sampler',
 	simpler: 'simpler',
-	'komplete-kontrol': 'keys',
-	omnisphere: 'keys',
-	plugin: 'keys',
+	omnisphere: 'orb',
+	drift: 'saw',
+	wavetable: 'wavetable',
+	meld: 'meld',
+	operator: 'operator',
+	collision: 'beater',
+	electric: 'tine',
+	analog: 'square',
+	'komplete-kontrol': 'plug',
+	plugin: 'plug',
 	unknown: 'device'
 };
 
@@ -124,7 +142,7 @@ export function glyphForPresetKey(key: string | null): DeviceGlyph {
 
 export function glyphForInstrument(type: InstrumentType | null): DeviceGlyph {
 	if (!type) return 'device';
-	return INSTRUMENT_GLYPHS[type] ?? 'keys';
+	return INSTRUMENT_GLYPHS[type] ?? 'device';
 }
 
 /**
@@ -141,9 +159,8 @@ export function glyphForInstrument(type: InstrumentType | null): DeviceGlyph {
  * Inst preset in no known folder, or known only by its recorded role, is
  * "an instrument".
  *
- * Null leaves the band to draw what it drew before categories: FX has no
- * mark yet (user, 2026-09-18: "use the knob for now"), and neither does a
- * track whose load recorded no category at all.
+ * FX draws a sparkle. Null — a track whose load recorded no category at
+ * all — leaves the band to the instrument's own mark.
  */
 export function glyphForCategory(category: string | null, folders: readonly string[] = []): DeviceGlyph | null {
 	switch (category) {
@@ -157,6 +174,8 @@ export function glyphForCategory(category: string | null, folders: readonly stri
 			return 'keyboard';
 		case 'synth':
 			return 'synth';
+		case 'fx':
+			return 'fx';
 		case 'inst':
 			return INST_FOLDER_GLYPHS[instFolder(folders)] ?? 'device';
 		default:
