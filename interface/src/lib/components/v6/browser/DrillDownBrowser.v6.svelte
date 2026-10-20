@@ -1617,7 +1617,7 @@
 
 <!-- The rail's first slot: Record, or the close X while the browser is open. -->
 {#snippet recordSlot()}
-	<div class="record-button-container">
+	<div class="record-button-container" class:open={isExpanded}>
 		{#if isExpanded}
 			<button
 				class="close-x"
@@ -1626,7 +1626,15 @@
 				onclick={handleClose}
 				aria-label="Close browser"
 			>
-				<X size={40} strokeWidth={2.5} />
+				<X size={32} strokeWidth={2.5} />
+			</button>
+			<button
+				class="icon-btn lock"
+				class:on={browserModeStore.isLocked}
+				onclick={handleLockToggle}
+				aria-label="Lock browser open"
+			>
+				{#if browserModeStore.isLocked}<Lock size={32} />{:else}<LockOpen size={32} />{/if}
 			</button>
 		{:else}
 			<RecordButton prepareOnHold shape="rect" />
@@ -1852,14 +1860,6 @@
 						</div>
 					{/if}
 
-					<button
-						class="icon-btn lock"
-						class:on={browserModeStore.isLocked}
-						onclick={handleLockToggle}
-						aria-label="Lock browser open"
-					>
-						{#if browserModeStore.isLocked}<Lock size={26} />{:else}<LockOpen size={26} />{/if}
-					</button>
 				</div>
 			</div>
 
@@ -2254,6 +2254,22 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		gap: var(--spacing-sm);
+	}
+	/* While open the slot is the close X and the lock, side by side: two
+	   fields of one size, level with the header's controls. */
+	.record-button-container.open {
+		align-items: flex-start;
+		padding-top: var(--spacing-md);
+	}
+	.record-button-container .close-x,
+	.record-button-container .lock {
+		flex: 1 1 0;
+		min-width: 0;
+		height: var(--height-comfortable);
+		border-radius: 12px;
+		border: 1px solid var(--browser-border, #2a2e37);
+		background: var(--browser-bg-primary, #16181d);
 	}
 	.selection-button.placeholder {
 		opacity: 0.3;
@@ -2307,16 +2323,14 @@
 		border-bottom: 1px solid var(--browser-border, #2a2e37);
 		background: var(--browser-bg-secondary, #1d2027);
 	}
-	/* The browse switch (or a replace pill) and the lock take the bar's right
-	   half, on four equal cells: three for the switch's segments, one for the
-	   lock. The lock is pinned to its column, so it holds its place when
-	   nothing fills the first three (Recent, Key). The breadcrumb gets the
-	   left half and clips as it always has. */
+	/* The browse switch (or a replace pill, or the key controls) takes the
+	   bar's right half; the lock lives in the rail beside the close X. The
+	   breadcrumb gets the left half. */
 	.bar-controls {
 		flex: 0 0 50%;
 		height: var(--height-comfortable);
 		display: grid;
-		grid-template-columns: 3fr 1fr;
+		grid-template-columns: 1fr;
 		gap: var(--spacing-sm);
 	}
 	.icon-btn {
@@ -2331,7 +2345,6 @@
 		cursor: pointer;
 	}
 	.icon-btn:active { transform: scale(0.94); }
-	.icon-btn.lock { grid-column: 2; }
 	.icon-btn.lock.on {
 		background: var(--accent);
 		border-color: var(--accent);
@@ -3038,8 +3051,13 @@
 	:global([data-grammar="flat"]) .close-x:hover {
 		color: var(--act-rec);
 	}
+	:global([data-grammar="flat"]) .record-button-container .close-x {
+		border-radius: 2px;
+		border-color: var(--line-strong);
+		background: var(--surface-well);
+	}
 
-	/* Top bar controls: lock + segmented browse switch + replace pill are
+	/* Bar and rail controls: lock + segmented browse switch + replace pill are
 	   flat control fields; the ON fill keeps the vendor accent (--accent
 	   is inlined per category) but carries ClipText, not the hard-coded
 	   #0c0d10. */

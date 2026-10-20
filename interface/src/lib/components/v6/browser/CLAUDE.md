@@ -17,7 +17,8 @@ Touch-first (iPad Safari).
   Record is a rounded **rectangle** here (`shape="rect"`), not the shared
   component's default circle: in a band slot the circle rule sizes off the short
   axis and throws away most of the 120px width. Tapping a Place opens + drills
-  in. While open, the Record slot swaps to a red **X** that closes.
+  in. While open, the Record slot swaps to a red **X** that closes and the
+  **Lock** beside it, two equal fields level with the top bar's controls.
 - **A rail tap resumes that button's last location; tapping the Place that's
   already open on screen restarts at its root.** The reset gesture is unchanged
   (it's how you get back to the top from deep inside — and tapping the open Place
@@ -50,10 +51,9 @@ Touch-first (iPad Safari).
   presets (→ MIDI track); **Simpler** → its samples and audio clips, a pick lands
   on a fresh Simpler (→ MIDI track); **Clip** (`audio`) → the same plus its MIDI
   clips, a pick lands as a clip (an `.alc` makes its own track — a MIDI clip's is
-  still silent, plan §5 follow-ups). The switch and the Lock share the bar's right half as four equal cells,
-  three segments and the lock, the lock pinned to the last cell so it holds its
-  place with no switch beside it (2026-09-14, user's call: "they should be able
-  to take up like half of the width"). The switch is a **kind filter**
+  still silent, plan §5 follow-ups). The switch takes the bar's right half (2026-09-14, user's call: "they
+  should be able to take up like half of the width"); the Lock sits beside the
+  close X in the rail's top slot (2026-10-20). The switch is a **kind filter**
   (`PlacesAdapter.setKindFilter`, set on every level load; the groups are
   `$lib/utils/placeKinds`'s, via `groupsForMode`): Instrument shows instruments,
   kits and effects, Simpler samples and clips, Clip those and `midi-clips`, and a folder is kept or dropped from its `kinds` counts
