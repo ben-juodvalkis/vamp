@@ -534,16 +534,17 @@
 		transition: none;
 	}
 
-	/* Flat grammar: Live's loop brace is a solid LoopColor grey bar on a
-	   ControlBackground lane — no orange frame, no translucent region.
-	   The region/handle colours are class-owned (--loop-region-* lifted off
-	   the inline style), so these override by specificity alone. */
+	/* Flat grammar: a LoopColor frame on a ControlBackground lane — no
+	   orange, and no fill: the clip's content shows through the loop, and
+	   the handles and the frame already say where it is. The region/handle
+	   colours are class-owned (--loop-region-* lifted off the inline
+	   style), so these override by specificity alone. */
 	:global([data-grammar="flat"]) .loop-container {
 		border: 1px solid var(--line-strong);
 		border-radius: 2px;
 	}
 	:global([data-grammar="flat"]) .loop-region {
-		background-color: var(--secondary);   /* SurfaceHighlight */
+		background-color: transparent;
 		border: 1px solid #919191;            /* LoopColor */
 		border-radius: 0;
 	}
