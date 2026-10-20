@@ -353,11 +353,18 @@
 				/>
 			{/if}
 			{#if showPlayhead}
+				<!-- Moved by transform, on a layer of its own: a `bottom` write
+				     repainted the rotated backdrop under the line every frame,
+				     which left faint shifting lines in a scaled view. The
+				     carrier is the track's height, so its translate % is the
+				     track's. -->
 				<div
-					class="absolute inset-x-0 pointer-events-none loop-playhead"
-					style="bottom: {playheadPercentage}%;"
+					class="absolute inset-0 pointer-events-none loop-playhead-carrier"
+					style="transform: translateY({-playheadPercentage}%);"
 					aria-hidden="true"
-				></div>
+				>
+					<div class="absolute inset-x-0 bottom-0 loop-playhead"></div>
+				</div>
 			{/if}
 
 			<!-- Loop length display - centered on entire component, color adapts to background -->
@@ -512,10 +519,13 @@
 	}
 
 	/* The playhead, across the lane: the strips' phosphor line, turned. */
+	.loop-playhead-carrier {
+		z-index: 150;
+		will-change: transform;
+	}
 	.loop-playhead {
 		height: 1px;
 		background: var(--playhead);
-		z-index: 150;
 	}
 
 	.loop-handle {

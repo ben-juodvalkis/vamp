@@ -138,5 +138,8 @@
 		left: 50%;
 		top: 50%;
 		transform: translate(-50%, -50%) rotate(-90deg) scaleY(-1);
+		/* Rasterized once on its own layer, so the playhead sliding over it
+		   never repaints the rotated content. */
+		will-change: transform;
 	}
 </style>
