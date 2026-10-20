@@ -73,9 +73,9 @@ describe('TrackClipMidiView — muted notes', () => {
 		});
 		await waitFor(() => expect(container.querySelectorAll('.midi-note')).toHaveLength(1));
 		const note = container.querySelector<HTMLElement>('.midi-note')!;
-		// One distinct pitch, MIN_LANES = 4 → the note sits in the top lane at a quarter height.
+		// One distinct pitch is one lane, and it fills the height.
 		expect(note.getAttribute('style')).toMatch(/top:\s*0%/);
-		expect(note.getAttribute('style')).toMatch(/height:\s*25%/);
+		expect(note.getAttribute('style')).toMatch(/height:\s*100%/);
 		expect(container.querySelector('.midi-status--empty')).toBeNull();
 	});
 });

@@ -19,6 +19,10 @@
 	import { createSliderThrottle } from '$lib/utils/sliderThrottle';
 	import { loopBraceGridBeats, snapToGrid } from '$lib/utils/clip/clipGesture';
 	import { playingClipsStore } from '$lib/stores/v6/playingClipsStore.svelte';
+	import { v3Store } from '$lib/stores/v3/normalized.svelte';
+	import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
+	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+	import VerticalClipBackdrop from './VerticalClipBackdrop.svelte';
 
 	// Constants
 	const MIN_LOOP_LENGTH_BEATS = 0.001;
@@ -79,6 +83,33 @@
 	let isRecording = $derived(
 		focusedTrackPath ? playingClipsStore.liveStatus(focusedTrackPath) === 2 : false
 	);
+
+	// The focused clip's content and playhead behind the brace. The clip
+	// is the focused one, which need not be its track's playing clip: the
+	// playhead rides the track's playing-slot channel, so it draws only
+	// while the focused clip IS the one playing (or held playing with the
+	// transport stopped), as the strips and the grid cells do.
+	let focusedClipPath = $derived(session.focusedClipPath);
+	let clipTrackPath = $derived.by(() => {
+		const idx = session.focusedClipIndices;
+		return idx ? `tracks/${idx.track}` : null;
+	});
+	let clipInk = $derived.by(() => {
+		const rec = clipTrackPath ? v3Store.tracks.get(clipTrackPath) : undefined;
+		return rec ? trackInk(rgbToHex(rec.color), paintModeReactive()) : undefined;
+	});
+	let playingEntry = $derived(clipTrackPath ? playingClipsStore.get(clipTrackPath) : undefined);
+	let showPlayhead = $derived(
+		!!clipTrackPath &&
+			!!focusedClipPath &&
+			playingEntry?.clipPath === focusedClipPath &&
+			playingClipsStore.liveStatus(clipTrackPath) === 1
+	);
+	let playheadPercentage = $derived.by(() => {
+		if (!showPlayhead || !clipTrackPath || totalRange <= 0) return 0;
+		const pos = playingClipsStore.position(clipTrackPath);
+		return Math.max(0, Math.min(100, (pos / totalRange) * 100));
+	});
 
 	let lengthLabel = $derived(formatBeats(displayEnd - displayStart));
 
@@ -305,6 +336,21 @@
 			<!-- Recording: the whole lane is the take; its count is on the strip. -->
 			<div class="absolute inset-0 loop-region recording" aria-hidden="true"></div>
 		{:else if hasClip}
+			{#if focusedClipPath}
+				<VerticalClipBackdrop
+					clipPath={focusedClipPath}
+					endBeats={totalRange}
+					color={clipInk}
+				/>
+			{/if}
+			{#if showPlayhead}
+				<div
+					class="absolute inset-x-0 pointer-events-none loop-playhead"
+					style="bottom: {playheadPercentage}%;"
+					aria-hidden="true"
+				></div>
+			{/if}
+
 			<!-- Loop length display - centered on entire component, color adapts to background -->
 			<span
 				class="absolute inset-0 flex items-center justify-center font-bold num pointer-events-none select-none z-[200] loop-length-display"
@@ -439,6 +485,20 @@
 		transition: bottom 0.1s ease-out, height 0.1s ease-out,
 			background-color var(--t-standard) var(--ease-settle),
 			border-color var(--t-standard) var(--ease-settle);
+	}
+
+	/* Behind the region's wash would hide the content under the flat skin's
+	   solid loop bar, so the backdrop sits over the region (z 50) and under
+	   the handles (100) and the readout (200); it takes no pointer events. */
+	.loop-container :global(.backdrop-host) {
+		z-index: 60;
+	}
+
+	/* The playhead, across the lane: the strips' phosphor line, turned. */
+	.loop-playhead {
+		height: 1px;
+		background: var(--playhead);
+		z-index: 150;
 	}
 
 	.loop-handle {

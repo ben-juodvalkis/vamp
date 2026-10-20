@@ -189,11 +189,10 @@
 	});
 
 	// Lay notes into lanes by *distinct pitch* rather than by raw
-	// semitone span — so a clip with two pitches gets two big lanes,
-	// not two thin lines floating in mostly empty space. We still
-	// guarantee a minimum lane count so a single-pitch clip doesn't
-	// fill the entire strip height with one fat bar.
-	const MIN_LANES = 4;
+	// semitone span, one lane per pitch and no floor: two pitches split
+	// the whole height in two, one fills it. (A four-lane floor left a
+	// two-pitch clip in the top half with the bottom half empty.)
+	const MIN_LANES = 1;
 
 	let pitchLanes = $derived.by(() => {
 		const lookup = new Map<number, number>();
