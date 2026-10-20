@@ -40,6 +40,14 @@
 
 	// UI state
 	let containerRef = $state<HTMLElement | null>(null);
+	/**
+	 * The time axis: the lane less a handle bar's height at each end, so
+	 * the handle bars hang OUTSIDE their loop points and the loop — region,
+	 * clip content, playhead — runs between their inner edges. With the
+	 * outer edges on the points, a loop of the whole clip hid a bar's
+	 * height of content under each handle.
+	 */
+	let trackRef = $state<HTMLElement | null>(null);
 	let isDragging = $state<'start' | 'end' | 'range' | null>(null);
 	let dragStartValues = $state({ start: 0, end: 0 });
 	let optimisticValues = $state<{ start: number; end: number } | null>(null);
@@ -195,10 +203,10 @@
 
 	/** `deltaY` is pixels travelled UP from the press point. */
 	function applyDrag(deltaY: number) {
-		if (!isDragging || !containerRef) return;
+		if (!isDragging || !trackRef) return;
 		dragMoved = true;
 
-		const rect = containerRef.getBoundingClientRect();
+		const rect = trackRef.getBoundingClientRect();
 		const deltaBeats = (deltaY / rect.height) * totalRange;
 
 		let newStart = loopStart;
@@ -294,8 +302,8 @@
 	const deadZoneDrag: DragOptions = $derived({
 		...braceDrag('start'),
 		onStart: ({ downY }: DragInfo) => {
-			if (!containerRef) return;
-			const rect = containerRef.getBoundingClientRect();
+			if (!trackRef) return;
+			const rect = trackRef.getBoundingClientRect();
 			const tapBeat = ((rect.bottom - downY) / rect.height) * totalRange;
 			// Which handle the press is asking for.
 			const handleToMove: 'start' | 'end' =
@@ -336,6 +344,7 @@
 			<!-- Recording: the whole lane is the take; its count is on the strip. -->
 			<div class="absolute inset-0 loop-region recording" aria-hidden="true"></div>
 		{:else if hasClip}
+			<div class="absolute inset-x-0 loop-track" bind:this={trackRef}>
 			{#if focusedClipPath}
 				<VerticalClipBackdrop
 					clipPath={focusedClipPath}
@@ -379,7 +388,7 @@
 				class="absolute inset-x-0 h-16 loop-handle"
 				class:cursor-ns-resize={hasClip}
 				class:dragging={isDragging !== null}
-				style="bottom: {startPercentage}%; z-index: 100;"
+				style="bottom: calc({startPercentage}% - var(--loop-bar-h)); z-index: 100;"
 				use:dragAction={startHandleDrag}
 				role="slider"
 				tabindex={0}
@@ -409,7 +418,7 @@
 				class="absolute inset-x-0 h-16 loop-handle"
 				class:cursor-ns-resize={hasClip}
 				class:dragging={isDragging !== null}
-				style="bottom: {endPercentage}%; z-index: 100; transform: translateY(100%);"
+				style="bottom: calc({endPercentage}% + var(--loop-bar-h)); z-index: 100; transform: translateY(100%);"
 				use:dragAction={endHandleDrag}
 				role="slider"
 				tabindex={0}
@@ -433,6 +442,7 @@
 					</div>
 				</div>
 			</div>
+			</div>
 		{:else}
 			<!-- No clip selected state - empty label -->
 		{/if}
@@ -442,6 +452,8 @@
 <style>
 	/* Lane = recessed well + act-loop hairline (§4.5). */
 	.loop-container {
+		/* A handle bar's height (Tailwind h-8): the track's inset at each end. */
+		--loop-bar-h: 2rem;
 		background: var(--surface-well);
 		border: 1px solid var(--act-loop-line);
 		/* The length readout sizes off this lane's width (`cqw`). */
@@ -485,6 +497,11 @@
 		transition: bottom 0.1s ease-out, height 0.1s ease-out,
 			background-color var(--t-standard) var(--ease-settle),
 			border-color var(--t-standard) var(--ease-settle);
+	}
+
+	.loop-track {
+		top: var(--loop-bar-h);
+		bottom: var(--loop-bar-h);
 	}
 
 	/* Behind the region's wash would hide the content under the flat skin's
