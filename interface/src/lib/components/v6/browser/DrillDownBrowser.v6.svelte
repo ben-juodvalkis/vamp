@@ -25,6 +25,9 @@
 	import { onMount, onDestroy, untrack } from 'svelte';
 	import Lock from '@lucide/svelte/icons/lock';
 	import LockOpen from '@lucide/svelte/icons/lock-open';
+	import AudioWaveform from '@lucide/svelte/icons/audio-waveform';
+	import IconNodeGlyph from '../tracks/TrackStrip/components/IconNodeGlyph.svelte';
+	import { KEYBOARD, SIMPLER } from '../tracks/TrackStrip/components/instrumentGlyphNodes';
 	import X from '@lucide/svelte/icons/x';
 
 	import {
@@ -1761,7 +1764,6 @@
 			<div class="bar">
 				<div class="crumbs">
 					{#each crumbs as c, i (c.index)}
-						{#if i > 0}<span class="sep">/</span>{/if}
 						<button
 							class="crumb"
 							class:root={c.index === -1}
@@ -1796,25 +1798,31 @@
 							<button
 								class="seg"
 								class:on={browseMode === 'midi'}
+								data-mode="midi"
 								disabled={midiUnavailableForCurrent}
 								onclick={() => setBrowseMode('midi')}
 							>
+								<span class="seg-icon" aria-hidden="true"><IconNodeGlyph iconNode={KEYBOARD} /></span>
 								Instrument
 							</button>
 							<button
 								class="seg"
 								class:on={browseMode === 'simpler'}
+								data-mode="simpler"
 								disabled={simplerUnavailableForCurrent}
 								onclick={() => setBrowseMode('simpler')}
 							>
+								<span class="seg-icon" aria-hidden="true"><IconNodeGlyph iconNode={SIMPLER} /></span>
 								Simpler
 							</button>
 							<button
 								class="seg"
 								class:on={browseMode === 'audio'}
+								data-mode="audio"
 								disabled={clipUnavailableForCurrent}
 								onclick={() => setBrowseMode('audio')}
 							>
+								<span class="seg-icon" aria-hidden="true"><AudioWaveform /></span>
 								Clip
 							</button>
 						</div>
@@ -2352,11 +2360,34 @@
 		padding: 0 var(--spacing-sm);
 		cursor: pointer;
 	}
+	/* Each mode wears its own ink: the icon carries it while the segment is
+	   off, the whole segment while it is on. */
+	.seg-switch .seg[data-mode='midi'] { --seg-ink: oklch(0.72 0.13 265); }
+	.seg-switch .seg[data-mode='simpler'] { --seg-ink: oklch(0.78 0.14 70); }
+	.seg-switch .seg[data-mode='audio'] { --seg-ink: oklch(0.78 0.11 195); }
+	.seg-switch .seg {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: var(--spacing-sm);
+	}
+	.seg-icon {
+		display: flex;
+		width: 1.6em;
+		height: 1.6em;
+		flex: none;
+		color: var(--seg-ink);
+	}
+	.seg-icon :global(svg) {
+		width: 100%;
+		height: 100%;
+	}
 	.seg-switch .seg:active { transform: scale(0.96); }
 	.seg-switch .seg.on {
-		background: var(--accent);
+		background: var(--seg-ink);
 		color: #0c0d10;
 	}
+	.seg-switch .seg.on .seg-icon { color: inherit; }
 	.seg-switch .seg:disabled {
 		opacity: 0.35;
 		cursor: default;
@@ -2376,29 +2407,41 @@
 		letter-spacing: 0.03em;
 	}
 
+	/* The path is a row of buttons at the bar's control height, each a field
+	   like the lock beside the switch: a tap jumps back up to that level.
+	   Left to right is the order, so no separator is drawn between them. */
 	.crumbs {
 		flex: 1 1 auto;
+		height: var(--height-comfortable);
 		display: flex;
-		align-items: center;
-		gap: 4px;
+		align-items: stretch;
+		gap: var(--spacing-xs);
 		min-width: 0;
 		overflow: hidden;
 	}
 	.crumb {
-		flex: 0 0 auto;
-		border: none;
-		background: none;
+		/* The crumbs share the bar's left half, as the switch's segments share
+		   its right: each as wide as it can be, a long one ellipsized. */
+		flex: 1 1 0;
+		min-width: 0;
+		display: block;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		line-height: calc(var(--height-comfortable) - 2px);
+		text-align: center;
+		border: 1px solid var(--browser-border, #2a2e37);
+		border-radius: 12px;
+		background: var(--browser-bg-primary, #16181d);
 		color: var(--muted-foreground, #8a8f9c);
-		font-size: 16px;
+		font-size: var(--text-lg);
 		font-weight: 550;
-		padding: var(--spacing-xs);
+		padding: 0 var(--spacing-md);
 		white-space: nowrap;
 		cursor: pointer;
 	}
 	.crumb.root { color: var(--accent); font-weight: 700; }
 	.crumb.here { color: var(--foreground, #eef0f4); }
-	.crumb:active { color: var(--foreground, #eef0f4); }
-	.sep { color: var(--browser-border, #4b5563); font-size: 14px; }
+	.crumb:active { transform: scale(0.96); color: var(--foreground, #eef0f4); }
 
 	/* ── Stage + layers ───────────────────────────────────────── */
 	.stage { flex: 1 1 auto; position: relative; overflow: hidden; }
@@ -3037,15 +3080,16 @@
 		letter-spacing: 0;
 	}
 
-	/* Breadcrumb: the root crumb keeps its emphasis at the flat grammar's
-	   bold (600, from the token — never the 700 literal); the separator on
-	   the visible grey ladder (the browser-border token is near-invisible on
-	   Live's dark bar). */
+	/* Breadcrumb: flat fields like the lock's; the root crumb keeps its
+	   emphasis at the flat grammar's bold (600, from the token — never the
+	   700 literal). */
+	:global([data-grammar="flat"]) .crumb {
+		border-radius: 2px;
+		border-color: var(--line-strong);
+		background: var(--surface-well);
+	}
 	:global([data-grammar="flat"]) .crumb.root {
 		font-weight: var(--font-weight-bold);
-	}
-	:global([data-grammar="flat"]) .sep {
-		color: var(--fg-tertiary);
 	}
 
 	/* Section (column) heads: SurfaceHighlight band, plain foreground name,
