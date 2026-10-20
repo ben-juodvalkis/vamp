@@ -2418,6 +2418,11 @@
 		gap: var(--spacing-xs);
 		min-width: 0;
 		overflow: hidden;
+		/* A rule midway between the path and the switch: where you are on
+		   one side, what you are browsing for on the other. */
+		padding-right: var(--spacing-xl);
+		margin-right: var(--spacing-md);
+		border-right: 1px solid var(--line-strong);
 	}
 	.crumb {
 		/* The crumbs share the bar's left half, as the switch's segments share
