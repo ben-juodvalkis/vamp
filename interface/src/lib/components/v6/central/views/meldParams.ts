@@ -141,6 +141,31 @@ export const MELD_FILTER_TYPES = [
 	'Membr'
 ] as const;
 
+/**
+ * What Live names `Filter L-B-H-N` (Filter_Macro2) under each filter type,
+ * less the "A Filter " prefix. Measured 2026-10-22 by stepping A Filter
+ * Type 0..16 on a running Meld and reading `parameters[17].name`.
+ */
+export const MELD_FILTER_EXTRA_NAMES = [
+	'L-B-H-N', // SVF 12
+	'L-B-H-N', // SVF 24
+	'Drive', // LP 12
+	'Drive', // HP 12
+	'Drive', // BP 12
+	'Drive', // LP Crunch
+	'Lofi', // LP Switched Res
+	'Drive', // Filth
+	'Q', // Peak
+	'Q', // Notch
+	'Spread', // Phaser
+	'Lofi', // Redux
+	'Morph', // Vowel
+	'Damp', // Comb +
+	'Damp', // Comb -
+	'Ratio', // Plate
+	'Damp' // Membrane
+] as const;
+
 /** The oscillator type `step` places from `current`, wrapping. */
 export function stepOscType(current: number, step: number): number {
 	const n = MELD_OSC_TYPES.length;

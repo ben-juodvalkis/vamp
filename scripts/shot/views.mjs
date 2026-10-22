@@ -465,6 +465,9 @@ function instrumentSwapStates() {
 			[{ click: '.osc-badge' }, { click: '.env-switch .device-segment:last-child' }]],
 		// The oscillator type grid open over the Osc pad.
 		['meld-osc-types', 'Meld', 'InstrumentMeld', meld, [{ click: '.engine-head .chooser-name' }]],
+		// Plate picked from the filter grid: the second macro reads Ratio.
+		['meld-filter-plate', 'Meld', 'InstrumentMeld', meld,
+			[{ click: '.filter-col .chooser-name' }, { click: '.filter-types .type-option:nth-child(16)' }]],
 		['omnisphere', 'Omnisphere', 'AuPluginDevice'],
 		// Filter up: the switch and sliders take the track's ink, not Amp's orange.
 		['omnisphere-filter', 'Omnisphere', 'AuPluginDevice', undefined,

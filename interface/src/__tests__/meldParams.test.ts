@@ -3,6 +3,7 @@ import {
 	MELD_ENGINE,
 	MELD_OSC_TYPES,
 	MELD_FILTER_TYPES,
+	MELD_FILTER_EXTRA_NAMES,
 	MELD_OCTAVES,
 	stepOscType
 } from '$lib/components/v6/central/views/meldParams';
@@ -25,6 +26,14 @@ describe('meldParams', () => {
 	it("has a filter type for each of Live's 17 steps and Live's -3..3 octaves", () => {
 		expect(MELD_FILTER_TYPES).toHaveLength(17);
 		expect(MELD_OCTAVES).toEqual([-3, -2, -1, 0, 1, 2, 3]);
+	});
+
+	it("names the filter's second macro as Live does under each type (rig, 2026-10-22)", () => {
+		// parameters[17].name, A Filter Type stepped 0..16, "A Filter " dropped.
+		expect(MELD_FILTER_EXTRA_NAMES).toEqual([
+			'L-B-H-N', 'L-B-H-N', 'Drive', 'Drive', 'Drive', 'Drive', 'Lofi', 'Drive', 'Q',
+			'Q', 'Spread', 'Lofi', 'Morph', 'Damp', 'Damp', 'Ratio', 'Damp'
+		]);
 	});
 
 	it('steps the oscillator type round both ends', () => {

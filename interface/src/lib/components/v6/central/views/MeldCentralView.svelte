@@ -21,6 +21,7 @@
     MELD_OCTAVES,
     MELD_OSC_TYPES,
     MELD_FILTER_TYPES,
+    MELD_FILTER_EXTRA_NAMES,
     stepOscType,
     type MeldEngine
   } from './meldParams';
@@ -122,16 +123,9 @@
     write(p.q, y);
   }
 
-  /**
-   * The filter's second macro, which Live renames with the type
-   * (L-B-H-N, Drive, Morph …), so the title is the name Live reports now,
-   * less its "A Filter " prefix.
-   */
+  /** The filter's second macro, titled with the name Live gives it under this type. */
   let filterExtra = $derived(read(p.lbhn, 0));
-  let filterExtraTitle = $derived.by(() => {
-    const name = device ? selectedTrackStore.paramName(selectedTrackStore.paramPath(device, p.lbhn)) : undefined;
-    return name?.replace(/^[AB]\s+(Filter\s+)?/, '') || 'Extra';
-  });
+  let filterExtraTitle = $derived(MELD_FILTER_EXTRA_NAMES[filterType] ?? 'Extra');
 
   /**
    * The open type chooser, if any: 25 oscillator types and 17 filter types
