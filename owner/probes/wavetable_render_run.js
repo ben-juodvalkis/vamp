@@ -4,6 +4,7 @@
 //
 //   node owner/probes/wavetable_render_run.js tables <out.json> [category …]
 //   node owner/probes/wavetable_render_run.js calib  <out.json>
+//   node owner/probes/wavetable_render_run.js joint  <out.json>
 //
 // Live's API names a Wavetable's tables but never hands over their samples,
 // and the factory tables live in Live's encrypted resources. So this plays
@@ -17,6 +18,9 @@
 // ones by default; the User category is skipped). `calib` renders Effect 1
 // and Effect 2 sweeps for every effect mode on the sine, saw and square
 // frames of Basics / Basic Shapes, the ground truth for the effect transforms.
+// `joint` sweeps Effect 1 with Effect 2 held at 50 % in each mode, on the
+// sine and the saw: how the two sliders combine, and FM's Tune, which does
+// nothing while Amount is 0.
 //
 // What colours the sound is neutralised: effect mode None, unison None, mono,
 // Osc 2 and Sub off, both filters off, amp attack and release at their
@@ -35,8 +39,8 @@ const pathLib = require('path');
 const osc = require(pathLib.resolve(__dirname, '..', '..', 'node_modules', 'osc'));
 
 const [mode, outPath, ...cats] = process.argv.slice(2);
-if (!['tables', 'calib'].includes(mode) || !outPath) {
-  console.error('usage: node wavetable_render_run.js tables|calib <out.json> [category …]');
+if (!['tables', 'calib', 'joint'].includes(mode) || !outPath) {
+  console.error('usage: node wavetable_render_run.js tables|calib|joint <out.json> [category …]');
   process.exit(2);
 }
 
@@ -138,6 +142,17 @@ async function segmentsFor(dev) {
         pre: [['oscillator_1_wavetable_category', ci], ['oscillator_1_wavetable_index', ti]],
         frames: positions.map(p => ({ pos: p, sets: [[prm(P.pos), p]] })),
       }));
+    }
+  } else if (mode === 'joint') {
+    for (const src of [{ shape: 'sine', pos: 0 }, { shape: 'saw', pos: 2 / 3 }]) {
+      for (const [modeName, modeIdx] of [['frequency_modulation', 1], ['sync_and_pulse_width', 2], ['warp_and_fold', 3]]) {
+        // Frame 0 is the plain cycle (both effects at rest) in the same note,
+        // what the sweep is aligned and scaled by.
+        segs.push({ category: 'Basics', table: 'Basic Shapes', kind: 'joint', shape: src.shape, mode: modeName, modeIndex: modeIdx, pos: src.pos,
+          pre: [['oscillator_1_wavetable_category', 0], ['oscillator_1_wavetable_index', 0], [prm(P.pos), src.pos], ['oscillator_1_effect_mode', modeIdx]],
+          frames: [{ e1: 0.5, e2: 0, sets: [[prm(P.e1), 0.5], [prm(P.e2), 0]] },
+            ...CALIB_E1.map(v => ({ e1: v, e2: 0.5, sets: [[prm(P.e1), v], [prm(P.e2), 0.5]] }))] });
+      }
     }
   } else {
     // Basics / Basic Shapes, measured by the tables run (its harmonics

@@ -13,7 +13,7 @@ one note are cut at the same phase of that note, so its frames line up with
 each other; the table is then turned so that its first frame's fundamental
 starts like a sine (rising through zero), and scaled so its loudest frame
 peaks at 1. A calibration sweep is turned and scaled by its neutral frame
-instead (Effect 1 at 0 %, Effect 2 at 0), so each effect frame reads against
+instead (Effect 1 at 0 %, Effect 2 at 0; a joint sweep opens on one), so each effect frame reads against
 the untouched cycle at the level it really plays.
 
 ``bundle`` writes what the interface ships
@@ -73,7 +73,7 @@ def cut(x, sr, onset, f0, t0, t1, points):
 
 def reference_frame(seg):
     """The frame a note is aligned and scaled by: the neutral one of a sweep."""
-    if seg.get("kind") == "effect1":
+    if seg.get("kind", "").startswith("effect1"):
         return [f["e1"] for f in seg["frames"]].index(0.5)
     return 0
 
@@ -110,7 +110,7 @@ def main(run_path, out_path, points=256):
             counts.append(m)
         ref = reference_frame(seg)
         frames = sine_aligned(np.array(frames), ref)
-        peak = (np.abs(frames[ref]).max() if seg.get("kind") in ("effect1", "effect2") else np.abs(frames).max()) or 1.0
+        peak = (np.abs(frames[ref]).max() if seg.get("kind") in ("effect1", "effect2", "joint") else np.abs(frames).max()) or 1.0
         entry = {k: v for k, v in seg.items() if k not in ("writes", "checked", "note_on", "frames")}
         # values[j] is what frame j was played at: {pos} for a table, {e1, e2} for a sweep.
         entry.update({"values": seg["frames"], "frames": np.round(frames / peak, 4).tolist(), "spread": spreads, "cycles": counts,
