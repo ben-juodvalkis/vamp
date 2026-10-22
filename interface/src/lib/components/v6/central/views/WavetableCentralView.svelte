@@ -304,7 +304,6 @@
             xValue={osc1Effect2}
             yValue={osc1Position}
             title="OSC 1"
-            icon="oscillator"
             onInteraction={handleOsc1XY}
             color={wavetableInk}
           >
@@ -326,7 +325,6 @@
           xValue={osc2Effect2}
           yValue={osc2Position}
           title="OSC 2"
-          icon="oscillator"
           isGhost={!osc2On}
           onInteraction={handleOsc2XY}
           color={wavetableInk}
