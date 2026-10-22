@@ -360,6 +360,12 @@ export const TOURS = {
 				description: 'Wavetable (Bass), Osc 2 and Envelope 2',
 				steps: [openInstrument(1), { click: '.osc-badge' }, { click: '.env-switch .device-segment:last-child' }]
 			},
+			// Filter 2 up.
+			{
+				name: 'inst-wavetable-flt2',
+				description: 'Wavetable (Bass), Filter 2',
+				steps: [openInstrument(1), { click: '.filter-col .osc-badge' }]
+			},
 			{ name: 'inst-drift', description: 'Drift (Keys)', steps: [openInstrument(2)] },
 			// No single-Simpler state: the scene's only Simpler is on Texture, an
 			// AUDIO track, and audio tracks draw no instrument tile to open it from.

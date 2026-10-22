@@ -54,7 +54,6 @@
   import WavetableWave from './wavetable/WavetableWave.svelte';
   import { loadFactoryWavetables, tableFrames, cycleAt, type WavetableBundle } from '$lib/utils/wavetableShapes';
   import { applyOscEffect, effectModeFromLive } from '$lib/utils/wavetableEffects';
-  import { SECTION_SWITCH_ON_ABOVE } from '$lib/services/drumVirtualMacros';
 
   interface Props {
     instrument?: InstrumentInfo | null;
@@ -82,12 +81,11 @@
   // Filter 1, read off the running device 2026-10-22 (Live 12.4.15):
   // Freq 20 Hz..20.5 kHz on a log sweep, Res 0..1 (Live's 0..125 %),
   // Type 0..4 Lowpass/Highpass/Bandpass/Notch/Morph, Slope 12/24.
-  const FLT1_ON = 21;      // 'Flt 1 On'
-  const FLT1_TYPE = 22;    // 'Flt 1 Type'
-  const FLT1_SLOPE = 25;   // 'Flt 1 Slope'
-  const FLT1_FREQ = 26;    // 'Flt 1 Freq'   0..1
-  const FLT1_RES = 27;     // 'Flt 1 Res'    0..1
-  const FLT1_MORPH = 29;   // 'Flt 1 Morph'  0..1
+  // Filter 2 is Filter 1 plus 9 (device dump, 2026-10-22).
+  const FLT = {
+    1: { on: 21, type: 22, slope: 25, freq: 26, res: 27, morph: 29 },
+    2: { on: 30, type: 31, slope: 34, freq: 35, res: 36, morph: 38 }
+  } as const;
   const FILTER_TYPES = ['LP', 'HP', 'BP', 'Notch', 'Morph'] as const;
 
   // The envelopes, four sliders in ADSR order (user's call and user's
@@ -126,10 +124,6 @@
   // the running device: 'Time' 0..1 with 0.5 at 0 % (Live shows -100..100 %,
   // it scales every envelope and LFO time) and 'Global Mod Amount' 0..1
   // (Live shows 0..200 %, 0.5 = 100 %; it scales every mod-matrix row).
-  // The sub oscillator, read off the running device 2026-10-22.
-  const SUB_ON = 17;        // 'Sub On'
-  const SUB_GAIN = 19;      // 'Sub Gain'  0..1
-
   const TIME = 87;          // 'Time'
   const GLOBAL_MOD = 88;    // 'Global Mod Amount'
 
@@ -170,8 +164,6 @@
   let oscEffect2 = $derived(read(o.effect2, 0));
   let osc1Gain = $derived(read(OSC[1].gain, 1));
   let osc2Gain = $derived(read(OSC[2].gain, 1));
-  let subOn = $derived(read(SUB_ON, 0) >= 0.5);
-  let subGain = $derived(read(SUB_GAIN, 0.5));
   let oscTransp = $derived(Math.round(read(o.transp, 0)));
 
   // Osc 2 ships OFF in the default preset, so its card is ghosted until it
@@ -188,12 +180,18 @@
 
   // Filter 1: cutoff across, resonance up, its response drawn beneath.
   // Like Osc 2, a drag on the pad switches it on.
-  let flt1On = $derived(read(FLT1_ON, 1) >= 0.5);
-  let flt1Freq = $derived(read(FLT1_FREQ, 1));
-  let flt1Res = $derived(read(FLT1_RES, 0));
-  let flt1Type = $derived(Math.round(read(FLT1_TYPE, 0)));
-  let flt1Slope = $derived(Math.round(read(FLT1_SLOPE, 0)));
-  let flt1Curve = $derived(liveFilterCurve(flt1Type, flt1Slope, read(FLT1_MORPH, 0)));
+  // The FLT 1/2 switch flips the column between the two filters, as the
+  // OSC switch does the card. View state only; it writes nothing to Live.
+  let fltTab = $state<1 | 2>(1);
+  let f = $derived(FLT[fltTab]);
+  let flt1On = $derived(read(FLT[1].on, 1) >= 0.5);
+  let flt2On = $derived(read(FLT[2].on, 0) >= 0.5);
+  let fltOn = $derived(fltTab === 1 ? flt1On : flt2On);
+  let fltFreq = $derived(read(f.freq, 1));
+  let fltRes = $derived(read(f.res, 0));
+  let fltType = $derived(Math.round(read(f.type, 0)));
+  let fltSlope = $derived(Math.round(read(f.slope, 0)));
+  let fltCurve = $derived(liveFilterCurve(fltType, fltSlope, read(f.morph, 0)));
 
   // ===== The oscillators' waves =====
   let devicePath = $derived(device?.devicePath);
@@ -321,19 +319,14 @@
     write(index, value);
   }
 
+  /** The stacked levels' drag speed: half, as Echo's gains. */
+  const LEVEL_SENSITIVITY = 0.5;
+
   /** A level in the mixer: the same rule, for the oscillator it belongs to. */
   function writeLevel(n: OscN, value: number) {
     if (!device) return;
     if (!(n === 1 ? osc1On : osc2On)) write(OSC[n].on, 1);
     write(OSC[n].gain, value);
-  }
-
-  /** Sub's switch is its level, as Drift's Noise: on above the floor, off at it. */
-  function writeSub(value: number) {
-    if (!device) return;
-    write(SUB_GAIN, value);
-    const on = value > SECTION_SWITCH_ON_ABOVE;
-    if (on !== subOn) write(SUB_ON, on ? 1 : 0);
   }
 
   function handleOscXY(x: number, y: number) {
@@ -343,14 +336,14 @@
 
   function handleFilterXY(x: number, y: number) {
     if (!device) return;
-    if (!flt1On) write(FLT1_ON, 1);
-    write(FLT1_FREQ, x);
-    write(FLT1_RES, y);
+    if (!fltOn) write(f.on, 1);
+    write(f.freq, x);
+    write(f.res, y);
   }
 
   function stepFilterType(step: number) {
     const n = FILTER_TYPES.length;
-    write(FLT1_TYPE, (((flt1Type + step) % n) + n) % n);
+    write(f.type, (((fltType + step) % n) + n) % n);
   }
 
   function writeEnv(index: number, fallback: { min: number; max: number }, value: number) {
@@ -362,6 +355,44 @@
 <div class="wt-root h-full w-full overflow-hidden relative">
   {#if instrument && device}
     <div class="h-full w-full flex min-h-0 p-(--central-inset)" style="gap: var(--central-gap);">
+      <!-- THE LEVELS, Drift's mixer reduced to its oscillators: Osc 1 over
+           Osc 2 in one column at the view's left edge (user, 2026-10-22),
+           each in its own colour, so balancing them never means switching
+           the card. Half speed, as Echo's gains: a full-height drag covers
+           half the rail. Touching a level brings its oscillator's card up. -->
+      <div class="mixer-col flex-none min-h-0 flex">
+        <div class="env-slider min-h-0 h-full flex flex-col gap-(--central-gap)">
+          <div class="flex-1 min-h-0">
+          <DeviceSlider
+            value={osc1Gain}
+            title="Osc 1"
+            icon="oscillator"
+            orientation="vertical"
+            labelSize="small"
+            isGhost={!osc1On}
+            color={osc1Ink}
+            sensitivity={LEVEL_SENSITIVITY}
+            onDown={() => (oscTab = 1)}
+            onInteraction={(v) => writeLevel(1, v)}
+          />
+          </div>
+          <div class="flex-1 min-h-0">
+          <DeviceSlider
+            value={osc2Gain}
+            title="Osc 2"
+            icon="oscillator"
+            orientation="vertical"
+            labelSize="small"
+            isGhost={!osc2On}
+            color={osc2Ink}
+            sensitivity={LEVEL_SENSITIVITY}
+            onDown={() => (oscTab = 2)}
+            onInteraction={(v) => writeLevel(2, v)}
+          />
+          </div>
+        </div>
+      </div>
+
       <!-- THE OSCILLATOR CARD, Drift's: the switch flips the card between
            Osc 1 and Osc 2 and the colour says which is up. The swap pill
            lies across its top (user's layout, 2026-09-16). -->
@@ -426,84 +457,57 @@
         </div>
       </div>
 
-      <!-- THE LEVEL MIXER, Drift's: Osc 1, Osc 2 and Sub side by side in
-           their own colours, so balancing them never means switching the
-           card. Touching an oscillator's level brings its card up; Sub's
-           level is its switch. -->
-      <div class="mixer-col flex-none min-h-0 flex gap-(--central-gap)">
-        <div class="env-slider min-h-0 h-full">
-          <DeviceSlider
-            value={osc1Gain}
-            title="Osc 1"
-            icon="oscillator"
-            orientation="vertical"
-            labelSize="small"
-            isGhost={!osc1On}
-            color={osc1Ink}
-            onDown={() => (oscTab = 1)}
-            onInteraction={(v) => writeLevel(1, v)}
-          />
-        </div>
-        <div class="env-slider min-h-0 h-full">
-          <DeviceSlider
-            value={osc2Gain}
-            title="Osc 2"
-            icon="oscillator"
-            orientation="vertical"
-            labelSize="small"
-            isGhost={!osc2On}
-            color={osc2Ink}
-            onDown={() => (oscTab = 2)}
-            onInteraction={(v) => writeLevel(2, v)}
-          />
-        </div>
-        <div class="env-slider min-h-0 h-full">
-          <DeviceSlider
-            value={subGain}
-            title="Sub"
-            icon="boom"
-            orientation="vertical"
-            labelSize="small"
-            isGhost={!subOn}
-            color={wavetableInk}
-            onInteraction={writeSub}
-          />
-        </div>
-      </div>
-
       <SectionDivider orientation="vertical" ink={wavetableInk.primary} />
 
-      <!-- Filter 1: cutoff across, resonance up, its curve beneath, then its
-           type and slope. Ghosted while the filter is off; a drag turns it on. -->
+      <!-- The filter the FLT 1/2 switch shows: cutoff across, resonance up,
+           its curve beneath, then its type and slope. Ghosted while that
+           filter is off; a drag turns it on. -->
       <div class="filter-col flex-1 min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
-        <div class="flex-1 min-h-0" style={flt1On ? '' : 'opacity: var(--opacity-ghost);'}>
+        <div class="flex-1 min-h-0 relative">
+          <!-- The FLT 1/2 switch rides the pad's top-left corner (user,
+               2026-10-22), outside the ghost so it never dims. -->
+          <button
+            class="osc-badge flt-badge"
+            style="--osc-badge-ink: {wavetableInk.primary};"
+            aria-label="Filter {fltTab} of 2 — switch to Filter {fltTab === 1 ? 2 : 1}"
+            onclick={() => (fltTab = fltTab === 1 ? 2 : 1)}
+          >
+            <span class="osc-badge-eyebrow">Flt</span>
+            <span class="osc-badge-pair">
+              <span class="osc-badge-n" class:on={fltTab === 1} class:silent={!flt1On}>1</span><span
+                class="osc-badge-slash">/</span><span
+                class="osc-badge-n" class:on={fltTab === 2} class:silent={!flt2On}>2</span>
+            </span>
+          </button>
+          <div class="h-full" style={fltOn ? '' : 'opacity: var(--opacity-ghost);'}>
           <DeviceXY
-            xValue={flt1Freq}
-            yValue={flt1Res}
-            title="Filter"
-            isGhost={!flt1On}
-            showCurve={flt1On}
-            curveType={flt1Curve.curveType}
-            curveOrder={flt1Curve.order}
+            xValue={fltFreq}
+            yValue={fltRes}
+            title="Filter {fltTab}"
+            isGhost={!fltOn}
+            showCurve={fltOn}
+            curveType={fltCurve.curveType}
+            curveOrder={fltCurve.order}
             curveFreqRange={FILTER_FREQ_RANGE.wavetable}
             onInteraction={handleFilterXY}
             color={wavetableInk}
           />
+          </div>
         </div>
         <!-- ‹ type ›, Meld's chooser: five buttons no longer fit beside the mixer. -->
         <div class="type-stepper strip-row flex-none" style="--btn-tint: {wavetableInk.primary};">
           <button class="physical-button" aria-label="Previous filter type" onclick={() => stepFilterType(-1)}>‹</button>
-          <span class="type-stepper-name" aria-live="polite">{FILTER_TYPES[flt1Type] ?? '—'}</span>
+          <span class="type-stepper-name" aria-live="polite">{FILTER_TYPES[fltType] ?? '—'}</span>
           <button class="physical-button" aria-label="Next filter type" onclick={() => stepFilterType(1)}>›</button>
         </div>
         <div class="device-segmented strip-row flex-none" style="--btn-tint: {wavetableInk.primary}; grid-template-columns: repeat(2, 1fr);">
           {#each ['12 dB', '24 dB'] as label, value}
             <button
               class="device-segment strip-step"
-              class:active={flt1Slope === value}
+              class:active={fltSlope === value}
               aria-label="Filter slope {label}"
-              aria-pressed={flt1Slope === value}
-              onclick={() => write(FLT1_SLOPE, value)}
+              aria-pressed={fltSlope === value}
+              onclick={() => write(f.slope, value)}
             >{label}</button>
           {/each}
         </div>
@@ -650,9 +654,17 @@
     white-space: nowrap;
   }
 
-  /* Three channels and two gaps; the width is for WebKit, as Drift's. */
+  /* One column, Osc 1 over Osc 2; the width is for WebKit, as Drift's. */
   .mixer-col {
-    width: calc(3 * var(--wt-slider-w) + 2 * var(--central-gap));
+    width: var(--wt-slider-w);
+  }
+
+  /* The FLT 1/2 switch, over the filter pad's top-left corner. */
+  .flt-badge {
+    position: absolute;
+    top: var(--spacing-sm);
+    left: var(--spacing-sm);
+    z-index: 2;
   }
 
   /* The OSC 1/2 switch: Drift's badge, a circle a touch row tall. */
