@@ -234,8 +234,10 @@ function wavetableParams({ osc2On = 0 } = {}) {
 		[`Filter ${n} Circuit LpHp`, `F${n} Circ`, 0, 4, 0, ''],
 		[`Filter ${n} Circuit BpNoMo`, `F${n} BpNo`, 0, 1, 0, ''],
 		[`Filter ${n} Slope`, `F${n} Slope`, 0, 1, 0, ''],
-		[`Filter ${n} Frequency`, `F${n} Freq`, 20, 20480, freq, 'Hz'],
-		[`Filter ${n} Resonance`, `F${n} Res`, 0, 1.25, 0.18, ''],
+		// 0..1 on Live's log sweep (20 Hz..20.5 kHz) and 0..1 (0..125 %), as
+		// the running device reports them; the .adv read Hz and 0..1.25.
+		[`Filter ${n} Frequency`, `F${n} Freq`, 0, 1, freq, ''],
+		[`Filter ${n} Resonance`, `F${n} Res`, 0, 1, 0.18, ''],
 		[`Filter ${n} Drive`, `F${n} Drive`, 0, 24, 0, 'dB'],
 		[`Filter ${n} Morph`, `F${n} Morph`, 0, 1, 0, '']
 	];
@@ -247,8 +249,8 @@ function wavetableParams({ osc2On = 0 } = {}) {
 		['Sub Tone', 'Sub Tone', 0, 1, 0, ''], // 18
 		['Sub Gain', 'Sub Gain', 0, 1, 0.5, ''], // 19
 		['Sub Transpose', 'Sub Tr', 0, 2, 1, ''], // 20
-		...filter(1, 1, 3200), // 21 .. 29
-		...filter(2, 0, 20), // 30 .. 38
+		...filter(1, 1, 0.68), // 21 .. 29
+		...filter(2, 0, 0), // 30 .. 38
 		// Amp envelope times are SECONDS on a 0..20 rail — the rail the view
 		// normalizes its Time pad against.
 		['Amp Attack', 'Att', 0, 20, 2.5, 's'], // 39

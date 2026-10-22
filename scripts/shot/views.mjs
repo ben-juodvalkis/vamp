@@ -23,6 +23,10 @@ import { readFileSync } from 'node:fs';
 // The rig's "106 Bass 01" Analog, all 172 parameters as the running Live
 // reported them (device_dump.js, 2026-10-22): [name, min, max, value].
 const ANALOG_106_BASS = JSON.parse(readFileSync(new URL('./fixtures/analog-106-bass.json', import.meta.url), 'utf8'));
+// A fresh Meld's 129 parameters as the running Live listed them
+// (device dump, 2026-10-22), a few moved off their defaults so the shot
+// shows values: [name, min, max, value].
+const MELD_DEFAULT = JSON.parse(readFileSync(new URL('./fixtures/meld-default.json', import.meta.url), 'utf8'));
 
 export const DEFAULT_VIEWPORT = { width: 1366, height: 1024 };
 
@@ -350,6 +354,12 @@ export const TOURS = {
 			{ name: 'drumrack-rack-macros', description: 'Drum Rack, nested-rack kit (Ethnic)', steps: [openInstrument(9)] },
 			{ name: 'drumrack-sampler-kit', description: 'Drum Rack, Sampler kit (Autumn)', steps: [openInstrument(10)] },
 			{ name: 'inst-wavetable', description: 'Wavetable (Bass)', steps: [openInstrument(1)] },
+			// Osc 2 up (off in this patch, so ghosted) and Envelope 2 showing.
+			{
+				name: 'inst-wavetable-osc2',
+				description: 'Wavetable (Bass), Osc 2 and Envelope 2',
+				steps: [openInstrument(1), { click: '.osc-badge' }, { click: '.env-switch .device-segment:last-child' }]
+			},
 			{ name: 'inst-drift', description: 'Drift (Keys)', steps: [openInstrument(2)] },
 			// No single-Simpler state: the scene's only Simpler is on Texture, an
 			// AUDIO track, and audio tracks draw no instrument tile to open it from.
@@ -440,6 +450,7 @@ function instrumentSwapStates() {
 		...names.map((n, i) => [n, n, 0, 127, 20 + i * 12, ''])
 	];
 	const analog = ANALOG_106_BASS.map(([n, min, max, v]) => [n, n, min, max, v, '']);
+	const meld = MELD_DEFAULT.map(([n, min, max, v]) => [n, n, min, max, v, '']);
 	const swaps = [
 		// Live, not ghosted: the measured patch, so the shot shows its values.
 		['analog', 'Analog', 'UltraAnalog', analog],
@@ -448,7 +459,12 @@ function instrumentSwapStates() {
 			[{ click: '.osc-badge' }, { click: '.env-switch .device-segment:last-child' }]],
 		['collision', 'Collision', 'Collision'],
 		['electric', 'Electric', 'LoungeLizard'],
-		['meld', 'Meld', 'InstrumentMeld'],
+		['meld', 'Meld', 'InstrumentMeld', meld],
+		// Engine B up, Mod envelope showing: the other half, in blue.
+		['meld-engine-b', 'Meld', 'InstrumentMeld', meld,
+			[{ click: '.osc-badge' }, { click: '.env-switch .device-segment:last-child' }]],
+		// The oscillator type grid open over the Osc pad.
+		['meld-osc-types', 'Meld', 'InstrumentMeld', meld, [{ click: '.engine-head .chooser-name' }]],
 		['omnisphere', 'Omnisphere', 'AuPluginDevice'],
 		// Filter up: the switch and sliders take the track's ink, not Amp's orange.
 		['omnisphere-filter', 'Omnisphere', 'AuPluginDevice', undefined,
