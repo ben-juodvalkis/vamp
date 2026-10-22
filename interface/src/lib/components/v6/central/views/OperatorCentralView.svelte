@@ -1,6 +1,8 @@
 <script lang="ts">
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
+  import DeviceXY from '../../device-panel/DeviceXY.svelte';
+  import { liveFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
   import EnvelopeGroup from './EnvelopeGroup.svelte';
   import SectionDivider from '../SectionDivider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
@@ -62,6 +64,16 @@
   const TONE = 8;            // 'Tone'         0..1   (global)
   const TIME = 120;          // 'Time'      -100..100 (global envelope-time scale)
 
+  // The filter, read off the running device 2026-10-22 (Live 12.4.15):
+  // Freq 30 Hz..18.5 kHz on a log sweep, Res 0..1.25 (Live's 0..125 %),
+  // Type 0..4 Lowpass/Highpass/Bandpass/Notch/Morph, Slope 12/24 dB.
+  const FILTER_ON = 165;     // 'Filter On'
+  const FILTER_TYPE = 166;   // 'Filter Type'
+  const FILTER_SLOPE = 169;  // 'Filter Slope'
+  const FILTER_FREQ = 170;   // 'Filter Freq'  0..1
+  const FILTER_RES = 171;    // 'Filter Res'   0..1.25
+  const FILTER_MORPH = 172;  // 'Filter Morph' 0..1
+
   // The amp envelope, four sliders in ADSR order (user's call and user's
   // indices, 2026-09-12). It was an XY pad reading Attack across and
   // Release up, which reached neither Decay nor Sustain at all.
@@ -98,6 +110,26 @@
   }
 
   let envelopeValues = $derived(ENVELOPE.map((stage) => envValue(stage.index, stage.atRest)));
+
+  function rawValue(index: number, atRest: number): number {
+    if (!device) return atRest;
+    return selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, index)) ?? atRest;
+  }
+
+  // Cutoff across, resonance up, the filter's response drawn under them.
+  // Reaching for the pad is the request to hear the filter, so a drag
+  // turns it on (as the Sampler's pad does); it never turns it off.
+  let filterOn = $derived(rawValue(FILTER_ON, 1) >= 0.5);
+  let filterCurve = $derived(
+    liveFilterCurve(rawValue(FILTER_TYPE, 0), rawValue(FILTER_SLOPE, 1), rawValue(FILTER_MORPH, 0))
+  );
+
+  function handleFilterXY(x: number, y: number) {
+    if (!device) return;
+    if (!filterOn) selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, FILTER_ON), 1);
+    writeEnv(FILTER_FREQ, x);
+    writeEnv(FILTER_RES, y);
+  }
 
   // Feedback (range 0-100, normalized to 0-1 for slider)
   let feedbackValue = $derived(device ? (selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, OSC_A_FEEDBACK)) ?? 0) / 100 : 0);
@@ -140,7 +172,7 @@
          inside the card is the same width as Feedback, Time or Tone
          (bar the card's own frame) instead of twice it — which is what a
          `1fr` card next to three fixed `w-24` columns gave. -->
-    <div class="h-full w-full p-(--central-inset) grid gap-(--central-gap)" style="grid-template-columns: 4fr 1fr 1fr 1fr auto auto auto;">
+    <div class="h-full w-full p-(--central-inset) grid gap-(--central-gap)" style="grid-template-columns: 4fr 1fr 1fr 1fr 3fr auto auto auto;">
       <!-- The amp envelope, one slider a stage, reading A → D → S → R.
            The bracket's label is what names the section, which is what
            lets the sliders inside it be one letter each. It opens the band,
@@ -206,6 +238,23 @@
           labelOrientation="horizontal"
           color={operatorInk}
           onInteraction={handleToneInteraction}
+        />
+      </div>
+      <!-- FILTER: cutoff across, resonance up, the response curve beneath.
+           Ghosted while the filter is off; a drag turns it on. -->
+      <div class="h-full min-w-0" style={filterOn ? '' : 'opacity: var(--opacity-ghost);'}>
+        <DeviceXY
+          xValue={envValue(FILTER_FREQ, 1)}
+          yValue={envValue(FILTER_RES, 0)}
+          title="Filter"
+          icon="filter"
+          isGhost={!filterOn}
+          showCurve={filterOn && filterCurve.curveType !== 'none'}
+          curveType={filterCurve.curveType}
+          curveOrder={filterCurve.order}
+          curveFreqRange={FILTER_FREQ_RANGE.operator}
+          onInteraction={handleFilterXY}
+          color={operatorInk}
         />
       </div>
       <!-- The wheels send MIDI, not Operator parameters: a seam divides the

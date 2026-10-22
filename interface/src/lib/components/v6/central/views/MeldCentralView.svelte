@@ -11,6 +11,7 @@
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
   import { PITCH_COLOR, MOD_COLOR, familyScheme } from '$lib/config/devicePresets';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
+  import { meldFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
 
   interface Props {
     instrument?: InstrumentInfo | null;
@@ -92,6 +93,12 @@
   let cutoff = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 15)) ?? 1 : 1);
   let resonance = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 16)) ?? 0 : 0);
 
+  // The curve under the Filter pad: A Filter On (13) and the SVFs'
+  // L-B-H-N morph (17), measured with the rest on 2026-10-22.
+  let filterOn = $derived((device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 13)) ?? 1 : 1) >= 0.5);
+  let lbhn = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 17)) ?? 0 : 0);
+  let filterCurve = $derived(meldFilterCurve(filterType, lbhn));
+
   // Time: Parameter 37 (X), Parameter 39 (Y)
   let timeX = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 37)) ?? 0.5 : 0.5);
   let timeY = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 39)) ?? 0.5 : 0.5);
@@ -167,6 +174,10 @@
           yValue={resonance}
           title="Filter"
           icon="filter"
+          showCurve={filterOn && filterCurve.curveType !== 'none'}
+          curveType={filterCurve.curveType}
+          curveOrder={filterCurve.order}
+          curveFreqRange={FILTER_FREQ_RANGE.meld}
           onInteraction={handleFilterXYInteraction}
           color={meldInk}
         />

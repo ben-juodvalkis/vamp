@@ -22,6 +22,7 @@ export interface AnalogVoiceParams {
 	subSync: number;
 	balance: number;
 	level: number;
+	filterOn: number;
 	filterType: number;
 	drive: number;
 	freq: number;
@@ -48,6 +49,7 @@ export const ANALOG_VOICE: Record<AnalogVoice, AnalogVoiceParams> = {
 		subSync: 47, // O1 Sub/Sync
 		balance: 48, // OSC1 Balance    0 = F2 … 1 = F1
 		level: 52, // OSC1 Level
+		filterOn: 53, // F1 On/Off
 		filterType: 54, // F1 Type      0..9
 		drive: 55, // F1 Drive          0..6
 		freq: 57, // F1 Freq
@@ -72,6 +74,7 @@ export const ANALOG_VOICE: Record<AnalogVoice, AnalogVoiceParams> = {
 		subSync: 114,
 		balance: 115,
 		level: 119,
+		filterOn: 120,
 		filterType: 121,
 		drive: 122,
 		freq: 124,

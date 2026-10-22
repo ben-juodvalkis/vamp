@@ -14,6 +14,7 @@
   import SectionDivider from '../SectionDivider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
   import EnvelopeGroup from './EnvelopeGroup.svelte';
+  import { analogFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
   import {
     ANALOG_VOICE,
     ANALOG_VOICES,
@@ -173,6 +174,8 @@
   let filterFamily = $derived(Math.floor(filterType / 2));
   let drive = $derived(Math.round(raw(p.drive, 0)));
   let f2Slave = $derived(raw(ANALOG_F2_SLAVE, 0) >= 0.5);
+  let filterOn = $derived(raw(p.filterOn, 1) >= 0.5);
+  let filterCurve = $derived(analogFilterCurve(filterType));
 
   function handleFilterXY(x: number, y: number) {
     writeNorm(p.freq, x);
@@ -395,6 +398,10 @@
             yValue={norm(p.res, 0)}
             title="Filter {voice}"
             icon="cutoff"
+            showCurve={filterOn}
+            curveType={filterCurve.curveType}
+            curveOrder={filterCurve.order}
+            curveFreqRange={FILTER_FREQ_RANGE.analog}
             onInteraction={handleFilterXY}
             color={voiceInk}
           />

@@ -162,7 +162,7 @@ describe('analogParams — Live’s own tables', () => {
 		const names = (v: 1 | 2) => Object.values(ANALOG_VOICE[v]).map((i) => dumped[i][0]);
 		expect(names(1)).toEqual([
 			'OSC1 On/Off', 'OSC1 Shape', 'OSC1 Octave', 'OSC1 Mode', 'OSC1 PW', 'O1 Sub/Sync', 'OSC1 Balance',
-			'OSC1 Level', 'F1 Type', 'F1 Drive', 'F1 Freq', 'F1 Resonance', 'F1 Freq < Env', 'FEG1 Attack',
+			'OSC1 Level', 'F1 On/Off', 'F1 Type', 'F1 Drive', 'F1 Freq', 'F1 Resonance', 'F1 Freq < Env', 'FEG1 Attack',
 			'FEG1 Decay', 'FEG1 Sustain', 'FEG1 Rel', 'AMP1 Level', 'AEG1 Attack', 'AEG1 Decay', 'AEG1 Sustain', 'AEG1 Rel'
 		]);
 		expect(names(2)).toEqual(names(1).map((n) => n.replace(/1/, '2')));

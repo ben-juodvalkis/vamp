@@ -5,6 +5,7 @@
   import { familyScheme, type DeviceColorScheme } from '$lib/config/devicePresets';
   import { MIN_SEND_INTERVAL_MS } from '$lib/utils/sliderThrottle';
   import { fitText } from '$lib/utils/fitText';
+  import { hzToCurveX } from '$lib/utils/instrumentFilterCurves';
 
   interface Props {
     xValue?: number;
@@ -19,6 +20,11 @@
     isGhost?: boolean;
     showCurve?: boolean;
     curveType?: CurveType;
+    // Stages of the curve (FilterCurve `order`): 2 draws a 24 dB slope.
+    curveOrder?: number;
+    // The cutoff X spans, as [minHz, maxHz] on a log sweep — the device's
+    // own range, measured in Live. Unset, X 0..1 is the curve's 20 Hz..20 kHz.
+    curveFreqRange?: readonly [number, number];
     color?: DeviceColorScheme;
     invertResonance?: boolean;
     // Drawn under the handle and the title, filling the pad: a picture of
@@ -48,6 +54,8 @@
     isGhost = false,
     showCurve = false,
     curveType = 'lowpass',
+    curveOrder = 1,
+    curveFreqRange,
     color = familyScheme('utility'),
     invertResonance = false,
     background,
@@ -302,7 +310,8 @@
     <!-- Filter curve visualization -->
     {#if showCurve}
       <FilterCurve
-        cutoff={localX}
+        cutoff={curveFreqRange ? hzToCurveX(curveFreqRange[0] * Math.pow(curveFreqRange[1] / curveFreqRange[0], localX)) : localX}
+        order={curveOrder}
         resonance={invertResonance ? 1 - localY : localY}
         {curveType}
         width={300}

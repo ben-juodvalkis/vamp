@@ -16,6 +16,7 @@
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import SectionDivider from '../SectionDivider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
+  import { driftFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
 
   interface Props {
     instrument?: InstrumentInfo | null;
@@ -661,6 +662,10 @@
             yValue={resonanceValue}
             title="Filter"
             icon="filter"
+            showCurve
+            curveType="lowpass"
+            curveOrder={driftFilterCurve(lpType).order}
+            curveFreqRange={FILTER_FREQ_RANGE.drift}
             onInteraction={handleFilterXYInteraction}
             color={driftInk}
           />

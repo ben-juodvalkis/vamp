@@ -36,6 +36,7 @@
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import EnvelopeGroup from './EnvelopeGroup.svelte';
+  import { liveFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
   import HostedSwapPill from '../HostedSwapPill.svelte';
   import MidiWheel from '../../midi/MidiWheel.svelte';
   import { sendPitchWheel, sendModWheel } from '$lib/api/midiWheels';
@@ -66,6 +67,16 @@
   const OSC2_ON = 9;
   const OSC2_POSITION = 12;
   const OSC2_EFFECT2 = 14;
+
+  // Filter 1, read off the running device 2026-10-22 (Live 12.4.15):
+  // Freq 20 Hz..20.5 kHz on a log sweep, Res 0..1 (Live's 0..125 %),
+  // Type 0..4 Lowpass/Highpass/Bandpass/Notch/Morph, Slope 12/24.
+  const FLT1_ON = 21;      // 'Flt 1 On'
+  const FLT1_TYPE = 22;    // 'Flt 1 Type'
+  const FLT1_SLOPE = 25;   // 'Flt 1 Slope'
+  const FLT1_FREQ = 26;    // 'Flt 1 Freq'   0..1
+  const FLT1_RES = 27;     // 'Flt 1 Res'    0..1
+  const FLT1_MORPH = 29;   // 'Flt 1 Morph'  0..1
 
   // The amp envelope, four sliders in ADSR order (user's call and user's
   // indices, 2026-09-12). It was an XY pad reading Attack across and
@@ -127,6 +138,13 @@
   // so the dot doesn't drag under a dashed border.
   let osc2On = $derived(read(OSC2_ON, 0) >= 0.5);
 
+  // Filter 1: cutoff across, resonance up, its response drawn beneath.
+  // Like Osc 2, a drag on the pad switches it on.
+  let flt1On = $derived(read(FLT1_ON, 1) >= 0.5);
+  let flt1Freq = $derived(read(FLT1_FREQ, 1));
+  let flt1Res = $derived(read(FLT1_RES, 0));
+  let flt1Curve = $derived(liveFilterCurve(read(FLT1_TYPE, 0), read(FLT1_SLOPE, 0), read(FLT1_MORPH, 0)));
+
   let envelopeValues = $derived(
     ENVELOPE.map((stage) => {
       const { min, max } = rangeOf(stage.index, stage.fallback);
@@ -177,6 +195,13 @@
     if (!osc2On) write(OSC2_ON, 1);
     write(OSC2_EFFECT2, x);
     write(OSC2_POSITION, y);
+  }
+
+  function handleFilterXY(x: number, y: number) {
+    if (!device) return;
+    if (!flt1On) write(FLT1_ON, 1);
+    write(FLT1_FREQ, x);
+    write(FLT1_RES, y);
   }
 
   function writeEnv(index: number, fallback: { min: number; max: number }, value: number) {
@@ -235,6 +260,24 @@
         />
       </div>
 
+      <!-- Filter 1: cutoff across, resonance up, its curve beneath.
+           Ghosted while the filter is off; a drag turns it on. -->
+      <div class="h-full w-full min-w-0" style={flt1On ? '' : 'opacity: var(--opacity-ghost);'}>
+        <DeviceXY
+          xValue={flt1Freq}
+          yValue={flt1Res}
+          title="Filter"
+          icon="filter"
+          isGhost={!flt1On}
+          showCurve={flt1On}
+          curveType={flt1Curve.curveType}
+          curveOrder={flt1Curve.order}
+          curveFreqRange={FILTER_FREQ_RANGE.wavetable}
+          onInteraction={handleFilterXY}
+          color={wavetableInk}
+        />
+      </div>
+
       <!-- The amp envelope, one slider a stage, reading A → D → S → R,
            bracketed by a named hairline either side. The four share the
            column the Time pad used to own, so OSC 1 and OSC 2 keep their
@@ -284,11 +327,11 @@
 </div>
 
 <style>
-  /* Three equal pads then the fixed wheel pair. The pads share the remainder
-     evenly so OSC 1 and OSC 2 are the same size — they are the same control
-     twice and an asymmetry would read as a hierarchy that isn't there. */
+  /* OSC 1, OSC 2, Filter and the envelope at equal widths, then the fixed
+     wheel pair. OSC 1 and OSC 2 are the same size — they are the same
+     control twice and an asymmetry would read as a hierarchy that isn't there. */
   .wt-root {
-    grid-template-columns: 1fr 1fr 1fr auto;
+    grid-template-columns: 1fr 1fr 1fr 1fr auto;
     gap: var(--central-gap);
     padding: var(--central-inset);
   }

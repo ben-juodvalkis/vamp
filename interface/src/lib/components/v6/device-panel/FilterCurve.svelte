@@ -21,6 +21,9 @@
     height?: number;
     animate?: boolean;
     curveColor?: string;
+    // Stages: 1 is one biquad (12 dB/oct on LP/HP), 2 adds a second,
+    // unresonant one (24 dB/oct). Single-filter curve types only.
+    order?: number;
   }
 
   let {
@@ -37,7 +40,8 @@
     // tile, XY pads). A recompute is 0.1 ms (measured, Mac) — drawing each
     // frame outright costs nothing. Opt in only for a curve nothing drags.
     animate = false,
-    curveColor
+    curveColor,
+    order = 1
   }: Props = $props();
 
   const gradientId = `curveGradient-${Math.random().toString(36).slice(2, 9)}`;
@@ -115,6 +119,15 @@
 
       const response = calculator.calculateFrequencyResponse(coeffs, frequencies);
       magnitudeResponse = response.magnitude;
+      if (order > 1 && filterType !== 'peak') {
+        // The extra stages steepen the slope and carry no resonance of
+        // their own (Q 0.7071), so a 24 dB filter keeps one resonant peak.
+        const flat = calculator.calculateFrequencyResponse(
+          calculator.calculateCoefficients({ type: filterType, frequency, sampleRate: 44100, Q: 0.7071 }),
+          frequencies
+        ).magnitude;
+        magnitudeResponse = magnitudeResponse.map((m, i) => m + flat[i] * (order - 1));
+      }
     } else {
       return '';
     }

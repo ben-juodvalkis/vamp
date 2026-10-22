@@ -41,6 +41,7 @@
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
   import { PITCH_COLOR, MOD_COLOR, familyScheme } from '$lib/config/devicePresets';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
+  import { liveFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
   import {
     SAMPLER_ROW_PARAM_NAMES,
     SAMPLER_ROW_SECTION_SWITCH,
@@ -169,6 +170,10 @@
   const FILTER_RES = 'Filter Res';
   let gainState = $derived(stateAt(GAIN));
   let filterState = $derived(stateAt(FILTER_FREQ, FILTER_ON));
+  let filterOn = $derived((valueAt(FILTER_ON, true) ?? 1) >= 0.5);
+  let filterCurve = $derived(
+    liveFilterCurve(valueAt('Filter Type', true) ?? 0, valueAt('Filter Slope', true) ?? 1, valueAt('Filter Morph', true) ?? 0)
+  );
 
   // MIDI wheel handlers (global CCs — same path as Operator/Omnisphere views)
   function handlePitchChange(value: number) {
@@ -213,6 +218,10 @@
             yValue={valueAt(FILTER_RES) ?? 0}
             title="Filter"
             icon="filter"
+            showCurve={filterOn}
+            curveType={filterCurve.curveType}
+            curveOrder={filterCurve.order}
+            curveFreqRange={FILTER_FREQ_RANGE.sampler}
             color={samplerInk}
             isGhost={filterState === 'none'}
             onInteraction={(x, y) => {
