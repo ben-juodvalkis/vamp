@@ -57,6 +57,7 @@
   import WavetableWave from './wavetable/WavetableWave.svelte';
   import { loadFactoryWavetables, tableFrames, cycleAt, type WavetableBundle } from '$lib/utils/wavetableShapes';
   import { applyOscEffect, effectModeFromLive } from '$lib/utils/wavetableEffects';
+  import { SECTION_SWITCH_ON_ABOVE } from '$lib/services/drumVirtualMacros';
 
   interface Props {
     instrument?: InstrumentInfo | null;
@@ -128,6 +129,10 @@
   // the running device: 'Time' 0..1 with 0.5 at 0 % (Live shows -100..100 %,
   // it scales every envelope and LFO time) and 'Global Mod Amount' 0..1
   // (Live shows 0..200 %, 0.5 = 100 %; it scales every mod-matrix row).
+  // The sub oscillator, read off the running device 2026-10-22.
+  const SUB_ON = 17;        // 'Sub On'
+  const SUB_GAIN = 19;      // 'Sub Gain'  0..1
+
   const TIME = 87;          // 'Time'
   const GLOBAL_MOD = 88;    // 'Global Mod Amount'
 
@@ -164,8 +169,12 @@
 
   // All parameter values as $derived - always reactive to store changes (ADR-149)
   let oscPosition = $derived(read(o.position, 0.5));
+  let oscEffect1 = $derived(read(o.effect1, 0));
   let oscEffect2 = $derived(read(o.effect2, 0));
-  let oscGain = $derived(read(o.gain, 1));
+  let osc1Gain = $derived(read(OSC[1].gain, 1));
+  let osc2Gain = $derived(read(OSC[2].gain, 1));
+  let subOn = $derived(read(SUB_ON, 0) >= 0.5);
+  let subGain = $derived(read(SUB_GAIN, 0.5));
   let oscTransp = $derived(Math.round(read(o.transp, 0)));
 
   // Osc 2 ships OFF in the default preset, so its card is ghosted until it
@@ -245,6 +254,15 @@
     return mode === 'none' ? cycle : applyOscEffect(cycle, mode, effect1, effect2);
   }
 
+  /**
+   * Effect 1's name on Live's panel under each effect mode. The LOM calls it
+   * "Osc N Effect 1" in every mode and AX describes it only as "Device"
+   * (both read 2026-10-22), so the words are the panel's: Tune seen on the
+   * rig in FM, PW and Warp from Live's manual. Mode None has no effect.
+   */
+  const EFFECT1_TITLES = { none: 'Fx 1', fm: 'Tune', classic: 'PW', modern: 'Warp' } as const;
+  let oscEffectMode = $derived(effectModeFromLive(Number(property(`oscillator_${oscTab}_effect_mode`) ?? 0)));
+
   let time = $derived(read(TIME, 0.5));
   let globalMod = $derived(read(GLOBAL_MOD, 0.5));
 
@@ -269,11 +287,14 @@
     1: { primary: '#ff8244', secondary: 'rgba(255, 130, 68, 0.1)', accent: '#ff9e60' },
     2: { primary: '#12b2f4', secondary: 'rgba(18, 178, 244, 0.1)', accent: '#33cdff' }
   } as const;
-  let oscInk = $derived.by(() => {
-    const raw = OSC_COLORS[oscTab];
+  function inkFor(n: OscN) {
+    const raw = OSC_COLORS[n];
     const mode = paintModeReactive();
     return { primary: trackInk(raw.primary, mode), secondary: raw.secondary, accent: trackInk(raw.accent, mode) };
-  });
+  }
+  let osc1Ink = $derived(inkFor(1));
+  let osc2Ink = $derived(inkFor(2));
+  let oscInk = $derived(oscTab === 1 ? osc1Ink : osc2Ink);
 
   // Wavetable color scheme (purple/violet - matches Wavetable's UI aesthetic)
   const wavetableColor = {
@@ -315,6 +336,21 @@
     write(index, value);
   }
 
+  /** A level in the mixer: the same rule, for the oscillator it belongs to. */
+  function writeLevel(n: OscN, value: number) {
+    if (!device) return;
+    if (!(n === 1 ? osc1On : osc2On)) write(OSC[n].on, 1);
+    write(OSC[n].gain, value);
+  }
+
+  /** Sub's switch is its level, as Drift's Noise: on above the floor, off at it. */
+  function writeSub(value: number) {
+    if (!device) return;
+    write(SUB_GAIN, value);
+    const on = value > SECTION_SWITCH_ON_ABOVE;
+    if (on !== subOn) write(SUB_ON, on ? 1 : 0);
+  }
+
   function handleOscXY(x: number, y: number) {
     writeOsc(o.effect2, x);
     writeOsc(o.position, y);
@@ -325,6 +361,11 @@
     if (!flt1On) write(FLT1_ON, 1);
     write(FLT1_FREQ, x);
     write(FLT1_RES, y);
+  }
+
+  function stepFilterType(step: number) {
+    const n = FILTER_TYPES.length;
+    write(FLT1_TYPE, (((flt1Type + step) % n) + n) % n);
   }
 
   function writeEnv(index: number, fallback: { min: number; max: number }, value: number) {
@@ -380,28 +421,76 @@
              while the oscillator is off; still draggable, and the drag turns
              it on. The parent blankets, `isGhost` dims only the pad body, so
              the title rides a single dim instead of two (DeviceXY). -->
-        <div class="flex-1 min-h-0" style={oscOn ? '' : 'opacity: var(--opacity-ghost);'}>
-          <DeviceXY
-            xValue={oscEffect2}
-            yValue={oscPosition}
-            title="OSC {oscTab}"
-            isGhost={!oscOn}
-            onInteraction={handleOscXY}
-            color={oscInk}
-          >
-            {#snippet background()}<WavetableWave cycle={oscWaveCycle} color={oscInk.primary} />{/snippet}
-          </DeviceXY>
+        <div class="flex-1 min-h-0 flex gap-(--central-gap)">
+          <div class="flex-1 min-w-0 min-h-0" style={oscOn ? '' : 'opacity: var(--opacity-ghost);'}>
+            <DeviceXY
+              xValue={oscEffect2}
+              yValue={oscPosition}
+              title="OSC {oscTab}"
+              isGhost={!oscOn}
+              onInteraction={handleOscXY}
+              color={oscInk}
+            >
+              {#snippet background()}<WavetableWave cycle={oscWaveCycle} color={oscInk.primary} />{/snippet}
+            </DeviceXY>
+          </div>
+          <!-- Effect 1 beside the pad, whose X is Effect 2. -->
+          <div class="env-slider min-h-0 h-full">
+            <DeviceSlider
+              value={oscEffect1}
+              title={EFFECT1_TITLES[oscEffectMode]}
+              icon="shape"
+              orientation="vertical"
+              labelSize="small"
+              isGhost={!oscOn || oscEffectMode === 'none'}
+              color={oscInk}
+              onInteraction={(v) => writeOsc(o.effect1, v)}
+            />
+          </div>
         </div>
-        <div class="strip-row flex-none">
+      </div>
+
+      <!-- THE LEVEL MIXER, Drift's: Osc 1, Osc 2 and Sub side by side in
+           their own colours, so balancing them never means switching the
+           card. Touching an oscillator's level brings its card up; Sub's
+           level is its switch. -->
+      <div class="mixer-col flex-none min-h-0 flex gap-(--central-gap)">
+        <div class="env-slider min-h-0 h-full">
           <DeviceSlider
-            value={oscGain}
-            title="Gain"
-            icon="gain"
-            orientation="horizontal"
+            value={osc1Gain}
+            title="Osc 1"
+            icon="oscillator"
+            orientation="vertical"
             labelSize="small"
-            isGhost={!oscOn}
-            color={oscInk}
-            onInteraction={(v) => writeOsc(o.gain, v)}
+            isGhost={!osc1On}
+            color={osc1Ink}
+            onDown={() => (oscTab = 1)}
+            onInteraction={(v) => writeLevel(1, v)}
+          />
+        </div>
+        <div class="env-slider min-h-0 h-full">
+          <DeviceSlider
+            value={osc2Gain}
+            title="Osc 2"
+            icon="oscillator"
+            orientation="vertical"
+            labelSize="small"
+            isGhost={!osc2On}
+            color={osc2Ink}
+            onDown={() => (oscTab = 2)}
+            onInteraction={(v) => writeLevel(2, v)}
+          />
+        </div>
+        <div class="env-slider min-h-0 h-full">
+          <DeviceSlider
+            value={subGain}
+            title="Sub"
+            icon="boom"
+            orientation="vertical"
+            labelSize="small"
+            isGhost={!subOn}
+            color={wavetableInk}
+            onInteraction={writeSub}
           />
         </div>
       </div>
@@ -425,16 +514,11 @@
             color={wavetableInk}
           />
         </div>
-        <div class="device-segmented strip-row flex-none" style="--btn-tint: {wavetableInk.primary}; grid-template-columns: repeat({FILTER_TYPES.length}, 1fr);">
-          {#each FILTER_TYPES as label, value}
-            <button
-              class="device-segment strip-step"
-              class:active={flt1Type === value}
-              aria-label="Filter {label}"
-              aria-pressed={flt1Type === value}
-              onclick={() => write(FLT1_TYPE, value)}
-            >{label}</button>
-          {/each}
+        <!-- ‹ type ›, Meld's chooser: five buttons no longer fit beside the mixer. -->
+        <div class="type-stepper strip-row flex-none" style="--btn-tint: {wavetableInk.primary};">
+          <button class="physical-button" aria-label="Previous filter type" onclick={() => stepFilterType(-1)}>‹</button>
+          <span class="type-stepper-name" aria-live="polite">{FILTER_TYPES[flt1Type] ?? '—'}</span>
+          <button class="physical-button" aria-label="Next filter type" onclick={() => stepFilterType(1)}>›</button>
         </div>
         <div class="device-segmented strip-row flex-none" style="--btn-tint: {wavetableInk.primary}; grid-template-columns: repeat(2, 1fr);">
           {#each ['12 dB', '24 dB'] as label, value}
@@ -579,6 +663,32 @@
   .env-slider {
     flex: 0 0 var(--wt-slider-w);
     width: var(--wt-slider-w);
+  }
+  .type-stepper {
+    display: grid;
+    grid-template-columns: var(--height-touch) minmax(0, 1fr) var(--height-touch);
+    gap: var(--spacing-xs);
+    align-items: center;
+  }
+  .type-stepper .physical-button {
+    height: 100%;
+    min-width: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+  .type-stepper-name {
+    text-align: center;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--btn-tint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Three channels and two gaps; the width is for WebKit, as Drift's. */
+  .mixer-col {
+    width: calc(3 * var(--wt-slider-w) + 2 * var(--central-gap));
   }
   .wheel-col {
     width: var(--wt-wheel-w);
