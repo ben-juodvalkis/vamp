@@ -32,7 +32,8 @@
    * macros, read from the saved preset: 1 Gain, 2 Spring, 3 Trem Rate,
    * 4 Trem Amount, 5 Room, 6 Amp Switch (Live labels it 0 below the
    * midpoint and 1 above: Dirty, Clean). Macro 7 is a hidden duplicate
-   * Room and has no control. On an audio track the FX grid's Gtr column
+   * Room. Neither the Amp Switch nor Macro 7 has a control here (the
+   * Dirty/Clean pair was removed 2026-10-22, the user's call). On an audio track the FX grid's Gtr column
    * already draws Gain, so the view leaves it out.
    *
    * The Wah (ADR-445, 2026-09-19) has no tile and no view of its own — the
@@ -58,9 +59,6 @@
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import SectionDivider from '../SectionDivider.svelte';
   import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
-  // What each control does, at a glance (user, 2026-10-06): ControlGlyph's
-  // drawn marks.
-  import ControlGlyph from '$lib/components/v6/device-panel/ControlGlyph.svelte';
 
   const fx = useFxGridSlot('pedal');
   const shifter = useFxGridSlot('shifter');
@@ -136,12 +134,11 @@
   });
 
   // Guitar.adg's macros (see the header). Macros are 0..127 on the wire.
-  const GTR = { spring: 2, tremRate: 3, tremAmount: 4, room: 5, ampSwitch: 6 } as const;
+  const GTR = { spring: 2, tremRate: 3, tremAmount: 4, room: 5 } as const;
   const MACRO_MAX = 127;
   const showGuitarGain = $derived(selectedTrackStore.trackType !== 'audio');
   const gtrValue = (macro: number) => (guitar.paramValue(macro) ?? 0) / MACRO_MAX;
   const sendGtr = (macro: number, normalized: number) => guitar.sendParam(macro, normalized * MACRO_MAX);
-  let gtrClean = $derived(gtrValue(GTR.ampSwitch) >= 0.5);
 
   let pedalType = $derived(fx.paramValue(1) ?? 0);
 
@@ -214,8 +211,8 @@
   // while it holds something.
   const showLeftColumn = $derived(showGuitarGain || showWah);
   // The Guitar group's width in tracks, so its name can span all of it:
-  // Dirty/Clean, Gain over Wah when shown, and the pads' two.
-  const guitarSpan = $derived(showLeftColumn ? 4 : 3);
+  // Gain over Wah when shown, and the pads' two.
+  const guitarSpan = $derived(showLeftColumn ? 3 : 2);
   // One unit per slider, two per XY pad, every seam its hairline: the
   // tracks share the width in that ratio and nothing has a fixed size
   // (user, 2026-10-05). A pad spans two slider tracks, so it is exactly two
@@ -228,8 +225,7 @@
   const gridColumns = $derived(
     [
       XY, SLIDER, SEAM, // pedal tone pad and drive slider over its type switch
-      SLIDER, // dirty/clean, heading the guitar group
-      ...(showLeftColumn ? [SLIDER] : []), // gain over wah
+      ...(showLeftColumn ? [SLIDER] : []), // gain over wah, heading the guitar group
       XY, SEAM, // spring/room over tremolo
       SLIDER, SEAM, // shifter
       XY // output · mix over redux
@@ -304,31 +300,13 @@
        introduces (the Chorus rule, user's call, 2026-09-13). -->
   <SectionDivider orientation="vertical" ink={guitarInk.primary} />
 
-  <!-- COLUMN 3: the Guitar rack — the Dirty/Clean switch, then its Gain
-       over the Wah, then its Spring/Room pad over its Tremolo pad. -->
+  <!-- COLUMN 3: the Guitar rack — its Gain over the Wah, then its
+       Spring/Room pad over its Tremolo pad. -->
   <div class="guitar-section" style="grid-column: span {guitarSpan};">
     <span
       class="group-eyebrow"
       style="color: {guitarInk.primary};{guitar.isGhost ? ' opacity: var(--opacity-ghost);' : ''}"
     >Guitar Amp</span>
-    <!-- Dirty / Clean, the amp's voice, lead the Guitar group (user,
-         2026-10-06). -->
-    <div class="column tone-stack" style={guitar.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
-      <button
-        class="physical-button tone-btn"
-        class:active={!guitar.isGhost && !gtrClean}
-        aria-pressed={!guitar.isGhost && !gtrClean}
-        style="--btn-tint: {guitarInk.primary};"
-        onclick={() => sendGtr(GTR.ampSwitch, 0)}
-      ><span class="tone-icon"><ControlGlyph name="dirty" /></span>Dirty</button>
-      <button
-        class="physical-button tone-btn"
-        class:active={!guitar.isGhost && gtrClean}
-        aria-pressed={!guitar.isGhost && gtrClean}
-        style="--btn-tint: {guitarInk.primary};"
-        onclick={() => sendGtr(GTR.ampSwitch, 1)}
-      ><span class="tone-icon"><ControlGlyph name="clean" /></span>Clean</button>
-    </div>
     {#if showLeftColumn}
       <!-- The Guitar's Gain (MIDI tracks only — on audio the grid's Gtr
            column draws it) over the Wah, the macro the expression pedal
@@ -454,7 +432,7 @@
 <style>
   .pedal-central-layout {
     display: grid;
-    /* pedal XY over pedal-type tabs | guitar (dirty/clean · gain over wah ·
+    /* pedal XY over pedal-type tabs | guitar (gain over wah ·
        spring/room pad over tremolo pad) | shifter | saturator output · mix
        over redux.
        grid-template-columns comes from `gridColumns`: a slider is one
@@ -565,23 +543,6 @@
   .guitar-xy {
     flex: 1 1 0;
     min-height: 0;
-  }
-
-  .tone-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4em;
-    flex: 1 1 0;
-    min-height: 0;
-    font-size: 0.8125rem;
-    font-weight: 600;
-  }
-
-  .tone-icon {
-    width: 4em;
-    height: 4em;
   }
 
   /* Gain over Wah: each half the column's height, or the whole of it alone. */

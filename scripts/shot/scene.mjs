@@ -997,7 +997,7 @@ const DEFAULT_TRACKS = [
 		arm: 1,
 		volume: 0.7,
 		// The Guitar rack carries Guitar.adg's own macro names, so
-		// the Pedal view's Guitar section (Spring, Tremolo pad, Room, Dirty/Clean) can be shot.
+		// the Pedal view's Guitar section (Spring, Tremolo pad, Room) can be shot.
 		devices: ['Octave', 'Auto Filter', 'Echo', 'Bass Amp', { name: 'Guitar', params: guitarRackParams() }],
 		clips: {
 			0: { name: 'Loop 1', length: 8, state: SLOT.recording }
