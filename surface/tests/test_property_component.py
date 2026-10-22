@@ -931,6 +931,82 @@ def test_hybrid_ir_lists_subscribe_as_json_arrays(emits, generation):
     assert json.loads(values[-1][2]) == ["Berliner Hall", "Soft Hall"]
 
 
+def test_allowlist_contains_the_wavetable_oscillator_keys():
+    """2026-10-22: each oscillator's table and effect mode, and the name
+    lists that turn the table's indices into names, for the Wavetable
+    view's drawing of the table."""
+    expected = {
+        "oscillator_%d_%s" % (n, attr)
+        for n in (1, 2)
+        for attr in ("wavetable_category", "wavetable_index", "effect_mode", "wavetables")
+    } | {"oscillator_wavetable_categories"}
+    actual = {prop for (cls, prop) in ALLOWLIST if cls == "InstrumentVector"}
+    assert actual == expected
+    for n in (1, 2):
+        for attr in ("wavetable_category", "wavetable_index", "effect_mode"):
+            spec = ALLOWLIST[("InstrumentVector", "oscillator_%d_%s" % (n, attr))]
+            assert spec.writable is True
+            assert spec.coerce_to_int is True
+        spec = ALLOWLIST[("InstrumentVector", "oscillator_%d_wavetables" % n)]
+        assert spec.writable is False
+        assert spec.coerce_dict_to_json is True
+
+
+class StubWavetable(_StubDevice):
+    """Wavetable as Live 12.4 has it: the indices, the effect mode and an
+    oscillator's table names offer a listener; the category list does not.
+    Setting a category resets the index to 0 and fires the name list."""
+
+    _observable = (
+        "oscillator_1_wavetable_category", "oscillator_1_wavetable_index",
+        "oscillator_1_effect_mode", "oscillator_1_wavetables",
+    )
+    _tables = {0: ["Basic Shapes", "Harmonic Series"], 10: ["Brds Dual Saw", "BS Sync"]}
+
+    def __init__(self):
+        self.class_name = "InstrumentVector"
+        self.parameters = []
+        self.oscillator_1_wavetable_category = 0
+        self.oscillator_1_wavetable_index = 1
+        self.oscillator_1_effect_mode = 3
+
+    @property
+    def oscillator_wavetable_categories(self):
+        return _StubStringVector(["Basics", "Collection"])
+
+    @property
+    def oscillator_1_wavetables(self):
+        return _StubStringVector(self._tables[self.oscillator_1_wavetable_category])
+
+
+def test_wavetable_oscillator_subscribes_as_names_and_indices(emits, generation):
+    wt = StubWavetable()
+    comp = PropertyComponent(
+        song=StubSong(tracks=[StubTrack(tid=301, devices=[wt])]),
+        emit=lambda a, args: emits.append((a, args)),
+    )
+    comp.set_generation(generation)
+    for name in (
+        "oscillator_wavetable_categories", "oscillator_1_wavetables",
+        "oscillator_1_wavetable_category", "oscillator_1_wavetable_index",
+        "oscillator_1_effect_mode",
+    ):
+        comp.handle_subscribe(args=("tracks/0/devices/0", name), source_addr=None)
+    values = {name: raw for (addr, (_dp, name, raw)) in emits if addr == V3_PROPERTY_VALUE_ADDRESS}
+    assert json.loads(values["oscillator_wavetable_categories"]) == ["Basics", "Collection"]
+    assert json.loads(values["oscillator_1_wavetables"]) == ["Basic Shapes", "Harmonic Series"]
+    assert values["oscillator_1_wavetable_index"] == 1
+    assert values["oscillator_1_effect_mode"] == 3
+    assert wt.listeners_for("oscillator_wavetable_categories") == []
+
+    # Another category in Live: the name list's listener fires with its tables.
+    wt.oscillator_1_wavetable_category = 10
+    wt.oscillator_1_wavetable_index = 0
+    wt.fire("oscillator_1_wavetables")
+    values = [args for (addr, args) in emits if addr == V3_PROPERTY_VALUE_ADDRESS]
+    assert json.loads(values[-1][2]) == ["Brds Dual Saw", "BS Sync"]
+
+
 def test_simpler_keys_use_lom_class_name_not_display_name():
     """ADR-002 followup-a-fix: Live's class_name is ``OriginalSimpler``,
     not the display-name ``Simpler``. The 2026-04-16 Playwright

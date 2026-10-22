@@ -216,7 +216,16 @@ Key rules:
   sample.file_path, sample.slices}`, Drift's `{voice_mode_index}`,
   Hybrid Reverb's 5 scalar IR properties plus `ir_time_shaping_on` (0/1)
   and the read-only `ir_category_list` / `ir_file_list` (JSON arrays of
-  Live's names, a stereo IR listed as `<Name> LR`), Compressor2's sidechain
+  Live's names, a stereo IR listed as `<Name> LR`), Wavetable's
+  (`InstrumentVector`, 2026-10-22) `oscillator_N_wavetable_category`,
+  `oscillator_N_wavetable_index` and `oscillator_N_effect_mode` for N = 1, 2
+  (ints, writable; Live resets the index to 0 when the category is set; the
+  mode is Live's `EffectMode`: 0 none, 1 frequency_modulation, 2
+  sync_and_pulse_width, 3 warp_and_fold) and the read-only
+  `oscillator_N_wavetables` (a JSON array naming the tables of that
+  oscillator's current category, re-sent when it changes) and
+  `oscillator_wavetable_categories` (a JSON array of the categories, fixed:
+  Live offers no listener, so a cold read only), Compressor2's sidechain
   routing pair, an Audio Effect Rack's read-only `chain_names` (a JSON array
   of its chains' names in chain order, re-sent when a chain is added,
   removed or renamed — the Pedal view titles the Wah slider with the

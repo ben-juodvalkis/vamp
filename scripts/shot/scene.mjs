@@ -42,6 +42,11 @@ export const PROTOCOL_VERSION = '3.12.0';
  * (fixtures/hybrid-ir-lists.json): the two list properties answer from it,
  * and the mock re-sends a category's file names when the IR category is set.
  */
+/** Wavetable's categories and their tables, as Live 12.4 lists them (measured 2026-10-22). */
+export const WAVETABLE_NAMES = JSON.parse(
+	readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'wavetable-names.json'), 'utf8')
+);
+
 export const HYBRID_IR_LISTS = JSON.parse(
 	readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'hybrid-ir-lists.json'), 'utf8')
 );
@@ -218,7 +223,8 @@ function wavetableParams({ osc2On = 0 } = {}) {
 		[`Osc ${n} Transpose`, `O${n} Tr`, -24, 24, 0, 'st'],
 		[`Osc ${n} Detune`, `O${n} Det`, -0.5, 0.5, 0, ''],
 		[`Osc ${n} Position`, `O${n} Pos`, 0, 1, position, ''],
-		[`Osc ${n} Effect 1`, `O${n} Fx1`, -1, 1, 0, ''],
+		// 0..1 with 0.5 at 0 %, as Live reports it (the .adv read -1..1).
+		[`Osc ${n} Effect 1`, `O${n} Fx1`, 0, 1, 0.5, ''],
 		[`Osc ${n} Effect 2`, `O${n} Fx2`, 0, 1, effect2, ''],
 		[`Osc ${n} Pan`, `O${n} Pan`, -1, 1, 0, ''],
 		[`Osc ${n} Gain`, `O${n} Gain`, 0, 1, 1, '']
@@ -1370,6 +1376,18 @@ export const PROPERTY_DEFAULTS = Object.freeze({
 	ir_decay_time: 20,
 	ir_size_factor: 1,
 	ir_time_shaping_on: 1,
+	// Every Wavetable: Osc 1 on Vintage / Brds Dual Saw with no effect, Osc 2
+	// on Formant / AEIOU in FM, so a shot draws a table plain and one through
+	// an effect.
+	oscillator_wavetable_categories: JSON.stringify(WAVETABLE_NAMES.categories),
+	oscillator_1_wavetable_category: WAVETABLE_NAMES.categories.indexOf('Vintage'),
+	oscillator_1_wavetable_index: 0,
+	oscillator_1_wavetables: JSON.stringify(WAVETABLE_NAMES.tables.Vintage),
+	oscillator_1_effect_mode: 0,
+	oscillator_2_wavetable_category: WAVETABLE_NAMES.categories.indexOf('Formant'),
+	oscillator_2_wavetable_index: 0,
+	oscillator_2_wavetables: JSON.stringify(WAVETABLE_NAMES.tables.Formant),
+	oscillator_2_effect_mode: 1,
 	// Live's selected pad, and one pad's own values off the kit values (the
 	// Drums kit answers by name): a `--hold '.pad-tile[data-note="38"]'`
 	// shot photographs the controls re-adjusting to pad 38.

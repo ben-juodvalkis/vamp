@@ -30,6 +30,13 @@
    *
    * The four oscillator params are natively 0..1, so they ride the pads
    * unscaled. The envelope stages are NOT.
+   *
+   * Each oscillator pad draws one cycle of the table it plays, at its Wave
+   * Position and through its effect (2026-10-22): the table's frames come
+   * from `wavetableShapes` (rendered off Live, keyed by category and table
+   * name), the table from the device's `oscillator_N_*` properties, and the
+   * effect from `wavetableEffects` with the mode and both effect params. A
+   * table the bundle lacks (a user table) draws no wave.
    */
 
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
@@ -46,6 +53,9 @@
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
   import { PITCH_COLOR, MOD_COLOR } from '$lib/config/devicePresets';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
+  import WavetableWave from './wavetable/WavetableWave.svelte';
+  import { loadFactoryWavetables, tableFrames, cycleAt, type WavetableBundle } from '$lib/utils/wavetableShapes';
+  import { applyOscEffect, effectModeFromLive } from '$lib/utils/wavetableEffects';
 
   interface Props {
     instrument?: InstrumentInfo | null;
@@ -63,9 +73,11 @@
 
   // ===== Parameter map (measured — see the module comment) =====
   const OSC1_POSITION = 4;
+  const OSC1_EFFECT1 = 5;  // 'Osc 1 Effect 1'  0..1, 0.5 = 0 %
   const OSC1_EFFECT2 = 6;
   const OSC2_ON = 9;
   const OSC2_POSITION = 12;
+  const OSC2_EFFECT1 = 13; // 'Osc 2 Effect 1'
   const OSC2_EFFECT2 = 14;
 
   // Filter 1, read off the running device 2026-10-22 (Live 12.4.15):
@@ -144,6 +156,65 @@
   let flt1Freq = $derived(read(FLT1_FREQ, 1));
   let flt1Res = $derived(read(FLT1_RES, 0));
   let flt1Curve = $derived(liveFilterCurve(read(FLT1_TYPE, 0), read(FLT1_SLOPE, 0), read(FLT1_MORPH, 0)));
+
+  // ===== The oscillators' waves =====
+  let devicePath = $derived(device?.devicePath);
+  const OSC_PROPERTIES = [1, 2].flatMap((n) => [
+    `oscillator_${n}_wavetable_category`,
+    `oscillator_${n}_wavetable_index`,
+    `oscillator_${n}_wavetables`,
+    `oscillator_${n}_effect_mode`
+  ]).concat('oscillator_wavetable_categories');
+
+  $effect(() => {
+    const path = devicePath;
+    if (!path) return;
+    const releases = OSC_PROPERTIES.map((name) => selectedTrackStore.subscribeProperty(path, name));
+    return () => releases.forEach((release) => release());
+  });
+
+  let shapes = $state<WavetableBundle | null>(null);
+  $effect(() => {
+    if (!devicePath || shapes) return;
+    let live = true;
+    loadFactoryWavetables().then((bundle) => {
+      if (live) shapes = bundle;
+    });
+    return () => {
+      live = false;
+    };
+  });
+
+  function property(name: string): unknown {
+    return devicePath ? selectedTrackStore.propertyValue(devicePath, name) : undefined;
+  }
+
+  /** A JSON-string property (Live's name lists) as an array of names. */
+  function nameList(name: string): string[] {
+    const value = property(name);
+    if (typeof value !== 'string') return [];
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /** One cycle of oscillator `n` as it plays, or null when its table has no render. */
+  function oscWave(n: 1 | 2, position: number, effect1: number, effect2: number): Float32Array | null {
+    if (!shapes) return null;
+    const category = nameList('oscillator_wavetable_categories')[Number(property(`oscillator_${n}_wavetable_category`))];
+    const table = nameList(`oscillator_${n}_wavetables`)[Number(property(`oscillator_${n}_wavetable_index`))];
+    if (!category || !table) return null;
+    const cycle = cycleAt(tableFrames(shapes, category, table), position);
+    if (!cycle) return null;
+    const mode = effectModeFromLive(Number(property(`oscillator_${n}_effect_mode`) ?? 0));
+    return mode === 'none' ? cycle : applyOscEffect(cycle, mode, effect1, effect2);
+  }
+
+  let osc1Wave = $derived(oscWave(1, osc1Position, read(OSC1_EFFECT1, 0.5), osc1Effect2));
+  let osc2Wave = $derived(oscWave(2, osc2Position, read(OSC2_EFFECT1, 0.5), osc2Effect2));
 
   let envelopeValues = $derived(
     ENVELOPE.map((stage) => {
@@ -236,7 +307,9 @@
             icon="oscillator"
             onInteraction={handleOsc1XY}
             color={wavetableInk}
-          />
+          >
+            {#snippet background()}<WavetableWave cycle={osc1Wave} color={wavetableInk.primary} />{/snippet}
+          </DeviceXY>
         </div>
       </div>
 
@@ -257,7 +330,9 @@
           isGhost={!osc2On}
           onInteraction={handleOsc2XY}
           color={wavetableInk}
-        />
+        >
+          {#snippet background()}<WavetableWave cycle={osc2Wave} color={wavetableInk.primary} />{/snippet}
+        </DeviceXY>
       </div>
 
       <!-- Filter 1: cutoff across, resonance up, its curve beneath.

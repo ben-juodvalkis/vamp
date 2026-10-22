@@ -452,6 +452,37 @@ ALLOWLIST: Dict[Tuple[str, str], PropertySpec] = {
         listener_path="", attr_name="ir_file_list", writable=False,
         coerce_dict_to_json=True,
     ),
+    # Wavetable (2026-10-22) — each oscillator's table and effect mode,
+    # so the view can draw the table's shape (rendered off Live into
+    # interface/static/wavetables/factory.json, keyed by category and
+    # table name). Measured on Live 12.4.15: category, index and effect
+    # mode are settable ints with listeners; setting the category resets
+    # the index to 0. ``oscillator_N_wavetables`` names the tables of the
+    # oscillator's current category and has a listener;
+    # ``oscillator_wavetable_categories`` is fixed and has none (a cold
+    # read only), like Hybrid's ``ir_category_list``. Effect mode is Live's
+    # ``WavetableDevice.EffectMode``: none 0, frequency_modulation 1,
+    # sync_and_pulse_width 2, warp_and_fold 3.
+    **{
+        ("InstrumentVector", "oscillator_%d_%s" % (_osc, _attr)): PropertySpec(
+            listener_path="", attr_name="oscillator_%d_%s" % (_osc, _attr),
+            writable=True, coerce_to_int=True,
+        )
+        for _osc in (1, 2)
+        for _attr in ("wavetable_category", "wavetable_index", "effect_mode")
+    },
+    ("InstrumentVector", "oscillator_1_wavetables"): PropertySpec(
+        listener_path="", attr_name="oscillator_1_wavetables", writable=False,
+        coerce_dict_to_json=True,
+    ),
+    ("InstrumentVector", "oscillator_2_wavetables"): PropertySpec(
+        listener_path="", attr_name="oscillator_2_wavetables", writable=False,
+        coerce_dict_to_json=True,
+    ),
+    ("InstrumentVector", "oscillator_wavetable_categories"): PropertySpec(
+        listener_path="", attr_name="oscillator_wavetable_categories", writable=False,
+        coerce_dict_to_json=True,
+    ),
     # Compressor — sidechain routing pair; both dict-shaped on the LOM
     # (per LOM reference §CompressorDevice). PR-3.5.7-impl-followup-b
     # routes them through JSON-on-the-wire via coerce_dict_to_json —
