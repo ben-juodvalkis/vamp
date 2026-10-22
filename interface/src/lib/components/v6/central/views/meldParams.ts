@@ -48,7 +48,7 @@ export const MELD_ENGINE: Record<MeldEngine, MeldEngineParams> = {
 		filterType: 14, // A Filter Type  0..16
 		freq: 15, // A Filter Freq
 		q: 16, // A Filter Q              (Filter_Macro1)
-		lbhn: 17, // A Filter L-B-H-N     (Filter_Macro2)
+		lbhn: 17, // A Filter L-B-H-N     (Filter_Macro2; renamed with the type)
 		ampAttack: 37, // A Amp Attack
 		ampDecay: 38, // A Amp Decay
 		ampRelease: 39, // A Amp Release

@@ -123,6 +123,17 @@
   }
 
   /**
+   * The filter's second macro, which Live renames with the type
+   * (L-B-H-N, Drive, Morph …), so the title is the name Live reports now,
+   * less its "A Filter " prefix.
+   */
+  let filterExtra = $derived(read(p.lbhn, 0));
+  let filterExtraTitle = $derived.by(() => {
+    const name = device ? selectedTrackStore.paramName(selectedTrackStore.paramPath(device, p.lbhn)) : undefined;
+    return name?.replace(/^[AB]\s+(Filter\s+)?/, '') || 'Extra';
+  });
+
+  /**
    * The open type chooser, if any: 25 oscillator types and 17 filter types
    * are too many for a row, so the name between the step arrows opens a
    * grid over its own pad, and a choice closes it.
@@ -224,7 +235,8 @@
 
       <SectionDivider orientation="vertical" ink={engineInk.primary} />
 
-      <!-- The engine's filter: cutoff across, Q up, its type under it. -->
+      <!-- The engine's filter: cutoff across, Q up, its second macro and
+           its type under it. -->
       <div class="filter-col flex-1 min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
         <div class="flex-1 min-h-0 relative">
           <DeviceXY
@@ -237,6 +249,17 @@
             curveFreqRange={FILTER_FREQ_RANGE.meld}
             onInteraction={handleFilterXY}
             color={engineInk}
+          />
+        </div>
+        <div class="filter-extra flex-none">
+          <DeviceSlider
+            value={filterExtra}
+            title={filterExtraTitle}
+            icon="morph"
+            orientation="horizontal"
+            labelSize="small"
+            color={engineInk}
+            onInteraction={(v) => write(p.lbhn, v)}
           />
         </div>
         {@render typeChooser('filter', MELD_FILTER_TYPES[filterType] ?? '—', (step) => {
@@ -416,6 +439,10 @@
     font-weight: 600;
     line-height: 1.1;
     overflow: hidden;
+  }
+
+  .filter-extra {
+    height: var(--height-touch);
   }
 
   .octave-row,
