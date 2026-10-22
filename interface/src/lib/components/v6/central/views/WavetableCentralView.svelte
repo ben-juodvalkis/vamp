@@ -5,7 +5,7 @@
    * Layout: one oscillator card with Drift's OSC 1/2 switch (2026-10-22,
    * the user's call — it was a pad per oscillator), the filter with its
    * type and slope, the envelopes as Amp or Env 2 in one bracket, Time and
-   * Global Mod Amount, then the pitch/mod wheels. The oscillator pad puts
+   * Global Mod Amount. No pitch/mod wheels (user's call, 2026-10-22). The oscillator pad puts
    * **wave position on Y and Effect 2 on X** for both oscillators, so the
    * switch never changes what an axis means.
    *
@@ -46,13 +46,10 @@
   import SectionDivider from '../SectionDivider.svelte';
   import { liveFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
   import HostedSwapPill from '../HostedSwapPill.svelte';
-  import MidiWheel from '../../midi/MidiWheel.svelte';
-  import { sendPitchWheel, sendModWheel } from '$lib/api/midiWheels';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
-  import { PITCH_COLOR, MOD_COLOR } from '$lib/config/devicePresets';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import WavetableWave from './wavetable/WavetableWave.svelte';
   import { loadFactoryWavetables, tableFrames, cycleAt, type WavetableBundle } from '$lib/utils/wavetableShapes';
@@ -311,18 +308,6 @@
     accent: trackInk(wavetableColor.accent, paintModeReactive())
   });
 
-  // MIDI wheel colors (shared across central views)
-  let pitchInk = $derived(trackScheme ?? {
-    primary: trackInk(PITCH_COLOR.primary, paintModeReactive()),
-    secondary: PITCH_COLOR.secondary,
-    accent: trackInk(PITCH_COLOR.accent, paintModeReactive())
-  });
-  let modInk = $derived(trackScheme ?? {
-    primary: trackInk(MOD_COLOR.primary, paintModeReactive()),
-    secondary: MOD_COLOR.secondary,
-    accent: trackInk(MOD_COLOR.accent, paintModeReactive())
-  });
-
   // ===== Handlers =====
   // XY interaction handlers - just send to store, control component handles local state
   /**
@@ -371,15 +356,6 @@
   function writeEnv(index: number, fallback: { min: number; max: number }, value: number) {
     const { min, max } = rangeOf(index, fallback);
     write(index, denorm(value, min, max));
-  }
-
-  // MIDI wheel handlers
-  function handlePitchChange(value: number) {
-    sendPitchWheel(value);
-  }
-
-  function handleModChange(value: number) {
-    sendModWheel(value);
   }
 </script>
 
@@ -591,17 +567,6 @@
           />
         </div>
       </div>
-
-      <SectionDivider orientation="vertical" ink={wavetableInk.primary} />
-
-      <div class="flex-none flex gap-(--central-gap) min-h-0">
-        <div class="wheel-col h-full">
-          <MidiWheel type="pitch" onInteraction={handlePitchChange} color={pitchInk} />
-        </div>
-        <div class="wheel-col h-full">
-          <MidiWheel type="modwheel" onInteraction={handleModChange} color={modInk} />
-        </div>
-      </div>
     </div>
   {:else}
     <!-- Default state when no Wavetable present -->
@@ -612,7 +577,6 @@
 <style>
   .wt-root {
     --wt-slider-w: var(--height-touch);
-    --wt-wheel-w: 56px;
   }
 
   .osc-head {
@@ -689,9 +653,6 @@
   /* Three channels and two gaps; the width is for WebKit, as Drift's. */
   .mixer-col {
     width: calc(3 * var(--wt-slider-w) + 2 * var(--central-gap));
-  }
-  .wheel-col {
-    width: var(--wt-wheel-w);
   }
 
   /* The OSC 1/2 switch: Drift's badge, a circle a touch row tall. */
