@@ -210,8 +210,7 @@ function permuteParams({ mute, pitch, muteLength = 8, pitchLength = 8 }) {
  * `Looping Presets/Instruments/Ableton/Synth/Ableton/Wavetable/Default.adv`
  * — the same artifact the view's own index map was measured from, so the
  * fixture and the component cannot drift apart on what index 9 means.
- * Stops at 41: nothing above it is read, and 93 params of filler would be
- * wire traffic in exchange for nothing.
+ * Stops at 88, Global Mod Amount: nothing above it is read.
  *
  * `osc2On` is a parameter of the fixture because it is the one state worth
  * photographing both ways — Wavetable ships with Osc 2 OFF, which is what
@@ -254,7 +253,57 @@ function wavetableParams({ osc2On = 0 } = {}) {
 		// normalizes its Time pad against.
 		['Amp Attack', 'Att', 0, 20, 2.5, 's'], // 39
 		['Amp Decay', 'Dec', 0.0015, 20, 0.42, 's'], // 40
-		['Amp Release', 'Rel', 0.0015, 20, 8, 's'] // 41
+		['Amp Release', 'Rel', 0.0015, 20, 8, 's'], // 41
+		// 42 .. 88 as Live 12.4 reports them (device dump, 2026-10-22), so the
+		// view's Sustain (45), Time (87, set off centre) and Global Mod Amount
+		// (88) read a value. Live's own rails are 0..1 here, unlike the .adv's.
+		['Amp A Slope', 'Amp A Slope', 0, 1, 0.5, ''], // 42
+		['Amp D Slope', 'Amp D Slope', 0, 1, 0.75, ''], // 43
+		['Amp R Slope', 'Amp R Slope', 0, 1, 0.75, ''], // 44
+		['Amp Sustain', 'Amp Sustain', 0, 1, 0.707946, ''], // 45
+		['Amp Loop Mode', 'Amp Loop Mode', 0, 2, 0, ''], // 46
+		['Env 2 Attack', 'Env 2 Attack', 0, 1, 0.08409, ''], // 47
+		['Env 2 Decay', 'Env 2 Decay', 0, 1, 0.415927, ''], // 48
+		['Env 2 Release', 'Env 2 Release', 0, 1, 0.415927, ''], // 49
+		['Env 2 A Slope', 'Env 2 A Slope', 0, 1, 0.5, ''], // 50
+		['Env 2 D Slope', 'Env 2 D Slope', 0, 1, 0.75, ''], // 51
+		['Env 2 R Slope', 'Env 2 R Slope', 0, 1, 0.75, ''], // 52
+		['Env 2 Initial', 'Env 2 Initial', 0, 1, 0, ''], // 53
+		['Env 2 Peak', 'Env 2 Peak', 0, 1, 1, ''], // 54
+		['Env 2 Sustain', 'Env 2 Sustain', 0, 1, 0.5, ''], // 55
+		['Env 2 Final', 'Env 2 Final', 0, 1, 0, ''], // 56
+		['Env 2 Loop Mode', 'Env 2 Loop Mode', 0, 2, 0, ''], // 57
+		['Env 3 Attack', 'Env 3 Attack', 0, 1, 0.08409, ''], // 58
+		['Env 3 Decay', 'Env 3 Decay', 0, 1, 0.415927, ''], // 59
+		['Env 3 Release', 'Env 3 Release', 0, 1, 0.415927, ''], // 60
+		['Env 3 A Slope', 'Env 3 A Slope', 0, 1, 0.5, ''], // 61
+		['Env 3 D Slope', 'Env 3 D Slope', 0, 1, 0.75, ''], // 62
+		['Env 3 R Slope', 'Env 3 R Slope', 0, 1, 0.75, ''], // 63
+		['Env 3 Initial', 'Env 3 Initial', 0, 1, 0, ''], // 64
+		['Env 3 Peak', 'Env 3 Peak', 0, 1, 1, ''], // 65
+		['Env 3 Sustain', 'Env 3 Sustain', 0, 1, 0.5, ''], // 66
+		['Env 3 Final', 'Env 3 Final', 0, 1, 0, ''], // 67
+		['Env 3 Loop Mode', 'Env 3 Loop Mode', 0, 2, 0, ''], // 68
+		['LFO 1 Retrig On', 'LFO 1 Retrig On', 0, 1, 1, ''], // 69
+		['LFO 1 Wave', 'LFO 1 Wave', 0, 4, 0, ''], // 70
+		['LFO 1 Amount', 'LFO 1 Amount', 0, 1, 1, ''], // 71
+		['LFO 1 Morph', 'LFO 1 Morph', 0, 1, 0.5, ''], // 72
+		['LFO 1 Offset', 'LFO 1 Offset', 0, 1, 0, ''], // 73
+		['LFO 1 Sync', 'LFO 1 Sync', 0, 1, 0, ''], // 74
+		['LFO 1 Freq', 'LFO 1 Freq', 0, 1, 0.320789, ''], // 75
+		['LFO 1 Synced', 'LFO 1 Synced', 0, 21, 15, ''], // 76
+		['LFO 1 Attack', 'LFO 1 Attack', 0, 1, 0, ''], // 77
+		['LFO 2 Retrig On', 'LFO 2 Retrig On', 0, 1, 1, ''], // 78
+		['LFO 2 Wave', 'LFO 2 Wave', 0, 4, 0, ''], // 79
+		['LFO 2 Amount', 'LFO 2 Amount', 0, 1, 1, ''], // 80
+		['LFO 2 Morph', 'LFO 2 Morph', 0, 1, 0.5, ''], // 81
+		['LFO 2 Offset', 'LFO 2 Offset', 0, 1, 0, ''], // 82
+		['LFO 2 Sync', 'LFO 2 Sync', 0, 1, 0, ''], // 83
+		['LFO 2 Freq', 'LFO 2 Freq', 0, 1, 0.320789, ''], // 84
+		['LFO 2 Synced', 'LFO 2 Synced', 0, 21, 15, ''], // 85
+		['LFO 2 Attack', 'LFO 2 Attack', 0, 1, 0, ''], // 86
+		['Time', 'Time', 0, 1, 0.62, ''], // 87
+		['Global Mod Amount', 'Global Mod Amount', 0, 1, 0.5, ''] // 88
 	];
 }
 
