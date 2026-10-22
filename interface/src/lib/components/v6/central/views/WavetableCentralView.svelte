@@ -43,6 +43,7 @@
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import EnvelopeGroup from './EnvelopeGroup.svelte';
+  import SectionDivider from '../SectionDivider.svelte';
   import { liveFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
   import HostedSwapPill from '../HostedSwapPill.svelte';
   import MidiWheel from '../../midi/MidiWheel.svelte';
@@ -113,6 +114,13 @@
     { index: 45, title: 'S', icon: 'sustain', fallback: { min: 0, max: 1 }, atRest: 1 },
     { index: 41, title: 'R', icon: 'release', fallback: { min: 0.0015, max: 20 }, atRest: 0.0015 }
   ] as const;
+
+  // The two global modulation controls (user's ask, 2026-10-22), read off
+  // the running device: 'Time' 0..1 with 0.5 at 0 % (Live shows -100..100 %,
+  // it scales every envelope and LFO time) and 'Global Mod Amount' 0..1
+  // (Live shows 0..200 %, 0.5 = 100 %; it scales every mod-matrix row).
+  const TIME = 87;          // 'Time'
+  const GLOBAL_MOD = 88;    // 'Global Mod Amount'
 
   const norm = (raw: number, min: number, max: number) =>
     Math.min(1, Math.max(0, (raw - min) / (max - min)));
@@ -212,6 +220,9 @@
     const mode = effectModeFromLive(Number(property(`oscillator_${n}_effect_mode`) ?? 0));
     return mode === 'none' ? cycle : applyOscEffect(cycle, mode, effect1, effect2);
   }
+
+  let time = $derived(read(TIME, 0.5));
+  let globalMod = $derived(read(GLOBAL_MOD, 0.5));
 
   let osc1Wave = $derived(oscWave(1, osc1Position, read(OSC1_EFFECT1, 0.5), osc1Effect2));
   let osc2Wave = $derived(oscWave(2, osc2Position, read(OSC2_EFFECT1, 0.5), osc2Effect2));
@@ -374,6 +385,37 @@
         </EnvelopeGroup>
       </div>
 
+      <!-- Time and Global Mod Amount: the device-wide scalers of every
+           envelope and LFO time and of the mod matrix. The envelope's
+           trailing hairline separates them from it; one more seam stands
+           between them and the wheels. -->
+      <div class="min-w-0 min-h-0 h-full flex gap-(--central-gap)">
+        <div class="min-w-0 h-full flex-1">
+          <DeviceSlider
+            value={time}
+            title="Time"
+            orientation="vertical"
+            labelOrientation="horizontal"
+            centerOrigin
+            centerValue={0.5}
+            color={wavetableInk}
+            onInteraction={(value) => write(TIME, value)}
+          />
+        </div>
+        <div class="min-w-0 h-full flex-1">
+          <DeviceSlider
+            value={globalMod}
+            title="Mod Amt"
+            orientation="vertical"
+            labelOrientation="horizontal"
+            color={wavetableInk}
+            onInteraction={(value) => write(GLOBAL_MOD, value)}
+          />
+        </div>
+      </div>
+
+      <SectionDivider orientation="vertical" ink={wavetableInk.primary} />
+
       <!-- MIDI Wheels (pitch + mod) -->
       <div class="wt-wheels flex min-h-0">
         <div class="w-24 h-full">
@@ -399,11 +441,12 @@
 </div>
 
 <style>
-  /* OSC 1, OSC 2, Filter and the envelope at equal widths, then the fixed
-     wheel pair. OSC 1 and OSC 2 are the same size — they are the same
+  /* OSC 1, OSC 2, Filter and the envelope at equal widths, then Time and
+     Mod Amt at the envelope sliders' width (two in half the envelope's
+     share), a seam, and the fixed wheel pair. OSC 1 and OSC 2 are the same size — they are the same
      control twice and an asymmetry would read as a hierarchy that isn't there. */
   .wt-root {
-    grid-template-columns: 1fr 1fr 1fr 1fr auto;
+    grid-template-columns: 1fr 1fr 1fr 1fr 0.5fr auto auto;
     gap: var(--central-gap);
     padding: var(--central-inset);
   }
