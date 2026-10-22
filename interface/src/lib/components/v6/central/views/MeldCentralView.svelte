@@ -82,9 +82,14 @@
   ];
 
   // All parameter values as $derived - always reactive to store changes (ADR-149)
-  // Macro: Parameter 8 (Macro 1 / X), Parameter 9 (Macro 2 / Y)
+  // Osc 1: Parameter 8 (A Osc Macro 1 / X), Parameter 9 (A Osc Macro 2 / Y)
   let macro1 = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 8)) ?? 0 : 0);
   let macro2 = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 9)) ?? 0 : 0);
+
+  // Osc 2: Parameter 68 (B Osc Macro 1 / X), Parameter 69 (B Osc Macro 2 / Y),
+  // measured on the rig 2026-10-22 (MeldVoice_EngineB_Oscillator_Macro1/2)
+  let osc2Macro1 = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 68)) ?? 0 : 0);
+  let osc2Macro2 = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 69)) ?? 0 : 0);
 
   // Filter Type: Parameter 14 (0-16)
   let filterType = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 14)) ?? 0 : 0);
@@ -111,6 +116,12 @@
     selectedTrackStore.setParamValue(yPath, y);  // Macro 2
   }
 
+  function handleOsc2XYInteraction(x: number, y: number) {
+    if (!device) return;
+    selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, 68), x); // B Osc Macro 1
+    selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, 69), y); // B Osc Macro 2
+  }
+
   function handleFilterXYInteraction(x: number, y: number) {
     if (!device) return;
     const xPath = selectedTrackStore.paramPath(device, 15);
@@ -130,24 +141,36 @@
 
 <div class="h-full w-full overflow-hidden relative">
   {#if instrument && device}
-    <!-- Layout: Macro XY | Filter Type buttons · Filter XY · Time XY | MIDI wheels.
+    <!-- Layout: Osc 1 XY · Osc 2 XY | Filter Type buttons · Filter XY · Time XY | MIDI wheels.
          The type buttons sat the same gap from the Macro pad as from the
          Filter pad they choose for; the first seam puts them with their
          filter, the second divides the device from the wheels (2026-09-13). -->
-    <div class="h-full w-full p-(--central-inset) grid gap-(--central-gap)" style="grid-template-columns: 1fr auto 1fr 1fr 1fr auto auto;">
-      <!-- Macro XY, with the swap pill lying across the top of its column
-           (user's layout, 2026-09-16). -->
+    <div class="h-full w-full p-(--central-inset) grid gap-(--central-gap)" style="grid-template-columns: 2fr auto 1fr 1fr 1fr auto auto;">
+      <!-- The two oscillators' macro XYs, with the swap pill lying across
+           the top of their column (user's layout, 2026-09-16). -->
       <div class="min-w-0 h-full flex flex-col gap-(--central-gap)">
         <HostedSwapPill />
-        <div class="flex-1 min-h-0">
-          <DeviceXY
-            xValue={macro1}
-            yValue={macro2}
-            title="Macro"
-            icon="macro"
-            onInteraction={handleMacroXYInteraction}
-            color={meldInk}
-          />
+        <div class="flex-1 min-h-0 grid grid-cols-2 gap-(--central-gap)">
+          <div class="min-w-0 h-full">
+            <DeviceXY
+              xValue={macro1}
+              yValue={macro2}
+              title="Osc 1"
+              icon="macro"
+              onInteraction={handleMacroXYInteraction}
+              color={meldInk}
+            />
+          </div>
+          <div class="min-w-0 h-full">
+            <DeviceXY
+              xValue={osc2Macro1}
+              yValue={osc2Macro2}
+              title="Osc 2"
+              icon="macro"
+              onInteraction={handleOsc2XYInteraction}
+              color={meldInk}
+            />
+          </div>
         </div>
       </div>
       <SectionDivider orientation="vertical" />
@@ -218,7 +241,7 @@
 </div>
 
 <style>
-  /* ---- Live skin (flat grammar): the three pads are DeviceXY and the
+  /* ---- Live skin (flat grammar): the four pads are DeviceXY and the
      wheels MidiWheel (flat on their own); the filter-type grid is
      .physical-button (app.css: flat field, ChosenDefault ON). Tailwind's
      font-semibold inlines 600 past the flat --font-weight-semibold token, so the
