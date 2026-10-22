@@ -107,6 +107,7 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 
 	// Instrument views - organized alphabetically
 	instrument: {
+		'analog': () => import('./views/AnalogCentralView.svelte'),
 		'collision': () => import('./views/CollisionCentralView.svelte'),
 		'drift': () => import('./views/DriftCentralView.svelte'),
 		// One entry for every DrumGroupDevice (ADR-428, Milestone 1b). The view

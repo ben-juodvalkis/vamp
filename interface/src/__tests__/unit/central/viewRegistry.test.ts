@@ -70,9 +70,9 @@ function allEntries(): Array<[string, () => Promise<unknown>]> {
 
 describe('viewRegistry — fallbacks', () => {
 	it('sends an unknown instrument subtype to default, never DrumRack', () => {
-		// 'analog' and 'unknown' are the real values finding #3 was about:
-		// identifyInstrumentType bottoms out at 'plugin' / 'unknown'.
-		for (const sub of ['analog', 'plugin', 'unknown', 'not-a-real-instrument']) {
+		// 'plugin' and 'unknown' are where identifyInstrumentType bottoms out
+		// ('analog' was the third until Analog got its view, 2026-10-22).
+		for (const sub of ['plugin', 'unknown', 'not-a-real-instrument']) {
 			expect(resolveViewComponent('instrument', sub)).toBe(
 				CENTRAL_VIEW_REGISTRY.default
 			);
@@ -175,7 +175,8 @@ describe('viewRegistry — resolution', () => {
 
 	it('isViewRegistered agrees with the registry contents', () => {
 		expect(isViewRegistered('instrument', 'simpler')).toBe(true);
-		expect(isViewRegistered('instrument', 'analog')).toBe(false);
+		expect(isViewRegistered('instrument', 'analog')).toBe(true);
+		expect(isViewRegistered('instrument', 'plugin')).toBe(false);
 		expect(isViewRegistered('instrument')).toBe(false);
 		expect(isViewRegistered('system')).toBe(true);
 	});

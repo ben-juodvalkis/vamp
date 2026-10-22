@@ -32,7 +32,7 @@ describe('instrumentService', () => {
 		});
 
 		it('should return true for Analog', () => {
-			const device = createDevice(0, 0, 'Analog', 'Analog');
+			const device = createDevice(0, 0, 'Analog', 'UltraAnalog');
 			expect(instrumentService.isInstrument(device)).toBe(true);
 		});
 
@@ -144,7 +144,7 @@ describe('instrumentService', () => {
 		});
 
 		it('should identify Analog', () => {
-			const info = createInstrumentInfo(0, 'Analog', 'Analog');
+			const info = createInstrumentInfo(0, 'UltraAnalog', 'Analog');
 			expect(instrumentService.identifyInstrumentType(info)).toBe('analog');
 		});
 
@@ -236,7 +236,7 @@ describe('instrumentService', () => {
 				createDevice(0, 0, 'Auto Filter', 'AutoFilter'),
 				createDevice(1, 1, 'Wavetable', 'InstrumentVector'),
 				createDevice(2, 2, 'Compressor', 'Compressor'),
-				createDevice(3, 3, 'Analog', 'Analog')
+				createDevice(3, 3, 'Analog', 'UltraAnalog')
 			];
 
 			const instruments = instrumentService.findAllInstruments(devices);

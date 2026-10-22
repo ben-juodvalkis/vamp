@@ -64,7 +64,7 @@ const INSTRUMENT_CLASSES = [
   'DrumGroupDevice',      // Drum Rack
   'InstrumentGroupDevice', // Instrument Rack
   'Operator',             // Operator synth
-  'Analog',               // Analog synth
+  'UltraAnalog',          // Analog synth (LOM class_name is UltraAnalog, measured 2026-10-22)
   'InstrumentVector',     // Wavetable synth
   'Drift',                // Drift synth
   'Collision',            // Collision physical modeling synth
@@ -150,7 +150,7 @@ class InstrumentService {
     // Native Ableton instruments
     if (className === 'DrumGroupDevice') return 'drumrack';
     if (className === 'Operator') return 'operator';
-    if (className === 'Analog') return 'analog';
+    if (className === 'UltraAnalog') return 'analog';
     if (className === 'InstrumentVector') return 'wavetable';
     if (className === 'Drift') return 'drift';
     if (className === 'Collision') return 'collision';

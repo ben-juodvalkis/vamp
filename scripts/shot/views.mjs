@@ -18,6 +18,12 @@
  */
 
 /** iPad Pro 12.9" landscape, the machine this interface is built for. */
+import { readFileSync } from 'node:fs';
+
+// The rig's "106 Bass 01" Analog, all 172 parameters as the running Live
+// reported them (device_dump.js, 2026-10-22): [name, min, max, value].
+const ANALOG_106_BASS = JSON.parse(readFileSync(new URL('./fixtures/analog-106-bass.json', import.meta.url), 'utf8'));
+
 export const DEFAULT_VIEWPORT = { width: 1366, height: 1024 };
 
 const P = {
@@ -433,7 +439,13 @@ function instrumentSwapStates() {
 		['Device On', 'Device On', 0, 1, 1, ''],
 		...names.map((n, i) => [n, n, 0, 127, 20 + i * 12, ''])
 	];
+	const analog = ANALOG_106_BASS.map(([n, min, max, v]) => [n, n, min, max, v, '']);
 	const swaps = [
+		// Live, not ghosted: the measured patch, so the shot shows its values.
+		['analog', 'Analog', 'UltraAnalog', analog],
+		// Voice 2 up, Filter envelope showing: the other half, in blue.
+		['analog-voice2', 'Analog', 'UltraAnalog', analog,
+			[{ click: '.osc-badge' }, { click: '.env-switch .device-segment:last-child' }]],
 		['collision', 'Collision', 'Collision'],
 		['electric', 'Electric', 'LoungeLizard'],
 		['meld', 'Meld', 'InstrumentMeld'],

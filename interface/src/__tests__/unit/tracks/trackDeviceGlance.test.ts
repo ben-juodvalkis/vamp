@@ -234,7 +234,7 @@ describe('trackDeviceGlance', () => {
 		['Operator', 'Operator', 'operator'],
 		['Collision', 'Collision', 'beater'],
 		['Electric', 'LoungeLizard', 'tine'],
-		['Analog', 'Analog', 'square'],
+		['Analog', 'UltraAnalog', 'square'],
 		['Komplete Kontrol', 'AuPluginDevice', 'plug'],
 		['Serum', 'AuPluginDevice', 'plug'],
 		['Stack', 'InstrumentGroupDevice', 'device']
