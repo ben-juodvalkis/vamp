@@ -198,7 +198,7 @@ export const TOURS = {
 			// loaded and its Gain is the grid's Gtr column, so the view leaves it out.
 			{
 				name: 'fx-guitar-loaded',
-				description: 'Pedal view on the Guitar track: the Guitar section live — Spring, Tremolo pad, Room, Dirty/Clean',
+				description: 'Pedal view on the Guitar track: the Guitar section live — Spring, Tremolo pad, Room',
 				steps: [selectTrack(3), openTile('Saturator')]
 			},
 			...FX_TILES.map(([label, name, description]) => ({

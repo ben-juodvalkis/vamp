@@ -8,8 +8,8 @@
  *
  * Since 2026-10-05 the Guitar rack's whole face is here too (GuitarCentralView
  * is gone): Gain (the tile, MIDI tracks only — on audio the grid's Gtr column
- * draws it), Spring, the Tremolo pad, Room and Dirty/Clean, on Guitar.adg's
- * macros 1-6.
+ * draws it), Spring, the Tremolo pad and Room, on Guitar.adg's macros 1-5.
+ * The Amp Switch (macro 6, Dirty/Clean) has no control since 2026-10-22.
  *
  * The Wah has no tile and no view of its own — the expression pedal plays
  * it — so this button is its only door on the iPad: a tap loads Wah.adg onto
@@ -193,7 +193,7 @@ describe('PedalCentralView', () => {
 		expect((container.querySelector('.saturator-faders') as HTMLElement).style.opacity).toContain('--opacity-ghost');
 	});
 
-	it('carries the Guitar rack: Gain, the Spring/Room pad over the Tremolo pad, and Dirty/Clean', async () => {
+	it('carries the Guitar rack: Gain, the Spring/Room pad over the Tremolo pad, and no Dirty/Clean', async () => {
 		seed([saturator({}), guitarRack()]);
 		const { container } = render(PedalCentralView);
 		await tick();
@@ -202,9 +202,8 @@ describe('PedalCentralView', () => {
 		expect(tile?.textContent).toContain('Gtr');
 		const pads = Array.from(container.querySelectorAll('.guitar-xy-stack .guitar-xy'));
 		expect(pads.map((p) => p.textContent)).toEqual([expect.stringContaining('Spring/Room'), expect.stringContaining('Tremolo')]);
-		const tone = Array.from(container.querySelectorAll<HTMLButtonElement>('.guitar-section .tone-btn'));
-		expect(tone.map((b) => b.textContent?.trim())).toEqual(['Dirty', 'Clean']);
-		expect(tone.map((b) => b.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
+		expect(container.querySelector('.guitar-section .tone-btn')).toBeNull();
+		expect(container.querySelector('.guitar-section')!.textContent).not.toMatch(/Dirty|Clean/);
 	});
 
 	it('leaves Gain out on an audio track, where the grid draws it', async () => {
@@ -213,17 +212,6 @@ describe('PedalCentralView', () => {
 		await tick();
 		expect(container.querySelector('.left-stack .device-control')).toBeNull();
 		expect(container.querySelectorAll('.guitar-xy-stack .guitar-xy').length).toBe(2);
-	});
-
-	it('lights Clean above the midpoint, and Dirty writes macro 6 to 0', async () => {
-		seed([saturator({}), guitarRack(127)]);
-		const { container } = render(PedalCentralView);
-		await tick();
-		const tone = Array.from(container.querySelectorAll<HTMLButtonElement>('.guitar-section .tone-btn'));
-		expect(tone[1].getAttribute('aria-pressed')).toBe('true');
-		tone[0].click();
-		await tick();
-		expect(send).toHaveBeenCalledWith(expect.any(String), expect.arrayContaining([`${GTR}/params/6`, 0]));
 	});
 
 	it('ghosts the Guitar section on a track with no amp rack', async () => {
@@ -262,7 +250,7 @@ describe('PedalCentralView', () => {
 		expect(guitar.textContent).toBe('Guitar Amp');
 	});
 
-	it('heads the Guitar group with Dirty/Clean, then the Gain over the Wah, after the Pedal', async () => {
+	it('heads the Guitar group with the Gain over the Wah, after the Pedal', async () => {
 		seed([saturator({}), guitarRack()]);
 		const { container } = render(PedalCentralView);
 		await tick();
@@ -270,8 +258,7 @@ describe('PedalCentralView', () => {
 		expect(columns[0].classList.contains('pedal-column')).toBe(true);
 		// After the group's name.
 		const group = container.querySelector('.guitar-section')!.children;
-		expect(group[1].classList.contains('tone-stack')).toBe(true);
-		const stack = group[2];
+		const stack = group[1];
 		expect(stack.classList.contains('left-stack')).toBe(true);
 		const cells = stack.querySelectorAll('.left-cell');
 		expect(cells.length).toBe(2);
