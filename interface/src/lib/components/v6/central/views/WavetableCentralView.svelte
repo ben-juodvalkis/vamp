@@ -267,7 +267,6 @@
           xValue={flt1Freq}
           yValue={flt1Res}
           title="Filter"
-          icon="filter"
           isGhost={!flt1On}
           showCurve={flt1On}
           curveType={flt1Curve.curveType}

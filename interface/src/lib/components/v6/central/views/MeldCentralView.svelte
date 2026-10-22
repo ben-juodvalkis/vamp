@@ -173,7 +173,6 @@
           xValue={cutoff}
           yValue={resonance}
           title="Filter"
-          icon="filter"
           showCurve={filterOn && filterCurve.curveType !== 'none'}
           curveType={filterCurve.curveType}
           curveOrder={filterCurve.order}

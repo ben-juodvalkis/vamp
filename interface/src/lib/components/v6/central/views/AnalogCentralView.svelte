@@ -397,7 +397,6 @@
             xValue={norm(p.freq, 1)}
             yValue={norm(p.res, 0)}
             title="Filter {voice}"
-            icon="cutoff"
             showCurve={filterOn}
             curveType={filterCurve.curveType}
             curveOrder={filterCurve.order}

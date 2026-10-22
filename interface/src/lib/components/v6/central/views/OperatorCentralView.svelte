@@ -247,7 +247,6 @@
           xValue={envValue(FILTER_FREQ, 1)}
           yValue={envValue(FILTER_RES, 0)}
           title="Filter"
-          icon="filter"
           isGhost={!filterOn}
           showCurve={filterOn && filterCurve.curveType !== 'none'}
           curveType={filterCurve.curveType}

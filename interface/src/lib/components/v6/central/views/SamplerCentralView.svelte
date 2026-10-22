@@ -217,7 +217,6 @@
             xValue={valueAt(FILTER_FREQ) ?? 1}
             yValue={valueAt(FILTER_RES) ?? 0}
             title="Filter"
-            icon="filter"
             showCurve={filterOn}
             curveType={filterCurve.curveType}
             curveOrder={filterCurve.order}

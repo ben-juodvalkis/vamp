@@ -661,7 +661,6 @@
             xValue={cutoffValue}
             yValue={resonanceValue}
             title="Filter"
-            icon="filter"
             showCurve
             curveType="lowpass"
             curveOrder={driftFilterCurve(lpType).order}
