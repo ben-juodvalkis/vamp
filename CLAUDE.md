@@ -81,7 +81,7 @@ share it), and switch back to `main` when Ben is done testing.
   don't say, measured on the rig. Ask the running Live with the surface's probes
 - `docs/reference/manual-test-checklist.md`: the rig smoke test
 - `docs/adr/`: every decision record. The next number is one past the
-  highest file there (461 on 2026-10-13)
+  highest file there (463 on 2026-10-23)
 - `interface/src/__tests__/`: the interface's tests. Mount components with
   `@testing-library/svelte`; read a store through a real `$derived` with
   `helpers/runeHarness.svelte.ts`.
@@ -97,9 +97,14 @@ share it), and switch back to `main` when Ben is done testing.
   gitignored, which Mac-side code lays over it (`config/CLAUDE.md`).
 - Log through `logger` (`$lib/utils/logger` in the browser, `./utils/logger`
   in the bridge), never `console.log`. `LOG_LEVEL=DEBUG npm run dev` for more.
-- Write no new docs, ADRs or CLAUDE.md prose unless Ben asks. Edit a
-  CLAUDE.md only where it now tells an agent something wrong; history
-  belongs in commit messages.
+- Write an ADR, in the same commit, when a change is big enough to
+  warrant one: a new feature or gesture, a new kind of behavior in Live or
+  on the wire, or a change that reverses an Accepted ADR (supersede it and
+  point its Status line at the new one). Layout, colour and spacing tweaks
+  and fixes need none; their commit message is the record. When unsure,
+  write it. Write no other new docs or CLAUDE.md prose unless Ben asks.
+  Edit a CLAUDE.md or reference doc wherever it now tells an agent
+  something wrong.
 - The browser's catalog is built at runtime by the interface server and
   cached under `scripts/.cache/places/` (gitignored); nothing generated is
   committed. Check `git status` after any `.gitignore` edit.
