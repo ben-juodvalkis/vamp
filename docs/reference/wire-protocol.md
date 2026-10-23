@@ -671,13 +671,13 @@ ack carrying the same `request_id` the UI sent.
 
 The pre-2026-04-26 addresses `/looping/v3/track/create_audio`,
 `/looping/v3/track/create_midi`, and `/looping/v3/track/ensure_devices`
-were retired in favor of the atomic endpoint. The
-`/looping/v3/track/created` event still exists but is now emitted
-**only** by the foot-pedal hold gesture (`FootTriggerComponent`); UI-
-initiated creates correlate via `prepare_for_preset/ack`. No UI
-listener consumes `/looping/v3/track/created` any more — Permute
-placement is owned by Python in both paths (`TrackPrepareComponent`
-for browser flows, `FootTriggerComponent` for foot-hold).
+were retired in favor of the atomic endpoint, and
+`/looping/v3/track/created` with them (nothing has sent it since the
+foot-pedal hold's Permute moved to Python; the hold creates no track
+at all since 2026-10-23). Creates correlate via
+`prepare_for_preset/ack`, and Permute placement is Python's.
+The tracks panel's **New Audio / New MIDI** buttons are a
+`prepare_for_preset` with an empty `preset_path`.
 
 | Address                                       | Dir     | Args                                                       | Semantics |
 | --------------------------------------------- | ------- | ---------------------------------------------------------- | --------- |
@@ -694,7 +694,6 @@ for browser flows, `FootTriggerComponent` for foot-hold).
 | `/looping/v3/track/group/record_suspend/ack`  | Surf→Bridge | `request_id:string, was_on:int(0\|1)` | `was_on=1` means record_mode really was on and is now off — the bridge only sends the matching `record_resume` when this says so. A read/write failure answers `was_on=0` rather than leaving the bridge hanging. |
 | `/looping/v3/track/group/record_resume`       | Bridge→Surf | `request_id:string` | Unconditionally sets `song.record_mode = 1` back on. Sent once, after the bracketed reposition finishes (success or failure) — never left stranded off. |
 | `/looping/v3/track/group/record_resume/ack`   | Surf→Bridge | `request_id:string` | Acknowledges the resume. The bridge degrades gracefully if either hop above times out (`RECORD_SURFACE_TIMEOUT_MS`, 2s) or the surface port is closed: the group/drag still runs, at worst hitting the same dialog this feature exists to avoid — this bracket is a nicety, never a blocker. The cost while it IS engaged: whatever plays during the bracket is not captured to the Arrangement on a track that was actually recording, a gap the length of one Group gesture. |
-| `/looping/v3/track/created`                   | Surf→UI | `type:string, trackIndex:int, origin:string`               | Foot-pedal hold gesture only. `origin="foot-trigger"`. No UI listener consumes this — Permute lands inline on the Python side in both paths. Retained on the wire for diagnostic / future use. |
 
 #### 2.9.1 Idempotency
 
@@ -738,7 +737,7 @@ arg-free OSC wires at the surface. Both paths call the same
 | Address                  | Dir        | Args      | Semantics |
 | ------------------------ | ---------- | --------- | --------- |
 | `/looping/v3/foot/tap`   | Hardware→Surf | (none) | Short press. |
-| `/looping/v3/foot/hold`  | Hardware→Surf | (none) | Long press. |
+| `/looping/v3/foot/hold`  | Hardware→Surf | (none) | Long press: next take (2026-10-23). |
 
 Tap branches on `song.view.highlighted_clip_slot` alone — never on what
 else is playing on that track — so one pedal walks a single slot through
@@ -756,10 +755,14 @@ the looper cycle:
 recording into reports both, so checking `is_playing` first collapses the
 take-ending press into the overdub branch.
 
-The hold's input channel is read by Python from
-`constants.audio.defaultInputChannel` (was hardcoded
-`"11/12 Guitar Mic"` in M4L). It is optional: unset, the new track keeps
-Live's own default input.
+Hold readies a new take on the selected track: it stops the track's
+clips (`Track.stop_all_clips`, quantized like Live's own stop) and
+highlights the first slot **below** the selected scene that holds no
+clip, appending a scene (`Song.create_scene(-1)`) when every slot below
+is full, so the next tap records a new clip there rather than
+overdubbing. A group track, the master or a return selected: nothing.
+Until 2026-10-23 hold created an armed audio track with Permute; the
+tracks panel's New Audio / New MIDI buttons do that now.
 
 ### 2.10.1 Wah pedal — and MidiWheels on MIDI tracks
 

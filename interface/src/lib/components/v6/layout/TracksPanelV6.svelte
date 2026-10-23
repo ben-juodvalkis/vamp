@@ -3,6 +3,7 @@
 	import constants from '$config/constants.json';
 	import { logger } from '$lib/utils/logger';
 	import TrackStrip from '$lib/components/v6/tracks/TrackStrip.svelte';
+	import NewTrackButtons from '$lib/components/v6/tracks/NewTrackButtons.svelte';
 	import SlotGrid from '$lib/components/v6/tracks/TrackStrip/components/SlotGrid.svelte';
 	import { uiPrefsStore } from '$lib/stores/v6/uiPrefsStore.svelte';
 	import type { SlotState } from '$lib/stores/v3/normalized.svelte';
@@ -63,8 +64,15 @@
 	// overrides are UNREACHABLE since 2026-09-26, kept until the flag goes.
 	let flipLayout = $derived(uiPrefsStore.flipLayout);
 
+	// The last column is New Audio / New MIDI (`NewTrackButtons`), in the
+	// strips row only, sized exactly like a strip. The clip grid and stop
+	// row carry it empty, so their track columns stay the strips' width.
+	let columnTemplate = $derived(
+		`grid-template-columns: repeat(${visibleTracks.length + 1}, minmax(var(--track-min-w), 1fr));`
+	);
+
 	let rowStyle = $derived(
-		`grid-template-columns: repeat(${Math.max(visibleTracks.length, 1)}, minmax(var(--track-min-w), 1fr));` +
+		columnTemplate +
 			` grid-template-rows: ${
 				layout.bandCount > 0
 					? flipLayout
@@ -143,9 +151,7 @@
 	// The grid row's own column template. Identical to the strips' except
 	// it never carries band rows — a group's bracket arm is chrome over
 	// the strips, and has no counterpart among the clip columns.
-	let slotRowStyle = $derived(
-		`grid-template-columns: repeat(${Math.max(visibleTracks.length, 1)}, minmax(var(--track-min-w), 1fr));`
-	);
+	let slotRowStyle = $derived(columnTemplate);
 
 	// Row pitch, measured rather than authored: the grid is one section
 	// of the main-area stack, and the pitch is that section divided by
@@ -429,6 +435,12 @@
 					<TrackStrip {trackIndex} onTrackSelect={handleTrackSelect} {rowScrolls} />
 				</div>
 			{/each}
+			<div
+				class="new-track-col"
+				style="grid-column: {visibleTracks.length + 1}; grid-row: 1 / -1;"
+			>
+				<NewTrackButtons />
+			</div>
 		</div>
 
 		<!-- Session clip grid (ADR-415) — a second grid row in THIS scroller,
@@ -519,8 +531,12 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--spacing-lg);
-		/* Keep a followed strip clear of the hard panel edge. */
-		scroll-padding-inline: var(--spacing-lg);
+		/* Keep a followed strip clear of the hard panel edge, and at the
+		   right-hand end clear of the New track column pinned over it.
+		   The row only scrolls once every column is at its floor, so the
+		   pinned column is then exactly --track-min-w wide. */
+		scroll-padding-inline: var(--spacing-lg)
+			calc(var(--track-min-w) + 2 * var(--spacing-lg));
 		/* Below this width strips stop compressing and the row scrolls
 		   instead. Declared ONCE here rather than per row: the strips, the
 		   clip grid and the stop row must resolve the SAME floor or their
@@ -716,6 +732,11 @@
 	.track-col {
 		min-width: 0;
 		min-height: 0;
+		/* A strip's own layers (volume ticks, load veil, up to z 20) stay
+		   inside its column, so the pinned New track column covers a strip
+		   scrolling under it. The group arm (z 1) still paints over the
+		   strip it grows out of. */
+		isolation: isolate;
 		/* The gutter is dead space to the grid, but not to a finger aimed
 		   at a strip's edge — which is where its volume ticks are drawn.
 		   Each strip's fader takes half of the gutter on each side
@@ -739,6 +760,21 @@
 
 	.track-col.is-last {
 		--fader-slop-right: 0px;
+	}
+
+	/* New Audio / New MIDI, after the last strip. Pinned to the panel's
+	   right edge once the row scrolls, so it is always one reach away; it
+	   takes the gutter to its left too, so strips scrolling under it do
+	   not show through the gap. */
+	.new-track-col {
+		position: sticky;
+		right: 0;
+		z-index: 1;
+		min-width: 0;
+		min-height: 0;
+		margin-left: calc(-1 * var(--strip-gutter));
+		padding-left: var(--strip-gutter);
+		background: var(--background);
 	}
 
 	/* Group bracket ("panhandle", ADR-413): the arm that grows out of the

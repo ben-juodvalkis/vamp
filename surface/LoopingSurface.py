@@ -822,7 +822,7 @@ class LoopingSurface(ControlSurface):
         in Live's preferences, its CCs arrive as plain MIDI instead of
         through the Max ctlin→OSC bridges.
         ``MidiPedalInput`` is the plain-Python (headless-testable)
-        translator: edge detection plus the 500ms tap/hold timer that
+        translator: edge detection plus the 650ms tap/hold timer that
         previously lived in ``owner/Max Patches/foot-trigger.js``. The
         resolved gestures call the same ``FootTriggerComponent`` /
         ``WahPedalComponent`` handlers the ``/looping/v3/foot/*`` and
@@ -1948,47 +1948,15 @@ class LoopingSurface(ControlSurface):
             self._selection_probe.handle_selection_probe,
         )
 
-        # Shared loader closure used by FootTriggerComponent
-        # to append Permute on hold-created audio tracks (2026-04-30 —
-        # see FootTriggerComponent docstring for why the Permute load
-        # moved out of the UI). The device-load component is constructed
-        # later in __init__, so resolve it at call time — the 12.3.7
-        # capability gate guarantees ``_device_load_component`` is
-        # attribute-set (possibly to ``None``) before any handler can
-        # fire.
-        def load_preset(track_index: int, preset_path: str) -> None:
-            dlc = getattr(self, "_device_load_component", None)
-            if dlc is None:
-                logger.warning(
-                    "auto-load suppressed — DeviceLoadComponent "
-                    "unavailable (Live <12.3.7?)",
-                )
-                return
-            dlc.handle_load(
-                ("tracks/%d" % track_index, "", preset_path), None,
-            )
-
         # Phase 9 PR-9b: FootTriggerComponent — owns the two arg-free
-        # gesture wires (``/looping/v3/foot/tap`` and ``…/hold``)
-        # emitted by ``owner/Max Patches/foot-trigger.js``. Hold creates an
-        # audio track, configures it, and appends Permute via the
-        # shared ``load_preset`` closure. The previous design re-emitted
-        # ``/looping/v3/track/created`` so the UI ran the Permute load,
-        # but the bridge broadcasts to all WS clients — Mac + iPad each
-        # fired a duplicate device/load and the track ended up with two
-        # Permutes (2026-04-30). Doing the load inline keeps the
-        # initiator and the device-chain write in the same place.
+        # gesture wires (``/looping/v3/foot/tap`` and ``…/hold``), reached
+        # from the pedal MIDI adapter below and from
+        # ``owner/Max Patches/foot-trigger.js``. Tap runs the looper cycle
+        # on the highlighted slot; hold stops the selected track and
+        # highlights the next empty slot below (2026-10-23).
         self._foot_trigger_component = FootTriggerComponent(
             song=self.song,
             emit=self._transport.send,
-            constants=constants,
-            schedule_delayed=self._schedule_delayed,
-            # 2026-04-22: gate on SessionSettings.auto_arm (same toggle
-            # as ExclusiveArmComponent — one flip covers both paths).
-            should_auto_arm=(
-                self._session_settings_component.should_auto_arm
-            ),
-            load_preset=load_preset,
         )
         for address, handler in (
             (V3_FOOT_TAP_ADDRESS, self._foot_trigger_component.handle_tap),
@@ -2081,9 +2049,7 @@ class LoopingSurface(ControlSurface):
         random_start_device_path = live_library.device_path(
             live_library.RANDOM_START_REL, configured_rs,
         )
-        # DeviceLoadComponent is constructed *after* this block (same
-        # ordering reason the load_preset closure resolves it lazily),
-        # so the Random Start prepend reaches it through a closure that
+        # DeviceLoadComponent is constructed *after* this block, so the Random Start prepend reaches it through a closure that
         # reads ``self._device_load_component`` at call time. Returns
         # ``None`` while the surface is mid-init or in a Live-version
         # gate where the DLC is permanently absent — the prepend then

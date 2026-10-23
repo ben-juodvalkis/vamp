@@ -284,6 +284,32 @@ describe('FXGrid — the grid is the held pad\'s', () => {
  * implicit third row. That is what keeps the XY tiles and the ruler still
  * when the selected track changes kind.
  */
+describe("the Drum cell is the Drum's only on a Drum or Perc track", () => {
+	const fx6 = (container: HTMLElement) => container.querySelector<HTMLElement>('[data-cell="fx6"]')!;
+
+	it('draws the Drum on a track filed under Drum, and under Perc', async () => {
+		const { container } = render(FXGrid);
+		await tick();
+		expect(fx6(container).textContent).toContain('Drum');
+		expect(fx6(container).textContent).not.toContain('Chorus');
+
+		replaceTree(3, [{ ...drums(), role: 'perc' }]);
+		await tick();
+		expect(fx6(container).textContent).not.toContain('Chorus');
+	});
+
+	it('draws the Chorus there on any other track, and on one with no category', async () => {
+		replaceTree(3, [{ ...drums(), role: 'synth' }]);
+		const { container } = render(FXGrid);
+		await tick();
+		expect(fx6(container).textContent).toContain('Chorus');
+
+		replaceTree(3, [{ ...drums(), role: '' }]);
+		await tick();
+		expect(fx6(container).textContent).toContain('Chorus');
+	});
+});
+
 describe('the FX grid layout is ten columns wide', () => {
 	function occupancy(kind: 'midi' | 'audio') {
 		const cells: Array<[string, GridCell]> = FX_GRID_LAYOUT.filter((s) => !s.hidden).map((s) => [s.deviceType as string, cellFor(s, kind)]);

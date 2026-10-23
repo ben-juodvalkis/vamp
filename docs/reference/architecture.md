@@ -307,7 +307,7 @@ One `Component` per slice of the LOM surface. Representative set:
 | `GrooveComponent` + `GroovePoolComponent` | Per-clip groove amounts + pool auto-assign. |
 | `SelectedTrackComponent` | Observe `song.view.selected_track`, write `view.selected_track` and `view.highlighted_clip_slot`, Move-encoder relative volume, and the Move pad hold (ADR-432): `/looping/v3/move/pad_hold [note, held]` from the Max Utility patch → the pad Live selected on the selected track's Drum Rack → `/looping/v3/drum/pad_hold [rackPath, padNote, held]` to the interface, which scopes that pad as if a finger held its tile. |
 | `ExclusiveArmComponent` | Arm-follows-selection side effect. |
-| `FootTriggerComponent` | `/looping/v3/foot/{tap,hold}` — tap toggles session record; hold creates + arms + auto-loads Permute on an audio track. |
+| `FootTriggerComponent` | `/looping/v3/foot/{tap,hold}` — tap runs the looper cycle on the highlighted slot (record → close → play → overdub); hold stops the selected track and highlights the next empty slot below, appending a scene if none. |
 | `ViewComponent` | `/looping/v3/view/focus`. |
 
 Full list: see [LoopingSurface.py](../../surface/LoopingSurface.py).
