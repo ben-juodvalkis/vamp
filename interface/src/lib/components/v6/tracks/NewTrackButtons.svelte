@@ -11,7 +11,7 @@
 	 * presses of one kind queue in `trackPreparation`, so a second press
 	 * finds the track the first one made rather than making another.
 	 */
-	import AudioWaveform from '@lucide/svelte/icons/audio-waveform';
+	import Mic from '@lucide/svelte/icons/mic';
 	import Piano from '@lucide/svelte/icons/piano';
 	import Plus from '@lucide/svelte/icons/plus';
 	import { press } from '$lib/actions/press';
@@ -33,7 +33,7 @@
 	}
 
 	const BUTTONS = [
-		{ kind: 'audio' as const, label: 'Audio', icon: AudioWaveform },
+		{ kind: 'audio' as const, label: 'Audio', icon: Mic },
 		{ kind: 'midi' as const, label: 'MIDI', icon: Piano }
 	];
 </script>
@@ -67,21 +67,24 @@
 		gap: var(--spacing-sm);
 	}
 
+	/* Each button is a size container, so its marks scale with the box
+	   the column gets: a strip's width across, half the row's height.
+	   Container units resolve against an ANCESTOR container, so only the
+	   button's children size in cqmin, never the button itself. */
 	.new-track {
 		flex: 1 1 0;
 		min-height: 0;
 		min-width: 0;
+		container-type: size;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		gap: var(--spacing-xs);
 		padding: 0;
 		border: 1px dashed var(--line-strong);
 		border-radius: var(--radius-md);
-		background: var(--card);
+		background: transparent;
 		color: var(--muted-foreground);
-		font-size: 0.8125rem;
 		font-weight: var(--font-weight-medium);
 		line-height: 1;
 		cursor: pointer;
@@ -89,6 +92,21 @@
 		transition:
 			background-color 90ms var(--ease-precise),
 			color 90ms var(--ease-precise);
+	}
+
+	/* Ghost text: the marks sit at the ghost weight an unloaded device
+	   wears, and come up to full under the finger. */
+	.new-track-icons,
+	.new-track-label {
+		opacity: var(--opacity-ghost);
+		transition: opacity 90ms var(--ease-precise);
+	}
+
+	.new-track:active .new-track-icons,
+	.new-track:active .new-track-label,
+	.new-track.is-pending .new-track-icons,
+	.new-track.is-pending .new-track-label {
+		opacity: 1;
 	}
 
 	.new-track:active {
@@ -106,7 +124,7 @@
 
 	@keyframes new-track-pending {
 		from {
-			background: var(--card);
+			background: transparent;
 		}
 		to {
 			background: var(--secondary);
@@ -116,29 +134,33 @@
 	.new-track-icons {
 		display: flex;
 		align-items: center;
-		gap: 2px;
+		gap: 2cqmin;
+		margin-bottom: 6cqmin;
+	}
+
+	.new-track-label {
+		font-size: clamp(0.75rem, 16cqmin, 1.25rem);
 	}
 
 	.new-track-icons :global(.new-track-plus) {
-		width: 0.875rem;
-		height: 0.875rem;
+		width: clamp(0.75rem, 20cqmin, 1.75rem);
+		height: clamp(0.75rem, 20cqmin, 1.75rem);
 	}
 
 	.new-track-icons :global(.new-track-icon) {
-		width: 1.25rem;
-		height: 1.25rem;
+		width: clamp(1.125rem, 36cqmin, 3.5rem);
+		height: clamp(1.125rem, 36cqmin, 3.5rem);
 	}
 
 	.new-track-icons :global(svg) {
 		stroke-width: 1.5;
 	}
 
-	/* Flat grammar: an empty slot's dashed edge on the card field — the
+	/* Flat grammar: an empty slot's dashed edge and no field — the
 	   column is somewhere a track will go, not a track. */
 	:global([data-grammar="flat"]) .new-track {
 		border-radius: 2px;
 		border-color: var(--line-strong);
-		background: var(--surface-well);
 	}
 	:global([data-grammar="flat"]) .new-track:active,
 	:global([data-grammar="flat"]) .new-track.is-pending {

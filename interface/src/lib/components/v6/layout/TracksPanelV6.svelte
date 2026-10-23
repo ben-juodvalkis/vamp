@@ -65,10 +65,10 @@
 	let flipLayout = $derived(uiPrefsStore.flipLayout);
 
 	// The last column is New Audio / New MIDI (`NewTrackButtons`), in the
-	// strips row only. The clip grid and stop row carry it empty, so their
-	// track columns stay the strips' width.
+	// strips row only, sized exactly like a strip. The clip grid and stop
+	// row carry it empty, so their track columns stay the strips' width.
 	let columnTemplate = $derived(
-		`grid-template-columns: repeat(${Math.max(visibleTracks.length, 1)}, minmax(var(--track-min-w), 1fr)) var(--new-track-col-w);`
+		`grid-template-columns: repeat(${visibleTracks.length + 1}, minmax(var(--track-min-w), 1fr));`
 	);
 
 	let rowStyle = $derived(
@@ -532,10 +532,11 @@
 		flex-direction: column;
 		gap: var(--spacing-lg);
 		/* Keep a followed strip clear of the hard panel edge, and at the
-		   right-hand end clear of the New track column pinned over it. */
+		   right-hand end clear of the New track column pinned over it.
+		   The row only scrolls once every column is at its floor, so the
+		   pinned column is then exactly --track-min-w wide. */
 		scroll-padding-inline: var(--spacing-lg)
-			calc(var(--new-track-col-w) + 2 * var(--spacing-lg));
-		--new-track-col-w: 64px;
+			calc(var(--track-min-w) + 2 * var(--spacing-lg));
 		/* Below this width strips stop compressing and the row scrolls
 		   instead. Declared ONCE here rather than per row: the strips, the
 		   clip grid and the stop row must resolve the SAME floor or their
