@@ -699,10 +699,10 @@ Permute placement (2026-04-30): the UI no longer fires a follow-up
 component that owns the create-or-reuse decision also owns the
 Permute append, so a single round-trip leaves the track ready and
 the broadcast wire double-load (multiple WS clients each firing
-their own follow-up) is structurally impossible. Foot-pedal hold
-continues to append Permute inline via `FootTriggerComponent` — it
-has its own `song.create_audio_track` call and bypasses
-`prepare_for_preset`.
+their own follow-up) is structurally impossible. The tracks panel's
+New Audio / New MIDI buttons are an empty-preset prepare; the foot
+pedal's hold creates no track since 2026-10-23 (it readies the next
+take — `FootTriggerComponent`).
 
 Browser-tree resolution goes through `BrowserCache` (built lazily
 per root: User Library + each Place), making preset lookups O(1)
@@ -721,11 +721,8 @@ check; it is the shared public helper. ADR-350 documents the
 production bug this gotcha caused in `TrackPrepareComponent`.
 
 The historical `/looping/v3/track/{create_audio,create_midi,
-ensure_devices}` wires were retired in the same change; the
-`/looping/v3/track/created` event still fires from
-`FootTriggerComponent` for the foot-pedal hold gesture but no UI
-listener consumes it any more — Permute lands on the Python side
-in both that path and the prepare path. `DeviceLoadComponent` no
+ensure_devices}` wires were retired in the same change, and
+`/looping/v3/track/created` is gone. `DeviceLoadComponent` no
 longer falls back to `song.view.selected_track` when `trackPath`
 is empty — such loads now reject with `track-not-found / empty-path`,
 making the "instrument lands on wrong track during selection echo
@@ -1028,7 +1025,7 @@ the pedal CCs itself — no Max, no OSC hop:
   through; channel `0` restores the omni parsing the old `ctlin` did), edge
   detection (both switches split high from low at value ≥ 64 — the
   retired Utility patch's literal `> 0` edge latched down on a pedal
-  whose "off" is a low non-zero value), and the 500ms
+  whose "off" is a low non-zero value), and the 650ms
   tap/hold state machine ported from `owner/Max Patches/foot-trigger.js`
   (press debounce, hold-suppresses-tap, press-seq guard against stale
   scheduled checks, plus a release-time clock check that keeps the

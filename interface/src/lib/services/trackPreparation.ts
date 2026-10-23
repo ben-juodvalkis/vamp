@@ -28,8 +28,8 @@
  * ``/looping/v3/device/load`` from the UI after each ack; under
  * multi-client subscriptions that double-loaded the device, and on
  * MIDI loads it added a perceptible second hop after the instrument
- * landed. Foot-pedal hold continues to append Permute inline on the
- * Python side via its own path (FootTriggerComponent).
+ * landed. The tracks panel's New Audio / New MIDI buttons
+ * (`NewTrackButtons`) are an empty-preset prepare.
  */
 
 import { send } from '$lib/api/simpleClient';

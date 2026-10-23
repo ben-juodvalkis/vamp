@@ -98,7 +98,7 @@ Any momentary or latching MIDI footswitch on USB:
 2. In the MIDI Ports list, turn that port's **Track** and **Remote** switches off.
 3. In Vamp's **Settings → General → Foot Switch**, press **Learn** and press the pedal.
 
-A tap walks record → close → play → overdub; a hold makes a new armed audio track.
+A tap walks record → close → play → overdub; a hold stops the track and moves to the next empty slot, so the next tap records a new clip. New Audio and New MIDI, right of the last track, make a track.
 
 ### Capture
 

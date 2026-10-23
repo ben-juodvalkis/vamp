@@ -51,7 +51,8 @@ unrelated to what you're testing.
 - [ ] ~~Press **+ Audio** on the central display~~ — **STALE**: no + Audio / + MIDI buttons in current UI; track creation is foot-pedal gesture or preset browser load only
 - [ ] ~~Press **+ MIDI** → new MIDI track appears~~ — **STALE**: see above
 - [ ] Delete a track from Live's UI → UI tree updates within a frame, no orphan rows
-- [ ] Foot-pedal hold gesture (or simulate via `/looping/v3/foot/hold`) creates a track + loads default preset
+- [ ] Foot-pedal hold (or `/looping/v3/foot/hold`) on a playing clip stops the track and highlights the next empty slot below; at the last scene it appends one. The next tap records there
+- [ ] New Audio / New MIDI (right of the last track) gives an armed empty track of that kind with Permute, selected
 - [ ] Track rename in Live propagates to UI; rename in UI propagates to Live
 
 ## 4 · Devices + presets
