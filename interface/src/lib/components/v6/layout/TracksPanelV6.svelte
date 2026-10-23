@@ -731,6 +731,11 @@
 	.track-col {
 		min-width: 0;
 		min-height: 0;
+		/* A strip's own layers (volume ticks, load veil, up to z 20) stay
+		   inside its column, so the pinned New track column covers a strip
+		   scrolling under it. The group arm (z 1) still paints over the
+		   strip it grows out of. */
+		isolation: isolate;
 		/* The gutter is dead space to the grid, but not to a finger aimed
 		   at a strip's edge — which is where its volume ticks are drawn.
 		   Each strip's fader takes half of the gutter on each side
