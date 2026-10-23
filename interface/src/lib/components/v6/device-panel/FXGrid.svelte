@@ -7,6 +7,8 @@
   import GuitarControl from './GuitarControl.svelte';
   import SquashControl from './SquashControl.svelte';
   import GlitchControl from './GlitchControl.svelte';
+  import ChorusControl from './ChorusControl.svelte';
+  import { trackCategory } from '$lib/services/trackCategory';
   import { provideFxScope } from '$lib/components/v6/central/fxScope';
   import { usePadChainRows } from '$lib/components/v6/central/usePadChainRows.svelte';
   import { activeDrumRackScope, selectedDrumRack } from '$lib/services/deviceViewRouter.svelte';
@@ -112,6 +114,17 @@
   const isMasterTrack = $derived(heldTrack ? heldTrack.trackPath === 'master' : selectedTrackStore.trackIndex === -1);
   const gridKind = $derived(isAudioTrack ? ('audio' as const) : ('midi' as const));
 
+  // The Drum tile is for a track whose instrument came from the Drum or
+  // Perc category; every other track (audio and master included) gets the
+  // Chorus in that cell (2026-10-23, the user's call). Chorus keeps its
+  // own slot (fx9), so the swap is only which tile is drawn there.
+  const gridTrack = $derived(heldTrack ?? v3Store.tracks.get(selectedTrackStore.selectedTrackPath));
+  const drumCategory = $derived.by(() => {
+    const { category } = trackCategory(gridTrack ?? undefined);
+    return category === 'drum' || category === 'perc';
+  });
+  const chorusIndex = FX_GRID_LAYOUT.findIndex((s) => s.position === 'fx9');
+
   provideFxScope(() => scope);
 
   // Effect presence per pad, ready before a finger lands (subscribed for
@@ -144,7 +157,8 @@
        audio and MIDI, and auto-placement cannot do both from one DOM
        order. Auto Pan and Glitch lead row 2 and Squash stands over Gain at the
        right on every track; on MIDI Rand Oct is full height, on audio the Guitar
-       stands under the Bass (2026-10-19).
+       stands under the Bass (2026-10-19). The Drum cell holds the Chorus on
+       any track not from the Drum or Perc category (2026-10-23).
 
        gap-2 (8px) is deliberate, on the app's interior ladder (16 frames a
        panel, 8 separates tiles inside one, 4 separates rows inside a tile).
@@ -178,6 +192,9 @@
                view. Rand Oct is a MIDI-effect control and would sit inert
                here. BassControl resolves its own `bass` slot. -->
           <BassControl />
+        {:else if slot.position === 'fx6' && !drumCategory}
+          <!-- Not a Drum or Perc track: the Chorus in the Drum's cell. -->
+          <ChorusControl device={devices[chorusIndex]} position="fx9" />
         {:else}
           <Component device={devices[i]} position={slot.position} />
         {/if}
