@@ -26,8 +26,9 @@ They are re-read on the clip's `notes/changed`.
 On the DrumCell, Sampler and Simpler kits the strip is a third row of the
 lead grid, from Gain to the right edge, with the pads running down beside
 it; on the other kits it is the foot of the controls column. Either way
-the controls give up about a third of their height. An effect's pane on
-the scoped pad hides it.
+it is one pad row tall, a quarter of the pads' height, its top level with
+the fourth pad's, and the controls give that up. An effect's pane on the
+scoped pad hides it.
 
 ## Consequences
 - With nothing playing on the track the strip says "No clip playing" and

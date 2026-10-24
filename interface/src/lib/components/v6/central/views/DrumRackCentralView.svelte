@@ -670,9 +670,11 @@
   }
   /* The scoped pad's notes strip (2026-10-24): a third row under the
      controls, from Gain to the right edge, the pads running down beside it.
-     It takes about a third of the controls' height, which they give up. */
+     One pad row tall (the user's call): the controls and the strip split
+     the pads' height 3:1, which lands the strip's top within a pixel of
+     the fourth pad's (the pads' 4px gaps against the grid's one). */
   .vm-lead-grid.vm-with-strip {
-    grid-template-rows: auto minmax(0, 1fr) minmax(0, 0.45fr);
+    grid-template-rows: auto minmax(0, 3fr) minmax(0, 1fr);
   }
   .vm-strip {
     grid-area: strip;
@@ -681,9 +683,12 @@
     min-width: 0;
     min-height: 0;
   }
-  /* In the flex row (the other kits) it is the controls column's foot. */
+  /* In the flex row (the other kits) it is the controls column's foot,
+     one pad row tall: a quarter of the column less the pads' three 4px
+     gaps, past the view's gap. */
   .vm-controls:not(.vm-controls-flat) > .vm-strip {
-    flex: 0 0 31%;
+    flex: 0 0 calc((100% - 12px) / 4);
+    margin-top: var(--central-gap);
   }
   .vm-lead-pill-cell {
     grid-area: pill;
