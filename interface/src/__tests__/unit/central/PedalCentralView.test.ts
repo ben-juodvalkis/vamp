@@ -24,7 +24,7 @@ vi.mock('$lib/utils/logger', () => ({
 	logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 }));
 
-import { render, cleanup } from '@testing-library/svelte';
+import { render, cleanup, fireEvent } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { SvelteMap } from 'svelte/reactivity';
 import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.svelte';
@@ -160,13 +160,12 @@ describe('PedalCentralView', () => {
 		const { container } = render(PedalCentralView, { props: { part: 'all' } });
 		await tick();
 		expect(container.textContent).not.toContain('Digital');
-		// Shifter, then Output · Mix over Redux, close the view on the right (2026-10-05).
+		// Shifter, then Color · Output · Mix, then Redux full height, close the
+		// view on the right (2026-10-24; the faders sat over Redux before).
 		const columns = container.querySelectorAll('.pedal-central-layout > .column');
-		expect(columns[columns.length - 2].classList.contains('shifter-column')).toBe(true);
-		const last = columns[columns.length - 1];
-		expect(last.classList.contains('sat-redux-column')).toBe(true);
-		expect(last.children[0].classList.contains('saturator-faders')).toBe(true);
-		expect(last.children[1].classList.contains('redux-column')).toBe(true);
+		expect(columns[columns.length - 3].classList.contains('shifter-column')).toBe(true);
+		expect(columns[columns.length - 2].classList.contains('saturator-column')).toBe(true);
+		expect(columns[columns.length - 1].classList.contains('redux-column')).toBe(true);
 		expect(slider(container, 'Shifter')).toBeDefined();
 	});
 
@@ -222,7 +221,7 @@ describe('PedalCentralView', () => {
 		expect(guitar.container.querySelector('.pedal-column')).not.toBeNull();
 		expect(guitar.container.querySelector('.guitar-section')).not.toBeNull();
 		expect(guitar.container.querySelector('.shifter-column')).toBeNull();
-		expect(guitar.container.querySelector('.sat-redux-column')).toBeNull();
+		expect(guitar.container.querySelector('.redux-column')).toBeNull();
 		guitar.unmount();
 
 		const effects = render(PedalCentralView);
@@ -230,10 +229,11 @@ describe('PedalCentralView', () => {
 		expect(effects.container.querySelector('.pedal-column')).toBeNull();
 		expect(effects.container.querySelector('.guitar-section')).toBeNull();
 		expect(effects.container.querySelector('.shifter-column')).not.toBeNull();
-		expect(effects.container.querySelector('.sat-redux-column')).not.toBeNull();
-		// The Drum cell holds the Chorus on audio, so the Drum Buss is here, XY first.
-		expect(effects.container.querySelector('.drum-group .drum-buss-layout.embedded .drum-xy')).not.toBeNull();
-		expect(effects.container.querySelector('.drum-group')?.textContent).toContain('Boom');
+		expect(effects.container.querySelector('.redux-column')).not.toBeNull();
+		// The Drum cell holds the Chorus on audio, so the view ends in the
+		// Drum Buss's door; the Drum Buss itself is its own view's.
+		expect(effects.container.querySelector('[data-debug="drum-door"]')?.textContent).toBe('Drum');
+		expect(effects.container.textContent).not.toContain('Boom');
 	});
 
 	it('splits the same way on a MIDI track, the Drum Buss only where the Drum cell holds the Chorus', async () => {
@@ -243,25 +243,37 @@ describe('PedalCentralView', () => {
 		expect(guitar.container.querySelector('.pedal-column')).not.toBeNull();
 		expect(guitar.container.querySelector('.guitar-section')).not.toBeNull();
 		expect(guitar.container.querySelector('.left-stack .device-control')).toBeNull(); // the Gain is the grid's
-		expect(guitar.container.querySelector('.sat-redux-column')).toBeNull();
+		expect(guitar.container.querySelector('.redux-column')).toBeNull();
 		guitar.unmount();
 
 		// No category, no Drum Rack: not a drum track, so the Chorus has the Drum cell.
 		const effects = render(PedalCentralView);
 		await tick();
 		expect(effects.container.querySelector('.guitar-section')).toBeNull();
-		expect(effects.container.querySelector('.sat-redux-column')).not.toBeNull();
-		expect(effects.container.querySelector('.drum-group')).not.toBeNull();
+		expect(effects.container.querySelector('.redux-column')).not.toBeNull();
+		expect(effects.container.querySelector('[data-debug="drum-door"]')).not.toBeNull();
 		effects.unmount();
 
 		// Whole (master's view), with the Gain and no Drum Buss.
 		const whole = render(PedalCentralView, { props: { part: 'all' } });
 		await tick();
-		for (const part of ['.pedal-column', '.guitar-section', '.shifter-column', '.sat-redux-column']) {
+		for (const part of ['.pedal-column', '.guitar-section', '.shifter-column', '.saturator-column', '.redux-column']) {
 			expect(whole.container.querySelector(part)).not.toBeNull();
 		}
 		expect(whole.container.querySelector('.left-stack .device-control')).not.toBeNull();
-		expect(whole.container.querySelector('.drum-group')).toBeNull();
+		expect(whole.container.querySelector('[data-debug="drum-door"]')).toBeNull();
+	});
+
+	it('ends in a Drum button off a drum track that loads the Drum Buss and opens its view', async () => {
+		seed([saturator({})], true);
+		const { container } = render(PedalCentralView);
+		await tick();
+		const door = container.querySelector<HTMLButtonElement>('[data-debug="drum-door"]')!;
+		await fireEvent.click(door);
+		await tick();
+		const loads = vi.mocked(send).mock.calls.filter(([addr]) => addr === '/looping/v3/device/load');
+		expect(loads.length).toBe(1);
+		expect(centralDisplayStore.isViewActive('device', 'drum')).toBe(true);
 	});
 
 	it('ghosts the Guitar section on a track with no amp rack', async () => {

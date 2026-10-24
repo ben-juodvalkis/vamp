@@ -48,8 +48,8 @@ function track(devices: DeviceRecord[]): TrackRecord {
 	};
 }
 
-function seed(devices: DeviceRecord[]) {
-	replaceTree(3, [track(devices)]);
+function seed(devices: DeviceRecord[], role = 'drum') {
+	replaceTree(3, [{ ...track(devices), role }]);
 	selectedTrackStore.handleTrackSelected(0);
 	fxGrid.resetForTrackChange();
 }
@@ -87,5 +87,21 @@ describe('DrumBussCentralView', () => {
 		expect(container.querySelector('.drum-buss-layout')?.classList.contains('slot-ghost')).toBe(true);
 		await fireEvent.click(container.querySelector('.comp-toggle')!);
 		expect(sendMock).toHaveBeenCalledWith('/looping/v3/device/load', [TRACK, '', '', 'native:DrumBuss', 'Drum Buss']);
+	});
+});
+
+describe('DrumBussCentralView — the Drum XY where the grid has none (2026-10-24)', () => {
+	it('leaves the XY to the grid on a drum track', async () => {
+		seed([drumBuss({})]);
+		const { container } = render(DrumBussCentralView);
+		await tick();
+		expect(container.querySelector('.drum-xy')).toBeNull();
+	});
+
+	it('leads with the Drum XY on a track whose Drum cell holds the Chorus', async () => {
+		seed([drumBuss({})], 'synth');
+		const { container } = render(DrumBussCentralView);
+		await tick();
+		expect(container.querySelector('.drum-buss-layout.with-xy .drum-xy')).not.toBeNull();
 	});
 });

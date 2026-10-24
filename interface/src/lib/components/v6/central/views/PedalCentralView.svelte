@@ -49,9 +49,9 @@
    * so the view splits in two: the Gtr (and
    * Bass) tile opens `GuitarCentralView`, which draws this view's `guitar`
    * part (the Pedal, then the Guitar rack with the Wah), and the Saturator
-   * tile draws its `effects` part (the Shifter, then the Saturator's Output
-   * and Mix over Redux, then the Drum Buss where the Drum cell holds the
-   * Chorus). `all`, the whole view with the Gain, is for a host that asks.
+   * tile draws its `effects` part (the Shifter, the Saturator's Color,
+   * Output and Mix, Redux at full height, and a Drum button where the Drum
+   * cell holds the Chorus). `all`, the whole view with the Gain, is for a host that asks.
    *
    * NO {#if device} gate - always renders, handles its own state.
    * `part` is optional: left out, it follows the track (see above).
@@ -69,7 +69,7 @@
   import SectionDivider from '../SectionDivider.svelte';
   import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
   import { drumCellHoldsChorus } from '$lib/components/v6/device-panel/drumCell.svelte';
-  import DrumBussCentralView from './DrumBussCentralView.svelte';
+  import { openDeviceView } from '$lib/services/deviceViewRouter.svelte';
 
   interface Props {
     part?: 'all' | 'guitar' | 'effects';
@@ -81,9 +81,16 @@
   const shown = $derived(part ?? 'effects');
   const withGuitar = $derived(shown !== 'effects');
   const withEffects = $derived(shown !== 'guitar');
-  // Where the Drum cell holds the Chorus (audio and non-drum tracks), the
-  // Drum Buss, XY and all, closes this view's effects part (2026-10-23).
+  // Where the Drum cell holds the Chorus (audio, Main and non-drum tracks)
+  // the grid has no door to the Drum Buss, so this view ends in one: a Drum
+  // button that inserts it if the track has none and opens its view, which
+  // carries the Drum XY there (2026-10-24, the user's call; the whole Drum
+  // Buss was embedded here the day before).
   const withDrum = $derived(shown === 'effects' && drumCellHoldsChorus());
+  function openDrum() {
+    drum.loadIfGhost();
+    openDeviceView('drum', { device: drum.device, color: drum.color });
+  }
   const drum = useFxGridSlot('drum');
 
   const fx = useFxGridSlot('pedal');
@@ -122,6 +129,7 @@
   }
 
   let drumInk = $derived(trackInk(drum.color.primary, paintModeReactive()));
+  let reduxInk = $derived(trackInk(redux.color.primary, paintModeReactive()));
 
   let saturatorInk = $derived({
     primary: trackInk(saturator.color.primary, paintModeReactive()),
@@ -268,12 +276,12 @@
       ...(withEffects
         ? [
             SLIDER, SEAM, // shifter
-            XY // output · mix over redux
+            'minmax(0, 3fr)', SEAM, // the Saturator's Color · Output · Mix
+            XY // redux, full height
           ]
         : []),
-      // the Drum Buss: its XY, five slider columns and Boom, one track
-      // holding its own grid, as wide as nine sliders
-      ...(withDrum ? [SEAM, 'minmax(0, 9fr)'] : [])
+      // the Drum button
+      ...(withDrum ? [SEAM, SLIDER] : [])
     ].join(' ')
   );
 </script>
@@ -450,12 +458,13 @@
     />
   </div>
 
-  <!-- COLUMN 5: the Saturator's Output and Mix side by side over the Redux
-       pad, the column two sliders wide (user, 2026-10-05). Its XY is the
-       grid tile that opened this view. -->
+  <!-- COLUMN 5: the Saturator's Color, Output and Mix side by side, full
+       height, then Redux in a column of its own (2026-10-24, the user's
+       call; the faders sat over Redux before). The Saturator's Drive is the
+       grid slider that opened this view. -->
   <SectionDivider orientation="vertical" ink={saturatorInk.primary} />
 
-  <div class="column pad sat-redux-column">
+  <div class="column saturator-column">
     <div class="saturator-faders" style={saturator.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
       {#each SATURATOR_FADERS as fader (fader.index)}
         <div class="slider-col">
@@ -475,7 +484,12 @@
         </div>
       {/each}
     </div>
-    <div class="xy-wrapper redux-column" class:slot-ghost={redux.isGhost}>
+  </div>
+
+  <SectionDivider orientation="vertical" ink={reduxInk} />
+
+  <div class="column pad redux-column" class:slot-ghost={redux.isGhost}>
+    <div class="xy-wrapper">
       <ReduxControl device={redux.device} icon="redux" />
     </div>
   </div>
@@ -484,17 +498,35 @@
 
   {#if withDrum}
   <SectionDivider orientation="vertical" ink={drumInk} />
-  <div class="drum-group">
-    <DrumBussCentralView embedded />
+  <!-- The Drum Buss's door: inserts it if the track has none, then opens
+       its view (the Drum XY and its controls). Controls nothing itself. -->
+  <div class="column drum-col">
+    <button
+      type="button"
+      class="physical-button drum-door"
+      class:is-ghost={drum.isGhost}
+      data-debug="drum-door"
+      style="--btn-tint: {drumInk};"
+      aria-label={drum.isGhost ? 'Add a Drum Buss and open it' : 'Open the Drum Buss'}
+      onclick={openDrum}
+    >Drum</button>
   </div>
   {/if}
 </div>
 
 <style>
-  .drum-group {
+  .drum-col {
     min-width: 0;
+  }
+  .drum-door {
+    flex: 1 1 0;
     min-height: 0;
-    height: 100%;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--btn-tint);
+  }
+  .drum-door.is-ghost {
+    opacity: var(--opacity-ghost);
   }
 
   .pedal-central-layout {
@@ -589,9 +621,9 @@
     font-weight: var(--font-weight-medium);
   }
 
-  /* Output · Mix over Redux, each half the column's height; the two
-     faders split its width with the same gap as the grid's, so each is
-     one slider wide. */
+  /* Color · Output · Mix at full height; the three faders split the
+     column's width with the same gap as the grid's, so each is one slider
+     wide. */
   .saturator-faders {
     flex: 1 1 0;
     min-height: 0;

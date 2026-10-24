@@ -45,5 +45,13 @@ the Gtr slider is the Gain.
 - The Drum XY embedded in the Saturator's view keeps the view up when
   touched (`disableCentralViewOnTap`).
 
+## Amendment (2026-10-24, the user's call)
+The Drum Buss is no longer embedded. Where the Drum cell holds the Chorus
+the Saturator's view ends in a **Drum button** that inserts a Drum Buss if
+the track has none and opens the Drum Buss view, which leads with the
+Drum XY wherever the grid has no Drum tile. The room it freed puts the
+Saturator's Color, Output and Mix side by side at full height and Redux in
+a full-height column of its own, on every track.
+
 ## Tags
 `fx-grid`, `central-view`, `guitar`, `pedal`, `drum-buss`, `audio-track`

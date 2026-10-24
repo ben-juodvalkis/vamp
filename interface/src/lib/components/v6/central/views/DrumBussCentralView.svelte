@@ -14,9 +14,10 @@
    * `Drum Buss.adv` through `sendParam`. Squash (the Glue Compressor) is
    * not here; the Gain / Utility view mounts it.
    *
-   * `embedded` (2026-10-23): on an audio track the Drum cell holds the
-   * Chorus, so the Saturator's view mounts this one inside its own grid,
-   * with the Drum XY leading it and no inset of its own.
+   * Where the FX grid has no Drum tile (its cell holds the Chorus: audio,
+   * Main and non-drum tracks, ADR-465), the Drum XY leads this view
+   * (2026-10-24, the user's call), so the view is the Drum Buss's whole
+   * face there. The Saturator view's Drum button opens it.
    */
 
   import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
@@ -30,11 +31,10 @@
   import type { DragInfo } from '$lib/actions/drag';
   import { segmentIndex, scrubBoxOf, type ScrubBox } from '$lib/utils/segmentScrub';
   import DrumBussControl from '$lib/components/v6/device-panel/DrumBussControl.svelte';
+  import { drumCellHoldsChorus } from '$lib/components/v6/device-panel/drumCell.svelte';
 
-  interface Props {
-    embedded?: boolean;
-  }
-  let { embedded = false }: Props = $props();
+  // The grid has no Drum tile here, so the view carries its XY.
+  const withXY = $derived(drumCellHoldsChorus());
 
   const drum = useFxGridSlot('drum');
 
@@ -124,8 +124,8 @@
   }
 </script>
 
-<div class="drum-buss-layout" class:embedded class:slot-ghost={drum.isGhost}>
-  {#if embedded}
+<div class="drum-buss-layout" class:with-xy={withXY} class:slot-ghost={drum.isGhost}>
+  {#if withXY}
     <!-- The Drum XY (transients x dry/wet), the grid tile's control. -->
     <div class="col drum-xy">
       <DrumBussControl device={drum.device} disableCentralViewOnTap={true} />
@@ -251,11 +251,9 @@
     width: 100%;
     padding: var(--central-inset);
   }
-  /* Embedded, the Drum XY leads as a pad two columns wide, and the host's
-     inset is the only one. */
-  .drum-buss-layout.embedded {
+  /* With the Drum XY leading, a pad two columns wide. */
+  .drum-buss-layout.with-xy {
     grid-template-columns: repeat(7, minmax(0, 1fr)) auto repeat(2, minmax(0, 1fr));
-    padding: 0;
   }
   .drum-xy {
     grid-column: span 2;
