@@ -234,13 +234,15 @@
 		border-radius: 2px;
 		width: 100%;
 		height: 100%;
-		border: 1px solid var(--line-strong);
+		/* A button is framed bright in its own glyph colour (as the clip
+		   view's buttons are), which a slider never is. */
+		border: 1px solid color-mix(in oklab, currentColor 70%, transparent);
 		background: var(--surface-well);
 		color: var(--act-rec);
 	}
 	:global([data-grammar="flat"]) .record-button:hover {
 		background: var(--secondary);
-		border-color: var(--line-strong);
+		border-color: color-mix(in oklab, currentColor 70%, transparent);
 	}
 	:global([data-grammar="flat"]) .record-button.recording {
 		background: var(--act-rec);

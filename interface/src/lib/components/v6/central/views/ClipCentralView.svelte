@@ -969,9 +969,12 @@ import { logger } from '$lib/utils/logger';
 	:global([data-grammar="flat"]) .clip-central-root {
 		background: transparent; /* no track wash */
 	}
+	/* Buttons are framed in their own glyph colour, bright, all the way
+	   round — what tells them from a slider, which has no frame of its own
+	   ink. Disabled dims the frame with the glyph; ON keeps its solid fill. */
 	:global([data-grammar="flat"]) .editor-toggle {
 		border-radius: 2px;
-		border-color: var(--line-strong);
+		border-color: color-mix(in oklab, currentColor 70%, transparent);
 		background: var(--surface-well);
 		color: var(--foreground);
 	}
@@ -993,7 +996,7 @@ import { logger } from '$lib/utils/logger';
 	:global([data-grammar="flat"]) .stacked-switches .btn-switch { font-size: 1rem; }
 	:global([data-grammar="flat"]) .btn-well {
 		background: var(--surface-well);
-		border: 1px solid var(--line-strong);
+		border: 1px solid color-mix(in oklab, currentColor 70%, transparent);
 		color: var(--foreground);
 		box-shadow: none;
 	}
@@ -1031,12 +1034,12 @@ import { logger } from '$lib/utils/logger';
 		border-color: var(--line-strong);
 	}
 	:global([data-grammar="flat"]) .clip-switch {
-		border: 1px solid var(--line-strong);
+		border: 1px solid color-mix(in oklab, currentColor 70%, transparent);
 		background: var(--surface-well);
 		color: var(--foreground);
 	}
 	:global([data-grammar="flat"]) .clip-switch:hover:not(:disabled) {
-		border-color: var(--line-strong);
+		border-color: color-mix(in oklab, currentColor 70%, transparent);
 		background: var(--secondary);
 	}
 	:global([data-grammar="flat"]) .clip-switch.active {
