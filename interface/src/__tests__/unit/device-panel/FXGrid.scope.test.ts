@@ -284,7 +284,7 @@ describe('FXGrid — the grid is the held pad\'s', () => {
  * implicit third row. That is what keeps the XY tiles and the ruler still
  * when the selected track changes kind.
  */
-describe("the Drum cell is the Drum's only on a Drum or Perc track", () => {
+describe("the Drum cell is the Drum's only on a drum track", () => {
 	const fx6 = (container: HTMLElement) => container.querySelector<HTMLElement>('[data-cell="fx6"]')!;
 
 	it('draws the Drum on a track filed under Drum, and under Perc', async () => {
@@ -298,13 +298,20 @@ describe("the Drum cell is the Drum's only on a Drum or Perc track", () => {
 		expect(fx6(container).textContent).not.toContain('Chorus');
 	});
 
-	it('draws the Chorus there on any other track, and on one with no category', async () => {
+	it('draws the Chorus there on any other track, even one holding a Drum Rack', async () => {
 		replaceTree(3, [{ ...drums(), role: 'synth' }]);
 		const { container } = render(FXGrid);
 		await tick();
 		expect(fx6(container).textContent).toContain('Chorus');
+	});
 
+	it('falls back to the instrument when the track records no category', async () => {
 		replaceTree(3, [{ ...drums(), role: '' }]);
+		const { container } = render(FXGrid);
+		await tick();
+		expect(fx6(container).textContent).not.toContain('Chorus');
+
+		replaceTree(3, [{ ...drums(), role: '', devices: new SvelteMap() }]);
 		await tick();
 		expect(fx6(container).textContent).toContain('Chorus');
 	});
