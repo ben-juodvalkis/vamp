@@ -157,7 +157,7 @@ describe('the audio track\'s fx1 column', () => {
 		expect(container.querySelector('.fx-grid')?.classList.contains('grid-cols-10')).toBe(true);
 	});
 
-	it('does not draw on a MIDI track, which keeps Rand Oct in that slot', async () => {
+	it('does not draw on a MIDI track, which keeps Rand Oct in that slot over the Gtr', async () => {
 		const midi = audioTrack();
 		midi.hasMidiInput = true;
 		midi.hasAudioInput = false;
@@ -171,7 +171,7 @@ describe('the audio track\'s fx1 column', () => {
 			.map((t) => t.textContent ?? '');
 		expect(titles.some((t) => t.includes('Rand Oct'))).toBe(true);
 		expect(titles.some((t) => t.includes('Bass'))).toBe(false);
-		expect(titles.some((t) => t.includes('Gtr'))).toBe(false);
+		expect(titles.some((t) => t.includes('Gtr'))).toBe(true);
 	});
 });
 

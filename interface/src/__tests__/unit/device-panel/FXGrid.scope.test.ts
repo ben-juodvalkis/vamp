@@ -26,7 +26,7 @@ import { send } from '$lib/api/simpleClient';
 // `FX_GRID_LAYOUT` undefined while `slotRegistry` initialises.
 import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.svelte';
 import FXGrid from '$lib/components/v6/device-panel/FXGrid.svelte';
-import { FX_GRID_LAYOUT, FX_GRID_COLUMNS, SQUASH_CELL, GLITCH_CELL, AUDIO_GUITAR_CELL, cellFor, type GridCell } from '$lib/config/fxGridLayout';
+import { FX_GRID_LAYOUT, FX_GRID_COLUMNS, SQUASH_CELL, GLITCH_CELL, GUITAR_CELL, cellFor, type GridCell, type GridTrackKind } from '$lib/config/fxGridLayout';
 import { currentInstrumentStore } from '$lib/stores/v6/currentInstrumentStore.svelte';
 import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
 import { setPropertySender } from '$lib/stores/v3/propertySubscriptions.svelte';
@@ -172,10 +172,10 @@ describe('FXGrid — the grid is the held pad\'s', () => {
 		const titles = Array.from(container.querySelectorAll('.device-control')).map((t) => t.textContent ?? '');
 		expect(titles.some((t) => t.includes('Chorus'))).toBe(false);
 		expect(titles.some((t) => t.includes('Pitch'))).toBe(false);
-		// MIDI: Rand Oct is full height; Variation is hidden for now.
-		expect(cellOf('Rand Oct')).toBe('1/1/1/2');
+		// MIDI: Rand Oct over the Gtr (2026-10-23); Variation is hidden for now.
+		expect(cellOf('Rand Oct')).toBe('1/1/1/1');
+		expect(cellOf('Gtr')).toBe('1/2/1/1');
 		expect(Array.from(container.querySelectorAll('.device-control')).some((t) => t.textContent?.includes('Var'))).toBe(false);
-		expect(container.textContent).not.toContain('Gtr');
 		drumPadScope.press(RACK, 38, 1, 0);
 		await tick();
 		expect(tileFor(container, 'Glue').getAttribute('data-fx-scope')).toBe('38');
@@ -325,10 +325,10 @@ describe("the Drum cell is the Drum's only on a drum track", () => {
 });
 
 describe('the FX grid layout is ten columns wide', () => {
-	function occupancy(kind: 'midi' | 'audio') {
+	function occupancy(kind: GridTrackKind) {
 		const cells: Array<[string, GridCell]> = FX_GRID_LAYOUT.filter((s) => !s.hidden).map((s) => [s.deviceType as string, cellFor(s, kind)]);
 		cells.push(['squash', SQUASH_CELL], ['glitch', GLITCH_CELL]);
-		if (kind === 'audio') cells.push(['guitar', AUDIO_GUITAR_CELL]);
+		if (kind !== 'master') cells.push(['guitar', GUITAR_CELL]);
 		const grid: string[][] = [0, 1].map(() => Array(FX_GRID_COLUMNS).fill(''));
 		for (const [name, c] of cells) {
 			for (let r = c.row; r < c.row + c.rowSpan; r++) {
@@ -343,10 +343,16 @@ describe('the FX grid layout is ten columns wide', () => {
 		return grid;
 	}
 
-	it('tiles both rows exactly on MIDI, with Rand Oct full height and Squash over Gain', () => {
-		const grid = occupancy('midi');
+	it('tiles both rows exactly on master, with Rand Oct\'s cell full height', () => {
+		const grid = occupancy('master');
 		expect(grid.flat().every(Boolean)).toBe(true);
 		expect([grid[0][0], grid[1][0]]).toEqual(['random', 'random']);
+	});
+
+	it('tiles both rows exactly on MIDI, with Rand Oct over the Guitar and Squash over Gain', () => {
+		const grid = occupancy('midi');
+		expect(grid.flat().every(Boolean)).toBe(true);
+		expect([grid[0][0], grid[1][0]]).toEqual(['random', 'guitar']);
 		// The user's order (2026-10-15).
 		expect(grid[0].slice(1, 9).filter((_, i) => i % 2 === 0)).toEqual(['eq', 'filter', 'saturator', 'drum']);
 		expect(grid[1].slice(1, 9).filter((_, i) => i % 2 === 0)).toEqual(['tremolo', 'glitch', 'echo', 'reverb']);
@@ -365,10 +371,11 @@ describe('the FX grid layout is ten columns wide', () => {
 	it('keeps every XY tile in the same place on both kinds', () => {
 		for (const s of FX_GRID_LAYOUT.filter((slot) => slot.span === 2)) {
 			expect(cellFor(s, 'audio'), s.deviceType).toEqual(cellFor(s, 'midi'));
+			expect(cellFor(s, 'master'), s.deviceType).toEqual(cellFor(s, 'midi'));
 		}
 	});
 
-	it('has no Guitar layout entry: on MIDI it lives in PedalCentralView', () => {
+	it('has no Guitar layout entry: FXGrid places it from GUITAR_CELL', () => {
 		expect(FX_GRID_LAYOUT.some((s) => s.deviceType === 'guitar')).toBe(false);
 	});
 });

@@ -23,14 +23,19 @@ tile there.
   view's own controls (Trim over Comp, Soft/Medium/Hard, Drive, Crunch,
   Damp, Boom), embedded (`DrumBussCentralView embedded`).
 
-**On a MIDI track nothing changes**: one Pedal view, whichever tile
+**Amended the same day (the user's call): MIDI tracks get the Gtr slider
+too**, under Rand Oct in column 1, and so the same split. The Drum Buss
+joins the Saturator's view wherever the Drum cell holds the Chorus (every
+audio track, every track that is not a drum track; ADR-465). Only master,
+which has no Gtr, keeps one whole Pedal view, Gain included, whichever tile
 opened it, so a touch inside it never swaps the view out from under the
 finger.
 
 `PedalCentralView` takes a `part` (`all` · `guitar` · `effects`) and,
-left out, follows the track. Audio is the FX grid's own test
-(`gridTrackIsAudio()` in `device-panel/drumCell.svelte.ts`): the held
-strip's track while one is held, else the selected one.
+left out, follows the track: split wherever `gridHasGuitar()`
+(`device-panel/drumCell.svelte.ts`; the held strip's track while one is
+held, else the selected one). The view carries the Gain only whole: split,
+the Gtr slider is the Gain.
 
 ## Consequences
 - The guitar controls are one tap from the Gtr column on an audio track,

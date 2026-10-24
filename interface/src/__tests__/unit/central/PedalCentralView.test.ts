@@ -137,7 +137,7 @@ afterEach(() => {
 describe('PedalCentralView', () => {
 	it('carries the Pedal pad and tabs, and only the Saturator\'s Output and Mix faders', async () => {
 		seed([saturator({ 1: 0.75, 8: 0.2, 10: 1, 11: 1 }), pedal()]);
-		const { container } = render(PedalCentralView);
+		const { container } = render(PedalCentralView, { props: { part: 'all' } });
 		await tick();
 		expect(container.querySelector('.pedal-column .pedal-tone .eq-panel')).not.toBeNull();
 		expect(container.querySelector('.pedal-column .pedal-tone')?.classList.contains('slot-ghost')).toBe(false);
@@ -157,7 +157,7 @@ describe('PedalCentralView', () => {
 
 	it('carries a Shifter fader in place of the Digital pad', async () => {
 		seed([]);
-		const { container } = render(PedalCentralView);
+		const { container } = render(PedalCentralView, { props: { part: 'all' } });
 		await tick();
 		expect(container.textContent).not.toContain('Digital');
 		// Shifter, then Output · Mix over Redux, close the view on the right (2026-10-05).
@@ -174,7 +174,7 @@ describe('PedalCentralView', () => {
 		HTMLElement.prototype.setPointerCapture = vi.fn();
 		HTMLElement.prototype.releasePointerCapture = vi.fn();
 		seed([]);
-		const { container } = render(PedalCentralView);
+		const { container } = render(PedalCentralView, { props: { part: 'all' } });
 		await tick();
 		const el = slider(container, 'Shifter')!;
 		el.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10 }));
@@ -187,7 +187,7 @@ describe('PedalCentralView', () => {
 
 	it('ghosts the Pedal pad and the Saturator faders on a track without either', async () => {
 		seed([]);
-		const { container } = render(PedalCentralView);
+		const { container } = render(PedalCentralView, { props: { part: 'all' } });
 		await tick();
 		expect(container.querySelector('.pedal-column .pedal-tone')?.classList.contains('slot-ghost')).toBe(true);
 		expect(container.querySelector('.pedal-column .pedal-drive')?.classList.contains('slot-ghost')).toBe(true);
@@ -196,7 +196,7 @@ describe('PedalCentralView', () => {
 
 	it('carries the Guitar rack: Gain, the Spring/Room pad over the Tremolo pad, and no Dirty/Clean', async () => {
 		seed([saturator({}), guitarRack()]);
-		const { container } = render(PedalCentralView);
+		const { container } = render(PedalCentralView, { props: { part: 'all' } });
 		await tick();
 		const tile = container.querySelector('.left-stack .device-control');
 		expect(tile?.classList.contains('device-ghost')).toBe(false);
@@ -236,22 +236,37 @@ describe('PedalCentralView', () => {
 		expect(effects.container.querySelector('.drum-group')?.textContent).toContain('Boom');
 	});
 
-	it('is one view on a MIDI track, whichever tile opened it', async () => {
+	it('splits the same way on a MIDI track, the Drum Buss only where the Drum cell holds the Chorus', async () => {
 		seed([saturator({}), guitarRack()]);
-		for (const View of [PedalCentralView, GuitarCentralView]) {
-			const { container, unmount } = render(View);
-			await tick();
-			for (const part of ['.pedal-column', '.guitar-section', '.shifter-column', '.sat-redux-column']) {
-				expect(container.querySelector(part)).not.toBeNull();
-			}
-			expect(container.querySelector('.drum-group')).toBeNull();
-			unmount();
+		const guitar = render(GuitarCentralView);
+		await tick();
+		expect(guitar.container.querySelector('.pedal-column')).not.toBeNull();
+		expect(guitar.container.querySelector('.guitar-section')).not.toBeNull();
+		expect(guitar.container.querySelector('.left-stack .device-control')).toBeNull(); // the Gain is the grid's
+		expect(guitar.container.querySelector('.sat-redux-column')).toBeNull();
+		guitar.unmount();
+
+		// No category, no Drum Rack: not a drum track, so the Chorus has the Drum cell.
+		const effects = render(PedalCentralView);
+		await tick();
+		expect(effects.container.querySelector('.guitar-section')).toBeNull();
+		expect(effects.container.querySelector('.sat-redux-column')).not.toBeNull();
+		expect(effects.container.querySelector('.drum-group')).not.toBeNull();
+		effects.unmount();
+
+		// Whole (master's view), with the Gain and no Drum Buss.
+		const whole = render(PedalCentralView, { props: { part: 'all' } });
+		await tick();
+		for (const part of ['.pedal-column', '.guitar-section', '.shifter-column', '.sat-redux-column']) {
+			expect(whole.container.querySelector(part)).not.toBeNull();
 		}
+		expect(whole.container.querySelector('.left-stack .device-control')).not.toBeNull();
+		expect(whole.container.querySelector('.drum-group')).toBeNull();
 	});
 
 	it('ghosts the Guitar section on a track with no amp rack', async () => {
 		seed([saturator({})]);
-		const { container } = render(PedalCentralView);
+		const { container } = render(PedalCentralView, { props: { part: 'all' } });
 		await tick();
 		expect(
 			container.querySelector('.left-stack .device-control')?.classList.contains('device-ghost')
@@ -263,7 +278,7 @@ describe('PedalCentralView', () => {
 		HTMLElement.prototype.releasePointerCapture = vi.fn();
 		seed([saturator({}), guitarRack()]);
 		centralDisplayStore.setView('device', 'pedal');
-		const { container } = render(PedalCentralView);
+		const { container } = render(PedalCentralView, { props: { part: 'all' } });
 		await tick();
 		const el = container.querySelector<HTMLElement>('.left-stack .device-control [role="slider"]');
 		expect(el).not.toBeNull();
@@ -275,7 +290,7 @@ describe('PedalCentralView', () => {
 
 	it('names the Pedal and Guitar Amp groups over their controls', async () => {
 		seed([saturator({}), guitarRack()]);
-		const { container } = render(PedalCentralView);
+		const { container } = render(PedalCentralView, { props: { part: 'all' } });
 		await tick();
 		const pedal = container.querySelector('.pedal-column')!.children[0];
 		expect(pedal.classList.contains('group-eyebrow')).toBe(true);
@@ -287,7 +302,7 @@ describe('PedalCentralView', () => {
 
 	it('heads the Guitar group with the Gain over the Wah, after the Pedal', async () => {
 		seed([saturator({}), guitarRack()]);
-		const { container } = render(PedalCentralView);
+		const { container } = render(PedalCentralView, { props: { part: 'all' } });
 		await tick();
 		const columns = container.querySelectorAll('.pedal-central-layout > .column');
 		expect(columns[0].classList.contains('pedal-column')).toBe(true);
@@ -313,14 +328,14 @@ describe('PedalCentralView', () => {
 
 	it('shows the Wah pedal macro\'s value on its slider', async () => {
 		seed([saturator({}), wahRack(127)]);
-		const { container } = render(PedalCentralView);
+		const { container } = render(PedalCentralView, { props: { part: 'all' } });
 		await tick();
 		expect(slider(container, 'Wah')!.getAttribute('aria-valuenow')).toBe('1');
 	});
 
 	it('titles the Wah slider with the chain Macro 2 selects, and subscribes the names', async () => {
 		seed([saturator({}), wahRack(0, 64)]);
-		const { container } = render(PedalCentralView);
+		const { container } = render(PedalCentralView, { props: { part: 'all' } });
 		await tick();
 		expect(_refcountForTest(WAH, 'chain_names')).toBe(1);
 		// No names yet (a surface that does not send them): the plain title.
@@ -335,7 +350,7 @@ describe('PedalCentralView', () => {
 		for (const [chain, name] of [[0, 'Wah'], [127, 'Ring']] as const) {
 			seed([saturator({}), wahRack(0, chain)]);
 			applyPropertyValue(WAH, 'chain_names', JSON.stringify(['Wah', 'Volume', 'Ring']));
-			const { container } = render(PedalCentralView);
+			const { container } = render(PedalCentralView, { props: { part: 'all' } });
 			await tick();
 			expect(slider(container, name), name).toBeDefined();
 			cleanup();
@@ -346,7 +361,7 @@ describe('PedalCentralView', () => {
 		HTMLElement.prototype.setPointerCapture = vi.fn();
 		HTMLElement.prototype.releasePointerCapture = vi.fn();
 		seed([saturator({})]);
-		const { container } = render(PedalCentralView);
+		const { container } = render(PedalCentralView, { props: { part: 'all' } });
 		await tick();
 		const el = slider(container, 'Wah')!;
 		el.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10 }));
@@ -361,7 +376,7 @@ describe('PedalCentralView', () => {
 		HTMLElement.prototype.releasePointerCapture = vi.fn();
 		seed([pedal()]);
 		centralDisplayStore.setView('device', 'pedal');
-		const { container } = render(PedalCentralView);
+		const { container } = render(PedalCentralView, { props: { part: 'all' } });
 		await tick();
 		const pad = container.querySelector<HTMLElement>('.pedal-tone .eq-panel');
 		expect(pad).not.toBeNull();
@@ -375,7 +390,7 @@ describe('PedalCentralView', () => {
 		HTMLElement.prototype.setPointerCapture = vi.fn();
 		HTMLElement.prototype.releasePointerCapture = vi.fn();
 		seed([pedal()]);
-		const { container } = render(PedalCentralView);
+		const { container } = render(PedalCentralView, { props: { part: 'all' } });
 		await tick();
 		const low = container.querySelector<HTMLElement>('.pedal-tone [data-band="low"]')!;
 		low.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 100 }));
@@ -388,7 +403,7 @@ describe('PedalCentralView', () => {
 
 	it('writes Drive and Dry/Wet together from the one Drive slider', async () => {
 		seed([pedal()]);
-		const { container } = render(PedalCentralView);
+		const { container } = render(PedalCentralView, { props: { part: 'all' } });
 		await tick();
 		const drive = container.querySelector<HTMLElement>('.pedal-drive [role="slider"]')!;
 		const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({

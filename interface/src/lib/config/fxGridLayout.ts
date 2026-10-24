@@ -69,12 +69,13 @@ export interface FXGridSlotConfig {
  * 11 slots on a TEN-column, two-row grid, every cell placed explicitly
  * (`col` / `row` / `span` / `rowSpan`) so placement can differ by track kind:
  *
- *   MIDI / master  col 1 Rand Oct (empty on master), full height
- *                  cols 2-9 row 1: EQ, Filter, Saturator, Drum
- *                           row 2: Tremolo (Auto Pan), Glitch, Echo, Reverb
- *                  col 10 Squash over Gain
- *   audio          col 1 Bass over Guitar
- *                  cols 2-10 identical
+ *   MIDI    col 1 Rand Oct over Gtr (2026-10-23)
+ *           cols 2-9 row 1: EQ, Filter, Saturator, Drum (Chorus off a
+ *                           drum track, ADR-465)
+ *                    row 2: Tremolo (Auto Pan), Glitch, Echo, Reverb
+ *           col 10 Squash over Gain
+ *   audio   col 1 Bass over Gtr; cols 2-10 identical (Chorus in Drum's cell)
+ *   master  col 1 one empty full-height cell; cols 2-10 identical
  *
  * 2026-10-15, last: the Chorus and Pitch tiles left the grid, their XYs
  * and their views now inside the Auto Pan view (the user's call). Chorus
@@ -99,7 +100,7 @@ export interface FXGridSlotConfig {
  * tiles became full-height columns. Both kinds are twelve columns, so the
  * XY tiles and the TotalMix ruler in layouts/default/Layout.svelte never move when the
  * selected track changes kind. Squash and the audio Guitar have no entries;
- * FXGrid places them from SQUASH_CELL and AUDIO_GUITAR_CELL below.
+ * FXGrid places them from SQUASH_CELL and GUITAR_CELL below.
  *
  * 2026-09-15: the grid lost a column. Gain's cell spans both rows, so each
  * row has nine columns left and the four XY pairs take eight of them —
@@ -252,8 +253,8 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
 /** The grid's column count. The TotalMix status strip in layouts/default/Layout.svelte repeats it by hand. */
 export const FX_GRID_COLUMNS = 10;
 
-/** Which placement a grid uses. Master and group tracks use MIDI's. */
-export type GridTrackKind = 'midi' | 'audio';
+/** Which placement a grid uses. Group tracks use MIDI's; master has no Gtr. */
+export type GridTrackKind = 'midi' | 'audio' | 'master';
 
 /** One cell on the ten-by-two grid: 1-based start column and row, plus spans. */
 export interface GridCell {
@@ -269,20 +270,25 @@ export const SQUASH_CELL: GridCell = { col: 10, row: 1, span: 1, rowSpan: 1 };
 /** Glitch (GlitchLoop): beside Pitch, under Filter, on every track. No layout entry. */
 export const GLITCH_CELL: GridCell = { col: 4, row: 2, span: 2, rowSpan: 1 };
 
-/** The Guitar rack's drive: the bottom of the first column, under the Bass, audio tracks only. No layout entry. */
-export const AUDIO_GUITAR_CELL: GridCell = { col: 1, row: 2, span: 1, rowSpan: 1 };
+/**
+ * The Guitar rack's drive: the bottom of the first column, under the Bass on
+ * audio and under Rand Oct on MIDI (2026-10-23), every track but master.
+ * No layout entry.
+ */
+export const GUITAR_CELL: GridCell = { col: 1, row: 2, span: 1, rowSpan: 1 };
 
 /**
- * Audio moves fx1 (the Bass there) over the Guitar in column 1 (2026-10-19). Every
- * other slot is placed the same on both kinds.
+ * Wherever the Guitar takes the foot of column 1, fx1 (the Bass on audio,
+ * Rand Oct on MIDI) is its top half. Every other slot is placed the same on
+ * every kind; master keeps Rand Oct's full-height (empty) cell.
  */
-const AUDIO_CELLS: Partial<Record<PositionKey, GridCell>> = {
+const GUITAR_COLUMN_CELLS: Partial<Record<PositionKey, GridCell>> = {
   fx1: { col: 1, row: 1, span: 1, rowSpan: 1 }
 };
 
 /** Where a layout slot sits for a track kind. */
 export function cellFor(slot: FXGridSlotConfig, kind: GridTrackKind): GridCell {
-  const override = kind === 'audio' ? AUDIO_CELLS[slot.position] : undefined;
+  const override = kind !== 'master' ? GUITAR_COLUMN_CELLS[slot.position] : undefined;
   return override ?? { col: slot.col, row: slot.row, span: slot.span, rowSpan: slot.rowSpan ?? 1 };
 }
 

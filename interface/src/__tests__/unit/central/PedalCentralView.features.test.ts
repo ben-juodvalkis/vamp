@@ -29,20 +29,20 @@ afterEach(() => {
 
 describe('PedalCentralView and the expressionPedal switch', () => {
 	it('draws no Wah before the bridge has said anything', () => {
-		const { queryByText, getByText } = render(PedalCentralView);
+		const { queryByText, getByText } = render(PedalCentralView, { props: { part: 'all' } });
 		expect(queryByText('Wah')).toBeNull();
 		expect(getByText('Fuzz')).toBeTruthy();
 	});
 
 	it('draws no Wah with the pedal switched off', () => {
 		pedal(false);
-		const { queryByText } = render(PedalCentralView);
+		const { queryByText } = render(PedalCentralView, { props: { part: 'all' } });
 		expect(queryByText('Wah')).toBeNull();
 	});
 
 	it('draws the Wah with the pedal switched on', () => {
 		pedal(true);
-		const { getAllByText } = render(PedalCentralView);
+		const { getAllByText } = render(PedalCentralView, { props: { part: 'all' } });
 		expect(getAllByText('Wah').length).toBeGreaterThan(0);
 	});
 });

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FX_GRID_LAYOUT, SQUASH_CELL, GLITCH_CELL, AUDIO_GUITAR_CELL, cellFor, cellStyle } from '$lib/config/fxGridLayout';
+  import { FX_GRID_LAYOUT, SQUASH_CELL, GLITCH_CELL, GUITAR_CELL, cellFor, cellStyle } from '$lib/config/fxGridLayout';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
   import { v3Store } from '$lib/stores/v3/normalized.svelte';
@@ -84,10 +84,10 @@
     slot11Device
   ]);
 
-  // Squash and, on audio, the Guitar have full-height columns of their own
+  // Squash and the Guitar (every track but master) have cells of their own
   // but no layout entry (the Bass and OTT tiles reach their slots the same
   // way), resolving `squash` / `guitar` through BaseDeviceControl's slotKey
-  // path. Their cells are SQUASH_CELL and AUDIO_GUITAR_CELL.
+  // path. Their cells are SQUASH_CELL and GUITAR_CELL.
   const squashDevice = $derived(selectedTrackStore.getFxGridSlot('squash', scopeKey).device);
   // Glitch (2026-10-15) the same way: GLITCH_CELL.
   const glitchLoopDevice = $derived(selectedTrackStore.getFxGridSlot('glitchLoop', scopeKey).device);
@@ -112,7 +112,7 @@
   // Keyed off the track index, not trackType — master reports neither
   // hasMidiInput nor hasAudioInput, so trackType is null there.
   const isMasterTrack = $derived(heldTrack ? heldTrack.trackPath === 'master' : selectedTrackStore.trackIndex === -1);
-  const gridKind = $derived(isAudioTrack ? ('audio' as const) : ('midi' as const));
+  const gridKind = $derived(isMasterTrack ? ('master' as const) : isAudioTrack ? ('audio' as const) : ('midi' as const));
 
   // The Drum cell holds the Chorus on any track that is not a drum track
   // (2026-10-23, the user's call; `drumCellHoldsChorus`). Chorus keeps its
@@ -166,11 +166,11 @@
        It is NOT bounded by label wrapping - "Rand Oct" going to two lines is
        fine, so do not treat the wrap point as a cap if you revisit this. -->
   <div class="h-full grid grid-cols-10 grid-rows-2 gap-2 fx-grid" class:fx-scoped={scoped}>
-    {#if isAudioTrack}
-      <!-- Audio: the Guitar rack's drive, under the Bass at the far left
-           (2026-10-19). On MIDI it is reached through the Pedal view's last
-           column instead. GuitarControl resolves its own `guitar` slot. -->
-      <div data-cell="guitar" data-col={AUDIO_GUITAR_CELL.col} data-row={AUDIO_GUITAR_CELL.row} data-span={AUDIO_GUITAR_CELL.span} data-row-span={AUDIO_GUITAR_CELL.rowSpan} style={cellStyle(AUDIO_GUITAR_CELL)}>
+    {#if !isMasterTrack}
+      <!-- The Guitar rack's drive at the foot of column 1, under the Bass on
+           audio (2026-10-19) and under Rand Oct on MIDI (2026-10-23); not on
+           master. GuitarControl resolves its own `guitar` slot. -->
+      <div data-cell="guitar" data-col={GUITAR_CELL.col} data-row={GUITAR_CELL.row} data-span={GUITAR_CELL.span} data-row-span={GUITAR_CELL.rowSpan} style={cellStyle(GUITAR_CELL)}>
         <GuitarControl device={guitarDevice} />
       </div>
     {/if}
