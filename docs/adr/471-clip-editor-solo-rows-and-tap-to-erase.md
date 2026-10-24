@@ -14,14 +14,19 @@ Erasing a note took a double-tap, chosen so a near miss could not delete.
 In practice it read as a tap that did nothing.
 
 ## Decision
-**A tap on a note name shows that row alone** (the user's call). The
-roll's lanes become the soloed pitches, the way Fold makes them the
-played pitches, so the row takes the full height; notes on other pitches
-are hidden and out of reach of a draw, a drag, the velocity lane and
-Quantize. Fingers on several names before the last one lifts show all
-their rows (hold one, tap the others). A hold that lets go counts as a
-tap. The same tap again — the rows already shown — shows every row; a new
-clip starts with none. The soloed keys wear the ON ink at a wash.
+**A note name solos its row, latched by a tap and momentary under a
+hold** (the user's call), on Mute's and Solo's rule (`momentaryPress`,
+ADR-427 addendum 3) and the Drum Rack pads' (one at a time). At
+finger-down the roll's lanes become that pitch alone, the way Fold makes
+them the played pitches, so the row takes the full height; notes on
+other pitches are hidden and out of reach of a draw, a drag, the
+velocity lane and Quantize. Let go under `MOMENTARY_HOLD_MS` and it
+latches; at or over it, or if the browser cancels the press, the rows
+from before the press come back. A press on the soloed row toggles back
+to every row by the same rule, so holding it peeks at the whole clip and
+letting go returns to the row. A press that turns into a pan before the
+hold puts the rows back. A new clip starts with none. The soloed key
+wears the ON ink at a wash.
 
 **A tap on a note erases it.** A press is a drag only past 8 px (a
 fingertip rolls on a tap; it was 2 px), and inside that slop the note no
@@ -36,8 +41,11 @@ moving is left alone, so a grab abandoned mid-thought deletes nothing.
   removed this way was not measured.
 - A note dragged up or down while soloed steps only between the soloed
   rows; with one row soloed its pitch cannot change, which is the point.
-- Hold-then-drag on a note name still scales that pitch's velocities and
-  solos nothing.
+- Hold-then-drag on a note name still scales that pitch's velocities;
+  the row is soloed while the finger is down and the hold restores it.
+- One row at a time: the first press hides every other name, so a
+  second finger has nothing to land on. A first cut soloed several rows
+  pressed together; the latch/momentary rule replaced it the same day.
 
 ## Tags
 `clip-view`, `gesture`, `notes`

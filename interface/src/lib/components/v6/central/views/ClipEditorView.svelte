@@ -163,22 +163,20 @@
 	let liveFoldLanes = $derived(foldLanes(notes.map((n) => n.pitch)));
 	let heldFoldLanes = $state<number[] | null>(null);
 
-	// ── Solo rows (a tap on a note name, ADR-471) ────────────────────
+	// ── Solo rows (a note name, ADR-471) ─────────────────────────────
 	// The roll shows only the soloed pitches, as lanes the way Fold shows
 	// its own, so the notes on them are fat and the rest are out of reach:
 	// hidden, untouched by a draw, a drag, the velocity lane or Quantize.
 	// It outranks Fold, and holds while the soloed rows empty (a row whose
-	// last note was moved or deleted stays, to draw on). Tapping the rows
-	// already soloed goes back to every row; a new clip starts with none.
+	// last note was moved or deleted stays, to draw on). The gutter decides
+	// latch or momentary, Mute's rule; a new clip starts with none.
 	let soloPitches = $state<number[]>([]);
 	$effect(() => {
 		void clipPath;
 		soloPitches = [];
 	});
 	function solo(pitches: number[]) {
-		const next = [...new Set(pitches)].sort((a, b) => a - b);
-		const same = next.length === soloPitches.length && next.every((p, i) => p === soloPitches[i]);
-		soloPitches = same ? [] : next;
+		soloPitches = [...new Set(pitches)].sort((a, b) => a - b);
 	}
 	let soloSet = $derived(new Set(soloPitches));
 	let shownNotes = $derived(soloPitches.length > 0 ? notes.filter((n) => soloSet.has(n.pitch)) : notes);

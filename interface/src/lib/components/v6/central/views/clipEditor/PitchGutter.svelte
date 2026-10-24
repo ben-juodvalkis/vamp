@@ -13,12 +13,14 @@
 	 * Rack's pads on a kit. A press on a note name still pans like the
 	 * rest of the canvas (the event bubbles to it). Two gestures of its own
 	 * ride on top:
-	 *  - tap or hold, and let go: show that row alone (`onSolo`). Fingers
-	 *    on several names before the last lets go show all their rows.
-	 *    The editor decides what a solo of the rows already shown means
-	 *    (back to every row);
+	 *  - solo: at finger-down the roll shows that row alone, or, on a row
+	 *    already soloed, every row again. Mute's and Solo's rule
+	 *    (`momentaryPress`): let go under MOMENTARY_HOLD_MS and it latches,
+	 *    at or over it the rows from before the press come back, so a hold
+	 *    is momentary. A press that turns into a pan puts them back too;
 	 *  - hold, then drag up or down: scale every note on that pitch's
-	 *    velocity, up louder, keeping their relative dynamics.
+	 *    velocity, up louder, keeping their relative dynamics (the row
+	 *    stays soloed while the finger is down; the hold restores it).
 	 * "Held" is decided when the finger first moves past the slop, by how
 	 * long it has been down, never by a timer: page timers are clamped to
 	 * ~1 s on the rig. The highlight that says "held" is a CSS delay.
@@ -26,7 +28,10 @@
 
 	import { sendModifyNotes, type RichNote } from '$lib/services/clipRichNotesService';
 	import { focusedNotesStore } from '$lib/stores/v6/focusedNotesStore.svelte';
-	import { MOMENTARY_HOLD_MS } from '$lib/components/v6/tracks/TrackStrip/utils/momentaryPress';
+	import {
+		MOMENTARY_HOLD_MS,
+		shouldRestoreOnRelease
+	} from '$lib/components/v6/tracks/TrackStrip/utils/momentaryPress';
 	import { createGestures } from './gestures';
 	import { pitchName, VELOCITY_MAX } from './noteStyle';
 
@@ -43,7 +48,7 @@
 		width: number;
 		/** A key took its finger for itself: the canvas stops panning with it. */
 		onHoldStart: (pointerId: number) => void;
-		/** Tapped or held names, all let go: show these rows. */
+		/** Show these rows alone (none: every row). */
 		onSolo: (pitches: number[]) => void;
 		/** The velocity scale under way, for the editor's readout. */
 		scaling: { pitch: number; factor: number } | null;
@@ -67,24 +72,19 @@
 
 	const KEY_SLOP_PX = 8;
 	const VEL_DOUBLING_PX = 120; // drag this far up to double the velocities
-
-	interface KeyPress {
+	let keyPress = $state<{
 		pointerId: number;
 		pitch: number;
 		x: number;
 		y: number;
 		at: number;
 		moved: boolean;
-		/** Became a pan: no longer this gutter's. */
+		/** The soloed rows before the press, put back by a hold or a pan. */
+		before: number[];
+		/** Became a pan: the press is the canvas's now. */
 		dropped: boolean;
-	}
-	let presses = $state<KeyPress[]>([]);
-	// The names pressed since the first finger landed; a solo when the last
-	// lifts, unless a velocity scale spent the gesture.
-	let chord = new Set<number>();
-	let chordSpent = false;
+	} | null>(null);
 	let velScale = $state<{
-		pointerId: number;
 		pitch: number;
 		factor: number;
 		members: { noteId: number; velocity: number }[];
@@ -97,55 +97,44 @@
 	});
 
 	function handleKeyDown(event: PointerEvent, pitch: number) {
-		if (clipPath === null || velScale !== null) return;
-		const live = presses.filter((p) => !p.dropped);
-		if (live.length > 0) {
-			// A second name: a chord, not a pinch. Keep this finger off the
-			// canvas and take the first ones off the pan.
+		if (clipPath === null) return;
+		if (keyPress !== null) {
+			// One name at a time, as one pad latches at a time; a second
+			// finger here is a fumble, not a pinch.
 			event.stopPropagation();
-			for (const p of live) onHoldStart(p.pointerId);
+			return;
 		}
-		const press: KeyPress = {
+		keyPress = {
 			pointerId: event.pointerId,
 			pitch,
 			x: event.clientX,
 			y: event.clientY,
 			at: performance.now(),
 			moved: false,
+			before: soloed,
 			dropped: false
 		};
-		presses.push(press);
-		chord.add(pitch);
-		beginGesture(
-			(e) => onKeyMove(e, press.pointerId),
-			(e) => onKeyEnd(e, press.pointerId)
-		);
+		onSolo(soloSet.has(pitch) ? soloed.filter((p) => p !== pitch) : [pitch]);
+		beginGesture(onKeyMove, onKeyEnd);
 	}
 
-	function pressOf(pointerId: number): KeyPress | undefined {
-		return presses.find((p) => p.pointerId === pointerId);
-	}
-
-	function onKeyMove(event: PointerEvent, pointerId: number) {
-		const kp = pressOf(pointerId);
-		if (!kp || kp.dropped || event.pointerId !== pointerId) return;
+	function onKeyMove(event: PointerEvent) {
+		const kp = keyPress;
+		if (kp === null || kp.dropped || event.pointerId !== kp.pointerId) return;
 		const dy = event.clientY - kp.y;
 		if (velScale === null) {
-			// In a chord a finger's drift means nothing.
-			if (presses.length > 1) return;
 			if (Math.hypot(event.clientX - kp.x, dy) <= KEY_SLOP_PX) return;
 			kp.moved = true;
 			if (performance.now() - kp.at < MOMENTARY_HOLD_MS) {
-				// A drag straight away is a pan; leave it to the canvas.
+				// A drag straight away is a pan; leave it to the canvas, and
+				// the rows as they were.
 				kp.dropped = true;
-				chord.delete(kp.pitch);
+				onSolo(kp.before);
 				return;
 			}
 			// Held, then moved: take the finger off the pan.
 			onHoldStart(kp.pointerId);
-			chordSpent = true;
 			velScale = {
-				pointerId,
 				pitch: kp.pitch,
 				factor: 1,
 				members: notes
@@ -153,7 +142,6 @@
 					.map((n) => ({ noteId: n.noteId, velocity: n.velocity }))
 			};
 		}
-		if (velScale.pointerId !== pointerId) return;
 		if (event.cancelable) event.preventDefault();
 		const factor = Math.pow(2, -dy / VEL_DOUBLING_PX);
 		velScale.factor = factor;
@@ -166,21 +154,21 @@
 		return Math.max(1, Math.min(VELOCITY_MAX, Math.round(velocity * factor)));
 	}
 
-	function onKeyEnd(event: PointerEvent, pointerId: number): false | void {
+	function onKeyEnd(event: PointerEvent): false | void {
+		const kp = keyPress;
 		// Another finger lifted: keep listening for this one.
-		if (event.pointerId !== pointerId) return false;
-		presses = presses.filter((p) => p.pointerId !== pointerId);
+		if (kp !== null && event.pointerId !== kp.pointerId) return false;
 		const vs = velScale;
-		if (vs !== null && vs.pointerId === pointerId) {
-			velScale = null;
-			commitVelocities(vs.members);
-		}
-		if (presses.length > 0) return;
-		const pitches = [...chord];
-		const spent = chordSpent;
-		chord = new Set();
-		chordSpent = false;
-		if (!spent && pitches.length > 0 && clipPath !== null) onSolo(pitches);
+		keyPress = null;
+		velScale = null;
+		if (kp === null) return;
+		if (vs !== null) commitVelocities(vs.members);
+		if (kp.dropped) return;
+		const restore = shouldRestoreOnRelease({
+			elapsedMs: performance.now() - kp.at,
+			reason: event.type === 'pointercancel' ? 'cancel' : 'up'
+		});
+		if (restore) onSolo(kp.before);
 	}
 
 	function commitVelocities(members: { noteId: number; velocity: number }[]) {
@@ -208,7 +196,7 @@
 		<div
 			class="key"
 			class:black={lane.black}
-			class:pressed={presses.some((p) => p.pitch === lane.pitch && !p.moved && !p.dropped)}
+			class:pressed={keyPress?.pitch === lane.pitch && !keyPress.moved}
 			class:soloed={soloSet.has(lane.pitch)}
 			class:scaling={velScale?.pitch === lane.pitch}
 			style="top: {lane.y}px; height: {lane.h}px;"
