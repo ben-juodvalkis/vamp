@@ -162,7 +162,7 @@
   // notes are the grid's own rule (the clip's, Live's selection, the held).
   const padSeqs = usePadSequencers(
     () => devicePath,
-    () => padGridNotes(clip.clipNotes, [selectedNote, ...heldNotes])
+    () => padGridNotes(clip.clipNotes, [selectedNote, ...heldNotes], members?.pads ?? [])
   );
   let kitSummary = $derived(kitClassSummary(members));
   let macroLayout = $derived(rackMacroLayout(members));

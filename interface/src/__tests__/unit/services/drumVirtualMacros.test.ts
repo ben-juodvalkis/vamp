@@ -593,9 +593,8 @@ describe('the pad grid layout', () => {
 	});
 
 	it('draws the pads in play: the clip, the selection and every held pad, ascending', () => {
-		// All three are equals — there is no paged fallback to hold in
-		// reserve any more, so with nothing playing the grid is simply the
-		// selected pad.
+		// All three are equals. With no kit passed there is nothing to fall
+		// back on, so with nothing playing the grid is the selected pad.
 		expect(padGridNotes([36, 42], [60])).toEqual([36, 42, 60]);
 		expect(padGridNotes([36, 42], [38, 40])).toEqual([36, 38, 40, 42]);
 		expect(padGridNotes([36, 42], [42])).toEqual([36, 42]); // already there
@@ -604,6 +603,19 @@ describe('the pad grid layout', () => {
 		expect(padGridNotes([], [60, null, 36])).toEqual([36, 60]);
 		expect(padGridNotes(null, [])).toEqual([]);
 		expect(padGridNotes(undefined)).toEqual([]);
+	});
+
+	it("shows the kit's first eight pads when the clip gives it none, with the selection and holds on top", () => {
+		const kit = [50, 36, 38, 40, 41, 42, 43, 44, 45, 46].map((note) => ({ note }));
+		// Nothing playing, and a clip with no notes: the eight lowest pads.
+		expect(padGridNotes(null, [], kit)).toEqual([36, 38, 40, 41, 42, 43, 44, 45]);
+		expect(padGridNotes([], [], kit)).toEqual([36, 38, 40, 41, 42, 43, 44, 45]);
+		// A selected or held pad past them joins.
+		expect(padGridNotes(null, [50], kit)).toEqual([36, 38, 40, 41, 42, 43, 44, 45, 50]);
+		// A playing clip with notes is still the grid's basis; the kit is not.
+		expect(padGridNotes([38], [], kit)).toEqual([38]);
+		// A kit of fewer than eight is all of it.
+		expect(padGridNotes(null, [], kit.slice(0, 3))).toEqual([36, 38, 50]);
 	});
 
 	it('pairs each note with its pad, and leaves a note the kit has none for empty', () => {

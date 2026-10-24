@@ -921,14 +921,14 @@ describe('DrumRackCentralView — the pad grid and hold-to-scope', () => {
 		return Array.from(container.querySelectorAll<HTMLElement>('.pad-tile')).map((t) => t.dataset.note);
 	}
 
-	it('draws only the pads in play — the selection alone with nothing playing', async () => {
+	it("draws the pads in play — the kit's first eight with nothing playing", async () => {
 		seed({ 'vm.members': DRUMCELL_WITH_PADS, 'vm.selectedPad': 40, 'vm.pitch': 0 });
 		const { container } = render(DrumRackCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
-		// One tile: what the controls are pointed at, and nothing else.
-		expect(noteList(container)).toEqual(['40']);
+		// Nothing playing: the kit's lowest eight (2026-10-24), the selection among them.
+		expect(noteList(container)).toEqual(['36', '37', '38', '39', '40', '41', '42', '43']);
 		expect(tile(container, 40).classList.contains('pad-selected')).toBe(true);
-		expect(container.querySelector('.pad-grid')?.getAttribute('data-columns')).toBe('1');
+		expect(container.querySelector('.pad-grid')?.getAttribute('data-columns')).toBe('2');
 
 		// The clip adds its own, in pitch order around the selection.
 		playClip();
@@ -1408,12 +1408,12 @@ describe('DrumRackCentralView — the playing clip on the grid', () => {
 		vi.useRealTimers();
 	});
 
-	it("adds the clip's pads to the selection, and drops them again when it stops", async () => {
+	it("draws the clip's pads with the selection, and the kit's first eight again when it stops", async () => {
 		seed({ 'vm.members': DRUMCELL_WITH_PADS, 'vm.selectedPad': 36 });
 		const { container } = render(DrumRackCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
 		const notes = () => Array.from(container.querySelectorAll<HTMLElement>('.pad-tile')).map((t) => t.dataset.note);
-		expect(notes()).toEqual(['36']); // nothing playing: the selection alone
+		expect(notes()).toEqual(['36', '37', '38', '39', '40', '41', '42', '43']); // nothing playing: the kit's first eight
 		playClip();
 		await settle();
 		expect(requestNotesMock).toHaveBeenCalledWith('tracks/0/slots/0/clip');
@@ -1431,11 +1431,12 @@ describe('DrumRackCentralView — the playing clip on the grid', () => {
 		holdPast();
 		padPointer(tile(container, 38), 'pointerup', 7);
 		await tick();
-		// Stopped: back to the selection alone — which the press above moved
-		// to 38, since touching a tile selects that pad in Live.
+		// Stopped: back to the kit's first eight, the selection (moved to 38
+		// by the press above, since touching a tile selects that pad in Live)
+		// among them.
 		playClip(0);
 		await settle();
-		expect(notes()).toEqual(['38']);
+		expect(notes()).toEqual(['36', '37', '38', '39', '40', '41', '42', '43']);
 	});
 
 	it("draws Live's selected pad even when the clip never plays it", async () => {

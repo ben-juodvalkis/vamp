@@ -70,7 +70,7 @@
     /** The pads currently held on this device, in press order. */
     heldNotes?: readonly number[];
     color: DeviceColorScheme;
-    /** The pitches the track's playing clip uses, ascending; null or empty = show the whole kit. */
+    /** The pitches the track's playing clip uses, ascending; null or empty = the kit's first eight pads (`padGridNotes`). */
     clipNotes?: readonly number[] | null;
     /** Pads the playhead just crossed (flashing). */
     litNotes?: ReadonlySet<number>;
@@ -98,7 +98,7 @@
   // column, pitch climbing as the eye does. DOM order stays ascending
   // (it is the reading order for a screen reader, and what the tests
   // assert); `padGridCell` places each tile.
-  let notes = $derived(padGridNotes(clipNotes, [selectedNote, ...heldNotes]));
+  let notes = $derived(padGridNotes(clipNotes, [selectedNote, ...heldNotes], pads));
   let slots = $derived(padGridSlots(pads, notes));
   let shape = $derived(padGridShape(slots.length));
 

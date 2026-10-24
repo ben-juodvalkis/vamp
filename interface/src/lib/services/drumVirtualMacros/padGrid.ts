@@ -11,6 +11,8 @@ export const PAD_COLUMN_ROWS = 4;
 
 /** Past this the grid grows rows instead, rather than out-widening the controls. */
 export const PAD_MAX_COLUMNS = 3;
+/** How many of the kit's pads the grid draws when the clip gives it none: Live's bottom two rows. */
+export const EMPTY_CLIP_PADS = 8;
 
 // ---------------------------------------------------------------------------
 // The playing clip on the grid (2026-09-08): only the pads it plays, and a
@@ -61,20 +63,28 @@ export function padGridShape(count: number): { columns: number; rows: number } {
  * pad and every pad a finger is holding (2026-09-09).
  *
  * All three are equals here — unlike the earlier rule, where the clip's
- * notes were the basis and the rest were added to them. There is no
- * paged fallback to hold in reserve any more, so with nothing playing the
- * grid is simply the selected pad, which is the whole of what the
- * controls are pointed at.
+ * notes were the basis and the rest were added to them.
+ *
+ * When the clip gives the grid nothing — nothing playing, or a clip with
+ * no notes — the kit's first EMPTY_CLIP_PADS pads (its lowest notes, Live's
+ * bottom two rows) stand in for it (2026-10-24, the user's call; the grid
+ * was the selected pad alone before, so no other pad could be reached).
  *
  * A note the kit has no pad for still draws, as the empty tile it is —
  * that is what explains a ghosted control rather than hiding it.
  */
 export function padGridNotes(
 	clipNotes: readonly number[] | null | undefined,
-	keep: readonly (number | null)[] = []
+	keep: readonly (number | null)[] = [],
+	kitPads: readonly { note: number }[] = []
 ): number[] {
 	const set = new Set<number>();
-	for (const note of clipNotes ?? []) if (Number.isInteger(note)) set.add(note);
+	const fromClip = (clipNotes ?? []).filter((n) => Number.isInteger(n));
+	const base =
+		fromClip.length > 0
+			? fromClip
+			: [...kitPads.map((p) => p.note)].filter((n) => Number.isInteger(n)).sort((a, b) => a - b).slice(0, EMPTY_CLIP_PADS);
+	for (const note of base) set.add(note);
 	for (const note of keep) if (note !== null && Number.isInteger(note)) set.add(note);
 	return [...set].sort((a, b) => a - b);
 }
