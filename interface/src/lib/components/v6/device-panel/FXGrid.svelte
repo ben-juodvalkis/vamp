@@ -8,7 +8,7 @@
   import SquashControl from './SquashControl.svelte';
   import GlitchControl from './GlitchControl.svelte';
   import ChorusControl from './ChorusControl.svelte';
-  import { trackCategory } from '$lib/services/trackCategory';
+  import { drumCellHoldsChorus } from './drumCell.svelte';
   import { provideFxScope } from '$lib/components/v6/central/fxScope';
   import { usePadChainRows } from '$lib/components/v6/central/usePadChainRows.svelte';
   import { activeDrumRackScope, selectedDrumRack } from '$lib/services/deviceViewRouter.svelte';
@@ -114,21 +114,10 @@
   const isMasterTrack = $derived(heldTrack ? heldTrack.trackPath === 'master' : selectedTrackStore.trackIndex === -1);
   const gridKind = $derived(isAudioTrack ? ('audio' as const) : ('midi' as const));
 
-  // The Drum tile is for a drum track; every other track (audio and master
-  // included) gets the Chorus in that cell (2026-10-23, the user's call).
-  // A drum track is one whose instrument came from the Drum or Perc
-  // category; a track with no recorded category (made in Live, before the
-  // app recorded one, an xFull kit) counts when it holds a Drum Rack. The
-  // category answers first because the class alone is wrong both ways: 45%
-  // of Drum/Perc presets are not Drum Racks, and 592 Drum Racks are filed
-  // under Inst, Synth or FX. Chorus keeps its own slot (fx9), so the swap
-  // is only which tile is drawn there.
-  const gridTrack = $derived(heldTrack ?? v3Store.tracks.get(selectedTrackStore.selectedTrackPath));
-  const drumCategory = $derived.by(() => {
-    const { category } = trackCategory(gridTrack ?? undefined);
-    if (category) return category === 'drum' || category === 'perc';
-    return [...(gridTrack?.devices.values() ?? [])].some((d) => d.className === 'DrumGroupDevice');
-  });
+  // The Drum cell holds the Chorus on any track that is not a drum track
+  // (2026-10-23, the user's call; `drumCellHoldsChorus`). Chorus keeps its
+  // own slot (fx9), so the swap is only which tile is drawn there.
+  const chorusInDrumCell = $derived(drumCellHoldsChorus());
   const chorusIndex = FX_GRID_LAYOUT.findIndex((s) => s.position === 'fx9');
 
   provideFxScope(() => scope);
@@ -198,8 +187,8 @@
                view. Rand Oct is a MIDI-effect control and would sit inert
                here. BassControl resolves its own `bass` slot. -->
           <BassControl />
-        {:else if slot.position === 'fx6' && !drumCategory}
-          <!-- Not a Drum or Perc track: the Chorus in the Drum's cell. -->
+        {:else if slot.position === 'fx6' && chorusInDrumCell}
+          <!-- Not a drum track: the Chorus in the Drum's cell. -->
           <ChorusControl device={devices[chorusIndex]} position="fx9" />
         {:else}
           <Component device={devices[i]} position={slot.position} />

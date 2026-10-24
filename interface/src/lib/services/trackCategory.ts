@@ -26,3 +26,17 @@ export function trackCategory(track: TrackRecord | undefined): { category: strin
 		: null;
 	return filed ?? { category: track?.role || null, folders: [] };
 }
+
+/**
+ * Whether a track is a drum track, for the FX grid's Drum cell (2026-10-23,
+ * the user's call): its instrument came from the Drum or Perc category, or,
+ * when no category was recorded (made in Live, loaded before the app recorded
+ * one, an xFull kit), it holds a Drum Rack. The category answers first
+ * because the class alone is wrong both ways: 45% of Drum/Perc presets are
+ * not Drum Racks, and 592 Drum Racks are filed under Inst, Synth or FX.
+ */
+export function isDrumTrack(track: TrackRecord | undefined): boolean {
+	const { category } = trackCategory(track);
+	if (category) return category === 'drum' || category === 'perc';
+	return [...(track?.devices.values() ?? [])].some((d) => d.className === 'DrumGroupDevice');
+}

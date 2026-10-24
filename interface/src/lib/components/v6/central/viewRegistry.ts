@@ -78,7 +78,7 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 		// `squash` the Utility's; without an entry the tap resolved to the
 		// placeholder view.
 		'bass': () => import('./views/PedalCentralView.svelte'),
-		'chorus': () => import('./views/AutoPanCentralView.svelte'), // the Chorus family joined Auto Pan's view (2026-10-15)
+		'chorus': () => import('./views/ChorusCentralView.svelte'), // Blur, Comb and Phaser off a drum track; the Auto Pan view on one (2026-10-23)
 		'compressor': () => import('./views/SquashCentralView.svelte'), // Compressor controls live in the Squash (dynamics) view
 		'digital': () => import('./views/DigitalCentralView.svelte'),
 		'drum': () => import('./views/DrumBussCentralView.svelte'),

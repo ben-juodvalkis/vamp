@@ -12,6 +12,11 @@
    * Coarse and Rate (`autopan/PitchGroup`). Every family is a column,
    * its controls stacked so none is narrow; the groups' roots are
    * `display: contents`, so one grid here holds every column and seam.
+   *
+   * Only on a drum track (2026-10-23): elsewhere the Chorus XY is the FX
+   * grid's tile in the Drum cell and Blur, Comb and Phaser are the Chorus
+   * view's (`ChorusCentralView`), so the Chorus group and its two columns
+   * leave this view.
    */
   import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
@@ -31,6 +36,7 @@
     type ShapeKey
   } from '$lib/components/v6/device-panel/autoPanParams';
   import ChorusGroup from './autopan/ChorusGroup.svelte';
+  import { drumCellHoldsChorus } from '$lib/components/v6/device-panel/drumCell.svelte';
   import PitchGroup from './autopan/PitchGroup.svelte';
 
   const fx = useFxGridSlot('tremolo');
@@ -95,9 +101,12 @@
     sine: 'M0 6 Q6 -1 12 6 T24 6',
     triangle: 'M0 6 L6 2 L18 10 L24 6'
   };
+
+  // The Chorus family is drawn here only where the grid has no Chorus tile.
+  const withChorus = $derived(!drumCellHoldsChorus());
 </script>
 
-<div class="autopan-layout">
+<div class="autopan-layout" class:no-chorus={!withChorus}>
   <!-- Auto Pan: rate, shape and Sync stacked in one column (2026-10-15).
        Only this column dims while Auto Pan is a ghost; the other families
        keep their own ghost states. -->
@@ -159,7 +168,7 @@
     </div>
   </div>
 
-  <ChorusGroup />
+  {#if withChorus}<ChorusGroup />{/if}
   <PitchGroup />
 </div>
 
@@ -176,6 +185,12 @@
     height: 100%;
     width: 100%;
     padding: var(--central-inset);
+  }
+  /* Off a drum track the Chorus group's two columns and seams are the
+     Chorus view's: Auto Pan | the Octave | Pitch Hack. */
+  .autopan-layout.no-chorus {
+    grid-template-columns:
+      minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
   }
 
   .stack {
