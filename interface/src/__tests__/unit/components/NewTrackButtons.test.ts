@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, afterEach, vi } from 'vitest';
 
-vi.mock('$lib/services/trackPreparation', () => ({ prepareForPreset: vi.fn() }));
+vi.mock('$lib/services/trackPreparation', () => ({ prepareForPreset: vi.fn(), NEW_TRACK_TARGET: 'new' }));
 vi.mock('$lib/utils/logger', () => ({
 	logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 }));
@@ -34,8 +34,9 @@ describe('NewTrackButtons', () => {
 		await tap(getByLabelText('New Audio track'));
 		await tap(getByLabelText('New MIDI track'));
 
-		expect(prepareForPreset).toHaveBeenNthCalledWith(1, 'audio', '');
-		expect(prepareForPreset).toHaveBeenNthCalledWith(2, 'midi', '');
+		// Always a new track, never a reused empty one (2026-10-24).
+		expect(prepareForPreset).toHaveBeenNthCalledWith(1, 'audio', '', 'new');
+		expect(prepareForPreset).toHaveBeenNthCalledWith(2, 'midi', '', 'new');
 	});
 
 	it('ignores a second press of a kind still in flight, and takes one after it lands', async () => {

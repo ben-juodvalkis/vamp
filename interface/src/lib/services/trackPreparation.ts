@@ -105,6 +105,13 @@ const queues: Map<TrackType, Promise<unknown>> = new Map();
  * into the config. Optional: a Recent entry or a config preset sends none and
  * the surface resolves the path through Live's own library.
  */
+/**
+ * `targetTrackPath` value meaning "always create a new track, never reuse
+ * an empty one" (2026-10-24): the New Audio / New MIDI buttons. Any other
+ * non-empty value pins the load to that track (replace-instrument mode).
+ */
+export const NEW_TRACK_TARGET = 'new';
+
 export async function prepareForPreset(
     trackType: TrackType,
     presetPath: string = '',

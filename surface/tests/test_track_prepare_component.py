@@ -828,6 +828,32 @@ def test_creates_when_no_empty_tracks_anywhere(scheduler):
     assert song.create_calls == [("midi", -1)]
 
 
+def test_new_target_creates_even_with_an_empty_track_selected(scheduler):
+    """Target ``new`` (the New buttons, 2026-10-24): always CREATE, even
+    when the selected track is empty and of the same type."""
+    t0 = StubTrack(has_midi_input=False)
+    t1 = StubTrack(has_midi_input=True)   # midi, empty, selected
+    t2 = StubTrack(has_midi_input=True)   # midi, empty
+    song = StubSong(tracks=[t0, t1, t2], selected=t1)
+    component, recorder = make_component(song, scheduler=scheduler)
+    component.handle_prepare(args=("req-new-1", "midi", "", "new"), source_addr=None)
+    assert song.create_calls == [("midi", -1)]
+    acks = recorder.acks()
+    assert len(acks) == 1
+    _, track_path, was_created = acks[0]
+    assert track_path == "tracks/3"
+    assert was_created == 1
+
+
+def test_new_target_audio_creates_and_defers_like_any_create(scheduler):
+    t0 = StubTrack(has_midi_input=True)
+    t1 = StubTrack(has_midi_input=False)  # audio, empty
+    song = StubSong(tracks=[t0, t1], selected=t1)
+    component, recorder = make_component(song, scheduler=scheduler)
+    component.handle_prepare(args=("req-new-2", "audio", "", "new"), source_addr=None)
+    assert song.create_calls == [("audio", -1)]
+
+
 # --- create path: audio deferral -----------------------------------------
 
 

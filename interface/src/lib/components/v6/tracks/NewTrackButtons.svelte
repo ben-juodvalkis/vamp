@@ -4,18 +4,18 @@
 	 * strips row (2026-10-23). It took over track creation from the foot
 	 * pedal's hold, which now moves the pedal to the next empty slot.
 	 *
-	 * Each button is one `prepare_for_preset` with no preset: the surface
-	 * reuses an empty track of that kind (the selected one first) or
-	 * creates one, arms and routes an audio track, appends Permute, and
-	 * Live selects it — so the pedal's next tap records there. Rapid
-	 * presses of one kind queue in `trackPreparation`, so a second press
-	 * finds the track the first one made rather than making another.
+	 * Each button is one `prepare_for_preset` with no preset and the target
+	 * `new`: the surface always creates a track of that kind (2026-10-24,
+	 * the user's call; it reused an empty one before), arms and routes an
+	 * audio track, appends Permute, and Live selects it — so the pedal's
+	 * next tap records there. Every press is a new track; presses of one
+	 * kind queue in `trackPreparation`, one create at a time.
 	 */
 	import Mic from '@lucide/svelte/icons/mic';
 	import Piano from '@lucide/svelte/icons/piano';
 	import Plus from '@lucide/svelte/icons/plus';
 	import { press } from '$lib/actions/press';
-	import { prepareForPreset, type TrackType } from '$lib/services/trackPreparation';
+	import { prepareForPreset, NEW_TRACK_TARGET, type TrackType } from '$lib/services/trackPreparation';
 	import { logger } from '$lib/utils/logger';
 
 	let pending = $state<Record<TrackType, boolean>>({ audio: false, midi: false });
@@ -24,7 +24,7 @@
 		if (pending[kind]) return;
 		pending[kind] = true;
 		try {
-			await prepareForPreset(kind, '');
+			await prepareForPreset(kind, '', NEW_TRACK_TARGET);
 		} catch (err) {
 			logger.warn('New track failed', { component: 'NewTrackButtons', kind, err });
 		} finally {
