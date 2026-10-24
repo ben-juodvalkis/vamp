@@ -126,6 +126,9 @@
   const TAP_TIME_THRESHOLD = 200; // ms
   const TAP_MOVEMENT_THRESHOLD = 5; // pixels
 
+  // Thickness of the fill's leading-edge line (`.slider-edge`), in px.
+  const EDGE_PX = 3;
+
   // Computed for display (guard against division by zero if min >= max)
   let fillPercent = $derived(max > min ? ((localValue - min) / (max - min)) * 100 : 0);
 
@@ -312,6 +315,18 @@
           "
         ></div>
       {/if}
+      <!-- The fill's leading edge: a bright line at the value, drawn at every
+           value, so an empty slider shows it on its floor and a full one on
+           its ceiling and neither reads as a button that is off or lit. Kept
+           inside the box: the offset loses the line's own width as it climbs. -->
+      <div
+        class="slider-edge {orientation}"
+        class:dragging={isDragging}
+        style={orientation === 'vertical'
+          ? `bottom: calc(${fillPercent}% - ${(fillPercent / 100) * EDGE_PX}px);`
+          : `left: calc(${fillPercent}% - ${(fillPercent / 100) * EDGE_PX}px);`}
+        aria-hidden="true"
+      ></div>
     {/if}
 
     <!-- Title label. Two stacked layers: the base reads on the unfilled well
@@ -448,6 +463,32 @@
   .slider-fill.horizontal {
     height: 100%;
     top: 0;
+  }
+
+  /* Bright leading edge of the fill — device ink toward white, like the
+     handle line; over the fill, under the label. 3px = EDGE_PX. */
+  .slider-edge {
+    position: absolute;
+    pointer-events: none;
+    z-index: 2;
+    background-color: color-mix(in oklab, var(--slider-tint, white) 45%, white);
+    transition: bottom 0.1s ease-out, left 0.1s ease-out;
+  }
+  .slider-edge.dragging {
+    transition: none;
+  }
+  .slider-edge.vertical {
+    left: 0;
+    right: 0;
+    height: 3px;
+  }
+  .slider-edge.horizontal {
+    top: 0;
+    bottom: 0;
+    width: 3px;
+  }
+  .slider-container.ghost .slider-edge {
+    opacity: var(--opacity-ghost);
   }
 
   .center-line {
