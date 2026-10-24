@@ -26,10 +26,10 @@ tile there.
 **Amended the same day (the user's call): MIDI tracks get the Gtr slider
 too**, under Rand Oct in column 1, and so the same split. The Drum Buss
 joins the Saturator's view wherever the Drum cell holds the Chorus (every
-audio track, every track that is not a drum track; ADR-465). Only master,
-which has no Gtr, keeps one whole Pedal view, Gain included, whichever tile
-opened it, so a touch inside it never swaps the view out from under the
-finger.
+audio track, every track that is not a drum track; ADR-465). Master kept one
+whole Pedal view, Gain included, until 2026-10-24, when Main took the
+audio column (the Bass over the Gtr, ADR-467) and with it the split: every
+track splits now.
 
 `PedalCentralView` takes a `part` (`all` · `guitar` · `effects`) and,
 left out, follows the track: split wherever `gridHasGuitar()`

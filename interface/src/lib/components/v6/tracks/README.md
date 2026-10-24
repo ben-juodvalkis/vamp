@@ -23,7 +23,7 @@ tracks/
 │   ├── useTrackData.svelte.ts     # name/color/mute/solo/volume/meterLevel +
 │   │                              # select / mute-toggle / solo-toggle
 │   └── useTinySequencer.svelte.ts # Permute thumbnail state
-└── MasterTrack.svelte             # Master strip (separate component;
+└── MasterTrack.svelte             # Master strip, the strip row's last column (ADR-469;
                                    # uses the reusable drag action).
                                    # Same 2/3 + 1/3 column a strip has:
                                    # the Card IS the fader, the key band

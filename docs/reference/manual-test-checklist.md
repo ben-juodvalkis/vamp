@@ -339,8 +339,8 @@ eight tracks so the strips row overflows and can actually pan.
 
 ### 13.5 Feedback under the finger
 
-- [ ] Press the **stop** button under the mini session grid (clip view,
-      leading column) → it visibly acknowledges the press before the clip
+- [ ] Press the **stop** button under the mini session grid (right sidebar,
+      bottom row) → it visibly acknowledges the press before the clip
       actually stops. A stop is quantized, so without the mark a press
       that landed looks exactly like one that missed.
 - [ ] Press a **clip cell** and a **scene button** → same acknowledgement,
