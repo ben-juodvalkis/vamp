@@ -1,34 +1,20 @@
 <script lang="ts">
     /**
-     * Mini session view — the selected track's clip column, living in
-     * the CLIP central view.
+     * Mini session view — the selected track's clip column, in the right
+     * sidebar's first row, level with the track strips (2026-10-24, the
+     * user's call: the master strip moved into the strip row and this took
+     * its place; it was the leading column of the Clip view's rail
+     * before). It appears exactly when the full grid is hidden
+     * (`uiPrefsStore.miniSessionActive`); in session mode the row is empty.
      *
-     * The full clip grid (ADR-415) is a whole section of the main-area
-     * stack, so switching CLIPS off buys back a third of the screen and
-     * costs you every clip on it: no launch targets, no playhead, no
-     * idea what is armed. This is the trade in miniature. It shows ONE
-     * track's column — the selected one — in the LEADING column of
-     * `ClipCentralView`'s control rail, at twice a rail column's width, and it
-     * appears exactly when the full grid is hidden
-     * (`uiPrefsStore.miniSessionActive`).
-     *
-     * **Why the clip view and not the FX grid.** Everything else in that
-     * rail is already about the clip you are looking at: Chance, Temp
-     * and Shuffle shape it, REC and Delete replace it, Loop X2 and the
-     * transpose pair edit it. What the rail could not say was WHICH clip
-     * — the selection lived only in the grid a section away, or, with
-     * CLIPS off, nowhere at all. The mini answers that and makes it
-     * changeable in the same place, which the FX grid (a rack of
-     * insert effects on the track) had no claim to.
-     *
-     * **It is the same `SlotGrid`, not a lookalike.** Cells, states,
-     * previews, the leading action strip, the press highlight, the
-     * playhead and every gesture come from the component the full grid
-     * uses, and the taps route through `composables/slotActions` — the
-     * module `TracksPanelV6` calls too. A cell therefore cannot come to
-     * mean one thing here and another there, which matters more than it
-     * looks: the body tap aims the FOOT PEDAL, and a mini view that
-     * aimed it differently would be worse than no mini view.
+     * **It is the same `SlotGrid`, with its own gestures.** Cells, states,
+     * previews, the press highlight and the playhead come from the full
+     * grid's component, and the actions route through
+     * `composables/slotActions`. What differs is the gestures
+     * (`tapFires`, 2026-10-24, the user's call): a tap anywhere on a cell
+     * fires it (the action strip's tap: launch, or stop a playing clip),
+     * and a hold past 500 ms only moves the highlight there, the foot
+     * pedal's target, and fires nothing.
      *
      * **One shared scene window.** `sceneWindowStore` is the same
      * offset the full grid and the scene rail use, so scrolling here and
@@ -55,15 +41,12 @@
     import { session } from '$lib/stores/session.svelte';
     import { v3Store } from '$lib/stores/v3/normalized.svelte';
     import { clipStateStore } from '$lib/stores/v6/clipStateStore.svelte';
-    import { clipEditorStore } from '$lib/stores/v6/clipEditorStore.svelte';
-    import { groupGestureStore } from '$lib/stores/v6/groupGestureStore.svelte';
     import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
     import { paintModeReactive } from '$lib/utils/paintMode.svelte';
     import { press } from '$lib/actions/press';
     import {
         selectSlot,
         actOnSlot,
-        focusSlot,
         stopTrack
     } from '$lib/components/v6/tracks/composables/slotActions';
 
@@ -77,30 +60,6 @@
     // set is empty" rather than "you are on master".
     const hasTrack = $derived(trackIndex >= 0);
 
-    // A body tap here aims the pedal exactly as the full grid's does, and
-    // on a slot holding a clip it also opens that clip's note view beside
-    // this column: the mini is already the "which clip" list, so picking
-    // one shows it. An empty slot has nothing to show and only selects.
-    // Tapping the clip whose editor is already open closes it, back to
-    // the clip controls.
-    function openSlot(slotIndex: number, slotPath: string) {
-        const focused = session.focusedClipIndices;
-        const editorOpenOnThis =
-            clipEditorStore.active &&
-            focused?.track === trackIndex &&
-            focused?.scene === slotIndex;
-        selectSlot(trackIndex, slotIndex);
-        // Mid group gesture the tap only toggles the track into the group.
-        if (groupGestureStore.active) return;
-        const state = v3Store.tracks.get(trackPath)?.slots.get(slotPath)?.state;
-        if (!state || state === 'empty') return;
-        if (editorOpenOnThis) {
-            clipEditorStore.set(false);
-            return;
-        }
-        focusSlot(trackIndex, slotPath);
-        clipEditorStore.set(true);
-    }
     const trackPath = $derived(`tracks/${trackIndex}`);
     const record = $derived(hasTrack ? v3Store.tracks.get(trackPath) : undefined);
     const trackName = $derived(record?.name ?? (hasTrack ? `Track ${trackIndex + 1}` : 'Master'));
@@ -194,10 +153,10 @@
                     {trackIndex}
                     {isGroup}
                     markSelectedTrack={false}
-                    onSelect={openSlot}
+                    tapFires
+                    onSelect={(slotIndex) => selectSlot(trackIndex, slotIndex)}
                     onAction={(slotIndex, slotPath, slotState) =>
                         actOnSlot(trackIndex, slotIndex, slotPath, slotState)}
-                    onFocus={(slotPath) => focusSlot(trackIndex, slotPath)}
                 />
 
                 {#if showThumb}

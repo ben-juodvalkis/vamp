@@ -11,7 +11,7 @@
 	import MiddlePanelV6 from '$lib/components/v6/layout/MiddlePanelV6.svelte';
 	import DrillDownBrowser from '$lib/components/v6/browser/DrillDownBrowser.v6.svelte';
 	import RightControlsSidebar from '$lib/components/v6/layout/RightControlsSidebar.svelte';
-	import MasterTrack from '$lib/components/v6/tracks/MasterTrack.svelte';
+	import MiniSessionGrid from '$lib/components/v6/session/MiniSessionGrid.svelte';
 	import V3ErrorBanner from '$lib/components/v6/session/V3ErrorBanner.svelte';
 	import GroupModeBanner from '$lib/components/v6/session/GroupModeBanner.svelte';
 	import LiveConnectionBanner from '$lib/components/v6/session/LiveConnectionBanner.svelte';
@@ -196,16 +196,15 @@
 			data-debug="right-sidebar"
 			style="gap: var(--spacing-lg);"
 		>
-			<!-- Section 1: the master strip, level with the track strips.
-			     Always visible, like the strips. Nothing else rides in this
-			     section: the TotalMix mirror was here as its own first row
-			     (which took height off the top of the master column), then
-			     inside MasterTrack's key block, and is now in the status
-			     strip — where it costs this column nothing at all. -->
+			<!-- Section 1, level with the track strips: the mini session view
+			     (the selected track's clips) while the full clip grid is
+			     hidden, and nothing in session mode (2026-10-24, the user's
+			     call). The master strip that was here is the last column of
+			     the strip row now, after New Audio / New MIDI. -->
 			<div class="min-h-0 layout-row section">
-				<MasterTrack
-					onSelect={() => logger.debug('Master selected', { component: 'page' })}
-				/>
+				{#if uiPrefsStore.miniSessionActive}
+					<MiniSessionGrid />
+				{/if}
 			</div>
 
 			<!-- Section 2: the scene-launch rail, level with the clip grid —

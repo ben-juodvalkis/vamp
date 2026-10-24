@@ -330,6 +330,54 @@ const SCENARIOS = [
 		}
 	},
 
+	{
+		name: 'mini-tap-fires',
+		view: 'default',
+		needs: 'tap',
+		description: 'a tap in the middle of a mini session cell fires it (2026-10-24)',
+		async run({ page, tap, sent, reset }) {
+			// The body, well clear of the action strip: in the full grid this
+			// tap only selects; in the mini it fires.
+			const cell = await centreOf(page, '[data-debug="mini-session"] [data-slot-index]', 1);
+			reset();
+			await tap(cell.x + cell.w / 4, cell.y);
+			await wait(250);
+			expect(
+				sent().some(
+					(m) =>
+						m.address === '/looping/v3/clip/launch' || m.address === '/looping/v3/clip/stop'
+				),
+				'a tap on a mini cell must fire it'
+			);
+		}
+	},
+
+	{
+		name: 'mini-hold-selects',
+		view: 'default',
+		description: 'a hold on a mini session cell moves the highlight there and fires nothing',
+		async run({ page, fingers, sent, reset }) {
+			const cell = await centreOf(page, '[data-debug="mini-session"] [data-slot-index]', 2);
+			reset();
+			const id = await fingers.down(cell.x + cell.w / 4, cell.y);
+			// LONG_PRESS_MS is 500; 800 clears it on a throttled clock.
+			await wait(800);
+			await fingers.up(id);
+			await wait(250);
+			expect(
+				sent().some((m) => m.address === '/looping/v3/selected_clip'),
+				'a hold must move the pedal target'
+			);
+			expect(
+				!sent().some(
+					(m) =>
+						m.address === '/looping/v3/clip/launch' || m.address === '/looping/v3/clip/stop'
+				),
+				'a hold must fire nothing'
+			);
+		}
+	},
+
 	// ---- Concurrent fingers. Chromium only (CDP). -------------------------
 	{
 		name: 'two-mutes',

@@ -4,6 +4,7 @@
 	import { logger } from '$lib/utils/logger';
 	import TrackStrip from '$lib/components/v6/tracks/TrackStrip.svelte';
 	import NewTrackButtons from '$lib/components/v6/tracks/NewTrackButtons.svelte';
+	import MasterTrack from '$lib/components/v6/tracks/MasterTrack.svelte';
 	import SlotGrid from '$lib/components/v6/tracks/TrackStrip/components/SlotGrid.svelte';
 	import { uiPrefsStore } from '$lib/stores/v6/uiPrefsStore.svelte';
 	import type { SlotState } from '$lib/stores/v3/normalized.svelte';
@@ -64,11 +65,15 @@
 	// overrides are UNREACHABLE since 2026-09-26, kept until the flag goes.
 	let flipLayout = $derived(uiPrefsStore.flipLayout);
 
-	// The last column is New Audio / New MIDI (`NewTrackButtons`), in the
-	// strips row only, sized exactly like a strip. The clip grid and stop
-	// row carry it empty, so their track columns stay the strips' width.
+	// The last two columns are New Audio / New MIDI (`NewTrackButtons`),
+	// a strip's width, and the master strip (2026-10-24, the user's call:
+	// out of the right sidebar) at the sidebar's width, which its key and
+	// time-signature band was laid out for. Strips row only: the clip grid
+	// and stop row carry them empty, so their track columns stay the
+	// strips' width.
+	const PINNED_COLS = 2;
 	let columnTemplate = $derived(
-		`grid-template-columns: repeat(${visibleTracks.length + 1}, minmax(var(--track-min-w), 1fr));`
+		`grid-template-columns: repeat(${visibleTracks.length + 1}, minmax(var(--track-min-w), 1fr)) var(--sidebar-width);`
 	);
 
 	let rowStyle = $derived(
@@ -435,11 +440,16 @@
 					<TrackStrip {trackIndex} onTrackSelect={handleTrackSelect} {rowScrolls} />
 				</div>
 			{/each}
+			<!-- New Audio / New MIDI, then the master strip: one pinned group
+			     at the row's right end, two strip columns wide. -->
 			<div
-				class="new-track-col"
-				style="grid-column: {visibleTracks.length + 1}; grid-row: 1 / -1;"
+				class="pinned-cols"
+				style="grid-column: {visibleTracks.length + 1} / span {PINNED_COLS}; grid-row: 1 / -1;"
 			>
-				<NewTrackButtons />
+				<div class="new-track-col"><NewTrackButtons /></div>
+				<div class="master-col" data-debug="master-col">
+					<MasterTrack onSelect={() => logger.debug('Master selected', { component: 'TracksPanelV6' })} />
+				</div>
 			</div>
 		</div>
 
@@ -762,11 +772,13 @@
 		--fader-slop-right: 0px;
 	}
 
-	/* New Audio / New MIDI, after the last strip. Pinned to the panel's
-	   right edge once the row scrolls, so it is always one reach away; it
-	   takes the gutter to its left too, so strips scrolling under it do
-	   not show through the gap. */
-	.new-track-col {
+	/* New Audio / New MIDI and the master strip, after the last strip.
+	   Pinned to the panel's right edge once the row scrolls, so both are
+	   always one reach away; the group takes the gutter to its left too,
+	   so strips scrolling under it do not show through the gap. Its own
+	   two columns repeat the row's last two tracks: a strip's width, then
+	   the sidebar's for the master. */
+	.pinned-cols {
 		position: sticky;
 		right: 0;
 		z-index: 1;
@@ -775,6 +787,18 @@
 		margin-left: calc(-1 * var(--strip-gutter));
 		padding-left: var(--strip-gutter);
 		background: var(--background);
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) var(--sidebar-width);
+		column-gap: var(--strip-gutter);
+	}
+	.new-track-col,
+	.master-col {
+		min-width: 0;
+		min-height: 0;
+	}
+	.master-col {
+		display: flex;
+		flex-direction: column;
 	}
 
 	/* Group bracket ("panhandle", ADR-413): the arm that grows out of the
