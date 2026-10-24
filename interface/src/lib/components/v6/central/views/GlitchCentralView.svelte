@@ -31,6 +31,8 @@
 	 * slider's, now with Clock, the old XY's other axis, on a slider of its
 	 * eleven detents) and 'variation' (`VariationCentralView`, the Var
 	 * slider's). The Glitch slider is Mix, so the view still leaves Mix out.
+	 * The glitch part also holds Pitch Hack (titled Reverse: its Rate column
+	 * and Mix), out of the Pitch view the same day.
 	 *
 	 * Self-contained: queries its own slots and renders through
 	 * ghost/loading/active without a `{#if device}` gate.
@@ -41,6 +43,7 @@
 	import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
 	import SectionDivider from '$lib/components/v6/central/SectionDivider.svelte';
 	import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
+	import PitchGroup from './autopan/PitchGroup.svelte';
 	import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 	import { sendParamsByName } from '$lib/services/deviceParams';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
@@ -191,7 +194,7 @@
 </script>
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
-<div class="glitch-central-layout relative" data-density="compact">
+<div class="glitch-central-layout relative" class:with-reverse={part === 'glitch'} data-density="compact">
 	{#if part === 'glitch'}
 	<!-- ===== GlitchLoop ===== -->
 	<section class="group" style="--panel-ink: {glitchInk.primary}; --btn-tint: {glitchInk.primary};">
@@ -268,6 +271,11 @@
 		</div>
 	</section>
 
+
+	<!-- Pitch Hack, titled Reverse: its Rate column and Mix, out of the
+	     Pitch view (2026-10-24, the user's call). The group brings its own
+	     seam; its root is `display: contents`, so its column is this grid's. -->
+	<PitchGroup show="reverse" />
 	{:else}
 	<!-- ===== Variation (Beat Repeat) ===== -->
 	<section class="group" style="--panel-ink: {varInk.primary};">
@@ -369,12 +377,17 @@
 <style>
 	.glitch-central-layout {
 		display: grid;
-		/* One device a view since 2026-10-24: GlitchLoop or the Variation. */
+		/* One device a view since 2026-10-24: GlitchLoop (with Pitch Hack's
+		   Reverse beside it, past a seam) or the Variation. */
 		grid-template-columns: minmax(0, 1fr);
 		height: 100%;
 		width: 100%;
 		padding: var(--central-inset);
 		gap: var(--central-gap);
+	}
+	/* GlitchLoop's presets and seven columns, then Reverse's two. */
+	.glitch-central-layout.with-reverse {
+		grid-template-columns: minmax(0, 8.6fr) auto minmax(0, 2fr);
 	}
 
 	.group {
