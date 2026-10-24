@@ -200,12 +200,13 @@
 	<section class="group" style="--panel-ink: {glitchInk.primary}; --btn-tint: {glitchInk.primary};">
 		<div class="group-title text-xs font-bold tracking-wider">GlitchLoop</div>
 		<div class="glitch-body">
-			<!-- The preset bank, top to bottom in the device's order. -->
-			<div class="presets" class:is-ghost-tab={glitchLoop.isGhost} role="group" aria-label="GlitchLoop presets">
+			<!-- The preset bank, top to bottom in the device's order: one
+			     segmented tab, like the Reverse rate column beside it. -->
+			<div class="device-segmented presets" class:is-ghost-tab={glitchLoop.isGhost} role="group" aria-label="GlitchLoop presets">
 				{#if presets}
 					{#each presets.bank as name, i}
 						<button
-							class="physical-button preset-btn"
+							class="device-segment preset-btn"
 							class:active={!glitchLoop.isGhost && litPreset === i}
 							aria-pressed={!glitchLoop.isGhost && litPreset === i}
 							onclick={() => loadPreset(name)}
@@ -419,7 +420,8 @@
 
 	/* Two columns of three, filled down then across, so the bank still
 	   reads in the device's order (2026-10-24, the user's call; one column
-	   of six before). */
+	   of six before). One segmented tab, as the Reverse column and Drift's
+	   choosers are: an outer frame, hairlines between, the lit one filled. */
 	.presets {
 		grid-column: 1;
 		grid-row: 1 / span 2;
@@ -427,8 +429,21 @@
 		grid-template-rows: repeat(3, minmax(0, 1fr));
 		grid-auto-flow: column;
 		grid-auto-columns: minmax(0, 1fr);
-		gap: 0.25rem;
+		gap: 0;
 		min-height: 0;
+	}
+	/* The shared divider is a top border on every segment after the first,
+	   which in two columns puts one under the frame at the head of the
+	   second. Draw them by position instead: a top rule inside a column,
+	   a left rule down the second. */
+	.presets .preset-btn {
+		border: 0;
+	}
+	.presets .preset-btn:not(:nth-child(3n + 1)) {
+		border-top: 1px solid var(--line-faint);
+	}
+	.presets .preset-btn:nth-child(n + 4) {
+		border-left: 1px solid var(--line-faint);
 	}
 
 	.preset-btn {
@@ -525,6 +540,12 @@
 	}
 	:global(.light[data-skin="hybrid"]) .preset-btn {
 		color: color-mix(in oklab, var(--btn-tint) 55%, var(--foreground));
+	}
+	:global([data-grammar="flat"]) .presets .preset-btn:not(:nth-child(3n + 1)) {
+		border-top-color: var(--line-strong);
+	}
+	:global([data-grammar="flat"]) .presets .preset-btn:nth-child(n + 4) {
+		border-left-color: var(--line-strong);
 	}
 	:global([data-grammar="flat"]) .preset-btn.active {
 		background: var(--btn-tint);
