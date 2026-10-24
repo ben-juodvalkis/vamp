@@ -12,13 +12,17 @@
 
 import { onDestroy } from 'svelte';
 
-export type BeginGesture = (onMove: (e: PointerEvent) => void, onEnd: () => void) => () => void;
+export type BeginGesture = (
+	onMove: (e: PointerEvent) => void,
+	onEnd: (e: PointerEvent) => void | false
+) => () => void;
 
 /**
  * Call during component init. Returns `begin(onMove, onEnd)`: `onMove`
- * runs on pointermove, `onEnd` once on pointerup/cancel. The returned
- * teardown drops the gesture early without running `onEnd` (a pinch
- * taking over).
+ * runs on pointermove, `onEnd` once on pointerup/cancel — unless it
+ * returns `false` (another finger lifted), which keeps the gesture
+ * listening. The returned teardown drops the gesture early without
+ * running `onEnd` (a pinch taking over).
  */
 export function createGestures(): BeginGesture {
 	const live = new Set<() => void>();
@@ -36,8 +40,8 @@ export function createGestures(): BeginGesture {
 			document.removeEventListener('pointercancel', end);
 			live.delete(teardown);
 		};
-		const end = () => {
-			onEnd();
+		const end = (e: PointerEvent) => {
+			if (onEnd(e) === false) return;
 			teardown();
 		};
 		document.addEventListener('pointermove', move);

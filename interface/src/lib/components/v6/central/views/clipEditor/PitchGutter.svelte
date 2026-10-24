@@ -13,7 +13,10 @@
 	 * Rack's pads on a kit. A press on a note name still pans like the
 	 * rest of the canvas (the event bubbles to it). Two gestures of its own
 	 * ride on top:
-	 *  - double-tap: delete every note on that pitch;
+	 *  - tap or hold, and let go: show that row alone (`onSolo`). Fingers
+	 *    on several names before the last lets go show all their rows.
+	 *    The editor decides what a solo of the rows already shown means
+	 *    (back to every row);
 	 *  - hold, then drag up or down: scale every note on that pitch's
 	 *    velocity, up louder, keeping their relative dynamics.
 	 * "Held" is decided when the finger first moves past the slop, by how
@@ -21,13 +24,8 @@
 	 * ~1 s on the rig. The highlight that says "held" is a CSS delay.
 	 */
 
-	import {
-		sendModifyNotes,
-		sendRemoveNotes,
-		type RichNote
-	} from '$lib/services/clipRichNotesService';
+	import { sendModifyNotes, type RichNote } from '$lib/services/clipRichNotesService';
 	import { focusedNotesStore } from '$lib/stores/v6/focusedNotesStore.svelte';
-	import { DOUBLE_TAP_MS } from '$lib/utils/clip/warpMarkers';
 	import { MOMENTARY_HOLD_MS } from '$lib/components/v6/tracks/TrackStrip/utils/momentaryPress';
 	import { createGestures } from './gestures';
 	import { pitchName, VELOCITY_MAX } from './noteStyle';
@@ -38,11 +36,15 @@
 		padLabels: Map<number, string>;
 		/** Folded lanes aren't contiguous, so each is named; unfolded, only the Cs. */
 		folded: boolean;
+		/** The rows shown alone, lit so the way back is plain. */
+		soloed: number[];
 		clipPath: string | null;
 		top: number;
 		width: number;
-		/** A held key took its finger: the canvas stops panning with it. */
+		/** A key took its finger for itself: the canvas stops panning with it. */
 		onHoldStart: (pointerId: number) => void;
+		/** Tapped or held names, all let go: show these rows. */
+		onSolo: (pitches: number[]) => void;
 		/** The velocity scale under way, for the editor's readout. */
 		scaling: { pitch: number; factor: number } | null;
 	}
@@ -52,10 +54,12 @@
 		notes,
 		padLabels,
 		folded,
+		soloed,
 		clipPath,
 		top,
 		width,
 		onHoldStart,
+		onSolo,
 		scaling = $bindable()
 	}: Props = $props();
 
@@ -63,53 +67,85 @@
 
 	const KEY_SLOP_PX = 8;
 	const VEL_DOUBLING_PX = 120; // drag this far up to double the velocities
-	let keyPress = $state<{
+
+	interface KeyPress {
 		pointerId: number;
 		pitch: number;
 		x: number;
 		y: number;
 		at: number;
 		moved: boolean;
-	} | null>(null);
+		/** Became a pan: no longer this gutter's. */
+		dropped: boolean;
+	}
+	let presses = $state<KeyPress[]>([]);
+	// The names pressed since the first finger landed; a solo when the last
+	// lifts, unless a velocity scale spent the gesture.
+	let chord = new Set<number>();
+	let chordSpent = false;
 	let velScale = $state<{
+		pointerId: number;
 		pitch: number;
 		factor: number;
 		members: { noteId: number; velocity: number }[];
 	} | null>(null);
-	let lastKeyTap: { pitch: number; at: number } | null = null;
+
+	let soloSet = $derived(new Set(soloed));
 
 	$effect(() => {
 		scaling = velScale ? { pitch: velScale.pitch, factor: velScale.factor } : null;
 	});
 
 	function handleKeyDown(event: PointerEvent, pitch: number) {
-		if (clipPath === null || keyPress !== null) return;
-		keyPress = {
+		if (clipPath === null || velScale !== null) return;
+		const live = presses.filter((p) => !p.dropped);
+		if (live.length > 0) {
+			// A second name: a chord, not a pinch. Keep this finger off the
+			// canvas and take the first ones off the pan.
+			event.stopPropagation();
+			for (const p of live) onHoldStart(p.pointerId);
+		}
+		const press: KeyPress = {
 			pointerId: event.pointerId,
 			pitch,
 			x: event.clientX,
 			y: event.clientY,
 			at: performance.now(),
-			moved: false
+			moved: false,
+			dropped: false
 		};
-		beginGesture(onKeyMove, onKeyEnd);
+		presses.push(press);
+		chord.add(pitch);
+		beginGesture(
+			(e) => onKeyMove(e, press.pointerId),
+			(e) => onKeyEnd(e, press.pointerId)
+		);
 	}
 
-	function onKeyMove(event: PointerEvent) {
-		const kp = keyPress;
-		if (kp === null || event.pointerId !== kp.pointerId) return;
+	function pressOf(pointerId: number): KeyPress | undefined {
+		return presses.find((p) => p.pointerId === pointerId);
+	}
+
+	function onKeyMove(event: PointerEvent, pointerId: number) {
+		const kp = pressOf(pointerId);
+		if (!kp || kp.dropped || event.pointerId !== pointerId) return;
 		const dy = event.clientY - kp.y;
 		if (velScale === null) {
+			// In a chord a finger's drift means nothing.
+			if (presses.length > 1) return;
 			if (Math.hypot(event.clientX - kp.x, dy) <= KEY_SLOP_PX) return;
 			kp.moved = true;
 			if (performance.now() - kp.at < MOMENTARY_HOLD_MS) {
 				// A drag straight away is a pan; leave it to the canvas.
-				keyPress = null;
+				kp.dropped = true;
+				chord.delete(kp.pitch);
 				return;
 			}
 			// Held, then moved: take the finger off the pan.
 			onHoldStart(kp.pointerId);
+			chordSpent = true;
 			velScale = {
+				pointerId,
 				pitch: kp.pitch,
 				factor: 1,
 				members: notes
@@ -117,6 +153,7 @@
 					.map((n) => ({ noteId: n.noteId, velocity: n.velocity }))
 			};
 		}
+		if (velScale.pointerId !== pointerId) return;
 		if (event.cancelable) event.preventDefault();
 		const factor = Math.pow(2, -dy / VEL_DOUBLING_PX);
 		velScale.factor = factor;
@@ -129,51 +166,39 @@
 		return Math.max(1, Math.min(VELOCITY_MAX, Math.round(velocity * factor)));
 	}
 
-	function onKeyEnd() {
-		const kp = keyPress;
+	function onKeyEnd(event: PointerEvent, pointerId: number): false | void {
+		// Another finger lifted: keep listening for this one.
+		if (event.pointerId !== pointerId) return false;
+		presses = presses.filter((p) => p.pointerId !== pointerId);
 		const vs = velScale;
-		keyPress = null;
-		velScale = null;
-		if (kp === null || clipPath === null) return;
-		if (vs !== null) {
-			const specs = [];
-			for (const m of vs.members) {
-				const n = focusedNotesStore.get(m.noteId);
-				if (!n || n.velocity === m.velocity) continue;
-				specs.push({
-					noteId: n.noteId,
-					pitch: n.pitch,
-					startBeats: n.startBeats,
-					durationBeats: n.durationBeats,
-					velocity: n.velocity,
-					mute: n.mute
-				});
-			}
-			if (specs.length > 0) sendModifyNotes(clipPath, specs);
-			return;
+		if (vs !== null && vs.pointerId === pointerId) {
+			velScale = null;
+			commitVelocities(vs.members);
 		}
-		// A tap: not moved, and not held (a hold that lets go is nothing).
-		const now = performance.now();
-		if (kp.moved || now - kp.at >= MOMENTARY_HOLD_MS) {
-			lastKeyTap = null;
-			return;
-		}
-		const prev = lastKeyTap;
-		if (prev && prev.pitch === kp.pitch && now - prev.at <= DOUBLE_TAP_MS) {
-			lastKeyTap = null;
-			deletePitch(kp.pitch);
-		} else {
-			lastKeyTap = { pitch: kp.pitch, at: now };
-		}
+		if (presses.length > 0) return;
+		const pitches = [...chord];
+		const spent = chordSpent;
+		chord = new Set();
+		chordSpent = false;
+		if (!spent && pitches.length > 0 && clipPath !== null) onSolo(pitches);
 	}
 
-	function deletePitch(pitch: number) {
+	function commitVelocities(members: { noteId: number; velocity: number }[]) {
 		if (clipPath === null) return;
-		const ids = notes.filter((n) => n.pitch === pitch).map((n) => n.noteId);
-		if (ids.length === 0) return;
-		focusedNotesStore.optimisticRemove(ids);
-		const real = ids.filter((id) => id >= 0);
-		if (real.length > 0) sendRemoveNotes(clipPath, real);
+		const specs = [];
+		for (const m of members) {
+			const n = focusedNotesStore.get(m.noteId);
+			if (!n || n.velocity === m.velocity) continue;
+			specs.push({
+				noteId: n.noteId,
+				pitch: n.pitch,
+				startBeats: n.startBeats,
+				durationBeats: n.durationBeats,
+				velocity: n.velocity,
+				mute: n.mute
+			});
+		}
+		if (specs.length > 0) sendModifyNotes(clipPath, specs);
 	}
 </script>
 
@@ -183,7 +208,8 @@
 		<div
 			class="key"
 			class:black={lane.black}
-			class:pressed={keyPress?.pitch === lane.pitch && !keyPress.moved}
+			class:pressed={presses.some((p) => p.pitch === lane.pitch && !p.moved && !p.dropped)}
+			class:soloed={soloSet.has(lane.pitch)}
 			class:scaling={velScale?.pitch === lane.pitch}
 			style="top: {lane.y}px; height: {lane.h}px;"
 			onpointerdown={(e) => handleKeyDown(e, lane.pitch)}
@@ -222,6 +248,15 @@
 	   with no JS timer (page timers are clamped on the rig). */
 	.key.pressed {
 		animation: key-held 1ms linear var(--key-hold-ms, 300ms) forwards;
+	}
+	/* A row shown alone: the key wears the ON ink at a wash, so the way
+	   back to every row (tap it again) is plain. */
+	.key.soloed {
+		background: color-mix(in oklab, var(--phosphor) 30%, var(--secondary));
+		box-shadow: inset 3px 0 0 var(--phosphor);
+	}
+	.key.soloed .key-label {
+		color: var(--foreground);
 	}
 	.key.scaling {
 		background: var(--phosphor);

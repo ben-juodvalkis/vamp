@@ -53,7 +53,7 @@
 	} from '$lib/utils/clip/clipEditorGeometry';
 	import { contentLocal } from '$lib/utils/clip/clipPointerMath';
 	import { snapToGrid, type LoopRange } from '$lib/utils/clip/clipGesture';
-	import { DOUBLE_TAP_MS } from '$lib/utils/clip/warpMarkers';
+	import { MOMENTARY_HOLD_MS } from '$lib/components/v6/tracks/TrackStrip/utils/momentaryPress';
 	import { logger } from '$lib/utils/logger';
 	import { useFocusedClip } from './clipEditor/useFocusedClip.svelte';
 	import { useWarpMarkers } from './clipEditor/useWarpMarkers.svelte';
@@ -162,7 +162,29 @@
 	let fold = $state(true);
 	let liveFoldLanes = $derived(foldLanes(notes.map((n) => n.pitch)));
 	let heldFoldLanes = $state<number[] | null>(null);
+
+	// ── Solo rows (a tap on a note name, ADR-471) ────────────────────
+	// The roll shows only the soloed pitches, as lanes the way Fold shows
+	// its own, so the notes on them are fat and the rest are out of reach:
+	// hidden, untouched by a draw, a drag, the velocity lane or Quantize.
+	// It outranks Fold, and holds while the soloed rows empty (a row whose
+	// last note was moved or deleted stays, to draw on). Tapping the rows
+	// already soloed goes back to every row; a new clip starts with none.
+	let soloPitches = $state<number[]>([]);
+	$effect(() => {
+		void clipPath;
+		soloPitches = [];
+	});
+	function solo(pitches: number[]) {
+		const next = [...new Set(pitches)].sort((a, b) => a - b);
+		const same = next.length === soloPitches.length && next.every((p, i) => p === soloPitches[i]);
+		soloPitches = same ? [] : next;
+	}
+	let soloSet = $derived(new Set(soloPitches));
+	let shownNotes = $derived(soloPitches.length > 0 ? notes.filter((n) => soloSet.has(n.pitch)) : notes);
+
 	let viewPitchWindow = $derived.by((): PitchWindow => {
+		if (isMidi && soloPitches.length > 0) return { ...pitchWindow, lanes: soloPitches };
 		const lanes = heldFoldLanes ?? liveFoldLanes;
 		return fold && isMidi && lanes.length > 0 ? { ...pitchWindow, lanes } : pitchWindow;
 	});
@@ -260,8 +282,8 @@
 		if (contentW <= 0 || contentH <= 0) return out;
 		const win = viewPitchWindow;
 		const h = laneHeight(win, contentH);
-		for (let i = 0; i < notes.length; i++) {
-			const n = notes[i];
+		for (let i = 0; i < shownNotes.length; i++) {
+			const n = shownNotes[i];
 			const noteEnd = n.startBeats + n.durationBeats;
 			if (noteEnd <= beatWindow.startBeats || n.startBeats >= beatWindow.endBeats) continue;
 			if (!win.lanes && (n.pitch < win.lowPitch || n.pitch > win.highPitch)) continue;
@@ -396,7 +418,6 @@
 			editGesture = null;
 			first.teardown();
 			first.revert();
-			lastNoteTap = null;
 			activePointers.set(first.id, localCoords({ clientX: first.x, clientY: first.y }));
 		}
 		activePointers.set(event.pointerId, localCoords(event));
@@ -474,9 +495,11 @@
 	// needs Shift/⌘ the iPad doesn't have, and the Select/Draw toggle was
 	// a mode to keep track of mid-set). A tap on empty grid draws a note
 	// (drag right to set its length); a drag on a note moves it (pitch +
-	// time) or, from its right edge, resizes it; a DOUBLE-tap on a note
-	// erases it, so a near-miss single tap can't delete one. Quantize acts
-	// on the whole clip.
+	// time) or, from its right edge, resizes it; a tap on a note erases it
+	// (the user's call, 2026-10-24, ADR-471: it was a double-tap). A note
+	// grabbed and let go without moving after a hold is left alone, so a
+	// change of mind mid-grab deletes nothing. Quantize acts on the notes
+	// shown.
 	// Optimistic-apply to focusedNotesStore, emit the write, reconcile on
 	// the surface's notes/changed re-pull (own-write echo suppressed —
 	// see useFocusedClip + clipRichNotesService.markLocalWrite).
@@ -484,6 +507,7 @@
 	// Drag state for a note move/resize gesture: the grabbed note and its
 	// pre-drag geometry.
 	type NoteDragKind = 'move' | 'resize';
+	const NOTE_TAP_SLOP_PX = 8;
 	let noteDrag = $state<{
 		kind: NoteDragKind;
 		noteId: number;
@@ -492,12 +516,9 @@
 		startBeats: number;
 		startPitch: number;
 		startDuration: number;
+		at: number;
 		moved: boolean;
 	} | null>(null);
-
-	// Double-tap a note: erase it. The first tap is a drag that never
-	// moved; a second on the same note within DOUBLE_TAP_MS removes it.
-	let lastNoteTap: { noteId: number; at: number } | null = null;
 
 	function startNoteDrag(event: PointerEvent, noteId: number) {
 		if (!isMidi || clipPath === null) return;
@@ -522,6 +543,7 @@
 			startBeats: note.startBeats,
 			startPitch: note.pitch,
 			startDuration: note.durationBeats,
+			at: performance.now(),
 			moved: false
 		};
 
@@ -548,12 +570,17 @@
 		const grid = gridBeats;
 		const dx = event.clientX - noteDrag.startClientX;
 		const dy = event.clientY - noteDrag.startClientY;
-		if (!noteDrag.moved && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) {
+		// A fingertip rolls a few px on a tap, and a tap erases: it is a
+		// drag only past the slop.
+		if (!noteDrag.moved && Math.hypot(dx, dy) > NOTE_TAP_SLOP_PX) {
 			noteDrag.moved = true;
 			// A drag off the resize handle that sets off up or down is a
 			// pitch move: a resize would ignore the pitch and snap the length.
 			if (noteDrag.kind === 'resize' && Math.abs(dy) > Math.abs(dx)) noteDrag.kind = 'move';
 		}
+		// Inside the slop the note stays put: a tap or a hold that lets go
+		// must leave nothing moved that Live was never told about.
+		if (!noteDrag.moved) return;
 
 		if (noteDrag.kind === 'resize') {
 			const snappedDur = Math.max(grid, snapToGrid(noteDrag.startDuration + deltaBeats, grid));
@@ -580,17 +607,9 @@
 		heldFoldLanes = null;
 		if (drag === null || clipPath === null) return;
 		if (!drag.moved) {
-			const prev = lastNoteTap;
-			const now = performance.now();
-			if (prev && prev.noteId === drag.noteId && now - prev.at <= DOUBLE_TAP_MS) {
-				lastNoteTap = null;
-				deleteNote(drag.noteId);
-			} else {
-				lastNoteTap = { noteId: drag.noteId, at: now };
-			}
+			if (performance.now() - drag.at < MOMENTARY_HOLD_MS) deleteNote(drag.noteId);
 			return;
 		}
-		lastNoteTap = null;
 		const n = focusedNotesStore.get(drag.noteId);
 		if (!n || n.noteId < 0) return;
 		sendModifyNotes(clipPath, [
@@ -608,7 +627,9 @@
 	function deleteNote(noteId: number) {
 		if (clipPath === null) return;
 		focusedNotesStore.optimisticRemove([noteId]);
-		sendRemoveNotes(clipPath, [noteId]);
+		// A note still drawing has no id in Live yet; its add lands and
+		// the next re-pull reconciles it.
+		if (noteId >= 0) sendRemoveNotes(clipPath, [noteId]);
 	}
 
 	// Draw-on-empty-grid. Pointerdown mints a temp note at the
@@ -630,7 +651,7 @@
 		// A note thinner than its grid cell is hit across the whole cell, so
 		// a short note takes a fingertip without the cells beside it, where
 		// the next note goes, losing anything.
-		const hit = noteInCell(notes, pitch, tapBeats, grid);
+		const hit = noteInCell(shownNotes, pitch, tapBeats, grid);
 		if (hit !== null) {
 			startNoteDrag(event, hit);
 			return;
@@ -706,13 +727,13 @@
 
 	// --- quantize (M5) ───────────────────────────────────────────────
 	// Live's Clip has no `quantize` LOM method (SelectionProbe dump), so
-	// quantize is client-side: snap every note's start in the clip to the
-	// grid and batch-modify. No new wire.
+	// quantize is client-side: snap every shown note's start to the grid
+	// (the whole clip, or the soloed rows) and batch-modify. No new wire.
 	function quantizeClip() {
 		if (clipPath === null) return;
 		const grid = gridBeats;
 		const specs = [];
-		for (const n of notes) {
+		for (const n of shownNotes) {
 			if (n.noteId < 0) continue;
 			const snapped = Math.max(0, snapToGrid(n.startBeats, grid));
 			if (Math.abs(snapped - n.startBeats) < 1e-6) continue; // already on grid
@@ -811,10 +832,12 @@
 					{notes}
 					{padLabels}
 					{folded}
+					soloed={soloPitches}
 					{clipPath}
 					top={TIME_AXIS_H}
 					width={pitchAxisW}
 					onHoldStart={releasePan}
+					onSolo={solo}
 					bind:scaling={velScale}
 				/>
 			{/if}
@@ -936,7 +959,7 @@
 			<!-- Velocity lane (M5): sits in the reserved bottom strip. -->
 			{#if isMidi}
 				<VelocityLane
-					{notes}
+					notes={shownNotes}
 					{beatWindow}
 					{clipPath}
 					left={pitchAxisW}
@@ -953,7 +976,7 @@
 				bind:fold
 				bind:gridDenom
 				bind:gridTriplet
-				canQuantize={notes.length > 0}
+				canQuantize={shownNotes.length > 0}
 				onQuantize={quantizeClip}
 			/>
 		{/if}
