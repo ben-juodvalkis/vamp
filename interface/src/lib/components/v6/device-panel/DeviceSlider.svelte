@@ -282,19 +282,6 @@
       ></div>
     {/if}
 
-    <!-- The track: a groove along the drag axis, drawn at every value, so a
-         slider at its floor or its ceiling still reads as a slider and never
-         as a button that is off or lit. Two layers like the label: the base
-         reads on the well, the inverse copy is clipped to the fill. -->
-    <div class="slider-groove {orientation}" aria-hidden="true"></div>
-    {#if showFill}
-      <div
-        class="slider-groove slider-groove--inverse {orientation}"
-        style="clip-path: {inverseClip};"
-        aria-hidden="true"
-      ></div>
-    {/if}
-
     <!-- Fill (suppressed in meter mode and when the handle line is showing) -->
     {#if showFill}
       {#if centerOrigin}
@@ -433,7 +420,6 @@
      mirrors DeviceXY so the device name rides a single parent dim and stays
      readable on the empty well. */
   .slider-container.ghost .slider-fill,
-  .slider-container.ghost .slider-groove,
   .slider-container.ghost .center-line,
   .slider-container.ghost .slider-handle-segment {
     opacity: var(--opacity-ghost);
@@ -462,33 +448,6 @@
   .slider-fill.horizontal {
     height: 100%;
     top: 0;
-  }
-
-  /* The groove is a rail just inside the leading edge (left for vertical,
-     bottom for horizontal), clear of the label, over the fill. Its inverse
-     copy sits a layer above the base, so on the fill the darker line wins. */
-  .slider-groove {
-    position: absolute;
-    pointer-events: none;
-    z-index: 2;
-    border-radius: 2px;
-    background: color-mix(in oklab, var(--slider-tint, var(--foreground)) 30%, var(--surface-well));
-  }
-  .slider-groove--inverse {
-    z-index: 3;
-    background: color-mix(in oklab, var(--card) 40%, transparent);
-  }
-  .slider-groove.vertical {
-    left: 5px;
-    width: 3px;
-    top: 5px;
-    bottom: 5px;
-  }
-  .slider-groove.horizontal {
-    bottom: 5px;
-    height: 3px;
-    left: 5px;
-    right: 5px;
   }
 
   .center-line {
@@ -663,15 +622,6 @@
   }
   :global([data-grammar="flat"]) .slider-handle-segment {
     background-color: var(--flat-handle);
-  }
-  /* --line-strong is darker than the well, so the groove is a light line
-     on the well and a faint dark one on the fill, never as dark as the
-     label it runs behind. */
-  :global([data-grammar="flat"]) .slider-groove {
-    background: color-mix(in oklab, var(--foreground) 22%, transparent);
-  }
-  :global([data-grammar="flat"]) .slider-groove--inverse {
-    background: color-mix(in oklab, var(--flat-on-fg) 22%, transparent);
   }
 
   /* Hybrid skin: Live's grammar, but the device family keeps its voice —
