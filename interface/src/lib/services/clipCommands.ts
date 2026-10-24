@@ -42,7 +42,8 @@ export {
 	sendClipFocus,
 	sendSelectClip,
 	sendClipDelete,
-	sendSceneLaunch
+	sendSceneLaunch,
+	sendSceneStop
 } from '$lib/api/simpleClient';
 
 const V3_CLIP_LOAD_FILE_ADDRESS = '/looping/v3/clip/load_file';

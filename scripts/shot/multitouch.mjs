@@ -380,6 +380,53 @@ const SCENARIOS = [
 	},
 
 	{
+		name: 'mini-main-scenes',
+		view: 'default',
+		description: 'with Main selected the mini is scene launches and a global stop (2026-10-24)',
+		async run({ page, fingers, tap, sent, reset }) {
+			const master = await centreOf(page, '[data-debug="master-card"]');
+			await tap(master.x, master.y);
+			await page.waitForSelector('[data-debug="mini-session"] [data-debug="scene-rail"]', { timeout: 3000 });
+
+			// A tap anywhere on a scene launches it.
+			const scene = await centreOf(page, '[data-debug="mini-session"] [data-scene-index]', 1);
+			reset();
+			await tap(scene.x, scene.y);
+			await wait(250);
+			expect(
+				sent().some((m) => m.address === '/looping/v3/scene/launch' && m.args[0] === 'scenes/1'),
+				'a tap on a scene must launch it'
+			);
+
+			// A hold only selects it.
+			const other = await centreOf(page, '[data-debug="mini-session"] [data-scene-index]', 2);
+			reset();
+			const id = await fingers.down(other.x, other.y);
+			await wait(800);
+			await fingers.up(id);
+			await wait(250);
+			expect(
+				sent().some((m) => m.address === '/looping/v3/selected_clip'),
+				'a hold must move the pedal row'
+			);
+			expect(
+				!sent().some((m) => m.address === '/looping/v3/scene/launch'),
+				'a hold must launch nothing'
+			);
+
+			// The footer is a global stop.
+			const stop = await centreOf(page, '[data-debug="mini-session"] [data-debug="rail-stop-all"]');
+			reset();
+			await tap(stop.x, stop.y);
+			await wait(250);
+			expect(
+				sent().some((m) => m.address === '/looping/v3/scene/stop'),
+				'the footer must stop everything'
+			);
+		}
+	},
+
+	{
 		name: 'mini-hold-selects',
 		view: 'default',
 		description: 'a hold on a mini session clip moves the highlight there, shows its Clip view and fires nothing',

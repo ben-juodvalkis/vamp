@@ -36,6 +36,7 @@
      */
 
     import SlotGrid from '$lib/components/v6/tracks/TrackStrip/components/SlotGrid.svelte';
+    import SceneRail from '$lib/components/v6/tracks/SceneRail.svelte';
     import { sceneWindowStore } from '$lib/stores/v6/sceneWindowStore.svelte';
     import { session } from '$lib/stores/session.svelte';
     import { v3Store } from '$lib/stores/v3/normalized.svelte';
@@ -205,11 +206,10 @@
             </button>
         </div>
     {:else}
-        <!-- Main (Live's master track) has no clip slots. Say so rather than drawing an empty
-             grid, which reads as "this set has no clips". -->
-        <div class="mini-empty">
-            <span>No clip slots on Main</span>
-        </div>
+        <!-- Main (Live's master track) has no clip slots: the scene launch
+             buttons and a global stop instead (2026-10-24, the user's
+             call), the scene rail's mini face. -->
+        <SceneRail mini />
     {/if}
 </div>
 
@@ -334,16 +334,6 @@
         background: color-mix(in oklab, var(--mini-ink) 65%, transparent);
     }
 
-    .mini-empty {
-        flex: 1 1 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0 8px;
-        color: var(--signal-dim);
-        font-size: 0.75rem;
-        text-align: center;
-    }
 
     /* ---- Flat grammar (Live / Hybrid skins, ui-architecture §8.1) ------
        Device tiles lose their tint and colored ring in the flat skins;
