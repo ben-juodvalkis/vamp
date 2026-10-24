@@ -464,9 +464,9 @@
     top: 0;
   }
 
-  /* The groove sits over the fill and under the label, inset from the ends
-     so it reads as a track with a start and a finish. Its inverse copy sits
-     a layer above the base, so on the fill the darker line wins. */
+  /* The groove is a rail just inside the leading edge (left for vertical,
+     bottom for horizontal), clear of the label, over the fill. Its inverse
+     copy sits a layer above the base, so on the fill the darker line wins. */
   .slider-groove {
     position: absolute;
     pointer-events: none;
@@ -479,18 +479,16 @@
     background: color-mix(in oklab, var(--card) 40%, transparent);
   }
   .slider-groove.vertical {
-    left: 50%;
+    left: 5px;
     width: 3px;
-    margin-left: -1.5px;
-    top: 10px;
-    bottom: 10px;
+    top: 5px;
+    bottom: 5px;
   }
   .slider-groove.horizontal {
-    top: 50%;
+    bottom: 5px;
     height: 3px;
-    margin-top: -1.5px;
-    left: 10px;
-    right: 10px;
+    left: 5px;
+    right: 5px;
   }
 
   .center-line {
