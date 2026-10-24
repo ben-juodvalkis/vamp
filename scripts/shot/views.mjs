@@ -183,6 +183,16 @@ export const TOURS = {
 				description: 'A hold on a mini slot holding a clip opens the Clip view on it',
 				steps: [{ hold: '[data-debug="mini-session"] [data-slot-index="1"]', ms: 700 }]
 			},
+			// On the Drums track the rows are the kit's pads: each name, note
+			// and velocity bar wears its pad's chain colour.
+			{
+				name: 'clip-notes-drums',
+				description: 'Note editor on the Drums track: pad names, the rows in their chain colours',
+				session: { '/looping/v3/clip/focused': ['tracks/0/slots/0/clip'] },
+				// Drums is the selected track, so a Clip tap on its strip is
+				// the editor's toggle (TrackStrip `clipViewUp`).
+				steps: [selectTrack(0)]
+			},
 			{
 				name: 'clip-notes-unfolded',
 				description: 'Note editor, Fold off',

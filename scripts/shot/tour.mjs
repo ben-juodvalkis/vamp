@@ -224,6 +224,9 @@ try {
 			// `/bridge/features` — a view's switch overrides (the `general`
 			// edition, a TotalMix that has not answered), then the state's own.
 			if (state.features) scene.features = { ...scene.features, ...state.features };
+			// The init-emit session scalars — the focused clip, say, which the
+			// mock fixes on Vox and never moves on a focus request.
+			if (state.session) scene.session = { ...scene.session, ...state.session };
 			mock = await startMockSurface({ port: mockPort, scene, log: () => {} });
 			context = await browser.newContext({ viewport, deviceScaleFactor: scale });
 			// Before the page exists, so its very first socket is intercepted.
