@@ -138,8 +138,10 @@ unrelated to what you're testing.
       finger: up or down on a note moves its velocity (the block brightens
       or dims, and Live's velocity matches on release), sideways moves it
       a step at a time, a quick tap deletes it, a long press let go in
-      place leaves it. Push one note off a step in Live, then Q puts it
-      back on. Stop the clip: the strip says "No clip playing"
+      place leaves it. On an empty step: a tap adds a note, a swipe paints
+      one per step (none on a step that has one), and sliding up or down
+      without lifting changes all of them; Live shows each. Push one note
+      off a step in Live, then Q puts it back on. Stop the clip: the strip says "No clip playing"
 - [ ] **Gain (2026-09-08):** one slider per kit shape moves how loud the
       pads are — each pad's `Volume` on DrumCell / Simpler / Sampler
       kits, each pad's *chain* volume on a kit of nested Instrument

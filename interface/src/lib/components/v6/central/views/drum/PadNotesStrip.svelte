@@ -12,7 +12,16 @@
 	 * editor's quantizing drag, `dragSnapStart`), whichever way the drag
 	 * sets off; a quick tap deletes it, as the clip editor's does, and a
 	 * press held past MOMENTARY_HOLD_MS that lets go in place does nothing.
-	 * A drag writes on release. Q, at the strip's right end, quantizes the
+	 * A drag writes on release.
+	 *
+	 * On an empty step: a tap adds a note there; a press that swipes paints
+	 * a note on every step it crosses (not one already holding a note), and
+	 * travel up or down, before or after, sets the velocity of every note
+	 * the stroke made, past a small deadband so a sideways swipe's wobble
+	 * does not. New notes are a step long at PAINT_VELOCITY; the stroke is
+	 * written on release, in one add (`sendAddNotes`).
+	 *
+	 * Q, at the strip's right end, quantizes the
 	 * pad's notes to the strip's steps, 100% (`quantizedNotes`, the clip
 	 * editor's Quantize).
 	 *
@@ -26,6 +35,7 @@
 	import { drag, type DragInfo } from '$lib/actions';
 	import {
 		requestRichNotes,
+		sendAddNotes,
 		sendModifyNotes,
 		sendRemoveNotes,
 		type RichNote
@@ -36,7 +46,19 @@
 	import { quantizedNotes } from '$lib/utils/clip/clipGesture';
 	import type { TimeRange } from '$lib/utils/waveformPaint';
 	import { noteColor } from '../clipEditor/noteStyle';
-	import { dragStart, dragVelocity, stripBlockAt, stripBlocks, stripStepBeats, stripSteps } from './padNotesStrip';
+	import {
+		dragStart,
+		dragVelocity,
+		paintSteps,
+		paintVelocity,
+		PAINT_VELOCITY,
+		stepTaken,
+		stripBlockAt,
+		stripBlocks,
+		stripStepAt,
+		stripStepBeats,
+		stripSteps
+	} from './padNotesStrip';
 
 	interface Props {
 		/** The track's playing MIDI clip; '' while nothing plays. */
@@ -89,15 +111,35 @@
 		startBeats: number;
 	} | null>(null);
 
+	// A paint stroke on empty steps: the steps laid down so far, in the
+	// order crossed, the step the finger is on, and the stroke's velocity.
+	let paint = $state<{ steps: number[]; last: number; velocity: number } | null>(null);
+	// Notes written but not yet back from Live carry a temp id below 0.
+	let nextTempId = -1;
+
 	const padNotes = $derived(notes.filter((n) => n.pitch === note));
+	const stepBeats = $derived(win ? stripStepBeats(win.end - win.start) : 0);
+	const painted = $derived(
+		paint && win
+			? paint.steps.map((i) => ({
+					noteId: -1000 - i,
+					startBeats: win.start + i * stepBeats,
+					durationBeats: stepBeats,
+					velocity: paint!.velocity
+				}))
+			: []
+	);
 	const blocks = $derived(
 		win
 			? stripBlocks(
-					padNotes.map((n) =>
-						press?.noteId === n.noteId
-							? { ...n, velocity: press.velocity, startBeats: press.startBeats }
-							: n
-					),
+					[
+						...padNotes.map((n) =>
+							press?.noteId === n.noteId
+								? { ...n, velocity: press.velocity, startBeats: press.startBeats }
+								: n
+						),
+						...painted
+					],
 					win
 				)
 			: []
@@ -106,23 +148,49 @@
 
 	let box: HTMLElement | null = $state(null);
 
+	function fractionAt(clientX: number): number | null {
+		const rect = box?.getBoundingClientRect();
+		return rect && rect.width > 0 ? (clientX - rect.left) / rect.width : null;
+	}
+
 	function onDown(info: DragInfo) {
 		press = null;
-		const rect = box?.getBoundingClientRect();
-		if (!rect || rect.width <= 0 || !win) return;
-		const i = stripBlockAt(blocks, (info.downX - rect.left) / rect.width, win);
-		if (i === null) return;
-		const n = padNotes.find((p) => p.noteId === blocks[i].noteId);
-		if (n) press = { noteId: n.noteId, at: performance.now(), axis: null, velocity: n.velocity, startBeats: n.startBeats };
+		paint = null;
+		const f = fractionAt(info.downX);
+		if (f === null || !win) return;
+		const i = stripBlockAt(blocks, f);
+		if (i !== null) {
+			const n = padNotes.find((p) => p.noteId === blocks[i].noteId);
+			if (n) press = { noteId: n.noteId, at: performance.now(), axis: null, velocity: n.velocity, startBeats: n.startBeats };
+			return;
+		}
+		// An empty step: the stroke starts there.
+		const w = win;
+		const step = stripStepAt(f, w);
+		paint = { steps: paintSteps([], step, step, (k) => stepTaken(padNotes, k, w)), last: step, velocity: PAINT_VELOCITY };
 	}
 
 	function onStart(info: DragInfo) {
-		if (!press) return;
+		if (!press) {
+			onMove(info);
+			return;
+		}
 		press = { ...press, axis: Math.abs(info.dx) > Math.abs(info.dy) ? 'move' : 'velocity' };
 		onMove(info);
 	}
 
 	function onMove(info: DragInfo) {
+		if (paint && win) {
+			const w = win;
+			const f = fractionAt(info.x);
+			const step = f === null ? paint.last : stripStepAt(f, w);
+			paint = {
+				steps: paintSteps(paint.steps, paint.last, step, (k) => stepTaken(padNotes, k, w)),
+				last: step,
+				velocity: paintVelocity(info.dy, info.height)
+			};
+			return;
+		}
 		if (!press || !win) return;
 		const n = padNotes.find((p) => p.noteId === press?.noteId);
 		if (!n) return;
@@ -130,10 +198,43 @@
 		else if (press.axis === 'move') press = { ...press, startBeats: dragStart(n.startBeats, info.dx, info.width, win) };
 	}
 
+	// The stroke, written: its notes on screen at once under temp ids, the
+	// real ids swapped in when Live returns them, a re-read if it fails.
+	function commitPaint() {
+		const p = paint;
+		paint = null;
+		if (!p || !win || !clipPath || p.steps.length === 0) return;
+		const cp = clipPath;
+		const added: RichNote[] = p.steps.map((i) => ({
+			noteId: nextTempId--,
+			pitch: note,
+			startBeats: win!.start + i * stepBeats,
+			durationBeats: stepBeats,
+			velocity: p.velocity,
+			mute: false
+		}));
+		notes = [...notes, ...added];
+		sendAddNotes(cp, added)
+			.then((ids) => {
+				const real = new Map(added.map((n, k) => [n.noteId, ids[k]]));
+				notes = notes.map((q) => (real.has(q.noteId) && real.get(q.noteId) !== undefined ? { ...q, noteId: real.get(q.noteId)! } : q));
+			})
+			.catch((error: Error) => {
+				logger.debug('PadNotesStrip: add failed', { clipPath: cp, error: error.message });
+				const temp = new Set(added.map((n) => n.noteId));
+				notes = notes.filter((q) => !temp.has(q.noteId));
+			});
+	}
+
 	function onEnd() {
+		if (paint) {
+			commitPaint();
+			return;
+		}
 		const p = press;
 		press = null;
-		if (!p || !clipPath) return;
+		// A note just painted has no id of Live's yet: nothing to write to.
+		if (!p || !clipPath || p.noteId < 0) return;
 		const n = notes.find((q) => q.noteId === p.noteId);
 		if (!n || (p.velocity === n.velocity && p.startBeats === n.startBeats)) return;
 		const moved = { ...n, velocity: p.velocity, startBeats: p.startBeats };
@@ -143,15 +244,18 @@
 	}
 
 	function onTap() {
+		if (paint) {
+			commitPaint();
+			return;
+		}
 		const p = press;
 		press = null;
-		if (!p || !clipPath || performance.now() - p.at >= MOMENTARY_HOLD_MS) return;
+		if (!p || !clipPath || p.noteId < 0 || performance.now() - p.at >= MOMENTARY_HOLD_MS) return;
 		notes = notes.filter((q) => q.noteId !== p.noteId);
 		sendRemoveNotes(clipPath, [p.noteId]);
 	}
 
 	// Q: every one of the pad's notes onto the strip's steps, in one write.
-	const stepBeats = $derived(win ? stripStepBeats(win.end - win.start) : 0);
 	const offGrid = $derived(win ? quantizedNotes(padNotes, stepBeats) : []);
 	function quantize() {
 		const specs = offGrid;
@@ -163,6 +267,10 @@
 
 	// What the drag is doing, for the corner readout.
 	const readout = $derived.by(() => {
+		if (paint && paint.steps.length > 0) {
+			const n = paint.steps.length;
+			return `Velocity ${paint.velocity} · ${n} ${n === 1 ? 'note' : 'notes'}`;
+		}
 		if (!press?.axis || !win) return null;
 		if (press.axis === 'velocity') return `Velocity ${press.velocity}`;
 		const step = stripStepBeats(win.end - win.start);
@@ -177,7 +285,7 @@
 	use:drag={{ commit: 'either', onDown, onStart, onMove, onEnd, onTap }}
 	data-pad-notes={note}
 	role="group"
-	aria-label="The pad's notes in the playing clip: drag a note up or down for its velocity, sideways to move it, tap to delete it"
+	aria-label="The pad's notes in the playing clip: drag a note up or down for its velocity, sideways to move it, tap to delete it; tap an empty step to add one, swipe to paint several"
 >
 	{#if !win}
 		<span class="strip-msg">No clip playing</span>

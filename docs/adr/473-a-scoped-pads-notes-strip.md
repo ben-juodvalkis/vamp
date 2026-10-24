@@ -21,7 +21,17 @@ moves it step to step with the clip editor's quantizing drag
 (`dragSnapStart`, ADR-472), kept inside the window; the release writes it
 (`sendModifyNotes`). A quick tap deletes it (`sendRemoveNotes`), as a tap
 on a note in the clip editor does (ADR-471); a press held past
-MOMENTARY_HOLD_MS that lets go in place does nothing. The geometry and
+MOMENTARY_HOLD_MS that lets go in place does nothing. A touch hits a note
+only by landing on it, so the empty step beside a note is its own target.
+
+On an empty step (the user's call, the same day): a tap adds a note there;
+a press that swipes paints a note on every step it crosses, filling any a
+fast swipe skips and leaving a step that already holds a note alone; and
+travel up or down in the same gesture, before or after painting, sets the
+velocity of every note the stroke made, once it is past a 12px deadband
+(so a sideways swipe's wobble moves nothing). New notes are a step long at
+velocity 100, written on release in one add (`sendAddNotes`), on screen at
+once under temp ids that Live's ids replace. The geometry and
 both drags are pure functions in `drum/padNotesStrip.ts`. **Q**, a
 button at the strip's right end, quantizes the pad's notes to the strip's
 steps, 100%, in one write (`quantizedNotes` in `clipGesture.ts`, which the
@@ -45,8 +55,7 @@ scoped pad hides it.
 ## Consequences
 - With nothing playing on the track the strip says "No clip playing" and
   edits nothing; the clip Live has focused is not used.
-- No note is added here, and a note's length is not changed: those are
-  still the clip editor's.
+- A note's length is not changed here: that is still the clip editor's.
 - An edit made in Live itself shows once the clip next reports
   `notes/changed`.
 

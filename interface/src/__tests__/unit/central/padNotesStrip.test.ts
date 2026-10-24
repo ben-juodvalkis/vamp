@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
+	PAINT_VELOCITY,
+	paintSteps,
+	paintVelocity,
+	stepTaken,
+	stripStepAt,
 	dragStart,
 	dragVelocity,
 	stripBlockAt,
@@ -42,7 +47,7 @@ describe('padNotesStrip — blocks', () => {
 		// Cut at the window's end.
 		expect(blocks[2].width).toBeCloseTo(0.125);
 	});
-	it('takes the block a touch lands on, or the nearest within a step, else none', () => {
+	it('takes the block a touch lands on, and only that', () => {
 		const blocks = stripBlocks(
 			[
 				{ noteId: 1, startBeats: 4, durationBeats: 0.25, velocity: 100 },
@@ -50,10 +55,11 @@ describe('padNotesStrip — blocks', () => {
 			],
 			win
 		);
-		expect(stripBlockAt(blocks, 0.03, win)).toBe(0);
-		expect(stripBlockAt(blocks, 0.1, win)).toBe(0);
-		expect(stripBlockAt(blocks, 0.48, win)).toBe(1);
-		expect(stripBlockAt(blocks, 0.3, win)).toBeNull();
+		expect(stripBlockAt(blocks, 0.03)).toBe(0);
+		expect(stripBlockAt(blocks, 0.53)).toBe(1);
+		// Just past a note's end is the empty step beside it.
+		expect(stripBlockAt(blocks, 0.07)).toBeNull();
+		expect(stripBlockAt(blocks, 0.3)).toBeNull();
 	});
 });
 
@@ -84,5 +90,34 @@ describe('padNotesStrip — dragStart', () => {
 	it('keeps the note inside the window', () => {
 		expect(dragStart(5, -400, 400, win)).toBeCloseTo(4);
 		expect(dragStart(5, 400, 400, win)).toBeCloseTo(7.75);
+	});
+});
+
+describe('padNotesStrip — painting notes on empty steps', () => {
+	// 4 beats: sixteen 16th steps.
+	const win = { start: 4, end: 8 };
+	it('finds the step under a touch', () => {
+		expect(stripStepAt(0, win)).toBe(0);
+		expect(stripStepAt(0.5, win)).toBe(8);
+		expect(stripStepAt(0.999, win)).toBe(15);
+		expect(stripStepAt(1.2, win)).toBe(15);
+	});
+	it('knows a step that already holds one of the pad\'s notes', () => {
+		const notes = [{ startBeats: 4.5 }, { startBeats: 5.3 }];
+		expect(stepTaken(notes, 2, win)).toBe(true);
+		expect(stepTaken(notes, 5, win)).toBe(true);
+		expect(stepTaken(notes, 3, win)).toBe(false);
+	});
+	it('lays down every step crossed, either way, skipping taken ones and repeats', () => {
+		const taken = (i: number) => i === 4;
+		expect(paintSteps([2], 2, 6, taken)).toEqual([2, 3, 5, 6]);
+		expect(paintSteps([2, 3, 5, 6], 6, 1, taken)).toEqual([2, 3, 5, 6, 1]);
+		expect(paintSteps([], 4, 4, taken)).toEqual([]);
+	});
+	it('holds the velocity through the deadband, then follows the drag', () => {
+		expect(paintVelocity(8, 127)).toBe(PAINT_VELOCITY);
+		expect(paintVelocity(-10, 127)).toBe(PAINT_VELOCITY);
+		expect(paintVelocity(32, 127)).toBe(120);
+		expect(paintVelocity(-52, 127)).toBe(60);
 	});
 });

@@ -9,6 +9,10 @@ import type { TimeRange } from '$lib/utils/waveformPaint';
 import { dragSnapStart } from '$lib/utils/clip/clipGesture';
 
 export const STRIP_VELOCITY_MAX = 127;
+/** A note painted on an empty step starts here. */
+export const PAINT_VELOCITY = 100;
+/** Vertical travel a painting finger may drift before it moves the velocity. */
+export const PAINT_DEADBAND_PX = 12;
 
 /** A step's length for a window: 16ths up to 2 bars, 8ths up to 4, beats past that. */
 export function stripStepBeats(spanBeats: number): number {
@@ -65,23 +69,16 @@ export function stripSteps(win: TimeRange): { at: number; beat: boolean }[] {
 }
 
 /**
- * The block a touch at `fraction` of the width takes: one it lands on, or
- * the nearest within a step of it (a 16th is a thin target under a
- * finger); else none.
+ * The block a touch at `fraction` of the width lands on, else none. Exact,
+ * not "the nearest": an empty step beside a note is a target of its own
+ * (a tap there adds a note), and a step is wide enough under a finger.
+ * Where blocks overlap, the one starting latest wins, as it is drawn on top.
  */
-export function stripBlockAt(blocks: readonly StripBlock[], fraction: number, win: TimeRange): number | null {
-	const span = win.end - win.start;
-	if (span <= 0) return null;
-	const reach = stripStepBeats(span) / span;
+export function stripBlockAt(blocks: readonly StripBlock[], fraction: number): number | null {
 	let best: number | null = null;
-	let bestDist = Infinity;
 	for (let i = 0; i < blocks.length; i++) {
 		const b = blocks[i];
-		const dist = fraction < b.left ? b.left - fraction : fraction > b.left + b.width ? fraction - (b.left + b.width) : 0;
-		if (dist <= reach && dist < bestDist) {
-			best = i;
-			bestDist = dist;
-		}
+		if (fraction >= b.left && fraction <= b.left + b.width && (best === null || b.left >= blocks[best].left)) best = i;
 	}
 	return best;
 }
@@ -110,4 +107,52 @@ export function dragStart(startBeats: number, dxPx: number, widthPx: number, win
 	const step = stripStepBeats(span);
 	const moved = dragSnapStart(startBeats - win.start, (dxPx / widthPx) * span, step) + win.start;
 	return Math.min(win.end - step, Math.max(win.start, moved));
+}
+
+/** The step a touch at `fraction` of the width is on, 0..count-1. */
+export function stripStepAt(fraction: number, win: TimeRange): number {
+	const span = win.end - win.start;
+	if (span <= 0) return 0;
+	const step = stripStepBeats(span);
+	const count = Math.max(1, Math.round(span / step));
+	return Math.min(count - 1, Math.max(0, Math.floor((fraction * span) / step)));
+}
+
+/** True when one of the pad's notes starts within step `index`. */
+export function stepTaken(notes: readonly { startBeats: number }[], index: number, win: TimeRange): boolean {
+	const step = stripStepBeats(win.end - win.start);
+	const from = win.start + index * step - 1e-6;
+	const to = win.start + (index + 1) * step - 1e-6;
+	return notes.some((n) => n.startBeats >= from && n.startBeats < to);
+}
+
+/**
+ * The steps a paint stroke has laid down, after the finger moves from
+ * step `from` to step `to`: every step between them joins (a fast swipe
+ * skips none), in the order crossed, except a step already in the stroke
+ * or already holding one of the pad's notes.
+ */
+export function paintSteps(
+	stroke: readonly number[],
+	from: number,
+	to: number,
+	taken: (index: number) => boolean
+): number[] {
+	const out = [...stroke];
+	const dir = to >= from ? 1 : -1;
+	for (let i = from; dir > 0 ? i <= to : i >= to; i += dir) {
+		if (!out.includes(i) && !taken(i)) out.push(i);
+	}
+	return out;
+}
+
+/**
+ * The velocity of a painted stroke after `dyPx` of vertical travel (up
+ * positive): PAINT_VELOCITY until the finger has drifted past the
+ * deadband, then the strip's relative drag from there.
+ */
+export function paintVelocity(dyPx: number, heightPx: number): number {
+	const past = Math.abs(dyPx) - PAINT_DEADBAND_PX;
+	if (past <= 0) return PAINT_VELOCITY;
+	return dragVelocity(PAINT_VELOCITY, Math.sign(dyPx) * past, heightPx);
 }
