@@ -40,12 +40,12 @@
   let rateLabel = $derived(isSynced ? syncRateLabel(syncRate) : frequencyLabel(frequency));
 </script>
 
-<BaseDeviceControl {position} {device} title="Auto Pan" showMoveToTop={true} showMoveToEnd={true}>
+<BaseDeviceControl {position} {device} title="Tremolo" showMoveToTop={true} showMoveToEnd={true}>
   {#snippet children({ sendParam, storePendingParam, triggerLoad, handleTap, isGhost, isLoading, color, openView })}
     <DeviceXY
       {xValue}
       {yValue}
-      title="Auto Pan"
+      title="Tremolo"
       {rateLabel}
       {isGhost}
       {color}

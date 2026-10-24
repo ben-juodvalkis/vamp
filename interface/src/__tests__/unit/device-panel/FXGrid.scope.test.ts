@@ -168,7 +168,7 @@ describe('FXGrid — the grid is the held pad\'s', () => {
 		expect(cellOf('Glue')).toBe('10/1/1/1');
 		expect(cellOf('Gain')).toBe('10/2/1/1');
 		expect(cellOf('Glitch')).toBe('4/2/2/1');
-		expect(cellOf('Auto Pan')).toBe('2/2/2/1');
+		expect(cellOf('Tremolo')).toBe('2/2/2/1');
 		const titles = Array.from(container.querySelectorAll('.device-control')).map((t) => t.textContent ?? '');
 		expect(titles.some((t) => t.includes('Chorus'))).toBe(false);
 		expect(titles.some((t) => t.includes('Pitch'))).toBe(false);

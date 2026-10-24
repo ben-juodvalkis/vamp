@@ -47,7 +47,7 @@ describe('Chorus view', () => {
 		await tick();
 		expect(view.container.querySelector('[data-view="chorus"]')).not.toBeNull();
 		expect(titles(view.container)).toContain('Phaser');
-		expect(titles(view.container)).not.toContain('Auto Pan');
+		expect(titles(view.container)).not.toContain('Tremolo');
 		cleanup();
 
 		const autoPan = render(AutoPanCentralView);

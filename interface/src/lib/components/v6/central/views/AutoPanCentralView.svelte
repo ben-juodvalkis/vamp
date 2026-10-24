@@ -111,7 +111,7 @@
        Only this column dims while Auto Pan is a ghost; the other families
        keep their own ghost states. -->
   <div class="stack autopan-col" class:slot-ghost={fx.isGhost} style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
-    <span class="col-title" style="color: {fxInk.primary};">Auto Pan</span>
+    <span class="col-title" style="color: {fxInk.primary};">Tremolo</span>
     <div class="pair">
       <!-- Sync, small, over the rate it switches. -->
       <div class="rate-col">
