@@ -21,7 +21,7 @@
 		left: number;
 		width: number;
 		height: number;
-		noteColor: (velocity: number) => string;
+		noteColor: (velocity: number, pitch?: number) => string;
 	}
 
 	let { notes, beatWindow, clipPath, left, width, height, noteColor }: Props = $props();
@@ -29,14 +29,14 @@
 	const beginGesture = createGestures();
 
 	let bars = $derived.by(() => {
-		const out: { noteId: number; x: number; w: number; velocity: number }[] = [];
+		const out: { noteId: number; pitch: number; x: number; w: number; velocity: number }[] = [];
 		if (width <= 0) return out;
 		for (const n of notes) {
 			const noteEnd = n.startBeats + n.durationBeats;
 			if (noteEnd <= beatWindow.startBeats || n.startBeats >= beatWindow.endBeats) continue;
 			const x = beatToX(n.startBeats, beatWindow, width);
 			const xEnd = beatToX(noteEnd, beatWindow, width);
-			out.push({ noteId: n.noteId, x, w: Math.max(3, xEnd - x), velocity: n.velocity });
+			out.push({ noteId: n.noteId, pitch: n.pitch, x, w: Math.max(3, xEnd - x), velocity: n.velocity });
 		}
 		return out;
 	});
@@ -108,7 +108,7 @@
 	{#each bars as bar (bar.noteId)}
 		<div
 			class="vel-bar"
-			style="left: {bar.x}px; width: {bar.w}px; height: {(bar.velocity / VELOCITY_MAX) * 100}%; background: {noteColor(bar.velocity)};"
+			style="left: {bar.x}px; width: {bar.w}px; height: {(bar.velocity / VELOCITY_MAX) * 100}%; background: {noteColor(bar.velocity, bar.pitch)};"
 			role="slider"
 			tabindex="-1"
 			aria-label="Note velocity"

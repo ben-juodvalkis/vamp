@@ -21,7 +21,7 @@ import { getPeaks, type PeakData } from '$lib/services/clipWaveformService';
 import { invalidateSample, peekSample, requestSample, type ClipSample } from '$lib/services/clipSampleService';
 import { v3Store } from '$lib/stores/v3/normalized.svelte';
 import { selectedDrumRack } from '$lib/services/deviceViewRouter.svelte';
-import { parseVmMembers, padTileLabels, VM } from '$lib/services/drumVirtualMacros';
+import { parseVmMembers, padColorCss, padTileLabels, VM } from '$lib/services/drumVirtualMacros';
 import { slotOfClip } from '$lib/services/clipSimilarSwap.svelte';
 import { logger } from '$lib/utils/logger';
 
@@ -62,11 +62,22 @@ export function useFocusedClip() {
 		if (!drumRackPath) return;
 		return selectedTrackStore.subscribeProperty(drumRackPath, VM.members);
 	});
+	const census = $derived(drumRackPath ? parseVmMembers(selectedTrackStore.propertyValue(drumRackPath, VM.members)) : null);
 	const padLabels = $derived.by((): Map<number, string> => {
 		const out = new Map<number, string>();
-		if (!drumRackPath) return out;
-		const census = parseVmMembers(selectedTrackStore.propertyValue(drumRackPath, VM.members));
 		for (const [note, text] of padTileLabels(census?.pads ?? [])) if (text.label) out.set(note, text.label);
+		return out;
+	});
+	// Each pad's chain colour, by note: a row's name, notes and velocity
+	// bars wear it, as its tile in the pad grid does (2026-10-24, the
+	// user's call). A pad Live left uncoloured is absent, and its row keeps
+	// the track's ink.
+	const padColors = $derived.by((): Map<number, string> => {
+		const out = new Map<number, string>();
+		for (const pad of census?.pads ?? []) {
+			const css = padColorCss(pad);
+			if (css) out.set(pad.note, css);
+		}
 		return out;
 	});
 
@@ -236,6 +247,7 @@ export function useFocusedClip() {
 		get isAudio() { return isAudio; },
 		get isMidi() { return isMidi; },
 		get padLabels() { return padLabels; },
+		get padColors() { return padColors; },
 		get wavFilePath() { return wavFilePath; },
 		get fileStartBeats() { return fileStartBeats; },
 		get fileEndBeats() { return fileEndBeats; },

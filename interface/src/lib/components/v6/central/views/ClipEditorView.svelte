@@ -86,6 +86,7 @@
 	let isAudio = $derived(clip.isAudio);
 	let notes = $derived(clip.notes);
 	let padLabels = $derived(clip.padLabels);
+	let padColors = $derived(clip.padColors);
 	let pitchAxisW = $derived(padLabels.size > 0 ? DRUM_PITCH_AXIS_W : PITCH_AXIS_W);
 
 	// ── Loop / markers (focused clip, always live via clipPropertiesStore)
@@ -271,6 +272,7 @@
 		const out: {
 			key: string;
 			noteId: number;
+			pitch: number;
 			x: number;
 			w: number;
 			y: number;
@@ -292,6 +294,7 @@
 				// across an optimistic edit (no fl/re-mount mid-drag).
 				key: String(n.noteId),
 				noteId: n.noteId,
+				pitch: n.pitch,
 				x,
 				w: Math.max(2, xEnd - x),
 				y: pitchToY(n.pitch, win, contentH),
@@ -302,8 +305,11 @@
 		return out;
 	});
 
-	function noteColor(velocity: number): string {
-		return inkNote(color, velocity);
+	// A Drum Rack row wears its pad's chain colour; any other note the
+	// track's.
+	function noteColor(velocity: number, pitch?: number): string {
+		const pad = pitch !== undefined ? padColors.get(pitch) : undefined;
+		return pad ? inkNote(pad, velocity, true) : inkNote(color, velocity);
 	}
 
 	// ── Loop braces, warp markers, playhead ──────────────────────────
@@ -829,6 +835,7 @@
 					lanes={pitchLanes}
 					{notes}
 					{padLabels}
+					{padColors}
 					{folded}
 					soloed={soloPitches}
 					{clipPath}
@@ -879,7 +886,7 @@
 						{#each visibleNotes as note (note.key)}
 							<div
 								class="note"
-								style="left: {note.x}px; width: {note.w}px; top: {note.y}px; height: {note.h}px; background: {noteColor(note.velocity)};"
+								style="left: {note.x}px; width: {note.w}px; top: {note.y}px; height: {note.h}px; background: {noteColor(note.velocity, note.pitch)};"
 								role="button"
 								tabindex="-1"
 								aria-label="MIDI note"

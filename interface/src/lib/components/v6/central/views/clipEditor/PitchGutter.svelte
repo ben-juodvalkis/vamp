@@ -33,12 +33,14 @@
 		shouldRestoreOnRelease
 	} from '$lib/components/v6/tracks/TrackStrip/utils/momentaryPress';
 	import { createGestures } from './gestures';
-	import { pitchName, VELOCITY_MAX } from './noteStyle';
+	import { padInk, pitchName, VELOCITY_MAX } from './noteStyle';
 
 	interface Props {
 		lanes: PitchLane[];
 		notes: RichNote[];
 		padLabels: Map<number, string>;
+		/** A Drum Rack pad's chain colour by note: its name wears it. */
+		padColors: Map<number, string>;
 		/** Folded lanes aren't contiguous, so each is named; unfolded, only the Cs. */
 		folded: boolean;
 		/** The rows shown alone, lit so the way back is plain. */
@@ -58,6 +60,7 @@
 		lanes,
 		notes,
 		padLabels,
+		padColors,
 		folded,
 		soloed,
 		clipPath,
@@ -202,7 +205,7 @@
 			style="top: {lane.y}px; height: {lane.h}px;"
 			onpointerdown={(e) => handleKeyDown(e, lane.pitch)}
 		>
-			{#if padLabels.has(lane.pitch)}<span class="key-label pad-label">{padLabels.get(lane.pitch)}</span>
+			{#if padLabels.has(lane.pitch)}<span class="key-label pad-label" style:--pad-ink={padColors.has(lane.pitch) ? padInk(padColors.get(lane.pitch)!) : undefined}>{padLabels.get(lane.pitch)}</span>
 			{:else if folded || lane.pitch % 12 === 0}<span class="key-label">{pitchName(lane.pitch)}</span>{/if}
 		</div>
 	{/each}
@@ -263,7 +266,10 @@
 		line-height: 1;
 		color: var(--fg-tertiary);
 	}
+	/* A pad's name in its chain colour (`padInk`; a soloed or scaling row
+	   keeps its own label ink). */
 	.pad-label {
+		color: var(--pad-ink, var(--fg-tertiary));
 		min-width: 0;
 		overflow: hidden;
 		white-space: nowrap;
