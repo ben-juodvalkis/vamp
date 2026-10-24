@@ -148,39 +148,21 @@
 </script>
 
 <!--
-	10-column flex layout: each column = flex-[1], LFO XY spans 2.
-	  shp1:1 | shp2:1 | morph+sync:1 | LFO XY:2 | flt1:1 | flt2:1 | drive:1 | circuit+slope:1 | mix:1
+	10-column flex layout: each column = flex-[1], LFO XY and the two tabs span 2.
+	  shapes:2 | morph+sync:1 | LFO XY:2 | filter types:2 | drive:1 | circuit+slope:1 | mix:1
 	A `SectionDivider` sits between the LFO group (cols 1-4) and the rest.
 -->
 <div class="h-full w-full flex min-h-0 p-(--central-inset) relative" style="gap: var(--central-gap);" class:slot-ghost={fx.isGhost}>
-	<!-- Col 1 — LFO shapes 1-4 (vertical stack) -->
+	<!-- Cols 1-2 — the eight LFO shapes, one segmented tab, two columns of
+	     four filled down then across. -->
 	<div
-		class="flex-[1] min-h-0 flex flex-col gap-1"
+		class="flex-[2] min-h-0 device-segmented seg-grid grid grid-cols-2 grid-rows-4 grid-flow-col"
+		style="--btn-tint: {lfoInk.primary};"
 	>
-		{#each LFO_SHAPE_OPTIONS.slice(0, 4) as option}
+		{#each LFO_SHAPE_OPTIONS.slice(0, 8) as option}
 			<button
-				class="physical-button flex-1 px-1 text-3xl text-center flex items-center justify-center"
+				class="device-segment min-h-0 px-1 text-3xl text-center flex items-center justify-center"
 				class:active={lfoShape === option.value}
-				style="--btn-tint: {lfoInk.primary};"
-				onclick={() => {
-					fx.sendParam(13, option.value);
-				}}
-				title={option.label}
-			>
-				{option.symbol}
-			</button>
-		{/each}
-	</div>
-
-	<!-- Col 2 — LFO shapes 5-8 (vertical stack) -->
-	<div
-		class="flex-[1] min-h-0 flex flex-col gap-1"
-	>
-		{#each LFO_SHAPE_OPTIONS.slice(4, 8) as option}
-			<button
-				class="physical-button flex-1 px-1 text-3xl text-center flex items-center justify-center"
-				class:active={lfoShape === option.value}
-				style="--btn-tint: {lfoInk.primary};"
 				onclick={() => {
 					fx.sendParam(13, option.value);
 				}}
@@ -250,31 +232,16 @@
 	     follows it. -->
 	<SectionDivider orientation="vertical" ink={fxInk.primary} />
 
-	<!-- Col 6 — Filter types 1-5 (vertical stack) -->
+	<!-- Cols 6-7 — the ten filter types, one segmented tab, two columns of
+	     five filled down then across. -->
 	<div
-		class="flex-[1] min-h-0 flex flex-col gap-1"
+		class="flex-[2] min-h-0 device-segmented seg-grid grid grid-cols-2 grid-rows-5 grid-flow-col"
+		style="--btn-tint: {fxInk.primary};"
 	>
-		{#each FILTER_TYPES.slice(0, 5) as type}
+		{#each FILTER_TYPES.slice(0, 10) as type}
 			<button
-				class="physical-button flex-1 px-3 text-sm text-center flex items-center justify-center"
+				class="device-segment min-h-0 px-3 text-sm text-center flex items-center justify-center"
 				class:active={filterType === type.value}
-				style="--btn-tint: {fxInk.primary};"
-				onclick={() => selectFilterType(type.value)}
-			>
-				{type.label}
-			</button>
-		{/each}
-	</div>
-
-	<!-- Col 7 — Filter types 6-10 (vertical stack) -->
-	<div
-		class="flex-[1] min-h-0 flex flex-col gap-1"
-	>
-		{#each FILTER_TYPES.slice(5, 10) as type}
-			<button
-				class="physical-button flex-1 px-3 text-sm text-center flex items-center justify-center"
-				class:active={filterType === type.value}
-				style="--btn-tint: {fxInk.primary};"
 				onclick={() => selectFilterType(type.value)}
 			>
 				{type.label}
@@ -303,19 +270,26 @@
 	<div
 		class="flex-[1] h-full flex flex-col gap-1"
 	>
-		{#each CIRCUIT_OPTIONS as option}
-			<button
-				class="physical-button flex-1 px-1 text-sm text-center font-medium flex items-center justify-center"
-				class:active={circuit === option.value}
-				style="--btn-tint: {fxInk.primary};"
-				onclick={() => {
-					fx.sendParam(7, option.value);
-				}}
-				title={option.label}
-			>
-				{option.label}
-			</button>
-		{/each}
+		<!-- The circuits are one pick-one tab; the slope under it is a
+		     switch of its own, so a separate button. Each option keeps one
+		     share of the column. -->
+		<div
+			class="min-h-0 device-segmented seg-grid flex flex-col"
+			style="flex: {CIRCUIT_OPTIONS.length} 1 0; --btn-tint: {fxInk.primary};"
+		>
+			{#each CIRCUIT_OPTIONS as option}
+				<button
+					class="device-segment flex-1 min-h-0 px-1 text-sm text-center font-medium flex items-center justify-center"
+					class:active={circuit === option.value}
+					onclick={() => {
+						fx.sendParam(7, option.value);
+					}}
+					title={option.label}
+				>
+					{option.label}
+				</button>
+			{/each}
+		</div>
 		<!-- Slope Toggle (12/24 dB) -->
 		<button
 			class="physical-button num flex-1 px-1 text-sm text-center flex items-center justify-center"

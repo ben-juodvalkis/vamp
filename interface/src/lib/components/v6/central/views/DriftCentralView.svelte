@@ -474,7 +474,7 @@
                waveform rows alone, not the body. Hence the inner wrapper
                below rather than `use:drag` up here. -->
           <div
-            class="wave-grid"
+            class="wave-grid device-segmented seg-grid"
             bind:this={waveGrid}
             use:drag={{ commit: 'immediate', onDown: waveScrubDown, onMove: (i) => waveAt(i.x, i.y) }}
             style="grid-template-columns: repeat({Math.ceil((oscWaveOptions.length + 1) / 2)}, minmax(0, 1fr));"
@@ -507,7 +507,7 @@
             </div>
             {#each oscWaveOptions as option}
               <button
-                class="physical-button wave-button"
+                class="device-segment wave-button"
                 class:active={oscWave === option.value}
                 style="--btn-tint: {oscInk.primary};"
                 title={option.label}
@@ -755,12 +755,12 @@
            here they sit across the two wheel columns, which are the only
            fixed-width block in the row with height to spare. -->
       <div class="flex-none flex flex-col gap-(--central-gap) min-h-0">
-        <div class="grid grid-cols-2 gap-1 flex-none">
+        <!-- One pick-one tab, two by two. -->
+        <div class="device-segmented seg-grid grid grid-cols-2 flex-none" style="--btn-tint: {driftInk.primary};">
           {#each VOICE_MODE_OPTIONS as option}
             <button
-              class="physical-button mode-button px-1 text-center"
+              class="device-segment mode-button px-1 text-center"
               class:active={voiceMode === option.value}
-              style="--btn-tint: {driftInk.primary};"
               onclick={() => {
                 if (!devicePath) return;
                 selectedTrackStore.setPropertyValue(devicePath, 'voice_mode_index', option.value);
@@ -838,16 +838,16 @@
     grid-column: 1 / -1;
   }
   /* The waveform block spans the body's first TWO rows plus the gap
-     between them, and divides that by the same gap — so its two rows come
-     out exactly one body row each. (It needs to be one box rather than
-     eight loose cells because it owns the scrub gesture: the drag surface
-     is the waveforms, not the whole card.) */
+     between them. It is one segmented tab (2026-10-24), so its rows are
+     divided by the tab's 1px hairline rather than the body's gap and come
+     out half a gap taller than a body row each. (It needs to be one box
+     rather than eight loose cells because it owns the scrub gesture: the
+     drag surface is the waveforms, not the whole card.) */
   .wave-grid {
     display: grid;
     grid-column: 1 / -1;
     grid-row: 1 / 3;
     grid-template-rows: repeat(2, minmax(0, 1fr));
-    gap: var(--spacing-sm);
     min-height: 0;
     min-width: 0;
   }
@@ -946,7 +946,10 @@
      circle overflowed its cell and the card sideways, 6.8px from the
      frame's edge against the view's 16px inset (tour layout check,
      2026-09-14). */
+  /* The switch sits inside the waveform tab as its first cell, on the
+     tab's own field. */
   .osc-badge-cell {
+    background: var(--surface-well);
     container-type: size;
     display: grid;
     place-items: center;
@@ -1003,7 +1006,7 @@
     padding: 0 1px;
   }
 
-  /* ---- Live skin (flat grammar). Wave / voice buttons are .physical-button,
+  /* ---- Live skin (flat grammar). Wave / voice buttons are segmented tabs,
      the pads / sliders / wheels are DeviceXY / DeviceSlider / MidiWheel —
      all flat on their own, and since 2026-09-13 the three section groups
      have no frame of their own either: the seams between them are
@@ -1047,17 +1050,6 @@
   :global([data-grammar="flat"]) .osc-card .device-segment.active,
   :global([data-grammar="flat"]) .filter-type-row .device-segment.active {
     background: var(--btn-tint);
-    color: var(--flat-on-fg);
-  }
-  /* Same argument for the waveform buttons, which are `physical-button`s
-     rather than segments: the flat grammar lights an active one with
-     --phosphor, and here the colour has to be the oscillator's. */
-  :global([data-grammar="flat"]) .osc-card .physical-button {
-    color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
-  }
-  :global([data-grammar="flat"]) .osc-card .physical-button.active {
-    background: var(--btn-tint);
-    border-color: var(--btn-tint);
     color: var(--flat-on-fg);
   }
 

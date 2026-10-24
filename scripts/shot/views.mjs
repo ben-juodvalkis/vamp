@@ -136,7 +136,8 @@ const FX_TILES = [
 	['Gtr', 'guitar', 'Gtr tile → the Guitar view: Pedal, Wah, the Guitar rack'],
 	['Drum', 'drum-buss', 'Drum Buss'],
 	['Glue', 'squash', 'Glue (the Squash slot), Gate, Multiband + Compressor'],
-	['Glitch', 'glitch', 'Glitch: GlitchLoop + Variation (the GlitchLoop slot)'],
+	['Glitch', 'glitch', 'Glitch: GlitchLoop + Reverse (the GlitchLoop slot)'],
+	['Stutter', 'variation', 'Variation (Beat Repeat), the Stutter tile: Interval, Grid, Length, Pitch Decay, Mode'],
 	['Tremolo', 'tremolo', 'Auto Pan Legacy (the Tremolo tile) + the Chorus family on a drum track'],
 	['Echo', 'echo', 'Echo'],
 	['Reverb', 'reverb', 'Reverb']

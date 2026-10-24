@@ -300,12 +300,11 @@
 
 			<div class="var-col">
 				<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Interval</div>
-				<div class="var-stack">
+				<div class="var-stack device-segmented seg-grid" style="--btn-tint: {varInk.primary};">
 					{#each INTERVAL_OPTIONS as option}
 						<button
-							class="physical-button var-btn"
+							class="device-segment var-btn"
 							class:active={Math.round(interval) === option.value}
-							style="--btn-tint: {varInk.primary};"
 							onclick={() => variation.sendParam(INTERVAL_INDEX, option.value)}
 						>{option.label}</button>
 					{/each}
@@ -315,14 +314,17 @@
 			<div class="var-col">
 				<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Grid</div>
 				<div class="var-stack">
+					<!-- The grids are one tab; the Rnd slider under it is not one
+					     of them. Each option keeps one share of the column. -->
+					<div class="var-tab device-segmented seg-grid" style="flex: {GRID_OPTIONS.length} 1 0; --btn-tint: {varInk.primary};">
 					{#each GRID_OPTIONS as option}
 						<button
-							class="physical-button var-btn"
+							class="device-segment var-btn"
 							class:active={Math.round(grid) === option.value}
-							style="--btn-tint: {varInk.primary};"
 							onclick={() => variation.sendParam(GRID_INDEX, option.value)}
 						>{option.label}</button>
 					{/each}
+					</div>
 					<div class="flex-1 min-h-0">
 						<DeviceSlider
 							value={amount / AMOUNT_MAX}
@@ -340,12 +342,11 @@
 
 			<div class="var-col">
 				<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Length</div>
-				<div class="var-stack">
+				<div class="var-stack device-segmented seg-grid" style="--btn-tint: {varInk.primary};">
 					{#each GATE_OPTIONS as option}
 						<button
-							class="physical-button var-btn"
+							class="device-segment var-btn"
 							class:active={Math.round(gate) === option.value}
-							style="--btn-tint: {varInk.primary};"
 							onclick={() => variation.sendParam(GATE_INDEX, option.value)}
 						>{option.label}</button>
 					{/each}
@@ -494,6 +495,17 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.25rem;
+	}
+
+	/* Interval, Grid and Length are pick-one tabs (2026-10-24): hairlines
+	   between their options, not the stack's gap. */
+	.var-stack.seg-grid {
+		gap: 1px;
+	}
+	.var-tab {
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
 	}
 
 	.var-btn {

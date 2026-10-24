@@ -383,10 +383,10 @@ import { logger } from '$lib/utils/logger';
 					Close
 				</button>
 			</div>
-			<div class="quant-grid" role="radiogroup" aria-label="Global launch quantization">
+			<div class="quant-grid device-segmented seg-grid" role="radiogroup" aria-label="Global launch quantization">
 				{#each LAUNCH_QUANTIZATIONS as label, value (value)}
 					<button
-						class="sys-toggle-box quant-chip"
+						class="device-segment quant-chip"
 						class:active={session.clipTriggerQuantization === value}
 						role="radio"
 						aria-checked={session.clipTriggerQuantization === value}
@@ -630,12 +630,6 @@ import { logger } from '$lib/utils/logger';
 		border-color: var(--sys-hover);
 	}
 
-	.sys-toggle-box.active {
-		color: var(--sys);
-		border-color: var(--sys);
-		background: var(--sys-bg-active);
-	}
-
 	.sys-toggle-box:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
@@ -720,7 +714,8 @@ import { logger } from '$lib/utils/logger';
 	.quant-grid {
 		display: grid;
 		grid-template-columns: repeat(7, 1fr);
-		gap: var(--spacing-sm);
+		/* One pick-one tab (2026-10-24): hairlines, not chips. */
+		gap: 1px;
 	}
 
 	.quant-chip {
@@ -791,16 +786,6 @@ import { logger } from '$lib/utils/logger';
 		background: var(--secondary);
 		color: var(--foreground);
 		border-color: var(--button-frame, var(--line-strong));
-	}
-	:global([data-grammar="flat"]) .sys-toggle-box.active {
-		background: var(--phosphor);
-		border-color: var(--phosphor);
-		color: var(--flat-on-fg);
-	}
-	/* Light: an ON fill sits at ~1:1 luminance against the light ladder,
-	   so the frame stays dark for the control's boundary to survive. */
-	:global(.light[data-grammar="flat"]) .sys-toggle-box.active {
-		border-color: var(--line-strong);
 	}
 	/* Disabled = Live's idiom (ControlOffDisabledForeground on the same
 	   field), never an opacity dim. */

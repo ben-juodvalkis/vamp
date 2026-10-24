@@ -264,10 +264,10 @@
 
         <!-- A type grid lies over both pads, so 25 names have room to read. -->
         {#if chooser === 'osc'}
-          <div class="type-grid osc-types" style="--btn-tint: {engineInk.primary};">
+          <div class="device-segmented seg-grid type-grid osc-types" style="--btn-tint: {engineInk.primary};">
             {#each MELD_OSC_TYPES as label, value}
               <button
-                class="physical-button type-option"
+                class="device-segment type-option"
                 class:active={oscType === value}
                 onclick={() => {
                   writeOsc(p.oscType, value);
@@ -278,10 +278,10 @@
           </div>
         {/if}
         {#if chooser === 'filter'}
-          <div class="type-grid filter-types" style="--btn-tint: {engineInk.primary};">
+          <div class="device-segmented seg-grid type-grid filter-types" style="--btn-tint: {engineInk.primary};">
             {#each MELD_FILTER_TYPES as label, value}
               <button
-                class="physical-button type-option"
+                class="device-segment type-option"
                 class:active={filterType === value}
                 onclick={() => {
                   write(p.filterType, value);
@@ -414,8 +414,6 @@
     inset: 0;
     z-index: 10;
     display: grid;
-    gap: var(--spacing-sm);
-    background: var(--background);
   }
   .osc-types {
     grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -531,6 +529,7 @@
   /* ---- Flat grammar: Analog's, so the two two-engine synths read alike.
      The engine colour is re-asserted against the house pair — here the
      colour IS the meaning (which half you are holding). */
+  :global([data-grammar="flat"]) .meld-root .type-grid .device-segment,
   :global([data-grammar="flat"]) .meld-root .physical-button {
     font-weight: var(--font-weight-medium);
     color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
@@ -540,7 +539,7 @@
     border-color: var(--btn-tint);
     color: var(--flat-on-fg);
   }
-  :global([data-grammar="flat"]) .meld-root .device-segmented .device-segment + .device-segment {
+  :global([data-grammar="flat"]) .meld-root .device-segmented:not(.seg-grid) .device-segment + .device-segment {
     border-top: 0;
     border-left: 1px solid var(--line-strong);
   }

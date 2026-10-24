@@ -337,12 +337,12 @@
         }}
       />
     </div>
-    <div class="pedal-type-buttons" style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
+    <!-- The pedal types, one pick-one tab. -->
+    <div class="pedal-type-buttons device-segmented seg-grid" style="--btn-tint: {pedalInk.primary};{fx.isGhost ? ' opacity: var(--opacity-ghost);' : ''}">
       {#each PEDAL_TYPE_OPTIONS as option}
         <button
-          class="physical-button w-full px-2 text-xs text-center font-medium"
+          class="device-segment w-full px-2 text-xs text-center font-medium"
           class:active={pedalType === option.value}
-          style="--btn-tint: {pedalInk.primary};"
           onclick={() => selectPedalType(option.value)}
         >
           {option.label}
@@ -662,7 +662,7 @@
   .pedal-type-buttons {
     display: flex;
     flex-direction: row;
-    gap: var(--spacing-xs);
+    gap: 1px;
     flex: 0 0 auto;
     height: 3rem;
   }

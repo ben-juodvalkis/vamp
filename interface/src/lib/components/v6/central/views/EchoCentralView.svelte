@@ -277,16 +277,16 @@
 	<SectionDivider orientation="vertical" />
 
 	<div
-		class="col wave-grid"
+		class="col wave-grid device-segmented seg-grid"
+		style="--btn-tint: {echo.color.primary};"
 		data-echo-lfo-wave
 		bind:this={waveGrid}
 		use:drag={{ commit: 'immediate', onDown: waveScrubDown, onMove: (i) => waveAt(i.x, i.y) }}
 	>
 		{#each ECHO_LFO_WAVES as label, value}
 			<button
-				class="physical-button wave-button"
+				class="device-segment wave-button"
 				class:active={lfoWave === value}
-				style="--btn-tint: {echo.color.primary};"
 				title={label}
 				aria-label="LFO wave {label}"
 				aria-pressed={lfoWave === value}
@@ -464,8 +464,8 @@
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 		grid-template-rows: repeat(3, minmax(0, 1fr));
-		gap: var(--spacing-sm);
 	}
+	/* The LFO waves are one pick-one tab (2026-10-24), hairlines between. */
 	.wave-button {
 		pointer-events: none;
 		min-height: 0;

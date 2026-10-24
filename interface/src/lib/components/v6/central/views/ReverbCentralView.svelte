@@ -654,40 +654,33 @@
         <!-- Reverb Type Tabs -->
         <div class="flex flex-col gap-2 min-h-0">
 
-          <!-- 2-column grid of reverb types -->
-          <div class="grid grid-cols-2 gap-1.5 flex-1">
-
-            <!-- Column 1: Convolution Types -->
-            <div class="flex flex-col gap-1.5">
-              {#each CONVOLUTION_TYPES as type, index}
-                {@const typeColor = reverbInk.convolution[index as keyof typeof reverbInk.convolution]}
-                <button
-                  class="physical-button text-sm h-12 px-2 flex-1 font-semibold tracking-wide"
-                  class:active={isConvolutionTypeActive(index)}
-                  style="--btn-tint: {typeColor.primary};"
-                  data-reverb-type={type.name}
-                  onclick={() => handleReverbTypeChange(index)}
-                >
-                  {type.name}
-                </button>
-              {/each}
-            </div>
-
-            <!-- Column 2: Algorithmic Types -->
-            <div class="flex flex-col gap-1.5">
-              {#each ALGORITHMIC_TYPES as type, index}
-                {@const typeColor = reverbInk.algorithmic[index as keyof typeof reverbInk.algorithmic]}
-                <button
-                  class="physical-button text-sm h-12 px-2 flex-1 font-semibold tracking-wide"
-                  class:active={isAlgorithmicTypeActive(index)}
-                  style="--btn-tint: {typeColor.primary};"
-                  data-reverb-type={type.name}
-                  onclick={() => handleReverbTypeChange(index + 5)}
-                >
-                  {type.name}
-                </button>
-              {/each}
-            </div>
+          <!-- The ten reverb types, one pick-one tab: convolution down the
+               left column, algorithmic down the right. -->
+          <div class="type-tab device-segmented seg-grid grid grid-cols-2 grid-rows-5 grid-flow-col flex-1 min-h-0">
+            {#each CONVOLUTION_TYPES as type, index}
+              {@const typeColor = reverbInk.convolution[index as keyof typeof reverbInk.convolution]}
+              <button
+                class="device-segment text-sm min-h-0 px-2 font-semibold tracking-wide"
+                class:active={isConvolutionTypeActive(index)}
+                style="--btn-tint: {typeColor.primary};"
+                data-reverb-type={type.name}
+                onclick={() => handleReverbTypeChange(index)}
+              >
+                {type.name}
+              </button>
+            {/each}
+            {#each ALGORITHMIC_TYPES as type, index}
+              {@const typeColor = reverbInk.algorithmic[index as keyof typeof reverbInk.algorithmic]}
+              <button
+                class="device-segment text-sm min-h-0 px-2 font-semibold tracking-wide"
+                class:active={isAlgorithmicTypeActive(index)}
+                style="--btn-tint: {typeColor.primary};"
+                data-reverb-type={type.name}
+                onclick={() => handleReverbTypeChange(index + 5)}
+              >
+                {type.name}
+              </button>
+            {/each}
           </div>
         </div>
 
@@ -760,9 +753,10 @@
             {/if}
             <!-- Live's two tabs; the first wears the algorithm's name, or "IR". -->
             <div class="picture-tabs" role="tablist" aria-label="Reverb picture">
+              <div class="device-segmented seg-grid flex">
               <button
                 role="tab"
-                class="physical-button picture-tab"
+                class="device-segment picture-tab"
                 class:active={panel === 'reverb'}
                 aria-selected={panel === 'reverb'}
                 style="--btn-tint: {currentColor.primary};"
@@ -773,7 +767,7 @@
               </button>
               <button
                 role="tab"
-                class="physical-button picture-tab"
+                class="device-segment picture-tab"
                 class:active={panel === 'eq'}
                 aria-selected={panel === 'eq'}
                 style="--btn-tint: {currentColor.primary};"
@@ -782,6 +776,7 @@
               >
                 EQ
               </button>
+              </div>
               {#if panel === 'reverb'}
                 <span class="picture-blurb">{isConvolution ? irTitle : algorithm.blurb}</span>
               {/if}
@@ -978,9 +973,16 @@
      shared .slot-ghost / --opacity-ghost ramp (an app-wide idiom, not
      touched here). Graticule is untouched — every rule sits under
      [data-grammar="flat"]. */
-  :global([data-grammar="flat"]) .physical-button {
+  :global([data-grammar="flat"]) .physical-button,
+  :global([data-grammar="flat"]) .type-tab .device-segment,
+  :global([data-grammar="flat"]) .picture-tab {
     font-weight: var(--font-weight-medium);
     letter-spacing: 0;
+  }
+  /* The type tab lights its choice in the house --phosphor, the per-type
+     ink stepping aside as it did on the buttons it replaced. */
+  :global([data-grammar="flat"]) .type-tab .device-segment.active {
+    background: var(--phosphor);
   }
   /* One ink for the algorithm: a lit switch wears its colour rather than
      the house --phosphor, as the Echo view's Sync does. */

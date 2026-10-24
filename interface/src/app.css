@@ -1233,6 +1233,36 @@ html, body {
   color: var(--flat-on-fg);
 }
 
+/* A segmented tab of any shape — rows, columns, a grid, a grid with empty
+   cells (`.seg-grid` on the `.device-segmented` frame). Each option draws
+   a 1px outline that exactly fills the 1px gap around it, so the hairlines
+   fall between options whatever the layout, an empty cell stays plain
+   field, and the frame clips the outline on its outer edge. The shared
+   top-border divider is off. A pick-one set is one of these; a switch that
+   turns something on or off on its own is a separate framed button. */
+.seg-grid {
+  gap: 1px;
+}
+.seg-grid .device-segment {
+  border: 0;
+  background: var(--surface-well);
+  outline: 1px solid var(--line-faint);
+}
+.seg-grid .device-segment.active {
+  background: color-mix(in oklab, var(--btn-tint, var(--phosphor)) 30%, var(--card));
+}
+[data-grammar="flat"] .seg-grid .device-segment {
+  border: 0;
+  outline-color: var(--line-strong);
+}
+[data-grammar="flat"] .seg-grid .device-segment:hover:not(.active) {
+  background: var(--secondary);
+}
+[data-grammar="flat"] .seg-grid .device-segment.active {
+  background: var(--btn-tint, var(--phosphor));
+  color: var(--flat-on-fg);
+}
+
 /* No HUD brackets, no capless playhead glow. */
 [data-grammar="flat"] .hud-bracket::after { display: none; }
 [data-grammar="flat"] .strip-playhead { background: var(--foreground); }

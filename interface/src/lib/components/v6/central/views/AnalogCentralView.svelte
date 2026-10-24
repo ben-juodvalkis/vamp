@@ -262,11 +262,13 @@
               </span>
             </button>
           </div>
+          <!-- The four shapes, one pick-one tab, two by two beside the
+               switch and the routing chip. -->
+          <div class="device-segmented seg-grid shape-tab" style="--btn-tint: {voiceInk.primary};">
           {#each ANALOG_SHAPES as label, value}
             <button
-              class="physical-button wave-button"
+              class="device-segment wave-button"
               class:active={shape === value}
-              style="--btn-tint: {voiceInk.primary};"
               title={label}
               aria-label="Osc {voice} shape {label}"
               aria-pressed={shape === value}
@@ -275,10 +277,13 @@
               {@render shapeGlyph(label)}
             </button>
           {/each}
+          </div>
           <!-- Where this oscillator goes: Filter 1, Filter 2 or both — its
                Balance, which is what makes Analog's two halves cross. -->
           <button
             class="physical-button route-button"
+            style:grid-column="1"
+            style:grid-row="2"
             style="--btn-tint: {voiceInk.primary};"
             title="Osc {voice} Balance"
             aria-label="Osc {voice} to {route}"
@@ -512,8 +517,12 @@
            is a switch here because its depth rides the mod wheel beside it. -->
       <div class="flex-none flex flex-col gap-(--central-gap) min-h-0">
         <div class="grid grid-cols-2 gap-1 flex-none">
-          <button class="physical-button mode-button px-1 text-center" class:active={isMono} style="--btn-tint: {analogInk.primary};" aria-pressed={isMono} onclick={() => setMono(true)}>Mono</button>
-          <button class="physical-button mode-button px-1 text-center" class:active={!isMono} style="--btn-tint: {analogInk.primary};" aria-pressed={!isMono} onclick={() => setMono(false)}>Poly</button>
+          <!-- Mono or Poly is one choice, a two-cell tab across the row;
+               Uni and Vib under it are switches of their own. -->
+          <div class="col-span-2 device-segmented seg-grid grid grid-cols-2" style="--btn-tint: {analogInk.primary};">
+            <button class="device-segment mode-button px-1 text-center" class:active={isMono} aria-pressed={isMono} onclick={() => setMono(true)}>Mono</button>
+            <button class="device-segment mode-button px-1 text-center" class:active={!isMono} aria-pressed={!isMono} onclick={() => setMono(false)}>Poly</button>
+          </div>
           <button class="physical-button mode-button px-1 text-center" class:active={unisonOn} style="--btn-tint: {analogInk.primary};" aria-pressed={unisonOn} onclick={() => write(ANALOG_UNISON_ON, unisonOn ? 0 : 1)}>Uni</button>
           <button class="physical-button mode-button px-1 text-center" class:active={vibOn} style="--btn-tint: {analogInk.primary};" aria-pressed={vibOn} onclick={() => write(ANALOG_VIB_ON, vibOn ? 0 : 1)}>Vib</button>
         </div>
@@ -538,8 +547,9 @@
     --analog-env-w: var(--height-touch);
   }
 
-  /* Shapes two rows (badge + four shapes + route = 3 x 2), then three
-     bands: octave, Sub/Sync, Level. One grid, so every row is one height. */
+  /* Shapes two rows (the badge over the route chip, then the shapes' 2 x 2
+     tab across two columns), then three bands: octave, Sub/Sync, Level.
+     One grid, so every row is one height. */
   .osc-body {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -553,6 +563,15 @@
   .osc-row {
     display: flex;
     gap: var(--spacing-sm);
+    min-height: 0;
+    min-width: 0;
+  }
+  .shape-tab {
+    grid-column: 2 / span 2;
+    grid-row: 1 / span 2;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
     min-height: 0;
     min-width: 0;
   }
@@ -719,7 +738,7 @@
   /* ---- Flat grammar. The segmented rows' dividers, and the voice colour
      re-asserted against the house pair: here the colour IS the meaning
      (which half you are holding), as on Drift's source cards. */
-  :global([data-grammar="flat"]) .analog-root .device-segmented .device-segment + .device-segment {
+  :global([data-grammar="flat"]) .analog-root .device-segmented:not(.seg-grid) .device-segment + .device-segment {
     border-top: 0;
     border-left: 1px solid var(--line-strong);
   }
@@ -738,12 +757,12 @@
     background: var(--btn-tint);
     color: var(--flat-on-fg);
   }
+  :global([data-grammar="flat"]) .analog-root .shape-tab .device-segment:not(.active),
   :global([data-grammar="flat"]) .analog-root .voice-card .physical-button,
   :global([data-grammar="flat"]) .analog-root .route-chip,
   :global([data-grammar="flat"]) .analog-root .slave-chip {
     color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
   }
-  :global([data-grammar="flat"]) .analog-root .voice-card .physical-button.active,
   :global([data-grammar="flat"]) .analog-root .slave-chip.active {
     background: var(--btn-tint);
     border-color: var(--btn-tint);

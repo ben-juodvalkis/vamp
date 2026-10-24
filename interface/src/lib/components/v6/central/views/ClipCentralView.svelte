@@ -435,12 +435,13 @@ import { logger } from '$lib/utils/logger';
 					}
 				/>
 			{:else if trackType === 'audio'}
-				<div class="stacked-switches">
+				<!-- The warp modes, one pick-one tab. -->
+				<div class="stacked-switches device-segmented seg-grid">
 					{#each warpModeOptions as option}
 						<button
 							onclick={() => setWarpMode(option.value)}
 							disabled={!hasClip}
-							class="btn btn-switch clip-switch font-bold text-base"
+							class="device-segment warp-option font-bold text-base"
 							class:active={warpMode === option.value}
 						><span class="fit-label" style:--fit-pad="0px" use:fitText={option.label}>{option.label}</span></button>
 					{/each}
@@ -816,13 +817,22 @@ import { logger } from '$lib/utils/logger';
 		display: grid;
 		grid-template-columns: minmax(0, 1fr);
 		grid-template-rows: repeat(3, 1fr);
-		gap: var(--central-gap);
+		gap: 1px;
 		flex: 1;
 		min-height: 0;
 	}
-	/* Each switch is its own container, so its `.fit-label` word measures the
-	   button it is in (app.css) — "Complex" in a narrow warp column. */
-	.stacked-switches .btn-switch { padding-inline: 0; min-width: 0; container-type: inline-size; }
+	/* Each option is its own container, so its `.fit-label` word measures the
+	   option it is in (app.css) — "Complex" in a narrow warp column. */
+	.warp-option {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding-inline: 0;
+		min-width: 0;
+		min-height: 0;
+		container-type: inline-size;
+	}
+	.warp-option:disabled { opacity: 0.5; cursor: not-allowed; }
 
 	/* Two-row stack for button columns */
 	.stacked-btns {
@@ -943,9 +953,10 @@ import { logger } from '$lib/utils/logger';
 		font-size: 1.125rem;
 	}
 	:global([data-grammar="flat"]) .btn-caps { text-transform: none; }
-	/* The warp labels keep the `text-base` they ask for: at the flat .btn's
-	   1.125rem "Complex" is wider than its column (see .stacked-switches). */
-	:global([data-grammar="flat"]) .stacked-switches .btn-switch { font-size: 1rem; }
+	/* The warp labels stay at 1rem: at the flat .btn's 1.125rem "Complex"
+	   is wider than its column (see .warp-option). */
+	:global([data-grammar="flat"]) .warp-option { font-size: 1rem; font-weight: var(--font-weight-medium); }
+	:global([data-grammar="flat"]) .warp-option:disabled { opacity: 1; color: var(--flat-disabled-fg); }
 	:global([data-grammar="flat"]) .btn-well {
 		background: var(--surface-well);
 		border: 1px solid var(--button-frame);
