@@ -132,6 +132,14 @@ unrelated to what you're testing.
       measured but `Filter Freq` / `Filter Res` are inferred from
       Simpler's naming, so if the pad ghosts on a Sampler kit that is the
       binding to fix
+- [ ] **A scoped pad's notes strip (ADR-473):** latch a pad on a drum
+      track whose clip is playing; under the controls, one pad row tall,
+      its notes in the pad's colour, matching the clip view. With a
+      finger: up or down on a note moves its velocity (the block brightens
+      or dims, and Live's velocity matches on release), sideways moves it
+      a step at a time, a quick tap deletes it, a long press let go in
+      place leaves it. Push one note off a step in Live, then Q puts it
+      back on. Stop the clip: the strip says "No clip playing"
 - [ ] **Gain (2026-09-08):** one slider per kit shape moves how loud the
       pads are — each pad's `Volume` on DrumCell / Simpler / Sampler
       kits, each pad's *chain* volume on a kit of nested Instrument
@@ -216,6 +224,12 @@ unrelated to what you're testing.
 - [ ] Toggle Wi-Fi briefly → reconnect happens, no permanent disconnect
 - [ ] No `Reaping wedged client` lines in `bridge.log` after a normal session
 - [ ] No `Health anomaly: ws-buffer:` lines after sustained use
+
+- [ ] **What a control is reads before a touch (ADR-474):** in any
+      central view a button is framed in its own colour (Record and Delete
+      red), a slider is not, a set of choices is one framed tab with
+      hairlines, and ‹ name › is one control. Check it in daylight on the
+      iPad, where the frames are thinnest
 
 ## 10 · Recovery scenarios
 
