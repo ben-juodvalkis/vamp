@@ -30,7 +30,8 @@
 	 *   8 Int Var     0..24 st   (not drawn)
 	 *
 	 * Since 2026-10-24 (the user's call) the group is the Pitch view
-	 * (`PitchCentralView`, `standalone`), out of the Tremolo view: no leading
+	 * (`PitchCentralView`, `standalone`, the Octave alone since Reverse moved
+	 * to the Glitch view the same day, `show`), out of the Tremolo view: no leading
 	 * seam, and no Octave Mix, which is the grid's Pitch slider.
 	 *
 	 * Self-contained: queries its own slots and renders through
@@ -56,8 +57,13 @@
 	interface Props {
 		/** The Pitch view's own: no leading seam, no Octave Mix (the grid's slider). */
 		standalone?: boolean;
+		/**
+		 * Which columns (2026-10-24, the user's call): `octave` (the Pitch
+		 * view's), `reverse` (Pitch Hack, the Glitch view's), or `both`.
+		 */
+		show?: 'both' | 'octave' | 'reverse';
 	}
-	let { standalone = false }: Props = $props();
+	let { standalone = false, show = 'both' }: Props = $props();
 
 	const octave = useFxGridSlot('octave');
 	const pitchHack = useFxGridSlot('pitchHack');
@@ -163,10 +169,11 @@
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
 <div class="pitch-group">
 	{#if !standalone}
-	<SectionDivider orientation="vertical" ink={octaveInk.primary} />
+	<SectionDivider orientation="vertical" ink={show === 'reverse' ? ink.primary : octaveInk.primary} />
 	{/if}
 
 	<!-- The Octave, titled Pitch: its interval and Mix upright side by side. -->
+	{#if show !== 'reverse'}
 	<div class="stack" style="--btn-tint: {octaveInk.primary};">
 		<span class="row-title" style="color: {octaveInk.primary};">Pitch</span>
 		<div class="pair">
@@ -219,7 +226,13 @@
 		</div>
 	</div>
 
+	{/if}
+
+	{#if show === 'both'}
 	<SectionDivider orientation="vertical" ink={ink.primary} />
+	{/if}
+
+	{#if show !== 'octave'}
 
 	<!-- Pitch Hack, titled Reverse: Rate and Mix upright side by side. -->
 	<div class="stack" style="--btn-tint: {ink.primary};">
@@ -267,6 +280,7 @@
 			</div>
 		</div>
 	</div>
+	{/if}
 </div>
 
 <style>

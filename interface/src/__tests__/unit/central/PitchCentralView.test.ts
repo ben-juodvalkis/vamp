@@ -1,6 +1,7 @@
 /**
  * The Pitch view (2026-10-24; the Pitch family in the Auto Pan view from
- * 2026-10-15). The Octave's Mix is the grid's Pitch slider, not drawn here. Pitch Hack: a Mix
+ * 2026-10-15): the Octave's interval. Its Mix is the grid's Pitch slider,
+ * and Pitch Hack (Reverse) is the Glitch view's since the same day. Pitch Hack: a Mix
  * slider and the Rate column (1 to 1/16 top to bottom;
  * Rate is param 5, an index into the device's value_items), and no
  * Coarse, Reverse, Recycle or Int Var. A step writes its own param only; the step
@@ -23,6 +24,7 @@ import { SvelteMap } from 'svelte/reactivity';
 import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { replaceTree, _resetForTests, type TrackRecord, type DeviceRecord, type ParamRecord } from '$lib/stores/v3/normalized.svelte';
 import PitchCentralView from '$lib/components/v6/central/views/PitchCentralView.svelte';
+import GlitchCentralView from '$lib/components/v6/central/views/GlitchCentralView.svelte';
 import { send } from '$lib/api/simpleClient';
 
 const TRACK = 'tracks/0';
@@ -75,15 +77,21 @@ const writtenTo = (device: string, param: number) =>
 const written = (param: number) => writtenTo(PH, param);
 
 beforeEach(() => {
+	// The Glitch view asks for GlitchLoop's preset bank on mount.
+	vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ bank: [], presets: {} }) })));
 	vi.clearAllMocks();
 	_resetForTests();
 });
-afterEach(() => cleanup());
+afterEach(() => {
+	cleanup();
+	vi.unstubAllGlobals();
+});
 
-describe('Pitch view: Pitch Hack rate column', () => {
+// Pitch Hack (titled Reverse) is the Glitch view's since 2026-10-24.
+describe('Glitch view: Pitch Hack rate column', () => {
 	it('draws 1 to 1/16 and lights the stop Rate matches', async () => {
 		seed(pitchHack(10));
-		const { container } = render(PitchCentralView);
+		const { container } = render(GlitchCentralView);
 		await tick();
 		expect(stops(container).map((b) => b.textContent?.trim())).toEqual(['1', '1/2', '1/4', '1/8', '1/16']);
 		expect(stops(container).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'false', 'false', 'true', 'false']);
@@ -91,7 +99,7 @@ describe('Pitch view: Pitch Hack rate column', () => {
 
 	it('writes each stop to Rate and leaves Dry / Wet to its slider', async () => {
 		seed(pitchHack(0, 0, 40));
-		const { container } = render(PitchCentralView);
+		const { container } = render(GlitchCentralView);
 		await tick();
 		for (const b of stops(container)) await fireEvent.click(b);
 		expect(written(5)).toEqual([19, 16, 13, 10, 7]);
@@ -100,9 +108,18 @@ describe('Pitch view: Pitch Hack rate column', () => {
 });
 
 describe('Pitch view: the Pitch family', () => {
-	it('draws a Mix slider for Pitch Hack (the Octave\'s is the grid tile), and no Coarse, Reverse, Recycle or Int Var', async () => {
+	it('draws the Octave alone in the Pitch view: no Mix (the grid tile) and no Reverse', async () => {
 		seed(pitchHack(13), octave(7));
 		const { container } = render(PitchCentralView);
+		await tick();
+		expect(sliderTitles(container)).toEqual([]);
+		expect(container.querySelector('.pitch-hack-rate')).toBeNull();
+		expect(container.textContent).not.toContain('Reverse');
+	});
+
+	it('draws Pitch Hack in the Glitch view: one Mix slider, no Coarse, Reverse, Recycle or Int Var', async () => {
+		seed(pitchHack(13), octave(7));
+		const { container } = render(GlitchCentralView);
 		await tick();
 		const titles = sliderTitles(container);
 		expect(titles.filter((t) => t === 'Mix')).toHaveLength(1);
@@ -110,7 +127,7 @@ describe('Pitch view: the Pitch family', () => {
 		expect(coarseSteps(container)).toEqual([]);
 		expect(container.textContent).not.toContain('Coarse');
 		expect(container.querySelector('.pitch-hack-mix [role="slider"]')).not.toBeNull();
-		expect(container.querySelector('.octave-mix [role="slider"]')).toBeNull();
+		expect(container.querySelector('.pitch-hack-rate')?.closest('.stack')?.querySelector('.row-title')?.textContent).toBe('Reverse');
 	});
 
 	it("draws the Octave's interval +12 to -12 under a Pitch title, lights the device's step and writes semitones", async () => {
@@ -120,7 +137,6 @@ describe('Pitch view: the Pitch family', () => {
 		expect(intervalSteps(container).map((b) => b.textContent?.trim())).toEqual(['+12', '+7', '-5', '-12']);
 		expect(intervalSteps(container).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'false', 'true', 'false']);
 		expect(container.querySelector('.octave-interval')?.closest('.stack')?.querySelector('.row-title')?.textContent).toBe('Pitch');
-		expect(container.querySelector('.pitch-hack-rate')?.closest('.stack')?.querySelector('.row-title')?.textContent).toBe('Reverse');
 		for (const b of intervalSteps(container)) await fireEvent.click(b);
 		expect(writtenTo(OCT, 1)).toEqual([12, 7, -5, -12]);
 		// A loaded Octave's Mix is the slider's: a step leaves it alone.

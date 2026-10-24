@@ -77,7 +77,7 @@ export interface FXGridSlotConfig {
  *           col 9 Glitch over Variation, sliders (2026-10-24)
  *           col 10 Squash over Gain
  *   audio   col 1 Bass over Gtr; cols 2-10 identical (Chorus in Drum's cell)
- *   master  col 1 one empty full-height cell; cols 2-10 identical
+ *   Main    as audio: Bass over Gtr (2026-10-24; one empty cell before)
  *
  * 2026-10-24 (the user's call): the Saturator and Glitch XYs became
  * sliders, each a column inside the outer ones: Pitch (the Octave's Mix,
@@ -260,8 +260,8 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
 /** The grid's column count. The TotalMix status strip in layouts/default/Layout.svelte repeats it by hand. */
 export const FX_GRID_COLUMNS = 10;
 
-/** Which placement a grid uses. Group tracks use MIDI's; master has no Gtr. */
-export type GridTrackKind = 'midi' | 'audio' | 'master';
+/** Which placement a grid uses. Group tracks use MIDI's, Main audio's. */
+export type GridTrackKind = 'midi' | 'audio';
 
 /** One cell on the ten-by-two grid: 1-based start column and row, plus spans. */
 export interface GridCell {
@@ -282,15 +282,15 @@ export const GLITCH_CELL: GridCell = { col: 9, row: 1, span: 1, rowSpan: 1 };
 
 /**
  * The Guitar rack's drive: the bottom of the first column, under the Bass on
- * audio and under Rand Oct on MIDI (2026-10-23), every track but master.
- * No layout entry.
+ * audio and Main and under Rand Oct on MIDI (2026-10-23; Main since
+ * 2026-10-24). No layout entry.
  */
 export const GUITAR_CELL: GridCell = { col: 1, row: 2, span: 1, rowSpan: 1 };
 
 /**
- * Wherever the Guitar takes the foot of column 1, fx1 (the Bass on audio,
- * Rand Oct on MIDI) is its top half. Every other slot is placed the same on
- * every kind; master keeps Rand Oct's full-height (empty) cell.
+ * The Guitar takes the foot of column 1 on every track, so fx1 (the Bass on
+ * audio and Main, Rand Oct on MIDI) is its top half. Every other slot is
+ * placed the same on every kind.
  */
 const GUITAR_COLUMN_CELLS: Partial<Record<PositionKey, GridCell>> = {
   fx1: { col: 1, row: 1, span: 1, rowSpan: 1 }
@@ -298,7 +298,8 @@ const GUITAR_COLUMN_CELLS: Partial<Record<PositionKey, GridCell>> = {
 
 /** Where a layout slot sits for a track kind. */
 export function cellFor(slot: FXGridSlotConfig, kind: GridTrackKind): GridCell {
-  const override = kind !== 'master' ? GUITAR_COLUMN_CELLS[slot.position] : undefined;
+  void kind; // one placement for every kind since Main took the Gtr (2026-10-24)
+  const override = GUITAR_COLUMN_CELLS[slot.position];
   return override ?? { col: slot.col, row: slot.row, span: slot.span, rowSpan: slot.rowSpan ?? 1 };
 }
 

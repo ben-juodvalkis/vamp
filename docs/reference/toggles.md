@@ -162,8 +162,8 @@ explicit `'0'` turns it off.
 `flipLayout` reverses the stack's **order** and nothing else: FX grid on
 top, central view, clip grid, track strips against the bottom edge of the
 screen — where, on a 12.9" iPad on a stand, the hands actually are. The
-right sidebar takes the same reversal, so master · scene rail · quantize
-· loop brace still line up row for row with the main area. Inside each
+right sidebar takes the same reversal, so its rows (the mini session ·
+scene rail · quantize · loop brace since ADR-469) still line up row for row with the main area. Inside each
 strip only the name band moves (to the foot of the card); Clip stays above Permute, because that pair is a
 reading order rather than a stack.
 
@@ -184,35 +184,15 @@ chrome.
 
 ### The mini session column
 
-The mini session column is not a fourth section — it lives **inside**
-the central view's, so it never changes `visibleSectionCount` and never
-resizes the scene window. `ClipCentralView`'s control rail grows from 9
-columns to 10 and gives the extra one — the **leading** column — to
-`MiniSessionGrid`: the **selected** track's clip column, rendered by the
-same `SlotGrid` the full grid uses, with a per-track stop button in the
-same extra row the full grid gives its stop row. It takes the rail's own
-pitch, exactly as wide as every fader and button column beside it: it is
-a column of that rail, not an annex on its edge. It reads first because
-the subject comes before what acts on it — every other column in the rail
-acts on the clip this one names. The nine existing columns are placed by
-explicit `grid-column` and shift one to the right while it is up, so
-their left-to-right order is untouched.
-
-Its stop button must be **exactly one cell tall**, which means the flex
-*basis*, not a `height`: in a flex column the basis is the main size, so
-a full-pitch basis beside a `pitch - gap` height silently won and drew
-the stop a gap taller than every slot above it (92px against 88px cells
-at 1366x1024). The full grid's stop row was always right; only the mini
-had the bug.
-
-**Why the clip view.** Everything else in that rail is already about the
-clip you are looking at — Chance, Temp and Shuffle shape it, REC and
-Delete replace it, Loop X2 and the transpose pair edit it. What the rail
-could not say was *which* clip: the selection lived a section away in the
-grid, or, with CLIPS off, nowhere at all. The mini answers that and makes
-it changeable in the same place. The FX grid was the other candidate and
-lost on exactly that test: a rack of insert effects on the track has no
-claim on which clip is selected.
+The mini session column is not a section of its own: it is the right
+sidebar's first row, level with the track strips (ADR-469, 2026-10-24;
+the leading column of the Clip view's rail before, and the master strip's
+row until then), so it never changes `visibleSectionCount` and never
+resizes the scene window. It is `MiniSessionGrid`: the **selected**
+track's clip column, rendered by the same `SlotGrid` the full grid uses
+but with its own gestures (a tap fires, a hold highlights and opens the
+Clip view), and a stop button a strip's name-band tall. With Main
+selected it is the scene launch buttons and a global stop.
 
 **It has no switch of its own.** `uiPrefsStore.miniSessionActive` is
 simply `!sessionMode` — full grid up, or clips in miniature, never
@@ -223,26 +203,17 @@ from an older install is now ignored, pinned by a test). The negation
 rather than "always" is load-bearing twice over: with CLIPS on the mini
 would repeat a column already drawn under its own strip, and both would
 be driving the one shared `sceneWindowStore` window. That window is
-also why exactly one of `SceneRail` and `MiniSessionGrid` is ever mounted
-— the two effects the rail owns (persisting the offset clamp and keeping
+also why the full `SceneRail` and `MiniSessionGrid` are never mounted
+together (the mini's Main face is the rail's mini mode, inside it) — the
+two effects the rail owns (persisting the offset clamp and keeping
 the pedal's row on screen) have to run in either layout, so the mini runs
 them for the layouts it owns.
 
-The getter deliberately says nothing about `showCentralView` or about
-which central view is selected. Those decide whether the *host* is on
-screen, and the host answers that by rendering or not; folding them in
-would make the getter claim to mean "is it visible", which it cannot know
-(the central section can be on while the view showing is Reverb).
-
-Cell gestures are shared code, not a lookalike:
-`components/v6/tracks/composables/slotActions` is called by both
-`TracksPanelV6` and the mini. A cell body aims the **foot pedal**, so a
-mini that aimed it differently would be worse than no mini at all.
-
-MINI shows as a plain row in the Sections card even in the layouts where
-it is moot (CLIPS on) rather than greying out — a control that dims as
-you flip its neighbours is harder to read than one that simply remembers
-what you asked for.
+The cells' actions are shared code (`components/v6/tracks/composables/
+slotActions`, called by `TracksPanelV6` and the mini); the gestures are
+deliberately not: the mini fires on a tap and aims the **foot pedal** on a
+hold, where the full grid aims it on a tap and fires from a cell's strip
+(ADR-469).
 
 **Where the switches live.** The **Sections** list in the master-track
 central view (`SystemCentralView`), three rows ordered the way the things

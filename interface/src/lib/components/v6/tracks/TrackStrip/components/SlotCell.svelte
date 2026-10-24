@@ -101,6 +101,12 @@
          * a performance surface.
          */
         actionWidthPx?: number;
+        /**
+         * The whole cell is the button (the mini grid, 2026-10-24): no
+         * strip, and on an empty slot the action glyph (● or –) drawn
+         * centred over the cell instead; a clip shows no glyph.
+         */
+        glyphCentered?: boolean;
         /** This slot's scene row is the selected one. */
         sceneSelected?: boolean;
         /**
@@ -129,6 +135,7 @@
         triggered = false,
         actionPressed = false,
         actionWidthPx = 0,
+        glyphCentered = false,
         sceneSelected = false,
         pedalTarget = false
     }: Props = $props();
@@ -149,14 +156,20 @@
     //                 to show on every empty slot regardless.
     //   stopped    ▶  play
     //   recording  ▶  end the take and launch it as a loop
-    //   playing    ■  stop
+    //   playing    ▶  re-fire from the top (stopping is the stop cell's)
     //
     // Note the recording case is ▶ rather than ■: firing a recording
     // session clip is how a looper CLOSES a take (you keep what you
     // played), where stopping would end it without ever looping it.
-    let actionGlyph = $derived(slotActionGlyph(slotState, canRecord));
+    // Centred (the mini grid), an empty slot on an unarmed track is a stop
+    // button, as in Live's own grid (2026-10-24, the user's call): ■, and
+    // the mini's tap stops the track there.
+    let stopsHere = $derived(glyphCentered && slotState === 'empty' && !canRecord);
+    let actionGlyph = $derived(stopsHere ? '\u25a0' : slotActionGlyph(slotState, canRecord));
     let actionLabel = $derived(
-        slotState === 'empty'
+        stopsHere
+            ? 'Stop the track'
+            : slotState === 'empty'
             ? canRecord
                 ? `Record into slot ${slotIndex + 1}`
                 : `Slot ${slotIndex + 1} — arm the track to record here`
@@ -166,7 +179,11 @@
                 ? `End take and loop ${label}`
                 : `Play ${label}`
     );
-    let showAction = $derived(!inert && actionWidthPx > 0);
+    // Centred (the mini grid), only an empty slot wears a mark (2026-10-24,
+    // the user's call): a clip shows itself, and a tap on it is a launch.
+    let showAction = $derived(
+        !inert && (actionWidthPx > 0 || (glyphCentered && slotState === 'empty'))
+    );
 
     // ---- Preview (ADR-415) ------------------------------------------
     //
@@ -385,7 +402,9 @@ const previewInk = '#000000';
         {#if showAction}
             <span
                 class="slot-action state-{slotState}"
-                class:cannot-record={slotState === 'empty' && !canRecord}
+                class:is-centered={glyphCentered}
+                class:cannot-record={slotState === 'empty' && !canRecord && !stopsHere}
+                class:is-stop={stopsHere}
                 class:is-pressed={actionPressed}
                 role="button"
                 tabindex="-1"
@@ -606,6 +625,17 @@ const previewInk = '#000000';
             filter 90ms var(--ease-precise);
     }
 
+    /* Centred over the whole cell (the mini grid, 2026-10-24): the same
+       glyph and inks, no strip of its own, so no edge, no fill and no
+       press tint (the whole cell lights instead). */
+    .slot-action.is-centered {
+        right: 0;
+        width: auto;
+        border-right: none;
+        background: transparent;
+        font-size: 1.125rem;
+    }
+
     /* Ink says what the press does, matching the glyph: record is the
        transport red, stop is the neutral dim, play/end-take is the play
        green. Same global action inks the cell states use, so the strip
@@ -618,6 +648,11 @@ const previewInk = '#000000';
        strip still reads as a control without reading as "records here". */
     .slot-action.cannot-record {
         color: var(--signal-dim);
+    }
+
+    /* The mini's stop: the stop button's own neutral ink. */
+    .slot-action.is-stop {
+        color: color-mix(in oklab, var(--signal-dim) 70%, var(--foreground));
     }
 
     .slot-action.state-playing {
@@ -742,6 +777,13 @@ const previewInk = '#000000';
     /* Not armed: Live's own disabled foreground, never an opacity dim. */
     :global([data-grammar="flat"]) .slot-action.cannot-record {
         color: var(--flat-disabled-fg);
+    }
+    :global([data-grammar="flat"]) .slot-action.is-stop {
+        color: var(--foreground);
+    }
+    :global([data-grammar="flat"]) .slot-action.is-centered {
+        background: transparent;
+        border-right: none;
     }
     :global([data-grammar="flat"]) .slot-cell.state-empty.is-pressed {
         background: var(--secondary);

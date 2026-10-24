@@ -195,8 +195,9 @@ function expectEqual(actual, wanted, message) {
  *
  * `trackCount` swaps the mock's scene for a different size. It costs a mock
  * restart, so only ask for it when the track count is the thing under
- * test: the crowded-row scenarios, because the strips row does not become
- * a scroller until the fourteenth track.
+ * test: the crowded-row scenarios, and the fitting-row ones on ten tracks,
+ * because with New Audio / New MIDI and the master strip in the row
+ * (2026-10-24) it becomes a scroller at the twelfth track on the iPad.
  *
  * `needs` says what input the scenario requires:
  *
@@ -214,6 +215,10 @@ const SCENARIOS = [
 	{
 		name: 'tap-mutes',
 		view: 'full',
+		// Ten tracks: with New Audio / New MIDI and the master strip in the
+		// row (2026-10-24) twelve no longer fit, and this scenario is about
+		// a row that does.
+		trackCount: 10,
 		needs: 'tap',
 		description: 'one trusted tap on a track name mutes that track',
 		async run({ page, tap, sent, reset }) {
@@ -330,10 +335,132 @@ const SCENARIOS = [
 		}
 	},
 
+	{
+		name: 'mini-tap-fires',
+		view: 'default',
+		needs: 'tap',
+		description: 'a tap in the middle of a mini session cell fires it (2026-10-24)',
+		async run({ page, tap, sent, reset }) {
+			// The body, well clear of the action strip: in the full grid this
+			// tap only selects; in the mini it fires.
+			const cell = await centreOf(page, '[data-debug="mini-session"] [data-slot-index]', 1);
+			reset();
+			await tap(cell.x + cell.w / 4, cell.y);
+			await wait(250);
+			expect(
+				sent().some(
+					(m) =>
+						m.address === '/looping/v3/clip/launch' || m.address === '/looping/v3/clip/stop'
+				),
+				'a tap on a mini cell must fire it'
+			);
+		}
+	},
+
+	{
+		name: 'mini-empty-unarmed-stops',
+		view: 'default',
+		needs: 'tap',
+		description: 'a tap on an empty mini slot of an unarmed track stops the track (2026-10-24)',
+		async run({ page, tap, sent, reset }) {
+			// Drums (track 0) is unarmed; its slot 4 is empty.
+			const cell = await centreOf(page, '[data-debug="mini-session"] [data-slot-index]', 4);
+			reset();
+			await tap(cell.x, cell.y);
+			await wait(250);
+			expect(
+				sent().some((m) => m.address === '/looping/v3/clip/stop'),
+				'an unarmed empty slot is a stop button'
+			);
+			expect(
+				!sent().some((m) => m.address === '/looping/v3/clip/launch'),
+				'it must not fire the slot'
+			);
+		}
+	},
+
+	{
+		name: 'mini-main-scenes',
+		view: 'default',
+		description: 'with Main selected the mini is scene launches and a global stop (2026-10-24)',
+		async run({ page, fingers, tap, sent, reset }) {
+			const master = await centreOf(page, '[data-debug="master-card"]');
+			await tap(master.x, master.y);
+			await page.waitForSelector('[data-debug="mini-session"] [data-debug="scene-rail"]', { timeout: 3000 });
+
+			// A tap anywhere on a scene launches it.
+			const scene = await centreOf(page, '[data-debug="mini-session"] [data-scene-index]', 1);
+			reset();
+			await tap(scene.x, scene.y);
+			await wait(250);
+			expect(
+				sent().some((m) => m.address === '/looping/v3/scene/launch' && m.args[0] === 'scenes/1'),
+				'a tap on a scene must launch it'
+			);
+
+			// A hold only selects it.
+			const other = await centreOf(page, '[data-debug="mini-session"] [data-scene-index]', 2);
+			reset();
+			const id = await fingers.down(other.x, other.y);
+			await wait(800);
+			await fingers.up(id);
+			await wait(250);
+			expect(
+				sent().some((m) => m.address === '/looping/v3/selected_clip'),
+				'a hold must move the pedal row'
+			);
+			expect(
+				!sent().some((m) => m.address === '/looping/v3/scene/launch'),
+				'a hold must launch nothing'
+			);
+
+			// The footer is a global stop.
+			const stop = await centreOf(page, '[data-debug="mini-session"] [data-debug="rail-stop-all"]');
+			reset();
+			await tap(stop.x, stop.y);
+			await wait(250);
+			expect(
+				sent().some((m) => m.address === '/looping/v3/scene/stop'),
+				'the footer must stop everything'
+			);
+		}
+	},
+
+	{
+		name: 'mini-hold-selects',
+		view: 'default',
+		description: 'a hold on a mini session clip moves the highlight there, shows its Clip view and fires nothing',
+		async run({ page, fingers, sent, reset }) {
+			const cell = await centreOf(page, '[data-debug="mini-session"] [data-slot-index]', 2);
+			reset();
+			const id = await fingers.down(cell.x + cell.w / 4, cell.y);
+			// LONG_PRESS_MS is 500; 800 clears it on a throttled clock.
+			await wait(800);
+			await fingers.up(id);
+			await wait(250);
+			// A clip: the focus wire moves the highlight and the Clip view up.
+			expect(
+				sent().some((m) => m.address === '/looping/v3/clip/focus'),
+				'a hold on a clip must focus it (highlight and Clip view)'
+			);
+			expect(
+				!sent().some(
+					(m) =>
+						m.address === '/looping/v3/clip/launch' || m.address === '/looping/v3/clip/stop'
+				),
+				'a hold must fire nothing'
+			);
+		}
+	},
+
 	// ---- Concurrent fingers. Chromium only (CDP). -------------------------
 	{
 		name: 'two-mutes',
 		view: 'full',
+		// Ten tracks: with New Audio / New MIDI and the master strip in the
+		// row (2026-10-24) twelve no longer fit, and this scenario is about
+		// a row that does.
+		trackCount: 10,
 		description: 'two fingers on two track names mute two tracks',
 		async run({ page, fingers, sent, reset }) {
 			// The trap this whole program starts from: `.header-name`
@@ -602,6 +729,10 @@ const SCENARIOS = [
 	{
 		name: 'volume-from-the-gutter',
 		view: 'full',
+		// Ten tracks: with New Audio / New MIDI and the master strip in the
+		// row (2026-10-24) twelve no longer fit, and this scenario is about
+		// a row that does.
+		trackCount: 10,
 		description: 'a drag that lands between two strips, or above a name, is still a fader',
 		async run({ page, fingers, sent, reset }) {
 			// "Sometimes I drag a strip and nothing happens" (2026-09-25).
@@ -684,6 +815,10 @@ const SCENARIOS = [
 	{
 		name: 'volume-from-a-sideways-start',
 		view: 'full',
+		// Ten tracks: with New Audio / New MIDI and the master strip in the
+		// row (2026-10-24) twelve no longer fit, and this scenario is about
+		// a row that does.
+		trackCount: 10,
 		description: 'with no row to scroll, a fader drag that sets off sideways still moves the volume',
 		async run({ page, fingers, sent, reset }) {
 			// The other half of "sometimes nothing happens": a drag whose first
@@ -778,6 +913,10 @@ const SCENARIOS = [
 	{
 		name: 'mute-momentary',
 		view: 'full',
+		// Ten tracks: with New Audio / New MIDI and the master strip in the
+		// row (2026-10-24) twelve no longer fit, and this scenario is about
+		// a row that does.
+		trackCount: 10,
 		description: 'holding a mute past the threshold restores it on release',
 		async run({ page, fingers, sent, reset }) {
 			const name = await centreOf(page, '.header-name', 4);

@@ -1,34 +1,23 @@
 <script lang="ts">
     /**
-     * Mini session view — the selected track's clip column, living in
-     * the CLIP central view.
+     * Mini session view — the selected track's clip column, in the right
+     * sidebar's first row, level with the track strips (2026-10-24, the
+     * user's call: the master strip moved into the strip row and this took
+     * its place; it was the leading column of the Clip view's rail
+     * before). It appears exactly when the full grid is hidden
+     * (`uiPrefsStore.miniSessionActive`); in session mode the row is empty.
      *
-     * The full clip grid (ADR-415) is a whole section of the main-area
-     * stack, so switching CLIPS off buys back a third of the screen and
-     * costs you every clip on it: no launch targets, no playhead, no
-     * idea what is armed. This is the trade in miniature. It shows ONE
-     * track's column — the selected one — in the LEADING column of
-     * `ClipCentralView`'s control rail, at twice a rail column's width, and it
-     * appears exactly when the full grid is hidden
-     * (`uiPrefsStore.miniSessionActive`).
-     *
-     * **Why the clip view and not the FX grid.** Everything else in that
-     * rail is already about the clip you are looking at: Chance, Temp
-     * and Shuffle shape it, REC and Delete replace it, Loop X2 and the
-     * transpose pair edit it. What the rail could not say was WHICH clip
-     * — the selection lived only in the grid a section away, or, with
-     * CLIPS off, nowhere at all. The mini answers that and makes it
-     * changeable in the same place, which the FX grid (a rack of
-     * insert effects on the track) had no claim to.
-     *
-     * **It is the same `SlotGrid`, not a lookalike.** Cells, states,
-     * previews, the leading action strip, the press highlight, the
-     * playhead and every gesture come from the component the full grid
-     * uses, and the taps route through `composables/slotActions` — the
-     * module `TracksPanelV6` calls too. A cell therefore cannot come to
-     * mean one thing here and another there, which matters more than it
-     * looks: the body tap aims the FOOT PEDAL, and a mini view that
-     * aimed it differently would be worse than no mini view.
+     * **It is the same `SlotGrid`, with its own gestures.** Cells, states,
+     * previews, the press highlight and the playhead come from the full
+     * grid's component, and the actions route through
+     * `composables/slotActions`. What differs is the gestures
+     * (`tapFires`, 2026-10-24, the user's call): a tap anywhere on a cell
+     * fires it (the action strip's tap: launch; a playing clip re-fires
+     * from the top, and stopping is the stop button's job), an empty
+     * slot's mark centred on the cell (● record on an armed track, ■ stop
+     * on an unarmed one, whose tap stops the track) and a clip with none,
+     * and a hold past 500 ms fires nothing: it moves the highlight there,
+     * the foot pedal's target, and on a clip brings up the Clip view.
      *
      * **One shared scene window.** `sceneWindowStore` is the same
      * offset the full grid and the scene rail use, so scrolling here and
@@ -39,24 +28,19 @@
      * only) can't do them here, so this component runs those effects for
      * the layouts it owns.
      *
-     * **Its own row pitch.** Nothing on screen has to line up with these
-     * rows — there is no rail beside them and no strip above them — so
-     * the box is simply divided by the rows drawn plus one for the stop
-     * row, exactly as `TracksPanelV6` and `SceneRail` each divide their
-     * own section. The rows-drawn count still comes from the shared
-     * store, so the mini shows the same window the full grid would at
-     * this section count — the central view's section and the clip
-     * grid's are the same height, so that lands right without either
-     * measuring the other.
+     * **Its own row pitch.** The stop row is a strip's name-band
+     * height (a quarter of the strip after its gaps), level with the mute buttons beside it, and the clip rows
+     * divide what is left by the rows drawn. The rows-drawn count comes
+     * from the shared store, so the mini shows the same window the full
+     * grid would at this section count.
      */
 
     import SlotGrid from '$lib/components/v6/tracks/TrackStrip/components/SlotGrid.svelte';
+    import SceneRail from '$lib/components/v6/tracks/SceneRail.svelte';
     import { sceneWindowStore } from '$lib/stores/v6/sceneWindowStore.svelte';
     import { session } from '$lib/stores/session.svelte';
     import { v3Store } from '$lib/stores/v3/normalized.svelte';
     import { clipStateStore } from '$lib/stores/v6/clipStateStore.svelte';
-    import { clipEditorStore } from '$lib/stores/v6/clipEditorStore.svelte';
-    import { groupGestureStore } from '$lib/stores/v6/groupGestureStore.svelte';
     import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
     import { paintModeReactive } from '$lib/utils/paintMode.svelte';
     import { press } from '$lib/actions/press';
@@ -77,42 +61,26 @@
     // set is empty" rather than "you are on master".
     const hasTrack = $derived(trackIndex >= 0);
 
-    // A body tap here aims the pedal exactly as the full grid's does, and
-    // on a slot holding a clip it also opens that clip's note view beside
-    // this column: the mini is already the "which clip" list, so picking
-    // one shows it. An empty slot has nothing to show and only selects.
-    // Tapping the clip whose editor is already open closes it, back to
-    // the clip controls.
-    function openSlot(slotIndex: number, slotPath: string) {
-        const focused = session.focusedClipIndices;
-        const editorOpenOnThis =
-            clipEditorStore.active &&
-            focused?.track === trackIndex &&
-            focused?.scene === slotIndex;
-        selectSlot(trackIndex, slotIndex);
-        // Mid group gesture the tap only toggles the track into the group.
-        if (groupGestureStore.active) return;
+    // A hold (500 ms): the highlight moves there and, on a slot holding a
+    // clip, the Clip view comes up on it (`focusSlot` does both). An empty
+    // slot only takes the highlight. Fires nothing either way.
+    function holdSlot(slotIndex: number, slotPath: string) {
         const state = v3Store.tracks.get(trackPath)?.slots.get(slotPath)?.state;
-        if (!state || state === 'empty') return;
-        if (editorOpenOnThis) {
-            clipEditorStore.set(false);
-            return;
-        }
-        focusSlot(trackIndex, slotPath);
-        clipEditorStore.set(true);
+        if (!state || state === 'empty') selectSlot(trackIndex, slotIndex);
+        else focusSlot(trackIndex, slotPath);
     }
     const trackPath = $derived(`tracks/${trackIndex}`);
     const record = $derived(hasTrack ? v3Store.tracks.get(trackPath) : undefined);
-    const trackName = $derived(record?.name ?? (hasTrack ? `Track ${trackIndex + 1}` : 'Master'));
+    const trackName = $derived(record?.name ?? (hasTrack ? `Track ${trackIndex + 1}` : 'Main'));
     const ink = $derived(trackInk(rgbToHex(record?.color ?? 0x808080), paintModeReactive()));
     const isGroup = $derived(hasTrack && clipStateStore.isGroupTrack(trackIndex));
 
     // ---- Row pitch ------------------------------------------------------
     //
-    // Measured, not authored — same recipe as the full grid's section and
-    // the rail's. The +1 is the stop row: it is one more row at the
-    // grid's own pitch, not a bar of chrome, so it aims exactly like a
-    // clip cell.
+    // Measured, not authored. The stop row is a strip's name-band height
+    // (2026-10-24, the user's call: level with the strips' mute buttons
+    // beside it), so the pitch is the clip rows' own box divided by the
+    // rows drawn, the stop row's height already out of it.
     let gridBoxEl = $state<HTMLDivElement | null>(null);
     let gridBoxHeightPx = $state(0);
 
@@ -127,7 +95,7 @@
      */
     let stopPressed = $state(false);
     const renderedRows = $derived(sceneWindowStore.renderedRows);
-    const rowPitchPx = $derived(renderedRows > 0 ? gridBoxHeightPx / (renderedRows + 1) : 0);
+    const rowPitchPx = $derived(renderedRows > 0 ? gridBoxHeightPx / renderedRows : 0);
 
     $effect(() => {
         const el = gridBoxEl;
@@ -184,20 +152,21 @@
     {#if hasTrack}
         <div
             class="mini-body"
-            bind:this={gridBoxEl}
             style={rowPitchPx > 0 ? `--session-row-h: ${rowPitchPx}px;` : ''}
         >
-            <div class="mini-grid">
+            <div class="mini-grid" bind:this={gridBoxEl}>
                 <SlotGrid
                     {trackPath}
                     trackColor={ink}
                     {trackIndex}
                     {isGroup}
                     markSelectedTrack={false}
-                    onSelect={openSlot}
+                    tapFires
+                    onSelect={holdSlot}
                     onAction={(slotIndex, slotPath, slotState) =>
-                        actOnSlot(trackIndex, slotIndex, slotPath, slotState)}
-                    onFocus={(slotPath) => focusSlot(trackIndex, slotPath)}
+                        slotState === 'empty' && !record?.arm
+                            ? stopTrack(trackIndex)
+                            : actOnSlot(trackIndex, slotIndex, slotPath, slotState)}
                 />
 
                 {#if showThumb}
@@ -237,11 +206,10 @@
             </button>
         </div>
     {:else}
-        <!-- Master has no clip slots. Say so rather than drawing an empty
-             grid, which reads as "this set has no clips". -->
-        <div class="mini-empty">
-            <span>No clip slots on Master</span>
-        </div>
+        <!-- Main (Live's master track) has no clip slots: the scene launch
+             buttons and a global stop instead (2026-10-24, the user's
+             call), the scene rail's mini face. -->
+        <SceneRail mini />
     {/if}
 </div>
 
@@ -264,10 +232,12 @@
         border-radius: var(--radius-md);
         background: color-mix(in oklab, var(--mini-ink) 6%, transparent);
         overflow: hidden;
+        /* The stop row sizes off this box's height (cqh). */
+        container-type: size;
     }
 
-    /* The measured box: scene rows plus the stop row. Nothing else may
-       go in here — anything that shortens it changes the pitch. */
+    /* The clip rows over the stop row. The rows' own box (.mini-grid) is
+       the measured one. */
     .mini-body {
         flex: 1 1 0;
         min-height: 0;
@@ -281,8 +251,10 @@
         min-height: 0;
     }
 
-    /* Same share of the box as one scene row, so the stop cell is the
-       same size as the clip cells above it. */
+    /* The strips' name-band height (2026-10-24), so it reads level with
+       the name / mute buttons in the row beside it; the clip rows share
+       the rest.
+       It was one scene row tall before, the full grid's stop-row rule. */
     .mini-stop {
         /* A full row minus the inset the cells keep between themselves —
            SlotCell's own sizing rule. It has to be the FLEX BASIS, not a
@@ -292,7 +264,15 @@
            clip slot above it (88px cells under a 92px stop at 1366×1024).
            The height stays as a belt-and-braces declaration for any
            context where this box is not a flex item. */
-        flex: 0 0 calc(var(--session-row-h) - var(--session-row-gap));
+        /* A strip's name band, measured from this column's own height: the
+           section is S = 100cqh + 10px (the 1px border and 4px padding each
+           side), a strip is its card's three bands plus the name with three
+           --spacing-xs gaps, so the name is (S - 3 gaps) / 4. It runs
+           through the frame's bottom inset (the negative margin) to the
+           section's edge, so top, bottom and height match the name band. */
+        flex: 0 0 calc((100cqh + 10px - 3 * var(--spacing-xs)) / 4);
+        margin-bottom: -5px;
+        position: relative;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -354,16 +334,6 @@
         background: color-mix(in oklab, var(--mini-ink) 65%, transparent);
     }
 
-    .mini-empty {
-        flex: 1 1 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0 8px;
-        color: var(--signal-dim);
-        font-size: 0.75rem;
-        text-align: center;
-    }
 
     /* ---- Flat grammar (Live / Hybrid skins, ui-architecture §8.1) ------
        Device tiles lose their tint and colored ring in the flat skins;

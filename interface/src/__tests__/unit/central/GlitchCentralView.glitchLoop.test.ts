@@ -96,7 +96,10 @@ describe('GlitchCentralView GlitchLoop', () => {
 		seed(glitchLoop());
 		const { container } = render(GlitchCentralView);
 		await settle();
-		expect(container.querySelector('[aria-label^="Mix:"]')).toBeNull();
+		// GlitchLoop's own Mix is the tile; the one Mix here is Reverse's
+		// (Pitch Hack, beside GlitchLoop since 2026-10-24).
+		const mixes = Array.from(container.querySelectorAll('[aria-label^="Mix:"]'));
+		expect(mixes.every((m) => m.closest('.pitch-hack-mix'))).toBe(true);
 		expect(container.querySelector('[aria-label^="Clock:"]')).not.toBeNull();
 		expect(container.textContent).not.toMatch(/Freeze|Hold/);
 		// The Variation is its own view since 2026-10-24.

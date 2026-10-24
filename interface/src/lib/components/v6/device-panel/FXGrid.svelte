@@ -108,13 +108,12 @@
       : selectedTrackStore.trackType === 'audio'
   );
 
-  // Master leaves that slot empty: no MIDI for Rand Oct. It held the OTT
-  // tile (a Multiband Dynamics Amount slider) until 2026-10-09; the
-  // device's controls are in the Gain view now, on every track.
-  // Keyed off the track index, not trackType — master reports neither
-  // hasMidiInput nor hasAudioInput, so trackType is null there.
+  // Main is an audio track to the grid (2026-10-24, the user's call): Bass
+  // over Gtr. Keyed off the track index, not trackType — Main reports
+  // neither hasMidiInput nor hasAudioInput, so trackType is null there.
   const isMasterTrack = $derived(heldTrack ? heldTrack.trackPath === 'master' : selectedTrackStore.trackIndex === -1);
-  const gridKind = $derived(isMasterTrack ? ('master' as const) : isAudioTrack ? ('audio' as const) : ('midi' as const));
+  const audioColumn = $derived(isAudioTrack || isMasterTrack);
+  const gridKind = $derived(audioColumn ? ('audio' as const) : ('midi' as const));
 
   // The Drum cell holds the Chorus on any track that is not a drum track
   // (2026-10-23, the user's call; `drumCellHoldsChorus`). Chorus keeps its
@@ -169,26 +168,22 @@
        It is NOT bounded by label wrapping - "Rand Oct" going to two lines is
        fine, so do not treat the wrap point as a cap if you revisit this. -->
   <div class="h-full grid grid-cols-10 grid-rows-2 gap-2 fx-grid" class:fx-scoped={scoped}>
-    {#if !isMasterTrack}
-      <!-- The Guitar rack's drive at the foot of column 1, under the Bass on
-           audio (2026-10-19) and under Rand Oct on MIDI (2026-10-23); not on
-           master. GuitarControl resolves its own `guitar` slot. -->
-      <div data-cell="guitar" data-col={GUITAR_CELL.col} data-row={GUITAR_CELL.row} data-span={GUITAR_CELL.span} data-row-span={GUITAR_CELL.rowSpan} style={cellStyle(GUITAR_CELL)}>
-        <GuitarControl device={guitarDevice} />
-      </div>
-    {/if}
+    <!-- The Guitar rack's drive at the foot of column 1 on every track:
+         under the Bass on audio (2026-10-19) and Main (2026-10-24), under
+         Rand Oct on MIDI (2026-10-23). GuitarControl resolves its own
+         `guitar` slot. -->
+    <div data-cell="guitar" data-col={GUITAR_CELL.col} data-row={GUITAR_CELL.row} data-span={GUITAR_CELL.span} data-row-span={GUITAR_CELL.rowSpan} style={cellStyle(GUITAR_CELL)}>
+      <GuitarControl device={guitarDevice} />
+    </div>
     {#each FX_GRID_LAYOUT as slot, i (slot.position)}
       {#if !slot.hidden}
       {@const Component = slot.component}
       {@const cell = cellFor(slot, gridKind)}
       <div data-cell={slot.position} data-col={cell.col} data-row={cell.row} data-span={cell.span} data-row-span={cell.rowSpan} style={cellStyle(cell)}>
-        {#if slot.position === 'fx1' && isMasterTrack}
-          <!-- Master track: fx1 is empty (the OTT tile left 2026-10-09). -->
-        {:else if slot.position === 'fx1' && isAudioTrack}
-          <!-- Audio track: fx1 is the Bass, the one grid device only useful
-               on audio, whose other face is the Bass panel in the Guitar
-               view. Rand Oct is a MIDI-effect control and would sit inert
-               here. BassControl resolves its own `bass` slot. -->
+        {#if slot.position === 'fx1' && audioColumn}
+          <!-- Audio track or Main: fx1 is the Bass. Rand Oct is a MIDI-effect
+               control and would sit inert here. BassControl resolves its
+               own `bass` slot. -->
           <BassControl />
         {:else if slot.position === 'fx6' && chorusInDrumCell}
           <!-- Not a drum track: the Chorus in the Drum's cell. -->

@@ -122,6 +122,12 @@ V3_TRACK_DUPLICATE_NACK_ADDRESS = "/looping/v3/track/duplicate/nack"
 NACK_INVALID_ARGS = "invalid-args"
 NACK_UNSUPPORTED_TYPE = "unsupported-type"
 NACK_CREATE_FAILED = "create-failed"
+
+# 4th arg of prepare_for_preset meaning "always create, never reuse" — the
+# New Audio / New MIDI buttons (2026-10-24). Any other non-empty value is a
+# pinned track path (replace-instrument mode).
+NEW_TRACK_TARGET = "new"
+
 NACK_LOAD_FAILED = "load-failed"
 NACK_NO_TRACK = "no-track"
 NACK_DUPLICATE_FAILED = "duplicate-failed"
@@ -285,7 +291,24 @@ class TrackPrepareComponent:
             self._handle_alc_prepare(request_id, preset_path, source, rel)
             return
 
-        if target_track_path:
+        if target_track_path == NEW_TRACK_TARGET:
+            # Always a new track (2026-10-24, the user's call): the New
+            # Audio / New MIDI buttons skip reuse-vs-create, so an empty
+            # track elsewhere in the set is never taken instead.
+            try:
+                tracks = list(self._song.tracks)
+            except _LOM_ERRORS as e:
+                self._nack(
+                    request_id, NACK_CREATE_FAILED,
+                    "read song.tracks raised: %s: %s" % (type(e).__name__, e),
+                )
+                return
+            created = self._create(track_type, tracks, request_id)
+            if created is None:
+                # _create already nacked.
+                return
+            track, was_created, target_index = created
+        elif target_track_path:
             # Replace-instrument mode: load onto this exact track,
             # bypassing reuse-vs-create. Live swaps the instrument in the
             # instrument slot in place; clips / Permute / FX are preserved.

@@ -74,6 +74,15 @@
          * stray light lines in the gaps between cells.
          */
         markSelectedTrack?: boolean;
+        /**
+         * The mini grid's gestures (2026-10-24, the user's call): a tap
+         * anywhere on a cell is the action strip's tap (launch; a playing
+         * clip re-fires from the top), and a hold moves the highlight there (`onSelect`)
+         * and fires nothing. The cells draw no strip then (width 0): the
+         * whole cell is the button, and the whole cell lights on a press.
+         * Off, a body tap selects, the strip acts and a hold focuses.
+         */
+        tapFires?: boolean;
     }
 
     let {
@@ -84,7 +93,8 @@
         onSelect,
         onAction,
         onFocus,
-        markSelectedTrack = true
+        markSelectedTrack = true,
+        tapFires = false
     }: Props = $props();
 
     let zone = $state<HTMLDivElement | null>(null);
@@ -250,7 +260,8 @@
             // highlight is the only thing that says "the tap landed".
             // Reads the pitch just measured above.
             pressedSlot = slotIndexAt(x, y);
-            pressedAction = pressedSlot !== null && isInActionZone(x);
+            // Tap-to-fire cells have no strip: the whole cell lights.
+            pressedAction = pressedSlot !== null && !tapFires && isInActionZone(x);
         },
         // Fires on release, on cancel, AND the moment the gesture
         // becomes a scroll — so a swipe across the grid doesn't drag a
@@ -331,7 +342,7 @@
         const slotIndex = slotIndexAt(x, y);
         if (slotIndex === null) return;
         const slotPath = `${trackPath}/slots/${slotIndex}`;
-        if (isInActionZone(x)) {
+        if (tapFires || isInActionZone(x)) {
             const slotState = slotStateFor(slotIndex);
             logger.debug('Slot action tap', { component: 'SlotGrid', slotPath, slotState });
             onAction(slotIndex, slotPath, slotState);
@@ -348,9 +359,16 @@
      * the gesture already suppressed the tap).
      */
     function dispatchCellLongPress(x: number, y: number) {
-        if (!onFocus) return;
         const slotIndex = slotIndexAt(x, y);
         if (slotIndex === null) return;
+        if (tapFires) {
+            // A hold aims the pedal and fires nothing, empty slots included.
+            const slotPath = `${trackPath}/slots/${slotIndex}`;
+            logger.debug('Slot long press → select', { component: 'SlotGrid', slotPath });
+            onSelect(slotIndex, slotPath);
+            return;
+        }
+        if (!onFocus) return;
         if (slotStateFor(slotIndex) === 'empty') return;
         const slotPath = `${trackPath}/slots/${slotIndex}`;
         logger.debug('Slot long press → focus', { component: 'SlotGrid', slotPath });
@@ -381,7 +399,8 @@
                 lengthBeats={clipLengthFor(slotIndex)}
                 pressed={slotIndex === pressedSlot && !pressedAction}
                 actionPressed={slotIndex === pressedSlot && pressedAction}
-                {actionWidthPx}
+                actionWidthPx={tapFires ? 0 : actionWidthPx}
+                glyphCentered={tapFires}
                 sceneSelected={slotIndex === selectedSceneIndex}
                 pedalTarget={isSelectedTrack && slotIndex === selectedSceneIndex}
                 triggered={triggeredSlotsStore.has(`${trackPath}/slots/${slotIndex}`)}

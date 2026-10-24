@@ -32,7 +32,7 @@
   {#snippet children({ sendParam, storePendingParam, triggerLoad, handleTap, isGhost, isLoading, color, openView })}
     <DeviceSlider
       value={chanceValue}
-      title="Var"
+      title="Stutter"
       labelOrientation="horizontal"
       labelSize="small"
       {isGhost}

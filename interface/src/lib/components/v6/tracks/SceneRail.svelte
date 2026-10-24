@@ -40,7 +40,20 @@
     import { v3Store } from '$lib/stores/v3/normalized.svelte';
     import { session } from '$lib/stores/session.svelte';
     import { useStripGestures } from './composables/useStripGestures.svelte';
-    import { sendSceneLaunch, sendSelectClip } from '$lib/services/clipCommands';
+    import { sendSceneLaunch, sendSceneStop, sendSelectClip } from '$lib/services/clipCommands';
+
+    interface Props {
+        /**
+         * The mini session's face of the rail, drawn when Main is selected
+         * (2026-10-24, the user's call): a tap anywhere on a scene launches
+         * it and a hold only selects it, the rows carry no launch strip,
+         * the pitch is the rows' own box divided by the rows drawn, and the
+         * footer is one global stop at a strip's name-band height (sized by
+         * the mini's frame, a size container) in place of the step arrows.
+         */
+        mini?: boolean;
+    }
+    let { mini = false }: Props = $props();
     import {
         actionStripWidth,
         isInActionStrip
@@ -86,9 +99,28 @@
     let section = $state<HTMLDivElement | null>(null);
     const renderedRows = $derived(sceneWindowStore.renderedRows);
     let sectionHeightPx = $state(0);
+    // Mini: the rows' own box, the stop footer already out of it.
+    let railHeightPx = $state(0);
     const rowPitchPx = $derived(
-        renderedRows > 0 ? sectionHeightPx / (renderedRows + 1) : 0
+        renderedRows <= 0
+            ? 0
+            : mini
+              ? railHeightPx / renderedRows
+              : sectionHeightPx / (renderedRows + 1)
     );
+
+    $effect(() => {
+        const el = rail;
+        if (!mini || !el || typeof ResizeObserver === 'undefined') return;
+        const measure = () => {
+            const h = el.getBoundingClientRect().height;
+            if (h > 0) railHeightPx = h;
+        };
+        measure();
+        const ro = new ResizeObserver(measure);
+        ro.observe(el);
+        return () => ro.disconnect();
+    });
 
     $effect(() => {
         const el = section;
@@ -133,7 +165,7 @@
      *  shared-formula arrangement the grid's cells use, so the strip the
      *  finger sees and the strip the hit test uses are one edge. */
     let railWidthPx = $state(0);
-    const actionWidthPx = $derived(actionStripWidth(railWidthPx));
+    const actionWidthPx = $derived(mini ? 0 : actionStripWidth(railWidthPx));
 
     $effect(() => {
         const el = rail;
@@ -221,7 +253,7 @@
         getElement: () => rail,
         onDown: ({ x, y }) => {
             pressedScene = sceneIndexAt(y);
-            pressedAction = pressedScene !== null && isInActionZone(x);
+            pressedAction = pressedScene !== null && !mini && isInActionZone(x);
         },
         onPressEnd: () => {
             pressedScene = null;
@@ -240,7 +272,17 @@
             sceneWindowStore.dragByRows(dy / rowPitchPx, dragToken);
         },
         onDragEnd: () => sceneWindowStore.endDrag(dragToken),
-        onTap: ({ x, y }) => dispatchSceneTap(x, y)
+        onTap: ({ x, y }) => dispatchSceneTap(x, y),
+        // Mini only: a hold selects the scene and launches nothing. The
+        // full rail has no hold, as before. A getter, read once when the
+        // gestures are built; a rail is mini or not for its whole life.
+        get onLongPress() {
+            if (!mini) return undefined;
+            return ({ y }: { y: number }) => {
+                const sceneIndex = sceneIndexAt(y);
+                if (sceneIndex !== null) selectScene(sceneIndex);
+            };
+        }
     });
 
     $effect(() => () => gestures.destroy());
@@ -265,6 +307,12 @@
     function dispatchSceneTap(x: number, y: number) {
         const sceneIndex = sceneIndexAt(y);
         if (sceneIndex === null) return;
+        if (mini) {
+            // A tap anywhere launches; the row it launches becomes the pedal's.
+            selectScene(sceneIndex);
+            sendSceneLaunch(`scenes/${sceneIndex}`);
+            return;
+        }
         if (isInActionZone(x)) {
             const scenePath = `scenes/${sceneIndex}`;
             logger.debug('Scene action tap → launch', { component: 'SceneRail', scenePath });
@@ -351,6 +399,27 @@
          Whatever lands here must stay exactly ONE row: the rail divides
          its section by `renderedRows + 1` and the grid divides its own
          by the same, which is the entire reason their rows line up. -->
+    {#if mini}
+    <!-- Mini: one global stop — every clip on every track
+         (`/looping/v3/scene/stop`, which needs a real scene path to
+         validate, so it is offered only while the set has a scene). -->
+    <div class="rail-footer is-mini" data-debug="rail-footer">
+        <button
+            type="button"
+            class="rail-step rail-stop-all"
+            data-debug="rail-stop-all"
+            aria-label="Stop all clips"
+            disabled={sceneCount <= 0}
+            use:press={{
+                onPress: () => sendSceneStop('scenes/0'),
+                touchAction: 'none',
+                disabled: sceneCount <= 0
+            }}
+        >
+            <span aria-hidden="true">■</span>
+        </button>
+    </div>
+    {:else}
     <div class="rail-footer" data-debug="rail-footer">
         <button
             type="button"
@@ -389,6 +458,7 @@
             <span aria-hidden="true">▼</span>
         </button>
     </div>
+    {/if}
 </div>
 
 <style>
@@ -522,6 +592,19 @@
        the pitch shrinks as the window grows, so this row fits ONE row
        of controls, never a stack. Hence `row`: the two arrows split the
        width and each keeps the full pitch. */
+    /* Mini: a strip's name-band height, from the mini's frame (the size
+       container: S = 100cqh + 10px, the name (S - 3 gaps) / 4), run
+       through the frame's bottom inset to the section's edge, as the
+       mini's track stop is. */
+    .rail-footer.is-mini {
+        flex: 0 0 calc((100cqh + 10px - 3 * var(--spacing-xs)) / 4);
+        margin-bottom: -5px;
+        padding-bottom: 0;
+    }
+    .rail-stop-all {
+        font-size: 1.125rem;
+    }
+
     .rail-footer {
         flex: 0 0 var(--session-row-h);
         min-height: 0;
