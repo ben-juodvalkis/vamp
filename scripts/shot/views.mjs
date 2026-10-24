@@ -322,6 +322,14 @@ export const TOURS = {
 				steps: [selectTrack(5), openTile('Reverb'), { click: '[data-reverb-type="Hall"]' }, { click: '[data-reverb-switch="8"]' }]
 			},
 			{ name: 'drumrack-drumcell', description: 'Drum Rack, DrumCell kit (Drums)', steps: [openInstrument(0)] },
+			// A tap latches a pad: the controls are its, and under them the
+			// strip of its notes in the playing clip, each step as tall as its
+			// velocity.
+			{
+				name: 'drumrack-pad-notes',
+				description: 'Drum Rack, DrumCell kit, the Ride pad latched: its notes strip under the controls',
+				steps: [openInstrument(0), { click: '.pad-tile:has-text("Ride")' }]
+			},
 			// The held pads' mixer strip (2026-09-29): Kick latched, its chain
 			// mute and volume in a thin column right of the pads.
 			{

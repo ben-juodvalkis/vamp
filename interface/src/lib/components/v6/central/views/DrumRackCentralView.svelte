@@ -12,6 +12,7 @@
   import DrumCellControlsRow from './drum/DrumCellControlsRow.svelte';
   import RackMacrosRow from './drum/RackMacrosRow.svelte';
   import PadFxPane from './drum/PadFxPane.svelte';
+  import PadNotesStrip from './drum/PadNotesStrip.svelte';
   import PadMixerColumn from './drum/PadMixerColumn.svelte';
   import { fxScopeFor } from '../fxScope';
   import { useDrumVm } from '../useDrumVm.svelte';
@@ -202,6 +203,9 @@
     scopeNote !== null && vm.scopedPad ? profileForPadClass(vm.scopedPad.className, profile) : profile
   );
   let paneType = $derived(devicePath ? drumPadScope.pane(devicePath) : null);
+  // The notes strip shows while a pad is scoped and its controls, not an
+  // effect's pane, are up (2026-10-24).
+  let showStrip = $derived(scopeNote !== null && paneType === null);
   let fxScope = $derived(
     devicePath && scopeNote !== null ? fxScopeFor(devicePath, scopeNote, vm.scopedPad) : null
   );
@@ -400,6 +404,7 @@
     class:vm-lead-grid={lead !== null}
     class:vm-lead-pads={showPads}
     class:vm-lead-pill={swapHost?.present ?? false}
+    class:vm-with-strip={showStrip}
     data-vm-lead={lead ?? undefined}
   >
     {#if lead !== null}
@@ -533,6 +538,15 @@
         filter={filterSlot}
       />
     {/if}
+    {#if showStrip && scopeNote !== null}
+      <!-- The scoped pad's notes in the playing clip, under the controls
+           (2026-10-24, the user's call). On the lead grid this is a cell of
+           its own row (`.vm-controls-flat` is `display: contents`); in the
+           flex row, the column's foot. -->
+      <div class="vm-strip">
+        <PadNotesStrip clipPath={clip.playingClipPath} clipWindow={clip.clipWindow} note={scopeNote} ink={controlInk.primary} />
+      </div>
+    {/if}
     </div>
     <!-- The Filter pad closes the row (see Gain above); a DrumCell kit
          stacks it under its Time pad instead. -->
@@ -654,6 +668,23 @@
   .vm-lead-grid:not(.vm-lead-pill) {
     row-gap: 0;
   }
+  /* The scoped pad's notes strip (2026-10-24): a third row under the
+     controls, from Gain to the right edge, the pads running down beside it.
+     It takes about a third of the controls' height, which they give up. */
+  .vm-lead-grid.vm-with-strip {
+    grid-template-rows: auto minmax(0, 1fr) minmax(0, 0.45fr);
+  }
+  .vm-strip {
+    grid-area: strip;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
+  /* In the flex row (the other kits) it is the controls column's foot. */
+  .vm-controls:not(.vm-controls-flat) > .vm-strip {
+    flex: 0 0 31%;
+  }
   .vm-lead-pill-cell {
     grid-area: pill;
     display: flex;
@@ -684,6 +715,12 @@
       'pill pill  pill  pill  fx time'
       'pads gain  trnsp start fx time';
   }
+  .vm-lead-grid.vm-with-strip[data-vm-lead='full'] {
+    grid-template-areas:
+      'pill pill  pill  pill  fx    time'
+      'pads gain  trnsp start fx    time'
+      'pads strip strip strip strip strip';
+  }
   /* UNREACHABLE since 2026-09-26 (showDrumPads is pinned on). */
   .vm-lead-grid[data-vm-lead='full']:not(.vm-lead-pads) {
     grid-template-columns: repeat(3, minmax(0, 1fr)) repeat(2, minmax(0, 3fr));
@@ -703,6 +740,12 @@
       'pill pill pill  pill   pill osc env filter'
       'pads gain trnsp spread sel  osc env filter';
   }
+  .vm-lead-grid.vm-with-strip[data-vm-lead='sampler'] {
+    grid-template-areas:
+      'pill pill  pill  pill   pill  osc   env   filter'
+      'pads gain  trnsp spread sel   osc   env   filter'
+      'pads strip strip strip  strip strip strip strip';
+  }
   .vm-lead-grid[data-vm-lead='sampler'] :global(.sampler-row) {
     display: contents;
   }
@@ -713,6 +756,12 @@
     grid-template-areas:
       'pill pill pill  time time time filter'
       'pads gain trnsp time time time filter';
+  }
+  .vm-lead-grid.vm-with-strip[data-vm-lead='simpler'] {
+    grid-template-areas:
+      'pill pill  pill  time  time  time  filter'
+      'pads gain  trnsp time  time  time  filter'
+      'pads strip strip strip strip strip strip';
   }
   .vm-lead-grid[data-vm-lead='simpler'] :global(.simpler-row) {
     display: contents;

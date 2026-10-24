@@ -23,12 +23,17 @@ import { playingClipsStore } from '$lib/stores/v6/playingClipsStore.svelte';
 import { requestNotes, subscribeNotesChanged, type MidiNote } from '$lib/services/clipNotesService';
 import { clipPadNotes, notesCrossed, PAD_FLASH_MS } from '$lib/services/drumVirtualMacros';
 import { logger } from '$lib/utils/logger';
+import { clipViewWindow, type TimeRange } from '$lib/utils/waveformPaint';
 
 export interface ClipPadsHandle {
 	/** The pitches the playing clip uses, ascending; null while nothing plays. */
 	readonly clipNotes: number[] | null;
 	/** The pads the playhead just crossed. */
 	readonly litNotes: ReadonlySet<number>;
+	/** The playing MIDI clip's path; '' while nothing (or an audio clip) plays. */
+	readonly playingClipPath: string;
+	/** The time it shows (`clipViewWindow`: the loop, else the clip); null while nothing plays. */
+	readonly clipWindow: TimeRange | null;
 }
 
 export function useClipPads(getTrackPath: () => string | undefined): ClipPadsHandle {
@@ -64,6 +69,8 @@ export function useClipPads(getTrackPath: () => string | undefined): ClipPadsHan
 	});
 
 	const clipNotes = $derived(playingClipPath ? clipPadNotes(clipNoteList) : null);
+	const midiClipPath = $derived(playing && !playing.isAudioClip ? playingClipPath : '');
+	const clipWindow = $derived(midiClipPath && playing ? clipViewWindow(playing) : null);
 
 	// The flash: pitch → a token for the latest trigger, so a pad hit twice
 	// inside PAD_FLASH_MS stays lit until the later one expires.
@@ -109,6 +116,8 @@ export function useClipPads(getTrackPath: () => string | undefined): ClipPadsHan
 
 	return {
 		get clipNotes() { return clipNotes; },
-		get litNotes() { return litNotes; }
+		get litNotes() { return litNotes; },
+		get playingClipPath() { return midiClipPath; },
+		get clipWindow() { return clipWindow; }
 	};
 }
