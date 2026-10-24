@@ -44,14 +44,14 @@
    * 2026-10-12 the slider is titled with the chain the toe switch selected
    * (Wah · Volume · Ring), read from the rack's `chain_names` property.
    *
-   * Wherever the grid draws its Gtr slider (every track but master since
-   * 2026-10-23, the user's call) it is the Guitar's door, so the view
-   * splits in two: the Gtr (and
+   * The grid draws its Gtr slider on every track (MIDI since 2026-10-23,
+   * Main since 2026-10-24, the user's calls) and it is the Guitar's door,
+   * so the view splits in two: the Gtr (and
    * Bass) tile opens `GuitarCentralView`, which draws this view's `guitar`
    * part (the Pedal, then the Guitar rack with the Wah), and the Saturator
    * tile draws its `effects` part (the Shifter, then the Saturator's Output
    * and Mix over Redux, then the Drum Buss where the Drum cell holds the
-   * Chorus). On master it is one view, `all`.
+   * Chorus). `all`, the whole view with the Gain, is for a host that asks.
    *
    * NO {#if device} gate - always renders, handles its own state.
    * `part` is optional: left out, it follows the track (see above).
@@ -68,14 +68,17 @@
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import SectionDivider from '../SectionDivider.svelte';
   import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
-  import { gridHasGuitar, drumCellHoldsChorus } from '$lib/components/v6/device-panel/drumCell.svelte';
+  import { drumCellHoldsChorus } from '$lib/components/v6/device-panel/drumCell.svelte';
   import DrumBussCentralView from './DrumBussCentralView.svelte';
 
   interface Props {
     part?: 'all' | 'guitar' | 'effects';
   }
   let { part }: Props = $props();
-  const shown = $derived(part ?? (gridHasGuitar() ? 'effects' : 'all'));
+  // Every track has the grid's Gtr since Main took one (2026-10-24), so
+  // the view is always split; `all` is the whole view, for a host that
+  // asks for it.
+  const shown = $derived(part ?? 'effects');
   const withGuitar = $derived(shown !== 'effects');
   const withEffects = $derived(shown !== 'guitar');
   // Where the Drum cell holds the Chorus (audio and non-drum tracks), the
@@ -165,7 +168,7 @@
   const GTR = { spring: 2, tremRate: 3, tremAmount: 4, room: 5 } as const;
   const MACRO_MAX = 127;
   // The Gain is the grid's Gtr slider wherever the view is split; whole
-  // (master), the view carries it.
+  // (`all`), the view carries it.
   const showGuitarGain = $derived(shown === 'all');
   const gtrValue = (macro: number) => (guitar.paramValue(macro) ?? 0) / MACRO_MAX;
   const sendGtr = (macro: number, normalized: number) => guitar.sendParam(macro, normalized * MACRO_MAX);

@@ -22,19 +22,13 @@ function gridTrack() {
 	return v3Store.tracks.get(held ?? selectedTrackStore.selectedTrackPath);
 }
 
-/** Whether the FX grid's track is an audio track (Bass over Gtr in column 1). Reactive. */
+/**
+ * Whether the FX grid treats its track as audio (Bass over Gtr in column 1):
+ * an audio track, or Main (2026-10-24, the user's call). Reactive.
+ */
 export function gridTrackIsAudio(): boolean {
+	const held = trackHoldScope.heldTracks()[0];
+	if ((held ?? selectedTrackStore.selectedTrackPath) === 'master') return true;
 	const track = gridTrack();
 	return !!track && !track.isFoldable && !track.hasMidiInput && track.hasAudioInput;
-}
-
-/**
- * Whether the FX grid draws the Gtr slider: on every track but master
- * (2026-10-23, the user's call; audio-only before). Where it does, the Gtr
- * tile's view is the Guitar view (Pedal, Wah, the Guitar rack) and the
- * Saturator's holds the rest (ADR-466). Reactive.
- */
-export function gridHasGuitar(): boolean {
-	const held = trackHoldScope.heldTracks()[0];
-	return (held ?? selectedTrackStore.selectedTrackPath) !== 'master';
 }

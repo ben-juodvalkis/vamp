@@ -332,7 +332,7 @@ describe('the FX grid layout is ten columns wide', () => {
 	function occupancy(kind: GridTrackKind) {
 		const cells: Array<[string, GridCell]> = FX_GRID_LAYOUT.filter((s) => !s.hidden).map((s) => [s.deviceType as string, cellFor(s, kind)]);
 		cells.push(['squash', SQUASH_CELL], ['pitch', PITCH_CELL], ['glitch', GLITCH_CELL]);
-		if (kind !== 'master') cells.push(['guitar', GUITAR_CELL]);
+		cells.push(['guitar', GUITAR_CELL]);
 		const grid: string[][] = [0, 1].map(() => Array(FX_GRID_COLUMNS).fill(''));
 		for (const [name, c] of cells) {
 			for (let r = c.row; r < c.row + c.rowSpan; r++) {
@@ -347,10 +347,15 @@ describe('the FX grid layout is ten columns wide', () => {
 		return grid;
 	}
 
-	it('tiles both rows exactly on master, with Rand Oct\'s cell full height', () => {
-		const grid = occupancy('master');
-		expect(grid.flat().every(Boolean)).toBe(true);
-		expect([grid[0][0], grid[1][0]]).toEqual(['random', 'random']);
+	it('draws Main as an audio track: the Bass over the Gtr (2026-10-24)', async () => {
+		selectedTrackStore.handleTrackSelected(-1);
+		const { container } = render(FXGrid);
+		await tick();
+		const cell = (name: string) => container.querySelector<HTMLElement>(`[data-cell="${name}"]`);
+		expect(cell('fx1')?.textContent).toContain('Bass');
+		expect(cell('fx1')?.textContent).not.toContain('Rand Oct');
+		expect(cell('guitar')?.textContent).toContain('Gtr');
+		expect([cell('fx1')?.dataset.row, cell('fx1')?.dataset.rowSpan]).toEqual(['1', '1']);
 	});
 
 	it('tiles both rows exactly on MIDI, with Rand Oct over the Guitar and Squash over Gain', () => {
@@ -377,7 +382,6 @@ describe('the FX grid layout is ten columns wide', () => {
 	it('keeps every XY tile in the same place on both kinds', () => {
 		for (const s of FX_GRID_LAYOUT.filter((slot) => slot.span === 2)) {
 			expect(cellFor(s, 'audio'), s.deviceType).toEqual(cellFor(s, 'midi'));
-			expect(cellFor(s, 'master'), s.deviceType).toEqual(cellFor(s, 'midi'));
 		}
 	});
 
