@@ -14,7 +14,7 @@
    *
    * Only on a drum track (2026-10-23): elsewhere the Chorus XY is the FX
    * grid's tile in the Drum cell and Blur, Comb and Phaser are the Chorus
-   * view's (`ChorusCentralView`), so the Chorus group and its two columns
+   * view's (`ChorusCentralView`), so the Chorus group and its columns
    * leave this view.
    */
   import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
@@ -170,18 +170,19 @@
 </div>
 
 <style>
-  /* Columns, each a device family stacked top to bottom (no control so
-     narrow): Auto Pan | Chorus over Blur | Comb over Phaser. A seam is its
-     hairline. */
+  /* One column a device, a seam between: Auto Pan | Chorus | Blur (a
+     slider, so narrow) | Comb | Phaser. */
   .autopan-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-columns:
+      minmax(0, 1.2fr) auto minmax(0, 1fr) auto minmax(0, 0.4fr)
+      auto minmax(0, 1fr) auto minmax(0, 1fr);
     gap: var(--central-gap);
     height: 100%;
     width: 100%;
     padding: var(--central-inset);
   }
-  /* Off a drum track the Chorus group's two columns and seams are the
+  /* Off a drum track the Chorus group's columns and seams are the
      Chorus view's, and Auto Pan has the view to itself. */
   .autopan-layout.no-chorus {
     grid-template-columns: minmax(0, 1fr);

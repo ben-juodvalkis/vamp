@@ -323,7 +323,7 @@
   }
 
   :global([data-grammar="flat"]) .swap-pill {
-    border: 1px solid var(--line-strong);
+    border: 1px solid var(--button-frame, var(--line-strong));
     box-shadow: none;
   }
   :global([data-grammar="flat"]) .swap-half {

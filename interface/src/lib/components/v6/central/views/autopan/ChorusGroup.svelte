@@ -4,9 +4,11 @@
 	 * the user's call): the Chorus XY that was the grid tile, then Blur's
 	 * dry/wet, Comb and Phaser, which were the Chorus view.
 	 *
-	 * Two columns, Chorus over Blur and Comb over Phaser, stacked so no
-	 * control is narrow. Its root is `display: contents`, so the columns
-	 * and seams are grid items of AutoPanCentralView, which owns the tracks.
+	 * One row, a column each and a seam between: the Chorus XY, Blur's
+	 * dry/wet standing upright, Comb, Phaser (2026-10-24, the user's call;
+	 * Chorus over Blur and Comb over Phaser before). Its root is
+	 * `display: contents`, so the columns and seams are grid items of
+	 * AutoPanCentralView, which owns the tracks.
 	 *
 	 * Contains virtual devices (smudge, comb, phaser) which have their own
 	 * ghost states. NO {#if device} gate - always renders, handles its own
@@ -43,40 +45,33 @@
 <div class="chorus-group">
 	<SectionDivider orientation="vertical" ink={chorusInk} />
 
-	<!-- Chorus over Blur. Seams fall on the DEVICE boundaries, across a
-	     column where devices stack. -->
-	<div class="stack">
-		<!-- The Chorus XY, the grid tile until 2026-10-15. -->
-		<div class="cell pad" class:slot-ghost={chorus.isGhost}>
-			<ChorusControl device={chorus.device} position={chorusPosition} />
-		</div>
+	<!-- The Chorus XY, the grid tile until 2026-10-15. -->
+	<div class="cell" class:slot-ghost={chorus.isGhost}>
+		<ChorusControl device={chorus.device} position={chorusPosition} />
+	</div>
 
-		<SectionDivider orientation="horizontal" ink={smudgeInk} />
+	<SectionDivider orientation="vertical" ink={smudgeInk} />
 
-		<!-- Blur's dry/wet (the `smudge` slot; virtual device - handles its own slot state) -->
-		<div class="cell fader" class:slot-ghost={smudge.isGhost}>
-			<SmudgeControl device={smudge.device} icon="blur" orientation="horizontal" />
-		</div>
+	<!-- Blur's dry/wet (the `smudge` slot; virtual device - handles its own slot state) -->
+	<div class="cell" class:slot-ghost={smudge.isGhost}>
+		<SmudgeControl device={smudge.device} icon="blur" />
 	</div>
 
 	<SectionDivider orientation="vertical" ink={combInk} />
 
-	<!-- Comb over Phaser. The pads are the same size and two wear the same
-	     ink, so without the seam the Phaser reads as a second Comb
-	     (2026-09-13, ADR-433). -->
-	<div class="stack">
-		<!-- Comb (virtual device - handles its own slot state). The Max
-		     device has no LFO. -->
-		<div class="cell pad" class:slot-ghost={comb.isGhost}>
-			<CombControl device={comb.device} icon="comb" />
-		</div>
+	<!-- Comb (virtual device - handles its own slot state). The Max
+	     device has no LFO. -->
+	<div class="cell" class:slot-ghost={comb.isGhost}>
+		<CombControl device={comb.device} icon="comb" />
+	</div>
 
-		<SectionDivider orientation="horizontal" ink={phaserInk} />
+	<!-- The pads are the same size and two wear the same ink, so without
+	     the seam the Phaser reads as a second Comb (2026-09-13, ADR-433). -->
+	<SectionDivider orientation="vertical" ink={phaserInk} />
 
-		<!-- Phaser (virtual device) — X: LFO speed, Y: feedback. -->
-		<div class="cell pad" class:slot-ghost={phaser.isGhost}>
-			<PhaserPad />
-		</div>
+	<!-- Phaser (virtual device) — X: LFO speed, Y: feedback. -->
+	<div class="cell" class:slot-ghost={phaser.isGhost}>
+		<PhaserPad />
 	</div>
 </div>
 
@@ -85,26 +80,10 @@
 		display: contents;
 	}
 
-	.stack {
-		display: flex;
-		flex-direction: column;
-		gap: var(--central-gap);
-		min-height: 0;
-		min-width: 0;
-	}
-
 	.cell {
 		display: flex;
 		flex-direction: column;
 		min-height: 0;
 		min-width: 0;
-	}
-
-	/* A pad takes two shares of the column, a flat fader one. */
-	.pad {
-		flex: 2 1 0;
-	}
-	.fader {
-		flex: 1 1 0;
 	}
 </style>

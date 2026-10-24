@@ -503,7 +503,7 @@ import { logger } from '$lib/utils/logger';
 		justify-content: center;
 		padding: 0 var(--spacing-sm);
 		background: var(--surface-well);
-		border: 1px solid var(--line-strong);
+		border: 1px solid var(--button-frame, var(--line-strong));
 		border-radius: var(--radius-md);
 		color: var(--muted-foreground);
 		font-size: 1.125rem;
@@ -784,13 +784,13 @@ import { logger } from '$lib/utils/logger';
 		letter-spacing: 0;
 		font-weight: var(--font-weight-medium);
 		color: var(--foreground);
-		border: 1px solid var(--line-strong);
+		border: 1px solid var(--button-frame, var(--line-strong));
 		background: var(--surface-well);
 	}
 	:global([data-grammar="flat"]) .sys-toggle-box:hover {
 		background: var(--secondary);
 		color: var(--foreground);
-		border-color: var(--line-strong);
+		border-color: var(--button-frame, var(--line-strong));
 	}
 	:global([data-grammar="flat"]) .sys-toggle-box.active {
 		background: var(--phosphor);

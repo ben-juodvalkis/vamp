@@ -405,23 +405,28 @@
 		color: var(--panel-ink);
 	}
 
-	/* presets · four pads two by two (two tracks each) · Duck · Glue ·
+	/* presets (two columns of three) · four pads two by two (two tracks each) · Duck · Glue ·
 	   Clock, over two rows. */
 	.glitch-body {
 		flex: 1;
 		min-height: 0;
 		min-width: 0;
 		display: grid;
-		grid-template-columns: minmax(0, 1.6fr) repeat(7, minmax(0, 1fr));
+		grid-template-columns: minmax(0, 2.4fr) repeat(7, minmax(0, 1fr));
 		grid-template-rows: repeat(2, minmax(0, 1fr));
 		gap: var(--central-gap);
 	}
 
+	/* Two columns of three, filled down then across, so the bank still
+	   reads in the device's order (2026-10-24, the user's call; one column
+	   of six before). */
 	.presets {
 		grid-column: 1;
 		grid-row: 1 / span 2;
 		display: grid;
-		grid-auto-rows: minmax(0, 1fr);
+		grid-template-rows: repeat(3, minmax(0, 1fr));
+		grid-auto-flow: column;
+		grid-auto-columns: minmax(0, 1fr);
 		gap: 0.25rem;
 		min-height: 0;
 	}

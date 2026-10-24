@@ -2393,7 +2393,7 @@
 	}
 	:global([data-grammar="flat"]) .edit-chip {
 		border-radius: 2px;
-		border-color: var(--line-strong);
+		border-color: var(--button-frame, var(--line-strong));
 		background: var(--surface-well);
 		color: var(--foreground);
 	}

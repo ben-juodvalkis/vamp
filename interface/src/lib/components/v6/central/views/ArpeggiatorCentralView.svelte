@@ -601,7 +601,7 @@
      matches the DetailViewBackground the view sits on. */
   :global([data-grammar="flat"]) .pattern-button {
     background-color: var(--surface-well);
-    border-color: var(--line-strong);
+    border-color: var(--button-frame, var(--line-strong));
     color: var(--foreground);
   }
   :global([data-grammar="flat"]) .pattern-eyebrow {
@@ -625,6 +625,6 @@
      the arp ink, a whisper of it in the frame (mirrors .glass-colored). */
   :global([data-skin="hybrid"]) .pattern-button {
     color: var(--pattern-ink);
-    border-color: color-mix(in srgb, var(--pattern-ink) 40%, var(--line-strong));
+    border-color: var(--button-frame, var(--line-strong));
   }
 </style>

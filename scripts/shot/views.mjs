@@ -132,11 +132,12 @@ const FX_TILES = [
 	['Rand Oct', 'random', 'Arpeggiator view (the Rand Oct tile)'],
 	['EQ', 'eq', 'EQ Eight'],
 	['Filter', 'filter', 'Auto Filter'],
-	['Saturator', 'pedal', 'Saturator tile → Pedal XY + Saturator faders + Digital + Redux'],
+	['Drive', 'pedal', 'Drive tile (the Saturator) → the Pedal view\'s effects part: Shifter | Color · Output · Mix | Redux'],
+	['Gtr', 'guitar', 'Gtr tile → the Guitar view: Pedal, Wah, the Guitar rack'],
 	['Drum', 'drum-buss', 'Drum Buss'],
 	['Glue', 'squash', 'Glue (the Squash slot), Gate, Multiband + Compressor'],
 	['Glitch', 'glitch', 'Glitch: GlitchLoop + Variation (the GlitchLoop slot)'],
-	['Auto Pan', 'tremolo', 'Auto Pan Legacy (the Tremolo slot) + the Chorus and Pitch families'],
+	['Tremolo', 'tremolo', 'Auto Pan Legacy (the Tremolo tile) + the Chorus family on a drum track'],
 	['Echo', 'echo', 'Echo'],
 	['Reverb', 'reverb', 'Reverb']
 ];
@@ -173,12 +174,13 @@ export const TOURS = {
 				description: 'Note editor with CLIPS on — no mini column, the editor full width',
 				steps: [{ click: '.editor-toggle' }]
 			},
-			// A body tap on a mini slot holding a clip focuses it and opens the
-			// editor; the second slot is a stopped clip in the default scene.
+			// The mini session sits in the right sidebar (ADR-469), where a tap
+			// launches; a hold past 500 ms focuses the clip and opens the Clip
+			// view. The second slot is a stopped clip in the default scene.
 			{
-				name: 'clip-mini-tap',
-				description: 'A tap on a mini slot holding a clip opens the note editor on it',
-				steps: [{ click: '.col-mini [data-slot-index="1"]' }]
+				name: 'clip-mini-hold',
+				description: 'A hold on a mini slot holding a clip opens the Clip view on it',
+				steps: [{ hold: '[data-debug="mini-session"] [data-slot-index="1"]', ms: 700 }]
 			},
 			{
 				name: 'clip-notes-unfolded',
@@ -193,17 +195,17 @@ export const TOURS = {
 			{ name: 'system', description: 'Master track — the System view: Transport, Follow Key, Sections', steps: [{ click: '[data-debug="master-card"]' }] },
 			{
 				name: 'fx-pedal-general',
-				description: 'Pedal view, expression pedal switched off — no Wah column',
+				description: 'Guitar view, expression pedal switched off — no Wah',
 				features: { expressionPedal: { enabled: false, available: false, reason: '' } },
-				steps: [openTile('Saturator')]
+				steps: [openTile('Gtr')]
 			},
-			// The Guitar rack's controls are the Pedal view's Guitar section
-			// (2026-10-05). On the Guitar track (an audio track) the rack is
-			// loaded and its Gain is the grid's Gtr column, so the view leaves it out.
+			// The Gtr tile opens the Guitar view (ADR-466): Pedal, Wah and the
+			// Guitar rack. On the Guitar track (an audio track) the rack is
+			// loaded; its Gain is the Gtr tile itself, so the view leaves it out.
 			{
 				name: 'fx-guitar-loaded',
-				description: 'Pedal view on the Guitar track: the Guitar section live — Spring, Tremolo pad, Room',
-				steps: [selectTrack(3), openTile('Saturator')]
+				description: 'Guitar view on the Guitar track: the Guitar rack live — Spring, Tremolo pad, Room',
+				steps: [selectTrack(3), openTile('Gtr')]
 			},
 			...FX_TILES.map(([label, name, description]) => ({
 				name: `fx-${name}`,
