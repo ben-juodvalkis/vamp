@@ -527,15 +527,11 @@
   /* ---- Flat grammar: Analog's, so the two two-engine synths read alike.
      The engine colour is re-asserted against the house pair — here the
      colour IS the meaning (which half you are holding). */
-  :global([data-grammar="flat"]) .meld-root .type-grid .device-segment,
-  :global([data-grammar="flat"]) .meld-root .physical-button {
+  :global([data-grammar="flat"]) .meld-root .type-grid .device-segment {
     font-weight: var(--font-weight-medium);
-    color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
   }
-  :global([data-grammar="flat"]) .meld-root .physical-button.active {
-    background: var(--btn-tint);
-    border-color: var(--btn-tint);
-    color: var(--flat-on-fg);
+  :global([data-grammar="flat"]) .meld-root .type-grid .device-segment:not(.active) {
+    color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
   }
   :global([data-grammar="flat"]) .meld-root .device-segmented:not(.seg-grid) .device-segment + .device-segment {
     border-top: 0;
