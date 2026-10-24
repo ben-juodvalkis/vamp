@@ -14,7 +14,8 @@
      * (`tapFires`, 2026-10-24, the user's call): a tap anywhere on a cell
      * fires it (the action strip's tap: launch; a playing clip re-fires
      * from the top, and stopping is the stop button's job), an empty
-     * slot's record mark centred on the cell and a clip with none,
+     * slot's mark centred on the cell (● record on an armed track, ■ stop
+     * on an unarmed one, whose tap stops the track) and a clip with none,
      * and a hold past 500 ms fires nothing: it moves the highlight there,
      * the foot pedal's target, and on a clip brings up the Clip view.
      *
@@ -162,7 +163,9 @@
                     tapFires
                     onSelect={holdSlot}
                     onAction={(slotIndex, slotPath, slotState) =>
-                        actOnSlot(trackIndex, slotIndex, slotPath, slotState)}
+                        slotState === 'empty' && !record?.arm
+                            ? stopTrack(trackIndex)
+                            : actOnSlot(trackIndex, slotIndex, slotPath, slotState)}
                 />
 
                 {#if showThumb}

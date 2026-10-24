@@ -358,6 +358,28 @@ const SCENARIOS = [
 	},
 
 	{
+		name: 'mini-empty-unarmed-stops',
+		view: 'default',
+		needs: 'tap',
+		description: 'a tap on an empty mini slot of an unarmed track stops the track (2026-10-24)',
+		async run({ page, tap, sent, reset }) {
+			// Drums (track 0) is unarmed; its slot 4 is empty.
+			const cell = await centreOf(page, '[data-debug="mini-session"] [data-slot-index]', 4);
+			reset();
+			await tap(cell.x, cell.y);
+			await wait(250);
+			expect(
+				sent().some((m) => m.address === '/looping/v3/clip/stop'),
+				'an unarmed empty slot is a stop button'
+			);
+			expect(
+				!sent().some((m) => m.address === '/looping/v3/clip/launch'),
+				'it must not fire the slot'
+			);
+		}
+	},
+
+	{
 		name: 'mini-hold-selects',
 		view: 'default',
 		description: 'a hold on a mini session clip moves the highlight there, shows its Clip view and fires nothing',

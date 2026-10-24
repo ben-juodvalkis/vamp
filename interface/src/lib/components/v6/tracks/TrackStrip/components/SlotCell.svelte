@@ -161,9 +161,15 @@
     // Note the recording case is ▶ rather than ■: firing a recording
     // session clip is how a looper CLOSES a take (you keep what you
     // played), where stopping would end it without ever looping it.
-    let actionGlyph = $derived(slotActionGlyph(slotState, canRecord));
+    // Centred (the mini grid), an empty slot on an unarmed track is a stop
+    // button, as in Live's own grid (2026-10-24, the user's call): ■, and
+    // the mini's tap stops the track there.
+    let stopsHere = $derived(glyphCentered && slotState === 'empty' && !canRecord);
+    let actionGlyph = $derived(stopsHere ? '\u25a0' : slotActionGlyph(slotState, canRecord));
     let actionLabel = $derived(
-        slotState === 'empty'
+        stopsHere
+            ? 'Stop the track'
+            : slotState === 'empty'
             ? canRecord
                 ? `Record into slot ${slotIndex + 1}`
                 : `Slot ${slotIndex + 1} — arm the track to record here`
@@ -397,7 +403,8 @@ const previewInk = '#000000';
             <span
                 class="slot-action state-{slotState}"
                 class:is-centered={glyphCentered}
-                class:cannot-record={slotState === 'empty' && !canRecord}
+                class:cannot-record={slotState === 'empty' && !canRecord && !stopsHere}
+                class:is-stop={stopsHere}
                 class:is-pressed={actionPressed}
                 role="button"
                 tabindex="-1"
@@ -643,6 +650,11 @@ const previewInk = '#000000';
         color: var(--signal-dim);
     }
 
+    /* The mini's stop: the stop button's own neutral ink. */
+    .slot-action.is-stop {
+        color: color-mix(in oklab, var(--signal-dim) 70%, var(--foreground));
+    }
+
     .slot-action.state-playing {
         color: color-mix(in oklab, var(--signal-dim) 70%, var(--foreground));
     }
@@ -765,6 +777,9 @@ const previewInk = '#000000';
     /* Not armed: Live's own disabled foreground, never an opacity dim. */
     :global([data-grammar="flat"]) .slot-action.cannot-record {
         color: var(--flat-disabled-fg);
+    }
+    :global([data-grammar="flat"]) .slot-action.is-stop {
+        color: var(--foreground);
     }
     :global([data-grammar="flat"]) .slot-action.is-centered {
         background: transparent;
