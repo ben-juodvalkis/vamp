@@ -285,7 +285,7 @@
 			<div class="device-wrapper">
 				<DeviceSlider
 					value={chance}
-					title="Var"
+					title="Stutter"
 					orientation="vertical"
 					labelOrientation="horizontal"
 					isGhost={variation.isGhost}
