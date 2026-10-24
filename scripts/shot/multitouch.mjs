@@ -195,8 +195,9 @@ function expectEqual(actual, wanted, message) {
  *
  * `trackCount` swaps the mock's scene for a different size. It costs a mock
  * restart, so only ask for it when the track count is the thing under
- * test: the crowded-row scenarios, because the strips row does not become
- * a scroller until the fourteenth track.
+ * test: the crowded-row scenarios, and the fitting-row ones on ten tracks,
+ * because with New Audio / New MIDI and the master strip in the row
+ * (2026-10-24) it becomes a scroller at the twelfth track on the iPad.
  *
  * `needs` says what input the scenario requires:
  *
@@ -214,6 +215,10 @@ const SCENARIOS = [
 	{
 		name: 'tap-mutes',
 		view: 'full',
+		// Ten tracks: with New Audio / New MIDI and the master strip in the
+		// row (2026-10-24) twelve no longer fit, and this scenario is about
+		// a row that does.
+		trackCount: 10,
 		needs: 'tap',
 		description: 'one trusted tap on a track name mutes that track',
 		async run({ page, tap, sent, reset }) {
@@ -383,6 +388,10 @@ const SCENARIOS = [
 	{
 		name: 'two-mutes',
 		view: 'full',
+		// Ten tracks: with New Audio / New MIDI and the master strip in the
+		// row (2026-10-24) twelve no longer fit, and this scenario is about
+		// a row that does.
+		trackCount: 10,
 		description: 'two fingers on two track names mute two tracks',
 		async run({ page, fingers, sent, reset }) {
 			// The trap this whole program starts from: `.header-name`
@@ -651,6 +660,10 @@ const SCENARIOS = [
 	{
 		name: 'volume-from-the-gutter',
 		view: 'full',
+		// Ten tracks: with New Audio / New MIDI and the master strip in the
+		// row (2026-10-24) twelve no longer fit, and this scenario is about
+		// a row that does.
+		trackCount: 10,
 		description: 'a drag that lands between two strips, or above a name, is still a fader',
 		async run({ page, fingers, sent, reset }) {
 			// "Sometimes I drag a strip and nothing happens" (2026-09-25).
@@ -733,6 +746,10 @@ const SCENARIOS = [
 	{
 		name: 'volume-from-a-sideways-start',
 		view: 'full',
+		// Ten tracks: with New Audio / New MIDI and the master strip in the
+		// row (2026-10-24) twelve no longer fit, and this scenario is about
+		// a row that does.
+		trackCount: 10,
 		description: 'with no row to scroll, a fader drag that sets off sideways still moves the volume',
 		async run({ page, fingers, sent, reset }) {
 			// The other half of "sometimes nothing happens": a drag whose first
@@ -827,6 +844,10 @@ const SCENARIOS = [
 	{
 		name: 'mute-momentary',
 		view: 'full',
+		// Ten tracks: with New Audio / New MIDI and the master strip in the
+		// row (2026-10-24) twelve no longer fit, and this scenario is about
+		// a row that does.
+		trackCount: 10,
 		description: 'holding a mute past the threshold restores it on release',
 		async run({ page, fingers, sent, reset }) {
 			const name = await centreOf(page, '.header-name', 4);
