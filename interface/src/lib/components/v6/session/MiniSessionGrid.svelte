@@ -70,7 +70,7 @@
     }
     const trackPath = $derived(`tracks/${trackIndex}`);
     const record = $derived(hasTrack ? v3Store.tracks.get(trackPath) : undefined);
-    const trackName = $derived(record?.name ?? (hasTrack ? `Track ${trackIndex + 1}` : 'Master'));
+    const trackName = $derived(record?.name ?? (hasTrack ? `Track ${trackIndex + 1}` : 'Main'));
     const ink = $derived(trackInk(rgbToHex(record?.color ?? 0x808080), paintModeReactive()));
     const isGroup = $derived(hasTrack && clipStateStore.isGroupTrack(trackIndex));
 
@@ -205,10 +205,10 @@
             </button>
         </div>
     {:else}
-        <!-- Master has no clip slots. Say so rather than drawing an empty
+        <!-- Main (Live's master track) has no clip slots. Say so rather than drawing an empty
              grid, which reads as "this set has no clips". -->
         <div class="mini-empty">
-            <span>No clip slots on Master</span>
+            <span>No clip slots on Main</span>
         </div>
     {/if}
 </div>
