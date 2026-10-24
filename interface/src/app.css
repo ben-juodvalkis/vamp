@@ -1263,6 +1263,44 @@ html, body {
   color: var(--flat-on-fg);
 }
 
+/* A stepper — ‹ name › — is ONE control: a single frame in the control's
+   colour with the two arrows and the name inside it, no dividers, as the
+   swap pill is (2026-10-24, the user's call; three framed buttons before).
+   Put `.stepper` on the row; its buttons and name are its children. */
+.stepper {
+  display: grid;
+  grid-template-columns: var(--stepper-arrow, 36px) minmax(0, 1fr) var(--stepper-arrow, 36px);
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--button-frame, var(--line-strong));
+  border-radius: var(--radius-sm);
+  background: var(--surface-well);
+  color: color-mix(in srgb, var(--btn-tint, var(--foreground)) 72%, var(--foreground));
+}
+.stepper > button,
+.stepper > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+}
+.stepper > button {
+  cursor: pointer;
+}
+.stepper > button:hover:not(.active) {
+  background: var(--secondary);
+}
+.stepper > button.active {
+  background: var(--btn-tint, var(--phosphor));
+  color: var(--flat-on-fg);
+}
+
 /* No HUD brackets, no capless playhead glow. */
 [data-grammar="flat"] .hud-bracket::after { display: none; }
 [data-grammar="flat"] .strip-playhead { background: var(--foreground); }

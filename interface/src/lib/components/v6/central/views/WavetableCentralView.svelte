@@ -495,10 +495,10 @@
           </div>
         </div>
         <!-- ‹ type ›, Meld's chooser: five buttons no longer fit beside the mixer. -->
-        <div class="type-stepper strip-row flex-none" style="--btn-tint: {wavetableInk.primary};">
-          <button class="physical-button" aria-label="Previous filter type" onclick={() => stepFilterType(-1)}>‹</button>
+        <div class="type-stepper stepper strip-row flex-none" style="--btn-tint: {wavetableInk.primary};">
+          <button class="type-step" aria-label="Previous filter type" onclick={() => stepFilterType(-1)}>‹</button>
           <span class="type-stepper-name" aria-live="polite">{FILTER_TYPES[fltType] ?? '—'}</span>
-          <button class="physical-button" aria-label="Next filter type" onclick={() => stepFilterType(1)}>›</button>
+          <button class="type-step" aria-label="Next filter type" onclick={() => stepFilterType(1)}>›</button>
         </div>
         <div class="device-segmented strip-row flex-none" style="--btn-tint: {wavetableInk.primary}; grid-template-columns: repeat(2, 1fr);">
           {#each ['12 dB', '24 dB'] as label, value}
@@ -632,15 +632,11 @@
     flex: 0 0 var(--wt-slider-w);
     width: var(--wt-slider-w);
   }
+  /* One `.stepper` (app.css): ‹ type › in a single frame. */
   .type-stepper {
-    display: grid;
-    grid-template-columns: var(--height-touch) minmax(0, 1fr) var(--height-touch);
-    gap: var(--spacing-xs);
-    align-items: center;
+    --stepper-arrow: var(--height-touch);
   }
-  .type-stepper .physical-button {
-    height: 100%;
-    min-width: 0;
+  .type-step {
     font-size: 1.125rem;
     font-weight: 600;
   }

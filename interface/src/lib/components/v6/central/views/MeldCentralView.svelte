@@ -164,16 +164,16 @@
 </script>
 
 {#snippet typeChooser(kind: 'osc' | 'filter', label: string, onStep: (step: number) => void)}
-  <div class="type-chooser" style="--btn-tint: {engineInk.primary};">
-    <button class="physical-button chooser-step" aria-label="Previous {kind} type" onclick={() => onStep(-1)}>‹</button>
+  <div class="type-chooser stepper" style="--btn-tint: {engineInk.primary};">
+    <button class="chooser-step" aria-label="Previous {kind} type" onclick={() => onStep(-1)}>‹</button>
     <button
-      class="physical-button chooser-name"
+      class="chooser-name"
       class:active={chooser === kind}
       aria-expanded={chooser === kind}
       aria-label="Choose {kind === 'osc' ? 'oscillator' : 'filter'} type, now {label}"
       onclick={() => (chooser = chooser === kind ? null : kind)}
     >{label}</button>
-    <button class="physical-button chooser-step" aria-label="Next {kind} type" onclick={() => onStep(1)}>›</button>
+    <button class="chooser-step" aria-label="Next {kind} type" onclick={() => onStep(1)}>›</button>
   </div>
 {/snippet}
 
@@ -380,13 +380,11 @@
     min-width: 0;
   }
 
-  /* ‹ name › — the arrows step, the name opens the grid over its pad. */
+  /* ‹ name › — one `.stepper` (app.css): the arrows step, the name opens
+     the grid over its pad. */
   .type-chooser {
     flex: 0 0 auto;
     min-width: 0;
-    display: grid;
-    grid-template-columns: 36px minmax(0, 1fr) 36px;
-    gap: var(--spacing-xs);
     height: var(--height-touch);
   }
   .chooser-step,
