@@ -65,7 +65,7 @@
   {#snippet children({ sendParam, storePendingParam, triggerLoad, handleTap, isGhost, isLoading, color })}
     <DeviceSlider
       value={driveValue}
-      title="Sat"
+      title="Drive"
       labelOrientation="horizontal"
       labelSize="small"
       {isGhost}

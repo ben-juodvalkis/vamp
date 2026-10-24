@@ -168,7 +168,7 @@ describe('FXGrid — the grid is the held pad\'s', () => {
 		// inside the first; three XYs a row between.
 		expect(cellOf('Glue')).toBe('10/1/1/1');
 		expect(cellOf('Gain')).toBe('10/2/1/1');
-		expect(cellOf('Sat')).toBe('2/2/1/1');
+		expect(cellOf('Drive')).toBe('2/2/1/1');
 		expect(cellOf('Stutter')).toBe('9/2/1/1');
 		expect(cellOf('Pitch')).toBe('2/1/1/1');
 		expect(cellOf('Glitch')).toBe('9/1/1/1');
