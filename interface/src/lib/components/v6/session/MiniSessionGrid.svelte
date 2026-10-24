@@ -13,8 +13,8 @@
      * `composables/slotActions`. What differs is the gestures
      * (`tapFires`, 2026-10-24, the user's call): a tap anywhere on a cell
      * fires it (the action strip's tap: launch, or stop a playing clip),
-     * and a hold past 500 ms only moves the highlight there, the foot
-     * pedal's target, and fires nothing.
+     * and a hold past 500 ms fires nothing: it moves the highlight there,
+     * the foot pedal's target, and on a clip brings up the Clip view.
      *
      * **One shared scene window.** `sceneWindowStore` is the same
      * offset the full grid and the scene rail use, so scrolling here and
@@ -47,6 +47,7 @@
     import {
         selectSlot,
         actOnSlot,
+        focusSlot,
         stopTrack
     } from '$lib/components/v6/tracks/composables/slotActions';
 
@@ -60,6 +61,14 @@
     // set is empty" rather than "you are on master".
     const hasTrack = $derived(trackIndex >= 0);
 
+    // A hold (500 ms): the highlight moves there and, on a slot holding a
+    // clip, the Clip view comes up on it (`focusSlot` does both). An empty
+    // slot only takes the highlight. Fires nothing either way.
+    function holdSlot(slotIndex: number, slotPath: string) {
+        const state = v3Store.tracks.get(trackPath)?.slots.get(slotPath)?.state;
+        if (!state || state === 'empty') selectSlot(trackIndex, slotIndex);
+        else focusSlot(trackIndex, slotPath);
+    }
     const trackPath = $derived(`tracks/${trackIndex}`);
     const record = $derived(hasTrack ? v3Store.tracks.get(trackPath) : undefined);
     const trackName = $derived(record?.name ?? (hasTrack ? `Track ${trackIndex + 1}` : 'Master'));
@@ -154,7 +163,7 @@
                     {isGroup}
                     markSelectedTrack={false}
                     tapFires
-                    onSelect={(slotIndex) => selectSlot(trackIndex, slotIndex)}
+                    onSelect={holdSlot}
                     onAction={(slotIndex, slotPath, slotState) =>
                         actOnSlot(trackIndex, slotIndex, slotPath, slotState)}
                 />

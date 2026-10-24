@@ -347,10 +347,14 @@
         --strip-gap: var(--spacing-xs);
         display: flex;
         flex-direction: column;
-        width: var(--sidebar-width);
+        /* A strip's width since it joined the strip row (2026-10-24),
+           shrinking with the strips. */
+        width: 100%;
         height: 100%;
         min-width: 0;
         gap: var(--strip-gap);
+        container-type: inline-size;
+        container-name: master-col;
     }
 
     /* The same share of the column `.header-block` takes on a strip. */
@@ -367,6 +371,18 @@
        UNREACHABLE since 2026-09-26 (flipLayout is pinned on), kept until the flag goes. */
     .key-block:not(.is-flipped) {
         order: -1;
+    }
+
+    /* Narrow (a crowded strip row), the key stacks over the time signature
+       (2026-10-24, the user's call), and the block takes two bands of the
+       column so each half keeps the touch floor's height: side by side at
+       a strip's width each half was ~30px wide, stacked in one band
+       ~26px tall. The fader above gives up the band. */
+    @container master-col (max-width: 110px) {
+        .key-block {
+            flex-direction: column;
+            flex: 2 2 var(--strip-gap);
+        }
     }
 
     /* The left half of the third: key on the left, time signature on the

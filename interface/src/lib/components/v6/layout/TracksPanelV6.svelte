@@ -65,15 +65,15 @@
 	// overrides are UNREACHABLE since 2026-09-26, kept until the flag goes.
 	let flipLayout = $derived(uiPrefsStore.flipLayout);
 
-	// The last two columns are New Audio / New MIDI (`NewTrackButtons`),
-	// a strip's width, and the master strip (2026-10-24, the user's call:
-	// out of the right sidebar) at the sidebar's width, which its key and
-	// time-signature band was laid out for. Strips row only: the clip grid
-	// and stop row carry them empty, so their track columns stay the
-	// strips' width.
+	// The last two columns are New Audio / New MIDI (`NewTrackButtons`)
+	// and the master strip (2026-10-24, the user's call: out of the right
+	// sidebar), each a strip's width, shrinking with the strips (the
+	// master stacks its key over its time signature when narrow). Strips
+	// row only: the clip grid and stop row carry them empty, so their
+	// track columns stay the strips' width.
 	const PINNED_COLS = 2;
 	let columnTemplate = $derived(
-		`grid-template-columns: repeat(${visibleTracks.length + 1}, minmax(var(--track-min-w), 1fr)) var(--sidebar-width);`
+		`grid-template-columns: repeat(${visibleTracks.length + PINNED_COLS}, minmax(var(--track-min-w), 1fr));`
 	);
 
 	let rowStyle = $derived(
@@ -776,8 +776,8 @@
 	   Pinned to the panel's right edge once the row scrolls, so both are
 	   always one reach away; the group takes the gutter to its left too,
 	   so strips scrolling under it do not show through the gap. Its own
-	   two columns repeat the row's last two tracks: a strip's width, then
-	   the sidebar's for the master. */
+	   two columns split it with the row's gutter between, so each is a
+	   strip's width. */
 	.pinned-cols {
 		position: sticky;
 		right: 0;
@@ -788,7 +788,7 @@
 		padding-left: var(--strip-gutter);
 		background: var(--background);
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) var(--sidebar-width);
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 		column-gap: var(--strip-gutter);
 	}
 	.new-track-col,

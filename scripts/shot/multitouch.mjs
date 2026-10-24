@@ -355,7 +355,7 @@ const SCENARIOS = [
 	{
 		name: 'mini-hold-selects',
 		view: 'default',
-		description: 'a hold on a mini session cell moves the highlight there and fires nothing',
+		description: 'a hold on a mini session clip moves the highlight there, shows its Clip view and fires nothing',
 		async run({ page, fingers, sent, reset }) {
 			const cell = await centreOf(page, '[data-debug="mini-session"] [data-slot-index]', 2);
 			reset();
@@ -364,9 +364,10 @@ const SCENARIOS = [
 			await wait(800);
 			await fingers.up(id);
 			await wait(250);
+			// A clip: the focus wire moves the highlight and the Clip view up.
 			expect(
-				sent().some((m) => m.address === '/looping/v3/selected_clip'),
-				'a hold must move the pedal target'
+				sent().some((m) => m.address === '/looping/v3/clip/focus'),
+				'a hold on a clip must focus it (highlight and Clip view)'
 			);
 			expect(
 				!sent().some(
