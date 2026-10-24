@@ -118,13 +118,12 @@
          ADR-427 exists for. A choice writes through the scope rule, so
          with a pad held it is that pad's type. -->
     <VmSlot state={fxTypeState} class="vm-slot-fx-type min-w-0" fn="fxType" badge={badges.fxType}>
-      <div class="fx-type-grid" role="group" aria-label="FX type">
+      <div class="device-segmented fx-type-grid" style="--btn-tint: {color.primary};" role="group" aria-label="FX type">
         {#each fxTypes as fxTypeName, index}
           <button
             type="button"
-            class="physical-button fx-type-option"
+            class="device-segment fx-type-option"
             class:active={selectedFxType === index}
-            style="--btn-tint: {color.primary};"
             aria-pressed={selectedFxType === index}
             use:press={{ onPress: () => write('fxType', index), touchAction: 'none' }}
           >
@@ -247,14 +246,29 @@
     grid-area: trnsp;
   }
 
-  /* ---- FX type: nine buttons, 3x3, filling the slot. */
+  /* ---- FX type: nine options, 3x3, filling the slot — one segmented tab
+     (2026-10-24, the user's call; nine separate buttons before), as the
+     Glitch presets and Drift's choosers are: an outer frame, hairlines
+     between, the chosen type filled. */
   .fx-type-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-template-rows: repeat(3, minmax(0, 1fr));
-    gap: var(--spacing-sm, 6px);
+    gap: 0;
     height: 100%;
     min-height: 0;
+  }
+  /* The shared divider is a top border on every segment after the first,
+     which in a grid lands mid-row. Draw them by position: a top rule from
+     the second row, a left rule from the second column. */
+  .fx-type-option {
+    border: 0;
+  }
+  .fx-type-option:nth-child(n + 4) {
+    border-top: 1px solid var(--line-faint);
+  }
+  .fx-type-option:not(:nth-child(3n + 1)) {
+    border-left: 1px solid var(--line-faint);
   }
   .fx-type-option {
     display: flex;
@@ -270,19 +284,21 @@
   /* ---- Live skin (flat grammar): the FX-type buttons wear the focused
      track's ink (ADR-402) as label and, when active, solid fill with Live's
      ClipText — never the GRATICULE wash/glow. Live never bolds a pad. */
-  :global([data-grammar="flat"]) .physical-button {
+  :global([data-grammar="flat"]) .fx-type-option {
     font-weight: var(--font-weight-medium);
     color: var(--btn-tint, var(--foreground));
   }
-  :global([data-grammar="flat"]) .physical-button.active {
+  :global([data-grammar="flat"]) .fx-type-option:nth-child(n + 4) {
+    border-top-color: var(--line-strong);
+  }
+  :global([data-grammar="flat"]) .fx-type-option:not(:nth-child(3n + 1)) {
+    border-left-color: var(--line-strong);
+  }
+  :global([data-grammar="flat"]) .fx-type-option.active {
     background: var(--btn-tint, var(--phosphor));
-    border-color: var(--btn-tint, var(--phosphor));
     color: var(--flat-clip-text);
   }
-  :global(.light[data-grammar="flat"]) .physical-button:not(.active) {
+  :global(.light[data-grammar="flat"]) .fx-type-option:not(.active) {
     color: color-mix(in oklab, var(--btn-tint, var(--foreground)) 55%, var(--foreground));
-  }
-  :global(.light[data-grammar="flat"]) .physical-button.active {
-    border-color: var(--line-strong);
   }
 </style>
