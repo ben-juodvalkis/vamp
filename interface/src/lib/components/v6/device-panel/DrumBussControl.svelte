@@ -18,9 +18,11 @@
   interface Props {
     device: DeviceRecord | null;
     position?: import('$lib/config/fxGridLayout').PositionKey;
+    /** Set where the control sits inside a view, so a touch keeps that view up. */
+    disableCentralViewOnTap?: boolean;
   }
 
-  let { device, position }: Props = $props();
+  let { device, position, disableCentralViewOnTap = false }: Props = $props();
 
   // Indices measured off the running Drum Buss (the rail carried the same).
   const PARAM_CONFIG = {
@@ -43,6 +45,7 @@
 <BaseDeviceControl
   {...position ? { position } : { slotKey: 'drum' as const }}
   {device}
+  {disableCentralViewOnTap}
   title="Drum"
   showMoveToTop={true}
   showMoveToEnd={true}

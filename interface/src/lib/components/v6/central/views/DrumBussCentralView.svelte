@@ -13,6 +13,10 @@
    * the track carries a Drum Buss, and a first write loads
    * `Drum Buss.adv` through `sendParam`. Squash (the Glue Compressor) is
    * not here; the Gain / Utility view mounts it.
+   *
+   * `embedded` (2026-10-23): on an audio track the Drum cell holds the
+   * Chorus, so the Saturator's view mounts this one inside its own grid,
+   * with the Drum XY leading it and no inset of its own.
    */
 
   import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
@@ -25,6 +29,12 @@
   import { drag } from '$lib/actions';
   import type { DragInfo } from '$lib/actions/drag';
   import { segmentIndex, scrubBoxOf, type ScrubBox } from '$lib/utils/segmentScrub';
+  import DrumBussControl from '$lib/components/v6/device-panel/DrumBussControl.svelte';
+
+  interface Props {
+    embedded?: boolean;
+  }
+  let { embedded = false }: Props = $props();
 
   const drum = useFxGridSlot('drum');
 
@@ -114,7 +124,14 @@
   }
 </script>
 
-<div class="drum-buss-layout" class:slot-ghost={drum.isGhost} style={drum.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
+<div class="drum-buss-layout" class:embedded class:slot-ghost={drum.isGhost}>
+  {#if embedded}
+    <!-- The Drum XY (transients x dry/wet), the grid tile's control. -->
+    <div class="col drum-xy">
+      <DrumBussControl device={drum.device} disableCentralViewOnTap={true} />
+    </div>
+  {/if}
+  <div class="drum-buss-faces" class:ghost={drum.isGhost}>
   <!-- Column 1: input Trim, first in Live's chain, over the Comp switch. -->
   <div class="col trim-comp">
     <div class="trim">
@@ -220,6 +237,7 @@
       }}
     />
   </div>
+  </div>
 </div>
 
 <style>
@@ -232,6 +250,26 @@
     height: 100%;
     width: 100%;
     padding: var(--central-inset);
+  }
+  /* Embedded, the Drum XY leads as a pad two columns wide, and the host's
+     inset is the only one. */
+  .drum-buss-layout.embedded {
+    grid-template-columns: repeat(7, minmax(0, 1fr)) auto repeat(2, minmax(0, 1fr));
+    padding: 0;
+  }
+  .drum-xy {
+    grid-column: span 2;
+    display: flex;
+    flex-direction: column;
+  }
+  /* The faces' wrapper takes no box: its columns are this grid's. It
+     carries the ghost dim to each of them (a box-less element cannot be
+     dimmed itself); the Drum XY draws its own. */
+  .drum-buss-faces {
+    display: contents;
+  }
+  .drum-buss-faces.ghost > :global(*) {
+    opacity: var(--opacity-ghost);
   }
 
   .col {

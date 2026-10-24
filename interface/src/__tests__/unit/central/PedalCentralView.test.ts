@@ -39,6 +39,7 @@ import {
 } from '$lib/stores/v3/normalized.svelte';
 import { _refcountForTest } from '$lib/stores/v3/propertySubscriptions.svelte';
 import PedalCentralView from '$lib/components/v6/central/views/PedalCentralView.svelte';
+import GuitarCentralView from '$lib/components/v6/central/views/GuitarCentralView.svelte';
 import { send } from '$lib/api/simpleClient';
 import { DEVICE_PRESETS } from '$lib/config/devicePresets';
 import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
@@ -208,10 +209,44 @@ describe('PedalCentralView', () => {
 
 	it('leaves Gain out on an audio track, where the grid draws it', async () => {
 		seed([saturator({}), guitarRack()], true);
-		const { container } = render(PedalCentralView);
+		const { container } = render(GuitarCentralView);
 		await tick();
 		expect(container.querySelector('.left-stack .device-control')).toBeNull();
 		expect(container.querySelectorAll('.guitar-xy-stack .guitar-xy').length).toBe(2);
+	});
+
+	it('splits in two on an audio track: Pedal and Guitar in the Guitar view, the rest in the Saturator\'s', async () => {
+		seed([saturator({}), guitarRack()], true);
+		const guitar = render(GuitarCentralView);
+		await tick();
+		expect(guitar.container.querySelector('.pedal-column')).not.toBeNull();
+		expect(guitar.container.querySelector('.guitar-section')).not.toBeNull();
+		expect(guitar.container.querySelector('.shifter-column')).toBeNull();
+		expect(guitar.container.querySelector('.sat-redux-column')).toBeNull();
+		guitar.unmount();
+
+		const effects = render(PedalCentralView);
+		await tick();
+		expect(effects.container.querySelector('.pedal-column')).toBeNull();
+		expect(effects.container.querySelector('.guitar-section')).toBeNull();
+		expect(effects.container.querySelector('.shifter-column')).not.toBeNull();
+		expect(effects.container.querySelector('.sat-redux-column')).not.toBeNull();
+		// The Drum cell holds the Chorus on audio, so the Drum Buss is here, XY first.
+		expect(effects.container.querySelector('.drum-group .drum-buss-layout.embedded .drum-xy')).not.toBeNull();
+		expect(effects.container.querySelector('.drum-group')?.textContent).toContain('Boom');
+	});
+
+	it('is one view on a MIDI track, whichever tile opened it', async () => {
+		seed([saturator({}), guitarRack()]);
+		for (const View of [PedalCentralView, GuitarCentralView]) {
+			const { container, unmount } = render(View);
+			await tick();
+			for (const part of ['.pedal-column', '.guitar-section', '.shifter-column', '.sat-redux-column']) {
+				expect(container.querySelector(part)).not.toBeNull();
+			}
+			expect(container.querySelector('.drum-group')).toBeNull();
+			unmount();
+		}
 	});
 
 	it('ghosts the Guitar section on a track with no amp rack', async () => {
@@ -269,7 +304,7 @@ describe('PedalCentralView', () => {
 
 	it('leaves the Wah alone in the left column on an audio track', async () => {
 		seed([saturator({})], true);
-		const { container } = render(PedalCentralView);
+		const { container } = render(GuitarCentralView);
 		await tick();
 		const cells = container.querySelectorAll('.left-stack .left-cell');
 		expect(cells.length).toBe(1);

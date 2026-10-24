@@ -72,12 +72,12 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 		'arpeggiator': () => import('./views/ArpeggiatorCentralView.svelte'),
 		'audio-effect-rack': () => import('./views/AudioEffectRackCentralView.svelte'),
 		// The Bass tile (audio tracks' fx1 column, 2026-09-14): its type is
-		// `bass`, its view the Guitar rack's — PedalCentralView since
-		// GuitarCentralView folded into it (2026-10-05).
+		// `bass`, its view the Guitar rack's — GuitarCentralView, which on
+		// an audio track is the Pedal view's guitar part (2026-10-23).
 		// Aliased here the way `random` aliases the Arpeggiator's and
 		// `squash` the Utility's; without an entry the tap resolved to the
 		// placeholder view.
-		'bass': () => import('./views/PedalCentralView.svelte'),
+		'bass': () => import('./views/GuitarCentralView.svelte'),
 		'chorus': () => import('./views/ChorusCentralView.svelte'), // Blur, Comb and Phaser off a drum track; the Auto Pan view on one (2026-10-23)
 		'compressor': () => import('./views/SquashCentralView.svelte'), // Compressor controls live in the Squash (dynamics) view
 		'digital': () => import('./views/DigitalCentralView.svelte'),
@@ -85,11 +85,11 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 		'echo': () => import('./views/EchoCentralView.svelte'), // the Echo tile, which replaced the Delay XY (2026-09-14)
 		'eq': () => import('./views/EQCentralView.svelte'),
 		'filter': () => import('./views/AutoFilterCentralView.svelte'),
-		'guitar': () => import('./views/PedalCentralView.svelte'), // the Guitar rack's controls live there (2026-10-05)
+		'guitar': () => import('./views/GuitarCentralView.svelte'), // Pedal, Wah and the Guitar rack on audio; the whole Pedal view on MIDI (2026-10-23)
 		'octave': () => import('./views/AutoPanCentralView.svelte'), // the Pitch family joined Auto Pan's view (2026-10-15)
 		'pitchHack': () => import('./views/AutoPanCentralView.svelte'),
 		'glitchLoop': () => import('./views/GlitchCentralView.svelte'), // the Glitch tile's slot (2026-10-15)
-		'pedal': () => import('./views/PedalCentralView.svelte'),
+		'pedal': () => import('./views/GuitarCentralView.svelte'), // the Pedal is the Guitar view's on audio (2026-10-23)
 		'saturator': () => import('./views/PedalCentralView.svelte'), // the Saturator tile's view (fx5, 2026-10-05), which holds the Pedal's XY
 		// The Rand Oct tile: its type is `random`, its view the Arpeggiator's
 		// (the MIDI-effects family — arpeggiator, velocity and chord slots).

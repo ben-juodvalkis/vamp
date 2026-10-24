@@ -44,8 +44,15 @@
    * 2026-10-12 the slider is titled with the chain the toe switch selected
    * (Wah · Volume · Ring), read from the rack's `chain_names` property.
    *
+   * On an audio track (2026-10-23, the user's call) the grid's own Gtr
+   * column is the Guitar's door, so the view splits in two: the Gtr (and
+   * Bass) tile opens `GuitarCentralView`, which draws this view's `guitar`
+   * part (the Pedal, then the Guitar rack with the Wah), and the Saturator
+   * tile draws its `effects` part (the Shifter, then the Saturator's Output
+   * and Mix over Redux). On a MIDI track it is one view, `all`.
+   *
    * NO {#if device} gate - always renders, handles its own state.
-   * NO props required - queries selectedTrackStore directly.
+   * `part` is optional: left out, it follows the track (see above).
    */
 
   import ReduxControl from '$lib/components/v6/device-panel/ReduxControl.svelte';
@@ -59,6 +66,20 @@
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import SectionDivider from '../SectionDivider.svelte';
   import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
+  import { gridTrackIsAudio } from '$lib/components/v6/device-panel/drumCell.svelte';
+  import DrumBussCentralView from './DrumBussCentralView.svelte';
+
+  interface Props {
+    part?: 'all' | 'guitar' | 'effects';
+  }
+  let { part }: Props = $props();
+  const shown = $derived(part ?? (gridTrackIsAudio() ? 'effects' : 'all'));
+  const withGuitar = $derived(shown !== 'effects');
+  const withEffects = $derived(shown !== 'guitar');
+  // On an audio track the Drum cell holds the Chorus, so the Drum Buss,
+  // XY and all, closes this view's effects part (2026-10-23, the user's call).
+  const withDrum = $derived(shown === 'effects');
+  const drum = useFxGridSlot('drum');
 
   const fx = useFxGridSlot('pedal');
   const shifter = useFxGridSlot('shifter');
@@ -94,6 +115,8 @@
     shifter.sendParam(SHIFTER_MODE, SHIFTER_MODE_RING);
     shifter.sendParam(SHIFTER_RM_COARSE, 0);
   }
+
+  let drumInk = $derived(trackInk(drum.color.primary, paintModeReactive()));
 
   let saturatorInk = $derived({
     primary: trackInk(saturator.color.primary, paintModeReactive()),
@@ -136,7 +159,7 @@
   // Guitar.adg's macros (see the header). Macros are 0..127 on the wire.
   const GTR = { spring: 2, tremRate: 3, tremAmount: 4, room: 5 } as const;
   const MACRO_MAX = 127;
-  const showGuitarGain = $derived(selectedTrackStore.trackType !== 'audio');
+  const showGuitarGain = $derived(!gridTrackIsAudio());
   const gtrValue = (macro: number) => (guitar.paramValue(macro) ?? 0) / MACRO_MAX;
   const sendGtr = (macro: number, normalized: number) => guitar.sendParam(macro, normalized * MACRO_MAX);
 
@@ -224,17 +247,30 @@
   const SEAM = 'auto';
   const gridColumns = $derived(
     [
-      XY, SLIDER, SEAM, // pedal tone pad and drive slider over its type switch
-      ...(showLeftColumn ? [SLIDER] : []), // gain over wah, heading the guitar group
-      XY, SEAM, // spring/room over tremolo
-      SLIDER, SEAM, // shifter
-      XY // output · mix over redux
+      ...(withGuitar
+        ? [
+            XY, SLIDER, SEAM, // pedal tone pad and drive slider over its type switch
+            ...(showLeftColumn ? [SLIDER] : []), // gain over wah, heading the guitar group
+            XY // spring/room over tremolo
+          ]
+        : []),
+      ...(withGuitar && withEffects ? [SEAM] : []),
+      ...(withEffects
+        ? [
+            SLIDER, SEAM, // shifter
+            XY // output · mix over redux
+          ]
+        : []),
+      // the Drum Buss: its XY, five slider columns and Boom, one track
+      // holding its own grid, as wide as nine sliders
+      ...(withDrum ? [SEAM, 'minmax(0, 9fr)'] : [])
     ].join(' ')
   );
 </script>
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
 <div class="pedal-central-layout relative" style="grid-template-columns: {gridColumns};">
+  {#if withGuitar}
   <!-- COLUMN 1: the Pedal — its tone stack on the EQ tile's pad beside
        one Drive/Mix slider, over its type switch laid out across. -->
   <div class="column pedal-column">
@@ -374,7 +410,13 @@
     </div>
   </div>
 
+  {/if}
+
+  {#if withGuitar && withEffects}
   <SectionDivider orientation="vertical" ink={shifterInk.primary} />
+  {/if}
+
+  {#if withEffects}
 
   <!-- COLUMN 4: the Shifter's ring-mod frequency, one fader. A tap on a
        ghost loads it; a drag loads it and writes the value. -->
@@ -427,9 +469,23 @@
     </div>
   </div>
 
+  {/if}
+
+  {#if withDrum}
+  <SectionDivider orientation="vertical" ink={drumInk} />
+  <div class="drum-group">
+    <DrumBussCentralView embedded />
+  </div>
+  {/if}
 </div>
 
 <style>
+  .drum-group {
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+  }
+
   .pedal-central-layout {
     display: grid;
     /* pedal XY over pedal-type tabs | guitar (gain over wah ·

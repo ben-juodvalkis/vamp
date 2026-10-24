@@ -13,8 +13,22 @@ import { isDrumTrack } from '$lib/services/trackCategory';
  * Reactive: read it inside a `$derived` or markup.
  */
 export function drumCellHoldsChorus(): boolean {
+	return gridTrackIsAudio() || !isDrumTrack(gridTrack());
+}
+
+/** The track the FX grid shows: the held strip's while one is held, else the selected one. */
+function gridTrack() {
 	const held = trackHoldScope.heldTracks()[0];
-	const track = v3Store.tracks.get(held ?? selectedTrackStore.selectedTrackPath);
-	const audio = !!track && !track.isFoldable && !track.hasMidiInput && track.hasAudioInput;
-	return audio || !isDrumTrack(track);
+	return v3Store.tracks.get(held ?? selectedTrackStore.selectedTrackPath);
+}
+
+/**
+ * Whether the FX grid's track is an audio track, the test the grid's Bass
+ * over Gtr column uses. On one, the Gtr tile's view is the Guitar view
+ * (Pedal, Wah, the Guitar rack) and the Saturator's holds the rest
+ * (2026-10-23, the user's call). Reactive.
+ */
+export function gridTrackIsAudio(): boolean {
+	const track = gridTrack();
+	return !!track && !track.isFoldable && !track.hasMidiInput && track.hasAudioInput;
 }
