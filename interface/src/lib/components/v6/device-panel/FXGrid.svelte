@@ -153,8 +153,8 @@
        fxGridLayout.ts): the leftmost column is arranged differently on
        audio and MIDI, and auto-placement cannot do both from one DOM
        order. Column 1 is Rand Oct (MIDI) or the Bass (audio) over the Gtr,
-       one empty cell on master; column 2 Pitch over Glitch; three XYs a row;
-       column 9 the Saturator over Variation; column 10 Squash over Gain
+       one empty cell on master; column 2 Pitch over the Saturator; three XYs
+       a row; column 9 Glitch over Variation; column 10 Squash over Gain
        (2026-10-24). The Drum cell holds the Chorus on audio and non-drum
        tracks (ADR-465).
 
@@ -201,8 +201,8 @@
     {/each}
     <!-- Squash, the Glue Compressor's one-finger threshold + makeup: the
          top of the last column, over Gain (2026-10-15). -->
-    <!-- Column 2 (2026-10-24): Pitch (the Octave's Mix) over Glitch
-         (GlitchLoop's Dry/Wet), sliders inside column 1. -->
+    <!-- Pitch (the Octave's Mix), column 2 over the Saturator, and Glitch
+         (GlitchLoop's Dry/Wet), column 9 over Variation (2026-10-24). -->
     <div data-cell="pitch" data-col={PITCH_CELL.col} data-row={PITCH_CELL.row} data-span={PITCH_CELL.span} data-row-span={PITCH_CELL.rowSpan} style={cellStyle(PITCH_CELL)}>
       <PitchControl device={octaveDevice} />
     </div>

@@ -164,14 +164,14 @@ describe('FXGrid — the grid is the held pad\'s', () => {
 			return [c.dataset.col, c.dataset.row, c.dataset.span, c.dataset.rowSpan].join('/');
 		};
 		// col/row/span/rowSpan (2026-10-24): Glue over Gain in the last
-		// column, the Saturator over Variation inside it; Pitch over Glitch
+		// column, Glitch over Variation inside it; Pitch over the Saturator
 		// inside the first; three XYs a row between.
 		expect(cellOf('Glue')).toBe('10/1/1/1');
 		expect(cellOf('Gain')).toBe('10/2/1/1');
-		expect(cellOf('Sat')).toBe('9/1/1/1');
+		expect(cellOf('Sat')).toBe('2/2/1/1');
 		expect(cellOf('Var')).toBe('9/2/1/1');
 		expect(cellOf('Pitch')).toBe('2/1/1/1');
-		expect(cellOf('Glitch')).toBe('2/2/1/1');
+		expect(cellOf('Glitch')).toBe('9/1/1/1');
 		expect(cellOf('EQ')).toBe('3/1/2/1');
 		expect(cellOf('Tremolo')).toBe('3/2/2/1');
 		expect(cellOf('Drum')).toBe('7/1/2/1');
@@ -359,10 +359,10 @@ describe('the FX grid layout is ten columns wide', () => {
 		expect([grid[0][0], grid[1][0]]).toEqual(['random', 'guitar']);
 		// The user's order (2026-10-24): sliders inside the outer columns,
 		// three XYs a row between.
-		expect([grid[0][1], grid[1][1]]).toEqual(['pitch', 'glitch']);
+		expect([grid[0][1], grid[1][1]]).toEqual(['pitch', 'saturator']);
 		expect(grid[0].slice(2, 8).filter((_, i) => i % 2 === 0)).toEqual(['eq', 'filter', 'drum']);
 		expect(grid[1].slice(2, 8).filter((_, i) => i % 2 === 0)).toEqual(['tremolo', 'echo', 'reverb']);
-		expect([grid[0][8], grid[1][8]]).toEqual(['saturator', 'variation']);
+		expect([grid[0][8], grid[1][8]]).toEqual(['glitch', 'variation']);
 		expect([grid[0][9], grid[1][9]]).toEqual(['squash', 'utility']);
 	});
 

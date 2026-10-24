@@ -1,7 +1,7 @@
 <script lang="ts">
 	/**
 	 * GlitchControl — the Glitch tile over GlitchLoop (`glitchLoop` slot): a
-	 * slider on its Dry/Wet in column 2 since 2026-10-24 (the user's call;
+	 * slider on its Dry/Wet in column 9 since 2026-10-24 (the user's call;
 	 * an XY with Clock across from 2026-10-15, and Clock is in the view now).
 	 * A tap opens the Glitch view. No layout entry: `slotKey` resolves its
 	 * own slot, as Squash does.

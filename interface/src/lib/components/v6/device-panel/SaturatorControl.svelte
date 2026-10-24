@@ -50,7 +50,7 @@
   });
 </script>
 
-<!-- The fx5 grid tile: a slider in column 9 since 2026-10-24 (an XY with
+<!-- The fx5 grid tile: a slider in column 2, under Pitch, since 2026-10-24 (an XY with
      Color Hi across before; Color is a fader in the view now). Its one
      axis is the XY's Y: Drive up, Output down to match, Dry/Wet up.
      The tile opens PedalCentralView. `slotKey` stays for a standalone mount. -->

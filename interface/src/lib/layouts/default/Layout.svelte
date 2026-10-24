@@ -348,7 +348,7 @@
 	     main     → the two right columns (9–10)
 
 	   Since 2026-10-24 the grid is a slider column each side of three XYs a
-	   row (Rand Oct or Bass over Gtr, Pitch over Glitch | XYs | Saturator
+	   row (Rand Oct or Bass over Gtr, Pitch over Saturator | XYs | Glitch
 	   over Variation, Squash over Gain), so Room and Main each take the
 	   two slider columns on their side and no bar straddles a tile seam,
 	   which is the one thing this ruler exists to prevent.

@@ -1,7 +1,7 @@
 <script lang="ts">
 	/**
 	 * PitchControl — the Pitch tile (2026-10-24, the user's call): a slider
-	 * on the Octave's Mix in column 2, over Glitch. It was the Mix slider of
+	 * on the Octave's Mix in column 2, over the Saturator. It was the Mix slider of
 	 * the Pitch group in the Tremolo view; the group is the Pitch view now,
 	 * which a tap opens. No layout entry: `slotKey` resolves the `octave`
 	 * slot, as Squash does.

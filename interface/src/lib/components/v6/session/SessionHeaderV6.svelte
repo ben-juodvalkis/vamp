@@ -353,7 +353,7 @@
      the same one the status strip runs. Each cell spans whole tiles:
        tempo    → columns 1–2 + EQ       (1–4)
        time     → Filter                 (5–6)
-       position → Drum + Saturator column (7–9)
+       position → Drum + Glitch column   (7–9)
        click    → Squash / Gain          (10)
      If the FX grid's column count or gap changes, this changes with it. */
   .hdr-ruler {
