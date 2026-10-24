@@ -67,13 +67,15 @@
 
 	// The last two columns are New Audio / New MIDI (`NewTrackButtons`)
 	// and the master strip (2026-10-24, the user's call: out of the right
-	// sidebar), each a strip's width, shrinking with the strips (the
-	// master stacks its key over its time signature when narrow). Strips
-	// row only: the clip grid and stop row carry them empty, so their
-	// track columns stay the strips' width.
+	// sidebar). New is a strip's width; the master shrinks with the
+	// strips (stacking its key over its time signature when narrow) but
+	// grows no wider than the sidebar, the width it had there, and the
+	// space it leaves goes to the strips. Strips row only: the clip grid
+	// and stop row carry them empty, so their track columns stay the
+	// strips' width.
 	const PINNED_COLS = 2;
 	let columnTemplate = $derived(
-		`grid-template-columns: repeat(${visibleTracks.length + PINNED_COLS}, minmax(var(--track-min-w), 1fr));`
+		`grid-template-columns: repeat(${visibleTracks.length + 1}, minmax(var(--track-min-w), 1fr)) minmax(var(--track-min-w), var(--sidebar-width));`
 	);
 
 	let rowStyle = $derived(
@@ -776,8 +778,8 @@
 	   Pinned to the panel's right edge once the row scrolls, so both are
 	   always one reach away; the group takes the gutter to its left too,
 	   so strips scrolling under it do not show through the gap. Its own
-	   two columns split it with the row's gutter between, so each is a
-	   strip's width. */
+	   two columns repeat the row's last two tracks: a strip's width, then
+	   the master's, capped at the sidebar's. */
 	.pinned-cols {
 		position: sticky;
 		right: 0;
@@ -788,7 +790,13 @@
 		padding-left: var(--strip-gutter);
 		background: var(--background);
 		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
+		/* Mirrors the row's last two tracks: New a strip's width w, the
+		   master min(w, sidebar). With content w + gutter + min(w, S),
+		   half of (content - gutter) is w when w <= S and more than S
+		   otherwise, so this lands on min(w, S) both ways, where a plain
+		   minmax let the master grow first and squeezed New to a sliver
+		   on a crowded row. */
+		grid-template-columns: minmax(0, 1fr) min(var(--sidebar-width), calc((100% - var(--strip-gutter)) / 2));
 		column-gap: var(--strip-gutter);
 	}
 	.new-track-col,

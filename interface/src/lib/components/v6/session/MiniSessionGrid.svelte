@@ -25,15 +25,11 @@
      * only) can't do them here, so this component runs those effects for
      * the layouts it owns.
      *
-     * **Its own row pitch.** Nothing on screen has to line up with these
-     * rows — there is no rail beside them and no strip above them — so
-     * the box is simply divided by the rows drawn plus one for the stop
-     * row, exactly as `TracksPanelV6` and `SceneRail` each divide their
-     * own section. The rows-drawn count still comes from the shared
-     * store, so the mini shows the same window the full grid would at
-     * this section count — the central view's section and the clip
-     * grid's are the same height, so that lands right without either
-     * measuring the other.
+     * **Its own row pitch.** The stop row is a strip's name-band
+     * height (a quarter of the strip after its gaps), level with the mute buttons beside it, and the clip rows
+     * divide what is left by the rows drawn. The rows-drawn count comes
+     * from the shared store, so the mini shows the same window the full
+     * grid would at this section count.
      */
 
     import SlotGrid from '$lib/components/v6/tracks/TrackStrip/components/SlotGrid.svelte';
@@ -77,10 +73,10 @@
 
     // ---- Row pitch ------------------------------------------------------
     //
-    // Measured, not authored — same recipe as the full grid's section and
-    // the rail's. The +1 is the stop row: it is one more row at the
-    // grid's own pitch, not a bar of chrome, so it aims exactly like a
-    // clip cell.
+    // Measured, not authored. The stop row is a strip's name-band height
+    // (2026-10-24, the user's call: level with the strips' mute buttons
+    // beside it), so the pitch is the clip rows' own box divided by the
+    // rows drawn, the stop row's height already out of it.
     let gridBoxEl = $state<HTMLDivElement | null>(null);
     let gridBoxHeightPx = $state(0);
 
@@ -95,7 +91,7 @@
      */
     let stopPressed = $state(false);
     const renderedRows = $derived(sceneWindowStore.renderedRows);
-    const rowPitchPx = $derived(renderedRows > 0 ? gridBoxHeightPx / (renderedRows + 1) : 0);
+    const rowPitchPx = $derived(renderedRows > 0 ? gridBoxHeightPx / renderedRows : 0);
 
     $effect(() => {
         const el = gridBoxEl;
@@ -152,10 +148,9 @@
     {#if hasTrack}
         <div
             class="mini-body"
-            bind:this={gridBoxEl}
             style={rowPitchPx > 0 ? `--session-row-h: ${rowPitchPx}px;` : ''}
         >
-            <div class="mini-grid">
+            <div class="mini-grid" bind:this={gridBoxEl}>
                 <SlotGrid
                     {trackPath}
                     trackColor={ink}
@@ -232,10 +227,12 @@
         border-radius: var(--radius-md);
         background: color-mix(in oklab, var(--mini-ink) 6%, transparent);
         overflow: hidden;
+        /* The stop row sizes off this box's height (cqh). */
+        container-type: size;
     }
 
-    /* The measured box: scene rows plus the stop row. Nothing else may
-       go in here — anything that shortens it changes the pitch. */
+    /* The clip rows over the stop row. The rows' own box (.mini-grid) is
+       the measured one. */
     .mini-body {
         flex: 1 1 0;
         min-height: 0;
@@ -249,8 +246,10 @@
         min-height: 0;
     }
 
-    /* Same share of the box as one scene row, so the stop cell is the
-       same size as the clip cells above it. */
+    /* The strips' name-band height (2026-10-24), so it reads level with
+       the name / mute buttons in the row beside it; the clip rows share
+       the rest.
+       It was one scene row tall before, the full grid's stop-row rule. */
     .mini-stop {
         /* A full row minus the inset the cells keep between themselves —
            SlotCell's own sizing rule. It has to be the FLEX BASIS, not a
@@ -260,7 +259,15 @@
            clip slot above it (88px cells under a 92px stop at 1366×1024).
            The height stays as a belt-and-braces declaration for any
            context where this box is not a flex item. */
-        flex: 0 0 calc(var(--session-row-h) - var(--session-row-gap));
+        /* A strip's name band, measured from this column's own height: the
+           section is S = 100cqh + 10px (the 1px border and 4px padding each
+           side), a strip is its card's three bands plus the name with three
+           --spacing-xs gaps, so the name is (S - 3 gaps) / 4. It runs
+           through the frame's bottom inset (the negative margin) to the
+           section's edge, so top, bottom and height match the name band. */
+        flex: 0 0 calc((100cqh + 10px - 3 * var(--spacing-xs)) / 4);
+        margin-bottom: -5px;
+        position: relative;
         display: flex;
         align-items: center;
         justify-content: center;

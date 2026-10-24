@@ -78,8 +78,9 @@
          * The mini grid's gestures (2026-10-24, the user's call): a tap
          * anywhere on a cell is the action strip's tap (launch, or stop a
          * playing clip), and a hold moves the highlight there (`onSelect`)
-         * and fires nothing. Off, a body tap selects, the strip acts and a
-         * hold focuses.
+         * and fires nothing. The cells draw no strip then (width 0): the
+         * whole cell is the button, and the whole cell lights on a press.
+         * Off, a body tap selects, the strip acts and a hold focuses.
          */
         tapFires?: boolean;
     }
@@ -259,7 +260,8 @@
             // highlight is the only thing that says "the tap landed".
             // Reads the pitch just measured above.
             pressedSlot = slotIndexAt(x, y);
-            pressedAction = pressedSlot !== null && (tapFires || isInActionZone(x));
+            // Tap-to-fire cells have no strip: the whole cell lights.
+            pressedAction = pressedSlot !== null && !tapFires && isInActionZone(x);
         },
         // Fires on release, on cancel, AND the moment the gesture
         // becomes a scroll — so a swipe across the grid doesn't drag a
@@ -397,7 +399,7 @@
                 lengthBeats={clipLengthFor(slotIndex)}
                 pressed={slotIndex === pressedSlot && !pressedAction}
                 actionPressed={slotIndex === pressedSlot && pressedAction}
-                {actionWidthPx}
+                actionWidthPx={tapFires ? 0 : actionWidthPx}
                 sceneSelected={slotIndex === selectedSceneIndex}
                 pedalTarget={isSelectedTrack && slotIndex === selectedSceneIndex}
                 triggered={triggeredSlotsStore.has(`${trackPath}/slots/${slotIndex}`)}
