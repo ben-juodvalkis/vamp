@@ -351,10 +351,10 @@
 
   /* The FX grid's ruler (`FXGrid.svelte`: ten equal columns, 8px gap),
      the same one the status strip runs. Each cell spans whole tiles:
-       tempo    → Rand Oct + EQ   (1–3)
-       time     → Filter          (4–5)
-       position → Saturator, Drum (6–9)
-       click    → Squash / Gain   (10)
+       tempo    → columns 1–2 + EQ       (1–4)
+       time     → Filter                 (5–6)
+       position → Drum + Saturator column (7–9)
+       click    → Squash / Gain          (10)
      If the FX grid's column count or gap changes, this changes with it. */
   .hdr-ruler {
     min-width: 0;
@@ -362,9 +362,9 @@
     grid-template-columns: repeat(10, minmax(0, 1fr));
     gap: 0.5rem;
   }
-  .hdr-ruler > :nth-child(1) { grid-column: 1 / span 3; }
-  .hdr-ruler > :nth-child(2) { grid-column: 4 / span 2; }
-  .hdr-ruler > :nth-child(3) { grid-column: 6 / span 4; }
+  .hdr-ruler > :nth-child(1) { grid-column: 1 / span 4; }
+  .hdr-ruler > :nth-child(2) { grid-column: 5 / span 2; }
+  .hdr-ruler > :nth-child(3) { grid-column: 7 / span 3; }
   .hdr-ruler > :nth-child(4) { grid-column: 10 / span 1; }
 
   /* The master view's value field: a well in a 1px frame. */

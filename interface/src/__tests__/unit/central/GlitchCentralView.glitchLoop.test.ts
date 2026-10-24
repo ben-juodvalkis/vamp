@@ -92,12 +92,15 @@ afterEach(() => {
 });
 
 describe('GlitchCentralView GlitchLoop', () => {
-	it('leaves Clock and Mix to the tile, and has no Freeze or Mod Hold', async () => {
+	it('leaves Mix to the tile, draws Clock (the old XY\'s X), and has no Freeze or Mod Hold', async () => {
 		seed(glitchLoop());
 		const { container } = render(GlitchCentralView);
 		await settle();
 		expect(container.querySelector('[aria-label^="Mix:"]')).toBeNull();
-		expect(container.textContent).not.toMatch(/Clock|Freeze|Hold/);
+		expect(container.querySelector('[aria-label^="Clock:"]')).not.toBeNull();
+		expect(container.textContent).not.toMatch(/Freeze|Hold/);
+		// The Variation is its own view since 2026-10-24.
+		expect(container.textContent).not.toContain('Variation');
 	});
 
 	it('lists the bank and lights the preset the device matches', async () => {

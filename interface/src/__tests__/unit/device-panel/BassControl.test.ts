@@ -142,11 +142,11 @@ describe('the audio track\'s fx1 column', () => {
 
 		// The clip-pitch slider went with the split — it lives in the Clip
 		// view, which the strip's Clip band opens in one tap.
-		// The Pitch tile (the Octave) left for the Auto Pan view on
-		// 2026-10-15, so no Pitch is on the grid.
+		// The Pitch tile is the Octave's Mix (2026-10-24), in column 2, not
+		// the clip's pitch.
 		const pitchTiles = Array.from(container.querySelectorAll<HTMLElement>('.device-control'))
 			.filter((t) => t.textContent?.includes('Pitch'));
-		expect(pitchTiles).toEqual([]);
+		expect(pitchTiles.map((t) => t.closest<HTMLElement>('[data-cell]')?.dataset.cell)).toEqual(['pitch']);
 
 		// Rand Oct is the MIDI track's tile, never audio's.
 		const titles = Array.from(container.querySelectorAll<HTMLElement>('.device-control'))

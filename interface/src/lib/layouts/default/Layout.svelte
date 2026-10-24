@@ -341,19 +341,17 @@
 	   a statement about which tile each monitor belongs over, and
 	   `nth-child` would re-point it silently if the channel order moved.
 
-	     room     → the left column       (1)
-	     playback → EQ                    (2–3)
-	     click    → Filter                (4–5)
-	     phones   → Saturator             (6–7)
-	     main     → Drum                  (8–9)
+	     room     → the two left columns  (1–2)
+	     playback → EQ                    (3–4)
+	     click    → Filter                (5–6)
+	     phones   → Drum / Chorus         (7–8)
+	     main     → the two right columns (9–10)
 
-	   Column 10 (Squash over Gain) stays clear: five channels do not tile
-	   a grid that keeps it back.
-
-	   Since 2026-10-15 the left edge is one column (Rand Oct on MIDI, the
-	   Guitar over the Bass on audio), so Room is one column wide and no bar
-	   straddles a tile seam, which is the one thing this ruler exists to
-	   prevent.
+	   Since 2026-10-24 the grid is a slider column each side of three XYs a
+	   row (Rand Oct or Bass over Gtr, Pitch over Glitch | XYs | Saturator
+	   over Variation, Squash over Gain), so Room and Main each take the
+	   two slider columns on their side and no bar straddles a tile seam,
+	   which is the one thing this ruler exists to prevent.
 
 	   One collision worth knowing: iPadOS draws its multitasking pill at
 	   roughly 677–699pt in landscape, which lands inside the Filter
@@ -361,19 +359,19 @@
 	   the battery cluster (~1270–1359pt) both fall outside the FX grid's
 	   152–1214pt band, so this ruler clears them by construction. */
 	.status-strip :global([data-channel='room']) {
-		grid-column: 1 / span 1;
+		grid-column: 1 / span 2;
 	}
 	.status-strip :global([data-channel='playback']) {
-		grid-column: 2 / span 2;
+		grid-column: 3 / span 2;
 	}
 	.status-strip :global([data-channel='click']) {
-		grid-column: 4 / span 2;
+		grid-column: 5 / span 2;
 	}
 	.status-strip :global([data-channel='phones']) {
-		grid-column: 6 / span 2;
+		grid-column: 7 / span 2;
 	}
 	.status-strip :global([data-channel='main']) {
-		grid-column: 8 / span 2;
+		grid-column: 9 / span 2;
 	}
 
 	.section {

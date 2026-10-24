@@ -29,8 +29,12 @@
 	 *   7 Reverse     0..100 %   (not drawn)
 	 *   8 Int Var     0..24 st   (not drawn)
 	 *
-	 * Self-contained: queries its own slots, takes no props, and renders
-	 * through ghost/loading/active without a `{#if device}` gate.
+	 * Since 2026-10-24 (the user's call) the group is the Pitch view
+	 * (`PitchCentralView`, `standalone`), out of the Tremolo view: no leading
+	 * seam, and no Octave Mix, which is the grid's Pitch slider.
+	 *
+	 * Self-contained: queries its own slots and renders through
+	 * ghost/loading/active without a `{#if device}` gate.
 	 */
 
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
@@ -48,6 +52,12 @@
 	import type { DragInfo } from '$lib/actions/drag';
 	import { segmentIndex, scrubBoxOf, type ScrubBox } from '$lib/utils/segmentScrub';
 	import SectionDivider from '../../SectionDivider.svelte';
+
+	interface Props {
+		/** The Pitch view's own: no leading seam, no Octave Mix (the grid's slider). */
+		standalone?: boolean;
+	}
+	let { standalone = false }: Props = $props();
 
 	const octave = useFxGridSlot('octave');
 	const pitchHack = useFxGridSlot('pitchHack');
@@ -152,7 +162,9 @@
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
 <div class="pitch-group">
+	{#if !standalone}
 	<SectionDivider orientation="vertical" ink={octaveInk.primary} />
+	{/if}
 
 	<!-- The Octave, titled Pitch: its interval and Mix upright side by side. -->
 	<div class="stack" style="--btn-tint: {octaveInk.primary};">
@@ -183,6 +195,7 @@
 				</div>
 			</div>
 
+			{#if !standalone}
 			<div class="cell octave-mix" class:slot-ghost={octave.isGhost}>
 				<DeviceSlider
 					value={octave.paramValue(OCTAVE_MIX_PARAM) ?? 0}
@@ -202,6 +215,7 @@
 					onInteraction={(v) => sendOctave(OCTAVE_MIX_PARAM, Math.max(0, Math.min(OCTAVE_MIX_MAX, v)))}
 				/>
 			</div>
+			{/if}
 		</div>
 	</div>
 

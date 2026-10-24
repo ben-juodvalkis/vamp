@@ -129,9 +129,12 @@
   // Index, label, and the value a fader rests at before the device answers.
   // Indices match the tile's PARAM_CONFIG (10 / 11); 10 was confirmed as
   // Output against the running device (2026-08-22). Nothing is remapped:
-  // what a fader shows is what the device stores. Drive (1) and Color Hi
-  // (8) have no fader: they are the grid tile's two axes (2026-10-05).
+  // what a fader shows is what the device stores. Drive (1) has no fader:
+  // it is the grid tile's.
+  // Color Hi (8) joined them 2026-10-24, when the tile became a Drive
+  // slider and lost the XY's Color axis.
   const SATURATOR_FADERS = [
+    { index: 8, title: 'Color', fallback: 0.5, icon: 'tone' },
     { index: 10, title: 'Output', fallback: 1, icon: 'output' },
     { index: 11, title: 'Mix', fallback: 1, icon: 'mix' }
   ] as const;

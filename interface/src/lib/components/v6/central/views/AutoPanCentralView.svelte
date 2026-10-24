@@ -5,13 +5,12 @@
    * LFO's shape as a vertical tab of four drawn waveforms. Amount is the grid tile's Y.
    * Parameters and labels are in `autoPanParams.ts`, measured on the rig.
    *
-   * Since 2026-10-15 (the user's call) the view also holds the Chorus and
-   * Pitch families, whose tiles left the grid: the Chorus XY, Blur, Comb
-   * and Phaser (`autopan/ChorusGroup`), then the Octave's interval column
-   * and Mix slider (the Pitch XY, split in two) and Pitch Hack's Mix,
-   * Coarse and Rate (`autopan/PitchGroup`). Every family is a column,
-   * its controls stacked so none is narrow; the groups' roots are
-   * `display: contents`, so one grid here holds every column and seam.
+   * From 2026-10-15 to 2026-10-24 the view also held the Pitch family; it
+   * is the Pitch view now (`PitchCentralView`), which the grid's Pitch
+   * slider opens. It holds the Chorus family (the Chorus XY, Blur, Comb
+   * and Phaser, `autopan/ChorusGroup`) on a drum track, a column each,
+   * the group's root `display: contents` so one grid holds every column
+   * and seam.
    *
    * Only on a drum track (2026-10-23): elsewhere the Chorus XY is the FX
    * grid's tile in the Drum cell and Blur, Comb and Phaser are the Chorus
@@ -37,7 +36,6 @@
   } from '$lib/components/v6/device-panel/autoPanParams';
   import ChorusGroup from './autopan/ChorusGroup.svelte';
   import { drumCellHoldsChorus } from '$lib/components/v6/device-panel/drumCell.svelte';
-  import PitchGroup from './autopan/PitchGroup.svelte';
 
   const fx = useFxGridSlot('tremolo');
 
@@ -169,28 +167,24 @@
   </div>
 
   {#if withChorus}<ChorusGroup />{/if}
-  <PitchGroup />
 </div>
 
 <style>
-  /* Five columns, each a device family stacked top to bottom (2026-10-15,
-     the user's call: no control so narrow): Auto Pan | Chorus over Blur |
-     Comb over Phaser | the Octave | Pitch Hack. A seam is its hairline. */
+  /* Columns, each a device family stacked top to bottom (no control so
+     narrow): Auto Pan | Chorus over Blur | Comb over Phaser. A seam is its
+     hairline. */
   .autopan-layout {
     display: grid;
-    grid-template-columns:
-      minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr)
-      auto minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
     gap: var(--central-gap);
     height: 100%;
     width: 100%;
     padding: var(--central-inset);
   }
   /* Off a drum track the Chorus group's two columns and seams are the
-     Chorus view's: Auto Pan | the Octave | Pitch Hack. */
+     Chorus view's, and Auto Pan has the view to itself. */
   .autopan-layout.no-chorus {
-    grid-template-columns:
-      minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .stack {

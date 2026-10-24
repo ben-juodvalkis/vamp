@@ -26,8 +26,14 @@
 	 * values by name in one undo step (`sendParamsByName`). The lit preset
 	 * is the one the device's values match.
 	 *
-	 * Self-contained: queries its own slots, takes no props, and renders
-	 * through ghost/loading/active without a `{#if device}` gate.
+	 * Since 2026-10-24 (the user's call) the two are separate views, each
+	 * opened by its own grid slider: `part` 'glitch' (GlitchLoop, the Glitch
+	 * slider's, now with Clock, the old XY's other axis, on a slider of its
+	 * eleven detents) and 'variation' (`VariationCentralView`, the Var
+	 * slider's). The Glitch slider is Mix, so the view still leaves Mix out.
+	 *
+	 * Self-contained: queries its own slots and renders through
+	 * ghost/loading/active without a `{#if device}` gate.
 	 */
 
 	import { onMount } from 'svelte';
@@ -41,6 +47,7 @@
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 	import { logger } from '$lib/utils/logger';
 	import {
+		GLITCH_LOOP_PARAMS,
 		glitchLoopIndex,
 		toUnit,
 		fromUnit,
@@ -48,6 +55,11 @@
 		type GlitchLoopParam,
 		type GlitchLoopPresets
 	} from '$lib/components/v6/device-panel/glitchLoopParams';
+
+	interface Props {
+		part?: 'glitch' | 'variation';
+	}
+	let { part = 'glitch' }: Props = $props();
 
 	const glitchLoop = useFxGridSlot('glitchLoop');
 	const variation = useFxGridSlot('variation');
@@ -74,6 +86,18 @@
 		return v === undefined ? fallback : toUnit(key, v);
 	};
 	const send = (key: GlitchLoopParam, t: number) => glitchLoop.sendParam(gIndex(key), fromUnit(key, t));
+
+	// Clock, the coupled pitch / length / fidelity macro, in its eleven
+	// detents: the old Glitch XY's X (2026-10-24). A fresh device holds the
+	// middle detent.
+	const CLOCK = GLITCH_LOOP_PARAMS.clock;
+	let clockUnit = $derived(((glitchLoop.paramValue(gIndex('clock')) ?? 5) - CLOCK.min) / (CLOCK.max - CLOCK.min));
+	function sendClock(t: number) {
+		const v = Math.round(Math.min(1, Math.max(0, t)) * (CLOCK.max - CLOCK.min)) + CLOCK.min;
+		if (glitchLoop.isGhost || v !== Math.round(glitchLoop.paramValue(gIndex('clock')) ?? -1)) {
+			glitchLoop.sendParam(gIndex('clock'), v);
+		}
+	}
 
 	// Two by two: the loop on top, Drive × Space and Drift × Chaos under it.
 	const PADS = [
@@ -168,6 +192,7 @@
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
 <div class="glitch-central-layout relative" data-density="compact">
+	{#if part === 'glitch'}
 	<!-- ===== GlitchLoop ===== -->
 	<section class="group" style="--panel-ink: {glitchInk.primary}; --btn-tint: {glitchInk.primary};">
 		<div class="group-title text-xs font-bold tracking-wider">GlitchLoop</div>
@@ -205,6 +230,23 @@
 				</div>
 			{/each}
 
+			<!-- Clock, full height, in its detents. -->
+			<div class="fx-slider" style:grid-column={8} class:slot-ghost={glitchLoop.isGhost}>
+				<DeviceSlider
+					value={clockUnit}
+					title="Clock"
+					orientation="vertical"
+					labelOrientation="horizontal"
+					labelSize="small"
+					isGhost={glitchLoop.isGhost}
+					color={glitchInk}
+					min={0}
+					max={1}
+					onTap={() => glitchLoop.loadIfGhost()}
+					onInteraction={(t) => sendClock(t)}
+				/>
+			</div>
+
 			<!-- Duck and Glue, full height. -->
 			{#each [{ key: 'duck', title: 'Duck', col: 6 }, { key: 'glue', title: 'Glue', col: 7 }] as const as s}
 				<div class="fx-slider" style:grid-column={s.col} class:slot-ghost={glitchLoop.isGhost}>
@@ -226,8 +268,7 @@
 		</div>
 	</section>
 
-	<SectionDivider orientation="vertical" ink={varInk.primary} />
-
+	{:else}
 	<!-- ===== Variation (Beat Repeat) ===== -->
 	<section class="group" style="--panel-ink: {varInk.primary};">
 		<div class="group-title text-xs font-bold tracking-wider">Variation</div>
@@ -322,14 +363,14 @@
 			</div>
 		</div>
 	</section>
+	{/if}
 </div>
 
 <style>
 	.glitch-central-layout {
 		display: grid;
-		/* glitchloop | seam | variation. GlitchLoop's seven and a half
-		   tracks to the Variation's five, one equal track per control. */
-		grid-template-columns: minmax(0, 7.6fr) auto minmax(0, 5fr);
+		/* One device a view since 2026-10-24: GlitchLoop or the Variation. */
+		grid-template-columns: minmax(0, 1fr);
 		height: 100%;
 		width: 100%;
 		padding: var(--central-inset);
@@ -351,14 +392,14 @@
 		color: var(--panel-ink);
 	}
 
-	/* presets · four pads two by two (two tracks each) · Duck · Glue,
-	   over two rows. */
+	/* presets · four pads two by two (two tracks each) · Duck · Glue ·
+	   Clock, over two rows. */
 	.glitch-body {
 		flex: 1;
 		min-height: 0;
 		min-width: 0;
 		display: grid;
-		grid-template-columns: minmax(0, 1.6fr) repeat(6, minmax(0, 1fr));
+		grid-template-columns: minmax(0, 1.6fr) repeat(7, minmax(0, 1fr));
 		grid-template-rows: repeat(2, minmax(0, 1fr));
 		gap: var(--central-gap);
 	}
