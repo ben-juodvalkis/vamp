@@ -103,7 +103,8 @@
         actionWidthPx?: number;
         /**
          * The whole cell is the button (the mini grid, 2026-10-24): no
-         * strip, and the action glyph drawn centred over the cell instead.
+         * strip, and on an empty slot the action glyph (● or –) drawn
+         * centred over the cell instead; a clip shows no glyph.
          */
         glyphCentered?: boolean;
         /** This slot's scene row is the selected one. */
@@ -172,7 +173,11 @@
                 ? `End take and loop ${label}`
                 : `Play ${label}`
     );
-    let showAction = $derived(!inert && (actionWidthPx > 0 || glyphCentered));
+    // Centred (the mini grid), only an empty slot wears a mark (2026-10-24,
+    // the user's call): a clip shows itself, and a tap on it is a launch.
+    let showAction = $derived(
+        !inert && (actionWidthPx > 0 || (glyphCentered && slotState === 'empty'))
+    );
 
     // ---- Preview (ADR-415) ------------------------------------------
     //
