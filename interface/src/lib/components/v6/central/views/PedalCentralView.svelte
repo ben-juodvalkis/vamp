@@ -253,7 +253,7 @@
     [
       ...(withGuitar
         ? [
-            XY, SLIDER, SEAM, // pedal tone pad and drive slider over its type switch
+            SLIDER, XY, SEAM, // pedal: drive, then the tone pad over its type switch
             ...(showLeftColumn ? [SLIDER] : []), // gain over wah, heading the guitar group
             XY // spring/room over tremolo
           ]
@@ -275,13 +275,32 @@
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
 <div class="pedal-central-layout relative" style="grid-template-columns: {gridColumns};">
   {#if withGuitar}
-  <!-- COLUMN 1: the Pedal — its tone stack on the EQ tile's pad beside
-       one Drive/Mix slider, over its type switch laid out across. -->
+  <!-- COLUMN 1: the Pedal — one Drive/Mix slider at the left, full
+       height, then its tone stack on the EQ tile's pad over its type
+       switch. -->
   <div class="column pedal-column">
     <span
       class="group-eyebrow"
       style="color: {pedalInk.primary};{fx.isGhost ? ' opacity: var(--opacity-ghost);' : ''}"
     >Pedal</span>
+    <div class="pedal-drive" class:slot-ghost={fx.isGhost}>
+      <DeviceSlider
+        value={pedalDrive}
+        title="Drive"
+        icon="drive"
+        orientation="vertical"
+        labelOrientation="vertical"
+        isGhost={fx.isGhost}
+        color={pedalInk}
+        min={0}
+        max={1}
+        onTap={() => fx.loadIfGhost()}
+        onInteraction={(v) => {
+          fx.sendParam(PEDAL.drive, v);
+          fx.sendParam(PEDAL.dryWet, v);
+        }}
+      />
+    </div>
     <div class="pedal-tone" class:slot-ghost={fx.isGhost}>
       <ToneCurvePad
         title="Tone"
@@ -301,24 +320,6 @@
           const step = Math.round(x * MID_FREQ_STEPS);
           if (step !== fx.paramValue(PEDAL.midFreq)) fx.sendParam(PEDAL.midFreq, step);
           sendTone(PEDAL.mid, y);
-        }}
-      />
-    </div>
-    <div class="pedal-drive" class:slot-ghost={fx.isGhost}>
-      <DeviceSlider
-        value={pedalDrive}
-        title="Drive"
-        icon="drive"
-        orientation="vertical"
-        labelOrientation="vertical"
-        isGhost={fx.isGhost}
-        color={pedalInk}
-        min={0}
-        max={1}
-        onTap={() => fx.loadIfGhost()}
-        onInteraction={(v) => {
-          fx.sendParam(PEDAL.drive, v);
-          fx.sendParam(PEDAL.dryWet, v);
         }}
       />
     </div>
@@ -520,8 +521,9 @@
     grid-column: span 2;
   }
 
-  /* The Pedal: the tone pad on two slider tracks and Drive on one, on the
-     view's own tracks (subgrid), the type switch across all three. */
+  /* The Pedal on the view's own tracks (subgrid): Drive on one, at the left
+     and full height, then the tone pad on two with the type switch under it
+     (2026-10-23, the user's layout). */
   .pedal-column {
     grid-column: span 3;
     display: grid;
@@ -532,19 +534,23 @@
     min-height: 0;
   }
 
-  .pedal-tone {
-    grid-column: span 2;
+  .pedal-drive {
+    grid-column: 1;
+    grid-row: 2 / span 2;
     min-width: 0;
     min-height: 0;
   }
 
-  .pedal-drive {
+  .pedal-tone {
+    grid-column: 2 / span 2;
+    grid-row: 2;
     min-width: 0;
     min-height: 0;
   }
 
   .pedal-column .pedal-type-buttons {
-    grid-column: 1 / -1;
+    grid-column: 2 / span 2;
+    grid-row: 3;
   }
 
   /* The Guitar group on the view's own tracks (subgrid), like the Pedal:
