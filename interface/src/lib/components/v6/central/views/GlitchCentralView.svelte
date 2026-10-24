@@ -1,23 +1,15 @@
 <script lang="ts">
 	/**
 	 * GlitchCentralView — the Glitch tile's view (2026-10-15, the user's
-	 * design). Two devices, a seam between them:
-	 *
-	 *   GlitchLoop  its Play page, mirrored: the preset bank, the loop
-	 *               macros and Drive × Space on four XY pads, two by two
-	 *               (Length × Reach, Tone × Repeats over Drive × Space,
-	 *               Drift × Chaos), and Duck and Glue on full-height
-	 *               sliders. Clock and Mix are the Glitch
-	 *               tile's axes, so the view leaves them out, and there is
-	 *               no Freeze or Mod Hold (the user's calls). Pairs
-	 *               agreed with the glitchloop side: what one hand moves
-	 *               together; Duck and Glue stay apart. A bipolar macro's
-	 *               noon is the pad's middle, "as the preset set it".
-	 *   Variation   (Beat Repeat) the Var slider (Chance, param 1) and its
-	 *               controls: Interval (2), Grid (4) with the Random amount
-	 *               (6) on its spare row, Length (8), and
-	 *               Mode, the routing switch (12) over Triplets (5). Pitch
-	 *               Decay (10) is not drawn (the user's call, 2026-10-15).
+	 * design). GlitchLoop's Play page, mirrored: the preset bank, the loop
+	 * macros and Drive × Space on four XY pads, two by two (Length × Reach,
+	 * Tone × Repeats over Drive × Space, Drift × Chaos), and Duck, Glue and
+	 * Clock on full-height sliders. Mix is the Glitch tile's slider, so the
+	 * view leaves it out, and there is no Freeze or Mod Hold (the user's
+	 * calls). Pairs agreed with the glitchloop side: what one hand moves
+	 * together; Duck and Glue stay apart. A bipolar macro's noon is the
+	 * pad's middle, "as the preset set it". Past a seam, Pitch Hack (titled
+	 * Reverse: its Rate column and Mix), out of the Pitch view on 2026-10-24.
 	 *
 	 * GlitchLoop's parameters resolve by name (`glitchLoopParams.ts`). Its
 	 * presets are not parameters (the device keeps them out of Live's undo
@@ -26,13 +18,9 @@
 	 * values by name in one undo step (`sendParamsByName`). The lit preset
 	 * is the one the device's values match.
 	 *
-	 * Since 2026-10-24 (the user's call) the two are separate views, each
-	 * opened by its own grid slider: `part` 'glitch' (GlitchLoop, the Glitch
-	 * slider's, now with Clock, the old XY's other axis, on a slider of its
-	 * eleven detents) and 'variation' (`VariationCentralView`, the Var
-	 * slider's). The Glitch slider is Mix, so the view still leaves Mix out.
-	 * The glitch part also holds Pitch Hack (titled Reverse: its Rate column
-	 * and Mix), out of the Pitch view the same day.
+	 * The Variation (Beat Repeat) was this view's other half until
+	 * 2026-10-24, then a `part` of it; it is `VariationCentralView` now, its
+	 * own file (the user's call, the same day).
 	 *
 	 * Self-contained: queries its own slots and renders through
 	 * ghost/loading/active without a `{#if device}` gate.
@@ -59,24 +47,13 @@
 		type GlitchLoopPresets
 	} from '$lib/components/v6/device-panel/glitchLoopParams';
 
-	interface Props {
-		part?: 'glitch' | 'variation';
-	}
-	let { part = 'glitch' }: Props = $props();
-
 	const glitchLoop = useFxGridSlot('glitchLoop');
-	const variation = useFxGridSlot('variation');
 
 	// GRATICULE §5.5: calibrate each device's ink at injection (hue preserved).
 	let glitchInk = $derived({
 		primary: trackInk(glitchLoop.color.primary, paintModeReactive()),
 		secondary: glitchLoop.color.secondary,
 		accent: trackInk(glitchLoop.color.accent, paintModeReactive())
-	});
-	let varInk = $derived({
-		primary: trackInk(variation.color.primary, paintModeReactive()),
-		secondary: variation.color.secondary,
-		accent: trackInk(variation.color.accent, paintModeReactive())
 	});
 
 	// ── GlitchLoop ─────────────────────────────────────────────────────────
@@ -150,59 +127,17 @@
 		}
 		sendParamsByName(path, presets.presets[name]);
 	}
-
-	// ── Variation (Beat Repeat) ────────────────────────────────────────────
-	const CHANCE_INDEX = 1;       // float 0-1, the grid tile's slider
-	const INTERVAL_INDEX = 2;     // int 0-7
-	const GRID_INDEX = 4;         // int 0-15
-	const TRIPLETS_INDEX = 5;     // bool 0/1
-	const AMOUNT_INDEX = 6;       // int 0-10
-	const GATE_INDEX = 8;         // int 0-18
-	const ROUTING_INDEX = 12;     // bool 0/1 — 0 = Mix, 1 = Insert
-
-	const AMOUNT_MAX = 10;
-
-	const INTERVAL_OPTIONS = [
-		{ value: 5, label: '1 Bar' },
-		{ value: 4, label: '1/2' },
-		{ value: 3, label: '1/4' },
-		{ value: 2, label: '1/8' }
-	];
-
-	const GRID_OPTIONS = [
-		{ value: 11, label: '1/4' },
-		{ value: 9, label: '1/8' },
-		{ value: 7, label: '1/16' }
-	];
-
-	const GATE_OPTIONS = [
-		{ value: 15, label: '1 Bar' },
-		{ value: 7, label: '1/2' },
-		{ value: 3, label: '1/4' },
-		{ value: 1, label: '1/8' }
-	];
-
-	let chance = $derived(variation.paramValue(CHANCE_INDEX) ?? 0);
-	let interval = $derived(variation.paramValue(INTERVAL_INDEX) ?? 0);
-	let grid = $derived(variation.paramValue(GRID_INDEX) ?? 0);
-	let triplets = $derived(Math.round(variation.paramValue(TRIPLETS_INDEX) ?? 0) === 0);
-	let amount = $derived(variation.paramValue(AMOUNT_INDEX) ?? 0);
-	let gate = $derived(variation.paramValue(GATE_INDEX) ?? 0);
-	// The switch NAMES its state: 0 is Mix, 1 is Insert. Reads Insert (1)
-	// until the device's own value arrives.
-	let insertMode = $derived(Math.round(variation.paramValue(ROUTING_INDEX) ?? 1) === 1);
 </script>
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
-<div class="glitch-central-layout relative" class:with-reverse={part === 'glitch'} data-density="compact">
-	{#if part === 'glitch'}
+<div class="glitch-central-layout relative" data-density="compact">
 	<!-- ===== GlitchLoop ===== -->
 	<section class="group" style="--panel-ink: {glitchInk.primary}; --btn-tint: {glitchInk.primary};">
 		<div class="group-title text-xs font-bold tracking-wider">GlitchLoop</div>
 		<div class="glitch-body">
 			<!-- The preset bank, top to bottom in the device's order: one
 			     segmented tab, like the Reverse rate column beside it. -->
-			<div class="device-segmented presets" class:is-ghost-tab={glitchLoop.isGhost} role="group" aria-label="GlitchLoop presets">
+			<div class="device-segmented seg-grid presets" class:is-ghost-tab={glitchLoop.isGhost} role="group" aria-label="GlitchLoop presets">
 				{#if presets}
 					{#each presets.bank as name, i}
 						<button
@@ -277,119 +212,17 @@
 	     Pitch view (2026-10-24, the user's call). The group brings its own
 	     seam; its root is `display: contents`, so its column is this grid's. -->
 	<PitchGroup show="reverse" />
-	{:else}
-	<!-- ===== Variation (Beat Repeat) ===== -->
-	<section class="group" style="--panel-ink: {varInk.primary};">
-		<div class="group-title text-xs font-bold tracking-wider">Variation</div>
-		<div class="var-body" class:slot-ghost={variation.isGhost}>
-			<!-- Var: the grid tile's slider, Chance. The first drag loads the device. -->
-			<div class="device-wrapper">
-				<DeviceSlider
-					value={chance}
-					title="Stutter"
-					orientation="vertical"
-					labelOrientation="horizontal"
-					isGhost={variation.isGhost}
-					color={varInk}
-					min={0}
-					max={1}
-					onTap={() => variation.loadIfGhost()}
-					onInteraction={(value) => variation.sendParam(CHANCE_INDEX, value)}
-				/>
-			</div>
-
-			<div class="var-col">
-				<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Interval</div>
-				<div class="var-stack device-segmented seg-grid" style="--btn-tint: {varInk.primary};">
-					{#each INTERVAL_OPTIONS as option}
-						<button
-							class="device-segment var-btn"
-							class:active={Math.round(interval) === option.value}
-							onclick={() => variation.sendParam(INTERVAL_INDEX, option.value)}
-						>{option.label}</button>
-					{/each}
-				</div>
-			</div>
-
-			<div class="var-col">
-				<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Grid</div>
-				<div class="var-stack">
-					<!-- The grids are one tab; the Rnd slider under it is not one
-					     of them. Each option keeps one share of the column. -->
-					<div class="var-tab device-segmented seg-grid" style="flex: {GRID_OPTIONS.length} 1 0; --btn-tint: {varInk.primary};">
-					{#each GRID_OPTIONS as option}
-						<button
-							class="device-segment var-btn"
-							class:active={Math.round(grid) === option.value}
-							onclick={() => variation.sendParam(GRID_INDEX, option.value)}
-						>{option.label}</button>
-					{/each}
-					</div>
-					<div class="flex-1 min-h-0">
-						<DeviceSlider
-							value={amount / AMOUNT_MAX}
-							title="Rnd"
-							orientation="horizontal"
-							labelOrientation="horizontal"
-							labelSize="small"
-							isGhost={variation.isGhost}
-							color={varInk}
-							onInteraction={(value) => variation.sendParam(AMOUNT_INDEX, Math.round(value * AMOUNT_MAX))}
-						/>
-					</div>
-				</div>
-			</div>
-
-			<div class="var-col">
-				<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Length</div>
-				<div class="var-stack device-segmented seg-grid" style="--btn-tint: {varInk.primary};">
-					{#each GATE_OPTIONS as option}
-						<button
-							class="device-segment var-btn"
-							class:active={Math.round(gate) === option.value}
-							onclick={() => variation.sendParam(GATE_INDEX, option.value)}
-						>{option.label}</button>
-					{/each}
-				</div>
-			</div>
-
-			<div class="var-col">
-				<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Mode</div>
-				<div class="var-stack">
-					<button
-						class="physical-button var-btn"
-						class:active={insertMode}
-						aria-pressed={insertMode}
-						style="--btn-tint: {varInk.primary};"
-						onclick={() => variation.sendParam(ROUTING_INDEX, insertMode ? 0 : 1)}
-					>{insertMode ? 'Insert' : 'Mix'}</button>
-					<button
-						class="physical-button var-btn"
-						class:active={triplets}
-						style="--btn-tint: {varInk.primary};"
-						onclick={() => variation.sendParam(TRIPLETS_INDEX, triplets ? 1 : 0)}
-					>Trip</button>
-				</div>
-			</div>
-		</div>
-	</section>
-	{/if}
 </div>
 
 <style>
+	/* GlitchLoop's presets and seven columns, then Reverse's two. */
 	.glitch-central-layout {
 		display: grid;
-		/* One device a view since 2026-10-24: GlitchLoop (with Pitch Hack's
-		   Reverse beside it, past a seam) or the Variation. */
-		grid-template-columns: minmax(0, 1fr);
+		grid-template-columns: minmax(0, 8.6fr) auto minmax(0, 2fr);
 		height: 100%;
 		width: 100%;
 		padding: var(--central-inset);
 		gap: var(--central-gap);
-	}
-	/* GlitchLoop's presets and seven columns, then Reverse's two. */
-	.glitch-central-layout.with-reverse {
-		grid-template-columns: minmax(0, 8.6fr) auto minmax(0, 2fr);
 	}
 
 	.group {
@@ -430,21 +263,7 @@
 		grid-template-rows: repeat(3, minmax(0, 1fr));
 		grid-auto-flow: column;
 		grid-auto-columns: minmax(0, 1fr);
-		gap: 0;
 		min-height: 0;
-	}
-	/* The shared divider is a top border on every segment after the first,
-	   which in two columns puts one under the frame at the head of the
-	   second. Draw them by position instead: a top rule inside a column,
-	   a left rule down the second. */
-	.presets .preset-btn {
-		border: 0;
-	}
-	.presets .preset-btn:not(:nth-child(3n + 1)) {
-		border-top: 1px solid var(--line-faint);
-	}
-	.presets .preset-btn:nth-child(n + 4) {
-		border-left: 1px solid var(--line-faint);
 	}
 
 	.preset-btn {
@@ -472,57 +291,6 @@
 		opacity: var(--opacity-ghost);
 	}
 
-	.var-body {
-		flex: 1;
-		min-height: 0;
-		min-width: 0;
-		display: grid;
-		grid-template-columns: repeat(5, minmax(0, 1fr));
-		gap: var(--central-gap);
-	}
-
-	.device-wrapper,
-	.var-col {
-		display: flex;
-		flex-direction: column;
-		min-height: 0;
-		min-width: 0;
-	}
-
-	.var-stack {
-		flex: 1;
-		min-height: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-
-	/* Interval, Grid and Length are pick-one tabs (2026-10-24): hairlines
-	   between their options, not the stack's gap. */
-	.var-stack.seg-grid {
-		gap: 1px;
-	}
-	.var-tab {
-		display: flex;
-		flex-direction: column;
-		min-height: 0;
-	}
-
-	.var-btn {
-		flex: 1;
-		min-height: 0;
-		padding: 0 0.25rem;
-		font-size: 1rem;
-		font-weight: 700;
-	}
-
-	/* GRATICULE: column headers and button labels are authored mixed-case
-	   and up-cased here for the HUD voice. */
-	.var-head,
-	.var-btn {
-		text-transform: uppercase;
-	}
-
 	/* ---- Live skin (flat grammar) ------------------------------------ */
 	/* Live sets control text medium, keeps authored case, and does not
 	   letterspace its section legends; headers are plain secondary text. */
@@ -530,17 +298,7 @@
 		font-weight: var(--font-weight-medium);
 		letter-spacing: 0;
 	}
-	:global([data-grammar="flat"]) .var-head,
-	:global([data-grammar="flat"]) .var-btn {
-		text-transform: none;
-	}
-	:global([data-grammar="flat"]) .var-head {
-		font-weight: var(--font-weight-medium);
-		opacity: 1;
-		color: var(--muted-foreground);
-	}
-	:global([data-grammar="flat"]) .preset-btn,
-	:global([data-grammar="flat"]) .var-body .physical-button {
+	:global([data-grammar="flat"]) .preset-btn {
 		font-weight: var(--font-weight-medium);
 	}
 	/* The presets wear GlitchLoop's ink as its pads' titles do (user,
@@ -553,26 +311,7 @@
 	:global(.light[data-skin="hybrid"]) .preset-btn {
 		color: color-mix(in oklab, var(--btn-tint) 55%, var(--foreground));
 	}
-	:global([data-grammar="flat"]) .presets .preset-btn:not(:nth-child(3n + 1)) {
-		border-top-color: var(--line-strong);
-	}
-	:global([data-grammar="flat"]) .presets .preset-btn:nth-child(n + 4) {
-		border-left-color: var(--line-strong);
-	}
 	:global([data-grammar="flat"]) .preset-btn.active {
-		background: var(--btn-tint);
-		border-color: var(--btn-tint);
-		color: var(--flat-on-fg);
-	}
-	/* Variation's tabs wear the Var slider's ink the same way (user,
-	   2026-10-15). */
-	:global([data-skin="hybrid"]) .var-btn {
-		color: var(--btn-tint);
-	}
-	:global(.light[data-skin="hybrid"]) .var-btn {
-		color: color-mix(in oklab, var(--btn-tint) 55%, var(--foreground));
-	}
-	:global([data-grammar="flat"]) .var-btn.active {
 		background: var(--btn-tint);
 		border-color: var(--btn-tint);
 		color: var(--flat-on-fg);

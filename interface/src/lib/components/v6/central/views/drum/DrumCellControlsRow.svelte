@@ -118,7 +118,7 @@
          ADR-427 exists for. A choice writes through the scope rule, so
          with a pad held it is that pad's type. -->
     <VmSlot state={fxTypeState} class="vm-slot-fx-type min-w-0" fn="fxType" badge={badges.fxType}>
-      <div class="device-segmented fx-type-grid" style="--btn-tint: {color.primary};" role="group" aria-label="FX type">
+      <div class="device-segmented seg-grid fx-type-grid" style="--btn-tint: {color.primary};" role="group" aria-label="FX type">
         {#each fxTypes as fxTypeName, index}
           <button
             type="button"
@@ -254,21 +254,8 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-template-rows: repeat(3, minmax(0, 1fr));
-    gap: 0;
     height: 100%;
     min-height: 0;
-  }
-  /* The shared divider is a top border on every segment after the first,
-     which in a grid lands mid-row. Draw them by position: a top rule from
-     the second row, a left rule from the second column. */
-  .fx-type-option {
-    border: 0;
-  }
-  .fx-type-option:nth-child(n + 4) {
-    border-top: 1px solid var(--line-faint);
-  }
-  .fx-type-option:not(:nth-child(3n + 1)) {
-    border-left: 1px solid var(--line-faint);
   }
   .fx-type-option {
     display: flex;
@@ -287,12 +274,6 @@
   :global([data-grammar="flat"]) .fx-type-option {
     font-weight: var(--font-weight-medium);
     color: var(--btn-tint, var(--foreground));
-  }
-  :global([data-grammar="flat"]) .fx-type-option:nth-child(n + 4) {
-    border-top-color: var(--line-strong);
-  }
-  :global([data-grammar="flat"]) .fx-type-option:not(:nth-child(3n + 1)) {
-    border-left-color: var(--line-strong);
   }
   :global([data-grammar="flat"]) .fx-type-option.active {
     background: var(--btn-tint, var(--phosphor));
