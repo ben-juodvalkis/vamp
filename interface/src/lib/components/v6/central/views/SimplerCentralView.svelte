@@ -700,7 +700,7 @@
      quieting to Live's regular-case, medium-weight control text. */
   :global([data-grammar="flat"]) .mode-toggle-glass {
     border-radius: var(--radius-sm);
-    border-color: var(--line-strong);
+    border-color: var(--button-frame, var(--line-strong));
     background: var(--surface-well);
     color: var(--foreground);
   }

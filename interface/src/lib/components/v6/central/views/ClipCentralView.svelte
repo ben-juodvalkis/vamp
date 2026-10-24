@@ -974,7 +974,7 @@ import { logger } from '$lib/utils/logger';
 	   ink. Disabled dims the frame with the glyph; ON keeps its solid fill. */
 	:global([data-grammar="flat"]) .editor-toggle {
 		border-radius: 2px;
-		border-color: color-mix(in oklab, currentColor 70%, transparent);
+		border-color: var(--button-frame);
 		background: var(--surface-well);
 		color: var(--foreground);
 	}
@@ -996,7 +996,7 @@ import { logger } from '$lib/utils/logger';
 	:global([data-grammar="flat"]) .stacked-switches .btn-switch { font-size: 1rem; }
 	:global([data-grammar="flat"]) .btn-well {
 		background: var(--surface-well);
-		border: 1px solid color-mix(in oklab, currentColor 70%, transparent);
+		border: 1px solid var(--button-frame);
 		color: var(--foreground);
 		box-shadow: none;
 	}
@@ -1034,12 +1034,12 @@ import { logger } from '$lib/utils/logger';
 		border-color: var(--line-strong);
 	}
 	:global([data-grammar="flat"]) .clip-switch {
-		border: 1px solid color-mix(in oklab, currentColor 70%, transparent);
+		border: 1px solid var(--button-frame);
 		background: var(--surface-well);
 		color: var(--foreground);
 	}
 	:global([data-grammar="flat"]) .clip-switch:hover:not(:disabled) {
-		border-color: color-mix(in oklab, currentColor 70%, transparent);
+		border-color: var(--button-frame);
 		background: var(--secondary);
 	}
 	:global([data-grammar="flat"]) .clip-switch.active {

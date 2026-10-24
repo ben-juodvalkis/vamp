@@ -243,7 +243,7 @@
 		min-height: 0;
 		padding: 0.625rem 0.75rem;
 		background: var(--surface-well);
-		border: 1px solid var(--line-strong);
+		border: 1px solid var(--button-frame, var(--line-strong));
 		border-radius: 2px;
 		color: var(--foreground);
 		font: inherit;

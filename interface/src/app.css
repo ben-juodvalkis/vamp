@@ -1181,10 +1181,18 @@ html, body {
   border: 1px solid var(--line-strong);
 }
 
+/* A button's frame: its own glyph colour, bright, all the way round. It is
+   what tells a button from a slider, which is framed in --line-strong.
+   Resolved where it is used, so currentColor is the button's. Disabled
+   dims it with the glyph; ON keeps its solid fill. */
+[data-grammar="flat"] {
+  --button-frame: color-mix(in oklab, currentColor 70%, transparent);
+}
+
 /* Toggles: OFF = control field, ON = ChosenDefault fill with dark text —
    Live's single most recognisable idiom. Device inks step aside for it. */
 [data-grammar="flat"] .physical-button {
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--button-frame);
   border-radius: var(--radius-sm);
   color: var(--foreground);
   background: var(--surface-well);
@@ -1205,7 +1213,7 @@ html, body {
   border-color: var(--line-strong);
 }
 [data-grammar="flat"] .device-segmented {
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--button-frame);
   border-radius: var(--radius-sm);
   background: var(--surface-well);
   box-shadow: none;
