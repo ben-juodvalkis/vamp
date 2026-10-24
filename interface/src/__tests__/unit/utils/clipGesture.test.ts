@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
 	hitTestRange,
 	snapToGrid,
+	dragSnapStart,
 	loopBraceGridBeats,
 	recordingBars,
 	recordingBeat,
@@ -212,5 +213,34 @@ describe('clipGesture — recordingBeat', () => {
 		expect(recordingBeat(-2, 4)).toBe(1);
 		expect(recordingBeat(NaN, 4)).toBe(1);
 		expect(recordingBeat(8, 0)).toBe(1);
+	});
+});
+
+describe('clipGesture — dragSnapStart (a dragged note lands on the grid)', () => {
+	const g = 0.25;
+	it('takes an off-grid note to the next line in the direction pulled, however small the pull', () => {
+		expect(dragSnapStart(1.1, 0.01, g)).toBeCloseTo(1.25);
+		expect(dragSnapStart(1.1, -0.01, g)).toBeCloseTo(1.0);
+		// 1.24 is nearest to 1.25 too, but left of it a pull leftward still
+		// goes to the line on its left.
+		expect(dragSnapStart(1.24, -0.01, g)).toBeCloseTo(1.0);
+	});
+	it('then follows the nearest line as the pull goes on', () => {
+		expect(dragSnapStart(1.1, 0.3, g)).toBeCloseTo(1.5);
+		expect(dragSnapStart(1.1, 0.6, g)).toBeCloseTo(1.75);
+		expect(dragSnapStart(1.1, -0.4, g)).toBeCloseTo(0.75);
+	});
+	it('moves an on-grid note line to line, by the nearest', () => {
+		expect(dragSnapStart(1.0, 0.1, g)).toBeCloseTo(1.0);
+		expect(dragSnapStart(1.0, 0.13, g)).toBeCloseTo(1.25);
+		expect(dragSnapStart(1.0, -0.13, g)).toBeCloseTo(0.75);
+	});
+	it('works on a triplet grid', () => {
+		const t = 1 / 3;
+		expect(dragSnapStart(0.5, 0.01, t)).toBeCloseTo(2 / 3);
+		expect(dragSnapStart(0.5, -0.01, t)).toBeCloseTo(1 / 3);
+	});
+	it('passes the pull through with no grid', () => {
+		expect(dragSnapStart(1.1, 0.07, 0)).toBeCloseTo(1.17);
 	});
 });

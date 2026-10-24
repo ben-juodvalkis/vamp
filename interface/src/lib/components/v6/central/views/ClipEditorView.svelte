@@ -52,7 +52,7 @@
 		type PitchWindow
 	} from '$lib/utils/clip/clipEditorGeometry';
 	import { contentLocal } from '$lib/utils/clip/clipPointerMath';
-	import { snapToGrid, type LoopRange } from '$lib/utils/clip/clipGesture';
+	import { dragSnapStart, snapToGrid, type LoopRange } from '$lib/utils/clip/clipGesture';
 	import { MOMENTARY_HOLD_MS } from '$lib/components/v6/tracks/TrackStrip/utils/momentaryPress';
 	import { logger } from '$lib/utils/logger';
 	import { useFocusedClip } from './clipEditor/useFocusedClip.svelte';
@@ -594,11 +594,14 @@
 			// Folded, the delta counts shown lanes and `shiftPitch` steps
 			// to a neighbouring shown pitch.
 			const deltaPitch = -clientDeltaToPitchDelta(event.clientY - noteDrag.startClientY, contentH, viewPitchWindow);
+			// A drag sideways quantizes the note (2026-10-24, the user's call):
+			// off the grid it goes to the line it is pulled toward first, then
+			// to the nearest line (`dragSnapStart`). A drag that has not gone
+			// sideways past the slop leaves its timing alone, so a move only up
+			// or down keeps an off-grid note where it was.
+			const sideways = Math.abs(dx) > NOTE_TAP_SLOP_PX;
 			focusedNotesStore.optimisticModify(noteDrag.noteId, {
-				// The MOVE snaps to whole grid steps, not the landing spot, so
-				// an off-grid note keeps its offset from the grid and a drag
-				// that is only up or down leaves its timing alone.
-				startBeats: Math.max(0, noteDrag.startBeats + snapToGrid(deltaBeats, grid)),
+				startBeats: sideways ? Math.max(0, dragSnapStart(noteDrag.startBeats, deltaBeats, grid)) : noteDrag.startBeats,
 				pitch: shiftPitch(noteDrag.startPitch, deltaPitch, viewPitchWindow)
 			});
 		}

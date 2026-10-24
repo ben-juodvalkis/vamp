@@ -41,6 +41,23 @@ export function snapToGrid(beats: number, gridBeats: number): number {
 }
 
 /**
+ * Where a note dragged in time lands: on the grid (2026-10-24, the user's
+ * call — a drag quantizes). Pulled from off the grid it goes first to the
+ * grid line on the side it is pulled toward, then to whichever line is
+ * nearest where the pull has taken it; a note already on the grid moves
+ * line to line. `deltaBeats` is the pull, signed.
+ */
+export function dragSnapStart(startBeats: number, deltaBeats: number, gridBeats: number): number {
+	if (gridBeats <= 0) return startBeats + deltaBeats;
+	const eps = 1e-6;
+	const nearest = snapToGrid(startBeats + deltaBeats, gridBeats);
+	const onGrid = Math.abs(snapToGrid(startBeats, gridBeats) - startBeats) < eps;
+	if (onGrid || deltaBeats === 0) return nearest;
+	if (deltaBeats > 0) return Math.max(Math.ceil(startBeats / gridBeats - eps) * gridBeats, nearest);
+	return Math.min(Math.floor(startBeats / gridBeats + eps) * gridBeats, nearest);
+}
+
+/**
  * The right sidebar loop brace's snap grid, in beats, from the length of
  * the clip it spans (the brace's whole height, 0 → end marker): a bar on
  * a clip over 4 bars, half a bar up to 4, a quarter of a bar up to 2.
