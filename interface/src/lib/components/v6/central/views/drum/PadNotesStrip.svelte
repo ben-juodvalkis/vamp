@@ -1,12 +1,18 @@
 <script lang="ts">
 	/**
-	 * PadNotesStrip — the scoped pad's notes in the track's playing clip, a
-	 * strip of steps under the Drum Rack view's controls (2026-10-24, the
-	 * user's call). While a pad is held or latched, its notes across the
-	 * clip's window (the view's `useClipPads`: the playing MIDI clip and
-	 * `clipViewWindow`) are bars, each as tall as its velocity, in the pad's
-	 * colour; a drag up or down on one moves its velocity (relative, so a
-	 * touch never jumps it) and the release writes it to Live.
+	 * PadNotesStrip — the scoped pad's row of the track's playing clip,
+	 * under the Drum Rack view's controls (2026-10-24, the user's call).
+	 * While a pad is held or latched, its notes across the clip's window
+	 * (the view's `useClipPads`: the playing MIDI clip and `clipViewWindow`)
+	 * are full-height blocks, as long as the notes, inked by velocity as the
+	 * clip editor inks a pad's notes (`noteColor`), over the window's steps.
+	 *
+	 * On a note: a drag up or down moves its velocity (relative, so a touch
+	 * never jumps it), a drag sideways moves it step to step (the clip
+	 * editor's quantizing drag, `dragSnapStart`), whichever way the drag
+	 * sets off; a quick tap deletes it, as the clip editor's does, and a
+	 * press held past MOMENTARY_HOLD_MS that lets go in place does nothing.
+	 * A drag writes on release.
 	 *
 	 * The notes are the clip's id-carrying ones (`requestRichNotes`), read
 	 * and written by clip path, which the surface takes for any clip, not
@@ -16,11 +22,18 @@
 	 */
 
 	import { drag, type DragInfo } from '$lib/actions';
-	import { requestRichNotes, sendModifyNotes, type RichNote } from '$lib/services/clipRichNotesService';
+	import {
+		requestRichNotes,
+		sendModifyNotes,
+		sendRemoveNotes,
+		type RichNote
+	} from '$lib/services/clipRichNotesService';
 	import { subscribeNotesChanged } from '$lib/services/clipNotesService';
+	import { MOMENTARY_HOLD_MS } from '$lib/components/v6/tracks/TrackStrip/utils/momentaryPress';
 	import { logger } from '$lib/utils/logger';
 	import type { TimeRange } from '$lib/utils/waveformPaint';
-	import { dragVelocity, stripBarAt, stripBars, stripSteps, STRIP_VELOCITY_MAX } from './padNotesStrip';
+	import { noteColor } from '../clipEditor/noteStyle';
+	import { dragStart, dragVelocity, stripBlockAt, stripBlocks, stripStepBeats, stripSteps } from './padNotesStrip';
 
 	interface Props {
 		/** The track's playing MIDI clip; '' while nothing plays. */
@@ -38,9 +51,6 @@
 	const win = $derived(clipPath && clipWindow && clipWindow.end > clipWindow.start ? clipWindow : null);
 
 	let notes = $state<RichNote[]>([]);
-	// The note under the finger and its velocity while it moves: drawn
-	// from here, and kept off a re-read until the release lands.
-	let dragging = $state<{ noteId: number; start: number; velocity: number } | null>(null);
 
 	$effect(() => {
 		const cp = clipPath;
@@ -66,15 +76,25 @@
 		};
 	});
 
+	// The press: the note under it, when it began, and — once the drag sets
+	// off — which way and what it has made of the note so far.
+	let press = $state<{
+		noteId: number;
+		at: number;
+		axis: 'velocity' | 'move' | null;
+		velocity: number;
+		startBeats: number;
+	} | null>(null);
+
 	const padNotes = $derived(notes.filter((n) => n.pitch === note));
-	const bars = $derived(
+	const blocks = $derived(
 		win
-			? stripBars(
-					padNotes.map((n) => ({
-						noteId: n.noteId,
-						startBeats: n.startBeats,
-						velocity: dragging?.noteId === n.noteId ? dragging.velocity : n.velocity
-					})),
+			? stripBlocks(
+					padNotes.map((n) =>
+						press?.noteId === n.noteId
+							? { ...n, velocity: press.velocity, startBeats: press.startBeats }
+							: n
+					),
 					win
 				)
 			: []
@@ -84,39 +104,65 @@
 	let box: HTMLElement | null = $state(null);
 
 	function onDown(info: DragInfo) {
+		press = null;
 		const rect = box?.getBoundingClientRect();
-		if (!rect || rect.width <= 0) return;
-		const i = stripBarAt(bars, (info.downX - rect.left) / rect.width);
+		if (!rect || rect.width <= 0 || !win) return;
+		const i = stripBlockAt(blocks, (info.downX - rect.left) / rect.width, win);
 		if (i === null) return;
-		const n = padNotes.find((p) => p.noteId === bars[i].noteId);
-		if (n) dragging = { noteId: n.noteId, start: n.velocity, velocity: n.velocity };
+		const n = padNotes.find((p) => p.noteId === blocks[i].noteId);
+		if (n) press = { noteId: n.noteId, at: performance.now(), axis: null, velocity: n.velocity, startBeats: n.startBeats };
+	}
+
+	function onStart(info: DragInfo) {
+		if (!press) return;
+		press = { ...press, axis: Math.abs(info.dx) > Math.abs(info.dy) ? 'move' : 'velocity' };
+		onMove(info);
 	}
 
 	function onMove(info: DragInfo) {
-		if (!dragging) return;
-		dragging = { ...dragging, velocity: dragVelocity(dragging.start, info.dy, info.height) };
+		if (!press || !win) return;
+		const n = padNotes.find((p) => p.noteId === press?.noteId);
+		if (!n) return;
+		if (press.axis === 'velocity') press = { ...press, velocity: dragVelocity(n.velocity, info.dy, info.height) };
+		else if (press.axis === 'move') press = { ...press, startBeats: dragStart(n.startBeats, info.dx, info.width, win) };
 	}
 
 	function onEnd() {
-		const d = dragging;
-		dragging = null;
-		if (!d || !clipPath || d.velocity === d.start) return;
-		const n = notes.find((p) => p.noteId === d.noteId);
-		if (!n) return;
-		// Keep the new value on screen until the re-read brings it back.
-		notes = notes.map((p) => (p.noteId === d.noteId ? { ...p, velocity: d.velocity } : p));
-		sendModifyNotes(clipPath, [{ ...n, velocity: d.velocity }]);
+		const p = press;
+		press = null;
+		if (!p || !clipPath) return;
+		const n = notes.find((q) => q.noteId === p.noteId);
+		if (!n || (p.velocity === n.velocity && p.startBeats === n.startBeats)) return;
+		const moved = { ...n, velocity: p.velocity, startBeats: p.startBeats };
+		// Keep the edit on screen until the re-read brings it back.
+		notes = notes.map((q) => (q.noteId === p.noteId ? moved : q));
+		sendModifyNotes(clipPath, [moved]);
 	}
+
+	function onTap() {
+		const p = press;
+		press = null;
+		if (!p || !clipPath || performance.now() - p.at >= MOMENTARY_HOLD_MS) return;
+		notes = notes.filter((q) => q.noteId !== p.noteId);
+		sendRemoveNotes(clipPath, [p.noteId]);
+	}
+
+	// What the drag is doing, for the corner readout.
+	const readout = $derived.by(() => {
+		if (!press?.axis || !win) return null;
+		if (press.axis === 'velocity') return `Velocity ${press.velocity}`;
+		const step = stripStepBeats(win.end - win.start);
+		return `Step ${Math.round((press.startBeats - win.start) / step) + 1}`;
+	});
 </script>
 
 <div
 	class="pad-notes-strip"
-	style="--strip-ink: {ink};"
 	bind:this={box}
-	use:drag={{ commit: 'y', onDown, onStart: onMove, onMove, onEnd, onTap: () => (dragging = null) }}
+	use:drag={{ commit: 'either', onDown, onStart, onMove, onEnd, onTap }}
 	data-pad-notes={note}
 	role="group"
-	aria-label="The pad's notes in the playing clip; drag a step up or down for its velocity"
+	aria-label="The pad's notes in the playing clip: drag a note up or down for its velocity, sideways to move it, tap to delete it"
 >
 	{#if !win}
 		<span class="strip-msg">No clip playing</span>
@@ -124,18 +170,18 @@
 		{#each steps as s}
 			<div class="strip-step" class:beat={s.beat} style="left: {s.at * 100}%;"></div>
 		{/each}
-		{#each bars as bar (bar.noteId)}
+		{#each blocks as block (block.noteId)}
 			<div
-				class="strip-bar"
-				class:active={dragging?.noteId === bar.noteId}
-				style="left: {bar.left * 100}%; width: {bar.width * 100}%; height: {(bar.velocity / STRIP_VELOCITY_MAX) * 100}%;"
+				class="strip-note"
+				class:active={press?.axis && press.noteId === block.noteId}
+				style="left: {block.left * 100}%; width: {block.width * 100}%; background: {noteColor(ink, block.velocity, true)};"
 			></div>
 		{/each}
-		{#if bars.length === 0}
+		{#if blocks.length === 0}
 			<span class="strip-msg">No notes on this pad</span>
 		{/if}
-		{#if dragging}
-			<span class="strip-readout">Velocity {dragging.velocity}</span>
+		{#if readout}
+			<span class="strip-readout">{readout}</span>
 		{/if}
 	{/if}
 </div>
@@ -150,7 +196,6 @@
 		border: 1px solid var(--line-strong);
 		border-radius: var(--radius-sm);
 		background: var(--surface-well);
-		cursor: ns-resize;
 	}
 	.strip-step {
 		position: absolute;
@@ -163,16 +208,19 @@
 	.strip-step.beat {
 		background: var(--line-strong);
 	}
-	/* A step, as tall as its velocity, in the pad's colour. */
-	.strip-bar {
+	/* A note, the strip's full height, as long as it is: the row of the
+	   clip editor, the pad's alone. A short note keeps a fingertip's sliver. */
+	.strip-note {
 		position: absolute;
+		top: 0;
 		bottom: 0;
+		min-width: 4px;
 		box-sizing: border-box;
 		border: 1px solid var(--surface-well);
-		background: var(--strip-ink);
+		border-radius: 2px;
 		pointer-events: none;
 	}
-	.strip-bar.active {
+	.strip-note.active {
 		outline: 2px solid var(--foreground);
 		outline-offset: -2px;
 	}

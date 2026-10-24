@@ -1,10 +1,12 @@
 /**
- * The scoped pad's notes strip (`PadNotesStrip.svelte`): where its steps
- * and its notes fall across the clip's loop, and what a drag does to a
- * velocity. Pure, so it is tested without a browser.
+ * The scoped pad's notes strip (`PadNotesStrip.svelte`): one row of the
+ * clip, the pad's — where its steps and its notes fall across the clip's
+ * window, and what a drag does to a note's velocity or position. Pure, so
+ * it is tested without a browser.
  */
 
 import type { TimeRange } from '$lib/utils/waveformPaint';
+import { dragSnapStart } from '$lib/utils/clip/clipGesture';
 
 export const STRIP_VELOCITY_MAX = 127;
 
@@ -18,33 +20,30 @@ export function stripStepBeats(spanBeats: number): number {
 export interface StripNote {
 	noteId: number;
 	startBeats: number;
+	durationBeats: number;
 	velocity: number;
 }
 
-export interface StripBar {
+export interface StripBlock {
 	noteId: number;
 	/** Left edge as a fraction of the strip's width, 0..1. */
 	left: number;
-	/** Width as a fraction of the strip's width: one step. */
+	/** Width as a fraction of the strip's width: the note's length. */
 	width: number;
 	velocity: number;
 }
 
-/**
- * One bar per note that starts inside the window, a step wide, at the
- * note's own start (an off-step note is drawn where it is, not on a step).
- */
-export function stripBars(notes: readonly StripNote[], win: TimeRange): StripBar[] {
+/** One full-height block per note that starts inside the window, as long as the note (cut at the window's end). */
+export function stripBlocks(notes: readonly StripNote[], win: TimeRange): StripBlock[] {
 	const span = win.end - win.start;
 	if (span <= 0) return [];
-	const step = stripStepBeats(span);
-	const out: StripBar[] = [];
+	const out: StripBlock[] = [];
 	for (const n of notes) {
 		if (n.startBeats < win.start || n.startBeats >= win.end) continue;
 		out.push({
 			noteId: n.noteId,
 			left: (n.startBeats - win.start) / span,
-			width: Math.min(step, win.end - n.startBeats) / span,
+			width: Math.min(n.durationBeats, win.end - n.startBeats) / span,
 			velocity: n.velocity
 		});
 	}
@@ -65,15 +64,21 @@ export function stripSteps(win: TimeRange): { at: number; beat: boolean }[] {
 	return out;
 }
 
-/** The bar a touch at `fraction` of the width takes: the nearest within half a step, else none. */
-export function stripBarAt(bars: readonly StripBar[], fraction: number): number | null {
+/**
+ * The block a touch at `fraction` of the width takes: one it lands on, or
+ * the nearest within a step of it (a 16th is a thin target under a
+ * finger); else none.
+ */
+export function stripBlockAt(blocks: readonly StripBlock[], fraction: number, win: TimeRange): number | null {
+	const span = win.end - win.start;
+	if (span <= 0) return null;
+	const reach = stripStepBeats(span) / span;
 	let best: number | null = null;
 	let bestDist = Infinity;
-	for (let i = 0; i < bars.length; i++) {
-		const b = bars[i];
-		const centre = b.left + b.width / 2;
-		const dist = Math.abs(fraction - centre);
-		if (dist <= b.width && dist < bestDist) {
+	for (let i = 0; i < blocks.length; i++) {
+		const b = blocks[i];
+		const dist = fraction < b.left ? b.left - fraction : fraction > b.left + b.width ? fraction - (b.left + b.width) : 0;
+		if (dist <= reach && dist < bestDist) {
 			best = i;
 			bestDist = dist;
 		}
@@ -91,4 +96,18 @@ export function dragVelocity(start: number, dyPx: number, heightPx: number): num
 	if (heightPx <= 0) return start;
 	const v = Math.round(start + (dyPx / heightPx) * STRIP_VELOCITY_MAX);
 	return Math.min(STRIP_VELOCITY_MAX, Math.max(1, v));
+}
+
+/**
+ * Where a note dragged `dxPx` sideways on a strip `widthPx` wide lands:
+ * on the strip's steps, as the clip editor's drag does (`dragSnapStart`:
+ * an off-step note goes to the step it is pulled toward first), and never
+ * out of the window.
+ */
+export function dragStart(startBeats: number, dxPx: number, widthPx: number, win: TimeRange): number {
+	const span = win.end - win.start;
+	if (widthPx <= 0 || span <= 0) return startBeats;
+	const step = stripStepBeats(span);
+	const moved = dragSnapStart(startBeats - win.start, (dxPx / widthPx) * span, step) + win.start;
+	return Math.min(win.end - step, Math.max(win.start, moved));
 }
