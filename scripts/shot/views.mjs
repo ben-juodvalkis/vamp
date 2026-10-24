@@ -194,6 +194,12 @@ export const TOURS = {
 				steps: [selectTrack(0)]
 			},
 			{
+				name: 'clip-notes-drums-solo',
+				description: 'The same, the Ride row soloed by a tap on its name: lit in its own colour',
+				session: { '/looping/v3/clip/focused': ['tracks/0/slots/0/clip'] },
+				steps: [selectTrack(0), { click: '.pitch-gutter .key:has-text("Ride")' }]
+			},
+			{
 				name: 'clip-notes-unfolded',
 				description: 'Note editor, Fold off',
 				steps: [{ click: '.editor-toggle' }, { click: '.edit-chip:has-text("Fold")' }]

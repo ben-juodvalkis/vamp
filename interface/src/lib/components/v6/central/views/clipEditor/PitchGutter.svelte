@@ -203,9 +203,10 @@
 			class:soloed={soloSet.has(lane.pitch)}
 			class:scaling={velScale?.pitch === lane.pitch}
 			style="top: {lane.y}px; height: {lane.h}px;"
+			style:--pad-ink={padLabels.has(lane.pitch) && padColors.has(lane.pitch) ? padInk(padColors.get(lane.pitch)!) : undefined}
 			onpointerdown={(e) => handleKeyDown(e, lane.pitch)}
 		>
-			{#if padLabels.has(lane.pitch)}<span class="key-label pad-label" style:--pad-ink={padColors.has(lane.pitch) ? padInk(padColors.get(lane.pitch)!) : undefined}>{padLabels.get(lane.pitch)}</span>
+			{#if padLabels.has(lane.pitch)}<span class="key-label pad-label">{padLabels.get(lane.pitch)}</span>
 			{:else if folded || lane.pitch % 12 === 0}<span class="key-label">{pitchName(lane.pitch)}</span>{/if}
 		</div>
 	{/each}
@@ -246,18 +247,32 @@
 		background: color-mix(in oklab, var(--phosphor) 30%, var(--secondary));
 		box-shadow: inset 3px 0 0 var(--phosphor);
 	}
+	/* A pad's row lights in its own chain colour, the name kept in it
+	   (2026-10-24, the user's call: the house orange took the colour away). */
+	.key.soloed:has(.pad-label) {
+		/* A lighter wash than the orange's, so the name in the same ink reads
+		   on it; the edge bar carries the lit state. */
+		background: color-mix(in oklab, var(--pad-ink, var(--phosphor)) 18%, var(--secondary));
+		box-shadow: inset 3px 0 0 var(--pad-ink, var(--phosphor));
+	}
+	.key.soloed .key-label.pad-label {
+		color: var(--pad-ink, var(--foreground));
+	}
 	.key.soloed .key-label {
 		color: var(--foreground);
 	}
 	.key.scaling {
 		background: var(--phosphor);
 	}
+	.key.scaling:has(.pad-label) {
+		background: var(--pad-ink, var(--phosphor));
+	}
 	.key.scaling .key-label {
 		color: var(--flat-on-fg, var(--background));
 	}
 	@keyframes key-held {
 		to {
-			background: color-mix(in oklab, var(--phosphor) 45%, var(--secondary));
+			background: color-mix(in oklab, var(--pad-ink, var(--phosphor)) 45%, var(--secondary));
 		}
 	}
 	.key-label {
@@ -266,8 +281,8 @@
 		line-height: 1;
 		color: var(--fg-tertiary);
 	}
-	/* A pad's name in its chain colour (`padInk`; a soloed or scaling row
-	   keeps its own label ink). */
+	/* A pad's name in its chain colour (`padInk`, set on the key so a
+	   soloed or scaling row can light in it too). */
 	.pad-label {
 		color: var(--pad-ink, var(--fg-tertiary));
 		min-width: 0;
