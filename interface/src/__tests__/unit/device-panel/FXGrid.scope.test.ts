@@ -305,6 +305,13 @@ describe("the Drum cell is the Drum's only on a drum track", () => {
 		expect(fx6(container).textContent).toContain('Chorus');
 	});
 
+	it('draws the Chorus on an audio track, even one filed under Drum', async () => {
+		replaceTree(3, [{ ...drums(), role: 'drum', hasMidiInput: false, hasAudioInput: true, devices: new SvelteMap() }]);
+		const { container } = render(FXGrid);
+		await tick();
+		expect(fx6(container).textContent).toContain('Chorus');
+	});
+
 	it('falls back to the instrument when the track records no category', async () => {
 		replaceTree(3, [{ ...drums(), role: '' }]);
 		const { container } = render(FXGrid);

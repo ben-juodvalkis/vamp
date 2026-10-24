@@ -20,12 +20,12 @@ import { replaceTree, _resetForTests, type TrackRecord } from '$lib/stores/v3/no
 import ChorusCentralView from '$lib/components/v6/central/views/ChorusCentralView.svelte';
 import AutoPanCentralView from '$lib/components/v6/central/views/AutoPanCentralView.svelte';
 
-function seed(role: string) {
+function seed(role: string, kind: Partial<TrackRecord> = {}) {
 	const t: TrackRecord = {
 		trackPath: 'tracks/0', name: 'T', color: 0xff8040, mute: false, solo: false, arm: false,
 		hasMidiInput: true, hasAudioInput: false, hasArrangementClips: false,
 		isFoldable: false, foldState: false, groupTrackIndex: -1, role,
-		devices: new SvelteMap(), slots: new SvelteMap()
+		devices: new SvelteMap(), slots: new SvelteMap(), ...kind
 	};
 	replaceTree(3, [t]);
 	selectedTrackStore.handleTrackSelected(0);
@@ -55,6 +55,13 @@ describe('Chorus view', () => {
 		expect(autoPan.container.querySelector('.autopan-layout.no-chorus')).not.toBeNull();
 		expect(titles(autoPan.container)).not.toContain('Phaser');
 		expect(titles(autoPan.container)).not.toContain('Chorus');
+	});
+
+	it('holds Blur, Comb and Phaser on an audio track filed under Drum', async () => {
+		seed('drum', { hasMidiInput: false, hasAudioInput: true });
+		const { container } = render(ChorusCentralView);
+		await tick();
+		expect(container.querySelector('[data-view="chorus"]')).not.toBeNull();
 	});
 
 	it('is the Auto Pan view, Chorus family included, on a drum track', async () => {

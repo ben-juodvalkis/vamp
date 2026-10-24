@@ -20,7 +20,9 @@ With no category recorded (a track made in Live, loaded before the app
 recorded one, an xFull kit), a Drum Rack on the track makes it one.
 The category answers first because the class alone is wrong both ways:
 45% of Drum/Perc presets are not Drum Racks, and 592 Drum Racks are filed
-under Inst, Synth or FX. Under a track hold the held track decides.
+under Inst, Synth or FX. **An audio track always holds the Chorus**,
+whatever category its clips were loaded from (a drum loop included; added
+the same day, the user's call). Under a track hold the held track decides.
 
 **In that mode the Chorus tile opens a Chorus view**: Blur's dry/wet,
 Comb and Phaser, one ruler, a slider one share and a pad two. The Auto
