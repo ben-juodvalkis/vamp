@@ -52,7 +52,7 @@
 		type PitchWindow
 	} from '$lib/utils/clip/clipEditorGeometry';
 	import { contentLocal } from '$lib/utils/clip/clipPointerMath';
-	import { dragSnapStart, snapToGrid, type LoopRange } from '$lib/utils/clip/clipGesture';
+	import { dragSnapStart, quantizedNotes, snapToGrid, type LoopRange } from '$lib/utils/clip/clipGesture';
 	import { MOMENTARY_HOLD_MS } from '$lib/components/v6/tracks/TrackStrip/utils/momentaryPress';
 	import { logger } from '$lib/utils/logger';
 	import { useFocusedClip } from './clipEditor/useFocusedClip.svelte';
@@ -738,22 +738,8 @@
 	// (the whole clip, or the soloed rows) and batch-modify. No new wire.
 	function quantizeClip() {
 		if (clipPath === null) return;
-		const grid = gridBeats;
-		const specs = [];
-		for (const n of shownNotes) {
-			if (n.noteId < 0) continue;
-			const snapped = Math.max(0, snapToGrid(n.startBeats, grid));
-			if (Math.abs(snapped - n.startBeats) < 1e-6) continue; // already on grid
-			focusedNotesStore.optimisticModify(n.noteId, { startBeats: snapped }); // optimistic
-			specs.push({
-				noteId: n.noteId,
-				pitch: n.pitch,
-				startBeats: snapped,
-				durationBeats: n.durationBeats,
-				velocity: n.velocity,
-				mute: n.mute
-			});
-		}
+		const specs = quantizedNotes(shownNotes, gridBeats);
+		for (const n of specs) focusedNotesStore.optimisticModify(n.noteId, { startBeats: n.startBeats }); // optimistic
 		if (specs.length > 0) sendModifyNotes(clipPath, specs);
 	}
 

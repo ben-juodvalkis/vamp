@@ -12,7 +12,9 @@
 	 * editor's quantizing drag, `dragSnapStart`), whichever way the drag
 	 * sets off; a quick tap deletes it, as the clip editor's does, and a
 	 * press held past MOMENTARY_HOLD_MS that lets go in place does nothing.
-	 * A drag writes on release.
+	 * A drag writes on release. Q, at the strip's right end, quantizes the
+	 * pad's notes to the strip's steps, 100% (`quantizedNotes`, the clip
+	 * editor's Quantize).
 	 *
 	 * The notes are the clip's id-carrying ones (`requestRichNotes`), read
 	 * and written by clip path, which the surface takes for any clip, not
@@ -31,6 +33,7 @@
 	import { subscribeNotesChanged } from '$lib/services/clipNotesService';
 	import { MOMENTARY_HOLD_MS } from '$lib/components/v6/tracks/TrackStrip/utils/momentaryPress';
 	import { logger } from '$lib/utils/logger';
+	import { quantizedNotes } from '$lib/utils/clip/clipGesture';
 	import type { TimeRange } from '$lib/utils/waveformPaint';
 	import { noteColor } from '../clipEditor/noteStyle';
 	import { dragStart, dragVelocity, stripBlockAt, stripBlocks, stripStepBeats, stripSteps } from './padNotesStrip';
@@ -147,6 +150,17 @@
 		sendRemoveNotes(clipPath, [p.noteId]);
 	}
 
+	// Q: every one of the pad's notes onto the strip's steps, in one write.
+	const stepBeats = $derived(win ? stripStepBeats(win.end - win.start) : 0);
+	const offGrid = $derived(win ? quantizedNotes(padNotes, stepBeats) : []);
+	function quantize() {
+		const specs = offGrid;
+		if (!clipPath || specs.length === 0) return;
+		const moved = new Map(specs.map((n) => [n.noteId, n]));
+		notes = notes.map((q) => moved.get(q.noteId) ?? q);
+		sendModifyNotes(clipPath, specs);
+	}
+
 	// What the drag is doing, for the corner readout.
 	const readout = $derived.by(() => {
 		if (!press?.axis || !win) return null;
@@ -156,6 +170,7 @@
 	});
 </script>
 
+<div class="pad-notes-row">
 <div
 	class="pad-notes-strip"
 	bind:this={box}
@@ -185,9 +200,25 @@
 		{/if}
 	{/if}
 </div>
+<button
+	class="physical-button strip-q"
+	disabled={offGrid.length === 0}
+	onclick={quantize}
+	title="Quantize this pad's notes to the steps"
+	aria-label="Quantize this pad's notes to the steps"
+>Q</button>
+</div>
 
 <style>
+	.pad-notes-row {
+		display: flex;
+		gap: var(--central-gap);
+		height: 100%;
+		min-width: 0;
+		min-height: 0;
+	}
 	.pad-notes-strip {
+		flex: 1 1 0;
 		position: relative;
 		min-width: 0;
 		min-height: 0;
@@ -233,6 +264,19 @@
 		font-size: 0.8125rem;
 		color: var(--muted-foreground);
 		pointer-events: none;
+	}
+	/* Q: a slider's width, the strip's height. */
+	.strip-q {
+		flex: 0 0 var(--vm-slider-w, 56px);
+		min-height: 0;
+		font-size: 1.25rem;
+		font-weight: var(--font-weight-medium);
+	}
+	.strip-q:disabled {
+		cursor: default;
+	}
+	:global([data-grammar="flat"]) .strip-q:disabled {
+		color: var(--flat-disabled-fg);
 	}
 	.strip-readout {
 		position: absolute;

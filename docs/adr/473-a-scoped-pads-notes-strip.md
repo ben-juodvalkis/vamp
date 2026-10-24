@@ -22,7 +22,11 @@ moves it step to step with the clip editor's quantizing drag
 (`sendModifyNotes`). A quick tap deletes it (`sendRemoveNotes`), as a tap
 on a note in the clip editor does (ADR-471); a press held past
 MOMENTARY_HOLD_MS that lets go in place does nothing. The geometry and
-both drags are pure functions in `drum/padNotesStrip.ts`.
+both drags are pure functions in `drum/padNotesStrip.ts`. **Q**, a
+button at the strip's right end, quantizes the pad's notes to the strip's
+steps, 100%, in one write (`quantizedNotes` in `clipGesture.ts`, which the
+clip editor's Quantize now calls too); it is disabled while every note is
+on a step.
 
 (First drawn the same day as velocity bars, a mini fader per note; the
 user's call made it the row itself.)

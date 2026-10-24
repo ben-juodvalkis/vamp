@@ -3,6 +3,7 @@ import {
 	hitTestRange,
 	snapToGrid,
 	dragSnapStart,
+	quantizedNotes,
 	loopBraceGridBeats,
 	recordingBars,
 	recordingBeat,
@@ -242,5 +243,25 @@ describe('clipGesture — dragSnapStart (a dragged note lands on the grid)', () 
 	});
 	it('passes the pull through with no grid', () => {
 		expect(dragSnapStart(1.1, 0.07, 0)).toBeCloseTo(1.17);
+	});
+});
+
+describe('clipGesture — quantizedNotes (Quantize, 100%)', () => {
+	it('moves each off-grid note to its nearest line and leaves the rest out', () => {
+		const out = quantizedNotes(
+			[
+				{ noteId: 1, startBeats: 1.1 },
+				{ noteId: 2, startBeats: 1.0 },
+				{ noteId: 3, startBeats: 0.9 },
+				{ noteId: -4, startBeats: 0.3 }
+			],
+			0.25
+		);
+		expect(out.map((n) => n.noteId)).toEqual([1, 3]);
+		expect(out[0].startBeats).toBeCloseTo(1.0);
+		expect(out[1].startBeats).toBeCloseTo(1.0);
+	});
+	it('never moves a note before 0', () => {
+		expect(quantizedNotes([{ noteId: 1, startBeats: 0.05 }], 1)[0]?.startBeats ?? 0).toBe(0);
 	});
 });

@@ -41,6 +41,23 @@ export function snapToGrid(beats: number, gridBeats: number): number {
 }
 
 /**
+ * Quantize, 100%: the notes whose start is off the grid, each moved to its
+ * nearest line (never before 0); notes already on it, and unsent ones
+ * (a temp id below 0), are left out. Shared by the clip editor's Quantize
+ * and the Drum Rack notes strip's Q.
+ */
+export function quantizedNotes<T extends { noteId: number; startBeats: number }>(notes: readonly T[], gridBeats: number): T[] {
+	const out: T[] = [];
+	for (const n of notes) {
+		if (n.noteId < 0) continue;
+		const snapped = Math.max(0, snapToGrid(n.startBeats, gridBeats));
+		if (Math.abs(snapped - n.startBeats) < 1e-6) continue;
+		out.push({ ...n, startBeats: snapped });
+	}
+	return out;
+}
+
+/**
  * Where a note dragged in time lands: on the grid (2026-10-24, the user's
  * call — a drag quantizes). Pulled from off the grid it goes first to the
  * grid line on the side it is pulled toward, then to whichever line is
