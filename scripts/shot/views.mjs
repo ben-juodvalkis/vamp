@@ -325,6 +325,17 @@ export const TOURS = {
 			// A tap latches a pad: the controls are its, and under them the
 			// strip of its notes in the playing clip, each step as tall as its
 			// velocity.
+			// The same on a 2-bar loop: the strip shows one bar, and the bar
+			// button left of it slides between the two.
+			{
+				name: 'drumrack-pad-notes-2bars',
+				description: 'Drum Rack, the Ride pad latched, the Drums clip a 2-bar loop: one bar on the strip, the bar button beside it',
+				scenePatch: (scene) => {
+					scene.clipLengths['tracks/0/slots/0/clip'] = 8;
+					for (const p of scene.playing) if (p.trackPath === 'tracks/0') p.lengthBeats = 8;
+				},
+				steps: [openInstrument(0), { click: '.pad-tile:has-text("Ride")' }]
+			},
 			{
 				name: 'drumrack-pad-notes',
 				description: 'Drum Rack, DrumCell kit, the Ride pad latched: its notes strip under the controls',

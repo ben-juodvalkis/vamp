@@ -21,7 +21,14 @@
 	 * does not. New notes are a step long at PAINT_VELOCITY; the stroke is
 	 * written on release, in one add (`sendAddNotes`).
 	 *
-	 * Q, at the strip's right end, quantizes the
+	 * One bar at a time (the clip's bars, `barBeats` off the session's time
+	 * signature), 16 steps of about 48pt on the iPad; the bar button on the
+	 * left, a slide up for a later bar and down for an earlier one, moves
+	 * between the loop's bars, and is not drawn on a one-bar loop. The strip
+	 * opens on the loop's first bar, and again whenever the clip changes.
+	 *
+	 * Q, at the strip's right end and only while one of the bar's notes is
+	 * off a step, quantizes the
 	 * pad's notes to the strip's steps, 100% (`quantizedNotes`, the clip
 	 * editor's Quantize).
 	 *
@@ -32,7 +39,9 @@
 	 * and the strip says so.
 	 */
 
+	import { untrack } from 'svelte';
 	import { drag, type DragInfo } from '$lib/actions';
+	import { session } from '$lib/stores/session.svelte';
 	import {
 		requestRichNotes,
 		sendAddNotes,
@@ -47,6 +56,10 @@
 	import type { TimeRange } from '$lib/utils/waveformPaint';
 	import { noteColor } from '../clipEditor/noteStyle';
 	import {
+		barBeats,
+		barWindow,
+		slideBar,
+		windowBars,
 		dragStart,
 		dragVelocity,
 		paintSteps,
@@ -73,7 +86,26 @@
 
 	let { clipPath, clipWindow, note, ink }: Props = $props();
 
-	const win = $derived(clipPath && clipWindow && clipWindow.end > clipWindow.start ? clipWindow : null);
+	const loopWin = $derived(clipPath && clipWindow && clipWindow.end > clipWindow.start ? clipWindow : null);
+	const bar = $derived(barBeats(session.timeSignature.numerator, session.timeSignature.denominator));
+	const bars = $derived(loopWin ? windowBars(loopWin, bar) : { first: 0, last: 0 });
+	let barIndex = $state(0);
+	$effect(() => {
+		void clipPath;
+		untrack(() => (barIndex = bars.first));
+	});
+	const shownBar = $derived(Math.min(bars.last, Math.max(bars.first, barIndex)));
+	// The bar on the strip: every step, block, drag and paint below is in it.
+	const win = $derived(loopWin ? barWindow(loopWin, bar, shownBar) : null);
+	const multiBar = $derived(bars.last > bars.first);
+
+	let barSlideFrom = 0;
+	function barDown() {
+		barSlideFrom = shownBar;
+	}
+	function barMove(info: DragInfo) {
+		barIndex = slideBar(barSlideFrom, info.dy, bars.first, bars.last);
+	}
 
 	let notes = $state<RichNote[]>([]);
 
@@ -255,8 +287,10 @@
 		sendRemoveNotes(clipPath, [p.noteId]);
 	}
 
-	// Q: every one of the pad's notes onto the strip's steps, in one write.
-	const offGrid = $derived(win ? quantizedNotes(padNotes, stepBeats) : []);
+	// Q: the pad's notes in the bar on the strip onto its steps, in one write.
+	const offGrid = $derived(
+		win ? quantizedNotes(padNotes.filter((n) => n.startBeats >= win.start && n.startBeats < win.end), stepBeats) : []
+	);
 	function quantize() {
 		const specs = offGrid;
 		if (!clipPath || specs.length === 0) return;
@@ -279,6 +313,22 @@
 </script>
 
 <div class="pad-notes-row">
+{#if multiBar}
+	<!-- The bar on the strip: slide up for a later bar, down for an earlier one. -->
+	<div
+		class="physical-button strip-bar-pick"
+		use:drag={{ commit: 'y', onDown: barDown, onStart: barMove, onMove: barMove }}
+		role="slider"
+		tabindex="-1"
+		aria-label="Bar"
+		aria-valuenow={shownBar + 1}
+		aria-valuemin={bars.first + 1}
+		aria-valuemax={bars.last + 1}
+	>
+		<span class="strip-bar-word">Bar</span>
+		<span class="strip-bar-num">{shownBar + 1}</span>
+	</div>
+{/if}
 <div
 	class="pad-notes-strip"
 	bind:this={box}
@@ -308,13 +358,15 @@
 		{/if}
 	{/if}
 </div>
-<button
-	class="physical-button strip-q"
-	disabled={offGrid.length === 0}
-	onclick={quantize}
-	title="Quantize this pad's notes to the steps"
-	aria-label="Quantize this pad's notes to the steps"
->Q</button>
+{#if offGrid.length > 0}
+	<!-- Only while a note in the bar is off a step: nothing to quantize, no Q. -->
+	<button
+		class="physical-button strip-q"
+		onclick={quantize}
+		title="Quantize this pad's notes to the steps"
+		aria-label="Quantize this pad's notes to the steps"
+	>Q</button>
+{/if}
 </div>
 
 <style>
@@ -373,18 +425,32 @@
 		color: var(--muted-foreground);
 		pointer-events: none;
 	}
+	/* The bar button: Q's size, its number large. */
+	.strip-bar-pick {
+		flex: 0 0 var(--vm-slider-w, 56px);
+		min-height: 0;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 2px;
+		cursor: ns-resize;
+	}
+	.strip-bar-word {
+		font-size: 0.6875rem;
+		color: var(--muted-foreground);
+	}
+	.strip-bar-num {
+		font-size: 1.25rem;
+		font-weight: var(--font-weight-medium);
+		font-variant-numeric: tabular-nums;
+	}
 	/* Q: a slider's width, the strip's height. */
 	.strip-q {
 		flex: 0 0 var(--vm-slider-w, 56px);
 		min-height: 0;
 		font-size: 1.25rem;
 		font-weight: var(--font-weight-medium);
-	}
-	.strip-q:disabled {
-		cursor: default;
-	}
-	:global([data-grammar="flat"]) .strip-q:disabled {
-		color: var(--flat-disabled-fg);
 	}
 	.strip-readout {
 		position: absolute;

@@ -156,3 +156,34 @@ export function paintVelocity(dyPx: number, heightPx: number): number {
 	if (past <= 0) return PAINT_VELOCITY;
 	return dragVelocity(PAINT_VELOCITY, Math.sign(dyPx) * past, heightPx);
 }
+
+// ---- One bar at a time (2026-10-24, the user's call: a 2-bar loop at
+// 16ths left a step ~24pt wide on the iPad; one bar keeps it ~48pt).
+
+/** Travel, in px, that slides the bar button one bar. */
+export const BAR_SLIDE_PX = 32;
+
+/** A bar's length in beats (Live's beats are quarter notes): 4 in 4/4, 3 in 3/4 and in 6/8. */
+export function barBeats(numerator: number, denominator: number): number {
+	const n = numerator > 0 ? numerator : 4;
+	const d = denominator > 0 ? denominator : 4;
+	return (n * 4) / d;
+}
+
+/** The bars a window touches, as bar indices counted from the clip's start (bar 1 is index 0). */
+export function windowBars(win: TimeRange, bar: number): { first: number; last: number } {
+	if (bar <= 0 || win.end <= win.start) return { first: 0, last: 0 };
+	const first = Math.floor(win.start / bar + 1e-6);
+	const last = Math.max(first, Math.ceil(win.end / bar - 1e-6) - 1);
+	return { first, last };
+}
+
+/** Bar `index`'s stretch of the window: the bar, cut to the window at either end. */
+export function barWindow(win: TimeRange, bar: number, index: number): TimeRange {
+	return { start: Math.max(win.start, index * bar), end: Math.min(win.end, (index + 1) * bar) };
+}
+
+/** The bar a slide of `dyPx` (up positive, up is later) from bar `from` reaches, kept within first..last. */
+export function slideBar(from: number, dyPx: number, first: number, last: number): number {
+	return Math.min(last, Math.max(first, from + Math.round(dyPx / BAR_SLIDE_PX)));
+}

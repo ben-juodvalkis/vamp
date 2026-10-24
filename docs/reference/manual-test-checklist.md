@@ -141,7 +141,9 @@ unrelated to what you're testing.
       place leaves it. On an empty step: a tap adds a note, a swipe paints
       one per step (none on a step that has one), and sliding up or down
       without lifting changes all of them; Live shows each. Push one note
-      off a step in Live, then Q puts it back on. Stop the clip: the strip says "No clip playing"
+      off a step in Live, then Q puts it back on. On a loop of more than
+      a bar the strip shows one bar and the Bar button left of it slides
+      up and down through the loop's bars and no further Stop the clip: the strip says "No clip playing"
 - [ ] **Gain (2026-09-08):** one slider per kit shape moves how loud the
       pads are — each pad's `Volume` on DrumCell / Simpler / Sampler
       kits, each pad's *chain* volume on a kit of nested Instrument

@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
+	barBeats,
+	barWindow,
+	slideBar,
+	windowBars,
 	PAINT_VELOCITY,
 	paintSteps,
 	paintVelocity,
@@ -119,5 +123,32 @@ describe('padNotesStrip — painting notes on empty steps', () => {
 		expect(paintVelocity(-10, 127)).toBe(PAINT_VELOCITY);
 		expect(paintVelocity(32, 127)).toBe(120);
 		expect(paintVelocity(-52, 127)).toBe(60);
+	});
+});
+
+describe('padNotesStrip — one bar at a time', () => {
+	it('reads a bar\'s length in beats off the time signature', () => {
+		expect(barBeats(4, 4)).toBe(4);
+		expect(barBeats(3, 4)).toBe(3);
+		expect(barBeats(6, 8)).toBe(3);
+		expect(barBeats(7, 8)).toBe(3.5);
+	});
+	it('counts the bars a loop touches from the clip\'s start', () => {
+		expect(windowBars({ start: 0, end: 4 }, 4)).toEqual({ first: 0, last: 0 });
+		expect(windowBars({ start: 0, end: 8 }, 4)).toEqual({ first: 0, last: 1 });
+		expect(windowBars({ start: 4, end: 16 }, 4)).toEqual({ first: 1, last: 3 });
+		// A loop off the bar lines touches the bars it overlaps.
+		expect(windowBars({ start: 2, end: 6 }, 4)).toEqual({ first: 0, last: 1 });
+	});
+	it('cuts a bar to the loop', () => {
+		expect(barWindow({ start: 4, end: 16 }, 4, 2)).toEqual({ start: 8, end: 12 });
+		expect(barWindow({ start: 2, end: 6 }, 4, 0)).toEqual({ start: 2, end: 4 });
+	});
+	it('slides a bar per 32px, up later, within the loop', () => {
+		expect(slideBar(1, 0, 1, 3)).toBe(1);
+		expect(slideBar(1, 33, 1, 3)).toBe(2);
+		expect(slideBar(1, 200, 1, 3)).toBe(3);
+		expect(slideBar(2, -40, 1, 3)).toBe(1);
+		expect(slideBar(2, -400, 1, 3)).toBe(1);
 	});
 });

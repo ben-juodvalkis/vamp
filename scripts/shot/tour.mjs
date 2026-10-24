@@ -227,6 +227,9 @@ try {
 			// The init-emit session scalars — the focused clip, say, which the
 			// mock fixes on Vox and never moves on a focus request.
 			if (state.session) scene.session = { ...scene.session, ...state.session };
+			// Anything else the built scene says, changed for this state — a
+			// clip's length, say. Runs last, on the state's own copy.
+			if (state.scenePatch) state.scenePatch(scene);
 			mock = await startMockSurface({ port: mockPort, scene, log: () => {} });
 			context = await browser.newContext({ viewport, deviceScaleFactor: scale });
 			// Before the page exists, so its very first socket is intercepted.

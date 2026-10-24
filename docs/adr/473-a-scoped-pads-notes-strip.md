@@ -10,10 +10,17 @@ clip editor, a different view showing every pad at once.
 
 ## Decision
 **While a pad is scoped, its row of the clip sits under the controls**
-(`views/drum/PadNotesStrip.svelte`). It spans the track's playing MIDI
-clip's window (`useClipPads`, which already follows that clip, now hands
-over its path and `clipViewWindow`) over steps: 16ths up to 2 bars, 8ths
-up to 4, beats past that. Each of the pad's notes is a full-height block
+(`views/drum/PadNotesStrip.svelte`). It shows **one bar** of the track's
+playing MIDI clip's loop (`useClipPads`, which already follows that clip,
+now hands over its path and `clipViewWindow`) in 16ths: 16 steps of about
+48pt on the iPad. The whole loop at once left a 2-bar loop's 16ths about
+24pt wide, half the touch floor (measured on the 1366-wide render), so the
+user cut it to a bar. A bar is `barBeats` off the session's time signature
+(3 beats in 3/4 and 6/8). A **bar button**, left of the strip and Q's
+size, shows the bar number; a slide up goes to a later bar and down to an
+earlier one, a bar per 32px, never past the loop's first or last bar. It
+is not drawn on a one-bar loop. The strip opens on the loop's first bar,
+and again when the clip changes. Each of the pad's notes is a full-height block
 as long as the note, inked by velocity as the clip editor inks a pad's
 notes (`noteColor`). On a note, a drag sets off one way or the other: up
 or down moves its velocity (relative, so a touch never jumps it), sideways
@@ -34,9 +41,10 @@ velocity 100, written on release in one add (`sendAddNotes`), on screen at
 once under temp ids that Live's ids replace. The geometry and
 both drags are pure functions in `drum/padNotesStrip.ts`. **Q**, a
 button at the strip's right end, quantizes the pad's notes to the strip's
-steps, 100%, in one write (`quantizedNotes` in `clipGesture.ts`, which the
-clip editor's Quantize now calls too); it is disabled while every note is
-on a step.
+steps, 100%, in one write (the bar on the strip) (`quantizedNotes` in `clipGesture.ts`, which the
+clip editor's Quantize now calls too); it is drawn only while one of the
+bar's notes is off a step (the user's call), the strip taking its width
+otherwise.
 
 (First drawn the same day as velocity bars, a mini fader per note; the
 user's call made it the row itself.)
