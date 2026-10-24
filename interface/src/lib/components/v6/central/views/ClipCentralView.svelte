@@ -248,33 +248,15 @@ import { logger } from '$lib/utils/logger';
 		focusSlot(track, `tracks/${track}/slots/${scene + 1}`);
 	}
 
-	let deleteClipHolding = $state(false);
-	let deleteClipHoldTimeout: ReturnType<typeof setTimeout> | null = null;
-	const HOLD_DURATION = 800;
-
-	// Duplicate-track: hold to spin off a variation track (copies the rig,
-	// then empties clips + resets Permute). Hold-gated like Delete/Replace
-	// since it mutates the set; isDuplicatingTrack locks during the async op.
-	let dupTrackHolding = $state(false);
-	let dupTrackHoldTimeout: ReturnType<typeof setTimeout> | null = null;
+	// Duplicate-track: a tap spins off a variation track (copies the rig,
+	// then empties clips + resets Permute). It was hold-gated until ADR-470;
+	// isDuplicatingTrack locks during the async op.
 	let isDuplicatingTrack = $state(false);
-	const DUP_TRACK_HOLD_DURATION = 800;
 
-	function handleDupTrackStart() {
+	function handleDupTrack() {
 		const trackPath = selectedTrackStore.selectedTrackPath;
 		if (!trackPath || isDuplicatingTrack) return;
-		dupTrackHolding = true;
-		dupTrackHoldTimeout = setTimeout(() => {
-			if (dupTrackHolding) {
-				dupTrackHolding = false;
-				void runDuplicateTrack(trackPath);
-			}
-		}, DUP_TRACK_HOLD_DURATION);
-	}
-
-	function handleDupTrackEnd() {
-		if (dupTrackHoldTimeout) { clearTimeout(dupTrackHoldTimeout); dupTrackHoldTimeout = null; }
-		dupTrackHolding = false;
+		void runDuplicateTrack(trackPath);
 	}
 
 	async function runDuplicateTrack(trackPath: string) {
@@ -363,25 +345,13 @@ import { logger } from '$lib/utils/logger';
 	}
 
 	onDestroy(() => {
-		if (deleteClipHoldTimeout) { clearTimeout(deleteClipHoldTimeout); deleteClipHoldTimeout = null; }
-		if (dupTrackHoldTimeout) { clearTimeout(dupTrackHoldTimeout); dupTrackHoldTimeout = null; }
 		if (groupGestureStore.active) groupGestureStore.cancel();
 	});
 
-	function handleDeleteClipStart() {
+	// A tap deletes the focused clip (hold-gated until ADR-470).
+	function handleDeleteClip() {
 		if (!clipIndices) return;
-		deleteClipHolding = true;
-		deleteClipHoldTimeout = setTimeout(() => {
-			if (deleteClipHolding && clipIndices) {
-				sendClipDelete(`tracks/${clipIndices.track}/slots/${clipIndices.scene}`);
-				deleteClipHolding = false;
-			}
-		}, HOLD_DURATION);
-	}
-
-	function handleDeleteClipEnd() {
-		if (deleteClipHoldTimeout) { clearTimeout(deleteClipHoldTimeout); deleteClipHoldTimeout = null; }
-		deleteClipHolding = false;
+		sendClipDelete(`tracks/${clipIndices.track}/slots/${clipIndices.scene}`);
 	}
 
 	// Transpose is available for: MIDI clip, OR drumrack/instrument-rack without a clip (device-level).
@@ -600,18 +570,11 @@ import { logger } from '$lib/utils/logger';
 			<div class="stacked-btns">
 				<div class="btn-cell">
 					<button
-						onpointerdown={handleDeleteClipStart}
-						onpointerup={handleDeleteClipEnd}
-						onpointerleave={handleDeleteClipEnd}
-						onpointercancel={handleDeleteClipEnd}
+						onclick={handleDeleteClip}
 						disabled={!hasClip}
-						class="btn btn-well fam-del relative overflow-hidden {deleteClipHolding ? 'is-active' : ''}"
+						class="btn btn-well fam-del"
 					>
-						{#if deleteClipHolding}<div class="hold-fill" style="animation-duration:{HOLD_DURATION}ms; background: color-mix(in oklab, var(--act-master), transparent 70%);"></div>{/if}
-						<span class="relative z-10 flex items-center justify-center btn-caps" aria-label="Delete clip">
-							{#if deleteClipHolding}
-								Hold...
-							{:else}
+						<span class="flex items-center justify-center btn-caps" aria-label="Delete clip">
 								<!-- Wide clip box with MIDI note bars, big red X overlaid -->
 								<svg class="w-12 h-12" fill="none" viewBox="0 0 36 24">
 									<rect x="2" y="4" width="32" height="16" rx="2" stroke="currentColor" stroke-width="2" />
@@ -622,7 +585,6 @@ import { logger } from '$lib/utils/logger';
 									<line x1="9" y1="3" x2="27" y2="21" style="stroke: var(--act-rec)" stroke-width="3" stroke-linecap="round" />
 									<line x1="27" y1="3" x2="9" y2="21" style="stroke: var(--act-rec)" stroke-width="3" stroke-linecap="round" />
 								</svg>
-							{/if}
 						</span>
 					</button>
 				</div>
@@ -712,19 +674,13 @@ import { logger } from '$lib/utils/logger';
 			<div class="stacked-btns" class:single={!axOn}>
 				<div class="btn-cell">
 					<button
-						onpointerdown={handleDupTrackStart}
-						onpointerup={handleDupTrackEnd}
-						onpointerleave={handleDupTrackEnd}
-						onpointercancel={handleDupTrackEnd}
+						onclick={handleDupTrack}
 						disabled={isDuplicatingTrack}
-						class="btn btn-switch dup-trk-btn clip-switch relative overflow-hidden font-bold text-base {dupTrackHolding ? 'active' : ''} {isDuplicatingTrack ? 'cursor-wait' : ''}"
+						class="btn btn-switch dup-trk-btn clip-switch font-bold text-base {isDuplicatingTrack ? 'cursor-wait' : ''}"
 					>
-						{#if dupTrackHolding}<div class="hold-fill" style="animation-duration:{DUP_TRACK_HOLD_DURATION}ms; background: color-mix(in oklab, var(--clip-track-tint, var(--act-quant)) 30%, transparent);"></div>{/if}
-						<span class="relative z-10 flex items-center justify-center btn-caps" aria-label="Duplicate track">
+						<span class="flex items-center justify-center btn-caps" aria-label="Duplicate track">
 							{#if isDuplicatingTrack}
 								...
-							{:else if dupTrackHolding}
-								Hold...
 							{:else}
 								<!-- Source track lane copied down to a duplicate lane (with notes + a + cue) -->
 								<svg class="w-12 h-12" fill="none" viewBox="0 0 32 28" style="transform: rotate(-90deg)">
@@ -933,10 +889,6 @@ import { logger } from '$lib/utils/logger';
 	.btn-well:hover:not(:disabled) {
 		background: color-mix(in oklab, var(--fam-color) 12%, var(--surface-well));
 	}
-	.btn-well.is-active {
-		background: color-mix(in oklab, var(--fam-color) 30%, var(--card));
-		color: var(--foreground);
-	}
 	/* Monitor + quant wells follow the focused track (ADR-402); del keeps its
 	   master-red, rec keeps recording-red — both are state/danger signals. */
 	.fam-monitor { --fam-color: var(--clip-track-tint, var(--act-monitor)); }
@@ -1003,11 +955,6 @@ import { logger } from '$lib/utils/logger';
 	:global([data-grammar="flat"]) .btn-well:hover:not(:disabled) {
 		background: var(--secondary);
 	}
-	:global([data-grammar="flat"]) .btn-well.is-active {
-		background: var(--phosphor);
-		border-color: var(--phosphor);
-		color: var(--flat-on-fg);
-	}
 	:global([data-grammar="flat"]) .fam-del.btn-well { color: var(--act-rec); }
 	/* Disabled = Live's idiom (ControlOffDisabledForeground on the same
 	   field), not opacity — a half-transparent orange reads as a tan wash. */
@@ -1015,7 +962,6 @@ import { logger } from '$lib/utils/logger';
 		opacity: 1;
 		color: var(--flat-disabled-fg);
 	}
-	:global([data-grammar="flat"]) .btn-well.is-active:disabled,
 	:global([data-grammar="flat"]) .clip-switch.active:disabled {
 		background: #868686;         /* ViewCheckControlDisabledOn */
 		border-color: #868686;
@@ -1028,7 +974,6 @@ import { logger } from '$lib/utils/logger';
 	}
 	/* Light: ON fills sit at ~1:1 luminance against the light ladder, so the
 	   frame stays dark. */
-	:global(.light[data-grammar="flat"]) .btn-well.is-active,
 	:global(.light[data-grammar="flat"]) .clip-switch.active,
 	:global(.light[data-grammar="flat"]) .editor-toggle.active {
 		border-color: var(--line-strong);
@@ -1078,16 +1023,4 @@ import { logger } from '$lib/utils/logger';
 		min-height: 0;
 	}
 
-	.hold-fill {
-		position: absolute;
-		bottom: 0; left: 0; right: 0;
-		height: 0%;
-		animation: holdProgress linear forwards;
-		z-index: 0;
-	}
-
-	@keyframes holdProgress {
-		from { height: 0%; }
-		to   { height: 100%; }
-	}
 </style>
