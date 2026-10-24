@@ -490,6 +490,11 @@
   .slider-container.ghost .slider-edge {
     opacity: var(--opacity-ghost);
   }
+  /* The FX grid holds no buttons, so there is nothing to tell its sliders
+     apart from: no edge there. */
+  :global(.fx-grid) .slider-edge {
+    display: none;
+  }
 
   .center-line {
     position: absolute;
