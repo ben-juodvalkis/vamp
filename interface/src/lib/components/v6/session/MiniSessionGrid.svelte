@@ -12,7 +12,9 @@
      * grid's component, and the actions route through
      * `composables/slotActions`. What differs is the gestures
      * (`tapFires`, 2026-10-24, the user's call): a tap anywhere on a cell
-     * fires it (the action strip's tap: launch, or stop a playing clip),
+     * fires it (the action strip's tap: launch; a playing clip re-fires
+     * from the top, and stopping is the stop button's job), the glyph
+     * centred on the cell,
      * and a hold past 500 ms fires nothing: it moves the highlight there,
      * the foot pedal's target, and on a clip brings up the Clip view.
      *

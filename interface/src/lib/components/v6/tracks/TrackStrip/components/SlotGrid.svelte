@@ -76,8 +76,8 @@
         markSelectedTrack?: boolean;
         /**
          * The mini grid's gestures (2026-10-24, the user's call): a tap
-         * anywhere on a cell is the action strip's tap (launch, or stop a
-         * playing clip), and a hold moves the highlight there (`onSelect`)
+         * anywhere on a cell is the action strip's tap (launch; a playing
+         * clip re-fires from the top), and a hold moves the highlight there (`onSelect`)
          * and fires nothing. The cells draw no strip then (width 0): the
          * whole cell is the button, and the whole cell lights on a press.
          * Off, a body tap selects, the strip acts and a hold focuses.
@@ -400,6 +400,7 @@
                 pressed={slotIndex === pressedSlot && !pressedAction}
                 actionPressed={slotIndex === pressedSlot && pressedAction}
                 actionWidthPx={tapFires ? 0 : actionWidthPx}
+                glyphCentered={tapFires}
                 sceneSelected={slotIndex === selectedSceneIndex}
                 pedalTarget={isSelectedTrack && slotIndex === selectedSceneIndex}
                 triggered={triggeredSlotsStore.has(`${trackPath}/slots/${slotIndex}`)}

@@ -101,6 +101,11 @@
          * a performance surface.
          */
         actionWidthPx?: number;
+        /**
+         * The whole cell is the button (the mini grid, 2026-10-24): no
+         * strip, and the action glyph drawn centred over the cell instead.
+         */
+        glyphCentered?: boolean;
         /** This slot's scene row is the selected one. */
         sceneSelected?: boolean;
         /**
@@ -129,6 +134,7 @@
         triggered = false,
         actionPressed = false,
         actionWidthPx = 0,
+        glyphCentered = false,
         sceneSelected = false,
         pedalTarget = false
     }: Props = $props();
@@ -149,7 +155,7 @@
     //                 to show on every empty slot regardless.
     //   stopped    ▶  play
     //   recording  ▶  end the take and launch it as a loop
-    //   playing    ■  stop
+    //   playing    ▶  re-fire from the top (stopping is the stop cell's)
     //
     // Note the recording case is ▶ rather than ■: firing a recording
     // session clip is how a looper CLOSES a take (you keep what you
@@ -166,7 +172,7 @@
                 ? `End take and loop ${label}`
                 : `Play ${label}`
     );
-    let showAction = $derived(!inert && actionWidthPx > 0);
+    let showAction = $derived(!inert && (actionWidthPx > 0 || glyphCentered));
 
     // ---- Preview (ADR-415) ------------------------------------------
     //
@@ -385,6 +391,7 @@ const previewInk = '#000000';
         {#if showAction}
             <span
                 class="slot-action state-{slotState}"
+                class:is-centered={glyphCentered}
                 class:cannot-record={slotState === 'empty' && !canRecord}
                 class:is-pressed={actionPressed}
                 role="button"
@@ -606,6 +613,17 @@ const previewInk = '#000000';
             filter 90ms var(--ease-precise);
     }
 
+    /* Centred over the whole cell (the mini grid, 2026-10-24): the same
+       glyph and inks, no strip of its own, so no edge, no fill and no
+       press tint (the whole cell lights instead). */
+    .slot-action.is-centered {
+        right: 0;
+        width: auto;
+        border-right: none;
+        background: transparent;
+        font-size: 1.125rem;
+    }
+
     /* Ink says what the press does, matching the glyph: record is the
        transport red, stop is the neutral dim, play/end-take is the play
        green. Same global action inks the cell states use, so the strip
@@ -742,6 +760,10 @@ const previewInk = '#000000';
     /* Not armed: Live's own disabled foreground, never an opacity dim. */
     :global([data-grammar="flat"]) .slot-action.cannot-record {
         color: var(--flat-disabled-fg);
+    }
+    :global([data-grammar="flat"]) .slot-action.is-centered {
+        background: transparent;
+        border-right: none;
     }
     :global([data-grammar="flat"]) .slot-cell.state-empty.is-pressed {
         background: var(--secondary);
