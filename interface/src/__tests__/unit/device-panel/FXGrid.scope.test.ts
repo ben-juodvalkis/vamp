@@ -26,7 +26,7 @@ import { send } from '$lib/api/simpleClient';
 // `FX_GRID_LAYOUT` undefined while `slotRegistry` initialises.
 import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.svelte';
 import FXGrid from '$lib/components/v6/device-panel/FXGrid.svelte';
-import { FX_GRID_LAYOUT, FX_GRID_COLUMNS, SQUASH_CELL, GLITCH_CELL, GUITAR_CELL, cellFor, type GridCell, type GridTrackKind } from '$lib/config/fxGridLayout';
+import { FX_GRID_LAYOUT, FX_GRID_COLUMNS, SQUASH_CELL, PITCH_CELL, GLITCH_CELL, GUITAR_CELL, cellFor, type GridCell, type GridTrackKind } from '$lib/config/fxGridLayout';
 import { currentInstrumentStore } from '$lib/stores/v6/currentInstrumentStore.svelte';
 import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
 import { setPropertySender } from '$lib/stores/v3/propertySubscriptions.svelte';
@@ -163,19 +163,23 @@ describe('FXGrid — the grid is the held pad\'s', () => {
 			const c = tile!.closest<HTMLElement>('[data-cell]')!;
 			return [c.dataset.col, c.dataset.row, c.dataset.span, c.dataset.rowSpan].join('/');
 		};
-		// col/row/span/rowSpan: Glue over Gain in the last column; Glitch
-		// second in row 2. Chorus and Pitch left for the Auto Pan view.
+		// col/row/span/rowSpan (2026-10-24): Glue over Gain in the last
+		// column, Glitch over Variation inside it; Pitch over the Saturator
+		// inside the first; three XYs a row between.
 		expect(cellOf('Glue')).toBe('10/1/1/1');
 		expect(cellOf('Gain')).toBe('10/2/1/1');
-		expect(cellOf('Glitch')).toBe('4/2/2/1');
-		expect(cellOf('Tremolo')).toBe('2/2/2/1');
+		expect(cellOf('Sat')).toBe('2/2/1/1');
+		expect(cellOf('Var')).toBe('9/2/1/1');
+		expect(cellOf('Pitch')).toBe('2/1/1/1');
+		expect(cellOf('Glitch')).toBe('9/1/1/1');
+		expect(cellOf('EQ')).toBe('3/1/2/1');
+		expect(cellOf('Tremolo')).toBe('3/2/2/1');
+		expect(cellOf('Drum')).toBe('7/1/2/1');
 		const titles = Array.from(container.querySelectorAll('.device-control')).map((t) => t.textContent ?? '');
 		expect(titles.some((t) => t.includes('Chorus'))).toBe(false);
-		expect(titles.some((t) => t.includes('Pitch'))).toBe(false);
-		// MIDI: Rand Oct over the Gtr (2026-10-23); Variation is hidden for now.
+		// MIDI: Rand Oct over the Gtr (2026-10-23).
 		expect(cellOf('Rand Oct')).toBe('1/1/1/1');
 		expect(cellOf('Gtr')).toBe('1/2/1/1');
-		expect(Array.from(container.querySelectorAll('.device-control')).some((t) => t.textContent?.includes('Var'))).toBe(false);
 		drumPadScope.press(RACK, 38, 1, 0);
 		await tick();
 		expect(tileFor(container, 'Glue').getAttribute('data-fx-scope')).toBe('38');
@@ -327,7 +331,7 @@ describe("the Drum cell is the Drum's only on a drum track", () => {
 describe('the FX grid layout is ten columns wide', () => {
 	function occupancy(kind: GridTrackKind) {
 		const cells: Array<[string, GridCell]> = FX_GRID_LAYOUT.filter((s) => !s.hidden).map((s) => [s.deviceType as string, cellFor(s, kind)]);
-		cells.push(['squash', SQUASH_CELL], ['glitch', GLITCH_CELL]);
+		cells.push(['squash', SQUASH_CELL], ['pitch', PITCH_CELL], ['glitch', GLITCH_CELL]);
 		if (kind !== 'master') cells.push(['guitar', GUITAR_CELL]);
 		const grid: string[][] = [0, 1].map(() => Array(FX_GRID_COLUMNS).fill(''));
 		for (const [name, c] of cells) {
@@ -353,11 +357,13 @@ describe('the FX grid layout is ten columns wide', () => {
 		const grid = occupancy('midi');
 		expect(grid.flat().every(Boolean)).toBe(true);
 		expect([grid[0][0], grid[1][0]]).toEqual(['random', 'guitar']);
-		// The user's order (2026-10-15).
-		expect(grid[0].slice(1, 9).filter((_, i) => i % 2 === 0)).toEqual(['eq', 'filter', 'saturator', 'drum']);
-		expect(grid[1].slice(1, 9).filter((_, i) => i % 2 === 0)).toEqual(['tremolo', 'glitch', 'echo', 'reverb']);
+		// The user's order (2026-10-24): sliders inside the outer columns,
+		// three XYs a row between.
+		expect([grid[0][1], grid[1][1]]).toEqual(['pitch', 'saturator']);
+		expect(grid[0].slice(2, 8).filter((_, i) => i % 2 === 0)).toEqual(['eq', 'filter', 'drum']);
+		expect(grid[1].slice(2, 8).filter((_, i) => i % 2 === 0)).toEqual(['tremolo', 'echo', 'reverb']);
+		expect([grid[0][8], grid[1][8]]).toEqual(['glitch', 'variation']);
 		expect([grid[0][9], grid[1][9]]).toEqual(['squash', 'utility']);
-		expect(grid.flat()).not.toContain('variation');
 	});
 
 	it('tiles both rows exactly on audio: the Bass over the Guitar, Squash over Gain', () => {

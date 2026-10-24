@@ -70,12 +70,20 @@ export interface FXGridSlotConfig {
  * (`col` / `row` / `span` / `rowSpan`) so placement can differ by track kind:
  *
  *   MIDI    col 1 Rand Oct over Gtr (2026-10-23)
- *           cols 2-9 row 1: EQ, Filter, Saturator, Drum (Chorus off a
- *                           drum track, ADR-465)
- *                    row 2: Tremolo (Auto Pan), Glitch, Echo, Reverb
+ *           col 2 Pitch over Saturator, sliders (2026-10-24)
+ *           cols 3-8 row 1: EQ, Filter, Drum (Chorus off a drum track,
+ *                           ADR-465)
+ *                    row 2: Tremolo (Auto Pan), Echo, Reverb
+ *           col 9 Glitch over Variation, sliders (2026-10-24)
  *           col 10 Squash over Gain
  *   audio   col 1 Bass over Gtr; cols 2-10 identical (Chorus in Drum's cell)
  *   master  col 1 one empty full-height cell; cols 2-10 identical
+ *
+ * 2026-10-24 (the user's call): the Saturator and Glitch XYs became
+ * sliders, each a column inside the outer ones: Pitch (the Octave's Mix,
+ * out of the Tremolo view) over the Saturator (its Drive) on the left,
+ * Glitch (GlitchLoop's Dry/Wet) over Variation on the right (Glitch and
+ * the Saturator swapped the same day). Three XYs a row.
  *
  * 2026-10-15, last: the Chorus and Pitch tiles left the grid, their XYs
  * and their views now inside the Auto Pan view (the user's call). Chorus
@@ -146,7 +154,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx3',
-    col: 2,
+    col: 3,
     deviceType: 'eq',
     component: EQControl,
     span: 2,
@@ -155,7 +163,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx4',
-    col: 4,
+    col: 5,
     deviceType: 'filter',
     component: AutoFilterControl,
     span: 2,
@@ -164,16 +172,16 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx5',
-    col: 6,
+    col: 2,
     deviceType: 'saturator',
     component: SaturatorControl,
-    span: 2,
-    row: 1,
+    span: 1,
+    row: 2,
     config: DEVICE_PRESETS.saturator
   },
   {
     position: 'fx6',
-    col: 8,
+    col: 7,
     deviceType: 'drum',
     component: DrumBussControl,
     span: 2,
@@ -195,16 +203,15 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
 
   // ===== ROW 2 =====
   {
-    // Variation: hidden for now (2026-10-15, the user's call); its column
-    // went to the XY tiles. Delete `hidden` and give it a cell to bring it back.
+    // Variation: back on the grid 2026-10-24 (the user's call), a slider
+    // under the Saturator's in column 9.
     position: 'fx8',
-    col: 2,
-    hidden: true,
+    col: 9,
     deviceType: 'variation',
     component: VariationControl,
     span: 1,
-    rowSpan: 2,
-    row: 1,
+    rowSpan: 1,
+    row: 2,
     config: DEVICE_PRESETS.variation
   },
   {
@@ -223,7 +230,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
     // Auto Pan leads row 2 since 2026-10-15 (the user's call), in the
     // Pitch tile's old cell.
     position: 'fx10',
-    col: 2,
+    col: 3,
     deviceType: 'tremolo',
     component: AutoPanControl,
     span: 2,
@@ -232,7 +239,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx11',
-    col: 6,
+    col: 5,
     deviceType: 'echo',
     component: EchoControl,
     span: 2,
@@ -241,7 +248,7 @@ export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
   },
   {
     position: 'fx12',
-    col: 8,
+    col: 7,
     deviceType: 'reverb',
     component: ReverbControl,
     span: 2,
@@ -267,8 +274,11 @@ export interface GridCell {
 /** Squash: the top of the last column, over Gain, on every track. No layout entry. */
 export const SQUASH_CELL: GridCell = { col: 10, row: 1, span: 1, rowSpan: 1 };
 
-/** Glitch (GlitchLoop): beside Pitch, under Filter, on every track. No layout entry. */
-export const GLITCH_CELL: GridCell = { col: 4, row: 2, span: 2, rowSpan: 1 };
+/** Pitch (the Octave's Mix): column 2, over the Saturator, on every track. No layout entry. */
+export const PITCH_CELL: GridCell = { col: 2, row: 1, span: 1, rowSpan: 1 };
+
+/** Glitch (GlitchLoop's Dry/Wet): column 9, over Variation, on every track. No layout entry. */
+export const GLITCH_CELL: GridCell = { col: 9, row: 1, span: 1, rowSpan: 1 };
 
 /**
  * The Guitar rack's drive: the bottom of the first column, under the Bass on

@@ -81,7 +81,7 @@ share it), and switch back to `main` when Ben is done testing.
   don't say, measured on the rig. Ask the running Live with the surface's probes
 - `docs/reference/manual-test-checklist.md`: the rig smoke test
 - `docs/adr/`: every decision record. The next number is one past the
-  highest file there (467 on 2026-10-23)
+  highest file there (468 on 2026-10-24)
 - `interface/src/__tests__/`: the interface's tests. Mount components with
   `@testing-library/svelte`; read a store through a real `$derived` with
   `helpers/runeHarness.svelte.ts`.

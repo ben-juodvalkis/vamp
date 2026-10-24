@@ -1,5 +1,6 @@
 /**
- * The Pitch family in the Auto Pan view (2026-10-15). Pitch Hack: a Mix
+ * The Pitch view (2026-10-24; the Pitch family in the Auto Pan view from
+ * 2026-10-15). The Octave's Mix is the grid's Pitch slider, not drawn here. Pitch Hack: a Mix
  * slider and the Rate column (1 to 1/16 top to bottom;
  * Rate is param 5, an index into the device's value_items), and no
  * Coarse, Reverse, Recycle or Int Var. A step writes its own param only; the step
@@ -21,7 +22,7 @@ import { tick } from 'svelte';
 import { SvelteMap } from 'svelte/reactivity';
 import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { replaceTree, _resetForTests, type TrackRecord, type DeviceRecord, type ParamRecord } from '$lib/stores/v3/normalized.svelte';
-import AutoPanCentralView from '$lib/components/v6/central/views/AutoPanCentralView.svelte';
+import PitchCentralView from '$lib/components/v6/central/views/PitchCentralView.svelte';
 import { send } from '$lib/api/simpleClient';
 
 const TRACK = 'tracks/0';
@@ -79,10 +80,10 @@ beforeEach(() => {
 });
 afterEach(() => cleanup());
 
-describe('Auto Pan view: Pitch Hack rate column', () => {
+describe('Pitch view: Pitch Hack rate column', () => {
 	it('draws 1 to 1/16 and lights the stop Rate matches', async () => {
 		seed(pitchHack(10));
-		const { container } = render(AutoPanCentralView);
+		const { container } = render(PitchCentralView);
 		await tick();
 		expect(stops(container).map((b) => b.textContent?.trim())).toEqual(['1', '1/2', '1/4', '1/8', '1/16']);
 		expect(stops(container).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'false', 'false', 'true', 'false']);
@@ -90,7 +91,7 @@ describe('Auto Pan view: Pitch Hack rate column', () => {
 
 	it('writes each stop to Rate and leaves Dry / Wet to its slider', async () => {
 		seed(pitchHack(0, 0, 40));
-		const { container } = render(AutoPanCentralView);
+		const { container } = render(PitchCentralView);
 		await tick();
 		for (const b of stops(container)) await fireEvent.click(b);
 		expect(written(5)).toEqual([19, 16, 13, 10, 7]);
@@ -98,23 +99,23 @@ describe('Auto Pan view: Pitch Hack rate column', () => {
 	});
 });
 
-describe('Auto Pan view: the Pitch family', () => {
-	it('draws a Mix slider for the Octave and for Pitch Hack, and no Coarse, Reverse, Recycle or Int Var', async () => {
+describe('Pitch view: the Pitch family', () => {
+	it('draws a Mix slider for Pitch Hack (the Octave\'s is the grid tile), and no Coarse, Reverse, Recycle or Int Var', async () => {
 		seed(pitchHack(13), octave(7));
-		const { container } = render(AutoPanCentralView);
+		const { container } = render(PitchCentralView);
 		await tick();
 		const titles = sliderTitles(container);
-		expect(titles.filter((t) => t === 'Mix')).toHaveLength(2);
+		expect(titles.filter((t) => t === 'Mix')).toHaveLength(1);
 		for (const gone of ['Reverse', 'Recycle', 'Int Var']) expect(titles).not.toContain(gone);
 		expect(coarseSteps(container)).toEqual([]);
 		expect(container.textContent).not.toContain('Coarse');
 		expect(container.querySelector('.pitch-hack-mix [role="slider"]')).not.toBeNull();
-		expect(container.querySelector('.octave-mix [role="slider"]')).not.toBeNull();
+		expect(container.querySelector('.octave-mix [role="slider"]')).toBeNull();
 	});
 
 	it("draws the Octave's interval +12 to -12 under a Pitch title, lights the device's step and writes semitones", async () => {
 		seed(pitchHack(13), octave(-5, 30));
-		const { container } = render(AutoPanCentralView);
+		const { container } = render(PitchCentralView);
 		await tick();
 		expect(intervalSteps(container).map((b) => b.textContent?.trim())).toEqual(['+12', '+7', '-5', '-12']);
 		expect(intervalSteps(container).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'false', 'true', 'false']);

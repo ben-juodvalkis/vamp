@@ -86,8 +86,8 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 		'eq': () => import('./views/EQCentralView.svelte'),
 		'filter': () => import('./views/AutoFilterCentralView.svelte'),
 		'guitar': () => import('./views/GuitarCentralView.svelte'), // Pedal, Wah and the Guitar rack on audio; the whole Pedal view on MIDI (2026-10-23)
-		'octave': () => import('./views/AutoPanCentralView.svelte'), // the Pitch family joined Auto Pan's view (2026-10-15)
-		'pitchHack': () => import('./views/AutoPanCentralView.svelte'),
+		'octave': () => import('./views/PitchCentralView.svelte'), // the Pitch slider's view (2026-10-24)
+		'pitchHack': () => import('./views/PitchCentralView.svelte'),
 		'glitchLoop': () => import('./views/GlitchCentralView.svelte'), // the Glitch tile's slot (2026-10-15)
 		'pedal': () => import('./views/GuitarCentralView.svelte'), // the Pedal is the Guitar view's on audio (2026-10-23)
 		'saturator': () => import('./views/PedalCentralView.svelte'), // the Saturator tile's view (fx5, 2026-10-05), which holds the Pedal's XY
@@ -102,7 +102,7 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 		'tremolo': () => import('./views/AutoPanCentralView.svelte'), // Auto Pan Legacy in the Tremolo slot (2026-10-01)
 		'utility': () => import('./views/SquashCentralView.svelte'), // the Gain tile's view: its Gate and Multiband moved into the dynamics view (2026-10-15)
 		'squash': () => import('./views/SquashCentralView.svelte'), // the dynamics view; the Squash tile itself is the grid column above it
-		'variation': () => import('./views/GlitchCentralView.svelte'), // its controls joined GlitchLoop's (2026-10-15)
+		'variation': () => import('./views/VariationCentralView.svelte'), // the Var slider's own view (2026-10-24)
 	},
 
 	// Instrument views - organized alphabetically

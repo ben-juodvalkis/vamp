@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FX_GRID_LAYOUT, SQUASH_CELL, GLITCH_CELL, GUITAR_CELL, cellFor, cellStyle } from '$lib/config/fxGridLayout';
+  import { FX_GRID_LAYOUT, SQUASH_CELL, PITCH_CELL, GLITCH_CELL, GUITAR_CELL, cellFor, cellStyle } from '$lib/config/fxGridLayout';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
   import { v3Store } from '$lib/stores/v3/normalized.svelte';
@@ -7,6 +7,7 @@
   import GuitarControl from './GuitarControl.svelte';
   import SquashControl from './SquashControl.svelte';
   import GlitchControl from './GlitchControl.svelte';
+  import PitchControl from './PitchControl.svelte';
   import ChorusControl from './ChorusControl.svelte';
   import { drumCellHoldsChorus } from './drumCell.svelte';
   import { provideFxScope } from '$lib/components/v6/central/fxScope';
@@ -89,8 +90,9 @@
   // way), resolving `squash` / `guitar` through BaseDeviceControl's slotKey
   // path. Their cells are SQUASH_CELL and GUITAR_CELL.
   const squashDevice = $derived(selectedTrackStore.getFxGridSlot('squash', scopeKey).device);
-  // Glitch (2026-10-15) the same way: GLITCH_CELL.
+  // Glitch (2026-10-15) the same way: GLITCH_CELL; Pitch (2026-10-24): PITCH_CELL.
   const glitchLoopDevice = $derived(selectedTrackStore.getFxGridSlot('glitchLoop', scopeKey).device);
+  const octaveDevice = $derived(selectedTrackStore.getFxGridSlot('octave', scopeKey).device);
   const guitarDevice = $derived(selectedTrackStore.getFxGridSlot('guitar', scopeKey).device);
 
   // Track kind decides two things (2026-09-15): what fx1 holds, and how the
@@ -150,10 +152,11 @@
   <!-- 10-column grid, 2 rows, every cell placed explicitly (cellFor in
        fxGridLayout.ts): the leftmost column is arranged differently on
        audio and MIDI, and auto-placement cannot do both from one DOM
-       order. Auto Pan and Glitch lead row 2 and Squash stands over Gain at the
-       right on every track; on MIDI Rand Oct is full height, on audio the Guitar
-       stands under the Bass (2026-10-19). The Drum cell holds the Chorus on
-       any track not from the Drum or Perc category (2026-10-23).
+       order. Column 1 is Rand Oct (MIDI) or the Bass (audio) over the Gtr,
+       one empty cell on master; column 2 Pitch over the Saturator; three XYs
+       a row; column 9 Glitch over Variation; column 10 Squash over Gain
+       (2026-10-24). The Drum cell holds the Chorus on audio and non-drum
+       tracks (ADR-465).
 
        gap-2 (8px) is deliberate, on the app's interior ladder (16 frames a
        panel, 8 separates tiles inside one, 4 separates rows inside a tile).
@@ -198,7 +201,11 @@
     {/each}
     <!-- Squash, the Glue Compressor's one-finger threshold + makeup: the
          top of the last column, over Gain (2026-10-15). -->
-    <!-- Glitch (GlitchLoop), beside Auto Pan in row 2, 2026-10-15. -->
+    <!-- Pitch (the Octave's Mix), column 2 over the Saturator, and Glitch
+         (GlitchLoop's Dry/Wet), column 9 over Variation (2026-10-24). -->
+    <div data-cell="pitch" data-col={PITCH_CELL.col} data-row={PITCH_CELL.row} data-span={PITCH_CELL.span} data-row-span={PITCH_CELL.rowSpan} style={cellStyle(PITCH_CELL)}>
+      <PitchControl device={octaveDevice} />
+    </div>
     <div data-cell="glitch" data-col={GLITCH_CELL.col} data-row={GLITCH_CELL.row} data-span={GLITCH_CELL.span} data-row-span={GLITCH_CELL.rowSpan} style={cellStyle(GLITCH_CELL)}>
       <GlitchControl device={glitchLoopDevice} />
     </div>
