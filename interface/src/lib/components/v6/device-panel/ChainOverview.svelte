@@ -24,6 +24,14 @@
    * row's add buttons end the tracks; a pick joins this chain, the pad's
    * under a pad scope.
    *
+   * **A cell carries its tile's control** (2026-10-25): a device the FX
+   * grid has a tile for shows that tile — its XY or slider, the grid's own
+   * component handed this cell's device — so whatever the grid can do the
+   * chain can too. A touch on it drives the device and makes it the pick
+   * (the one its tile and view control), and never starts a reorder. Under
+   * a pad scope the overview provides the pad's `fxScope`, as the grid
+   * does, so the tiles resolve against the pad's chain.
+   *
    * **A pad follows the Drum Rack view.** While a pad is held or latched
    * on the selected track's Drum Rack, the overview is that pad's chain —
    * its instrument, then its effects (`vm.padFx`, with the records the
@@ -37,6 +45,14 @@
   import Power from '@lucide/svelte/icons/power';
   import Plus from '@lucide/svelte/icons/plus';
   import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
+  import type { Component } from 'svelte';
+  import { FX_GRID_LAYOUT } from '$lib/config/fxGridLayout';
+  import { provideFxScope } from '$lib/components/v6/central/fxScope';
+  import GuitarControl from './GuitarControl.svelte';
+  import BassControl from './BassControl.svelte';
+  import PitchControl from './PitchControl.svelte';
+  import GlitchControl from './GlitchControl.svelte';
+  import SquashControl from './SquashControl.svelte';
   import Music from '@lucide/svelte/icons/music';
   import { press } from '$lib/actions/press';
   import { drag, type DragInfo } from '$lib/actions/drag';
@@ -82,6 +98,16 @@
     variation: 'Stutter',
     utility: 'Gain',
     sequencer: 'Permute'
+  };
+
+  /** The grid's tile for a device type, by `DEVICE_PRESETS` key: the layout's slots, then the tiles placed outside it. */
+  const TILE_COMPONENTS: Record<string, { Tile: Component<any>; position?: string }> = {
+    ...Object.fromEntries(FX_GRID_LAYOUT.map((slot) => [slot.deviceType, { Tile: slot.component, position: slot.position }])),
+    guitar: { Tile: GuitarControl },
+    bass: { Tile: BassControl },
+    octave: { Tile: PitchControl },
+    glitchLoop: { Tile: GlitchControl },
+    squash: { Tile: SquashControl }
   };
 
   /** Live's class as a person would say it, for a device renamed away from its type. */
@@ -134,6 +160,8 @@
   // under a track hold, whose grid is another track's.
   const padScope = $derived(trackHoldScope.active ? null : activeDrumRackScope());
   usePadChainRows(() => selectedDrumRack()?.rackPath, () => padScope?.note);
+  // The tiles in the cells resolve against the pad's chain while one is scoped.
+  provideFxScope(() => padScope);
 
   /** The pad's chain in order: its instrument and effects, the records where the pad's row has sent them. */
   const padChain = $derived.by(() => {
@@ -389,8 +417,9 @@
   }
 </script>
 
-{#snippet cellBody(cell: Cell, position: number)}
+{#snippet cellBody(cell: Cell, position: number, live = true)}
   {@const glyph = glyphOf(cell)}
+  {@const tile = cell.kind !== 'instrument' && cell.presetKey ? TILE_COMPONENTS[cell.presetKey] : undefined}
       <div class="cell-head">
         <span class="order">{position + 1}</span>
         {#if fxChainStore.appointed === cell.device.devicePath}
@@ -408,6 +437,20 @@
         {/if}
       </div>
 
+      {#if tile && live}
+        <!-- The grid's own tile, on this device. A touch here is the
+             control's: it picks this device and never starts a reorder. -->
+        <div
+          class="cell-control"
+          role="presentation"
+          onpointerdown={(e) => {
+            if (cell.presetKey) fxChainStore.pick(pickScope, cell.presetKey, cell.device.devicePath);
+            e.stopPropagation();
+          }}
+        >
+          <tile.Tile device={cell.device} position={tile.position} />
+        </div>
+      {:else}
       <div class="mark" aria-hidden="true">
         {#if cell.kind === 'instrument'}
           <!-- The strip's own mark for the instrument, so the two agree. -->
@@ -422,6 +465,7 @@
           <Music />
         {/if}
       </div>
+      {/if}
 
       {#if cell.macros.length > 0}
         <div class="macros" aria-hidden="true">
@@ -500,7 +544,7 @@
         style="--cell-ink: {cell.ink}; left: {dragging.box.left + dragging.dx}px; top: {dragging.box.top - dragging.dy}px; width: {dragging.box.width}px; height: {dragging.box.height}px;"
         aria-hidden="true"
       >
-        {@render cellBody(cell, dragging.to)}
+        {@render cellBody(cell, dragging.to, false)}
       </div>
     {/if}
   {/if}
@@ -683,6 +727,22 @@
     width: 30px;
     height: 30px;
     stroke-width: 1.25;
+  }
+  /* A tile in a cell: the grid's XY or slider, minus its reorder arrows
+     (the cell's drag moves the device here). */
+  .cell-control {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    margin: 0 -2px;
+  }
+  .cell-control > :global(*) {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+  }
+  .cell-control :global(.move-btn) {
+    display: none;
   }
   .glyph {
     display: flex;

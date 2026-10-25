@@ -199,6 +199,12 @@ export const TOURS = {
 				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { drag: chainCell(6), by: [-190, 20], keep: true }]
 			},
 			{
+				name: 'chain-xy',
+				description: 'Dragged the Wobble cell\'s Filter XY down and right: its curve and dot move, the other Auto Filter stays, the chain keeps its order and the hand moves to Wobble',
+				scenePatch: chainDemo,
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { drag: `${chainCell(2)} .cell-control`, by: [30, 120] }]
+			},
+			{
 				name: 'chain-moved',
 				description: 'Dragged Reverb two cells left: it now sits ahead of Echo',
 				scenePatch: chainDemo,
