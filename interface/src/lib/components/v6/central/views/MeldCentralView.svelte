@@ -373,6 +373,15 @@
     --meld-wheel-w: 56px;
   }
 
+  /* Smaller iPads (ADR-476): the two engine columns are the only ones that
+     flex, so they take the whole shortfall; the wheels come down to the
+     44px touch floor and give them 24px back. */
+  @media (max-width: 1365.98px) {
+    .meld-root {
+      --meld-wheel-w: var(--height-touch);
+    }
+  }
+
   .engine-head {
     display: flex;
     gap: var(--spacing-sm);

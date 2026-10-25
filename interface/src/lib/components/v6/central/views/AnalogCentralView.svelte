@@ -676,6 +676,28 @@
     flex: 0 0 var(--analog-env-w);
     width: var(--analog-env-w);
   }
+
+  /* Smaller iPads (ADR-476). Every column but the filter's is fixed or
+     floored, so the filter took the whole shortfall: 160px on the 12.9-inch,
+     none at all on the 10.2-inch. Glide and the wheels come down to the 44px
+     touch floor (Noise keeps 56px: its route chip, "→F1+F2", needs it), and
+     the voice card and the filter share what is left from their 12.9-inch
+     widths, 196 and 160px: an 11-inch draws both at those, a 10.2-inch gives
+     up ~20% of each, and the voice card stops at 152px. After the rules it
+     overrides, which it matches in specificity. */
+  @media (max-width: 1365.98px) {
+    .glide-col,
+    .wheel-col {
+      width: var(--height-touch);
+    }
+    .voice-card {
+      flex: 0 1 196px;
+      min-width: 152px;
+    }
+    .filter-col {
+      flex: 1 1 160px;
+    }
+  }
   .mode-button {
     min-height: var(--height-touch);
     font-size: 0.8125rem;

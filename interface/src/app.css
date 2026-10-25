@@ -285,6 +285,19 @@
   --central-gap: 0.5rem;
 }
 
+/* Every iPad narrower than the 12.9-inch Pro (ADR-476): the central view
+   loses 140–240px of its 1062px to the screen, all of it out of the boxes
+   that flex, while the 44px sliders and the gaps keep theirs. So below
+   1366px every view takes the compact sizes, which hands back 8px per gap
+   — 100px and more across a view of ten controls. The 12.9-inch and wider
+   never match, so they keep exactly what they had. */
+@media (max-width: 1365.98px) {
+  :root {
+    --central-inset: 0.5rem;
+    --central-gap: 0.5rem;
+  }
+}
+
 /* Fluid type floors. Text that sizes off its control (cqw/cqh) still needs
    a floor, and a fixed floor is only right at the size it was tuned for:
    the iPad Pro's 1366px landscape width. `--fluid-px` is 1px there and at

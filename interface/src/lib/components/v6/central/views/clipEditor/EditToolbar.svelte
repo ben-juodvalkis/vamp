@@ -74,9 +74,13 @@
 
 <style>
 	/* Its own column beside the roll (the canvas stops TOOLBAR_W short of
-	   the right edge), so the roll keeps the full height. Chips stack at a
-	   44 px touch floor and share the height. The top is padded clear of
-	   ClipCentralView's editor-toggle chip, which floats over this corner. */
+	   the right edge), so the roll keeps the full height. Chips share the
+	   height, up to 72px each. There is no 44px floor (ADR-476): the four
+	   need ~242px at it, which a smaller iPad's editor, or the 12.9-inch's
+	   with four sections, does not have, and the floor pushed Quantize out
+	   of the column; a short chip beats a missing one. The top is padded
+	   clear of ClipCentralView's editor-toggle chip, which floats over this
+	   corner. */
 	.edit-toolbar {
 		position: absolute;
 		top: 0;
@@ -108,7 +112,7 @@
 	}
 	.edit-chip {
 		flex: 1 1 0;
-		min-height: 44px;
+		min-height: 0;
 		max-height: 72px;
 		white-space: nowrap;
 		overflow: hidden;
