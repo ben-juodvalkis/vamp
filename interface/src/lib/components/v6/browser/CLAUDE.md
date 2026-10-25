@@ -42,13 +42,16 @@ Touch-first (iPad Safari).
   first restored level: a level with no folders *and* no presets means the
   catalog moved under the memory, so it's forgotten and the browser falls back to
   the root.
-- **One three-way top-bar switch: `[Instrument | Simpler | Clip]` (ADR-397, revises
+- **One top-bar switch: `[Instrument | Simpler | Clip | Effect]` (ADR-397, revises
   ADR-395/396; kept for the Places, Ben 2026-09-24: "could the header be the same
   as it used to be?"; relabeled from MIDI | Simpler | Audio 2026-09-25 — play it,
-  or let it play. The mode ids stay `midi | simpler | audio`).** With a Place open, the top bar carries a single segmented
+  or let it play; Effect added 2026-10-25, ADR-478. The mode ids are
+  `midi | simpler | audio | effects`).** With a Place open, the top bar carries a single segmented
   switch (`browserModeStore.browseMode`, a projection over `sourceMode` ×
-  `audioLoadTarget` — see the stores note): **Instrument** (`midi`) → the Place's
-  presets (→ MIDI track); **Simpler** → its samples and audio clips, a pick lands
+  `audioLoadTarget`, plus `browseEffects` — see the stores note): **Instrument**
+  (`midi`) → the Place's instruments and kits (→ MIDI track); **Effect**
+  (`effects`) → its audio and MIDI effect presets, a pick added to the selected
+  track's chain or the scoped pad's (no track prep); **Simpler** → its samples and audio clips, a pick lands
   on a fresh Simpler (→ MIDI track); **Clip** (`audio`) → the same plus its MIDI
   clips, a pick lands as a clip (an `.alc` makes its own track — a MIDI clip's is
   still silent, plan §5 follow-ups). The switch takes the bar's right half (2026-09-14, user's call: "they

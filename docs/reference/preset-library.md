@@ -47,12 +47,14 @@ with a kind read from the file itself (`interface/src/lib/utils/placeKinds.ts`):
 | `.wav` `.aif` `.aiff` `.mp3` `.flac` `.m4a` `.ogg` | A sample. |
 
 **The switch decides what you see.** The browser's top-bar
-`Instrument | Simpler | Clip` switch is what you'll do with a pick — play it,
-or let it play. Instrument shows a Place's presets (instruments, kits and
-effects); Simpler its samples and audio clips, landing on a fresh Simpler;
-Clip those plus its MIDI clips, landing as a clip. A MIDI clip has no audio
-for a Simpler, so only Clip lists it. (Internally the modes are still
-`midi | simpler | audio`.)
+`Instrument | Simpler | Clip | Effect` switch is what you'll do with a pick —
+play it, let it play, or put it on the chain. Instrument shows a Place's
+instruments and kits; Simpler its samples and audio clips, landing on a fresh
+Simpler; Clip those plus its MIDI clips, landing as a clip; Effect its audio
+and MIDI effect presets, added to the selected track's chain (or the scoped
+drum pad's). A MIDI clip has no audio for a Simpler, so only Clip lists it.
+Effects show only from ticked Places: Live's factory effect presets are not
+offered as one. (Internally the modes are `midi | simpler | audio | effects`.)
 A Place's samples live in its `Samples` folder by convention; the switch opens
 that folder directly.
 
