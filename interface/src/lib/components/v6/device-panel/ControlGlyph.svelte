@@ -292,6 +292,15 @@
     <circle cx="16" cy="16" r="11" />
     <path d="M16 16 L22.5 9.5" />
     <circle cx="16" cy="16" r="1.8" fill="currentColor" stroke="none" />
+  {:else if name === 'rack'}
+    <!-- A rack: a box of macro knobs. -->
+    <rect x="2.5" y="9" width="27" height="14" rx="2" />
+    <circle cx="9" cy="16" r="3.6" />
+    <path d="M9 16 L6.5 18.5" />
+    <circle cx="16" cy="16" r="3.6" />
+    <path d="M16 16 L14.8 12.6" />
+    <circle cx="23" cy="16" r="3.6" />
+    <path d="M23 16 L26.1 14.2" />
   {/if}
 </svg>
 

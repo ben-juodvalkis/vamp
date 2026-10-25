@@ -92,6 +92,7 @@ export const CONTROL_GLYPHS = [
 	'transpose',
 	'select',
 	'macro',
+	'rack',
 ] as const;
 
 export type ControlGlyphName = (typeof CONTROL_GLYPHS)[number];
@@ -203,8 +204,8 @@ export const DEVICE_CLASS_GLYPHS: Readonly<Record<string, ControlGlyphName>> = {
 	MidiNoteLength: 'notelength',
 	MidiVelocity: 'velocity',
 	MidiScale: 'tune',
-	AudioEffectGroupDevice: 'select',
-	MidiEffectGroupDevice: 'select'
+	AudioEffectGroupDevice: 'rack',
+	MidiEffectGroupDevice: 'rack'
 };
 
 /** The app's own Max devices, by their `DEVICE_PRESETS` key: their class (a Max device) says nothing. */
