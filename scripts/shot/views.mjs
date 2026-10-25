@@ -200,9 +200,9 @@ export const TOURS = {
 			},
 			{
 				name: 'chain-xy',
-				description: 'Dragged the Wobble cell\'s Filter XY down and right: its curve and dot move, the other Auto Filter stays, the chain keeps its order and the hand moves to Wobble',
+				description: 'Dragged the Wobble cell\'s Filter XY down and a whole cell left: its curve and dot move, the other Auto Filter stays, the chain keeps its order and the hand moves to Wobble',
 				scenePatch: chainDemo,
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { drag: `${chainCell(2)} .cell-control`, by: [30, 120] }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { drag: `${chainCell(2)} .cell-control`, by: [-170, 80] }]
 			},
 			{
 				name: 'chain-moved',

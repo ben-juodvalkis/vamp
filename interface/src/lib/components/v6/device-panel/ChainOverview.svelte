@@ -330,8 +330,19 @@
     return row * 10 + col;
   }
 
+  // A press that lands on a cell's tile is the tile's: it picks the device
+  // and the cell neither reorders nor taps. Read at finger-down, from the
+  // press's own target — Svelte delegates the tiles' pointer handlers to
+  // the root, so stopping the event on the way up would starve them.
+  let pressInControl = false;
+  function pressDown(cell: Cell, info: DragInfo) {
+    const target = info.event?.target;
+    pressInControl = target instanceof Element && target.closest('.cell-control') !== null;
+    if (pressInControl && cell.presetKey) fxChainStore.pick(pickScope, cell.presetKey, cell.device.devicePath);
+  }
+
   function dragStart(cell: Cell, index: number, info: DragInfo) {
-    if (cell.kind === 'instrument' || !chainEl) return;
+    if (pressInControl || cell.kind === 'instrument' || !chainEl) return;
     const node = chainEl.querySelector<HTMLElement>(`[data-cell-key="${CSS.escape(cell.key)}"]`);
     const origin = chainEl.getBoundingClientRect();
     const r = node?.getBoundingClientRect();
@@ -440,14 +451,7 @@
       {#if tile && live}
         <!-- The grid's own tile, on this device. A touch here is the
              control's: it picks this device and never starts a reorder. -->
-        <div
-          class="cell-control"
-          role="presentation"
-          onpointerdown={(e) => {
-            if (cell.presetKey) fxChainStore.pick(pickScope, cell.presetKey, cell.device.devicePath);
-            e.stopPropagation();
-          }}
-        >
+        <div class="cell-control" role="presentation">
           <tile.Tile device={cell.device} position={tile.position} />
         </div>
       {:else}
@@ -513,7 +517,10 @@
       animate:flip={{ duration: 160 }}
       use:drag={{
         commit: 'either',
-        onTap: () => open(cell),
+        onDown: (info) => pressDown(cell, info),
+        onTap: () => {
+          if (!pressInControl) open(cell);
+        },
         onStart: (info) => dragStart(cell, index, info),
         onMove: dragMove,
         onEnd: dragEnd
