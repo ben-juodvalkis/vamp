@@ -519,6 +519,14 @@ export async function startMockSurface({
 					return;
 				}
 
+				case '/looping/v3/device/select': {
+					// [devicePath] — the blue hand moves there, and the surface
+					// reports it the way Live's listener makes it report.
+					const [devicePath] = args;
+					send(ws, '/looping/v3/device/appointed', [typeof devicePath === 'string' ? devicePath : '']);
+					return;
+				}
+
 				case '/looping/v3/device/load': {
 					// [trackPath, devicePath, presetPath] — answered only when
 					// `devicePath` is a pad on one of the scene's Drum Racks

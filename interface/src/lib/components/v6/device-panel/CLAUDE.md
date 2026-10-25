@@ -28,7 +28,11 @@ All controls use the modular `handleTap` from BaseDeviceControl:
   top-level device view, or the Drum Rack view's pane while a pad is
   scoped (issue #491; see "The pad scope" below). Never call
   `centralDisplayStore.setView('device', …)` from a tile yourself.
-- **Selects the device** in Live (the blue hand) when the slot has one.
+- **Appoints the device** in Live (the blue hand) when the slot has one —
+  and so does every drag frame, through `openView()`, so a controller
+  following the hand follows the iPad. `fxChainStore.appoint` sends only
+  when the surface's last report (`/looping/v3/device/appointed`) puts
+  the hand elsewhere; a tap always sends. Not under a track hold.
 - **Never loads.** A ghost tile loads on its **first drag frame**
   (`triggerLoad`, called from `onInteraction`), not on a tap — ADR-167.
   This line used to say the opposite; a tile whose tap should load is a

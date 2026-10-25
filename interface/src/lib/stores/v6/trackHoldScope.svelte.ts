@@ -28,6 +28,7 @@ import { SvelteMap } from 'svelte/reactivity';
 import { selectedTrackStore, type SlotKey } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { v3Store, type DeviceRecord } from '$lib/stores/v3/normalized.svelte';
 import { trackOfDevicePath } from '$lib/utils/trackScopePaths';
+import { isNameKeyedClass } from '$lib/utils/deviceSlotMatch';
 
 // pointer id → held track path. Insertion order is press order.
 const holds = new SvelteMap<number, string>();
@@ -80,12 +81,17 @@ function dropPin(): void {
 	if (holds.size === 0) followerLocal.clear();
 }
 
-/** The same device on another track: same class and name, first match. */
+/**
+ * The same device on another track, the way a tile finds it: the same
+ * type, and the same name only where the type cannot tell (a rack, a Max
+ * device, a plug-in — `utils/deviceSlotMatch`); first match.
+ */
 function twinOn(trackPath: string, device: DeviceRecord): DeviceRecord | null {
 	const track = v3Store.tracks.get(trackPath);
 	if (!track) return null;
 	for (const d of track.devices.values()) {
-		if (d.className === device.className && d.name === device.name) return d;
+		if (d.className !== device.className) continue;
+		if (!isNameKeyedClass(d.className) || d.name === device.name) return d;
 	}
 	return null;
 }

@@ -91,6 +91,7 @@ import {
 	isV3PermuteStepAddress
 } from './handlers/v3PermuteStep';
 import { handleV3DrumPadHold, isV3DrumPadHoldAddress } from './handlers/v3DrumPadHold';
+import { handleV3DeviceAppointed, isV3DeviceAppointedAddress } from './handlers/v3DeviceAppointed';
 import {
 	handleV3TotalMix,
 	handleV3TotalMixMeters,
@@ -224,6 +225,10 @@ function routeMessage(address: string, args: OSCArg[]): void {
 	}
 	if (isV3DrumPadHoldAddress(address)) {
 		handleV3DrumPadHold(address, args);
+		return;
+	}
+	if (isV3DeviceAppointedAddress(address)) {
+		handleV3DeviceAppointed(address, args);
 		return;
 	}
 	if (isV3TotalMixAddress(address)) {

@@ -137,7 +137,9 @@ lifetime**: a release with nothing latched beneath, an unlatch, a latch
 scope is refused. `services/deviceViewRouter.svelte.ts` is what sets it.
 
 `fxGridStore` keeps **one slot table per pad path** beside the track's.
-`getSlot(key, scope)` matches the slot's class + default name against
+`getSlot(key, scope)` matches the slot's device (type first, the default
+name only for racks, Max devices and plug-ins — `utils/deviceSlotMatch`,
+ADR-476) against
 `selectedTrackStore.padDevices(scope)` — **presence decides which effects
 the pad carries, the map supplies their records** (2026-09-12): each entry
 of the rack's `vm.padFx` row is the v3 store's record from the pad's map

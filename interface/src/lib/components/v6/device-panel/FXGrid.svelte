@@ -29,7 +29,8 @@
    * - Each slot has: position, deviceType, component, span, rowSpan, config
    * - `device` per slot is resolved via selectedTrackStore.getFxGridSlot
    *   (FXGridState), which reads v3 `devicesByPath` and matches on
-   *   className+name from DEVICE_PRESETS. The legacy `slotRegistry`
+   *   the type first (the name only for racks, Max devices and plug-ins;
+   *   utils/deviceSlotMatch, ADR-476) from DEVICE_PRESETS. The legacy `slotRegistry`
    *   sync path (v2 `handleDeviceList` / `handleCompleteDeviceState`)
    *   went away with closeout-2/3, leaving `slotRegistry.getSlot().device`
    *   permanently null — so we resolve directly from the live v3 tree.

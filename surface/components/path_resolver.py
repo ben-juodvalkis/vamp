@@ -827,6 +827,75 @@ def compose_param_path_under(device_path: str, param_index: int) -> str:
     return "%s/%s/%d" % (device_path, _SEGMENT_PARAMS, param_index)
 
 
+_MAX_DEVICE_NESTING = 8
+
+
+def compose_device_path_for(song, device, _depth: int = 0) -> Optional[str]:
+    """The path of any device Live hands back — the appointed device, say —
+    by walking ``canonical_parent`` up to its track.
+
+    A device on a track is ``<track>/devices/<N>``; one on a drum pad's
+    chain is ``<rack>/pads/<note>/devices/<N>`` (3.8.0), the rack's own
+    path found the same way, so a pad inside a pad composes. A device in
+    any other rack's chain has no path (``chains/`` is reserved), so it
+    answers the **rack's** — the nearest thing on the wire that holds it.
+    ``None`` for a return track, a device that is gone, or any LOM raise.
+    """
+    if device is None or _depth > _MAX_DEVICE_NESTING:
+        return None
+    try:
+        parent = device.canonical_parent
+    except (RuntimeError, AttributeError, TypeError):
+        return None
+    if parent is None:
+        return None
+    index = _index_by_handle(_safe_devices(parent), device)
+    if index is None:
+        return None
+    track_path = compose_track_path(song, parent)
+    if track_path is not None:
+        return "%s/%s/%d" % (track_path, _SEGMENT_DEVICES, index)
+    # Not a track: a rack's chain, whose canonical_parent is the rack.
+    try:
+        rack = parent.canonical_parent
+    except (RuntimeError, AttributeError, TypeError):
+        return None
+    rack_path = compose_device_path_for(song, rack, _depth + 1)
+    if rack_path is None:
+        return None
+    note = _pad_note_of_chain(rack, parent)
+    if note is None:
+        return rack_path
+    return compose_chain_device_path(compose_pad_path(rack_path, note), index)
+
+
+def _index_by_handle(devices: list, device) -> Optional[int]:
+    for idx, candidate in enumerate(devices):
+        if same_lom_handle(candidate, device):
+            return idx
+    return None
+
+
+def _pad_note_of_chain(rack, chain) -> Optional[int]:
+    """The note of the drum pad whose first chain is ``chain`` — the only
+    chain a ``pads/<note>`` path reaches — or ``None`` (not a Drum Rack,
+    a pad's second chain, a raise)."""
+    try:
+        if not getattr(rack, "can_have_drum_pads", False):
+            return None
+        pads = list(rack.drum_pads)
+    except (RuntimeError, AttributeError, TypeError):
+        return None
+    for pad in pads:
+        try:
+            chains = list(pad.chains or ())
+            if chains and same_lom_handle(chains[0], chain):
+                return int(pad.note)
+        except (RuntimeError, AttributeError, TypeError, ValueError):
+            continue
+    return None
+
+
 def compose_slot_path(song, track, slot_index: int) -> Optional[str]:
     """Return the canonical path for a clip slot on a known track.
 

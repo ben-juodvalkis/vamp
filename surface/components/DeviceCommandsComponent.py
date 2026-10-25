@@ -12,6 +12,18 @@ side-effect methods that have no Live property surface (verified via
     /looping/v3/simpler/warp_half    [devicePath]
     /looping/v3/simpler/warp_double  [devicePath]
 
+and the one Surf→UI line beside them (2026-10-25):
+
+    /looping/v3/device/appointed     [devicePath]
+
+Live's appointed device — the blue hand, which a controller locked to
+"the selected device" follows — wherever it goes: a `device/select` from
+the interface, a click in Live, a controller's own move. `""` when there
+is none or it is on a return track; a device inside a non-drum rack's
+chain names its rack (``path_resolver.compose_device_path_for``). Sent
+on the listener, re-sent when a structural change moves its path, and
+seeded on every handshake accept.
+
 The M4L predecessors (``/looping/device/select``,
 ``/looping/device/move_appointed_to_top``,
 ``/looping/device/move_appointed_to_end``) resolved by the M4L-space
@@ -67,6 +79,7 @@ V3_DEVICE_DELETE_ADDRESS = "/looping/v3/device/delete"
 V3_SIMPLER_REVERSE_ADDRESS = "/looping/v3/simpler/reverse"
 V3_SIMPLER_WARP_HALF_ADDRESS = "/looping/v3/simpler/warp_half"
 V3_SIMPLER_WARP_DOUBLE_ADDRESS = "/looping/v3/simpler/warp_double"
+V3_DEVICE_APPOINTED_ADDRESS = "/looping/v3/device/appointed"
 
 V3_ERROR_ADDRESS = "/looping/v3/error"
 
@@ -124,6 +137,19 @@ class DeviceCommandsComponent:
         self._song = song
         self._emit = emit
         self._disconnected = False
+        # The appointed device's path as last sent; None before the first.
+        self._appointed_path: Optional[str] = None
+        self._appointed_listener = False
+        add = getattr(song, "add_appointed_device_listener", None)
+        if add is not None:
+            try:
+                add(self._on_appointed_device_changed)
+                self._appointed_listener = True
+            except _LOM_ERRORS as e:
+                logger.warning(
+                    "DeviceCommandsComponent: appointed_device listener "
+                    "refused: %s: %s", type(e).__name__, e,
+                )
 
     # --- wire handlers ---------------------------------------------------
 
@@ -153,6 +179,61 @@ class DeviceCommandsComponent:
                 detail="select_device raised: %s: %s" % (
                     type(e).__name__, str(e)[:80],
                 ),
+            )
+            return
+        self._appoint(device)
+
+    # --- the blue hand ---------------------------------------------------
+
+    def _appoint(self, device) -> None:
+        """Put Live's blue hand on ``device``. Selecting a device moves the
+        hand when the hand follows the selection; this write covers the
+        case it does not, so a controller following the hand follows the
+        interface. A no-op when the hand is already there. Not measured on
+        the rig yet: whether Live ever leaves it behind after a select."""
+        try:
+            current = self._song.appointed_device
+        except _LOM_ERRORS:
+            return
+        if path_resolver.same_lom_handle(current, device):
+            return
+        try:
+            self._song.appointed_device = device
+        except _LOM_ERRORS as e:
+            logger.warning(
+                "DeviceCommandsComponent: appointed_device write refused: "
+                "%s: %s", type(e).__name__, e,
+            )
+
+    def _on_appointed_device_changed(self) -> None:
+        # A notification: reads only, and the emit is not a LOM write.
+        self._emit_appointed(force=False)
+
+    def on_structural_change(self) -> None:
+        """A track or device moved: the hand's device may have a new path."""
+        self._emit_appointed(force=False)
+
+    def emit_on_accept(self) -> None:
+        """Seed a client that just connected with where the hand is."""
+        self._emit_appointed(force=True)
+
+    def _emit_appointed(self, force: bool) -> None:
+        if self._disconnected:
+            return
+        try:
+            device = self._song.appointed_device
+        except _LOM_ERRORS:
+            device = None
+        path = path_resolver.compose_device_path_for(self._song, device) or ""
+        if not force and path == self._appointed_path:
+            return
+        self._appointed_path = path
+        try:
+            self._emit(V3_DEVICE_APPOINTED_ADDRESS, (path,))
+        except Exception as e:
+            logger.warning(
+                "DeviceCommandsComponent: emit %s failed: %s",
+                V3_DEVICE_APPOINTED_ADDRESS, e,
             )
 
     def handle_move_to_top(self, args, source_addr) -> None:
@@ -446,3 +527,14 @@ class DeviceCommandsComponent:
         if self._disconnected:
             return
         self._disconnected = True
+        if self._appointed_listener:
+            remove = getattr(self._song, "remove_appointed_device_listener", None)
+            if remove is not None:
+                try:
+                    remove(self._on_appointed_device_changed)
+                except _LOM_ERRORS as e:
+                    logger.warning(
+                        "DeviceCommandsComponent: appointed_device listener "
+                        "detach failed: %s", e,
+                    )
+            self._appointed_listener = False

@@ -6,7 +6,8 @@
 	 * twelve, under the device's name. A plug-in reports the parameters
 	 * configured for it in Live, which is the set a performer chose.
 	 *
-	 * Shows the appointed device: the overview appoints what it opens.
+	 * Shows the device the overview opened it on (its pick), so the blue
+	 * hand moving elsewhere in Live does not swap it out from under you.
 	 */
 	import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 	import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
@@ -16,10 +17,14 @@
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 	import { glyphForName } from '$lib/config/controlGlyphMap';
 	import DeviceEmptyState from '../DeviceEmptyState.svelte';
+	import { CHAIN_DEVICE_VIEW } from './chainDeviceView';
 
 	const MAX_SLIDERS = 12;
 
-	const device = $derived(selectedTrackStore.devicesByPath.find((d) => d.devicePath === fxChainStore.appointed));
+	const device = $derived.by(() => {
+		const picked = fxChainStore.pickFor(selectedTrackStore.selectedTrackPath, CHAIN_DEVICE_VIEW);
+		return selectedTrackStore.devicesByPath.find((d) => d.devicePath === picked);
+	});
 	const scheme = familyScheme('utility');
 	const color = $derived({
 		primary: trackInk(scheme.primary, paintModeReactive()),

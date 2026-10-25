@@ -214,6 +214,7 @@
       openDeviceView('audio-effect-rack');
       return;
     }
+    fxChainStore.pick(trackPath, CHAIN_DEVICE_VIEW, device.devicePath);
     openDeviceView(CHAIN_DEVICE_VIEW);
   }
 </script>

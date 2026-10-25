@@ -11,7 +11,10 @@
  * - **The appointed device** — Live's blue hand. Every tap in the
  *   overview and every gesture on a tile appoints its device, so a knob
  *   controller following the blue hand follows the iPad. Sent only when
- *   it changes: a tile appoints on every drag frame.
+ *   it changes: a tile appoints on every drag frame. The surface reports
+ *   where the hand really is (`/looping/v3/device/appointed`, a click in
+ *   Live included), which replaces our guess, so a gesture after the hand
+ *   moved elsewhere sends again.
  */
 import { SvelteMap } from 'svelte/reactivity';
 import { selectDevice } from '$lib/services/deviceMoveService';
@@ -46,13 +49,17 @@ export const fxChainStore = {
 		picks.set(pickKey(trackPath, type), devicePath);
 	},
 
-	/** The device the app last appointed in Live (Live does not report its own). */
+	/** The device Live's blue hand is on: the surface's report, else what we last sent. */
 	get appointed(): string | null {
 		return appointed;
 	},
+	/** The surface's report of the hand (`device/appointed`): recorded, never sent back. */
+	observeAppointed(devicePath: string | null): void {
+		appointed = devicePath;
+	},
 	/**
 	 * Appoint `devicePath`. A repeat is dropped unless `force` — a deliberate
-	 * tap re-sends, since Live's hand may have moved without telling us.
+	 * tap re-sends, in case the report of a move elsewhere has not landed.
 	 */
 	appoint(devicePath: string, { force = false }: { force?: boolean } = {}): void {
 		if (appointed === devicePath && !force) return;

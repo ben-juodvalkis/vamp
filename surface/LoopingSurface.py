@@ -1266,6 +1266,11 @@ class LoopingSurface(ControlSurface):
             )
             if selected_track is not None:
                 selected_track.emit_on_accept()
+            # The blue hand (2026-10-25): where Live's appointed device is,
+            # so a reconnecting UI marks it without waiting for a move.
+            device_commands = getattr(self, "_device_commands_component", None)
+            if device_commands is not None:
+                device_commands.emit_on_accept()
             # ExclusiveArmComponent seed: arm the currently-selected
             # regular track on handshake accept. Master/return
             # selections skip silently. Symmetric guard to the
@@ -2180,6 +2185,16 @@ class LoopingSurface(ControlSurface):
                     "LoopingSurface: selected-track structural-change "
                     "raised: %s", e,
                 )
+            # The blue hand's device may sit at a new path now.
+            device_commands = getattr(self, "_device_commands_component", None)
+            if device_commands is not None:
+                try:
+                    device_commands.on_structural_change()
+                except Exception as e:
+                    logger.error(
+                        "LoopingSurface: device-commands structural-change "
+                        "raised: %s", e,
+                    )
             # permute ADR-020: re-walk the Permute devices (paths and
             # handles re-resolve; runtime state keyed by LOM id survives).
             sequencer = getattr(self, "_sequencer_component", None)
