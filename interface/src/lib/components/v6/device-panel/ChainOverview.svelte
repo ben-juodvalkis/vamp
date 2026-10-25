@@ -14,9 +14,12 @@
    * choice is visible here too.
    *
    * The power button in a cell's corner turns the device on and off
-   * (Device On, parameter 0). A cell dragged sideways moves the device
-   * in Live's chain (`device/move`); the instrument stays put and nothing
-   * crosses it (`utils/chainDrop`).
+   * (Device On, parameter 0). A cell dragged moves the device in Live's
+   * chain (`device/move`): the cell rides the finger, the others slide
+   * aside to show where it will land, and the new order holds after the
+   * drop until Live's republish shows it (or 2 s pass, Live having
+   * refused). The instrument stays put and nothing crosses it
+   * (`utils/chainDrop`).
    *
    * **A pad follows the Drum Rack view.** While a pad is held or latched
    * on the selected track's Drum Rack, the overview is that pad's chain —
@@ -39,7 +42,8 @@
   import { press } from '$lib/actions/press';
   import { drag, type DragInfo } from '$lib/actions/drag';
   import { moveDevice } from '$lib/services/deviceMoveService';
-  import { chainDropIndex } from '$lib/utils/chainDrop';
+  import { clampChainIndex, moved } from '$lib/utils/chainDrop';
+  import { flip } from 'svelte/animate';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
   import { fxChainStore, RACK_PICK } from '$lib/stores/v6/fxChainStore.svelte';
@@ -118,6 +122,8 @@
   } as const;
 
   type Cell = {
+    /** Stable across Live's renumbering (paths are positions): name, class, and which of those it is. */
+    key: string;
     device: DeviceRecord;
     order: number;
     kind: 'instrument' | 'rack' | 'max' | 'plugin' | 'effect';
@@ -181,7 +187,8 @@
   });
 
   const cells = $derived<Cell[]>(
-    devices.map((device, i) => {
+    devices.map((device, i, all) => {
+      const nth = all.slice(0, i).filter((d) => d.name === device.name && d.className === device.className).length;
       const presetKey = presetKeyFor(device);
       const isInstrument = padChain
         ? padChain[i].instrument
@@ -198,6 +205,7 @@
       const family = presetKey ? DEVICE_PRESETS[presetKey].color.primary : kind === 'rack' ? DEVICE_FAMILY_INKS.rackVoice.primary : DEVICE_FAMILY_INKS.utility.primary;
       const typeLabel = TYPE_LABELS[device.className] ?? splitCamel(device.className);
       return {
+        key: `${device.className}|${device.name}|${nth}`,
         device,
         order: i + 1,
         kind,
@@ -250,58 +258,97 @@
     selectedTrackStore.setParamValue(path, cell.on ? 0 : 1);
   }
 
-  // A drag in flight: which cell, how far it has travelled, and the slot
-  // between cells it would land in (0..cells.length).
-  let dragging = $state<{ path: string; from: number; dx: number; dy: number } | null>(null);
-  let dropSlot = $state<number | null>(null);
+  // A drag in flight: which cell, where it started, where it would land
+  // now, and the box it rides from (relative to the chain).
+  let dragging = $state<{
+    key: string;
+    path: string;
+    from: number;
+    to: number;
+    dx: number;
+    dy: number;
+    box: { left: number; top: number; width: number; height: number };
+  } | null>(null);
   let chainEl = $state<HTMLElement | null>(null);
+  // After a drop: the order we expect Live to report, shown until it does.
+  let pending = $state<{ order: string[]; until: number } | null>(null);
 
   const instrumentIndex = $derived(cells.findIndex((c) => c.kind === 'instrument'));
+  const naturalOrder = $derived(cells.map((c) => c.key));
 
-  function slotAt(x: number, y: number): number | null {
-    const hit = document.elementFromPoint(x, y)?.closest<HTMLElement>('.chain-cell');
-    if (!hit || !chainEl?.contains(hit)) return null;
-    const index = Number(hit.dataset.index);
-    const box = hit.getBoundingClientRect();
-    return index + (x > box.left + box.width / 2 ? 1 : 0);
-  }
-
-  function landing(): number | null {
-    if (!dragging || dropSlot === null) return null;
-    return chainDropIndex({
-      from: dragging.from,
-      slot: dropSlot,
-      count: cells.length,
-      instrument: instrumentIndex >= 0 ? instrumentIndex : null
-    });
-  }
-
-  /** The slot the drop marker shows: where the device would really land. */
-  const markerSlot = $derived.by(() => {
-    const to = landing();
-    if (to === null || !dragging) return null;
-    return to > dragging.from ? to + 1 : to;
+  // Live's republish shows the move (or something else happened, or it
+  // never came): the chain as Live reports it takes over again.
+  $effect(() => {
+    if (!pending) return;
+    const now = naturalOrder.join('\n');
+    if (now === pending.order.join('\n')) {
+      pending = null;
+      return;
+    }
+    const timer = setTimeout(() => (pending = null), Math.max(0, pending.until - Date.now()));
+    return () => clearTimeout(timer);
   });
 
+  /** The cells in the order to draw them: the drag's preview, else a drop Live has not shown yet. */
+  const shown = $derived.by(() => {
+    if (dragging) return moved(cells, dragging.from, dragging.to);
+    if (pending) {
+      const byKey = new Map(cells.map((c) => [c.key, c]));
+      const order = pending.order.map((k) => byKey.get(k));
+      if (order.every(Boolean) && order.length === cells.length) return order as Cell[];
+    }
+    return cells;
+  });
+
+  /** The cell position under a point, by the grid's own geometry — not the cells, which are sliding. */
+  function positionAt(x: number, y: number): number | null {
+    if (!chainEl) return null;
+    const box = chainEl.getBoundingClientRect();
+    const gap = 8;
+    const col = Math.max(0, Math.min(9, Math.floor(((x - box.left) * 10) / (box.width + gap))));
+    const row = tall ? 0 : y < box.top + box.height / 2 ? 0 : 1;
+    return row * 10 + col;
+  }
+
   function dragStart(cell: Cell, index: number, info: DragInfo) {
-    if (cell.kind === 'instrument') return;
-    dragging = { path: cell.device.devicePath, from: index, dx: info.dx, dy: info.dy };
-    dropSlot = null;
+    if (cell.kind === 'instrument' || !chainEl) return;
+    const node = chainEl.querySelector<HTMLElement>(`[data-cell-key="${CSS.escape(cell.key)}"]`);
+    const origin = chainEl.getBoundingClientRect();
+    const r = node?.getBoundingClientRect();
+    if (!r) return;
+    pending = null;
+    dragging = {
+      key: cell.key,
+      path: cell.device.devicePath,
+      from: index,
+      to: index,
+      dx: info.dx,
+      dy: info.dy,
+      box: { left: r.left - origin.left, top: r.top - origin.top, width: r.width, height: r.height }
+    };
   }
 
   function dragMove(info: DragInfo) {
     if (!dragging) return;
-    dragging = { ...dragging, dx: info.dx, dy: info.dy };
-    const slot = slotAt(info.x, info.y);
-    if (slot !== null) dropSlot = slot;
+    const at = positionAt(info.x, info.y);
+    const to =
+      at === null
+        ? dragging.to
+        : (clampChainIndex({
+            from: dragging.from,
+            to: at,
+            count: cells.length,
+            instrument: instrumentIndex >= 0 ? instrumentIndex : null
+          }) ?? dragging.to);
+    dragging = { ...dragging, to, dx: info.dx, dy: info.dy };
   }
 
   function dragEnd() {
-    const to = landing();
-    const path = dragging?.path;
+    const d = dragging;
     dragging = null;
-    dropSlot = null;
-    if (path && to !== null) void moveDevice(path, to);
+    if (!d || d.to === d.from) return;
+    pending = { order: moved(naturalOrder, d.from, d.to), until: Date.now() + 2000 };
+    void moveDevice(d.path, d.to);
   }
 
   function glyphOf(cell: Cell): DeviceGlyph | null {
@@ -343,44 +390,10 @@
   }
 </script>
 
-<div
-  class="chain"
-  class:tall
-  class:pad-scoped={padScope !== null}
-  data-debug="chain-overview"
-  data-chain-scope={padScope?.note}
-  style={padInk ? `--scope-ink: ${padInk}` : undefined}
-  bind:this={chainEl}
->
-  {#each cells as cell, index (cell.device.devicePath)}
-    {@const glyph = glyphOf(cell)}
-    {@const lifted = dragging?.path === cell.device.devicePath}
-    <div
-      class="chain-cell"
-      class:off={!cell.on}
-      class:lifted
-      class:drop-before={markerSlot === index}
-      class:drop-after={markerSlot === cells.length && index === cells.length - 1}
-      style:translate={lifted ? `${dragging?.dx ?? 0}px ${-(dragging?.dy ?? 0)}px` : undefined}
-      data-index={index}
-      class:appointed={fxChainStore.appointed === cell.device.devicePath}
-      class:instrument={cell.kind === 'instrument'}
-      style="--cell-ink: {cell.ink};"
-      data-device-path={cell.device.devicePath}
-      data-kind={cell.kind}
-      role="button"
-      tabindex="0"
-      aria-label="{cell.device.name}{cell.tile ? `, the ${cell.tile} tile's` : ''}"
-      use:drag={{
-        commit: 'either',
-        onTap: () => open(cell),
-        onStart: (info) => dragStart(cell, index, info),
-        onMove: dragMove,
-        onEnd: dragEnd
-      }}
-    >
+{#snippet cellBody(cell: Cell, position: number)}
+  {@const glyph = glyphOf(cell)}
       <div class="cell-head">
-        <span class="order">{cell.order}</span>
+        <span class="order">{position + 1}</span>
         {#if fxChainStore.appointed === cell.device.devicePath}
           <span class="hand" aria-label="Selected in Live"><Hand /></span>
         {/if}
@@ -431,8 +444,59 @@
           <span class="pad-chip tile-chip">{cell.tile}</span>
         {/if}
       </div>
+{/snippet}
+
+<div
+  class="chain"
+  class:tall
+  class:pad-scoped={padScope !== null}
+  data-debug="chain-overview"
+  data-chain-scope={padScope?.note}
+  style={padInk ? `--scope-ink: ${padInk}` : undefined}
+  bind:this={chainEl}
+>
+  {#each shown as cell, position (cell.key)}
+    {@const index = cells.indexOf(cell)}
+    <div
+      class="chain-cell"
+      class:off={!cell.on}
+      class:placeholder={dragging?.key === cell.key}
+      class:appointed={fxChainStore.appointed === cell.device.devicePath}
+      class:instrument={cell.kind === 'instrument'}
+      style="--cell-ink: {cell.ink};"
+      data-cell-key={cell.key}
+      data-device-path={cell.device.devicePath}
+      data-kind={cell.kind}
+      role="button"
+      tabindex="0"
+      aria-label="{cell.device.name}{cell.tile ? `, the ${cell.tile} tile's` : ''}"
+      animate:flip={{ duration: 160 }}
+      use:drag={{
+        commit: 'either',
+        onTap: () => open(cell),
+        onStart: (info) => dragStart(cell, index, info),
+        onMove: dragMove,
+        onEnd: dragEnd
+      }}
+    >
+      {@render cellBody(cell, position)}
     </div>
   {/each}
+  {#if dragging}
+    {@const cell = cells.find((c) => c.key === dragging?.key)}
+    {#if cell}
+      <!-- The cell under the finger, riding it; its place in the list is the gap. -->
+      <div
+        class="chain-cell lifted"
+        class:off={!cell.on}
+        class:appointed={fxChainStore.appointed === cell.device.devicePath}
+        style="--cell-ink: {cell.ink}; left: {dragging.box.left + dragging.dx}px; top: {dragging.box.top - dragging.dy}px; width: {dragging.box.width}px; height: {dragging.box.height}px;"
+        aria-hidden="true"
+      >
+        {@render cellBody(cell, dragging.to)}
+      </div>
+    {/if}
+  {/if}
   {#if padScope}
     <!-- Whose chain this is, as the grid's scope chip says it. -->
     <div class="pad-chip chain-scope-chip" aria-label="Chain of pad {padScope.note}">
@@ -491,28 +555,23 @@
   .chain-cell.off > :not(.cell-head) {
     opacity: 0.45;
   }
-  /* The cell under the finger rides it and lets the cells below be hit. */
+  /* The cell under the finger rides it, out of the grid's flow. */
   .chain-cell.lifted {
-    z-index: 2;
-    pointer-events: none;
-    box-shadow: 0 6px 18px oklch(0 0 0 / 0.5);
-  }
-  /* Where it would land: a bar in the trough on that side. */
-  .chain-cell.drop-before::before,
-  .chain-cell.drop-after::after {
-    content: '';
     position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    border-radius: 2px;
-    background: var(--foreground);
+    z-index: 4;
+    pointer-events: none;
+    box-shadow: 0 8px 22px oklch(0 0 0 / 0.55);
+    scale: 1.04;
   }
-  .chain-cell.drop-before::before {
-    left: -6px;
+  /* Where it will land: its own place in the previewed order, emptied. */
+  .chain-cell.placeholder {
+    border-style: dashed;
+    border-color: color-mix(in oklab, var(--cell-ink) 60%, transparent);
+    background: transparent;
+    box-shadow: none;
   }
-  .chain-cell.drop-after::after {
-    right: -6px;
+  .chain-cell.placeholder > :global(*) {
+    visibility: hidden;
   }
   /* The blue hand: the device Live's controllers follow. */
   .chain-cell.appointed {

@@ -235,7 +235,7 @@ async function centreOf(page, selector, what) {
  *                                       the screen behind it can still be shot.
  *   { fill: selector, text }            type into a field, as a keyboard would.
  *   { wait: ms }                        let an animation (a smooth scroll) land.
- *   { drag: selector, by?: [dx, dy] }   a real press-move-release in steps, so
+ *   { drag: selector, by?: [dx, dy], keep? }   a real press-move-release in steps (keep: no release until after the capture), so
  *                                       the drag machine crosses its slop
  *                                       threshold and the control sees a first
  *                                       drag frame — the one event a ghost FX
@@ -275,8 +275,14 @@ export async function performSteps(page, steps, { log = () => {} } = {}) {
 				await page.mouse.move(x + (dx * i) / frames, y + (dy * i) / frames);
 				await page.waitForTimeout(16);
 			}
-			await page.mouse.up();
-			await page.waitForTimeout(400);
+			// `keep: true` stays down through the capture, to photograph a drag in flight.
+			if (step.keep) {
+				await page.waitForTimeout(250);
+				release = () => page.mouse.up();
+			} else {
+				await page.mouse.up();
+				await page.waitForTimeout(400);
+			}
 		} else if (step.hold) {
 			const ms = step.ms ?? 450;
 			const { x, y } = await centreOf(page, step.hold, '--hold');

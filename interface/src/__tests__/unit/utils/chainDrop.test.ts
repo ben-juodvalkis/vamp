@@ -1,27 +1,28 @@
 import { describe, expect, it } from 'vitest';
-import { chainDropIndex } from '$lib/utils/chainDrop';
+import { clampChainIndex, moved } from '$lib/utils/chainDrop';
 
-describe('chainDropIndex', () => {
-	it('moves left to the slot', () => {
-		expect(chainDropIndex({ from: 3, slot: 1, count: 5, instrument: null })).toBe(1);
+describe('clampChainIndex', () => {
+	it('lands where the finger is', () => {
+		expect(clampChainIndex({ from: 3, to: 1, count: 5, instrument: null })).toBe(1);
+		expect(clampChainIndex({ from: 1, to: 3, count: 5, instrument: null })).toBe(3);
 	});
-	it('moves right to one before the slot', () => {
-		expect(chainDropIndex({ from: 1, slot: 4, count: 5, instrument: null })).toBe(3);
-	});
-	it('moves to the end', () => {
-		expect(chainDropIndex({ from: 0, slot: 5, count: 5, instrument: null })).toBe(4);
-	});
-	it('is no move beside where it started', () => {
-		expect(chainDropIndex({ from: 2, slot: 2, count: 5, instrument: null })).toBeNull();
-		expect(chainDropIndex({ from: 2, slot: 3, count: 5, instrument: null })).toBeNull();
+	it('clamps to the chain', () => {
+		expect(clampChainIndex({ from: 0, to: 9, count: 5, instrument: null })).toBe(4);
 	});
 	it('never moves the instrument', () => {
-		expect(chainDropIndex({ from: 1, slot: 4, count: 5, instrument: 1 })).toBeNull();
+		expect(clampChainIndex({ from: 1, to: 4, count: 5, instrument: 1 })).toBeNull();
 	});
 	it('keeps an audio effect after the instrument', () => {
-		expect(chainDropIndex({ from: 4, slot: 0, count: 5, instrument: 1 })).toBe(2);
+		expect(clampChainIndex({ from: 4, to: 0, count: 5, instrument: 1 })).toBe(2);
 	});
 	it('keeps a MIDI effect before the instrument', () => {
-		expect(chainDropIndex({ from: 0, slot: 5, count: 5, instrument: 2 })).toBe(1);
+		expect(clampChainIndex({ from: 0, to: 4, count: 5, instrument: 2 })).toBe(1);
+	});
+});
+
+describe('moved', () => {
+	it('moves one item and keeps the rest in order', () => {
+		expect(moved(['a', 'b', 'c', 'd'], 3, 1)).toEqual(['a', 'd', 'b', 'c']);
+		expect(moved(['a', 'b', 'c', 'd'], 0, 2)).toEqual(['b', 'c', 'a', 'd']);
 	});
 });

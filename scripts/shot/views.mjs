@@ -193,8 +193,14 @@ export const TOURS = {
 				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { click: `${chainCell(4)} .power` }]
 			},
 			{
+				name: 'chain-dragging',
+				description: 'Reverb mid-drag, still held: it rides the finger, Echo has slid right, the dashed gap is where it lands',
+				scenePatch: chainDemo,
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { drag: chainCell(6), by: [-190, 20], keep: true }]
+			},
+			{
 				name: 'chain-moved',
-				description: 'Dragged Reverb a cell left: it now sits ahead of the Dub Space rack',
+				description: 'Dragged Reverb two cells left: it now sits ahead of Echo',
 				scenePatch: chainDemo,
 				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { drag: chainCell(6), by: [-190, 0] }]
 			},
