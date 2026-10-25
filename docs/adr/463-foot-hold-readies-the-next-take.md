@@ -1,4 +1,4 @@
-# ADR-461: The Foot Pedal's Hold Readies the Next Take
+# ADR-463: The Foot Pedal's Hold Readies the Next Take
 
 ## Status
 **Accepted** (2026-10-23). Branch `foot-hold-next-take`, `c98fdfd`.
