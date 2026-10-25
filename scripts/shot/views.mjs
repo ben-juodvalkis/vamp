@@ -19,6 +19,7 @@
 
 /** iPad Pro 12.9" landscape, the machine this interface is built for. */
 import { readFileSync } from 'node:fs';
+import { CHAIN_DEMO_DEVICES, CHAIN_DEMO_TRACK, setTrackDevices } from './scene.mjs';
 
 // The rig's "106 Bass 01" Analog, all 172 parameters as the running Live
 // reported them (device_dump.js, 2026-10-22): [name, min, max, value].
@@ -144,9 +145,56 @@ const FX_TILES = [
 ];
 
 /** Open Settings from the master strip's gear. */
+const chainDemo = (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, CHAIN_DEMO_DEVICES);
+const chainCell = (index) => `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/${index}"]`;
 const SETTINGS_OPEN = [{ click: '[data-debug="master-card"]' }, { click: '[data-debug="settings-gear"]', dom: true }];
 
 export const TOURS = {
+	// The FX section's second face (the chain overview, a mock-up for Ben,
+	// 2026-10-25): the Lead track carries CHAIN_DEMO_DEVICES — two Auto
+	// Filters, two racks of the performer's, a plug-in.
+	chain: {
+		description: 'The FX grid and the chain overview behind its switch, on a track with two Auto Filters, two racks and a plug-in.',
+		states: [
+			{
+				name: 'grid',
+				description: 'Lead selected, the FX grid: the Filter tile wears 1/2 (two Auto Filters on the track)',
+				scenePatch: chainDemo,
+				steps: [openInstrument(CHAIN_DEMO_TRACK)]
+			},
+			{
+				name: 'chain',
+				description: 'The switch flipped: the chain in order, each device its tile chip',
+				scenePatch: chainDemo,
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }]
+			},
+			{
+				name: 'chain-filter-2',
+				description: 'Tapped the second Auto Filter: appointed, the Filter view on it, the Filter chip moved to it',
+				scenePatch: chainDemo,
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { click: chainCell(3) }]
+			},
+			{
+				name: 'grid-after-pick',
+				description: 'Back to the grid after that pick: the Filter tile wears 2/2',
+				scenePatch: chainDemo,
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { click: chainCell(3) }, { click: '[data-fx-mode="grid"]' }]
+			},
+			{
+				name: 'chain-rack',
+				description: 'Tapped the Dub Space rack: its macros in the central view',
+				scenePatch: chainDemo,
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { click: chainCell(5) }]
+			},
+			{
+				name: 'chain-plugin',
+				description: 'Tapped the plug-in: the generic view, one slider per parameter',
+				scenePatch: chainDemo,
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { click: chainCell(8) }]
+			}
+		]
+	},
+
 	central: {
 		description: 'Every central view the default scene reaches, cropped to the central section.',
 		crop: '.central-frame',

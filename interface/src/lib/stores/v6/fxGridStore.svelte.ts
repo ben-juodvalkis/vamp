@@ -18,6 +18,8 @@ import type { DeviceRecord } from '$lib/stores/v3/normalized.svelte';
 import { parsePadPath, scopeKeyOf } from '$lib/utils/padPaths';
 import { isTrackScopeKey, trackOfDevicePath } from '$lib/utils/trackScopePaths';
 import { setNewDeviceHook, v3Store } from '$lib/stores/v3/normalized.svelte';
+import { matchesSlot, pickSlotDevice } from '$lib/utils/deviceSlotMatch';
+import { fxChainStore } from './fxChainStore.svelte';
 import {
 	armParam,
 	armSpeculative,
@@ -222,17 +224,14 @@ export class FXGridState {
 
 	/**
 	 * Resolve a DeviceRecord to its FX-grid slot key, or undefined if
-	 * the device isn't in the FX-grid mapping. Mirrors the matching
-	 * predicate used elsewhere (`expectedClassName + defaultName`).
+	 * the device isn't in the FX-grid mapping. Type first, the name only
+	 * for racks, Max devices and plug-ins (`utils/deviceSlotMatch`).
 	 */
 	private matchDeviceToSlot(device: DeviceRecord): PositionKey | DeviceTypeKey | undefined {
 		for (const [slotKey] of this.slots) {
 			const config = this.slotKeyConfig(slotKey);
 			if (!config) continue;
-			if (
-				device.className === config.expectedClassName &&
-				device.name === config.defaultName
-			) {
+			if (matchesSlot(device, config)) {
 				return slotKey;
 			}
 		}
@@ -438,12 +437,10 @@ export class FXGridState {
 			throw new Error(`[FXGridState] No config found for device type: ${deviceType}`);
 		}
 
-		// Find device from the scope's chain: the track's, or the pad's.
+		// Find device from the scope's chain: the track's, or the pad's —
+		// the performer's pick when the chain holds several of the type.
 		const devices = this.devicesIn(scope);
-		const device =
-			devices.find(
-				(d) => d.className === config.expectedClassName && d.name === config.defaultName
-			) || null;
+		const device = pickSlotDevice(devices, config, fxChainStore.pickFor(scope || selectedTrackStore.selectedTrackPath, deviceType));
 
 		return {
 			...slot,
@@ -573,8 +570,7 @@ export class FXGridState {
 
 			if (
 				slot.loadState === 'loading' &&
-				device.className === config.expectedClassName &&
-				device.name === config.defaultName
+				matchesSlot(device, config)
 			) {
 				// Clear timeout
 				if (slot.loadTimeout) {
@@ -673,7 +669,7 @@ export class FXGridState {
 		// Use slotRegistry to find matching slot
 		for (const [position, slotStore] of slotRegistry.getAllSlots().entries()) {
 			const config = slotStore.config;
-			if (device.className === config.expectedClassName && device.name === config.defaultName) {
+			if (matchesSlot(device, config)) {
 				const deviceType = slotRegistry.getDeviceTypeForPosition(position);
 				if (deviceType) {
 					return { position, deviceType };

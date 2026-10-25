@@ -1195,6 +1195,52 @@ const DEFAULT_TRACKS = [
 	}
 ];
 
+/** A rack's parameters: Device On, then sixteen macros, the named ones first. */
+function rackParams(macros, { on = 1 } = {}) {
+	const out = [['Device On', 'Device On', 0, 1, on, '']];
+	for (let i = 0; i < 16; i++) {
+		const [name, value] = macros[i] ?? [`Macro ${i + 1}`, 0];
+		out.push([name, name, 0, 127, value, '']);
+	}
+	return out;
+}
+
+/**
+ * The chain the `chain` tour puts on the Lead track (index 6): every case
+ * the chain overview has to show — the instrument, Permute, two Auto
+ * Filters (one renamed, as a preset dragged in from Live's browser is),
+ * the app's own Echo and Reverb, two of the performer's racks (one
+ * switched off) and a plug-in the app has no view for.
+ */
+export const CHAIN_DEMO_TRACK = 6;
+export const CHAIN_DEMO_DEVICES = [
+	{ name: 'Wavetable', params: wavetableParams({ osc2On: 1 }) },
+	{ name: 'Permute', params: permuteParams({ mute: [1, 1, 1, 1, 1, 1, 1, 1], pitch: [1, 0, 0, 1, 0, 1, 0, 0] }) },
+	{ name: 'Wobble', like: 'Auto Filter' },
+	'Auto Filter',
+	'Echo',
+	{
+		name: 'Dub Space',
+		className: 'AudioEffectGroupDevice',
+		params: rackParams([['Send', 96], ['Feedback', 70], ['Tone', 48], ['Wobble', 30], ['Size', 110], ['Decay', 84], ['Duck', 40], ['Mix', 64]])
+	},
+	'Reverb',
+	{ name: 'Grit', className: 'AudioEffectGroupDevice', params: rackParams([['Drive', 90], ['Crush', 20], ['Tone', 70], ['Mix', 100]], { on: 0 }) },
+	{
+		name: 'Supermassive',
+		className: 'AuPluginDevice',
+		params: [
+			['Device On', 'Device On', 0, 1, 1, ''],
+			['Mix', 'Mix', 0, 1, 0.42, ''],
+			['Delay', 'Delay', 0, 1, 0.6, ''],
+			['Feedback', 'Feedback', 0, 1, 0.55, ''],
+			['Density', 'Density', 0, 1, 0.3, ''],
+			['Width', 'Width', 0, 1, 0.8, ''],
+			['Mod Rate', 'Mod Rate', 0, 1, 0.2, '']
+		]
+	}
+];
+
 const SLOTS_PER_TRACK = 8;
 
 /**
@@ -1261,6 +1307,29 @@ export function swapDevice(scene, devicePath, { name, className, params }) {
 	return scene;
 }
 
+/**
+ * Replace one track's devices in a built scene: its D and P records, in
+ * place, from a `devices` list in `DEFAULT_TRACKS`' form. A tour state's
+ * `scenePatch` uses it to shoot a chain the default scene does not carry.
+ * Returns the scene.
+ */
+export function setTrackDevices(scene, trackIndex, devices) {
+	const args = scene.treeArgs;
+	const prefix = `tracks/${trackIndex}/devices/`;
+	let at = args.findIndex((v, k) => v === 'D' && String(args[k + 1]).startsWith(prefix));
+	if (at < 0) throw new Error(`setTrackDevices: no device records on tracks/${trackIndex}`);
+	let end = at;
+	for (;;) {
+		if (args[end] === 'D' && String(args[end + 1]).startsWith(prefix)) end += 4;
+		else if (args[end] === 'P' && String(args[end + 1]).startsWith(prefix)) end += 8;
+		else break;
+	}
+	const records = [];
+	pushDevices(records, `tracks/${trackIndex}`, devices);
+	args.splice(at, end - at, ...records);
+	return scene;
+}
+
 function pushDevices(args, trackPath, deviceNames, deviceProperties = {}, padRacks = {}) {
 	deviceNames.forEach((entry, deviceIndex) => {
 		// A device is either a bare name or `{ name, params, properties,
@@ -1272,11 +1341,15 @@ function pushDevices(args, trackPath, deviceNames, deviceProperties = {}, padRac
 		// table, not tree records — §3 carries no property values).
 		const name = typeof entry === 'string' ? entry : entry.name;
 		const devicePath = `${trackPath}/devices/${deviceIndex}`;
-		const className = deviceClassName(name);
+		// `className` names a device the way Live does when its name is not
+		// its type's (a preset dragged in keeps the preset's name); `like`
+		// borrows another device's parameters (`{ name: 'Wobble', like:
+		// 'Auto Filter' }`).
+		const className = (typeof entry !== 'string' && entry.className) || deviceClassName(entry.like ?? name);
 		if (typeof entry !== 'string' && entry.properties) {
 			deviceProperties[devicePath] = { ...entry.properties };
 		}
-		const params = (typeof entry === 'string' ? null : entry.params) ?? DEVICE_PARAMS[name] ?? [];
+		const params = (typeof entry === 'string' ? null : entry.params) ?? DEVICE_PARAMS[entry.like ?? name] ?? [];
 		pushDeviceRecords(args, devicePath, name, className, params);
 
 		// Every Drum Rack gets a pad table (issue #491): its census's pads,

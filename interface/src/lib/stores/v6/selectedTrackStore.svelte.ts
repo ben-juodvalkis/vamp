@@ -20,6 +20,7 @@ import { logger } from '$lib/utils/logger';
 // — audit hotspot #9 decoupling. fxGridStore.svelte.ts re-exports it.
 import { FXGridState } from './fxGridStore.svelte';
 import { slotRegistry } from './slotRegistry.svelte';
+import { fxChainStore, RACK_PICK } from './fxChainStore.svelte';
 import {
 	v3Store,
 	UNSET_GENERATION,
@@ -236,10 +237,16 @@ class SelectedTrackStore {
 	get audioEffectRackByPath(): DeviceRecord | undefined {
 		const track = v3Store.tracks.get(this.selectedTrackPath);
 		if (!track) return undefined;
+		// The rack the chain overview last opened, while it is still on the
+		// track; else the first.
+		const picked = fxChainStore.pickFor(this.selectedTrackPath, RACK_PICK);
+		let first: DeviceRecord | undefined;
 		for (const device of track.devices.values()) {
-			if (device.className === 'AudioEffectGroupDevice') return device;
+			if (device.className !== 'AudioEffectGroupDevice') continue;
+			if (device.devicePath === picked) return device;
+			first ??= device;
 		}
-		return undefined;
+		return first;
 	}
 
 	/**

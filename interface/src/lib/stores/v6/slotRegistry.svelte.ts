@@ -19,6 +19,7 @@ import { FXSlotStore } from './fxSlotStore.svelte';
 import { FX_GRID_LAYOUT, type PositionKey, type DeviceTypeKey } from '$lib/config/fxGridLayout';
 import type { Device } from './selectedTrackStore.svelte';
 import { logger } from '$lib/utils/logger';
+import { matchesSlot } from '$lib/utils/deviceSlotMatch';
 
 class SlotRegistry {
 	private slots = new Map<PositionKey, FXSlotStore>();
@@ -97,10 +98,7 @@ class SlotRegistry {
 	 */
 	findSlotForDevice(device: Device): PositionKey | null {
 		for (const [key, slot] of this.slots.entries()) {
-			if (
-				device.className === slot.config.expectedClassName &&
-				device.name === slot.config.defaultName
-			) {
+			if (matchesSlot(device, slot.config)) {
 				return key as PositionKey;
 			}
 		}

@@ -87,6 +87,8 @@
 
 {#if audioEffectRack}
 	<div class="audio-effect-rack-view" data-density="compact">
+		<!-- Which rack: a track can carry several, and the chain overview picks one. -->
+		<div class="rack-name">{audioEffectRack.name}</div>
 		<!-- Dynamic Controls -->
 		{#if controlLayout.length > 0}
 			<div class="controls-panel">
@@ -130,6 +132,12 @@
 {/if}
 
 <style>
+.rack-name {
+		text-align: center;
+		font-size: 0.75rem;
+		color: var(--muted-foreground);
+	}
+
 	.audio-effect-rack-view {
 		padding: var(--central-inset);
 		height: 100%;

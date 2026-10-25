@@ -71,6 +71,8 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 	device: {
 		'arpeggiator': () => import('./views/ArpeggiatorCentralView.svelte'),
 		'audio-effect-rack': () => import('./views/AudioEffectRackCentralView.svelte'),
+		// The chain overview's view for a device with no view of its own.
+		'chain-device': () => import('./views/ChainDeviceCentralView.svelte'),
 		// The Bass tile (audio tracks' fx1 column, 2026-09-14): its type is
 		// `bass`, its view the Guitar rack's — GuitarCentralView, which on
 		// an audio track is the Pedal view's guitar part (2026-10-23).

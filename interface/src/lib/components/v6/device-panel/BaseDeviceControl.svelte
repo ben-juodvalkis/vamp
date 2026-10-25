@@ -15,6 +15,7 @@ import { logger } from '$lib/utils/logger';
   import { sendParam } from '$lib/services/deviceParams';
   import { readFxScope } from '$lib/components/v6/central/fxScope';
   import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
+  import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import ArrowRight from '@lucide/svelte/icons/arrow-right';
   import Check from '@lucide/svelte/icons/check';
@@ -127,8 +128,18 @@ import { logger } from '$lib/utils/logger';
   // is a no-op when the right view is already up, so the tiles may call
   // it on every drag frame (they used to swap the view 30×/sec).
   function openView() {
+    appoint();
     if (disableCentralViewOnTap) return;
     openDeviceView(deviceType, { device, color });
+  }
+
+  // Every gesture on a tile appoints its device (Live's blue hand), so a
+  // knob controller following the hand follows the iPad. Deduped in the
+  // store: the tiles call openView on every drag frame. Not under a track
+  // hold: selecting a device on another track would select that track in
+  // Live, which is exactly what the hold is there to avoid.
+  function appoint(force = false) {
+    if (device && !trackHeld) fxChainStore.appoint(device.devicePath, { force });
   }
 
   // Trigger device loading on first interaction and conditionally switch to
@@ -149,13 +160,8 @@ import { logger } from '$lib/utils/logger';
   async function handleTap() {
     if (unscopable) return;
     openView();
-
-    // Select device for appointed device system (blue hand). Not under a
-    // track hold: selecting a device on another track would select that
-    // track in Live, which is exactly what the hold is there to avoid.
-    if (device && !trackHeld) {
-      await selectDevice(device.devicePath);
-    }
+    // A deliberate tap re-sends the selection even when it is already ours.
+    appoint(true);
   }
 
   // Send parameter change (services/deviceParams). No slot argument: a

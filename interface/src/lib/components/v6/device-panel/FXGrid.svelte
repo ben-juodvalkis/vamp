@@ -16,6 +16,9 @@
   import { padTileLabel } from '$lib/services/drumVirtualMacros';
   import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+  import { DEVICE_PRESETS } from '$lib/config/devicePresets';
+  import { pickSlotDevice, slotCandidates } from '$lib/utils/deviceSlotMatch';
+  import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
 
   /**
    * FX Grid - Data-driven layout from FX_GRID_LAYOUT configuration
@@ -145,6 +148,23 @@
       : scope ? padTileLabel(scope.name) || `Pad ${scope.note}` : ''
   );
   const scoped = $derived(scope !== null || heldTrack !== null);
+
+  /**
+   * "1/2" on a tile whose type the track carries more than once: which of
+   * them the tile controls, in chain order. The chain overview is where the
+   * other one is picked. The track's own grid only — a scoped grid is a
+   * pad's or another track's.
+   */
+  function multiOf(deviceType: string): string | null {
+    if (scoped) return null;
+    const config = DEVICE_PRESETS[deviceType];
+    if (!config) return null;
+    const trackDevices = selectedTrackStore.devicesByPath;
+    const candidates = slotCandidates(trackDevices, config);
+    if (candidates.length < 2) return null;
+    const chosen = pickSlotDevice(trackDevices, config, fxChainStore.pickFor(selectedTrackStore.selectedTrackPath, deviceType));
+    return `${candidates.indexOf(chosen!) + 1}/${candidates.length}`;
+  }
 </script>
 
 <div class="w-full h-full" data-fx-scope={scope?.note} data-fx-track-scope={heldTrack?.trackPath} style={scopeInk ? `--scope-ink: ${scopeInk}` : undefined}>
@@ -179,7 +199,8 @@
       {#if !slot.hidden}
       {@const Component = slot.component}
       {@const cell = cellFor(slot, gridKind)}
-      <div data-cell={slot.position} data-col={cell.col} data-row={cell.row} data-span={cell.span} data-row-span={cell.rowSpan} style={cellStyle(cell)}>
+      {@const multi = multiOf(slot.position === 'fx1' && audioColumn ? 'bass' : slot.position === 'fx6' && chorusInDrumCell ? 'chorus' : slot.deviceType)}
+      <div data-cell={slot.position} data-col={cell.col} data-row={cell.row} data-span={cell.span} data-row-span={cell.rowSpan} style={cellStyle(cell)} class:has-multi={multi !== null}>
         {#if slot.position === 'fx1' && audioColumn}
           <!-- Audio track or Main: fx1 is the Bass. Rand Oct is a MIDI-effect
                control and would sit inert here. BassControl resolves its
@@ -190,6 +211,9 @@
           <ChorusControl device={devices[chorusIndex]} position="fx9" />
         {:else}
           <Component device={devices[i]} position={slot.position} />
+        {/if}
+        {#if multi}
+          <span class="pad-chip multi-chip" aria-label="Controls device {multi} of this type">{multi}</span>
         {/if}
       </div>
       {/if}
@@ -244,8 +268,23 @@
     --chip-ink: var(--scope-ink, var(--track-ink));
     position: absolute;
     top: 4px;
-    right: 4px;
+    /* Left of the FX section's switch (DevicesPanelV6). */
+    right: calc(4px + var(--fx-switch-w, 0px));
     z-index: 3;
+    pointer-events: none;
+  }
+  /* A tile controlling one of several of its type. Only these cells take a
+     containing block, for the reason the scope comment above gives. */
+  .has-multi {
+    position: relative;
+  }
+  .multi-chip {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    z-index: 2;
+    font-size: 10px;
+    padding: 1px 6px;
     pointer-events: none;
   }
 </style>
