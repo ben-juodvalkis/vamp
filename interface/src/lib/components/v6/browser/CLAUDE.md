@@ -55,8 +55,9 @@ Touch-first (iPad Safari).
   should be able to take up like half of the width"); the Lock sits beside the
   close X in the rail's top slot (2026-10-20). The switch is a **kind filter**
   (`PlacesAdapter.setKindFilter`, set on every level load; the groups are
-  `$lib/utils/placeKinds`'s, via `groupsForMode`): Instrument shows instruments,
-  kits and effects, Simpler samples and clips, Clip those and `midi-clips`, and a folder is kept or dropped from its `kinds` counts
+  `$lib/utils/placeKinds`'s, via `groupsForMode`): Instrument shows instruments
+  and kits, Simpler samples and clips, Clip those and `midi-clips`, Effect a
+  Place's audio and MIDI effect presets (2026-10-25, ADR-478), and a folder is kept or dropped from its `kinds` counts
   without descending. `setBrowseMode` drives it: presets↔samples restarts at the
   Place's root (`selectCategory`); Simpler↔Clip keeps the same samples + place and
   only re-preps for the new track kind. Among samples a Place's root holds only
@@ -364,8 +365,10 @@ source and the Phase 4 switch that chose between them.
   instrument. **Prep** follows the switch: a MIDI track unless it says Audio. A
   replace-clip pick in a Place must be sample-like (`tryReplaceAudioClip`).
 - **Tiles**: a plug-in preset names its plug-in under its name; a plug-in that
-  is not installed, or an effect, is **greyed and disabled**, with "Not
-  installed" / "Effect" on its face (the iPad has no tooltips). The stacked label
+  is not installed is **greyed and disabled**, with "Not installed" on its
+  face (the iPad has no tooltips). An effect preset loads (Effect segment,
+  ADR-478): a tap adds it to the selected track's chain, or the scoped pad's,
+  through `device/load` with no track prep (`addEffect`). The stacked label
   (`.has-plugin`, column flex) applies only to tiles that carry one.
 - **Coloring**: a preset from a Place carries its Place's role (`Preset.role`,
   stamped by the adapter) and passes it to `trackColoring` as `placeRole` — the

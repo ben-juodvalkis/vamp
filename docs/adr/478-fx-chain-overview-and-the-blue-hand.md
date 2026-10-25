@@ -57,6 +57,15 @@ hand.** While a pad is held or latched, the overview is that pad's chain
 is, and a tap opens an effect in the Drum Rack view's pane. Scoping a pad
 appoints its instrument; letting the scope go appoints the rack.
 
+**Effects come from the browser, and the chain ends in a door to them.**
+The browser's switch gains a fourth segment, Effect, listing a Place's
+audio and MIDI effect presets (Instrument keeps instruments and kits). A
+tap adds the preset to the selected track's chain, or the scoped pad's,
+through `device/load` with no track prep; before, effect tiles were
+greyed. The overview's last cell is a dashed + Effect that opens the
+browser on Effect. The grid/chain switch is one button over the
+section's top-left corner, where it no longer takes the Glue tile's taps.
+
 ## Consequences
 - A renamed native device lights its tile, and the tile no longer loads a
   duplicate beside it.
@@ -75,6 +84,9 @@ appoints its instrument; letting the scope go appoints the rack.
   virtual-macro layer's and never reach the wire.
 - `device/move` is a new address with no protocol bump: an older surface
   ignores it, so a drag on it does nothing until Live restarts.
+- Effects appear only from ticked Places. On the rig the seven ticked
+  Places hold one effect preset; Effect Patches and the User Library hold
+  the rest, and Live's factory effect presets are not offered as a Place.
 - `npm run shot:tour -- chain` shoots the overview on a demo chain, with
   a power toggle, a drag and a scoped pad.
 
