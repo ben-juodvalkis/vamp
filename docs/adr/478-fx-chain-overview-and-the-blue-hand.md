@@ -57,6 +57,11 @@ hand.** While a pad is held or latched, the overview is that pad's chain
 is, and a tap opens an effect in the Drum Rack view's pane. Scoping a pad
 appoints its instrument; letting the scope go appoints the rack.
 
+**A cell carries its tile's control.** A device the grid has a tile for
+shows that tile inside its cell (the grid's own component, handed the
+cell's device), so the chain can do whatever the grid can, on each device
+of a type separately. A touch there picks the device and never reorders.
+
 **Effects come from the browser, and the chain ends in a door to them.**
 The browser's switch gains a fourth segment, Effect, listing a Place's
 audio and MIDI effect presets (Instrument keeps instruments and kits). A
