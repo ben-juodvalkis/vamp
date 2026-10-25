@@ -48,6 +48,13 @@
     // Drag speed: the share of the rail one full slider length travels.
     // Below 1 for a wide rail that wants finer moves (Echo's Input, 80 dB).
     sensitivity?: number;
+    // A value box (ADR-477): the finger travel, in px, that sweeps the whole
+    // rail, in place of the slider's own length. A short box is then as fine
+    // as a tall slider. Unset, a full-length drag sweeps the rail, as before.
+    travel?: number;
+    // Shown in place of the title while a finger drags it: Live's own value
+    // ("12 ms", "-6.0 dB"), which arrives only while the UI is writing it.
+    readout?: string;
     // Draw the split handle line (two rail-pinned segments with a gap for the
     // label) instead of a solid fill. Implied by `track` — meter mode has no
     // fill to read position from, so it always needs the handle. Set it
@@ -77,6 +84,8 @@
     centerOrigin = false,
     centerValue,
     sensitivity = 1,
+    travel,
+    readout,
     handleLine = false,
     track = null,
     trackIndex = 0,
@@ -98,6 +107,9 @@
 
   let isDragging = $state(false);
   let container: HTMLDivElement;
+
+  // The words on the slider: its name, or Live's value while it is dragged.
+  let shownTitle = $derived(isDragging && readout ? readout : title);
 
   // Local state for smooth interaction
   let localValue = $state(value);
@@ -223,7 +235,7 @@
 
     // Calculate delta from start position
     const currentPointer = orientation === 'vertical' ? event.clientY : event.clientX;
-    const size = orientation === 'vertical' ? rect.height : rect.width;
+    const size = travel ?? (orientation === 'vertical' ? rect.height : rect.width);
     const delta = ((currentPointer - startPointer) / size) * sensitivity;
 
     // Apply delta to start value (invert for vertical)
@@ -320,7 +332,7 @@
          readable once the fill rises over them. No inverse in meter mode. -->
     {#if title || label || icon}
       <div class="slider-label label-{effectiveLabelOrientation} label-{labelSize}">
-        {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={title}>{title}</span>{/if}</span>
+        {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={shownTitle}>{shownTitle}</span>{/if}</span>
       </div>
       {#if showFill}
         <div
@@ -328,7 +340,7 @@
           style="clip-path: {inverseClip};"
           aria-hidden="true"
         >
-          {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={title}>{title}</span>{/if}</span>
+          {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={shownTitle}>{shownTitle}</span>{/if}</span>
         </div>
       {/if}
     {/if}

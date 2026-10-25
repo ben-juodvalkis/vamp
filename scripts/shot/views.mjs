@@ -498,9 +498,8 @@ function instrumentSwapStates() {
 	const swaps = [
 		// Live, not ghosted: the measured patch, so the shot shows its values.
 		['analog', 'Analog', 'UltraAnalog', analog],
-		// Voice 2 up, Filter envelope showing: the other half, in blue.
-		['analog-voice2', 'Analog', 'UltraAnalog', analog,
-			[{ click: '.osc-badge' }, { click: '.env-switch .device-segment:last-child' }]],
+		// Voice 2 up: the other half, in blue (both its envelopes in view, ADR-477).
+		['analog-voice2', 'Analog', 'UltraAnalog', analog, [{ click: '.osc-badge' }]],
 		['collision', 'Collision', 'Collision'],
 		['electric', 'Electric', 'LoungeLizard'],
 		['meld', 'Meld', 'InstrumentMeld', meld],

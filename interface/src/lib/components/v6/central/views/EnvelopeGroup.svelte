@@ -52,9 +52,11 @@
      * Which hairlines to draw. `both` brackets the group; `trailing` drops
      * the leading one for a host where the group OPENS the band — Operator's,
      * whose leading hairline drew against the view's own left edge with
-     * nothing on the far side of it to separate (audit, 2026-09-13).
+     * nothing on the far side of it to separate (audit, 2026-09-13). `none`
+     * draws neither, for a host that brackets several groups at once
+     * (Analog's two envelopes, stacked, ADR-477).
      */
-    edges?: 'both' | 'trailing';
+    edges?: 'both' | 'trailing' | 'none';
     /**
      * Drawn over the eyebrow, inside the hairlines, so it spans the stages
      * and not the seam — Operator's swap pill (user's layout, 2026-09-16).
@@ -78,7 +80,9 @@
     </div>
   </div>
 </div>
-<SectionDivider orientation="vertical" {ink} />
+{#if edges !== 'none'}
+  <SectionDivider orientation="vertical" {ink} />
+{/if}
 
 <style>
   .envelope-group {

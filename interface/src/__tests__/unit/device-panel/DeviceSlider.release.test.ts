@@ -42,6 +42,32 @@ describe('DeviceSlider onRelease', () => {
 		expect(onRelease.mock.calls[0][0]).toBeCloseTo(0.7, 9); // 40 px up a 200 px rail
 	});
 
+	it('sweeps over `travel` px when given one, whatever its own length (ADR-477)', async () => {
+		const onRelease = vi.fn();
+		// The rail is 200 px tall; a 400 px travel makes the same 40 px drag half as far.
+		const { container } = render(DeviceSlider, { props: { value: 0.5, title: 'A', travel: 400, onRelease } });
+		await tick();
+		const el = container.querySelector<HTMLElement>('[role="slider"]')!;
+		pointer(el, 'pointerdown', 100);
+		pointer(el, 'pointermove', 60);
+		pointer(el, 'pointerup', 60);
+		expect(onRelease.mock.calls[0][0]).toBeCloseTo(0.6, 9);
+	});
+
+	it('shows its readout in place of its title only while dragged', async () => {
+		const { container } = render(DeviceSlider, { props: { value: 0.5, title: 'Decay', readout: '120 ms' } });
+		await tick();
+		const el = container.querySelector<HTMLElement>('[role="slider"]')!;
+		expect(el.textContent).toContain('Decay');
+		pointer(el, 'pointerdown', 100);
+		await tick();
+		expect(el.textContent).toContain('120 ms');
+		expect(el.textContent).not.toContain('Decay');
+		pointer(el, 'pointerup', 100);
+		await tick();
+		expect(el.textContent).toContain('Decay');
+	});
+
 	it('stays quiet for a tap, and for a drag back to where it began', async () => {
 		const onRelease = vi.fn();
 		const { container } = render(DeviceSlider, { props: { value: 0.5, title: 'Size', onRelease } });
