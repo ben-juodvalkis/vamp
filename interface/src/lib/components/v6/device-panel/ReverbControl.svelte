@@ -1,8 +1,14 @@
 <script lang="ts">
   import type { DeviceRecord } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
+  import { session } from '$lib/stores/session.svelte';
   import BaseDeviceControl from './BaseDeviceControl.svelte';
   import DeviceXY from './DeviceXY.svelte';
+  import ReverbPortrait from '../central/views/reverb/ReverbPortrait.svelte';
+  import ReverbIrDisplay from '../central/views/reverb/ReverbIrDisplay.svelte';
+  import { reverbTail, decayAtTailX } from '../central/views/reverb/reverbTail';
+  import { useReverbIrPicture } from '../central/views/reverb/useReverbIrPicture.svelte';
+  import { HYBRID, LIVE_DEFAULTS, ROUTING_CONVOLUTION } from './hybridReverbParams';
 
   interface Props {
     device: DeviceRecord | null;
@@ -40,6 +46,20 @@
       : 0
   );
 
+  /** A parameter's raw value, or Live's default before the device answers. */
+  function raw(index: number): number {
+    return (device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, index)) : undefined) ?? LIVE_DEFAULTS[index] ?? 0;
+  }
+
+  // What the reverb sounds like, drawn behind the pad once there is one
+  // (ADR-477; the Reverb view's own pictures until then): an algorithm's
+  // tail, whose X is where the tail ends, so the handle rides its decay mark;
+  // an IR's waveform, under the pad's own axes. An empty slot keeps the
+  // plain pad.
+  let runsIr = $derived(!!device && raw(HYBRID.routing) === ROUTING_CONVOLUTION);
+  let tail = $derived(device && !runsIr ? reverbTail(raw, session.tempo) : null);
+  const irPicture = useReverbIrPicture(() => devicePath, () => runsIr);
+
   // Convert 0-1 slider value to IR size factor range (0.2 to 5, with 1.0 at halfway)
   function mapToIRSizeFactor(sliderValue: number): number {
     // Clamp input to 0-1 range
@@ -57,12 +77,47 @@
 
 <BaseDeviceControl {position} {device} title="Reverb" showMoveToTop={true} showMoveToEnd={true}>
   {#snippet children({ sendParam, storePendingParam, triggerLoad, handleTap, isGhost, isLoading, color, openView })}
+    {#if tail && !isGhost && !isLoading}
+      {@const onset = tail.input.onset}
+      <ReverbPortrait
+        input={tail.input}
+        crossoverLabel={tail.crossoverLabel}
+        compact
+        title="Reverb"
+        {color}
+        onTap={handleTap}
+        onMove={(x, y) => {
+          openView();
+          sendParam(PARAM_CONFIG.decayTime.index, decayAtTailX(x, onset));
+          sendParam(PARAM_CONFIG.dryWet.index, y);
+        }}
+        onRelease={(x) => {
+          if (devicePath) {
+            selectedTrackStore.setPropertyValue(devicePath, 'ir_size_factor', mapToIRSizeFactor(decayAtTailX(x, onset)));
+          }
+        }}
+      />
+    {:else}
+    {#snippet irBackground()}
+      <ReverbIrDisplay
+        wave={irPicture.wave}
+        status={irPicture.status}
+        category={irPicture.category}
+        attack={irPicture.attack}
+        decay={irPicture.decay}
+        size={irPicture.size}
+        shaping={irPicture.shaping}
+        {color}
+        compact
+      />
+    {/snippet}
     <DeviceXY
       xValue={decayTimeValue}
       yValue={dryWetValue}
       title="Reverb"
       {isGhost}
       {color}
+      background={runsIr && !isGhost && !isLoading ? irBackground : undefined}
       onTap={handleTap}
       onInteraction={(x, y) => {
         // Update central display immediately on interaction
@@ -89,5 +144,6 @@
         }
       }}
     />
+    {/if}
   {/snippet}
 </BaseDeviceControl>

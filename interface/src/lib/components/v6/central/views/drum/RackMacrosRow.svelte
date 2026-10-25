@@ -7,6 +7,9 @@
    * of that name. The kit's transpose-named macro is `pitch`'s member, so
    * Trnsp (a snippet the parent supplies) stands in that macro's place.
    *
+   * Two rows of value boxes, filled column by column (ADR-477), the view's
+   * Gain first so it sits over Trnsp as it does on every other kit.
+   *
    * A dumb row: values, states and badges in, a write out.
    */
   import type { Snippet } from 'svelte';
@@ -29,12 +32,19 @@
     onWrite: (name: string, t: number) => void;
     /** Trnsp, drawn in the transpose macro's place when the kit has one. */
     trnsp?: Snippet;
+    /** The view's Gain, the first box. */
+    gain?: Snippet;
   }
 
-  let { layout, value, state, badge, coverage, color, onWrite, trnsp }: Props = $props();
+  let { layout, value, state, badge, coverage, color, onWrite, trnsp, gain }: Props = $props();
 </script>
 
-<div class="flex-1 min-h-0 flex gap-(--central-gap) vm-rack-macros">
+<div class="flex-1 min-h-0 gap-(--central-gap) vm-rack-macros">
+  {#if gain}
+    <div class="rack-slot rack-slider" data-vm-function="gain">
+      {@render gain()}
+    </div>
+  {/if}
   {#if trnsp}
     <!-- Trnsp in the transpose macro's place: the same knob, in semitones.
          First, beside the view's Gain, where every kit keeps it (2026-09-27). -->
@@ -67,16 +77,16 @@
 
 <style>
   /* ---- Rack-macros profile ------------------------------------------
-     One slider per pad-rack macro name. */
+     One box per pad-rack macro name, two rows filled column by column. */
+  .vm-rack-macros {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-auto-columns: minmax(0, 1fr);
+  }
   .vm-rack-macros > :global(.rack-slot) {
     display: flex;
     min-height: 0;
     min-width: 0;
-    height: 100%;
-    flex-shrink: 1;
-  }
-  .vm-rack-macros > :global(.rack-slider) {
-    flex: 1 1 0;
-    min-width: 40px;
   }
 </style>

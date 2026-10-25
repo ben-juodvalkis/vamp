@@ -1,10 +1,10 @@
 <script lang="ts">
 	/**
-	 * The Reverb view's picture of the tail (`tailPortrait.ts`) on an XY pad:
-	 * the pad's X is where the tail ends (Decay), its Y is Dry/Wet — the
-	 * Reverb tile's two axes, so a drag here does what a drag on the tile
-	 * does, and the picture shows it happen. Full wet parks the handle at the
-	 * top of the stack, below the tabs and readouts over the pad's top.
+	 * The picture of the tail (`tailPortrait.ts`) on an XY pad: the pad's X
+	 * is where the tail ends (Decay), its Y is Dry/Wet. The Reverb tile on the
+	 * FX grid draws it `compact` (no readouts or axis text, its title) once a
+	 * reverb is loaded (ADR-477); the Reverb view drew it full size until
+	 * then. Full wet parks the handle at the top of the stack.
 	 */
 	import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
@@ -13,15 +13,30 @@
 	interface Props {
 		input: TailInput;
 		/** Name and value pairs, top-right: Decay, Dry/Wet. */
-		readouts: { name: string; value: string }[];
+		readouts?: { name: string; value: string }[];
 		crossoverLabel?: string;
 		color: DeviceColorScheme;
 		isGhost?: boolean;
+		/** A tile's size: the ridges, the marks and the handle, no text but the title. */
+		compact?: boolean;
+		title?: string;
 		onMove: (x: number, y: number) => void;
+		onRelease?: (x: number, y: number) => void;
 		onTap?: () => void;
 	}
 
-	let { input, readouts, crossoverLabel, color, isGhost = false, onMove, onTap }: Props = $props();
+	let {
+		input,
+		readouts = [],
+		crossoverLabel,
+		color,
+		isGhost = false,
+		compact = false,
+		title,
+		onMove,
+		onRelease,
+		onTap
+	}: Props = $props();
 
 	let portrait = $derived(tailPortrait(input));
 
@@ -53,8 +68,8 @@
 	const depth = (k: number, n: number) => 0.45 + (0.55 * k) / Math.max(1, n - 1);
 </script>
 
-<div class="reverb-portrait" class:ghost={isGhost} style="--ink: {color.primary};" data-reverb-portrait={input.algo}>
-	<DeviceXY xValue={portrait.tailEndX} yValue={input.wet} yTop={STACK_TOP} {color} {isGhost} onInteraction={onMove} {onTap}>
+<div class="reverb-portrait" class:ghost={isGhost} class:compact style="--ink: {color.primary};" data-reverb-portrait={input.algo}>
+	<DeviceXY xValue={portrait.tailEndX} yValue={input.wet} yTop={STACK_TOP} {title} {color} {isGhost} onInteraction={onMove} {onRelease} {onTap}>
 		{#snippet background()}
 			<div class="picture" aria-hidden="true">
 				<svg viewBox="0 0 1000 1000" preserveAspectRatio="none">
@@ -233,6 +248,13 @@
 		font-size: 0.6875rem;
 		color: var(--fg-tertiary);
 		white-space: nowrap;
+	}
+	/* A tile: the picture alone under the pad's title. */
+	.compact .readouts,
+	.compact .tick-label,
+	.compact .dry-label,
+	.compact .crossover-label {
+		display: none;
 	}
 	/* Narrow — a drum pad's pane — the tabs take the top-left corner's
 	   whole width, so the readout steps down beneath them. */
