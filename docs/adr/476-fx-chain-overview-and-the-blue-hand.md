@@ -42,6 +42,21 @@ structural change that moves it, and on every accept. The overview marks
 that device; a tile re-sends only when the hand is somewhere else. No
 protocol bump: an older surface never sends the report.
 
+**In the overview a device is switched and moved where it sits.** A
+power button in each cell's corner writes Device On (parameter 0). A cell
+dragged sideways moves the device in Live's chain: `device/move
+[devicePath, index]`, the index where it ends up, which the surface clamps
+and turns into `move_device`'s count-before-removal index. The instrument
+stays put and nothing is dropped across it (Live keeps MIDI effects
+before the instrument, audio effects after).
+
+**A drum pad scoped in the Drum Rack view scopes the overview and the
+hand.** While a pad is held or latched, the overview is that pad's chain
+(its instrument from `vm.padFx`, its effects with the records its
+`vm.padChain` row brings), in the pad's frame and chip as the scoped grid
+is, and a tap opens an effect in the Drum Rack view's pane. Scoping a pad
+appoints its instrument; letting the scope go appoints the rack.
+
 ## Consequences
 - A renamed native device lights its tile, and the tile no longer loads a
   duplicate beside it.
@@ -54,7 +69,14 @@ protocol bump: an older surface never sends the report.
 - Not yet measured on the rig: whether a select ever leaves the hand
   behind (the write covers it either way), and whether the appointed
   listener fires for a hand moved by another control surface.
-- `npm run shot:tour -- chain` shoots the overview on a demo chain.
+- Moving a device the browser loaded this session has the `move_to_*`
+  undo hazard: Edit → Undo that reaches the move can abort Live.
+- A pad's instrument shows no power button: its parameters are the
+  virtual-macro layer's and never reach the wire.
+- `device/move` is a new address with no protocol bump: an older surface
+  ignores it, so a drag on it does nothing until Live restarts.
+- `npm run shot:tour -- chain` shoots the overview on a demo chain, with
+  a power toggle, a drag and a scoped pad.
 
 ## Tags
 `fx-grid`, `chain-overview`, `blue-hand`, `appointed-device`, `racks`

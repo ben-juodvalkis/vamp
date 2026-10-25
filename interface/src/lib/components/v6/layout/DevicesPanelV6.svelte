@@ -3,6 +3,10 @@
 	import ChainOverview from '$lib/components/v6/device-panel/ChainOverview.svelte';
 	import FxPanelSwitch from '$lib/components/v6/device-panel/FxPanelSwitch.svelte';
 	import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
+	import { usePadHand } from '$lib/components/v6/device-panel/usePadHand.svelte';
+
+	// The blue hand follows the Drum Rack view's pad scope, whichever face is up.
+	usePadHand();
 </script>
 
 <!-- The FX grid's own slot cards carry the structure, so the panel's outer

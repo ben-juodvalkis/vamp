@@ -18,6 +18,7 @@ import { logger } from '$lib/utils/logger';
 const V3_DEVICE_SELECT_ADDRESS = '/looping/v3/device/select';
 const V3_DEVICE_MOVE_TO_TOP_ADDRESS = '/looping/v3/device/move_to_top';
 const V3_DEVICE_MOVE_TO_END_ADDRESS = '/looping/v3/device/move_to_end';
+const V3_DEVICE_MOVE_ADDRESS = '/looping/v3/device/move';
 
 /**
  * Set the "blue hand" (view's selected device). Idempotent at the LOM
@@ -78,6 +79,24 @@ export async function moveDeviceToEnd(devicePath: string): Promise<void> {
 	}
 }
 
+/**
+ * Move the device at `devicePath` so it sits at `index` in its own chain
+ * afterwards — the chain overview's drag (2026-10-25). The surface clamps
+ * the index to the chain and does the `move_device` index arithmetic.
+ */
+export async function moveDevice(devicePath: string, index: number): Promise<void> {
+	try {
+		await send(V3_DEVICE_MOVE_ADDRESS, [devicePath, index]);
+	} catch (error) {
+		logger.error('Failed to move device:', {
+			component: 'deviceMove',
+			devicePath,
+			index,
+			error,
+		});
+		throw error;
+	}
+}
 
 const V3_DEVICE_DELETE_ADDRESS = '/looping/v3/device/delete';
 

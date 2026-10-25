@@ -8,6 +8,7 @@ side-effect methods that have no Live property surface (verified via
     /looping/v3/device/select        [devicePath]
     /looping/v3/device/move_to_top   [devicePath]
     /looping/v3/device/move_to_end   [devicePath]
+    /looping/v3/device/move          [devicePath, index]
     /looping/v3/simpler/reverse      [devicePath]
     /looping/v3/simpler/warp_half    [devicePath]
     /looping/v3/simpler/warp_double  [devicePath]
@@ -75,6 +76,7 @@ _LOM_ERRORS: Tuple[type, ...] = (RuntimeError, AttributeError, TypeError)
 V3_DEVICE_SELECT_ADDRESS = "/looping/v3/device/select"
 V3_DEVICE_MOVE_TO_TOP_ADDRESS = "/looping/v3/device/move_to_top"
 V3_DEVICE_MOVE_TO_END_ADDRESS = "/looping/v3/device/move_to_end"
+V3_DEVICE_MOVE_ADDRESS = "/looping/v3/device/move"
 V3_DEVICE_DELETE_ADDRESS = "/looping/v3/device/delete"
 V3_SIMPLER_REVERSE_ADDRESS = "/looping/v3/simpler/reverse"
 V3_SIMPLER_WARP_HALF_ADDRESS = "/looping/v3/simpler/warp_half"
@@ -125,6 +127,7 @@ class DeviceCommandsComponent:
     V3_DEVICE_SELECT_ADDRESS = V3_DEVICE_SELECT_ADDRESS
     V3_DEVICE_MOVE_TO_TOP_ADDRESS = V3_DEVICE_MOVE_TO_TOP_ADDRESS
     V3_DEVICE_MOVE_TO_END_ADDRESS = V3_DEVICE_MOVE_TO_END_ADDRESS
+    V3_DEVICE_MOVE_ADDRESS = V3_DEVICE_MOVE_ADDRESS
     V3_SIMPLER_REVERSE_ADDRESS = V3_SIMPLER_REVERSE_ADDRESS
     V3_SIMPLER_WARP_HALF_ADDRESS = V3_SIMPLER_WARP_HALF_ADDRESS
     V3_SIMPLER_WARP_DOUBLE_ADDRESS = V3_SIMPLER_WARP_DOUBLE_ADDRESS
@@ -244,6 +247,29 @@ class DeviceCommandsComponent:
         """``[devicePath]`` — move the device to the last index in its chain."""
         self._move_to(args, V3_DEVICE_MOVE_TO_END_ADDRESS, position="end")
 
+    def handle_move(self, args, source_addr) -> None:
+        """``[devicePath, index]`` — move the device so it sits at ``index``
+        in its own chain afterwards (the chain overview's drag, 2026-10-25).
+
+        ``index`` is where the device ends up, counted in the chain as it
+        is after the move; it is clamped to the chain. Live's
+        ``move_device`` counts its index before the source is taken out
+        (see ``_move_to``), so a move to the right passes one more.
+        """
+        if self._disconnected:
+            return
+        if not self._check_arg_count(V3_DEVICE_MOVE_ADDRESS, args, 2):
+            return
+        try:
+            wanted = int(args[1])
+        except (TypeError, ValueError):
+            self._emit_error(
+                V3_DEVICE_MOVE_ADDRESS, V3_ERROR_WRITE_REJECTED,
+                path=_coerce_str(args[0]), detail="index is not a number",
+            )
+            return
+        self._move_to(args[:1], V3_DEVICE_MOVE_ADDRESS, position=wanted)
+
     def handle_delete(self, args, source_addr) -> None:
         """``[devicePath]`` — remove the device from its chain (issue #491,
         protocol 3.8.0). ``parent.delete_device(index)`` on whatever
@@ -336,8 +362,11 @@ class DeviceCommandsComponent:
 
     # --- internal --------------------------------------------------------
 
-    def _move_to(self, args, address: str, position: str) -> None:
-        """Shared body for move_to_top / move_to_end.
+    def _move_to(self, args, address: str, position) -> None:
+        """Shared body for move_to_top / move_to_end / move.
+
+        ``position`` is ``"top"``, ``"end"`` or the index the device is
+        to sit at after the move.
 
         Resolves the devicePath, reads ``canonical_parent`` to locate
         the destination track / rack, then calls
@@ -398,7 +427,22 @@ class DeviceCommandsComponent:
                 path=device_path, detail="parent.devices is empty",
             )
             return
-        target_index = 0 if position == "top" else device_count
+        if position == "top":
+            target_index = 0
+        elif position == "end":
+            target_index = device_count
+        else:
+            current = self._index_in(parent, device)
+            if current is None:
+                self._emit_error(
+                    address, V3_ERROR_WRITE_REJECTED,
+                    path=device_path, detail="device not in its parent's chain",
+                )
+                return
+            wanted = max(0, min(device_count - 1, position))
+            if wanted == current:
+                return
+            target_index = wanted + 1 if wanted > current else wanted
         try:
             self._song.move_device(device, parent, target_index)
         except _LOM_ERRORS as e:
@@ -409,6 +453,17 @@ class DeviceCommandsComponent:
                     type(e).__name__, str(e)[:80],
                 ),
             )
+
+    @staticmethod
+    def _index_in(parent, device) -> Optional[int]:
+        """The device's index in ``parent.devices`` by LOM identity, or None."""
+        try:
+            for i, candidate in enumerate(parent.devices):
+                if path_resolver.same_lom_handle(candidate, device):
+                    return i
+        except _LOM_ERRORS:
+            return None
+        return None
 
     def _invoke_simpler_method(
         self, args, address: str, method_name: str,

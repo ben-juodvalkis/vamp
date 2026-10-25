@@ -187,6 +187,23 @@ export const TOURS = {
 				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { click: chainCell(5) }]
 			},
 			{
+				name: 'chain-power',
+				description: 'Tapped the Echo cell\'s power button: Echo off (dimmed, the button unlit); Grit was off already',
+				scenePatch: chainDemo,
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { click: `${chainCell(4)} .power` }]
+			},
+			{
+				name: 'chain-moved',
+				description: 'Dragged Reverb a cell left: it now sits ahead of the Dub Space rack',
+				scenePatch: chainDemo,
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { drag: chainCell(6), by: [-190, 0] }]
+			},
+			{
+				name: 'chain-pad',
+				description: 'Jazz, pad 38 latched in the Drum Rack view: the chain is that pad\'s (its Simpler, Reverb, Permute; the blue hand on the Simpler), in the pad\'s frame and chip',
+				steps: [openInstrument(8), { click: '.pad-tile[data-note="38"]' }, { click: '[data-fx-mode="chain"]' }]
+			},
+			{
 				name: 'chain-plugin',
 				description: 'Tapped the plug-in: the generic view, one slider per parameter',
 				scenePatch: chainDemo,

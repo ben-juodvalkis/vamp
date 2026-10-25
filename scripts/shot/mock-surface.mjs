@@ -527,6 +527,24 @@ export async function startMockSurface({
 					return;
 				}
 
+				case '/looping/v3/device/move': {
+					// [devicePath, index] — the chain overview's drag. The track's
+					// device records are reordered and renumbered, and the tree is
+					// re-sent at the next generation, as Live's structural
+					// republish would.
+					const [devicePath, index] = args;
+					const m = typeof devicePath === 'string' ? /^(tracks\/\d+)\/devices\/(\d+)$/.exec(devicePath) : null;
+					if (!m || typeof index !== 'number') {
+						log(`unhandled ${address} ${devicePath}`);
+						return;
+					}
+					moveTrackDevice(resolved.treeArgs, m[1], Number(m[2]), index);
+					generation += 1;
+					sendStateFull(ws, 'structural');
+					log(`device/move ${devicePath} → index ${index}`);
+					return;
+				}
+
 				case '/looping/v3/device/load': {
 					// [trackPath, devicePath, presetPath] — answered only when
 					// `devicePath` is a pad on one of the scene's Drum Racks
@@ -703,4 +721,34 @@ if (invokedDirectly) {
 	const scene = await loadScene(flag('scene', 'default'));
 	await startMockSurface({ port, scene, log: (m) => console.log(`[mock-surface] ${m}`) });
 	console.log(`[mock-surface] scene "${scene.name ?? 'unnamed'}" ready — Ctrl-C to stop`);
+}
+
+/**
+ * Move a track's top-level device to `to` in `args` (the scene's tree):
+ * its D and P records, and every later one's, renumbered.
+ */
+function moveTrackDevice(args, trackPath, from, to) {
+	const prefix = `${trackPath}/devices/`;
+	const start = args.findIndex((v, k) => v === 'D' && String(args[k + 1]).startsWith(prefix));
+	if (start < 0) return;
+	const groups = [];
+	let k = start;
+	for (;;) {
+		const path = String(args[k + 1]);
+		if (args[k] === 'D' && path.startsWith(prefix)) {
+			groups.push([]);
+			groups.at(-1).push(...args.slice(k, k + 4));
+			k += 4;
+		} else if (args[k] === 'P' && path.startsWith(prefix)) {
+			groups.at(-1).push(...args.slice(k, k + 8));
+			k += 8;
+		} else break;
+	}
+	const target = Math.max(0, Math.min(groups.length - 1, to));
+	const [moved] = groups.splice(from, 1);
+	groups.splice(target, 0, moved);
+	const renumbered = groups.flatMap((group, i) =>
+		group.map((v) => (typeof v === 'string' ? v.replace(/^(tracks\/\d+\/devices\/)\d+(?=\/|$)/, (_, p) => (p === prefix ? `${p}${i}` : _)) : v))
+	);
+	args.splice(start, k - start, ...renumbered);
 }

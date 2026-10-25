@@ -113,3 +113,14 @@ export function padDeviceStubs(
 		properties: new Map<string, never>()
 	}));
 }
+
+/**
+ * The pad's instrument on its chain, as a device path — where Live's blue
+ * hand goes when the pad is scoped (2026-10-25). Before presence has told
+ * which index holds it, the chain's head, where a pad's instrument sits
+ * unless MIDI effects lead it.
+ */
+export function padInstrumentPath(padFx: PadFxMap | null | undefined, padPath: string, note: number): string {
+	const instrument = padFx?.get(note)?.find((d) => d.type === DEVICE_TYPE_INSTRUMENT);
+	return `${padPath}/devices/${instrument?.index ?? 0}`;
+}

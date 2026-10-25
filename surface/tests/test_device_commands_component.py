@@ -577,3 +577,56 @@ def test_delete_reports_a_lom_raise():
     assert emits[-1][1][1] == V3_ERROR_WRITE_REJECTED
     assert "delete_device raised: RuntimeError" in emits[-1][1][3]
     assert [d.name for d in rack.drum_pads[36].chains[0].devices] == ["DrumCell", "Reverb"]
+
+
+# --- handle_move (to an index; the chain overview's drag) -----------------
+# Live counts move_device's index before the source is taken out, so a
+# move to the right passes one more than where the device ends up.
+
+
+def test_move_left_passes_the_final_index(component, emits):
+    song = component._song
+    d2 = song.tracks[0].devices[2]
+    component.handle_move(args=("tracks/0/devices/2", 0), source_addr=None)
+    assert song.move_device_calls == [(d2, song.tracks[0], 0)]
+    assert emits == []
+
+
+def test_move_right_passes_one_more_than_the_final_index(component, emits):
+    song = component._song
+    d0 = song.tracks[0].devices[0]
+    component.handle_move(args=("tracks/0/devices/0", 1), source_addr=None)
+    assert song.move_device_calls == [(d0, song.tracks[0], 2)]
+
+
+def test_move_to_the_last_index_appends(component, emits):
+    song = component._song
+    d0 = song.tracks[0].devices[0]
+    component.handle_move(args=("tracks/0/devices/0", 2), source_addr=None)
+    assert song.move_device_calls == [(d0, song.tracks[0], 3)]
+
+
+def test_move_index_is_clamped_to_the_chain(component, emits):
+    song = component._song
+    d0 = song.tracks[0].devices[0]
+    component.handle_move(args=("tracks/0/devices/0", 99), source_addr=None)
+    assert song.move_device_calls == [(d0, song.tracks[0], 3)]
+
+
+def test_move_to_where_it_already_is_does_nothing(component, emits):
+    song = component._song
+    component.handle_move(args=("tracks/0/devices/1", 1), source_addr=None)
+    assert song.move_device_calls == []
+    assert emits == []
+
+
+def test_move_non_numeric_index_is_rejected(component, emits):
+    song = component._song
+    component.handle_move(args=("tracks/0/devices/1", "left"), source_addr=None)
+    assert song.move_device_calls == []
+    assert emits[0][1][1] == V3_ERROR_WRITE_REJECTED
+
+
+def test_move_wrong_arg_count_is_rejected(component, emits):
+    component.handle_move(args=("tracks/0/devices/1",), source_addr=None)
+    assert emits[0][1][1] == V3_ERROR_WRITE_REJECTED
