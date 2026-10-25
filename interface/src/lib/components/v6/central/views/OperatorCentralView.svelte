@@ -6,8 +6,7 @@
   import EnvelopeGroup from './EnvelopeGroup.svelte';
   import SectionDivider from '../SectionDivider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
-  import MidiWheel from '../../midi/MidiWheel.svelte';
-  import { sendPitchWheel, sendModWheel } from '$lib/api/midiWheels';
+  import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -155,36 +154,28 @@
     selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, TONE), Math.max(0, Math.min(1, value)));
   }
 
-  // MIDI wheel handlers
-  function handlePitchChange(value: number) {
-    sendPitchWheel(value);
-  }
-
-  function handleModChange(value: number) {
-    sendModWheel(value);
+  /** Live's own value, a box's readout while it is dragged (ADR-477); sent only while the UI writes. */
+  function display(index: number): string | undefined {
+    if (!device) return undefined;
+    return selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(device, index));
   }
 </script>
 
 <div class="h-full w-full overflow-hidden relative">
   {#if instrument && device}
-    <!-- Seven slider columns on one ruler, then the wheels. The envelope
-         card is 4fr against the three 1fr sliders beside it, so a stage
-         inside the card is the same width as Feedback, Time or Tone
-         (bar the card's own frame) instead of twice it — which is what a
-         `1fr` card next to three fixed `w-24` columns gave. -->
-    <div class="h-full w-full p-(--central-inset) grid gap-(--central-gap)" style="grid-template-columns: 4fr 1fr 1fr 1fr 3fr auto auto auto;">
-      <!-- The amp envelope, one slider a stage, reading A → D → S → R.
-           The bracket's label is what names the section, which is what
-           lets the sliders inside it be one letter each. It opens the band,
-           so it draws only its trailing hairline — a leading one sat against
-           the view's own left edge (2026-09-13). That hairline lives INSIDE
-           this cell, so the cell's gap must be the grid's (both --central-gap, ADR-434): at 8px it
-           sat 8px from R and 16px from Feedback (measured, 2026-09-14). -->
-      <div class="min-w-0 min-h-0 h-full flex gap-(--central-gap)">
-        <EnvelopeGroup ink={operatorInk.primary} edges="trailing">
-          <!-- The swap pill lies across the top of the envelope, the view's
-               leading group (user's layout, 2026-09-16). -->
-          {#snippet header()}<HostedSwapPill />{/snippet}
+    <!-- Two halves (ADR-477): on the left the amp envelope over Feedback,
+         Time and Tone, all value boxes half a fader's height and as fine;
+         on the right the Filter pad, which took the width the three
+         full-height faders had. Then the wheels, Pitch over Mod. -->
+    <div class="h-full w-full p-(--central-inset) grid gap-(--central-gap)" style="grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto auto;">
+      <div class="min-w-0 min-h-0 h-full flex flex-col gap-(--central-gap)">
+        <!-- The swap pill lies across the top of the left half, the view's
+             leading group (user's layout, 2026-09-16). -->
+        <HostedSwapPill />
+        <!-- The amp envelope, one box a stage, reading A → D → S → R. The
+             bracket's label names the section, which lets the boxes inside
+             be one letter each. -->
+        <EnvelopeGroup ink={operatorInk.primary} edges="none">
           {#each ENVELOPE as stage, i}
             <div class="min-w-0 h-full flex-1">
               <DeviceSlider
@@ -192,54 +183,56 @@
                 title={stage.title}
                 icon={stage.icon}
                 orientation="vertical"
-                labelOrientation="horizontal"
                 color={operatorInk}
+                readout={display(stage.index)}
                 onInteraction={(value) => writeEnv(stage.index, value)}
               />
             </div>
           {/each}
         </EnvelopeGroup>
+        <SectionDivider orientation="horizontal" ink={operatorInk.primary} />
+        <div class="flex-1 min-h-0 flex gap-(--central-gap)">
+          <div class="flex-1 min-w-0 h-full">
+            <DeviceSlider
+              value={feedbackValue}
+              title="Feedback"
+              icon="feedback"
+              orientation="vertical"
+              color={operatorInk}
+              readout={display(OSC_A_FEEDBACK)}
+              onInteraction={handleFeedbackInteraction}
+            />
+          </div>
+          <!-- Time: the global envelope-time scale, bipolar around 0 -->
+          <div class="flex-1 min-w-0 h-full">
+            <DeviceSlider
+              value={timeValue}
+              title="Time"
+              icon="envelope"
+              orientation="vertical"
+              color={operatorInk}
+              min={-100}
+              max={100}
+              centerOrigin={true}
+              centerValue={0}
+              readout={display(TIME)}
+              onInteraction={handleTimeInteraction}
+            />
+          </div>
+          <div class="flex-1 min-w-0 h-full">
+            <DeviceSlider
+              value={toneValue}
+              title="Tone"
+              icon="tone"
+              orientation="vertical"
+              color={operatorInk}
+              readout={display(TONE)}
+              onInteraction={handleToneInteraction}
+            />
+          </div>
+        </div>
       </div>
-      <!-- FEEDBACK slider -->
-      <div class="h-full min-w-0">
-        <DeviceSlider
-          value={feedbackValue}
-          title="Feedback"
-          icon="feedback"
-          orientation="vertical"
-          labelOrientation="horizontal"
-          color={operatorInk}
-          onInteraction={handleFeedbackInteraction}
-        />
-      </div>
-      <!-- TIME slider: global envelope-time scale, bipolar around 0 -->
-      <div class="h-full min-w-0">
-        <DeviceSlider
-          value={timeValue}
-          title="Time"
-          icon="envelope"
-          orientation="vertical"
-          labelOrientation="horizontal"
-          color={operatorInk}
-          min={-100}
-          max={100}
-          centerOrigin={true}
-          centerValue={0}
-          onInteraction={handleTimeInteraction}
-        />
-      </div>
-      <!-- TONE slider -->
-      <div class="h-full min-w-0">
-        <DeviceSlider
-          value={toneValue}
-          title="Tone"
-          icon="tone"
-          orientation="vertical"
-          labelOrientation="horizontal"
-          color={operatorInk}
-          onInteraction={handleToneInteraction}
-        />
-      </div>
+      <SectionDivider orientation="vertical" ink={operatorInk.primary} />
       <!-- FILTER: cutoff across, resonance up, the response curve beneath.
            Ghosted while the filter is off; a drag turns it on. -->
       <div class="h-full min-w-0" style={filterOn ? '' : 'opacity: var(--opacity-ghost);'}>
@@ -259,21 +252,9 @@
       <!-- The wheels send MIDI, not Operator parameters: a seam divides the
            device from them, as in every instrument view (2026-09-13). -->
       <SectionDivider orientation="vertical" />
-      <!-- MIDI wheels — fixed, the two `auto` columns; they are not part
-           of the slider ruler and never share its width. -->
-      <div class="h-full w-24">
-        <MidiWheel
-          type="pitch"
-          onInteraction={handlePitchChange}
-          color={pitchInk}
-        />
-      </div>
-      <div class="h-full w-24">
-        <MidiWheel
-          type="modwheel"
-          onInteraction={handleModChange}
-          color={modInk}
-        />
+      <!-- MIDI wheels, Pitch over Mod (ADR-477) -->
+      <div class="h-full w-14 min-h-0">
+        <MidiWheelsPanel pitchColor={pitchInk} modColor={modInk} />
       </div>
     </div>
   {:else}

@@ -2,8 +2,8 @@
   /**
    * Instrument Rack Central View
    *
-   * One slider per named macro; the MIDI wheels lead the row, under the
-   * swap pill (2026-09-16).
+   * One value box per named macro, two rows of them (ADR-477); the MIDI
+   * wheels lead the row, Pitch over Mod under the swap pill (2026-09-16).
    */
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
@@ -11,8 +11,7 @@
   import { glyphForName } from '$lib/config/controlGlyphMap';
   import SectionDivider from '../SectionDivider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
-  import MidiWheel from '../../midi/MidiWheel.svelte';
-  import { sendPitchWheel, sendModWheel } from '$lib/api/midiWheels';
+  import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -90,15 +89,6 @@
     return macroValues[macroIndex - 1] / MACRO_MAX;
   }
 
-  // MIDI wheel handlers
-  function handlePitchChange(value: number) {
-    sendPitchWheel(value);
-  }
-
-  function handleModChange(value: number) {
-    sendModWheel(value);
-  }
-
   // MIDI wheel colors (shared palettes, normalized through the ink layer).
   let pitchInk = $derived(trackScheme ?? { primary: trackInk(PITCH_COLOR.primary, paintModeReactive()), secondary: PITCH_COLOR.secondary, accent: trackInk(PITCH_COLOR.accent, paintModeReactive()) });
   let modInk = $derived(trackScheme ?? { primary: trackInk(MOD_COLOR.primary, paintModeReactive()), secondary: MOD_COLOR.secondary, accent: trackInk(MOD_COLOR.accent, paintModeReactive()) });
@@ -115,21 +105,8 @@
              stay put while a rack loads or names none. -->
         <div class="wheels-group">
           <HostedSwapPill />
-          <div class="wheels-row">
-            <div class="control-slot slider-slot">
-              <MidiWheel
-                type="pitch"
-                onInteraction={handlePitchChange}
-                color={pitchInk}
-              />
-            </div>
-            <div class="control-slot slider-slot">
-              <MidiWheel
-                type="modwheel"
-                onInteraction={handleModChange}
-                color={modInk}
-              />
-            </div>
+          <div class="wheels-stack">
+            <MidiWheelsPanel pitchColor={pitchInk} modColor={modInk} />
           </div>
         </div>
 
@@ -137,8 +114,11 @@
              two sat the same gap apart as two macros do (2026-09-13). -->
         <SectionDivider orientation="vertical" />
 
-        <!-- One slider per named macro -->
+        <!-- One value box per named macro, two rows filled column by
+             column (ADR-477): neighbours pair top over bottom, and an XY
+             pad, which stands in for two macros, takes a 2 x 2 block. -->
         {#if controlLayout.length > 0}
+          <div class="macro-grid">
           {#each layoutItems as item, i}
             {#if item.kind === 'xy'}
               <div class="control-slot xy-slot">
@@ -154,19 +134,20 @@
                 />
               </div>
             {:else}
-              <div class="control-slot slider-slot">
+              <div class="control-slot">
                 <DeviceSlider
                   value={getNormalizedValue(item.control.macroIndex)}
                   title={item.control.name}
                   icon={glyphForName(item.control.name)}
                   orientation="vertical"
-                  labelOrientation="horizontal"
                   color={ctlInk(i)}
+                  readout={device ? selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(device, item.control.macroIndex)) : undefined}
                   onInteraction={(val) => handleSliderChange(item.control.macroIndex, val)}
                 />
               </div>
             {/if}
           {/each}
+          </div>
         {:else}
           <!-- No used macros yet (loading or none configured) -->
           <div class="flex-1 flex items-center justify-center text-muted-foreground">
@@ -199,33 +180,38 @@
     flex-shrink: 1;
   }
 
-  .slider-slot {
+  /* Two rows, filled column by column, every column one share. */
+  .macro-grid {
     flex: 1 1 0;
-    min-width: 40px;
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: column dense;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: var(--central-gap);
   }
 
-  /* An XY pad stands in for two macros, so it takes their two columns. */
+  /* An XY pad stands in for two macros, so it takes a 2 x 2 block. */
   .xy-slot {
-    flex: 2 1 var(--central-gap);
-    min-width: 80px;
+    grid-column: span 2;
+    grid-row: span 2;
   }
 
-  /* The wheels and the pill over them: exactly two slider shares, so a wheel
-     stays as wide as a macro slider — the basis is the one gap between the
-     two wheels, which a plain `flex: 2 1 0` would have taken out of their
-     share. */
+  /* The wheels and the pill over them: wide enough for the pill to name
+     the preset between its two 44px halves (at 10rem it read "Auro…"),
+     the wheels stacked under it (ADR-477). */
   .wheels-group {
-    flex: 2 1 var(--central-gap);
+    flex: 0 0 auto;
+    width: 13rem;
     display: flex;
     flex-direction: column;
     gap: var(--central-gap);
     min-width: 0;
     min-height: 0;
   }
-  .wheels-row {
+  .wheels-stack {
     flex: 1 1 0;
-    display: flex;
-    gap: var(--central-gap);
     min-height: 0;
   }
 

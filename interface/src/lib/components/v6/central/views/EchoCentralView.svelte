@@ -2,9 +2,13 @@
 	/**
 	 * EchoCentralView — what the Echo tile opens (2026-09-14).
 	 *
-	 *   [Time over Sync] [Filter  Filter]
-	 *   | [LFO Wave 2x3] [Rate over LFO Sync] [LFO > Time] [LFO > Filter]
-	 *   | [Input] [Output] [Feedback] [Mix]
+	 *   [Time over Sync] [Filter  Filter  Filter  Filter  Filter]
+	 *   | [LFO Wave 2x3] [Rate over LFO Sync] [LFO > Time over LFO > Filter]
+	 *   | [Input over Output] [Feedback over Mix]
+	 *
+	 * Every slider is a value box (ADR-477): the depths and levels stand in
+	 * pairs, each box half a fader's height and as fine, and the three
+	 * columns that freed went to the filter graph (two columns before).
 	 *
 	 * Every axis of the tile has its own control here (user's call), plus
 	 * what the tile has no room for: the Sync switch, Echo's two-dot filter
@@ -240,7 +244,6 @@
 				title="Time {timeLabel}"
 				icon="delay"
 				orientation="vertical"
-				labelOrientation="horizontal"
 				labelSize="small"
 				isGhost={echo.isGhost}
 				color={echo.color}
@@ -304,7 +307,6 @@
 				title="Rate {lfoLabel}"
 				icon="rate"
 				orientation="vertical"
-				labelOrientation="horizontal"
 				labelSize="small"
 				isGhost={echo.isGhost}
 				color={echo.color}
@@ -323,111 +325,117 @@
 		</button>
 	</div>
 
-	<div class="col">
-		<DeviceSlider
-			value={lfoToTime}
-			title="LFO > Time"
-			icon="lfo"
-			orientation="vertical"
-			labelOrientation="horizontal"
-			labelSize="small"
-			isGhost={echo.isGhost}
-			color={echo.color}
-			onTap={() => echo.loadIfGhost()}
-			onInteraction={(t) => echo.sendParam(ECHO_LFO.toTime, t)}
-		/>
-	</div>
-
-	<div class="col">
-		<DeviceSlider
-			value={lfoToFilter}
-			title="LFO > Filter"
-			icon="cutoff"
-			orientation="vertical"
-			labelOrientation="horizontal"
-			labelSize="small"
-			isGhost={echo.isGhost}
-			color={echo.color}
-			onTap={() => echo.loadIfGhost()}
-			onInteraction={(t) => echo.sendParam(ECHO_LFO.toFilter, t)}
-		/>
+	<!-- The LFO's two depths, Time over Filter: a pair of value boxes. -->
+	<div class="col box-pair">
+		<div class="box">
+			<DeviceSlider
+				value={lfoToTime}
+				title="LFO > Time"
+				icon="lfo"
+				orientation="vertical"
+				labelSize="small"
+				isGhost={echo.isGhost}
+				color={echo.color}
+				readout={echo.paramDisplay(ECHO_LFO.toTime)}
+				onTap={() => echo.loadIfGhost()}
+				onInteraction={(t) => echo.sendParam(ECHO_LFO.toTime, t)}
+			/>
+		</div>
+		<div class="box">
+			<DeviceSlider
+				value={lfoToFilter}
+				title="LFO > Filter"
+				icon="cutoff"
+				orientation="vertical"
+				labelSize="small"
+				isGhost={echo.isGhost}
+				color={echo.color}
+				readout={echo.paramDisplay(ECHO_LFO.toFilter)}
+				onTap={() => echo.loadIfGhost()}
+				onInteraction={(t) => echo.sendParam(ECHO_LFO.toFilter, t)}
+			/>
+		</div>
 	</div>
 
 	<SectionDivider orientation="vertical" />
 
-	<div class="col">
-		<DeviceSlider
-			value={input}
-			title="Input"
-			icon="gain"
-			sensitivity={GAIN_SENSITIVITY}
-			orientation="vertical"
-			labelOrientation="horizontal"
-			labelSize="small"
-			isGhost={echo.isGhost}
-			color={echo.color}
-			onTap={() => echo.loadIfGhost()}
-			onDown={inputDown}
-			onInteraction={inputMoved}
-		/>
+	<!-- The levels in two pairs: Input over Output (Input drags Output the
+	     other way), Feedback over Mix. -->
+	<div class="col box-pair">
+		<div class="box">
+			<DeviceSlider
+				value={input}
+				title="Input"
+				icon="gain"
+				sensitivity={GAIN_SENSITIVITY}
+				orientation="vertical"
+				labelSize="small"
+				isGhost={echo.isGhost}
+				color={echo.color}
+				readout={echo.paramDisplay(ECHO.inputGain)}
+				onTap={() => echo.loadIfGhost()}
+				onDown={inputDown}
+				onInteraction={inputMoved}
+			/>
+		</div>
+		<div class="box">
+			<DeviceSlider
+				value={output}
+				title="Output"
+				icon="output"
+				sensitivity={GAIN_SENSITIVITY}
+				orientation="vertical"
+				labelSize="small"
+				isGhost={echo.isGhost}
+				color={echo.color}
+				readout={echo.paramDisplay(ECHO.outputGain)}
+				onTap={() => echo.loadIfGhost()}
+				onInteraction={(t) => echo.sendParam(ECHO.outputGain, fullValue(ECHO.outputGain, t))}
+			/>
+		</div>
 	</div>
 
-	<div class="col">
-		<DeviceSlider
-			value={output}
-			title="Output"
-			icon="output"
-			sensitivity={GAIN_SENSITIVITY}
-			orientation="vertical"
-			labelOrientation="horizontal"
-			labelSize="small"
-			isGhost={echo.isGhost}
-			color={echo.color}
-			onTap={() => echo.loadIfGhost()}
-			onInteraction={(t) => echo.sendParam(ECHO.outputGain, fullValue(ECHO.outputGain, t))}
-		/>
-	</div>
-
-	<div class="col">
-		<DeviceSlider
-			value={feedback}
-			title="Feedback"
-			icon="feedback"
-			orientation="vertical"
-			labelOrientation="horizontal"
-			labelSize="small"
-			isGhost={echo.isGhost}
-			color={echo.color}
-			onTap={() => echo.loadIfGhost()}
-			onInteraction={(t) => echo.sendParam(ECHO.feedback, t)}
-		/>
-	</div>
-
-	<div class="col">
-		<DeviceSlider
-			value={mix}
-			title="Mix"
-			icon="mix"
-			orientation="vertical"
-			labelOrientation="horizontal"
-			labelSize="small"
-			isGhost={echo.isGhost}
-			color={echo.color}
-			onTap={() => echo.loadIfGhost()}
-			onInteraction={(t) => echo.sendParam(ECHO.mix, t)}
-		/>
+	<div class="col box-pair">
+		<div class="box">
+			<DeviceSlider
+				value={feedback}
+				title="Feedback"
+				icon="feedback"
+				orientation="vertical"
+				labelSize="small"
+				isGhost={echo.isGhost}
+				color={echo.color}
+				readout={echo.paramDisplay(ECHO.feedback)}
+				onTap={() => echo.loadIfGhost()}
+				onInteraction={(t) => echo.sendParam(ECHO.feedback, t)}
+			/>
+		</div>
+		<div class="box">
+			<DeviceSlider
+				value={mix}
+				title="Mix"
+				icon="mix"
+				orientation="vertical"
+				labelSize="small"
+				isGhost={echo.isGhost}
+				color={echo.color}
+				readout={echo.paramDisplay(ECHO.mix)}
+				onTap={() => echo.loadIfGhost()}
+				onInteraction={(t) => echo.sendParam(ECHO.mix, t)}
+			/>
+		</div>
 	</div>
 </div>
 
 <style>
-	/* Eleven equal columns — the filter graph spans two — with an `auto`
+	/* Eleven equal columns — the filter graph spans five — with an `auto`
 	   track for each seam: Time + Filter | LFO (wave, rate, depths) | levels. */
 	.echo-layout {
 		display: grid;
 		grid-template-columns:
+			repeat(6, minmax(0, 1fr)) auto
 			repeat(3, minmax(0, 1fr)) auto
-			repeat(4, minmax(0, 1fr)) auto
-			repeat(4, minmax(0, 1fr));
+			repeat(2, minmax(0, 1fr));
 		gap: var(--central-gap);
 		height: 100%;
 		width: 100%;
@@ -438,6 +446,17 @@
 		min-height: 0;
 		min-width: 0;
 		height: 100%;
+	}
+
+	/* Two value boxes in one column, each half its height (ADR-477). */
+	.box-pair {
+		display: flex;
+		flex-direction: column;
+		gap: var(--central-gap);
+	}
+	.box {
+		flex: 1 1 0;
+		min-height: 0;
 	}
 
 	/* A slider over its switch: the Drum Buss view's Trim-over-Comp shape. */
@@ -482,7 +501,7 @@
 	}
 
 	.filter-graph {
-		grid-column: span 2;
+		grid-column: span 5;
 		position: relative;
 		overflow: hidden;
 		border: 1px solid var(--line-strong);

@@ -1,4 +1,4 @@
-# ADR-476: The FX Chain Overview, Type-First Tiles and the Blue Hand
+# ADR-478: The FX Chain Overview, Type-First Tiles and the Blue Hand
 
 ## Status
 **Proposed** (2026-10-25), on the branch `claude/fx-chain-overview-mock`

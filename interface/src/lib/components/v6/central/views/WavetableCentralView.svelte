@@ -151,6 +151,12 @@
     selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, index), value);
   }
 
+  /** Live's own value, a box's readout while it is dragged (ADR-477); sent only while the UI writes. */
+  function display(index: number): string | undefined {
+    if (!device) return undefined;
+    return selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(device, index));
+  }
+
   /**
    * Which oscillator the card is showing. View state only, as on Drift: it
    * writes nothing, so a patch change never takes the card away mid-edit.
@@ -263,14 +269,16 @@
 
   let oscWaveCycle = $derived(oscWave(oscTab, oscPosition, read(o.effect1, 0.5), oscEffect2));
 
-  let envView = $state<'amp' | 'env2'>('amp');
-  let envStages = $derived(envView === 'amp' ? ENVELOPE : ENV2);
-  let envelopeValues = $derived(
-    envStages.map((stage) => {
-      const { min, max } = rangeOf(stage.index, stage.fallback);
-      return norm(read(stage.index, stage.atRest), min, max);
-    })
-  );
+  /** Both envelopes in view, Amp over Envelope 2 (ADR-477). */
+  const ENVELOPES = [
+    { title: 'Amp Envelope', stages: ENVELOPE },
+    { title: 'Envelope 2', stages: ENV2 }
+  ] as const;
+
+  function envelopeValue(stage: { index: number; fallback: { min: number; max: number }; atRest: number }): number {
+    const { min, max } = rangeOf(stage.index, stage.fallback);
+    return norm(read(stage.index, stage.atRest), min, max);
+  }
 
   // ===== Colors =====
   /**
@@ -319,9 +327,6 @@
     write(index, value);
   }
 
-  /** The stacked levels' drag speed: half, as Echo's gains. */
-  const LEVEL_SENSITIVITY = 0.5;
-
   /** A level in the mixer: the same rule, for the oscillator it belongs to. */
   function writeLevel(n: OscN, value: number) {
     if (!device) return;
@@ -358,8 +363,9 @@
       <!-- THE LEVELS, Drift's mixer reduced to its oscillators: Osc 1 over
            Osc 2 in one column at the view's left edge (user, 2026-10-22),
            each in its own colour, so balancing them never means switching
-           the card. Half speed, as Echo's gains: a full-height drag covers
-           half the rail. Touching a level brings its oscillator's card up. -->
+           the card. Value boxes (ADR-477): half a fader's height and as
+           fine, which retired their half-speed drag. Touching a level
+           brings its oscillator's card up. -->
       <div class="mixer-col flex-none min-h-0 flex">
         <div class="env-slider min-h-0 h-full flex flex-col gap-(--central-gap)">
           <div class="flex-1 min-h-0">
@@ -371,7 +377,7 @@
             labelSize="small"
             isGhost={!osc1On}
             color={osc1Ink}
-            sensitivity={LEVEL_SENSITIVITY}
+            readout={display(OSC[1].gain)}
             onDown={() => (oscTab = 1)}
             onInteraction={(v) => writeLevel(1, v)}
           />
@@ -385,7 +391,7 @@
             labelSize="small"
             isGhost={!osc2On}
             color={osc2Ink}
-            sensitivity={LEVEL_SENSITIVITY}
+            readout={display(OSC[2].gain)}
             onDown={() => (oscTab = 2)}
             onInteraction={(v) => writeLevel(2, v)}
           />
@@ -451,6 +457,7 @@
               labelSize="small"
               isGhost={!oscOn || oscEffectMode === 'none'}
               color={oscInk}
+              readout={display(o.effect1)}
               onInteraction={(v) => writeOsc(o.effect1, v)}
             />
           </div>
@@ -513,42 +520,40 @@
         </div>
       </div>
 
-      <!-- The envelopes, Amp or Env 2 in one bracket, one slider a stage,
-           A → D → S → R either way, so switching never moves the edges. -->
+      <!-- The two envelopes, Amp over Envelope 2, one box a stage, A → D →
+           S → R (ADR-477): both in view, so there is no switch, each box
+           half a fader's height and as fine. One bracket, a seam between. -->
       <div class="env-col flex-none min-h-0 flex gap-(--central-gap)">
-        <EnvelopeGroup ink={wavetableInk.primary} title={envView === 'amp' ? 'Amp Envelope' : 'Envelope 2'}>
-          {#snippet header()}
-            <div class="device-segmented env-switch flex-none" style="--btn-tint: {wavetableInk.primary};">
-              {#each [['amp', 'Amp'], ['env2', 'Env 2']] as [key, label]}
-                <button
-                  class="device-segment strip-step"
-                  class:active={envView === key}
-                  aria-pressed={envView === key}
-                  onclick={() => (envView = key as 'amp' | 'env2')}
-                >{label}</button>
+        <SectionDivider orientation="vertical" ink={wavetableInk.primary} />
+        <div class="flex-1 min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
+          {#each ENVELOPES as envelope, e (envelope.title)}
+            {#if e > 0}<SectionDivider orientation="horizontal" ink={wavetableInk.primary} />{/if}
+            <EnvelopeGroup ink={wavetableInk.primary} title={envelope.title} edges="none">
+              {#each envelope.stages as stage (stage.index)}
+                <div class="env-slider min-h-0 h-full">
+                  <DeviceSlider
+                    value={envelopeValue(stage)}
+                    title={stage.title}
+                    icon={stage.icon}
+                    orientation="vertical"
+                    labelSize="small"
+                    color={wavetableInk}
+                    readout={display(stage.index)}
+                    onInteraction={(value) => writeEnv(stage.index, stage.fallback, value)}
+                  />
+                </div>
               {/each}
-            </div>
-          {/snippet}
-          {#each envStages as stage, i (stage.index)}
-            <div class="env-slider min-h-0 h-full">
-              <DeviceSlider
-                value={envelopeValues[i]}
-                title={stage.title}
-                icon={stage.icon}
-                orientation="vertical"
-                labelSize="small"
-                color={wavetableInk}
-                onInteraction={(value) => writeEnv(stage.index, stage.fallback, value)}
-              />
-            </div>
+            </EnvelopeGroup>
           {/each}
-        </EnvelopeGroup>
+        </div>
+        <SectionDivider orientation="vertical" ink={wavetableInk.primary} />
       </div>
 
-      <!-- Time and Global Mod Amount: the device-wide scalers of every
-           envelope and LFO time and of the mod matrix. -->
-      <div class="flex-none min-h-0 flex gap-(--central-gap)">
-        <div class="env-slider min-h-0 h-full">
+      <!-- Time over Global Mod Amount: the device-wide scalers of every
+           envelope and LFO time and of the mod matrix, two boxes in one
+           column (ADR-477). -->
+      <div class="scaler-col flex-none min-h-0 flex flex-col gap-(--central-gap)">
+        <div class="flex-1 min-h-0">
           <DeviceSlider
             value={time}
             title="Time"
@@ -557,16 +562,18 @@
             centerOrigin
             centerValue={0.5}
             color={wavetableInk}
+            readout={display(TIME)}
             onInteraction={(value) => write(TIME, value)}
           />
         </div>
-        <div class="env-slider min-h-0 h-full">
+        <div class="flex-1 min-h-0">
           <DeviceSlider
             value={globalMod}
             title="Mod Amt"
             orientation="vertical"
             labelSize="small"
             color={wavetableInk}
+            readout={display(GLOBAL_MOD)}
             onInteraction={(value) => write(GLOBAL_MOD, value)}
           />
         </div>
@@ -594,13 +601,8 @@
     height: var(--height-touch);
     min-width: 0;
   }
-  .strip-row.device-segmented,
-  .env-switch {
+  .strip-row.device-segmented {
     display: grid;
-  }
-  .env-switch {
-    grid-template-columns: repeat(2, 1fr);
-    height: var(--height-touch);
   }
   .device-segmented .device-segment + .device-segment {
     border-top: 0;
@@ -623,8 +625,8 @@
     white-space: nowrap;
   }
 
-  /* Four stages and their three gaps, plus the bracket's own two seams and
-     the gap beside each — EnvelopeGroup draws them inside this column. */
+  /* Four stages and their three gaps, plus the bracket's two seams and the
+     gap beside each, all drawn inside this column. */
   .env-col {
     width: calc(4 * var(--wt-slider-w) + 5 * var(--central-gap) + 2px);
   }
@@ -650,8 +652,10 @@
     white-space: nowrap;
   }
 
-  /* One column, Osc 1 over Osc 2; the width is for WebKit, as Drift's. */
-  .mixer-col {
+  /* One column, Osc 1 over Osc 2; the width is for WebKit, as Drift's.
+     Time over Mod Amt is the same. */
+  .mixer-col,
+  .scaler-col {
     width: var(--wt-slider-w);
   }
 

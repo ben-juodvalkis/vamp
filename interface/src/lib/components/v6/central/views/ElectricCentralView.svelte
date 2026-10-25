@@ -2,8 +2,7 @@
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import SectionDivider from '../SectionDivider.svelte';
-  import MidiWheel from '../../midi/MidiWheel.svelte';
-  import { sendPitchWheel, sendModWheel } from '$lib/api/midiWheels';
+  import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -52,15 +51,6 @@
     secondary: MOD_COLOR.secondary,
     accent: trackInk(MOD_COLOR.accent, paintModeReactive())
   });
-
-  // MIDI wheel handlers
-  function handlePitchChange(value: number) {
-    sendPitchWheel(value);
-  }
-
-  function handleModChange(value: number) {
-    sendModWheel(value);
-  }
 
   // All parameter values as $derived - always reactive to store changes (ADR-149)
   // Hammer: Parameter 8 (Stiffness X), Parameter 16 (Noise Y)
@@ -120,22 +110,9 @@
       />
 
       <SectionDivider orientation="vertical" />
-      <!-- MIDI Wheels (pitch + mod) -->
-      <div class="flex gap-(--central-gap) min-h-0">
-        <div class="w-24 h-full">
-          <MidiWheel
-            type="pitch"
-            onInteraction={handlePitchChange}
-            color={pitchInk}
-          />
-        </div>
-        <div class="w-24 h-full">
-          <MidiWheel
-            type="modwheel"
-            onInteraction={handleModChange}
-            color={modInk}
-          />
-        </div>
+      <!-- MIDI wheels, Pitch over Mod (ADR-477) -->
+      <div class="h-full w-14 flex-none min-h-0">
+        <MidiWheelsPanel pitchColor={pitchInk} modColor={modInk} />
       </div>
     </div>
   {:else}

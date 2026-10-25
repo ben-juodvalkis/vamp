@@ -1,10 +1,25 @@
 <script lang="ts">
+  /**
+   * The pitch and mod wheels, Pitch over Mod in one column (ADR-477). Each
+   * is half the column's height and as fine as a full-height wheel, since a
+   * wheel sweeps over the value-box travel at least. Side by side, two
+   * full-height wheels cost every instrument view a second column for no
+   * more precision. The host sets the column's width; the gap is the view's.
+   */
   import { sendPitchWheel, sendModWheel } from '$lib/api/midiWheels';
   import MidiWheel from './MidiWheel.svelte';
   import { PITCH_COLOR, MOD_COLOR, type DeviceColorScheme } from '$lib/config/devicePresets';
   import { deviceInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
+
+  interface Props {
+    /** The view's own inks; unset, the focused track's (ADR-402). */
+    pitchColor?: DeviceColorScheme;
+    modColor?: DeviceColorScheme;
+  }
+
+  let { pitchColor, modColor }: Props = $props();
 
   // Both wheels follow the focused track's ink (ADR-402), distinguished by
   // their PITCH/MOD labels + behaviour. The ink-calibrated PITCH/MOD family
@@ -15,37 +30,16 @@
     secondary: c.secondary,
     accent: deviceInk(c.accent, paintModeReactive())
   });
-  const pitchColor = $derived(selectedTrackScheme() ?? inked(PITCH_COLOR));
-  const modColor = $derived(selectedTrackScheme() ?? inked(MOD_COLOR));
-
-  // Handle pitch bend value (0-16383)
-  function handlePitchChange(value: number) {
-    sendPitchWheel(value);
-  }
-
-  // Handle mod wheel value (0-127)
-  function handleModChange(value: number) {
-    sendModWheel(value);
-  }
+  const pitchInk = $derived(pitchColor ?? selectedTrackScheme() ?? inked(PITCH_COLOR));
+  const modInk = $derived(modColor ?? selectedTrackScheme() ?? inked(MOD_COLOR));
 </script>
 
 <div class="midi-wheels-panel">
-  <div class="wheels-container">
-    <MidiWheel
-      type="pitch"
-      onInteraction={handlePitchChange}
-      color={pitchColor}
-      height="100%"
-      width="100%"
-    />
-
-    <MidiWheel
-      type="modwheel"
-      onInteraction={handleModChange}
-      color={modColor}
-      height="100%"
-      width="100%"
-    />
+  <div class="wheel-cell">
+    <MidiWheel type="pitch" onInteraction={sendPitchWheel} color={pitchInk} />
+  </div>
+  <div class="wheel-cell">
+    <MidiWheel type="modwheel" onInteraction={sendModWheel} color={modInk} />
   </div>
 </div>
 
@@ -53,15 +47,14 @@
   .midi-wheels-panel {
     display: flex;
     flex-direction: column;
+    gap: var(--central-gap);
     height: 100%;
     width: 100%;
+    min-height: 0;
   }
 
-  .wheels-container {
-    flex: 1;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+  .wheel-cell {
+    flex: 1 1 0;
     min-height: 0;
   }
 </style>

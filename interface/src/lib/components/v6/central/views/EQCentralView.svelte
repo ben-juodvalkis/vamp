@@ -4,8 +4,9 @@
    *
    * Self-contained central view that queries its own slot state.
    * Renders immediately with ghost/loading/active states.
-   * Displays Channel EQ output gain slider, and beside it Ben's Adaptive Tone
-   * Shaper's graph (2026-10-07; oeksound bloom's sliders the day before).
+   * Displays Channel EQ's Low Cut over its output gain, one column of value
+   * boxes (ADR-477), and beside it Ben's Adaptive Tone Shaper's graph
+   * (2026-10-07; oeksound bloom's sliders the day before).
    *
    * NO {#if device} gate - always renders, handles its own state.
    * NO props required - queries selectedTrackStore directly.
@@ -97,46 +98,36 @@
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
 <div class="h-full w-full flex p-(--central-inset) gap-(--central-gap)">
-<!-- Channel EQ: Low Cut, the name, Output. -->
-<div class="eq-group h-full flex flex-col items-center justify-center relative" class:slot-ghost={fx.isGhost}>
-  <!-- Centered EQ label matching DeviceXY standard -->
-  <div
-    class="eq-title absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-2xl font-bold uppercase tracking-wider pointer-events-none select-none z-10 dark:text-white/90 light:text-foreground/80"
-  >EQ</div>
-
-  <div class="w-full h-full flex justify-between">
-    <!-- Left: Low Cut Toggle -->
-    <div class="w-24 flex flex-col items-center gap-2">
-      <div class="eq-label text-xs text-muted-foreground font-medium">Low Cut</div>
-      <button
-        onclick={toggleLowCut}
-        class="physical-button flex-1 w-full text-lg font-bold"
-        class:active={lowCutEnabled}
-        style="--btn-tint: {fxInk.primary};"
-      >
-        {lowCutEnabled ? 'ON' : 'OFF'}
-      </button>
-    </div>
-
-    <!-- Right: Output Gain Slider -->
-    <div class="w-20 flex flex-col items-center gap-2">
-      <div class="eq-label text-xs text-muted-foreground font-medium">Output</div>
-      <div class="flex-1 w-full">
-        <DeviceSlider
-          value={outputGainValue}
-          labelOrientation="horizontal"
-          title={Math.round(outputGainValue * 100) + '%'}
-          icon="output"
-          isGhost={fx.isGhost}
-          color={fx.isGhost ? ghostInk : fxInk}
-          onInteraction={(val) => {
-            fx.sendParam(PARAM_CONFIG.outputGain, val);
-          }}
-        />
-      </div>
+<!-- Channel EQ: its name over Low Cut over Output, one column of value
+     boxes (ADR-477). Side by side under a centred name they took 16rem,
+     which the graph has now. -->
+<div class="eq-group h-full flex flex-col" class:slot-ghost={fx.isGhost}>
+  <span class="group-eyebrow" style="color: {fxInk.primary};">EQ</span>
+  <div class="flex-1 min-h-0 flex flex-col gap-(--central-gap)">
+    <!-- A switch: one cell, lit while the low cut is on. -->
+    <button
+      onclick={toggleLowCut}
+      class="physical-button flex-1 min-h-0 w-full text-base font-bold"
+      class:active={lowCutEnabled}
+      aria-pressed={lowCutEnabled}
+      style="--btn-tint: {fxInk.primary};"
+    >
+      Low Cut
+    </button>
+    <div class="flex-1 min-h-0">
+      <DeviceSlider
+        value={outputGainValue}
+        title="Output"
+        icon="output"
+        isGhost={fx.isGhost}
+        color={fx.isGhost ? ghostInk : fxInk}
+        readout={fx.paramDisplay(PARAM_CONFIG.outputGain)}
+        onInteraction={(val) => {
+          fx.sendParam(PARAM_CONFIG.outputGain, val);
+        }}
+      />
     </div>
   </div>
-
 </div>
 
 <SectionDivider orientation="vertical" ink={tsInk.primary} />
@@ -144,7 +135,7 @@
 <!-- The Tone Shaper: its name over its graph. A tap on a ghost loads it; a
      drag loads it and writes. -->
 <div class="ts-group h-full flex-1 min-w-0 flex flex-col" class:slot-ghost={ts.isGhost}>
-  <span class="ts-title" style="color: {tsInk.primary};">Tone Shaper</span>
+  <span class="group-eyebrow" style="color: {tsInk.primary};">Tone Shaper</span>
   <div class="flex-1 min-h-0">
     <ToneShaperGraph
       frame={tsFrame}
@@ -163,21 +154,18 @@
 </div>
 
 <style>
-  /* GRATICULE: control labels are authored mixed-case ("Low Cut", "Output")
-     and up-cased here for the HUD voice. */
-  .eq-label {
-    text-transform: uppercase;
-  }
-
-  /* The Channel EQ keeps a fixed width; the graph takes the rest. */
+  /* The Channel EQ is one column of value boxes (ADR-477); the graph takes
+     the rest. Each group is its name over its controls. */
   .eq-group {
-    flex: 0 0 16rem;
+    flex: 0 0 6rem;
+    gap: var(--spacing-xs);
   }
   .ts-group {
     gap: var(--spacing-xs);
   }
   /* The eyebrow every named group in a central view wears (EnvelopeGroup's). */
-  .ts-title {
+  .group-eyebrow {
+    flex: none;
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.05em;
@@ -185,29 +173,18 @@
     text-align: center;
     white-space: nowrap;
   }
-  :global([data-grammar="flat"]) .ts-title {
+  :global([data-grammar="flat"]) .group-eyebrow {
     letter-spacing: normal;
     text-transform: none;
     font-weight: var(--font-weight-medium);
   }
 
-  /* ---- Live skin (flat grammar): the centred "EQ" is Live's device-name
-     text — mixed case, medium weight, plain foreground — not the bold
-     tracked HUD literal on a white/90 chrome colour; the LOW CUT toggle
-     drops bold (app.css already gives .physical-button its flat field +
-     ChosenDefault ON fill). Nothing else here paints chrome: the OUTPUT
-     slider is DeviceSlider (already flat) in a bare flex wrapper, so no
-     frame / shadow is re-added around it. Graticule is untouched — every
-     rule sits under [data-grammar="flat"]. */
-  :global([data-grammar="flat"]) .eq-title {
-    text-transform: none;
-    letter-spacing: 0;
-    font-weight: var(--font-weight-medium);
-    color: var(--foreground);
-  }
-  :global([data-grammar="flat"]) .eq-label {
-    text-transform: none;
-  }
+  /* ---- Live skin (flat grammar): the LOW CUT switch drops bold (app.css
+     already gives .physical-button its flat field + ChosenDefault ON fill).
+     Nothing else here paints chrome: the OUTPUT box is DeviceSlider
+     (already flat) in a bare flex wrapper, so no frame / shadow is re-added
+     around it. Graticule is untouched — every rule sits under
+     [data-grammar="flat"]. */
   :global([data-grammar="flat"]) .physical-button {
     font-weight: var(--font-weight-medium);
   }

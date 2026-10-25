@@ -33,8 +33,7 @@
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import SectionDivider from '../SectionDivider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
-  import MidiWheel from '../../midi/MidiWheel.svelte';
-  import { sendPitchWheel, sendModWheel } from '$lib/api/midiWheels';
+  import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -175,14 +174,6 @@
     liveFilterCurve(valueAt('Filter Type', true) ?? 0, valueAt('Filter Slope', true) ?? 1, valueAt('Filter Morph', true) ?? 0)
   );
 
-  // MIDI wheel handlers (global CCs — same path as Operator/Omnisphere views)
-  function handlePitchChange(value: number) {
-    sendPitchWheel(value);
-  }
-
-  function handleModChange(value: number) {
-    sendModWheel(value);
-  }
 </script>
 
 <div class="h-full w-full overflow-hidden relative">
@@ -193,7 +184,7 @@
          here (--central-inset): the row used to carry p-2 of its own and the
          wheels py-2 to match it, which left the seam 16px from Trnsp and
          8px from Pitch (measured, 2026-09-14). -->
-    <div class="h-full w-full grid gap-(--central-gap) p-(--central-inset)" style="grid-template-columns: 1fr auto auto auto;">
+    <div class="h-full w-full grid gap-(--central-gap) p-(--central-inset)" style="grid-template-columns: 1fr auto auto;">
       <!-- The Sampler kit's cells (see `.sampler-grid`); the row names its own. -->
       <div class="sampler-grid min-w-0 h-full">
         <div class="sampler-pill">
@@ -231,20 +222,9 @@
         </VmSlot>
       </div>
       <SectionDivider orientation="vertical" />
-      <!-- MIDI wheels -->
-      <div class="h-full w-24">
-        <MidiWheel
-          type="pitch"
-          onInteraction={handlePitchChange}
-          color={pitchInk}
-        />
-      </div>
-      <div class="h-full w-24">
-        <MidiWheel
-          type="modwheel"
-          onInteraction={handleModChange}
-          color={modInk}
-        />
+      <!-- MIDI wheels, Pitch over Mod (ADR-477) -->
+      <div class="h-full w-14 min-h-0">
+        <MidiWheelsPanel pitchColor={pitchInk} modColor={modInk} />
       </div>
     </div>
   {:else}

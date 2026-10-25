@@ -2,8 +2,7 @@
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
-  import MidiWheel from '../../midi/MidiWheel.svelte';
-  import { sendPitchWheel, sendModWheel } from '$lib/api/midiWheels';
+  import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -135,6 +134,16 @@
     if (on !== current) write(index, on ? 1 : 0);
   }
 
+  /**
+   * Live's own value for a slider's readout (ADR-477), shown while it is
+   * dragged. Undefined until the UI has written the parameter: Live sends
+   * the string only then.
+   */
+  function display(index: number): string | undefined {
+    if (!device) return undefined;
+    return selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(device, index));
+  }
+
   // ---- oscillator
 
   let osc1On = $derived(raw(ANALOG_VOICE[1].oscOn, 1) >= 0.5);
@@ -182,28 +191,32 @@
     writeNorm(p.res, y);
   }
 
-  // ---- envelopes: one bracket, Amp or Filter. The fifth slider is the
-  // stage that envelope drives — the amp's level, the filter's env amount.
+  // ---- envelopes: Amp over Filter, both in view (ADR-477). The first box
+  // of each is the stage that envelope drives — the amp's level, the
+  // filter's env amount.
 
-  let envView = $state<'amp' | 'filter'>('amp');
-
-  let envStages = $derived(
-    envView === 'amp'
-      ? [
-          { index: p.ampLevel, title: 'Lvl', icon: 'gain' as const, atRest: 0.87, bipolar: false },
-          { index: p.aegAttack, title: 'A', icon: 'attack' as const, atRest: 0, bipolar: false },
-          { index: p.aegDecay, title: 'D', icon: 'decay' as const, atRest: 0.6, bipolar: false },
-          { index: p.aegSustain, title: 'S', icon: 'sustain' as const, atRest: 0, bipolar: false },
-          { index: p.aegRelease, title: 'R', icon: 'release' as const, atRest: 0.6, bipolar: false }
-        ]
-      : [
-          { index: p.envAmount, title: 'Amt', icon: 'depth' as const, atRest: 0.5, bipolar: true },
-          { index: p.fegAttack, title: 'A', icon: 'attack' as const, atRest: 0, bipolar: false },
-          { index: p.fegDecay, title: 'D', icon: 'decay' as const, atRest: 0.6, bipolar: false },
-          { index: p.fegSustain, title: 'S', icon: 'sustain' as const, atRest: 0, bipolar: false },
-          { index: p.fegRelease, title: 'R', icon: 'release' as const, atRest: 0.6, bipolar: false }
-        ]
-  );
+  let envelopes = $derived([
+    {
+      title: 'Amp Envelope',
+      stages: [
+        { index: p.ampLevel, title: 'Lvl', icon: 'gain' as const, atRest: 0.87, bipolar: false },
+        { index: p.aegAttack, title: 'A', icon: 'attack' as const, atRest: 0, bipolar: false },
+        { index: p.aegDecay, title: 'D', icon: 'decay' as const, atRest: 0.6, bipolar: false },
+        { index: p.aegSustain, title: 'S', icon: 'sustain' as const, atRest: 0, bipolar: false },
+        { index: p.aegRelease, title: 'R', icon: 'release' as const, atRest: 0.6, bipolar: false }
+      ]
+    },
+    {
+      title: 'Filter Envelope',
+      stages: [
+        { index: p.envAmount, title: 'Amt', icon: 'depth' as const, atRest: 0.5, bipolar: true },
+        { index: p.fegAttack, title: 'A', icon: 'attack' as const, atRest: 0, bipolar: false },
+        { index: p.fegDecay, title: 'D', icon: 'decay' as const, atRest: 0.6, bipolar: false },
+        { index: p.fegSustain, title: 'S', icon: 'sustain' as const, atRest: 0, bipolar: false },
+        { index: p.fegRelease, title: 'R', icon: 'release' as const, atRest: 0.6, bipolar: false }
+      ]
+    }
+  ]);
 
   // ---- voicing
 
@@ -327,6 +340,7 @@
                 labelSize="small"
                 isGhost={!oscOn}
                 color={voiceInk}
+                readout={display(p.subSync)}
                 onInteraction={(v) => writeOsc(p.subSync, v)}
               />
             </div>
@@ -340,6 +354,7 @@
                   labelSize="small"
                   isGhost={!oscOn}
                   color={voiceInk}
+                  readout={display(p.pw)}
                   onInteraction={(v) => writeOsc(p.pw, v)}
                 />
               </div>
@@ -355,6 +370,7 @@
               labelSize="small"
               isGhost={!oscOn}
               color={voiceInk}
+              readout={display(p.level)}
               onInteraction={(v) => writeOsc(p.level, v)}
             />
           </div>
@@ -363,32 +379,55 @@
 
       <!-- Noise is the one source both halves share, so it stands outside
            the voice card in its own red. Its switch is its level, Drift's
-           rule: up turns it on, the floor turns it off, from a finger only. -->
-      <div class="noise-col flex-none min-h-0 flex flex-col gap-2">
+           rule: up turns it on, the floor turns it off, from a finger only.
+           Glide shares the column as a box under it (ADR-477): it had a
+           full-height column of its own, which the filter has now. -->
+      <div class="noise-col flex-none min-h-0 flex flex-col gap-(--central-gap)">
+        <div class="flex-1 min-h-0 flex flex-col gap-2">
+          <div class="flex-1 min-h-0">
+            <DeviceSlider
+              value={noiseLevel}
+              title="Noise"
+              icon="noise"
+              orientation="vertical"
+              labelSize="small"
+              isGhost={!noiseOn}
+              color={noiseInk}
+              readout={display(ANALOG_NOISE_LEVEL)}
+              onInteraction={(v) => {
+                writeNorm(ANALOG_NOISE_LEVEL, v);
+                writeSwitch(ANALOG_NOISE_ON, v > SECTION_SWITCH_ON_ABOVE, noiseOn);
+              }}
+            />
+          </div>
+          <button
+            class="physical-button route-button route-chip flex-none"
+            style="--btn-tint: {noiseInk.primary};"
+            title="Noise Balance"
+            aria-label="Noise to {noiseRoute}"
+            onclick={() => write(ANALOG_NOISE_BALANCE, nextRouteBalance(raw(ANALOG_NOISE_BALANCE, 0.5)))}
+          >
+            <span class="route-arrow">→</span>{noiseRoute}
+          </button>
+        </div>
+
+        <!-- Glide, its switch its level like Noise's. -->
         <div class="flex-1 min-h-0">
           <DeviceSlider
-            value={noiseLevel}
-            title="Noise"
-            icon="noise"
+            value={glideOn ? glideTime : 0}
+            title="Glide"
+            icon="glide"
             orientation="vertical"
             labelSize="small"
-            isGhost={!noiseOn}
-            color={noiseInk}
+            isGhost={!glideOn}
+            color={analogInk}
+            readout={display(ANALOG_GLIDE_TIME)}
             onInteraction={(v) => {
-              writeNorm(ANALOG_NOISE_LEVEL, v);
-              writeSwitch(ANALOG_NOISE_ON, v > SECTION_SWITCH_ON_ABOVE, noiseOn);
+              writeSwitch(ANALOG_GLIDE_ON, v > SECTION_SWITCH_ON_ABOVE, glideOn);
+              if (v > SECTION_SWITCH_ON_ABOVE) writeNorm(ANALOG_GLIDE_TIME, v);
             }}
           />
         </div>
-        <button
-          class="physical-button route-button route-chip flex-none"
-          style="--btn-tint: {noiseInk.primary};"
-          title="Noise Balance"
-          aria-label="Noise to {noiseRoute}"
-          onclick={() => write(ANALOG_NOISE_BALANCE, nextRouteBalance(raw(ANALOG_NOISE_BALANCE, 0.5)))}
-        >
-          <span class="route-arrow">→</span>{noiseRoute}
-        </button>
       </div>
 
       <SectionDivider orientation="vertical" ink={voiceInk.primary} />
@@ -458,64 +497,46 @@
         </div>
       </div>
 
-      <!-- The voice's envelopes, Amp or Filter in one bracket: five
-           sliders whichever is up, so switching never moves the edges. -->
+      <!-- The voice's two envelopes, Amp over Filter, as value boxes
+           (ADR-477). Both are in view, so there is no Amp/Filter switch:
+           each box is half a fader's height and as fine, since a box sweeps
+           its range over the same finger travel whatever its size. A seam
+           between them; the one after them is the voicing column's. -->
       <div class="env-col flex-none min-h-0 flex gap-(--central-gap)">
-        <EnvelopeGroup ink={voiceInk.primary} title={envView === 'amp' ? 'Amp Envelope' : 'Filter Envelope'}>
-          {#snippet header()}
-            <div class="device-segmented env-switch flex-none" style="--btn-tint: {voiceInk.primary};">
-              {#each [['amp', 'Amp'], ['filter', 'Filter']] as [key, label]}
-                <button
-                  class="device-segment strip-step"
-                  class:active={envView === key}
-                  aria-pressed={envView === key}
-                  onclick={() => (envView = key as 'amp' | 'filter')}
-                >{label}</button>
+        <SectionDivider orientation="vertical" ink={voiceInk.primary} />
+        <div class="flex-1 min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
+          {#each envelopes as envelope, i (envelope.title)}
+            {#if i > 0}<SectionDivider orientation="horizontal" ink={voiceInk.primary} />{/if}
+            <EnvelopeGroup ink={voiceInk.primary} title={envelope.title} edges="none">
+              {#each envelope.stages as stage (stage.index)}
+                <div class="env-slider min-h-0 h-full">
+                  <DeviceSlider
+                    value={stage.bipolar ? raw(stage.index, 0) : norm(stage.index, stage.atRest)}
+                    title={stage.title}
+                    icon={stage.icon}
+                    orientation="vertical"
+                    labelSize="small"
+                    color={voiceInk}
+                    min={stage.bipolar ? -1 : 0}
+                    max={1}
+                    centerOrigin={stage.bipolar}
+                    centerValue={stage.bipolar ? 0 : undefined}
+                    readout={display(stage.index)}
+                    onInteraction={(v) => (stage.bipolar ? write(stage.index, Math.max(-1, Math.min(1, v))) : writeNorm(stage.index, v))}
+                  />
+                </div>
               {/each}
-            </div>
-          {/snippet}
-          {#each envStages as stage (stage.index)}
-            <div class="env-slider min-h-0 h-full">
-              <DeviceSlider
-                value={stage.bipolar ? raw(stage.index, 0) : norm(stage.index, stage.atRest)}
-                title={stage.title}
-                icon={stage.icon}
-                orientation="vertical"
-                labelSize="small"
-                color={voiceInk}
-                min={stage.bipolar ? -1 : 0}
-                max={1}
-                centerOrigin={stage.bipolar}
-                centerValue={stage.bipolar ? 0 : undefined}
-                onInteraction={(v) => (stage.bipolar ? write(stage.index, Math.max(-1, Math.min(1, v))) : writeNorm(stage.index, v))}
-              />
-            </div>
+            </EnvelopeGroup>
           {/each}
-        </EnvelopeGroup>
-      </div>
-
-      <!-- Glide, its switch its level like Noise's. -->
-      <div class="glide-col flex-none min-h-0">
-        <DeviceSlider
-          value={glideOn ? glideTime : 0}
-          title="Glide"
-          icon="glide"
-          orientation="vertical"
-          labelSize="small"
-          isGhost={!glideOn}
-          color={analogInk}
-          onInteraction={(v) => {
-            writeSwitch(ANALOG_GLIDE_ON, v > SECTION_SWITCH_ON_ABOVE, glideOn);
-            if (v > SECTION_SWITCH_ON_ABOVE) writeNorm(ANALOG_GLIDE_TIME, v);
-          }}
-        />
+        </div>
       </div>
 
       <SectionDivider orientation="vertical" ink={analogInk.primary} />
 
-      <!-- Mono / Poly and the two voicing switches over the wheels. Vibrato
-           is a switch here because its depth rides the mod wheel beside it. -->
-      <div class="flex-none flex flex-col gap-(--central-gap) min-h-0">
+      <!-- Mono / Poly and the two voicing switches over the wheels, Pitch
+           over Mod (ADR-477). Vibrato is a switch here because its depth
+           rides the mod wheel under it. -->
+      <div class="voicing-col flex-none flex flex-col gap-(--central-gap) min-h-0">
         <div class="grid grid-cols-2 gap-1 flex-none">
           <!-- Mono or Poly is one choice, a two-cell tab across the row;
                Uni and Vib under it are switches of their own. -->
@@ -526,13 +547,8 @@
           <button class="physical-button mode-button px-1 text-center" class:active={unisonOn} style="--btn-tint: {analogInk.primary};" aria-pressed={unisonOn} onclick={() => write(ANALOG_UNISON_ON, unisonOn ? 0 : 1)}>Uni</button>
           <button class="physical-button mode-button px-1 text-center" class:active={vibOn} style="--btn-tint: {analogInk.primary};" aria-pressed={vibOn} onclick={() => write(ANALOG_VIB_ON, vibOn ? 0 : 1)}>Vib</button>
         </div>
-        <div class="flex-1 min-h-0 flex gap-(--central-gap)">
-          <div class="wheel-col h-full">
-            <MidiWheel type="pitch" onInteraction={sendPitchWheel} color={pitchInk} />
-          </div>
-          <div class="wheel-col h-full">
-            <MidiWheel type="modwheel" onInteraction={sendModWheel} color={modInk} />
-          </div>
+        <div class="flex-1 min-h-0">
+          <MidiWheelsPanel pitchColor={pitchInk} modColor={modInk} />
         </div>
       </div>
     </div>
@@ -604,12 +620,10 @@
 
   .octave-row,
   .mode-row,
-  .strip-row,
-  .env-switch {
+  .strip-row {
     display: grid;
   }
-  .mode-row,
-  .env-switch {
+  .mode-row {
     grid-template-columns: repeat(2, 1fr);
   }
   .mode-row {
@@ -618,8 +632,7 @@
   }
   .octave-row .device-segment + .device-segment,
   .mode-row .device-segment + .device-segment,
-  .strip-row .device-segment + .device-segment,
-  .env-switch .device-segment + .device-segment {
+  .strip-row .device-segment + .device-segment {
     border-top: 0;
     border-left: 1px solid var(--line-faint);
   }
@@ -627,8 +640,7 @@
   .device-segment.active + .device-segment {
     border-left-color: transparent;
   }
-  .strip-row,
-  .env-switch {
+  .strip-row {
     height: var(--height-touch);
   }
   .octave-step,
@@ -662,19 +674,41 @@
     font-weight: 600;
   }
 
-  .noise-col,
-  .glide-col,
-  .wheel-col {
+  .noise-col {
     width: var(--analog-slider-w);
   }
-  /* Five stages and their four gaps, plus the bracket's own two seams and
-     the gap beside each — EnvelopeGroup draws them inside this column. */
+  /* Two slider widths: the switches' 2 x 2 over the stacked wheels. */
+  .voicing-col {
+    width: calc(2 * var(--analog-slider-w) + var(--central-gap));
+  }
+  /* Five stages and their four gaps, plus the leading seam and the gap
+     after it; the seam that closes the pair is the voicing column's. */
   .env-col {
-    width: calc(5 * var(--analog-env-w) + 6 * var(--central-gap) + 2px);
+    width: calc(5 * var(--analog-env-w) + 5 * var(--central-gap) + 1px);
   }
   .env-slider {
     flex: 0 0 var(--analog-env-w);
     width: var(--analog-env-w);
+  }
+
+  /* Smaller iPads (ADR-476). Every column but the filter's is fixed or
+     floored, so the filter took the whole shortfall. The voicing column comes
+     down to two 44px touch floors (Noise keeps 56px: its route chip,
+     "→F1+F2", needs it), and the voice card and the filter share what is left from their
+     12.9-inch widths, 196 and 249px: an 11-inch draws both at those, a
+     10.2-inch gives up ~20% of each, and the voice card stops at 152px. After
+     the rules it overrides, which it matches in specificity. */
+  @media (max-width: 1365.98px) {
+    .voicing-col {
+      width: calc(2 * var(--height-touch) + var(--central-gap));
+    }
+    .voice-card {
+      flex: 0 1 196px;
+      min-width: 152px;
+    }
+    .filter-col {
+      flex: 1 1 249px;
+    }
   }
   .mode-button {
     min-height: var(--height-touch);

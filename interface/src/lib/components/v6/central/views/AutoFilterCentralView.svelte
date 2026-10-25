@@ -148,12 +148,15 @@
 </script>
 
 <!--
-	10-column flex layout: each column = flex-[1], LFO XY and the two tabs span 2.
-	  shapes:2 | morph+sync:1 | LFO XY:2 | filter types:2 | drive:1 | circuit+slope:1 | mix:1
-	A `SectionDivider` sits between the LFO group (cols 1-4) and the rest.
+	10-share flex layout: each column = flex-[1], the two tabs span 2, the LFO
+	XY 3.
+	  shapes:2 | morph:1 | LFO XY:3 | filter types:2 | circuit+slope:1 | drive/mix:1
+	A `SectionDivider` sits between the LFO group (cols 1-3) and the rest.
+	Drive and Mix are value boxes stacked in the last column (ADR-477); the
+	column they freed went to the LFO pad, which was 2 shares.
 -->
 <div class="h-full w-full flex min-h-0 p-(--central-inset) relative" style="gap: var(--central-gap);" class:slot-ghost={fx.isGhost}>
-	<!-- Cols 1-2 — the eight LFO shapes, one segmented tab, two columns of
+	<!-- The eight LFO shapes, one segmented tab, two columns of
 	     four filled down then across. -->
 	<div
 		class="flex-[2] min-h-0 device-segmented seg-grid grid grid-cols-2 grid-rows-4 grid-flow-col"
@@ -173,7 +176,7 @@
 		{/each}
 	</div>
 
-	<!-- Col 3 — vertical MORPH slider -->
+	<!-- vertical MORPH slider -->
 	<div
 		class="flex-[1] min-h-0"
 	>
@@ -182,17 +185,17 @@
 			title="Morph"
 			icon="morph"
 			orientation="vertical"
-			labelOrientation="horizontal"
 			isGhost={fx.isGhost}
 			color={lfoInk}
+			readout={fx.paramDisplay(23)}
 			onInteraction={(value) => {
 				fx.sendParam(23, value);
 			}}
 		/>
 	</div>
 
-	<!-- Cols 4-5 — LFO XY pad (double width) with floating Time/Sync toggle -->
-	<div class="flex-[2] min-h-0 relative">
+	<!-- LFO XY pad (three shares) with floating Time/Sync toggle -->
+	<div class="flex-[3] min-h-0 relative">
 		<DeviceXY
 			xValue={1 - lfoTime}
 			yValue={lfoAmount}
@@ -232,7 +235,7 @@
 	     follows it. -->
 	<SectionDivider orientation="vertical" ink={fxInk.primary} />
 
-	<!-- Cols 6-7 — the ten filter types, one segmented tab, two columns of
+	<!-- The ten filter types, one segmented tab, two columns of
 	     five filled down then across. -->
 	<div
 		class="flex-[2] min-h-0 device-segmented seg-grid grid grid-cols-2 grid-rows-5 grid-flow-col"
@@ -249,24 +252,7 @@
 		{/each}
 	</div>
 
-	<!-- Col 8 — Drive vertical slider -->
-	<div class="flex-[1] h-full">
-		<DeviceSlider
-			value={drive}
-			title="Drive"
-			icon="drive"
-			orientation="vertical"
-			labelOrientation="horizontal"
-			isGhost={fx.isGhost}
-			color={fxInk}
-			onInteraction={(value) => {
-				fx.sendParam(DRIVE_INDEX, value);
-				fx.sendParam(OUTPUT_INDEX, outputForDrive(value));
-			}}
-		/>
-	</div>
-
-	<!-- Col 9 — Circuit buttons + Slope toggle -->
+	<!-- Circuit buttons + Slope toggle -->
 	<div
 		class="flex-[1] h-full flex flex-col gap-1"
 	>
@@ -302,21 +288,39 @@
 		</button>
 	</div>
 
-	<!-- Col 10 — Mix (Dry/Wet). Last because it is the device's last stage:
-	     Live's own panel ends on Output, Soft Clip and Dry/Wet. -->
-	<div class="flex-[1] h-full">
-		<DeviceSlider
-			value={mix}
-			title="Mix"
-			icon="mix"
-			orientation="vertical"
-			labelOrientation="horizontal"
-			isGhost={fx.isGhost}
-			color={fxInk}
-			onInteraction={(value) => {
-				fx.sendParam(MIX_INDEX, value);
-			}}
-		/>
+	<!-- Drive over Mix (Dry/Wet), two value boxes (ADR-477). Last because
+	     Mix is the device's last stage (Live's own panel ends on Output,
+	     Soft Clip and Dry/Wet), and Drive, which sets Output, sits over it. -->
+	<div class="flex-[1] h-full flex flex-col gap-(--central-gap)">
+		<div class="flex-1 min-h-0">
+			<DeviceSlider
+				value={drive}
+				title="Drive"
+				icon="drive"
+				orientation="vertical"
+				isGhost={fx.isGhost}
+				color={fxInk}
+				readout={fx.paramDisplay(DRIVE_INDEX)}
+				onInteraction={(value) => {
+					fx.sendParam(DRIVE_INDEX, value);
+					fx.sendParam(OUTPUT_INDEX, outputForDrive(value));
+				}}
+			/>
+		</div>
+		<div class="flex-1 min-h-0">
+			<DeviceSlider
+				value={mix}
+				title="Mix"
+				icon="mix"
+				orientation="vertical"
+				isGhost={fx.isGhost}
+				color={fxInk}
+				readout={fx.paramDisplay(MIX_INDEX)}
+				onInteraction={(value) => {
+					fx.sendParam(MIX_INDEX, value);
+				}}
+			/>
+		</div>
 	</div>
 
 </div>

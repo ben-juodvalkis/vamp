@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy, type Snippet } from 'svelte';
   import ControlGlyph, { type ControlGlyphName } from './ControlGlyph.svelte';
+  import { inValueBoxScope, VALUE_BOX_TRAVEL } from '../central/valueBox';
   import { familyScheme, type DeviceColorScheme } from '$lib/config/devicePresets';
   import MeterVisualization from '$lib/components/v6/looping/MeterVisualizationV6.svelte';
   import { createSliderThrottle } from '$lib/utils/sliderThrottle';
@@ -38,7 +39,9 @@
     onDown?: () => void;
     isGhost?: boolean;
     orientation?: 'vertical' | 'horizontal';
-    labelOrientation?: 'vertical' | 'horizontal' | 'auto';  // 'auto' follows slider orientation
+    // 'auto' follows the slider's orientation. Unset: 'auto', or upright in a
+    // central view, where a slider is a value box (ADR-477).
+    labelOrientation?: 'vertical' | 'horizontal' | 'auto';
     labelSize?: 'small' | 'large';  // 'small' for FX grid, 'large' for central views
     color?: DeviceColorScheme;
     min?: number;
@@ -48,6 +51,14 @@
     // Drag speed: the share of the rail one full slider length travels.
     // Below 1 for a wide rail that wants finer moves (Echo's Input, 80 dB).
     sensitivity?: number;
+    // A value box (ADR-477): the finger travel, in px, that sweeps the whole
+    // rail when the slider is shorter than it, so a short box is as fine as a
+    // tall slider; a longer slider sweeps over its own length. Unset: the
+    // value-box travel in a central view, else the slider's own length.
+    travel?: number;
+    // Shown in place of the title while a finger drags it: Live's own value
+    // ("12 ms", "-6.0 dB"), which arrives only while the UI is writing it.
+    readout?: string;
     // Draw the split handle line (two rail-pinned segments with a gap for the
     // label) instead of a solid fill. Implied by `track` — meter mode has no
     // fill to read position from, so it always needs the handle. Set it
@@ -69,7 +80,7 @@
     onDown,
     isGhost = false,
     orientation = 'vertical',
-    labelOrientation = 'auto',
+    labelOrientation,
     labelSize = 'large',
     color = familyScheme('utility'),
     min = 0,
@@ -77,6 +88,8 @@
     centerOrigin = false,
     centerValue,
     sensitivity = 1,
+    travel,
+    readout,
     handleLine = false,
     track = null,
     trackIndex = 0,
@@ -84,9 +97,14 @@
   }: Props = $props();
 
   // Resolve label orientation - 'auto' follows slider orientation
-  let effectiveLabelOrientation = $derived(
-    labelOrientation === 'auto' ? orientation : labelOrientation
-  );
+  // A central view makes every slider a value box (ADR-477, `valueBox.ts`).
+  const valueBox = inValueBoxScope();
+  let effectiveTravel = $derived(travel ?? (valueBox ? VALUE_BOX_TRAVEL : undefined));
+
+  let effectiveLabelOrientation = $derived.by(() => {
+    const asked = labelOrientation ?? (valueBox ? 'horizontal' : 'auto');
+    return asked === 'auto' ? orientation : asked;
+  });
   // The label fits along the axis its text runs on (app.css `.fit-label`).
   let fitClass = $derived(effectiveLabelOrientation === 'vertical' ? 'fit-label-v' : 'fit-label');
 
@@ -98,6 +116,9 @@
 
   let isDragging = $state(false);
   let container: HTMLDivElement;
+
+  // The words on the slider: its name, or Live's value while it is dragged.
+  let shownTitle = $derived(isDragging && readout ? readout : title);
 
   // Local state for smooth interaction
   let localValue = $state(value);
@@ -223,7 +244,8 @@
 
     // Calculate delta from start position
     const currentPointer = orientation === 'vertical' ? event.clientY : event.clientX;
-    const size = orientation === 'vertical' ? rect.height : rect.width;
+    const length = orientation === 'vertical' ? rect.height : rect.width;
+    const size = effectiveTravel ? Math.max(length, effectiveTravel) : length;
     const delta = ((currentPointer - startPointer) / size) * sensitivity;
 
     // Apply delta to start value (invert for vertical)
@@ -320,7 +342,7 @@
          readable once the fill rises over them. No inverse in meter mode. -->
     {#if title || label || icon}
       <div class="slider-label label-{effectiveLabelOrientation} label-{labelSize}">
-        {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={title}>{title}</span>{/if}</span>
+        {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={shownTitle}>{shownTitle}</span>{/if}</span>
       </div>
       {#if showFill}
         <div
@@ -328,7 +350,7 @@
           style="clip-path: {inverseClip};"
           aria-hidden="true"
         >
-          {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={title}>{title}</span>{/if}</span>
+          {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={shownTitle}>{shownTitle}</span>{/if}</span>
         </div>
       {/if}
     {/if}

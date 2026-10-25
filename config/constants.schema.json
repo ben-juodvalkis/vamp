@@ -488,6 +488,11 @@
               "type": "integer",
               "minimum": 0,
               "description": "A press released under this is a tap (latch); at or over it, a hold (momentary)"
+            },
+            "valueBoxTravelPx": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Finger travel, in CSS px, that sweeps a value box's whole range whatever the box's size (ADR-477)"
             }
           }
         }

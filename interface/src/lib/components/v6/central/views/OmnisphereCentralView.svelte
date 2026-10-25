@@ -6,6 +6,7 @@
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import SectionDivider from '../SectionDivider.svelte';
+  import EnvelopeGroup from './EnvelopeGroup.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { deviceInk } from '$lib/utils/formatters/trackFormatters';
@@ -64,19 +65,14 @@
   const FILTER_ENV = [['A', 13, 'attack'], ['D', 14, 'decay'], ['S', 15, 'sustain'], ['R', 16, 'release']] as const;
   const FILTER_ENV_AMOUNT = 5;
 
-  // Which envelope the sliders drive. The view's own, so it starts on Amp.
-  let envMode = $state<'amp' | 'filter'>('amp');
-  let env = $derived(envMode === 'amp' ? AMP_ENV : FILTER_ENV);
-
-  // Color says which envelope is up (user's call, 2026-10-01): Amp wears the
-  // theme's ON orange on the switch and its sliders; Filter wears the track's
-  // ink on both, as the rest of the view does.
+  // Color says which envelope is which (user's call, 2026-10-01): Amp wears
+  // the theme's ON orange; Filter wears the track's ink, as the rest of the
+  // view does. Both are in view since ADR-477, Amp over Filter.
   const AMP_INK = {
     primary: 'var(--phosphor)',
     secondary: 'color-mix(in oklab, var(--phosphor) 10%, transparent)',
     accent: 'var(--phosphor)'
   };
-  let envInk = $derived(envMode === 'amp' ? AMP_INK : omniInk);
 
   function paramValue(index: number): number {
     return device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, index)) ?? 0.5 : 0.5;
@@ -85,6 +81,12 @@
   function writeParam(index: number, value: number) {
     if (!device) return;
     selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, index), value);
+  }
+
+  /** Live's own value, a box's readout while it is dragged (ADR-477); sent only while the UI writes. */
+  function display(index: number): string | undefined {
+    if (!device) return undefined;
+    return selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(device, index));
   }
 
   let fxIsOn = $derived(fxValue < 0.5); // Inverted: ON when param is 0, OFF when param is 1
@@ -143,9 +145,9 @@
     <!-- Main content grid, the user's layout (2026-10-12): six equal
          columns before the seam, in three equal sections: the four XY pads
          take two, the ORB two (2026-10-12), the envelopes two; then the seam and the MIDI wheels. Three rows: a
-         header (the swap pill over the pads, the Amp | Filter switch over
-         the envelopes, FX over the wheels), then two rows of controls. The
-         ORB takes all three rows, full height (2026-10-12). -->
+         header (the swap pill over the pads, FX over the wheels), then two
+         rows of controls. The ORB and the envelopes take all three rows,
+         full height (2026-10-12; the envelopes since ADR-477). -->
     <div class="omni-grid h-full w-full grid gap-(--central-gap) p-(--central-inset)">
       <!-- Cols 1-2, header: the swap pill, top-left as in every instrument
            view (2026-10-06), over the pads. -->
@@ -164,64 +166,53 @@
         />
       </div>
 
-      <!-- Cols 5-6: one envelope at a time, full height, the Amp | Filter
-           switch over it in the header (user's layout, 2026-09-29). Under
-           Filter the envelope's Amount stands full height in the fifth
-           column; under Amp the four sliders take that column too. It shares the
-           view's rows (subgrid), so the switch sits level with the swap pill and FX
-           and the sliders start level with the pads. -->
-      <div class="omni-envelopes min-w-0 min-h-0" style="grid-column: 5 / 7; grid-row: 1 / 4;">
-        <div
-          class="device-segmented omni-env-switch grid grid-cols-2 min-w-0"
-          style="--btn-tint: {envInk.primary}; grid-column: 1 / 6; grid-row: 1;"
-          role="radiogroup"
-          aria-label="Envelope"
-        >
-          {#each [['amp', 'Amp'], ['filter', 'Filter']] as [mode, label] (mode)}
-            <button
-              class="device-segment text-base font-bold"
-              class:active={envMode === mode}
-              role="radio"
-              aria-checked={envMode === mode}
-              onclick={() => (envMode = mode as 'amp' | 'filter')}
-            >
-              {label}
-            </button>
-          {/each}
-        </div>
-        <div
-          class="omni-env-sliders min-w-0 min-h-0"
-          style="grid-column: {envMode === 'filter' ? '1 / 5' : '1 / 6'}; grid-row: 2 / 4;"
-        >
-          <!-- Keyed, so a switch mid-drag drops the held slider rather than
-               carrying it onto the other envelope's parameters. -->
-          {#key envMode}
-            {#each env as [label, index, glyph] (index)}
+      <!-- Cols 5-6, every row: both envelopes, Amp over Filter, as value
+           boxes (ADR-477) — no switch, each box half a slider's height and
+           as fine. The Filter envelope's Amount is its fifth box, narrower:
+           one control beside a curve. A seam between the two. -->
+      <div class="omni-envelopes min-w-0 min-h-0 flex flex-col gap-(--central-gap)" style="grid-column: 5 / 7; grid-row: 1 / 4;">
+        <EnvelopeGroup ink={AMP_INK.primary} title="Amp Envelope" edges="none">
+          {#each AMP_ENV as [label, index, glyph] (index)}
+            <div class="flex-1 min-w-0 h-full">
               <DeviceSlider
                 value={paramValue(index)}
                 title={label}
                 icon={glyph}
                 orientation="vertical"
-                labelOrientation="horizontal"
-                color={envInk}
+                color={AMP_INK}
+                readout={display(index)}
                 onInteraction={(value) => writeParam(index, value)}
               />
-            {/each}
-          {/key}
-        </div>
-        {#if envMode === 'filter'}
-          <div class="min-w-0 min-h-0" style="grid-column: 5; grid-row: 2 / 4;">
+            </div>
+          {/each}
+        </EnvelopeGroup>
+        <SectionDivider orientation="horizontal" ink={omniInk.primary} />
+        <EnvelopeGroup ink={omniInk.primary} title="Filter Envelope" edges="none">
+          {#each FILTER_ENV as [label, index, glyph] (index)}
+            <div class="flex-1 min-w-0 h-full">
+              <DeviceSlider
+                value={paramValue(index)}
+                title={label}
+                icon={glyph}
+                orientation="vertical"
+                color={omniInk}
+                readout={display(index)}
+                onInteraction={(value) => writeParam(index, value)}
+              />
+            </div>
+          {/each}
+          <div class="env-amount min-w-0 h-full">
             <DeviceSlider
               value={paramValue(FILTER_ENV_AMOUNT)}
               title="Amt"
               icon="depth"
               orientation="vertical"
-              labelOrientation="horizontal"
               color={omniInk}
+              readout={display(FILTER_ENV_AMOUNT)}
               onInteraction={(value) => writeParam(FILTER_ENV_AMOUNT, value)}
             />
           </div>
-        {/if}
+        </EnvelopeGroup>
       </div>
 
       <!-- Col 1, top: UNISON XY Pad -->
@@ -283,7 +274,8 @@
         <SectionDivider orientation="vertical" />
       </div>
 
-      <!-- Col 8: FX in the header, the MIDI Wheels under it. -->
+      <!-- Col 8: FX in the header, the MIDI wheels under it, Pitch over Mod
+           (ADR-477): one wheel a row, level with the pads. -->
       <button
         class="physical-button omni-fx w-full min-w-0 text-xl font-bold"
         class:active={fxIsOn}
@@ -364,44 +356,17 @@
      (already the flat field / ChosenDefault ON) whose bold literal settles
      to medium. Graticule is untouched — the rule sits under
      [data-grammar="flat"]. */
-  /* The switch, then the curve down the view's other two rows. Amount's
-     column (Filter only) is narrower: it is one control beside a curve. */
+  /* Six equal columns, the seam, then the FX / wheels column at a fixed
+     width (ADR-477): the wheels are stacked, so the column needs one
+     wheel's width, not an equal share. */
   .omni-grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr)) auto minmax(0, 1fr);
+    grid-template-columns: repeat(6, minmax(0, 1fr)) auto 72px;
     grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
   }
 
-  .omni-envelopes {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr) 0.8fr;
-    grid-template-rows: subgrid;
-    column-gap: var(--central-gap);
-  }
-
-  .omni-env-sliders {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    column-gap: var(--central-gap);
-  }
-
-  /* The shared segmented chrome divides its options top to bottom; these two
-     sit side by side, so the hairline goes between them instead. */
-  .omni-env-switch {
-    height: var(--height-touch, 44px);
-  }
-  .omni-env-switch :global(.device-segment + .device-segment) {
-    border-top: 0;
-    border-left: 1px solid var(--line-faint);
-  }
-  :global([data-grammar="flat"]) .omni-env-switch :global(.device-segment + .device-segment) {
-    border-top: 0;
-    border-left: 1px solid var(--line-strong);
-  }
-
-  /* The flat grammar fills every ON segment with its orange; here the fill
-     follows the envelope's ink instead. */
-  :global([data-grammar="flat"]) .omni-env-switch :global(.device-segment.active) {
-    background: var(--btn-tint);
+  /* The Filter envelope's Amount: one control beside a curve, narrower. */
+  .env-amount {
+    flex: 0.8 1 0;
   }
 
   :global([data-grammar="flat"]) .omni-fx {

@@ -2,11 +2,17 @@
   /**
    * DrumBussCentralView — what the Drum tile opens (2026-09-10).
    *
-   * Seven EQUAL columns, the Boom pad taking two (user's layout,
-   * 2026-09-12), in Live's own signal order, with a seam before Boom —
-   * Live's separate low-end section and the only pad here (2026-09-13):
+   * Seven EQUAL columns (user's layout, 2026-09-12), in Live's own signal
+   * order, with a seam before Boom — Live's separate low-end section and the
+   * only pad here (2026-09-13):
    *
-   *   [Trim over Comp] [Soft/Medium/Hard] [Drive] [Crunch] [Damp] | [Boom  Boom]
+   *   [Trim over Comp] [Soft/Medium/Hard] [Drive over Crunch over Damp]
+   *   | [Boom  Boom  Boom  Boom]
+   *
+   * Drive, Crunch and Damp are value boxes (ADR-477), three in one column:
+   * each sweeps over a fixed finger travel at least, so a third of a fader's
+   * height is as fine as the fader was. Boom took the two columns they
+   * spread over (it was two columns wide).
    *
    * The Drum XY (transients x dry/wet) is the grid tile, so it is not
    * repeated here. Same slot machinery as every device view — ghost until
@@ -102,6 +108,13 @@
   let damp = $derived(readT(PARAM.damp, 1));
   let trim = $derived(readT(PARAM.trim, 1));
 
+  // Drive, Crunch and Damp, top to bottom: the column of value boxes.
+  let distortion = $derived([
+    { value: drive, title: 'Drive', icon: 'drive', param: PARAM.drive },
+    { value: crunch, title: 'Crunch', icon: 'crunch', param: PARAM.crunch },
+    { value: damp, title: 'Damp', icon: 'cutoff', param: PARAM.damp }
+  ] as const);
+
   /**
    * Drive type is a VERTICAL tab, the grammar of Drift's waveform list,
    * and it scrubs up and down: the column owns one pointer and resolves
@@ -140,10 +153,10 @@
         title="Trim"
         icon="gain"
         orientation="vertical"
-        labelOrientation="horizontal"
         labelSize="small"
         isGhost={drum.isGhost}
         color={drumInk}
+        readout={drum.paramDisplay(PARAM.trim)}
         onInteraction={(t) => writeT(PARAM.trim, t)}
       />
     </div>
@@ -176,46 +189,24 @@
     {/each}
   </div>
 
-  <div class="col">
-    <DeviceSlider
-      value={drive}
-      title="Drive"
-      icon="drive"
-      orientation="vertical"
-      labelOrientation="horizontal"
-      labelSize="small"
-      isGhost={drum.isGhost}
-      color={drumInk}
-      onInteraction={(t) => writeT(PARAM.drive, t)}
-    />
-  </div>
-
-  <div class="col">
-    <DeviceSlider
-      value={crunch}
-      title="Crunch"
-      icon="crunch"
-      orientation="vertical"
-      labelOrientation="horizontal"
-      labelSize="small"
-      isGhost={drum.isGhost}
-      color={drumInk}
-      onInteraction={(t) => writeT(PARAM.crunch, t)}
-    />
-  </div>
-
-  <div class="col">
-    <DeviceSlider
-      value={damp}
-      title="Damp"
-      icon="cutoff"
-      orientation="vertical"
-      labelOrientation="horizontal"
-      labelSize="small"
-      isGhost={drum.isGhost}
-      color={drumInk}
-      onInteraction={(t) => writeT(PARAM.damp, t)}
-    />
+  <!-- Column 3: the distortion and its tone, top to bottom in Live's
+       order, three value boxes. -->
+  <div class="col box-stack">
+    {#each distortion as box (box.param)}
+      <div class="box">
+        <DeviceSlider
+          value={box.value}
+          title={box.title}
+          icon={box.icon}
+          orientation="vertical"
+          labelSize="small"
+          isGhost={drum.isGhost}
+          color={drumInk}
+          readout={drum.paramDisplay(box.param)}
+          onInteraction={(t) => writeT(box.param, t)}
+        />
+      </div>
+    {/each}
   </div>
 
   <!-- Boom is Live's separate low-end section, and the only pad here. -->
@@ -241,19 +232,23 @@
 </div>
 
 <style>
-  /* Seven equal columns; Boom spans the last two, past an `auto` track for
+  /* Seven equal columns; Boom spans the last four, past an `auto` track for
      the seam before it. */
   .drum-buss-layout {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr)) auto repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto repeat(4, minmax(0, 1fr));
     gap: var(--central-gap);
     height: 100%;
     width: 100%;
     padding: var(--central-inset);
   }
-  /* With the Drum XY leading, a pad two columns wide. */
+  /* With the Drum XY leading, a pad two columns wide, and Boom back to two:
+     still seven columns. */
   .drum-buss-layout.with-xy {
-    grid-template-columns: repeat(7, minmax(0, 1fr)) auto repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr)) auto repeat(2, minmax(0, 1fr));
+  }
+  .drum-buss-layout.with-xy .boom {
+    grid-column: span 2;
   }
   .drum-xy {
     grid-column: span 2;
@@ -277,7 +272,18 @@
   }
 
   .boom {
-    grid-column: span 2;
+    grid-column: span 4;
+  }
+
+  /* Value boxes stacked in one column, sharing its height (ADR-477). */
+  .box-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--central-gap);
+  }
+  .box {
+    flex: 1 1 0;
+    min-height: 0;
   }
 
   /* Trim takes most of the column; Comp is a button at its foot. */

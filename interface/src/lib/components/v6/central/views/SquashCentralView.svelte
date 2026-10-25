@@ -26,6 +26,11 @@
    * `UtilityCentralView` on 2026-10-15, the user's call, in the place of
    * the Glue Compressor's Attack, Release and Ratio rows, which went. The
    * Gain tile opens this view too now.
+   *
+   * Every slider is a value box (ADR-477): Squash's Threshold over its
+   * Output, and the Multiband's Ratio over Threshold over Output, each
+   * group one column, so the Gate's pad and the Compressor group take the
+   * width the side-by-side faders had.
    */
 
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
@@ -254,8 +259,8 @@
      `SectionDivider` says with one line. -->
 <div class="squash-central-layout relative">
   <!-- ===== Panel 1 — Glue Compressor (Squash) =====
-       Threshold and Output. `sendParam` is fire-and-forget on a ghost —
-       it queues and triggers the load. -->
+       Threshold over Output, two value boxes. `sendParam` is
+       fire-and-forget on a ghost — it queues and triggers the load. -->
   <section class="dyn-panel glue-panel" style="--panel-ink: {squash.isGhost ? IDLE_SCHEME.primary : squashInk.primary};">
     <div class="panel-title text-xs font-bold tracking-wider">Squash</div>
     <div class="glue-body">
@@ -267,11 +272,11 @@
           title="Threshold"
           icon="threshold"
           orientation="vertical"
-          labelOrientation="horizontal"
           min={GLUE_THRESHOLD_MIN}
           max={GLUE_THRESHOLD_MAX}
           isGhost={squash.isGhost}
           color={squash.isGhost ? IDLE_SCHEME : squashInk}
+          readout={squash.paramDisplay(GLUE_THRESHOLD_PARAM)}
           onTap={() => squash.loadIfGhost()}
           onInteraction={(value) => squash.sendParam(GLUE_THRESHOLD_PARAM, value)}
         />
@@ -282,11 +287,11 @@
           title="Output"
           icon="output"
           orientation="vertical"
-          labelOrientation="horizontal"
           min={GLUE_OUTPUT_MIN}
           max={GLUE_OUTPUT_MAX}
           isGhost={squash.isGhost}
           color={squash.isGhost ? IDLE_SCHEME : squashInk}
+          readout={squash.paramDisplay(GLUE_OUTPUT_PARAM)}
           onTap={() => squash.loadIfGhost()}
           onInteraction={(value) => squash.sendParam(GLUE_OUTPUT_PARAM, value)}
         />
@@ -306,9 +311,9 @@
 
   <SectionDivider orientation="vertical" />
 
-  <!-- ===== Multiband Dynamics: the Mid band's Below Threshold and
-       Below Ratio, and the device's Output. A ghost loads it on the first
-       drag, inserted by name with the user's own default. ===== -->
+  <!-- ===== Multiband Dynamics: the Mid band's Below Ratio over its Below
+       Threshold over the device's Output, three value boxes. A ghost loads
+       it on the first drag, inserted by name with the user's own default. ===== -->
   <section class="dyn-panel mb-panel" data-device="multiband" style="--panel-ink: {multiband.isGhost ? IDLE_SCHEME.primary : multiband.color.primary};">
     <div class="panel-title text-xs font-bold tracking-wider">Multiband</div>
     <div class="mb-body">
@@ -318,13 +323,13 @@
           value={mbRatioPos}
           title="Ratio"
           orientation="vertical"
-          labelOrientation="horizontal"
           min={0}
           max={1}
           centerOrigin={true}
           centerValue={0.5}
           isGhost={multiband.isGhost}
           color={multiband.color}
+          readout={multiband.paramDisplay(MB_BELOW_RATIO_MID)}
           onTap={() => multiband.loadIfGhost()}
           onInteraction={(value) => multiband.sendParam(MB_BELOW_RATIO_MID, ratioFromSlider(value))}
         />
@@ -335,11 +340,11 @@
           title="Threshold"
           icon="threshold"
           orientation="vertical"
-          labelOrientation="horizontal"
           min={MB_THRESHOLD_MIN}
           max={MB_THRESHOLD_MAX}
           isGhost={multiband.isGhost}
           color={multiband.color}
+          readout={multiband.paramDisplay(MB_BELOW_THRESHOLD_MID)}
           onTap={() => multiband.loadIfGhost()}
           onInteraction={(value) => multiband.sendParam(MB_BELOW_THRESHOLD_MID, value)}
         />
@@ -350,13 +355,13 @@
           title="Output"
           icon="output"
           orientation="vertical"
-          labelOrientation="horizontal"
           min={MB_OUTPUT_MIN}
           max={MB_OUTPUT_MAX}
           centerOrigin={true}
           centerValue={0}
           isGhost={multiband.isGhost}
           color={multiband.color}
+          readout={multiband.paramDisplay(MB_OUTPUT)}
           onTap={() => multiband.loadIfGhost()}
           onInteraction={(value) => multiband.sendParam(MB_OUTPUT, value)}
         />
@@ -417,6 +422,7 @@
           max={CUTOFF_MAX}
           isGhost={compressor.isGhost || !sidechainEnabled}
           color={compressor.isGhost || !sidechainEnabled ? IDLE_SCHEME : liveInk}
+          readout={compressor.paramDisplay(CUTOFF_PARAM)}
           onInteraction={handleCutoffChange}
         />
       </div>
@@ -442,11 +448,11 @@
         title="Output"
         icon="output"
         orientation="vertical"
-        labelOrientation="horizontal"
         min={MAKEUP_GAIN_MIN}
         max={MAKEUP_GAIN_MAX}
         isGhost={compressor.isGhost}
         color={compressor.isGhost ? IDLE_SCHEME : liveInk}
+        readout={compressor.paramDisplay(MAKEUP_GAIN_PARAM)}
         onInteraction={handleMakeupGainChange}
       />
     </div>
@@ -465,8 +471,10 @@
     display: grid;
     /* squash | seam | gate | seam | multiband | seam | compressor. The
        Gate and Multiband groups took the width the Glue Compressor's
-       Attack/Release/Ratio rows had (2026-10-15). */
-    grid-template-columns: 1.6fr auto 1.6fr auto 2.4fr auto 3.9fr;
+       Attack/Release/Ratio rows had (2026-10-15). Squash and Multiband are
+       one column of value boxes each (ADR-477); the Gate's pad and the
+       Compressor group took what their side-by-side faders spread over. */
+    grid-template-columns: 0.8fr auto 2.8fr auto 0.8fr auto 5.1fr;
     height: 100%;
     width: 100%;
     padding: var(--central-inset);
@@ -503,17 +511,18 @@
     gap: var(--central-gap);
   }
 
-  /* threshold | output */
+  /* threshold over output */
   .glue-body {
-    grid-template-columns: 1fr 1fr;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
   }
 
+  /* ratio over threshold over output */
   .mb-body {
     flex: 1;
     min-height: 0;
     min-width: 0;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
     gap: var(--central-gap);
   }
 

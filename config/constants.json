@@ -328,7 +328,9 @@
     },
     "gestures": {
       "momentaryHoldMs": 300,
-      "_momentaryHoldMs_note": "ADR-427/432. A press released under this many ms is a tap (latch); at or over it, a hold (momentary). One number for Solo, the pad tiles and the Move pad; owner/Max Patches/move_pad_hold.js mirrors it by hand (Max ES5 cannot read JSON)."
+      "_momentaryHoldMs_note": "ADR-427/432. A press released under this many ms is a tap (latch); at or over it, a hold (momentary). One number for Solo, the pad tiles and the Move pad; owner/Max Patches/move_pad_hold.js mirrors it by hand (Max ES5 cannot read JSON).",
+      "valueBoxTravelPx": 240,
+      "_valueBoxTravelPx_note": "ADR-477. How far a finger drags to sweep a value box's whole range, whatever the box's size, so a short box is as fine as a tall slider. About a full central slider on the 12.9-inch, whose own length is its travel (213-295px in the Analog view)."
     },
     "browser": {
       "twoColumnThreshold": 6,

@@ -440,7 +440,7 @@ const DEVICE_CLASS_NAMES = {
 	// the rig: the Reverb preset is a Hybrid Reverb saved as "Reverb",
 	// Auto Filter and Chorus are the Live 12 rewrites, Utility is a
 	// StereoGain, Variation a Beat Repeat, Tremolo an AU plugin. An FX-grid
-	// tile matched on class AND name until ADR-476 (type first since), so
+	// tile matched on class AND name until ADR-478 (type first since), so
 	// with the name-derived defaults every fixture Reverb and Filter tile read ghost while the track
 	// plainly carried one — found 2026-09-10 by measuring the Jazz track's
 	// Reverb label against its Delay's. A pad load (below) names its

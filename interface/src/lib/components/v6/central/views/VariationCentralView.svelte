@@ -86,6 +86,7 @@
 					color={varInk}
 					min={0}
 					max={1}
+					readout={variation.paramDisplay(CHANCE_INDEX)}
 					onTap={() => variation.loadIfGhost()}
 					onInteraction={(value) => variation.sendParam(CHANCE_INDEX, value)}
 				/>
@@ -127,6 +128,7 @@
 							labelSize="small"
 							isGhost={variation.isGhost}
 							color={varInk}
+							readout={variation.paramDisplay(AMOUNT_INDEX)}
 							onInteraction={(value) => variation.sendParam(AMOUNT_INDEX, Math.round(value * AMOUNT_MAX))}
 						/>
 					</div>

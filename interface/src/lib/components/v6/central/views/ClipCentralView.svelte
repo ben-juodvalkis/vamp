@@ -402,16 +402,12 @@ import { logger } from '$lib/utils/logger';
 	{:else}
 
 <!--
-	7 equal columns plus one hairline seam track, each always grid-placed
-	by number (the class names are the DOM's order, not the screen's — see
-	the `.col-N { grid-column }` table for where each one actually lands):
-	Col 1: REC top + Delete bottom
-	Col 2: clip> top + −12 bottom
-	Col 3: clip< top + +12 bottom
-	Col 4: Replace top + Dup/Simpler bottom
-	Col 5: TEMP slider (MIDI) | GAIN slider (audio) — full height
-	Col 6: CHANCE slider (MIDI) | warp mode buttons (audio) — full height
-	Col 9: Dup Trk — full height (hold to duplicate the whole track)
+	6 equal columns plus one hairline seam track over two rows, each always
+	grid-placed by number (the class names are the DOM's order, not the
+	screen's — see the `.col-N { grid-column }` table for where each one
+	actually lands). Every column spans both rows but the last, which stacks
+	two value boxes (ADR-477): TEMP over CHANCE (MIDI), GAIN over the warp
+	modes (audio). They were two full-height columns.
 
 	The mini session view that led this rail while the full clip grid was
 	hidden moved to the right sidebar's first row on 2026-10-24.
@@ -420,12 +416,11 @@ import { logger } from '$lib/utils/logger';
 	{#if browser}
 
 
-		<!-- Col 1: CHANCE (MIDI) | warp modes (audio) -->
+		<!-- Col 1: CHANCE (MIDI) | warp modes (audio), the last column's lower box -->
 		<div class="col col-1 transition-opacity duration-200 {trackType === 'midi' ? (permuteDevice === null ? 'opacity-30' : 'opacity-100') : (!hasClip ? 'opacity-30' : 'opacity-100')}">
 			{#if trackType === 'midi'}
 				<DeviceSlider
 					value={chance}
-					labelOrientation="horizontal"
 					title="Chance"
 					icon="chance"
 					color={trackScheme}
@@ -449,14 +444,14 @@ import { logger } from '$lib/utils/logger';
 			{/if}
 		</div>
 
-		<!-- Col 2: TEMP (MIDI) | GAIN (audio), beside Pitch: the two faders
-		     that set how the clip sounds. to Simpler moved under Rev for it
-		     (2026-09-27). Temp is dimmed and inert under a pad scope (ADR-435). -->
+		<!-- Col 2: TEMP (MIDI) | GAIN (audio), the last column's upper box,
+		     beside Pitch: the two faders that set how the clip sounds. to
+		     Simpler moved under Rev for it (2026-09-27). Temp is dimmed and
+		     inert under a pad scope (ADR-435). -->
 		<div class="col col-2 transition-opacity duration-200 {trackType === 'midi' ? ((permuteDevice === null || temperatureInert) ? 'opacity-30' : 'opacity-100') : (!hasClip ? 'opacity-30' : 'opacity-100')}" data-temperature-inert={temperatureInert ? '' : undefined}>
 			{#if trackType === 'midi'}
 				<DeviceSlider
 					value={temperature}
-					labelOrientation="horizontal"
 					title="Temp"
 					icon="temperature"
 					color={trackScheme}
@@ -472,7 +467,6 @@ import { logger } from '$lib/utils/logger';
 					value={gain}
 					title="Gain"
 					icon="gain"
-					labelOrientation="horizontal"
 					color={trackScheme}
 					onInteraction={(val) => setAudioClipGain(val)}
 				>
@@ -774,40 +768,42 @@ import { logger } from '$lib/utils/logger';
 		background: color-mix(in oklab, var(--editor-accent) 12%, transparent);
 	}
 
-	/* 7 equal columns, always fixed positions regardless of track type, plus
+	/* 6 equal columns, always fixed positions regardless of track type, plus
 	   the `auto` seam track that groups them (2026-09-13):
-	     Replace/Dup Trk · REC/Del · nav | Loop X2 · ±12 · Temp · Chance
-	   The seam is `auto`, so a track is a hairline wide and the seven
-	   content columns still divide the rest evenly. Regrouped on the user's
-	   call the same day: what acts on the track or the clip | what shapes
-	   what the clip plays (Loop X2 or Reverse, ±12 or the audio pitch
-	   slider, Temp, Chance). Timing — Shuffle and the base grid it swung
-	   against — left for the Groove view on 2026-09-29, and the rail was
-	   divided again among the seven. */
+	     Replace/Dup Trk · REC/Del · nav | Loop X2 · ±12 · Temp over Chance
+	   The seam is `auto`, so a track is a hairline wide and the six content
+	   columns still divide the rest evenly. Regrouped on the user's call the
+	   same day: what acts on the track or the clip | what shapes what the
+	   clip plays (Loop X2 or Reverse, ±12 or the audio pitch slider, Temp,
+	   Chance). Timing — Shuffle and the base grid it swung against — left
+	   for the Groove view on 2026-09-29. Two rows: every column spans both
+	   but the last, where Temp and Chance (Gain and the warp modes on audio)
+	   stack as two value boxes (ADR-477), each the height of a button row's
+	   cell, so their edges meet the buttons'. They were two columns. */
 	.outer {
 		display: grid;
-		grid-template-columns: repeat(3, 1fr) auto repeat(4, 1fr);
-		grid-template-rows: 1fr;
+		grid-template-columns: repeat(3, 1fr) auto repeat(3, 1fr);
+		grid-template-rows: repeat(2, minmax(0, 1fr));
 		gap: var(--central-gap);
 		min-height: 0;
 		overflow: hidden;
 		align-items: stretch;
 	}
 
-	.col { min-height: 0; min-width: 0; display: flex; flex-direction: column; grid-row: 1; }
-	.seam { grid-row: 1; display: flex; align-items: stretch; }
+	.col { min-height: 0; min-width: 0; display: flex; flex-direction: column; grid-row: 1 / span 2; }
+	.seam { grid-row: 1 / span 2; display: flex; align-items: stretch; }
 	.col-9 { grid-column: 1; }
 	.col-3 { grid-column: 2; }
 	.col-5 { grid-column: 3; }
 	.seam-a { grid-column: 4; }
 	.col-6 { grid-column: 5; }
 	.col-4 { grid-column: 6; }
-	.col-2 { grid-column: 7; }
-	.col-1 { grid-column: 8; }
+	.col-2 { grid-column: 7; grid-row: 1; }
+	.col-1 { grid-column: 7; grid-row: 2; }
 
 	.editor-full { position: relative; min-width: 0; min-height: 0; }
 
-	/* Full-height stack of 3 switch buttons (warp modes) */
+	/* Stack of 3 switch buttons (warp modes), the lower box of the last column */
 	/* `minmax(0, 1fr)`, not the implicit `auto` column: auto sizes to the
 	   widest label's min-content, so "Complex" held the warp column wider
 	   than its share once the mini column went 2fr and pushed it into the
