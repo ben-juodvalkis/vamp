@@ -71,6 +71,7 @@ describe('browserModeStore source axis', () => {
 // browser's setBrowseMode/browseMode rely on so a refactor can't silently drift.
 describe('browserModeStore browseMode projection', () => {
 	beforeEach(() => {
+		browserModeStore.setBrowseMode('midi');
 		browserModeStore.sourceMode = 'instruments';
 		browserModeStore.audioLoadTarget = 'clip';
 	});
@@ -109,10 +110,27 @@ describe('browserModeStore browseMode projection', () => {
 	});
 
 	it('round-trips every mode through set → get', () => {
-		for (const mode of ['midi', 'simpler', 'audio'] as const) {
+		for (const mode of ['midi', 'simpler', 'audio', 'effects'] as const) {
 			browserModeStore.setBrowseMode(mode);
 			expect(browserModeStore.browseMode).toBe(mode);
 		}
+	});
+
+	it('effects browse the presets: the instruments source, and back to midi on leaving', () => {
+		browserModeStore.setBrowseMode('effects');
+		expect(browserModeStore.browseMode).toBe('effects');
+		expect(browserModeStore.sourceMode).toBe('instruments');
+		expect(browserModeStore.isAudioSource).toBe(false);
+		expect(localStorage.getItem('browserModeStore.browseEffects')).toBe('1');
+		browserModeStore.setBrowseMode('midi');
+		expect(browserModeStore.browseMode).toBe('midi');
+	});
+
+	it('a replace drops the effects segment for the half it needs', () => {
+		browserModeStore.setBrowseMode('effects');
+		browserModeStore.openForReplace('tracks/2', null);
+		expect(browserModeStore.browseMode).toBe('midi');
+		browserModeStore.exitReplaceMode();
 	});
 
 	it('persists the underlying fields set via setBrowseMode', () => {

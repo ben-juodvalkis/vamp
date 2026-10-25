@@ -9,22 +9,24 @@
 const LOCK_STORAGE_KEY = 'browserModeStore.isLocked';
 const SOURCE_MODE_STORAGE_KEY = 'browserModeStore.sourceMode';
 const AUDIO_LOAD_TARGET_STORAGE_KEY = 'browserModeStore.audioLoadTarget';
+const BROWSE_EFFECTS_STORAGE_KEY = 'browserModeStore.browseEffects';
 
 /** Browse source axis: instrument presets vs audio samples (the Audio toggle). */
 export type SourceMode = 'instruments' | 'audio';
 /** What a picked audio sample becomes: a clip on an audio track, or a Simpler. */
 export type AudioLoadTarget = 'clip' | 'simpler';
 /**
- * The top-bar three-way switch position — a UI projection over the two
- * orthogonal fields above (`sourceMode` × `audioLoadTarget`). Only three of
- * the four combinations are meaningful, so the switch collapses them:
+ * The top-bar switch position — a UI projection over the orthogonal fields
+ * above (`sourceMode` × `audioLoadTarget`) and `browseEffects`:
  *   `midi`    → instruments            (label Instrument — MIDI track: instrument preset)
  *   `simpler` → audio + simpler target (label Simpler — MIDI track: sample on a fresh Simpler)
  *   `audio`   → audio + clip target    (label Clip — a sample or clip into a Session slot)
- * `sourceMode`/`audioLoadTarget` stay the persisted source of truth; this is
- * the derived label the browser reads/writes via `browseMode`/`setBrowseMode`.
+ *   `effects` → effect presets         (label Effect — onto the selected track's chain, 2026-10-25)
+ * The fields stay the persisted source of truth; this is the derived label
+ * the browser reads/writes via `browseMode`/`setBrowseMode`. Effects browse
+ * the Place's presets, so `sourceMode` reads `instruments` under them.
  */
-export type BrowseMode = 'midi' | 'simpler' | 'audio';
+export type BrowseMode = 'midi' | 'simpler' | 'audio' | 'effects';
 
 function readStringFromStorage(key: string): string | null {
 	if (typeof localStorage === 'undefined') return null;
@@ -72,6 +74,13 @@ function createBrowserModeStore() {
 	// choice survives reloads (the rail Audio toggle + the top load-as switch).
 	let sourceMode = $state<SourceMode>(readSourceModeFromStorage());
 	let audioLoadTarget = $state<AudioLoadTarget>(readAudioLoadTargetFromStorage());
+	let browseEffects = $state(readStringFromStorage(BROWSE_EFFECTS_STORAGE_KEY) === '1');
+	// Bumped by `openEffectsBrowser`; the browser lands on a Place with effects.
+	let effectsOpenRequest = $state(0);
+	const setBrowseEffects = (value: boolean) => {
+		browseEffects = value;
+		writeStringToStorage(BROWSE_EFFECTS_STORAGE_KEY, value ? '1' : '0');
+	};
 
 	return {
 		// Instrument browser persistent mode
@@ -133,6 +142,7 @@ function createBrowserModeStore() {
 			// with openAudioBrowserForReplace forcing 'audio'.
 			sourceMode = 'instruments';
 			writeStringToStorage(SOURCE_MODE_STORAGE_KEY, sourceMode);
+			setBrowseEffects(false);
 			isInstrumentPersistent = true; // Replace mode uses persistent browse mode
 		},
 
@@ -163,6 +173,20 @@ function createBrowserModeStore() {
 			isInstrumentPersistent = true;
 		},
 
+		// Open the browser on its Effect segment — the chain overview's + cell
+		// (2026-10-25). A pick lands on the selected track's chain, or the
+		// scoped pad's.
+		openEffectsBrowser() {
+			sourceMode = 'instruments';
+			writeStringToStorage(SOURCE_MODE_STORAGE_KEY, sourceMode);
+			setBrowseEffects(true);
+			isInstrumentPersistent = true;
+			effectsOpenRequest += 1;
+		},
+		get effectsOpenRequest(): number {
+			return effectsOpenRequest;
+		},
+
 		// Open scale browser from external trigger (SystemCentralView Key button)
 		openScaleBrowser() {
 			isScalePersistent = true;
@@ -172,6 +196,7 @@ function createBrowserModeStore() {
 		openAudioBrowserForReplace(trackIndex: number, clipIndex: number) {
 			sourceMode = 'audio';
 			writeStringToStorage(SOURCE_MODE_STORAGE_KEY, sourceMode);
+			setBrowseEffects(false);
 			isInstrumentPersistent = true;
 			audioClipReplaceTarget = { trackIndex, clipIndex };
 			// Exactly one replace mode at a time — drop any instrument-replace pin
@@ -236,15 +261,17 @@ function createBrowserModeStore() {
 			this.audioLoadTarget = audioLoadTarget === 'simpler' ? 'clip' : 'simpler';
 		},
 
-		// Three-way top-bar switch (Instrument | Simpler | Clip; ids midi | simpler | audio) — a projection over
-		// `sourceMode` × `audioLoadTarget`. Reading derives the label; writing
-		// sets both underlying (persisted) fields so the projection round-trips.
+		// Top-bar switch (Instrument | Simpler | Clip | Effect; ids midi | simpler | audio | effects) — a
+		// projection over `sourceMode` × `audioLoadTarget` and `browseEffects`.
+		// Reading derives the label; writing sets the underlying (persisted)
+		// fields so the projection round-trips.
 		get browseMode(): BrowseMode {
-			if (sourceMode === 'instruments') return 'midi';
+			if (sourceMode === 'instruments') return browseEffects ? 'effects' : 'midi';
 			return audioLoadTarget === 'simpler' ? 'simpler' : 'audio';
 		},
 		setBrowseMode(mode: BrowseMode) {
-			if (mode === 'midi') {
+			setBrowseEffects(mode === 'effects');
+			if (mode === 'midi' || mode === 'effects') {
 				this.sourceMode = 'instruments';
 				return;
 			}

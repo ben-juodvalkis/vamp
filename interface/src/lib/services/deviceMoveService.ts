@@ -125,3 +125,36 @@ export async function deleteDevice(devicePath: string): Promise<void> {
 		throw error;
 	}
 }
+
+const V3_DEVICE_LOAD_ADDRESS = '/looping/v3/device/load';
+
+/**
+ * Add a preset file to a chain — the browser's Effect segment (2026-10-25).
+ * `/looping/v3/device/load [trackPath, devicePath, presetPath, source, rel]`:
+ * `devicePath` empty for the track's chain, a pad path for that pad's; the
+ * device lands where Live puts a browser load (after the selected device,
+ * else at the end). `source`/`rel` name the Place it lives in (3.11.0), or
+ * are left off when it has none. Typed errors (`load-failed`,
+ * `path-not-found`) arrive via `/looping/v3/error`.
+ */
+export async function addPresetToChain(
+	trackPath: string,
+	devicePath: string,
+	presetPath: string,
+	source = '',
+	rel = ''
+): Promise<void> {
+	const args = source && rel ? [trackPath, devicePath, presetPath, source, rel] : [trackPath, devicePath, presetPath];
+	try {
+		await send(V3_DEVICE_LOAD_ADDRESS, args);
+	} catch (error) {
+		logger.error('Failed to add preset to chain:', {
+			component: 'deviceMove',
+			trackPath,
+			devicePath,
+			presetPath,
+			error,
+		});
+		throw error;
+	}
+}

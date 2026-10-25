@@ -123,12 +123,17 @@ describe('PlacesAdapter', () => {
 		expect((await a.getPresets('place:synth', ['Pads'], Infinity)).map((p) => p.name)).toEqual(['Wet Hall']);
 	});
 
-	it('never picks a greyed tile at random, chip or no chip', async () => {
+	it('picks at random only what the switch shows: no effect under Instrument, only effects under Effect', async () => {
 		const a = new PlacesAdapter('synth');
+		a.setKindFilter(['instruments', 'kits']);
 		for (let i = 0; i < 60; i++) {
 			const p = await a.getRandomPreset('place:synth', ['Pads']);
 			expect(p.installed).not.toBe(false);
 			expect(p.kind).not.toBe('audio-effect');
+		}
+		a.setKindFilter(['effects']);
+		for (let i = 0; i < 20; i++) {
+			expect((await a.getRandomPreset('place:synth', ['Pads'])).kind).toBe('audio-effect');
 		}
 	});
 

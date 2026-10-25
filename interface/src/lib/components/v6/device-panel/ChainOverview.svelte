@@ -19,7 +19,10 @@
    * aside to show where it will land, and the new order holds after the
    * drop until Live's republish shows it (or 2 s pass, Live having
    * refused). The instrument stays put and nothing crosses it
-   * (`utils/chainDrop`).
+   * (`utils/chainDrop`). A dashed + cell after the last device opens the
+   * browser on its Effect segment (`openEffectsBrowser`), as the strips
+   * row's add buttons end the tracks; a pick joins this chain, the pad's
+   * under a pad scope.
    *
    * **A pad follows the Drum Rack view.** While a pad is held or latched
    * on the selected track's Drum Rack, the overview is that pad's chain —
@@ -32,6 +35,8 @@
   import Hand from '@lucide/svelte/icons/hand';
   import Plug from '@lucide/svelte/icons/plug';
   import Power from '@lucide/svelte/icons/power';
+  import Plus from '@lucide/svelte/icons/plus';
+  import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
   import Music from '@lucide/svelte/icons/music';
   import { press } from '$lib/actions/press';
   import { drag, type DragInfo } from '$lib/actions/drag';
@@ -209,8 +214,8 @@
     })
   );
 
-  /** Ten a row, one row tall each while they fit, so a chain reads like Live's: left to right. */
-  const tall = $derived(cells.length <= 10);
+  /** Ten a row, one row tall each while they and the + cell fit, so a chain reads like Live's: left to right. */
+  const tall = $derived(cells.length < 10);
 
   function indexOf(path: string): number {
     const m = /\/devices\/(\d+)$/.exec(path);
@@ -473,6 +478,17 @@
       {@render cellBody(cell, position)}
     </div>
   {/each}
+  <!-- Add an effect: the browser on Effect, landing on this chain. -->
+  <button
+    type="button"
+    class="chain-add"
+    aria-label="Add an effect"
+    data-debug="chain-add"
+    use:press={{ onPress: () => browserModeStore.openEffectsBrowser(), touchAction: 'none' }}
+  >
+    <span class="chain-add-icons" aria-hidden="true"><Plus /><ControlGlyph name="rack" /></span>
+    <span class="chain-add-label">Effect</span>
+  </button>
   {#if dragging}
     {@const cell = cells.find((c) => c.key === dragging?.key)}
     {#if cell}
@@ -523,6 +539,49 @@
     right: 4px;
     z-index: 3;
     pointer-events: none;
+  }
+  /* The + cell: the strips row's add buttons' dashed ghost (NewTrackButtons). */
+  .chain-add {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    border: 1px dashed var(--line-strong);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--muted-foreground);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .chain.tall .chain-add {
+    grid-row: span 2;
+  }
+  .chain-add > span {
+    opacity: var(--opacity-ghost);
+  }
+  .chain-add:active {
+    background: var(--secondary);
+    color: var(--foreground);
+  }
+  .chain-add:active > span {
+    opacity: 1;
+  }
+  .chain-add-icons {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .chain-add-icons :global(svg) {
+    width: 22px;
+    height: 22px;
+  }
+  .chain-add-label {
+    font-size: 0.8125rem;
+    font-weight: var(--font-weight-medium);
   }
   .chain.tall .chain-cell {
     grid-row: span 2;

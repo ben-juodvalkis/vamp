@@ -88,11 +88,12 @@ export function loadsAsInstrument(kind: ItemKind | undefined): boolean {
 /**
  * Whether a tap may load the item at all — the one rule behind a greyed tile
  * and every random pick (a folder's hold, a section header's hold): not a
- * plug-in preset whose plug-in is not installed, and not an effect. True for
- * every type-catalog item, which carries neither a kind nor an installed flag.
+ * plug-in preset whose plug-in is not installed. An effect loads too since
+ * the browser's Effect segment (2026-10-25), onto the selected chain; the
+ * switch's kind filter keeps effects out of the other segments' picks.
  */
-export function canLoad(kind: ItemKind | undefined, installed?: boolean): boolean {
-	return installed !== false && groupOfKind(kind) !== 'effects';
+export function canLoad(_kind: ItemKind | undefined, installed?: boolean): boolean {
+	return installed !== false;
 }
 
 /** Whether the item is audio the sample action (Simpler or clip) applies to. A MIDI clip is not. */

@@ -210,6 +210,12 @@ export const TOURS = {
 				steps: [openInstrument(8), { click: '.pad-tile[data-note="38"]' }, { click: '[data-fx-mode="chain"]' }]
 			},
 			{
+				name: 'chain-add',
+				description: 'Tapped the + cell at the end of the chain: the browser opens on its Effect segment, on a Place that has effect presets',
+				scenePatch: chainDemo,
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { click: '[data-debug="chain-add"]' }, { wait: 800 }]
+			},
+			{
 				name: 'chain-plugin',
 				description: 'Tapped the plug-in: the generic view, one slider per parameter',
 				scenePatch: chainDemo,

@@ -64,7 +64,11 @@
 	import { session, clearScaleDetected } from '$lib/stores/session.svelte';
 	import { ROOT_NOTES, SCALE_NAMES, getScaleIndex } from '$lib/data/scales';
 	import { logger } from '$lib/utils/logger';
-	import { PLACES_CHANGED_EVENT, warmPlacesCache } from '$lib/services/placesLive';
+	import { PLACES_CHANGED_EVENT, warmPlacesCache, placeArgs } from '$lib/services/placesLive';
+	import { addPresetToChain } from '$lib/services/deviceMoveService';
+	import { activeDrumRackScope } from '$lib/services/deviceViewRouter.svelte';
+	import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
+	import ControlGlyph from '../device-panel/ControlGlyph.svelte';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 	import { press, type PressOptions, type PressReleaseInfo } from '$lib/actions';
@@ -162,15 +166,19 @@
 	/** Each Place's index entry, keyed by its rail id (`place:drum`). */
 	let placeInfo = $state<Record<string, PlaceInfo>>({});
 	/**
-	 * The kinds a Place shows under the switch: its presets (Instrument), its
-	 * audio (Simpler), or its audio and MIDI clips (Clip). A MIDI clip has no
-	 * audio for a Simpler, so only Clip lists it.
+	 * The kinds a Place shows under the switch: its instruments and kits
+	 * (Instrument), its audio (Simpler), its audio and MIDI clips (Clip), or
+	 * its effect presets (Effect, 2026-10-25). A MIDI clip has no audio for a
+	 * Simpler, so only Clip lists it.
 	 */
-	const PRESET_GROUPS: KindGroup[] = ['instruments', 'kits', 'effects'];
+	const PRESET_GROUPS: KindGroup[] = ['instruments', 'kits'];
 	const AUDIO_GROUPS: KindGroup[] = ['samples', 'clips'];
 	const CLIP_GROUPS: KindGroup[] = [...AUDIO_GROUPS, 'midi-clips'];
+	const EFFECT_GROUPS: KindGroup[] = ['effects'];
 	const groupsForMode = (mode: BrowseMode): KindGroup[] =>
-		mode === 'midi' ? PRESET_GROUPS : mode === 'simpler' ? AUDIO_GROUPS : CLIP_GROUPS;
+		mode === 'midi' ? PRESET_GROUPS : mode === 'effects' ? EFFECT_GROUPS : mode === 'simpler' ? AUDIO_GROUPS : CLIP_GROUPS;
+	/** Whether a mode lists a Place's samples (Simpler, Clip) rather than its presets. */
+	const amongSamplesIn = (mode: BrowseMode) => mode === 'simpler' || mode === 'audio';
 	const placeKindGroups = $derived(groupsForMode(browserModeStore.browseMode));
 	/**
 	 * Set when a Place opens, or its switch flips, among samples: the Place's
@@ -259,6 +267,7 @@
 	const simplerUnavailableForCurrent = $derived(!placeHas(selectedVendorId, AUDIO_GROUPS));
 	const clipUnavailableForCurrent = $derived(!placeHas(selectedVendorId, CLIP_GROUPS));
 	const midiUnavailableForCurrent = $derived(!placeHas(selectedVendorId, PRESET_GROUPS));
+	const effectsUnavailableForCurrent = $derived(!placeHas(selectedVendorId, EFFECT_GROUPS));
 
 	const screen = $derived(screenKind(!!selectedVendorId, folders, presets.length));
 	const crumbs = $derived(
@@ -597,8 +606,10 @@
 	// than the `isAudioSource` derived — this runs imperatively right after
 	// `tapRailCategory` may have written `sourceMode`, and we want that value.
 	function pathMemoryKey(buttonId: string): string {
-		// A Place remembers a spot among its presets and one among its samples.
-		return rememberedPathKey(buttonId, browserModeStore.isAudioSource);
+		// A Place remembers a spot among its presets, one among its samples and
+		// one among its effects.
+		const key = rememberedPathKey(buttonId, browserModeStore.isAudioSource);
+		return browserModeStore.browseMode === 'effects' ? `${key}:effects` : key;
 	}
 
 	// Record where we are for the open button, so a later open-from-closed tap on
@@ -635,17 +646,20 @@
 		// Replace Inst, a sample for a clip), and `tapRailCategory` keeps such a
 		// Place from opening at all.
 		if (isPlaceVendorId(vendor.vendorId)) {
-			const amongSamples = browserModeStore.browseMode !== 'midi';
+			const amongSamples = amongSamplesIn(browserModeStore.browseMode);
 			const replacing = browserModeStore.isReplacingInstrument || browserModeStore.isReplacingAudioClip();
 			const fits = placeHas(vendor.id, groupsForMode(browserModeStore.browseMode));
-			if (!replacing && !fits && amongSamples) {
+			if (!replacing && !fits && browserModeStore.browseMode === 'effects') {
+				// No effects here: its instruments, else its clips.
+				browserModeStore.setBrowseMode(placeHas(vendor.id, PRESET_GROUPS) || !placeHas(vendor.id, CLIP_GROUPS) ? 'midi' : 'audio');
+			} else if (!replacing && !fits && amongSamples) {
 				if (placeHas(vendor.id, CLIP_GROUPS)) browserModeStore.setBrowseMode('audio');
 				else if (placeHas(vendor.id, PRESET_GROUPS)) browserModeStore.setBrowseMode('midi');
 			} else if (!replacing && !fits && placeHas(vendor.id, CLIP_GROUPS)) {
 				browserModeStore.sourceMode = 'audio';
 				if (!placeHas(vendor.id, AUDIO_GROUPS)) browserModeStore.setBrowseMode('audio');
 			}
-			openLoneFolder = browserModeStore.browseMode !== 'midi';
+			openLoneFolder = amongSamplesIn(browserModeStore.browseMode);
 		}
 		browserNavigationStore.selectedCategory = 'vendor';
 		browserNavigationStore.selectedVendorId = vendor.id;
@@ -712,8 +726,9 @@
 		}
 		// Read the store getter (not the derived) — this runs imperatively right
 		// after a setBrowseMode() / sourceMode mutation, so we want the just-written value.
-		const landsAsAudio = browserModeStore.browseMode === 'audio';
-		if (landsAsAudio) {
+		const mode = browserModeStore.browseMode;
+		// Effects land on a chain that is already there: no track to prep.
+		if (mode === 'audio' || mode === 'effects') {
 			// Audio: no up-front prep; the load path creates its own track.
 			trackPrepManager.skipPrepAndMarkReady();
 		} else {
@@ -847,6 +862,10 @@
 	// ── Preset load (tap a leaf card) ──
 	async function loadPreset(preset: Preset) {
 		browserNavigationStore.loadedPresetPath = preset.path;
+		if (groupOfKind(preset.kind) === 'effects') {
+			await addEffect(preset);
+			return;
+		}
 		try {
 			if (await tryReplaceAudioClip(preset)) return;
 			await commitPresetLoad(preset);
@@ -861,6 +880,29 @@
 			// this catches the throw that beat the close — a failing
 			// tryReplaceAudioClip, which runs first. handleClose is idempotent.
 			if (!browserModeStore.isLocked) handleClose();
+		}
+	}
+
+	/**
+	 * An effect preset joins a chain that is already there (2026-10-25): the
+	 * selected track's, or the pad's while one is held or latched in the Drum
+	 * Rack view (not under a track hold, whose FX are another track's). No
+	 * track prep, no landing strip: the device appearing in Live, the FX grid
+	 * and the chain overview is the confirmation.
+	 */
+	async function addEffect(preset: Preset, closeDelayMs = 0) {
+		const trackPath = selectedTrackStore.selectedTrackPath;
+		const pad = trackHoldScope.active ? null : activeDrumRackScope();
+		handlePostLoad(closeDelayMs);
+		if (!trackPath) {
+			reportLoadFailure(preset.name, new Error('No track selected'));
+			return;
+		}
+		try {
+			await addPresetToChain(trackPath, pad?.padPath ?? '', preset.fullPath, ...placeArgs(preset));
+		} catch (err) {
+			logger.error('Effect load failed', { component: 'DrillDownBrowser', err });
+			reportLoadFailure(preset.name, err);
 		}
 	}
 
@@ -890,6 +932,10 @@
 			// screen has no preset card to light up; a section header does, and
 			// `loadedPresetPath` above is what lights it.
 			if (owns()) showPickOn(folderName, preset.name);
+			if (groupOfKind(preset.kind) === 'effects') {
+				await addEffect(preset, PRESET_REVEAL_MS);
+				return;
+			}
 			if (await tryReplaceAudioClip(preset)) return;
 			// Linger just long enough to read the name on the tile.
 			await commitPresetLoad(preset, PRESET_REVEAL_MS);
@@ -1371,6 +1417,23 @@
 			wasPersistent = nowPersistent;
 		}
 	});
+	// The chain overview's + cell (`openEffectsBrowser`): the open Place if it
+	// has effect presets, else the first Place that does.
+	let seenEffectsRequest = browserModeStore.effectsOpenRequest;
+	$effect(() => {
+		const request = browserModeStore.effectsOpenRequest;
+		if (request === seenEffectsRequest) return;
+		seenEffectsRequest = request;
+		isExpanded = true;
+		untrack(() => {
+			const current = findVendorById(vendors, selectedVendorId);
+			const target =
+				current && isPlaceVendor(current) && placeHas(current.id, EFFECT_GROUPS)
+					? current
+					: (placeVendors.find((v) => placeHas(v.id, EFFECT_GROUPS)) ?? current);
+			if (target && isPlaceVendor(target)) selectCategory(target, { restore: true });
+		});
+	});
 	let wasScalePersistent = false;
 	$effect(() => {
 		const nowScale = browserModeStore.isScalePersistent;
@@ -1537,19 +1600,20 @@
 		if (mode === 'simpler' && simplerUnavailableForCurrent) return;
 		if (mode === 'audio' && clipUnavailableForCurrent) return;
 		if (mode === 'midi' && midiUnavailableForCurrent) return;
-		const wasAudio = isAudioSource;
+		if (mode === 'effects' && effectsUnavailableForCurrent) return;
+		const was = browseMode;
 		browserModeStore.setBrowseMode(mode);
-		// Leaving audio (→ MIDI) abandons an in-progress clip replace (you can't
-		// replace an audio clip with an instrument) — drop the target so it can't
-		// fire unexpectedly on a later audio pick.
-		if (mode === 'midi') {
+		// Leaving audio (→ Instrument or Effect) abandons an in-progress clip
+		// replace (you can't replace an audio clip with a preset) — drop the
+		// target so it can't fire unexpectedly on a later audio pick.
+		if (!amongSamplesIn(mode)) {
 			browserModeStore.clearAudioClipReplaceTarget();
 		}
 		const cur = findVendorById(vendors, selectedVendorId);
 		if (!(isExpanded && !isScale && cur && isPlaceVendor(cur))) return;
-		if (wasAudio !== (mode !== 'midi')) {
-			// presets ↔ samples: the content changes — re-skin from the Place's
-			// root. (Simpler ↔ Audio skips this: same samples, keeps your place.)
+		if (amongSamplesIn(was) !== amongSamplesIn(mode) || was === 'effects' || mode === 'effects') {
+			// presets ↔ samples ↔ effects: the content changes — re-skin from the
+			// Place's root. (Simpler ↔ Audio skips this: same samples, keeps your place.)
 			selectCategory(cur);
 		}
 		// A switch tap commits a mode, so prep its landing-pad track now (MIDI /
@@ -1587,22 +1651,17 @@
      carries neither field. -->
 {#snippet presetTile(p: Preset)}
 	{@const notInstalled = p.installed === false}
-	{@const effect = groupOfKind(p.kind) === 'effects'}
 	<!-- The line under the name: the plug-in, else why a greyed tile is greyed —
 	     on its face, since the iPad shows no tooltips. -->
-	{@const subLabel = notInstalled ? 'Not installed' : (p.plugin ?? (effect ? 'Effect' : null))}
+	{@const subLabel = notInstalled ? 'Not installed' : (p.plugin ?? null)}
 	<button
 		class="card preset-tile"
 		class:loaded={(shownChargingPresetPath ?? browserNavigationStore.loadedPresetPath) === p.path}
-		class:unavailable={notInstalled || effect}
+		class:unavailable={notInstalled}
 		class:has-plugin={!!subLabel}
 		style="--k: {p.vendorColor || activeColor};"
-		disabled={notInstalled || effect}
-		title={notInstalled
-			? `${p.plugin ?? 'This plug-in'} is not installed`
-			: effect
-				? 'An effect preset — it does not load as an instrument'
-				: undefined}
+		disabled={notInstalled}
+		title={notInstalled ? `${p.plugin ?? 'This plug-in'} is not installed` : undefined}
 		onclick={() => loadPreset(p)}
 	>
 		{#if audioWaveformsEnabled && isAudioThumbnailType(p.type)}
@@ -1796,12 +1855,14 @@
 					{:else if isReplacingInstrument}
 						<div class="replace-pill" aria-label="Replacing instrument">Replace inst</div>
 					{:else if showSourceSwitch}
-						<!-- Three-way browse switch (Places only), by what you'll do
+						<!-- Four-way browse switch (Places only), by what you'll do
 						     with a pick: Instrument = a Place's presets (MIDI track),
 						     Simpler = a sample onto a fresh Simpler (MIDI track),
-						     Clip = a sample or clip into a Session slot. Internal ids
-						     stay midi | simpler | audio. A segment disables when the
-						     open Place has nothing it lists. -->
+						     Clip = a sample or clip into a Session slot, Effect = an
+						     effect preset onto the selected track's chain (or the
+						     scoped pad's). Internal ids midi | simpler | audio |
+						     effects. A segment disables when the open Place has
+						     nothing it lists. -->
 						<div class="seg-switch" role="group" aria-label="Browse mode">
 							<button
 								class="seg"
@@ -1832,6 +1893,16 @@
 							>
 								<span class="seg-icon" aria-hidden="true"><AudioWaveform /></span>
 								Clip
+							</button>
+							<button
+								class="seg"
+								class:on={browseMode === 'effects'}
+								data-mode="effects"
+								disabled={effectsUnavailableForCurrent}
+								onclick={() => setBrowseMode('effects')}
+							>
+								<span class="seg-icon" aria-hidden="true"><ControlGlyph name="rack" /></span>
+								Effect
 							</button>
 						</div>
 					{/if}
