@@ -16,11 +16,11 @@
      .glass-panel-subtle class stays intact elsewhere.
 
      Two faces behind one tiny switch: the grid, or the selected track's
-     chain in order (ChainOverview). The switch is out of flow in the
-     corner, so neither face gives up a cell for it. -->
+     chain in order (ChainOverview). The switch is one button out of
+     flow over the top-left corner, so neither face gives up a cell for it. -->
 <div
 	class="glass-panel-subtle h-full flex flex-col relative"
-	style="border-color: transparent; background: transparent; backdrop-filter: none; --fx-switch-w: 76px;"
+	style="border-color: transparent; background: transparent; backdrop-filter: none;"
 >
 	{#if fxChainStore.mode === 'chain'}
 		<ChainOverview />

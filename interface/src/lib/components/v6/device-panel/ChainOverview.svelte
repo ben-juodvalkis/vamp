@@ -30,15 +30,9 @@
    */
   import Box from '@lucide/svelte/icons/box';
   import Hand from '@lucide/svelte/icons/hand';
-  import Layers from '@lucide/svelte/icons/layers';
   import Plug from '@lucide/svelte/icons/plug';
   import Power from '@lucide/svelte/icons/power';
-  import AudioWaveform from '@lucide/svelte/icons/audio-waveform';
-  import Gauge from '@lucide/svelte/icons/gauge';
   import Music from '@lucide/svelte/icons/music';
-  import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
-  import Waves from '@lucide/svelte/icons/waves';
-  import Zap from '@lucide/svelte/icons/zap';
   import { press } from '$lib/actions/press';
   import { drag, type DragInfo } from '$lib/actions/drag';
   import { moveDevice } from '$lib/services/deviceMoveService';
@@ -48,7 +42,8 @@
   import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
   import { fxChainStore, RACK_PICK } from '$lib/stores/v6/fxChainStore.svelte';
   import { DEVICE_PRESETS, DEVICE_FAMILY_INKS } from '$lib/config/devicePresets';
-  import { DEVICE_GLYPHS, type DeviceGlyph } from '$lib/config/deviceGlyphMap';
+  import ControlGlyph from './ControlGlyph.svelte';
+  import { DEVICE_CLASS_GLYPHS, DEVICE_KEY_GLYPHS, glyphForName, type ControlGlyphName } from '$lib/config/controlGlyphMap';
   import { matchesSlot, pickSlotDevice } from '$lib/utils/deviceSlotMatch';
   import { openDeviceView, activeDrumRackScope, selectedDrumRack } from '$lib/services/deviceViewRouter.svelte';
   import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
@@ -112,14 +107,6 @@
     BeatRepeat: 'Beat Repeat'
   };
 
-  const EFFECT_MARKS = {
-    filter: AudioWaveform,
-    space: Waves,
-    dynamics: Gauge,
-    drive: Zap,
-    movement: Music,
-    gain: SlidersHorizontal
-  } as const;
 
   type Cell = {
     /** Stable across Live's renumbering (paths are positions): name, class, and which of those it is. */
@@ -351,8 +338,15 @@
     void moveDevice(d.path, d.to);
   }
 
-  function glyphOf(cell: Cell): DeviceGlyph | null {
-    return cell.presetKey ? (DEVICE_GLYPHS[cell.presetKey] ?? null) : null;
+  /** What the device does, drawn (`ControlGlyph`): by the app's own device, its class, else its name. */
+  function glyphOf(cell: Cell): ControlGlyphName | null {
+    const { device } = cell;
+    return (
+      (cell.presetKey ? DEVICE_KEY_GLYPHS[cell.presetKey] : undefined) ??
+      DEVICE_CLASS_GLYPHS[device.className] ??
+      glyphForName(device.name) ??
+      null
+    );
   }
 
   function open(cell: Cell) {
@@ -413,15 +407,12 @@
         {#if cell.kind === 'instrument'}
           <!-- The strip's own mark for the instrument, so the two agree. -->
           <span class="instrument-mark"><TrackDeviceView {glance} color={cell.ink} /></span>
-        {:else if cell.kind === 'rack'}
-          <Layers />
+        {:else if glyph}
+          <span class="glyph"><ControlGlyph name={glyph} /></span>
         {:else if cell.kind === 'max'}
           <Box />
         {:else if cell.kind === 'plugin'}
           <Plug />
-        {:else if glyph && glyph in EFFECT_MARKS}
-          {@const Mark = EFFECT_MARKS[glyph as keyof typeof EFFECT_MARKS]}
-          <Mark />
         {:else}
           <Music />
         {/if}
@@ -529,7 +520,7 @@
     --chip-ink: var(--scope-ink, var(--track-ink));
     position: absolute;
     top: 4px;
-    right: calc(4px + var(--fx-switch-w, 0px));
+    right: 4px;
     z-index: 3;
     pointer-events: none;
   }
@@ -587,6 +578,10 @@
     gap: 6px;
     min-height: 18px;
   }
+  /* The first cell's corner is the FX section's switch (FxPanelSwitch). */
+  .chain-cell:first-child .cell-head {
+    padding-left: 36px;
+  }
   .order {
     font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
@@ -629,6 +624,16 @@
     width: 30px;
     height: 30px;
     stroke-width: 1.25;
+  }
+  .glyph {
+    display: flex;
+    width: 44px;
+    height: 44px;
+  }
+  .glyph :global(svg) {
+    width: 100%;
+    height: 100%;
+    stroke-width: 1.75;
   }
   .instrument-mark {
     width: 100%;

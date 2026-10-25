@@ -269,8 +269,7 @@
     --chip-ink: var(--scope-ink, var(--track-ink));
     position: absolute;
     top: 4px;
-    /* Left of the FX section's switch (DevicesPanelV6). */
-    right: calc(4px + var(--fx-switch-w, 0px));
+    right: 4px;
     z-index: 3;
     pointer-events: none;
   }

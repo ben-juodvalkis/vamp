@@ -150,3 +150,66 @@ export function glyphForName(name: string | null | undefined): ControlGlyphName 
 	for (const [rule, glyph] of NAME_RULES) if (rule.test(n)) return glyph;
 	return undefined;
 }
+
+/**
+ * A device's own mark in the chain overview (2026-10-25): the glyph that
+ * draws what the device does, by the class Live reports. A device's class
+ * says what it is, whatever its preset named it (type first, as the tiles
+ * match). Anything unlisted guesses from its name (`glyphForName`).
+ */
+export const DEVICE_CLASS_GLYPHS: Readonly<Record<string, ControlGlyphName>> = {
+	AutoFilter2: 'filter',
+	AutoFilter: 'filter',
+	Eq8: 'tone',
+	ChannelEq: 'tone',
+	FilterEQ3: 'tone',
+	Echo: 'feedback',
+	Delay: 'delay',
+	PingPongDelay: 'delay',
+	FilterDelay: 'delay',
+	GrainDelay: 'pitchhack',
+	Hybrid: 'reverb',
+	Reverb: 'reverb',
+	Saturator: 'drive',
+	Roar: 'drive',
+	Overdrive: 'dirty',
+	Pedal: 'pedal',
+	Amp: 'amp',
+	Cabinet: 'amp',
+	GlueCompressor: 'compress',
+	Compressor2: 'compress',
+	Limiter: 'threshold',
+	MultibandDynamics: 'crossover',
+	Gate: 'gate',
+	DrumBuss: 'punch',
+	StereoGain: 'gain',
+	Chorus2: 'unison',
+	PhaserNew: 'phaser',
+	AutoPan: 'tremolo',
+	AutoPan2: 'tremolo',
+	Tuner: 'tune',
+	Shifter: 'transpose',
+	FrequencyShifter: 'ringmod',
+	Redux2: 'redux',
+	Erosion: 'noise',
+	Vinyl: 'vintage',
+	Corpus: 'resonator',
+	Resonator: 'resonator',
+	BeatRepeat: 'loop',
+	Looper: 'loop',
+	MidiRandom: 'dice',
+	MidiPitcher: 'transpose',
+	MidiArpeggiator: 'rate',
+	MidiNoteLength: 'notelength',
+	MidiVelocity: 'velocity',
+	MidiScale: 'tune',
+	AudioEffectGroupDevice: 'select',
+	MidiEffectGroupDevice: 'select'
+};
+
+/** The app's own Max devices, by their `DEVICE_PRESETS` key: their class (a Max device) says nothing. */
+export const DEVICE_KEY_GLYPHS: Readonly<Record<string, ControlGlyphName>> = {
+	sequencer: 'swing',
+	glitchLoop: 'pitchhack',
+	pitchHack: 'pitchhack'
+};

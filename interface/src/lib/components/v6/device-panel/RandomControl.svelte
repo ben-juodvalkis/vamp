@@ -22,7 +22,8 @@
   };
 </script>
 
-<BaseDeviceControl slotKey="random" title="Random" showMoveToTop={true} showMoveToEnd={true}>
+<!-- No move-to-first arrow: its corner is the FX section's switch (FxPanelSwitch). -->
+<BaseDeviceControl slotKey="random" title="Random" showMoveToEnd={true}>
   {#snippet children({ device, sendParam, storePendingParam, triggerLoad, handleTap, isGhost, isLoading, color, openView })}
     {@const amountValue = device
       ? (selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, PARAM_CONFIG.amount.index)) ?? 0)
