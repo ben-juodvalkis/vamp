@@ -60,7 +60,18 @@ rule applied view by view:
   Amp | Filter switch is gone).
 - **Drift**: the mixer and the voicing sliders stack in their cards; wheels
   stacked in the mode column.
-- **Collision, Electric, Sampler**: the wheels stack, one narrow column.
+- **Collision, Electric**: the wheels stack, one narrow column.
+- **Sampler**: Gain over Trnsp, Spread beside them, the swap pill across
+  the three columns and Osc / Pitch under it (the name fits); the freed
+  column widens the rest. The wheels stack.
+- **Drum Rack** (the user asked after the rest were done): on every kit
+  Gain over Trnsp in one column, so they keep one place across kits
+  (2026-09-27's muscle-memory rule), each kit's columns 9fr past the pads.
+  DrumCell: Start full height beside them, the FX and Time pads wider.
+  Sampler kit: Spread over Select; Osc / Pitch, the envelope and Filter
+  equal. Simpler kit: the Time pad and Filter equal. A nested-rack kit's
+  macros are two rows of boxes, Gain first; the mapped-macro grid goes to
+  two rows past two macros; a pitch-only kit stacks Gain over Trnsp too.
 - **Instrument Rack**: the macros fill two rows column by column; an XY pad
   takes a 2×2 cell. **Komplete Kontrol**: its eight parameters a 2×4 grid.
   **Pattern Rack** and **Audio Effect Rack**: macros in two rows.
@@ -81,12 +92,24 @@ rule applied view by view:
 - **Clip view**: Temp over Chance on a MIDI clip, Gain over the warp tab on
   an audio clip; the rail is six columns, REC and Delete on the same pixels
   for both.
-- **Left as they were**, apart from the travel and upright labels: Reverb
-  (already rows of boxes), the Arpeggiator, Variation, Tremolo, Chorus and
-  Pitch views (each fader alone in its group), the Guitar's Drive and Wah
-  (alone in their groups), the Shifter, Auto Filter's Morph, Glitch's
-  Clock, Groove's Amount, and the Drum Rack and Sampler/Simpler kits' lead
-  grid (ADR-428's one ruler, the user's muscle-memory rule).
+- **Reverb** (the user: "I don't love horizontal sliders"): its two
+  columns of six horizontal rows are two groups of vertical boxes, three
+  columns by two rows, name over value; Sync and Mono under their boxes,
+  Freeze over In in the bottom-right cell, an IR's Attack, Decay and Size
+  full height. **The picture moved to the Reverb tile** (the user: the
+  tail was "an XY matching the XY in the device grid"): once a reverb is
+  loaded the tile draws an algorithm's tail behind its pad, its X where
+  the tail ends so the handle rides the decay mark (the tile's Decay write
+  goes through the same mapping, `reverb/reverbTail.ts`), or the loaded
+  IR's waveform under its own axes; an empty slot keeps the plain pad.
+  The view gains Decay and Dry/Wet boxes, its Algorithm | EQ tabs move to
+  a row over the controls, and the EQ tab keeps its curve. The IR pad left
+  with the tail: its Attack and Decay were boxes beside it already.
+- **Left as they were**, apart from the travel and upright labels: the
+  Arpeggiator, Variation, Tremolo, Chorus and Pitch views (each fader
+  alone in its group), the Guitar's Drive and Wah (alone in their groups),
+  the Shifter, Auto Filter's Morph, Glitch's Clock, Groove's Amount, and
+  the Sampler envelope's stages.
 
 ## Consequences
 - Precision no longer follows size. Most stages are a little finer than
@@ -103,9 +126,17 @@ rule applied view by view:
 - On the 10.2-inch the Pattern Rack's macro boxes are small.
 - The central tour lost `omnisphere-filter` (both envelopes are always
   drawn), clicks the oscillator badge for `wavetable-osc2` and
-  `meld-engine-b`, and gained `komplete-kontrol`.
+  `meld-engine-b`, and gained `komplete-kontrol`. Its Reverb drags are
+  vertical, and the IR states drag the Attack and Decay boxes.
+- The Reverb view's pictures are a tile's size now: the tile draws them
+  without words (no readouts, axis labels or "No picture for this IR").
+  A User IR, or a Mac without Live's IR files, leaves the tile plain.
+- The tile subscribes Live's IR properties while its reverb runs an IR,
+  so its waveform is there with the Reverb view closed.
+- On a half-height Drum Rack box, a "31/32 macro" badge can sit over the
+  box's glyph.
 - Tried and not taken: 60px boxes on Analog, more box-like, but they gave
   the filter back and cramped its type strip.
 
 ## Tags
-`ui`, `central-views`, `sliders`, `value-box`, `midi-wheels`, `gestures`
+`ui`, `central-views`, `sliders`, `value-box`, `midi-wheels`, `gestures`, `reverb`, `drum-rack`, `fx-grid`

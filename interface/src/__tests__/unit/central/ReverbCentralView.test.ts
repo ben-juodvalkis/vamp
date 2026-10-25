@@ -1,8 +1,8 @@
 /**
- * ReverbCentralView (2026-10-02 redesign): an algorithm draws the tail
- * picture, its own controls with Freeze under them, and the controls every
- * algorithm shares — each reading Live's own label at rest. Convolution
- * keeps its IR Time pad.
+ * ReverbCentralView (2026-10-02 redesign; value boxes, ADR-477): an
+ * algorithm's own controls with Freeze beside them, and the controls every
+ * algorithm shares, Decay and Dry/Wet first — each reading Live's own label
+ * at rest. The tail picture and the IR's waveform are the Reverb tile's.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -88,9 +88,9 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe('ReverbCentralView, an algorithm', () => {
-	it('draws the Dark Hall: the tail, its own five, Freeze under them', async () => {
+	it('draws the Dark Hall: its own five, Freeze beside them, no tail', async () => {
 		const c = await mount({ 6: 0 });
-		expect(c.querySelector('[data-reverb-portrait="darkHall"]')).not.toBeNull();
+		expect(c.querySelector('[data-reverb-portrait]')).toBeNull();
 		expect(c.textContent).toContain('Dark Hall');
 		expect(c.textContent).toContain('3.50 s');
 		expect(labels(c.querySelector('[data-reverb-own]'))).toEqual([
@@ -102,7 +102,7 @@ describe('ReverbCentralView, an algorithm', () => {
 	it('draws what every algorithm shares, in Live’s words', async () => {
 		const c = await mount({ 6: 1 });
 		expect(labels(c.querySelector('[data-reverb-shared]'))).toEqual([
-			'Size 50 %', 'Predelay 10.0 ms', 'Feedback 0.0 %', 'Delay 0.00 ms', 'Stereo 100 %', 'Vintage Off'
+			'Decay 3.50 s', 'Dry/Wet 50 %', 'Size 50 %', 'Predelay 10.0 ms', 'Feedback 0.0 %', 'Delay 0.00 ms', 'Stereo 100 %', 'Vintage Off'
 		]);
 		const switches = [...c.querySelectorAll('[data-reverb-shared] [data-reverb-switch]')].map((b) => b.textContent?.trim());
 		expect(switches).toEqual(['Sync', 'Mono']);
@@ -194,13 +194,13 @@ describe('ReverbCentralView, convolution', () => {
 
 	afterEach(() => vi.unstubAllGlobals());
 
-	it('draws the loaded IR from Live’s file, named in Live’s words', async () => {
+	it('names the loaded IR in Live’s words, and reads its file to fit the boxes', async () => {
 		const fetchMock = vi.fn(async () => new Response(JSON.stringify({ files: [{ channel: 'mono', path: PATH }] })));
 		vi.stubGlobal('fetch', fetchMock);
 		const c = await mount({ 48: 3 }, SPRING);
 		expect(c.querySelector('[data-reverb-portrait]')).toBeNull();
+		expect(c.querySelector('.ir-display')).toBeNull(); // the tile draws it
 		expect(fetchMock).toHaveBeenCalledWith('/api/reverb-ir?category=Springs&file=Awesome%20Stereo%20Spring');
-		await vi.waitFor(() => expect(c.querySelectorAll('[data-reverb-ir] .ir-display path').length).toBeGreaterThan(0));
 		expect([...c.querySelectorAll('[data-reverb-tab]')].map((t) => t.textContent?.trim())).toEqual(['IR', 'EQ']);
 		expect(c.querySelector('.picture-blurb')?.textContent).toBe('Awesome Stereo Spring · Springs');
 	});
@@ -239,87 +239,78 @@ describe('ReverbCentralView, convolution', () => {
 		});
 		afterEach(() => vi.restoreAllMocks());
 
-		it('the IR pad: nothing while it drags, Attack and Decay once when it lets go', async () => {
+		it('the Attack box: nothing while it drags, the attack once when it lets go', async () => {
 			const c = await mount({ 48: 3 }, SPRING);
-			const pad = c.querySelector('[data-reverb-ir] .xy-container')!;
-			pointer(pad, 'pointerdown', 10, 10);
-			pointer(pad, 'pointermove', 60, 80);
-			pointer(pad, 'pointermove', 100, 120);
+			const attack = row(c, 'Attack');
+			pointer(attack, 'pointerdown', 10, 200);
+			pointer(attack, 'pointermove', 10, 150);
+			pointer(attack, 'pointermove', 10, 100);
 			await new Promise((r) => setTimeout(r, 50));
 			expect(propertySets()).toHaveLength(0);
-			pointer(pad, 'pointerup', 100, 120);
-			expect(propertySets().map(([, args]) => (args as unknown[])[1])).toEqual(['ir_attack_time', 'ir_decay_time']);
+			pointer(attack, 'pointerup', 10, 100);
+			expect(propertySets().map(([, args]) => (args as unknown[])[1])).toEqual(['ir_attack_time']);
 		});
 
-		it('the Size slider: nothing while it drags, the size once when it lets go', async () => {
+		it('the Size box: nothing while it drags, the size once when it lets go', async () => {
 			const c = await mount({ 48: 3 }, SPRING);
 			const size = row(c, 'Size');
 			expect(size.getAttribute('aria-label')).toMatch(/^Size 100 %/);
-			pointer(size, 'pointerdown', 150, 10);
-			pointer(size, 'pointermove', 180, 10);
-			pointer(size, 'pointermove', 210, 10);
+			pointer(size, 'pointerdown', 10, 150);
+			pointer(size, 'pointermove', 10, 127);
+			pointer(size, 'pointermove', 10, 105);
 			await new Promise((r) => setTimeout(r, 50));
 			expect(propertySets()).toHaveLength(0);
 			expect(labels(c.querySelector('[data-reverb-own]'))).toContain('Size 162 %'); // the row follows
-			pointer(size, 'pointerup', 210, 10);
+			pointer(size, 'pointerup', 10, 105);
 			const sets = propertySets();
 			expect(sets).toHaveLength(1);
 			const [, [path, name, value]] = sets[0] as [string, [string, string, number]];
 			expect([path, name]).toEqual([DEVICE, 'ir_size_factor']);
-			expect(value).toBeCloseTo(1.62, 2); // 60 px of a 400 px rail: 0.5 → 0.65, and 0.2 · 25^0.65
+			expect(value).toBeCloseTo(1.62, 2); // 45 px up a 300 px box: 0.5 → 0.65, and 0.2 · 25^0.65
 		});
 
-		it('the Decay slider: nothing while it drags, the decay once when it lets go', async () => {
+		it('the Decay box: nothing while it drags, the decay once when it lets go', async () => {
 			const c = await mount({ 48: 3 }, { ...SPRING, ir_decay_time: 1 });
 			const decay = row(c, 'Decay');
-			pointer(decay, 'pointerdown', 200, 10);
-			pointer(decay, 'pointermove', 140, 10);
+			pointer(decay, 'pointerdown', 10, 100);
+			pointer(decay, 'pointermove', 10, 160);
 			await new Promise((r) => setTimeout(r, 50));
 			expect(propertySets()).toHaveLength(0);
-			pointer(decay, 'pointerup', 140, 10);
+			pointer(decay, 'pointerup', 10, 160);
 			const sets = propertySets();
 			expect(sets.map(([, args]) => (args as unknown[])[1])).toEqual(['ir_decay_time']);
 			expect((sets[0][1] as number[])[2]).toBeLessThan(1);
 		});
 	});
 
-	it('holds the axis while Size drags, so the IR stretches under the finger, then fits it again', async () => {
+	it('holds the boxes’ axis while Size drags, then fits it to the stretched IR', async () => {
 		vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ files: [{ channel: 'mono', path: PATH }] }))));
 		HTMLElement.prototype.setPointerCapture = vi.fn();
 		HTMLElement.prototype.releasePointerCapture = vi.fn();
 		const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
 			x: 0, y: 0, top: 0, left: 0, right: 400, bottom: 300, width: 400, height: 300, toJSON: () => ({})
 		} as DOMRect);
-		const pointer = (el: Element, type: string, x: number) => {
-			const ev = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: 10 });
+		const pointer = (el: Element, type: string, y: number) => {
+			const ev = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: 10, clientY: y });
 			Object.defineProperty(ev, 'pointerId', { value: 1 });
 			el.dispatchEvent(ev);
 		};
-		const c = await mount({ 48: 3 }, SPRING);
-		const ticks = () => [...c.querySelectorAll('[data-reverb-ir] .tick-label')].map((t) => t.textContent);
-		await vi.waitFor(() => expect(ticks().at(-1)).toBe('2 s')); // a 2 s IR at 100 %
-		const before = ticks();
+		const c = await mount({ 48: 3 }, { ...SPRING, ir_decay_time: 1 });
+		const decayAt = () =>
+			Number(c.querySelector('[data-reverb-own] [role="slider"][aria-label^="Decay"]')?.getAttribute('aria-valuenow'));
+		// Fitted to the 2 s IR at 100 % once its file is read (3 s, Live's rail, before).
+		const unread = decayAt();
+		await vi.waitFor(() => expect(decayAt()).not.toBe(unread));
+		const fitted = decayAt();
 		const size = c.querySelector('[data-reverb-own] [role="slider"][aria-label^="Size"]')!;
 		pointer(size, 'pointerdown', 150);
-		pointer(size, 'pointermove', 210);
+		pointer(size, 'pointermove', 105);
 		await new Promise((r) => setTimeout(r, 50));
 		expect(labels(c.querySelector('[data-reverb-own]'))).toContain('Size 162 %');
-		expect(ticks()).toEqual(before); // the axis held
-		pointer(size, 'pointerup', 210);
+		expect(decayAt()).toBe(fitted); // the axis held
+		pointer(size, 'pointerup', 105);
 		await tick();
-		expect(ticks()).not.toEqual(before); // fitted to 3.24 s
-		expect(ticks().at(-1)).toBe('2 s');
+		expect(decayAt()).toBeLessThan(fitted); // 1 s of a 3.24 s axis
 		rect.mockRestore();
-	});
-
-	it('says so when the IR has no file here (a User IR)', async () => {
-		vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ files: [] }))));
-		const c = await mount({ 48: 3 }, {
-			...SPRING,
-			ir_category_list: JSON.stringify(['Early_Reflections', 'User']),
-			ir_file_list: JSON.stringify(['My Room']),
-			ir_category_index: 1
-		});
-		await vi.waitFor(() => expect(c.querySelector('[data-reverb-ir]')?.textContent).toContain('A User IR: no picture from here'));
 	});
 });

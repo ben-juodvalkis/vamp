@@ -2,29 +2,30 @@
   /**
    * ReverbCentralView — the Hybrid Reverb, what the Reverb tile opens.
    *
-   *   [types 2×5] | [the tail, an XY pad] | [the algorithm's own] [room · output]
+   *   [types 2×5] | [tabs over: the engine's own | what every engine shares]
    *
    * The left picker chooses which reverb: five convolution IRs, five
-   * algorithms. Convolution draws its IR time pad. An algorithm (2026-10-02
-   * redesign) draws:
+   * algorithms. Every control is a value box (ADR-477), two rows a group:
    *
-   * - The tail (`reverb/ReverbPortrait`): every band of the reverb ringing
-   *   out, highs at the back, on a time axis from the dry hit. Dragging it is
-   *   the Reverb tile's gesture — across is Decay (the tail ends under the
-   *   handle), up is Dry/Wet — and every other control below bends the
-   *   picture the way it bends the sound.
-   * - The algorithm's own controls, signature first, and Freeze + Freeze In
-   *   on the bottom row, always in the same place.
-   * - What every algorithm shares: Size, Predelay (ms, or 16ths with Sync)
-   *   and its Feedback, the algorithm's Delay, Stereo with Bass Mono, and
-   *   Vintage.
+   * - The engine's own: an algorithm's controls, signature first, with
+   *   Freeze + Freeze In in the bottom-right cell, always in the same place;
+   *   or the IR's Attack, Decay and Size, full height.
+   * - What every algorithm shares: Decay and Dry/Wet (the Reverb tile's two
+   *   axes), Size, Predelay (ms, or 16ths with Sync) and its Feedback, the
+   *   algorithm's Delay, Stereo with Bass Mono, and Vintage; an IR keeps
+   *   Predelay, Feedback, Stereo, Vintage and Dry/Wet.
    *
-   * Two tabs on the picture, as Live's device has: the algorithm's (the
-   * tail) and EQ (2026-10-02). The EQ tab draws the reverb's own EQ as a
-   * curve with a handle per band (`reverb/ReverbEqEditor`), and the column
-   * beside it trades the algorithm's controls for what the curve does not
-   * hold: each end's Cut or Shelf with its Slope or Gain, the peaks' Q, the
-   * EQ's On and Pre Algo. Freeze keeps its row on both tabs.
+   * The picture of the reverb — an algorithm's tail (`reverb/ReverbPortrait`,
+   * every band ringing out from the dry hit) or the IR's waveform — is drawn
+   * on the Reverb tile, behind its pad, since ADR-477; until then it was a
+   * pad of its own here, the tile's two axes a second time.
+   *
+   * Two tabs over the controls, as Live's device has: the algorithm's (or
+   * IR) and EQ (2026-10-02). The EQ tab draws the reverb's own EQ as a curve
+   * with a handle per band (`reverb/ReverbEqEditor`), and the group beside
+   * it trades the engine's controls for what the curve does not hold: each
+   * end's Cut or Shelf with its Slope or Gain, the peaks' Q, the EQ's On and
+   * Pre Algo. Freeze keeps its cell on both tabs.
    *
    * Every control reads its value in Live's own format at rest, from the
    * curves in `hybridReverbParams.ts` (measured on the rig): the surface
@@ -36,7 +37,6 @@
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { session } from '$lib/stores/session.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
-  import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import ControlGlyph from '../../device-panel/ControlGlyph.svelte';
   import type { ControlGlyphName } from '$lib/config/controlGlyphMap';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
@@ -44,24 +44,18 @@
   import { deviceInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import SectionDivider from '../SectionDivider.svelte';
-  import ReverbPortrait from './reverb/ReverbPortrait.svelte';
   import ReverbEqEditor from './reverb/ReverbEqEditor.svelte';
-  import ReverbIrDisplay from './reverb/ReverbIrDisplay.svelte';
   import { useReverbIr } from './reverb/useReverbIr.svelte';
   import {
     IR_ATTACK_MAX,
-    IR_TOP,
-    attackAt,
     attackAtPosition,
     attackPosition,
-    attackX,
     categoryLabel,
     decayAt,
     decayY,
     irLabel
   } from './reverb/irDisplay';
-  import { xToTime, type TailInput } from './reverb/tailPortrait';
-  import { eqBands, wetLevelDb, type EqBand, type EqBandKey } from './reverb/reverbEq';
+  import { eqBands, type EqBand, type EqBandKey } from './reverb/reverbEq';
   import {
     HYBRID,
     LIVE_DEFAULTS,
@@ -73,26 +67,18 @@
     irSizePosition,
     algoDelaySeconds,
     algorithmFor,
-    bassMult,
-    bassXHz,
     controlPosition,
     controlRaw,
     decaySeconds,
-    decayValue,
     eqGainDb,
     eqGainLabel,
     eqQ,
     eqQLabel,
     eqSlopeLabel,
     feedbackGain,
-    hzLabel,
     percentLabel,
     predelaySeconds,
-    prismMult,
-    prismXOverHz,
-    shimmerSemitones,
     sixteenthsLabel,
-    tidesRateBeats,
     timeLabel,
     vintageLabel
   } from '$lib/components/v6/device-panel/hybridReverbParams';
@@ -223,14 +209,14 @@
   // The loaded IR's waveform, from Live's own file.
   const ir = useReverbIr(() => ({ category: irCategoryName, file: irFileName }));
   /**
-   * Attack and Decay while a finger moves them — on the pad or on their
-   * sliders, which follow each other — before the release writes them.
+   * Attack and Decay while a finger moves their boxes, before the release
+   * writes them.
    */
   let irAttackPreview = $state<number | null>(null);
   let irDecayPreview = $state<number | null>(null);
   let irAttackShown = $derived(irAttackPreview ?? irAttackTime);
   let irDecayShown = $derived(irDecayPreview ?? irDecayTime);
-  /** The IR's name and category, beside the picture's tabs. */
+  /** The IR's name and category, beside the tabs. */
   let irTitle = $derived(
     irFileName && irFileName !== '<empty>'
       ? `${irLabel(irFileName).name} · ${categoryLabel(irCategoryName)}`
@@ -242,15 +228,15 @@
    * and a stream of them hangs it.
    */
   let irSizePreview = $state<number | null>(null);
-  /** Size as the picture and the readout show it: the finger's while it drags. */
+  /** Size as its box shows it: the finger's while it drags. */
   let irSizeShown = $derived(irSizePreview !== null ? irSizeFactor(irSizePreview) : irSizeValue);
-  /** The IR picture's axis, held at its span from before a Size drag until the release. */
+  /** The IR's axis, held at its span from before a Size drag until the release. */
   let irAxisHeld = $state<number | null>(null);
   /**
-   * The seconds the IR pad and its picture span: the IR as Size stretches
-   * it (Live's 3 s Attack rail until the file is read). The pad's Attack
-   * and Decay are fitted to it (`reverb/irDisplay.ts`), so a short IR does
-   * not leave most of the pad doing nothing.
+   * The seconds the IR's Attack and Decay boxes span: the IR as Size
+   * stretches it (Live's 3 s Attack rail until the file is read), fitted
+   * (`reverb/irDisplay.ts`) so a short IR does not leave most of a box doing
+   * nothing.
    */
   let irAxis = $derived(irAxisHeld ?? (ir.wave && ir.wave.seconds > 0 ? ir.wave.seconds * irSizeShown : IR_ATTACK_MAX));
 
@@ -320,59 +306,9 @@
   let wet = $derived(clamp01(raw(HYBRID.dryWet)));
   let frozen = $derived(on(HYBRID.freeze));
 
-  // The reverb's own EQ: its tab draws it, and the tail draws its gain per band.
+  // The reverb's own EQ, which its tab draws.
   let eq = $derived(eqBands(raw));
   let eqOn = $derived(on(HYBRID.eqOn));
-  let wetPath = $derived(wetLevelDb(eq, eqOn, clamp01(raw(HYBRID.sendGain))));
-
-  let tail = $derived<TailInput>({
-    algo: algorithm.key,
-    decay,
-    onset: predelay + algoDelay,
-    echoSpacing: predelay,
-    feedback: feedbackGain(raw(feedbackIndex)),
-    size: raw(HYBRID.size),
-    damping: raw(HYBRID.damping),
-    diffusion: raw(HYBRID.diffusion),
-    mod: raw(HYBRID.mod),
-    shape: raw(HYBRID.hallShape),
-    bassMult: bassMult(raw(HYBRID.hallBassMult)),
-    bassX: bassXHz(raw(HYBRID.hallBassX)),
-    lowDamp: raw(HYBRID.quartzLowDamp),
-    distance: raw(HYBRID.quartzDistance),
-    shimmer: raw(HYBRID.shimmer),
-    pitch: shimmerSemitones(raw(HYBRID.shimmerPitch)),
-    tide: raw(HYBRID.tide),
-    tidePeriod: tidesRateBeats(raw(HYBRID.tidesRate)) * 4 * sixteenth,
-    wave: raw(HYBRID.tidesWave),
-    lowMult: prismMult(raw(HYBRID.prismLowMult)),
-    highMult: prismMult(raw(HYBRID.prismHighMult)),
-    xOver: prismXOverHz(raw(HYBRID.prismXOver)),
-    freeze: frozen,
-    wet,
-    levelDb: wetPath,
-    vintage: Math.round(raw(HYBRID.vintage))
-  });
-
-  let readouts = $derived([
-    { name: 'Decay', value: frozen ? 'Frozen' : timeLabel(decay) },
-    { name: 'Dry/Wet', value: percentLabel(wet * 100) }
-  ]);
-
-  let crossoverLabel = $derived(
-    algorithm.key === 'darkHall'
-      ? `Bass X ${hzLabel(tail.bassX)}`
-      : algorithm.key === 'prism'
-        ? `X-Over ${hzLabel(tail.xOver)}`
-        : undefined
-  );
-
-  /** The tail pad: X is where the tail ends, so Decay is that time less the onset. */
-  function moveTail(x: number, y: number) {
-    fx.sendParam(HYBRID.decay, decayValue(xToTime(x) - tail.onset));
-    fx.sendParam(HYBRID.dryWet, clamp01(y));
-  }
-
   function toggle(index: number) {
     fx.sendParam(index, on(index) ? 0 : 1);
   }
@@ -394,7 +330,23 @@
     type?: number;
   }
 
+  // The tile's two axes lead: the picture of the tail is the tile's now
+  // (ADR-477), so they are boxes here.
   let shared = $derived<Row[]>([
+    {
+      key: 'decay',
+      name: 'Decay',
+      position: raw(HYBRID.decay),
+      label: frozen ? 'Frozen' : timeLabel(decay),
+      write: (t) => fx.sendParam(HYBRID.decay, clamp01(t))
+    },
+    {
+      key: 'drywet',
+      name: 'Dry/Wet',
+      position: wet,
+      label: percentLabel(wet * 100),
+      write: (t) => fx.sendParam(HYBRID.dryWet, clamp01(t))
+    },
     {
       key: 'size',
       name: 'Size',
@@ -453,20 +405,15 @@
   let isConvolution = $derived(reverbMode === ROUTING_CONVOLUTION);
 
   /**
-   * Convolution's shared column: what the device has besides its engines —
-   * the algorithm's own Size and Delay do nothing to an IR — and Dry/Wet,
-   * which the algorithm's pad carries and the IR pad (Attack × Decay) does not.
+   * Convolution's shared group: what the device has besides its engines —
+   * the algorithm's own Decay, Size and Delay do nothing to an IR — with
+   * Dry/Wet last.
    */
   let convolutionShared = $derived<Row[]>([
-    ...shared.filter((r) => r.key !== 'size' && r.key !== 'delay'),
-    {
-      key: 'drywet',
-      name: 'Dry/Wet',
-      position: wet,
-      label: percentLabel(wet * 100),
-      write: (t) => fx.sendParam(HYBRID.dryWet, clamp01(t))
-    }
+    ...shared.filter((r) => !['decay', 'drywet', 'size', 'delay'].includes(r.key)),
+    ...shared.filter((r) => r.key === 'drywet')
   ]);
+
 
   function writeIr(name: string, value: number) {
     if (fx.devicePath) selectedTrackStore.setPropertyValue(fx.devicePath, name, value);
@@ -515,6 +462,20 @@
 
   /** What the picture shows: the tail, or the reverb's EQ — Live's two tabs. */
   let panel = $state<'reverb' | 'eq'>('reverb');
+
+  let sharedRows = $derived(isConvolution ? convolutionShared : shared);
+  // Two rows of boxes, so a column per two.
+  let sharedCols = $derived(Math.ceil(sharedRows.length / 2));
+  // The EQ keeps its curve; an algorithm's tail and an IR's waveform are the
+  // Reverb tile's (ADR-477), so the controls take the width.
+  let hasPicture = $derived(panel === 'eq');
+  /** A box group `n` columns of ~60px boxes wide, as the panel was. */
+  const groupWidth = (n: number) => `calc(${n} * 60px + ${n - 1} * var(--spacing-sm))`;
+  let layoutColumns = $derived(
+    hasPicture
+      ? `minmax(0, 1fr) auto ${groupWidth(3)} auto ${groupWidth(sharedCols)}`
+      : `minmax(0, 3fr) auto minmax(0, ${sharedCols}fr)`
+  );
   /** The EQ band last touched: lit on the curve, named in its readout. */
   let eqFocus = $state<EqBandKey>('lo');
 
@@ -590,11 +551,11 @@
   });
 </script>
 
-<!-- A row's label: Live's name on the left, its value on the right. Drawn in
+<!-- A box's label: its glyph, Live's name and, under it, its value. Drawn in
      both of the slider's label layers, so it flips on the fill. -->
-{#snippet rowLabel(name: string, value: string)}
+{#snippet boxLabel(name: string, value: string)}
   {@const glyph = ROW_GLYPHS[name]}
-  <span class="row-label"><span class="row-name">{#if glyph}<span class="row-glyph"><ControlGlyph name={glyph} /></span>{/if}{name}</span><span class="row-value">{value}</span></span>
+  <span class="box-label">{#if glyph}<span class="box-glyph"><ControlGlyph name={glyph} /></span>{/if}<span class="box-name">{name}</span><span class="box-value">{value}</span></span>
 {/snippet}
 
 {#snippet typeChip(index: number)}
@@ -609,22 +570,25 @@
   </button>
 {/snippet}
 
-{#snippet sliderRow(row: Row)}
-  {#snippet label()}{@render rowLabel(row.name, row.label)}{/snippet}
-  <div class="row" class:with-chip={row.chip || row.type !== undefined}>
-    <DeviceSlider
-      value={row.position}
-      title="{row.name} {row.label}"
-      {label}
-      orientation="horizontal"
-      labelOrientation="horizontal"
-      labelSize="small"
-      isGhost={fx.isGhost}
-      color={currentColor}
-      onTap={() => fx.loadIfGhost()}
-      onInteraction={row.write}
-      onRelease={row.commit}
-    />
+<!-- One value box, its switch (Sync, Mono, Cut / Shelf) under it. -->
+{#snippet sliderBox(row: Row)}
+  {#snippet label()}{@render boxLabel(row.name, row.label)}{/snippet}
+  <div class="cell">
+    <div class="box">
+      <DeviceSlider
+        value={row.position}
+        title="{row.name} {row.label}"
+        {label}
+        orientation="vertical"
+        labelOrientation="horizontal"
+        labelSize="small"
+        isGhost={fx.isGhost}
+        color={currentColor}
+        onTap={() => fx.loadIfGhost()}
+        onInteraction={row.write}
+        onRelease={row.commit}
+      />
+    </div>
     {#if row.chip}{@render chip(row.chip.name, row.chip.index)}{/if}
     {#if row.type !== undefined}{@render typeChip(row.type)}{/if}
   </div>
@@ -689,9 +653,48 @@
              nothing between them until the hairline landed (2026-09-13). -->
         <SectionDivider orientation="vertical" />
 
-        <div class="algo-layout" data-reverb-algorithm={isConvolution ? 'convolution' : algorithm.key}>
-          <div class="picture" data-reverb-panel={panel}>
-            {#if panel === 'eq'}
+        <div
+          class="algo-layout"
+          style="grid-template-columns: {layoutColumns};"
+          data-reverb-panel={panel}
+          data-reverb-algorithm={isConvolution ? 'convolution' : algorithm.key}
+        >
+          <!-- Live's two tabs, the first wearing the algorithm's name or "IR", over
+               the controls (on the tail's corner until ADR-477). -->
+          <div class="picture-tabs" role="tablist" aria-label="Reverb picture">
+            <div class="device-segmented seg-grid flex">
+            <button
+              role="tab"
+              class="device-segment picture-tab"
+              class:active={panel === 'reverb'}
+              aria-selected={panel === 'reverb'}
+              style="--btn-tint: {currentColor.primary};"
+              data-reverb-tab="reverb"
+              onclick={() => (panel = 'reverb')}
+            >
+              {isConvolution ? 'IR' : algorithm.name}
+            </button>
+            <button
+              role="tab"
+              class="device-segment picture-tab"
+              class:active={panel === 'eq'}
+              aria-selected={panel === 'eq'}
+              style="--btn-tint: {currentColor.primary};"
+              data-reverb-tab="eq"
+              onclick={() => (panel = 'eq')}
+            >
+              EQ
+            </button>
+            </div>
+            {#if panel === 'reverb'}
+              <span class="picture-blurb">{isConvolution ? irTitle : algorithm.blurb}</span>
+            {/if}
+          </div>
+
+          {#if hasPicture}
+            <!-- The EQ's curve. An algorithm's tail and an IR's waveform are
+                 drawn on the Reverb tile now (ADR-477). -->
+            <div class="picture">
               <ReverbEqEditor
                 bands={eq}
                 on={eqOn}
@@ -701,135 +704,61 @@
                 onSelect={(key) => (eqFocus = key)}
                 onWrite={(index, value) => fx.sendParam(index, value)}
               />
-            {:else if isConvolution}
-              <!-- The loaded IR: Attack across, Decay up, fitted to it. The writes
-                   wait for the release — Live recalculates the IR on every change,
-                   and a stream of them hangs it — while the picture follows. The
-                   handle climbs no higher than a full-scale IR, under the tabs. -->
-              <div class="ir-pad" data-reverb-ir>
-                <DeviceXY
-                  xValue={attackX(irAttackShown, irAxis)}
-                  yValue={decayY(irDecayShown, irAxis)}
-                  yTop={IR_TOP}
-                  isGhost={fx.isGhost}
-                  color={currentColor}
-                  onInteraction={(x, y) => {
-                    irAttackPreview = attackAt(x, irAxis);
-                    irDecayPreview = decayAt(y, irAxis);
-                  }}
-                  onRelease={(x, y) => {
-                    irAttackPreview = null;
-                    irDecayPreview = null;
-                    writeIr('ir_attack_time', attackAt(x, irAxis));
-                    writeIr('ir_decay_time', decayAt(y, irAxis));
-                  }}
-                >
-                  {#snippet background()}
-                    <ReverbIrDisplay
-                      wave={ir.wave}
-                      status={ir.status}
-                      category={irCategoryName}
-                      attack={irAttackShown}
-                      decay={irDecayShown}
-                      size={irSizeShown}
-                      axisSpan={irAxis}
-                      shaping={irShaping}
-                      color={currentColor}
-                      isGhost={fx.isGhost}
-                    />
-                  {/snippet}
-                </DeviceXY>
-              </div>
-            {:else}
-              <ReverbPortrait
-                input={tail}
-                {readouts}
-                {crossoverLabel}
-                color={currentColor}
-                isGhost={fx.isGhost}
-                onMove={moveTail}
-                onTap={() => fx.loadIfGhost()}
-              />
-            {/if}
-            <!-- Live's two tabs; the first wears the algorithm's name, or "IR". -->
-            <div class="picture-tabs" role="tablist" aria-label="Reverb picture">
-              <div class="device-segmented seg-grid flex">
-              <button
-                role="tab"
-                class="device-segment picture-tab"
-                class:active={panel === 'reverb'}
-                aria-selected={panel === 'reverb'}
-                style="--btn-tint: {currentColor.primary};"
-                data-reverb-tab="reverb"
-                onclick={() => (panel = 'reverb')}
-              >
-                {isConvolution ? 'IR' : algorithm.name}
-              </button>
-              <button
-                role="tab"
-                class="device-segment picture-tab"
-                class:active={panel === 'eq'}
-                aria-selected={panel === 'eq'}
-                style="--btn-tint: {currentColor.primary};"
-                data-reverb-tab="eq"
-                onclick={() => (panel = 'eq')}
-              >
-                EQ
-              </button>
-              </div>
-              {#if panel === 'reverb'}
-                <span class="picture-blurb">{isConvolution ? irTitle : algorithm.blurb}</span>
-              {/if}
             </div>
-          </div>
 
-          <SectionDivider orientation="vertical" />
+            <SectionDivider orientation="vertical" />
+          {/if}
 
-          <!-- The engine's own controls, or the EQ's; an algorithm's Freeze on the bottom row. -->
-          <div class="algo-col" data-reverb-own>
+          <!-- The engine's own controls, or the EQ's, as value boxes down two
+               rows (ADR-477); an algorithm's Freeze in the bottom-right cell. -->
+          <div class="box-group" class:one-row={panel !== 'eq' && isConvolution} data-reverb-own>
             {#if panel === 'eq'}
               {#each eqRows as row (row.key)}
-                {@render sliderRow(row)}
+                {@render sliderBox(row)}
               {/each}
-              <div class="row chips pair-row">
+              <div class="cell chips pair-cell">
                 {@render chip('On', HYBRID.eqOn, 'EQ On')}
                 {@render chip('Pre Algo', HYBRID.eqPreAlgo, 'Pre Algo: the EQ before the algorithm, not after both engines')}
               </div>
             {:else if isConvolution}
               {#each irRows as row (row.key)}
-                {@render sliderRow(row)}
+                {@render sliderBox(row)}
               {/each}
             {:else}
               {#each algorithm.controls as control (control.index)}
-                {#snippet ownLabel()}{@render rowLabel(control.name, control.label(raw(control.index)))}{/snippet}
-                <div class="row">
-                  <DeviceSlider
-                    value={controlPosition(control, raw(control.index))}
-                    title="{control.name} {control.label(raw(control.index))}"
-                    label={ownLabel}
-                    orientation="horizontal"
-                    labelOrientation="horizontal"
-                    labelSize="small"
-                    isGhost={fx.isGhost}
-                    color={currentColor}
-                    onTap={() => fx.loadIfGhost()}
-                    onInteraction={(t) => fx.sendParam(control.index, controlRaw(control, t))}
-                  />
+                {#snippet ownLabel()}{@render boxLabel(control.name, control.label(raw(control.index)))}{/snippet}
+                <div class="cell">
+                  <div class="box">
+                    <DeviceSlider
+                      value={controlPosition(control, raw(control.index))}
+                      title="{control.name} {control.label(raw(control.index))}"
+                      label={ownLabel}
+                      orientation="vertical"
+                      labelOrientation="horizontal"
+                      labelSize="small"
+                      isGhost={fx.isGhost}
+                      color={currentColor}
+                      onTap={() => fx.loadIfGhost()}
+                      onInteraction={(t) => fx.sendParam(control.index, controlRaw(control, t))}
+                    />
+                  </div>
                 </div>
               {/each}
             {/if}
             {#if !isConvolution}
-              <div class="row chips freeze-row">
+              <div class="cell chips freeze-cell">
                 {@render chip('Freeze', HYBRID.freeze)}
                 {@render chip('In', HYBRID.freezeIn, 'Freeze In: new input still feeds the frozen tail')}
               </div>
             {/if}
           </div>
 
+          <SectionDivider orientation="vertical" />
+
           <!-- What the device has besides its engines. -->
-          <div class="algo-col" data-reverb-shared>
-            {#each isConvolution ? convolutionShared : shared as row (row.key)}
-              {@render sliderRow(row)}
+          <div class="box-group" style="grid-template-columns: repeat({sharedCols}, minmax(0, 1fr));" data-reverb-shared>
+            {#each sharedRows as row (row.key)}
+              {@render sliderBox(row)}
             {/each}
           </div>
         </div>
@@ -840,99 +769,112 @@
 </div>
 
 <style>
-  /* The tail takes what the two columns leave. Six rows a column, the
-     algorithm's own five (Prism's three) over Freeze, so a row sits level
-     with its neighbour across the seam. */
+  /* The tabs over two groups of value boxes, two rows each, filled column
+     by column (ADR-477; two columns of six horizontal rows until then): the
+     engine's own (an algorithm's five, Prism's three, the EQ's four and its
+     On / Pre Algo) with Freeze bottom right, or the IR's three full height;
+     then, past a seam, what every engine shares, Decay and Dry/Wet first.
+     The columns are set inline (`layoutColumns`): the groups share the width,
+     or, on the EQ tab, keep 60px boxes and leave the rest to the curve. */
   .algo-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto 196px 196px;
-    gap: var(--central-gap);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: var(--spacing-sm) var(--central-gap);
     height: 100%;
     min-height: 0;
     min-width: 0;
+    container-type: inline-size;
   }
 
-  .algo-col {
+  .box-group {
     display: grid;
-    grid-template-rows: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: column;
     gap: var(--spacing-sm);
     min-height: 0;
     min-width: 0;
   }
-
-  .row {
-    min-height: 0;
-    min-width: 0;
-  }
-  .row.with-chip {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 48px;
-    gap: var(--spacing-sm);
-  }
-  .ir-pad {
-    height: 100%;
-    min-height: 0;
-    min-width: 0;
+  /* The IR's three (Attack, Decay, Size) stand full height, side by side. */
+  .box-group.one-row {
+    grid-template-rows: minmax(0, 1fr);
   }
 
-  .pair-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: var(--spacing-sm);
-  }
-  .freeze-row {
-    grid-row: 6;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 56px;
-    gap: var(--spacing-sm);
-  }
-
-  .row-label {
-    position: absolute;
-    inset: 0 0.5rem;
+  /* A box, and its switch under it when it has one. */
+  .cell {
     display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    min-height: 0;
+    min-width: 0;
+  }
+  .box {
+    flex: 1 1 0;
+    display: flex;
+    min-height: 0;
+    min-width: 0;
+  }
+  .cell > .reverb-chip {
+    flex: 0 0 2.25rem;
+  }
+  .chips > .reverb-chip {
+    flex: 1 1 0;
+  }
+
+  .pair-cell {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .freeze-cell {
+    grid-column: 3;
+    grid-row: 2;
+  }
+
+  /* Sized for a box about 60px wide: "Feedback" and "Diffusion" fit on one
+     line, a two-word name wraps between its words, never inside one. */
+  .box-label {
+    position: absolute;
+    inset: 0.25rem 0.125rem;
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.375rem;
-    font-size: 0.8125rem;
+    justify-content: center;
+    gap: 0.125rem;
+    font-size: 0.6875rem;
+    line-height: 1.15;
+    text-align: center;
     text-transform: none;
     letter-spacing: 0;
-    white-space: nowrap;
   }
-  .row-name {
+  .box-name {
     font-weight: 400;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
-  /* The row's glyph, just before its name, in the label's ink so it flips on the fill too. */
-  .row-glyph {
-    display: inline-block;
-    width: 1.1em;
-    height: 1.1em;
-    margin-right: 0.3em;
-    vertical-align: -0.25em;
+  /* The box's glyph, over its name, in the label's ink so it flips on the fill too. */
+  .box-glyph {
+    display: block;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-bottom: 0.125rem;
   }
-  .row-value {
+  .box-value {
     font-weight: var(--font-weight-medium);
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
-  /* The picture's frame: the tail or the EQ, Live's two tabs over its corner. */
+  /* The EQ's curve. */
   .picture {
     position: relative;
     height: 100%;
     min-width: 0;
     min-height: 0;
-    container-type: inline-size;
   }
   .picture-tabs {
-    position: absolute;
-    top: 0.5rem;
-    left: 0.5rem;
-    z-index: 5;
+    grid-column: 1 / -1;
     display: flex;
     align-items: center;
     gap: 0.25rem;
+    min-width: 0;
   }
   .picture-tab {
     min-height: 0;
@@ -948,8 +890,8 @@
     white-space: nowrap;
     pointer-events: none;
   }
-  /* Narrow — a drum pad's pane — the blurb gives way to the readouts. */
-  @container (max-width: 330px) {
+  /* Narrow — a drum pad's pane — the blurb gives way. */
+  @container (max-width: 420px) {
     .picture-blurb {
       display: none;
     }
@@ -958,9 +900,9 @@
   .reverb-chip {
     min-height: 0;
     min-width: 0;
-    height: 100%;
-    padding: 0 0.25rem;
-    font-size: 0.875rem;
+    padding: 0 0.125rem;
+    font-size: 0.8125rem;
+    white-space: nowrap;
   }
 
   /* ---- Live skin (flat grammar): the reverb-type tabs are Live's plain

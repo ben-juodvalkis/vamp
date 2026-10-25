@@ -231,16 +231,16 @@ export const TOURS = {
 			})),
 			// The Hybrid Reverb on Pad (track 5): the rig's full parameter vector
 			// (a Quartz), one state per algorithm the picker's tap leaves it on,
-			// each with the drag that shows what that algorithm is about. A
-			// slider drag is relative: +dx of its ~196 px moves it dx/196.
+			// each with the drag that shows what that algorithm is about. A box
+			// drag is relative: -dy of 240 px sweeps it bottom to top (ADR-477).
 			...[
-				['Hall', 'Bass Mult raised: the lows below Bass X ring longer', [{ drag: '[aria-label^="Bass Mult"]', by: [36, 0] }]],
-				['Quartz', 'Diffusion down: the tail breaks into its echoes', [{ drag: '[aria-label^="Diffusion"]', by: [-170, 0] }]],
+				['Hall', 'Bass Mult raised: the lows below Bass X ring longer', [{ drag: '[aria-label^="Bass Mult"]', by: [0, -44] }]],
+				['Quartz', 'Diffusion down: the tail breaks into its echoes', [{ drag: '[aria-label^="Diffusion"]', by: [0, 208] }]],
 				['Shimmer', 'Pitch +12: the energy climbs an octave a pass', []],
-				['Tides', 'Rate 1/4: the bands ripple out of step', [{ drag: '[aria-label^="Rate"]', by: [-40, 0] }]],
+				['Tides', 'Rate 1/4: the bands ripple out of step', [{ drag: '[aria-label^="Rate"]', by: [0, 49] }]],
 				['Prism', 'Low Mult up, High Mult down: the lows outlast the highs', [
-					{ drag: '[aria-label^="Low Mult"]', by: [60, 0] },
-					{ drag: '[aria-label^="High Mult"]', by: [-50, 0] }
+					{ drag: '[aria-label^="Low Mult"]', by: [0, -73] },
+					{ drag: '[aria-label^="High Mult"]', by: [0, 61] }
 				]]
 			].map(([algo, what, drags]) => ({
 				name: `fx-reverb-${algo.toLowerCase()}`,
@@ -268,9 +268,9 @@ export const TOURS = {
 					{ click: '[data-reverb-own] [data-reverb-switch="43"]' }
 				]
 			},
-			// Convolution: the IR the button loads, drawn from Live's own file
-			// (`/api/reverb-ir` reads this Mac's Live app; a Mac without one shows
-			// "No picture for this IR"), then shaped by a drag on its pad.
+			// Convolution: the IR the button loads, then shaped by its Attack and
+			// Decay boxes. Its waveform (from Live's own file, `/api/reverb-ir`)
+			// is drawn on the Reverb tile since ADR-477, not in this view.
 			{
 				name: 'fx-reverb-ir-spring',
 				description: 'Reverb, Spring: Live’s “Awesome Stereo Spring” IR, unshaped',
@@ -283,22 +283,24 @@ export const TOURS = {
 			},
 			{
 				name: 'fx-reverb-ir-shaped',
-				description: 'Reverb, Spring, the pad dragged right and down: Attack fades it in, Decay cuts the tail',
+				description: 'Reverb, Spring, Attack up and Decay down: Attack fades it in, Decay cuts the tail',
 				steps: [
 					selectTrack(5),
 					openTile('Reverb'),
 					{ click: '[data-reverb-type="Spring"]' },
-					{ drag: '[data-reverb-ir] .xy-container', by: [60, 190] }
+					{ drag: '[data-reverb-own] [role="slider"][aria-label^="Attack"]', by: [0, -40] },
+					{ drag: '[data-reverb-own] [role="slider"][aria-label^="Decay"]', by: [0, 160] }
 				]
 			},
 			{
 				name: 'fx-reverb-ir-short',
-				description: 'Reverb, Short (an early-reflections IR) shaped by a drag: the pad fitted to a short IR',
+				description: 'Reverb, Short (an early-reflections IR) shaped: its boxes fitted to a short IR',
 				steps: [
 					selectTrack(5),
 					openTile('Reverb'),
 					{ click: '[data-reverb-type="Short"]' },
-					{ drag: '[data-reverb-ir] .xy-container', by: [80, 120] }
+					{ drag: '[data-reverb-own] [role="slider"][aria-label^="Attack"]', by: [0, -53] },
+					{ drag: '[data-reverb-own] [role="slider"][aria-label^="Decay"]', by: [0, 100] }
 				]
 			},
 			{
@@ -308,7 +310,7 @@ export const TOURS = {
 					selectTrack(5),
 					openTile('Reverb'),
 					{ click: '[data-reverb-type="Spring"]' },
-					{ drag: '[data-reverb-own] [role="slider"][aria-label^="Size"]', by: [60, 0] }
+					{ drag: '[data-reverb-own] [role="slider"][aria-label^="Size"]', by: [0, -73] }
 				]
 			},
 			{

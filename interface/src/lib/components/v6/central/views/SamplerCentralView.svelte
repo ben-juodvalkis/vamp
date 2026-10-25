@@ -234,9 +234,11 @@
 </div>
 
 <style>
-  /* The Drum Rack's Sampler-kit cells, less the pads (2026-09-27): a slider
-     1fr and a pad 2fr, so Gain, Trnsp and Spread sit under the swap pill
-     and Osc / Pitch, the envelope and Filter run full height beside them.
+  /* The Drum Rack's Sampler-kit cells, less the pads (2026-09-27): Gain
+     over Trnsp and Spread beside them under the swap pill (value boxes,
+     ADR-477), the swap pill across them and Osc / Pitch (under it, so the
+     pill has room to name the preset), the envelope and Filter full height
+     beside them. The column the stacked boxes gave up widens the rest.
      The envelope keeps all four stages here (a kit hides Decay and
      Sustain). The row is `display: contents` and its cells name themselves
      (`SamplerControlsRow`).
@@ -251,13 +253,14 @@
     display: grid;
     gap: var(--central-gap);
     grid-template-columns:
-      repeat(3, minmax(0, 1fr)) minmax(0, 2fr)
+      repeat(2, minmax(0, 1fr)) minmax(0, 2fr)
       auto repeat(4, minmax(0, 1fr)) auto
       minmax(0, 2fr);
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto repeat(2, minmax(0, 1fr));
     grid-template-areas:
-      'pill pill  pill   osc envl env env env env envr filter'
-      'gain trnsp spread osc envl env env env env envr filter';
+      'pill  pill   pill envl env env env env envr filter'
+      'gain  spread osc  envl env env env env envr filter'
+      'trnsp spread osc  envl env env env env envr filter';
   }
   .sampler-grid :global(.sampler-row),
   .sampler-grid :global(.envelope-column) {

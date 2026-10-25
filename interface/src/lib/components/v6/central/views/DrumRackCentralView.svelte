@@ -465,8 +465,9 @@
          on both, and it to be the leftmost slider"). Neither is drawn on a
          macro-grid kit: the rack's mapped macros are its controls. On the
          lead grid `grid-area` places them; in the flex row this markup
-         order does. -->
-    {#if scopedProfile !== 'macro-grid'}
+         order does. A nested-rack or pitch-only kit draws Gain itself,
+         over Trnsp (ADR-477). -->
+    {#if scopedProfile !== 'macro-grid' && scopedProfile !== 'rack-macros' && scopedProfile !== 'pitch-only'}
       <div class="flex h-full vm-gain-col">
         {@render gainSlot()}
       </div>
@@ -491,6 +492,7 @@
         color={controlInk}
         onWrite={(name, t) => vm.writeMacro(name, t)}
         trnsp={members?.pitchMacro ? trnspSlot : undefined}
+        gain={gainSlot}
       />
     {:else if scopedProfile === 'sampler'}
       <!-- Sampler kits: the Sampler row, every control a function fanned
@@ -514,10 +516,11 @@
         onWrite={(control, value) => vm.write(control, value)}
       />
     {:else if scopedProfile === 'pitch-only'}
-      <!-- Any other native class: Trnsp where it always sits, beside Gain,
-           then the pad class. -->
+      <!-- Any other native class: Gain over Trnsp, where every kit keeps
+           them (ADR-477), then the pad class. -->
       <div class="flex-1 grid grid-cols-4 gap-(--central-gap) min-h-0">
-        <div class="flex gap-(--central-gap) h-full min-w-0">
+        <div class="flex flex-col gap-(--central-gap) h-full min-w-0">
+          {@render gainSlot()}
           {@render trnspSlot()}
         </div>
         <div class="vm-kit-card col-span-3 min-w-0" style="--kit-ink: {controlInk.primary};">
@@ -602,19 +605,18 @@
      lying across the top of the leading group. `.vm-controls-flat` is
      `display: contents`, and so are the rows' own boxes, so every pad and
      slider is a cell of this grid; each row names its cells (`fx`, `time`,
-     `start`, `trnsp` / `osc`, `env`, `spread`, `trnsp` / `time`, `trnsp`)
-     and the templates below say where they go. A pad is `2fr` and a slider
-     `1fr`, so the one ruler the DrumCell row has kept since 2026-09-12
-     ("each XY should be equal width and the sliders be half width of the
-     XY") holds across the pill's edge, which a flex row with the pads' fixed
-     column inside the group could not promise. With no pill to show, its
-     row is empty and its gap goes too.
-     Every kit shares ONE column set — pads, three sliders, three pads — so
-     Gain, Trnsp and Filter sit on the same pixels whichever kit is loaded
-     (user, 2026-09-27, after the Sampler kit had Gain at the far right). */
-  .vm-lead-grid[data-vm-lead] {
-    grid-template-columns: auto repeat(3, minmax(0, 1fr)) repeat(3, minmax(0, 2fr));
-  }
+     `start`, `trnsp` / `osc`, `env`, `spread`, `sel`, `trnsp` / `time`,
+     `trnsp`) and the templates below say where they go. A kit's pads are
+     equal (the ruler of 2026-09-12, "each XY should be equal width"); a
+     slider column was half a pad until ADR-477 and is narrower now, its
+     boxes as fine at any width. With no pill to show, its row is empty and
+     its gap goes too.
+     Every kit puts Gain and Trnsp on the same pixels (user, 2026-09-27,
+     after the Sampler kit had Gain at the far right): since ADR-477 one
+     column, Gain over Trnsp, two value boxes as fine as the faders they
+     replace, the kit's own sliders in the column beside it, and the pads
+     sharing what is left — the controls are two rows under the pill. Each
+     kit's template is below. */
   .vm-controls-flat {
     display: contents;
   }
@@ -663,18 +665,19 @@
   }
   .vm-lead-grid {
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto repeat(2, minmax(0, 1fr));
   }
+  /* No pill: its row is empty, and the inset takes back the gap under it. */
   .vm-lead-grid:not(.vm-lead-pill) {
-    row-gap: 0;
+    padding-top: calc(var(--central-inset) - var(--central-gap));
   }
   /* The scoped pad's notes strip (2026-10-24): a third row under the
      controls, from Gain to the right edge, the pads running down beside it.
-     One pad row tall (the user's call): the controls and the strip split
-     the pads' height 3:1, which lands the strip's top within a pixel of
-     the fourth pad's (the pads' 4px gaps against the grid's one). */
+     One pad row tall (the user's call): the controls' two rows and the
+     strip split the pads' height 3:1, which lands the strip's top within a
+     pixel of the fourth pad's (the pads' 4px gaps against the grid's). */
   .vm-lead-grid.vm-with-strip {
-    grid-template-rows: auto minmax(0, 3fr) minmax(0, 1fr);
+    grid-template-rows: auto repeat(2, minmax(0, 1.5fr)) minmax(0, 1fr);
   }
   .vm-strip {
     grid-area: strip;
@@ -710,63 +713,72 @@
     grid-area: gain;
     width: auto;
   }
-  /* DrumCell: pads · Gain · Trnsp · Start under the pill, then two
+  /* DrumCell: pads · Gain over Trnsp · Start under the pill, then two
      columns — FX over its type grid, Time over Filter (user, 2026-10-04).
-     The two columns split the three pads' 6fr, so Gain, Trnsp and Start
-     stay on the other kits' pixels. */
+     The kits' columns all come to 9fr past the pads, so Gain and Trnsp
+     land on the same pixels on each: here a slider 2fr of 18, a pad 7. */
   .vm-lead-grid[data-vm-lead='full'] {
-    grid-template-columns: auto repeat(3, minmax(0, 1fr)) repeat(2, minmax(0, 3fr));
+    grid-template-columns: auto repeat(2, minmax(0, 2fr)) repeat(2, minmax(0, 7fr));
     grid-template-areas:
-      'pill pill  pill  pill  fx time'
-      'pads gain  trnsp start fx time';
+      'pill pill  pill  fx time'
+      'pads gain  start fx time'
+      'pads trnsp start fx time';
   }
   .vm-lead-grid.vm-with-strip[data-vm-lead='full'] {
     grid-template-areas:
-      'pill pill  pill  pill  fx    time'
-      'pads gain  trnsp start fx    time'
-      'pads strip strip strip strip strip';
+      'pill pill  pill  fx    time'
+      'pads gain  start fx    time'
+      'pads trnsp start fx    time'
+      'pads strip strip strip strip';
   }
   /* UNREACHABLE since 2026-09-26 (showDrumPads is pinned on). */
   .vm-lead-grid[data-vm-lead='full']:not(.vm-lead-pads) {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) repeat(2, minmax(0, 3fr));
+    grid-template-columns: repeat(2, minmax(0, 2fr)) repeat(2, minmax(0, 7fr));
     grid-template-areas:
-      'pill pill  pill  fx time'
-      'gain trnsp start fx time';
+      'pill  pill  fx time'
+      'gain  start fx time'
+      'trnsp start fx time';
   }
   /* Sampler (the Abbey Road kits): the DrumCell's cells, one for one — Spread
      where Start is, Osc over Pitch where FX is, the Amp Envelope's A and R
      where Time is (both are the amp envelope's times), Filter last. Until
      2026-09-27 this kit put Osc / Pitch first and Gain at the far right. */
-  /* Select (the Sample Selector, 2026-10-04) is a fourth slider after
-     Spread, so this kit's columns are a tenth narrower than the others'. */
+  /* Select (the Sample Selector, 2026-10-04) sits under Spread, as Trnsp
+     under Gain; the three pads share 7 of the 9 equally (a slider 3fr of
+     27, a pad 7). */
   .vm-lead-grid[data-vm-lead='sampler'] {
-    grid-template-columns: auto repeat(4, minmax(0, 1fr)) repeat(3, minmax(0, 2fr));
+    grid-template-columns: auto repeat(2, minmax(0, 3fr)) repeat(3, minmax(0, 7fr));
     grid-template-areas:
-      'pill pill pill  pill   pill osc env filter'
-      'pads gain trnsp spread sel  osc env filter';
+      'pill pill  pill   osc env filter'
+      'pads gain  spread osc env filter'
+      'pads trnsp sel    osc env filter';
   }
   .vm-lead-grid.vm-with-strip[data-vm-lead='sampler'] {
     grid-template-areas:
-      'pill pill  pill  pill   pill  osc   env   filter'
-      'pads gain  trnsp spread sel   osc   env   filter'
-      'pads strip strip strip  strip strip strip strip';
+      'pill pill  pill   osc   env   filter'
+      'pads gain  spread osc   env   filter'
+      'pads trnsp sel    osc   env   filter'
+      'pads strip strip  strip strip strip';
   }
   .vm-lead-grid[data-vm-lead='sampler'] :global(.sampler-row) {
     display: contents;
   }
-  /* Simpler (the Jazz kit): no third slider and one pad of its own, so the
-     Time pad takes the Start cell and the FX pad's with it, and Gain, Trnsp
-     and Filter stay where the DrumCell kit has them. */
+  /* Simpler (the Jazz kit): no slider of its own and one pad, so the Time
+     pad starts where the DrumCell kit's Start does and shares the rest
+     with Filter equally (a slider 1fr of 9, each pad 4). */
   .vm-lead-grid[data-vm-lead='simpler'] {
+    grid-template-columns: auto minmax(0, 1fr) repeat(2, minmax(0, 4fr));
     grid-template-areas:
-      'pill pill pill  time time time filter'
-      'pads gain trnsp time time time filter';
+      'pill pill  time filter'
+      'pads gain  time filter'
+      'pads trnsp time filter';
   }
   .vm-lead-grid.vm-with-strip[data-vm-lead='simpler'] {
     grid-template-areas:
-      'pill pill  pill  time  time  time  filter'
-      'pads gain  trnsp time  time  time  filter'
-      'pads strip strip strip strip strip strip';
+      'pill pill  time  filter'
+      'pads gain  time  filter'
+      'pads trnsp time  filter'
+      'pads strip strip strip';
   }
   .vm-lead-grid[data-vm-lead='simpler'] :global(.simpler-row) {
     display: contents;

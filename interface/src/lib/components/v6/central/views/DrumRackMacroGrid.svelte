@@ -69,8 +69,9 @@
 
   let usedMacros = $derived(mapped.filter((paramIndex) => paramIndex < parameterNames.length));
 
-  // Single row with dynamic column count matching macro count
-  let gridCols = $derived(usedMacros.length);
+  // Past two macros, two rows of value boxes filled column by column
+  // (ADR-477); one or two stay side by side.
+  let gridRows = $derived(usedMacros.length > 2 ? 2 : 1);
 
   // Handle parameter changes - just send to store, control component handles local state
   function handleParameterChange(paramIndex: number, value: number) {
@@ -84,8 +85,8 @@
     <!-- One slider per mapped macro -->
     {#if usedMacros.length > 0}
       <div
-        class="flex-1 min-h-0 grid gap-(--central-gap)"
-        style="grid-template-columns: repeat({gridCols}, 1fr);"
+        class="flex-1 min-h-0 grid gap-(--central-gap) macro-grid"
+        style="grid-template-rows: repeat({gridRows}, minmax(0, 1fr));"
       >
         {#each usedMacros as paramIndex (paramIndex)}
           <div class="flex flex-col min-h-0">
@@ -113,3 +114,10 @@
     <DeviceEmptyState glyph="🥁" message="Load a drum rack" color={drumRackKKInk.primary} />
   {/if}
 </div>
+
+<style>
+  .macro-grid {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+  }
+</style>

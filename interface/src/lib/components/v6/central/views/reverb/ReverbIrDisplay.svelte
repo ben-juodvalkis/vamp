@@ -29,9 +29,11 @@
 		 * finger. Unset, the axis fits the IR.
 		 */
 		axisSpan?: number | null;
+		/** A tile's size (the Reverb tile, ADR-477): the picture without its words. */
+		compact?: boolean;
 	}
 
-	let { wave, status, category, attack, decay, size, shaping, color, isGhost = false, axisSpan = null }: Props = $props();
+	let { wave, status, category, attack, decay, size, shaping, color, isGhost = false, axisSpan = null, compact = false }: Props = $props();
 
 	const X0 = IR_X0;
 	const X1 = IR_X1;
@@ -82,7 +84,7 @@
 	);
 </script>
 
-<div class="ir-display" class:ghost={isGhost} style="--ink: {color.primary};" aria-hidden="true" bind:this={root}>
+<div class="ir-display" class:ghost={isGhost} class:compact style="--ink: {color.primary};" aria-hidden="true" bind:this={root}>
 	{#if shape}
 		<svg viewBox="0 0 1000 1000" preserveAspectRatio="none">
 			{#each ticks as t (t)}
@@ -156,6 +158,11 @@
 		stroke: var(--fg-tertiary);
 		stroke-width: 1;
 		vector-effect: non-scaling-stroke;
+	}
+	.compact .tick-label,
+	.compact .missing,
+	.compact .note {
+		display: none;
 	}
 	.tick-label {
 		position: absolute;
