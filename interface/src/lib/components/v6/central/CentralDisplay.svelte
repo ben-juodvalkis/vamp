@@ -10,6 +10,7 @@ import { logger } from '$lib/utils/logger';
 	import { useInstrumentSwap } from './useInstrumentSwap.svelte';
 	import { useClipSwap } from './useClipSwap.svelte';
 	import { provideSwapHost } from './swapHost.svelte';
+	import { provideValueBoxes } from './valueBox';
 	import type { Component } from 'svelte';
 
 	// Component loading state
@@ -60,6 +61,10 @@ import { logger } from '$lib/utils/logger';
 	// view places it itself, lying flat over a group of its own controls
 	// (`HostedSwapPill`, 2026-09-16), which claims the host and keeps the
 	// column down.
+	// Every slider in a central view is a value box: it sweeps over a fixed
+	// finger travel at least, its label upright (ADR-477).
+	provideValueBoxes();
+
 	const swap = useInstrumentSwap(() => viewType === 'instrument');
 	const clipSwap = useClipSwap(() => viewType === 'clip');
 	let pill = $derived(swap.model ? swap : clipSwap.model ? clipSwap : null);

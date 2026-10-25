@@ -126,7 +126,6 @@
             value={rateValue}
             title={rateLabel}
             orientation="vertical"
-            labelOrientation="horizontal"
             isGhost={fx.isGhost}
             color={fxInk}
             onInteraction={writeRate}

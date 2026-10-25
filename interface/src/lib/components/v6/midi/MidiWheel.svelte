@@ -1,6 +1,7 @@
 <script lang="ts">
   import { PITCH_COLOR, MOD_COLOR, type DeviceColorScheme } from '$lib/config/devicePresets';
   import { createSliderThrottle } from '$lib/utils/sliderThrottle';
+  import { VALUE_BOX_TRAVEL } from '../central/valueBox';
 
   interface Props {
     type: 'pitch' | 'modwheel';
@@ -60,9 +61,11 @@
     const deltaY = lastY - event.clientY; // Positive = up, negative = down
     lastY = event.clientY;
 
-    // Update value based on drag delta
+    // Update value based on drag delta: the whole range over the wheel's own
+    // height or the value-box travel, whichever is longer, so a half-height
+    // wheel is as fine as a full one (ADR-477).
     const rect = container.getBoundingClientRect();
-    const normalizedDelta = deltaY / rect.height;
+    const normalizedDelta = deltaY / Math.max(rect.height, VALUE_BOX_TRAVEL);
 
     if (type === 'pitch') {
       const valueDelta = normalizedDelta * PITCH_MAX;

@@ -5,8 +5,7 @@
   import SectionDivider from '../SectionDivider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
   import EnvelopeGroup from './EnvelopeGroup.svelte';
-  import MidiWheel from '../../midi/MidiWheel.svelte';
-  import { sendPitchWheel, sendModWheel } from '$lib/api/midiWheels';
+  import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -90,6 +89,12 @@
     selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, index), value);
   }
 
+  /** Live's own value, a box's readout while it is dragged (ADR-477); sent only while the UI writes. */
+  function display(index: number): string | undefined {
+    if (!device) return undefined;
+    return selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(device, index));
+  }
+
   // ---- engine and oscillator
 
   let aOn = $derived(read(MELD_ENGINE.A.on, 1) >= 0.5);
@@ -134,28 +139,32 @@
    */
   let chooser = $state<'osc' | 'filter' | null>(null);
 
-  // ---- envelopes: one bracket, Amp or Mod. The first slider is what that
-  // envelope ends in — the engine's volume, the mod envelope's peak.
+  // ---- envelopes: Amp over Mod, both in view (ADR-477). The first box of
+  // each is what that envelope ends in — the engine's volume, the mod
+  // envelope's peak.
 
-  let envView = $state<'amp' | 'mod'>('amp');
-
-  let envStages = $derived(
-    envView === 'amp'
-      ? [
-          { index: p.volume, title: 'Vol', icon: 'gain' as const, atRest: 0.635 },
-          { index: p.ampAttack, title: 'A', icon: 'attack' as const, atRest: 0.07 },
-          { index: p.ampDecay, title: 'D', icon: 'decay' as const, atRest: 0.35 },
-          { index: p.ampSustain, title: 'S', icon: 'sustain' as const, atRest: 1 },
-          { index: p.ampRelease, title: 'R', icon: 'release' as const, atRest: 0.19 }
-        ]
-      : [
-          { index: p.modPeak, title: 'Peak', icon: 'depth' as const, atRest: 1 },
-          { index: p.modAttack, title: 'A', icon: 'attack' as const, atRest: 0.07 },
-          { index: p.modDecay, title: 'D', icon: 'decay' as const, atRest: 0.35 },
-          { index: p.modSustain, title: 'S', icon: 'sustain' as const, atRest: 0 },
-          { index: p.modRelease, title: 'R', icon: 'release' as const, atRest: 0.19 }
-        ]
-  );
+  let envelopes = $derived([
+    {
+      title: 'Amp Envelope',
+      stages: [
+        { index: p.volume, title: 'Vol', icon: 'gain' as const, atRest: 0.635 },
+        { index: p.ampAttack, title: 'A', icon: 'attack' as const, atRest: 0.07 },
+        { index: p.ampDecay, title: 'D', icon: 'decay' as const, atRest: 0.35 },
+        { index: p.ampSustain, title: 'S', icon: 'sustain' as const, atRest: 1 },
+        { index: p.ampRelease, title: 'R', icon: 'release' as const, atRest: 0.19 }
+      ]
+    },
+    {
+      title: 'Mod Envelope',
+      stages: [
+        { index: p.modPeak, title: 'Peak', icon: 'depth' as const, atRest: 1 },
+        { index: p.modAttack, title: 'A', icon: 'attack' as const, atRest: 0.07 },
+        { index: p.modDecay, title: 'D', icon: 'decay' as const, atRest: 0.35 },
+        { index: p.modSustain, title: 'S', icon: 'sustain' as const, atRest: 0 },
+        { index: p.modRelease, title: 'R', icon: 'release' as const, atRest: 0.19 }
+      ]
+    }
+  ]);
 
   // ---- shared by both engines
 
@@ -293,41 +302,40 @@
         {/if}
       </div>
 
-      <!-- The engine's envelopes, Amp or Mod in one bracket: five sliders
-           whichever is up, so switching never moves the edges. -->
+      <!-- The engine's two envelopes, Amp over Mod, as value boxes
+           (ADR-477): both in view, so there is no Amp/Mod switch, and each
+           box half a fader's height and as fine. One bracket around the
+           pair, a seam between them. -->
       <div class="env-col flex-none min-h-0 flex gap-(--central-gap)">
-        <EnvelopeGroup ink={engineInk.primary} title={envView === 'amp' ? 'Amp Envelope' : 'Mod Envelope'}>
-          {#snippet header()}
-            <div class="device-segmented env-switch flex-none" style="--btn-tint: {engineInk.primary};">
-              {#each [['amp', 'Amp'], ['mod', 'Mod']] as [key, label]}
-                <button
-                  class="device-segment strip-step"
-                  class:active={envView === key}
-                  aria-pressed={envView === key}
-                  onclick={() => (envView = key as 'amp' | 'mod')}
-                >{label}</button>
+        <SectionDivider orientation="vertical" ink={engineInk.primary} />
+        <div class="flex-1 min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
+          {#each envelopes as envelope, i (envelope.title)}
+            {#if i > 0}<SectionDivider orientation="horizontal" ink={engineInk.primary} />{/if}
+            <EnvelopeGroup ink={engineInk.primary} title={envelope.title} edges="none">
+              {#each envelope.stages as stage (stage.index)}
+                <div class="env-slider min-h-0 h-full">
+                  <DeviceSlider
+                    value={read(stage.index, stage.atRest)}
+                    title={stage.title}
+                    icon={stage.icon}
+                    orientation="vertical"
+                    labelSize="small"
+                    color={engineInk}
+                    readout={display(stage.index)}
+                    onInteraction={(v) => write(stage.index, v)}
+                  />
+                </div>
               {/each}
-            </div>
-          {/snippet}
-          {#each envStages as stage (stage.index)}
-            <div class="env-slider min-h-0 h-full">
-              <DeviceSlider
-                value={read(stage.index, stage.atRest)}
-                title={stage.title}
-                icon={stage.icon}
-                orientation="vertical"
-                labelSize="small"
-                color={engineInk}
-                onInteraction={(v) => write(stage.index, v)}
-              />
-            </div>
+            </EnvelopeGroup>
           {/each}
-        </EnvelopeGroup>
+        </div>
+        <SectionDivider orientation="vertical" ink={engineInk.primary} />
       </div>
 
-      <!-- Drive and Voice Spread: Meld's own, after both engines. -->
-      <div class="global-col flex-none min-h-0 flex gap-(--central-gap)">
-        <div class="env-slider min-h-0 h-full">
+      <!-- Drive over Voice Spread: Meld's own, after both engines, two
+           boxes in one column (ADR-477). -->
+      <div class="global-col flex-none min-h-0 flex flex-col gap-(--central-gap)">
+        <div class="flex-1 min-h-0">
           <DeviceSlider
             value={drive}
             title="Drive"
@@ -335,10 +343,11 @@
             orientation="vertical"
             labelSize="small"
             color={meldInk}
+            readout={display(MELD_DRIVE)}
             onInteraction={(v) => write(MELD_DRIVE, v)}
           />
         </div>
-        <div class="env-slider min-h-0 h-full">
+        <div class="flex-1 min-h-0">
           <DeviceSlider
             value={spread}
             title="Spread"
@@ -346,6 +355,7 @@
             orientation="vertical"
             labelSize="small"
             color={meldInk}
+            readout={display(MELD_SPREAD)}
             onInteraction={(v) => write(MELD_SPREAD, v)}
           />
         </div>
@@ -353,13 +363,9 @@
 
       <SectionDivider orientation="vertical" ink={meldInk.primary} />
 
-      <div class="flex-none flex gap-(--central-gap) min-h-0">
-        <div class="wheel-col h-full">
-          <MidiWheel type="pitch" onInteraction={sendPitchWheel} color={pitchInk} />
-        </div>
-        <div class="wheel-col h-full">
-          <MidiWheel type="modwheel" onInteraction={sendModWheel} color={modInk} />
-        </div>
+      <!-- Pitch over Mod (ADR-477). -->
+      <div class="wheel-col flex-none min-h-0">
+        <MidiWheelsPanel pitchColor={pitchInk} modColor={modInk} />
       </div>
     </div>
   {:else}
@@ -444,16 +450,11 @@
     height: var(--height-touch);
   }
 
-  .octave-row,
-  .env-switch {
+  .octave-row {
     display: grid;
     height: var(--height-touch);
   }
-  .env-switch {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .octave-row .device-segment + .device-segment,
-  .env-switch .device-segment + .device-segment {
+  .octave-row .device-segment + .device-segment {
     border-top: 0;
     border-left: 1px solid var(--line-faint);
   }
@@ -473,14 +474,18 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Five stages and their four gaps, plus the bracket's own two seams and
-     the gap beside each — EnvelopeGroup draws them inside this column. */
+  /* Five stages and their four gaps, plus the bracket's two seams and the
+     gap beside each, all drawn inside this column. */
   .env-col {
     width: calc(5 * var(--meld-slider-w) + 6 * var(--central-gap) + 2px);
   }
   .env-slider {
     flex: 0 0 var(--meld-slider-w);
     width: var(--meld-slider-w);
+  }
+  /* The wheels' width: two stacked columns, read as one pair of pairs. */
+  .global-col {
+    width: var(--meld-wheel-w);
   }
   .wheel-col {
     width: var(--meld-wheel-w);

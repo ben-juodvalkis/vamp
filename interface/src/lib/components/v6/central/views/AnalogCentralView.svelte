@@ -2,8 +2,7 @@
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
-  import MidiWheel from '../../midi/MidiWheel.svelte';
-  import { sendPitchWheel, sendModWheel } from '$lib/api/midiWheels';
+  import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -15,7 +14,6 @@
   import HostedSwapPill from '../HostedSwapPill.svelte';
   import EnvelopeGroup from './EnvelopeGroup.svelte';
   import { analogFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
-  import constants from '$config/constants.json';
   import {
     ANALOG_VOICE,
     ANALOG_VOICES,
@@ -137,13 +135,10 @@
   }
 
   /**
-   * Every slider here is a value box (ADR-477): it sweeps its range over
-   * the same finger travel whatever its size, and shows Live's own value
-   * while it is dragged. Undefined until the UI has written the parameter:
-   * Live sends the string only then.
+   * Live's own value for a slider's readout (ADR-477), shown while it is
+   * dragged. Undefined until the UI has written the parameter: Live sends
+   * the string only then.
    */
-  const BOX_TRAVEL: number = constants.ui.gestures.valueBoxTravelPx;
-
   function display(index: number): string | undefined {
     if (!device) return undefined;
     return selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(device, index));
@@ -345,7 +340,6 @@
                 labelSize="small"
                 isGhost={!oscOn}
                 color={voiceInk}
-                travel={BOX_TRAVEL}
                 readout={display(p.subSync)}
                 onInteraction={(v) => writeOsc(p.subSync, v)}
               />
@@ -360,7 +354,6 @@
                   labelSize="small"
                   isGhost={!oscOn}
                   color={voiceInk}
-                  travel={BOX_TRAVEL}
                   readout={display(p.pw)}
                   onInteraction={(v) => writeOsc(p.pw, v)}
                 />
@@ -377,7 +370,6 @@
               labelSize="small"
               isGhost={!oscOn}
               color={voiceInk}
-              travel={BOX_TRAVEL}
               readout={display(p.level)}
               onInteraction={(v) => writeOsc(p.level, v)}
             />
@@ -398,11 +390,9 @@
               title="Noise"
               icon="noise"
               orientation="vertical"
-              labelOrientation="horizontal"
               labelSize="small"
               isGhost={!noiseOn}
               color={noiseInk}
-              travel={BOX_TRAVEL}
               readout={display(ANALOG_NOISE_LEVEL)}
               onInteraction={(v) => {
                 writeNorm(ANALOG_NOISE_LEVEL, v);
@@ -428,11 +418,9 @@
             title="Glide"
             icon="glide"
             orientation="vertical"
-            labelOrientation="horizontal"
             labelSize="small"
             isGhost={!glideOn}
             color={analogInk}
-            travel={BOX_TRAVEL}
             readout={display(ANALOG_GLIDE_TIME)}
             onInteraction={(v) => {
               writeSwitch(ANALOG_GLIDE_ON, v > SECTION_SWITCH_ON_ABOVE, glideOn);
@@ -527,14 +515,12 @@
                     title={stage.title}
                     icon={stage.icon}
                     orientation="vertical"
-                    labelOrientation="horizontal"
                     labelSize="small"
                     color={voiceInk}
                     min={stage.bipolar ? -1 : 0}
                     max={1}
                     centerOrigin={stage.bipolar}
                     centerValue={stage.bipolar ? 0 : undefined}
-                    travel={BOX_TRAVEL}
                     readout={display(stage.index)}
                     onInteraction={(v) => (stage.bipolar ? write(stage.index, Math.max(-1, Math.min(1, v))) : writeNorm(stage.index, v))}
                   />
@@ -547,9 +533,10 @@
 
       <SectionDivider orientation="vertical" ink={analogInk.primary} />
 
-      <!-- Mono / Poly and the two voicing switches over the wheels. Vibrato
-           is a switch here because its depth rides the mod wheel beside it. -->
-      <div class="flex-none flex flex-col gap-(--central-gap) min-h-0">
+      <!-- Mono / Poly and the two voicing switches over the wheels, Pitch
+           over Mod (ADR-477). Vibrato is a switch here because its depth
+           rides the mod wheel under it. -->
+      <div class="voicing-col flex-none flex flex-col gap-(--central-gap) min-h-0">
         <div class="grid grid-cols-2 gap-1 flex-none">
           <!-- Mono or Poly is one choice, a two-cell tab across the row;
                Uni and Vib under it are switches of their own. -->
@@ -560,13 +547,8 @@
           <button class="physical-button mode-button px-1 text-center" class:active={unisonOn} style="--btn-tint: {analogInk.primary};" aria-pressed={unisonOn} onclick={() => write(ANALOG_UNISON_ON, unisonOn ? 0 : 1)}>Uni</button>
           <button class="physical-button mode-button px-1 text-center" class:active={vibOn} style="--btn-tint: {analogInk.primary};" aria-pressed={vibOn} onclick={() => write(ANALOG_VIB_ON, vibOn ? 0 : 1)}>Vib</button>
         </div>
-        <div class="flex-1 min-h-0 flex gap-(--central-gap)">
-          <div class="wheel-col h-full">
-            <MidiWheel type="pitch" onInteraction={sendPitchWheel} color={pitchInk} />
-          </div>
-          <div class="wheel-col h-full">
-            <MidiWheel type="modwheel" onInteraction={sendModWheel} color={modInk} />
-          </div>
+        <div class="flex-1 min-h-0">
+          <MidiWheelsPanel pitchColor={pitchInk} modColor={modInk} />
         </div>
       </div>
     </div>
@@ -692,9 +674,12 @@
     font-weight: 600;
   }
 
-  .noise-col,
-  .wheel-col {
+  .noise-col {
     width: var(--analog-slider-w);
+  }
+  /* Two slider widths: the switches' 2 x 2 over the stacked wheels. */
+  .voicing-col {
+    width: calc(2 * var(--analog-slider-w) + var(--central-gap));
   }
   /* Five stages and their four gaps, plus the leading seam and the gap
      after it; the seam that closes the pair is the voicing column's. */
@@ -707,15 +692,15 @@
   }
 
   /* Smaller iPads (ADR-476). Every column but the filter's is fixed or
-     floored, so the filter took the whole shortfall. The wheels come down to
-     the 44px touch floor (Noise keeps 56px: its route chip, "→F1+F2", needs
-     it), and the voice card and the filter share what is left from their
+     floored, so the filter took the whole shortfall. The voicing column comes
+     down to two 44px touch floors (Noise keeps 56px: its route chip,
+     "→F1+F2", needs it), and the voice card and the filter share what is left from their
      12.9-inch widths, 196 and 249px: an 11-inch draws both at those, a
      10.2-inch gives up ~20% of each, and the voice card stops at 152px. After
      the rules it overrides, which it matches in specificity. */
   @media (max-width: 1365.98px) {
-    .wheel-col {
-      width: var(--height-touch);
+    .voicing-col {
+      width: calc(2 * var(--height-touch) + var(--central-gap));
     }
     .voice-card {
       flex: 0 1 196px;

@@ -53,6 +53,11 @@
    * Output and Mix, Redux at full height, and a Drum button where the Drum
    * cell holds the Chorus). `all`, the whole view with the Gain, is for a host that asks.
    *
+   * Every fader is a value box (ADR-477): it sweeps over a fixed finger
+   * travel at least, its label upright, and shows Live's value while it is
+   * dragged. The Saturator's Color, Output and Mix stand as three boxes in
+   * one column, which hands Redux the two columns they spread over.
+   *
    * NO {#if device} gate - always renders, handles its own state.
    * `part` is optional: left out, it follows the track (see above).
    */
@@ -259,9 +264,11 @@
   // (user, 2026-10-05). A pad spans two slider tracks, so it is exactly two
   // sliders and the gap between them. The Pedal and Guitar groups are
   // subgrids, so each of their controls is still one track of this grid;
-  // Output and Mix split a pad-wide column with the same gap.
+  // Color, Output and Mix stack in one slider-wide column (ADR-477), and
+  // Redux spans four slider tracks.
   const SLIDER = 'minmax(0, 1fr)';
   const XY = 'minmax(0, 1fr) minmax(0, 1fr)'; // two slider tracks; a pad spans both
+  const XY4 = `${XY} ${XY}`; // four slider tracks: Redux, the effects part's pad
   const SEAM = 'auto';
   const gridColumns = $derived(
     [
@@ -276,8 +283,8 @@
       ...(withEffects
         ? [
             SLIDER, SEAM, // shifter
-            'minmax(0, 3fr)', SEAM, // the Saturator's Color · Output · Mix
-            XY // redux, full height
+            SLIDER, SEAM, // the Saturator's Color over Output over Mix
+            XY4 // redux, full height
           ]
         : []),
       // the Drum button
@@ -303,9 +310,9 @@
         title="Drive"
         icon="drive"
         orientation="vertical"
-        labelOrientation="vertical"
         isGhost={fx.isGhost}
         color={pedalInk}
+        readout={fx.paramDisplay(PEDAL.drive)}
         min={0}
         max={1}
         onTap={() => fx.loadIfGhost()}
@@ -380,10 +387,10 @@
               title={wahTitle}
               icon="wah"
               orientation="vertical"
-              labelOrientation="horizontal"
               labelSize="small"
               isGhost={wah.isGhost}
               color={wahInk}
+              readout={wah.paramDisplay(WAH_PEDAL_MACRO)}
               onTap={() => wah.loadIfGhost()}
               onInteraction={(v) => wah.sendParam(WAH_PEDAL_MACRO, v * MACRO_MAX)}
             />
@@ -445,9 +452,9 @@
       title="Shifter"
       icon="ringmod"
       orientation="vertical"
-      labelOrientation="vertical"
       isGhost={shifter.isGhost}
       color={shifterInk}
+      readout={shifter.paramDisplay(SHIFTER_RM_COARSE)}
       min={0}
       max={SHIFTER_RM_MAX}
       onTap={() => armShifterLoad()}
@@ -458,10 +465,11 @@
     />
   </div>
 
-  <!-- COLUMN 5: the Saturator's Color, Output and Mix side by side, full
-       height, then Redux in a column of its own (2026-10-24, the user's
-       call; the faders sat over Redux before). The Saturator's Drive is the
-       grid slider that opened this view. -->
+  <!-- COLUMN 5: the Saturator's Color over Output over Mix, three value
+       boxes in one column (ADR-477; side by side at full height before),
+       then Redux in a column of its own (2026-10-24, the user's call; the
+       faders sat over Redux before). The Saturator's Drive is the grid
+       slider that opened this view. -->
   <SectionDivider orientation="vertical" ink={saturatorInk.primary} />
 
   <div class="column saturator-column">
@@ -473,9 +481,9 @@
             title={fader.title}
             icon={fader.icon}
             orientation="vertical"
-            labelOrientation="vertical"
             isGhost={saturator.isGhost}
             color={saturatorInk}
+            readout={saturator.paramDisplay(fader.index)}
             min={0}
             max={1}
             onTap={() => saturator.loadIfGhost()}
@@ -488,7 +496,7 @@
 
   <SectionDivider orientation="vertical" ink={reduxInk} />
 
-  <div class="column pad redux-column" class:slot-ghost={redux.isGhost}>
+  <div class="column pad-wide redux-column" class:slot-ghost={redux.isGhost}>
     <div class="xy-wrapper">
       <ReduxControl device={redux.device} icon="redux" />
     </div>
@@ -532,8 +540,8 @@
   .pedal-central-layout {
     display: grid;
     /* pedal XY over pedal-type tabs | guitar (gain over wah ·
-       spring/room pad over tremolo pad) | shifter | saturator output · mix
-       over redux.
+       spring/room pad over tremolo pad) | shifter | saturator color over
+       output over mix | redux.
        grid-template-columns comes from `gridColumns`: a slider is one
        share of the width, a pad two, a seam its hairline. */
     height: 100%;
@@ -557,6 +565,9 @@
 
   .pad {
     grid-column: span 2;
+  }
+  .pad-wide {
+    grid-column: span 4;
   }
 
   /* The Pedal on the view's own tracks (subgrid): Drive on one, at the left
@@ -621,14 +632,13 @@
     font-weight: var(--font-weight-medium);
   }
 
-  /* Color · Output · Mix at full height; the three faders split the
-     column's width with the same gap as the grid's, so each is one slider
-     wide. */
+  /* Color over Output over Mix: three value boxes sharing one slider-wide
+     column's height, with the grid's gap between them. */
   .saturator-faders {
     flex: 1 1 0;
     min-height: 0;
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     gap: var(--central-gap);
   }
 

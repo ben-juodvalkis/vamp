@@ -16,9 +16,10 @@
 	 * Quantize and amounts), with the same focus fallback Q uses: the clip
 	 * running on the selected track.
 	 *
-	 * Sliders either side of the tiles: Random and Velocity on the left,
-	 * Amount on the right — `random_amount`, `velocity_amount`,
-	 * `timing_amount` on the clip's groove. A clip with no groove takes the
+	 * Sliders either side of the tiles: Random over Velocity on the left, two
+	 * value boxes in one column (ADR-477), Amount on the right —
+	 * `random_amount`, `velocity_amount`, `timing_amount` on the clip's
+	 * groove, each 0-100 %, which a box reads out while it is dragged. A clip with no groove takes the
 	 * first tile on its first move, as Q does (`services/grooveChooser`). The lit tile's picture moves from
 	 * straight (Amount 0) to the file's pattern (Amount 100); the others show
 	 * the whole pattern. A file Live stores in its binary format has no
@@ -98,6 +99,11 @@
 		setClipGrooveFile(path, name);
 	}
 
+	/** A groove amount as Live shows it: whole percent. */
+	function percent(amount: number): string {
+		return `${Math.round(amount)} %`;
+	}
+
 	function write(set: (clipPath: string, value: number) => void, value: number) {
 		const path = targetClip();
 		if (!path) return;
@@ -109,25 +115,27 @@
 </script>
 
 <div class="groove-view p-(--central-inset)" style:--groove-ink={scheme.primary} data-debug="groove-view">
-	<div class="slider" class:dim={!hasClip}>
-		<DeviceSlider
-			value={clipGrooveStore.randomAmount / 100}
-			labelOrientation="horizontal"
-			title="Random"
-			icon="dice"
-			color={scheme}
-			onInteraction={(v) => write(setClipGrooveRandomAmount, v * 100)}
-		/>
-	</div>
-	<div class="slider" class:dim={!hasClip}>
-		<DeviceSlider
-			value={clipGrooveStore.velocityAmount / 100}
-			labelOrientation="horizontal"
-			title="Velocity"
-			icon="velocity"
-			color={scheme}
-			onInteraction={(v) => write(setClipGrooveVelocityAmount, v * 100)}
-		/>
+	<div class="slider-pair">
+		<div class="slider" class:dim={!hasClip}>
+			<DeviceSlider
+				value={clipGrooveStore.randomAmount / 100}
+				title="Random"
+				icon="dice"
+				color={scheme}
+				readout={percent(clipGrooveStore.randomAmount)}
+				onInteraction={(v) => write(setClipGrooveRandomAmount, v * 100)}
+			/>
+		</div>
+		<div class="slider" class:dim={!hasClip}>
+			<DeviceSlider
+				value={clipGrooveStore.velocityAmount / 100}
+				title="Velocity"
+				icon="velocity"
+				color={scheme}
+				readout={percent(clipGrooveStore.velocityAmount)}
+				onInteraction={(v) => write(setClipGrooveVelocityAmount, v * 100)}
+			/>
+		</div>
 	</div>
 	<div class="seam"><SectionDivider orientation="vertical" /></div>
 
@@ -179,10 +187,10 @@
 	<div class="slider" class:dim={!hasClip}>
 		<DeviceSlider
 			value={clipGrooveStore.timingAmount / 100}
-			labelOrientation="horizontal"
 			title="Amount"
 			icon="swing"
 			color={scheme}
+			readout={percent(clipGrooveStore.timingAmount)}
 			onInteraction={(v) => write(setClipGrooveTimingAmount, v * 100)}
 		/>
 	</div>
@@ -191,7 +199,7 @@
 <style>
 	.groove-view {
 		display: grid;
-		grid-template-columns: repeat(2, 5.5rem) auto minmax(0, 1fr) auto 5.5rem;
+		grid-template-columns: 5.5rem auto minmax(0, 1fr) auto 5.5rem;
 		grid-template-rows: minmax(0, 1fr);
 		gap: var(--central-gap);
 		height: 100%;
@@ -208,6 +216,16 @@
 	}
 	.slider {
 		flex-direction: column;
+	}
+	.slider-pair {
+		display: flex;
+		flex-direction: column;
+		gap: var(--central-gap);
+		min-height: 0;
+		min-width: 0;
+	}
+	.slider-pair .slider {
+		flex: 1 1 0;
 	}
 	.dim {
 		opacity: 0.45;

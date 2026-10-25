@@ -187,13 +187,15 @@
     selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, 2), offbeatOn ? 0 : MACRO_MAX);
   }
 
-  // The picker takes the row's width after the sliders, each slider keeping
-  // a twelfth of it — so a rack with no other macros is all
-  // picker. Its shape is fixed at 3 x 2, so nothing is measured: Offbeat and
-  // Auto keep the same corners at every width.
+  // The picker takes the row's width after the macros, each column of
+  // macro boxes keeping a twelfth of it — so a rack with no other macros is
+  // all picker. The boxes stand two to a column (ADR-477), a lone one full
+  // height. The picker's shape is fixed at 3 x 2, so nothing is measured:
+  // Offbeat and Auto keep the same corners at every width.
   const ROW_UNITS = 12;
-  let sliderUnits = $derived(controlLayout.length);
-  let gridGrow = $derived(Math.max(ROW_UNITS - sliderUnits, 6));
+  let macroRows = $derived(controlLayout.length > 1 ? 2 : 1);
+  let macroColumns = $derived(Math.ceil(controlLayout.length / macroRows));
+  let gridGrow = $derived(Math.max(ROW_UNITS - macroColumns, 6));
 </script>
 
 <div class="h-full w-full flex flex-col" data-density="compact">
@@ -264,20 +266,25 @@
         <SectionDivider orientation="vertical" />
       {/if}
 
-      <!-- A slider for each named macro 3-16 -->
-      {#each controlLayout as control, i}
-        <div class="control-slot slider-slot">
-          <DeviceSlider
-            value={getNormalizedValue(control.macroIndex)}
-            title={control.name}
-            icon={glyphForName(control.name)}
-            orientation="vertical"
-            labelOrientation="horizontal"
-            color={ctlInk(i)}
-            onInteraction={(val) => handleSliderChange(control.macroIndex, val)}
-          />
+      <!-- A value box for each named macro 3-16, two to a column, filled
+           column by column (ADR-477). -->
+      {#if controlLayout.length > 0}
+        <div class="macro-grid" style="flex-grow: {macroColumns}; grid-template-rows: repeat({macroRows}, minmax(0, 1fr));">
+          {#each controlLayout as control, i}
+            <div class="control-slot">
+              <DeviceSlider
+                value={getNormalizedValue(control.macroIndex)}
+                title={control.name}
+                icon={glyphForName(control.name)}
+                orientation="vertical"
+                color={ctlInk(i)}
+                readout={device ? selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(device, control.macroIndex)) : undefined}
+                onInteraction={(val) => handleSliderChange(control.macroIndex, val)}
+              />
+            </div>
+          {/each}
         </div>
-      {/each}
+      {/if}
 
     </div>
   {:else}
@@ -373,9 +380,15 @@
     flex-shrink: 1;
   }
 
-  .slider-slot {
+  /* flex-grow and the row count are set inline from the macro count. */
+  .macro-grid {
     flex: 1 1 0;
-    min-width: 40px;
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: var(--central-gap);
   }
 
 

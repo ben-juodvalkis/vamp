@@ -87,18 +87,19 @@
 
 {#if audioEffectRack}
 	<div class="audio-effect-rack-view" data-density="compact">
-		<!-- Dynamic Controls -->
+		<!-- One value box per named macro, two to a column, filled column by
+		     column (ADR-477), as the Instrument Rack's; a lone one full height. -->
 		{#if controlLayout.length > 0}
-			<div class="controls-panel">
+			<div class="controls-panel" style="grid-template-rows: repeat({controlLayout.length > 1 ? 2 : 1}, minmax(0, 1fr));">
 				{#each controlLayout as control}
-					<div class="control-slot slider-slot">
+					<div class="control-slot">
 						<DeviceSlider
 							value={getNormalizedValue(control.macroIndex)}
 							title={control.name}
 							icon={glyphForName(control.name)}
 							orientation="vertical"
-							labelOrientation="horizontal"
 							color={effectiveColor}
+							readout={selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(audioEffectRack, control.macroIndex))}
 							onInteraction={(val) => handleSliderChange(control.macroIndex, val)}
 						/>
 					</div>
@@ -138,11 +139,13 @@
 		gap: var(--central-gap);
 	}
 
-	/* Dynamic controls layout */
+	/* The named macros: rows set inline, filled column by column, every
+	   column one share (ADR-477). */
 	.controls-panel {
 		flex: 1;
-		display: flex;
-		flex-direction: row;
+		display: grid;
+		grid-auto-flow: column;
+		grid-auto-columns: minmax(0, 1fr);
 		gap: var(--central-gap);
 		min-height: 0;
 		overflow: hidden;
@@ -154,11 +157,6 @@
 		min-width: 0;
 		height: 100%;
 		flex-shrink: 1;
-	}
-
-	.slider-slot {
-		flex: 1 1 0;
-		min-width: 40px;
 	}
 
 

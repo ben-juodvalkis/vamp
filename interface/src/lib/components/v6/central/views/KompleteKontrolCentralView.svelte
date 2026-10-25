@@ -2,8 +2,7 @@
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import { glyphForName } from '$lib/config/controlGlyphMap';
-  import MidiWheel from '../../midi/MidiWheel.svelte';
-  import { sendPitchWheel, sendModWheel } from '$lib/api/midiWheels';
+  import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -80,15 +79,6 @@
   // Komplete Kontrol has 8 macro parameters (indices 1-8)
   const SLIDER_PARAMS = [1, 2, 3, 4, 5, 6, 7, 8];
 
-  // MIDI wheel handlers
-  function handlePitchChange(value: number) {
-    sendPitchWheel(value);
-  }
-
-  function handleModChange(value: number) {
-    sendModWheel(value);
-  }
-
   // MIDI wheel colors
   let pitchInk = $derived(trackScheme ?? {
     primary: trackInk(PITCH_COLOR.primary, paintModeReactive()),
@@ -104,17 +94,19 @@
 
 <div class="h-full w-full flex flex-col" data-density="compact">
   {#if instrument}
-    <!-- 8 sliders + 2 MIDI wheels in equal-width flex layout -->
+    <!-- The 8 parameters as value boxes, two rows of four filled column by
+         column, then the MIDI wheels, Pitch over Mod (ADR-477). -->
     <div class="controls-panel">
+      <div class="param-grid">
       {#each SLIDER_PARAMS as paramIndex (paramIndex)}
         {@const name = parameterNames[paramIndex - 1] ? cleanParameterName(parameterNames[paramIndex - 1]) : `Param ${paramIndex}`}
-        <div class="control-slot slider-slot">
+        <div class="control-slot">
           <DeviceSlider
             value={getParamValue(paramIndex)}
-            labelOrientation="horizontal"
             title={name}
             icon={glyphForName(name)}
             color={kompleteKontrolInk}
+            readout={device ? selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(device, paramIndex)) : undefined}
             onInteraction={(value) => {
               if (!device) return;
               selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, paramIndex), value);
@@ -123,20 +115,11 @@
         </div>
       {/each}
 
-      <!-- MIDI Wheels as individual slider-width controls -->
-      <div class="control-slot slider-slot">
-        <MidiWheel
-          type="pitch"
-          onInteraction={handlePitchChange}
-          color={pitchInk}
-        />
       </div>
-      <div class="control-slot slider-slot">
-        <MidiWheel
-          type="modwheel"
-          onInteraction={handleModChange}
-          color={modInk}
-        />
+
+      <!-- MIDI wheels, one column the width of a parameter column -->
+      <div class="wheel-slot">
+        <MidiWheelsPanel pitchColor={pitchInk} modColor={modInk} />
       </div>
     </div>
   {:else}
@@ -164,8 +147,22 @@
     flex-shrink: 1;
   }
 
-  .slider-slot {
+  /* Two rows of four, column by column: a parameter's neighbour sits under
+     it. Four shares wide, beside the wheels' one. */
+  .param-grid {
+    flex: 4 1 calc(3 * var(--central-gap));
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: var(--central-gap);
+  }
+
+  .wheel-slot {
     flex: 1 1 0;
     min-width: 40px;
+    min-height: 0;
   }
 </style>

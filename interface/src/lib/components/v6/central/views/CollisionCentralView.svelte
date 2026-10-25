@@ -2,8 +2,7 @@
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import SectionDivider from '../SectionDivider.svelte';
-  import MidiWheel from '../../midi/MidiWheel.svelte';
-  import { sendPitchWheel, sendModWheel } from '$lib/api/midiWheels';
+  import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -49,15 +48,6 @@
     secondary: MOD_COLOR.secondary,
     accent: trackInk(MOD_COLOR.accent, paintModeReactive())
   });
-
-  // MIDI wheel handlers
-  function handlePitchChange(value: number) {
-    sendPitchWheel(value);
-  }
-
-  function handleModChange(value: number) {
-    sendModWheel(value);
-  }
 
   // Resonator on/off state (param 32: Res1, param 65: Res2)
   let res1On = $derived(device ? (selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 32)) ?? 1) > 0.5 : true);
@@ -130,20 +120,9 @@
       <!-- The wheels send MIDI, not Collision parameters: a seam divides them
            from the device, as in every instrument view (2026-09-13). -->
       <SectionDivider orientation="vertical" />
-      <!-- MIDI wheels -->
-      <div class="h-full w-24 flex-none">
-        <MidiWheel
-          type="pitch"
-          onInteraction={handlePitchChange}
-          color={pitchInk}
-        />
-      </div>
-      <div class="h-full w-24 flex-none">
-        <MidiWheel
-          type="modwheel"
-          onInteraction={handleModChange}
-          color={modInk}
-        />
+      <!-- MIDI wheels, Pitch over Mod (ADR-477) -->
+      <div class="h-full w-14 flex-none">
+        <MidiWheelsPanel pitchColor={pitchInk} modColor={modInk} />
       </div>
     </div>
   {:else}

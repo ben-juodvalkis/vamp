@@ -2,8 +2,7 @@
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
-  import MidiWheel from '../../midi/MidiWheel.svelte';
-  import { sendPitchWheel, sendModWheel } from '$lib/api/midiWheels';
+  import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -88,12 +87,10 @@
     accent: trackInk(MOD_COLOR.accent, paintModeReactive())
   });
 
-  function handlePitchChange(value: number) {
-    sendPitchWheel(value);
-  }
-
-  function handleModChange(value: number) {
-    sendModWheel(value);
+  /** Live's own value, a box's readout while it is dragged (ADR-477); sent only while the UI writes. */
+  function display(index: number): string | undefined {
+    if (!device || index < 0) return undefined;
+    return selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(device, index));
   }
 
   const OSC1_WAVE_OPTIONS: { value: number; label: string }[] = [
@@ -585,8 +582,10 @@
       <!-- No seam between the oscillator card and the mixer (user,
            2026-09-28): they are one sources group, which the source
            colours already say, and the seam's width went to the pads. -->
+      <!-- Stacked, one column of three boxes (ADR-477): still the three
+           sources in one place, and two columns' width went to the pads. -->
       <div class="drift-card mixer-card flex-none min-h-0 flex flex-col gap-2" style="--drift-ink: {driftInk.primary};">
-        <div class="flex-1 min-h-0 flex gap-(--central-gap)">
+        <div class="flex-1 min-h-0 flex flex-col gap-(--central-gap)">
           <!-- Touching either oscillator's level brings ITS card up on the
                left (`onDown`, so the switch lands on the touch rather than
                on the first frame a finger has moved). The card is what says
@@ -601,6 +600,7 @@
               labelSize="small"
               isGhost={!osc1On}
               color={osc1Ink}
+              readout={display(29)}
               onDown={() => (oscTab = 1)}
               onInteraction={(value) => writeOsc(1, 29, value)}
             />
@@ -614,6 +614,7 @@
               labelSize="small"
               isGhost={!osc2On}
               color={osc2Ink}
+              readout={display(30)}
               onDown={() => (oscTab = 2)}
               onInteraction={(value) => writeOsc(2, 30, value)}
             />
@@ -627,6 +628,7 @@
               labelSize="small"
               isGhost={!noiseOn}
               color={noiseInk}
+              readout={display(33)}
               onInteraction={(value) => {
                 if (!device) return;
                 selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, 33), value);
@@ -695,9 +697,9 @@
            was the only fixed-width block in the row with height to spare. -->
       <div class="drift-card voicing-card flex-none min-h-0 flex flex-col gap-2" style="--drift-ink: {driftInk.primary};">
         <!-- The mode's own slider, absent in Poly (it has nothing to write
-             there). The card is as wide as the sliders it draws, so
-             switching mode moves the pads' right edge. -->
-        <div class="flex-1 min-h-0 flex gap-(--central-gap)">
+             there), Glide, then Drift: boxes stacked in one column
+             (ADR-477), so a mode change moves no edge. -->
+        <div class="flex-1 min-h-0 flex flex-col gap-(--central-gap)">
           {#if voiceMode !== 0}
           <div class="voicing-slider min-h-0">
             <DeviceSlider
@@ -708,6 +710,7 @@
               labelSize="small"
               isGhost={voiceMode === 0}
               color={driftInk}
+              readout={display(voicingSliderParam)}
               onInteraction={(value) => {
                 if (!device || voicingSliderParam < 0) return;
                 selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, voicingSliderParam), value);
@@ -727,6 +730,7 @@
                 orientation="vertical"
                 labelSize="small"
                 color={driftInk}
+                readout={display(GLIDE)}
                 onInteraction={writeGlide}
               />
             </div>
@@ -739,6 +743,7 @@
               orientation="vertical"
               labelSize="small"
               color={driftInk}
+              readout={display(60)}
               onInteraction={(value) => {
                 if (!device) return;
                 selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, 60), value);
@@ -750,11 +755,11 @@
 
       <SectionDivider orientation="vertical" ink={driftInk.primary} />
 
-      <!-- Voice mode over the MIDI wheels. The four modes choose what the
-           voicing group means, so they are not one of its controls; up
-           here they sit across the two wheel columns, which are the only
-           fixed-width block in the row with height to spare. -->
-      <div class="flex-none flex flex-col gap-(--central-gap) min-h-0">
+      <!-- Voice mode over the MIDI wheels, Pitch over Mod (ADR-477). The
+           four modes choose what the voicing group means, so they are not
+           one of its controls; up here they sit over the wheels, the one
+           block in the row with height to spare. -->
+      <div class="mode-col flex-none flex flex-col gap-(--central-gap) min-h-0">
         <!-- One pick-one tab, two by two. -->
         <div class="device-segmented seg-grid grid grid-cols-2 flex-none" style="--btn-tint: {driftInk.primary};">
           {#each VOICE_MODE_OPTIONS as option}
@@ -770,21 +775,8 @@
             </button>
           {/each}
         </div>
-        <div class="flex-1 min-h-0 flex gap-(--central-gap)">
-          <div class="wheel-col h-full">
-            <MidiWheel
-              type="pitch"
-              onInteraction={handlePitchChange}
-              color={pitchInk}
-            />
-          </div>
-          <div class="wheel-col h-full">
-            <MidiWheel
-              type="modwheel"
-              onInteraction={handleModChange}
-              color={modInk}
-            />
-          </div>
+        <div class="flex-1 min-h-0">
+          <MidiWheelsPanel pitchColor={pitchInk} modColor={modInk} />
         </div>
       </div>
     </div>
@@ -885,27 +877,18 @@
     font-size: 0.75rem;
     font-weight: 600;
   }
-  /* The voicing sliders are pinned like every other (user, 2026-09-28).
-     They used to divide a card sized for Mono's three, which drew Poly's
-     two at 92px beside the mixer's 56. The card is now as wide as its
-     sliders, so a mode change moves the Time/Filter column's edge. */
-  /* The explicit width is for WebKit: it sizes the content-wide card from
-     its sliders' widths, not their flex-basis, so without one the card
-     came out narrow on the iPad and the sliders spilled under the wheels. */
+  /* The level mixer and the voicing group are value boxes stacked in a
+     column at the view's slider width (ADR-477), sharing its height. The
+     explicit card widths are for WebKit, which sized a content-wide card
+     from its sliders and spilled them under the wheels without one. */
+  .mixer-slider,
   .voicing-slider {
-    flex: 0 0 var(--drift-slider-w);
+    flex: 1 1 0;
+    min-height: 0;
+  }
+  .mixer-card,
+  .voicing-card {
     width: var(--drift-slider-w);
-  }
-  /* The level mixer: three channels at the view's slider width, and the
-     column exactly as wide as them — three sliders, TWO gaps. It said four
-     gaps while it was a card with 8px of padding each side; once the frame
-     came off, those 16px were slack that piled up after Noise and put the
-     seam 28px from it and 12px from Time (measured, 2026-09-14). */
-  .mixer-slider {
-    flex: 0 0 var(--drift-slider-w);
-  }
-  .mixer-card {
-    width: calc(3 * var(--drift-slider-w) + 2 * var(--central-gap));
   }
   /* The strip owns the pointer; the steps are its face. Keyboard focus
      and Enter still reach them. */
@@ -920,8 +903,9 @@
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
-  .wheel-col {
-    width: var(--drift-slider-w);
+  /* Two slider widths: the 2 x 2 mode tab over the stacked wheels. */
+  .mode-col {
+    width: calc(2 * var(--drift-slider-w) + var(--central-gap));
   }
   .mode-button {
     min-height: var(--height-touch);

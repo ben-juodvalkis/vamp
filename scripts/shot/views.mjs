@@ -392,11 +392,11 @@ export const TOURS = {
 			{ name: 'drumrack-rack-macros', description: 'Drum Rack, nested-rack kit (Ethnic)', steps: [openInstrument(9)] },
 			{ name: 'drumrack-sampler-kit', description: 'Drum Rack, Sampler kit (Autumn)', steps: [openInstrument(10)] },
 			{ name: 'inst-wavetable', description: 'Wavetable (Bass)', steps: [openInstrument(1)] },
-			// Osc 2 up (off in this patch, so ghosted) and Envelope 2 showing.
+			// Osc 2 up (off in this patch, so ghosted); both envelopes are always in view (ADR-477).
 			{
 				name: 'inst-wavetable-osc2',
-				description: 'Wavetable (Bass), Osc 2 and Envelope 2',
-				steps: [openInstrument(1), { click: '.osc-badge' }, { click: '.env-switch .device-segment:last-child' }]
+				description: 'Wavetable (Bass), Osc 2',
+				steps: [openInstrument(1), { click: '.osc-badge' }]
 			},
 			// Filter 2 up.
 			{
@@ -503,18 +503,19 @@ function instrumentSwapStates() {
 		['collision', 'Collision', 'Collision'],
 		['electric', 'Electric', 'LoungeLizard'],
 		['meld', 'Meld', 'InstrumentMeld', meld],
-		// Engine B up, Mod envelope showing: the other half, in blue.
-		['meld-engine-b', 'Meld', 'InstrumentMeld', meld,
-			[{ click: '.osc-badge' }, { click: '.env-switch .device-segment:last-child' }]],
+		// Engine B up: the other half, in blue (both its envelopes in view, ADR-477).
+		['meld-engine-b', 'Meld', 'InstrumentMeld', meld, [{ click: '.osc-badge' }]],
 		// The oscillator type grid open over the Osc pad.
 		['meld-osc-types', 'Meld', 'InstrumentMeld', meld, [{ click: '.engine-head .chooser-name' }]],
 		// Plate picked from the filter grid: the second macro reads Ratio.
 		['meld-filter-plate', 'Meld', 'InstrumentMeld', meld,
 			[{ click: '.filter-col .chooser-name' }, { click: '.filter-types .type-option:nth-child(16)' }]],
+		// Amp and Filter envelopes both in view (ADR-477): the Filter row takes
+		// the track's ink, not Amp's orange. (An omnisphere-filter state flipped
+		// the switch that showed one or the other until then.)
 		['omnisphere', 'Omnisphere', 'AuPluginDevice'],
-		// Filter up: the switch and sliders take the track's ink, not Amp's orange.
-		['omnisphere-filter', 'Omnisphere', 'AuPluginDevice', undefined,
-			[{ click: '.omni-env-switch .device-segment:last-child' }]],
+		// A plug-in named Komplete Kontrol: eight parameter boxes, two rows (ADR-477).
+		['komplete-kontrol', 'Komplete Kontrol', 'AuPluginDevice'],
 		// The Sampler as the rig lists it (read off a running Sampler,
 		// 2026-09-27): what the view binds by name, at the ranges and values
 		// Live reported — Osc and the pitch envelope off, so only their

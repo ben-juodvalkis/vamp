@@ -3,8 +3,9 @@
 	 * GlitchCentralView — the Glitch tile's view (2026-10-15, the user's
 	 * design). GlitchLoop's Play page, mirrored: the preset bank, the loop
 	 * macros and Drive × Space on four XY pads, two by two (Length × Reach,
-	 * Tone × Repeats over Drive × Space, Drift × Chaos), and Duck, Glue and
-	 * Clock on full-height sliders. Mix is the Glitch tile's slider, so the
+	 * Tone × Repeats over Drive × Space, Drift × Chaos), Duck over Glue as
+	 * two value boxes and Clock at full height (ADR-477). Mix is the Glitch
+	 * tile's slider, so the
 	 * view leaves it out, and there is no Freeze or Mod Hold (the user's
 	 * calls). Pairs agreed with the glitchloop side: what one hand moves
 	 * together; Duck and Glue stay apart. A bipolar macro's noon is the
@@ -170,35 +171,36 @@
 			{/each}
 
 			<!-- Clock, full height, in its detents. -->
-			<div class="fx-slider" style:grid-column={8} class:slot-ghost={glitchLoop.isGhost}>
+			<div class="fx-slider" style:grid-column={7} class:slot-ghost={glitchLoop.isGhost}>
 				<DeviceSlider
 					value={clockUnit}
 					title="Clock"
 					orientation="vertical"
-					labelOrientation="horizontal"
 					labelSize="small"
 					isGhost={glitchLoop.isGhost}
 					color={glitchInk}
 					min={0}
 					max={1}
+					readout={glitchLoop.paramDisplay(gIndex('clock'))}
 					onTap={() => glitchLoop.loadIfGhost()}
 					onInteraction={(t) => sendClock(t)}
 				/>
 			</div>
 
-			<!-- Duck and Glue, full height. -->
-			{#each [{ key: 'duck', title: 'Duck', col: 6 }, { key: 'glue', title: 'Glue', col: 7 }] as const as s}
-				<div class="fx-slider" style:grid-column={s.col} class:slot-ghost={glitchLoop.isGhost}>
+			<!-- Duck over Glue, two value boxes in one column (ADR-477): two
+			     controls, not a pair on one pad. -->
+			{#each [{ key: 'duck', title: 'Duck', row: 1 }, { key: 'glue', title: 'Glue', row: 2 }] as const as s}
+				<div class="fx-box" style:grid-column={6} style:grid-row={s.row} class:slot-ghost={glitchLoop.isGhost}>
 					<DeviceSlider
 						value={unit(s.key, 0)}
 						title={s.title}
 						orientation="vertical"
-						labelOrientation="horizontal"
 						labelSize="small"
 						isGhost={glitchLoop.isGhost}
 						color={glitchInk}
 						min={0}
 						max={1}
+						readout={glitchLoop.paramDisplay(gIndex(s.key))}
 						onTap={() => glitchLoop.loadIfGhost()}
 						onInteraction={(t) => send(s.key, t)}
 					/>
@@ -240,14 +242,16 @@
 		color: var(--panel-ink);
 	}
 
-	/* presets (two columns of three) · four pads two by two (two tracks each) · Duck · Glue ·
-	   Clock, over two rows. */
+	/* presets (two columns of three) · four pads two by two (two tracks each)
+	   · Duck over Glue · Clock, over two rows. The pad tracks are 1.25fr: the
+	   column Duck and Glue freed when they stacked (ADR-477) went to the pads,
+	   so the slider columns keep the width they had. */
 	.glitch-body {
 		flex: 1;
 		min-height: 0;
 		min-width: 0;
 		display: grid;
-		grid-template-columns: minmax(0, 2.4fr) repeat(7, minmax(0, 1fr));
+		grid-template-columns: minmax(0, 2.4fr) repeat(4, minmax(0, 1.25fr)) repeat(2, minmax(0, 1fr));
 		grid-template-rows: repeat(2, minmax(0, 1fr));
 		gap: var(--central-gap);
 	}
@@ -276,7 +280,8 @@
 	}
 
 	.pad,
-	.fx-slider {
+	.fx-slider,
+	.fx-box {
 		min-width: 0;
 		min-height: 0;
 		display: flex;

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy, type Snippet } from 'svelte';
   import ControlGlyph, { type ControlGlyphName } from './ControlGlyph.svelte';
+  import { inValueBoxScope, VALUE_BOX_TRAVEL } from '../central/valueBox';
   import { familyScheme, type DeviceColorScheme } from '$lib/config/devicePresets';
   import MeterVisualization from '$lib/components/v6/looping/MeterVisualizationV6.svelte';
   import { createSliderThrottle } from '$lib/utils/sliderThrottle';
@@ -38,7 +39,9 @@
     onDown?: () => void;
     isGhost?: boolean;
     orientation?: 'vertical' | 'horizontal';
-    labelOrientation?: 'vertical' | 'horizontal' | 'auto';  // 'auto' follows slider orientation
+    // 'auto' follows the slider's orientation. Unset: 'auto', or upright in a
+    // central view, where a slider is a value box (ADR-477).
+    labelOrientation?: 'vertical' | 'horizontal' | 'auto';
     labelSize?: 'small' | 'large';  // 'small' for FX grid, 'large' for central views
     color?: DeviceColorScheme;
     min?: number;
@@ -49,8 +52,9 @@
     // Below 1 for a wide rail that wants finer moves (Echo's Input, 80 dB).
     sensitivity?: number;
     // A value box (ADR-477): the finger travel, in px, that sweeps the whole
-    // rail, in place of the slider's own length. A short box is then as fine
-    // as a tall slider. Unset, a full-length drag sweeps the rail, as before.
+    // rail when the slider is shorter than it, so a short box is as fine as a
+    // tall slider; a longer slider sweeps over its own length. Unset: the
+    // value-box travel in a central view, else the slider's own length.
     travel?: number;
     // Shown in place of the title while a finger drags it: Live's own value
     // ("12 ms", "-6.0 dB"), which arrives only while the UI is writing it.
@@ -76,7 +80,7 @@
     onDown,
     isGhost = false,
     orientation = 'vertical',
-    labelOrientation = 'auto',
+    labelOrientation,
     labelSize = 'large',
     color = familyScheme('utility'),
     min = 0,
@@ -93,9 +97,14 @@
   }: Props = $props();
 
   // Resolve label orientation - 'auto' follows slider orientation
-  let effectiveLabelOrientation = $derived(
-    labelOrientation === 'auto' ? orientation : labelOrientation
-  );
+  // A central view makes every slider a value box (ADR-477, `valueBox.ts`).
+  const valueBox = inValueBoxScope();
+  let effectiveTravel = $derived(travel ?? (valueBox ? VALUE_BOX_TRAVEL : undefined));
+
+  let effectiveLabelOrientation = $derived.by(() => {
+    const asked = labelOrientation ?? (valueBox ? 'horizontal' : 'auto');
+    return asked === 'auto' ? orientation : asked;
+  });
   // The label fits along the axis its text runs on (app.css `.fit-label`).
   let fitClass = $derived(effectiveLabelOrientation === 'vertical' ? 'fit-label-v' : 'fit-label');
 
@@ -235,7 +244,8 @@
 
     // Calculate delta from start position
     const currentPointer = orientation === 'vertical' ? event.clientY : event.clientX;
-    const size = travel ?? (orientation === 'vertical' ? rect.height : rect.width);
+    const length = orientation === 'vertical' ? rect.height : rect.width;
+    const size = effectiveTravel ? Math.max(length, effectiveTravel) : length;
     const delta = ((currentPointer - startPointer) / size) * sensitivity;
 
     // Apply delta to start value (invert for vertical)

@@ -209,9 +209,9 @@
 					title="Mix"
 					icon="mix"
 					orientation="vertical"
-					labelOrientation="horizontal"
 					isGhost={octave.isGhost}
 					color={octaveInk}
+					readout={octave.paramDisplay(OCTAVE_MIX_PARAM)}
 					min={0}
 					max={OCTAVE_MIX_MAX}
 					onTap={() => {
@@ -269,9 +269,9 @@
 					title="Mix"
 					icon="mix"
 					orientation="vertical"
-					labelOrientation="horizontal"
 					isGhost={pitchHack.isGhost}
 					color={ink}
+					readout={pitchHack.paramDisplay(PH.mix.index)}
 					min={0}
 					max={PH.mix.max}
 					onTap={() => pitchHack.loadIfGhost()}

@@ -472,6 +472,7 @@
       labelSize="small"
       isGhost={velocity.isGhost}
       color={velocity.color}
+      readout={velocity.paramDisplay(VELOCITY_PARAMS.RANDOM)}
       onInteraction={(value) => {
         const intValue = Math.round(value * 127);
         velocity.sendParam(VELOCITY_PARAMS.RANDOM, intValue);
