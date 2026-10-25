@@ -412,10 +412,13 @@ plus the per-button path memory `rememberPath` / `getRememberedPath` /
 state), `browserModeStore` (persistent / replace / scale / lock + `sourceMode`
 and `audioLoadTarget`, both persisted and resumed on each open — ADR-397, no
 MIDI reset; `replaceInstrumentPresetPath` is the pinned track's patch at arm
-time, which is where a replace opens — ADR-441). The top-bar `[MIDI | Simpler |
-Audio]` switch reads/writes these two via the `browseMode` projection (`get
-browseMode` / `setBrowseMode`): `midi`↔instruments, `simpler`↔audio+simpler,
-`audio`↔audio+clip — one control over two orthogonal fields (ADR-397).
+time, which is where a replace opens — ADR-441). The top-bar `[Instrument |
+Simpler | Clip | Effect]` switch reads/writes these via the `browseMode`
+projection (`get browseMode` / `setBrowseMode`): `midi`↔instruments,
+`simpler`↔audio+simpler, `audio`↔audio+clip, `effects`↔instruments+`browseEffects`
+(persisted too; a replace clears it) — one control over the orthogonal fields
+(ADR-397). `openEffectsBrowser` opens it on Effect (the chain overview's +
+cell, ADR-478).
 (`browserGestureStore` was gesture-only and was deleted with the old browser.)
 
 ## Grid layout
