@@ -9,6 +9,7 @@
   import { reverbTail, decayAtTailX } from '../central/views/reverb/reverbTail';
   import { useReverbIrPicture } from '../central/views/reverb/useReverbIrPicture.svelte';
   import { HYBRID, LIVE_DEFAULTS, ROUTING_CONVOLUTION } from './hybridReverbParams';
+  import { controlFor, resolveParam, type ParamRef, type XyControl } from './deviceControls';
 
   interface Props {
     device: DeviceRecord | null;
@@ -19,32 +20,16 @@
 
   let devicePath = $derived((device as any)?.devicePath);
 
-  const PARAM_CONFIG = {
-    decayTime: {
-      index: 10,
-      min: 0,
-      max: 1,
-      type: 'float' as const
-    },
-    dryWet: {
-      index: 53,
-      min: 0,
-      max: 1,
-      type: 'float' as const
-    }
-  };
+  // The `reverb` control (`deviceControls`): Decay across, Dry/Wet up. The
+  // portrait below places the same Decay on the tail's time axis.
+  const REVERB = controlFor('reverb') as XyControl;
+  const get = (ref: ParamRef) =>
+    device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, resolveParam(ref))) : undefined;
 
   // Reactive view of armed/store state.
-  let decayTimeValue = $derived(
-    device
-      ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, PARAM_CONFIG.decayTime.index)) ?? 0.5
-      : 0.5
-  );
-  let dryWetValue = $derived(
-    device
-      ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, PARAM_CONFIG.dryWet.index)) ?? 0
-      : 0
-  );
+  let at = $derived(REVERB.read(get));
+  let decayTimeValue = $derived(at.x);
+  let dryWetValue = $derived(at.y);
 
   /** A parameter's raw value, or Live's default before the device answers. */
   function raw(index: number): number {
@@ -88,8 +73,7 @@
         onTap={handleTap}
         onMove={(x, y) => {
           openView();
-          sendParam(PARAM_CONFIG.decayTime.index, decayAtTailX(x, onset));
-          sendParam(PARAM_CONFIG.dryWet.index, y);
+          for (const [ref, value] of REVERB.write(decayAtTailX(x, onset), y, get)) sendParam(resolveParam(ref), value);
         }}
         onRelease={(x) => {
           if (devicePath) {
@@ -129,12 +113,10 @@
             triggerLoad();
           }
           // Store as pending - will be applied when device loads
-          storePendingParam(PARAM_CONFIG.decayTime.index, x);
-          storePendingParam(PARAM_CONFIG.dryWet.index, y);
+          for (const [ref, value] of REVERB.write(x, y, get)) storePendingParam(resolveParam(ref), value);
         } else {
           // Device is active - send immediately during drag (cache updates optimistically)
-          sendParam(PARAM_CONFIG.decayTime.index, x);
-          sendParam(PARAM_CONFIG.dryWet.index, y);
+          for (const [ref, value] of REVERB.write(x, y, get)) sendParam(resolveParam(ref), value);
         }
       }}
       onRelease={(x, y) => {

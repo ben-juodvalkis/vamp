@@ -39,7 +39,8 @@
    * the selected track, so a pad's chain draws its mark instead. A
    * Permute carries its mute and pitch steps (`chain/PermuteStepsFace`),
    * the track's instrument the control its view is known by
-   * (`chain/InstrumentFace`: Omnisphere's ORB, Drift's filter).
+   * (`chain/InstrumentFace`: Omnisphere's ORB, Drift's filter), and a
+   * Drum Rack its kit's Trnsp (`chain/DrumRackFace`, `vm.pitch`).
    *
    * **A pad follows the Drum Rack view.** While a pad is held or latched
    * on the selected track's Drum Rack, the overview is that pad's chain —
@@ -54,22 +55,29 @@
   import Power from '@lucide/svelte/icons/power';
   import Plus from '@lucide/svelte/icons/plus';
   import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
+  import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
+  import { setContext } from 'svelte';
+  import { PICTURE_CONTEXT } from '$lib/components/v6/browser/devicePictures';
   import type { Component } from 'svelte';
-  import { FX_GRID_LAYOUT } from '$lib/config/fxGridLayout';
+  import { FX_GRID_LAYOUT, type DeviceTypeKey } from '$lib/config/fxGridLayout';
   import { provideFxScope } from '$lib/components/v6/central/fxScope';
   import GuitarControl from './GuitarControl.svelte';
   import BassControl from './BassControl.svelte';
   import PitchControl from './PitchControl.svelte';
   import GlitchControl from './GlitchControl.svelte';
   import SquashControl from './SquashControl.svelte';
+  import ControlTile from './ControlTile.svelte';
+  import { controlFor } from './deviceControls';
   import MidiWheelsPanel from '$lib/components/v6/midi/MidiWheelsPanel.svelte';
   import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
   import InstrumentFace, { FACED_INSTRUMENTS } from './chain/InstrumentFace.svelte';
+  import DrumRackFace from './chain/DrumRackFace.svelte';
   import { schemeFromInk } from '$lib/config/devicePresets';
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
   import constants from '$config/constants.json';
   import Music from '@lucide/svelte/icons/music';
   import { press } from '$lib/actions/press';
+  import { swallowNextClick } from '$lib/utils/swallowNextClick';
   import { drag as dragAction, type DragInfo, type DragEndInfo } from '$lib/actions/drag';
   import { moveDevice } from '$lib/services/deviceMoveService';
   import {
@@ -82,28 +90,30 @@
     sameDevices,
     type ReorderState
   } from '$lib/utils/chainDrop';
-  import { onDestroy, untrack } from 'svelte';
+  import { onDestroy, tick, untrack } from 'svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
-  import { fxChainStore, RACK_PICK } from '$lib/stores/v6/fxChainStore.svelte';
+  import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
   import { DEVICE_PRESETS, DEVICE_FAMILY_INKS } from '$lib/config/devicePresets';
   import ControlGlyph from './ControlGlyph.svelte';
   import { DEVICE_CLASS_GLYPHS, DEVICE_KEY_GLYPHS, glyphForName, type ControlGlyphName } from '$lib/config/controlGlyphMap';
-  import { matchesSlot, pickSlotDevice } from '$lib/utils/deviceSlotMatch';
-  import { openDeviceView, activeDrumRackScope, selectedDrumRack } from '$lib/services/deviceViewRouter.svelte';
+  import { pickSlotDevice } from '$lib/utils/deviceSlotMatch';
+  import { activeDrumRackScope, selectedDrumRack } from '$lib/services/deviceViewRouter.svelte';
+  import { effectTypeOf, openEffectView } from '$lib/services/effectView.svelte';
   import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
   import { usePadChainRows } from '$lib/components/v6/central/usePadChainRows.svelte';
   import { DEVICE_TYPE_INSTRUMENT, VM_PAD_FX, parseVmPadFx, padTileLabel } from '$lib/services/drumVirtualMacros';
-  import { isViewRegistered } from '$lib/components/v6/central/viewRegistry';
   import { trackDeviceGlance } from '$lib/components/v6/tracks/composables/useTrackDevice.svelte';
   import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import { selectedTrackInk } from '$lib/utils/selectedTrackInk';
-  import { CHAIN_DEVICE_VIEW } from '$lib/components/v6/central/views/chainDeviceView';
   import TrackDeviceView from '$lib/components/v6/tracks/TrackStrip/components/TrackDeviceView.svelte';
   import type { DeviceRecord } from '$lib/stores/v3/normalized.svelte';
 
   /** The tiles that control a device, by preset key, and what each is called on the grid. */
+  // The devices' pictures draw here (devicePictures), not on the FX grid.
+  setContext(PICTURE_CONTEXT, true);
+
   const TILE_LABELS: Record<string, string> = {
     random: 'Rand Oct',
     octave: 'Pitch',
@@ -300,12 +310,7 @@
     return s.replace(/([a-z])([A-Z])/g, '$1 $2');
   }
 
-  function presetKeyFor(device: DeviceRecord): string | null {
-    for (const [key, config] of Object.entries(DEVICE_PRESETS)) {
-      if (config.expectedClassName && matchesSlot(device, config)) return key;
-    }
-    return null;
-  }
+  const presetKeyFor = (device: DeviceRecord) => effectTypeOf(device);
 
   function macrosOf(device: DeviceRecord): { name: string; value: number }[] {
     const names = selectedTrackStore.paramNamesForDevice(device as never);
@@ -336,8 +341,10 @@
    * - `drag` — the drag in flight: the order it started from and where it
    *   would land. It changes when the landing changes, not per finger
    *   frame.
-   * - The lifted cell's position is written straight onto its transform,
-   *   once a frame: the finger never touches reactive state.
+   * - The cell itself rides the finger — no copy, no placeholder (the
+   *   user's call, 2026-10-26): its own transform is written once a frame,
+   *   so the finger never touches reactive state, and it keeps its slot
+   *   in the previewed order, which is the gap the others slide around.
    *
    * The list is redrawn only when the order changes, and the cells slide
    * by a FLIP run on exactly those changes (below), not `animate:flip`,
@@ -363,7 +370,8 @@
     chain: { left: number; top: number; width: number; height: number };
   };
   let drag = $state<Drag | null>(null);
-  let liftedEl = $state<HTMLElement | null>(null);
+  /** The dragged cell's own node. */
+  let dragNode: HTMLElement | null = null;
 
   // Drops on the wire follow Live: each report lands the move in flight
   // (or not), and the next goes out.
@@ -411,20 +419,22 @@
     return row * cols + col;
   }
 
-  // The lifted cell's offset, written once a frame.
+  // The dragged cell's offset from where it was lifted, written once a
+  // frame as a transform from wherever the previewed order has put its
+  // slot (`offsetLeft`/`offsetTop`, which leave the transform out).
   let offset = { dx: 0, dy: 0 };
   let frame = 0;
-  function paintLifted() {
+  function paintDragged() {
     frame = 0;
-    if (liftedEl) liftedEl.style.transform = `translate3d(${offset.dx}px, ${-offset.dy}px, 0)`;
+    const d = drag;
+    if (!d || !dragNode) return;
+    const x = d.box.left + offset.dx - dragNode.offsetLeft;
+    const y = d.box.top - offset.dy - dragNode.offsetTop;
+    dragNode.style.transform = `translate3d(${x}px, ${y}px, 0)`;
   }
-  function scheduleLifted() {
-    if (!frame) frame = requestAnimationFrame(paintLifted);
+  function scheduleDragged() {
+    if (!frame) frame = requestAnimationFrame(paintDragged);
   }
-  // The lifted cell mounts a render after the lift: place it at once.
-  $effect(() => {
-    if (liftedEl) paintLifted();
-  });
 
   // FLIP: on a change of order, each cell starts where it was drawn and
   // slides to its new place. Measured only when the order changes.
@@ -435,7 +445,7 @@
     if (!chainEl) return;
     before = new Map();
     for (const el of chainEl.querySelectorAll<HTMLElement>(':scope > [data-cell-key]')) {
-      before.set(el.dataset.cellKey!, el.getBoundingClientRect());
+      if (el !== dragNode) before.set(el.dataset.cellKey!, el.getBoundingClientRect());
     }
   });
   $effect(() => {
@@ -455,6 +465,9 @@
       });
     }
     before = new Map();
+    // Its slot moved under it: keep the dragged cell under the finger
+    // before this frame paints.
+    if (drag) paintDragged();
   });
   onDestroy(() => {
     if (frame) cancelAnimationFrame(frame);
@@ -472,13 +485,22 @@
   }
 
   function dragStart(cell: Cell, position: number, info: DragInfo) {
-    if (pressInControl || cell.kind === 'instrument' || !chainEl) return;
+    // A drag on a cell's control is that control's, and it opens the
+    // device's view as a tap on the cell does — every control here, not
+    // only the grid's tiles, which open their own (2026-10-26).
+    if (pressInControl) {
+      open(cell);
+      return;
+    }
+    if (cell.kind === 'instrument' || !chainEl) return;
     const node = chainEl.querySelector<HTMLElement>(`:scope > [data-cell-key="${CSS.escape(cell.key)}"]`);
     if (!node) return;
     // Where it is drawn, mid-slide included, so it lifts from under the finger.
     const r = node.getBoundingClientRect();
     const c = chainEl.getBoundingClientRect();
+    for (const a of node.getAnimations()) a.cancel();
     const instrument = shown.findIndex((x) => x.kind === 'instrument');
+    dragNode = node;
     offset = { dx: info.dx, dy: info.dy };
     drag = {
       key: cell.key,
@@ -489,13 +511,14 @@
       box: { left: r.left - c.left, top: r.top - c.top, width: r.width, height: r.height },
       chain: { left: c.left, top: c.top, width: c.width, height: c.height }
     };
+    paintDragged();
   }
 
   function dragMove(info: DragInfo) {
     const d = drag;
     if (!d) return;
     offset = { dx: info.dx, dy: info.dy };
-    scheduleLifted();
+    scheduleDragged();
     // The landing is read at the lifted cell's centre, so it follows the
     // cell wherever it was picked up by.
     const x = d.chain.left + d.box.left + d.box.width / 2 + info.dx;
@@ -506,12 +529,34 @@
 
   function dragEnd(info: DragEndInfo) {
     const d = drag;
+    const node = dragNode;
     drag = null;
+    dragNode = null;
     if (frame) cancelAnimationFrame(frame);
     frame = 0;
     // Only a finger lifted drops; a cancel or an unmount puts it back.
-    if (!d || info.reason !== 'up' || d.to === d.from) return;
-    reorder = { desired: moved(d.base, d.from, d.to), inflight: reorder.inflight };
+    if (d && info.reason === 'up' && d.to !== d.from) {
+      reorder = { desired: moved(d.base, d.from, d.to), inflight: reorder.inflight };
+    }
+    if (node) settle(node);
+  }
+
+  /** The let-go cell glides from under the finger into its slot. */
+  function settle(node: HTMLElement) {
+    const from = node.getBoundingClientRect();
+    node.style.transform = '';
+    void tick().then(() => {
+      if (!node.isConnected) return;
+      for (const a of node.getAnimations()) a.cancel();
+      const to = node.getBoundingClientRect();
+      const dx = from.left - to.left;
+      const dy = from.top - to.top;
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+      node.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], {
+        duration: 180,
+        easing: 'cubic-bezier(0.2, 0, 0, 1)'
+      });
+    });
   }
 
   /** What the device does, drawn (`ControlGlyph`): by the app's own device, its class, else its name. */
@@ -525,42 +570,35 @@
     );
   }
 
+  /**
+   * + Effect: the browser on its Effect segment. Under a pad scope the pad
+   * is latched first (user, 2026-10-26): the browser covers the Drum Rack
+   * view, a held pad's tile unmounts and its hold ends, and the pick must
+   * still land in the pad the chain was showing.
+   */
+  function addEffect() {
+    swallowNextClick();
+    if (padScope) drumPadScope.latch(padScope.rackPath, padScope.note);
+    browserModeStore.openEffectsBrowser();
+  }
+
   function open(cell: Cell) {
     const { device } = cell;
-    fxChainStore.appoint(device.devicePath, { force: true });
-    if (padScope) {
-      // The pad's instrument is what the Drum Rack view already shows; an
-      // effect opens in its pane (the router routes under the scope).
-      if (cell.kind === 'instrument') return;
-      if (cell.presetKey && isViewRegistered('device', cell.presetKey)) {
-        fxChainStore.pick(pickScope, cell.presetKey, device.devicePath);
-        openDeviceView(cell.presetKey);
-      }
-      return;
-    }
     if (cell.kind === 'instrument') {
+      // The pad's instrument is what the Drum Rack view already shows.
+      if (padScope) return;
+      fxChainStore.appoint(device.devicePath, { force: true });
       if (glance.instrumentViewType) {
         centralDisplayStore.setView('instrument', glance.instrumentViewType, { instrument: glance.instrument });
         return;
       }
-    } else if (cell.presetKey === 'sequencer') {
-      centralDisplayStore.setView('permute', undefined, null, 'Permute');
-      return;
-    } else if (cell.presetKey && isViewRegistered('device', cell.presetKey)) {
-      fxChainStore.pick(trackPath, cell.presetKey, device.devicePath);
-      openDeviceView(cell.presetKey);
-      return;
-    } else if (cell.kind === 'rack') {
-      fxChainStore.pick(trackPath, RACK_PICK, device.devicePath);
-      openDeviceView('audio-effect-rack');
-      return;
     }
-    fxChainStore.pick(trackPath, CHAIN_DEVICE_VIEW, device.devicePath);
-    openDeviceView(CHAIN_DEVICE_VIEW);
+    // An effect: its view, as a browser load's (`services/effectView`).
+    openEffectView(device, { pickScope, padScoped: !!padScope });
   }
 </script>
 
-{#snippet cellBody(cell: Cell, position: number, live = true)}
+{#snippet cellBody(cell: Cell, position: number)}
   {@const glyph = glyphOf(cell)}
   {@const tile = cell.kind !== 'instrument' && cell.presetKey ? TILE_COMPONENTS[cell.presetKey] : undefined}
       <!-- One row says it all, so the control below gets the height: the
@@ -593,24 +631,35 @@
         </span>
       </div>
 
-      {#if live && cell.presetKey === 'sequencer'}
+      {#if cell.presetKey === 'sequencer'}
         <!-- Permute: its mute and pitch steps, on this device. -->
         <div class="cell-control" role="presentation"><PermuteStepsFace device={cell.device} color={cell.ink} /></div>
-      {:else if live && !padScope && cell.kind === 'instrument' && glance.instrumentViewType && FACED_INSTRUMENTS.has(glance.instrumentViewType)}
+      {:else if !padScope && cell.kind === 'instrument' && glance.instrumentViewType && FACED_INSTRUMENTS.has(glance.instrumentViewType)}
         <!-- The instrument's signature control, as its view draws it. -->
         <div class="cell-control" role="presentation">
           <InstrumentFace device={cell.device} type={glance.instrumentViewType} color={selectedTrackScheme() ?? schemeFromInk(cell.ink)} />
         </div>
-      {:else if live && !padScope && isMidiWheels(cell.device)}
+      {:else if !padScope && cell.kind === 'instrument' && cell.device.className === 'DrumGroupDevice'}
+        <!-- A Drum Rack: the kit's Trnsp, as its view draws it. -->
+        <div class="cell-control" role="presentation">
+          <DrumRackFace device={cell.device} color={selectedTrackScheme() ?? schemeFromInk(cell.ink)} />
+        </div>
+      {:else if !padScope && isMidiWheels(cell.device)}
         <!-- The pitch and mod wheels, as the instrument views draw them:
              Pitch over Mod in a full-height cell, side by side in a
              two-row chain's half-height one. -->
         <div class="cell-control" role="presentation"><MidiWheelsPanel sideBySide={grid.rows > 1} /></div>
-      {:else if tile && live}
+      {:else if tile}
         <!-- The grid's own tile, on this device. A touch here is the
              control's: it picks this device and never starts a reorder. -->
         <div class="cell-control" role="presentation">
           <tile.Tile device={cell.device} position={tile.position} />
+        </div>
+      {:else if controlFor(cell.presetKey)}
+        <!-- No grid tile: the device's control (deviceControls), the one its
+             browser preset tiles and its view draw, on this device. -->
+        <div class="cell-control" role="presentation">
+          <ControlTile type={cell.presetKey as DeviceTypeKey} device={cell.device} />
         </div>
       {:else}
       <div class="mark" aria-hidden="true">
@@ -653,7 +702,7 @@
     <div
       class="chain-cell"
       class:off={!isOn(cell)}
-      class:placeholder={drag?.key === cell.key}
+      class:dragging={drag?.key === cell.key}
       class:appointed={fxChainStore.appointed === cell.device.devicePath}
       class:instrument={cell.kind === 'instrument'}
       style="--cell-ink: {cell.ink};"
@@ -683,33 +732,11 @@
     class="chain-add"
     aria-label="Add an effect"
     data-debug="chain-add"
-    use:press={{ onPress: () => browserModeStore.openEffectsBrowser(), touchAction: 'none' }}
+    use:press={{ onPress: addEffect, touchAction: 'none' }}
   >
     <span class="chain-add-icons" aria-hidden="true"><Plus /><ControlGlyph name="rack" /></span>
     <span class="chain-add-label">Effect</span>
   </button>
-  {#if drag}
-    {@const cell = shown.find((c) => c.key === drag?.key)}
-    {#if cell}
-      <!-- The cell under the finger, riding it (its transform is written
-           per frame, outside Svelte); its place in the list is the gap.
-           Every style is a directive so a redraw never clears that. -->
-      <div
-        class="chain-cell lifted"
-        class:off={!isOn(cell)}
-        class:appointed={fxChainStore.appointed === cell.device.devicePath}
-        style:--cell-ink={cell.ink}
-        style:left="{drag.box.left}px"
-        style:top="{drag.box.top}px"
-        style:width="{drag.box.width}px"
-        style:height="{drag.box.height}px"
-        bind:this={liftedEl}
-        aria-hidden="true"
-      >
-        {@render cellBody(cell, drag.to, false)}
-      </div>
-    {/if}
-  {/if}
   {#if padScope}
     <!-- Whose chain this is, as the grid's scope chip says it. -->
     <div class="pad-chip chain-scope-chip" aria-label="Chain of pad {padScope.note}">
@@ -805,24 +832,10 @@
   .chain-cell.off > :not(.cell-head) {
     opacity: 0.45;
   }
-  /* The cell under the finger rides it, out of the grid's flow. */
-  .chain-cell.lifted {
-    position: absolute;
+  /* The cell under the finger rides it, over the others. */
+  .chain-cell.dragging {
     z-index: 4;
-    pointer-events: none;
-    box-shadow: 0 8px 22px oklch(0 0 0 / 0.55);
-    scale: 1.04;
     will-change: transform;
-  }
-  /* Where it will land: its own place in the previewed order, emptied. */
-  .chain-cell.placeholder {
-    border-style: dashed;
-    border-color: color-mix(in oklab, var(--cell-ink) 60%, transparent);
-    background: transparent;
-    box-shadow: none;
-  }
-  .chain-cell.placeholder > :global(*) {
-    visibility: hidden;
   }
   /* The blue hand: the device Live's controllers follow. */
   .chain-cell.appointed {

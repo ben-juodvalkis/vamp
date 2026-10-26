@@ -2,12 +2,10 @@
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
-  import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
-  import { PITCH_COLOR, MOD_COLOR } from '$lib/config/devicePresets';
   import { SECTION_SWITCH_ON_ABOVE } from '$lib/services/drumVirtualMacros';
   import { drag } from '$lib/actions';
   import type { DragInfo } from '$lib/actions/drag';
@@ -46,7 +44,7 @@
    * OSC 1 orange, OSC 2 blue, Noise red. This is a deliberate exception
    * to ADR-402 — every other instrument view wears the focused track's
    * ink, and the rest of THIS view still does (Filter, Time, Voicing,
-   * Drift, the wheels). The sources are the one place a shared ink costs
+   * Drift). The sources are the one place a shared ink costs
    * something: with one oscillator card switched between two
    * oscillators, the colour is what says which one you are holding
    * without reading the tab, and Noise is a third source that used to be
@@ -75,17 +73,6 @@
   let osc1Ink = $derived(sourceInk('osc1'));
   let osc2Ink = $derived(sourceInk('osc2'));
   let noiseInk = $derived(sourceInk('noise'));
-
-  let pitchInk = $derived(trackScheme ?? {
-    primary: trackInk(PITCH_COLOR.primary, paintModeReactive()),
-    secondary: PITCH_COLOR.secondary,
-    accent: trackInk(PITCH_COLOR.accent, paintModeReactive())
-  });
-  let modInk = $derived(trackScheme ?? {
-    primary: trackInk(MOD_COLOR.primary, paintModeReactive()),
-    secondary: MOD_COLOR.secondary,
-    accent: trackInk(MOD_COLOR.accent, paintModeReactive())
-  });
 
   /** Live's own value, a box's readout while it is dragged (ADR-477); sent only while the UI writes. */
   function display(index: number): string | undefined {
@@ -426,7 +413,7 @@
 <div class="drift-root h-full w-full overflow-hidden relative">
   {#if instrument && device}
     <!--
-      Signal-flow row: Sources (OSC 1 + OSC 2 + Noise) → Filter/Time → Voicing → wheels.
+      Signal-flow row: Sources (OSC 1 + OSC 2 + Noise) → Filter/Time → Voicing → voice mode.
       Each oscillator is one card reading top-to-bottom: pick a waveform, shape it
       on the pad, set its level — so the two cards are the same gesture twice.
       Mirrors AutoFilterCentralView's flex-[N] idiom for consistency across views.
@@ -691,10 +678,9 @@
       <SectionDivider orientation="vertical" ink={driftInk.primary} />
 
       <!-- Voicing group: the mode's own parameter, Glide in Mono, and
-           Drift. The 2x2 mode grid that used to sit on top moved above
-           the wheels (user, 2026-09-12) — it chooses what the card MEANS
-           rather than being one of its controls, and the wheels' column
-           was the only fixed-width block in the row with height to spare. -->
+           Drift. The 2x2 mode grid that used to sit on top has its own
+           column (user, 2026-09-12) — it chooses what the card MEANS
+           rather than being one of its controls. -->
       <div class="drift-card voicing-card flex-none min-h-0 flex flex-col gap-2" style="--drift-ink: {driftInk.primary};">
         <!-- The mode's own slider, absent in Poly (it has nothing to write
              there), Glide, then Drift: boxes stacked in one column
@@ -755,13 +741,13 @@
 
       <SectionDivider orientation="vertical" ink={driftInk.primary} />
 
-      <!-- Voice mode over the MIDI wheels, Pitch over Mod (ADR-477). The
-           four modes choose what the voicing group means, so they are not
-           one of its controls; up here they sit over the wheels, the one
-           block in the row with height to spare. -->
+      <!-- Voice mode, a column of its own. The four modes choose what the
+           voicing group means, so they are not one of its controls. The
+           wheels under it left for the MidiWheels device's chain cell
+           (user, 2026-10-26), so the tab takes the column's height. -->
       <div class="mode-col flex-none flex flex-col gap-(--central-gap) min-h-0">
         <!-- One pick-one tab, two by two. -->
-        <div class="device-segmented seg-grid grid grid-cols-2 flex-none" style="--btn-tint: {driftInk.primary};">
+        <div class="device-segmented seg-grid grid grid-cols-2 grid-rows-2 flex-1 min-h-0" style="--btn-tint: {driftInk.primary};">
           {#each VOICE_MODE_OPTIONS as option}
             <button
               class="device-segment mode-button px-1 text-center"
@@ -774,9 +760,6 @@
               {option.label}
             </button>
           {/each}
-        </div>
-        <div class="flex-1 min-h-0">
-          <MidiWheelsPanel pitchColor={pitchInk} modColor={modInk} />
         </div>
       </div>
     </div>
@@ -798,7 +781,7 @@
      56px is the house figure — `--vm-slider-w`, what the Drum Rack view
      gives a vertical slider. A slider is pinned to it and the things
      that genuinely want width (the wave and octave choosers) take what
-     is left. The wheels take it too. */
+     is left. */
   .drift-root {
     --drift-slider-w: 56px;
   }
@@ -880,7 +863,7 @@
   /* The level mixer and the voicing group are value boxes stacked in a
      column at the view's slider width (ADR-477), sharing its height. The
      explicit card widths are for WebKit, which sized a content-wide card
-     from its sliders and spilled them under the wheels without one. */
+     from its sliders and spilled them past the row without one. */
   .mixer-slider,
   .voicing-slider {
     flex: 1 1 0;
@@ -903,7 +886,7 @@
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
-  /* Two slider widths: the 2 x 2 mode tab over the stacked wheels. */
+  /* Two slider widths: the 2 x 2 mode tab, the column's full height. */
   .mode-col {
     width: calc(2 * var(--drift-slider-w) + var(--central-gap));
   }
@@ -991,7 +974,7 @@
   }
 
   /* ---- Live skin (flat grammar). Wave / voice buttons are segmented tabs,
-     the pads / sliders / wheels are DeviceXY / DeviceSlider / MidiWheel —
+     the pads / sliders are DeviceXY / DeviceSlider —
      all flat on their own, and since 2026-09-13 the three section groups
      have no frame of their own either: the seams between them are
      `SectionDivider`s, which carry their own flat fork. What is left here

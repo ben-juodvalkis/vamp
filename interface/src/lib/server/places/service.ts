@@ -47,7 +47,7 @@ import {
 	loadKindCache,
 	saveKindCache,
 	scanPlace,
-	groupEffectsPlace,
+	tidyEffectsPlace,
 	shapePlace,
 	type AuComponent,
 	type KindCache,
@@ -58,6 +58,9 @@ import {
 import { findLiveDatabase, indexRowsFingerprint, indexRowsOf, openIndex, placeFileId, scanIndexPlace, type IndexHandle } from './indexScan';
 import { MANIFEST_NAME, readManifest } from './placesManifest';
 import { bakeThumbnails } from './audioThumbnailCache';
+
+/** How the effects Place is drawn (`tidyEffectsPlace`): 3, every preset on one screen in its folder's section (2026-10-26; 2 as on disk, 1 grouped by kind). */
+const EFFECTS_LAYOUT = 3;
 
 export type CatalogSource = 'index' | 'disk';
 
@@ -449,7 +452,9 @@ export class PlacesService {
 		// Live's indexer touches anywhere. The Place's name, icon and id are
 		// in it too, so a Place renamed in Live is served under its new name.
 		const effects = this.isEffectsPlace(s) ? (configSection<{ effectsHidden?: string[] }>('catalog').effectsHidden ?? []) : null;
-		const identity = `${s.name}:${s.icon}:${id}:${s.path}:${JSON.stringify(tuning)}:${JSON.stringify(effects)}`;
+		// The effects Place's layout rule is in it too, so a change to how the
+		// Place is drawn rebuilds a catalog cached under the old one.
+		const identity = `${s.name}:${s.icon}:${id}:${s.path}:${JSON.stringify(tuning)}:${JSON.stringify(effects && { hidden: effects, layout: EFFECTS_LAYOUT })}`;
 		// An index build is stamped with a fingerprint of the Place's own rows,
 		// not the index's write time: Live writes its index every couple of
 		// seconds while it runs, and rebuilding all seven Places on each write
@@ -487,7 +492,7 @@ export class PlacesService {
 			raw = scanPlace(s.path, s.name, scanCtx);
 			source = 'disk';
 		}
-		if (effects) raw = groupEffectsPlace(raw, effects);
+		if (effects) raw = tidyEffectsPlace(raw, effects);
 		const tree = shapePlace(raw, { maxFolderDepth: tuning.maxFolderDepth, flattenFolders: tuning.flattenFolders, keepNestingFolders: tuning.keepNestingFolders });
 		const kinds = tree.kinds ?? {};
 		const samples = tree.folders[SAMPLES_FOLDER] ?? null;

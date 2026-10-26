@@ -6,6 +6,7 @@ Owns the UI→Surf clip-lifecycle addresses:
     /looping/v3/clip/stop               [trackPath]
     /looping/v3/clip/focus              [slotPath]
     /looping/v3/clip/delete             [slotPath]
+    /looping/v3/clip/create             [slotPath, lengthBeats]
     /looping/v3/clip/duplicate          [slotPath, destSlotPath]
     /looping/v3/clip/duplicate_region   [slotPath]   # ROW 8
     /looping/v3/clip/load_file          [trackPath, slotPath, filePath]
@@ -74,6 +75,9 @@ V3_CLIP_STOP_ADDRESS = "/looping/v3/clip/stop"
 # own selection — there was no way to say "show me THAT clip".
 V3_CLIP_FOCUS_ADDRESS = "/looping/v3/clip/focus"
 V3_CLIP_DELETE_ADDRESS = "/looping/v3/clip/delete"
+# An empty MIDI clip, made and fired in one go: the Drum Rack view's pad
+# strip, when a step is added with nothing playing on the track.
+V3_CLIP_CREATE_ADDRESS = "/looping/v3/clip/create"
 V3_CLIP_DUPLICATE_ADDRESS = "/looping/v3/clip/duplicate"
 V3_CLIP_DUPLICATE_REGION_ADDRESS = "/looping/v3/clip/duplicate_region"
 V3_CLIP_LOAD_FILE_ADDRESS = "/looping/v3/clip/load_file"
@@ -571,6 +575,73 @@ class ClipsComponent:
                 detail="delete_clip raised: %s: %s" % (
                     type(e).__name__, str(e)[:80],
                 ),
+            )
+
+    def handle_create(self, args, source_addr) -> None:
+        """``[slotPath, lengthBeats]`` — make an empty MIDI clip and fire it.
+
+        The Drum Rack view's pad strip sends this when a step is added
+        with nothing playing on the track, then writes the step's notes
+        to ``slotPath/clip``; this runs first, since the surface takes
+        its messages in order. The clip is fired so the step is heard
+        at the next launch boundary.
+
+        Occupied slot → ``write-rejected`` (never replaces a clip);
+        a length that is not a positive number → ``write-rejected``;
+        ``create_clip`` raising (an audio or group track) →
+        ``write-rejected``; ``fire`` raising → ``launch-failed``.
+        """
+        if self._disconnected:
+            return
+        if not self._check_arg_count(V3_CLIP_CREATE_ADDRESS, args, 2):
+            return
+        slot_path = _coerce_str(args[0])
+        try:
+            length = float(args[1])
+        except (TypeError, ValueError):
+            length = 0.0
+        if not length > 0:
+            self._emit_error(
+                V3_CLIP_CREATE_ADDRESS,
+                V3_ERROR_WRITE_REJECTED,
+                path=slot_path,
+                detail="length must be a positive number of beats",
+            )
+            return
+        slot = self._resolve_slot_or_error(V3_CLIP_CREATE_ADDRESS, slot_path)
+        if slot is None:
+            return
+        if self._slot_has_clip_safe(slot):
+            self._emit_error(
+                V3_CLIP_CREATE_ADDRESS,
+                V3_ERROR_WRITE_REJECTED,
+                path=slot_path,
+                detail="slot already holds a clip",
+            )
+            return
+        began = self._begin_undo_step()
+        try:
+            slot.create_clip(length)
+        except _LOM_ERRORS as e:
+            self._emit_error(
+                V3_CLIP_CREATE_ADDRESS,
+                V3_ERROR_WRITE_REJECTED,
+                path=slot_path,
+                detail="create_clip raised: %s: %s" % (
+                    type(e).__name__, str(e)[:80],
+                ),
+            )
+            return
+        finally:
+            self._end_undo_step(began)
+        try:
+            slot.fire()
+        except _LOM_ERRORS as e:
+            self._emit_error(
+                V3_CLIP_CREATE_ADDRESS,
+                V3_ERROR_LAUNCH_FAILED,
+                path=slot_path,
+                detail="%s: %s" % (type(e).__name__, str(e)[:80]),
             )
 
     def handle_duplicate(self, args, source_addr) -> None:

@@ -1,9 +1,12 @@
 <script lang="ts">
   /**
-   * ArpeggiatorCentralView - Slot-Aware Version
+   * ArpeggiatorCentralView — the Arpeggiator's own view: Pattern (Style),
+   * Sync + Rate, Steps and Gate. Velocity, Chord, Note Chance and Random
+   * each have their own view since the chain overview (ADR-478) opens a
+   * device's view by its own type.
    *
-   * Self-contained central view that queries its own slot state.
-   * Uses SlotAware components to render immediately with ghost/loading/active states.
+   * Self-contained: queries its own slot state, so it renders immediately
+   * with ghost/loading/active states.
    *
    * NO {#if device} gate - always renders, controls handle their own state.
    * NO props required - all controls query their slots internally.
@@ -11,7 +14,6 @@
 
   import { logger } from '$lib/utils/logger';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
-  import VelocityRangeBrace from '../../controls/VelocityRangeBrace.svelte';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import ArrowRight from '@lucide/svelte/icons/arrow-right';
   import Check from '@lucide/svelte/icons/check';
@@ -20,12 +22,8 @@
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-  import SectionDivider from '../SectionDivider.svelte';
 
   const arp = useFxGridSlot('arpeggiator');
-  const velocity = useFxGridSlot('velocity');
-  const chord = useFxGridSlot('chord');
-  const chance = useFxGridSlot('chance');
 
   // Calibrated ink twins (GRATICULE §2.5). primary/accent normalized through
   // trackInk; secondary (low-alpha wash) untouched. Used for all chrome styled
@@ -34,11 +32,6 @@
     primary: trackInk(arp.color.primary, paintModeReactive()),
     secondary: arp.color.secondary,
     accent: trackInk(arp.color.accent, paintModeReactive()),
-  });
-  let chordInk = $derived({
-    primary: trackInk(chord.color.primary, paintModeReactive()),
-    secondary: chord.color.secondary,
-    accent: trackInk(chord.color.accent, paintModeReactive()),
   });
 
   const ARP_PARAMS = {
@@ -212,52 +205,6 @@
   function handleSyncToggle() {
     arp.sendParam(ARP_PARAMS.SYNCED_RATE, syncIsOn ? 0 : 1);
   }
-
-  const VELOCITY_PARAMS = {
-    RANDOM: 3,
-    OUT_HI: 6,
-    OUT_LOW: 7
-  } as const;
-
-  let velocityRandom = $derived(velocity.paramValue(VELOCITY_PARAMS.RANDOM) ?? 0);
-
-  const CHORD_PARAMS = {
-    SHIFT_1: 1,
-    SHIFT_2: 5,
-    SHIFT_3: 9,
-    SHIFT_4: 13
-  } as const;
-
-  const CHORD_BUTTONS: { paramIndex: number; onValue: number; label: string }[] = [
-    { paramIndex: CHORD_PARAMS.SHIFT_1, onValue: 12, label: '+1' },
-    { paramIndex: CHORD_PARAMS.SHIFT_2, onValue: 24, label: '+2' },
-    { paramIndex: CHORD_PARAMS.SHIFT_3, onValue: -12, label: '-1' },
-    { paramIndex: CHORD_PARAMS.SHIFT_4, onValue: -24, label: '-2' }
-  ];
-
-  function getChordParamValue(paramIndex: number): number {
-    return chord.paramValue(paramIndex) ?? 0;
-  }
-
-  function handleChordToggle(paramIndex: number, onValue: number) {
-    const current = getChordParamValue(paramIndex);
-    chord.sendParam(paramIndex, current !== 0 ? 0 : onValue);
-  }
-
-  // Note Chance — a Max MIDI effect with exactly one parameter, so the
-  // LOM order is forced: [0] Device On, [1] Chance. 0-100 %, 101 steps
-  // (the dial's own `parameter_steps`), polyphonic — at 60 % roughly
-  // six notes of every ten get through, chords included.
-  const CHANCE_PARAM = 1;
-  const CHANCE_MAX = 100;
-
-  // The rest value is 100, not 0: silence is what a *pulled-down* chance
-  // means, so a ghost slider sitting at zero would read as "this device
-  // mutes the track". The library copy of the .amxd defaults to 100 as
-  // well, so the ghost and the freshly-loaded device agree.
-  let chanceValue = $derived(chance.paramValue(CHANCE_PARAM) ?? CHANCE_MAX);
-  let chanceDisplay = $derived(chance.paramDisplay(CHANCE_PARAM));
-  let chanceTitle = $derived(chanceDisplay ? `Chance · ${chanceDisplay}` : 'Chance');
 
   let patternPickerOpen = $state(false);
 
@@ -452,83 +399,6 @@
     />
   </div>
 
-  <!-- FOUR DEVICES IN ONE ROW (2026-09-13). Pattern, Rate, Steps and Gate
-       are the Arpeggiator; Rand Vel and the brace are Velocity; the Oct
-       buttons are Chord; Chance is its own. Every one of them used to
-       abut the next at the same 16px gap that separates two of the
-       Arpeggiator's OWN controls, so the row read as one long device with
-       an odd set of parameters. The hairlines say where each one starts;
-       each carries its device's ink, matching the controls after it. -->
-  <SectionDivider orientation="vertical" ink={velocity.color.primary} />
-
-  <!-- Velocity Random slider -->
-  <div class="flex-1" class:slot-ghost={velocity.isGhost}>
-    <DeviceSlider
-      value={velocityRandom / 127}
-      title="Rand Vel"
-      icon="randvel"
-      orientation="vertical"
-      labelOrientation="horizontal"
-      labelSize="small"
-      isGhost={velocity.isGhost}
-      color={velocity.color}
-      readout={velocity.paramDisplay(VELOCITY_PARAMS.RANDOM)}
-      onInteraction={(value) => {
-        const intValue = Math.round(value * 127);
-        velocity.sendParam(VELOCITY_PARAMS.RANDOM, intValue);
-      }}
-    />
-  </div>
-
-  <!-- Velocity Range Brace (Out Low / Out Hi) -->
-  <div class="flex-1">
-    <VelocityRangeBrace
-      device={velocity.device}
-      isGhost={velocity.isGhost}
-      color={velocity.color}
-      onInteraction={() => velocity.loadIfGhost()}
-    />
-  </div>
-
-  <SectionDivider orientation="vertical" ink={chordInk.primary} />
-
-  <!-- Chord octave shift buttons -->
-  <div class="flex-1 flex flex-col gap-(--central-gap) min-h-0">
-    {#each CHORD_BUTTONS as btn}
-      {@const isOn = getChordParamValue(btn.paramIndex) !== 0}
-      <button
-        class="physical-button arp-caps w-full flex-1 min-h-0 text-base font-bold"
-        class:active={isOn}
-        style="--btn-tint: {chordInk.primary};{chord.isGhost ? ' opacity: var(--opacity-ghost);' : ''}"
-        onclick={() => handleChordToggle(btn.paramIndex, btn.onValue)}
-      >
-        Oct {btn.label}
-      </button>
-    {/each}
-  </div>
-
-  <SectionDivider orientation="vertical" ink={chance.color.primary} />
-
-  <!-- Note Chance: the odds an incoming note survives. A drag loads the
-       device if the slot is a ghost; so does a tap, which has no value of
-       its own to send (DeviceSlider drags are relative). -->
-  <div class="flex-1" class:slot-ghost={chance.isGhost}>
-    <DeviceSlider
-      value={chanceValue / CHANCE_MAX}
-      title={chanceTitle}
-      icon="chance"
-      orientation="vertical"
-      labelOrientation="horizontal"
-      labelSize="small"
-      isGhost={chance.isGhost}
-      color={chance.color}
-      onTap={() => chance.loadIfGhost()}
-      onInteraction={(value) => {
-        chance.sendParam(CHANCE_PARAM, Math.round(value * CHANCE_MAX));
-      }}
-    />
-  </div>
-
   {#if patternPickerOpen}
     <div class="pattern-picker absolute inset-0 z-20 p-(--central-inset) flex flex-col">
       <div class="grid grid-cols-9 grid-rows-2 gap-2 flex-1 min-h-0">
@@ -588,7 +458,7 @@
     background-color: var(--card);
   }
 
-  /* Sync / Oct toggles are authored mixed-case and up-cased here for the
+  /* The Sync toggle is authored mixed-case and up-cased here for the
      HUD voice. */
   .arp-caps {
     text-transform: uppercase;

@@ -2,12 +2,10 @@
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import { glyphForName } from '$lib/config/controlGlyphMap';
-  import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
-  import { PITCH_COLOR, MOD_COLOR } from '$lib/config/devicePresets';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
 
   interface Props {
@@ -78,24 +76,13 @@
 
   // Komplete Kontrol has 8 macro parameters (indices 1-8)
   const SLIDER_PARAMS = [1, 2, 3, 4, 5, 6, 7, 8];
-
-  // MIDI wheel colors
-  let pitchInk = $derived(trackScheme ?? {
-    primary: trackInk(PITCH_COLOR.primary, paintModeReactive()),
-    secondary: PITCH_COLOR.secondary,
-    accent: trackInk(PITCH_COLOR.accent, paintModeReactive())
-  });
-  let modInk = $derived(trackScheme ?? {
-    primary: trackInk(MOD_COLOR.primary, paintModeReactive()),
-    secondary: MOD_COLOR.secondary,
-    accent: trackInk(MOD_COLOR.accent, paintModeReactive())
-  });
 </script>
 
 <div class="h-full w-full flex flex-col" data-density="compact">
   {#if instrument}
     <!-- The 8 parameters as value boxes, two rows of four filled column by
-         column, then the MIDI wheels, Pitch over Mod (ADR-477). -->
+         column (ADR-477). The wheels left for the MidiWheels device's chain
+         cell (user, 2026-10-26). -->
     <div class="controls-panel">
       <div class="param-grid">
       {#each SLIDER_PARAMS as paramIndex (paramIndex)}
@@ -115,11 +102,6 @@
         </div>
       {/each}
 
-      </div>
-
-      <!-- MIDI wheels, one column the width of a parameter column -->
-      <div class="wheel-slot">
-        <MidiWheelsPanel pitchColor={pitchInk} modColor={modInk} />
       </div>
     </div>
   {:else}
@@ -148,9 +130,9 @@
   }
 
   /* Two rows of four, column by column: a parameter's neighbour sits under
-     it. Four shares wide, beside the wheels' one. */
+     it. The whole width. */
   .param-grid {
-    flex: 4 1 calc(3 * var(--central-gap));
+    flex: 1 1 0;
     min-width: 0;
     min-height: 0;
     display: grid;
@@ -158,11 +140,5 @@
     grid-auto-flow: column;
     grid-auto-columns: minmax(0, 1fr);
     gap: var(--central-gap);
-  }
-
-  .wheel-slot {
-    flex: 1 1 0;
-    min-width: 40px;
-    min-height: 0;
   }
 </style>

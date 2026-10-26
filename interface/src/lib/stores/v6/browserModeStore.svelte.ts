@@ -77,6 +77,8 @@ function createBrowserModeStore() {
 	let browseEffects = $state(readStringFromStorage(BROWSE_EFFECTS_STORAGE_KEY) === '1');
 	// Bumped by `openEffectsBrowser`; the browser lands on a Place with effects.
 	let effectsOpenRequest = $state(0);
+	// Bumped by `openInstrumentBrowser`; the browser resumes where it was, on Instrument.
+	let instrumentOpenRequest = $state(0);
 	const setBrowseEffects = (value: boolean) => {
 		browseEffects = value;
 		writeStringToStorage(BROWSE_EFFECTS_STORAGE_KEY, value ? '1' : '0');
@@ -185,6 +187,20 @@ function createBrowserModeStore() {
 		},
 		get effectsOpenRequest(): number {
 			return effectsOpenRequest;
+		},
+
+		// Open the browser on its Instrument segment, where it was left — the
+		// strips' + MIDI (user, 2026-10-26). The track it creates is selected
+		// and empty, so the pick lands on it.
+		openInstrumentBrowser() {
+			sourceMode = 'instruments';
+			writeStringToStorage(SOURCE_MODE_STORAGE_KEY, sourceMode);
+			setBrowseEffects(false);
+			isInstrumentPersistent = true;
+			instrumentOpenRequest += 1;
+		},
+		get instrumentOpenRequest(): number {
+			return instrumentOpenRequest;
 		},
 
 		// Open scale browser from external trigger (SystemCentralView Key button)

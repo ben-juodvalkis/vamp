@@ -1,13 +1,11 @@
 <script lang="ts">
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
-  import SectionDivider from '../SectionDivider.svelte';
-  import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
-  import { PITCH_COLOR, MOD_COLOR, familyScheme } from '$lib/config/devicePresets';
+  import { familyScheme } from '$lib/config/devicePresets';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
 
@@ -35,18 +33,6 @@
     primary: trackInk(collisionColor.primary, paintModeReactive()),
     secondary: collisionColor.secondary,
     accent: trackInk(collisionColor.accent, paintModeReactive())
-  });
-
-  // MIDI wheel colors (shared across central views)
-  let pitchInk = $derived(trackScheme ?? {
-    primary: trackInk(PITCH_COLOR.primary, paintModeReactive()),
-    secondary: PITCH_COLOR.secondary,
-    accent: trackInk(PITCH_COLOR.accent, paintModeReactive())
-  });
-  let modInk = $derived(trackScheme ?? {
-    primary: trackInk(MOD_COLOR.primary, paintModeReactive()),
-    secondary: MOD_COLOR.secondary,
-    accent: trackInk(MOD_COLOR.accent, paintModeReactive())
   });
 
   // Resonator on/off state (param 32: Res1, param 65: Res2)
@@ -79,7 +65,8 @@
   {#if instrument && device}
     <!-- Two resonator XY pads side by side, hidden when off; the swap pill
          lies across the top of the first one shown, top-left as in every
-         instrument view. -->
+         instrument view. The wheels left for the MidiWheels device's
+         chain cell (user, 2026-10-26). -->
     <div class="h-full w-full p-(--central-inset) flex items-center justify-center gap-(--central-gap)">
       {#if res1On}
         <div class="flex-1 h-full min-w-0 flex flex-col gap-(--central-gap)">
@@ -117,13 +104,6 @@
           <p class="flex-1 flex items-center justify-center">No resonators active</p>
         </div>
       {/if}
-      <!-- The wheels send MIDI, not Collision parameters: a seam divides them
-           from the device, as in every instrument view (2026-09-13). -->
-      <SectionDivider orientation="vertical" />
-      <!-- MIDI wheels, Pitch over Mod (ADR-477) -->
-      <div class="h-full w-14 flex-none">
-        <MidiWheelsPanel pitchColor={pitchInk} modColor={modInk} />
-      </div>
     </div>
   {:else}
     <!-- Default state when no Collision present -->

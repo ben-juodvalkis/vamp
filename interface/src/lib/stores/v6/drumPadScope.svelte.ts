@@ -395,6 +395,17 @@ export const drumPadScope = {
 		}
 	},
 
+	/**
+	 * Latch `note` on `devicePath`, as a tap on its tile does (2026-10-26):
+	 * the chain overview's + Effect latches a held pad, so the pad stays
+	 * scoped while the browser covers the Drum Rack view and the hold ends
+	 * under it, and the pick lands in that pad. A later hold's release
+	 * leaves the latch as it is; a tap on the pad lets it go.
+	 */
+	latch(devicePath: string, note: number): void {
+		setLatch(devicePath, note);
+	},
+
 	/** Drop every hold, latch, pin and pane (a track change, a device replaced under a finger, PADS off, tests). */
 	clear(): void {
 		holds.clear();

@@ -9,8 +9,9 @@
 	 * view leaves it out, and there is no Freeze or Mod Hold (the user's
 	 * calls). Pairs agreed with the glitchloop side: what one hand moves
 	 * together; Duck and Glue stay apart. A bipolar macro's noon is the
-	 * pad's middle, "as the preset set it". Past a seam, Pitch Hack (titled
-	 * Reverse: its Rate column and Mix), out of the Pitch view on 2026-10-24.
+	 * pad's middle, "as the preset set it". Pitch Hack (titled Reverse) sat
+	 * past a seam from 2026-10-24 until the FX chain overview gave every
+	 * device a view of its own (2026-10-26); it is `ReverseCentralView` now.
 	 *
 	 * GlitchLoop's parameters resolve by name (`glitchLoopParams.ts`). Its
 	 * presets are not parameters (the device keeps them out of Live's undo
@@ -32,7 +33,6 @@
 	import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
 	import SectionDivider from '$lib/components/v6/central/SectionDivider.svelte';
 	import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
-	import PitchGroup from './autopan/PitchGroup.svelte';
 	import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 	import { sendParamsByName } from '$lib/services/deviceParams';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
@@ -209,18 +209,13 @@
 		</div>
 	</section>
 
-
-	<!-- Pitch Hack, titled Reverse: its Rate column and Mix, out of the
-	     Pitch view (2026-10-24, the user's call). The group brings its own
-	     seam; its root is `display: contents`, so its column is this grid's. -->
-	<PitchGroup show="reverse" />
 </div>
 
 <style>
-	/* GlitchLoop's presets and seven columns, then Reverse's two. */
+	/* GlitchLoop's presets and seven columns. */
 	.glitch-central-layout {
 		display: grid;
-		grid-template-columns: minmax(0, 8.6fr) auto minmax(0, 2fr);
+		grid-template-columns: minmax(0, 1fr);
 		height: 100%;
 		width: 100%;
 		padding: var(--central-inset);

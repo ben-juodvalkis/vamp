@@ -116,7 +116,8 @@ export interface FXGridSlotConfig {
  * Rand Oct over Variation; the instrument slider that used to share fx1's
  * column and the Guitar tile that used to sit beside it both went (the
  * strip's device band opens the instrument view now, and the Guitar rack's
- * drive slider moved into PedalCentralView, which is also its door). On
+ * drive slider moved into the Pedal view; it is GuitarCentralView's since
+ * 2026-10-26, one device per view). On
  * audio the row-1 slot is the Bass, and the clip-pitch tile went with it —
  * it was a second copy of the PITCH column ClipCentralView already draws.
  *
@@ -136,7 +137,9 @@ export interface FXGridSlotConfig {
  *
  * 2026-10-05: the Saturator and the Pedal swapped places — the Saturator's
  * XY is the grid tile again, and the Pedal's XY moved into the view the
- * tile opens (PedalCentralView), beside its type tabs.
+ * tile opens (PedalCentralView), beside its type tabs. Since 2026-10-26
+ * every device has its own view: the tile opens SaturatorCentralView and
+ * the Pedal is PedalCentralView's alone.
  *
  * Note: Arpeggiator and Bass are virtual devices (not in grid, accessed via central views)
  */

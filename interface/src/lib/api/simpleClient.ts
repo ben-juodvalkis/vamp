@@ -549,6 +549,14 @@ export function sendClipDelete(slotPath: string): void {
 	send('/looping/v3/clip/delete', [slotPath]);
 }
 
+/**
+ * Make an empty MIDI clip ``lengthBeats`` long at ``slotPath`` and fire it.
+ * Occupied slot → ``write-rejected``; the surface never replaces a clip.
+ */
+export function sendClipCreate(slotPath: string, lengthBeats: number): void {
+	send('/looping/v3/clip/create', [slotPath, lengthBeats]);
+}
+
 /** Duplicate clip at ``slotPath`` to ``destSlotPath`` (same track only). */
 export function sendClipDuplicate(slotPath: string, destSlotPath: string): void {
 	send('/looping/v3/clip/duplicate', [slotPath, destSlotPath]);

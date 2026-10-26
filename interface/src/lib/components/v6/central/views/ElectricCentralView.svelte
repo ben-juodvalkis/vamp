@@ -1,13 +1,10 @@
 <script lang="ts">
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
-  import SectionDivider from '../SectionDivider.svelte';
-  import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
-  import { PITCH_COLOR, MOD_COLOR } from '$lib/config/devicePresets';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
 
@@ -40,18 +37,6 @@
     accent: trackInk(electricColor.accent, paintModeReactive())
   });
 
-  // MIDI wheel colors (shared across central views)
-  let pitchInk = $derived(trackScheme ?? {
-    primary: trackInk(PITCH_COLOR.primary, paintModeReactive()),
-    secondary: PITCH_COLOR.secondary,
-    accent: trackInk(PITCH_COLOR.accent, paintModeReactive())
-  });
-  let modInk = $derived(trackScheme ?? {
-    primary: trackInk(MOD_COLOR.primary, paintModeReactive()),
-    secondary: MOD_COLOR.secondary,
-    accent: trackInk(MOD_COLOR.accent, paintModeReactive())
-  });
-
   // All parameter values as $derived - always reactive to store changes (ADR-149)
   // Hammer: Parameter 8 (Stiffness X), Parameter 16 (Noise Y)
   let hammerStiffness = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 8)) ?? 0.5 : 0.5);
@@ -80,9 +65,9 @@
 
 <div class="h-full w-full overflow-hidden relative">
   {#if instrument && device}
-    <!-- Layout: Hammer XY + Fork XY | MIDI wheels — the seam divides the
-         device from the wheels, which send MIDI (2026-09-13). -->
-    <div class="h-full w-full p-(--central-inset) grid gap-(--central-gap)" style="grid-template-columns: 1fr 1fr auto auto;">
+    <!-- Layout: Hammer XY + Fork XY. The wheels left for the MidiWheels
+         device's chain cell (user, 2026-10-26). -->
+    <div class="h-full w-full p-(--central-inset) grid gap-(--central-gap)" style="grid-template-columns: 1fr 1fr;">
       <!-- Hammer XY: Stiffness (X) / Noise (Y), the swap pill lying across
            the top of its column, top-left as in every instrument view. -->
       <div class="min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
@@ -108,12 +93,6 @@
         onInteraction={handleForkXYInteraction}
         color={electricInk}
       />
-
-      <SectionDivider orientation="vertical" />
-      <!-- MIDI wheels, Pitch over Mod (ADR-477) -->
-      <div class="h-full w-14 flex-none min-h-0">
-        <MidiWheelsPanel pitchColor={pitchInk} modColor={modInk} />
-      </div>
     </div>
   {:else}
     <!-- Default state when no Electric present -->

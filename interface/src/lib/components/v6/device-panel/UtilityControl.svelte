@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { controlFor, resolveParam, type ParamRef, type SliderControl } from './deviceControls';
   import type { DeviceRecord } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { slotRegistry } from '$lib/stores/v6/slotRegistry.svelte';
@@ -17,21 +18,13 @@
 
   let { device, position }: Props = $props();
 
-  const PARAM_CONFIG = {
-    width: {
-      index: 9,
-      min: -1,
-      max: 1,
-      type: 'float' as const
-    }
-  };
+  // The `utility` control (`deviceControls`): Gain on 0..1, drawn over the track's meter.
+  const UTILITY = controlFor('utility') as SliderControl;
+  const get = (ref: ParamRef) =>
+    device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, resolveParam(ref))) : undefined;
 
   // Reactive view of armed/store state.
-  let widthValue = $derived(
-    device
-      ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, PARAM_CONFIG.width.index)) ?? 0
-      : 0
-  );
+  let widthValue = $derived(UTILITY.read(get));
 
   // ===== TRACK METER =====
   // ROW 6.5 (2026-04-21): DeviceSlider's optional meter display now reads
@@ -80,8 +73,8 @@
       labelSize="small"
       {isGhost}
       {color}
-      min={PARAM_CONFIG.width.min}
-      max={PARAM_CONFIG.width.max}
+      min={0}
+      max={1}
       track={selectedTrackIndex >= 0 ? track : null}
       trackIndex={selectedTrackIndex}
       meterColor={trackColor}
@@ -100,10 +93,10 @@
             triggerLoad();
           }
           // Store as pending - will be applied when device loads
-          storePendingParam(PARAM_CONFIG.width.index, value);
+          for (const [ref, v] of UTILITY.write(value, get)) storePendingParam(resolveParam(ref), v);
         } else {
           // Device is active - send immediately (cache updates optimistically)
-          sendParam(PARAM_CONFIG.width.index, value);
+          for (const [ref, v] of UTILITY.write(value, get)) sendParam(resolveParam(ref), v);
         }
       }}
     />

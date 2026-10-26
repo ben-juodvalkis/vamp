@@ -146,14 +146,25 @@ describe('viewRegistry — the Drum Rack is one view (ADR-428, Milestone 1b)', (
 });
 
 describe('viewRegistry — the Rand Oct tile (issue #491)', () => {
-	it("opens the Arpeggiator view for the tile's own type, random", () => {
-		// The tile used to name the Arpeggiator view itself; since every tile
-		// opens its own type through the router, `random` has to resolve
-		// here — with no entry it fell through to the placeholder view.
+	it("opens Random's own view for the tile's own type, random", () => {
+		// Since every tile opens its own type through the router, `random`
+		// has to resolve here — with no entry it fell through to the
+		// placeholder view. It aliased the Arpeggiator view until the chain
+		// overview (ADR-478) gave each device its own; nothing there drove
+		// Random.
 		const targets = new Map(registryTargets());
-		expect(targets.get('device:random')).toBe('ArpeggiatorCentralView.svelte');
-		expect(targets.get('device:random')).toBe(targets.get('device:arpeggiator'));
+		expect(targets.get('device:random')).toBe('RandomCentralView.svelte');
 		expect(resolveViewComponent('device', 'random')).not.toBe(CENTRAL_VIEW_REGISTRY.default);
+	});
+});
+
+describe('viewRegistry — the Arpeggiator view is one device (ADR-478)', () => {
+	it('opens Velocity, Chord and Note Chance in views of their own', () => {
+		const targets = new Map(registryTargets());
+		expect(targets.get('device:arpeggiator')).toBe('ArpeggiatorCentralView.svelte');
+		expect(targets.get('device:velocity')).toBe('VelocityCentralView.svelte');
+		expect(targets.get('device:chord')).toBe('ChordCentralView.svelte');
+		expect(targets.get('device:chance')).toBe('ChanceCentralView.svelte');
 	});
 });
 

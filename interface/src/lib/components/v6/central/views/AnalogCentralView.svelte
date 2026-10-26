@@ -2,12 +2,11 @@
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
-  import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
-  import { PITCH_COLOR, MOD_COLOR, familyScheme } from '$lib/config/devicePresets';
+  import { familyScheme } from '$lib/config/devicePresets';
   import { SECTION_SWITCH_ON_ABOVE } from '$lib/services/drumVirtualMacros';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import SectionDivider from '../SectionDivider.svelte';
@@ -57,16 +56,6 @@
     primary: trackInk(analogColor.primary, paintModeReactive()),
     secondary: analogColor.secondary,
     accent: trackInk(analogColor.accent, paintModeReactive())
-  });
-  let pitchInk = $derived(trackScheme ?? {
-    primary: trackInk(PITCH_COLOR.primary, paintModeReactive()),
-    secondary: PITCH_COLOR.secondary,
-    accent: trackInk(PITCH_COLOR.accent, paintModeReactive())
-  });
-  let modInk = $derived(trackScheme ?? {
-    primary: trackInk(MOD_COLOR.primary, paintModeReactive()),
-    secondary: MOD_COLOR.secondary,
-    accent: trackInk(MOD_COLOR.accent, paintModeReactive())
   });
 
   /**
@@ -533,11 +522,12 @@
 
       <SectionDivider orientation="vertical" ink={analogInk.primary} />
 
-      <!-- Mono / Poly and the two voicing switches over the wheels, Pitch
-           over Mod (ADR-477). Vibrato is a switch here because its depth
-           rides the mod wheel under it. -->
+      <!-- Mono / Poly and the two voicing switches, the column's full
+           height. Vibrato is a switch here because its depth rides the mod
+           wheel. The wheels under them left for the MidiWheels device's
+           chain cell (user, 2026-10-26). -->
       <div class="voicing-col flex-none flex flex-col gap-(--central-gap) min-h-0">
-        <div class="grid grid-cols-2 gap-1 flex-none">
+        <div class="grid grid-cols-2 grid-rows-2 gap-1 flex-1 min-h-0">
           <!-- Mono or Poly is one choice, a two-cell tab across the row;
                Uni and Vib under it are switches of their own. -->
           <div class="col-span-2 device-segmented seg-grid grid grid-cols-2" style="--btn-tint: {analogInk.primary};">
@@ -546,9 +536,6 @@
           </div>
           <button class="physical-button mode-button px-1 text-center" class:active={unisonOn} style="--btn-tint: {analogInk.primary};" aria-pressed={unisonOn} onclick={() => write(ANALOG_UNISON_ON, unisonOn ? 0 : 1)}>Uni</button>
           <button class="physical-button mode-button px-1 text-center" class:active={vibOn} style="--btn-tint: {analogInk.primary};" aria-pressed={vibOn} onclick={() => write(ANALOG_VIB_ON, vibOn ? 0 : 1)}>Vib</button>
-        </div>
-        <div class="flex-1 min-h-0">
-          <MidiWheelsPanel pitchColor={pitchInk} modColor={modInk} />
         </div>
       </div>
     </div>
@@ -677,7 +664,7 @@
   .noise-col {
     width: var(--analog-slider-w);
   }
-  /* Two slider widths: the switches' 2 x 2 over the stacked wheels. */
+  /* Two slider widths: the switches' 2 x 2, the column's full height. */
   .voicing-col {
     width: calc(2 * var(--analog-slider-w) + var(--central-gap));
   }

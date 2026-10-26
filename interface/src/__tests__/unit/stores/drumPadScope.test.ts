@@ -113,6 +113,20 @@ describe('drumPadScope', () => {
 		expect(drumPadScope.heldNotes(DEV)).toEqual([42]);
 	});
 
+	it('a held pad latched by + Effect stays scoped when its hold ends under the browser', () => {
+		// The chain overview's + Effect latches the held pad; the browser then
+		// covers the Drum Rack view and the tile's press ends with a cancel.
+		drumPadScope.press(DEV, 38, 1, 0);
+		drumPadScope.latch(DEV, 38);
+		drumPadScope.release(1, 'cancel', 900);
+		expect(drumPadScope.scopeNote(DEV)).toBe(38);
+		expect(drumPadScope.latchedNote(DEV)).toBe(38);
+		// A tap on the pad lets it go, as any latch.
+		drumPadScope.press(DEV, 38, 2, 1000);
+		drumPadScope.release(2, 'up', 1100);
+		expect(drumPadScope.scopeNote(DEV)).toBeNull();
+	});
+
 	it('a press that never finished cleanly never latches', () => {
 		// The browser claiming the gesture, or the grid unmounting under
 		// the finger: a latch is deliberate, and this was not.

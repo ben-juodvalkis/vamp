@@ -14,6 +14,7 @@ import { render, cleanup, fireEvent } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import NewTrackButtons from '$lib/components/v6/tracks/NewTrackButtons.svelte';
 import { prepareForPreset } from '$lib/services/trackPreparation';
+import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
 
 async function tap(button: Element) {
 	await fireEvent.pointerDown(button);
@@ -58,6 +59,32 @@ describe('NewTrackButtons', () => {
 		vi.mocked(prepareForPreset).mockResolvedValue({ trackPath: 'tracks/4', trackIndex: 4, wasCreated: true });
 		await tap(audio);
 		expect(prepareForPreset).toHaveBeenCalledTimes(2);
+	});
+
+	it('opens the browser once the track exists: + MIDI on Instrument, + Audio on Effect', async () => {
+		vi.mocked(prepareForPreset).mockResolvedValue({ trackPath: 'tracks/3', trackIndex: 3, wasCreated: true });
+		const { getByLabelText } = render(NewTrackButtons);
+		const effects = browserModeStore.effectsOpenRequest;
+		const instruments = browserModeStore.instrumentOpenRequest;
+
+		await tap(getByLabelText('New MIDI track'));
+		await tick();
+		expect(browserModeStore.instrumentOpenRequest).toBe(instruments + 1);
+		expect(browserModeStore.browseMode).toBe('midi');
+
+		await tap(getByLabelText('New Audio track'));
+		await tick();
+		expect(browserModeStore.effectsOpenRequest).toBe(effects + 1);
+		expect(browserModeStore.browseMode).toBe('effects');
+	});
+
+	it('opens no browser when the create is refused', async () => {
+		vi.mocked(prepareForPreset).mockRejectedValueOnce(new Error('prepareForPreset create-failed: x'));
+		const { getByLabelText } = render(NewTrackButtons);
+		const instruments = browserModeStore.instrumentOpenRequest;
+		await tap(getByLabelText('New MIDI track'));
+		await tick();
+		expect(browserModeStore.instrumentOpenRequest).toBe(instruments);
 	});
 
 	it('comes back from a refused prepare', async () => {

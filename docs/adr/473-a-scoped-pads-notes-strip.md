@@ -62,7 +62,8 @@ scoped pad hides it.
 
 ## Consequences
 - With nothing playing on the track the strip says "No clip playing" and
-  edits nothing; the clip Live has focused is not used.
+  edits nothing; the clip Live has focused is not used. (Superseded by
+  ADR-480: a step added there makes a one-bar clip and fires it.)
 - A note's length is not changed here: that is still the clip editor's.
 - An edit made in Live itself shows once the clip next reports
   `notes/changed`.

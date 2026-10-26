@@ -1,66 +1,15 @@
 <script lang="ts">
-  import type { DeviceRecord } from '$lib/stores/v6/selectedTrackStore.svelte';
-  import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
-  import BaseDeviceControl from './BaseDeviceControl.svelte';
-  import DeviceXY from './DeviceXY.svelte';
-  import { AUTO_FILTER_PARAM, autoFilterCurve } from './autoFilterParams';
+	/** The `filter` control (`deviceControls`) as a tile. */
+	import type { DeviceRecord } from '$lib/stores/v6/selectedTrackStore.svelte';
+	import type { PositionKey } from '$lib/config/fxGridLayout';
+	import ControlTile from './ControlTile.svelte';
 
-  interface Props {
-    device: DeviceRecord | null;
-    position: import('$lib/config/fxGridLayout').PositionKey;
-  }
+	interface Props {
+		device: DeviceRecord | null;
+		position: PositionKey;
+	}
 
-  let { device, position }: Props = $props();
-
-  // Single source of truth: paramValueArmed reads the UI-armed value
-  // during a drag's round-trip window, falling back to the v3 store
-  // (which carries pre-load speculative seeds + post-load surface
-  // values). No component-local $state shadow, no untrack() — the
-  // store is authoritative and reactive. Pre-load gestures land in
-  // the store via the FX-grid new-device hook (paramArming.svelte);
-  // mid-drag echoes are suppressed by the arm in setParamValue.
-  let cutoffValue = $derived(
-    device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, AUTO_FILTER_PARAM.frequency)) ?? 1 : 1
-  );
-  let resonanceValue = $derived(
-    device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, AUTO_FILTER_PARAM.resonance)) ?? 0 : 0
-  );
-  let filterType = $derived(
-    device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, AUTO_FILTER_PARAM.type)) ?? 0 : 0
-  );
-  // The curve per type, from Live's own labels (autoFilterParams).
-  let curveType = $derived(autoFilterCurve(filterType));
+	let { device, position }: Props = $props();
 </script>
 
-<BaseDeviceControl {position} {device} title="AutoFilter" showMoveToTop={true}>
-  {#snippet children({ sendParam, storePendingParam, triggerLoad, handleTap, isGhost, isLoading, color, openView })}
-    <DeviceXY
-      xValue={cutoffValue}
-      yValue={resonanceValue}
-      title="Filter"
-      {isGhost}
-      {color}
-      showCurve={curveType !== 'none'}
-      {curveType}
-      onTap={handleTap}
-      onInteraction={(x, y) => {
-        // Always update central display immediately on interaction
-        openView();
-
-        if (isGhost || isLoading) {
-          // Trigger load on first ghost interaction
-          if (isGhost) {
-            triggerLoad();
-          }
-          // Store as pending - will be applied when device loads
-          storePendingParam(1, x); // Cutoff
-          storePendingParam(2, y); // Resonance
-        } else {
-          // Device is active - send to Ableton
-          sendParam(1, x); // Cutoff - parameter 1
-          sendParam(2, y); // Resonance - parameter 2
-        }
-      }}
-    />
-  {/snippet}
-</BaseDeviceControl>
+<ControlTile type="filter" {device} {position} />

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { presetFace } from '$lib/components/v6/browser/presetFaces';
+import { presetControl } from '$lib/components/v6/device-panel/deviceControls';
 
 /**
  * Each case is one preset loaded onto a track in the running Live (2026-10-25)
@@ -18,13 +18,29 @@ const CASES: Array<{ name: string; preset: string; className: string; params: Re
 	{ name: "StereoGain", preset: "Bass Mono", className: "StereoGain", params: {"On": 1, "PhaseInvertL": 0, "PhaseInvertR": 0, "ChannelMode": 1.0, "StereoWidth": 1.0, "MidSideBalance": 1.0, "Mono": 0, "BassMono": 1, "BassMonoFrequency": 120.0, "Balance": 0.0, "Gain": 1.0, "LegacyGain": 0.0, "Mute": 0, "DcFilter": 0}, labels: {}, live: {"9": 0}, tol: {"9": 0.01} },
 	{ name: "BeatRepeat", preset: "Airpusher", className: "BeatRepeat", params: {"On": 1, "Chance": 0.700787425, "Interval": 2.0, "Offset": 0.0, "Grid": 7.0, "BlockTripplets": 1, "GridChance": 3.0, "GridChanceType": 2.0, "Gate": 8.0, "DampVolume": 0.0, "DampPitch": 0.6377952695, "BasePitch": 12.0, "MixType": 1.0, "WetLevel": 1.0, "FilterOn": 1, "MidFreq": 3864.98828, "BandWidth": 4.484375, "InstantRepeat": 0}, labels: {}, live: {"1": 0.7007874250411987}, tol: {} },
 	{ name: "MidiRandom", preset: "Blue", className: "MidiRandom", params: {"On": 1, "Chance": 0.1031746045, "Choices": 1.0, "Scale": 1.0, "Sign": 0.0, "Alternate": 0, "UseCurrentScale": 0}, labels: {}, live: {"1": 0.1031746044754982}, tol: {} },
+	{ name: "Pedal", preset: "Pedal", className: "Pedal", params: {"On": 1, "Type": 0, "Gain": 0, "Output": 0, "Bass": 0, "Mid": 0, "Treble": 0, "MidFreq": 1, "Sub": 0, "DryWet": 1}, labels: {}, live: {"2": 0}, tol: {} },
+	{ name: "Gate", preset: "Gate", className: "Gate", params: {"On": 1, "Threshold": 0.0003162277571, "Attack": 3.5, "Hold": 10, "Release": 15, "Return": 3, "Gain": -40}, labels: {}, live: {"1": 0, "4": 0.4860469698905945}, tol: {"4": 0.001} },
+	{ name: "PhaserNew", preset: "Phaser-Flanger", className: "PhaserNew", params: {"On":1,"Modulation_Amount":0.9761904478,"Modulation_Waveform":1,"Modulation_Frequency":0.1486274302,"Modulation_Frequency2":0.5,"Modulation_Sync":0,"Modulation_Sync2":0,"Modulation_SyncedRate":4,"Modulation_SyncedRate2":4,"Modulation_PhaseOffset":0,"Modulation_SpinEnabled":0,"Modulation_Spin":0,"Modulation_DutyCycle":0.1000000238,"Modulation_LfoBlend":0,"Modulation_EnvelopeEnabled":1,"Modulation_EnvelopeAmount":0,"Modulation_EnvelopeAttack":0.001000000047,"Modulation_EnvelopeRelease":0.1199999899,"Mode":0,"Notches":2,"FlangerDelayTime":0.002500000177,"DoublerDelayTime":0.07999999821,"ModulationBlend":0,"CenterFrequency":399.999969,"Spread":0.3515625,"Feedback":0,"Warmth":0,"SafeBassFrequency":79.9999924,"InvertWet":0,"OutputGain":0.9999999404,"DryWet":1}, labels: {}, live: {"3":0.3253968358039856,"25":0}, tol: {} },
+	{ name: "Redux2", preset: "Redux", className: "Redux2", params: {"On":1,"SampleRate":40000,"Jitter":0,"BitDepth":16,"QuantizerShape":0,"QuantizerDcShift":0,"EnablePreFilter":0,"EnablePostFilter":1,"PostFilterValue":0,"DryWet":1}, labels: {}, live: {"1":1,"8":0.5}, tol: {} },
+	{ name: "Compressor2", preset: "Compressor", className: "Compressor2", params: {"On":1,"Threshold":1.99526238,"Ratio":4,"ExpansionRatio":1.14999998,"Attack":2,"Release":50,"AutoReleaseControlOnOff":0,"Gain":0,"GainCompensation":0,"DryWet":1,"Model":1,"LegacyModel":1,"LogEnvelope":1,"LegacyEnvFollowerMode":0,"Knee":6,"LookAhead":0,"SideListen":0,"OnOff":0,"Volume":1,"SideChainEq_On":0,"SideChainEq_Mode":3,"SideChainEq_Freq":97.9965515}, labels: {}, live: {"1":1}, tol: {} },
+	{ name: "Shifter", preset: "Shifter", className: "Shifter", params: {"On":1,"Lfo_Amount":0,"Lfo_AmountPitch":0,"Lfo_Waveform":1,"Lfo_SyncOn":0,"Lfo_RateHz":0.4999999404,"Lfo_SyncedRate":12,"Lfo_SpinOn":1,"Lfo_PhaseOffset":180,"Lfo_SpinAmount":0,"Lfo_Offset":0,"Lfo_SHWidth":0,"Lfo_DutyCycle":0,"Pitch_Coarse":0,"Pitch_Fine":0,"Pitch_WindowSize":0.07999999076,"ModBasedShifting_Fine":-1,"ModBasedShifting_FShift_Coarse":0,"ModBasedShifting_RingMod_Coarse":1,"ModBasedShifting_RingMod_Drive":0,"ModBasedShifting_RingMod_DriveAmount":0,"MidiPitch_Glide":0,"EnvelopeFollower_On":0,"EnvelopeFollower_Attack":0.006000000052,"EnvelopeFollower_Release":0.200000003,"EnvelopeFollower_AmountHz":0,"EnvelopeFollower_AmountPitch":0,"Delay_On":0,"Delay_SyncOn":1,"Delay_TimeSeconds":0.2499999702,"Delay_SyncedTime":9,"Delay_Feedback":0,"Global_ShifterMode":2,"Global_Tone":22000,"Global_Wide":0,"Global_DryWet":1}, labels: {}, live: {"18":0,"32":2}, tol: {} },
+	// Max devices (2026-10-26): what the server reads from each .amxd (parseAmxd), and what Live reported once it loaded.
+	{ name: "Octave", preset: "Octave", className: "MxDeviceAudioEffect", params: {"Semitones": -12, "Mix": 100, "Tone": 100, "Response": 0, "Quality": 0}, labels: {}, live: {"2": 100}, tol: {} },
+	{ name: "Comb", preset: "Comb", className: "MxDeviceAudioEffect", params: {"Feedback": 17.58, "Tune": 0, "Mix": 17.58}, labels: {}, live: {"1": 0, "2": 17.579999923706055, "3": 17.579999923706055}, tol: {"2": 1e-4, "3": 1e-4} },
+	{ name: "Blur", preset: "Blur", className: "MxDeviceAudioEffect", params: {"Drive": 100, "Rate": 22, "Seam": 36, "Mix": 0, "Width": 0, "Clip": 1, "Restart": 1}, labels: {}, live: {"4": 0}, tol: {} },
+	{ name: "NoteChance", preset: "Note Chance", className: "MxDeviceMidiEffect", params: {"Chance": 100}, labels: {}, live: {"1": 100}, tol: {} },
+	{ name: "GlitchLoop", preset: "GlitchLoop", className: "MxDeviceAudioEffect", params: {"Clock": 5, "Dry/Wet": 35.7033}, labels: {}, live: {"19": 35.70330047607422}, tol: {"19": 1e-4} },
+	{ name: "MultibandDynamics", preset: "Multiband Dynamics", className: "MultibandDynamics", params: {"On": 1, "OutputGain": 0, "BelowThresholdMid": -27.125, "BelowRatioMid": 0}, labels: {}, live: {"27": 0}, tol: {} },
+	{ name: "MidiVelocity", preset: "Velocity", className: "MidiVelocity", params: {"On": 1, "Drive": 0, "Compand": 0, "Random": 0, "Mode": 0, "Operation": 2, "MaxOut": 127, "MinOut": 1, "Range": 127, "Lowest": 1}, labels: {}, live: {"3": 0}, tol: {} },
+	{ name: "MidiArpeggiator", preset: "Arpeggiator", className: "MidiArpeggiator", params: {"On": 0, "Mode": 14, "SyncState": 1, "SyncedRate": 6, "FreeRate": 20, "Gate": 1}, labels: {}, live: {"0": 0, "5": 6, "8": 1}, tol: {} },
+	{ name: "MidiChord", preset: "Chord", className: "MidiChord", params: {"On": 1, "Shift1": 0, "ShiftScaleDegrees1": 0, "Velocity1": 1, "Chance1": 1}, labels: {}, live: {"1": 0}, tol: {} },
 	{ name: "GuitarRack", preset: "Guitar", className: "AudioEffectGroupDevice", params: {"MacroControls.0": 0.0, "MacroControls.1": 20.0, "MacroControls.2": 87.2762375}, labels: {"MacroDisplayNames.0": "Gain"}, live: {"1": 0}, tol: {} },
 ];
 
 describe('preset faces start where Live puts the loaded preset', () => {
 	for (const c of CASES) {
 		it(`${c.name}: ${c.preset}`, () => {
-			const got = presetFace({ className: c.className, params: c.params, labels: c.labels });
+			const got = presetControl({ className: c.className, params: c.params, labels: c.labels }, c.preset);
 			expect(got).not.toBeNull();
 			for (const [index, live] of Object.entries(c.live)) {
 				const tol = c.tol[Number(index)] ?? 1e-6;
@@ -33,15 +49,22 @@ describe('preset faces start where Live puts the loaded preset', () => {
 		});
 	}
 
-	it('names a rack face after its first macro', () => {
+	it('a rack the app knows is its tile; any other is its first macro, by the rack\'s name for it', () => {
 		const rack = CASES.find((c) => c.className === 'AudioEffectGroupDevice')!;
-		const got = presetFace({ className: rack.className, params: rack.params, labels: rack.labels });
-		expect(got?.face.kind).toBe('slider');
-		expect(got?.face.kind === 'slider' && got.face.title).toBe('Gain');
+		const known = presetControl({ className: rack.className, params: rack.params, labels: rack.labels }, 'Guitar');
+		expect(known?.control.kind === 'slider' && known.control.title).toBe('Gtr');
+		const other = presetControl({ className: rack.className, params: rack.params, labels: rack.labels }, 'Dub Space');
+		expect(other?.control.kind === 'slider' && other.control.title).toBe('Gain');
 	});
 
-	it('draws nothing for a class with no face, or a file missing the values', () => {
-		expect(presetFace({ className: 'Roar', params: {} })).toBeNull();
-		expect(presetFace({ className: 'Echo', params: {} })).toBeNull();
+	it('a Max device is found by its name: its class is shared', () => {
+		expect(presetControl({ className: 'MxDeviceAudioEffect', params: { Mix: 50 } }, 'Blur')?.control.title).toBe('Blur');
+		expect(presetControl({ className: 'MxDeviceAudioEffect', params: { Mix: 50 } }, 'Octave')?.control.title).toBe('Pitch');
+		expect(presetControl({ className: 'MxDeviceAudioEffect', params: {} }, 'Comb')).toBeNull();
+	});
+
+	it('draws nothing for a class with no control, or a file missing the values', () => {
+		expect(presetControl({ className: 'Roar', params: {} }, 'Roar')).toBeNull();
+		expect(presetControl({ className: 'Echo', params: {} }, 'Echo')).toBeNull();
 	});
 });
