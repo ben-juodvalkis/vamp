@@ -85,10 +85,10 @@ export interface SliderControl {
 	picture?: PictureKind;
 	/** A mark beside its title (the racks: Gtr, Bass, Wah). */
 	icon?: ControlGlyphName;
-	/** The parameter whose label Live gives is the slider's readout. */
-	readout?: ParamRef;
-	/** Where the fill grows from, 0..1, for a control centered on a neutral value (Multiband's 1 : 1). */
-	center?: number;
+	/** The parameter whose label Live gives is the slider's readout; a function when it follows another (Shifter's mode). */
+	readout?: ParamRef | ((get: Get) => ParamRef);
+	/** Where the fill grows from, 0..1, for a control centered on a neutral value (Multiband's 1 : 1); a function when it follows another. */
+	center?: number | ((get: Get) => number | undefined);
 	read(get: Get): number;
 	write(t: number, get: Get): Writes;
 }
@@ -146,7 +146,11 @@ const PITCH_HACK_MIX = { name: 'Dry / Wet', index: 2 };
 /** A Max device's saved values, by name, at each parameter's fallback index; null when the file lacks one. */
 const byName = (s: SavedPreset, ...refs: Array<{ name: string; index: number }>) =>
 	all(Object.fromEntries(refs.map((r) => [r.index, s.params[r.name]])));
-const SHIFTER = { ringMod: 18, mode: 32, ring: 2, ringModMax: 0.75 } as const;
+/** Live's Shifter (device_dump, 2026-10-26): Mode 0..2 (Pitch, Freq, Ring), each mode's amount its own parameter. */
+const SHIFTER = { pitch: 13, freq: 17, ringMod: 18, mode: 32, ring: 2, ringModMax: 0.75 } as const;
+/** The Shifter's mode; a ghost, which loads into Ring, reads as Ring. */
+const shifterMode = (g: Get) => Math.round(g(SHIFTER.mode) ?? SHIFTER.ring);
+const shifterAmount = (g: Get) => [SHIFTER.pitch, SHIFTER.freq, SHIFTER.ringMod][shifterMode(g)] ?? SHIFTER.ringMod;
 
 export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> = {
 	// Measured: Disco Filter. Frequency in Hz → log(hz/20)/log(1000).
@@ -457,20 +461,39 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	// 0), capped at 0.75 (1 kHz) as the Pedal view caps it; Mode 2 is Ring,
 	// set with the first write when it is not.
 	shifter: {
+		// One Amount for whichever mode is on (user, 2026-10-26: "just one
+		// slider for amount, and the 3-way switch"): Pitch Coarse ±24 st,
+		// FShift Coarse ±10 kHz (both centered), or RM Coarse to 1 kHz. A
+		// ghost loads into Ring.
 		control: {
 			kind: 'slider',
 			title: 'Shifter', picture: 'ringmod',
-			readout: SHIFTER.ringMod,
-			read: (g) => clamp01((g(SHIFTER.ringMod) ?? 0) / SHIFTER.ringModMax),
-			write: (t, g) => [
-				...(g(SHIFTER.mode) === SHIFTER.ring ? [] : ([[SHIFTER.mode, SHIFTER.ring]] as Writes)),
-				[SHIFTER.ringMod, clamp01(t) * SHIFTER.ringModMax]
-			]
+			readout: shifterAmount,
+			center: (g) => (shifterMode(g) === SHIFTER.ring ? undefined : 0.5),
+			read: (g) => {
+				const m = shifterMode(g);
+				if (m === 0) return clamp01(((g(SHIFTER.pitch) ?? 0) + 24) / 48);
+				if (m === 1) return clamp01(g(SHIFTER.freq) ?? 0.5);
+				return clamp01((g(SHIFTER.ringMod) ?? 0) / SHIFTER.ringModMax);
+			},
+			write: (t, g) => {
+				const m = shifterMode(g);
+				const mode: Writes = g(SHIFTER.mode) === undefined ? [[SHIFTER.mode, SHIFTER.ring]] : [];
+				if (m === 0) return [[SHIFTER.pitch, Math.round(clamp01(t) * 48 - 24)]];
+				if (m === 1) return [[SHIFTER.freq, clamp01(t)]];
+				return [...mode, [SHIFTER.ringMod, clamp01(t) * SHIFTER.ringModMax]];
+			}
 		},
 		fromPreset: (s) =>
 			s.params.ModBasedShifting_RingMod_Coarse === undefined
 				? null
-				: { [SHIFTER.ringMod]: clamp01(Math.log10(s.params.ModBasedShifting_RingMod_Coarse) / 4), [SHIFTER.mode]: s.params.Global_ShifterMode ?? 0 }
+				: {
+						[SHIFTER.ringMod]: clamp01(Math.log10(s.params.ModBasedShifting_RingMod_Coarse) / 4),
+						[SHIFTER.mode]: s.params.Global_ShifterMode ?? 0,
+						// Semitones as the LOM; Live's FShift rail is linear, -10..10 kHz over 0..1.
+						[SHIFTER.pitch]: s.params.Pitch_Coarse ?? 0,
+						[SHIFTER.freq]: clamp01(((s.params.ModBasedShifting_FShift_Coarse ?? 0) + 10000) / 20000)
+					}
 	},
 	// Max devices (2026-10-26): parameters by the name Live gives them, the
 	// `.amxd`'s `parameter_shortname`, with the measured index as fallback;

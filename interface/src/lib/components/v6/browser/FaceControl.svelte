@@ -90,6 +90,7 @@
 	/>
 {:else if control.kind === 'slider'}
 	{@const level = control.read(get)}
+	{@const center = typeof control.center === 'function' ? control.center(get) : control.center}
 	<!-- Soft: the fill fades so a name reads over it, and a line marks the
 	     level at full ink, so a value at 0 still shows a slider (Pedal's
 	     Drive, 2026-10-26: a bare tile before). -->
@@ -100,7 +101,7 @@
 			     the picture reads wherever the fill has risen over it (the
 			     user, 2026-10-26). -->
 			<div class="slider-picture"><DevicePicture kind={picture} x={level} ink={color.primary} /></div>
-			<div class="slider-picture slider-picture--inverse" style="clip-path: {fillClip(level, control.center)};">
+			<div class="slider-picture slider-picture--inverse" style="clip-path: {fillClip(level, center)};">
 				<DevicePicture kind={picture} x={level} ink="var(--flat-on-fg)" />
 			</div>
 		{/if}
@@ -110,9 +111,9 @@
 			icon={mark}
 			{isGhost}
 			{orientation}
-			readout={control.readout === undefined ? undefined : display(control.readout)}
-			centerOrigin={control.center !== undefined}
-			centerValue={control.center}
+			readout={control.readout === undefined ? undefined : display(typeof control.readout === 'function' ? control.readout(get) : control.readout)}
+			centerOrigin={center !== undefined}
+			centerValue={center}
 			{labelOrientation}
 			{labelSize}
 			{color}

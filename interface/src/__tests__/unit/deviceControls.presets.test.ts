@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { presetControl } from '$lib/components/v6/device-panel/deviceControls';
+import { presetControl, DEVICE_CONTROLS } from '$lib/components/v6/device-panel/deviceControls';
 
 /**
  * Each case is one preset loaded onto a track in the running Live (2026-10-25)
@@ -61,6 +61,23 @@ describe('preset faces start where Live puts the loaded preset', () => {
 		expect(presetControl({ className: 'MxDeviceAudioEffect', params: { Mix: 50 } }, 'Blur')?.control.title).toBe('Blur');
 		expect(presetControl({ className: 'MxDeviceAudioEffect', params: { Mix: 50 } }, 'Octave')?.control.title).toBe('Pitch');
 		expect(presetControl({ className: 'MxDeviceAudioEffect', params: {} }, 'Comb')).toBeNull();
+	});
+
+	it("the Shifter's one Amount follows its mode", () => {
+		const shifter = DEVICE_CONTROLS.shifter!.control;
+		if (shifter.kind !== 'slider') throw new Error('slider');
+		const at = (values: Record<number, number>) => (ref: number | { index: number }) => values[typeof ref === 'number' ? ref : ref.index];
+		const pitch = at({ 32: 0, 13: 12 });
+		expect(shifter.read(pitch)).toBeCloseTo(0.75);
+		expect(shifter.write(0.25, pitch)).toEqual([[13, -12]]);
+		const freq = at({ 32: 1, 17: 0.6 });
+		expect(shifter.read(freq)).toBeCloseTo(0.6);
+		expect(shifter.write(0.4, freq)).toEqual([[17, 0.4]]);
+		const ring = at({ 32: 2, 18: 0.375 });
+		expect(shifter.read(ring)).toBeCloseTo(0.5);
+		expect(shifter.write(1, ring)).toEqual([[18, 0.75]]);
+		// A ghost loads into Ring.
+		expect(shifter.write(1, at({}))).toEqual([[32, 2], [18, 0.75]]);
 	});
 
 	it('draws nothing for a class with no control, or a file missing the values', () => {
