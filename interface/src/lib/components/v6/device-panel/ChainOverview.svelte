@@ -56,6 +56,8 @@
   import Plus from '@lucide/svelte/icons/plus';
   import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
   import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
+  import { isDrumTrack } from '$lib/services/trackCategory';
+  import { v3Store } from '$lib/stores/v3/normalized.svelte';
   import { setContext } from 'svelte';
   import { PICTURE_CONTEXT } from '$lib/components/v6/browser/devicePictures';
   import type { Component } from 'svelte';
@@ -411,24 +413,46 @@
   const shown = $derived((drag && arrange(cells, moved(drag.base, drag.from, drag.to))) || settled);
 
   /*
-   * The ghost Utility (2026-10-26, Ben's call): a chain with no Utility
-   * always ends in one, as the strips always end in Main — the FX grid's
-   * own Gain tile in its ghost state, last, after the + cell (Ben, the
-   * same day; it sat between the last device and the + until then). Its first drag frame loads a Utility (ADR-167), which Live
-   * puts at the end of the chain: where the ghost already is. The ghost
-   * stays under the finger until it lifts — its tile drives the Utility
-   * that has arrived — and the real cell takes over on release, so the
-   * gesture that loaded it is never cut off mid-drag.
+   * Ghost cells: devices to grab before the chain has them, each the FX
+   * grid's own tile in its ghost state, in a dashed cell. Its first drag
+   * frame loads the device (ADR-167), which Live puts at the end of the
+   * chain; the ghost stays under the finger until it lifts — its tile
+   * drives the device that has arrived — and the real cell takes over on
+   * release, so the gesture that loaded it is never cut off mid-drag.
+   *
+   * The Utility (ADR-482): a chain with no Utility always ends in one, as
+   * the strips always end in Main, in a column of its own the width of the
+   * side bars, after the + cell (the user, 2026-10-26).
+   *
+   * Suggestions (ADR-483, the same day): while a chain holds few effects,
+   * the ones a track most often wants stand ghosted before the + cell, a
+   * Drum Buss on a drum track and an Echo and an Auto Filter on any other,
+   * and they go once the chain fills up, so it never gets crowded. Not on
+   * a pad's chain.
    */
   const UTILITY_TILE = TILE_COMPONENTS.utility;
-  const hasUtility = $derived(cells.some((c) => c.presetKey === 'utility'));
-  let ghostHeld = $state<number | null>(null);
-  const showGhostUtility = $derived(!!UTILITY_TILE && (!hasUtility || ghostHeld !== null));
+  /** Fewer effects than this and the chain suggests some. */
+  const SUGGEST_BELOW = 3;
+  const DRUM_SUGGESTIONS = ['drum'];
+  const MELODIC_SUGGESTIONS = ['echo', 'filter'];
+  const hasType = (key: string) => cells.some((c) => c.presetKey === key);
+  /** The pointer holding a ghost, and which ghost. */
+  let ghostHeld = $state<{ id: number; key: string; suggestions: string[] } | null>(null);
+  const showGhostUtility = $derived(!!UTILITY_TILE && (!hasType('utility') || ghostHeld?.key === 'utility'));
+  const liveSuggestions = $derived.by(() => {
+    if (padScope) return [];
+    const effects = cells.filter((c) => c.kind !== 'instrument').length;
+    if (effects >= SUGGEST_BELOW) return [];
+    const wanted = isDrumTrack(v3Store.tracks.get(trackPath)) ? DRUM_SUGGESTIONS : MELODIC_SUGGESTIONS;
+    return wanted.filter((key) => TILE_COMPONENTS[key] && !hasType(key));
+  });
+  /** Held still while a ghost is under a finger, so nothing slides beneath it as the load lands. */
+  const suggestions = $derived(ghostHeld?.suggestions ?? liveSuggestions);
 
-  function holdGhost(e: PointerEvent) {
+  function holdGhost(e: PointerEvent, key: string) {
     if (ghostHeld !== null) return;
     const id = e.pointerId;
-    ghostHeld = id;
+    ghostHeld = { id, key, suggestions: liveSuggestions };
     const lift = (u: PointerEvent) => {
       if (u.pointerId !== id) return;
       ghostHeld = null;
@@ -439,14 +463,14 @@
     window.addEventListener('pointercancel', lift);
   }
 
-  /** The cells drawn: while the ghost is still held, the Utility it loaded stays behind it. */
+  /** The cells drawn: while a ghost is still held, the device it loaded stays behind it. */
   const drawn = $derived.by(() => {
-    if (ghostHeld === null || !hasUtility) return shown;
+    if (ghostHeld === null || !hasType(ghostHeld.key)) return shown;
     const last = shown[shown.length - 1];
-    return last?.presetKey === 'utility' ? shown.slice(0, -1) : shown;
+    return last?.presetKey === ghostHeld.key ? shown.slice(0, -1) : shown;
   });
 
-  const grid = $derived(chainGrid(drawn.length + (showGhostUtility ? 1 : 0), CHAIN_WRAP_AFTER));
+  const grid = $derived(chainGrid(drawn.length + suggestions.length, CHAIN_WRAP_AFTER));
 
   /** The cell position under a point, by the grid's geometry at lift — not the cells, which are sliding. */
   function positionAt(d: Drag, x: number, y: number): number {
@@ -728,14 +752,13 @@
       {/if}
 {/snippet}
 
+<div class="chain-wrap" class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
 <div
   class="chain"
   style:--chain-cols={grid.cols}
   style:--chain-rows={grid.rows}
-  class:pad-scoped={padScope !== null}
   data-debug="chain-overview"
   data-chain-scope={padScope?.note}
-  style={padInk ? `--scope-ink: ${padInk}` : undefined}
   bind:this={chainEl}
 >
   {#each drawn as cell, position (cell.key)}
@@ -766,6 +789,23 @@
       {@render cellBody(cell, position)}
     </div>
   {/each}
+  {#each suggestions as key (key)}
+    {@const ghost = TILE_COMPONENTS[key]}
+    <!-- A suggested device, ghosted: drag its control to load one. -->
+    <div
+      class="chain-cell ghost-cell"
+      data-debug="chain-ghost-{key}"
+      role="presentation"
+      onpointerdowncapture={(e) => holdGhost(e, key)}
+    >
+      <div class="cell-head">
+        <span class="name" lang="en">{DEVICE_PRESETS[key]?.defaultName ?? key}</span>
+      </div>
+      <div class="cell-control" role="presentation">
+        <ghost.Tile position={ghost.position} />
+      </div>
+    </div>
+  {/each}
   <!-- Add an effect: the browser on Effect, landing on this chain. -->
   <button
     type="button"
@@ -777,23 +817,6 @@
     <span class="chain-add-icons" aria-hidden="true"><Plus /><ControlGlyph name="rack" /></span>
     <span class="chain-add-label">Effect</span>
   </button>
-  {#if showGhostUtility && UTILITY_TILE}
-    <!-- The ghost Utility: drag its fader to load one at the chain's end. -->
-    <div
-      class="chain-cell ghost-utility"
-      data-debug="chain-ghost-utility"
-      role="presentation"
-      onpointerdowncapture={holdGhost}
-    >
-      <div class="cell-head">
-        <span class="order">{drawn.length + 1}</span>
-        <span class="name" lang="en">Utility</span>
-      </div>
-      <div class="cell-control" role="presentation">
-        <UTILITY_TILE.Tile position={UTILITY_TILE.position} />
-      </div>
-    </div>
-  {/if}
   {#if padScope}
     <!-- Whose chain this is, as the grid's scope chip says it. -->
     <div class="pad-chip chain-scope-chip" aria-label="Chain of pad {padScope.note}">
@@ -801,11 +824,46 @@
     </div>
   {/if}
 </div>
+{#if showGhostUtility && UTILITY_TILE}
+  <!-- The ghost Utility: its own column, the side bars' width; drag its
+       fader to load one at the chain's end. -->
+  <div
+    class="chain-cell ghost-cell ghost-utility"
+    data-debug="chain-ghost-utility"
+    role="presentation"
+    onpointerdowncapture={(e) => holdGhost(e, 'utility')}
+  >
+    <div class="cell-head">
+      <span class="name" lang="en">Utility</span>
+    </div>
+    <div class="cell-control" role="presentation">
+      <UTILITY_TILE.Tile position={UTILITY_TILE.position} />
+    </div>
+  </div>
+{/if}
+</div>
 
 <style>
   /* As many columns and rows as the chain needs (`chainGrid`), on the FX
      grid's 8px trough. */
+  /* The chain, then the ghost Utility's column at the side bars' width. */
+  .chain-wrap {
+    height: 100%;
+    display: flex;
+    gap: 8px;
+    min-width: 0;
+  }
+  .chain-wrap > .ghost-utility {
+    flex: 0 0 var(--sidebar-width, 120px);
+  }
+  .chain-wrap.pad-scoped {
+    outline: 2px solid var(--scope-ink, var(--track-ink, var(--phosphor)));
+    outline-offset: -2px;
+    border-radius: var(--radius-sm, 2px);
+  }
   .chain {
+    flex: 1 1 0;
+    min-width: 0;
     height: 100%;
     display: grid;
     grid-template-columns: repeat(var(--chain-cols, 10), minmax(0, 1fr));
@@ -816,11 +874,6 @@
      (FXGrid's .fx-scoped: drawn inside, since the section clips). */
   .chain {
     position: relative;
-  }
-  .chain.pad-scoped {
-    outline: 2px solid var(--scope-ink, var(--track-ink, var(--phosphor)));
-    outline-offset: -2px;
-    border-radius: var(--radius-sm, 2px);
   }
   .chain-scope-chip {
     --chip-ink: var(--scope-ink, var(--track-ink));
@@ -886,9 +939,9 @@
     cursor: pointer;
     user-select: none;
   }
-  /* The ghost Utility reads as the + cell does: a dashed outline, its
-     name dim; the tile inside wears its own ghost state. */
-  .chain-cell.ghost-utility {
+  /* A ghost reads as the + cell does: a dashed outline, its name dim; the
+     tile inside wears its own ghost state. */
+  .chain-cell.ghost-cell {
     border-style: dashed;
     background: transparent;
     color: var(--muted-foreground);

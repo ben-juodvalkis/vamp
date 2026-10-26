@@ -1,7 +1,8 @@
 # ADR-482: The Chain Ends in a Ghost Utility
 
 ## Status
-**Accepted** (2026-10-26). Extends ADR-478 (the FX chain overview). No Live
+**Accepted** (2026-10-26). Extends ADR-478 (the FX chain overview). Amended by
+ADR-483: the ghost sits in its own column, the side bars' width. No Live
 restart: interface only.
 
 ## Context
