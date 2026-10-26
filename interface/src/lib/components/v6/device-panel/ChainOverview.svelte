@@ -247,7 +247,10 @@
         kind,
         presetKey,
         tile: tileOf.get(device.devicePath) ?? null,
-        ink: isInstrument ? (padChain ? (padInk ?? trackColor) : trackColor) : trackInk(family, paint)
+        // The instrument and Permute wear the track's color (Permute: the
+        // user, 2026-10-26, as the strip's own Permute section does); a
+        // pad's chain, the pad's.
+        ink: isInstrument || presetKey === 'sequencer' ? (padChain ? (padInk ?? trackColor) : trackColor) : trackInk(family, paint)
       };
     })
   );
