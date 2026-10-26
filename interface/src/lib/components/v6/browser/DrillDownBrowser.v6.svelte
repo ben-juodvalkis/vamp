@@ -2997,18 +2997,40 @@
 		position: relative;
 		z-index: 1;
 	}
-	/* A tile with a live face: its words sit over the control and let the
-	   finger through to it, and the wash steps back so the curve reads. */
-	.preset-tile.faced .tile-name,
-	.preset-tile.faced .tile-plugin {
-		pointer-events: none;
-		color: var(--foreground, #fff);
-		text-shadow: 0 1px 3px oklch(0 0 0 / 0.8);
-	}
+	/* A tile with a live face: the control on top, the name in a band below
+	   it, clear of the picture and the handle (user, 2026-10-26: "the name
+	   goes below the XY/slider to improve legibility"). A tap on the band is
+	   the tile's: it loads the preset as saved. */
 	.preset-tile.faced {
 		position: relative;
 		overflow: hidden;
 		padding: 0;
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
+		justify-content: stretch;
+	}
+	.preset-tile.faced > :global(.preset-face) {
+		position: relative;
+		inset: auto;
+		flex: 1 1 0;
+		min-height: 0;
+	}
+	.preset-tile.faced .tile-name,
+	.preset-tile.faced .tile-plugin {
+		pointer-events: none;
+		flex: 0 0 auto;
+		padding: 3px 6px 5px;
+		color: var(--foreground, #fff);
+		text-shadow: none;
+	}
+	.preset-tile.faced .tile-name {
+		font-size: max(var(--type-min), min(9cqw, 1.05rem, calc(100cqw / var(--fit-em, 0.001))));
+		-webkit-line-clamp: 1;
+		line-clamp: 1;
+	}
+	.preset-tile.faced .tile-plugin {
+		margin-top: -4px;
 	}
 	/* A plug-in preset names its plug-in under its own name (browser-places
 	   plan §2), small and quiet: the name is what you are choosing between.

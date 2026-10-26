@@ -85,7 +85,9 @@
 	     Drive, 2026-10-26: a bare tile before). -->
 	<div class="slider-face" class:soft style="--level: {level}; --level-ink: {color.primary};">
 		{#if picture}
-			<div class="slider-picture"><DevicePicture kind={picture} x={level} ink={color.primary} /></div>
+			<!-- Over a solid fill the device's ink would vanish into it: the
+			     foreground reads on the fill and the well alike. -->
+			<div class="slider-picture"><DevicePicture kind={picture} x={level} ink={soft ? color.primary : 'var(--foreground)'} /></div>
 		{/if}
 		<DeviceSlider
 			value={level}
@@ -141,8 +143,10 @@
 		inset: 0;
 		z-index: 1;
 		pointer-events: none;
-		opacity: 0.55;
-		mix-blend-mode: screen;
+		opacity: 0.45;
+	}
+	.slider-face.soft .slider-picture {
+		opacity: 0.8;
 	}
 	.slider-face.soft::after {
 		content: '';

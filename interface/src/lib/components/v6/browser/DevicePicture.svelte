@@ -15,9 +15,17 @@
 
 	let { kind, x, y = 0, ink }: Props = $props();
 	const strokes = $derived(pictureStrokes(kind, x, y));
+	/** Shapes that must keep their proportions (a pedal, rings); the rest stretch to the cell. */
+	const KEEP_ASPECT = new Set<PictureKind>(['stompbox', 'rings']);
 </script>
 
-<svg class="device-picture" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" style="--picture-ink: {ink};">
+<svg
+	class="device-picture"
+	viewBox="0 0 100 100"
+	preserveAspectRatio={KEEP_ASPECT.has(kind) ? 'xMidYMid meet' : 'none'}
+	aria-hidden="true"
+	style="--picture-ink: {ink};"
+>
 	{#each strokes as s, i (i)}
 		<path d={s.d} style="opacity: {s.o};" class:fill={s.fill} vector-effect="non-scaling-stroke" />
 	{/each}

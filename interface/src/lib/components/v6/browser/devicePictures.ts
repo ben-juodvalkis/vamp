@@ -28,6 +28,7 @@ export type PictureKind =
 	| 'stairs'
 	| 'shaper'
 	| 'clip'
+	| 'stompbox'
 	| 'compress'
 	| 'ratio'
 	| 'repeat'
@@ -135,6 +136,20 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0): PictureStro
 		case 'clip': {
 			const ceiling = 1 - x * 0.75;
 			return [{ d: trace((u) => 50 - (38 * Math.max(-ceiling, Math.min(ceiling, Math.sin(2 * Math.PI * u * 2)))) / ceiling, 160), o: 0.85 }];
+		}
+		// Pedal: a stompbox (user, 2026-10-26: "should show a guitar pedal"),
+		// its drive knob turned to the drive, its light lit once it drives.
+		case 'stompbox': {
+			const angle = (-135 + x * 270) * (Math.PI / 180);
+			const knob = { cx: 50, cy: 38, r: 11 };
+			return [
+				{ d: 'M28,10h44a6,6 0 0 1 6,6v72a6,6 0 0 1 -6,6h-44a6,6 0 0 1 -6,-6v-72a6,6 0 0 1 6,-6Z', o: 0.75 },
+				{ d: circle(knob.cx, knob.cy, knob.r), o: 0.85 },
+				{ d: `M${knob.cx},${knob.cy}L${f(knob.cx + Math.sin(angle) * knob.r * 0.85)},${f(knob.cy - Math.cos(angle) * knob.r * 0.85)}`, o: 0.95 },
+				{ d: circle(50, 18, 2.2), o: x > 0.02 ? 0.95 : 0.25, fill: true },
+				{ d: circle(50, 74, 8), o: 0.7 },
+				{ d: 'M36,58H64', o: 0.35 }
+			];
 		}
 		// Glue / Compressor: input across, output up; above the threshold the line flattens.
 		case 'compress': {

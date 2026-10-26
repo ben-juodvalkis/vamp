@@ -303,7 +303,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	// Measured: Pedal (2026-10-26). Gain is Drive (2), 0..1 as saved. Drive
 	// alone (user, 2026-10-26), not the Pedal view's Drive/Mix pair.
 	pedal: {
-		control: { kind: 'slider', title: 'Drive', picture: 'clip', read: (g) => clamp01(g(2) ?? 0), write: (t) => [[2, clamp01(t)]] },
+		control: { kind: 'slider', title: 'Drive', picture: 'stompbox', read: (g) => clamp01(g(2) ?? 0), write: (t) => [[2, clamp01(t)]] },
 		fromPreset: (s) => (s.params.Gain === undefined ? null : { 2: s.params.Gain })
 	},
 	// Measured: Bass - Low Extender. Threshold and Makeup in dB, as the LOM:
