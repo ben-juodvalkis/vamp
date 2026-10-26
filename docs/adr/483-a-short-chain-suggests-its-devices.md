@@ -26,7 +26,8 @@ Utility no wider than the side bars.
   behind it, so nothing slides under the finger as the load lands.
 - The ghost Utility leaves the grid for a column of its own after the
   + cell, full height, the side bars' width (`--sidebar-width`), the way
-  the strips end in Main.
+  the strips end in Main. (Later the same day it left the chain for the
+  right sidebar's top row; see ADR-482's Status.)
 
 ## Consequences
 - A short chain is one or two cells longer; at three effects the

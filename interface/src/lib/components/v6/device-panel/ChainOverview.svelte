@@ -266,9 +266,8 @@
    * Devices past which the chain takes a second row. Up to it the cells and
    * the + cell share one row, wide as the track strips get; past it the
    * cells split evenly over two rows (`chainGrid`). Reads like Live's chain:
-   * left to right, then the next row. Four since the ghost Utility took a
-   * column of its own beside the grid (the user, 2026-10-26; five before).
-   * Suggested ghosts count as cells.
+   * left to right, then the next row. Four since the user's call
+   * (2026-10-26; five before). Suggested ghosts count as cells.
    */
   const CHAIN_WRAP_AFTER = 4;
 
@@ -386,9 +385,9 @@
    * drives the device that has arrived — and the real cell takes over on
    * release, so the gesture that loaded it is never cut off mid-drag.
    *
-   * The Utility (ADR-482): a chain with no Utility always ends in one, as
-   * the strips always end in Main, in a column of its own the width of the
-   * side bars, after the + cell (the user, 2026-10-26).
+   * The ghost Utility (ADR-482) left the chain for the right sidebar's top
+   * row the same day (the user's call): it is the track's Utility there,
+   * ghost or live.
    *
    * Suggestions (ADR-483, the same day): while a chain holds few effects,
    * the ones a track most often wants stand ghosted before the + cell: the
@@ -397,7 +396,6 @@
    * and they go once the chain fills up, so it never gets crowded. Not on
    * a pad's chain.
    */
-  const UTILITY_TILE = TILE_COMPONENTS.utility;
   /** Fewer effects than this and the chain suggests some. */
   const SUGGEST_BELOW = 3;
   const DRUM_SUGGESTIONS = ['drum'];
@@ -407,7 +405,6 @@
   const hasType = (key: string) => cells.some((c) => c.presetKey === key);
   /** The pointer holding a ghost, and which ghost. */
   let ghostHeld = $state<{ id: number; key: string; suggestions: string[] } | null>(null);
-  const showGhostUtility = $derived(!!UTILITY_TILE && (!hasType('utility') || ghostHeld?.key === 'utility'));
   const liveSuggestions = $derived.by(() => {
     if (padScope) return [];
     const effects = cells.filter((c) => c.kind !== 'instrument').length;
@@ -788,37 +785,17 @@
     </div>
   {/if}
 </div>
-{#if showGhostUtility && UTILITY_TILE}
-  <!-- The ghost Utility: its own column, the side bars' width; drag its
-       fader to load one at the chain's end. -->
-  <div
-    class="chain-cell ghost-cell ghost-utility"
-    data-debug="chain-ghost-utility"
-    role="presentation"
-    onpointerdowncapture={(e) => holdGhost(e, 'utility')}
-  >
-    <div class="cell-head">
-      <span class="name" lang="en">Utility</span>
-    </div>
-    <div class="cell-control" role="presentation">
-      <UTILITY_TILE.Tile position={UTILITY_TILE.position} />
-    </div>
-  </div>
-{/if}
 </div>
 
 <style>
   /* As many columns and rows as the chain needs (`chainGrid`), on the FX
      grid's 8px trough. */
-  /* The chain, then the ghost Utility's column at the side bars' width. */
+  /* The chain's frame: the pad scope's outline and the two-row header. */
   .chain-wrap {
     height: 100%;
     display: flex;
     gap: 8px;
     min-width: 0;
-  }
-  .chain-wrap > .ghost-utility {
-    flex: 0 0 var(--sidebar-width, 120px);
   }
   .chain-wrap.pad-scoped {
     outline: 2px solid var(--scope-ink, var(--track-ink, var(--phosphor)));
@@ -951,7 +928,7 @@
     padding-left: 6px;
   }
   /* Two rows of cells: half that, so the controls keep their height
-     (the user, the same day). The Utility's column matches. */
+     (the user, the same day). */
   .chain-wrap.two-rows .cell-head {
     height: calc(var(--strip-band-h, 56px) / 2);
   }

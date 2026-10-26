@@ -2,7 +2,10 @@
 
 ## Status
 **Accepted** (2026-10-26). Extends ADR-478 (the FX chain overview). Amended by
-ADR-483: the ghost sits in its own column, the side bars' width. No Live
+ADR-483: the ghost sits in its own column, the side bars' width. Then
+moved, the same day, at the user's call: the Utility is the right
+sidebar's top row (level with the FX section), in the loop brace's place,
+ghost or live; the chain no longer draws it. No Live
 restart: interface only.
 
 ## Context

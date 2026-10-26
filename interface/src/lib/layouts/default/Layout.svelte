@@ -229,14 +229,15 @@
 				style="overflow: visible;"
 			>
 				<div class="flex-1 min-h-0">
-					<RightControlsSidebar section="quantize" />
+					<RightControlsSidebar section="clip" />
 				</div>
 			</div>
 
-			<!-- Section 4: the clip loop brace, level with the FX grid. -->
+			<!-- Section 4: the track's Utility, level with the FX grid (the loop
+			     brace's row until 2026-10-26; the brace shares Q's row now). -->
 			<div class="min-h-0 layout-row section flex flex-col" class:row-hidden={!showDevicesRow}>
 				<div class="flex-1 min-h-0">
-					<RightControlsSidebar section="loop" />
+					<RightControlsSidebar section="utility" />
 				</div>
 			</div>
 		</div>

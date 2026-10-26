@@ -64,19 +64,22 @@
 		setQuantization(value);
 	});
 
-	// Convert screen position to percentage value (vertical)
-	function screenToValue(screenY: number): number {
-		if (!containerRef) return 0;
-
-		const rect = containerRef.getBoundingClientRect();
-		// Invert: top of container = 100%, bottom = 0%
-		const percentage = 1 - (screenY - rect.top) / rect.height;
-		return Math.max(0, Math.min(100, percentage * 100));
+	/**
+	 * Relative at half sensitivity (the user, 2026-10-26): Q is half the
+	 * row since it shares it with the loop brace, so a drag across twice its
+	 * height covers 0..100, as one across the whole row did. It was
+	 * absolute (the value under the finger) before; a touch-down no longer
+	 * jumps it.
+	 */
+	const DRAG_SENSITIVITY = 0.5;
+	let dragStartValue = 0;
+	function dragToValue(dy: number, height: number): number {
+		const value = dragStartValue + (dy / Math.max(1, height)) * 100 * DRAG_SENSITIVITY;
+		return Math.max(0, Math.min(100, value));
 	}
 
 	/**
-	 * One press, one pointer, absolute: the value follows wherever the
-	 * finger is, from touch-down onward (ADR-427, `commit: 'immediate'` —
+	 * One press, one pointer, relative from touch-down (ADR-427, `commit: 'immediate'` —
 	 * this control has no tap/drag distinction to make, and waiting for a
 	 * slop threshold would drop the first 12px of every gesture).
 	 *
@@ -100,11 +103,12 @@
 			centralDisplayStore.setView('groove');
 			// Ahead of the first quantize write, so that write lands on it.
 			loadFirstGrooveIfNone(gestureClipPath);
+			dragStartValue = displayValue;
 			isDragging = true;
 			throttle.start();
 		},
-		onMove: ({ y }: DragInfo) => {
-			const val = Math.round(screenToValue(y));
+		onMove: ({ dy, height }: DragInfo) => {
+			const val = Math.round(dragToValue(dy, height));
 			// Update UI immediately, queue for the frame-synchronised send.
 			optimisticValue = val;
 			throttle.push(val);
