@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clampChainIndex, moved } from '$lib/utils/chainDrop';
+import { chainGrid, clampChainIndex, moved } from '$lib/utils/chainDrop';
 
 describe('clampChainIndex', () => {
 	it('lands where the finger is', () => {
@@ -24,5 +24,20 @@ describe('moved', () => {
 	it('moves one item and keeps the rest in order', () => {
 		expect(moved(['a', 'b', 'c', 'd'], 3, 1)).toEqual(['a', 'd', 'b', 'c']);
 		expect(moved(['a', 'b', 'c', 'd'], 0, 2)).toEqual(['b', 'c', 'a', 'd']);
+	});
+});
+
+describe('chainGrid', () => {
+	it('keeps a short chain on one row, the + cell included', () => {
+		expect(chainGrid(2, 4)).toEqual({ cols: 3, rows: 1 });
+		expect(chainGrid(4, 4)).toEqual({ cols: 5, rows: 1 });
+	});
+	it('splits a longer chain evenly over two rows', () => {
+		expect(chainGrid(5, 4)).toEqual({ cols: 3, rows: 2 });
+		expect(chainGrid(8, 4)).toEqual({ cols: 5, rows: 2 });
+		expect(chainGrid(12, 4)).toEqual({ cols: 7, rows: 2 });
+	});
+	it('an empty chain is the + cell alone', () => {
+		expect(chainGrid(0, 4)).toEqual({ cols: 1, rows: 1 });
 	});
 });

@@ -57,6 +57,11 @@ hand.** While a pad is held or latched, the overview is that pad's chain
 is, and a tap opens an effect in the Drum Rack view's pane. Scoping a pad
 appoints its instrument; letting the scope go appoints the rack.
 
+**The chain is as wide as its length allows.** Up to five devices share
+one row with the + cell, wide as the track strips get; past five, two rows
+split evenly (`chainGrid`). One row keeps the controls full height; the
+second row halves them, so it waits until six devices.
+
 **A cell carries its tile's control.** A device the grid has a tile for
 shows that tile inside its cell (the grid's own component, handed the
 cell's device), so the chain can do whatever the grid can, on each device

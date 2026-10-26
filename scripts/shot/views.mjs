@@ -146,6 +146,9 @@ const FX_TILES = [
 
 /** Open Settings from the master strip's gear. */
 const chainDemo = (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, CHAIN_DEMO_DEVICES);
+// Chains of other lengths, for the adaptive layout: the instrument, then effects.
+const chainOf = (n) => (scene) =>
+	setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], 'Auto Filter', 'Echo', 'Reverb', CHAIN_DEMO_DEVICES[5], 'Auto Filter', CHAIN_DEMO_DEVICES[7], CHAIN_DEMO_DEVICES[8]].slice(0, n));
 const chainCell = (index) => `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/${index}"]`;
 const SETTINGS_OPEN = [{ click: '[data-debug="master-card"]' }, { click: '[data-debug="settings-gear"]', dom: true }];
 
@@ -168,6 +171,12 @@ export const TOURS = {
 				scenePatch: chainDemo,
 				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }]
 			},
+			...[2, 4, 5, 8].map((n) => ({
+				name: `chain-len-${n}`,
+				description: `A chain of ${n} devices: one row up to five, then two rows split evenly, the + cell always last`,
+				scenePatch: chainOf(n),
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }]
+			})),
 			{
 				name: 'chain-filter-2',
 				description: 'Tapped the second Auto Filter: appointed, the Filter view on it, the Filter chip moved to it',

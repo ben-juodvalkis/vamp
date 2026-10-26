@@ -33,3 +33,16 @@ export function moved<T>(items: readonly T[], from: number, to: number): T[] {
 	out.splice(to, 0, item);
 	return out;
 }
+
+/**
+ * The chain overview's grid for `count` devices plus its + cell
+ * (2026-10-25): one row while the chain is short, so a few devices get the
+ * width the track strips would; past `wrapAfter` devices, two rows, the
+ * cells split evenly between them so each stays wide. Never more than two:
+ * the FX section is two tile rows tall.
+ */
+export function chainGrid(count: number, wrapAfter: number): { cols: number; rows: number } {
+	const slots = count + 1;
+	const rows = count > wrapAfter ? 2 : 1;
+	return { cols: Math.max(1, Math.ceil(slots / rows)), rows };
+}

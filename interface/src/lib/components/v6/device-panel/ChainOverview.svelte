@@ -1,7 +1,8 @@
 <script lang="ts">
   /**
    * ChainOverview — the FX section's second face: every device on the
-   * selected track, in chain order, on the FX grid's own ten-column ruler.
+   * selected track, in chain order, as wide as their number allows: one
+   * row while the chain is short, two once it is long (`chainGrid`).
    *
    * A tap appoints the device (Live's blue hand) and opens its controls in
    * the central view, which stays up beside this list — so choosing
@@ -57,7 +58,7 @@
   import { press } from '$lib/actions/press';
   import { drag, type DragInfo } from '$lib/actions/drag';
   import { moveDevice } from '$lib/services/deviceMoveService';
-  import { clampChainIndex, moved } from '$lib/utils/chainDrop';
+  import { chainGrid, clampChainIndex, moved } from '$lib/utils/chainDrop';
   import { flip } from 'svelte/animate';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
@@ -242,8 +243,14 @@
     })
   );
 
-  /** Ten a row, one row tall each while they and the + cell fit, so a chain reads like Live's: left to right. */
-  const tall = $derived(cells.length < 10);
+  /**
+   * Devices past which the chain takes a second row. Up to it the cells and
+   * the + cell share one row, wide as the track strips get; past it the
+   * cells split evenly over two rows (`chainGrid`). Reads like Live's chain:
+   * left to right, then the next row.
+   */
+  const CHAIN_WRAP_AFTER = 5;
+  const grid = $derived(chainGrid(cells.length, CHAIN_WRAP_AFTER));
 
   function indexOf(path: string): number {
     const m = /\/devices\/(\d+)$/.exec(path);
@@ -325,9 +332,10 @@
     if (!chainEl) return null;
     const box = chainEl.getBoundingClientRect();
     const gap = 8;
-    const col = Math.max(0, Math.min(9, Math.floor(((x - box.left) * 10) / (box.width + gap))));
-    const row = tall ? 0 : y < box.top + box.height / 2 ? 0 : 1;
-    return row * 10 + col;
+    const { cols, rows } = grid;
+    const col = Math.max(0, Math.min(cols - 1, Math.floor(((x - box.left) * cols) / (box.width + gap))));
+    const row = rows === 1 ? 0 : y < box.top + box.height / 2 ? 0 : 1;
+    return row * cols + col;
   }
 
   // A press that lands on a cell's tile is the tile's: it picks the device
@@ -492,7 +500,8 @@
 
 <div
   class="chain"
-  class:tall
+  style:--chain-cols={grid.cols}
+  style:--chain-rows={grid.rows}
   class:pad-scoped={padScope !== null}
   data-debug="chain-overview"
   data-chain-scope={padScope?.note}
@@ -564,13 +573,13 @@
 </div>
 
 <style>
-  /* The FX grid's ruler: ten columns, two rows, the same 8px trough, so a
-     cell lands on the pixels a tile does. */
+  /* As many columns and rows as the chain needs (`chainGrid`), on the FX
+     grid's 8px trough. */
   .chain {
     height: 100%;
     display: grid;
-    grid-template-columns: repeat(10, minmax(0, 1fr));
-    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--chain-cols, 10), minmax(0, 1fr));
+    grid-template-rows: repeat(var(--chain-rows, 2), minmax(0, 1fr));
     gap: 8px;
   }
   /* A pad's chain wears the pad's frame and chip, as the scoped grid does
@@ -608,9 +617,6 @@
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
-  .chain.tall .chain-add {
-    grid-row: span 2;
-  }
   .chain-add > span {
     opacity: var(--opacity-ghost);
   }
@@ -633,9 +639,6 @@
   .chain-add-label {
     font-size: 0.8125rem;
     font-weight: var(--font-weight-medium);
-  }
-  .chain.tall .chain-cell {
-    grid-row: span 2;
   }
 
   .chain-cell {
