@@ -21,7 +21,7 @@ export type PictureKind =
 	| 'rings'
 	| 'waves'
 	| 'tremolo'
-	| 'transient'
+	| 'drum'
 	| 'gate'
 	| 'comb'
 	| 'notches'
@@ -101,13 +101,23 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0): PictureStro
 				{ d: trace((u) => 50 + 34 * (1 - y * (0.5 + 0.5 * Math.sin(2 * Math.PI * u * lfo))) * Math.sin(2 * Math.PI * u * 12), 160), o: 0.5 }
 			];
 		}
-		// Drum Buss: a hit, its attack sharpened (right) or softened (left) by Transients.
-		case 'transient': {
-			const peak = 15 + (1 - x) * 40;
-			const decay = 3 + (1 - x) * 6;
+		// Drum Buss: a drum (user, 2026-10-26: "should show a drum"), its
+		// head struck harder the sharper the transients (right), filled in
+		// with the mix (up).
+		case 'drum': {
+			const ellipse = (cy: number) => `M20,${cy}a30,9 0 1,0 60,0a30,9 0 1,0 -60,0`;
+			const strike = 5 + x * 16;
+			const hits = [-0.45, 0, 0.45].map((a) => {
+				const sx = 50 + Math.sin(a) * 8;
+				const sy = 26 - Math.cos(a) * 2;
+				return `M${f(sx)},${f(sy)}L${f(sx + Math.sin(a) * strike)},${f(sy - Math.cos(a) * strike)}`;
+			});
 			return [
-				{ d: trace((u) => 92 - (92 - peak) * Math.exp(-decay * u) * (u < 0.04 ? u / 0.04 : 1)), o: 0.8 },
-				{ d: trace((u) => 92 - (92 - peak) * y * Math.exp(-decay * 0.6 * u)), o: 0.35 }
+				{ d: ellipse(40), o: 0.1 + 0.35 * y, fill: true },
+				{ d: ellipse(40), o: 0.85 },
+				{ d: 'M20,40V72M80,40V72M20,72a30,9 0 0,0 60,0', o: 0.85 },
+				{ d: 'M20,48L35,68L50,50L65,68L80,48', o: 0.35 },
+				{ d: hits.join(''), o: 0.3 + 0.6 * x }
 			];
 		}
 		// Gate: what opens over the threshold line, closing over its release.

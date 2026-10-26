@@ -277,7 +277,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	drum: {
 		control: {
 			kind: 'xy',
-			title: 'Drum', picture: 'transient',
+			title: 'Drum', picture: 'drum',
 			read: (g) => ({ x: ((g(6) ?? 0) + 1) / 2, y: g(13) ?? 0 }),
 			write: (x, y) => [
 				[6, 2 * x - 1],
