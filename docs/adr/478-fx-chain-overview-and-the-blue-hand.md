@@ -91,9 +91,14 @@ is `20 · 1000^v` Hz). A tap loads it as saved; a drag loads it and sets the
 values under the finger on the device that load lands, never on another of
 its type.
 
-**Vamp Devices is the effects library** (2026-10-26). `catalog.effectsPlace`
-defaults to "Vamp Devices": the one folder holding the effects the app
-loads, and the place the owner adds presets. The amp racks (Guitar, Bass
+**Vamp Devices holds the devices the app loads; a Sidebar Place is the
+shelf** (2026-10-26). `catalog.effectsPlace` defaults to "Vamp Devices"; the
+rig names its own shelf, "Audio-Midi Effects" (a Sidebar folder, in
+`constants.local.json`), where the owner adds presets, and its Audio Effects
+and MIDI Effects folders hold hard links to the Vamp Devices effects, so +
+Effect shows the Wah and the amps beside the presets with one file behind
+each. The tiles, the pedal and the surface load from Vamp Devices. The amp
+racks (Guitar, Bass
 Amp) and Note Chance joined it from the User Library's Effect Patches, so
 every file tile names that Place and `paths.effectPresetsBase` is gone. The
 browser draws it as Audio Effects and MIDI Effects by each item's kind and

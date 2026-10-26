@@ -374,8 +374,11 @@ source and the Phase 4 switch that chose between them.
   through `device/load` with no track prep (`addEffect`). The stacked label
   (`.has-plugin`, column flex) applies only to tiles that carry one.
 - **The effects Place** (`catalog.effectsPlace`, a Place's sidebar name;
-  "Vamp Devices" by default since 2026-10-26, the one folder of the effects
-  the app loads, which the owner adds presets to): the server lays it out as
+  "Vamp Devices" by default since 2026-10-26, the devices the app loads; the
+  rig names its own shelf, "Audio-Midi Effects", in `constants.local.json`,
+  which holds its presets beside hard links to the Vamp Devices effects —
+  `ln`, so the two names are one file and cannot drift, until an editor
+  saves by writing a new file): the server lays it out as
   Audio Effects and MIDI Effects by each item's kind, a one-preset device
   folder showing as that preset, and leaves out `catalog.effectsHidden` (the
   Recorder, random-start and their plumbing) — `diskScan.groupEffectsPlace`;
