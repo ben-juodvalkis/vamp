@@ -6,8 +6,8 @@
    * grid's Gain column) is one finger over threshold+makeup together,
    * which is the performance gesture. Threshold and output are the
    * settings behind it, each set outright here (Threshold added beside
-   * Output, user, 2026-09-16). Two value boxes (ADR-477), Threshold over
-   * Output.
+   * Output, user, 2026-09-16). Two value boxes (ADR-477), side by side
+   * (user, 2026-10-26; Threshold over Output before).
    *
    * Split out of the shared dynamics view (`SquashCentralView`, which also
    * held the Gate, the Multiband and the Compressor) when the FX chain
@@ -88,10 +88,10 @@
 </div>
 
 <style>
-  /* threshold over output */
+  /* threshold | output */
   .glue-central-layout {
     display: grid;
-    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     height: 100%;
     width: 100%;
     padding: var(--central-inset);
