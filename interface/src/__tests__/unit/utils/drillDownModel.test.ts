@@ -9,6 +9,7 @@ import {
 	computeGroupedVisibleWindow,
 	groupPresetsByOrigin,
 	packGroupedSections,
+	packFillSections,
 	replaceLanding,
 	windowsEqual,
 	groupedWindowsEqual,
@@ -802,5 +803,23 @@ describe('drillDownModel — replaceLanding', () => {
 				openShowsSamples: true
 			})
 		).toEqual({ kind: 'reskin', vendorId: 'place:drum' });
+	});
+});
+
+describe('drillDownModel — packFillSections', () => {
+	const g = (folder: string | null, n: number) => ({ folder, presets: Array.from({ length: n }, (_, i) => ({ path: `${folder ?? 'loose'}/${i}` })) });
+
+	it('packs sections into rows of up to one more tile than the columns', () => {
+		// The rig's effects Place at 7 columns (2026-10-26).
+		const bands = packFillSections([g('Dynamics', 4), g('Glitch', 4), g('Midi Effect', 6), g('Modulation', 5), g('Time', 2), g('Tone', 5), g('Utility', 3)], 7);
+		expect(bands.map((b) => b.groups.map((x) => x.folder))).toEqual([['Dynamics', 'Glitch'], ['Midi Effect'], ['Modulation', 'Time'], ['Tone', 'Utility']]);
+		expect(bands.every((b) => b.kind === 'packed')).toBe(true);
+	});
+
+	it('splits a section too big for a row as evenly as it goes, its header on the first row only', () => {
+		const bands = packFillSections([g('Distortion', 9)], 7);
+		expect(bands.map((b) => b.count)).toEqual([5, 4]);
+		expect(bands.map((b) => b.groups[0].continued)).toEqual([false, true]);
+		expect(bands.flatMap((b) => b.groups[0].presets.map((p) => p.path))).toEqual(g('Distortion', 9).presets.map((p) => p.path));
 	});
 });

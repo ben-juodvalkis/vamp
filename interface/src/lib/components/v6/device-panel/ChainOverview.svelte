@@ -52,6 +52,7 @@
   import Power from '@lucide/svelte/icons/power';
   import Plus from '@lucide/svelte/icons/plus';
   import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
+  import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
   import type { Component } from 'svelte';
   import { FX_GRID_LAYOUT, type DeviceTypeKey } from '$lib/config/fxGridLayout';
   import { provideFxScope } from '$lib/components/v6/central/fxScope';
@@ -422,6 +423,18 @@
     );
   }
 
+  /**
+   * + Effect: the browser on its Effect segment. Under a pad scope the pad
+   * is latched first (user, 2026-10-26): the browser covers the Drum Rack
+   * view, a held pad's tile unmounts and its hold ends, and the pick must
+   * still land in the pad the chain was showing.
+   */
+  function addEffect() {
+    swallowNextClick();
+    if (padScope) drumPadScope.latch(padScope.rackPath, padScope.note);
+    browserModeStore.openEffectsBrowser();
+  }
+
   function open(cell: Cell) {
     const { device } = cell;
     if (cell.kind === 'instrument') {
@@ -572,7 +585,7 @@
     class="chain-add"
     aria-label="Add an effect"
     data-debug="chain-add"
-    use:press={{ onPress: () => { swallowNextClick(); browserModeStore.openEffectsBrowser(); }, touchAction: 'none' }}
+    use:press={{ onPress: addEffect, touchAction: 'none' }}
   >
     <span class="chain-add-icons" aria-hidden="true"><Plus /><ControlGlyph name="rack" /></span>
     <span class="chain-add-label">Effect</span>

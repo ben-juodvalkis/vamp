@@ -97,6 +97,7 @@
 		computeGroupedVisibleWindow,
 		groupPresetsByOrigin,
 		packGroupedSections,
+		packFillSections,
 		replaceLanding,
 		railBands,
 		keepRecent,
@@ -323,9 +324,14 @@
 	// The effects Place is color-coded by folder (user, 2026-10-26): each
 	// section, its header and its tiles wear the device family its folder's
 	// name says (`sectionInks`). Every other Place keeps its own color.
+	const onEffectsScreen = $derived(
+		!!effectsVendor && browserNavigationStore.currentVendorId === effectsVendor.vendorId && useGroupedPresets
+	);
+	// The effects screen fills every row (`packFillSections`): its sections
+	// are few and small, and a half-empty row is dead space (user, 2026-10-26).
+	const fillRows = $derived(onEffectsScreen);
 	const sectionInkOf = $derived.by(() => {
-		const onEffects = !!effectsVendor && browserNavigationStore.currentVendorId === effectsVendor.vendorId;
-		if (!onEffects || !useGroupedPresets) return null;
+		if (!onEffectsScreen) return null;
 		return sectionInks(presetGroups.flatMap((g) => (g.folder ? [g.folder] : [])));
 	});
 	const presetInkOf = $derived.by(() => {
@@ -340,7 +346,11 @@
 	// (below) and never changes tile geometry — a packed band is exactly one tile
 	// row tall, so it maps 1:1 onto a windowing section and ADR-404 keeps working.
 	const presetBands = $derived.by(() =>
-		useGroupedPresets ? packGroupedSections(presetGroups, gridLayout.columns) : []
+		!useGroupedPresets
+			? []
+			: fillRows
+				? packFillSections(presetGroups, gridLayout.columns)
+				: packGroupedSections(presetGroups, gridLayout.columns)
 	);
 
 	// Comfort constraints for the grid solvers: tiles grow to FILL the stage and
@@ -397,6 +407,7 @@
 				// Counted as drawn: small sections share rows (ADR-409), so the
 				// tiles grow into the height the packing frees.
 				headers: presetGroups.map((g) => g.folder !== null),
+				fill: fillRows,
 				headerHeight: SECTION_HEADER_H,
 				sectionGap: SECTION_GAP,
 				...PRESET_COMFORT
@@ -469,9 +480,10 @@
 				// so ceil(count/cols)===1 and it renders whole; big bands window as
 				// before). A band shows a header if any of its sections is named.
 				sections: presetBands.map((b) => {
-					const named = b.groups.some((g) => g.folder !== null);
+					const named = b.groups.some((g) => g.folder !== null && !g.continued);
 					return {
-						count: b.count,
+						// A filled row holds up to one tile more than the columns: still one row.
+						count: fillRows ? Math.min(b.count, gridLayout.columns) : b.count,
 						headerHeight: named ? SECTION_HEADER_H : 0,
 						// A headerless band (the loose bucket alone) keeps the grid pad
 						// as its top breathing room (the inline pad replaces the CSS one).
@@ -2175,7 +2187,7 @@
 							{#if groupedWindow.topPad > 0}
 								<div class="window-spacer" style="height: {groupedWindow.topPad}px"></div>
 							{/if}
-							{#each windowedGroups as { sw, band } (band.groups.map((g) => g.folder ?? '·').join('|'))}
+							{#each windowedGroups as { sw, band } (band.groups.map((g) => g.folder ?? '·').join('|') + ':' + (band.groups[0]?.presets[0]?.path ?? ''))}
 								{#if band.kind === 'full'}
 									{@const group = band.groups[0]}
 									<!-- Big section: its own full-width row, windowed as before. -->
@@ -2199,7 +2211,8 @@
 									     tall so it renders whole (no per-row windowing needed). -->
 									<section
 										class="preset-section band-row"
-										style="--tile-h: {gridLayout.tileHeight}px; --tile-w: {gridLayout.tileWidth}px;"
+										class:fill={fillRows}
+										style="--tile-h: {gridLayout.tileHeight}px; --tile-w: {gridLayout.tileWidth}px; --N: {band.count};"
 									>
 										{#each band.groups as group (group.folder ?? '·')}
 											<div
@@ -2207,7 +2220,7 @@
 												class:loose={group.folder === null}
 												style="--n: {group.presets.length};"
 											>
-												{#if group.folder !== null}
+												{#if group.folder !== null && !group.continued}
 													{@render sectionHead(group.folder, group.presets)}
 												{/if}
 												<div class="adaptive-grid sectioned packed">
@@ -2730,6 +2743,28 @@
 		grid-auto-rows: var(--tile-h, 160px);
 		width: max-content;
 	}
+	/* A filled row (the effects screen): its tiles share the whole row width,
+	   every cell spanning its own tile count on one grid, so tiles in a row
+	   are one width and the row ends at the stage's edge (packFillSections). */
+	.band-row.fill {
+		display: grid;
+		grid-template-columns: repeat(var(--N, 1), minmax(0, 1fr));
+		column-gap: var(--grid-gap, 8px);
+		align-items: start;
+	}
+	.band-row.fill > .band-cell {
+		grid-column: span var(--n, 1);
+		display: grid;
+		grid-template-columns: subgrid;
+	}
+	.band-row.fill > .band-cell > :global(*) {
+		grid-column: 1 / -1;
+	}
+	.band-row.fill .adaptive-grid.sectioned.packed {
+		grid-template-columns: subgrid;
+		width: auto;
+	}
+
 	/* Reserve the header band even on the headerless (loose) cell so every cell's
 	   first tile row sits at the same height across the band. */
 	.band-cell.loose > .adaptive-grid.sectioned.packed { margin-top: var(--header-h, 44px); }

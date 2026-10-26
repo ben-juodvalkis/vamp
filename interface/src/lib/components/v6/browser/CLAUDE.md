@@ -399,7 +399,13 @@ source and the Phase 4 switch that chose between them.
   and its tiles wear the device family its folder's name says
   (`utils/sectionInks`: Distortion the distortion ink, Time time-and-space,
   Tone filter, "Midi Effect" note machinery…); a folder whose name says none
-  takes the next family no folder took (user, 2026-10-26). The server
+  takes the next family no folder took (user, 2026-10-26). Its rows are
+  filled (`packFillSections`, user the same day: "more info, less dead
+  space"): sections pack in order into rows of up to one tile more than the
+  columns, each row's tiles share its whole width (a subgrid per cell), and
+  a section too big for a row splits evenly over rows of its own, its header
+  on the first. The solver counts the same rows (`fill`). Other Places keep
+  `packGroupedSections`: their sections can hold thousands. The server
   catalogs it whether or not it is ticked and flags it in `index.json`
   (`effects`, and `hidden` while unticked); the browser keeps a hidden one off
   the rail (`effectsVendor`) and the chain overview's + Effect opens it, on

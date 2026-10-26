@@ -280,6 +280,7 @@ export const TOURS = {
 			...[
 				['shifter', { name: 'Shifter', className: 'Shifter', params: [['Device On', 'Device On', 0, 1, 1, ''], ...Array.from({ length: 17 }, (_, i) => [`P${i + 1}`, `P${i + 1}`, 0, 1, 0, '']), ['RM Coarse', 'RM Coarse', 0, 1, 0.5, '100 Hz']] }],
 				['chance', { name: 'Note Chance', className: 'MxDeviceMidiEffect', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Chance', 'Chance', 0, 100, 60, '60 %']] }],
+				['chorus', { name: 'Chorus-Ensemble', className: 'Chorus2', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Mode', 'Mode', 0, 2, 1, 'Ensemble'], ['Shape', 'Shape', 0, 1, 0, ''], ['Rate', 'Rate', 0, 1, 0.42, '1.20 Hz'], ['Amount', 'Amount', 0, 1, 0.6, '60 %'], ['Feedback', 'Feedback', 0, 1, 0.25, '25 %'], ['FB Invert', 'FB Invert', 0, 1, 0, ''], ['Offset', 'Offset', 0, 1, 0, ''], ['Delay Time', 'Delay Time', 0, 5, 2, ''], ['Delay Taps', 'Delay Taps', 0, 1, 1, ''], ['HP On', 'HP On', 0, 1, 0, ''], ['HP Freq', 'HP Freq', 0, 1, 0.28, ''], ['Width', 'Width', 0, 1, 0.7, '140 %'], ['Warmth', 'Warmth', 0, 1, 0.3, '9.0 %'], ['Output', 'Output', 0, 1, 0.71, ''], ['Dry/Wet', 'Dry/Wet', 0, 1, 0.5, '50 %']] }],
 				['redux', { name: 'Redux', className: 'Redux2', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Sample Rate', 'Sample Rate', 0, 1, 0.62, '9.08 kHz'], ['Jitter', 'Jitter', 0, 1, 0.2, '4.0 %'], ['Bit Depth', 'Bit Depth', 1, 16, 8, '8'], ['Quantizer Shape', 'Quantizer Shape', 0, 1, 0.35, '35 %'], ['DC Shift', 'DC Shift', 0, 1, 0, 'Off'], ['Pre-Filter On', 'Pre-Filter On', 0, 1, 1, 'On'], ['Post-Filter On', 'Post-Filter On', 0, 1, 1, 'On'], ['Post-Filter', 'Post-Filter', 0, 1, 0.5, '0.00'], ['Dry/Wet', 'Dry/Wet', 0, 1, 0.8, '80 %']] }],
 				['multiband', { name: 'Multiband Dynamics', className: 'MultibandDynamics', params: Array.from({ length: 28 }, (_, i) => i === 0 ? ['Device On', 'Device On', 0, 1, 1, ''] : i === 5 ? ['Output', 'Output', -24, 24, 0, '0.00 dB'] : i === 21 ? ['Below Threshold (Mid)', 'Below Threshold (Mid)', -80, 0, -27.125, '-27.1 dB'] : i === 27 ? ['Below Ratio (Mid)', 'Below Ratio (Mid)', -3, 1, 0.4, '1 : 1.67'] : [`P${i}`, `P${i}`, 0, 1, 0, '']) }]
 			].map(([key, device]) => ({
@@ -288,6 +289,43 @@ export const TOURS = {
 				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], device]),
 				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(1)} .cell-head .name` }, { wait: 500 }]
 			})),
+			// An instrument's cell carries its view's signature control (INSTRUMENT_CONTROLS).
+			...[
+				['wavetable', CHAIN_DEMO_TRACK, null],
+				// The scene's Simpler sits on an audio track, which claims no instrument: put one on the MIDI demo track.
+				['simpler', CHAIN_DEMO_TRACK, ['Simpler', 'Echo']],
+				['operator', 11, null]
+			].map(([key, track, devices]) => ({
+				name: `chain-instrument-${key}`,
+				description: `The ${key} track's chain: its instrument cell draws its view's signature control`,
+				...(devices ? { scenePatch: (scene) => setTrackDevices(scene, track, devices) } : {}),
+				steps: [openInstrument(track)]
+			})),
+			// The MIDI effects' controls on their chain cells (deviceControls).
+			{
+				name: 'chain-midi-effects',
+				description: 'An Arpeggiator (Rate across, Gate up), a Chord (its first shift) and a Velocity (Rand Vel) on the chain',
+				scenePatch: (scene) =>
+					setTrackDevices(scene, CHAIN_DEMO_TRACK, [
+						{ name: 'Arpeggiator', className: 'MidiArpeggiator', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Style', 'Style', 0, 17, 0, 'Up'], ['Offset', 'Offset', -8, 8, 0, '0'], ['Repeats', 'Repeats', 0, 16, 0, ''], ['Sync On', 'Sync On', 0, 1, 1, 'On'], ['Synced Rate', 'Synced Rate', 0, 13, 8, '1/8'], ['Groove', 'Groove', 0, 3, 0, ''], ['Free Rate', 'Free Rate', 0, 1, 0.15, ''], ['Gate', 'Gate', 1, 200, 120, '120 %']] },
+						{ name: 'Chord', className: 'MidiChord', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Shift1', 'Shift1', -36, 36, 7, '+7 st']] },
+						{ name: 'Velocity', className: 'MidiVelocity', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Drive', 'Drive', -1, 1, 0, ''], ['Compand', 'Compand', -1, 1, 0, ''], ['Random', 'Random', 0, 64, 40, '40'], ['Mode', 'Mode', 0, 2, 0, ''], ['Operation', 'Operation', 0, 2, 2, ''], ['Out Hi', 'Out Hi', 0, 127, 110, ''], ['Out Low', 'Out Low', 0, 127, 30, '']] },
+						CHAIN_DEMO_DEVICES[0]
+					]),
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(2)} .cell-head .name` }, { wait: 500 }]
+			},
+			{
+				name: 'chain-pad-add',
+				description: 'Jazz, pad 38 latched: + Effect, then Gate picked in the browser lands in the pad\'s chain (needs --real-data for the effects Place)',
+				steps: [
+					openInstrument(8),
+					{ click: '.pad-tile[data-note="38"]' },
+					{ click: '[data-debug="chain-add"]' },
+					{ wait: 2500 },
+					{ click: '.preset-tile:has-text("Gate")' },
+					{ wait: 2500 }
+				]
+			},
 			{
 				name: 'chain-add',
 				description: 'Tapped the + cell at the end of the chain: the browser opens on its Effect segment, on a Place that has effect presets',
