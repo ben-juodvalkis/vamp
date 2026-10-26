@@ -254,6 +254,11 @@ export const TOURS = {
 				steps: [openInstrument(CHAIN_DEMO_TRACK), { drag: `${chainCell(6)} .cell-head .name`, by: [-190, 0] }]
 			},
 			{
+				name: 'chain-drum',
+				description: 'Jazz, no pad scoped: the Drum Rack cell carries the kit\'s Trnsp',
+				steps: [openInstrument(8), { click: '[data-fx-mode="chain"]' }]
+			},
+			{
 				name: 'chain-pad',
 				description: 'Jazz, pad 38 latched in the Drum Rack view: the chain is that pad\'s (its Simpler, Reverb, Permute; the blue hand on the Simpler), in the pad\'s frame and chip',
 				steps: [openInstrument(8), { click: '.pad-tile[data-note="38"]' }]
