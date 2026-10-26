@@ -465,6 +465,7 @@ const DEVICE_CLASS_NAMES = {
 	Octave: 'MxDeviceAudioEffect',
 	// GlitchLoop too: a Max audio effect, matched by class and name.
 	GlitchLoop: 'MxDeviceAudioEffect',
+	'Pitch Hack': 'MxDeviceAudioEffect',
 	// So is the Tone Shaper's (EQ view).
 	"Ben's Adaptive Tone Shaper": 'MxDeviceAudioEffect',
 	// The Guitar rack is an Audio Effect Rack; without the entry its slot
@@ -903,6 +904,18 @@ const DEVICE_PARAMS = {
 		['Device On', 'On', 0, 1, 1, ''],
 		['Semitones', 'Semitones', -12, 12, 12, ''],
 		['Mix', 'Mix', 0, 100, 50, '%']
+	],
+	// Pitch Hack's eight, as dumped off the running Live (2026-10-15).
+	'Pitch Hack': [
+		['Device On', 'On', 0, 1, 1, ''],
+		['Cents', 'Cents', -99, 99, 12, 'ct'],
+		['Dry / Wet', 'Dry / Wet', 0, 100, 60, '%'],
+		['Coarse', 'Coarse', -36, 36, 12, 'st'],
+		['Level', 'Level', -96, 0, -6, 'dB'],
+		['Rate', 'Rate', 0, 23, 13, ''],
+		['Recycle', 'Recycle', 0, 95, 40, '%'],
+		['Reverse', 'Reverse', 0, 100, 75, '%'],
+		['Int Var', 'Int Var', 0, 24, 5, 'st']
 	],
 	'Note Chance': [
 		['Device On', 'On', 0, 1, 1, ''],
