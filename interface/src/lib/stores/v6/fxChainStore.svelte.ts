@@ -1,7 +1,8 @@
 /**
- * The FX section's second face: the selected track's chain, in order.
+ * The FX section's chain overview: the selected track's chain, in order.
  *
- * - `mode` — what the FX section shows: the grid, or the chain overview.
+ * - `mode` — what the FX section shows: the chain overview (the default)
+ *   or the grid.
  *   The tiny switch in the section's corner flips it.
  * - **Picks** — which device a tile controls when the track carries
  *   several of its type (two Auto Filters), and which rack the rack view
@@ -24,7 +25,7 @@ export type FxPanelMode = 'grid' | 'chain';
 /** The pick key for the rack view, beside the device types. */
 export const RACK_PICK = 'audio-effect-rack';
 
-let mode = $state<FxPanelMode>('grid');
+let mode = $state<FxPanelMode>('chain');
 let appointed = $state<string | null>(null);
 const picks = new SvelteMap<string, string>();
 
@@ -69,7 +70,7 @@ export const fxChainStore = {
 
 	/** Tests and a track change. */
 	reset(): void {
-		mode = 'grid';
+		mode = 'chain';
 		appointed = null;
 		picks.clear();
 	}

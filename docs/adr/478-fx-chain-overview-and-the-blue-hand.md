@@ -81,6 +81,8 @@ browser on Effect, on the Mac's effects Place (`catalog.effectsPlace`), a
 Place cataloged for this whether or not it is ticked and kept off the rail
 unless it is. The grid/chain switch is one button over the
 section's top-left corner, where it no longer takes the Glue tile's taps.
+Since 2026-10-26 the chain overview is the face the FX section opens on;
+the grid is the one behind the switch.
 
 **An effect preset tile is the preset's own control.** In the browser a
 preset of any class a grid tile drives (and any effect rack, by its first
