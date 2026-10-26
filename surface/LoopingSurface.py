@@ -134,6 +134,7 @@ from .components.ClipPropertiesComponent import (
 )
 from .components.ClipsComponent import (
     ClipsComponent,
+    V3_CLIP_CREATE_ADDRESS,
     V3_CLIP_DELETE_ADDRESS,
     V3_CLIP_DUPLICATE_ADDRESS,
     V3_CLIP_DUPLICATE_REGION_ADDRESS,
@@ -1846,6 +1847,7 @@ class LoopingSurface(ControlSurface):
             # ClipPropertiesComponent observes.
             (V3_CLIP_FOCUS_ADDRESS, self._clips_component.handle_focus),
             (V3_CLIP_DELETE_ADDRESS, self._clips_component.handle_delete),
+            (V3_CLIP_CREATE_ADDRESS, self._clips_component.handle_create),
             (V3_CLIP_DUPLICATE_ADDRESS,
              self._clips_component.handle_duplicate),
             (V3_CLIP_DUPLICATE_REGION_ADDRESS,

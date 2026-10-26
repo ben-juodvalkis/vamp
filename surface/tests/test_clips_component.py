@@ -17,6 +17,7 @@ import pytest
 
 from components.ClipsComponent import (
     ClipsComponent,
+    V3_CLIP_CREATE_ADDRESS,
     V3_CLIP_CREATED_ADDRESS,
     V3_CLIP_DELETE_ADDRESS,
     V3_CLIP_DUPLICATE_ADDRESS,
@@ -168,6 +169,13 @@ class StubClipSlot:
         self.delete_called += 1
         self.has_clip = False
         self.clip = None
+
+    def create_clip(self, length: float):
+        if getattr(self, "_create_clip_raises", None) is not None:
+            raise self._create_clip_raises
+        self.created_clip_lengths = getattr(self, "created_clip_lengths", []) + [length]
+        self.has_clip = True
+        self.clip = StubClip()
 
     def create_audio_clip(self, file_path: str):
         if self._create_audio_clip_raises is not None:
@@ -609,6 +617,59 @@ def test_stop_raise_emits_write_rejected(component, emits):
     assert path == "tracks/0"
     assert "RuntimeError" in detail
     assert "torn down" in detail
+
+
+# --- create ---------------------------------------------------------------
+
+
+def test_create_makes_a_clip_and_fires_it(component, emits):
+    slot = component._song.tracks[0].clip_slots[2]
+
+    component.handle_create(args=("tracks/0/slots/2", 4.0), source_addr=None)
+
+    assert slot.created_clip_lengths == [4.0]
+    assert slot.fired == 1
+    assert emits == []
+
+
+def test_create_on_an_occupied_slot_is_rejected_and_touches_nothing(component, emits):
+    slot = component._song.tracks[0].clip_slots[1]
+    slot.has_clip = True
+    slot.clip = StubClip()
+
+    component.handle_create(args=("tracks/0/slots/1", 4.0), source_addr=None)
+
+    assert slot.fired == 0
+    assert not getattr(slot, "created_clip_lengths", [])
+    _addr, (orig, code, path, _detail) = emits[0]
+    assert (orig, code, path) == (V3_CLIP_CREATE_ADDRESS, V3_ERROR_WRITE_REJECTED, "tracks/0/slots/1")
+
+
+@pytest.mark.parametrize("length", [0, -4, "x"])
+def test_create_with_a_bad_length_is_rejected(component, emits, length):
+    slot = component._song.tracks[0].clip_slots[0]
+
+    component.handle_create(args=("tracks/0/slots/0", length), source_addr=None)
+
+    assert slot.fired == 0
+    assert emits[0][1][1] == V3_ERROR_WRITE_REJECTED
+
+
+def test_create_refused_by_live_does_not_fire(component, emits):
+    slot = component._song.tracks[0].clip_slots[0]
+    slot._create_clip_raises = RuntimeError("audio track")
+
+    component.handle_create(args=("tracks/0/slots/0", 4.0), source_addr=None)
+
+    assert slot.fired == 0
+    _addr, (_orig, code, _path, detail) = emits[0]
+    assert code == V3_ERROR_WRITE_REJECTED
+    assert "audio track" in detail
+
+
+def test_create_oob_emits_slot_not_found(component, emits):
+    component.handle_create(args=("tracks/0/slots/99", 4.0), source_addr=None)
+    assert emits[0][1][1] == V3_ERROR_SLOT_NOT_FOUND
 
 
 # --- delete ---------------------------------------------------------------

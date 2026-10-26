@@ -35,13 +35,23 @@
 	 * The notes are the clip's id-carrying ones (`requestRichNotes`), read
 	 * and written by clip path, which the surface takes for any clip, not
 	 * only Live's focused one, so the strip needs no focus. Re-read on the
-	 * clip's `notes/changed`. Nothing playing on the track: nothing to edit,
-	 * and the strip says so.
+	 * clip's `notes/changed`.
+	 *
+	 * Nothing playing on the track: the strip is one empty bar, and the
+	 * first step added there makes a one-bar MIDI clip for it and fires it
+	 * (`clip/create`, in the pedal's slot when that is empty, else the
+	 * track's first empty one; `slotForNewClip`), then writes the step into
+	 * it. The strip keeps editing that clip while its launch is queued, and
+	 * hands over to it once it plays.
 	 */
 
 	import { untrack } from 'svelte';
 	import { drag, type DragInfo } from '$lib/actions';
 	import { session } from '$lib/stores/session.svelte';
+	import { v3Store } from '$lib/stores/v3/normalized.svelte';
+	import { sceneWindowStore } from '$lib/stores/v6/sceneWindowStore.svelte';
+	import { triggeredSlotsStore } from '$lib/stores/v6/triggeredSlotsStore.svelte';
+	import { sendClipCreate } from '$lib/services/clipCommands';
 	import {
 		requestRichNotes,
 		sendAddNotes,
@@ -65,6 +75,7 @@
 		paintSteps,
 		paintVelocity,
 		PAINT_VELOCITY,
+		slotForNewClip,
 		stepTaken,
 		stripBlockAt,
 		stripBlocks,
@@ -74,6 +85,8 @@
 	} from './padNotesStrip';
 
 	interface Props {
+		/** The track the kit is on: where a clip is made when nothing plays. */
+		trackPath: string;
 		/** The track's playing MIDI clip; '' while nothing plays. */
 		clipPath: string;
 		/** The time the clip shows; null while nothing plays. */
@@ -84,10 +97,22 @@
 		ink: string;
 	}
 
-	let { clipPath, clipWindow, note, ink }: Props = $props();
+	let { trackPath, clipPath: playingPath, clipWindow, note, ink }: Props = $props();
 
-	const loopWin = $derived(clipPath && clipWindow && clipWindow.end > clipWindow.start ? clipWindow : null);
 	const bar = $derived(barBeats(session.timeSignature.numerator, session.timeSignature.denominator));
+	// The clip this strip made, while its launch is queued: the strip
+	// writes there until the track plays it (or another clip, or the track
+	// changes), when the playing clip takes over again.
+	let made = $state<{ trackPath: string; clipPath: string } | null>(null);
+	$effect(() => {
+		if (made && (playingPath || made.trackPath !== trackPath)) made = null;
+	});
+	const clipPath = $derived(playingPath || made?.clipPath || '');
+	// Nothing playing and nothing made: one empty bar, ready for a first step.
+	const draft = $derived(!clipPath);
+	const loopWin = $derived(
+		playingPath && clipWindow && clipWindow.end > clipWindow.start ? clipWindow : { start: 0, end: bar }
+	);
 	const bars = $derived(loopWin ? windowBars(loopWin, bar) : { first: 0, last: 0 });
 	let barIndex = $state(0);
 	$effect(() => {
@@ -232,11 +257,37 @@
 
 	// The stroke, written: its notes on screen at once under temp ids, the
 	// real ids swapped in when Live returns them, a re-read if it fails.
+	// A one-bar clip for the strip's first step, made and fired; its path,
+	// or '' when the track has no empty slot.
+	function makeClip(): string {
+		const track = v3Store.tracks.get(trackPath);
+		const slotAt = (i: number) => `${trackPath}/slots/${i}`;
+		const index = slotForNewClip(
+			(i) => {
+				const slot = track?.slots.get(slotAt(i));
+				return !slot || (slot.state === 'empty' && !slot.clip);
+			},
+			sceneWindowStore.sceneCount,
+			session.selectedSceneIndex
+		);
+		if (index === null) {
+			logger.info('PadNotesStrip: no empty slot for a new clip', { trackPath });
+			return '';
+		}
+		const slotPath = slotAt(index);
+		sendClipCreate(slotPath, bar);
+		triggeredSlotsStore.markPending(slotPath);
+		made = { trackPath, clipPath: `${slotPath}/clip` };
+		return made.clipPath;
+	}
+
 	function commitPaint() {
 		const p = paint;
 		paint = null;
-		if (!p || !win || !clipPath || p.steps.length === 0) return;
-		const cp = clipPath;
+		if (!p || !win || p.steps.length === 0) return;
+		// The surface takes its messages in order: the clip exists before the notes arrive.
+		const cp = clipPath || makeClip();
+		if (!cp) return;
 		const added: RichNote[] = p.steps.map((i) => ({
 			noteId: nextTempId--,
 			pitch: note,
@@ -337,9 +388,7 @@
 	role="group"
 	aria-label="The pad's notes in the playing clip: drag a note up or down for its velocity, sideways to move it, tap to delete it; tap an empty step to add one, swipe to paint several"
 >
-	{#if !win}
-		<span class="strip-msg">No clip playing</span>
-	{:else}
+	{#if win}
 		{#each steps as s}
 			<div class="strip-step" class:beat={s.beat} style="left: {s.at * 100}%;"></div>
 		{/each}
@@ -351,7 +400,7 @@
 			></div>
 		{/each}
 		{#if blocks.length === 0}
-			<span class="strip-msg">No notes on this pad</span>
+			<span class="strip-msg">{draft ? 'No clip playing: add a step to start one' : 'No notes on this pad'}</span>
 		{/if}
 		{#if readout}
 			<span class="strip-readout">{readout}</span>

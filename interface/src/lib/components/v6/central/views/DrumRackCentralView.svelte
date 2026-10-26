@@ -547,7 +547,7 @@
            its own row (`.vm-controls-flat` is `display: contents`); in the
            flex row, the column's foot. -->
       <div class="vm-strip">
-        <PadNotesStrip clipPath={clip.playingClipPath} clipWindow={clip.clipWindow} note={scopeNote} ink={controlInk.primary} />
+        <PadNotesStrip trackPath={trackPath ?? ''} clipPath={clip.playingClipPath} clipWindow={clip.clipWindow} note={scopeNote} ink={controlInk.primary} />
       </div>
     {/if}
     </div>
