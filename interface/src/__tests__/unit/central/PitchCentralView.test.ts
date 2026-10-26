@@ -1,7 +1,8 @@
 /**
  * The Pitch view (2026-10-24; the Pitch family in the Auto Pan view from
  * 2026-10-15): the Octave's interval. Its Mix is the grid's Pitch slider,
- * and Pitch Hack (Reverse) is the Glitch view's since the same day. Pitch Hack: a Mix
+ * and Pitch Hack (Reverse) has its own view (the Glitch view's from the same
+ * day until 2026-10-26). Pitch Hack: a Mix
  * slider and the Rate column (1 to 1/16 top to bottom;
  * Rate is param 5, an index into the device's value_items), and no
  * Coarse, Reverse, Recycle or Int Var. A step writes its own param only; the step
@@ -24,7 +25,7 @@ import { SvelteMap } from 'svelte/reactivity';
 import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { replaceTree, _resetForTests, type TrackRecord, type DeviceRecord, type ParamRecord } from '$lib/stores/v3/normalized.svelte';
 import PitchCentralView from '$lib/components/v6/central/views/PitchCentralView.svelte';
-import GlitchCentralView from '$lib/components/v6/central/views/GlitchCentralView.svelte';
+import ReverseCentralView from '$lib/components/v6/central/views/ReverseCentralView.svelte';
 import { send } from '$lib/api/simpleClient';
 
 const TRACK = 'tracks/0';
@@ -77,21 +78,18 @@ const writtenTo = (device: string, param: number) =>
 const written = (param: number) => writtenTo(PH, param);
 
 beforeEach(() => {
-	// The Glitch view asks for GlitchLoop's preset bank on mount.
-	vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ bank: [], presets: {} }) })));
 	vi.clearAllMocks();
 	_resetForTests();
 });
 afterEach(() => {
 	cleanup();
-	vi.unstubAllGlobals();
 });
 
-// Pitch Hack (titled Reverse) is the Glitch view's since 2026-10-24.
-describe('Glitch view: Pitch Hack rate column', () => {
+// Pitch Hack (titled Reverse) has its own view since 2026-10-26.
+describe('Reverse view: Pitch Hack rate column', () => {
 	it('draws 1 to 1/16 and lights the stop Rate matches', async () => {
 		seed(pitchHack(10));
-		const { container } = render(GlitchCentralView);
+		const { container } = render(ReverseCentralView);
 		await tick();
 		expect(stops(container).map((b) => b.textContent?.trim())).toEqual(['1', '1/2', '1/4', '1/8', '1/16']);
 		expect(stops(container).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'false', 'false', 'true', 'false']);
@@ -99,7 +97,7 @@ describe('Glitch view: Pitch Hack rate column', () => {
 
 	it('writes each stop to Rate and leaves Dry / Wet to its slider', async () => {
 		seed(pitchHack(0, 0, 40));
-		const { container } = render(GlitchCentralView);
+		const { container } = render(ReverseCentralView);
 		await tick();
 		for (const b of stops(container)) await fireEvent.click(b);
 		expect(written(5)).toEqual([19, 16, 13, 10, 7]);
@@ -117,9 +115,9 @@ describe('Pitch view: the Pitch family', () => {
 		expect(container.textContent).not.toContain('Reverse');
 	});
 
-	it('draws Pitch Hack in the Glitch view: one Mix slider, no Coarse, Reverse, Recycle or Int Var', async () => {
+	it('draws Pitch Hack in its own view: one Mix slider, no Coarse, Reverse, Recycle or Int Var', async () => {
 		seed(pitchHack(13), octave(7));
-		const { container } = render(GlitchCentralView);
+		const { container } = render(ReverseCentralView);
 		await tick();
 		const titles = sliderTitles(container);
 		expect(titles.filter((t) => t === 'Mix')).toHaveLength(1);

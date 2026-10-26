@@ -2,7 +2,7 @@
 	/**
 	 * A live face on a browser preset tile (2026-10-25, ADR-478): the preset's
 	 * own control — the XY, slider or tone pad its FX-grid tile is — at the
-	 * values its file saves, drawn behind the tile's name (`presetFaces`). A
+	 * values its file saves, drawn behind the tile's name (`deviceControls`, ADR-479). A
 	 * tap loads the preset as it is; a drag loads it AND sets the values the
 	 * finger chooses, as a ghost grid tile does, applied to the device this
 	 * load lands (`services/presetDragLoad`).

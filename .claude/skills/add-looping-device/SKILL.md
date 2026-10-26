@@ -85,7 +85,6 @@ gate: {
   expectedClassName: 'Gate',    // the .adv's root element (Max: MxDeviceAudioEffect)
   padScoped: true,              // may live in a drum pad's chain
   gridSlot: false,              // omit only for a real grid tile
-  centralViewGroup: 'squash',   // the view its tap opens
   color: familyScheme('dynamics')
 },
 ```
@@ -145,8 +144,11 @@ gate: {
   (`useFxGridSlot('<key>').device`). Pass `disableCentralViewOnTap` (a tap
   must not navigate away from the view it sits in) and `tapLoads` if a tap on
   a ghost should load it.
-- **Its own central view:** create it in `central/views/`, register it in
-  `central/viewRegistry.ts`. An unregistered type opens the placeholder view.
+- **Its own central view:** every device type has one (ADR-478), the view
+  a tap on its tile or chain cell opens. Create it in `central/views/`,
+  mounting its control as `ControlTile` with the view's own controls around
+  it, and register it under the key in `central/viewRegistry.ts`. An
+  unregistered type opens the placeholder view.
 - A tile whose drag may load a device that belongs at the chain's head arms
   the move with `onGesture` (Pitch and Bass, `useBassChainPosition`).
 

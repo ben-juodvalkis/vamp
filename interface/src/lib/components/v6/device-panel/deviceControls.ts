@@ -325,7 +325,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	// Measured: Utility. Output is the file's Gain, a linear factor (1 → 0 dB
 	// → 0 on the -1..1 rail). The grid tile draws the track's meter behind it.
 	utility: {
-		control: { kind: 'slider', title: 'Gain', read: (g) => clamp01(((g(9) ?? 0) + 1) / 2), write: (t) => [[9, 2 * clamp01(t) - 1]] },
+		control: { kind: 'slider', title: 'Gain', readout: 9, read: (g) => clamp01(((g(9) ?? 0) + 1) / 2), write: (t) => [[9, 2 * clamp01(t) - 1]] },
 		fromPreset: (s) => (s.params.Gain === undefined ? null : { 9: railFor(UTILITY_OUTPUT_DB, db(s.params.Gain)) })
 	},
 	// Measured: Airpusher. Chance as is.
@@ -335,7 +335,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	},
 	// Measured: Blue. Chance as is.
 	random: {
-		control: { kind: 'slider', title: 'Rand Oct', read: (g) => clamp01(g(1) ?? 0), write: (t) => [[1, clamp01(t)]] },
+		control: { kind: 'slider', title: 'Rand Oct', readout: 1, read: (g) => clamp01(g(1) ?? 0), write: (t) => [[1, clamp01(t)]] },
 		fromPreset: (s) => (s.params.Chance === undefined ? null : { 1: s.params.Chance })
 	},
 	// Measured: Redux (2026-10-26). Post-Filter -4..4 → (v + 4) / 8 (0 →

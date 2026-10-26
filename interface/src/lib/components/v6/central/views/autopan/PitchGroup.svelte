@@ -31,7 +31,8 @@
 	 *
 	 * Since 2026-10-24 (the user's call) the group is the Pitch view
 	 * (`PitchCentralView`, `standalone`, the Octave alone since Reverse moved
-	 * to the Glitch view the same day, `show`), out of the Tremolo view: no leading
+	 * to the Glitch view the same day, `show`; Reverse is its own view,
+	 * `ReverseCentralView`, since 2026-10-26), out of the Tremolo view: no leading
 	 * seam, and no Octave Mix, which is the grid's Pitch slider.
 	 *
 	 * Self-contained: queries its own slots and renders through
@@ -59,7 +60,7 @@
 		standalone?: boolean;
 		/**
 		 * Which columns (2026-10-24, the user's call): `octave` (the Pitch
-		 * view's), `reverse` (Pitch Hack, the Glitch view's), or `both`.
+		 * view's), `reverse` (Pitch Hack, the Reverse view's), or `both`.
 		 */
 		show?: 'both' | 'octave' | 'reverse';
 	}
