@@ -82,6 +82,13 @@ Place cataloged for this whether or not it is ticked and kept off the rail
 unless it is. The grid/chain switch is one button over the
 section's top-left corner, where it no longer takes the Glue tile's taps.
 
+**An effect preset tile is the preset's own control.** In the browser an
+Auto Filter preset draws its curve at the values its file saves (read from
+the `.adv` on the Mac, mapped through Live's own units, measured: Frequency
+is `20 · 1000^v` Hz). A tap loads it as saved; a drag loads it and sets the
+values under the finger on the device that load lands, never on another of
+its type.
+
 ## Consequences
 - A renamed native device lights its tile, and the tile no longer loads a
   duplicate beside it.
@@ -103,6 +110,12 @@ section's top-left corner, where it no longer takes the Glue tile's taps.
 - Effects appear only from ticked Places. On the rig the seven ticked
   Places hold one effect preset; Effect Patches and the User Library hold
   the rest, and Live's factory effect presets are not offered as a Place.
+- The Auto Filter tile's and view's type tables were wrong from 6 on (Live:
+  Comb, Resampling, Notch+LP, Vowel); both read `autoFilterParams` now. The
+  view also said Random for the LFO's Wander and SV2 for the MS2 circuit.
+- The Places index's ETag was the service's version alone, which restarts
+  at the same numbers, so a browser could keep an older server's index
+  through a 304; it carries the server's start too now.
 - `npm run shot:tour -- chain` shoots the overview on a demo chain, with
   a power toggle, a drag and a scoped pad.
 

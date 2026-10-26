@@ -3,7 +3,7 @@
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import BaseDeviceControl from './BaseDeviceControl.svelte';
   import DeviceXY from './DeviceXY.svelte';
-  import type { CurveType } from './FilterCurve.svelte';
+  import { AUTO_FILTER_PARAM, autoFilterCurve } from './autoFilterParams';
 
   interface Props {
     device: DeviceRecord | null;
@@ -11,20 +11,6 @@
   }
 
   let { device, position }: Props = $props();
-
-  // Filter type mapping (param 4: 0-9)
-  const FILTER_TYPE_CURVES: CurveType[] = [
-    'lowpass',   // 0: Low-pass
-    'highpass',  // 1: High-pass
-    'bandpass',  // 2: Band-pass
-    'notch',     // 3: Notch
-    'lowpass',   // 4: Morph (use lowpass visual)
-    'lowpass',   // 5: DJ (use lowpass visual)
-    'bandpass',  // 6: Vowel (bandpass-like)
-    'peak',      // 7: Comb
-    'lowpass',   // 8: Resampling (lowpass-like)
-    'lowpass'    // 9: SV (State Variable, lowpass-like)
-  ];
 
   // Single source of truth: paramValueArmed reads the UI-armed value
   // during a drag's round-trip window, falling back to the v3 store
@@ -34,15 +20,16 @@
   // the store via the FX-grid new-device hook (paramArming.svelte);
   // mid-drag echoes are suppressed by the arm in setParamValue.
   let cutoffValue = $derived(
-    device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 1)) ?? 1 : 1
+    device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, AUTO_FILTER_PARAM.frequency)) ?? 1 : 1
   );
   let resonanceValue = $derived(
-    device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 2)) ?? 0 : 0
+    device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, AUTO_FILTER_PARAM.resonance)) ?? 0 : 0
   );
   let filterType = $derived(
-    device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 4)) ?? 0 : 0
+    device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, AUTO_FILTER_PARAM.type)) ?? 0 : 0
   );
-  let curveType = $derived(FILTER_TYPE_CURVES[Math.round(filterType)] || 'lowpass');
+  // The curve per type, from Live's own labels (autoFilterParams).
+  let curveType = $derived(autoFilterCurve(filterType));
 </script>
 
 <BaseDeviceControl {position} {device} title="AutoFilter" showMoveToTop={true}>

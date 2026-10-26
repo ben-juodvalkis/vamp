@@ -14,6 +14,13 @@ import { json, type RequestHandler } from '@sveltejs/kit';
 import { placesService } from '$lib/server/places/service';
 
 const HEADERS = { 'cache-control': 'no-cache' };
+/**
+ * The index's ETag carries this server's start as well as the service's
+ * version: the version counts from the same number on every start, so a
+ * client holding an older server's index under the same version kept it
+ * through a 304 (found 2026-10-25, when a new build added the effects Place).
+ */
+const BOOT = Date.now().toString(36);
 
 function reply(body: unknown, etag: string, request: Request): Response {
 	if (request.headers.get('if-none-match') === etag) return new Response(null, { status: 304, headers: { ...HEADERS, etag } });
@@ -23,7 +30,7 @@ function reply(body: unknown, etag: string, request: Request): Response {
 export const GET: RequestHandler = ({ params, request }) => {
 	const file = params.file ?? '';
 	const service = placesService();
-	if (file === 'index.json') return reply(service.indexJson(), `"index-${service.currentVersion}"`, request);
+	if (file === 'index.json') return reply(service.indexJson(), `"index-${BOOT}-${service.currentVersion}"`, request);
 	const tag = service.fileTag(file);
 	if (tag === null) return json({ ok: false, code: 'not-found', detail: `no catalog file ${file}` }, { status: 404, headers: { 'cache-control': 'no-store' } });
 	if (request.headers.get('if-none-match') === tag) return new Response(null, { status: 304, headers: { ...HEADERS, etag: tag } });

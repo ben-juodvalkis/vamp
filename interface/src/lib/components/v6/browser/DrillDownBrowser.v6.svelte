@@ -69,6 +69,9 @@
 	import { activeDrumRackScope } from '$lib/services/deviceViewRouter.svelte';
 	import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
 	import ControlGlyph from '../device-panel/ControlGlyph.svelte';
+	import BrowserPresetFace from './BrowserPresetFace.svelte';
+	import { startPresetDrag, type PresetDrag } from '$lib/services/presetDragLoad.svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 	import { press, type PressOptions, type PressReleaseInfo } from '$lib/actions';
@@ -913,6 +916,34 @@
 		}
 	}
 
+	/**
+	 * A drag on an effect tile's face (2026-10-25, ADR-478): the load and the
+	 * finger's values, onto the chain `addEffect` would pick — the selected
+	 * track's, or the scoped pad's.
+	 */
+	function beginEffectDrag(preset: Preset, className: string, values: Record<number, number>): PresetDrag | null {
+		const trackPath = selectedTrackStore.selectedTrackPath;
+		if (!trackPath) {
+			reportLoadFailure(preset.name, new Error('No track selected'));
+			return null;
+		}
+		const pad = trackHoldScope.active ? null : activeDrumRackScope();
+		browserNavigationStore.loadedPresetPath = preset.path;
+		const [source, rel] = placeArgs(preset);
+		return startPresetDrag({
+			trackPath,
+			padPath: pad?.padPath ?? '',
+			presetPath: preset.fullPath,
+			source,
+			rel,
+			className,
+			name: preset.name,
+			values
+		});
+	}
+	/** Effect tiles drawing a live face: they hand the face the gesture. */
+	const facedTiles = new SvelteSet<string>();
+
 	// ── Random pick from a folder (long-press a folder tile or a section header) ──
 	async function loadRandomFromFolder(
 		folderName: string,
@@ -1667,6 +1698,7 @@
 	{@const subLabel = notInstalled ? 'Not installed' : (p.plugin ?? null)}
 	<button
 		class="card preset-tile"
+		class:faced={facedTiles.has(p.path)}
 		class:loaded={(shownChargingPresetPath ?? browserNavigationStore.loadedPresetPath) === p.path}
 		class:unavailable={notInstalled}
 		class:has-plugin={!!subLabel}
@@ -1677,6 +1709,18 @@
 	>
 		{#if audioWaveformsEnabled && isAudioThumbnailType(p.type)}
 			<BrowserPresetWaveform preset={p} />
+		{/if}
+		{#if p.kind === 'audio-effect' && !notInstalled}
+			<!-- An effect's own control at its saved values: tap loads, drag
+			     loads and sets (BrowserPresetFace). -->
+			<BrowserPresetFace
+				preset={p}
+				ink={p.vendorColor || activeColor}
+				onTap={() => loadPreset(p)}
+				beginDrag={(className, values) => beginEffectDrag(p, className, values)}
+				afterDrag={() => handlePostLoad()}
+				onFaced={(on) => (on ? facedTiles.add(p.path) : facedTiles.delete(p.path))}
+			/>
 		{/if}
 		<span class="tile-name" use:fitText={p.name} use:clampLines>{p.name}</span>
 		{#if subLabel}
@@ -2460,6 +2504,7 @@
 	.seg-switch .seg[data-mode='midi'] { --seg-ink: oklch(0.72 0.13 265); }
 	.seg-switch .seg[data-mode='simpler'] { --seg-ink: oklch(0.78 0.14 70); }
 	.seg-switch .seg[data-mode='audio'] { --seg-ink: oklch(0.78 0.11 195); }
+	.seg-switch .seg[data-mode='effects'] { --seg-ink: oklch(0.74 0.15 330); }
 	.seg-switch .seg {
 		display: flex;
 		align-items: center;
@@ -2880,6 +2925,19 @@
 	.preset-tile .tile-plugin {
 		position: relative;
 		z-index: 1;
+	}
+	/* A tile with a live face: its words sit over the control and let the
+	   finger through to it, and the wash steps back so the curve reads. */
+	.preset-tile.faced .tile-name,
+	.preset-tile.faced .tile-plugin {
+		pointer-events: none;
+		color: var(--foreground, #fff);
+		text-shadow: 0 1px 3px oklch(0 0 0 / 0.8);
+	}
+	.preset-tile.faced {
+		position: relative;
+		overflow: hidden;
+		padding: 0;
 	}
 	/* A plug-in preset names its plug-in under its own name (browser-places
 	   plan §2), small and quiet: the name is what you are choosing between.

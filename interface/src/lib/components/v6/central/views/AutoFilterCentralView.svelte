@@ -85,10 +85,12 @@
 		{ value: 3, label: 'Notch' },
 		{ value: 4, label: 'Morph' },
 		{ value: 5, label: 'DJ' },
-		{ value: 6, label: 'Vowel' },
-		{ value: 7, label: 'Comb' },
-		{ value: 8, label: 'Resamp' },
-		{ value: 9, label: 'SV' }
+		// Live's own labels from 6 on (dumped 2026-10-25, autoFilterParams):
+		// Comb, Resampling, Notch+LP, Vowel. They read Vowel, Comb, Resamp, SV.
+		{ value: 6, label: 'Comb' },
+		{ value: 7, label: 'Resamp' },
+		{ value: 8, label: 'Notch+LP' },
+		{ value: 9, label: 'Vowel' }
 	];
 
 	const LFO_SHAPE_OPTIONS = [
@@ -98,14 +100,14 @@
 		{ value: 3, label: 'Square', symbol: '⊓' },
 		{ value: 4, label: 'Ramp Up', symbol: '⟋' },
 		{ value: 5, label: 'Ramp Down', symbol: '⟍' },
-		{ value: 6, label: 'Random', symbol: '※' },
+		{ value: 6, label: 'Wander', symbol: '※' }, // Live: Wander (read Random)
 		{ value: 7, label: 'S&H', symbol: 'S&H' }
 	];
 
 	const CIRCUIT_OPTIONS = [
 		{ value: 0, label: 'SVF' },
 		{ value: 1, label: 'DFM' },
-		{ value: 2, label: 'SV2' },
+		{ value: 2, label: 'MS2' }, // Live: MS2 (read SV2)
 		{ value: 3, label: 'PRD' }
 	];
 

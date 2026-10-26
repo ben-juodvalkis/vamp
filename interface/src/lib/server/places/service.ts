@@ -739,6 +739,11 @@ export class PlacesService {
 		return this.listing();
 	}
 
+	/** The folders of every Place the browser has a catalog of: what a preset read may open (`/api/places/preset-params`). */
+	catalogRoots(): string[] {
+		return this.sources.filter((s) => this.catalogs.has(s.key)).map((s) => s.path);
+	}
+
 	/** Today's `index.json`: the ticked Places in sidebar order. */
 	indexJson(): PlacesIndexJson {
 		const places = this.sources
@@ -851,6 +856,16 @@ const SLOT = '__loopingPlacesService';
 /** The one service of this process, started on first use (`hooks.server.ts` starts it at boot). */
 export function placesService(): PlacesService {
 	const g = globalThis as unknown as Record<string, PlacesService | undefined>;
+	// The slot outlives a dev server's reload of this module, so one watcher
+	// serves every request; but an instance of the class before an edit runs
+	// the old code until a restart (2026-10-25: a running `npm run dev` never
+	// cataloged the effects Place). A new class replaces it. In production the
+	// module loads once, so this never fires.
+	const held = g[SLOT];
+	if (held && !(held instanceof PlacesService)) {
+		(held as { stop?: () => void }).stop?.();
+		g[SLOT] = undefined;
+	}
 	if (!g[SLOT]) {
 		g[SLOT] = new PlacesService();
 		g[SLOT].start();

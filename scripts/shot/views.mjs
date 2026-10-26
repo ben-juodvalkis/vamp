@@ -257,6 +257,21 @@ export const TOURS = {
 				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { click: '[data-debug="chain-add"]' }, { wait: 800 }]
 			},
 			{
+				name: 'browser-auto-filter',
+				description: 'The + Effect browser on Audio-Midi Effects › Audio Effects › Auto Filter: every preset tile draws its saved curve (needs catalog.effectsPlace and the Mac\'s library)',
+				scenePatch: chainDemo,
+				steps: [
+					openInstrument(CHAIN_DEMO_TRACK),
+					{ click: '[data-fx-mode="chain"]' },
+					{ click: '[data-debug="chain-add"]' },
+					{ wait: 1500 },
+					{ click: '.folder-tile:has-text("Audio Effects")' },
+					{ wait: 800 },
+					{ click: '.folder-tile:has-text("Auto Filter")' },
+					{ wait: 1500 }
+				]
+			},
+			{
 				name: 'chain-plugin',
 				description: 'Tapped the plug-in: the generic view, one slider per parameter',
 				scenePatch: chainDemo,
