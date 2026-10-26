@@ -1,5 +1,5 @@
 /**
- * PadNotesStrip with nothing playing (ADR-479): the first step added makes
+ * PadNotesStrip with nothing playing (ADR-480): the first step added makes
  * a one-bar clip in the pedal's slot, or the track's first empty one, fires
  * it, and writes the step into it.
  */

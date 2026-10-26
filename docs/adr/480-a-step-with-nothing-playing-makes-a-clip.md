@@ -1,4 +1,4 @@
-# ADR-479: A Step Added With Nothing Playing Makes a Clip
+# ADR-480: A Step Added With Nothing Playing Makes a Clip
 
 ## Status
 **Accepted** (2026-10-26). Partly supersedes ADR-473 (its "No clip
