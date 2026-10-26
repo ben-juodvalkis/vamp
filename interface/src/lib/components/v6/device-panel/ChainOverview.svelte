@@ -425,8 +425,9 @@
    * side bars, after the + cell (the user, 2026-10-26).
    *
    * Suggestions (ADR-483, the same day): while a chain holds few effects,
-   * the ones a track most often wants stand ghosted before the + cell, a
-   * Drum Buss on a drum track and an Echo and an Auto Filter on any other,
+   * the ones a track most often wants stand ghosted before the + cell: the
+   * Guitar and Bass racks on an audio track, a Drum Buss on a drum track,
+   * an Echo and an Auto Filter on any other,
    * and they go once the chain fills up, so it never gets crowded. Not on
    * a pad's chain.
    */
@@ -435,6 +436,8 @@
   const SUGGEST_BELOW = 3;
   const DRUM_SUGGESTIONS = ['drum'];
   const MELODIC_SUGGESTIONS = ['echo', 'filter'];
+  /** An audio track: the guitar and bass racks (the user, 2026-10-26). */
+  const AUDIO_SUGGESTIONS = ['guitar', 'bass'];
   const hasType = (key: string) => cells.some((c) => c.presetKey === key);
   /** The pointer holding a ghost, and which ghost. */
   let ghostHeld = $state<{ id: number; key: string; suggestions: string[] } | null>(null);
@@ -443,7 +446,9 @@
     if (padScope) return [];
     const effects = cells.filter((c) => c.kind !== 'instrument').length;
     if (effects >= SUGGEST_BELOW) return [];
-    const wanted = isDrumTrack(v3Store.tracks.get(trackPath)) ? DRUM_SUGGESTIONS : MELODIC_SUGGESTIONS;
+    const track = v3Store.tracks.get(trackPath);
+    const audio = !!track && !track.isFoldable && !track.hasMidiInput && track.hasAudioInput;
+    const wanted = audio ? AUDIO_SUGGESTIONS : isDrumTrack(track) ? DRUM_SUGGESTIONS : MELODIC_SUGGESTIONS;
     return wanted.filter((key) => TILE_COMPONENTS[key] && !hasType(key));
   });
   /** Held still while a ghost is under a finger, so nothing slides beneath it as the load lands. */

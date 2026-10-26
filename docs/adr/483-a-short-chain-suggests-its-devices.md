@@ -15,8 +15,9 @@ Utility no wider than the side bars.
 ## Decision
 - While a track's chain holds fewer than three effects (the instrument not
   counted), ghost cells stand between the last device and the + cell:
-  a Drum Buss on a drum track (`isDrumTrack`, the rule the FX grid's Drum
-  cell uses), an Echo and an Auto Filter on any other. A type the chain
+  the Guitar and Bass racks on an audio track (added the same day, the
+  user's call), a Drum Buss on a drum track (`isDrumTrack`, the rule the FX
+  grid's Drum cell uses), an Echo and an Auto Filter on any other. A type the chain
   already has is not suggested. Not on a pad's chain.
 - A ghost cell is the FX grid's own tile in its ghost state, in a dashed
   cell named for the device; its first drag frame loads the device
@@ -31,7 +32,8 @@ Utility no wider than the side bars.
 - A short chain is one or two cells longer, so it reaches the
   two-row wrap one device sooner; at three effects the suggestions go.
 - The suggestions are fixed lists in `ChainOverview.svelte`
-  (`DRUM_SUGGESTIONS`, `MELODIC_SUGGESTIONS`, `SUGGEST_BELOW`).
+  (`AUDIO_SUGGESTIONS`, `DRUM_SUGGESTIONS`, `MELODIC_SUGGESTIONS`,
+  `SUGGEST_BELOW`).
 
 ## Tags
 `fx-chain`, `chain-overview`, `ghost-tile`, `suggestions`

@@ -344,6 +344,12 @@ export const TOURS = {
 				steps: [select, { click: '[data-debug="chain-add"]' }, { wait: 2500 }]
 			})),
 			{
+				name: 'chain-audio',
+				description: 'An audio track (Guitar) with a short chain: the Guitar and Bass racks stand ghosted before the + cell (ADR-483)',
+				scenePatch: (scene) => setTrackDevices(scene, 3, ['Echo']),
+				steps: [selectTrack(3), { wait: 800 }]
+			},
+			{
 				name: 'chain-plugin',
 				description: 'Tapped the plug-in: the generic view, one slider per parameter',
 				scenePatch: chainDemo,
