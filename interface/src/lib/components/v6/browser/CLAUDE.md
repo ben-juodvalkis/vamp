@@ -373,6 +373,13 @@ source and the Phase 4 switch that chose between them.
   ADR-478): a tap adds it to the selected track's chain, or the scoped pad's,
   through `device/load` with no track prep (`addEffect`). The stacked label
   (`.has-plugin`, column flex) applies only to tiles that carry one.
+- **The effects Place** (`catalog.effectsPlace`, a Place's sidebar name; the
+  rig's is "Audio-Midi Effects", in `constants.local.json`): the server
+  catalogs it whether or not it is ticked and flags it in `index.json`
+  (`effects`, and `hidden` while unticked); the browser keeps a hidden one off
+  the rail (`effectsVendor`) and the chain overview's + Effect opens it, on
+  Effect. Unset, + Effect opens the open Place, else the first ticked one with
+  effect presets. A rail Place's Effect segment works as before.
 - **Coloring**: a preset from a Place carries its Place's role (`Preset.role`,
   stamped by the adapter) and passes it to `trackColoring` as `placeRole` — the
   answer outright, since a Place's `<Place>/<folders>/…` path would be read

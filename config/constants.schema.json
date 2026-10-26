@@ -452,6 +452,10 @@
       "type": "object",
       "description": "Places-catalog generation config (scripts/generate-places-catalog.ts)",
       "properties": {
+        "effectsPlace": {
+          "type": "string",
+          "description": "The Place + Effect opens, by its name in Live's sidebar; cataloged even when unticked, off the rail unless ticked. Empty for none."
+        },
         "maxFolderDepth": {
           "type": "integer",
           "minimum": 1,

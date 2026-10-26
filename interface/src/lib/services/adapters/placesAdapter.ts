@@ -55,6 +55,10 @@ export interface PlaceInfo {
 	samplesFile?: string;
 	totalItems: number;
 	kinds: KindCounts;
+	/** The effects Place (`catalog.effectsPlace`): where the chain overview's + Effect opens the browser. */
+	effects?: boolean;
+	/** The effects Place, cataloged though not ticked: kept off the rail. */
+	hidden?: boolean;
 }
 
 export interface PlacesIndex {

@@ -62,6 +62,10 @@ one row with the + cell, wide as the track strips get; past five, two rows
 split evenly (`chainGrid`). One row keeps the controls full height; the
 second row halves them, so it waits until six devices.
 
+**A cell carries its tile's control**, and Permute its steps, MidiWheels
+its wheels, the instrument its signature control (Omnisphere's ORB,
+Drift's filter so far).
+
 **A cell carries its tile's control.** A device the grid has a tile for
 shows that tile inside its cell (the grid's own component, handed the
 cell's device), so the chain can do whatever the grid can, on each device
@@ -73,7 +77,9 @@ audio and MIDI effect presets (Instrument keeps instruments and kits). A
 tap adds the preset to the selected track's chain, or the scoped pad's,
 through `device/load` with no track prep; before, effect tiles were
 greyed. The overview's last cell is a dashed + Effect that opens the
-browser on Effect. The grid/chain switch is one button over the
+browser on Effect, on the Mac's effects Place (`catalog.effectsPlace`), a
+Place cataloged for this whether or not it is ticked and kept off the rail
+unless it is. The grid/chain switch is one button over the
 section's top-left corner, where it no longer takes the Glue tile's taps.
 
 ## Consequences

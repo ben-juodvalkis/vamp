@@ -163,6 +163,12 @@
 	// let it play (a clip in a Session slot). Instrument shows a Place's presets,
 	// Simpler its samples and audio clips, Clip those plus its MIDI clips.
 	let placeVendors = $state<BrowserVendor[]>([]);
+	/**
+	 * The effects Place (`catalog.effectsPlace`), where + Effect opens: off
+	 * the rail unless it is ticked, so it is a vendor of its own beside the
+	 * rail's. Null when the Mac names none.
+	 */
+	let effectsVendor = $state<BrowserVendor | null>(null);
 	/** Each Place's index entry, keyed by its rail id (`place:drum`). */
 	let placeInfo = $state<Record<string, PlaceInfo>>({});
 	/**
@@ -195,6 +201,7 @@
 
 	const vendors = $derived.by(() => {
 		const list = [...placeVendors];
+		if (effectsVendor && !list.some((v) => v.id === effectsVendor?.id)) list.push(effectsVendor);
 		if (recentInstrumentsStore.hasItems) list.push(recentVendor);
 		return list;
 	});
@@ -213,7 +220,7 @@
 	const isReplacingInstrument = $derived(browserModeStore.isReplacingInstrument);
 	// A Place browses a catalog (drill-in prep, the header's switch); Recent is a
 	// list and carries neither.
-	const isPlaceVendor = (v: BrowserVendor) => placeVendors.some((p) => p.id === v.id);
+	const isPlaceVendor = (v: BrowserVendor) => isPlaceVendorId(v.id);
 
 	// ── UI state ──
 	let isExpanded = $state(false);
@@ -1367,28 +1374,31 @@
 	async function loadRail(refresh: boolean) {
 		try {
 			const index = await getPlacesIndex();
-			placeVendors = index.places.map((p) => ({
+			const asVendor = (p: (typeof index.places)[number]): BrowserVendor => ({
 				id: placeVendorId(p.id),
 				name: p.name,
 				// A Place's role colors its button (`vendors.types[role]`).
 				color: (p.role && TYPE_COLORS[p.role]?.color) || DEFAULT_TYPE_COLOR,
 				vendorId: placeVendorId(p.id),
 				trackType: 'midi'
-			}));
+			});
+			placeVendors = index.places.filter((p) => !p.hidden).map(asVendor);
+			const effects = index.places.find((p) => p.effects);
+			effectsVendor = effects ? asVendor(effects) : null;
 			placeInfo = Object.fromEntries(index.places.map((p) => [placeVendorId(p.id), p]));
 			// Every Place's files into Safari's cache while nothing is happening,
 			// so a first open mid-set is a parse, not a transfer (§9).
 			void warmPlacesCache(index.places);
 			if (refresh) {
-				browserNavigationStore.refreshVendorStates(placeVendors);
-				if (selectedVendor && selectedVendor !== 'recent-instruments' && !placeVendors.some((v) => v.id === selectedVendor)) {
+				browserNavigationStore.refreshVendorStates(vendors);
+				if (selectedVendor && selectedVendor !== 'recent-instruments' && !vendors.some((v) => v.id === selectedVendor)) {
 					// The open Place was unticked: back to the rail.
 					browserNavigationStore.currentVendorId = null;
 					browserNavigationStore.selectedVendorId = null;
 				}
 				await loadCurrentLevel();
 			} else {
-				browserNavigationStore.initializeVendorStates(placeVendors);
+				browserNavigationStore.initializeVendorStates(vendors);
 			}
 		} catch (error) {
 			logger.warn('No Places catalog from the Mac yet', {
@@ -1417,8 +1427,9 @@
 			wasPersistent = nowPersistent;
 		}
 	});
-	// The chain overview's + cell (`openEffectsBrowser`): the open Place if it
-	// has effect presets, else the first Place that does.
+	// The chain overview's + cell (`openEffectsBrowser`): the effects Place
+	// when the Mac names one (`catalog.effectsPlace`), else the open Place if
+	// it has effect presets, else the first Place that does.
 	let seenEffectsRequest = browserModeStore.effectsOpenRequest;
 	$effect(() => {
 		const request = browserModeStore.effectsOpenRequest;
@@ -1427,10 +1438,10 @@
 		isExpanded = true;
 		untrack(() => {
 			const current = findVendorById(vendors, selectedVendorId);
-			const target =
+			const target = effectsVendor ?? (
 				current && isPlaceVendor(current) && placeHas(current.id, EFFECT_GROUPS)
 					? current
-					: (placeVendors.find((v) => placeHas(v.id, EFFECT_GROUPS)) ?? current);
+					: (placeVendors.find((v) => placeHas(v.id, EFFECT_GROUPS)) ?? current));
 			if (target && isPlaceVendor(target)) selectCategory(target, { restore: true });
 		});
 	});

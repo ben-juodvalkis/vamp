@@ -103,7 +103,22 @@ export interface PlacesListing {
 
 export interface PlacesIndexJson {
 	metadata: { generatedAt: string; sidebarRoot: string; source: string; totalItems: number; version: number };
-	places: Array<{ id: string; name: string; path: string; icon: string; role: string | null; source: string; file: string; samplesFile?: string; totalItems: number; kinds: KindCounts }>;
+	places: Array<{
+		id: string;
+		name: string;
+		path: string;
+		icon: string;
+		role: string | null;
+		source: string;
+		file: string;
+		samplesFile?: string;
+		totalItems: number;
+		kinds: KindCounts;
+		/** The effects Place (`catalog.effectsPlace`): where + Effect opens the browser. */
+		effects?: boolean;
+		/** Cataloged as the effects Place but not ticked: off the rail. */
+		hidden?: boolean;
+	}>;
 	aliases: PlaceAliasMap;
 }
 
@@ -358,10 +373,19 @@ export class PlacesService {
 		}
 	}
 
-	/** Rebuild every ticked Place whose stamp changed, drop the unticked, bump once. Returns whether anything changed. */
+	/**
+	 * Whether a source is the effects Place (`catalog.effectsPlace`, by its
+	 * sidebar name): the one + Effect opens. It is cataloged ticked or not.
+	 */
+	private isEffectsPlace(s: Pick<LibrarySource, 'name'>): boolean {
+		const name = configSection<{ effectsPlace?: string }>('catalog').effectsPlace;
+		return !!name && s.name === name;
+	}
+
+	/** Rebuild every ticked Place (and the effects Place) whose stamp changed, drop the rest, bump once. Returns whether anything changed. */
 	private rebuildTicked(why: string): boolean {
 		const t0 = Date.now();
-		const wanted = this.sources.filter((s) => this.ticks.ticked.has(s.key) && s.present);
+		const wanted = this.sources.filter((s) => s.present && (this.ticks.ticked.has(s.key) || this.isEffectsPlace(s)));
 		let changed = false;
 		for (const key of [...this.catalogs.keys()]) {
 			if (!wanted.some((s) => s.key === key)) {
@@ -731,7 +755,8 @@ export class PlacesService {
 					file: `${c.id}.json`,
 					samplesFile: c.samples ? `${c.id}-samples.json` : undefined,
 					totalItems: c.totalItems,
-					kinds: c.kinds
+					kinds: c.kinds,
+					...(this.isEffectsPlace(s) ? { effects: true, hidden: !this.ticks.ticked.has(s.key) } : {})
 				};
 			});
 		const sidebarRoot = configPath('sidebarRoot') ?? '';

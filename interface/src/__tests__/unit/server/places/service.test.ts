@@ -11,6 +11,19 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createPlacesService, loadSource, type PlacesService } from '$lib/server/places/service';
 
+// `catalog.effectsPlace` per test; the rest of the config is the repo's.
+let effectsPlace = '';
+vi.mock('$lib/server/runtimeConfig', async (importOriginal) => {
+	const real = await importOriginal<typeof import('$lib/server/runtimeConfig')>();
+	return {
+		...real,
+		configSection: (key: string) => {
+			const section = real.configSection(key) as Record<string, unknown>;
+			return key === 'catalog' ? { ...section, effectsPlace } : section;
+		}
+	};
+});
+
 let root: string;
 let service: PlacesService | null = null;
 
@@ -65,6 +78,7 @@ beforeEach(() => {
 	);
 });
 afterEach(() => {
+	effectsPlace = '';
 	vi.unstubAllEnvs();
 	service?.stop();
 	service = null;
@@ -161,5 +175,27 @@ describe('loadSource', () => {
 		expect(loadSource({ kind: 'place', name: 'Drum' })).toBe('place:Drum');
 		expect(loadSource({ kind: 'user-library', name: 'User Library' })).toBe('library');
 		expect(loadSource({ kind: 'pack', name: 'Drum Booth' })).toBe('pack:Drum Booth');
+	});
+});
+
+describe('PlacesService, the effects Place', () => {
+	it('catalogs the effects Place unticked, flagged hidden; ticked, it is on the rail too', () => {
+		effectsPlace = 'Key';
+		const s = make();
+		const [drum, key] = s.listing().sources;
+		s.setTicks([drum.key]);
+		expect(s.indexJson().places.map((p) => [p.id, p.effects ?? false, p.hidden ?? false])).toEqual([
+			['drum', false, false],
+			['key', true, true]
+		]);
+		expect(s.fileJson('key.json')).not.toBeNull();
+		s.setTicks([drum.key, key.key]);
+		expect(s.indexJson().places.find((p) => p.id === 'key')).toMatchObject({ effects: true, hidden: false });
+	});
+
+	it('names no effects Place by default', () => {
+		const s = make();
+		s.setTicks([s.listing().sources[0].key]);
+		expect(s.indexJson().places.some((p) => p.effects)).toBe(false);
 	});
 });
