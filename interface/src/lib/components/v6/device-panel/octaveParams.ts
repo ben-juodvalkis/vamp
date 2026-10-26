@@ -14,6 +14,8 @@ export const OCTAVE_MIX_MAX = 100;
  * shelf's "Pitch Shift.amxd" loaded and dumped: 3 Tone 0..100, 4 Response,
  * 5 Quality); their labels are the device file's `parameter_enum`, in order.
  */
+export const OCTAVE_TONE_PARAM = 3;
+export const OCTAVE_TONE_MAX = 100;
 export const OCTAVE_RESPONSE_PARAM = 4;
 export const OCTAVE_RESPONSE_STEPS = ['Fast', 'Balanced', 'Clean'] as const;
 export const OCTAVE_QUALITY_PARAM = 5;

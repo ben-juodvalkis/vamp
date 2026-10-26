@@ -107,11 +107,11 @@ describe('Reverse view: Pitch Hack rate column', () => {
 });
 
 describe('Pitch view: the Pitch family', () => {
-	it('draws the Octave alone in the Pitch view: three tabs, no Mix (the grid tile) and no Reverse', async () => {
+	it('draws the Octave alone in the Pitch view: three tabs and Tone, no Mix (the grid tile) and no Reverse', async () => {
 		seed(pitchHack(13), octave(7));
 		const { container } = render(PitchCentralView);
 		await tick();
-		expect(sliderTitles(container)).toEqual([]);
+		expect(sliderTitles(container)).toEqual(['Tone']);
 		expect(container.querySelector('.pitch-hack-rate')).toBeNull();
 		expect(container.textContent).not.toContain('Reverse');
 		expect(Array.from(container.querySelectorAll('[role="radiogroup"]')).map((g) => g.getAttribute('aria-label'))).toEqual(['Pitch', 'Response', 'Quality']);
@@ -154,6 +154,13 @@ describe('Pitch view: the Pitch family', () => {
 		for (const b of tab(container, 'Quality')) await fireEvent.click(b);
 		expect(writtenTo(OCT, 4)).toEqual([0, 1, 2]);
 		expect(writtenTo(OCT, 5)).toEqual([0, 1, 2]);
+	});
+
+	it('draws Tone (param 3, 0..100) as a slider beside the tabs', async () => {
+		seed(octave(7));
+		const { container } = render(PitchCentralView);
+		await tick();
+		expect(sliderTitles(container)).toEqual(['Tone']);
 	});
 
 	it('drives the same device loaded from the shelf as "Pitch Shift"', async () => {

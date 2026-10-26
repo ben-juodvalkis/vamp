@@ -3,7 +3,8 @@
 	 * The Octave's view, Pitch Shift on the effects shelf (the `octave` slot):
 	 * three pick-one tabs, as the Variation view draws them (user,
 	 * 2026-10-26): Pitch (+12, +7, -5, -12, high to low), Response and
-	 * Quality. The grid's Pitch slider is its Mix. Indices and labels in
+	 * Quality; then Tone, a value box (ADR-477). The grid's Pitch slider is
+	 * its Mix. Indices and labels in
 	 * `octaveParams.ts`, measured on the rig.
 	 *
 	 * A step on a ghost loads the device with its Mix at 50, dry and shifted
@@ -21,8 +22,11 @@
 		OCTAVE_RESPONSE_PARAM,
 		OCTAVE_RESPONSE_STEPS,
 		OCTAVE_QUALITY_PARAM,
-		OCTAVE_QUALITY_STEPS
+		OCTAVE_QUALITY_STEPS,
+		OCTAVE_TONE_PARAM,
+		OCTAVE_TONE_MAX
 	} from '$lib/components/v6/device-panel/octaveParams';
+	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 
@@ -30,6 +34,11 @@
 	const octaveChain = useBassChainPosition(octave, 'PitchCentralView');
 
 	let ink = $derived(trackInk(octave.color.primary, paintModeReactive()));
+	let inkScheme = $derived({
+		primary: ink,
+		secondary: octave.color.secondary,
+		accent: trackInk(octave.color.accent, paintModeReactive())
+	});
 
 	const OCTAVE_LOAD_MIX = 50;
 	function send(index: number, v: number) {
@@ -70,12 +79,28 @@
 			</div>
 		</div>
 	{/each}
+	<div class="pitch-col" class:slot-ghost={octave.isGhost}>
+		<div class="pitch-head text-xs font-bold text-center pb-1">Tone</div>
+		<div class="tone">
+			<DeviceSlider
+				value={octave.paramValue(OCTAVE_TONE_PARAM) ?? OCTAVE_TONE_MAX}
+				title="Tone"
+				orientation="vertical"
+				min={0}
+				max={OCTAVE_TONE_MAX}
+				isGhost={octave.isGhost}
+				color={inkScheme}
+				readout={octave.paramDisplay(OCTAVE_TONE_PARAM)}
+				onInteraction={(v) => send(OCTAVE_TONE_PARAM, Math.max(0, Math.min(OCTAVE_TONE_MAX, v)))}
+			/>
+		</div>
+	</div>
 </div>
 
 <style>
 	.pitch-layout {
 		display: grid;
-		grid-template-columns: repeat(3, minmax(0, 1fr));
+		grid-template-columns: repeat(4, minmax(0, 1fr));
 		gap: var(--central-gap);
 		height: 100%;
 		width: 100%;
@@ -95,6 +120,16 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1px;
+	}
+
+	.tone {
+		flex: 1;
+		min-height: 0;
+		display: flex;
+	}
+	.tone > :global(*) {
+		flex: 1 1 auto;
+		min-width: 0;
 	}
 
 	.pitch-btn {
