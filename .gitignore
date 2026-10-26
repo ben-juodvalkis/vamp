@@ -43,6 +43,12 @@ audio/
 !Vamp Devices/Comb/Comb.aupreset
 !Vamp Devices/Octave/Octave.aupreset
 
+# The amp racks (Guitar, Bass Amp) and Note Chance load from Vamp Devices
+# too (2026-10-26), copied there from the User Library's Effect Patches, and
+# stay on this Mac: the racks hold TONE3000 captures, Note Chance is
+# downloaded. *.adg is ignored above; the .amxd needs saying.
+Vamp Devices/Note Chance/
+
 # GlitchLoop is the owner's private device (its engine is a port of
 # PitchLoop89): the glitchloop repo's build copies it here so it loads
 # through the Vamp Devices Place, and it never enters this repo.

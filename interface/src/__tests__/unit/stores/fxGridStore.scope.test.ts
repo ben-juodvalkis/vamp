@@ -121,7 +121,7 @@ describe('a scoped slot', () => {
 		expect(selectedTrackStore.getFxGridSlot('reverb', PAD).state).toBe('loading');
 		expect(selectedTrackStore.getFxGridSlot('reverb').state).toBe('ghost'); // the track's slot is untouched
 		await selectedTrackStore.loadFxGridDevice('guitar', PAD);
-		expect(sendMock).toHaveBeenCalledWith('/looping/v3/device/load', [TRACK, PAD, DEVICE_PRESETS.guitar.presetPath]);
+		expect(sendMock).toHaveBeenCalledWith('/looping/v3/device/load', [TRACK, PAD, '', 'place:Vamp Devices', 'Guitar/Guitar.adg']);
 		const { setTrackName } = await import('$lib/services/trackCommands');
 		expect(setTrackName).not.toHaveBeenCalled();
 	});

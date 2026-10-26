@@ -208,7 +208,9 @@ change, and renames it to the tile's name (a Hybrid Reverb becomes
 Live's factory settings. To change what a tile loads, change the device's
 default in Live (right-click its title bar → Save as Default Preset).
 Racks, plug-in presets and Max devices are files, and load through the
-browser from `paths.effectPresetsBase` or the Vamp Devices Place.
+browser from the Vamp Devices Place (the amp racks and Note Chance since
+2026-10-26; `paths.effectPresetsBase`, the User Library folder they loaded
+from before, is gone).
 
 ## 8. Troubleshooting
 

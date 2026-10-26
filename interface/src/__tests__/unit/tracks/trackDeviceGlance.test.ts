@@ -33,7 +33,7 @@ import { machineStore } from '$lib/stores/machineStore.svelte';
 // The library's folder reaches the client over /bridge/machine at run time
 // (onboarding.plan.md §6.5), from a Mac's own config; here, a fixture one.
 const LIBRARY = '/Volumes/Audio/User Library/Looping Presets/Instruments';
-machineStore.update(JSON.stringify({ paths: { instrumentsBase: LIBRARY, effectPresetsBase: '', m4lDevicesRoot: '' }, totalmix: null }));
+machineStore.update(JSON.stringify({ paths: { instrumentsBase: LIBRARY, m4lDevicesRoot: '' }, totalmix: null }));
 
 type ParamSpec = { name: string; value: number; min?: number; max?: number };
 

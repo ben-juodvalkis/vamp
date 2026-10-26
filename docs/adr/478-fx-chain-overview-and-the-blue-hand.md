@@ -91,6 +91,16 @@ is `20 · 1000^v` Hz). A tap loads it as saved; a drag loads it and sets the
 values under the finger on the device that load lands, never on another of
 its type.
 
+**Vamp Devices is the effects library** (2026-10-26). `catalog.effectsPlace`
+defaults to "Vamp Devices": the one folder holding the effects the app
+loads, and the place the owner adds presets. The amp racks (Guitar, Bass
+Amp) and Note Chance joined it from the User Library's Effect Patches, so
+every file tile names that Place and `paths.effectPresetsBase` is gone. The
+browser draws it as Audio Effects and MIDI Effects by each item's kind and
+leaves the plumbing out (`catalog.effectsHidden`); the files stay one folder
+per device at the top, because 886 saved sets point at them by absolute
+path (Permute 2,896 times), and moving them would break those sets.
+
 ## Consequences
 - A renamed native device lights its tile, and the tile no longer loads a
   duplicate beside it.
@@ -109,9 +119,15 @@ its type.
   virtual-macro layer's and never reach the wire.
 - `device/move` is a new address with no protocol bump: an older surface
   ignores it, so a drag on it does nothing until Live restarts.
-- Effects appear only from ticked Places. On the rig the seven ticked
-  Places hold one effect preset; Effect Patches and the User Library hold
-  the rest, and Live's factory effect presets are not offered as a Place.
+- Effects appear only from ticked Places and the effects Place. Live's
+  factory effect presets are not offered; a preset reaches + Effect once
+  it is copied into Vamp Devices (under `Audio Effects/<device>/` merges
+  into the browser's group of that name).
+- The amp racks and Note Chance are on the owner's Mac only (gitignored:
+  TONE3000 captures, a downloaded device). A general install has no Guitar
+  or Bass Amp to load, as it had none before.
+- Permute's header says Max audio effect (`aaaa`), so the browser files it
+  under Audio Effects, as Live does.
 - The Auto Filter tile's and view's type tables were wrong from 6 on (Live:
   Comb, Resampling, Notch+LP, Vowel); both read `autoFilterParams` now. The
   view also said Random for the LFO's Wander and SV2 for the MS2 circuit.

@@ -12,20 +12,20 @@ const require = createRequire(import.meta.url);
 const { machineSnapshot, createMachineRegistry, MACHINE_ADDRESS, repoRootFromHere } = require('../../../../bridge/utils/machine.js');
 
 describe('machineSnapshot', () => {
-	it('carries the two library paths, the Max devices folder from the repo root, and the TotalMix range', () => {
+	it('carries the instrument library path, the Max devices folder from the repo root, and the TotalMix range', () => {
 		const snap = machineSnapshot(
-			{ paths: { instrumentsBase: '/Lib/Instruments', effectPresetsBase: '/Lib/Effects' }, osc: { totalmix: { minDb: -65, maxDb: 6, silenceDb: -300 } } },
+			{ paths: { instrumentsBase: '/Lib/Instruments' }, osc: { totalmix: { minDb: -65, maxDb: 6, silenceDb: -300 } } },
 			{ repoRoot: '/repo' }
 		);
 		expect(snap).toEqual({
-			paths: { instrumentsBase: '/Lib/Instruments', effectPresetsBase: '/Lib/Effects', m4lDevicesRoot: '/repo/Vamp Devices' },
+			paths: { instrumentsBase: '/Lib/Instruments', m4lDevicesRoot: '/repo/Vamp Devices' },
 			totalmix: { minDb: -65, maxDb: 6, silenceDb: -300 }
 		});
 	});
 
 	it('answers empty paths and no range for a config with none, never a throw', () => {
 		const snap = machineSnapshot({}, { repoRoot: '/repo' });
-		expect(snap.paths).toEqual({ instrumentsBase: '', effectPresetsBase: '', m4lDevicesRoot: '/repo/Vamp Devices' });
+		expect(snap.paths).toEqual({ instrumentsBase: '', m4lDevicesRoot: '/repo/Vamp Devices' });
 		expect(snap.totalmix).toBeNull();
 	});
 

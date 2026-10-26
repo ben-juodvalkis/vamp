@@ -123,7 +123,7 @@ which exist only while `features.expressionPedal` is on:
    certainly on another channel — flip to `channel: 0` to confirm
    before hunting elsewhere.
 6. What the expression pedal drives depends on the selected track
-   (ADR-445): the **Wah** (`Looping Presets/Effect Patches/Wah.adg`) on
+   (ADR-445): the **Wah** (`Vamp Devices/Wah/Wah.adg`) on
    an audio track, **MidiWheels** (`Vamp Devices/MidiWheels.amxd`,
    the device the on-screen pitch/mod wheels drive; the pedal sweeps its
    mod wheel) on a MIDI track. Both paths are in `config/constants.json` →

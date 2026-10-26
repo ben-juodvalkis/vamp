@@ -68,10 +68,6 @@
           "type": "string",
           "description": "The instrument library's root; sidebarRoot sits inside it. Paths recorded before the Places (<instrumentsBase>/<Vendor>/<Type>/…) and Sidebar paths are both read from it for a category (interface/src/lib/utils/presetPath.ts)."
         },
-        "effectPresetsBase": {
-          "type": "string",
-          "description": "The folder of the FX tiles that are files (racks, plug-in presets, Max devices); the native tiles insert Live's own device and need none"
-        },
         "glitchLoopRoot": {
           "type": "string",
           "description": "The owner's glitchloop checkout. The Glitch view's presets are read from its max/glitchloop_presets.json (GET /api/glitchloop/presets); unset, the view shows no presets."
@@ -455,6 +451,11 @@
         "effectsPlace": {
           "type": "string",
           "description": "The Place + Effect opens, by its name in Live's sidebar; cataloged even when unticked, off the rail unless ticked. Empty for none."
+        },
+        "effectsHidden": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Top-level folders or files of the effects Place the browser leaves out."
         },
         "maxFolderDepth": {
           "type": "integer",

@@ -30,6 +30,14 @@ describe('kindOfRow', () => {
 		expect(kindOfRow(row({}), '.adg')).toBe('unknown');
 	});
 
+	it("reads a Max device's preset from its m4l device_id", () => {
+		// Pitch Hack.adv's row in Live's database, 2026-10-26.
+		const pitchHack = 'device:m4l:audiofx:pack@www.ableton.com/260:Audio%20Effects/Pitch%20Hack/Ableton%20Folder%20Info/Pitch%20Hack.amxd';
+		expect(kindOfRow(row({ device_type: 2, device_id: pitchHack }), '.adv')).toBe('audio-effect');
+		expect(kindOfRow(row({ device_id: 'device:m4l:midifx:abs@/x.amxd' }), '.adv')).toBe('midi-effect');
+		expect(kindOfRow(row({ device_id: 'device:m4l:instr:abs@/x.amxd' }), '.adv')).toBe('instrument');
+	});
+
 	it('reads Max devices from device_type, plug-in presets from the au domain, clips from the subtype', () => {
 		expect(kindOfRow(row({ device_type: 1 }), '.amxd')).toBe('max-instrument');
 		expect(kindOfRow(row({ device_type: 2 }), '.amxd')).toBe('max-audio-effect');

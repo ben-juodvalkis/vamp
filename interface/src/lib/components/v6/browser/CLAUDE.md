@@ -373,8 +373,13 @@ source and the Phase 4 switch that chose between them.
   ADR-478): a tap adds it to the selected track's chain, or the scoped pad's,
   through `device/load` with no track prep (`addEffect`). The stacked label
   (`.has-plugin`, column flex) applies only to tiles that carry one.
-- **The effects Place** (`catalog.effectsPlace`, a Place's sidebar name; the
-  rig's is "Audio-Midi Effects", in `constants.local.json`): the server
+- **The effects Place** (`catalog.effectsPlace`, a Place's sidebar name;
+  "Vamp Devices" by default since 2026-10-26, the one folder of the effects
+  the app loads, which the owner adds presets to): the server lays it out as
+  Audio Effects and MIDI Effects by each item's kind, a one-preset device
+  folder showing as that preset, and leaves out `catalog.effectsHidden` (the
+  Recorder, random-start and their plumbing) — `diskScan.groupEffectsPlace`;
+  the files never move, because saved sets point at them by path. The server
   catalogs it whether or not it is ticked and flags it in `index.json`
   (`effects`, and `hidden` while unticked); the browser keeps a hidden one off
   the rail (`effectsVendor`) and the chain overview's + Effect opens it, on

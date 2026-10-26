@@ -8,7 +8,6 @@
  */
 
 import constants from '$config/constants.json';
-import { machineStore } from '$lib/stores/machineStore.svelte';
 
 export type CurveType = 'lowpass' | 'highpass' | 'bandpass' | 'notch' | 'eq' | 'none';
 
@@ -16,20 +15,6 @@ export interface DeviceColorScheme {
   primary: string;    // Main color for borders and active states
   secondary: string;  // Background color with transparency
   accent: string;     // Bright color for highlights
-}
-
-/**
- * A preset's path on the Mac. The table holds `{effectPresetsBase}` in place
- * of the owner's folder, which arrives from the bridge at run time
- * (`/bridge/machine`, onboarding.plan.md §6.5) — an iPad build compiles no
- * machine path in. Before a snapshot lands the folder is '', and the surface
- * answers `path-not-found`, which the tile shows as it always did.
- */
-export function resolvePresetPath(presetPath: string): string {
-  const base = machineStore.paths.effectPresetsBase;
-  // No snapshot yet: the template goes as it is, which the surface answers
-  // `path-not-found` exactly as it answers a missing preset file.
-  return base ? presetPath.replace('{effectPresetsBase}', base) : presetPath;
 }
 
 /**
@@ -42,7 +27,7 @@ type LoadFields = Pick<DevicePresetConfig, 'presetPath' | 'source' | 'rel' | 'na
 
 export function deviceLoadArgs(trackPath: string, devicePath: string, preset: LoadFields): string[] {
   if (preset.native) return [trackPath, devicePath, '', loadKey(preset), preset.defaultName];
-  const presetPath = resolvePresetPath(preset.presetPath ?? '');
+  const presetPath = preset.presetPath ?? '';
   return preset.source && preset.rel
     ? [trackPath, devicePath, presetPath, preset.source, preset.rel]
     : [trackPath, devicePath, presetPath];
@@ -54,7 +39,7 @@ export function deviceLoadArgs(trackPath: string, devicePath: string, preset: Lo
  * path on the Mac.
  */
 export function loadKey(preset: Pick<DevicePresetConfig, 'presetPath' | 'native' | 'expectedClassName'>): string {
-  return preset.native ? `native:${preset.expectedClassName}` : resolvePresetPath(preset.presetPath ?? '');
+  return preset.native ? `native:${preset.expectedClassName}` : (preset.presetPath ?? '');
 }
 
 export interface DevicePresetConfig {
@@ -443,7 +428,9 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   guitar: {
     // The amp rack lives on a pad as well as on a track (user, 2026-09-11); it loads through the browser and is moved into the chain.
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Guitar.adg',
+    presetPath: '',
+    source: 'place:Vamp Devices',
+    rel: 'Guitar/Guitar.adg',
     defaultName: 'Guitar',
     expectedClassName: 'AudioEffectGroupDevice',
     color: familyScheme('distortion')
@@ -455,7 +442,9 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     // tile drives; no view repeats it. Live names it after the .adg, which
     // is how the slot re-finds it.
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Bass Amp.adg',
+    presetPath: '',
+    source: 'place:Vamp Devices',
+    rel: 'Bass Amp/Bass Amp.adg',
     defaultName: 'Bass Amp',
     expectedClassName: 'AudioEffectGroupDevice',
     // Violet, not the Guitar's orange (2026-10-01): it shares the Guitar
@@ -521,14 +510,16 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   chance: {
     // A Max MIDI effect (one parameter: [1] Chance, 0-100 %, 101 steps),
     // so it never takes the insert-by-name path — no native class, no
-    // Live default; the browser loads the .amxd out of Effect Patches
+    // Live default; the browser loads the .amxd out of Vamp Devices
     // and Live names the device after the file. MIDI effect all the
     // same, so a pad load lands at the head of the pad's chain like
     // Random/Velocity/Chord. The library copy's own parameter_initial
     // is 100 (the Downloads original ships 50), so a fresh insert passes
     // every note until a finger says otherwise.
     padScoped: true,
-    presetPath: '{effectPresetsBase}/Note Chance.amxd',
+    presetPath: '',
+    source: 'place:Vamp Devices',
+    rel: 'Note Chance/Note Chance.amxd',
     defaultName: 'Note Chance',
     expectedClassName: 'MxDeviceMidiEffect',
     gridSlot: false,

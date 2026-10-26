@@ -157,7 +157,14 @@ export function kindOfRow(row: Pick<IndexRow, 'name' | 'file_type' | 'subtype' |
 	}
 	if (ext === '.adv') {
 		const lc = liveClassOf(row.device_id);
-		if (!lc) return 'unknown';
+		if (!lc) {
+			// A Max device's preset (Pitch Hack.adv): `device:m4l:audiofx:<the .amxd>`.
+			const m4l = /^device:m4l:(\w+):/.exec(row.device_id ?? '')?.[1];
+			if (m4l === 'instr') return 'instrument';
+			if (m4l === 'midifx') return 'midi-effect';
+			if (m4l === 'audiofx') return 'audio-effect';
+			return 'unknown';
+		}
 		if (LIVE_INSTRUMENTS.has(lc.cls) || lc.domain === 'instr') return 'instrument';
 		if (lc.domain === 'midifx' || lc.cls === 'MxDeviceMidiEffect' || lc.cls.startsWith('Midi')) return 'midi-effect';
 		return 'audio-effect';

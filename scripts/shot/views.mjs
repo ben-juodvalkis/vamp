@@ -256,36 +256,10 @@ export const TOURS = {
 				scenePatch: chainDemo,
 				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { click: '[data-debug="chain-add"]' }, { wait: 800 }]
 			},
-			{
-				name: 'browser-auto-filter',
-				description: 'The + Effect browser on Audio-Midi Effects › Audio Effects › Auto Filter: every preset tile draws its saved curve (needs catalog.effectsPlace and the Mac\'s library)',
-				scenePatch: chainDemo,
-				steps: [
-					openInstrument(CHAIN_DEMO_TRACK),
-					{ click: '[data-fx-mode="chain"]' },
-					{ click: '[data-debug="chain-add"]' },
-					{ wait: 1500 },
-					{ click: '.folder-tile:has-text("Audio Effects")' },
-					{ wait: 800 },
-					{ click: '.folder-tile:has-text("Auto Filter")' },
-					{ wait: 1500 }
-				]
-			},
-			// Every faced device's folder in the effects Place (needs --real-data and the Mac's library).
-			...[
-				['Audio Effects', 'Echo'],
-				['Audio Effects', 'Hybrid Reverb'],
-				['Audio Effects', 'Channel EQ'],
-				['Audio Effects', 'Chorus-Ensemble'],
-				['Audio Effects', 'Drum Buss'],
-				['Audio Effects', 'Saturator'],
-				['Audio Effects', 'Glue Compressor'],
-				['Audio Effects', 'Utility'],
-				['Audio Effects', 'Beat Repeat'],
-				['MIDI Effects', 'Random']
-			].map(([group, folder]) => ({
-				name: `browser-${folder.toLowerCase().replace(/[^a-z]+/g, '-')}`,
-				description: `The + Effect browser on ${group} › ${folder}: each preset tile is its grid tile's control at the preset's saved values`,
+			// The effects Place, Vamp Devices, as the browser groups it (needs --real-data).
+			...['Audio Effects', 'MIDI Effects'].map((group) => ({
+				name: `browser-${group.toLowerCase().replace(/[^a-z]+/g, '-')}`,
+				description: `The + Effect browser on Vamp Devices › ${group}: the devices filed by kind, a rack's tile its first macro at the saved value`,
 				scenePatch: chainDemo,
 				steps: [
 					openInstrument(CHAIN_DEMO_TRACK),
@@ -293,8 +267,6 @@ export const TOURS = {
 					{ click: '[data-debug="chain-add"]' },
 					{ wait: 1500 },
 					{ click: `.folder-tile:has-text("${group}")` },
-					{ wait: 800 },
-					{ click: `.folder-tile:text-is("${folder}"), .folder-tile:has-text("${folder}")` },
 					{ wait: 1500 }
 				]
 			})),

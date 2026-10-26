@@ -1987,8 +1987,8 @@ names a Place after its folder, so the folder's name is what the loads name
   **Where Live finds it:** the user saves it from Live to
   `User Library/Presets/Instruments/Instrument Rack/`, and this file is a
   copy of that one — so it drifts on a re-save there, unlike the devices.
-  It is **no longer** in `Looping Presets/Effect Patches/`
-  (`paths.effectPresetsBase`), so the interface's effect-patch browser
+  It is **no longer** in `Looping Presets/Effect Patches/`, so the
+  interface's effect-patch browser
   does not list it.
 - `mute-solo-control/` - `Lock Move Knobs.amxd` (running `mute-solo-control.js`), a
   hand-placed device in the rig template: Track Key Controls' mute/solo keys with the Move's four

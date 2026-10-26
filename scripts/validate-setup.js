@@ -164,7 +164,7 @@ function checkSetup() {
   }
 
   // A Mac's own paths, when its local file names them
-  for (const key of ['paths.effectPresetsBase', 'paths.instrumentsBase']) {
+  for (const key of ['paths.instrumentsBase']) {
     const value = setting(config, key);
     if (value && !fs.existsSync(value)) warn(`${key} is not on this Mac: ${value}`);
   }

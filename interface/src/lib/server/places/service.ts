@@ -47,6 +47,7 @@ import {
 	loadKindCache,
 	saveKindCache,
 	scanPlace,
+	groupEffectsPlace,
 	shapePlace,
 	type AuComponent,
 	type KindCache,
@@ -447,7 +448,8 @@ export class PlacesService {
 		// at the Place's top level, or a forced rebuild — not for every file
 		// Live's indexer touches anywhere. The Place's name, icon and id are
 		// in it too, so a Place renamed in Live is served under its new name.
-		const identity = `${s.name}:${s.icon}:${id}:${s.path}:${JSON.stringify(tuning)}`;
+		const effects = this.isEffectsPlace(s) ? (configSection<{ effectsHidden?: string[] }>('catalog').effectsHidden ?? []) : null;
+		const identity = `${s.name}:${s.icon}:${id}:${s.path}:${JSON.stringify(tuning)}:${JSON.stringify(effects)}`;
 		// An index build is stamped with a fingerprint of the Place's own rows,
 		// not the index's write time: Live writes its index every couple of
 		// seconds while it runs, and rebuilding all seven Places on each write
@@ -485,6 +487,7 @@ export class PlacesService {
 			raw = scanPlace(s.path, s.name, scanCtx);
 			source = 'disk';
 		}
+		if (effects) raw = groupEffectsPlace(raw, effects);
 		const tree = shapePlace(raw, { maxFolderDepth: tuning.maxFolderDepth, flattenFolders: tuning.flattenFolders, keepNestingFolders: tuning.keepNestingFolders });
 		const kinds = tree.kinds ?? {};
 		const samples = tree.folders[SAMPLES_FOLDER] ?? null;

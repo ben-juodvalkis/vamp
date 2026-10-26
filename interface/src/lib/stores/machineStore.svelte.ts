@@ -11,7 +11,6 @@ import { setTotalMixRange } from '$lib/utils/totalmixScale';
 
 export interface MachinePaths {
 	instrumentsBase: string;
-	effectPresetsBase: string;
 	m4lDevicesRoot: string;
 }
 
@@ -21,7 +20,7 @@ export interface MachineSnapshot {
 }
 
 const EMPTY: MachineSnapshot = Object.freeze({
-	paths: Object.freeze({ instrumentsBase: '', effectPresetsBase: '', m4lDevicesRoot: '' }),
+	paths: Object.freeze({ instrumentsBase: '', m4lDevicesRoot: '' }),
 	totalmix: null
 });
 
@@ -55,7 +54,6 @@ class MachineStore {
 		const next: MachineSnapshot = {
 			paths: {
 				instrumentsBase: str(raw.paths?.instrumentsBase),
-				effectPresetsBase: str(raw.paths?.effectPresetsBase),
 				m4lDevicesRoot: str(raw.paths?.m4lDevicesRoot)
 			},
 			totalmix:

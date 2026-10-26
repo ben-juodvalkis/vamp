@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('$lib/utils/logger', () => ({ logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
 import { machineStore } from '$lib/stores/machineStore.svelte';
-import { DEVICE_PRESETS, deviceLoadArgs, loadKey, resolvePresetPath } from '$lib/config/devicePresets';
+import { DEVICE_PRESETS, deviceLoadArgs, loadKey } from '$lib/config/devicePresets';
 import { MIN_DB, MAX_DB, setTotalMixRange } from '$lib/utils/totalmixScale';
 import * as scale from '$lib/utils/totalmixScale';
 import { handleBridgeMessage } from '$lib/api/handlers/miscHandlers';
@@ -20,21 +20,19 @@ afterEach(() => {
 describe('machineStore', () => {
 	it('starts empty, takes a snapshot, and ignores an unreadable frame', () => {
 		expect(machineStore.known).toBe(false);
-		expect(machineStore.paths.effectPresetsBase).toBe('');
+		expect(machineStore.paths.instrumentsBase).toBe('');
 		machineStore.update('{not json');
 		expect(machineStore.known).toBe(false);
-		machineStore.update(JSON.stringify({ paths: { instrumentsBase: '/Lib/Instruments', effectPresetsBase: '/Lib/Effects', m4lDevicesRoot: '/repo/Vamp Devices' }, totalmix: null }));
+		machineStore.update(JSON.stringify({ paths: { instrumentsBase: '/Lib/Instruments', m4lDevicesRoot: '/repo/Vamp Devices' }, totalmix: null }));
 		expect(machineStore.known).toBe(true);
-		expect(machineStore.paths).toEqual({ instrumentsBase: '/Lib/Instruments', effectPresetsBase: '/Lib/Effects', m4lDevicesRoot: '/repo/Vamp Devices' });
+		expect(machineStore.paths).toEqual({ instrumentsBase: '/Lib/Instruments', m4lDevicesRoot: '/repo/Vamp Devices' });
 	});
 
-	it('resolves a file tile’s preset path from the snapshot, and sends it on device/load', () => {
-		expect(DEVICE_PRESETS.guitar.presetPath).toBe('{effectPresetsBase}/Guitar.adg');
-		expect(resolvePresetPath(DEVICE_PRESETS.guitar.presetPath!)).toBe('{effectPresetsBase}/Guitar.adg');
-		machineStore.update(JSON.stringify({ paths: { instrumentsBase: '', effectPresetsBase: '/Lib/Effects', m4lDevicesRoot: '' }, totalmix: null }));
-		expect(resolvePresetPath(DEVICE_PRESETS.guitar.presetPath!)).toBe('/Lib/Effects/Guitar.adg');
-		expect(deviceLoadArgs('tracks/1', '', DEVICE_PRESETS.guitar)).toEqual(['tracks/1', '', '/Lib/Effects/Guitar.adg']);
-		// A preset shipped in Vamp Devices names the Place; the surface fills the path in.
+	it('sends a file tile’s Place and path inside it on device/load', () => {
+		// Every file tile is in Vamp Devices since 2026-10-26: the load names
+		// the Place, and the surface fills the path in.
+		expect(deviceLoadArgs('tracks/1', '', DEVICE_PRESETS.guitar)).toEqual(['tracks/1', '', '', 'place:Vamp Devices', 'Guitar/Guitar.adg']);
+		expect(deviceLoadArgs('tracks/1', '', DEVICE_PRESETS.bass)).toEqual(['tracks/1', '', '', 'place:Vamp Devices', 'Bass Amp/Bass Amp.adg']);
 		expect(deviceLoadArgs('tracks/1', '', DEVICE_PRESETS.digital)).toEqual(['tracks/1', '', '', 'place:Vamp Devices', 'Digital/Digital.adg']);
 		// A native tile names its device, not a file, whatever the snapshot says (3.12.0).
 		expect(deviceLoadArgs('tracks/1', '', DEVICE_PRESETS.reverb)).toEqual(['tracks/1', '', '', 'native:Hybrid', 'Reverb']);

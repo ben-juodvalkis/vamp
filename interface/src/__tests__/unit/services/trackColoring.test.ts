@@ -37,7 +37,7 @@ import { send } from '$lib/api/simpleClient';
 import { machineStore } from '$lib/stores/machineStore.svelte';
 // A Mac's library folder, as /bridge/machine hands it over; a fixture one.
 const LIBRARY = '/Volumes/Audio/User Library/Looping Presets/Instruments';
-machineStore.update(JSON.stringify({ paths: { instrumentsBase: LIBRARY, effectPresetsBase: '', m4lDevicesRoot: '' }, totalmix: null }));
+machineStore.update(JSON.stringify({ paths: { instrumentsBase: LIBRARY, m4lDevicesRoot: '' }, totalmix: null }));
 import {
 	applyAutoColorOnPrepareAck,
 	colorForAudio,

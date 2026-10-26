@@ -13,7 +13,6 @@
  * What travels:
  *   paths.instrumentsBase     the folder a preset path recorded before the
  *                             Places is read against (`presetPath.ts`)
- *   paths.effectPresetsBase   the folder of the FX tiles that are files (`devicePresets.ts`)
  *   paths.m4lDevicesRoot      this checkout's `Vamp Devices`, derived
  *                             from the bridge's own location
  *   totalmix                  the mixer's dB range (`osc.totalmix`), or null
@@ -39,7 +38,7 @@ function stringOr(v, fallback = '') {
 /**
  * @param {Object} constants the parsed constants.json
  * @param {{repoRoot?: string}} [opts]
- * @returns {{paths: {instrumentsBase: string, effectPresetsBase: string, m4lDevicesRoot: string}, totalmix: {minDb: number, maxDb: number, silenceDb: number} | null}}
+ * @returns {{paths: {instrumentsBase: string, m4lDevicesRoot: string}, totalmix: {minDb: number, maxDb: number, silenceDb: number} | null}}
  */
 function machineSnapshot(constants, { repoRoot = repoRootFromHere() } = {}) {
     const paths = (constants && constants.paths) || {};
@@ -51,7 +50,6 @@ function machineSnapshot(constants, { repoRoot = repoRootFromHere() } = {}) {
     return {
         paths: {
             instrumentsBase: stringOr(paths.instrumentsBase),
-            effectPresetsBase: stringOr(paths.effectPresetsBase),
             m4lDevicesRoot: path.join(repoRoot, 'Vamp Devices')
         },
         totalmix
