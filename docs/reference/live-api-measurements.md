@@ -238,6 +238,42 @@ rather than building new ones, and nothing watching a chain's device list hears 
 is the only observable difference. The load itself took 3.5 s for 32 vocal samples (prepare ack)
 and logged a `control-thread hiccup` of the same order.
 
+## A device preset's saved values against the LOM (2026-10-25)
+
+What a native device's `.adv` saves beside what the LOM reports once it is
+loaded — measured by loading one preset of each class onto a track, dumping
+it and deleting it (`owner/probes/preset_measure.js`; Live 12.4.15b7). The
+browser's preset faces read these (`browser/presetFaces.ts`, tested against
+the same numbers in `browser.presetFaces.test.ts`).
+
+- **Order:** a native device saves its parameters (`<Name><LomId/><Manual
+  Value/>`) in the order the LOM lists them, Device On first — true for
+  Auto Filter, Echo, Hybrid, Channel EQ, Chorus-Ensemble, Drum Buss,
+  Saturator, Glue, Beat Repeat, Random, Compressor, Gate, Multiband,
+  Redux, Pedal, Phaser-Flanger, Shifter, the MIDI effects. **Not** Auto
+  Pan Legacy (16 saved, 13 on the LOM) or Utility (14 against 12): map those
+  by name.
+- **Units:** many are the same number; the rest are display units:
+  - Auto Filter Frequency: Hz → `log(hz/20)/log(1000)` (169.668594 → 0.3095238).
+  - Echo L Time: seconds on Live's own rail (0.375 → 0.5653; sampled,
+    `presetCurves.ts`); Feedback a fraction of 150 % (0.6071 → 0.4048).
+  - Hybrid Decay: seconds (`hybridReverbParams.decayValue`, 0.514 → 0.1667).
+  - Channel EQ: gains as linear factors on ±15 dB (shelves) and ±12 dB
+    (mid) rails (4.158 → 12.4 dB → 0.9134); Mid Freq Hz on 120 Hz..7.5 kHz, log.
+  - Chorus-Ensemble Rate: Hz on Live's rail (0.66 → 0.373; sampled).
+  - Saturator: Drive dB on ±36 (0 → 0.5), Output dB on -36..0 (0 → 1).
+  - Auto Pan Legacy Frequency: Hz, `0.05 · 1800^v` (1.00 → 0.3997).
+  - Utility Output is the file's `Gain`, a linear factor (1 → 0 dB → 0).
+  - Glue Threshold/Makeup, Drum Buss, Beat Repeat and Random Chance, every
+    Dry/Wet: as saved.
+- **Racks** (`.adg`): `<GroupDevicePreset>` wraps the rack; its own
+  `MacroControls.<n>` come before any nested rack's and are
+  `parameters[n + 1]` value for value (0..127, the Guitar rack), named by
+  `MacroDisplayNames.<n>`.
+- **A loaded preset's device takes the preset's file name** (Disco
+  Filter.adv → an `AutoFilter2` named "Disco Filter"), which is how a drag
+  on a browser tile finds the device its load landed.
+
 ## Quantization values
 
 `Song.clip_trigger_quantization` (launch quantization), in Live's order, coarse to fine:

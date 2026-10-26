@@ -13,7 +13,7 @@ import { isUnderRoot, normalizeSamplePath } from '$lib/server/sampleRoots';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const path = normalizeSamplePath(url.searchParams.get('path'));
-	if (!path || posix.extname(path).toLowerCase() !== '.adv') error(400, 'path must be an absolute .adv');
+	if (!path || !['.adv', '.adg'].includes(posix.extname(path).toLowerCase())) error(400, 'path must be an absolute .adv or .adg');
 	if (!placesService().catalogRoots().some((root) => isUnderRoot(path, root))) error(403, 'not in a cataloged Place');
 	try {
 		return json(await readPresetParams(path), { headers: { 'cache-control': 'private, max-age=60' } });

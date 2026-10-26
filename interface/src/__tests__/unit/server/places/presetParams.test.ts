@@ -39,8 +39,24 @@ describe('preset params', () => {
 	it('reads the device class and every saved value, booleans as 1/0', () => {
 		expect(parsePresetXml(XML)).toEqual({
 			className: 'AutoFilter2',
-			params: { On: 1, Filter_Frequency: 169.668594, Filter_Resonance: 0.4453125, Filter_Type: 2 }
+			params: { On: 1, Filter_Frequency: 169.668594, Filter_Resonance: 0.4453125, Filter_Type: 2 },
+			labels: {}
 		});
+	});
+
+	it("reads a rack's class, its own macros before a nested rack's, and their names", () => {
+		// The shape of the rig's Guitar.adg, trimmed: the outer rack's macros come first.
+		const rack = `<Ableton><GroupDevicePreset><Device><AudioEffectGroupDevice Id="0">
+			<MacroControls.0><LomId Value="0" /><Manual Value="0" /></MacroControls.0>
+			<MacroControls.1><LomId Value="0" /><Manual Value="20" /></MacroControls.1>
+			<MacroDisplayNames.0 Value="Gain" /><MacroDisplayNames.1 Value="Spring" />
+			<Branches><AudioEffectGroupDevice Id="1"><MacroControls.0><LomId Value="0" /><Manual Value="99" /></MacroControls.0></AudioEffectGroupDevice></Branches>
+		</AudioEffectGroupDevice></Device></GroupDevicePreset></Ableton>`;
+		const p = parsePresetXml(rack);
+		expect(p.className).toBe('AudioEffectGroupDevice');
+		expect(p.params['MacroControls.0']).toBe(0);
+		expect(p.params['MacroControls.1']).toBe(20);
+		expect(p.labels['MacroDisplayNames.0']).toBe('Gain');
 	});
 
 	it('reads a gzipped .adv from disk', async () => {

@@ -82,8 +82,10 @@ Place cataloged for this whether or not it is ticked and kept off the rail
 unless it is. The grid/chain switch is one button over the
 section's top-left corner, where it no longer takes the Glue tile's taps.
 
-**An effect preset tile is the preset's own control.** In the browser an
-Auto Filter preset draws its curve at the values its file saves (read from
+**An effect preset tile is the preset's own control.** In the browser a
+preset of any class a grid tile drives (and any effect rack, by its first
+macro) draws that tile's control at the values its file saves; an Auto
+Filter, for one, draws its curve (read from
 the `.adv` on the Mac, mapped through Live's own units, measured: Frequency
 is `20 · 1000^v` Hz). A tap loads it as saved; a drag loads it and sets the
 values under the finger on the device that load lands, never on another of

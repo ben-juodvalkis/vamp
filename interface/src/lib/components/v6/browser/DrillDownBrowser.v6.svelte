@@ -941,6 +941,8 @@
 			values
 		});
 	}
+	/** The kinds whose tiles may draw a live face (`presetFaces`): effects and effect racks. */
+	const FACE_KINDS = new Set(['audio-effect', 'midi-effect', 'effect-rack', 'midi-effect-rack']);
 	/** Effect tiles drawing a live face: they hand the face the gesture. */
 	const facedTiles = new SvelteSet<string>();
 
@@ -1710,7 +1712,7 @@
 		{#if audioWaveformsEnabled && isAudioThumbnailType(p.type)}
 			<BrowserPresetWaveform preset={p} />
 		{/if}
-		{#if p.kind === 'audio-effect' && !notInstalled}
+		{#if FACE_KINDS.has(p.kind ?? '') && !notInstalled}
 			<!-- An effect's own control at its saved values: tap loads, drag
 			     loads and sets (BrowserPresetFace). -->
 			<BrowserPresetFace
@@ -3359,6 +3361,12 @@
 	}
 	:global([data-grammar="flat"]) .preset-tile.loaded {
 		box-shadow: inset 0 0 0 2px var(--flat-selection);
+	}
+	/* A tile with a live face is the control's well, as a grid tile is: the
+	   Place's ink is the control's, not a fill behind it. */
+	:global([data-grammar="flat"]) .preset-tile.faced,
+	:global([data-grammar="flat"]) .preset-tile.faced:hover {
+		background: var(--surface-well);
 	}
 	/* A tile a tap cannot load (a plug-in not installed, an effect): Live's
 	   disabled text on the well, as the flat switches do — not a ghost. */

@@ -381,15 +381,21 @@ source and the Phase 4 switch that chose between them.
   Effect. Unset, + Effect opens the open Place, else the first ticked one with
   effect presets. A rail Place's Effect segment works as before.
 - **Live preset faces** (2026-10-25, ADR-478): an effect preset tile of a
-  class with a face (`BrowserPresetFace`, `FACED_PRESET_CLASSES`; Auto Filter
-  so far) draws the preset's own control at its SAVED values, read once the
+  class with a face (`BrowserPresetFace`, `presetFaces.ts`: every class an FX
+  grid tile drives — Auto Filter, Echo, Auto Pan Legacy, Hybrid, Channel EQ,
+  Chorus-Ensemble, Drum Buss, Saturator, Glue, Utility, Beat Repeat, Random —
+  and any audio or MIDI effect rack by its first macro) draws the preset's
+  own control (the grid tile's XY, slider or tone pad) at its SAVED values, read once the
   tile nears the screen from `/api/places/preset-params` (the server unzips
   the `.adv`, `$lib/server/places/presetParams`, only inside a cataloged
   Place). A tap loads the preset as saved; a drag loads it and sets the
   finger's values on the device THAT load lands (`services/presetDragLoad`,
   found by class + the preset's name, which Live gives the device). Measured
   on the rig: Disco Filter dragged right and up landed at 0.623 / 0.745 where
-  the file saves 0.3095 / 0.4453. Units: `device-panel/autoFilterParams.ts`.
+  the file saves 0.3095 / 0.4453. How each class's saved values map onto the LOM was measured
+  (`docs/reference/live-api-measurements.md`, "A device preset's saved
+  values"); Live's own rails where the file is in display units are
+  `presetCurves.ts`, generated from `owner/probes/preset_rail_sample.js`.
 - **Coloring**: a preset from a Place carries its Place's role (`Preset.role`,
   stamped by the adapter) and passes it to `trackColoring` as `placeRole` — the
   answer outright, since a Place's `<Place>/<folders>/…` path would be read
