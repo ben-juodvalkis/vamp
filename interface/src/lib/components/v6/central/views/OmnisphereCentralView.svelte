@@ -2,7 +2,6 @@
   import { session } from '$lib/stores/session.svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
-  import OrbControl from '../../device-panel/OrbControl.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import SectionDivider from '../SectionDivider.svelte';
   import EnvelopeGroup from './EnvelopeGroup.svelte';
@@ -30,7 +29,7 @@
 
   // Fallback body scheme (distortion family) — used only on cold start, plus
   // the FX toggle + empty-state glyph. The whole view otherwise wears the
-  // focused track's ink (ADR-402): every XY pad + the ORB take omniInk, so the
+  // focused track's ink (ADR-402): every XY pad takes omniInk, so the
   // view reads as its track. Sections stay distinguished by their titles.
   const omnisphereColor = familyScheme('distortion');
 
@@ -53,8 +52,6 @@
   let eqMidValue = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 21)) ?? 0.5 : 0.5);
   let eqHiValue = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 22)) ?? 0.5 : 0.5);
   let fxValue = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 24)) ?? 0 : 0);
-  let orbAngleValue = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 25)) ?? 0.5 : 0.5);
-  let orbRadiusValue = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 26)) ?? 0.5 : 0.5);
 
   // The two envelopes, each four plain sliders, A-D-S-R (user's call,
   // 2026-10-01: the drawn curve's handles were too fiddly for a finger).
@@ -123,14 +120,6 @@
     selectedTrackStore.setParamValue(yPath, y);
   }
 
-  function handleOrbInteraction(angle: number, radius: number) {
-    if (!device) return;
-    const anglePath = selectedTrackStore.paramPath(device, 25);
-    const radiusPath = selectedTrackStore.paramPath(device, 26);
-    selectedTrackStore.setParamValue(anglePath, angle);
-    selectedTrackStore.setParamValue(radiusPath, radius);
-  }
-
   // Handle FX toggle (inverted: clicking ON sets param to 0, clicking OFF sets param to 1)
   function handleFxToggle() {
     if (!device) return;
@@ -141,14 +130,14 @@
 
 <div class="h-full w-full">
   {#if instrument}
-    <!-- Main content grid, the user's layout (2026-10-12): six equal
-         columns in three equal sections: the four XY pads take two, the ORB
-         two (2026-10-12), the envelopes two; then the FX switch, the
-         column's full height. Three rows: a header (the swap pill over the
-         pads), then two rows of controls. The ORB and the envelopes take
-         all three rows, full height (2026-10-12; the envelopes since
-         ADR-477). The seam and the wheels that stood under FX left for the
-         MidiWheels device's chain cell (user, 2026-10-26). -->
+    <!-- Main content grid, the user's layout (2026-10-12): four equal
+         columns in two equal sections, the four XY pads and the envelopes,
+         then the FX switch, the column's full height. Three rows: a header
+         (the swap pill over the pads), then two rows of controls; the
+         envelopes take all three (ADR-477). The ORB that stood between
+         them left at the user's call (2026-10-26), and the seam and the
+         wheels under FX for the MidiWheels device's chain cell (the same
+         day). -->
     <div class="omni-grid h-full w-full grid gap-(--central-gap) p-(--central-inset)">
       <!-- Cols 1-2, header: the swap pill, top-left as in every instrument
            view (2026-10-06), over the pads. -->
@@ -156,22 +145,11 @@
         <HostedSwapPill />
       </div>
 
-      <!-- Cols 3-4, every row: the ORB. -->
-      <div class="min-h-0" style="grid-column: 3 / 5; grid-row: 1 / 4;">
-        <OrbControl
-          angle={orbAngleValue}
-          radius={orbRadiusValue}
-          title="Orb"
-          onInteraction={handleOrbInteraction}
-          color={omniInk}
-        />
-      </div>
-
-      <!-- Cols 5-6, every row: both envelopes, Amp over Filter, as value
+      <!-- Cols 3-4, every row: both envelopes, Amp over Filter, as value
            boxes (ADR-477) — no switch, each box half a slider's height and
            as fine. The Filter envelope's Amount is its fifth box, narrower:
            one control beside a curve. A seam between the two. -->
-      <div class="omni-envelopes min-w-0 min-h-0 flex flex-col gap-(--central-gap)" style="grid-column: 5 / 7; grid-row: 1 / 4;">
+      <div class="omni-envelopes min-w-0 min-h-0 flex flex-col gap-(--central-gap)" style="grid-column: 3 / 5; grid-row: 1 / 4;">
         <EnvelopeGroup ink={AMP_INK.primary} title="Amp Envelope" edges="none">
           {#each AMP_ENV as [label, index, glyph] (index)}
             <div class="flex-1 min-w-0 h-full">
@@ -272,7 +250,7 @@
       <button
         class="physical-button omni-fx w-full h-full min-w-0 min-h-0 text-xl font-bold"
         class:active={fxIsOn}
-        style="--btn-tint: {omniInk.primary}; grid-column: 7; grid-row: 1 / 4;"
+        style="--btn-tint: {omniInk.primary}; grid-column: 5; grid-row: 1 / 4;"
         onclick={handleFxToggle}
       >
         FX
@@ -339,15 +317,14 @@
 <style>
   /* ---- Live skin (flat grammar): the four XY pads are DeviceXY (flat
      well, 1px frame, re-cased title — its .center-title rule outranks the
-     text-2xl / font-bold titleClass passed here), the ORB is OrbControl
-     (flat well + re-cased title live in that component) — their flat look
+     text-2xl / font-bold titleClass passed here) — their flat look
      is theirs to own, not restyled from here. The only chrome this file draws itself is the FX toggle: a .physical-button
      (already the flat field / ChosenDefault ON) whose bold literal settles
      to medium. Graticule is untouched — the rule sits under
      [data-grammar="flat"]. */
-  /* Six equal columns, then the FX switch's column at a fixed width. */
+  /* Four equal columns, then the FX switch's column at a fixed width. */
   .omni-grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr)) 72px;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) 72px;
     grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
   }
 
