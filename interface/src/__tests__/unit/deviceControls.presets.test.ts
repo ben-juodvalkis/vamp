@@ -31,6 +31,9 @@ const CASES: Array<{ name: string; preset: string; className: string; params: Re
 	{ name: "NoteChance", preset: "Note Chance", className: "MxDeviceMidiEffect", params: {"Chance": 100}, labels: {}, live: {"1": 100}, tol: {} },
 	{ name: "GlitchLoop", preset: "GlitchLoop", className: "MxDeviceAudioEffect", params: {"Clock": 5, "Dry/Wet": 35.7033}, labels: {}, live: {"19": 35.70330047607422}, tol: {"19": 1e-4} },
 	{ name: "MultibandDynamics", preset: "Multiband Dynamics", className: "MultibandDynamics", params: {"On": 1, "OutputGain": 0, "BelowThresholdMid": -27.125, "BelowRatioMid": 0}, labels: {}, live: {"27": 0}, tol: {} },
+	{ name: "MidiVelocity", preset: "Velocity", className: "MidiVelocity", params: {"On": 1, "Drive": 0, "Compand": 0, "Random": 0, "Mode": 0, "Operation": 2, "MaxOut": 127, "MinOut": 1, "Range": 127, "Lowest": 1}, labels: {}, live: {"3": 0}, tol: {} },
+	{ name: "MidiArpeggiator", preset: "Arpeggiator", className: "MidiArpeggiator", params: {"On": 0, "Mode": 14, "SyncState": 1, "SyncedRate": 6, "FreeRate": 20, "Gate": 1}, labels: {}, live: {"0": 0, "5": 6, "8": 1}, tol: {} },
+	{ name: "MidiChord", preset: "Chord", className: "MidiChord", params: {"On": 1, "Shift1": 0, "ShiftScaleDegrees1": 0, "Velocity1": 1, "Chance1": 1}, labels: {}, live: {"1": 0}, tol: {} },
 	{ name: "GuitarRack", preset: "Guitar", className: "AudioEffectGroupDevice", params: {"MacroControls.0": 0.0, "MacroControls.1": 20.0, "MacroControls.2": 87.2762375}, labels: {"MacroDisplayNames.0": "Gain"}, live: {"1": 0}, tol: {} },
 ];
 

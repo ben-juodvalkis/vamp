@@ -357,6 +357,43 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 		control: { kind: 'slider', title: 'Stutter', read: (g) => clamp01(g(1) ?? 0), write: (t) => [[1, clamp01(t)]] },
 		fromPreset: (s) => (s.params.Chance === undefined ? null : { 1: s.params.Chance })
 	},
+	// Measured: Velocity (2026-10-26). Random is 0..64 in Live (not 127),
+	// saved as is.
+	velocity: {
+		control: { kind: 'slider', title: 'Rand Vel', readout: 3, read: (g) => clamp01((g(3) ?? 0) / 64), write: (t) => [[3, clamp01(t) * 64]] },
+		fromPreset: (s) => (s.params.Random === undefined ? null : { 3: s.params.Random })
+	},
+	// Measured: Arpeggiator (2026-10-26). Synced Rate 0..13 (1/128..1/1),
+	// Gate 1..200 %, both as saved; the preset saves the device off. Rate
+	// across in its fourteen steps, Gate up: the bottom switches the device
+	// off, as the Arpeggiator view's Gate does, and any other height on.
+	arpeggiator: {
+		control: {
+			kind: 'xy',
+			title: 'Arp',
+			read: (g) => ({ x: clamp01((g(5) ?? 6) / 13), y: (g(0) ?? 0) < 0.5 ? 0 : clamp01(((g(8) ?? 1) - 1) / 199) }),
+			write: (x, y) => [
+				[5, Math.round(clamp01(x) * 13)],
+				[0, y > 0 ? 1 : 0],
+				[8, 1 + clamp01(y) * 199]
+			],
+			label: (_g, display) => display(5)
+		},
+		fromPreset: (s) => all({ 0: s.params.On, 5: s.params.SyncedRate, 8: s.params.Gate })
+	},
+	// Measured: Chord (2026-10-26). Shift1 -36..36 st as saved. One slider on
+	// the first added note, in whole semitones over ±24, 0 at the middle.
+	chord: {
+		control: {
+			kind: 'slider',
+			title: 'Shift',
+			readout: 1,
+			center: 0.5,
+			read: (g) => clamp01(((g(1) ?? 0) + 24) / 48),
+			write: (t) => [[1, Math.round(clamp01(t) * 48 - 24)]]
+		},
+		fromPreset: (s) => (s.params.Shift1 === undefined ? null : { 1: s.params.Shift1 })
+	},
 	// Measured: Blue. Chance as is.
 	random: {
 		control: { kind: 'slider', title: 'Rand Oct', readout: 1, read: (g) => clamp01(g(1) ?? 0), write: (t) => [[1, clamp01(t)]] },

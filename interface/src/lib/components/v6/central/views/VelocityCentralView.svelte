@@ -9,40 +9,21 @@
 	 * ghost/loading/active without a `{#if device}` gate.
 	 */
 
-	import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
+	import ControlTile from '../../device-panel/ControlTile.svelte';
 	import VelocityRangeBrace from '../../controls/VelocityRangeBrace.svelte';
 	import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
 
 	const velocity = useFxGridSlot('velocity');
 
-	const VELOCITY_PARAMS = {
-		RANDOM: 3,
-		OUT_HI: 6,
-		OUT_LOW: 7
-	} as const;
-
-	let velocityRandom = $derived(velocity.paramValue(VELOCITY_PARAMS.RANDOM) ?? 0);
 </script>
 
 <!-- NO {#if device} gate - always render, each control handles its own state -->
 <div class="h-full w-full flex p-(--central-inset) gap-(--central-gap)">
-	<!-- Velocity Random slider -->
-	<div class="flex-1" class:slot-ghost={velocity.isGhost}>
-		<DeviceSlider
-			value={velocityRandom / 127}
-			title="Rand Vel"
-			icon="randvel"
-			orientation="vertical"
-			labelOrientation="horizontal"
-			labelSize="small"
-			isGhost={velocity.isGhost}
-			color={velocity.color}
-			readout={velocity.paramDisplay(VELOCITY_PARAMS.RANDOM)}
-			onInteraction={(value) => {
-				const intValue = Math.round(value * 127);
-				velocity.sendParam(VELOCITY_PARAMS.RANDOM, intValue);
-			}}
-		/>
+	<!-- Rand Vel, the `velocity` control (deviceControls, ADR-479): Live's
+	     Random is 0..64 (measured 2026-10-26); this slider scaled it to 127,
+	     so its top half clamped. -->
+	<div class="flex-1">
+		<ControlTile type="velocity" device={velocity.device} icon="randvel" disableCentralViewOnTap />
 	</div>
 
 	<!-- Velocity Range Brace (Out Low / Out Hi) -->

@@ -277,6 +277,11 @@ tested against the same numbers in `deviceControls.presets.test.ts`).
   - Shifter: RM Coarse Hz, `1 · 10000^v` (1 Hz → 0); Mode as saved (2 Ring).
   - Multiband Dynamics: Below Ratio (Mid) -3..1, Below Threshold (Mid) dB
     and Output dB, all as saved (0 → 0, -27.125 → -27.125).
+  - The MIDI effects, as saved: Velocity Random **0..64** (not 0..127),
+    Out Hi/Low 0..127; Arpeggiator Synced Rate 0..13, Gate **1..200** %
+    (its preset saves the device off), Free Rate ms on `10 · 100^v`
+    (20 → 0.1505); Chord Shift1..6 -36..36 st; Random Chance 0..1
+    (its Interval saves as `Scale`).
   - Glue Threshold/Makeup, Drum Buss, Beat Repeat and Random Chance, every
     Dry/Wet: as saved.
 - **Racks** (`.adg`): `<GroupDevicePreset>` wraps the rack; its own
