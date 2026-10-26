@@ -19,8 +19,11 @@
    * chain (`device/move`): the cell rides the finger, the others slide
    * aside to show where it will land, and the new order holds after the
    * drop until Live's republish shows it (or 2 s pass, Live having
-   * refused). The instrument stays put and nothing crosses it
-   * (`utils/chainDrop`). A dashed + cell after the last device opens the
+   * refused). A drop is one move; drops made while one is in flight
+   * queue behind it and go out against the paths Live reports next. Only
+   * a lifted finger drops — a cancelled gesture puts the cell back. The
+   * instrument stays put and nothing crosses it (`utils/chainDrop`).
+   * A dashed + cell after the last device opens the
    * browser on its Effect segment (`openEffectsBrowser`), as the strips
    * row's add buttons end the tracks; a pick joins this chain, the pad's
    * under a pad scope.
@@ -75,10 +78,19 @@
   import Music from '@lucide/svelte/icons/music';
   import { press } from '$lib/actions/press';
   import { swallowNextClick } from '$lib/utils/swallowNextClick';
-  import { drag, type DragInfo } from '$lib/actions/drag';
+  import { drag as dragAction, type DragInfo, type DragEndInfo } from '$lib/actions/drag';
   import { moveDevice } from '$lib/services/deviceMoveService';
-  import { chainGrid, clampChainIndex, moved } from '$lib/utils/chainDrop';
-  import { flip } from 'svelte/animate';
+  import {
+    arrange,
+    chainGrid,
+    clampChainIndex,
+    moved,
+    planReorder,
+    REORDER_IDLE,
+    sameDevices,
+    type ReorderState
+  } from '$lib/utils/chainDrop';
+  import { onDestroy, tick, untrack } from 'svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
   import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
@@ -165,19 +177,24 @@
   };
 
 
+  /**
+   * What a cell is: only what changes when the chain does. Live values
+   * (Device On, a rack's macros) are read in the markup, so a moving
+   * parameter repaints its own cell and never rebuilds the list.
+   */
   type Cell = {
     /** Stable across Live's renumbering (paths are positions): name, class, and which of those it is. */
     key: string;
+    /** Class and name: what the device is, shared by two of a kind. */
+    sig: string;
+    /** Where Live has it now. */
+    path: string;
     device: DeviceRecord;
-    order: number;
     kind: 'instrument' | 'rack' | 'max' | 'plugin' | 'effect';
     presetKey: string | null;
     tile: string | null;
     typeLabel: string | null;
     ink: string;
-    on: boolean;
-    powered: boolean;
-    macros: { name: string; value: number }[];
   };
 
   const trackPath = $derived(selectedTrackStore.selectedTrackPath);
@@ -250,23 +267,30 @@
               : 'effect';
       const family = presetKey ? DEVICE_PRESETS[presetKey].color.primary : kind === 'rack' ? DEVICE_FAMILY_INKS.rackVoice.primary : DEVICE_FAMILY_INKS.utility.primary;
       const typeLabel = TYPE_LABELS[device.className] ?? splitCamel(device.className);
+      const sig = `${device.className}|${device.name}`;
       return {
-        key: `${device.className}|${device.name}|${nth}`,
+        key: `${sig}|${nth}`,
+        sig,
+        path: device.devicePath,
         device,
-        order: i + 1,
         kind,
         presetKey,
         tile: tileOf.get(device.devicePath) ?? null,
         typeLabel: typeLabel.toLowerCase() === device.name.toLowerCase() ? null : typeLabel,
-        ink: isInstrument ? (padChain ? (padInk ?? trackColor) : trackColor) : trackInk(family, paint),
-        on: (selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 0)) ?? 1) > 0,
-        // A pad's instrument has no records on the wire (they are the
-        // virtual-macro layer's), so there is no Device On to show.
-        powered: selectedTrackStore.paramValue(selectedTrackStore.paramPath(device, 0)) !== undefined,
-        macros: kind === 'rack' ? macrosOf(device) : []
+        ink: isInstrument ? (padChain ? (padInk ?? trackColor) : trackColor) : trackInk(family, paint)
       };
     })
   );
+
+  function isOn(cell: Cell): boolean {
+    return (selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(cell.device, 0)) ?? 1) > 0;
+  }
+
+  // A pad's instrument has no records on the wire (they are the
+  // virtual-macro layer's), so there is no Device On to show.
+  function isPowered(cell: Cell): boolean {
+    return selectedTrackStore.paramValue(selectedTrackStore.paramPath(cell.device, 0)) !== undefined;
+  }
 
   /**
    * Devices past which the chain takes a second row. Up to it the cells and
@@ -302,61 +326,152 @@
 
   function togglePower(cell: Cell) {
     const path = selectedTrackStore.paramPath(cell.device, 0);
-    selectedTrackStore.setParamValue(path, cell.on ? 0 : 1);
+    selectedTrackStore.setParamValue(path, isOn(cell) ? 0 : 1);
   }
 
-  // A drag in flight: which cell, where it started, where it would land
-  // now, and the box it rides from (relative to the chain).
-  let dragging = $state<{
+  /*
+   * Reordering (2026-10-26). Three layers, each changing only as often as
+   * it must:
+   *
+   * - `reorder` — drops Live has not shown yet (`utils/chainDrop`'s
+   *   `planReorder`): the order held on screen, and the one move on the
+   *   wire. A move is sent against the paths Live last reported, and the
+   *   next waits until Live shows the last, so two quick drops never send
+   *   a path the first has shifted.
+   * - `drag` — the drag in flight: the order it started from and where it
+   *   would land. It changes when the landing changes, not per finger
+   *   frame.
+   * - The cell itself rides the finger — no copy, no placeholder (the
+   *   user's call, 2026-10-26): its own transform is written once a frame,
+   *   so the finger never touches reactive state, and it keeps its slot
+   *   in the previewed order, which is the gap the others slide around.
+   *
+   * The list is redrawn only when the order changes, and the cells slide
+   * by a FLIP run on exactly those changes (below), not `animate:flip`,
+   * which measures every cell on every redraw of the list.
+   */
+  const MOVE_TIMEOUT_MS = 2000;
+  const GRID_GAP = 8;
+
+  let chainEl = $state<HTMLElement | null>(null);
+  let reorder = $state<ReorderState>(REORDER_IDLE);
+
+  type Drag = {
     key: string;
-    path: string;
     from: number;
     to: number;
-    dx: number;
-    dy: number;
+    /** The order it started from, as shown then. */
+    base: { key: string; sig: string }[];
+    /** The instrument's place in that order, or null. */
+    instrument: number | null;
+    /** The cell's box when lifted, relative to the chain. */
     box: { left: number; top: number; width: number; height: number };
-  } | null>(null);
-  let chainEl = $state<HTMLElement | null>(null);
-  // After a drop: the order we expect Live to report, shown until it does.
-  let pending = $state<{ order: string[]; until: number } | null>(null);
+    /** The chain's box in client coordinates, measured once at lift. */
+    chain: { left: number; top: number; width: number; height: number };
+  };
+  let drag = $state<Drag | null>(null);
+  /** The dragged cell's own node. */
+  let dragNode: HTMLElement | null = null;
 
-  const instrumentIndex = $derived(cells.findIndex((c) => c.kind === 'instrument'));
-  const naturalOrder = $derived(cells.map((c) => c.key));
-
-  // Live's republish shows the move (or something else happened, or it
-  // never came): the chain as Live reports it takes over again.
+  // Drops on the wire follow Live: each report lands the move in flight
+  // (or not), and the next goes out.
   $effect(() => {
-    if (!pending) return;
-    const now = naturalOrder.join('\n');
-    if (now === pending.order.join('\n')) {
-      pending = null;
-      return;
-    }
-    const timer = setTimeout(() => (pending = null), Math.max(0, pending.until - Date.now()));
+    const state = reorder;
+    if (!state.desired) return;
+    const now = Date.now();
+    const { state: next, send } = planReorder(state, cells, now, MOVE_TIMEOUT_MS);
+    if (send) void moveDevice(send.path, send.to).catch(() => (reorder = REORDER_IDLE));
+    if (next !== state) reorder = next;
+    if (!next.inflight) return;
+    // Wake when the move in flight runs out, if Live never shows it.
+    const timer = setTimeout(() => (reorder = { ...reorder }), Math.max(0, next.inflight.until - now));
     return () => clearTimeout(timer);
   });
 
-  /** The cells in the order to draw them: the drag's preview, else a drop Live has not shown yet. */
-  const shown = $derived.by(() => {
-    if (dragging) return moved(cells, dragging.from, dragging.to);
-    if (pending) {
-      const byKey = new Map(cells.map((c) => [c.key, c]));
-      const order = pending.order.map((k) => byKey.get(k));
-      if (order.every(Boolean) && order.length === cells.length) return order as Cell[];
-    }
-    return cells;
+  // Another track or pad: nothing in flight here means anything there.
+  const scopeKey = $derived(`${trackPath}|${padScope?.padPath ?? ''}`);
+  let lastScope = '';
+  $effect(() => {
+    if (scopeKey === lastScope) return;
+    lastScope = scopeKey;
+    untrack(() => {
+      reorder = REORDER_IDLE;
+      drag = null;
+    });
   });
 
-  /** The cell position under a point, by the grid's own geometry — not the cells, which are sliding. */
-  function positionAt(x: number, y: number): number | null {
-    if (!chainEl) return null;
-    const box = chainEl.getBoundingClientRect();
-    const gap = 8;
+  // A device added or removed under a drag: its positions mean nothing now.
+  $effect(() => {
+    if (drag && !sameDevices(cells, drag.base)) untrack(() => (drag = null));
+  });
+
+  /** The cells as Live will have them once the drops land. */
+  const settled = $derived((reorder.desired && arrange(cells, reorder.desired)) || cells);
+
+  /** The cells in the order to draw them: the drag's preview, else `settled`. */
+  const shown = $derived((drag && arrange(cells, moved(drag.base, drag.from, drag.to))) || settled);
+
+  /** The cell position under a point, by the grid's geometry at lift — not the cells, which are sliding. */
+  function positionAt(d: Drag, x: number, y: number): number {
     const { cols, rows } = grid;
-    const col = Math.max(0, Math.min(cols - 1, Math.floor(((x - box.left) * cols) / (box.width + gap))));
-    const row = rows === 1 ? 0 : y < box.top + box.height / 2 ? 0 : 1;
+    const col = Math.max(0, Math.min(cols - 1, Math.floor(((x - d.chain.left) * cols) / (d.chain.width + GRID_GAP))));
+    const row = rows === 1 ? 0 : y < d.chain.top + d.chain.height / 2 ? 0 : 1;
     return row * cols + col;
   }
+
+  // The dragged cell's offset from where it was lifted, written once a
+  // frame as a transform from wherever the previewed order has put its
+  // slot (`offsetLeft`/`offsetTop`, which leave the transform out).
+  let offset = { dx: 0, dy: 0 };
+  let frame = 0;
+  function paintDragged() {
+    frame = 0;
+    const d = drag;
+    if (!d || !dragNode) return;
+    const x = d.box.left + offset.dx - dragNode.offsetLeft;
+    const y = d.box.top - offset.dy - dragNode.offsetTop;
+    dragNode.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+  }
+  function scheduleDragged() {
+    if (!frame) frame = requestAnimationFrame(paintDragged);
+  }
+
+  // FLIP: on a change of order, each cell starts where it was drawn and
+  // slides to its new place. Measured only when the order changes.
+  const orderKey = $derived(shown.map((c) => c.key).join('\n'));
+  let before = new Map<string, DOMRect>();
+  $effect.pre(() => {
+    void orderKey;
+    if (!chainEl) return;
+    before = new Map();
+    for (const el of chainEl.querySelectorAll<HTMLElement>(':scope > [data-cell-key]')) {
+      if (el !== dragNode) before.set(el.dataset.cellKey!, el.getBoundingClientRect());
+    }
+  });
+  $effect(() => {
+    void orderKey;
+    if (!chainEl || before.size === 0) return;
+    for (const el of chainEl.querySelectorAll<HTMLElement>(':scope > [data-cell-key]')) {
+      const from = before.get(el.dataset.cellKey!);
+      if (!from) continue;
+      for (const a of el.getAnimations()) a.cancel();
+      const to = el.getBoundingClientRect();
+      const dx = from.left - to.left;
+      const dy = from.top - to.top;
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) continue;
+      el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], {
+        duration: 180,
+        easing: 'cubic-bezier(0.2, 0, 0, 1)'
+      });
+    }
+    before = new Map();
+    // Its slot moved under it: keep the dragged cell under the finger
+    // before this frame paints.
+    if (drag) paintDragged();
+  });
+  onDestroy(() => {
+    if (frame) cancelAnimationFrame(frame);
+  });
 
   // A press that lands on a cell's tile is the tile's: it picks the device
   // and the cell neither reorders nor taps. Read at finger-down, from the
@@ -369,7 +484,7 @@
     if (pressInControl && cell.presetKey) fxChainStore.pick(pickScope, cell.presetKey, cell.device.devicePath);
   }
 
-  function dragStart(cell: Cell, index: number, info: DragInfo) {
+  function dragStart(cell: Cell, position: number, info: DragInfo) {
     // A drag on a cell's control is that control's, and it opens the
     // device's view as a tap on the cell does — every control here, not
     // only the grid's tiles, which open their own (2026-10-26).
@@ -378,43 +493,70 @@
       return;
     }
     if (cell.kind === 'instrument' || !chainEl) return;
-    const node = chainEl.querySelector<HTMLElement>(`[data-cell-key="${CSS.escape(cell.key)}"]`);
-    const origin = chainEl.getBoundingClientRect();
-    const r = node?.getBoundingClientRect();
-    if (!r) return;
-    pending = null;
-    dragging = {
+    const node = chainEl.querySelector<HTMLElement>(`:scope > [data-cell-key="${CSS.escape(cell.key)}"]`);
+    if (!node) return;
+    // Where it is drawn, mid-slide included, so it lifts from under the finger.
+    const r = node.getBoundingClientRect();
+    const c = chainEl.getBoundingClientRect();
+    for (const a of node.getAnimations()) a.cancel();
+    const instrument = shown.findIndex((x) => x.kind === 'instrument');
+    dragNode = node;
+    offset = { dx: info.dx, dy: info.dy };
+    drag = {
       key: cell.key,
-      path: cell.device.devicePath,
-      from: index,
-      to: index,
-      dx: info.dx,
-      dy: info.dy,
-      box: { left: r.left - origin.left, top: r.top - origin.top, width: r.width, height: r.height }
+      from: position,
+      to: position,
+      base: shown.map(({ key, sig }) => ({ key, sig })),
+      instrument: instrument >= 0 ? instrument : null,
+      box: { left: r.left - c.left, top: r.top - c.top, width: r.width, height: r.height },
+      chain: { left: c.left, top: c.top, width: c.width, height: c.height }
     };
+    paintDragged();
   }
 
   function dragMove(info: DragInfo) {
-    if (!dragging) return;
-    const at = positionAt(info.x, info.y);
-    const to =
-      at === null
-        ? dragging.to
-        : (clampChainIndex({
-            from: dragging.from,
-            to: at,
-            count: cells.length,
-            instrument: instrumentIndex >= 0 ? instrumentIndex : null
-          }) ?? dragging.to);
-    dragging = { ...dragging, to, dx: info.dx, dy: info.dy };
+    const d = drag;
+    if (!d) return;
+    offset = { dx: info.dx, dy: info.dy };
+    scheduleDragged();
+    // The landing is read at the lifted cell's centre, so it follows the
+    // cell wherever it was picked up by.
+    const x = d.chain.left + d.box.left + d.box.width / 2 + info.dx;
+    const y = d.chain.top + d.box.top + d.box.height / 2 - info.dy;
+    const to = clampChainIndex({ from: d.from, to: positionAt(d, x, y), count: d.base.length, instrument: d.instrument });
+    if (to !== null && to !== d.to) drag = { ...d, to };
   }
 
-  function dragEnd() {
-    const d = dragging;
-    dragging = null;
-    if (!d || d.to === d.from) return;
-    pending = { order: moved(naturalOrder, d.from, d.to), until: Date.now() + 2000 };
-    void moveDevice(d.path, d.to);
+  function dragEnd(info: DragEndInfo) {
+    const d = drag;
+    const node = dragNode;
+    drag = null;
+    dragNode = null;
+    if (frame) cancelAnimationFrame(frame);
+    frame = 0;
+    // Only a finger lifted drops; a cancel or an unmount puts it back.
+    if (d && info.reason === 'up' && d.to !== d.from) {
+      reorder = { desired: moved(d.base, d.from, d.to), inflight: reorder.inflight };
+    }
+    if (node) settle(node);
+  }
+
+  /** The let-go cell glides from under the finger into its slot. */
+  function settle(node: HTMLElement) {
+    const from = node.getBoundingClientRect();
+    node.style.transform = '';
+    void tick().then(() => {
+      if (!node.isConnected) return;
+      for (const a of node.getAnimations()) a.cancel();
+      const to = node.getBoundingClientRect();
+      const dx = from.left - to.left;
+      const dy = from.top - to.top;
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+      node.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], {
+        duration: 180,
+        easing: 'cubic-bezier(0.2, 0, 0, 1)'
+      });
+    });
   }
 
   /** What the device does, drawn (`ControlGlyph`): by the app's own device, its class, else its name. */
@@ -456,7 +598,7 @@
   }
 </script>
 
-{#snippet cellBody(cell: Cell, position: number, live = true)}
+{#snippet cellBody(cell: Cell, position: number)}
   {@const glyph = glyphOf(cell)}
   {@const tile = cell.kind !== 'instrument' && cell.presetKey ? TILE_COMPONENTS[cell.presetKey] : undefined}
       <!-- One row says it all, so the control below gets the height: the
@@ -475,44 +617,45 @@
         {#if fxChainStore.appointed === cell.device.devicePath}
           <span class="hand" aria-label="Selected in Live"><Hand /></span>
         {/if}
-        {#if cell.powered}
+        {#if isPowered(cell)}
+        {@const on = isOn(cell)}
         <button
           type="button"
           class="power"
-          class:on={cell.on}
-          aria-label="{cell.on ? 'Turn off' : 'Turn on'} {cell.device.name}"
-          aria-pressed={cell.on}
+          class:on
+          aria-label="{on ? 'Turn off' : 'Turn on'} {cell.device.name}"
+          aria-pressed={on}
           use:press={{ onPress: () => togglePower(cell), stopPropagation: true }}
         ><Power /></button>
         {/if}
         </span>
       </div>
 
-      {#if live && cell.presetKey === 'sequencer'}
+      {#if cell.presetKey === 'sequencer'}
         <!-- Permute: its mute and pitch steps, on this device. -->
         <div class="cell-control" role="presentation"><PermuteStepsFace device={cell.device} color={cell.ink} /></div>
-      {:else if live && !padScope && cell.kind === 'instrument' && glance.instrumentViewType && FACED_INSTRUMENTS.has(glance.instrumentViewType)}
+      {:else if !padScope && cell.kind === 'instrument' && glance.instrumentViewType && FACED_INSTRUMENTS.has(glance.instrumentViewType)}
         <!-- The instrument's signature control, as its view draws it. -->
         <div class="cell-control" role="presentation">
           <InstrumentFace device={cell.device} type={glance.instrumentViewType} color={selectedTrackScheme() ?? schemeFromInk(cell.ink)} />
         </div>
-      {:else if live && !padScope && cell.kind === 'instrument' && cell.device.className === 'DrumGroupDevice'}
+      {:else if !padScope && cell.kind === 'instrument' && cell.device.className === 'DrumGroupDevice'}
         <!-- A Drum Rack: the kit's Trnsp, as its view draws it. -->
         <div class="cell-control" role="presentation">
           <DrumRackFace device={cell.device} color={selectedTrackScheme() ?? schemeFromInk(cell.ink)} />
         </div>
-      {:else if live && !padScope && isMidiWheels(cell.device)}
+      {:else if !padScope && isMidiWheels(cell.device)}
         <!-- The pitch and mod wheels, as the instrument views draw them:
              Pitch over Mod in a full-height cell, side by side in a
              two-row chain's half-height one. -->
         <div class="cell-control" role="presentation"><MidiWheelsPanel sideBySide={grid.rows > 1} /></div>
-      {:else if tile && live}
+      {:else if tile}
         <!-- The grid's own tile, on this device. A touch here is the
              control's: it picks this device and never starts a reorder. -->
         <div class="cell-control" role="presentation">
           <tile.Tile device={cell.device} position={tile.position} />
         </div>
-      {:else if live && controlFor(cell.presetKey)}
+      {:else if controlFor(cell.presetKey)}
         <!-- No grid tile: the device's control (deviceControls), the one its
              browser preset tiles and its view draw, on this device. -->
         <div class="cell-control" role="presentation">
@@ -535,9 +678,10 @@
       </div>
       {/if}
 
-      {#if cell.macros.length > 0}
+      {@const macros = cell.kind === 'rack' ? macrosOf(cell.device) : []}
+      {#if macros.length > 0}
         <div class="macros" aria-hidden="true">
-          {#each cell.macros as m (m.name)}
+          {#each macros as m (m.name)}
             <span class="macro" style="--v: {m.value};" title={m.name}></span>
           {/each}
         </div>
@@ -555,11 +699,10 @@
   bind:this={chainEl}
 >
   {#each shown as cell, position (cell.key)}
-    {@const index = cells.indexOf(cell)}
     <div
       class="chain-cell"
-      class:off={!cell.on}
-      class:placeholder={dragging?.key === cell.key}
+      class:off={!isOn(cell)}
+      class:dragging={drag?.key === cell.key}
       class:appointed={fxChainStore.appointed === cell.device.devicePath}
       class:instrument={cell.kind === 'instrument'}
       style="--cell-ink: {cell.ink};"
@@ -569,14 +712,13 @@
       role="button"
       tabindex="0"
       aria-label="{cell.device.name}{cell.tile ? `, the ${cell.tile} tile's` : ''}"
-      animate:flip={{ duration: 160 }}
-      use:drag={{
+      use:dragAction={{
         commit: 'either',
         onDown: (info) => pressDown(cell, info),
         onTap: () => {
           if (!pressInControl) open(cell);
         },
-        onStart: (info) => dragStart(cell, index, info),
+        onStart: (info) => dragStart(cell, position, info),
         onMove: dragMove,
         onEnd: dragEnd
       }}
@@ -595,21 +737,6 @@
     <span class="chain-add-icons" aria-hidden="true"><Plus /><ControlGlyph name="rack" /></span>
     <span class="chain-add-label">Effect</span>
   </button>
-  {#if dragging}
-    {@const cell = cells.find((c) => c.key === dragging?.key)}
-    {#if cell}
-      <!-- The cell under the finger, riding it; its place in the list is the gap. -->
-      <div
-        class="chain-cell lifted"
-        class:off={!cell.on}
-        class:appointed={fxChainStore.appointed === cell.device.devicePath}
-        style="--cell-ink: {cell.ink}; left: {dragging.box.left + dragging.dx}px; top: {dragging.box.top - dragging.dy}px; width: {dragging.box.width}px; height: {dragging.box.height}px;"
-        aria-hidden="true"
-      >
-        {@render cellBody(cell, dragging.to, false)}
-      </div>
-    {/if}
-  {/if}
   {#if padScope}
     <!-- Whose chain this is, as the grid's scope chip says it. -->
     <div class="pad-chip chain-scope-chip" aria-label="Chain of pad {padScope.note}">
@@ -705,23 +832,10 @@
   .chain-cell.off > :not(.cell-head) {
     opacity: 0.45;
   }
-  /* The cell under the finger rides it, out of the grid's flow. */
-  .chain-cell.lifted {
-    position: absolute;
+  /* The cell under the finger rides it, over the others. */
+  .chain-cell.dragging {
     z-index: 4;
-    pointer-events: none;
-    box-shadow: 0 8px 22px oklch(0 0 0 / 0.55);
-    scale: 1.04;
-  }
-  /* Where it will land: its own place in the previewed order, emptied. */
-  .chain-cell.placeholder {
-    border-style: dashed;
-    border-color: color-mix(in oklab, var(--cell-ink) 60%, transparent);
-    background: transparent;
-    box-shadow: none;
-  }
-  .chain-cell.placeholder > :global(*) {
-    visibility: hidden;
+    will-change: transform;
   }
   /* The blue hand: the device Live's controllers follow. */
   .chain-cell.appointed {

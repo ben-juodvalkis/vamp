@@ -231,9 +231,9 @@ export const TOURS = {
 			},
 			{
 				name: 'chain-dragging',
-				description: 'Reverb mid-drag, still held: it rides the finger, Echo has slid right, the dashed gap is where it lands',
+				description: 'Reverb mid-drag up to third place, still held: the cell itself rides the finger and the cells after it have slid along, out of its way',
 				scenePatch: chainDemo,
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { drag: `${chainCell(6)} .cell-head .name`, by: [-190, 20], keep: true }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { drag: `${chainCell(6)} .cell-head .name`, by: [200, -240], keep: true }]
 			},
 			{
 				name: 'chain-xy',
