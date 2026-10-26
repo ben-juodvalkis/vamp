@@ -12,8 +12,9 @@
 	 * nothing is drawn and the tile is the plain button it always was.
 	 */
 	import FaceControl from './FaceControl.svelte';
+	import DevicePicture from './DevicePicture.svelte';
 	import { setContext } from 'svelte';
-	import { PICTURE_CONTEXT } from '$lib/components/v6/browser/devicePictures';
+	import { PICTURE_CONTEXT, genericPicture } from '$lib/components/v6/browser/devicePictures';
 	import { presetParams, type PresetParams } from '$lib/services/presetParams';
 	import { presetControl, resolveParam, DEVICE_CONTROLS, type ParamRef, type Writes } from '$lib/components/v6/device-panel/deviceControls';
 	import { DEVICE_PRESETS } from '$lib/config/devicePresets';
@@ -74,8 +75,11 @@
 	});
 
 	const found = $derived(presetControl(saved, preset.name));
+	// A device with no control of its own (the Tone Shaper) draws its
+	// generic picture, as its Recent ghost does; a tap on it loads.
+	const generic = $derived(found ? null : genericPicture(saved?.className, preset.name));
 	$effect(() => {
-		onFaced?.(found !== null);
+		onFaced?.(found !== null || generic !== null);
 	});
 	const color = $derived(schemeFromInk(ink));
 	/** The class the device arrives as: the file's, or for an `.amxd` the device type's. */
@@ -125,6 +129,8 @@
 >
 	{#if found}
 		<FaceControl control={found.control} {get} {color} {onTap} onMove={move} titled={false} soft />
+	{:else if generic}
+		<DevicePicture kind={generic} x={0} y={0} {ink} />
 	{/if}
 </div>
 

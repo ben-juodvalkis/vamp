@@ -450,5 +450,15 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0, variant = 0)
 	}
 }
 
+/**
+ * The picture of a device drawn generically, having no control or picture of
+ * its own (the user, 2026-10-26): EQ Eight and the Tone Shaper an EQ curve.
+ * A Recent ghost and a browser tile both ask.
+ */
+export function genericPicture(className: string | undefined, name: string): PictureKind | null {
+	if (className === 'Eq8' || name === 'Tone Shaper') return 'eqcurve';
+	return null;
+}
+
 /** Pictures draw where a provider asks for them (the chain overview, a browser tile), not on the FX grid. */
 export const PICTURE_CONTEXT = Symbol('device-pictures');

@@ -6,6 +6,7 @@
 	 * A tap adds it to this chain again.
 	 */
 	import DevicePicture from '$lib/components/v6/browser/DevicePicture.svelte';
+	import { genericPicture } from '$lib/components/v6/browser/devicePictures';
 	import FilterCurve from '$lib/components/v6/device-panel/FilterCurve.svelte';
 	import ControlGlyph from '$lib/components/v6/device-panel/ControlGlyph.svelte';
 	import constants from '$config/constants.json';
@@ -56,10 +57,7 @@
 		return control && control.kind !== 'eq' && !control.picture ? (control.icon ?? null) : null;
 	});
 	/** Devices drawn generically, having no picture of their own (the user, 2026-10-26). */
-	const generic = $derived.by(() => {
-		if (saved?.className === 'Eq8' || recent.name === 'Tone Shaper') return 'eqcurve' as const;
-		return null;
-	});
+	const generic = $derived(genericPicture(saved?.className, recent.name));
 
 	const picture = $derived.by(() => {
 		if (isWheels) return { kind: 'wheels' as const, x: 0, y: 0 };
