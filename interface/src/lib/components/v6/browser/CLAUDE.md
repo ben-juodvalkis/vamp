@@ -404,7 +404,7 @@ source and the Phase 4 switch that chose between them.
   space"): sections pack in order into rows of up to one tile more than the
   columns, each row's tiles share its whole width (a subgrid per cell), and
   a section too big for a row splits evenly over rows of its own, its header
-  on the first. The solver counts the same rows (`fill`). Other Places keep
+  on the first. The solver counts the same rows (`fill`), and bounds the columns by the tiles, not the largest folder (a 6-tile largest folder once capped it at 6 and overflowed the screen). Its folder names are a slim label in the folder's ink over the tiles (`FILL_HEADER_H` 22px, `FILL_SECTION_GAP` 10px), not the 44px header band (user, 2026-10-26). Other Places keep
   `packGroupedSections`: their sections can hold thousands. The server
   catalogs it whether or not it is ticked and flags it in `index.json`
   (`effects`, and `hidden` while unticked); the browser keeps a hidden one off

@@ -309,6 +309,11 @@
 	// --section-gap so the solver and the stylesheet can't drift apart.
 	const SECTION_HEADER_H = 44;
 	const SECTION_GAP = 16;
+	// The effects screen's folders: a slim label in the folder's own ink over
+	// its tiles, not a band (user, 2026-10-26: "all the dead space just for
+	// the folder name").
+	const FILL_HEADER_H = 22;
+	const FILL_SECTION_GAP = 10;
 	// The hold key of a mixed level's preset header — a path separator no
 	// folder name can contain, so it never lights a folder tile's charge.
 	const HERE_KEY = '/here';
@@ -331,6 +336,8 @@
 	// The effects screen fills every row (`packFillSections`): its sections
 	// are few and small, and a half-empty row is dead space (user, 2026-10-26).
 	const fillRows = $derived(onEffectsScreen);
+	const presetHeaderH = $derived(fillRows ? FILL_HEADER_H : SECTION_HEADER_H);
+	const presetSectionGap = $derived(fillRows ? FILL_SECTION_GAP : SECTION_GAP);
 	const sectionInkOf = $derived.by(() => {
 		if (!onEffectsScreen) return null;
 		return sectionInks(presetGroups.flatMap((g) => (g.folder ? [g.folder] : [])));
@@ -409,8 +416,8 @@
 				// tiles grow into the height the packing frees.
 				headers: presetGroups.map((g) => g.folder !== null),
 				fill: fillRows,
-				headerHeight: SECTION_HEADER_H,
-				sectionGap: SECTION_GAP,
+				headerHeight: presetHeaderH,
+				sectionGap: presetSectionGap,
 				...PRESET_COMFORT
 			});
 		}
@@ -485,7 +492,7 @@
 					return {
 						// A filled row holds up to one tile more than the columns: still one row.
 						count: fillRows ? Math.min(b.count, gridLayout.columns) : b.count,
-						headerHeight: named ? SECTION_HEADER_H : 0,
+						headerHeight: named ? presetHeaderH : 0,
 						// A headerless band (the loose bucket alone) keeps the grid pad
 						// as its top breathing room (the inline pad replaces the CSS one).
 						leadPad: named ? 0 : GRID_PADDING
@@ -494,7 +501,7 @@
 				columns: gridLayout.columns,
 				tileHeight: gridLayout.tileHeight,
 				gap: GRID_GAP,
-				sectionGap: SECTION_GAP,
+				sectionGap: presetSectionGap,
 				overscanRows: OVERSCAN_ROWS
 			});
 			// untrack: the compare must not make the recompute-effect depend on the
@@ -2191,7 +2198,7 @@
 					     grid's tile geometry, under a calm sticky folder header. -->
 					<div
 						class="layer grouped-layer"
-						style="--header-h: {SECTION_HEADER_H}px; --section-gap: {SECTION_GAP}px;"
+						style="--header-h: {presetHeaderH}px; --section-gap: {presetSectionGap}px;"
 					>
 						<!-- Keyed on the navigated location so a fresh folder always opens
 						     scrolled to the top (the DOM — and its scrollTop — is rebuilt). -->
@@ -2782,6 +2789,26 @@
 	.band-row.fill .adaptive-grid.sectioned.packed {
 		grid-template-columns: subgrid;
 		width: auto;
+	}
+	/* Its folder names: a slim label in the folder's ink sitting on its
+	   tiles, no band behind it (FILL_HEADER_H). */
+	.band-row.fill .section-head,
+	:global([data-grammar="flat"]) .band-row.fill .section-head {
+		min-height: var(--header-h, 22px);
+		padding: 0 2px 3px;
+		background: transparent;
+	}
+	.band-row.fill .section-name,
+	:global([data-grammar="flat"]) .band-row.fill .section-name {
+		font-size: 13px;
+		line-height: 1;
+		color: var(--k);
+		-webkit-line-clamp: 1;
+		line-clamp: 1;
+	}
+	.band-row.fill .section-count {
+		font-size: 11px;
+		line-height: 1;
 	}
 
 	/* Reserve the header band even on the headerless (loose) cell so every cell's

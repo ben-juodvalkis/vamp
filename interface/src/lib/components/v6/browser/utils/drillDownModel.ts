@@ -496,8 +496,11 @@ export function computeGroupedGridLayout(c: GroupedGridConstraints): GridLayout 
 
 	// Column upper bound: min tap width, and never more columns than the largest
 	// section can fill (extra columns would be dead width in EVERY section).
+	// Filled rows share sections, so there the bound is every tile: the
+	// effects screen's largest folder going from 8 to 6 capped it at 6 columns
+	// and stacked 7 rows where 5 fit (user, 2026-10-26).
 	const maxColsByWidth = Math.max(1, Math.floor((width + gap) / (minTile + gap)));
-	const maxCols = Math.min(Math.max(...sizes), Math.max(1, maxColsByWidth));
+	const maxCols = Math.min(c.fill ? count : Math.max(...sizes), Math.max(1, maxColsByWidth));
 
 	let best: GridLayout | null = null;
 	let bestScore = -Infinity;

@@ -452,6 +452,30 @@ describe('drillDownModel — computeGroupedGridLayout', () => {
 		expect(grouped.rows).toBe(perSection.reduce((a, b) => a + b, 0));
 	});
 
+	it('filled rows take as many columns as the tiles need, not the largest section (the effects screen)', () => {
+		// The rig's effects folders on 2026-10-26: Guitar split out of
+		// Distortion left no folder over 6, which capped the grid at 6
+		// columns and stacked more rows than the screen holds.
+		// The browser's stage at 1366x1024 and its 44px headers.
+		const groups = [6, 4, 4, 2, 6, 4, 2, 5, 3];
+		const layout = computeGroupedGridLayout({
+			width: 1135,
+			height: 913,
+			groups,
+			headerCount: groups.length,
+			headers: groups.map(() => true),
+			fill: true,
+			headerHeight: 44,
+			sectionGap: 16,
+			gap: 12,
+			minTile: 112,
+			minTileHeight: 78,
+			targetAspect: 1.5
+		});
+		expect(layout.columns).toBeGreaterThan(6);
+		expect(layout.scrolls).toBe(false);
+	});
+
 	it('never uses more columns than the largest section can fill', () => {
 		const grouped = computeGroupedGridLayout({
 			...STAGE,
