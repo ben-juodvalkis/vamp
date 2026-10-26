@@ -231,6 +231,8 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 		control: {
 			kind: 'xy',
 			title: 'Reverb',
+			// Its picture on a browser tile (its chain cell draws its own portrait).
+			picture: 'tail',
 			read: (g) => ({ x: g(10) ?? 0.5, y: g(53) ?? 0 }),
 			write: (x, y) => [
 				[10, x],

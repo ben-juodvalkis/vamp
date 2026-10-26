@@ -65,7 +65,7 @@ const hash = (i: number) => {
 	return s - Math.floor(s);
 };
 
-const circle = (cx: number, cy: number, r: number) => `M${f(cx - r)},${cy}a${f(r)},${f(r)} 0 1,0 ${f(2 * r)},0a${f(r)},${f(r)} 0 1,0 ${f(-2 * r)},0`;
+const circle = (cx: number, cy: number, r: number) => `M${f(cx - r)},${f(cy)}a${f(r)},${f(r)} 0 1,0 ${f(2 * r)},0a${f(r)},${f(r)} 0 1,0 ${f(-2 * r)},0`;
 const bar = (x: number, y: number, w: number, h: number) => `M${f(x)},${f(y)}h${f(w)}v${f(h)}h${f(-w)}Z`;
 
 /** The strokes of a picture at a control's position: `x` (a slider's level, or a pad's across) and `y` (a pad's up). */
@@ -97,11 +97,13 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0): PictureStro
 			const amp = 6 + y * 28;
 			return [0, 0.35].map((phase, i) => ({ d: trace((u) => 50 + amp * Math.sin(2 * Math.PI * (u * cycles + phase))), o: i ? 0.45 : 0.8 }));
 		}
-		// Tremolo: a tone whose level swells at the LFO's rate, by its depth.
+		// Tremolo: one cycle of its swell (the user, 2026-10-26: simpler, "just
+		// one cycle"), deeper with its depth.
 		case 'tremolo': {
-			const lfo = 1 + x * 5;
+			const amp = 8 + y * 32;
 			return [
-				{ d: trace((u) => 50 + 34 * (1 - y * (0.5 + 0.5 * Math.sin(2 * Math.PI * u * lfo))) * Math.sin(2 * Math.PI * u * 12), 160), o: 0.5 }
+				{ d: 'M0,50H100', o: 0.2 },
+				{ d: trace((u) => 50 - amp * Math.sin(2 * Math.PI * u)), o: 0.85 }
 			];
 		}
 		// Drum Buss: a drum (user, 2026-10-26: "should show a drum"), its
@@ -132,10 +134,22 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0): PictureStro
 				{ d: trace((u) => (u < 0.15 ? 90 : u < 0.4 ? 20 : 20 + 70 * Math.min(1, (u - 0.4) / rel))), o: 0.85 }
 			];
 		}
-		// Comb: teeth spaced by its tune, taller with feedback.
+		// Comb: an actual comb (the user, 2026-10-26), its spine over its
+		// teeth: more teeth as its tune rises, longer with feedback.
 		case 'comb': {
-			const n = 4 + Math.round(x * 14);
-			return Array.from({ length: n }, (_, i) => ({ d: `M${f(((i + 0.5) / n) * 100)},92V${f(92 - 15 - y * 70)}`, o: 0.75 }));
+			const n = 8 + Math.round(x * 12);
+			const left = 12;
+			const right = 88;
+			const spine = { top: 24, h: 12 };
+			const len = 16 + y * 34;
+			const teeth = Array.from({ length: n }, (_, i) => {
+				const tx = left + 3 + ((right - left - 6) * i) / (n - 1);
+				return `M${f(tx)},${spine.top + spine.h}V${f(spine.top + spine.h + len)}`;
+			}).join('');
+			return [
+				{ d: `M${left + 4},${spine.top}H${right - 4}a4,4 0 0 1 4,4V${spine.top + spine.h}H${left}V${spine.top + 4}a4,4 0 0 1 4,-4Z`, o: 0.8, fill: true },
+				{ d: teeth, o: 0.85 }
+			];
 		}
 		// Phaser: notches swept through the spectrum, deeper with feedback.
 		case 'notches': {
@@ -161,13 +175,16 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0): PictureStro
 				{ d: trace((u) => 50 - 36 * (Math.tanh(k * Math.sin(2 * Math.PI * u * 2)) / Math.tanh(k)), 160), o: 0.85 }
 			];
 		}
-		// A reverb, generic (the Recent column's Hybrid Reverb, the user,
-		// 2026-10-26): a hit and its tail dying away.
-		case 'tail':
+		// A reverb (Hybrid Reverb, the user, 2026-10-26): a hit and its tail
+		// dying away, longer with the decay, louder with the mix.
+		case 'tail': {
+			const fade = 6 - 4.5 * x;
+			const amp = 24 + 20 * y;
 			return [
 				{ d: 'M0,50H100', o: 0.2 },
-				{ d: trace((u) => 50 - 42 * Math.exp(-u * 3.2) * Math.sin(2 * Math.PI * u * 14 + 0.6) * (0.65 + 0.35 * Math.sin(u * 37)), 240), o: 0.85 }
+				{ d: trace((u) => 50 - amp * Math.exp(-u * fade) * Math.sin(2 * Math.PI * u * 14 + 0.6) * (0.65 + 0.35 * Math.sin(u * 37)), 240), o: 0.85 }
 			];
+		}
 		// MidiWheels: its two wheels side by side, pitch centred, mod at rest
 		// (the user, 2026-10-26).
 		case 'wheels':
@@ -249,31 +266,51 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0): PictureStro
 		case 'scatter': {
 			return Array.from({ length: 12 }, (_, i) => ({ d: bar(4 + i * 8, 46 - (hash(i) - 0.5) * 80 * x, 6, 8), o: 0.8, fill: true }));
 		}
-		// Blur: copies of one wave smeared over each other, more with the mix.
+		// Blur: a face, smeared (the user, 2026-10-26: "someone's face, but
+		// blurry"): copies of it slid apart and fading, more and further apart
+		// the wetter.
 		case 'smear': {
-			const n = 1 + Math.round(x * 5);
-			return Array.from({ length: n }, (_, i) => ({ d: trace((u) => 50 + 26 * Math.sin(2 * Math.PI * (u * 2 + i * 0.07))), o: 0.85 / (1 + i * 0.6) }));
+			const copies = 2 + Math.round(x * 4);
+			const face = (dx: number, dy: number) =>
+				`${circle(50 + dx, 50 + dy, 30)}${circle(39 + dx, 43 + dy, 3.5)}${circle(61 + dx, 43 + dy, 3.5)}M${f(36 + dx)},${f(60 + dy)}Q${f(50 + dx)},${f(72 + dy)} ${f(64 + dx)},${f(60 + dy)}`;
+			return Array.from({ length: copies }, (_, i) => {
+				const t = copies === 1 ? 0 : i / (copies - 1);
+				const spread = 3 + x * 7;
+				return { d: face((t - 0.5) * 2 * spread, (t - 0.5) * spread * 0.5), o: 0.8 - Math.abs(t - 0.5) * 0.6 };
+			});
 		}
-		// GlitchLoop: a wave cut into jumbled pieces, the more the wetter.
+		// GlitchLoop: psychedelic bubbles (the user, 2026-10-26), overlapping
+		// and ringed, more of them the wetter.
 		case 'glitch': {
-			const pieces = 8;
+			const n = 4 + Math.round(x * 6);
+			return Array.from({ length: n }, (_, i) => {
+				const cx = 14 + hash(i + 11) * 72;
+				const cy = 16 + hash(i + 23) * 68;
+				const r = 7 + hash(i + 37) * 16;
+				const rings = 1 + Math.floor(hash(i + 51) * 3);
+				const d = Array.from({ length: rings }, (_, k) => circle(cx, cy, r * (1 - k * 0.3))).join('');
+				return { d, o: 0.45 + 0.45 * hash(i + 71) };
+			});
+		}
+		// Octave (Pitch Shift): a keyboard on its side with an up arrow beside
+		// it (the user, 2026-10-26), the arrow stronger with the mix.
+		case 'octaves': {
+			const keys = 7;
+			const top = 12;
+			const kh = 76 / keys;
+			const left = 22;
+			const w = 30;
+			const whites = Array.from({ length: keys }, (_, i) => bar(left, top + i * kh, w, kh)).join('');
+			// Black keys between white ones, as on a piano (none between E-F and B-C).
+			const blacks = [0, 1, 3, 4, 5]
+				.map((i) => bar(left, top + (i + 1) * kh - kh * 0.3, w * 0.6, kh * 0.6))
+				.join('');
 			return [
-				{
-					d: trace((u) => {
-						const p = Math.floor(u * pieces);
-						const shift = (hash(p) - 0.5) * x;
-						return 50 - 34 * Math.sin(2 * Math.PI * (u + shift) * 2);
-					}, 160),
-					o: 0.85
-				}
+				{ d: whites, o: 0.7 },
+				{ d: blacks, o: 0.55, fill: true },
+				{ d: 'M72,84V18M60,32L72,18L84,32', o: 0.4 + 0.55 * x }
 			];
 		}
-		// Octave: the note and the octave below it, louder with the mix.
-		case 'octaves':
-			return [
-				{ d: trace((u) => 50 - 22 * Math.sin(2 * Math.PI * u * 4)), o: 0.4 },
-				{ d: trace((u) => 50 - 40 * x * Math.sin(2 * Math.PI * u * 2)), o: 0.85 }
-			];
 		// Pitch Hack: a backward arrow, for its reverse (the user, 2026-10-26),
 		// stronger with the mix.
 		case 'reverse':
@@ -305,12 +342,50 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0): PictureStro
 			const w = (92 / n) * (0.15 + y * 0.85);
 			return Array.from({ length: n }, (_, i) => ({ d: bar(4 + (i * 92) / n, 82 - ((i % 4) / 3) * 60, w, 8), o: 0.85, fill: true }));
 		}
-		// Chord: the played note and the one Shift adds, above or below it.
-		case 'chord':
-			return [
-				{ d: bar(20, 46, 60, 8), o: 0.85, fill: true },
-				{ d: bar(20, 46 - (x - 0.5) * 80, 60, 8), o: Math.abs(x - 0.5) < 0.01 ? 0.15 : 0.6, fill: true }
-			];
+		// Chord: an octave of piano keys (the user, 2026-10-26), the played
+		// triad lit and the note Shift adds lit too, above or below. Each white
+		// key's outline is notched around the black keys beside it, so no two
+		// shapes overlap; black keys are solid, and a played one is hollowed.
+		case 'chord': {
+			const WHITE = 7;
+			const left = 4;
+			const kw = 92 / WHITE;
+			const top = 22;
+			const bottom = 78;
+			const g = 1.4;
+			const whiteSemis = [0, 2, 4, 5, 7, 9, 11];
+			/** A black key on the boundary after these white keys. */
+			const blackAfter = new Set([0, 1, 3, 4, 5]);
+			const bw = kw * 0.56;
+			const bh = (bottom - top) * 0.58;
+			const shift = Math.round((x - 0.5) * 24);
+			const added = ((shift % 12) + 12) % 12;
+			const played = new Set([0, 4, 7, ...(shift !== 0 ? [added] : [])]);
+			const whiteKey = (i: number) => {
+				const x0 = left + i * kw + g / 2;
+				const x1 = left + (i + 1) * kw - g / 2;
+				const notchY = top + bh + g;
+				const leftNotch = i > 0 && blackAfter.has(i - 1);
+				const rightNotch = blackAfter.has(i);
+				const lx = left + i * kw + bw / 2 + g / 2;
+				const rx = left + (i + 1) * kw - bw / 2 - g / 2;
+				let d = `M${f(x0)},${bottom}`;
+				d += leftNotch ? `V${f(notchY)}H${f(lx)}V${top}` : `V${top}`;
+				d += rightNotch ? `H${f(rx)}V${f(notchY)}H${f(x1)}` : `H${f(x1)}`;
+				return d + `V${bottom}Z`;
+			};
+			const strokes: PictureStroke[] = [];
+			const lit = whiteSemis.flatMap((semi, i) => (played.has(semi) ? [whiteKey(i)] : []));
+			if (lit.length) strokes.push({ d: lit.join(''), o: 0.5, fill: true });
+			strokes.push({ d: whiteSemis.map((_, i) => whiteKey(i)).join(''), o: 0.95 });
+			for (const i of blackAfter) {
+				const bx = left + (i + 1) * kw - bw / 2;
+				const key = bar(bx, top, bw, bh);
+				if (played.has(whiteSemis[i] + 1)) strokes.push({ d: key, o: 0.95 });
+				else strokes.push({ d: key, o: 0.95, fill: true });
+			}
+			return strokes;
+		}
 	}
 }
 

@@ -57,7 +57,6 @@
 	});
 	/** Devices drawn generically, having no picture of their own (the user, 2026-10-26). */
 	const generic = $derived.by(() => {
-		if (key === 'reverb') return 'tail' as const;
 		if (saved?.className === 'Eq8' || recent.name === 'Tone Shaper') return 'eqcurve' as const;
 		return null;
 	});
