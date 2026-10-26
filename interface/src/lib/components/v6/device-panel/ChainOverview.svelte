@@ -299,7 +299,6 @@
    * left to right, then the next row.
    */
   const CHAIN_WRAP_AFTER = 5;
-  const grid = $derived(chainGrid(cells.length, CHAIN_WRAP_AFTER));
 
   function indexOf(path: string): number {
     const m = /\/devices\/(\d+)$/.exec(path);
@@ -410,6 +409,44 @@
 
   /** The cells in the order to draw them: the drag's preview, else `settled`. */
   const shown = $derived((drag && arrange(cells, moved(drag.base, drag.from, drag.to))) || settled);
+
+  /*
+   * The ghost Utility (2026-10-26, Ben's call): a chain with no Utility
+   * always ends in one, as the strips always end in Main — the FX grid's
+   * own Gain tile in its ghost state, after the last device and before
+   * the + cell. Its first drag frame loads a Utility (ADR-167), which Live
+   * puts at the end of the chain: where the ghost already is. The ghost
+   * stays under the finger until it lifts — its tile drives the Utility
+   * that has arrived — and the real cell takes over on release, so the
+   * gesture that loaded it is never cut off mid-drag.
+   */
+  const UTILITY_TILE = TILE_COMPONENTS.utility;
+  const hasUtility = $derived(cells.some((c) => c.presetKey === 'utility'));
+  let ghostHeld = $state<number | null>(null);
+  const showGhostUtility = $derived(!!UTILITY_TILE && (!hasUtility || ghostHeld !== null));
+
+  function holdGhost(e: PointerEvent) {
+    if (ghostHeld !== null) return;
+    const id = e.pointerId;
+    ghostHeld = id;
+    const lift = (u: PointerEvent) => {
+      if (u.pointerId !== id) return;
+      ghostHeld = null;
+      window.removeEventListener('pointerup', lift);
+      window.removeEventListener('pointercancel', lift);
+    };
+    window.addEventListener('pointerup', lift);
+    window.addEventListener('pointercancel', lift);
+  }
+
+  /** The cells drawn: while the ghost is still held, the Utility it loaded stays behind it. */
+  const drawn = $derived.by(() => {
+    if (ghostHeld === null || !hasUtility) return shown;
+    const last = shown[shown.length - 1];
+    return last?.presetKey === 'utility' ? shown.slice(0, -1) : shown;
+  });
+
+  const grid = $derived(chainGrid(drawn.length + (showGhostUtility ? 1 : 0), CHAIN_WRAP_AFTER));
 
   /** The cell position under a point, by the grid's geometry at lift — not the cells, which are sliding. */
   function positionAt(d: Drag, x: number, y: number): number {
@@ -701,7 +738,7 @@
   style={padInk ? `--scope-ink: ${padInk}` : undefined}
   bind:this={chainEl}
 >
-  {#each shown as cell, position (cell.key)}
+  {#each drawn as cell, position (cell.key)}
     <div
       class="chain-cell"
       class:off={!isOn(cell)}
@@ -729,6 +766,23 @@
       {@render cellBody(cell, position)}
     </div>
   {/each}
+  {#if showGhostUtility && UTILITY_TILE}
+    <!-- The ghost Utility: drag its fader to load one at the chain's end. -->
+    <div
+      class="chain-cell ghost-utility"
+      data-debug="chain-ghost-utility"
+      role="presentation"
+      onpointerdowncapture={holdGhost}
+    >
+      <div class="cell-head">
+        <span class="order">{drawn.length + 1}</span>
+        <span class="name" lang="en">Utility</span>
+      </div>
+      <div class="cell-control" role="presentation">
+        <UTILITY_TILE.Tile position={UTILITY_TILE.position} />
+      </div>
+    </div>
+  {/if}
   <!-- Add an effect: the browser on Effect, landing on this chain. -->
   <button
     type="button"
@@ -831,6 +885,14 @@
     color: var(--cell-ink);
     cursor: pointer;
     user-select: none;
+  }
+  /* The ghost Utility reads as the + cell does: a dashed outline, its
+     name dim; the tile inside wears its own ghost state. */
+  .chain-cell.ghost-utility {
+    border-style: dashed;
+    background: transparent;
+    color: var(--muted-foreground);
+    cursor: default;
   }
   .chain-cell.off > :not(.cell-head) {
     opacity: 0.45;
