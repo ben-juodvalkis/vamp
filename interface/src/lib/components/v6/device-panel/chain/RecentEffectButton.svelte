@@ -46,7 +46,8 @@
 	<span class="recent-picture" aria-hidden="true">
 		{#if picture}<DevicePicture kind={picture.kind} x={picture.x} y={picture.y} ink="var(--muted-foreground)" />{/if}
 	</span>
-	<span class="recent-name">{recent.name}</span>
+	<!-- "+ Echo": what a tap does (the user, 2026-10-26). -->
+	<span class="recent-name">+ {recent.name}</span>
 </button>
 
 <style>
