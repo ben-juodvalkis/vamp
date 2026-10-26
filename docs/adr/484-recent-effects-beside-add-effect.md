@@ -24,7 +24,11 @@ again without the browser.
   (a tap or a drag), newest first, once each. The list is shared across
   tracks and kept in this browser's localStorage (a per-viewer
   convenience), up to twelve.
-- It is smart about the chain: it shows the first four that fit, skipping a
+- Up to eight, in two columns of four, each half a cell's width, newest
+  first left to right; when the chain is crowded onto two rows, four in one
+  column, each a row with its picture beside its name (the user, the same
+  day).
+- It is smart about the chain: it shows the first ones that fit, skipping a
   MIDI effect on a track that is not a MIDI track and anything the chain
   already holds (by name: Live names a loaded preset's device after it).
   A tap from the column does not reorder it, so buttons do not move under

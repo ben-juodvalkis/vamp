@@ -54,21 +54,22 @@
 	/* A ghost, as the + Effect cell beside it is drawn (the user, the same
 	   day): no fill of its own, a dashed line, the picture and name in muted
 	   ink at the ghost opacity; full ink while pressed. */
+	/* A tile: the picture over the name, centered (two to a row). */
 	.recent-effect {
-		flex: 1 1 0;
 		min-height: 0;
 		min-width: 0;
 		display: flex;
+		flex-direction: column;
 		align-items: center;
-		justify-content: flex-start;
-		gap: 10px;
-		padding: 0 10px;
+		justify-content: center;
+		gap: 2px;
+		padding: 4px;
 		border: 1px dashed var(--line-strong);
 		border-radius: 2px;
 		background: transparent;
 		color: var(--muted-foreground);
 		font: inherit;
-		text-align: left;
+		text-align: center;
 		cursor: pointer;
 		overflow: hidden;
 		-webkit-tap-highlight-color: transparent;
@@ -85,9 +86,10 @@
 	}
 	.recent-picture {
 		position: relative;
-		flex: 0 0 auto;
-		width: 44px;
-		height: 30px;
+		flex: 1 1 0;
+		align-self: stretch;
+		min-height: 0;
+		max-height: 34px;
 	}
 	.recent-picture > :global(*) {
 		position: absolute;
@@ -96,8 +98,10 @@
 		height: 100%;
 	}
 	.recent-name {
+		max-width: 100%;
 		min-width: 0;
-		font-size: 0.875rem;
+		flex: 0 0 auto;
+		font-size: 0.75rem;
 		font-weight: var(--font-weight-medium);
 		white-space: nowrap;
 		overflow: hidden;

@@ -152,6 +152,7 @@ const chainDemo = (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, CHAIN_DEMO
 // Chains of other lengths, for the adaptive layout: the instrument, then effects.
 /** The rig's effects shelf (catalog.effectsPlace), for states that name its files. */
 const SHELF = '/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Audio-Midi Effects';
+const RECENT_SEED = [['Echo', 'Time'], ['Saturator', 'Distortion'], ['Chorus', 'Modulation'], ['Drum Buss', 'Distortion'], ['Glue', 'Dynamics'], ['Redux', 'Distortion'], ['Phaser', 'Modulation'], ['Gate', 'Dynamics'], ['Tremolo', 'Modulation'], ['Compressor', 'Dynamics']];
 const chainOf = (n) => (scene) =>
 	setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], 'Auto Filter', 'Echo', 'Reverb', CHAIN_DEMO_DEVICES[5], 'Auto Filter', CHAIN_DEMO_DEVICES[7], CHAIN_DEMO_DEVICES[8]].slice(0, n));
 const chainCell = (index) => `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/${index}"]`;
@@ -346,16 +347,21 @@ export const TOURS = {
 				scenePatch: chainDemo,
 				steps: [select, { click: '[data-debug="chain-add"]' }, { wait: 2500 }]
 			})),
-			{
-				name: 'chain-recents',
-				description: 'The Recent column beside + Effect (ADR-484): the last effects added, grey; Echo is on the chain already, so it is skipped',
-				scenePatch: chainOf(3),
+			// The Recent column beside + Effect (ADR-484), seeded from the rig's
+			// shelf so --real-data draws each one's picture. Echo is on the chain
+			// already, so it is skipped.
+			...[
+				['chain-recents', 'eight in two columns of four', 3],
+				['chain-recents-crowded', 'a chain on two rows: four in one column', 5]
+			].map(([name, what, n]) => ({
+				name,
+				description: `The Recent column (ADR-484): ${what}; Echo is on the chain, so it is skipped`,
+				scenePatch: chainOf(n),
 				steps: [
-					// The rig's shelf, so --real-data draws each one's picture.
-					{ storage: { 'vamp.recentEffects': JSON.stringify([['Echo', 'Time'], ['Saturator', 'Distortion'], ['Chorus', 'Modulation'], ['Drum Buss', 'Distortion'], ['Glue', 'Dynamics']].map(([n, dir]) => ({ name: n, fullPath: `${SHELF}/${dir}/${n}.adv`, source: '', rel: '' }))) } },
+					{ storage: { 'vamp.recentEffects': JSON.stringify(RECENT_SEED.map(([n, dir]) => ({ name: n, fullPath: `${SHELF}/${dir}/${n}.adv`, source: '', rel: '' }))) } },
 					openInstrument(CHAIN_DEMO_TRACK)
 				]
-			},
+			})),
 			{
 				name: 'chain-plugin',
 				description: 'Tapped the plug-in: the generic view, one slider per parameter',

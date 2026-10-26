@@ -68,7 +68,7 @@
   import SquashControl from './SquashControl.svelte';
   import ControlTile from './ControlTile.svelte';
   import RecentEffectButton from './chain/RecentEffectButton.svelte';
-  import { recentForChain } from '$lib/services/recentEffects.svelte';
+  import { recentForChain, RECENT_EFFECTS_CROWDED } from '$lib/services/recentEffects.svelte';
   import { controlFor } from './deviceControls';
   import MidiWheelsPanel from '$lib/components/v6/midi/MidiWheelsPanel.svelte';
   import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
@@ -387,10 +387,12 @@
    * this chain already holds. It replaced the suggested ghost devices
    * (ADR-483); the ghost Utility had already left for the right sidebar.
    */
-  const recents = $derived(recentForChain(cells.map((c) => c.device.name)));
+  const recentPool = $derived(recentForChain(cells.map((c) => c.device.name)));
   const drawn = $derived(shown);
 
-  const grid = $derived(chainGrid(drawn.length + (recents.length > 0 ? 1 : 0), CHAIN_WRAP_AFTER));
+  const grid = $derived(chainGrid(drawn.length + (recentPool.length > 0 ? 1 : 0), CHAIN_WRAP_AFTER));
+  /** Eight in two columns of four; four in one column once the chain is crowded onto two rows (the user, 2026-10-26). */
+  const recents = $derived(grid.rows > 1 ? recentPool.slice(0, RECENT_EFFECTS_CROWDED) : recentPool);
 
   /** The cell position under a point, by the grid's geometry at lift — not the cells, which are sliding. */
   function positionAt(d: Drag, x: number, y: number): number {
@@ -704,7 +706,7 @@
   {/each}
   {#if recents.length > 0}
     <!-- Recent: the last effects added, grey; a tap adds one here again. -->
-    <div class="chain-recents" data-debug="chain-recents" role="group" aria-label="Recent effects">
+    <div class="chain-recents" class:crowded={grid.rows > 1} data-debug="chain-recents" role="group" aria-label="Recent effects">
       {#each recents as recent (recent.fullPath)}
         <RecentEffectButton {recent} />
       {/each}
@@ -824,12 +826,31 @@
     user-select: none;
   }
   /* The Recent column: four grey rows, the + cell's height. */
+  /* The Recent column, as wide as one cell: two columns of four, each half
+     its width, newest first left to right; one column of four on a crowded
+     chain. The rows are fixed, so a short list keeps the tiles' size. */
   .chain-recents {
     min-width: 0;
     min-height: 0;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(4, minmax(0, 1fr));
     gap: 4px;
+  }
+  .chain-recents.crowded {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* One wide, short row each: the picture beside the name. */
+  .chain-recents.crowded > :global(.recent-effect) {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 0 10px;
+  }
+  .chain-recents.crowded > :global(.recent-effect .recent-picture) {
+    flex: 0 0 44px;
+    align-self: center;
+    height: 70%;
   }
   .chain-cell.off > :not(.cell-head) {
     opacity: 0.45;

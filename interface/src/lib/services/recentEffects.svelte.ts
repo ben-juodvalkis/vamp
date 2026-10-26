@@ -2,9 +2,10 @@
  * The effects added most recently (ADR-484, user 2026-10-26): the effect
  * presets loaded from the browser, newest first, so the chain overview's
  * Recent column can put one on a chain again in one tap. It shows the first
- * four that fit the chain (`recentForChain`): no MIDI effect off a MIDI
- * track, nothing the chain already holds; the list keeps more than four so
- * the column stays full after that filter.
+ * eight that fit the chain (`recentForChain`), four when the chain is
+ * crowded onto two rows: no MIDI effect off a MIDI track, nothing the chain
+ * already holds; the list keeps more than that so the column stays full
+ * after the filter.
  *
  * Shared across tracks: one just used on one track is ready on the next.
  * Kept in this browser's localStorage, a per-viewer convenience, and
@@ -35,9 +36,10 @@ export interface RecentEffect {
 	kind?: ItemKind;
 }
 
-/** How many the list keeps, and how many the column shows. */
+/** How many the list keeps, and how many the column shows: eight, or four on a crowded chain. */
 export const RECENT_EFFECTS_MAX = 12;
-export const RECENT_EFFECTS_SHOWN = 4;
+export const RECENT_EFFECTS_SHOWN = 8;
+export const RECENT_EFFECTS_CROWDED = 4;
 const STORAGE_KEY = 'vamp.recentEffects';
 
 function readStored(): RecentEffect[] {
@@ -76,12 +78,12 @@ export function recordRecentEffect(effect: RecentEffect): void {
 
 /**
  * The recents the column shows for a chain whose devices are named
- * `loaded`: the first four that fit the selected track and that the chain
+ * `loaded`: the first `max` that fit the selected track and that the chain
  * does not already hold (Live names a loaded preset's device after it).
  */
-export function recentForChain(loaded: readonly string[]): RecentEffect[] {
+export function recentForChain(loaded: readonly string[], max: number = RECENT_EFFECTS_SHOWN): RecentEffect[] {
 	const have = new Set(loaded);
-	return recent.filter((r) => fitsSelectedTrack(r) && !have.has(r.name)).slice(0, RECENT_EFFECTS_SHOWN);
+	return recent.filter((r) => fitsSelectedTrack(r) && !have.has(r.name)).slice(0, max);
 }
 
 /** Whether an effect can go on the selected track: a MIDI effect only on a MIDI track. */
