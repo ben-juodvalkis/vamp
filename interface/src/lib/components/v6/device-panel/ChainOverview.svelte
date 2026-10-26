@@ -378,8 +378,8 @@
   const shown = $derived((drag && arrange(cells, moved(drag.base, drag.from, drag.to))) || settled);
 
   /*
-   * The Recent column (ADR-484, the user's call, 2026-10-26): beside the +
-   * cell, the last effects added from the browser, grey, a tap adding one
+   * The Recent column (ADR-484, the user's call, 2026-10-26): just before
+   * the + cell, the last effects added from the browser, grey, a tap adding one
    * here again. Only what fits: no MIDI effect off a MIDI track, nothing
    * this chain already holds. It replaced the suggested ghost devices
    * (ADR-483); the ghost Utility had already left for the right sidebar.
@@ -699,6 +699,14 @@
       {@render cellBody(cell, position)}
     </div>
   {/each}
+  {#if recents.length > 0}
+    <!-- Recent: the last effects added, grey; a tap adds one here again. -->
+    <div class="chain-recents" data-debug="chain-recents" role="group" aria-label="Recent effects">
+      {#each recents as recent (recent.fullPath)}
+        <RecentEffectButton {recent} />
+      {/each}
+    </div>
+  {/if}
   <!-- Add an effect: the browser on Effect, landing on this chain. -->
   <button
     type="button"
@@ -710,14 +718,6 @@
     <span class="chain-add-icons" aria-hidden="true"><Plus /><ControlGlyph name="rack" /></span>
     <span class="chain-add-label">Effect</span>
   </button>
-  {#if recents.length > 0}
-    <!-- Recent: the last effects added, grey; a tap adds one here again. -->
-    <div class="chain-recents" data-debug="chain-recents" role="group" aria-label="Recent effects">
-      {#each recents as recent (recent.fullPath)}
-        <RecentEffectButton {recent} />
-      {/each}
-    </div>
-  {/if}
   {#if padScope}
     <!-- Whose chain this is, as the grid's scope chip says it. -->
     <div class="pad-chip chain-scope-chip" aria-label="Chain of pad {padScope.note}">

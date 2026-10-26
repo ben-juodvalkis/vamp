@@ -12,8 +12,9 @@ effects actually used lately, a tap away, so one can be put on a chain
 again without the browser.
 
 ## Decision
-- Beside the chain overview's + Effect cell stands a Recent column: up to
-  four grey buttons, each an effect added lately, its device picture (at
+- Just before the chain overview's + Effect cell (to its left) stands a
+  Recent column: up to four buttons drawn as ghosts the way the + cell is
+  (no fill, a dashed line, muted ink at the ghost opacity), each an effect added lately, its device picture (at
   the values its file saves, as its browser tile draws it) and its name.
   Grey on purpose, so it does not pull the eye from the chain.
 - A tap adds that preset to this chain again (the selected track's, or the

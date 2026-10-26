@@ -1,7 +1,7 @@
 <script lang="ts">
 	/**
 	 * One of the chain's Recent buttons (ADR-484): an effect added lately,
-	 * drawn grey so it does not pull the eye, its device's picture at the
+	 * drawn as a ghost like the + Effect cell, so it does not pull the eye, its device's picture at the
 	 * values its file saves (as its browser tile draws them) beside its name.
 	 * A tap adds it to this chain again.
 	 */
@@ -50,7 +50,9 @@
 </button>
 
 <style>
-	/* Grey, a quiet row: a line, a well, the name in muted ink. */
+	/* A ghost, as the + Effect cell beside it is drawn (the user, the same
+	   day): no fill of its own, a dashed line, the picture and name in muted
+	   ink at the ghost opacity; full ink while pressed. */
 	.recent-effect {
 		flex: 1 1 0;
 		min-height: 0;
@@ -60,17 +62,25 @@
 		justify-content: flex-start;
 		gap: 10px;
 		padding: 0 10px;
-		border: 1px solid var(--line-strong);
+		border: 1px dashed var(--line-strong);
 		border-radius: 2px;
-		background: var(--surface-well);
+		background: transparent;
 		color: var(--muted-foreground);
 		font: inherit;
 		text-align: left;
 		cursor: pointer;
 		overflow: hidden;
+		-webkit-tap-highlight-color: transparent;
+	}
+	.recent-effect > span {
+		opacity: var(--opacity-ghost);
 	}
 	.recent-effect:active {
-		background: color-mix(in oklab, var(--foreground) 8%, var(--surface-well));
+		background: var(--secondary);
+		color: var(--foreground);
+	}
+	.recent-effect:active > span {
+		opacity: 1;
 	}
 	.recent-picture {
 		position: relative;
