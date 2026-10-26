@@ -51,10 +51,13 @@
 		labelSize = 'small',
 		labelOrientation = 'horizontal'
 	}: Props = $props();
-	const title = $derived(titled ? control.title : '');
 	/** The chain overview and the browser draw the device's picture; the FX grid does not. */
 	const pictured = getContext<boolean>(PICTURE_CONTEXT) === true;
 	const picture = $derived(pictured && control.kind !== 'eq' ? control.picture : undefined);
+	// Over a picture the title would sit on it (user, 2026-10-26: "the label
+	// doesn't clash with the icon"); where pictures draw, the device is named
+	// above the control already (the chain cell's head, the tile's name band).
+	const title = $derived(titled && !picture ? control.title : '');
 	const mark = $derived(icon ?? (pictured && control.kind !== 'eq' ? control.icon : undefined));
 </script>
 
