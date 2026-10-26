@@ -366,7 +366,14 @@
   }
 
   function dragStart(cell: Cell, index: number, info: DragInfo) {
-    if (pressInControl || cell.kind === 'instrument' || !chainEl) return;
+    // A drag on a cell's control is that control's, and it opens the
+    // device's view as a tap on the cell does — every control here, not
+    // only the grid's tiles, which open their own (2026-10-26).
+    if (pressInControl) {
+      open(cell);
+      return;
+    }
+    if (cell.kind === 'instrument' || !chainEl) return;
     const node = chainEl.querySelector<HTMLElement>(`[data-cell-key="${CSS.escape(cell.key)}"]`);
     const origin = chainEl.getBoundingClientRect();
     const r = node?.getBoundingClientRect();
