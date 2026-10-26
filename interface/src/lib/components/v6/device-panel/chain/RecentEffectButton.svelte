@@ -71,7 +71,7 @@
 		const get = (ref: ParamRef) => found.values[resolveParam(ref)];
 		if (found.control.kind === 'xy') {
 			const at = found.control.read(get);
-			return { kind: found.control.picture, x: at.x, y: at.y };
+			return { kind: found.control.picture, x: at.x, y: at.y, variant: found.control.pictureVariant?.(get) };
 		}
 		return { kind: found.control.picture, x: found.control.read(get), y: 0 };
 	});
@@ -88,7 +88,7 @@
 		{#if curve}
 			<FilterCurve cutoff={curve.cutoff} resonance={curve.resonance} curveType={curve.type} width={300} height={300} curveColor="var(--muted-foreground)" />
 		{:else if picture}
-			<DevicePicture kind={picture.kind} x={picture.x} y={picture.y} ink="var(--muted-foreground)" />
+			<DevicePicture kind={picture.kind} x={picture.x} y={picture.y} variant={'variant' in picture ? picture.variant : undefined} ink="var(--muted-foreground)" />
 		{:else if mark}
 			<span class="recent-mark"><ControlGlyph name={mark} /></span>
 		{/if}

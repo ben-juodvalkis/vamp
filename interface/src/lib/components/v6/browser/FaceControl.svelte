@@ -65,7 +65,7 @@
 	{@const at = control.read(get)}
 	{@const curve = control.curve?.(get)}
 	{#snippet xyPicture()}
-		{#if picture}<DevicePicture kind={picture} x={at.x} y={at.y} ink={color.primary} />{/if}
+		{#if picture}<DevicePicture kind={picture} x={at.x} y={at.y} variant={control.pictureVariant?.(get)} ink={color.primary} />{/if}
 	{/snippet}
 	<DeviceXY
 		xValue={at.x}

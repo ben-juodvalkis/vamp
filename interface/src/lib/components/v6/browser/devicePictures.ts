@@ -68,8 +68,12 @@ const hash = (i: number) => {
 const circle = (cx: number, cy: number, r: number) => `M${f(cx - r)},${f(cy)}a${f(r)},${f(r)} 0 1,0 ${f(2 * r)},0a${f(r)},${f(r)} 0 1,0 ${f(-2 * r)},0`;
 const bar = (x: number, y: number, w: number, h: number) => `M${f(x)},${f(y)}h${f(w)}v${f(h)}h${f(-w)}Z`;
 
-/** The strokes of a picture at a control's position: `x` (a slider's level, or a pad's across) and `y` (a pad's up). */
-export function pictureStrokes(kind: PictureKind, x: number, y = 0): PictureStroke[] {
+/**
+ * The strokes of a picture at a control's position: `x` (a slider's level,
+ * or a pad's across) and `y` (a pad's up), and `variant`, a further reading
+ * a control can name (Tremolo's LFO shape).
+ */
+export function pictureStrokes(kind: PictureKind, x: number, y = 0, variant = 0): PictureStroke[] {
 	x = clamp01(x);
 	y = clamp01(y);
 	switch (kind) {
@@ -97,13 +101,30 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0): PictureStro
 			const amp = 6 + y * 28;
 			return [0, 0.35].map((phase, i) => ({ d: trace((u) => 50 + amp * Math.sin(2 * Math.PI * (u * cycles + phase))), o: i ? 0.45 : 0.8 }));
 		}
-		// Tremolo: one cycle of its swell (the user, 2026-10-26: simpler, "just
-		// one cycle"), deeper with its depth.
+		// Tremolo: one cycle of its LFO in the shape the Tremolo view shows
+		// (the user, 2026-10-26: "match the actual shape"): `variant` 0 saw
+		// down, 1 square, 2 sine, 3 triangle. Deeper with its depth.
 		case 'tremolo': {
 			const amp = 8 + y * 32;
+			const wave = (u: number) => {
+				switch (Math.round(variant)) {
+					case 0: return 1 - 2 * u;
+					case 1: return u < 0.5 ? 1 : -1;
+					case 3: return u < 0.25 ? 4 * u : u < 0.75 ? 2 - 4 * u : 4 * u - 4;
+					default: return Math.sin(2 * Math.PI * u);
+				}
+			};
+			const square = Math.round(variant) === 1;
+			const saw = Math.round(variant) === 0;
+			// The saw and the square rise from the floor first, as the view's tab draws them.
+			const d = square
+				? `M0,${f(50 + amp)}V${f(50 - amp)}H50V${f(50 + amp)}H100`
+				: saw
+					? `M2,${f(50 + amp)}V${f(50 - amp)}L100,${f(50 + amp)}`
+					: trace((u) => 50 - amp * wave(u));
 			return [
 				{ d: 'M0,50H100', o: 0.2 },
-				{ d: trace((u) => 50 - amp * Math.sin(2 * Math.PI * u)), o: 0.85 }
+				{ d, o: 0.85 }
 			];
 		}
 		// Drum Buss: a drum (user, 2026-10-26: "should show a drum"), its
@@ -156,12 +177,15 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0): PictureStro
 			const n = 2 + Math.round(x * 6);
 			return [{ d: trace((u) => 20 + (55 + y * 20) * Math.pow(Math.abs(Math.cos(Math.PI * u * n)), 0.6 + y * 2), 160), o: 0.8 }];
 		}
-		// Redux: a sine held in steps, coarser as the sample rate drops (up).
+		// Redux: a sine held in steps, coarser as the sample rate drops (up):
+		// three quarters of a cycle and big steps (the user, 2026-10-26: half
+		// the cycles, more jagged).
 		case 'stairs': {
-			const steps = Math.round(4 + (1 - y) * 28);
+			const steps = Math.round(4 + (1 - y) * 5);
+			const cycles = 0.75;
 			return [
-				{ d: trace((u) => 50 - 36 * Math.sin(2 * Math.PI * (Math.floor(u * steps) / steps) * 1.5), 240), o: 0.85 },
-				{ d: trace((u) => 50 - 36 * Math.sin(2 * Math.PI * u * 1.5)), o: 0.25 }
+				{ d: trace((u) => 50 - 38 * Math.sin(2 * Math.PI * (Math.floor(u * steps) / steps) * cycles), 240), o: 0.85 },
+				{ d: trace((u) => 50 - 38 * Math.sin(2 * Math.PI * u * cycles)), o: 0.25 }
 			];
 		}
 		// Saturator: a sine through its waveshaper, its peaks clipped flatter

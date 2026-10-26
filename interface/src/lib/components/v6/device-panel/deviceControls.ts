@@ -27,6 +27,7 @@ import {
 	AUTO_PAN,
 	frequencyLabel,
 	frequencyValue,
+	shapeIndex,
 	syncRateLabel,
 	tileAmount,
 	tileFrequency,
@@ -66,6 +67,8 @@ export interface XyControl {
 	title: string;
 	/** Its picture behind the pad, on a chain cell and a browser tile (`devicePictures`). */
 	picture?: PictureKind;
+	/** A further reading the picture draws from (Tremolo's LFO shape), beyond the pad's position. */
+	pictureVariant?(get: Get): number;
 	/** A mark beside its title. */
 	icon?: ControlGlyphName;
 	read(get: Get): { x: number; y: number };
@@ -197,6 +200,8 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 		control: {
 			kind: 'xy',
 			title: 'Tremolo', picture: 'tremolo',
+			// The LFO shape the Tremolo view's tab shows (the user, 2026-10-26): 0 saw down, 1 square, 2 sine, 3 triangle.
+			pictureVariant: (g) => shapeIndex(g(AUTO_PAN.waveform) ?? 2, g(AUTO_PAN.shape) ?? 0) ?? 2,
 			read: (g) => {
 				const synced = (g(AUTO_PAN.lfoType) ?? 1) >= 0.5;
 				return {

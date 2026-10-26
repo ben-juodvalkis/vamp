@@ -31,6 +31,13 @@ describe('device pictures follow their control', () => {
 		expect(spread(1)).toBeGreaterThan(spread(0));
 	});
 
+	it('Tremolo draws the LFO shape its view shows: saw down, square, sine, triangle', () => {
+		const line = (variant: number) => pictureStrokes('tremolo', 0.5, 1, variant)[1].d;
+		expect(line(0)).toMatch(/^M2,[\d.]+V[\d.]+L100,[\d.]+$/);
+		expect(line(1)).toMatch(/^M0,[\d.]+V[\d.]+H50V[\d.]+H100$/);
+		expect(new Set([0, 1, 2, 3].map(line)).size).toBe(4);
+	});
+
 	it('every kind draws, at every corner, and holds still for the same values', () => {
 		const kinds: PictureKind[] = ['rings', 'waves', 'tremolo', 'drum', 'gate', 'comb', 'notches', 'stairs', 'shaper', 'stompbox', 'eqcurve', 'wheels', 'tail', 'stack', 'compress', 'ratio', 'repeat', 'scatter', 'smear', 'glitch', 'octaves', 'reverse', 'ringmod', 'chance', 'velocity', 'arp', 'chord'];
 		for (const k of kinds)
