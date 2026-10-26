@@ -351,8 +351,8 @@ export const TOURS = {
 			// shelf so --real-data draws each one's picture. Echo is on the chain
 			// already, so it is skipped.
 			...[
-				['chain-recents', 'a short chain on one row: a narrow block, four in one column', 3],
-				['chain-recents-crowded', 'a chain on two rows: the block spans the empty cell, eight in as many columns as fit', 5]
+				['chain-recents', 'a chain on one row: eight in two columns of four', 3],
+				['chain-recents-crowded', 'a chain on two rows: six in three columns of two', 5]
 			].map(([name, what, n]) => ({
 				name,
 				description: `The Recent column (ADR-484): ${what}; Echo is on the chain, so it is skipped`,

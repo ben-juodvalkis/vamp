@@ -85,7 +85,6 @@
   import {
     arrange,
     chainGrid,
-    recentSpan,
     recentLayout,
     clampChainIndex,
     moved,
@@ -394,36 +393,11 @@
 
   const grid = $derived(chainGrid(drawn.length + (recentPool.length > 0 ? 1 : 0), CHAIN_WRAP_AFTER));
   /*
-   * The Recent block sizes itself (the user, 2026-10-26: "be intelligent
-   * about this"): it spans the empty cells the grid leaves in its row
-   * (`recentSpan`), and takes as many columns as keep each tile at least
-   * as wide as the side bars, up to four (`recentLayout`): one column of
-   * four when narrow, else eight in 2 x 4, 3 x 3 or 4 x 2. Measured: the
-   * block's width against a probe as wide as `--sidebar-width`, which
-   * scales with the screen.
+   * The Recent block is one cell: two columns of four on a one-row chain,
+   * three columns of two once it wraps to two rows and the cell is short
+   * and wide (`recentLayout`, the user, 2026-10-26).
    */
-  /** The block's gap, as `.chain-recents` sets it. */
-  const RECENT_GAP = 4;
-  const recentCells = $derived(recentSpan(drawn.length, grid));
-  let recentsEl = $state<HTMLElement | null>(null);
-  let sidebarProbe = $state<HTMLElement | null>(null);
-  let recentsWidth = $state(0);
-  let sidebarWidth = $state(120);
-  $effect(() => {
-    const el = recentsEl;
-    const probe = sidebarProbe;
-    if (!el || !probe || typeof ResizeObserver === 'undefined') return;
-    const measure = () => {
-      recentsWidth = el.clientWidth;
-      sidebarWidth = probe.offsetWidth || 120;
-    };
-    const obs = new ResizeObserver(measure);
-    obs.observe(el);
-    obs.observe(probe);
-    measure();
-    return () => obs.disconnect();
-  });
-  const recentGrid = $derived(recentLayout(recentsWidth, sidebarWidth, RECENT_GAP));
+  const recentGrid = $derived(recentLayout(grid.rows));
   const recents = $derived(recentPool.slice(0, recentGrid.shown));
 
   /** The cell position under a point, by the grid's geometry at lift — not the cells, which are sliding. */
@@ -740,16 +714,12 @@
     <!-- Recent: the last effects added, grey; a tap adds one here again. -->
     <div
       class="chain-recents"
-      class:crowded={recentGrid.columns === 1}
-      style:grid-column="span {recentCells}"
       style:--recent-cols={recentGrid.columns}
       style:--recent-rows={recentGrid.rows}
-      bind:this={recentsEl}
       data-debug="chain-recents"
       role="group"
       aria-label="Recent effects"
     >
-      <span class="sidebar-probe" bind:this={sidebarProbe} aria-hidden="true"></span>
       {#each recents as recent (recent.fullPath)}
         <RecentEffectButton {recent} />
       {/each}
@@ -880,26 +850,6 @@
     grid-template-columns: repeat(var(--recent-cols, 2), minmax(0, 1fr));
     grid-template-rows: repeat(var(--recent-rows, 4), minmax(0, 1fr));
     gap: 4px;
-  }
-  /* As wide as the side bars, to measure against; takes no room. */
-  .sidebar-probe {
-    position: absolute;
-    width: var(--sidebar-width, 120px);
-    height: 0;
-    visibility: hidden;
-    pointer-events: none;
-  }
-  /* One wide, short row each: the picture beside the name. */
-  .chain-recents.crowded > :global(.recent-effect) {
-    flex-direction: row;
-    justify-content: flex-start;
-    gap: 10px;
-    padding: 0 10px;
-  }
-  .chain-recents.crowded > :global(.recent-effect .recent-picture) {
-    flex: 0 0 44px;
-    align-self: center;
-    height: 70%;
   }
   .chain-cell.off > :not(.cell-head) {
     opacity: 0.45;

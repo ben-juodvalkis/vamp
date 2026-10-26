@@ -173,24 +173,10 @@ export function chainGrid(count: number, wrapAfter: number): { cols: number; row
 }
 
 /**
- * How many grid cells the chain's Recent block spans (ADR-484): one, plus
- * the empty cells the grid leaves at its end when they share its row (the
- * user, 2026-10-26: "all the dead space"). `devices` is the cells before
- * it; the + cell follows it, the empties follow the + cell.
+ * The Recent block's tiles (ADR-484; the user, 2026-10-26): one cell, two
+ * columns of four on a chain of one row, three columns of two once the
+ * chain wraps to two rows and its cells are short and wide.
  */
-export function recentSpan(devices: number, grid: { cols: number; rows: number }): number {
-	const empty = Math.max(0, grid.cols * grid.rows - (devices + 2));
-	const col = devices % grid.cols;
-	return col + 2 + empty <= grid.cols ? 1 + empty : 1;
-}
-
-/**
- * The Recent block's tiles for a block `width` px wide: as many columns as
- * keep each at least `minTile` wide (the side bars' width), up to four;
- * eight tiles in two or more columns, four in one (the user, 2026-10-26).
- */
-export function recentLayout(width: number, minTile: number, gap: number): { columns: number; rows: number; shown: number } {
-	const columns = Math.max(1, Math.min(4, Math.floor((width + gap) / (minTile + gap))));
-	const shown = columns === 1 ? 4 : 8;
-	return { columns, rows: Math.ceil(shown / columns), shown };
+export function recentLayout(chainRows: number): { columns: number; rows: number; shown: number } {
+	return chainRows > 1 ? { columns: 3, rows: 2, shown: 6 } : { columns: 2, rows: 4, shown: 8 };
 }
