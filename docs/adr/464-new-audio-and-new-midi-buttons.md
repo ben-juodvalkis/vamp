@@ -1,4 +1,4 @@
-# ADR-462: New Audio and New MIDI Are a Column After the Last Strip
+# ADR-464: New Audio and New MIDI Are a Column After the Last Strip
 
 ## Status
 **Accepted** (2026-10-23). Branch `foot-hold-next-take`: `c98fdfd`,
