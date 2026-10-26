@@ -222,22 +222,23 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0): PictureStro
 				{ d: trace((u) => 100 - 100 * (u < th ? u : th + (u - th) * 0.25)), o: 0.85 }
 			];
 		}
-		// Multiband: three bands side by side, bass, mid and treble (the user,
-		// 2026-10-26), each 1 : 1 at the middle, compression flattening the
-		// top, expansion steepening the bottom.
+		// Multiband: three compressor knees side by side, bass, mid and treble,
+		// split by two dividers (the user's sketch, 2026-10-26): a steep rise
+		// to the threshold, then a flatter line above it, flatter the higher
+		// the ratio. A mild knee even at 1 : 1, so it reads as a compressor.
 		case 'ratio': {
-			const slope = x >= 0.5 ? 1 - (x - 0.5) * 1.8 : 1 + (0.5 - x) * 3;
-			return [0, 1, 2].flatMap((band) => {
-				const left = 2 + band * 34;
-				const w = 28;
-				const at = (u: number) => `${f(left + u * w)},${f(90 - 80 * Math.max(0, Math.min(1, 0.5 + (u - 0.5) * slope)))}`;
-				let d = '';
-				for (let i = 0; i <= 24; i++) d += `${i ? 'L' : 'M'}${at(i / 24)}`;
-				return [
-					{ d: `M${f(left)},90L${f(left + w)},10`, o: 0.2 },
-					{ d, o: 0.85 }
-				];
+			const upper = 0.5 - Math.max(0, x - 0.5) * 0.8;
+			const knees = [0, 1, 2].map((band) => {
+				const left = band * (100 / 3);
+				const kx = left + 11;
+				const ky = 44;
+				const ex = left + 27;
+				return `M${f(left + 5)},84L${f(kx)},${ky}L${f(ex)},${f(ky - (ex - kx) * upper)}`;
 			});
+			return [
+				{ d: 'M33.3,14V86M66.7,14V86', o: 0.35 },
+				{ d: knees.join(''), o: 0.9 }
+			];
 		}
 		// Beat Repeat: a slice and its repeats, more the likelier.
 		case 'repeat': {
