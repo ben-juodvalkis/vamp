@@ -59,6 +59,13 @@
 	// above the control already (the chain cell's head, the tile's name band).
 	const title = $derived(titled && !picture ? control.title : '');
 	const mark = $derived(icon ?? (pictured && control.kind !== 'eq' ? control.icon : undefined));
+	/** The slider's filled region as a clip-path, as `DeviceSlider` clips its inverse label: from the floor, or from `center`. */
+	function fillClip(level: number, center?: number): string {
+		const lo = (center === undefined ? 0 : Math.min(center, level)) * 100;
+		const hi = (center === undefined ? level : Math.max(center, level)) * 100;
+		if (hi - lo <= 0) return 'inset(0 0 100% 0)';
+		return orientation === 'vertical' ? `inset(${100 - hi}% 0 ${lo}% 0)` : `inset(0 ${100 - hi}% 0 ${lo}%)`;
+	}
 </script>
 
 {#if control.kind === 'xy'}
@@ -88,9 +95,14 @@
 	     Drive, 2026-10-26: a bare tile before). -->
 	<div class="slider-face" class:soft style="--level: {level}; --level-ink: {color.primary};">
 		{#if picture}
-			<!-- Over a solid fill the device's ink would vanish into it: the
-			     foreground reads on the fill and the well alike. -->
-			<div class="slider-picture"><DevicePicture kind={picture} x={level} ink={soft ? color.primary : 'var(--foreground)'} /></div>
+			<!-- Two layers, as the slider draws its label: the device's ink on
+			     the well, and a copy clipped to the fill in the on-fill ink, so
+			     the picture reads wherever the fill has risen over it (the
+			     user, 2026-10-26). -->
+			<div class="slider-picture"><DevicePicture kind={picture} x={level} ink={color.primary} /></div>
+			<div class="slider-picture slider-picture--inverse" style="clip-path: {fillClip(level, control.center)};">
+				<DevicePicture kind={picture} x={level} ink="var(--flat-on-fg)" />
+			</div>
 		{/if}
 		<DeviceSlider
 			value={level}
@@ -150,6 +162,10 @@
 	}
 	.slider-face.soft .slider-picture {
 		opacity: 0.8;
+	}
+	.slider-picture--inverse,
+	.slider-face.soft .slider-picture--inverse {
+		opacity: 0.9;
 	}
 	.slider-face.soft::after {
 		content: '';
