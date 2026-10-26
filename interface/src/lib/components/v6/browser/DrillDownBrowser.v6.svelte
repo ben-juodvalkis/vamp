@@ -72,6 +72,7 @@
 	import ControlGlyph from '../device-panel/ControlGlyph.svelte';
 	import BrowserPresetFace from './BrowserPresetFace.svelte';
 	import { startPresetDrag, type PresetDrag } from '$lib/services/presetDragLoad.svelte';
+	import { openViewWhenLanded } from '$lib/services/effectView.svelte';
 	import type { Writes } from '$lib/components/v6/device-panel/deviceControls';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { sectionInks } from './utils/sectionInks';
@@ -934,9 +935,12 @@
 			reportLoadFailure(preset.name, new Error('A MIDI effect goes on a MIDI track'));
 			return;
 		}
+		// Its view opens once Live reports the device (user, 2026-10-26).
+		const cancelView = openViewWhenLanded({ trackPath, padPath: pad?.padPath ?? '', name: preset.name });
 		try {
 			await addPresetToChain(trackPath, pad?.padPath ?? '', preset.fullPath, ...placeArgs(preset));
 		} catch (err) {
+			cancelView();
 			logger.error('Effect load failed', { component: 'DrillDownBrowser', err });
 			reportLoadFailure(preset.name, err);
 		}

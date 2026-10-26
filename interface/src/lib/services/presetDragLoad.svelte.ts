@@ -17,6 +17,7 @@ import { resolveParam, type Writes } from '$lib/components/v6/device-panel/devic
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
 import { addPresetToChain } from './deviceMoveService';
+import { openEffectView } from './effectView.svelte';
 import { logger } from '$lib/utils/logger';
 
 const LAND_TIMEOUT_MS = 5000;
@@ -77,7 +78,8 @@ export function startPresetDrag(opts: {
 			const device = landedDevice(chain(), opts.className, opts.name, before);
 			if (!device) return;
 			landedPath = device.devicePath;
-			fxChainStore.appoint(device.devicePath);
+			// Its view follows the load, as a tap's does (`openViewWhenLanded`).
+			openEffectView(device, { pickScope: opts.padPath || opts.trackPath, padScoped: !!opts.padPath });
 			flush();
 			if (ended) dispose();
 		});

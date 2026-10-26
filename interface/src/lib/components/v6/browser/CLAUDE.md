@@ -371,7 +371,10 @@ source and the Phase 4 switch that chose between them.
   is not installed is **greyed and disabled**, with "Not installed" on its
   face (the iPad has no tooltips). An effect preset loads (Effect segment,
   ADR-478): a tap adds it to the selected track's chain, or the scoped pad's,
-  through `device/load` with no track prep (`addEffect`). A MIDI effect (a
+  through `device/load` with no track prep (`addEffect`), and once Live
+  reports the device (named for the file) its central view opens, as a tap
+  on its chain cell opens it (`services/effectView`; a drag's load too,
+  user 2026-10-26). A MIDI effect (a
   native one, a Max one or a MIDI effect rack, `MIDI_EFFECT_KINDS`) is
   greyed and disabled unless the selected track is a MIDI track, "MIDI
   tracks only" on its face, and `addEffect` refuses one there too (a random

@@ -76,21 +76,20 @@
   import { flip } from 'svelte/animate';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
-  import { fxChainStore, RACK_PICK } from '$lib/stores/v6/fxChainStore.svelte';
+  import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
   import { DEVICE_PRESETS, DEVICE_FAMILY_INKS } from '$lib/config/devicePresets';
   import ControlGlyph from './ControlGlyph.svelte';
   import { DEVICE_CLASS_GLYPHS, DEVICE_KEY_GLYPHS, glyphForName, type ControlGlyphName } from '$lib/config/controlGlyphMap';
-  import { matchesSlot, pickSlotDevice } from '$lib/utils/deviceSlotMatch';
-  import { openDeviceView, activeDrumRackScope, selectedDrumRack } from '$lib/services/deviceViewRouter.svelte';
+  import { pickSlotDevice } from '$lib/utils/deviceSlotMatch';
+  import { activeDrumRackScope, selectedDrumRack } from '$lib/services/deviceViewRouter.svelte';
+  import { effectTypeOf, openEffectView } from '$lib/services/effectView.svelte';
   import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
   import { usePadChainRows } from '$lib/components/v6/central/usePadChainRows.svelte';
   import { DEVICE_TYPE_INSTRUMENT, VM_PAD_FX, parseVmPadFx, padTileLabel } from '$lib/services/drumVirtualMacros';
-  import { isViewRegistered } from '$lib/components/v6/central/viewRegistry';
   import { trackDeviceGlance } from '$lib/components/v6/tracks/composables/useTrackDevice.svelte';
   import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import { selectedTrackInk } from '$lib/utils/selectedTrackInk';
-  import { CHAIN_DEVICE_VIEW } from '$lib/components/v6/central/views/chainDeviceView';
   import TrackDeviceView from '$lib/components/v6/tracks/TrackStrip/components/TrackDeviceView.svelte';
   import type { DeviceRecord } from '$lib/stores/v3/normalized.svelte';
 
@@ -279,12 +278,7 @@
     return s.replace(/([a-z])([A-Z])/g, '$1 $2');
   }
 
-  function presetKeyFor(device: DeviceRecord): string | null {
-    for (const [key, config] of Object.entries(DEVICE_PRESETS)) {
-      if (config.expectedClassName && matchesSlot(device, config)) return key;
-    }
-    return null;
-  }
+  const presetKeyFor = (device: DeviceRecord) => effectTypeOf(device);
 
   function macrosOf(device: DeviceRecord): { name: string; value: number }[] {
     const names = selectedTrackStore.paramNamesForDevice(device as never);
@@ -428,36 +422,17 @@
 
   function open(cell: Cell) {
     const { device } = cell;
-    fxChainStore.appoint(device.devicePath, { force: true });
-    if (padScope) {
-      // The pad's instrument is what the Drum Rack view already shows; an
-      // effect opens in its pane (the router routes under the scope).
-      if (cell.kind === 'instrument') return;
-      if (cell.presetKey && isViewRegistered('device', cell.presetKey)) {
-        fxChainStore.pick(pickScope, cell.presetKey, device.devicePath);
-        openDeviceView(cell.presetKey);
-      }
-      return;
-    }
     if (cell.kind === 'instrument') {
+      // The pad's instrument is what the Drum Rack view already shows.
+      if (padScope) return;
+      fxChainStore.appoint(device.devicePath, { force: true });
       if (glance.instrumentViewType) {
         centralDisplayStore.setView('instrument', glance.instrumentViewType, { instrument: glance.instrument });
         return;
       }
-    } else if (cell.presetKey === 'sequencer') {
-      centralDisplayStore.setView('permute', undefined, null, 'Permute');
-      return;
-    } else if (cell.presetKey && isViewRegistered('device', cell.presetKey)) {
-      fxChainStore.pick(trackPath, cell.presetKey, device.devicePath);
-      openDeviceView(cell.presetKey);
-      return;
-    } else if (cell.kind === 'rack') {
-      fxChainStore.pick(trackPath, RACK_PICK, device.devicePath);
-      openDeviceView('audio-effect-rack');
-      return;
     }
-    fxChainStore.pick(trackPath, CHAIN_DEVICE_VIEW, device.devicePath);
-    openDeviceView(CHAIN_DEVICE_VIEW);
+    // An effect: its view, as a browser load's (`services/effectView`).
+    openEffectView(device, { pickScope, padScoped: !!padScope });
   }
 </script>
 
