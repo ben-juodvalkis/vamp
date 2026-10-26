@@ -401,6 +401,7 @@
                 actionPressed={slotIndex === pressedSlot && pressedAction}
                 actionWidthPx={tapFires ? 0 : actionWidthPx}
                 glyphCentered={tapFires}
+                countTrackPath={tapFires ? trackPath : ''}
                 sceneSelected={slotIndex === selectedSceneIndex}
                 pedalTarget={isSelectedTrack && slotIndex === selectedSceneIndex}
                 triggered={triggeredSlotsStore.has(`${trackPath}/slots/${slotIndex}`)}
