@@ -374,6 +374,16 @@ describe('drillDownModel — packGroupedSections', () => {
 });
 
 describe('drillDownModel — computeGroupedGridLayout', () => {
+	it('counts small sections as packed into shared rows, so the tiles grow into the height that frees', () => {
+		// The rig's effects Place (2026-10-26): seven folders on one screen.
+		const base = { width: 1700, height: 1200, groups: [8, 4, 4, 2, 5, 2, 5, 3], headerCount: 8, headerHeight: 44, sectionGap: 16, minTile: 112, minTileHeight: 78, targetAspect: 1.5 };
+		const apart = computeGroupedGridLayout(base);
+		const packed = computeGroupedGridLayout({ ...base, headers: base.groups.map(() => true) });
+		expect(packed.rows).toBeLessThan(apart.rows);
+		expect(packed.tileHeight).toBeGreaterThan(apart.tileHeight);
+		expect(packed.scrolls).toBe(false);
+	});
+
 	// The component's actual comfort constraints for preset grids.
 	const STAGE = {
 		width: 1100,

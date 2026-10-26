@@ -377,6 +377,9 @@
 				height,
 				groups: presetGroups.map((g) => g.presets.length),
 				headerCount: presetGroups.filter((g) => g.folder !== null).length,
+				// Counted as drawn: small sections share rows (ADR-409), so the
+				// tiles grow into the height the packing frees.
+				headers: presetGroups.map((g) => g.folder !== null),
 				headerHeight: SECTION_HEADER_H,
 				sectionGap: SECTION_GAP,
 				...PRESET_COMFORT
