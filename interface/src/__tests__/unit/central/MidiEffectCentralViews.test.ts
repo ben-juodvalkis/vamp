@@ -92,6 +92,25 @@ describe('MIDI-effect central views (ADR-478)', () => {
 		expect(container.textContent).toContain('Rand Oct');
 	});
 
+	it('the Random view draws Choices, Interval, Sign, Mode and Scale, lit from the device, and writes them', async () => {
+		// Measured: 2 Choices, 3 Interval, 4 Sign (Add Sub Bi), 5 Mode (Rnd Alt), 6 Use Current Scale.
+		seed([midiDevice('Random', 'MidiRandom', { 1: 0.5, 2: 1, 3: 12, 4: 2, 5: 1, 6: 0 })]);
+		const { container, getByText } = render(RandomCentralView);
+		await tick();
+		const sliders = Array.from(container.querySelectorAll('[role="slider"]')).map((s) => s.getAttribute('aria-label')?.split(':')[0]);
+		expect(sliders).toEqual(expect.arrayContaining(['Choices', 'Interval']));
+		expect(getByText('Bi').classList.contains('active')).toBe(true);
+		expect(getByText('Alt').classList.contains('active')).toBe(true);
+		const wrote = (param: number) =>
+			sendMock.mock.calls.filter(([addr, args]) => addr === '/looping/v3/param/set' && (args as unknown[])[0] === `${DEVICE}/params/${param}`).map(([, args]) => (args as unknown[])[1]);
+		await fireEvent.click(getByText('Sub'));
+		await fireEvent.click(getByText('Rnd'));
+		await fireEvent.click(getByText('Scale'));
+		expect(wrote(4)).toEqual([1]);
+		expect(wrote(5)).toEqual([0]);
+		expect(wrote(6)).toEqual([1]);
+	});
+
 	it('the Chord view toggles a shift between its interval and 0', async () => {
 		seed([midiDevice('Chord', 'MidiChord', { 1: 0, 5: 24 })]);
 		const { getByText } = render(ChordCentralView);

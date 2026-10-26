@@ -306,6 +306,11 @@ tested against the same numbers in `deviceControls.presets.test.ts`).
   dumped, deleted, 2026-10-26: 1 Semitones -12..12, 2 Mix 0..100, 3 Tone
   0..100, 4 Response 0..2, 5 Quality 0..2). The app matches it by
   `aliases` in `devicePresets.ts`.
+- **Random** (MidiRandom, read off the set's "Random Octave" with
+  device_dump, 2026-10-26): 1 Chance 0..1, 2 Choices 1..24, 3 Interval
+  1..24, 4 Sign 0..2 (Add, Sub, Bi), 5 Mode 0..1 (Rnd, Alt), 6 Use Current
+  Scale 0..1. The same day `device/load` of `Random.adv` onto a MIDI track
+  added nothing and reported no error, twice (cause not found).
 - **A Max device saved as an `.adv`** (Pitch Hack) keeps each Live
   parameter as `<MxDIntParameter>` / `<MxDFloatParameter>` with its
   `ShortName` and, under `<Timeable>`, its `Manual` value: Dry / Wet 100,
