@@ -94,7 +94,7 @@ export interface SavedPreset {
 
 export interface DeviceControl {
 	control: Control;
-	/** The LOM values a preset file opens at, for the parameters the control uses; null when the file lacks them. Absent: the control's rest values (a Max device's `.amxd`). */
+	/** The LOM values a preset file opens at, for the parameters the control uses; null when the file lacks them. Absent: the control's rest values. */
 	fromPreset?(saved: SavedPreset): Record<number, number> | null;
 }
 
@@ -118,7 +118,14 @@ const macroSlider = (title: string, macro = 1): SliderControl => ({
 /** A rack preset's macro: `MacroControls.<n>` is `parameters[n + 1]`, value for value (measured on the Guitar rack). */
 const macroFromPreset = (s: SavedPreset) => (s.params['MacroControls.0'] === undefined ? null : { 1: s.params['MacroControls.0'] });
 
-const GLITCH_MIX: ParamRef = { name: GLITCH_LOOP_PARAMS.mix.name, index: GLITCH_LOOP_PARAMS.mix.index };
+const GLITCH_MIX = { name: GLITCH_LOOP_PARAMS.mix.name, index: GLITCH_LOOP_PARAMS.mix.index };
+const BLUR_MIX = { name: 'Mix', index: 4 };
+const COMB = { tune: { name: 'Tune', index: 1 }, mix: { name: 'Mix', index: 2 }, feedback: { name: 'Feedback', index: 3 } };
+const OCTAVE_MIX = { name: 'Mix', index: OCTAVE_MIX_PARAM };
+const CHANCE = { name: 'Chance', index: 1 };
+/** A Max device's saved values, by name, at each parameter's fallback index; null when the file lacks one. */
+const byName = (s: SavedPreset, ...refs: Array<{ name: string; index: number }>) =>
+	all(Object.fromEntries(refs.map((r) => [r.index, s.params[r.name]])));
 const SHIFTER = { ringMod: 18, mode: 32, ring: 2, ringModMax: 0.75 } as const;
 
 export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> = {
@@ -389,22 +396,27 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 				? null
 				: { [SHIFTER.ringMod]: clamp01(Math.log10(s.params.ModBasedShifting_RingMod_Coarse) / 4), [SHIFTER.mode]: s.params.Global_ShifterMode ?? 0 }
 	},
-	// Max devices: an `.amxd` saves no values the server reads, so a preset
-	// tile rests where the control rests.
+	// Max devices (2026-10-26): parameters by the name Live gives them, the
+	// `.amxd`'s `parameter_shortname`, with the measured index as fallback;
+	// the file saves each at the value Live opens it at (measured: Octave
+	// Mix 100, Comb Mix and Feedback 17.58, Blur Mix 0, Note Chance 100,
+	// GlitchLoop Dry/Wet 35.7033), in Live's units.
 	smudge: {
-		control: { kind: 'slider', title: 'Blur', read: (g) => clamp01((g(4) ?? 0) / 100), write: (t) => [[4, clamp01(t) * 100]] }
+		control: { kind: 'slider', title: 'Blur', read: (g) => clamp01((g(BLUR_MIX) ?? 0) / 100), write: (t) => [[BLUR_MIX, clamp01(t) * 100]] },
+		fromPreset: (s) => byName(s, BLUR_MIX)
 	},
 	comb: {
 		control: {
 			kind: 'xy',
 			title: 'Comb',
-			read: (g) => ({ x: ((g(1) ?? 0) + 24) / 48, y: clamp01((g(3) ?? 17.58) / 100) }),
+			read: (g) => ({ x: ((g(COMB.tune) ?? 0) + 24) / 48, y: clamp01((g(COMB.feedback) ?? 17.58) / 100) }),
 			write: (x, y) => [
-				[1, -24 + 48 * x],
-				[2, y * 100],
-				[3, y * 100]
+				[COMB.tune, -24 + 48 * x],
+				[COMB.mix, y * 100],
+				[COMB.feedback, y * 100]
 			]
-		}
+		},
+		fromPreset: (s) => byName(s, COMB.tune, COMB.mix, COMB.feedback)
 	},
 	glitchLoop: {
 		control: {
@@ -412,18 +424,21 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 			title: 'Glitch',
 			read: (g) => clamp01((g(GLITCH_MIX) ?? 0) / GLITCH_LOOP_PARAMS.mix.max),
 			write: (t) => [[GLITCH_MIX, clamp01(t) * GLITCH_LOOP_PARAMS.mix.max]]
-		}
+		},
+		fromPreset: (s) => byName(s, GLITCH_MIX)
 	},
 	octave: {
 		control: {
 			kind: 'slider',
 			title: 'Pitch',
-			read: (g) => clamp01((g(OCTAVE_MIX_PARAM) ?? 0) / OCTAVE_MIX_MAX),
-			write: (t) => [[OCTAVE_MIX_PARAM, clamp01(t) * OCTAVE_MIX_MAX]]
-		}
+			read: (g) => clamp01((g(OCTAVE_MIX) ?? 0) / OCTAVE_MIX_MAX),
+			write: (t) => [[OCTAVE_MIX, clamp01(t) * OCTAVE_MIX_MAX]]
+		},
+		fromPreset: (s) => byName(s, OCTAVE_MIX)
 	},
 	chance: {
-		control: { kind: 'slider', title: 'Chance', readout: 1, read: (g) => clamp01((g(1) ?? 100) / 100), write: (t) => [[1, Math.round(clamp01(t) * 100)]] }
+		control: { kind: 'slider', title: 'Chance', readout: CHANCE, read: (g) => clamp01((g(CHANCE) ?? 100) / 100), write: (t) => [[CHANCE, Math.round(clamp01(t) * 100)]] },
+		fromPreset: (s) => byName(s, CHANCE)
 	},
 	// Racks the app knows: macro 1, as their tiles and views drive it.
 	guitar: { control: macroSlider('Gtr'), fromPreset: macroFromPreset },
@@ -448,7 +463,7 @@ const RACK_CLASSES = new Set(['AudioEffectGroupDevice', 'MidiEffectGroupDevice']
 /**
  * The `DEVICE_PRESETS` key a preset file is: a native class names its key
  * outright; a Max device or a rack goes by the name Live gives it, which is
- * the file's. An `.amxd`'s class is not read (`''`), so its name decides.
+ * the file's.
  */
 export function deviceKeyForPreset(className: string, name: string): string | null {
 	for (const [key, config] of Object.entries(DEVICE_PRESETS)) {

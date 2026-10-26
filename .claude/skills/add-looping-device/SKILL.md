@@ -65,10 +65,16 @@ node owner/probes/preset_rail_sample.js 0 "<abs path>" "" "" <scratchpad>/rail.j
   Compressor's agree). Below a rail's first label Live puts 0.
 - Live only loads a preset its browser can see (a ticked Place or the User
   Library), not a Core Library path.
-- A Max device's `.amxd` saves nothing the server reads: its browser tiles
-  rest at the control's rest values, and it needs no `fromPreset`. Its
-  parameter indices can shift build to build: reference them by name with
-  the measured index as the fallback (`{ name: 'Dry/Wet', index: 19 }`).
+- A Max device's `.amxd` is a header and its patcher JSON (a frozen one,
+  `mx@c`, embeds several). Each `live.*` box saves its value as
+  `parameter_initial`; Live names the parameter by its
+  `parameter_shortname` (Blur's "Loop Rate" is "Rate"). `parseAmxd` reads
+  them, so `fromPreset` reads them by that name (`byName`). Check the
+  values against the device loaded in Live (`preset_measure.js` takes an
+  `.amxd` too); a patch can set a value on load (Blur's Rate opens at 92,
+  not the 22 it saves). Reference a Max device's parameters by name with
+  the measured index as the fallback (`{ name: 'Dry/Wet', index: 19 }`):
+  its indices can shift build to build.
 
 Write each measurement into `docs/reference/live-api-measurements.md` ("A
 device preset's saved values") and add the case to

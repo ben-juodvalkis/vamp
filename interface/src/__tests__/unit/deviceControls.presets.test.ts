@@ -24,6 +24,12 @@ const CASES: Array<{ name: string; preset: string; className: string; params: Re
 	{ name: "Redux2", preset: "Redux", className: "Redux2", params: {"On":1,"SampleRate":40000,"Jitter":0,"BitDepth":16,"QuantizerShape":0,"QuantizerDcShift":0,"EnablePreFilter":0,"EnablePostFilter":1,"PostFilterValue":0,"DryWet":1}, labels: {}, live: {"1":1,"8":0.5}, tol: {} },
 	{ name: "Compressor2", preset: "Compressor", className: "Compressor2", params: {"On":1,"Threshold":1.99526238,"Ratio":4,"ExpansionRatio":1.14999998,"Attack":2,"Release":50,"AutoReleaseControlOnOff":0,"Gain":0,"GainCompensation":0,"DryWet":1,"Model":1,"LegacyModel":1,"LogEnvelope":1,"LegacyEnvFollowerMode":0,"Knee":6,"LookAhead":0,"SideListen":0,"OnOff":0,"Volume":1,"SideChainEq_On":0,"SideChainEq_Mode":3,"SideChainEq_Freq":97.9965515}, labels: {}, live: {"1":1}, tol: {} },
 	{ name: "Shifter", preset: "Shifter", className: "Shifter", params: {"On":1,"Lfo_Amount":0,"Lfo_AmountPitch":0,"Lfo_Waveform":1,"Lfo_SyncOn":0,"Lfo_RateHz":0.4999999404,"Lfo_SyncedRate":12,"Lfo_SpinOn":1,"Lfo_PhaseOffset":180,"Lfo_SpinAmount":0,"Lfo_Offset":0,"Lfo_SHWidth":0,"Lfo_DutyCycle":0,"Pitch_Coarse":0,"Pitch_Fine":0,"Pitch_WindowSize":0.07999999076,"ModBasedShifting_Fine":-1,"ModBasedShifting_FShift_Coarse":0,"ModBasedShifting_RingMod_Coarse":1,"ModBasedShifting_RingMod_Drive":0,"ModBasedShifting_RingMod_DriveAmount":0,"MidiPitch_Glide":0,"EnvelopeFollower_On":0,"EnvelopeFollower_Attack":0.006000000052,"EnvelopeFollower_Release":0.200000003,"EnvelopeFollower_AmountHz":0,"EnvelopeFollower_AmountPitch":0,"Delay_On":0,"Delay_SyncOn":1,"Delay_TimeSeconds":0.2499999702,"Delay_SyncedTime":9,"Delay_Feedback":0,"Global_ShifterMode":2,"Global_Tone":22000,"Global_Wide":0,"Global_DryWet":1}, labels: {}, live: {"18":0,"32":2}, tol: {} },
+	// Max devices (2026-10-26): what the server reads from each .amxd (parseAmxd), and what Live reported once it loaded.
+	{ name: "Octave", preset: "Octave", className: "MxDeviceAudioEffect", params: {"Semitones": -12, "Mix": 100, "Tone": 100, "Response": 0, "Quality": 0}, labels: {}, live: {"2": 100}, tol: {} },
+	{ name: "Comb", preset: "Comb", className: "MxDeviceAudioEffect", params: {"Feedback": 17.58, "Tune": 0, "Mix": 17.58}, labels: {}, live: {"1": 0, "2": 17.579999923706055, "3": 17.579999923706055}, tol: {"2": 1e-4, "3": 1e-4} },
+	{ name: "Blur", preset: "Blur", className: "MxDeviceAudioEffect", params: {"Drive": 100, "Rate": 22, "Seam": 36, "Mix": 0, "Width": 0, "Clip": 1, "Restart": 1}, labels: {}, live: {"4": 0}, tol: {} },
+	{ name: "NoteChance", preset: "Note Chance", className: "MxDeviceMidiEffect", params: {"Chance": 100}, labels: {}, live: {"1": 100}, tol: {} },
+	{ name: "GlitchLoop", preset: "GlitchLoop", className: "MxDeviceAudioEffect", params: {"Clock": 5, "Dry/Wet": 35.7033}, labels: {}, live: {"19": 35.70330047607422}, tol: {"19": 1e-4} },
 	{ name: "GuitarRack", preset: "Guitar", className: "AudioEffectGroupDevice", params: {"MacroControls.0": 0.0, "MacroControls.1": 20.0, "MacroControls.2": 87.2762375}, labels: {"MacroDisplayNames.0": "Gain"}, live: {"1": 0}, tol: {} },
 ];
 
@@ -47,10 +53,10 @@ describe('preset faces start where Live puts the loaded preset', () => {
 		expect(other?.control.kind === 'slider' && other.control.title).toBe('Gain');
 	});
 
-	it('a Max device rests where its control rests: the server reads no .amxd', () => {
-		const comb = presetControl({ className: '', params: {} }, 'Comb');
-		expect(comb?.control.title).toBe('Comb');
-		expect(comb?.values).toEqual({});
+	it('a Max device is found by its name: its class is shared', () => {
+		expect(presetControl({ className: 'MxDeviceAudioEffect', params: { Mix: 50 } }, 'Blur')?.control.title).toBe('Blur');
+		expect(presetControl({ className: 'MxDeviceAudioEffect', params: { Mix: 50 } }, 'Octave')?.control.title).toBe('Pitch');
+		expect(presetControl({ className: 'MxDeviceAudioEffect', params: {} }, 'Comb')).toBeNull();
 	});
 
 	it('draws nothing for a class with no control, or a file missing the values', () => {

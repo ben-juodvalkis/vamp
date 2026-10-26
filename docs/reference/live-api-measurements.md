@@ -281,6 +281,16 @@ tested against the same numbers in `deviceControls.presets.test.ts`).
   `MacroControls.<n>` come before any nested rack's and are
   `parameters[n + 1]` value for value (0..127, the Guitar rack), named by
   `MacroDisplayNames.<n>`.
+- **Max devices** (`.amxd`, 2026-10-26): the file is the `ampf` header (type
+  code `aaaa` audio, `mmmm` MIDI) and its patcher JSON; a frozen device
+  (`mx@c`) embeds its patchers among its files. Each `live.*` box saves
+  `parameter_initial`, and Live opens the device at it: Octave Mix 100,
+  Comb Tune 0 and Mix/Feedback 17.58, Blur Mix 0, Note Chance 100,
+  GlitchLoop Dry/Wet 35.7033 (loaded, dumped, deleted). Live names each
+  parameter by its `parameter_shortname`, not its long name: Blur's "Loop
+  Rate" is "Rate", GlitchLoop's "DryWet" is "Dry/Wet", "Restart on Play"
+  is "Restart". A patch can set a value on load: Blur's Rate opened at
+  92.4, not the 22 the file saves.
 - **A loaded preset's device takes the preset's file name** (Disco
   Filter.adv → an `AutoFilter2` named "Disco Filter"), which is how a drag
   on a browser tile finds the device its load landed.

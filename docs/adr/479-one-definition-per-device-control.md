@@ -33,8 +33,8 @@ tile (17 tile files are now one-line wrappers), a chain cell for any device
 type with an entry, a central view's mount (`tapLoads` where a tap on a
 ghost loads it, `disableCentralViewOnTap` inside a view). A browser preset
 tile draws the same entry through `presetControl` at the file's saved
-values; an `.amxd`, whose values the server cannot read, rests where the
-control rests. A tile that draws something of its own (Reverb's portrait,
+values; an `.amxd` is read for each Live parameter's `parameter_initial`
+by its short name, the name Live gives it (2026-10-26). A tile that draws something of its own (Reverb's portrait,
 Utility's meter) takes its parameters and math from its entry.
 
 The `add-looping-device` skill is the procedure: measure, register in

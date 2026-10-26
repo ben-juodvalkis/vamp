@@ -44,12 +44,7 @@
 		const el = host;
 		const path = preset.fullPath;
 		saved = null;
-		// A Max device's `.amxd` saves nothing the server reads: its control rests where it rests.
-		if (/\.amxd$/i.test(path ?? '')) {
-			saved = { className: '', params: {} };
-			return;
-		}
-		if (!el || !/\.ad[vg]$/i.test(path ?? '')) return;
+		if (!el || !/\.(adv|adg|amxd)$/i.test(path ?? '')) return;
 		let cancelled = false;
 		const load = () => presetParams(path).then((p) => !cancelled && (saved = p));
 		if (typeof IntersectionObserver === 'undefined') {
