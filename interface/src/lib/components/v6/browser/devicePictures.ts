@@ -101,7 +101,7 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0, variant = 0)
 			const amp = 6 + y * 28;
 			return [0, 0.35].map((phase, i) => ({ d: trace((u) => 50 + amp * Math.sin(2 * Math.PI * (u * cycles + phase))), o: i ? 0.45 : 0.8 }));
 		}
-		// Tremolo: one cycle of its LFO in the shape the Tremolo view shows
+		// Tremolo: two cycles of its LFO in the shape the Tremolo view shows
 		// (the user, 2026-10-26: "match the actual shape"): `variant` 0 saw
 		// down, 1 square, 2 sine, 3 triangle. Deeper with its depth.
 		case 'tremolo': {
@@ -116,12 +116,15 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0, variant = 0)
 			};
 			const square = Math.round(variant) === 1;
 			const saw = Math.round(variant) === 0;
-			// The saw and the square rise from the floor first, as the view's tab draws them.
+			// Two cycles (the user, 2026-10-26). The saw and the square rise from
+			// the floor first, as the view's tab draws them.
+			const hi = f(50 - amp);
+			const lo = f(50 + amp);
 			const d = square
-				? `M0,${f(50 + amp)}V${f(50 - amp)}H50V${f(50 + amp)}H100`
+				? `M0,${lo}V${hi}H25V${lo}H50V${hi}H75V${lo}H100`
 				: saw
-					? `M2,${f(50 + amp)}V${f(50 - amp)}L100,${f(50 + amp)}`
-					: trace((u) => 50 - amp * wave(u));
+					? `M2,${lo}V${hi}L50,${lo}V${hi}L100,${lo}`
+					: trace((u) => 50 - amp * wave((u * 2) % 1), 128);
 			return [
 				{ d: 'M0,50H100', o: 0.2 },
 				{ d, o: 0.85 }
