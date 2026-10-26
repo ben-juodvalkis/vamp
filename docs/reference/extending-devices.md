@@ -188,23 +188,22 @@ Rules:
   to Ableton. `sendParam` forwards a 0–1 value — the device
   metadata in `data/device-configs.json` rescales on the UI side.
 
-### 1.5 Step 4 — wire into the FX grid
+### 1.5 Step 4 — give it a slot (optional)
 
-Edit `interface/src/lib/config/fxGridLayout.ts`:
+The FX grid went with ADR-485 (2026-10-26); the FX section is the chain
+overview, whose cells draw a device's tile from its `DEVICE_CONTROLS` entry
+(`ControlTile`) with no slot needed. A device whose tile draws something of
+its own takes a slot in `interface/src/lib/config/fxGridLayout.ts`, the
+slot table, so tiles and views resolve it by position:
 
 ```typescript
-import DelayControl from '$lib/components/v6/device-panel/DelayControl.svelte';
-
 export const FX_GRID_LAYOUT: FXGridSlotConfig[] = [
-  { position: 'fx1', deviceType: 'filter', component: AutoFilterControl, col: 1, span: 2, row: 1 },
-  { position: 'fx3', deviceType: 'delay',  component: DelayControl,      col: 3, span: 2, row: 1 },
-  { position: 'fx7', deviceType: 'utility', component: UtilityControl,   col: 12, span: 1, rowSpan: 2, row: 1 },
+  { position: 'fx11', deviceType: 'echo', component: EchoControl, config: DEVICE_PRESETS.echo },
   // ...
 ];
 ```
 
-Grid rendering is data-driven from this file. `FXGrid.svelte`
-doesn't need editing.
+A position is a name, not a place.
 
 ### 1.6 Step 4-alt — virtual device
 

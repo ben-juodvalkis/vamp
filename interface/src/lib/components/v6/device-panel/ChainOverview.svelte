@@ -401,6 +401,8 @@
    */
   const recentGrid = $derived(recentLayout(grid.rows));
   const recents = $derived(recentPool.slice(0, recentGrid.shown));
+  /** The columns the recents fill, top to bottom; + Effect widens over the rest (the user, the same day: no dead space). */
+  const recentColsUsed = $derived(Math.max(1, Math.ceil(recents.length / recentGrid.rows)));
 
   /** The cell position under a point, by the grid's geometry at lift — not the cells, which are sliding. */
   function positionAt(d: Drag, x: number, y: number): number {
@@ -732,6 +734,7 @@
       class="chain-ghosts"
       style:--recent-cols={recentGrid.columns}
       style:--recent-rows={recentGrid.rows}
+      style:--add-from={recentColsUsed + 1}
       data-debug="chain-recents"
       role="group"
       aria-label="Recent effects"
@@ -846,9 +849,10 @@
     cursor: pointer;
     user-select: none;
   }
-  /* The ghost section: two cells wide, the recents in their columns
-     (newest first, left to right) and + Effect the last column, every row.
-     The rows are fixed, so a short list keeps the tiles' size. */
+  /* The ghost section: two cells wide, the recents filling their columns
+     top to bottom (newest first) and + Effect every column they leave, full
+     height, so a short list widens it rather than leaving gaps. The rows
+     are fixed, so the tiles keep their size. */
   .chain-ghosts {
     grid-column: span 2;
     min-width: 0;
@@ -856,10 +860,11 @@
     display: grid;
     grid-template-columns: repeat(calc(var(--recent-cols, 3) + 1), minmax(0, 1fr));
     grid-template-rows: repeat(var(--recent-rows, 4), minmax(0, 1fr));
+    grid-auto-flow: column;
     gap: 4px;
   }
   .chain-ghosts > .chain-add {
-    grid-column: -2 / -1;
+    grid-column: var(--add-from, -2) / -1;
     grid-row: 1 / -1;
   }
   .chain-cell.off > :not(.cell-head) {
@@ -892,10 +897,6 @@
      (the user, the same day). */
   .chain-wrap.two-rows .cell-head {
     height: calc(var(--strip-band-h, 56px) / 2);
-  }
-  /* The first cell's corner is the FX section's switch (FxPanelSwitch). */
-  .chain-cell:first-child .cell-head {
-    padding-left: 38px;
   }
   /* The hand and Device On close the row. */
   .head-end {

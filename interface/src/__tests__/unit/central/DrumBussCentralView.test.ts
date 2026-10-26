@@ -90,18 +90,14 @@ describe('DrumBussCentralView', () => {
 	});
 });
 
-describe('DrumBussCentralView — the Drum XY where the grid has none (2026-10-24)', () => {
-	it('leaves the XY to the grid on a drum track', async () => {
-		seed([drumBuss({})]);
-		const { container } = render(DrumBussCentralView);
-		await tick();
-		expect(container.querySelector('.drum-xy')).toBeNull();
-	});
-
-	it('leads with the Drum XY on a track whose Drum cell holds the Chorus', async () => {
-		seed([drumBuss({})], 'synth');
-		const { container } = render(DrumBussCentralView);
-		await tick();
-		expect(container.querySelector('.drum-buss-layout.with-xy .drum-xy')).not.toBeNull();
+describe('DrumBussCentralView — the Drum XY (ADR-485: no grid tile carries it)', () => {
+	it('leads with the Drum XY on a drum track and any other', async () => {
+		for (const role of [undefined, 'synth'] as const) {
+			seed([drumBuss({})], role);
+			const { container, unmount } = render(DrumBussCentralView);
+			await tick();
+			expect(container.querySelector('.drum-buss-layout.with-xy .drum-xy')).not.toBeNull();
+			unmount();
+		}
 	});
 });

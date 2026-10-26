@@ -48,7 +48,7 @@ placeholder view.
 kind (XY, slider, the EQ's tone pad), the parameters it reads and writes,
 the math, its rest values and how a preset file reads onto it. `ControlTile`
 draws any entry as a live tile (`BaseDeviceControl` + `browser/FaceControl`),
-and it is what the grid tiles (most tile files are one-line wrappers), the
+and it is what the tiles (most tile files are one-line wrappers), the
 chain overview's cells and the central views' mounts are; the browser's
 preset tiles draw the same entry at the file's values. A tile that draws
 something of its own (Reverb's portrait, Utility's meter) takes its
@@ -61,36 +61,34 @@ skill.
 values it shows — Echo's rings, a compressor's transfer curve, Redux's
 stepped sine, Pedal's clipped sine, the Arpeggiator's run. Drawn on the chain
 overview's cells and the browser's tiles (they provide `PICTURE_CONTEXT`),
-never on the FX grid, which is pixel-identical without them; a control's
+never in a central view; a control's
 `icon` (the Gtr, Bass and Wah racks' marks) follows the same rule.
 
-### The fx1 column — one slot, three track types (ADR-438)
+### The FX section is the chain overview (ADR-485)
 
-**The grid is TEN columns, every cell placed explicitly** (2026-09-15, ADR-438 addendum; re-dealt 2026-10-15). `fxGridLayout.ts` gives each entry `col` / `row` / `span` / `rowSpan`; `cellFor(slot, kind)` moves fx1 on audio, and `SQUASH_CELL`, `GLITCH_CELL` and `AUDIO_GUITAR_CELL` place the tiles with no entry. **MIDI:** Rand Oct over the Gtr in column 1 (2026-10-23; full height before). **Main:** as audio, the Bass over the Gtr (2026-10-24). All three (ADR-467): column 2 Pitch (the Octave's Mix, `PitchControl`, `PITCH_CELL`) over the Saturator (a Drive slider); three XYs a row in 3–8, EQ · Filter · Drum (Chorus off a drum track) over Tremolo · Echo · Reverb; column 9 Glitch (GlitchLoop's Dry/Wet, `GLITCH_CELL`) over Variation (the slider labelled Stutter); Squash over Gain in 10. **Every device type has its own central view (2026-10-26)**, registered under its `DEVICE_PRESETS` key, because the FX chain overview (ADR-478) opens a cell's device by that key: a view draws its own device and no other, and a tile opens its device's view. Pitch opens `PitchCentralView` (the Octave's interval), Glitch `GlitchCentralView` (GlitchLoop alone; Pitch Hack is `ReverseCentralView`), Variation `VariationCentralView`, the Saturator (labelled Drive) `SaturatorCentralView` (Color · Output · Mix). Variation's entry is `hidden` (the Stutter slider draws it; its controls are `VariationCentralView`), and so is Chorus's, whose tile is drawn in the Drum cell instead on every audio track and every track that is not a drum track (ADR-465, `drumCell.svelte.ts`); the Chorus tile opens `ChorusCentralView` (its XY alone); Blur, Comb and Phaser are `BlurCentralView`, `CombCentralView` and `PhaserCentralView`, and the Auto Pan view (tile titled Tremolo) is Auto Pan's alone on every track. **Audio:** the Bass (in fx1's slot) over the Gtr in column 1, the rest identical. **Glitch** (`GlitchControl`, the `glitchLoop` slot: X Clock, Y Dry/Wet, by parameter name through `glitchLoopParams.ts`) opens `GlitchCentralView`; the Stutter slider opens `VariationCentralView`, its own file since 2026-10-24. Both kinds tile the same 10×2 grid, so the XY tiles and the TotalMix status strip's ruler in `layouts/default/Layout.svelte` (hard-coupled to the column count, no shared constant) never move when the track changes kind; `FXGrid.scope.test.ts` pins the tiling for both.
+**The FX grid is gone (2026-10-26, the user's call).** The FX section is
+`ChainOverview` alone: the selected track's chain (or a scoped pad's), one
+cell per device, each drawing its tile, then the Recent ghosts and + Effect
+(ADR-484); the track's Utility is the right sidebar's top row (ADR-482).
+`FXGrid.svelte`, the grid/chain switch (`FxPanelSwitch`), the ten-column
+placement (`col` / `row` / `span`, `cellFor`, the `*_CELL`s) and the Drum
+cell's Chorus rule (`drumCell.svelte.ts`) went with it.
 
-`fx1` holds a different control per track type, and on audio the Guitar joins the left edge. All three branches live in `FXGrid.svelte`, and none of the three has a `fxGridLayout` entry except the MIDI one:
+What stays: `fxGridLayout.ts` is the **slot table** (a position per device
+type and the tile it is drawn with), which tiles, chain cells and central
+views resolve their device through (`getFxGridSlot`, `useFxGridSlot`). A
+position is a name, not a place. The tiles (`*Control.svelte`) are the chain
+cells' faces. **Every device type has its own central view**, registered
+under its `DEVICE_PRESETS` key, because a chain cell opens its device by
+that key: a view draws its own device and no other. A view for a device the
+track does not hold is reached only by loading one (a Recent button, the
+browser); its controls are ghosts until then.
 
-- **MIDI → Rand Oct**, the layout entry's own `RandomControl`.
-- **Audio → `BassControl.svelte`** when `selectedTrackStore.trackType === 'audio'`. The `bass` slot — the `Bass Amp.adg` rack, this tile its only control — param **1**, its one macro (the mix), rail 0..127, resting at **0** (see the fill note below). It is the one device on the grid that is *only* useful on audio: `fxGridStore.loadDevice` renames the track "Bass" on an audio track and leaves a MIDI track's name alone. `slotKey="bass"`, like Squash.
-- **Main → the Bass, over the Gtr, as on audio** (2026-10-24, the user's call; empty from 2026-10-09, when the OTT tile left, until then). The OTT's Mid Below Threshold, Below Ratio and Output are sliders in `MultibandCentralView` on every track, slot `ott`, indices in `multibandParams.ts`.
-
-**Squash and Gain share column 10, Squash on top** (2026-10-15; separate full-height columns before): `SquashControl.svelte` (the Glue Compressor's threshold + makeup on one 0..1 slider, indices 1 and 3 measured off the `.adv`, no layout entry, resolving its own `squash` slot through `slotKey`) and the Gain tile. A tap on Squash opens `GlueCentralView` (Threshold over Output), the Gain tile `UtilityCentralView`; the Gate, the Multiband and the Compressor each have their own view too (`GateCentralView`, `MultibandCentralView`, `CompressorCentralView`, ADR-478). They shared one split column from 2026-09-10 until the twelve-column refinement.
-
-**Three tiles left the grid with the ten-column cut**, and only one of them moved:
-
-- **The instrument slider** (`InstrumentControl.svelte` + `config/instrumentSliderMap.ts`) — **deleted**. It drove one expressive parameter of the selected track's instrument and opened that instrument's central view on tap (ADR-383). The track strip's **device band** (`TrackDeviceView`, `data-section="device"`, PR #496) took the tap-to-open job on every track at once; the parameter is in the instrument's own view. Adding a new instrument type now needs no grid work — give it a mark in `config/deviceGlyphMap.ts` (`INSTRUMENT_GLYPHS`) so the band draws it.
-- **`ClipPitchControl.svelte`** — **deleted**. It was the focused clip's absolute `pitch_coarse` as a −12..+12 semitone slider on the same store and setter as ClipCentralView's PITCH column (`clipPropertiesStore.pitchCoarse` / `setAudioClipPitch`) — a literal second copy, and the strip's Clip band opens that view in one tap. It was the audio candidate to cut for exactly that reason; the Bass stayed because it is a door as well as a control, and Variation because Beat Repeat is an audio effect.
-- **`GuitarControl.svelte` (`fx2`) — MOVED, not deleted.** It is back on the grid at the foot of column 1 on every track (no layout entry, `GUITAR_CELL`; audio only until 2026-10-23), mounted standalone the way `SaturatorControl` has been since ADR-431. It keeps `slotKey="guitar"`, so it keeps its ghost state and its drag-to-load, which is why it is the tile and not a bare fader. A tap opens `GuitarCentralView` (the rack alone: the Gain, this tile mounted with its tap disabled, then the Spring/Room pad beside the Tremolo pad, side by side since 2026-10-26). The Pedal, the Wah, the Shifter, Redux and the Saturator, which shared the Pedal view with it until 2026-10-26, each have their own view (`PedalCentralView`, `WahCentralView`, `ShifterCentralView`, `ReduxCentralView`, `SaturatorCentralView`); the Drum button that view ended in went, since the chain is every device's door.
-
-A tap on the Bass tile opens **`BassCentralView`** (the tile at full size). An unregistered type resolves to the placeholder view (the defect a830a7a fixed for `random` and the 2026-09-12 review caught on `ott`), so a new device type needs its own registry entry.
-
-**Gtr and Bass draw the ordinary coloured fill (user, 2026-09-15).** Both had borrowed GAIN's split handle line, which made three of the grid's tiles read in a grammar the rest of them don't. **Gain cannot do otherwise:** its cell IS the track's meter (`track` on the `DeviceSlider`, which forces `showHandleLine` and suppresses `showFill`), so the fill is spoken for and the line is the only way left to show where the fader sits. A plain 0..127 drive or a 0..1 mix has its fill free. **This is why Bass rests at 0 rather than the 1.0 the preset stores:** as a fill, a cold slot at the ceiling painted the whole cell solid orange, which reads as a lit state rather than a value at the top of its rail. Every fill tile on this grid rests at the floor; that is the rule the exception was breaking. The rest value is only the cold read — once the slot has a device the slider shows whatever Live has.
-
-**`useBassChainPosition` (`central/useBassChainPosition.svelte.ts`) is shared by both faces.** A browser load lands at the END of the chain and the Bass belongs at its head, so the gesture that might load arms a one-shot move that fires when the device arrives — the UI-layer twin of `WahPedalComponent._pending_move_to_top`. Its other user is the Octave's controls in `views/autopan/PitchGroup.svelte`. **Arm only where a load can actually follow**: the tile arms in `onInteraction` and *not* on tap, because a tap loads nothing (ADR-167) and a latch left standing would fire on the next bass device to arrive from anywhere, including one dragged in by hand.
-
-**Grid re-deal history.** 2026-08-22: Pitch-Helix left the grid (its central view is still registered and reachable) and the Saturator took a tile for two weeks; `fx1`/`fx2` swapped so `RandomControl` held the tall column and `GuitarControl` the single cell. 2026-09-10 (ADR-431): **the Drum Buss took that tile** — `DrumBussControl.svelte` (`fx6`, transients across, dry/wet up — the Drum XY the instrument-view rail carried, ADR-424; the rail is deleted) opens `DrumBussCentralView` (the Comp switch + the Boom XY) — and **the Saturator went back into `PedalCentralView`** as its XY plus its four parameters on faders; `SaturatorCentralView` is gone and `device/saturator` is no longer registered. Same day, Squash took the top of the Gain column. The Drum tile is `padScoped` (since 2026-09-11; it shipped inert under a scope for a day) — a kick with its own Drum Buss is the ordinary case, and the insert-by-name path puts one straight into the pad's chain.
-
-Since 2026-10-24 (ADR-467) row 1 reads **fx1 · Pitch · EQ · Filter · Drum · Glitch · Squash** and row 2 **Gtr · Saturator · Tremolo (Auto Pan) · Echo · Reverb · Variation · Gain**, Chorus in Drum's cell on audio and non-drum tracks (ADR-465). The Gtr opens the Guitar rack's view and the Saturator slider the Saturator's (one device per view since 2026-10-26; the Pedal view's `part` split of ADR-466 is gone).
+**Gtr and Bass draw the ordinary coloured fill (user, 2026-09-15).** Gain
+cannot: its cell IS the track's meter (`track` on the `DeviceSlider`), so
+its line shows the fader. Bass rests at 0 rather than the 1.0 the preset
+stores: a cold slot at the ceiling painted the whole cell solid, which reads
+as a lit state. The rest value is only the cold read.
 
 ### Parameter reads (post-ADR-359)
 
@@ -112,7 +110,7 @@ The armed-aware reader returns the UI's last-written value during a drag's round
 ### The pad scope (issue #491, 2026-09-10)
 
 While a pad is held or latched on the selected track's Drum Rack, **the
-grid is that pad's**. `FXGrid.svelte` provides the `fxScope` context
+chain is that pad's**. `ChainOverview` provides the `fxScope` context
 (`central/fxScope.ts`, a getter — the scoped pad can move under a
 mounted tile) from `activeDrumRackScope()`, subscribes the rack's
 `vm.padFx` presence row so the flip is instant at touch-down, subscribes
@@ -127,7 +125,7 @@ absolutely placed so it takes no cell from the tiles (a pad Live left
 uncoloured would otherwise leave the grid looking unchanged while
 meaning something else). Tiles keep their family inks (ADR-400).
 
-**`FXGrid` resolves every tile's `device` prop against the scope too**
+**Every tile's `device` prop is resolved against the scope too**
 (`getFxGridSlot(position, scopeKey)`, 2026-09-11): a tile derives the
 values it draws from that prop, and the first cut resolved it against
 the track only — so under a held pad the XY showed the track's device

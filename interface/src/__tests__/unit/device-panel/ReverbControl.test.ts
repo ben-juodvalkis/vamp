@@ -24,7 +24,8 @@ import { tick } from 'svelte';
 import { SvelteMap } from 'svelte/reactivity';
 // The stores before the grid (see BassControl.test.ts).
 import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.svelte';
-import FXGrid from '$lib/components/v6/device-panel/FXGrid.svelte';
+import ReverbControl from '$lib/components/v6/device-panel/ReverbControl.svelte';
+import { getSlotByDeviceType } from '$lib/config/fxGridLayout';
 import { DEVICE_PRESETS } from '$lib/config/devicePresets';
 import { LIVE_DEFAULTS } from '$lib/components/v6/device-panel/hybridReverbParams';
 import {
@@ -65,11 +66,13 @@ function track(devices: DeviceRecord[]): TrackRecord {
 	};
 }
 
-async function mountGrid(devices: DeviceRecord[]): Promise<HTMLElement> {
+async function mountTile(devices: DeviceRecord[]): Promise<HTMLElement> {
 	replaceTree(3, [track(devices)]);
 	selectedTrackStore.handleTrackSelected(0);
 	fxGrid.resetForTrackChange();
-	const { container } = render(FXGrid);
+	// The device the tile is handed, as the chain cell resolves it.
+	const device = devices.find((d) => d.className === 'Hybrid') ?? null;
+	const { container } = render(ReverbControl, { props: { device, position: getSlotByDeviceType('reverb')!.position } });
 	await tick();
 	const tile = Array.from(container.querySelectorAll<HTMLElement>('.device-control')).find((t) =>
 		t.textContent?.includes('Reverb')
@@ -104,13 +107,13 @@ afterEach(() => {
 
 describe('the Reverb tile', () => {
 	it('draws the plain pad while the slot is empty', async () => {
-		const tile = await mountGrid([]);
+		const tile = await mountTile([]);
 		expect(tile.querySelector('[data-reverb-portrait]')).toBeNull();
 		expect(tile.querySelector('.ir-display')).toBeNull();
 	});
 
 	it('draws the tail behind its pad while the reverb runs an algorithm', async () => {
-		const tile = await mountGrid([reverb({ 48: 2, 6: 0 })]);
+		const tile = await mountTile([reverb({ 48: 2, 6: 0 })]);
 		expect(tile.querySelector('[data-reverb-portrait="darkHall"]')).not.toBeNull();
 		expect(tile.querySelectorAll('[data-reverb-portrait] .ridge-line').length).toBeGreaterThan(0);
 		// A tile's size: the picture and the title, no readouts.
@@ -121,7 +124,7 @@ describe('the Reverb tile', () => {
 	it('draws the loaded IR’s waveform while the reverb runs an IR', async () => {
 		const fetchMock = vi.fn(async () => new Response(JSON.stringify({ files: [{ channel: 'mono', path: '/ir.aif' }] })));
 		vi.stubGlobal('fetch', fetchMock);
-		const tile = await mountGrid([reverb({ 48: 3 }, SPRING)]);
+		const tile = await mountTile([reverb({ 48: 3 }, SPRING)]);
 		expect(tile.querySelector('[data-reverb-portrait]')).toBeNull();
 		expect(fetchMock).toHaveBeenCalledWith('/api/reverb-ir?category=Springs&file=Awesome%20Stereo%20Spring');
 		await vi.waitFor(() => expect(tile.querySelectorAll('.ir-display path').length).toBeGreaterThan(0));

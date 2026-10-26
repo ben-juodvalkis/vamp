@@ -14,16 +14,11 @@
    * height is as fine as the fader was. Boom took the two columns they
    * spread over (it was two columns wide).
    *
-   * The Drum XY (transients x dry/wet) is the grid tile, so it is not
-   * repeated here. Same slot machinery as every device view — ghost until
-   * the track carries a Drum Buss, and a first write loads
-   * `Drum Buss.adv` through `sendParam`. Squash (the Glue Compressor) is
-   * not here; the Gain / Utility view mounts it.
-   *
-   * Where the FX grid has no Drum tile (its cell holds the Chorus: audio,
-   * Main and non-drum tracks, ADR-465), the Drum XY leads this view
-   * (2026-10-24, the user's call), so the view is the Drum Buss's whole
-   * face there. The Saturator view's Drum button opens it.
+   * The Drum XY (transients x dry/wet) leads the view, so it is the Drum
+   * Buss's whole face (on every track since the FX grid went, ADR-485).
+   * Same slot machinery as every device view — ghost until the track
+   * carries a Drum Buss, and a first write loads `Drum Buss.adv` through
+   * `sendParam`.
    */
 
   import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
@@ -37,10 +32,6 @@
   import type { DragInfo } from '$lib/actions/drag';
   import { segmentIndex, scrubBoxOf, type ScrubBox } from '$lib/utils/segmentScrub';
   import DrumBussControl from '$lib/components/v6/device-panel/DrumBussControl.svelte';
-  import { drumCellHoldsChorus } from '$lib/components/v6/device-panel/drumCell.svelte';
-
-  // The grid has no Drum tile here, so the view carries its XY.
-  const withXY = $derived(drumCellHoldsChorus());
 
   const drum = useFxGridSlot('drum');
 
@@ -137,13 +128,11 @@
   }
 </script>
 
-<div class="drum-buss-layout" class:with-xy={withXY} class:slot-ghost={drum.isGhost}>
-  {#if withXY}
-    <!-- The Drum XY (transients x dry/wet), the grid tile's control. -->
-    <div class="col drum-xy">
-      <DrumBussControl device={drum.device} disableCentralViewOnTap={true} />
-    </div>
-  {/if}
+<div class="drum-buss-layout with-xy" class:slot-ghost={drum.isGhost}>
+  <!-- The Drum XY (transients x dry/wet), its chain cell's control. -->
+  <div class="col drum-xy">
+    <DrumBussControl device={drum.device} disableCentralViewOnTap={true} />
+  </div>
   <div class="drum-buss-faces" class:ghost={drum.isGhost}>
   <!-- Column 1: input Trim, first in Live's chain, over the Comp switch. -->
   <div class="col trim-comp">

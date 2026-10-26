@@ -34,11 +34,10 @@ import { render, cleanup } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { SvelteMap } from 'svelte/reactivity';
 import { send } from '$lib/api/simpleClient';
-// The stores before the grid: `fxGridLayout` imports the tile components,
+// The stores before the tiles: `fxGridLayout` imports the tile components,
 // which import the stores, which import `fxGridLayout` — a cycle the app
-// enters from the store side (see FXGrid.scope.test.ts).
+// enters from the store side.
 import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.svelte';
-import FXGrid from '$lib/components/v6/device-panel/FXGrid.svelte';
 import BassControl from '$lib/components/v6/device-panel/BassControl.svelte';
 import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
 import { CENTRAL_VIEW_REGISTRY, resolveViewComponent } from '$lib/components/v6/central/viewRegistry';
@@ -117,62 +116,6 @@ beforeEach(() => {
 afterEach(() => {
 	cleanup();
 	vi.restoreAllMocks();
-});
-
-describe('the audio track\'s fx1 column', () => {
-	it('is the Bass over the Guitar, with no clip-pitch slider', async () => {
-		const { container } = render(FXGrid);
-		await tick();
-
-		const bassTile = Array.from(container.querySelectorAll<HTMLElement>('.device-control'))
-			.find((t) => t.textContent?.includes('Bass'));
-		expect(bassTile).toBeDefined();
-
-		// Audio stands the Bass over the Guitar in column 1 (2026-10-19).
-		// col/row/span/rowSpan:
-		const cell = (el: Element) => {
-			const c = el.closest<HTMLElement>('[data-cell]')!;
-			return [c.dataset.col, c.dataset.row, c.dataset.span, c.dataset.rowSpan].join('/');
-		};
-		expect(cell(bassTile!)).toBe('1/1/1/1');
-		const tiles = Array.from(container.querySelectorAll<HTMLElement>('.device-control'));
-		const gtr = tiles.find((t) => t.textContent?.includes('Gtr'));
-		expect(gtr).toBeDefined();
-		expect(cell(gtr!)).toBe('1/2/1/1');
-
-		// The clip-pitch slider went with the split — it lives in the Clip
-		// view, which the strip's Clip band opens in one tap.
-		// The Pitch tile is the Octave's Mix (2026-10-24), in column 2, not
-		// the clip's pitch.
-		const pitchTiles = Array.from(container.querySelectorAll<HTMLElement>('.device-control'))
-			.filter((t) => t.textContent?.includes('Pitch'));
-		expect(pitchTiles.map((t) => t.closest<HTMLElement>('[data-cell]')?.dataset.cell)).toEqual(['pitch']);
-
-		// Rand Oct is the MIDI track's tile, never audio's.
-		const titles = Array.from(container.querySelectorAll<HTMLElement>('.device-control'))
-			.map((t) => t.textContent ?? '');
-		expect(titles.some((t) => t.includes('Rand Oct'))).toBe(false);
-
-		// Ten columns on audio as on MIDI; the TotalMix ruler rides on it.
-		expect(container.querySelector('.fx-grid')?.classList.contains('grid-cols-10')).toBe(true);
-	});
-
-	it('does not draw on a MIDI track, which keeps Rand Oct in that slot over the Gtr', async () => {
-		const midi = audioTrack();
-		midi.hasMidiInput = true;
-		midi.hasAudioInput = false;
-		replaceTree(4, [midi]);
-		selectedTrackStore.handleTrackSelected(0);
-		fxGrid.resetForTrackChange();
-
-		const { container } = render(FXGrid);
-		await tick();
-		const titles = Array.from(container.querySelectorAll<HTMLElement>('.device-control'))
-			.map((t) => t.textContent ?? '');
-		expect(titles.some((t) => t.includes('Rand Oct'))).toBe(true);
-		expect(titles.some((t) => t.includes('Bass'))).toBe(false);
-		expect(titles.some((t) => t.includes('Gtr'))).toBe(true);
-	});
 });
 
 describe('BassControl', () => {

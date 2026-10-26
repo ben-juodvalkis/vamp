@@ -127,22 +127,24 @@ const openPermute = (index) => ({ click: `[data-track-index="${index}"] [data-se
 // here on 2026-09-15, when that slider left the grid with the ten-column
 // cut — the band is the instrument view's door now.
 const openInstrument = (index) => ({ click: `[data-track-index="${index}"] [data-section="device"]` });
-// The FX section opens on the chain overview; a grid tile is behind the switch.
-const SHOW_GRID = { click: '[data-fx-mode="grid"]' };
-const openTile = (label) => [SHOW_GRID, { click: `.device-control:has-text("${label}")` }];
+// A device's view opens from its cell in the FX chain (the FX grid went with
+// ADR-485): the cell whose head names the device.
+const openCell = (name) => ({ click: `.chain-cell:has(.cell-head .name:text-is("${name}"))` });
 
-const FX_TILES = [
-	['Rand Oct', 'random', 'Random view (the Rand Oct tile)'],
-	['EQ', 'eq', 'EQ Eight'],
-	['Filter', 'filter', 'Auto Filter'],
-	['Drive', 'pedal', 'Drive tile → the Saturator view: Color · Output · Mix'],
-	['Gtr', 'guitar', 'Gtr tile → the Guitar rack view: Gain, Spring/Room, Tremolo'],
-	['Drum', 'drum-buss', 'Drum Buss'],
-	['Glue', 'squash', 'Glue (the Squash slot): Threshold over Output'],
-	['Glitch', 'glitch', 'Glitch: GlitchLoop (the GlitchLoop slot)'],
-	['Pitch', 'pitch', 'Pitch tile → the Octave (Pitch Shift) view: Pitch, Response and Quality tabs'],
-	['Stutter', 'variation', 'Variation (Beat Repeat), the Stutter tile: Interval, Grid, Length, Pitch Decay, Mode'],
-	['Tremolo', 'tremolo', 'Auto Pan Legacy (the Tremolo tile)'],
+// Each device view, from its chain cell: the device on the Lead track's chain
+// (after its instrument), then its cell tapped. [device, state, description]
+const FX_VIEWS = [
+	['Random', 'random', 'Random view'],
+	['Channel EQ', 'eq', 'Channel EQ'],
+	['Auto Filter', 'filter', 'Auto Filter'],
+	['Saturator', 'pedal', 'The Saturator view: Color · Output · Mix'],
+	['Guitar', 'guitar', 'The Guitar rack view: Gain, Spring/Room, Tremolo'],
+	['Drum Buss', 'drum-buss', 'Drum Buss: the Drum XY, then its controls'],
+	['Glue Compressor', 'squash', 'Glue: Threshold over Output'],
+	['GlitchLoop', 'glitch', 'Glitch: GlitchLoop'],
+	['Octave', 'pitch', 'The Octave (Pitch Shift) view: Pitch, Response and Quality tabs, Tone'],
+	['Variation', 'variation', 'Variation (Beat Repeat): Stutter, Interval, Grid, Length, Mode'],
+	['Auto Pan Legacy', 'tremolo', 'Auto Pan Legacy (Tremolo)'],
 	['Echo', 'echo', 'Echo'],
 	['Reverb', 'reverb', 'Reverb']
 ];
@@ -163,14 +165,8 @@ export const TOURS = {
 	// 2026-10-25): the Lead track carries CHAIN_DEMO_DEVICES — two Auto
 	// Filters, two racks of the performer's, a plug-in.
 	chain: {
-		description: 'The FX grid and the chain overview behind its switch, on a track with two Auto Filters, two racks and a plug-in.',
+		description: 'The FX chain overview, on a track with two Auto Filters, two racks and a plug-in.',
 		states: [
-			{
-				name: 'grid',
-				description: 'Lead selected, the switch flipped to the FX grid: the Filter tile wears 1/2 (two Auto Filters on the track)',
-				scenePatch: chainDemo,
-				steps: [openInstrument(CHAIN_DEMO_TRACK), SHOW_GRID]
-			},
 			{
 				name: 'chain',
 				description: 'The FX section as it opens: the chain in order, each device its tile chip',
@@ -216,12 +212,6 @@ export const TOURS = {
 				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: chainCell(3) }]
 			},
 			{
-				name: 'grid-after-pick',
-				description: 'Back to the grid after that pick: the Filter tile wears 2/2',
-				scenePatch: chainDemo,
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: chainCell(3) }, { click: '[data-fx-mode="grid"]' }]
-			},
-			{
 				name: 'chain-rack',
 				description: 'Tapped the Dub Space rack: its macros in the central view',
 				scenePatch: chainDemo,
@@ -260,7 +250,7 @@ export const TOURS = {
 			{
 				name: 'chain-drum',
 				description: 'Jazz, no pad scoped: the Drum Rack cell carries the kit\'s Trnsp',
-				steps: [openInstrument(8), { click: '[data-fx-mode="chain"]' }]
+				steps: [openInstrument(8)]
 			},
 			{
 				name: 'chain-pad',
@@ -352,13 +342,14 @@ export const TOURS = {
 			// already, so it is skipped.
 			...[
 				['chain-recents', 'the instrument alone, on one row: the ghost section two cells wide, recents in three columns of four and + Effect the full-height last column; Auto Filter draws its curve', 1],
-				['chain-recents-crowded', 'a chain on two rows: recents in five columns of two and + Effect double height; Echo and Auto Filter are on it, so they are skipped', 5]
-			].map(([name, what, n]) => ({
+				['chain-recents-crowded', 'a chain on two rows: recents in five columns of two and + Effect double height; Echo and Auto Filter are on it, so they are skipped', 5],
+				['chain-recents-few', 'three recents on two rows: they fill two columns top to bottom and + Effect widens over the rest', 5, 5]
+			].map(([name, what, n, seed = RECENT_SEED.length]) => ({
 				name,
 				description: `The Recent column (ADR-484): ${what}`,
 				scenePatch: chainOf(n),
 				steps: [
-					{ storage: { 'vamp.recentEffects': JSON.stringify(RECENT_SEED.map(([n, dir]) => ({ name: n, fullPath: `${SHELF}/${dir}/${n}.adv`, source: '', rel: '' }))) } },
+					{ storage: { 'vamp.recentEffects': JSON.stringify(RECENT_SEED.slice(0, seed).map(([n, dir]) => ({ name: n, fullPath: `${SHELF}/${dir}/${n}.adv`, source: '', rel: '' }))) } },
 					openInstrument(CHAIN_DEMO_TRACK)
 				]
 			})),
@@ -438,7 +429,8 @@ export const TOURS = {
 				name: 'fx-pedal-general',
 				description: 'Guitar rack view, expression pedal switched off (no Wah in it either way since 2026-10-26)',
 				features: { expressionPedal: { enabled: false, available: false, reason: '' } },
-				steps: [...openTile('Gtr')]
+				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], 'Guitar']),
+				steps: [openInstrument(CHAIN_DEMO_TRACK), openCell('Guitar')]
 			},
 			// The Gtr tile opens the Guitar rack's view (one device per view
 			// since 2026-10-26). On the Guitar track (an audio track) the rack
@@ -446,12 +438,13 @@ export const TOURS = {
 			{
 				name: 'fx-guitar-loaded',
 				description: 'Guitar view on the Guitar track: the Guitar rack live — Spring, Tremolo pad, Room',
-				steps: [selectTrack(3), ...openTile('Gtr')]
+				steps: [selectTrack(3), openCell('Guitar')]
 			},
-			...FX_TILES.map(([label, name, description]) => ({
+			...FX_VIEWS.map(([device, name, description]) => ({
 				name: `fx-${name}`,
 				description,
-				steps: [...openTile(label)]
+				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], device]),
+				steps: [openInstrument(CHAIN_DEMO_TRACK), openCell(device)]
 			})),
 			// The Hybrid Reverb on Pad (track 5): the rig's full parameter vector
 			// (a Quartz), one state per algorithm the picker's tap leaves it on,
@@ -469,7 +462,7 @@ export const TOURS = {
 			].map(([algo, what, drags]) => ({
 				name: `fx-reverb-${algo.toLowerCase()}`,
 				description: `Reverb, ${algo}. ${what}`,
-				steps: [selectTrack(5), ...openTile('Reverb'), { click: `[data-reverb-type="${algo}"]` }, ...drags]
+				steps: [selectTrack(5), openCell('Reverb'), { click: `[data-reverb-type="${algo}"]` }, ...drags]
 			})),
 			// The EQ tab (2026-10-02): the rig's own EQ — Lo Cut at 121 Hz, 18 dB,
 			// Hi Shelf at 5 kHz — then shaped by dragging the handles, as a finger
@@ -477,14 +470,14 @@ export const TOURS = {
 			{
 				name: 'fx-reverb-eq',
 				description: 'Reverb, EQ tab: the rig’s EQ — Lo Cut 121 Hz 18 dB, the peaks flat, Hi Shelf 5 kHz',
-				steps: [selectTrack(5), ...openTile('Reverb'), { click: '[data-reverb-type="Hall"]' }, { click: '[data-reverb-tab="eq"]' }]
+				steps: [selectTrack(5), openCell('Reverb'), { click: '[data-reverb-type="Hall"]' }, { click: '[data-reverb-tab="eq"]' }]
 			},
 			{
 				name: 'fx-reverb-eq-shaped',
 				description: 'Reverb, EQ tab: Peak 1 dragged up, Peak 2 down and higher, the Hi end switched to Cut',
 				steps: [
 					selectTrack(5),
-					...openTile('Reverb'),
+					openCell('Reverb'),
 					{ click: '[data-reverb-type="Hall"]' },
 					{ click: '[data-reverb-tab="eq"]' },
 					{ drag: '[data-eq-band="peak1"]', by: [-20, -45] },
@@ -498,19 +491,19 @@ export const TOURS = {
 			{
 				name: 'fx-reverb-ir-spring',
 				description: 'Reverb, Spring: Live’s “Awesome Stereo Spring” IR, unshaped',
-				steps: [selectTrack(5), ...openTile('Reverb'), { click: '[data-reverb-type="Spring"]' }]
+				steps: [selectTrack(5), openCell('Reverb'), { click: '[data-reverb-type="Spring"]' }]
 			},
 			{
 				name: 'fx-reverb-ir-plate',
 				description: 'Reverb, Plate: Live’s “Classic Plate 1” IR',
-				steps: [selectTrack(5), ...openTile('Reverb'), { click: '[data-reverb-type="Plate"]' }]
+				steps: [selectTrack(5), openCell('Reverb'), { click: '[data-reverb-type="Plate"]' }]
 			},
 			{
 				name: 'fx-reverb-ir-shaped',
 				description: 'Reverb, Spring, Attack up and Decay down: Attack fades it in, Decay cuts the tail',
 				steps: [
 					selectTrack(5),
-					...openTile('Reverb'),
+					openCell('Reverb'),
 					{ click: '[data-reverb-type="Spring"]' },
 					{ drag: '[data-reverb-own] [role="slider"][aria-label^="Attack"]', by: [0, -40] },
 					{ drag: '[data-reverb-own] [role="slider"][aria-label^="Decay"]', by: [0, 160] }
@@ -521,7 +514,7 @@ export const TOURS = {
 				description: 'Reverb, Short (an early-reflections IR) shaped: its boxes fitted to a short IR',
 				steps: [
 					selectTrack(5),
-					...openTile('Reverb'),
+					openCell('Reverb'),
 					{ click: '[data-reverb-type="Short"]' },
 					{ drag: '[data-reverb-own] [role="slider"][aria-label^="Attack"]', by: [0, -53] },
 					{ drag: '[data-reverb-own] [role="slider"][aria-label^="Decay"]', by: [0, 100] }
@@ -532,7 +525,7 @@ export const TOURS = {
 				description: 'Reverb, Spring with Size dragged up: the IR stretched over a longer axis',
 				steps: [
 					selectTrack(5),
-					...openTile('Reverb'),
+					openCell('Reverb'),
 					{ click: '[data-reverb-type="Spring"]' },
 					{ drag: '[data-reverb-own] [role="slider"][aria-label^="Size"]', by: [0, -73] }
 				]
@@ -540,12 +533,12 @@ export const TOURS = {
 			{
 				name: 'fx-reverb-ir-eq',
 				description: 'Reverb, Spring on its EQ tab: the same editor and EQ rows as an algorithm’s',
-				steps: [selectTrack(5), ...openTile('Reverb'), { click: '[data-reverb-type="Spring"]' }, { click: '[data-reverb-tab="eq"]' }]
+				steps: [selectTrack(5), openCell('Reverb'), { click: '[data-reverb-type="Spring"]' }, { click: '[data-reverb-tab="eq"]' }]
 			},
 			{
 				name: 'fx-reverb-frozen',
 				description: 'Reverb, Hall with Freeze on: every band holds to the edge',
-				steps: [selectTrack(5), ...openTile('Reverb'), { click: '[data-reverb-type="Hall"]' }, { click: '[data-reverb-switch="8"]' }]
+				steps: [selectTrack(5), openCell('Reverb'), { click: '[data-reverb-type="Hall"]' }, { click: '[data-reverb-switch="8"]' }]
 			},
 			{ name: 'drumrack-drumcell', description: 'Drum Rack, DrumCell kit (Drums)', steps: [openInstrument(0)] },
 			// A tap latches a pad: the controls are its, and under them the

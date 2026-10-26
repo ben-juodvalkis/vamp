@@ -1,31 +1,19 @@
 <script lang="ts">
-	import FXGrid from '$lib/components/v6/device-panel/FXGrid.svelte';
 	import ChainOverview from '$lib/components/v6/device-panel/ChainOverview.svelte';
-	import FxPanelSwitch from '$lib/components/v6/device-panel/FxPanelSwitch.svelte';
-	import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
 	import { usePadHand } from '$lib/components/v6/device-panel/usePadHand.svelte';
 
-	// The blue hand follows the Drum Rack view's pad scope, whichever face is up.
+	// The blue hand follows the Drum Rack view's pad scope.
 	usePadHand();
 </script>
 
-<!-- The FX grid's own slot cards carry the structure, so the panel's outer
-     frame + fill are redundant — hide both (transparent border keeps the 1px
-     box so there's no layout shift; transparent background/backdrop drops the
-     grey wash behind the grid). Inline overrides so the shared
-     .glass-panel-subtle class stays intact elsewhere.
-
-     Two faces behind one tiny switch: the grid, or the selected track's
-     chain in order (ChainOverview). The switch is one button out of
-     flow over the top-left corner, so neither face gives up a cell for it. -->
+<!-- The FX section: the selected track's chain, in order (ChainOverview).
+     The FX grid and the switch between the two went with ADR-485. The
+     chain's cells carry the structure, so the panel's outer frame + fill
+     are hidden (a transparent border keeps the 1px box; inline overrides
+     so the shared .glass-panel-subtle class stays intact elsewhere). -->
 <div
 	class="glass-panel-subtle h-full flex flex-col relative"
 	style="border-color: transparent; background: transparent; backdrop-filter: none;"
 >
-	{#if fxChainStore.mode === 'chain'}
-		<ChainOverview />
-	{:else}
-		<FXGrid />
-	{/if}
-	<FxPanelSwitch />
+	<ChainOverview />
 </div>

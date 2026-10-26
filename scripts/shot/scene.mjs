@@ -463,6 +463,8 @@ const DEVICE_CLASS_NAMES = {
 	'Bass Amp': 'AudioEffectGroupDevice',
 	// The Octave panel's slot (Chorus view) is a Max device, matched the same way.
 	Octave: 'MxDeviceAudioEffect',
+	// GlitchLoop too: a Max audio effect, matched by class and name.
+	GlitchLoop: 'MxDeviceAudioEffect',
 	// So is the Tone Shaper's (EQ view).
 	"Ben's Adaptive Tone Shaper": 'MxDeviceAudioEffect',
 	// The Guitar rack is an Audio Effect Rack; without the entry its slot

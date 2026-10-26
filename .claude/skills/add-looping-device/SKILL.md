@@ -2,8 +2,8 @@
 name: add-looping-device
 description: >-
   Define a device type in Vamp and give it its control everywhere at once: the
-  FX-grid tile or a central view's mount, the effect chain's cell, and the
-  browser's preset tiles. Use whenever the request is "add <device>", "give
+  effect chain's cell, a central view's mount, and the browser's preset
+  tiles. Use whenever the request is "add <device>", "give
   <device> a slider/XY/tile", "<device> shows no control in the browser or the
   chain", "put <device> in the <name> view", or "wire <preset>.adv/.amxd into
   the UI". Also use before editing devicePresets.ts, deviceControls.ts,
@@ -26,7 +26,6 @@ cannot disagree:
 
 | Where | Draws it through |
 |---|---|
-| FX grid tile | `ControlTile` (a tile file is a one-line wrapper of it) |
 | Effect chain cell | `ControlTile`, from the cell's device type (`ChainOverview`) |
 | A central view's mount | `ControlTile` (`tapLoads` where a tap should load a ghost) |
 | Browser preset tile | `presetControl` → `FaceControl`, at the file's saved values |
@@ -90,7 +89,7 @@ gate: {
   defaultName: 'Gate',          // Live names a device after the file's basename
   expectedClassName: 'Gate',    // the .adv's root element (Max: MxDeviceAudioEffect)
   padScoped: true,              // may live in a drum pad's chain
-  gridSlot: false,              // omit only for a real grid tile
+  gridSlot: false,              // a virtual slot: the FX grid is gone (ADR-485)
   color: familyScheme('dynamics')
 },
 ```
@@ -147,9 +146,9 @@ gate: {
   `ChainOverview`'s `TILE_COMPONENTS` uses that tile, which wraps the same
   entry). A browser preset tile draws `presetControl` for any `.adv`, `.adg`
   or `.amxd` whose device type has an entry.
-- **A grid tile:** a wrapper file in `device-panel/`
-  (`<ControlTile type="gate" {device} {position} />`) and an entry in
-  `config/fxGridLayout.ts`. The grid is full, so a new tile evicts one: ask Ben.
+- **No grid tile:** the FX grid is gone (ADR-485). A slot in
+  `config/fxGridLayout.ts` is only for a device whose tile draws something
+  of its own beyond `ControlTile`.
 - **Inside a central view:** mount `ControlTile` with the slot's device
   (`useFxGridSlot('<key>').device`). Pass `disableCentralViewOnTap` (a tap
   must not navigate away from the view it sits in) and `tapLoads` if a tap on

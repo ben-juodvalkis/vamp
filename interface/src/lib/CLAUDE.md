@@ -77,7 +77,7 @@ the row has nothing to scroll.
 
 ## Config (`config/`)
 
-- `fxGridLayout.ts` - Maps 11 FX slot positions to device types, Svelte components and explicit grid cells on a **ten**-column grid (ADR-438 addendum). `cellFor(slot, kind)` (kinds `midi` · `audio`; Main is audio) halves fx1, the Gtr under it on every track; `SQUASH_CELL`, `PITCH_CELL`, `GLITCH_CELL` and `GUITAR_CELL` place the tiles with no entry; column 2 is Pitch over the Saturator and column 9 Glitch over Variation, sliders (ADR-467). Column 1: Rand Oct over the Gtr on MIDI, the Bass over the Gtr on audio and Main. `FXGrid.svelte` mounts fx1 per track type: Rand Oct on MIDI, the Bass on audio and Main. The instrument slider and the clip-pitch tile left with ADR-438. The Gtr tile opens `GuitarCentralView` (ADR-466)
+- `fxGridLayout.ts` - The device slot table: a position per device type and the tile component it is drawn with, which tiles, the FX chain's cells and the central views resolve their device through. The FX grid that placed these on a ten-column ruler went with ADR-485 (2026-10-26); a position is a name now, not a place
 - `devicePresets.ts` - Device definitions with parameter names and ranges
 - `permuteLayout.ts` - The thin Permute's 38 pattern controls by role (16 steps a lane since ADR-443; `PERMUTE_MAX_STEPS` is the length cap the Permute view and step grid read): long names (the contract with `Vamp Devices/Permute/Permute.amxd` and the surface engine), the positional fallback, the device defaults, and `resolvePermuteLayout()` — the one resolver every reader and the reset go through (ADR-429). `findPermute(records)` is the one finder (class + name, the pair the surface's engine discovers by) for a track's chain and, since ADR-435, a pad's
 

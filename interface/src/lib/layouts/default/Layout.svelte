@@ -38,7 +38,7 @@
 	//   1. track strips   — always on, always first
 	//   2. session clip grid  (CLIPS, default off)
 	//   3. central view       — always on (its VIEW switch went 2026-09-26)
-	//   4. FX grid            (FX,    default on)
+	//   4. FX chain           (FX,    default on)
 	//
 	// Nothing swaps places: a toggle adds or removes a whole section and
 	// the survivors re-divide the height. So the default is the familiar
@@ -69,7 +69,7 @@
 	let showCentralRow = $derived(uiPrefsStore.showCentralView);
 	let showDevicesRow = $derived(uiPrefsStore.showFxGrid);
 	// Mirrors the stack bottom-to-top (ADR-421, always on since its FLIP
-	// switch went, 2026-09-26): FX grid on
+	// switch went, 2026-09-26): FX chain on
 	// top, track strips against the bottom edge where the hands are. Done
 	// with `flex-direction: column-reverse` rather than by reordering the
 	// markup, which is what makes it free: flex shares, gaps and the
@@ -176,7 +176,7 @@
 				<MiddlePanelV6 />
 			</div>
 
-			<!-- Section 4: Devices Panel (FX grid). -->
+			<!-- Section 4: Devices Panel (the FX chain). -->
 			<div
 				class="min-h-0 layout-row section"
 				class:row-hidden={!showDevicesRow}
@@ -233,7 +233,7 @@
 				</div>
 			</div>
 
-			<!-- Section 4: the track's Utility, level with the FX grid (the loop
+			<!-- Section 4: the track's Utility, level with the FX chain (the loop
 			     brace's row until 2026-10-26; the brace shares Q's row now). -->
 			<div class="min-h-0 layout-row section flex flex-col" class:row-hidden={!showDevicesRow}>
 				<div class="flex-1 min-h-0">
@@ -304,17 +304,12 @@
 
 	   z-index clears the expanded browser overlay (z-index 1000), which
 	   is fixed to the viewport and would otherwise cover this. */
-	/* The strip runs the FX grid's own column ruler, so each monitor bar
-	   sits directly over the tile it shares a column with. That means
-	   three things have to agree with `FXGrid.svelte`: TWELVE equal
-	   columns, its 8px `gap-2` trough, and the inset of the middle column
-	   the grid lives in — the root's 16px side padding, plus a sidebar,
-	   plus the gap between them. The strip is full-bleed (negative
-	   margins cancel that root padding), so it re-adds the whole inset
-	   itself. If the FX grid's column count or gap ever changes, this
-	   changes with it; there is no shared constant because the two are
-	   different components and a token would hide the coupling rather
-	   than document it.
+	/* The strip runs a ten-column ruler over the middle column, the one the
+	   FX grid had until ADR-485 (equal columns, an 8px trough, inset by
+	   the root's 16px side padding plus a sidebar plus the gap between
+	   them); the transport header shares it. The strip is full-bleed
+	   (negative margins cancel that root padding), so it re-adds the
+	   whole inset itself.
 
 	   `overflow: hidden` matters off-device, where the height is 0 and
 	   the bars must not spill. */

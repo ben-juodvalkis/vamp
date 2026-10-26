@@ -209,8 +209,8 @@
 
      Laid on the page's own columns (Ben, 2026-10-19): Play over the
      browser rail, Overdub over the right sidebar, and the four cells
-     between them on the FX grid's ten-column ruler, so every edge lands
-     on an edge below it. Click and Overdub are each ONE lit cell, the
+     between them on a ten-column ruler (the FX grid's until ADR-485),
+     shared with the status strip. Click and Overdub are each ONE lit cell, the
      whole cell the switch, rather than a name beside an On/Off chip.
 
      Fixed height so enabling it compresses the flex rows below rather
@@ -349,13 +349,12 @@
     gap: var(--spacing-lg);
   }
 
-  /* The FX grid's ruler (`FXGrid.svelte`: ten equal columns, 8px gap),
-     the same one the status strip runs. Each cell spans whole tiles:
-       tempo    → columns 1–2 + EQ       (1–4)
-       time     → Filter                 (5–6)
-       position → Drum + Glitch column   (7–9)
-       click    → Squash / Gain          (10)
-     If the FX grid's column count or gap changes, this changes with it. */
+  /* A ten-column ruler (ten equal columns, 8px gap; the FX grid's until
+     ADR-485), the same one the status strip runs:
+       tempo    → columns 1–4
+       time     → 5–6
+       position → 7–9
+       click    → 10 */
   .hdr-ruler {
     min-width: 0;
     display: grid;
