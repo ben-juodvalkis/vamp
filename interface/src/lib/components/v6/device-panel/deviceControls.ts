@@ -552,3 +552,47 @@ export function presetControl(saved: SavedPreset | null, name: string): { contro
 	}
 	return null;
 }
+
+/**
+ * An instrument's control on its chain cell (2026-10-26): the pad its view
+ * is known by, in each parameter's own range (the face reads and writes
+ * through Live's min..max). The parameters are the views' own, read off the
+ * running device when each view was built (the `*Params.ts` tables and the
+ * views' constants): Operator's, Analog's, Wavetable's and Meld's filter,
+ * Sampler's and Simpler's by name, Collision's first resonator, Electric's
+ * hammer. `on` is the switch a gesture turns on first (a filter heard only
+ * while on). An Instrument Rack is its first macro, named as the rack names
+ * it. Omnisphere's ORB and Drift's filter are drawn by `InstrumentFace`.
+ */
+export interface InstrumentControl {
+	kind: 'xy' | 'macro';
+	title: string;
+	/** A parameter by index, or by name (an index of -1 when only the name is known). */
+	x: ParamRef;
+	y?: ParamRef;
+	/** Positions 0..1 shown before the device answers. */
+	rest: [number, number];
+	on?: ParamRef;
+}
+
+const byNameOnly = (name: string): ParamRef => ({ name, index: -1 });
+
+export const INSTRUMENT_CONTROLS: Readonly<Record<string, InstrumentControl>> = {
+	// OperatorCentralView: 165 'Filter On', 170 'Filter Freq', 171 'Filter Res'.
+	operator: { kind: 'xy', title: 'Filter', x: { name: 'Filter Freq', index: 170 }, y: { name: 'Filter Res', index: 171 }, on: { name: 'Filter On', index: 165 }, rest: [1, 0] },
+	// analogParams: 53 F1 On/Off, 57 F1 Freq, 59 F1 Resonance.
+	analog: { kind: 'xy', title: 'Filter', x: 57, y: 59, on: 53, rest: [1, 0] },
+	// WavetableCentralView FLT[1]: 21 on, 26 freq, 27 res.
+	wavetable: { kind: 'xy', title: 'Filter', x: 26, y: 27, on: 21, rest: [1, 0] },
+	// meldParams MELD_ENGINE.A: 13 filterOn, 15 freq, 16 q.
+	meld: { kind: 'xy', title: 'Filter', x: 15, y: 16, on: 13, rest: [1, 0] },
+	// SamplerCentralView: 'F On', 'Filter Freq', 'Filter Res' (Simpler alike).
+	sampler: { kind: 'xy', title: 'Filter', x: byNameOnly('Filter Freq'), y: byNameOnly('Filter Res'), on: byNameOnly('F On'), rest: [1, 0] },
+	simpler: { kind: 'xy', title: 'Filter', x: byNameOnly('Filter Freq'), y: byNameOnly('Filter Res'), on: byNameOnly('F On'), rest: [1, 0] },
+	// CollisionCentralView: 41 Res 1 decay, 45 material.
+	collision: { kind: 'xy', title: 'Res 1', x: 41, y: 45, rest: [0.5, 0.5] },
+	// ElectricCentralView: 8 hammer stiffness, 16 noise.
+	electric: { kind: 'xy', title: 'Hammer', x: 8, y: 16, rest: [0.5, 0.5] },
+	// An Instrument Rack's first macro, parameters[1].
+	'instrument-rack': { kind: 'macro', title: 'Macro 1', x: 1, rest: [0, 0] }
+};

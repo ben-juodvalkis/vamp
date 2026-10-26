@@ -288,6 +288,18 @@ export const TOURS = {
 				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], device]),
 				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(1)} .cell-head .name` }, { wait: 500 }]
 			})),
+			// An instrument's cell carries its view's signature control (INSTRUMENT_CONTROLS).
+			...[
+				['wavetable', CHAIN_DEMO_TRACK, null],
+				// The scene's Simpler sits on an audio track, which claims no instrument: put one on the MIDI demo track.
+				['simpler', CHAIN_DEMO_TRACK, ['Simpler', 'Echo']],
+				['operator', 11, null]
+			].map(([key, track, devices]) => ({
+				name: `chain-instrument-${key}`,
+				description: `The ${key} track's chain: its instrument cell draws its view's signature control`,
+				...(devices ? { scenePatch: (scene) => setTrackDevices(scene, track, devices) } : {}),
+				steps: [openInstrument(track)]
+			})),
 			// The MIDI effects' controls on their chain cells (deviceControls).
 			{
 				name: 'chain-midi-effects',
