@@ -33,6 +33,7 @@ export type PictureKind =
 	| 'tail'
 	| 'stack'
 	| 'compress'
+	| 'vu'
 	| 'ratio'
 	| 'repeat'
 	| 'scatter'
@@ -264,6 +265,39 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0, variant = 0)
 			return [
 				{ d: 'M0,100L100,0', o: 0.2 },
 				{ d: trace((u) => 100 - 100 * (u < th ? u : th + (u - th) * 0.25)), o: 0.85 }
+			];
+		}
+		// Glue: a vintage VU meter, as Live's Glue draws its gain reduction
+		// (user, 2026-10-26): a framed face, a scale arc of ticks with the
+		// top end heavier, and a needle from a pivot under the face that
+		// swings right with more glue.
+		case 'vu': {
+			const px = 50;
+			const py = 86;
+			const at = (deg: number, r: number) => {
+				const a = (deg * Math.PI) / 180;
+				return [px + r * Math.sin(a), py - r * Math.cos(a)];
+			};
+			const ticks = Array.from({ length: 9 }, (_, i) => {
+				const deg = -48 + i * 12;
+				const [x0, y0] = at(deg, i % 2 ? 54 : 51);
+				const [x1, y1] = at(deg, 58);
+				return `M${f(x0)},${f(y0)}L${f(x1)},${f(y1)}`;
+			});
+			const [ax, ay] = at(-48, 58);
+			const [bx, by] = at(48, 58);
+			const [rx, ry] = at(24, 60);
+			const [r2x, r2y] = at(44, 60);
+			const [r3x, r3y] = at(44, 62.5);
+			const [r4x, r4y] = at(24, 62.5);
+			const [nx, ny] = at(-48 + x * 96, 56);
+			return [
+				{ d: 'M10,14H90Q94,14 94,18V82Q94,86 90,86H10Q6,86 6,82V18Q6,14 10,14Z', o: 0.6 },
+				{ d: `M${f(ax)},${f(ay)}A58,58 0 0,1 ${f(bx)},${f(by)}`, o: 0.45 },
+				{ d: ticks.join(''), o: 0.75 },
+				{ d: `M${f(rx)},${f(ry)}A60,60 0 0,1 ${f(r2x)},${f(r2y)}L${f(r3x)},${f(r3y)}A62.5,62.5 0 0,0 ${f(r4x)},${f(r4y)}Z`, o: 0.55, fill: true },
+				{ d: `M${px},${py}L${f(nx)},${f(ny)}`, o: 0.95 },
+				{ d: 'M38,86A12,12 0 0,1 62,86Z', o: 0.6, fill: true }
 			];
 		}
 		// Multiband: three compressor knees side by side, bass, mid and treble,

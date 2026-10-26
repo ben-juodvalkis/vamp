@@ -321,7 +321,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	squash: {
 		control: {
 			kind: 'slider',
-			title: 'Glue', picture: 'compress',
+			title: 'Glue', picture: 'vu',
 			read: (g) => clamp01((g(1) ?? 0) / -40),
 			write: (t) => [
 				[1, -40 * t],
