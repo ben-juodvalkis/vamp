@@ -10,8 +10,9 @@ the same way, in a Utility that is there to grab whether or not the track has
 one: a gain stage at the end of the chain, a drag away.
 
 ## Decision
-- A chain with no Utility ends in a ghost one, after the last device and
-  before the + cell: the FX grid's own Gain tile (`UtilityControl`) in its
+- A chain with no Utility ends in a ghost one, after the + cell (the user,
+  the same day; it sat between the last device and the + at first): the FX
+  grid's own Gain tile (`UtilityControl`) in its
   ghost state, in a dashed cell titled Utility. Under a pad scope it is the
   pad's, as the tile is.
 - Its first drag frame loads a Utility, as a ghost grid tile does (ADR-167);

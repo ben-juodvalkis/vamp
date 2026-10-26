@@ -413,8 +413,8 @@
   /*
    * The ghost Utility (2026-10-26, Ben's call): a chain with no Utility
    * always ends in one, as the strips always end in Main — the FX grid's
-   * own Gain tile in its ghost state, after the last device and before
-   * the + cell. Its first drag frame loads a Utility (ADR-167), which Live
+   * own Gain tile in its ghost state, last, after the + cell (Ben, the
+   * same day; it sat between the last device and the + until then). Its first drag frame loads a Utility (ADR-167), which Live
    * puts at the end of the chain: where the ghost already is. The ghost
    * stays under the finger until it lifts — its tile drives the Utility
    * that has arrived — and the real cell takes over on release, so the
@@ -766,6 +766,17 @@
       {@render cellBody(cell, position)}
     </div>
   {/each}
+  <!-- Add an effect: the browser on Effect, landing on this chain. -->
+  <button
+    type="button"
+    class="chain-add"
+    aria-label="Add an effect"
+    data-debug="chain-add"
+    use:press={{ onPress: addEffect, touchAction: 'none' }}
+  >
+    <span class="chain-add-icons" aria-hidden="true"><Plus /><ControlGlyph name="rack" /></span>
+    <span class="chain-add-label">Effect</span>
+  </button>
   {#if showGhostUtility && UTILITY_TILE}
     <!-- The ghost Utility: drag its fader to load one at the chain's end. -->
     <div
@@ -783,17 +794,6 @@
       </div>
     </div>
   {/if}
-  <!-- Add an effect: the browser on Effect, landing on this chain. -->
-  <button
-    type="button"
-    class="chain-add"
-    aria-label="Add an effect"
-    data-debug="chain-add"
-    use:press={{ onPress: addEffect, touchAction: 'none' }}
-  >
-    <span class="chain-add-icons" aria-hidden="true"><Plus /><ControlGlyph name="rack" /></span>
-    <span class="chain-add-label">Effect</span>
-  </button>
   {#if padScope}
     <!-- Whose chain this is, as the grid's scope chip says it. -->
     <div class="pad-chip chain-scope-chip" aria-label="Chain of pad {padScope.note}">
