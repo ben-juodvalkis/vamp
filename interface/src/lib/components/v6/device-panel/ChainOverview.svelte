@@ -429,7 +429,10 @@
     const d = drag;
     if (!d || !dragNode) return;
     const x = d.box.left + offset.dx - dragNode.offsetLeft;
-    const y = d.box.top - offset.dy - dragNode.offsetTop;
+    // One row: the cell slides along it, level, wherever the finger goes
+    // up or down (Ben, 2026-10-26). Two rows need the vertical.
+    const dy = grid.rows === 1 ? 0 : offset.dy;
+    const y = d.box.top - dy - dragNode.offsetTop;
     dragNode.style.transform = `translate3d(${x}px, ${y}px, 0)`;
   }
   function scheduleDragged() {
