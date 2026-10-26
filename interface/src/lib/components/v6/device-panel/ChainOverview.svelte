@@ -716,7 +716,7 @@
       {/if}
 {/snippet}
 
-<div class="chain-wrap" class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
+<div class="chain-wrap" class:two-rows={grid.rows > 1} class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
 <div
   class="chain"
   style:--chain-cols={grid.cols}
@@ -949,6 +949,11 @@
     height: var(--strip-band-h, 56px);
     flex: 0 0 auto;
     padding-left: 6px;
+  }
+  /* Two rows of cells: half that, so the controls keep their height
+     (the user, the same day). The Utility's column matches. */
+  .chain-wrap.two-rows .cell-head {
+    height: calc(var(--strip-band-h, 56px) / 2);
   }
   /* The first cell's corner is the FX section's switch (FxPanelSwitch). */
   .chain-cell:first-child .cell-head {
