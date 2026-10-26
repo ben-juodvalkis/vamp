@@ -36,7 +36,8 @@
    * the selected track, so a pad's chain draws its mark instead. A
    * Permute carries its mute and pitch steps (`chain/PermuteStepsFace`),
    * the track's instrument the control its view is known by
-   * (`chain/InstrumentFace`: Omnisphere's ORB, Drift's filter).
+   * (`chain/InstrumentFace`: Omnisphere's ORB, Drift's filter), and a
+   * Drum Rack its kit's Trnsp (`chain/DrumRackFace`, `vm.pitch`).
    *
    * **A pad follows the Drum Rack view.** While a pad is held or latched
    * on the selected track's Drum Rack, the overview is that pad's chain —
@@ -52,42 +53,45 @@
   import Plus from '@lucide/svelte/icons/plus';
   import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
   import type { Component } from 'svelte';
-  import { FX_GRID_LAYOUT } from '$lib/config/fxGridLayout';
+  import { FX_GRID_LAYOUT, type DeviceTypeKey } from '$lib/config/fxGridLayout';
   import { provideFxScope } from '$lib/components/v6/central/fxScope';
   import GuitarControl from './GuitarControl.svelte';
   import BassControl from './BassControl.svelte';
   import PitchControl from './PitchControl.svelte';
   import GlitchControl from './GlitchControl.svelte';
   import SquashControl from './SquashControl.svelte';
+  import ControlTile from './ControlTile.svelte';
+  import { controlFor } from './deviceControls';
   import MidiWheelsPanel from '$lib/components/v6/midi/MidiWheelsPanel.svelte';
   import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
   import InstrumentFace, { FACED_INSTRUMENTS } from './chain/InstrumentFace.svelte';
+  import DrumRackFace from './chain/DrumRackFace.svelte';
   import { schemeFromInk } from '$lib/config/devicePresets';
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
   import constants from '$config/constants.json';
   import Music from '@lucide/svelte/icons/music';
   import { press } from '$lib/actions/press';
+  import { swallowNextClick } from '$lib/utils/swallowNextClick';
   import { drag, type DragInfo } from '$lib/actions/drag';
   import { moveDevice } from '$lib/services/deviceMoveService';
   import { chainGrid, clampChainIndex, moved } from '$lib/utils/chainDrop';
   import { flip } from 'svelte/animate';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
-  import { fxChainStore, RACK_PICK } from '$lib/stores/v6/fxChainStore.svelte';
+  import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
   import { DEVICE_PRESETS, DEVICE_FAMILY_INKS } from '$lib/config/devicePresets';
   import ControlGlyph from './ControlGlyph.svelte';
   import { DEVICE_CLASS_GLYPHS, DEVICE_KEY_GLYPHS, glyphForName, type ControlGlyphName } from '$lib/config/controlGlyphMap';
-  import { matchesSlot, pickSlotDevice } from '$lib/utils/deviceSlotMatch';
-  import { openDeviceView, activeDrumRackScope, selectedDrumRack } from '$lib/services/deviceViewRouter.svelte';
+  import { pickSlotDevice } from '$lib/utils/deviceSlotMatch';
+  import { activeDrumRackScope, selectedDrumRack } from '$lib/services/deviceViewRouter.svelte';
+  import { effectTypeOf, openEffectView } from '$lib/services/effectView.svelte';
   import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
   import { usePadChainRows } from '$lib/components/v6/central/usePadChainRows.svelte';
   import { DEVICE_TYPE_INSTRUMENT, VM_PAD_FX, parseVmPadFx, padTileLabel } from '$lib/services/drumVirtualMacros';
-  import { isViewRegistered } from '$lib/components/v6/central/viewRegistry';
   import { trackDeviceGlance } from '$lib/components/v6/tracks/composables/useTrackDevice.svelte';
   import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import { selectedTrackInk } from '$lib/utils/selectedTrackInk';
-  import { CHAIN_DEVICE_VIEW } from '$lib/components/v6/central/views/chainDeviceView';
   import TrackDeviceView from '$lib/components/v6/tracks/TrackStrip/components/TrackDeviceView.svelte';
   import type { DeviceRecord } from '$lib/stores/v3/normalized.svelte';
 
@@ -276,12 +280,7 @@
     return s.replace(/([a-z])([A-Z])/g, '$1 $2');
   }
 
-  function presetKeyFor(device: DeviceRecord): string | null {
-    for (const [key, config] of Object.entries(DEVICE_PRESETS)) {
-      if (config.expectedClassName && matchesSlot(device, config)) return key;
-    }
-    return null;
-  }
+  const presetKeyFor = (device: DeviceRecord) => effectTypeOf(device);
 
   function macrosOf(device: DeviceRecord): { name: string; value: number }[] {
     const names = selectedTrackStore.paramNamesForDevice(device as never);
@@ -365,7 +364,14 @@
   }
 
   function dragStart(cell: Cell, index: number, info: DragInfo) {
-    if (pressInControl || cell.kind === 'instrument' || !chainEl) return;
+    // A drag on a cell's control is that control's, and it opens the
+    // device's view as a tap on the cell does — every control here, not
+    // only the grid's tiles, which open their own (2026-10-26).
+    if (pressInControl) {
+      open(cell);
+      return;
+    }
+    if (cell.kind === 'instrument' || !chainEl) return;
     const node = chainEl.querySelector<HTMLElement>(`[data-cell-key="${CSS.escape(cell.key)}"]`);
     const origin = chainEl.getBoundingClientRect();
     const r = node?.getBoundingClientRect();
@@ -418,36 +424,17 @@
 
   function open(cell: Cell) {
     const { device } = cell;
-    fxChainStore.appoint(device.devicePath, { force: true });
-    if (padScope) {
-      // The pad's instrument is what the Drum Rack view already shows; an
-      // effect opens in its pane (the router routes under the scope).
-      if (cell.kind === 'instrument') return;
-      if (cell.presetKey && isViewRegistered('device', cell.presetKey)) {
-        fxChainStore.pick(pickScope, cell.presetKey, device.devicePath);
-        openDeviceView(cell.presetKey);
-      }
-      return;
-    }
     if (cell.kind === 'instrument') {
+      // The pad's instrument is what the Drum Rack view already shows.
+      if (padScope) return;
+      fxChainStore.appoint(device.devicePath, { force: true });
       if (glance.instrumentViewType) {
         centralDisplayStore.setView('instrument', glance.instrumentViewType, { instrument: glance.instrument });
         return;
       }
-    } else if (cell.presetKey === 'sequencer') {
-      centralDisplayStore.setView('permute', undefined, null, 'Permute');
-      return;
-    } else if (cell.presetKey && isViewRegistered('device', cell.presetKey)) {
-      fxChainStore.pick(trackPath, cell.presetKey, device.devicePath);
-      openDeviceView(cell.presetKey);
-      return;
-    } else if (cell.kind === 'rack') {
-      fxChainStore.pick(trackPath, RACK_PICK, device.devicePath);
-      openDeviceView('audio-effect-rack');
-      return;
     }
-    fxChainStore.pick(trackPath, CHAIN_DEVICE_VIEW, device.devicePath);
-    openDeviceView(CHAIN_DEVICE_VIEW);
+    // An effect: its view, as a browser load's (`services/effectView`).
+    openEffectView(device, { pickScope, padScoped: !!padScope });
   }
 </script>
 
@@ -491,6 +478,11 @@
         <div class="cell-control" role="presentation">
           <InstrumentFace device={cell.device} type={glance.instrumentViewType} color={selectedTrackScheme() ?? schemeFromInk(cell.ink)} />
         </div>
+      {:else if live && !padScope && cell.kind === 'instrument' && cell.device.className === 'DrumGroupDevice'}
+        <!-- A Drum Rack: the kit's Trnsp, as its view draws it. -->
+        <div class="cell-control" role="presentation">
+          <DrumRackFace device={cell.device} color={selectedTrackScheme() ?? schemeFromInk(cell.ink)} />
+        </div>
       {:else if live && !padScope && isMidiWheels(cell.device)}
         <!-- The pitch and mod wheels, as the instrument views draw them:
              Pitch over Mod in a full-height cell, side by side in a
@@ -501,6 +493,12 @@
              control's: it picks this device and never starts a reorder. -->
         <div class="cell-control" role="presentation">
           <tile.Tile device={cell.device} position={tile.position} />
+        </div>
+      {:else if live && controlFor(cell.presetKey)}
+        <!-- No grid tile: the device's control (deviceControls), the one its
+             browser preset tiles and its view draw, on this device. -->
+        <div class="cell-control" role="presentation">
+          <ControlTile type={cell.presetKey as DeviceTypeKey} device={cell.device} />
         </div>
       {:else}
       <div class="mark" aria-hidden="true">
@@ -574,7 +572,7 @@
     class="chain-add"
     aria-label="Add an effect"
     data-debug="chain-add"
-    use:press={{ onPress: () => browserModeStore.openEffectsBrowser(), touchAction: 'none' }}
+    use:press={{ onPress: () => { swallowNextClick(); browserModeStore.openEffectsBrowser(); }, touchAction: 'none' }}
   >
     <span class="chain-add-icons" aria-hidden="true"><Plus /><ControlGlyph name="rack" /></span>
     <span class="chain-add-label">Effect</span>

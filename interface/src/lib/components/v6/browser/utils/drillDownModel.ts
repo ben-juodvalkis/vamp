@@ -112,8 +112,11 @@ export interface PresetGroup<P extends { path: string }> {
  * the loose bucket rather than disappearing).
  */
 function originFolderFor(path: string, currentPath: string[]): string | null {
-	if (currentPath.length === 0) return null;
 	const dirs = path.split('/').slice(0, -1); // drop the filename
+	// At a Place's root a preset's path starts with the Place's own folder,
+	// so its section is the folder under that (the effects Place keeps every
+	// preset on its root screen, 2026-10-26).
+	if (currentPath.length === 0) return dirs.length > 1 ? dirs[1] : null;
 	let searchEnd = dirs.length; // exclusive upper bound for the next match
 	let anchor = -1; // index where the LAST currentPath segment matched
 	for (let j = currentPath.length - 1; j >= 0; j--) {
@@ -379,6 +382,41 @@ export interface GroupedGridConstraints extends Omit<GridConstraints, 'count'> {
 	headerHeight: number;
 	/** Extra vertical gap between sections (defaults to the tile gap). */
 	sectionGap?: number;
+	/**
+	 * Whether each section (parallel to `groups`) draws a header. Given, the
+	 * sections are counted as the browser draws them, packed into shared rows
+	 * by `packGroupedSections`' rule (ADR-409): a packed band is one tile row
+	 * under one header row. Without it, every section takes its own rows and
+	 * `headerCount` headers (the mixed level's folders-then-presets).
+	 */
+	headers?: boolean[];
+}
+
+/** The bands `packGroupedSections` makes of sections of these sizes at `cols` columns: each band's tile rows and whether it has a header row. */
+function packedBands(sizes: number[], headers: boolean[], cols: number): Array<{ rows: number; header: boolean }> {
+	const bands: Array<{ rows: number; header: boolean }> = [];
+	let runCount = 0;
+	let runHeader = false;
+	let run = false;
+	const flush = () => {
+		if (run) bands.push({ rows: 1, header: runHeader });
+		run = false;
+		runCount = 0;
+		runHeader = false;
+	};
+	sizes.forEach((n, i) => {
+		if (n > cols) {
+			flush();
+			bands.push({ rows: Math.ceil(n / cols), header: headers[i] });
+			return;
+		}
+		if (runCount + n > cols) flush();
+		run = true;
+		runCount += n;
+		runHeader ||= headers[i];
+	});
+	flush();
+	return bands;
 }
 
 /**
@@ -392,7 +430,8 @@ export function computeGroupedGridLayout(c: GroupedGridConstraints): GridLayout 
 	const targetAspect = c.targetAspect ?? 1;
 	const sectionGap = c.sectionGap ?? gap;
 
-	const sizes = c.groups.filter((n) => n > 0).map((n) => Math.floor(n));
+	const kept = c.groups.map((n, i) => ({ n: Math.floor(n), header: c.headers?.[i] ?? false })).filter((g) => g.n > 0);
+	const sizes = kept.map((g) => g.n);
 	const count = sizes.reduce((a, b) => a + b, 0);
 	const width = Math.max(1, c.width);
 	const height = Math.max(1, c.height);
@@ -412,10 +451,15 @@ export function computeGroupedGridLayout(c: GroupedGridConstraints): GridLayout 
 	let bestScore = -Infinity;
 
 	for (let cols = 1; cols <= maxCols; cols++) {
-		const rowsPerSection = sizes.map((n) => Math.ceil(n / cols));
-		const rows = rowsPerSection.reduce((a, b) => a + b, 0);
-		const rowGaps = rowsPerSection.reduce((a, r) => a + (r - 1) * gap, 0);
-		const chrome = chromeBase + rowGaps;
+		// Packed, the bands the browser draws; else one band per section.
+		const bands = c.headers
+			? packedBands(sizes, kept.map((g) => g.header), cols)
+			: sizes.map((n) => ({ rows: Math.ceil(n / cols), header: false }));
+		const rows = bands.reduce((a, b) => a + b.rows, 0);
+		const rowGaps = bands.reduce((a, b) => a + (b.rows - 1) * gap, 0);
+		const chrome = c.headers
+			? bands.filter((b) => b.header).length * c.headerHeight + (bands.length - 1) * sectionGap + rowGaps
+			: chromeBase + rowGaps;
 
 		const tileWidth = (width - gap * (cols - 1)) / cols;
 		// Grow rows to fill the stage when everything fits; hold at the min height

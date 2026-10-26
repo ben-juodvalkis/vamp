@@ -40,7 +40,8 @@ u.on('ready', () => {
     const dumpFile = out.replace(/\.json$/, '.dump.json');
     try { execFileSync('node', [`${REPO}/owner/probes/device_dump.js`, devPath, '--json', dumpFile], { stdio: 'ignore' }); } catch (e) {}
     const dump = JSON.parse(fs.readFileSync(dumpFile, 'utf8'));
-    const xml = zlib.gunzipSync(fs.readFileSync(presetPath)).toString('utf8');
+    // A Max device's .amxd is no XML: its saved values are compared by name, by hand.
+    const xml = presetPath.endsWith('.amxd') ? '' : zlib.gunzipSync(fs.readFileSync(presetPath)).toString('utf8');
     const saved = [...xml.matchAll(/<(\w+)>\s*<LomId Value="-?\d+"\s*\/>\s*<Manual Value="([^"]*)"/g)].map((m) => [m[1], m[2]]);
     const rows = dump.parameters.map((p, i) => ({ i: p.index, name: p.name, min: p.min, max: p.max, lom: p.value, q: p.is_quantized, labels: p.labels, xmlName: saved[i]?.[0], xml: saved[i]?.[1] }));
     fs.writeFileSync(out, JSON.stringify({ preset: presetPath, device: after[idx], className: dump.identity?.class_name, devPath, rows, savedCount: saved.length }, null, 1));

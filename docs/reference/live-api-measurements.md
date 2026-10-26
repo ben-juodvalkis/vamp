@@ -243,8 +243,8 @@ and logged a `control-thread hiccup` of the same order.
 What a native device's `.adv` saves beside what the LOM reports once it is
 loaded — measured by loading one preset of each class onto a track, dumping
 it and deleting it (`owner/probes/preset_measure.js`; Live 12.4.15b7). The
-browser's preset faces read these (`browser/presetFaces.ts`, tested against
-the same numbers in `browser.presetFaces.test.ts`).
+device controls read these (`device-panel/deviceControls.ts`, ADR-479,
+tested against the same numbers in `deviceControls.presets.test.ts`).
 
 - **Order:** a native device saves its parameters (`<Name><LomId/><Manual
   Value/>`) in the order the LOM lists them, Device On first — true for
@@ -264,12 +264,35 @@ the same numbers in `browser.presetFaces.test.ts`).
   - Saturator: Drive dB on ±36 (0 → 0.5), Output dB on -36..0 (0 → 1).
   - Auto Pan Legacy Frequency: Hz, `0.05 · 1800^v` (1.00 → 0.3997).
   - Utility Output is the file's `Gain`, a linear factor (1 → 0 dB → 0).
+  - Pedal: Gain is Drive (2), 0..1 as saved; Output dB, Mid Freq 0..2 too.
+  - Gate: Threshold a linear factor, Live's rail in dB (sampled, -70 dB → 0);
+    Release ms, `0.1 · 30000^v` (15 → 0.486). Attack ms and Floor dB as saved.
+  - Compressor: Threshold a linear factor on the same rail as Gate's (Live's
+    labels agree at every quarter; 1.995, +6 dB → 1).
+  - Phaser-Flanger (2026-10-26): LFO 1 Freq is 0..1 on Live's rail
+    `0.01 Hz · 4000^v`, the file in Hz (0.1486 → 0.3254); Feedback 0..1,
+    Live's 99 % at 1 (saved 0 → 0, the one point measured).
+  - Redux: Sample Rate Hz on Live's rail (sampled; 40 kHz → 1, 3.99 kHz at
+    0.5); Post-Filter -4..4 → `(v + 4) / 8` (0 → 0.5).
+  - Shifter: RM Coarse Hz, `1 · 10000^v` (1 Hz → 0); Mode as saved (2 Ring).
+  - Multiband Dynamics: Below Ratio (Mid) -3..1, Below Threshold (Mid) dB
+    and Output dB, all as saved (0 → 0, -27.125 → -27.125).
   - Glue Threshold/Makeup, Drum Buss, Beat Repeat and Random Chance, every
     Dry/Wet: as saved.
 - **Racks** (`.adg`): `<GroupDevicePreset>` wraps the rack; its own
   `MacroControls.<n>` come before any nested rack's and are
   `parameters[n + 1]` value for value (0..127, the Guitar rack), named by
   `MacroDisplayNames.<n>`.
+- **Max devices** (`.amxd`, 2026-10-26): the file is the `ampf` header (type
+  code `aaaa` audio, `mmmm` MIDI) and its patcher JSON; a frozen device
+  (`mx@c`) embeds its patchers among its files. Each `live.*` box saves
+  `parameter_initial`, and Live opens the device at it: Octave Mix 100,
+  Comb Tune 0 and Mix/Feedback 17.58, Blur Mix 0, Note Chance 100,
+  GlitchLoop Dry/Wet 35.7033 (loaded, dumped, deleted). Live names each
+  parameter by its `parameter_shortname`, not its long name: Blur's "Loop
+  Rate" is "Rate", GlitchLoop's "DryWet" is "Dry/Wet", "Restart on Play"
+  is "Restart". A patch can set a value on load: Blur's Rate opened at
+  92.4, not the 22 the file saves.
 - **A loaded preset's device takes the preset's file name** (Disco
   Filter.adv → an `AutoFilter2` named "Disco Filter"), which is how a drag
   on a browser tile finds the device its load landed.

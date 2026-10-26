@@ -425,51 +425,30 @@ export function collapseSingleChains(node: PlaceFolder): PlaceFolder {
 	return { ...node, folders };
 }
 
-/** The groups the effects Place is laid out in, the way Live's browser files them. */
-export const EFFECT_GROUP_NAMES = { audio: 'Audio Effects', midi: 'MIDI Effects' } as const;
-const MIDI_EFFECT_KINDS = new Set<ItemKind>(['midi-effect', 'max-midi-effect', 'midi-effect-rack']);
 
 function itemsUnder(node: PlaceFolder): PlaceItem[] {
 	return [...node.presets, ...Object.values(node.folders).flatMap(itemsUnder)];
 }
 
 /**
- * The effects Place (`catalog.effectsPlace`, Vamp Devices) laid out as
- * Live's browser lays effects out: an Audio Effects and a MIDI Effects
- * folder, each holding its devices (2026-10-26). The checkout keeps one
- * folder per device at its top level, which 886 saved sets point into by
- * absolute path, so the grouping is drawn here and the files never move.
- * A top-level folder already named for a group merges into it; one whose
- * items are all MIDI effects files under MIDI, any other under Audio; a
- * folder holding a single preset and nothing else is that preset; a
- * folder or file named in `hidden` (the plumbing the app loads on its own:
- * the Recorder, random-start, their abstractions, the groove) is dropped.
+ * The effects Place (`catalog.effectsPlace`) as one screen (user,
+ * 2026-10-26): every preset in it at its top level, each keeping its own
+ * path, so the browser draws each folder's presets as a headed section
+ * under the loose ones (`groupPresetsByOrigin`, ADR-403), as it does past
+ * the depth cap. What is on disk decides the sections ("just show what's
+ * in the folder"; grouped into Audio Effects and MIDI Effects by kind that
+ * morning). A folder or file named in `hidden` (the plumbing the app loads
+ * on its own: the Recorder, random-start, their abstractions, the groove)
+ * is dropped. The files never move: saved sets point into them by path.
  */
-export function groupEffectsPlace(raw: PlaceFolder, hidden: readonly string[]): PlaceFolder {
+export function tidyEffectsPlace(raw: PlaceFolder, hidden: readonly string[]): PlaceFolder {
 	const drop = new Set(hidden.map((h) => h.toLowerCase()));
-	const groups = { audio: { folders: {} as Record<string, PlaceFolder>, presets: [] as PlaceItem[] }, midi: { folders: {} as Record<string, PlaceFolder>, presets: [] as PlaceItem[] } };
-	const groupOf = (items: PlaceItem[]) => (items.length && items.every((i) => i.kind && MIDI_EFFECT_KINDS.has(i.kind)) ? 'midi' : 'audio');
 	const file = (item: PlaceItem) => fileName(item.path).replace(/\.[^.]+$/, '');
-	const place = (folder: PlaceFolder, into: (typeof groups)['audio']) => {
-		if (folder.presets.length === 1 && Object.keys(folder.folders).length === 0) into.presets.push(folder.presets[0]);
-		else if (itemsUnder(folder).length) into.folders[folder.name] = folder;
-	};
+	const presets = raw.presets.filter((item) => !drop.has(file(item).toLowerCase()));
 	for (const [name, folder] of Object.entries(raw.folders)) {
-		if (drop.has(name.toLowerCase())) continue;
-		const named = (Object.keys(EFFECT_GROUP_NAMES) as Array<keyof typeof EFFECT_GROUP_NAMES>).find((g) => EFFECT_GROUP_NAMES[g].toLowerCase() === name.toLowerCase());
-		if (named) {
-			for (const child of Object.values(folder.folders)) place(child, groups[named]);
-			groups[named].presets.push(...folder.presets);
-		} else place(folder, groups[groupOf(itemsUnder(folder))]);
+		if (!drop.has(name.toLowerCase())) presets.push(...itemsUnder(folder));
 	}
-	for (const item of raw.presets) if (!drop.has(file(item).toLowerCase())) groups[groupOf([item])].presets.push(item);
-	const folders: Record<string, PlaceFolder> = {};
-	for (const g of ['audio', 'midi'] as const) {
-		if (!groups[g].presets.length && !Object.keys(groups[g].folders).length) continue;
-		const name = EFFECT_GROUP_NAMES[g];
-		folders[name] = { name, path: `${raw.path}/${name}`, folders: groups[g].folders, presets: groups[g].presets, vendorColor: raw.vendorColor };
-	}
-	return { ...raw, folders, presets: [] };
+	return { ...raw, folders: {}, presets };
 }
 
 const byNameCI = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: 'base' });

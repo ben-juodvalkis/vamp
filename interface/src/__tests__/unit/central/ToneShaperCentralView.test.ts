@@ -1,5 +1,6 @@
 /**
- * EQCentralView's Tone Shaper: Ben's Adaptive Tone Shaper's graph beside the
+ * ToneShaperCentralView (its own view since 2026-10-26; beside the Channel EQ
+ * in the EQ view before): Ben's Adaptive Tone Shaper's graph beside the
  * Channel EQ (params read off the running device 2026-10-07: 1 Amount,
  * 2–5 the tone levels, 6 Latency, 7 Quality, 8–11 the centers in Hz), and
  * the frames its device sends through the bridge.
@@ -20,7 +21,7 @@ import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.sv
 import { replaceTree, _resetForTests, type TrackRecord, type DeviceRecord, type ParamRecord } from '$lib/stores/v3/normalized.svelte';
 import { applyToneShaperFrame, __resetToneShaperStoreForTests } from '$lib/stores/v3/toneShaper.svelte';
 import { handleToneShaperFrame } from '$lib/api/handlers/toneShaperFrame';
-import EQCentralView from '$lib/components/v6/central/views/EQCentralView.svelte';
+import ToneShaperCentralView from '$lib/components/v6/central/views/ToneShaperCentralView.svelte';
 
 const TRACK = 'tracks/0';
 const DEVICE = `${TRACK}/devices/0`;
@@ -82,10 +83,10 @@ beforeEach(() => {
 });
 afterEach(() => cleanup());
 
-describe('EQCentralView Tone Shaper', () => {
+describe('ToneShaperCentralView', () => {
 	it('draws the four handles, the Amount and the switches from params 1–11', async () => {
 		seed([toneShaper({ 1: 7.5, 2: 3, 5: -2.5, 7: 1, 8: 80, 11: 12000 })]);
-		const { container } = render(EQCentralView);
+		const { container } = render(ToneShaperCentralView);
 		await tick();
 		expect(handles(container)).toEqual({
 			lows: { level: '3.00', hz: '80', text: '80' },
@@ -96,16 +97,16 @@ describe('EQCentralView Tone Shaper', () => {
 		expect(container.querySelector('[data-ts-amount]')?.getAttribute('aria-valuenow')).toBe('7.5');
 		expect(container.querySelector('[data-ts-switch="zero"]')?.getAttribute('aria-pressed')).toBe('true');
 		expect(container.querySelector('[data-ts-switch="eco"]')?.getAttribute('aria-pressed')).toBe('true');
-		expect(container.querySelector('.ts-group')?.classList.contains('slot-ghost')).toBe(false);
+		expect(container.querySelector('.ts-layout')?.classList.contains('slot-ghost')).toBe(false);
 		// The view asks the bridge for this device's frames.
 		expect(send).toHaveBeenCalledWith('/toneshaper/watch', [DEVICE]);
 	});
 
 	it('dims as a ghost when the track has none: Amount 0, the handles at rest, ZERO on', async () => {
 		seed([]);
-		const { container } = render(EQCentralView);
+		const { container } = render(ToneShaperCentralView);
 		await tick();
-		expect(container.querySelector('.ts-group')?.classList.contains('slot-ghost')).toBe(true);
+		expect(container.querySelector('.ts-layout')?.classList.contains('slot-ghost')).toBe(true);
 		expect(handles(container)).toEqual({
 			lows: { level: '0.00', hz: '100', text: '100' },
 			lomids: { level: '0.00', hz: '350', text: '350' },
@@ -121,7 +122,7 @@ describe('EQCentralView Tone Shaper', () => {
 
 	it('draws the spectrum and the curve from the device\'s frame', async () => {
 		seed([toneShaper()]);
-		const { container } = render(EQCentralView);
+		const { container } = render(ToneShaperCentralView);
 		await tick();
 		expect(container.querySelector('.spectrum')).toBeNull();
 		expect(container.querySelector('.curve')).toBeNull();
@@ -142,7 +143,7 @@ describe('EQCentralView Tone Shaper', () => {
 		handleToneShaperFrame('/toneshaper/frame', frame(() => -30, () => 0).map((v, i) => (i === 3 ? 'x' : v)));
 		expect(applyToneShaperFrame('tracks/4/devices/2', Array(59).fill(-30), Array(59).fill(0))).toBe(true);
 		seed([toneShaper()]);
-		const { container } = render(EQCentralView);
+		const { container } = render(ToneShaperCentralView);
 		expect(container.querySelector('.spectrum')).toBeNull();
 	});
 });

@@ -1,20 +1,13 @@
 /**
- * PedalCentralView (ADR-431): seven columns — Digital, Redux, the Pedal's
- * XY and its type tabs (since 2026-10-05, when the Saturator's XY became the
- * fx5 grid tile that opens this view), the Saturator's Output and Mix
- * faders, since the ten-column FX-grid cut (2026-09-15) the Guitar amp
- * rack's drive slider, and since ADR-445 (2026-09-19) the Wah button. The
- * Pedal reads its own device and a tap on its pad stays in this view.
+ * The Pedal family's views, one device each since the FX chain overview
+ * took over from the grid (2026-10-26): the Pedal (PedalCentralView), the
+ * Saturator, the Shifter, Redux, the Guitar rack (GuitarCentralView), the
+ * Wah and the Bass Amp. They shared the Pedal view (`part`) until then.
  *
- * Since 2026-10-05 the Guitar rack's whole face is here too (GuitarCentralView
- * is gone): Gain (the tile, MIDI tracks only — on audio the grid's Gtr column
- * draws it), Spring, the Tremolo pad and Room, on Guitar.adg's macros 1-5.
- * The Amp Switch (macro 6, Dirty/Clean) has no control since 2026-10-22.
- *
- * The Wah has no tile and no view of its own — the expression pedal plays
- * it — so this button is its only door on the iPad: a tap loads Wah.adg onto
- * the selected track through `device/load`, a hold removes it through
- * `device/delete`, and it is lit while the track carries one.
+ * The Guitar rack's macros 1-5 are Gain, Spring, Trem Rate, Trem Amount and
+ * Room; the Amp Switch (macro 6, Dirty/Clean) has no control since
+ * 2026-10-22. The Wah is a slider on Wah.adg's Macro 1, titled with the chain
+ * its Macro 2 selects.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -24,7 +17,7 @@ vi.mock('$lib/utils/logger', () => ({
 	logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 }));
 
-import { render, cleanup, fireEvent } from '@testing-library/svelte';
+import { render, cleanup } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { SvelteMap } from 'svelte/reactivity';
 import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.svelte';
@@ -39,10 +32,13 @@ import {
 } from '$lib/stores/v3/normalized.svelte';
 import { _refcountForTest } from '$lib/stores/v3/propertySubscriptions.svelte';
 import PedalCentralView from '$lib/components/v6/central/views/PedalCentralView.svelte';
+import SaturatorCentralView from '$lib/components/v6/central/views/SaturatorCentralView.svelte';
+import ShifterCentralView from '$lib/components/v6/central/views/ShifterCentralView.svelte';
+import ReduxCentralView from '$lib/components/v6/central/views/ReduxCentralView.svelte';
 import GuitarCentralView from '$lib/components/v6/central/views/GuitarCentralView.svelte';
+import WahCentralView from '$lib/components/v6/central/views/WahCentralView.svelte';
+import BassCentralView from '$lib/components/v6/central/views/BassCentralView.svelte';
 import { send } from '$lib/api/simpleClient';
-import { DEVICE_PRESETS } from '$lib/config/devicePresets';
-import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
 
 const TRACK = 'tracks/0';
 const SAT = `${TRACK}/devices/0`;
@@ -121,288 +117,61 @@ function slider(container: HTMLElement, title: string): HTMLElement | undefined 
 }
 
 beforeEach(() => {
-	// The rig: the Wah exists only while the expression pedal is switched on
-	// (PedalCentralView.features.test.ts covers it switched off).
-	bridgeStatus.updateFeatures(
-		JSON.stringify({ expressionPedal: { enabled: true, available: true, reason: '' } })
-	);
 	vi.clearAllMocks();
 	_resetForTests();
 });
 afterEach(() => {
 	cleanup();
-	bridgeStatus.updateFeatures('{}');
 });
 
-describe('PedalCentralView', () => {
-	it('carries the Pedal pad and tabs, and only the Saturator\'s Output and Mix faders', async () => {
-		seed([saturator({ 1: 0.75, 8: 0.2, 10: 1, 11: 1 }), pedal()]);
-		const { container } = render(PedalCentralView, { props: { part: 'all' } });
-		await tick();
-		expect(container.querySelector('.pedal-column .pedal-tone .eq-panel')).not.toBeNull();
-		expect(container.querySelector('.pedal-column .pedal-tone')?.classList.contains('slot-ghost')).toBe(false);
-		expect(container.querySelector('.pedal-column .pedal-drive [role="slider"]')).not.toBeNull();
-		// No Saturator pad here: that is the grid tile.
-		expect(container.textContent).not.toContain('Saturator');
-		for (const title of ['Output', 'Mix']) {
-			expect(slider(container, title), title).toBeDefined();
-		}
-		// Drive and Color Hi are the tile's two axes, not faders.
-		const satFaders = container.querySelector<HTMLElement>('.saturator-faders')!;
-		for (const title of ['Drive', 'Color Hi']) {
-			expect(slider(satFaders, title), title).toBeUndefined();
-		}
-		expect(container.textContent).toContain('Distort');
-	});
+const tapOn = (el: HTMLElement) => {
+	el.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10 }));
+	el.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 10, clientY: 10 }));
+};
+const loads = () => vi.mocked(send).mock.calls.filter(([addr]) => addr === '/looping/v3/device/load');
 
-	it('carries a Shifter fader in place of the Digital pad', async () => {
-		seed([]);
-		const { container } = render(PedalCentralView, { props: { part: 'all' } });
-		await tick();
-		expect(container.textContent).not.toContain('Digital');
-		// Shifter, then Color · Output · Mix, then Redux full height, close the
-		// view on the right (2026-10-24; the faders sat over Redux before).
-		const columns = container.querySelectorAll('.pedal-central-layout > .column');
-		expect(columns[columns.length - 3].classList.contains('shifter-column')).toBe(true);
-		expect(columns[columns.length - 2].classList.contains('saturator-column')).toBe(true);
-		expect(columns[columns.length - 1].classList.contains('redux-column')).toBe(true);
-		expect(slider(container, 'Shifter')).toBeDefined();
-	});
+beforeEach(() => {
+	HTMLElement.prototype.setPointerCapture = vi.fn();
+	HTMLElement.prototype.releasePointerCapture = vi.fn();
+});
 
-	it('a tap on a ghost Shifter loads Live\'s Shifter', async () => {
-		HTMLElement.prototype.setPointerCapture = vi.fn();
-		HTMLElement.prototype.releasePointerCapture = vi.fn();
-		seed([]);
-		const { container } = render(PedalCentralView, { props: { part: 'all' } });
-		await tick();
-		const el = slider(container, 'Shifter')!;
-		el.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10 }));
-		el.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 10, clientY: 10 }));
-		await tick();
-		const loads = vi.mocked(send).mock.calls.filter(([addr]) => addr === '/looping/v3/device/load');
-		expect(loads.length).toBe(1);
-		expect(JSON.stringify(loads[0][1])).toContain('Shifter');
-	});
-
-	it('ghosts the Pedal pad and the Saturator faders on a track without either', async () => {
-		seed([]);
-		const { container } = render(PedalCentralView, { props: { part: 'all' } });
-		await tick();
-		expect(container.querySelector('.pedal-column .pedal-tone')?.classList.contains('slot-ghost')).toBe(true);
-		expect(container.querySelector('.pedal-column .pedal-drive')?.classList.contains('slot-ghost')).toBe(true);
-		expect((container.querySelector('.saturator-faders') as HTMLElement).style.opacity).toContain('--opacity-ghost');
-	});
-
-	it('carries the Guitar rack: Gain, the Spring/Room pad over the Tremolo pad, and no Dirty/Clean', async () => {
-		seed([saturator({}), guitarRack()]);
-		const { container } = render(PedalCentralView, { props: { part: 'all' } });
-		await tick();
-		const tile = container.querySelector('.left-stack .device-control');
-		expect(tile?.classList.contains('device-ghost')).toBe(false);
-		expect(tile?.textContent).toContain('Gtr');
-		const pads = Array.from(container.querySelectorAll('.guitar-xy-stack .guitar-xy'));
-		expect(pads.map((p) => p.textContent)).toEqual([expect.stringContaining('Spring/Room'), expect.stringContaining('Tremolo')]);
-		expect(container.querySelector('.guitar-section .tone-btn')).toBeNull();
-		expect(container.querySelector('.guitar-section')!.textContent).not.toMatch(/Dirty|Clean/);
-	});
-
-	it('leaves Gain out on an audio track, where the grid draws it', async () => {
-		seed([saturator({}), guitarRack()], true);
-		const { container } = render(GuitarCentralView);
-		await tick();
-		expect(container.querySelector('.left-stack .device-control')).toBeNull();
-		expect(container.querySelectorAll('.guitar-xy-stack .guitar-xy').length).toBe(2);
-	});
-
-	it('splits in two on an audio track: Pedal and Guitar in the Guitar view, the rest in the Saturator\'s', async () => {
-		seed([saturator({}), guitarRack()], true);
-		const guitar = render(GuitarCentralView);
-		await tick();
-		expect(guitar.container.querySelector('.pedal-column')).not.toBeNull();
-		expect(guitar.container.querySelector('.guitar-section')).not.toBeNull();
-		expect(guitar.container.querySelector('.shifter-column')).toBeNull();
-		expect(guitar.container.querySelector('.redux-column')).toBeNull();
-		guitar.unmount();
-
-		const effects = render(PedalCentralView);
-		await tick();
-		expect(effects.container.querySelector('.pedal-column')).toBeNull();
-		expect(effects.container.querySelector('.guitar-section')).toBeNull();
-		expect(effects.container.querySelector('.shifter-column')).not.toBeNull();
-		expect(effects.container.querySelector('.redux-column')).not.toBeNull();
-		// The Drum cell holds the Chorus on audio, so the view ends in the
-		// Drum Buss's door; the Drum Buss itself is its own view's.
-		expect(effects.container.querySelector('[data-debug="drum-door"]')?.textContent).toBe('Drum');
-		expect(effects.container.textContent).not.toContain('Boom');
-	});
-
-	it('splits the same way on a MIDI track, the Drum Buss only where the Drum cell holds the Chorus', async () => {
-		seed([saturator({}), guitarRack()]);
-		const guitar = render(GuitarCentralView);
-		await tick();
-		expect(guitar.container.querySelector('.pedal-column')).not.toBeNull();
-		expect(guitar.container.querySelector('.guitar-section')).not.toBeNull();
-		expect(guitar.container.querySelector('.left-stack .device-control')).toBeNull(); // the Gain is the grid's
-		expect(guitar.container.querySelector('.redux-column')).toBeNull();
-		guitar.unmount();
-
-		// No category, no Drum Rack: not a drum track, so the Chorus has the Drum cell.
-		const effects = render(PedalCentralView);
-		await tick();
-		expect(effects.container.querySelector('.guitar-section')).toBeNull();
-		expect(effects.container.querySelector('.redux-column')).not.toBeNull();
-		expect(effects.container.querySelector('[data-debug="drum-door"]')).not.toBeNull();
-		effects.unmount();
-
-		// Whole (master's view), with the Gain and no Drum Buss.
-		const whole = render(PedalCentralView, { props: { part: 'all' } });
-		await tick();
-		for (const part of ['.pedal-column', '.guitar-section', '.shifter-column', '.saturator-column', '.redux-column']) {
-			expect(whole.container.querySelector(part)).not.toBeNull();
-		}
-		expect(whole.container.querySelector('.left-stack .device-control')).not.toBeNull();
-		expect(whole.container.querySelector('[data-debug="drum-door"]')).toBeNull();
-	});
-
-	it('ends in a Drum button off a drum track that loads the Drum Buss and opens its view', async () => {
-		seed([saturator({})], true);
+describe('PedalCentralView — the Pedal alone', () => {
+	it('carries the Drive slider, the tone pad and the type tabs, and no other device', async () => {
+		seed([saturator({}), guitarRack(), wahRack(), pedal()]);
 		const { container } = render(PedalCentralView);
 		await tick();
-		const door = container.querySelector<HTMLButtonElement>('[data-debug="drum-door"]')!;
-		await fireEvent.click(door);
-		await tick();
-		const loads = vi.mocked(send).mock.calls.filter(([addr]) => addr === '/looping/v3/device/load');
-		expect(loads.length).toBe(1);
-		expect(centralDisplayStore.isViewActive('device', 'drum')).toBe(true);
-	});
-
-	it('ghosts the Guitar section on a track with no amp rack', async () => {
-		seed([saturator({})]);
-		const { container } = render(PedalCentralView, { props: { part: 'all' } });
-		await tick();
-		expect(
-			container.querySelector('.left-stack .device-control')?.classList.contains('device-ghost')
-		).toBe(true);
-	});
-
-	it('keeps a tap on the Gain slider inside this view', async () => {
-		HTMLElement.prototype.setPointerCapture = vi.fn();
-		HTMLElement.prototype.releasePointerCapture = vi.fn();
-		seed([saturator({}), guitarRack()]);
-		centralDisplayStore.setView('device', 'pedal');
-		const { container } = render(PedalCentralView, { props: { part: 'all' } });
-		await tick();
-		const el = container.querySelector<HTMLElement>('.left-stack .device-control [role="slider"]');
-		expect(el).not.toBeNull();
-		el!.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10 }));
-		el!.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 10, clientY: 10 }));
-		await tick();
-		expect(centralDisplayStore.isViewActive('device', 'pedal')).toBe(true);
-	});
-
-	it('names the Pedal and Guitar Amp groups over their controls', async () => {
-		seed([saturator({}), guitarRack()]);
-		const { container } = render(PedalCentralView, { props: { part: 'all' } });
-		await tick();
-		const pedal = container.querySelector('.pedal-column')!.children[0];
-		expect(pedal.classList.contains('group-eyebrow')).toBe(true);
-		expect(pedal.textContent).toBe('Pedal');
-		const guitar = container.querySelector('.guitar-section')!.children[0];
-		expect(guitar.classList.contains('group-eyebrow')).toBe(true);
-		expect(guitar.textContent).toBe('Guitar Amp');
-	});
-
-	it('heads the Guitar group with the Gain over the Wah, after the Pedal', async () => {
-		seed([saturator({}), guitarRack()]);
-		const { container } = render(PedalCentralView, { props: { part: 'all' } });
-		await tick();
-		const columns = container.querySelectorAll('.pedal-central-layout > .column');
-		expect(columns[0].classList.contains('pedal-column')).toBe(true);
-		// After the group's name.
-		const group = container.querySelector('.guitar-section')!.children;
-		const stack = group[1];
-		expect(stack.classList.contains('left-stack')).toBe(true);
-		const cells = stack.querySelectorAll('.left-cell');
-		expect(cells.length).toBe(2);
-		expect(cells[0].textContent).toContain('Gtr');
-		expect(cells[1].classList.contains('wah-cell')).toBe(true);
-		expect(slider(container, 'Wah')).toBeDefined();
-	});
-
-	it('leaves the Wah alone in the left column on an audio track', async () => {
-		seed([saturator({})], true);
-		const { container } = render(GuitarCentralView);
-		await tick();
-		const cells = container.querySelectorAll('.left-stack .left-cell');
-		expect(cells.length).toBe(1);
-		expect(cells[0].classList.contains('wah-cell')).toBe(true);
-	});
-
-	it('shows the Wah pedal macro\'s value on its slider', async () => {
-		seed([saturator({}), wahRack(127)]);
-		const { container } = render(PedalCentralView, { props: { part: 'all' } });
-		await tick();
-		expect(slider(container, 'Wah')!.getAttribute('aria-valuenow')).toBe('1');
-	});
-
-	it('titles the Wah slider with the chain Macro 2 selects, and subscribes the names', async () => {
-		seed([saturator({}), wahRack(0, 64)]);
-		const { container } = render(PedalCentralView, { props: { part: 'all' } });
-		await tick();
-		expect(_refcountForTest(WAH, 'chain_names')).toBe(1);
-		// No names yet (a surface that does not send them): the plain title.
-		expect(slider(container, 'Wah')).toBeDefined();
-		applyPropertyValue(WAH, 'chain_names', JSON.stringify(['Wah', 'Volume', 'Ring']));
-		await tick();
-		expect(slider(container, 'Volume')).toBeDefined();
-		expect(slider(container, 'Wah')).toBeUndefined();
-	});
-
-	it('names the first and last chains at the ends of Macro 2', async () => {
-		for (const [chain, name] of [[0, 'Wah'], [127, 'Ring']] as const) {
-			seed([saturator({}), wahRack(0, chain)]);
-			applyPropertyValue(WAH, 'chain_names', JSON.stringify(['Wah', 'Volume', 'Ring']));
-			const { container } = render(PedalCentralView, { props: { part: 'all' } });
-			await tick();
-			expect(slider(container, name), name).toBeDefined();
-			cleanup();
+		expect(container.querySelector('.pedal-tone .eq-panel')).not.toBeNull();
+		expect(container.querySelector('.pedal-tone')?.classList.contains('slot-ghost')).toBe(false);
+		expect(container.querySelector('.pedal-drive [role="slider"]')).not.toBeNull();
+		expect(container.textContent).toContain('Distort');
+		for (const title of ['Output', 'Mix', 'Shifter', 'Wah', 'Gtr']) {
+			expect(slider(container, title), title).toBeUndefined();
 		}
+		expect(container.textContent).not.toMatch(/Spring\/Room|Redux|Drum/);
 	});
 
-	it('a tap on a ghost Wah loads Wah.adg onto the selected track through device/load', async () => {
-		HTMLElement.prototype.setPointerCapture = vi.fn();
-		HTMLElement.prototype.releasePointerCapture = vi.fn();
-		seed([saturator({})]);
-		const { container } = render(PedalCentralView, { props: { part: 'all' } });
+	it('ghosts the Pedal on a track without one', async () => {
+		seed([]);
+		const { container } = render(PedalCentralView);
 		await tick();
-		const el = slider(container, 'Wah')!;
-		el.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10 }));
-		el.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 10, clientY: 10 }));
-		await tick();
-		expect(send).toHaveBeenCalledWith('/looping/v3/device/load', [TRACK, '', '', 'place:Vamp Devices', 'Wah/Wah.adg']);
+		expect(container.querySelector('.pedal-tone')?.classList.contains('slot-ghost')).toBe(true);
+		expect(container.querySelector('.pedal-drive')?.classList.contains('slot-ghost')).toBe(true);
 	});
 
-	it('keeps a tap on the Pedal tone pad inside this view', async () => {
-		// jsdom has no pointer capture; the pad asks for it on every press.
-		HTMLElement.prototype.setPointerCapture = vi.fn();
-		HTMLElement.prototype.releasePointerCapture = vi.fn();
+	it('keeps a tap on the tone pad inside this view', async () => {
 		seed([pedal()]);
 		centralDisplayStore.setView('device', 'pedal');
-		const { container } = render(PedalCentralView, { props: { part: 'all' } });
+		const { container } = render(PedalCentralView);
 		await tick();
-		const pad = container.querySelector<HTMLElement>('.pedal-tone .eq-panel');
-		expect(pad).not.toBeNull();
-		pad!.click();
+		container.querySelector<HTMLElement>('.pedal-tone .eq-panel')!.click();
 		await tick();
 		expect(centralDisplayStore.isViewActive('device', 'pedal')).toBe(true);
-		expect(vi.mocked(send).mock.calls.filter(([addr]) => addr === '/looping/v3/device/load')).toEqual([]);
+		expect(loads()).toEqual([]);
 	});
 
-	it('drags the Pedal\'s Bass on the tone pad\'s left third, in Live\'s -1..1', async () => {
-		HTMLElement.prototype.setPointerCapture = vi.fn();
-		HTMLElement.prototype.releasePointerCapture = vi.fn();
+	it("drags the Pedal's Bass on the tone pad's left third, in Live's -1..1", async () => {
 		seed([pedal()]);
-		const { container } = render(PedalCentralView, { props: { part: 'all' } });
+		const { container } = render(PedalCentralView);
 		await tick();
 		const low = container.querySelector<HTMLElement>('.pedal-tone [data-band="low"]')!;
 		low.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 100 }));
@@ -415,7 +184,7 @@ describe('PedalCentralView', () => {
 
 	it('writes Drive and Dry/Wet together from the one Drive slider', async () => {
 		seed([pedal()]);
-		const { container } = render(PedalCentralView, { props: { part: 'all' } });
+		const { container } = render(PedalCentralView);
 		await tick();
 		const drive = container.querySelector<HTMLElement>('.pedal-drive [role="slider"]')!;
 		const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
@@ -438,5 +207,132 @@ describe('PedalCentralView', () => {
 		expect(drv.length).toBeGreaterThan(0);
 		expect(drv.at(-1)).toBeGreaterThan(0);
 		expect(writes(9).at(-1)).toBe(drv.at(-1));
+	});
+});
+
+describe('SaturatorCentralView', () => {
+	it("carries the Saturator's Color, Output and Mix, and no Drive (the tile's)", async () => {
+		seed([saturator({ 1: 0.75, 8: 0.2, 10: 1, 11: 1 })]);
+		const { container } = render(SaturatorCentralView);
+		await tick();
+		for (const title of ['Color', 'Output', 'Mix']) {
+			expect(slider(container, title), title).toBeDefined();
+		}
+		expect(slider(container, 'Drive')).toBeUndefined();
+		expect(container.textContent).not.toMatch(/Shifter|Redux|Drum/);
+	});
+
+	it('ghosts the faders on a track without a Saturator', async () => {
+		seed([]);
+		const { container } = render(SaturatorCentralView);
+		await tick();
+		const cols = container.querySelectorAll('.slider-col');
+		expect(cols.length).toBe(3);
+		cols.forEach((c) => expect(c.classList.contains('slot-ghost')).toBe(true));
+	});
+});
+
+describe('ShifterCentralView', () => {
+	it("a tap on a ghost Shifter loads Live's Shifter", async () => {
+		seed([]);
+		const { container } = render(ShifterCentralView);
+		await tick();
+		tapOn(slider(container, 'Shifter')!);
+		await tick();
+		expect(loads().length).toBe(1);
+		expect(JSON.stringify(loads()[0][1])).toContain('Shifter');
+	});
+});
+
+describe('ReduxCentralView', () => {
+	it('draws the Redux pad, not a placeholder', async () => {
+		seed([]);
+		const { container } = render(ReduxCentralView);
+		await tick();
+		expect(container.querySelector('[data-view="redux"] .device-control')).not.toBeNull();
+		expect(container.textContent).not.toContain('No device loaded');
+	});
+});
+
+describe('GuitarCentralView — the Guitar rack alone', () => {
+	it('carries the Gain, the Spring/Room pad over the Tremolo pad, and no Dirty/Clean', async () => {
+		seed([saturator({}), guitarRack(), pedal()]);
+		const { container } = render(GuitarCentralView);
+		await tick();
+		const tile = container.querySelector('.gain .device-control');
+		expect(tile?.classList.contains('device-ghost')).toBe(false);
+		expect(tile?.textContent).toContain('Gtr');
+		const pads = Array.from(container.querySelectorAll('.pads .guitar-xy'));
+		expect(pads.map((p) => p.textContent)).toEqual([expect.stringContaining('Spring/Room'), expect.stringContaining('Tremolo')]);
+		expect(container.textContent).not.toMatch(/Dirty|Clean|Distort|Wah/);
+	});
+
+	it('ghosts the Guitar on a track with no amp rack', async () => {
+		seed([saturator({})]);
+		const { container } = render(GuitarCentralView);
+		await tick();
+		expect(container.querySelector('.gain .device-control')?.classList.contains('device-ghost')).toBe(true);
+	});
+
+	it('keeps a tap on the Gain slider inside this view', async () => {
+		seed([guitarRack()]);
+		centralDisplayStore.setView('device', 'guitar');
+		const { container } = render(GuitarCentralView);
+		await tick();
+		const el = container.querySelector<HTMLElement>('.gain .device-control [role="slider"]');
+		expect(el).not.toBeNull();
+		tapOn(el!);
+		await tick();
+		expect(centralDisplayStore.isViewActive('device', 'guitar')).toBe(true);
+	});
+});
+
+describe('WahCentralView', () => {
+	it("shows the Wah pedal macro's value on its slider, without the pedal switch", async () => {
+		seed([wahRack(127)]);
+		const { container } = render(WahCentralView);
+		await tick();
+		expect(slider(container, 'Wah')!.getAttribute('aria-valuenow')).toBe('1');
+	});
+
+	it('titles the slider with the chain Macro 2 selects, and subscribes the names', async () => {
+		seed([wahRack(0, 64)]);
+		const { container } = render(WahCentralView);
+		await tick();
+		expect(_refcountForTest(WAH, 'chain_names')).toBe(1);
+		expect(slider(container, 'Wah')).toBeDefined();
+		applyPropertyValue(WAH, 'chain_names', JSON.stringify(['Wah', 'Volume', 'Ring']));
+		await tick();
+		expect(slider(container, 'Volume')).toBeDefined();
+		expect(slider(container, 'Wah')).toBeUndefined();
+	});
+
+	it('names the first and last chains at the ends of Macro 2', async () => {
+		for (const [chain, name] of [[0, 'Wah'], [127, 'Ring']] as const) {
+			seed([wahRack(0, chain)]);
+			applyPropertyValue(WAH, 'chain_names', JSON.stringify(['Wah', 'Volume', 'Ring']));
+			const { container } = render(WahCentralView);
+			await tick();
+			expect(slider(container, name), name).toBeDefined();
+			cleanup();
+		}
+	});
+
+	it('a tap on a ghost Wah loads Wah.adg onto the selected track through device/load', async () => {
+		seed([]);
+		const { container } = render(WahCentralView);
+		await tick();
+		tapOn(slider(container, 'Wah')!);
+		await tick();
+		expect(send).toHaveBeenCalledWith('/looping/v3/device/load', [TRACK, '', '', 'place:Vamp Devices', 'Wah/Wah.adg']);
+	});
+});
+
+describe('BassCentralView', () => {
+	it("draws the Bass Amp's one control", async () => {
+		seed([], true);
+		const { container } = render(BassCentralView);
+		await tick();
+		expect(slider(container, 'Bass')).toBeDefined();
 	});
 });
