@@ -86,6 +86,7 @@
     arrange,
     chainGrid,
     recentLayout,
+    ghostSpan,
     clampChainIndex,
     moved,
     planReorder,
@@ -400,6 +401,8 @@
    * sixth (`recentLayout`, the user, 2026-10-26).
    */
   const recentGrid = $derived(recentLayout(grid.rows));
+  /** The ghost section's cells: two with recents, one without, plus any the wrap leaves empty in its row. */
+  const ghostCells = $derived(ghostSpan(drawn.length, recentPool.length > 0 ? 2 : 1, grid));
   /** The most recent that fit, shown in alphabetical order (the user, 2026-10-26), down each column. */
   const recents = $derived(
     recentPool.slice(0, recentGrid.shown).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }))
@@ -730,10 +733,11 @@
   {/each}
   <!-- The ghost section (ADR-484): two cells, the recents in columns and
        + Effect the last column, full height; just + Effect with no recents. -->
-  {#snippet addCell()}
+  {#snippet addCell(span: number | null)}
     <!-- Add an effect: the browser on Effect, landing on this chain. -->
     <button
       type="button"
+      style:grid-column={span ? `span ${span}` : undefined}
       class="chain-add"
       aria-label="Add an effect"
       data-debug="chain-add"
@@ -746,6 +750,7 @@
   {#if recents.length > 0}
     <div
       class="chain-ghosts"
+      style:grid-column="span {ghostCells}"
       style:--recent-cols={recentGrid.columns}
       style:--recent-rows={recentGrid.rows}
       style:--add-from={recentColsUsed + 1}
@@ -756,10 +761,10 @@
       {#each recents as recent (recent.fullPath)}
         <RecentEffectButton {recent} />
       {/each}
-      {@render addCell()}
+      {@render addCell(null)}
     </div>
   {:else}
-    {@render addCell()}
+    {@render addCell(ghostCells)}
   {/if}
   {#if padScope}
     <!-- Whose chain this is, as the grid's scope chip says it. -->
@@ -868,7 +873,6 @@
      height, so a short list widens it rather than leaving gaps. The rows
      are fixed, so the tiles keep their size. */
   .chain-ghosts {
-    grid-column: span 2;
     min-width: 0;
     min-height: 0;
     display: grid;

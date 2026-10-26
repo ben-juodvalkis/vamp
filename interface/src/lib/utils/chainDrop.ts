@@ -180,3 +180,15 @@ export function chainGrid(count: number, wrapAfter: number): { cols: number; row
 export function recentLayout(chainRows: number): { columns: number; rows: number; shown: number } {
 	return chainRows > 1 ? { columns: 5, rows: 2, shown: 10 } : { columns: 3, rows: 4, shown: 12 };
 }
+
+/**
+ * How many grid cells the chain's ghost section takes (ADR-484): its own
+ * `cells` (two with recents, one for + Effect alone), plus the empty cells
+ * an uneven wrap leaves after it in its row, so the row ends flush (the
+ * user, 2026-10-26: no dead space). `devices` is the cells before it.
+ */
+export function ghostSpan(devices: number, cells: number, grid: { cols: number; rows: number }): number {
+	const empty = Math.max(0, grid.cols * grid.rows - (devices + cells));
+	const col = devices % grid.cols;
+	return col + cells + empty <= grid.cols ? cells + empty : cells;
+}

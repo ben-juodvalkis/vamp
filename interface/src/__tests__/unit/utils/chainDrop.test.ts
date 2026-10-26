@@ -8,7 +8,7 @@ import {
 	REORDER_IDLE,
 	sameDevices,
 	type ChainEntry,
-	type ReorderState, recentLayout } from '$lib/utils/chainDrop';
+	type ReorderState, recentLayout, ghostSpan } from '$lib/utils/chainDrop';
 
 describe('clampChainIndex', () => {
 	it('lands where the finger is', () => {
@@ -184,5 +184,17 @@ describe('the Recent block (ADR-484)', () => {
 	it('is three columns of four on one row, five of two on two rows (+ Effect the last column)', () => {
 		expect(recentLayout(1)).toEqual({ columns: 3, rows: 4, shown: 12 });
 		expect(recentLayout(2)).toEqual({ columns: 5, rows: 2, shown: 10 });
+	});
+});
+
+describe('the ghost section fills an uneven wrap (ADR-484)', () => {
+	it('spans the empty cells its row would leave', () => {
+		// 5 devices + the two-cell section on 4 x 2: one cell left over, beside it.
+		expect(ghostSpan(5, 2, chainGrid(6, 4))).toBe(3);
+		// + Effect alone after 6 devices on 4 x 2: one cell left over.
+		expect(ghostSpan(6, 1, chainGrid(6, 4))).toBe(2);
+		// A full row leaves nothing.
+		expect(ghostSpan(6, 2, chainGrid(7, 4))).toBe(2);
+		expect(ghostSpan(3, 2, chainGrid(4, 4))).toBe(2);
 	});
 });

@@ -29,7 +29,10 @@ again without the browser.
   three columns of four (twelve), on two rows five columns of two (ten)
   (`chainDrop.recentLayout`, the user's call the same day, after a
   one-cell block beside a one-cell + Effect). With no recents, + Effect is
-  one cell as before. The list keeps thirty-two. The ones shown are the
+  one cell as before. Where an uneven wrap leaves empty cells after it in
+  its row, the section (or + Effect alone) spans them too, its columns
+  stretching with it (`chainDrop.ghostSpan`, the user, the same day). The
+  list keeps thirty-two. The ones shown are the
   most recent that fit, drawn in alphabetical order (the user, the same
   day).
 - It is smart about the chain: it shows the first ones that fit, skipping a
