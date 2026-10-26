@@ -392,7 +392,11 @@ source and the Phase 4 switch that chose between them.
   Audio Effects and MIDI Effects by kind that morning). The files never
   move, because saved sets point at them by path. The layout rule is in the
   catalog's cache stamp (`EFFECTS_LAYOUT` in `service.ts`): bump it when it
-  changes, or a cached build keeps the old layout. The server
+  changes, or a cached build keeps the old layout. Each section, its header
+  and its tiles wear the device family its folder's name says
+  (`utils/sectionInks`: Distortion the distortion ink, Time time-and-space,
+  Tone filter, "Midi Effect" note machinery…); a folder whose name says none
+  takes the next family no folder took (user, 2026-10-26). The server
   catalogs it whether or not it is ticked and flags it in `index.json`
   (`effects`, and `hidden` while unticked); the browser keeps a hidden one off
   the rail (`effectsVendor`) and the chain overview's + Effect opens it, on

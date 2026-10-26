@@ -74,6 +74,7 @@
 	import { startPresetDrag, type PresetDrag } from '$lib/services/presetDragLoad.svelte';
 	import type { Writes } from '$lib/components/v6/device-panel/deviceControls';
 	import { SvelteSet } from 'svelte/reactivity';
+	import { sectionInks } from './utils/sectionInks';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 	import { press, type PressOptions, type PressReleaseInfo } from '$lib/actions';
@@ -317,6 +318,21 @@
 		screen === 'presets' ? groupPresetsByOrigin(presets, currentPath) : []
 	);
 	const useGroupedPresets = $derived(presetGroups.length > 1);
+
+	// The effects Place is color-coded by folder (user, 2026-10-26): each
+	// section, its header and its tiles wear the device family its folder's
+	// name says (`sectionInks`). Every other Place keeps its own color.
+	const sectionInkOf = $derived.by(() => {
+		const onEffects = !!effectsVendor && browserNavigationStore.currentVendorId === effectsVendor.vendorId;
+		if (!onEffects || !useGroupedPresets) return null;
+		return sectionInks(presetGroups.flatMap((g) => (g.folder ? [g.folder] : [])));
+	});
+	const presetInkOf = $derived.by(() => {
+		const inks = sectionInkOf;
+		if (!inks) return null;
+		return new Map(presetGroups.flatMap((g) => (g.folder ? g.presets.map((p) => [p.path, inks.get(g.folder!.toLowerCase())] as const) : [])));
+	});
+	const inkFor = (p: Preset) => presetInkOf?.get(p.path) || p.vendorColor || activeColor;
 
 	// Coalesce small sections onto shared rows so a 1–2 tile section doesn't strand
 	// a whole line (ADR-403 revised). Packing uses the solver's chosen column count
@@ -1718,7 +1734,7 @@
 		class:loaded={(shownChargingPresetPath ?? browserNavigationStore.loadedPresetPath) === p.path}
 		class:unavailable={inactive}
 		class:has-plugin={!!subLabel}
-		style="--k: {p.vendorColor || activeColor};"
+		style="--k: {inkFor(p)};"
 		disabled={inactive}
 		title={notInstalled ? `${p.plugin ?? 'This plug-in'} is not installed` : midiOnly ? 'A MIDI effect goes on a MIDI track' : undefined}
 		onclick={() => loadPreset(p)}
@@ -1731,7 +1747,7 @@
 			     loads and sets (BrowserPresetFace). -->
 			<BrowserPresetFace
 				preset={p}
-				ink={p.vendorColor || activeColor}
+				ink={inkFor(p)}
 				onTap={() => loadPreset(p)}
 				beginDrag={(className, values) => beginEffectDrag(p, className, values)}
 				afterDrag={() => handlePostLoad()}
@@ -1837,7 +1853,7 @@
 		class="section-head"
 		class:charging={chargingFolder === folder}
 		class:picked={pickedFolder === folder}
-		style="--k: {sectionPresets[0]?.vendorColor || activeColor};"
+		style="--k: {sectionInkOf?.get(folder.toLowerCase()) || sectionPresets[0]?.vendorColor || activeColor};"
 		use:press={sectionPress(folder, sectionPresets)}
 	>
 		{#if chargingFolder === folder}
