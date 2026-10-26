@@ -12,12 +12,17 @@
 	 * nothing is drawn and the tile is the plain button it always was.
 	 */
 	import FaceControl from './FaceControl.svelte';
+	import { setContext } from 'svelte';
+	import { PICTURE_CONTEXT } from '$lib/components/v6/browser/devicePictures';
 	import { presetParams, type PresetParams } from '$lib/services/presetParams';
 	import { presetControl, resolveParam, DEVICE_CONTROLS, type ParamRef, type Writes } from '$lib/components/v6/device-panel/deviceControls';
 	import { DEVICE_PRESETS } from '$lib/config/devicePresets';
 	import { schemeFromInk } from '$lib/config/devicePresets';
 	import type { Preset } from '$lib/services/adapters/browserAdapter';
 	import type { PresetDrag } from '$lib/services/presetDragLoad.svelte';
+
+	// The devices' pictures draw here (devicePictures), not on the FX grid.
+	setContext(PICTURE_CONTEXT, true);
 
 	interface Props {
 		preset: Preset;

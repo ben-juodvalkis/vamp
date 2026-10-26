@@ -11,6 +11,9 @@
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
 	import type { ControlGlyphName } from '$lib/components/v6/device-panel/ControlGlyph.svelte';
 	import type { Control, Get, ParamRef, Writes } from '$lib/components/v6/device-panel/deviceControls';
+	import { getContext } from 'svelte';
+	import DevicePicture from './DevicePicture.svelte';
+	import { PICTURE_CONTEXT } from './devicePictures';
 
 	interface Props {
 		control: Control;
@@ -49,18 +52,26 @@
 		labelOrientation = 'horizontal'
 	}: Props = $props();
 	const title = $derived(titled ? control.title : '');
+	/** The chain overview and the browser draw the device's picture; the FX grid does not. */
+	const pictured = getContext<boolean>(PICTURE_CONTEXT) === true;
+	const picture = $derived(pictured && control.kind !== 'eq' ? control.picture : undefined);
+	const mark = $derived(icon ?? (pictured && control.kind !== 'eq' ? control.icon : undefined));
 </script>
 
 {#if control.kind === 'xy'}
 	{@const at = control.read(get)}
 	{@const curve = control.curve?.(get)}
+	{#snippet xyPicture()}
+		{#if picture}<DevicePicture kind={picture} x={at.x} y={at.y} ink={color.primary} />{/if}
+	{/snippet}
 	<DeviceXY
 		xValue={at.x}
 		yValue={at.y}
 		{title}
-		{icon}
+		icon={mark}
 		{isGhost}
 		rateLabel={control.label?.(get, display)}
+		background={picture ? xyPicture : undefined}
 		showCurve={curve !== undefined && curve !== 'none'}
 		curveType={curve}
 		{color}
@@ -73,10 +84,13 @@
 	     level at full ink, so a value at 0 still shows a slider (Pedal's
 	     Drive, 2026-10-26: a bare tile before). -->
 	<div class="slider-face" class:soft style="--level: {level}; --level-ink: {color.primary};">
+		{#if picture}
+			<div class="slider-picture"><DevicePicture kind={picture} x={level} ink={color.primary} /></div>
+		{/if}
 		<DeviceSlider
 			value={level}
 			{title}
-			{icon}
+			icon={mark}
 			{isGhost}
 			{orientation}
 			readout={control.readout === undefined ? undefined : display(control.readout)}
@@ -120,6 +134,15 @@
 	.slider-face > :global(*) {
 		flex: 1 1 auto;
 		min-width: 0;
+	}
+	/* The picture over the slider's fill, faint, never taking a touch. */
+	.slider-picture {
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		pointer-events: none;
+		opacity: 0.55;
+		mix-blend-mode: screen;
 	}
 	.slider-face.soft::after {
 		content: '';

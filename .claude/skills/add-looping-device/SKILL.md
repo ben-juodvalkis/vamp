@@ -132,6 +132,10 @@ gate: {
   and wet). It may read `g` to skip a write (Shifter sets Ring only when not
   already Ring).
 - A slider's `readout` names the parameter whose Live label it shows.
+- `picture` names a sketch drawn behind the control on chain cells and
+  browser tiles (`browser/devicePictures.ts`: add a kind there, a pure
+  function of the control's position, if none fits). Every device should
+  read as itself at a glance; `icon` puts a mark beside the title instead.
 - An XY may draw a `curve` (Auto Filter) or a `label` (Echo's time).
 - `fromPreset` returns LOM values by index for the parameters the control
   uses, or `null` when the file lacks them. Comment the measurement above it.

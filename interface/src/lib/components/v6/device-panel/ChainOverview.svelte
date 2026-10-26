@@ -53,6 +53,8 @@
   import Plus from '@lucide/svelte/icons/plus';
   import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
   import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
+  import { setContext } from 'svelte';
+  import { PICTURE_CONTEXT } from '$lib/components/v6/browser/devicePictures';
   import type { Component } from 'svelte';
   import { FX_GRID_LAYOUT, type DeviceTypeKey } from '$lib/config/fxGridLayout';
   import { provideFxScope } from '$lib/components/v6/central/fxScope';
@@ -97,6 +99,9 @@
   import type { DeviceRecord } from '$lib/stores/v3/normalized.svelte';
 
   /** The tiles that control a device, by preset key, and what each is called on the grid. */
+  // The devices' pictures draw here (devicePictures), not on the FX grid.
+  setContext(PICTURE_CONTEXT, true);
+
   const TILE_LABELS: Record<string, string> = {
     random: 'Rand Oct',
     octave: 'Pitch',

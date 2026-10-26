@@ -50,6 +50,8 @@ import {
 	railFor
 } from '$lib/components/v6/browser/presetCurves';
 import { DEVICE_PRESETS } from '$lib/config/devicePresets';
+import type { PictureKind } from '$lib/components/v6/browser/devicePictures';
+import type { ControlGlyphName } from './ControlGlyph.svelte';
 
 /** A LOM parameter index, or a Max device's parameter by name with its measured index as the fallback. */
 export type ParamRef = number | { name: string; index: number };
@@ -61,6 +63,10 @@ export type Writes = ReadonlyArray<readonly [ParamRef, number]>;
 export interface XyControl {
 	kind: 'xy';
 	title: string;
+	/** Its picture behind the pad, on a chain cell and a browser tile (`devicePictures`). */
+	picture?: PictureKind;
+	/** A mark beside its title. */
+	icon?: ControlGlyphName;
 	read(get: Get): { x: number; y: number };
 	write(x: number, y: number, get: Get): Writes;
 	/** The filter curve drawn behind the dot. */
@@ -71,6 +77,10 @@ export interface XyControl {
 export interface SliderControl {
 	kind: 'slider';
 	title: string;
+	/** Its picture behind the slider, on a chain cell and a browser tile (`devicePictures`). */
+	picture?: PictureKind;
+	/** A mark beside its title (the racks: Gtr, Bass, Wah). */
+	icon?: ControlGlyphName;
 	/** The parameter whose label Live gives is the slider's readout. */
 	readout?: ParamRef;
 	/** Where the fill grows from, 0..1, for a control centered on a neutral value (Multiband's 1 : 1). */
@@ -112,9 +122,10 @@ const thresholdValue = (gain: number) => {
 	return d <= THRESHOLD_DB.units[1] ? 0 : railFor(THRESHOLD_DB, d);
 };
 /** One rack macro, 0..127, as a slider. */
-const macroSlider = (title: string, macro = 1): SliderControl => ({
+const macroSlider = (title: string, macro = 1, icon?: ControlGlyphName): SliderControl => ({
 	kind: 'slider',
 	title,
+	icon,
 	read: (g) => clamp01((g(macro) ?? 0) / 127),
 	write: (t) => [[macro, clamp01(t) * 127]]
 });
@@ -159,7 +170,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	echo: {
 		control: {
 			kind: 'xy',
-			title: 'Echo',
+			title: 'Echo', picture: 'rings',
 			read: (g) => ({
 				x: ECHO.timeTFrom((g(ECHO.sync) ?? 1) >= 0.5, g(ECHO.sixteenths), g(ECHO.time)),
 				y: clamp01(g(ECHO.feedback) ?? 0)
@@ -182,7 +193,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	tremolo: {
 		control: {
 			kind: 'xy',
-			title: 'Tremolo',
+			title: 'Tremolo', picture: 'tremolo',
 			read: (g) => {
 				const synced = (g(AUTO_PAN.lfoType) ?? 1) >= 0.5;
 				return {
@@ -251,7 +262,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	chorus: {
 		control: {
 			kind: 'xy',
-			title: 'Chorus',
+			title: 'Chorus', picture: 'waves',
 			read: (g) => ({ x: g(3) ?? 0.5, y: g(15) ?? 0 }),
 			write: (x, y) => [
 				[3, x],
@@ -264,7 +275,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	drum: {
 		control: {
 			kind: 'xy',
-			title: 'Drum',
+			title: 'Drum', picture: 'transient',
 			read: (g) => ({ x: ((g(6) ?? 0) + 1) / 2, y: g(13) ?? 0 }),
 			write: (x, y) => [
 				[6, 2 * x - 1],
@@ -279,6 +290,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 		control: {
 			kind: 'slider',
 			title: 'Drive',
+			picture: 'shaper',
 			read: (g) => clamp01(((g(1) ?? 0.5) - 0.5) / 0.5),
 			write: (t) => [
 				[1, 0.5 + 0.5 * t],
@@ -291,7 +303,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	// Measured: Pedal (2026-10-26). Gain is Drive (2), 0..1 as saved. Drive
 	// alone (user, 2026-10-26), not the Pedal view's Drive/Mix pair.
 	pedal: {
-		control: { kind: 'slider', title: 'Drive', read: (g) => clamp01(g(2) ?? 0), write: (t) => [[2, clamp01(t)]] },
+		control: { kind: 'slider', title: 'Drive', picture: 'clip', read: (g) => clamp01(g(2) ?? 0), write: (t) => [[2, clamp01(t)]] },
 		fromPreset: (s) => (s.params.Gain === undefined ? null : { 2: s.params.Gain })
 	},
 	// Measured: Bass - Low Extender. Threshold and Makeup in dB, as the LOM:
@@ -299,7 +311,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	squash: {
 		control: {
 			kind: 'slider',
-			title: 'Glue',
+			title: 'Glue', picture: 'compress',
 			read: (g) => clamp01((g(1) ?? 0) / -40),
 			write: (t) => [
 				[1, -40 * t],
@@ -313,7 +325,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	gate: {
 		control: {
 			kind: 'xy',
-			title: 'Gate',
+			title: 'Gate', picture: 'gate',
 			read: (g) => ({ x: g(4) ?? 0.5, y: g(1) ?? 0 }),
 			write: (x, y) => [
 				[4, x],
@@ -329,7 +341,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	// same dB rail as Gate's (Live's labels agree at every quarter): 1.995
 	// (+6 dB) → 1.
 	compressor: {
-		control: { kind: 'slider', title: 'Comp', read: (g) => clamp01(g(1) ?? 1), write: (t) => [[1, clamp01(t)]] },
+		control: { kind: 'slider', title: 'Comp', picture: 'compress', read: (g) => clamp01(g(1) ?? 1), write: (t) => [[1, clamp01(t)]] },
 		fromPreset: (s) => (s.params.Threshold === undefined ? null : { 1: thresholdValue(s.params.Threshold) })
 	},
 	// Measured: Multiband Dynamics (2026-10-26). Below Ratio (Mid), -3..1 as
@@ -338,7 +350,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	ott: {
 		control: {
 			kind: 'slider',
-			title: 'Ratio',
+			title: 'Ratio', picture: 'ratio',
 			readout: MB_BELOW_RATIO_MID,
 			center: 0.5,
 			read: (g) => sliderFromRatio(g(MB_BELOW_RATIO_MID) ?? 0),
@@ -354,13 +366,13 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	},
 	// Measured: Airpusher. Chance as is.
 	variation: {
-		control: { kind: 'slider', title: 'Stutter', read: (g) => clamp01(g(1) ?? 0), write: (t) => [[1, clamp01(t)]] },
+		control: { kind: 'slider', title: 'Stutter', picture: 'repeat', read: (g) => clamp01(g(1) ?? 0), write: (t) => [[1, clamp01(t)]] },
 		fromPreset: (s) => (s.params.Chance === undefined ? null : { 1: s.params.Chance })
 	},
 	// Measured: Velocity (2026-10-26). Random is 0..64 in Live (not 127),
 	// saved as is.
 	velocity: {
-		control: { kind: 'slider', title: 'Rand Vel', readout: 3, read: (g) => clamp01((g(3) ?? 0) / 64), write: (t) => [[3, clamp01(t) * 64]] },
+		control: { kind: 'slider', title: 'Rand Vel', readout: 3, picture: 'velocity', read: (g) => clamp01((g(3) ?? 0) / 64), write: (t) => [[3, clamp01(t) * 64]] },
 		fromPreset: (s) => (s.params.Random === undefined ? null : { 3: s.params.Random })
 	},
 	// Measured: Arpeggiator (2026-10-26). Synced Rate 0..13 (1/128..1/1),
@@ -370,7 +382,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	arpeggiator: {
 		control: {
 			kind: 'xy',
-			title: 'Arp',
+			title: 'Arp', picture: 'arp',
 			read: (g) => ({ x: clamp01((g(5) ?? 6) / 13), y: (g(0) ?? 0) < 0.5 ? 0 : clamp01(((g(8) ?? 1) - 1) / 199) }),
 			write: (x, y) => [
 				[5, Math.round(clamp01(x) * 13)],
@@ -386,7 +398,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	chord: {
 		control: {
 			kind: 'slider',
-			title: 'Shift',
+			title: 'Shift', picture: 'chord',
 			readout: 1,
 			center: 0.5,
 			read: (g) => clamp01(((g(1) ?? 0) + 24) / 48),
@@ -396,7 +408,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	},
 	// Measured: Blue. Chance as is.
 	random: {
-		control: { kind: 'slider', title: 'Rand Oct', readout: 1, read: (g) => clamp01(g(1) ?? 0), write: (t) => [[1, clamp01(t)]] },
+		control: { kind: 'slider', title: 'Rand Oct', readout: 1, picture: 'scatter', read: (g) => clamp01(g(1) ?? 0), write: (t) => [[1, clamp01(t)]] },
 		fromPreset: (s) => (s.params.Chance === undefined ? null : { 1: s.params.Chance })
 	},
 	// Measured: Redux (2026-10-26). Post-Filter -4..4 → (v + 4) / 8 (0 →
@@ -405,7 +417,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	redux: {
 		control: {
 			kind: 'xy',
-			title: 'Redux',
+			title: 'Redux', picture: 'stairs',
 			read: (g) => ({ x: g(8) ?? 0.5, y: 1 - (g(1) ?? 1) }),
 			write: (x, y) => [
 				[8, x],
@@ -421,7 +433,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	phaser: {
 		control: {
 			kind: 'xy',
-			title: 'Phaser',
+			title: 'Phaser', picture: 'notches',
 			read: (g) => ({ x: g(3) ?? 0.3254, y: g(25) ?? 0 }),
 			write: (x, y) => [
 				[3, x],
@@ -437,7 +449,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	shifter: {
 		control: {
 			kind: 'slider',
-			title: 'Shifter',
+			title: 'Shifter', picture: 'ringmod',
 			readout: SHIFTER.ringMod,
 			read: (g) => clamp01((g(SHIFTER.ringMod) ?? 0) / SHIFTER.ringModMax),
 			write: (t, g) => [
@@ -456,13 +468,13 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	// Mix 100, Comb Mix and Feedback 17.58, Blur Mix 0, Note Chance 100,
 	// GlitchLoop Dry/Wet 35.7033), in Live's units.
 	smudge: {
-		control: { kind: 'slider', title: 'Blur', read: (g) => clamp01((g(BLUR_MIX) ?? 0) / 100), write: (t) => [[BLUR_MIX, clamp01(t) * 100]] },
+		control: { kind: 'slider', title: 'Blur', picture: 'smear', read: (g) => clamp01((g(BLUR_MIX) ?? 0) / 100), write: (t) => [[BLUR_MIX, clamp01(t) * 100]] },
 		fromPreset: (s) => byName(s, BLUR_MIX)
 	},
 	comb: {
 		control: {
 			kind: 'xy',
-			title: 'Comb',
+			title: 'Comb', picture: 'comb',
 			read: (g) => ({ x: ((g(COMB.tune) ?? 0) + 24) / 48, y: clamp01((g(COMB.feedback) ?? 17.58) / 100) }),
 			write: (x, y) => [
 				[COMB.tune, -24 + 48 * x],
@@ -475,7 +487,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	glitchLoop: {
 		control: {
 			kind: 'slider',
-			title: 'Glitch',
+			title: 'Glitch', picture: 'glitch',
 			read: (g) => clamp01((g(GLITCH_MIX) ?? 0) / GLITCH_LOOP_PARAMS.mix.max),
 			write: (t) => [[GLITCH_MIX, clamp01(t) * GLITCH_LOOP_PARAMS.mix.max]]
 		},
@@ -484,20 +496,20 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	octave: {
 		control: {
 			kind: 'slider',
-			title: 'Pitch',
+			title: 'Pitch', picture: 'octaves',
 			read: (g) => clamp01((g(OCTAVE_MIX) ?? 0) / OCTAVE_MIX_MAX),
 			write: (t) => [[OCTAVE_MIX, clamp01(t) * OCTAVE_MIX_MAX]]
 		},
 		fromPreset: (s) => byName(s, OCTAVE_MIX)
 	},
 	chance: {
-		control: { kind: 'slider', title: 'Chance', readout: CHANCE, read: (g) => clamp01((g(CHANCE) ?? 100) / 100), write: (t) => [[CHANCE, Math.round(clamp01(t) * 100)]] },
+		control: { kind: 'slider', title: 'Chance', readout: CHANCE, picture: 'chance', read: (g) => clamp01((g(CHANCE) ?? 100) / 100), write: (t) => [[CHANCE, Math.round(clamp01(t) * 100)]] },
 		fromPreset: (s) => byName(s, CHANCE)
 	},
 	// Racks the app knows: macro 1, as their tiles and views drive it.
-	guitar: { control: macroSlider('Gtr'), fromPreset: macroFromPreset },
-	bass: { control: macroSlider('Bass'), fromPreset: macroFromPreset },
-	wah: { control: macroSlider('Wah'), fromPreset: macroFromPreset }
+	guitar: { control: macroSlider('Gtr', 1, 'amp'), fromPreset: macroFromPreset },
+	bass: { control: macroSlider('Bass', 1, 'amp'), fromPreset: macroFromPreset },
+	wah: { control: macroSlider('Wah', 1, 'wah'), fromPreset: macroFromPreset }
 };
 
 /** A parameter's index on a device whose parameter names are `names`. */
