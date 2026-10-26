@@ -30,6 +30,7 @@ export type PictureKind =
 	| 'clip'
 	| 'stompbox'
 	| 'eqcurve'
+	| 'wheels'
 	| 'stack'
 	| 'compress'
 	| 'ratio'
@@ -162,6 +163,16 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0): PictureStro
 			const ceiling = 1 - x * 0.75;
 			return [{ d: trace((u) => 50 - (38 * Math.max(-ceiling, Math.min(ceiling, Math.sin(2 * Math.PI * u * 2)))) / ceiling, 160), o: 0.85 }];
 		}
+		// MidiWheels: its two wheels side by side, pitch centred, mod at rest
+		// (the user, 2026-10-26).
+		case 'wheels':
+			return [
+				{ d: 'M26,10h16a4,4 0 0 1 4,4v72a4,4 0 0 1 -4,4h-16a4,4 0 0 1 -4,-4v-72a4,4 0 0 1 4,-4Z', o: 0.8 },
+				{ d: 'M58,10h16a4,4 0 0 1 4,4v72a4,4 0 0 1 -4,4h-16a4,4 0 0 1 -4,-4v-72a4,4 0 0 1 4,-4Z', o: 0.8 },
+				{ d: 'M24,50H44', o: 0.95 },
+				{ d: 'M56,82H76', o: 0.95 },
+				{ d: 'M27,24H41M27,32H41M27,68H41M27,76H41M59,24H73M59,32H73M59,40H73M59,48H73', o: 0.3 }
+			];
 		// An EQ, generic (the Recent column's Channel EQ, the user,
 		// 2026-10-26): a low shelf lifted, a dip in the mids, an air lift.
 		case 'eqcurve':

@@ -7,8 +7,10 @@
 	 */
 	import DevicePicture from '$lib/components/v6/browser/DevicePicture.svelte';
 	import FilterCurve from '$lib/components/v6/device-panel/FilterCurve.svelte';
+	import ControlGlyph from '$lib/components/v6/device-panel/ControlGlyph.svelte';
+	import constants from '$config/constants.json';
 	import { presetParams, type PresetParams } from '$lib/services/presetParams';
-	import { presetControl, resolveParam, type ParamRef } from '$lib/components/v6/device-panel/deviceControls';
+	import { presetControl, resolveParam, deviceKeyForPreset, DEVICE_CONTROLS, type ParamRef } from '$lib/components/v6/device-panel/deviceControls';
 	import { addEffectToChain, type RecentEffect } from '$lib/services/recentEffects.svelte';
 	import { press } from '$lib/actions/press';
 
@@ -41,7 +43,19 @@
 		return { type, cutoff: Math.min(at.x, CURVE_MAX_CUTOFF), resonance: at.y };
 	});
 
+	// MidiWheels has no control entry of its own (its chain cell is the two
+	// wheels), so it is known by name and drawn as its wheels.
+	const isWheels = $derived(recent.name === constants.devices.midiWheels.deviceName);
+	// A control with a mark and no picture (the Wah, the amp racks) draws its mark.
+	// By the device's type, so a rack whose file saves no readable macro still has it.
+	const mark = $derived.by(() => {
+		const key = deviceKeyForPreset(saved?.className ?? '', recent.name);
+		const control = key ? DEVICE_CONTROLS[key]?.control : undefined;
+		return control && control.kind !== 'eq' && !control.picture ? (control.icon ?? null) : null;
+	});
+
 	const picture = $derived.by(() => {
+		if (isWheels) return { kind: 'wheels' as const, x: 0, y: 0 };
 		const found = presetControl(saved, recent.name);
 		// An EQ (the tone pad) draws a generic EQ curve (the user, 2026-10-26).
 		if (found?.control.kind === 'eq') return { kind: 'eqcurve' as const, x: 0, y: 0 };
@@ -67,6 +81,8 @@
 			<FilterCurve cutoff={curve.cutoff} resonance={curve.resonance} curveType={curve.type} width={300} height={300} curveColor="var(--muted-foreground)" />
 		{:else if picture}
 			<DevicePicture kind={picture.kind} x={picture.x} y={picture.y} ink="var(--muted-foreground)" />
+		{:else if mark}
+			<span class="recent-mark"><ControlGlyph name={mark} /></span>
 		{/if}
 	</span>
 	<!-- "+ Echo": what a tap does (the user, 2026-10-26). -->
@@ -127,6 +143,15 @@
 	}
 	.recent-picture :global(.response-curve) {
 		stroke-width: 6;
+	}
+	.recent-mark {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.recent-mark :global(svg) {
+		height: 100%;
+		width: auto;
 	}
 	.recent-name {
 		max-width: 100%;
