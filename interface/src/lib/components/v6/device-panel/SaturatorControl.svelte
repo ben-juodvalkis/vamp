@@ -53,7 +53,7 @@
 <!-- The fx5 grid tile: a slider in column 2, under Pitch, since 2026-10-24 (an XY with
      Color Hi across before; Color is a fader in the view now). Its one
      axis is the XY's Y: Drive up, Output down to match, Dry/Wet up.
-     The tile opens PedalCentralView. `slotKey` stays for a standalone mount. -->
+     The tile opens SaturatorCentralView. `slotKey` stays for a standalone mount. -->
 <BaseDeviceControl
   {...position ? { position } : { slotKey: 'saturator' as const }}
   {device}

@@ -18,7 +18,7 @@
    * track and leaves a MIDI track's name alone).
    *
    * The device is the `bass` slot — the `Bass Amp.adg` rack — and this
-   * tile is its only control (no view repeats the fader). Param 1 is the rack's one visible macro, the mix, rail 0..127, resting at 0 so
+   * tile is its only control (`BassCentralView` mounts it full size). Param 1 is the rack's one visible macro, the mix, rail 0..127, resting at 0 so
    * the tile reads empty until it is reached for. The tile names the DEVICE
    * the way every other tile does (Gtr, Drum, Squash).
    *
@@ -26,11 +26,8 @@
    * `SquashControl` — and `FXGrid` mounts it behind
    * `isAudioTrack`, so no other track reaches it.
    *
-   * A tap opens `PedalCentralView` (the Guitar rack's controls, since
-   * 2026-10-05), which the registry aliases to `bass`
-   * for exactly this reason: an unregistered type resolves to the
-   * placeholder view (the defect a830a7a fixed for `random` and the
-   * 2026-09-12 review caught on `ott`).
+   * A tap opens `BassCentralView` (the Guitar rack's view until the FX
+   * chain overview gave every device its own, 2026-10-26).
    */
 
   // Accepted for API symmetry with the other tiles; the slot is the

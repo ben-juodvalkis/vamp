@@ -16,9 +16,9 @@
    * the same distortion family, and the Pedal view is where a hand already
    * goes for drive.
    *
-   * The rack's other macros live in `PedalCentralView` too since
-   * 2026-10-05 (GuitarCentralView is gone): a tap on the grid column opens
-   * that view, and the view's own mount sets `disableCentralViewOnTap`.
+   * Since 2026-10-26 the rack has its own view again, `GuitarCentralView`
+   * (Gain, Spring/Room, Tremolo): a tap on the tile opens it, and the
+   * view's own mount sets `disableCentralViewOnTap`.
    *
    * No layout entry any more, so `slotKey` resolves its own `guitar` slot,
    * the way `SquashControl` and `BassControl` do. `position`
@@ -27,7 +27,7 @@
   interface Props {
     device?: DeviceRecord | null;
     position?: import('$lib/config/fxGridLayout').PositionKey;
-    /** Inside the Pedal view a tap has nowhere to go: it is already home. */
+    /** Inside the Guitar view a tap has nowhere to go: it is already home. */
     disableCentralViewOnTap?: boolean;
     // Marks for what the control does (the central views pass them; the
     // grid tile draws none).

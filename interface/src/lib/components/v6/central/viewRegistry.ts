@@ -64,47 +64,48 @@ interface ViewRegistry {
  * when the corresponding view is first displayed.
  */
 export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
-	// Device views - organized alphabetically for maintainability
-	// 'drum' is the Drum Buss (ADR-431): the Drum XY is a grid tile, this
-	// view holds Boom and the Comp switch. The Saturator's XY is a grid tile
-	// and its view is the Pedal view, which keeps its Output and Mix (ADR-457).
+	// Device views - organized alphabetically for maintainability.
+	// One view per device type (2026-10-26): the FX chain overview opens
+	// the view registered under a device's DEVICE_PRESETS key, so a view
+	// draws its own device and no other. A key with no entry opens the
+	// chain's generic view ('chain-device').
 	device: {
 		'arpeggiator': () => import('./views/ArpeggiatorCentralView.svelte'),
 		'audio-effect-rack': () => import('./views/AudioEffectRackCentralView.svelte'),
+		'bass': () => import('./views/BassCentralView.svelte'),
 		// The chain overview's view for a device with no view of its own.
 		'chain-device': () => import('./views/ChainDeviceCentralView.svelte'),
-		// The Bass tile (audio tracks' fx1 column, 2026-09-14): its type is
-		// `bass`, its view the Guitar rack's — GuitarCentralView, which on
-		// an audio track is the Pedal view's guitar part (2026-10-23).
-		// Aliased here the way `random` aliases the Arpeggiator's and
-		// `squash` the Utility's; without an entry the tap resolved to the
-		// placeholder view.
-		'bass': () => import('./views/GuitarCentralView.svelte'),
-		'chorus': () => import('./views/ChorusCentralView.svelte'), // Blur, Comb and Phaser off a drum track; the Auto Pan view on one (2026-10-23)
-		'compressor': () => import('./views/SquashCentralView.svelte'), // Compressor controls live in the Squash (dynamics) view
+		'chance': () => import('./views/ChanceCentralView.svelte'),
+		'chord': () => import('./views/ChordCentralView.svelte'),
+		'chorus': () => import('./views/ChorusCentralView.svelte'),
+		'comb': () => import('./views/CombCentralView.svelte'),
+		'compressor': () => import('./views/CompressorCentralView.svelte'),
 		'digital': () => import('./views/DigitalCentralView.svelte'),
-		'drum': () => import('./views/DrumBussCentralView.svelte'),
-		'echo': () => import('./views/EchoCentralView.svelte'), // the Echo tile, which replaced the Delay XY (2026-09-14)
+		'drum': () => import('./views/DrumBussCentralView.svelte'), // the Drum Buss (ADR-431)
+		'echo': () => import('./views/EchoCentralView.svelte'),
 		'eq': () => import('./views/EQCentralView.svelte'),
 		'filter': () => import('./views/AutoFilterCentralView.svelte'),
-		'guitar': () => import('./views/GuitarCentralView.svelte'), // Pedal, Wah and the Guitar rack on audio; the whole Pedal view on MIDI (2026-10-23)
-		'octave': () => import('./views/PitchCentralView.svelte'), // the Pitch slider's view (2026-10-24)
-		'pitchHack': () => import('./views/GlitchCentralView.svelte'), // Reverse sits beside GlitchLoop (2026-10-24)
-		'glitchLoop': () => import('./views/GlitchCentralView.svelte'), // the Glitch tile's slot (2026-10-15)
-		'pedal': () => import('./views/GuitarCentralView.svelte'), // the Pedal is the Guitar view's on audio (2026-10-23)
-		'saturator': () => import('./views/PedalCentralView.svelte'), // the Saturator tile's view (fx5, 2026-10-05), which holds the Pedal's XY
-		// The Rand Oct tile: its type is `random`, its view the Arpeggiator's
-		// (the MIDI-effects family — arpeggiator, velocity and chord slots).
-		// The tile used to name that view itself; since every tile opens its
-		// own type through the router (issue #491) the alias lives here, the
-		// way `squash` and `compressor` alias the Utility view.
-		'random': () => import('./views/ArpeggiatorCentralView.svelte'),
+		'gate': () => import('./views/GateCentralView.svelte'),
+		'glitchLoop': () => import('./views/GlitchCentralView.svelte'),
+		'guitar': () => import('./views/GuitarCentralView.svelte'), // the Guitar rack (Gtr tile)
+		'octave': () => import('./views/PitchCentralView.svelte'), // the Pitch slider's view
+		'ott': () => import('./views/MultibandCentralView.svelte'), // Multiband Dynamics
+		'pedal': () => import('./views/PedalCentralView.svelte'),
+		'phaser': () => import('./views/PhaserCentralView.svelte'),
+		'pitchHack': () => import('./views/ReverseCentralView.svelte'), // Pitch Hack, titled Reverse
+		'random': () => import('./views/RandomCentralView.svelte'), // the Rand Oct tile
 		'redux': () => import('./views/ReduxCentralView.svelte'),
 		'reverb': () => import('./views/ReverbCentralView.svelte'),
-		'tremolo': () => import('./views/AutoPanCentralView.svelte'), // Auto Pan Legacy in the Tremolo slot (2026-10-01)
-		'utility': () => import('./views/SquashCentralView.svelte'), // the Gain tile's view: its Gate and Multiband moved into the dynamics view (2026-10-15)
-		'squash': () => import('./views/SquashCentralView.svelte'), // the dynamics view; the Squash tile itself is the grid column above it
-		'variation': () => import('./views/VariationCentralView.svelte'), // the Var slider's own view (2026-10-24)
+		'saturator': () => import('./views/SaturatorCentralView.svelte'), // the Drive tile
+		'shifter': () => import('./views/ShifterCentralView.svelte'),
+		'smudge': () => import('./views/BlurCentralView.svelte'), // Blur
+		'squash': () => import('./views/GlueCentralView.svelte'), // the Glue Compressor (the Squash tile)
+		'toneShaper': () => import('./views/ToneShaperCentralView.svelte'),
+		'tremolo': () => import('./views/AutoPanCentralView.svelte'), // Auto Pan Legacy in the Tremolo slot
+		'utility': () => import('./views/UtilityCentralView.svelte'), // the Gain tile
+		'variation': () => import('./views/VariationCentralView.svelte'), // the Stutter slider (Beat Repeat)
+		'velocity': () => import('./views/VelocityCentralView.svelte'),
+		'wah': () => import('./views/WahCentralView.svelte'),
 	},
 
 	// Instrument views - organized alphabetically

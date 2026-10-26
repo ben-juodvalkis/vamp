@@ -130,16 +130,16 @@ const openInstrument = (index) => ({ click: `[data-track-index="${index}"] [data
 const openTile = (label) => ({ click: `.device-control:has-text("${label}")` });
 
 const FX_TILES = [
-	['Rand Oct', 'random', 'Arpeggiator view (the Rand Oct tile)'],
+	['Rand Oct', 'random', 'Random view (the Rand Oct tile)'],
 	['EQ', 'eq', 'EQ Eight'],
 	['Filter', 'filter', 'Auto Filter'],
-	['Drive', 'pedal', 'Drive tile (the Saturator) → the Pedal view\'s effects part: Shifter | Color · Output · Mix | Redux'],
-	['Gtr', 'guitar', 'Gtr tile → the Guitar view: Pedal, Wah, the Guitar rack'],
+	['Drive', 'pedal', 'Drive tile → the Saturator view: Color · Output · Mix'],
+	['Gtr', 'guitar', 'Gtr tile → the Guitar rack view: Gain, Spring/Room, Tremolo'],
 	['Drum', 'drum-buss', 'Drum Buss'],
-	['Glue', 'squash', 'Glue (the Squash slot), Gate, Multiband + Compressor'],
-	['Glitch', 'glitch', 'Glitch: GlitchLoop + Reverse (the GlitchLoop slot)'],
+	['Glue', 'squash', 'Glue (the Squash slot): Threshold over Output'],
+	['Glitch', 'glitch', 'Glitch: GlitchLoop (the GlitchLoop slot)'],
 	['Stutter', 'variation', 'Variation (Beat Repeat), the Stutter tile: Interval, Grid, Length, Pitch Decay, Mode'],
-	['Tremolo', 'tremolo', 'Auto Pan Legacy (the Tremolo tile) + the Chorus family on a drum track'],
+	['Tremolo', 'tremolo', 'Auto Pan Legacy (the Tremolo tile)'],
 	['Echo', 'echo', 'Echo'],
 	['Reverb', 'reverb', 'Reverb']
 ];
@@ -344,13 +344,13 @@ export const TOURS = {
 			{ name: 'system', description: 'Master track — the System view: Transport, Follow Key, Sections', steps: [{ click: '[data-debug="master-card"]' }] },
 			{
 				name: 'fx-pedal-general',
-				description: 'Guitar view, expression pedal switched off — no Wah',
+				description: 'Guitar rack view, expression pedal switched off (no Wah in it either way since 2026-10-26)',
 				features: { expressionPedal: { enabled: false, available: false, reason: '' } },
 				steps: [openTile('Gtr')]
 			},
-			// The Gtr tile opens the Guitar view (ADR-466): Pedal, Wah and the
-			// Guitar rack. On the Guitar track (an audio track) the rack is
-			// loaded; its Gain is the Gtr tile itself, so the view leaves it out.
+			// The Gtr tile opens the Guitar rack's view (one device per view
+			// since 2026-10-26). On the Guitar track (an audio track) the rack
+			// is loaded.
 			{
 				name: 'fx-guitar-loaded',
 				description: 'Guitar view on the Guitar track: the Guitar rack live — Spring, Tremolo pad, Room',

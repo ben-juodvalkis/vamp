@@ -135,7 +135,7 @@ describe('trackDeviceGlance', () => {
 		expect(glance.glyph).toBe('guitar');
 	});
 
-	it('leaves the view type null for a device the rig draws no view for', () => {
+	it("opens Blur's own view for a Blur at the chain head", () => {
 		replaceTree(1, [
 			track('tracks/1', 'audio', [device('tracks/1/devices/0', 'Blur', 'MxDeviceAudioEffect')])
 		]);
@@ -144,13 +144,26 @@ describe('trackDeviceGlance', () => {
 
 		expect(glance.kind).toBe('device');
 		expect(glance.name).toBe('Blur');
-		// `smudge` is a real preset, but it has no entry in the device view
-		// registry (it is a lane of the Chorus view, not a view of its own)
-		// — the band still names it and still selects the track.
+		// Every device type has a view of its own since 2026-10-26 (it was a
+		// lane of the Chorus view before, and the band opened nothing).
+		expect(glance.deviceViewType).toBe('smudge');
+	});
+
+	it('leaves the view type null for a device the rig draws no view for', () => {
+		replaceTree(1, [
+			track('tracks/1', 'audio', [device('tracks/1/devices/0', 'Vocal', 'AudioEffectGroupDevice')])
+		]);
+
+		const glance = trackDeviceGlance('tracks/1');
+
+		expect(glance.kind).toBe('device');
+		expect(glance.name).toBe('Vocal');
+		// `vocal` is a real preset (the band's mic glyph) with no view; the
+		// band still names it and still selects the track.
 		expect(glance.deviceViewType).toBeNull();
 	});
 
-	it('opens the Guitar view for a Bass at the chain head', () => {
+	it('opens the Bass view for a Bass at the chain head', () => {
 		// `bass` gained a registry entry with the Bass tile in the audio
 		// track's fx1 column (2026-09-14), so a bass track's device band
 		// opens the view carrying the Bass mix fader instead of falling

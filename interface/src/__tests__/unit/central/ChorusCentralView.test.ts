@@ -1,8 +1,8 @@
 /**
- * The Chorus view (2026-10-23). Off a drum track the Chorus XY is the FX
- * grid's tile in the Drum cell, and Blur, Comb and Phaser leave the Auto Pan
- * view for this one. On a drum track the family stays in the Auto Pan view,
- * which is what this view draws there.
+ * The Chorus family's views, one device each since the FX chain overview
+ * took over from the grid (2026-10-26): the Chorus XY (ChorusCentralView),
+ * Blur, Comb and Phaser. Until then the Chorus view drew Blur, Comb and
+ * Phaser off a drum track, and the Auto Pan view all four on one.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -18,6 +18,9 @@ import { SvelteMap } from 'svelte/reactivity';
 import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { replaceTree, _resetForTests, type TrackRecord } from '$lib/stores/v3/normalized.svelte';
 import ChorusCentralView from '$lib/components/v6/central/views/ChorusCentralView.svelte';
+import BlurCentralView from '$lib/components/v6/central/views/BlurCentralView.svelte';
+import CombCentralView from '$lib/components/v6/central/views/CombCentralView.svelte';
+import PhaserCentralView from '$lib/components/v6/central/views/PhaserCentralView.svelte';
 import AutoPanCentralView from '$lib/components/v6/central/views/AutoPanCentralView.svelte';
 
 function seed(role: string, kind: Partial<TrackRecord> = {}) {
@@ -32,7 +35,7 @@ function seed(role: string, kind: Partial<TrackRecord> = {}) {
 	fxGrid.resetForTrackChange();
 }
 
-const titles = (container: HTMLElement) => container.textContent ?? '';
+const deviceControls = (container: HTMLElement) => container.querySelectorAll('.device-control').length;
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -40,37 +43,35 @@ beforeEach(() => {
 });
 afterEach(() => cleanup());
 
-describe('Chorus view', () => {
-	it('holds Blur, Comb and Phaser off a drum track, and the Auto Pan view drops them', async () => {
+describe('Chorus family views', () => {
+	it('draws the Chorus XY alone, on a drum track or off one', async () => {
+		for (const role of ['drum', 'synth']) {
+			seed(role);
+			const { container } = render(ChorusCentralView);
+			await tick();
+			expect(container.querySelector('[data-view="chorus"]'), role).not.toBeNull();
+			expect(deviceControls(container), role).toBe(1);
+			expect(container.textContent, role).not.toMatch(/Phaser|Comb|Tremolo/);
+			cleanup();
+		}
+	});
+
+	it('gives Blur, Comb and Phaser a view each, one control apiece', async () => {
 		seed('synth');
-		const view = render(ChorusCentralView);
-		await tick();
-		expect(view.container.querySelector('[data-view="chorus"]')).not.toBeNull();
-		expect(titles(view.container)).toContain('Phaser');
-		expect(titles(view.container)).not.toContain('Tremolo');
-		cleanup();
-
-		const autoPan = render(AutoPanCentralView);
-		await tick();
-		expect(autoPan.container.querySelector('.autopan-layout.no-chorus')).not.toBeNull();
-		expect(titles(autoPan.container)).not.toContain('Phaser');
-		expect(titles(autoPan.container)).not.toContain('Chorus');
+		for (const [View, type] of [[BlurCentralView, 'smudge'], [CombCentralView, 'comb'], [PhaserCentralView, 'phaser']] as const) {
+			const { container } = render(View);
+			await tick();
+			expect(container.querySelector(`[data-view="${type}"]`), type).not.toBeNull();
+			expect(deviceControls(container), type).toBe(1);
+			cleanup();
+		}
 	});
 
-	it('holds Blur, Comb and Phaser on an audio track filed under Drum', async () => {
-		seed('drum', { hasMidiInput: false, hasAudioInput: true });
-		const { container } = render(ChorusCentralView);
-		await tick();
-		expect(container.querySelector('[data-view="chorus"]')).not.toBeNull();
-	});
-
-	it('is the Auto Pan view, Chorus family included, on a drum track', async () => {
+	it('leaves the Auto Pan view to Auto Pan, on a drum track too', async () => {
 		seed('drum');
-		const { container } = render(ChorusCentralView);
+		const { container } = render(AutoPanCentralView);
 		await tick();
-		expect(container.querySelector('[data-view="chorus"]')).toBeNull();
-		expect(container.querySelector('.autopan-layout:not(.no-chorus)')).not.toBeNull();
-		expect(titles(container)).toContain('Phaser');
-		expect(titles(container)).toContain('Chorus');
+		expect(container.textContent).toContain('Tremolo');
+		expect(container.textContent).not.toMatch(/Phaser|Chorus|Comb/);
 	});
 });

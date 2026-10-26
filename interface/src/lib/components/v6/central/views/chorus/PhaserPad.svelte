@@ -2,8 +2,7 @@
 	/**
 	 * PhaserPad — the Phaser-Flanger's XY (X: LFO speed, Y: feedback),
 	 * wrapped in BaseDeviceControl like Blur and Comb so it carries the same
-	 * move-to-first / move-to-last arrows. Drawn by the Chorus view, or by
-	 * the Auto Pan view's Chorus group on a drum track (2026-10-23).
+	 * move-to-first / move-to-last arrows. Drawn by the Phaser view.
 	 * A virtual device: it handles its own slot state and ghost.
 	 */
 

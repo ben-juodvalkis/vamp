@@ -4,9 +4,10 @@
    *
    * Self-contained central view that queries its own slot state.
    * Renders immediately with ghost/loading/active states.
-   * Displays Channel EQ's Low Cut over its output gain, one column of value
-   * boxes (ADR-477), and beside it Ben's Adaptive Tone Shaper's graph
-   * (2026-10-07; oeksound bloom's sliders the day before).
+   * Displays Channel EQ's Low Cut over its output gain (ADR-477). Ben's
+   * Adaptive Tone Shaper's graph sat beside them from 2026-10-07 until the
+   * FX chain overview gave every device a view of its own (2026-10-26); it
+   * is `ToneShaperCentralView` now.
    *
    * NO {#if device} gate - always renders, handles its own state.
    * NO props required - queries selectedTrackStore directly.
@@ -17,13 +18,8 @@
   import { deviceInk } from '$lib/utils/formatters/trackFormatters';
   import { familyScheme } from '$lib/config/devicePresets';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-  import { toneShaperStore } from '$lib/stores/v3/toneShaper.svelte';
-  import SectionDivider from '../SectionDivider.svelte';
-  import ToneShaperGraph from './eq/ToneShaperGraph.svelte';
-  import { TS_PARAM, TS_HANDLE } from './eq/toneShaper';
 
   const fx = useFxGridSlot('eq');
-  const ts = useFxGridSlot('toneShaper');
 
   // GRATICULE (§5.5): calibrated slot ink for live controls (deviceInk —
   // neutral-safe, byte no-op on the chokepoint's already-inked scheme).
@@ -71,36 +67,11 @@
   function toggleLowCut() {
     fx.sendParam(PARAM_CONFIG.lowCut, lowCutEnabled ? 0 : 1);
   }
-
-  let tsInk = $derived({
-    primary: deviceInk(ts.color.primary, paintModeReactive()),
-    secondary: ts.color.secondary,
-    accent: deviceInk(ts.color.accent, paintModeReactive())
-  });
-
-  // The Tone Shaper's parameters in their own units (`TS_PARAM`). Unloaded
-  // it draws Amount 0 (the user's call for bloom, 2026-10-06), the handles
-  // flat at their rest centers, ZERO on, as the device loads.
-  let tsAmount = $derived(ts.paramValue(TS_PARAM.amount) ?? 0);
-  let tsLevels = $derived(TS_HANDLE.map((_, i) => ts.paramValue(TS_PARAM.levels[i]) ?? 0));
-  let tsHz = $derived(TS_HANDLE.map((h, i) => ts.paramValue(TS_PARAM.hz[i]) ?? h.rest));
-  let tsZero = $derived((ts.paramValue(TS_PARAM.latency) ?? 1) >= 0.5);
-  let tsEco = $derived((ts.paramValue(TS_PARAM.quality) ?? 0) >= 0.5);
-  let tsFrame = $derived(ts.devicePath ? toneShaperStore.get(ts.devicePath) : undefined);
-
-  // Tell the bridge which device's frames to relay: this one's while the
-  // view is up, none when it goes.
-  $effect(() => {
-    toneShaperStore.watch(ts.devicePath ?? '');
-    return () => toneShaperStore.watch('');
-  });
 </script>
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
 <div class="h-full w-full flex p-(--central-inset) gap-(--central-gap)">
-<!-- Channel EQ: its name over Low Cut over Output, one column of value
-     boxes (ADR-477). Side by side under a centred name they took 16rem,
-     which the graph has now. -->
+<!-- Channel EQ: Low Cut over Output (ADR-477). -->
 <div class="eq-group h-full flex flex-col" class:slot-ghost={fx.isGhost}>
   <span class="group-eyebrow" style="color: {fxInk.primary};">EQ</span>
   <div class="flex-1 min-h-0 flex flex-col gap-(--central-gap)">
@@ -129,38 +100,12 @@
     </div>
   </div>
 </div>
-
-<SectionDivider orientation="vertical" ink={tsInk.primary} />
-
-<!-- The Tone Shaper: its name over its graph. A tap on a ghost loads it; a
-     drag loads it and writes. -->
-<div class="ts-group h-full flex-1 min-w-0 flex flex-col" class:slot-ghost={ts.isGhost}>
-  <span class="group-eyebrow" style="color: {tsInk.primary};">Tone Shaper</span>
-  <div class="flex-1 min-h-0">
-    <ToneShaperGraph
-      frame={tsFrame}
-      amount={tsAmount}
-      levels={tsLevels}
-      hz={tsHz}
-      zero={tsZero}
-      eco={tsEco}
-      color={ts.isGhost ? ghostInk : tsInk}
-      isGhost={ts.isGhost}
-      onWrite={(index, value) => ts.sendParam(index, value)}
-      onTap={() => ts.loadIfGhost()}
-    />
-  </div>
-</div>
 </div>
 
 <style>
-  /* The Channel EQ is one column of value boxes (ADR-477); the graph takes
-     the rest. Each group is its name over its controls. */
   .eq-group {
-    flex: 0 0 6rem;
-    gap: var(--spacing-xs);
-  }
-  .ts-group {
+    flex: 1 1 0;
+    min-width: 0;
     gap: var(--spacing-xs);
   }
   /* The eyebrow every named group in a central view wears (EnvelopeGroup's). */
