@@ -13,7 +13,8 @@
 	 */
 	import FaceControl from './FaceControl.svelte';
 	import { presetParams, type PresetParams } from '$lib/services/presetParams';
-	import { presetFace, type LomValues } from './presetFaces';
+	import { presetControl, resolveParam, DEVICE_CONTROLS, type ParamRef, type Writes } from '$lib/components/v6/device-panel/deviceControls';
+	import { DEVICE_PRESETS } from '$lib/config/devicePresets';
 	import { schemeFromInk } from '$lib/config/devicePresets';
 	import type { Preset } from '$lib/services/adapters/browserAdapter';
 	import type { PresetDrag } from '$lib/services/presetDragLoad.svelte';
@@ -25,7 +26,7 @@
 		/** A tap: load the preset as saved. */
 		onTap: () => void;
 		/** The first move of a drag: start the load, with the class it arrives as. */
-		beginDrag: (className: string, values: LomValues) => PresetDrag | null;
+		beginDrag: (className: string, values: Writes) => PresetDrag | null;
 		/** The drag ended. */
 		afterDrag?: () => void;
 		/** Told whether a face is drawn, so the tile can hand it the gesture. */
@@ -43,6 +44,11 @@
 		const el = host;
 		const path = preset.fullPath;
 		saved = null;
+		// A Max device's `.amxd` saves nothing the server reads: its control rests where it rests.
+		if (/\.amxd$/i.test(path ?? '')) {
+			saved = { className: '', params: {} };
+			return;
+		}
 		if (!el || !/\.ad[vg]$/i.test(path ?? '')) return;
 		let cancelled = false;
 		const load = () => presetParams(path).then((p) => !cancelled && (saved = p));
@@ -66,22 +72,32 @@
 		};
 	});
 
-	const found = $derived(presetFace(saved));
+	const found = $derived(presetControl(saved, preset.name));
 	$effect(() => {
 		onFaced?.(found !== null);
 	});
 	const color = $derived(schemeFromInk(ink));
+	/** The class the device arrives as: the file's, or for an `.amxd` the device type's. */
+	const arrivesAs = $derived.by(() => {
+		if (saved?.className) return saved.className;
+		const key = Object.keys(DEVICE_CONTROLS).find((k) => DEVICE_PRESETS[k]?.defaultName === preset.name);
+		return key ? (DEVICE_PRESETS[key].expectedClassName ?? '') : '';
+	});
 
-	// The values the face shows: the preset's, then the finger's while it drags.
-	let dragged = $state<LomValues | null>(null);
-	const shown = $derived(found ? { ...found.values, ...(dragged ?? {}) } : {});
+	// The values the control shows: the preset's, then the finger's while it drags.
+	let dragged = $state<Map<string, [ParamRef, number]>>(new Map());
+	const refKey = (ref: ParamRef) => (typeof ref === 'number' ? String(ref) : ref.name);
+	const get = (ref: ParamRef) => dragged.get(refKey(ref))?.[1] ?? found?.values[resolveParam(ref)];
 
 	let drag: PresetDrag | null = null;
-	function move(writes: LomValues) {
-		if (!found || !saved) return;
-		dragged = { ...(dragged ?? {}), ...writes };
-		if (!drag) drag = beginDrag(saved.className, dragged);
-		drag?.update(dragged);
+	function move(writes: Writes) {
+		if (!found) return;
+		const next = new Map(dragged);
+		for (const [ref, value] of writes) next.set(refKey(ref), [ref, value]);
+		dragged = next;
+		const all = [...next.values()];
+		if (!drag) drag = beginDrag(arrivesAs, all);
+		drag?.update(all);
 	}
 	function release() {
 		if (!drag) return;
@@ -92,7 +108,7 @@
 	// The tile is the preset again once a drag has been handed off.
 	$effect(() => {
 		void preset.fullPath;
-		dragged = null;
+		dragged = new Map();
 	});
 </script>
 
@@ -107,7 +123,7 @@
 	onpointercancel={release}
 >
 	{#if found}
-		<FaceControl face={found.face} values={shown} {color} {onTap} onMove={move} />
+		<FaceControl control={found.control} {get} {color} {onTap} onMove={move} titled={false} soft />
 	{/if}
 </div>
 

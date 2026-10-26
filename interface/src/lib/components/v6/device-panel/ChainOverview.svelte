@@ -52,16 +52,15 @@
   import Plus from '@lucide/svelte/icons/plus';
   import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
   import type { Component } from 'svelte';
-  import { FX_GRID_LAYOUT } from '$lib/config/fxGridLayout';
+  import { FX_GRID_LAYOUT, type DeviceTypeKey } from '$lib/config/fxGridLayout';
   import { provideFxScope } from '$lib/components/v6/central/fxScope';
   import GuitarControl from './GuitarControl.svelte';
   import BassControl from './BassControl.svelte';
   import PitchControl from './PitchControl.svelte';
   import GlitchControl from './GlitchControl.svelte';
   import SquashControl from './SquashControl.svelte';
-  import GateControl from './GateControl.svelte';
-  import DeviceFace from './chain/DeviceFace.svelte';
-  import { faceForClass } from '$lib/components/v6/browser/presetFaces';
+  import ControlTile from './ControlTile.svelte';
+  import { controlFor } from './deviceControls';
   import MidiWheelsPanel from '$lib/components/v6/midi/MidiWheelsPanel.svelte';
   import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
   import InstrumentFace, { FACED_INSTRUMENTS } from './chain/InstrumentFace.svelte';
@@ -123,9 +122,7 @@
     bass: { Tile: BassControl },
     octave: { Tile: PitchControl },
     glitchLoop: { Tile: GlitchControl },
-    squash: { Tile: SquashControl },
-    // The Glue view's Gate XY, the one its browser tiles draw too.
-    gate: { Tile: GateControl }
+    squash: { Tile: SquashControl }
   };
 
   /** MidiWheels, re-found as the surface finds it: class + the name Live gives the loaded `.amxd`. */
@@ -515,11 +512,11 @@
         <div class="cell-control" role="presentation">
           <tile.Tile device={cell.device} position={tile.position} />
         </div>
-      {:else if live && faceForClass(cell.device.className)}
-        <!-- No grid tile: the face its browser preset tiles draw (Pedal's
-             Drive), on this device. -->
+      {:else if live && controlFor(cell.presetKey)}
+        <!-- No grid tile: the device's control (deviceControls), the one its
+             browser preset tiles and its view draw, on this device. -->
         <div class="cell-control" role="presentation">
-          <DeviceFace device={cell.device} face={faceForClass(cell.device.className)!} ink={cell.ink} />
+          <ControlTile type={cell.presetKey as DeviceTypeKey} device={cell.device} />
         </div>
       {:else}
       <div class="mark" aria-hidden="true">

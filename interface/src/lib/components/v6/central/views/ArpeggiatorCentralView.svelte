@@ -9,6 +9,7 @@
    * NO props required - all controls query their slots internally.
    */
 
+  import ControlTile from '../../device-panel/ControlTile.svelte';
   import { logger } from '$lib/utils/logger';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import VelocityRangeBrace from '../../controls/VelocityRangeBrace.svelte';
@@ -244,20 +245,9 @@
     chord.sendParam(paramIndex, current !== 0 ? 0 : onValue);
   }
 
-  // Note Chance — a Max MIDI effect with exactly one parameter, so the
-  // LOM order is forced: [0] Device On, [1] Chance. 0-100 %, 101 steps
-  // (the dial's own `parameter_steps`), polyphonic — at 60 % roughly
-  // six notes of every ten get through, chords included.
-  const CHANCE_PARAM = 1;
-  const CHANCE_MAX = 100;
-
-  // The rest value is 100, not 0: silence is what a *pulled-down* chance
-  // means, so a ghost slider sitting at zero would read as "this device
-  // mutes the track". The library copy of the .amxd defaults to 100 as
-  // well, so the ghost and the freshly-loaded device agree.
-  let chanceValue = $derived(chance.paramValue(CHANCE_PARAM) ?? CHANCE_MAX);
-  let chanceDisplay = $derived(chance.paramDisplay(CHANCE_PARAM));
-  let chanceTitle = $derived(chanceDisplay ? `Chance · ${chanceDisplay}` : 'Chance');
+  // Note Chance — a Max MIDI effect with one parameter, Chance 0-100 %,
+  // resting at 100 (a pulled-down chance means silence): the `chance`
+  // control in deviceControls.
 
   let patternPickerOpen = $state(false);
 
@@ -509,24 +499,11 @@
 
   <SectionDivider orientation="vertical" ink={chance.color.primary} />
 
-  <!-- Note Chance: the odds an incoming note survives. A drag loads the
-       device if the slot is a ghost; so does a tap, which has no value of
-       its own to send (DeviceSlider drags are relative). -->
+  <!-- Note Chance: the odds an incoming note survives, the `chance`
+       control (deviceControls). A drag loads the device if the slot is a
+       ghost (ADR-167). -->
   <div class="flex-1" class:slot-ghost={chance.isGhost}>
-    <DeviceSlider
-      value={chanceValue / CHANCE_MAX}
-      title={chanceTitle}
-      icon="chance"
-      orientation="vertical"
-      labelOrientation="horizontal"
-      labelSize="small"
-      isGhost={chance.isGhost}
-      color={chance.color}
-      onTap={() => chance.loadIfGhost()}
-      onInteraction={(value) => {
-        chance.sendParam(CHANCE_PARAM, Math.round(value * CHANCE_MAX));
-      }}
-    />
+    <ControlTile type="chance" device={chance.device} icon="chance" disableCentralViewOnTap tapLoads />
   </div>
 
   {#if patternPickerOpen}

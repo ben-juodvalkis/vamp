@@ -21,6 +21,13 @@ covers the property wire contract.
 
 ## 1. Adding a new UI device control
 
+> **Since 2026-10-26 (ADR-479) a device's control is one entry in
+> `interface/src/lib/components/v6/device-panel/deviceControls.ts`**, drawn
+> by `ControlTile` in the grid, the chain and the views and by the browser's
+> preset tiles. Steps 1.3–1.4 below (pinning indices in a component, a
+> hand-written control) are superseded: follow the `add-looping-device`
+> skill (`.claude/skills/add-looping-device/SKILL.md`).
+
 ### 1.1 Grid vs virtual
 
 **Grid devices** appear in the 12-slot FX Grid (`fx1`–`fx12`, two

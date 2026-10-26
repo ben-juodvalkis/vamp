@@ -42,12 +42,19 @@ A tile whose type has no registered view passes
 `disableCentralViewOnTap`: the router resolves an unknown type to the
 placeholder view.
 
-### Component Types
-- **DeviceXY**: For 2-parameter controls (most FX)
-- **DeviceSlider**: For 1-parameter controls (Compressor, Variation, etc.)
-- **Custom**: For complex controls (EQ, Sequencer)
+### One definition per device control (ADR-479)
 
-See the full guide for complete implementation patterns, parameter mapping, and central view integration.
+**A device's control lives in `deviceControls.ts` and nowhere else**: its
+kind (XY, slider, the EQ's tone pad), the parameters it reads and writes,
+the math, its rest values and how a preset file reads onto it. `ControlTile`
+draws any entry as a live tile (`BaseDeviceControl` + `browser/FaceControl`),
+and it is what the grid tiles (most tile files are one-line wrappers), the
+chain overview's cells and the central views' mounts are; the browser's
+preset tiles draw the same entry at the file's values. A tile that draws
+something of its own (Reverb's portrait, Utility's meter) takes its
+parameters and math from its entry. Never write a parameter index, a range
+or a conversion in a component. The procedure is the `add-looping-device`
+skill.
 
 ### The fx1 column — one slot, three track types (ADR-438)
 

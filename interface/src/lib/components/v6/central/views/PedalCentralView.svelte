@@ -62,6 +62,7 @@
    * `part` is optional: left out, it follows the track (see above).
    */
 
+  import ControlTile from '../../device-panel/ControlTile.svelte';
   import ReduxControl from '$lib/components/v6/device-panel/ReduxControl.svelte';
   import ToneCurvePad from '$lib/components/v6/device-panel/ToneCurvePad.svelte';
   import GuitarControl from '$lib/components/v6/device-panel/GuitarControl.svelte';
@@ -112,26 +113,13 @@
   // surface does not even listen for the pedal (general-release audit §7b).
   const showWah = $derived(bridgeStatus.isFeatureOn('expressionPedal'));
 
-  const SHIFTER_RM_COARSE = 18;
-  const SHIFTER_RM_MAX = 0.75;
-  const SHIFTER_MODE = 32;
-  const SHIFTER_MODE_RING = 2;
-
+  // The Shifter is the `shifter` control (deviceControls): RM Coarse to
+  // 1 kHz, Ring set with the first write (a ghost's included).
   let shifterInk = $derived({
     primary: trackInk(shifter.color.primary, paintModeReactive()),
     secondary: shifter.color.secondary,
     accent: trackInk(shifter.color.accent, paintModeReactive())
   });
-
-  // A ghost slot's first write loads the Shifter; Ring goes with it as a
-  // pending write, so the fader is heard the moment the device lands.
-  // RM Coarse starts at 0 (1 Hz) rather than Live's 0.75 (user, 2026-10-05):
-  // a tap writes it, a drag writes its own value after.
-  function armShifterLoad() {
-    if (!shifter.isGhost) return;
-    shifter.sendParam(SHIFTER_MODE, SHIFTER_MODE_RING);
-    shifter.sendParam(SHIFTER_RM_COARSE, 0);
-  }
 
   let drumInk = $derived(trackInk(drum.color.primary, paintModeReactive()));
   let reduxInk = $derived(trackInk(redux.color.primary, paintModeReactive()));
@@ -447,22 +435,7 @@
   <!-- COLUMN 4: the Shifter's ring-mod frequency, one fader. A tap on a
        ghost loads it; a drag loads it and writes the value. -->
   <div class="column shifter-column" class:slot-ghost={shifter.isGhost}>
-    <DeviceSlider
-      value={Math.min(shifter.paramValue(SHIFTER_RM_COARSE) ?? 0, SHIFTER_RM_MAX)}
-      title="Shifter"
-      icon="ringmod"
-      orientation="vertical"
-      isGhost={shifter.isGhost}
-      color={shifterInk}
-      readout={shifter.paramDisplay(SHIFTER_RM_COARSE)}
-      min={0}
-      max={SHIFTER_RM_MAX}
-      onTap={() => armShifterLoad()}
-      onInteraction={(v) => {
-        armShifterLoad();
-        shifter.sendParam(SHIFTER_RM_COARSE, v);
-      }}
-    />
+    <ControlTile type="shifter" device={shifter.device} icon="ringmod" disableCentralViewOnTap tapLoads labelSize="large" />
   </div>
 
   <!-- COLUMN 5: the Saturator's Color over Output over Mix, three value

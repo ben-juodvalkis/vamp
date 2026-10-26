@@ -1,81 +1,125 @@
 <script lang="ts">
 	/**
-	 * A device's face (`presetFaces`): its XY, slider or tone pad, drawn at the
-	 * values handed in. One drawing for both places a face shows (2026-10-26):
-	 * a browser preset tile, at the values its file saves, and a chain cell
-	 * for a device the FX grid has no tile for, at the values Live reports.
-	 * The caller owns the values and what a move does.
+	 * A device's control (`deviceControls`) drawn at the values `get` reads:
+	 * its XY, slider or tone pad. The one drawing behind a grid tile, a chain
+	 * cell and a browser preset tile (2026-10-26). The caller owns the values
+	 * and what a move does.
 	 */
 	import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import ToneCurvePad from '$lib/components/v6/device-panel/ToneCurvePad.svelte';
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
-	import type { Face, LomValues } from './presetFaces';
+	import type { ControlGlyphName } from '$lib/components/v6/device-panel/ControlGlyph.svelte';
+	import type { Control, Get, ParamRef, Writes } from '$lib/components/v6/device-panel/deviceControls';
 
 	interface Props {
-		face: Face;
-		values: LomValues;
+		control: Control;
+		get: Get;
 		color: DeviceColorScheme;
+		/** Live's label for a parameter, for a pad that draws one (Echo's time). */
+		display?: (ref: ParamRef) => string | undefined;
 		onTap?: () => void;
-		/** The parameter writes a gesture makes, by LOM index. */
-		onMove: (writes: LomValues) => void;
-		/** A slider's title; empty where a name is drawn over it (a browser tile). */
-		title?: string;
+		/** The parameter writes a gesture makes. */
+		onMove: (writes: Writes) => void;
+		/** Draw the title; off where a name is drawn over the control (a browser tile). */
+		titled?: boolean;
+		/** The level line under a soft fill, where a name is drawn over it. */
+		soft?: boolean;
+		isGhost?: boolean;
+		icon?: ControlGlyphName;
+		orientation?: 'vertical' | 'horizontal';
+		/** A slider's label: small and level on a grid tile, the slider's own default in a central view. */
+		labelSize?: 'small' | 'large';
+		labelOrientation?: 'vertical' | 'horizontal' | 'auto';
 	}
 
-	let { face, values, color, onTap, onMove, title = '' }: Props = $props();
+	let {
+		control,
+		get,
+		color,
+		display = () => undefined,
+		onTap,
+		onMove,
+		titled = true,
+		soft = false,
+		isGhost = false,
+		icon,
+		orientation = 'vertical',
+		labelSize = 'small',
+		labelOrientation = 'horizontal'
+	}: Props = $props();
+	const title = $derived(titled ? control.title : '');
 </script>
 
-{#if face.kind === 'xy'}
-	{@const at = face.read(values)}
+{#if control.kind === 'xy'}
+	{@const at = control.read(get)}
+	{@const curve = control.curve?.(get)}
 	<DeviceXY
 		xValue={at.x}
 		yValue={at.y}
-		showCurve={face.curve !== undefined}
-		curveType={face.curve?.(values)}
+		{title}
+		{icon}
+		{isGhost}
+		rateLabel={control.label?.(get, display)}
+		showCurve={curve !== undefined && curve !== 'none'}
+		curveType={curve}
 		{color}
 		{onTap}
-		onInteraction={(x, y) => onMove(face.write(x, y, values))}
+		onInteraction={(x, y) => onMove(control.write(x, y, get))}
 	/>
-{:else if face.kind === 'slider'}
-	<!-- The fill stays soft so a name reads over it; a line marks the level
-	     at full ink, so a value at 0 still shows a slider (Pedal's Drive,
-	     2026-10-26: a bare tile before). -->
-	{@const level = face.read(values)}
-	<div class="slider-face" style="--level: {level}; --level-ink: {color.primary};">
+{:else if control.kind === 'slider'}
+	{@const level = control.read(get)}
+	<!-- Soft: the fill fades so a name reads over it, and a line marks the
+	     level at full ink, so a value at 0 still shows a slider (Pedal's
+	     Drive, 2026-10-26: a bare tile before). -->
+	<div class="slider-face" class:soft style="--level: {level}; --level-ink: {color.primary};">
 		<DeviceSlider
 			value={level}
 			{title}
-			orientation="vertical"
-			labelOrientation="horizontal"
-			labelSize="small"
+			{icon}
+			{isGhost}
+			{orientation}
+			readout={control.readout === undefined ? undefined : display(control.readout)}
+			{labelOrientation}
+			{labelSize}
 			{color}
 			{onTap}
-			onInteraction={(t) => onMove(face.write(t, values))}
+			onInteraction={(t) => onMove(control.write(t, get))}
 		/>
 	</div>
 {:else}
-	{@const eq = face.read(values)}
+	{@const eq = control.read(get)}
 	<ToneCurvePad
-		title=""
+		{title}
 		low={eq.low}
 		mid={eq.mid}
 		midFreq={eq.midFreq}
 		high={eq.high}
+		{isGhost}
 		{color}
 		{onTap}
-		onLow={(v) => onMove({ 2: v })}
-		onMid={(f, g) => onMove({ 4: f, 3: g })}
-		onHigh={(v) => onMove({ 5: v })}
+		onLow={(v) => onMove(control.low(v))}
+		onMid={(f, g) => onMove(control.mid(f, g))}
+		onHigh={(v) => onMove(control.high(v))}
 	/>
 {/if}
 
 <style>
+	/* Fills its box as a bare slider does: a tile's box is not a flex container. */
 	.slider-face {
 		position: relative;
 		display: flex;
+		width: 100%;
+		height: 100%;
+		flex: 1 1 auto;
+		min-width: 0;
+		min-height: 0;
 	}
-	.slider-face::after {
+	.slider-face > :global(*) {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+	.slider-face.soft::after {
 		content: '';
 		position: absolute;
 		inset-inline: 0;
@@ -84,9 +128,7 @@
 		background: var(--level-ink);
 		pointer-events: none;
 	}
-	.slider-face > :global(*) {
+	.slider-face.soft > :global(*) {
 		opacity: 0.5;
-		flex: 1 1 auto;
-		min-width: 0;
 	}
 </style>

@@ -243,8 +243,8 @@ and logged a `control-thread hiccup` of the same order.
 What a native device's `.adv` saves beside what the LOM reports once it is
 loaded — measured by loading one preset of each class onto a track, dumping
 it and deleting it (`owner/probes/preset_measure.js`; Live 12.4.15b7). The
-browser's preset faces read these (`browser/presetFaces.ts`, tested against
-the same numbers in `browser.presetFaces.test.ts`).
+device controls read these (`device-panel/deviceControls.ts`, ADR-479,
+tested against the same numbers in `deviceControls.presets.test.ts`).
 
 - **Order:** a native device saves its parameters (`<Name><LomId/><Manual
   Value/>`) in the order the LOM lists them, Device On first — true for
@@ -267,6 +267,14 @@ the same numbers in `browser.presetFaces.test.ts`).
   - Pedal: Gain is Drive (2), 0..1 as saved; Output dB, Mid Freq 0..2 too.
   - Gate: Threshold a linear factor, Live's rail in dB (sampled, -70 dB → 0);
     Release ms, `0.1 · 30000^v` (15 → 0.486). Attack ms and Floor dB as saved.
+  - Compressor: Threshold a linear factor on the same rail as Gate's (Live's
+    labels agree at every quarter; 1.995, +6 dB → 1).
+  - Phaser-Flanger (2026-10-26): LFO 1 Freq is 0..1 on Live's rail
+    `0.01 Hz · 4000^v`, the file in Hz (0.1486 → 0.3254); Feedback 0..1,
+    Live's 99 % at 1 (saved 0 → 0, the one point measured).
+  - Redux: Sample Rate Hz on Live's rail (sampled; 40 kHz → 1, 3.99 kHz at
+    0.5); Post-Filter -4..4 → `(v + 4) / 8` (0 → 0.5).
+  - Shifter: RM Coarse Hz, `1 · 10000^v` (1 Hz → 0); Mode as saved (2 Ring).
   - Glue Threshold/Makeup, Drum Buss, Beat Repeat and Random Chance, every
     Dry/Wet: as saved.
 - **Racks** (`.adg`): `<GroupDevicePreset>` wraps the rack; its own

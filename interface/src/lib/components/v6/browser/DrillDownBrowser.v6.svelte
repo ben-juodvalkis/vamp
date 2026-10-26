@@ -71,6 +71,7 @@
 	import ControlGlyph from '../device-panel/ControlGlyph.svelte';
 	import BrowserPresetFace from './BrowserPresetFace.svelte';
 	import { startPresetDrag, type PresetDrag } from '$lib/services/presetDragLoad.svelte';
+	import type { Writes } from '$lib/components/v6/device-panel/deviceControls';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -921,7 +922,7 @@
 	 * finger's values, onto the chain `addEffect` would pick — the selected
 	 * track's, or the scoped pad's.
 	 */
-	function beginEffectDrag(preset: Preset, className: string, values: Record<number, number>): PresetDrag | null {
+	function beginEffectDrag(preset: Preset, className: string, values: Writes): PresetDrag | null {
 		const trackPath = selectedTrackStore.selectedTrackPath;
 		if (!trackPath) {
 			reportLoadFailure(preset.name, new Error('No track selected'));
@@ -941,8 +942,8 @@
 			values
 		});
 	}
-	/** The kinds whose tiles may draw a live face (`presetFaces`): effects and effect racks. */
-	const FACE_KINDS = new Set(['audio-effect', 'midi-effect', 'effect-rack', 'midi-effect-rack']);
+	/** The kinds whose tiles may draw a live face (`deviceControls`): effects and effect racks. */
+	const FACE_KINDS = new Set(['audio-effect', 'midi-effect', 'effect-rack', 'midi-effect-rack', 'max-audio-effect', 'max-midi-effect']);
 	/** Effect tiles drawing a live face: they hand the face the gesture. */
 	const facedTiles = new SvelteSet<string>();
 
