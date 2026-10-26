@@ -17,6 +17,7 @@
 	import { presetParams, type PresetParams } from '$lib/services/presetParams';
 	import { presetControl, resolveParam, DEVICE_CONTROLS, type ParamRef, type Writes } from '$lib/components/v6/device-panel/deviceControls';
 	import { DEVICE_PRESETS } from '$lib/config/devicePresets';
+	import { namesDevice } from '$lib/utils/deviceSlotMatch';
 	import { schemeFromInk } from '$lib/config/devicePresets';
 	import type { Preset } from '$lib/services/adapters/browserAdapter';
 	import type { PresetDrag } from '$lib/services/presetDragLoad.svelte';
@@ -80,7 +81,7 @@
 	/** The class the device arrives as: the file's, or for an `.amxd` the device type's. */
 	const arrivesAs = $derived.by(() => {
 		if (saved?.className) return saved.className;
-		const key = Object.keys(DEVICE_CONTROLS).find((k) => DEVICE_PRESETS[k]?.defaultName === preset.name);
+		const key = Object.keys(DEVICE_CONTROLS).find((k) => DEVICE_PRESETS[k] && namesDevice(DEVICE_PRESETS[k], preset.name));
 		return key ? (DEVICE_PRESETS[key].expectedClassName ?? '') : '';
 	});
 

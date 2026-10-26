@@ -37,6 +37,7 @@ import {
 	type InstrumentType
 } from '$lib/services/instrumentService';
 import { DEVICE_PRESETS, type DevicePresetConfig } from '$lib/config/devicePresets';
+import { namesDevice } from '$lib/utils/deviceSlotMatch';
 import {
 	CHARACTER_DEVICE_KEYS,
 	glyphForCategory,
@@ -125,7 +126,7 @@ function presetEntryFor(device: DeviceRecord): [string, DevicePresetConfig] | nu
 	for (const entry of Object.entries(DEVICE_PRESETS)) {
 		const config = entry[1];
 		if (config.expectedClassName !== device.className) continue;
-		if (config.defaultName === device.name) return entry;
+		if (namesDevice(config, device.name)) return entry;
 		if (!AMBIGUOUS_CLASSES.has(device.className) && !byClassOnly) byClassOnly = entry;
 	}
 	return byClassOnly;

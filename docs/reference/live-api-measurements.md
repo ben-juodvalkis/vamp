@@ -300,7 +300,16 @@ tested against the same numbers in `deviceControls.presets.test.ts`).
   92.4, not the 22 the file saves.
 - **A loaded preset's device takes the preset's file name** (Disco
   Filter.adv → an `AutoFilter2` named "Disco Filter"), which is how a drag
-  on a browser tile finds the device its load landed.
+  on a browser tile finds the device its load landed. A hard link under
+  another name loads under that name: the shelf's "Pitch Shift.amxd" is
+  `Vamp Devices/Octave/Octave.amxd` and arrives as "Pitch Shift" (loaded,
+  dumped, deleted, 2026-10-26: 1 Semitones -12..12, 2 Mix 0..100, 3 Tone
+  0..100, 4 Response 0..2, 5 Quality 0..2). The app matches it by
+  `aliases` in `devicePresets.ts`.
+- **A Max device saved as an `.adv`** (Pitch Hack) keeps each Live
+  parameter as `<MxDIntParameter>` / `<MxDFloatParameter>` with its
+  `ShortName` and, under `<Timeable>`, its `Manual` value: Dry / Wet 100,
+  Rate 10 on the rig's preset.
 
 ## Quantization values
 

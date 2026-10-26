@@ -54,6 +54,10 @@ export interface DevicePresetConfig {
   source?: string;
   rel?: string;
   defaultName: string;
+  /** Other names Live gives the same device: Live names a loaded file after
+   *  itself, so a copy on the user's shelf under another name (the Octave's
+   *  "Pitch Shift.amxd", a hard link) arrives under that name. */
+  aliases?: readonly string[];
   expectedClassName: string;
   curveType?: CurveType;
   color: DeviceColorScheme;
@@ -449,6 +453,8 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     source: 'place:Vamp Devices',
     rel: 'Octave/Octave.amxd',
     defaultName: 'Octave',
+    // The same file on the effects shelf as "Pitch Shift.amxd" (2026-10-26).
+    aliases: ['Pitch Shift'],
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
     color: familyScheme('pitchSeq')

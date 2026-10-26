@@ -50,6 +50,7 @@ import {
 	railFor
 } from '$lib/components/v6/browser/presetCurves';
 import { DEVICE_PRESETS } from '$lib/config/devicePresets';
+import { namesDevice } from '$lib/utils/deviceSlotMatch';
 import type { PictureKind } from '$lib/components/v6/browser/devicePictures';
 import type { ControlGlyphName } from './ControlGlyph.svelte';
 
@@ -549,7 +550,7 @@ export function deviceKeyForPreset(className: string, name: string): string | nu
 		if (!DEVICE_CONTROLS[key]) continue;
 		if (config.native) {
 			if (config.expectedClassName === className) return key;
-		} else if (config.defaultName === name && (className === '' || className === config.expectedClassName)) {
+		} else if (namesDevice(config, name) && (className === '' || className === config.expectedClassName)) {
 			return key;
 		}
 	}

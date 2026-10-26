@@ -32,13 +32,14 @@ const TRACK = 'tracks/0';
 const PH = `${TRACK}/devices/0`;
 const OCT = `${TRACK}/devices/1`;
 
-function octave(semitones: number, mix = 50): DeviceRecord {
+function octave(semitones: number, mix = 50, response = 0, quality = 0, name = 'Octave'): DeviceRecord {
 	const params = new SvelteMap<string, ParamRecord>();
-	([['Device On', 0, 1, 1], ['Semitones', -12, 12, semitones], ['Mix', 0, 100, mix]] as const).forEach(([name, min, max, value], i) => {
+	// As dumped off the running Live (2026-10-26).
+	([['Device On', 0, 1, 1], ['Semitones', -12, 12, semitones], ['Mix', 0, 100, mix], ['Tone', 0, 100, 100], ['Response', 0, 2, response], ['Quality', 0, 2, quality]] as const).forEach(([pname, min, max, value], i) => {
 		const paramPath = `${OCT}/params/${i}`;
-		params.set(paramPath, { paramPath, name, displayName: name, min, max, value, unit: '' });
+		params.set(paramPath, { paramPath, name: pname, displayName: pname, min, max, value, unit: '' });
 	});
-	return { devicePath: OCT, name: 'Octave', className: 'MxDeviceAudioEffect', params, properties: new SvelteMap() };
+	return { devicePath: OCT, name, className: 'MxDeviceAudioEffect', params, properties: new SvelteMap() };
 }
 
 function pitchHack(rate: number, coarse = 0, mix = 0): DeviceRecord {
@@ -66,8 +67,8 @@ const stops = (container: HTMLElement) =>
 	Array.from(container.querySelectorAll<HTMLButtonElement>('.pitch-hack-rate button'));
 const coarseSteps = (container: HTMLElement) =>
 	Array.from(container.querySelectorAll<HTMLButtonElement>('.pitch-hack-coarse button'));
-const intervalSteps = (container: HTMLElement) =>
-	Array.from(container.querySelectorAll<HTMLButtonElement>('.octave-interval button'));
+const tab = (container: HTMLElement, title: string) =>
+	Array.from(container.querySelectorAll<HTMLButtonElement>(`[role="radiogroup"][aria-label="${title}"] button`));
 const sliderTitles = (container: HTMLElement) =>
 	Array.from(container.querySelectorAll<HTMLElement>('[role="slider"]')).map((s) => s.getAttribute('aria-label')?.split(':')[0]);
 
@@ -106,13 +107,14 @@ describe('Reverse view: Pitch Hack rate column', () => {
 });
 
 describe('Pitch view: the Pitch family', () => {
-	it('draws the Octave alone in the Pitch view: no Mix (the grid tile) and no Reverse', async () => {
+	it('draws the Octave alone in the Pitch view: three tabs, no Mix (the grid tile) and no Reverse', async () => {
 		seed(pitchHack(13), octave(7));
 		const { container } = render(PitchCentralView);
 		await tick();
 		expect(sliderTitles(container)).toEqual([]);
 		expect(container.querySelector('.pitch-hack-rate')).toBeNull();
 		expect(container.textContent).not.toContain('Reverse');
+		expect(Array.from(container.querySelectorAll('[role="radiogroup"]')).map((g) => g.getAttribute('aria-label'))).toEqual(['Pitch', 'Response', 'Quality']);
 	});
 
 	it('draws Pitch Hack in its own view: one Mix slider, no Coarse, Reverse, Recycle or Int Var', async () => {
@@ -128,17 +130,37 @@ describe('Pitch view: the Pitch family', () => {
 		expect(container.querySelector('.pitch-hack-rate')?.closest('.stack')?.querySelector('.row-title')?.textContent).toBe('Reverse');
 	});
 
-	it("draws the Octave's interval +12 to -12 under a Pitch title, lights the device's step and writes semitones", async () => {
+	it("draws the Octave's pitch +12 to -12, lights the device's step and writes semitones", async () => {
 		seed(pitchHack(13), octave(-5, 30));
 		const { container } = render(PitchCentralView);
 		await tick();
-		expect(intervalSteps(container).map((b) => b.textContent?.trim())).toEqual(['+12', '+7', '-5', '-12']);
-		expect(intervalSteps(container).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'false', 'true', 'false']);
-		expect(container.querySelector('.octave-interval')?.closest('.stack')?.querySelector('.row-title')?.textContent).toBe('Pitch');
-		for (const b of intervalSteps(container)) await fireEvent.click(b);
+		expect(tab(container, 'Pitch').map((b) => b.textContent?.trim())).toEqual(['+12', '+7', '-5', '-12']);
+		expect(tab(container, 'Pitch').map((b) => b.getAttribute('aria-checked'))).toEqual(['false', 'false', 'true', 'false']);
+		for (const b of tab(container, 'Pitch')) await fireEvent.click(b);
 		expect(writtenTo(OCT, 1)).toEqual([12, 7, -5, -12]);
 		// A loaded Octave's Mix is the slider's: a step leaves it alone.
 		expect(writtenTo(OCT, 2)).toEqual([]);
+	});
+
+	it('draws Response and Quality as tabs and writes their steps (params 4 and 5)', async () => {
+		seed(octave(7, 50, 1, 2));
+		const { container } = render(PitchCentralView);
+		await tick();
+		expect(tab(container, 'Response').map((b) => b.textContent?.trim())).toEqual(['Fast', 'Balanced', 'Clean']);
+		expect(tab(container, 'Quality').map((b) => b.textContent?.trim())).toEqual(['Full', 'Lite', 'Eco']);
+		expect(tab(container, 'Response').map((b) => b.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false']);
+		expect(tab(container, 'Quality').map((b) => b.getAttribute('aria-checked'))).toEqual(['false', 'false', 'true']);
+		for (const b of tab(container, 'Response')) await fireEvent.click(b);
+		for (const b of tab(container, 'Quality')) await fireEvent.click(b);
+		expect(writtenTo(OCT, 4)).toEqual([0, 1, 2]);
+		expect(writtenTo(OCT, 5)).toEqual([0, 1, 2]);
+	});
+
+	it('drives the same device loaded from the shelf as "Pitch Shift"', async () => {
+		seed(octave(12, 50, 0, 0, 'Pitch Shift'));
+		const { container } = render(PitchCentralView);
+		await tick();
+		expect(tab(container, 'Pitch').map((b) => b.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false', 'false']);
 	});
 
 });

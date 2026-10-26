@@ -37,12 +37,17 @@ interface Candidate {
 	className: string;
 }
 
-type SlotConfig = Pick<DevicePresetConfig, 'expectedClassName' | 'defaultName'>;
+/** Whether `name` is what Live calls this device: its default name or an alias. */
+export function namesDevice(config: Pick<DevicePresetConfig, 'defaultName' | 'aliases'>, name: string): boolean {
+	return config.defaultName === name || (config.aliases?.includes(name) ?? false);
+}
+
+type SlotConfig = Pick<DevicePresetConfig, 'expectedClassName' | 'defaultName' | 'aliases'>;
 
 /** Whether `device` is a device this tile can control. */
 export function matchesSlot(device: Pick<Candidate, 'name' | 'className'>, config: SlotConfig): boolean {
 	if (device.className !== config.expectedClassName) return false;
-	return isNameKeyedClass(device.className) ? device.name === config.defaultName : true;
+	return isNameKeyedClass(device.className) ? namesDevice(config, device.name) : true;
 }
 
 /** Every device on the chain this tile could control, in chain order. */

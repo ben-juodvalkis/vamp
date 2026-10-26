@@ -140,6 +140,7 @@ const FX_TILES = [
 	['Drum', 'drum-buss', 'Drum Buss'],
 	['Glue', 'squash', 'Glue (the Squash slot): Threshold over Output'],
 	['Glitch', 'glitch', 'Glitch: GlitchLoop (the GlitchLoop slot)'],
+	['Pitch', 'pitch', 'Pitch tile → the Octave (Pitch Shift) view: Pitch, Response and Quality tabs'],
 	['Stutter', 'variation', 'Variation (Beat Repeat), the Stutter tile: Interval, Grid, Length, Pitch Decay, Mode'],
 	['Tremolo', 'tremolo', 'Auto Pan Legacy (the Tremolo tile)'],
 	['Echo', 'echo', 'Echo'],

@@ -9,6 +9,16 @@ export const OCTAVE_PITCH_PARAM = 1;
 export const OCTAVE_MIX_PARAM = 2;
 export const OCTAVE_MIX_MAX = 100;
 
+/**
+ * Response and Quality, 0..2 each, measured on the rig 2026-10-26 (the
+ * shelf's "Pitch Shift.amxd" loaded and dumped: 3 Tone 0..100, 4 Response,
+ * 5 Quality); their labels are the device file's `parameter_enum`, in order.
+ */
+export const OCTAVE_RESPONSE_PARAM = 4;
+export const OCTAVE_RESPONSE_STEPS = ['Fast', 'Balanced', 'Clean'] as const;
+export const OCTAVE_QUALITY_PARAM = 5;
+export const OCTAVE_QUALITY_STEPS = ['Full', 'Lite', 'Eco'] as const;
+
 /** The four intervals worth having, the Pitch tile's X stops. */
 export const OCTAVE_PITCH_STEPS = [
 	{ label: '+12', value: 12 },
