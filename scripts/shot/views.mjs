@@ -142,6 +142,7 @@ const FX_VIEWS = [
 	['Drum Buss', 'drum-buss', 'Drum Buss: the Drum XY, then its controls'],
 	['Glue Compressor', 'squash', 'Glue: Threshold over Output'],
 	['GlitchLoop', 'glitch', 'Glitch: GlitchLoop'],
+	['Pitch Hack', 'reverse', 'Pitch Hack (Reverse): Rate tabs, then a value box per parameter'],
 	['Octave', 'pitch', 'The Octave (Pitch Shift) view: Pitch, Response and Quality tabs, Tone'],
 	['Variation', 'variation', 'Variation (Beat Repeat): Stutter, Interval, Grid, Length, Mode'],
 	['Auto Pan Legacy', 'tremolo', 'Auto Pan Legacy (Tremolo)'],

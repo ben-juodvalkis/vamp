@@ -2,11 +2,10 @@
  * The Pitch view (2026-10-24; the Pitch family in the Auto Pan view from
  * 2026-10-15): the Octave's interval. Its Mix is the grid's Pitch slider,
  * and Pitch Hack (Reverse) has its own view (the Glitch view's from the same
- * day until 2026-10-26). Pitch Hack: a Mix
- * slider and the Rate column (1 to 1/16 top to bottom;
- * Rate is param 5, an index into the device's value_items), and no
- * Coarse, Reverse, Recycle or Int Var. A step writes its own param only; the step
- * that loads the device also puts Dry / Wet (param 2) at 100. The Octave,
+ * day until 2026-10-26). Pitch Hack: the Rate tabs (1 to 1/16 top to
+ * bottom; Rate is param 5, an index into the device's value_items) and a
+ * value box for each other parameter. A step writes its own param only; a
+ * write that loads the device also puts Dry / Wet (param 2) at 100. The Octave,
  * the Pitch tile until then: an interval column of the tile's four stops
  * and a Mix slider. The fixtures are the parameter lists dumped off the
  * running Live.
@@ -63,10 +62,6 @@ function seed(...devices: DeviceRecord[]) {
 	fxGrid.resetForTrackChange();
 }
 
-const stops = (container: HTMLElement) =>
-	Array.from(container.querySelectorAll<HTMLButtonElement>('.pitch-hack-rate button'));
-const coarseSteps = (container: HTMLElement) =>
-	Array.from(container.querySelectorAll<HTMLButtonElement>('.pitch-hack-coarse button'));
 const tab = (container: HTMLElement, title: string) =>
 	Array.from(container.querySelectorAll<HTMLButtonElement>(`[role="radiogroup"][aria-label="${title}"] button`));
 const sliderTitles = (container: HTMLElement) =>
@@ -86,23 +81,31 @@ afterEach(() => {
 	cleanup();
 });
 
-// Pitch Hack (titled Reverse) has its own view since 2026-10-26.
-describe('Reverse view: Pitch Hack rate column', () => {
-	it('draws 1 to 1/16 and lights the stop Rate matches', async () => {
+// Pitch Hack (titled Reverse) has its own view since 2026-10-26, with every
+// parameter since the same day.
+describe('Reverse view: Pitch Hack', () => {
+	it('draws Rate 1 to 1/16 as tabs and lights the stop Rate matches', async () => {
 		seed(pitchHack(10));
 		const { container } = render(ReverseCentralView);
 		await tick();
-		expect(stops(container).map((b) => b.textContent?.trim())).toEqual(['1', '1/2', '1/4', '1/8', '1/16']);
-		expect(stops(container).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'false', 'false', 'true', 'false']);
+		expect(tab(container, 'Rate').map((b) => b.textContent?.trim())).toEqual(['1', '1/2', '1/4', '1/8', '1/16']);
+		expect(tab(container, 'Rate').map((b) => b.getAttribute('aria-checked'))).toEqual(['false', 'false', 'false', 'true', 'false']);
 	});
 
 	it('writes each stop to Rate and leaves Dry / Wet to its slider', async () => {
 		seed(pitchHack(0, 0, 40));
 		const { container } = render(ReverseCentralView);
 		await tick();
-		for (const b of stops(container)) await fireEvent.click(b);
+		for (const b of tab(container, 'Rate')) await fireEvent.click(b);
 		expect(written(5)).toEqual([19, 16, 13, 10, 7]);
 		expect(written(2)).toEqual([]);
+	});
+
+	it('draws every other parameter as a value box, columns left to right', async () => {
+		seed(pitchHack(13));
+		const { container } = render(ReverseCentralView);
+		await tick();
+		expect(sliderTitles(container)).toEqual(['Mix', 'Level', 'Reverse', 'Recycle', 'Int Var', 'Coarse', 'Cents']);
 	});
 });
 
@@ -115,19 +118,6 @@ describe('Pitch view: the Pitch family', () => {
 		expect(container.querySelector('.pitch-hack-rate')).toBeNull();
 		expect(container.textContent).not.toContain('Reverse');
 		expect(Array.from(container.querySelectorAll('[role="radiogroup"]')).map((g) => g.getAttribute('aria-label'))).toEqual(['Pitch', 'Response', 'Quality']);
-	});
-
-	it('draws Pitch Hack in its own view: one Mix slider, no Coarse, Reverse, Recycle or Int Var', async () => {
-		seed(pitchHack(13), octave(7));
-		const { container } = render(ReverseCentralView);
-		await tick();
-		const titles = sliderTitles(container);
-		expect(titles.filter((t) => t === 'Mix')).toHaveLength(1);
-		for (const gone of ['Reverse', 'Recycle', 'Int Var']) expect(titles).not.toContain(gone);
-		expect(coarseSteps(container)).toEqual([]);
-		expect(container.textContent).not.toContain('Coarse');
-		expect(container.querySelector('.pitch-hack-mix [role="slider"]')).not.toBeNull();
-		expect(container.querySelector('.pitch-hack-rate')?.closest('.stack')?.querySelector('.row-title')?.textContent).toBe('Reverse');
 	});
 
 	it("draws the Octave's pitch +12 to -12, lights the device's step and writes semitones", async () => {
