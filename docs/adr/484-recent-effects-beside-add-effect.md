@@ -29,7 +29,7 @@ again without the browser.
   three columns of four (twelve), on two rows five columns of two (ten)
   (`chainDrop.recentLayout`, the user's call the same day, after a
   one-cell block beside a one-cell + Effect). With no recents, + Effect is
-  one cell as before. The list keeps sixteen.
+  one cell as before. The list keeps thirty-two.
 - It is smart about the chain: it shows the first ones that fit, skipping a
   MIDI effect on a track that is not a MIDI track and anything the chain
   already holds (by name: Live names a loaded preset's device after it).

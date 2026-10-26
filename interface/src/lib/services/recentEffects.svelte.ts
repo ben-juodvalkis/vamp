@@ -37,7 +37,7 @@ export interface RecentEffect {
 }
 
 /** How many the list keeps, and the most the column shows. */
-export const RECENT_EFFECTS_MAX = 16;
+export const RECENT_EFFECTS_MAX = 32;
 export const RECENT_EFFECTS_SHOWN = 12;
 const STORAGE_KEY = 'vamp.recentEffects';
 
