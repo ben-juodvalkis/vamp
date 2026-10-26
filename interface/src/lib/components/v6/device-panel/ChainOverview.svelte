@@ -298,9 +298,11 @@
    * Devices past which the chain takes a second row. Up to it the cells and
    * the + cell share one row, wide as the track strips get; past it the
    * cells split evenly over two rows (`chainGrid`). Reads like Live's chain:
-   * left to right, then the next row.
+   * left to right, then the next row. Four since the ghost Utility took a
+   * column of its own beside the grid (the user, 2026-10-26; five before).
+   * Suggested ghosts count as cells.
    */
-  const CHAIN_WRAP_AFTER = 5;
+  const CHAIN_WRAP_AFTER = 4;
 
   function indexOf(path: string): number {
     const m = /\/devices\/(\d+)$/.exec(path);

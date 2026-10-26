@@ -29,8 +29,10 @@ Utility no wider than the side bars.
   the strips end in Main.
 
 ## Consequences
-- A short chain is one or two cells longer, so it reaches the
-  two-row wrap one device sooner; at three effects the suggestions go.
+- A short chain is one or two cells longer; at three effects the
+  suggestions go. With the Utility in its own column the grid is
+  narrower, so the chain wraps to two rows after four cells, not five
+  (`CHAIN_WRAP_AFTER`, the user, the same day).
 - The suggestions are fixed lists in `ChainOverview.svelte`
   (`AUDIO_SUGGESTIONS`, `DRUM_SUGGESTIONS`, `MELODIC_SUGGESTIONS`,
   `SUGGEST_BELOW`).
