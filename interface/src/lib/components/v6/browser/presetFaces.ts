@@ -31,7 +31,7 @@ import {
 import { decayValue } from '$lib/components/v6/device-panel/hybridReverbParams';
 import { AUTO_FILTER_PARAM, autoFilterCurve, frequencyToValue } from '$lib/components/v6/device-panel/autoFilterParams';
 import type { CurveType } from '$lib/components/v6/device-panel/FilterCurve.svelte';
-import { CHORUS_RATE_HZ, ECHO_TIME_SECONDS, UTILITY_OUTPUT_DB, railFor } from './presetCurves';
+import { CHORUS_RATE_HZ, ECHO_TIME_SECONDS, GATE_THRESHOLD_DB, UTILITY_OUTPUT_DB, railFor } from './presetCurves';
 
 /** LOM parameter index → value. */
 export type LomValues = Record<number, number>;
@@ -189,6 +189,28 @@ export const PRESET_FACES: Readonly<Record<string, FaceSpec>> = {
 			write: (t) => ({ 1: 0.5 + 0.5 * t, 10: 1 - 0.5 * t, 11: t })
 		}
 	},
+	// Measured: Pedal (2026-10-26). Gain is Live's Drive (2), 0..1 as saved;
+	// the file's Output, Mid Freq and Dry/Wet read as the LOM too. The slider
+	// is Drive alone (user, 2026-10-26), not the Pedal view's Drive/Mix pair.
+	Pedal: {
+		fromPreset: (s) => (s.params.Gain === undefined ? null : { 2: s.params.Gain }),
+		face: { kind: 'slider', title: 'Drive', read: (v) => clamp01(v[2]), write: (t) => ({ 2: clamp01(t) }) }
+	},
+	// Measured: Gate (2026-10-26). Threshold is a linear factor, on Live's
+	// rail in dB (GATE_THRESHOLD_DB; 0.000316 → -70 dB → 0, below the rail's
+	// first label, which Live puts at 0); Release in ms, 0.1 · 30000^v
+	// (15 ms → 0.486). The Glue view's Gate XY: Release across, Threshold up.
+	Gate: {
+		fromPreset: (s) => {
+			if (s.params.Threshold === undefined || s.params.Release === undefined) return null;
+			const thresholdDb = db(s.params.Threshold);
+			return {
+				1: thresholdDb <= GATE_THRESHOLD_DB.units[1] ? 0 : railFor(GATE_THRESHOLD_DB, thresholdDb),
+				4: clamp01(Math.log(s.params.Release / 0.1) / Math.log(30000))
+			};
+		},
+		face: { kind: 'xy', read: (v) => ({ x: v[4], y: v[1] }), write: (x, y) => ({ 4: x, 1: y }) }
+	},
 	// Measured: Bass - Low Extender. Threshold and Makeup in dB, as the LOM.
 	GlueCompressor: {
 		fromPreset: (s) => defined(fromRecord({ 1: s.params.Threshold, 3: s.params.Makeup })),
@@ -222,4 +244,10 @@ export function presetFace(saved: SavedPreset | null): { face: Face; values: Lom
 	const values = spec.fromPreset(saved);
 	if (!values) return null;
 	return { face: typeof spec.face === 'function' ? spec.face(saved) : spec.face, values };
+}
+
+/** A loaded device's face by its LOM class, for a chain cell; null for a class with none, or a rack's (named from its file). */
+export function faceForClass(className: string): Face | null {
+	const face = PRESET_FACES[className]?.face;
+	return face && typeof face !== 'function' ? face : null;
 }

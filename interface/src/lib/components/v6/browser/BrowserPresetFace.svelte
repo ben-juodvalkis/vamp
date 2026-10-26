@@ -11,9 +11,7 @@
 	 * (`services/presetParams`); until then, or for a class with no face,
 	 * nothing is drawn and the tile is the plain button it always was.
 	 */
-	import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
-	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
-	import ToneCurvePad from '$lib/components/v6/device-panel/ToneCurvePad.svelte';
+	import FaceControl from './FaceControl.svelte';
 	import { presetParams, type PresetParams } from '$lib/services/presetParams';
 	import { presetFace, type LomValues } from './presetFaces';
 	import { schemeFromInk } from '$lib/config/devicePresets';
@@ -109,47 +107,7 @@
 	onpointercancel={release}
 >
 	{#if found}
-		{@const face = found.face}
-		{#if face.kind === 'xy'}
-			{@const at = face.read(shown)}
-			<DeviceXY
-				xValue={at.x}
-				yValue={at.y}
-				showCurve={face.curve !== undefined}
-				curveType={face.curve?.(shown)}
-				{color}
-				{onTap}
-				onInteraction={(x, y) => move(face.write(x, y, shown))}
-			/>
-		{:else if face.kind === 'slider'}
-			<!-- The tile's name is the label; the fill stays soft so it reads over it. -->
-			<div class="slider-face">
-			<DeviceSlider
-				value={face.read(shown)}
-				title=""
-				orientation="vertical"
-				labelOrientation="horizontal"
-				labelSize="small"
-				{color}
-				{onTap}
-				onInteraction={(t) => move(face.write(t, shown))}
-			/>
-			</div>
-		{:else}
-			{@const eq = face.read(shown)}
-			<ToneCurvePad
-				title=""
-				low={eq.low}
-				mid={eq.mid}
-				midFreq={eq.midFreq}
-				high={eq.high}
-				{color}
-				{onTap}
-				onLow={(v) => move({ 2: v })}
-				onMid={(f, g) => move({ 4: f, 3: g })}
-				onHigh={(v) => move({ 5: v })}
-			/>
-		{/if}
+		<FaceControl face={found.face} values={shown} {color} {onTap} onMove={move} />
 	{/if}
 </div>
 
@@ -168,13 +126,5 @@
 		flex: 1 1 auto;
 		min-width: 0;
 		min-height: 0;
-	}
-	.slider-face {
-		display: flex;
-		opacity: 0.5;
-	}
-	.slider-face > :global(*) {
-		flex: 1 1 auto;
-		min-width: 0;
 	}
 </style>

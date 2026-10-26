@@ -259,6 +259,18 @@ export const TOURS = {
 				steps: [openInstrument(8), { click: '.pad-tile[data-note="38"]' }]
 			},
 			{
+				name: 'chain-pedal-gate',
+				description: 'A Pedal and a Gate on the chain: no grid tile, so the Pedal cell is the face its browser tiles draw (Drive at 0.6) and the Gate cell the Glue view\'s Gate XY',
+				scenePatch: (scene) =>
+					setTrackDevices(scene, CHAIN_DEMO_TRACK, [
+						CHAIN_DEMO_DEVICES[0],
+						{ name: 'Pedal', className: 'Pedal', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Type', 'Type', 0, 2, 0, ''], ['Drive', 'Drive', 0, 1, 0.6, ''], ['Output', 'Output', -20, 20, 0, ''], ['Bass', 'Bass', -1, 1, 0, ''], ['Mid', 'Mid', -1, 1, 0, ''], ['Treble', 'Treble', -1, 1, 0, ''], ['Mid Freq', 'Mid Freq', 0, 2, 1, ''], ['Sub', 'Sub', 0, 1, 0, ''], ['Dry/Wet', 'Dry/Wet', 0, 1, 1, '']] },
+						{ name: 'Gate', className: 'Gate', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Threshold', 'Threshold', 0, 1, 0.55, ''], ['Attack', 'Attack', 0.02, 150, 3.5, ''], ['Hold', 'Hold', 0, 1, 0.31, ''], ['Release', 'Release', 0, 1, 0.35, '']] },
+						'Echo'
+					]),
+				steps: [openInstrument(CHAIN_DEMO_TRACK)]
+			},
+			{
 				name: 'chain-add',
 				description: 'Tapped the + cell at the end of the chain: the browser opens on its Effect segment, on a Place that has effect presets',
 				scenePatch: chainDemo,

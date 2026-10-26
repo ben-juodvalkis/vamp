@@ -264,6 +264,9 @@ the same numbers in `browser.presetFaces.test.ts`).
   - Saturator: Drive dB on ±36 (0 → 0.5), Output dB on -36..0 (0 → 1).
   - Auto Pan Legacy Frequency: Hz, `0.05 · 1800^v` (1.00 → 0.3997).
   - Utility Output is the file's `Gain`, a linear factor (1 → 0 dB → 0).
+  - Pedal: Gain is Drive (2), 0..1 as saved; Output dB, Mid Freq 0..2 too.
+  - Gate: Threshold a linear factor, Live's rail in dB (sampled, -70 dB → 0);
+    Release ms, `0.1 · 30000^v` (15 → 0.486). Attack ms and Floor dB as saved.
   - Glue Threshold/Makeup, Drum Buss, Beat Repeat and Random Chance, every
     Dry/Wet: as saved.
 - **Racks** (`.adg`): `<GroupDevicePreset>` wraps the rack; its own

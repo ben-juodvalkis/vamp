@@ -391,7 +391,9 @@ source and the Phase 4 switch that chose between them.
 - **Live preset faces** (2026-10-25, ADR-478): an effect preset tile of a
   class with a face (`BrowserPresetFace`, `presetFaces.ts`: every class an FX
   grid tile drives — Auto Filter, Echo, Auto Pan Legacy, Hybrid, Channel EQ,
-  Chorus-Ensemble, Drum Buss, Saturator, Glue, Utility, Beat Repeat, Random —
+  Chorus-Ensemble, Drum Buss, Saturator, Pedal (its Drive alone), Gate (the
+  Glue view's XY), Glue,
+  Utility, Beat Repeat, Random —
   and any audio or MIDI effect rack by its first macro) draws the preset's
   own control (the grid tile's XY, slider or tone pad) at its SAVED values, read once the
   tile nears the screen from `/api/places/preset-params` (the server unzips

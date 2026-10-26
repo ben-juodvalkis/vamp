@@ -59,6 +59,9 @@
   import PitchControl from './PitchControl.svelte';
   import GlitchControl from './GlitchControl.svelte';
   import SquashControl from './SquashControl.svelte';
+  import GateControl from './GateControl.svelte';
+  import DeviceFace from './chain/DeviceFace.svelte';
+  import { faceForClass } from '$lib/components/v6/browser/presetFaces';
   import MidiWheelsPanel from '$lib/components/v6/midi/MidiWheelsPanel.svelte';
   import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
   import InstrumentFace, { FACED_INSTRUMENTS } from './chain/InstrumentFace.svelte';
@@ -120,7 +123,9 @@
     bass: { Tile: BassControl },
     octave: { Tile: PitchControl },
     glitchLoop: { Tile: GlitchControl },
-    squash: { Tile: SquashControl }
+    squash: { Tile: SquashControl },
+    // The Glue view's Gate XY, the one its browser tiles draw too.
+    gate: { Tile: GateControl }
   };
 
   /** MidiWheels, re-found as the surface finds it: class + the name Live gives the loaded `.amxd`. */
@@ -509,6 +514,12 @@
              control's: it picks this device and never starts a reorder. -->
         <div class="cell-control" role="presentation">
           <tile.Tile device={cell.device} position={tile.position} />
+        </div>
+      {:else if live && faceForClass(cell.device.className)}
+        <!-- No grid tile: the face its browser preset tiles draw (Pedal's
+             Drive), on this device. -->
+        <div class="cell-control" role="presentation">
+          <DeviceFace device={cell.device} face={faceForClass(cell.device.className)!} ink={cell.ink} />
         </div>
       {:else}
       <div class="mark" aria-hidden="true">
