@@ -256,10 +256,12 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0): PictureStro
 		// notes deactivated"), so it reads as chance at 100 % too; more pass the likelier.
 		case 'chance':
 			return Array.from({ length: 12 }, (_, i) => ({ d: bar(4 + i * 8, 40, 6, 20), o: hash(i + 7) < 0.15 + 0.65 * x ? 0.85 : 0.15, fill: true }));
-		// Velocity: twelve notes' velocities, spread by its randomness.
+		// Velocity: twelve notes' velocities as a bar graph on one baseline,
+		// their tops always uneven (user, 2026-10-26: "steps of varying
+		// heights… just the top varies") and more so with its randomness.
 		case 'velocity':
 			return Array.from({ length: 12 }, (_, i) => {
-				const h = Math.max(6, 55 + (hash(i + 3) - 0.5) * 90 * x);
+				const h = Math.max(8, 50 + (hash(i + 3) - 0.5) * 84 * (0.35 + 0.65 * x));
 				return { d: bar(4 + i * 8, 92 - h, 6, h), o: 0.8, fill: true };
 			});
 		// Arpeggiator: a rising run, faster with the rate, each note as long as the gate.

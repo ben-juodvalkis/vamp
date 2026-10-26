@@ -21,6 +21,16 @@ describe('device pictures follow their control', () => {
 		expect(arcs.every((s) => /^M[\d.]+,100A.* 0 0 1 [\d.]+,100$/.test(s.d))).toBe(true);
 	});
 
+	it("Velocity is a bar graph: one baseline, uneven tops even at no randomness, more uneven with it", () => {
+		const bars = (x: number) => pictureStrokes('velocity', x).map((s) => s.d.match(/^M([\d.]+),([\d.]+)h[\d.]+v([\d.]+)/)!.slice(2).map(Number));
+		const bottoms = (x: number) => bars(x).map(([top, h]) => Math.round((top + h) * 10) / 10);
+		const spread = (x: number) => Math.max(...bars(x).map(([, h]) => h)) - Math.min(...bars(x).map(([, h]) => h));
+		expect(new Set(bottoms(0)).size).toBe(1);
+		expect(new Set(bottoms(1)).size).toBe(1);
+		expect(spread(0)).toBeGreaterThan(10);
+		expect(spread(1)).toBeGreaterThan(spread(0));
+	});
+
 	it('every kind draws, at every corner, and holds still for the same values', () => {
 		const kinds: PictureKind[] = ['rings', 'waves', 'tremolo', 'drum', 'gate', 'comb', 'notches', 'stairs', 'shaper', 'clip', 'stompbox', 'stack', 'compress', 'ratio', 'repeat', 'scatter', 'smear', 'glitch', 'octaves', 'reverse', 'ringmod', 'chance', 'velocity', 'arp', 'chord'];
 		for (const k of kinds)
