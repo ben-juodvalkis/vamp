@@ -152,7 +152,7 @@ const chainDemo = (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, CHAIN_DEMO
 // Chains of other lengths, for the adaptive layout: the instrument, then effects.
 /** The rig's effects shelf (catalog.effectsPlace), for states that name its files. */
 const SHELF = '/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Audio-Midi Effects';
-const RECENT_SEED = [['Echo', 'Time'], ['Saturator', 'Distortion'], ['Chorus', 'Modulation'], ['Drum Buss', 'Distortion'], ['Glue', 'Dynamics'], ['Redux', 'Distortion'], ['Phaser', 'Modulation'], ['Gate', 'Dynamics'], ['Tremolo', 'Modulation'], ['Compressor', 'Dynamics']];
+const RECENT_SEED = [['Echo', 'Time'], ['Auto Filter', 'Tone'], ['Saturator', 'Distortion'], ['Chorus', 'Modulation'], ['Drum Buss', 'Distortion'], ['Glue', 'Dynamics'], ['Redux', 'Distortion'], ['Phaser', 'Modulation'], ['Gate', 'Dynamics'], ['Tremolo', 'Modulation'], ['Compressor', 'Dynamics']];
 const chainOf = (n) => (scene) =>
 	setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], 'Auto Filter', 'Echo', 'Reverb', CHAIN_DEMO_DEVICES[5], 'Auto Filter', CHAIN_DEMO_DEVICES[7], CHAIN_DEMO_DEVICES[8]].slice(0, n));
 const chainCell = (index) => `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/${index}"]`;
@@ -351,11 +351,11 @@ export const TOURS = {
 			// shelf so --real-data draws each one's picture. Echo is on the chain
 			// already, so it is skipped.
 			...[
-				['chain-recents', 'a chain on one row: eight in two columns of four', 3],
-				['chain-recents-crowded', 'a chain on two rows: six in three columns of two', 5]
+				['chain-recents', 'the instrument alone, on one row: eight in two columns of four, Auto Filter drawing its curve', 1],
+				['chain-recents-crowded', 'a chain on two rows: six in three columns of two; Echo and Auto Filter are on it, so they are skipped', 5]
 			].map(([name, what, n]) => ({
 				name,
-				description: `The Recent column (ADR-484): ${what}; Echo is on the chain, so it is skipped`,
+				description: `The Recent column (ADR-484): ${what}`,
 				scenePatch: chainOf(n),
 				steps: [
 					{ storage: { 'vamp.recentEffects': JSON.stringify(RECENT_SEED.map(([n, dir]) => ({ name: n, fullPath: `${SHELF}/${dir}/${n}.adv`, source: '', rel: '' }))) } },

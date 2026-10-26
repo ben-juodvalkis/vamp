@@ -6,6 +6,7 @@
 	 * A tap adds it to this chain again.
 	 */
 	import DevicePicture from '$lib/components/v6/browser/DevicePicture.svelte';
+	import FilterCurve from '$lib/components/v6/device-panel/FilterCurve.svelte';
 	import { presetParams, type PresetParams } from '$lib/services/presetParams';
 	import { presetControl, resolveParam, type ParamRef } from '$lib/components/v6/device-panel/deviceControls';
 	import { addEffectToChain, type RecentEffect } from '$lib/services/recentEffects.svelte';
@@ -22,6 +23,22 @@
 		let cancelled = false;
 		void presetParams(path).then((p) => !cancelled && (saved = p));
 		return () => (cancelled = true);
+	});
+
+	const CURVE_MAX_CUTOFF = 0.55;
+	// A filter (the Auto Filter) draws its response curve at the saved
+	// cutoff and resonance, as its tile does (the user, 2026-10-26).
+	const curve = $derived.by(() => {
+		const found = presetControl(saved, recent.name);
+		if (!found || found.control.kind !== 'xy' || !found.control.curve) return null;
+		const get = (ref: ParamRef) => found.values[resolveParam(ref)];
+		const type = found.control.curve(get);
+		if (type === 'none' || type === 'eq') return null;
+		const at = found.control.read(get);
+		// A cutoff saved wide open draws as a flat line, which reads as no
+		// filter at all: past the middle it is drawn at the middle, so the
+		// button still shows a filter's shape. Below, the true curve.
+		return { type, cutoff: Math.min(at.x, CURVE_MAX_CUTOFF), resonance: at.y };
 	});
 
 	const picture = $derived.by(() => {
@@ -44,7 +61,11 @@
 	use:press={{ onPress: () => void addEffectToChain(recent), touchAction: 'none', stopPropagation: true }}
 >
 	<span class="recent-picture" aria-hidden="true">
-		{#if picture}<DevicePicture kind={picture.kind} x={picture.x} y={picture.y} ink="var(--muted-foreground)" />{/if}
+		{#if curve}
+			<FilterCurve cutoff={curve.cutoff} resonance={curve.resonance} curveType={curve.type} width={300} height={300} curveColor="var(--muted-foreground)" />
+		{:else if picture}
+			<DevicePicture kind={picture.kind} x={picture.x} y={picture.y} ink="var(--muted-foreground)" />
+		{/if}
 	</span>
 	<!-- "+ Echo": what a tap does (the user, 2026-10-26). -->
 	<span class="recent-name">+ {recent.name}</span>
@@ -96,6 +117,14 @@
 		inset: 0;
 		width: 100%;
 		height: 100%;
+	}
+	/* The curve alone: its shaded fill reads as a block at this size. */
+	.recent-picture :global(.response-fill),
+	.recent-picture :global(.response-echo) {
+		display: none;
+	}
+	.recent-picture :global(.response-curve) {
+		stroke-width: 6;
 	}
 	.recent-name {
 		max-width: 100%;
