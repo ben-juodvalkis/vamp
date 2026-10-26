@@ -187,3 +187,14 @@ export function barWindow(win: TimeRange, bar: number, index: number): TimeRange
 export function slideBar(from: number, dyPx: number, first: number, last: number): number {
 	return Math.min(last, Math.max(first, from + Math.round(dyPx / BAR_SLIDE_PX)));
 }
+
+/**
+ * The slot a step added with nothing playing makes its clip in: the
+ * pedal's slot when it is empty (the scene the performer has selected),
+ * else the track's first empty slot; null when every slot holds a clip.
+ */
+export function slotForNewClip(isEmpty: (index: number) => boolean, sceneCount: number, preferred: number): number | null {
+	if (preferred >= 0 && preferred < sceneCount && isEmpty(preferred)) return preferred;
+	for (let i = 0; i < sceneCount; i++) if (isEmpty(i)) return i;
+	return null;
+}
