@@ -27,3 +27,6 @@ one: a gain stage at the end of the chain, a drag away.
   rows one device sooner.
 - The ghost is not a device: it cannot be reordered or dropped on, and a cell
   dragged past the last device stops before it.
+
+## Tags
+`fx-chain`, `chain-overview`, `ghost-tile`, `utility`
