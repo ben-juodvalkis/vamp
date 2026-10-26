@@ -67,6 +67,7 @@
   import constants from '$config/constants.json';
   import Music from '@lucide/svelte/icons/music';
   import { press } from '$lib/actions/press';
+  import { swallowNextClick } from '$lib/utils/swallowNextClick';
   import { drag, type DragInfo } from '$lib/actions/drag';
   import { moveDevice } from '$lib/services/deviceMoveService';
   import { chainGrid, clampChainIndex, moved } from '$lib/utils/chainDrop';
@@ -574,7 +575,7 @@
     class="chain-add"
     aria-label="Add an effect"
     data-debug="chain-add"
-    use:press={{ onPress: () => browserModeStore.openEffectsBrowser(), touchAction: 'none' }}
+    use:press={{ onPress: () => { swallowNextClick(); browserModeStore.openEffectsBrowser(); }, touchAction: 'none' }}
   >
     <span class="chain-add-icons" aria-hidden="true"><Plus /><ControlGlyph name="rack" /></span>
     <span class="chain-add-label">Effect</span>
