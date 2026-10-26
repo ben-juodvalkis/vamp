@@ -33,7 +33,10 @@
    * a pad scope the overview provides the pad's `fxScope`, as the grid
    * does, so the tiles resolve against the pad's chain. MidiWheels carries
    * the pitch and mod wheels (`MidiWheelsPanel`); the wheels' wire names
-   * the selected track, so a pad's chain draws its mark instead.
+   * the selected track, so a pad's chain draws its mark instead. A
+   * Permute carries its mute and pitch steps (`chain/PermuteStepsFace`),
+   * the track's instrument the control its view is known by
+   * (`chain/InstrumentFace`: Omnisphere's ORB, Drift's filter).
    *
    * **A pad follows the Drum Rack view.** While a pad is held or latched
    * on the selected track's Drum Rack, the overview is that pad's chain —
@@ -57,6 +60,10 @@
   import GlitchControl from './GlitchControl.svelte';
   import SquashControl from './SquashControl.svelte';
   import MidiWheelsPanel from '$lib/components/v6/midi/MidiWheelsPanel.svelte';
+  import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
+  import InstrumentFace, { FACED_INSTRUMENTS } from './chain/InstrumentFace.svelte';
+  import { schemeFromInk } from '$lib/config/devicePresets';
+  import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
   import constants from '$config/constants.json';
   import Music from '@lucide/svelte/icons/music';
   import { press } from '$lib/actions/press';
@@ -476,7 +483,15 @@
         </span>
       </div>
 
-      {#if live && !padScope && isMidiWheels(cell.device)}
+      {#if live && cell.presetKey === 'sequencer'}
+        <!-- Permute: its mute and pitch steps, on this device. -->
+        <div class="cell-control" role="presentation"><PermuteStepsFace device={cell.device} color={cell.ink} /></div>
+      {:else if live && !padScope && cell.kind === 'instrument' && glance.instrumentViewType && FACED_INSTRUMENTS.has(glance.instrumentViewType)}
+        <!-- The instrument's signature control, as its view draws it. -->
+        <div class="cell-control" role="presentation">
+          <InstrumentFace device={cell.device} type={glance.instrumentViewType} color={selectedTrackScheme() ?? schemeFromInk(cell.ink)} />
+        </div>
+      {:else if live && !padScope && isMidiWheels(cell.device)}
         <!-- The pitch and mod wheels, as the instrument views draw them:
              Pitch over Mod in a full-height cell, side by side in a
              two-row chain's half-height one. -->

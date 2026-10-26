@@ -19,7 +19,7 @@
 
 /** iPad Pro 12.9" landscape, the machine this interface is built for. */
 import { readFileSync } from 'node:fs';
-import { CHAIN_DEMO_DEVICES, CHAIN_DEMO_TRACK, setTrackDevices } from './scene.mjs';
+import { CHAIN_DEMO_DEVICES, CHAIN_DEMO_TRACK, OMNISPHERE_STANDIN, driftParams, setTrackDevices } from './scene.mjs';
 
 // The rig's "106 Bass 01" Analog, all 172 parameters as the running Live
 // reported them (device_dump.js, 2026-10-22): [name, min, max, value].
@@ -189,6 +189,18 @@ export const TOURS = {
 				description: 'MidiWheels on a two-row chain: the wheels side by side in its half-height cell',
 				scenePatch: (scene) =>
 					setTrackDevices(scene, CHAIN_DEMO_TRACK, [{ name: 'MidiWheels', className: 'MxDeviceMidiEffect' }, ...CHAIN_DEMO_DEVICES.slice(0, 6)]),
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }]
+			},
+			{
+				name: 'chain-faces',
+				description: 'Omnisphere with its ORB, Permute with its mute and pitch steps, then two effects',
+				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [OMNISPHERE_STANDIN, CHAIN_DEMO_DEVICES[1], 'Auto Filter', 'Echo']),
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }]
+			},
+			{
+				name: 'chain-drift',
+				description: 'Drift with its filter XY, then Permute and an Echo',
+				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [{ name: 'Drift', params: driftParams() }, CHAIN_DEMO_DEVICES[1], 'Echo']),
 				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }]
 			},
 			{

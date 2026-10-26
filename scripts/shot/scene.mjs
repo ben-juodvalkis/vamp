@@ -326,7 +326,7 @@ function wavetableParams({ osc2On = 0 } = {}) {
  * noise at zero): filter 3200 Hz / res 0.35, osc gains 0.9 and 0.6, noise
  * 0.25, amp attack 0.4 s and release 2.5 s.
  */
-function driftParams({ osc2On = 1 } = {}) {
+export function driftParams({ osc2On = 1 } = {}) {
 	const p = [
 		['On', 'On', 0, 1, 1, ''], // 0
 		['Filter Frequency', 'Filter Freq', 19.999998, 19999.9961, 3200, ''], // 1
@@ -1213,6 +1213,15 @@ function rackParams(macros, { on = 1 } = {}) {
  * switched off) and a plug-in the app has no view for.
  */
 export const CHAIN_DEMO_TRACK = 6;
+/** A stand-in Omnisphere: 27 plug-in parameters, the ORB's angle and radius at 25 / 26 as its view reads them. */
+export const OMNISPHERE_STANDIN = {
+	name: 'Omnisphere',
+	className: 'AuPluginDevice',
+	params: Array.from({ length: 27 }, (_, i) =>
+		i === 0 ? ['Device On', 'Device On', 0, 1, 1, ''] : [`Param ${i}`, `Param ${i}`, 0, 1, i === 25 ? 0.3 : i === 26 ? 0.7 : 0.5, '']
+	)
+};
+
 export const CHAIN_DEMO_DEVICES = [
 	{ name: 'Wavetable', params: wavetableParams({ osc2On: 1 }) },
 	{ name: 'Permute', params: permuteParams({ mute: [1, 1, 1, 1, 1, 1, 1, 1], pitch: [1, 0, 0, 1, 0, 1, 0, 0] }) },
