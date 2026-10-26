@@ -15,6 +15,7 @@
      */
 
     import ClipPreview from './ClipPreview.svelte';
+    import RecordingCount from './RecordingCount.svelte';
     import { slotActionGlyph } from '../utils/slotCellState';
     import {
         requestSample,
@@ -107,6 +108,13 @@
          * centred over the cell instead; a clip shows no glyph.
          */
         glyphCentered?: boolean;
+        /**
+         * The track whose take this cell counts (`bar.beat`, the strip's
+         * `RecordingCount`) while it records. The mini grid passes it: it
+         * stands beside no strip clip section, and a red cell alone
+         * says nothing about how long the take has run.
+         */
+        countTrackPath?: string;
         /** This slot's scene row is the selected one. */
         sceneSelected?: boolean;
         /**
@@ -136,6 +144,7 @@
         actionPressed = false,
         actionWidthPx = 0,
         glyphCentered = false,
+        countTrackPath = '',
         sceneSelected = false,
         pedalTarget = false
     }: Props = $props();
@@ -391,6 +400,9 @@ const previewInk = '#000000';
                  go. It survives where there is room for it: the strip's
                  own clip view, the clip central view, and this cell's
                  `aria-label`. -->
+            {#if slotState === 'recording' && countTrackPath}
+                <RecordingCount trackPath={countTrackPath} />
+            {/if}
         {/if}
 
         <!-- The one part of the cell that acts. Presentational like
