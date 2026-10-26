@@ -8,8 +8,7 @@ import {
 	REORDER_IDLE,
 	sameDevices,
 	type ChainEntry,
-	type ReorderState
-} from '$lib/utils/chainDrop';
+	type ReorderState, recentSpan, recentLayout } from '$lib/utils/chainDrop';
 
 describe('clampChainIndex', () => {
 	it('lands where the finger is', () => {
@@ -178,5 +177,23 @@ describe('planReorder', () => {
 			now = chain(...moved(now.map((e) => e.sig), from, step.send.to));
 		}
 		expect(now.map((e) => e.sig)).toEqual(['m2', 'm1', 'I', 'e2', 'e1']);
+	});
+});
+
+describe('the Recent block (ADR-484)', () => {
+	it('spans the empty cell a two-row grid leaves in its row', () => {
+		// 5 devices + Recent + the + cell on 4 x 2: one cell left over, beside them.
+		expect(recentSpan(5, chainGrid(6, 4))).toBe(2);
+		// A full one-row grid leaves none.
+		expect(recentSpan(3, chainGrid(4, 4))).toBe(1);
+		// Recent closing a row, the + cell and the gap on the next: no span.
+		expect(recentSpan(3, { cols: 4, rows: 2 })).toBe(1);
+	});
+
+	it('takes as many columns as keep a tile as wide as the side bars, up to four', () => {
+		expect(recentLayout(230, 120, 4)).toEqual({ columns: 1, rows: 4, shown: 4 });
+		expect(recentLayout(244, 120, 4)).toEqual({ columns: 2, rows: 4, shown: 8 });
+		expect(recentLayout(380, 120, 4)).toEqual({ columns: 3, rows: 3, shown: 8 });
+		expect(recentLayout(600, 120, 4)).toEqual({ columns: 4, rows: 2, shown: 8 });
 	});
 });

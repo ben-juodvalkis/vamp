@@ -68,7 +68,7 @@
   import SquashControl from './SquashControl.svelte';
   import ControlTile from './ControlTile.svelte';
   import RecentEffectButton from './chain/RecentEffectButton.svelte';
-  import { recentForChain, RECENT_EFFECTS_CROWDED } from '$lib/services/recentEffects.svelte';
+  import { recentForChain } from '$lib/services/recentEffects.svelte';
   import { controlFor } from './deviceControls';
   import MidiWheelsPanel from '$lib/components/v6/midi/MidiWheelsPanel.svelte';
   import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
@@ -85,6 +85,8 @@
   import {
     arrange,
     chainGrid,
+    recentSpan,
+    recentLayout,
     clampChainIndex,
     moved,
     planReorder,
@@ -392,24 +394,28 @@
 
   const grid = $derived(chainGrid(drawn.length + (recentPool.length > 0 ? 1 : 0), CHAIN_WRAP_AFTER));
   /*
-   * Eight in two columns of four; four in one column only when a half
-   * column would be narrower than the side bars (the user, 2026-10-26: two
-   * rows of devices alone do not crowd it). Measured: the column's width
-   * against a probe as wide as `--sidebar-width`, which scales with the
-   * screen.
+   * The Recent block sizes itself (the user, 2026-10-26: "be intelligent
+   * about this"): it spans the empty cells the grid leaves in its row
+   * (`recentSpan`), and takes as many columns as keep each tile at least
+   * as wide as the side bars, up to four (`recentLayout`): one column of
+   * four when narrow, else eight in 2 x 4, 3 x 3 or 4 x 2. Measured: the
+   * block's width against a probe as wide as `--sidebar-width`, which
+   * scales with the screen.
    */
-  /** The column's gap, as `.chain-recents` sets it. */
+  /** The block's gap, as `.chain-recents` sets it. */
   const RECENT_GAP = 4;
+  const recentCells = $derived(recentSpan(drawn.length, grid));
   let recentsEl = $state<HTMLElement | null>(null);
   let sidebarProbe = $state<HTMLElement | null>(null);
-  let recentsNarrow = $state(false);
+  let recentsWidth = $state(0);
+  let sidebarWidth = $state(120);
   $effect(() => {
     const el = recentsEl;
     const probe = sidebarProbe;
     if (!el || !probe || typeof ResizeObserver === 'undefined') return;
     const measure = () => {
-      const half = (el.clientWidth - RECENT_GAP) / 2;
-      recentsNarrow = half < probe.offsetWidth;
+      recentsWidth = el.clientWidth;
+      sidebarWidth = probe.offsetWidth || 120;
     };
     const obs = new ResizeObserver(measure);
     obs.observe(el);
@@ -417,7 +423,8 @@
     measure();
     return () => obs.disconnect();
   });
-  const recents = $derived(recentsNarrow ? recentPool.slice(0, RECENT_EFFECTS_CROWDED) : recentPool);
+  const recentGrid = $derived(recentLayout(recentsWidth, sidebarWidth, RECENT_GAP));
+  const recents = $derived(recentPool.slice(0, recentGrid.shown));
 
   /** The cell position under a point, by the grid's geometry at lift — not the cells, which are sliding. */
   function positionAt(d: Drag, x: number, y: number): number {
@@ -731,7 +738,17 @@
   {/each}
   {#if recents.length > 0}
     <!-- Recent: the last effects added, grey; a tap adds one here again. -->
-    <div class="chain-recents" class:crowded={recentsNarrow} bind:this={recentsEl} data-debug="chain-recents" role="group" aria-label="Recent effects">
+    <div
+      class="chain-recents"
+      class:crowded={recentGrid.columns === 1}
+      style:grid-column="span {recentCells}"
+      style:--recent-cols={recentGrid.columns}
+      style:--recent-rows={recentGrid.rows}
+      bind:this={recentsEl}
+      data-debug="chain-recents"
+      role="group"
+      aria-label="Recent effects"
+    >
       <span class="sidebar-probe" bind:this={sidebarProbe} aria-hidden="true"></span>
       {#each recents as recent (recent.fullPath)}
         <RecentEffectButton {recent} />
@@ -860,8 +877,8 @@
     min-width: 0;
     min-height: 0;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--recent-cols, 2), minmax(0, 1fr));
+    grid-template-rows: repeat(var(--recent-rows, 4), minmax(0, 1fr));
     gap: 4px;
   }
   /* As wide as the side bars, to measure against; takes no room. */
@@ -871,9 +888,6 @@
     height: 0;
     visibility: hidden;
     pointer-events: none;
-  }
-  .chain-recents.crowded {
-    grid-template-columns: minmax(0, 1fr);
   }
   /* One wide, short row each: the picture beside the name. */
   .chain-recents.crowded > :global(.recent-effect) {
