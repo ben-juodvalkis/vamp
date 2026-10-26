@@ -80,6 +80,8 @@
 			{isGhost}
 			{orientation}
 			readout={control.readout === undefined ? undefined : display(control.readout)}
+			centerOrigin={control.center !== undefined}
+			centerValue={control.center}
 			{labelOrientation}
 			{labelSize}
 			{color}

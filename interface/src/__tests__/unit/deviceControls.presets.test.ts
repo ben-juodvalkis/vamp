@@ -30,6 +30,7 @@ const CASES: Array<{ name: string; preset: string; className: string; params: Re
 	{ name: "Blur", preset: "Blur", className: "MxDeviceAudioEffect", params: {"Drive": 100, "Rate": 22, "Seam": 36, "Mix": 0, "Width": 0, "Clip": 1, "Restart": 1}, labels: {}, live: {"4": 0}, tol: {} },
 	{ name: "NoteChance", preset: "Note Chance", className: "MxDeviceMidiEffect", params: {"Chance": 100}, labels: {}, live: {"1": 100}, tol: {} },
 	{ name: "GlitchLoop", preset: "GlitchLoop", className: "MxDeviceAudioEffect", params: {"Clock": 5, "Dry/Wet": 35.7033}, labels: {}, live: {"19": 35.70330047607422}, tol: {"19": 1e-4} },
+	{ name: "MultibandDynamics", preset: "Multiband Dynamics", className: "MultibandDynamics", params: {"On": 1, "OutputGain": 0, "BelowThresholdMid": -27.125, "BelowRatioMid": 0}, labels: {}, live: {"27": 0}, tol: {} },
 	{ name: "GuitarRack", preset: "Guitar", className: "AudioEffectGroupDevice", params: {"MacroControls.0": 0.0, "MacroControls.1": 20.0, "MacroControls.2": 87.2762375}, labels: {"MacroDisplayNames.0": "Gain"}, live: {"1": 0}, tol: {} },
 ];
 

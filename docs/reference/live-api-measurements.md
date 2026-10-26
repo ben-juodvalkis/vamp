@@ -275,6 +275,8 @@ tested against the same numbers in `deviceControls.presets.test.ts`).
   - Redux: Sample Rate Hz on Live's rail (sampled; 40 kHz → 1, 3.99 kHz at
     0.5); Post-Filter -4..4 → `(v + 4) / 8` (0 → 0.5).
   - Shifter: RM Coarse Hz, `1 · 10000^v` (1 Hz → 0); Mode as saved (2 Ring).
+  - Multiband Dynamics: Below Ratio (Mid) -3..1, Below Threshold (Mid) dB
+    and Output dB, all as saved (0 → 0, -27.125 → -27.125).
   - Glue Threshold/Makeup, Drum Buss, Beat Repeat and Random Chance, every
     Dry/Wet: as saved.
 - **Racks** (`.adg`): `<GroupDevicePreset>` wraps the rack; its own

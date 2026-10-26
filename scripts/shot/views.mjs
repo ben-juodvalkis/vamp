@@ -274,7 +274,8 @@ export const TOURS = {
 			// drawing its `deviceControls` entry (ADR-479).
 			...[
 				['shifter', { name: 'Shifter', className: 'Shifter', params: [['Device On', 'Device On', 0, 1, 1, ''], ...Array.from({ length: 17 }, (_, i) => [`P${i + 1}`, `P${i + 1}`, 0, 1, 0, '']), ['RM Coarse', 'RM Coarse', 0, 1, 0.5, '100 Hz']] }],
-				['chance', { name: 'Note Chance', className: 'MxDeviceMidiEffect', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Chance', 'Chance', 0, 100, 60, '60 %']] }]
+				['chance', { name: 'Note Chance', className: 'MxDeviceMidiEffect', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Chance', 'Chance', 0, 100, 60, '60 %']] }],
+				['multiband', { name: 'Multiband Dynamics', className: 'MultibandDynamics', params: Array.from({ length: 28 }, (_, i) => i === 0 ? ['Device On', 'Device On', 0, 1, 1, ''] : i === 5 ? ['Output', 'Output', -24, 24, 0, '0.00 dB'] : i === 21 ? ['Below Threshold (Mid)', 'Below Threshold (Mid)', -80, 0, -27.125, '-27.1 dB'] : i === 27 ? ['Below Ratio (Mid)', 'Below Ratio (Mid)', -3, 1, 0.4, '1 : 1.67'] : [`P${i}`, `P${i}`, 0, 1, 0, '']) }]
 			].map(([key, device]) => ({
 				name: `chain-view-${key}`,
 				description: `Tapped the ${device.name} cell: its own view, the control its browser tiles and chain cell draw`,

@@ -39,6 +39,7 @@ import { decayValue } from './hybridReverbParams';
 import { AUTO_FILTER_PARAM, autoFilterCurve, frequencyToValue } from './autoFilterParams';
 import { GLITCH_LOOP_PARAMS } from './glitchLoopParams';
 import { OCTAVE_MIX_MAX, OCTAVE_MIX_PARAM } from './octaveParams';
+import { MB_BELOW_RATIO_MID, ratioFromSlider, sliderFromRatio } from './multibandParams';
 import type { CurveType } from './FilterCurve.svelte';
 import {
 	CHORUS_RATE_HZ,
@@ -72,6 +73,8 @@ export interface SliderControl {
 	title: string;
 	/** The parameter whose label Live gives is the slider's readout. */
 	readout?: ParamRef;
+	/** Where the fill grows from, 0..1, for a control centered on a neutral value (Multiband's 1 : 1). */
+	center?: number;
 	read(get: Get): number;
 	write(t: number, get: Get): Writes;
 }
@@ -328,6 +331,20 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	compressor: {
 		control: { kind: 'slider', title: 'Comp', read: (g) => clamp01(g(1) ?? 1), write: (t) => [[1, clamp01(t)]] },
 		fromPreset: (s) => (s.params.Threshold === undefined ? null : { 1: thresholdValue(s.params.Threshold) })
+	},
+	// Measured: Multiband Dynamics (2026-10-26). Below Ratio (Mid), -3..1 as
+	// saved (0 → 0, Live's 1 : 1.00); the slider is the Glue view's rail,
+	// expansion below its middle and compression above (sliderFromRatio).
+	ott: {
+		control: {
+			kind: 'slider',
+			title: 'Ratio',
+			readout: MB_BELOW_RATIO_MID,
+			center: 0.5,
+			read: (g) => sliderFromRatio(g(MB_BELOW_RATIO_MID) ?? 0),
+			write: (t) => [[MB_BELOW_RATIO_MID, ratioFromSlider(t)]]
+		},
+		fromPreset: (s) => (s.params.BelowRatioMid === undefined ? null : { [MB_BELOW_RATIO_MID]: s.params.BelowRatioMid })
 	},
 	// Measured: Utility. Output is the file's Gain, a linear factor (1 → 0 dB
 	// → 0 on the -1..1 rail). The grid tile draws the track's meter behind it.
