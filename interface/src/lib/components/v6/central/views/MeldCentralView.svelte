@@ -5,12 +5,11 @@
   import SectionDivider from '../SectionDivider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
   import EnvelopeGroup from './EnvelopeGroup.svelte';
-  import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
-  import { PITCH_COLOR, MOD_COLOR, familyScheme } from '$lib/config/devicePresets';
+  import { familyScheme } from '$lib/config/devicePresets';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import { meldFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
   import {
@@ -43,16 +42,6 @@
     primary: trackInk(meldColor.primary, paintModeReactive()),
     secondary: meldColor.secondary,
     accent: trackInk(meldColor.accent, paintModeReactive())
-  });
-  let pitchInk = $derived(trackScheme ?? {
-    primary: trackInk(PITCH_COLOR.primary, paintModeReactive()),
-    secondary: PITCH_COLOR.secondary,
-    accent: trackInk(PITCH_COLOR.accent, paintModeReactive())
-  });
-  let modInk = $derived(trackScheme ?? {
-    primary: trackInk(MOD_COLOR.primary, paintModeReactive()),
-    secondary: MOD_COLOR.secondary,
-    accent: trackInk(MOD_COLOR.accent, paintModeReactive())
   });
 
   /**
@@ -360,13 +349,8 @@
           />
         </div>
       </div>
-
-      <SectionDivider orientation="vertical" ink={meldInk.primary} />
-
-      <!-- Pitch over Mod (ADR-477). -->
-      <div class="wheel-col flex-none min-h-0">
-        <MidiWheelsPanel pitchColor={pitchInk} modColor={modInk} />
-      </div>
+      <!-- The wheels that closed the row left for the MidiWheels device's
+           chain cell (user, 2026-10-26). -->
     </div>
   {:else}
     <DeviceEmptyState glyph="~" message="Load Meld to access controls" color={meldInk.primary} />
@@ -376,15 +360,15 @@
 <style>
   .meld-root {
     --meld-slider-w: var(--height-touch);
-    --meld-wheel-w: 56px;
+    --meld-global-w: 56px;
   }
 
   /* Smaller iPads (ADR-476): the two engine columns are the only ones that
-     flex, so they take the whole shortfall; the wheels come down to the
-     44px touch floor and give them 24px back. */
+     flex, so they take the whole shortfall; the global column comes down
+     to the 44px touch floor and gives them 12px back. */
   @media (max-width: 1365.98px) {
     .meld-root {
-      --meld-wheel-w: var(--height-touch);
+      --meld-global-w: var(--height-touch);
     }
   }
 
@@ -483,12 +467,9 @@
     flex: 0 0 var(--meld-slider-w);
     width: var(--meld-slider-w);
   }
-  /* The wheels' width: two stacked columns, read as one pair of pairs. */
+  /* The global column: one slider width. */
   .global-col {
-    width: var(--meld-wheel-w);
-  }
-  .wheel-col {
-    width: var(--meld-wheel-w);
+    width: var(--meld-global-w);
   }
 
   /* The Engine A/B switch: Analog's voice badge, a circle a touch row tall. */

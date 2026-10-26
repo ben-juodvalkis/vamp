@@ -4,7 +4,6 @@
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import OrbControl from '../../device-panel/OrbControl.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
-  import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import SectionDivider from '../SectionDivider.svelte';
   import EnvelopeGroup from './EnvelopeGroup.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
@@ -143,11 +142,13 @@
 <div class="h-full w-full">
   {#if instrument}
     <!-- Main content grid, the user's layout (2026-10-12): six equal
-         columns before the seam, in three equal sections: the four XY pads
-         take two, the ORB two (2026-10-12), the envelopes two; then the seam and the MIDI wheels. Three rows: a
-         header (the swap pill over the pads, FX over the wheels), then two
-         rows of controls. The ORB and the envelopes take all three rows,
-         full height (2026-10-12; the envelopes since ADR-477). -->
+         columns in three equal sections: the four XY pads take two, the ORB
+         two (2026-10-12), the envelopes two; then the FX switch, the
+         column's full height. Three rows: a header (the swap pill over the
+         pads), then two rows of controls. The ORB and the envelopes take
+         all three rows, full height (2026-10-12; the envelopes since
+         ADR-477). The seam and the wheels that stood under FX left for the
+         MidiWheels device's chain cell (user, 2026-10-26). -->
     <div class="omni-grid h-full w-full grid gap-(--central-gap) p-(--central-inset)">
       <!-- Cols 1-2, header: the swap pill, top-left as in every instrument
            view (2026-10-06), over the pads. -->
@@ -267,26 +268,15 @@
         />
       </div>
 
-      <!-- The wheels send MIDI, not Omnisphere parameters: a seam divides the
-           device from them, as in every instrument view (2026-09-13). The
-           wrapper spans every row — SectionDivider takes no class of its own. -->
-      <div class="flex min-h-0" style="grid-column: 7; grid-row: 1 / 4;">
-        <SectionDivider orientation="vertical" />
-      </div>
-
-      <!-- Col 8: FX in the header, the MIDI wheels under it, Pitch over Mod
-           (ADR-477): one wheel a row, level with the pads. -->
+      <!-- Col 7, every row: the FX switch. -->
       <button
-        class="physical-button omni-fx w-full min-w-0 text-xl font-bold"
+        class="physical-button omni-fx w-full h-full min-w-0 min-h-0 text-xl font-bold"
         class:active={fxIsOn}
-        style="--btn-tint: {omniInk.primary}; grid-column: 8; grid-row: 1; height: var(--height-touch, 44px);"
+        style="--btn-tint: {omniInk.primary}; grid-column: 7; grid-row: 1 / 4;"
         onclick={handleFxToggle}
       >
         FX
       </button>
-      <div class="flex flex-col min-h-0" style="grid-column: 8; grid-row: 2 / 4;">
-        <MidiWheelsPanel />
-      </div>
 
       <!-- EQ Sliders commented out for now
       <div class="flex gap-1 min-h-0 col-span-2">
@@ -350,17 +340,14 @@
   /* ---- Live skin (flat grammar): the four XY pads are DeviceXY (flat
      well, 1px frame, re-cased title — its .center-title rule outranks the
      text-2xl / font-bold titleClass passed here), the ORB is OrbControl
-     (flat well + re-cased title live in that component) and the wheels are
-     MidiWheelsPanel — their flat look is theirs to own, not restyled from
-     here. The only chrome this file draws itself is the FX toggle: a .physical-button
+     (flat well + re-cased title live in that component) — their flat look
+     is theirs to own, not restyled from here. The only chrome this file draws itself is the FX toggle: a .physical-button
      (already the flat field / ChosenDefault ON) whose bold literal settles
      to medium. Graticule is untouched — the rule sits under
      [data-grammar="flat"]. */
-  /* Six equal columns, the seam, then the FX / wheels column at a fixed
-     width (ADR-477): the wheels are stacked, so the column needs one
-     wheel's width, not an equal share. */
+  /* Six equal columns, then the FX switch's column at a fixed width. */
   .omni-grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr)) auto 72px;
+    grid-template-columns: repeat(6, minmax(0, 1fr)) 72px;
     grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
   }
 

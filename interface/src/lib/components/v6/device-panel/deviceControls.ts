@@ -137,6 +137,8 @@ const BLUR_MIX = { name: 'Mix', index: 4 };
 const COMB = { tune: { name: 'Tune', index: 1 }, mix: { name: 'Mix', index: 2 }, feedback: { name: 'Feedback', index: 3 } };
 const OCTAVE_MIX = { name: 'Mix', index: OCTAVE_MIX_PARAM };
 const CHANCE = { name: 'Chance', index: 1 };
+/** Pitch Hack's Dry / Wet, 0..100 % (device_dump, 2026-10-15; the .adv saves it under the same short name). */
+const PITCH_HACK_MIX = { name: 'Dry / Wet', index: 2 };
 /** A Max device's saved values, by name, at each parameter's fallback index; null when the file lacks one. */
 const byName = (s: SavedPreset, ...refs: Array<{ name: string; index: number }>) =>
 	all(Object.fromEntries(refs.map((r) => [r.index, s.params[r.name]])));
@@ -501,6 +503,16 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 			write: (t) => [[OCTAVE_MIX, clamp01(t) * OCTAVE_MIX_MAX]]
 		},
 		fromPreset: (s) => byName(s, OCTAVE_MIX)
+	},
+	// Pitch Hack: its Mix (user, 2026-10-26: "should be a slider for mix").
+	pitchHack: {
+		control: {
+			kind: 'slider',
+			title: 'Mix', readout: PITCH_HACK_MIX, picture: 'reverse',
+			read: (g) => clamp01((g(PITCH_HACK_MIX) ?? 0) / 100),
+			write: (t) => [[PITCH_HACK_MIX, Math.round(clamp01(t) * 100)]]
+		},
+		fromPreset: (s) => byName(s, PITCH_HACK_MIX)
 	},
 	chance: {
 		control: { kind: 'slider', title: 'Chance', readout: CHANCE, picture: 'chance', read: (g) => clamp01((g(CHANCE) ?? 100) / 100), write: (t) => [[CHANCE, Math.round(clamp01(t) * 100)]] },

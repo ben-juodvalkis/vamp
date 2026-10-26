@@ -36,6 +36,19 @@ afterEach(() => {
 });
 
 describe('preset params', () => {
+	it("reads a Max device's .adv by each parameter's short name (Pitch Hack's shape, trimmed)", () => {
+		const mxd = `<Ableton><MxDeviceAudioEffect>
+			<MxDIntParameter Id="1"><Index Value="1" /><Name Value="Dry / Wet" /><ShortName Value="Dry / Wet" /><MinValue Value="0" />
+				<Timeable><LomId Value="0" /><Manual Value="100" /></Timeable></MxDIntParameter>
+			<MxDIntParameter Id="2"><Name Value="Interval" /><ShortName Value="Coarse" />
+				<Timeable><LomId Value="0" /><Manual Value="-12" /></Timeable></MxDIntParameter>
+		</MxDeviceAudioEffect></Ableton>`;
+		const { className, params } = parsePresetXml(mxd);
+		expect(className).toBe('MxDeviceAudioEffect');
+		expect(params['Dry / Wet']).toBe(100);
+		expect(params.Coarse).toBe(-12);
+	});
+
 	it('reads the device class and every saved value, booleans as 1/0', () => {
 		expect(parsePresetXml(XML)).toEqual({
 			className: 'AutoFilter2',

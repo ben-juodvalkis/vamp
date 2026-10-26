@@ -1,10 +1,11 @@
 <script lang="ts">
   /**
    * Sampler Central View — the Sampler row (`SamplerControlsRow`) on
-   * one Sampler, with Gain and a Filter pad, beside the pitch and mod
-   * wheels. Laid out on the Drum Rack's Sampler-kit cells (2026-09-27,
-   * user's call: the same muscle memory in both): Gain · Trnsp · Spread
-   * under the swap pill, then Osc over Pitch · the amp envelope · Filter.
+   * one Sampler, with Gain and a Filter pad (the wheels left for the
+   * MidiWheels device's chain cell, user, 2026-10-26). Laid out on the
+   * Drum Rack's Sampler-kit cells (2026-09-27, user's call: the same
+   * muscle memory in both): Gain · Trnsp · Spread under the swap pill,
+   * then Osc over Pitch · the amp envelope · Filter.
    *
    * Parameters are resolved by NAME off the device's own list
    * (`SAMPLER_ROW_PARAM_NAMES`, the names the surface binds on a kit
@@ -31,14 +32,12 @@
   import VmSlot from './drum/VmSlot.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
-  import SectionDivider from '../SectionDivider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
-  import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
-  import { PITCH_COLOR, MOD_COLOR, familyScheme } from '$lib/config/devicePresets';
+  import { familyScheme } from '$lib/config/devicePresets';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import { liveFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
   import {
@@ -73,18 +72,6 @@
     primary: trackInk(samplerColor.primary, paintModeReactive()),
     secondary: samplerColor.secondary,
     accent: trackInk(samplerColor.accent, paintModeReactive())
-  });
-
-  // MIDI wheel colors (match other central views)
-  let pitchInk = $derived(trackScheme ?? {
-    primary: trackInk(PITCH_COLOR.primary, paintModeReactive()),
-    secondary: PITCH_COLOR.secondary,
-    accent: trackInk(PITCH_COLOR.accent, paintModeReactive())
-  });
-  let modInk = $derived(trackScheme ?? {
-    primary: trackInk(MOD_COLOR.primary, paintModeReactive()),
-    secondary: MOD_COLOR.secondary,
-    accent: trackInk(MOD_COLOR.accent, paintModeReactive())
   });
 
   const CONTROLS = Object.keys(SAMPLER_ROW_PARAM_NAMES) as SamplerRowControl[];
@@ -178,13 +165,10 @@
 
 <div class="h-full w-full overflow-hidden relative">
   {#if instrument && device}
-    <!-- Layout: the Sampler's controls (fill) | MIDI wheels. The wheels send
-         MIDI, not Sampler parameters, so a seam divides them from the device
-         the way Drift's and Wavetable's do (2026-09-13). The inset is all
-         here (--central-inset): the row used to carry p-2 of its own and the
-         wheels py-2 to match it, which left the seam 16px from Trnsp and
-         8px from Pitch (measured, 2026-09-14). -->
-    <div class="h-full w-full grid gap-(--central-gap) p-(--central-inset)" style="grid-template-columns: 1fr auto auto;">
+    <!-- Layout: the Sampler's controls, the whole width. The inset is all
+         here (--central-inset); the row carries none of its own. The wheels
+         left for the MidiWheels device's chain cell (user, 2026-10-26). -->
+    <div class="h-full w-full grid gap-(--central-gap) p-(--central-inset)" style="grid-template-columns: minmax(0, 1fr);">
       <!-- The Sampler kit's cells (see `.sampler-grid`); the row names its own. -->
       <div class="sampler-grid min-w-0 h-full">
         <div class="sampler-pill">
@@ -220,11 +204,6 @@
             }}
           />
         </VmSlot>
-      </div>
-      <SectionDivider orientation="vertical" />
-      <!-- MIDI wheels, Pitch over Mod (ADR-477) -->
-      <div class="h-full w-14 min-h-0">
-        <MidiWheelsPanel pitchColor={pitchInk} modColor={modInk} />
       </div>
     </div>
   {:else}

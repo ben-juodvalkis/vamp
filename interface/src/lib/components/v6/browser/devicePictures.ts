@@ -36,6 +36,7 @@ export type PictureKind =
 	| 'smear'
 	| 'glitch'
 	| 'octaves'
+	| 'reverse'
 	| 'ringmod'
 	| 'chance'
 	| 'velocity'
@@ -69,11 +70,23 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0): PictureStro
 	x = clamp01(x);
 	y = clamp01(y);
 	switch (kind) {
-		// Echo: rings out from the middle, spaced by its time, more and longer-lived with feedback.
+		// Echo: the top half of rings out from the bottom middle, as Live's Echo
+		// draws them (user, 2026-10-26), a dot at each crest: more rings and
+		// longer-lived with feedback, spread wider with time.
 		case 'rings': {
-			const n = 3 + Math.round(y * 6);
-			const gap = 5 + x * 7;
-			return Array.from({ length: n }, (_, i) => ({ d: circle(50, 50, 8 + i * gap), o: 0.3 + 0.6 * (1 - i / n) }));
+			const n = 3 + Math.round(y * 9);
+			const reach = 0.6 + 0.4 * x;
+			return Array.from({ length: n }, (_, i) => {
+				const r = reach * Math.pow((i + 1) / n, 1.4);
+				const rx = 49 * r;
+				const ry = 92 * r;
+				const top = 100 - ry;
+				const o = 0.35 + 0.6 * ((i + 1) / n);
+				return [
+					{ d: `M${f(50 - rx)},100A${f(rx)},${f(ry)} 0 0 1 ${f(50 + rx)},100`, o },
+					{ d: `M${f(50)},${f(top)}m-1.2,0a1.2,1.2 0 1,0 2.4,0a1.2,1.2 0 1,0 -2.4,0`, o: 0.95, fill: true }
+				];
+			}).flat();
 		}
 		// Chorus: two voices drifting apart at its rate, wider with its mix.
 		case 'waves': {
@@ -201,14 +214,22 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0): PictureStro
 				{ d: trace((u) => 50 - 22 * Math.sin(2 * Math.PI * u * 4)), o: 0.4 },
 				{ d: trace((u) => 50 - 40 * x * Math.sin(2 * Math.PI * u * 2)), o: 0.85 }
 			];
+		// Pitch Hack: a note played backwards, swelling into its attack, louder with the mix.
+		case 'reverse':
+			return [
+				{ d: trace((u) => 50 - 38 * Math.pow(u, 2.5) * Math.sin(2 * Math.PI * u * 9), 200), o: 0.25 + 0.6 * x },
+				{ d: 'M100,12V88', o: 0.3 + 0.5 * x }
+			];
 		// Shifter (ring): the tone times a carrier that rises with the slider.
 		case 'ringmod': {
 			const carrier = 3 + x * 30;
 			return [{ d: trace((u) => 50 - 36 * Math.sin(2 * Math.PI * u * 2) * Math.sin(2 * Math.PI * u * carrier), 240), o: 0.85 }];
 		}
-		// Note Chance: twelve notes, the ones that get through drawn.
+		// Note Chance: twelve notes, the ones that get through lit. Some always
+		// drop and some always pass (user, 2026-10-26: "should show some of the
+		// notes deactivated"), so it reads as chance at 100 % too; more pass the likelier.
 		case 'chance':
-			return Array.from({ length: 12 }, (_, i) => ({ d: bar(4 + i * 8, 40, 6, 20), o: hash(i + 7) < x ? 0.85 : 0.15, fill: true }));
+			return Array.from({ length: 12 }, (_, i) => ({ d: bar(4 + i * 8, 40, 6, 20), o: hash(i + 7) < 0.15 + 0.65 * x ? 0.85 : 0.15, fill: true }));
 		// Velocity: twelve notes' velocities, spread by its randomness.
 		case 'velocity':
 			return Array.from({ length: 12 }, (_, i) => {

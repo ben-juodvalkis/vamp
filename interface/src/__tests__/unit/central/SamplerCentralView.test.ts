@@ -147,7 +147,7 @@ describe('SamplerCentralView — the Sampler row by name', () => {
 		expect(container.querySelector('[data-vm-function="selector"]')).toBeNull(); // a kit's control only
 		expect(slider(container, 'S').getAttribute('aria-valuenow')).toBe('1'); // Ve Sustain
 		expect(slider(container, 'Trnsp').getAttribute('aria-valuenow')).toBe('-16');
-		expect(container.querySelectorAll('.midi-wheel')).toHaveLength(2);
+		expect(container.querySelectorAll('.midi-wheel')).toHaveLength(0); // the wheels are the MidiWheels device's (2026-10-26)
 		// Gain and Filter, as a kit draws them (2026-09-27).
 		expect(slider(container, 'Gain').getAttribute('aria-valuenow')).toBe('0.5'); // Volume 0 dB on ±36
 		expect(slider(container, 'Filter').getAttribute('aria-label')).toBe('Filter: X 80%, Y 20%'); // 0.25 of 1.25 up

@@ -6,12 +6,11 @@
   import EnvelopeGroup from './EnvelopeGroup.svelte';
   import SectionDivider from '../SectionDivider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
-  import MidiWheelsPanel from '../../midi/MidiWheelsPanel.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
-  import { PITCH_COLOR, MOD_COLOR, familyScheme } from '$lib/config/devicePresets';
+  import { familyScheme } from '$lib/config/devicePresets';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
 
   interface Props {
@@ -38,18 +37,6 @@
     primary: trackInk(operatorColor.primary, paintModeReactive()),
     secondary: operatorColor.secondary,
     accent: trackInk(operatorColor.accent, paintModeReactive())
-  });
-
-  // MIDI wheel colors (match other central views)
-  let pitchInk = $derived(trackScheme ?? {
-    primary: trackInk(PITCH_COLOR.primary, paintModeReactive()),
-    secondary: PITCH_COLOR.secondary,
-    accent: trackInk(PITCH_COLOR.accent, paintModeReactive())
-  });
-  let modInk = $derived(trackScheme ?? {
-    primary: trackInk(MOD_COLOR.primary, paintModeReactive()),
-    secondary: MOD_COLOR.secondary,
-    accent: trackInk(MOD_COLOR.accent, paintModeReactive())
   });
 
   // Operator LOM parameter indices — read off the running device
@@ -166,8 +153,9 @@
     <!-- Two halves (ADR-477): on the left the amp envelope over Feedback,
          Time and Tone, all value boxes half a fader's height and as fine;
          on the right the Filter pad, which took the width the three
-         full-height faders had. Then the wheels, Pitch over Mod. -->
-    <div class="h-full w-full p-(--central-inset) grid gap-(--central-gap)" style="grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto auto;">
+         full-height faders had. The wheels left for the MidiWheels device's
+         chain cell (user, 2026-10-26). -->
+    <div class="h-full w-full p-(--central-inset) grid gap-(--central-gap)" style="grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);">
       <div class="min-w-0 min-h-0 h-full flex flex-col gap-(--central-gap)">
         <!-- The swap pill lies across the top of the left half, the view's
              leading group (user's layout, 2026-09-16). -->
@@ -248,13 +236,6 @@
           onInteraction={handleFilterXY}
           color={operatorInk}
         />
-      </div>
-      <!-- The wheels send MIDI, not Operator parameters: a seam divides the
-           device from them, as in every instrument view (2026-09-13). -->
-      <SectionDivider orientation="vertical" />
-      <!-- MIDI wheels, Pitch over Mod (ADR-477) -->
-      <div class="h-full w-14 min-h-0">
-        <MidiWheelsPanel pitchColor={pitchInk} modColor={modInk} />
       </div>
     </div>
   {:else}

@@ -28,6 +28,13 @@ export interface PresetParams {
 const MAX_PRESET_BYTES = 4 * 1024 * 1024;
 const PARAM = /<([\w.]+)>\s*<LomId Value="-?\d+"\s*\/>\s*<Manual Value="([^"]*)"/g;
 const LABEL = /<(MacroDisplayNames\.\d+) Value="([^"]*)"/g;
+/**
+ * A Max device saved as an `.adv` (Pitch Hack) keeps each Live parameter as
+ * `<MxDIntParameter>` / `<MxDFloatParameter>` / `<MxDEnumParameter>`: its
+ * `ShortName` (the name Live gives it, as `parseAmxd` keys) and, under
+ * `<Timeable>`, the `Manual` value it opens at.
+ */
+const MXD_PARAM = /<MxD\w+Parameter Id="\d+">[\s\S]*?<ShortName Value="([^"]*)"[\s\S]*?<Timeable>\s*<LomId Value="-?\d+"\s*\/>\s*<Manual Value="([^"]*)"/g;
 /** A rack preset (`.adg`) wraps its device in `<GroupDevicePreset>`; the class is the first rack inside. */
 const RACK = /<(AudioEffectGroupDevice|MidiEffectGroupDevice|InstrumentGroupDevice|DrumGroupDevice)\b/;
 
@@ -37,7 +44,7 @@ export function parsePresetXml(xml: string): PresetParams {
 	const params: Record<string, number> = {};
 	const labels: Record<string, string> = {};
 	for (const m of xml.matchAll(LABEL)) if (!(m[1] in labels)) labels[m[1]] = m[2];
-	for (const m of xml.matchAll(PARAM)) {
+	for (const m of [...xml.matchAll(MXD_PARAM), ...xml.matchAll(PARAM)]) {
 		const [, name, raw] = m;
 		if (name in params) continue;
 		const value = raw === 'true' ? 1 : raw === 'false' ? 0 : Number(raw);

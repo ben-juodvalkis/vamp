@@ -71,6 +71,7 @@
 	import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
 	import ControlGlyph from '../device-panel/ControlGlyph.svelte';
 	import BrowserPresetFace from './BrowserPresetFace.svelte';
+	import BrowserWheelsFace from './BrowserWheelsFace.svelte';
 	import { startPresetDrag, type PresetDrag } from '$lib/services/presetDragLoad.svelte';
 	import { openViewWhenLanded } from '$lib/services/effectView.svelte';
 	import type { Writes } from '$lib/components/v6/device-panel/deviceControls';
@@ -1520,6 +1521,20 @@
 			if (target && isPlaceVendor(target)) selectCategory(target, { restore: true });
 		});
 	});
+	// The strips' + MIDI (`openInstrumentBrowser`): the Place it was on, where
+	// it was left among its instruments; the first Place if none was open.
+	let seenInstrumentRequest = browserModeStore.instrumentOpenRequest;
+	$effect(() => {
+		const request = browserModeStore.instrumentOpenRequest;
+		if (request === seenInstrumentRequest) return;
+		seenInstrumentRequest = request;
+		isExpanded = true;
+		untrack(() => {
+			const current = findVendorById(vendors, selectedVendorId);
+			const target = current && isPlaceVendor(current) && current.id !== effectsVendor?.id ? current : placeVendors[0];
+			if (target && isPlaceVendor(target)) selectCategory(target, { restore: true });
+		});
+	});
 	let wasScalePersistent = false;
 	$effect(() => {
 		const nowScale = browserModeStore.isScalePersistent;
@@ -1744,9 +1759,11 @@
 	<!-- The line under the name: the plug-in, else why a greyed tile is greyed —
 	     on its face, since the iPad shows no tooltips. -->
 	{@const subLabel = notInstalled ? 'Not installed' : midiOnly ? 'MIDI tracks only' : (p.plugin ?? null)}
+	<!-- MidiWheels draws its two wheels, live (BrowserWheelsFace). -->
+	{@const wheels = !inactive && p.kind === 'max-midi-effect' && p.name === constants.devices.midiWheels.deviceName}
 	<button
 		class="card preset-tile"
-		class:faced={facedTiles.has(p.path)}
+		class:faced={wheels || facedTiles.has(p.path)}
 		class:loaded={(shownChargingPresetPath ?? browserNavigationStore.loadedPresetPath) === p.path}
 		class:unavailable={inactive}
 		class:has-plugin={!!subLabel}
@@ -1758,7 +1775,9 @@
 		{#if audioWaveformsEnabled && isAudioThumbnailType(p.type)}
 			<BrowserPresetWaveform preset={p} />
 		{/if}
-		{#if FACE_KINDS.has(p.kind ?? '') && !inactive}
+		{#if wheels}
+			<BrowserWheelsFace />
+		{:else if FACE_KINDS.has(p.kind ?? '') && !inactive}
 			<!-- An effect's own control at its saved values: tap loads, drag
 			     loads and sets (BrowserPresetFace). -->
 			<BrowserPresetFace
