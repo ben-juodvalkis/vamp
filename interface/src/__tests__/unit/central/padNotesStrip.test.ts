@@ -3,6 +3,7 @@ import {
 	barBeats,
 	barWindow,
 	slideBar,
+	slotForNewClip,
 	windowBars,
 	PAINT_VELOCITY,
 	paintSteps,
@@ -150,5 +151,24 @@ describe('padNotesStrip — one bar at a time', () => {
 		expect(slideBar(1, 200, 1, 3)).toBe(3);
 		expect(slideBar(2, -40, 1, 3)).toBe(1);
 		expect(slideBar(2, -400, 1, 3)).toBe(1);
+	});
+});
+
+describe('padNotesStrip — a clip for the first step', () => {
+	const emptyAt = (...free: number[]) => (i: number) => free.includes(i);
+
+	it("takes the pedal's slot when it is empty", () => {
+		expect(slotForNewClip(emptyAt(0, 3), 8, 3)).toBe(3);
+	});
+
+	it("else the track's first empty slot", () => {
+		expect(slotForNewClip(emptyAt(2, 5), 8, 0)).toBe(2);
+		expect(slotForNewClip(emptyAt(2), 8, -1)).toBe(2);
+		expect(slotForNewClip(emptyAt(2), 8, 12)).toBe(2);
+	});
+
+	it('none when every slot holds a clip', () => {
+		expect(slotForNewClip(emptyAt(), 8, 0)).toBeNull();
+		expect(slotForNewClip(emptyAt(9), 8, 9)).toBeNull();
 	});
 });

@@ -13,9 +13,11 @@
  * move writes straight through. A load that never lands is given up after
  * `LAND_TIMEOUT_MS`.
  */
+import { resolveParam, type Writes } from '$lib/components/v6/device-panel/deviceControls';
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
 import { addPresetToChain } from './deviceMoveService';
+import { openEffectView } from './effectView.svelte';
 import { logger } from '$lib/utils/logger';
 
 const LAND_TIMEOUT_MS = 5000;
@@ -33,8 +35,8 @@ export function landedDevice<D extends Candidate>(chain: readonly D[], className
 }
 
 export interface PresetDrag {
-	/** The values the finger is on now, LOM parameter index → value. */
-	update(values: Record<number, number>): void;
+	/** The values the finger is on now: every parameter it has moved, a Max device's by name. */
+	update(values: Writes): void;
 	/** The finger lifted: keep waiting for the device if it has not landed, then stop. */
 	end(): void;
 }
@@ -49,21 +51,24 @@ export function startPresetDrag(opts: {
 	/** The class and name the device arrives as. */
 	className: string;
 	name: string;
-	values: Record<number, number>;
+	values: Writes;
 }): PresetDrag {
 	const chain = () => (opts.padPath ? selectedTrackStore.padDevices(opts.padPath) : selectedTrackStore.devicesByPath);
 	const before = chain().filter((d) => d.className === opts.className && d.name === opts.name).length;
-	let pending = { ...opts.values };
-	let written: Record<number, number> = {};
+	let pending = opts.values;
+	const written: Record<number, number> = {};
 	let landedPath: string | null = null;
 	let ended = false;
 
 	const flush = () => {
 		if (!landedPath) return;
-		for (const [index, value] of Object.entries(pending)) {
-			if (written[Number(index)] === value) continue;
+		// Names resolve on the device that landed (a Max device's indices shift build to build).
+		const names = selectedTrackStore.paramNamesForDevice(landedPath);
+		for (const [ref, value] of pending) {
+			const index = resolveParam(ref, names);
+			if (written[index] === value) continue;
 			void selectedTrackStore.setParamValue(`${landedPath}/params/${index}`, value);
-			written[Number(index)] = value;
+			written[index] = value;
 		}
 	};
 
@@ -73,7 +78,8 @@ export function startPresetDrag(opts: {
 			const device = landedDevice(chain(), opts.className, opts.name, before);
 			if (!device) return;
 			landedPath = device.devicePath;
-			fxChainStore.appoint(device.devicePath);
+			// Its view follows the load, as a tap's does (`openViewWhenLanded`).
+			openEffectView(device, { pickScope: opts.padPath || opts.trackPath, padScoped: !!opts.padPath });
 			flush();
 			if (ended) dispose();
 		});
@@ -97,7 +103,7 @@ export function startPresetDrag(opts: {
 
 	return {
 		update(values) {
-			pending = { ...values };
+			pending = values;
 			flush();
 		},
 		end() {

@@ -371,36 +371,64 @@ source and the Phase 4 switch that chose between them.
   is not installed is **greyed and disabled**, with "Not installed" on its
   face (the iPad has no tooltips). An effect preset loads (Effect segment,
   ADR-478): a tap adds it to the selected track's chain, or the scoped pad's,
-  through `device/load` with no track prep (`addEffect`). The stacked label
+  through `device/load` with no track prep (`addEffect`), and once Live
+  reports the device (named for the file) its central view opens, as a tap
+  on its chain cell opens it (`services/effectView`; a drag's load too,
+  user 2026-10-26). A MIDI effect (a
+  native one, a Max one or a MIDI effect rack, `MIDI_EFFECT_KINDS`) is
+  greyed and disabled unless the selected track is a MIDI track, "MIDI
+  tracks only" on its face, and `addEffect` refuses one there too (a random
+  pick could land on it) (user, 2026-10-26). The stacked label
   (`.has-plugin`, column flex) applies only to tiles that carry one.
 - **The effects Place** (`catalog.effectsPlace`, a Place's sidebar name;
   "Vamp Devices" by default since 2026-10-26, the devices the app loads; the
   rig names its own shelf, "Audio-Midi Effects", in `constants.local.json`,
   which holds its presets beside hard links to the Vamp Devices effects —
   `ln`, so the two names are one file and cannot drift, until an editor
-  saves by writing a new file): the server lays it out as
-  Audio Effects and MIDI Effects by each item's kind, a one-preset device
-  folder showing as that preset, and leaves out `catalog.effectsHidden` (the
-  Recorder, random-start and their plumbing) — `diskScan.groupEffectsPlace`;
-  the files never move, because saved sets point at them by path. The server
+  saves by writing a new file): one screen (user, 2026-10-26). The server
+  lifts every preset in it to its top level, each keeping its own path, and
+  leaves out `catalog.effectsHidden` (the Recorder, random-start and their
+  plumbing) — `diskScan.tidyEffectsPlace`; the browser draws each folder's
+  presets as a headed section under the loose ones (`groupPresetsByOrigin`,
+  which at a Place's root takes the folder under the Place). The sections are
+  the folders on disk ("just show what's in the folder"; it was grouped into
+  Audio Effects and MIDI Effects by kind that morning). The files never
+  move, because saved sets point at them by path. The layout rule is in the
+  catalog's cache stamp (`EFFECTS_LAYOUT` in `service.ts`): bump it when it
+  changes, or a cached build keeps the old layout. Each section, its header
+  and its tiles wear the device family its folder's name says
+  (`utils/sectionInks`: Distortion the distortion ink, Time time-and-space,
+  Tone filter, "Midi Effect" note machinery…); a folder whose name says none
+  takes the next family no folder took (user, 2026-10-26). Its rows are
+  filled (`packFillSections`, user the same day: "more info, less dead
+  space"): sections pack in order into rows of up to one tile more than the
+  columns, each row's tiles share its whole width (a subgrid per cell), and
+  a section too big for a row splits evenly over rows of its own, its header
+  on the first. The solver counts the same rows (`fill`). Other Places keep
+  `packGroupedSections`: their sections can hold thousands. The server
   catalogs it whether or not it is ticked and flags it in `index.json`
   (`effects`, and `hidden` while unticked); the browser keeps a hidden one off
   the rail (`effectsVendor`) and the chain overview's + Effect opens it, on
   Effect. Unset, + Effect opens the open Place, else the first ticked one with
   effect presets. A rail Place's Effect segment works as before.
-- **Live preset faces** (2026-10-25, ADR-478): an effect preset tile of a
-  class with a face (`BrowserPresetFace`, `presetFaces.ts`: every class an FX
-  grid tile drives — Auto Filter, Echo, Auto Pan Legacy, Hybrid, Channel EQ,
-  Chorus-Ensemble, Drum Buss, Saturator, Glue, Utility, Beat Repeat, Random —
-  and any audio or MIDI effect rack by its first macro) draws the preset's
-  own control (the grid tile's XY, slider or tone pad) at its SAVED values, read once the
-  tile nears the screen from `/api/places/preset-params` (the server unzips
-  the `.adv`, `$lib/server/places/presetParams`, only inside a cataloged
-  Place). A tap loads the preset as saved; a drag loads it and sets the
-  finger's values on the device THAT load lands (`services/presetDragLoad`,
-  found by class + the preset's name, which Live gives the device). Measured
-  on the rig: Disco Filter dragged right and up landed at 0.623 / 0.745 where
-  the file saves 0.3095 / 0.4453. How each class's saved values map onto the LOM was measured
+- **Live preset faces** (2026-10-25, ADR-478; one definition since
+  2026-10-26, ADR-479): an effect preset tile whose device type has a control
+  in `device-panel/deviceControls.ts` draws that control (`BrowserPresetFace`
+  → `presetControl` → `FaceControl`, the drawing the grid tiles and chain
+  cells use) at the values its file SAVES, read once the tile nears the
+  screen from `/api/places/preset-params` (the server unzips the `.adv`,
+  `$lib/server/places/presetParams`, only inside a cataloged Place). A native
+  class finds its type by class; a Max device or a rack by the name the file
+  gives it; any other rack is its first macro, named as the rack names it. An
+  `.amxd` is read too: each Live parameter's `parameter_initial`, by its
+  `parameter_shortname`, the name Live gives it (`parseAmxd`). A slider face is drawn soft under the tile's name, with a full-ink
+  line at its level so a preset saved at 0 still shows a slider. A tap loads
+  the preset as saved; a drag loads it and sets the finger's values on the
+  device THAT load lands (`services/presetDragLoad`, found by class + the
+  preset's name, which Live gives the device; a Max device's parameters
+  resolve by name on it). Measured on the rig: Disco Filter dragged right and
+  up landed at 0.623 / 0.745 where the file saves 0.3095 / 0.4453. How each
+  file's saved values map onto the LOM was measured
   (`docs/reference/live-api-measurements.md`, "A device preset's saved
   values"); Live's own rails where the file is in display units are
   `presetCurves.ts`, generated from `owner/probes/preset_rail_sample.js`.

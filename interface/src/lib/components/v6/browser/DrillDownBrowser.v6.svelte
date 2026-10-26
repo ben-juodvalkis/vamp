@@ -51,6 +51,7 @@
 		groupCounts,
 		groupOfKind,
 		isSampleLike,
+		MIDI_EFFECT_KINDS,
 		loadsAsInstrument,
 		type KindGroup
 	} from '$lib/utils/placeKinds';
@@ -71,7 +72,10 @@
 	import ControlGlyph from '../device-panel/ControlGlyph.svelte';
 	import BrowserPresetFace from './BrowserPresetFace.svelte';
 	import { startPresetDrag, type PresetDrag } from '$lib/services/presetDragLoad.svelte';
+	import { openViewWhenLanded } from '$lib/services/effectView.svelte';
+	import type { Writes } from '$lib/components/v6/device-panel/deviceControls';
 	import { SvelteSet } from 'svelte/reactivity';
+	import { sectionInks } from './utils/sectionInks';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 	import { press, type PressOptions, type PressReleaseInfo } from '$lib/actions';
@@ -93,6 +97,7 @@
 		computeGroupedVisibleWindow,
 		groupPresetsByOrigin,
 		packGroupedSections,
+		packFillSections,
 		replaceLanding,
 		railBands,
 		keepRecent,
@@ -316,12 +321,36 @@
 	);
 	const useGroupedPresets = $derived(presetGroups.length > 1);
 
+	// The effects Place is color-coded by folder (user, 2026-10-26): each
+	// section, its header and its tiles wear the device family its folder's
+	// name says (`sectionInks`). Every other Place keeps its own color.
+	const onEffectsScreen = $derived(
+		!!effectsVendor && browserNavigationStore.currentVendorId === effectsVendor.vendorId && useGroupedPresets
+	);
+	// The effects screen fills every row (`packFillSections`): its sections
+	// are few and small, and a half-empty row is dead space (user, 2026-10-26).
+	const fillRows = $derived(onEffectsScreen);
+	const sectionInkOf = $derived.by(() => {
+		if (!onEffectsScreen) return null;
+		return sectionInks(presetGroups.flatMap((g) => (g.folder ? [g.folder] : [])));
+	});
+	const presetInkOf = $derived.by(() => {
+		const inks = sectionInkOf;
+		if (!inks) return null;
+		return new Map(presetGroups.flatMap((g) => (g.folder ? g.presets.map((p) => [p.path, inks.get(g.folder!.toLowerCase())] as const) : [])));
+	});
+	const inkFor = (p: Preset) => presetInkOf?.get(p.path) || p.vendorColor || activeColor;
+
 	// Coalesce small sections onto shared rows so a 1–2 tile section doesn't strand
 	// a whole line (ADR-403 revised). Packing uses the solver's chosen column count
 	// (below) and never changes tile geometry — a packed band is exactly one tile
 	// row tall, so it maps 1:1 onto a windowing section and ADR-404 keeps working.
 	const presetBands = $derived.by(() =>
-		useGroupedPresets ? packGroupedSections(presetGroups, gridLayout.columns) : []
+		!useGroupedPresets
+			? []
+			: fillRows
+				? packFillSections(presetGroups, gridLayout.columns)
+				: packGroupedSections(presetGroups, gridLayout.columns)
 	);
 
 	// Comfort constraints for the grid solvers: tiles grow to FILL the stage and
@@ -375,6 +404,10 @@
 				height,
 				groups: presetGroups.map((g) => g.presets.length),
 				headerCount: presetGroups.filter((g) => g.folder !== null).length,
+				// Counted as drawn: small sections share rows (ADR-409), so the
+				// tiles grow into the height the packing frees.
+				headers: presetGroups.map((g) => g.folder !== null),
+				fill: fillRows,
 				headerHeight: SECTION_HEADER_H,
 				sectionGap: SECTION_GAP,
 				...PRESET_COMFORT
@@ -447,9 +480,10 @@
 				// so ceil(count/cols)===1 and it renders whole; big bands window as
 				// before). A band shows a header if any of its sections is named.
 				sections: presetBands.map((b) => {
-					const named = b.groups.some((g) => g.folder !== null);
+					const named = b.groups.some((g) => g.folder !== null && !g.continued);
 					return {
-						count: b.count,
+						// A filled row holds up to one tile more than the columns: still one row.
+						count: fillRows ? Math.min(b.count, gridLayout.columns) : b.count,
 						headerHeight: named ? SECTION_HEADER_H : 0,
 						// A headerless band (the loose bucket alone) keeps the grid pad
 						// as its top breathing room (the inline pad replaces the CSS one).
@@ -908,9 +942,17 @@
 			reportLoadFailure(preset.name, new Error('No track selected'));
 			return;
 		}
+		// A random pick can land on a MIDI effect the tile would have refused.
+		if (MIDI_EFFECT_KINDS.has(preset.kind ?? 'unknown') && selectedTrackStore.trackType !== 'midi') {
+			reportLoadFailure(preset.name, new Error('A MIDI effect goes on a MIDI track'));
+			return;
+		}
+		// Its view opens once Live reports the device (user, 2026-10-26).
+		const cancelView = openViewWhenLanded({ trackPath, padPath: pad?.padPath ?? '', name: preset.name });
 		try {
 			await addPresetToChain(trackPath, pad?.padPath ?? '', preset.fullPath, ...placeArgs(preset));
 		} catch (err) {
+			cancelView();
 			logger.error('Effect load failed', { component: 'DrillDownBrowser', err });
 			reportLoadFailure(preset.name, err);
 		}
@@ -921,7 +963,7 @@
 	 * finger's values, onto the chain `addEffect` would pick — the selected
 	 * track's, or the scoped pad's.
 	 */
-	function beginEffectDrag(preset: Preset, className: string, values: Record<number, number>): PresetDrag | null {
+	function beginEffectDrag(preset: Preset, className: string, values: Writes): PresetDrag | null {
 		const trackPath = selectedTrackStore.selectedTrackPath;
 		if (!trackPath) {
 			reportLoadFailure(preset.name, new Error('No track selected'));
@@ -941,8 +983,8 @@
 			values
 		});
 	}
-	/** The kinds whose tiles may draw a live face (`presetFaces`): effects and effect racks. */
-	const FACE_KINDS = new Set(['audio-effect', 'midi-effect', 'effect-rack', 'midi-effect-rack']);
+	/** The kinds whose tiles may draw a live face (`deviceControls`): effects and effect racks. */
+	const FACE_KINDS = new Set(['audio-effect', 'midi-effect', 'effect-rack', 'midi-effect-rack', 'max-audio-effect', 'max-midi-effect']);
 	/** Effect tiles drawing a live face: they hand the face the gesture. */
 	const facedTiles = new SvelteSet<string>();
 
@@ -1695,29 +1737,33 @@
      carries neither field. -->
 {#snippet presetTile(p: Preset)}
 	{@const notInstalled = p.installed === false}
+	<!-- A MIDI effect goes only on a MIDI track (user, 2026-10-26): on an
+	     audio track, a group or Main it is greyed like a missing plug-in. -->
+	{@const midiOnly = MIDI_EFFECT_KINDS.has(p.kind ?? 'unknown') && selectedTrackStore.trackType !== 'midi'}
+	{@const inactive = notInstalled || midiOnly}
 	<!-- The line under the name: the plug-in, else why a greyed tile is greyed —
 	     on its face, since the iPad shows no tooltips. -->
-	{@const subLabel = notInstalled ? 'Not installed' : (p.plugin ?? null)}
+	{@const subLabel = notInstalled ? 'Not installed' : midiOnly ? 'MIDI tracks only' : (p.plugin ?? null)}
 	<button
 		class="card preset-tile"
 		class:faced={facedTiles.has(p.path)}
 		class:loaded={(shownChargingPresetPath ?? browserNavigationStore.loadedPresetPath) === p.path}
-		class:unavailable={notInstalled}
+		class:unavailable={inactive}
 		class:has-plugin={!!subLabel}
-		style="--k: {p.vendorColor || activeColor};"
-		disabled={notInstalled}
-		title={notInstalled ? `${p.plugin ?? 'This plug-in'} is not installed` : undefined}
+		style="--k: {inkFor(p)};"
+		disabled={inactive}
+		title={notInstalled ? `${p.plugin ?? 'This plug-in'} is not installed` : midiOnly ? 'A MIDI effect goes on a MIDI track' : undefined}
 		onclick={() => loadPreset(p)}
 	>
 		{#if audioWaveformsEnabled && isAudioThumbnailType(p.type)}
 			<BrowserPresetWaveform preset={p} />
 		{/if}
-		{#if FACE_KINDS.has(p.kind ?? '') && !notInstalled}
+		{#if FACE_KINDS.has(p.kind ?? '') && !inactive}
 			<!-- An effect's own control at its saved values: tap loads, drag
 			     loads and sets (BrowserPresetFace). -->
 			<BrowserPresetFace
 				preset={p}
-				ink={p.vendorColor || activeColor}
+				ink={inkFor(p)}
 				onTap={() => loadPreset(p)}
 				beginDrag={(className, values) => beginEffectDrag(p, className, values)}
 				afterDrag={() => handlePostLoad()}
@@ -1823,7 +1869,7 @@
 		class="section-head"
 		class:charging={chargingFolder === folder}
 		class:picked={pickedFolder === folder}
-		style="--k: {sectionPresets[0]?.vendorColor || activeColor};"
+		style="--k: {sectionInkOf?.get(folder.toLowerCase()) || sectionPresets[0]?.vendorColor || activeColor};"
 		use:press={sectionPress(folder, sectionPresets)}
 	>
 		{#if chargingFolder === folder}
@@ -2141,7 +2187,7 @@
 							{#if groupedWindow.topPad > 0}
 								<div class="window-spacer" style="height: {groupedWindow.topPad}px"></div>
 							{/if}
-							{#each windowedGroups as { sw, band } (band.groups.map((g) => g.folder ?? '·').join('|'))}
+							{#each windowedGroups as { sw, band } (band.groups.map((g) => g.folder ?? '·').join('|') + ':' + (band.groups[0]?.presets[0]?.path ?? ''))}
 								{#if band.kind === 'full'}
 									{@const group = band.groups[0]}
 									<!-- Big section: its own full-width row, windowed as before. -->
@@ -2165,7 +2211,8 @@
 									     tall so it renders whole (no per-row windowing needed). -->
 									<section
 										class="preset-section band-row"
-										style="--tile-h: {gridLayout.tileHeight}px; --tile-w: {gridLayout.tileWidth}px;"
+										class:fill={fillRows}
+										style="--tile-h: {gridLayout.tileHeight}px; --tile-w: {gridLayout.tileWidth}px; --N: {band.count};"
 									>
 										{#each band.groups as group (group.folder ?? '·')}
 											<div
@@ -2173,7 +2220,7 @@
 												class:loose={group.folder === null}
 												style="--n: {group.presets.length};"
 											>
-												{#if group.folder !== null}
+												{#if group.folder !== null && !group.continued}
 													{@render sectionHead(group.folder, group.presets)}
 												{/if}
 												<div class="adaptive-grid sectioned packed">
@@ -2696,6 +2743,28 @@
 		grid-auto-rows: var(--tile-h, 160px);
 		width: max-content;
 	}
+	/* A filled row (the effects screen): its tiles share the whole row width,
+	   every cell spanning its own tile count on one grid, so tiles in a row
+	   are one width and the row ends at the stage's edge (packFillSections). */
+	.band-row.fill {
+		display: grid;
+		grid-template-columns: repeat(var(--N, 1), minmax(0, 1fr));
+		column-gap: var(--grid-gap, 8px);
+		align-items: start;
+	}
+	.band-row.fill > .band-cell {
+		grid-column: span var(--n, 1);
+		display: grid;
+		grid-template-columns: subgrid;
+	}
+	.band-row.fill > .band-cell > :global(*) {
+		grid-column: 1 / -1;
+	}
+	.band-row.fill .adaptive-grid.sectioned.packed {
+		grid-template-columns: subgrid;
+		width: auto;
+	}
+
 	/* Reserve the header band even on the headerless (loose) cell so every cell's
 	   first tile row sits at the same height across the band. */
 	.band-cell.loose > .adaptive-grid.sectioned.packed { margin-top: var(--header-h, 44px); }

@@ -42,6 +42,7 @@ export {
 	sendClipFocus,
 	sendSelectClip,
 	sendClipDelete,
+	sendClipCreate,
 	sendSceneLaunch,
 	sendSceneStop
 } from '$lib/api/simpleClient';

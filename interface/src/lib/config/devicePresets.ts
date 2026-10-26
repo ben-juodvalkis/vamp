@@ -58,7 +58,6 @@ export interface DevicePresetConfig {
   curveType?: CurveType;
   color: DeviceColorScheme;
   gridSlot?: boolean;           // NEW: false = virtual slot (default: true)
-  centralViewGroup?: string;    // NEW: which central view hosts this device
   /** ADR-400: this device wears the focused TRACK's ink instead of its own
    *  color (utility/gain — "the track's own trim"). `color` stays as the
    *  fallback for contexts with no focused track. Honored by the fx-grid
@@ -174,7 +173,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Compressor',
     expectedClassName: 'Compressor2',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'squash',         // Belongs to SquashCentralView (2026-09-11)
     color: familyScheme('dynamics')
   },
   gate: {
@@ -183,7 +181,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Gate',
     expectedClassName: 'Gate',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'squash',         // In SquashCentralView since 2026-10-15
     color: familyScheme('dynamics')
   },
   ott: {
@@ -191,7 +188,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Multiband Dynamics',
     expectedClassName: 'MultibandDynamics',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'squash',         // Mid band's Below Threshold/Ratio, in SquashCentralView since 2026-10-15
     color: familyScheme('dynamics')
   },
   squash: {
@@ -200,7 +196,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Glue Compressor',
     expectedClassName: 'GlueCompressor',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'squash',         // Names SquashCentralView; the control itself is an FX-grid column
     color: familyScheme('dynamics')
   },
   saturator: {
@@ -208,7 +203,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Saturator',
     expectedClassName: 'Saturator',
-    centralViewGroup: 'pedal',          // Its grid tile (fx5, 2026-10-05) opens PedalCentralView
     color: familyScheme('distortion')
   },
   variation: {
@@ -243,7 +237,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: "Ben's Adaptive Tone Shaper",
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'eq',             // Belongs to EQCentralView
     color: familyScheme('filter')       // A tone balancer, the EQ's family
   },
   drum: {
@@ -261,8 +254,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Pedal',
     expectedClassName: 'Pedal',
-    gridSlot: false,                    // Virtual device: its XY is a column of PedalCentralView (2026-10-05)
-    centralViewGroup: 'pedal',
+    gridSlot: false,                    // Virtual device: no tile; PedalCentralView is its own view
     color: familyScheme('distortion')
   },
   tremolo: {
@@ -290,15 +282,14 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     color: familyScheme('utility')
   },
   shifter: {
-    // Live's Shifter, one fader in PedalCentralView (2026-10-05, in place
-    // of the Digital rack's XY): 18 RM Coarse, written with 32 Mode = Ring
+    // Live's Shifter, one fader in ShifterCentralView (2026-10-26; in the
+    // Pedal view from 2026-10-05, in place of the Digital rack's XY): 18 RM Coarse, written with 32 Mode = Ring
     // on load. Class and indices measured off the running device.
     padScoped: true,
     native: true,
     defaultName: 'Shifter',
     expectedClassName: 'Shifter',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'pedal',          // Belongs to PedalCentralView
     color: familyScheme('distortion')
   },
   redux: {
@@ -307,7 +298,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Redux',
     expectedClassName: 'Redux2',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'pedal',          // Belongs to PedalCentralView
     color: familyScheme('distortion')
   },
   reverb: {
@@ -341,7 +331,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Digital',
     expectedClassName: 'AudioEffectGroupDevice',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'pedal',          // Belongs to PedalCentralView
     color: familyScheme('distortion')
   },
   comb: {
@@ -358,7 +347,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Comb',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'smudge',         // Belongs to SmudgeCentralView
     color: familyScheme('dynamics')     // Gold (user, 2026-10-19): the Auto Pan view's columns read apart, not four magentas
   },
   phaser: {
@@ -367,7 +355,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Phaser',
     expectedClassName: 'PhaserNew',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'chorus',         // Belongs to ChorusCentralView
     color: familyScheme('rackVoice')    // Rose under the Comb's gold (user, 2026-10-19)
   },
   pitchHack: {
@@ -384,7 +371,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Pitch Hack',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'pitch',          // The Auto Pan view's Reverse column since 2026-10-15
     color: familyScheme('timeSpace')    // Echo and Reverb's teal (user, 2026-10-15), apart from the Pitch column's violet
   },
   glitchLoop: {
@@ -404,7 +390,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'GlitchLoop',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'glitch',         // The Glitch tile and its view (2026-10-15)
     color: familyScheme('rackVoice')    // Rose (user, 2026-10-07): violet sat too close to Octave, and Comb and Phaser here are magenta
   },
   smudge: {
@@ -421,7 +406,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Blur',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'chorus',         // Belongs to ChorusCentralView
     color: familyScheme('distortion')   // Kept from the Saturn tile: its ink tells it apart inside the Chorus view
   },
   // New grid devices to replace saturator slot
@@ -467,7 +451,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Octave',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'pitch',          // The Pitch tile and its view (2026-10-15)
     color: familyScheme('pitchSeq')
   },
   // Virtual Smudge Device
@@ -494,7 +477,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Velocity',
     expectedClassName: 'MidiVelocity',
     gridSlot: false,
-    centralViewGroup: 'arpeggiator',
     color: familyScheme('dynamics')
   },
   chord: {
@@ -504,7 +486,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Chord',
     expectedClassName: 'MidiChord',
     gridSlot: false,
-    centralViewGroup: 'arpeggiator',
     color: familyScheme('pitchSeq')
   },
   chance: {
@@ -523,7 +504,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Note Chance',
     expectedClassName: 'MxDeviceMidiEffect',
     gridSlot: false,
-    centralViewGroup: 'arpeggiator',
     color: familyScheme('pitchSeq')
   },
   wah: {
@@ -537,7 +517,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Wah',
     expectedClassName: 'AudioEffectGroupDevice',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'pedal',          // Its button is in PedalCentralView
     color: familyScheme('filter')       // A wah IS a filter — function over host view
   },
   vocal: {
@@ -548,7 +527,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Vocal',
     expectedClassName: 'AudioEffectGroupDevice',
     gridSlot: false,                    // Virtual device
-    centralViewGroup: 'reverb',         // Belongs to ReverbCentralView
     color: familyScheme('rackVoice')
   }
 };
@@ -608,11 +586,5 @@ export function getGridSlots(): string[] {
 export function getVirtualSlots(): string[] {
   return Object.entries(DEVICE_PRESETS)
     .filter(([_, config]) => config.gridSlot === false)
-    .map(([key, _]) => key);
-}
-
-export function getCentralViewDevices(viewGroup: string): string[] {
-  return Object.entries(DEVICE_PRESETS)
-    .filter(([_, config]) => config.centralViewGroup === viewGroup)
     .map(([key, _]) => key);
 }
