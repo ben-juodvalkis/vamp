@@ -400,7 +400,10 @@
    * sixth (`recentLayout`, the user, 2026-10-26).
    */
   const recentGrid = $derived(recentLayout(grid.rows));
-  const recents = $derived(recentPool.slice(0, recentGrid.shown));
+  /** The most recent that fit, shown in alphabetical order (the user, 2026-10-26), down each column. */
+  const recents = $derived(
+    recentPool.slice(0, recentGrid.shown).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }))
+  );
   /** The columns the recents fill, top to bottom; + Effect widens over the rest (the user, the same day: no dead space). */
   const recentColsUsed = $derived(Math.max(1, Math.ceil(recents.length / recentGrid.rows)));
 
@@ -861,7 +864,7 @@
     user-select: none;
   }
   /* The ghost section: two cells wide, the recents filling their columns
-     top to bottom (newest first) and + Effect every column they leave, full
+     top to bottom (alphabetical) and + Effect every column they leave, full
      height, so a short list widens it rather than leaving gaps. The rows
      are fixed, so the tiles keep their size. */
   .chain-ghosts {
