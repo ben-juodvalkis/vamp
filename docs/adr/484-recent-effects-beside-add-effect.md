@@ -25,9 +25,10 @@ again without the browser.
   tracks and kept in this browser's localStorage (a per-viewer
   convenience), up to twelve.
 - Up to eight, in two columns of four, each half a cell's width, newest
-  first left to right; when the chain is crowded onto two rows, four in one
-  column, each a row with its picture beside its name (the user, the same
-  day).
+  first left to right; four in one column, each a row with its picture
+  beside its name, only when a half column would be narrower than the side
+  bars (`--sidebar-width`, measured), the user's rule the same day. Two
+  rows of devices alone do not narrow it.
 - It is smart about the chain: it shows the first ones that fit, skipping a
   MIDI effect on a track that is not a MIDI track and anything the chain
   already holds (by name: Live names a loaded preset's device after it).

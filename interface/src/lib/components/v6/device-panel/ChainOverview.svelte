@@ -391,8 +391,33 @@
   const drawn = $derived(shown);
 
   const grid = $derived(chainGrid(drawn.length + (recentPool.length > 0 ? 1 : 0), CHAIN_WRAP_AFTER));
-  /** Eight in two columns of four; four in one column once the chain is crowded onto two rows (the user, 2026-10-26). */
-  const recents = $derived(grid.rows > 1 ? recentPool.slice(0, RECENT_EFFECTS_CROWDED) : recentPool);
+  /*
+   * Eight in two columns of four; four in one column only when a half
+   * column would be narrower than the side bars (the user, 2026-10-26: two
+   * rows of devices alone do not crowd it). Measured: the column's width
+   * against a probe as wide as `--sidebar-width`, which scales with the
+   * screen.
+   */
+  /** The column's gap, as `.chain-recents` sets it. */
+  const RECENT_GAP = 4;
+  let recentsEl = $state<HTMLElement | null>(null);
+  let sidebarProbe = $state<HTMLElement | null>(null);
+  let recentsNarrow = $state(false);
+  $effect(() => {
+    const el = recentsEl;
+    const probe = sidebarProbe;
+    if (!el || !probe || typeof ResizeObserver === 'undefined') return;
+    const measure = () => {
+      const half = (el.clientWidth - RECENT_GAP) / 2;
+      recentsNarrow = half < probe.offsetWidth;
+    };
+    const obs = new ResizeObserver(measure);
+    obs.observe(el);
+    obs.observe(probe);
+    measure();
+    return () => obs.disconnect();
+  });
+  const recents = $derived(recentsNarrow ? recentPool.slice(0, RECENT_EFFECTS_CROWDED) : recentPool);
 
   /** The cell position under a point, by the grid's geometry at lift — not the cells, which are sliding. */
   function positionAt(d: Drag, x: number, y: number): number {
@@ -706,7 +731,8 @@
   {/each}
   {#if recents.length > 0}
     <!-- Recent: the last effects added, grey; a tap adds one here again. -->
-    <div class="chain-recents" class:crowded={grid.rows > 1} data-debug="chain-recents" role="group" aria-label="Recent effects">
+    <div class="chain-recents" class:crowded={recentsNarrow} bind:this={recentsEl} data-debug="chain-recents" role="group" aria-label="Recent effects">
+      <span class="sidebar-probe" bind:this={sidebarProbe} aria-hidden="true"></span>
       {#each recents as recent (recent.fullPath)}
         <RecentEffectButton {recent} />
       {/each}
@@ -827,15 +853,24 @@
   }
   /* The Recent column: four grey rows, the + cell's height. */
   /* The Recent column, as wide as one cell: two columns of four, each half
-     its width, newest first left to right; one column of four on a crowded
-     chain. The rows are fixed, so a short list keeps the tiles' size. */
+     its width, newest first left to right; one column of four when a half
+     would be narrower than the side bars. The rows are fixed, so a short list keeps the tiles' size. */
   .chain-recents {
+    position: relative;
     min-width: 0;
     min-height: 0;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-rows: repeat(4, minmax(0, 1fr));
     gap: 4px;
+  }
+  /* As wide as the side bars, to measure against; takes no room. */
+  .sidebar-probe {
+    position: absolute;
+    width: var(--sidebar-width, 120px);
+    height: 0;
+    visibility: hidden;
+    pointer-events: none;
   }
   .chain-recents.crowded {
     grid-template-columns: minmax(0, 1fr);
