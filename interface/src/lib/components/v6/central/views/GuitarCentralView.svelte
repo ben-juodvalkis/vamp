@@ -81,10 +81,11 @@
 </div>
 
 <style>
-  /* A slider one share, a pad two. */
+  /* A slider one share, a pad two; the two pads side by side (user,
+     2026-10-26; stacked before). */
   .guitar-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 4fr);
     height: 100%;
     width: 100%;
     padding: var(--central-inset);
@@ -100,9 +101,14 @@
     min-height: 0;
   }
 
+  .pads {
+    flex-direction: row;
+  }
+
   .gain > :global(*),
   .guitar-xy {
     flex: 1 1 0;
+    min-width: 0;
     min-height: 0;
   }
 </style>
