@@ -51,6 +51,7 @@
 		groupCounts,
 		groupOfKind,
 		isSampleLike,
+		MIDI_EFFECT_KINDS,
 		loadsAsInstrument,
 		type KindGroup
 	} from '$lib/utils/placeKinds';
@@ -909,6 +910,11 @@
 			reportLoadFailure(preset.name, new Error('No track selected'));
 			return;
 		}
+		// A random pick can land on a MIDI effect the tile would have refused.
+		if (MIDI_EFFECT_KINDS.has(preset.kind ?? 'unknown') && selectedTrackStore.trackType !== 'midi') {
+			reportLoadFailure(preset.name, new Error('A MIDI effect goes on a MIDI track'));
+			return;
+		}
 		try {
 			await addPresetToChain(trackPath, pad?.padPath ?? '', preset.fullPath, ...placeArgs(preset));
 		} catch (err) {
@@ -1696,24 +1702,28 @@
      carries neither field. -->
 {#snippet presetTile(p: Preset)}
 	{@const notInstalled = p.installed === false}
+	<!-- A MIDI effect goes only on a MIDI track (user, 2026-10-26): on an
+	     audio track, a group or Main it is greyed like a missing plug-in. -->
+	{@const midiOnly = MIDI_EFFECT_KINDS.has(p.kind ?? 'unknown') && selectedTrackStore.trackType !== 'midi'}
+	{@const inactive = notInstalled || midiOnly}
 	<!-- The line under the name: the plug-in, else why a greyed tile is greyed —
 	     on its face, since the iPad shows no tooltips. -->
-	{@const subLabel = notInstalled ? 'Not installed' : (p.plugin ?? null)}
+	{@const subLabel = notInstalled ? 'Not installed' : midiOnly ? 'MIDI tracks only' : (p.plugin ?? null)}
 	<button
 		class="card preset-tile"
 		class:faced={facedTiles.has(p.path)}
 		class:loaded={(shownChargingPresetPath ?? browserNavigationStore.loadedPresetPath) === p.path}
-		class:unavailable={notInstalled}
+		class:unavailable={inactive}
 		class:has-plugin={!!subLabel}
 		style="--k: {p.vendorColor || activeColor};"
-		disabled={notInstalled}
-		title={notInstalled ? `${p.plugin ?? 'This plug-in'} is not installed` : undefined}
+		disabled={inactive}
+		title={notInstalled ? `${p.plugin ?? 'This plug-in'} is not installed` : midiOnly ? 'A MIDI effect goes on a MIDI track' : undefined}
 		onclick={() => loadPreset(p)}
 	>
 		{#if audioWaveformsEnabled && isAudioThumbnailType(p.type)}
 			<BrowserPresetWaveform preset={p} />
 		{/if}
-		{#if FACE_KINDS.has(p.kind ?? '') && !notInstalled}
+		{#if FACE_KINDS.has(p.kind ?? '') && !inactive}
 			<!-- An effect's own control at its saved values: tap loads, drag
 			     loads and sets (BrowserPresetFace). -->
 			<BrowserPresetFace

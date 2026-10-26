@@ -265,13 +265,15 @@ describe('drillDownModel — groupPresetsByOrigin', () => {
 		expect(groups.map((g) => g.folder)).toEqual([null, 'Sub']);
 	});
 
-	it('treats an empty current path (folder-less type root) as all-loose', () => {
+	it("at a Place's root, groups by the folder under the Place; its own files are loose", () => {
 		const groups = groupPresetsByOrigin(
-			[p('Ableton/Keys/root1.adg'), p('Ableton/Keys/root2.adg')],
+			[p('Effects/Echo.adv'), p('Effects/Tone/Auto Filter.adv'), p('Effects/Dynamics/Gate.adv'), p('Effects/Tone/EQ.adv')],
 			[]
 		);
 		expect(groups).toEqual([
-			{ folder: null, presets: [p('Ableton/Keys/root1.adg'), p('Ableton/Keys/root2.adg')] }
+			{ folder: null, presets: [p('Effects/Echo.adv')] },
+			{ folder: 'Dynamics', presets: [p('Effects/Dynamics/Gate.adv')] },
+			{ folder: 'Tone', presets: [p('Effects/Tone/Auto Filter.adv'), p('Effects/Tone/EQ.adv')] }
 		]);
 	});
 

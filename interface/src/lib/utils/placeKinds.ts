@@ -71,6 +71,9 @@ const GROUP_OF: Record<ItemKind, KindGroup | null> = {
 	unknown: null
 };
 
+/** The kinds that go only on a MIDI track's chain, ahead of its instrument. */
+export const MIDI_EFFECT_KINDS: ReadonlySet<ItemKind> = new Set<ItemKind>(['midi-effect', 'max-midi-effect', 'midi-effect-rack']);
+
 export function groupOfKind(kind: ItemKind | undefined): KindGroup | null {
 	return kind ? (GROUP_OF[kind] ?? null) : null;
 }

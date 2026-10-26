@@ -112,8 +112,11 @@ export interface PresetGroup<P extends { path: string }> {
  * the loose bucket rather than disappearing).
  */
 function originFolderFor(path: string, currentPath: string[]): string | null {
-	if (currentPath.length === 0) return null;
 	const dirs = path.split('/').slice(0, -1); // drop the filename
+	// At a Place's root a preset's path starts with the Place's own folder,
+	// so its section is the folder under that (the effects Place keeps every
+	// preset on its root screen, 2026-10-26).
+	if (currentPath.length === 0) return dirs.length > 1 ? dirs[1] : null;
 	let searchEnd = dirs.length; // exclusive upper bound for the next match
 	let anchor = -1; // index where the LAST currentPath segment matched
 	for (let j = currentPath.length - 1; j >= 0; j--) {

@@ -371,18 +371,28 @@ source and the Phase 4 switch that chose between them.
   is not installed is **greyed and disabled**, with "Not installed" on its
   face (the iPad has no tooltips). An effect preset loads (Effect segment,
   ADR-478): a tap adds it to the selected track's chain, or the scoped pad's,
-  through `device/load` with no track prep (`addEffect`). The stacked label
+  through `device/load` with no track prep (`addEffect`). A MIDI effect (a
+  native one, a Max one or a MIDI effect rack, `MIDI_EFFECT_KINDS`) is
+  greyed and disabled unless the selected track is a MIDI track, "MIDI
+  tracks only" on its face, and `addEffect` refuses one there too (a random
+  pick could land on it) (user, 2026-10-26). The stacked label
   (`.has-plugin`, column flex) applies only to tiles that carry one.
 - **The effects Place** (`catalog.effectsPlace`, a Place's sidebar name;
   "Vamp Devices" by default since 2026-10-26, the devices the app loads; the
   rig names its own shelf, "Audio-Midi Effects", in `constants.local.json`,
   which holds its presets beside hard links to the Vamp Devices effects —
   `ln`, so the two names are one file and cannot drift, until an editor
-  saves by writing a new file): the server lays it out as
-  Audio Effects and MIDI Effects by each item's kind, a one-preset device
-  folder showing as that preset, and leaves out `catalog.effectsHidden` (the
-  Recorder, random-start and their plumbing) — `diskScan.groupEffectsPlace`;
-  the files never move, because saved sets point at them by path. The server
+  saves by writing a new file): one screen (user, 2026-10-26). The server
+  lifts every preset in it to its top level, each keeping its own path, and
+  leaves out `catalog.effectsHidden` (the Recorder, random-start and their
+  plumbing) — `diskScan.tidyEffectsPlace`; the browser draws each folder's
+  presets as a headed section under the loose ones (`groupPresetsByOrigin`,
+  which at a Place's root takes the folder under the Place). The sections are
+  the folders on disk ("just show what's in the folder"; it was grouped into
+  Audio Effects and MIDI Effects by kind that morning). The files never
+  move, because saved sets point at them by path. The layout rule is in the
+  catalog's cache stamp (`EFFECTS_LAYOUT` in `service.ts`): bump it when it
+  changes, or a cached build keeps the old layout. The server
   catalogs it whether or not it is ticked and flags it in `index.json`
   (`effects`, and `hidden` while unticked); the browser keeps a hidden one off
   the rail (`effectsVendor`) and the chain overview's + Effect opens it, on

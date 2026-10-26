@@ -287,18 +287,16 @@ export const TOURS = {
 				scenePatch: chainDemo,
 				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-debug="chain-add"]' }, { wait: 800 }]
 			},
-			// The effects Place, Vamp Devices, as the browser groups it (needs --real-data).
-			...['Audio Effects', 'MIDI Effects'].map((group) => ({
-				name: `browser-${group.toLowerCase().replace(/[^a-z]+/g, '-')}`,
-				description: `The + Effect browser on Vamp Devices › ${group}: the devices filed by kind, a rack's tile its first macro at the saved value`,
+			// The effects Place as it is on disk (needs --real-data), from a MIDI
+			// track and from an audio track, where its MIDI effects are greyed.
+			...[
+				['browser-effects', 'a MIDI track: every effect live, MIDI effects included', openInstrument(CHAIN_DEMO_TRACK)],
+				['browser-effects-on-audio', 'an audio track (Guitar): the MIDI effects greyed, "MIDI tracks only"', selectTrack(3)]
+			].map(([name, from, select]) => ({
+				name,
+				description: `The + Effect browser from ${from}; each tile its device's control at its saved values`,
 				scenePatch: chainDemo,
-				steps: [
-					openInstrument(CHAIN_DEMO_TRACK),
-					{ click: '[data-debug="chain-add"]' },
-					{ wait: 1500 },
-					{ click: `.folder-tile:has-text("${group}")` },
-					{ wait: 1500 }
-				]
+				steps: [select, { click: '[data-debug="chain-add"]' }, { wait: 2500 }]
 			})),
 			{
 				name: 'chain-plugin',
