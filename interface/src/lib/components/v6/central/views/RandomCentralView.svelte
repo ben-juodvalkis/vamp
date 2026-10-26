@@ -9,7 +9,8 @@
 	 * Measured on the rig (device_dump on the set's "Random Octave",
 	 * 2026-10-26): 1 Chance 0..1, 2 Choices 1..24, 3 Interval 1..24, 4 Sign
 	 * 0..2 (Add, Sub, Bi), 5 Mode 0..1 (Rnd, Alt), 6 Use Current Scale 0..1.
-	 * Choices and Interval are value boxes (ADR-477), Sign and Mode pick-one
+	 * Choices and Interval are value boxes (ADR-477), each labelled with its
+	 * current value at all times (the user, the same day), Sign and Mode pick-one
 	 * tabs as the Variation view draws them, Scale a switch. A ghost draws
 	 * Live's defaults, and its first write loads the device.
 	 *
@@ -56,13 +57,12 @@
 		{#each BOXES as box (box.index)}
 			<DeviceSlider
 				value={value(box.index)}
-				title={box.title}
+				title="{box.title} {step(box.index)}"
 				orientation="vertical"
 				min={1}
 				max={24}
 				isGhost={random.isGhost}
 				color={ink}
-				readout={random.paramDisplay(box.index)}
 				onInteraction={(v) => random.sendParam(box.index, Math.round(Math.max(1, Math.min(24, v))))}
 			/>
 		{/each}

@@ -98,7 +98,7 @@ describe('MIDI-effect central views (ADR-478)', () => {
 		const { container, getByText } = render(RandomCentralView);
 		await tick();
 		const sliders = Array.from(container.querySelectorAll('[role="slider"]')).map((s) => s.getAttribute('aria-label')?.split(':')[0]);
-		expect(sliders).toEqual(expect.arrayContaining(['Choices', 'Interval']));
+		expect(sliders).toEqual(expect.arrayContaining(['Choices 1', 'Interval 12']));
 		expect(getByText('Bi').classList.contains('active')).toBe(true);
 		expect(getByText('Alt').classList.contains('active')).toBe(true);
 		const wrote = (param: number) =>
