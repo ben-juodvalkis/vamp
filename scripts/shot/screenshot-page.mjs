@@ -243,6 +243,8 @@ async function centreOf(page, selector, what) {
  *   { storage: { key: value } }         set localStorage keys and fire a
  *                                       'storage' event for each, as another
  *                                       tab writing them would.
+ *   { press: selector, ms?: number }    a tap held `ms` (default 300)
+ *                                       before lifting, as a finger taps.
  *   { hold: selector, ms?: number }     press and STAY pressed. The button is
  *                                       still down when this returns, so
  *                                       :active and every pointerdown-armed
@@ -297,6 +299,16 @@ export async function performSteps(page, steps, { log = () => {} } = {}) {
 				await page.mouse.up();
 				await page.waitForTimeout(400);
 			}
+		} else if (step.press) {
+			// A tap held `ms` before lifting: a finger's tap, slower than a click.
+			const ms = step.ms ?? 300;
+			const { x, y } = await centreOf(page, step.press, '--press');
+			log(`pressing ${step.press} for ${ms}ms`);
+			await page.mouse.move(x, y);
+			await page.mouse.down();
+			await page.waitForTimeout(ms);
+			await page.mouse.up();
+			await page.waitForTimeout(400);
 		} else if (step.hold) {
 			const ms = step.ms ?? 450;
 			const { x, y } = await centreOf(page, step.hold, '--hold');

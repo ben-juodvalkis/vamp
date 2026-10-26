@@ -480,6 +480,17 @@
     if (pressInControl && cell.presetKey) fxChainStore.pick(pickScope, cell.presetKey, cell.device.devicePath);
   }
 
+  /**
+   * A tap on a cell's control opens the device too (the user, 2026-10-26:
+   * a tap on the Auto Filter's XY did nothing). The XY counts a press as its
+   * own tap only under 200 ms and 5 px, which a finger on the iPad often
+   * is not; the cell's tap has no time limit and a touch's slop. Except
+   * where a tap IS the control's: Permute's steps, the MIDI wheels.
+   */
+  function tapOpensFromControl(cell: Cell): boolean {
+    return cell.presetKey !== 'sequencer' && !isMidiWheels(cell.device);
+  }
+
   function dragStart(cell: Cell, position: number, info: DragInfo) {
     // A drag on a cell's control is that control's, and it opens the
     // device's view as a tap on the cell does — every control here, not
@@ -704,7 +715,7 @@
         commit: 'either',
         onDown: (info) => pressDown(cell, info),
         onTap: () => {
-          if (!pressInControl) open(cell);
+          if (!pressInControl || tapOpensFromControl(cell)) open(cell);
         },
         onStart: (info) => dragStart(cell, position, info),
         onMove: dragMove,

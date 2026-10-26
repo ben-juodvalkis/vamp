@@ -230,6 +230,12 @@ export const TOURS = {
 				steps: [openInstrument(CHAIN_DEMO_TRACK), { drag: `${chainCell(6)} .cell-head .name`, by: [200, -240], keep: true }]
 			},
 			{
+				name: 'chain-xy-tap',
+				description: 'A finger-slow tap (350 ms) on an Auto Filter cell\'s XY: its view opens and the hand moves to it',
+				scenePatch: chainDemo,
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { press: `${chainCell(3)} .cell-control`, ms: 350 }]
+			},
+			{
 				name: 'chain-xy',
 				description: 'Dragged the Wobble cell\'s Filter XY down and a whole cell left: its curve and dot move, the other Auto Filter stays, the chain keeps its order and the hand moves to Wobble',
 				scenePatch: chainDemo,
