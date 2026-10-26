@@ -154,7 +154,7 @@ const chainDemo = (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, CHAIN_DEMO
 // Chains of other lengths, for the adaptive layout: the instrument, then effects.
 /** The rig's effects shelf (catalog.effectsPlace), for states that name its files. */
 const SHELF = '/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Audio-Midi Effects';
-const RECENT_SEED = [['Echo', 'Time'], ['Auto Filter', 'Tone'], ['Saturator', 'Distortion'], ['Chorus', 'Modulation'], ['Drum Buss', 'Distortion'], ['Glue', 'Dynamics'], ['Redux', 'Distortion'], ['Phaser', 'Modulation'], ['Gate', 'Dynamics'], ['Tremolo', 'Modulation'], ['Compressor', 'Dynamics']];
+const RECENT_SEED = [['Echo', 'Time'], ['Auto Filter', 'Tone'], ['Channel EQ', 'Tone'], ['Saturator', 'Distortion'], ['Chorus', 'Modulation'], ['Drum Buss', 'Distortion'], ['Glue', 'Dynamics'], ['Redux', 'Distortion'], ['Phaser', 'Modulation'], ['Gate', 'Dynamics'], ['Tremolo', 'Modulation'], ['Compressor', 'Dynamics']];
 const chainOf = (n) => (scene) =>
 	setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], 'Auto Filter', 'Echo', 'Reverb', CHAIN_DEMO_DEVICES[5], 'Auto Filter', CHAIN_DEMO_DEVICES[7], CHAIN_DEMO_DEVICES[8]].slice(0, n));
 const chainCell = (index) => `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/${index}"]`;

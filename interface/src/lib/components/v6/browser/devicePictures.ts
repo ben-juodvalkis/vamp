@@ -29,6 +29,7 @@ export type PictureKind =
 	| 'shaper'
 	| 'clip'
 	| 'stompbox'
+	| 'eqcurve'
 	| 'stack'
 	| 'compress'
 	| 'ratio'
@@ -161,6 +162,13 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0): PictureStro
 			const ceiling = 1 - x * 0.75;
 			return [{ d: trace((u) => 50 - (38 * Math.max(-ceiling, Math.min(ceiling, Math.sin(2 * Math.PI * u * 2)))) / ceiling, 160), o: 0.85 }];
 		}
+		// An EQ, generic (the Recent column's Channel EQ, the user,
+		// 2026-10-26): a low shelf lifted, a dip in the mids, an air lift.
+		case 'eqcurve':
+			return [
+				{ d: 'M0,50H100', o: 0.2 },
+				{ d: trace((u) => 50 - 32 / (1 + Math.exp((u - 0.2) * 24)) + 34 * Math.exp(-(((u - 0.52) / 0.1) ** 2)) - 26 / (1 + Math.exp(-(u - 0.8) * 24))), o: 0.85 }
+			];
 		// Pedal: a stompbox (user, 2026-10-26: "should show a guitar pedal"),
 		// its drive knob turned to the drive, its light lit once it drives.
 		case 'stompbox': {

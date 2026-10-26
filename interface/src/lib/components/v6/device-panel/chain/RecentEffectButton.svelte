@@ -43,7 +43,9 @@
 
 	const picture = $derived.by(() => {
 		const found = presetControl(saved, recent.name);
-		if (!found || found.control.kind === 'eq' || !found.control.picture) return null;
+		// An EQ (the tone pad) draws a generic EQ curve (the user, 2026-10-26).
+		if (found?.control.kind === 'eq') return { kind: 'eqcurve' as const, x: 0, y: 0 };
+		if (!found || !found.control.picture) return null;
 		const get = (ref: ParamRef) => found.values[resolveParam(ref)];
 		if (found.control.kind === 'xy') {
 			const at = found.control.read(get);
