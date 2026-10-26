@@ -351,8 +351,8 @@ export const TOURS = {
 			// shelf so --real-data draws each one's picture. Echo is on the chain
 			// already, so it is skipped.
 			...[
-				['chain-recents', 'the instrument alone, on one row: eight in two columns of four, Auto Filter drawing its curve', 1],
-				['chain-recents-crowded', 'a chain on two rows: six in three columns of two; Echo and Auto Filter are on it, so they are skipped', 5]
+				['chain-recents', 'the instrument alone, on one row: the ghost section two cells wide, recents in three columns of four and + Effect the full-height last column; Auto Filter draws its curve', 1],
+				['chain-recents-crowded', 'a chain on two rows: recents in five columns of two and + Effect double height; Echo and Auto Filter are on it, so they are skipped', 5]
 			].map(([name, what, n]) => ({
 				name,
 				description: `The Recent column (ADR-484): ${what}`,

@@ -173,10 +173,10 @@ export function chainGrid(count: number, wrapAfter: number): { cols: number; row
 }
 
 /**
- * The Recent block's tiles (ADR-484; the user, 2026-10-26): one cell, two
- * columns of four on a chain of one row, three columns of two once the
- * chain wraps to two rows and its cells are short and wide.
+ * The ghost section's recents (ADR-484; the user, 2026-10-26): two cells
+ * wide with + Effect its last column; three columns of four beside it on a
+ * chain of one row, five columns of two once the chain wraps to two rows.
  */
 export function recentLayout(chainRows: number): { columns: number; rows: number; shown: number } {
-	return chainRows > 1 ? { columns: 3, rows: 2, shown: 6 } : { columns: 2, rows: 4, shown: 8 };
+	return chainRows > 1 ? { columns: 5, rows: 2, shown: 10 } : { columns: 3, rows: 4, shown: 12 };
 }

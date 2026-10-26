@@ -42,9 +42,9 @@ describe('recent effects', () => {
 		expect(recentEffects()).toHaveLength(RECENT_EFFECTS_MAX);
 	});
 
-	it('shows up to eight (or the crowded four), skipping what the chain holds and filling from older ones', () => {
-		for (const n of ['A', 'B', 'C', 'D', 'E', 'F', 'Glue', 'Redux', 'Drum Buss', 'Chorus', 'Saturator', 'Echo']) recordRecentEffect(fx(n));
-		expect(recentForChain(['Wavetable', 'Echo', 'Chorus']).map((r) => r.name)).toEqual(['Saturator', 'Drum Buss', 'Redux', 'Glue', 'F', 'E', 'D', 'C']);
+	it('shows up to twelve (or fewer on request), skipping what the chain holds and filling from older ones', () => {
+		for (const n of ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'Glue', 'Redux', 'Drum Buss', 'Chorus', 'Saturator', 'Echo']) recordRecentEffect(fx(n));
+		expect(recentForChain(['Wavetable', 'Echo', 'Chorus']).map((r) => r.name)).toEqual(['Saturator', 'Drum Buss', 'Redux', 'Glue', 'J', 'I', 'H', 'G', 'F', 'E', 'D', 'C']);
 		expect(recentForChain(['Wavetable', 'Echo', 'Chorus'], 4).map((r) => r.name)).toEqual(['Saturator', 'Drum Buss', 'Redux', 'Glue']);
 	});
 

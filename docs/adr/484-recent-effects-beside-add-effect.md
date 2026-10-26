@@ -24,11 +24,12 @@ again without the browser.
   (a tap or a drag), newest first, once each. The list is shared across
   tracks and kept in this browser's localStorage (a per-viewer
   convenience), up to twelve.
-- One cell: two columns of four (eight) on a chain of one row; three
-  columns of two (six) once the chain wraps to two rows and the cell is
-  short and wide (`chainDrop.recentLayout`, the user's call the same day,
-  after trying a block that spanned the grid's empty cells and picked its
-  columns by width).
+- The recents and + Effect are one ghost section two cells wide, + Effect
+  its last column, full height: on a chain of one row the recents take
+  three columns of four (twelve), on two rows five columns of two (ten)
+  (`chainDrop.recentLayout`, the user's call the same day, after a
+  one-cell block beside a one-cell + Effect). With no recents, + Effect is
+  one cell as before. The list keeps sixteen.
 - It is smart about the chain: it shows the first ones that fit, skipping a
   MIDI effect on a track that is not a MIDI track and anything the chain
   already holds (by name: Live names a loaded preset's device after it).

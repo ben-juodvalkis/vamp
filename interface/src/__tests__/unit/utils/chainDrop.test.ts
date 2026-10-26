@@ -181,8 +181,8 @@ describe('planReorder', () => {
 });
 
 describe('the Recent block (ADR-484)', () => {
-	it('is two columns of four on one row, three of two on two rows', () => {
-		expect(recentLayout(1)).toEqual({ columns: 2, rows: 4, shown: 8 });
-		expect(recentLayout(2)).toEqual({ columns: 3, rows: 2, shown: 6 });
+	it('is three columns of four on one row, five of two on two rows (+ Effect the last column)', () => {
+		expect(recentLayout(1)).toEqual({ columns: 3, rows: 4, shown: 12 });
+		expect(recentLayout(2)).toEqual({ columns: 5, rows: 2, shown: 10 });
 	});
 });

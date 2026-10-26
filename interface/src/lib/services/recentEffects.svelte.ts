@@ -2,8 +2,8 @@
  * The effects added most recently (ADR-484, user 2026-10-26): the effect
  * presets loaded from the browser, newest first, so the chain overview's
  * Recent column can put one on a chain again in one tap. It shows the first
- * that fit the chain (`recentForChain`), up to eight, as many as the block
- * has room for (`chainDrop.recentLayout`): no MIDI effect off a MIDI track,
+ * that fit the chain (`recentForChain`), up to twelve, as many as the ghost
+ * section has room for (`chainDrop.recentLayout`): no MIDI effect off a MIDI track,
  * nothing the chain already holds; the list keeps more than that so the
  * column stays full after the filter.
  *
@@ -37,8 +37,8 @@ export interface RecentEffect {
 }
 
 /** How many the list keeps, and the most the column shows. */
-export const RECENT_EFFECTS_MAX = 12;
-export const RECENT_EFFECTS_SHOWN = 8;
+export const RECENT_EFFECTS_MAX = 16;
+export const RECENT_EFFECTS_SHOWN = 12;
 const STORAGE_KEY = 'vamp.recentEffects';
 
 function readStored(): RecentEffect[] {

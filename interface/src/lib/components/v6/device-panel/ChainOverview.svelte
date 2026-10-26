@@ -271,7 +271,8 @@
    * the + cell share one row, wide as the track strips get; past it the
    * cells split evenly over two rows (`chainGrid`). Reads like Live's chain:
    * left to right, then the next row. Four since the user's call
-   * (2026-10-26; five before). The Recent column counts as a cell.
+   * (2026-10-26; five before). The ghost section (recents and + Effect)
+   * is two cells.
    */
   const CHAIN_WRAP_AFTER = 4;
 
@@ -382,9 +383,9 @@
   const shown = $derived((drag && arrange(cells, moved(drag.base, drag.from, drag.to))) || settled);
 
   /*
-   * The Recent column (ADR-484, the user's call, 2026-10-26): just before
-   * the + cell, the last effects added from the browser, grey, a tap adding one
-   * here again. Only what fits: no MIDI effect off a MIDI track, nothing
+   * The recents (ADR-484, the user's call, 2026-10-26): with + Effect, the
+   * chain's ghost section, the last effects added from the browser, grey, a
+   * tap adding one here again. Only what fits: no MIDI effect off a MIDI track, nothing
    * this chain already holds. It replaced the suggested ghost devices
    * (ADR-483); the ghost Utility had already left for the right sidebar.
    */
@@ -393,9 +394,10 @@
 
   const grid = $derived(chainGrid(drawn.length + (recentPool.length > 0 ? 1 : 0), CHAIN_WRAP_AFTER));
   /*
-   * The Recent block is one cell: two columns of four on a one-row chain,
-   * three columns of two once it wraps to two rows and the cell is short
-   * and wide (`recentLayout`, the user, 2026-10-26).
+   * The ghost section is two cells, the recents and + Effect together:
+   * on a one-row chain three columns of four and + Effect a full-height
+   * fourth; on two rows five columns of two and + Effect a double-height
+   * sixth (`recentLayout`, the user, 2026-10-26).
    */
   const recentGrid = $derived(recentLayout(grid.rows));
   const recents = $derived(recentPool.slice(0, recentGrid.shown));
@@ -710,10 +712,24 @@
       {@render cellBody(cell, position)}
     </div>
   {/each}
+  <!-- The ghost section (ADR-484): two cells, the recents in columns and
+       + Effect the last column, full height; just + Effect with no recents. -->
+  {#snippet addCell()}
+    <!-- Add an effect: the browser on Effect, landing on this chain. -->
+    <button
+      type="button"
+      class="chain-add"
+      aria-label="Add an effect"
+      data-debug="chain-add"
+      use:press={{ onPress: addEffect, touchAction: 'none' }}
+    >
+      <span class="chain-add-icons" aria-hidden="true"><Plus /><ControlGlyph name="rack" /></span>
+      <span class="chain-add-label">Effect</span>
+    </button>
+  {/snippet}
   {#if recents.length > 0}
-    <!-- Recent: the last effects added, grey; a tap adds one here again. -->
     <div
-      class="chain-recents"
+      class="chain-ghosts"
       style:--recent-cols={recentGrid.columns}
       style:--recent-rows={recentGrid.rows}
       data-debug="chain-recents"
@@ -723,19 +739,11 @@
       {#each recents as recent (recent.fullPath)}
         <RecentEffectButton {recent} />
       {/each}
+      {@render addCell()}
     </div>
+  {:else}
+    {@render addCell()}
   {/if}
-  <!-- Add an effect: the browser on Effect, landing on this chain. -->
-  <button
-    type="button"
-    class="chain-add"
-    aria-label="Add an effect"
-    data-debug="chain-add"
-    use:press={{ onPress: addEffect, touchAction: 'none' }}
-  >
-    <span class="chain-add-icons" aria-hidden="true"><Plus /><ControlGlyph name="rack" /></span>
-    <span class="chain-add-label">Effect</span>
-  </button>
   {#if padScope}
     <!-- Whose chain this is, as the grid's scope chip says it. -->
     <div class="pad-chip chain-scope-chip" aria-label="Chain of pad {padScope.note}">
@@ -838,18 +846,21 @@
     cursor: pointer;
     user-select: none;
   }
-  /* The Recent column: four grey rows, the + cell's height. */
-  /* The Recent column, as wide as one cell: two columns of four, each half
-     its width, newest first left to right; one column of four when a half
-     would be narrower than the side bars. The rows are fixed, so a short list keeps the tiles' size. */
-  .chain-recents {
-    position: relative;
+  /* The ghost section: two cells wide, the recents in their columns
+     (newest first, left to right) and + Effect the last column, every row.
+     The rows are fixed, so a short list keeps the tiles' size. */
+  .chain-ghosts {
+    grid-column: span 2;
     min-width: 0;
     min-height: 0;
     display: grid;
-    grid-template-columns: repeat(var(--recent-cols, 2), minmax(0, 1fr));
+    grid-template-columns: repeat(calc(var(--recent-cols, 3) + 1), minmax(0, 1fr));
     grid-template-rows: repeat(var(--recent-rows, 4), minmax(0, 1fr));
     gap: 4px;
+  }
+  .chain-ghosts > .chain-add {
+    grid-column: -2 / -1;
+    grid-row: 1 / -1;
   }
   .chain-cell.off > :not(.cell-head) {
     opacity: 0.45;
