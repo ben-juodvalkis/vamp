@@ -150,6 +150,8 @@ const FX_TILES = [
 /** Open Settings from the master strip's gear. */
 const chainDemo = (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, CHAIN_DEMO_DEVICES);
 // Chains of other lengths, for the adaptive layout: the instrument, then effects.
+/** The rig's effects shelf (catalog.effectsPlace), for states that name its files. */
+const SHELF = '/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Audio-Midi Effects';
 const chainOf = (n) => (scene) =>
 	setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], 'Auto Filter', 'Echo', 'Reverb', CHAIN_DEMO_DEVICES[5], 'Auto Filter', CHAIN_DEMO_DEVICES[7], CHAIN_DEMO_DEVICES[8]].slice(0, n));
 const chainCell = (index) => `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/${index}"]`;
@@ -345,10 +347,14 @@ export const TOURS = {
 				steps: [select, { click: '[data-debug="chain-add"]' }, { wait: 2500 }]
 			})),
 			{
-				name: 'chain-audio',
-				description: 'An audio track (Guitar) with a short chain: the Guitar and Bass racks stand ghosted before the + cell (ADR-483)',
-				scenePatch: (scene) => setTrackDevices(scene, 3, ['Echo']),
-				steps: [selectTrack(3), { wait: 800 }]
+				name: 'chain-recents',
+				description: 'The Recent column beside + Effect (ADR-484): the last effects added, grey; Echo is on the chain already, so it is skipped',
+				scenePatch: chainOf(3),
+				steps: [
+					// The rig's shelf, so --real-data draws each one's picture.
+					{ storage: { 'vamp.recentEffects': JSON.stringify([['Echo', 'Time'], ['Saturator', 'Distortion'], ['Chorus', 'Modulation'], ['Drum Buss', 'Distortion'], ['Glue', 'Dynamics']].map(([n, dir]) => ({ name: n, fullPath: `${SHELF}/${dir}/${n}.adv`, source: '', rel: '' }))) } },
+					openInstrument(CHAIN_DEMO_TRACK)
+				]
 			},
 			{
 				name: 'chain-plugin',

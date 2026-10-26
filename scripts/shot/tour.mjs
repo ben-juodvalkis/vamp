@@ -284,6 +284,7 @@ try {
 
 			captured.push({ state, file });
 			const note = consoleErrors.length ? `  (${consoleErrors.length} console error(s))` : '';
+			if (process.env.SHOT_CONSOLE) for (const e of consoleErrors) console.log("   console:", e.slice(0, 300));
 			const layoutNote = !checkLayout ? '' : problems.length ? `  LAYOUT ✗ ${problems.length}` : '  layout ok';
 			log(`${state.name.padEnd(width)}  ${String(Date.now() - t0).padStart(5)} ms${layoutNote}${note}`);
 			for (const problem of problems) log(`${' '.repeat(width)}    ${problem}`);

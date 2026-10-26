@@ -1,7 +1,7 @@
 # ADR-483: A Short Chain Suggests Its Devices
 
 ## Status
-**Accepted** (2026-10-26). Extends ADR-482 (the ghost Utility), and moves
+**Superseded** by ADR-484 (2026-10-26: a Recent column replaced the suggestions). Was **Accepted** (2026-10-26). Extends ADR-482 (the ghost Utility), and moves
 that ghost into a column of its own. No Live restart: interface only.
 
 ## Context

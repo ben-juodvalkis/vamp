@@ -240,6 +240,9 @@ async function centreOf(page, selector, what) {
  *                                       threshold and the control sees a first
  *                                       drag frame — the one event a ghost FX
  *                                       tile loads on (ADR-167). Default 24,-24.
+ *   { storage: { key: value } }         set localStorage keys and fire a
+ *                                       'storage' event for each, as another
+ *                                       tab writing them would.
  *   { hold: selector, ms?: number }     press and STAY pressed. The button is
  *                                       still down when this returns, so
  *                                       :active and every pointerdown-armed
@@ -258,6 +261,17 @@ export async function performSteps(page, steps, { log = () => {} } = {}) {
 			if (step.dom) await page.locator(step.click).first().evaluate((el) => el.click(), undefined, { timeout: 5000 });
 			else await page.click(step.click, { timeout: 5000 });
 			await page.waitForTimeout(400);
+		} else if (step.storage) {
+			// Seed this page's localStorage and announce it as another tab would
+			// (a 'storage' event); a store that keeps its state there re-reads it.
+			log(`seeding localStorage: ${Object.keys(step.storage).join(', ')}`);
+			await page.evaluate((entries) => {
+				for (const [key, value] of entries) {
+					localStorage.setItem(key, value);
+					window.dispatchEvent(new StorageEvent('storage', { key, newValue: value }));
+				}
+			}, Object.entries(step.storage));
+			await page.waitForTimeout(300);
 		} else if (step.wait) {
 			await page.waitForTimeout(step.wait);
 		} else if (step.fill) {

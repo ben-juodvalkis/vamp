@@ -56,8 +56,6 @@
   import Plus from '@lucide/svelte/icons/plus';
   import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
   import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
-  import { isDrumTrack } from '$lib/services/trackCategory';
-  import { v3Store } from '$lib/stores/v3/normalized.svelte';
   import { setContext } from 'svelte';
   import { PICTURE_CONTEXT } from '$lib/components/v6/browser/devicePictures';
   import type { Component } from 'svelte';
@@ -69,6 +67,8 @@
   import GlitchControl from './GlitchControl.svelte';
   import SquashControl from './SquashControl.svelte';
   import ControlTile from './ControlTile.svelte';
+  import RecentEffectButton from './chain/RecentEffectButton.svelte';
+  import { recentForChain } from '$lib/services/recentEffects.svelte';
   import { controlFor } from './deviceControls';
   import MidiWheelsPanel from '$lib/components/v6/midi/MidiWheelsPanel.svelte';
   import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
@@ -267,7 +267,7 @@
    * the + cell share one row, wide as the track strips get; past it the
    * cells split evenly over two rows (`chainGrid`). Reads like Live's chain:
    * left to right, then the next row. Four since the user's call
-   * (2026-10-26; five before). Suggested ghosts count as cells.
+   * (2026-10-26; five before). The Recent column counts as a cell.
    */
   const CHAIN_WRAP_AFTER = 4;
 
@@ -378,67 +378,16 @@
   const shown = $derived((drag && arrange(cells, moved(drag.base, drag.from, drag.to))) || settled);
 
   /*
-   * Ghost cells: devices to grab before the chain has them, each the FX
-   * grid's own tile in its ghost state, in a dashed cell. Its first drag
-   * frame loads the device (ADR-167), which Live puts at the end of the
-   * chain; the ghost stays under the finger until it lifts — its tile
-   * drives the device that has arrived — and the real cell takes over on
-   * release, so the gesture that loaded it is never cut off mid-drag.
-   *
-   * The ghost Utility (ADR-482) left the chain for the right sidebar's top
-   * row the same day (the user's call): it is the track's Utility there,
-   * ghost or live.
-   *
-   * Suggestions (ADR-483, the same day): while a chain holds few effects,
-   * the ones a track most often wants stand ghosted before the + cell: the
-   * Guitar and Bass racks on an audio track, a Drum Buss on a drum track,
-   * an Echo and an Auto Filter on any other,
-   * and they go once the chain fills up, so it never gets crowded. Not on
-   * a pad's chain.
+   * The Recent column (ADR-484, the user's call, 2026-10-26): beside the +
+   * cell, the last effects added from the browser, grey, a tap adding one
+   * here again. Only what fits: no MIDI effect off a MIDI track, nothing
+   * this chain already holds. It replaced the suggested ghost devices
+   * (ADR-483); the ghost Utility had already left for the right sidebar.
    */
-  /** Fewer effects than this and the chain suggests some. */
-  const SUGGEST_BELOW = 3;
-  const DRUM_SUGGESTIONS = ['drum'];
-  const MELODIC_SUGGESTIONS = ['echo', 'filter'];
-  /** An audio track: the guitar and bass racks (the user, 2026-10-26). */
-  const AUDIO_SUGGESTIONS = ['guitar', 'bass'];
-  const hasType = (key: string) => cells.some((c) => c.presetKey === key);
-  /** The pointer holding a ghost, and which ghost. */
-  let ghostHeld = $state<{ id: number; key: string; suggestions: string[] } | null>(null);
-  const liveSuggestions = $derived.by(() => {
-    if (padScope) return [];
-    const effects = cells.filter((c) => c.kind !== 'instrument').length;
-    if (effects >= SUGGEST_BELOW) return [];
-    const track = v3Store.tracks.get(trackPath);
-    const audio = !!track && !track.isFoldable && !track.hasMidiInput && track.hasAudioInput;
-    const wanted = audio ? AUDIO_SUGGESTIONS : isDrumTrack(track) ? DRUM_SUGGESTIONS : MELODIC_SUGGESTIONS;
-    return wanted.filter((key) => TILE_COMPONENTS[key] && !hasType(key));
-  });
-  /** Held still while a ghost is under a finger, so nothing slides beneath it as the load lands. */
-  const suggestions = $derived(ghostHeld?.suggestions ?? liveSuggestions);
+  const recents = $derived(recentForChain(cells.map((c) => c.device.name)));
+  const drawn = $derived(shown);
 
-  function holdGhost(e: PointerEvent, key: string) {
-    if (ghostHeld !== null) return;
-    const id = e.pointerId;
-    ghostHeld = { id, key, suggestions: liveSuggestions };
-    const lift = (u: PointerEvent) => {
-      if (u.pointerId !== id) return;
-      ghostHeld = null;
-      window.removeEventListener('pointerup', lift);
-      window.removeEventListener('pointercancel', lift);
-    };
-    window.addEventListener('pointerup', lift);
-    window.addEventListener('pointercancel', lift);
-  }
-
-  /** The cells drawn: while a ghost is still held, the device it loaded stays behind it. */
-  const drawn = $derived.by(() => {
-    if (ghostHeld === null || !hasType(ghostHeld.key)) return shown;
-    const last = shown[shown.length - 1];
-    return last?.presetKey === ghostHeld.key ? shown.slice(0, -1) : shown;
-  });
-
-  const grid = $derived(chainGrid(drawn.length + suggestions.length, CHAIN_WRAP_AFTER));
+  const grid = $derived(chainGrid(drawn.length + (recents.length > 0 ? 1 : 0), CHAIN_WRAP_AFTER));
 
   /** The cell position under a point, by the grid's geometry at lift — not the cells, which are sliding. */
   function positionAt(d: Drag, x: number, y: number): number {
@@ -750,23 +699,6 @@
       {@render cellBody(cell, position)}
     </div>
   {/each}
-  {#each suggestions as key (key)}
-    {@const ghost = TILE_COMPONENTS[key]}
-    <!-- A suggested device, ghosted: drag its control to load one. -->
-    <div
-      class="chain-cell ghost-cell"
-      data-debug="chain-ghost-{key}"
-      role="presentation"
-      onpointerdowncapture={(e) => holdGhost(e, key)}
-    >
-      <div class="cell-head">
-        <span class="name" lang="en">{DEVICE_PRESETS[key]?.defaultName ?? key}</span>
-      </div>
-      <div class="cell-control" role="presentation">
-        <ghost.Tile position={ghost.position} />
-      </div>
-    </div>
-  {/each}
   <!-- Add an effect: the browser on Effect, landing on this chain. -->
   <button
     type="button"
@@ -778,6 +710,14 @@
     <span class="chain-add-icons" aria-hidden="true"><Plus /><ControlGlyph name="rack" /></span>
     <span class="chain-add-label">Effect</span>
   </button>
+  {#if recents.length > 0}
+    <!-- Recent: the last effects added, grey; a tap adds one here again. -->
+    <div class="chain-recents" data-debug="chain-recents" role="group" aria-label="Recent effects">
+      {#each recents as recent (recent.fullPath)}
+        <RecentEffectButton {recent} />
+      {/each}
+    </div>
+  {/if}
   {#if padScope}
     <!-- Whose chain this is, as the grid's scope chip says it. -->
     <div class="pad-chip chain-scope-chip" aria-label="Chain of pad {padScope.note}">
@@ -880,26 +820,13 @@
     cursor: pointer;
     user-select: none;
   }
-  /* A ghost: no cell frame, its name dim; the tile inside wears its own
-     ghost state. */
-  .chain-cell.ghost-cell {
-    border-color: transparent;
-    background: transparent;
-    color: var(--muted-foreground);
-    cursor: default;
-  }
-  /* Its one border is the device's own, dashed; its name, marks and
-     picture grey, so it reads as not there yet (the user, 2026-10-26). */
-  .chain-cell.ghost-cell .cell-control :global(.device-ghost),
-  :global([data-grammar="flat"]) .chain-cell.ghost-cell .cell-control :global(.device-ghost) {
-    border-style: dashed !important;
-    border-color: var(--line-strong) !important;
-    /* Dimmed: half a device's well, so it sits back from the real ones. */
-    background: color-mix(in oklab, var(--surface-well) 50%, transparent) !important;
-  }
-  .chain-cell.ghost-cell .cell-control {
-    filter: grayscale(1);
-    opacity: 0.6;
+  /* The Recent column: four grey rows, the + cell's height. */
+  .chain-recents {
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
   }
   .chain-cell.off > :not(.cell-head) {
     opacity: 0.45;

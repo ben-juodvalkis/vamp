@@ -320,6 +320,11 @@ was rendered from.
 
 A tour always serves the committed catalog fixtures (`--real-data` to opt
 out): it is a comparison set, so two runs of the same code should agree.
+`SHOT_CONSOLE=1` prints each state's console errors under its line, the way
+to see why a component rendered blank (a Svelte runtime error passes the
+gate). A `{ storage: { key: value } }` step seeds the page's localStorage
+and fires a `storage` event for it, for state kept there (the chain's
+Recent column, `chain-recents`).
 Like `shot`, it photographs the **last build** — `npm run build` first.
 
 Tours are `TOURS` in [`views.mjs`](views.mjs). The `central` tour's

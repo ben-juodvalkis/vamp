@@ -66,14 +66,13 @@
 	import { ROOT_NOTES, SCALE_NAMES, getScaleIndex } from '$lib/data/scales';
 	import { logger } from '$lib/utils/logger';
 	import { PLACES_CHANGED_EVENT, warmPlacesCache, placeArgs } from '$lib/services/placesLive';
-	import { addPresetToChain } from '$lib/services/deviceMoveService';
 	import { activeDrumRackScope } from '$lib/services/deviceViewRouter.svelte';
 	import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
 	import ControlGlyph from '../device-panel/ControlGlyph.svelte';
 	import BrowserPresetFace from './BrowserPresetFace.svelte';
 	import BrowserWheelsFace from './BrowserWheelsFace.svelte';
 	import { startPresetDrag, type PresetDrag } from '$lib/services/presetDragLoad.svelte';
-	import { openViewWhenLanded } from '$lib/services/effectView.svelte';
+	import { addEffectToChain, fitsSelectedTrack, recordRecentEffect, type RecentEffect } from '$lib/services/recentEffects.svelte';
 	import type { Writes } from '$lib/components/v6/device-panel/deviceControls';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { sectionInks } from './utils/sectionInks';
@@ -943,27 +942,18 @@
 	 * and the chain overview is the confirmation.
 	 */
 	async function addEffect(preset: Preset, closeDelayMs = 0) {
-		const trackPath = selectedTrackStore.selectedTrackPath;
-		const pad = trackHoldScope.active ? null : activeDrumRackScope();
 		handlePostLoad(closeDelayMs);
-		if (!trackPath) {
-			reportLoadFailure(preset.name, new Error('No track selected'));
-			return;
-		}
-		// A random pick can land on a MIDI effect the tile would have refused.
-		if (MIDI_EFFECT_KINDS.has(preset.kind ?? 'unknown') && selectedTrackStore.trackType !== 'midi') {
-			reportLoadFailure(preset.name, new Error('A MIDI effect goes on a MIDI track'));
-			return;
-		}
-		// Its view opens once Live reports the device (user, 2026-10-26).
-		const cancelView = openViewWhenLanded({ trackPath, padPath: pad?.padPath ?? '', name: preset.name });
-		try {
-			await addPresetToChain(trackPath, pad?.padPath ?? '', preset.fullPath, ...placeArgs(preset));
-		} catch (err) {
-			cancelView();
-			logger.error('Effect load failed', { component: 'DrillDownBrowser', err });
-			reportLoadFailure(preset.name, err);
-		}
+		// A random pick can land on a MIDI effect the tile would have
+		// refused; `addEffectToChain` refuses it there too.
+		const effect = recentOf(preset);
+		if (selectedTrackStore.selectedTrackPath && fitsSelectedTrack(effect)) recordRecentEffect(effect);
+		await addEffectToChain(effect);
+	}
+
+	/** An effect preset as the chain's Recent column keeps it (ADR-484). */
+	function recentOf(preset: Preset): RecentEffect {
+		const [source, rel] = placeArgs(preset);
+		return { name: preset.name, fullPath: preset.fullPath, source, rel, kind: preset.kind };
 	}
 
 	/**
@@ -979,6 +969,7 @@
 		}
 		const pad = trackHoldScope.active ? null : activeDrumRackScope();
 		browserNavigationStore.loadedPresetPath = preset.path;
+		recordRecentEffect(recentOf(preset));
 		const [source, rel] = placeArgs(preset);
 		return startPresetDrag({
 			trackPath,
