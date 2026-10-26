@@ -17,9 +17,11 @@
     /** The view's own inks; unset, the focused track's (ADR-402). */
     pitchColor?: DeviceColorScheme;
     modColor?: DeviceColorScheme;
+    /** Pitch beside Mod instead of over it — a short host, the chain overview's two-row cell. */
+    sideBySide?: boolean;
   }
 
-  let { pitchColor, modColor }: Props = $props();
+  let { pitchColor, modColor, sideBySide = false }: Props = $props();
 
   // Both wheels follow the focused track's ink (ADR-402), distinguished by
   // their PITCH/MOD labels + behaviour. The ink-calibrated PITCH/MOD family
@@ -34,7 +36,7 @@
   const modInk = $derived(modColor ?? selectedTrackScheme() ?? inked(MOD_COLOR));
 </script>
 
-<div class="midi-wheels-panel">
+<div class="midi-wheels-panel" class:side-by-side={sideBySide}>
   <div class="wheel-cell">
     <MidiWheel type="pitch" onInteraction={sendPitchWheel} color={pitchInk} />
   </div>
@@ -53,8 +55,13 @@
     min-height: 0;
   }
 
+  .midi-wheels-panel.side-by-side {
+    flex-direction: row;
+  }
+
   .wheel-cell {
     flex: 1 1 0;
     min-height: 0;
+    min-width: 0;
   }
 </style>

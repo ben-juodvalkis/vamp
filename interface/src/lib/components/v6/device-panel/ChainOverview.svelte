@@ -31,7 +31,9 @@
    * chain can too. A touch on it drives the device and makes it the pick
    * (the one its tile and view control), and never starts a reorder. Under
    * a pad scope the overview provides the pad's `fxScope`, as the grid
-   * does, so the tiles resolve against the pad's chain.
+   * does, so the tiles resolve against the pad's chain. MidiWheels carries
+   * the pitch and mod wheels (`MidiWheelsPanel`); the wheels' wire names
+   * the selected track, so a pad's chain draws its mark instead.
    *
    * **A pad follows the Drum Rack view.** While a pad is held or latched
    * on the selected track's Drum Rack, the overview is that pad's chain —
@@ -54,6 +56,8 @@
   import PitchControl from './PitchControl.svelte';
   import GlitchControl from './GlitchControl.svelte';
   import SquashControl from './SquashControl.svelte';
+  import MidiWheelsPanel from '$lib/components/v6/midi/MidiWheelsPanel.svelte';
+  import constants from '$config/constants.json';
   import Music from '@lucide/svelte/icons/music';
   import { press } from '$lib/actions/press';
   import { drag, type DragInfo } from '$lib/actions/drag';
@@ -110,6 +114,10 @@
     glitchLoop: { Tile: GlitchControl },
     squash: { Tile: SquashControl }
   };
+
+  /** MidiWheels, re-found as the surface finds it: class + the name Live gives the loaded `.amxd`. */
+  const MIDI_WHEELS = constants.devices.midiWheels;
+  const isMidiWheels = (d: DeviceRecord) => d.className === MIDI_WHEELS.className && d.name === MIDI_WHEELS.deviceName;
 
   /** Live's class as a person would say it, for a device renamed away from its type. */
   const TYPE_LABELS: Record<string, string> = {
@@ -439,8 +447,19 @@
 {#snippet cellBody(cell: Cell, position: number, live = true)}
   {@const glyph = glyphOf(cell)}
   {@const tile = cell.kind !== 'instrument' && cell.presetKey ? TILE_COMPONENTS[cell.presetKey] : undefined}
+      <!-- One row says it all, so the control below gets the height: the
+           position, the name and its type, the tile that drives it, the
+           blue hand, Device On. -->
       <div class="cell-head">
         <span class="order">{position + 1}</span>
+        <span class="name" lang="en">{cell.device.name}</span>
+        {#if cell.typeLabel}
+          <span class="type">{cell.typeLabel}</span>
+        {/if}
+        {#if cell.tile}
+          <span class="pad-chip tile-chip">{cell.tile}</span>
+        {/if}
+        <span class="head-end">
         {#if fxChainStore.appointed === cell.device.devicePath}
           <span class="hand" aria-label="Selected in Live"><Hand /></span>
         {/if}
@@ -454,9 +473,15 @@
           use:press={{ onPress: () => togglePower(cell), stopPropagation: true }}
         ><Power /></button>
         {/if}
+        </span>
       </div>
 
-      {#if tile && live}
+      {#if live && !padScope && isMidiWheels(cell.device)}
+        <!-- The pitch and mod wheels, as the instrument views draw them:
+             Pitch over Mod in a full-height cell, side by side in a
+             two-row chain's half-height one. -->
+        <div class="cell-control" role="presentation"><MidiWheelsPanel sideBySide={grid.rows > 1} /></div>
+      {:else if tile && live}
         <!-- The grid's own tile, on this device. A touch here is the
              control's: it picks this device and never starts a reorder. -->
         <div class="cell-control" role="presentation">
@@ -486,16 +511,6 @@
           {/each}
         </div>
       {/if}
-
-      <div class="cell-foot">
-        <span class="name" lang="en">{cell.device.name}</span>
-        {#if cell.typeLabel}
-          <span class="type">{cell.typeLabel}</span>
-        {/if}
-        {#if cell.tile}
-          <span class="pad-chip tile-chip">{cell.tile}</span>
-        {/if}
-      </div>
 {/snippet}
 
 <div
@@ -645,8 +660,8 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 8px 6px;
+    gap: 4px;
+    padding: 4px;
     min-width: 0;
     min-height: 0;
     border: 1px solid var(--line-strong);
@@ -689,16 +704,31 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    min-height: 18px;
+    min-width: 0;
+    height: 28px;
+    flex: 0 0 auto;
+    padding-left: 2px;
   }
   /* The first cell's corner is the FX section's switch (FxPanelSwitch). */
   .chain-cell:first-child .cell-head {
-    padding-left: 36px;
+    padding-left: 38px;
   }
   .order {
+    flex: 0 0 auto;
     font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
     color: var(--muted-foreground);
+  }
+  /* The hand and Device On close the row. */
+  .head-end {
+    flex: 0 0 auto;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .hand {
+    display: flex;
   }
   .hand :global(svg) {
     width: 16px;
@@ -710,8 +740,8 @@
     align-items: center;
     justify-content: center;
     width: 32px;
-    height: 32px;
-    margin: -6px -4px -6px auto;
+    height: 28px;
+    margin-right: -2px;
     border: 0;
     border-radius: var(--radius-sm);
     background: transparent;
@@ -783,26 +813,19 @@
     border-radius: 1px;
   }
 
-  .cell-foot {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-  }
+  /* The name keeps its room; the type takes only what is left. */
   .name {
+    flex: 0 1 auto;
+    min-width: 0;
     font-size: 0.8125rem;
     font-weight: var(--font-weight-medium);
-    line-height: 1.2;
+    white-space: nowrap;
     overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow-wrap: anywhere;
-    -webkit-hyphens: auto;
-    hyphens: auto;
+    text-overflow: ellipsis;
   }
   .type {
+    flex: 1 1 0;
+    min-width: 0;
     font-size: 0.6875rem;
     color: var(--muted-foreground);
     white-space: nowrap;
@@ -813,7 +836,7 @@
   /* Which grid tile controls this device. */
   .tile-chip {
     --chip-ink: var(--cell-ink);
-    align-self: flex-start;
+    flex: 0 0 auto;
     font-size: 10px;
     padding: 1px 6px;
   }

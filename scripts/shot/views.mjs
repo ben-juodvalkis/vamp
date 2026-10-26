@@ -178,6 +178,20 @@ export const TOURS = {
 				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }]
 			})),
 			{
+				name: 'chain-wheels',
+				description: 'MidiWheels ahead of the instrument: its cell carries the pitch and mod wheels',
+				scenePatch: (scene) =>
+					setTrackDevices(scene, CHAIN_DEMO_TRACK, [{ name: 'MidiWheels', className: 'MxDeviceMidiEffect' }, CHAIN_DEMO_DEVICES[0], 'Auto Filter', 'Echo']),
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }]
+			},
+			{
+				name: 'chain-wheels-two-rows',
+				description: 'MidiWheels on a two-row chain: the wheels side by side in its half-height cell',
+				scenePatch: (scene) =>
+					setTrackDevices(scene, CHAIN_DEMO_TRACK, [{ name: 'MidiWheels', className: 'MxDeviceMidiEffect' }, ...CHAIN_DEMO_DEVICES.slice(0, 6)]),
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }]
+			},
+			{
 				name: 'chain-filter-2',
 				description: 'Tapped the second Auto Filter: appointed, the Filter view on it, the Filter chip moved to it',
 				scenePatch: chainDemo,
