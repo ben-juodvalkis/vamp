@@ -315,6 +315,18 @@ export const TOURS = {
 				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(2)} .cell-head .name` }, { wait: 500 }]
 			},
 			{
+				name: 'chain-pad-add',
+				description: 'Jazz, pad 38 latched: + Effect, then Gate picked in the browser lands in the pad\'s chain (needs --real-data for the effects Place)',
+				steps: [
+					openInstrument(8),
+					{ click: '.pad-tile[data-note="38"]' },
+					{ click: '[data-debug="chain-add"]' },
+					{ wait: 2500 },
+					{ click: '.preset-tile:has-text("Gate")' },
+					{ wait: 2500 }
+				]
+			},
+			{
 				name: 'chain-add',
 				description: 'Tapped the + cell at the end of the chain: the browser opens on its Effect segment, on a Place that has effect presets',
 				scenePatch: chainDemo,
