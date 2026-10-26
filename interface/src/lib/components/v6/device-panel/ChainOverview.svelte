@@ -150,35 +150,6 @@
   const MIDI_WHEELS = constants.devices.midiWheels;
   const isMidiWheels = (d: DeviceRecord) => d.className === MIDI_WHEELS.className && d.name === MIDI_WHEELS.deviceName;
 
-  /** Live's class as a person would say it, for a device renamed away from its type. */
-  const TYPE_LABELS: Record<string, string> = {
-    AutoFilter2: 'Auto Filter',
-    Hybrid: 'Hybrid Reverb',
-    StereoGain: 'Utility',
-    AudioEffectGroupDevice: 'Effect Rack',
-    InstrumentGroupDevice: 'Instrument Rack',
-    MidiEffectGroupDevice: 'MIDI Rack',
-    DrumGroupDevice: 'Drum Rack',
-    MxDeviceAudioEffect: 'Max Effect',
-    MxDeviceMidiEffect: 'Max MIDI',
-    MxDeviceInstrument: 'Max Instrument',
-    AuPluginDevice: 'Plug-in',
-    PluginDevice: 'Plug-in',
-    InstrumentVector: 'Wavetable',
-    OriginalSimpler: 'Simpler',
-    MultiSampler: 'Sampler',
-    UltraAnalog: 'Analog',
-    InstrumentMeld: 'Meld',
-    GlueCompressor: 'Glue',
-    Compressor2: 'Compressor',
-    ChannelEq: 'Channel EQ',
-    Chorus2: 'Chorus',
-    PhaserNew: 'Phaser',
-    Redux2: 'Redux',
-    BeatRepeat: 'Beat Repeat'
-  };
-
-
   /**
    * What a cell is: only what changes when the chain does. Live values
    * (Device On, a rack's macros) are read in the markup, so a moving
@@ -195,7 +166,6 @@
     kind: 'instrument' | 'rack' | 'max' | 'plugin' | 'effect';
     presetKey: string | null;
     tile: string | null;
-    typeLabel: string | null;
     ink: string;
   };
 
@@ -268,7 +238,6 @@
               ? 'plugin'
               : 'effect';
       const family = presetKey ? DEVICE_PRESETS[presetKey].color.primary : kind === 'rack' ? DEVICE_FAMILY_INKS.rackVoice.primary : DEVICE_FAMILY_INKS.utility.primary;
-      const typeLabel = TYPE_LABELS[device.className] ?? splitCamel(device.className);
       const sig = `${device.className}|${device.name}`;
       return {
         key: `${sig}|${nth}`,
@@ -278,7 +247,6 @@
         kind,
         presetKey,
         tile: tileOf.get(device.devicePath) ?? null,
-        typeLabel: typeLabel.toLowerCase() === device.name.toLowerCase() ? null : typeLabel,
         ink: isInstrument ? (padChain ? (padInk ?? trackColor) : trackColor) : trackInk(family, paint)
       };
     })
@@ -307,10 +275,6 @@
   function indexOf(path: string): number {
     const m = /\/devices\/(\d+)$/.exec(path);
     return m ? Number(m[1]) : 0;
-  }
-
-  function splitCamel(s: string): string {
-    return s.replace(/([a-z])([A-Z])/g, '$1 $2');
   }
 
   const presetKeyFor = (device: DeviceRecord) => effectTypeOf(device);
@@ -672,18 +636,11 @@
 {#snippet cellBody(cell: Cell, position: number)}
   {@const glyph = glyphOf(cell)}
   {@const tile = cell.kind !== 'instrument' && cell.presetKey ? TILE_COMPONENTS[cell.presetKey] : undefined}
-      <!-- One row says it all, so the control below gets the height: the
-           position, the name and its type, the tile that drives it, the
-           blue hand, Device On. -->
+      <!-- The device's name alone, on a band as tall as a strip's mute
+           button, so there is room to grab the cell (the user, 2026-10-26);
+           then the blue hand and Device On. -->
       <div class="cell-head">
-        <span class="order">{position + 1}</span>
         <span class="name" lang="en">{cell.device.name}</span>
-        {#if cell.typeLabel}
-          <span class="type">{cell.typeLabel}</span>
-        {/if}
-        {#if cell.tile}
-          <span class="pad-chip tile-chip">{cell.tile}</span>
-        {/if}
         <span class="head-end">
         {#if fxChainStore.appointed === cell.device.devicePath}
           <span class="hand" aria-label="Selected in Live"><Hand /></span>
@@ -982,25 +939,20 @@
     background: color-mix(in oklab, var(--cell-ink) 14%, var(--surface-well));
   }
 
-  /* Order, then the hand beside it, the power button in the corner. */
+  /* The name, then the hand and the power button in the corner: a band
+     the strips' name band's height (--strip-band-h), a handle to drag by. */
   .cell-head {
     display: flex;
     align-items: center;
     gap: 6px;
     min-width: 0;
-    height: 28px;
+    height: var(--strip-band-h, 56px);
     flex: 0 0 auto;
-    padding-left: 2px;
+    padding-left: 6px;
   }
   /* The first cell's corner is the FX section's switch (FxPanelSwitch). */
   .chain-cell:first-child .cell-head {
     padding-left: 38px;
-  }
-  .order {
-    flex: 0 0 auto;
-    font-size: 0.75rem;
-    font-variant-numeric: tabular-nums;
-    color: var(--muted-foreground);
   }
   /* The hand and Device On close the row. */
   .head-end {
@@ -1014,16 +966,16 @@
     display: flex;
   }
   .hand :global(svg) {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
   }
   /* Device On. Lit while the device runs, dim when bypassed. */
   .power {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 28px;
+    width: 44px;
+    height: 100%;
     margin-right: -2px;
     border: 0;
     border-radius: var(--radius-sm);
@@ -1035,8 +987,8 @@
     color: var(--cell-ink);
   }
   .power :global(svg) {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
   }
 
   .mark {
@@ -1100,27 +1052,11 @@
   .name {
     flex: 0 1 auto;
     min-width: 0;
-    font-size: 0.8125rem;
+    font-size: 1rem;
     font-weight: var(--font-weight-medium);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .type {
-    flex: 1 1 0;
-    min-width: 0;
-    font-size: 0.6875rem;
-    color: var(--muted-foreground);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
 
-  /* Which grid tile controls this device. */
-  .tile-chip {
-    --chip-ink: var(--cell-ink);
-    flex: 0 0 auto;
-    font-size: 10px;
-    padding: 1px 6px;
-  }
 </style>
