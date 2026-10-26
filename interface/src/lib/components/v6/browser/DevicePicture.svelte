@@ -16,7 +16,7 @@
 	let { kind, x, y = 0, ink }: Props = $props();
 	const strokes = $derived(pictureStrokes(kind, x, y));
 	/** Shapes that must keep their proportions (a pedal, a drum, an amp stack); the rest stretch to the cell, Echo's arcs with it as Live draws them. */
-	const KEEP_ASPECT = new Set<PictureKind>(['stompbox', 'drum', 'stack', 'wheels']);
+	const KEEP_ASPECT = new Set<PictureKind>(['stompbox', 'drum', 'stack', 'wheels', 'reverse']);
 </script>
 
 <svg

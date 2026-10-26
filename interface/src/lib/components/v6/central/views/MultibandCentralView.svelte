@@ -2,9 +2,9 @@
   /**
    * MultibandCentralView — the Multiband Dynamics' view (slot `ott`).
    *
-   * The Mid band's Below Ratio, its Below Threshold and the device's
-   * Output, three value boxes side by side (user, 2026-10-26; stacked
-   * before, ADR-477). A ghost loads it on the first
+   * The Mid band's Below Threshold and the device's Output, two value
+   * boxes side by side. The Below Ratio is the device's chain cell, so it
+   * left this view (user, 2026-10-26; three boxes, stacked before ADR-477). A ghost loads it on the first
    * drag, inserted by name with the user's own default. Indices and rails
    * live in `multibandParams.ts`.
    *
@@ -25,7 +25,6 @@
     MB_OUTPUT_MIN,
     MB_OUTPUT_MAX
   } from '../../device-panel/multibandParams';
-  import ControlTile from '../../device-panel/ControlTile.svelte';
 
   const multiband = useFxGridSlot('ott');
 
@@ -36,11 +35,6 @@
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
 <div class="mb-central-layout relative" data-device="multiband">
-  <!-- The `ott` control (deviceControls, ADR-479): 1 : 1 at the middle,
-       expansion below it, compression above. -->
-  <div class="mb-slider">
-    <ControlTile type="ott" device={multiband.device} disableCentralViewOnTap tapLoads labelSize="large" />
-  </div>
   <div class="mb-slider" class:slot-ghost={multiband.isGhost}>
     <DeviceSlider
       value={mbThreshold}
@@ -76,10 +70,10 @@
 </div>
 
 <style>
-  /* ratio | threshold | output */
+  /* threshold | output */
   .mb-central-layout {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     height: 100%;
     width: 100%;
     padding: var(--central-inset);

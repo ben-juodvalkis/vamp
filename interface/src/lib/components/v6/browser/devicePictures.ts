@@ -27,7 +27,6 @@ export type PictureKind =
 	| 'notches'
 	| 'stairs'
 	| 'shaper'
-	| 'clip'
 	| 'stompbox'
 	| 'eqcurve'
 	| 'wheels'
@@ -151,18 +150,16 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0): PictureStro
 				{ d: trace((u) => 50 - 36 * Math.sin(2 * Math.PI * u * 1.5)), o: 0.25 }
 			];
 		}
-		// Saturator: its waveshaper, from a straight line to a squashed S.
+		// Saturator: a sine through its waveshaper, its peaks clipped flatter
+		// as the drive rises (the user, 2026-10-26: "a clipped curve", not the
+		// flat transfer line), the clean sine faint behind it. Some clipping
+		// even at rest, so it always reads as saturation.
 		case 'shaper': {
-			const k = 0.5 + x * 7;
+			const k = 3 + x * 7;
 			return [
-				{ d: 'M0,50H100M50,0V100', o: 0.2 },
-				{ d: trace((u) => 50 - 42 * (Math.tanh(k * (2 * u - 1)) / Math.tanh(k))), o: 0.85 }
+				{ d: trace((u) => 50 - 34 * Math.sin(2 * Math.PI * u * 2), 160), o: 0.2 },
+				{ d: trace((u) => 50 - 36 * (Math.tanh(k * Math.sin(2 * Math.PI * u * 2)) / Math.tanh(k)), 160), o: 0.85 }
 			];
-		}
-		// Pedal: a sine clipped harder with drive.
-		case 'clip': {
-			const ceiling = 1 - x * 0.75;
-			return [{ d: trace((u) => 50 - (38 * Math.max(-ceiling, Math.min(ceiling, Math.sin(2 * Math.PI * u * 2)))) / ceiling, 160), o: 0.85 }];
 		}
 		// A reverb, generic (the Recent column's Hybrid Reverb, the user,
 		// 2026-10-26): a hit and its tail dying away.
@@ -225,13 +222,22 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0): PictureStro
 				{ d: trace((u) => 100 - 100 * (u < th ? u : th + (u - th) * 0.25)), o: 0.85 }
 			];
 		}
-		// Multiband: 1 : 1 at the middle; compression flattens the top, expansion steepens the bottom.
+		// Multiband: three bands side by side, bass, mid and treble (the user,
+		// 2026-10-26), each 1 : 1 at the middle, compression flattening the
+		// top, expansion steepening the bottom.
 		case 'ratio': {
 			const slope = x >= 0.5 ? 1 - (x - 0.5) * 1.8 : 1 + (0.5 - x) * 3;
-			return [
-				{ d: 'M0,100L100,0', o: 0.2 },
-				{ d: trace((u) => 100 - 100 * Math.max(0, Math.min(1, 0.5 + (u - 0.5) * slope))), o: 0.85 }
-			];
+			return [0, 1, 2].flatMap((band) => {
+				const left = 2 + band * 34;
+				const w = 28;
+				const at = (u: number) => `${f(left + u * w)},${f(90 - 80 * Math.max(0, Math.min(1, 0.5 + (u - 0.5) * slope)))}`;
+				let d = '';
+				for (let i = 0; i <= 24; i++) d += `${i ? 'L' : 'M'}${at(i / 24)}`;
+				return [
+					{ d: `M${f(left)},90L${f(left + w)},10`, o: 0.2 },
+					{ d, o: 0.85 }
+				];
+			});
 		}
 		// Beat Repeat: a slice and its repeats, more the likelier.
 		case 'repeat': {
@@ -267,11 +273,12 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0): PictureStro
 				{ d: trace((u) => 50 - 22 * Math.sin(2 * Math.PI * u * 4)), o: 0.4 },
 				{ d: trace((u) => 50 - 40 * x * Math.sin(2 * Math.PI * u * 2)), o: 0.85 }
 			];
-		// Pitch Hack: a note played backwards, swelling into its attack, louder with the mix.
+		// Pitch Hack: a backward arrow, for its reverse (the user, 2026-10-26),
+		// stronger with the mix.
 		case 'reverse':
 			return [
-				{ d: trace((u) => 50 - 38 * Math.pow(u, 2.5) * Math.sin(2 * Math.PI * u * 9), 200), o: 0.25 + 0.6 * x },
-				{ d: 'M100,12V88', o: 0.3 + 0.5 * x }
+				{ d: 'M84,50H18M38,30L18,50L38,70', o: 0.35 + 0.6 * x },
+				{ d: 'M84,36V64', o: 0.25 + 0.4 * x }
 			];
 		// Shifter (ring): the tone times a carrier that rises with the slider.
 		case 'ringmod': {

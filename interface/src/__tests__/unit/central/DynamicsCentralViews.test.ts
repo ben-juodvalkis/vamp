@@ -57,10 +57,11 @@ describe('the dynamics views, one per device (ADR-478)', () => {
 		expect(container.querySelector('.gate-body')).not.toBeNull();
 	});
 
-	it('Multiband: Ratio, Threshold and Output', () => {
+	it('Multiband: Threshold and Output; the Ratio is its chain cell (2026-10-26)', () => {
 		const { container } = render(MultibandCentralView);
-		expect(container.querySelectorAll('.mb-slider')).toHaveLength(3);
-		expect(container.textContent).toContain('Ratio');
+		expect(container.querySelectorAll('.mb-slider')).toHaveLength(2);
+		expect(container.textContent).toContain('Threshold');
+		expect(container.textContent).not.toContain('Ratio');
 	});
 
 	it('Compressor: sidechain, Makeup and the module, without the other dynamics devices', () => {
