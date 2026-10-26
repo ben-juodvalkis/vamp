@@ -939,13 +939,26 @@
     cursor: pointer;
     user-select: none;
   }
-  /* A ghost reads as the + cell does: a dashed outline, its name dim; the
-     tile inside wears its own ghost state. */
+  /* A ghost: no cell frame, its name dim; the tile inside wears its own
+     ghost state. */
   .chain-cell.ghost-cell {
-    border-style: dashed;
+    border-color: transparent;
     background: transparent;
     color: var(--muted-foreground);
     cursor: default;
+  }
+  /* Its one border is the device's own, dashed; its name, marks and
+     picture grey, so it reads as not there yet (the user, 2026-10-26). */
+  .chain-cell.ghost-cell .cell-control :global(.device-ghost),
+  :global([data-grammar="flat"]) .chain-cell.ghost-cell .cell-control :global(.device-ghost) {
+    border-style: dashed !important;
+    border-color: var(--line-strong) !important;
+    /* Dimmed: half a device's well, so it sits back from the real ones. */
+    background: color-mix(in oklab, var(--surface-well) 50%, transparent) !important;
+  }
+  .chain-cell.ghost-cell .cell-control {
+    filter: grayscale(1);
+    opacity: 0.6;
   }
   .chain-cell.off > :not(.cell-head) {
     opacity: 0.45;
