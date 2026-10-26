@@ -153,6 +153,18 @@ const FX_VIEWS = [
 /** Open Settings from the master strip's gear. */
 const chainDemo = (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, CHAIN_DEMO_DEVICES);
 // Chains of other lengths, for the adaptive layout: the instrument, then effects.
+/** Live's Shifter as the rig dumped it (2026-10-26), in Ring with a drive and a slow LFO. */
+const SHIFTER_PARAMS = [
+	['Device On', 0, 1, 1, 'On'], ['LFO Amt Hz', 0, 1, 0.3, '58.1 Hz'], ['LFO Amt St', 0, 1, 0, '0.00 st'], ['LFO Wave', 0, 9, 1, 'Triangle'],
+	['LFO Sync', 0, 1, 0, 'Off'], ['LFO Freq', 0, 1, 0.46, '0.50 Hz'], ['LFO Synced', 0, 21, 12, '1/4'], ['LFO Stereo Mode', 0, 1, 1, 'Spin'],
+	['LFO Phase', 0, 1, 0.5, '180°'], ['LFO Spin', 0, 1, 0, '0.0 %'], ['LFO Offset', 0, 1, 0, '0.0°'], ['LFO Width', 0, 1, 0, '0.0 %'],
+	['LFO Morph', 0, 1, 0.5, '0.0 %'], ['Pitch Coarse', -24, 24, 7, '7 st'], ['Pitch Fine', 0, 1, 0.5, '0 ct'], ['Pitch Window', 0, 1, 0.59, '80.0 ms'],
+	['Mod Fine', 0, 1, 0.5, '0.00 Hz'], ['FShift Coarse', 0, 1, 0.62, '1.20 kHz'], ['RM Coarse', 0, 1, 0.5, '100 Hz'], ['RM Drive', 0, 1, 1, 'On'],
+	['RM Drive Gain', 0, 1, 0.4, '9.6 dB'], ['MidiPitch Glide', 0, 1, 0, '0.00 ms'], ['Env On', 0, 1, 0, 'Off'], ['Env Attack', 0, 1, 0.2, '6.00 ms'],
+	['Env Release', 0, 1, 0.5, '200 ms'], ['Env Amount Hz', 0, 1, 0.5, '0.00 Hz'], ['Env Amount St', 0, 1, 0.5, '0.00 st'], ['Delay On', 0, 1, 0, 'Off'],
+	['Delay Sync', 0, 1, 1, 'On'], ['Delay Time', 0, 1, 0.35, '250 ms'], ['Delay Synced', 0, 17, 9, '1/4'], ['Delay Feedback', 0, 1, 0, '0.0 %'],
+	['Mode', 0, 2, 2, 'Ring'], ['Tone', 0, 1, 0.75, '9.45 kHz'], ['Wide', 0, 1, 0, 'Off'], ['Dry/Wet', 0, 1, 0.8, '80 %']
+].map(([name, ...rest]) => [name, name, ...rest]);
 /** The rig's effects shelf (catalog.effectsPlace), for states that name its files. */
 const SHELF = '/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Audio-Midi Effects';
 const RECENT_SEED = [['Echo', 'Time'], ['Auto Filter', 'Tone'], ['Hybrid Reverb', 'Time'], ['EQ Eight', 'Tone'], ['Tone Shaper', 'Tone', 'amxd'], ['Utility', 'Utility'], ['Channel EQ', 'Tone'], ['Wah', 'Guitar', 'adg'], ['MidiWheels', 'Midi Effect', 'amxd'], ['Saturator', 'Distortion'], ['Chorus', 'Modulation'], ['Drum Buss', 'Distortion'], ['Glue', 'Dynamics'], ['Redux', 'Distortion'], ['Phaser', 'Modulation'], ['Gate', 'Dynamics'], ['Tremolo', 'Modulation'], ['Compressor', 'Dynamics']];
@@ -279,7 +291,7 @@ export const TOURS = {
 			// A device with no grid tile opens its own view from its chain cell,
 			// drawing its `deviceControls` entry (ADR-479).
 			...[
-				['shifter', { name: 'Shifter', className: 'Shifter', params: [['Device On', 'Device On', 0, 1, 1, ''], ...Array.from({ length: 17 }, (_, i) => [`P${i + 1}`, `P${i + 1}`, 0, 1, 0, '']), ['RM Coarse', 'RM Coarse', 0, 1, 0.5, '100 Hz']] }],
+				['shifter', { name: 'Shifter', className: 'Shifter', params: SHIFTER_PARAMS }],
 				['chance', { name: 'Note Chance', className: 'MxDeviceMidiEffect', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Chance', 'Chance', 0, 100, 60, '60 %']] }],
 				['chorus', { name: 'Chorus-Ensemble', className: 'Chorus2', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Mode', 'Mode', 0, 2, 1, 'Ensemble'], ['Shape', 'Shape', 0, 1, 0, ''], ['Rate', 'Rate', 0, 1, 0.42, '1.20 Hz'], ['Amount', 'Amount', 0, 1, 0.6, '60 %'], ['Feedback', 'Feedback', 0, 1, 0.25, '25 %'], ['FB Invert', 'FB Invert', 0, 1, 0, ''], ['Offset', 'Offset', 0, 1, 0, ''], ['Delay Time', 'Delay Time', 0, 5, 2, ''], ['Delay Taps', 'Delay Taps', 0, 1, 1, ''], ['HP On', 'HP On', 0, 1, 0, ''], ['HP Freq', 'HP Freq', 0, 1, 0.28, ''], ['Width', 'Width', 0, 1, 0.7, '140 %'], ['Warmth', 'Warmth', 0, 1, 0.3, '9.0 %'], ['Output', 'Output', 0, 1, 0.71, ''], ['Dry/Wet', 'Dry/Wet', 0, 1, 0.5, '50 %']] }],
 				['redux', { name: 'Redux', className: 'Redux2', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Sample Rate', 'Sample Rate', 0, 1, 0.62, '9.08 kHz'], ['Jitter', 'Jitter', 0, 1, 0.2, '4.0 %'], ['Bit Depth', 'Bit Depth', 1, 16, 8, '8'], ['Quantizer Shape', 'Quantizer Shape', 0, 1, 0.35, '35 %'], ['DC Shift', 'DC Shift', 0, 1, 0, 'Off'], ['Pre-Filter On', 'Pre-Filter On', 0, 1, 1, 'On'], ['Post-Filter On', 'Post-Filter On', 0, 1, 1, 'On'], ['Post-Filter', 'Post-Filter', 0, 1, 0.5, '0.00'], ['Dry/Wet', 'Dry/Wet', 0, 1, 0.8, '80 %']] }],
