@@ -29,6 +29,7 @@ export type PictureKind =
 	| 'shaper'
 	| 'clip'
 	| 'stompbox'
+	| 'stack'
 	| 'compress'
 	| 'ratio'
 	| 'repeat'
@@ -172,6 +173,21 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0): PictureStro
 				{ d: circle(50, 18, 2.2), o: x > 0.02 ? 0.95 : 0.25, fill: true },
 				{ d: circle(50, 74, 8), o: 0.7 },
 				{ d: 'M36,58H64', o: 0.35 }
+			];
+		}
+		// Bass Amp: a full stack (user, 2026-10-26), a head on two 2 x 2
+		// cabinets, its speakers lit as the macro turns up.
+		case 'stack': {
+			const cone = 0.2 + 0.7 * x;
+			// Two cabinets 38 tall under a 16-tall head, four speakers each.
+			const cabs = [22, 61];
+			const speakers = (top: number) => [9.5, 28.5].flatMap((dy) => [36, 64].map((cx) => [cx, top + dy]));
+			return [
+				{ d: bar(18, 1, 64, 17), o: 0.85 },
+				{ d: [30, 42, 54, 66].map((k) => circle(k, 9.5, 2.4)).join(''), o: 0.8 },
+				...cabs.map((top) => ({ d: bar(18, top, 64, 38), o: 0.85 })),
+				...cabs.map((top) => ({ d: speakers(top).map(([cx, cy]) => circle(cx, cy, 7)).join(''), o: 0.75 })),
+				...cabs.map((top) => ({ d: speakers(top).map(([cx, cy]) => circle(cx, cy, 2.8)).join(''), o: cone, fill: true }))
 			];
 		}
 		// Glue / Compressor: input across, output up; above the threshold the line flattens.

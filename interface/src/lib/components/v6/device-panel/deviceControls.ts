@@ -520,7 +520,8 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	},
 	// Racks the app knows: macro 1, as their tiles and views drive it.
 	guitar: { control: macroSlider('Gtr', 1, 'amp'), fromPreset: macroFromPreset },
-	bass: { control: macroSlider('Bass', 1, 'amp'), fromPreset: macroFromPreset },
+	// The Bass Amp drawn as a full stack (user, 2026-10-26), not the Gtr's amp mark.
+	bass: { control: { ...macroSlider('Bass', 1), picture: 'stack' }, fromPreset: macroFromPreset },
 	wah: { control: macroSlider('Wah', 1, 'wah'), fromPreset: macroFromPreset }
 };
 
