@@ -48,14 +48,23 @@
 	const isWheels = $derived(recent.name === constants.devices.midiWheels.deviceName);
 	// A control with a mark and no picture (the Wah, the amp racks) draws its mark.
 	// By the device's type, so a rack whose file saves no readable macro still has it.
+	const key = $derived(deviceKeyForPreset(saved?.className ?? '', recent.name));
 	const mark = $derived.by(() => {
-		const key = deviceKeyForPreset(saved?.className ?? '', recent.name);
+		// The Utility's cell is its meter: here, its gain mark.
+		if (key === 'utility') return 'gain' as const;
 		const control = key ? DEVICE_CONTROLS[key]?.control : undefined;
 		return control && control.kind !== 'eq' && !control.picture ? (control.icon ?? null) : null;
+	});
+	/** Devices drawn generically, having no picture of their own (the user, 2026-10-26). */
+	const generic = $derived.by(() => {
+		if (key === 'reverb') return 'tail' as const;
+		if (saved?.className === 'Eq8' || recent.name === 'Tone Shaper') return 'eqcurve' as const;
+		return null;
 	});
 
 	const picture = $derived.by(() => {
 		if (isWheels) return { kind: 'wheels' as const, x: 0, y: 0 };
+		if (generic) return { kind: generic, x: 0, y: 0 };
 		const found = presetControl(saved, recent.name);
 		// An EQ (the tone pad) draws a generic EQ curve (the user, 2026-10-26).
 		if (found?.control.kind === 'eq') return { kind: 'eqcurve' as const, x: 0, y: 0 };

@@ -32,7 +32,7 @@ describe('device pictures follow their control', () => {
 	});
 
 	it('every kind draws, at every corner, and holds still for the same values', () => {
-		const kinds: PictureKind[] = ['rings', 'waves', 'tremolo', 'drum', 'gate', 'comb', 'notches', 'stairs', 'shaper', 'clip', 'stompbox', 'eqcurve', 'wheels', 'stack', 'compress', 'ratio', 'repeat', 'scatter', 'smear', 'glitch', 'octaves', 'reverse', 'ringmod', 'chance', 'velocity', 'arp', 'chord'];
+		const kinds: PictureKind[] = ['rings', 'waves', 'tremolo', 'drum', 'gate', 'comb', 'notches', 'stairs', 'shaper', 'clip', 'stompbox', 'eqcurve', 'wheels', 'tail', 'stack', 'compress', 'ratio', 'repeat', 'scatter', 'smear', 'glitch', 'octaves', 'reverse', 'ringmod', 'chance', 'velocity', 'arp', 'chord'];
 		for (const k of kinds)
 			for (const [x, y] of [[0, 0], [1, 1], [0.5, 0.5]]) {
 				const strokes = pictureStrokes(k, x, y);

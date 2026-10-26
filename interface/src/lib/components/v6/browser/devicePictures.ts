@@ -31,6 +31,7 @@ export type PictureKind =
 	| 'stompbox'
 	| 'eqcurve'
 	| 'wheels'
+	| 'tail'
 	| 'stack'
 	| 'compress'
 	| 'ratio'
@@ -163,6 +164,13 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0): PictureStro
 			const ceiling = 1 - x * 0.75;
 			return [{ d: trace((u) => 50 - (38 * Math.max(-ceiling, Math.min(ceiling, Math.sin(2 * Math.PI * u * 2)))) / ceiling, 160), o: 0.85 }];
 		}
+		// A reverb, generic (the Recent column's Hybrid Reverb, the user,
+		// 2026-10-26): a hit and its tail dying away.
+		case 'tail':
+			return [
+				{ d: 'M0,50H100', o: 0.2 },
+				{ d: trace((u) => 50 - 42 * Math.exp(-u * 3.2) * Math.sin(2 * Math.PI * u * 14 + 0.6) * (0.65 + 0.35 * Math.sin(u * 37)), 240), o: 0.85 }
+			];
 		// MidiWheels: its two wheels side by side, pitch centred, mod at rest
 		// (the user, 2026-10-26).
 		case 'wheels':
