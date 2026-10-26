@@ -2,7 +2,7 @@
 	/**
 	 * A live face on a browser preset tile (2026-10-25, ADR-478): the preset's
 	 * own control — the XY, slider or tone pad its FX-grid tile is — at the
-	 * values its file saves, drawn behind the tile's name (`presetFaces`). A
+	 * values its file saves, drawn behind the tile's name (`deviceControls`, ADR-479). A
 	 * tap loads the preset as it is; a drag loads it AND sets the values the
 	 * finger chooses, as a ghost grid tile does, applied to the device this
 	 * load lands (`services/presetDragLoad`).
@@ -11,11 +11,10 @@
 	 * (`services/presetParams`); until then, or for a class with no face,
 	 * nothing is drawn and the tile is the plain button it always was.
 	 */
-	import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
-	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
-	import ToneCurvePad from '$lib/components/v6/device-panel/ToneCurvePad.svelte';
+	import FaceControl from './FaceControl.svelte';
 	import { presetParams, type PresetParams } from '$lib/services/presetParams';
-	import { presetFace, type LomValues } from './presetFaces';
+	import { presetControl, resolveParam, DEVICE_CONTROLS, type ParamRef, type Writes } from '$lib/components/v6/device-panel/deviceControls';
+	import { DEVICE_PRESETS } from '$lib/config/devicePresets';
 	import { schemeFromInk } from '$lib/config/devicePresets';
 	import type { Preset } from '$lib/services/adapters/browserAdapter';
 	import type { PresetDrag } from '$lib/services/presetDragLoad.svelte';
@@ -27,7 +26,7 @@
 		/** A tap: load the preset as saved. */
 		onTap: () => void;
 		/** The first move of a drag: start the load, with the class it arrives as. */
-		beginDrag: (className: string, values: LomValues) => PresetDrag | null;
+		beginDrag: (className: string, values: Writes) => PresetDrag | null;
 		/** The drag ended. */
 		afterDrag?: () => void;
 		/** Told whether a face is drawn, so the tile can hand it the gesture. */
@@ -45,7 +44,7 @@
 		const el = host;
 		const path = preset.fullPath;
 		saved = null;
-		if (!el || !/\.ad[vg]$/i.test(path ?? '')) return;
+		if (!el || !/\.(adv|adg|amxd)$/i.test(path ?? '')) return;
 		let cancelled = false;
 		const load = () => presetParams(path).then((p) => !cancelled && (saved = p));
 		if (typeof IntersectionObserver === 'undefined') {
@@ -68,22 +67,32 @@
 		};
 	});
 
-	const found = $derived(presetFace(saved));
+	const found = $derived(presetControl(saved, preset.name));
 	$effect(() => {
 		onFaced?.(found !== null);
 	});
 	const color = $derived(schemeFromInk(ink));
+	/** The class the device arrives as: the file's, or for an `.amxd` the device type's. */
+	const arrivesAs = $derived.by(() => {
+		if (saved?.className) return saved.className;
+		const key = Object.keys(DEVICE_CONTROLS).find((k) => DEVICE_PRESETS[k]?.defaultName === preset.name);
+		return key ? (DEVICE_PRESETS[key].expectedClassName ?? '') : '';
+	});
 
-	// The values the face shows: the preset's, then the finger's while it drags.
-	let dragged = $state<LomValues | null>(null);
-	const shown = $derived(found ? { ...found.values, ...(dragged ?? {}) } : {});
+	// The values the control shows: the preset's, then the finger's while it drags.
+	let dragged = $state<Map<string, [ParamRef, number]>>(new Map());
+	const refKey = (ref: ParamRef) => (typeof ref === 'number' ? String(ref) : ref.name);
+	const get = (ref: ParamRef) => dragged.get(refKey(ref))?.[1] ?? found?.values[resolveParam(ref)];
 
 	let drag: PresetDrag | null = null;
-	function move(writes: LomValues) {
-		if (!found || !saved) return;
-		dragged = { ...(dragged ?? {}), ...writes };
-		if (!drag) drag = beginDrag(saved.className, dragged);
-		drag?.update(dragged);
+	function move(writes: Writes) {
+		if (!found) return;
+		const next = new Map(dragged);
+		for (const [ref, value] of writes) next.set(refKey(ref), [ref, value]);
+		dragged = next;
+		const all = [...next.values()];
+		if (!drag) drag = beginDrag(arrivesAs, all);
+		drag?.update(all);
 	}
 	function release() {
 		if (!drag) return;
@@ -94,7 +103,7 @@
 	// The tile is the preset again once a drag has been handed off.
 	$effect(() => {
 		void preset.fullPath;
-		dragged = null;
+		dragged = new Map();
 	});
 </script>
 
@@ -109,47 +118,7 @@
 	onpointercancel={release}
 >
 	{#if found}
-		{@const face = found.face}
-		{#if face.kind === 'xy'}
-			{@const at = face.read(shown)}
-			<DeviceXY
-				xValue={at.x}
-				yValue={at.y}
-				showCurve={face.curve !== undefined}
-				curveType={face.curve?.(shown)}
-				{color}
-				{onTap}
-				onInteraction={(x, y) => move(face.write(x, y, shown))}
-			/>
-		{:else if face.kind === 'slider'}
-			<!-- The tile's name is the label; the fill stays soft so it reads over it. -->
-			<div class="slider-face">
-			<DeviceSlider
-				value={face.read(shown)}
-				title=""
-				orientation="vertical"
-				labelOrientation="horizontal"
-				labelSize="small"
-				{color}
-				{onTap}
-				onInteraction={(t) => move(face.write(t, shown))}
-			/>
-			</div>
-		{:else}
-			{@const eq = face.read(shown)}
-			<ToneCurvePad
-				title=""
-				low={eq.low}
-				mid={eq.mid}
-				midFreq={eq.midFreq}
-				high={eq.high}
-				{color}
-				{onTap}
-				onLow={(v) => move({ 2: v })}
-				onMid={(f, g) => move({ 4: f, 3: g })}
-				onHigh={(v) => move({ 5: v })}
-			/>
-		{/if}
+		<FaceControl control={found.control} {get} {color} {onTap} onMove={move} titled={false} soft />
 	{/if}
 </div>
 
@@ -168,13 +137,5 @@
 		flex: 1 1 auto;
 		min-width: 0;
 		min-height: 0;
-	}
-	.slider-face {
-		display: flex;
-		opacity: 0.5;
-	}
-	.slider-face > :global(*) {
-		flex: 1 1 auto;
-		min-width: 0;
 	}
 </style>

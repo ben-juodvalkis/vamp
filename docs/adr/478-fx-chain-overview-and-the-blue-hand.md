@@ -81,6 +81,8 @@ browser on Effect, on the Mac's effects Place (`catalog.effectsPlace`), a
 Place cataloged for this whether or not it is ticked and kept off the rail
 unless it is. The grid/chain switch is one button over the
 section's top-left corner, where it no longer takes the Glue tile's taps.
+Since 2026-10-26 the chain overview is the face the FX section opens on;
+the grid is the one behind the switch.
 
 **An effect preset tile is the preset's own control.** In the browser a
 preset of any class a grid tile drives (and any effect rack, by its first
@@ -105,6 +107,22 @@ browser draws it as Audio Effects and MIDI Effects by each item's kind and
 leaves the plumbing out (`catalog.effectsHidden`); the files stay one folder
 per device at the top, because 886 saved sets point at them by absolute
 path (Permute 2,896 times), and moving them would break those sets.
+
+**Every device type has a central view of its own** (2026-10-26). The
+chain opens a cell by its `DEVICE_PRESETS` key, so the views that drew
+several devices are split, each control moved to the view of the device it
+drives: the Pedal view into Pedal, Guitar rack, Wah, Shifter, Saturator and
+Redux (its Drum button went; the chain is every device's door); the dynamics
+view into Glue, Gate, Multiband, Compressor and Utility (which drew no
+Utility control at all); the Chorus view into Chorus, Blur, Comb and Phaser
+(the Auto Pan view keeps Auto Pan only); Glitch into GlitchLoop and Reverse
+(Pitch Hack); EQ into Channel EQ and Tone Shaper; the Arpeggiator into
+Arpeggiator, Velocity, Chord, Chance and Random. A grid tile opens its own
+device's view, so on the grid face the devices with no tile (Shifter, Redux,
+Wah, Gate, Multiband, Compressor, Blur, Comb, Phaser, Pitch Hack, Tone
+Shaper, Velocity, Chord, Chance) are reached from the chain only. The Wah
+view is not gated on the expression-pedal switch: the chain opens it only on
+a Wah the track holds.
 
 ## Consequences
 - A renamed native device lights its tile, and the tile no longer loads a

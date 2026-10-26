@@ -127,19 +127,21 @@ const openPermute = (index) => ({ click: `[data-track-index="${index}"] [data-se
 // here on 2026-09-15, when that slider left the grid with the ten-column
 // cut — the band is the instrument view's door now.
 const openInstrument = (index) => ({ click: `[data-track-index="${index}"] [data-section="device"]` });
-const openTile = (label) => ({ click: `.device-control:has-text("${label}")` });
+// The FX section opens on the chain overview; a grid tile is behind the switch.
+const SHOW_GRID = { click: '[data-fx-mode="grid"]' };
+const openTile = (label) => [SHOW_GRID, { click: `.device-control:has-text("${label}")` }];
 
 const FX_TILES = [
-	['Rand Oct', 'random', 'Arpeggiator view (the Rand Oct tile)'],
+	['Rand Oct', 'random', 'Random view (the Rand Oct tile)'],
 	['EQ', 'eq', 'EQ Eight'],
 	['Filter', 'filter', 'Auto Filter'],
-	['Drive', 'pedal', 'Drive tile (the Saturator) → the Pedal view\'s effects part: Shifter | Color · Output · Mix | Redux'],
-	['Gtr', 'guitar', 'Gtr tile → the Guitar view: Pedal, Wah, the Guitar rack'],
+	['Drive', 'pedal', 'Drive tile → the Saturator view: Color · Output · Mix'],
+	['Gtr', 'guitar', 'Gtr tile → the Guitar rack view: Gain, Spring/Room, Tremolo'],
 	['Drum', 'drum-buss', 'Drum Buss'],
-	['Glue', 'squash', 'Glue (the Squash slot), Gate, Multiband + Compressor'],
-	['Glitch', 'glitch', 'Glitch: GlitchLoop + Reverse (the GlitchLoop slot)'],
+	['Glue', 'squash', 'Glue (the Squash slot): Threshold over Output'],
+	['Glitch', 'glitch', 'Glitch: GlitchLoop (the GlitchLoop slot)'],
 	['Stutter', 'variation', 'Variation (Beat Repeat), the Stutter tile: Interval, Grid, Length, Pitch Decay, Mode'],
-	['Tremolo', 'tremolo', 'Auto Pan Legacy (the Tremolo tile) + the Chorus family on a drum track'],
+	['Tremolo', 'tremolo', 'Auto Pan Legacy (the Tremolo tile)'],
 	['Echo', 'echo', 'Echo'],
 	['Reverb', 'reverb', 'Reverb']
 ];
@@ -161,89 +163,95 @@ export const TOURS = {
 		states: [
 			{
 				name: 'grid',
-				description: 'Lead selected, the FX grid: the Filter tile wears 1/2 (two Auto Filters on the track)',
+				description: 'Lead selected, the switch flipped to the FX grid: the Filter tile wears 1/2 (two Auto Filters on the track)',
 				scenePatch: chainDemo,
-				steps: [openInstrument(CHAIN_DEMO_TRACK)]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), SHOW_GRID]
 			},
 			{
 				name: 'chain',
-				description: 'The switch flipped: the chain in order, each device its tile chip',
+				description: 'The FX section as it opens: the chain in order, each device its tile chip',
 				scenePatch: chainDemo,
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK)]
 			},
 			...[2, 4, 5, 8].map((n) => ({
 				name: `chain-len-${n}`,
 				description: `A chain of ${n} devices: one row up to five, then two rows split evenly, the + cell always last`,
 				scenePatch: chainOf(n),
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK)]
 			})),
 			{
 				name: 'chain-wheels',
 				description: 'MidiWheels ahead of the instrument: its cell carries the pitch and mod wheels',
 				scenePatch: (scene) =>
 					setTrackDevices(scene, CHAIN_DEMO_TRACK, [{ name: 'MidiWheels', className: 'MxDeviceMidiEffect' }, CHAIN_DEMO_DEVICES[0], 'Auto Filter', 'Echo']),
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK)]
 			},
 			{
 				name: 'chain-wheels-two-rows',
 				description: 'MidiWheels on a two-row chain: the wheels side by side in its half-height cell',
 				scenePatch: (scene) =>
 					setTrackDevices(scene, CHAIN_DEMO_TRACK, [{ name: 'MidiWheels', className: 'MxDeviceMidiEffect' }, ...CHAIN_DEMO_DEVICES.slice(0, 6)]),
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK)]
 			},
 			{
 				name: 'chain-faces',
 				description: 'Omnisphere with its ORB, Permute with its mute and pitch steps, then two effects',
 				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [OMNISPHERE_STANDIN, CHAIN_DEMO_DEVICES[1], 'Auto Filter', 'Echo']),
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK)]
 			},
 			{
 				name: 'chain-drift',
 				description: 'Drift with its filter XY, then Permute and an Echo',
 				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [{ name: 'Drift', params: driftParams() }, CHAIN_DEMO_DEVICES[1], 'Echo']),
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK)]
 			},
 			{
 				name: 'chain-filter-2',
 				description: 'Tapped the second Auto Filter: appointed, the Filter view on it, the Filter chip moved to it',
 				scenePatch: chainDemo,
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { click: chainCell(3) }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: chainCell(3) }]
 			},
 			{
 				name: 'grid-after-pick',
 				description: 'Back to the grid after that pick: the Filter tile wears 2/2',
 				scenePatch: chainDemo,
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { click: chainCell(3) }, { click: '[data-fx-mode="grid"]' }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: chainCell(3) }, { click: '[data-fx-mode="grid"]' }]
 			},
 			{
 				name: 'chain-rack',
 				description: 'Tapped the Dub Space rack: its macros in the central view',
 				scenePatch: chainDemo,
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { click: chainCell(5) }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: chainCell(5) }]
 			},
 			{
 				name: 'chain-power',
 				description: 'Tapped the Echo cell\'s power button: Echo off (dimmed, the button unlit); Grit was off already',
 				scenePatch: chainDemo,
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { click: `${chainCell(4)} .power` }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(4)} .power` }]
 			},
 			{
 				name: 'chain-dragging',
 				description: 'Reverb mid-drag, still held: it rides the finger, Echo has slid right, the dashed gap is where it lands',
 				scenePatch: chainDemo,
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { drag: chainCell(6), by: [-190, 20], keep: true }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { drag: `${chainCell(6)} .cell-head .name`, by: [-190, 20], keep: true }]
 			},
 			{
 				name: 'chain-xy',
 				description: 'Dragged the Wobble cell\'s Filter XY down and a whole cell left: its curve and dot move, the other Auto Filter stays, the chain keeps its order and the hand moves to Wobble',
 				scenePatch: chainDemo,
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { drag: `${chainCell(2)} .cell-control`, by: [-170, 80] }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { drag: `${chainCell(2)} .cell-control`, by: [-170, 80] }]
+			},
+			{
+				name: 'chain-steps-drag',
+				description: 'Dragged across Permute\'s steps in its cell: the Permute view opens, as a tap on the cell opens it',
+				scenePatch: chainDemo,
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { drag: `${chainCell(1)} .cell-control`, by: [60, 0] }]
 			},
 			{
 				name: 'chain-moved',
 				description: 'Dragged Reverb two cells left: it now sits ahead of Echo',
 				scenePatch: chainDemo,
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { drag: chainCell(6), by: [-190, 0] }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { drag: `${chainCell(6)} .cell-head .name`, by: [-190, 0] }]
 			},
 			{
 				name: 'chain-drum',
@@ -253,33 +261,54 @@ export const TOURS = {
 			{
 				name: 'chain-pad',
 				description: 'Jazz, pad 38 latched in the Drum Rack view: the chain is that pad\'s (its Simpler, Reverb, Permute; the blue hand on the Simpler), in the pad\'s frame and chip',
-				steps: [openInstrument(8), { click: '.pad-tile[data-note="38"]' }, { click: '[data-fx-mode="chain"]' }]
+				steps: [openInstrument(8), { click: '.pad-tile[data-note="38"]' }]
 			},
+			{
+				name: 'chain-pedal-gate',
+				description: 'A Pedal and a Gate on the chain: no grid tile, so the Pedal cell is the face its browser tiles draw (Drive at 0.6) and the Gate cell the Glue view\'s Gate XY',
+				scenePatch: (scene) =>
+					setTrackDevices(scene, CHAIN_DEMO_TRACK, [
+						CHAIN_DEMO_DEVICES[0],
+						{ name: 'Pedal', className: 'Pedal', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Type', 'Type', 0, 2, 0, ''], ['Drive', 'Drive', 0, 1, 0.6, ''], ['Output', 'Output', -20, 20, 0, ''], ['Bass', 'Bass', -1, 1, 0, ''], ['Mid', 'Mid', -1, 1, 0, ''], ['Treble', 'Treble', -1, 1, 0, ''], ['Mid Freq', 'Mid Freq', 0, 2, 1, ''], ['Sub', 'Sub', 0, 1, 0, ''], ['Dry/Wet', 'Dry/Wet', 0, 1, 1, '']] },
+						{ name: 'Gate', className: 'Gate', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Threshold', 'Threshold', 0, 1, 0.55, ''], ['Attack', 'Attack', 0.02, 150, 3.5, ''], ['Hold', 'Hold', 0, 1, 0.31, ''], ['Release', 'Release', 0, 1, 0.35, '']] },
+						'Echo'
+					]),
+				steps: [openInstrument(CHAIN_DEMO_TRACK)]
+			},
+			// A device with no grid tile opens its own view from its chain cell,
+			// drawing its `deviceControls` entry (ADR-479).
+			...[
+				['shifter', { name: 'Shifter', className: 'Shifter', params: [['Device On', 'Device On', 0, 1, 1, ''], ...Array.from({ length: 17 }, (_, i) => [`P${i + 1}`, `P${i + 1}`, 0, 1, 0, '']), ['RM Coarse', 'RM Coarse', 0, 1, 0.5, '100 Hz']] }],
+				['chance', { name: 'Note Chance', className: 'MxDeviceMidiEffect', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Chance', 'Chance', 0, 100, 60, '60 %']] }],
+				['multiband', { name: 'Multiband Dynamics', className: 'MultibandDynamics', params: Array.from({ length: 28 }, (_, i) => i === 0 ? ['Device On', 'Device On', 0, 1, 1, ''] : i === 5 ? ['Output', 'Output', -24, 24, 0, '0.00 dB'] : i === 21 ? ['Below Threshold (Mid)', 'Below Threshold (Mid)', -80, 0, -27.125, '-27.1 dB'] : i === 27 ? ['Below Ratio (Mid)', 'Below Ratio (Mid)', -3, 1, 0.4, '1 : 1.67'] : [`P${i}`, `P${i}`, 0, 1, 0, '']) }]
+			].map(([key, device]) => ({
+				name: `chain-view-${key}`,
+				description: `Tapped the ${device.name} cell: its own view, the control its browser tiles and chain cell draw`,
+				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], device]),
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(1)} .cell-head .name` }, { wait: 500 }]
+			})),
 			{
 				name: 'chain-add',
 				description: 'Tapped the + cell at the end of the chain: the browser opens on its Effect segment, on a Place that has effect presets',
 				scenePatch: chainDemo,
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { click: '[data-debug="chain-add"]' }, { wait: 800 }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-debug="chain-add"]' }, { wait: 800 }]
 			},
-			// The effects Place, Vamp Devices, as the browser groups it (needs --real-data).
-			...['Audio Effects', 'MIDI Effects'].map((group) => ({
-				name: `browser-${group.toLowerCase().replace(/[^a-z]+/g, '-')}`,
-				description: `The + Effect browser on Vamp Devices › ${group}: the devices filed by kind, a rack's tile its first macro at the saved value`,
+			// The effects Place as it is on disk (needs --real-data), from a MIDI
+			// track and from an audio track, where its MIDI effects are greyed.
+			...[
+				['browser-effects', 'a MIDI track: every effect live, MIDI effects included', openInstrument(CHAIN_DEMO_TRACK)],
+				['browser-effects-on-audio', 'an audio track (Guitar): the MIDI effects greyed, "MIDI tracks only"', selectTrack(3)]
+			].map(([name, from, select]) => ({
+				name,
+				description: `The + Effect browser from ${from}; each tile its device's control at its saved values`,
 				scenePatch: chainDemo,
-				steps: [
-					openInstrument(CHAIN_DEMO_TRACK),
-					{ click: '[data-fx-mode="chain"]' },
-					{ click: '[data-debug="chain-add"]' },
-					{ wait: 1500 },
-					{ click: `.folder-tile:has-text("${group}")` },
-					{ wait: 1500 }
-				]
+				steps: [select, { click: '[data-debug="chain-add"]' }, { wait: 2500 }]
 			})),
 			{
 				name: 'chain-plugin',
 				description: 'Tapped the plug-in: the generic view, one slider per parameter',
 				scenePatch: chainDemo,
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: '[data-fx-mode="chain"]' }, { click: chainCell(8) }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: chainCell(8) }]
 			}
 		]
 	},
@@ -349,22 +378,22 @@ export const TOURS = {
 			{ name: 'system', description: 'Master track — the System view: Transport, Follow Key, Sections', steps: [{ click: '[data-debug="master-card"]' }] },
 			{
 				name: 'fx-pedal-general',
-				description: 'Guitar view, expression pedal switched off — no Wah',
+				description: 'Guitar rack view, expression pedal switched off (no Wah in it either way since 2026-10-26)',
 				features: { expressionPedal: { enabled: false, available: false, reason: '' } },
-				steps: [openTile('Gtr')]
+				steps: [...openTile('Gtr')]
 			},
-			// The Gtr tile opens the Guitar view (ADR-466): Pedal, Wah and the
-			// Guitar rack. On the Guitar track (an audio track) the rack is
-			// loaded; its Gain is the Gtr tile itself, so the view leaves it out.
+			// The Gtr tile opens the Guitar rack's view (one device per view
+			// since 2026-10-26). On the Guitar track (an audio track) the rack
+			// is loaded.
 			{
 				name: 'fx-guitar-loaded',
 				description: 'Guitar view on the Guitar track: the Guitar rack live — Spring, Tremolo pad, Room',
-				steps: [selectTrack(3), openTile('Gtr')]
+				steps: [selectTrack(3), ...openTile('Gtr')]
 			},
 			...FX_TILES.map(([label, name, description]) => ({
 				name: `fx-${name}`,
 				description,
-				steps: [openTile(label)]
+				steps: [...openTile(label)]
 			})),
 			// The Hybrid Reverb on Pad (track 5): the rig's full parameter vector
 			// (a Quartz), one state per algorithm the picker's tap leaves it on,
@@ -382,7 +411,7 @@ export const TOURS = {
 			].map(([algo, what, drags]) => ({
 				name: `fx-reverb-${algo.toLowerCase()}`,
 				description: `Reverb, ${algo}. ${what}`,
-				steps: [selectTrack(5), openTile('Reverb'), { click: `[data-reverb-type="${algo}"]` }, ...drags]
+				steps: [selectTrack(5), ...openTile('Reverb'), { click: `[data-reverb-type="${algo}"]` }, ...drags]
 			})),
 			// The EQ tab (2026-10-02): the rig's own EQ — Lo Cut at 121 Hz, 18 dB,
 			// Hi Shelf at 5 kHz — then shaped by dragging the handles, as a finger
@@ -390,14 +419,14 @@ export const TOURS = {
 			{
 				name: 'fx-reverb-eq',
 				description: 'Reverb, EQ tab: the rig’s EQ — Lo Cut 121 Hz 18 dB, the peaks flat, Hi Shelf 5 kHz',
-				steps: [selectTrack(5), openTile('Reverb'), { click: '[data-reverb-type="Hall"]' }, { click: '[data-reverb-tab="eq"]' }]
+				steps: [selectTrack(5), ...openTile('Reverb'), { click: '[data-reverb-type="Hall"]' }, { click: '[data-reverb-tab="eq"]' }]
 			},
 			{
 				name: 'fx-reverb-eq-shaped',
 				description: 'Reverb, EQ tab: Peak 1 dragged up, Peak 2 down and higher, the Hi end switched to Cut',
 				steps: [
 					selectTrack(5),
-					openTile('Reverb'),
+					...openTile('Reverb'),
 					{ click: '[data-reverb-type="Hall"]' },
 					{ click: '[data-reverb-tab="eq"]' },
 					{ drag: '[data-eq-band="peak1"]', by: [-20, -45] },
@@ -411,19 +440,19 @@ export const TOURS = {
 			{
 				name: 'fx-reverb-ir-spring',
 				description: 'Reverb, Spring: Live’s “Awesome Stereo Spring” IR, unshaped',
-				steps: [selectTrack(5), openTile('Reverb'), { click: '[data-reverb-type="Spring"]' }]
+				steps: [selectTrack(5), ...openTile('Reverb'), { click: '[data-reverb-type="Spring"]' }]
 			},
 			{
 				name: 'fx-reverb-ir-plate',
 				description: 'Reverb, Plate: Live’s “Classic Plate 1” IR',
-				steps: [selectTrack(5), openTile('Reverb'), { click: '[data-reverb-type="Plate"]' }]
+				steps: [selectTrack(5), ...openTile('Reverb'), { click: '[data-reverb-type="Plate"]' }]
 			},
 			{
 				name: 'fx-reverb-ir-shaped',
 				description: 'Reverb, Spring, Attack up and Decay down: Attack fades it in, Decay cuts the tail',
 				steps: [
 					selectTrack(5),
-					openTile('Reverb'),
+					...openTile('Reverb'),
 					{ click: '[data-reverb-type="Spring"]' },
 					{ drag: '[data-reverb-own] [role="slider"][aria-label^="Attack"]', by: [0, -40] },
 					{ drag: '[data-reverb-own] [role="slider"][aria-label^="Decay"]', by: [0, 160] }
@@ -434,7 +463,7 @@ export const TOURS = {
 				description: 'Reverb, Short (an early-reflections IR) shaped: its boxes fitted to a short IR',
 				steps: [
 					selectTrack(5),
-					openTile('Reverb'),
+					...openTile('Reverb'),
 					{ click: '[data-reverb-type="Short"]' },
 					{ drag: '[data-reverb-own] [role="slider"][aria-label^="Attack"]', by: [0, -53] },
 					{ drag: '[data-reverb-own] [role="slider"][aria-label^="Decay"]', by: [0, 100] }
@@ -445,7 +474,7 @@ export const TOURS = {
 				description: 'Reverb, Spring with Size dragged up: the IR stretched over a longer axis',
 				steps: [
 					selectTrack(5),
-					openTile('Reverb'),
+					...openTile('Reverb'),
 					{ click: '[data-reverb-type="Spring"]' },
 					{ drag: '[data-reverb-own] [role="slider"][aria-label^="Size"]', by: [0, -73] }
 				]
@@ -453,12 +482,12 @@ export const TOURS = {
 			{
 				name: 'fx-reverb-ir-eq',
 				description: 'Reverb, Spring on its EQ tab: the same editor and EQ rows as an algorithm’s',
-				steps: [selectTrack(5), openTile('Reverb'), { click: '[data-reverb-type="Spring"]' }, { click: '[data-reverb-tab="eq"]' }]
+				steps: [selectTrack(5), ...openTile('Reverb'), { click: '[data-reverb-type="Spring"]' }, { click: '[data-reverb-tab="eq"]' }]
 			},
 			{
 				name: 'fx-reverb-frozen',
 				description: 'Reverb, Hall with Freeze on: every band holds to the edge',
-				steps: [selectTrack(5), openTile('Reverb'), { click: '[data-reverb-type="Hall"]' }, { click: '[data-reverb-switch="8"]' }]
+				steps: [selectTrack(5), ...openTile('Reverb'), { click: '[data-reverb-type="Hall"]' }, { click: '[data-reverb-switch="8"]' }]
 			},
 			{ name: 'drumrack-drumcell', description: 'Drum Rack, DrumCell kit (Drums)', steps: [openInstrument(0)] },
 			// A tap latches a pad: the controls are its, and under them the

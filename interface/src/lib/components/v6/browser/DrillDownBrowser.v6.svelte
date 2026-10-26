@@ -51,6 +51,7 @@
 		groupCounts,
 		groupOfKind,
 		isSampleLike,
+		MIDI_EFFECT_KINDS,
 		loadsAsInstrument,
 		type KindGroup
 	} from '$lib/utils/placeKinds';
@@ -71,7 +72,9 @@
 	import ControlGlyph from '../device-panel/ControlGlyph.svelte';
 	import BrowserPresetFace from './BrowserPresetFace.svelte';
 	import { startPresetDrag, type PresetDrag } from '$lib/services/presetDragLoad.svelte';
+	import type { Writes } from '$lib/components/v6/device-panel/deviceControls';
 	import { SvelteSet } from 'svelte/reactivity';
+	import { sectionInks } from './utils/sectionInks';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 	import { press, type PressOptions, type PressReleaseInfo } from '$lib/actions';
@@ -316,6 +319,21 @@
 	);
 	const useGroupedPresets = $derived(presetGroups.length > 1);
 
+	// The effects Place is color-coded by folder (user, 2026-10-26): each
+	// section, its header and its tiles wear the device family its folder's
+	// name says (`sectionInks`). Every other Place keeps its own color.
+	const sectionInkOf = $derived.by(() => {
+		const onEffects = !!effectsVendor && browserNavigationStore.currentVendorId === effectsVendor.vendorId;
+		if (!onEffects || !useGroupedPresets) return null;
+		return sectionInks(presetGroups.flatMap((g) => (g.folder ? [g.folder] : [])));
+	});
+	const presetInkOf = $derived.by(() => {
+		const inks = sectionInkOf;
+		if (!inks) return null;
+		return new Map(presetGroups.flatMap((g) => (g.folder ? g.presets.map((p) => [p.path, inks.get(g.folder!.toLowerCase())] as const) : [])));
+	});
+	const inkFor = (p: Preset) => presetInkOf?.get(p.path) || p.vendorColor || activeColor;
+
 	// Coalesce small sections onto shared rows so a 1–2 tile section doesn't strand
 	// a whole line (ADR-403 revised). Packing uses the solver's chosen column count
 	// (below) and never changes tile geometry — a packed band is exactly one tile
@@ -375,6 +393,9 @@
 				height,
 				groups: presetGroups.map((g) => g.presets.length),
 				headerCount: presetGroups.filter((g) => g.folder !== null).length,
+				// Counted as drawn: small sections share rows (ADR-409), so the
+				// tiles grow into the height the packing frees.
+				headers: presetGroups.map((g) => g.folder !== null),
 				headerHeight: SECTION_HEADER_H,
 				sectionGap: SECTION_GAP,
 				...PRESET_COMFORT
@@ -908,6 +929,11 @@
 			reportLoadFailure(preset.name, new Error('No track selected'));
 			return;
 		}
+		// A random pick can land on a MIDI effect the tile would have refused.
+		if (MIDI_EFFECT_KINDS.has(preset.kind ?? 'unknown') && selectedTrackStore.trackType !== 'midi') {
+			reportLoadFailure(preset.name, new Error('A MIDI effect goes on a MIDI track'));
+			return;
+		}
 		try {
 			await addPresetToChain(trackPath, pad?.padPath ?? '', preset.fullPath, ...placeArgs(preset));
 		} catch (err) {
@@ -921,7 +947,7 @@
 	 * finger's values, onto the chain `addEffect` would pick — the selected
 	 * track's, or the scoped pad's.
 	 */
-	function beginEffectDrag(preset: Preset, className: string, values: Record<number, number>): PresetDrag | null {
+	function beginEffectDrag(preset: Preset, className: string, values: Writes): PresetDrag | null {
 		const trackPath = selectedTrackStore.selectedTrackPath;
 		if (!trackPath) {
 			reportLoadFailure(preset.name, new Error('No track selected'));
@@ -941,8 +967,8 @@
 			values
 		});
 	}
-	/** The kinds whose tiles may draw a live face (`presetFaces`): effects and effect racks. */
-	const FACE_KINDS = new Set(['audio-effect', 'midi-effect', 'effect-rack', 'midi-effect-rack']);
+	/** The kinds whose tiles may draw a live face (`deviceControls`): effects and effect racks. */
+	const FACE_KINDS = new Set(['audio-effect', 'midi-effect', 'effect-rack', 'midi-effect-rack', 'max-audio-effect', 'max-midi-effect']);
 	/** Effect tiles drawing a live face: they hand the face the gesture. */
 	const facedTiles = new SvelteSet<string>();
 
@@ -1695,29 +1721,33 @@
      carries neither field. -->
 {#snippet presetTile(p: Preset)}
 	{@const notInstalled = p.installed === false}
+	<!-- A MIDI effect goes only on a MIDI track (user, 2026-10-26): on an
+	     audio track, a group or Main it is greyed like a missing plug-in. -->
+	{@const midiOnly = MIDI_EFFECT_KINDS.has(p.kind ?? 'unknown') && selectedTrackStore.trackType !== 'midi'}
+	{@const inactive = notInstalled || midiOnly}
 	<!-- The line under the name: the plug-in, else why a greyed tile is greyed —
 	     on its face, since the iPad shows no tooltips. -->
-	{@const subLabel = notInstalled ? 'Not installed' : (p.plugin ?? null)}
+	{@const subLabel = notInstalled ? 'Not installed' : midiOnly ? 'MIDI tracks only' : (p.plugin ?? null)}
 	<button
 		class="card preset-tile"
 		class:faced={facedTiles.has(p.path)}
 		class:loaded={(shownChargingPresetPath ?? browserNavigationStore.loadedPresetPath) === p.path}
-		class:unavailable={notInstalled}
+		class:unavailable={inactive}
 		class:has-plugin={!!subLabel}
-		style="--k: {p.vendorColor || activeColor};"
-		disabled={notInstalled}
-		title={notInstalled ? `${p.plugin ?? 'This plug-in'} is not installed` : undefined}
+		style="--k: {inkFor(p)};"
+		disabled={inactive}
+		title={notInstalled ? `${p.plugin ?? 'This plug-in'} is not installed` : midiOnly ? 'A MIDI effect goes on a MIDI track' : undefined}
 		onclick={() => loadPreset(p)}
 	>
 		{#if audioWaveformsEnabled && isAudioThumbnailType(p.type)}
 			<BrowserPresetWaveform preset={p} />
 		{/if}
-		{#if FACE_KINDS.has(p.kind ?? '') && !notInstalled}
+		{#if FACE_KINDS.has(p.kind ?? '') && !inactive}
 			<!-- An effect's own control at its saved values: tap loads, drag
 			     loads and sets (BrowserPresetFace). -->
 			<BrowserPresetFace
 				preset={p}
-				ink={p.vendorColor || activeColor}
+				ink={inkFor(p)}
 				onTap={() => loadPreset(p)}
 				beginDrag={(className, values) => beginEffectDrag(p, className, values)}
 				afterDrag={() => handlePostLoad()}
@@ -1823,7 +1853,7 @@
 		class="section-head"
 		class:charging={chargingFolder === folder}
 		class:picked={pickedFolder === folder}
-		style="--k: {sectionPresets[0]?.vendorColor || activeColor};"
+		style="--k: {sectionInkOf?.get(folder.toLowerCase()) || sectionPresets[0]?.vendorColor || activeColor};"
 		use:press={sectionPress(folder, sectionPresets)}
 	>
 		{#if chargingFolder === folder}

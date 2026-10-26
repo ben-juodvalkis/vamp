@@ -265,13 +265,15 @@ describe('drillDownModel — groupPresetsByOrigin', () => {
 		expect(groups.map((g) => g.folder)).toEqual([null, 'Sub']);
 	});
 
-	it('treats an empty current path (folder-less type root) as all-loose', () => {
+	it("at a Place's root, groups by the folder under the Place; its own files are loose", () => {
 		const groups = groupPresetsByOrigin(
-			[p('Ableton/Keys/root1.adg'), p('Ableton/Keys/root2.adg')],
+			[p('Effects/Echo.adv'), p('Effects/Tone/Auto Filter.adv'), p('Effects/Dynamics/Gate.adv'), p('Effects/Tone/EQ.adv')],
 			[]
 		);
 		expect(groups).toEqual([
-			{ folder: null, presets: [p('Ableton/Keys/root1.adg'), p('Ableton/Keys/root2.adg')] }
+			{ folder: null, presets: [p('Effects/Echo.adv')] },
+			{ folder: 'Dynamics', presets: [p('Effects/Dynamics/Gate.adv')] },
+			{ folder: 'Tone', presets: [p('Effects/Tone/Auto Filter.adv'), p('Effects/Tone/EQ.adv')] }
 		]);
 	});
 
@@ -372,6 +374,16 @@ describe('drillDownModel — packGroupedSections', () => {
 });
 
 describe('drillDownModel — computeGroupedGridLayout', () => {
+	it('counts small sections as packed into shared rows, so the tiles grow into the height that frees', () => {
+		// The rig's effects Place (2026-10-26): seven folders on one screen.
+		const base = { width: 1700, height: 1200, groups: [8, 4, 4, 2, 5, 2, 5, 3], headerCount: 8, headerHeight: 44, sectionGap: 16, minTile: 112, minTileHeight: 78, targetAspect: 1.5 };
+		const apart = computeGroupedGridLayout(base);
+		const packed = computeGroupedGridLayout({ ...base, headers: base.groups.map(() => true) });
+		expect(packed.rows).toBeLessThan(apart.rows);
+		expect(packed.tileHeight).toBeGreaterThan(apart.tileHeight);
+		expect(packed.scrolls).toBe(false);
+	});
+
 	// The component's actual comfort constraints for preset grids.
 	const STAGE = {
 		width: 1100,

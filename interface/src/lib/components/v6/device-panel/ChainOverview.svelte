@@ -53,13 +53,15 @@
   import Plus from '@lucide/svelte/icons/plus';
   import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
   import type { Component } from 'svelte';
-  import { FX_GRID_LAYOUT } from '$lib/config/fxGridLayout';
+  import { FX_GRID_LAYOUT, type DeviceTypeKey } from '$lib/config/fxGridLayout';
   import { provideFxScope } from '$lib/components/v6/central/fxScope';
   import GuitarControl from './GuitarControl.svelte';
   import BassControl from './BassControl.svelte';
   import PitchControl from './PitchControl.svelte';
   import GlitchControl from './GlitchControl.svelte';
   import SquashControl from './SquashControl.svelte';
+  import ControlTile from './ControlTile.svelte';
+  import { controlFor } from './deviceControls';
   import MidiWheelsPanel from '$lib/components/v6/midi/MidiWheelsPanel.svelte';
   import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
   import InstrumentFace, { FACED_INSTRUMENTS } from './chain/InstrumentFace.svelte';
@@ -69,6 +71,7 @@
   import constants from '$config/constants.json';
   import Music from '@lucide/svelte/icons/music';
   import { press } from '$lib/actions/press';
+  import { swallowNextClick } from '$lib/utils/swallowNextClick';
   import { drag, type DragInfo } from '$lib/actions/drag';
   import { moveDevice } from '$lib/services/deviceMoveService';
   import { chainGrid, clampChainIndex, moved } from '$lib/utils/chainDrop';
@@ -367,7 +370,14 @@
   }
 
   function dragStart(cell: Cell, index: number, info: DragInfo) {
-    if (pressInControl || cell.kind === 'instrument' || !chainEl) return;
+    // A drag on a cell's control is that control's, and it opens the
+    // device's view as a tap on the cell does — every control here, not
+    // only the grid's tiles, which open their own (2026-10-26).
+    if (pressInControl) {
+      open(cell);
+      return;
+    }
+    if (cell.kind === 'instrument' || !chainEl) return;
     const node = chainEl.querySelector<HTMLElement>(`[data-cell-key="${CSS.escape(cell.key)}"]`);
     const origin = chainEl.getBoundingClientRect();
     const r = node?.getBoundingClientRect();
@@ -509,6 +519,12 @@
         <div class="cell-control" role="presentation">
           <tile.Tile device={cell.device} position={tile.position} />
         </div>
+      {:else if live && controlFor(cell.presetKey)}
+        <!-- No grid tile: the device's control (deviceControls), the one its
+             browser preset tiles and its view draw, on this device. -->
+        <div class="cell-control" role="presentation">
+          <ControlTile type={cell.presetKey as DeviceTypeKey} device={cell.device} />
+        </div>
       {:else}
       <div class="mark" aria-hidden="true">
         {#if cell.kind === 'instrument'}
@@ -581,7 +597,7 @@
     class="chain-add"
     aria-label="Add an effect"
     data-debug="chain-add"
-    use:press={{ onPress: () => browserModeStore.openEffectsBrowser(), touchAction: 'none' }}
+    use:press={{ onPress: () => { swallowNextClick(); browserModeStore.openEffectsBrowser(); }, touchAction: 'none' }}
   >
     <span class="chain-add-icons" aria-hidden="true"><Plus /><ControlGlyph name="rack" /></span>
     <span class="chain-add-label">Effect</span>
