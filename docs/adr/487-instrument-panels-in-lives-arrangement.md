@@ -1,8 +1,9 @@
 # ADR-487: Instrument Panels in Live's Arrangement
 
 ## Status
-**Accepted** (2026-10-27). Replaces the Electric view's two XY pads and the
-Collision view's resonator pads. No Live restart: interface only.
+**Accepted** (2026-10-27). Replaces the Electric view's two XY pads, the
+Collision view's resonator pads and the Operator view's layout of
+2026-10-27 (its Filter pad stays). No Live restart: interface only.
 
 ## Context
 The instrument views each draw a hand-picked handful of their device:
@@ -53,7 +54,14 @@ the reverse.
   dumps and fails on a name Live does not list, a chooser or stepper whose
   labels miscount the parameter's values, a switch on a non-on/off
   parameter, or an eyebrow naming a missing page.
-- **First two instruments**: Electric (Hammer · Fork · Damper/Pickup ·
+- **Slots**: a device's own control the rule cannot draw (Operator's
+  filter pad with its response curve) is a `slot` region the view fills
+  with a snippet, bound by name through the same `usePanelParams`.
+- **First instruments**: Operator (Live's tabs Osc A–D · LFO · Pitch over
+  the middle, each its main boxes and its envelope; the Filter pad; Time ·
+  Tone · Volume; pages for each oscillator and its envelope, the LFO and its
+  envelope, the pitch envelope, the filter, its envelope and the shaper, and
+  Global), Electric (Hammer · Fork · Damper/Pickup ·
   Global, a page each) and Collision (Mallet · Noise · tabs Res 1 / Res 2 /
   LFO / MIDI · Global; pages for Mallet, Noise, each resonator and its
   velocity and key amounts, each LFO, MIDI and Global). A page can open a
@@ -61,12 +69,13 @@ the reverse.
   column (the views host none).
 
 ## Consequences
-- Electric and Collision reach every parameter but Device On (33 of 34,
-  139 of 140), each at most two taps from the frame.
+- Operator, Electric and Collision reach every parameter but Device On
+  (194 of 195, 33 of 34, 139 of 140), each at most three taps from the
+  frame. Operator's view drew about 10.
 - The panels show Live's values only while a box is dragged, as every
   value box in the app does (the audit's open question on readouts at rest).
 - The other instruments keep their hand-laid views until moved onto
-  panels; Operator and Analog first need their faces described as frames.
+  panels.
 - The shot tour's Electric and Collision states now load the measured
   parameter lists, and reach each tab and page (`inst-electric-*`,
   `inst-collision-*`).

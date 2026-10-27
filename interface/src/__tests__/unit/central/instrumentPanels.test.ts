@@ -12,8 +12,10 @@
 import { describe, it, expect } from 'vitest';
 import ELECTRIC from '../../../../../docs/reference/instruments/dumps/Electric.json';
 import COLLISION from '../../../../../docs/reference/instruments/dumps/Collision.json';
+import OPERATOR from '../../../../../docs/reference/instruments/dumps/Operator.json';
 import { ELECTRIC_PANEL } from '$lib/components/v6/central/views/panel/electricPanel';
 import { COLLISION_PANEL } from '$lib/components/v6/central/views/panel/collisionPanel';
+import { OPERATOR_PANEL } from '$lib/components/v6/central/views/panel/operatorPanel';
 import {
 	panelParamNames,
 	type InstrumentPanel,
@@ -32,7 +34,7 @@ function allGroups(panel: InstrumentPanel): PanelGroup[] {
 	const groups: PanelGroup[] = [];
 	for (const region of panel.frame) {
 		if (region.kind === 'group') groups.push(region.group);
-		else for (const tab of region.tabs) groups.push(...tab.groups);
+		else if (region.kind === 'tabs') for (const tab of region.tabs) groups.push(...tab.groups);
 	}
 	for (const page of panel.pages) for (const row of page.rows) groups.push(...row);
 	return groups;
@@ -40,7 +42,8 @@ function allGroups(panel: InstrumentPanel): PanelGroup[] {
 
 const PANELS: [string, InstrumentPanel, { parameters: DumpParam[] }][] = [
 	['Electric', ELECTRIC_PANEL, ELECTRIC],
-	['Collision', COLLISION_PANEL, COLLISION]
+	['Collision', COLLISION_PANEL, COLLISION],
+	['Operator', OPERATOR_PANEL, OPERATOR]
 ];
 
 describe.each(PANELS)('%s panel', (_name, panel, dump) => {

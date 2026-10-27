@@ -43,7 +43,14 @@ export interface PanelTab {
 
 export type PanelRegion =
 	| { kind: 'group'; group: PanelGroup }
-	| { kind: 'tabs'; tabs: readonly PanelTab[] };
+	| { kind: 'tabs'; tabs: readonly PanelTab[] }
+	/**
+	 * A device's own control the rule cannot draw (Operator's filter pad and
+	 * its response curve), passed to the view as a snippet under `slot`; it
+	 * takes `units` boxes of width, under an eyebrow like a group's. `params`
+	 * names what it binds, for the reference test.
+	 */
+	| { kind: 'slot'; slot: string; title?: string; page?: string; units: number; params: readonly string[] };
 
 export interface PanelPage {
 	id: string;
@@ -80,6 +87,7 @@ export function groupUnits(group: PanelGroup, pageRows = 1): number {
 
 export function regionUnits(region: PanelRegion): number {
 	if (region.kind === 'group') return groupUnits(region.group);
+	if (region.kind === 'slot') return region.units;
 	return Math.max(...region.tabs.map((t) => t.groups.reduce((n, g) => n + groupUnits(g), 0)));
 }
 
@@ -92,6 +100,7 @@ export function panelParamNames(panel: InstrumentPanel): string[] {
 	};
 	for (const region of panel.frame) {
 		if (region.kind === 'group') addGroup(region.group);
+		else if (region.kind === 'slot') region.params.forEach((n) => names.add(n));
 		else
 			for (const tab of region.tabs) {
 				if (tab.switchParam) names.add(tab.switchParam);

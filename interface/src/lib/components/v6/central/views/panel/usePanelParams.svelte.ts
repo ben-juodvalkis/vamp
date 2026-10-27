@@ -23,6 +23,10 @@ export interface PanelParams {
 	isOn(switchName: string | undefined): boolean;
 	/** Writes a raw value, switching its section on first when it is off. */
 	write(name: string, value: number, switchName?: string): void;
+	/** The value as 0..1 over the parameter's own range, for a control that sweeps 0..1 (an XY pad). */
+	unit(name: string): number | undefined;
+	/** Writes 0..1 over the parameter's own range, as `write` does. */
+	writeUnit(name: string, t: number, switchName?: string): void;
 }
 
 export function usePanelParams(getDevice: () => PanelDevice | undefined): PanelParams {
@@ -53,25 +57,40 @@ export function usePanelParams(getDevice: () => PanelDevice | undefined): PanelP
 		return v === undefined || v >= 0.5;
 	}
 
+	function range(name: string) {
+		const path = pathOf(name);
+		return path ? selectedTrackStore.paramRange(path) : undefined;
+	}
+
+	function write(name: string, value: number, switchName?: string) {
+		if (switchName && !isOn(switchName)) {
+			const switchPath = pathOf(switchName);
+			if (switchPath) selectedTrackStore.setParamValue(switchPath, 1);
+		}
+		const path = pathOf(name);
+		if (path) selectedTrackStore.setParamValue(path, value);
+	}
+
 	return {
 		has: (name) => indexByName.has(name),
 		raw,
-		range(name) {
-			const path = pathOf(name);
-			return path ? selectedTrackStore.paramRange(path) : undefined;
-		},
+		range,
 		display(name) {
 			const path = pathOf(name);
 			return path ? selectedTrackStore.paramDisplay(path) : undefined;
 		},
 		isOn,
-		write(name, value, switchName) {
-			if (switchName && !isOn(switchName)) {
-				const switchPath = pathOf(switchName);
-				if (switchPath) selectedTrackStore.setParamValue(switchPath, 1);
-			}
-			const path = pathOf(name);
-			if (path) selectedTrackStore.setParamValue(path, value);
+		write,
+		unit(name) {
+			const v = raw(name);
+			const r = range(name);
+			if (v === undefined || !r || r.max <= r.min) return undefined;
+			return Math.max(0, Math.min(1, (v - r.min) / (r.max - r.min)));
+		},
+		writeUnit(name, t, switchName) {
+			const r = range(name);
+			if (!r || r.max <= r.min) return;
+			write(name, r.min + Math.max(0, Math.min(1, t)) * (r.max - r.min), switchName);
 		}
 	};
 }

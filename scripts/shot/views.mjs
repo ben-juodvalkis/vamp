@@ -773,6 +773,12 @@ function instrumentSwapStates() {
 		['analog', 'Analog', 'UltraAnalog', analog],
 		// Voice 2 up: the other half, in blue (both its envelopes in view, ADR-477).
 		['analog-voice2', 'Analog', 'UltraAnalog', analog, [{ click: '.osc-badge' }]],
+		// Operator in Live's arrangement (ADR-487), at Live's defaults: an
+		// oscillator's page, the LFO tab, the filter's page and Global's.
+		['operator-osc-b', 'Operator', 'Operator', referenceParams('Operator'), [{ click: '[data-tab="Osc B"]' }, { click: '[data-group="Oscillator B"] .eyebrow-link' }]],
+		['operator-lfo', 'Operator', 'Operator', referenceParams('Operator'), [{ click: '[data-tab="LFO"]' }]],
+		['operator-filter', 'Operator', 'Operator', referenceParams('Operator'), [{ click: '[data-group="Filter"] .eyebrow-link' }]],
+		['operator-global', 'Operator', 'Operator', referenceParams('Operator'), [{ click: '[data-group="Global"] .eyebrow-link' }]],
 		['collision', 'Collision', 'Collision', referenceParams('Collision')],
 		// Live's tabs over the middle, and the pages behind the eyebrows (ADR-487).
 		['collision-lfo', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-tab="LFO"]' }]],

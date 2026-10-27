@@ -9,6 +9,7 @@
 	 * Which page or tab is up is view state: it never writes to Live, and a
 	 * view arrives on its frame.
 	 */
+	import type { Snippet } from 'svelte';
 	import SectionDivider from '../../SectionDivider.svelte';
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
 	import PanelGroupView from './PanelGroupView.svelte';
@@ -20,9 +21,11 @@
 		panel: InstrumentPanel;
 		params: PanelParams;
 		color: DeviceColorScheme;
+		/** The device's own controls for the panel's `slot` regions, by slot name. */
+		slots?: Record<string, Snippet>;
 	}
 
-	let { panel, params, color }: Props = $props();
+	let { panel, params, color, slots = {} }: Props = $props();
 
 	let pageId = $state<string | null>(null);
 	let tabSelected = $state<Record<number, number>>({});
@@ -58,6 +61,15 @@
 			{#if i > 0}<SectionDivider orientation="vertical" ink={color.primary} />{/if}
 			{#if region.kind === 'group'}
 				<PanelGroupView group={region.group} {params} {color} onOpen={openPage} />
+			{:else if region.kind === 'slot'}
+				<div class="panel-slot" style="flex: {region.units} 1 0;" data-group={region.title ?? region.slot}>
+					{#if region.page}
+						<button class="panel-eyebrow eyebrow-link" style="color: {color.primary};" onclick={() => openPage(region.page!)}>{region.title} ›</button>
+					{:else}
+						<span class="panel-eyebrow" style="color: {color.primary};">{region.title ?? ''}&nbsp;</span>
+					{/if}
+					<div class="panel-slot-body">{@render slots[region.slot]?.()}</div>
+				</div>
 			{:else}
 				{@const sel = Math.min(tabSelected[i] ?? 0, region.tabs.length - 1)}
 				{@const tab = region.tabs[sel]}
@@ -105,6 +117,44 @@
 	}
 	.panel-filler {
 		min-width: 0;
+	}
+	.panel-slot {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-xs);
+		min-width: 0;
+		min-height: 0;
+	}
+	.panel-slot-body {
+		flex: 1 1 0;
+		display: flex;
+		min-width: 0;
+		min-height: 0;
+	}
+	.panel-slot-body > :global(*) {
+		flex: 1 1 0;
+		min-width: 0;
+	}
+	/* The eyebrow a slot wears, the same as a group's (PanelGroupView). */
+	.panel-eyebrow {
+		flex: 0 0 auto;
+		font-size: 0.75rem;
+		font-weight: 700;
+		line-height: 1rem;
+		text-align: center;
+		white-space: nowrap;
+	}
+	.eyebrow-link {
+		align-self: center;
+		background: none;
+		border: 0;
+		padding: 0 0.75rem;
+		text-decoration: underline;
+		text-underline-offset: 3px;
+		cursor: pointer;
+	}
+	:global([data-grammar='flat']) .panel-slot .panel-eyebrow {
+		font-weight: var(--font-weight-medium);
 	}
 	.panel-rows {
 		flex: 1 1 0;

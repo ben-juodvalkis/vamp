@@ -1,5 +1,6 @@
 /**
- * OperatorCentralView — the Time and Tone sliders (2026-09-07).
+ * OperatorCentralView — the Time and Tone sliders (2026-09-07), on the
+ * Operator panel since ADR-487, which binds them by name.
  *
  * Mounts the real view against the real v3 store and pins the two things
  * a reader of the file cannot see:
@@ -180,8 +181,11 @@ describe('OperatorCentralView — Time and Tone', () => {
 		expect(tone.getAttribute('aria-valuemin')).toBe('0');
 		expect(tone.getAttribute('aria-valuemax')).toBe('1');
 
-		// The pre-existing Feedback slider still normalizes 0..100 to 0..1.
-		expect(slider(container, 'Feedback').getAttribute('aria-valuenow')).toBe('0.4');
+		// Feedback too, on Live's 0..100 (ADR-487: a panel box takes the
+		// parameter's own range; it normalized to 0..1 until then).
+		const feedback = slider(container, 'Feedback');
+		expect(feedback.getAttribute('aria-valuenow')).toBe('40');
+		expect(feedback.getAttribute('aria-valuemax')).toBe('100');
 	});
 
 	it('a drag on Time writes param 120 on its -100..100 rail', async () => {

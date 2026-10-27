@@ -773,7 +773,16 @@ const AUTUMN_KIT_PROPERTIES = Object.freeze({
 	'vm.filterRes': 0.15
 });
 
+// An instrument's parameters as the rig's Live lists them, at Live's defaults
+// (docs/reference/instruments/dumps, measured 2026-10-27).
+function referenceParams(instrument) {
+	const dump = JSON.parse(readFileSync(new URL(`../../docs/reference/instruments/dumps/${instrument}.json`, import.meta.url), 'utf8'));
+	return dump.parameters.map((p) => [p.name, p.original_name ?? p.name, p.min, p.max, p.value, '']);
+}
+
 const DEVICE_PARAMS = {
+	// Bound by name since ADR-487: without Live's own list the panel draws ghosts.
+	Operator: referenceParams('Operator'),
 	// Permute is the one device here whose params are read for their
 	// INDEX, not their name: `useTinySequencer` / `sequencerStore` address
 	// steps positionally (1..8 mute, 9 mute length, 11..18 pitch, 19 pitch
