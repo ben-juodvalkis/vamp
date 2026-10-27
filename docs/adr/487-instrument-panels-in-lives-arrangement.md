@@ -78,13 +78,17 @@ the reverse.
   ("Osc 2 ›" with voice 2 up), and Global leads on to Vibrato and MPE
   (`analogPanel.ts`). Wavetable's face opens the shown oscillator and
   filter, its modulation sources (Live's Amp · Env 2 · Env 3 · LFO 1 ·
-  LFO 2, each a page one tap in) and Global (`wavetablePanel.ts`).
+  LFO 2, each a page one tap in) and Global (`wavetablePanel.ts`). Meld's
+  face opens the shown engine's oscillator, filter, envelopes and LFOs, and
+  Global with both engines' mix (`meldPanel.ts`); its Osc pad dropped its
+  knob icon so its name still fits under the eyebrow's line.
 
 ## Consequences
-- Operator, Electric, Collision, Drift, Analog and Wavetable reach every
-  parameter but Device On (194 of 195, 33 of 34, 139 of 140, 65 of 66, 171
-  of 172, 92 of 93), each at most three taps from the frame. Operator's view
-  drew about 10, Drift's about 20, Analog's about 44, Wavetable's about 30.
+- Operator, Electric, Collision, Drift, Analog, Wavetable and Meld reach
+  every parameter but Device On (194 of 195, 33 of 34, 139 of 140, 65 of 66,
+  171 of 172, 92 of 93, 128 of 129), each at most three taps from the frame.
+  Operator's view drew about 10, Drift's about 20, Analog's about 44,
+  Wavetable's about 30, Meld's about 32.
 - The panels show Live's values only while a box is dragged, as every
   value box in the app does (the audit's open question on readouts at rest).
 - The other instruments keep their hand-laid views until moved onto

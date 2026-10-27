@@ -816,6 +816,13 @@ function instrumentSwapStates() {
 		['wavetable-env2', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable'), [{ click: '.eyebrow-link[data-page="mod"]' }, { click: '[data-group="Env 2"] .eyebrow-link' }]],
 		['wavetable-lfo1', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable'), [{ click: '.eyebrow-link[data-page="mod"]' }, { click: '[data-group="LFO 1"] .eyebrow-link' }]],
 		['wavetable-global', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable'), [{ click: '.eyebrow-link[data-page="global"]' }]],
+		// Meld's face (ADR-487), the measured patch, and the pages its eyebrows open.
+		['meld-osc-a', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '.eyebrow-link[data-page="osc-a"]' }]],
+		['meld-filter-b', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '.osc-badge' }, { click: '.eyebrow-link[data-page="filter-b"]' }]],
+		['meld-menv-a', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '.eyebrow-link[data-page="env-a"]' }, { click: '[data-group="Mod Env"] .eyebrow-link' }]],
+		['meld-lfo-a', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '.eyebrow-link[data-page="lfo-a"]' }]],
+		['meld-lfofx-a', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '.eyebrow-link[data-page="lfo-a"]' }, { click: '[data-group="LFO 1"] .eyebrow-link' }]],
+		['meld-global', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '.eyebrow-link[data-page="global"]' }]],
 		['electric-hammer', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Hammer"] .eyebrow-link' }]],
 		['electric-pickup', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Damper / Pickup"] .eyebrow-link' }]],
 		['electric-global', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Global"] .eyebrow-link' }]],

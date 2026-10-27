@@ -26,9 +26,13 @@ import { replaceTree, _resetForTests, type TrackRecord, type DeviceRecord, type 
 import ElectricCentralView from '$lib/components/v6/central/views/ElectricCentralView.svelte';
 import CollisionCentralView from '$lib/components/v6/central/views/CollisionCentralView.svelte';
 import DriftCentralView from '$lib/components/v6/central/views/DriftCentralView.svelte';
+import MeldCentralView from '$lib/components/v6/central/views/MeldCentralView.svelte';
+import AnalogCentralView from '$lib/components/v6/central/views/AnalogCentralView.svelte';
 import ELECTRIC from '../../../../../docs/reference/instruments/dumps/Electric.json';
 import COLLISION from '../../../../../docs/reference/instruments/dumps/Collision.json';
 import DRIFT from '../../../../../docs/reference/instruments/dumps/Drift.json';
+import MELD from '../../../../../docs/reference/instruments/dumps/Meld.json';
+import ANALOG from '../../../../../docs/reference/instruments/dumps/Analog.json';
 
 const sendMock = vi.mocked(send);
 const TRACK = 'tracks/0';
@@ -218,5 +222,34 @@ describe('DriftCentralView — its own face, Live\'s sections behind the eyebrow
 		await fireEvent.click(pageLink(container, 'envelopes'));
 		await fireEvent.click(option(container, 'Cyc Env Mode', 'Sync'));
 		expect(paramSets()).toEqual([[indexOf(DRIFT as Dump, 'Cyc Env Mode'), 3]]);
+	});
+});
+
+describe.each([
+	['Meld', MeldCentralView, MELD, 'InstrumentMeld', ['osc-a', 'filter-a'], ['osc-b', 'filter-b']],
+	['Analog', AnalogCentralView, ANALOG, 'UltraAnalog', ['osc1', 'filter1', 'env1'], ['osc2', 'filter2', 'env2']]
+] as const)('%sCentralView — the eyebrows open the shown half\'s pages', (name, View, dump, className, first, second) => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		_resetForTests();
+		replaceTree(7, [track(dump as Dump, name, className)]);
+		selectedTrackStore.handleTrackSelected(0);
+	});
+	afterEach(() => cleanup());
+
+	const links = (container: HTMLElement) =>
+		[...container.querySelectorAll<HTMLElement>('.eyebrow-link')].map((l) => l.dataset.page);
+
+	it('follows the half switch, and opens a page writing nothing', async () => {
+		const { container } = render(View, { props: { instrument: instrument(name, className) } });
+		await tick();
+		expect(links(container)).toEqual(expect.arrayContaining([...first]));
+		await fireEvent.click(el(container, '.osc-badge'));
+		expect(links(container)).toEqual(expect.arrayContaining([...second]));
+		await fireEvent.click(el(container, `.eyebrow-link[data-page="${second[1]}"]`));
+		expect(el(container, '[data-panel-page]').dataset.panelPage).toBe(second[1]);
+		await fireEvent.click(el(container, '.panel-back'));
+		expect(el(container, '[data-panel-page]').dataset.panelPage).toBe('frame');
+		expect(paramSets()).toEqual([]);
 	});
 });

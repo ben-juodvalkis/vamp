@@ -4,6 +4,10 @@
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import SectionDivider from '../SectionDivider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
+  import InstrumentPanelView from './panel/InstrumentPanelView.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
+  import { usePanelParams } from './panel/usePanelParams.svelte';
+  import { MELD_PANEL } from './panel/meldPanel';
   import EnvelopeGroup from './EnvelopeGroup.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
@@ -60,6 +64,10 @@
    * patch change never takes the half away mid-edit.
    */
   let engine = $state<MeldEngine>('A');
+
+  /** The pages behind the face's eyebrows, the shown engine's, by Live's names (ADR-487). */
+  const panelParams = usePanelParams(() => device);
+  let pageEngine = $derived(engine === 'A' ? 'a' : 'b');
   let p = $derived(MELD_ENGINE[engine]);
   let engineInk = $derived.by(() => {
     const raw = ENGINE_COLORS[engine];
@@ -177,6 +185,8 @@
 
 <div class="meld-root h-full w-full overflow-hidden relative">
   {#if instrument && device}
+    <InstrumentPanelView panel={MELD_PANEL} params={panelParams} color={meldInk}>
+    {#snippet face(openPage: (page: string) => void)}
     <div class="h-full w-full flex min-h-0 p-(--central-inset)" style="gap: var(--central-gap);">
 
       <!-- THE ENGINE. Meld is two synths, Osc → Filter → Amp twice, so the
@@ -184,6 +194,7 @@
            and the colour says which half is up. -->
       <div class="paths flex-[2.3] min-w-0 min-h-0 flex relative" style="gap: var(--central-gap);">
       <div class="engine-col flex-[1.3] min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
+        <PanelEyebrow title="Engine {engine}" page="osc-{pageEngine}" onOpen={openPage} color={engineInk.primary} />
         <HostedSwapPill />
         <div class="engine-head flex-none">
           <button
@@ -206,7 +217,6 @@
             xValue={read(p.oscShape, 0)}
             yValue={read(p.oscTone, 0)}
             title="Osc {engine}"
-            icon="macro"
             isGhost={!engineOn}
             onInteraction={handleOscXY}
             color={engineInk}
@@ -230,6 +240,7 @@
       <!-- The engine's filter: cutoff across, Q up, its second macro and
            its type under it. -->
       <div class="filter-col flex-1 min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
+        <PanelEyebrow title="Filter {engine}" page="filter-{pageEngine}" onOpen={openPage} color={engineInk.primary} />
         <div class="flex-1 min-h-0 relative">
           <DeviceXY
             xValue={read(p.freq, 1)}
@@ -298,6 +309,10 @@
       <div class="env-col flex-none min-h-0 flex gap-(--central-gap)">
         <SectionDivider orientation="vertical" ink={engineInk.primary} />
         <div class="flex-1 min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
+          <div class="eyebrow-pair">
+            <PanelEyebrow title="Envelopes" page="env-{pageEngine}" onOpen={openPage} color={engineInk.primary} />
+            <PanelEyebrow title="LFOs" page="lfo-{pageEngine}" onOpen={openPage} color={engineInk.primary} />
+          </div>
           {#each envelopes as envelope, i (envelope.title)}
             {#if i > 0}<SectionDivider orientation="horizontal" ink={engineInk.primary} />{/if}
             <EnvelopeGroup ink={engineInk.primary} title={envelope.title} edges="none">
@@ -324,6 +339,7 @@
       <!-- Drive over Voice Spread: Meld's own, after both engines, two
            boxes in one column (ADR-477). -->
       <div class="global-col flex-none min-h-0 flex flex-col gap-(--central-gap)">
+        <PanelEyebrow title="Global" page="global" onOpen={openPage} color={meldInk.primary} />
         <div class="flex-1 min-h-0">
           <DeviceSlider
             value={drive}
@@ -352,12 +368,19 @@
       <!-- The wheels that closed the row left for the MidiWheels device's
            chain cell (user, 2026-10-26). -->
     </div>
+    {/snippet}
+    </InstrumentPanelView>
   {:else}
     <DeviceEmptyState glyph="~" message="Load Meld to access controls" color={meldInk.primary} />
   {/if}
 </div>
 
 <style>
+  .eyebrow-pair {
+    display: flex;
+    justify-content: center;
+    min-width: 0;
+  }
   .meld-root {
     --meld-slider-w: var(--height-touch);
     --meld-global-w: 56px;
