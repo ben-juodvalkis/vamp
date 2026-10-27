@@ -18,7 +18,7 @@ reverted.)
   Live's whole 1 % .. 200 % rail, resting at 100 %. The keyboard picture
   lights the triad brighter as it rises.
 - The view is the whole device, measured with `device_dump` (29
-  parameters): the six added notes as columns of Shift, Velocity and
+  parameters): the first two added notes (of Live's six) as columns of Shift, Velocity and
   Chance value boxes, then Scale (Use Current Scale) and Strum, Tension and
   Crescendo past a seam. With Scale on a note's shift is its Scale Degrees
   parameter, as Live's panel shows it. A note at 0 adds nothing, so its

@@ -3,8 +3,10 @@
 	 * The Chord's view: all of the device (the user, 2026-10-27: "set up the
 	 * central view to give us more control"), as Live's panel lays it out.
 	 *
-	 *   [Shift / Velocity / Chance] × the six added notes | [Scale] [Strum]
-	 *   [Tension] [Crescendo]
+	 *   [Shift / Velocity / Chance] × the first two added notes | [Scale]
+	 *   [Strum] [Tension] [Crescendo]
+	 *
+	 * Two notes, not Live's six (the user, 2026-10-27: "we don't need all 6").
 	 *
 	 * With Scale on (Use Current Scale) a note's shift is its Scale Degrees
 	 * parameter, as Live's panel shows it, and semitones otherwise. A note at
@@ -35,7 +37,7 @@
 		accent: trackInk(chord.color.accent, paintModeReactive())
 	});
 
-	const NOTES = [1, 2, 3, 4, 5, 6].map((n) => ({ n, shift: 4 * n - 3, degrees: 4 * n - 2, velocity: 4 * n - 1, chance: 4 * n }));
+	const NOTES = [1, 2].map((n) => ({ n, shift: 4 * n - 3, degrees: 4 * n - 2, velocity: 4 * n - 1, chance: 4 * n }));
 	const P = { strum: 25, tension: 26, crescendo: 27, scale: 28 } as const;
 	const SHIFT_MAX = 36;
 	const VELOCITY_MIN = 0.01;
@@ -135,11 +137,11 @@
 </div>
 
 <style>
-	/* Six note columns under a row of numbers, a label column before them,
+	/* Two note columns under a row of numbers, a label column before them,
 	   then a seam and the Scale switch over the strum. */
 	.chord-layout {
 		display: grid;
-		grid-template-columns: auto repeat(6, minmax(0, 1fr)) auto minmax(0, 1.25fr);
+		grid-template-columns: auto repeat(2, minmax(0, 1fr)) auto minmax(0, 1fr);
 		grid-template-rows: auto repeat(3, minmax(0, 1fr));
 		height: 100%;
 		width: 100%;
@@ -177,12 +179,12 @@
 		color: var(--muted-foreground);
 	}
 	.seam {
-		grid-column: 8;
+		grid-column: 4;
 		grid-row: 1 / -1;
 		display: flex;
 	}
 	.side {
-		grid-column: 9;
+		grid-column: 5;
 		grid-row: 1 / -1;
 		display: flex;
 		flex-direction: column;
