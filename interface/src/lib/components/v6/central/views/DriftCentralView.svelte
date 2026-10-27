@@ -631,11 +631,13 @@
 
       <SectionDivider orientation="vertical" ink={driftInk.primary} />
 
-      <!-- Time over Filter, equal halves of one column, with the filter's
-           type switch at its foot: under the pad it belongs to, and below
-           both pads rather than inside one, so the two stay the same height. -->
-      <div class="flex-[3] min-h-0 flex flex-col" style="gap: var(--central-gap);">
-        <div class="flex-1 min-h-0">
+      <!-- Time beside Filter (2026-10-27; stacked until then, two 370 x 100
+           pads, 75 tall on the iPad mini, where Time's label fell off its
+           own foot). Time runs the column's full height; Filter shares
+           its column with the filter's type switch at its foot, under the
+           pad it belongs to. -->
+      <div class="flex-[3] min-h-0 time-filter-grid">
+        <div class="min-h-0 min-w-0 time-pad">
           <DeviceXY
             xValue={timeXValue}
             yValue={timeYValue}
@@ -645,7 +647,7 @@
             color={driftInk}
           />
         </div>
-        <div class="flex-1 min-h-0">
+        <div class="min-h-0 min-w-0">
           <DeviceXY
             xValue={cutoffValue}
             yValue={resonanceValue}
@@ -659,7 +661,7 @@
           />
         </div>
         <div
-          class="device-segmented filter-type-row flex-none"
+          class="device-segmented filter-type-row"
           style="--btn-tint: {driftInk.primary}; grid-template-columns: repeat({LP_TYPE_OPTIONS.length}, 1fr);"
         >
           {#each LP_TYPE_OPTIONS as option}
@@ -1020,4 +1022,14 @@
     color: var(--flat-on-fg);
   }
 
+  /* Time | Filter, the type switch under Filter. */
+  .time-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: var(--central-gap);
+  }
+  .time-pad {
+    grid-row: 1 / span 2;
+  }
 </style>
