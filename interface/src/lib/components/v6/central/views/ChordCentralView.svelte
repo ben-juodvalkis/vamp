@@ -3,10 +3,12 @@
 	 * The Chord's view: all of the device (the user, 2026-10-27: "set up the
 	 * central view to give us more control"), as Live's panel lays it out.
 	 *
-	 *   [Shift / Velocity / Chance] × the first two added notes | [Scale]
-	 *   [Strum] [Tension] [Crescendo]
+	 *   Note 1: [Shift] [Vel] [Chance] | Note 2: [Shift] [Vel] [Chance] |
+	 *   [Scale] over [Strum] [Tension] [Crescendo]
 	 *
-	 * Two notes, not Live's six (the user, 2026-10-27: "we don't need all 6").
+	 * Two notes, not Live's six (the user, 2026-10-27: "we don't need all 6"),
+	 * and every control a tall value box side by side, not a short row of
+	 * them (the same day: "the sliders are super wide and short").
 	 *
 	 * With Scale on (Use Current Scale) a note's shift is its Scale Degrees
 	 * parameter, as Live's panel shows it, and semitones otherwise. A note at
@@ -59,16 +61,17 @@
 </script>
 
 <div class="chord-layout" data-view="chord" style="--btn-tint: {ink.primary};">
-	<div class="row-label" style="grid-row: 2;">Shift</div>
-	<div class="row-label" style="grid-row: 3;">Velocity</div>
-	<div class="row-label" style="grid-row: 4;">Chance</div>
-
-	{#each NOTES as note (note.n)}
+	{#each NOTES as note, i (note.n)}
 		{@const shiftIndex = scaled ? note.degrees : note.shift}
 		{@const shift = value(shiftIndex)}
 		{@const silent = Math.round(shift) === 0}
-		<div class="note-head" style="grid-column: {note.n + 1};" class:silent>{note.n}</div>
-		<div class="cell" style="grid-column: {note.n + 1}; grid-row: 2;" data-note={note.n} data-fn="shift">
+		{@const col = 1 + i * 4}
+		{#if i > 0}<div class="seam" style="grid-column: {col - 1};"><SectionDivider orientation="vertical" /></div>{/if}
+		<div class="group-head" style="grid-column: {col} / span 3;">Note {note.n}</div>
+		{#each [['Shift', col], ['Velocity', col + 1], ['Chance', col + 2]] as [name, c] (name)}
+			<div class="caption" class:silent={silent && name !== 'Shift'} style="grid-column: {c};">{name}</div>
+		{/each}
+		<div class="cell" style="grid-column: {col};" data-note={note.n} data-fn="shift">
 			<DeviceSlider
 				value={shift}
 				title={signed(shift, scaled ? 'sd' : 'st')}
@@ -83,7 +86,7 @@
 				onInteraction={(v) => chord.sendParam(shiftIndex, Math.round(v))}
 			/>
 		</div>
-		<div class="cell" class:silent style="grid-column: {note.n + 1}; grid-row: 3;" data-note={note.n} data-fn="velocity">
+		<div class="cell" class:silent style="grid-column: {col + 1};" data-note={note.n} data-fn="velocity">
 			<DeviceSlider
 				value={value(note.velocity)}
 				title={percent(value(note.velocity))}
@@ -95,7 +98,7 @@
 				onInteraction={(v) => chord.sendParam(note.velocity, v)}
 			/>
 		</div>
-		<div class="cell" class:silent style="grid-column: {note.n + 1}; grid-row: 4;" data-note={note.n} data-fn="chance">
+		<div class="cell" class:silent style="grid-column: {col + 2};" data-note={note.n} data-fn="chance">
 			<DeviceSlider
 				value={value(note.chance)}
 				title={percent(value(note.chance))}
@@ -109,17 +112,18 @@
 		</div>
 	{/each}
 
-	<div class="seam"><SectionDivider orientation="vertical" /></div>
+	<div class="seam" style="grid-column: 8;"><SectionDivider orientation="vertical" /></div>
 
-	<div class="side" class:slot-ghost={chord.isGhost}>
-		<button
-			class="physical-button switch"
-			class:active={!chord.isGhost && scaled}
-			aria-pressed={scaled}
-			data-fn="scale"
-			onclick={() => chord.sendParam(P.scale, scaled ? 0 : 1)}
-		>Scale</button>
-		{#each STRUM as b (b.index)}
+	<button
+		class="physical-button switch"
+		class:active={!chord.isGhost && scaled}
+		class:slot-ghost={chord.isGhost}
+		aria-pressed={scaled}
+		data-fn="scale"
+		onclick={() => chord.sendParam(P.scale, scaled ? 0 : 1)}
+	>Scale</button>
+	{#each STRUM as b, i (b.index)}
+		<div class="cell" style="grid-column: {9 + i};" data-fn={b.title.toLowerCase()}>
 			<DeviceSlider
 				value={value(b.index)}
 				title={b.title}
@@ -132,26 +136,32 @@
 				readout={chord.paramDisplay(b.index)}
 				onInteraction={(v) => chord.sendParam(b.index, b.round ? Math.round(v) : v)}
 			/>
-		{/each}
-	</div>
+		</div>
+	{/each}
 </div>
 
 <style>
-	/* Two note columns under a row of numbers, a label column before them,
-	   then a seam and the Scale switch over the strum. */
+	/* Nine tall value boxes on one ruler: each note's three under its name and
+	   their captions, a seam, the strum's three under the Scale switch. */
 	.chord-layout {
 		display: grid;
-		grid-template-columns: auto repeat(2, minmax(0, 1fr)) auto minmax(0, 1fr);
-		grid-template-rows: auto repeat(3, minmax(0, 1fr));
+		grid-template-columns:
+			repeat(3, minmax(0, 1fr)) auto
+			repeat(3, minmax(0, 1fr)) auto
+			repeat(3, minmax(0, 1fr));
+		grid-template-rows: auto auto minmax(0, 1fr);
 		height: 100%;
 		width: 100%;
 		padding: var(--central-inset);
-		gap: var(--central-gap);
+		column-gap: var(--central-gap);
+		row-gap: 4px;
 	}
 	.cell {
+		grid-row: 3;
 		display: flex;
 		min-width: 0;
 		min-height: 0;
+		margin-top: calc(var(--central-gap) - 4px);
 	}
 	.cell > :global(*) {
 		flex: 1 1 0;
@@ -159,44 +169,28 @@
 	}
 	/* A note at 0 adds nothing: its velocity and chance step back. */
 	.cell.silent,
-	.note-head.silent {
+	.caption.silent {
 		opacity: var(--opacity-ghost);
 	}
-	.note-head {
+	.group-head {
 		grid-row: 1;
 		text-align: center;
 		font-size: 0.75rem;
 		color: var(--btn-tint);
-		font-variant-numeric: tabular-nums;
 	}
-	/* The row's name, upright, at the head of its row. */
-	.row-label {
-		grid-column: 1;
-		writing-mode: vertical-rl;
-		transform: rotate(180deg);
+	.caption {
+		grid-row: 2;
 		text-align: center;
 		font-size: 0.75rem;
 		color: var(--muted-foreground);
 	}
 	.seam {
-		grid-column: 4;
 		grid-row: 1 / -1;
 		display: flex;
-	}
-	.side {
-		grid-column: 5;
-		grid-row: 1 / -1;
-		display: flex;
-		flex-direction: column;
-		gap: var(--central-gap);
-		min-width: 0;
-		min-height: 0;
-	}
-	.side > :global(*) {
-		flex: 1 1 0;
-		min-height: 0;
 	}
 	.switch {
+		grid-column: 9 / span 3;
+		grid-row: 1 / span 2;
 		min-height: var(--height-touch);
 		font-size: 1rem;
 		font-weight: 600;
