@@ -17,7 +17,7 @@ A device type is two entries and nothing else:
 1. **`interface/src/lib/config/devicePresets.ts`** — what the device IS: how
    the app finds it on a chain and loads it.
 2. **`interface/src/lib/components/v6/device-panel/deviceControls.ts`** — how
-   it is PLAYED: its one control (an XY, a slider, a few buttons or the EQ's tone pad), the
+   it is PLAYED: its one control (an XY, a slider or the EQ's tone pad), the
    parameters it reads and writes, the math, the values it rests at, and how
    a preset file's saved values read onto it.
 

@@ -100,24 +100,7 @@ export interface EqControl {
 	mid(freq: number, gain: number): Writes;
 	high(v: number): Writes;
 }
-/** One button of a `ButtonsControl`: lit while `on`, and a press makes `press`'s writes. */
-export interface ControlButton {
-	label: string;
-	on(get: Get): boolean;
-	press(get: Get): Writes;
-}
-export interface ButtonsControl {
-	kind: 'buttons';
-	title: string;
-	/** Its picture, where one is drawn without the buttons (a Recent button). */
-	picture?: PictureKind;
-	icon?: ControlGlyphName;
-	/** Where the picture draws, 0..1. */
-	read(get: Get): number;
-	/** Top to bottom on a vertical tile, left to right on a horizontal one. */
-	buttons: ReadonlyArray<ControlButton>;
-}
-export type Control = XyControl | SliderControl | EqControl | ButtonsControl;
+export type Control = XyControl | SliderControl | EqControl;
 
 /** A preset file's saved values: its class and each parameter by the file's own name. */
 export interface SavedPreset {
@@ -441,19 +424,16 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 		},
 		fromPreset: (s) => all({ 0: s.params.On, 5: s.params.SyncedRate, 8: s.params.Gate })
 	},
-	// Measured: Chord (2026-10-26). Shift1 -36..36 st as saved. Two buttons
-	// on the first added note (the user, 2026-10-27): +12 and -12, each
-	// setting it to its octave, or back to 0 when it is already there.
+	// Measured: Chord (2026-10-26). Shift1 -36..36 st as saved. One slider on
+	// the first added note, in whole semitones over ±24, 0 at the middle.
 	chord: {
 		control: {
-			kind: 'buttons',
+			kind: 'slider',
 			title: 'Shift', picture: 'chord',
+			readout: 1,
+			center: 0.5,
 			read: (g) => clamp01(((g(1) ?? 0) + 24) / 48),
-			buttons: [12, -12].map((st) => ({
-				label: st > 0 ? `+${st}` : `${st}`,
-				on: (g: Get) => g(1) === st,
-				press: (g: Get): Writes => [[1, g(1) === st ? 0 : st]]
-			}))
+			write: (t) => [[1, Math.round(clamp01(t) * 48 - 24)]]
 		},
 		fromPreset: (s) => (s.params.Shift1 === undefined ? null : { 1: s.params.Shift1 })
 	},

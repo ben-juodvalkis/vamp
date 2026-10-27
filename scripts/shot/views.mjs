@@ -318,11 +318,11 @@ export const TOURS = {
 			// The MIDI effects' controls on their chain cells (deviceControls).
 			{
 				name: 'chain-midi-effects',
-				description: 'An Arpeggiator (Rate across, Gate up), a Chord (+12 lit) and a Velocity (Rand Vel) on the chain',
+				description: 'An Arpeggiator (Rate across, Gate up), a Chord (its first shift) and a Velocity (Rand Vel) on the chain',
 				scenePatch: (scene) =>
 					setTrackDevices(scene, CHAIN_DEMO_TRACK, [
 						{ name: 'Arpeggiator', className: 'MidiArpeggiator', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Style', 'Style', 0, 17, 0, 'Up'], ['Offset', 'Offset', -8, 8, 0, '0'], ['Repeats', 'Repeats', 0, 16, 0, ''], ['Sync On', 'Sync On', 0, 1, 1, 'On'], ['Synced Rate', 'Synced Rate', 0, 13, 8, '1/8'], ['Groove', 'Groove', 0, 3, 0, ''], ['Free Rate', 'Free Rate', 0, 1, 0.15, ''], ['Gate', 'Gate', 1, 200, 120, '120 %']] },
-						{ name: 'Chord', className: 'MidiChord', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Shift1', 'Shift1', -36, 36, 12, '+12 st']] },
+						{ name: 'Chord', className: 'MidiChord', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Shift1', 'Shift1', -36, 36, 7, '+7 st']] },
 						{ name: 'Velocity', className: 'MidiVelocity', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Drive', 'Drive', -1, 1, 0, ''], ['Compand', 'Compand', -1, 1, 0, ''], ['Random', 'Random', 0, 64, 40, '40'], ['Mode', 'Mode', 0, 2, 0, ''], ['Operation', 'Operation', 0, 2, 2, ''], ['Out Hi', 'Out Hi', 0, 127, 110, ''], ['Out Low', 'Out Low', 0, 127, 30, '']] },
 						CHAIN_DEMO_DEVICES[0]
 					]),
