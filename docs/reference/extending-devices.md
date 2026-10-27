@@ -429,9 +429,6 @@ Implementation lives in `BaseDeviceControl.svelte`; it uses
 `deviceMoveService.ts` which fires `/looping/v3/device/move`
 (addresses carry `devicePath`, not int IDs).
 
-Exception: **Digital LFO** does not get an arrow because it controls
-the same device as Digital.
-
 ## 5. Parameter index verification
 
 Never hardcode parameter indices from the docs, from the `.adv`, or

@@ -162,7 +162,7 @@ fail with nothing on screen:
   checkout's own `random-start.amxd` through the "Vamp Devices" Place, like Permute and
   MidiWheels; `random-start.adv` isn't needed (it held the device's own defaults). The rig's
   local override is gone too.
-- **`Digital.adg`,** re-saved (stock Shifter + Redux) (**S**).
+- **`Digital.adg`:** dropped 2026-10-27, its rack and view with it; the rig had moved away from it.
 - **A template set** with `Vamp-Recorder.amxd` on Return A, for capture (**M**, needs the rig).
 - **Something to browse on day one:** Live's Packs and Core Library through Live's index. It
   covers all 82 Packs on the rig, and their presets carry Live's own role tags (measured

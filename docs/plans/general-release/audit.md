@@ -220,7 +220,7 @@ files embed his paths. For example, `Reverb.adv` points its impulse responses in
 6. **Stock rebuilds with the same names and macro layout:**
    - `Guitar.adg`: Amp + Cabinet instead of TONE3000, and no Guitar Rig IRs.
    - `Wah.adg`: dropped 2026-09-26. The wah is owner-only (§7e).
-   - `Digital.adg`: Shifter + Redux, re-saved.
+   - `Digital.adg`: dropped 2026-10-27 with its view.
    - `Expression Pedal.adg`: dropped 2026-09-25. MidiWheels replaced it.
 7. **A Live Set template** with `looping-recorder.amxd` on Return A, for capture.
 

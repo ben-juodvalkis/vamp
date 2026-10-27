@@ -325,18 +325,6 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     expectedClassName: 'MxDeviceAudioEffect',
     color: familyScheme('pitchSeq')
   },
-  digital: {
-    // Ships in the repo, in Vamp Devices, and loads through that Place
-    // like Blur (2026-10-03; the User Library's Effect Patches before).
-    padScoped: true,
-    presetPath: '',
-    source: 'place:Vamp Devices',
-    rel: 'Digital/Digital.adg',
-    defaultName: 'Digital',
-    expectedClassName: 'AudioEffectGroupDevice',
-    gridSlot: false,                    // Virtual device
-    color: familyScheme('distortion')
-  },
   comb: {
     // Comb ships in the repo beside Blur and loads the same way, through the
     // "Vamp Devices" Place. It is a Max rebuild of the owner's Zebrify
@@ -367,7 +355,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     // through the browser — a Max device has no insert-by-name path — and
     // Live names it after the .adv. The name is load-bearing: Permute is an
     // MxDeviceAudioEffect too.
-    // In Vamp Devices since 2026-10-03, like Digital.
+    // In Vamp Devices since 2026-10-03.
     padScoped: true,
     presetPath: '',
     source: 'place:Vamp Devices',
@@ -513,7 +501,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     color: familyScheme('pitchSeq')
   },
   wah: {
-    // In Vamp Devices since 2026-10-03, like Digital. The surface finds
+    // In Vamp Devices since 2026-10-03. The surface finds
     // the same file for the pedal (`live_library.WAH_REL`), and its path is
     // what lands the rack at the head of the chain.
     padScoped: true,

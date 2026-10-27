@@ -33,7 +33,6 @@ describe('machineStore', () => {
 		// the Place, and the surface fills the path in.
 		expect(deviceLoadArgs('tracks/1', '', DEVICE_PRESETS.guitar)).toEqual(['tracks/1', '', '', 'place:Vamp Devices', 'Guitar/Guitar.adg']);
 		expect(deviceLoadArgs('tracks/1', '', DEVICE_PRESETS.bass)).toEqual(['tracks/1', '', '', 'place:Vamp Devices', 'Bass Amp/Bass Amp.adg']);
-		expect(deviceLoadArgs('tracks/1', '', DEVICE_PRESETS.digital)).toEqual(['tracks/1', '', '', 'place:Vamp Devices', 'Digital/Digital.adg']);
 		// A native tile names its device, not a file, whatever the snapshot says (3.12.0).
 		expect(deviceLoadArgs('tracks/1', '', DEVICE_PRESETS.reverb)).toEqual(['tracks/1', '', '', 'native:Hybrid', 'Reverb']);
 		expect(loadKey(DEVICE_PRESETS.reverb)).toBe('native:Hybrid');

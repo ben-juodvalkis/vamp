@@ -80,7 +80,6 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 		'chorus': () => import('./views/ChorusCentralView.svelte'),
 		'comb': () => import('./views/CombCentralView.svelte'),
 		'compressor': () => import('./views/CompressorCentralView.svelte'),
-		'digital': () => import('./views/DigitalCentralView.svelte'),
 		'drum': () => import('./views/DrumBussCentralView.svelte'), // the Drum Buss (ADR-431)
 		'echo': () => import('./views/EchoCentralView.svelte'),
 		'eq': () => import('./views/EQCentralView.svelte'),

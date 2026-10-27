@@ -197,7 +197,6 @@ const VIEW_ONLY_DEVICES = [
 	['velocity', { name: 'Velocity', className: 'MidiVelocity', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Drive', 'Drive', -1, 1, 0, ''], ['Compand', 'Compand', -1, 1, 0, ''], ['Random', 'Random', 0, 64, 40, '40'], ['Mode', 'Mode', 0, 2, 0, ''], ['Operation', 'Operation', 0, 2, 2, ''], ['Out Hi', 'Out Hi', 0, 127, 110, ''], ['Out Low', 'Out Low', 0, 127, 30, '']] }],
 	['tone-shaper', { name: "Ben's Adaptive Tone Shaper", className: 'MxDeviceAudioEffect', params: [['Device On', 'Device On', 0, 1, 1, '']] }],
 	['blur', { name: 'Blur', className: 'MxDeviceAudioEffect', params: [['Device On', 'Device On', 0, 1, 1, '']] }],
-	['digital', { name: 'Digital', className: 'AudioEffectGroupDevice', params: [['Device On', 'Device On', 0, 1, 1, '']] }],
 	['wah', { name: 'Wah', className: 'AudioEffectGroupDevice', params: [['Device On', 'Device On', 0, 1, 1, '']] }],
 	['bass', { name: 'Bass Amp', className: 'AudioEffectGroupDevice', params: [['Device On', 'Device On', 0, 1, 1, '']] }],
 	['pedal', { name: 'Pedal', className: 'Pedal', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Type', 'Type', 0, 2, 0, ''], ['Drive', 'Drive', 0, 1, 0.6, ''], ['Output', 'Output', -20, 20, 0, ''], ['Bass', 'Bass', -1, 1, 0, ''], ['Mid', 'Mid', -1, 1, 0, ''], ['Treble', 'Treble', -1, 1, 0, ''], ['Mid Freq', 'Mid Freq', 0, 2, 1, ''], ['Sub', 'Sub', 0, 1, 0, ''], ['Dry/Wet', 'Dry/Wet', 0, 1, 1, '']] }]

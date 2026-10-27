@@ -86,7 +86,6 @@ export const DEVICE_GLYPHS: Readonly<Record<string, DeviceGlyph>> = {
 	saturator: 'drive',
 	pedal: 'drive',
 	redux: 'drive',
-	digital: 'drive',
 	shifter: 'drive',
 	drum: 'drive',
 	smudge: 'drive',

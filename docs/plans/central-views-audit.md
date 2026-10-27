@@ -141,6 +141,7 @@ the audit commit. After: `after/1366/<state>.png` and
 | Auto Filter | Time/Sync a touch row under the LFO pad, no longer over its corner and the frame's edge | `fx-filter` |
 | Analog | Voice card's grid gaps 8 → 4 px: its rows measure 44 px at 1366 (were 41) | `inst-analog` |
 | Drum Rack | Pad strip's bar button reads "Bar 1" on one line; the mini's layout check passes | `drumrack-pad-notes-2bars` |
+| Digital | Removed with its rack (`Vamp Devices/Digital/Digital.adg`), preset entry and glyph: the rig had moved away from it (Ben, 2026-10-27) | — |
 
 **Left alone, and why**
 
