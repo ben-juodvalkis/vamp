@@ -1,13 +1,14 @@
 <script lang="ts">
 	/**
 	 * A device's control (`deviceControls`) drawn at the values `get` reads:
-	 * its XY, slider or tone pad. The one drawing behind a grid tile, a chain
+	 * its XY, slider, buttons or tone pad. The one drawing behind a grid tile, a chain
 	 * cell and a browser preset tile (2026-10-26). The caller owns the values
 	 * and what a move does.
 	 */
 	import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import ToneCurvePad from '$lib/components/v6/device-panel/ToneCurvePad.svelte';
+	import DeviceButtons from '$lib/components/v6/device-panel/DeviceButtons.svelte';
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
 	import type { ControlGlyphName } from '$lib/components/v6/device-panel/ControlGlyph.svelte';
 	import type { Control, Get, ParamRef, Writes } from '$lib/components/v6/device-panel/deviceControls';
@@ -121,6 +122,15 @@
 			onInteraction={(t) => onMove(control.write(t, get))}
 		/>
 	</div>
+{:else if control.kind === 'buttons'}
+	{@const buttons = control.buttons}
+	<DeviceButtons
+		buttons={buttons.map((b) => ({ label: b.label, on: b.on(get) }))}
+		{color}
+		{isGhost}
+		{orientation}
+		onPress={(i) => onMove(buttons[i].press(get))}
+	/>
 {:else}
 	{@const eq = control.read(get)}
 	<ToneCurvePad
