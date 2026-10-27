@@ -4,7 +4,7 @@
    *
    * Self-contained central view that queries its own slot state.
    * Renders immediately with ghost/loading/active states.
-   * Displays Channel EQ's Low Cut over its output gain (ADR-477). Ben's
+   * Displays Channel EQ's Low Cut beside its output gain, two tall boxes. Ben's
    * Adaptive Tone Shaper's graph sat beside them from 2026-10-07 until the
    * FX chain overview gave every device a view of its own (2026-10-26); it
    * is `ToneShaperCentralView` now.
@@ -70,58 +70,57 @@
 </script>
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
-<div class="h-full w-full flex p-(--central-inset) gap-(--central-gap)">
-<!-- Channel EQ: Low Cut over Output (ADR-477). -->
-<div class="eq-group h-full flex flex-col" class:slot-ghost={fx.isGhost}>
-  <span class="group-eyebrow" style="color: {fxInk.primary};">EQ</span>
-  <div class="flex-1 min-h-0 flex flex-col gap-(--central-gap)">
-    <!-- A switch: one cell, lit while the low cut is on. -->
-    <button
-      onclick={toggleLowCut}
-      class="physical-button flex-1 min-h-0 w-full text-base font-bold"
-      class:active={lowCutEnabled}
-      aria-pressed={lowCutEnabled}
-      style="--btn-tint: {fxInk.primary};"
-    >
-      Low Cut
-    </button>
-    <div class="flex-1 min-h-0">
-      <DeviceSlider
-        value={outputGainValue}
-        title="Output"
-        icon="output"
-        isGhost={fx.isGhost}
-        color={fx.isGhost ? ghostInk : fxInk}
-        readout={fx.paramDisplay(PARAM_CONFIG.outputGain)}
-        onInteraction={(val) => {
-          fx.sendParam(PARAM_CONFIG.outputGain, val);
-        }}
-      />
-    </div>
+<!-- Channel EQ: Low Cut beside Output, two tall boxes side by side (the Glue
+     view's shape). They were two full-width rows (ADR-477's first cut), a
+     1000 x 120 switch over a 1000 x 120 slider that swept sideways. -->
+<div class="eq-layout" class:slot-ghost={fx.isGhost}>
+  <!-- A switch: one cell, lit while the low cut is on. -->
+  <button
+    onclick={toggleLowCut}
+    class="physical-button eq-switch text-lg font-bold"
+    class:active={lowCutEnabled}
+    aria-pressed={lowCutEnabled}
+    style="--btn-tint: {fxInk.primary};"
+  >
+    Low Cut
+  </button>
+  <div class="eq-cell">
+    <DeviceSlider
+      value={outputGainValue}
+      title="Output"
+      icon="output"
+      isGhost={fx.isGhost}
+      color={fx.isGhost ? ghostInk : fxInk}
+      readout={fx.paramDisplay(PARAM_CONFIG.outputGain)}
+      onInteraction={(val) => {
+        fx.sendParam(PARAM_CONFIG.outputGain, val);
+      }}
+    />
   </div>
-</div>
 </div>
 
 <style>
-  .eq-group {
+  /* low cut | output */
+  .eq-layout {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    height: 100%;
+    width: 100%;
+    padding: var(--central-inset);
+    gap: var(--central-gap);
+  }
+  .eq-switch {
+    min-width: 0;
+    min-height: 0;
+  }
+  .eq-cell {
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+  }
+  .eq-cell > :global(*) {
     flex: 1 1 0;
     min-width: 0;
-    gap: var(--spacing-xs);
-  }
-  /* The eyebrow every named group in a central view wears (EnvelopeGroup's). */
-  .group-eyebrow {
-    flex: none;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    text-align: center;
-    white-space: nowrap;
-  }
-  :global([data-grammar="flat"]) .group-eyebrow {
-    letter-spacing: normal;
-    text-transform: none;
-    font-weight: var(--font-weight-medium);
   }
 
   /* ---- Live skin (flat grammar): the LOW CUT switch drops bold (app.css
