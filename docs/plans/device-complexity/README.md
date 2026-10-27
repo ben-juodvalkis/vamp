@@ -3,9 +3,9 @@
 Status: proposal for Ben to choose from (2026-10-27). **Built since, on
 branch `claude/instrument-pages` (ADR-487):** the revision below (Live's
 own panels, tabs and section pages) for Operator, Electric and Collision,
-and Drift's and Analog's own faces with Live's sections as pages behind
-their eyebrows, each now reaching every parameter but Device On. Not built:
-Meld, Wavetable, Simpler and Sampler, whose hand-laid views carry
+and Drift's, Analog's and Wavetable's own faces with Live's sections as
+pages behind their eyebrows, each now reaching every parameter but Device
+On. Not built: Meld, Simpler and Sampler, whose hand-laid views carry
 widgets of their own (oscillator displays, the voice switch, waveforms)
 that a rule-laid panel would flatten; for them a `slot` region (how
 Operator keeps its filter pad) can carry those widgets into a Live-shaped

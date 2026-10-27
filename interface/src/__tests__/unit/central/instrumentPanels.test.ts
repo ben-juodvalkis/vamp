@@ -15,11 +15,13 @@ import COLLISION from '../../../../../docs/reference/instruments/dumps/Collision
 import OPERATOR from '../../../../../docs/reference/instruments/dumps/Operator.json';
 import DRIFT from '../../../../../docs/reference/instruments/dumps/Drift.json';
 import ANALOG from '../../../../../docs/reference/instruments/dumps/Analog.json';
+import WAVETABLE from '../../../../../docs/reference/instruments/dumps/Wavetable.json';
 import { ELECTRIC_PANEL } from '$lib/components/v6/central/views/panel/electricPanel';
 import { COLLISION_PANEL } from '$lib/components/v6/central/views/panel/collisionPanel';
 import { OPERATOR_PANEL } from '$lib/components/v6/central/views/panel/operatorPanel';
 import { DRIFT_PANEL } from '$lib/components/v6/central/views/panel/driftPanel';
 import { ANALOG_PANEL } from '$lib/components/v6/central/views/panel/analogPanel';
+import { WAVETABLE_PANEL } from '$lib/components/v6/central/views/panel/wavetablePanel';
 import {
 	panelParamNames,
 	type InstrumentPanel,
@@ -49,7 +51,8 @@ const PANELS: [string, InstrumentPanel, { parameters: DumpParam[] }][] = [
 	['Collision', COLLISION_PANEL, COLLISION],
 	['Operator', OPERATOR_PANEL, OPERATOR],
 	['Drift', DRIFT_PANEL, DRIFT],
-	['Analog', ANALOG_PANEL, ANALOG]
+	['Analog', ANALOG_PANEL, ANALOG],
+	['Wavetable', WAVETABLE_PANEL, WAVETABLE]
 ];
 
 describe.each(PANELS)('%s panel', (_name, panel, dump) => {
@@ -95,7 +98,8 @@ describe.each(PANELS)('%s panel', (_name, panel, dump) => {
 
 describe.each([
 	['Drift', DRIFT_PANEL, DRIFT],
-	['Analog', ANALOG_PANEL, ANALOG]
+	['Analog', ANALOG_PANEL, ANALOG],
+	['Wavetable', WAVETABLE_PANEL, WAVETABLE]
 ] as const)('%s panel reach', (_name, panel, dump) => {
 	it('reaches every parameter but Device On', () => {
 		const bound = new Set(panelParamNames(panel));

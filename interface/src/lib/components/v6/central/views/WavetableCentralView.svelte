@@ -46,6 +46,10 @@
   import SectionDivider from '../SectionDivider.svelte';
   import { liveFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
   import HostedSwapPill from '../HostedSwapPill.svelte';
+  import InstrumentPanelView from './panel/InstrumentPanelView.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
+  import { usePanelParams } from './panel/usePanelParams.svelte';
+  import { WAVETABLE_PANEL } from './panel/wavetablePanel';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -162,6 +166,9 @@
    * writes nothing, so a patch change never takes the card away mid-edit.
    */
   let oscTab = $state<OscN>(1);
+
+  /** The pages behind the face's eyebrows, by Live's names (ADR-487). */
+  const panelParams = usePanelParams(() => device);
   let o = $derived(OSC[oscTab]);
 
   // All parameter values as $derived - always reactive to store changes (ADR-149)
@@ -359,6 +366,8 @@
 
 <div class="wt-root h-full w-full overflow-hidden relative">
   {#if instrument && device}
+    <InstrumentPanelView panel={WAVETABLE_PANEL} params={panelParams} color={wavetableInk}>
+    {#snippet face(openPage: (page: string) => void)}
     <div class="h-full w-full flex min-h-0 p-(--central-inset)" style="gap: var(--central-gap);">
       <!-- THE LEVELS, Drift's mixer reduced to its oscillators: Osc 1 over
            Osc 2 in one column at the view's left edge (user, 2026-10-22),
@@ -368,6 +377,7 @@
            brings its oscillator's card up. -->
       <div class="mixer-col flex-none min-h-0 flex">
         <div class="env-slider min-h-0 h-full flex flex-col gap-(--central-gap)">
+          <PanelEyebrow color={wavetableInk.primary} />
           <div class="flex-1 min-h-0">
           <DeviceSlider
             value={osc1Gain}
@@ -403,6 +413,7 @@
            Osc 1 and Osc 2 and the colour says which is up. The swap pill
            lies across its top (user's layout, 2026-09-16). -->
       <div class="osc-col flex-[1.2] min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
+        <PanelEyebrow title="Osc {oscTab}" page="osc{oscTab}" onOpen={openPage} color={oscInk.primary} />
         <HostedSwapPill />
         <div class="osc-head flex-none">
           <button
@@ -470,6 +481,7 @@
            its curve beneath, then its type and slope. Ghosted while that
            filter is off; a drag turns it on. -->
       <div class="filter-col flex-1 min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
+        <PanelEyebrow title="Filter {fltTab}" page="filter{fltTab}" onOpen={openPage} color={wavetableInk.primary} />
         <div class="flex-1 min-h-0 relative">
           <!-- The FLT 1/2 switch rides the pad's top-left corner (user,
                2026-10-22), outside the ghost so it never dims. -->
@@ -526,6 +538,7 @@
       <div class="env-col flex-none min-h-0 flex gap-(--central-gap)">
         <SectionDivider orientation="vertical" ink={wavetableInk.primary} />
         <div class="flex-1 min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
+          <PanelEyebrow title="Mod Sources" page="mod" onOpen={openPage} color={wavetableInk.primary} />
           {#each ENVELOPES as envelope, e (envelope.title)}
             {#if e > 0}<SectionDivider orientation="horizontal" ink={wavetableInk.primary} />{/if}
             <EnvelopeGroup ink={wavetableInk.primary} title={envelope.title} edges="none">
@@ -553,6 +566,7 @@
            envelope and LFO time and of the mod matrix, two boxes in one
            column (ADR-477). -->
       <div class="scaler-col flex-none min-h-0 flex flex-col gap-(--central-gap)">
+        <PanelEyebrow title="Global" page="global" onOpen={openPage} color={wavetableInk.primary} />
         <div class="flex-1 min-h-0">
           <DeviceSlider
             value={time}
@@ -579,6 +593,8 @@
         </div>
       </div>
     </div>
+    {/snippet}
+    </InstrumentPanelView>
   {:else}
     <!-- Default state when no Wavetable present -->
     <DeviceEmptyState glyph="~" message="Load Wavetable to access controls" color={wavetableInk.primary} />

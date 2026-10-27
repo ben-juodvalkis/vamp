@@ -76,13 +76,15 @@ the reverse.
   sections as pages (`driftPanel.ts`). Analog is the second: its face
   shows one voice at a time, so its eyebrows open the shown voice's pages
   ("Osc 2 ›" with voice 2 up), and Global leads on to Vibrato and MPE
-  (`analogPanel.ts`).
+  (`analogPanel.ts`). Wavetable's face opens the shown oscillator and
+  filter, its modulation sources (Live's Amp · Env 2 · Env 3 · LFO 1 ·
+  LFO 2, each a page one tap in) and Global (`wavetablePanel.ts`).
 
 ## Consequences
-- Operator, Electric, Collision, Drift and Analog reach every parameter but
-  Device On (194 of 195, 33 of 34, 139 of 140, 65 of 66, 171 of 172), each
-  at most three taps from the frame. Operator's view drew about 10, Drift's
-  about 20, Analog's about 44.
+- Operator, Electric, Collision, Drift, Analog and Wavetable reach every
+  parameter but Device On (194 of 195, 33 of 34, 139 of 140, 65 of 66, 171
+  of 172, 92 of 93), each at most three taps from the frame. Operator's view
+  drew about 10, Drift's about 20, Analog's about 44, Wavetable's about 30.
 - The panels show Live's values only while a box is dragged, as every
   value box in the app does (the audit's open question on readouts at rest).
 - The other instruments keep their hand-laid views until moved onto
