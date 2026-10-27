@@ -1,0 +1,1350 @@
+{
+  "identity": {
+    "path": "tracks/1/devices/0/pads/36/devices/0",
+    "pythonType": "DrumCellDevice",
+    "name": "Kick-SessionDry-Felt-Soft",
+    "class_name": "DrumCell",
+    "class_display_name": "Drum Sampler",
+    "type": "Device.DeviceType.instrument",
+    "can_have_chains": false,
+    "can_have_drum_pads": false,
+    "is_active": true
+  },
+  "parameters": [
+    {
+      "index": 0,
+      "name": "Device On",
+      "original_name": "Device On",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "name": "Transpose",
+      "original_name": "Transpose",
+      "min": -48,
+      "max": 48,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -48,
+          "label": "-48 st"
+        },
+        {
+          "value": -24,
+          "label": "-24 st"
+        },
+        {
+          "value": 0,
+          "label": "0 st"
+        },
+        {
+          "value": 24,
+          "label": "24 st"
+        },
+        {
+          "value": 48,
+          "label": "48 st"
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "name": "Detune",
+      "original_name": "Detune",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-50 ct"
+        },
+        {
+          "value": 0.25,
+          "label": "-25 ct"
+        },
+        {
+          "value": 0.5,
+          "label": "0 ct"
+        },
+        {
+          "value": 0.75,
+          "label": "25 ct"
+        },
+        {
+          "value": 1,
+          "label": "50 ct"
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "name": "Vel > Vol",
+      "original_name": "Vel > Vol",
+      "min": 0,
+      "max": 1,
+      "value": 0.3499999940395355,
+      "default_value": 0.3499999940395355,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 0.35,
+          "label": "35 %"
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "name": "Mod Src",
+      "original_name": "Mod Src",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Velocity"
+        },
+        {
+          "value": 1,
+          "label": "Slide"
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "name": "Mod Dest",
+      "original_name": "Mod Dest",
+      "min": 0,
+      "max": 5,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Filter"
+        },
+        {
+          "value": 1,
+          "label": "Attack"
+        },
+        {
+          "value": 2,
+          "label": "Hold"
+        },
+        {
+          "value": 3,
+          "label": "Decay"
+        },
+        {
+          "value": 4,
+          "label": "FX 1"
+        },
+        {
+          "value": 5,
+          "label": "FX 2"
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "name": "Mod Amt",
+      "original_name": "Mod Amt",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "name": "Filter On",
+      "original_name": "Filter On",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "name": "Filter Freq",
+      "original_name": "Filter Freq",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "default_value": 1,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "30.0 Hz"
+        },
+        {
+          "value": 0.25,
+          "label": "156 Hz"
+        },
+        {
+          "value": 0.5,
+          "label": "812 Hz"
+        },
+        {
+          "value": 0.75,
+          "label": "4.23 kHz"
+        },
+        {
+          "value": 1,
+          "label": "22.0 kHz"
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "name": "Filter Res",
+      "original_name": "Filter Res",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "22 %"
+        },
+        {
+          "value": 0.5,
+          "label": "45 %"
+        },
+        {
+          "value": 0.75,
+          "label": "67 %"
+        },
+        {
+          "value": 1,
+          "label": "90 %"
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "name": "Filter Type",
+      "original_name": "Filter Type",
+      "min": 0,
+      "max": 3,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Low-Pass 12dB"
+        },
+        {
+          "value": 1,
+          "label": "Low-Pass 24dB"
+        },
+        {
+          "value": 2,
+          "label": "High-Pass 24dB"
+        },
+        {
+          "value": 3,
+          "label": "Peak"
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "name": "Filter Gain",
+      "original_name": "Filter Gain",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-12 dB"
+        },
+        {
+          "value": 0.25,
+          "label": "-6.0 dB"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 dB"
+        },
+        {
+          "value": 0.75,
+          "label": "6.0 dB"
+        },
+        {
+          "value": 1,
+          "label": "12 dB"
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "name": "Attack",
+      "original_name": "Attack",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.10 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "2.11 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "44.7 ms"
+        },
+        {
+          "value": 0.75,
+          "label": "946 ms"
+        },
+        {
+          "value": 1,
+          "label": "20.0 s"
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "name": "Hold",
+      "original_name": "Hold",
+      "min": 0,
+      "max": 1,
+      "value": 0.5184267163276672,
+      "default_value": 0.5184267163276672,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1.00 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "15.7 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "245 ms"
+        },
+        {
+          "value": 0.75,
+          "label": "3.83 s"
+        },
+        {
+          "value": 1,
+          "label": "Inf"
+        },
+        {
+          "value": 0.518427,
+          "label": "300 ms"
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "name": "Decay",
+      "original_name": "Decay",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "default_value": 0.6278578639030457,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1.00 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "15.7 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "245 ms"
+        },
+        {
+          "value": 0.75,
+          "label": "3.83 s"
+        },
+        {
+          "value": 1,
+          "label": "60.0 s"
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "name": "Env Mode",
+      "original_name": "Env Mode",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Trigger"
+        },
+        {
+          "value": 1,
+          "label": "Gate"
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "name": "Start",
+      "original_name": "Start",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "name": "Length",
+      "original_name": "Length",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "default_value": 1,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "name": "Volume",
+      "original_name": "Volume",
+      "min": 0,
+      "max": 1,
+      "value": 0.33070865273475647,
+      "default_value": 0.3333333432674408,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-36 dB"
+        },
+        {
+          "value": 0.25,
+          "label": "-18 dB"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 dB"
+        },
+        {
+          "value": 0.75,
+          "label": "18 dB"
+        },
+        {
+          "value": 1,
+          "label": "36 dB"
+        },
+        {
+          "value": 0.330709,
+          "label": "-12 dB"
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "name": "Pan",
+      "original_name": "Pan",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "50L"
+        },
+        {
+          "value": 0.25,
+          "label": "25L"
+        },
+        {
+          "value": 0.5,
+          "label": "C"
+        },
+        {
+          "value": 0.75,
+          "label": "25R"
+        },
+        {
+          "value": 1,
+          "label": "50R"
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "name": "FX On",
+      "original_name": "FX On",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "name": "FX Type",
+      "original_name": "FX Type",
+      "min": 0,
+      "max": 8,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Stretch"
+        },
+        {
+          "value": 1,
+          "label": "Loop"
+        },
+        {
+          "value": 2,
+          "label": "Pitch Env"
+        },
+        {
+          "value": 3,
+          "label": "Punch"
+        },
+        {
+          "value": 4,
+          "label": "8-Bit"
+        },
+        {
+          "value": 5,
+          "label": "FM"
+        },
+        {
+          "value": 6,
+          "label": "Ring Mod"
+        },
+        {
+          "value": 7,
+          "label": "Sub Osc"
+        },
+        {
+          "value": 8,
+          "label": "Noise"
+        }
+      ]
+    },
+    {
+      "index": 22,
+      "name": "Pitch Env Amt",
+      "original_name": "Pitch Env Amt",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 23,
+      "name": "Pitch Env Decay",
+      "original_name": "Pitch Env Decay",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5288019180297852,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "5.00 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "36.2 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "254 ms"
+        },
+        {
+          "value": 0.75,
+          "label": "847 ms"
+        },
+        {
+          "value": 1,
+          "label": "2.00 s"
+        }
+      ]
+    },
+    {
+      "index": 24,
+      "name": "Sub Amt",
+      "original_name": "Sub Amt",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 25,
+      "name": "Sub Freq",
+      "original_name": "Sub Freq",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "30.0 Hz"
+        },
+        {
+          "value": 0.25,
+          "label": "42.4 Hz"
+        },
+        {
+          "value": 0.5,
+          "label": "60.0 Hz"
+        },
+        {
+          "value": 0.75,
+          "label": "84.9 Hz"
+        },
+        {
+          "value": 1,
+          "label": "120 Hz"
+        }
+      ]
+    },
+    {
+      "index": 26,
+      "name": "Noise Amt",
+      "original_name": "Noise Amt",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 27,
+      "name": "Noise Color",
+      "original_name": "Noise Color",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.8140136003494263,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "180 Hz"
+        },
+        {
+          "value": 0.25,
+          "label": "1.11 kHz"
+        },
+        {
+          "value": 0.5,
+          "label": "3.89 kHz"
+        },
+        {
+          "value": 0.75,
+          "label": "8.52 kHz"
+        },
+        {
+          "value": 1,
+          "label": "15.0 kHz"
+        }
+      ]
+    },
+    {
+      "index": 28,
+      "name": "Loop Offset",
+      "original_name": "Loop Offset",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0.1414213478565216,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "6.2 %"
+        },
+        {
+          "value": 0.5,
+          "label": "25 %"
+        },
+        {
+          "value": 0.75,
+          "label": "56 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 29,
+      "name": "Loop Length",
+      "original_name": "Loop Length",
+      "min": 0,
+      "max": 1,
+      "value": 0.5000002384185791,
+      "default_value": 0.7693092823028564,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "10.0 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "40.6 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "133 ms"
+        },
+        {
+          "value": 0.75,
+          "label": "286 ms"
+        },
+        {
+          "value": 1,
+          "label": "500 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "133 ms"
+        }
+      ]
+    },
+    {
+      "index": 30,
+      "name": "Stretch Factor",
+      "original_name": "Stretch Factor",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1.00 "
+        },
+        {
+          "value": 0.25,
+          "label": "2.19 "
+        },
+        {
+          "value": 0.5,
+          "label": "5.75 "
+        },
+        {
+          "value": 0.75,
+          "label": "11.69 "
+        },
+        {
+          "value": 1,
+          "label": "20.00 "
+        }
+      ]
+    },
+    {
+      "index": 31,
+      "name": "Grain Size",
+      "original_name": "Grain Size",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5674802660942078,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "5.00 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "23.4 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "78.8 ms"
+        },
+        {
+          "value": 0.75,
+          "label": "171 ms"
+        },
+        {
+          "value": 1,
+          "label": "300 ms"
+        }
+      ]
+    },
+    {
+      "index": 32,
+      "name": "Punch Amt",
+      "original_name": "Punch Amt",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 33,
+      "name": "Punch Release",
+      "original_name": "Punch Release",
+      "min": 0,
+      "max": 1,
+      "value": 0.4999999701976776,
+      "default_value": 0.4000000059604645,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "60.0 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "74.7 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "178 ms"
+        },
+        {
+          "value": 0.75,
+          "label": "457 ms"
+        },
+        {
+          "value": 1,
+          "label": "1.00 s"
+        },
+        {
+          "value": 0.5,
+          "label": "177 ms"
+        }
+      ]
+    },
+    {
+      "index": 34,
+      "name": "8-Bit Rate",
+      "original_name": "8-Bit Rate",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0.7775953412055969,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1.00 kHz"
+        },
+        {
+          "value": 0.25,
+          "label": "2.34 kHz"
+        },
+        {
+          "value": 0.5,
+          "label": "5.48 kHz"
+        },
+        {
+          "value": 0.75,
+          "label": "12.8 kHz"
+        },
+        {
+          "value": 1,
+          "label": "30.0 kHz"
+        }
+      ]
+    },
+    {
+      "index": 35,
+      "name": "8-Bit Flt Decay",
+      "original_name": "8-Bit Flt Decay",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 1,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "10.0 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "47.3 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "224 ms"
+        },
+        {
+          "value": 0.75,
+          "label": "1.06 s"
+        },
+        {
+          "value": 1,
+          "label": "Off"
+        }
+      ]
+    },
+    {
+      "index": 36,
+      "name": "FM Amt",
+      "original_name": "FM Amt",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "1.6 %"
+        },
+        {
+          "value": 0.5,
+          "label": "12 %"
+        },
+        {
+          "value": 0.75,
+          "label": "42 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 37,
+      "name": "FM Freq",
+      "original_name": "FM Freq",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.7538031339645386,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "10.0 Hz"
+        },
+        {
+          "value": 0.25,
+          "label": "46.1 Hz"
+        },
+        {
+          "value": 0.5,
+          "label": "212 Hz"
+        },
+        {
+          "value": 0.75,
+          "label": "977 Hz"
+        },
+        {
+          "value": 1,
+          "label": "4.50 kHz"
+        }
+      ]
+    },
+    {
+      "index": 38,
+      "name": "RM Amt",
+      "original_name": "RM Amt",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 39,
+      "name": "RM Freq",
+      "original_name": "RM Freq",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.7246636152267456,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1.00 Hz"
+        },
+        {
+          "value": 0.25,
+          "label": "5.88 Hz"
+        },
+        {
+          "value": 0.5,
+          "label": "157 Hz"
+        },
+        {
+          "value": 0.75,
+          "label": "1.19 kHz"
+        },
+        {
+          "value": 1,
+          "label": "5.00 kHz"
+        }
+      ]
+    }
+  ],
+  "attributes": [
+    {
+      "name": "can_compare_ab",
+      "value": true,
+      "observable": false,
+      "doc": "Returns true if the Device has the capability to AB compare.",
+      "settable": false
+    },
+    {
+      "name": "can_have_chains",
+      "value": false,
+      "observable": false,
+      "doc": "Returns true if the device is a rack.",
+      "settable": false
+    },
+    {
+      "name": "can_have_drum_pads",
+      "value": false,
+      "observable": false,
+      "doc": "Returns true if the device is a drum rack.",
+      "settable": false
+    },
+    {
+      "name": "class_display_name",
+      "value": "Drum Sampler",
+      "observable": false,
+      "doc": "Return const access to the name of the device's class name as displayed in Live's browser and device chain",
+      "settable": false
+    },
+    {
+      "name": "class_name",
+      "value": "DrumCell",
+      "observable": false,
+      "doc": "Return const access to the name of the device's class.",
+      "settable": false
+    },
+    {
+      "name": "gain",
+      "value": 0.5011501312255859,
+      "observable": true,
+      "doc": "Return the Gain value",
+      "settable": true
+    },
+    {
+      "name": "is_active",
+      "value": true,
+      "observable": true,
+      "doc": "Return const access to whether this device is active. This will be false bothwhen the device is off and when it's inside a rack device which is off.",
+      "settable": false
+    },
+    {
+      "name": "is_using_compare_preset_b",
+      "value": false,
+      "observable": true,
+      "doc": "Returns whether the Device has loaded the preset in compare slot B. Only relevant if can_compare_ab, otherwise errors.",
+      "settable": true
+    },
+    {
+      "name": "latency_in_ms",
+      "value": 0,
+      "observable": true,
+      "doc": "Returns the latency of the device in ms.",
+      "settable": false
+    },
+    {
+      "name": "latency_in_samples",
+      "value": 0,
+      "observable": true,
+      "doc": "Returns the latency of the device in samples.",
+      "settable": false
+    },
+    {
+      "name": "name",
+      "value": "Kick-SessionDry-Felt-Soft",
+      "observable": true,
+      "doc": "Return access to the name of the device.",
+      "settable": true
+    },
+    {
+      "name": "type",
+      "value": "Device.DeviceType.instrument",
+      "observable": false,
+      "doc": "Return the type of the device.",
+      "settable": false
+    }
+  ],
+  "propertyAllowlist": []
+}

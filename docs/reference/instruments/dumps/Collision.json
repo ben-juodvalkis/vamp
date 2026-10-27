@@ -1,0 +1,6115 @@
+{
+  "identity": {
+    "path": "tracks/2/devices/0",
+    "pythonType": "Device",
+    "name": "Collision",
+    "class_name": "Collision",
+    "class_display_name": "Collision",
+    "type": "Device.DeviceType.instrument",
+    "can_have_chains": false,
+    "can_have_drum_pads": false,
+    "is_active": true
+  },
+  "parameters": [
+    {
+      "index": 0,
+      "name": "Device On",
+      "original_name": "Device On",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "name": "Structure",
+      "original_name": "Structure",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1 > 2"
+        },
+        {
+          "value": 1,
+          "label": "1 + 2"
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "name": "PB Range",
+      "original_name": "PB Range",
+      "min": 0,
+      "max": 24,
+      "value": 5,
+      "default_value": 5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 st"
+        },
+        {
+          "value": 1,
+          "label": "+1 st"
+        },
+        {
+          "value": 2,
+          "label": "+2 st"
+        },
+        {
+          "value": 3,
+          "label": "+3 st"
+        },
+        {
+          "value": 4,
+          "label": "+4 st"
+        },
+        {
+          "value": 5,
+          "label": "+5 st"
+        },
+        {
+          "value": 6,
+          "label": "+6 st"
+        },
+        {
+          "value": 7,
+          "label": "+7 st"
+        },
+        {
+          "value": 8,
+          "label": "+8 st"
+        },
+        {
+          "value": 9,
+          "label": "+9 st"
+        },
+        {
+          "value": 10,
+          "label": "+10 st"
+        },
+        {
+          "value": 11,
+          "label": "+11 st"
+        },
+        {
+          "value": 12,
+          "label": "+12 st"
+        },
+        {
+          "value": 13,
+          "label": "+13 st"
+        },
+        {
+          "value": 14,
+          "label": "+14 st"
+        },
+        {
+          "value": 15,
+          "label": "+15 st"
+        },
+        {
+          "value": 16,
+          "label": "+16 st"
+        },
+        {
+          "value": 17,
+          "label": "+17 st"
+        },
+        {
+          "value": 18,
+          "label": "+18 st"
+        },
+        {
+          "value": 19,
+          "label": "+19 st"
+        },
+        {
+          "value": 20,
+          "label": "+20 st"
+        },
+        {
+          "value": 21,
+          "label": "+21 st"
+        },
+        {
+          "value": 22,
+          "label": "+22 st"
+        },
+        {
+          "value": 23,
+          "label": "+23 st"
+        },
+        {
+          "value": 24,
+          "label": "+24 st"
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "name": "Voices",
+      "original_name": "Voices",
+      "min": 0,
+      "max": 8,
+      "value": 2,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Mono"
+        },
+        {
+          "value": 1,
+          "label": "2"
+        },
+        {
+          "value": 2,
+          "label": "4"
+        },
+        {
+          "value": 3,
+          "label": "6"
+        },
+        {
+          "value": 4,
+          "label": "8"
+        },
+        {
+          "value": 5,
+          "label": "10"
+        },
+        {
+          "value": 6,
+          "label": "12"
+        },
+        {
+          "value": 7,
+          "label": "14"
+        },
+        {
+          "value": 8,
+          "label": "16"
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "name": "Retrig On",
+      "original_name": "Retrig On",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "name": "Volume",
+      "original_name": "Volume",
+      "min": 0,
+      "max": 1,
+      "value": 0.7047892212867737,
+      "default_value": 0.7047892212867737,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-inf dB"
+        },
+        {
+          "value": 0.25,
+          "label": "-18 dB"
+        },
+        {
+          "value": 0.5,
+          "label": "-6.0 dB"
+        },
+        {
+          "value": 0.75,
+          "label": "1.0 dB"
+        },
+        {
+          "value": 1,
+          "label": "6.0 dB"
+        },
+        {
+          "value": 0.704789,
+          "label": "-0.1 dB"
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "name": "Note PB Range",
+      "original_name": "Note PB Range",
+      "min": 0,
+      "max": 48,
+      "value": 48,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 st"
+        },
+        {
+          "value": 1,
+          "label": "1 st"
+        },
+        {
+          "value": 2,
+          "label": "2 st"
+        },
+        {
+          "value": 3,
+          "label": "3 st"
+        },
+        {
+          "value": 4,
+          "label": "4 st"
+        },
+        {
+          "value": 5,
+          "label": "5 st"
+        },
+        {
+          "value": 6,
+          "label": "6 st"
+        },
+        {
+          "value": 7,
+          "label": "7 st"
+        },
+        {
+          "value": 8,
+          "label": "8 st"
+        },
+        {
+          "value": 9,
+          "label": "9 st"
+        },
+        {
+          "value": 10,
+          "label": "10 st"
+        },
+        {
+          "value": 11,
+          "label": "11 st"
+        },
+        {
+          "value": 12,
+          "label": "12 st"
+        },
+        {
+          "value": 13,
+          "label": "13 st"
+        },
+        {
+          "value": 14,
+          "label": "14 st"
+        },
+        {
+          "value": 15,
+          "label": "15 st"
+        },
+        {
+          "value": 16,
+          "label": "16 st"
+        },
+        {
+          "value": 17,
+          "label": "17 st"
+        },
+        {
+          "value": 18,
+          "label": "18 st"
+        },
+        {
+          "value": 19,
+          "label": "19 st"
+        },
+        {
+          "value": 20,
+          "label": "20 st"
+        },
+        {
+          "value": 21,
+          "label": "21 st"
+        },
+        {
+          "value": 22,
+          "label": "22 st"
+        },
+        {
+          "value": 23,
+          "label": "23 st"
+        },
+        {
+          "value": 24,
+          "label": "24 st"
+        },
+        {
+          "value": 25,
+          "label": "25 st"
+        },
+        {
+          "value": 26,
+          "label": "26 st"
+        },
+        {
+          "value": 27,
+          "label": "27 st"
+        },
+        {
+          "value": 28,
+          "label": "28 st"
+        },
+        {
+          "value": 29,
+          "label": "29 st"
+        },
+        {
+          "value": 30,
+          "label": "30 st"
+        },
+        {
+          "value": 31,
+          "label": "31 st"
+        },
+        {
+          "value": 32,
+          "label": "32 st"
+        },
+        {
+          "value": 33,
+          "label": "33 st"
+        },
+        {
+          "value": 34,
+          "label": "34 st"
+        },
+        {
+          "value": 35,
+          "label": "35 st"
+        },
+        {
+          "value": 36,
+          "label": "36 st"
+        },
+        {
+          "value": 37,
+          "label": "37 st"
+        },
+        {
+          "value": 38,
+          "label": "38 st"
+        },
+        {
+          "value": 39,
+          "label": "39 st"
+        },
+        {
+          "value": 40,
+          "label": "40 st"
+        },
+        {
+          "value": 41,
+          "label": "41 st"
+        },
+        {
+          "value": 42,
+          "label": "42 st"
+        },
+        {
+          "value": 43,
+          "label": "43 st"
+        },
+        {
+          "value": 44,
+          "label": "44 st"
+        },
+        {
+          "value": 45,
+          "label": "45 st"
+        },
+        {
+          "value": 46,
+          "label": "46 st"
+        },
+        {
+          "value": 47,
+          "label": "47 st"
+        },
+        {
+          "value": 48,
+          "label": "48 st"
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "name": "Mallet On/Off",
+      "original_name": "Mallet On/Off",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "name": "Mallet Volume",
+      "original_name": "Mallet Volume",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-60 dB"
+        },
+        {
+          "value": 0.25,
+          "label": "-45 dB"
+        },
+        {
+          "value": 0.5,
+          "label": "-30 dB"
+        },
+        {
+          "value": 0.75,
+          "label": "-15 dB"
+        },
+        {
+          "value": 1,
+          "label": "0.0 dB"
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "name": "Mallet Volume < Vel",
+      "original_name": "Mallet Volume < Vel",
+      "min": -5,
+      "max": 5,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "name": "Mallet Volume < Key",
+      "original_name": "Mallet Volume < Key",
+      "min": -2,
+      "max": 2,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -2,
+          "label": "-200 %"
+        },
+        {
+          "value": -1,
+          "label": "-100 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 2,
+          "label": "200 %"
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "name": "Mallet Stiffness",
+      "original_name": "Mallet Stiffness",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "name": "Mallet Stiffness < Vel",
+      "original_name": "Mallet Stiffness < Vel",
+      "min": -5,
+      "max": 5,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "name": "Mallet Stiffness < Key",
+      "original_name": "Mallet Stiffness < Key",
+      "min": -2,
+      "max": 2,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -2,
+          "label": "-200 %"
+        },
+        {
+          "value": -1,
+          "label": "-100 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 2,
+          "label": "200 %"
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "name": "Mallet Noise Amount",
+      "original_name": "Mallet Noise Amount",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "name": "Mallet Noise Amount < Vel",
+      "original_name": "Mallet Noise Amount < Vel",
+      "min": -5,
+      "max": 5,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "name": "Mallet Noise Amount < Key",
+      "original_name": "Mallet Noise Amount < Key",
+      "min": -2,
+      "max": 2,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -2,
+          "label": "-200 %"
+        },
+        {
+          "value": -1,
+          "label": "-100 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 2,
+          "label": "200 %"
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "name": "Mallet Noise Color",
+      "original_name": "Mallet Noise Color",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "name": "Noise On/Off",
+      "original_name": "Noise On/Off",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "name": "Noise Volume",
+      "original_name": "Noise Volume",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-60 dB"
+        },
+        {
+          "value": 0.25,
+          "label": "-45 dB"
+        },
+        {
+          "value": 0.5,
+          "label": "-30 dB"
+        },
+        {
+          "value": 0.75,
+          "label": "-15 dB"
+        },
+        {
+          "value": 1,
+          "label": "0.0 dB"
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "name": "Noise Volume < Vel",
+      "original_name": "Noise Volume < Vel",
+      "min": -5,
+      "max": 5,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "name": "Noise Volume < Key",
+      "original_name": "Noise Volume < Key",
+      "min": -2,
+      "max": 2,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -2,
+          "label": "-200 %"
+        },
+        {
+          "value": -1,
+          "label": "-100 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 2,
+          "label": "200 %"
+        }
+      ]
+    },
+    {
+      "index": 22,
+      "name": "Noise Filter Type",
+      "original_name": "Noise Filter Type",
+      "min": 0,
+      "max": 3,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "LP"
+        },
+        {
+          "value": 1,
+          "label": "HP"
+        },
+        {
+          "value": 2,
+          "label": "BP"
+        },
+        {
+          "value": 3,
+          "label": "LP+HP"
+        }
+      ]
+    },
+    {
+      "index": 23,
+      "name": "Noise Filter Freq",
+      "original_name": "Noise Filter Freq",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": " 50 Hz"
+        },
+        {
+          "value": 0.25,
+          "label": "218 Hz"
+        },
+        {
+          "value": 0.5,
+          "label": "949 Hz"
+        },
+        {
+          "value": 0.75,
+          "label": "4.1 kHz"
+        },
+        {
+          "value": 1,
+          "label": "18.0 kHz"
+        }
+      ]
+    },
+    {
+      "index": 24,
+      "name": "Noise Freq < Vel",
+      "original_name": "Noise Freq < Vel",
+      "min": -8,
+      "max": 8,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -8,
+          "label": "-100 %"
+        },
+        {
+          "value": -7,
+          "label": "-88 %"
+        },
+        {
+          "value": -6,
+          "label": "-75 %"
+        },
+        {
+          "value": -5,
+          "label": "-62 %"
+        },
+        {
+          "value": -4,
+          "label": "-50 %"
+        },
+        {
+          "value": -3,
+          "label": "-38 %"
+        },
+        {
+          "value": -2,
+          "label": "-25 %"
+        },
+        {
+          "value": -1,
+          "label": "-12 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "12 %"
+        },
+        {
+          "value": 2,
+          "label": "25 %"
+        },
+        {
+          "value": 3,
+          "label": "38 %"
+        },
+        {
+          "value": 4,
+          "label": "50 %"
+        },
+        {
+          "value": 5,
+          "label": "62 %"
+        },
+        {
+          "value": 6,
+          "label": "75 %"
+        },
+        {
+          "value": 7,
+          "label": "88 %"
+        },
+        {
+          "value": 8,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 25,
+      "name": "Noise Freq < Key",
+      "original_name": "Noise Freq < Key",
+      "min": -2,
+      "max": 2,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -2,
+          "label": "-200 %"
+        },
+        {
+          "value": -1,
+          "label": "-100 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 2,
+          "label": "200 %"
+        }
+      ]
+    },
+    {
+      "index": 26,
+      "name": "Noise Freq < Env",
+      "original_name": "Noise Freq < Env",
+      "min": -5,
+      "max": 5,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 27,
+      "name": "Noise Filter Q",
+      "original_name": "Noise Filter Q",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.20"
+        },
+        {
+          "value": 0.25,
+          "label": "0.39"
+        },
+        {
+          "value": 0.5,
+          "label": "0.77"
+        },
+        {
+          "value": 0.75,
+          "label": "1.52"
+        },
+        {
+          "value": 1,
+          "label": "3.00"
+        }
+      ]
+    },
+    {
+      "index": 28,
+      "name": "Noise Attack",
+      "original_name": "Noise Attack",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "7 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "100 ms"
+        },
+        {
+          "value": 0.75,
+          "label": "1.41 s"
+        },
+        {
+          "value": 1,
+          "label": "20.0 s"
+        }
+      ]
+    },
+    {
+      "index": 29,
+      "name": "Noise Decay",
+      "original_name": "Noise Decay",
+      "min": 0,
+      "max": 1,
+      "value": 0.20000000298023224,
+      "default_value": 0.20000000298023224,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "2 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "26 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "346 ms"
+        },
+        {
+          "value": 0.75,
+          "label": "4.56 s"
+        },
+        {
+          "value": 1,
+          "label": "60.0 s"
+        },
+        {
+          "value": 0.2,
+          "label": "16 ms"
+        }
+      ]
+    },
+    {
+      "index": 30,
+      "name": "Noise Sustain",
+      "original_name": "Noise Sustain",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.00"
+        },
+        {
+          "value": 0.25,
+          "label": "25.00"
+        },
+        {
+          "value": 0.5,
+          "label": "50.00"
+        },
+        {
+          "value": 0.75,
+          "label": "75.00"
+        },
+        {
+          "value": 1,
+          "label": "100.00"
+        }
+      ]
+    },
+    {
+      "index": 31,
+      "name": "Noise Release",
+      "original_name": "Noise Release",
+      "min": 0,
+      "max": 1,
+      "value": 0.20000000298023224,
+      "default_value": 0.20000000298023224,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "2 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "26 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "346 ms"
+        },
+        {
+          "value": 0.75,
+          "label": "4.56 s"
+        },
+        {
+          "value": 1,
+          "label": "60.0 s"
+        },
+        {
+          "value": 0.2,
+          "label": "16 ms"
+        }
+      ]
+    },
+    {
+      "index": 32,
+      "name": "Res 1 On/Off",
+      "original_name": "Res 1 On/Off",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 33,
+      "name": "Res 1 Type",
+      "original_name": "Res 1 Type",
+      "min": 0,
+      "max": 6,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Beam"
+        },
+        {
+          "value": 1,
+          "label": "Marimba"
+        },
+        {
+          "value": 2,
+          "label": "String"
+        },
+        {
+          "value": 3,
+          "label": "Membrane"
+        },
+        {
+          "value": 4,
+          "label": "Plate"
+        },
+        {
+          "value": 5,
+          "label": "Pipe"
+        },
+        {
+          "value": 6,
+          "label": "Tube"
+        }
+      ]
+    },
+    {
+      "index": 34,
+      "name": "Res 1 Quality",
+      "original_name": "Res 1 Quality",
+      "min": 0,
+      "max": 3,
+      "value": 2,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Eco"
+        },
+        {
+          "value": 1,
+          "label": "Low"
+        },
+        {
+          "value": 2,
+          "label": "Med"
+        },
+        {
+          "value": 3,
+          "label": "High"
+        }
+      ]
+    },
+    {
+      "index": 35,
+      "name": "Res 1 Tune",
+      "original_name": "Res 1 Tune",
+      "min": -48,
+      "max": 48,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -48,
+          "label": "-48 st"
+        },
+        {
+          "value": -24,
+          "label": "-24 st"
+        },
+        {
+          "value": 0,
+          "label": "0 st"
+        },
+        {
+          "value": 24,
+          "label": "+24 st"
+        },
+        {
+          "value": 48,
+          "label": "+48 st"
+        }
+      ]
+    },
+    {
+      "index": 36,
+      "name": "Res 1 Fine Tune",
+      "original_name": "Res 1 Fine Tune",
+      "min": -50,
+      "max": 50,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -50,
+          "label": "-50 ct"
+        },
+        {
+          "value": -25,
+          "label": "-25 ct"
+        },
+        {
+          "value": 0,
+          "label": "0 ct"
+        },
+        {
+          "value": 25,
+          "label": "25 ct"
+        },
+        {
+          "value": 50,
+          "label": "50 ct"
+        }
+      ]
+    },
+    {
+      "index": 37,
+      "name": "Res 1 Tune < Key",
+      "original_name": "Res 1 Tune < Key",
+      "min": -2,
+      "max": 2,
+      "value": 1,
+      "default_value": 1,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -2,
+          "label": "-200 %"
+        },
+        {
+          "value": -1,
+          "label": "-100 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 2,
+          "label": "200 %"
+        }
+      ]
+    },
+    {
+      "index": 38,
+      "name": "Res 1 Pitch Env.",
+      "original_name": "Res 1 Pitch Env.",
+      "min": -1,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -1,
+          "label": "-100 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 39,
+      "name": "Res 1 Pitch Env. < Vel",
+      "original_name": "Res 1 Pitch Env. < Vel",
+      "min": -5,
+      "max": 5,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 40,
+      "name": "Res 1 Pitch Env. Time",
+      "original_name": "Res 1 Pitch Env. Time",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "10 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "100 ms"
+        },
+        {
+          "value": 0.75,
+          "label": "1.00 s"
+        },
+        {
+          "value": 1,
+          "label": "10.0 s"
+        }
+      ]
+    },
+    {
+      "index": 41,
+      "name": "Res 1 Decay",
+      "original_name": "Res 1 Decay",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "50 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "257 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "1.32 s"
+        },
+        {
+          "value": 0.75,
+          "label": "6.80 s"
+        },
+        {
+          "value": 1,
+          "label": "35.0 s"
+        }
+      ]
+    },
+    {
+      "index": 42,
+      "name": "Res 1 Decay < Vel",
+      "original_name": "Res 1 Decay < Vel",
+      "min": -5,
+      "max": 5,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 43,
+      "name": "Res 1 Decay < Key",
+      "original_name": "Res 1 Decay < Key",
+      "min": -2,
+      "max": 2,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -2,
+          "label": "-200 %"
+        },
+        {
+          "value": -1,
+          "label": "-100 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 2,
+          "label": "200 %"
+        }
+      ]
+    },
+    {
+      "index": 44,
+      "name": "Res 1 Off Decay",
+      "original_name": "Res 1 Off Decay",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 45,
+      "name": "Res 1 Material",
+      "original_name": "Res 1 Material",
+      "min": -1,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -1,
+          "label": "-100.00"
+        },
+        {
+          "value": 0,
+          "label": "0.00"
+        },
+        {
+          "value": 1,
+          "label": "100.00"
+        }
+      ]
+    },
+    {
+      "index": 46,
+      "name": "Res 1 Material < Vel",
+      "original_name": "Res 1 Material < Vel",
+      "min": -5,
+      "max": 5,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 47,
+      "name": "Res 1 Material < Key",
+      "original_name": "Res 1 Material < Key",
+      "min": -2,
+      "max": 2,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -2,
+          "label": "-200 %"
+        },
+        {
+          "value": -1,
+          "label": "-100 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 2,
+          "label": "200 %"
+        }
+      ]
+    },
+    {
+      "index": 48,
+      "name": "Res 1 Radius",
+      "original_name": "Res 1 Radius",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 49,
+      "name": "Res 1 Radius < Vel",
+      "original_name": "Res 1 Radius < Vel",
+      "min": -5,
+      "max": 5,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 50,
+      "name": "Res 1 Radius < Key",
+      "original_name": "Res 1 Radius < Key",
+      "min": -2,
+      "max": 2,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -2,
+          "label": "-200 %"
+        },
+        {
+          "value": -1,
+          "label": "-100 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 2,
+          "label": "200 %"
+        }
+      ]
+    },
+    {
+      "index": 51,
+      "name": "Res 1 Ratio",
+      "original_name": "Res 1 Ratio",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 52,
+      "name": "Res 1 Brightness",
+      "original_name": "Res 1 Brightness",
+      "min": -1,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -1,
+          "label": "-100 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 53,
+      "name": "Res 1 Bleed",
+      "original_name": "Res 1 Bleed",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 54,
+      "name": "Res 1 Inharmonics",
+      "original_name": "Res 1 Inharmonics",
+      "min": -1,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -1,
+          "label": "-100 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 55,
+      "name": "Res 1 Inharmonics < Vel",
+      "original_name": "Res 1 Inharmonics < Vel",
+      "min": -5,
+      "max": 5,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 56,
+      "name": "Res 1 Opening",
+      "original_name": "Res 1 Opening",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "default_value": 1,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 57,
+      "name": "Res 1 Opening < Vel",
+      "original_name": "Res 1 Opening < Vel",
+      "min": -5,
+      "max": 5,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 58,
+      "name": "Res 1 Hit",
+      "original_name": "Res 1 Hit",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 59,
+      "name": "Res 1 Hit < Random",
+      "original_name": "Res 1 Hit < Random",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 60,
+      "name": "Res 1 Listening L",
+      "original_name": "Res 1 Listening L",
+      "min": 0,
+      "max": 1,
+      "value": 0.10000000149011612,
+      "default_value": 0.10000000149011612,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 0.1,
+          "label": "10 %"
+        }
+      ]
+    },
+    {
+      "index": 61,
+      "name": "Res 1 Listening R",
+      "original_name": "Res 1 Listening R",
+      "min": 0,
+      "max": 1,
+      "value": 0.8999999761581421,
+      "default_value": 0.8999999761581421,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 0.9,
+          "label": "90 %"
+        }
+      ]
+    },
+    {
+      "index": 62,
+      "name": "Res 1 Pan",
+      "original_name": "Res 1 Pan",
+      "min": -1,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -1,
+          "label": "50L"
+        },
+        {
+          "value": 0,
+          "label": "C"
+        },
+        {
+          "value": 1,
+          "label": "50R"
+        }
+      ]
+    },
+    {
+      "index": 63,
+      "name": "Res 1 Pan < Key",
+      "original_name": "Res 1 Pan < Key",
+      "min": -1,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -1,
+          "label": "-500 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "500 %"
+        }
+      ]
+    },
+    {
+      "index": 64,
+      "name": "Res 1 Volume",
+      "original_name": "Res 1 Volume",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-inf dB"
+        },
+        {
+          "value": 0.25,
+          "label": "-18 dB"
+        },
+        {
+          "value": 0.5,
+          "label": "-6.0 dB"
+        },
+        {
+          "value": 0.75,
+          "label": "1.0 dB"
+        },
+        {
+          "value": 1,
+          "label": "6.0 dB"
+        }
+      ]
+    },
+    {
+      "index": 65,
+      "name": "Res 2 On/Off",
+      "original_name": "Res 2 On/Off",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 66,
+      "name": "Res 2 Type",
+      "original_name": "Res 2 Type",
+      "min": 0,
+      "max": 6,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Beam"
+        },
+        {
+          "value": 1,
+          "label": "Marimba"
+        },
+        {
+          "value": 2,
+          "label": "String"
+        },
+        {
+          "value": 3,
+          "label": "Membrane"
+        },
+        {
+          "value": 4,
+          "label": "Plate"
+        },
+        {
+          "value": 5,
+          "label": "Pipe"
+        },
+        {
+          "value": 6,
+          "label": "Tube"
+        }
+      ]
+    },
+    {
+      "index": 67,
+      "name": "Res 2 Quality",
+      "original_name": "Res 2 Quality",
+      "min": 0,
+      "max": 3,
+      "value": 2,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Eco"
+        },
+        {
+          "value": 1,
+          "label": "Low"
+        },
+        {
+          "value": 2,
+          "label": "Med"
+        },
+        {
+          "value": 3,
+          "label": "High"
+        }
+      ]
+    },
+    {
+      "index": 68,
+      "name": "Res 2 Tune",
+      "original_name": "Res 2 Tune",
+      "min": -48,
+      "max": 48,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -48,
+          "label": "-48 st"
+        },
+        {
+          "value": -24,
+          "label": "-24 st"
+        },
+        {
+          "value": 0,
+          "label": "0 st"
+        },
+        {
+          "value": 24,
+          "label": "+24 st"
+        },
+        {
+          "value": 48,
+          "label": "+48 st"
+        }
+      ]
+    },
+    {
+      "index": 69,
+      "name": "Res 2 Fine Tune",
+      "original_name": "Res 2 Fine Tune",
+      "min": -50,
+      "max": 50,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -50,
+          "label": "-50 ct"
+        },
+        {
+          "value": -25,
+          "label": "-25 ct"
+        },
+        {
+          "value": 0,
+          "label": "0 ct"
+        },
+        {
+          "value": 25,
+          "label": "25 ct"
+        },
+        {
+          "value": 50,
+          "label": "50 ct"
+        }
+      ]
+    },
+    {
+      "index": 70,
+      "name": "Res 2 Tune < Key",
+      "original_name": "Res 2 Tune < Key",
+      "min": -2,
+      "max": 2,
+      "value": 1,
+      "default_value": 1,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -2,
+          "label": "-200 %"
+        },
+        {
+          "value": -1,
+          "label": "-100 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 2,
+          "label": "200 %"
+        }
+      ]
+    },
+    {
+      "index": 71,
+      "name": "Res 2 Pitch Env.",
+      "original_name": "Res 2 Pitch Env.",
+      "min": -1,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -1,
+          "label": "-100 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 72,
+      "name": "Res 2 Pitch Env. < Vel",
+      "original_name": "Res 2 Pitch Env. < Vel",
+      "min": -5,
+      "max": 5,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 73,
+      "name": "Res 2 Pitch Env. Time",
+      "original_name": "Res 2 Pitch Env. Time",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "10 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "100 ms"
+        },
+        {
+          "value": 0.75,
+          "label": "1.00 s"
+        },
+        {
+          "value": 1,
+          "label": "10.0 s"
+        }
+      ]
+    },
+    {
+      "index": 74,
+      "name": "Res 2 Decay",
+      "original_name": "Res 2 Decay",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "50 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "257 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "1.32 s"
+        },
+        {
+          "value": 0.75,
+          "label": "6.80 s"
+        },
+        {
+          "value": 1,
+          "label": "35.0 s"
+        }
+      ]
+    },
+    {
+      "index": 75,
+      "name": "Res 2 Decay < Vel",
+      "original_name": "Res 2 Decay < Vel",
+      "min": -5,
+      "max": 5,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 76,
+      "name": "Res 2 Decay < Key",
+      "original_name": "Res 2 Decay < Key",
+      "min": -2,
+      "max": 2,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -2,
+          "label": "-200 %"
+        },
+        {
+          "value": -1,
+          "label": "-100 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 2,
+          "label": "200 %"
+        }
+      ]
+    },
+    {
+      "index": 77,
+      "name": "Res 2 Off Decay",
+      "original_name": "Res 2 Off Decay",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 78,
+      "name": "Res 2 Material",
+      "original_name": "Res 2 Material",
+      "min": -1,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -1,
+          "label": "-100.00"
+        },
+        {
+          "value": 0,
+          "label": "0.00"
+        },
+        {
+          "value": 1,
+          "label": "100.00"
+        }
+      ]
+    },
+    {
+      "index": 79,
+      "name": "Res 2 Material < Vel",
+      "original_name": "Res 2 Material < Vel",
+      "min": -5,
+      "max": 5,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 80,
+      "name": "Res 2 Material < Key",
+      "original_name": "Res 2 Material < Key",
+      "min": -2,
+      "max": 2,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -2,
+          "label": "-200 %"
+        },
+        {
+          "value": -1,
+          "label": "-100 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 2,
+          "label": "200 %"
+        }
+      ]
+    },
+    {
+      "index": 81,
+      "name": "Res 2 Radius",
+      "original_name": "Res 2 Radius",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 82,
+      "name": "Res 2 Radius < Vel",
+      "original_name": "Res 2 Radius < Vel",
+      "min": -5,
+      "max": 5,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 83,
+      "name": "Res 2 Radius < Key",
+      "original_name": "Res 2 Radius < Key",
+      "min": -2,
+      "max": 2,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -2,
+          "label": "-200 %"
+        },
+        {
+          "value": -1,
+          "label": "-100 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 2,
+          "label": "200 %"
+        }
+      ]
+    },
+    {
+      "index": 84,
+      "name": "Res 2 Ratio",
+      "original_name": "Res 2 Ratio",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 85,
+      "name": "Res 2 Brightness",
+      "original_name": "Res 2 Brightness",
+      "min": -1,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -1,
+          "label": "-100 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 86,
+      "name": "Res 2 Bleed",
+      "original_name": "Res 2 Bleed",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 87,
+      "name": "Res 2 Inharmonics",
+      "original_name": "Res 2 Inharmonics",
+      "min": -1,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -1,
+          "label": "-100 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 88,
+      "name": "Res 2 Inharmonics < Vel",
+      "original_name": "Res 2 Inharmonics < Vel",
+      "min": -5,
+      "max": 5,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 89,
+      "name": "Res 2 Opening",
+      "original_name": "Res 2 Opening",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "default_value": 1,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 90,
+      "name": "Res 2 Opening < Vel",
+      "original_name": "Res 2 Opening < Vel",
+      "min": -5,
+      "max": 5,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 91,
+      "name": "Res 2 Hit",
+      "original_name": "Res 2 Hit",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 92,
+      "name": "Res 2 Hit < Random",
+      "original_name": "Res 2 Hit < Random",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 93,
+      "name": "Res 2 Listening L",
+      "original_name": "Res 2 Listening L",
+      "min": 0,
+      "max": 1,
+      "value": 0.10000000149011612,
+      "default_value": 0.10000000149011612,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 0.1,
+          "label": "10 %"
+        }
+      ]
+    },
+    {
+      "index": 94,
+      "name": "Res 2 Listening R",
+      "original_name": "Res 2 Listening R",
+      "min": 0,
+      "max": 1,
+      "value": 0.8999999761581421,
+      "default_value": 0.8999999761581421,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 0.9,
+          "label": "90 %"
+        }
+      ]
+    },
+    {
+      "index": 95,
+      "name": "Res 2 Pan",
+      "original_name": "Res 2 Pan",
+      "min": -1,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -1,
+          "label": "50L"
+        },
+        {
+          "value": 0,
+          "label": "C"
+        },
+        {
+          "value": 1,
+          "label": "50R"
+        }
+      ]
+    },
+    {
+      "index": 96,
+      "name": "Res 2 Pan < Key",
+      "original_name": "Res 2 Pan < Key",
+      "min": -1,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -1,
+          "label": "-500 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "500 %"
+        }
+      ]
+    },
+    {
+      "index": 97,
+      "name": "Res 2 Volume",
+      "original_name": "Res 2 Volume",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-inf dB"
+        },
+        {
+          "value": 0.25,
+          "label": "-18 dB"
+        },
+        {
+          "value": 0.5,
+          "label": "-6.0 dB"
+        },
+        {
+          "value": 0.75,
+          "label": "1.0 dB"
+        },
+        {
+          "value": 1,
+          "label": "6.0 dB"
+        }
+      ]
+    },
+    {
+      "index": 98,
+      "name": "LFO 1 On",
+      "original_name": "LFO 1 On",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 99,
+      "name": "LFO 1 Wave",
+      "original_name": "LFO 1 Wave",
+      "min": 0,
+      "max": 6,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Sine"
+        },
+        {
+          "value": 1,
+          "label": "Square"
+        },
+        {
+          "value": 2,
+          "label": "Triangle"
+        },
+        {
+          "value": 3,
+          "label": "SawUp"
+        },
+        {
+          "value": 4,
+          "label": "SawDown"
+        },
+        {
+          "value": 5,
+          "label": "Sample & Hold"
+        },
+        {
+          "value": 6,
+          "label": "Random Ramp"
+        }
+      ]
+    },
+    {
+      "index": 100,
+      "name": "LFO 1 Retrig On",
+      "original_name": "LFO 1 Retrig On",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 101,
+      "name": "LFO 1 Sync",
+      "original_name": "LFO 1 Sync",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Free"
+        },
+        {
+          "value": 1,
+          "label": "Sync"
+        }
+      ]
+    },
+    {
+      "index": 102,
+      "name": "LFO 1 Freq",
+      "original_name": "LFO 1 Freq",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 Hz"
+        },
+        {
+          "value": 0.25,
+          "label": "0.1 Hz"
+        },
+        {
+          "value": 0.5,
+          "label": "0.3 Hz"
+        },
+        {
+          "value": 0.75,
+          "label": "1.8 Hz"
+        },
+        {
+          "value": 1,
+          "label": " 10 Hz"
+        }
+      ]
+    },
+    {
+      "index": 103,
+      "name": "LFO 1 Synced",
+      "original_name": "LFO 1 Synced",
+      "min": 0,
+      "max": 21,
+      "value": 4,
+      "default_value": 4,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "8"
+        },
+        {
+          "value": 1,
+          "label": "6"
+        },
+        {
+          "value": 2,
+          "label": "4"
+        },
+        {
+          "value": 3,
+          "label": "3"
+        },
+        {
+          "value": 4,
+          "label": "2"
+        },
+        {
+          "value": 5,
+          "label": "1.5"
+        },
+        {
+          "value": 6,
+          "label": "1"
+        },
+        {
+          "value": 7,
+          "label": "3/4"
+        },
+        {
+          "value": 8,
+          "label": "1/2"
+        },
+        {
+          "value": 9,
+          "label": "3/8"
+        },
+        {
+          "value": 10,
+          "label": "1/3"
+        },
+        {
+          "value": 11,
+          "label": "5/16"
+        },
+        {
+          "value": 12,
+          "label": "1/4"
+        },
+        {
+          "value": 13,
+          "label": "3/16"
+        },
+        {
+          "value": 14,
+          "label": "1/6"
+        },
+        {
+          "value": 15,
+          "label": "1/8"
+        },
+        {
+          "value": 16,
+          "label": "1/12"
+        },
+        {
+          "value": 17,
+          "label": "1/16"
+        },
+        {
+          "value": 18,
+          "label": "1/24"
+        },
+        {
+          "value": 19,
+          "label": "1/32"
+        },
+        {
+          "value": 20,
+          "label": "1/48"
+        },
+        {
+          "value": 21,
+          "label": "1/64"
+        }
+      ]
+    },
+    {
+      "index": 104,
+      "name": "LFO 1 Rate < Key",
+      "original_name": "LFO 1 Rate < Key",
+      "min": -2,
+      "max": 2,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -2,
+          "label": "-200 %"
+        },
+        {
+          "value": -1,
+          "label": "-100 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 2,
+          "label": "200 %"
+        }
+      ]
+    },
+    {
+      "index": 105,
+      "name": "LFO 1 Offset",
+      "original_name": "LFO 1 Offset",
+      "min": 0,
+      "max": 360,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.00°"
+        },
+        {
+          "value": 90,
+          "label": "90.0°"
+        },
+        {
+          "value": 180,
+          "label": "180°"
+        },
+        {
+          "value": 270,
+          "label": "270°"
+        },
+        {
+          "value": 360,
+          "label": "360°"
+        }
+      ]
+    },
+    {
+      "index": 106,
+      "name": "LFO 1 Amount",
+      "original_name": "LFO 1 Amount",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 107,
+      "name": "LFO 1 Depth < Vel",
+      "original_name": "LFO 1 Depth < Vel",
+      "min": -5,
+      "max": 5,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 108,
+      "name": "LFO 1 Dest A",
+      "original_name": "LFO 1 Dest A",
+      "min": 0,
+      "max": 16,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "No Destination"
+        },
+        {
+          "value": 1,
+          "label": "Mallet Stiffness"
+        },
+        {
+          "value": 2,
+          "label": "Noise Freq"
+        },
+        {
+          "value": 3,
+          "label": "Noise Volume"
+        },
+        {
+          "value": 4,
+          "label": "Res 1 Pitch"
+        },
+        {
+          "value": 5,
+          "label": "Res 1 Hit"
+        },
+        {
+          "value": 6,
+          "label": "Res 1 Pan"
+        },
+        {
+          "value": 7,
+          "label": "Res 1 Pipe Opening"
+        },
+        {
+          "value": 8,
+          "label": "Res 2 Input"
+        },
+        {
+          "value": 9,
+          "label": "Res 2 Pitch"
+        },
+        {
+          "value": 10,
+          "label": "Res 2 Hit"
+        },
+        {
+          "value": 11,
+          "label": "Res 2 Pan"
+        },
+        {
+          "value": 12,
+          "label": "Res 2 Pipe Opening"
+        },
+        {
+          "value": 13,
+          "label": "Volume"
+        },
+        {
+          "value": 14,
+          "label": "LFO 1 Frequency"
+        },
+        {
+          "value": 15,
+          "label": "LFO 2 Frequency"
+        },
+        {
+          "value": 16,
+          "label": "LFO 2 Amount"
+        }
+      ]
+    },
+    {
+      "index": 109,
+      "name": "LFO 1 Amt A",
+      "original_name": "LFO 1 Amt A",
+      "min": -5,
+      "max": 5,
+      "value": 2.5,
+      "default_value": 2.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        },
+        {
+          "value": 2.5,
+          "label": "50 %"
+        }
+      ]
+    },
+    {
+      "index": 110,
+      "name": "LFO 1 Dest B",
+      "original_name": "LFO 1 Dest B",
+      "min": 0,
+      "max": 16,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "No Destination"
+        },
+        {
+          "value": 1,
+          "label": "Mallet Stiffness"
+        },
+        {
+          "value": 2,
+          "label": "Noise Freq"
+        },
+        {
+          "value": 3,
+          "label": "Noise Volume"
+        },
+        {
+          "value": 4,
+          "label": "Res 1 Pitch"
+        },
+        {
+          "value": 5,
+          "label": "Res 1 Hit"
+        },
+        {
+          "value": 6,
+          "label": "Res 1 Pan"
+        },
+        {
+          "value": 7,
+          "label": "Res 1 Pipe Opening"
+        },
+        {
+          "value": 8,
+          "label": "Res 2 Input"
+        },
+        {
+          "value": 9,
+          "label": "Res 2 Pitch"
+        },
+        {
+          "value": 10,
+          "label": "Res 2 Hit"
+        },
+        {
+          "value": 11,
+          "label": "Res 2 Pan"
+        },
+        {
+          "value": 12,
+          "label": "Res 2 Pipe Opening"
+        },
+        {
+          "value": 13,
+          "label": "Volume"
+        },
+        {
+          "value": 14,
+          "label": "LFO 1 Frequency"
+        },
+        {
+          "value": 15,
+          "label": "LFO 2 Frequency"
+        },
+        {
+          "value": 16,
+          "label": "LFO 2 Amount"
+        }
+      ]
+    },
+    {
+      "index": 111,
+      "name": "LFO 1 Amt B",
+      "original_name": "LFO 1 Amt B",
+      "min": -5,
+      "max": 5,
+      "value": 2.5,
+      "default_value": 2.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        },
+        {
+          "value": 2.5,
+          "label": "50 %"
+        }
+      ]
+    },
+    {
+      "index": 112,
+      "name": "LFO 2 On",
+      "original_name": "LFO 2 On",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 113,
+      "name": "LFO 2 Wave",
+      "original_name": "LFO 2 Wave",
+      "min": 0,
+      "max": 6,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Sine"
+        },
+        {
+          "value": 1,
+          "label": "Square"
+        },
+        {
+          "value": 2,
+          "label": "Triangle"
+        },
+        {
+          "value": 3,
+          "label": "SawUp"
+        },
+        {
+          "value": 4,
+          "label": "SawDown"
+        },
+        {
+          "value": 5,
+          "label": "Sample & Hold"
+        },
+        {
+          "value": 6,
+          "label": "Random Ramp"
+        }
+      ]
+    },
+    {
+      "index": 114,
+      "name": "LFO 2 Retrig On",
+      "original_name": "LFO 2 Retrig On",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 115,
+      "name": "LFO 2 Sync",
+      "original_name": "LFO 2 Sync",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Free"
+        },
+        {
+          "value": 1,
+          "label": "Sync"
+        }
+      ]
+    },
+    {
+      "index": 116,
+      "name": "LFO 2 Freq",
+      "original_name": "LFO 2 Freq",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 Hz"
+        },
+        {
+          "value": 0.25,
+          "label": "0.1 Hz"
+        },
+        {
+          "value": 0.5,
+          "label": "0.3 Hz"
+        },
+        {
+          "value": 0.75,
+          "label": "1.8 Hz"
+        },
+        {
+          "value": 1,
+          "label": " 10 Hz"
+        }
+      ]
+    },
+    {
+      "index": 117,
+      "name": "LFO 2 Synced",
+      "original_name": "LFO 2 Synced",
+      "min": 0,
+      "max": 21,
+      "value": 4,
+      "default_value": 4,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "8"
+        },
+        {
+          "value": 1,
+          "label": "6"
+        },
+        {
+          "value": 2,
+          "label": "4"
+        },
+        {
+          "value": 3,
+          "label": "3"
+        },
+        {
+          "value": 4,
+          "label": "2"
+        },
+        {
+          "value": 5,
+          "label": "1.5"
+        },
+        {
+          "value": 6,
+          "label": "1"
+        },
+        {
+          "value": 7,
+          "label": "3/4"
+        },
+        {
+          "value": 8,
+          "label": "1/2"
+        },
+        {
+          "value": 9,
+          "label": "3/8"
+        },
+        {
+          "value": 10,
+          "label": "1/3"
+        },
+        {
+          "value": 11,
+          "label": "5/16"
+        },
+        {
+          "value": 12,
+          "label": "1/4"
+        },
+        {
+          "value": 13,
+          "label": "3/16"
+        },
+        {
+          "value": 14,
+          "label": "1/6"
+        },
+        {
+          "value": 15,
+          "label": "1/8"
+        },
+        {
+          "value": 16,
+          "label": "1/12"
+        },
+        {
+          "value": 17,
+          "label": "1/16"
+        },
+        {
+          "value": 18,
+          "label": "1/24"
+        },
+        {
+          "value": 19,
+          "label": "1/32"
+        },
+        {
+          "value": 20,
+          "label": "1/48"
+        },
+        {
+          "value": 21,
+          "label": "1/64"
+        }
+      ]
+    },
+    {
+      "index": 118,
+      "name": "LFO 2 Rate < Key",
+      "original_name": "LFO 2 Rate < Key",
+      "min": -2,
+      "max": 2,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -2,
+          "label": "-200 %"
+        },
+        {
+          "value": -1,
+          "label": "-100 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 2,
+          "label": "200 %"
+        }
+      ]
+    },
+    {
+      "index": 119,
+      "name": "LFO 2 Offset",
+      "original_name": "LFO 2 Offset",
+      "min": 0,
+      "max": 360,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.00°"
+        },
+        {
+          "value": 90,
+          "label": "90.0°"
+        },
+        {
+          "value": 180,
+          "label": "180°"
+        },
+        {
+          "value": 270,
+          "label": "270°"
+        },
+        {
+          "value": 360,
+          "label": "360°"
+        }
+      ]
+    },
+    {
+      "index": 120,
+      "name": "LFO 2 Amount",
+      "original_name": "LFO 2 Amount",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 121,
+      "name": "LFO 2 Depth < Vel",
+      "original_name": "LFO 2 Depth < Vel",
+      "min": -5,
+      "max": 5,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 122,
+      "name": "LFO 2 Dest A",
+      "original_name": "LFO 2 Dest A",
+      "min": 0,
+      "max": 16,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "No Destination"
+        },
+        {
+          "value": 1,
+          "label": "Mallet Stiffness"
+        },
+        {
+          "value": 2,
+          "label": "Noise Freq"
+        },
+        {
+          "value": 3,
+          "label": "Noise Volume"
+        },
+        {
+          "value": 4,
+          "label": "Res 1 Pitch"
+        },
+        {
+          "value": 5,
+          "label": "Res 1 Hit"
+        },
+        {
+          "value": 6,
+          "label": "Res 1 Pan"
+        },
+        {
+          "value": 7,
+          "label": "Res 1 Pipe Opening"
+        },
+        {
+          "value": 8,
+          "label": "Res 2 Input"
+        },
+        {
+          "value": 9,
+          "label": "Res 2 Pitch"
+        },
+        {
+          "value": 10,
+          "label": "Res 2 Hit"
+        },
+        {
+          "value": 11,
+          "label": "Res 2 Pan"
+        },
+        {
+          "value": 12,
+          "label": "Res 2 Pipe Opening"
+        },
+        {
+          "value": 13,
+          "label": "Volume"
+        },
+        {
+          "value": 14,
+          "label": "LFO 1 Frequency"
+        },
+        {
+          "value": 15,
+          "label": "LFO 1 Amount"
+        },
+        {
+          "value": 16,
+          "label": "LFO 2 Frequency"
+        }
+      ]
+    },
+    {
+      "index": 123,
+      "name": "LFO 2 Amt A",
+      "original_name": "LFO 2 Amt A",
+      "min": -5,
+      "max": 5,
+      "value": 2.5,
+      "default_value": 2.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        },
+        {
+          "value": 2.5,
+          "label": "50 %"
+        }
+      ]
+    },
+    {
+      "index": 124,
+      "name": "LFO 2 Dest B",
+      "original_name": "LFO 2 Dest B",
+      "min": 0,
+      "max": 16,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "No Destination"
+        },
+        {
+          "value": 1,
+          "label": "Mallet Stiffness"
+        },
+        {
+          "value": 2,
+          "label": "Noise Freq"
+        },
+        {
+          "value": 3,
+          "label": "Noise Volume"
+        },
+        {
+          "value": 4,
+          "label": "Res 1 Pitch"
+        },
+        {
+          "value": 5,
+          "label": "Res 1 Hit"
+        },
+        {
+          "value": 6,
+          "label": "Res 1 Pan"
+        },
+        {
+          "value": 7,
+          "label": "Res 1 Pipe Opening"
+        },
+        {
+          "value": 8,
+          "label": "Res 2 Input"
+        },
+        {
+          "value": 9,
+          "label": "Res 2 Pitch"
+        },
+        {
+          "value": 10,
+          "label": "Res 2 Hit"
+        },
+        {
+          "value": 11,
+          "label": "Res 2 Pan"
+        },
+        {
+          "value": 12,
+          "label": "Res 2 Pipe Opening"
+        },
+        {
+          "value": 13,
+          "label": "Volume"
+        },
+        {
+          "value": 14,
+          "label": "LFO 1 Frequency"
+        },
+        {
+          "value": 15,
+          "label": "LFO 1 Amount"
+        },
+        {
+          "value": 16,
+          "label": "LFO 2 Frequency"
+        }
+      ]
+    },
+    {
+      "index": 125,
+      "name": "LFO 2 Amt B",
+      "original_name": "LFO 2 Amt B",
+      "min": -5,
+      "max": 5,
+      "value": 2.5,
+      "default_value": 2.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        },
+        {
+          "value": 2.5,
+          "label": "50 %"
+        }
+      ]
+    },
+    {
+      "index": 126,
+      "name": "PB Dest A",
+      "original_name": "PB Dest A",
+      "min": 0,
+      "max": 17,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "No Destination"
+        },
+        {
+          "value": 1,
+          "label": "Mallet Stiffness"
+        },
+        {
+          "value": 2,
+          "label": "Noise Freq"
+        },
+        {
+          "value": 3,
+          "label": "Noise Volume"
+        },
+        {
+          "value": 4,
+          "label": "Res 1 Pitch"
+        },
+        {
+          "value": 5,
+          "label": "Res 1 Hit"
+        },
+        {
+          "value": 6,
+          "label": "Res 1 Pan"
+        },
+        {
+          "value": 7,
+          "label": "Res 1 Pipe Opening"
+        },
+        {
+          "value": 8,
+          "label": "Res 2 Input"
+        },
+        {
+          "value": 9,
+          "label": "Res 2 Pitch"
+        },
+        {
+          "value": 10,
+          "label": "Res 2 Hit"
+        },
+        {
+          "value": 11,
+          "label": "Res 2 Pan"
+        },
+        {
+          "value": 12,
+          "label": "Res 2 Pipe Opening"
+        },
+        {
+          "value": 13,
+          "label": "Volume"
+        },
+        {
+          "value": 14,
+          "label": "LFO 1 Frequency"
+        },
+        {
+          "value": 15,
+          "label": "LFO 1 Amount"
+        },
+        {
+          "value": 16,
+          "label": "LFO 2 Frequency"
+        },
+        {
+          "value": 17,
+          "label": "LFO 2 Amount"
+        }
+      ]
+    },
+    {
+      "index": 127,
+      "name": "PB Amt A",
+      "original_name": "PB Amt A",
+      "min": -5,
+      "max": 5,
+      "value": 2.5,
+      "default_value": 2.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        },
+        {
+          "value": 2.5,
+          "label": "50 %"
+        }
+      ]
+    },
+    {
+      "index": 128,
+      "name": "MW Dest A",
+      "original_name": "MW Dest A",
+      "min": 0,
+      "max": 17,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "No Destination"
+        },
+        {
+          "value": 1,
+          "label": "Mallet Stiffness"
+        },
+        {
+          "value": 2,
+          "label": "Noise Freq"
+        },
+        {
+          "value": 3,
+          "label": "Noise Volume"
+        },
+        {
+          "value": 4,
+          "label": "Res 1 Pitch"
+        },
+        {
+          "value": 5,
+          "label": "Res 1 Hit"
+        },
+        {
+          "value": 6,
+          "label": "Res 1 Pan"
+        },
+        {
+          "value": 7,
+          "label": "Res 1 Pipe Opening"
+        },
+        {
+          "value": 8,
+          "label": "Res 2 Input"
+        },
+        {
+          "value": 9,
+          "label": "Res 2 Pitch"
+        },
+        {
+          "value": 10,
+          "label": "Res 2 Hit"
+        },
+        {
+          "value": 11,
+          "label": "Res 2 Pan"
+        },
+        {
+          "value": 12,
+          "label": "Res 2 Pipe Opening"
+        },
+        {
+          "value": 13,
+          "label": "Volume"
+        },
+        {
+          "value": 14,
+          "label": "LFO 1 Frequency"
+        },
+        {
+          "value": 15,
+          "label": "LFO 1 Amount"
+        },
+        {
+          "value": 16,
+          "label": "LFO 2 Frequency"
+        },
+        {
+          "value": 17,
+          "label": "LFO 2 Amount"
+        }
+      ]
+    },
+    {
+      "index": 129,
+      "name": "MW Amt A",
+      "original_name": "MW Amt A",
+      "min": -5,
+      "max": 5,
+      "value": 2.5,
+      "default_value": 2.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        },
+        {
+          "value": 2.5,
+          "label": "50 %"
+        }
+      ]
+    },
+    {
+      "index": 130,
+      "name": "MW Dest B",
+      "original_name": "MW Dest B",
+      "min": 0,
+      "max": 17,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "No Destination"
+        },
+        {
+          "value": 1,
+          "label": "Mallet Stiffness"
+        },
+        {
+          "value": 2,
+          "label": "Noise Freq"
+        },
+        {
+          "value": 3,
+          "label": "Noise Volume"
+        },
+        {
+          "value": 4,
+          "label": "Res 1 Pitch"
+        },
+        {
+          "value": 5,
+          "label": "Res 1 Hit"
+        },
+        {
+          "value": 6,
+          "label": "Res 1 Pan"
+        },
+        {
+          "value": 7,
+          "label": "Res 1 Pipe Opening"
+        },
+        {
+          "value": 8,
+          "label": "Res 2 Input"
+        },
+        {
+          "value": 9,
+          "label": "Res 2 Pitch"
+        },
+        {
+          "value": 10,
+          "label": "Res 2 Hit"
+        },
+        {
+          "value": 11,
+          "label": "Res 2 Pan"
+        },
+        {
+          "value": 12,
+          "label": "Res 2 Pipe Opening"
+        },
+        {
+          "value": 13,
+          "label": "Volume"
+        },
+        {
+          "value": 14,
+          "label": "LFO 1 Frequency"
+        },
+        {
+          "value": 15,
+          "label": "LFO 1 Amount"
+        },
+        {
+          "value": 16,
+          "label": "LFO 2 Frequency"
+        },
+        {
+          "value": 17,
+          "label": "LFO 2 Amount"
+        }
+      ]
+    },
+    {
+      "index": 131,
+      "name": "MW Amt B",
+      "original_name": "MW Amt B",
+      "min": -5,
+      "max": 5,
+      "value": 2.5,
+      "default_value": 2.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        },
+        {
+          "value": 2.5,
+          "label": "50 %"
+        }
+      ]
+    },
+    {
+      "index": 132,
+      "name": "Press Dest A",
+      "original_name": "Press Dest A",
+      "min": 0,
+      "max": 17,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "No Destination"
+        },
+        {
+          "value": 1,
+          "label": "Mallet Stiffness"
+        },
+        {
+          "value": 2,
+          "label": "Noise Freq"
+        },
+        {
+          "value": 3,
+          "label": "Noise Volume"
+        },
+        {
+          "value": 4,
+          "label": "Res 1 Pitch"
+        },
+        {
+          "value": 5,
+          "label": "Res 1 Hit"
+        },
+        {
+          "value": 6,
+          "label": "Res 1 Pan"
+        },
+        {
+          "value": 7,
+          "label": "Res 1 Pipe Opening"
+        },
+        {
+          "value": 8,
+          "label": "Res 2 Input"
+        },
+        {
+          "value": 9,
+          "label": "Res 2 Pitch"
+        },
+        {
+          "value": 10,
+          "label": "Res 2 Hit"
+        },
+        {
+          "value": 11,
+          "label": "Res 2 Pan"
+        },
+        {
+          "value": 12,
+          "label": "Res 2 Pipe Opening"
+        },
+        {
+          "value": 13,
+          "label": "Volume"
+        },
+        {
+          "value": 14,
+          "label": "LFO 1 Frequency"
+        },
+        {
+          "value": 15,
+          "label": "LFO 1 Amount"
+        },
+        {
+          "value": 16,
+          "label": "LFO 2 Frequency"
+        },
+        {
+          "value": 17,
+          "label": "LFO 2 Amount"
+        }
+      ]
+    },
+    {
+      "index": 133,
+      "name": "Press Amt A",
+      "original_name": "Press Amt A",
+      "min": -5,
+      "max": 5,
+      "value": 2.5,
+      "default_value": 2.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        },
+        {
+          "value": 2.5,
+          "label": "50 %"
+        }
+      ]
+    },
+    {
+      "index": 134,
+      "name": "Press Dest B",
+      "original_name": "Press Dest B",
+      "min": 0,
+      "max": 17,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "No Destination"
+        },
+        {
+          "value": 1,
+          "label": "Mallet Stiffness"
+        },
+        {
+          "value": 2,
+          "label": "Noise Freq"
+        },
+        {
+          "value": 3,
+          "label": "Noise Volume"
+        },
+        {
+          "value": 4,
+          "label": "Res 1 Pitch"
+        },
+        {
+          "value": 5,
+          "label": "Res 1 Hit"
+        },
+        {
+          "value": 6,
+          "label": "Res 1 Pan"
+        },
+        {
+          "value": 7,
+          "label": "Res 1 Pipe Opening"
+        },
+        {
+          "value": 8,
+          "label": "Res 2 Input"
+        },
+        {
+          "value": 9,
+          "label": "Res 2 Pitch"
+        },
+        {
+          "value": 10,
+          "label": "Res 2 Hit"
+        },
+        {
+          "value": 11,
+          "label": "Res 2 Pan"
+        },
+        {
+          "value": 12,
+          "label": "Res 2 Pipe Opening"
+        },
+        {
+          "value": 13,
+          "label": "Volume"
+        },
+        {
+          "value": 14,
+          "label": "LFO 1 Frequency"
+        },
+        {
+          "value": 15,
+          "label": "LFO 1 Amount"
+        },
+        {
+          "value": 16,
+          "label": "LFO 2 Frequency"
+        },
+        {
+          "value": 17,
+          "label": "LFO 2 Amount"
+        }
+      ]
+    },
+    {
+      "index": 135,
+      "name": "Press Amt B",
+      "original_name": "Press Amt B",
+      "min": -5,
+      "max": 5,
+      "value": 2.5,
+      "default_value": 2.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        },
+        {
+          "value": 2.5,
+          "label": "50 %"
+        }
+      ]
+    },
+    {
+      "index": 136,
+      "name": "Slide Dest A",
+      "original_name": "Slide Dest A",
+      "min": 0,
+      "max": 17,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "No Destination"
+        },
+        {
+          "value": 1,
+          "label": "Mallet Stiffness"
+        },
+        {
+          "value": 2,
+          "label": "Noise Freq"
+        },
+        {
+          "value": 3,
+          "label": "Noise Volume"
+        },
+        {
+          "value": 4,
+          "label": "Res 1 Pitch"
+        },
+        {
+          "value": 5,
+          "label": "Res 1 Hit"
+        },
+        {
+          "value": 6,
+          "label": "Res 1 Pan"
+        },
+        {
+          "value": 7,
+          "label": "Res 1 Pipe Opening"
+        },
+        {
+          "value": 8,
+          "label": "Res 2 Input"
+        },
+        {
+          "value": 9,
+          "label": "Res 2 Pitch"
+        },
+        {
+          "value": 10,
+          "label": "Res 2 Hit"
+        },
+        {
+          "value": 11,
+          "label": "Res 2 Pan"
+        },
+        {
+          "value": 12,
+          "label": "Res 2 Pipe Opening"
+        },
+        {
+          "value": 13,
+          "label": "Volume"
+        },
+        {
+          "value": 14,
+          "label": "LFO 1 Frequency"
+        },
+        {
+          "value": 15,
+          "label": "LFO 1 Amount"
+        },
+        {
+          "value": 16,
+          "label": "LFO 2 Frequency"
+        },
+        {
+          "value": 17,
+          "label": "LFO 2 Amount"
+        }
+      ]
+    },
+    {
+      "index": 137,
+      "name": "Slide Amt A",
+      "original_name": "Slide Amt A",
+      "min": -5,
+      "max": 5,
+      "value": 2.5,
+      "default_value": 2.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        },
+        {
+          "value": 2.5,
+          "label": "50 %"
+        }
+      ]
+    },
+    {
+      "index": 138,
+      "name": "Slide Dest B",
+      "original_name": "Slide Dest B",
+      "min": 0,
+      "max": 17,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "No Destination"
+        },
+        {
+          "value": 1,
+          "label": "Mallet Stiffness"
+        },
+        {
+          "value": 2,
+          "label": "Noise Freq"
+        },
+        {
+          "value": 3,
+          "label": "Noise Volume"
+        },
+        {
+          "value": 4,
+          "label": "Res 1 Pitch"
+        },
+        {
+          "value": 5,
+          "label": "Res 1 Hit"
+        },
+        {
+          "value": 6,
+          "label": "Res 1 Pan"
+        },
+        {
+          "value": 7,
+          "label": "Res 1 Pipe Opening"
+        },
+        {
+          "value": 8,
+          "label": "Res 2 Input"
+        },
+        {
+          "value": 9,
+          "label": "Res 2 Pitch"
+        },
+        {
+          "value": 10,
+          "label": "Res 2 Hit"
+        },
+        {
+          "value": 11,
+          "label": "Res 2 Pan"
+        },
+        {
+          "value": 12,
+          "label": "Res 2 Pipe Opening"
+        },
+        {
+          "value": 13,
+          "label": "Volume"
+        },
+        {
+          "value": 14,
+          "label": "LFO 1 Frequency"
+        },
+        {
+          "value": 15,
+          "label": "LFO 1 Amount"
+        },
+        {
+          "value": 16,
+          "label": "LFO 2 Frequency"
+        },
+        {
+          "value": 17,
+          "label": "LFO 2 Amount"
+        }
+      ]
+    },
+    {
+      "index": 139,
+      "name": "Slide Amt B",
+      "original_name": "Slide Amt B",
+      "min": -5,
+      "max": 5,
+      "value": 2.5,
+      "default_value": 2.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -5,
+          "label": "-100 %"
+        },
+        {
+          "value": -4,
+          "label": "-80 %"
+        },
+        {
+          "value": -3,
+          "label": "-60 %"
+        },
+        {
+          "value": -2,
+          "label": "-40 %"
+        },
+        {
+          "value": -1,
+          "label": "-20 %"
+        },
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 1,
+          "label": "20 %"
+        },
+        {
+          "value": 2,
+          "label": "40 %"
+        },
+        {
+          "value": 3,
+          "label": "60 %"
+        },
+        {
+          "value": 4,
+          "label": "80 %"
+        },
+        {
+          "value": 5,
+          "label": "100 %"
+        },
+        {
+          "value": 2.5,
+          "label": "50 %"
+        }
+      ]
+    }
+  ],
+  "attributes": [
+    {
+      "name": "can_compare_ab",
+      "value": true,
+      "observable": false,
+      "doc": "Returns true if the Device has the capability to AB compare.",
+      "settable": false
+    },
+    {
+      "name": "can_have_chains",
+      "value": false,
+      "observable": false,
+      "doc": "Returns true if the device is a rack.",
+      "settable": false
+    },
+    {
+      "name": "can_have_drum_pads",
+      "value": false,
+      "observable": false,
+      "doc": "Returns true if the device is a drum rack.",
+      "settable": false
+    },
+    {
+      "name": "class_display_name",
+      "value": "Collision",
+      "observable": false,
+      "doc": "Return const access to the name of the device's class name as displayed in Live's browser and device chain",
+      "settable": false
+    },
+    {
+      "name": "class_name",
+      "value": "Collision",
+      "observable": false,
+      "doc": "Return const access to the name of the device's class.",
+      "settable": false
+    },
+    {
+      "name": "is_active",
+      "value": true,
+      "observable": true,
+      "doc": "Return const access to whether this device is active. This will be false bothwhen the device is off and when it's inside a rack device which is off.",
+      "settable": false
+    },
+    {
+      "name": "is_using_compare_preset_b",
+      "value": false,
+      "observable": true,
+      "doc": "Returns whether the Device has loaded the preset in compare slot B. Only relevant if can_compare_ab, otherwise errors.",
+      "settable": true
+    },
+    {
+      "name": "latency_in_ms",
+      "value": 1.3333333333333333,
+      "observable": true,
+      "doc": "Returns the latency of the device in ms.",
+      "settable": false
+    },
+    {
+      "name": "latency_in_samples",
+      "value": 64,
+      "observable": true,
+      "doc": "Returns the latency of the device in samples.",
+      "settable": false
+    },
+    {
+      "name": "name",
+      "value": "Collision",
+      "observable": true,
+      "doc": "Return access to the name of the device.",
+      "settable": true
+    },
+    {
+      "name": "type",
+      "value": "Device.DeviceType.instrument",
+      "observable": false,
+      "doc": "Return the type of the device.",
+      "settable": false
+    }
+  ],
+  "propertyAllowlist": []
+}

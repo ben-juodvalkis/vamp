@@ -1,0 +1,1528 @@
+{
+  "identity": {
+    "path": "tracks/2/devices/0",
+    "pythonType": "Device",
+    "name": "Electric",
+    "class_name": "LoungeLizard",
+    "class_display_name": "Electric",
+    "type": "Device.DeviceType.instrument",
+    "can_have_chains": false,
+    "can_have_drum_pads": false,
+    "is_active": true
+  },
+  "parameters": [
+    {
+      "index": 0,
+      "name": "Device On",
+      "original_name": "Device On",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "name": "Voices",
+      "original_name": "Voices",
+      "min": 0,
+      "max": 30,
+      "value": 30,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "2"
+        },
+        {
+          "value": 1,
+          "label": "3"
+        },
+        {
+          "value": 2,
+          "label": "4"
+        },
+        {
+          "value": 3,
+          "label": "5"
+        },
+        {
+          "value": 4,
+          "label": "6"
+        },
+        {
+          "value": 5,
+          "label": "7"
+        },
+        {
+          "value": 6,
+          "label": "8"
+        },
+        {
+          "value": 7,
+          "label": "9"
+        },
+        {
+          "value": 8,
+          "label": "10"
+        },
+        {
+          "value": 9,
+          "label": "11"
+        },
+        {
+          "value": 10,
+          "label": "12"
+        },
+        {
+          "value": 11,
+          "label": "13"
+        },
+        {
+          "value": 12,
+          "label": "14"
+        },
+        {
+          "value": 13,
+          "label": "15"
+        },
+        {
+          "value": 14,
+          "label": "16"
+        },
+        {
+          "value": 15,
+          "label": "17"
+        },
+        {
+          "value": 16,
+          "label": "18"
+        },
+        {
+          "value": 17,
+          "label": "19"
+        },
+        {
+          "value": 18,
+          "label": "20"
+        },
+        {
+          "value": 19,
+          "label": "21"
+        },
+        {
+          "value": 20,
+          "label": "22"
+        },
+        {
+          "value": 21,
+          "label": "23"
+        },
+        {
+          "value": 22,
+          "label": "24"
+        },
+        {
+          "value": 23,
+          "label": "25"
+        },
+        {
+          "value": 24,
+          "label": "26"
+        },
+        {
+          "value": 25,
+          "label": "27"
+        },
+        {
+          "value": 26,
+          "label": "28"
+        },
+        {
+          "value": 27,
+          "label": "29"
+        },
+        {
+          "value": 28,
+          "label": "30"
+        },
+        {
+          "value": 29,
+          "label": "31"
+        },
+        {
+          "value": 30,
+          "label": "32"
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "name": "PB Range",
+      "original_name": "PB Range",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "default_value": 1,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.00"
+        },
+        {
+          "value": 0.25,
+          "label": "3.00"
+        },
+        {
+          "value": 0.5,
+          "label": "6.00"
+        },
+        {
+          "value": 0.75,
+          "label": "9.00"
+        },
+        {
+          "value": 1,
+          "label": "12.00"
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "name": "Note PB Range",
+      "original_name": "Note PB Range",
+      "min": 0,
+      "max": 48,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 st"
+        },
+        {
+          "value": 1,
+          "label": "1 st"
+        },
+        {
+          "value": 2,
+          "label": "2 st"
+        },
+        {
+          "value": 3,
+          "label": "3 st"
+        },
+        {
+          "value": 4,
+          "label": "4 st"
+        },
+        {
+          "value": 5,
+          "label": "5 st"
+        },
+        {
+          "value": 6,
+          "label": "6 st"
+        },
+        {
+          "value": 7,
+          "label": "7 st"
+        },
+        {
+          "value": 8,
+          "label": "8 st"
+        },
+        {
+          "value": 9,
+          "label": "9 st"
+        },
+        {
+          "value": 10,
+          "label": "10 st"
+        },
+        {
+          "value": 11,
+          "label": "11 st"
+        },
+        {
+          "value": 12,
+          "label": "12 st"
+        },
+        {
+          "value": 13,
+          "label": "13 st"
+        },
+        {
+          "value": 14,
+          "label": "14 st"
+        },
+        {
+          "value": 15,
+          "label": "15 st"
+        },
+        {
+          "value": 16,
+          "label": "16 st"
+        },
+        {
+          "value": 17,
+          "label": "17 st"
+        },
+        {
+          "value": 18,
+          "label": "18 st"
+        },
+        {
+          "value": 19,
+          "label": "19 st"
+        },
+        {
+          "value": 20,
+          "label": "20 st"
+        },
+        {
+          "value": 21,
+          "label": "21 st"
+        },
+        {
+          "value": 22,
+          "label": "22 st"
+        },
+        {
+          "value": 23,
+          "label": "23 st"
+        },
+        {
+          "value": 24,
+          "label": "24 st"
+        },
+        {
+          "value": 25,
+          "label": "25 st"
+        },
+        {
+          "value": 26,
+          "label": "26 st"
+        },
+        {
+          "value": 27,
+          "label": "27 st"
+        },
+        {
+          "value": 28,
+          "label": "28 st"
+        },
+        {
+          "value": 29,
+          "label": "29 st"
+        },
+        {
+          "value": 30,
+          "label": "30 st"
+        },
+        {
+          "value": 31,
+          "label": "31 st"
+        },
+        {
+          "value": 32,
+          "label": "32 st"
+        },
+        {
+          "value": 33,
+          "label": "33 st"
+        },
+        {
+          "value": 34,
+          "label": "34 st"
+        },
+        {
+          "value": 35,
+          "label": "35 st"
+        },
+        {
+          "value": 36,
+          "label": "36 st"
+        },
+        {
+          "value": 37,
+          "label": "37 st"
+        },
+        {
+          "value": 38,
+          "label": "38 st"
+        },
+        {
+          "value": 39,
+          "label": "39 st"
+        },
+        {
+          "value": 40,
+          "label": "40 st"
+        },
+        {
+          "value": 41,
+          "label": "41 st"
+        },
+        {
+          "value": 42,
+          "label": "42 st"
+        },
+        {
+          "value": 43,
+          "label": "43 st"
+        },
+        {
+          "value": 44,
+          "label": "44 st"
+        },
+        {
+          "value": 45,
+          "label": "45 st"
+        },
+        {
+          "value": 46,
+          "label": "46 st"
+        },
+        {
+          "value": 47,
+          "label": "47 st"
+        },
+        {
+          "value": 48,
+          "label": "48 st"
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "name": "Volume",
+      "original_name": "Volume",
+      "min": 0,
+      "max": 1,
+      "value": 0.7047892212867737,
+      "default_value": 0.7047892212867737,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-inf dB"
+        },
+        {
+          "value": 0.25,
+          "label": "-18 dB"
+        },
+        {
+          "value": 0.5,
+          "label": "-6.0 dB"
+        },
+        {
+          "value": 0.75,
+          "label": "1.1 dB"
+        },
+        {
+          "value": 1,
+          "label": "6.0 dB"
+        },
+        {
+          "value": 0.704789,
+          "label": "0.0 dB"
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "name": "Semitone",
+      "original_name": "Semitone",
+      "min": 0,
+      "max": 24,
+      "value": 12,
+      "default_value": 12,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-12 st"
+        },
+        {
+          "value": 1,
+          "label": "-11 st"
+        },
+        {
+          "value": 2,
+          "label": "-10 st"
+        },
+        {
+          "value": 3,
+          "label": "-9 st"
+        },
+        {
+          "value": 4,
+          "label": "-8 st"
+        },
+        {
+          "value": 5,
+          "label": "-7 st"
+        },
+        {
+          "value": 6,
+          "label": "-6 st"
+        },
+        {
+          "value": 7,
+          "label": "-5 st"
+        },
+        {
+          "value": 8,
+          "label": "-4 st"
+        },
+        {
+          "value": 9,
+          "label": "-3 st"
+        },
+        {
+          "value": 10,
+          "label": "-2 st"
+        },
+        {
+          "value": 11,
+          "label": "-1 st"
+        },
+        {
+          "value": 12,
+          "label": "0 st"
+        },
+        {
+          "value": 13,
+          "label": "1 st"
+        },
+        {
+          "value": 14,
+          "label": "2 st"
+        },
+        {
+          "value": 15,
+          "label": "3 st"
+        },
+        {
+          "value": 16,
+          "label": "4 st"
+        },
+        {
+          "value": 17,
+          "label": "5 st"
+        },
+        {
+          "value": 18,
+          "label": "6 st"
+        },
+        {
+          "value": 19,
+          "label": "7 st"
+        },
+        {
+          "value": 20,
+          "label": "8 st"
+        },
+        {
+          "value": 21,
+          "label": "9 st"
+        },
+        {
+          "value": 22,
+          "label": "10 st"
+        },
+        {
+          "value": 23,
+          "label": "11 st"
+        },
+        {
+          "value": 24,
+          "label": "12 st"
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "name": "Detune",
+      "original_name": "Detune",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-0.50"
+        },
+        {
+          "value": 0.25,
+          "label": "-0.25"
+        },
+        {
+          "value": 0.5,
+          "label": "0.00"
+        },
+        {
+          "value": 0.75,
+          "label": "0.25"
+        },
+        {
+          "value": 1,
+          "label": "0.50"
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "name": "KB Stretch",
+      "original_name": "KB Stretch",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "name": "M Stiffness",
+      "original_name": "M Stiffness",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "name": "M Stiff < Key",
+      "original_name": "M Stiff < Key",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0"
+        },
+        {
+          "value": 0.25,
+          "label": "25"
+        },
+        {
+          "value": 0.5,
+          "label": "50"
+        },
+        {
+          "value": 0.75,
+          "label": "75"
+        },
+        {
+          "value": 1,
+          "label": "100"
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "name": "M Stiff < Vel",
+      "original_name": "M Stiff < Vel",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0"
+        },
+        {
+          "value": 0.25,
+          "label": "25"
+        },
+        {
+          "value": 0.5,
+          "label": "50"
+        },
+        {
+          "value": 0.75,
+          "label": "75"
+        },
+        {
+          "value": 1,
+          "label": "100"
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "name": "M Force",
+      "original_name": "M Force",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "name": "M Force < Key",
+      "original_name": "M Force < Key",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0"
+        },
+        {
+          "value": 0.25,
+          "label": "25"
+        },
+        {
+          "value": 0.5,
+          "label": "50"
+        },
+        {
+          "value": 0.75,
+          "label": "75"
+        },
+        {
+          "value": 1,
+          "label": "100"
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "name": "M Force < Vel",
+      "original_name": "M Force < Vel",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0"
+        },
+        {
+          "value": 0.25,
+          "label": "25"
+        },
+        {
+          "value": 0.5,
+          "label": "50"
+        },
+        {
+          "value": 0.75,
+          "label": "75"
+        },
+        {
+          "value": 1,
+          "label": "100"
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "name": "Noise Pitch",
+      "original_name": "Noise Pitch",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "name": "Noise Decay",
+      "original_name": "Noise Decay",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "name": "Noise Amount",
+      "original_name": "Noise Amount",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "name": "Noise < Key",
+      "original_name": "Noise < Key",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0"
+        },
+        {
+          "value": 0.25,
+          "label": "25"
+        },
+        {
+          "value": 0.5,
+          "label": "50"
+        },
+        {
+          "value": 0.75,
+          "label": "75"
+        },
+        {
+          "value": 1,
+          "label": "100"
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "name": "F Release",
+      "original_name": "F Release",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "name": "F Tine Decay",
+      "original_name": "F Tine Decay",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "name": "F Tine Vol",
+      "original_name": "F Tine Vol",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "name": "F Tine < Key",
+      "original_name": "F Tine < Key",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0"
+        },
+        {
+          "value": 0.25,
+          "label": "25"
+        },
+        {
+          "value": 0.5,
+          "label": "50"
+        },
+        {
+          "value": 0.75,
+          "label": "75"
+        },
+        {
+          "value": 1,
+          "label": "100"
+        }
+      ]
+    },
+    {
+      "index": 22,
+      "name": "F Tine Color",
+      "original_name": "F Tine Color",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 23,
+      "name": "F Tone Decay",
+      "original_name": "F Tone Decay",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 24,
+      "name": "F Tone Vol",
+      "original_name": "F Tone Vol",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 25,
+      "name": "P Symmetry",
+      "original_name": "P Symmetry",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 26,
+      "name": "P Distance",
+      "original_name": "P Distance",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 27,
+      "name": "Pickup Model",
+      "original_name": "Pickup Model",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "R"
+        },
+        {
+          "value": 1,
+          "label": "W"
+        }
+      ]
+    },
+    {
+      "index": 28,
+      "name": "P Amp In",
+      "original_name": "P Amp In",
+      "min": 0,
+      "max": 1,
+      "value": 0.41999998688697815,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 0.42,
+          "label": "42 %"
+        }
+      ]
+    },
+    {
+      "index": 29,
+      "name": "P Amp Out",
+      "original_name": "P Amp Out",
+      "min": 0,
+      "max": 1,
+      "value": 0.41999998688697815,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 0.42,
+          "label": "42 %"
+        }
+      ]
+    },
+    {
+      "index": 30,
+      "name": "P Amp < Key",
+      "original_name": "P Amp < Key",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0"
+        },
+        {
+          "value": 0.25,
+          "label": "25"
+        },
+        {
+          "value": 0.5,
+          "label": "50"
+        },
+        {
+          "value": 0.75,
+          "label": "75"
+        },
+        {
+          "value": 1,
+          "label": "100"
+        }
+      ]
+    },
+    {
+      "index": 31,
+      "name": "Damp Tone",
+      "original_name": "Damp Tone",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 32,
+      "name": "Damp Amount",
+      "original_name": "Damp Amount",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 33,
+      "name": "Damp Balance",
+      "original_name": "Damp Balance",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    }
+  ],
+  "attributes": [
+    {
+      "name": "can_compare_ab",
+      "value": true,
+      "observable": false,
+      "doc": "Returns true if the Device has the capability to AB compare.",
+      "settable": false
+    },
+    {
+      "name": "can_have_chains",
+      "value": false,
+      "observable": false,
+      "doc": "Returns true if the device is a rack.",
+      "settable": false
+    },
+    {
+      "name": "can_have_drum_pads",
+      "value": false,
+      "observable": false,
+      "doc": "Returns true if the device is a drum rack.",
+      "settable": false
+    },
+    {
+      "name": "class_display_name",
+      "value": "Electric",
+      "observable": false,
+      "doc": "Return const access to the name of the device's class name as displayed in Live's browser and device chain",
+      "settable": false
+    },
+    {
+      "name": "class_name",
+      "value": "LoungeLizard",
+      "observable": false,
+      "doc": "Return const access to the name of the device's class.",
+      "settable": false
+    },
+    {
+      "name": "is_active",
+      "value": true,
+      "observable": true,
+      "doc": "Return const access to whether this device is active. This will be false bothwhen the device is off and when it's inside a rack device which is off.",
+      "settable": false
+    },
+    {
+      "name": "is_using_compare_preset_b",
+      "value": false,
+      "observable": true,
+      "doc": "Returns whether the Device has loaded the preset in compare slot B. Only relevant if can_compare_ab, otherwise errors.",
+      "settable": true
+    },
+    {
+      "name": "latency_in_ms",
+      "value": 0,
+      "observable": true,
+      "doc": "Returns the latency of the device in ms.",
+      "settable": false
+    },
+    {
+      "name": "latency_in_samples",
+      "value": 0,
+      "observable": true,
+      "doc": "Returns the latency of the device in samples.",
+      "settable": false
+    },
+    {
+      "name": "name",
+      "value": "Electric",
+      "observable": true,
+      "doc": "Return access to the name of the device.",
+      "settable": true
+    },
+    {
+      "name": "type",
+      "value": "Device.DeviceType.instrument",
+      "observable": false,
+      "doc": "Return the type of the device.",
+      "settable": false
+    }
+  ],
+  "propertyAllowlist": []
+}

@@ -1,0 +1,3505 @@
+{
+  "identity": {
+    "path": "tracks/2/devices/0",
+    "pythonType": "WavetableDevice",
+    "name": "Wavetable",
+    "class_name": "InstrumentVector",
+    "class_display_name": "Wavetable",
+    "type": "Device.DeviceType.instrument",
+    "can_have_chains": false,
+    "can_have_drum_pads": false,
+    "is_active": true
+  },
+  "parameters": [
+    {
+      "index": 0,
+      "name": "Device On",
+      "original_name": "Device On",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "name": "Osc 1 On",
+      "original_name": "Osc 1 On",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "name": "Osc 1 Transp",
+      "original_name": "Osc 1 Transp",
+      "min": -24,
+      "max": 24,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -24,
+          "label": "-24 st"
+        },
+        {
+          "value": -23,
+          "label": "-23 st"
+        },
+        {
+          "value": -22,
+          "label": "-22 st"
+        },
+        {
+          "value": -21,
+          "label": "-21 st"
+        },
+        {
+          "value": -20,
+          "label": "-20 st"
+        },
+        {
+          "value": -19,
+          "label": "-19 st"
+        },
+        {
+          "value": -18,
+          "label": "-18 st"
+        },
+        {
+          "value": -17,
+          "label": "-17 st"
+        },
+        {
+          "value": -16,
+          "label": "-16 st"
+        },
+        {
+          "value": -15,
+          "label": "-15 st"
+        },
+        {
+          "value": -14,
+          "label": "-14 st"
+        },
+        {
+          "value": -13,
+          "label": "-13 st"
+        },
+        {
+          "value": -12,
+          "label": "-12 st"
+        },
+        {
+          "value": -11,
+          "label": "-11 st"
+        },
+        {
+          "value": -10,
+          "label": "-10 st"
+        },
+        {
+          "value": -9,
+          "label": "-9 st"
+        },
+        {
+          "value": -8,
+          "label": "-8 st"
+        },
+        {
+          "value": -7,
+          "label": "-7 st"
+        },
+        {
+          "value": -6,
+          "label": "-6 st"
+        },
+        {
+          "value": -5,
+          "label": "-5 st"
+        },
+        {
+          "value": -4,
+          "label": "-4 st"
+        },
+        {
+          "value": -3,
+          "label": "-3 st"
+        },
+        {
+          "value": -2,
+          "label": "-2 st"
+        },
+        {
+          "value": -1,
+          "label": "-1 st"
+        },
+        {
+          "value": 0,
+          "label": "0 st"
+        },
+        {
+          "value": 1,
+          "label": "1 st"
+        },
+        {
+          "value": 2,
+          "label": "2 st"
+        },
+        {
+          "value": 3,
+          "label": "3 st"
+        },
+        {
+          "value": 4,
+          "label": "4 st"
+        },
+        {
+          "value": 5,
+          "label": "5 st"
+        },
+        {
+          "value": 6,
+          "label": "6 st"
+        },
+        {
+          "value": 7,
+          "label": "7 st"
+        },
+        {
+          "value": 8,
+          "label": "8 st"
+        },
+        {
+          "value": 9,
+          "label": "9 st"
+        },
+        {
+          "value": 10,
+          "label": "10 st"
+        },
+        {
+          "value": 11,
+          "label": "11 st"
+        },
+        {
+          "value": 12,
+          "label": "12 st"
+        },
+        {
+          "value": 13,
+          "label": "13 st"
+        },
+        {
+          "value": 14,
+          "label": "14 st"
+        },
+        {
+          "value": 15,
+          "label": "15 st"
+        },
+        {
+          "value": 16,
+          "label": "16 st"
+        },
+        {
+          "value": 17,
+          "label": "17 st"
+        },
+        {
+          "value": 18,
+          "label": "18 st"
+        },
+        {
+          "value": 19,
+          "label": "19 st"
+        },
+        {
+          "value": 20,
+          "label": "20 st"
+        },
+        {
+          "value": 21,
+          "label": "21 st"
+        },
+        {
+          "value": 22,
+          "label": "22 st"
+        },
+        {
+          "value": 23,
+          "label": "23 st"
+        },
+        {
+          "value": 24,
+          "label": "24 st"
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "name": "Osc 1 Detune",
+      "original_name": "Osc 1 Detune",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-50 ct"
+        },
+        {
+          "value": 0.25,
+          "label": "-25 ct"
+        },
+        {
+          "value": 0.5,
+          "label": "0 ct"
+        },
+        {
+          "value": 0.75,
+          "label": "25 ct"
+        },
+        {
+          "value": 1,
+          "label": "50 ct"
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "name": "Osc 1 Pos",
+      "original_name": "Osc 1 Pos",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "name": "Osc 1 Effect 1",
+      "original_name": "Osc 1 Effect 1",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "name": "Osc 1 Effect 2",
+      "original_name": "Osc 1 Effect 2",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "name": "Osc 1 Pan",
+      "original_name": "Osc 1 Pan",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "50L"
+        },
+        {
+          "value": 0.25,
+          "label": "25L"
+        },
+        {
+          "value": 0.5,
+          "label": "C"
+        },
+        {
+          "value": 0.75,
+          "label": "25R"
+        },
+        {
+          "value": 1,
+          "label": "50R"
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "name": "Osc 1 Gain",
+      "original_name": "Osc 1 Gain",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "default_value": 1,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-inf dB"
+        },
+        {
+          "value": 0.25,
+          "label": "-12 dB"
+        },
+        {
+          "value": 0.5,
+          "label": "-6.0 dB"
+        },
+        {
+          "value": 0.75,
+          "label": "-2.5 dB"
+        },
+        {
+          "value": 1,
+          "label": "0.0 dB"
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "name": "Osc 2 On",
+      "original_name": "Osc 2 On",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "name": "Osc 2 Transp",
+      "original_name": "Osc 2 Transp",
+      "min": -24,
+      "max": 24,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -24,
+          "label": "-24 st"
+        },
+        {
+          "value": -23,
+          "label": "-23 st"
+        },
+        {
+          "value": -22,
+          "label": "-22 st"
+        },
+        {
+          "value": -21,
+          "label": "-21 st"
+        },
+        {
+          "value": -20,
+          "label": "-20 st"
+        },
+        {
+          "value": -19,
+          "label": "-19 st"
+        },
+        {
+          "value": -18,
+          "label": "-18 st"
+        },
+        {
+          "value": -17,
+          "label": "-17 st"
+        },
+        {
+          "value": -16,
+          "label": "-16 st"
+        },
+        {
+          "value": -15,
+          "label": "-15 st"
+        },
+        {
+          "value": -14,
+          "label": "-14 st"
+        },
+        {
+          "value": -13,
+          "label": "-13 st"
+        },
+        {
+          "value": -12,
+          "label": "-12 st"
+        },
+        {
+          "value": -11,
+          "label": "-11 st"
+        },
+        {
+          "value": -10,
+          "label": "-10 st"
+        },
+        {
+          "value": -9,
+          "label": "-9 st"
+        },
+        {
+          "value": -8,
+          "label": "-8 st"
+        },
+        {
+          "value": -7,
+          "label": "-7 st"
+        },
+        {
+          "value": -6,
+          "label": "-6 st"
+        },
+        {
+          "value": -5,
+          "label": "-5 st"
+        },
+        {
+          "value": -4,
+          "label": "-4 st"
+        },
+        {
+          "value": -3,
+          "label": "-3 st"
+        },
+        {
+          "value": -2,
+          "label": "-2 st"
+        },
+        {
+          "value": -1,
+          "label": "-1 st"
+        },
+        {
+          "value": 0,
+          "label": "0 st"
+        },
+        {
+          "value": 1,
+          "label": "1 st"
+        },
+        {
+          "value": 2,
+          "label": "2 st"
+        },
+        {
+          "value": 3,
+          "label": "3 st"
+        },
+        {
+          "value": 4,
+          "label": "4 st"
+        },
+        {
+          "value": 5,
+          "label": "5 st"
+        },
+        {
+          "value": 6,
+          "label": "6 st"
+        },
+        {
+          "value": 7,
+          "label": "7 st"
+        },
+        {
+          "value": 8,
+          "label": "8 st"
+        },
+        {
+          "value": 9,
+          "label": "9 st"
+        },
+        {
+          "value": 10,
+          "label": "10 st"
+        },
+        {
+          "value": 11,
+          "label": "11 st"
+        },
+        {
+          "value": 12,
+          "label": "12 st"
+        },
+        {
+          "value": 13,
+          "label": "13 st"
+        },
+        {
+          "value": 14,
+          "label": "14 st"
+        },
+        {
+          "value": 15,
+          "label": "15 st"
+        },
+        {
+          "value": 16,
+          "label": "16 st"
+        },
+        {
+          "value": 17,
+          "label": "17 st"
+        },
+        {
+          "value": 18,
+          "label": "18 st"
+        },
+        {
+          "value": 19,
+          "label": "19 st"
+        },
+        {
+          "value": 20,
+          "label": "20 st"
+        },
+        {
+          "value": 21,
+          "label": "21 st"
+        },
+        {
+          "value": 22,
+          "label": "22 st"
+        },
+        {
+          "value": 23,
+          "label": "23 st"
+        },
+        {
+          "value": 24,
+          "label": "24 st"
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "name": "Osc 2 Detune",
+      "original_name": "Osc 2 Detune",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-50 ct"
+        },
+        {
+          "value": 0.25,
+          "label": "-25 ct"
+        },
+        {
+          "value": 0.5,
+          "label": "0 ct"
+        },
+        {
+          "value": 0.75,
+          "label": "25 ct"
+        },
+        {
+          "value": 1,
+          "label": "50 ct"
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "name": "Osc 2 Pos",
+      "original_name": "Osc 2 Pos",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "name": "Osc 2 Effect 1",
+      "original_name": "Osc 2 Effect 1",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "name": "Osc 2 Effect 2",
+      "original_name": "Osc 2 Effect 2",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "name": "Osc 2 Pan",
+      "original_name": "Osc 2 Pan",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "50L"
+        },
+        {
+          "value": 0.25,
+          "label": "25L"
+        },
+        {
+          "value": 0.5,
+          "label": "C"
+        },
+        {
+          "value": 0.75,
+          "label": "25R"
+        },
+        {
+          "value": 1,
+          "label": "50R"
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "name": "Osc 2 Gain",
+      "original_name": "Osc 2 Gain",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "default_value": 1,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-inf dB"
+        },
+        {
+          "value": 0.25,
+          "label": "-12 dB"
+        },
+        {
+          "value": 0.5,
+          "label": "-6.0 dB"
+        },
+        {
+          "value": 0.75,
+          "label": "-2.5 dB"
+        },
+        {
+          "value": 1,
+          "label": "0.0 dB"
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "name": "Sub On",
+      "original_name": "Sub On",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "name": "Sub Tone",
+      "original_name": "Sub Tone",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "name": "Sub Gain",
+      "original_name": "Sub Gain",
+      "min": 0,
+      "max": 1,
+      "value": 0.5011875033378601,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-inf dB"
+        },
+        {
+          "value": 0.25,
+          "label": "-12 dB"
+        },
+        {
+          "value": 0.5,
+          "label": "-6.0 dB"
+        },
+        {
+          "value": 0.75,
+          "label": "-2.5 dB"
+        },
+        {
+          "value": 1,
+          "label": "0.0 dB"
+        },
+        {
+          "value": 0.501188,
+          "label": "-6.0 dB"
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "name": "Sub Transpose",
+      "original_name": "Sub Transpose",
+      "min": 0,
+      "max": 2,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0"
+        },
+        {
+          "value": 1,
+          "label": "-1"
+        },
+        {
+          "value": 2,
+          "label": "-2"
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "name": "Flt 1 On",
+      "original_name": "Flt 1 On",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 22,
+      "name": "Flt 1 Type",
+      "original_name": "Flt 1 Type",
+      "min": 0,
+      "max": 4,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Lowpass"
+        },
+        {
+          "value": 1,
+          "label": "Highpass"
+        },
+        {
+          "value": 2,
+          "label": "Bandpass"
+        },
+        {
+          "value": 3,
+          "label": "Notch"
+        },
+        {
+          "value": 4,
+          "label": "Morph"
+        }
+      ]
+    },
+    {
+      "index": 23,
+      "name": "Flt 1 LP/HP",
+      "original_name": "Flt 1 LP/HP",
+      "min": 0,
+      "max": 4,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Clean"
+        },
+        {
+          "value": 1,
+          "label": "OSR"
+        },
+        {
+          "value": 2,
+          "label": "MS2"
+        },
+        {
+          "value": 3,
+          "label": "SMP"
+        },
+        {
+          "value": 4,
+          "label": "PRD"
+        }
+      ]
+    },
+    {
+      "index": 24,
+      "name": "Flt 1 BP/NO/MO",
+      "original_name": "Flt 1 BP/NO/MO",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Clean"
+        },
+        {
+          "value": 1,
+          "label": "OSR"
+        }
+      ]
+    },
+    {
+      "index": 25,
+      "name": "Flt 1 Slope",
+      "original_name": "Flt 1 Slope",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "12"
+        },
+        {
+          "value": 1,
+          "label": "24"
+        }
+      ]
+    },
+    {
+      "index": 26,
+      "name": "Flt 1 Freq",
+      "original_name": "Flt 1 Freq",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "default_value": 0.9965783953666687,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "20.0 Hz"
+        },
+        {
+          "value": 0.25,
+          "label": "113 Hz"
+        },
+        {
+          "value": 0.5,
+          "label": "640 Hz"
+        },
+        {
+          "value": 0.75,
+          "label": "3.62 kHz"
+        },
+        {
+          "value": 1,
+          "label": "20.5 kHz"
+        }
+      ]
+    },
+    {
+      "index": 27,
+      "name": "Flt 1 Res",
+      "original_name": "Flt 1 Res",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "31 %"
+        },
+        {
+          "value": 0.5,
+          "label": "62 %"
+        },
+        {
+          "value": 0.75,
+          "label": "94 %"
+        },
+        {
+          "value": 1,
+          "label": "125 %"
+        }
+      ]
+    },
+    {
+      "index": 28,
+      "name": "Flt 1 Drive",
+      "original_name": "Flt 1 Drive",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.00 dB"
+        },
+        {
+          "value": 0.25,
+          "label": "6.00 dB"
+        },
+        {
+          "value": 0.5,
+          "label": "12.0 dB"
+        },
+        {
+          "value": 0.75,
+          "label": "18.0 dB"
+        },
+        {
+          "value": 1,
+          "label": "24.0 dB"
+        }
+      ]
+    },
+    {
+      "index": 29,
+      "name": "Flt 1 Morph",
+      "original_name": "Flt 1 Morph",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 lp/bp"
+        },
+        {
+          "value": 0.25,
+          "label": "0 bp/hp"
+        },
+        {
+          "value": 0.5,
+          "label": "0 hp/no"
+        },
+        {
+          "value": 0.75,
+          "label": "0 no/lp"
+        },
+        {
+          "value": 1,
+          "label": "100 no/lp"
+        }
+      ]
+    },
+    {
+      "index": 30,
+      "name": "Flt 2 On",
+      "original_name": "Flt 2 On",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 31,
+      "name": "Flt 2 Type",
+      "original_name": "Flt 2 Type",
+      "min": 0,
+      "max": 4,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Lowpass"
+        },
+        {
+          "value": 1,
+          "label": "Highpass"
+        },
+        {
+          "value": 2,
+          "label": "Bandpass"
+        },
+        {
+          "value": 3,
+          "label": "Notch"
+        },
+        {
+          "value": 4,
+          "label": "Morph"
+        }
+      ]
+    },
+    {
+      "index": 32,
+      "name": "Flt 2 LP/HP",
+      "original_name": "Flt 2 LP/HP",
+      "min": 0,
+      "max": 4,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Clean"
+        },
+        {
+          "value": 1,
+          "label": "OSR"
+        },
+        {
+          "value": 2,
+          "label": "MS2"
+        },
+        {
+          "value": 3,
+          "label": "SMP"
+        },
+        {
+          "value": 4,
+          "label": "PRD"
+        }
+      ]
+    },
+    {
+      "index": 33,
+      "name": "Flt 2 BP/NO/MO",
+      "original_name": "Flt 2 BP/NO/MO",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Clean"
+        },
+        {
+          "value": 1,
+          "label": "OSR"
+        }
+      ]
+    },
+    {
+      "index": 34,
+      "name": "Flt 2 Slope",
+      "original_name": "Flt 2 Slope",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "12"
+        },
+        {
+          "value": 1,
+          "label": "24"
+        }
+      ]
+    },
+    {
+      "index": 35,
+      "name": "Flt 2 Freq",
+      "original_name": "Flt 2 Freq",
+      "min": 0,
+      "max": 1,
+      "value": 0.0000022411345526052173,
+      "default_value": 0.9965783953666687,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "20.0 Hz"
+        },
+        {
+          "value": 0.25,
+          "label": "113 Hz"
+        },
+        {
+          "value": 0.5,
+          "label": "640 Hz"
+        },
+        {
+          "value": 0.75,
+          "label": "3.62 kHz"
+        },
+        {
+          "value": 1,
+          "label": "20.5 kHz"
+        },
+        {
+          "value": 0.000002,
+          "label": "20.0 Hz"
+        }
+      ]
+    },
+    {
+      "index": 36,
+      "name": "Flt 2 Res",
+      "original_name": "Flt 2 Res",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "31 %"
+        },
+        {
+          "value": 0.5,
+          "label": "62 %"
+        },
+        {
+          "value": 0.75,
+          "label": "94 %"
+        },
+        {
+          "value": 1,
+          "label": "125 %"
+        }
+      ]
+    },
+    {
+      "index": 37,
+      "name": "Flt 2 Drive",
+      "original_name": "Flt 2 Drive",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.00 dB"
+        },
+        {
+          "value": 0.25,
+          "label": "6.00 dB"
+        },
+        {
+          "value": 0.5,
+          "label": "12.0 dB"
+        },
+        {
+          "value": 0.75,
+          "label": "18.0 dB"
+        },
+        {
+          "value": 1,
+          "label": "24.0 dB"
+        }
+      ]
+    },
+    {
+      "index": 38,
+      "name": "Flt 2 Morph",
+      "original_name": "Flt 2 Morph",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0 lp/bp"
+        },
+        {
+          "value": 0.25,
+          "label": "0 bp/hp"
+        },
+        {
+          "value": 0.5,
+          "label": "0 hp/no"
+        },
+        {
+          "value": 0.75,
+          "label": "0 no/lp"
+        },
+        {
+          "value": 1,
+          "label": "100 no/lp"
+        }
+      ]
+    },
+    {
+      "index": 39,
+      "name": "Amp Attack",
+      "original_name": "Amp Attack",
+      "min": 0,
+      "max": 1,
+      "value": 0.8478260636329651,
+      "default_value": 0.08408964425325394,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.00 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "78.1 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "1.25 s"
+        },
+        {
+          "value": 0.75,
+          "label": "6.33 s"
+        },
+        {
+          "value": 1,
+          "label": "20.0 s"
+        },
+        {
+          "value": 0.847826,
+          "label": "10.3 s"
+        }
+      ]
+    },
+    {
+      "index": 40,
+      "name": "Amp Decay",
+      "original_name": "Amp Decay",
+      "min": 0,
+      "max": 1,
+      "value": 0.3804347813129425,
+      "default_value": 0.41592657566070557,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1.50 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "79.6 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "1.25 s"
+        },
+        {
+          "value": 0.75,
+          "label": "6.33 s"
+        },
+        {
+          "value": 1,
+          "label": "20.0 s"
+        },
+        {
+          "value": 0.380435,
+          "label": "420 ms"
+        }
+      ]
+    },
+    {
+      "index": 41,
+      "name": "Amp Release",
+      "original_name": "Amp Release",
+      "min": 0,
+      "max": 1,
+      "value": 0.8695651888847351,
+      "default_value": 0.41592657566070557,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1.50 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "79.6 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "1.25 s"
+        },
+        {
+          "value": 0.75,
+          "label": "6.33 s"
+        },
+        {
+          "value": 1,
+          "label": "20.0 s"
+        },
+        {
+          "value": 0.869565,
+          "label": "11.4 s"
+        }
+      ]
+    },
+    {
+      "index": 42,
+      "name": "Amp A Slope",
+      "original_name": "Amp A Slope",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 43,
+      "name": "Amp D Slope",
+      "original_name": "Amp D Slope",
+      "min": 0,
+      "max": 1,
+      "value": 0.75,
+      "default_value": 0.75,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 44,
+      "name": "Amp R Slope",
+      "original_name": "Amp R Slope",
+      "min": 0,
+      "max": 1,
+      "value": 0.75,
+      "default_value": 0.75,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 45,
+      "name": "Amp Sustain",
+      "original_name": "Amp Sustain",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "default_value": 0.7071067690849304,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-inf dB"
+        },
+        {
+          "value": 0.25,
+          "label": "-24 dB"
+        },
+        {
+          "value": 0.5,
+          "label": "-12 dB"
+        },
+        {
+          "value": 0.75,
+          "label": "-5.0 dB"
+        },
+        {
+          "value": 1,
+          "label": "0.0 dB"
+        }
+      ]
+    },
+    {
+      "index": 46,
+      "name": "Amp Loop Mode",
+      "original_name": "Amp Loop Mode",
+      "min": 0,
+      "max": 2,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "None"
+        },
+        {
+          "value": 1,
+          "label": "Trigger"
+        },
+        {
+          "value": 2,
+          "label": "Loop"
+        }
+      ]
+    },
+    {
+      "index": 47,
+      "name": "Env 2 Attack",
+      "original_name": "Env 2 Attack",
+      "min": 0,
+      "max": 1,
+      "value": 0.08408964425325394,
+      "default_value": 0.08408964425325394,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.00 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "78.1 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "1.25 s"
+        },
+        {
+          "value": 0.75,
+          "label": "6.33 s"
+        },
+        {
+          "value": 1,
+          "label": "20.0 s"
+        },
+        {
+          "value": 0.08409,
+          "label": "1.00 ms"
+        }
+      ]
+    },
+    {
+      "index": 48,
+      "name": "Env 2 Decay",
+      "original_name": "Env 2 Decay",
+      "min": 0,
+      "max": 1,
+      "value": 0.41592657566070557,
+      "default_value": 0.41592657566070557,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1.50 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "79.6 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "1.25 s"
+        },
+        {
+          "value": 0.75,
+          "label": "6.33 s"
+        },
+        {
+          "value": 1,
+          "label": "20.0 s"
+        },
+        {
+          "value": 0.415927,
+          "label": "600 ms"
+        }
+      ]
+    },
+    {
+      "index": 49,
+      "name": "Env 2 Release",
+      "original_name": "Env 2 Release",
+      "min": 0,
+      "max": 1,
+      "value": 0.41592657566070557,
+      "default_value": 0.41592657566070557,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1.50 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "79.6 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "1.25 s"
+        },
+        {
+          "value": 0.75,
+          "label": "6.33 s"
+        },
+        {
+          "value": 1,
+          "label": "20.0 s"
+        },
+        {
+          "value": 0.415927,
+          "label": "600 ms"
+        }
+      ]
+    },
+    {
+      "index": 50,
+      "name": "Env 2 A Slope",
+      "original_name": "Env 2 A Slope",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 51,
+      "name": "Env 2 D Slope",
+      "original_name": "Env 2 D Slope",
+      "min": 0,
+      "max": 1,
+      "value": 0.75,
+      "default_value": 0.75,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 52,
+      "name": "Env 2 R Slope",
+      "original_name": "Env 2 R Slope",
+      "min": 0,
+      "max": 1,
+      "value": 0.75,
+      "default_value": 0.75,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 53,
+      "name": "Env 2 Initial",
+      "original_name": "Env 2 Initial",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 54,
+      "name": "Env 2 Peak",
+      "original_name": "Env 2 Peak",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "default_value": 1,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 55,
+      "name": "Env 2 Sustain",
+      "original_name": "Env 2 Sustain",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 56,
+      "name": "Env 2 Final",
+      "original_name": "Env 2 Final",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 57,
+      "name": "Env 2 Loop Mode",
+      "original_name": "Env 2 Loop Mode",
+      "min": 0,
+      "max": 2,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "None"
+        },
+        {
+          "value": 1,
+          "label": "Trigger"
+        },
+        {
+          "value": 2,
+          "label": "Loop"
+        }
+      ]
+    },
+    {
+      "index": 58,
+      "name": "Env 3 Attack",
+      "original_name": "Env 3 Attack",
+      "min": 0,
+      "max": 1,
+      "value": 0.08408964425325394,
+      "default_value": 0.08408964425325394,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.00 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "78.1 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "1.25 s"
+        },
+        {
+          "value": 0.75,
+          "label": "6.33 s"
+        },
+        {
+          "value": 1,
+          "label": "20.0 s"
+        },
+        {
+          "value": 0.08409,
+          "label": "1.00 ms"
+        }
+      ]
+    },
+    {
+      "index": 59,
+      "name": "Env 3 Decay",
+      "original_name": "Env 3 Decay",
+      "min": 0,
+      "max": 1,
+      "value": 0.41592657566070557,
+      "default_value": 0.41592657566070557,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1.50 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "79.6 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "1.25 s"
+        },
+        {
+          "value": 0.75,
+          "label": "6.33 s"
+        },
+        {
+          "value": 1,
+          "label": "20.0 s"
+        },
+        {
+          "value": 0.415927,
+          "label": "600 ms"
+        }
+      ]
+    },
+    {
+      "index": 60,
+      "name": "Env 3 Release",
+      "original_name": "Env 3 Release",
+      "min": 0,
+      "max": 1,
+      "value": 0.41592657566070557,
+      "default_value": 0.41592657566070557,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1.50 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "79.6 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "1.25 s"
+        },
+        {
+          "value": 0.75,
+          "label": "6.33 s"
+        },
+        {
+          "value": 1,
+          "label": "20.0 s"
+        },
+        {
+          "value": 0.415927,
+          "label": "600 ms"
+        }
+      ]
+    },
+    {
+      "index": 61,
+      "name": "Env 3 A Slope",
+      "original_name": "Env 3 A Slope",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 62,
+      "name": "Env 3 D Slope",
+      "original_name": "Env 3 D Slope",
+      "min": 0,
+      "max": 1,
+      "value": 0.75,
+      "default_value": 0.75,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 63,
+      "name": "Env 3 R Slope",
+      "original_name": "Env 3 R Slope",
+      "min": 0,
+      "max": 1,
+      "value": 0.75,
+      "default_value": 0.75,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 64,
+      "name": "Env 3 Initial",
+      "original_name": "Env 3 Initial",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 65,
+      "name": "Env 3 Peak",
+      "original_name": "Env 3 Peak",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "default_value": 1,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 66,
+      "name": "Env 3 Sustain",
+      "original_name": "Env 3 Sustain",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 67,
+      "name": "Env 3 Final",
+      "original_name": "Env 3 Final",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 68,
+      "name": "Env 3 Loop Mode",
+      "original_name": "Env 3 Loop Mode",
+      "min": 0,
+      "max": 2,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "None"
+        },
+        {
+          "value": 1,
+          "label": "Trigger"
+        },
+        {
+          "value": 2,
+          "label": "Loop"
+        }
+      ]
+    },
+    {
+      "index": 69,
+      "name": "LFO 1 Retrig On",
+      "original_name": "LFO 1 Retrig On",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 70,
+      "name": "LFO 1 Wave",
+      "original_name": "LFO 1 Wave",
+      "min": 0,
+      "max": 4,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Sine"
+        },
+        {
+          "value": 1,
+          "label": "Triangle"
+        },
+        {
+          "value": 2,
+          "label": "Sawtooth"
+        },
+        {
+          "value": 3,
+          "label": "Rectangle"
+        },
+        {
+          "value": 4,
+          "label": "Noise"
+        }
+      ]
+    },
+    {
+      "index": 71,
+      "name": "LFO 1 Amount",
+      "original_name": "LFO 1 Amount",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "default_value": 1,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 72,
+      "name": "LFO 1 Morph",
+      "original_name": "LFO 1 Morph",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 73,
+      "name": "LFO 1 Offset",
+      "original_name": "LFO 1 Offset",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0°"
+        },
+        {
+          "value": 0.25,
+          "label": "90°"
+        },
+        {
+          "value": 0.5,
+          "label": "180°"
+        },
+        {
+          "value": 0.75,
+          "label": "270°"
+        },
+        {
+          "value": 1,
+          "label": "360°"
+        }
+      ]
+    },
+    {
+      "index": 74,
+      "name": "LFO 1 Sync",
+      "original_name": "LFO 1 Sync",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Free"
+        },
+        {
+          "value": 1,
+          "label": "Tempo"
+        }
+      ]
+    },
+    {
+      "index": 75,
+      "name": "LFO 1 Freq",
+      "original_name": "LFO 1 Freq",
+      "min": 0,
+      "max": 1,
+      "value": 0.32078906893730164,
+      "default_value": 0.32078906893730164,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.01 Hz"
+        },
+        {
+          "value": 0.25,
+          "label": "0.48 Hz"
+        },
+        {
+          "value": 0.5,
+          "label": "3.76 Hz"
+        },
+        {
+          "value": 0.75,
+          "label": "12.66 Hz"
+        },
+        {
+          "value": 1,
+          "label": "30.00 Hz"
+        },
+        {
+          "value": 0.320789,
+          "label": "1.00 Hz"
+        }
+      ]
+    },
+    {
+      "index": 76,
+      "name": "LFO 1 Synced",
+      "original_name": "LFO 1 Synced",
+      "min": 0,
+      "max": 21,
+      "value": 15,
+      "default_value": 15,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "8"
+        },
+        {
+          "value": 1,
+          "label": "6"
+        },
+        {
+          "value": 2,
+          "label": "4"
+        },
+        {
+          "value": 3,
+          "label": "3"
+        },
+        {
+          "value": 4,
+          "label": "2"
+        },
+        {
+          "value": 5,
+          "label": "1.5"
+        },
+        {
+          "value": 6,
+          "label": "1"
+        },
+        {
+          "value": 7,
+          "label": "3/4"
+        },
+        {
+          "value": 8,
+          "label": "1/2"
+        },
+        {
+          "value": 9,
+          "label": "3/8"
+        },
+        {
+          "value": 10,
+          "label": "1/3"
+        },
+        {
+          "value": 11,
+          "label": "5/16"
+        },
+        {
+          "value": 12,
+          "label": "1/4"
+        },
+        {
+          "value": 13,
+          "label": "3/16"
+        },
+        {
+          "value": 14,
+          "label": "1/6"
+        },
+        {
+          "value": 15,
+          "label": "1/8"
+        },
+        {
+          "value": 16,
+          "label": "1/12"
+        },
+        {
+          "value": 17,
+          "label": "1/16"
+        },
+        {
+          "value": 18,
+          "label": "1/24"
+        },
+        {
+          "value": 19,
+          "label": "1/32"
+        },
+        {
+          "value": 20,
+          "label": "1/48"
+        },
+        {
+          "value": 21,
+          "label": "1/64"
+        }
+      ]
+    },
+    {
+      "index": 77,
+      "name": "LFO 1 Attack",
+      "original_name": "LFO 1 Attack",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.00 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "78.1 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "1.25 s"
+        },
+        {
+          "value": 0.75,
+          "label": "6.33 s"
+        },
+        {
+          "value": 1,
+          "label": "20.0 s"
+        }
+      ]
+    },
+    {
+      "index": 78,
+      "name": "LFO 2 Retrig On",
+      "original_name": "LFO 2 Retrig On",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 79,
+      "name": "LFO 2 Wave",
+      "original_name": "LFO 2 Wave",
+      "min": 0,
+      "max": 4,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Sine"
+        },
+        {
+          "value": 1,
+          "label": "Triangle"
+        },
+        {
+          "value": 2,
+          "label": "Sawtooth"
+        },
+        {
+          "value": 3,
+          "label": "Rectangle"
+        },
+        {
+          "value": 4,
+          "label": "Noise"
+        }
+      ]
+    },
+    {
+      "index": 80,
+      "name": "LFO 2 Amount",
+      "original_name": "LFO 2 Amount",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "default_value": 1,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 81,
+      "name": "LFO 2 Morph",
+      "original_name": "LFO 2 Morph",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 82,
+      "name": "LFO 2 Offset",
+      "original_name": "LFO 2 Offset",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0°"
+        },
+        {
+          "value": 0.25,
+          "label": "90°"
+        },
+        {
+          "value": 0.5,
+          "label": "180°"
+        },
+        {
+          "value": 0.75,
+          "label": "270°"
+        },
+        {
+          "value": 1,
+          "label": "360°"
+        }
+      ]
+    },
+    {
+      "index": 83,
+      "name": "LFO 2 Sync",
+      "original_name": "LFO 2 Sync",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Free"
+        },
+        {
+          "value": 1,
+          "label": "Tempo"
+        }
+      ]
+    },
+    {
+      "index": 84,
+      "name": "LFO 2 Freq",
+      "original_name": "LFO 2 Freq",
+      "min": 0,
+      "max": 1,
+      "value": 0.32078906893730164,
+      "default_value": 0.32078906893730164,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.01 Hz"
+        },
+        {
+          "value": 0.25,
+          "label": "0.48 Hz"
+        },
+        {
+          "value": 0.5,
+          "label": "3.76 Hz"
+        },
+        {
+          "value": 0.75,
+          "label": "12.66 Hz"
+        },
+        {
+          "value": 1,
+          "label": "30.00 Hz"
+        },
+        {
+          "value": 0.320789,
+          "label": "1.00 Hz"
+        }
+      ]
+    },
+    {
+      "index": 85,
+      "name": "LFO 2 Synced",
+      "original_name": "LFO 2 Synced",
+      "min": 0,
+      "max": 21,
+      "value": 15,
+      "default_value": 15,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "8"
+        },
+        {
+          "value": 1,
+          "label": "6"
+        },
+        {
+          "value": 2,
+          "label": "4"
+        },
+        {
+          "value": 3,
+          "label": "3"
+        },
+        {
+          "value": 4,
+          "label": "2"
+        },
+        {
+          "value": 5,
+          "label": "1.5"
+        },
+        {
+          "value": 6,
+          "label": "1"
+        },
+        {
+          "value": 7,
+          "label": "3/4"
+        },
+        {
+          "value": 8,
+          "label": "1/2"
+        },
+        {
+          "value": 9,
+          "label": "3/8"
+        },
+        {
+          "value": 10,
+          "label": "1/3"
+        },
+        {
+          "value": 11,
+          "label": "5/16"
+        },
+        {
+          "value": 12,
+          "label": "1/4"
+        },
+        {
+          "value": 13,
+          "label": "3/16"
+        },
+        {
+          "value": 14,
+          "label": "1/6"
+        },
+        {
+          "value": 15,
+          "label": "1/8"
+        },
+        {
+          "value": 16,
+          "label": "1/12"
+        },
+        {
+          "value": 17,
+          "label": "1/16"
+        },
+        {
+          "value": 18,
+          "label": "1/24"
+        },
+        {
+          "value": 19,
+          "label": "1/32"
+        },
+        {
+          "value": 20,
+          "label": "1/48"
+        },
+        {
+          "value": 21,
+          "label": "1/64"
+        }
+      ]
+    },
+    {
+      "index": 86,
+      "name": "LFO 2 Attack",
+      "original_name": "LFO 2 Attack",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.00 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "78.1 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "1.25 s"
+        },
+        {
+          "value": 0.75,
+          "label": "6.33 s"
+        },
+        {
+          "value": 1,
+          "label": "20.0 s"
+        }
+      ]
+    },
+    {
+      "index": 87,
+      "name": "Time",
+      "original_name": "Time",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 88,
+      "name": "Global Mod Amount",
+      "original_name": "Global Mod Amount",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "100 %"
+        },
+        {
+          "value": 0.75,
+          "label": "150 %"
+        },
+        {
+          "value": 1,
+          "label": "200 %"
+        }
+      ]
+    },
+    {
+      "index": 89,
+      "name": "Unison Amount",
+      "original_name": "Unison Amount",
+      "min": 0,
+      "max": 1,
+      "value": 0.30000001192092896,
+      "default_value": 0.30000001192092896,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        },
+        {
+          "value": 0.3,
+          "label": "30 %"
+        }
+      ]
+    },
+    {
+      "index": 90,
+      "name": "Transpose",
+      "original_name": "Transpose",
+      "min": -48,
+      "max": 48,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -48,
+          "label": "-48 st"
+        },
+        {
+          "value": -24,
+          "label": "-24 st"
+        },
+        {
+          "value": 0,
+          "label": "0 st"
+        },
+        {
+          "value": 24,
+          "label": "24 st"
+        },
+        {
+          "value": 48,
+          "label": "48 st"
+        }
+      ]
+    },
+    {
+      "index": 91,
+      "name": "Glide",
+      "original_name": "Glide",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.00 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "78.1 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "1.25 s"
+        },
+        {
+          "value": 0.75,
+          "label": "6.33 s"
+        },
+        {
+          "value": 1,
+          "label": "20.0 s"
+        }
+      ]
+    },
+    {
+      "index": 92,
+      "name": "Volume",
+      "original_name": "Volume",
+      "min": 0,
+      "max": 1,
+      "value": 0.7071067690849304,
+      "default_value": 0.7071067690849304,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-inf dB"
+        },
+        {
+          "value": 0.25,
+          "label": "-24 dB"
+        },
+        {
+          "value": 0.5,
+          "label": "-12 dB"
+        },
+        {
+          "value": 0.75,
+          "label": "-5.0 dB"
+        },
+        {
+          "value": 1,
+          "label": "0.0 dB"
+        },
+        {
+          "value": 0.707107,
+          "label": "-6.0 dB"
+        }
+      ]
+    }
+  ],
+  "attributes": [
+    {
+      "name": "can_compare_ab",
+      "value": true,
+      "observable": false,
+      "doc": "Returns true if the Device has the capability to AB compare.",
+      "settable": false
+    },
+    {
+      "name": "can_have_chains",
+      "value": false,
+      "observable": false,
+      "doc": "Returns true if the device is a rack.",
+      "settable": false
+    },
+    {
+      "name": "can_have_drum_pads",
+      "value": false,
+      "observable": false,
+      "doc": "Returns true if the device is a drum rack.",
+      "settable": false
+    },
+    {
+      "name": "class_display_name",
+      "value": "Wavetable",
+      "observable": false,
+      "doc": "Return const access to the name of the device's class name as displayed in Live's browser and device chain",
+      "settable": false
+    },
+    {
+      "name": "class_name",
+      "value": "InstrumentVector",
+      "observable": false,
+      "doc": "Return const access to the name of the device's class.",
+      "settable": false
+    },
+    {
+      "name": "filter_routing",
+      "value": 0,
+      "observable": true,
+      "doc": "Return the current filter routing.",
+      "settable": true
+    },
+    {
+      "name": "is_active",
+      "value": true,
+      "observable": true,
+      "doc": "Return const access to whether this device is active. This will be false bothwhen the device is off and when it's inside a rack device which is off.",
+      "settable": false
+    },
+    {
+      "name": "is_using_compare_preset_b",
+      "value": false,
+      "observable": true,
+      "doc": "Returns whether the Device has loaded the preset in compare slot B. Only relevant if can_compare_ab, otherwise errors.",
+      "settable": true
+    },
+    {
+      "name": "latency_in_ms",
+      "value": 0,
+      "observable": true,
+      "doc": "Returns the latency of the device in ms.",
+      "settable": false
+    },
+    {
+      "name": "latency_in_samples",
+      "value": 0,
+      "observable": true,
+      "doc": "Returns the latency of the device in samples.",
+      "settable": false
+    },
+    {
+      "name": "mono_poly",
+      "value": 1,
+      "observable": true,
+      "doc": "Return the current voicing mode.",
+      "settable": true
+    },
+    {
+      "name": "name",
+      "value": "Wavetable",
+      "observable": true,
+      "doc": "Return access to the name of the device.",
+      "settable": true
+    },
+    {
+      "name": "oscillator_1_effect_mode",
+      "value": 3,
+      "observable": true,
+      "doc": "Return the current effect mode of the oscillator 1.",
+      "settable": true
+    },
+    {
+      "name": "oscillator_1_wavetable_category",
+      "value": 0,
+      "observable": true,
+      "doc": "Return the current wavetable category of the oscillator 1.",
+      "settable": true
+    },
+    {
+      "name": "oscillator_1_wavetable_index",
+      "value": 0,
+      "observable": true,
+      "doc": "Return the current wavetable index of the oscillator 1.",
+      "settable": true
+    },
+    {
+      "name": "oscillator_1_wavetables",
+      "value": "<Base.StringVector object at 0x394eafc40>",
+      "observable": true,
+      "doc": "Get a vector of oscillator 1's wavetable names.",
+      "settable": false
+    },
+    {
+      "name": "oscillator_2_effect_mode",
+      "value": 0,
+      "observable": true,
+      "doc": "Return the current effect mode of the oscillator 2.",
+      "settable": true
+    },
+    {
+      "name": "oscillator_2_wavetable_category",
+      "value": 0,
+      "observable": true,
+      "doc": "Return the current wavetable category of the oscillator 2.",
+      "settable": true
+    },
+    {
+      "name": "oscillator_2_wavetable_index",
+      "value": 0,
+      "observable": true,
+      "doc": "Return the current wavetable index of the oscillator 2.",
+      "settable": true
+    },
+    {
+      "name": "oscillator_2_wavetables",
+      "value": "<Base.StringVector object at 0x394eafcc0>",
+      "observable": true,
+      "doc": "Get a vector of oscillator 2's wavetable names.",
+      "settable": false
+    },
+    {
+      "name": "oscillator_wavetable_categories",
+      "value": "<Base.StringVector object at 0x394eafcc0>",
+      "observable": false,
+      "doc": "Get a vector of the available wavetable categories.",
+      "settable": false
+    },
+    {
+      "name": "poly_voices",
+      "value": 6,
+      "observable": true,
+      "doc": "Return the current number of polyphonic voices. Uses the VoiceCount enumeration.",
+      "settable": true
+    },
+    {
+      "name": "type",
+      "value": "Device.DeviceType.instrument",
+      "observable": false,
+      "doc": "Return the type of the device.",
+      "settable": false
+    },
+    {
+      "name": "unison_mode",
+      "value": 1,
+      "observable": true,
+      "doc": "Return the current unison mode.",
+      "settable": true
+    },
+    {
+      "name": "unison_voice_count",
+      "value": 3,
+      "observable": true,
+      "doc": "Return the current number of unison voices.",
+      "settable": true
+    },
+    {
+      "name": "visible_modulation_target_names",
+      "value": "<Base.StringVector object at 0x394eafcc0>",
+      "observable": true,
+      "doc": "Get the names of all the visible modulation targets.",
+      "settable": false
+    }
+  ],
+  "propertyAllowlist": [
+    "(\"InstrumentVector\", \"oscillator_%d_%s\" % (_osc, _attr)): PropertySpec(",
+    "(\"InstrumentVector\", \"oscillator_1_wavetables\"): PropertySpec(",
+    "(\"InstrumentVector\", \"oscillator_2_wavetables\"): PropertySpec(",
+    "(\"InstrumentVector\", \"oscillator_wavetable_categories\"): PropertySpec("
+  ]
+}

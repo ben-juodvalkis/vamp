@@ -1,0 +1,4862 @@
+{
+  "identity": {
+    "path": "tracks/2/devices/0",
+    "pythonType": "MeldDevice",
+    "name": "Meld",
+    "class_name": "InstrumentMeld",
+    "class_display_name": "Meld",
+    "type": "Device.DeviceType.instrument",
+    "can_have_chains": false,
+    "can_have_drum_pads": false,
+    "is_active": true
+  },
+  "parameters": [
+    {
+      "index": 0,
+      "name": "Device On",
+      "original_name": "On",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "name": "A On",
+      "original_name": "MeldVoice_EngineA_On",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "name": "A Keytracking",
+      "original_name": "MeldVoice_EngineA_Oscillator_Pitch_Keytracking",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "name": "A Transpose",
+      "original_name": "MeldVoice_EngineA_Oscillator_Pitch_Transpose",
+      "min": -12,
+      "max": 12,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -12,
+          "label": "-12 st"
+        },
+        {
+          "value": -11,
+          "label": "-11 st"
+        },
+        {
+          "value": -10,
+          "label": "-10 st"
+        },
+        {
+          "value": -9,
+          "label": "-9 st"
+        },
+        {
+          "value": -8,
+          "label": "-8 st"
+        },
+        {
+          "value": -7,
+          "label": "-7 st"
+        },
+        {
+          "value": -6,
+          "label": "-6 st"
+        },
+        {
+          "value": -5,
+          "label": "-5 st"
+        },
+        {
+          "value": -4,
+          "label": "-4 st"
+        },
+        {
+          "value": -3,
+          "label": "-3 st"
+        },
+        {
+          "value": -2,
+          "label": "-2 st"
+        },
+        {
+          "value": -1,
+          "label": "-1 st"
+        },
+        {
+          "value": 0,
+          "label": "0 st"
+        },
+        {
+          "value": 1,
+          "label": "1 st"
+        },
+        {
+          "value": 2,
+          "label": "2 st"
+        },
+        {
+          "value": 3,
+          "label": "3 st"
+        },
+        {
+          "value": 4,
+          "label": "4 st"
+        },
+        {
+          "value": 5,
+          "label": "5 st"
+        },
+        {
+          "value": 6,
+          "label": "6 st"
+        },
+        {
+          "value": 7,
+          "label": "7 st"
+        },
+        {
+          "value": 8,
+          "label": "8 st"
+        },
+        {
+          "value": 9,
+          "label": "9 st"
+        },
+        {
+          "value": 10,
+          "label": "10 st"
+        },
+        {
+          "value": 11,
+          "label": "11 st"
+        },
+        {
+          "value": 12,
+          "label": "12 st"
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "name": "A Transp Scale",
+      "original_name": "MeldVoice_EngineA_Oscillator_Pitch_TransposeScaleDegrees",
+      "min": -48,
+      "max": 48,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -48,
+          "label": "-48 sd"
+        },
+        {
+          "value": -24,
+          "label": "-24 sd"
+        },
+        {
+          "value": 0,
+          "label": "0 sd"
+        },
+        {
+          "value": 24,
+          "label": "24 sd"
+        },
+        {
+          "value": 48,
+          "label": "48 sd"
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "name": "A Octave",
+      "original_name": "MeldVoice_EngineA_Oscillator_Pitch_TransposeOctaves",
+      "min": -3,
+      "max": 3,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -3,
+          "label": "-3 oct"
+        },
+        {
+          "value": -2,
+          "label": "-2 oct"
+        },
+        {
+          "value": -1,
+          "label": "-1 oct"
+        },
+        {
+          "value": 0,
+          "label": "0 oct"
+        },
+        {
+          "value": 1,
+          "label": "1 oct"
+        },
+        {
+          "value": 2,
+          "label": "2 oct"
+        },
+        {
+          "value": 3,
+          "label": "3 oct"
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "name": "A Detune",
+      "original_name": "MeldVoice_EngineA_Oscillator_Pitch_Detune",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-50 ct"
+        },
+        {
+          "value": 0.25,
+          "label": "-25 ct"
+        },
+        {
+          "value": 0.5,
+          "label": "0 ct"
+        },
+        {
+          "value": 0.75,
+          "label": "25 ct"
+        },
+        {
+          "value": 1,
+          "label": "50 ct"
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "name": "A Osc Type",
+      "original_name": "MeldVoice_EngineA_Oscillator_OscillatorType",
+      "min": 0,
+      "max": 24,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Basic Shapes"
+        },
+        {
+          "value": 1,
+          "label": "Dual Basic Shapes  (♭♯)"
+        },
+        {
+          "value": 2,
+          "label": "Noisy Shapes"
+        },
+        {
+          "value": 3,
+          "label": "Square Sync"
+        },
+        {
+          "value": 4,
+          "label": "Square 5th"
+        },
+        {
+          "value": 5,
+          "label": "Sub"
+        },
+        {
+          "value": 6,
+          "label": "Swarm Sine  (♭♯)"
+        },
+        {
+          "value": 7,
+          "label": "Swarm Triangle  (♭♯)"
+        },
+        {
+          "value": 8,
+          "label": "Swarm Saw  (♭♯)"
+        },
+        {
+          "value": 9,
+          "label": "Swarm Square  (♭♯)"
+        },
+        {
+          "value": 10,
+          "label": "Harmonic Fm"
+        },
+        {
+          "value": 11,
+          "label": "Fold Fm"
+        },
+        {
+          "value": 12,
+          "label": "Squelch"
+        },
+        {
+          "value": 13,
+          "label": "Simple Fm"
+        },
+        {
+          "value": 14,
+          "label": "Chip  (♭♯)"
+        },
+        {
+          "value": 15,
+          "label": "Shepard's Pi"
+        },
+        {
+          "value": 16,
+          "label": "Tarp"
+        },
+        {
+          "value": 17,
+          "label": "Extratone"
+        },
+        {
+          "value": 18,
+          "label": "Noise Loop"
+        },
+        {
+          "value": 19,
+          "label": "Filtered Noise"
+        },
+        {
+          "value": 20,
+          "label": "Bitgrunge"
+        },
+        {
+          "value": 21,
+          "label": "Crackle"
+        },
+        {
+          "value": 22,
+          "label": "Rain"
+        },
+        {
+          "value": 23,
+          "label": "Bubble"
+        },
+        {
+          "value": 24,
+          "label": "Chord  (♭♯)"
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "name": "A Osc Shape",
+      "original_name": "MeldVoice_EngineA_Oscillator_Macro1",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 "
+        },
+        {
+          "value": 0.25,
+          "label": "25.0 "
+        },
+        {
+          "value": 0.5,
+          "label": "50.0 "
+        },
+        {
+          "value": 0.75,
+          "label": "75.0 "
+        },
+        {
+          "value": 1,
+          "label": "100.0 "
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "name": "A Osc Tone",
+      "original_name": "MeldVoice_EngineA_Oscillator_Macro2",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 "
+        },
+        {
+          "value": 0.25,
+          "label": "25.0 "
+        },
+        {
+          "value": 0.5,
+          "label": "50.0 "
+        },
+        {
+          "value": 0.75,
+          "label": "75.0 "
+        },
+        {
+          "value": 1,
+          "label": "100.0 "
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "name": "A Osc Scale Aware",
+      "original_name": "MeldVoice_EngineA_Oscillator_UseScale",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "name": "A Reset",
+      "original_name": "MeldVoice_EngineA_Oscillator_Reset",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "name": "A Reset To Voice Offset",
+      "original_name": "MeldVoice_EngineA_Oscillator_ResetToVoiceOffset",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "name": "A Filter On",
+      "original_name": "MeldVoice_EngineA_Filter_On",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "name": "A Filter Type",
+      "original_name": "MeldVoice_EngineA_Filter_FilterType",
+      "min": 0,
+      "max": 16,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "SVF 12dB"
+        },
+        {
+          "value": 1,
+          "label": "SVF 24dB"
+        },
+        {
+          "value": 2,
+          "label": "LP 12dB MS2"
+        },
+        {
+          "value": 3,
+          "label": "HP 12dB MS2"
+        },
+        {
+          "value": 4,
+          "label": "BP 12dB OSR"
+        },
+        {
+          "value": 5,
+          "label": "LP Crunch 12dB"
+        },
+        {
+          "value": 6,
+          "label": "LP Switched Res"
+        },
+        {
+          "value": 7,
+          "label": "Filther"
+        },
+        {
+          "value": 8,
+          "label": "Eq Peak"
+        },
+        {
+          "value": 9,
+          "label": "Eq Notch"
+        },
+        {
+          "value": 10,
+          "label": "Phaser"
+        },
+        {
+          "value": 11,
+          "label": "Redux"
+        },
+        {
+          "value": 12,
+          "label": "Vowel"
+        },
+        {
+          "value": 13,
+          "label": "Comb +"
+        },
+        {
+          "value": 14,
+          "label": "Comb -"
+        },
+        {
+          "value": 15,
+          "label": "Plate Resonator  (♭♯)"
+        },
+        {
+          "value": 16,
+          "label": "Membrane Resonator  (♭♯)"
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "name": "A Filter Freq",
+      "original_name": "MeldVoice_EngineA_Filter_Frequency",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "default_value": 1,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "20.0 Hz"
+        },
+        {
+          "value": 0.25,
+          "label": "113 Hz"
+        },
+        {
+          "value": 0.5,
+          "label": "640 Hz"
+        },
+        {
+          "value": 0.75,
+          "label": "3.62 kHz"
+        },
+        {
+          "value": 1,
+          "label": "20.5 kHz"
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "name": "A Filter Q",
+      "original_name": "MeldVoice_EngineA_Filter_Macro1",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 "
+        },
+        {
+          "value": 0.25,
+          "label": "25.0 "
+        },
+        {
+          "value": 0.5,
+          "label": "50.0 "
+        },
+        {
+          "value": 0.75,
+          "label": "75.0 "
+        },
+        {
+          "value": 1,
+          "label": "100.0 "
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "name": "A Filter L-B-H-N",
+      "original_name": "MeldVoice_EngineA_Filter_Macro2",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 "
+        },
+        {
+          "value": 0.25,
+          "label": "25.0 "
+        },
+        {
+          "value": 0.5,
+          "label": "50.0 "
+        },
+        {
+          "value": 0.75,
+          "label": "75.0 "
+        },
+        {
+          "value": 1,
+          "label": "100.0 "
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "name": "A Filter Filter Scale Aware",
+      "original_name": "MeldVoice_EngineA_Filter_UseScale",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "name": "A LFO 1 Wave",
+      "original_name": "MeldVoice_EngineA_Lfo1_GeneratorType",
+      "min": 0,
+      "max": 5,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Basic Shapes"
+        },
+        {
+          "value": 1,
+          "label": "Ramp"
+        },
+        {
+          "value": 2,
+          "label": "Wander"
+        },
+        {
+          "value": 3,
+          "label": "Alternate"
+        },
+        {
+          "value": 4,
+          "label": "Euclid"
+        },
+        {
+          "value": 5,
+          "label": "Pulsate"
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "name": "A LFO 1 Sync",
+      "original_name": "MeldVoice_EngineA_Lfo1_Sync",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Free"
+        },
+        {
+          "value": 1,
+          "label": "Tempo"
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "name": "A LFO 1 Retrig On",
+      "original_name": "MeldVoice_EngineA_Lfo1_Retrigger",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 22,
+      "name": "A LFO 1 Freq",
+      "original_name": "MeldVoice_EngineA_Lfo1_Rate",
+      "min": 0,
+      "max": 1,
+      "value": 0.2313804030418396,
+      "default_value": 0.2313804030418396,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.01 Hz"
+        },
+        {
+          "value": 0.25,
+          "label": "1.26 Hz"
+        },
+        {
+          "value": 0.5,
+          "label": "10.0 Hz"
+        },
+        {
+          "value": 0.75,
+          "label": "26.8 Hz"
+        },
+        {
+          "value": 1,
+          "label": "200 Hz"
+        },
+        {
+          "value": 0.23138,
+          "label": "1.00 Hz"
+        }
+      ]
+    },
+    {
+      "index": 23,
+      "name": "A LFO 1 Synced",
+      "original_name": "MeldVoice_EngineA_Lfo1_SyncedRate",
+      "min": 0,
+      "max": 21,
+      "value": 15,
+      "default_value": 15,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "8"
+        },
+        {
+          "value": 1,
+          "label": "6"
+        },
+        {
+          "value": 2,
+          "label": "4"
+        },
+        {
+          "value": 3,
+          "label": "3"
+        },
+        {
+          "value": 4,
+          "label": "2"
+        },
+        {
+          "value": 5,
+          "label": "1.5"
+        },
+        {
+          "value": 6,
+          "label": "1"
+        },
+        {
+          "value": 7,
+          "label": "3/4"
+        },
+        {
+          "value": 8,
+          "label": "1/2"
+        },
+        {
+          "value": 9,
+          "label": "3/8"
+        },
+        {
+          "value": 10,
+          "label": "1/3"
+        },
+        {
+          "value": 11,
+          "label": "5/16"
+        },
+        {
+          "value": 12,
+          "label": "1/4"
+        },
+        {
+          "value": 13,
+          "label": "3/16"
+        },
+        {
+          "value": 14,
+          "label": "1/6"
+        },
+        {
+          "value": 15,
+          "label": "1/8"
+        },
+        {
+          "value": 16,
+          "label": "1/12"
+        },
+        {
+          "value": 17,
+          "label": "1/16"
+        },
+        {
+          "value": 18,
+          "label": "1/24"
+        },
+        {
+          "value": 19,
+          "label": "1/32"
+        },
+        {
+          "value": 20,
+          "label": "1/48"
+        },
+        {
+          "value": 21,
+          "label": "1/64"
+        }
+      ]
+    },
+    {
+      "index": 24,
+      "name": "A LFO 1 Offset",
+      "original_name": "MeldVoice_EngineA_Lfo1_PhaseOffset",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0°"
+        },
+        {
+          "value": 0.25,
+          "label": "90°"
+        },
+        {
+          "value": 0.5,
+          "label": "180°"
+        },
+        {
+          "value": 0.75,
+          "label": "270°"
+        },
+        {
+          "value": 1,
+          "label": "360°"
+        }
+      ]
+    },
+    {
+      "index": 25,
+      "name": "A LFO 1 Shape",
+      "original_name": "MeldVoice_EngineA_Lfo1_GeneratorMacro1",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 "
+        },
+        {
+          "value": 0.25,
+          "label": "25.0 "
+        },
+        {
+          "value": 0.5,
+          "label": "50.0 "
+        },
+        {
+          "value": 0.75,
+          "label": "75.0 "
+        },
+        {
+          "value": 1,
+          "label": "100.0 "
+        }
+      ]
+    },
+    {
+      "index": 26,
+      "name": "A LFO 1 Fold",
+      "original_name": "MeldVoice_EngineA_Lfo1_GeneratorMacro2",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 "
+        },
+        {
+          "value": 0.25,
+          "label": "25.0 "
+        },
+        {
+          "value": 0.5,
+          "label": "50.0 "
+        },
+        {
+          "value": 0.75,
+          "label": "75.0 "
+        },
+        {
+          "value": 1,
+          "label": "100.0 "
+        }
+      ]
+    },
+    {
+      "index": 27,
+      "name": "A LFO 1 FX 1 Type",
+      "original_name": "MeldVoice_EngineA_Lfo1_Transformer1Type",
+      "min": 0,
+      "max": 18,
+      "value": 2,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "None"
+        },
+        {
+          "value": 1,
+          "label": "Offset"
+        },
+        {
+          "value": 2,
+          "label": "Attenuverter"
+        },
+        {
+          "value": 3,
+          "label": "Gate"
+        },
+        {
+          "value": 4,
+          "label": "Skew Unipolar"
+        },
+        {
+          "value": 5,
+          "label": "Skew Bipolar"
+        },
+        {
+          "value": 6,
+          "label": "Unipolarizer"
+        },
+        {
+          "value": 7,
+          "label": "Quantizer"
+        },
+        {
+          "value": 8,
+          "label": "S&H"
+        },
+        {
+          "value": 9,
+          "label": "Independent S&H"
+        },
+        {
+          "value": 10,
+          "label": "Clipper"
+        },
+        {
+          "value": 11,
+          "label": "Fade In"
+        },
+        {
+          "value": 12,
+          "label": "Fade Out"
+        },
+        {
+          "value": 13,
+          "label": "Slew Down"
+        },
+        {
+          "value": 14,
+          "label": "Slew Up"
+        },
+        {
+          "value": 15,
+          "label": "Slew Up & Down"
+        },
+        {
+          "value": 16,
+          "label": "Trig Env"
+        },
+        {
+          "value": 17,
+          "label": "Comparator"
+        },
+        {
+          "value": 18,
+          "label": "Scrambler"
+        }
+      ]
+    },
+    {
+      "index": 28,
+      "name": "A LFO 1 FX 1 Scale",
+      "original_name": "MeldVoice_EngineA_Lfo1_Transformer1Macro",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 "
+        },
+        {
+          "value": 0.25,
+          "label": "25.0 "
+        },
+        {
+          "value": 0.5,
+          "label": "50.0 "
+        },
+        {
+          "value": 0.75,
+          "label": "75.0 "
+        },
+        {
+          "value": 1,
+          "label": "100.0 "
+        }
+      ]
+    },
+    {
+      "index": 29,
+      "name": "A LFO 1 FX 2 Type",
+      "original_name": "MeldVoice_EngineA_Lfo1_Transformer2Type",
+      "min": 0,
+      "max": 18,
+      "value": 11,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "None"
+        },
+        {
+          "value": 1,
+          "label": "Offset"
+        },
+        {
+          "value": 2,
+          "label": "Attenuverter"
+        },
+        {
+          "value": 3,
+          "label": "Gate"
+        },
+        {
+          "value": 4,
+          "label": "Skew Unipolar"
+        },
+        {
+          "value": 5,
+          "label": "Skew Bipolar"
+        },
+        {
+          "value": 6,
+          "label": "Unipolarizer"
+        },
+        {
+          "value": 7,
+          "label": "Quantizer"
+        },
+        {
+          "value": 8,
+          "label": "S&H"
+        },
+        {
+          "value": 9,
+          "label": "Independent S&H"
+        },
+        {
+          "value": 10,
+          "label": "Clipper"
+        },
+        {
+          "value": 11,
+          "label": "Fade In"
+        },
+        {
+          "value": 12,
+          "label": "Fade Out"
+        },
+        {
+          "value": 13,
+          "label": "Slew Down"
+        },
+        {
+          "value": 14,
+          "label": "Slew Up"
+        },
+        {
+          "value": 15,
+          "label": "Slew Up & Down"
+        },
+        {
+          "value": 16,
+          "label": "Trig Env"
+        },
+        {
+          "value": 17,
+          "label": "Comparator"
+        },
+        {
+          "value": 18,
+          "label": "Scrambler"
+        }
+      ]
+    },
+    {
+      "index": 30,
+      "name": "A LFO 1 FX 2 Ramp",
+      "original_name": "MeldVoice_EngineA_Lfo1_Transformer2Macro",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 "
+        },
+        {
+          "value": 0.25,
+          "label": "25.0 "
+        },
+        {
+          "value": 0.5,
+          "label": "50.0 "
+        },
+        {
+          "value": 0.75,
+          "label": "75.0 "
+        },
+        {
+          "value": 1,
+          "label": "100.0 "
+        }
+      ]
+    },
+    {
+      "index": 31,
+      "name": "A LFO 2 Wave",
+      "original_name": "MeldVoice_EngineA_Lfo2_Waveform",
+      "min": 0,
+      "max": 5,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Sine"
+        },
+        {
+          "value": 1,
+          "label": "Tri"
+        },
+        {
+          "value": 2,
+          "label": "Saw Up"
+        },
+        {
+          "value": 3,
+          "label": "Saw Down"
+        },
+        {
+          "value": 4,
+          "label": "Rectangle"
+        },
+        {
+          "value": 5,
+          "label": "Random S&H"
+        }
+      ]
+    },
+    {
+      "index": 32,
+      "name": "A LFO 2 Sync",
+      "original_name": "MeldVoice_EngineA_Lfo2_Sync",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Free"
+        },
+        {
+          "value": 1,
+          "label": "Tempo"
+        }
+      ]
+    },
+    {
+      "index": 33,
+      "name": "A LFO 2 Freq",
+      "original_name": "MeldVoice_EngineA_Lfo2_Rate",
+      "min": 0,
+      "max": 1,
+      "value": 0.4160108268260956,
+      "default_value": 0.4160108268260956,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.01 Hz"
+        },
+        {
+          "value": 0.25,
+          "label": "0.79 Hz"
+        },
+        {
+          "value": 0.5,
+          "label": "12.5 Hz"
+        },
+        {
+          "value": 0.75,
+          "label": "63.3 Hz"
+        },
+        {
+          "value": 1,
+          "label": "200 Hz"
+        },
+        {
+          "value": 0.416011,
+          "label": "6.00 Hz"
+        }
+      ]
+    },
+    {
+      "index": 34,
+      "name": "A LFO 2 Synced",
+      "original_name": "MeldVoice_EngineA_Lfo2_SyncedRate",
+      "min": 0,
+      "max": 21,
+      "value": 12,
+      "default_value": 12,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "8"
+        },
+        {
+          "value": 1,
+          "label": "6"
+        },
+        {
+          "value": 2,
+          "label": "4"
+        },
+        {
+          "value": 3,
+          "label": "3"
+        },
+        {
+          "value": 4,
+          "label": "2"
+        },
+        {
+          "value": 5,
+          "label": "1.5"
+        },
+        {
+          "value": 6,
+          "label": "1"
+        },
+        {
+          "value": 7,
+          "label": "3/4"
+        },
+        {
+          "value": 8,
+          "label": "1/2"
+        },
+        {
+          "value": 9,
+          "label": "3/8"
+        },
+        {
+          "value": 10,
+          "label": "1/3"
+        },
+        {
+          "value": 11,
+          "label": "5/16"
+        },
+        {
+          "value": 12,
+          "label": "1/4"
+        },
+        {
+          "value": 13,
+          "label": "3/16"
+        },
+        {
+          "value": 14,
+          "label": "1/6"
+        },
+        {
+          "value": 15,
+          "label": "1/8"
+        },
+        {
+          "value": 16,
+          "label": "1/12"
+        },
+        {
+          "value": 17,
+          "label": "1/16"
+        },
+        {
+          "value": 18,
+          "label": "1/24"
+        },
+        {
+          "value": 19,
+          "label": "1/32"
+        },
+        {
+          "value": 20,
+          "label": "1/48"
+        },
+        {
+          "value": 21,
+          "label": "1/64"
+        }
+      ]
+    },
+    {
+      "index": 35,
+      "name": "A LFO 2 Retrig On",
+      "original_name": "MeldVoice_EngineA_Lfo2_Retrigger",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 36,
+      "name": "A LFO 2 Offset",
+      "original_name": "MeldVoice_EngineA_Lfo2_PhaseOffset",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0°"
+        },
+        {
+          "value": 0.25,
+          "label": "90°"
+        },
+        {
+          "value": 0.5,
+          "label": "180°"
+        },
+        {
+          "value": 0.75,
+          "label": "270°"
+        },
+        {
+          "value": 1,
+          "label": "360°"
+        }
+      ]
+    },
+    {
+      "index": 37,
+      "name": "A Amp Attack",
+      "original_name": "MeldVoice_EngineA_AmpEnvelope_Times_Attack",
+      "min": 0,
+      "max": 1,
+      "value": 0.0707106813788414,
+      "default_value": 0.0707106813788414,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.00 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "156 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "2.50 s"
+        },
+        {
+          "value": 0.75,
+          "label": "12.7 s"
+        },
+        {
+          "value": 1,
+          "label": "40.0 s"
+        },
+        {
+          "value": 0.070711,
+          "label": "1.00 ms"
+        }
+      ]
+    },
+    {
+      "index": 38,
+      "name": "A Amp Decay",
+      "original_name": "MeldVoice_EngineA_AmpEnvelope_Times_Decay",
+      "min": 0,
+      "max": 1,
+      "value": 0.349747896194458,
+      "default_value": 0.349747896194458,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1.50 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "158 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "2.50 s"
+        },
+        {
+          "value": 0.75,
+          "label": "12.7 s"
+        },
+        {
+          "value": 1,
+          "label": "40.0 s"
+        },
+        {
+          "value": 0.349748,
+          "label": "600 ms"
+        }
+      ]
+    },
+    {
+      "index": 39,
+      "name": "A Amp Release",
+      "original_name": "MeldVoice_EngineA_AmpEnvelope_Times_Release",
+      "min": 0,
+      "max": 1,
+      "value": 0.1866055279970169,
+      "default_value": 0.1866055279970169,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1.50 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "158 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "2.50 s"
+        },
+        {
+          "value": 0.75,
+          "label": "12.7 s"
+        },
+        {
+          "value": 1,
+          "label": "40.0 s"
+        },
+        {
+          "value": 0.186606,
+          "label": "50.0 ms"
+        }
+      ]
+    },
+    {
+      "index": 40,
+      "name": "A Amp A Slope",
+      "original_name": "MeldVoice_EngineA_AmpEnvelope_Slopes_Attack",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 41,
+      "name": "A Amp D Slope",
+      "original_name": "MeldVoice_EngineA_AmpEnvelope_Slopes_Decay",
+      "min": 0,
+      "max": 1,
+      "value": 0.75,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 42,
+      "name": "A Amp R Slope",
+      "original_name": "MeldVoice_EngineA_AmpEnvelope_Slopes_Release",
+      "min": 0,
+      "max": 1,
+      "value": 0.75,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 43,
+      "name": "A Amp Sustain",
+      "original_name": "MeldVoice_EngineA_AmpEnvelope_Sustain",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "default_value": 1,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-inf dB"
+        },
+        {
+          "value": 0.25,
+          "label": "-24 dB"
+        },
+        {
+          "value": 0.5,
+          "label": "-12 dB"
+        },
+        {
+          "value": 0.75,
+          "label": "-5.0 dB"
+        },
+        {
+          "value": 1,
+          "label": "0.0 dB"
+        }
+      ]
+    },
+    {
+      "index": 44,
+      "name": "A Amp Loop Mode",
+      "original_name": "MeldVoice_EngineA_AmpEnvelope_LoopMode",
+      "min": 0,
+      "max": 3,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "None"
+        },
+        {
+          "value": 1,
+          "label": "Trigger"
+        },
+        {
+          "value": 2,
+          "label": "Loop"
+        },
+        {
+          "value": 3,
+          "label": "AD Loop"
+        }
+      ]
+    },
+    {
+      "index": 45,
+      "name": "A Mod Attack",
+      "original_name": "MeldVoice_EngineA_FilterEnvelope_Times_Attack",
+      "min": 0,
+      "max": 1,
+      "value": 0.0707106813788414,
+      "default_value": 0.0707106813788414,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.00 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "156 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "2.50 s"
+        },
+        {
+          "value": 0.75,
+          "label": "12.7 s"
+        },
+        {
+          "value": 1,
+          "label": "40.0 s"
+        },
+        {
+          "value": 0.070711,
+          "label": "1.00 ms"
+        }
+      ]
+    },
+    {
+      "index": 46,
+      "name": "A Mod Decay",
+      "original_name": "MeldVoice_EngineA_FilterEnvelope_Times_Decay",
+      "min": 0,
+      "max": 1,
+      "value": 0.349747896194458,
+      "default_value": 0.349747896194458,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1.50 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "158 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "2.50 s"
+        },
+        {
+          "value": 0.75,
+          "label": "12.7 s"
+        },
+        {
+          "value": 1,
+          "label": "40.0 s"
+        },
+        {
+          "value": 0.349748,
+          "label": "600 ms"
+        }
+      ]
+    },
+    {
+      "index": 47,
+      "name": "A Mod Release",
+      "original_name": "MeldVoice_EngineA_FilterEnvelope_Times_Release",
+      "min": 0,
+      "max": 1,
+      "value": 0.1866055279970169,
+      "default_value": 0.1866055279970169,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1.50 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "158 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "2.50 s"
+        },
+        {
+          "value": 0.75,
+          "label": "12.7 s"
+        },
+        {
+          "value": 1,
+          "label": "40.0 s"
+        },
+        {
+          "value": 0.186606,
+          "label": "50.0 ms"
+        }
+      ]
+    },
+    {
+      "index": 48,
+      "name": "A Mod Initial",
+      "original_name": "MeldVoice_EngineA_FilterEnvelope_Values_Initial",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 49,
+      "name": "A Mod Peak",
+      "original_name": "MeldVoice_EngineA_FilterEnvelope_Values_Peak",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "default_value": 1,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 50,
+      "name": "A Mod Sustain",
+      "original_name": "MeldVoice_EngineA_FilterEnvelope_Values_Sustain",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 51,
+      "name": "A Mod Final",
+      "original_name": "MeldVoice_EngineA_FilterEnvelope_Values_Final",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 52,
+      "name": "A Mod A Slope",
+      "original_name": "MeldVoice_EngineA_FilterEnvelope_Slopes_Attack",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 53,
+      "name": "A Mod D Slope",
+      "original_name": "MeldVoice_EngineA_FilterEnvelope_Slopes_Decay",
+      "min": 0,
+      "max": 1,
+      "value": 0.75,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 54,
+      "name": "A Mod R Slope",
+      "original_name": "MeldVoice_EngineA_FilterEnvelope_Slopes_Release",
+      "min": 0,
+      "max": 1,
+      "value": 0.75,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 55,
+      "name": "A Mod Loop Mode",
+      "original_name": "MeldVoice_EngineA_FilterEnvelope_LoopMode",
+      "min": 0,
+      "max": 3,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "None"
+        },
+        {
+          "value": 1,
+          "label": "Trigger"
+        },
+        {
+          "value": 2,
+          "label": "Loop"
+        },
+        {
+          "value": 3,
+          "label": "AD Loop"
+        }
+      ]
+    },
+    {
+      "index": 56,
+      "name": "A Tone Filter",
+      "original_name": "MeldVoice_EngineA_ToneFilter",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-1.00 "
+        },
+        {
+          "value": 0.25,
+          "label": "-0.50 "
+        },
+        {
+          "value": 0.5,
+          "label": "0.00 "
+        },
+        {
+          "value": 0.75,
+          "label": "0.50 "
+        },
+        {
+          "value": 1,
+          "label": "1.00 "
+        }
+      ]
+    },
+    {
+      "index": 57,
+      "name": "A Pan",
+      "original_name": "MeldVoice_EngineA_Pan",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "50L"
+        },
+        {
+          "value": 0.25,
+          "label": "25L"
+        },
+        {
+          "value": 0.5,
+          "label": "C"
+        },
+        {
+          "value": 0.75,
+          "label": "25R"
+        },
+        {
+          "value": 1,
+          "label": "50R"
+        }
+      ]
+    },
+    {
+      "index": 58,
+      "name": "A Volume",
+      "original_name": "MeldVoice_EngineA_Volume",
+      "min": 0,
+      "max": 1,
+      "value": 0.6351351141929626,
+      "default_value": 0.6351351141929626,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-50 dB"
+        },
+        {
+          "value": 0.25,
+          "label": "-32 dB"
+        },
+        {
+          "value": 0.5,
+          "label": "-13 dB"
+        },
+        {
+          "value": 0.75,
+          "label": "5.5 dB"
+        },
+        {
+          "value": 1,
+          "label": "24 dB"
+        },
+        {
+          "value": 0.635135,
+          "label": "-3.0 dB"
+        }
+      ]
+    },
+    {
+      "index": 59,
+      "name": "A Glide Mode",
+      "original_name": "MeldVoice_EngineA_GlideMode",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Portamento"
+        },
+        {
+          "value": 1,
+          "label": "Glissando"
+        }
+      ]
+    },
+    {
+      "index": 60,
+      "name": "A Glide Time",
+      "original_name": "MeldVoice_EngineA_GlideTime",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.00 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "78.1 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "1.25 s"
+        },
+        {
+          "value": 0.75,
+          "label": "6.33 s"
+        },
+        {
+          "value": 1,
+          "label": "20.0 s"
+        }
+      ]
+    },
+    {
+      "index": 61,
+      "name": "B On",
+      "original_name": "MeldVoice_EngineB_On",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 62,
+      "name": "B Keytracking",
+      "original_name": "MeldVoice_EngineB_Oscillator_Pitch_Keytracking",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 63,
+      "name": "B Transpose",
+      "original_name": "MeldVoice_EngineB_Oscillator_Pitch_Transpose",
+      "min": -12,
+      "max": 12,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -12,
+          "label": "-12 st"
+        },
+        {
+          "value": -11,
+          "label": "-11 st"
+        },
+        {
+          "value": -10,
+          "label": "-10 st"
+        },
+        {
+          "value": -9,
+          "label": "-9 st"
+        },
+        {
+          "value": -8,
+          "label": "-8 st"
+        },
+        {
+          "value": -7,
+          "label": "-7 st"
+        },
+        {
+          "value": -6,
+          "label": "-6 st"
+        },
+        {
+          "value": -5,
+          "label": "-5 st"
+        },
+        {
+          "value": -4,
+          "label": "-4 st"
+        },
+        {
+          "value": -3,
+          "label": "-3 st"
+        },
+        {
+          "value": -2,
+          "label": "-2 st"
+        },
+        {
+          "value": -1,
+          "label": "-1 st"
+        },
+        {
+          "value": 0,
+          "label": "0 st"
+        },
+        {
+          "value": 1,
+          "label": "1 st"
+        },
+        {
+          "value": 2,
+          "label": "2 st"
+        },
+        {
+          "value": 3,
+          "label": "3 st"
+        },
+        {
+          "value": 4,
+          "label": "4 st"
+        },
+        {
+          "value": 5,
+          "label": "5 st"
+        },
+        {
+          "value": 6,
+          "label": "6 st"
+        },
+        {
+          "value": 7,
+          "label": "7 st"
+        },
+        {
+          "value": 8,
+          "label": "8 st"
+        },
+        {
+          "value": 9,
+          "label": "9 st"
+        },
+        {
+          "value": 10,
+          "label": "10 st"
+        },
+        {
+          "value": 11,
+          "label": "11 st"
+        },
+        {
+          "value": 12,
+          "label": "12 st"
+        }
+      ]
+    },
+    {
+      "index": 64,
+      "name": "B Transp Scale",
+      "original_name": "MeldVoice_EngineB_Oscillator_Pitch_TransposeScaleDegrees",
+      "min": -48,
+      "max": 48,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -48,
+          "label": "-48 sd"
+        },
+        {
+          "value": -24,
+          "label": "-24 sd"
+        },
+        {
+          "value": 0,
+          "label": "0 sd"
+        },
+        {
+          "value": 24,
+          "label": "24 sd"
+        },
+        {
+          "value": 48,
+          "label": "48 sd"
+        }
+      ]
+    },
+    {
+      "index": 65,
+      "name": "B Octave",
+      "original_name": "MeldVoice_EngineB_Oscillator_Pitch_TransposeOctaves",
+      "min": -3,
+      "max": 3,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": -3,
+          "label": "-3 oct"
+        },
+        {
+          "value": -2,
+          "label": "-2 oct"
+        },
+        {
+          "value": -1,
+          "label": "-1 oct"
+        },
+        {
+          "value": 0,
+          "label": "0 oct"
+        },
+        {
+          "value": 1,
+          "label": "1 oct"
+        },
+        {
+          "value": 2,
+          "label": "2 oct"
+        },
+        {
+          "value": 3,
+          "label": "3 oct"
+        }
+      ]
+    },
+    {
+      "index": 66,
+      "name": "B Detune",
+      "original_name": "MeldVoice_EngineB_Oscillator_Pitch_Detune",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-50 ct"
+        },
+        {
+          "value": 0.25,
+          "label": "-25 ct"
+        },
+        {
+          "value": 0.5,
+          "label": "0 ct"
+        },
+        {
+          "value": 0.75,
+          "label": "25 ct"
+        },
+        {
+          "value": 1,
+          "label": "50 ct"
+        }
+      ]
+    },
+    {
+      "index": 67,
+      "name": "B Osc Type",
+      "original_name": "MeldVoice_EngineB_Oscillator_OscillatorType",
+      "min": 0,
+      "max": 24,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Basic Shapes"
+        },
+        {
+          "value": 1,
+          "label": "Dual Basic Shapes  (♭♯)"
+        },
+        {
+          "value": 2,
+          "label": "Noisy Shapes"
+        },
+        {
+          "value": 3,
+          "label": "Square Sync"
+        },
+        {
+          "value": 4,
+          "label": "Square 5th"
+        },
+        {
+          "value": 5,
+          "label": "Sub"
+        },
+        {
+          "value": 6,
+          "label": "Swarm Sine  (♭♯)"
+        },
+        {
+          "value": 7,
+          "label": "Swarm Triangle  (♭♯)"
+        },
+        {
+          "value": 8,
+          "label": "Swarm Saw  (♭♯)"
+        },
+        {
+          "value": 9,
+          "label": "Swarm Square  (♭♯)"
+        },
+        {
+          "value": 10,
+          "label": "Harmonic Fm"
+        },
+        {
+          "value": 11,
+          "label": "Fold Fm"
+        },
+        {
+          "value": 12,
+          "label": "Squelch"
+        },
+        {
+          "value": 13,
+          "label": "Simple Fm"
+        },
+        {
+          "value": 14,
+          "label": "Chip  (♭♯)"
+        },
+        {
+          "value": 15,
+          "label": "Shepard's Pi"
+        },
+        {
+          "value": 16,
+          "label": "Tarp"
+        },
+        {
+          "value": 17,
+          "label": "Extratone"
+        },
+        {
+          "value": 18,
+          "label": "Noise Loop"
+        },
+        {
+          "value": 19,
+          "label": "Filtered Noise"
+        },
+        {
+          "value": 20,
+          "label": "Bitgrunge"
+        },
+        {
+          "value": 21,
+          "label": "Crackle"
+        },
+        {
+          "value": 22,
+          "label": "Rain"
+        },
+        {
+          "value": 23,
+          "label": "Bubble"
+        },
+        {
+          "value": 24,
+          "label": "Chord  (♭♯)"
+        }
+      ]
+    },
+    {
+      "index": 68,
+      "name": "B Osc Shape",
+      "original_name": "MeldVoice_EngineB_Oscillator_Macro1",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 "
+        },
+        {
+          "value": 0.25,
+          "label": "25.0 "
+        },
+        {
+          "value": 0.5,
+          "label": "50.0 "
+        },
+        {
+          "value": 0.75,
+          "label": "75.0 "
+        },
+        {
+          "value": 1,
+          "label": "100.0 "
+        }
+      ]
+    },
+    {
+      "index": 69,
+      "name": "B Osc Tone",
+      "original_name": "MeldVoice_EngineB_Oscillator_Macro2",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 "
+        },
+        {
+          "value": 0.25,
+          "label": "25.0 "
+        },
+        {
+          "value": 0.5,
+          "label": "50.0 "
+        },
+        {
+          "value": 0.75,
+          "label": "75.0 "
+        },
+        {
+          "value": 1,
+          "label": "100.0 "
+        }
+      ]
+    },
+    {
+      "index": 70,
+      "name": "B Osc Scale Aware",
+      "original_name": "MeldVoice_EngineB_Oscillator_UseScale",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 71,
+      "name": "B Reset",
+      "original_name": "MeldVoice_EngineB_Oscillator_Reset",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 72,
+      "name": "B Reset To Voice Offset",
+      "original_name": "MeldVoice_EngineB_Oscillator_ResetToVoiceOffset",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 73,
+      "name": "B Filter On",
+      "original_name": "MeldVoice_EngineB_Filter_On",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 74,
+      "name": "B Filter Type",
+      "original_name": "MeldVoice_EngineB_Filter_FilterType",
+      "min": 0,
+      "max": 16,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "SVF 12dB"
+        },
+        {
+          "value": 1,
+          "label": "SVF 24dB"
+        },
+        {
+          "value": 2,
+          "label": "LP 12dB MS2"
+        },
+        {
+          "value": 3,
+          "label": "HP 12dB MS2"
+        },
+        {
+          "value": 4,
+          "label": "BP 12dB OSR"
+        },
+        {
+          "value": 5,
+          "label": "LP Crunch 12dB"
+        },
+        {
+          "value": 6,
+          "label": "LP Switched Res"
+        },
+        {
+          "value": 7,
+          "label": "Filther"
+        },
+        {
+          "value": 8,
+          "label": "Eq Peak"
+        },
+        {
+          "value": 9,
+          "label": "Eq Notch"
+        },
+        {
+          "value": 10,
+          "label": "Phaser"
+        },
+        {
+          "value": 11,
+          "label": "Redux"
+        },
+        {
+          "value": 12,
+          "label": "Vowel"
+        },
+        {
+          "value": 13,
+          "label": "Comb +"
+        },
+        {
+          "value": 14,
+          "label": "Comb -"
+        },
+        {
+          "value": 15,
+          "label": "Plate Resonator  (♭♯)"
+        },
+        {
+          "value": 16,
+          "label": "Membrane Resonator  (♭♯)"
+        }
+      ]
+    },
+    {
+      "index": 75,
+      "name": "B Filter Freq",
+      "original_name": "MeldVoice_EngineB_Filter_Frequency",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "default_value": 1,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "20.0 Hz"
+        },
+        {
+          "value": 0.25,
+          "label": "113 Hz"
+        },
+        {
+          "value": 0.5,
+          "label": "640 Hz"
+        },
+        {
+          "value": 0.75,
+          "label": "3.62 kHz"
+        },
+        {
+          "value": 1,
+          "label": "20.5 kHz"
+        }
+      ]
+    },
+    {
+      "index": 76,
+      "name": "B Filter Q",
+      "original_name": "MeldVoice_EngineB_Filter_Macro1",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 "
+        },
+        {
+          "value": 0.25,
+          "label": "25.0 "
+        },
+        {
+          "value": 0.5,
+          "label": "50.0 "
+        },
+        {
+          "value": 0.75,
+          "label": "75.0 "
+        },
+        {
+          "value": 1,
+          "label": "100.0 "
+        }
+      ]
+    },
+    {
+      "index": 77,
+      "name": "B Filter L-B-H-N",
+      "original_name": "MeldVoice_EngineB_Filter_Macro2",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 "
+        },
+        {
+          "value": 0.25,
+          "label": "25.0 "
+        },
+        {
+          "value": 0.5,
+          "label": "50.0 "
+        },
+        {
+          "value": 0.75,
+          "label": "75.0 "
+        },
+        {
+          "value": 1,
+          "label": "100.0 "
+        }
+      ]
+    },
+    {
+      "index": 78,
+      "name": "B Filter Filter Scale Aware",
+      "original_name": "MeldVoice_EngineB_Filter_UseScale",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 79,
+      "name": "B LFO 1 Wave",
+      "original_name": "MeldVoice_EngineB_Lfo1_GeneratorType",
+      "min": 0,
+      "max": 5,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Basic Shapes"
+        },
+        {
+          "value": 1,
+          "label": "Ramp"
+        },
+        {
+          "value": 2,
+          "label": "Wander"
+        },
+        {
+          "value": 3,
+          "label": "Alternate"
+        },
+        {
+          "value": 4,
+          "label": "Euclid"
+        },
+        {
+          "value": 5,
+          "label": "Pulsate"
+        }
+      ]
+    },
+    {
+      "index": 80,
+      "name": "B LFO 1 Sync",
+      "original_name": "MeldVoice_EngineB_Lfo1_Sync",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Free"
+        },
+        {
+          "value": 1,
+          "label": "Tempo"
+        }
+      ]
+    },
+    {
+      "index": 81,
+      "name": "B LFO 1 Retrig On",
+      "original_name": "MeldVoice_EngineB_Lfo1_Retrigger",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 82,
+      "name": "B LFO 1 Freq",
+      "original_name": "MeldVoice_EngineB_Lfo1_Rate",
+      "min": 0,
+      "max": 1,
+      "value": 0.2313804030418396,
+      "default_value": 0.2313804030418396,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.01 Hz"
+        },
+        {
+          "value": 0.25,
+          "label": "1.26 Hz"
+        },
+        {
+          "value": 0.5,
+          "label": "10.0 Hz"
+        },
+        {
+          "value": 0.75,
+          "label": "26.8 Hz"
+        },
+        {
+          "value": 1,
+          "label": "200 Hz"
+        },
+        {
+          "value": 0.23138,
+          "label": "1.00 Hz"
+        }
+      ]
+    },
+    {
+      "index": 83,
+      "name": "B LFO 1 Synced",
+      "original_name": "MeldVoice_EngineB_Lfo1_SyncedRate",
+      "min": 0,
+      "max": 21,
+      "value": 15,
+      "default_value": 15,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "8"
+        },
+        {
+          "value": 1,
+          "label": "6"
+        },
+        {
+          "value": 2,
+          "label": "4"
+        },
+        {
+          "value": 3,
+          "label": "3"
+        },
+        {
+          "value": 4,
+          "label": "2"
+        },
+        {
+          "value": 5,
+          "label": "1.5"
+        },
+        {
+          "value": 6,
+          "label": "1"
+        },
+        {
+          "value": 7,
+          "label": "3/4"
+        },
+        {
+          "value": 8,
+          "label": "1/2"
+        },
+        {
+          "value": 9,
+          "label": "3/8"
+        },
+        {
+          "value": 10,
+          "label": "1/3"
+        },
+        {
+          "value": 11,
+          "label": "5/16"
+        },
+        {
+          "value": 12,
+          "label": "1/4"
+        },
+        {
+          "value": 13,
+          "label": "3/16"
+        },
+        {
+          "value": 14,
+          "label": "1/6"
+        },
+        {
+          "value": 15,
+          "label": "1/8"
+        },
+        {
+          "value": 16,
+          "label": "1/12"
+        },
+        {
+          "value": 17,
+          "label": "1/16"
+        },
+        {
+          "value": 18,
+          "label": "1/24"
+        },
+        {
+          "value": 19,
+          "label": "1/32"
+        },
+        {
+          "value": 20,
+          "label": "1/48"
+        },
+        {
+          "value": 21,
+          "label": "1/64"
+        }
+      ]
+    },
+    {
+      "index": 84,
+      "name": "B LFO 1 Offset",
+      "original_name": "MeldVoice_EngineB_Lfo1_PhaseOffset",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0°"
+        },
+        {
+          "value": 0.25,
+          "label": "90°"
+        },
+        {
+          "value": 0.5,
+          "label": "180°"
+        },
+        {
+          "value": 0.75,
+          "label": "270°"
+        },
+        {
+          "value": 1,
+          "label": "360°"
+        }
+      ]
+    },
+    {
+      "index": 85,
+      "name": "B LFO 1 Shape",
+      "original_name": "MeldVoice_EngineB_Lfo1_GeneratorMacro1",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 "
+        },
+        {
+          "value": 0.25,
+          "label": "25.0 "
+        },
+        {
+          "value": 0.5,
+          "label": "50.0 "
+        },
+        {
+          "value": 0.75,
+          "label": "75.0 "
+        },
+        {
+          "value": 1,
+          "label": "100.0 "
+        }
+      ]
+    },
+    {
+      "index": 86,
+      "name": "B LFO 1 Fold",
+      "original_name": "MeldVoice_EngineB_Lfo1_GeneratorMacro2",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 "
+        },
+        {
+          "value": 0.25,
+          "label": "25.0 "
+        },
+        {
+          "value": 0.5,
+          "label": "50.0 "
+        },
+        {
+          "value": 0.75,
+          "label": "75.0 "
+        },
+        {
+          "value": 1,
+          "label": "100.0 "
+        }
+      ]
+    },
+    {
+      "index": 87,
+      "name": "B LFO 1 FX 1 Type",
+      "original_name": "MeldVoice_EngineB_Lfo1_Transformer1Type",
+      "min": 0,
+      "max": 18,
+      "value": 2,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "None"
+        },
+        {
+          "value": 1,
+          "label": "Offset"
+        },
+        {
+          "value": 2,
+          "label": "Attenuverter"
+        },
+        {
+          "value": 3,
+          "label": "Gate"
+        },
+        {
+          "value": 4,
+          "label": "Skew Unipolar"
+        },
+        {
+          "value": 5,
+          "label": "Skew Bipolar"
+        },
+        {
+          "value": 6,
+          "label": "Unipolarizer"
+        },
+        {
+          "value": 7,
+          "label": "Quantizer"
+        },
+        {
+          "value": 8,
+          "label": "S&H"
+        },
+        {
+          "value": 9,
+          "label": "Independent S&H"
+        },
+        {
+          "value": 10,
+          "label": "Clipper"
+        },
+        {
+          "value": 11,
+          "label": "Fade In"
+        },
+        {
+          "value": 12,
+          "label": "Fade Out"
+        },
+        {
+          "value": 13,
+          "label": "Slew Down"
+        },
+        {
+          "value": 14,
+          "label": "Slew Up"
+        },
+        {
+          "value": 15,
+          "label": "Slew Up & Down"
+        },
+        {
+          "value": 16,
+          "label": "Trig Env"
+        },
+        {
+          "value": 17,
+          "label": "Comparator"
+        },
+        {
+          "value": 18,
+          "label": "Scrambler"
+        }
+      ]
+    },
+    {
+      "index": 88,
+      "name": "B LFO 1 FX 1 Scale",
+      "original_name": "MeldVoice_EngineB_Lfo1_Transformer1Macro",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 "
+        },
+        {
+          "value": 0.25,
+          "label": "25.0 "
+        },
+        {
+          "value": 0.5,
+          "label": "50.0 "
+        },
+        {
+          "value": 0.75,
+          "label": "75.0 "
+        },
+        {
+          "value": 1,
+          "label": "100.0 "
+        }
+      ]
+    },
+    {
+      "index": 89,
+      "name": "B LFO 1 FX 2 Type",
+      "original_name": "MeldVoice_EngineB_Lfo1_Transformer2Type",
+      "min": 0,
+      "max": 18,
+      "value": 11,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "None"
+        },
+        {
+          "value": 1,
+          "label": "Offset"
+        },
+        {
+          "value": 2,
+          "label": "Attenuverter"
+        },
+        {
+          "value": 3,
+          "label": "Gate"
+        },
+        {
+          "value": 4,
+          "label": "Skew Unipolar"
+        },
+        {
+          "value": 5,
+          "label": "Skew Bipolar"
+        },
+        {
+          "value": 6,
+          "label": "Unipolarizer"
+        },
+        {
+          "value": 7,
+          "label": "Quantizer"
+        },
+        {
+          "value": 8,
+          "label": "S&H"
+        },
+        {
+          "value": 9,
+          "label": "Independent S&H"
+        },
+        {
+          "value": 10,
+          "label": "Clipper"
+        },
+        {
+          "value": 11,
+          "label": "Fade In"
+        },
+        {
+          "value": 12,
+          "label": "Fade Out"
+        },
+        {
+          "value": 13,
+          "label": "Slew Down"
+        },
+        {
+          "value": 14,
+          "label": "Slew Up"
+        },
+        {
+          "value": 15,
+          "label": "Slew Up & Down"
+        },
+        {
+          "value": 16,
+          "label": "Trig Env"
+        },
+        {
+          "value": 17,
+          "label": "Comparator"
+        },
+        {
+          "value": 18,
+          "label": "Scrambler"
+        }
+      ]
+    },
+    {
+      "index": 90,
+      "name": "B LFO 1 FX 2 Ramp",
+      "original_name": "MeldVoice_EngineB_Lfo1_Transformer2Macro",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 "
+        },
+        {
+          "value": 0.25,
+          "label": "25.0 "
+        },
+        {
+          "value": 0.5,
+          "label": "50.0 "
+        },
+        {
+          "value": 0.75,
+          "label": "75.0 "
+        },
+        {
+          "value": 1,
+          "label": "100.0 "
+        }
+      ]
+    },
+    {
+      "index": 91,
+      "name": "B LFO 2 Wave",
+      "original_name": "MeldVoice_EngineB_Lfo2_Waveform",
+      "min": 0,
+      "max": 5,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Sine"
+        },
+        {
+          "value": 1,
+          "label": "Tri"
+        },
+        {
+          "value": 2,
+          "label": "Saw Up"
+        },
+        {
+          "value": 3,
+          "label": "Saw Down"
+        },
+        {
+          "value": 4,
+          "label": "Rectangle"
+        },
+        {
+          "value": 5,
+          "label": "Random S&H"
+        }
+      ]
+    },
+    {
+      "index": 92,
+      "name": "B LFO 2 Sync",
+      "original_name": "MeldVoice_EngineB_Lfo2_Sync",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Free"
+        },
+        {
+          "value": 1,
+          "label": "Tempo"
+        }
+      ]
+    },
+    {
+      "index": 93,
+      "name": "B LFO 2 Freq",
+      "original_name": "MeldVoice_EngineB_Lfo2_Rate",
+      "min": 0,
+      "max": 1,
+      "value": 0.4160108268260956,
+      "default_value": 0.4160108268260956,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.01 Hz"
+        },
+        {
+          "value": 0.25,
+          "label": "0.79 Hz"
+        },
+        {
+          "value": 0.5,
+          "label": "12.5 Hz"
+        },
+        {
+          "value": 0.75,
+          "label": "63.3 Hz"
+        },
+        {
+          "value": 1,
+          "label": "200 Hz"
+        },
+        {
+          "value": 0.416011,
+          "label": "6.00 Hz"
+        }
+      ]
+    },
+    {
+      "index": 94,
+      "name": "B LFO 2 Synced",
+      "original_name": "MeldVoice_EngineB_Lfo2_SyncedRate",
+      "min": 0,
+      "max": 21,
+      "value": 12,
+      "default_value": 12,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "8"
+        },
+        {
+          "value": 1,
+          "label": "6"
+        },
+        {
+          "value": 2,
+          "label": "4"
+        },
+        {
+          "value": 3,
+          "label": "3"
+        },
+        {
+          "value": 4,
+          "label": "2"
+        },
+        {
+          "value": 5,
+          "label": "1.5"
+        },
+        {
+          "value": 6,
+          "label": "1"
+        },
+        {
+          "value": 7,
+          "label": "3/4"
+        },
+        {
+          "value": 8,
+          "label": "1/2"
+        },
+        {
+          "value": 9,
+          "label": "3/8"
+        },
+        {
+          "value": 10,
+          "label": "1/3"
+        },
+        {
+          "value": 11,
+          "label": "5/16"
+        },
+        {
+          "value": 12,
+          "label": "1/4"
+        },
+        {
+          "value": 13,
+          "label": "3/16"
+        },
+        {
+          "value": 14,
+          "label": "1/6"
+        },
+        {
+          "value": 15,
+          "label": "1/8"
+        },
+        {
+          "value": 16,
+          "label": "1/12"
+        },
+        {
+          "value": 17,
+          "label": "1/16"
+        },
+        {
+          "value": 18,
+          "label": "1/24"
+        },
+        {
+          "value": 19,
+          "label": "1/32"
+        },
+        {
+          "value": 20,
+          "label": "1/48"
+        },
+        {
+          "value": 21,
+          "label": "1/64"
+        }
+      ]
+    },
+    {
+      "index": 95,
+      "name": "B LFO 2 Retrig On",
+      "original_name": "MeldVoice_EngineB_Lfo2_Retrigger",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 96,
+      "name": "B LFO 2 Offset",
+      "original_name": "MeldVoice_EngineB_Lfo2_PhaseOffset",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0°"
+        },
+        {
+          "value": 0.25,
+          "label": "90°"
+        },
+        {
+          "value": 0.5,
+          "label": "180°"
+        },
+        {
+          "value": 0.75,
+          "label": "270°"
+        },
+        {
+          "value": 1,
+          "label": "360°"
+        }
+      ]
+    },
+    {
+      "index": 97,
+      "name": "B Amp Attack",
+      "original_name": "MeldVoice_EngineB_AmpEnvelope_Times_Attack",
+      "min": 0,
+      "max": 1,
+      "value": 0.0707106813788414,
+      "default_value": 0.0707106813788414,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.00 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "156 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "2.50 s"
+        },
+        {
+          "value": 0.75,
+          "label": "12.7 s"
+        },
+        {
+          "value": 1,
+          "label": "40.0 s"
+        },
+        {
+          "value": 0.070711,
+          "label": "1.00 ms"
+        }
+      ]
+    },
+    {
+      "index": 98,
+      "name": "B Amp Decay",
+      "original_name": "MeldVoice_EngineB_AmpEnvelope_Times_Decay",
+      "min": 0,
+      "max": 1,
+      "value": 0.349747896194458,
+      "default_value": 0.349747896194458,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1.50 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "158 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "2.50 s"
+        },
+        {
+          "value": 0.75,
+          "label": "12.7 s"
+        },
+        {
+          "value": 1,
+          "label": "40.0 s"
+        },
+        {
+          "value": 0.349748,
+          "label": "600 ms"
+        }
+      ]
+    },
+    {
+      "index": 99,
+      "name": "B Amp Release",
+      "original_name": "MeldVoice_EngineB_AmpEnvelope_Times_Release",
+      "min": 0,
+      "max": 1,
+      "value": 0.1866055279970169,
+      "default_value": 0.1866055279970169,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1.50 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "158 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "2.50 s"
+        },
+        {
+          "value": 0.75,
+          "label": "12.7 s"
+        },
+        {
+          "value": 1,
+          "label": "40.0 s"
+        },
+        {
+          "value": 0.186606,
+          "label": "50.0 ms"
+        }
+      ]
+    },
+    {
+      "index": 100,
+      "name": "B Amp A Slope",
+      "original_name": "MeldVoice_EngineB_AmpEnvelope_Slopes_Attack",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 101,
+      "name": "B Amp D Slope",
+      "original_name": "MeldVoice_EngineB_AmpEnvelope_Slopes_Decay",
+      "min": 0,
+      "max": 1,
+      "value": 0.75,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 102,
+      "name": "B Amp R Slope",
+      "original_name": "MeldVoice_EngineB_AmpEnvelope_Slopes_Release",
+      "min": 0,
+      "max": 1,
+      "value": 0.75,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 103,
+      "name": "B Amp Sustain",
+      "original_name": "MeldVoice_EngineB_AmpEnvelope_Sustain",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "default_value": 1,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-inf dB"
+        },
+        {
+          "value": 0.25,
+          "label": "-24 dB"
+        },
+        {
+          "value": 0.5,
+          "label": "-12 dB"
+        },
+        {
+          "value": 0.75,
+          "label": "-5.0 dB"
+        },
+        {
+          "value": 1,
+          "label": "0.0 dB"
+        }
+      ]
+    },
+    {
+      "index": 104,
+      "name": "B Amp Loop Mode",
+      "original_name": "MeldVoice_EngineB_AmpEnvelope_LoopMode",
+      "min": 0,
+      "max": 3,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "None"
+        },
+        {
+          "value": 1,
+          "label": "Trigger"
+        },
+        {
+          "value": 2,
+          "label": "Loop"
+        },
+        {
+          "value": 3,
+          "label": "AD Loop"
+        }
+      ]
+    },
+    {
+      "index": 105,
+      "name": "B Mod Attack",
+      "original_name": "MeldVoice_EngineB_FilterEnvelope_Times_Attack",
+      "min": 0,
+      "max": 1,
+      "value": 0.0707106813788414,
+      "default_value": 0.0707106813788414,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.00 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "156 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "2.50 s"
+        },
+        {
+          "value": 0.75,
+          "label": "12.7 s"
+        },
+        {
+          "value": 1,
+          "label": "40.0 s"
+        },
+        {
+          "value": 0.070711,
+          "label": "1.00 ms"
+        }
+      ]
+    },
+    {
+      "index": 106,
+      "name": "B Mod Decay",
+      "original_name": "MeldVoice_EngineB_FilterEnvelope_Times_Decay",
+      "min": 0,
+      "max": 1,
+      "value": 0.349747896194458,
+      "default_value": 0.349747896194458,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1.50 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "158 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "2.50 s"
+        },
+        {
+          "value": 0.75,
+          "label": "12.7 s"
+        },
+        {
+          "value": 1,
+          "label": "40.0 s"
+        },
+        {
+          "value": 0.349748,
+          "label": "600 ms"
+        }
+      ]
+    },
+    {
+      "index": 107,
+      "name": "B Mod Release",
+      "original_name": "MeldVoice_EngineB_FilterEnvelope_Times_Release",
+      "min": 0,
+      "max": 1,
+      "value": 0.1866055279970169,
+      "default_value": 0.1866055279970169,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "1.50 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "158 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "2.50 s"
+        },
+        {
+          "value": 0.75,
+          "label": "12.7 s"
+        },
+        {
+          "value": 1,
+          "label": "40.0 s"
+        },
+        {
+          "value": 0.186606,
+          "label": "50.0 ms"
+        }
+      ]
+    },
+    {
+      "index": 108,
+      "name": "B Mod Initial",
+      "original_name": "MeldVoice_EngineB_FilterEnvelope_Values_Initial",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 109,
+      "name": "B Mod Peak",
+      "original_name": "MeldVoice_EngineB_FilterEnvelope_Values_Peak",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "default_value": 1,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 110,
+      "name": "B Mod Sustain",
+      "original_name": "MeldVoice_EngineB_FilterEnvelope_Values_Sustain",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 111,
+      "name": "B Mod Final",
+      "original_name": "MeldVoice_EngineB_FilterEnvelope_Values_Final",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 112,
+      "name": "B Mod A Slope",
+      "original_name": "MeldVoice_EngineB_FilterEnvelope_Slopes_Attack",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 113,
+      "name": "B Mod D Slope",
+      "original_name": "MeldVoice_EngineB_FilterEnvelope_Slopes_Decay",
+      "min": 0,
+      "max": 1,
+      "value": 0.75,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 114,
+      "name": "B Mod R Slope",
+      "original_name": "MeldVoice_EngineB_FilterEnvelope_Slopes_Release",
+      "min": 0,
+      "max": 1,
+      "value": 0.75,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-100 %"
+        },
+        {
+          "value": 0.25,
+          "label": "-50 %"
+        },
+        {
+          "value": 0.5,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.75,
+          "label": "50 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 115,
+      "name": "B Mod Loop Mode",
+      "original_name": "MeldVoice_EngineB_FilterEnvelope_LoopMode",
+      "min": 0,
+      "max": 3,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "None"
+        },
+        {
+          "value": 1,
+          "label": "Trigger"
+        },
+        {
+          "value": 2,
+          "label": "Loop"
+        },
+        {
+          "value": 3,
+          "label": "AD Loop"
+        }
+      ]
+    },
+    {
+      "index": 116,
+      "name": "B Tone Filter",
+      "original_name": "MeldVoice_EngineB_ToneFilter",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-1.00 "
+        },
+        {
+          "value": 0.25,
+          "label": "-0.50 "
+        },
+        {
+          "value": 0.5,
+          "label": "0.00 "
+        },
+        {
+          "value": 0.75,
+          "label": "0.50 "
+        },
+        {
+          "value": 1,
+          "label": "1.00 "
+        }
+      ]
+    },
+    {
+      "index": 117,
+      "name": "B Pan",
+      "original_name": "MeldVoice_EngineB_Pan",
+      "min": 0,
+      "max": 1,
+      "value": 0.5,
+      "default_value": 0.5,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "50L"
+        },
+        {
+          "value": 0.25,
+          "label": "25L"
+        },
+        {
+          "value": 0.5,
+          "label": "C"
+        },
+        {
+          "value": 0.75,
+          "label": "25R"
+        },
+        {
+          "value": 1,
+          "label": "50R"
+        }
+      ]
+    },
+    {
+      "index": 118,
+      "name": "B Volume",
+      "original_name": "MeldVoice_EngineB_Volume",
+      "min": 0,
+      "max": 1,
+      "value": 0.6351351141929626,
+      "default_value": 0.6351351141929626,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-50 dB"
+        },
+        {
+          "value": 0.25,
+          "label": "-32 dB"
+        },
+        {
+          "value": 0.5,
+          "label": "-13 dB"
+        },
+        {
+          "value": 0.75,
+          "label": "5.5 dB"
+        },
+        {
+          "value": 1,
+          "label": "24 dB"
+        },
+        {
+          "value": 0.635135,
+          "label": "-3.0 dB"
+        }
+      ]
+    },
+    {
+      "index": 119,
+      "name": "B Glide Mode",
+      "original_name": "MeldVoice_EngineB_GlideMode",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Portamento"
+        },
+        {
+          "value": 1,
+          "label": "Glissando"
+        }
+      ]
+    },
+    {
+      "index": 120,
+      "name": "B Glide Time",
+      "original_name": "MeldVoice_EngineB_GlideTime",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.00 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "78.1 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "1.25 s"
+        },
+        {
+          "value": 0.75,
+          "label": "6.33 s"
+        },
+        {
+          "value": 1,
+          "label": "20.0 s"
+        }
+      ]
+    },
+    {
+      "index": 121,
+      "name": "Engine B Delay",
+      "original_name": "MeldVoice_EngineBDelay",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.00 ms"
+        },
+        {
+          "value": 0.25,
+          "label": "39.1 ms"
+        },
+        {
+          "value": 0.5,
+          "label": "625 ms"
+        },
+        {
+          "value": 0.75,
+          "label": "3.16 s"
+        },
+        {
+          "value": 1,
+          "label": "10.0 s"
+        }
+      ]
+    },
+    {
+      "index": 122,
+      "name": "Drive",
+      "original_name": "MeldVoice_Drive",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 123,
+      "name": "Limiter On",
+      "original_name": "MeldVoice_LimiterOn",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 124,
+      "name": "Link Envelopes",
+      "original_name": "MeldVoice_LinkAmpEnvelopes",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 125,
+      "name": "Scale Aware",
+      "original_name": "MeldVoice_UseScale",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 126,
+      "name": "Voice Spread",
+      "original_name": "MeldVoice_VoiceSpreadAmount",
+      "min": 0,
+      "max": 1,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0.0 %"
+        },
+        {
+          "value": 0.25,
+          "label": "25 %"
+        },
+        {
+          "value": 0.5,
+          "label": "50 %"
+        },
+        {
+          "value": 0.75,
+          "label": "75 %"
+        },
+        {
+          "value": 1,
+          "label": "100 %"
+        }
+      ]
+    },
+    {
+      "index": 127,
+      "name": "Volume",
+      "original_name": "Volume",
+      "min": 0,
+      "max": 1,
+      "value": 0.5754392743110657,
+      "default_value": 0.5754398703575134,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "-inf dB"
+        },
+        {
+          "value": 0.25,
+          "label": "-24 dB"
+        },
+        {
+          "value": 0.5,
+          "label": "-9.1 dB"
+        },
+        {
+          "value": 0.75,
+          "label": "-0.2 dB"
+        },
+        {
+          "value": 1,
+          "label": "6.0 dB"
+        },
+        {
+          "value": 0.575439,
+          "label": "-6.0 dB"
+        }
+      ]
+    },
+    {
+      "index": 128,
+      "name": "Mono Legato",
+      "original_name": "MonoLegato",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    }
+  ],
+  "attributes": [
+    {
+      "name": "can_compare_ab",
+      "value": true,
+      "observable": false,
+      "doc": "Returns true if the Device has the capability to AB compare.",
+      "settable": false
+    },
+    {
+      "name": "can_have_chains",
+      "value": false,
+      "observable": false,
+      "doc": "Returns true if the device is a rack.",
+      "settable": false
+    },
+    {
+      "name": "can_have_drum_pads",
+      "value": false,
+      "observable": false,
+      "doc": "Returns true if the device is a drum rack.",
+      "settable": false
+    },
+    {
+      "name": "class_display_name",
+      "value": "Meld",
+      "observable": false,
+      "doc": "Return const access to the name of the device's class name as displayed in Live's browser and device chain",
+      "settable": false
+    },
+    {
+      "name": "class_name",
+      "value": "InstrumentMeld",
+      "observable": false,
+      "doc": "Return const access to the name of the device's class.",
+      "settable": false
+    },
+    {
+      "name": "is_active",
+      "value": true,
+      "observable": true,
+      "doc": "Return const access to whether this device is active. This will be false bothwhen the device is off and when it's inside a rack device which is off.",
+      "settable": false
+    },
+    {
+      "name": "is_using_compare_preset_b",
+      "value": false,
+      "observable": true,
+      "doc": "Returns whether the Device has loaded the preset in compare slot B. Only relevant if can_compare_ab, otherwise errors.",
+      "settable": true
+    },
+    {
+      "name": "latency_in_ms",
+      "value": 0,
+      "observable": true,
+      "doc": "Returns the latency of the device in ms.",
+      "settable": false
+    },
+    {
+      "name": "latency_in_samples",
+      "value": 0,
+      "observable": true,
+      "doc": "Returns the latency of the device in samples.",
+      "settable": false
+    },
+    {
+      "name": "mono_poly",
+      "value": 1,
+      "observable": true,
+      "doc": "Returns the mode of Polyphony",
+      "settable": true
+    },
+    {
+      "name": "name",
+      "value": "Meld",
+      "observable": true,
+      "doc": "Return access to the name of the device.",
+      "settable": true
+    },
+    {
+      "name": "poly_voices",
+      "value": 5,
+      "observable": true,
+      "doc": "Return the Poly Voice count",
+      "settable": true
+    },
+    {
+      "name": "selected_engine",
+      "value": false,
+      "observable": true,
+      "doc": "Return what Voice Engine is selected",
+      "settable": true
+    },
+    {
+      "name": "type",
+      "value": "Device.DeviceType.instrument",
+      "observable": false,
+      "doc": "Return the type of the device.",
+      "settable": false
+    },
+    {
+      "name": "unison_voices",
+      "value": 0,
+      "observable": true,
+      "doc": "Return the Unison Voice count",
+      "settable": true
+    }
+  ],
+  "propertyAllowlist": []
+}

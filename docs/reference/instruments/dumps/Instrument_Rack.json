@@ -1,0 +1,815 @@
+{
+  "identity": {
+    "path": "tracks/2/devices/0",
+    "pythonType": "RackDevice",
+    "name": "Instrument Rack",
+    "class_name": "InstrumentGroupDevice",
+    "class_display_name": "Instrument Rack",
+    "type": "Device.DeviceType.instrument",
+    "can_have_chains": true,
+    "can_have_drum_pads": false,
+    "is_active": true
+  },
+  "parameters": [
+    {
+      "index": 0,
+      "name": "Device On",
+      "original_name": "Device On",
+      "min": 0,
+      "max": 1,
+      "value": 1,
+      "is_quantized": true,
+      "labels": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "On"
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "name": "Macro 1",
+      "original_name": "Macro 1",
+      "min": 0,
+      "max": 127,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0"
+        },
+        {
+          "value": 31.75,
+          "label": "31"
+        },
+        {
+          "value": 63.5,
+          "label": "63"
+        },
+        {
+          "value": 95.25,
+          "label": "95"
+        },
+        {
+          "value": 127,
+          "label": "127"
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "name": "Macro 2",
+      "original_name": "Macro 2",
+      "min": 0,
+      "max": 127,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0"
+        },
+        {
+          "value": 31.75,
+          "label": "31"
+        },
+        {
+          "value": 63.5,
+          "label": "63"
+        },
+        {
+          "value": 95.25,
+          "label": "95"
+        },
+        {
+          "value": 127,
+          "label": "127"
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "name": "Macro 3",
+      "original_name": "Macro 3",
+      "min": 0,
+      "max": 127,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0"
+        },
+        {
+          "value": 31.75,
+          "label": "31"
+        },
+        {
+          "value": 63.5,
+          "label": "63"
+        },
+        {
+          "value": 95.25,
+          "label": "95"
+        },
+        {
+          "value": 127,
+          "label": "127"
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "name": "Macro 4",
+      "original_name": "Macro 4",
+      "min": 0,
+      "max": 127,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0"
+        },
+        {
+          "value": 31.75,
+          "label": "31"
+        },
+        {
+          "value": 63.5,
+          "label": "63"
+        },
+        {
+          "value": 95.25,
+          "label": "95"
+        },
+        {
+          "value": 127,
+          "label": "127"
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "name": "Macro 5",
+      "original_name": "Macro 5",
+      "min": 0,
+      "max": 127,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0"
+        },
+        {
+          "value": 31.75,
+          "label": "31"
+        },
+        {
+          "value": 63.5,
+          "label": "63"
+        },
+        {
+          "value": 95.25,
+          "label": "95"
+        },
+        {
+          "value": 127,
+          "label": "127"
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "name": "Macro 6",
+      "original_name": "Macro 6",
+      "min": 0,
+      "max": 127,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0"
+        },
+        {
+          "value": 31.75,
+          "label": "31"
+        },
+        {
+          "value": 63.5,
+          "label": "63"
+        },
+        {
+          "value": 95.25,
+          "label": "95"
+        },
+        {
+          "value": 127,
+          "label": "127"
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "name": "Macro 7",
+      "original_name": "Macro 7",
+      "min": 0,
+      "max": 127,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0"
+        },
+        {
+          "value": 31.75,
+          "label": "31"
+        },
+        {
+          "value": 63.5,
+          "label": "63"
+        },
+        {
+          "value": 95.25,
+          "label": "95"
+        },
+        {
+          "value": 127,
+          "label": "127"
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "name": "Macro 8",
+      "original_name": "Macro 8",
+      "min": 0,
+      "max": 127,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0"
+        },
+        {
+          "value": 31.75,
+          "label": "31"
+        },
+        {
+          "value": 63.5,
+          "label": "63"
+        },
+        {
+          "value": 95.25,
+          "label": "95"
+        },
+        {
+          "value": 127,
+          "label": "127"
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "name": "Macro 9",
+      "original_name": "Macro 9",
+      "min": 0,
+      "max": 127,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0"
+        },
+        {
+          "value": 31.75,
+          "label": "31"
+        },
+        {
+          "value": 63.5,
+          "label": "63"
+        },
+        {
+          "value": 95.25,
+          "label": "95"
+        },
+        {
+          "value": 127,
+          "label": "127"
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "name": "Macro 10",
+      "original_name": "Macro 10",
+      "min": 0,
+      "max": 127,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0"
+        },
+        {
+          "value": 31.75,
+          "label": "31"
+        },
+        {
+          "value": 63.5,
+          "label": "63"
+        },
+        {
+          "value": 95.25,
+          "label": "95"
+        },
+        {
+          "value": 127,
+          "label": "127"
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "name": "Macro 11",
+      "original_name": "Macro 11",
+      "min": 0,
+      "max": 127,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0"
+        },
+        {
+          "value": 31.75,
+          "label": "31"
+        },
+        {
+          "value": 63.5,
+          "label": "63"
+        },
+        {
+          "value": 95.25,
+          "label": "95"
+        },
+        {
+          "value": 127,
+          "label": "127"
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "name": "Macro 12",
+      "original_name": "Macro 12",
+      "min": 0,
+      "max": 127,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0"
+        },
+        {
+          "value": 31.75,
+          "label": "31"
+        },
+        {
+          "value": 63.5,
+          "label": "63"
+        },
+        {
+          "value": 95.25,
+          "label": "95"
+        },
+        {
+          "value": 127,
+          "label": "127"
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "name": "Macro 13",
+      "original_name": "Macro 13",
+      "min": 0,
+      "max": 127,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0"
+        },
+        {
+          "value": 31.75,
+          "label": "31"
+        },
+        {
+          "value": 63.5,
+          "label": "63"
+        },
+        {
+          "value": 95.25,
+          "label": "95"
+        },
+        {
+          "value": 127,
+          "label": "127"
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "name": "Macro 14",
+      "original_name": "Macro 14",
+      "min": 0,
+      "max": 127,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0"
+        },
+        {
+          "value": 31.75,
+          "label": "31"
+        },
+        {
+          "value": 63.5,
+          "label": "63"
+        },
+        {
+          "value": 95.25,
+          "label": "95"
+        },
+        {
+          "value": 127,
+          "label": "127"
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "name": "Macro 15",
+      "original_name": "Macro 15",
+      "min": 0,
+      "max": 127,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0"
+        },
+        {
+          "value": 31.75,
+          "label": "31"
+        },
+        {
+          "value": 63.5,
+          "label": "63"
+        },
+        {
+          "value": 95.25,
+          "label": "95"
+        },
+        {
+          "value": 127,
+          "label": "127"
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "name": "Macro 16",
+      "original_name": "Macro 16",
+      "min": 0,
+      "max": 127,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0"
+        },
+        {
+          "value": 31.75,
+          "label": "31"
+        },
+        {
+          "value": 63.5,
+          "label": "63"
+        },
+        {
+          "value": 95.25,
+          "label": "95"
+        },
+        {
+          "value": 127,
+          "label": "127"
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "name": "Chain Selector",
+      "original_name": "Chain Selector",
+      "min": 0,
+      "max": 127,
+      "value": 0,
+      "default_value": 0,
+      "is_quantized": false,
+      "labels": [
+        {
+          "value": 0,
+          "label": "0"
+        },
+        {
+          "value": 31.75,
+          "label": "31"
+        },
+        {
+          "value": 63.5,
+          "label": "63"
+        },
+        {
+          "value": 95.25,
+          "label": "95"
+        },
+        {
+          "value": 127,
+          "label": "127"
+        }
+      ]
+    }
+  ],
+  "attributes": [
+    {
+      "name": "can_compare_ab",
+      "value": false,
+      "observable": false,
+      "doc": "Returns true if the Device has the capability to AB compare.",
+      "settable": false
+    },
+    {
+      "name": "can_have_chains",
+      "value": true,
+      "observable": false,
+      "doc": "Returns true if the device is a rack.",
+      "settable": false
+    },
+    {
+      "name": "can_have_drum_pads",
+      "value": false,
+      "observable": false,
+      "doc": "Returns true if the device is a drum rack.",
+      "settable": false
+    },
+    {
+      "name": "can_show_chains",
+      "value": false,
+      "observable": false,
+      "doc": "return True, if this Rack contains a rack instrument device that is capable of showing its chains in session view.",
+      "settable": false
+    },
+    {
+      "name": "chain_selector",
+      "value": "<DeviceParameter.DeviceParameter object at 0x134190940>",
+      "observable": false,
+      "doc": "Const access to the chain selector parameter.",
+      "settable": false
+    },
+    {
+      "name": "chain_selector.automation_state",
+      "value": 0,
+      "observable": true,
+      "doc": "Returns state of type AutomationState.",
+      "settable": false
+    },
+    {
+      "name": "chain_selector.default_value",
+      "value": 0,
+      "observable": false,
+      "doc": "Return the default value for this parameter.  A Default value is only",
+      "settable": false
+    },
+    {
+      "name": "chain_selector.display_value",
+      "value": 0,
+      "observable": true,
+      "doc": "Get/Set the current value (as visible in the GUI) this parameter.",
+      "settable": true
+    },
+    {
+      "name": "chain_selector.is_enabled",
+      "value": true,
+      "observable": false,
+      "doc": "Returns false if the parameter has been macro mapped or disabled by Max.",
+      "settable": false
+    },
+    {
+      "name": "chain_selector.is_quantized",
+      "value": false,
+      "observable": false,
+      "doc": "Returns True, if this value is a boolean or integer like switch.",
+      "settable": false
+    },
+    {
+      "name": "chain_selector.max",
+      "value": 127,
+      "observable": false,
+      "doc": "Returns const access to the upper value of the allowed range for",
+      "settable": false
+    },
+    {
+      "name": "chain_selector.min",
+      "value": 0,
+      "observable": false,
+      "doc": "Returns const access to the lower value of the allowed range for",
+      "settable": false
+    },
+    {
+      "name": "chain_selector.name",
+      "value": "Chain Selector",
+      "observable": true,
+      "doc": "Returns const access the name of this parameter, as visible in Lives",
+      "settable": false
+    },
+    {
+      "name": "chain_selector.original_name",
+      "value": "Chain Selector",
+      "observable": false,
+      "doc": "Returns const access the original name of this parameter, unaffected of",
+      "settable": false
+    },
+    {
+      "name": "chain_selector.state",
+      "value": 0,
+      "observable": true,
+      "doc": "Returns the state of the parameter:",
+      "settable": false
+    },
+    {
+      "name": "chain_selector.value",
+      "value": 0,
+      "observable": true,
+      "doc": "Get/Set the current internal value of this parameter.",
+      "settable": true
+    },
+    {
+      "name": "chains",
+      "value": "<Base.Vector object at 0x134190940>",
+      "observable": true,
+      "doc": "Return const access to the list of chains in this device. Throws an exception if can_have_chains is false.",
+      "settable": false
+    },
+    {
+      "name": "class_display_name",
+      "value": "Instrument Rack",
+      "observable": false,
+      "doc": "Return const access to the name of the device's class name as displayed in Live's browser and device chain",
+      "settable": false
+    },
+    {
+      "name": "class_name",
+      "value": "InstrumentGroupDevice",
+      "observable": false,
+      "doc": "Return const access to the name of the device's class.",
+      "settable": false
+    },
+    {
+      "name": "has_macro_mappings",
+      "value": false,
+      "observable": true,
+      "doc": "Returns true if any of the rack's macros are mapped to a parameter.",
+      "settable": false
+    },
+    {
+      "name": "is_active",
+      "value": true,
+      "observable": true,
+      "doc": "Return const access to whether this device is active. This will be false bothwhen the device is off and when it's inside a rack device which is off.",
+      "settable": false
+    },
+    {
+      "name": "is_showing_chains",
+      "value": false,
+      "observable": true,
+      "doc": "Returns True, if it is showing chains.",
+      "settable": true
+    },
+    {
+      "name": "latency_in_ms",
+      "value": 0,
+      "observable": true,
+      "doc": "Returns the latency of the device in ms.",
+      "settable": false
+    },
+    {
+      "name": "latency_in_samples",
+      "value": 0,
+      "observable": true,
+      "doc": "Returns the latency of the device in samples.",
+      "settable": false
+    },
+    {
+      "name": "macros_mapped",
+      "value": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "observable": true,
+      "doc": "A list of booleans, one for each macro parameter, which is True iffthat macro is mapped to something",
+      "settable": false
+    },
+    {
+      "name": "name",
+      "value": "Instrument Rack",
+      "observable": true,
+      "doc": "Return access to the name of the device.",
+      "settable": true
+    },
+    {
+      "name": "return_chains",
+      "value": "<Base.Vector object at 0x134190940>",
+      "observable": true,
+      "doc": "Return const access to the list of return chains in this device. Throws an exception if can_have_chains is false.",
+      "settable": false
+    },
+    {
+      "name": "selected_variation_index",
+      "value": -1,
+      "observable": false,
+      "doc": "Access to the index of the currently selected macro variation.Throws an exception if the index is out of range.",
+      "settable": true
+    },
+    {
+      "name": "type",
+      "value": "Device.DeviceType.instrument",
+      "observable": false,
+      "doc": "Return the type of the device.",
+      "settable": false
+    },
+    {
+      "name": "variation_count",
+      "value": 0,
+      "observable": true,
+      "doc": "Access to the number of macro variations currently stored.",
+      "settable": false
+    },
+    {
+      "name": "visible_macro_count",
+      "value": 8,
+      "observable": true,
+      "doc": "Access to the number of macros that are currently visible.",
+      "settable": false
+    }
+  ],
+  "propertyAllowlist": []
+}
