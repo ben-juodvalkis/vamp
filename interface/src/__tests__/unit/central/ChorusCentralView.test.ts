@@ -13,7 +13,7 @@ vi.mock('$lib/utils/logger', () => ({
 }));
 
 import { render, cleanup } from '@testing-library/svelte';
-import { tick } from 'svelte';
+import { tick, type Component } from 'svelte';
 import { SvelteMap } from 'svelte/reactivity';
 import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { replaceTree, _resetForTests, type TrackRecord } from '$lib/stores/v3/normalized.svelte';
@@ -58,7 +58,7 @@ describe('Chorus family views', () => {
 
 	it('gives Blur, Comb and Phaser a view each, one control apiece', async () => {
 		seed('synth');
-		for (const [View, type] of [[BlurCentralView, 'smudge'], [CombCentralView, 'comb'], [PhaserCentralView, 'phaser']] as const) {
+		for (const [View, type] of [[BlurCentralView, 'smudge'], [CombCentralView, 'comb'], [PhaserCentralView, 'phaser']] as Array<[Component, string]>) {
 			const { container } = render(View);
 			await tick();
 			expect(container.querySelector(`[data-view="${type}"]`), type).not.toBeNull();

@@ -138,7 +138,23 @@ const macroFromPreset = (s: SavedPreset) => (s.params['MacroControls.0'] === und
 
 const GLITCH_MIX = { name: GLITCH_LOOP_PARAMS.mix.name, index: GLITCH_LOOP_PARAMS.mix.index };
 const BLUR_MIX = { name: 'Mix', index: 4 };
-const COMB = { tune: { name: 'Tune', index: 1 }, mix: { name: 'Mix', index: 2 }, feedback: { name: 'Feedback', index: 3 } };
+/**
+ * Comb (`Vamp Devices/Comb/Comb.amxd`, device_dump 2026-10-27): Tune -24..24 st,
+ * Mix 0..100, Feedback -100..100, and its LFO on Tune: Amount 0..24 st, Rate
+ * 0.01..40 (Live's label is 40 · t³ Hz of the rail, 11.665 = 1.00 Hz), Sync
+ * Rate 0..15 (8 bars .. 1/32), Shape 0..6, Sync 0 Free / 1 Sync.
+ */
+export const COMB = {
+	tune: { name: 'Tune', index: 1 },
+	mix: { name: 'Mix', index: 2 },
+	feedback: { name: 'Feedback', index: 3 },
+	lfoAmount: { name: 'Amount', index: 4 },
+	lfoRate: { name: 'Rate', index: 5 },
+	lfoSyncRate: { name: 'Sync Rate', index: 6 },
+	lfoShape: { name: 'Shape', index: 7 },
+	lfoSync: { name: 'Sync', index: 8 }
+} as const;
+export const COMB_LFO = { amountMax: 24, rateMin: 0.01, rateMax: 40, syncRateMax: 15 } as const;
 const OCTAVE_MIX = { name: 'Mix', index: OCTAVE_MIX_PARAM };
 const CHANCE = { name: 'Chance', index: 1 };
 /** Pitch Hack's Dry / Wet, 0..100 % (device_dump, 2026-10-15; the .adv saves it under the same short name). */
