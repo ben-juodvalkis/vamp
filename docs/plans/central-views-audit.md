@@ -69,7 +69,7 @@ little more than Device On, so they show layout, not values.
    its Pattern pad's border.
 6. **House-rule debt** (not layout, listed for the record): parameter
    indices written in components — `EQCentralView` (`PARAM_CONFIG`),
-   `RandomCentralView`, `ReduxCentralView`, `PedalCentralView`; Komplete
+   `RandomCentralView`, `ReduxCentralView`, `PedalCentralView`, `DriftCentralView` (its oscillator writes), `AutoFilterCentralView` (the LFO pad's 12 / 16 / 18 and its rate conversion); Komplete
    Kontrol paints a hard-coded `#00D4FF`; Glitch and Variation set
    `data-density="compact"` though their control count is fixed (ADR-434
    reserves it for counts that come from what is loaded).
@@ -121,3 +121,43 @@ Bar caption. Left alone: the fill-line label (item 1)
 and readouts at rest (item 2), both `DeviceSlider`-wide decisions for Ben;
 one-control views (Utility, Chance, Wah), which need a decision rather than
 a layout.
+
+## Results (Phase 2)
+
+One commit a view. Before: `tour/central/<state>.png` (12.9-inch) and
+`audit/central-1133x744/<state>.png` (mini), from the commands above run on
+the audit commit. After: `after/1366/<state>.png` and
+`after/1133x744/<state>.png`, and the whole tour again in
+`after/full-1366/` and `after/full-1133x744/`.
+
+| View | Change | State |
+|---|---|---|
+| Channel EQ | Low Cut beside Output, two tall boxes, Glue's shape; the redundant eyebrow gone | `fx-eq` |
+| Instrument Rack | One row of tall macro boxes while eight columns fit (a pad counts two); two rows past that, as before | `inst-instrument-rack`, `-xy` |
+| Komplete Kontrol | Eight params in one row, 120 x 300 instead of 226 x 140 | `inst-komplete-kontrol` |
+| Operator | Seven tall boxes on one ruler (amp envelope bracketed, then Feedback, Time, Tone) beside the Filter pad; mini stages 50 → ~145 tall | `inst-operator` |
+| Drift | Time beside Filter instead of stacked; Time's label no longer clipped | `inst-drift` |
+| Groove | Empty state spans its column, the Settings button a house button filling it; layout check passes | `groove` |
+| Auto Filter | Time/Sync a touch row under the LFO pad, no longer over its corner and the frame's edge | `fx-filter` |
+| Analog | Voice card's grid gaps 8 → 4 px: its rows measure 44 px at 1366 (were 41) | `inst-analog` |
+| Drum Rack | Pad strip's bar button reads "Bar 1" on one line; the mini's layout check passes | `drumrack-pad-notes-2bars` |
+
+**Left alone, and why**
+
+- The fill line through labels and values readable only while dragging:
+  both are `DeviceSlider`-wide (every slider in the app) and want a
+  decision, not a per-view patch.
+- Clip view's pencil: floats top-right by design ("in both modes");
+  giving it a cell means renumbering the clip rail's grid, and it is 30 px,
+  under the touch floor, so where it lives is a call for Ben.
+- One-control views (Utility, Chance, Wah) and the Tremolo's wide rate box:
+  a layout cannot make one or two controls fill a 1062 px band without
+  being wide; whether such views should show more of their device is the
+  same question as the instruments' (`docs/plans/device-complexity/`).
+- Compressor's sidechain half: the mock lists no sidechain sources; on the
+  rig that column holds the track list, so its emptiness here is the
+  mock's.
+- Analog on the smaller iPads and the dense instruments generally (Analog,
+  Wavetable, Meld): more controls than room; the proposal in
+  `docs/plans/device-complexity/` is the answer rather than another squeeze.
+- Every view in the "fine" row above.
