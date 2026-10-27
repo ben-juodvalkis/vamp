@@ -138,6 +138,9 @@ const macroFromPreset = (s: SavedPreset) => (s.params['MacroControls.0'] === und
 
 const GLITCH_MIX = { name: GLITCH_LOOP_PARAMS.mix.name, index: GLITCH_LOOP_PARAMS.mix.index };
 const BLUR_MIX = { name: 'Mix', index: 4 };
+/** Chord's Velocity1 and its floor (measured: 0.01, Live's "1.0 %"). */
+const CHORD_VELOCITY = 3;
+const CHORD_VELOCITY_MIN = 0.01;
 /**
  * Comb (`Vamp Devices/Comb/Comb.amxd`, device_dump 2026-10-27): Tune -24..24 st,
  * Mix 0..100, Feedback -100..100, and its LFO on Tune: Amount 0..24 st, Rate
@@ -424,18 +427,18 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 		},
 		fromPreset: (s) => all({ 0: s.params.On, 5: s.params.SyncedRate, 8: s.params.Gate })
 	},
-	// Measured: Chord (2026-10-26). Shift1 -36..36 st as saved. One slider on
-	// the first added note, in whole semitones over ±24, 0 at the middle.
+	// Measured: Chord (2026-10-27). Velocity1 0.01..2 (1.0 % .. 200 %,
+	// default 1 = 100 %), as saved. One slider on the first added note's
+	// velocity (the user, 2026-10-27); the view has the rest.
 	chord: {
 		control: {
 			kind: 'slider',
-			title: 'Shift', picture: 'chord',
-			readout: 1,
-			center: 0.5,
-			read: (g) => clamp01(((g(1) ?? 0) + 24) / 48),
-			write: (t) => [[1, Math.round(clamp01(t) * 48 - 24)]]
+			title: 'Velocity', picture: 'chord',
+			readout: CHORD_VELOCITY,
+			read: (g) => clamp01(((g(CHORD_VELOCITY) ?? 1) - CHORD_VELOCITY_MIN) / (2 - CHORD_VELOCITY_MIN)),
+			write: (t) => [[CHORD_VELOCITY, CHORD_VELOCITY_MIN + clamp01(t) * (2 - CHORD_VELOCITY_MIN)]]
 		},
-		fromPreset: (s) => (s.params.Shift1 === undefined ? null : { 1: s.params.Shift1 })
+		fromPreset: (s) => (s.params.Velocity1 === undefined ? null : { [CHORD_VELOCITY]: s.params.Velocity1 })
 	},
 	// Measured: Blue. Chance as is.
 	random: {

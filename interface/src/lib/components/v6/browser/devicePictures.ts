@@ -404,9 +404,9 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0, variant = 0)
 			return Array.from({ length: n }, (_, i) => ({ d: bar(4 + (i * 92) / n, 82 - ((i % 4) / 3) * 60, w, 8), o: 0.85, fill: true }));
 		}
 		// Chord: an octave of piano keys (the user, 2026-10-26), the played
-		// triad lit and the note Shift adds lit too, above or below. Each white
-		// key's outline is notched around the black keys beside it, so no two
-		// shapes overlap; black keys are solid, and a played one is hollowed.
+		// triad lit brighter as the first note's velocity rises (2026-10-27).
+		// Each white key's outline is notched around the black keys beside
+		// it, so no two shapes overlap; black keys are solid.
 		case 'chord': {
 			const WHITE = 7;
 			const left = 4;
@@ -419,9 +419,7 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0, variant = 0)
 			const blackAfter = new Set([0, 1, 3, 4, 5]);
 			const bw = kw * 0.56;
 			const bh = (bottom - top) * 0.58;
-			const shift = Math.round((x - 0.5) * 24);
-			const added = ((shift % 12) + 12) % 12;
-			const played = new Set([0, 4, 7, ...(shift !== 0 ? [added] : [])]);
+			const played = new Set([0, 4, 7]);
 			const whiteKey = (i: number) => {
 				const x0 = left + i * kw + g / 2;
 				const x1 = left + (i + 1) * kw - g / 2;
@@ -437,13 +435,11 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0, variant = 0)
 			};
 			const strokes: PictureStroke[] = [];
 			const lit = whiteSemis.flatMap((semi, i) => (played.has(semi) ? [whiteKey(i)] : []));
-			if (lit.length) strokes.push({ d: lit.join(''), o: 0.5, fill: true });
+			strokes.push({ d: lit.join(''), o: 0.12 + 0.6 * x, fill: true });
 			strokes.push({ d: whiteSemis.map((_, i) => whiteKey(i)).join(''), o: 0.95 });
 			for (const i of blackAfter) {
 				const bx = left + (i + 1) * kw - bw / 2;
-				const key = bar(bx, top, bw, bh);
-				if (played.has(whiteSemis[i] + 1)) strokes.push({ d: key, o: 0.95 });
-				else strokes.push({ d: key, o: 0.95, fill: true });
+				strokes.push({ d: bar(bx, top, bw, bh), o: 0.95, fill: true });
 			}
 			return strokes;
 		}

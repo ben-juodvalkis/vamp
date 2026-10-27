@@ -280,7 +280,8 @@ tested against the same numbers in `deviceControls.presets.test.ts`).
   - The MIDI effects, as saved: Velocity Random **0..64** (not 0..127),
     Out Hi/Low 0..127; Arpeggiator Synced Rate 0..13, Gate **1..200** %
     (its preset saves the device off), Free Rate ms on `10 · 100^v`
-    (20 → 0.1505); Chord Shift1..6 -36..36 st; Random Chance 0..1
+    (20 → 0.1505); Chord Shift1..6 -36..36 st, Velocity1..6 0.01..2
+    (1.0 % .. 200 %; 1 → 1, 2026-10-27); Random Chance 0..1
     (its Interval saves as `Scale`).
   - Glue Threshold/Makeup, Drum Buss, Beat Repeat and Random Chance, every
     Dry/Wet: as saved.
