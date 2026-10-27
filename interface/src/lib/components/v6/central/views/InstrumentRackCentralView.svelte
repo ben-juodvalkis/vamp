@@ -62,6 +62,11 @@
   // Macros whose first word is "XY" pair up into pads (the rack's own
   // convention, named in Live): "XY Cutoff" + "XY Res" → a Cutoff/Res pad.
   const layoutItems = $derived(pairXYPrefixedMacros(controlLayout));
+  // One row of tall boxes while they fit (a pad is two columns wide); past
+  // eight columns, two rows filled column by column.
+  const ONE_ROW_MAX_COLUMNS = 8;
+  const macroColumns = $derived(layoutItems.reduce((n, item) => n + (item.kind === 'xy' ? 2 : 1), 0));
+  const macroRows = $derived(macroColumns > ONE_ROW_MAX_COLUMNS ? 2 : 1);
 
   // Update all macro values in single effect
   $effect(() => {
@@ -103,14 +108,15 @@
           <HostedSwapPill />
         </div>
 
-        <!-- One value box per named macro, two rows filled column by
-             column (ADR-477): neighbours pair top over bottom, and an XY
-             pad, which stands in for two macros, takes a 2 x 2 block. -->
+        <!-- One value box per named macro (ADR-477): one row of tall boxes
+             while eight columns fit, else two rows filled column by column,
+             neighbours paired top over bottom. An XY pad stands in for two
+             macros: two columns, every row. -->
         {#if controlLayout.length > 0}
-          <div class="macro-grid">
+          <div class="macro-grid" style:--macro-rows={macroRows}>
           {#each layoutItems as item, i}
             {#if item.kind === 'xy'}
-              <div class="control-slot xy-slot">
+              <div class="control-slot xy-slot" style:grid-row="span {macroRows}">
                 <DeviceXY
                   xValue={getNormalizedValue(item.x.macroIndex)}
                   yValue={getNormalizedValue(item.y.macroIndex)}
@@ -169,22 +175,21 @@
     flex-shrink: 1;
   }
 
-  /* Two rows, filled column by column, every column one share. */
+  /* One row or two (filled column by column), every column one share. */
   .macro-grid {
     flex: 1 1 0;
     min-width: 0;
     min-height: 0;
     display: grid;
-    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(var(--macro-rows, 2), minmax(0, 1fr));
     grid-auto-flow: column dense;
     grid-auto-columns: minmax(0, 1fr);
     gap: var(--central-gap);
   }
 
-  /* An XY pad stands in for two macros, so it takes a 2 x 2 block. */
+  /* An XY pad stands in for two macros: two columns, every row. */
   .xy-slot {
     grid-column: span 2;
-    grid-row: span 2;
   }
 
   /* The pill's column: wide enough for the pill to name the preset
