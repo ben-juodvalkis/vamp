@@ -14,10 +14,12 @@ import ELECTRIC from '../../../../../docs/reference/instruments/dumps/Electric.j
 import COLLISION from '../../../../../docs/reference/instruments/dumps/Collision.json';
 import OPERATOR from '../../../../../docs/reference/instruments/dumps/Operator.json';
 import DRIFT from '../../../../../docs/reference/instruments/dumps/Drift.json';
+import ANALOG from '../../../../../docs/reference/instruments/dumps/Analog.json';
 import { ELECTRIC_PANEL } from '$lib/components/v6/central/views/panel/electricPanel';
 import { COLLISION_PANEL } from '$lib/components/v6/central/views/panel/collisionPanel';
 import { OPERATOR_PANEL } from '$lib/components/v6/central/views/panel/operatorPanel';
 import { DRIFT_PANEL } from '$lib/components/v6/central/views/panel/driftPanel';
+import { ANALOG_PANEL } from '$lib/components/v6/central/views/panel/analogPanel';
 import {
 	panelParamNames,
 	type InstrumentPanel,
@@ -46,7 +48,8 @@ const PANELS: [string, InstrumentPanel, { parameters: DumpParam[] }][] = [
 	['Electric', ELECTRIC_PANEL, ELECTRIC],
 	['Collision', COLLISION_PANEL, COLLISION],
 	['Operator', OPERATOR_PANEL, OPERATOR],
-	['Drift', DRIFT_PANEL, DRIFT]
+	['Drift', DRIFT_PANEL, DRIFT],
+	['Analog', ANALOG_PANEL, ANALOG]
 ];
 
 describe.each(PANELS)('%s panel', (_name, panel, dump) => {
@@ -90,10 +93,18 @@ describe.each(PANELS)('%s panel', (_name, panel, dump) => {
 	});
 });
 
-describe('Drift panel reach', () => {
+describe.each([
+	['Drift', DRIFT_PANEL, DRIFT],
+	['Analog', ANALOG_PANEL, ANALOG]
+] as const)('%s panel reach', (_name, panel, dump) => {
 	it('reaches every parameter but Device On', () => {
-		const bound = new Set(panelParamNames(DRIFT_PANEL));
-		const unreached = DRIFT.parameters.map((p) => p.name).filter((n) => n !== 'Device On' && !bound.has(n));
+		const bound = new Set(panelParamNames(panel));
+		const unreached = dump.parameters.map((p) => p.name).filter((n) => n !== 'Device On' && !bound.has(n));
 		expect(unreached).toEqual([]);
+	});
+
+	it('names a parent page that exists', () => {
+		const ids = new Set(panel.pages.map((p) => p.id));
+		expect(panel.pages.filter((p) => p.parent && !ids.has(p.parent)).map((p) => p.id)).toEqual([]);
 	});
 });

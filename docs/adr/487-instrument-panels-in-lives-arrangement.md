@@ -73,12 +73,16 @@ the reverse.
   frame. Drift is the first: its oscillator card, source-coloured mixer,
   Time and Filter pads and voice mode stay, and "Oscillators ›",
   "Envelopes ›", "LFO / Mod ›", "Filter ›" and "Global ›" open Live's
-  sections as pages (`driftPanel.ts`).
+  sections as pages (`driftPanel.ts`). Analog is the second: its face
+  shows one voice at a time, so its eyebrows open the shown voice's pages
+  ("Osc 2 ›" with voice 2 up), and Global leads on to Vibrato and MPE
+  (`analogPanel.ts`).
 
 ## Consequences
-- Operator, Electric, Collision and Drift reach every parameter but Device
-  On (194 of 195, 33 of 34, 139 of 140, 65 of 66), each at most three taps
-  from the frame. Operator's view drew about 10, Drift's about 20.
+- Operator, Electric, Collision, Drift and Analog reach every parameter but
+  Device On (194 of 195, 33 of 34, 139 of 140, 65 of 66, 171 of 172), each
+  at most three taps from the frame. Operator's view drew about 10, Drift's
+  about 20, Analog's about 44.
 - The panels show Live's values only while a box is dragged, as every
   value box in the app does (the audit's open question on readouts at rest).
 - The other instruments keep their hand-laid views until moved onto

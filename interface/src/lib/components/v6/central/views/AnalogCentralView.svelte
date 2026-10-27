@@ -12,6 +12,10 @@
   import SectionDivider from '../SectionDivider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
   import EnvelopeGroup from './EnvelopeGroup.svelte';
+  import InstrumentPanelView from './panel/InstrumentPanelView.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
+  import { usePanelParams } from './panel/usePanelParams.svelte';
+  import { ANALOG_PANEL } from './panel/analogPanel';
   import { analogFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
   import {
     ANALOG_VOICE,
@@ -85,6 +89,9 @@
    * so a load never takes the card away mid-edit.
    */
   let voice = $state<AnalogVoice>(1);
+
+  /** The pages behind the face's eyebrows, the shown voice's, by Live's names (ADR-487). */
+  const panelParams = usePanelParams(() => device);
   let p = $derived(ANALOG_VOICE[voice]);
   let voiceInk = $derived(sourceInk(voice));
 
@@ -239,6 +246,8 @@
 
 <div class="analog-root h-full w-full overflow-hidden relative">
   {#if instrument && device}
+    <InstrumentPanelView panel={ANALOG_PANEL} params={panelParams} color={analogInk}>
+    {#snippet face(openPage: (page: string) => void)}
     <div class="h-full w-full flex min-h-0 p-(--central-inset)" style="gap: var(--central-gap);">
 
       <!-- THE VOICE CARD. Analog is two synths, Osc → Filter → Amp twice,
@@ -247,6 +256,7 @@
            says which half is up. Rows: shapes (the switch, four shapes,
            the routing chip), octave, Sub/Sync, level. -->
       <div class="voice-card flex-[2] min-w-[196px] min-h-0 flex flex-col gap-(--central-gap)">
+        <PanelEyebrow title="Osc {voice}" page="osc{voice}" onOpen={openPage} color={voiceInk.primary} />
         <HostedSwapPill />
         <div class="osc-body flex-1 min-h-0" style={oscOn ? '' : 'opacity: var(--opacity-ghost);'}>
           <div class="osc-badge-cell">
@@ -372,6 +382,7 @@
            Glide shares the column as a box under it (ADR-477): it had a
            full-height column of its own, which the filter has now. -->
       <div class="noise-col flex-none min-h-0 flex flex-col gap-(--central-gap)">
+        <PanelEyebrow title="Noise" page="noise" onOpen={openPage} color={analogInk.primary} />
         <div class="flex-1 min-h-0 flex flex-col gap-2">
           <div class="flex-1 min-h-0">
             <DeviceSlider
@@ -425,6 +436,7 @@
            (five families; a second tap on the lit one flips its slope) and
            its drive (amount, and Asym lit for Live's asymmetric three). -->
       <div class="filter-col flex-[3] min-w-0 min-h-0 flex flex-col" style="gap: var(--central-gap);">
+        <PanelEyebrow title="Filter {voice}" page="filter{voice}" onOpen={openPage} color={voiceInk.primary} />
         <div class="flex-1 min-h-0 relative">
           <DeviceXY
             xValue={norm(p.freq, 1)}
@@ -494,6 +506,7 @@
       <div class="env-col flex-none min-h-0 flex gap-(--central-gap)">
         <SectionDivider orientation="vertical" ink={voiceInk.primary} />
         <div class="flex-1 min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
+          <PanelEyebrow title="Envelopes" page="env{voice}" onOpen={openPage} color={voiceInk.primary} />
           {#each envelopes as envelope, i (envelope.title)}
             {#if i > 0}<SectionDivider orientation="horizontal" ink={voiceInk.primary} />{/if}
             <EnvelopeGroup ink={voiceInk.primary} title={envelope.title} edges="none">
@@ -527,6 +540,7 @@
            wheel. The wheels under them left for the MidiWheels device's
            chain cell (user, 2026-10-26). -->
       <div class="voicing-col flex-none flex flex-col gap-(--central-gap) min-h-0">
+        <PanelEyebrow title="Global" page="global" onOpen={openPage} color={analogInk.primary} />
         <div class="grid grid-cols-2 grid-rows-2 gap-1 flex-1 min-h-0">
           <!-- Mono or Poly is one choice, a two-cell tab across the row;
                Uni and Vib under it are switches of their own. -->
@@ -539,6 +553,8 @@
         </div>
       </div>
     </div>
+    {/snippet}
+    </InstrumentPanelView>
   {:else}
     <DeviceEmptyState glyph="~" message="Load Analog to access its controls" color={analogInk.primary} />
   {/if}

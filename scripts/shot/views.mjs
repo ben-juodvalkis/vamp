@@ -798,6 +798,16 @@ function instrumentSwapStates() {
 		['drift-envelopes', 'Drift', 'Drift', referenceParams('Drift'), [{ click: '.eyebrow-link[data-page="envelopes"]' }]],
 		['drift-lfo-mod', 'Drift', 'Drift', referenceParams('Drift'), [{ click: '.eyebrow-link[data-page="lfo-mod"]' }]],
 		['drift-global', 'Drift', 'Drift', referenceParams('Drift'), [{ click: '.eyebrow-link[data-page="global"]' }]],
+		// Analog's face on Live's measured list (ADR-487) and the pages its
+		// eyebrows open, voice 1's, and voice 2's filter.
+		['analog-reference', 'Analog', 'UltraAnalog', referenceParams('Analog')],
+		['analog-osc1', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="osc1"]' }]],
+		['analog-filter2', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.osc-badge' }, { click: '.eyebrow-link[data-page="filter2"]' }]],
+		['analog-env1', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="env1"]' }]],
+		['analog-aeg1', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="env1"]' }, { click: '[data-group="Amp Env"] .eyebrow-link' }]],
+		['analog-lfo1', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="osc1"]' }, { click: '[data-group="LFO 1"] .eyebrow-link' }]],
+		['analog-global', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="global"]' }]],
+		['analog-mpe', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="global"]' }, { click: '[data-group="MPE"] .eyebrow-link' }]],
 		['electric-hammer', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Hammer"] .eyebrow-link' }]],
 		['electric-pickup', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Damper / Pickup"] .eyebrow-link' }]],
 		['electric-global', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Global"] .eyebrow-link' }]],
