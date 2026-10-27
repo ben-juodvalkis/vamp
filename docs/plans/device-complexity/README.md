@@ -1,6 +1,15 @@
 # Proposal: a UI system for device complexity
 
-Status: proposal for Ben to choose from (2026-10-27). Nothing here is built.
+Status: proposal for Ben to choose from (2026-10-27). **Built since, on
+branch `claude/instrument-pages` (ADR-487):** the revision below (Live's
+own panels, tabs and section pages) for Operator, Electric and Collision,
+each now reaching every parameter but Device On. Not built: Analog, Meld,
+Wavetable, Drift, Simpler and Sampler, whose hand-laid views carry
+widgets of their own (oscillator displays, the voice switch, waveforms)
+that a rule-laid panel would flatten; for them a `slot` region (how
+Operator keeps its filter pad) can carry those widgets into a Live-shaped
+frame, and the Simpler/Sampler section rules below are what the panel's
+switched-off ghosting already does.
 
 The central view is about 1062 x 330 px on the 12.9-inch iPad and 850 x 236
 on the mini. The instruments behind it have from 34 parameters (Electric)
