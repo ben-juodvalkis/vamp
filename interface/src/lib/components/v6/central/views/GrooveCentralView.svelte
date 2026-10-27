@@ -145,7 +145,7 @@
 		{:else if groovesStore.listing && tiles.length === 0}
 			<div class="groove-note">
 				<p>No grooves are ticked for this view.</p>
-				<button class="btn btn-switch clip-switch" onclick={() => settingsStore.openSettings('grooves')}>
+				<button class="physical-button text-base" onclick={() => settingsStore.openSettings('grooves')}>
 					Choose grooves in Settings
 				</button>
 			</div>
@@ -313,13 +313,22 @@
 		color: color-mix(in srgb, var(--flat-on-fg) 75%, transparent);
 	}
 
+	/* The empty state spans the tile column, its Settings button the whole
+	   height under the note, so the column reads as one thing to press
+	   rather than a line of text in a field of nothing. */
 	.groove-note {
+		height: 100%;
 		display: flex;
 		flex-direction: column;
-		align-items: flex-start;
+		align-items: stretch;
 		gap: var(--central-gap);
 		color: var(--muted-foreground);
 		font-size: 0.9375rem;
+		text-align: center;
+	}
+	.groove-note > button {
+		flex: 1 1 0;
+		min-height: var(--height-touch);
 	}
 	.groove-note .btn {
 		min-height: var(--height-touch);
