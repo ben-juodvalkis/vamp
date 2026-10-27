@@ -44,7 +44,7 @@
 	/** The device's saved defaults (device_dump), what a ghost shows. */
 	const REST = new Map<ParamRef, number>([
 		[COMB.lfoAmount, 0],
-		[COMB.lfoRate, 11.665],
+		[COMB.lfoRate, 1.587],
 		[COMB.lfoSyncRate, 7],
 		[COMB.lfoShape, 0],
 		[COMB.lfoSync, 0]
