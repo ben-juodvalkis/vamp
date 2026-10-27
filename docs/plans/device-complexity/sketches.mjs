@@ -38,6 +38,7 @@ body{background:#2e323a;font-family:Inter,-apple-system,Helvetica,sans-serif;col
 .switch{height:44px;border:1px solid #6b6f78;background:#1a1c21;display:flex;align-items:center;justify-content:center;font-size:14px;color:#bbb;border-radius:2px;flex:none}
 .switch.on{background:${ink};color:#111;border-color:${ink}}
 .inst{display:grid;grid-template-columns:repeat(4,1fr);height:44px;border:1px solid #6b6f78;border-radius:2px}.inst span{display:flex;align-items:center;justify-content:center;color:${ink};font-size:14px}.inst span.on{background:${ink};color:#111}
+.tabs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;height:44px;border:1px solid #6b6f78;border-radius:2px;flex:none}.tabs div{display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;color:${ink};border-left:1px solid #33363d}.tabs div:first-child{border-left:0}.tabs div.on{background:${ink};color:#111}.tdot{width:7px;height:7px;border-radius:50%;border:1px solid currentColor}.tdot.lit{background:currentColor}.eyebrow.tap{text-decoration:underline;text-underline-offset:3px}
 .note{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:#aaa}
 `;
 const box = (t, v, f, cls = '') => `<div class="box ${cls}"><div class="fill" style="height:${f}%"></div><div class="lab">${t}<span class="val">${v}</span></div></div>`;
@@ -91,6 +92,38 @@ Object.assign(pages, {
 			<div class="row">${box('Bright', '50 %', 50)}${box('Inharm', '0 %', 50)}${box('Opening', '0 %', 0)}${box('Hit', '25 %', 25)}${box('Bleed', '0 %', 0)}${box('Volume', '0 dB', 80)}</div>
 		</div></div>`,
 	'operator-osc-mini': pages['operator-osc-a'].replace('<div class="band">', '<div class="band mini">')
+});
+
+// Live's own arrangement (Live 12 manual, 2026-10-27): a fixed frame read in
+// signal order, Global at the right edge, and a horizontal tab strip over the
+// one region Live swaps.
+const tabs = (names, on, dots = {}) => `<div class="tabs">${names.map((n) => `<div class="${n === on ? 'on' : ''}">${n}${dots[n] ? `<span class="tdot ${dots[n]}"></span>` : ''}</div>`).join('')}</div>`;
+Object.assign(pages, {
+	'collision-live': `<div class="band">
+		<div class="group" style="flex:1.1"><div class="eyebrow">Mallet</div><div class="row">${box('Volume', '-30 dB', 40)}${box('Stiff', '56 %', 56)}</div></div>
+		<div class="seam"></div>
+		<div class="group" style="flex:1.1"><div class="eyebrow">Noise</div><div class="row">${box('Volume', '-32 dB', 35)}${box('Freq', '208 Hz', 30)}</div></div>
+		<div class="seam"></div>
+		<div class="group" style="flex:4.2">${tabs(['Res 1', 'Res 2', 'LFO', 'MIDI'], 'Res 1', { 'Res 1': 'lit', 'Res 2': 'lit', LFO: '' })}
+			<div class="row" style="margin-top:12px">${box('Decay', '332 ms', 30)}${box('Material', '-9.4', 45)}${box('Bright', '66 %', 66)}${box('Inharm', '1.6 %', 50)}${box('Tune', '0 st', 50)}${box('Gain', '-6 dB', 70)}</div></div>
+		<div class="seam"></div>
+		<div class="group" style="flex:0.75"><div class="eyebrow">Global</div><div class="row">${box('Volume', '4.0 dB', 80)}</div></div></div>`,
+	'electric-live': `<div class="band">
+		<div class="group" style="flex:2"><div class="eyebrow tap">Hammer ›</div><div class="row">${box('Stiffness', '22 %', 22)}${box('Noise', '100 %', 100)}</div></div>
+		<div class="seam"></div>
+		<div class="group" style="flex:2"><div class="eyebrow tap">Fork ›</div><div class="row">${box('Tine', '48 %', 48)}${box('Tone', '50 %', 50)}</div></div>
+		<div class="seam"></div>
+		<div class="group" style="flex:2"><div class="eyebrow tap">Damper / Pickup ›</div><div class="row">${box('Symmetry', '49 %', 49)}<div style="flex:1;display:flex;min-width:0">${seg(['R', 'W'], 'W')}</div></div></div>
+		<div class="seam"></div>
+		<div class="group" style="flex:1"><div class="eyebrow">Global</div><div class="row">${box('Volume', '-6 dB', 75)}</div></div></div>`,
+	'electric-live-hammer': `<div class="band">
+		<div class="group" style="flex:0 0 120px"><div class="eyebrow">Hammer</div><div class="switch" style="flex:1">‹ Panel</div></div>
+		<div class="seam"></div>
+		<div class="group" style="flex:3"><div class="eyebrow">Stiffness</div><div class="row">${box('Amount', '22 %', 22)}${box('< Vel', '58', 70)}${box('< Key', '60', 72)}</div></div>
+		<div class="seam"></div>
+		<div class="group" style="flex:3"><div class="eyebrow">Force</div><div class="row">${box('Amount', '21 %', 21)}${box('< Vel', '59', 70)}${box('< Key', '40', 60)}</div></div>
+		<div class="seam"></div>
+		<div class="group" style="flex:4"><div class="eyebrow">Noise</div><div class="row">${box('Amount', '100 %', 100)}${box('Pitch', '44 %', 44)}${box('Decay', '42 %', 42)}${box('< Key', '39', 58)}</div></div></div>`
 });
 const SIZES = { 'operator-osc-mini': [850, 236] };
 
