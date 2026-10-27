@@ -330,8 +330,4 @@
 		flex: 1 1 0;
 		min-height: var(--height-touch);
 	}
-	.groove-note .btn {
-		min-height: var(--height-touch);
-		padding: 0 1rem;
-	}
 </style>
