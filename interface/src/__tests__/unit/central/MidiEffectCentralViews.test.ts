@@ -35,7 +35,7 @@ const DEVICE = `${TRACK}/devices/0`;
 
 function midiDevice(name: string, className: string, values: Record<number, number>): DeviceRecord {
 	const params = new SvelteMap<string, ParamRecord>();
-	for (let i = 0; i <= 16; i++) {
+	for (let i = 0; i <= 28; i++) {
 		const paramPath = `${DEVICE}/params/${i}`;
 		params.set(paramPath, { paramPath, name: `P${i}`, displayName: `P${i}`, min: -48, max: 127, value: values[i] ?? 0, unit: '' });
 	}
@@ -111,19 +111,21 @@ describe('MIDI-effect central views (ADR-478)', () => {
 		expect(wrote(6)).toEqual([1]);
 	});
 
-	it('the Chord view toggles a shift between its interval and 0', async () => {
-		seed([midiDevice('Chord', 'MidiChord', { 1: 0, 5: 24 })]);
-		const { getByText } = render(ChordCentralView);
+	it('the Chord view draws two notes and the strum, and its Scale switch shows the shifts in scale degrees', async () => {
+		// Measured: note n's Shift 4n - 3, Scale Degrees 4n - 2, Velocity 4n - 1, Chance 4n; 28 Use Current Scale.
+		const labels = (c: HTMLElement) => Array.from(c.querySelectorAll('[role="slider"]')).map((s) => s.getAttribute('aria-label')?.split(':')[0]);
+		seed([midiDevice('Chord', 'MidiChord', { 1: 12, 3: 0.8, 4: 1, 5: 7, 7: 1.2, 8: 0.5, 28: 0 })]);
+		const { container, getByText } = render(ChordCentralView);
 		await tick();
-		const plusTwo = getByText('Oct +2');
-		expect(plusTwo.classList.contains('active')).toBe(true);
-		await fireEvent.click(getByText('Oct +1'));
+		expect(labels(container)).toEqual(['+12 st', '80 %', '100 %', '+7 st', '120 %', '50 %', 'Strum', 'Tension', 'Crescendo']);
+		await fireEvent.click(getByText('Scale'));
 		expect(sendMock.mock.calls.find(([addr, args]) =>
-			addr === '/looping/v3/param/set' && (args as unknown[])[0] === `${DEVICE}/params/1`
-		)?.[1]).toEqual(expect.arrayContaining([`${DEVICE}/params/1`, 12]));
-		await fireEvent.click(plusTwo);
-		expect(sendMock.mock.calls.find(([addr, args]) =>
-			addr === '/looping/v3/param/set' && (args as unknown[])[0] === `${DEVICE}/params/5`
-		)?.[1]).toEqual(expect.arrayContaining([`${DEVICE}/params/5`, 0]));
+			addr === '/looping/v3/param/set' && (args as unknown[])[0] === `${DEVICE}/params/28`
+		)?.[1]).toEqual(expect.arrayContaining([`${DEVICE}/params/28`, 1]));
+		cleanup();
+		seed([midiDevice('Chord', 'MidiChord', { 1: 12, 2: 3, 28: 1 })]);
+		const scaled = render(ChordCentralView);
+		await tick();
+		expect(labels(scaled.container)[0]).toBe('+3 sd');
 	});
 });
