@@ -25,8 +25,10 @@ import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { replaceTree, _resetForTests, type TrackRecord, type DeviceRecord, type ParamRecord } from '$lib/stores/v3/normalized.svelte';
 import ElectricCentralView from '$lib/components/v6/central/views/ElectricCentralView.svelte';
 import CollisionCentralView from '$lib/components/v6/central/views/CollisionCentralView.svelte';
+import DriftCentralView from '$lib/components/v6/central/views/DriftCentralView.svelte';
 import ELECTRIC from '../../../../../docs/reference/instruments/dumps/Electric.json';
 import COLLISION from '../../../../../docs/reference/instruments/dumps/Collision.json';
+import DRIFT from '../../../../../docs/reference/instruments/dumps/Drift.json';
 
 const sendMock = vi.mocked(send);
 const TRACK = 'tracks/0';
@@ -184,5 +186,37 @@ describe('CollisionCentralView — Live\'s tabs over the middle', () => {
 			[indexOf(dump, 'Res 2 On/Off'), 1],
 			[indexOf(dump, 'Res 2 Type'), 4]
 		]);
+	});
+});
+
+describe('DriftCentralView — its own face, Live\'s sections behind the eyebrows', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		_resetForTests();
+		replaceTree(7, [track(DRIFT as Dump, 'Drift', 'Drift')]);
+		selectedTrackStore.handleTrackSelected(0);
+	});
+	afterEach(() => cleanup());
+
+	const pageLink = (container: HTMLElement, page: string) => el(container, `.eyebrow-link[data-page="${page}"]`);
+
+	it('opens each of Live\'s sections from the face and comes back to it', async () => {
+		const { container } = render(DriftCentralView, { props: { instrument: instrument('Drift', 'Drift') } });
+		await tick();
+		for (const page of ['oscillators', 'filter', 'envelopes', 'lfo-mod', 'global']) {
+			expect(el(container, '[data-panel-page]').dataset.panelPage).toBe('frame');
+			await fireEvent.click(pageLink(container, page));
+			expect(el(container, '[data-panel-page]').dataset.panelPage).toBe(page);
+			await fireEvent.click(el(container, '.panel-back'));
+		}
+		expect(paramSets()).toEqual([]);
+	});
+
+	it('writes the cycling envelope\'s mode by its name', async () => {
+		const { container } = render(DriftCentralView, { props: { instrument: instrument('Drift', 'Drift') } });
+		await tick();
+		await fireEvent.click(pageLink(container, 'envelopes'));
+		await fireEvent.click(option(container, 'Cyc Env Mode', 'Sync'));
+		expect(paramSets()).toEqual([[indexOf(DRIFT as Dump, 'Cyc Env Mode'), 3]]);
 	});
 });

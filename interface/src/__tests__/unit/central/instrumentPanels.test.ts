@@ -13,9 +13,11 @@ import { describe, it, expect } from 'vitest';
 import ELECTRIC from '../../../../../docs/reference/instruments/dumps/Electric.json';
 import COLLISION from '../../../../../docs/reference/instruments/dumps/Collision.json';
 import OPERATOR from '../../../../../docs/reference/instruments/dumps/Operator.json';
+import DRIFT from '../../../../../docs/reference/instruments/dumps/Drift.json';
 import { ELECTRIC_PANEL } from '$lib/components/v6/central/views/panel/electricPanel';
 import { COLLISION_PANEL } from '$lib/components/v6/central/views/panel/collisionPanel';
 import { OPERATOR_PANEL } from '$lib/components/v6/central/views/panel/operatorPanel';
+import { DRIFT_PANEL } from '$lib/components/v6/central/views/panel/driftPanel';
 import {
 	panelParamNames,
 	type InstrumentPanel,
@@ -43,7 +45,8 @@ function allGroups(panel: InstrumentPanel): PanelGroup[] {
 const PANELS: [string, InstrumentPanel, { parameters: DumpParam[] }][] = [
 	['Electric', ELECTRIC_PANEL, ELECTRIC],
 	['Collision', COLLISION_PANEL, COLLISION],
-	['Operator', OPERATOR_PANEL, OPERATOR]
+	['Operator', OPERATOR_PANEL, OPERATOR],
+	['Drift', DRIFT_PANEL, DRIFT]
 ];
 
 describe.each(PANELS)('%s panel', (_name, panel, dump) => {
@@ -84,5 +87,13 @@ describe.each(PANELS)('%s panel', (_name, panel, dump) => {
 		const ids = new Set(panel.pages.map((p) => p.id));
 		const linked = allGroups(panel).flatMap((g) => (g.page ? [g.page] : []));
 		expect(linked.filter((id) => !ids.has(id))).toEqual([]);
+	});
+});
+
+describe('Drift panel reach', () => {
+	it('reaches every parameter but Device On', () => {
+		const bound = new Set(panelParamNames(DRIFT_PANEL));
+		const unreached = DRIFT.parameters.map((p) => p.name).filter((n) => n !== 'Device On' && !bound.has(n));
+		expect(unreached).toEqual([]);
 	});
 });

@@ -790,6 +790,14 @@ function instrumentSwapStates() {
 		['collision-midi-page', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-tab="MIDI"]' }, { click: '[data-group="MIDI"] .eyebrow-link' }]],
 		['electric', 'Electric', 'LoungeLizard', referenceParams('Electric')],
 		// Live's arrangement (ADR-487): a section's eyebrow opens its page.
+		// Drift's face, its own (ADR-487), on Live's measured list, and the
+		// sections its eyebrows open.
+		['drift-face', 'Drift', 'Drift', referenceParams('Drift')],
+		['drift-oscillators', 'Drift', 'Drift', referenceParams('Drift'), [{ click: '.eyebrow-link[data-page="oscillators"]' }]],
+		['drift-filter', 'Drift', 'Drift', referenceParams('Drift'), [{ click: '.eyebrow-link[data-page="filter"]' }]],
+		['drift-envelopes', 'Drift', 'Drift', referenceParams('Drift'), [{ click: '.eyebrow-link[data-page="envelopes"]' }]],
+		['drift-lfo-mod', 'Drift', 'Drift', referenceParams('Drift'), [{ click: '.eyebrow-link[data-page="lfo-mod"]' }]],
+		['drift-global', 'Drift', 'Drift', referenceParams('Drift'), [{ click: '.eyebrow-link[data-page="global"]' }]],
 		['electric-hammer', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Hammer"] .eyebrow-link' }]],
 		['electric-pickup', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Damper / Pickup"] .eyebrow-link' }]],
 		['electric-global', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Global"] .eyebrow-link' }]],

@@ -14,6 +14,7 @@
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
 	import PanelGroupView from './PanelGroupView.svelte';
 	import PanelTabs from './PanelTabs.svelte';
+	import PanelEyebrow from './PanelEyebrow.svelte';
 	import { groupUnits, regionUnits, type InstrumentPanel } from './panelTypes';
 	import type { PanelParams } from './usePanelParams.svelte';
 
@@ -23,9 +24,15 @@
 		color: DeviceColorScheme;
 		/** The device's own controls for the panel's `slot` regions, by slot name. */
 		slots?: Record<string, Snippet>;
+		/**
+		 * A hand-laid face in place of the frame (a view whose layout carries
+		 * widgets of its own: Drift's oscillator card, Analog's voice switch).
+		 * It is handed the way to open a page, for its `PanelEyebrow`s.
+		 */
+		face?: Snippet<[(page: string) => void]>;
 	}
 
-	let { panel, params, color, slots = {} }: Props = $props();
+	let { panel, params, color, slots = {}, face }: Props = $props();
 
 	let pageId = $state<string | null>(null);
 	let tabSelected = $state<Record<number, number>>({});
@@ -55,6 +62,8 @@
 			{/each}
 		</div>
 	</div>
+{:else if face}
+	<div class="h-full w-full" data-panel-page="frame">{@render face(openPage)}</div>
 {:else}
 	<div class="panel-layout" data-panel-page="frame">
 		{#each panel.frame as region, i (i)}
@@ -63,11 +72,7 @@
 				<PanelGroupView group={region.group} {params} {color} onOpen={openPage} />
 			{:else if region.kind === 'slot'}
 				<div class="panel-slot" style="flex: {region.units} 1 0;" data-group={region.title ?? region.slot}>
-					{#if region.page}
-						<button class="panel-eyebrow eyebrow-link" style="color: {color.primary};" onclick={() => openPage(region.page!)}>{region.title} ›</button>
-					{:else}
-						<span class="panel-eyebrow" style="color: {color.primary};">{region.title ?? ''}&nbsp;</span>
-					{/if}
+					<PanelEyebrow title={region.title} page={region.page} onOpen={openPage} color={color.primary} />
 					<div class="panel-slot-body">{@render slots[region.slot]?.()}</div>
 				</div>
 			{:else}
@@ -134,27 +139,6 @@
 	.panel-slot-body > :global(*) {
 		flex: 1 1 0;
 		min-width: 0;
-	}
-	/* The eyebrow a slot wears, the same as a group's (PanelGroupView). */
-	.panel-eyebrow {
-		flex: 0 0 auto;
-		font-size: 0.75rem;
-		font-weight: 700;
-		line-height: 1rem;
-		text-align: center;
-		white-space: nowrap;
-	}
-	.eyebrow-link {
-		align-self: center;
-		background: none;
-		border: 0;
-		padding: 0 0.75rem;
-		text-decoration: underline;
-		text-underline-offset: 3px;
-		cursor: pointer;
-	}
-	:global([data-grammar='flat']) .panel-slot .panel-eyebrow {
-		font-weight: var(--font-weight-medium);
 	}
 	.panel-rows {
 		flex: 1 1 0;

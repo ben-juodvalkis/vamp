@@ -8,6 +8,7 @@
 	 */
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
 	import PanelControlView from './PanelControlView.svelte';
+	import PanelEyebrow from './PanelEyebrow.svelte';
 	import { controlUnits, groupUnits, type PanelGroup } from './panelTypes';
 	import type { PanelParams } from './usePanelParams.svelte';
 
@@ -28,13 +29,7 @@
 
 <div class="panel-group" style="flex: {groupUnits(group, pageRows)} 1 0;" data-group={group.title ?? ''}>
 	{#if !bare}
-		{#if group.page && onOpen}
-			<button class="panel-eyebrow eyebrow-link" style="color: {color.primary};" onclick={() => onOpen?.(group.page!)}>
-				{group.title} ›
-			</button>
-		{:else}
-			<span class="panel-eyebrow" style="color: {color.primary};">{group.title ?? ''}&nbsp;</span>
-		{/if}
+		<PanelEyebrow title={group.title} page={group.page} {onOpen} color={color.primary} />
 	{/if}
 	<div class="panel-row">
 		{#each group.controls as control (control.param)}
@@ -53,28 +48,6 @@
 		min-width: 0;
 		min-height: 0;
 	}
-	/* The house eyebrow (EnvelopeGroup's): 0.75rem, centred, upright. */
-	.panel-eyebrow {
-		flex: 0 0 auto;
-		font-size: 0.75rem;
-		font-weight: 700;
-		line-height: 1rem;
-		text-align: center;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	/* A link to the section's page: the eyebrow's line, a touch target's
-	   width, underlined so it reads as something to press. */
-	.eyebrow-link {
-		align-self: center;
-		background: none;
-		border: 0;
-		padding: 0 0.75rem;
-		text-decoration: underline;
-		text-underline-offset: 3px;
-		cursor: pointer;
-	}
 	.panel-row {
 		flex: 1 1 0;
 		display: flex;
@@ -90,8 +63,5 @@
 	.panel-cell > :global(*) {
 		flex: 1 1 0;
 		min-width: 0;
-	}
-	:global([data-grammar='flat']) .panel-eyebrow {
-		font-weight: var(--font-weight-medium);
 	}
 </style>

@@ -67,11 +67,18 @@ the reverse.
   velocity and key amounts, each LFO, MIDI and Global). A page can open a
   page of its own, whose way back returns to it. The swap pill keeps its
   column (the views host none).
+- **A hand-laid face**: a view whose own layout already reads in Live's
+  order and carries widgets a rule would flatten keeps it as the panel's
+  `face` and wears `PanelEyebrow` links over its columns instead of a
+  frame. Drift is the first: its oscillator card, source-coloured mixer,
+  Time and Filter pads and voice mode stay, and "Oscillators ›",
+  "Envelopes ›", "LFO / Mod ›", "Filter ›" and "Global ›" open Live's
+  sections as pages (`driftPanel.ts`).
 
 ## Consequences
-- Operator, Electric and Collision reach every parameter but Device On
-  (194 of 195, 33 of 34, 139 of 140), each at most three taps from the
-  frame. Operator's view drew about 10.
+- Operator, Electric, Collision and Drift reach every parameter but Device
+  On (194 of 195, 33 of 34, 139 of 140, 65 of 66), each at most three taps
+  from the frame. Operator's view drew about 10, Drift's about 20.
 - The panels show Live's values only while a box is dragged, as every
   value box in the app does (the audit's open question on readouts at rest).
 - The other instruments keep their hand-laid views until moved onto

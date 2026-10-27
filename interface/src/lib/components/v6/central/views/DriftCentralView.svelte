@@ -14,6 +14,10 @@
   import SectionDivider from '../SectionDivider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
   import { driftFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
+  import InstrumentPanelView from './panel/InstrumentPanelView.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
+  import { usePanelParams } from './panel/usePanelParams.svelte';
+  import { DRIFT_PANEL } from './panel/driftPanel';
 
   interface Props {
     instrument?: InstrumentInfo | null;
@@ -24,6 +28,9 @@
   let deviceIndex = $derived(instrument?.deviceIndex ?? 0);
   let device = $derived(selectedTrackStore.devicesByPath[deviceIndex]);
   let devicePath = $derived(device?.devicePath);
+
+  /** The pages behind the face's eyebrows, every parameter by Live's name (ADR-487). */
+  const panelParams = usePanelParams(() => device);
 
   const driftColor = {
     primary: '#06b6d4',
@@ -418,6 +425,8 @@
       on the pad, set its level — so the two cards are the same gesture twice.
       Mirrors AutoFilterCentralView's flex-[N] idiom for consistency across views.
     -->
+    <InstrumentPanelView panel={DRIFT_PANEL} params={panelParams} color={driftInk}>
+    {#snippet face(openPage: (page: string) => void)}
     <div class="h-full w-full flex min-h-0 p-(--central-inset)" style="gap: var(--central-gap);">
 
       <!-- ONE oscillator card, switched between OSC 1 and OSC 2 (user's
@@ -436,6 +445,7 @@
            style="--drift-ink: {oscInk.primary};">
         <!-- The swap pill lies across the top of the oscillator card (user's
              layout, 2026-09-16): the card is the view's leading column. -->
+        <PanelEyebrow title="Oscillators" page="oscillators" onOpen={openPage} color={driftInk.primary} />
         <HostedSwapPill />
         <!-- Everything reads across, stacked down the card (user's call,
              2026-09-12): the waveform grid two rows deep, then the octave
@@ -571,7 +581,8 @@
            colours already say, and the seam's width went to the pads. -->
       <!-- Stacked, one column of three boxes (ADR-477): still the three
            sources in one place, and two columns' width went to the pads. -->
-      <div class="drift-card mixer-card flex-none min-h-0 flex flex-col gap-2" style="--drift-ink: {driftInk.primary};">
+      <div class="drift-card mixer-card flex-none min-h-0 flex flex-col gap-(--central-gap)" style="--drift-ink: {driftInk.primary};">
+        <PanelEyebrow color={driftInk.primary} />
         <div class="flex-1 min-h-0 flex flex-col gap-(--central-gap)">
           <!-- Touching either oscillator's level brings ITS card up on the
                left (`onDown`, so the switch lands on the touch rather than
@@ -637,6 +648,14 @@
            its column with the filter's type switch at its foot, under the
            pad it belongs to. -->
       <div class="flex-[3] min-h-0 time-filter-grid">
+        <!-- Live's Envelopes and LFO/Mod sit between its Filter and Global;
+             here they are the Time pad's (Env 1's Attack and Release), and
+             Filter's eyebrow is the pad's own. -->
+        <div class="eyebrow-pair">
+          <PanelEyebrow title="Envelopes" page="envelopes" onOpen={openPage} color={driftInk.primary} />
+          <PanelEyebrow title="LFO / Mod" page="lfo-mod" onOpen={openPage} color={driftInk.primary} />
+        </div>
+        <PanelEyebrow title="Filter" page="filter" onOpen={openPage} color={driftInk.primary} />
         <div class="min-h-0 min-w-0 time-pad">
           <DeviceXY
             xValue={timeXValue}
@@ -683,7 +702,8 @@
            Drift. The 2x2 mode grid that used to sit on top has its own
            column (user, 2026-09-12) — it chooses what the card MEANS
            rather than being one of its controls. -->
-      <div class="drift-card voicing-card flex-none min-h-0 flex flex-col gap-2" style="--drift-ink: {driftInk.primary};">
+      <div class="drift-card voicing-card flex-none min-h-0 flex flex-col gap-(--central-gap)" style="--drift-ink: {driftInk.primary};">
+        <PanelEyebrow color={driftInk.primary} />
         <!-- The mode's own slider, absent in Poly (it has nothing to write
              there), Glide, then Drift: boxes stacked in one column
              (ADR-477), so a mode change moves no edge. -->
@@ -748,6 +768,7 @@
            wheels under it left for the MidiWheels device's chain cell
            (user, 2026-10-26), so the tab takes the column's height. -->
       <div class="mode-col flex-none flex flex-col gap-(--central-gap) min-h-0">
+        <PanelEyebrow title="Global" page="global" onOpen={openPage} color={driftInk.primary} />
         <!-- One pick-one tab, two by two. -->
         <div class="device-segmented seg-grid grid grid-cols-2 grid-rows-2 flex-1 min-h-0" style="--btn-tint: {driftInk.primary};">
           {#each VOICE_MODE_OPTIONS as option}
@@ -765,6 +786,8 @@
         </div>
       </div>
     </div>
+    {/snippet}
+    </InstrumentPanelView>
   {:else}
     <DeviceEmptyState glyph="~" message="Load Drift to access filter controls" color={driftInk.primary} />
   {/if}
@@ -1026,10 +1049,15 @@
   .time-filter-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     gap: var(--central-gap);
   }
   .time-pad {
-    grid-row: 1 / span 2;
+    grid-row: 2 / span 2;
+  }
+  .eyebrow-pair {
+    display: flex;
+    justify-content: center;
+    min-width: 0;
   }
 </style>
