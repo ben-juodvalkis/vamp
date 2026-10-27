@@ -28,6 +28,12 @@ const ANALOG_106_BASS = JSON.parse(readFileSync(new URL('./fixtures/analog-106-b
 // (device dump, 2026-10-22), a few moved off their defaults so the shot
 // shows values: [name, min, max, value].
 const MELD_DEFAULT = JSON.parse(readFileSync(new URL('./fixtures/meld-default.json', import.meta.url), 'utf8'));
+// An instrument's parameters as the rig's Live listed them, at Live's
+// defaults (docs/reference/instruments/dumps, measured 2026-10-27): what a
+// swapped-in view binds by name, so its shot draws values, not ghosts.
+const referenceParams = (instrument) =>
+	JSON.parse(readFileSync(new URL(`../../docs/reference/instruments/dumps/${instrument}.json`, import.meta.url), 'utf8'))
+		.parameters.map((p) => [p.name, p.original_name ?? p.name, p.min, p.max, p.value, '']);
 
 export const DEFAULT_VIEWPORT = { width: 1366, height: 1024 };
 
@@ -767,8 +773,20 @@ function instrumentSwapStates() {
 		['analog', 'Analog', 'UltraAnalog', analog],
 		// Voice 2 up: the other half, in blue (both its envelopes in view, ADR-477).
 		['analog-voice2', 'Analog', 'UltraAnalog', analog, [{ click: '.osc-badge' }]],
-		['collision', 'Collision', 'Collision'],
-		['electric', 'Electric', 'LoungeLizard'],
+		['collision', 'Collision', 'Collision', referenceParams('Collision')],
+		// Live's tabs over the middle, and the pages behind the eyebrows (ADR-487).
+		['collision-lfo', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-tab="LFO"]' }]],
+		['collision-midi', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-tab="MIDI"]' }]],
+		['collision-res1', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-group="Resonator 1"] .eyebrow-link' }]],
+		['collision-noise', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-group="Noise"] .eyebrow-link' }]],
+		['collision-lfo1', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-tab="LFO"]' }, { click: '[data-group="LFO 1"] .eyebrow-link' }]],
+		['collision-res1-mod', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-group="Resonator 1"] .eyebrow-link' }, { click: '[data-group="Body"] .eyebrow-link' }]],
+		['collision-midi-page', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-tab="MIDI"]' }, { click: '[data-group="MIDI"] .eyebrow-link' }]],
+		['electric', 'Electric', 'LoungeLizard', referenceParams('Electric')],
+		// Live's arrangement (ADR-487): a section's eyebrow opens its page.
+		['electric-hammer', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Hammer"] .eyebrow-link' }]],
+		['electric-pickup', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Damper / Pickup"] .eyebrow-link' }]],
+		['electric-global', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Global"] .eyebrow-link' }]],
 		['meld', 'Meld', 'InstrumentMeld', meld],
 		// Engine B up: the other half, in blue (both its envelopes in view, ADR-477).
 		['meld-engine-b', 'Meld', 'InstrumentMeld', meld, [{ click: '.osc-badge' }]],
