@@ -196,34 +196,38 @@
 		/>
 	</div>
 
-	<!-- LFO XY pad (three shares) with floating Time/Sync toggle -->
-	<div class="flex-[3] min-h-0 relative">
-		<DeviceXY
-			xValue={1 - lfoTime}
-			yValue={lfoAmount}
-			title={lfoTitle}
-			icon="lfo"
-			isGhost={fx.isGhost}
-			showCurve={false}
-			color={lfoInk}
-			onInteraction={(x, y) => {
-				// LFO Time parameter (continuous)
-				fx.sendParam(16, 1 - x); // LFO Time - inverted
+	<!-- LFO XY pad (three shares) over its Time/Sync switch -->
+	<div class="flex-[3] min-h-0 flex flex-col gap-(--central-gap)">
+		<div class="flex-1 min-h-0">
+			<DeviceXY
+				xValue={1 - lfoTime}
+				yValue={lfoAmount}
+				title={lfoTitle}
+				icon="lfo"
+				isGhost={fx.isGhost}
+				showCurve={false}
+				color={lfoInk}
+				onInteraction={(x, y) => {
+					// LFO Time parameter (continuous)
+					fx.sendParam(16, 1 - x); // LFO Time - inverted
 
-				// LFO Rate/Division parameter (integer 4-16)
-				// X=0 (left) → value 16, X=1 (right) → value 4
-				const lfoRate = Math.round(16 - (x * 12)); // Maps X from 0-1 to 16-4
-				fx.sendParam(18, lfoRate); // LFO Rate as integer
+					// LFO Rate/Division parameter (integer 4-16)
+					// X=0 (left) → value 16, X=1 (right) → value 4
+					const lfoRate = Math.round(16 - (x * 12)); // Maps X from 0-1 to 16-4
+					fx.sendParam(18, lfoRate); // LFO Rate as integer
 
-				// LFO Amount
-				fx.sendParam(12, y); // LFO Amount
-			}}
-		/>
-		<!-- Floating Time/Sync toggle, nudged inward from the XY pad's top-right corner -->
+					// LFO Amount
+					fx.sendParam(12, y); // LFO Amount
+				}}
+			/>
+		</div>
+		<!-- Time/Sync, one touch row under the pad it switches. It floated
+		     over the pad's top-right corner until 2026-10-27, 8px past it,
+		     which on a small iPad put it across the frame's edge. -->
 		<button
-			class="physical-button lfo-sync-toggle absolute z-10 text-xs font-medium flex items-center justify-center"
+			class="physical-button lfo-sync-toggle text-sm font-medium"
 			class:active={lfoSync >= 3}
-			style="--btn-tint: {lfoInk.primary}; width: 44px; height: 44px; top: -8px; right: -8px; border-radius: var(--lfo-toggle-radius, 9999px);"
+			style="--btn-tint: {lfoInk.primary};"
 			onclick={toggleLfoSync}
 			title={lfoSync >= 3 ? 'Sync' : 'Time'}
 		>
@@ -332,21 +336,10 @@
 	   flat field — the shape / type / circuit / slope buttons are
 	   .physical-button (app.css gives them the ControlBackground field and
 	   ChosenDefault ON fill), MORPH / DRIVE are DeviceSlider and the LFO pad
-	   is DeviceXY (both flat, both re-case their own titles). The one
-	   hold-out is the floating Time/Sync pill: its 9999px radius is inline,
-	   so it is lifted into --lfo-toggle-radius (Graticule fallback 9999px —
-	   unchanged) and squared here. Every rule sits under
-	   [data-grammar="flat"]; Graticule is untouched. */
-	:global([data-grammar="flat"]) .lfo-sync-toggle {
-		--lfo-toggle-radius: 2px;
-	}
-
-	/* The `absolute` utility alone loses: app.css's `.physical-button {
-	   position: relative }` is unlayered and Tailwind's utilities live in a
-	   layer, so the toggle was drawn IN FLOW — under the LFO pad and 20px
-	   past the frame's bottom edge, clipped (measured by the tour's layout
-	   check, 2026-09-14). A scoped rule outranks both. */
+	   is DeviceXY (both flat, both re-case their own titles), and the
+	   Time/Sync switch under the pad is a plain .physical-button too. */
 	.lfo-sync-toggle {
-		position: absolute;
+		flex: 0 0 var(--height-touch);
+		min-height: 0;
 	}
 </style>
