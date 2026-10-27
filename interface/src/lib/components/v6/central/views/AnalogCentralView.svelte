@@ -552,12 +552,13 @@
 
   /* Shapes two rows (the badge over the route chip, then the shapes' 2 x 2
      tab across two columns), then three bands: octave, Sub/Sync, Level.
-     One grid, so every row is one height. */
+     One grid, so every row is one height. Its gaps are 4px: at 8px the five
+     rows came to 41px on the 12.9-inch, under the 44px touch floor. */
   .osc-body {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-template-rows: repeat(5, minmax(0, 1fr));
-    gap: var(--spacing-sm);
+    gap: var(--spacing-xs);
   }
   .octave-row,
   .osc-row {
@@ -565,7 +566,7 @@
   }
   .osc-row {
     display: flex;
-    gap: var(--spacing-sm);
+    gap: var(--spacing-xs);
     min-height: 0;
     min-width: 0;
   }
