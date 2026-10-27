@@ -82,6 +82,8 @@ classify() {
         # test_key_detect.py checks the surface's scales against this list.
         interface/src/lib/data/scales.ts) CLS="types vitest build serve surface" ;;
         interface/src/*) CLS="types vitest build serve" ;;
+        # The instrument panels' tests import the measured dumps (ADR-487).
+        docs/reference/instruments/dumps/*) CLS="vitest" ;;
         # Read by no test (sourceBytes' NUL walk aside, covered below).
         *.md|docs/*|LICENSE) CLS="" ;;
         # The screenshot rig: it makes PNGs, and no test imports or reads it.

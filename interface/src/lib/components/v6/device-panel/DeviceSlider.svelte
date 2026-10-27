@@ -43,6 +43,10 @@
     // central view, where a slider is a value box (ADR-477).
     labelOrientation?: 'vertical' | 'horizontal' | 'auto';
     labelSize?: 'small' | 'large';  // 'small' for FX grid, 'large' for central views
+    // Where the label sits along the box. 'top' keeps it clear of a fill
+    // resting mid-range, where a centred label is cut in half (an instrument
+    // panel's boxes, ADR-487, which arrive at Live's 50% defaults).
+    labelAt?: 'center' | 'top';
     color?: DeviceColorScheme;
     min?: number;
     max?: number;
@@ -82,6 +86,7 @@
     orientation = 'vertical',
     labelOrientation,
     labelSize = 'large',
+    labelAt = 'center',
     color = familyScheme('utility'),
     min = 0,
     max = 1,
@@ -341,12 +346,13 @@
          filled region (inline clip-path) and uses an on-fill ink so letters stay
          readable once the fill rises over them. No inverse in meter mode. -->
     {#if title || label || icon}
-      <div class="slider-label label-{effectiveLabelOrientation} label-{labelSize}">
+      <div class="slider-label label-{effectiveLabelOrientation} label-{labelSize}" class:label-top={labelAt === 'top'}>
         {#if icon}<span class="slider-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}<span class="slider-label-text">{#if label}{@render label()}{:else}<span class={fitClass} use:fitText={shownTitle}>{shownTitle}</span>{/if}</span>
       </div>
       {#if showFill}
         <div
           class="slider-label slider-label--inverse label-{effectiveLabelOrientation} label-{labelSize}"
+          class:label-top={labelAt === 'top'}
           style="clip-path: {inverseClip};"
           aria-hidden="true"
         >
@@ -531,6 +537,18 @@
   /* Inverse copy sits above the base, clipped to the filled region. */
   .slider-label.slider-label--inverse {
     z-index: 11;
+  }
+  /* Label at the top of the box: the start of its column (or of its row,
+     in a wide box), a little in from the edge. */
+  .slider-label.label-top {
+    justify-content: flex-start;
+    padding-top: 0.75rem;
+  }
+  @container (min-aspect-ratio: 3/2) {
+    .slider-label.label-top {
+      justify-content: center;
+      align-items: flex-start;
+    }
   }
 
   .slider-label-text {
