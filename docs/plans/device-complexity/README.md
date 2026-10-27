@@ -63,6 +63,22 @@ onto the face (most instrument views already host it there).
 |---|---|
 | ![Operator face](operator-face.png) | ![Operator Osc page](operator-osc-a.png) |
 
+| Electric face (the two pads it has today, plus the rail) | Electric, Fork page |
+|---|---|
+| ![Electric face](electric-face.png) | ![Electric Fork page](electric-fork.png) |
+
+| Collision face | Collision, Resonator page (two rows, instance badge 1/2) |
+|---|---|
+| ![Collision face](collision-face.png) | ![Collision Res page](collision-res.png) |
+
+**On the iPad mini** (850 x 236) the same Operator page shows the limit:
+ten boxes still stand, but a five-option chooser falls to ~17 px a row and
+"Feedback" clips. So the rule needs a size step: on a band under ~280 px
+tall a page takes at most eight boxes and a chooser goes two columns wide,
+and the rest of the section moves to a second page.
+
+![Operator Osc page on the iPad mini](operator-osc-mini.png)
+
 *Sketches, not the app: static HTML at the band's size
 (`node docs/plans/device-complexity/sketches.mjs docs/plans/device-complexity`).*
 

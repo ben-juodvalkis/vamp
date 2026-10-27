@@ -7,8 +7,13 @@ const out = process.argv[2];
 const ink = '#9a7cf2';
 const css = `
 *{box-sizing:border-box;margin:0}
-body{background:#2e323a;font-family:Inter,-apple-system,Helvetica,sans-serif;color:#e6e6e6;width:1062px;height:330px;overflow:hidden}
-.band{display:flex;gap:16px;padding:16px;height:330px}
+body{background:#2e323a;font-family:Inter,-apple-system,Helvetica,sans-serif;color:#e6e6e6;width:100vw;height:100vh;overflow:hidden}
+.band{display:flex;gap:16px;padding:16px;height:100vh}
+.band.mini{gap:8px;padding:8px}
+.band.mini .row{gap:8px}
+.band.mini .box .lab{font-size:13px}
+.band.mini .box .val{font-size:11px}
+.rows{display:flex;flex-direction:column;gap:16px;flex:1;min-height:0}
 .rail{display:flex;flex-direction:column;gap:6px;width:56px;flex:none}
 .chip{flex:1;font-size:13px;border:1px solid #6b6f78;background:#1a1c21;display:flex;align-items:center;justify-content:center;font-size:12px;color:${ink};border-radius:2px;text-align:center;line-height:1.1}
 .chip.on{background:${ink};color:#111;border-color:${ink}}
@@ -56,11 +61,46 @@ const pages = {
 		<div class="seam"></div>
 		<div class="group" style="flex:6;position:relative"><div class="eyebrow">Filter, ghosted: names from the reference</div><div class="row">${box('Freq', '', 70, 'ghost')}${box('Res', '', 20, 'ghost')}${box('Type', '', 0, 'ghost')}${box('Drive', '', 0, 'ghost')}${box('Env', '', 50, 'ghost')}${box('Key', '', 0, 'ghost')}</div></div></div>`
 };
+const EL = [['Face'], ['Mallet'], ['Fork'], ['Pickup'], ['Global']];
+const CO = [['Face'], ['Exciter'], ['Res'], ['LFO'], ['Global']];
+const badge = (letters, on) => `<div class="inst" style="grid-template-columns:repeat(${letters.length},1fr)">${letters.map((l) => `<span class="${l === on ? 'on' : ''}">${l}</span>`).join('')}</div>`;
+const seg = (opts, on) => `<div class="seg">${opts.map((o) => `<div class="${o === on ? 'on' : ''}">${o}</div>`).join('')}</div>`;
+const pad = (t, x, y, flex = 1.6) => `<div class="pad" style="flex:${flex}"><div class="lab">${t}</div><div class="dot" style="left:${x}%;top:${y}%"></div></div>`;
+Object.assign(pages, {
+	'electric-face': `<div class="band">${rail('Face', EL)}
+		${pad('Hammer', 35, 55, 2.2)}${pad('Fork', 62, 38, 2.2)}
+		<div class="seam"></div>
+		<div class="group" style="flex:2"><div class="eyebrow">Damper · Pickup</div><div class="row">${box('Damp', '50 %', 50)}<div style="flex:1;display:flex;min-width:0">${seg(['R', 'W'], 'R')}</div>${box('Volume', '-6 dB', 75)}</div></div></div>`,
+	'electric-fork': `<div class="band">${rail('Fork', EL)}
+		<div class="group" style="flex:5"><div class="eyebrow">Tine</div><div class="row">${box('Decay', '1.2 s', 45)}${box('Volume', '-4 dB', 70)}${box('Color', '50 %', 50)}${box('< Key', '0 %', 50)}</div></div>
+		<div class="seam"></div>
+		<div class="group" style="flex:2.5"><div class="eyebrow">Tone</div><div class="row">${box('Decay', '800 ms', 35)}${box('Volume', '-12 dB', 40)}</div></div>
+		<div class="seam"></div>
+		<div class="group" style="flex:1.25"><div class="eyebrow"></div><div class="row">${box('Release', '150 ms', 25)}</div></div></div>`,
+	'collision-face': `<div class="band">${rail('Face', CO)}
+		${pad('Mallet', 40, 60, 2)}
+		<div class="seam"></div>
+		<div class="group" style="flex:3"><div class="eyebrow">Res 1</div><div class="row">${box('Tune', '0 st', 50)}${box('Decay', '1.5 s', 55)}${box('Material', '60 %', 60)}</div></div>
+		<div class="seam"></div>
+		<div class="group" style="flex:2"><div class="eyebrow"></div><div class="row">${box('Res 2', '30 %', 30)}${box('Volume', '-6 dB', 75)}</div></div></div>`,
+	'collision-res': `<div class="band">${rail('Res', CO)}
+		<div class="group" style="flex:0 0 120px"><div class="eyebrow">Resonator</div>${badge(['1', '2'], '1')}<div class="switch on" style="margin-top:8px">1 On</div><div style="margin-top:8px;flex:1;display:flex">${seg(['Beam', 'Marimba', 'String', 'Membrane', 'Plate', 'Pipe', 'Tube'], 'Marimba')}</div></div>
+		<div class="seam"></div>
+		<div class="rows" style="flex:7">
+			<div class="row">${box('Tune', '0 st', 50)}${box('Fine', '0 ct', 50)}${box('Decay', '1.5 s', 55)}${box('Material', '60 %', 60)}${box('Radius', '40 %', 40)}${box('Ratio', '1.0', 20)}</div>
+			<div class="row">${box('Bright', '50 %', 50)}${box('Inharm', '0 %', 50)}${box('Opening', '0 %', 0)}${box('Hit', '25 %', 25)}${box('Bleed', '0 %', 0)}${box('Volume', '0 dB', 80)}</div>
+		</div></div>`,
+	'operator-osc-mini': pages['operator-osc-a'].replace('<div class="band">', '<div class="band mini">')
+});
+const SIZES = { 'operator-osc-mini': [850, 236] };
+
 // Playwright's own browser, or the cloud container's preinstalled one.
 const browser = await chromium.launch().catch(() => chromium.launch({ executablePath: '/opt/pw-browsers/chromium' }));
-const page = await browser.newPage({ viewport: { width: 1062, height: 330 }, deviceScaleFactor: 2 });
 for (const [name, body] of Object.entries(pages)) {
+	const [width, height] = SIZES[name] ?? [1062, 330];
+	const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 2 });
 	await page.setContent(`<!doctype html><html><head><style>${css}</style></head><body>${body}</body></html>`);
 	await page.screenshot({ path: `${out}/${name}.png` });
+	await page.close();
 }
 await browser.close();
