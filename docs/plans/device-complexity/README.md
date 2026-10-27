@@ -131,7 +131,7 @@ taps from its face.
 Ben's direction: lean on how Ableton arranges each device wherever that
 works for touch, so finding a control in Vamp is finding it in Live. Read
 against the Live 12 manual's device screenshots (kept outside the repo:
-they are Ableton's, on the `reference/ableton-instrument-images` branch),
+they are Ableton's, in the rig's gitignored `screenshots/ableton-manual/`),
 Live already solves most of this proposal's questions, and differs from
 the left rail above in a useful way: **Live never swaps the whole panel.**
 It keeps a fixed frame and swaps one region with a horizontal tab strip.
