@@ -80,8 +80,9 @@
 
 <div class="h-full w-full flex flex-col" data-density="compact">
   {#if instrument}
-    <!-- The 8 parameters as value boxes, two rows of four filled column by
-         column (ADR-477). The wheels left for the MidiWheels device's chain
+    <!-- The 8 parameters as value boxes in one row, tall like the Chord
+         view's (ADR-477; two rows of four until 2026-10-27, boxes twice as
+         wide as tall). The wheels left for the MidiWheels device's chain
          cell (user, 2026-10-26). -->
     <div class="controls-panel">
       <div class="param-grid">
@@ -129,14 +130,13 @@
     flex-shrink: 1;
   }
 
-  /* Two rows of four, column by column: a parameter's neighbour sits under
-     it. The whole width. */
+  /* One row of eight, the whole width. */
   .param-grid {
     flex: 1 1 0;
     min-width: 0;
     min-height: 0;
     display: grid;
-    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
     grid-auto-flow: column;
     grid-auto-columns: minmax(0, 1fr);
     gap: var(--central-gap);
