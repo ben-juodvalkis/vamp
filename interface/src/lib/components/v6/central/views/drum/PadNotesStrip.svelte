@@ -474,15 +474,19 @@
 		color: var(--muted-foreground);
 		pointer-events: none;
 	}
-	/* The bar button: Q's size, its number large. */
+	/* The bar button: Q's size, its number large beside the word. Stacked,
+	   the two overflowed the strip's row on the smaller iPads (~36px there),
+	   the word drawn on the button's top border. */
 	.strip-bar-pick {
 		flex: 0 0 var(--vm-slider-w, 56px);
 		min-height: 0;
 		display: flex;
-		flex-direction: column;
-		align-items: center;
+		flex-direction: row;
+		align-items: baseline;
+		align-content: center;
+		flex-wrap: wrap;
 		justify-content: center;
-		gap: 2px;
+		column-gap: 3px;
 		cursor: ns-resize;
 	}
 	.strip-bar-word {
