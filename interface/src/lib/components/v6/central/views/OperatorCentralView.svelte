@@ -150,73 +150,83 @@
 
 <div class="h-full w-full overflow-hidden relative">
   {#if instrument && device}
-    <!-- Two halves (ADR-477): on the left the amp envelope over Feedback,
-         Time and Tone, all value boxes half a fader's height and as fine;
-         on the right the Filter pad, which took the width the three
-         full-height faders had. The wheels left for the MidiWheels device's
-         chain cell (user, 2026-10-26). -->
-    <div class="h-full w-full p-(--central-inset) grid gap-(--central-gap)" style="grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);">
+    <!-- One ruler of tall value boxes (ADR-477): the swap pill over the amp
+         envelope's four stages and Feedback, Time and Tone, then the Filter
+         pad. Until 2026-10-27 the boxes were two short rows filling the
+         left half (ADSR 105 x 75, 50 tall on the iPad mini) beside a
+         half-width pad. The wheels left for the MidiWheels device's chain
+         cell (user, 2026-10-26). -->
+    <div class="h-full w-full p-(--central-inset) grid gap-(--central-gap)" style="grid-template-columns: minmax(0, 7fr) auto minmax(0, 3fr);">
       <div class="min-w-0 min-h-0 h-full flex flex-col gap-(--central-gap)">
-        <!-- The swap pill lies across the top of the left half, the view's
-             leading group (user's layout, 2026-09-16). -->
+        <!-- The swap pill lies across the top, over the boxes it leads
+             (user's layout, 2026-09-16). -->
         <HostedSwapPill />
-        <!-- The amp envelope, one box a stage, reading A → D → S → R. The
-             bracket's label names the section, which lets the boxes inside
-             be one letter each. -->
-        <EnvelopeGroup ink={operatorInk.primary} edges="none">
-          {#each ENVELOPE as stage, i}
-            <div class="min-w-0 h-full flex-1">
-              <DeviceSlider
-                value={envelopeValues[i]}
-                title={stage.title}
-                icon={stage.icon}
-                orientation="vertical"
-                color={operatorInk}
-                readout={display(stage.index)}
-                onInteraction={(value) => writeEnv(stage.index, value)}
-              />
-            </div>
-          {/each}
-        </EnvelopeGroup>
-        <SectionDivider orientation="horizontal" ink={operatorInk.primary} />
         <div class="flex-1 min-h-0 flex gap-(--central-gap)">
-          <div class="flex-1 min-w-0 h-full">
-            <DeviceSlider
-              value={feedbackValue}
-              title="Feedback"
-              icon="feedback"
-              orientation="vertical"
-              color={operatorInk}
-              readout={display(OSC_A_FEEDBACK)}
-              onInteraction={handleFeedbackInteraction}
-            />
+          <!-- The amp envelope, one box a stage, reading A → D → S → R. The
+               bracket's label names the section, which lets the boxes inside
+               be one letter each; its trailing hairline is the seam to
+               Feedback. -->
+          <div class="min-w-0 h-full flex gap-(--central-gap)" style="flex: 4 1 0;">
+            <EnvelopeGroup ink={operatorInk.primary} edges="trailing">
+              {#each ENVELOPE as stage, i}
+                <div class="min-w-0 h-full flex-1">
+                  <DeviceSlider
+                    value={envelopeValues[i]}
+                    title={stage.title}
+                    icon={stage.icon}
+                    orientation="vertical"
+                    color={operatorInk}
+                    readout={display(stage.index)}
+                    onInteraction={(value) => writeEnv(stage.index, value)}
+                  />
+                </div>
+              {/each}
+            </EnvelopeGroup>
           </div>
-          <!-- Time: the global envelope-time scale, bipolar around 0 -->
-          <div class="flex-1 min-w-0 h-full">
-            <DeviceSlider
-              value={timeValue}
-              title="Time"
-              icon="envelope"
-              orientation="vertical"
-              color={operatorInk}
-              min={-100}
-              max={100}
-              centerOrigin={true}
-              centerValue={0}
-              readout={display(TIME)}
-              onInteraction={handleTimeInteraction}
-            />
-          </div>
-          <div class="flex-1 min-w-0 h-full">
-            <DeviceSlider
-              value={toneValue}
-              title="Tone"
-              icon="tone"
-              orientation="vertical"
-              color={operatorInk}
-              readout={display(TONE)}
-              onInteraction={handleToneInteraction}
-            />
+          <!-- Feedback, Time, Tone: under an empty eyebrow line, so their
+               tops sit level with the stages'. -->
+          <div class="min-w-0 h-full flex flex-col tone-group" style="flex: 3 1 0;">
+            <span class="eyebrow-spacer" aria-hidden="true">&nbsp;</span>
+            <div class="flex-1 min-h-0 flex gap-(--central-gap)">
+              <div class="flex-1 min-w-0 h-full">
+                <DeviceSlider
+                  value={feedbackValue}
+                  title="Feedback"
+                  icon="feedback"
+                  orientation="vertical"
+                  color={operatorInk}
+                  readout={display(OSC_A_FEEDBACK)}
+                  onInteraction={handleFeedbackInteraction}
+                />
+              </div>
+              <!-- Time: the global envelope-time scale, bipolar around 0 -->
+              <div class="flex-1 min-w-0 h-full">
+                <DeviceSlider
+                  value={timeValue}
+                  title="Time"
+                  icon="envelope"
+                  orientation="vertical"
+                  color={operatorInk}
+                  min={-100}
+                  max={100}
+                  centerOrigin={true}
+                  centerValue={0}
+                  readout={display(TIME)}
+                  onInteraction={handleTimeInteraction}
+                />
+              </div>
+              <div class="flex-1 min-w-0 h-full">
+                <DeviceSlider
+                  value={toneValue}
+                  title="Tone"
+                  icon="tone"
+                  orientation="vertical"
+                  color={operatorInk}
+                  readout={display(TONE)}
+                  onInteraction={handleToneInteraction}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -243,3 +253,16 @@
     <DeviceEmptyState glyph="~" message="Load Operator to access FM controls" color={operatorInk.primary} />
   {/if}
 </div>
+
+<style>
+  /* The eyebrow's line (EnvelopeGroup's 0.75rem title and its gap), drawn
+     empty so Feedback, Time and Tone start level with the stages. */
+  .tone-group {
+    gap: var(--spacing-xs);
+  }
+  .eyebrow-spacer {
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+</style>
