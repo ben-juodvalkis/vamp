@@ -173,6 +173,36 @@ const chainOf = (n) => (scene) =>
 const chainCell = (index) => `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/${index}"]`;
 const SETTINGS_OPEN = [{ click: '[data-debug="master-card"]' }, { click: '[data-debug="settings-gear"]', dom: true }];
 
+// Devices with no grid tile, each opening its own view from its chain cell.
+const CHAIN_VIEW_DEVICES = [
+		['shifter', { name: 'Shifter', className: 'Shifter', params: SHIFTER_PARAMS }],
+		['comb', { name: 'Comb', className: 'MxDeviceAudioEffect', params: [['Device On', 0, 1, 1, ''], ['Tune', -24, 24, 0, '0 st'], ['Mix', 0, 100, 17.58, '17.6 %'], ['Feedback', -100, 100, 17.58, '17.6 %'], ['Amount', 0, 24, 7, '+7 st'], ['Rate', 0.01, 2, 1.587, '1.00 Hz'], ['Sync Rate', 0, 15, 7, '1/4'], ['Shape', 0, 6, 1, 'Triangle'], ['Sync', 0, 1, 0, 'val1']].map(([name, ...rest]) => [name, name, ...rest]) }],
+		// Chord's 29 parameters as device_dump read them (2026-10-27): two notes added, a strum.
+		['chord', { name: 'Chord', className: 'MidiChord', params: [['Device On', 0, 1, 1, ''], ...[[12, 0.8, 1], [7, 1.2, 0.5], [0, 1, 1], [0, 1, 1], [0, 1, 1], [0, 1, 1]].flatMap(([st, vel, ch], i) => [[`Shift${i + 1}`, -36, 36, st, `${st > 0 ? '+' : ''}${st} st`], [`Shift${i + 1} Scale Degrees`, -36, 36, 0, '0 sd'], [`Velocity${i + 1}`, 0.01, 2, vel, `${Math.round(vel * 100)} %`], [`Chance${i + 1}`, 0, 1, ch, `${Math.round(ch * 100)} %`]]), ['Strum', -20, 20, 6, '36.0 ms'], ['Strum Tension', -100, 100, 0, '0 %'], ['Strum Crescendo', -100, 100, 0, '0 %'], ['Use Current Scale', 0, 1, 0, 'Off']].map(([name, ...rest]) => [name, name, ...rest]) }],
+		['chance', { name: 'Note Chance', className: 'MxDeviceMidiEffect', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Chance', 'Chance', 0, 100, 60, '60 %']] }],
+		['chorus', { name: 'Chorus-Ensemble', className: 'Chorus2', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Mode', 'Mode', 0, 2, 1, 'Ensemble'], ['Shape', 'Shape', 0, 1, 0, ''], ['Rate', 'Rate', 0, 1, 0.42, '1.20 Hz'], ['Amount', 'Amount', 0, 1, 0.6, '60 %'], ['Feedback', 'Feedback', 0, 1, 0.25, '25 %'], ['FB Invert', 'FB Invert', 0, 1, 0, ''], ['Offset', 'Offset', 0, 1, 0, ''], ['Delay Time', 'Delay Time', 0, 5, 2, ''], ['Delay Taps', 'Delay Taps', 0, 1, 1, ''], ['HP On', 'HP On', 0, 1, 0, ''], ['HP Freq', 'HP Freq', 0, 1, 0.28, ''], ['Width', 'Width', 0, 1, 0.7, '140 %'], ['Warmth', 'Warmth', 0, 1, 0.3, '9.0 %'], ['Output', 'Output', 0, 1, 0.71, ''], ['Dry/Wet', 'Dry/Wet', 0, 1, 0.5, '50 %']] }],
+		['redux', { name: 'Redux', className: 'Redux2', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Sample Rate', 'Sample Rate', 0, 1, 0.62, '9.08 kHz'], ['Jitter', 'Jitter', 0, 1, 0.2, '4.0 %'], ['Bit Depth', 'Bit Depth', 1, 16, 8, '8'], ['Quantizer Shape', 'Quantizer Shape', 0, 1, 0.35, '35 %'], ['DC Shift', 'DC Shift', 0, 1, 0, 'Off'], ['Pre-Filter On', 'Pre-Filter On', 0, 1, 1, 'On'], ['Post-Filter On', 'Post-Filter On', 0, 1, 1, 'On'], ['Post-Filter', 'Post-Filter', 0, 1, 0.5, '0.00'], ['Dry/Wet', 'Dry/Wet', 0, 1, 0.8, '80 %']] }],
+		['multiband', { name: 'Multiband Dynamics', className: 'MultibandDynamics', params: Array.from({ length: 28 }, (_, i) => i === 0 ? ['Device On', 'Device On', 0, 1, 1, ''] : i === 5 ? ['Output', 'Output', -24, 24, 0, '0.00 dB'] : i === 21 ? ['Below Threshold (Mid)', 'Below Threshold (Mid)', -80, 0, -27.125, '-27.1 dB'] : i === 27 ? ['Below Ratio (Mid)', 'Below Ratio (Mid)', -3, 1, 0.4, '1 : 1.67'] : [`P${i}`, `P${i}`, 0, 1, 0, '']) }]
+];
+
+// The views no other state reaches (layout audit, 2026-10-27), opened from
+// their chain cell like `chain-view-*`. Only the parameters a view needs to
+// draw, often just Device On: these states are for layout, not values.
+const VIEW_ONLY_DEVICES = [
+	['compressor', { name: 'Compressor', className: 'Compressor2', params: [['Device On', 'Device On', 0, 1, 1, '']] }],
+	['gate', { name: 'Gate', className: 'Gate', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Threshold', 'Threshold', 0, 1, 0.55, ''], ['Attack', 'Attack', 0.02, 150, 3.5, ''], ['Hold', 'Hold', 0, 1, 0.31, ''], ['Release', 'Release', 0, 1, 0.35, '']] }],
+	['phaser', { name: 'Phaser', className: 'PhaserNew', params: [['Device On', 'Device On', 0, 1, 1, '']] }],
+	['utility', { name: 'Utility', className: 'StereoGain', params: [['Device On', 'Device On', 0, 1, 1, '']] }],
+	['arpeggiator', { name: 'Arpeggiator', className: 'MidiArpeggiator', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Style', 'Style', 0, 17, 0, 'Up'], ['Offset', 'Offset', -8, 8, 0, '0'], ['Repeats', 'Repeats', 0, 16, 0, ''], ['Sync On', 'Sync On', 0, 1, 1, 'On'], ['Synced Rate', 'Synced Rate', 0, 13, 8, '1/8'], ['Groove', 'Groove', 0, 3, 0, ''], ['Free Rate', 'Free Rate', 0, 1, 0.15, ''], ['Gate', 'Gate', 1, 200, 120, '120 %']] }],
+	['velocity', { name: 'Velocity', className: 'MidiVelocity', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Drive', 'Drive', -1, 1, 0, ''], ['Compand', 'Compand', -1, 1, 0, ''], ['Random', 'Random', 0, 64, 40, '40'], ['Mode', 'Mode', 0, 2, 0, ''], ['Operation', 'Operation', 0, 2, 2, ''], ['Out Hi', 'Out Hi', 0, 127, 110, ''], ['Out Low', 'Out Low', 0, 127, 30, '']] }],
+	['tone-shaper', { name: "Ben's Adaptive Tone Shaper", className: 'MxDeviceAudioEffect', params: [['Device On', 'Device On', 0, 1, 1, '']] }],
+	['blur', { name: 'Blur', className: 'MxDeviceAudioEffect', params: [['Device On', 'Device On', 0, 1, 1, '']] }],
+	['digital', { name: 'Digital', className: 'AudioEffectGroupDevice', params: [['Device On', 'Device On', 0, 1, 1, '']] }],
+	['wah', { name: 'Wah', className: 'AudioEffectGroupDevice', params: [['Device On', 'Device On', 0, 1, 1, '']] }],
+	['bass', { name: 'Bass Amp', className: 'AudioEffectGroupDevice', params: [['Device On', 'Device On', 0, 1, 1, '']] }],
+	['pedal', { name: 'Pedal', className: 'Pedal', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Type', 'Type', 0, 2, 0, ''], ['Drive', 'Drive', 0, 1, 0.6, ''], ['Output', 'Output', -20, 20, 0, ''], ['Bass', 'Bass', -1, 1, 0, ''], ['Mid', 'Mid', -1, 1, 0, ''], ['Treble', 'Treble', -1, 1, 0, ''], ['Mid Freq', 'Mid Freq', 0, 2, 1, ''], ['Sub', 'Sub', 0, 1, 0, ''], ['Dry/Wet', 'Dry/Wet', 0, 1, 1, '']] }]
+];
+
 export const TOURS = {
 	// The FX section's second face (the chain overview, a mock-up for Ben,
 	// 2026-10-25): the Lead track carries CHAIN_DEMO_DEVICES — two Auto
@@ -290,16 +320,7 @@ export const TOURS = {
 			},
 			// A device with no grid tile opens its own view from its chain cell,
 			// drawing its `deviceControls` entry (ADR-479).
-			...[
-				['shifter', { name: 'Shifter', className: 'Shifter', params: SHIFTER_PARAMS }],
-				['comb', { name: 'Comb', className: 'MxDeviceAudioEffect', params: [['Device On', 0, 1, 1, ''], ['Tune', -24, 24, 0, '0 st'], ['Mix', 0, 100, 17.58, '17.6 %'], ['Feedback', -100, 100, 17.58, '17.6 %'], ['Amount', 0, 24, 7, '+7 st'], ['Rate', 0.01, 2, 1.587, '1.00 Hz'], ['Sync Rate', 0, 15, 7, '1/4'], ['Shape', 0, 6, 1, 'Triangle'], ['Sync', 0, 1, 0, 'val1']].map(([name, ...rest]) => [name, name, ...rest]) }],
-				// Chord's 29 parameters as device_dump read them (2026-10-27): two notes added, a strum.
-				['chord', { name: 'Chord', className: 'MidiChord', params: [['Device On', 0, 1, 1, ''], ...[[12, 0.8, 1], [7, 1.2, 0.5], [0, 1, 1], [0, 1, 1], [0, 1, 1], [0, 1, 1]].flatMap(([st, vel, ch], i) => [[`Shift${i + 1}`, -36, 36, st, `${st > 0 ? '+' : ''}${st} st`], [`Shift${i + 1} Scale Degrees`, -36, 36, 0, '0 sd'], [`Velocity${i + 1}`, 0.01, 2, vel, `${Math.round(vel * 100)} %`], [`Chance${i + 1}`, 0, 1, ch, `${Math.round(ch * 100)} %`]]), ['Strum', -20, 20, 6, '36.0 ms'], ['Strum Tension', -100, 100, 0, '0 %'], ['Strum Crescendo', -100, 100, 0, '0 %'], ['Use Current Scale', 0, 1, 0, 'Off']].map(([name, ...rest]) => [name, name, ...rest]) }],
-				['chance', { name: 'Note Chance', className: 'MxDeviceMidiEffect', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Chance', 'Chance', 0, 100, 60, '60 %']] }],
-				['chorus', { name: 'Chorus-Ensemble', className: 'Chorus2', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Mode', 'Mode', 0, 2, 1, 'Ensemble'], ['Shape', 'Shape', 0, 1, 0, ''], ['Rate', 'Rate', 0, 1, 0.42, '1.20 Hz'], ['Amount', 'Amount', 0, 1, 0.6, '60 %'], ['Feedback', 'Feedback', 0, 1, 0.25, '25 %'], ['FB Invert', 'FB Invert', 0, 1, 0, ''], ['Offset', 'Offset', 0, 1, 0, ''], ['Delay Time', 'Delay Time', 0, 5, 2, ''], ['Delay Taps', 'Delay Taps', 0, 1, 1, ''], ['HP On', 'HP On', 0, 1, 0, ''], ['HP Freq', 'HP Freq', 0, 1, 0.28, ''], ['Width', 'Width', 0, 1, 0.7, '140 %'], ['Warmth', 'Warmth', 0, 1, 0.3, '9.0 %'], ['Output', 'Output', 0, 1, 0.71, ''], ['Dry/Wet', 'Dry/Wet', 0, 1, 0.5, '50 %']] }],
-				['redux', { name: 'Redux', className: 'Redux2', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Sample Rate', 'Sample Rate', 0, 1, 0.62, '9.08 kHz'], ['Jitter', 'Jitter', 0, 1, 0.2, '4.0 %'], ['Bit Depth', 'Bit Depth', 1, 16, 8, '8'], ['Quantizer Shape', 'Quantizer Shape', 0, 1, 0.35, '35 %'], ['DC Shift', 'DC Shift', 0, 1, 0, 'Off'], ['Pre-Filter On', 'Pre-Filter On', 0, 1, 1, 'On'], ['Post-Filter On', 'Post-Filter On', 0, 1, 1, 'On'], ['Post-Filter', 'Post-Filter', 0, 1, 0.5, '0.00'], ['Dry/Wet', 'Dry/Wet', 0, 1, 0.8, '80 %']] }],
-				['multiband', { name: 'Multiband Dynamics', className: 'MultibandDynamics', params: Array.from({ length: 28 }, (_, i) => i === 0 ? ['Device On', 'Device On', 0, 1, 1, ''] : i === 5 ? ['Output', 'Output', -24, 24, 0, '0.00 dB'] : i === 21 ? ['Below Threshold (Mid)', 'Below Threshold (Mid)', -80, 0, -27.125, '-27.1 dB'] : i === 27 ? ['Below Ratio (Mid)', 'Below Ratio (Mid)', -3, 1, 0.4, '1 : 1.67'] : [`P${i}`, `P${i}`, 0, 1, 0, '']) }]
-			].map(([key, device]) => ({
+			...CHAIN_VIEW_DEVICES.map(([key, device]) => ({
 				name: `chain-view-${key}`,
 				description: `Tapped the ${device.name} cell: its own view, the control its browser tiles and chain cell draw`,
 				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], device]),
@@ -649,7 +670,13 @@ export const TOURS = {
 			// No single-Simpler state: the scene's only Simpler is on Texture, an
 			// AUDIO track, and audio tracks draw no instrument tile to open it from.
 			{ name: 'inst-operator', description: 'Operator (FM)', steps: [openInstrument(11)] },
-			...instrumentSwapStates()
+			...instrumentSwapStates(),
+			...[...CHAIN_VIEW_DEVICES, ...VIEW_ONLY_DEVICES].map(([key, device]) => ({
+				name: `view-${key}`,
+				description: `${device.name}, opened from its chain cell`,
+				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], device]),
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(1)} .cell-head .name` }, { wait: 500 }]
+			}))
 		]
 	},
 	// The full-page Settings (plan.md §11): the setup that left the System
