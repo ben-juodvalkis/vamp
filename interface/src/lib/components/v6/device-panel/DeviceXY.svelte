@@ -343,11 +343,13 @@
       </div>
     {/if}
 
-    <!-- Control handle -->
+    <!-- Control handle: its travel inset by the dot's radius, so at a rail
+         (a filter shut, a Drum Buss at rest) the dot is whole, not half
+         off the pad's edge. -->
     <div
       class="xy-handle"
       class:dragging={isDragging}
-      style="left: {localX * 100}%; bottom: {localY * yTop * 100}%; --handle-ink: {color.primary};"
+      style="left: calc(var(--dot-r) + {localX} * (100% - 2 * var(--dot-r))); bottom: calc(var(--dot-r) + {localY * yTop} * (100% - 2 * var(--dot-r))); --handle-ink: {color.primary};"
     ></div>
   </div>
 
@@ -474,6 +476,9 @@
      is the whole marker. The 28px box stays as the (invisible) positioning frame
      so the drag-scale keeps a stable origin. Visual only (pointer-events:none) —
      the pad is the touch target, so the size change is safe. */
+  .xy-container {
+    --dot-r: 6px;
+  }
   .xy-handle {
     position: absolute;
     width: 28px;

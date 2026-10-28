@@ -60,6 +60,7 @@
   import { setContext } from 'svelte';
   import CellSize from './chain/CellSize.svelte';
   import MidiWheelsFace from './chain/MidiWheelsFace.svelte';
+  import RackFace from './chain/RackFace.svelte';
   import { PICTURE_CONTEXT } from '$lib/components/v6/browser/devicePictures';
   import type { Component } from 'svelte';
   import { FX_GRID_LAYOUT, type DeviceTypeKey } from '$lib/config/fxGridLayout';
@@ -647,8 +648,9 @@
   {@const tile = cell.kind !== 'instrument' && cell.presetKey ? TILE_COMPONENTS[cell.presetKey] : undefined}
       <!-- The device's name alone, on a band as tall as a strip's mute
            button, so there is room to grab the cell (the user, 2026-10-26);
-           then the blue hand and Device On. -->
-      <div class="cell-head">
+           then the blue hand and Device On. Measured as the faces are
+           (ADR-492), so a narrow cell's name steps down a size. -->
+      <CellSize><div class="cell-head">
         <span class="name" lang="en">{cell.device.name}</span>
         <span class="head-end">
         {#if fxChainStore.appointed === cell.device.devicePath}
@@ -666,7 +668,7 @@
         ><Power /></button>
         {/if}
         </span>
-      </div>
+      </div></CellSize>
 
       {#if cell.kit}
         <!-- A Drum Rack: its pads, as its view draws them. -->
@@ -698,7 +700,7 @@
           <ControlTile type={cell.presetKey as DeviceTypeKey} device={cell.device} />
         </CellSize></div>
       {:else}
-      <div class="mark" aria-hidden="true">
+      {#snippet mark()}
         {#if cell.kind === 'instrument'}
           <!-- The strip's own mark for the instrument, so the two agree. -->
           <span class="instrument-mark"><TrackDeviceView {glance} color={cell.ink} /></span>
@@ -711,16 +713,14 @@
         {:else}
           <Music />
         {/if}
-      </div>
-      {/if}
-
+      {/snippet}
       {@const macros = cell.kind === 'rack' ? macrosOf(cell.device) : []}
       {#if macros.length > 0}
-        <div class="macros" aria-hidden="true">
-          {#each macros as m (m.name)}
-            <span class="macro" style="--v: {m.value};" title={m.name}></span>
-          {/each}
-        </div>
+        <!-- A rack: its mark over its named macros, which fill a tall cell. -->
+        <div class="cell-face"><CellSize><RackFace {macros}>{@render mark()}</RackFace></CellSize></div>
+      {:else}
+        <div class="mark" aria-hidden="true">{@render mark()}</div>
+      {/if}
       {/if}
 {/snippet}
 
@@ -938,8 +938,12 @@
     gap: 6px;
     min-width: 0;
     height: var(--strip-band-h, 56px);
-    flex: 0 0 auto;
+    /* Across its CellSize: the whole width, the power button in the corner. */
+    flex: 1 1 auto;
     padding-left: 6px;
+  }
+  .chain-cell > :global(.cell-size:has(> .cell-head)) {
+    flex: none;
   }
   /* Two rows of cells: half that, so the controls keep their height
      (the user, the same day). */
@@ -1026,18 +1030,16 @@
     height: 56px;
   }
 
-  /* A rack is a box of macros: its named ones, as a tiny meter each. */
-  .macros {
+  /* A rack's face (`chain/RackFace`): its mark and macros, the cell's rest. */
+  .cell-face {
+    flex: 1 1 auto;
+    min-height: 0;
     display: flex;
-    align-items: flex-end;
-    gap: 2px;
-    height: 22px;
   }
-  .macro {
-    flex: 1 1 0;
-    height: 100%;
-    background: linear-gradient(to top, var(--cell-ink) calc(var(--v) * 100%), color-mix(in oklab, var(--cell-ink) 15%, transparent) 0);
-    border-radius: 1px;
+  .cell-face > :global(*) {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
   }
 
   /* The name keeps its room; the type takes only what is left. */
@@ -1049,6 +1051,24 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  /* A one-row chain's band has room for two lines: a long name wraps
+     (hyphenated where the browser can, else broken where it must) rather
+     than losing its end. */
+  .chain-wrap:not(.two-rows) .name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+    line-height: 1.2;
+    hyphens: auto;
+    overflow-wrap: anywhere;
+  }
+  /* A narrow cell leaves the name what the power button does not: a size
+     smaller. */
+  :global([data-cell-width='narrow']) .cell-head .name {
+    font-size: 0.8125rem;
   }
 
 </style>

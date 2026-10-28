@@ -208,6 +208,31 @@ const VIEW_ONLY_DEVICES = [
 	['pedal', { name: 'Pedal', className: 'Pedal', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Type', 'Type', 0, 2, 0, ''], ['Drive', 'Drive', 0, 1, 0.6, ''], ['Output', 'Output', -20, 20, 0, ''], ['Bass', 'Bass', -1, 1, 0, ''], ['Mid', 'Mid', -1, 1, 0, ''], ['Treble', 'Treble', -1, 1, 0, ''], ['Mid Freq', 'Mid Freq', 0, 2, 1, ''], ['Sub', 'Sub', 0, 1, 0, ''], ['Dry/Wet', 'Dry/Wet', 0, 1, 1, '']] }]
 ];
 
+const chunk = (list, n) => Array.from({ length: Math.ceil(list.length / n) }, (_, i) => list.slice(i * n, i * n + n));
+const faceName = (d) => (typeof d === 'string' ? d : d.name);
+const viewOnly = (key) => VIEW_ONLY_DEVICES.find(([k]) => k === key)[1];
+const chainView = (key) => CHAIN_VIEW_DEVICES.find(([k]) => k === key)[1];
+const MIDI_WHEELS_DEVICE = { name: 'MidiWheels', className: 'MxDeviceMidiEffect' };
+/** The `faces` tour's chains: [group, track, devices], an instrument first where the faces need one. */
+const FACE_GROUPS = [
+	// The grid's tiles (ChainOverview's TILE_COMPONENTS).
+	['tiles', CHAIN_DEMO_TRACK, [
+		'Random', 'Channel EQ', 'Auto Filter', 'Saturator', 'Drum Buss', viewOnly('utility'), 'Variation', chainView('chorus'),
+		'Auto Pan Legacy', 'Echo', 'Reverb', 'Guitar', viewOnly('bass'), 'Octave', 'GlitchLoop', 'Glue Compressor'
+	]],
+	// deviceControls entries with no grid tile (ControlTile).
+	['controls', CHAIN_DEMO_TRACK, [
+		viewOnly('pedal'), viewOnly('gate'), viewOnly('compressor'), chainView('multiband'), viewOnly('velocity'), viewOnly('arpeggiator'), chainView('chord'), chainView('redux'),
+		viewOnly('phaser'), chainView('shifter'), chainView('comb'), chainView('chance'), viewOnly('wah'), 'Pitch Hack', viewOnly('tone-shaper'), viewOnly('blur')
+	]],
+	// The instruments' faces, Permute, the wheels, a rack's macros, the marks.
+	['omni', CHAIN_DEMO_TRACK, [MIDI_WHEELS_DEVICE, OMNISPHERE_STANDIN, CHAIN_DEMO_DEVICES[1], CHAIN_DEMO_DEVICES[5], CHAIN_DEMO_DEVICES[8], CHAIN_DEMO_DEVICES[7], { name: 'Mystery', className: 'MxDeviceAudioEffect' }, 'Echo']],
+	['drift', CHAIN_DEMO_TRACK, [{ name: 'Drift', params: driftParams() }, CHAIN_DEMO_DEVICES[1], MIDI_WHEELS_DEVICE, 'Echo', 'Reverb', 'Auto Filter', CHAIN_DEMO_DEVICES[5], 'Saturator']],
+	['wavetable', CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], CHAIN_DEMO_DEVICES[1], 'Echo', 'Reverb', 'Auto Filter', CHAIN_DEMO_DEVICES[5], 'Saturator', 'Drum Buss']],
+	['simpler', CHAIN_DEMO_TRACK, ['Simpler', 'Echo', 'Reverb', 'Auto Filter', CHAIN_DEMO_DEVICES[5], 'Saturator', 'Drum Buss', 'Channel EQ']],
+	['kit', 0, [{ name: 'Drum-Rack', padChains: { 50: ['Echo'] } }, 'Compressor', 'Auto Pan Legacy', 'Echo', 'Reverb', 'Auto Filter', 'Saturator', 'Drum Buss']]
+];
+
 export const TOURS = {
 	// The FX section's second face (the chain overview, a mock-up for Ben,
 	// 2026-10-25): the Lead track carries CHAIN_DEMO_DEVICES — two Auto
@@ -408,6 +433,30 @@ export const TOURS = {
 				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: chainCell(8) }]
 			}
 		]
+	},
+
+	// Every chain face at the sizes a chain gives it (ADR-492): four devices
+	// are one row of tall cells, eight two rows of short ones. The width
+	// follows the viewport: the iPad's 1366 gives medium cells, 2200 wide,
+	// 900 narrow.
+	faces: {
+		description: 'Every face the chain draws, in one-row (tall) and two-row (short) chains, cropped to the chain.',
+		states: FACE_GROUPS.flatMap(([group, track, devices]) => [
+			...chunk(devices, 4).map((four, i) => ({
+				name: `faces-${group}-tall-${i + 1}`,
+				description: `${group}, one row: ${four.map(faceName).join(', ')}`,
+				crop: '.chain-wrap',
+				scenePatch: (scene) => setTrackDevices(scene, track, four),
+				steps: [openInstrument(track)]
+			})),
+			...chunk(devices, 8).map((eight, i) => ({
+				name: `faces-${group}-short-${i + 1}`,
+				description: `${group}, two rows: ${eight.map(faceName).join(', ')}`,
+				crop: '.chain-wrap',
+				scenePatch: (scene) => setTrackDevices(scene, track, eight),
+				steps: [openInstrument(track)]
+			}))
+		])
 	},
 
 	central: {
