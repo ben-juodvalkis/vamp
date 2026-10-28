@@ -98,6 +98,7 @@
 		computeGroupedVisibleWindow,
 		groupPresetsByOrigin,
 		groupPresetsByInstrument,
+		groupPresetsForLevel,
 		packGroupedSections,
 		packFillSections,
 		replaceLanding,
@@ -325,12 +326,12 @@
 	// (from each preset's surviving physical `path`). Only meaningful with 2+
 	// sections — a normal (unflattened) leaf comes back as one loose bucket and
 	// renders as the plain grid, unchanged.
-	// A level mixing instrument types is grouped by type instead
-	// (`groupPresetsByInstrument`); the effects Place keeps its folders.
+	// Subfolders stay sections, ordered by instrument type inside; presets
+	// in the level itself are grouped by type (`groupPresetsForLevel`). The
+	// effects Place keeps its folders as they are.
 	const onEffectsPlace = $derived(!!effectsVendor && browserNavigationStore.currentVendorId === effectsVendor.vendorId);
-	const instrumentGroups = $derived(screen === 'presets' && !onEffectsPlace ? groupPresetsByInstrument(presets) : null);
 	const presetGroups = $derived(
-		screen === 'presets' ? (instrumentGroups ?? groupPresetsByOrigin(presets, currentPath)) : []
+		screen !== 'presets' ? [] : onEffectsPlace ? groupPresetsByOrigin(presets, currentPath) : groupPresetsForLevel(presets, currentPath)
 	);
 	// A mixed level's own presets, under its folders: one section per
 	// instrument type when they mix types (user, 2026-10-28: Synth › Ableton's
@@ -2263,7 +2264,7 @@
 									<!-- Big section: its own full-width row, windowed as before. -->
 									<section class="preset-section" class:loose={group.folder === null}>
 										{#if group.folder !== null}
-											{@render sectionHead(group.folder, group.presets, group.folder, instrumentGroups ? DEVICE_ICONS[group.folder] : undefined)}
+											{@render sectionHead(group.folder, group.presets, group.folder, group.instrument ? DEVICE_ICONS[group.folder] : undefined)}
 										{/if}
 										<div
 											class="adaptive-grid sectioned"
@@ -2291,7 +2292,7 @@
 												style="--n: {group.presets.length};"
 											>
 												{#if group.folder !== null && !group.continued}
-													{@render sectionHead(group.folder, group.presets, group.folder, instrumentGroups ? DEVICE_ICONS[group.folder] : undefined)}
+													{@render sectionHead(group.folder, group.presets, group.folder, group.instrument ? DEVICE_ICONS[group.folder] : undefined)}
 												{/if}
 												<div class="adaptive-grid sectioned packed">
 													{#each group.presets as p (p.path)}

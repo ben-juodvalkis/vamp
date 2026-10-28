@@ -86,6 +86,8 @@ export function pathForCrumb(path: string[], index: number): string[] {
 export interface PresetGroup<P extends { path: string }> {
 	folder: string | null;
 	presets: P[];
+	/** A section of one instrument type (`folder` names it), not a subfolder: its header wears the type's glyph. */
+	instrument?: boolean;
 	/** A later row of a section split across rows (`packFillSections`): drawn without its header. */
 	continued?: boolean;
 }
@@ -207,9 +209,43 @@ export function groupPresetsByInstrument<P extends { path: string; device?: stri
 	if (byType.size < 2) return null;
 	const groups: PresetGroup<P>[] = [...byType.entries()]
 		.sort(([a, pa], [b, pb]) => pb.length - pa.length || a.localeCompare(b, undefined, { sensitivity: 'base' }))
-		.map(([folder, list]) => ({ folder, presets: list }));
-	if (untyped.length) groups.push({ folder: 'Other', presets: untyped });
+		.map(([folder, list]) => ({ folder, presets: list, instrument: true }));
+	if (untyped.length) groups.push({ folder: 'Other', presets: untyped, instrument: true });
 	return groups;
+}
+
+/**
+ * A level of presets in its sections (user, 2026-10-28: "sort by subfolders,
+ * then only further sort by inst type at the edge leaf"). A flattened level's
+ * subfolders stay its sections (`groupPresetsByOrigin`), each with its
+ * presets ordered by instrument type — the level's most common type first,
+ * untyped last, name order within a type — so a subfolder's colors cluster.
+ * The presets sitting in the level itself are grouped by type when they mix
+ * types (`groupPresetsByInstrument`), and lead as the loose bucket did.
+ */
+export function groupPresetsForLevel<P extends { path: string; device?: string; plugin?: string }>(
+	presets: P[],
+	currentPath: string[]
+): PresetGroup<P>[] {
+	const origin = groupPresetsByOrigin(presets, currentPath);
+	const counts = new Map<string, number>();
+	for (const p of presets) {
+		const type = instrumentTypeOf(p);
+		if (type !== null) counts.set(type, (counts.get(type) ?? 0) + 1);
+	}
+	const rank = new Map(
+		[...counts.entries()]
+			.sort(([a, na], [b, nb]) => nb - na || a.localeCompare(b, undefined, { sensitivity: 'base' }))
+			.map(([type], i) => [type, i])
+	);
+	const rankOf = (p: P) => rank.get(instrumentTypeOf(p) ?? '') ?? rank.size;
+	const out: PresetGroup<P>[] = [];
+	for (const g of origin) {
+		if (g.folder === null) out.push(...(groupPresetsByInstrument(g.presets) ?? [g]));
+		// Array.prototype.sort is stable: name order holds within a type.
+		else out.push({ ...g, presets: [...g.presets].sort((a, b) => rankOf(a) - rankOf(b)) });
+	}
+	return out;
 }
 
 // ── Packing small sections into shared rows (ADR-409) ───────────────────────

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { groupPresetsByInstrument,
+import { groupPresetsByInstrument, groupPresetsForLevel,
 	screenKind,
 	buildCrumbs,
 	pathForCrumb,
@@ -862,5 +862,28 @@ describe('groupPresetsByInstrument', () => {
 	it('leaves a level of one type (or none) to its origin sections', () => {
 		expect(groupPresetsByInstrument([p('a', 'Operator'), p('b', 'Operator'), p('c')])).toBeNull();
 		expect(groupPresetsByInstrument([p('a'), p('b')])).toBeNull();
+	});
+});
+
+describe('groupPresetsForLevel', () => {
+	const p = (path: string, device?: string) => ({ path, name: path.split('/').pop()!.replace('.adv', ''), device });
+	it('keeps flattened subfolders as sections, their presets ordered by type, and groups the level\'s own presets by type', () => {
+		const groups = groupPresetsForLevel(
+			[
+				p('Synth/Ableton/Brass/A.adv', 'Wavetable'),
+				p('Synth/Ableton/Brass/B.adv', 'Operator'),
+				p('Synth/Ableton/Brass/C.adv', 'Operator'),
+				p('Synth/Ableton/Loose 1.adv', 'Operator'),
+				p('Synth/Ableton/Loose 2.adv', 'Drift')
+			],
+			['Ableton']
+		);
+		expect(groups.map((g) => [g.folder, !!g.instrument, g.presets.map((x) => x.name)])).toEqual([
+			// One each: a tie, so by name.
+			['Drift', true, ['Loose 2']],
+			['Operator', true, ['Loose 1']],
+			// The level's most common type (Operator, 3) first.
+			['Brass', false, ['B', 'C', 'A']]
+		]);
 	});
 });
