@@ -32,7 +32,7 @@ unrelated to what you're testing.
 - [ ] Live opens; the **Looping** control surface is selected in Preferences → Link/MIDI (load it manually if needed)
 - [ ] `Heartbeat probe from … args=()` appears in Live's `Log.txt` within ~5 s of the surface loading
 - [ ] Browser at `http://localhost:3000` shows the connection badge as connected
-- [ ] iPad at `http://192.168.100.1:3000` (or `bj.local:3000`) connects within ~5 s
+- [ ] iPad at `http://<the Mac's name>.local:3000` connects within ~5 s (the fixed `192.168.100.1` is gone: macOS keeps the cable's network private, ADR-488)
 - [ ] DevTools console shows `V6 session system initialized`
 
 **Exit criterion:** all four endpoints (bridge, interface, Mac browser, iPad) reach a steady state with no `WARN`/`ERROR` lines in `logs/bridge.log`.
@@ -439,6 +439,36 @@ must clear on its own after ~6 s:
       ~24 pt less height, and the pill is full-height by design.
 
 ---
+
+## 15 · Vamp for Mac, Vamp for iPad, pairing (ADR-488, ADR-490, ADR-491)
+
+Built 2026-10-27 on `bj/native-ipad-app`; none of it has run on the iPad
+itself. Needs a full Live restart first (the status-bar line), and the
+iPad with Developer Mode on (Settings → Privacy & Security), plugged in.
+
+**Vamp for Mac (`npm run install-mac-app`, then open Vamp from Launchpad)**
+- [ ] The click starts Vamp: menu says "Vamp: starting…", then "running" (~45 s, less with no code changes); Live, the blocker and the Max patch open; no Safari windows
+- [ ] Menu → Copy iPad Address pastes `http://<name>.local:8889`; Show Log opens `logs/vamp-mac.log`
+- [ ] Restart Vamp: back to "running"; the iPad reconnects by itself
+- [ ] Quit (stops Vamp): nothing left on 8081 / 8889 / 8890, Live and Max still open
+- [ ] Open at Login: on, log out and in, Vamp starts by itself
+- [ ] `npm run ipad` in a Terminal while the app is open: the menu says "running from npm run ipad" and offers no Stop
+
+**Vamp for iPad (Xcode: pair the iPad, run the VampPad scheme on it)**
+- [ ] Opens to "Waiting for the Mac" with no cable; plug in → the interface appears with no URL typed
+- [ ] Unplug ~10 s, replug: "Reconnecting to the Mac…", then back, quickly (the device channel was up 2 s after a replug in testing; the network link took 20 s)
+- [ ] Load presets for a minute: no drop
+- [ ] The iPad never dims or locks while the app is in front
+- [ ] Menu bar on the Mac: "iPad: connected by cable" / "plugged in, Vamp not open" / "not plugged in" as you go
+
+**Pairing (a phone, or Safari on the iPad)**
+- [ ] Mac browser and Vamp for iPad: no pairing screen, ever
+- [ ] Safari on the phone over Wi-Fi: "Pair this device" → Ask the Mac → Live's status bar shows "Vamp: … wants to connect. Code ……" and the trusted screens show an Allow banner
+- [ ] Typing the code pairs it (page reloads into Vamp); a wrong code says how many tries are left
+- [ ] Allow on the cabled iPad pairs a second device without the code; Ignore refuses it; either clears the status bar line
+- [ ] Settings → Connection → Devices lists the phone; Forget it, reload the phone: it asks again
+- [ ] Safari on the iPad home-screen app pairs once and stays paired across a relaunch (the 7-day cap on script cookies should not apply: to confirm)
+- [ ] The TCP leg (ADR-489) after a set load: no `no accept — resending hello` in `logs/bridge.log`
 
 ## When you don't need the full pass
 
