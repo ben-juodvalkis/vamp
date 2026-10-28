@@ -1,0 +1,5 @@
+// Shared by every target. A Mac's own signing team lives in Local.xcconfig
+// beside this file (gitignored): DEVELOPMENT_TEAM = <your team id>. Without
+// it the Mac app and the tests still build (signed to run locally); the iPad
+// app needs a team to install on a device.
+#include? "Local.xcconfig"

@@ -1,0 +1,339 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		00B05AB09DDDA5C05A280322 /* Splice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DED6AF0A86F7612C3229FAC /* Splice.swift */; };
+		08321E0D3BA1B2A0A74C1CCF /* LinkProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E71B2FC18F7AE4133AC5215 /* LinkProtocol.swift */; };
+		08F59359E9DB4DE67CFCD360 /* LinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E205C25310E6D86E3D913802 /* LinkTests.swift */; };
+		2E6DFB63CBCF1533389C13D0 /* LinkServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E6A855106B6835A56B03903 /* LinkServer.swift */; };
+		30A603AF85E94CB27CCEF75E /* UsbMux.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A274A47EF8CB1FB15CE2231 /* UsbMux.swift */; };
+		B8938D47541BF7D3E76C86FC /* LinkClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B83BED9048B5F511FD8DC9C /* LinkClient.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0A274A47EF8CB1FB15CE2231 /* UsbMux.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsbMux.swift; sourceTree = "<group>"; };
+		1DED6AF0A86F7612C3229FAC /* Splice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Splice.swift; sourceTree = "<group>"; };
+		2947AB166D4E2928A980A4A7 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+		29D36ED924CFB01F92EEF64D /* VampLinkTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VampLinkTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3E6A855106B6835A56B03903 /* LinkServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkServer.swift; sourceTree = "<group>"; };
+		3E71B2FC18F7AE4133AC5215 /* LinkProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkProtocol.swift; sourceTree = "<group>"; };
+		7B83BED9048B5F511FD8DC9C /* LinkClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkClient.swift; sourceTree = "<group>"; };
+		E205C25310E6D86E3D913802 /* LinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		5DE81232C7919490CED3DFD8 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				2947AB166D4E2928A980A4A7 /* Base.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		66538A1F2123FFFD911326DC /* Mac */ = {
+			isa = PBXGroup;
+			children = (
+				7B83BED9048B5F511FD8DC9C /* LinkClient.swift */,
+				0A274A47EF8CB1FB15CE2231 /* UsbMux.swift */,
+			);
+			path = Mac;
+			sourceTree = "<group>";
+		};
+		A8E03AE9981FCFD5DDBFD8DC /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				3E71B2FC18F7AE4133AC5215 /* LinkProtocol.swift */,
+				3E6A855106B6835A56B03903 /* LinkServer.swift */,
+				1DED6AF0A86F7612C3229FAC /* Splice.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		B7C414E7FA5A25E20D5C2D1D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				29D36ED924CFB01F92EEF64D /* VampLinkTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		DF0751AB5A60846693FEF234 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				E205C25310E6D86E3D913802 /* LinkTests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		E0EFC01E22F19B3FB8D13E03 = {
+			isa = PBXGroup;
+			children = (
+				5DE81232C7919490CED3DFD8 /* Config */,
+				66538A1F2123FFFD911326DC /* Mac */,
+				A8E03AE9981FCFD5DDBFD8DC /* Shared */,
+				DF0751AB5A60846693FEF234 /* Tests */,
+				B7C414E7FA5A25E20D5C2D1D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		3E8CE78A1F6A0D741BD78E87 /* VampLinkTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DA9AF7521F2F7EE297F31065 /* Build configuration list for PBXNativeTarget "VampLinkTests" */;
+			buildPhases = (
+				18FE310D12B16C8CA0ED52A0 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = VampLinkTests;
+			packageProductDependencies = (
+			);
+			productName = VampLinkTests;
+			productReference = 29D36ED924CFB01F92EEF64D /* VampLinkTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E1A97F58F7EC55843E68C0B9 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					3E8CE78A1F6A0D741BD78E87 = {
+						ProvisioningStyle = Manual;
+					};
+				};
+			};
+			buildConfigurationList = 8BDE60C4D258F406313825C0 /* Build configuration list for PBXProject "Vamp" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = E0EFC01E22F19B3FB8D13E03;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = B7C414E7FA5A25E20D5C2D1D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				3E8CE78A1F6A0D741BD78E87 /* VampLinkTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		18FE310D12B16C8CA0ED52A0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B8938D47541BF7D3E76C86FC /* LinkClient.swift in Sources */,
+				08321E0D3BA1B2A0A74C1CCF /* LinkProtocol.swift in Sources */,
+				2E6DFB63CBCF1533389C13D0 /* LinkServer.swift in Sources */,
+				08F59359E9DB4DE67CFCD360 /* LinkTests.swift in Sources */,
+				00B05AB09DDDA5C05A280322 /* Splice.swift in Sources */,
+				30A603AF85E94CB27CCEF75E /* UsbMux.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		0BD370A2435C7A6EF01CD2C0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2947AB166D4E2928A980A4A7 /* Base.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		6FF4C2D6926BBB52A2A9CDD0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2947AB166D4E2928A980A4A7 /* Base.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		B61C8587F3882DD823458E1E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.benjuodvalkis.vamp.VampLinkTests;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		F31565F0EC658F19D8413BAC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.benjuodvalkis.vamp.VampLinkTests;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		8BDE60C4D258F406313825C0 /* Build configuration list for PBXProject "Vamp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0BD370A2435C7A6EF01CD2C0 /* Debug */,
+				6FF4C2D6926BBB52A2A9CDD0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		DA9AF7521F2F7EE297F31065 /* Build configuration list for PBXNativeTarget "VampLinkTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B61C8587F3882DD823458E1E /* Debug */,
+				F31565F0EC658F19D8413BAC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = E1A97F58F7EC55843E68C0B9 /* Project object */;
+}
