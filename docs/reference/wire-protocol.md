@@ -1071,12 +1071,14 @@ aren't presence-gated.
 | ------------------------------------- | ------- | ------------------------------ | --------- |
 | `/bridge/ping`                        | Bridge→UI | `seq:int, ts:int`            | 5s heartbeat. UI swallows in its WS onmessage handler. |
 | `/looping/v3/bridge/heartbeat`        | Surf→UI | `seq:int, monoMs:int`          | 1 Hz surface-alive beacon. UI dispatches a `surface-heartbeat` window event. HealthMonitor watches for >3s gaps (`tick-stall`). |
-| `/looping/v3/server/heartbeat`        | Bridge→Surf | `seq:int, epochMs:int, mode:string?` | "The dev server is running" beacon, sent every `timing.serverPresence.heartbeatIntervalMs` (default 2s) while the bridge process is alive. Bridge-originated straight to the surface UDP port (no `backendScope` routing). The surface's `ServerPresenceComponent` treats a gap > `graceWindowMs` (default 6s) as "server gone" and gates performance-only behaviors (arm-follows-selection) off. Also refreshed on every handshake accept so set-load / Live-restart recovery is instant. The optional 3rd arg `mode` (`"ipad"`/`"dev"`, from `LOOPING_SERVER_MODE`) records which npm script started the bridge; on the first heartbeat carrying it, `is_ipad_present()` seeds the launch-mode default of the `auto_capture` toggle that gates the performance-capture behaviors (§2.12/§2.14). See §2.12 and §5.6. |
+| `/looping/v3/server/heartbeat`        | Bridge→Surf | `seq:int, epochMs:int, mode:string?` | "The dev server is running" beacon, sent every `timing.serverPresence.heartbeatIntervalMs` (default 2s) while the bridge process is alive. Bridge-originated straight to the surface (no `backendScope` routing): on the TCP leg while it is connected, UDP 11020 otherwise (ADR-489). The surface's `ServerPresenceComponent` treats a gap > `graceWindowMs` (default 6s) as "server gone" and gates performance-only behaviors (arm-follows-selection) off. Also refreshed on every handshake accept so set-load / Live-restart recovery is instant. The optional 3rd arg `mode` (`"ipad"`/`"dev"`, from `LOOPING_SERVER_MODE`) records which npm script started the bridge; on the first heartbeat carrying it, `is_ipad_present()` seeds the launch-mode default of the `auto_capture` toggle that gates the performance-capture behaviors (§2.12/§2.14). See §2.12 and §5.6. |
+| `/looping/v3/session/show_message`    | Bridge→Surf | `text:string` | **ADR-491.** A line in Live's status bar (`ControlSurface.show_message`, `StatusMessageComponent`): "Vamp: <name> (<address>) wants to connect. Code <code>" while a device is pairing, `""` to clear it once the request ends. Bridge-originated straight to the surface like the heartbeat; no UI sends it. One line, cut to 160 characters. A surface from before it logs "no handler" and shows nothing. |
 | `/looping/v3/surface/hello`           | Surf→UI | `surfaceInstanceId:string, protocolVersion:string, timestamp:int` | Fires once at every `ControlSurface.__init__`. UI uses instanceId mismatch to detect surface restart. See §5.6. |
-| `/bridge/server_mode`                 | Bridge→UI | `mode:string` | Launch mode (`"dev"`/`"ipad"`) announced to WS clients — the WebSocket-side counterpart of the UDP-only `/looping/v3/server/heartbeat` `mode` arg (which never reaches WS clients). Sent once per client on connect (`WebSocketServer.handleConnection`) and re-broadcast on the 5s ping cadence for self-healing. `mode` comes from `LOOPING_SERVER_MODE`, fixed for the bridge process lifetime. Consumed by the menu-bar utility (`owner/menubar`) for its status line; the web UI ignores it. |
+| `/bridge/server_mode`                 | Bridge→UI | `mode:string` | Launch mode (`"dev"`/`"ipad"`) announced to WS clients — the WebSocket-side counterpart of the surface-only `/looping/v3/server/heartbeat` `mode` arg (which never reaches WS clients). Sent once per client on connect (`WebSocketServer.handleConnection`) and re-broadcast on the 5s ping cadence for self-healing. `mode` comes from `LOOPING_SERVER_MODE`, fixed for the bridge process lifetime. Consumed by the menu-bar utility (`owner/apps (Vamp for Mac)`) for its status line; the web UI ignores it. |
 | `/bridge/ax_helper`                   | Bridge→UI | `state:string, detail:string` | **ADR-439.** The Looping AX Helper as the bridge sees it — the one process trusted with macOS Accessibility, dialed over its Unix socket (`axHelper.socketPath`). `state` is `ready`, `ax-untrusted` (the app has no Accessibility grant; `detail` names the System Settings switch) or `ax-helper-down` (no connection: not installed, not running, or restarting past a 1.5 s grace). Sent once per client on connect, on every change, and on the 5 s ping cadence. The same codes are the named errors every AX-driven reply carries (`/cmd/clip/reverse/ack [0, code, detail]`, Save As, similar-sound swap), so an AX control never silently does nothing. |
 | `/bridge/features`                    | Bridge→UI | `snapshot:string` (JSON) | **General-release audit §7b.** The bridge's feature switches, `{ <id>: { enabled, available, reason } }`, one entry per switch it knows (`totalmix`, `maxUtilityPatch`, `expressionPedal`, `menubar`, `axHelper`; `interface/bridge/utils/features.js`), plus `captureRecorder`, which is no switch: always enabled, available while the recorder device says hello (§2.15; `No recorder on Return A`, `Waiting for the recorder`), and it goes back too. `enabled` is `constants.features.<id>`, read once at bridge start — only an explicit `true` is on. `available` says what the feature drives has been seen since the bridge started (for `totalmix`: the mixer answered on either OSC controller) and never goes back; `reason` is a short why-not, written to be drawn in a control (`Waiting for TotalMix`, `TotalMix not answering`, `TotalMix config missing`, `AX helper not running`, `AX helper needs Accessibility`), empty when available or off. `axHelper` alone can go back: it tracks the helper's own state. Sent once per client on connect (ahead of auth, like `/bridge/connection_status`: which subsystems exist is layout, not the set), on every change, and on the 5 s ping cadence. The UI draws nothing for a feature until a snapshot names it (`bridgeStatus.feature()` reads an unnamed one as off), hides one that is off, and greys out one that is on but unavailable, with the reason. Outside v3 version negotiation like every `/bridge/*` frame, so no protocol bump. |
 | `/bridge/machine`                     | Bridge→UI | `snapshot:string` (JSON) | **2026-09-26 (onboarding.plan.md §3, §6.5).** The machine's values a client used to compile in: `{ paths: { instrumentsBase, m4lDevicesRoot }, totalmix: { minDb, maxDb, silenceDb } | null }`. `instrumentsBase` is what a preset path recorded before the Places is read against (`effectPresetsBase`, the folder the file tiles loaded from, left on 2026-10-26: every file tile names the Vamp Devices Place now), `m4lDevicesRoot` this checkout's `Vamp Devices` from the bridge's own location, `totalmix` the mixer's dB range (`osc.totalmix`) or null. Read once at bridge start; sent once per client on connect, after `/bridge/features`, and on the 5 s ping cadence. Until it lands the client's paths are empty and an FX tile's load answers `path-not-found`, as a missing preset always did. Outside v3 negotiation, so no protocol bump. |
+| `/bridge/pairing`                     | Bridge→UI | `event:string` (JSON) | **ADR-491.** Pairing news for the trusted screens' Allow / Ignore banner: `{type:'request', id, name, address}` when a device asks (never its code), `{type:'resolved', id, outcome}` when the request is approved, refused or expired, so every banner for it closes. Relayed from the interface server's POST to the bridge's loopback-only, secret-checked `/pairing` route (`handlers/pairingRelay.js`); sent to authenticated clients only. Outside v3 negotiation. |
 | `/cmd/clip/reverse`                   | UI→Bridge | `clipPath:string` | **ADR-368, rebuilt on ADR-439.** Reverse the focused Session audio clip. Live's LOM has no `Clip.reverse()`, so the bridge asks the Looping AX Helper to press Clip View's own Reverse button — the helper holds the one Accessibility grant, so this works whichever terminal started `npm run dev`. Bridge-terminated: never relayed to the surface. |
 | `/cmd/clip/reverse/ack`               | Bridge→UI | `ok:int(0\|1)[, code:string, detail:string]` | `[1]` on success. On failure **`[0, code, detail]`** with a named AX code — the same vocabulary `/bridge/ax_helper` publishes (`ax-helper-down`, `ax-untrusted`, `ax-no-main-window`, `ax-control-missing`, `ax-control-disabled`, `ax-timeout`, …). This replaced the osascript copy's `[0, stderr]` when `liveAxClick.js` was deleted; `clipReverseStore.isReversing` is held until this arrives, bounded by `axHelper.requestTimeoutMs` (20 s), not by an osascript timeout. |
 | `/bridge/client_log`                  | UI→Bridge | `level:string, message:string, meta:string` | Browser watchdog reports (visibility change, rAF stall, online/offline). Bridge mirrors into `logs/bridge.log`. |
@@ -1097,7 +1099,7 @@ The `auto_capture` toggle *defaults* to the launch mode — seeded to
 dev→off) — so out of the box these behaviors fire under `npm run ipad` and
 not `npm run dev`, exactly as before this toggle existed. But the toggle is
 now the sole gate and fully overridable: a `dev` session can force capture
-on, an `ipad` set can force it off (from the web UI or the `owner/menubar`
+on, an `ipad` set can force it off (from the web UI or the `owner/apps (Vamp for Mac)`
 utility). Cleanup on the stop edge is ownership-based, not gate-based — a
 take armed while the toggle was on is always disarmed and offered for save
 even if the toggle flips off mid-take.
@@ -1340,7 +1342,7 @@ have no value-write semantics and don't need this pattern; they fire
 and forget, with the surface emitting follow-up state changes that
 the UI absorbs through the normal handler path.
 
-## 4.9 Bridge↔surface transport (2026-08-31)
+## 4.9 Bridge↔surface transport (2026-08-31; bridge→surface on TCP, ADR-489)
 
 Two legs run side by side. **Which leg a message took is invisible to
 the UI** — same addresses, same args, same order — so this section is
@@ -1348,8 +1350,8 @@ about the bridge↔surface hop only and changes nothing above it.
 
 | Leg | Port | Carries |
 | --- | --- | --- |
-| UDP | 11020 surface-bound, 11021 bridge-bound | Everything, except as below. Fire-and-forget senders on ephemeral ports (Max probe drivers) require it. |
-| TCP | 11022, surface **listens** | `state/full/tree` only. Since 3.6.0 that message has **no UDP fallback** — with no peer connected it is not sent at all. |
+| UDP | 11020 surface-bound, 11021 bridge-bound | Surface → bridge: everything but `state/full/tree` and the replies to frames that came in on TCP. Bridge → surface: **only while the TCP leg is down** (ADR-489). Fire-and-forget senders on ephemeral ports (the Max patches, the probe drivers) always. |
+| TCP | 11022, surface **listens** | Surface → bridge: `state/full/tree`, which since 3.6.0 has **no UDP fallback** — with no peer connected it is not sent at all — and the replies to frames received on it. Bridge → surface: **everything, while connected** — UI writes, `hello`, `server/heartbeat`, the swap and Group hops (ADR-489). |
 
 Framing is `[4-byte big-endian payload length][OSC message bytes]` —
 the payload is exactly what the UDP leg already carries, so this is a
@@ -1371,20 +1373,42 @@ starting and the bridge dialling in. The `state/full/unchanged` marker
 is four small args and still rides UDP, so a client whose bridge has
 no TCP leg can still be told its tree is current.
 
-**The chunking protocol does not change.** Over TCP the chunk budget
-is effectively unlimited, so the bundle ships as `begin` + **one**
-chunk + `end` instead of `begin` + 99 + `end`. The UI needs no change
-at all: the reassembler already reads `totalChunks` off `begin` and
-concatenates however many arrive, so a one-chunk bundle is the
-degenerate case of the protocol it already speaks. The checksum is
-byte-identical over either leg.
+The wire is chosen per publish, so a peer that comes or goes changes
+the *next* bundle rather than half-committing the current one. (Before
+3.6.0 a publish with no peer fell back to a chunked UDP bundle; there
+is no such bundle any more.)
 
-**Falling back is normal, not an error.** With no TCP peer connected
-the surface emits the chunked UDP bundle exactly as it always has —
-which is what happens against a bridge that predates this leg, and in
-the window between Live starting and the bridge dialling in. The wire
-is chosen per publish, so a peer that comes or goes changes the *next*
-bundle rather than half-committing the current one.
+**Bridge → surface rides the stream (ADR-489, 2026-10-27).** The
+surface drains its UDP socket only from Live's pump, so a stalled tick
+(`tick-stall:pythonSurface`, 3–12 s measured) plus a full receive
+buffer lost datagrams — the handshake `hello` (§5.3a), a write, a swap
+hop — silently. A stream holds them, in order, until the pump runs. So
+while the TCP leg is connected the bridge sends **every** message on it
+(`interface/bridge/transport/SurfaceLink.js`), and UDP 11020 carries a
+bridge message only while the leg is down. Each message takes exactly
+one leg; nothing is queued for the stream while it is down, and a
+frame the stream refuses is not re-sent on UDP, where it would overtake
+the frames still queued. The bytes are the same on either leg (both
+encode with osc.js, `metadata: false`), and the surface dispatches a TCP
+frame through the UDP transport's own handler table and drain hooks,
+so a handler cannot tell which leg its message came in on. A tuple
+reply goes back on the leg the request came in on.
+
+**The bridge waits for the surface's word first.** A surface that routes
+its stream sends `/looping/v3/bridge/tcp_ready [1]` (Surf→Bridge, int)
+first on every connection; the bridge consumes it, never broadcasts it,
+and only then moves its messages onto the stream, until that connection
+drops. A surface from before ADR-489 accepts the connection, drops every
+frame on it and never sends the word, so a bridge restarted ahead of
+Live keeps reaching it over UDP.
+
+Two limits come with the stream. A surface that has stopped reading
+(a hung Live) gets frames dropped past 1 MiB queued in the bridge
+(`MAX_PENDING_OUT_BYTES`, counted as `droppedOut`) rather than a buffer
+that grows until the bridge dies. And the UDP fallback window after a
+Live restart or set load is cut short: any datagram from the surface
+kicks a redial at once (at most once a second) rather than waiting out
+the backoff.
 
 **Reconnect is the bridge's job.** UDP was connectionless, so a Live
 restart was invisible; TCP is not, so the bridge redials with backoff
@@ -1395,6 +1419,13 @@ separate connection that stays up throughout.
 
 The bridge binds `0.0.0.0:8081`. Before this, anything on the LAN that
 knew the port could drive Live and read the whole Set.
+
+Since 2026-10-27 a page reaches it on the page's own origin at
+`/bridge-socket` (`osc.webSocket.path`), which the interface server passes
+through to 8081 with the Origin header intact (ADR-488); other clients
+still dial 8081. The page holds its queued writes and its handshake hello
+until `/bridge/auth/result [1]`, since anything sent before it is refused,
+and it sends the proof only on the socket that was challenged.
 
 | Address | Dir | Args | Semantics |
 | --- | --- | --- | --- |
@@ -1440,7 +1471,7 @@ gate on and the default salt size and timeout.
 
 Clients that must authenticate: the web UI
 (`WebSocketConnection.ts`) and the Swift menu-bar app
-(`owner/menubar` — reads the secret file directly, since it runs on the
+(`owner/apps (Vamp for Mac)` — reads the secret file directly, since it runs on the
 same Mac). If auth is enabled and no secret can be established, the
 bridge logs an ERROR and runs **unauthenticated** rather than refusing
 every client — failing open is the deliberate choice for a performance
@@ -1538,13 +1569,17 @@ The surface mints a `sessionId` (UUID) at handshake. Useful for
 correlating logs across bridge / surface / UI. Not load-bearing for
 correctness.
 
-### 5.3a hello delivery is unreliable — the UI retries (ADR-418)
+### 5.3a hello delivery — the UI retries (ADR-418, ADR-489)
 
-`hello` does not ride the WebSocket end to end. The bridge relays it
-onto **UDP 11020**, which is unacknowledged, and the surface only
-drains that socket on a Live tick — `bridge.log` records
-`tick-stall:pythonSurface` gaps of 3–12s, during which arrivals can be
-lost to a full buffer.
+`hello` does not ride the WebSocket end to end. Until ADR-489 the
+bridge relayed it onto **UDP 11020**, which is unacknowledged, and the
+surface only drains that socket from Live's pump — `bridge.log`
+records `tick-stall:pythonSurface` gaps of 3–12s, during which
+arrivals can be lost to a full buffer. Since ADR-489 it rides the TCP
+leg (§4.9) whenever that is connected, and is not lost on the way in;
+the retry below stays for when the leg is down and the hello takes UDP,
+for a surface that is not running, and for an `accept` lost on its way
+back, which still rides UDP 11021.
 
 A lost `hello` used to be silent and permanent: no `accept`, so no
 `state/full` (§5.5), so no tracks, meters or playheads — while writes

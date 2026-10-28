@@ -1,9 +1,10 @@
 # Device Pairing
 
-**Designed 2026-09-30. The smaller fixes but the recorder's port are done the same day; pairing
-is not started.** What is exposed today, and why, is
-[../../../SECURITY.md](../../../SECURITY.md). This plan closes the main gap: a device on the same
-network can drive Live because `/api/ws-auth` signs the bridge's challenge for any caller.
+**Designed 2026-09-30; pairing built 2026-10-27 on `bj/native-ipad-app` (ADR-491), to be tried
+on the rig.** What is built: trust by address (the Mac) and by cookie (a paired device), the
+pairing screen, the code in Live's status bar, Allow and Ignore on trusted screens, the gate on
+every API route but pairing's own, and Settings → Connection → Devices (Forget, Forget all). The
+recorder's port is still open.
 
 **Sizes:** **S** is hours, **M** a day or two, **L** a project.
 
@@ -43,11 +44,17 @@ The page's HTML and scripts stay open: they hold nothing secret.
 ## Who is trusted
 
 1. **The Mac itself:** the caller's address is loopback or one of the Mac's own addresses.
-2. **The USB-C link:** the caller's address is on the link's subnet, `network.ipad.usbc` /24
-   (`192.168.100.0/24` by default). The Mac routes replies to that subnet down the cable, so a
-   device on Wi-Fi that gives itself such an address can't finish a connection. **To confirm on
-   the rig** from a second device. Link-local addresses (`169.254.x.x`, the cable before its
-   address is set by hand) are not trusted: Wi-Fi uses the same range when DHCP fails.
+2. **The cable:** Vamp for iPad (ADR-488). Its connections cross the cable through usbmux and
+   reach the page server from Vamp for Mac's relay on loopback, so they are case 1 with nothing
+   further to check, and nothing on a network can produce one. (Ben, 2026-10-27: "cable is
+   enough for trust"; Wi-Fi stays available when needed, through pairing.)
+
+   Safari over the cable is no longer recognizable by address. This rule trusted the link's
+   subnet, `network.ipad.usbc` /24 (`192.168.100.0/24`), but since 2026-10-27 macOS keeps the
+   iPad's USB network interface private: it cannot be given that address and self-assigns
+   `169.254.x.x`, the range Wi-Fi also falls back to, which is not trusted. Until the interface a
+   connection arrived on can be told apart (to measure), Safari over the cable pairs once like
+   Wi-Fi.
 3. **A paired device:** it sends a valid device cookie.
 4. **Anything else** gets the pairing screen.
 

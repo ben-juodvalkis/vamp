@@ -6,21 +6,24 @@ play safely, and what is coming.
 
 ## The short version
 
-- **Today, your network is trusted.** Anyone on the same network who can open the page can drive
-  your Live set, exactly as your iPad does.
-- **The USB-C link is private.** The cable is a network of two: only the iPad on the other end can
-  reach the page. Play over it whenever you can.
-- **On Wi-Fi, use a network you trust:** your own, at home. Not venue, hotel or festival Wi-Fi.
-- **Device pairing is planned.** A device on Wi-Fi will have to be approved once before it can
-  play. The cable and the Mac itself won't need it. The design is
+- **A device has to be approved once before it can play** (pairing, ADR-491). It asks; the Mac
+  shows a 6-digit code in Live's status bar and an **Allow** banner on screens already connected;
+  the code typed on the device, or Allow, pairs it, and it is remembered. Settings → Connection →
+  Devices forgets one. `osc.webSocket.auth.pairing: false` turns pairing off.
+- **The Mac itself and Vamp for iPad on the USB cable never pair.** The app reaches the Mac through
+  Apple's device channel over the cable, which nothing on a network can. Play over it whenever you
+  can. Safari over the cable pairs once, like Wi-Fi: its link can't be told from Wi-Fi by address.
+- **On Wi-Fi, prefer a network you trust.** The page is plain HTTP, so someone who can watch the
+  network's traffic could copy a paired device's cookie. Pairing stops anyone who merely opens the
+  page, not that. The design is
   [docs/plans/general-release/security.plan.md](docs/plans/general-release/security.plan.md).
 
 ## What the network can reach today
 
 | Port | What | Who can use it |
 |---|---|---|
-| 8889 (`npm run ipad`), 3000 (`npm run dev`) | The web page and its API | Anyone who can reach the Mac |
-| 8081 | The bridge's WebSocket, which carries every command to Live | Anyone who can load the page (below) |
+| 8889 (`npm run ipad`), 3000 (`npm run dev`) | The web page (anyone) and its API (the Mac and paired devices) | The page: anyone who can reach the Mac |
+| 8081 | The bridge's WebSocket, which carries every command to Live | The Mac and paired devices (below) |
 | 11016 (UDP) | Vamp-Recorder's control port, when the device is in your set | Anyone who can reach the Mac |
 
 Every other port Vamp opens listens on the Mac only (`127.0.0.1`).
@@ -29,9 +32,9 @@ Every other port Vamp opens listens on the Mac only (`127.0.0.1`).
 **Why the WebSocket's password doesn't stop a stranger.** The bridge challenges every
 connection with a fresh random value and accepts only an answer signed with a secret that
 never crosses the network (`interface/bridge/utils/wsSecret.js`). But the page has to get that
-answer from somewhere, and it asks the web server (`/api/ws-auth`), which signs for any caller.
-So the check keeps out stray tabs, port scanners and anything that isn't Vamp, but not a person
-who opens the page. The bridge also refuses a browser page served from any other website, so a
+answer from somewhere, and it asks the web server (`/api/ws-auth`), which since pairing (ADR-491)
+signs only for the Mac itself and paired devices. An unpaired device gets the pairing screen
+instead, and a 401 from every API route but pairing's own. The bridge also refuses a browser page served from any other website, so a
 site you visit can't reach it through your browser.
 
 **Vamp-Recorder's port** is a Max `udpreceive`, which can't be limited to the Mac. A device on

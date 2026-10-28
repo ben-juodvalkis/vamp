@@ -77,18 +77,29 @@ const CLIENT_SOURCE = join(
 	'connection',
 	'WebSocketConnection.ts'
 );
-const CONFIG_WS_PORT = JSON.parse(
+const CONFIG_WS = JSON.parse(
 	readFileSync(join(REPO_ROOT, 'config', 'constants.json'), 'utf8')
-).osc.webSocket.port;
-const INLINED_WS_PORT = (() => {
+).osc.webSocket;
+const CONFIG_WS_PORT = CONFIG_WS.port;
+const INLINED_WS = (() => {
 	try {
-		const m = /webSocket:\s*\{\s*port:\s*(\d+)\s*\}/.exec(readFileSync(CLIENT_SOURCE, 'utf8'));
-		return m ? Number(m[1]) : null;
+		const m = /webSocket:\s*\{\s*port:\s*(\d+)(?:,\s*path:\s*'([^']+)')?/.exec(
+			readFileSync(CLIENT_SOURCE, 'utf8')
+		);
+		return m ? { port: Number(m[1]), path: m[2] ?? null } : null;
 	} catch {
 		return null;
 	}
 })();
+const INLINED_WS_PORT = INLINED_WS?.port ?? null;
 export const CLIENT_WS_PORT = INLINED_WS_PORT ?? CONFIG_WS_PORT;
+/**
+ * The path a page dials on its own origin, which the dev server passes
+ * through to whatever holds the bridge port. The harness routes it to the
+ * mock as well as the port, or a page would reach the live set through
+ * the dev server's proxy.
+ */
+export const CLIENT_WS_PATH = INLINED_WS?.path ?? CONFIG_WS.path;
 
 /**
  * Is something already listening on `port`?
@@ -176,7 +187,7 @@ export function assertMockPort(harness = 'shot') {
 				`       — falling back to config/constants.json (:${CONFIG_WS_PORT}). If that block was\n` +
 				'       reshaped, fix the regex here: the harness routes the page by this port.'
 		);
-	} else if (INLINED_WS_PORT !== CONFIG_WS_PORT) {
+	} else if (INLINED_WS_PORT !== CONFIG_WS_PORT || CLIENT_WS_PATH !== CONFIG_WS.path) {
 		// Neither copy can be trusted while they disagree, and the failure this
 		// prevents is a capture of the live set rather than the scene.
 		console.error(

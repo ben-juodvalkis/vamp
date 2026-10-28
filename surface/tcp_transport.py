@@ -101,6 +101,13 @@ logger = logging.getLogger("looping")
 _HEADER = struct.Struct(">I")
 HEADER_BYTES = _HEADER.size
 
+#: Said first on every accepted connection by a transport that routes its
+#: inbound frames (ADR-489): the bridge moves its traffic onto the stream
+#: only once it hears this. A surface from before ADR-489 has no router,
+#: drops whatever arrives on the stream and never says it, so a bridge
+#: restarted ahead of Live keeps sending that surface UDP.
+TCP_READY_ADDRESS = "/looping/v3/bridge/tcp_ready"
+
 #: Reject an inbound frame claiming to be larger than this.
 #:
 #: A corrupt or hostile length prefix would otherwise have us buffer
@@ -131,11 +138,21 @@ class TCPTransport:
     Args:
         local_addr: ``(host, port)`` to listen on.
         name: Log-prefix string. Defaults to ``"tcp"``.
+        router: Optional transport whose handlers and drain hooks
+            inbound frames go through — ``OSCTransport``'s
+            ``dispatch`` / ``run_drain_hooks``. With one, this leg's
+            own ``add_handler`` table is unused.
     """
 
-    def __init__(self, local_addr, name="tcp", on_connect=None):
+    def __init__(self, local_addr, name="tcp", on_connect=None, router=None):
         self._local_addr = local_addr
         self._name = name
+        # The bridge sends every message over this leg while it is
+        # connected (ADR-489), so inbound frames must reach the same
+        # handlers a datagram on the UDP port does — and the same drain
+        # hooks, or a ``property/set`` coalesced by the drum fan-out
+        # would sit queued until some datagram happened to arrive.
+        self._router = router
         # Fired once per accepted peer, after the connection is live.
         #
         # This is what lets a stream-only publisher be safe. Over UDP a
@@ -324,6 +341,8 @@ class TCPTransport:
         try:
             self._accept_pending()
             count = self._read_and_dispatch()
+            if count and self._router is not None:
+                self._router.run_drain_hooks()
             # Flush last: a handler may have queued a reply, and this
             # gets it onto the wire in the same pump rather than the
             # next one.
@@ -368,6 +387,9 @@ class TCPTransport:
             self._outbox = bytearray()
             self._connects += 1
             logger.info("%s peer connected: %s", self._name, peer)
+            # Ahead of the hook, so the word precedes the republished tree.
+            if self._router is not None:
+                self.send(TCP_READY_ADDRESS, (1,))
             if self._on_connect is not None:
                 try:
                     self._on_connect()
@@ -463,6 +485,14 @@ class TCPTransport:
             return
 
         perf_profiler.record_inbound(address)
+
+        if self._router is not None:
+            # A reply goes back on the stream it came in on, which the
+            # bridge reads into the same place as a UDP reply.
+            reply = self._router.dispatch(address, args, self._peer)
+            if reply is not None:
+                self.send(address, reply)
+            return
 
         handler = self._handlers.get(address)
         if handler is None:

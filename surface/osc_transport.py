@@ -205,11 +205,18 @@ class OSCTransport:
             return 0
         try:
             count = self._drain()
-            if count and self._drain_hooks:
-                self._run_drain_hooks()
+            if count:
+                self.run_drain_hooks()
             return count
         finally:
             self._drain_lock.release()
+
+    def run_drain_hooks(self):
+        """Run every drain hook once. Called at the end of a pass that
+        dispatched ≥1 message — this transport's own, or the TCP leg's,
+        which dispatches through this transport's handlers (ADR-489)."""
+        if self._drain_hooks:
+            self._run_drain_hooks()
 
     def _run_drain_hooks(self):
         for hook in self._drain_hooks:
@@ -278,13 +285,28 @@ class OSCTransport:
         # Inbound profile hook (no-op unless LOOPING_SURFACE_PROFILE=1).
         perf_profiler.record_inbound(address)
 
+        reply = self.dispatch(address, args, source_addr)
+        if reply is not None:
+            self.send(address, reply, remote_addr=source_addr)
+
+    def dispatch(self, address, args, source_addr):
+        """Run the handler for one decoded message; return its reply.
+
+        The one handler table on the surface. The TCP leg calls this
+        too (ADR-489): the bridge sends everything over the stream
+        while it is connected, so both legs must reach the same
+        handlers or an address registered here would go deaf the
+        moment the stream came up. Returns the handler's tuple, or
+        None for no reply, no handler, a raise, or a non-tuple return —
+        the caller sends the reply back on whichever leg it came in on.
+        """
         handler = self._handlers.get(address)
         if handler is None:
             logger.warning(
                 "%s no handler for %s (from %s)",
                 self._name, address, source_addr,
             )
-            return
+            return None
 
         try:
             reply = handler(args, source_addr)
@@ -296,17 +318,16 @@ class OSCTransport:
                 "%s handler for %s raised: %s\n%s",
                 self._name, address, e, traceback.format_exc(),
             )
-            return
+            return None
 
-        if reply is not None:
-            if not isinstance(reply, tuple):
-                logger.error(
-                    "%s handler for %s returned non-tuple reply %r; "
-                    "dropping (tuple required, use (x,) for 1-arg)",
-                    self._name, address, reply,
-                )
-                return
-            self.send(address, reply, remote_addr=source_addr)
+        if reply is not None and not isinstance(reply, tuple):
+            logger.error(
+                "%s handler for %s returned non-tuple reply %r; "
+                "dropping (tuple required, use (x,) for 1-arg)",
+                self._name, address, reply,
+            )
+            return None
+        return reply
 
     @property
     def drain_skips(self):

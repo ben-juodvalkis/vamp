@@ -16,16 +16,16 @@ iPad touch interface.
 
 ```
   ┌──────────────────────┐        WebSocket         ┌──────────────────────┐
-  │  Browser / iPad      │◀────── port 8081 ──────▶│  Enhanced OSC Bridge │
+  │  Browser / iPad      │◀── :8889/bridge-socket ─▶│  Enhanced OSC Bridge │
   │  SvelteKit UI        │                          │  (Node.js)           │
   └──────────────────────┘                          └──────────┬───────────┘
                                                                │
-                                                     UDP/OSC   │
+                                        OSC: TCP, UDP fallback │
                                                                ▼
   ┌──────────────────────┐                          ┌──────────────────────┐
   │  Ableton Live 12     │◀────── LOM (Python) ────│  Python Control      │
   │                      │                          │  Surface             │
-  │  - Python Remote     │                          │  port 11020/11021    │
+  │  - Python Remote     │                          │  ports 11020-11022   │
   │    Script slot       │                          │  (surface/)          │
   │  - Max Patches       │                          └──────────────────────┘
   │    (hardware I/O)    │
@@ -37,8 +37,9 @@ Four processes, one machine:
 1. **Browser / iPad** — SvelteKit app served from `interface/`. The
    user-facing surface; all UI state lives here.
 2. **Enhanced OSC Bridge** — Node.js process in `interface/bridge/`.
-   Translates WebSocket frames (browser) to UDP/OSC packets
-   (everything else). Pure router; no business logic.
+   Translates WebSocket frames (browser) to OSC: to the surface over
+   its TCP leg (UDP only while that is down, ADR-489), to everything
+   else over UDP. Pure router; no business logic.
 3. **Python Control Surface** — installed into Ableton's User
    Library as a Remote Script (see [setup.md](setup.md)). Runs
    inside Live; owns every LOM call on behalf of the UI. Source
@@ -80,12 +81,15 @@ layout (routes, stores, services, components).
 
 ### 2.2 The bridge
 
-- Serves a WebSocket on `osc.webSocket.port` (8081) for browser
-  clients.
+- Serves a WebSocket on `osc.webSocket.port` (8081). Pages reach it
+  through the interface server's pass-through at `osc.webSocket.path`
+  (`/bridge-socket`) on their own origin; other clients dial 8081.
 - Serves multiple UDP port pairs, one per backend. See the port
   map below.
 - Routes inbound OSC messages by address pattern to the right UDP
   port (see [`routing/messageRouter.js`](../../interface/bridge/routing/messageRouter.js)).
+  The surface's "port" is `transport/SurfaceLink.js`: the TCP leg (11022)
+  while it is connected, UDP 11020 only while it is not (ADR-489).
   The primary backend is the Python Control Surface; the others
   (MIDI converter, TotalMix, the Vamp-Recorder device) handle
   specialized traffic they own. An address no rule matches is logged
@@ -102,7 +106,10 @@ for file-level detail.
 ### 2.3 The Python Control Surface
 
 - Subclasses `ableton.v3.control_surface.ControlSurface` and binds
-  a UDP socket on `osc.pythonSurface.remotePort` (11020).
+  a UDP socket on `osc.pythonSurface.remotePort` (11020) and a TCP
+  listener on `osc.pythonSurface.tcpPort` (11022). The bridge sends
+  over TCP while it is connected; both legs dispatch through the one
+  handler table (ADR-489).
 - Drains its inbound socket on every Live tick via
   `schedule_message` — handlers run synchronously on the main
   thread, so LOM access is safe.
@@ -184,14 +191,15 @@ sub-second 7001 bootstrap below. The surface's own 11020 and 11022 bind
 
 | Send / Recv | Endpoint | Purpose |
 |---|---|---|
-| 11021 / 11020 | **Python Control Surface** | Primary backend. Bridge sends to 11020, surface replies to 11021. 11021 was the first port moved to `127.0.0.1` (2026-09-16): `session/save_as_request` is bridge-terminated straight into the AX helper, so a `0.0.0.0` bind let any LAN host drive Live and Accessibility with one datagram. |
+| 11021 / 11020 | **Python Control Surface** | Primary backend. Surface replies to 11021; the bridge sends to 11020 only while the TCP leg below is down (ADR-489), and the Max patches and probe drivers send here always. 11021 was the first port moved to `127.0.0.1` (2026-09-16): `session/save_as_request` is bridge-terminated straight into the AX helper, so a `0.0.0.0` bind let any LAN host drive Live and Accessibility with one datagram. |
+| 11022 (TCP) | **Python Control Surface**, stream | The surface listens; the bridge dials and redials after a Live restart (`SurfaceTcpClient.js`), and any datagram from the surface kicks a redial at once. Length-prefixed OSC both ways. Surface → bridge it carries `state/full/tree` (its only wire since 3.6.0) and the replies to frames that came in on it; bridge → surface it carries **every** message while connected — UI writes, the hello, the server heartbeat, the swap and Group hops (ADR-489). |
 | 7003 / 9003 | TotalMix FX (Global OSC) | **Only while `features.totalmix` is on** — true on the rig; off, the bridge binds none of the three TotalMix pairs, runs no bootstrap and reads no `osc.totalmix*` block (general-release audit §7b, `docs/reference/toggles.md`). **The bridge now talks to the mixer directly** (ADR-423), on OSC remote controller 3 in Global OSC mode; controller 1 keeps its legacy configuration so the cutover is reversible by one dropdown. Bridge → 7003 writes, mixer → 9003 changes plus an 811-address dump when TotalMix enables the controller. Every value is **dB**. Requires TotalMix FX 2.10+. ⚠️ There is no read verb, and an argument-less message is a *write of 1.0*, not a query. |
 | 7002 / 7001 | TotalMix FX (legacy) | Borrowed for well under a second at bridge startup and then released, to seed the level cache — Global OSC cannot be asked for current state and its dump fires on TotalMix's schedule, not the bridge's. A busy port degrades to an empty cache rather than failing. The one bridge UDP socket on all interfaces: TotalMix's controller 1 sends to `looping-studio-2.local`, which resolves to the LAN address as well as loopback. |
 | 11018 / 11019 | TotalMix M4L device | Bridge ↔ the Max for Live monitor device. The device sends `/totalmix/hello` on load and receives the cached levels back; its `live.gain~` faders and the wire both carry dB. |
 | 11017 / 11016 | Looping Recorder | Bridge ↔ the `Vamp-Recorder` M4L capture device. Opened, routed and scope-mapped by the bridge (`enhanced-osc-bridge.js:128`, `WebSocketServer.js:348`). |
 | 11030 (output only) | **Permute mute gate** → Max | **Not a bridge port.** The surface sends `/looping/permute/gate <trackIndex> <open>` from its own socket straight to a `udpreceive` inside a Max device on that track — the outbound twin of the foot-trigger row below, and the only wire in this table the bridge never sees. It exists so a device can gate **what it plays** instead of the surface writing a parameter, which costs one Live undo step per step transition. Receivers fail **open** after ~2.5 s of silence. Sole receiver today: the `Skaka Metronome Picker` inside the Skaka Metronome Rack. |
 | 11010 | Foot Trigger (input only) | Legacy/reserved. The Max foot chain fires straight at 11020; the USB-direct path (ADR-422) uses no OSC port at all — the pedal CCs arrive on the surface's MIDI input. |
-| 8081 | WebSocket | Browser clients. |
+| 8081 | WebSocket | The bridge. Pages reach it through the interface server, on their own origin at `osc.webSocket.path` (`/bridge-socket`), which `vite dev` (3000) and `vite preview` (8889) pass through here, so the iPad has one address and one port (2026-10-27). The menu-bar app and the perf and shot scripts dial 8081 directly. |
 | — (Unix socket) | Looping AX Helper | `axHelper.socketPath` (`~/Library/Application Support/Looping/ax-helper.sock`), owner-only. The bridge dials it; one JSON line each way (ADR-439). Deliberately not a TCP port: whoever can connect can press anything in Live. |
 | 3000 | HTTP (dev) | SvelteKit dev server. |
 
@@ -209,18 +217,18 @@ every layer:
     │   /looping/v3/param/set [path="tracks/0/devices/1/params/2",
     │                          value=0.3, generation=7]
     ▼
- WebSocket (port 8081)
+ WebSocket (the page's own port, /bridge-socket → the bridge's 8081)
     │
     ▼
  Bridge: routing/messageRouter.js
     │   - backendScope matches /looping/v3/* → 'pythonSurface'
     │
     ▼
- UDP to port 11020
+ TCP to port 11022 (UDP 11020 only while the stream is down)
     │
     ▼
- Python surface: LoopingSurface._tick
-    │   - drains socket, dispatches by address
+ Python surface: the drain pump (FastDrainPump, ~93 Hz)
+    │   - drains both legs, dispatches by address
     │
     ▼
  DevicesComponent.handle_set_param_v3
@@ -322,6 +330,7 @@ LoopingSurface.__init__
     │   1. super().__init__ with a minimal Specification
     │      (empty ElementsBase — we're headless OSC-only)
     │   2. Load constants.json; bind UDP on pythonSurface.remotePort
+    │      and the TCP listener on pythonSurface.tcpPort
     │   3. Construct components in dependency order:
     │      transport → Session → SessionSettings → ServerPresence →
     │      PerformanceCapture → Devices → Generation →
@@ -377,14 +386,21 @@ Reconnect is just another handshake — the second `accept` produces
 a second `state/full`. The UI does **not** issue `/state/resync`
 on reconnect; accept already brought the tree.
 
-**The hello is retried (ADR-418).** It crosses an unacknowledged UDP
-hop to reach the surface, and the surface drains that socket only on a
-Live tick — so a tick stall plus a full buffer loses it. A lost hello
-means no accept, so no `state/full`, so no tracks / meters / playheads,
-while writes keep working (fire-and-forget). The UI therefore resends
-`hello` every 2s until accepted, bounded at 8 tries. Both sides must
-tolerate the repeat: a client may see several accepts, and the surface
-several hellos from one client.
+**The hello is retried (ADR-418).** It used to cross an unacknowledged
+UDP hop to reach the surface, which drains that socket only from Live's
+pump — so a tick stall plus a full buffer lost it. A lost hello means
+no accept, so no `state/full`, so no tracks / meters / playheads, while
+writes keep working (fire-and-forget). The UI therefore resends `hello`
+every 2s until accepted, bounded at 8 tries. Both sides must tolerate
+the repeat: a client may see several accepts, and the surface several
+hellos from one client.
+
+**Since ADR-489 the hello rides the TCP leg**, ordered and held through
+a stall, whenever the bridge has it — so while it is up a hello is not
+lost on the way in. The retry stays, for what is left: the stream is
+down (Live closed, a set loading, the second before the redial lands)
+and the hello takes UDP; the surface is not running; or the accept,
+which still comes back over UDP 11021, is lost on the way out.
 
 **Accepts are broadcast.** The bridge routes by address, and the
 surface's reply carries no client identity, so every accept reaches
@@ -471,7 +487,7 @@ alone (ADR-418):
 
 | Log signal | Cause |
 |---|---|
-| no `handshake: accepted`, repeated `no accept — resending hello` | the hello is being lost on the UDP hop |
+| no `handshake: accepted`, repeated `no accept — resending hello` | no surface is answering: with `Surface TCP status connected` in the log the hello reached a surface that is not processing (a stalled tick) or its accept was lost on the UDP way back; with the stream down it may be lost on the UDP way in (ADR-489) |
 | `reactivity-stall` (+ a preceding `uncaught-error`) | an error escaped a Svelte effect and wedged the effect scheduler |
 | `boundary-error` | a `<svelte:boundary>` contained a render error — that subtree degraded, the app kept running (ADR-419) |
 
@@ -515,7 +531,7 @@ See [wire-protocol.md §8.6](wire-protocol.md#86-surface-instance-advertisement-
 | Concern | Lives in |
 |---|---|
 | User gestures, rendering, normalized UI state | `interface/src/` (SvelteKit, Svelte 5 runes) |
-| WebSocket↔UDP routing, liveness | `interface/bridge/` (Node.js) |
+| WebSocket↔OSC routing (TCP to the surface, UDP), liveness | `interface/bridge/` (Node.js) |
 | Every LOM read, listener, write | `surface/` (Python Remote Script) |
 | Hardware foot-switch + MIDI remap | `owner/Max Patches/` (Max v8 JavaScript) |
 | Single source of truth for ports, paths, timing | `config/constants.json`, read at run time by server modules (`$lib/server/runtimeConfig.ts`) |
@@ -524,8 +540,8 @@ See [wire-protocol.md §8.6](wire-protocol.md#86-surface-instance-advertisement-
 
 ## 9. Next
 
-- [wire-protocol.md](wire-protocol.md) — the contract on the UDP
-  and WebSocket wire.
+- [wire-protocol.md](wire-protocol.md) — the contract on the OSC
+  (TCP and UDP) and WebSocket wire.
 - [ui-architecture.md](ui-architecture.md) — how the SvelteKit
   side is organized.
 - [live-api-measurements.md](live-api-measurements.md): what the Live

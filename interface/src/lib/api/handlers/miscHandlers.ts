@@ -41,6 +41,14 @@ export function handleBridgeMessage(address: string, args: OSCArg[]): void {
 		});
 		return;
 	}
+	if (address === '/bridge/pairing') {
+		// One JSON argument: a device asking to pair, or how a request
+		// ended (ADR-491). Sent to trusted screens only.
+		import('$lib/stores/pairing.svelte').then(({ pairingStore }) => {
+			pairingStore.onBridgeMessage(String(args[0] ?? ''));
+		});
+		return;
+	}
 	if (address === '/bridge/connection_status') {
 		import('$lib/stores/bridgeStatus.svelte').then(({ bridgeStatus }) => {
 			bridgeStatus.updateFromBridge(String(args[0] ?? 'unknown'));

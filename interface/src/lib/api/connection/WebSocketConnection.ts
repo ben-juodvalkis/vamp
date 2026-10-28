@@ -20,7 +20,7 @@ import type { OSCArg } from '$lib/types/osc';
 // See: ADR-143, documentation/current/websocket-rsv1-issue.md
 const constants = {
 	osc: {
-		webSocket: { port: 8081 },
+		webSocket: { port: 8081, path: '/bridge-socket' },
 		messageQueue: { maxSize: 100, timeout: 10000 },
 		reconnectDelay: 2000
 	},
@@ -116,7 +116,15 @@ const AUTH_PROOF_URL = '/api/ws-auth';
  * Not cached: each salt is fresh per connection, so each proof is
  * good exactly once.
  */
-async function fetchAuthProof(salt: string): Promise<string | null> {
+/**
+ * The interface server answers 401 to a device that is not paired
+ * (ADR-491). That is not a link problem a retry will fix: the page shows
+ * the pairing screen (`pairing-required`), and the socket stops redialling
+ * until the device is paired and the page reloads.
+ */
+let pairingRequired = false;
+
+async function fetchAuthProof(salt: string): Promise<string | null | 'unpaired'> {
 	// Bounded: after the USB link resets, Safari can hand this request to
 	// a pooled HTTP connection to the link's old address, which hangs.
 	// The bridge closes an unauthenticated socket at 5s anyway, so past
@@ -128,6 +136,7 @@ async function fetchAuthProof(salt: string): Promise<string | null> {
 			cache: 'no-store',
 			signal: abort.signal
 		});
+		if (res.status === 401) return 'unpaired';
 		if (!res.ok) {
 			logger.error('Could not obtain the WebSocket auth proof', { status: res.status });
 			return null;
@@ -158,6 +167,17 @@ const AUTH_PROOF_TIMEOUT_MS = 3000;
 async function answerAuthChallenge(salt: string, socket: WebSocket): Promise<void> {
 	const proof = await fetchAuthProof(salt);
 	if (socket !== ws || socket.readyState !== WebSocket.OPEN) return;
+	if (proof === 'unpaired') {
+		logger.warn('This device is not paired: showing the pairing screen');
+		pairingRequired = true;
+		if (reconnectTimer) {
+			clearTimeout(reconnectTimer);
+			reconnectTimer = null;
+		}
+		abandonSocket(socket, 'unpaired');
+		if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('pairing-required'));
+		return;
+	}
 	if (!proof) {
 		logger.error('Cannot authenticate to the bridge — no proof available');
 		abandonSocket(socket, 'auth-proof');
@@ -225,16 +245,18 @@ export function setConnectionHandler(handler: ConnectionHandler): void {
 }
 
 /**
- * The bridge's address: the host that served this page. The bridge runs on
- * the same Mac as the page's server, so whatever name or address reached the
- * page — `localhost` on the Mac, an IP or a `.local` name on the iPad —
- * reaches the bridge. There used to be a second guess, the rig's own
- * Bonjour name `looping-studio.local`, tried first by a page opened at
- * `localhost`: on any other Mac that is a stranger's name, or nobody's.
+ * The bridge's address: this page's own origin, at `osc.webSocket.path`.
+ * The interface server passes that path through to the bridge, so whatever
+ * reached the page — `localhost` on the Mac, an IP or a `.local` name on the
+ * iPad, the native iPad app's tunnel — reaches the bridge too, on the same
+ * port. The page used to dial the bridge's own port beside it, which meant
+ * a second port to reach and, for the native app, a second one to tunnel.
+ * (Before that it also guessed the rig's Bonjour name first, from
+ * `localhost`: on any other Mac a stranger's name, or nobody's.)
  */
 function getConnectionUrls(): string[] {
-	const host = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
-	return [`ws://${host}:${constants.osc.webSocket.port}`];
+	const host = typeof window === 'undefined' ? 'localhost' : window.location.host;
+	return [`ws://${host}${constants.osc.webSocket.path}`];
 }
 
 /**
@@ -242,7 +264,7 @@ function getConnectionUrls(): string[] {
  * `onclose` so all retry paths converge on one cadence.
  */
 function scheduleReconnect(reason: string): void {
-	if (reconnectTimer) return;
+	if (reconnectTimer || pairingRequired) return;
 	const delay = Math.min(
 		BASE_RECONNECT_MS * Math.pow(2, reconnectAttempts),
 		MAX_RECONNECT_MS
@@ -625,7 +647,7 @@ export function reconnectNow(reason: string): void {
 	// Before the layout's first `connectToLive` the handlers it installs
 	// (the handshake among them) are not there yet: connecting now would
 	// open a socket nobody says hello on.
-	if (!connectStarted) return;
+	if (!connectStarted || pairingRequired) return;
 	if (ws?.readyState === WebSocket.OPEN) {
 		const silence = Date.now() - lastInboundTs;
 		if (silence <= RESUME_SILENCE_MS) return;

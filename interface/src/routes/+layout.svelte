@@ -18,6 +18,8 @@
 		noteReactiveTick
 	} from '$lib/utils/clientWatchdog';
 	import PerfOverlay from '$lib/components/v6/debug/PerfOverlay.svelte';
+	import PairingScreen from '$lib/components/v6/pairing/PairingScreen.svelte';
+	import PairingBanner from '$lib/components/v6/pairing/PairingBanner.svelte';
 
 	let { children } = $props();
 
@@ -147,6 +149,10 @@
 <main class="py-4">
 	{@render children?.()}
 </main>
+
+<!-- Pairing (ADR-491): the screen an unpaired device sees, the banner a trusted one answers. -->
+<PairingBanner />
+<PairingScreen />
 
 {#if showPerf}
 	<PerfOverlay />

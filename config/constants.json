@@ -10,7 +10,7 @@
     "maxUtilityPatch": false,
     "_expressionPedalNote": "The expression pedal and its toe switch (midiPedals.channel, wahToeSwitchCC, wahExpressionCC) and the Wah they play: the sweep drives Wah.adg on an audio track and MidiWheels' mod wheel on a MIDI track, the toe switch loads or steps it (ADR-422, ADR-445). Off: the surface claims neither CC, so they reach Live like any other MIDI, and the Pedal view draws no Wah button. The foot switch is not part of this: it is a user setting with Learn in the System view.",
     "expressionPedal": false,
-    "_menubarNote": "The owner's macOS menu-bar app (owner/menubar), which mirrors toggles the System view already has. Off: npm run dev and npm run ipad neither build nor launch it (scripts/launch-menubar.sh exits at once, setup-ipad.js never calls it).",
+    "_menubarNote": "Vamp for Mac (owner/apps, the VampMac target): the owner's menu-bar app, which mirrors toggles the System view already has and carries Vamp for iPad's link over the USB cable (ADR-488). Needs Xcode. Off: npm run dev and npm run ipad neither build nor launch it (scripts/launch-menubar.sh exits at once, setup-ipad.js never calls it), so the iPad app has no Mac to reach and Safari is the way in.",
     "menubar": false,
     "_axHelperNote": "The Looping AX Helper (ADR-439), the one process that drives Live's own UI through macOS Accessibility, installed by npm run install-ax-helper. Off: the bridge dials no helper, and the UI draws no Reverse or Group button, a held Drum Sampler pad steps the kit rather than Live's similar samples, and npm run ipad never opens Live's Save As dialog. On: those are greyed out, with the reason, while the helper is not running or has no Accessibility grant.",
     "axHelper": false
@@ -214,11 +214,15 @@
     "webSocket": {
       "port": 8081,
       "host": "0.0.0.0",
+      "path": "/bridge-socket",
+      "_pathNote": "Where a page reaches the bridge: on its own origin, at this path. The interface server (vite dev and vite preview) passes the upgrade through to the bridge on port, so the iPad talks to one address and one port (and the native iPad app tunnels one port). Clients outside a page (the menu-bar app, perf and shot scripts) still dial port directly; the bridge accepts any path.",
       "description": "WebSocket server for interface communication. NOTE: Port 8080 causes RSV1 protocol errors due to system-level interference (see websocket-rsv1-issue.md)",
       "auth": {
         "enabled": true,
         "saltBytes": 16,
         "timeoutMs": 5000,
+        "pairing": true,
+        "_pairingNote": "ADR-491. On unless false. With it on, only a trusted caller gets the proof /api/ws-auth signs (and any /api route but the pairing flow): the Mac itself, which includes Vamp for iPad over the cable (it reaches the page server from Vamp for Mac's relay on loopback), or a device paired once — a code shown in Live's status bar, typed on the device, or Allow tapped on a trusted screen. Paired devices are kept as token hashes in config/.paired-devices.json (gitignored, 0600); Settings → Connection → Devices forgets them. false trusts every caller, as before pairing.",
         "_note": "HMAC-SHA256 challenge on connect (2026-08-31). The server sends a random per-connection salt; the client's first frame must be /bridge/auth carrying HMAC-SHA256(secret, salt) as hex. The secret never crosses the wire. Until a client authenticates its messages are refused and nothing is broadcast to it. THE SECRET IS NOT IN THIS FILE and must never be -- this file is committed. It comes from the LOOPING_WS_SECRET env var, else config/.ws-secret (gitignored, auto-generated on first run, mode 0600). See interface/bridge/utils/wsSecret.js. Scope, honestly: this raises the bar from 'anything that can reach port 8081' to 'anything that can load the app' -- the page has the interface server sign the salt (/api/ws-auth), and that server is also on the LAN. Closing that last gap is device pairing, decided 2026-09-30 and not built yet (docs/plans/general-release/security.plan.md). The gate is on unless enabled is false; a missing auth block keeps it on. A browser page from any origin but localhost, an IP address or a .local name is refused before the challenge (interface/bridge/utils/originCheck.js). timeoutMs closes a socket that connects and never authenticates."
       }
     },
@@ -236,6 +240,11 @@
     "ipad": { "usbc": "192.168.100.1" }
   },
 
+  "padLink": {
+    "devicePort": 47800,
+    "pagePort": 8889,
+    "_note": "Vamp for iPad over the USB cable (owner/apps). devicePort: where the iPad app listens for the Mac, reached through usbmux (loopback on the iPad, so nothing on a network can). pagePort: the Mac's page server the Mac app splices each stream to, the one npm run ipad serves on; the iPad app also loads the page at localhost on this port. The iPad app compiles both in (owner/apps/Pad/VampPadApp.swift); a test keeps the copies equal."
+  },
   "http": {
     "interfacePort": 3000
   },

@@ -114,10 +114,12 @@ the 35-state central tour came back 35/35, layout-checked, in 75 s, and
 `logs/bridge.log` grew by **0 bytes** — the captured page never spoke to the
 bridge at all.
 
-How, and why it needs saying: the port the client dials is **compiled into
-the page** (`WebSocketConnection.ts`), so a mock that simply moves off it
-moves only the server, and the page keeps dialling :8081 — a running bridge,
-whose answers are the live Ableton set. That capture comes back looking
+How, and why it needs saying: where the client dials is **compiled into
+the page** (`WebSocketConnection.ts`). Since 2026-10-27 that is its own
+origin at `/bridge-socket`, which the dev server passes through to whatever
+holds :8081, so a mock that simply moves off :8081 moves only the server,
+and the page keeps reaching a running bridge, whose answers are the live
+Ableton set. The route below matches the path as well as the port. That capture comes back looking
 perfectly plausible, which is what made it dangerous. So the two halves are
 done together and never apart:
 
@@ -141,7 +143,7 @@ Three consequences worth knowing:
   running, and the old harness quietly took over the rig's own loopback
   traffic for the length of a run. Detection is a connect probe.
 - **`--interactive` only routes the window the harness opened.** A browser
-  *you* open at the printed URL dials :8081 and gets the real bridge. The
+  *you* open at the printed URL dials `/bridge-socket` and gets the real bridge. The
   harness says so when it happens.
 
 ### Building for a shot while `npm run ipad` is up

@@ -73,6 +73,32 @@
 		});
 	});
 	const FEATURE_WORD = { on: 'On', off: 'Off', unavailable: 'Unavailable' };
+
+	// --- Paired devices (ADR-491) -------------------------------------------
+	// Devices that paired once to drive Vamp off the cable. Forgetting one
+	// applies on its next connection; an open session is never cut.
+	type PairedDevice = { hash: string; name: string; address: string; lastUsed: number };
+	let devices = $state<PairedDevice[]>([]);
+	let devicesState = $state<'loading' | 'ready' | 'failed'>('loading');
+	async function loadDevices() {
+		try {
+			const res = await fetch('/api/pair/devices', { cache: 'no-store' });
+			if (!res.ok) throw new Error(String(res.status));
+			devices = (await res.json()).devices ?? [];
+			devicesState = 'ready';
+		} catch {
+			devicesState = 'failed';
+		}
+	}
+	async function forget(query: string) {
+		await fetch(`/api/pair/devices?${query}`, { method: 'DELETE' }).catch(() => {});
+		await loadDevices();
+	}
+	onMount(() => void loadDevices());
+	function lastSeen(ms: number): string {
+		const days = Math.floor((Date.now() - ms) / 86_400_000);
+		return days <= 0 ? 'Seen today' : days === 1 ? 'Seen yesterday' : `Seen ${days} days ago`;
+	}
 </script>
 
 <div class="set-section">
@@ -96,6 +122,41 @@
 	<section class="set-group" data-debug="settings-ipad">
 		<h2 class="set-group-title">iPad</h2>
 		<IpadAddresses {addresses} state={addressState} />
+	</section>
+
+	<section class="set-group" data-debug="settings-devices">
+		<h2 class="set-group-title">Devices</h2>
+		<ul class="set-list">
+			<li class="set-row">
+				<span class="set-row-main">
+					<span class="set-row-label">This Mac and Vamp for iPad</span>
+					<span class="set-row-sub">Trusted as they are: no pairing on the USB cable.</span>
+				</span>
+			</li>
+			{#each devices as device (device.hash)}
+				<li class="set-row" data-paired-device={device.hash.slice(0, 12)}>
+					<span class="set-row-main">
+						<span class="set-row-label">{device.name}</span>
+						<span class="set-row-sub">Paired from {device.address || 'an unknown address'} · {lastSeen(device.lastUsed)}</span>
+					</span>
+					<button class="set-btn" onclick={() => forget(`hash=${encodeURIComponent(device.hash)}`)}>Forget</button>
+				</li>
+			{/each}
+			{#if devicesState === 'ready' && devices.length === 0}
+				<li class="set-row">
+					<span class="set-row-main">
+						<span class="set-row-sub">No device has paired over Wi-Fi.</span>
+					</span>
+				</li>
+			{:else if devicesState === 'failed'}
+				<li class="set-row">
+					<span class="set-row-main"><span class="set-row-sub">Couldn't read the paired devices.</span></span>
+				</li>
+			{/if}
+		</ul>
+		{#if devices.length > 1}
+			<button class="set-btn" onclick={() => forget('all=1')}>Forget all</button>
+		{/if}
 	</section>
 
 	<section class="set-group" data-debug="settings-features">

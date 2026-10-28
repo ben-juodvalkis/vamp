@@ -178,6 +178,10 @@ function createWebSocketServer(config, udpPorts, connectionStatus, metrics, heal
 
     // Create HTTP server first
     const httpServer = http.createServer((req, res) => {
+        // Routes the orchestrator adds (the pairing relay, ADR-491), each
+        // guarding itself: this port is on every interface.
+        const route = config.httpRoutes && config.httpRoutes[req.url];
+        if (route) return route(req, res);
         // Handle non-WebSocket HTTP requests (health check, etc.)
         if (req.url === '/health') {
             res.writeHead(200, { 'Content-Type': 'application/json' });

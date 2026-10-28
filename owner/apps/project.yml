@@ -1,0 +1,110 @@
+# Vamp's native apps: Vamp for Mac (the menu-bar host) and Vamp for iPad
+# (full-screen Vamp over the USB cable), sharing the link code in Shared/.
+# Generate the Xcode project with `xcodegen` in this folder; the generated
+# Vamp.xcodeproj is committed, so building needs only Xcode.
+name: Vamp
+options:
+  bundleIdPrefix: com.benjuodvalkis.vamp
+  deploymentTarget:
+    iOS: "17.0"
+    macOS: "14.0"
+  createIntermediateGroups: true
+configFiles:
+  Debug: Config/Base.xcconfig
+  Release: Config/Base.xcconfig
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+targets:
+  VampPad:
+    type: application
+    platform: iOS
+    sources:
+      - Shared
+      - Pad
+    info:
+      path: Pad/Info.plist
+      properties:
+        CFBundleDisplayName: Vamp
+        LSRequiresIPhoneOS: true
+        UIRequiresFullScreen: true
+        UIStatusBarHidden: true
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+        # The page is loaded from localhost, where the app's own listener
+        # hands it to the Mac: plain http to loopback only.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.benjuodvalkis.vamp.ipad
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        PRODUCT_NAME: Vamp
+        # iPad first; iPhone too, so the link can be tried on a phone.
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+  VampMac:
+    type: application
+    platform: macOS
+    sources:
+      - Shared
+      - path: Mac
+        excludes:
+          - "Menu/verify/**"
+          - "Menu/README.md"
+    info:
+      path: Mac/Info.plist
+      properties:
+        CFBundleDisplayName: Vamp
+        # A menu-bar agent: no Dock icon, no main window.
+        LSUIElement: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.benjuodvalkis.vamp.mac
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        PRODUCT_NAME: Vamp
+        # Run locally, unsandboxed: it opens usbmuxd's socket and reads the
+        # repo's config, neither of which a sandboxed app may.
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        ENABLE_APP_SANDBOX: NO
+        ENABLE_HARDENED_RUNTIME: NO
+  VampLinkTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Shared
+      - Mac/UsbMux.swift
+      - Mac/LinkClient.swift
+      - Tests
+    settings:
+      base:
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  VampPad:
+    build:
+      targets:
+        VampPad: all
+  VampMac:
+    build:
+      targets:
+        VampMac: all
+  VampLinkTests:
+    build:
+      targets:
+        VampLinkTests: [test]
+    test:
+      targets: [VampLinkTests]

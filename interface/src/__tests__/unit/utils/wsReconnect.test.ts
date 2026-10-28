@@ -265,6 +265,27 @@ describe('reconnecting after the link drops', () => {
 		expect(FakeWebSocket.instances.at(-1)).not.toBe(rejected);
 	});
 
+	it('an unpaired device shows the pairing screen and stops redialling (ADR-491)', async () => {
+		vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 401 }) as Response));
+		const required = vi.fn();
+		window.addEventListener('pairing-required', required);
+		const mod = await freshModule();
+		void mod.connectToLive();
+		await vi.advanceTimersByTimeAsync(10);
+		const socket = FakeWebSocket.instances.at(-1)!;
+		socket.receive('/bridge/auth/challenge', ['dddddddddddddddd']);
+		await vi.advanceTimersByTimeAsync(10);
+
+		expect(required).toHaveBeenCalledTimes(1);
+		expect(socket.readyState).toBe(FakeWebSocket.CLOSED);
+		const count = FakeWebSocket.instances.length;
+		await vi.advanceTimersByTimeAsync(10_000);
+		expect(FakeWebSocket.instances.length).toBe(count);
+		mod.reconnectNow('online');
+		expect(FakeWebSocket.instances.length).toBe(count);
+		window.removeEventListener('pairing-required', required);
+	});
+
 	it('does nothing before the app has started connecting', async () => {
 		const mod = await freshModule();
 		mod.reconnectNow('online');

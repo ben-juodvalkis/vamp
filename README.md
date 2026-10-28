@@ -104,9 +104,9 @@ iPad / browser  ⇄  bridge (WebSocket ⇄ OSC)  ⇄  control surface inside Liv
   device, set up the way your Live defaults have it, or loads one of Vamp's own devices from
   `Vamp Devices/` ([docs/plans/general-release/plan.md](docs/plans/general-release/plan.md)
   §6).
-- **Your network is trusted.** Anyone on the same network who can open the page can drive your
-  Live set. Use the USB-C link or a network you trust. Device pairing is planned: see
-  [SECURITY.md](SECURITY.md).
+- **A device pairs once** before it can drive your Live set, with a code in Live's status bar or
+  Allow on a screen already connected; the Mac and Vamp for iPad on the cable never do. The page is
+  plain HTTP, so prefer the cable or a network you trust: see [SECURITY.md](SECURITY.md).
 
 ## Documentation
 

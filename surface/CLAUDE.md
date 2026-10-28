@@ -572,7 +572,26 @@ Tests: `tests/test_clips_swap_file.py`.
 fire-and-forget senders on ephemeral ports (the Max probe drivers)
 need a datagram socket regardless.
 
-Only `state/full` moved across, because it is the only message whose
+**Bridge → surface rides it too (ADR-489, 2026-10-27)**, once the
+transport has said so: a routing `TCPTransport` sends
+`/looping/v3/bridge/tcp_ready [1]` (`TCP_READY_ADDRESS`) first on every
+connection it accepts, and the bridge moves onto the stream only after
+hearing it, so a bridge restarted ahead of Live never strands an older
+surface. While the
+bridge is connected it sends every message here — UI writes, the hello,
+`server/heartbeat`, the swap and Group hops — and uses UDP 11020 only
+while the stream is down. `TCPTransport` is built with
+`router=self._transport`: a frame dispatches through
+`OSCTransport.dispatch` (the one handler table, so register on the UDP
+transport as always — never on the TCP one), a pass that dispatched
+anything runs the UDP transport's drain hooks (the drum fan-out's flush
+needs them), and a tuple reply goes back on the stream. Handlers see
+the TCP peer as `source_addr`, which they only log. The UDP socket
+stays for the Max patches and probe drivers, which send there
+directly. Tests: the routed block at the end of
+`tests/test_tcp_transport.py`.
+
+Surface → bridge, only `state/full` moved across, because it is the only message whose
 size the 9,216-byte darwin datagram ceiling actually constrains —
 389 KB on a realistic set, which forced ~99 chunks, an FNV-1a
 checksum, and a 453-line reassembler on the UI side. Protocol 3.6.0
@@ -824,7 +843,7 @@ marker alone.
 launch-mode-derived — `SessionSettingsComponent.seed_auto_capture_default`
 is called from `ServerPresenceComponent`'s `on_first_mode` callback when
 the first heartbeat reveals `mode` (ipad→on, dev→off) — but it is then
-fully user-overridable from the web UI or the `owner/menubar` app. So a
+fully user-overridable from the web UI or the `owner/apps (Vamp for Mac)` app. So a
 dev session can force capture on and an ipad set can force it off. A user
 write commits the value so a late mode seed can't clobber a deliberate
 override. (Historically the gate was `is_ipad_present()` directly; the

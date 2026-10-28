@@ -308,6 +308,10 @@ from .components.SessionComponent import (
     V3_SESSION_SIGNATURE_NUM_ADDRESS,
     V3_SESSION_STOP_CMD_ADDRESS,
 )
+from .components.StatusMessageComponent import (
+    SHOW_MESSAGE_ADDRESS,
+    StatusMessageComponent,
+)
 from .components.SessionSettingsComponent import (
     SessionSettingsComponent,
     V3_SESSION_AUTO_ARM_ADDRESS,
@@ -469,12 +473,14 @@ class LoopingSurface(ControlSurface):
 
         self._transport.add_handler("/live/test", self._handle_live_test)
 
-        # TCP leg, bound beside UDP rather than replacing it. Migration
-        # is one address at a time: ``state/full`` moves first because
-        # it is the only thing whose 389 KB actually needs the stream;
-        # everything else keeps working over UDP untouched, and
-        # fire-and-forget senders on ephemeral ports (the Max probe
-        # drivers) still require a datagram socket regardless.
+        # TCP leg, bound beside UDP rather than replacing it. Outbound,
+        # only ``state/full`` rides it: the one message whose 389 KB
+        # needs the stream. Inbound, the bridge sends everything over
+        # it while connected and falls back to UDP only while it is
+        # down (ADR-489), so its frames dispatch through the UDP
+        # transport's handlers and drain hooks — one table, two legs.
+        # UDP stays: fire-and-forget senders on ephemeral ports (the
+        # Max patches, the probe drivers) need a datagram socket.
         #
         # A bind failure here is not fatal to the surface as a whole —
         # every other address keeps working over UDP. It is fatal to
@@ -493,6 +499,7 @@ class LoopingSurface(ControlSurface):
                     # __init__), and a peer cannot connect before the
                     # first pump anyway — which is after both exist.
                     on_connect=self._on_stream_peer_connected,
+                    router=self._transport,
                 )
             except OSError as e:
                 logger.error(
@@ -612,6 +619,13 @@ class LoopingSurface(ControlSurface):
         # SessionSettingsComponent — init-emit seeds the UI; the
         # on_accept re-seed for connecting clients is wired into the
         # handshake accept chain later.
+        # Pairing (ADR-491): the bridge puts a device's code in Live's
+        # status bar, and clears it once the request is settled.
+        self._status_message_component = StatusMessageComponent(show=self.show_message)
+        self._transport.add_handler(
+            SHOW_MESSAGE_ADDRESS, self._status_message_component.handle_show_message,
+        )
+
         self._session_settings_component = SessionSettingsComponent(
             emit=self._transport.send,
         )

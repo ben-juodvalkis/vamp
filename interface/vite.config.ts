@@ -137,6 +137,16 @@ export default defineConfig({
 		// Any Mac's Bonjour name. Vite always answers to localhost and to any
 		// IP address, which is how the iPad reaches it over USB-C or Wi-Fi.
 		allowedHosts: ['.local'],
+		// The page reaches the bridge through this server, on its own origin
+		// (`osc.webSocket.path`), so the iPad has one address and one port to
+		// reach. `vite preview` (npm run ipad) inherits this. The Origin header
+		// goes through untouched, so the bridge's origin check still applies.
+		proxy: {
+			[constants.osc.webSocket.path]: {
+				target: `ws://127.0.0.1:${constants.osc.webSocket.port}`,
+				ws: true
+			}
+		},
 		watch: {
 			// Exclude large audio/preset directories from file watching to improve build performance
 			ignored: [

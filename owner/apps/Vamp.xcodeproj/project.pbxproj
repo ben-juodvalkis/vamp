@@ -1,0 +1,590 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		00B05AB09DDDA5C05A280322 /* Splice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DED6AF0A86F7612C3229FAC /* Splice.swift */; };
+		01E43854851150E2A88BD20F /* Supervisor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7588887B3FEC5F945688A7D6 /* Supervisor.swift */; };
+		04D76BF276F5A8BD3D0FADC0 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D368FE577FEB550B9CC1A9D4 /* AppState.swift */; };
+		08321E0D3BA1B2A0A74C1CCF /* LinkProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E71B2FC18F7AE4133AC5215 /* LinkProtocol.swift */; };
+		08F59359E9DB4DE67CFCD360 /* LinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E205C25310E6D86E3D913802 /* LinkTests.swift */; };
+		09E25C1F5DB590222D21BD05 /* LinkServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E6A855106B6835A56B03903 /* LinkServer.swift */; };
+		0FA909E5A877918C5C079C25 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EBA6AF1690AE6F51DC7D2B2A /* Assets.xcassets */; };
+		1D58B1CF20FD7E8B0538559A /* OSCEnvelope.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48DAE09A3ED042760066FDE2 /* OSCEnvelope.swift */; };
+		29451632DC10E6832C5F02C1 /* LinkClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B83BED9048B5F511FD8DC9C /* LinkClient.swift */; };
+		2CC02CC8BA5AD290C6F171F7 /* UsbMux.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A274A47EF8CB1FB15CE2231 /* UsbMux.swift */; };
+		2E6DFB63CBCF1533389C13D0 /* LinkServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E6A855106B6835A56B03903 /* LinkServer.swift */; };
+		30A603AF85E94CB27CCEF75E /* UsbMux.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A274A47EF8CB1FB15CE2231 /* UsbMux.swift */; };
+		47AE04D3A8CF38C3C72B4801 /* VampPadApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DAE9F4E122B2D6291B30B4B /* VampPadApp.swift */; };
+		4BC2611245B8F4A620A02F2B /* Splice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DED6AF0A86F7612C3229FAC /* Splice.swift */; };
+		607E3A52004476820E4C3739 /* PadLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 915CB9013A537FFC92E573BC /* PadLink.swift */; };
+		82074817F87A77DB97E2A305 /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DD360D6442DE26552DCA9DA /* AppConfig.swift */; };
+		87360A7F7941CF489CD2CBEC /* VampMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FF8FFE78D61C16CCE0245DE /* VampMacApp.swift */; };
+		909B6C878FB3B6270878DFBE /* Splice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DED6AF0A86F7612C3229FAC /* Splice.swift */; };
+		97CCA00D5DF9E64B9F69F499 /* BridgeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25B9BD3695516F19720AAA2E /* BridgeClient.swift */; };
+		9C4946FB803880E5E3BA1C69 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A908C651CE459585CE047490 /* Assets.xcassets */; };
+		B8938D47541BF7D3E76C86FC /* LinkClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B83BED9048B5F511FD8DC9C /* LinkClient.swift */; };
+		BB991C43B037500A636443C3 /* Wire.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F813656117C8E51E0B9EA5B /* Wire.swift */; };
+		C8E7E75FD9BA9FFEC754678C /* LinkProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E71B2FC18F7AE4133AC5215 /* LinkProtocol.swift */; };
+		CCC23DA81A031BBB9A03F17B /* LinkProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E71B2FC18F7AE4133AC5215 /* LinkProtocol.swift */; };
+		EEC75B180FBEFF546FE023AB /* LinkServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E6A855106B6835A56B03903 /* LinkServer.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0A274A47EF8CB1FB15CE2231 /* UsbMux.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsbMux.swift; sourceTree = "<group>"; };
+		1DED6AF0A86F7612C3229FAC /* Splice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Splice.swift; sourceTree = "<group>"; };
+		25B9BD3695516F19720AAA2E /* BridgeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeClient.swift; sourceTree = "<group>"; };
+		2947AB166D4E2928A980A4A7 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+		29D36ED924CFB01F92EEF64D /* VampLinkTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VampLinkTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3E6A855106B6835A56B03903 /* LinkServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkServer.swift; sourceTree = "<group>"; };
+		3E71B2FC18F7AE4133AC5215 /* LinkProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkProtocol.swift; sourceTree = "<group>"; };
+		3F813656117C8E51E0B9EA5B /* Wire.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Wire.swift; sourceTree = "<group>"; };
+		48DAE09A3ED042760066FDE2 /* OSCEnvelope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSCEnvelope.swift; sourceTree = "<group>"; };
+		7588887B3FEC5F945688A7D6 /* Supervisor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Supervisor.swift; sourceTree = "<group>"; };
+		7B83BED9048B5F511FD8DC9C /* LinkClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkClient.swift; sourceTree = "<group>"; };
+		7DD360D6442DE26552DCA9DA /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
+		7E3BA74AF6C6EAD79C3B3AA7 /* VampPad.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = VampPad.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7FF8FFE78D61C16CCE0245DE /* VampMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VampMacApp.swift; sourceTree = "<group>"; };
+		8DAE9F4E122B2D6291B30B4B /* VampPadApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VampPadApp.swift; sourceTree = "<group>"; };
+		915CB9013A537FFC92E573BC /* PadLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PadLink.swift; sourceTree = "<group>"; };
+		A6B13582108DC5D088C2AB67 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		A908C651CE459585CE047490 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		BA98A5B137CB6D8CE7BF97B8 /* VampMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VampMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D368FE577FEB550B9CC1A9D4 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		E205C25310E6D86E3D913802 /* LinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkTests.swift; sourceTree = "<group>"; };
+		EBA6AF1690AE6F51DC7D2B2A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F3BB2F13DF6908B1C162FFDE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		4B63692741D6CDD7BBEF8960 /* Menu */ = {
+			isa = PBXGroup;
+			children = (
+				7DD360D6442DE26552DCA9DA /* AppConfig.swift */,
+				D368FE577FEB550B9CC1A9D4 /* AppState.swift */,
+				25B9BD3695516F19720AAA2E /* BridgeClient.swift */,
+				48DAE09A3ED042760066FDE2 /* OSCEnvelope.swift */,
+				3F813656117C8E51E0B9EA5B /* Wire.swift */,
+			);
+			path = Menu;
+			sourceTree = "<group>";
+		};
+		5DE81232C7919490CED3DFD8 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				2947AB166D4E2928A980A4A7 /* Base.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		66538A1F2123FFFD911326DC /* Mac */ = {
+			isa = PBXGroup;
+			children = (
+				EBA6AF1690AE6F51DC7D2B2A /* Assets.xcassets */,
+				F3BB2F13DF6908B1C162FFDE /* Info.plist */,
+				7B83BED9048B5F511FD8DC9C /* LinkClient.swift */,
+				915CB9013A537FFC92E573BC /* PadLink.swift */,
+				7588887B3FEC5F945688A7D6 /* Supervisor.swift */,
+				0A274A47EF8CB1FB15CE2231 /* UsbMux.swift */,
+				7FF8FFE78D61C16CCE0245DE /* VampMacApp.swift */,
+				4B63692741D6CDD7BBEF8960 /* Menu */,
+			);
+			path = Mac;
+			sourceTree = "<group>";
+		};
+		A8E03AE9981FCFD5DDBFD8DC /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				3E71B2FC18F7AE4133AC5215 /* LinkProtocol.swift */,
+				3E6A855106B6835A56B03903 /* LinkServer.swift */,
+				1DED6AF0A86F7612C3229FAC /* Splice.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		B7C414E7FA5A25E20D5C2D1D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				29D36ED924CFB01F92EEF64D /* VampLinkTests.xctest */,
+				BA98A5B137CB6D8CE7BF97B8 /* VampMac.app */,
+				7E3BA74AF6C6EAD79C3B3AA7 /* VampPad.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		BC9B18BC1725816BDE7BCC43 /* Pad */ = {
+			isa = PBXGroup;
+			children = (
+				A908C651CE459585CE047490 /* Assets.xcassets */,
+				A6B13582108DC5D088C2AB67 /* Info.plist */,
+				8DAE9F4E122B2D6291B30B4B /* VampPadApp.swift */,
+			);
+			path = Pad;
+			sourceTree = "<group>";
+		};
+		DF0751AB5A60846693FEF234 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				E205C25310E6D86E3D913802 /* LinkTests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		E0EFC01E22F19B3FB8D13E03 = {
+			isa = PBXGroup;
+			children = (
+				5DE81232C7919490CED3DFD8 /* Config */,
+				66538A1F2123FFFD911326DC /* Mac */,
+				BC9B18BC1725816BDE7BCC43 /* Pad */,
+				A8E03AE9981FCFD5DDBFD8DC /* Shared */,
+				DF0751AB5A60846693FEF234 /* Tests */,
+				B7C414E7FA5A25E20D5C2D1D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		3E8CE78A1F6A0D741BD78E87 /* VampLinkTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DA9AF7521F2F7EE297F31065 /* Build configuration list for PBXNativeTarget "VampLinkTests" */;
+			buildPhases = (
+				18FE310D12B16C8CA0ED52A0 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = VampLinkTests;
+			packageProductDependencies = (
+			);
+			productName = VampLinkTests;
+			productReference = 29D36ED924CFB01F92EEF64D /* VampLinkTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		78D0FE748C716CDAEBEEB9DA /* VampPad */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1B203D97B070E1388108FF2E /* Build configuration list for PBXNativeTarget "VampPad" */;
+			buildPhases = (
+				DA8F2C6AF9B7E3204A7A188B /* Sources */,
+				95D9FC4C20E0F220A1A8510A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = VampPad;
+			packageProductDependencies = (
+			);
+			productName = VampPad;
+			productReference = 7E3BA74AF6C6EAD79C3B3AA7 /* VampPad.app */;
+			productType = "com.apple.product-type.application";
+		};
+		DCFF4A1871CEB6A61AE70CDD /* VampMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 444F26CA63A223325EC8E97F /* Build configuration list for PBXNativeTarget "VampMac" */;
+			buildPhases = (
+				F3D8344E87CEBF2132A80E71 /* Sources */,
+				2E504357D01ACD50548CC6E0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = VampMac;
+			packageProductDependencies = (
+			);
+			productName = VampMac;
+			productReference = BA98A5B137CB6D8CE7BF97B8 /* VampMac.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E1A97F58F7EC55843E68C0B9 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					3E8CE78A1F6A0D741BD78E87 = {
+						ProvisioningStyle = Manual;
+					};
+					78D0FE748C716CDAEBEEB9DA = {
+						ProvisioningStyle = Automatic;
+					};
+					DCFF4A1871CEB6A61AE70CDD = {
+						ProvisioningStyle = Manual;
+					};
+				};
+			};
+			buildConfigurationList = 8BDE60C4D258F406313825C0 /* Build configuration list for PBXProject "Vamp" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = E0EFC01E22F19B3FB8D13E03;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = B7C414E7FA5A25E20D5C2D1D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				78D0FE748C716CDAEBEEB9DA /* VampPad */,
+				DCFF4A1871CEB6A61AE70CDD /* VampMac */,
+				3E8CE78A1F6A0D741BD78E87 /* VampLinkTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		2E504357D01ACD50548CC6E0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0FA909E5A877918C5C079C25 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		95D9FC4C20E0F220A1A8510A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9C4946FB803880E5E3BA1C69 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		18FE310D12B16C8CA0ED52A0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B8938D47541BF7D3E76C86FC /* LinkClient.swift in Sources */,
+				08321E0D3BA1B2A0A74C1CCF /* LinkProtocol.swift in Sources */,
+				2E6DFB63CBCF1533389C13D0 /* LinkServer.swift in Sources */,
+				08F59359E9DB4DE67CFCD360 /* LinkTests.swift in Sources */,
+				00B05AB09DDDA5C05A280322 /* Splice.swift in Sources */,
+				30A603AF85E94CB27CCEF75E /* UsbMux.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DA8F2C6AF9B7E3204A7A188B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CCC23DA81A031BBB9A03F17B /* LinkProtocol.swift in Sources */,
+				EEC75B180FBEFF546FE023AB /* LinkServer.swift in Sources */,
+				909B6C878FB3B6270878DFBE /* Splice.swift in Sources */,
+				47AE04D3A8CF38C3C72B4801 /* VampPadApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F3D8344E87CEBF2132A80E71 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				82074817F87A77DB97E2A305 /* AppConfig.swift in Sources */,
+				04D76BF276F5A8BD3D0FADC0 /* AppState.swift in Sources */,
+				97CCA00D5DF9E64B9F69F499 /* BridgeClient.swift in Sources */,
+				29451632DC10E6832C5F02C1 /* LinkClient.swift in Sources */,
+				C8E7E75FD9BA9FFEC754678C /* LinkProtocol.swift in Sources */,
+				09E25C1F5DB590222D21BD05 /* LinkServer.swift in Sources */,
+				1D58B1CF20FD7E8B0538559A /* OSCEnvelope.swift in Sources */,
+				607E3A52004476820E4C3739 /* PadLink.swift in Sources */,
+				4BC2611245B8F4A620A02F2B /* Splice.swift in Sources */,
+				01E43854851150E2A88BD20F /* Supervisor.swift in Sources */,
+				2CC02CC8BA5AD290C6F171F7 /* UsbMux.swift in Sources */,
+				87360A7F7941CF489CD2CBEC /* VampMacApp.swift in Sources */,
+				BB991C43B037500A636443C3 /* Wire.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		0BD370A2435C7A6EF01CD2C0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2947AB166D4E2928A980A4A7 /* Base.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		4CB6AEFCF81890CD39B38D64 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = Pad/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.benjuodvalkis.vamp.ipad;
+				PRODUCT_NAME = Vamp;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		6FF4C2D6926BBB52A2A9CDD0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2947AB166D4E2928A980A4A7 /* Base.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		9D58AC320D95BAB70F8A6A53 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				INFOPLIST_FILE = Mac/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.benjuodvalkis.vamp.mac;
+				PRODUCT_NAME = Vamp;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		A988C4824C5D399D7CDDC754 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				INFOPLIST_FILE = Mac/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.benjuodvalkis.vamp.mac;
+				PRODUCT_NAME = Vamp;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		B61C8587F3882DD823458E1E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.benjuodvalkis.vamp.VampLinkTests;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		CD72DF5B2E5C034C45969751 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = Pad/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.benjuodvalkis.vamp.ipad;
+				PRODUCT_NAME = Vamp;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		F31565F0EC658F19D8413BAC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.benjuodvalkis.vamp.VampLinkTests;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1B203D97B070E1388108FF2E /* Build configuration list for PBXNativeTarget "VampPad" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4CB6AEFCF81890CD39B38D64 /* Debug */,
+				CD72DF5B2E5C034C45969751 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		444F26CA63A223325EC8E97F /* Build configuration list for PBXNativeTarget "VampMac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A988C4824C5D399D7CDDC754 /* Debug */,
+				9D58AC320D95BAB70F8A6A53 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8BDE60C4D258F406313825C0 /* Build configuration list for PBXProject "Vamp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0BD370A2435C7A6EF01CD2C0 /* Debug */,
+				6FF4C2D6926BBB52A2A9CDD0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		DA9AF7521F2F7EE297F31065 /* Build configuration list for PBXNativeTarget "VampLinkTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B61C8587F3882DD823458E1E /* Debug */,
+				F31565F0EC658F19D8413BAC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = E1A97F58F7EC55843E68C0B9 /* Project object */;
+}

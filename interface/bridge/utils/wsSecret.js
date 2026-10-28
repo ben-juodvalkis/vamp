@@ -14,8 +14,8 @@
  * determined attacker already on the LAN, because the UI is a browser
  * page and the page has to answer somehow — it has the interface server
  * sign the salt (`/api/ws-auth`), and that server is also on the LAN.
- * Closing that last gap is device pairing, decided 2026-09-30 and not
- * built yet (docs/plans/general-release/security.plan.md).
+ * Pairing (ADR-491) closes that gap: `/api/ws-auth` signs only for the
+ * Mac itself and paired devices (docs/plans/general-release/security.plan.md).
  *
  * What it does buy, concretely: stray clients, stale tabs from another
  * machine, port scanners, and anything on the network that is not the
