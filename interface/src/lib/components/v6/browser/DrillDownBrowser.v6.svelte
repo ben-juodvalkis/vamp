@@ -983,6 +983,8 @@
 		});
 	}
 	/** The kinds whose tiles may draw a live face (`deviceControls`): effects and effect racks. */
+	/** Tag labels a preset tile names at most: a line's worth at the densest grid. */
+	const CARD_TAGS = 3;
 	const FACE_KINDS = new Set(['audio-effect', 'midi-effect', 'effect-rack', 'midi-effect-rack', 'max-audio-effect', 'max-midi-effect']);
 	/** Effect tiles drawing a live face: they hand the face the gesture. */
 	const facedTiles = new SvelteSet<string>();
@@ -1759,12 +1761,15 @@
 	{@const subLabel = notInstalled ? 'Not installed' : midiOnly ? 'MIDI tracks only' : (p.plugin ?? null)}
 	<!-- MidiWheels draws its two wheels, live (BrowserWheelsFace). -->
 	{@const wheels = !inactive && p.kind === 'max-midi-effect' && p.name === constants.devices.midiWheels.deviceName}
+	<!-- What the sound is like (Live's Character, Timbre, Mood tags), on a tile
+	     with room: not one whose face fills it. -->
+	{@const tags = wheels || facedTiles.has(p.path) ? [] : (p.tags ?? []).slice(0, CARD_TAGS)}
 	<button
 		class="card preset-tile"
 		class:faced={wheels || facedTiles.has(p.path)}
 		class:loaded={(shownChargingPresetPath ?? browserNavigationStore.loadedPresetPath) === p.path}
 		class:unavailable={inactive}
-		class:has-plugin={!!subLabel}
+		class:has-plugin={!!subLabel || tags.length > 0}
 		style="--k: {inkFor(p)};"
 		disabled={inactive}
 		title={notInstalled ? `${p.plugin ?? 'This plug-in'} is not installed` : midiOnly ? 'A MIDI effect goes on a MIDI track' : undefined}
@@ -1790,6 +1795,11 @@
 		<span class="tile-name" use:fitText={p.name} use:clampLines>{p.name}</span>
 		{#if subLabel}
 			<span class="tile-plugin">{subLabel}</span>
+		{/if}
+		{#if tags.length}
+			<span class="tile-tags">
+				{#each tags as tag (tag)}<span class="tile-tag">{tag}</span>{/each}
+			</span>
 		{/if}
 	</button>
 {/snippet}
@@ -3030,7 +3040,8 @@
 	/* ADR-401: the waveform thumbnail (BrowserPresetWaveform) sits at z-index:0
 	   behind the tile content; lift the labels above it. */
 	.preset-tile .tile-name,
-	.preset-tile .tile-plugin {
+	.preset-tile .tile-plugin,
+	.preset-tile .tile-tags {
 		position: relative;
 		z-index: 1;
 	}
@@ -3086,6 +3097,28 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		max-width: 100%;
+	}
+	/* Tags under the name: one line of small labels, quieter than the
+	   plug-in's name; what does not fit is clipped, never wrapped. */
+	.preset-tile .tile-tags {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 3px;
+		max-width: 100%;
+		max-height: 1.35em;
+		margin-top: 4px;
+		overflow: hidden;
+		font-size: 0.66rem;
+		line-height: 1.35;
+	}
+	.preset-tile .tile-tag {
+		padding: 0 5px;
+		border-radius: 999px;
+		background: color-mix(in oklab, currentColor 14%, transparent);
+		font-weight: 600;
+		opacity: 0.8;
+		white-space: nowrap;
 	}
 	/* Greyed, not hidden: a plug-in that is not installed, or an effect preset
 	   (which never loads as an instrument). Visible, saying why in its title,

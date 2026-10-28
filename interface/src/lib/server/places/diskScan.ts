@@ -71,6 +71,8 @@ export interface PlaceItem {
 	patch?: string;
 	installed?: boolean;
 	peaks?: string;
+	/** What the sound is like, from Live's tags (`indexScan.cardTags`): index scans only. */
+	tags?: string[];
 }
 
 export interface PlaceFolder {

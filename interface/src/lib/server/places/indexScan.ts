@@ -23,8 +23,12 @@
  * Rules (§4): roots come from `Library.cfg`, never the whole tree; links do
  * not appear (nor in Live's browser); a `/` in an index name is a `:` on disk;
  * a device inside `Ableton Folder Info` is Live's device bundle, shown as the
- * device with the folder hidden. The tags Live's Packs carry
- * (`Sounds|Bass`…) are read for roles later; a user's own presets carry none.
+ * device with the folder hidden.
+ *
+ * Tags: `metadata` holds the tags a Pack ships (key 1264941431) and the ones a
+ * user folder's tag file sets (key 1431004537 — Omnisphere-Tools writes the
+ * Spectrasonics attributes there, its ADR 011), as `Group|Value` strings. An
+ * item carries the values of `CARD_TAG_GROUPS` for its tile's labels.
  *
  * **When it cannot be trusted** the caller falls back to the disk scan:
  * no database, a `version` other than `12300`, a column this reads gone,
@@ -42,6 +46,17 @@ import { newestLiveDatabase } from '../../../routes/api/similar-samples/similarS
 export const SUPPORTED_SCHEMA = 12300;
 
 const FOLDER_TYPE = fourccOf('fldr');
+
+/** `metadata.key` for a Pack's own tags and for a user folder's (measured 2026-10-28). */
+const TAG_KEYS = [1264941431, 1431004537];
+/**
+ * The tag groups a preset tile names, in this order: what a sound is like.
+ * Live's Packs say it under Character, Spectrasonics under Timbre and Mood;
+ * the rest (Sounds, Type, Keyword, Omni Category…) repeats the folder or is noise.
+ */
+export const CARD_TAG_GROUPS = ['Character', 'Timbre', 'Mood'];
+/** At most this many per item: the tile shows a line of them. */
+const MAX_CARD_TAGS = 6;
 const SKIP_FOLDERS = new Set(['Ableton Folder Info']);
 
 function fourccOf(code: string): number {
@@ -102,6 +117,8 @@ export interface IndexRow {
 	device_id: string | null;
 	mod_date: number | null;
 	file_size: number | null;
+	/** The item's tags, `Group|Value`, newline-separated; null when it has none. */
+	tags: string | null;
 }
 
 /** The `files.file_id` of the folder the index lists as this Place, or null. */
@@ -216,7 +233,9 @@ export interface IndexScanResult {
 export function indexRowsOf(h: IndexHandle, rootId: number): IndexRow[] {
 	return h.db
 		.prepare(
-			`SELECT f.file_id, f.parent_id, f.name, f.file_type, f.subtype, f.device_type, f.device_id, f.mod_date, f.file_size
+			`SELECT f.file_id, f.parent_id, f.name, f.file_type, f.subtype, f.device_type, f.device_id, f.mod_date, f.file_size,
+			   (SELECT group_concat(v.value, char(10)) FROM metadata m JOIN metadata_values v ON v.id = m.value_id
+			    WHERE m.file_id = f.file_id AND m.key IN (${TAG_KEYS.join(',')})) AS tags
 			 FROM ancestors a JOIN files f ON f.file_id = a.file_id WHERE a.ancestor_id = ?`
 		)
 		.all(rootId) as unknown as IndexRow[];
@@ -230,7 +249,7 @@ export function indexRowsOf(h: IndexHandle, rootId: number): IndexRow[] {
 export function indexRowsFingerprint(rows: IndexRow[]): string {
 	const hash = createHash('sha1');
 	for (const r of rows) {
-		hash.update(`${r.file_id}\t${r.parent_id}\t${r.name}\t${r.file_type}\t${r.subtype}\t${r.device_type}\t${r.device_id ?? ''}\t${r.mod_date ?? ''}\t${r.file_size ?? ''}\n`);
+		hash.update(`${r.file_id}\t${r.parent_id}\t${r.name}\t${r.file_type}\t${r.subtype}\t${r.device_type}\t${r.device_id ?? ''}\t${r.mod_date ?? ''}\t${r.file_size ?? ''}\t${r.tags ?? ''}\n`);
 	}
 	return hash.digest('hex');
 }
@@ -313,6 +332,8 @@ export function scanIndexPlace(h: IndexHandle, rootId: number, rootPath: string,
 				const patch = info?.patch;
 				if (patch && patch !== item.name) item.patch = patch;
 			}
+			const tags = cardTags(r.tags);
+			if (tags.length) item.tags = tags;
 			const tint = tintFor(item, opts.colors);
 			if (tint) item.vendorColor = tint;
 			node.presets.push(item);
@@ -332,6 +353,22 @@ function fileInfoOf(full: string, r: IndexRow, cache: KindCache | undefined): Ki
 	const info = readKind(full, '.aupreset');
 	cache.set(full, { size: r.file_size ?? 0, mtimeMs: (r.mod_date ?? 0) * 1000, info });
 	return info;
+}
+
+/** The values of `CARD_TAG_GROUPS` in an index row's tags, in group order, unique. */
+export function cardTags(raw: string | null): string[] {
+	if (!raw) return [];
+	const out: string[] = [];
+	const all = raw.split('\n');
+	for (const group of CARD_TAG_GROUPS) {
+		for (const t of all) {
+			const i = t.indexOf('|');
+			if (i < 0 || t.slice(0, i) !== group) continue;
+			const value = t.slice(i + 1);
+			if (value && !out.includes(value)) out.push(value);
+		}
+	}
+	return out.slice(0, MAX_CARD_TAGS);
 }
 
 function extOf(name: string): string {

@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { auKeyOf, indexRowsFingerprint, indexRowsOf, kindOfRow, type IndexHandle } from '$lib/server/places/indexScan';
+import { auKeyOf, cardTags, indexRowsFingerprint, indexRowsOf, kindOfRow, type IndexHandle } from '$lib/server/places/indexScan';
 
 const four = (s: string) => ((s.charCodeAt(0) << 24) | (s.charCodeAt(1) << 16) | (s.charCodeAt(2) << 8) | s.charCodeAt(3)) >>> 0;
 const row = (over: Partial<{ name: string; file_type: number; subtype: number; device_type: number; device_id: string | null }>) => ({
@@ -66,7 +66,9 @@ describe('indexRowsFingerprint', () => {
 	function index(): { h: IndexHandle; add: (id: number, parent: number, name: string, place: boolean) => void } {
 		const db = new DatabaseSync(':memory:');
 		db.exec(`CREATE TABLE files (file_id INTEGER, parent_id INTEGER, name TEXT, file_type INTEGER, subtype INTEGER, device_type INTEGER, device_id TEXT, mod_date INTEGER, file_size INTEGER);
-			CREATE TABLE ancestors (file_id INTEGER, ancestor_id INTEGER);`);
+			CREATE TABLE ancestors (file_id INTEGER, ancestor_id INTEGER);
+			CREATE TABLE metadata (file_id INTEGER, key INTEGER, value_id INTEGER);
+			CREATE TABLE metadata_values (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT);`);
 		const add = (id: number, parent: number, name: string, place: boolean) => {
 			db.prepare('INSERT INTO files VALUES (?, ?, ?, 0, 0, 0, NULL, 100, 10)').run(id, parent, name);
 			if (place) db.prepare('INSERT INTO ancestors VALUES (?, 1)').run(id);
@@ -86,5 +88,24 @@ describe('indexRowsFingerprint', () => {
 		expect(touched).not.toBe(before);
 		add(4, 1, 'Clap.adg', true);
 		expect(indexRowsFingerprint(indexRowsOf(h, 1))).not.toBe(touched);
+	});
+
+	it('moves when a tag file changes an item\'s tags, and reads them', () => {
+		const { h, add } = index();
+		add(2, 1, 'Pad.aupreset', true);
+		const before = indexRowsFingerprint(indexRowsOf(h, 1));
+		h.db.prepare("INSERT INTO metadata_values (id, value) VALUES (7, 'Mood|Dark')").run();
+		h.db.prepare('INSERT INTO metadata VALUES (2, 1431004537, 7)').run();
+		const rows = indexRowsOf(h, 1);
+		expect(rows[0].tags).toBe('Mood|Dark');
+		expect(indexRowsFingerprint(rows)).not.toBe(before);
+	});
+});
+
+describe('cardTags', () => {
+	it('keeps Character, Timbre and Mood values, in that order, once each', () => {
+		expect(cardTags('Mood|Dark\nSounds|Pad\nTimbre|Analog\nCharacter|Warm\nMood|Dark\nKeyword|Arp')).toEqual(['Warm', 'Analog', 'Dark']);
+		expect(cardTags('Sounds|Pad|Warm\nOmni Category|Pads')).toEqual([]);
+		expect(cardTags(null)).toEqual([]);
 	});
 });
