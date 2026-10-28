@@ -40,7 +40,8 @@
    * Permute carries its mute and pitch steps (`chain/PermuteStepsFace`),
    * the track's instrument the control its view is known by
    * (`chain/InstrumentFace`: Omnisphere's ORB, Drift's filter), and a
-   * Drum Rack its kit's Trnsp (`chain/DrumRackFace`, `vm.pitch`).
+   * Drum Rack its pads (`chain/DrumRackFace`, as the Drum Rack view
+   * draws them, 2026-10-27).
    *
    * **A pad follows the Drum Rack view.** While a pad is held or latched
    * on the selected track's Drum Rack, the overview is that pad's chain —
@@ -169,6 +170,8 @@
     presetKey: string | null;
     tile: string | null;
     ink: string;
+    /** The track's Drum Rack, drawn as its pads, and kept first while a pad is scoped. */
+    kit: boolean;
   };
 
   const trackPath = $derived(selectedTrackStore.selectedTrackPath);
@@ -252,10 +255,32 @@
         // The instrument and Permute wear the track's color (Permute: the
         // user, 2026-10-26, as the strip's own Permute section does); a
         // pad's chain, the pad's.
-        ink: isInstrument || presetKey === 'sequencer' ? (padChain ? (padInk ?? trackColor) : trackColor) : trackInk(family, paint)
+        ink: isInstrument || presetKey === 'sequencer' ? (padChain ? (padInk ?? trackColor) : trackColor) : trackInk(family, paint),
+        kit: !padChain && isInstrument && device.className === 'DrumGroupDevice'
       };
     })
   );
+
+  /*
+   * The kit cell (2026-10-27): while a pad is scoped the chain is the
+   * pad's, but the rack's own cell stays first, with its pads, so a pad
+   * pressed there stays under the finger as the chain turns into its pad's
+   * — a hold lasts, and another pad is a tap away. Same key as the cell the
+   * unscoped chain draws for it, so it is the same cell, never remounted.
+   * Outside `cells`: the drops and their positions are the pad chain's.
+   */
+  const kitCell = $derived.by<Cell | null>(() => {
+    if (!padChain || !padScope) return null;
+    const all = [...selectedTrackStore.devicesByPath].sort((a, b) => indexOf(a.devicePath) - indexOf(b.devicePath));
+    const i = all.findIndex((d) => d.devicePath === padScope.rackPath);
+    if (i < 0) return null;
+    const device = all[i];
+    const nth = all.slice(0, i).filter((d) => d.name === device.name && d.className === device.className).length;
+    const sig = `${device.className}|${device.name}`;
+    return { key: `${sig}|${nth}`, sig, path: device.devicePath, device, kind: 'instrument', presetKey: null, tile: null, ink: trackColor, kit: true };
+  });
+  /** How many cells the kit cell puts ahead of the chain's own. */
+  const kitLead = $derived(kitCell ? 1 : 0);
 
   function isOn(cell: Cell): boolean {
     return (selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(cell.device, 0)) ?? 1) > 0;
@@ -391,7 +416,7 @@
    * (ADR-483); the ghost Utility had already left for the right sidebar.
    */
   const recentPool = $derived(recentForChain(cells.map((c) => c.device.name)));
-  const drawn = $derived(shown);
+  const drawn = $derived(kitCell ? [kitCell, ...shown] : shown);
 
   const grid = $derived(chainGrid(drawn.length + (recentPool.length > 0 ? 1 : 0), CHAIN_WRAP_AFTER));
   /*
@@ -491,10 +516,10 @@
    * a tap on the Auto Filter's XY did nothing). The XY counts a press as its
    * own tap only under 200 ms and 5 px, which a finger on the iPad often
    * is not; the cell's tap has no time limit and a touch's slop. Except
-   * where a tap IS the control's: Permute's steps, the MIDI wheels.
+   * where a tap IS the control's: Permute's steps, the MIDI wheels, a Drum Rack's pads.
    */
   function tapOpensFromControl(cell: Cell): boolean {
-    return cell.presetKey !== 'sequencer' && !isMidiWheels(cell.device);
+    return cell.presetKey !== 'sequencer' && !isMidiWheels(cell.device) && !cell.kit;
   }
 
   function dragStart(cell: Cell, position: number, info: DragInfo) {
@@ -502,7 +527,7 @@
     // device's view as a tap on the cell does — every control here, not
     // only the grid's tiles, which open their own (2026-10-26).
     if (pressInControl) {
-      open(cell);
+      if (!cell.kit) open(cell);
       return;
     }
     if (cell.kind === 'instrument' || !chainEl) return;
@@ -536,7 +561,7 @@
     // cell wherever it was picked up by.
     const x = d.chain.left + d.box.left + d.box.width / 2 + info.dx;
     const y = d.chain.top + d.box.top + d.box.height / 2 - info.dy;
-    const to = clampChainIndex({ from: d.from, to: positionAt(d, x, y), count: d.base.length, instrument: d.instrument });
+    const to = clampChainIndex({ from: d.from, to: Math.max(0, positionAt(d, x, y) - kitLead), count: d.base.length, instrument: d.instrument });
     if (to !== null && to !== d.to) drag = { ...d, to };
   }
 
@@ -598,6 +623,11 @@
   function open(cell: Cell) {
     const { device } = cell;
     if (cell.kind === 'instrument') {
+      // The kit cell under a pad: back to the kit.
+      if (cell.kit && padScope) {
+        drumPadScope.clear();
+        return;
+      }
       // The pad's instrument is what the Drum Rack view already shows.
       if (padScope) return;
       fxChainStore.appoint(device.devicePath, { force: true });
@@ -637,18 +667,18 @@
         </span>
       </div>
 
-      {#if cell.presetKey === 'sequencer'}
+      {#if cell.kit}
+        <!-- A Drum Rack: its pads, as its view draws them. -->
+        <div class="cell-control" role="presentation">
+          <DrumRackFace device={cell.device} color={selectedTrackScheme() ?? schemeFromInk(cell.ink)} />
+        </div>
+      {:else if cell.presetKey === 'sequencer'}
         <!-- Permute: its mute and pitch steps, on this device. -->
         <div class="cell-control" role="presentation"><PermuteStepsFace device={cell.device} color={cell.ink} /></div>
       {:else if !padScope && cell.kind === 'instrument' && glance.instrumentViewType && FACED_INSTRUMENTS.has(glance.instrumentViewType)}
         <!-- The instrument's signature control, as its view draws it. -->
         <div class="cell-control" role="presentation">
           <InstrumentFace device={cell.device} type={glance.instrumentViewType} color={selectedTrackScheme() ?? schemeFromInk(cell.ink)} />
-        </div>
-      {:else if !padScope && cell.kind === 'instrument' && cell.device.className === 'DrumGroupDevice'}
-        <!-- A Drum Rack: the kit's Trnsp, as its view draws it. -->
-        <div class="cell-control" role="presentation">
-          <DrumRackFace device={cell.device} color={selectedTrackScheme() ?? schemeFromInk(cell.ink)} />
         </div>
       {:else if !padScope && isMidiWheels(cell.device)}
         <!-- The pitch and mod wheels, as the instrument views draw them:
@@ -723,7 +753,7 @@
         onTap: () => {
           if (!pressInControl || tapOpensFromControl(cell)) open(cell);
         },
-        onStart: (info) => dragStart(cell, position, info),
+        onStart: (info) => dragStart(cell, position - kitLead, info),
         onMove: dragMove,
         onEnd: dragEnd
       }}
