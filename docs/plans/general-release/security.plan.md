@@ -1,9 +1,10 @@
 # Device Pairing
 
-**Designed 2026-09-30. The smaller fixes but the recorder's port are done the same day; pairing
-is not started.** What is exposed today, and why, is
-[../../../SECURITY.md](../../../SECURITY.md). This plan closes the main gap: a device on the same
-network can drive Live because `/api/ws-auth` signs the bridge's challenge for any caller.
+**Designed 2026-09-30; pairing built 2026-10-27 on `bj/native-ipad-app` (ADR-491), to be tried
+on the rig.** What is built: trust by address (the Mac) and by cookie (a paired device), the
+pairing screen, the code in Live's status bar, Allow and Ignore on trusted screens, the gate on
+every API route but pairing's own, and Settings → Connection → Devices (Forget, Forget all). The
+recorder's port is still open.
 
 **Sizes:** **S** is hours, **M** a day or two, **L** a project.
 

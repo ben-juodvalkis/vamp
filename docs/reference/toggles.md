@@ -405,3 +405,15 @@ Live-restart recovery is instant rather than heartbeat-cadence-delayed.
 
 See `wire-protocol.md` §2.12–2.14 for the wire details and
 `interface/bridge/CLAUDE.md` for the bridge side.
+
+## Pairing (`osc.webSocket.auth.pairing`, ADR-491)
+
+Not a feature switch: like the auth gate it extends, it is **on unless
+`false`**. On, `/api/ws-auth` and every `/api/*` route but the pairing flow
+answer only the Mac itself (loopback or one of its own addresses — Vamp for
+iPad over the cable included, through Vamp for Mac's relay) and devices
+paired once; anything else gets the pairing screen. Off, every caller is
+trusted, as before pairing. Read on each request (`$lib/server/pairing/
+service.ts`), so a change to `constants.local.json` lands on the next one.
+Paired devices are `config/.paired-devices.json`; Settings → Connection →
+Devices forgets them.

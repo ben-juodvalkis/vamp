@@ -308,6 +308,10 @@ from .components.SessionComponent import (
     V3_SESSION_SIGNATURE_NUM_ADDRESS,
     V3_SESSION_STOP_CMD_ADDRESS,
 )
+from .components.StatusMessageComponent import (
+    SHOW_MESSAGE_ADDRESS,
+    StatusMessageComponent,
+)
 from .components.SessionSettingsComponent import (
     SessionSettingsComponent,
     V3_SESSION_AUTO_ARM_ADDRESS,
@@ -615,6 +619,13 @@ class LoopingSurface(ControlSurface):
         # SessionSettingsComponent — init-emit seeds the UI; the
         # on_accept re-seed for connecting clients is wired into the
         # handshake accept chain later.
+        # Pairing (ADR-491): the bridge puts a device's code in Live's
+        # status bar, and clears it once the request is settled.
+        self._status_message_component = StatusMessageComponent(show=self.show_message)
+        self._transport.add_handler(
+            SHOW_MESSAGE_ADDRESS, self._status_message_component.handle_show_message,
+        )
+
         self._session_settings_component = SessionSettingsComponent(
             emit=self._transport.send,
         )

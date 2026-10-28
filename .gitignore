@@ -185,6 +185,9 @@ pw-console*.txt
 # WebSocket auth secret — machine-local, auto-generated on first run.
 # Never commit: it is the credential the UI proves it holds.
 config/.ws-secret
+# Paired devices (ADR-491): token hashes, never committed
+config/.paired-devices.json
+config/.paired-devices.json.tmp
 
 # midi-hub-max clone (its own repo) and the link Max loads
 /owner/Max Patches/midi-hub-max/

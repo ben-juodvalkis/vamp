@@ -77,15 +77,15 @@ This builds the app for performance and serves it on port **8889**. Open the add
 **Settings → Connection** shows, in Safari on the iPad, then **Share → Add to Home Screen** to
 run it full screen. It is laid out for landscape.
 
-- **USB-C** is the steadiest link. macOS gives the iPad's USB network no fixed address by default,
-  so set it once: **System Settings → Network →** the iPad's USB interface **→ Details → TCP/IP →
-  Configure IPv4: Manually**, address `192.168.100.1`, subnet mask `255.255.255.0`. Then the iPad
-  opens `http://192.168.100.1:8889`.
+- **USB-C** is the steadiest link. With Vamp for iPad (ADR-488) there is nothing to set: plug in and
+  open the app. In Safari, open `http://<the Mac's name>.local:8889` (Settings → Connection shows
+  it). macOS now keeps the iPad's USB network private, so it can no longer be given a fixed address.
 - **Wi-Fi** works on a network that lets devices reach each other: open `http://<the Mac's
   address>:8889`.
 
-**Anyone on the same network who can open the page can drive Live.** Use USB-C or a network you
-trust. [SECURITY.md](SECURITY.md) says what is exposed and what is coming.
+**A device other than the Mac pairs once** (ADR-491): a code in Live's status bar, or Allow on a
+screen already connected. Vamp for iPad on the cable never does. [SECURITY.md](SECURITY.md) says
+what is exposed.
 
 ## 7. Optional
 

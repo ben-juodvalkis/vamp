@@ -116,7 +116,15 @@ const AUTH_PROOF_URL = '/api/ws-auth';
  * Not cached: each salt is fresh per connection, so each proof is
  * good exactly once.
  */
-async function fetchAuthProof(salt: string): Promise<string | null> {
+/**
+ * The interface server answers 401 to a device that is not paired
+ * (ADR-491). That is not a link problem a retry will fix: the page shows
+ * the pairing screen (`pairing-required`), and the socket stops redialling
+ * until the device is paired and the page reloads.
+ */
+let pairingRequired = false;
+
+async function fetchAuthProof(salt: string): Promise<string | null | 'unpaired'> {
 	// Bounded: after the USB link resets, Safari can hand this request to
 	// a pooled HTTP connection to the link's old address, which hangs.
 	// The bridge closes an unauthenticated socket at 5s anyway, so past
@@ -128,6 +136,7 @@ async function fetchAuthProof(salt: string): Promise<string | null> {
 			cache: 'no-store',
 			signal: abort.signal
 		});
+		if (res.status === 401) return 'unpaired';
 		if (!res.ok) {
 			logger.error('Could not obtain the WebSocket auth proof', { status: res.status });
 			return null;
@@ -158,6 +167,17 @@ const AUTH_PROOF_TIMEOUT_MS = 3000;
 async function answerAuthChallenge(salt: string, socket: WebSocket): Promise<void> {
 	const proof = await fetchAuthProof(salt);
 	if (socket !== ws || socket.readyState !== WebSocket.OPEN) return;
+	if (proof === 'unpaired') {
+		logger.warn('This device is not paired: showing the pairing screen');
+		pairingRequired = true;
+		if (reconnectTimer) {
+			clearTimeout(reconnectTimer);
+			reconnectTimer = null;
+		}
+		abandonSocket(socket, 'unpaired');
+		if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('pairing-required'));
+		return;
+	}
 	if (!proof) {
 		logger.error('Cannot authenticate to the bridge — no proof available');
 		abandonSocket(socket, 'auth-proof');
@@ -244,7 +264,7 @@ function getConnectionUrls(): string[] {
  * `onclose` so all retry paths converge on one cadence.
  */
 function scheduleReconnect(reason: string): void {
-	if (reconnectTimer) return;
+	if (reconnectTimer || pairingRequired) return;
 	const delay = Math.min(
 		BASE_RECONNECT_MS * Math.pow(2, reconnectAttempts),
 		MAX_RECONNECT_MS
@@ -627,7 +647,7 @@ export function reconnectNow(reason: string): void {
 	// Before the layout's first `connectToLive` the handlers it installs
 	// (the handshake among them) are not there yet: connecting now would
 	// open a socket nobody says hello on.
-	if (!connectStarted) return;
+	if (!connectStarted || pairingRequired) return;
 	if (ws?.readyState === WebSocket.OPEN) {
 		const silence = Date.now() - lastInboundTs;
 		if (silence <= RESUME_SILENCE_MS) return;

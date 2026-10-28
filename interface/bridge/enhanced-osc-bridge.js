@@ -352,6 +352,8 @@ const drumSwap = !features.isEnabled('axHelper') ? null : createDrumSwapSimilar(
 // only the bridge ever waits on it. Null while `features.axHelper` is off, like
 // the swap above.
 const { createLiveGroupTracks } = require('./handlers/liveGroupTracks');
+const { createPairingRelay, PAIRING_PATH, SHOW_MESSAGE_ADDRESS } = require('./handlers/pairingRelay');
+const { resolveWsSecret } = require('./utils/wsSecret');
 const groupTracks = !features.isEnabled('axHelper') ? null : createLiveGroupTracks({
     axHelper,
     logger,
@@ -362,11 +364,27 @@ const groupTracks = !features.isEnabled('axHelper') ? null : createLiveGroupTrac
     sendToSurface: sendTaggedToSurface
 });
 
+// Pairing (ADR-491): the interface server POSTs each request and its
+// outcome here; the trusted screens get a banner and Live's status bar the
+// code. Taken from loopback with the WebSocket secret only.
+const pairingRelay = createPairingRelay({
+    secret: resolveWsSecret().secret,
+    broadcast: (address, args) => broadcastBatcher.enqueue({ address, args, source: 'bridge' }),
+    showInLive: (text) => {
+        try {
+            surfaceLink.send({ address: SHOW_MESSAGE_ADDRESS, args: [{ type: 's', value: text }] });
+        } catch (e) {
+            logger.debug('Pairing status-bar message not sent', { error: e.message });
+        }
+    },
+    logger
+});
+
 const { httpServer, wss } = createWebSocketServer(
     // Thread the launch mode through so the WS server can announce it to
     // each client on connect (see /bridge/server_mode). Merged, not mutated,
     // so the shared constants object stays untouched.
-    { ...OSC_CONFIG.webSocket, serverMode: SERVER_MODE },
+    { ...OSC_CONFIG.webSocket, serverMode: SERVER_MODE, httpRoutes: { [PAIRING_PATH]: pairingRelay } },
     // `pythonSurface` here is the link, so a UI write takes the stream
     // whenever it is up (ADR-489).
     outboundPorts,
