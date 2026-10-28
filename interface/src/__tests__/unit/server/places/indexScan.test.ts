@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { auKeyOf, cardTags, indexRowsFingerprint, indexRowsOf, kindOfRow, type IndexHandle } from '$lib/server/places/indexScan';
+import { auKeyOf, cardTags, deviceNameOf, indexRowsFingerprint, indexRowsOf, kindOfRow, type IndexHandle } from '$lib/server/places/indexScan';
 
 const four = (s: string) => ((s.charCodeAt(0) << 24) | (s.charCodeAt(1) << 16) | (s.charCodeAt(2) << 8) | s.charCodeAt(3)) >>> 0;
 const row = (over: Partial<{ name: string; file_type: number; subtype: number; device_type: number; device_id: string | null }>) => ({
@@ -107,5 +107,22 @@ describe('cardTags', () => {
 		expect(cardTags('Mood|Dark\nSounds|Pad\nTimbre|Analog\nCharacter|Warm\nMood|Dark\nKeyword|Arp')).toEqual(['Warm', 'Analog', 'Dark']);
 		expect(cardTags('Sounds|Pad|Warm\nOmni Category|Pads')).toEqual([]);
 		expect(cardTags(null)).toEqual([]);
+	});
+});
+
+describe('deviceNameOf', () => {
+	const names = new Map([['DrumGroupDevice', 'Drum Rack'], ['InstrumentVector', 'Wavetable']]);
+	it("names a Live preset's device as Live's Built-in devices do, else by its class in words", () => {
+		expect(deviceNameOf('device:ableton:instr:DrumGroupDevice', names)).toBe('Drum Rack');
+		expect(deviceNameOf('device:ableton:instr:InstrumentVector', names)).toBe('Wavetable');
+		// A legacy device with no Built-in entry.
+		expect(deviceNameOf('device:ableton:audiofx:AutoFilter', names)).toBe('Auto Filter');
+		expect(deviceNameOf('device:ableton:audiofx:Erosion2', names)).toBe('Erosion');
+	});
+	it("names a Max device's preset by its .amxd, and nothing for a plug-in", () => {
+		const pitchHack = 'device:m4l:audiofx:pack@www.ableton.com/260:Audio%20Effects/Pitch%20Hack/Ableton%20Folder%20Info/Pitch%20Hack.amxd';
+		expect(deviceNameOf(pitchHack, names)).toBe('Pitch Hack');
+		expect(deviceNameOf('device:au:instr:1:2:3', names)).toBeUndefined();
+		expect(deviceNameOf(null, names)).toBeUndefined();
 	});
 });

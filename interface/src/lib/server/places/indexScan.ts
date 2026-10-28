@@ -28,7 +28,15 @@
  * Tags: `metadata` holds the tags a Pack ships (key 1264941431) and the ones a
  * user folder's tag file sets (key 1431004537 — Omnisphere-Tools writes the
  * Spectrasonics attributes there, its ADR 011), as `Group|Value` strings. An
- * item carries the values of `CARD_TAG_GROUPS` for its tile's labels.
+ * item carries the values of `CARD_TAG_GROUPS` for its tile's labels. A copy of
+ * a Pack preset in a user folder has no tags of its own (Live keys them by
+ * file); one with no card tags borrows those of the Pack preset with the
+ * same name and size.
+ *
+ * Device: a Live preset (`.adg`/`.adv`) names the device it loads, in Live's
+ * own words, read from the index's Built-in devices (`DrumGroupDevice` is
+ * "Drum Rack", `InstrumentVector` "Wavetable"); a Max device's preset names
+ * its `.amxd`.
  *
  * **When it cannot be trusted** the caller falls back to the disk scan:
  * no database, a `version` other than `12300`, a column this reads gone,
@@ -119,6 +127,56 @@ export interface IndexRow {
 	file_size: number | null;
 	/** The item's tags, `Group|Value`, newline-separated; null when it has none. */
 	tags: string | null;
+}
+
+interface Lookups {
+	/** Device class → the name Live shows for it. */
+	deviceNames: Map<string, string>;
+	/** `name\tsize` of a Pack's `.adg`/`.adv` → its card tags. */
+	packTags: Map<string, string[]>;
+}
+const lookups = new WeakMap<IndexHandle, Lookups>();
+
+/** What every Place's scan reads from the index once: device names and Pack presets' tags. */
+function lookupsOf(h: IndexHandle): Lookups {
+	let l = lookups.get(h);
+	if (l) return l;
+	const deviceNames = new Map<string, string>();
+	const builtIn = h.db.prepare("SELECT file_id FROM places WHERE name = 'Built-in' LIMIT 1").get() as { file_id: number } | undefined;
+	if (builtIn) {
+		const rows = h.db
+			.prepare("SELECT f.name, f.device_id FROM ancestors a JOIN files f ON f.file_id = a.file_id WHERE a.ancestor_id = ? AND f.device_id LIKE 'device:ableton:%'")
+			.all(builtIn.file_id) as Array<{ name: string; device_id: string }>;
+		for (const r of rows) {
+			const cls = liveClassOf(r.device_id)?.cls;
+			if (cls && !deviceNames.has(cls)) deviceNames.set(cls, r.name.replace(/\.[^.]+$/, ''));
+		}
+	}
+	const packTags = new Map<string, string[]>();
+	const rows = h.db
+		.prepare(
+			`SELECT f.name, f.file_size,
+			   (SELECT group_concat(v.value, char(10)) FROM metadata m JOIN metadata_values v ON v.id = m.value_id
+			    WHERE m.file_id = f.file_id AND m.key IN (${TAG_KEYS.join(',')})) AS tags
+			 FROM places p JOIN ancestors a ON a.ancestor_id = p.file_id JOIN files f ON f.file_id = a.file_id
+			 WHERE p.folder_kind = 0 AND (f.name LIKE '%.adg' OR f.name LIKE '%.adv')`
+		)
+		.all() as Array<{ name: string; file_size: number | null; tags: string | null }>;
+	for (const r of rows) {
+		const tags = cardTags(r.tags);
+		if (tags.length) packTags.set(`${r.name}\t${r.file_size ?? ''}`, tags);
+	}
+	lookups.set(h, (l = { deviceNames, packTags }));
+	return l;
+}
+
+/** The name Live shows for a Live preset's device, or undefined (a plug-in, a sample). */
+export function deviceNameOf(deviceId: string | null, names: Map<string, string>): string | undefined {
+	const lc = liveClassOf(deviceId);
+	if (lc) return names.get(lc.cls) ?? lc.cls.replace(/\d+$/, '').replace(/([a-z])([A-Z])/g, '$1 $2');
+	// A Max device's preset: `device:m4l:<domain>:<…>/<Name>.amxd`.
+	const amxd = /^device:m4l:\w+:.*?([^/:]+)\.amxd$/.exec(deviceId ?? '')?.[1];
+	return amxd ? decodeURIComponent(amxd) : undefined;
 }
 
 /** The `files.file_id` of the folder the index lists as this Place, or null. */
@@ -262,6 +320,7 @@ export function indexRowsFingerprint(rows: IndexRow[]): string {
  */
 export function scanIndexPlace(h: IndexHandle, rootId: number, rootPath: string, placeName: string, opts: IndexScanOptions, prefetched?: IndexRow[]): IndexScanResult {
 	const rows = prefetched ?? indexRowsOf(h, rootId);
+	const { deviceNames, packTags } = lookupsOf(h);
 	const byParent = new Map<number, IndexRow[]>();
 	for (const r of rows) {
 		let list = byParent.get(r.parent_id);
@@ -332,8 +391,13 @@ export function scanIndexPlace(h: IndexHandle, rootId: number, rootPath: string,
 				const patch = info?.patch;
 				if (patch && patch !== item.name) item.patch = patch;
 			}
+			if (ext === '.adg' || ext === '.adv') {
+				const device = deviceNameOf(r.device_id, deviceNames);
+				if (device) item.device = device;
+			}
 			const tags = cardTags(r.tags);
-			if (tags.length) item.tags = tags;
+			const borrowed = tags.length || (ext !== '.adg' && ext !== '.adv') ? undefined : packTags.get(`${r.name}\t${r.file_size ?? ''}`);
+			if (tags.length || borrowed) item.tags = tags.length ? tags : borrowed;
 			const tint = tintFor(item, opts.colors);
 			if (tint) item.vendorColor = tint;
 			node.presets.push(item);

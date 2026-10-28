@@ -987,6 +987,23 @@
 	/** The kinds whose tiles may draw a live face (`deviceControls`): effects and effect racks. */
 	/** Tag labels a preset tile names at most: a line's worth at the densest grid. */
 	const CARD_TAGS = 3;
+	/**
+	 * Whether this grid's preset tiles have room for the tag row under a
+	 * two-line name and the plug-in/device line. The name comes first: in a
+	 * denser grid the tags give way rather than cut the name to one line. The
+	 * sizes mirror the CSS: --spacing-sm padding and a 2px border, the name at
+	 * 15cqw (at most 2.6rem) × 1.12, the sub-label 0.72rem and the tags 0.62rem
+	 * at 1.2 plus their margins.
+	 */
+	const tagsFit = $derived.by(() => {
+		const { tileWidth: w, tileHeight: h } = gridLayout;
+		if (!w || !h) return true;
+		const frame = 2 * (8 + 2);
+		const nameLine = Math.min(0.15 * (w - frame), 41.6) * 1.12;
+		const subLine = 0.72 * 16 * 1.2 + 2;
+		const tagLine = 0.62 * 16 * 1.2 + 2;
+		return h - frame >= 2 * nameLine + subLine + tagLine;
+	});
 	const FACE_KINDS = new Set(['audio-effect', 'midi-effect', 'effect-rack', 'midi-effect-rack', 'max-audio-effect', 'max-midi-effect']);
 	/** Effect tiles drawing a live face: they hand the face the gesture. */
 	const facedTiles = new SvelteSet<string>();
@@ -1758,17 +1775,19 @@
 	     audio track, a group or Main it is greyed like a missing plug-in. -->
 	{@const midiOnly = MIDI_EFFECT_KINDS.has(p.kind ?? 'unknown') && selectedTrackStore.trackType !== 'midi'}
 	{@const inactive = notInstalled || midiOnly}
-	<!-- The line under the name: the plug-in, else why a greyed tile is greyed —
-	     on its face, since the iPad shows no tooltips. -->
-	{@const subLabel = notInstalled ? 'Not installed' : midiOnly ? 'MIDI tracks only' : (p.plugin ?? null)}
 	<!-- MidiWheels draws its two wheels, live (BrowserWheelsFace). -->
 	{@const wheels = !inactive && p.kind === 'max-midi-effect' && p.name === constants.devices.midiWheels.deviceName}
+	{@const faced = wheels || facedTiles.has(p.path)}
+	<!-- The line under the name: why a greyed tile is greyed — on its face,
+	     since the iPad shows no tooltips — else the plug-in, else a Live
+	     preset's device ("Drum Rack", "Operator") unless its face pictures it. -->
+	{@const subLabel = notInstalled ? 'Not installed' : midiOnly ? 'MIDI tracks only' : (p.plugin ?? (faced ? null : (p.device ?? null)))}
 	<!-- What the sound is like (Live's Character, Timbre, Mood tags), on a tile
 	     with room: not one whose face fills it. -->
-	{@const tags = wheels || facedTiles.has(p.path) ? [] : (p.tags ?? []).filter((t) => !pathWords.has(t.toLowerCase())).slice(0, CARD_TAGS)}
+	{@const tags = faced || !tagsFit ? [] : (p.tags ?? []).filter((t) => !pathWords.has(t.toLowerCase())).slice(0, CARD_TAGS)}
 	<button
 		class="card preset-tile"
-		class:faced={wheels || facedTiles.has(p.path)}
+		class:faced
 		class:loaded={(shownChargingPresetPath ?? browserNavigationStore.loadedPresetPath) === p.path}
 		class:unavailable={inactive}
 		class:has-plugin={!!subLabel || tags.length > 0}

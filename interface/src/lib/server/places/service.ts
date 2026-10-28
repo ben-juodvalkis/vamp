@@ -62,6 +62,13 @@ import { bakeThumbnails } from './audioThumbnailCache';
 /** How the effects Place is drawn (`tidyEffectsPlace`): 3, every preset on one screen in its folder's section (2026-10-26; 2 as on disk, 1 grouped by kind). */
 const EFFECTS_LAYOUT = 3;
 
+/**
+ * Bump when the scan writes something new into a catalog: the cache stamp
+ * otherwise holds only what the build read, so a catalog cached by older code
+ * would be served as it was. 2: items carry `tags` and `device` (2026-10-28).
+ */
+const CATALOG_FORMAT = 2;
+
 export type CatalogSource = 'index' | 'disk';
 
 /** One ticked Place's catalog, as the browser reads it. */
@@ -454,7 +461,9 @@ export class PlacesService {
 		const effects = this.isEffectsPlace(s) ? (configSection<{ effectsHidden?: string[] }>('catalog').effectsHidden ?? []) : null;
 		// The effects Place's layout rule is in it too, so a change to how the
 		// Place is drawn rebuilds a catalog cached under the old one.
-		const identity = `${s.name}:${s.icon}:${id}:${s.path}:${JSON.stringify(tuning)}:${JSON.stringify(effects && { hidden: effects, layout: EFFECTS_LAYOUT })}`;
+		// And the build's format: a change to what a scan writes into a catalog
+		// (a new item field) rebuilds catalogs cached by the code before it.
+		const identity = `${CATALOG_FORMAT}:${s.name}:${s.icon}:${id}:${s.path}:${JSON.stringify(tuning)}:${JSON.stringify(effects && { hidden: effects, layout: EFFECTS_LAYOUT })}`;
 		// An index build is stamped with a fingerprint of the Place's own rows,
 		// not the index's write time: Live writes its index every couple of
 		// seconds while it runs, and rebuilding all seven Places on each write

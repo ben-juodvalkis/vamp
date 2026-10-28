@@ -71,6 +71,8 @@ export interface PlaceItem {
 	patch?: string;
 	installed?: boolean;
 	peaks?: string;
+	/** A Live preset's device, as Live names it ("Drum Rack", "Wavetable"): index scans only. */
+	device?: string;
 	/** What the sound is like, from Live's tags (`indexScan.cardTags`): index scans only. */
 	tags?: string[];
 }
