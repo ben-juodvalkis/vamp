@@ -102,6 +102,16 @@ const KICK_MIN_INTERVAL_MS = 1_000;
 const MAX_PENDING_OUT_BYTES = 1024 * 1024;
 
 /**
+ * The surface's word that this stream takes the bridge's messages
+ * (ADR-489). It sends it first on every connection. A surface from before
+ * ADR-489 has no handlers on the stream and never sends it, so until it
+ * arrives `acceptsMessages()` stays false and everything keeps going over
+ * UDP: a bridge restarted ahead of Live still reaches the old surface.
+ * Consumed here, never passed on.
+ */
+const TCP_READY_ADDRESS = '/looping/v3/bridge/tcp_ready';
+
+/**
  * Create the surface TCP client.
  *
  * @param {Object} opts
@@ -113,7 +123,7 @@ const MAX_PENDING_OUT_BYTES = 1024 * 1024;
  *        so nothing downstream can tell which leg a message arrived on.
  * @param {(state: string, detail?: Object) => void} [opts.onStatus]
  * @param {number} [opts.maxPendingOutBytes] - test seam for the outbound cap
- * @returns {{ start(): void, stop(): void, kick(): boolean, send(address: string, args?: unknown[]): boolean, isConnected(): boolean, stats(): Object }}
+ * @returns {{ start(): void, stop(): void, kick(): boolean, send(address: string, args?: unknown[]): boolean, isConnected(): boolean, acceptsMessages(): boolean, stats(): Object }}
  */
 function createSurfaceTcpClient({ host, port, onMessage, onStatus, maxPendingOutBytes = MAX_PENDING_OUT_BYTES }) {
     /** @type {net.Socket|null} */
@@ -127,6 +137,8 @@ function createSurfaceTcpClient({ host, port, onMessage, onStatus, maxPendingOut
     let stopped = false;
     let lastKickAt = 0;
     let inbox = Buffer.alloc(0);
+    /** The surface on this connection has sent TCP_READY_ADDRESS. */
+    let accepts = false;
 
     const stats = {
         connects: 0,
@@ -174,6 +186,7 @@ function createSurfaceTcpClient({ host, port, onMessage, onStatus, maxPendingOut
         const dying = socket;
         socket = null;
         inbox = Buffer.alloc(0);
+        accepts = false;
         if (dying) {
             stats.disconnects += 1;
             dying.removeAllListeners();
@@ -199,6 +212,7 @@ function createSurfaceTcpClient({ host, port, onMessage, onStatus, maxPendingOut
             attempts = 0;
             stats.connects += 1;
             inbox = Buffer.alloc(0);
+            accepts = false;
             logger.info('Surface TCP connected', { host, port });
             setStatus('connected', { host, port });
         });
@@ -219,6 +233,7 @@ function createSurfaceTcpClient({ host, port, onMessage, onStatus, maxPendingOut
             if (dialing === pending) dialing = null;
             if (socket === pending || socket === null) {
                 socket = null;
+                accepts = false;
                 pending.removeAllListeners();
                 pending.destroy();
                 scheduleReconnect(err.code || 'error');
@@ -265,6 +280,15 @@ function createSurfaceTcpClient({ host, port, onMessage, onStatus, maxPendingOut
                 continue;
             }
 
+            if (message && message.address === TCP_READY_ADDRESS) {
+                if (!accepts) {
+                    accepts = true;
+                    logger.info('Surface takes the bridge\'s messages over TCP');
+                    setStatus('accepting', { host, port });
+                }
+                continue;
+            }
+
             try {
                 onMessage(message);
             } catch (e) {
@@ -296,6 +320,7 @@ function createSurfaceTcpClient({ host, port, onMessage, onStatus, maxPendingOut
             }
             socket = null;
             dialing = null;
+            accepts = false;
         },
 
         /**
@@ -364,8 +389,18 @@ function createSurfaceTcpClient({ host, port, onMessage, onStatus, maxPendingOut
             return socket !== null;
         },
 
+        /**
+         * Connected, and the surface has said it takes messages on this
+         * stream. What `SurfaceLink.js` routes on: connected alone is not
+         * enough, since a surface from before ADR-489 accepts the
+         * connection and drops every message on it.
+         */
+        acceptsMessages() {
+            return socket !== null && accepts;
+        },
+
         stats() {
-            return { ...stats, connected: socket !== null, pendingIn: inbox.length };
+            return { ...stats, connected: socket !== null, accepts: socket !== null && accepts, pendingIn: inbox.length };
         }
     };
 }
@@ -374,5 +409,6 @@ module.exports = {
     createSurfaceTcpClient,
     HEADER_BYTES,
     MAX_FRAME_BYTES,
-    MAX_PENDING_OUT_BYTES
+    MAX_PENDING_OUT_BYTES,
+    TCP_READY_ADDRESS
 };

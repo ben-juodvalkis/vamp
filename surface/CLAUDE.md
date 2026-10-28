@@ -572,7 +572,12 @@ Tests: `tests/test_clips_swap_file.py`.
 fire-and-forget senders on ephemeral ports (the Max probe drivers)
 need a datagram socket regardless.
 
-**Bridge → surface rides it too (ADR-489, 2026-10-27).** While the
+**Bridge → surface rides it too (ADR-489, 2026-10-27)**, once the
+transport has said so: a routing `TCPTransport` sends
+`/looping/v3/bridge/tcp_ready [1]` (`TCP_READY_ADDRESS`) first on every
+connection it accepts, and the bridge moves onto the stream only after
+hearing it, so a bridge restarted ahead of Live never strands an older
+surface. While the
 bridge is connected it sends every message here — UI writes, the hello,
 `server/heartbeat`, the swap and Group hops — and uses UDP 11020 only
 while the stream is down. `TCPTransport` is built with

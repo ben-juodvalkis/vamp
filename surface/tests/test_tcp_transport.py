@@ -23,11 +23,12 @@ import time
 
 import pytest
 
-from osc_codec import encode_message
+from osc_codec import decode_message, encode_message
 from tcp_transport import (
     HEADER_BYTES,
     MAX_FRAME_BYTES,
     MAX_OUTBOX_BYTES,
+    TCP_READY_ADDRESS,
     TCPTransport,
 )
 
@@ -470,8 +471,11 @@ def routed(udp):
 
 @pytest.fixture
 def routed_peer(routed):
+    """A connected bridge stand-in that has already read the transport's
+    ready word, so each test starts on the frames it is about."""
     sock = socket.create_connection(routed.local_addr)
     _pump_until(routed, lambda: routed.connected)
+    assert decode_message(_read_frame(sock)) == (TCP_READY_ADDRESS, [1])
     yield sock
     try:
         sock.close()
@@ -489,6 +493,24 @@ def _read_frame(sock):
     while len(body) < length:
         body += sock.recv(length - len(body))
     return body
+
+
+def test_a_routing_transport_says_it_takes_messages_first(routed):
+    """ADR-489: the bridge moves onto the stream only on this word, so a
+    routing transport says it on every connection, before anything else."""
+    for _ in range(2):
+        sock = socket.create_connection(routed.local_addr)
+        _pump_until(routed, lambda: routed.connected)
+        assert decode_message(_read_frame(sock)) == (TCP_READY_ADDRESS, [1])
+        sock.close()
+        _pump_until(routed, lambda: not routed.connected)
+
+
+def test_a_transport_without_a_router_never_says_it(transport, peer):
+    """A stream that would drop the bridge's messages must not claim them:
+    the bridge's own sends are what tell the two apart."""
+    transport.send("/probe", (1,))
+    assert decode_message(_read_frame(peer)) == ("/probe", [1])
 
 
 def test_a_frame_reaches_the_udp_transports_handler(udp, routed, routed_peer):
@@ -518,7 +540,8 @@ def test_a_routed_reply_goes_back_on_the_stream(udp, routed, routed_peer):
     udp.add_handler("/live/test", lambda a, s: ("ok",))
 
     routed_peer.sendall(_frame("/live/test"))
-    _pump_until(routed, lambda: routed.stats()["framesOut"] >= 1)
+    # Two out: the ready word on connect (ADR-489), then the reply.
+    _pump_until(routed, lambda: routed.stats()["framesOut"] >= 2)
 
     assert _read_frame(routed_peer) == encode_message("/live/test", ("ok",))
 

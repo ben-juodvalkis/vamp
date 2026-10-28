@@ -19,11 +19,16 @@
  * One message, one leg. Nothing is sent twice, and nothing is queued for
  * the stream while it is down: a write delivered after an unknown delay
  * is worse than one sent now on the leg that is there.
+ *
+ * "Up" means the surface has said it takes messages on the stream
+ * (`acceptsMessages()`), not merely that it is connected: a surface from
+ * before ADR-489 accepts the connection and drops everything on it, so a
+ * bridge restarted ahead of Live keeps that surface on UDP.
  */
 
 /**
  * @param {Object} opts
- * @param {{ isConnected(): boolean, send(address: string, args?: unknown[]): boolean }} opts.tcp
+ * @param {{ acceptsMessages(): boolean, send(address: string, args?: unknown[]): boolean }} opts.tcp
  * @param {() => ({ send(packet: { address: string, args?: unknown[] }): void } | null | undefined)} opts.udpPort
  *        Read per send, so a port opened (or torn down) later is seen.
  * @returns {{ send(packet: { address: string, args?: unknown[] }): 'tcp'|'udp', stats(): Object }}
@@ -35,7 +40,7 @@ function createSurfaceLink({ tcp, udpPort }) {
 
     return {
         send(packet) {
-            if (tcp.isConnected()) {
+            if (tcp.acceptsMessages()) {
                 // A false here is a frame the stream refused (backed up,
                 // or would not encode) and has already counted and
                 // logged. Falling back would deliver it ahead of the
@@ -55,7 +60,7 @@ function createSurfaceLink({ tcp, udpPort }) {
         },
 
         stats() {
-            return { ...stats, leg: tcp.isConnected() ? 'tcp' : 'udp' };
+            return { ...stats, leg: tcp.acceptsMessages() ? 'tcp' : 'udp' };
         }
     };
 }

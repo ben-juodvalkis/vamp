@@ -1392,6 +1392,14 @@ frame through the UDP transport's own handler table and drain hooks,
 so a handler cannot tell which leg its message came in on. A tuple
 reply goes back on the leg the request came in on.
 
+**The bridge waits for the surface's word first.** A surface that routes
+its stream sends `/looping/v3/bridge/tcp_ready [1]` (Surf→Bridge, int)
+first on every connection; the bridge consumes it, never broadcasts it,
+and only then moves its messages onto the stream, until that connection
+drops. A surface from before ADR-489 accepts the connection, drops every
+frame on it and never sends the word, so a bridge restarted ahead of
+Live keeps reaching it over UDP.
+
 Two limits come with the stream. A surface that has stopped reading
 (a hung Live) gets frames dropped past 1 MiB queued in the bridge
 (`MAX_PENDING_OUT_BYTES`, counted as `droppedOut`) rather than a buffer

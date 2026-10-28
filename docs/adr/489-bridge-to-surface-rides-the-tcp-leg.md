@@ -52,6 +52,17 @@ ahead of the frames still queued. Both legs encode with osc.js and
 `metadata: false`, so a typed arg or a blob is the same bytes on either
 (pinned by `surfaceLink.test.ts`).
 
+"Connected" means **the surface has said it takes messages on the
+stream**, not merely that the connection is up. A routing `TCPTransport`
+sends `/looping/v3/bridge/tcp_ready [1]` first on every connection it
+accepts (`TCP_READY_ADDRESS`, ahead of the republished tree), and the
+bridge's `SurfaceTcpClient` consumes it — it is never broadcast — and
+routes on `acceptsMessages()` from then until the connection drops. A
+surface from before this decision accepts the connection and drops every
+frame on it ("no handler"); it never says the word, so a bridge
+restarted ahead of Live keeps sending it UDP and the restart order stops
+mattering. Added the same day, after the merge showed the gap.
+
 **2. On the surface both legs dispatch through one handler table.**
 `TCPTransport` takes the UDP `OSCTransport` as its `router`: an inbound
 frame goes to `OSCTransport.dispatch`, the same lookup, guard and reply

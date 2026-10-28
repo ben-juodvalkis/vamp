@@ -28,7 +28,7 @@ import dgram from 'node:dgram';
 const nodeRequire = createRequire(import.meta.url);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const osc: any = nodeRequire('osc');
-const { createSurfaceTcpClient } = nodeRequire('../../../../bridge/transport/SurfaceTcpClient.js');
+const { createSurfaceTcpClient, TCP_READY_ADDRESS } = nodeRequire('../../../../bridge/transport/SurfaceTcpClient.js');
 const { createSurfaceLink } = nodeRequire('../../../../bridge/transport/SurfaceLink.js');
 const { __testing } = nodeRequire('../../../../bridge/transport/WebSocketServer.js');
 
@@ -54,12 +54,28 @@ function until(check: () => boolean, ms = 3000): Promise<void> {
 	});
 }
 
-/** The surface's 11022 end: accepts, de-frames, keeps every payload. */
-async function fakeSurface(port = 0) {
+/** One length-prefixed OSC frame, as the surface writes them. */
+function frame(packet: Packet): Buffer {
+	const payload = Buffer.from(osc.writePacket(packet, { metadata: true }));
+	const header = Buffer.alloc(4);
+	header.writeUInt32BE(payload.length, 0);
+	return Buffer.concat([header, payload]);
+}
+
+const READY = frame({ address: TCP_READY_ADDRESS, args: [{ type: 'i', value: 1 }] });
+
+/**
+ * The surface's 11022 end: accepts, de-frames, keeps every payload. A
+ * surface since ADR-489 says it takes the bridge's messages first thing;
+ * `ready: false` is one from before, which accepts the connection and
+ * never says so.
+ */
+async function fakeSurface(port = 0, { ready = true }: { ready?: boolean } = {}) {
 	const payloads: Buffer[] = [];
 	const sockets = new Set<net.Socket>();
 	const server = net.createServer((socket) => {
 		sockets.add(socket);
+		if (ready) socket.write(READY);
 		let inbox = Buffer.alloc(0);
 		socket.on('data', (chunk) => {
 			inbox = Buffer.concat([inbox, chunk]);
@@ -145,7 +161,7 @@ describe('surfaceLink: the stream while it is up', () => {
 		const tcp = client(surface.port);
 		const link = createSurfaceLink({ tcp, udpPort: () => udp.port });
 		tcp.start();
-		await until(() => tcp.isConnected());
+		await until(() => tcp.acceptsMessages());
 
 		expect(link.send(TYPED)).toBe('tcp');
 		await until(() => surface.payloads.length === 1);
@@ -163,7 +179,7 @@ describe('surfaceLink: the stream while it is up', () => {
 		const tcp = client(surface.port);
 		const link = createSurfaceLink({ tcp, udpPort: () => null });
 		tcp.start();
-		await until(() => tcp.isConnected());
+		await until(() => tcp.acceptsMessages());
 
 		for (let i = 0; i < 500; i++) {
 			link.send({ address: '/looping/v3/track/volume', args: [{ type: 'i', value: i }] });
@@ -186,7 +202,7 @@ describe('surfaceLink: the stream while it is up', () => {
 		await until(() => udp.datagrams.length === 1);
 
 		tcp.start();
-		await until(() => tcp.isConnected());
+		await until(() => tcp.acceptsMessages());
 		expect(link.send(TYPED)).toBe('tcp');
 		await until(() => surface.payloads.length === 1);
 
@@ -199,7 +215,7 @@ describe('surfaceLink: the stream while it is up', () => {
 		const tcp = client(surface.port);
 		const link = createSurfaceLink({ tcp, udpPort: () => udp.port });
 		tcp.start();
-		await until(() => tcp.isConnected());
+		await until(() => tcp.acceptsMessages());
 
 		__testing.routeMessageToUDP(
 			{
@@ -249,7 +265,7 @@ describe('surfaceLink: UDP only while the stream is down', () => {
 		const tcp = client(surface.port);
 		const link = createSurfaceLink({ tcp, udpPort: () => udp.port });
 		tcp.start();
-		await until(() => tcp.isConnected());
+		await until(() => tcp.acceptsMessages());
 
 		// Live quits: the listener and its connection go.
 		await surface.close();
@@ -259,10 +275,57 @@ describe('surfaceLink: UDP only while the stream is down', () => {
 		// Live is back on the same port; a datagram from it kicks the redial.
 		const again = await fakeSurface(surface.port);
 		expect(tcp.kick()).toBe(true);
-		await until(() => tcp.isConnected(), 1000);
+		await until(() => tcp.acceptsMessages(), 1000);
 		expect(link.send({ address: '/x', args: [{ type: 'i', value: 2 }] })).toBe('tcp');
 		await until(() => again.payloads.length === 1);
 		expect(again.messages()[0].args[0].value).toBe(2);
+	});
+});
+
+describe('surfaceLink: a surface from before ADR-489', () => {
+	it('stays on UDP while the stream is connected but the surface never says it is ready', async () => {
+		// The case the check exists for: the bridge restarted ahead of Live,
+		// whose old surface accepts the stream and drops every message on it.
+		const surface = await fakeSurface(0, { ready: false });
+		const udp = await fakeUdp();
+		const tcp = client(surface.port);
+		const link = createSurfaceLink({ tcp, udpPort: () => udp.port });
+		tcp.start();
+		await until(() => tcp.isConnected());
+		await new Promise((resolve) => setTimeout(resolve, 50));
+
+		expect(tcp.acceptsMessages()).toBe(false);
+		expect(link.send({ address: '/looping/v3/handshake/hello', args: ['3.11.0'] })).toBe('udp');
+		await until(() => udp.datagrams.length === 1);
+		expect(surface.payloads).toHaveLength(0);
+	});
+
+	it('moves onto the stream once the surface says so, and keeps the word to itself', async () => {
+		const surface = await fakeSurface(0, { ready: false });
+		const udp = await fakeUdp();
+		const seen: string[] = [];
+		const tcp = client(surface.port, { onMessage: (m: Packet) => seen.push(m.address) });
+		const link = createSurfaceLink({ tcp, udpPort: () => udp.port });
+		tcp.start();
+		await until(() => tcp.isConnected() && surface.sockets.size === 1);
+		expect(link.send({ address: '/a' })).toBe('udp');
+
+		for (const socket of surface.sockets) socket.write(READY);
+		await until(() => tcp.acceptsMessages());
+		expect(link.send({ address: '/b' })).toBe('tcp');
+		await until(() => surface.payloads.length === 1);
+		expect(seen).not.toContain(TCP_READY_ADDRESS);
+		expect(tcp.stats().accepts).toBe(true);
+	});
+
+	it('forgets the word when the connection drops', async () => {
+		const surface = await fakeSurface();
+		const tcp = client(surface.port);
+		tcp.start();
+		await until(() => tcp.acceptsMessages());
+		await surface.close();
+		await until(() => !tcp.isConnected());
+		expect(tcp.acceptsMessages()).toBe(false);
 	});
 });
 
@@ -315,7 +378,7 @@ describe('SurfaceTcpClient: a surface that stops reading', () => {
 		const tcp = client(surface.port, { maxPendingOutBytes: cap });
 		const link = createSurfaceLink({ tcp, udpPort: () => udp.port });
 		tcp.start();
-		await until(() => tcp.isConnected() && surface.sockets.size === 1);
+		await until(() => tcp.acceptsMessages() && surface.sockets.size === 1);
 		// A hung Live: the connection stays up and nothing is read.
 		for (const s of surface.sockets) s.pause();
 

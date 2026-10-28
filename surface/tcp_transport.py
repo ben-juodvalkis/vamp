@@ -101,6 +101,13 @@ logger = logging.getLogger("looping")
 _HEADER = struct.Struct(">I")
 HEADER_BYTES = _HEADER.size
 
+#: Said first on every accepted connection by a transport that routes its
+#: inbound frames (ADR-489): the bridge moves its traffic onto the stream
+#: only once it hears this. A surface from before ADR-489 has no router,
+#: drops whatever arrives on the stream and never says it, so a bridge
+#: restarted ahead of Live keeps sending that surface UDP.
+TCP_READY_ADDRESS = "/looping/v3/bridge/tcp_ready"
+
 #: Reject an inbound frame claiming to be larger than this.
 #:
 #: A corrupt or hostile length prefix would otherwise have us buffer
@@ -380,6 +387,9 @@ class TCPTransport:
             self._outbox = bytearray()
             self._connects += 1
             logger.info("%s peer connected: %s", self._name, peer)
+            # Ahead of the hook, so the word precedes the republished tree.
+            if self._router is not None:
+                self.send(TCP_READY_ADDRESS, (1,))
             if self._on_connect is not None:
                 try:
                     self._on_connect()
