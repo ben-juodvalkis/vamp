@@ -20,7 +20,7 @@ import type { OSCArg } from '$lib/types/osc';
 // See: ADR-143, documentation/current/websocket-rsv1-issue.md
 const constants = {
 	osc: {
-		webSocket: { port: 8081 },
+		webSocket: { port: 8081, path: '/bridge-socket' },
 		messageQueue: { maxSize: 100, timeout: 10000 },
 		reconnectDelay: 2000
 	},
@@ -225,16 +225,18 @@ export function setConnectionHandler(handler: ConnectionHandler): void {
 }
 
 /**
- * The bridge's address: the host that served this page. The bridge runs on
- * the same Mac as the page's server, so whatever name or address reached the
- * page — `localhost` on the Mac, an IP or a `.local` name on the iPad —
- * reaches the bridge. There used to be a second guess, the rig's own
- * Bonjour name `looping-studio.local`, tried first by a page opened at
- * `localhost`: on any other Mac that is a stranger's name, or nobody's.
+ * The bridge's address: this page's own origin, at `osc.webSocket.path`.
+ * The interface server passes that path through to the bridge, so whatever
+ * reached the page — `localhost` on the Mac, an IP or a `.local` name on the
+ * iPad, the native iPad app's tunnel — reaches the bridge too, on the same
+ * port. The page used to dial the bridge's own port beside it, which meant
+ * a second port to reach and, for the native app, a second one to tunnel.
+ * (Before that it also guessed the rig's Bonjour name first, from
+ * `localhost`: on any other Mac a stranger's name, or nobody's.)
  */
 function getConnectionUrls(): string[] {
-	const host = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
-	return [`ws://${host}:${constants.osc.webSocket.port}`];
+	const host = typeof window === 'undefined' ? 'localhost' : window.location.host;
+	return [`ws://${host}${constants.osc.webSocket.path}`];
 }
 
 /**

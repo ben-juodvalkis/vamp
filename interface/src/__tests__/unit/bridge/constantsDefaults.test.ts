@@ -26,17 +26,20 @@ type Constants = {
 const tracked = JSON.parse(readFileSync(join(REPO_ROOT, 'config', 'constants.json'), 'utf8')) as Constants;
 
 describe('config/constants.json', () => {
-	it('names the WebSocket port the client dials', () => {
-		// `WebSocketConnection.ts` carries its own copy of the port rather than
-		// importing the config (SSR). Moving only the config left the bundle
-		// dialling the old port, so the two have to agree.
+	it('names the WebSocket port and path the client dials', () => {
+		// `WebSocketConnection.ts` carries its own copy rather than importing
+		// the config (SSR). The page dials its own origin at the path, which
+		// the interface server passes through to the bridge's port: moving
+		// either in the config alone leaves the bundle dialling the old one,
+		// and the screenshot harness routes the page by both.
 		const client = readFileSync(
 			join(REPO_ROOT, 'interface/src/lib/api/connection/WebSocketConnection.ts'),
 			'utf8'
 		);
-		const inlined = /webSocket:\s*\{\s*port:\s*(\d+)\s*\}/.exec(client);
-		expect(inlined, 'the hardcoded webSocket port block moved').not.toBe(null);
+		const inlined = /webSocket:\s*\{\s*port:\s*(\d+),\s*path:\s*'([^']+)'\s*\}/.exec(client);
+		expect(inlined, 'the hardcoded webSocket block moved').not.toBe(null);
 		expect(Number(inlined?.[1])).toBe(tracked.osc.webSocket.port);
+		expect(inlined?.[2]).toBe((tracked.osc.webSocket as { path?: string }).path);
 	});
 
 	it('carries the port fields the UDP and TCP transports read', () => {

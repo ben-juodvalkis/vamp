@@ -214,6 +214,8 @@
     "webSocket": {
       "port": 8081,
       "host": "0.0.0.0",
+      "path": "/bridge-socket",
+      "_pathNote": "Where a page reaches the bridge: on its own origin, at this path. The interface server (vite dev and vite preview) passes the upgrade through to the bridge on port, so the iPad talks to one address and one port (and the native iPad app tunnels one port). Clients outside a page (the menu-bar app, perf and shot scripts) still dial port directly; the bridge accepts any path.",
       "description": "WebSocket server for interface communication. NOTE: Port 8080 causes RSV1 protocol errors due to system-level interference (see websocket-rsv1-issue.md)",
       "auth": {
         "enabled": true,

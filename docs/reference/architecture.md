@@ -16,7 +16,7 @@ iPad touch interface.
 
 ```
   ┌──────────────────────┐        WebSocket         ┌──────────────────────┐
-  │  Browser / iPad      │◀────── port 8081 ──────▶│  Enhanced OSC Bridge │
+  │  Browser / iPad      │◀── :8889/bridge-socket ─▶│  Enhanced OSC Bridge │
   │  SvelteKit UI        │                          │  (Node.js)           │
   └──────────────────────┘                          └──────────┬───────────┘
                                                                │
@@ -80,8 +80,9 @@ layout (routes, stores, services, components).
 
 ### 2.2 The bridge
 
-- Serves a WebSocket on `osc.webSocket.port` (8081) for browser
-  clients.
+- Serves a WebSocket on `osc.webSocket.port` (8081). Pages reach it
+  through the interface server's pass-through at `osc.webSocket.path`
+  (`/bridge-socket`) on their own origin; other clients dial 8081.
 - Serves multiple UDP port pairs, one per backend. See the port
   map below.
 - Routes inbound OSC messages by address pattern to the right UDP
@@ -191,7 +192,7 @@ sub-second 7001 bootstrap below. The surface's own 11020 and 11022 bind
 | 11017 / 11016 | Looping Recorder | Bridge ↔ the `Vamp-Recorder` M4L capture device. Opened, routed and scope-mapped by the bridge (`enhanced-osc-bridge.js:128`, `WebSocketServer.js:348`). |
 | 11030 (output only) | **Permute mute gate** → Max | **Not a bridge port.** The surface sends `/looping/permute/gate <trackIndex> <open>` from its own socket straight to a `udpreceive` inside a Max device on that track — the outbound twin of the foot-trigger row below, and the only wire in this table the bridge never sees. It exists so a device can gate **what it plays** instead of the surface writing a parameter, which costs one Live undo step per step transition. Receivers fail **open** after ~2.5 s of silence. Sole receiver today: the `Skaka Metronome Picker` inside the Skaka Metronome Rack. |
 | 11010 | Foot Trigger (input only) | Legacy/reserved. The Max foot chain fires straight at 11020; the USB-direct path (ADR-422) uses no OSC port at all — the pedal CCs arrive on the surface's MIDI input. |
-| 8081 | WebSocket | Browser clients. |
+| 8081 | WebSocket | The bridge. Pages reach it through the interface server, on their own origin at `osc.webSocket.path` (`/bridge-socket`), which `vite dev` (3000) and `vite preview` (8889) pass through here, so the iPad has one address and one port (2026-10-27). The menu-bar app and the perf and shot scripts dial 8081 directly. |
 | — (Unix socket) | Looping AX Helper | `axHelper.socketPath` (`~/Library/Application Support/Looping/ax-helper.sock`), owner-only. The bridge dials it; one JSON line each way (ADR-439). Deliberately not a TCP port: whoever can connect can press anything in Live. |
 | 3000 | HTTP (dev) | SvelteKit dev server. |
 
@@ -209,7 +210,7 @@ every layer:
     │   /looping/v3/param/set [path="tracks/0/devices/1/params/2",
     │                          value=0.3, generation=7]
     ▼
- WebSocket (port 8081)
+ WebSocket (the page's own port, /bridge-socket → the bridge's 8081)
     │
     ▼
  Bridge: routing/messageRouter.js

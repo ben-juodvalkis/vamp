@@ -78,7 +78,7 @@ import {
 	appendPadDevice,
 	deviceClassName
 } from './scene.mjs';
-import { CLIENT_WS_PORT } from './stack.mjs';
+import { CLIENT_WS_PORT, CLIENT_WS_PATH } from './stack.mjs';
 
 const PING_INTERVAL_MS = 5_000;
 const SURFACE_HEARTBEAT_MS = 1_000;
@@ -147,8 +147,9 @@ export async function startMockSurface({
 	 * The page's port is compiled in (`CLIENT_WS_PORT`), so when a real
 	 * bridge holds it the mock has to move — and the page has to be lied to
 	 * about where it went, or it talks to the bridge and photographs the live
-	 * set. The client dials the origin's own host on `:8081`
-	 * (`WebSocketConnection.ts`), so one pattern covers it, and the
+	 * set. The client dials its own origin at `CLIENT_WS_PATH`
+	 * (`WebSocketConnection.ts`), which the dev server would pass through to
+	 * the real bridge, so the pattern takes that path as well as the port; the
 	 * interception is what makes the run safe rather than merely lucky:
 	 * `route.connectToServer()` is never called, so there is no socket to the
 	 * real port at all. Nothing the page does — a watchdog force-close, a
@@ -159,7 +160,10 @@ export async function startMockSurface({
 	 * decision (see `resolveMockPort`).
 	 */
 	const routePage = async (context) => {
-		await context.routeWebSocket(new RegExp(`:${CLIENT_WS_PORT}`), (route) => {
+		// The page dials its own origin at `osc.webSocket.path`, which the dev
+		// server would pass through to a real bridge; the port is kept for
+		// any client that still dials it directly.
+		await context.routeWebSocket(new RegExp(`:${CLIENT_WS_PORT}|${CLIENT_WS_PATH}`), (route) => {
 			const upstream = new WebSocket(`ws://127.0.0.1:${port}`);
 			const queued = [];
 			upstream.on('open', () => {
