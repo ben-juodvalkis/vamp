@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
+import { groupPresetsByInstrument,
 	screenKind,
 	buildCrumbs,
 	pathForCrumb,
@@ -845,5 +845,22 @@ describe('drillDownModel — packFillSections', () => {
 		expect(bands.map((b) => b.count)).toEqual([5, 4]);
 		expect(bands.map((b) => b.groups[0].continued)).toEqual([false, true]);
 		expect(bands.flatMap((b) => b.groups[0].presets.map((p) => p.path))).toEqual(g('Distortion', 9).presets.map((p) => p.path));
+	});
+});
+
+describe('groupPresetsByInstrument', () => {
+	const p = (name: string, device?: string, plugin?: string) => ({ path: `X/${name}`, name, device, plugin });
+	it('splits a level of several instrument types, the biggest first, untyped last', () => {
+		const groups = groupPresetsByInstrument([p('a', 'Operator'), p('b', undefined, 'Omnisphere'), p('c', 'Operator'), p('d'), p('e', 'Analog')]);
+		expect(groups?.map((g) => [g.folder, g.presets.map((x) => x.name)])).toEqual([
+			['Operator', ['a', 'c']],
+			['Analog', ['e']],
+			['Omnisphere', ['b']],
+			['Other', ['d']]
+		]);
+	});
+	it('leaves a level of one type (or none) to its origin sections', () => {
+		expect(groupPresetsByInstrument([p('a', 'Operator'), p('b', 'Operator'), p('c')])).toBeNull();
+		expect(groupPresetsByInstrument([p('a'), p('b')])).toBeNull();
 	});
 });

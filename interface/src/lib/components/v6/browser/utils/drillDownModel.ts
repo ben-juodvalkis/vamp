@@ -176,6 +176,42 @@ export function groupPresetsByOrigin<P extends { path: string }>(
 	return groups;
 }
 
+/** A preset's instrument type: the Live device it loads, else its plug-in; null for neither (a sample, a clip). */
+export function instrumentTypeOf(p: { device?: string; plugin?: string }): string | null {
+	return p.device ?? p.plugin ?? null;
+}
+
+/**
+ * A level that mixes instrument types, in one section per type (user,
+ * 2026-10-28: "if a folder has presets of multiple instrument types lets
+ * group by instrument"): the most common type first, ties by name, presets
+ * keeping their order within it, and anything with no type last under
+ * `Other`. Null when the level holds one type or none — it keeps its
+ * origin sections (`groupPresetsByOrigin`).
+ */
+export function groupPresetsByInstrument<P extends { path: string; device?: string; plugin?: string }>(
+	presets: P[]
+): PresetGroup<P>[] | null {
+	const byType = new Map<string, P[]>();
+	const untyped: P[] = [];
+	for (const p of presets) {
+		const type = instrumentTypeOf(p);
+		if (type === null) {
+			untyped.push(p);
+			continue;
+		}
+		const list = byType.get(type);
+		if (list) list.push(p);
+		else byType.set(type, [p]);
+	}
+	if (byType.size < 2) return null;
+	const groups: PresetGroup<P>[] = [...byType.entries()]
+		.sort(([a, pa], [b, pb]) => pb.length - pa.length || a.localeCompare(b, undefined, { sensitivity: 'base' }))
+		.map(([folder, list]) => ({ folder, presets: list }));
+	if (untyped.length) groups.push({ folder: 'Other', presets: untyped });
+	return groups;
+}
+
 // ── Packing small sections into shared rows (ADR-409) ───────────────────────
 //
 // A flattened folder often recovers many *tiny* origin sections (1–2 tiles). Left

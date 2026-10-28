@@ -70,7 +70,7 @@
 	import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
 	import ControlGlyph from '../device-panel/ControlGlyph.svelte';
 	import BrowserPresetFace from './BrowserPresetFace.svelte';
-	import { deviceIconFor } from './deviceIcons';
+	import { DEVICE_ICONS, deviceIconFor } from './deviceIcons';
 	import BrowserWheelsFace from './BrowserWheelsFace.svelte';
 	import { startPresetDrag, type PresetDrag } from '$lib/services/presetDragLoad.svelte';
 	import { addEffectToChain, fitsSelectedTrack, recordRecentEffect, type RecentEffect } from '$lib/services/recentEffects.svelte';
@@ -97,6 +97,7 @@
 		computeVisibleWindow,
 		computeGroupedVisibleWindow,
 		groupPresetsByOrigin,
+		groupPresetsByInstrument,
 		packGroupedSections,
 		packFillSections,
 		replaceLanding,
@@ -324,8 +325,12 @@
 	// (from each preset's surviving physical `path`). Only meaningful with 2+
 	// sections — a normal (unflattened) leaf comes back as one loose bucket and
 	// renders as the plain grid, unchanged.
+	// A level mixing instrument types is grouped by type instead
+	// (`groupPresetsByInstrument`); the effects Place keeps its folders.
+	const onEffectsPlace = $derived(!!effectsVendor && browserNavigationStore.currentVendorId === effectsVendor.vendorId);
+	const instrumentGroups = $derived(screen === 'presets' && !onEffectsPlace ? groupPresetsByInstrument(presets) : null);
 	const presetGroups = $derived(
-		screen === 'presets' ? groupPresetsByOrigin(presets, currentPath) : []
+		screen === 'presets' ? (instrumentGroups ?? groupPresetsByOrigin(presets, currentPath)) : []
 	);
 	const useGroupedPresets = $derived(presetGroups.length > 1);
 
@@ -333,7 +338,7 @@
 	// section, its header and its tiles wear the device family its folder's
 	// name says (`sectionInks`). Every other Place keeps its own color.
 	const onEffectsScreen = $derived(
-		!!effectsVendor && browserNavigationStore.currentVendorId === effectsVendor.vendorId && useGroupedPresets
+		onEffectsPlace && useGroupedPresets
 	);
 	// The effects screen fills every row (`packFillSections`): its sections
 	// are few and small, and a half-empty row is dead space (user, 2026-10-26).
@@ -1001,7 +1006,8 @@
 		if (!w || !h) return true;
 		const frame = 2 * (8 + 2);
 		const nameLine = Math.min(0.15 * (w - frame), 41.6) * 1.12;
-		const subLine = 0.72 * 16 * 1.2 + 2;
+		// A level grouped by instrument shows no device line (its header says it).
+		const subLine = instrumentGroups ? 0 : 0.72 * 16 * 1.2 + 2;
 		const tagLine = 0.62 * 16 * 1.2 + 2;
 		return h - frame >= 2 * nameLine + subLine + tagLine;
 	});
@@ -1781,8 +1787,9 @@
 	{@const faced = wheels || facedTiles.has(p.path)}
 	<!-- The line under the name: why a greyed tile is greyed — on its face,
 	     since the iPad shows no tooltips — else the plug-in, else a Live
-	     preset's device ("Drum Rack", "Operator") unless its face pictures it. -->
-	{@const subLabel = notInstalled ? 'Not installed' : midiOnly ? 'MIDI tracks only' : (p.plugin ?? (faced ? null : (p.device ?? null)))}
+	     preset's device ("Drum Rack", "Operator") unless its face pictures it;
+	     none in a level grouped by instrument, whose section header says it. -->
+	{@const subLabel = notInstalled ? 'Not installed' : midiOnly ? 'MIDI tracks only' : instrumentGroups ? null : (p.plugin ?? (faced ? null : (p.device ?? null)))}
 	<!-- What the sound is like (Live's Character, Timbre, Mood tags), on a tile
 	     with room: not one whose face fills it. -->
 	<!-- The instrument's glyph (deviceIcons), leading its name on that line: what it is at a glance. -->
@@ -1931,6 +1938,9 @@
 				aria-hidden="true"
 				style="animation-duration: {HOLD_TO_RANDOM_MS}ms;"
 			></span>
+		{/if}
+		{#if pick === null && instrumentGroups && DEVICE_ICONS[folder]}
+			<svg class="section-icon" viewBox="0 0 24 24" aria-hidden="true"><path d={DEVICE_ICONS[folder]} /></svg>
 		{/if}
 		<span class="section-name">{pick ?? label}</span>
 		{#if pick === null}
@@ -2883,6 +2893,17 @@
 		margin: 0;
 		padding: var(--spacing-xs) 2px 0;
 		background: var(--browser-bg-primary, #16181d);
+	}
+	/* An instrument section's glyph (groupPresetsByInstrument), in its device's color. */
+	.section-icon {
+		flex: 0 0 auto;
+		width: 18px;
+		height: 18px;
+		fill: none;
+		stroke: var(--k);
+		stroke-width: 1.8;
+		stroke-linecap: round;
+		stroke-linejoin: round;
 	}
 	.section-name {
 		flex: 0 0 auto;
