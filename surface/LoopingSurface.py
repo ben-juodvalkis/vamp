@@ -469,12 +469,14 @@ class LoopingSurface(ControlSurface):
 
         self._transport.add_handler("/live/test", self._handle_live_test)
 
-        # TCP leg, bound beside UDP rather than replacing it. Migration
-        # is one address at a time: ``state/full`` moves first because
-        # it is the only thing whose 389 KB actually needs the stream;
-        # everything else keeps working over UDP untouched, and
-        # fire-and-forget senders on ephemeral ports (the Max probe
-        # drivers) still require a datagram socket regardless.
+        # TCP leg, bound beside UDP rather than replacing it. Outbound,
+        # only ``state/full`` rides it: the one message whose 389 KB
+        # needs the stream. Inbound, the bridge sends everything over
+        # it while connected and falls back to UDP only while it is
+        # down (ADR-488), so its frames dispatch through the UDP
+        # transport's handlers and drain hooks — one table, two legs.
+        # UDP stays: fire-and-forget senders on ephemeral ports (the
+        # Max patches, the probe drivers) need a datagram socket.
         #
         # A bind failure here is not fatal to the surface as a whole —
         # every other address keeps working over UDP. It is fatal to
@@ -493,6 +495,7 @@ class LoopingSurface(ControlSurface):
                     # __init__), and a peer cannot connect before the
                     # first pump anyway — which is after both exist.
                     on_connect=self._on_stream_peer_connected,
+                    router=self._transport,
                 )
             except OSError as e:
                 logger.error(

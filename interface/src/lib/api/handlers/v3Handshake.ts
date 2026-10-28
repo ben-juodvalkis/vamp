@@ -181,15 +181,19 @@ export function onHandshakeAccepted(listener: () => void): () => void {
 	};
 }
 
-/** The hello crosses a UDP hop (bridge → surface, port 11020) and is
- *  unacknowledged. A drop there — a full socket buffer, or a Live tick
+/** The hello used to cross an unacknowledged UDP hop (bridge → surface,
+ *  port 11020). A drop there — a full socket buffer, or a Live tick
  *  stall, which `bridge.log` records at 3–12s — strands the UI in
  *  `pending` forever: no accept, so no `state/full`, so no tracks,
  *  meters or playheads, while outbound writes keep working because
  *  they're fire-and-forget. That reads exactly like a frozen UI whose
  *  faders still reach Live, and only a reload cleared it.
  *
- *  So the hello repeats until an accept lands. Attempts stop at
+ *  Since ADR-488 the bridge sends it over its TCP leg to the surface
+ *  whenever that is connected, where it is not lost. It still takes UDP
+ *  while the leg is down, the accept still comes back over UDP, and the
+ *  surface may not be running — and this side cannot tell which leg
+ *  was used. So the hello repeats until an accept lands. Attempts stop at
  *  MAX_RETRIES; a genuinely absent surface is picked up later by the
  *  reconnect path or by `surface/hello`, both of which start a fresh
  *  sequence. */
