@@ -1,7 +1,8 @@
 <script lang="ts">
   /**
-   * A Drum Rack's face in the chain overview: its pads, as the Drum Rack
-   * view draws them (2026-10-27, in place of the kit's Trnsp) — the pads in
+   * A Drum Rack's face in the chain overview: its pads, laid out as Live's
+   * rack lays them (rows, lowest along the bottom; 2026-10-28), lit as the
+   * Drum Rack view lights them (2026-10-27, in place of the kit's Trnsp) — the pads in
    * play (the playing clip's, Live's selection, the held), flashing as the
    * clip plays them. A hold scopes the chain to that pad and lifting
    * returns; a tap latches, by `drumPadScope`'s rule, the view's own.
@@ -27,6 +28,9 @@
 
   let { device, color }: Props = $props();
 
+  /** The narrowest face that still gets four pads across (four 56px tiles and their gaps). */
+  const RACK_FOUR_MIN_WIDTH = 236;
+
   const devicePath = $derived(device.devicePath);
   const clip = useClipPads(() => devicePath.split('/devices/')[0]);
   const vm = useDrumVm(() => devicePath, { kitFunctions: [], functions: () => [] });
@@ -43,12 +47,17 @@
     selectedTrackStore.setPropertyValue(devicePath, VM.selectedPad, note);
   }
 
+  // Live's layout, four across as the rack is, or two where the cell is
+  // too narrow for four tiles to take a name (user, 2026-10-28).
+  let faceWidth = $state(0);
+  const rackColumns = $derived(faceWidth >= RACK_FOUR_MIN_WIDTH || faceWidth === 0 ? 4 : 2);
+
   function onRelease(pointerId: number, reason: MomentaryReleaseReason = 'up') {
     drumPadScope.release(pointerId, reason);
   }
 </script>
 
-<div class="drum-face">
+<div class="drum-face" bind:clientWidth={faceWidth}>
   <DrumPadGrid
     pads={vm.members?.pads ?? []}
     selectedNote={vm.selectedNote}
@@ -56,6 +65,7 @@
     clipNotes={clip.clipNotes}
     litNotes={clip.litNotes}
     {color}
+    {rackColumns}
     {onPress}
     {onRelease}
   />

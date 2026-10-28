@@ -839,3 +839,26 @@ describe('profileForPadClass — the row a held pad earns', () => {
 		expect(profileForPadClass('DrumCell', 'macro-grid')).toBe('macro-grid');
 	});
 });
+
+describe('padRackShape / padRackCell (Live layout, 2026-10-28)', () => {
+	it('lays the first four pads along the bottom row, left to right', async () => {
+		const { padRackShape, padRackCell } = await import('$lib/services/drumVirtualMacros');
+		const shape = padRackShape(6, 4);
+		expect(shape).toEqual({ columns: 4, rows: 2 });
+		const cells = [0, 1, 2, 3, 4, 5].map((i) => padRackCell(i, shape.columns, shape.rows));
+		expect(cells).toEqual([
+			{ column: 1, row: 2 },
+			{ column: 2, row: 2 },
+			{ column: 3, row: 2 },
+			{ column: 4, row: 2 },
+			{ column: 1, row: 1 },
+			{ column: 2, row: 1 }
+		]);
+	});
+	it('two across when narrow, and fewer pads than columns stay one row', async () => {
+		const { padRackShape, padRackCell } = await import('$lib/services/drumVirtualMacros');
+		expect(padRackShape(5, 2)).toEqual({ columns: 2, rows: 3 });
+		expect(padRackCell(4, 2, 3)).toEqual({ column: 1, row: 1 });
+		expect(padRackShape(3, 4)).toEqual({ columns: 3, rows: 1 });
+	});
+});
