@@ -66,9 +66,9 @@ const EFFECTS_LAYOUT = 3;
  * Bump when the scan writes something new into a catalog: the cache stamp
  * otherwise holds only what the build read, so a catalog cached by older code
  * would be served as it was. 2: items carry `tags` and `device`; 3: tags
- * borrowed by name too (both 2026-10-28).
+ * borrowed by name too; 4: a Live preset tinted by its device (all 2026-10-28).
  */
-const CATALOG_FORMAT = 3;
+const CATALOG_FORMAT = 4;
 
 export type CatalogSource = 'index' | 'disk';
 
@@ -179,9 +179,12 @@ function tuningFor(name: string): CatalogTuning {
 	};
 }
 
+/** The card palette: `vendors.brands` by brand, and `vendors.devices` as `device:<Live's name>`. */
 function brandColors(): Record<string, string | undefined> {
-	const brands = configSection<Record<string, { color?: string }>>('vendors').brands ?? {};
-	return Object.fromEntries(Object.entries(brands as Record<string, { color?: string }>).map(([k, v]) => [k, v?.color]));
+	const vendors = configSection<Record<string, Record<string, { color?: string }>>>('vendors');
+	const entries = (section: Record<string, { color?: string }> | undefined, prefix = '') =>
+		Object.entries(section ?? {}).map(([k, v]) => [`${prefix}${k}`, v?.color] as const);
+	return Object.fromEntries([...entries(vendors.brands), ...entries(vendors.devices, 'device:')]);
 }
 
 /**

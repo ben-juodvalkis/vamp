@@ -317,17 +317,18 @@ export interface ScanContext {
 /**
  * A tile's color, from what the file is rather than the folder it came from:
  * samples and clips take the audio color, a plug-in preset its maker's
- * (Omnisphere → Omni, Komplete Kontrol → NI), and a Live preset Ableton's —
- * the `vendors.brands` palette, so the Places browser reads like the old one.
+ * (Omnisphere → Omni, Komplete Kontrol → NI) — the `vendors.brands`
+ * palette — and a Live preset its device's (`vendors.devices`: a Drum Rack,
+ * an Operator, a Wavetable each its own), else Ableton's.
  */
-export function tintFor(item: Pick<PlaceItem, 'kind' | 'maker' | 'type'>, colors: Record<string, string | undefined>): string | undefined {
+export function tintFor(item: Pick<PlaceItem, 'kind' | 'maker' | 'type' | 'device'>, colors: Record<string, string | undefined>): string | undefined {
 	if (item.type === '.aupreset') {
 		if (item.maker === 'Spectrasonics') return colors.Omni;
 		if (item.maker === 'Native Instruments') return colors.NI;
 		return undefined;
 	}
 	if (SAMPLE_EXTENSIONS.has(item.type) || item.type === CLIP_EXTENSION) return colors.Audio;
-	return colors.Ableton;
+	return (item.device && colors[`device:${item.device}`]) || colors.Ableton;
 }
 
 function kindOfFile(file: string, ext: string, st: fs.Stats, ctx: ScanContext): KindInfo {

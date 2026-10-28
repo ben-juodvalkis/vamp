@@ -70,6 +70,7 @@
 	import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
 	import ControlGlyph from '../device-panel/ControlGlyph.svelte';
 	import BrowserPresetFace from './BrowserPresetFace.svelte';
+	import { deviceIconFor } from './deviceIcons';
 	import BrowserWheelsFace from './BrowserWheelsFace.svelte';
 	import { startPresetDrag, type PresetDrag } from '$lib/services/presetDragLoad.svelte';
 	import { addEffectToChain, fitsSelectedTrack, recordRecentEffect, type RecentEffect } from '$lib/services/recentEffects.svelte';
@@ -1784,6 +1785,8 @@
 	{@const subLabel = notInstalled ? 'Not installed' : midiOnly ? 'MIDI tracks only' : (p.plugin ?? (faced ? null : (p.device ?? null)))}
 	<!-- What the sound is like (Live's Character, Timbre, Mood tags), on a tile
 	     with room: not one whose face fills it. -->
+	<!-- The instrument's glyph (deviceIcons), leading its name on that line: what it is at a glance. -->
+	{@const icon = inactive || !subLabel ? null : deviceIconFor(p)}
 	{@const tags = faced || !tagsFit ? [] : (p.tags ?? []).filter((t) => !pathWords.has(t.toLowerCase())).slice(0, CARD_TAGS)}
 	<button
 		class="card preset-tile"
@@ -1815,7 +1818,9 @@
 		{/if}
 		<span class="tile-name" use:fitText={p.name} use:clampLines>{p.name}</span>
 		{#if subLabel}
-			<span class="tile-plugin">{subLabel}</span>
+			<span class="tile-plugin"
+				>{#if icon}<svg class="tile-icon" viewBox="0 0 24 24" aria-hidden="true"><path d={icon} /></svg>{/if}{subLabel}</span
+			>
 		{/if}
 		{#if tags.length}
 			<span class="tile-tags">
@@ -3118,6 +3123,21 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		max-width: 100%;
+	}
+	/* The instrument's glyph, leading its name on the line under the preset's
+	   (user, 2026-10-28: "the icon and the name … could be one thing"). */
+	.preset-tile .tile-icon {
+		display: inline-block;
+		width: 1.25em;
+		height: 1.25em;
+		margin-right: 0.3em;
+		vertical-align: -0.3em;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.8;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		pointer-events: none;
 	}
 	/* Tags under the name: one line of small labels, quieter than the
 	   plug-in's name, and as short as a line can be so the name keeps its
