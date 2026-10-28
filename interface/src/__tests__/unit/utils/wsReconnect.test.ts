@@ -47,7 +47,16 @@ class FakeWebSocket {
 		}, 0);
 	}
 
-	send() {}
+	frames: string[] = [];
+
+	send(data: string) {
+		this.frames.push(data);
+	}
+
+	/** A frame from the bridge. */
+	receive(address: string, args: unknown[] = []) {
+		this.onmessage?.({ data: JSON.stringify({ address, args }) });
+	}
 
 	close() {
 		if (this.readyState === FakeWebSocket.CLOSED) return;
@@ -58,6 +67,33 @@ class FakeWebSocket {
 
 async function freshModule() {
 	return import('$lib/api/connection/WebSocketConnection');
+}
+
+/** Connect and have the bridge accept the socket. */
+async function accepted(mod: Awaited<ReturnType<typeof freshModule>>) {
+	void mod.connectToLive();
+	await vi.advanceTimersByTimeAsync(10);
+	const socket = FakeWebSocket.instances.at(-1)!;
+	socket.receive('/bridge/auth/result', [1]);
+	return socket;
+}
+
+/** A `fetch` for `/api/ws-auth` that answers each salt when told to. */
+function deferredProofs() {
+	const pending = new Map<string, (proof: string) => void>();
+	vi.stubGlobal(
+		'fetch',
+		vi.fn((url: string, init?: RequestInit) => {
+			const salt = new URL(url, 'http://x').searchParams.get('salt')!;
+			return new Promise((resolve, reject) => {
+				init?.signal?.addEventListener('abort', () => reject(new Error('aborted')));
+				pending.set(salt, (proof) =>
+					resolve({ ok: true, json: async () => ({ proof }) } as Response)
+				);
+			});
+		})
+	);
+	return pending;
 }
 
 describe('reconnecting after the link drops', () => {
@@ -112,14 +148,13 @@ describe('reconnecting after the link drops', () => {
 		expect(FakeWebSocket.instances.length).toBeGreaterThan(before);
 
 		await vi.advanceTimersByTimeAsync(10);
+		FakeWebSocket.instances.at(-1)!.receive('/bridge/auth/result', [1]);
 		expect(mod.isConnected()).toBe(true);
 	});
 
 	it('drops a socket that has gone quiet when the page comes back', async () => {
 		const mod = await freshModule();
-		void mod.connectToLive();
-		await vi.advanceTimersByTimeAsync(10);
-		const quiet = FakeWebSocket.instances.at(-1)!;
+		const quiet = await accepted(mod);
 		expect(mod.isConnected()).toBe(true);
 
 		// Seven seconds with nothing from the bridge: past two missed pings,
@@ -133,20 +168,101 @@ describe('reconnecting after the link drops', () => {
 		expect(quiet.readyState).toBe(FakeWebSocket.CLOSED);
 		await vi.advanceTimersByTimeAsync(10);
 		expect(FakeWebSocket.instances.at(-1)).not.toBe(quiet);
+		FakeWebSocket.instances.at(-1)!.receive('/bridge/auth/result', [1]);
 		expect(mod.isConnected()).toBe(true);
 	});
 
 	it('leaves a socket that is hearing the bridge alone', async () => {
 		const mod = await freshModule();
-		void mod.connectToLive();
-		await vi.advanceTimersByTimeAsync(10);
-		const live = FakeWebSocket.instances.at(-1)!;
+		const live = await accepted(mod);
 
 		live.onmessage?.({ data: JSON.stringify({ address: '/bridge/ping', args: [1, 0] }) });
 		mod.reconnectNow('visible');
 
 		expect(live.readyState).toBe(FakeWebSocket.OPEN);
 		expect(FakeWebSocket.instances.at(-1)).toBe(live);
+	});
+
+	it('says hello only once the bridge has accepted the socket', async () => {
+		deferredProofs();
+		const mod = await freshModule();
+		const onConnect = vi.fn();
+		mod.setConnectionHandler(onConnect);
+		void mod.connectToLive();
+		await vi.advanceTimersByTimeAsync(10);
+		const socket = FakeWebSocket.instances.at(-1)!;
+
+		socket.receive('/bridge/auth/challenge', ['abcdef0123456789']);
+		mod.send('/looping/v3/track/mute', ['tracks/0', 1]);
+		await vi.advanceTimersByTimeAsync(2000);
+		// Open, challenged, not yet accepted: nothing the bridge would refuse.
+		expect(onConnect).not.toHaveBeenCalled();
+		expect(mod.isConnected()).toBe(false);
+		expect(socket.frames.some((f) => f.includes('track/mute'))).toBe(false);
+
+		socket.receive('/bridge/auth/result', [1]);
+		expect(onConnect).toHaveBeenCalledTimes(1);
+		expect(socket.frames.some((f) => f.includes('track/mute'))).toBe(true);
+	});
+
+	it('is ready on its own when the bridge sends no challenge', async () => {
+		const mod = await freshModule();
+		const onConnect = vi.fn();
+		mod.setConnectionHandler(onConnect);
+		void mod.connectToLive();
+		await vi.advanceTimersByTimeAsync(1010);
+		expect(onConnect).toHaveBeenCalledTimes(1);
+		expect(mod.isConnected()).toBe(true);
+	});
+
+	it("never sends one socket's proof on the next socket", async () => {
+		const proofs = deferredProofs();
+		const mod = await freshModule();
+		void mod.connectToLive();
+		await vi.advanceTimersByTimeAsync(10);
+		const first = FakeWebSocket.instances.at(-1)!;
+		first.receive('/bridge/auth/challenge', ['aaaaaaaaaaaaaaaa']);
+
+		// The link drops while the first proof is still on its way.
+		first.close();
+		await vi.advanceTimersByTimeAsync(600);
+		const second = FakeWebSocket.instances.at(-1)!;
+		expect(second).not.toBe(first);
+		second.receive('/bridge/auth/challenge', ['bbbbbbbbbbbbbbbb']);
+
+		proofs.get('aaaaaaaaaaaaaaaa')!('proof-for-a');
+		proofs.get('bbbbbbbbbbbbbbbb')!('proof-for-b');
+		await vi.advanceTimersByTimeAsync(0);
+
+		const sent = second.frames.join('\n');
+		expect(sent).toContain('proof-for-b');
+		expect(sent).not.toContain('proof-for-a');
+	});
+
+	it('gives up on a proof that never comes and tries a fresh socket', async () => {
+		deferredProofs(); // never answered
+		const mod = await freshModule();
+		void mod.connectToLive();
+		await vi.advanceTimersByTimeAsync(10);
+		const stuck = FakeWebSocket.instances.at(-1)!;
+		stuck.receive('/bridge/auth/challenge', ['cccccccccccccccc']);
+
+		await vi.advanceTimersByTimeAsync(3000);
+		expect(stuck.readyState).toBe(FakeWebSocket.CLOSED);
+		await vi.advanceTimersByTimeAsync(600);
+		expect(FakeWebSocket.instances.at(-1)).not.toBe(stuck);
+	});
+
+	it('tries a fresh socket when the bridge rejects the proof', async () => {
+		const mod = await freshModule();
+		void mod.connectToLive();
+		await vi.advanceTimersByTimeAsync(10);
+		const rejected = FakeWebSocket.instances.at(-1)!;
+		rejected.receive('/bridge/auth/result', [0, 'bad-proof']);
+
+		expect(rejected.readyState).toBe(FakeWebSocket.CLOSED);
+		await vi.advanceTimersByTimeAsync(600);
+		expect(FakeWebSocket.instances.at(-1)).not.toBe(rejected);
 	});
 
 	it('does nothing before the app has started connecting', async () => {

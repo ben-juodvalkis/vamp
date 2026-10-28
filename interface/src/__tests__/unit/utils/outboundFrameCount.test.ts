@@ -67,6 +67,8 @@ async function connected() {
 
 	const socket = FakeWebSocket.instances.at(-1)!;
 	expect(socket.readyState).toBe(FakeWebSocket.OPEN);
+	// The bridge accepting us is what makes the socket carry writes.
+	socket.onmessage?.({ data: JSON.stringify({ address: '/bridge/auth/result', args: [1] }) });
 	socket.frames.length = 0; // drop handshake traffic
 	return { mod, socket };
 }

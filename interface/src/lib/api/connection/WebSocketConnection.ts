@@ -34,6 +34,15 @@ let connectionMethod: string = 'unknown';
 let isConnecting: boolean = false;
 let connectStarted = false;
 
+// The open socket has been accepted by the bridge (see `markReady`).
+let socketReady = false;
+// A challenge arrived and its proof is on the way.
+let awaitingAuth = false;
+// With auth on, the challenge follows `onopen` within milliseconds; a
+// socket that has heard none by now is on a bridge with auth off.
+const NO_CHALLENGE_MS = 1000;
+let noChallengeTimer: ReturnType<typeof setTimeout> | null = null;
+
 // Reconnect cadence: 500ms, then every 1s for as long as it takes. The
 // bridge is on the Mac at the other end of a cable, so a failed attempt
 // costs nothing worth saving. It used to back off to 30s, which on
@@ -108,9 +117,16 @@ const AUTH_PROOF_URL = '/api/ws-auth';
  * good exactly once.
  */
 async function fetchAuthProof(salt: string): Promise<string | null> {
+	// Bounded: after the USB link resets, Safari can hand this request to
+	// a pooled HTTP connection to the link's old address, which hangs.
+	// The bridge closes an unauthenticated socket at 5s anyway, so past
+	// this the attempt is over and a fresh one does better.
+	const abort = new AbortController();
+	const timer = setTimeout(() => abort.abort(), AUTH_PROOF_TIMEOUT_MS);
 	try {
 		const res = await fetch(`${AUTH_PROOF_URL}?salt=${encodeURIComponent(salt)}`, {
-			cache: 'no-store'
+			cache: 'no-store',
+			signal: abort.signal
 		});
 		if (!res.ok) {
 			logger.error('Could not obtain the WebSocket auth proof', { status: res.status });
@@ -121,26 +137,34 @@ async function fetchAuthProof(salt: string): Promise<string | null> {
 	} catch (e) {
 		logger.error('WebSocket auth proof fetch failed', { error: String(e) });
 		return null;
+	} finally {
+		clearTimeout(timer);
 	}
 }
 
+const AUTH_PROOF_TIMEOUT_MS = 3000;
+
 /**
- * Answer the bridge's challenge.
+ * Answer the bridge's challenge, on the socket that issued it.
  *
- * Sent with `flushOutboxNow` rather than the normal microtask flush:
- * this is the frame that unblocks every other frame, and letting it sit
- * behind a queued burst would deadlock the connection against its own
- * auth timeout.
+ * Straight onto that socket, not through `send`: the outbox goes to
+ * whichever socket is current, and with fast retries a proof that was
+ * slow to arrive used to land on the NEXT socket, whose salt it does not
+ * match — `Client failed authentication`, measured on the rig
+ * 2026-10-27. A proof for a socket that has since gone is dropped.
+ * With no proof the socket is given up at once rather than left to the
+ * bridge's 5s auth timeout.
  */
-async function answerAuthChallenge(salt: string): Promise<void> {
+async function answerAuthChallenge(salt: string, socket: WebSocket): Promise<void> {
 	const proof = await fetchAuthProof(salt);
+	if (socket !== ws || socket.readyState !== WebSocket.OPEN) return;
 	if (!proof) {
 		logger.error('Cannot authenticate to the bridge — no proof available');
+		abandonSocket(socket, 'auth-proof');
 		return;
 	}
 	try {
-		send(AUTH_ADDRESS, [proof]);
-		flushOutboxNow();
+		socket.send(JSON.stringify(buildWireMessage(AUTH_ADDRESS, [proof])));
 	} catch (e) {
 		logger.error('Failed to answer the auth challenge', { error: String(e) });
 	}
@@ -290,24 +314,15 @@ function tryConnect(urls: string[], index = 0): Promise<void> {
 				// arriving, we'll close + reconnect from this side.
 				startLivenessWatchdog();
 
-				// Flush any queued messages
-				flushMessageQueue();
-
-				// Notify listeners that a (re)connect happened so
-				// they can re-register subscriptions and pull fresh
-				// state. The custom event fires for every successful
-				// open — first-connect and every reconnect alike —
-				// so services can use one handler for both paths.
-				if (typeof window !== 'undefined') {
-					window.dispatchEvent(new CustomEvent('bridge-resync', {
-						detail: { reason: 'connected', attempt: reconnectAttempts }
-					}));
-				}
-
-				// Call connection handler
-				if (onConnectCallback) {
-					onConnectCallback();
-				}
+				// Usable once the bridge has accepted us (`markReady`
+				// from the auth result). A bridge with auth off sends no
+				// challenge, so a socket that hears none is ready.
+				socketReady = false;
+				awaitingAuth = false;
+				noChallengeTimer = setTimeout(() => {
+					noChallengeTimer = null;
+					if (ws === testWs && !awaitingAuth) markReady(testWs);
+				}, NO_CHALLENGE_MS);
 
 				resolve();
 			};
@@ -348,8 +363,13 @@ function dispatchInbound(message: { address?: string; args?: OSCArg[] }): void {
 	// is useless until it is satisfied.
 	if (message.address === AUTH_CHALLENGE_ADDRESS) {
 		const salt = message.args?.[0];
-		if (typeof salt === 'string' && salt) {
-			void answerAuthChallenge(salt);
+		if (typeof salt === 'string' && salt && ws) {
+			awaitingAuth = true;
+			if (noChallengeTimer) {
+				clearTimeout(noChallengeTimer);
+				noChallengeTimer = null;
+			}
+			void answerAuthChallenge(salt, ws);
 		} else {
 			logger.error('Auth challenge carried no salt', { args: message.args });
 		}
@@ -362,8 +382,10 @@ function dispatchInbound(message: { address?: string; args?: OSCArg[] }): void {
 	if (message.address === AUTH_RESULT_ADDRESS) {
 		if (message.args?.[0] === 1) {
 			logger.info('Authenticated to the bridge');
+			if (ws) markReady(ws);
 		} else {
 			logger.error('Bridge rejected our authentication', { detail: message.args?.[1] });
+			if (ws) abandonSocket(ws, 'auth-rejected');
 		}
 		return;
 	}
@@ -435,6 +457,41 @@ function setupWebSocketHandlers(websocket: WebSocket): void {
 }
 
 /**
+ * The bridge has accepted this socket: now it carries traffic. Until here
+ * the bridge refuses everything we send ("Refusing message from
+ * unauthenticated client"), so the handshake hello and the queued writes
+ * wait for this rather than going out at `onopen` to be dropped, which
+ * left a reconnect waiting on the hello's 2s retry.
+ */
+function markReady(socket: WebSocket): void {
+	if (socket !== ws || socketReady) return;
+	socketReady = true;
+	awaitingAuth = false;
+	if (noChallengeTimer) {
+		clearTimeout(noChallengeTimer);
+		noChallengeTimer = null;
+	}
+
+	// Flush any queued messages
+	flushMessageQueue();
+
+	// Notify listeners that a (re)connect happened so they can
+	// re-register subscriptions and pull fresh state. Fires for every
+	// connect — first and every reconnect alike — so services can use
+	// one handler for both paths.
+	if (typeof window !== 'undefined') {
+		window.dispatchEvent(new CustomEvent('bridge-resync', {
+			detail: { reason: 'connected', attempt: reconnectAttempts }
+		}));
+	}
+
+	// Call connection handler
+	if (onConnectCallback) {
+		onConnectCallback();
+	}
+}
+
+/**
  * The socket is finished with: forget it and schedule the next attempt.
  * Runs once per socket — from its `onclose`, or from `abandonSocket`
  * first, whichever comes first.
@@ -442,6 +499,12 @@ function setupWebSocketHandlers(websocket: WebSocket): void {
 function socketGone(websocket: WebSocket, reason: string): void {
 	if (ws !== websocket) return;
 	ws = null;
+	socketReady = false;
+	awaitingAuth = false;
+	if (noChallengeTimer) {
+		clearTimeout(noChallengeTimer);
+		noChallengeTimer = null;
+	}
 	connectionMethod = 'disconnected';
 
 	// Update global WebSocket status for freeze detector
@@ -698,7 +761,7 @@ export function buildOutboundFrame(messages: OutboundMessage[]): object | null {
  * `send` would have.
  */
 function deliverOutbound(messages: OutboundMessage[]): void {
-	if (ws?.readyState === WebSocket.OPEN) {
+	if (ws?.readyState === WebSocket.OPEN && socketReady) {
 		const frame = buildOutboundFrame(messages);
 		if (frame) ws.send(JSON.stringify(frame));
 		return;
@@ -724,7 +787,7 @@ export function flushOutboxNow(): void {
  * Check if connected to WebSocket
  */
 export function isConnected(): boolean {
-	return ws?.readyState === WebSocket.OPEN;
+	return ws?.readyState === WebSocket.OPEN && socketReady;
 }
 
 /**
@@ -732,7 +795,7 @@ export function isConnected(): boolean {
  */
 export function getConnectionStatus(): { connected: boolean; method: string; url?: string } {
 	return {
-		connected: ws?.readyState === WebSocket.OPEN,
+		connected: ws?.readyState === WebSocket.OPEN && socketReady,
 		method: connectionMethod,
 		url: ws?.url
 	};
