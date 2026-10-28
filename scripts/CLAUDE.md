@@ -25,7 +25,12 @@ Automation, run from the repo root through `npm run`.
 - `setup-ipad.js`: `npm run ipad`. Launches Live, the browser blocker and the
   menu-bar agent right away, runs `prep:ipad` (the gated build) underneath, then starts the bridge and the :8889 preview under
   `concurrently`, which restarts them forever. A build failure stops it
-  instead of looping.
+  instead of looping, and it exits when `concurrently` does (its status
+  page's server used to keep it alive with nothing under it). Vamp for Mac
+  runs it as a child when opened from the Dock (ADR-490): `SKIP_MENUBAR=1`,
+  and `VAMP_MAC_APP=1` opens no Safari windows.
+- `install-mac-app.sh` (`npm run install-mac-app`): builds Vamp for Mac in
+  Release into `~/Applications/Vamp.app` and records this checkout for it.
 - `staleness.mjs`: fingerprint gates for the catalog scan and the Vite build.
   A stat walk (path, size, mtime; symlinks hashed as links) is compared with
   `scripts/.cache/<name>-stamp.json`, and every artifact the last run wrote
@@ -37,7 +42,9 @@ Automation, run from the repo root through `npm run`.
   pattern or by port, and only LISTEN sockets (an unscoped sweep once killed
   Chrome's network process). A port held by anything else is named and left.
   `--list` prints what it would stop; `--caches` also clears build caches.
-  `cleanupScoping.test.ts` drives `--list`.
+  `cleanupScoping.test.ts` drives `--list`. A shell inside the repo whose command line names a server
+  is one of those processes too: run checks against a starting stack from
+  outside the repo.
 - `setup.js` (`npm run setup`): Node, `npm install`, the surface's link
   into Live (`surface/install.sh`), then the setup check.
 - `validate-setup.js` (`npm run validate`, `dev`'s and `ipad`'s first

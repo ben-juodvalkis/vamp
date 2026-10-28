@@ -64,7 +64,8 @@ share it), and switch back to `main` when Ben is done testing.
   so before diagnosing odd rig behavior, compare Live's start time with the
   newest file under `surface/`.
 - **Servers:** `npm run dev` serves the Mac at http://localhost:3000.
-  `npm run ipad` serves a production build on :8889; the iPad is at
+  `npm run ipad` serves a production build on :8889 (so does Vamp for Mac,
+  opened from the Dock, ADR-490; its output is `logs/vamp-mac.log`); the iPad is at
   http://<the Mac's name>.local:8889 (the rig's is printed at startup).
   Not 192.168.100.1: macOS now keeps the iPad's USB link as a private,
   self-assigned one that cannot be given a fixed address (2026-10-27,

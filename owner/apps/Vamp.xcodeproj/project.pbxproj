@@ -8,10 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		00B05AB09DDDA5C05A280322 /* Splice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DED6AF0A86F7612C3229FAC /* Splice.swift */; };
+		01E43854851150E2A88BD20F /* Supervisor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7588887B3FEC5F945688A7D6 /* Supervisor.swift */; };
 		04D76BF276F5A8BD3D0FADC0 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D368FE577FEB550B9CC1A9D4 /* AppState.swift */; };
 		08321E0D3BA1B2A0A74C1CCF /* LinkProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E71B2FC18F7AE4133AC5215 /* LinkProtocol.swift */; };
 		08F59359E9DB4DE67CFCD360 /* LinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E205C25310E6D86E3D913802 /* LinkTests.swift */; };
 		09E25C1F5DB590222D21BD05 /* LinkServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E6A855106B6835A56B03903 /* LinkServer.swift */; };
+		0FA909E5A877918C5C079C25 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EBA6AF1690AE6F51DC7D2B2A /* Assets.xcassets */; };
 		1D58B1CF20FD7E8B0538559A /* OSCEnvelope.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48DAE09A3ED042760066FDE2 /* OSCEnvelope.swift */; };
 		29451632DC10E6832C5F02C1 /* LinkClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B83BED9048B5F511FD8DC9C /* LinkClient.swift */; };
 		2CC02CC8BA5AD290C6F171F7 /* UsbMux.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A274A47EF8CB1FB15CE2231 /* UsbMux.swift */; };
@@ -24,6 +26,7 @@
 		87360A7F7941CF489CD2CBEC /* VampMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FF8FFE78D61C16CCE0245DE /* VampMacApp.swift */; };
 		909B6C878FB3B6270878DFBE /* Splice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DED6AF0A86F7612C3229FAC /* Splice.swift */; };
 		97CCA00D5DF9E64B9F69F499 /* BridgeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25B9BD3695516F19720AAA2E /* BridgeClient.swift */; };
+		9C4946FB803880E5E3BA1C69 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A908C651CE459585CE047490 /* Assets.xcassets */; };
 		B8938D47541BF7D3E76C86FC /* LinkClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B83BED9048B5F511FD8DC9C /* LinkClient.swift */; };
 		BB991C43B037500A636443C3 /* Wire.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F813656117C8E51E0B9EA5B /* Wire.swift */; };
 		C8E7E75FD9BA9FFEC754678C /* LinkProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E71B2FC18F7AE4133AC5215 /* LinkProtocol.swift */; };
@@ -41,6 +44,7 @@
 		3E71B2FC18F7AE4133AC5215 /* LinkProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkProtocol.swift; sourceTree = "<group>"; };
 		3F813656117C8E51E0B9EA5B /* Wire.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Wire.swift; sourceTree = "<group>"; };
 		48DAE09A3ED042760066FDE2 /* OSCEnvelope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSCEnvelope.swift; sourceTree = "<group>"; };
+		7588887B3FEC5F945688A7D6 /* Supervisor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Supervisor.swift; sourceTree = "<group>"; };
 		7B83BED9048B5F511FD8DC9C /* LinkClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkClient.swift; sourceTree = "<group>"; };
 		7DD360D6442DE26552DCA9DA /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
 		7E3BA74AF6C6EAD79C3B3AA7 /* VampPad.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = VampPad.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -48,9 +52,11 @@
 		8DAE9F4E122B2D6291B30B4B /* VampPadApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VampPadApp.swift; sourceTree = "<group>"; };
 		915CB9013A537FFC92E573BC /* PadLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PadLink.swift; sourceTree = "<group>"; };
 		A6B13582108DC5D088C2AB67 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		A908C651CE459585CE047490 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		BA98A5B137CB6D8CE7BF97B8 /* VampMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VampMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D368FE577FEB550B9CC1A9D4 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		E205C25310E6D86E3D913802 /* LinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkTests.swift; sourceTree = "<group>"; };
+		EBA6AF1690AE6F51DC7D2B2A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F3BB2F13DF6908B1C162FFDE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -78,9 +84,11 @@
 		66538A1F2123FFFD911326DC /* Mac */ = {
 			isa = PBXGroup;
 			children = (
+				EBA6AF1690AE6F51DC7D2B2A /* Assets.xcassets */,
 				F3BB2F13DF6908B1C162FFDE /* Info.plist */,
 				7B83BED9048B5F511FD8DC9C /* LinkClient.swift */,
 				915CB9013A537FFC92E573BC /* PadLink.swift */,
+				7588887B3FEC5F945688A7D6 /* Supervisor.swift */,
 				0A274A47EF8CB1FB15CE2231 /* UsbMux.swift */,
 				7FF8FFE78D61C16CCE0245DE /* VampMacApp.swift */,
 				4B63692741D6CDD7BBEF8960 /* Menu */,
@@ -111,6 +119,7 @@
 		BC9B18BC1725816BDE7BCC43 /* Pad */ = {
 			isa = PBXGroup;
 			children = (
+				A908C651CE459585CE047490 /* Assets.xcassets */,
 				A6B13582108DC5D088C2AB67 /* Info.plist */,
 				8DAE9F4E122B2D6291B30B4B /* VampPadApp.swift */,
 			);
@@ -162,6 +171,7 @@
 			buildConfigurationList = 1B203D97B070E1388108FF2E /* Build configuration list for PBXNativeTarget "VampPad" */;
 			buildPhases = (
 				DA8F2C6AF9B7E3204A7A188B /* Sources */,
+				95D9FC4C20E0F220A1A8510A /* Resources */,
 			);
 			buildRules = (
 			);
@@ -179,6 +189,7 @@
 			buildConfigurationList = 444F26CA63A223325EC8E97F /* Build configuration list for PBXNativeTarget "VampMac" */;
 			buildPhases = (
 				F3D8344E87CEBF2132A80E71 /* Sources */,
+				2E504357D01ACD50548CC6E0 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -232,6 +243,25 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		2E504357D01ACD50548CC6E0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0FA909E5A877918C5C079C25 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		95D9FC4C20E0F220A1A8510A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9C4946FB803880E5E3BA1C69 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		18FE310D12B16C8CA0ED52A0 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -270,6 +300,7 @@
 				1D58B1CF20FD7E8B0538559A /* OSCEnvelope.swift in Sources */,
 				607E3A52004476820E4C3739 /* PadLink.swift in Sources */,
 				4BC2611245B8F4A620A02F2B /* Splice.swift in Sources */,
+				01E43854851150E2A88BD20F /* Supervisor.swift in Sources */,
 				2CC02CC8BA5AD290C6F171F7 /* UsbMux.swift in Sources */,
 				87360A7F7941CF489CD2CBEC /* VampMacApp.swift in Sources */,
 				BB991C43B037500A636443C3 /* Wire.swift in Sources */,

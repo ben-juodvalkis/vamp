@@ -105,15 +105,20 @@ async function announceReady(abletonLaunchedAt) {
     const { ready } = createStatusPage();
 
     console.log('\n📄 iPad Status Page (Prominent URL Display):');
-    console.log('   🌐 Opening in browser: http://localhost:8890/');
+    console.log(process.env.VAMP_MAC_APP
+        ? '   🌐 http://localhost:8890/ (not opened: Vamp for Mac\'s menu shows the same)'
+        : '   🌐 Opening in browser: http://localhost:8890/');
     console.log('   📱 Large, prominent iPad URLs with copy-to-clipboard');
     console.log('   🔄 Auto-refreshes every 30 seconds');
 
     await ready;
 
     const bestIP = getBestIPadIP();
-    launch('open', ['-a', 'Safari', 'http://localhost:8890/']);
-    launch('open', ['-a', 'Safari', `http://${bestIP}:8889`]);
+    // Started by Vamp for Mac, whose menu is the status page: no Safari windows.
+    if (!process.env.VAMP_MAC_APP) {
+        launch('open', ['-a', 'Safari', 'http://localhost:8890/']);
+        launch('open', ['-a', 'Safari', `http://${bestIP}:8889`]);
+    }
 
     console.log('\n📱 iPad Setup Instructions:');
     console.log('   1. Connect iPad via USB-C (recommended)');
@@ -246,6 +251,10 @@ async function setupiPad() {
         } else {
             console.log(`\n❌ iPad setup exited with code ${code}`);
         }
+        // Exit with it. The status page's server would otherwise keep this
+        // process alive with no bridge and no page server under it, which a
+        // supervisor (Vamp for Mac) cannot tell from a running Vamp.
+        process.exit(code === null ? 1 : code);
     });
 
     // Handle Ctrl+C gracefully

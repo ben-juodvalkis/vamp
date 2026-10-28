@@ -39,6 +39,11 @@ struct AppConfig {
     /// same Mac as the bridge and the file is the bridge's own store.
     let wsSecret: String?
 
+    /// The checkout the config came from (`<root>/config/constants.json`).
+    var repoRoot: URL? {
+        sourcePath.map { URL(fileURLWithPath: $0).deletingLastPathComponent().deletingLastPathComponent() }
+    }
+
     static let fallback = AppConfig(
         host: "localhost",
         webSocketPort: 8081,
@@ -128,6 +133,11 @@ struct AppConfig {
             candidates.append(explicit)
         }
         if let root = env["LOOPING_PROJECT_ROOT"], !root.isEmpty {
+            candidates.append(root + "/config/constants.json")
+        }
+        // Written by `npm run install-mac-app`: an app opened from the Dock
+        // has no environment and no working directory to go on.
+        if let root = UserDefaults.standard.string(forKey: "repoRoot"), !root.isEmpty {
             candidates.append(root + "/config/constants.json")
         }
         candidates.append("/Users/Shared/DevWork/GitHub/vamp/config/constants.json")

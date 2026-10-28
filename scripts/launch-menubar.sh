@@ -70,6 +70,9 @@ fi
 
 # Point the app at this repo's constants.json regardless of CWD.
 export LOOPING_PROJECT_ROOT="$ROOT"
+# The Terminal's npm run owns the servers: the app reports them and offers
+# no Start/Stop (owner/apps/Mac/Supervisor.swift).
+export VAMP_FROM_NPM=1
 
 # Singleton: a dev run torn down by concurrently can leave the app behind as
 # an orphan, and repeated starts once piled up six identical menu-bar icons.
