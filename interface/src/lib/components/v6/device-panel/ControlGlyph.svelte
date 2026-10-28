@@ -301,6 +301,12 @@
     <path d="M16 16 L14.8 12.6" />
     <circle cx="23" cy="16" r="3.6" />
     <path d="M23 16 L26.1 14.2" />
+  {:else if name === 'drum'}
+    <!-- A Drum Rack: a snare, its two sticks crossed over the head. -->
+    <ellipse cx="16" cy="15" rx="11" ry="3.5" />
+    <path d="M5 15 V24 A11 3.5 0 0 0 27 24 V15" />
+    <path d="M10 18.3 V27 M16 18.5 V27.5 M22 18.3 V27" opacity=".6" />
+    <path d="M7 3 L17 12 M25 3 L15 12" />
   {/if}
 </svg>
 

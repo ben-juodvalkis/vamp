@@ -93,6 +93,7 @@ export const CONTROL_GLYPHS = [
 	'select',
 	'macro',
 	'rack',
+	'drum',
 ] as const;
 
 export type ControlGlyphName = (typeof CONTROL_GLYPHS)[number];

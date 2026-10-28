@@ -4,7 +4,8 @@
    * the one control every native kit gets — `vm.pitch`, whole semitones on
    * ±48, the surface fanning it out to every pad's Transpose. Under a held
    * or latched pad it is that pad's, by `useDrumVm`'s rule, as the Drum Rack
-   * view's own Trnsp is.
+   * view's own Trnsp is. It wears the drum mark beside its label, as the
+   * Gtr and Wah racks wear theirs, so the cell says what the device is.
    */
   import DeviceSlider from '../DeviceSlider.svelte';
   import VmSlot from '$lib/components/v6/central/views/drum/VmSlot.svelte';
@@ -29,7 +30,7 @@
     value={vm.value('pitch') ?? 0}
     labelOrientation="horizontal"
     title="Trnsp"
-    icon="transpose"
+    icon="drum"
     {color}
     min={VM_PITCH_MIN}
     max={VM_PITCH_MAX}
