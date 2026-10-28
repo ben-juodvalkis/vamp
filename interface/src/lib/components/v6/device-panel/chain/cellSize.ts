@@ -1,5 +1,6 @@
 /**
- * How much room a chain cell gives its face (ADR-492, 2026-10-28).
+ * How much room a chain cell gives its face, across and down (ADR-492,
+ * 2026-10-28).
  *
  * The chain overview's cells are as wide as the chain leaves them: a short
  * chain gives each device a broad cell, a long one or a two-row chain a
@@ -13,6 +14,8 @@ import { getContext, setContext } from 'svelte';
 
 /** A cell's width, in three steps. */
 export type CellWidthClass = 'narrow' | 'medium' | 'wide';
+/** A cell's height, in two: a two-row chain's cells are short. */
+export type CellHeightClass = 'short' | 'tall';
 
 export interface CellSize {
 	/** CSS px of the face's area; 0 until measured. */
@@ -20,6 +23,8 @@ export interface CellSize {
 	readonly height: number;
 	/** `width` in steps (`cellWidthClass`); null until measured. */
 	readonly widthClass: CellWidthClass | null;
+	/** `height` in steps (`cellHeightClass`); null until measured. */
+	readonly heightClass: CellHeightClass | null;
 }
 
 /**
@@ -28,11 +33,22 @@ export interface CellSize {
  */
 export const CELL_WIDTH_STEPS = { medium: 120, wide: 236 } as const;
 
+/**
+ * Tall's lower bound. On the iPad a one-row chain leaves a face about
+ * 260px, a two-row chain about 115px; this sits between them.
+ */
+export const CELL_TALL_MIN = 180;
+
 export function cellWidthClass(width: number): CellWidthClass | null {
 	if (!(width > 0)) return null;
 	if (width >= CELL_WIDTH_STEPS.wide) return 'wide';
 	if (width >= CELL_WIDTH_STEPS.medium) return 'medium';
 	return 'narrow';
+}
+
+export function cellHeightClass(height: number): CellHeightClass | null {
+	if (!(height > 0)) return null;
+	return height >= CELL_TALL_MIN ? 'tall' : 'short';
 }
 
 const KEY = Symbol('chain-cell-size');

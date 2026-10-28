@@ -59,6 +59,7 @@
   import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
   import { setContext } from 'svelte';
   import CellSize from './chain/CellSize.svelte';
+  import MidiWheelsFace from './chain/MidiWheelsFace.svelte';
   import { PICTURE_CONTEXT } from '$lib/components/v6/browser/devicePictures';
   import type { Component } from 'svelte';
   import { FX_GRID_LAYOUT, type DeviceTypeKey } from '$lib/config/fxGridLayout';
@@ -72,7 +73,6 @@
   import RecentEffectButton from './chain/RecentEffectButton.svelte';
   import { recentForChain } from '$lib/services/recentEffects.svelte';
   import { controlFor } from './deviceControls';
-  import MidiWheelsPanel from '$lib/components/v6/midi/MidiWheelsPanel.svelte';
   import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
   import InstrumentFace, { FACED_INSTRUMENTS } from './chain/InstrumentFace.svelte';
   import DrumRackFace from './chain/DrumRackFace.svelte';
@@ -683,9 +683,8 @@
         </CellSize></div>
       {:else if !padScope && isMidiWheels(cell.device)}
         <!-- The pitch and mod wheels, as the instrument views draw them:
-             Pitch over Mod in a full-height cell, side by side in a
-             two-row chain's half-height one. -->
-        <div class="cell-control" role="presentation"><CellSize><MidiWheelsPanel sideBySide={grid.rows > 1} /></CellSize></div>
+             side by side, stacked only in a narrow cell. -->
+        <div class="cell-control" role="presentation"><CellSize><MidiWheelsFace /></CellSize></div>
       {:else if tile}
         <!-- The grid's own tile, on this device. A touch here is the
              control's: it picks this device and never starts a reorder. -->
