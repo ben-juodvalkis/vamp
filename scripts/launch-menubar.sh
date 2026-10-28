@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
 #
-# Launch the macOS menu-bar utility (owner/menubar) alongside `npm run dev` /
-# `npm run ipad`. It's a standalone SwiftUI MenuBarExtra app that talks to the
-# bridge over WebSocket — see owner/menubar/README.md.
+# Launch Vamp for Mac (owner/apps, the VampMac target) alongside `npm run dev`
+# / `npm run ipad`: the menu-bar app that mirrors the session toggles over the
+# bridge's WebSocket (owner/apps/Mac/Menu/README.md) and carries Vamp for
+# iPad's link over the USB cable.
 #
-# This is a best-effort launcher: if the machine has no Swift toolchain, or
+# This is a best-effort launcher: if the machine has no Xcode, or
 # isn't macOS, it prints one line and idles (see skip() below) so it never
 # breaks the dev run and never churns under concurrently's restart policy.
 #
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PKG_DIR="$ROOT/owner/menubar/LoopingMenuBar"
+APPS_DIR="$ROOT/owner/apps"
+APP_BIN="$APPS_DIR/build/Build/Products/Debug/Vamp.app/Contents/MacOS/Vamp"
 
 # The owner's app (general-release plan.md §4): only while features.menubar
 # is on, in this Mac's config/constants.local.json. Off, it exits at once
@@ -38,28 +40,32 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   skip "not macOS"
 fi
 
-# Needs a Swift toolchain (Xcode or Command Line Tools).
-if ! command -v swift >/dev/null 2>&1; then
-  skip "no swift toolchain — install Xcode CLT to enable"
+# Needs Xcode itself (the Command Line Tools alone have no xcodebuild that
+# builds app targets).
+if ! xcodebuild -version >/dev/null 2>&1; then
+  skip "no Xcode — install it to enable"
 fi
 
-if [[ ! -d "$PKG_DIR" ]]; then
-  skip "package not found at $PKG_DIR"
+if [[ ! -d "$APPS_DIR/Vamp.xcodeproj" ]]; then
+  skip "project not found at $APPS_DIR"
 fi
 
 # Point the app at this repo's constants.json regardless of CWD.
 export LOOPING_PROJECT_ROOT="$ROOT"
 
-# Singleton: when concurrently tears down a dev run it kills `swift run`, but
-# the app binary that `swift run` spawned survives as an orphan — repeated
-# `npm run dev`/`ipad` starts were observed piling up six identical menu-bar
-# icons, all connected to the bridge. Reap any existing instance before
-# launching ours. `-x` matches the exact process name (the app binary), so it
-# can't hit this script, concurrently, or the swift toolchain.
+# Singleton: a dev run torn down by concurrently can leave the app behind as
+# an orphan, and repeated starts once piled up six identical menu-bar icons.
+# Reap any existing instance first: the old SwiftPM menu-bar app by its exact
+# name, and Vamp for Mac by its binary's path. Not `pkill -x Vamp`: the iPad
+# app in the Simulator is a process named Vamp too.
 pkill -x LoopingMenuBar 2>/dev/null || true
+pkill -f "Vamp.app/Contents/MacOS/Vamp" 2>/dev/null || true
 
-echo "📎 building + launching menu bar (first build can take ~30s)…"
-# `swift run` in the package dir builds if needed then launches the agent.
-# Suppress the Dock icon is handled in-app (setActivationPolicy(.accessory)).
-cd "$PKG_DIR"
-exec swift run
+echo "📎 building + launching Vamp for Mac (a first build takes ~30s)…"
+# Incremental: a few seconds when nothing changed.
+if ! xcodebuild build -project "$APPS_DIR/Vamp.xcodeproj" -scheme VampMac \
+     -configuration Debug -destination "generic/platform=macOS" \
+     -derivedDataPath "$APPS_DIR/build" -quiet; then
+  skip "Vamp for Mac did not build"
+fi
+exec "$APP_BIN"

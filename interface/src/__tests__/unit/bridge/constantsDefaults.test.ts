@@ -42,6 +42,21 @@ describe('config/constants.json', () => {
 		expect(inlined?.[2]).toBe((tracked.osc.webSocket as { path?: string }).path);
 	});
 
+	it('names the ports Vamp for iPad compiles in', () => {
+		// The iPad app cannot read the config, so it carries `padLink`'s ports
+		// itself (owner/apps/Pad/VampPadApp.swift, `PadPorts`). Moving one in
+		// the config alone strands the app: the Mac dials a port it is not
+		// listening on.
+		const pad = readFileSync(join(REPO_ROOT, 'owner/apps/Pad/VampPadApp.swift'), 'utf8');
+		const device = /static let device: UInt16 = (\d+)/.exec(pad);
+		const page = /static let page: UInt16 = (\d+)/.exec(pad);
+		const padLink = (tracked as { padLink?: { devicePort?: number; pagePort?: number } }).padLink;
+		expect(device, 'PadPorts.device moved').not.toBe(null);
+		expect(page, 'PadPorts.page moved').not.toBe(null);
+		expect(Number(device?.[1])).toBe(padLink?.devicePort);
+		expect(Number(page?.[1])).toBe(padLink?.pagePort);
+	});
+
 	it('carries the port fields the UDP and TCP transports read', () => {
 		const surface = tracked.osc.pythonSurface;
 		expect(surface, 'osc.pythonSurface').toBeDefined();

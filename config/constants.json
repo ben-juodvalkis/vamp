@@ -10,7 +10,7 @@
     "maxUtilityPatch": false,
     "_expressionPedalNote": "The expression pedal and its toe switch (midiPedals.channel, wahToeSwitchCC, wahExpressionCC) and the Wah they play: the sweep drives Wah.adg on an audio track and MidiWheels' mod wheel on a MIDI track, the toe switch loads or steps it (ADR-422, ADR-445). Off: the surface claims neither CC, so they reach Live like any other MIDI, and the Pedal view draws no Wah button. The foot switch is not part of this: it is a user setting with Learn in the System view.",
     "expressionPedal": false,
-    "_menubarNote": "The owner's macOS menu-bar app (owner/menubar), which mirrors toggles the System view already has. Off: npm run dev and npm run ipad neither build nor launch it (scripts/launch-menubar.sh exits at once, setup-ipad.js never calls it).",
+    "_menubarNote": "Vamp for Mac (owner/apps, the VampMac target): the owner's menu-bar app, which mirrors toggles the System view already has and carries Vamp for iPad's link over the USB cable (ADR-488). Needs Xcode. Off: npm run dev and npm run ipad neither build nor launch it (scripts/launch-menubar.sh exits at once, setup-ipad.js never calls it), so the iPad app has no Mac to reach and Safari is the way in.",
     "menubar": false,
     "_axHelperNote": "The Looping AX Helper (ADR-439), the one process that drives Live's own UI through macOS Accessibility, installed by npm run install-ax-helper. Off: the bridge dials no helper, and the UI draws no Reverse or Group button, a held Drum Sampler pad steps the kit rather than Live's similar samples, and npm run ipad never opens Live's Save As dialog. On: those are greyed out, with the reason, while the helper is not running or has no Accessibility grant.",
     "axHelper": false

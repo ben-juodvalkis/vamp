@@ -32,7 +32,7 @@
         },
         "menubar": {
           "type": "boolean",
-          "description": "The owner's macOS menu-bar app (owner/menubar): built and launched by npm run dev and npm run ipad only while on."
+          "description": "The owner's macOS menu-bar app (owner/apps (Vamp for Mac)): built and launched by npm run dev and npm run ipad only while on."
         },
         "axHelper": {
           "type": "boolean",

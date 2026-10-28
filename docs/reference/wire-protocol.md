@@ -1073,7 +1073,7 @@ aren't presence-gated.
 | `/looping/v3/bridge/heartbeat`        | Surf→UI | `seq:int, monoMs:int`          | 1 Hz surface-alive beacon. UI dispatches a `surface-heartbeat` window event. HealthMonitor watches for >3s gaps (`tick-stall`). |
 | `/looping/v3/server/heartbeat`        | Bridge→Surf | `seq:int, epochMs:int, mode:string?` | "The dev server is running" beacon, sent every `timing.serverPresence.heartbeatIntervalMs` (default 2s) while the bridge process is alive. Bridge-originated straight to the surface UDP port (no `backendScope` routing). The surface's `ServerPresenceComponent` treats a gap > `graceWindowMs` (default 6s) as "server gone" and gates performance-only behaviors (arm-follows-selection) off. Also refreshed on every handshake accept so set-load / Live-restart recovery is instant. The optional 3rd arg `mode` (`"ipad"`/`"dev"`, from `LOOPING_SERVER_MODE`) records which npm script started the bridge; on the first heartbeat carrying it, `is_ipad_present()` seeds the launch-mode default of the `auto_capture` toggle that gates the performance-capture behaviors (§2.12/§2.14). See §2.12 and §5.6. |
 | `/looping/v3/surface/hello`           | Surf→UI | `surfaceInstanceId:string, protocolVersion:string, timestamp:int` | Fires once at every `ControlSurface.__init__`. UI uses instanceId mismatch to detect surface restart. See §5.6. |
-| `/bridge/server_mode`                 | Bridge→UI | `mode:string` | Launch mode (`"dev"`/`"ipad"`) announced to WS clients — the WebSocket-side counterpart of the UDP-only `/looping/v3/server/heartbeat` `mode` arg (which never reaches WS clients). Sent once per client on connect (`WebSocketServer.handleConnection`) and re-broadcast on the 5s ping cadence for self-healing. `mode` comes from `LOOPING_SERVER_MODE`, fixed for the bridge process lifetime. Consumed by the menu-bar utility (`owner/menubar`) for its status line; the web UI ignores it. |
+| `/bridge/server_mode`                 | Bridge→UI | `mode:string` | Launch mode (`"dev"`/`"ipad"`) announced to WS clients — the WebSocket-side counterpart of the UDP-only `/looping/v3/server/heartbeat` `mode` arg (which never reaches WS clients). Sent once per client on connect (`WebSocketServer.handleConnection`) and re-broadcast on the 5s ping cadence for self-healing. `mode` comes from `LOOPING_SERVER_MODE`, fixed for the bridge process lifetime. Consumed by the menu-bar utility (`owner/apps (Vamp for Mac)`) for its status line; the web UI ignores it. |
 | `/bridge/ax_helper`                   | Bridge→UI | `state:string, detail:string` | **ADR-439.** The Looping AX Helper as the bridge sees it — the one process trusted with macOS Accessibility, dialed over its Unix socket (`axHelper.socketPath`). `state` is `ready`, `ax-untrusted` (the app has no Accessibility grant; `detail` names the System Settings switch) or `ax-helper-down` (no connection: not installed, not running, or restarting past a 1.5 s grace). Sent once per client on connect, on every change, and on the 5 s ping cadence. The same codes are the named errors every AX-driven reply carries (`/cmd/clip/reverse/ack [0, code, detail]`, Save As, similar-sound swap), so an AX control never silently does nothing. |
 | `/bridge/features`                    | Bridge→UI | `snapshot:string` (JSON) | **General-release audit §7b.** The bridge's feature switches, `{ <id>: { enabled, available, reason } }`, one entry per switch it knows (`totalmix`, `maxUtilityPatch`, `expressionPedal`, `menubar`, `axHelper`; `interface/bridge/utils/features.js`), plus `captureRecorder`, which is no switch: always enabled, available while the recorder device says hello (§2.15; `No recorder on Return A`, `Waiting for the recorder`), and it goes back too. `enabled` is `constants.features.<id>`, read once at bridge start — only an explicit `true` is on. `available` says what the feature drives has been seen since the bridge started (for `totalmix`: the mixer answered on either OSC controller) and never goes back; `reason` is a short why-not, written to be drawn in a control (`Waiting for TotalMix`, `TotalMix not answering`, `TotalMix config missing`, `AX helper not running`, `AX helper needs Accessibility`), empty when available or off. `axHelper` alone can go back: it tracks the helper's own state. Sent once per client on connect (ahead of auth, like `/bridge/connection_status`: which subsystems exist is layout, not the set), on every change, and on the 5 s ping cadence. The UI draws nothing for a feature until a snapshot names it (`bridgeStatus.feature()` reads an unnamed one as off), hides one that is off, and greys out one that is on but unavailable, with the reason. Outside v3 version negotiation like every `/bridge/*` frame, so no protocol bump. |
 | `/bridge/machine`                     | Bridge→UI | `snapshot:string` (JSON) | **2026-09-26 (onboarding.plan.md §3, §6.5).** The machine's values a client used to compile in: `{ paths: { instrumentsBase, m4lDevicesRoot }, totalmix: { minDb, maxDb, silenceDb } | null }`. `instrumentsBase` is what a preset path recorded before the Places is read against (`effectPresetsBase`, the folder the file tiles loaded from, left on 2026-10-26: every file tile names the Vamp Devices Place now), `m4lDevicesRoot` this checkout's `Vamp Devices` from the bridge's own location, `totalmix` the mixer's dB range (`osc.totalmix`) or null. Read once at bridge start; sent once per client on connect, after `/bridge/features`, and on the 5 s ping cadence. Until it lands the client's paths are empty and an FX tile's load answers `path-not-found`, as a missing preset always did. Outside v3 negotiation, so no protocol bump. |
@@ -1097,7 +1097,7 @@ The `auto_capture` toggle *defaults* to the launch mode — seeded to
 dev→off) — so out of the box these behaviors fire under `npm run ipad` and
 not `npm run dev`, exactly as before this toggle existed. But the toggle is
 now the sole gate and fully overridable: a `dev` session can force capture
-on, an `ipad` set can force it off (from the web UI or the `owner/menubar`
+on, an `ipad` set can force it off (from the web UI or the `owner/apps (Vamp for Mac)`
 utility). Cleanup on the stop edge is ownership-based, not gate-based — a
 take armed while the toggle was on is always disarmed and offered for save
 even if the toggle flips off mid-take.
@@ -1396,6 +1396,13 @@ separate connection that stays up throughout.
 The bridge binds `0.0.0.0:8081`. Before this, anything on the LAN that
 knew the port could drive Live and read the whole Set.
 
+Since 2026-10-27 a page reaches it on the page's own origin at
+`/bridge-socket` (`osc.webSocket.path`), which the interface server passes
+through to 8081 with the Origin header intact (ADR-488); other clients
+still dial 8081. The page holds its queued writes and its handshake hello
+until `/bridge/auth/result [1]`, since anything sent before it is refused,
+and it sends the proof only on the socket that was challenged.
+
 | Address | Dir | Args | Semantics |
 | --- | --- | --- | --- |
 | `/bridge/auth/challenge` | Bridge→UI | `salt:string` | Sent immediately on connect. Fresh random salt per connection. |
@@ -1440,7 +1447,7 @@ gate on and the default salt size and timeout.
 
 Clients that must authenticate: the web UI
 (`WebSocketConnection.ts`) and the Swift menu-bar app
-(`owner/menubar` — reads the secret file directly, since it runs on the
+(`owner/apps (Vamp for Mac)` — reads the secret file directly, since it runs on the
 same Mac). If auth is enabled and no secret can be established, the
 bridge logs an ERROR and runs **unauthenticated** rather than refusing
 every client — failing open is the deliberate choice for a performance

@@ -353,7 +353,7 @@ export function handleV3HandshakeAccept(args: OSCArg[]): void {
 	if (!UI_SUPPORTED_VERSIONS.includes(version)) {
 		// Not ours. Accepts are BROADCAST to every WebSocket client, and
 		// other clients negotiate their own versions — the menubar app
-		// (owner/menubar Wire.swift) advertises 3.3.0, so its accept
+		// (owner/apps/Mac/Menu/Wire.swift) advertises 3.3.0, so its accept
 		// lands here too. A genuine "surface can't speak our version"
 		// never arrives as an accept: `HandshakeComponent._pick_version`
 		// returns None and the surface emits /looping/v3/error instead.

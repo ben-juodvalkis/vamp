@@ -90,23 +90,20 @@ Requires macOS 13+ and a Swift toolchain (Xcode or Command Line Tools).
 
 **Automatic** — `npm run dev` and `npm run ipad` now launch the menu bar as a
 `concurrently` process (via `scripts/launch-menubar.sh`, exposed as
-`npm run menubar`). The first build takes ~30s; after that it's instant. If the
-machine has no Swift toolchain (or isn't macOS) the launcher prints one line and
+`npm run menubar`). The first build takes ~30s; after that it's a few seconds.
+If the machine has no Xcode (or isn't macOS) the launcher prints one line and
 idles, so it never breaks the dev run.
 
 **Manual** — to run it on its own:
 
 ```bash
-cd owner/menubar/LoopingMenuBar
-swift run          # builds and launches the menu-bar agent (no Dock icon)
+npm run menubar    # builds the VampMac target and launches it (no Dock icon)
 ```
 
-Or open it in Xcode: `xed .` (or `open Package.swift`), then Run.
-
-The Dock icon is suppressed at runtime (`NSApp.setActivationPolicy(.accessory)`),
-so `swift run` gives you a real menu-bar agent with no extra Info.plist. To
-leave it running permanently, build a release binary and add it to **System
-Settings → General → Login Items**, or archive it into a `.app` in Xcode.
+Or open `owner/apps/Vamp.xcodeproj` in Xcode, pick the VampMac scheme, Run.
+Since 2026-10-27 this is Vamp for Mac (ADR-488): the same menu, moved from the
+SwiftPM package at `owner/menubar`, plus Vamp for iPad's link over the USB
+cable (`../PadLink.swift`).
 
 ### Pointing it at constants.json
 
@@ -118,8 +115,8 @@ Resolution order (first hit wins):
 4. walk up from the current directory looking for `config/constants.json`
 
 If none is found it falls back to the same inlined defaults the web UI uses
-(port 8081, etc.), so it still runs. Launching via `swift run` from inside the
-repo means step 4 finds it automatically.
+(port 8081, etc.), so it still runs. Launching from inside the
+repo means step 4 finds it automatically (`npm run menubar` sets step 2).
 
 ## Verifying it works
 
@@ -130,7 +127,7 @@ handshake → seed → toggle → echo → **cross-client sync** choreography th
 implements, using a JS twin of the Swift envelope logic:
 
 ```bash
-cd owner/menubar
+cd owner/apps/Mac/Menu
 node verify/verify.mjs
 ```
 
@@ -145,7 +142,7 @@ With the rig running:
 ```bash
 npm run dev                         # bridge + interface + surface
 # open http://localhost:3000 in a browser
-cd owner/menubar/LoopingMenuBar && swift run
+npm run menubar
 ```
 
 Then:
@@ -166,23 +163,20 @@ Then:
 ## Layout
 
 ```
-owner/menubar/
-├── README.md
-├── LoopingMenuBar/                     # SwiftPM package (the app)
-│   ├── Package.swift
-│   └── Sources/LoopingMenuBar/
-│       ├── LoopingMenuBarApp.swift     # @main, MenuBarExtra + menu content
-│       ├── AppState.swift              # observable model, taps -> writes
-│       ├── BridgeClient.swift          # WebSocket lifecycle, handshake, reconnect
-│       ├── OSCEnvelope.swift           # wire envelope (port of WebSocketConnection.ts)
-│       ├── AppConfig.swift             # reads config/constants.json
-│       └── Wire.swift                  # v3 addresses + Setting enum
-└── verify/                             # dependency-free Node harness
+owner/apps/Mac/
+├── VampMacApp.swift                    # @main, MenuBarExtra + menu content
+├── PadLink.swift, UsbMux.swift, LinkClient.swift   # Vamp for iPad's link
+└── Menu/
+    ├── README.md
+    ├── AppState.swift                  # observable model, taps -> writes
+    ├── BridgeClient.swift              # WebSocket lifecycle, handshake, reconnect
+    ├── OSCEnvelope.swift               # wire envelope (port of WebSocketConnection.ts)
+    ├── AppConfig.swift                 # reads config/constants.json
+    ├── Wire.swift                      # v3 addresses + Setting enum
+    └── verify/                         # dependency-free Node harness
     ├── envelope.mjs                    # JS twin of OSCEnvelope.swift
     ├── mock-bridge.mjs                 # raw-socket bridge/surface simulator
     └── verify.mjs                      # asserts the full choreography
 ```
 
-> Self-contained by design: it reads `config/constants.json` but has no other
-> coupling to the repo, so it lifts cleanly into a standalone sibling repo later
-> (e.g. `git filter-repo --path owner/menubar`).
+> It reads `config/constants.json` but has no other coupling to the repo.

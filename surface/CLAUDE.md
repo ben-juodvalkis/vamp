@@ -824,7 +824,7 @@ marker alone.
 launch-mode-derived — `SessionSettingsComponent.seed_auto_capture_default`
 is called from `ServerPresenceComponent`'s `on_first_mode` callback when
 the first heartbeat reveals `mode` (ipad→on, dev→off) — but it is then
-fully user-overridable from the web UI or the `owner/menubar` app. So a
+fully user-overridable from the web UI or the `owner/apps (Vamp for Mac)` app. So a
 dev session can force capture on and an ipad set can force it off. A user
 write commits the value so a late mode seed can't clobber a deliberate
 override. (Historically the gate was `is_ipad_present()` directly; the

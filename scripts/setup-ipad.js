@@ -80,7 +80,7 @@ function launchPerformanceApps() {
         launch(blocker, ['start'], '🔒 Starting browser blocker...');
     }
 
-    // Menu-bar utility (owner/menubar). Detached + unref'd — a fire-and-forget
+    // Menu-bar utility (owner/apps (Vamp for Mac)). Detached + unref'd — a fire-and-forget
     // GUI agent like Safari/Ableton, NOT a concurrently peer: it must not sit
     // under the bridge/preview restart policy (a menu-bar agent that exits 0
     // would churn-restart and can drag the servers down). The launcher no-ops

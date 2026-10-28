@@ -74,6 +74,9 @@ classify() {
     case $1 in
         # The AX helper's own pytest; nothing else imports it.
         owner/ax-helper/*) CLS="ax" ;;
+        # The native apps: constantsDefaults.test.ts reads the iPad app's
+        # ports. Their own XCTests run in Xcode, not here.
+        owner/apps/*) CLS="vitest" ;;
         # userLibraryDetection.test.ts reads the installer.
         surface/install.sh) CLS="surface vitest" ;;
         surface/*) CLS="surface" ;;

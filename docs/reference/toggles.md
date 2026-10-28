@@ -64,7 +64,7 @@ The three capture behaviors gate on the single `auto_capture` toggle. Its
 **default** is the launch mode — seeded from `is_ipad_present()` on the
 first heartbeat (ipad→on, dev→off), so out of the box they fire under
 `npm run ipad` and stay silent under `npm run dev`, as before. But the
-toggle is overridable from any client (web UI or the `owner/menubar`
+toggle is overridable from any client (web UI or the `owner/apps (Vamp for Mac)`
 utility): a dev session can force capture on, an ipad set can force it off.
 An override **holds across set loads and Live restarts** — the bridge
 remembers the last client write and replays it over a rebuilt surface's
@@ -258,7 +258,7 @@ never read a stale snapshot.
 **and are written back** from the **Behavior** card in
 `SystemCentralView` — the master track's central view, reached by
 tapping the master strip. The first three are the same addresses the
-`owner/menubar` utility uses, so the two surfaces are interchangeable and
+`owner/apps (Vamp for Mac)` utility uses, so the two surfaces are interchangeable and
 each sees the other's flip via the echo.
 
 **There is no `sequencer_engine` switch any more (2026-09-26).** It was a
@@ -304,7 +304,7 @@ connect, on change and with the 5 s ping.
 |---|---|---|---|
 | `totalmix` | No TotalMix sockets (9003, 11019) and no startup bootstrap on 7001; no `osc.totalmix*` block is read; nothing about a mixer is logged. No status-strip mirror. | TotalMix answers on either OSC controller: the startup bootstrap's read of controller 1, or any packet on Global OSC (controller 3). The reason reads `Waiting for TotalMix` until the bootstrap ends, then `TotalMix not answering`; `TotalMix config missing` when the switch is on and an `osc.totalmix*` block is not. Once available it stays so: the mixer sends no heartbeat, so its going away cannot be seen. | `enhanced-osc-bridge.js` (link, ports, bootstrap); `bridgeStatus.isFeatureOn` / `unavailableReason` in `layouts/default/Layout.svelte` |
 | `maxUtilityPatch` | Neither `npm run dev` (`open:max`) nor `npm run ipad` opens `owner/Max Patches/Max Utility 1.0.maxpat`, so standalone Max never starts: no Move knobs or pad hold, no Move → TotalMix knobs, no CC 67 piano-pedal looper, no SoftStep/EV-1 remap. Settings (behind the gear in the System view) draws no **Move Knob** switch. The on-screen pitch/mod wheels do **not** hang off it: since 2026-09-25 they drive the `MidiWheels.amxd` device through the surface (`/looping/v3/wheels/*`), with no standalone Max and no switch. | Never: the bridge cannot see the patch (its only packet toward the bridge is the TotalMix device's hello), so on reads as available, as it did before the switch. | `scripts/open-max-patch.js` (both launch sites); `SettingsPage` |
-| `menubar` | Neither `npm run dev` nor `npm run ipad` builds or launches the menu-bar app (`owner/menubar`): `scripts/launch-menubar.sh` exits at once, and `setup-ipad.js` never calls it. Nothing else changes: the app only mirrors toggles the System view has. | Never: the app is only ever a client, so on reads as available. | `scripts/launch-menubar.sh`, `scripts/setup-ipad.js` |
+| `menubar` | Neither `npm run dev` nor `npm run ipad` builds or launches the menu-bar app (`owner/apps (Vamp for Mac)`): `scripts/launch-menubar.sh` exits at once, and `setup-ipad.js` never calls it. Nothing else changes: the app only mirrors toggles the System view has. | Never: the app is only ever a client, so on reads as available. | `scripts/launch-menubar.sh`, `scripts/setup-ipad.js` |
 | `axHelper` | The bridge builds no helper client, dials nothing and sends no `/bridge/ax_helper`; a stray Reverse, Group or swap request is answered `ax-helper-down`; `npm run ipad` never opens Live's Save As dialog. The clip view draws no **Rev** (to Simpler takes the column) and no **Group** (Dup Trk takes the column), and a held Drum Sampler pad's pill steps the kit instead of Live's similar samples. | The helper is connected and trusted. Greyed out meanwhile, with `AX helper not running` or `AX helper needs Accessibility`; unlike the others it goes back when the helper does. | `enhanced-osc-bridge.js`; `ClipCentralView`, `useInstrumentSwap` |
 | `expressionPedal` | The surface claims neither of the wah's CCs (`midiPedals.wahToeSwitchCC` / `wahExpressionCC`), so they reach Live like any other MIDI on the port; the `/looping/v3/wah/*` OSC wires stay. The Wah has no other way to be played (its view, `WahCentralView`, opens from the chain only on a Wah the track holds). The foot switch is **not** part of it: that is a user setting (below, "Foot switch"). Read by the surface too (`config_loader.feature_on`), once, when it is built. | Never: the pedal reaches the surface as MIDI the bridge never sees, so on reads as available. | `LoopingSurface._setup_midi_pedal_input`; `PedalCentralView` |
 

@@ -286,7 +286,7 @@ match Looping's exactly (2883 passed, 4 skipped).
   the three devices, and none of Looping's. Permute, MidiWheels and Random Start each loaded
   through `user_folders['Vamp Devices']` on scratch tracks, deleted after.
 - The AX helper was rebuilt from `owner/ax-helper` and stayed trusted for Accessibility (same
-  signing identity). The menubar app builds from `owner/menubar`.
+  signing identity). The menubar app builds from `owner/apps (Vamp for Mac)`.
 - `npm run ipad` serves from `vamp`, and a fresh page authenticates and shows the set.
 - Claude's memory was copied to `vamp`'s project folder.
 
