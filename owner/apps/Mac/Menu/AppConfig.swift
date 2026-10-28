@@ -25,6 +25,10 @@ struct AppConfig {
     let graceWindowMs: Int
     /// Where constants.json was loaded from, or nil if the fallback was used.
     let sourcePath: String?
+    /// `padLink` in constants.json: the iPad app's port, reached through
+    /// usbmux, and the Mac page server each of its streams is spliced to.
+    let padDevicePort: UInt16
+    let padPagePort: UInt16
 
     /// Shared secret for the bridge's WebSocket auth challenge, if one
     /// could be read. `nil` means we cannot authenticate — the bridge
@@ -42,6 +46,8 @@ struct AppConfig {
         heartbeatIntervalMs: 2000,
         graceWindowMs: 6000,
         sourcePath: nil,
+        padDevicePort: 47800,
+        padPagePort: 8889,
         wsSecret: nil
     )
 
@@ -71,6 +77,10 @@ struct AppConfig {
         // localhost (network.localhost), same as the web UI's localhost fallback.
         let localhost = (json["network"] as? [String: Any])?["localhost"] as? String ?? fallback.host
 
+        let padLink = json["padLink"] as? [String: Any]
+        let padDevice = (padLink?["devicePort"] as? NSNumber)?.uint16Value ?? fallback.padDevicePort
+        let padPage = (padLink?["pagePort"] as? NSNumber)?.uint16Value ?? fallback.padPagePort
+
         return AppConfig(
             host: localhost,
             webSocketPort: port,
@@ -78,6 +88,8 @@ struct AppConfig {
             heartbeatIntervalMs: heartbeat,
             graceWindowMs: grace,
             sourcePath: url.path,
+            padDevicePort: padDevice,
+            padPagePort: padPage,
             wsSecret: secret
         )
     }

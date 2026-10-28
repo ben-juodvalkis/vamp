@@ -91,23 +91,6 @@ final class LinkEndToEndTests: XCTestCase {
         return listener.port!.rawValue
     }
 
-    /// Plain TCP to the iPad side, where usbmux would be on the rig.
-    private func tcpDialer(_ port: UInt16) -> LinkDialer {
-        return { queue, done in
-            let conn = NWConnection(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: port)!, using: .linkTCP())
-            var finished = false
-            conn.stateUpdateHandler = { state in
-                guard !finished else { return }
-                switch state {
-                case .ready: finished = true; done(conn, Data())
-                case .failed, .waiting: finished = true; conn.cancel(); done(nil, Data())
-                default: break
-                }
-            }
-            conn.start(queue: queue)
-        }
-    }
-
     private func startLink(macPort: UInt16) {
         server = LinkServer(devicePort: devicePort, pagePort: pagePort)
         let linked = expectation(description: "linked")
@@ -116,7 +99,7 @@ final class LinkEndToEndTests: XCTestCase {
             if up && !fulfilled { fulfilled = true; linked.fulfill() }
         }
         server.start()
-        client = LinkClient(dial: tcpDialer(devicePort), macPort: macPort, queue: queue)
+        client = LinkClient(dial: UsbMux.loopbackDialer(port: devicePort), macPort: macPort, queue: queue)
         client!.start()
         wait(for: [linked], timeout: 5)
     }
@@ -212,7 +195,7 @@ final class LinkEndToEndTests: XCTestCase {
         wait(for: [down], timeout: 3)
 
         let started = Date()
-        client = LinkClient(dial: tcpDialer(devicePort), macPort: macPort, queue: queue)
+        client = LinkClient(dial: UsbMux.loopbackDialer(port: devicePort), macPort: macPort, queue: queue)
         client!.start()
         wait(for: [up], timeout: 5)
         XCTAssertLessThan(Date().timeIntervalSince(started), 2)

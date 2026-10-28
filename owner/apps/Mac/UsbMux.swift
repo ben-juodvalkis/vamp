@@ -71,6 +71,31 @@ enum UsbMux {
         }
     }
 
+    /// Plain TCP to `port` on this Mac's loopback: where the iPad app
+    /// listens when it runs in the Simulator, and the tests' stand-in for
+    /// usbmux.
+    static func loopbackDialer(port: UInt16) -> LinkDialer {
+        return { queue, done in
+            let conn = NWConnection(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: port)!, using: .linkTCP())
+            var finished = false
+            conn.stateUpdateHandler = { state in
+                guard !finished else { return }
+                switch state {
+                case .ready:
+                    finished = true
+                    done(conn, Data())
+                case .failed, .waiting:
+                    finished = true
+                    conn.cancel()
+                    done(nil, Data())
+                default:
+                    break
+                }
+            }
+            conn.start(queue: queue)
+        }
+    }
+
     private static func readResult(_ conn: NWConnection, pending: Data, finish: @escaping (NWConnection?, Data) -> Void) {
         conn.receive(minimumIncompleteLength: 1, maximumLength: 4096) { data, _, isComplete, error in
             var pending = pending

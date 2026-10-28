@@ -17,6 +17,62 @@ settings:
     SWIFT_VERSION: "5.0"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
 targets:
+  VampPad:
+    type: application
+    platform: iOS
+    sources:
+      - Shared
+      - Pad
+    info:
+      path: Pad/Info.plist
+      properties:
+        CFBundleDisplayName: Vamp
+        LSRequiresIPhoneOS: true
+        UIRequiresFullScreen: true
+        UIStatusBarHidden: true
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+        # The page is loaded from localhost, where the app's own listener
+        # hands it to the Mac: plain http to loopback only.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.benjuodvalkis.vamp.ipad
+        PRODUCT_NAME: Vamp
+        TARGETED_DEVICE_FAMILY: "2"
+        CODE_SIGN_STYLE: Automatic
+  VampMac:
+    type: application
+    platform: macOS
+    sources:
+      - Shared
+      - path: Mac
+        excludes:
+          - "Menu/verify/**"
+          - "Menu/README.md"
+    info:
+      path: Mac/Info.plist
+      properties:
+        CFBundleDisplayName: Vamp
+        # A menu-bar agent: no Dock icon, no main window.
+        LSUIElement: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.benjuodvalkis.vamp.mac
+        PRODUCT_NAME: Vamp
+        # Run locally, unsandboxed: it opens usbmuxd's socket and reads the
+        # repo's config, neither of which a sandboxed app may.
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        ENABLE_APP_SANDBOX: NO
+        ENABLE_HARDENED_RUNTIME: NO
   VampLinkTests:
     type: bundle.unit-test
     platform: macOS
@@ -31,6 +87,14 @@ targets:
         CODE_SIGN_STYLE: Manual
         GENERATE_INFOPLIST_FILE: YES
 schemes:
+  VampPad:
+    build:
+      targets:
+        VampPad: all
+  VampMac:
+    build:
+      targets:
+        VampMac: all
   VampLinkTests:
     build:
       targets:

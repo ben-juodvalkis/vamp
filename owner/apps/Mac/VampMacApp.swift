@@ -1,14 +1,18 @@
 import SwiftUI
 import AppKit
 
+/// Vamp for Mac: the menu-bar host. Mirrors the session toggles (the menu
+/// that was the Looping menu-bar app) and carries Vamp for iPad's link over
+/// the USB cable (`PadLink`).
 @main
-struct LoopingMenuBarApp: App {
+struct VampMacApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var state = AppState()
+    @StateObject private var pad = PadLink(config: AppConfig.load())
 
     var body: some Scene {
         MenuBarExtra {
-            MenuContent(state: state)
+            MenuContent(state: state, pad: pad)
         } label: {
             // Filled icon when the bridge is up, hollow when it's down.
             Image(systemName: state.connected ? "repeat.circle.fill" : "repeat.circle")
@@ -28,9 +32,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 /// The dropdown. Native `.menu` style renders `Toggle` rows as checkmark items.
 struct MenuContent: View {
     @ObservedObject var state: AppState
+    @ObservedObject var pad: PadLink
 
     var body: some View {
         Text(statusLine)
+        Text(pad.statusLine)
 
         Divider()
 
