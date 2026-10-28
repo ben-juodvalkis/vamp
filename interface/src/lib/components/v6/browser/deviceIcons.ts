@@ -1,10 +1,11 @@
 /**
- * A glyph per instrument type for a browser preset tile's corner (user,
+ * A glyph per instrument type, heading a browser section of that type (user,
  * 2026-10-28: "each instrument type like Operator, Omnisphere, Drum Rack…
  * visually distinct… some sort of icon for each"). Keyed by the device Live
  * names (`Preset.device`, indexScan.deviceNameOf) or the plug-in
- * (`Preset.plugin`). Each is a few strokes on a 24 × 24 box, drawn in the
- * tile's ink: a sketch of what the instrument is, not its logo.
+ * (`Preset.plugin`), as `groupPresetsByInstrument` names a section. Each is a
+ * few strokes on a 24 × 24 box, drawn in the section's ink: a sketch of what
+ * the instrument is, not its logo.
  */
 
 /** Stroked SVG path data on a 24 × 24 box. */
@@ -41,8 +42,3 @@ export const DEVICE_ICONS: Readonly<Record<string, string>> = {
 	Omnisphere: 'M12 4a8 8 0 1 0 0.01 0M4 12c0 2.2 3.6 4 8 4s8-1.8 8-4-3.6-4-8-4-8 1.8-8 4',
 	'Komplete Kontrol': 'M12 5a7 7 0 1 0 0.01 0M12 12l4-4'
 };
-
-/** The glyph for a preset's instrument, or null for a type with none (an effect, a sample). */
-export function deviceIconFor(p: { device?: string; plugin?: string }): string | null {
-	return DEVICE_ICONS[p.device ?? ''] ?? DEVICE_ICONS[p.plugin ?? ''] ?? null;
-}
