@@ -19,9 +19,27 @@ APP_BIN="$APPS_DIR/build/Build/Products/Debug/Vamp.app/Contents/MacOS/Vamp"
 # is on, in this Mac's config/constants.local.json. Off, it exits at once
 # rather than idling like skip() below: `npm run dev` restarts nothing that
 # exits, and `npm run ipad` checks the switch before it launches this.
-if ! node -e 'process.exit(require(process.argv[1]).readFeatureFlags(require(process.argv[2]).loadConstants()).menubar ? 0 : 1)' \
-    "$ROOT/interface/bridge/utils/features.js" "$ROOT/interface/bridge/utils/constants.js"; then
+#
+# 0 is on and 1 is off; anything else is the check itself failing, and is
+# retried. On 2026-10-27 node segfaulted here once (139) and passed five times
+# straight after: read as "off", that crash silently left the rig with no
+# menu-bar app.
+menubar_switch() {
+  node -e 'process.exit(require(process.argv[1]).readFeatureFlags(require(process.argv[2]).loadConstants()).menubar ? 0 : 1)' \
+    "$ROOT/interface/bridge/utils/features.js" "$ROOT/interface/bridge/utils/constants.js"
+}
+switch_code=2
+for attempt in 1 2 3; do
+  switch_code=0
+  menubar_switch || switch_code=$?
+  [[ $switch_code -le 1 ]] && break
+  echo "⚠️  reading features.menubar failed (exit $switch_code), attempt $attempt of 3"
+done
+if [[ $switch_code -eq 1 ]]; then
   echo "🔕 menu bar not launched (features.menubar is off)"
+  exit 0
+elif [[ $switch_code -ne 0 ]]; then
+  echo "🔕 menu bar not launched (could not read features.menubar: exit $switch_code)"
   exit 0
 fi
 
