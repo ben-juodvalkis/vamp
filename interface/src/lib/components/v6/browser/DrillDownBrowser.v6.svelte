@@ -3162,9 +3162,13 @@
 		justify-content: center;
 		gap: 3px;
 		max-width: 100%;
-		/* As many rows as the grid has room for (tagRows); a label that does
-		   not fit them wraps out of sight. */
-		height: calc(var(--tag-rows, 1) * 1.2em + (var(--tag-rows, 1) - 1) * 3px);
+		/* As many rows as the grid has room for (tagRows), and no taller than
+		   the tags it holds; a label that does not fit wraps out of sight. Rows
+		   pack at the top and each label keeps one line's height: stretched
+		   over a spare row, a label's text sat at its top. */
+		max-height: calc(var(--tag-rows, 1) * 1.2em + (var(--tag-rows, 1) - 1) * 3px);
+		align-content: flex-start;
+		align-items: center;
 		margin-top: 2px;
 		overflow: hidden;
 		font-size: 0.62rem;
@@ -3172,6 +3176,7 @@
 	}
 	.preset-tile .tile-tag {
 		max-width: 100%;
+		height: 1.2em;
 		padding: 0 5px;
 		border-radius: 999px;
 		background: color-mix(in oklab, currentColor 16%, transparent);
