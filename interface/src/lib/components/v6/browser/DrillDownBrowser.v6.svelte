@@ -332,6 +332,12 @@
 	const presetGroups = $derived(
 		screen === 'presets' ? (instrumentGroups ?? groupPresetsByOrigin(presets, currentPath)) : []
 	);
+	// A mixed level's own presets, under its folders: one section per
+	// instrument type when they mix types (user, 2026-10-28: Synth › Ableton's
+	// loose presets), else one Presets (or Samples) section.
+	const mixedGroups = $derived(
+		screen !== 'mixed' ? [] : ((onEffectsPlace ? null : groupPresetsByInstrument(presets)) ?? [{ folder: null, presets }])
+	);
 	const useGroupedPresets = $derived(presetGroups.length > 1);
 
 	// The effects Place is color-coded by folder (user, 2026-10-26): each
@@ -396,14 +402,15 @@
 		const width = stageWidth - GRID_PADDING * 2;
 		const height = stageHeight - GRID_PADDING * 2;
 		if (screen === 'mixed') {
-			// Folders, then the level's own presets under one header: two
-			// sections on ONE ruler, at the preset grid's density, so a folder
-			// tile and a preset tile are the same size and share columns.
+			// Folders, then the level's own presets under their header(s)
+			// (`mixedGroups`): sections on ONE ruler, at the preset grid's
+			// density, so a folder tile and a preset tile are the same size and
+			// share columns.
 			return computeGroupedGridLayout({
 				width,
 				height,
-				groups: [folders.length, presets.length],
-				headerCount: 1,
+				groups: [folders.length, ...mixedGroups.map((g) => g.presets.length)],
+				headerCount: mixedGroups.length,
 				headerHeight: SECTION_HEADER_H,
 				sectionGap: SECTION_GAP,
 				...PRESET_COMFORT
@@ -465,8 +472,8 @@
 
 	function updateWindows() {
 		if (screen === 'mixed') {
-			// Two windowing sections: the folders (headerless, the grid pad on
-			// top, like the loose bucket) and the presets under their header.
+			// Windowing sections: the folders (headerless, the grid pad on top,
+			// like the loose bucket), then each of `mixedGroups` under its header.
 			// Windowed like any grouped screen — a level can hold hundreds of
 			// samples beside one subfolder (FX › Nature › Animals › Birds: 218).
 			const next = computeGroupedVisibleWindow({
@@ -474,7 +481,7 @@
 				viewportHeight: stageHeight,
 				sections: [
 					{ count: folders.length, headerHeight: 0, leadPad: GRID_PADDING },
-					{ count: presets.length, headerHeight: SECTION_HEADER_H }
+					...mixedGroups.map((g) => ({ count: g.presets.length, headerHeight: SECTION_HEADER_H }))
 				],
 				columns: gridLayout.columns,
 				tileHeight: gridLayout.tileHeight,
@@ -1910,7 +1917,7 @@
 <!-- `folder` keys the hold's charge and reveal; `label` is what the header
      reads when that is not the key (a mixed level's presets, keyed apart from
      every folder name on the same screen). -->
-{#snippet sectionHead(folder: string, sectionPresets: Preset[], label: string = folder)}
+{#snippet sectionHead(folder: string, sectionPresets: Preset[], label: string = folder, glyph?: string)}
 	{@const pick =
 		pickedFolder === folder && pickedName
 			? pickedName
@@ -1931,8 +1938,8 @@
 				style="animation-duration: {HOLD_TO_RANDOM_MS}ms;"
 			></span>
 		{/if}
-		{#if pick === null && instrumentGroups && DEVICE_ICONS[folder]}
-			<svg class="section-icon" viewBox="0 0 24 24" aria-hidden="true"><path d={DEVICE_ICONS[folder]} /></svg>
+		{#if pick === null && glyph}
+			<svg class="section-icon" viewBox="0 0 24 24" aria-hidden="true"><path d={glyph} /></svg>
 		{/if}
 		<span class="section-name">{pick ?? label}</span>
 		{#if pick === null}
@@ -2194,9 +2201,15 @@
 								<div class="window-spacer" style="height: {groupedWindow.topPad}px"></div>
 							{/if}
 							{#each groupedWindow.sections as sw (sw.section)}
+								{@const mixed = sw.section > 0 ? mixedGroups[sw.section - 1] : null}
 								<section class="preset-section" class:loose={sw.section === 0}>
-									{#if sw.section === 1}
-										{@render sectionHead(HERE_KEY, presets, paneAmongSamples ? 'Samples' : 'Presets')}
+									{#if mixed}
+										{@render sectionHead(
+											mixed.folder ? `${HERE_KEY}/${mixed.folder}` : HERE_KEY,
+											mixed.presets,
+											mixed.folder ?? (paneAmongSamples ? 'Samples' : 'Presets'),
+											mixed.folder ? DEVICE_ICONS[mixed.folder] : undefined
+										)}
 									{/if}
 									<div
 										class="adaptive-grid sectioned"
@@ -2206,8 +2219,8 @@
 											{#each folders.slice(sw.start, sw.end) as name (name)}
 												{@render folderTile(name)}
 											{/each}
-										{:else}
-											{#each presets.slice(sw.start, sw.end) as p (p.path)}
+										{:else if mixed}
+											{#each mixed.presets.slice(sw.start, sw.end) as p (p.path)}
 												{@render presetTile(p)}
 											{/each}
 										{/if}
@@ -2248,7 +2261,7 @@
 									<!-- Big section: its own full-width row, windowed as before. -->
 									<section class="preset-section" class:loose={group.folder === null}>
 										{#if group.folder !== null}
-											{@render sectionHead(group.folder, group.presets)}
+											{@render sectionHead(group.folder, group.presets, group.folder, instrumentGroups ? DEVICE_ICONS[group.folder] : undefined)}
 										{/if}
 										<div
 											class="adaptive-grid sectioned"
@@ -2276,7 +2289,7 @@
 												style="--n: {group.presets.length};"
 											>
 												{#if group.folder !== null && !group.continued}
-													{@render sectionHead(group.folder, group.presets)}
+													{@render sectionHead(group.folder, group.presets, group.folder, instrumentGroups ? DEVICE_ICONS[group.folder] : undefined)}
 												{/if}
 												<div class="adaptive-grid sectioned packed">
 													{#each group.presets as p (p.path)}
