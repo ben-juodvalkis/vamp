@@ -149,6 +149,7 @@ The bridge + browser cooperate to detect and recover from the common "iPad Safar
 
 - **Client liveness watchdog** — client expects any inbound frame within 12s; on silence it force-closes the socket, triggering reconnect.
 - **Dead-client reaper** — if a client's `bufferedAmount` stays above **512KB** (`REAPER_BUFFER_THRESHOLD`) for two consecutive 10s ticks, the bridge calls `client.terminate()` to force a TCP RST. Without this, a suspended iPad's socket can sit forever.
+- **Gone-client check** — a WebSocket-level ping to every client each 5s (`WS_PING_INTERVAL_MS`); one that misses two pongs is terminated (`Dropping a client that stopped answering pings`). Browsers, `ws` and `URLSessionWebSocketTask` answer pings themselves. Catches what the reaper's 512KB bar does not: on 2026-10-27 the iPad's USB link reset and ~380KB queued for a socket nobody read.
 - **`/bridge/client_log`** — the browser watchdog ([clientWatchdog.ts](../src/lib/utils/clientWatchdog.ts)) reports tab visibility changes, rAF stalls, and online/offline transitions here. WebSocketServer logs them to `bridge.log` so one file has both sides of the wire.
 - **`bridge-resync` custom event** — fires on every WS (re)connect and on visibility-resume. Reconnect path refreshes state via the v3 handshake accept (auto-emits state/full); visibility path calls `sendStateResync()` explicitly.
 

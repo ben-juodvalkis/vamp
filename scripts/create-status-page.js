@@ -21,7 +21,12 @@ function getNetworkInterfaces() {
     // The Mac's side of the USB-C link: the configured address, or a
     // self-assigned 169.254 one (the rule Settings uses, networkAddresses.ts).
     const usbcAddress = constants.network?.ipad?.usbc || '';
+    // The Mac's Bonjour name: the one address that survives the USB link
+    // resetting (its 169.254 address changes each time), so it is the one
+    // to save on the iPad's home screen.
+    const name = os.hostname();
     const results = {
+        stable: name.endsWith('.local') ? `http://${name}:8889` : null,
         wifi: null,
         usbc: null,
         localhost: 'http://localhost:8889'
@@ -167,12 +172,19 @@ function generateStatusHTML(interfaces) {
         <h1>Live Looping Interface</h1>
         <p class="subtitle">iPad Connection URLs</p>
 
-        ${interfaces.usbc ? `
+        ${interfaces.stable ? `
         <div class="url-row">
-            <span class="url-label">USB-C<span class="badge recommended">BEST</span></span>
-            <a href="${interfaces.usbc}" class="url-link primary" target="_blank">${interfaces.usbc}</a>
+            <span class="url-label">Save this one<span class="badge recommended">BEST</span></span>
+            <a href="${interfaces.stable}" class="url-link primary" target="_blank">${interfaces.stable}</a>
         </div>
         ` : ''}
+
+        <div class="url-row">
+            <span class="url-label">USB-C link${interfaces.usbc ? '<span class="badge backup">CHANGES</span>' : ''}</span>
+            ${interfaces.usbc
+                ? `<a href="${interfaces.usbc}" class="url-link${interfaces.stable ? '' : ' primary'}" target="_blank">${interfaces.usbc}</a>`
+                : '<span class="url-link">Down right now: plug the iPad in, or wait a moment if it is</span>'}
+        </div>
 
         ${interfaces.wifi ? `
         <div class="url-row">
@@ -263,8 +275,11 @@ function createStatusPage() {
     
     // Log prominent URLs to console as well
     console.log(`\n🎯 iPad Connection URLs:`);
+    if (interfaces.stable) {
+        console.log(`   ⭐ Save this one: ${interfaces.stable}`);
+    }
     if (interfaces.usbc) {
-        console.log(`   🔌 USB-C (RECOMMENDED): ${interfaces.usbc}`);
+        console.log(`   🔌 USB-C link right now (changes when the link resets): ${interfaces.usbc}`);
     }
     if (interfaces.wifi) {
         console.log(`   📶 WiFi: ${interfaces.wifi}`);

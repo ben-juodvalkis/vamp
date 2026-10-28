@@ -83,10 +83,23 @@ function displayInterfaces(port = 8889) {
         console.log(`   Mac:  http://${interfaces.usb.ip}:${port}`);
         console.log(`   iPad: http://${interfaces.usb.ip}:${port}`);
         console.log(`   📝 Note: iPad must be connected via USB-C cable`);
-        console.log(`   📝 iPad network config: IP=${interfaces.usb.ip.replace(/\.\d+$/, '.2')}, Router=${interfaces.usb.ip}`);
+        // A self-assigned link needs nothing set on the iPad, and its
+        // address changes on every reset; only a configured one does.
+        if (!interfaces.usb.ip.startsWith('169.254.')) {
+            console.log(`   📝 iPad network config: IP=${interfaces.usb.ip.replace(/\.\d+$/, '.2')}, Router=${interfaces.usb.ip}`);
+        } else {
+            console.log(`   📝 Self-assigned: this address changes whenever the link resets`);
+        }
     } else {
-        console.log(`\n🔌 USB-C Connection: Not detected`);
-        console.log(`   📝 Connect iPad via USB-C cable and wait a moment`);
+        console.log(`\n🔌 USB-C link: down at this moment`);
+        console.log(`   📝 macOS resets the iPad's cable link now and then; it comes back by itself.`);
+        console.log(`   📝 Nothing plugged in? Connect the iPad by USB-C.`);
+    }
+
+    // The Bonjour name survives the link resetting; its address does not.
+    const name = require('os').hostname();
+    if (name.endsWith('.local')) {
+        console.log(`\n⭐ Save this one on the iPad: http://${name}:${port}`);
     }
     
     console.log('\n' + '='.repeat(50));
@@ -110,6 +123,11 @@ function getBestIPadIP() {
     } catch (error) {
         // Silently fall back to auto-detection if config can't be loaded
     }
+
+    // The Mac's Bonjour name, when it has one: unlike the USB link's
+    // self-assigned address it does not change when the link resets.
+    const name = require('os').hostname();
+    if (name.endsWith('.local')) return name;
 
     // Fall back to auto-detection
     const interfaces = detectInterfaces();

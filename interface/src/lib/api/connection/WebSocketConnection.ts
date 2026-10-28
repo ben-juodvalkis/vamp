@@ -32,14 +32,23 @@ let ws: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let connectionMethod: string = 'unknown';
 let isConnecting: boolean = false;
+let connectStarted = false;
 
-// Reconnect backoff: 1s → 2s → 4s → 8s → 16s → capped at 30s. Reset
-// to the base delay after a successful connection. Prevents hammering
-// the bridge if it's genuinely down while still recovering fast from
-// transient blips.
-const BASE_RECONNECT_MS = 1000;
-const MAX_RECONNECT_MS = 30_000;
+// Reconnect cadence: 500ms, then every 1s for as long as it takes. The
+// bridge is on the Mac at the other end of a cable, so a failed attempt
+// costs nothing worth saving. It used to back off to 30s, which on
+// 2026-10-27 meant the iPad's USB link came back from a ~30s drop and
+// the page sat dark for up to another 30s before it tried again.
+const BASE_RECONNECT_MS = 500;
+const MAX_RECONNECT_MS = 1000;
 let reconnectAttempts = 0;
+
+// A WebSocket to an address that has gone away (the USB link's
+// self-assigned address changes on every reset) neither opens nor
+// errors until TCP gives up, which on iOS takes over a minute. With
+// `isConnecting` held for that long no retry can start, so an attempt
+// that has not opened by now is abandoned.
+const CONNECT_TIMEOUT_MS = 4000;
 
 // Liveness watchdog. Bridge sends `/bridge/ping` every 5s; we expect
 // any inbound traffic (ping or otherwise) within SILENCE_THRESHOLD_MS.
@@ -241,8 +250,19 @@ function tryConnect(urls: string[], index = 0): Promise<void> {
 	return new Promise<void>((resolve, reject) => {
 		try {
 			const testWs = new WebSocket(url);
+			const connectTimer = setTimeout(() => {
+				if (testWs.readyState === WebSocket.OPEN) return;
+				logger.warn('WebSocket did not open in time — abandoning the attempt', {
+					url,
+					timeoutMs: CONNECT_TIMEOUT_MS
+				});
+				testWs.onopen = null;
+				try { testWs.close(); } catch {}
+				reject();
+			}, CONNECT_TIMEOUT_MS);
 
 			testWs.onopen = () => {
+				clearTimeout(connectTimer);
 				logger.info('WebSocket connected', { url });
 				connectionMethod = url.includes('.local')
 					? 'Bonjour'
@@ -293,6 +313,7 @@ function tryConnect(urls: string[], index = 0): Promise<void> {
 			};
 
 			testWs.onerror = () => {
+				clearTimeout(connectTimer);
 				logger.debug('Connection failed', { url });
 				testWs.close();
 				reject();
@@ -300,6 +321,7 @@ function tryConnect(urls: string[], index = 0): Promise<void> {
 
 			testWs.onclose = () => {
 				if (ws !== testWs) {
+					clearTimeout(connectTimer);
 					reject();
 				}
 			};
@@ -404,23 +426,43 @@ function setupWebSocketHandlers(websocket: WebSocket): void {
 
 	websocket.onclose = () => {
 		logger.info('Connection closed', { previousMethod: connectionMethod });
-		ws = null;
-		connectionMethod = 'disconnected';
-
-		// Update global WebSocket status for freeze detector
-		(globalThis as any).__wsConnected = false;
-
-		stopLivenessWatchdog();
-
-		// Exponential backoff reconnect. Cap at 30s so an extended
-		// outage doesn't starve us on recovery. `reconnectAttempts`
-		// resets to 0 on successful open (see `tryConnect` onopen).
-		scheduleReconnect('onclose');
+		socketGone(websocket, 'onclose');
 	};
 
 	websocket.onerror = (error) => {
 		logger.error('WebSocket connection error', { error });
 	};
+}
+
+/**
+ * The socket is finished with: forget it and schedule the next attempt.
+ * Runs once per socket — from its `onclose`, or from `abandonSocket`
+ * first, whichever comes first.
+ */
+function socketGone(websocket: WebSocket, reason: string): void {
+	if (ws !== websocket) return;
+	ws = null;
+	connectionMethod = 'disconnected';
+
+	// Update global WebSocket status for freeze detector
+	(globalThis as any).__wsConnected = false;
+
+	stopLivenessWatchdog();
+	scheduleReconnect(reason);
+}
+
+/**
+ * Give up on a socket that reads OPEN but has gone quiet. `close()` alone
+ * is not enough: on a link that has vanished the closing handshake never
+ * completes, and `onclose` can be a minute away. So the socket is
+ * forgotten here and now, and its late events, if any, are ignored.
+ */
+function abandonSocket(websocket: WebSocket, reason: string): void {
+	websocket.onmessage = null;
+	websocket.onclose = null;
+	websocket.onerror = null;
+	try { websocket.close(); } catch {}
+	socketGone(websocket, reason);
 }
 
 /**
@@ -440,7 +482,7 @@ function startLivenessWatchdog(): void {
 				silenceMs: silence,
 				threshold: SILENCE_THRESHOLD_MS
 			});
-			try { ws.close(); } catch {}
+			abandonSocket(ws, 'silent');
 		}
 	}, PING_CHECK_INTERVAL_MS);
 }
@@ -489,6 +531,7 @@ function flushMessageQueue(): void {
  * Connect to Live via WebSocket with fallback URLs
  */
 export function connectToLive(): Promise<void> {
+	connectStarted = true;
 	if (ws?.readyState === WebSocket.OPEN) return Promise.resolve();
 	if (isConnecting) return Promise.resolve();
 
@@ -498,6 +541,50 @@ export function connectToLive(): Promise<void> {
 	isConnecting = true;
 	return tryConnect(urls).finally(() => {
 		isConnecting = false;
+	});
+}
+
+// On resume a socket can still read OPEN though nothing has crossed it
+// for a while: a suspended tab, or a USB link that reset underneath it.
+// Past this much silence (about two missed `/bridge/ping`s) it is
+// treated as dead rather than waiting out SILENCE_THRESHOLD_MS.
+const RESUME_SILENCE_MS = 6_000;
+
+/**
+ * Reconnect now, not on the retry timer: the iPad says its network is
+ * back, or the page came back to the front. A socket that is open and
+ * hearing the bridge is left alone; one that has gone quiet is closed,
+ * and its `onclose` reconnects.
+ *
+ * Exported for tests.
+ */
+export function reconnectNow(reason: string): void {
+	// Before the layout's first `connectToLive` the handlers it installs
+	// (the handshake among them) are not there yet: connecting now would
+	// open a socket nobody says hello on.
+	if (!connectStarted) return;
+	if (ws?.readyState === WebSocket.OPEN) {
+		const silence = Date.now() - lastInboundTs;
+		if (silence <= RESUME_SILENCE_MS) return;
+		logger.warn('Socket quiet on resume — reconnecting', { reason, silenceMs: silence });
+		abandonSocket(ws, reason);
+	}
+	if (reconnectTimer) {
+		clearTimeout(reconnectTimer);
+		reconnectTimer = null;
+	}
+	reconnectAttempts = 0;
+	logger.info('Reconnecting now', { reason });
+	void connectToLive();
+}
+
+if (typeof window !== 'undefined') {
+	window.addEventListener('online', () => reconnectNow('online'));
+	window.addEventListener('pageshow', (e) => {
+		if (e.persisted) reconnectNow('pageshow');
+	});
+	document.addEventListener('visibilitychange', () => {
+		if (document.visibilityState === 'visible') reconnectNow('visible');
 	});
 }
 

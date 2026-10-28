@@ -222,11 +222,21 @@ Builds the production interface and starts a preview server on
 **It does not configure any networking.** Nothing in `scripts/` or
 `owner/` calls `networksetup`, `ifconfig` or `route` — this doc claimed
 otherwise, and the claim sent people looking for a script that has never
-existed. The USB-C link is a **one-time manual step** in System Settings
-→ Network → the iPad's USB interface: set it to Manual with IP
-`192.168.100.1` / mask `255.255.255.0`. macOS remembers it, which is why
-the setup appears to happen by itself on every run after the first. Auto-opens a status page at
-<http://localhost:8890/> with the URLs to paste into iPad Safari.
+existed. Auto-opens a status page at <http://localhost:8890/> with the
+URLs to paste into iPad Safari, the Mac's `.local` name first.
+
+**The USB-C link can't be given a fixed address.** It used to be a
+one-time manual step (System Settings → Network → the iPad's USB
+interface → Manual, `192.168.100.1`). Measured on the rig on 2026-10-27,
+macOS now marks the iPad's USB network interface `HiddenConfiguration` in
+`/Library/Preferences/SystemConfiguration/NetworkInterfaces.plist`:
+it appears in neither System Settings nor `networksetup`, it runs on a
+self-assigned `169.254.x.x` address, and that address changes whenever
+macOS resets the link (twice in 90 s that day). Resetting the iPad's trust
+did not bring the old behavior back. So the page is opened by the Mac's
+Bonjour name, which survives a reset, and the page reconnects on its own
+when the link returns. A native iPad app over usbmux, which avoids the
+link altogether, is issue #8.
 
 Ableton Live launches immediately, in parallel with the build, so its
 cold start overlaps the build rather than queueing behind it. The
@@ -240,9 +250,11 @@ Force a full rebuild with `FORCE=1 npm run ipad`.
 On the iPad:
 1. Connect via USB-C cable.
 2. Trust the computer if prompted.
-3. Open Safari to **http://192.168.100.1:8889** — `npm run ipad` serves
+3. Open Safari to **http://&lt;the Mac's name&gt;.local:8889** (`npm run ipad`
+   prints it as "Save this one") and add it to the Home Screen. It serves
    the production preview on 8889 (`package.json` `preview:ipad`), not the
-   3000 that `npm run dev` uses.
+   3000 that `npm run dev` uses. If macOS ever renames the Mac after a name
+   clash (it appends `-2`, `-3`), the saved URL needs the new name.
 4. Green connection dot = WebSocket connected + tracks flowing.
 
 ### 7.2 WiFi

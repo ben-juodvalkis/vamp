@@ -933,6 +933,38 @@ const reaperTimer = setInterval(() => {
         }
     }
 }, 10_000);
+
+// Gone-client check. A WebSocket ping every 5s; a browser answers it
+// from its network stack whatever its page is doing, so a client that
+// misses two in a row is not there any more — on 2026-10-27 the iPad's
+// USB link reset under it and the bridge went on queueing ~380 KB for a
+// socket nobody was reading, under the reaper's 512 KB bar. Terminated,
+// it stops costing a broadcast per meter tick, and the page reconnects
+// on its own when its link is back.
+const WS_PING_INTERVAL_MS = 5_000;
+const WS_MISSED_PONGS_LIMIT = 2;
+const wsPingTimer = setInterval(() => {
+    if (!wss) return;
+    for (const client of wss.clients) {
+        if (!client.__pongWired) {
+            client.__pongWired = true;
+            client.__missedPongs = 0;
+            client.on('pong', () => { client.__missedPongs = 0; });
+        }
+        if (client.__missedPongs >= WS_MISSED_PONGS_LIMIT) {
+            logger.warn('Dropping a client that stopped answering pings', {
+                clientId: client.clientId || 'unknown',
+                missedPongs: client.__missedPongs,
+                bufferedBytes: client.bufferedAmount || 0
+            });
+            try { client.terminate(); } catch {}
+            continue;
+        }
+        client.__missedPongs += 1;
+        try { client.ping(); } catch {}
+    }
+}, WS_PING_INTERVAL_MS);
+if (wsPingTimer.unref) wsPingTimer.unref();
 if (reaperTimer.unref) reaperTimer.unref();
 
 logger.info('WebSocket-OSC Bridge ready', {
