@@ -9,22 +9,9 @@
             "modernui": 1
         },
         "classnamespace": "box",
-        "rect": [ 390.0, 182.0, 213.0, 72.0 ],
+        "rect": [ 437.0, 176.0, 213.0, 72.0 ],
         "openinpresentation": 1,
         "boxes": [
-            {
-                "box": {
-                    "id": "obj-127",
-                    "maxclass": "toggle",
-                    "numinlets": 1,
-                    "numoutlets": 1,
-                    "outlettype": [ "int" ],
-                    "parameter_enable": 0,
-                    "patching_rect": [ 392.0, 529.0, 24.0, 24.0 ],
-                    "presentation": 1,
-                    "presentation_rect": [ 0.0, 0.0, 24.0, 24.0 ]
-                }
-            },
             {
                 "box": {
                     "id": "obj-129",
@@ -39,13 +26,13 @@
             {
                 "box": {
                     "id": "obj-5",
-                    "linecount": 5,
+                    "linecount": 6,
                     "maxclass": "message",
                     "numinlets": 2,
                     "numoutlets": 1,
                     "outlettype": [ "" ],
-                    "patching_rect": [ 660.0, 261.0, 50.0, 76.0 ],
-                    "text": "sysex 0 240 0 33 29 1 1 7 54 247"
+                    "patching_rect": [ 660.0, 261.0, 53.0, 89.0 ],
+                    "text": "sysex 0 240 0 33 29 1 1 58 34 97 0 247"
                 }
             },
             {
@@ -191,7 +178,7 @@
                     "numoutlets": 1,
                     "outlettype": [ "" ],
                     "patching_rect": [ -279.0, 303.0, 50.0, 76.0 ],
-                    "text": "/looping/v3/move/pad_hold 80 0"
+                    "text": "/looping/v3/move/pad_hold 8 0"
                 }
             },
             {
@@ -228,7 +215,7 @@
                     "numoutlets": 1,
                     "outlettype": [ "" ],
                     "patching_rect": [ -495.0, 327.0, 50.0, 22.0 ],
-                    "text": "1 16 0"
+                    "text": "1 0 127"
                 }
             },
             {
@@ -283,7 +270,7 @@
                     "numoutlets": 1,
                     "outlettype": [ "" ],
                     "patching_rect": [ -464.0, 301.0, 98.0000029206276, 22.0 ],
-                    "text": "1 0 0"
+                    "text": "1 8 0"
                 }
             },
             {
@@ -2051,13 +2038,13 @@
                             {
                                 "box": {
                                     "id": "obj-17",
-                                    "linecount": 6,
+                                    "linecount": 7,
                                     "maxclass": "message",
                                     "numinlets": 2,
                                     "numoutlets": 1,
                                     "outlettype": [ "" ],
                                     "patching_rect": [ 484.0, 296.0, 66.0, 89.0 ],
-                                    "text": "ableton_move_live_port sysex 0 240 0 33 29 1 1 7 54 247"
+                                    "text": "ableton_move_live_port sysex 0 240 0 33 29 1 1 58 34 97 0 247"
                                 }
                             },
                             {
@@ -2090,7 +2077,7 @@
                                     "numoutlets": 1,
                                     "outlettype": [ "" ],
                                     "patching_rect": [ 908.0, 577.0, 51.0, 35.0 ],
-                                    "text": "noteoff 1 72 0"
+                                    "text": "noteoff 1 55 0"
                                 }
                             },
                             {
@@ -2101,7 +2088,7 @@
                                     "numoutlets": 1,
                                     "outlettype": [ "" ],
                                     "patching_rect": [ 25.0, 548.0, 317.0, 22.0 ],
-                                    "text": "ableton_move_live_port sysex 0 240 0 33 29 1 1 7 54 247"
+                                    "text": "deviceinfo to_max_2 \"to Max 2\""
                                 }
                             },
                             {
@@ -2299,8 +2286,6 @@
                                     "saved_object_attributes": {
                                         "autostart": 0,
                                         "defer": 0,
-                                        "node_bin_path": "",
-                                        "npm_bin_path": "",
                                         "watch": 0
                                     },
                                     "text": "node.script midi-hub.js",
