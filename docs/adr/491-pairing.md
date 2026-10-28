@@ -54,6 +54,10 @@ of trusting the cable's fixed `192.168.100.0/24` subnet can no longer hold.
   full Live restart.
 - Not built: Safari over the cable told apart by the interface it arrived
   on; Vamp-Recorder's UDP port, still open to the network.
+- **Measured on a real device (2026-10-28):** Safari on an iPhone over the
+  cable's self-assigned link (`169.254.133.62`, in airplane mode) got the
+  pairing screen, asked at 09:34:45 and was paired at 09:34:51 with the code
+  from Live's status bar, then played.
 - Measured on this Mac: from the Mac, `/api/pair/state` answers
   `trusted: true via mac`; the relay answers 204 with the secret and 401
   without; the banner and the pairing screen render. An untrusted device

@@ -33,6 +33,10 @@ targets:
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+          - UIInterfaceOrientationPortrait
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
@@ -47,7 +51,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.benjuodvalkis.vamp.ipad
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         PRODUCT_NAME: Vamp
-        TARGETED_DEVICE_FAMILY: "2"
+        # iPad first; iPhone too, so the link can be tried on a phone.
+        TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_STYLE: Automatic
   VampMac:
     type: application
