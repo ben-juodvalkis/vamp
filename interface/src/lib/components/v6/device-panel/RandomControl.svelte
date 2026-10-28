@@ -9,8 +9,8 @@
 		position?: PositionKey;
 	}
 
-	let { device: _device, position: _position }: Props = $props();
-	// The `random` slot, wherever it is drawn: the grid's fx1 on MIDI passes a cell it does not need.
+	// The device is the chain cell's: two Rand Octs on a track are two cells.
+	let { device }: Props = $props();
 </script>
 
-<ControlTile type="random" />
+<ControlTile type="random" {device} />

@@ -17,10 +17,10 @@
 		position?: PositionKey;
 	}
 
-	let { device: _device, position: _position }: Props = $props();
+	let { device }: Props = $props();
 
 	const bass = useFxGridSlot('bass');
 	const chain = useBassChainPosition(bass, 'BassControl');
 </script>
 
-<ControlTile type="bass" onGesture={() => chain.arm()} />
+<ControlTile type="bass" {device} onGesture={() => chain.arm()} />
