@@ -17,6 +17,7 @@
   import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { VM } from '$lib/services/drumVirtualMacros';
+  import { useCellSize } from './cellSize';
   import type { MomentaryReleaseReason } from '$lib/components/v6/tracks/TrackStrip/utils/momentaryPress';
   import type { DeviceRecord } from '$lib/stores/v3/normalized.svelte';
   import type { DeviceColorScheme } from '$lib/config/devicePresets';
@@ -28,8 +29,6 @@
 
   let { device, color }: Props = $props();
 
-  /** The narrowest face that still gets four pads across (four 56px tiles and their gaps). */
-  const RACK_FOUR_MIN_WIDTH = 236;
 
   const devicePath = $derived(device.devicePath);
   const clip = useClipPads(() => devicePath.split('/devices/')[0]);
@@ -48,16 +47,17 @@
   }
 
   // Live's layout, four across as the rack is, or two where the cell is
-  // too narrow for four tiles to take a name (user, 2026-10-28).
-  let faceWidth = $state(0);
-  const rackColumns = $derived(faceWidth >= RACK_FOUR_MIN_WIDTH || faceWidth === 0 ? 4 : 2);
+  // too narrow for four tiles to take a name (user, 2026-10-28; the
+  // cell's size, ADR-492).
+  const cellSize = useCellSize();
+  const rackColumns = $derived(cellSize()?.widthClass === 'wide' || !cellSize()?.widthClass ? 4 : 2);
 
   function onRelease(pointerId: number, reason: MomentaryReleaseReason = 'up') {
     drumPadScope.release(pointerId, reason);
   }
 </script>
 
-<div class="drum-face" bind:clientWidth={faceWidth}>
+<div class="drum-face">
   <DrumPadGrid
     pads={vm.members?.pads ?? []}
     selectedNote={vm.selectedNote}

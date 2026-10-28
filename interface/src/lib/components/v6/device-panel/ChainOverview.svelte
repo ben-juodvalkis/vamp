@@ -58,6 +58,7 @@
   import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
   import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
   import { setContext } from 'svelte';
+  import CellSize from './chain/CellSize.svelte';
   import { PICTURE_CONTEXT } from '$lib/components/v6/browser/devicePictures';
   import type { Component } from 'svelte';
   import { FX_GRID_LAYOUT, type DeviceTypeKey } from '$lib/config/fxGridLayout';
@@ -669,34 +670,34 @@
 
       {#if cell.kit}
         <!-- A Drum Rack: its pads, as its view draws them. -->
-        <div class="cell-control" role="presentation">
+        <div class="cell-control" role="presentation"><CellSize>
           <DrumRackFace device={cell.device} color={selectedTrackScheme() ?? schemeFromInk(cell.ink)} />
-        </div>
+        </CellSize></div>
       {:else if cell.presetKey === 'sequencer'}
         <!-- Permute: its mute and pitch steps, on this device. -->
-        <div class="cell-control" role="presentation"><PermuteStepsFace device={cell.device} color={cell.ink} /></div>
+        <div class="cell-control" role="presentation"><CellSize><PermuteStepsFace device={cell.device} color={cell.ink} /></CellSize></div>
       {:else if !padScope && cell.kind === 'instrument' && glance.instrumentViewType && FACED_INSTRUMENTS.has(glance.instrumentViewType)}
         <!-- The instrument's signature control, as its view draws it. -->
-        <div class="cell-control" role="presentation">
+        <div class="cell-control" role="presentation"><CellSize>
           <InstrumentFace device={cell.device} type={glance.instrumentViewType} color={selectedTrackScheme() ?? schemeFromInk(cell.ink)} />
-        </div>
+        </CellSize></div>
       {:else if !padScope && isMidiWheels(cell.device)}
         <!-- The pitch and mod wheels, as the instrument views draw them:
              Pitch over Mod in a full-height cell, side by side in a
              two-row chain's half-height one. -->
-        <div class="cell-control" role="presentation"><MidiWheelsPanel sideBySide={grid.rows > 1} /></div>
+        <div class="cell-control" role="presentation"><CellSize><MidiWheelsPanel sideBySide={grid.rows > 1} /></CellSize></div>
       {:else if tile}
         <!-- The grid's own tile, on this device. A touch here is the
              control's: it picks this device and never starts a reorder. -->
-        <div class="cell-control" role="presentation">
+        <div class="cell-control" role="presentation"><CellSize>
           <tile.Tile device={cell.device} position={tile.position} />
-        </div>
+        </CellSize></div>
       {:else if controlFor(cell.presetKey)}
         <!-- No grid tile: the device's control (deviceControls), the one its
              browser preset tiles and its view draw, on this device. -->
-        <div class="cell-control" role="presentation">
+        <div class="cell-control" role="presentation"><CellSize>
           <ControlTile type={cell.presetKey as DeviceTypeKey} device={cell.device} />
-        </div>
+        </CellSize></div>
       {:else}
       <div class="mark" aria-hidden="true">
         {#if cell.kind === 'instrument'}
