@@ -332,6 +332,12 @@
 	const presetGroups = $derived(
 		screen === 'presets' ? (instrumentGroups ?? groupPresetsByOrigin(presets, currentPath)) : []
 	);
+	// A mixed level's own presets, under its folders: one section per
+	// instrument type when they mix types (user, 2026-10-28: Synth › Ableton's
+	// loose presets), else one Presets (or Samples) section.
+	const mixedGroups = $derived(
+		screen !== 'mixed' ? [] : ((onEffectsPlace ? null : groupPresetsByInstrument(presets)) ?? [{ folder: null, presets }])
+	);
 	const useGroupedPresets = $derived(presetGroups.length > 1);
 
 	// The effects Place is color-coded by folder (user, 2026-10-26): each
@@ -380,7 +386,8 @@
 	// scarce resource is how many you can scan at once, not how big each one is.
 	// ~112×78 still clears the 44px touch target with room to spare, and roughly
 	// doubles the tiles onscreen vs the folder floors (more columns AND more rows).
-	const PRESET_COMFORT = { gap: GRID_GAP, minTile: 112, minTileHeight: 78, targetAspect: 1.5 };
+	// 92 (78 before 2026-10-28): room for two rows of tags under a two-line name.
+	const PRESET_COMFORT = { gap: GRID_GAP, minTile: 112, minTileHeight: 92, targetAspect: 1.5 };
 
 	const gridLayout = $derived.by(() => {
 		const count = isScale
@@ -396,14 +403,15 @@
 		const width = stageWidth - GRID_PADDING * 2;
 		const height = stageHeight - GRID_PADDING * 2;
 		if (screen === 'mixed') {
-			// Folders, then the level's own presets under one header: two
-			// sections on ONE ruler, at the preset grid's density, so a folder
-			// tile and a preset tile are the same size and share columns.
+			// Folders, then the level's own presets under their header(s)
+			// (`mixedGroups`): sections on ONE ruler, at the preset grid's
+			// density, so a folder tile and a preset tile are the same size and
+			// share columns.
 			return computeGroupedGridLayout({
 				width,
 				height,
-				groups: [folders.length, presets.length],
-				headerCount: 1,
+				groups: [folders.length, ...mixedGroups.map((g) => g.presets.length)],
+				headerCount: mixedGroups.length,
 				headerHeight: SECTION_HEADER_H,
 				sectionGap: SECTION_GAP,
 				...PRESET_COMFORT
@@ -465,8 +473,8 @@
 
 	function updateWindows() {
 		if (screen === 'mixed') {
-			// Two windowing sections: the folders (headerless, the grid pad on
-			// top, like the loose bucket) and the presets under their header.
+			// Windowing sections: the folders (headerless, the grid pad on top,
+			// like the loose bucket), then each of `mixedGroups` under its header.
 			// Windowed like any grouped screen — a level can hold hundreds of
 			// samples beside one subfolder (FX › Nature › Animals › Birds: 218).
 			const next = computeGroupedVisibleWindow({
@@ -474,7 +482,7 @@
 				viewportHeight: stageHeight,
 				sections: [
 					{ count: folders.length, headerHeight: 0, leadPad: GRID_PADDING },
-					{ count: presets.length, headerHeight: SECTION_HEADER_H }
+					...mixedGroups.map((g) => ({ count: g.presets.length, headerHeight: SECTION_HEADER_H }))
 				],
 				columns: gridLayout.columns,
 				tileHeight: gridLayout.tileHeight,
@@ -991,22 +999,23 @@
 		});
 	}
 	/** The kinds whose tiles may draw a live face (`deviceControls`): effects and effect racks. */
-	/** Tag labels a preset tile names at most: a line's worth at the densest grid. */
-	const CARD_TAGS = 3;
+	/** Tag labels a preset tile names at most: two rows' worth. */
+	const CARD_TAGS = 6;
 	/**
-	 * Whether this grid's preset tiles have room for the tag row under a
-	 * two-line name. The name comes first: in a denser grid the tags give way
-	 * rather than cut the name to one line. The sizes mirror the CSS:
+	 * How many rows of tags this grid's preset tiles have room for under a
+	 * two-line name, at most two. The name comes first: in a denser grid the
+	 * tags give way rather than cut the name to one line. The sizes mirror the CSS:
 	 * --spacing-sm padding and a 2px border, the name at 15cqw (at most
 	 * 2.6rem) × 1.12, the tags 0.62rem at 1.2 plus their margin.
 	 */
-	const tagsFit = $derived.by(() => {
+	const TAG_ROW_GAP = 3;
+	const tagRows = $derived.by(() => {
 		const { tileWidth: w, tileHeight: h } = gridLayout;
-		if (!w || !h) return true;
+		if (!w || !h) return 1;
 		const frame = 2 * (8 + 2);
 		const nameLine = Math.min(0.15 * (w - frame), 41.6) * 1.12;
 		const tagLine = 0.62 * 16 * 1.2 + 2;
-		return h - frame >= 2 * nameLine + tagLine;
+		return Math.max(0, Math.min(2, Math.floor((h - frame - 2 * nameLine + TAG_ROW_GAP) / (tagLine + TAG_ROW_GAP))));
 	});
 	const FACE_KINDS = new Set(['audio-effect', 'midi-effect', 'effect-rack', 'midi-effect-rack', 'max-audio-effect', 'max-midi-effect']);
 	/** Effect tiles drawing a live face: they hand the face the gesture. */
@@ -1788,7 +1797,7 @@
 	{@const subLabel = notInstalled ? 'Not installed' : midiOnly ? 'MIDI tracks only' : null}
 	<!-- What the sound is like (Live's Character, Timbre, Mood tags), on a tile
 	     with room: not one whose face fills it. -->
-	{@const tags = faced || inactive || !tagsFit ? [] : (p.tags ?? []).filter((t) => !pathWords.has(t.toLowerCase())).slice(0, CARD_TAGS)}
+	{@const tags = faced || inactive || !tagRows ? [] : (p.tags ?? []).filter((t) => !pathWords.has(t.toLowerCase())).slice(0, CARD_TAGS)}
 	<button
 		class="card preset-tile"
 		class:faced
@@ -1822,7 +1831,7 @@
 			<span class="tile-plugin">{subLabel}</span>
 		{/if}
 		{#if tags.length}
-			<span class="tile-tags">
+			<span class="tile-tags" style="--tag-rows: {tagRows};">
 				{#each tags as tag (tag)}<span class="tile-tag">{tag}</span>{/each}
 			</span>
 		{/if}
@@ -1910,7 +1919,7 @@
 <!-- `folder` keys the hold's charge and reveal; `label` is what the header
      reads when that is not the key (a mixed level's presets, keyed apart from
      every folder name on the same screen). -->
-{#snippet sectionHead(folder: string, sectionPresets: Preset[], label: string = folder)}
+{#snippet sectionHead(folder: string, sectionPresets: Preset[], label: string = folder, glyph?: string)}
 	{@const pick =
 		pickedFolder === folder && pickedName
 			? pickedName
@@ -1931,8 +1940,8 @@
 				style="animation-duration: {HOLD_TO_RANDOM_MS}ms;"
 			></span>
 		{/if}
-		{#if pick === null && instrumentGroups && DEVICE_ICONS[folder]}
-			<svg class="section-icon" viewBox="0 0 24 24" aria-hidden="true"><path d={DEVICE_ICONS[folder]} /></svg>
+		{#if pick === null && glyph}
+			<svg class="section-icon" viewBox="0 0 24 24" aria-hidden="true"><path d={glyph} /></svg>
 		{/if}
 		<span class="section-name">{pick ?? label}</span>
 		{#if pick === null}
@@ -2194,9 +2203,15 @@
 								<div class="window-spacer" style="height: {groupedWindow.topPad}px"></div>
 							{/if}
 							{#each groupedWindow.sections as sw (sw.section)}
+								{@const mixed = sw.section > 0 ? mixedGroups[sw.section - 1] : null}
 								<section class="preset-section" class:loose={sw.section === 0}>
-									{#if sw.section === 1}
-										{@render sectionHead(HERE_KEY, presets, paneAmongSamples ? 'Samples' : 'Presets')}
+									{#if mixed}
+										{@render sectionHead(
+											mixed.folder ? `${HERE_KEY}/${mixed.folder}` : HERE_KEY,
+											mixed.presets,
+											mixed.folder ?? (paneAmongSamples ? 'Samples' : 'Presets'),
+											mixed.folder ? DEVICE_ICONS[mixed.folder] : undefined
+										)}
 									{/if}
 									<div
 										class="adaptive-grid sectioned"
@@ -2206,8 +2221,8 @@
 											{#each folders.slice(sw.start, sw.end) as name (name)}
 												{@render folderTile(name)}
 											{/each}
-										{:else}
-											{#each presets.slice(sw.start, sw.end) as p (p.path)}
+										{:else if mixed}
+											{#each mixed.presets.slice(sw.start, sw.end) as p (p.path)}
 												{@render presetTile(p)}
 											{/each}
 										{/if}
@@ -2248,7 +2263,7 @@
 									<!-- Big section: its own full-width row, windowed as before. -->
 									<section class="preset-section" class:loose={group.folder === null}>
 										{#if group.folder !== null}
-											{@render sectionHead(group.folder, group.presets)}
+											{@render sectionHead(group.folder, group.presets, group.folder, instrumentGroups ? DEVICE_ICONS[group.folder] : undefined)}
 										{/if}
 										<div
 											class="adaptive-grid sectioned"
@@ -2276,7 +2291,7 @@
 												style="--n: {group.presets.length};"
 											>
 												{#if group.folder !== null && !group.continued}
-													{@render sectionHead(group.folder, group.presets)}
+													{@render sectionHead(group.folder, group.presets, group.folder, instrumentGroups ? DEVICE_ICONS[group.folder] : undefined)}
 												{/if}
 												<div class="adaptive-grid sectioned packed">
 													{#each group.presets as p (p.path)}
@@ -3147,7 +3162,9 @@
 		justify-content: center;
 		gap: 3px;
 		max-width: 100%;
-		height: 1.2em;
+		/* As many rows as the grid has room for (tagRows); a label that does
+		   not fit them wraps out of sight. */
+		height: calc(var(--tag-rows, 1) * 1.2em + (var(--tag-rows, 1) - 1) * 3px);
 		margin-top: 2px;
 		overflow: hidden;
 		font-size: 0.62rem;

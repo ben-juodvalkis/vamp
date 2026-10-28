@@ -60,13 +60,16 @@ const FOLDER_TYPE = fourccOf('fldr');
 /** `metadata.key` for a Pack's own tags and for a user folder's (measured 2026-10-28). */
 const TAG_KEYS = [1264941431, 1431004537];
 /**
- * The tag groups a preset tile names, in this order: what a sound is like.
- * Live's Packs say it under Character, Spectrasonics under Timbre and Mood;
- * the rest (Sounds, Type, Keyword, Omni Category…) repeats the folder or is noise.
+ * The tag groups a preset tile names, in this order: what a sound is like,
+ * then what it is for. Live's Packs say the first under Character,
+ * Spectrasonics under Timbre and Mood; Genres and Keyword (Omnisphere's
+ * "Arpeggio", "Tempo-based") follow (user, 2026-10-28: "lets show more
+ * tags"). The rest (Sounds, Type, Omni Category, Osc Type…) repeats the
+ * folder or is noise.
  */
-export const CARD_TAG_GROUPS = ['Character', 'Timbre', 'Mood'];
-/** At most this many per item: the tile shows a line of them. */
-const MAX_CARD_TAGS = 6;
+export const CARD_TAG_GROUPS = ['Character', 'Timbre', 'Mood', 'Genres', 'Keyword'];
+/** At most this many per item: the tile shows two rows of them. */
+const MAX_CARD_TAGS = 8;
 const SKIP_FOLDERS = new Set(['Ableton Folder Info']);
 
 function fourccOf(code: string): number {

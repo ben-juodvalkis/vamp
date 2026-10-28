@@ -103,8 +103,8 @@ describe('indexRowsFingerprint', () => {
 });
 
 describe('cardTags', () => {
-	it('keeps Character, Timbre and Mood values, in that order, once each', () => {
-		expect(cardTags('Mood|Dark\nSounds|Pad\nTimbre|Analog\nCharacter|Warm\nMood|Dark\nKeyword|Arp')).toEqual(['Warm', 'Analog', 'Dark']);
+	it('keeps Character, Timbre, Mood, Genres and Keyword values, in that order, once each', () => {
+		expect(cardTags('Mood|Dark\nSounds|Pad\nKeyword|Arp\nTimbre|Analog\nGenres|Ambient\nCharacter|Warm\nMood|Dark')).toEqual(['Warm', 'Analog', 'Dark', 'Ambient', 'Arp']);
 		expect(cardTags('Sounds|Pad|Warm\nOmni Category|Pads')).toEqual([]);
 		expect(cardTags(null)).toEqual([]);
 	});
