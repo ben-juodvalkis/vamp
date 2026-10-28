@@ -32,6 +32,12 @@ export interface Preset {
 	maker?: string;
 	patch?: string;
 	installed?: boolean;
+	// A Live preset's device as Live names it ("Drum Rack", "Operator"),
+	// shown under the name the way a plug-in preset shows its plug-in.
+	device?: string;
+	// What the sound is like, from Live's tags (Character, Timbre, Mood),
+	// values only, shown as labels on the tile. Index-built catalogs only.
+	tags?: string[];
 	// The role of the Place the item came from (drum / key / …), stamped by
 	// the Places adapter (and by Recent, for an entry whose file lies in a
 	// Place). A load passes it to track coloring as the answer. `null` = the

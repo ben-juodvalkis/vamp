@@ -70,6 +70,7 @@
 	import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
 	import ControlGlyph from '../device-panel/ControlGlyph.svelte';
 	import BrowserPresetFace from './BrowserPresetFace.svelte';
+	import { deviceIconFor } from './deviceIcons';
 	import BrowserWheelsFace from './BrowserWheelsFace.svelte';
 	import { startPresetDrag, type PresetDrag } from '$lib/services/presetDragLoad.svelte';
 	import { addEffectToChain, fitsSelectedTrack, recordRecentEffect, type RecentEffect } from '$lib/services/recentEffects.svelte';
@@ -260,6 +261,8 @@
 	const selectedVendor = $derived(browserNavigationStore.currentVendorId);
 	const vendorState = $derived(browserNavigationStore.getCurrentVendorState(selectedVendor));
 	const currentPath = $derived(vendorState?.currentPath ?? []);
+	/** The folders you stand in, lowercased: a tile's tag that repeats one says nothing ("Aggressive" in Aggressive). */
+	const pathWords = $derived(new Set(currentPath.map((seg) => seg.toLowerCase())));
 	const activeColor = $derived(
 		trackInk(findVendorById(vendors, selectedVendorId)?.color ?? '#888888', paintModeReactive())
 	);
@@ -983,6 +986,25 @@
 		});
 	}
 	/** The kinds whose tiles may draw a live face (`deviceControls`): effects and effect racks. */
+	/** Tag labels a preset tile names at most: a line's worth at the densest grid. */
+	const CARD_TAGS = 3;
+	/**
+	 * Whether this grid's preset tiles have room for the tag row under a
+	 * two-line name and the plug-in/device line. The name comes first: in a
+	 * denser grid the tags give way rather than cut the name to one line. The
+	 * sizes mirror the CSS: --spacing-sm padding and a 2px border, the name at
+	 * 15cqw (at most 2.6rem) × 1.12, the sub-label 0.72rem and the tags 0.62rem
+	 * at 1.2 plus their margins.
+	 */
+	const tagsFit = $derived.by(() => {
+		const { tileWidth: w, tileHeight: h } = gridLayout;
+		if (!w || !h) return true;
+		const frame = 2 * (8 + 2);
+		const nameLine = Math.min(0.15 * (w - frame), 41.6) * 1.12;
+		const subLine = 0.72 * 16 * 1.2 + 2;
+		const tagLine = 0.62 * 16 * 1.2 + 2;
+		return h - frame >= 2 * nameLine + subLine + tagLine;
+	});
 	const FACE_KINDS = new Set(['audio-effect', 'midi-effect', 'effect-rack', 'midi-effect-rack', 'max-audio-effect', 'max-midi-effect']);
 	/** Effect tiles drawing a live face: they hand the face the gesture. */
 	const facedTiles = new SvelteSet<string>();
@@ -1754,17 +1776,24 @@
 	     audio track, a group or Main it is greyed like a missing plug-in. -->
 	{@const midiOnly = MIDI_EFFECT_KINDS.has(p.kind ?? 'unknown') && selectedTrackStore.trackType !== 'midi'}
 	{@const inactive = notInstalled || midiOnly}
-	<!-- The line under the name: the plug-in, else why a greyed tile is greyed —
-	     on its face, since the iPad shows no tooltips. -->
-	{@const subLabel = notInstalled ? 'Not installed' : midiOnly ? 'MIDI tracks only' : (p.plugin ?? null)}
 	<!-- MidiWheels draws its two wheels, live (BrowserWheelsFace). -->
 	{@const wheels = !inactive && p.kind === 'max-midi-effect' && p.name === constants.devices.midiWheels.deviceName}
+	{@const faced = wheels || facedTiles.has(p.path)}
+	<!-- The line under the name: why a greyed tile is greyed — on its face,
+	     since the iPad shows no tooltips — else the plug-in, else a Live
+	     preset's device ("Drum Rack", "Operator") unless its face pictures it. -->
+	{@const subLabel = notInstalled ? 'Not installed' : midiOnly ? 'MIDI tracks only' : (p.plugin ?? (faced ? null : (p.device ?? null)))}
+	<!-- What the sound is like (Live's Character, Timbre, Mood tags), on a tile
+	     with room: not one whose face fills it. -->
+	<!-- The instrument's glyph (deviceIcons), leading its name on that line: what it is at a glance. -->
+	{@const icon = inactive || !subLabel ? null : deviceIconFor(p)}
+	{@const tags = faced || !tagsFit ? [] : (p.tags ?? []).filter((t) => !pathWords.has(t.toLowerCase())).slice(0, CARD_TAGS)}
 	<button
 		class="card preset-tile"
-		class:faced={wheels || facedTiles.has(p.path)}
+		class:faced
 		class:loaded={(shownChargingPresetPath ?? browserNavigationStore.loadedPresetPath) === p.path}
 		class:unavailable={inactive}
-		class:has-plugin={!!subLabel}
+		class:has-plugin={!!subLabel || tags.length > 0}
 		style="--k: {inkFor(p)};"
 		disabled={inactive}
 		title={notInstalled ? `${p.plugin ?? 'This plug-in'} is not installed` : midiOnly ? 'A MIDI effect goes on a MIDI track' : undefined}
@@ -1789,7 +1818,14 @@
 		{/if}
 		<span class="tile-name" use:fitText={p.name} use:clampLines>{p.name}</span>
 		{#if subLabel}
-			<span class="tile-plugin">{subLabel}</span>
+			<span class="tile-plugin"
+				>{#if icon}<svg class="tile-icon" viewBox="0 0 24 24" aria-hidden="true"><path d={icon} /></svg>{/if}{subLabel}</span
+			>
+		{/if}
+		{#if tags.length}
+			<span class="tile-tags">
+				{#each tags as tag (tag)}<span class="tile-tag">{tag}</span>{/each}
+			</span>
 		{/if}
 	</button>
 {/snippet}
@@ -3030,7 +3066,8 @@
 	/* ADR-401: the waveform thumbnail (BrowserPresetWaveform) sits at z-index:0
 	   behind the tile content; lift the labels above it. */
 	.preset-tile .tile-name,
-	.preset-tile .tile-plugin {
+	.preset-tile .tile-plugin,
+	.preset-tile .tile-tags {
 		position: relative;
 		z-index: 1;
 	}
@@ -3086,6 +3123,48 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		max-width: 100%;
+	}
+	/* The instrument's glyph, leading its name on the line under the preset's
+	   (user, 2026-10-28: "the icon and the name … could be one thing"). */
+	.preset-tile .tile-icon {
+		display: inline-block;
+		width: 1.25em;
+		height: 1.25em;
+		margin-right: 0.3em;
+		vertical-align: -0.3em;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.8;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		pointer-events: none;
+	}
+	/* Tags under the name: one line of small labels, quieter than the
+	   plug-in's name, and as short as a line can be so the name keeps its
+	   second line (clampLines counts this row against it). A label that does
+	   not fit the line wraps out of sight, never onto a second row. */
+	.preset-tile .tile-tags {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 3px;
+		max-width: 100%;
+		height: 1.2em;
+		margin-top: 2px;
+		overflow: hidden;
+		font-size: 0.62rem;
+		line-height: 1.2;
+	}
+	.preset-tile .tile-tag {
+		max-width: 100%;
+		padding: 0 5px;
+		border-radius: 999px;
+		background: color-mix(in oklab, currentColor 16%, transparent);
+		font-weight: 600;
+		opacity: 0.85;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	/* Greyed, not hidden: a plug-in that is not installed, or an effect preset
 	   (which never loads as an instrument). Visible, saying why in its title,

@@ -317,6 +317,23 @@
       "NI": { "color": "#17cfcf" },
       "Omni": { "color": "#dd3cdd" },
       "Audio": { "color": "#f2700d" }
+    },
+    "_devicesNote": "devices colors a Live preset's card by the device it loads, keyed by Live's own name for it (indexScan.deviceNameOf): one OKLCH hue each, clear of the brands' (Omni 328, NI 195, Audio 48, Ableton 95), lightness alternating 0.72/0.82 so neighbours read apart (2026-10-28). A device with no entry (an effect) keeps brands.Ableton.",
+    "devices": {
+      "Drum Rack": { "color": "#f97096" },
+      "Drum Sampler": { "color": "#ffa3cf" },
+      "Impulse": { "color": "#ffaba3" },
+      "Electric": { "color": "#fdb25b" },
+      "Instrument Rack": { "color": "#b7d341" },
+      "Analog": { "color": "#64bd50" },
+      "Drift": { "color": "#3be59d" },
+      "Collision": { "color": "#06bfa0" },
+      "Operator": { "color": "#15a5dd" },
+      "Simpler": { "color": "#8fcbfe" },
+      "Wavetable": { "color": "#71a3ff" },
+      "Sampler": { "color": "#b6bffe" },
+      "Meld": { "color": "#ad8dfd" },
+      "Tension": { "color": "#dfacff" }
     }
   },
 

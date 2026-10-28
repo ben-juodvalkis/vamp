@@ -23,8 +23,22 @@
  * Rules (§4): roots come from `Library.cfg`, never the whole tree; links do
  * not appear (nor in Live's browser); a `/` in an index name is a `:` on disk;
  * a device inside `Ableton Folder Info` is Live's device bundle, shown as the
- * device with the folder hidden. The tags Live's Packs carry
- * (`Sounds|Bass`…) are read for roles later; a user's own presets carry none.
+ * device with the folder hidden.
+ *
+ * Tags: `metadata` holds the tags a Pack ships (key 1264941431) and the ones a
+ * user folder's tag file sets (key 1431004537 — Omnisphere-Tools writes the
+ * Spectrasonics attributes there, its ADR 011), as `Group|Value` strings. An
+ * item carries the values of `CARD_TAG_GROUPS` for its tile's labels. A copy of
+ * a Pack preset in a user folder has no tags of its own (Live keys them by
+ * file); one with no card tags borrows those of the Pack preset with the
+ * same name and size, else — a bare device saved out of a Pack's rack keeps
+ * the name but not the size or extension — of the Pack presets sharing its
+ * name, when they all agree.
+ *
+ * Device: a Live preset (`.adg`/`.adv`) names the device it loads, in Live's
+ * own words, read from the index's Built-in devices (`DrumGroupDevice` is
+ * "Drum Rack", `InstrumentVector` "Wavetable"); a Max device's preset names
+ * its `.amxd`.
  *
  * **When it cannot be trusted** the caller falls back to the disk scan:
  * no database, a `version` other than `12300`, a column this reads gone,
@@ -42,6 +56,17 @@ import { newestLiveDatabase } from '../../../routes/api/similar-samples/similarS
 export const SUPPORTED_SCHEMA = 12300;
 
 const FOLDER_TYPE = fourccOf('fldr');
+
+/** `metadata.key` for a Pack's own tags and for a user folder's (measured 2026-10-28). */
+const TAG_KEYS = [1264941431, 1431004537];
+/**
+ * The tag groups a preset tile names, in this order: what a sound is like.
+ * Live's Packs say it under Character, Spectrasonics under Timbre and Mood;
+ * the rest (Sounds, Type, Keyword, Omni Category…) repeats the folder or is noise.
+ */
+export const CARD_TAG_GROUPS = ['Character', 'Timbre', 'Mood'];
+/** At most this many per item: the tile shows a line of them. */
+const MAX_CARD_TAGS = 6;
 const SKIP_FOLDERS = new Set(['Ableton Folder Info']);
 
 function fourccOf(code: string): number {
@@ -102,6 +127,70 @@ export interface IndexRow {
 	device_id: string | null;
 	mod_date: number | null;
 	file_size: number | null;
+	/** The item's tags, `Group|Value`, newline-separated; null when it has none. */
+	tags: string | null;
+}
+
+interface Lookups {
+	/** Device class → the name Live shows for it. */
+	deviceNames: Map<string, string>;
+	/** `name\tsize` of a Pack's `.adg`/`.adv` → its card tags. */
+	packTags: Map<string, string[]>;
+	/** A Pack preset's name, lowercased and without extension → its card tags; null where Packs disagree. */
+	packTagsByName: Map<string, string[] | null>;
+}
+const lookups = new WeakMap<IndexHandle, Lookups>();
+
+/** What every Place's scan reads from the index once: device names and Pack presets' tags. */
+function lookupsOf(h: IndexHandle): Lookups {
+	let l = lookups.get(h);
+	if (l) return l;
+	const deviceNames = new Map<string, string>();
+	const builtIn = h.db.prepare("SELECT file_id FROM places WHERE name = 'Built-in' LIMIT 1").get() as { file_id: number } | undefined;
+	if (builtIn) {
+		const rows = h.db
+			.prepare("SELECT f.name, f.device_id FROM ancestors a JOIN files f ON f.file_id = a.file_id WHERE a.ancestor_id = ? AND f.device_id LIKE 'device:ableton:%'")
+			.all(builtIn.file_id) as Array<{ name: string; device_id: string }>;
+		for (const r of rows) {
+			const cls = liveClassOf(r.device_id)?.cls;
+			if (cls && !deviceNames.has(cls)) deviceNames.set(cls, r.name.replace(/\.[^.]+$/, ''));
+		}
+	}
+	const packTags = new Map<string, string[]>();
+	const packTagsByName = new Map<string, string[] | null>();
+	const rows = h.db
+		.prepare(
+			`SELECT f.name, f.file_size,
+			   (SELECT group_concat(v.value, char(10)) FROM metadata m JOIN metadata_values v ON v.id = m.value_id
+			    WHERE m.file_id = f.file_id AND m.key IN (${TAG_KEYS.join(',')})) AS tags
+			 FROM places p JOIN ancestors a ON a.ancestor_id = p.file_id JOIN files f ON f.file_id = a.file_id
+			 WHERE p.folder_kind = 0 AND (f.name LIKE '%.adg' OR f.name LIKE '%.adv')`
+		)
+		.all() as Array<{ name: string; file_size: number | null; tags: string | null }>;
+	for (const r of rows) {
+		const tags = cardTags(r.tags);
+		if (!tags.length) continue;
+		packTags.set(`${r.name}\t${r.file_size ?? ''}`, tags);
+		const key = presetStem(r.name);
+		const had = packTagsByName.get(key);
+		if (had === undefined) packTagsByName.set(key, tags);
+		else if (had && had.join('\n') !== tags.join('\n')) packTagsByName.set(key, null);
+	}
+	lookups.set(h, (l = { deviceNames, packTags, packTagsByName }));
+	return l;
+}
+
+function presetStem(name: string): string {
+	return name.replace(/\.(adg|adv)$/i, '').toLowerCase();
+}
+
+/** The name Live shows for a Live preset's device, or undefined (a plug-in, a sample). */
+export function deviceNameOf(deviceId: string | null, names: Map<string, string>): string | undefined {
+	const lc = liveClassOf(deviceId);
+	if (lc) return names.get(lc.cls) ?? lc.cls.replace(/\d+$/, '').replace(/([a-z])([A-Z])/g, '$1 $2');
+	// A Max device's preset: `device:m4l:<domain>:<…>/<Name>.amxd`.
+	const amxd = /^device:m4l:\w+:.*?([^/:]+)\.amxd$/.exec(deviceId ?? '')?.[1];
+	return amxd ? decodeURIComponent(amxd) : undefined;
 }
 
 /** The `files.file_id` of the folder the index lists as this Place, or null. */
@@ -216,7 +305,9 @@ export interface IndexScanResult {
 export function indexRowsOf(h: IndexHandle, rootId: number): IndexRow[] {
 	return h.db
 		.prepare(
-			`SELECT f.file_id, f.parent_id, f.name, f.file_type, f.subtype, f.device_type, f.device_id, f.mod_date, f.file_size
+			`SELECT f.file_id, f.parent_id, f.name, f.file_type, f.subtype, f.device_type, f.device_id, f.mod_date, f.file_size,
+			   (SELECT group_concat(v.value, char(10)) FROM metadata m JOIN metadata_values v ON v.id = m.value_id
+			    WHERE m.file_id = f.file_id AND m.key IN (${TAG_KEYS.join(',')})) AS tags
 			 FROM ancestors a JOIN files f ON f.file_id = a.file_id WHERE a.ancestor_id = ?`
 		)
 		.all(rootId) as unknown as IndexRow[];
@@ -230,7 +321,7 @@ export function indexRowsOf(h: IndexHandle, rootId: number): IndexRow[] {
 export function indexRowsFingerprint(rows: IndexRow[]): string {
 	const hash = createHash('sha1');
 	for (const r of rows) {
-		hash.update(`${r.file_id}\t${r.parent_id}\t${r.name}\t${r.file_type}\t${r.subtype}\t${r.device_type}\t${r.device_id ?? ''}\t${r.mod_date ?? ''}\t${r.file_size ?? ''}\n`);
+		hash.update(`${r.file_id}\t${r.parent_id}\t${r.name}\t${r.file_type}\t${r.subtype}\t${r.device_type}\t${r.device_id ?? ''}\t${r.mod_date ?? ''}\t${r.file_size ?? ''}\t${r.tags ?? ''}\n`);
 	}
 	return hash.digest('hex');
 }
@@ -243,6 +334,7 @@ export function indexRowsFingerprint(rows: IndexRow[]): string {
  */
 export function scanIndexPlace(h: IndexHandle, rootId: number, rootPath: string, placeName: string, opts: IndexScanOptions, prefetched?: IndexRow[]): IndexScanResult {
 	const rows = prefetched ?? indexRowsOf(h, rootId);
+	const { deviceNames, packTags, packTagsByName } = lookupsOf(h);
 	const byParent = new Map<number, IndexRow[]>();
 	for (const r of rows) {
 		let list = byParent.get(r.parent_id);
@@ -313,6 +405,16 @@ export function scanIndexPlace(h: IndexHandle, rootId: number, rootPath: string,
 				const patch = info?.patch;
 				if (patch && patch !== item.name) item.patch = patch;
 			}
+			if (ext === '.adg' || ext === '.adv') {
+				const device = deviceNameOf(r.device_id, deviceNames);
+				if (device) item.device = device;
+			}
+			const tags = cardTags(r.tags);
+			const borrowed =
+				tags.length || (ext !== '.adg' && ext !== '.adv')
+					? undefined
+					: (packTags.get(`${r.name}\t${r.file_size ?? ''}`) ?? packTagsByName.get(presetStem(r.name)) ?? undefined);
+			if (tags.length || borrowed) item.tags = tags.length ? tags : borrowed;
 			const tint = tintFor(item, opts.colors);
 			if (tint) item.vendorColor = tint;
 			node.presets.push(item);
@@ -332,6 +434,22 @@ function fileInfoOf(full: string, r: IndexRow, cache: KindCache | undefined): Ki
 	const info = readKind(full, '.aupreset');
 	cache.set(full, { size: r.file_size ?? 0, mtimeMs: (r.mod_date ?? 0) * 1000, info });
 	return info;
+}
+
+/** The values of `CARD_TAG_GROUPS` in an index row's tags, in group order, unique. */
+export function cardTags(raw: string | null): string[] {
+	if (!raw) return [];
+	const out: string[] = [];
+	const all = raw.split('\n');
+	for (const group of CARD_TAG_GROUPS) {
+		for (const t of all) {
+			const i = t.indexOf('|');
+			if (i < 0 || t.slice(0, i) !== group) continue;
+			const value = t.slice(i + 1);
+			if (value && !out.includes(value)) out.push(value);
+		}
+	}
+	return out.slice(0, MAX_CARD_TAGS);
 }
 
 function extOf(name: string): string {

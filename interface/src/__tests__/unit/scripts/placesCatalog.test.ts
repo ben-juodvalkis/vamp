@@ -111,6 +111,10 @@ describe('reading kinds', () => {
 		expect(tintFor({ type: '.aupreset', kind: 'plugin-instrument', maker: 'Native Instruments' }, colors)).toBe('ni');
 		expect(tintFor({ type: '.aupreset', kind: 'unknown' }, colors)).toBeUndefined();
 		expect(tintFor({ type: '.adg', kind: 'drum-rack' }, colors)).toBe('ableton');
+		// A Live preset takes its device's color, and Ableton's when its device has none (an effect).
+		const withDevices = { ...colors, 'device:Operator': 'operator' };
+		expect(tintFor({ type: '.adv', kind: 'instrument', device: 'Operator' }, withDevices)).toBe('operator');
+		expect(tintFor({ type: '.adv', kind: 'audio-effect', device: 'Reverb' }, withDevices)).toBe('ableton');
 		expect(tintFor({ type: '.wav', kind: 'sample' }, colors)).toBe('audio');
 		expect(tintFor({ type: '.alc', kind: 'audio-clip' }, colors)).toBe('audio');
 	});
