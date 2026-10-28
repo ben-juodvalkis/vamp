@@ -229,7 +229,7 @@ export const TOURS = {
 			})),
 			{
 				name: 'chain-wheels',
-				description: 'MidiWheels ahead of the instrument: its cell carries the pitch and mod wheels',
+				description: 'MidiWheels ahead of the instrument: its cell carries the pitch and mod wheels, side by side',
 				scenePatch: (scene) =>
 					setTrackDevices(scene, CHAIN_DEMO_TRACK, [{ name: 'MidiWheels', className: 'MxDeviceMidiEffect' }, CHAIN_DEMO_DEVICES[0], 'Auto Filter', 'Echo']),
 				steps: [openInstrument(CHAIN_DEMO_TRACK)]
