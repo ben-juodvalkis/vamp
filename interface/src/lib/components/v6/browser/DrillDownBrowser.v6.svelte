@@ -260,6 +260,8 @@
 	const selectedVendor = $derived(browserNavigationStore.currentVendorId);
 	const vendorState = $derived(browserNavigationStore.getCurrentVendorState(selectedVendor));
 	const currentPath = $derived(vendorState?.currentPath ?? []);
+	/** The folders you stand in, lowercased: a tile's tag that repeats one says nothing ("Aggressive" in Aggressive). */
+	const pathWords = $derived(new Set(currentPath.map((seg) => seg.toLowerCase())));
 	const activeColor = $derived(
 		trackInk(findVendorById(vendors, selectedVendorId)?.color ?? '#888888', paintModeReactive())
 	);
@@ -1763,7 +1765,7 @@
 	{@const wheels = !inactive && p.kind === 'max-midi-effect' && p.name === constants.devices.midiWheels.deviceName}
 	<!-- What the sound is like (Live's Character, Timbre, Mood tags), on a tile
 	     with room: not one whose face fills it. -->
-	{@const tags = wheels || facedTiles.has(p.path) ? [] : (p.tags ?? []).slice(0, CARD_TAGS)}
+	{@const tags = wheels || facedTiles.has(p.path) ? [] : (p.tags ?? []).filter((t) => !pathWords.has(t.toLowerCase())).slice(0, CARD_TAGS)}
 	<button
 		class="card preset-tile"
 		class:faced={wheels || facedTiles.has(p.path)}
@@ -3099,26 +3101,31 @@
 		max-width: 100%;
 	}
 	/* Tags under the name: one line of small labels, quieter than the
-	   plug-in's name; what does not fit is clipped, never wrapped. */
+	   plug-in's name, and as short as a line can be so the name keeps its
+	   second line (clampLines counts this row against it). A label that does
+	   not fit the line wraps out of sight, never onto a second row. */
 	.preset-tile .tile-tags {
 		display: flex;
 		flex-wrap: wrap;
 		justify-content: center;
 		gap: 3px;
 		max-width: 100%;
-		max-height: 1.35em;
-		margin-top: 4px;
+		height: 1.2em;
+		margin-top: 2px;
 		overflow: hidden;
-		font-size: 0.66rem;
-		line-height: 1.35;
+		font-size: 0.62rem;
+		line-height: 1.2;
 	}
 	.preset-tile .tile-tag {
+		max-width: 100%;
 		padding: 0 5px;
 		border-radius: 999px;
-		background: color-mix(in oklab, currentColor 14%, transparent);
+		background: color-mix(in oklab, currentColor 16%, transparent);
 		font-weight: 600;
-		opacity: 0.8;
+		opacity: 0.85;
 		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	/* Greyed, not hidden: a plug-in that is not installed, or an effect preset
 	   (which never loads as an instrument). Visible, saying why in its title,
