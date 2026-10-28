@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { auKeyOf, cardTags, deviceNameOf, indexRowsFingerprint, indexRowsOf, kindOfRow, type IndexHandle } from '$lib/server/places/indexScan';
+import { auKeyOf, cardTags, deviceNameOf, indexRowsFingerprint, indexRowsOf, kindOfRow, scanIndexPlace, type IndexHandle } from '$lib/server/places/indexScan';
 
 const four = (s: string) => ((s.charCodeAt(0) << 24) | (s.charCodeAt(1) << 16) | (s.charCodeAt(2) << 8) | s.charCodeAt(3)) >>> 0;
 const row = (over: Partial<{ name: string; file_type: number; subtype: number; device_type: number; device_id: string | null }>) => ({
@@ -124,5 +124,44 @@ describe('deviceNameOf', () => {
 		expect(deviceNameOf(pitchHack, names)).toBe('Pitch Hack');
 		expect(deviceNameOf('device:au:instr:1:2:3', names)).toBeUndefined();
 		expect(deviceNameOf(null, names)).toBeUndefined();
+	});
+});
+
+describe('scanIndexPlace: devices and borrowed tags', () => {
+	// A Place (1) beside two Packs (10, 20) and Built-in (30), as Live's index lists them.
+	function index(): IndexHandle {
+		const db = new DatabaseSync(':memory:');
+		db.exec(`CREATE TABLE files (file_id INTEGER, parent_id INTEGER, name TEXT, file_type INTEGER, subtype INTEGER, device_type INTEGER, device_id TEXT, mod_date INTEGER, file_size INTEGER);
+			CREATE TABLE ancestors (file_id INTEGER, ancestor_id INTEGER);
+			CREATE TABLE places (file_id INTEGER, folder_kind INTEGER, level INTEGER, name TEXT);
+			CREATE TABLE metadata (file_id INTEGER, key INTEGER, value_id INTEGER);
+			CREATE TABLE metadata_values (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT);
+			INSERT INTO places VALUES (10, 0, 0, 'Pack A'), (20, 0, 0, 'Pack B'), (30, 8, 0, 'Built-in');`);
+		let id = 100;
+		const file = (under: number, name: string, deviceId: string | null, size: number, tags: string[] = []) => {
+			const fid = id++;
+			db.prepare('INSERT INTO files VALUES (?, ?, ?, 0, 0, 0, ?, 100, ?)').run(fid, under, name, deviceId, size);
+			db.prepare('INSERT INTO ancestors VALUES (?, ?)').run(fid, under);
+			for (const t of tags) {
+				const v = db.prepare('INSERT INTO metadata_values (value) VALUES (?)').run(t).lastInsertRowid;
+				db.prepare('INSERT INTO metadata VALUES (?, 1264941431, ?)').run(fid, v);
+			}
+		};
+		file(30, 'Wavetable.adv', 'device:ableton:instr:InstrumentVector', 1);
+		file(10, 'Glass Pad.adg', 'device:ableton:instr:InstrumentGroupDevice', 5000, ['Character|Bright', 'Sounds|Pad']);
+		file(10, 'Split.adg', 'device:ableton:instr:InstrumentGroupDevice', 5000, ['Character|Dark']);
+		file(20, 'Split.adg', 'device:ableton:instr:InstrumentGroupDevice', 6000, ['Character|Soft']);
+		// The Place: a bare Wavetable saved out of the Glass Pad rack, and one whose name two Packs tag differently.
+		file(1, 'Glass Pad.adv', 'device:ableton:instr:InstrumentVector', 900);
+		file(1, 'Split.adv', 'device:ableton:instr:InstrumentVector', 900);
+		return { db, file: ':memory:', schema: 12300 };
+	}
+
+	it("names the device as Live's Built-in does, borrows a rack's tags by name, and skips a name Packs disagree on", () => {
+		const { tree } = scanIndexPlace(index(), 1, '/Place', 'Place', { au: new Map(), colors: {} });
+		const byName = Object.fromEntries(tree.presets.map((p) => [p.name, p]));
+		expect(byName['Glass Pad'].device).toBe('Wavetable');
+		expect(byName['Glass Pad'].tags).toEqual(['Bright']);
+		expect(byName['Split'].tags).toBeUndefined();
 	});
 });

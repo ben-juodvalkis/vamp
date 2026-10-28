@@ -31,7 +31,9 @@
  * item carries the values of `CARD_TAG_GROUPS` for its tile's labels. A copy of
  * a Pack preset in a user folder has no tags of its own (Live keys them by
  * file); one with no card tags borrows those of the Pack preset with the
- * same name and size.
+ * same name and size, else — a bare device saved out of a Pack's rack keeps
+ * the name but not the size or extension — of the Pack presets sharing its
+ * name, when they all agree.
  *
  * Device: a Live preset (`.adg`/`.adv`) names the device it loads, in Live's
  * own words, read from the index's Built-in devices (`DrumGroupDevice` is
@@ -134,6 +136,8 @@ interface Lookups {
 	deviceNames: Map<string, string>;
 	/** `name\tsize` of a Pack's `.adg`/`.adv` → its card tags. */
 	packTags: Map<string, string[]>;
+	/** A Pack preset's name, lowercased and without extension → its card tags; null where Packs disagree. */
+	packTagsByName: Map<string, string[] | null>;
 }
 const lookups = new WeakMap<IndexHandle, Lookups>();
 
@@ -153,6 +157,7 @@ function lookupsOf(h: IndexHandle): Lookups {
 		}
 	}
 	const packTags = new Map<string, string[]>();
+	const packTagsByName = new Map<string, string[] | null>();
 	const rows = h.db
 		.prepare(
 			`SELECT f.name, f.file_size,
@@ -164,10 +169,19 @@ function lookupsOf(h: IndexHandle): Lookups {
 		.all() as Array<{ name: string; file_size: number | null; tags: string | null }>;
 	for (const r of rows) {
 		const tags = cardTags(r.tags);
-		if (tags.length) packTags.set(`${r.name}\t${r.file_size ?? ''}`, tags);
+		if (!tags.length) continue;
+		packTags.set(`${r.name}\t${r.file_size ?? ''}`, tags);
+		const key = presetStem(r.name);
+		const had = packTagsByName.get(key);
+		if (had === undefined) packTagsByName.set(key, tags);
+		else if (had && had.join('\n') !== tags.join('\n')) packTagsByName.set(key, null);
 	}
-	lookups.set(h, (l = { deviceNames, packTags }));
+	lookups.set(h, (l = { deviceNames, packTags, packTagsByName }));
 	return l;
+}
+
+function presetStem(name: string): string {
+	return name.replace(/\.(adg|adv)$/i, '').toLowerCase();
 }
 
 /** The name Live shows for a Live preset's device, or undefined (a plug-in, a sample). */
@@ -320,7 +334,7 @@ export function indexRowsFingerprint(rows: IndexRow[]): string {
  */
 export function scanIndexPlace(h: IndexHandle, rootId: number, rootPath: string, placeName: string, opts: IndexScanOptions, prefetched?: IndexRow[]): IndexScanResult {
 	const rows = prefetched ?? indexRowsOf(h, rootId);
-	const { deviceNames, packTags } = lookupsOf(h);
+	const { deviceNames, packTags, packTagsByName } = lookupsOf(h);
 	const byParent = new Map<number, IndexRow[]>();
 	for (const r of rows) {
 		let list = byParent.get(r.parent_id);
@@ -396,7 +410,10 @@ export function scanIndexPlace(h: IndexHandle, rootId: number, rootPath: string,
 				if (device) item.device = device;
 			}
 			const tags = cardTags(r.tags);
-			const borrowed = tags.length || (ext !== '.adg' && ext !== '.adv') ? undefined : packTags.get(`${r.name}\t${r.file_size ?? ''}`);
+			const borrowed =
+				tags.length || (ext !== '.adg' && ext !== '.adv')
+					? undefined
+					: (packTags.get(`${r.name}\t${r.file_size ?? ''}`) ?? packTagsByName.get(presetStem(r.name)) ?? undefined);
 			if (tags.length || borrowed) item.tags = tags.length ? tags : borrowed;
 			const tint = tintFor(item, opts.colors);
 			if (tint) item.vendorColor = tint;
