@@ -106,6 +106,23 @@ export function padGridCell(index: number, rows: number): { column: number; row:
 	return { column: Math.floor(index / rows) + 1, row: rows - (index % rows) };
 }
 
+/**
+ * Live's own layout, for the chain overview's Drum Rack cell (user,
+ * 2026-10-28): ROWS of `columns`, filled left to right, the first row at
+ * the BOTTOM — the lowest four pads along the foot, as the rack draws
+ * them. The cell picks four across or two by its width.
+ */
+export function padRackShape(count: number, columns: number): { columns: number; rows: number } {
+	if (count <= 0 || columns <= 0) return { columns: 0, rows: 0 };
+	return { columns: Math.min(count, columns), rows: Math.ceil(count / columns) };
+}
+
+/** Where the `index`-th note (ascending) sits in `padRackShape`'s grid. */
+export function padRackCell(index: number, columns: number, rows: number): { column: number; row: number } {
+	if (columns <= 0 || rows <= 0) return { column: 1, row: 1 };
+	return { column: (index % columns) + 1, row: rows - Math.floor(index / columns) };
+}
+
 /** Each note paired with the pad that sits there, or null where the kit has none. */
 export function padGridSlots(pads: readonly VmPad[], notes: readonly number[]): { note: number; pad: VmPad | null }[] {
 	const byNote = new Map<number, VmPad>();

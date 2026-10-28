@@ -60,6 +60,8 @@
     padGridNotes,
     padGridSlots,
     padGridCell,
+    padRackShape,
+    padRackCell,
     type VmPad
   } from '$lib/services/drumVirtualMacros';
 
@@ -76,6 +78,8 @@
     litNotes?: ReadonlySet<number>;
     /** ADR-435: the pads that carry a Permute of their own, with what it is doing — drawn as a step strip on the tile. */
     padSequencers?: ReadonlyMap<number, TinySequencerState>;
+    /** Live's layout instead (the chain cell, 2026-10-28): rows this many across, the lowest along the bottom (`padRackShape`). */
+    rackColumns?: number;
     onPress?: (note: number, pointerId: number) => void;
     onRelease?: (pointerId: number, reason: MomentaryReleaseReason) => void;
   }
@@ -88,6 +92,7 @@
     clipNotes = null,
     litNotes = new Set<number>(),
     padSequencers = new Map<number, TinySequencerState>(),
+    rackColumns,
     onPress,
     onRelease
   }: Props = $props();
@@ -100,7 +105,8 @@
   // assert); `padGridCell` places each tile.
   let notes = $derived(padGridNotes(clipNotes, [selectedNote, ...heldNotes], pads));
   let slots = $derived(padGridSlots(pads, notes));
-  let shape = $derived(padGridShape(slots.length));
+  let shape = $derived(rackColumns ? padRackShape(slots.length, rackColumns) : padGridShape(slots.length));
+  const cellAt = (i: number) => (rackColumns ? padRackCell(i, shape.columns, shape.rows) : padGridCell(i, shape.rows));
 
   // Labels are decided for the kit at once: shared words dropped, a name
   // that says nothing replaced by the note, a name two pads share given
@@ -142,7 +148,7 @@
 >
   <div class="pad-tiles" role="group" aria-label="Pads in play">
     {#each slots as slot, i (slot.note)}
-      {@const cell = padGridCell(i, shape.rows)}
+      {@const cell = cellAt(i)}
       <button
         type="button"
         class="pad-tile"
