@@ -56,6 +56,16 @@ Object.defineProperty(global, 'localStorage', {
 	value: localStorageMock
 });
 
+// jsdom has no ResizeObserver, which `bind:clientWidth` needs: the chain's
+// cells measure their faces (ADR-492). Sizes stay 0, as jsdom lays nothing out.
+if (!('ResizeObserver' in globalThis)) {
+	globalThis.ResizeObserver = class {
+		observe() {}
+		unobserve() {}
+		disconnect() {}
+	} as unknown as typeof ResizeObserver;
+}
+
 // Reset mocks between tests
 beforeEach(() => {
 	vi.clearAllMocks();

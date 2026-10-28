@@ -1,0 +1,34 @@
+<script lang="ts">
+  /**
+   * Measures the room a chain cell leaves its face and provides it
+   * (`cellSize.ts`, ADR-492), so the face can pick the layout that fits.
+   * `data-cell-width` carries the step for CSS and tests.
+   */
+  import type { Snippet } from 'svelte';
+  import { cellWidthClass, provideCellSize } from './cellSize';
+
+  let { children }: { children: Snippet } = $props();
+
+  let width = $state(0);
+  let height = $state(0);
+  const widthClass = $derived(cellWidthClass(width));
+
+  provideCellSize(() => ({ width, height, widthClass }));
+</script>
+
+<div class="cell-size" data-cell-width={widthClass} bind:clientWidth={width} bind:clientHeight={height}>
+  {@render children()}
+</div>
+
+<style>
+  .cell-size {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+  }
+  .cell-size > :global(*) {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+  }
+</style>
