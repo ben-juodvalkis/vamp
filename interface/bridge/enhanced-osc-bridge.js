@@ -29,6 +29,7 @@ const { logger } = require('./utils/logger');
 const { createUDPPorts, setupAllPortHandlers, openAllPorts, closeAllPorts } = require('./transport/UDPPortManager');
 const { createWebSocketServer, broadcastToClients } = require('./transport/WebSocketServer');
 const { createSurfaceTcpClient } = require('./transport/SurfaceTcpClient');
+const { createSurfaceLink } = require('./transport/SurfaceLink');
 const { processIncomingMessage } = require('./utils/oscMessageUtils');
 const { recordInbound } = require('./utils/oscTap');
 const { createHealthMonitor } = require('./utils/healthMonitor');
@@ -241,6 +242,62 @@ const udpPorts = createUDPPorts(OSC_CONFIG);
 // Set up port handlers
 setupAllPortHandlers(udpPorts, OSC_CONFIG, connectionStatus);
 
+// ============================================
+// Surface TCP leg
+// ============================================
+//
+// The second bridge↔surface transport, alongside UDP rather than
+// replacing it. Surface→bridge it carries the tree: `state/full` needs
+// the stream (protocol 3.6.0 deleted the chunking that fitted it in
+// datagrams). Bridge→surface it carries EVERYTHING while it is up
+// (ADR-489, through `surfaceLink` below): the surface drains UDP only
+// from Live's pump, so a stalled tick dropped datagrams, the handshake
+// hello among them (ADR-418). UDP stays as the fallback while the
+// stream is down, and for the fire-and-forget Max senders that need a
+// datagram socket regardless.
+//
+// Inbound frames go through the *same* `handleIncomingOSC` with the
+// *same* `pythonSurface` source, including the same middleware. That
+// is deliberate: nothing downstream — capture taps, the profiler, the
+// health monitor, the UI — should be able to tell which leg a message
+// arrived on, so migrating an address across is invisible past this
+// point. Created here, ahead of everything that sends to the surface,
+// and started below; `INBOUND_MIDDLEWARE` is read when a frame arrives,
+// by which point it exists.
+const surfaceTcp = createSurfaceTcpClient({
+    host: constants.osc.pythonSurface.host,
+    port: constants.osc.pythonSurface.tcpPort,
+    onMessage: (oscMessage) => {
+        const middleware = INBOUND_MIDDLEWARE.pythonSurface;
+        const consumed = middleware ? middleware(oscMessage) === true : false;
+        if (!consumed) handleIncomingOSC(oscMessage, 'pythonSurface');
+    },
+    onStatus: (state) => {
+        logger.info('Surface TCP status', { state });
+    }
+});
+
+// Every bridge→surface send goes through this: the stream while it is
+// connected, the UDP port while it is not. Shaped like a UDP port, so
+// the WS server's router takes it in the port map in place of
+// `udpPorts.pythonSurface`.
+const surfaceLink = createSurfaceLink({
+    tcp: surfaceTcp,
+    udpPort: () => udpPorts.pythonSurface
+});
+const outboundPorts = { ...udpPorts, pythonSurface: surfaceLink };
+
+/** Send to the surface with every number tagged: osc.js sends a bare JS
+ *  number as a float, and the surface reads a note or an index as an int. */
+function sendTaggedToSurface(address, args) {
+    surfaceLink.send({
+        address,
+        args: args.map((value) => (typeof value === 'number'
+            ? { type: Number.isInteger(value) ? 'i' : 'f', value }
+            : { type: 's', value: String(value) }))
+    });
+}
+
 // Create WebSocket server. The health monitor is created first with
 // a lazy `wss` accessor so both can reference each other without a
 // circular init.
@@ -285,18 +342,7 @@ const drumSwap = !features.isEnabled('axHelper') ? null : createDrumSwapSimilar(
     // raised constant with a literal here made the bridge give up, run its
     // `finally` and close Live's undo step while the helper was still pressing.
     pressTimeoutS: (constants.axHelper || {}).messagingTimeoutS,
-    sendToSurface: (address, args) => {
-        const port = udpPorts.pythonSurface;
-        if (!port) throw new Error('python surface port is not open');
-        // Explicit tags: osc.js sends a bare JS number as a float, and the
-        // surface reads a note as an int.
-        port.send({
-            address,
-            args: args.map((value) => (typeof value === 'number'
-                ? { type: Number.isInteger(value) ? 'i' : 'f', value }
-                : { type: 's', value: String(value) }))
-        });
-    }
+    sendToSurface: sendTaggedToSurface
 });
 
 // "Group" on the iPad: Live's LOM cannot group tracks, so this drives Live's
@@ -313,16 +359,7 @@ const groupTracks = !features.isEnabled('axHelper') ? null : createLiveGroupTrac
     // existing one) borrow the record button for a moment when record_mode
     // would otherwise block it (RecordSuspendComponent, the surface half).
     // Same tagging discipline as the swap orchestrator's sendToSurface.
-    sendToSurface: (address, args) => {
-        const port = udpPorts.pythonSurface;
-        if (!port) throw new Error('python surface port is not open');
-        port.send({
-            address,
-            args: args.map((value) => (typeof value === 'number'
-                ? { type: Number.isInteger(value) ? 'i' : 'f', value }
-                : { type: 's', value: String(value) }))
-        });
-    }
+    sendToSurface: sendTaggedToSurface
 });
 
 const { httpServer, wss } = createWebSocketServer(
@@ -330,7 +367,9 @@ const { httpServer, wss } = createWebSocketServer(
     // each client on connect (see /bridge/server_mode). Merged, not mutated,
     // so the shared constants object stays untouched.
     { ...OSC_CONFIG.webSocket, serverMode: SERVER_MODE },
-    udpPorts,
+    // `pythonSurface` here is the link, so a UI write takes the stream
+    // whenever it is up (ADR-489).
+    outboundPorts,
     connectionStatus,
     metrics,
     healthMonitor,
@@ -350,7 +389,7 @@ wssRef = wss;
 // BRIDGE_BATCH_WINDOW_MS (default 10 ms). Single-item windows skip
 // the /bridge/batch envelope; client side disassembles in
 // WebSocketConnection. UI→Surf writes never touch this — they go
-// straight to UDP via routeMessageToUDP.
+// straight to the surface via routeMessageToUDP and `surfaceLink`.
 const broadcastBatcher = createBroadcastBatcher({
     send: (message) => broadcastToClients(wss, message, healthMonitor)
 });
@@ -448,10 +487,8 @@ function handleSaveAsRequestIfNeeded(oscMessage) {
 // osc.js infers bare JS numbers as floats, which the surface's strict
 // bool01 parser rejects (same trap encodeOutboundArgs guards against).
 function replayAutoCaptureOverride(value) {
-    const port = udpPorts.pythonSurface;
-    if (!port) return;
     try {
-        port.send({
+        surfaceLink.send({
             address: AUTO_CAPTURE_ADDRESS,
             args: [{ type: 'i', value }]
         });
@@ -659,7 +696,13 @@ for (const source of INBOUND_SOURCES) {
         continue;
     }
     const middleware = INBOUND_MIDDLEWARE[source];
+    // A datagram from the surface means its listener is up: redial the
+    // stream now rather than wait out the backoff, so writes leave the
+    // UDP fallback within a second of a Live restart or set load
+    // (ADR-489). A no-op while connected, and rate-limited inside.
+    const onSurfaceDatagram = source === 'pythonSurface' ? () => surfaceTcp.kick() : null;
     port.on('message', (oscMessage) => {
+        if (onSurfaceDatagram) onSurfaceDatagram();
         // A middleware that returns true has fully consumed the message
         // (bridge-terminated command) — skip the UI broadcast.
         const consumed = middleware ? middleware(oscMessage) === true : false;
@@ -667,36 +710,8 @@ for (const source of INBOUND_SOURCES) {
     });
 }
 
-// ============================================
-// Surface TCP leg
-// ============================================
-//
-// The second bridge↔surface transport, alongside UDP rather than
-// replacing it. It exists to retire the 9,216-byte darwin datagram
-// ceiling that `state/full`'s chunk/checksum/reassemble machinery used
-// to work around — protocol 3.6.0 deleted that machinery, so this leg
-// is now the *only* wire the tree has. UDP stays because everything
-// else fits a datagram and because fire-and-forget senders on
-// ephemeral ports (the Max probe drivers) need one regardless.
-//
-// Inbound frames go through the *same* `handleIncomingOSC` with the
-// *same* `pythonSurface` source, including the same middleware. That
-// is deliberate: nothing downstream — capture taps, the profiler, the
-// health monitor, the UI — should be able to tell which leg a message
-// arrived on, so migrating an address across is invisible past this
-// point.
-const surfaceTcp = createSurfaceTcpClient({
-    host: constants.osc.pythonSurface.host,
-    port: constants.osc.pythonSurface.tcpPort,
-    onMessage: (oscMessage) => {
-        const middleware = INBOUND_MIDDLEWARE.pythonSurface;
-        const consumed = middleware ? middleware(oscMessage) === true : false;
-        if (!consumed) handleIncomingOSC(oscMessage, 'pythonSurface');
-    },
-    onStatus: (state) => {
-        logger.info('Surface TCP status', { state });
-    }
-});
+// The surface TCP leg is created near the top, ahead of every sender;
+// it starts dialling here.
 surfaceTcp.start();
 
 // ============================================
@@ -851,8 +866,11 @@ if (pingTimer.unref) pingTimer.unref();
 // client, because the user's signal for "I'm performing" is having
 // started the server, not having opened the browser yet.
 //
-// Direct UDP send to the surface port (bypasses the WS→backend router),
-// so this address needs no `backendScope.pythonSurface` entry.
+// Sent straight to the surface through `surfaceLink` (bypasses the
+// WS→backend router), so this address needs no `backendScope.pythonSurface`
+// entry. It rides the TCP leg while that is up and UDP otherwise
+// (ADR-489) — over UDP a stalled tick could drop a few in a row, and a
+// gap past the grace window read as the server gone.
 //
 // The 3rd arg is the launch mode ("ipad" | "dev"), set by the npm
 // script that started us (`LOOPING_SERVER_MODE`, see package.json
@@ -867,11 +885,9 @@ const SERVER_HEARTBEAT_INTERVAL_MS =
     2000;
 let serverHeartbeatSeq = 0;
 const serverHeartbeatTimer = setInterval(() => {
-    const port = udpPorts.pythonSurface;
-    if (!port) return;
     serverHeartbeatSeq = (serverHeartbeatSeq + 1) & 0x7fffffff;
     try {
-        port.send({
+        surfaceLink.send({
             address: '/looping/v3/server/heartbeat',
             args: [serverHeartbeatSeq, Date.now(), SERVER_MODE]
         });

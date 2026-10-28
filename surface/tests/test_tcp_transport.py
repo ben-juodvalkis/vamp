@@ -440,3 +440,135 @@ def test_duplicate_handler_registration_is_refused(transport):
     transport.add_handler("/x", lambda a, b: None)
     with pytest.raises(ValueError):
         transport.add_handler("/x", lambda a, b: None)
+
+
+# --- routed through the UDP transport (ADR-489) ----------------------------
+#
+# The bridge sends every message over this leg while it is connected, so
+# the leg dispatches through ``OSCTransport``'s one handler table and drain
+# hooks. A real ``OSCTransport`` on an ephemeral port is the router, so the
+# tests prove the wiring ``LoopingSurface`` uses, not a stand-in for it.
+
+
+@pytest.fixture
+def udp():
+    from osc_transport import OSCTransport
+
+    t = OSCTransport(
+        local_addr=("127.0.0.1", 0), remote_addr=("127.0.0.1", 1), name="udp",
+    )
+    yield t
+    t.close()
+
+
+@pytest.fixture
+def routed(udp):
+    t = TCPTransport(local_addr=("127.0.0.1", 0), name="routed", router=udp)
+    yield t
+    t.close()
+
+
+@pytest.fixture
+def routed_peer(routed):
+    sock = socket.create_connection(routed.local_addr)
+    _pump_until(routed, lambda: routed.connected)
+    yield sock
+    try:
+        sock.close()
+    except OSError:
+        pass
+
+
+def _read_frame(sock):
+    sock.settimeout(5.0)
+    header = b""
+    while len(header) < HEADER_BYTES:
+        header += sock.recv(HEADER_BYTES - len(header))
+    (length,) = struct.unpack(">I", header)
+    body = b""
+    while len(body) < length:
+        body += sock.recv(length - len(body))
+    return body
+
+
+def test_a_frame_reaches_the_udp_transports_handler(udp, routed, routed_peer):
+    """One table: a handler registered on the UDP port hears the stream."""
+    seen = []
+    udp.add_handler("/looping/v3/handshake/hello", lambda a, s: seen.append(a) or None)
+
+    routed_peer.sendall(_frame("/looping/v3/handshake/hello", ("3.12.0",)))
+    _pump_until(routed, lambda: seen)
+
+    assert seen == [["3.12.0"]]
+
+
+def test_frames_dispatch_in_the_order_sent(udp, routed, routed_peer):
+    """Ordered delivery is the point: a burst lands as it was sent."""
+    seen = []
+    udp.add_handler("/x", lambda a, s: seen.append(a[0]) or None)
+
+    routed_peer.sendall(b"".join(_frame("/x", (i,)) for i in range(50)))
+    _pump_until(routed, lambda: len(seen) >= 50)
+
+    assert seen == list(range(50))
+
+
+def test_a_routed_reply_goes_back_on_the_stream(udp, routed, routed_peer):
+    """A tuple reply returns on the leg the request came in on."""
+    udp.add_handler("/live/test", lambda a, s: ("ok",))
+
+    routed_peer.sendall(_frame("/live/test"))
+    _pump_until(routed, lambda: routed.stats()["framesOut"] >= 1)
+
+    assert _read_frame(routed_peer) == encode_message("/live/test", ("ok",))
+
+
+def test_a_pass_that_dispatched_runs_the_drain_hooks(udp, routed, routed_peer):
+    """The drum fan-out applies from a drain hook (ADR-428); a write
+    that came over the stream must not sit queued until a datagram
+    happens to arrive."""
+    calls = []
+    udp.add_handler("/x", lambda a, s: calls.append("handler") or None)
+    udp.add_drain_hook(lambda: calls.append("hook"))
+
+    routed_peer.sendall(_frame("/x", (1,)) + _frame("/x", (2,)))
+    _pump_until(routed, lambda: calls.count("handler") >= 2 and "hook" in calls)
+
+    assert calls[-1] == "hook", "hooks run after the pass's handlers"
+
+
+def test_an_empty_pass_runs_no_drain_hooks(udp, routed, routed_peer):
+    hooks = []
+    udp.add_drain_hook(lambda: hooks.append(1))
+
+    for _ in range(5):
+        routed.poll()
+
+    assert hooks == []
+
+
+def test_a_routed_unknown_address_is_not_fatal(udp, routed, routed_peer):
+    seen = []
+    udp.add_handler("/known", lambda a, s: seen.append(a) or None)
+
+    routed_peer.sendall(_frame("/unknown") + _frame("/known", (1,)))
+    _pump_until(routed, lambda: seen)
+
+    assert routed.connected is True
+    assert seen == [[1]]
+
+
+def test_a_routed_raising_handler_keeps_the_stream(udp, routed, routed_peer):
+    seen = []
+
+    def boom(args, src):
+        raise RuntimeError("handler bug")
+
+    udp.add_handler("/boom", boom)
+    udp.add_handler("/after", lambda a, s: seen.append(a) or None)
+
+    routed_peer.sendall(_frame("/boom") + _frame("/after", (7,)))
+    _pump_until(routed, lambda: seen)
+
+    assert routed.connected is True
+    assert seen == [[7]]
