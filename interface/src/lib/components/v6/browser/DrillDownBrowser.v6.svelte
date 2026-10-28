@@ -386,7 +386,8 @@
 	// scarce resource is how many you can scan at once, not how big each one is.
 	// ~112×78 still clears the 44px touch target with room to spare, and roughly
 	// doubles the tiles onscreen vs the folder floors (more columns AND more rows).
-	const PRESET_COMFORT = { gap: GRID_GAP, minTile: 112, minTileHeight: 78, targetAspect: 1.5 };
+	// 92 (78 before 2026-10-28): room for two rows of tags under a two-line name.
+	const PRESET_COMFORT = { gap: GRID_GAP, minTile: 112, minTileHeight: 92, targetAspect: 1.5 };
 
 	const gridLayout = $derived.by(() => {
 		const count = isScale
@@ -998,22 +999,23 @@
 		});
 	}
 	/** The kinds whose tiles may draw a live face (`deviceControls`): effects and effect racks. */
-	/** Tag labels a preset tile names at most: a line's worth at the densest grid. */
-	const CARD_TAGS = 3;
+	/** Tag labels a preset tile names at most: two rows' worth. */
+	const CARD_TAGS = 6;
 	/**
-	 * Whether this grid's preset tiles have room for the tag row under a
-	 * two-line name. The name comes first: in a denser grid the tags give way
-	 * rather than cut the name to one line. The sizes mirror the CSS:
+	 * How many rows of tags this grid's preset tiles have room for under a
+	 * two-line name, at most two. The name comes first: in a denser grid the
+	 * tags give way rather than cut the name to one line. The sizes mirror the CSS:
 	 * --spacing-sm padding and a 2px border, the name at 15cqw (at most
 	 * 2.6rem) × 1.12, the tags 0.62rem at 1.2 plus their margin.
 	 */
-	const tagsFit = $derived.by(() => {
+	const TAG_ROW_GAP = 3;
+	const tagRows = $derived.by(() => {
 		const { tileWidth: w, tileHeight: h } = gridLayout;
-		if (!w || !h) return true;
+		if (!w || !h) return 1;
 		const frame = 2 * (8 + 2);
 		const nameLine = Math.min(0.15 * (w - frame), 41.6) * 1.12;
 		const tagLine = 0.62 * 16 * 1.2 + 2;
-		return h - frame >= 2 * nameLine + tagLine;
+		return Math.max(0, Math.min(2, Math.floor((h - frame - 2 * nameLine + TAG_ROW_GAP) / (tagLine + TAG_ROW_GAP))));
 	});
 	const FACE_KINDS = new Set(['audio-effect', 'midi-effect', 'effect-rack', 'midi-effect-rack', 'max-audio-effect', 'max-midi-effect']);
 	/** Effect tiles drawing a live face: they hand the face the gesture. */
@@ -1795,7 +1797,7 @@
 	{@const subLabel = notInstalled ? 'Not installed' : midiOnly ? 'MIDI tracks only' : null}
 	<!-- What the sound is like (Live's Character, Timbre, Mood tags), on a tile
 	     with room: not one whose face fills it. -->
-	{@const tags = faced || inactive || !tagsFit ? [] : (p.tags ?? []).filter((t) => !pathWords.has(t.toLowerCase())).slice(0, CARD_TAGS)}
+	{@const tags = faced || inactive || !tagRows ? [] : (p.tags ?? []).filter((t) => !pathWords.has(t.toLowerCase())).slice(0, CARD_TAGS)}
 	<button
 		class="card preset-tile"
 		class:faced
@@ -1829,7 +1831,7 @@
 			<span class="tile-plugin">{subLabel}</span>
 		{/if}
 		{#if tags.length}
-			<span class="tile-tags">
+			<span class="tile-tags" style="--tag-rows: {tagRows};">
 				{#each tags as tag (tag)}<span class="tile-tag">{tag}</span>{/each}
 			</span>
 		{/if}
@@ -3160,7 +3162,9 @@
 		justify-content: center;
 		gap: 3px;
 		max-width: 100%;
-		height: 1.2em;
+		/* As many rows as the grid has room for (tagRows); a label that does
+		   not fit them wraps out of sight. */
+		height: calc(var(--tag-rows, 1) * 1.2em + (var(--tag-rows, 1) - 1) * 3px);
 		margin-top: 2px;
 		overflow: hidden;
 		font-size: 0.62rem;

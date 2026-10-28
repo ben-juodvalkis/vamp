@@ -66,9 +66,10 @@ const EFFECTS_LAYOUT = 3;
  * Bump when the scan writes something new into a catalog: the cache stamp
  * otherwise holds only what the build read, so a catalog cached by older code
  * would be served as it was. 2: items carry `tags` and `device`; 3: tags
- * borrowed by name too; 4: a Live preset tinted by its device (all 2026-10-28).
+ * borrowed by name too; 4: a Live preset tinted by its device; 5: Genres and
+ * Keyword tags too (all 2026-10-28).
  */
-const CATALOG_FORMAT = 4;
+const CATALOG_FORMAT = 5;
 
 export type CatalogSource = 'index' | 'disk';
 
