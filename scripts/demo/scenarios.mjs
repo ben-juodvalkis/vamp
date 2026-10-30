@@ -55,8 +55,11 @@ export const T = {
 	}),
 	/** A strip's name band: a tap mutes. */
 	name: (track) => ({ css: `.track-col[data-track-index="${track}"] .header-name`, label: `track ${track} name` }),
-	/** The action strip of a slot in the clip view's column (the selected track's). */
-	slot: (slot) => ({ css: `.mini-session .slot-cell[data-slot-index="${slot}"] .slot-action`, label: `slot ${slot}` }),
+	/**
+	 * A slot in the mini session (the selected track's column). The whole
+	 * cell fires it since ADR-469; only an empty slot draws a mark.
+	 */
+	slot: (slot) => ({ css: `.mini-session .slot-cell[data-slot-index="${slot}"]`, label: `slot ${slot}` }),
 	/** A cell of the FX grid: 'fx1'…'fx12', 'squash'. */
 	tile: (cell) => ({ css: `[data-debug="devices-panel"] [data-cell="${cell}"] .device-control`, label: `tile ${cell}` }),
 	/** An XY pad in the central view, by its title. */
@@ -389,6 +392,68 @@ export const SCENARIOS = {
 			{ at: '31.1', caption: 'Everything you saw was played on the iPad.' }
 		],
 		end: '33.1',
+		result: [looping(0, 0), looping(1, 0), looping(2, 0)]
+	},
+
+	// For App Review (2026-10-30): the tour cut to what the interface still
+	// has since ADR-485 (no FX grid tiles), from presets the rig's Places
+	// hold (Drum › Ableton, Bass › Electric › Ableton, Key › Ableton ›
+	// Electric). About a minute.
+	'app-review': {
+		title: 'Vamp for iPad: App Review',
+		blurb: 'An empty Live set built into a three-part loop from the iPad: load, record, loop, mute.',
+		tempo: 96,
+		prefs: { [PREFS.session]: '0', [PREFS.fx]: '1' },
+		liveWindow: { w: 1090, h: 856 },
+		set: { empty: true, key: { root: 0, scale: 'Major' } },
+		intro: { title: 'Vamp for iPad', subtitle: 'Plays Ableton Live on a Mac, over the USB cable.' },
+		outro: {
+			title: 'Vamp for iPad',
+			subtitle: 'Every change in Live above was made from the iPad.',
+			foot: 'Needs a Mac running Ableton Live 12 and Vamp for Mac'
+		},
+		steps: [
+			{ at: '1.2', chapter: 'Start', caption: 'An empty Live set, and Vamp on the iPad.' },
+
+			{ at: '2.1', chapter: 'Load a kit', caption: "Browse Live's library by touch.", tap: T.rail('Drum') },
+			{ at: '2.3', tap: T.folder('Ableton') },
+			{ at: '3.1', caption: 'Tap a kit. It loads on a new track in Live.', tap: T.preset('Acuff Kit'), until: hasDevice(1, 'DrumGroupDevice') },
+			{ at: '4.4', do: (live) => live.invoke('song', 'delete_track', [0]) },
+
+			{ at: '5.2', chapter: 'Record a loop', caption: 'Arm the track, then tap record.', tap: T.strip(0, 'clip'), until: armed(0) },
+			{ at: '5.4', tap: T.slot(0) },
+			{ at: '6.1', caption: 'Live records from the next bar.', play: DRUMS, until: recording(0, 0) },
+			{ at: '7.3', caption: 'Tap again, and the take loops.', tap: T.slot(0) },
+			{ at: '8.1', until: looping(0, 0) },
+
+			{ at: '8.3', chapter: 'Add a bass', caption: 'Load a bass.', tap: T.rail('Bass') },
+			{ at: '9.1', tap: T.folder('Electric') },
+			{ at: '9.3', tap: T.folder('Ableton') },
+			{ at: '10.1', tap: T.preset('Electric Bass'), until: hasDevice(1, 'InstrumentGroupDevice') },
+			{ at: '10.3', caption: 'Record it over the drums.', tap: T.strip(1, 'clip'), until: armed(1) },
+			{ at: '10.4', tap: T.slot(0) },
+			{ at: '11.1', play: BASS, until: recording(1, 0) },
+			{ at: '12.3', caption: 'Close the loop.', tap: T.slot(0) },
+			{ at: '13.1', until: looping(1, 0) },
+
+			{ at: '13.3', chapter: 'Add keys', caption: 'Now some keys.', tap: T.rail('Key') },
+			{ at: '14.1', tap: T.folder('Ableton') },
+			{ at: '14.3', tap: T.folder('Electric') },
+			{ at: '15.1', tap: T.preset('E-Piano MKI Mellow'), until: hasDevice(2, 'LoungeLizard') },
+			{ at: '15.3', caption: 'Record the chords.', tap: T.strip(2, 'clip'), until: armed(2) },
+			{ at: '15.4', tap: T.slot(0) },
+			{ at: '16.1', play: KEYS, until: recording(2, 0) },
+			{ at: '17.3', tap: T.slot(0) },
+			{ at: '18.1', caption: 'Three loops, playing in Live.', until: looping(2, 0) },
+
+			{ at: '19.1', chapter: 'Permute', caption: 'A step sequencer on every track: octave steps on the bass.', tap: T.strip(1, 'permute') },
+			{ at: '19.3', taps: [T.step('pitch', 3), T.step('pitch', 7)] },
+
+			{ at: '21.1', chapter: 'Mix', caption: 'Tap a name to mute it…', tap: T.name(0), until: muted(0, true) },
+			{ at: '22.1', caption: '…and bring it back.', tap: T.name(0), until: muted(0, false) },
+			{ at: '23.1', caption: 'Every change in Live was made from the iPad.' }
+		],
+		end: '25.1',
 		result: [looping(0, 0), looping(1, 0), looping(2, 0)]
 	},
 
