@@ -145,6 +145,13 @@ struct PadWebView: UIViewRepresentable {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
+        // Tells the page it fills the screen with no status bar or home
+        // indicator, before its first paint: app.css then gives it top and
+        // bottom margins the safe-area inset no longer supplies.
+        config.userContentController.addUserScript(WKUserScript(
+            source: "document.documentElement.dataset.shell = 'pad';",
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true))
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.isOpaque = false

@@ -110,11 +110,11 @@
 		padding-top: 0;
 		padding-left: 16px;
 		padding-right: 16px;
-		padding-bottom: 0;
+		padding-bottom: var(--edge-bottom);
 	"
 >
-	<!-- Status strip. The safe-area gutter, spent instead of padded away.
-	     It is exactly `env(safe-area-inset-top)` tall and carries no
+	<!-- Status strip. The top margin, spent instead of padded away.
+	     It is exactly `--edge-top` tall (app.css) and carries no
 	     margin, so it occupies the identical box the root's old
 	     `padding-top` did: every section height below is unchanged, and
 	     off-device (harness, desktop) the inset is 0 and this row
@@ -302,6 +302,10 @@
 	   Center. The bottom edge has no equivalent — the home-indicator band
 	   is outside the viewport entirely and cannot be drawn in.
 
+	   In Vamp for iPad iOS draws nothing over it: the app hides the status
+	   bar and home indicator and fills the screen, so the strip and the
+	   root's bottom padding are both 16px there, the sides' margin.
+
 	   z-index clears the expanded browser overlay (z-index 1000), which
 	   is fixed to the viewport and would otherwise cover this. */
 	/* The strip runs a ten-column ruler over the middle column, the one the
@@ -314,7 +318,7 @@
 	   `overflow: hidden` matters off-device, where the height is 0 and
 	   the bars must not spill. */
 	.status-strip {
-		height: env(safe-area-inset-top);
+		height: var(--edge-top);
 		margin-left: -16px;
 		margin-right: -16px;
 		position: relative;

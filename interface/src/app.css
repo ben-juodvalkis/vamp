@@ -398,6 +398,14 @@
      column keeps its share. 8.8vw is 120.2px at 1366, so the cap binds there. */
   --sidebar-width: clamp(72px, 8.8vw, 120px);
 
+  /* The page's top and bottom margins. In Safari and the home-screen web
+     app iOS keeps a band at the top for its clock (the safe-area inset,
+     0 off the iPad) and cuts the home-indicator band off the bottom.
+     Vamp for iPad hides both and fills the screen, so there the margins
+     match the 16px sides (html[data-shell='pad'] below). */
+  --edge-top: env(safe-area-inset-top, 0px);
+  --edge-bottom: 0px;
+
   /* Line Heights */
   --leading-tight: 1.2;
   --leading-normal: 1.4;
@@ -542,6 +550,13 @@
   --color-act-solo: var(--act-solo);
   --color-act-pitch: var(--act-pitch);
   --color-act-warn: var(--act-warn);
+}
+
+/* Inside Vamp for iPad (it sets data-shell before the page's first paint):
+   the full screen is ours, so the top and bottom margins match the sides. */
+html[data-shell='pad'] {
+  --edge-top: 16px;
+  --edge-bottom: 16px;
 }
 
 /* Light mode shadow overrides — retained for the not-yet-restyled survivors above */

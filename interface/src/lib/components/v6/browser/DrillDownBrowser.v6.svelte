@@ -2363,14 +2363,15 @@
 	.drill-browser button { touch-action: manipulation; }
 
 	/* Expanded: fill the viewport exactly (inset: 0), then honor the SAME insets
-	   the main layout uses as PADDING *inside* the box — safe-area top, 16px
-	   sides, 0 bottom. Doing it as padding (not offset + bottom:0) keeps the box
-	   within the viewport so the rail never hangs off the bottom edge on iPad,
-	   where env(safe-area-inset-top) is non-zero. */
+	   the main layout uses as PADDING *inside* the box — the page margins
+	   (--edge-top, 16px sides, --edge-bottom; app.css). Doing it as padding
+	   (not offset + bottom:0) keeps the box within the viewport so the rail
+	   never hangs off the bottom edge on iPad, where the top margin is
+	   non-zero. */
 	.drill-browser.expanded {
 		position: fixed;
 		inset: 0;
-		padding: env(safe-area-inset-top) 16px 0 16px;
+		padding: var(--edge-top) 16px var(--edge-bottom) 16px;
 		z-index: 1000;
 		box-sizing: border-box;
 		background: var(--browser-bg-primary, #16181d);

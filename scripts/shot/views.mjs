@@ -71,8 +71,8 @@ export const VIEWS = {
 	// The feature switches (general-release audit §7b). `features` replaces
 	// the scene's bridge snapshot (`/bridge/features`) for the matching ids;
 	// these three share one layout, so any two of them diff to the switch
-	// alone. The status-strip mirror is not in any capture: its band is
-	// `env(safe-area-inset-top)` tall, which is 0 off the iPad.
+	// alone. The status-strip mirror is in no capture but `pad-app`'s: its
+	// band is `env(safe-area-inset-top)` tall, which is 0 off the iPad.
 	header: {
 		description: 'Transport header on — the TotalMix faders as the rig draws them.',
 		prefs: { [P.transport]: '1' }
@@ -85,6 +85,24 @@ export const VIEWS = {
 			maxUtilityPatch: { enabled: false, available: false, reason: '' },
 			expressionPedal: { enabled: false, available: false, reason: '' }
 		}
+	},
+	// The page as Vamp for iPad shows it: the app marks it `data-shell="pad"`
+	// before its first paint (VampPadApp.swift), which gives it 16px top and
+	// bottom margins (app.css `--edge-top` / `--edge-bottom`). `corners` draws
+	// the screen's rounded corners over the capture (the iPad Pro 12.9"'s,
+	// 18pt), so a shot shows what the glass cuts off.
+	'pad-app': {
+		description: 'Inside Vamp for iPad: full screen, 16px margins all round, the TotalMix mirror in the top one, the screen corners drawn.',
+		prefs: {},
+		shell: 'pad',
+		corners: 18
+	},
+	'pad-app-general': {
+		description: 'Vamp for iPad in the general edition: no TotalMix, so the top margin is empty.',
+		prefs: {},
+		shell: 'pad',
+		corners: 18,
+		features: { totalmix: { enabled: false, available: false, reason: '' } }
 	},
 	'totalmix-down': {
 		description: 'TotalMix switched on but not answering — the faders greyed out, saying why.',

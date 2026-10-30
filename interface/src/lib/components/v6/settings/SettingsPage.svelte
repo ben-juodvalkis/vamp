@@ -258,7 +258,7 @@
 		z-index: 1002;
 		display: grid;
 		grid-template-rows: auto minmax(0, 1fr);
-		padding-top: env(safe-area-inset-top);
+		padding-top: var(--edge-top);
 		background: var(--background);
 		color: var(--foreground);
 	}

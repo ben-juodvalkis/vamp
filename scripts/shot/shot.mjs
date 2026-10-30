@@ -250,6 +250,34 @@ try {
 		{ prefs: view.prefs, theme }
 	);
 
+	// A native shell marks the page before its first paint, as the app does.
+	if (view.shell || view.corners) {
+		await context.addInitScript(
+			({ shell, corners }) => {
+				// Chromium runs this before <html> exists (WebKit's document
+				// start, the app's, runs after), so mark it when it appears.
+				const mark = () => {
+					const root = document.documentElement;
+					if (root && shell) root.dataset.shell = shell;
+					return !!root;
+				};
+				if (!mark()) new MutationObserver((_, o) => mark() && o.disconnect()).observe(document, { childList: true });
+				if (!corners) return;
+				// The screen's rounded corners: everything outside them is
+				// glass the display does not light.
+				document.addEventListener('DOMContentLoaded', () => {
+					const mask = document.createElement('div');
+					mask.setAttribute('data-shot-corners', '');
+					mask.style.cssText =
+						`position:fixed;inset:0;z-index:2147483647;pointer-events:none;` +
+						`border-radius:${corners}px;box-shadow:0 0 0 ${corners}px #000;`;
+					document.body.appendChild(mask);
+				});
+			},
+			{ shell: view.shell ?? null, corners: view.corners ?? 0 }
+		);
+	}
+
 	const page = await context.newPage();
 	if (has('reduced-motion')) {
 		// See the flag's note above: this is how a set with a RECORDING
