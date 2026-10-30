@@ -1,9 +1,9 @@
 # ADR-488: Vamp for iPad and Vamp for Mac, over the USB Cable
 
 ## Status
-**Proposed** (2026-10-27), on branch `bj/native-ipad-app`. Accepted once it
-has run on the rig's iPad. Issue #8. No Live restart: the bridge, the
-interface server and the menu-bar app only.
+**Accepted** (2026-10-30): ran on the rig's iPad (below). Proposed
+2026-10-27 on `bj/native-ipad-app`, merged 2026-10-28. Issue #8. No Live
+restart: the bridge, the interface server and the menu-bar app only.
 
 ## Context
 The iPad reaches Vamp as a Safari page. On 2026-10-27 that stopped being
@@ -61,6 +61,13 @@ first and sent on the second.
   is what keeps it usable.
 
 ## Consequences
+- **Measured on the rig's iPad (2026-10-30, iPadOS 18.7.8):** installed from
+  Xcode and launched with no URL typed; the set loaded through the link.
+  Unplugged at 16:33:29, plugged in at 16:33:34: the iPad was back on the
+  device channel at once, Vamp for Mac's control connection 1 s after the
+  plug and the page's connections 2 s after it, with no reload. Presets
+  loaded after it with no drop. (Over Safari the cable's network link alone
+  took ~20 s to get an address after a replug, 2026-10-27.)
 - A replug costs the app ~2 s instead of ~20 s plus a reconnect; a Mac rename
   or address change costs it nothing. Not yet measured on the iPad itself.
 - Measured on this Mac with the app in the iPad Pro 12.9" Simulator

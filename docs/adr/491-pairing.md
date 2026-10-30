@@ -1,8 +1,8 @@
 # ADR-491: Pairing: the Cable Is Trusted, Wi-Fi Pairs Once
 
 ## Status
-**Proposed** (2026-10-27), on branch `bj/native-ipad-app`. Accepted once a
-device has paired on the rig. Builds `docs/plans/general-release/security.plan.md`
+**Accepted** (2026-10-28): an iPhone paired on the rig (below). Proposed
+2026-10-27 on `bj/native-ipad-app`. Builds `docs/plans/general-release/security.plan.md`
 (designed 2026-09-30). Needs a full Live restart for the status-bar line.
 
 ## Context
