@@ -38,7 +38,8 @@ already the menu-bar app on the rig, so it is the natural thing to click.
   used to keep `setup-ipad.js` alive with nothing under it — found when the
   app could not tell a dead Vamp from a running one.
 - **`npm run install-mac-app`** builds the Release app into
-  `~/Applications/Vamp.app` with its icon and records the checkout it runs
+  `/Applications/Vamp.app` (`~/Applications` until 2026-10-30, which Finder's
+  Applications does not list) with its icon and records the checkout it runs
   (`defaults … repoRoot`), since an app opened from the Dock has no working
   directory. Interface and server changes need no reinstall.
 
