@@ -43,6 +43,27 @@ already the menu-bar app on the rig, so it is the natural thing to click.
   (`defaults … repoRoot`), since an app opened from the Dock has no working
   directory. Interface and server changes need no reinstall.
 
+- **It keeps itself current** (2026-10-30, Ben: "can we have vamp
+  automatically check for any changes when it starts up?"). The installer
+  records the fingerprint of the app's own code
+  (`scripts/mac-app-fingerprint.sh`: `owner/apps` Mac/, Shared/, project.yml,
+  Config/Base.xcconfig). Opened from the Dock, the app recomputes it; if it
+  differs it rebuilds and replaces itself (`VAMP_SELF_UPDATE=1
+  install-mac-app.sh`), waits for its own process to exit and relaunches the
+  new copy, which starts Vamp. A failed rebuild runs the installed copy and
+  says so in the log. Interface and server changes were already rebuilt by
+  `npm run ipad`'s own fingerprint gate on every start; the iPad app still
+  needs Xcode, and the iPad a reload for a new interface. Measured: after an
+  edit to `Supervisor.swift`, open → rebuilt in 5 s → relaunched → page
+  server up 13 s after the click.
+- **The servers start without `NODE_USE_SYSTEM_CA`.** With it set, Node 24.7
+  reads the macOS Keychain's certificates on a background thread and can
+  segfault there (crash report 2026-10-30: `ReadMacOSKeychainCertificates` →
+  `X509_get_subject_name`, a null read); npm then re-raises the signal, and a
+  start died with exit 1 after a skipped build. The setting came from the
+  environment the app was launched from (Claude Code's), not Ben's shell;
+  Vamp makes no outbound TLS, so the app drops it for its child.
+
 ## Consequences
 - Measured from a Dock-style `open`: the page server answered 42 s after
   the click (an unchanged build is skipped), with Live, the browser

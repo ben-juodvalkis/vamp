@@ -23,6 +23,8 @@ final class Supervisor: ObservableObject {
         case external
         /// The child exited by itself; the log says why.
         case failed(String)
+        /// Rebuilding and replacing itself before it starts Vamp.
+        case updating
     }
 
     @Published private(set) var state: State = .stopped
@@ -62,7 +64,11 @@ final class Supervisor: ObservableObject {
         }
         Task { @MainActor in
             await checkHealth()
-            if !fromNpm && !pageUp { start() }
+            if !fromNpm && !pageUp {
+                // A rebuilt app relaunches itself and starts Vamp from there.
+                if await updateSelfIfStale() { return }
+                start()
+            }
         }
     }
 
@@ -87,11 +93,78 @@ final class Supervisor: ObservableObject {
     var statusLine: String {
         switch state {
         case .stopped: return repoRoot == nil ? "Vamp: can't find the repo" : "Vamp: stopped"
+        case .updating: return "Vamp: updating Vamp for Mac…"
         case .starting: return "Vamp: starting…"
         case .running: return pageUp ? "Vamp: running" : "Vamp: running, page server restarting…"
         case .stopping: return "Vamp: stopping…"
         case .external: return fromNpm ? "Vamp: running from npm run ipad" : "Vamp: running (started elsewhere)"
         case .failed(let why): return "Vamp: stopped — \(why)"
+        }
+    }
+
+    // MARK: - Keeping itself current
+
+    /// Opened from the Dock, check this app's own code against the build
+    /// installed: `scripts/mac-app-fingerprint.sh` against the fingerprint
+    /// `install-mac-app.sh` recorded. If the code changed, rebuild and
+    /// replace this app, then relaunch it, which starts Vamp. Returns true
+    /// when it relaunches; false to carry on with this copy (current, or
+    /// the rebuild failed, which the log says).
+    private func updateSelfIfStale() async -> Bool {
+        guard let root = repoRoot else { return false }
+        let recorded = UserDefaults.standard.string(forKey: "sourceFingerprint")
+        let script = root.appendingPathComponent("scripts/mac-app-fingerprint.sh").path
+        guard let current = await Self.run(["/bin/bash", script], in: root, log: nil).output,
+              !current.isEmpty else { return false }
+        if current == recorded { return false }
+
+        state = .updating
+        appendToLog("— Vamp for Mac's code changed since it was installed: rebuilding it —")
+        let update = await Self.run(
+            ["/bin/zsh", "-lc", "VAMP_SELF_UPDATE=1 bash scripts/install-mac-app.sh"],
+            in: root, log: openLog()
+        )
+        guard update.status == 0 else {
+            appendToLog("— the rebuild failed (\(update.status)); running the copy installed —")
+            state = .stopped
+            return false
+        }
+        appendToLog("— rebuilt: relaunching —")
+        // Relaunch once this process has gone, or `open` would only bring
+        // this copy forward. Detached: it outlives the app that started it.
+        let me = ProcessInfo.processInfo.processIdentifier
+        let relaunch = Process()
+        relaunch.executableURL = URL(fileURLWithPath: "/bin/sh")
+        relaunch.arguments = ["-c", "while kill -0 \(me) 2>/dev/null; do sleep 0.2; done; open /Applications/Vamp.app"]
+        try? relaunch.run()
+        NSApp.terminate(nil)
+        return true
+    }
+
+    /// Run a command to the end without blocking the main thread.
+    private nonisolated static func run(
+        _ argv: [String], in dir: URL, log: FileHandle?
+    ) async -> (status: Int32, output: String?) {
+        await withCheckedContinuation { done in
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: argv[0])
+            process.arguments = Array(argv.dropFirst())
+            process.currentDirectoryURL = dir
+            let pipe = Pipe()
+            if let log {
+                process.standardOutput = log
+                process.standardError = log
+            } else {
+                process.standardOutput = pipe
+            }
+            process.terminationHandler = { proc in
+                let output = log == nil
+                    ? String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    : nil
+                done.resume(returning: (proc.terminationStatus, output))
+            }
+            do { try process.run() } catch { done.resume(returning: (-1, nil)) }
         }
     }
 
@@ -116,6 +189,11 @@ final class Supervisor: ObservableObject {
         // The menu is the status page: setup-ipad.js opens no Safari windows.
         env["VAMP_MAC_APP"] = "1"
         env["LOOPING_PROJECT_ROOT"] = root.path
+        // Node 24.7 reading the macOS Keychain's certificates segfaults on a
+        // background thread (ReadMacOSKeychainCertificates → X509 null read,
+        // crash report 2026-10-30 16:47): a start died with exit 1 after a
+        // skipped build. Vamp makes no outbound TLS, so it never needs them.
+        env.removeValue(forKey: "NODE_USE_SYSTEM_CA")
         process.environment = env
         if let log {
             process.standardOutput = log
@@ -258,7 +336,7 @@ final class Supervisor: ObservableObject {
             } else if let since = starting, Date().timeIntervalSince(since) > Self.startLimit {
                 state = .failed("the page server never answered; see the log")
             }
-        case .running, .stopping:
+        case .running, .stopping, .updating:
             break
         }
     }

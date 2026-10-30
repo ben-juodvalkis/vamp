@@ -31,6 +31,10 @@ Automation, run from the repo root through `npm run`.
   and `VAMP_MAC_APP=1` opens no Safari windows.
 - `install-mac-app.sh` (`npm run install-mac-app`): builds Vamp for Mac in
   Release into `/Applications/Vamp.app` (removing a copy left in `~/Applications`), records this checkout for it, and quits and reopens a running copy.
+  It also records `mac-app-fingerprint.sh`'s hash of the app's own code; the
+  app compares it at startup and, if its code changed, reinstalls itself with
+  `VAMP_SELF_UPDATE=1` (no quit, no reopen: the app relaunches itself) and
+  relaunches (ADR-490). So it is run by hand once.
 - `staleness.mjs`: fingerprint gates for the catalog scan and the Vite build.
   A stat walk (path, size, mtime; symlinks hashed as links) is compared with
   `scripts/.cache/<name>-stamp.json`, and every artifact the last run wrote
