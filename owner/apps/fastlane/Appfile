@@ -1,0 +1,3 @@
+# The team comes from Config/Local.xcconfig through the project; the lanes
+# sign in with the App Store Connect API key (Fastfile), never an Apple ID.
+app_identifier("com.benjuodvalkis.vamp.ipad")

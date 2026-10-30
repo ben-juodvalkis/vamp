@@ -192,3 +192,8 @@ config/.paired-devices.json.tmp
 # midi-hub-max clone (its own repo) and the link Max loads
 /owner/Max Patches/midi-hub-max/
 /owner/Max Patches/midi-hub.js
+
+# fastlane: the API key settings and its run reports
+owner/apps/fastlane/.env
+owner/apps/fastlane/report.xml
+owner/apps/fastlane/README.md

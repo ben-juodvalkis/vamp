@@ -1,0 +1,139 @@
+# Vamp's release lanes, run on the Mac from this folder (owner/apps):
+#
+#   fastlane ios build      archive Vamp for iPad for the App Store (no upload)
+#   fastlane ios beta       archive and upload it to TestFlight
+#   fastlane ios release    archive and upload it to App Store Connect, for
+#                           review once submitted there (never auto-submits)
+#   fastlane mac notarized  Vamp for Mac signed with Developer ID, notarized
+#                           by Apple and stapled, zipped into build/dist/
+#
+# AUTH: an App Store Connect API key, so no Apple ID password or 2FA. Its
+# three values go in fastlane/.env beside this file (gitignored), which
+# fastlane reads on its own:
+#   ASC_KEY_ID      the key's ID (App Store Connect → Users and Access → Integrations)
+#   ASC_ISSUER_ID   the issuer ID, shown above the key table on that page
+#   ASC_KEY_PATH    path to AuthKey_<ID>.p8 (downloadable once)
+#
+# The archives build into build/ (gitignored), apart from the build
+# scripts/install-mac-app.sh installs from.
+
+APP_ID_PAD = "com.benjuodvalkis.vamp.ipad"
+PROJECT    = "Vamp.xcodeproj"
+OUT_DIR    = "build/dist"
+
+skip_docs
+default_platform(:ios)
+
+before_all do
+  # fastlane's Ruby breaks on non-ASCII output without a UTF-8 locale.
+  ENV["LANG"] ||= "en_US.UTF-8"
+  ENV["LC_ALL"] ||= "en_US.UTF-8"
+end
+
+platform :ios do
+  desc "Archive Vamp for iPad for the App Store (no upload)"
+  lane :build do |options|
+    api_key = options[:api_key]
+    # Build numbers must rise with every upload of a version: take the next
+    # one after what App Store Connect already has, not a local counter.
+    # Without the key (an archive-only check) the project's own number stands.
+    xcargs = "-allowProvisioningUpdates"
+    if api_key
+      latest = latest_testflight_build_number(
+        api_key: api_key,
+        app_identifier: APP_ID_PAD,
+        initial_build_number: 0,
+      )
+      xcargs += " CURRENT_PROJECT_VERSION=#{latest + 1}"
+      # Lets automatic signing create the App Store profile through the key,
+      # without an Apple ID signed in to Xcode.
+      xcargs += " -authenticationKeyPath #{File.expand_path(ENV['ASC_KEY_PATH'])}" \
+                " -authenticationKeyID #{ENV['ASC_KEY_ID']}" \
+                " -authenticationKeyIssuerID #{ENV['ASC_ISSUER_ID']}"
+    end
+
+    build_app(
+      project: PROJECT,
+      scheme: "VampPad",
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: OUT_DIR,
+      output_name: "Vamp.ipa",
+      derived_data_path: "build/fastlane",
+      clean: true,
+      xcargs: xcargs,
+      export_xcargs: xcargs.split(" CURRENT_PROJECT_VERSION").first,
+      export_options: { signingStyle: "automatic" },
+    )
+  end
+
+  desc "Archive Vamp for iPad and upload it to TestFlight"
+  lane :beta do
+    api_key = load_api_key
+    build(api_key: api_key)
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true,
+    )
+  end
+
+  desc "Archive Vamp for iPad and upload it to App Store Connect (submit there)"
+  lane :release do
+    api_key = load_api_key
+    build(api_key: api_key)
+    upload_to_app_store(
+      api_key: api_key,
+      # The listing, screenshots and the review submission stay in App Store
+      # Connect for now: this lane ships the binary only.
+      skip_metadata: true,
+      skip_screenshots: true,
+      submit_for_review: false,
+      precheck_include_in_app_purchases: false,
+      force: true,
+    )
+  end
+end
+
+platform :mac do
+  desc "Vamp for Mac: Developer ID signed, notarized, stapled and zipped"
+  lane :notarized do
+    api_key = load_api_key
+    # The project signs Vamp for Mac ad hoc for running on this Mac; a copy
+    # for anyone else is signed with Developer ID and the hardened runtime
+    # that notarization requires. Still unsandboxed: the Mac App Store is
+    # not this route.
+    build_mac_app(
+      project: PROJECT,
+      scheme: "VampMac",
+      configuration: "Release",
+      export_method: "developer-id",
+      output_directory: OUT_DIR,
+      derived_data_path: "build/fastlane",
+      clean: true,
+      xcargs: "CODE_SIGN_IDENTITY='Developer ID Application' CODE_SIGN_STYLE=Manual " \
+              "ENABLE_HARDENED_RUNTIME=YES OTHER_CODE_SIGN_FLAGS=--timestamp",
+      export_options: { signingStyle: "manual", signingCertificate: "Developer ID Application" },
+    )
+    app = File.join(OUT_DIR, "Vamp.app")
+    notarize(package: app, api_key: api_key, print_log: true)
+    zip = File.join(OUT_DIR, "Vamp-mac.zip")
+    sh("cd .. && rm -f '#{zip}' && ditto -c -k --keepParent '#{app}' '#{zip}'")
+    UI.success("Notarized: owner/apps/#{zip}")
+  end
+end
+
+# Resolves the App Store Connect API key, failing loudly rather than falling
+# back to an Apple ID login that would hang waiting for 2FA.
+def load_api_key
+  missing = %w[ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_PATH].select { |k| ENV[k].to_s.strip.empty? }
+  unless missing.empty?
+    UI.user_error!("Missing #{missing.join(', ')} in owner/apps/fastlane/.env " \
+                   "(App Store Connect → Users and Access → Integrations).")
+  end
+  app_store_connect_api_key(
+    key_id: ENV["ASC_KEY_ID"],
+    issuer_id: ENV["ASC_ISSUER_ID"],
+    key_filepath: File.expand_path(ENV["ASC_KEY_PATH"]),
+    in_house: false,
+  )
+end
