@@ -116,7 +116,8 @@ enum UsbMux {
 /// Follows devices on the cable: one `Listen` to usbmuxd, redialled if
 /// usbmuxd restarts. Network-attached devices (Wi-Fi sync) are ignored.
 final class UsbMuxWatcher {
-    var onAttach: ((Int) -> Void)?
+    /// A device on the cable: its usbmux id and its serial number (UDID).
+    var onAttach: ((Int, String?) -> Void)?
     var onDetach: ((Int) -> Void)?
 
     private let queue: DispatchQueue
@@ -186,7 +187,7 @@ final class UsbMuxWatcher {
             let props = message["Properties"] as? [String: Any]
             guard (props?["ConnectionType"] as? String) == "USB", !usbDevices.contains(id) else { return }
             usbDevices.insert(id)
-            onAttach?(id)
+            onAttach?(id, props?["SerialNumber"] as? String)
         case "Detached":
             guard usbDevices.remove(id) != nil else { return }
             onDetach?(id)

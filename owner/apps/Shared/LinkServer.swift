@@ -14,16 +14,31 @@ import Network
 /// With no Mac on the control connection, a page connection is refused at
 /// once, so the web view fails fast and can say so, instead of hanging.
 ///
-/// A second control connection replaces the first only once the first has
-/// gone quiet (`LinkProtocol.healthyWithin`): a newcomer cannot take a
-/// working link over. Stream ids are random, so one cannot be guessed.
+/// Anything on the iPad can reach `devicePort`, so nothing is trusted for
+/// being there (ADR-494). A control connection is the Mac only once it has
+/// proved it holds `key` (or paired, with the code the Mac shows, and been
+/// given it); a stream only with the tag that session's key makes. Even
+/// then, a second control connection replaces the first only once the first
+/// has gone quiet (`LinkProtocol.healthyWithin`). Stream ids are random.
 final class LinkServer {
     let devicePort: UInt16
     let pagePort: UInt16
 
+    enum PairingEvent: Equatable {
+        /// The Mac does not know this iPad yet: ask for the code it shows.
+        case codeNeeded
+        case wrongCode(triesLeft: Int)
+        /// Paired: the Mac has the key now.
+        case paired
+        /// The Mac ended the pairing (too many wrong codes), or it went.
+        case ended
+    }
+
     /// Called on the main queue when the Mac's control connection comes or
     /// goes.
     var onLinkChange: ((Bool) -> Void)?
+    /// Called on the main queue as a pairing goes along.
+    var onPairing: ((PairingEvent) -> Void)?
     /// The link's state changes, one line each (never per message).
     var log: ((String) -> Void)?
 
@@ -31,20 +46,38 @@ final class LinkServer {
     /// may shorten it.
     var silenceLimit = LinkProtocol.silenceLimit
 
+    /// One control connection: proving itself, pairing, or the link.
+    private final class Session {
+        let conn: NWConnection
+        let macNonce: String
+        let padNonce = LinkAuth.nonce()
+        var buffer = LineBuffer()
+        var pairing = false
+        var code: String?
+
+        init(conn: NWConnection, macNonce: String) {
+            self.conn = conn
+            self.macNonce = macNonce
+        }
+    }
+
+    private let key: LinkKey
     private let queue = DispatchQueue(label: "vamp.link.server")
     private var linkListener: NWListener?
     private var pageListener: NWListener?
-    private var control: NWConnection?
-    private var controlBuffer = LineBuffer()
+    private var control: Session?
+    /// Control connections still proving themselves or pairing.
+    private var handshakes: [ObjectIdentifier: Session] = [:]
     private var lastHeard = Date.distantPast
     private var silenceTimer: DispatchSourceTimer?
     private var pending: [UInt32: NWConnection] = [:]
     private var splices: [ObjectIdentifier: Splice] = [:]
     private var running = false
 
-    init(devicePort: UInt16, pagePort: UInt16) {
+    init(devicePort: UInt16, pagePort: UInt16, key: LinkKey) {
         self.devicePort = devicePort
         self.pagePort = pagePort
+        self.key = key
     }
 
     func start() {
@@ -61,6 +94,8 @@ final class LinkServer {
             linkListener?.cancel(); linkListener = nil
             pageListener?.cancel(); pageListener = nil
             silenceTimer?.cancel(); silenceTimer = nil
+            for session in handshakes.values { session.conn.cancel() }
+            handshakes.removeAll()
             dropControl("stopped")
         }
     }
@@ -71,6 +106,16 @@ final class LinkServer {
         queue.async { [self] in
             guard running else { return }
             startListeners()
+        }
+    }
+
+    /// The code the person typed, for the pairing in progress.
+    func submitCode(_ code: String) {
+        queue.async { [self] in
+            guard let session = handshakes.values.first(where: { $0.pairing }) else { return }
+            session.code = code
+            let proof = LinkAuth.proof(LinkAuth.codeKey(code), "pair-ipad", session.macNonce, session.padNonce)
+            session.conn.sendLine(LinkProtocol.line(.pairCode(proof: proof)))
         }
     }
 
@@ -125,7 +170,7 @@ final class LinkServer {
         var id = UInt32.random(in: 1...UInt32.max)
         while pending[id] != nil { id = UInt32.random(in: 1...UInt32.max) }
         pending[id] = conn
-        control.sendLine(LinkProtocol.line(.open(id)))
+        control.conn.sendLine(LinkProtocol.line(.open(id)))
         queue.asyncAfter(deadline: .now() + LinkProtocol.streamWait) { [weak self] in
             if let stale = self?.pending.removeValue(forKey: id) { stale.cancel() }
         }
@@ -153,15 +198,13 @@ final class LinkServer {
             let hello = String(decoding: pending[pending.startIndex..<newline], as: UTF8.self)
             let rest = Data(pending[pending.index(after: newline)...])
             switch LinkProtocol.parseHello(hello) {
-            case .control:
-                var buffer = LineBuffer()
-                let early = buffer.append(rest) ?? []
-                self.adoptControl(conn, buffer: buffer, earlyLines: early)
-            case .stream(let id):
-                self.attachStream(conn, id: id, leading: rest)
+            case .control(let nonce):
+                self.beginHandshake(conn, macNonce: nonce, rest: rest)
+            case .stream(let id, let tag):
+                self.attachStream(conn, id: id, tag: tag, leading: rest)
             case nil:
                 if LinkProtocol.isOtherVersion(hello) {
-                    self.log?("refused a link of another version: \(hello)")
+                    self.log?("refused a link of another version: \(hello.split(separator: " ").prefix(3).joined(separator: " "))")
                     conn.send(content: Data(LinkProtocol.unsupportedLine().utf8), completion: .contentProcessed { _ in conn.cancel() })
                 } else {
                     conn.cancel()
@@ -170,7 +213,14 @@ final class LinkServer {
         }
     }
 
-    private func attachStream(_ link: NWConnection, id: UInt32, leading: Data) {
+    private func attachStream(_ link: NWConnection, id: UInt32, tag: String, leading: Data) {
+        guard let control,
+              LinkAuth.same(tag, LinkAuth.streamTag(key.symmetric, macNonce: control.macNonce, padNonce: control.padNonce, id: id))
+        else {
+            log?("a stream without this session's tag; closed")
+            link.cancel()
+            return
+        }
         guard let page = pending.removeValue(forKey: id) else {
             log?("a stream for an unknown or expired id; closed")
             link.cancel()
@@ -183,68 +233,145 @@ final class LinkServer {
         splice.start(leadingToB: leading)
     }
 
-    private func adoptControl(_ conn: NWConnection, buffer: LineBuffer, earlyLines: [String]) {
-        if let old = control, old !== conn {
+    // MARK: - The handshake
+
+    private func beginHandshake(_ conn: NWConnection, macNonce: String, rest: Data) {
+        let session = Session(conn: conn, macNonce: macNonce)
+        handshakes[ObjectIdentifier(session)] = session
+        conn.stateUpdateHandler = { [weak self, weak session] state in
+            guard let self, let session else { return }
+            switch state {
+            case .failed, .cancelled: self.sessionEnded(session, why: "the connection ended")
+            default: break
+            }
+        }
+        let proof = LinkAuth.proof(key.symmetric, "ipad", macNonce, session.padNonce)
+        conn.sendLine(LinkProtocol.line(.auth(keyId: key.id, nonce: session.padNonce, proof: proof)))
+        // A handshake that never finishes holds nothing for long.
+        queue.asyncAfter(deadline: .now() + LinkProtocol.handshakeLimit) { [weak self, weak session] in
+            guard let self, let session, self.handshakes[ObjectIdentifier(session)] != nil, !session.pairing else { return }
+            self.log?("a handshake did not finish; closed")
+            session.conn.cancel()
+        }
+        if !rest.isEmpty { consume(session, rest) }
+        read(session)
+    }
+
+    private func read(_ session: Session) {
+        session.conn.receive(minimumIncompleteLength: 1, maximumLength: 4096) { [weak self] data, _, isComplete, error in
+            guard let self else { return }
+            if let data, !data.isEmpty { self.consume(session, data) }
+            if isComplete || error != nil {
+                self.sessionEnded(session, why: self.control === session ? "the Mac closed the link" : "the handshake was closed")
+            } else if self.control === session || self.handshakes[ObjectIdentifier(session)] != nil {
+                self.read(session)
+            }
+        }
+    }
+
+    private func consume(_ session: Session, _ data: Data) {
+        guard let lines = session.buffer.append(data) else {
+            log?("a line too long for the protocol; closed")
+            session.conn.cancel()
+            return
+        }
+        if control === session { lastHeard = Date() }
+        for line in lines {
+            if control === session {
+                if LinkProtocol.parseControl(line) == .ping {
+                    session.conn.sendLine(LinkProtocol.line(.pong))
+                }
+            } else if handshakes[ObjectIdentifier(session)] != nil {
+                handshake(session, line)
+            }
+        }
+    }
+
+    private func handshake(_ session: Session, _ line: String) {
+        switch LinkProtocol.parseAuth(line) {
+        case .authOK(let proof):
+            let expected = LinkAuth.proof(key.symmetric, "mac", session.macNonce, session.padNonce)
+            guard LinkAuth.same(proof, expected) else {
+                log?("a control connection failed to prove itself; closed")
+                session.conn.cancel()
+                return
+            }
+            if session.pairing {
+                session.pairing = false
+                notifyPairing(.paired)
+            }
+            adopt(session)
+        case .pair:
+            log?("the Mac does not know this iPad yet: pairing")
+            session.pairing = true
+            notifyPairing(.codeNeeded)
+            queue.asyncAfter(deadline: .now() + LinkProtocol.pairingLimit) { [weak self, weak session] in
+                guard let self, let session, self.handshakes[ObjectIdentifier(session)] != nil else { return }
+                self.log?("the pairing timed out")
+                session.conn.cancel()
+            }
+        case .pairWrong(let left):
+            notifyPairing(.wrongCode(triesLeft: left))
+        case .pairOK(let proof):
+            // The other end knows the code shown on the Mac: it is the Mac.
+            // Only now does the key leave this iPad.
+            guard let code = session.code,
+                  LinkAuth.same(proof, LinkAuth.proof(LinkAuth.codeKey(code), "pair-mac", session.macNonce, session.padNonce))
+            else {
+                log?("a pairing reply that does not know the code; closed")
+                session.conn.cancel()
+                return
+            }
+            session.conn.sendLine(LinkProtocol.line(.key(hex: key.hex)))
+        case .denied:
+            log?("the Mac refused this iPad")
+            session.conn.cancel()
+        default:
+            break
+        }
+    }
+
+    private func sessionEnded(_ session: Session, why: String) {
+        if handshakes.removeValue(forKey: ObjectIdentifier(session)) != nil {
+            if session.pairing { notifyPairing(.ended) }
+            return
+        }
+        if control === session { dropControl(why) }
+    }
+
+    /// A control connection that has proved itself becomes the link, unless
+    /// a working one is already there.
+    private func adopt(_ session: Session) {
+        handshakes.removeValue(forKey: ObjectIdentifier(session))
+        if let old = control {
             guard Date().timeIntervalSince(lastHeard) > LinkProtocol.healthyWithin else {
                 log?("refused a second control connection: the link is working")
-                conn.cancel()
+                session.conn.cancel()
                 return
             }
             log?("replaced a quiet control connection")
-            old.cancel()
+            control = nil
+            old.conn.cancel()
+            dropPending()
         }
-        control = conn
-        controlBuffer = buffer
+        control = session
         lastHeard = Date()
-        conn.stateUpdateHandler = { [weak self, weak conn] state in
-            guard let self, let conn else { return }
-            switch state {
-            case .failed, .cancelled:
-                if self.control === conn { self.dropControl("the connection ended") }
-            default:
-                break
-            }
-        }
         log?("linked to the Mac")
         notify(true)
-        for line in earlyLines { handleControl(line) }
-        readControl(conn)
-    }
-
-    private func readControl(_ conn: NWConnection) {
-        conn.receive(minimumIncompleteLength: 1, maximumLength: 4096) { [weak self] data, _, isComplete, error in
-            guard let self, self.control === conn else { return }
-            if let data, !data.isEmpty {
-                guard let lines = self.controlBuffer.append(data) else {
-                    self.dropControl("a line too long for the protocol")
-                    return
-                }
-                self.lastHeard = Date()
-                for line in lines { self.handleControl(line) }
-            }
-            if isComplete || error != nil {
-                self.dropControl("the Mac closed the link")
-            } else {
-                self.readControl(conn)
-            }
-        }
-    }
-
-    private func handleControl(_ line: String) {
-        if LinkProtocol.parseControl(line) == .ping {
-            control?.sendLine(LinkProtocol.line(.pong))
-        }
     }
 
     private func dropControl(_ why: String) {
-        guard let conn = control else { return }
+        guard let session = control else { return }
         log?("unlinked: \(why)")
         control = nil
-        controlBuffer = LineBuffer()
-        conn.cancel()
+        session.conn.cancel()
+        dropPending()
+        notify(false)
+    }
+
+    private func dropPending() {
         for (_, page) in pending { page.cancel() }
         pending.removeAll()
-        notify(false)
     }
 
     private func startSilenceTimer() {
@@ -264,5 +391,10 @@ final class LinkServer {
     private func notify(_ linked: Bool) {
         let handler = onLinkChange
         DispatchQueue.main.async { handler?(linked) }
+    }
+
+    private func notifyPairing(_ event: PairingEvent) {
+        let handler = onPairing
+        DispatchQueue.main.async { handler?(event) }
     }
 }

@@ -16,8 +16,17 @@ struct VampMacApp: App {
         MenuBarExtra {
             MenuContent(state: state, pad: pad, vamp: vamp)
         } label: {
-            // Filled icon when the bridge is up, hollow when it's down.
-            Image(systemName: state.connected ? "repeat.circle.fill" : "repeat.circle")
+            if let code = pad.pairingCode {
+                // An iPad waits for its pairing code: show it in the menu
+                // bar itself, spaced in threes as the iPad's field reads.
+                HStack(spacing: 4) {
+                    Image(systemName: "key.fill")
+                    Text("\(code.prefix(3)) \(code.suffix(3))").monospacedDigit()
+                }
+            } else {
+                // Filled when the bridge is up, hollow when it's down.
+                Image(systemName: state.connected ? "repeat.circle.fill" : "repeat.circle")
+            }
         }
         .menuBarExtraStyle(.menu)
     }
@@ -79,6 +88,11 @@ struct MenuContent: View {
 
         Text(statusLine)
         Text(pad.statusLine)
+        if let code = pad.pairingCode {
+            // Spaced in threes, as the iPad's field shows it.
+            Text("Pair Vamp for iPad: type \(code.prefix(3)) \(code.suffix(3)) on the iPad")
+        }
+        Button("Forget Paired iPads") { pad.forgetPairedIPads() }
 
         Divider()
 

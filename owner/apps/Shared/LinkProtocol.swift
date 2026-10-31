@@ -1,25 +1,46 @@
 import Foundation
 
-/// The wire between Vamp for Mac and Vamp for iPad.
+/// The wire between Vamp for Mac and Vamp for iPad (ADR-488; authenticated
+/// since version 2, ADR-494).
 ///
 /// usbmux (Apple's device channel over the USB cable) only lets the Mac
 /// open connections to a port on the iPad, never the other way. So the iPad
 /// app listens on `devicePort` and the Mac dials it, twice over:
 ///
-/// - one **control** connection, held open while the cable is in. The iPad
-///   asks for streams on it (`OPEN <id>`); the Mac pings it (`PING`/`PONG`)
-///   so a half-open link is noticed in seconds, not at TCP's leisure.
+/// - one **control** connection, held open while the cable is in. It opens
+///   with a handshake that proves both ends hold the key they share
+///   (`LinkAuth`), or pairs them once with a code. Then the iPad asks for
+///   streams on it (`OPEN <id>`) and the Mac pings it (`PING`/`PONG`) so a
+///   half-open link is noticed in seconds, not at TCP's leisure.
 /// - one **stream** connection per connection the iPad's web view opens
 ///   (the page, its assets, the bridge WebSocket). It starts with
-///   `VAMPLINK 1 STREAM <id>` and is raw bytes after that line, spliced on
-///   the Mac to its own page server.
+///   `VAMPLINK 2 STREAM <id> <tag>` — the tag only the paired Mac in this
+///   session can make — and is raw bytes after that line, spliced on the
+///   Mac to its own page server.
+///
+/// The control handshake, Mac first:
+///
+///     VAMPLINK 2 CONTROL <mac nonce>
+///                                  AUTH <key id> <pad nonce> <pad proof>
+///     AUTHOK <mac proof>                       (the Mac knows the key)
+///
+///     PAIR                                     (it does not: a code is shown on the Mac)
+///                                  PAIRCODE <proof by the code>
+///     PAIRWRONG <tries left> | PAIROK <proof by the code>
+///                                  KEY <the key>
+///     AUTHOK <mac proof>
+///
+///     DENIED                                   (a proof failed, or too many tries)
 ///
 /// Every message is one ASCII line ending in `\n`. The first line on any
 /// connection says what it is. An iPad that does not speak the Mac's
 /// version answers `VAMPLINK-UNSUPPORTED <versions it speaks>` before it
 /// closes, so the Mac can say "update Vamp for iPad" instead of "not open".
+/// Version 1 (no handshake, sequential stream ids) is spoken only by the Mac,
+/// to a Vamp for iPad installed before version 2, while it is allowed.
 enum LinkProtocol {
-    static let version = 1
+    static let version = 2
+    static let legacyVersion = 1
 
     /// The timings both ends must agree on, in one place.
     /// The Mac pings every `pingInterval` and drops a control connection
@@ -34,6 +55,12 @@ enum LinkProtocol {
     static let healthyWithin: TimeInterval = 3
     /// How long a page connection waits for the Mac's stream.
     static let streamWait: TimeInterval = 5
+    /// How long a handshake may take before it is dropped; a pairing waits
+    /// for a person, so it has longer.
+    static let handshakeLimit: TimeInterval = 10
+    static let pairingLimit: TimeInterval = 180
+    /// Wrong codes before the Mac ends the pairing (a new code on the next).
+    static let pairingTries = 5
 
     /// The first line of an iPad's refusal of a version it does not speak.
     static let unsupported = "VAMPLINK-UNSUPPORTED"
@@ -41,8 +68,8 @@ enum LinkProtocol {
     static func unsupportedLine() -> String { "\(unsupported) \(version)\n" }
 
     enum Hello: Equatable {
-        case control
-        case stream(UInt32)
+        case control(nonce: String)
+        case stream(id: UInt32, tag: String)
     }
 
     enum Control: Equatable {
@@ -51,12 +78,27 @@ enum LinkProtocol {
         case pong
     }
 
+    enum Auth: Equatable {
+        case auth(keyId: String, nonce: String, proof: String)
+        case authOK(proof: String)
+        case pair
+        case pairCode(proof: String)
+        case pairOK(proof: String)
+        case pairWrong(triesLeft: Int)
+        case key(hex: String)
+        case denied
+    }
+
     static func line(_ hello: Hello) -> String {
         switch hello {
-        case .control: return "VAMPLINK \(version) CONTROL\n"
-        case .stream(let id): return "VAMPLINK \(version) STREAM \(id)\n"
+        case .control(let nonce): return "VAMPLINK \(version) CONTROL \(nonce)\n"
+        case .stream(let id, let tag): return "VAMPLINK \(version) STREAM \(id) \(tag)\n"
         }
     }
+
+    /// Version 1's hellos, for a Vamp for iPad installed before version 2.
+    static func legacyControlLine() -> String { "VAMPLINK \(legacyVersion) CONTROL\n" }
+    static func legacyStreamLine(_ id: UInt32) -> String { "VAMPLINK \(legacyVersion) STREAM \(id)\n" }
 
     /// Whether `line` is a hello of a version this end does not speak: a
     /// `VAMPLINK` line, but not this version's.
@@ -66,13 +108,13 @@ enum LinkProtocol {
     }
 
     static func parseHello(_ line: String) -> Hello? {
-        let parts = line.split(separator: " ")
+        let parts = line.split(separator: " ").map(String.init)
         guard parts.count >= 3, parts[0] == "VAMPLINK", parts[1] == "\(version)" else { return nil }
         switch parts[2] {
-        case "CONTROL" where parts.count == 3:
-            return .control
-        case "STREAM" where parts.count == 4:
-            return UInt32(parts[3]).map(Hello.stream)
+        case "CONTROL" where parts.count == 4 && isToken(parts[3]):
+            return .control(nonce: parts[3])
+        case "STREAM" where parts.count == 5 && isToken(parts[4]):
+            return UInt32(parts[3]).map { .stream(id: $0, tag: parts[4]) }
         default:
             return nil
         }
@@ -94,6 +136,40 @@ enum LinkProtocol {
         case ("PONG", 1): return .pong
         default: return nil
         }
+    }
+
+    static func line(_ message: Auth) -> String {
+        switch message {
+        case .auth(let keyId, let nonce, let proof): return "AUTH \(keyId) \(nonce) \(proof)\n"
+        case .authOK(let proof): return "AUTHOK \(proof)\n"
+        case .pair: return "PAIR\n"
+        case .pairCode(let proof): return "PAIRCODE \(proof)\n"
+        case .pairOK(let proof): return "PAIROK \(proof)\n"
+        case .pairWrong(let left): return "PAIRWRONG \(left)\n"
+        case .key(let hex): return "KEY \(hex)\n"
+        case .denied: return "DENIED\n"
+        }
+    }
+
+    static func parseAuth(_ line: String) -> Auth? {
+        let parts = line.split(separator: " ").map(String.init)
+        guard let head = parts.first, parts.dropFirst().allSatisfy(isToken) else { return nil }
+        switch (head, parts.count) {
+        case ("AUTH", 4): return .auth(keyId: parts[1], nonce: parts[2], proof: parts[3])
+        case ("AUTHOK", 2): return .authOK(proof: parts[1])
+        case ("PAIR", 1): return .pair
+        case ("PAIRCODE", 2): return .pairCode(proof: parts[1])
+        case ("PAIROK", 2): return .pairOK(proof: parts[1])
+        case ("PAIRWRONG", 2): return Int(parts[1]).map { .pairWrong(triesLeft: $0) }
+        case ("KEY", 2): return .key(hex: parts[1])
+        case ("DENIED", 1): return .denied
+        default: return nil
+        }
+    }
+
+    /// Hex and digits only, of a sane length: nonces, ids, proofs, keys.
+    private static func isToken(_ s: String) -> Bool {
+        !s.isEmpty && s.count <= 128 && s.allSatisfy { $0.isHexDigit }
     }
 }
 

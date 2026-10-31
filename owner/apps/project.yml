@@ -93,6 +93,8 @@ targets:
       - Mac/UsbMux.swift
       - Mac/LinkClient.swift
       - Mac/SupervisorRules.swift
+      - Mac/PairedIPads.swift
+      - Mac/VampLog.swift
       - Tests
     settings:
       base:

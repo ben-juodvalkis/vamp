@@ -49,6 +49,13 @@ The page's HTML and scripts stay open: they hold nothing secret.
    further to check, and nothing on a network can produce one. (Ben, 2026-10-27: "cable is
    enough for trust"; Wi-Fi stays available when needed, through pairing.)
 
+   Another app on the same iPad can reach the link's port, though (the native apps audit,
+   2026-10-31). So the relay trusts only a link that has proved itself: since ADR-494 Vamp for
+   iPad and Vamp for Mac share a key, paired once with a code the Mac shows and the iPad's
+   person types, and every control connection and stream proves it. An older Vamp for iPad
+   still links unauthenticated, said in the menu, until it is updated; an iPad that has
+   paired never does.
+
    Safari over the cable is no longer recognizable by address. This rule trusted the link's
    subnet, `network.ipad.usbc` /24 (`192.168.100.0/24`), but since 2026-10-27 macOS keeps the
    iPad's USB network interface private: it cannot be given that address and self-assigns

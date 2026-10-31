@@ -56,7 +56,17 @@ final class PadModel: ObservableObject {
     /// Bumped to make the web view load the page again.
     @Published private(set) var reloadToken = 0
 
-    private let server = LinkServer(devicePort: PadPorts.device, pagePort: PadPorts.localPage)
+    /// Pairing with a Mac that does not know this iPad yet (ADR-494).
+    enum Pairing: Equatable {
+        case none
+        /// Asking for the code Vamp for Mac's menu shows.
+        case askCode
+        case wrongCode(triesLeft: Int)
+        case ended
+    }
+    @Published private(set) var pairing: Pairing = .none
+
+    private let server = LinkServer(devicePort: PadPorts.device, pagePort: PadPorts.localPage, key: LinkKeychain.loadOrCreate())
     /// The link's state changes, for Console.app and Xcode's console.
     private static let log = Logger(subsystem: "com.benjuodvalkis.vamp.ipad", category: "link")
 
@@ -64,6 +74,9 @@ final class PadModel: ObservableObject {
         server.log = { Self.log.notice("\($0, privacy: .public)") }
         server.onLinkChange = { [weak self] up in
             Task { @MainActor in self?.linkChanged(up) }
+        }
+        server.onPairing = { [weak self] event in
+            Task { @MainActor in self?.pairingChanged(event) }
         }
         server.start()
         updateIdleTimer()
@@ -78,8 +91,22 @@ final class PadModel: ObservableObject {
 
     var pageURL: URL { URL(string: "http://localhost:\(PadPorts.localPage)/")! }
 
+    private func pairingChanged(_ event: LinkServer.PairingEvent) {
+        switch event {
+        case .codeNeeded: pairing = .askCode
+        case .wrongCode(let left): pairing = .wrongCode(triesLeft: left)
+        case .paired: pairing = .none
+        case .ended: pairing = pairing == .none ? .none : .ended
+        }
+    }
+
+    func submitPairingCode(_ code: String) {
+        server.submitCode(code)
+    }
+
     private func linkChanged(_ up: Bool) {
         linked = up
+        if up { pairing = .none }
         updateIdleTimer()
         // A loaded page reconnects by itself (its socket retries every
         // second); only a page that never loaded needs loading again.
@@ -111,7 +138,9 @@ struct PadRoot: View {
             Color.black
             PadWebView(model: model)
                 .opacity(model.pageLoaded ? 1 : 0)
-            if !model.pageLoaded {
+            if model.pairing != .none && !model.linked {
+                PairingView(model: model)
+            } else if !model.pageLoaded {
                 WaitingView(linked: model.linked)
             } else if !model.linked {
                 VStack {
@@ -146,6 +175,59 @@ struct WaitingView: View {
             }
         }
         .foregroundStyle(.white)
+    }
+}
+
+/// The first link with a Mac: type the code its menu shows.
+struct PairingView: View {
+    @ObservedObject var model: PadModel
+    @State private var code = ""
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "key")
+                .font(.system(size: 56, weight: .light))
+            Text(model.pairing == .ended ? "Pairing ended" : "Pair with the Mac")
+                .font(.title2.weight(.semibold))
+            Text(message)
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 460)
+            if model.pairing != .ended {
+                TextField("000000", text: $code)
+                    .keyboardType(.numberPad)
+                    .textContentType(.oneTimeCode)
+                    .font(.system(size: 40, weight: .medium, design: .monospaced))
+                    .multilineTextAlignment(.center)
+                    .frame(width: 260)
+                    .padding(.vertical, 8)
+                    .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+                    .focused($focused)
+                    .onChange(of: code) { _, typed in
+                        let digits = String(typed.filter(\.isNumber).prefix(6))
+                        if digits != typed { code = digits }
+                        if digits.count == 6 {
+                            model.submitPairingCode(digits)
+                            code = ""
+                        }
+                    }
+            }
+        }
+        .foregroundStyle(.white)
+        .onAppear { focused = true }
+    }
+
+    private var message: String {
+        switch model.pairing {
+        case .wrongCode(let left):
+            return "That code was not right. \(left) \(left == 1 ? "try" : "tries") left: type the code beside the key in the Mac's menu bar."
+        case .ended:
+            return "The Mac will show a new code in a few seconds: type that one."
+        default:
+            return "Vamp for Mac shows a six-digit code in the Mac's menu bar, beside a key. Type it here, once: after that this iPad and this Mac know each other."
+        }
     }
 }
 

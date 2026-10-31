@@ -22,15 +22,46 @@ func freePort() -> UInt16 {
 /// usbmux, with a stand-in for the Mac's page server behind it.
 final class LinkProtocolTests: XCTestCase {
     func testHelloRoundTrip() {
-        XCTAssertEqual(LinkProtocol.parseHello("VAMPLINK 1 CONTROL"), .control)
-        XCTAssertEqual(LinkProtocol.parseHello("VAMPLINK 1 STREAM 42"), .stream(42))
-        XCTAssertEqual(LinkProtocol.line(.stream(42)), "VAMPLINK 1 STREAM 42\n")
+        XCTAssertEqual(LinkProtocol.parseHello("VAMPLINK 2 CONTROL 0a1b"), .control(nonce: "0a1b"))
+        XCTAssertEqual(LinkProtocol.parseHello("VAMPLINK 2 STREAM 42 beef"), .stream(id: 42, tag: "beef"))
+        XCTAssertEqual(LinkProtocol.line(.stream(id: 42, tag: "beef")), "VAMPLINK 2 STREAM 42 beef\n")
+        // Version 1, and a version 2 hello without its nonce or tag, are not hellos.
+        XCTAssertNil(LinkProtocol.parseHello("VAMPLINK 1 CONTROL"))
         XCTAssertNil(LinkProtocol.parseHello("VAMPLINK 2 CONTROL"))
-        XCTAssertTrue(LinkProtocol.isOtherVersion("VAMPLINK 2 CONTROL abc"))
-        XCTAssertFalse(LinkProtocol.isOtherVersion("VAMPLINK 1 CONTROL"))
+        XCTAssertNil(LinkProtocol.parseHello("VAMPLINK 2 STREAM 42"))
+        XCTAssertNil(LinkProtocol.parseHello("VAMPLINK 2 CONTROL not-hex"))
+        XCTAssertTrue(LinkProtocol.isOtherVersion("VAMPLINK 1 CONTROL"))
+        XCTAssertFalse(LinkProtocol.isOtherVersion("VAMPLINK 2 CONTROL abc"))
         XCTAssertFalse(LinkProtocol.isOtherVersion("GET / HTTP/1.1"))
         XCTAssertNil(LinkProtocol.parseHello("GET / HTTP/1.1"))
-        XCTAssertNil(LinkProtocol.parseHello("VAMPLINK 1 STREAM x"))
+        XCTAssertEqual(LinkProtocol.legacyControlLine(), "VAMPLINK 1 CONTROL\n")
+    }
+
+    func testAuthRoundTrip() {
+        let messages: [LinkProtocol.Auth] = [
+            .auth(keyId: "ab12", nonce: "cd34", proof: "ef56"), .authOK(proof: "aa"), .pair,
+            .pairCode(proof: "bb"), .pairOK(proof: "cc"), .pairWrong(triesLeft: 3), .key(hex: "dd"), .denied
+        ]
+        for message in messages {
+            XCTAssertEqual(LinkProtocol.parseAuth(String(LinkProtocol.line(message).dropLast())), message)
+        }
+        XCTAssertNil(LinkProtocol.parseAuth("AUTH a b"))
+        XCTAssertNil(LinkProtocol.parseAuth("KEY not hex at all"))
+    }
+
+    func testProofsAreBoundToTheirRoleAndSession() {
+        let key = LinkKey.random().symmetric
+        let ipad = LinkAuth.proof(key, "ipad", "m1", "p1")
+        XCTAssertEqual(ipad, LinkAuth.proof(key, "ipad", "m1", "p1"))
+        XCTAssertNotEqual(ipad, LinkAuth.proof(key, "mac", "m1", "p1"), "the iPad's proof is not the Mac's")
+        XCTAssertNotEqual(ipad, LinkAuth.proof(key, "ipad", "m2", "p1"), "nor good in another session")
+        XCTAssertNotEqual(ipad, LinkAuth.proof(LinkKey.random().symmetric, "ipad", "m1", "p1"))
+        XCTAssertTrue(LinkAuth.same("abc", "abc"))
+        XCTAssertFalse(LinkAuth.same("abc", "abd"))
+        let k = LinkKey.random()
+        XCTAssertEqual(LinkKey(hex: k.hex), k)
+        XCTAssertEqual(k.id.count, 16)
+        XCTAssertTrue(LinkAuth.newCode().allSatisfy(\.isNumber))
     }
 
     func testControlRoundTrip() {
@@ -68,18 +99,30 @@ final class LinkEndToEndTests: XCTestCase {
     private var macServer: NWListener!
     private var devicePort: UInt16 = 0
     private var pagePort: UInt16 = 0
+    /// The iPad's key, and the Mac's store of paired iPads (in a scratch file).
+    private let key = LinkKey.random()
+    private var paired: PairedIPads!
+    private var pairedFile: URL!
 
     override func setUp() {
         super.setUp()
         devicePort = freePort()
         pagePort = freePort()
+        pairedFile = FileManager.default.temporaryDirectory.appendingPathComponent("paired-\(UUID().uuidString).json")
+        paired = PairedIPads(file: pairedFile)
     }
 
     override func tearDown() {
         client?.stop()
         server?.stop()
         macServer?.cancel()
+        try? FileManager.default.removeItem(at: pairedFile)
         super.tearDown()
+    }
+
+    private func makeClient(macPort: UInt16, serial: String? = nil, legacyAllowed: @escaping () -> Bool = { true }) -> LinkClient {
+        LinkClient(dial: UsbMux.loopbackDialer(port: devicePort), macPort: macPort, queue: queue,
+                   paired: paired, serial: serial, legacyAllowed: legacyAllowed)
     }
 
     /// The Mac's page server stand-in: echoes whatever it is sent.
@@ -110,15 +153,17 @@ final class LinkEndToEndTests: XCTestCase {
         return listener.port!.rawValue
     }
 
+    /// The iPad and the Mac, already paired, linked.
     private func startLink(macPort: UInt16) {
-        server = LinkServer(devicePort: devicePort, pagePort: pagePort)
+        paired.add(key, serial: nil)
+        server = LinkServer(devicePort: devicePort, pagePort: pagePort, key: key)
         let linked = expectation(description: "linked")
         var fulfilled = false
         server.onLinkChange = { up in
             if up && !fulfilled { fulfilled = true; linked.fulfill() }
         }
         server.start()
-        client = LinkClient(dial: UsbMux.loopbackDialer(port: devicePort), macPort: macPort, queue: queue)
+        client = makeClient(macPort: macPort)
         client!.start()
         wait(for: [linked], timeout: 5)
     }
@@ -190,7 +235,7 @@ final class LinkEndToEndTests: XCTestCase {
     }
 
     func testAPageConnectionWithNoMacIsRefusedAtOnce() {
-        server = LinkServer(devicePort: devicePort, pagePort: pagePort)
+        server = LinkServer(devicePort: devicePort, pagePort: pagePort, key: key)
         server.start()
         Thread.sleep(forTimeInterval: 0.3)
         let started = Date()
@@ -214,7 +259,7 @@ final class LinkEndToEndTests: XCTestCase {
         wait(for: [down], timeout: 3)
 
         let started = Date()
-        client = LinkClient(dial: UsbMux.loopbackDialer(port: devicePort), macPort: macPort, queue: queue)
+        client = makeClient(macPort: macPort)
         client!.start()
         wait(for: [up], timeout: 5)
         XCTAssertLessThan(Date().timeIntervalSince(started), 2)
@@ -244,12 +289,15 @@ final class LinkEndToEndTests: XCTestCase {
         return conn
     }
 
-    func testANewcomerCannotTakeAWorkingLinkOver() {
+    func testAStandInForTheMacWithoutTheKeyIsNotLinked() {
         startLink(macPort: startEchoServer())
-        let refused = expectation(description: "the newcomer is closed")
+        let refused = expectation(description: "the impostor is closed")
         var openedForIntruder = false
-        let intruder = rawLink(LinkProtocol.line(.control), lines: { line in
+        var intruder: NWConnection!
+        intruder = rawLink(LinkProtocol.line(.control(nonce: "abcd")), lines: { line in
             if line.hasPrefix("OPEN") { openedForIntruder = true }
+            // It cannot make the Mac's proof, so it guesses one.
+            if line.hasPrefix("AUTH ") { intruder.sendLine(LinkProtocol.line(.authOK(proof: "00ff"))) }
         }, closed: { refused.fulfill() })
         wait(for: [refused], timeout: 3)
         // The Mac still has the link: a page connection crosses it.
@@ -259,12 +307,12 @@ final class LinkEndToEndTests: XCTestCase {
     }
 
     func testAnotherVersionIsToldSoBeforeTheIPadCloses() {
-        server = LinkServer(devicePort: devicePort, pagePort: pagePort)
+        server = LinkServer(devicePort: devicePort, pagePort: pagePort, key: key)
         server.start()
         Thread.sleep(forTimeInterval: 0.3)
         let told = expectation(description: "unsupported")
         var answer = ""
-        let conn = rawLink("VAMPLINK 9 CONTROL\n", lines: { line in
+        let conn = rawLink("VAMPLINK 1 CONTROL\n", lines: { line in
             answer = line
             told.fulfill()
         })
@@ -273,26 +321,166 @@ final class LinkEndToEndTests: XCTestCase {
         conn.cancel()
     }
 
-    func testAStreamForAnIdNobodyAskedForIsClosed() {
+    func testAStreamWithoutTheSessionsTagIsClosed() {
         startLink(macPort: startEchoServer())
         let closed = expectation(description: "closed")
-        let conn = rawLink(LinkProtocol.line(.stream(12345)), lines: { _ in }, closed: { closed.fulfill() })
+        let conn = rawLink(LinkProtocol.line(.stream(id: 12345, tag: "abcdef")), lines: { _ in }, closed: { closed.fulfill() })
         wait(for: [closed], timeout: 3)
         conn.cancel()
     }
 
     func testASilentLinkIsDropped() {
-        server = LinkServer(devicePort: devicePort, pagePort: pagePort)
+        server = LinkServer(devicePort: devicePort, pagePort: pagePort, key: key)
         server.silenceLimit = 1
         let up = expectation(description: "linked")
         let down = expectation(description: "dropped")
         server.onLinkChange = { linked in linked ? up.fulfill() : down.fulfill() }
         server.start()
         Thread.sleep(forTimeInterval: 0.3)
-        // A control connection that then says nothing, as a half-open one.
-        let conn = rawLink(LinkProtocol.line(.control), lines: { _ in })
+        // The Mac's side of the handshake, by hand, then silence, as a
+        // half-open connection.
+        var conn: NWConnection!
+        conn = rawLink(LinkProtocol.line(.control(nonce: "abcd")), lines: { line in
+            guard case .auth(_, let padNonce, _) = LinkProtocol.parseAuth(line) else { return }
+            conn.sendLine(LinkProtocol.line(.authOK(proof: LinkAuth.proof(self.key.symmetric, "mac", "abcd", padNonce))))
+        })
         wait(for: [up], timeout: 3)
         wait(for: [down], timeout: 4)
         conn.cancel()
+    }
+
+    // MARK: - Pairing
+
+    func testAnIPadTheMacDoesNotKnowPairsWithTheCodeAndIsRememberedBySerial() {
+        let macPort = startEchoServer()
+        server = LinkServer(devicePort: devicePort, pagePort: pagePort, key: key)
+        let asked = expectation(description: "the iPad asks for the code")
+        let linked = expectation(description: "linked")
+        let pairedEvent = expectation(description: "paired")
+        server.onPairing = { if $0 == .codeNeeded { asked.fulfill() } else if $0 == .paired { pairedEvent.fulfill() } }
+        server.onLinkChange = { if $0 { linked.fulfill() } }
+        server.start()
+        var shown: String?
+        client = makeClient(macPort: macPort, serial: "IPAD-1")
+        client!.onPairingCode = { code in if let code { shown = code } }
+        client!.start()
+        wait(for: [asked], timeout: 5)
+        // The person types the code the Mac's menu shows.
+        server.submitCode(try! XCTUnwrap(shown))
+        wait(for: [linked, pairedEvent], timeout: 5)
+        XCTAssertEqual(paired.key(for: key.id), key, "the Mac keeps the iPad's key")
+        XCTAssertTrue(paired.knows(serial: "IPAD-1"))
+        XCTAssertEqual(PairedIPads(file: pairedFile).key(for: key.id), key, "on disk too")
+        XCTAssertEqual(roundTrip(Data("paired".utf8)), Data("paired".utf8))
+    }
+
+    func testAWrongCodeIsToldSoAndTooManyEndThePairing() {
+        let macPort = startEchoServer()
+        server = LinkServer(devicePort: devicePort, pagePort: pagePort, key: key)
+        var events: [LinkServer.PairingEvent] = []
+        let ended = expectation(description: "ended")
+        let asked = expectation(description: "asked")
+        asked.assertForOverFulfill = false
+        server.onPairing = { event in
+            events.append(event)
+            if event == .codeNeeded { asked.fulfill() }
+            if event == .ended { ended.fulfill() }
+        }
+        server.start()
+        var shown = ""
+        client = makeClient(macPort: macPort)
+        client!.onPairingCode = { code in if let code { shown = code } }
+        client!.start()
+        wait(for: [asked], timeout: 5)
+        let wrong = shown == "000000" ? "111111" : "000000"
+        for _ in 0..<LinkProtocol.pairingTries {
+            server.submitCode(wrong)
+            Thread.sleep(forTimeInterval: 0.1)
+        }
+        wait(for: [ended], timeout: 5)
+        XCTAssertTrue(events.contains(.wrongCode(triesLeft: LinkProtocol.pairingTries - 1)))
+        XCTAssertNil(paired.key(for: key.id), "nothing was paired")
+    }
+
+    func testAStandInForTheIPadWithoutItsKeyIsDenied() {
+        // The Mac knows this iPad's key; another app answering on its port
+        // names it but cannot prove it.
+        paired.add(key, serial: nil)
+        let listener = try! NWListener(using: .loopbackListener(port: devicePort))
+        let denied = expectation(description: "denied")
+        listener.newConnectionHandler = { conn in
+            conn.start(queue: self.queue)
+            var buffer = LineBuffer()
+            func read() {
+                conn.receive(minimumIncompleteLength: 1, maximumLength: 4096) { data, _, done, _ in
+                    for line in data.flatMap({ buffer.append($0) }) ?? [] {
+                        if case .control = LinkProtocol.parseHello(line) {
+                            conn.sendLine(LinkProtocol.line(.auth(keyId: self.key.id, nonce: "aa", proof: "bb")))
+                        }
+                        if LinkProtocol.parseAuth(line) == .denied { denied.fulfill() }
+                    }
+                    if !done { read() }
+                }
+            }
+            read()
+        }
+        listener.start(queue: queue)
+        var linked = false
+        client = makeClient(macPort: freePort())
+        client!.onLinkChange = { if $0 { linked = true } }
+        client!.start()
+        wait(for: [denied], timeout: 5)
+        client!.stop()
+        listener.cancel()
+        XCTAssertFalse(linked)
+    }
+
+    // MARK: - A Vamp for iPad from before the handshake
+
+    /// The iPad's end as version 1 spoke it: it closes on any hello but its
+    /// own, and links on `VAMPLINK 1 CONTROL` with no proof.
+    private func startLegacyIPad() -> (NWListener, XCTestExpectation) {
+        let listener = try! NWListener(using: .loopbackListener(port: devicePort))
+        let legacyHello = expectation(description: "spoken to in version 1")
+        legacyHello.assertForOverFulfill = false
+        listener.newConnectionHandler = { conn in
+            conn.start(queue: self.queue)
+            var buffer = LineBuffer()
+            conn.receive(minimumIncompleteLength: 1, maximumLength: 4096) { data, _, _, _ in
+                let lines = data.flatMap { buffer.append($0) } ?? []
+                if lines.first == String(LinkProtocol.legacyControlLine().dropLast()) {
+                    legacyHello.fulfill()
+                } else {
+                    conn.cancel()
+                }
+            }
+        }
+        listener.start(queue: queue)
+        return (listener, legacyHello)
+    }
+
+    func testAnOlderIPadAppGetsTheUnauthenticatedLinkAndTheMacSaysSo() {
+        let (listener, legacyHello) = startLegacyIPad()
+        let legacy = expectation(description: "unauthenticated")
+        client = makeClient(macPort: freePort(), serial: "OLD-IPAD")
+        client!.onLegacy = { if $0 { legacy.fulfill() } }
+        client!.start()
+        wait(for: [legacyHello, legacy], timeout: 5)
+        listener.cancel()
+    }
+
+    func testAnIPadThatHasPairedIsNeverDowngraded() {
+        paired.add(key, serial: "IPAD-1")
+        let (listener, legacyHello) = startLegacyIPad()
+        legacyHello.isInverted = true
+        let refused = expectation(description: "refused")
+        refused.assertForOverFulfill = false
+        client = makeClient(macPort: freePort(), serial: "IPAD-1",
+                            legacyAllowed: { [paired] in !paired!.knows(serial: "IPAD-1") })
+        client!.onIncompatible = { _ in refused.fulfill() }
+        client!.start()
+        wait(for: [refused], timeout: 5)
+        wait(for: [legacyHello], timeout: 0.5)
+        listener.cancel()
     }
 }
