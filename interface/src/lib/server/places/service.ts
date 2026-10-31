@@ -58,6 +58,9 @@ import {
 import { findLiveDatabase, indexRowsFingerprint, indexRowsOf, openIndex, placeFileId, scanIndexPlace, type IndexHandle } from './indexScan';
 import { MANIFEST_NAME, readManifest } from './placesManifest';
 import { CATEGORY_ROLES, PACKS_SOURCE, type LiveCategory } from './categoryScan';
+
+/** Where + Effect opens when `catalog.effectsPlace` names no Place. */
+const EFFECTS_CATEGORY: LiveCategory = 'Audio Effects';
 import { CategoryScans } from './categoryScans';
 import { collectionRoots, collectionStamp, scanCollection } from './collectionScan';
 
@@ -442,12 +445,14 @@ export class PlacesService {
 	}
 
 	/**
-	 * Whether a source is the effects Place (`catalog.effectsPlace`, by its
-	 * sidebar name): the one + Effect opens. It is cataloged ticked or not.
+	 * Whether a source is the effects Place, the one + Effect opens: the
+	 * Place `catalog.effectsPlace` names (by its sidebar name), else Live's
+	 * Audio Effects category (Ben, 2026-10-31). It is cataloged ticked or not.
 	 */
-	private isEffectsPlace(s: Pick<LibrarySource, 'name'>): boolean {
+	private isEffectsPlace(s: Pick<LibrarySource, 'name' | 'kind'>): boolean {
 		const name = configSection<{ effectsPlace?: string }>('catalog').effectsPlace;
-		return !!name && s.name === name;
+		if (name) return s.name === name;
+		return s.kind === 'category' && s.name === EFFECTS_CATEGORY;
 	}
 
 	/** Rebuild every ticked Place (and the effects Place) whose stamp changed, drop the rest, bump once. Returns whether anything changed. */
@@ -960,7 +965,7 @@ export class PlacesService {
 
 	/** The folders of every Place the browser has a catalog of: what a preset read may open (`/api/places/preset-params`). */
 	catalogRoots(): string[] {
-		return this.sources.filter((s) => this.catalogs.has(s.key)).flatMap((s) => this.catalogs.get(s.key)!.roots ?? [s.path]);
+		return [...new Set(this.sources.filter((s) => this.catalogs.has(s.key)).flatMap((s) => this.catalogs.get(s.key)!.roots ?? [s.path]))];
 	}
 
 	/** Today's `index.json`: the ticked Places in sidebar order. */

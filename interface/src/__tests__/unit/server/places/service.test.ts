@@ -320,9 +320,30 @@ describe('PlacesService, the effects Place', () => {
 		expect(s.indexJson().places.find((p) => p.id === 'key')).toMatchObject({ effects: true, hidden: false });
 	});
 
-	it('names no effects Place by default', () => {
+	it('names no effects Place by default on a Mac with no Live index', () => {
 		const s = make();
 		s.setTicks([firstPlace(s).key]);
 		expect(s.indexJson().places.some((p) => p.effects)).toBe(false);
+	});
+
+	it("opens + Effect on Live's Audio Effects category by default, ticked or not", () => {
+		const dbDir = join(root, 'Live Database');
+		mkdirSync(dbDir, { recursive: true });
+		const f = liveIndexFixture(join(dbDir, 'Live-files-12300.db'));
+		f.place(['Users', 'me', 'Packs', 'Drum Booth'], 'Drum Booth', 0);
+		f.file(['Users', 'me', 'Packs', 'Drum Booth', 'FX'], 'Crush.adv', { device_id: 'device:ableton:audiofx:Redux2' });
+		f.db.close();
+		vi.stubEnv('LOOPING_CATALOG_SOURCE', 'disk');
+		service = createPlacesService({
+			prefsDir: join(root, 'prefs'),
+			ticksFile: join(root, 'logs', 'places.json'),
+			cacheDir: join(root, 'cache'),
+			liveDatabaseDir: dbDir,
+			auDirs: []
+		});
+		service.setTicks([firstPlace(service).key]);
+		expect(service.indexJson().places.find((p) => p.effects)).toMatchObject({ name: 'Audio Effects', hidden: true, totalItems: 1 });
+		service.setTicks([firstPlace(service).key, 'category:Audio Effects']);
+		expect(service.indexJson().places.find((p) => p.effects)).toMatchObject({ name: 'Audio Effects', hidden: false });
 	});
 });
