@@ -132,6 +132,37 @@ on Live's side, which measured fine.
   built .557). That load's 9 s went to Live creating the track, with
   "Audio queue timeout" lines every 3 s while the Mac's screen was locked.
 
+## Addendum: Live's Collections (2026-10-31)
+Ben asked for Live's Collections, the colored tags, on the rail. Each one
+`Library.cfg` names (`<LabelInfo Uri="color:colors=N" DisplayName=…>`) is a
+source in Settings, its own group after the categories, keyed by its number
+(`collection:N`) so a rename in Live keeps the tick. Its members are the
+index rows with bit N of `files.colors` set (bit 0 is on every file), read
+on the server's thread: 6 ms for every tagged row on the rig, a millisecond
+or two per Collection (`collectionScan.ts`).
+
+- A preset, sample, clip or Max device is an item at the Collection's top,
+  naming its root for the load (`library`, `pack:<name>`, `place:<name>`).
+- A tagged folder or Pack is a folder of everything in it ("Designer
+  Drums", 329 items).
+- **A Live device loads by class.** Live lists its own devices as folders
+  under Built-in (`device:ableton:audiofx:Eq8`); each is an item whose load
+  names `native:<class>` and its own name. An effect goes through
+  `device/load`, an instrument through `prepare_for_preset`, which gained
+  the by-name insert (Ben: "there must be a way to load instruments").
+  The surface inserts a class `NATIVE_DEVICE_NAMES` lacks by the name the
+  load gives, Live's own from its index, where it refused it before.
+- Left out and counted in the log: plug-ins (no load names one yet) and a
+  Max device inside Live's app (LFO). The rig's "Plugins" and "All Inputs"
+  are almost all plug-ins, so they show one item each.
+- Every Built-in device is in the index twice, once under no Place (a stale
+  copy of another Live); only rows under a root `places` lists are read.
+
+Not measured in Live yet: inserting the classes the map lacks (EQ Eight,
+Limiter, Grain Delay…) and a native instrument onto a track that already
+has one (in place of the old, beside it, or refused). Both need the new
+surface, which runs after a Live restart.
+
 ## Consequences
 - The rail grows by one button per ticked category, and its bands share
   out the extra. With all eight ticked (the seven and Packs) beside the

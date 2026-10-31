@@ -36,7 +36,7 @@
 	const FILTER_FROM = 12;
 
 	let filter = $state('');
-	let open = $state<Record<PlacesGroupId, boolean>>({ shown: true, categories: true, places: true, 'user-library': true });
+	let open = $state<Record<PlacesGroupId, boolean>>({ shown: true, categories: true, collections: true, places: true, 'user-library': true });
 	let settled = $state.raw<ReadonlyMap<string, boolean>>(new Map());
 
 	$effect(() => {
@@ -160,7 +160,7 @@
 												if (places.saving) e.preventDefault();
 											}}
 											onchange={(e) => onTick(e, s)}
-											aria-label={`Show ${s.key === PACKS_KEY ? 'every installed Pack' : `${s.kind === 'category' ? 'the category ' : ''}${s.name}`} in the browser`}
+											aria-label={`Show ${s.key === PACKS_KEY ? 'every installed Pack' : `${s.kind === 'category' ? 'the category ' : s.kind === 'collection' ? 'the Collection ' : ''}${s.name}`} in the browser`}
 										/>
 										<span class="set-check" aria-hidden="true"><Check class="set-check-icon" /></span>
 										<span class="set-row-main">
@@ -171,6 +171,8 @@
 												<span class="set-row-sub">Every installed Pack, one button</span>
 											{:else if s.kind === 'category'}
 												<span class="set-row-sub">From your Packs and User Library</span>
+											{:else if s.kind === 'collection'}
+												<span class="set-row-sub">A Collection in Live’s browser</span>
 											{:else}
 												<span class="set-place-path" dir="rtl"><bdi dir="ltr">{parentPath(s)}</bdi></span>
 											{/if}

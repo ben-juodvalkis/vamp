@@ -79,7 +79,7 @@ export const CARD_TAG_GROUPS = ['Character', 'Timbre', 'Mood', 'Genres', 'Keywor
 const MAX_CARD_TAGS = 8;
 const SKIP_FOLDERS = new Set(['Ableton Folder Info']);
 
-function fourccOf(code: string): number {
+export function fourccOf(code: string): number {
 	return ((code.charCodeAt(0) << 24) | (code.charCodeAt(1) << 16) | (code.charCodeAt(2) << 8) | code.charCodeAt(3)) >>> 0;
 }
 

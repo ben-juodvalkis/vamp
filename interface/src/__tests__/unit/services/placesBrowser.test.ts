@@ -311,6 +311,8 @@ describe('a load that names its Place (3.11.0)', () => {
 		expect(placeArgs({ source: 'place:Synth', placePath: '/Lib/Sidebar/Synth/', fullPath: '/Lib/Sidebar/Synth/Lead/Bright.adg' })).toEqual(['place:Synth', 'Lead/Bright.adg']);
 		expect(placeArgs({ fullPath: '/Recent/x.adg' })).toEqual(['', '']);
 		expect(placeArgs({ source: 'place:Synth', placePath: '/Lib/Sidebar/Synth', fullPath: '/Elsewhere/x.adg' })).toEqual(['', '']);
+		// A Live device from a Collection names its class and the name it inserts by.
+		expect(placeArgs({ source: 'native:Eq8', fullPath: 'native:Eq8', name: 'EQ Eight' })).toEqual(['native:Eq8', 'EQ Eight']);
 	});
 });
 

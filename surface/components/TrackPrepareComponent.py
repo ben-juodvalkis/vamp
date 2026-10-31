@@ -88,6 +88,8 @@ from .TrackMetadataComponent import (  # ADR-439: written here, on a load's ack 
 )
 
 from . import live_library
+from .DeviceLoadComponent import NATIVE_SOURCE_PREFIX
+
 logger = logging.getLogger("looping")
 
 
@@ -255,7 +257,12 @@ class TrackPrepareComponent:
         # in an empty preset_path from the Place's folder.
         source = _coerce_str(args[4]) if len(args) == 6 else ""
         rel = _coerce_str(args[5]) if len(args) == 6 else ""
-        if source and rel:
+        if source.startswith(NATIVE_SOURCE_PREFIX):
+            # A native instrument names its class, not a file (a Collection's
+            # Operator, 2026-10-31): the source stands in for the preset path,
+            # as on ``device/load``, and ``load_into_track`` inserts it by name.
+            preset_path = source
+        elif source and rel:
             preset_path = self._device_load.absolute_path(preset_path, source, rel)
 
         if not request_id:

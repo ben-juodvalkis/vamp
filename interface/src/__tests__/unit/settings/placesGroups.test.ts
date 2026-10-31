@@ -1,6 +1,6 @@
 /**
  * Settings → Places lays out a hundred-odd folders (the rig: 21 Places, the
- * User Library) and Live's categories, every Pack as one of them, in four
+ * User Library) and Live's categories, every Pack as one of them, in five
  * groups, ticked first, and a folder keeps
  * the group it had when the page opened, so a tick never moves the row under
  * the finger (`placesGroups.ts`).
@@ -28,20 +28,22 @@ const sources = [
 	src('place', 'Bass', `${LIB}/Sidebar/Bass`, true),
 	src('user-library', 'User Library', LIB),
 	src('category', 'Sounds', ''),
-	src('category', 'Packs', '', true)
+	src('category', 'Packs', '', true),
+	src('collection', 'FX', '')
 ];
 
 describe('groupPlaces', () => {
-	it("puts the ticked first, then Live's categories (the Packs among them), the Places and the User Library, each in Live’s order", () => {
+	it("puts the ticked first, then Live's categories (the Packs among them), its Collections, the Places and the User Library, each in Live’s order", () => {
 		const groups = groupPlaces(sources, new Map());
-		expect(groups.map((g) => g.id)).toEqual(['shown', 'categories', 'places', 'user-library']);
+		expect(groups.map((g) => g.id)).toEqual(['shown', 'categories', 'collections', 'places', 'user-library']);
 		expect(groups[0].sources.map((s) => s.name)).toEqual(['Drum', 'Bass', 'Packs']);
 		expect(groups[1].sources.map((s) => s.name)).toEqual(['Sounds']);
-		expect(groups[2].sources.map((s) => s.name)).toEqual(['Desktop']);
+		expect(groups[2].sources.map((s) => s.name)).toEqual(['FX']);
+		expect(groups[3].sources.map((s) => s.name)).toEqual(['Desktop']);
 	});
 
 	it('leaves an empty group out', () => {
-		const groups = groupPlaces(sources.filter((s) => s.kind !== 'user-library'), new Map());
+		const groups = groupPlaces(sources.filter((s) => s.kind !== 'user-library' && s.kind !== 'collection'), new Map());
 		expect(groups.map((g) => g.id)).toEqual(['shown', 'categories', 'places']);
 	});
 

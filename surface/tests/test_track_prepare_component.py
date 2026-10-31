@@ -1500,3 +1500,16 @@ def test_alc_prepare_falls_back_to_raw_sample_track(scheduler, tmp_path, monkeyp
         getattr(s, "audio_clip_path", None) == str(sample)
         for s in new_track.clip_slots
     )
+
+
+def test_a_native_instrument_loads_by_its_class_with_no_file():
+    """A Collection's Operator (2026-10-31): ``native:<class>`` stands in
+    for the preset path, so the prepare loads instead of reading an empty
+    path as a bare track."""
+    t0 = StubTrack(has_midi_input=True)
+    song = StubSong(tracks=[t0], selected=t0)
+    load = StubDeviceLoad()
+    component, recorder = make_component(song, device_load=load)
+    component.handle_prepare(args=("req-n", "midi", "", "", "native:Operator", "Operator"), source_addr=None)
+    assert [p for _t, p in load.calls][0] == "native:Operator"
+    assert len(recorder.acks()) == 1

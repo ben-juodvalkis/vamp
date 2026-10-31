@@ -59,6 +59,7 @@ import { findLiveDatabase, indexRowsFingerprint, indexRowsOf, openIndex, placeFi
 import { MANIFEST_NAME, readManifest } from './placesManifest';
 import { CATEGORY_ROLES, PACKS_SOURCE, type LiveCategory } from './categoryScan';
 import { CategoryScans } from './categoryScans';
+import { collectionRoots, collectionStamp, scanCollection } from './collectionScan';
 
 /** How deep the Packs button nests (`catalog.places.Packs.maxFolderDepth` overrides): the Pack, then its own folders. */
 const PACKS_DEPTH = 4;
@@ -346,9 +347,11 @@ export class PlacesService {
 		// the catalog script used, so `place:drum` stays `place:drum`. The
 		// Places take theirs before Live's categories, which the list puts
 		// first: a Place named "Drums" keeps `drums` and the category numbers.
+		// Live's Collections come last of all, so neither moves for one.
 		const used = new Set<string>();
 		this.ids.clear();
-		const placesFirst = [...this.sources.filter((s) => s.kind !== 'category'), ...this.sources.filter((s) => s.kind === 'category')];
+		const order = (s: LibrarySource) => (s.kind === 'collection' ? 2 : s.kind === 'category' ? 1 : 0);
+		const placesFirst = [...this.sources].sort((a, b) => order(a) - order(b));
 		for (const s of placesFirst) {
 			let id = folderSlug(s.name) || 'place';
 			for (let n = 2; used.has(id); n++) id = `${folderSlug(s.name)}-${n}`;
@@ -459,8 +462,8 @@ export class PlacesService {
 			}
 		}
 		const source = preferredSource();
-		// A Live category is only ever built from the index, whatever the Places use.
-		const needsIndex = source === 'index' || wanted.some((s) => s.kind === 'category');
+		// A Live category or Collection is only ever built from the index, whatever the Places use.
+		const needsIndex = source === 'index' || wanted.some((s) => s.kind === 'category' || s.kind === 'collection');
 		let index: IndexHandle | null = null;
 		if (needsIndex) index = this.openIndexOrNull();
 		this.lastDbStamp = this.dbStamp();
@@ -468,7 +471,12 @@ export class PlacesService {
 		try {
 			for (const s of wanted) {
 				const id = this.ids.get(s.key)!;
-				const built = s.kind === 'category' ? this.buildCategory(s, id, index, ctx!) : this.buildOne(s, id, source === 'index' ? index : null, ctx!);
+				const built =
+					s.kind === 'category'
+						? this.buildCategory(s, id, index, ctx!)
+						: s.kind === 'collection'
+							? this.buildCollection(s, id, index, ctx!)
+							: this.buildOne(s, id, source === 'index' ? index : null, ctx!);
 				if (built) {
 					this.catalogs.set(s.key, built);
 					changed = true;
@@ -602,6 +610,35 @@ export class PlacesService {
 		const raw = trees.categories!.trees.get(s.name as LiveCategory);
 		if (!raw) return null;
 		return this.finishBuild(s, id, role, 'index', stamp, t, shape(raw), have, trees.categories!.roots.map((r) => r.path), true);
+	}
+
+	/**
+	 * One of Live's Collections (`collectionScan.ts`): its tagged rows, read
+	 * here (a millisecond or two on the rig), rebuilt when the tags or the
+	 * files under the User Library and the Packs changed. Each item names its
+	 * own root, as a category's do; a Live device names its class.
+	 */
+	private buildCollection(s: LibrarySource, id: string, index: IndexHandle | null, ctx: { au: Map<string, AuComponent>; colors: Record<string, string | undefined> }): BuiltCatalog | null {
+		if (!index) return null;
+		const tuning = tuningFor(s.name);
+		const role = tuning.role !== undefined ? tuning.role : null;
+		const stamp = `collection:2:${this.categoryScans.stamp(index)}:${collectionStamp(index)}:${CATALOG_FORMAT}:${s.name}:${id}:${JSON.stringify(tuning)}`;
+		const have = this.catalogs.get(s.key);
+		if (have && have.stamp === stamp) return null;
+		const cached = this.readCache(s.key, stamp);
+		if (cached) return cached;
+		if (this.categoryScans.kindCacheStale) {
+			this.kindCache = null;
+			this.categoryScans.kindCacheStale = false;
+		}
+		if (!this.kindCache) this.kindCache = loadKindCache(join(this.cacheDir, 'places-kind-cache.json'));
+		const t = Date.now();
+		const n = Number(s.key.slice(s.key.indexOf(':') + 1));
+		const scanned = scanCollection(index, n, s.name, { ...ctx, kindCache: this.kindCache }, collectionRoots(index, this.lib.places));
+		this.scanned = true;
+		logger.info('places: collection scanned', { component: 'places', name: s.name, rows: scanned.rows, skipped: scanned.skipped, ms: Date.now() - t });
+		const tree = shapePlace(scanned.tree, { maxFolderDepth: tuning.maxFolderDepth, flattenFolders: tuning.flattenFolders, keepNestingFolders: tuning.keepNestingFolders });
+		return this.finishBuild(s, id, role, 'index', stamp, t, tree, have, scanned.roots, true);
 	}
 
 	/** The catalog of a shaped tree; null when it is the one already held (its stamp is moved on). */
@@ -938,7 +975,7 @@ export class PlacesService {
 					path: c.path,
 					icon: c.icon,
 					role: c.role,
-					...(s.kind === 'category' ? {} : { source: loadSource(s) }),
+					...(s.kind === 'category' || s.kind === 'collection' ? {} : { source: loadSource(s) }),
 					file: `${c.id}.json`,
 					samplesFile: c.samples ? `${c.id}-samples.json` : undefined,
 					totalItems: c.totalItems,

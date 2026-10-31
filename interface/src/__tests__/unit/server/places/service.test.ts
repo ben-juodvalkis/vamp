@@ -214,6 +214,37 @@ describe("PlacesService, Live's categories", () => {
 		expect(service.catalogRoots()).toEqual(['/Users/me/Packs/Drum Booth']);
 	});
 
+	it("builds a ticked Collection from Live's tags; a Live device loads by class", () => {
+		const dbDir = join(root, 'Live Database');
+		mkdirSync(dbDir, { recursive: true });
+		const f = liveIndexFixture(join(dbDir, 'Live-files-12300.db'));
+		f.place(['Users', 'me', 'Packs', 'Drum Booth'], 'Drum Booth', 0);
+		f.place(['Live.app', 'Builtin'], 'Built-in', 8);
+		f.collect(f.file(['Users', 'me', 'Packs', 'Drum Booth', 'FX'], 'Crush.adv', { device_id: 'device:ableton:audiofx:Redux2' }), 4);
+		f.collect(f.row(['Live.app', 'Builtin', 'Instruments'], 'Operator', 'dfld', 'device:ableton:instr:Operator'), 4);
+		f.db.close();
+		const cfg = join(root, 'prefs', 'Live 12.4', 'Library.cfg');
+		writeFileSync(cfg, readFileSync(cfg, 'utf8').replace('</ContentLibrary>', '<LabelInfos><LabelInfo Uri="color:colors=4" DisplayName="Looper FX" /></LabelInfos></ContentLibrary>'));
+		vi.stubEnv('LOOPING_CATALOG_SOURCE', 'disk');
+		service = createPlacesService({
+			prefsDir: join(root, 'prefs'),
+			ticksFile: join(root, 'logs', 'places.json'),
+			cacheDir: join(root, 'cache'),
+			liveDatabaseDir: dbDir,
+			auDirs: []
+		});
+		expect(service.listing().sources.find((x) => x.kind === 'collection')).toMatchObject({ key: 'collection:4', name: 'Looper FX' });
+		service.setTicks(['collection:4']);
+		const entry = service.indexJson().places.find((p) => p.name === 'Looper FX')!;
+		expect(entry).toMatchObject({ id: 'looper-fx', path: '', totalItems: 2 });
+		expect(entry.source).toBeUndefined();
+		const file = service.fileJson('looper-fx.json') as { tree: { presets: Array<Record<string, unknown>> } };
+		expect(file.tree.presets.map((p) => [p.name, p.source])).toEqual([
+			['Crush', 'pack:Drum Booth'],
+			['Operator', 'native:Operator']
+		]);
+	});
+
 	it('builds the categories in a process of its own, serving nothing new until it lands', async () => {
 		const dbDir = join(root, 'Live Database');
 		mkdirSync(dbDir, { recursive: true });

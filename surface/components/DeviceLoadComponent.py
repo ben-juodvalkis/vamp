@@ -155,8 +155,9 @@ TRACK_INSERT_MODE_BESIDE_SELECTION = 2
 # reading ``class_name`` / ``class_display_name``. Keep in step with the
 # tiles' ``expectedClassName`` in ``devicePresets.ts``.
 #
-# This map has NO fallback and cannot have one: an unknown class is refused
-# as ``unknown-device``. 13 of its 22 rows are not recoverable from the
+# This map has NO fallback of its own: an unknown class inserts by the
+# load's ``rel`` (Live's index name, a Collection's item) and is refused as
+# ``unknown-device`` when that is empty. 13 of its 22 rows are not recoverable from the
 # class string by any rule (StereoGain -> Utility, Hybrid -> Hybrid Reverb,
 # Chorus2 -> Chorus-Ensemble, PhaserNew -> Phaser-Flanger), and a guessed
 # name is one Live refuses.
@@ -667,7 +668,11 @@ class DeviceLoadComponent:
         default for it applies, named ``device_name`` (the tile's name;
         Live's display name when empty). ``key`` is what the error wire
         names: the load's ``native:<class>`` source."""
-        display = NATIVE_DEVICE_NAMES.get(device_class)
+        # A class the map lacks inserts by the name the load gives: a
+        # Collection item names its device as Live's own index does (the
+        # device folder's name, "EQ Eight"), which is the name Live's
+        # browser inserts it by (ADR-493, 2026-10-31).
+        display = NATIVE_DEVICE_NAMES.get(device_class) or device_name
         if not display:
             logger.warning(
                 "DeviceLoadComponent: no display name for native class %r", device_class,
@@ -685,6 +690,20 @@ class DeviceLoadComponent:
                 path=key,
                 detail="insert-refused" + scope_suffix,
             )
+
+    def _insert_native_into_track(self, track, device_class: str, device_name: str) -> Optional[str]:
+        """``load_into_track`` for a native device (a Collection's
+        instrument, 2026-10-31): inserted by name like a tile's effect, an
+        instrument after the chain's leading MIDI effects, where Live keeps
+        it. ``None`` on success, else the detail."""
+        display = NATIVE_DEVICE_NAMES.get(device_class) or device_name
+        if not display:
+            return "unknown-device: %s" % device_class
+        # An instrument takes the MIDI effects' index rule: after them, before the rest.
+        plan = (display, device_name or display, True)
+        if not self._insert_native(track, plan, "track"):
+            return "insert-refused"
+        return None
 
     def _insert_native(self, container, plan: Tuple[str, str, bool], scope_label: str) -> bool:
         """``container.insert_device(display_name)`` — a track or a drum
@@ -1090,6 +1109,8 @@ class DeviceLoadComponent:
         undoing that move aborts Live (measured 2026-09-14, a native rack
         and a Max device alike).
         """
+        if source.startswith(NATIVE_SOURCE_PREFIX):
+            return self._insert_native_into_track(track, source[len(NATIVE_SOURCE_PREFIX):], rel)
         preset_path = self.absolute_path(preset_path, source, rel)
         if not preset_path:
             return "empty-preset-path"

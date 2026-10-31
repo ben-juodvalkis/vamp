@@ -582,7 +582,7 @@
 		// A Place reads through the switch: its presets, or its samples and
 		// clips. Set on every load, so the adapter always filters by the mode
 		// this level was asked for.
-		const amongSamples = isPlaceVendorId(selectedVendor) && placeKindGroups !== PRESET_GROUPS;
+		const amongSamples = isPlaceVendorId(selectedVendor) && placeKindGroups !== PRESET_GROUPS && placeKindGroups !== EFFECT_GROUPS;
 		if (isPlaceVendorId(selectedVendor)) {
 			(adapter as PlacesAdapter).setKindFilter?.(placeKindGroups);
 		}

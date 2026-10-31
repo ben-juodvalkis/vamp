@@ -17,6 +17,11 @@ const XML = `<Ableton><ContentLibrary>
 		<UserFolderInfo Id="425" Path="/Users/me/Sidebar/Drum" DisplayName="Drum" IconName="Sidebar/Sidebar_Drums" />
 	</UserFolderInfoList>
 	<PreferredFactoryPacksInstallationPath Value="/Packs" />
+	<LabelInfos>
+		<LabelInfo Id="2" Uri="color:colors=2" DisplayName="Plug &amp; Play" IsEnabled="false" />
+		<LabelInfo Id="1" Uri="color:colors=1" DisplayName="Favorites" IsEnabled="true" />
+		<LabelInfo Id="3" Uri="query:Everything" DisplayName="" IsEnabled="true" />
+	</LabelInfos>
 </ContentLibrary></Ableton>`;
 
 describe('parseLiveLibrary', () => {
@@ -27,6 +32,13 @@ describe('parseLiveLibrary', () => {
 		expect(lib.packsFolder).toBe('/Packs');
 		expect(lib.packs.map((p) => p.name)).toEqual(['Session Drums Club', 'Beat Tools']);
 		expect(lib.cfgMtimeMs).toBe(5);
+	});
+
+	it("reads Live's Collections by number, hidden in Live's sidebar or not", () => {
+		expect(parseLiveLibrary(XML).collections).toEqual([
+			{ n: 1, name: 'Favorites' },
+			{ n: 2, name: 'Plug & Play' }
+		]);
 	});
 
 	it('answers nothing for a file with no project or packs', () => {
@@ -49,14 +61,18 @@ describe('librarySources', () => {
 			'category:Max for Live',
 			'category:Clips',
 			'category:Packs',
+			'collection:Favorites',
+			'collection:Plug & Play',
 			'place:Bass',
 			'place:Drum',
 			'user-library:User Library'
 		]);
 		// A category has no folder: it is read from Live's index alone. No Pack is a source of its own.
 		expect(sources[0]).toMatchObject({ key: 'category:Sounds', path: '', present: true });
-		expect(sources[8].key).toBe(sourceKey('place', '/Users/me/Sidebar/Bass'));
-		expect(sources.slice(8).map((s) => s.present)).toEqual([true, false, true]);
-		expect(sources[9].icon).toBe('Sidebar/Sidebar_Drums');
+		// A Collection is keyed by its number, so a rename in Live keeps its tick.
+		expect(sources[8]).toMatchObject({ key: 'collection:1', path: '', present: true });
+		expect(sources[10].key).toBe(sourceKey('place', '/Users/me/Sidebar/Bass'));
+		expect(sources.slice(10).map((s) => s.present)).toEqual([true, false, true]);
+		expect(sources[11].icon).toBe('Sidebar/Sidebar_Drums');
 	});
 });

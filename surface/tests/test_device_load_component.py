@@ -1811,9 +1811,18 @@ def test_a_midi_effect_goes_after_the_leading_midi_effects():
     assert [d.name for d in track.devices] == ["Arpeggiator", "Random", "Simpler", "Delay"]
 
 
-def test_an_unknown_class_is_refused_and_touches_nothing():
+def test_an_unmapped_class_inserts_by_the_name_the_load_gives():
+    """A Collection's item names its device as Live's index does."""
     comp, song, _rack, browser, rec = _native_rig()
-    comp.handle_load(_native("", "NoSuchDevice", "Mystery"), None)
+    comp.handle_load(_native("", "Eq8", "EQ Eight"), None)
+    assert song.tracks[0].inserts == [("EQ Eight", None)]
+    assert browser.calls == []
+    assert rec.errors() == []
+
+
+def test_an_unknown_class_with_no_name_is_refused_and_touches_nothing():
+    comp, song, _rack, browser, rec = _native_rig()
+    comp.handle_load(_native("", "NoSuchDevice", ""), None)
     assert song.tracks[0].inserts == []
     assert browser.calls == []
     assert (song.begins, song.ends) == (0, 0)
@@ -1986,3 +1995,22 @@ def test_load_groove_by_name_loads_a_user_groove_from_the_user_library(song, rec
         assert c.load_groove_by_name("User: Nope").startswith("not-in-browser")
     finally:
         c.disconnect()
+
+
+def test_load_into_track_inserts_a_native_instrument_by_name_after_the_midi_effects():
+    """A Collection's Operator reaches a track through ``prepare_for_preset``,
+    which loads through ``load_into_track`` (2026-10-31)."""
+    arp = FakeDevice("MidiArpeggiator", [], type_=4, name="Arpeggiator")
+    fx = FakeDevice("Delay", [], type_=2, name="Delay")
+    comp, song, _rack, browser, rec = _native_rig(track_devices=[arp, fx])
+    track = song.tracks[0]
+    assert comp.load_into_track(track, "native:Operator", source="native:Operator", rel="Operator") is None
+    assert track.inserts == [("Operator", 1)]
+    assert browser.calls == []
+    assert (song.begins, song.ends) == (1, 1)
+
+
+def test_load_into_track_refuses_a_native_class_with_no_name():
+    comp, song, _rack, _browser, _rec = _native_rig(track_devices=[])
+    assert comp.load_into_track(song.tracks[0], "native:Nope", source="native:Nope", rel="") == "unknown-device: Nope"
+    assert song.tracks[0].inserts == []

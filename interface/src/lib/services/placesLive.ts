@@ -61,7 +61,9 @@ export async function warmPlacesCache(
  * item with no Place behind it (a Recent entry), which the surface resolves
  * by path through Live's own library.
  */
-export function placeArgs(preset: { source?: string; placePath?: string; fullPath: string }): [string, string] {
+export function placeArgs(preset: { source?: string; placePath?: string; fullPath: string; name?: string }): [string, string] {
+	// A Live device in a Collection names its class and inserts by its own name (protocol 3.12.0).
+	if (preset.source?.startsWith('native:')) return [preset.source, preset.name ?? ''];
 	const root = preset.placePath?.replace(/\/+$/, '');
 	if (!preset.source || !root || !preset.fullPath.startsWith(`${root}/`)) return ['', ''];
 	return [preset.source, preset.fullPath.slice(root.length + 1)];
@@ -72,7 +74,7 @@ export const PLACES_TICKS_URL = '/api/places/ticks';
 
 export interface PlacesSource {
 	key: string;
-	kind: 'place' | 'user-library' | 'category';
+	kind: 'place' | 'user-library' | 'category' | 'collection';
 	name: string;
 	path: string;
 	icon: string;

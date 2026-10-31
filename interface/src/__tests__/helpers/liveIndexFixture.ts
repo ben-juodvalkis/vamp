@@ -20,20 +20,24 @@ export interface LiveIndexFixture {
 	place(segments: string[], name: string, kind: number): void;
 	/** A `vfolders` sub-folder of `group` and the folder names that fall in it. */
 	vfolder(group: number, name: string, patterns: string[]): void;
+	/** A row of any type (`dfld`, `plug`…) in the folder `segments`; its id. */
+	row(segments: string[], name: string, type: string, deviceId?: string): number;
+	/** Put row `id` in Live's Collection `n` (`files.colors` bit n). */
+	collect(id: number, n: number): void;
 }
 
 export function liveIndexFixture(file = ':memory:'): LiveIndexFixture {
 	const db = new DatabaseSync(file);
 	db.exec(`CREATE TABLE version (schema INTEGER, platform INTEGER); INSERT INTO version VALUES (12300, 2);
-		CREATE TABLE files (file_id INTEGER PRIMARY KEY, parent_id INTEGER, name TEXT, file_type INTEGER, subtype INTEGER, device_type INTEGER, device_id TEXT, mod_date INTEGER, file_size INTEGER);
+		CREATE TABLE files (file_id INTEGER PRIMARY KEY, parent_id INTEGER, name TEXT, file_type INTEGER, subtype INTEGER, device_type INTEGER, device_id TEXT, mod_date INTEGER, file_size INTEGER, colors INTEGER DEFAULT 1);
 		CREATE TABLE ancestors (file_id INTEGER, ancestor_id INTEGER);
 		CREATE TABLE places (file_id INTEGER, folder_kind INTEGER, level INTEGER, name TEXT);
 		CREATE TABLE metadata (file_id INTEGER, key INTEGER, value_id INTEGER);
 		CREATE TABLE metadata_values (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT);
 		CREATE TABLE vfolders (vfolder_id INTEGER PRIMARY KEY AUTOINCREMENT, group_id INTEGER, name TEXT);
 		CREATE TABLE vfolder_patterns (vfolder_id INTEGER, name TEXT);
-		INSERT INTO files VALUES (1, 0, '/', ${FOLDER}, 0, 0, NULL, 0, 0);`);
-	const insert = db.prepare('INSERT INTO files VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+		INSERT INTO files (file_id, parent_id, name, file_type, subtype, device_type, device_id, mod_date, file_size) VALUES (1, 0, '/', ${FOLDER}, 0, 0, NULL, 0, 0);`);
+	const insert = db.prepare('INSERT INTO files (file_id, parent_id, name, file_type, subtype, device_type, device_id, mod_date, file_size) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
 	const child = db.prepare('SELECT file_id FROM files WHERE parent_id = ? AND name = ?');
 	const parentOf = db.prepare('SELECT parent_id FROM files WHERE file_id = ?');
 	const ancestor = db.prepare('INSERT INTO ancestors VALUES (?, ?)');
@@ -68,6 +72,16 @@ export function liveIndexFixture(file = ':memory:'): LiveIndexFixture {
 		},
 		place(segments, name, kind) {
 			db.prepare('INSERT INTO places VALUES (?, ?, 0, ?)').run(folder(segments), kind, name);
+		},
+		row(segments, name, type, deviceId) {
+			const parent = folder(segments);
+			const id = next++;
+			insert.run(id, parent, name, four(type), 0, 0, deviceId ?? null, 100, 0);
+			link(id, parent);
+			return id;
+		},
+		collect(id, n) {
+			db.prepare('UPDATE files SET colors = colors | ? WHERE file_id = ?').run(2 ** n, id);
 		},
 		vfolder(group, name, patterns) {
 			const { lastInsertRowid } = db.prepare('INSERT INTO vfolders (group_id, name) VALUES (?, ?)').run(group, name);

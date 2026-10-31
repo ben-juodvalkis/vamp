@@ -14,7 +14,7 @@ import { join, posix } from 'node:path';
 import { decodeXmlEntities, libraryPlaces, newestLibraryCfg, type LivePlace } from '../libraryCfg';
 import { LIVE_CATEGORIES, PACKS_SOURCE } from './categoryScan';
 
-export type SourceKind = 'place' | 'user-library' | 'pack' | 'category';
+export type SourceKind = 'place' | 'user-library' | 'pack' | 'category' | 'collection';
 
 /** One folder the browser can catalog: a sidebar Place, the User Library, or a Pack. */
 export interface LibrarySource {
@@ -44,6 +44,14 @@ export interface LiveLibrary {
 	packsFolder: string | null;
 	/** Installed Packs (`LibrarySliceInfo`), by name. */
 	packs: Array<{ name: string; path: string }>;
+	/** Live's Collections, the colored tags, by number and the name the user gave each. */
+	collections: LiveCollection[];
+}
+
+/** One of Live's Collections: `files.colors` bit `n` in the index marks its members. */
+export interface LiveCollection {
+	n: number;
+	name: string;
 }
 
 export const DEFAULT_PREFS_DIR = join(process.env.HOME ?? '', 'Library/Preferences/Ableton');
@@ -76,6 +84,22 @@ export function packsOf(xml: string): Array<{ name: string; path: string }> {
 	return packs;
 }
 
+/**
+ * Live's Collections (`<LabelInfo Uri="color:colors=N" DisplayName=…>`),
+ * in number order. Read whether or not Live's own sidebar shows them
+ * (`IsEnabled`): the rig's seven are all hidden there (2026-10-31).
+ */
+export function collectionsOf(xml: string): LiveCollection[] {
+	const out: LiveCollection[] = [];
+	for (const m of xml.matchAll(/<LabelInfo\b[^>]*\sUri="color:colors=(\d+)"[^>]*>/g)) {
+		const name = /\sDisplayName="([^"]*)"/.exec(m[0]);
+		const n = Number(m[1]);
+		if (!Number.isInteger(n) || n < 1 || n > 30) continue;
+		out.push({ n, name: name && name[1] ? decodeXmlEntities(name[1]) : `Collection ${n}` });
+	}
+	return out.sort((a, b) => a.n - b.n);
+}
+
 export function packsFolderOf(xml: string): string | null {
 	const m = /<PreferredFactoryPacksInstallationPath\s+Value="([^"]*)"/.exec(xml);
 	const p = m ? decodeXmlEntities(m[1]) : '';
@@ -90,19 +114,20 @@ export function parseLiveLibrary(xml: string, cfgFile: string | null = null, cfg
 		places: libraryPlaces(xml),
 		userLibrary: userLibraryOf(xml),
 		packsFolder: packsFolderOf(xml),
-		packs: packsOf(xml)
+		packs: packsOf(xml),
+		collections: collectionsOf(xml)
 	};
 }
 
 /** Read the newest `Library.cfg` under `prefsDir`; an empty library when there is none. */
 export function readLiveLibrary(prefsDir = DEFAULT_PREFS_DIR): LiveLibrary {
 	const cfgFile = newestLibraryCfg(prefsDir);
-	if (!cfgFile) return { cfgFile: null, cfgMtimeMs: 0, places: [], userLibrary: null, packsFolder: null, packs: [] };
+	if (!cfgFile) return { cfgFile: null, cfgMtimeMs: 0, places: [], userLibrary: null, packsFolder: null, packs: [], collections: [] };
 	try {
 		const xml = readFileSync(cfgFile, 'utf8');
 		return parseLiveLibrary(xml, cfgFile, statSync(cfgFile).mtimeMs);
 	} catch {
-		return { cfgFile, cfgMtimeMs: 0, places: [], userLibrary: null, packsFolder: null, packs: [] };
+		return { cfgFile, cfgMtimeMs: 0, places: [], userLibrary: null, packsFolder: null, packs: [], collections: [] };
 	}
 }
 
@@ -110,8 +135,10 @@ export function readLiveLibrary(prefsDir = DEFAULT_PREFS_DIR): LiveLibrary {
  * Everything a user can tick, in the order the browser's rail shows them:
  * Live's categories in its sidebar order and then every installed Pack as
  * one source (`categoryScan.ts`; ADR-493: above the Places, Ben 2026-10-31),
- * then the sidebar Places in Live's order, then the User Library. A category
- * is no folder: its `path` is empty, and it is built only from Live's index.
+ * then Live's Collections (`collectionScan.ts`), then the sidebar Places in Live's order, then the User Library. A category
+ * or a Collection is no folder: its `path` is empty, and it is built only
+ * from Live's index. A Collection is keyed by its number, so renaming it in
+ * Live keeps its tick.
  * The Packs are no longer ticked one by one.
  */
 export function librarySources(lib: LiveLibrary, exists: (p: string) => boolean = existsSync): LibrarySource[] {
@@ -127,6 +154,9 @@ export function librarySources(lib: LiveLibrary, exists: (p: string) => boolean 
 	for (const name of [...LIVE_CATEGORIES, PACKS_SOURCE]) {
 		const key = sourceKey('category', name);
 		out.push({ key, kind: 'category', name, path: '', icon: '', present: true });
+	}
+	for (const c of lib.collections) {
+		out.push({ key: sourceKey('collection', String(c.n)), kind: 'collection', name: c.name, path: '', icon: '', present: true });
 	}
 	for (const p of lib.places) add('place', p.name, p.path, p.icon);
 	if (lib.userLibrary) add('user-library', 'User Library', lib.userLibrary);
