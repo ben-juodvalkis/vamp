@@ -13,6 +13,10 @@ import Network
 ///
 /// With no Mac on the control connection, a page connection is refused at
 /// once, so the web view fails fast and can say so, instead of hanging.
+///
+/// A second control connection replaces the first only once the first has
+/// gone quiet (`LinkProtocol.healthyWithin`): a newcomer cannot take a
+/// working link over. Stream ids are random, so one cannot be guessed.
 final class LinkServer {
     let devicePort: UInt16
     let pagePort: UInt16
@@ -20,12 +24,12 @@ final class LinkServer {
     /// Called on the main queue when the Mac's control connection comes or
     /// goes.
     var onLinkChange: ((Bool) -> Void)?
+    /// The link's state changes, one line each (never per message).
+    var log: ((String) -> Void)?
 
-    /// The Mac pings every 2 s; past this with nothing heard, the link is
-    /// treated as gone (the cable can leave a connection half-open).
-    static let silenceLimit: TimeInterval = 6
-    /// How long a page connection waits for the Mac's stream.
-    static let streamWait: TimeInterval = 5
+    /// Past this with nothing heard, the link is treated as gone. A test
+    /// may shorten it.
+    var silenceLimit = LinkProtocol.silenceLimit
 
     private let queue = DispatchQueue(label: "vamp.link.server")
     private var linkListener: NWListener?
@@ -36,15 +40,12 @@ final class LinkServer {
     private var silenceTimer: DispatchSourceTimer?
     private var pending: [UInt32: NWConnection] = [:]
     private var splices: [ObjectIdentifier: Splice] = [:]
-    private var nextId: UInt32 = 1
     private var running = false
 
     init(devicePort: UInt16, pagePort: UInt16) {
         self.devicePort = devicePort
         self.pagePort = pagePort
     }
-
-    var isLinked: Bool { queue.sync { control != nil } }
 
     func start() {
         queue.async { [self] in
@@ -60,7 +61,7 @@ final class LinkServer {
             linkListener?.cancel(); linkListener = nil
             pageListener?.cancel(); pageListener = nil
             silenceTimer?.cancel(); silenceTimer = nil
-            dropControl()
+            dropControl("stopped")
         }
     }
 
@@ -86,13 +87,15 @@ final class LinkServer {
 
     private func makeListener(port: UInt16, accept: @escaping (NWConnection) -> Void) -> NWListener? {
         guard let listener = try? NWListener(using: .loopbackListener(port: port)) else {
+            log?("could not listen on port \(port); retrying")
             retryListenersSoon()
             return nil
         }
         listener.newConnectionHandler = accept
         listener.stateUpdateHandler = { [weak self, weak listener] state in
             guard let self, let listener else { return }
-            if case .failed = state {
+            if case .failed(let error) = state {
+                self.log?("listener on port \(port) failed (\(error)); retrying")
                 listener.cancel()
                 if self.linkListener === listener { self.linkListener = nil }
                 if self.pageListener === listener { self.pageListener = nil }
@@ -118,11 +121,12 @@ final class LinkServer {
             conn.cancel()
             return
         }
-        let id = nextId
-        nextId &+= 1
+        // Random, so a stream cannot be guessed and claimed by another app.
+        var id = UInt32.random(in: 1...UInt32.max)
+        while pending[id] != nil { id = UInt32.random(in: 1...UInt32.max) }
         pending[id] = conn
         control.sendLine(LinkProtocol.line(.open(id)))
-        queue.asyncAfter(deadline: .now() + Self.streamWait) { [weak self] in
+        queue.asyncAfter(deadline: .now() + LinkProtocol.streamWait) { [weak self] in
             if let stale = self?.pending.removeValue(forKey: id) { stale.cancel() }
         }
     }
@@ -156,13 +160,19 @@ final class LinkServer {
             case .stream(let id):
                 self.attachStream(conn, id: id, leading: rest)
             case nil:
-                conn.cancel()
+                if LinkProtocol.isOtherVersion(hello) {
+                    self.log?("refused a link of another version: \(hello)")
+                    conn.send(content: Data(LinkProtocol.unsupportedLine().utf8), completion: .contentProcessed { _ in conn.cancel() })
+                } else {
+                    conn.cancel()
+                }
             }
         }
     }
 
     private func attachStream(_ link: NWConnection, id: UInt32, leading: Data) {
         guard let page = pending.removeValue(forKey: id) else {
+            log?("a stream for an unknown or expired id; closed")
             link.cancel()
             return
         }
@@ -174,7 +184,15 @@ final class LinkServer {
     }
 
     private func adoptControl(_ conn: NWConnection, buffer: LineBuffer, earlyLines: [String]) {
-        if let old = control, old !== conn { old.cancel() }
+        if let old = control, old !== conn {
+            guard Date().timeIntervalSince(lastHeard) > LinkProtocol.healthyWithin else {
+                log?("refused a second control connection: the link is working")
+                conn.cancel()
+                return
+            }
+            log?("replaced a quiet control connection")
+            old.cancel()
+        }
         control = conn
         controlBuffer = buffer
         lastHeard = Date()
@@ -182,11 +200,12 @@ final class LinkServer {
             guard let self, let conn else { return }
             switch state {
             case .failed, .cancelled:
-                if self.control === conn { self.dropControl() }
+                if self.control === conn { self.dropControl("the connection ended") }
             default:
                 break
             }
         }
+        log?("linked to the Mac")
         notify(true)
         for line in earlyLines { handleControl(line) }
         readControl(conn)
@@ -197,14 +216,14 @@ final class LinkServer {
             guard let self, self.control === conn else { return }
             if let data, !data.isEmpty {
                 guard let lines = self.controlBuffer.append(data) else {
-                    self.dropControl()
+                    self.dropControl("a line too long for the protocol")
                     return
                 }
                 self.lastHeard = Date()
                 for line in lines { self.handleControl(line) }
             }
             if isComplete || error != nil {
-                self.dropControl()
+                self.dropControl("the Mac closed the link")
             } else {
                 self.readControl(conn)
             }
@@ -217,8 +236,9 @@ final class LinkServer {
         }
     }
 
-    private func dropControl() {
+    private func dropControl(_ why: String) {
         guard let conn = control else { return }
+        log?("unlinked: \(why)")
         control = nil
         controlBuffer = LineBuffer()
         conn.cancel()
@@ -233,8 +253,8 @@ final class LinkServer {
         timer.schedule(deadline: .now() + 1, repeating: 1)
         timer.setEventHandler { [weak self] in
             guard let self, self.control != nil else { return }
-            if Date().timeIntervalSince(self.lastHeard) > Self.silenceLimit {
-                self.dropControl()
+            if Date().timeIntervalSince(self.lastHeard) > self.silenceLimit {
+                self.dropControl("nothing heard in \(Int(self.silenceLimit)) s")
             }
         }
         timer.resume()

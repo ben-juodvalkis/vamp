@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import WebKit
+import os
 
 /// Vamp for iPad: Vamp's own interface, full screen, reached over the USB
 /// cable through Vamp for Mac rather than over a network.
@@ -29,7 +30,7 @@ struct VampPadApp: App {
 }
 
 /// The ports, copied from `padLink` in config/constants.json (the app
-/// cannot read it). `padLinkPorts.test.ts` keeps the copies equal.
+/// cannot read it). `constantsDefaults.test.ts` keeps the copies equal.
 enum PadPorts {
     static let device: UInt16 = 47800
     static let page: UInt16 = 8889
@@ -49,25 +50,37 @@ final class PadModel: ObservableObject {
     /// Vamp for Mac is on the other end of the cable.
     @Published private(set) var linked = false
     /// The interface has loaded at least once since the app started.
-    @Published var pageLoaded = false
+    @Published var pageLoaded = false {
+        didSet { updateIdleTimer() }
+    }
     /// Bumped to make the web view load the page again.
     @Published private(set) var reloadToken = 0
 
     private let server = LinkServer(devicePort: PadPorts.device, pagePort: PadPorts.localPage)
+    /// The link's state changes, for Console.app and Xcode's console.
+    private static let log = Logger(subsystem: "com.benjuodvalkis.vamp.ipad", category: "link")
 
     init() {
+        server.log = { Self.log.notice("\($0, privacy: .public)") }
         server.onLinkChange = { [weak self] up in
             Task { @MainActor in self?.linkChanged(up) }
         }
         server.start()
-        // A performance surface: the iPad must not dim or lock mid-set.
-        UIApplication.shared.isIdleTimerDisabled = true
+        updateIdleTimer()
+    }
+
+    /// A performance surface: the iPad must not dim or lock mid-set. Only
+    /// while there is a set to play, though: waiting for the Mac, it may
+    /// sleep like any app.
+    private func updateIdleTimer() {
+        UIApplication.shared.isIdleTimerDisabled = linked || pageLoaded
     }
 
     var pageURL: URL { URL(string: "http://localhost:\(PadPorts.localPage)/")! }
 
     private func linkChanged(_ up: Bool) {
         linked = up
+        updateIdleTimer()
         // A loaded page reconnects by itself (its socket retries every
         // second); only a page that never loaded needs loading again.
         if up && !pageLoaded { reloadToken += 1 }
@@ -85,7 +98,7 @@ final class PadModel: ObservableObject {
     func scenePhaseChanged(_ phase: ScenePhase) {
         if phase == .active {
             server.restartIfNeeded()
-            UIApplication.shared.isIdleTimerDisabled = true
+            updateIdleTimer()
         }
     }
 }
@@ -183,10 +196,18 @@ struct PadWebView: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            Task { @MainActor in self.model.pageFailed() }
+            failed(error)
         }
 
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            failed(error)
+        }
+
+        /// A load this app cancelled itself by starting the next one is not a
+        /// failed page: retrying it would cancel the load in flight, and a
+        /// slow start would never finish loading.
+        private func failed(_ error: Error) {
+            if (error as NSError).domain == NSURLErrorDomain && (error as NSError).code == NSURLErrorCancelled { return }
             Task { @MainActor in self.model.pageFailed() }
         }
 

@@ -1,5 +1,21 @@
 import XCTest
 import Network
+import Darwin
+
+/// A loopback port nothing is listening on right now: the kernel's pick,
+/// so two tests (or a running Simulator app) never collide on one.
+func freePort() -> UInt16 {
+    let fd = socket(AF_INET, SOCK_STREAM, 0)
+    defer { close(fd) }
+    var addr = sockaddr_in()
+    addr.sin_family = sa_family_t(AF_INET)
+    addr.sin_addr.s_addr = inet_addr("127.0.0.1")
+    addr.sin_port = 0
+    var len = socklen_t(MemoryLayout<sockaddr_in>.size)
+    _ = withUnsafeMutablePointer(to: &addr) { $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { bind(fd, $0, len) } }
+    _ = withUnsafeMutablePointer(to: &addr) { $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { getsockname(fd, $0, &len) } }
+    return UInt16(bigEndian: addr.sin_port)
+}
 
 /// The protocol pieces, then the whole link run on this Mac: the iPad's
 /// `LinkServer` and the Mac's `LinkClient` joined by plain TCP in place of
@@ -10,6 +26,9 @@ final class LinkProtocolTests: XCTestCase {
         XCTAssertEqual(LinkProtocol.parseHello("VAMPLINK 1 STREAM 42"), .stream(42))
         XCTAssertEqual(LinkProtocol.line(.stream(42)), "VAMPLINK 1 STREAM 42\n")
         XCTAssertNil(LinkProtocol.parseHello("VAMPLINK 2 CONTROL"))
+        XCTAssertTrue(LinkProtocol.isOtherVersion("VAMPLINK 2 CONTROL abc"))
+        XCTAssertFalse(LinkProtocol.isOtherVersion("VAMPLINK 1 CONTROL"))
+        XCTAssertFalse(LinkProtocol.isOtherVersion("GET / HTTP/1.1"))
         XCTAssertNil(LinkProtocol.parseHello("GET / HTTP/1.1"))
         XCTAssertNil(LinkProtocol.parseHello("VAMPLINK 1 STREAM x"))
     }
@@ -52,8 +71,8 @@ final class LinkEndToEndTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        devicePort = UInt16.random(in: 40000...44999)
-        pagePort = UInt16.random(in: 45000...49999)
+        devicePort = freePort()
+        pagePort = freePort()
     }
 
     override func tearDown() {
@@ -65,7 +84,7 @@ final class LinkEndToEndTests: XCTestCase {
 
     /// The Mac's page server stand-in: echoes whatever it is sent.
     private func startEchoServer() -> UInt16 {
-        let listener = try! NWListener(using: .loopbackListener(port: UInt16.random(in: 50000...54999)))
+        let listener = try! NWListener(using: .loopbackListener(port: freePort()))
         listener.newConnectionHandler = { conn in
             conn.start(queue: self.queue)
             func echo() {
@@ -200,5 +219,80 @@ final class LinkEndToEndTests: XCTestCase {
         wait(for: [up], timeout: 5)
         XCTAssertLessThan(Date().timeIntervalSince(started), 2)
         XCTAssertEqual(roundTrip(Data("again".utf8)), Data("again".utf8))
+    }
+
+    // MARK: - A raw stand-in for the Mac, or for another app on the iPad
+
+    /// A connection to the iPad's link port that sends `hello` and hands
+    /// back each line it is sent.
+    private func rawLink(_ hello: String, lines: @escaping (String) -> Void, closed: (() -> Void)? = nil) -> NWConnection {
+        let conn = NWConnection(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: devicePort)!, using: .linkTCP())
+        var buffer = LineBuffer()
+        var saidClosed = false
+        let close = { if !saidClosed { saidClosed = true; closed?() } }
+        func read() {
+            conn.receive(minimumIncompleteLength: 1, maximumLength: 4096) { data, _, done, error in
+                if let data, let got = buffer.append(data) { got.forEach(lines) }
+                if done || error != nil { close(); return }
+                read()
+            }
+        }
+        conn.stateUpdateHandler = { if case .cancelled = $0 { close() } }
+        conn.start(queue: queue)
+        conn.sendLine(hello)
+        read()
+        return conn
+    }
+
+    func testANewcomerCannotTakeAWorkingLinkOver() {
+        startLink(macPort: startEchoServer())
+        let refused = expectation(description: "the newcomer is closed")
+        var openedForIntruder = false
+        let intruder = rawLink(LinkProtocol.line(.control), lines: { line in
+            if line.hasPrefix("OPEN") { openedForIntruder = true }
+        }, closed: { refused.fulfill() })
+        wait(for: [refused], timeout: 3)
+        // The Mac still has the link: a page connection crosses it.
+        XCTAssertEqual(roundTrip(Data("still mine".utf8)), Data("still mine".utf8))
+        XCTAssertFalse(openedForIntruder, "the intruder was told of no stream")
+        intruder.cancel()
+    }
+
+    func testAnotherVersionIsToldSoBeforeTheIPadCloses() {
+        server = LinkServer(devicePort: devicePort, pagePort: pagePort)
+        server.start()
+        Thread.sleep(forTimeInterval: 0.3)
+        let told = expectation(description: "unsupported")
+        var answer = ""
+        let conn = rawLink("VAMPLINK 9 CONTROL\n", lines: { line in
+            answer = line
+            told.fulfill()
+        })
+        wait(for: [told], timeout: 3)
+        XCTAssertEqual(answer, String(LinkProtocol.unsupportedLine().dropLast()))
+        conn.cancel()
+    }
+
+    func testAStreamForAnIdNobodyAskedForIsClosed() {
+        startLink(macPort: startEchoServer())
+        let closed = expectation(description: "closed")
+        let conn = rawLink(LinkProtocol.line(.stream(12345)), lines: { _ in }, closed: { closed.fulfill() })
+        wait(for: [closed], timeout: 3)
+        conn.cancel()
+    }
+
+    func testASilentLinkIsDropped() {
+        server = LinkServer(devicePort: devicePort, pagePort: pagePort)
+        server.silenceLimit = 1
+        let up = expectation(description: "linked")
+        let down = expectation(description: "dropped")
+        server.onLinkChange = { linked in linked ? up.fulfill() : down.fulfill() }
+        server.start()
+        Thread.sleep(forTimeInterval: 0.3)
+        // A control connection that then says nothing, as a half-open one.
+        let conn = rawLink(LinkProtocol.line(.control), lines: { _ in })
+        wait(for: [up], timeout: 3)
+        wait(for: [down], timeout: 4)
+        conn.cancel()
     }
 }

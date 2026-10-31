@@ -15,9 +15,30 @@ import Foundation
 ///   the Mac to its own page server.
 ///
 /// Every message is one ASCII line ending in `\n`. The first line on any
-/// connection says what it is.
+/// connection says what it is. An iPad that does not speak the Mac's
+/// version answers `VAMPLINK-UNSUPPORTED <versions it speaks>` before it
+/// closes, so the Mac can say "update Vamp for iPad" instead of "not open".
 enum LinkProtocol {
     static let version = 1
+
+    /// The timings both ends must agree on, in one place.
+    /// The Mac pings every `pingInterval` and drops a control connection
+    /// that has not answered in `pongLimit`.
+    static let pingInterval: TimeInterval = 2
+    static let pongLimit: TimeInterval = 6
+    /// The iPad drops a control connection it has heard nothing on in
+    /// `silenceLimit` (the cable can leave a connection half-open), and
+    /// lets a second one replace it only once it has been quiet for
+    /// `healthyWithin`: a newcomer cannot take a working link over.
+    static let silenceLimit: TimeInterval = 6
+    static let healthyWithin: TimeInterval = 3
+    /// How long a page connection waits for the Mac's stream.
+    static let streamWait: TimeInterval = 5
+
+    /// The first line of an iPad's refusal of a version it does not speak.
+    static let unsupported = "VAMPLINK-UNSUPPORTED"
+
+    static func unsupportedLine() -> String { "\(unsupported) \(version)\n" }
 
     enum Hello: Equatable {
         case control
@@ -35,6 +56,13 @@ enum LinkProtocol {
         case .control: return "VAMPLINK \(version) CONTROL\n"
         case .stream(let id): return "VAMPLINK \(version) STREAM \(id)\n"
         }
+    }
+
+    /// Whether `line` is a hello of a version this end does not speak: a
+    /// `VAMPLINK` line, but not this version's.
+    static func isOtherVersion(_ line: String) -> Bool {
+        let parts = line.split(separator: " ")
+        return parts.count >= 2 && parts[0] == "VAMPLINK" && parts[1] != "\(version)"
     }
 
     static func parseHello(_ line: String) -> Hello? {
