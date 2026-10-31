@@ -158,14 +158,14 @@ describe('Settings → Places', () => {
 		fakeMac(listingWith(SOURCES));
 		const { container, getByRole, getByLabelText } = render(SettingsPage);
 		await fireEvent.click(getByRole('tab', { name: /Places/ }));
-		await waitFor(() => expect(getByLabelText('Filter folders by name or path')).toBeTruthy());
+		await waitFor(() => expect(getByLabelText('Filter by name or path')).toBeTruthy());
 
-		await fireEvent.input(getByLabelText('Filter folders by name or path'), { target: { value: 'pack' } });
+		await fireEvent.input(getByLabelText('Filter by name or path'), { target: { value: 'pack' } });
 		const boxes = within(panel(container, 'places')).getAllByRole('checkbox');
 		expect(boxes.map((b) => b.getAttribute('aria-label'))).toEqual(['Show every installed Pack in the browser']);
 
-		await fireEvent.input(getByLabelText('Filter folders by name or path'), { target: { value: 'zzz' } });
-		expect(panel(container, 'places').textContent).toContain('No folder matches “zzz”');
+		await fireEvent.input(getByLabelText('Filter by name or path'), { target: { value: 'zzz' } });
+		expect(panel(container, 'places').textContent).toContain('Nothing matches “zzz”');
 	});
 
 	it('saves a tick as it is made, and the row stays in its group', async () => {

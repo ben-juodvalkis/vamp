@@ -32,7 +32,7 @@
 	/** Every installed Pack as one source (ADR-493), the server's `category:Packs`. */
 	const PACKS_KEY = 'category:Packs';
 
-	/** Past this many folders the list gets a filter. */
+	/** Past this many rows the list gets a filter. */
 	const FILTER_FROM = 12;
 
 	let filter = $state('');
@@ -96,10 +96,10 @@
 		<div class="set-places-bar">
 			<p class="set-lead" aria-live="polite">
 				{#if places.tickedCount === 0}
-					<strong>Nothing is ticked yet.</strong> Tick a folder to give it a button on the browser’s rail.
+					<strong>Nothing is ticked yet.</strong> Tick a category or a folder to give it a button on the browser’s rail.
 				{:else}
-					<strong>{places.tickedCount}</strong> of {sources.length} folders show in the browser. Tick a folder to give it a
-					button on the browser’s rail.
+					<strong>{places.tickedCount}</strong> of {sources.length} show in the browser. Tick a category or a folder to give
+					it a button on the browser’s rail.
 				{/if}
 				{#if places.saving}<span class="set-saving">Saving…</span>{/if}
 				{#if places.saveError}<span class="set-save-error" role="alert">Not saved: {places.saveError}</span>{/if}
@@ -110,8 +110,8 @@
 					<input
 						type="search"
 						bind:value={filter}
-						placeholder="Filter {sources.length} folders"
-						aria-label="Filter folders by name or path"
+						placeholder="Filter {sources.length} by name"
+						aria-label="Filter by name or path"
 						autocomplete="off"
 						autocapitalize="off"
 						spellcheck="false"
@@ -129,7 +129,7 @@
 		</div>
 
 		{#if filtering && matches === 0}
-			<p class="set-lead">No folder matches “{filter.trim()}”.</p>
+			<p class="set-lead">Nothing matches “{filter.trim()}”.</p>
 		{/if}
 
 		{#each groups as g (g.id)}
