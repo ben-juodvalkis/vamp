@@ -103,8 +103,9 @@ drives Live and passes the gate's page-load check. **Size:** 2 days.
 
 ### Phase 3: Node inside the app
 
-- Ship the official Node 22 LTS binaries inside `Vamp.app/Contents/Resources/` (arm64 and x86_64,
-  or arm64 only: §8), ~100 MB uncompressed, ~40 MB in the dmg.
+- Ship the official Node 22 LTS binaries inside `Vamp.app/Contents/Resources/`, **both arm64 and
+  x86_64** (Ben, 2026-10-31: Intel Macs are supported), joined into one universal binary with
+  `lipo` as Vamp for Mac itself is: ~200 MB uncompressed, ~80 MB in the dmg.
 - Sign the Node binary with the hardened runtime and the one entitlement V8 needs
   (`com.apple.security.cs.allow-jit`); add its license to `THIRD-PARTY-NOTICES.md`.
 - Vamp for Mac's `Supervisor` runs `vamp-server` with that Node when installed, and
@@ -127,6 +128,9 @@ drives Live and passes the gate's page-load check. **Size:** 2 days.
 - **Updates with Sparkle 2:** an appcast on the site, EdDSA-signed. An update that changes the
   surface copies it again and says "restart Live to finish updating" in the menu (Live loads a
   control surface once). The fingerprint self-rebuild (ADR-490) stays for a checkout only.
+- **A QR code for Safari** (Ben, 2026-10-31: yes): the menu shows the iPad's address as a QR
+  code, so an iPad without Vamp for iPad opens the page by pointing its camera at the Mac.
+  Core Image's `CIQRCodeGenerator`, no dependency.
 - **Uninstall:** a menu item that removes the copied surface and asks before deleting
   `VAMP_DATA`; then the app goes to the Trash as usual.
 
@@ -187,14 +191,13 @@ two Live steps) and **develop** (the clone, as now). The README's "there's no ap
 
 ## 8. Open questions for Ben
 
-1. **Intel Macs?** Shipping arm64 only halves the Node in the app. Live 12 still runs on Intel.
+1. ~~Intel Macs?~~ **Yes** (Ben, 2026-10-31): the app and its Node are universal (Phase 3).
 2. **Where should `Vamp Devices` live:** `~/Music/Vamp/` (recommended, visible, beside the
    user's music) or inside Application Support (hidden, harder to point Live at)?
 3. **Price and terms:** free, as the repo is (MIT)? The App Store needs a decision for Vamp for
    iPad.
 4. **Update channel:** one stable feed, or also a beta feed for testers?
-5. **Should the installer also handle the iPad with no app,** by printing a QR code of the
-   Safari address in the menu? Cheap, and it helps anyone without Vamp for iPad.
+5. ~~A QR code of the Safari address in the menu?~~ **Yes** (Ben, 2026-10-31; Phase 4).
 
 ## 9. Order and size
 
