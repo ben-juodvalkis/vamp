@@ -20,7 +20,7 @@ final class AppState: ObservableObject {
     private let client: BridgeClient
 
     init() {
-        let cfg = AppConfig.load()
+        let cfg = AppConfig.shared
         self.config = cfg
         self.client = BridgeClient(config: cfg)
 

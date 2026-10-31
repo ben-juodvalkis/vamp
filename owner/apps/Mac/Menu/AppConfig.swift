@@ -4,14 +4,14 @@ import Foundation
 /// single source of truth (CLAUDE.md: "Never hardcode these values").
 ///
 /// Only the values this app needs are read: the WebSocket port, the reconnect
-/// base delay, and the server-presence timings. Addresses are wire contract,
-/// not config (see `Wire`).
+/// base delay and the iPad link's ports. Addresses are wire contract, not
+/// config (see `Wire`). This Mac's `config/constants.local.json` is laid
+/// over it, as the bridge and the interface server lay it (config/CLAUDE.md).
 ///
 /// Resolution order for constants.json (first hit wins):
 ///   1. $LOOPING_CONFIG            — explicit path to a constants.json
 ///   2. $LOOPING_PROJECT_ROOT      — <root>/config/constants.json
-///   3. /Users/Shared/DevWork/GitHub/vamp/config/constants.json
-///      (matches constants.paths.projectRoot — the default rig install)
+///   3. the `repoRoot` default `npm run install-mac-app` records
 ///   4. walk up from the current directory looking for config/constants.json
 ///
 /// If none is found the built-in fallbacks are used (same values the web UI
@@ -21,8 +21,6 @@ struct AppConfig {
     let host: String
     let webSocketPort: Int
     let reconnectDelayMs: Int
-    let heartbeatIntervalMs: Int
-    let graceWindowMs: Int
     /// Where constants.json was loaded from, or nil if the fallback was used.
     let sourcePath: String?
     /// `padLink` in constants.json: the iPad app's port, reached through
@@ -48,21 +46,27 @@ struct AppConfig {
         host: "localhost",
         webSocketPort: 8081,
         reconnectDelayMs: 2000,
-        heartbeatIntervalMs: 2000,
-        graceWindowMs: 6000,
         sourcePath: nil,
         padDevicePort: 47800,
         padPagePort: 8889,
         wsSecret: nil
     )
 
+    /// The configuration, read once for the whole app.
+    static let shared = load()
+
     static func load() -> AppConfig {
         guard
             let url = locateConstants(),
             let data = try? Data(contentsOf: url),
-            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            var json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else {
             return fallback
+        }
+        let local = url.deletingLastPathComponent().appendingPathComponent("constants.local.json")
+        if let localData = try? Data(contentsOf: local),
+           let overlay = try? JSONSerialization.jsonObject(with: localData) as? [String: Any] {
+            json = merged(json, overlay)
         }
 
         // The secret sits beside constants.json, in the same config/
@@ -73,10 +77,6 @@ struct AppConfig {
         let ws = osc?["webSocket"] as? [String: Any]
         let port = (ws?["port"] as? NSNumber)?.intValue ?? fallback.webSocketPort
         let reconnect = (osc?["reconnectDelay"] as? NSNumber)?.intValue ?? fallback.reconnectDelayMs
-
-        let presence = (json["timing"] as? [String: Any])?["serverPresence"] as? [String: Any]
-        let heartbeat = (presence?["heartbeatIntervalMs"] as? NSNumber)?.intValue ?? fallback.heartbeatIntervalMs
-        let grace = (presence?["graceWindowMs"] as? NSNumber)?.intValue ?? fallback.graceWindowMs
 
         // The bridge binds on 0.0.0.0; a same-machine client connects on
         // localhost (network.localhost), same as the web UI's localhost fallback.
@@ -90,13 +90,25 @@ struct AppConfig {
             host: localhost,
             webSocketPort: port,
             reconnectDelayMs: reconnect,
-            heartbeatIntervalMs: heartbeat,
-            graceWindowMs: grace,
             sourcePath: url.path,
             padDevicePort: padDevice,
             padPagePort: padPage,
             wsSecret: secret
         )
+    }
+
+    /// `overlay` laid over `base`: objects merge key by key, anything else
+    /// is replaced (the bridge's `loadConstants` rule).
+    static func merged(_ base: [String: Any], _ overlay: [String: Any]) -> [String: Any] {
+        var out = base
+        for (key, value) in overlay {
+            if let inner = value as? [String: Any], let under = base[key] as? [String: Any] {
+                out[key] = merged(under, inner)
+            } else {
+                out[key] = value
+            }
+        }
+        return out
     }
 
     /// Read `config/.ws-secret`, or the `LOOPING_WS_SECRET` override.
@@ -140,7 +152,6 @@ struct AppConfig {
         if let root = UserDefaults.standard.string(forKey: "repoRoot"), !root.isEmpty {
             candidates.append(root + "/config/constants.json")
         }
-        candidates.append("/Users/Shared/DevWork/GitHub/vamp/config/constants.json")
 
         var dir = URL(fileURLWithPath: fm.currentDirectoryPath)
         for _ in 0..<8 {

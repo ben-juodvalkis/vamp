@@ -1,9 +1,9 @@
 # ADR-490: Vamp for Mac Runs Vamp
 
 ## Status
-**Proposed** (2026-10-27), on branch `bj/native-ipad-app`. Accepted once Ben
-has run a session from the icon. No Live restart: the scripts and the
-menu-bar app only.
+**Accepted** (2026-10-28, merged from `bj/native-ipad-app`; in daily use on
+the rig). Proposed 2026-10-27. No Live restart: the scripts and the
+menu-bar app only. Amended 2026-10-31 (below).
 
 ## Context
 Starting Vamp meant a Terminal: `npm run ipad`, whose window had to stay
@@ -22,8 +22,9 @@ already the menu-bar app on the rig, so it is the natural thing to click.
   name), "Show Log", "Open at Login" (`SMAppService`). The page server's
   answer on `padLink.pagePort` is the health signal, polled every 2 s.
 - **Quitting stops what it started**: the child's whole process tree, found
-  by parent pid (`proc_listchildpids`), SIGTERM then SIGKILL after 2 s, then
-  `scripts/cleanup.sh`. Not by name: Max's Node inherits npm's environment and
+  by parent pid (`proc_listchildpids`), SIGTERM then SIGKILL to whatever is
+  left after up to 2 s, with `scripts/cleanup.sh` run beside it (it stops
+  what `concurrently` respawns meanwhile). Not by name: Max's Node inherits npm's environment and
   matches the stack's names. Measured: after quitting, no bridge, page
   server or `concurrently`, ports 8081, 8889 and 8890 free, Live and Max
   untouched.
@@ -63,6 +64,30 @@ already the menu-bar app on the rig, so it is the natural thing to click.
   start died with exit 1 after a skipped build. The setting came from the
   environment the app was launched from (Claude Code's), not Ben's shell;
   Vamp makes no outbound TLS, so the app drops it for its child.
+
+## Amendment (2026-10-31): from the native apps audit
+- **The decisions are `SupervisorRules`**, pure functions the unit tests
+  drive (`SupervisorRulesTests`). Start is offered only with nothing of the
+  app's own running, and Stop whenever something is: a start past its 180 s
+  limit used to read "stopped", grey out Stop and offer a Start that ran a
+  second `npm run ipad` over the first. Now it says it is still trying,
+  stays stoppable, and turns to running if the page server answers late.
+- **An unexpected exit is not restarted when the page server answers**:
+  someone else's servers came up, and starting would run cleanup.sh over them.
+- **A crash or force-quit no longer strands Vamp.** The child's pid and start
+  time are recorded; the next launch takes that very process back (pid and
+  start time must both match) and can stop it.
+- **The self-update**: the fingerprint is taken before the build, so an edit
+  made during it is rebuilt next time rather than recorded as built; it covers
+  the generated project and the xcconfigs, not the menu's README or JS
+  harness; a rebuild is stopped after 5 minutes; a failed one is said in the
+  menu until an update succeeds and is not retried for the same code. The
+  install builds into `build/install`, apart from the Debug copy.
+- **SIGTERM quits as the menu does**, stopping what the app started, and
+  `launch-menubar.sh` quits a running copy instead of killing it.
+- **Open at Login** says when it fails. The app writes its own lines to
+  `logs/vamp-mac.log` through `VampLog`, and reads `constants.local.json`
+  over `constants.json`, as the bridge does.
 
 ## Consequences
 - Measured from a Dock-style `open`: the page server answered 42 s after

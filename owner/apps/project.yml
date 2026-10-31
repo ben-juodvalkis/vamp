@@ -92,6 +92,7 @@ targets:
       - Shared
       - Mac/UsbMux.swift
       - Mac/LinkClient.swift
+      - Mac/SupervisorRules.swift
       - Tests
     settings:
       base:

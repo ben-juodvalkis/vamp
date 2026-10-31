@@ -30,10 +30,17 @@ if [[ ! -w /Applications ]]; then
   exit 1
 fi
 
+# The fingerprint of the code about to be built, taken before the build: an
+# edit made while it builds is then a different fingerprint, which the app
+# rebuilds for at its next launch, rather than one recorded as built.
+FINGERPRINT="$(bash "$ROOT/scripts/mac-app-fingerprint.sh")"
+
 echo "🔨 building Vamp for Mac (Release)…"
+# Its own build folder: launch-menubar.sh builds the Debug copy into
+# build/, and two xcodebuilds into one folder at once collide.
 xcodebuild build -project "$APPS_DIR/Vamp.xcodeproj" -scheme VampMac \
   -configuration Release -destination "generic/platform=macOS" \
-  -derivedDataPath "$APPS_DIR/build" -quiet
+  -derivedDataPath "$APPS_DIR/build/install" -quiet
 
 # A running copy keeps its old code until it quits. Quit it as the menu does,
 # not with a signal: quitting is what stops the Vamp it started. Not when the
@@ -48,7 +55,7 @@ if [[ -z "${VAMP_SELF_UPDATE:-}" ]] && pgrep -f "Applications/Vamp.app/Contents/
   done
 fi
 
-BUILT="$APPS_DIR/build/Build/Products/Release/Vamp.app"
+BUILT="$APPS_DIR/build/install/Build/Products/Release/Vamp.app"
 rm -rf "$DEST"
 ditto "$BUILT" "$DEST"
 if [[ -d "$OLD_DEST" ]]; then
@@ -57,7 +64,7 @@ if [[ -d "$OLD_DEST" ]]; then
 fi
 
 defaults write "$BUNDLE_ID" repoRoot "$ROOT"
-defaults write "$BUNDLE_ID" sourceFingerprint "$(bash "$ROOT/scripts/mac-app-fingerprint.sh")"
+defaults write "$BUNDLE_ID" sourceFingerprint "$FINGERPRINT"
 
 echo "✅ installed $DEST"
 echo "   It runs this checkout: $ROOT"

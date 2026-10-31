@@ -9,8 +9,8 @@ import ServiceManagement
 struct VampMacApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var state = AppState()
-    @StateObject private var pad = PadLink(config: AppConfig.load())
-    @StateObject private var vamp = Supervisor(config: AppConfig.load())
+    @StateObject private var pad = PadLink(config: AppConfig.shared)
+    @StateObject private var vamp = Supervisor(config: AppConfig.shared)
 
     var body: some Scene {
         MenuBarExtra {
@@ -23,11 +23,18 @@ struct VampMacApp: App {
     }
 }
 
-/// Removes the Dock icon so this runs as a pure menu-bar agent — no Info.plist
-/// / LSUIElement needed, which keeps `swift run` working as a real agent app.
+/// The app's lifecycle hooks. (No Dock icon: `LSUIElement` in Info.plist.)
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var sigterm: DispatchSourceSignal?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
+        // A `kill` or a logout's SIGTERM quits as the menu's Quit does, so
+        // the Vamp this app started is stopped rather than left running.
+        signal(SIGTERM, SIG_IGN)
+        let source = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
+        source.setEventHandler { NSApp.terminate(nil) }
+        source.resume()
+        sigterm = source
     }
 
     /// Quitting stops what this app started (never a Terminal's servers).
@@ -42,9 +49,11 @@ struct MenuContent: View {
     @ObservedObject var pad: PadLink
     @ObservedObject var vamp: Supervisor
     @State private var openAtLogin = SMAppService.mainApp.status == .enabled
+    @State private var loginError: String?
 
     var body: some View {
         Text(vamp.statusLine)
+        if let note = vamp.updateNote { Text(note) }
         if !vamp.fromNpm {
             Button("Start Vamp") { vamp.start() }.disabled(!vamp.canStart)
             Button("Restart Vamp") { vamp.restart() }.disabled(!vamp.canStop)
@@ -57,10 +66,14 @@ struct MenuContent: View {
             set: { on in
                 do {
                     if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
-                } catch {}
+                    loginError = nil
+                } catch {
+                    loginError = "Open at Login failed: \(error.localizedDescription)"
+                }
                 openAtLogin = SMAppService.mainApp.status == .enabled
             }
         ))
+        if let loginError { Text(loginError) }
 
         Divider()
 

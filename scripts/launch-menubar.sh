@@ -76,11 +76,18 @@ export VAMP_FROM_NPM=1
 
 # Singleton: a dev run torn down by concurrently can leave the app behind as
 # an orphan, and repeated starts once piled up six identical menu-bar icons.
-# Reap any existing instance first: the old SwiftPM menu-bar app by its exact
-# name, and Vamp for Mac by its binary's path. Not `pkill -x Vamp`: the iPad
-# app in the Simulator is a process named Vamp too.
-pkill -x LoopingMenuBar 2>/dev/null || true
-pkill -f "Vamp.app/Contents/MacOS/Vamp" 2>/dev/null || true
+# Quit any running copy first, as its menu's Quit does, so one opened from
+# the Dock stops the Vamp it started; then reap a copy that did not quit.
+# By its binary's path: the iPad app in the Simulator is a process named
+# Vamp too.
+if pgrep -f "Vamp.app/Contents/MacOS/Vamp" >/dev/null; then
+  osascript -e 'tell application id "com.benjuodvalkis.vamp.mac" to quit' >/dev/null 2>&1 || true
+  for _ in $(seq 1 20); do
+    pgrep -f "Vamp.app/Contents/MacOS/Vamp" >/dev/null || break
+    sleep 0.5
+  done
+  pkill -f "Vamp.app/Contents/MacOS/Vamp" 2>/dev/null || true
+fi
 
 echo "📎 building + launching Vamp for Mac (a first build takes ~30s)…"
 # Incremental: a few seconds when nothing changed.

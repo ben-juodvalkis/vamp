@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 #
 # The fingerprint of Vamp for Mac's own code: one hash over every file it is
-# built from (owner/apps: Mac/, Shared/, project.yml, Config/Base.xcconfig).
+# built from (owner/apps: Mac/ and Shared/ less the menu's README and its JS
+# harness, project.yml, the generated project xcodebuild builds from, and the
+# xcconfigs).
 # install-mac-app.sh records it in the app's defaults when it installs; the
 # app recomputes it at startup and, if they differ, rebuilds and replaces
 # itself before starting Vamp (ADR-490). Interface and server changes are not
@@ -10,7 +12,8 @@ set -euo pipefail
 
 APPS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../owner/apps" && pwd)"
 cd "$APPS_DIR"
-find Mac Shared project.yml Config/Base.xcconfig -type f ! -name '.DS_Store' -print0 \
+find Mac Shared project.yml Vamp.xcodeproj/project.pbxproj Config -type f \
+    ! -name '.DS_Store' ! -path 'Mac/Menu/README.md' ! -path 'Mac/Menu/verify/*' -print0 \
   | LC_ALL=C sort -z \
   | xargs -0 shasum -a 256 \
   | shasum -a 256 \
