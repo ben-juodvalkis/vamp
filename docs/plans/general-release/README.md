@@ -126,6 +126,7 @@ Four follow-up tests need Ben at the Mac, because they change the library
 | [audit.md](audit.md) | The 2026-09-23 audit: the inventory and analysis behind the plan. Code and config cite its sections ("general-release audit §7b"), so its numbering stays |
 | [naming.md](naming.md) | The public name, domains, and what to rename when |
 | [security.plan.md](security.plan.md) | Device pairing: who is trusted, the code and Allow, not getting locked out |
+| [installer.plan.md](installer.plan.md) | Vamp without a clone: one notarized `Vamp.dmg` that carries Node, the server, the control surface and Vamp Devices, and updates itself; Vamp for iPad from the App Store (not started, 2026-10-31) |
 | [demo-recording.plan.md](demo-recording.plan.md) | The demo gallery (not started) |
 | [../browser-places.plan.md](https://github.com/ben-juodvalkis/Looping/blob/dbae35ae/documentation/browser-places.plan.md) | The Places browser (done 2026-09-24). Its Phase 0 measured what Live reports about Places |
 | [../toggles.md](../../reference/toggles.md) | What each feature switch does today |
