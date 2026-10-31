@@ -24,8 +24,9 @@ struct VampMacApp: App {
                     Text("\(code.prefix(3)) \(code.suffix(3))").monospacedDigit()
                 }
             } else {
-                // Filled when the bridge is up, hollow when it's down.
-                Image(systemName: state.connected ? "repeat.circle.fill" : "repeat.circle")
+                // A V for Vamp (Ben, 2026-10-31): filled when the bridge
+                // is up, hollow when it's down.
+                Image(systemName: state.connected ? "v.circle.fill" : "v.circle")
             }
         }
         .menuBarExtraStyle(.menu)

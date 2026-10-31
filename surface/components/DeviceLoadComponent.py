@@ -57,6 +57,7 @@ from .browser_cache import BrowserCache
 from .live_library import LiveLibrary, read_live_library
 from .drum_vm_functions import (
     DEVICE_TYPE_AUDIO_EFFECT,
+    DEVICE_TYPE_INSTRUMENT,
     DEVICE_TYPE_MIDI_EFFECT,
     device_type,
 )
@@ -695,14 +696,56 @@ class DeviceLoadComponent:
         """``load_into_track`` for a native device (a Collection's
         instrument, 2026-10-31): inserted by name like a tile's effect, an
         instrument after the chain's leading MIDI effects, where Live keeps
-        it. ``None`` on success, else the detail."""
+        it. ``None`` on success, else the detail.
+
+        An instrument the track already holds is replaced, as a browser load
+        replaces it: Live refuses a second one ("Device chains cannot have
+        more than one instrument each", measured on the rig 2026-10-31,
+        where every new MIDI track starts with the user's default Operator)."""
         display = NATIVE_DEVICE_NAMES.get(device_class) or device_name
         if not display:
             return "unknown-device: %s" % device_class
+        name = device_name or display
+        if not _is_midi_effect_class(device_class):
+            held = next(
+                (i for i, d in enumerate(_devices_of(track)) if device_type(d) == DEVICE_TYPE_INSTRUMENT),
+                None,
+            )
+            if held is not None:
+                return self._replace_instrument(track, held, display, name)
         # An instrument takes the MIDI effects' index rule: after them, before the rest.
-        plan = (display, device_name or display, True)
+        plan = (display, name, True)
         if not self._insert_native(track, plan, "track"):
             return "insert-refused"
+        return None
+
+    def _replace_instrument(self, track, index: int, display: str, device_name: str) -> Optional[str]:
+        """Delete the instrument at ``index`` and insert ``display`` in its
+        place, renamed ``device_name``, in one undo step. Live cannot hold
+        both for a moment, so the old one goes first; if Live then refuses
+        the new one, the step holds only the delete and Edit → Undo brings
+        the old one back."""
+        began = self._begin_undo_step()
+        try:
+            try:
+                track.delete_device(index)
+                device = track.insert_device(display, index)
+            except _LOM_ERRORS as e:
+                logger.warning(
+                    "DeviceLoadComponent: replacing the instrument at %d with %r raised %s: %s",
+                    index, display, type(e).__name__, e,
+                )
+                return "insert-refused"
+            if device is None:
+                return "insert-refused"
+            try:
+                if getattr(device, "name", None) != device_name:
+                    device.name = device_name
+            except _LOM_ERRORS as e:
+                logger.warning("DeviceLoadComponent: renaming %r raised %s: %s", display, type(e).__name__, e)
+        finally:
+            self._end_undo_step(began)
+        logger.info("DeviceLoadComponent: replaced the instrument at %d with %r", index, display)
         return None
 
     def _insert_native(self, container, plan: Tuple[str, str, bool], scope_label: str) -> bool:

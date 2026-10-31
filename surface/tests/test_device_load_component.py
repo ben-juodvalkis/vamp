@@ -2014,3 +2014,18 @@ def test_load_into_track_refuses_a_native_class_with_no_name():
     comp, song, _rack, _browser, _rec = _native_rig(track_devices=[])
     assert comp.load_into_track(song.tracks[0], "native:Nope", source="native:Nope", rel="") == "unknown-device: Nope"
     assert song.tracks[0].inserts == []
+
+
+def test_load_into_track_replaces_the_instrument_a_track_holds():
+    """Live refuses a second instrument on a chain (measured 2026-10-31: every
+    new MIDI track on the rig starts with the default Operator), so a native
+    instrument takes the old one's place, in one undo step."""
+    arp = FakeDevice("MidiArpeggiator", [], type_=4, name="Arpeggiator")
+    old = FakeDevice("Operator", [], type_=1, name="Operator")
+    fx = FakeDevice("Delay", [], type_=2, name="Delay")
+    comp, song, _rack, browser, _rec = _native_rig(track_devices=[arp, old, fx])
+    track = song.tracks[0]
+    assert comp.load_into_track(track, "native:InstrumentVector", source="native:InstrumentVector", rel="Wavetable") is None
+    assert [d.name for d in track.devices] == ["Arpeggiator", "Wavetable", "Delay"]
+    assert browser.calls == []
+    assert (song.begins, song.ends) == (1, 1)

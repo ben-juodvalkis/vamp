@@ -710,7 +710,7 @@
 		// it would show an empty screen. Then it flips to one it can fill:
 		// Simpler → Clip (a Place of MIDI clips only) → Instrument; Instrument →
 		// the last audio segment, or Clip when that is Simpler with nothing to
-		// play. Never mid-replace: the replace chose its half (an instrument for
+		// play; any of them → Effect for a button of effects alone. Never mid-replace: the replace chose its half (an instrument for
 		// Replace Inst, a sample for a clip), and `tapRailCategory` keeps such a
 		// Place from opening at all.
 		if (isPlaceVendorId(vendor.vendorId)) {
@@ -726,6 +726,12 @@
 			} else if (!replacing && !fits && placeHas(vendor.id, CLIP_GROUPS)) {
 				browserModeStore.sourceMode = 'audio';
 				if (!placeHas(vendor.id, AUDIO_GROUPS)) browserModeStore.setBrowseMode('audio');
+			}
+			// A button of effects alone (Audio Effects, MIDI Effects, an effects
+			// Collection) opened on any other segment: its effects, not an empty
+			// screen (Ben, 2026-10-31).
+			if (!replacing && !placeHas(vendor.id, groupsForMode(browserModeStore.browseMode)) && placeHas(vendor.id, EFFECT_GROUPS)) {
+				browserModeStore.setBrowseMode('effects');
 			}
 			openLoneFolder = amongSamplesIn(browserModeStore.browseMode);
 		}
