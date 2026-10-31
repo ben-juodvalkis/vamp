@@ -759,8 +759,9 @@ export const TOURS = {
 	// through the DOM, because at phone width the app's layout draws it off
 	// screen. A state's `firstRun: true` has the fixture listing say the Mac
 	// has saved nothing, which opens Settings by itself as the checklist. The
-	// listing is the rig's own (fixtures/places-list.json): 21 Places, 7
-	// ticked, the User Library and 81 Packs.
+	// listing is the rig's own (fixtures/places-list.json): Live's categories
+	// and Packs as one source (ADR-493), 21 Places, 7 ticked, and the User
+	// Library.
 	settings: {
 		description: 'The full-page Settings, opened from the gear in the System view.',
 		crop: '[data-debug="settings-page"]',
@@ -778,13 +779,8 @@ export const TOURS = {
 			},
 			{
 				name: 'settings-places',
-				description: 'Settings → Places — the ticked ones first, the Packs folded',
+				description: 'Settings → Places — the ticked ones first, then Live’s categories',
 				steps: [...SETTINGS_OPEN, { click: '[data-tab="places"]' }]
-			},
-			{
-				name: 'settings-places-packs',
-				description: 'Settings → Places, the Packs unfolded and scrolled to',
-				steps: [...SETTINGS_OPEN, { click: '[data-tab="places"]' }, { click: '[data-group="packs"] .set-group-toggle' }, { wait: 700 }]
 			},
 			{
 				name: 'settings-places-filter',

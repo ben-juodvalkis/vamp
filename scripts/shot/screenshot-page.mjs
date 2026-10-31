@@ -97,9 +97,10 @@ export async function installCatalogFixtures(context, { force = false, firstRun 
 	// on this machine's Live library.
 	await context.route('**/api/places/list', async (route) => {
 		if (!force) return route.continue();
-		// The rig's own listing (21 Places, 7 of them ticked, the User Library
-		// and 81 Packs), so Settings is photographed at the length it really
-		// has; the catalog index is the fallback, every Place in it ticked.
+		// The rig's own listing (Live's categories with the Packs as one, 21
+		// Places, 7 of them ticked, and the User Library), so Settings is
+		// photographed at the length it really has; the catalog index is the
+		// fallback, every Place in it ticked.
 		const listed = join(FIXTURE_DIR, 'places-list.json');
 		const index = join(FIXTURE_DATA_DIR, 'places', 'index.json');
 		const places = (await exists(listed))

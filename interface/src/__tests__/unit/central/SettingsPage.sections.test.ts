@@ -2,7 +2,8 @@
  * Settings' sections (plan.md §11): a sidebar of General, Places and
  * Connection, with Setup ahead of them on a first run. Each section is a tab
  * panel that stays mounted while hidden; the page remembers where it was
- * left. Places groups its folders, folds the Packs, filters, and saves each
+ * left. Places groups its folders and Live's categories (every Pack one of
+ * them), filters, and saves each
  * tick as it is made. A first run ends with Finish setup (which saves) or
  * Set up later (which does not), and the checklist no longer vanishes when
  * the first tick saves the Mac's ticks file.
@@ -50,7 +51,8 @@ const SOURCES = [
 	source('place', 'Desktop', false),
 	source('place', 'Drum', true),
 	source('user-library', 'User Library', false),
-	...Array.from({ length: 14 }, (_, i) => source('pack', `Pack ${String(i + 1).padStart(2, '0')}`, false))
+	...Array.from({ length: 6 }, (_, i) => source('place', `Place ${i + 1}`, false)),
+	...['Sounds', 'Drums', 'Clips', 'Packs'].map((name) => ({ ...source('category', name, false), key: `category:${name}`, path: '' }))
 ];
 
 /** A Mac answering /api/places/* and /api/network. `ticks` records every save. */
@@ -135,32 +137,32 @@ describe('Settings sections', () => {
 });
 
 describe('Settings → Places', () => {
-	it('lists the ticked first, and keeps the Packs folded until asked', async () => {
+	it("lists the ticked first, then Live's categories with every Pack as one tick", async () => {
 		fakeMac(listingWith(SOURCES));
 		const { container, getByRole } = render(SettingsPage);
 		await fireEvent.click(getByRole('tab', { name: /Places/ }));
 		await waitFor(() => expect(container.querySelector('[data-group="shown"]')).toBeTruthy());
 
 		const groups = [...container.querySelectorAll<HTMLElement>('[data-group]')].map((g) => g.dataset.group);
-		expect(groups).toEqual(['shown', 'places', 'user-library', 'packs']);
+		expect(groups).toEqual(['shown', 'categories', 'places', 'user-library']);
 		const shown = container.querySelector<HTMLElement>('[data-group="shown"]')!;
 		expect(within(shown).getByRole('checkbox', { name: 'Show Drum in the browser' })).toBeTruthy();
 
-		const packs = container.querySelector<HTMLElement>('[data-group="packs"]')!;
-		expect(within(packs).queryAllByRole('checkbox')).toHaveLength(0);
-		await fireEvent.click(within(packs).getByRole('button', { name: /Packs/ }));
-		expect(within(packs).getAllByRole('checkbox')).toHaveLength(14);
+		const categories = container.querySelector<HTMLElement>('[data-group="categories"]')!;
+		expect(within(categories).getAllByRole('checkbox')).toHaveLength(4);
+		expect(within(categories).getByRole('checkbox', { name: 'Show every installed Pack in the browser' })).toBeTruthy();
+		expect(within(categories).getByRole('checkbox', { name: 'Show the category Sounds in the browser' })).toBeTruthy();
 	});
 
-	it('filters by name, reaching into the folded Packs', async () => {
+	it('filters by name', async () => {
 		fakeMac(listingWith(SOURCES));
 		const { container, getByRole, getByLabelText } = render(SettingsPage);
 		await fireEvent.click(getByRole('tab', { name: /Places/ }));
 		await waitFor(() => expect(getByLabelText('Filter folders by name or path')).toBeTruthy());
 
-		await fireEvent.input(getByLabelText('Filter folders by name or path'), { target: { value: 'pack 07' } });
+		await fireEvent.input(getByLabelText('Filter folders by name or path'), { target: { value: 'pack' } });
 		const boxes = within(panel(container, 'places')).getAllByRole('checkbox');
-		expect(boxes.map((b) => b.getAttribute('aria-label'))).toEqual(['Show the Pack Pack 07 in the browser']);
+		expect(boxes.map((b) => b.getAttribute('aria-label'))).toEqual(['Show every installed Pack in the browser']);
 
 		await fireEvent.input(getByLabelText('Filter folders by name or path'), { target: { value: 'zzz' } });
 		expect(panel(container, 'places').textContent).toContain('No folder matches “zzz”');

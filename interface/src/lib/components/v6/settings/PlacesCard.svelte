@@ -2,8 +2,8 @@
 	/**
 	 * Settings → Places (onboarding.plan.md §2, §6.2, §7): every folder Live's
 	 * library offers — the sidebar Places in Live's order, the User Library,
-	 * the installed Packs — and Live's own categories (Sounds, Drums,
-	 * Instruments…, from Live's index) with a tick each. A ticked one is cataloged on the
+	 * and Live's own categories (Sounds, Drums, Instruments…, from Live's
+	 * index), every installed Pack as one more, with a tick each. A ticked one is cataloged on the
 	 * Mac and becomes a button on the browser rail; a tick lands on every
 	 * client within seconds (`placesLive`).
 	 *
@@ -29,11 +29,14 @@
 
 	let { places }: { places: PlacesListingState } = $props();
 
+	/** Every installed Pack as one source (ADR-493), the server's `category:Packs`. */
+	const PACKS_KEY = 'category:Packs';
+
 	/** Past this many folders the list gets a filter. */
 	const FILTER_FROM = 12;
 
 	let filter = $state('');
-	let open = $state<Record<PlacesGroupId, boolean>>({ shown: true, categories: true, places: true, 'user-library': true, packs: false });
+	let open = $state<Record<PlacesGroupId, boolean>>({ shown: true, categories: true, places: true, 'user-library': true });
 	let settled = $state.raw<ReadonlyMap<string, boolean>>(new Map());
 
 	$effect(() => {
@@ -49,9 +52,10 @@
 	const groups = $derived(groupPlaces(sources, settled, filter));
 	const matches = $derived(groups.reduce((n, g) => n + g.sources.length, 0));
 
-	// A group opened by a tap scrolls up to meet the finger: the Packs sit at
-	// the foot of the list, and unfolding them below the fold looked like
-	// nothing happened. Reduced motion jumps instead of gliding.
+	// A group opened by a tap scrolls up to meet the finger: unfolding one at
+	// the foot of the list below the fold looked like nothing happened (the
+	// 81 Packs sat there until they became one tick). Reduced motion jumps
+	// instead of gliding.
 	function toggleGroup(id: PlacesGroupId, event: MouseEvent) {
 		open[id] = !open[id];
 		if (!open[id]) return;
@@ -156,16 +160,18 @@
 												if (places.saving) e.preventDefault();
 											}}
 											onchange={(e) => onTick(e, s)}
-											aria-label={`Show ${s.kind === 'pack' ? 'the Pack ' : s.kind === 'category' ? 'the category ' : ''}${s.name} in the browser`}
+											aria-label={`Show ${s.key === PACKS_KEY ? 'every installed Pack' : `${s.kind === 'category' ? 'the category ' : ''}${s.name}`} in the browser`}
 										/>
 										<span class="set-check" aria-hidden="true"><Check class="set-check-icon" /></span>
 										<span class="set-row-main">
 											<span class="set-row-label set-place-name">{s.name}</span>
 											{#if !s.present}
 												<span class="set-row-sub">Not on this Mac right now</span>
+											{:else if s.key === PACKS_KEY}
+												<span class="set-row-sub">Every installed Pack, one button</span>
 											{:else if s.kind === 'category'}
 												<span class="set-row-sub">From your Packs and User Library</span>
-											{:else if s.kind !== 'pack'}
+											{:else}
 												<span class="set-place-path" dir="rtl"><bdi dir="ltr">{parentPath(s)}</bdi></span>
 											{/if}
 										</span>

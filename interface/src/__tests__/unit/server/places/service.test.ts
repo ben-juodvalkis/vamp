@@ -26,6 +26,9 @@ vi.mock('$lib/server/runtimeConfig', async (importOriginal) => {
 });
 
 let root: string;
+
+/** The first sidebar Place in the listing: Live's categories come before the Places. */
+const firstPlace = (s: PlacesService) => s.listing().sources.find((x) => x.kind === 'place')!;
 let service: PlacesService | null = null;
 
 function libraryCfg(places: Array<[string, string]>, userLibrary: string): void {
@@ -92,7 +95,10 @@ describe('PlacesService, disk source', () => {
 		const listing = s.listing();
 		expect(listing.firstRun).toBe(true);
 		expect(listing.sources.filter((x) => x.kind !== 'category').map((x) => `${x.kind}:${x.name}`)).toEqual(['place:Drum', 'place:Key', 'place:Desktop', 'user-library:User Library']);
-		expect(listing.sources.filter((x) => x.kind === 'category').map((x) => x.name)).toEqual(['Sounds', 'Drums', 'Instruments', 'Audio Effects', 'MIDI Effects', 'Max for Live', 'Clips']);
+		// Live's categories, every Pack as one source among them, ahead of the Places.
+		expect(listing.sources.slice(0, 8).map((x) => `${x.kind}:${x.name}`)).toEqual(
+			['Sounds', 'Drums', 'Instruments', 'Audio Effects', 'MIDI Effects', 'Max for Live', 'Clips', 'Packs'].map((n) => `category:${n}`)
+		);
 		expect(listing.sources.some((x) => x.ticked)).toBe(false);
 		expect(s.indexJson().places).toEqual([]);
 		// Onboarding's step 2: this checkout's Max devices folder is no Place of the scratch library.
@@ -103,7 +109,7 @@ describe('PlacesService, disk source', () => {
 	it('a tick builds the Place in the browser shapes, saves the file, ends the first run and bumps once', () => {
 		const s = make();
 		const v0 = s.currentVersion;
-		const drum = s.listing().sources[0];
+		const drum = firstPlace(s);
 		const listing = s.setTicks([drum.key]);
 		expect(listing.firstRun).toBe(false);
 		expect(existsSync(join(root, 'logs', 'places.json'))).toBe(true);
@@ -125,7 +131,7 @@ describe('PlacesService, disk source', () => {
 
 	it('serves the cached build on a restart, and drops an unticked Place', () => {
 		const s = make();
-		const [drum, key] = s.listing().sources;
+		const [drum, key] = s.listing().sources.filter((x) => x.kind === 'place');
 		s.setTicks([drum.key, key.key]);
 		expect(s.indexJson().places.map((p) => p.id)).toEqual(['drum', 'key']);
 		s.stop();
@@ -141,7 +147,7 @@ describe('PlacesService, disk source', () => {
 
 	it('a rebuild that comes out the same keeps the served catalog: same ETag, no version bump', () => {
 		const s = make();
-		const drum = s.listing().sources[0];
+		const drum = firstPlace(s);
 		s.setTicks([drum.key]);
 		const v = s.currentVersion;
 		const tag = s.fileTag('drum.json');
@@ -163,7 +169,7 @@ describe('PlacesService, disk source', () => {
 
 	it('follows a Place renamed in Live, and serves it under its new name', () => {
 		const s = make();
-		const drum = s.listing().sources[0];
+		const drum = firstPlace(s);
 		s.setTicks([drum.key]);
 		libraryCfg([['Drums', join(root, 'Sidebar', 'Drum')]], 'User Library');
 		// The poll is off in tests; a reload is what the poll would do.
@@ -204,6 +210,32 @@ describe("PlacesService, Live's categories", () => {
 		// A preset read may open the category's roots, not the whole disk.
 		expect(service.catalogRoots()).toEqual(['/Users/me/Packs/Drum Booth']);
 	});
+
+	it('serves every Pack as one button whose Packs are files of their own, read when opened', () => {
+		const dbDir = join(root, 'Live Database');
+		mkdirSync(dbDir, { recursive: true });
+		const f = liveIndexFixture(join(dbDir, 'Live-files-12300.db'));
+		f.place(['Users', 'me', 'Packs', 'Drum Booth'], 'Drum Booth', 0);
+		f.file(['Users', 'me', 'Packs', 'Drum Booth', 'Kits'], 'Booth Kit.adg', { device_id: 'device:ableton:instr:DrumGroupDevice' });
+		f.db.close();
+		vi.stubEnv('LOOPING_CATALOG_SOURCE', 'disk');
+		service = createPlacesService({
+			prefsDir: join(root, 'prefs'),
+			ticksFile: join(root, 'logs', 'places.json'),
+			cacheDir: join(root, 'cache'),
+			liveDatabaseDir: dbDir,
+			auDirs: []
+		});
+		service.setTicks(['category:Packs']);
+		const top = service.fileJson('packs.json') as { tree: { folders: Record<string, { external?: string; presets: unknown[]; kinds?: Record<string, number> }> } };
+		const stub = top.tree.folders['Drum Booth'];
+		expect(stub).toMatchObject({ external: 'packs~drum-booth.json', presets: [], kinds: { 'drum-rack': 1 } });
+		// The Pack's one folder (Kits) collapses into it, as a Place's single-child chains do.
+		const part = service.fileJson('packs~drum-booth.json') as { tree: { presets: Array<Record<string, unknown>> } };
+		expect(part.tree.presets[0]).toMatchObject({ name: 'Booth Kit', source: 'pack:Drum Booth' });
+		expect(service.fileTag('packs~drum-booth.json')).not.toBe(service.fileTag('packs.json'));
+		expect(service.fileTag('packs~nope.json')).toBeNull();
+	});
 });
 
 describe('loadSource', () => {
@@ -218,7 +250,7 @@ describe('PlacesService, the effects Place', () => {
 	it('catalogs the effects Place unticked, flagged hidden; ticked, it is on the rail too', () => {
 		effectsPlace = 'Key';
 		const s = make();
-		const [drum, key] = s.listing().sources;
+		const [drum, key] = s.listing().sources.filter((x) => x.kind === 'place');
 		s.setTicks([drum.key]);
 		expect(s.indexJson().places.map((p) => [p.id, p.effects ?? false, p.hidden ?? false])).toEqual([
 			['drum', false, false],
@@ -231,7 +263,7 @@ describe('PlacesService, the effects Place', () => {
 
 	it('names no effects Place by default', () => {
 		const s = make();
-		s.setTicks([s.listing().sources[0].key]);
+		s.setTicks([firstPlace(s).key]);
 		expect(s.indexJson().places.some((p) => p.effects)).toBe(false);
 	});
 });

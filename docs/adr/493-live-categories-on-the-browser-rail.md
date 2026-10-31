@@ -83,10 +83,36 @@ Measured on the rig (Live 12.4.25b1) through the surface's probes:
   `6th Gear Plantation.adv` (Sounds › Bass) loaded onto a new track, and
   `8DotBall.adv` (Audio Effects › Echo) loaded onto that track's chain.
 
+## Addendum: categories first, the Packs as one button (2026-10-31)
+Ben asked for the categories above the Places, and for one tick for every
+installed Pack in place of one per Pack.
+
+- **Order.** `librarySources` lists the categories, then `Packs`, then the
+  Places and the User Library, and the rail follows. The Places take their
+  ids first, as before, so a Place named "Drums" keeps `drums` and the
+  category is numbered.
+- **Packs** (`category:Packs`, `scanPacks`) holds a folder per installed
+  Pack (83 on the rig, Core Library included), each holding the Pack's own
+  tree as `scanIndexPlace` reads it, nested four deep. Each item names its
+  Pack for the load. It is 60,402 items and 30 MB, so each Pack is served
+  as a file of its own (`packs~<slug>.json`, `BuiltCatalog.parts`) behind
+  an `external` stub that keeps its `kinds`. The button opens on 21 KB,
+  and a Pack's file loads when it is tapped (Core Library 3.5 MB). The
+  browser already fills an `external` folder wherever it sits.
+- **Packs are no longer sources of their own.** Settings has no Packs
+  group; the one Packs row sits with the categories.
+- **A device's folder is `dfld` in Live's index**, not `fldr`. The index
+  scan read only `fldr`, so it dropped every Pack device and the presets
+  filed under it: Creative Extensions › Instruments came out empty. The
+  scan now reads both (catalog format 7). Measured with Live running: a
+  Poli preset (Packs › Creative Extensions), a Big Band Essentials 2 kit
+  (Drums › Kits) and Core Library's Echo preset `8DotBall` each loaded
+  onto a new track or its chain through the surface.
+
 ## Consequences
 - The rail grows by one button per ticked category, and its bands share
-  out the extra. With all seven ticked beside the rig's seven Places,
-  Recent and the categories make fifteen buttons.
+  out the extra. With all eight ticked (the seven and Packs) beside the
+  rig's seven Places, Recent makes sixteen buttons.
 - Instruments and the effects show more than Live does (all of a Pack's
   presets), and Drum Hits shows more than Live does (the "Kicks" folders
   above). Sounds and Clips match Live.

@@ -57,7 +57,10 @@ import {
 } from './diskScan';
 import { findLiveDatabase, indexRowsFingerprint, indexRowsOf, openIndex, placeFileId, scanIndexPlace, type IndexHandle } from './indexScan';
 import { MANIFEST_NAME, readManifest } from './placesManifest';
-import { CATEGORY_ROLES, categoryRoots, categoryStamp, scanCategories, type CategoryScanResult, type LiveCategory } from './categoryScan';
+import { CATEGORY_ROLES, PACKS_SOURCE, categoryRoots, categoryStamp, scanCategories, scanPacks, type CategoryScanResult, type LiveCategory } from './categoryScan';
+
+/** How deep the Packs button nests (`catalog.places.Packs.maxFolderDepth` overrides): the Pack, then its own folders. */
+const PACKS_DEPTH = 4;
 import { bakeThumbnails } from './audioThumbnailCache';
 
 /** How the effects Place is drawn (`tidyEffectsPlace`): 3, every preset on one screen in its folder's section (2026-10-26; 2 as on disk, 1 grouped by kind). */
@@ -68,9 +71,11 @@ const EFFECTS_LAYOUT = 3;
  * otherwise holds only what the build read, so a catalog cached by older code
  * would be served as it was. 2: items carry `tags` and `device`; 3: tags
  * borrowed by name too; 4: a Live preset tinted by its device; 5: Genres and
- * Keyword tags too (all 2026-10-28).
+ * Keyword tags too (all 2026-10-28); 6: the Packs button's Packs as
+ * parts of their own; 7: a device's folder (`dfld`) read as a folder (both
+ * 2026-10-31).
  */
-const CATALOG_FORMAT = 5;
+const CATALOG_FORMAT = 7;
 
 export type CatalogSource = 'index' | 'disk';
 
@@ -96,6 +101,12 @@ export interface BuiltCatalog {
 	baked: boolean;
 	/** A Live category's roots (the User Library, the Packs): the folders its items may be read from. */
 	roots?: string[];
+	/**
+	 * Top-level folders served as files of their own (`<id>~<slug>.json`),
+	 * fetched when opened: the Packs button's Packs, 30 MB together on the
+	 * rig. The tree holds an `external` stub for each, its `kinds` kept.
+	 */
+	parts?: Record<string, PlaceFolder>;
 	/** A fingerprint of what the build produced, before thumbnails: a rebuild that matches it changed nothing. */
 	content?: string;
 }
@@ -252,6 +263,8 @@ export class PlacesService {
 	private categoryStampRead: { at: number; stamp: string } | null = null;
 	/** Every category's tree from one read of the index, kept while its stamp holds. */
 	private categoryScan: { stamp: string; result: CategoryScanResult } | null = null;
+	/** Every Pack's tree (`scanPacks`), kept while the same stamp holds. */
+	private packsScan: { stamp: string; tree: PlaceFolder; roots: string[] } | null = null;
 
 	constructor(opts: PlacesServiceOptions = {}) {
 		this.prefsDir = opts.prefsDir ?? DEFAULT_PREFS_DIR;
@@ -312,10 +325,13 @@ export class PlacesService {
 	private readSources(): void {
 		this.sources = librarySources(this.lib);
 		// Ids: the name's slug, numbered on a clash, in list order — the rule
-		// the catalog script used, so `place:drum` stays `place:drum`.
+		// the catalog script used, so `place:drum` stays `place:drum`. The
+		// Places take theirs before Live's categories, which the list puts
+		// first: a Place named "Drums" keeps `drums` and the category numbers.
 		const used = new Set<string>();
 		this.ids.clear();
-		for (const s of this.sources) {
+		const placesFirst = [...this.sources.filter((s) => s.kind !== 'category'), ...this.sources.filter((s) => s.kind === 'category')];
+		for (const s of placesFirst) {
 			let id = folderSlug(s.name) || 'place';
 			for (let n = 2; used.has(id); n++) id = `${folderSlug(s.name)}-${n}`;
 			used.add(id);
@@ -537,6 +553,10 @@ export class PlacesService {
 	private buildCategory(s: LibrarySource, id: string, index: IndexHandle | null, ctx: { au: Map<string, AuComponent>; colors: Record<string, string | undefined> }): BuiltCatalog | null {
 		if (!index) return null;
 		const tuning = tuningFor(s.name);
+		const packs = s.name === PACKS_SOURCE;
+		if (packs && configSection<{ places?: Record<string, PlaceTuning> }>('catalog').places?.[s.name]?.maxFolderDepth === undefined) {
+			tuning.maxFolderDepth = Math.max(tuning.maxFolderDepth, PACKS_DEPTH);
+		}
 		const role = tuning.role !== undefined ? tuning.role : (CATEGORY_ROLES[s.name as LiveCategory] ?? null);
 		const now = Date.now();
 		if (!this.categoryStampRead || now - this.categoryStampRead.at >= CATEGORY_STAMP_MS) {
@@ -551,8 +571,18 @@ export class PlacesService {
 
 		const t = Date.now();
 		this.scanned = true;
+		if (!this.kindCache) this.kindCache = loadKindCache(join(this.cacheDir, 'places-kind-cache.json'));
+		if (packs) {
+			if (this.packsScan?.stamp !== indexStamp) {
+				const roots = categoryRoots(index);
+				const { tree, rows } = scanPacks(index, { ...ctx, kindCache: this.kindCache }, roots);
+				this.packsScan = { stamp: indexStamp, tree, roots: roots.filter((r) => r.source.startsWith('pack:')).map((r) => r.path) };
+				logger.info('places: packs scanned', { component: 'places', rows, packs: this.packsScan.roots.length, ms: Date.now() - t });
+			}
+			const tree = shapePlace(this.packsScan.tree, { maxFolderDepth: tuning.maxFolderDepth, flattenFolders: tuning.flattenFolders, keepNestingFolders: tuning.keepNestingFolders });
+			return this.finishBuild(s, id, role, 'index', stamp, t, tree, have, this.packsScan.roots, true);
+		}
 		if (this.categoryScan?.stamp !== indexStamp) {
-			if (!this.kindCache) this.kindCache = loadKindCache(join(this.cacheDir, 'places-kind-cache.json'));
 			const result = scanCategories(index, { ...ctx, kindCache: this.kindCache });
 			this.categoryScan = { stamp: indexStamp, result };
 			logger.info('places: categories scanned', { component: 'places', rows: result.rows, roots: result.roots.length, ms: Date.now() - t });
@@ -574,9 +604,23 @@ export class PlacesService {
 		t: number,
 		tree: PlaceFolder,
 		have: BuiltCatalog | undefined,
-		roots?: string[]
+		roots?: string[],
+		split = false
 	): BuiltCatalog | null {
 		const kinds = tree.kinds ?? {};
+		let parts: Record<string, PlaceFolder> | undefined;
+		if (split) {
+			parts = {};
+			const folders: Record<string, PlaceFolder> = {};
+			for (const [name, folder] of Object.entries(tree.folders)) {
+				const slug = folderSlug(name) || 'part';
+				let file = `${id}~${slug}.json`;
+				for (let n = 2; parts[file]; n++) file = `${id}~${slug}-${n}.json`;
+				parts[file] = folder;
+				folders[name] = { ...folder, folders: {}, presets: [], external: file };
+			}
+			tree.folders = folders;
+		}
 		const samples = tree.folders[SAMPLES_FOLDER] ?? null;
 		if (samples) {
 			tree.folders = { ...tree.folders, [SAMPLES_FOLDER]: { ...samples, folders: {}, presets: [], external: `${id}-samples.json` } };
@@ -598,7 +642,8 @@ export class PlacesService {
 			totalItems: totalOf(kinds),
 			baked: false,
 			...(roots ? { roots } : {}),
-			content: createHash('sha1').update(JSON.stringify([source, role, s.name, s.icon, id, tree, samples])).digest('hex')
+			...(parts ? { parts } : {}),
+			content: createHash('sha1').update(JSON.stringify([source, role, s.name, s.icon, id, tree, samples, parts ?? null])).digest('hex')
 		};
 		// Live writes its index for anything it indexes, a file on the Desktop
 		// included, and every write rebuilds the ticked Places. One that comes
@@ -651,6 +696,7 @@ export class PlacesService {
 		this.catalogs.clear();
 		this.categoryStampRead = null;
 		this.categoryScan = null;
+		this.packsScan = null;
 		try {
 			for (const f of readdirSync(this.catalogCacheDir())) if (f.endsWith('.json')) unlinkSync(join(this.catalogCacheDir(), f));
 		} catch {
@@ -689,6 +735,7 @@ export class PlacesService {
 				};
 				collect(c.tree);
 				if (c.samples) collect(c.samples);
+				for (const part of Object.values(c.parts ?? {})) collect(part);
 				return items;
 			};
 			// Decode in a low-priority process of its own, so a cold bake leaves
@@ -894,7 +941,11 @@ export class PlacesService {
 	}
 
 	/** The catalog a file name (`<id>.json`, `<id>-samples.json`) belongs to, or null. */
-	private catalogOf(name: string): { c: BuiltCatalog; samples: boolean } | null {
+	private catalogOf(name: string): { c: BuiltCatalog; samples: boolean; part?: PlaceFolder } | null {
+		for (const c of this.catalogs.values()) {
+			const part = c.parts?.[name];
+			if (part) return { c, samples: false, part };
+		}
 		const samples = name.endsWith('-samples.json');
 		const id = samples ? name.slice(0, -'-samples.json'.length) : name.endsWith('.json') ? name.slice(0, -5) : '';
 		if (!id) return null;
@@ -913,11 +964,18 @@ export class PlacesService {
 		if (!hit) return null;
 		// The content, not the stamp: an index write that changed nothing in the
 		// Place moves the stamp and must not make every page re-download it.
-		return `"${keyHash(`${hit.c.content ?? hit.c.stamp}:${hit.c.builtAt}:${hit.c.baked}:${hit.samples}`)}"`;
+		return `"${keyHash(`${hit.c.content ?? hit.c.stamp}:${hit.c.builtAt}:${hit.c.baked}:${hit.samples}:${hit.part ? name : ''}`)}"`;
 	}
 
-	/** `<id>.json` or `<id>-samples.json`, or null. */
+	/** `<id>.json`, `<id>-samples.json` or one of a catalog's parts (`<id>~<slug>.json`), or null. */
 	fileJson(name: string): unknown | null {
+		const hit = this.catalogOf(name);
+		if (hit?.part) {
+			return {
+				metadata: { placeId: hit.c.id, name: hit.part.name, generatedAt: hit.c.builtAt },
+				tree: { folders: hit.part.folders, presets: hit.part.presets, kinds: hit.part.kinds }
+			};
+		}
 		const samples = name.endsWith('-samples.json');
 		const id = samples ? name.slice(0, -'-samples.json'.length) : name.endsWith('.json') ? name.slice(0, -5) : '';
 		if (!id) return null;

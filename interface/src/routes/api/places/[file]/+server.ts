@@ -1,8 +1,10 @@
 /**
  * `/api/places/index.json`, `/api/places/<id>.json`, `/api/places/<id>-samples.json`
+ * and `/api/places/<id>~<slug>.json` (one Pack of the Packs button, ADR-493)
  * — the browser's catalog, served from the Places service at runtime
- * (onboarding.plan.md §6.1). The three files keep the shape they had under
- * `interface/static/data/places/`, so `placesAdapter.ts` reads them unchanged.
+ * (onboarding.plan.md §6.1). The files keep the shape they had under
+ * `interface/static/data/places/`, so `placesAdapter.ts` reads them unchanged:
+ * a part is an `external` folder, as a Place's Samples is.
  *
  * Cached the way the static files were (§9): `no-cache` with an ETag, so a
  * page reload revalidates with one small request and reuses the body it

@@ -6,7 +6,7 @@
  * every Drum Rack, over the User Library and the Packs only.
  */
 import { describe, expect, it } from 'vitest';
-import { categoryRoots, categoryStamp, scanCategories } from '$lib/server/places/categoryScan';
+import { categoryRoots, categoryStamp, scanCategories, scanPacks } from '$lib/server/places/categoryScan';
 import type { PlaceFolder, PlaceItem } from '$lib/server/places/diskScan';
 import type { IndexHandle } from '$lib/server/places/indexScan';
 import { liveIndexFixture } from '../../../helpers/liveIndexFixture';
@@ -92,6 +92,33 @@ describe('scanCategories', () => {
 		const max = scan(h).trees.get('Max for Live')!.folders['Max Audio Effect'];
 		expect(items(max)[0]).toMatchObject({ path: 'Max for Live/Max Audio Effect/Drum Booth/Devices/Wobble/Wobble.amxd' });
 		expect(items(max)[0].fullPath).toBe('/Users/me/Packs/Drum Booth/Devices/Wobble/Ableton Folder Info/Wobble.amxd');
+	});
+});
+
+describe('scanPacks', () => {
+	it('puts every installed Pack under one root, each holding its own folders and naming itself for the load', () => {
+		const { f, h } = library();
+		f.place([...PACKS, 'Voice Box'], 'Voice Box', 0);
+		f.file([...PACKS, 'Drum Booth', 'Kits'], 'Booth Kit.adg', { device_id: 'device:ableton:instr:DrumGroupDevice' });
+		f.file([...PACKS, 'Voice Box', 'Samples', 'Choir'], 'Aah.wav');
+		// The User Library is no Pack.
+		f.file([...UL, 'Mine'], 'Mine.adv', { device_id: 'device:ableton:instr:Operator' });
+		const { tree } = scanPacks(h, { au: new Map(), colors: {} });
+		expect(Object.keys(tree.folders).sort()).toEqual(['Drum Booth', 'Voice Box']);
+		const kit = tree.folders['Drum Booth'].folders.Kits.presets[0];
+		expect(kit).toMatchObject({ path: 'Packs/Drum Booth/Kits/Booth Kit.adg', source: 'pack:Drum Booth', placePath: '/Users/me/Packs/Drum Booth' });
+		expect(tree.folders['Voice Box'].folders.Samples.path).toBe('Packs/Voice Box/Samples');
+	});
+
+	it("reads a device's folder (`dfld` in Live's index) as a folder, its presets included", () => {
+		const { f, h } = library();
+		f.file([...PACKS, 'Drum Booth', 'Instruments', 'Bass', 'Ableton Folder Info'], 'Bass.amxd', { device_type: 1 });
+		f.file([...PACKS, 'Drum Booth', 'Instruments', 'Bass', 'Basses'], 'Sub.adv', { device_id: 'device:m4l:instr:pack@x/Bass.amxd' });
+		const dfld = ((('d'.charCodeAt(0) << 24) | ('f'.charCodeAt(0) << 16) | ('l'.charCodeAt(0) << 8) | 'd'.charCodeAt(0)) >>> 0);
+		f.db.prepare("UPDATE files SET file_type = ? WHERE name = 'Bass'").run(dfld);
+		const bass = scanPacks(h, { au: new Map(), colors: {} }).tree.folders['Drum Booth'].folders.Instruments.folders.Bass;
+		expect(bass.presets.map((p) => [p.name, p.kind])).toEqual([['Bass', 'max-instrument']]);
+		expect(bass.folders.Basses.presets.map((p) => p.name)).toEqual(['Sub']);
 	});
 });
 

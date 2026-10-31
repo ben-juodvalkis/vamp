@@ -39,11 +39,13 @@
 import type { PlaceFolder, PlaceItem } from './diskScan';
 import { CLIP_EXTENSION, PRESET_EXTENSIONS, SAMPLE_EXTENSIONS } from './diskScan';
 import {
+	DEVICE_FOLDER_TYPE,
 	FOLDER_TYPE,
 	diskSpeller,
 	extOf,
 	indexItem,
 	indexLookups,
+	scanIndexPlace,
 	TAG_KEYS,
 	type IndexHandle,
 	type IndexRow,
@@ -53,6 +55,14 @@ import {
 /** The categories, in Live's sidebar order. */
 export const LIVE_CATEGORIES = ['Sounds', 'Drums', 'Instruments', 'Audio Effects', 'MIDI Effects', 'Max for Live', 'Clips'] as const;
 export type LiveCategory = (typeof LIVE_CATEGORIES)[number];
+
+/**
+ * Every installed Pack as one rail button (Ben, 2026-10-31: one tick in
+ * place of one per Pack): a folder per Pack, Core Library included, each
+ * holding the Pack's own tree as Live's index lists it (`scanPacks`).
+ * Listed with the categories, after them.
+ */
+export const PACKS_SOURCE = 'Packs';
 
 /** A category's role for track coloring: Drums colors as the drum rail does; the rest say nothing. */
 export const CATEGORY_ROLES: Partial<Record<LiveCategory, string>> = { Drums: 'drum' };
@@ -154,7 +164,7 @@ function candidateRows(h: IndexHandle, roots: CategoryRoot[], drumHitPatterns: s
 			   (SELECT group_concat(v.value, char(10)) FROM metadata m JOIN metadata_values v ON v.id = m.value_id
 			    WHERE m.file_id = f.file_id AND m.key IN (${TAG_KEYS.join(',')})) AS tags
 			 FROM ancestors a JOIN files f ON f.file_id = a.file_id JOIN files pf ON pf.file_id = f.parent_id
-			 WHERE a.ancestor_id IN (${roots.map((r) => r.fileId).join(',')}) AND f.file_type <> ${FOLDER_TYPE}
+			 WHERE a.ancestor_id IN (${roots.map((r) => r.fileId).join(',')}) AND f.file_type NOT IN (${FOLDER_TYPE}, ${DEVICE_FOLDER_TYPE})
 			   AND ((${like([...PRESET_EXTENSIONS, CLIP_EXTENSION])}) OR ((${like(SAMPLE_EXTENSIONS)}) AND pf.name IN (${hits})))`
 		)
 		.all(...drumHitPatterns) as unknown as CategoryRow[];
@@ -258,4 +268,32 @@ export function scanCategories(h: IndexHandle, opts: IndexScanOptions, roots: Ca
 		}
 	}
 	return { trees, roots, rows: rows.length };
+}
+
+/** A tree and every folder and item under it, with the root's name put in front of each path and each item naming its Pack. */
+function underPacks(node: PlaceFolder, root: CategoryRoot): PlaceFolder {
+	return {
+		...node,
+		path: `${PACKS_SOURCE}/${node.path}`,
+		folders: Object.fromEntries(Object.entries(node.folders).map(([k, v]) => [k, underPacks(v, root)])),
+		presets: node.presets.map((p) => ({ ...p, path: `${PACKS_SOURCE}/${p.path}`, source: root.source, placePath: root.path }))
+	};
+}
+
+/**
+ * Every installed Pack under one root (`PACKS_SOURCE`): a folder per Pack
+ * named as Live names it, holding what `scanIndexPlace` reads for that Pack
+ * (its devices' bundles shown as the device, as in a Place). Each item names
+ * its Pack (`pack:<name>`) for the load.
+ */
+export function scanPacks(h: IndexHandle, opts: IndexScanOptions, roots: CategoryRoot[] = categoryRoots(h)): { tree: PlaceFolder; rows: number } {
+	const tree: PlaceFolder = { name: PACKS_SOURCE, path: PACKS_SOURCE, folders: {}, presets: [], vendorColor: null };
+	let rows = 0;
+	for (const root of roots) {
+		if (!root.source.startsWith('pack:')) continue;
+		const scanned = scanIndexPlace(h, root.fileId, root.path, root.name, opts);
+		rows += scanned.rows;
+		tree.folders[root.name] = underPacks(scanned.tree, root);
+	}
+	return { tree, rows };
 }

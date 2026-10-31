@@ -12,7 +12,7 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join, posix } from 'node:path';
 import { decodeXmlEntities, libraryPlaces, newestLibraryCfg, type LivePlace } from '../libraryCfg';
-import { LIVE_CATEGORIES } from './categoryScan';
+import { LIVE_CATEGORIES, PACKS_SOURCE } from './categoryScan';
 
 export type SourceKind = 'place' | 'user-library' | 'pack' | 'category';
 
@@ -107,10 +107,12 @@ export function readLiveLibrary(prefsDir = DEFAULT_PREFS_DIR): LiveLibrary {
 }
 
 /**
- * Every folder a user can tick, in the order Settings lists them: the sidebar
- * Places in Live's order, then the User Library, then the Packs A→Z, then
- * Live's categories in its sidebar order (`categoryScan.ts`). A category is
- * no folder: its `path` is empty, and it is built only from Live's index.
+ * Everything a user can tick, in the order the browser's rail shows them:
+ * Live's categories in its sidebar order and then every installed Pack as
+ * one source (`categoryScan.ts`; ADR-493: above the Places, Ben 2026-10-31),
+ * then the sidebar Places in Live's order, then the User Library. A category
+ * is no folder: its `path` is empty, and it is built only from Live's index.
+ * The Packs are no longer ticked one by one.
  */
 export function librarySources(lib: LiveLibrary, exists: (p: string) => boolean = existsSync): LibrarySource[] {
 	const out: LibrarySource[] = [];
@@ -122,14 +124,11 @@ export function librarySources(lib: LiveLibrary, exists: (p: string) => boolean 
 		seen.add(key);
 		out.push({ key, kind, name, path: clean, icon, present: exists(clean) });
 	};
-	for (const p of lib.places) add('place', p.name, p.path, p.icon);
-	if (lib.userLibrary) add('user-library', 'User Library', lib.userLibrary);
-	for (const p of [...lib.packs].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))) {
-		add('pack', p.name, p.path);
-	}
-	for (const name of LIVE_CATEGORIES) {
+	for (const name of [...LIVE_CATEGORIES, PACKS_SOURCE]) {
 		const key = sourceKey('category', name);
 		out.push({ key, kind: 'category', name, path: '', icon: '', present: true });
 	}
+	for (const p of lib.places) add('place', p.name, p.path, p.icon);
+	if (lib.userLibrary) add('user-library', 'User Library', lib.userLibrary);
 	return out;
 }

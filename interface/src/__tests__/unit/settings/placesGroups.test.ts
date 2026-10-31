@@ -1,6 +1,7 @@
 /**
  * Settings → Places lays out a hundred-odd folders (the rig: 21 Places, the
- * User Library, 81 Packs) in four groups, ticked first, and a folder keeps
+ * User Library) and Live's categories, every Pack as one of them, in four
+ * groups, ticked first, and a folder keeps
  * the group it had when the page opened, so a tick never moves the row under
  * the finger (`placesGroups.ts`).
  */
@@ -9,7 +10,7 @@ import { groupPlaces, settleTicks, parentPath, matchesFilter } from '$lib/compon
 import type { PlacesSource } from '$lib/services/placesLive';
 
 const src = (kind: PlacesSource['kind'], name: string, path: string, ticked = false, present = true): PlacesSource => ({
-	key: `${kind}:${path}`,
+	key: `${kind}:${path || name}`,
 	kind,
 	name,
 	path,
@@ -26,30 +27,22 @@ const sources = [
 	src('place', 'Drum', `${LIB}/Sidebar/Drum`, true),
 	src('place', 'Bass', `${LIB}/Sidebar/Bass`, true),
 	src('user-library', 'User Library', LIB),
-	src('pack', 'Drum Booth', '/Users/me/Music/Ableton/Packs/Drum Booth'),
-	src('pack', 'Voice Box', '/Users/me/Music/Ableton/Packs/Voice Box', true)
+	src('category', 'Sounds', ''),
+	src('category', 'Packs', '', true)
 ];
 
 describe('groupPlaces', () => {
-	it('puts the ticked folders first, then Places, the User Library and the Packs, each in Live’s order', () => {
+	it("puts the ticked first, then Live's categories (the Packs among them), the Places and the User Library, each in Live’s order", () => {
 		const groups = groupPlaces(sources, new Map());
-		expect(groups.map((g) => g.id)).toEqual(['shown', 'places', 'user-library', 'packs']);
-		expect(groups[0].sources.map((s) => s.name)).toEqual(['Drum', 'Bass', 'Voice Box']);
-		expect(groups[1].sources.map((s) => s.name)).toEqual(['Desktop']);
-		expect(groups[3].sources.map((s) => s.name)).toEqual(['Drum Booth']);
-	});
-
-	it("gives Live's categories a group of their own, after the ticked ones", () => {
-		const withCategories = [...sources, src('category', 'Sounds', ''), src('category', 'Drums', '', true)];
-		const groups = groupPlaces(withCategories, new Map());
-		expect(groups.map((g) => g.id)).toEqual(['shown', 'categories', 'places', 'user-library', 'packs']);
+		expect(groups.map((g) => g.id)).toEqual(['shown', 'categories', 'places', 'user-library']);
+		expect(groups[0].sources.map((s) => s.name)).toEqual(['Drum', 'Bass', 'Packs']);
 		expect(groups[1].sources.map((s) => s.name)).toEqual(['Sounds']);
-		expect(groups[0].sources.map((s) => s.name)).toContain('Drums');
+		expect(groups[2].sources.map((s) => s.name)).toEqual(['Desktop']);
 	});
 
 	it('leaves an empty group out', () => {
 		const groups = groupPlaces(sources.filter((s) => s.kind !== 'user-library'), new Map());
-		expect(groups.map((g) => g.id)).toEqual(['shown', 'places', 'packs']);
+		expect(groups.map((g) => g.id)).toEqual(['shown', 'categories', 'places']);
 	});
 
 	it('keeps a folder where it was settled when its tick changes', () => {
@@ -77,7 +70,7 @@ describe('groupPlaces', () => {
 		const shown = groups.find((g) => g.id === 'shown')!;
 		expect(shown.sources.map((s) => s.name)).toEqual(['Drum']);
 		expect(shown.total).toBe(3);
-		expect(groups.find((g) => g.id === 'packs')!.sources.map((s) => s.name)).toEqual(['Drum Booth']);
+		expect(groups.find((g) => g.id === 'categories')!.sources).toEqual([]);
 		expect(groups.find((g) => g.id === 'places')!.sources).toEqual([]);
 		expect(matchesFilter(sources[0], 'users/me')).toBe(true);
 		expect(matchesFilter(sources[0], '  ')).toBe(true);

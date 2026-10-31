@@ -56,6 +56,13 @@ import { newestLiveDatabase } from '../../../routes/api/similar-samples/similarS
 export const SUPPORTED_SCHEMA = 12300;
 
 export const FOLDER_TYPE = fourccOf('fldr');
+/**
+ * A device's folder: Live's index types it `dfld`, not `fldr` (measured
+ * 2026-10-31: Creative Extensions › Instruments › Bass, which holds the
+ * device's `Ableton Folder Info` and its presets). Read as a folder, or the
+ * device and every preset filed under it go missing.
+ */
+export const DEVICE_FOLDER_TYPE = fourccOf('dfld');
 
 /** `metadata.key` for a Pack's own tags and for a user folder's (measured 2026-10-28). */
 export const TAG_KEYS = [1264941431, 1431004537];
@@ -353,7 +360,7 @@ export function scanIndexPlace(h: IndexHandle, rootId: number, rootPath: string,
 		for (const r of byParent.get(id) ?? []) {
 			const diskName = spelledOnDisk(dir, r.name.replace(/\//g, ':'));
 			if (diskName.startsWith('.')) continue;
-			if (r.file_type === FOLDER_TYPE) {
+			if (r.file_type === FOLDER_TYPE || r.file_type === DEVICE_FOLDER_TYPE) {
 				if (SKIP_FOLDERS.has(diskName)) {
 					// A device bundle: show what is inside as if it sat here.
 					const inner = build(r.file_id, rel, `${dir}/${diskName}`, diskName);

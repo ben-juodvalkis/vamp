@@ -36,28 +36,27 @@ describe('parseLiveLibrary', () => {
 });
 
 describe('librarySources', () => {
-	it('lists Places first in sidebar order, then the User Library, then the Packs A→Z, then Live\'s categories, each keyed by kind and path', () => {
+	it("lists Live's categories and every Pack as one source, then the Places in sidebar order, then the User Library, each keyed by kind", () => {
 		const lib = parseLiveLibrary(XML);
-		const present = new Set(['/Users/me/Sidebar/Bass', '/Users/me/Music/Ableton/User Library', '/Packs/Beat Tools']);
+		const present = new Set(['/Users/me/Sidebar/Bass', '/Users/me/Music/Ableton/User Library']);
 		const sources = librarySources(lib, (p) => present.has(p));
 		expect(sources.map((s) => `${s.kind}:${s.name}`)).toEqual([
-			'place:Bass',
-			'place:Drum',
-			'user-library:User Library',
-			'pack:Beat Tools',
-			'pack:Session Drums Club',
 			'category:Sounds',
 			'category:Drums',
 			'category:Instruments',
 			'category:Audio Effects',
 			'category:MIDI Effects',
 			'category:Max for Live',
-			'category:Clips'
+			'category:Clips',
+			'category:Packs',
+			'place:Bass',
+			'place:Drum',
+			'user-library:User Library'
 		]);
-		expect(sources[0].key).toBe(sourceKey('place', '/Users/me/Sidebar/Bass'));
-		expect(sources.map((s) => s.present)).toEqual([true, false, true, true, false, ...Array(7).fill(true)]);
-		// A category has no folder: it is read from Live's index alone.
-		expect(sources[5]).toMatchObject({ key: 'category:Sounds', path: '' });
-		expect(sources[1].icon).toBe('Sidebar/Sidebar_Drums');
+		// A category has no folder: it is read from Live's index alone. No Pack is a source of its own.
+		expect(sources[0]).toMatchObject({ key: 'category:Sounds', path: '', present: true });
+		expect(sources[8].key).toBe(sourceKey('place', '/Users/me/Sidebar/Bass'));
+		expect(sources.slice(8).map((s) => s.present)).toEqual([true, false, true]);
+		expect(sources[9].icon).toBe('Sidebar/Sidebar_Drums');
 	});
 });
