@@ -119,13 +119,31 @@ drives Live and passes the gate's page-load check. **Size:** 2 days.
   `<User Library>/Remote Scripts/Vamp`, the User Library found from Live's `Library.cfg` as
   `surface/install.sh` finds it (ported to Swift), with `vamp-paths.json` beside it. A
   symlink there (the rig's) is left alone.
-- **Vamp Devices, kept minimal:** Permute, MidiWheels, random-start, the groove and the
-  recorder, which no longer goes on Return A ([capture.plan.md](capture.plan.md)); the effect
-  tiles' own devices come along but load only when chosen. Copy them to
-  `~/Music/Vamp/Vamp Devices`, a folder the user can see and Live can index; the checklist says
-  "add this as a Place in Live", keeping the name "Vamp Devices" (the loads name it). **Better,
-  if it tests out:** copy them into the user's User Library instead, which Live's browser already
-  lists, and drop the Place step altogether (capture.plan.md §6).
+- **Vamp Devices, optional (Ben, 2026-10-31):** the install ships a folder of utility devices —
+  Permute, MidiWheels, the recorder ([capture.plan.md](capture.plan.md)), random-start, the
+  groove, and the effect tiles' own devices — copied to `~/Music/Vamp/Vamp Devices`. Vamp works
+  without it: **adding it to Live's Places is what turns those features on**, and while it is
+  not a Place they are not shown. The server already knows whether the Place exists (the
+  listing's `m4lDevices`), and the bridge's feature switches already turn controls off with a
+  reason; the devices become a feature of their own.
+
+  | Device | While the Place is missing |
+  |---|---|
+  | Permute | New tracks get none; the Permute view and the strip's step rows are not shown |
+  | MidiWheels | The on-screen wheels are not shown |
+  | The recorder | REC is not shown |
+  | random-start | A Simpler loads without the Random knob, silently |
+  | Vamp Groove | The groove chooser offers the Core Library's grooves only |
+  | The effect tiles' devices | Those tiles are not offered in + Effect |
+
+  Hidden in the performance views, but not hidden from the person: Settings → Places says
+  "Add the Vamp Devices folder to Live's Places to turn on Permute, the wheels and Capture",
+  and ticks itself when it is there. **To check in Live:** whether a Place added while Live
+  runs reaches the surface at once, or only after a restart (the rig's notes say fixing a Place
+  needed one). If it needs the restart, the instructions order it: add the folder, pick the
+  control surface, restart Live once. **Later, if it tests out:** copy the devices into the
+  User Library instead, which Live's browser already lists, so there is no Place step at all
+  (capture.plan.md §6).
 - **The checklist** becomes Vamp for Mac's too: the menu says what is left (control surface
   picked, Place added, iPad paired), from the same signals `firstRunSteps.ts` reads, and opens
   Settings on the Mac for the rest.
@@ -171,8 +189,9 @@ two Live steps) and **develop** (the clone, as now). The README's "there's no ap
   would race Live's own writes. The checklist explains it and ticks itself on the handshake.
 - **Adding the Vamp Devices Place.** Measured 2026-09-26: Live rewrites `Library.cfg` itself
   when a Place is added, at once, while it runs (`liveLibrary.ts`). Editing that file from
-  outside would race it the same way. The checklist ticks itself when the Place appears. This
-  step goes if the devices can live in the User Library (Phase 4).
+  outside would race it the same way. The checklist ticks itself when the Place appears. The
+  step is optional (Phase 4: without it, Vamp runs with those features hidden), and it goes
+  altogether if the devices can live in the User Library.
 - **Not the recorder on Return A:** that step goes with [capture.plan.md](capture.plan.md).
 
 ## 6. The rig is not touched
