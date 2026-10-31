@@ -68,8 +68,8 @@ first and sent on the second.
   plug and the page's connections 2 s after it, with no reload. Presets
   loaded after it with no drop. (Over Safari the cable's network link alone
   took ~20 s to get an address after a replug, 2026-10-27.)
-- A replug costs the app ~2 s instead of ~20 s plus a reconnect; a Mac rename
-  or address change costs it nothing. Not yet measured on the iPad itself.
+- A replug costs the app ~2 s instead of ~20 s plus a reconnect (measured on
+  the iPad, above); a Mac rename or address change costs it nothing.
 - Measured on this Mac with the app in the iPad Pro 12.9" Simulator
   (`VAMP_LINK_DIRECT=1` links over loopback; `-padLocalPagePort` moves the
   app's page port off the Mac's own 8889): the live set loads through the
@@ -82,11 +82,12 @@ first and sent on the second.
   rather than from the iPad; its gone-client ping check still reaches the
   page through the pass-through.
 - Installing on an iPad needs Developer Mode, pairing with Xcode and a signing
-  team (`owner/apps/Config/Local.xcconfig`, gitignored). Distribution beyond
-  the owner's iPad (TestFlight or the App Store) is undecided.
-- Later: Vamp for Mac starting and supervising the bridge and page server in
-  place of the Terminal and the status page; the USB cable as the trust
-  boundary in place of the device pairing `security.plan.md` plans.
+  team (`owner/apps/Config/Local.xcconfig`, gitignored). Since 2026-10-30
+  `fastlane ios beta` / `release` send it to TestFlight and the App Store.
+- Since built: Vamp for Mac starting and supervising the bridge and page
+  server (ADR-490); the cable as the trust boundary (ADR-491), with the link
+  itself authenticated since ADR-494, which replaces the version-1 protocol
+  above (no handshake, sequential stream ids).
 
 ## Tags
 `ipad`, `native-app`, `usbmux`, `connection`, `menubar`, `websocket`

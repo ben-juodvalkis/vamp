@@ -1,4 +1,4 @@
-// JS port of the Swift OSCEnvelope (Sources/LoopingMenuBar/OSCEnvelope.swift),
+// JS port of the Swift OSCEnvelope (owner/apps/Mac/Menu/OSCEnvelope.swift),
 // kept line-for-line equivalent so the harness validates the exact same wire
 // logic the menu-bar app ships. Also matches buildWireMessage / dispatchInbound
 // in interface/src/lib/api/connection/WebSocketConnection.ts.

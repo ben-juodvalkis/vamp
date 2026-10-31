@@ -1,7 +1,9 @@
-# Looping Menu-Bar
+# Vamp for Mac's menu
 
-A lightweight macOS menu-bar (status-bar) utility for the Looping live-looping
-rig. It gives you a checkmark-per-setting dropdown to flip the app's runtime
+The menu of Vamp for Mac (ADR-488, ADR-490), which also starts Vamp, carries
+Vamp for iPad's link (`../PadLink.swift`, ADR-494) and pairs iPads with it.
+This folder is the part that mirrors the session settings: a lightweight
+macOS menu-bar (status-bar) utility for the live-looping rig. It gives you a checkmark-per-setting dropdown to flip the app's runtime
 toggles **without opening the web UI**, and it reflects **live** state — the
 checkmarks stay correct when you change a setting from the web UI or from Live.
 
@@ -86,7 +88,7 @@ carries `mode` never reaches WebSocket clients.
 
 ## Build & run
 
-Requires macOS 13+ and a Swift toolchain (Xcode or Command Line Tools).
+Requires macOS 14+ and Xcode (`owner/apps/project.yml`).
 
 **Automatic** — `npm run dev` and `npm run ipad` now launch the menu bar as a
 `concurrently` process (via `scripts/launch-menubar.sh`, exposed as
@@ -111,12 +113,13 @@ Resolution order (first hit wins):
 
 1. `LOOPING_CONFIG` — explicit path to a `constants.json`
 2. `LOOPING_PROJECT_ROOT` — `<root>/config/constants.json`
-3. `/Users/Shared/DevWork/GitHub/vamp/config/constants.json` (the rig default)
+3. the `repoRoot` default `npm run install-mac-app` records (an app opened
+   from the Dock has no environment or working directory)
 4. walk up from the current directory looking for `config/constants.json`
 
-If none is found it falls back to the same inlined defaults the web UI uses
-(port 8081, etc.), so it still runs. Launching from inside the
-repo means step 4 finds it automatically (`npm run menubar` sets step 2).
+This Mac's `config/constants.local.json` is laid over it, as the bridge
+does. If none is found it falls back to the same inlined defaults the web UI
+uses (port 8081, etc.), so it still runs. `npm run menubar` sets step 2.
 
 ## Verifying it works
 
@@ -131,7 +134,7 @@ cd owner/apps/Mac/Menu
 node verify/verify.mjs
 ```
 
-Expected: `11 passed, 0 failed`, including *"web-UI client observes menu-bar
+Expected: `19 passed, 0 failed`, including *"web-UI client observes menu-bar
 write"* and *"menu-bar observes web-UI write"* — the bidirectional proof — and
 the `/bridge/batch` unwrap path.
 

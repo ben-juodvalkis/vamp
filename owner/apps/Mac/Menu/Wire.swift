@@ -15,7 +15,6 @@ enum Wire {
     static let authResult = "/bridge/auth/result"
 
     static let handshakeHello = "/looping/v3/handshake/hello"
-    static let handshakeAccept = "/looping/v3/handshake/accept"
     static let uiSupportedVersions = ["3.3.0"]
 
     // Primary SessionSettings toggles (bidirectional: same address carries

@@ -137,14 +137,6 @@ final class UsbMuxWatcher {
         }
     }
 
-    func stop() {
-        queue.async { [self] in
-            running = false
-            conn?.cancel()
-            conn = nil
-        }
-    }
-
     private func connect() {
         let conn = NWConnection(to: .unix(path: UsbMux.socketPath), using: .tcp)
         self.conn = conn

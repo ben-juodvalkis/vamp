@@ -133,15 +133,15 @@ final class BridgeClient: NSObject, URLSessionWebSocketDelegate {
                 if case .string(let salt)? = msg.args.first, !salt.isEmpty {
                     answerAuthChallenge(salt)
                 } else {
-                    NSLog("[LoopingMenuBar] auth challenge carried no salt")
+                    NSLog("[Vamp for Mac] auth challenge carried no salt")
                 }
                 continue
             case Wire.authResult:
                 if case .int(let ok)? = msg.args.first, ok == 1 {
-                    NSLog("[LoopingMenuBar] authenticated to the bridge")
+                    NSLog("[Vamp for Mac] authenticated to the bridge")
                     seedAfterAuth()
                 } else {
-                    NSLog("[LoopingMenuBar] bridge rejected authentication")
+                    NSLog("[Vamp for Mac] bridge rejected authentication")
                 }
                 continue
             default:
@@ -186,7 +186,7 @@ final class BridgeClient: NSObject, URLSessionWebSocketDelegate {
             // Nothing to prove with. The bridge will send us nothing, so
             // the menu bar shows disconnected — which is the honest
             // outcome, and better than looking connected while inert.
-            NSLog("[LoopingMenuBar] no WebSocket secret available; cannot authenticate")
+            NSLog("[Vamp for Mac] no WebSocket secret available; cannot authenticate")
             return
         }
         let key = SymmetricKey(data: Data(secret.utf8))
