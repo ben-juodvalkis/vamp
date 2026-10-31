@@ -52,6 +52,7 @@ final class PadLink: ObservableObject {
                 self.attach(id, serial: serial, dial: UsbMux.dialer(deviceID: id, port: self.devicePort))
             }
         }
+        watcher.log = { VampLog.line("iPad link: \($0)") }
         watcher.onDetach = { [weak self] id in
             Task { @MainActor in self?.detach(id) }
         }

@@ -115,16 +115,32 @@ enum UsbMux {
 
 /// Follows devices on the cable: one `Listen` to usbmuxd, redialled if
 /// usbmuxd restarts. Network-attached devices (Wi-Fi sync) are ignored.
+///
+/// While nothing is on the cable the `Listen` is renewed every
+/// `idleRenewal`: usbmuxd announces every attached device to a new one, so
+/// an attach the old one never heard turns up within that time. Measured on
+/// the rig, 2026-10-31: a Vamp for Mac running for 90 minutes said "not
+/// plugged in" with the iPad on the cable while usbmuxd announced it to any
+/// new listener, and a relaunch linked at once. A `Listen` that stalls
+/// (`waiting`) is dropped and redialled too. A device on the cable keeps
+/// its `Listen`, so a live link is never touched.
 final class UsbMuxWatcher {
     /// A device on the cable: its usbmux id and its serial number (UDID).
     var onAttach: ((Int, String?) -> Void)?
     var onDetach: ((Int) -> Void)?
+    /// State changes worth a line in the log, never per message.
+    var log: ((String) -> Void)?
+
+    static let idleRenewal: TimeInterval = 20
 
     private let queue: DispatchQueue
     private var conn: NWConnection?
     private var pending = Data()
     private var usbDevices = Set<Int>()
     private var running = false
+    /// When the current `Listen` replaced an idle one, for the log: an attach
+    /// heard right after says the old one had missed it.
+    private var renewedAt: Date?
 
     init(queue: DispatchQueue) {
         self.queue = queue
@@ -147,6 +163,10 @@ final class UsbMuxWatcher {
             case .ready:
                 conn.send(content: UsbMux.packet(["MessageType": "Listen"], tag: 1), completion: .contentProcessed { _ in })
                 self.read(conn)
+                self.renewWhileIdle(conn)
+            case .waiting(let error):
+                self.log?("usbmuxd did not answer (\(error)); dialling it again")
+                conn.cancel()
             case .failed, .cancelled:
                 self.lost(conn)
             default:
@@ -154,6 +174,18 @@ final class UsbMuxWatcher {
             }
         }
         conn.start(queue: queue)
+    }
+
+    /// Renew `conn` after `idleRenewal` if nothing is on the cable by then.
+    private func renewWhileIdle(_ conn: NWConnection) {
+        queue.asyncAfter(deadline: .now() + Self.idleRenewal) { [weak self] in
+            guard let self, self.running, self.conn === conn else { return }
+            guard self.usbDevices.isEmpty else { return self.renewWhileIdle(conn) }
+            self.conn = nil
+            conn.cancel()
+            self.renewedAt = Date()
+            self.connect()
+        }
     }
 
     private func read(_ conn: NWConnection) {
@@ -179,6 +211,10 @@ final class UsbMuxWatcher {
             let props = message["Properties"] as? [String: Any]
             guard (props?["ConnectionType"] as? String) == "USB", !usbDevices.contains(id) else { return }
             usbDevices.insert(id)
+            if let at = renewedAt, Date().timeIntervalSince(at) < 2 {
+                log?("the renewed watch found an iPad the last one had missed")
+            }
+            renewedAt = nil
             onAttach?(id, props?["SerialNumber"] as? String)
         case "Detached":
             guard usbDevices.remove(id) != nil else { return }
