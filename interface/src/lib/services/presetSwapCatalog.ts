@@ -61,7 +61,7 @@ export async function presetSiblings(fullPath: string): Promise<PresetSiblings |
 		return null;
 	}
 	const path = aliasPresetPath(index.aliases, fullPath);
-	const place = index.places.find((p) => path.startsWith(`${p.path.replace(/\/+$/, '')}/`));
+	const place = index.places.find((p) => !!p.path && path.startsWith(`${p.path.replace(/\/+$/, '')}/`));
 	if (!place) return null;
 	const found = await placeAdapterFor(place.id).findPresetSiblings(path);
 	if (!found) return null;

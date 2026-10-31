@@ -2,7 +2,8 @@
 	/**
 	 * Settings → Places (onboarding.plan.md §2, §6.2, §7): every folder Live's
 	 * library offers — the sidebar Places in Live's order, the User Library,
-	 * the installed Packs — with a tick each. A ticked one is cataloged on the
+	 * the installed Packs — and Live's own categories (Sounds, Drums,
+	 * Instruments…, from Live's index) with a tick each. A ticked one is cataloged on the
 	 * Mac and becomes a button on the browser rail; a tick lands on every
 	 * client within seconds (`placesLive`).
 	 *
@@ -32,7 +33,7 @@
 	const FILTER_FROM = 12;
 
 	let filter = $state('');
-	let open = $state<Record<PlacesGroupId, boolean>>({ shown: true, places: true, 'user-library': true, packs: false });
+	let open = $state<Record<PlacesGroupId, boolean>>({ shown: true, categories: true, places: true, 'user-library': true, packs: false });
 	let settled = $state.raw<ReadonlyMap<string, boolean>>(new Map());
 
 	$effect(() => {
@@ -155,13 +156,15 @@
 												if (places.saving) e.preventDefault();
 											}}
 											onchange={(e) => onTick(e, s)}
-											aria-label={`Show ${s.kind === 'pack' ? 'the Pack ' : ''}${s.name} in the browser`}
+											aria-label={`Show ${s.kind === 'pack' ? 'the Pack ' : s.kind === 'category' ? 'the category ' : ''}${s.name} in the browser`}
 										/>
 										<span class="set-check" aria-hidden="true"><Check class="set-check-icon" /></span>
 										<span class="set-row-main">
 											<span class="set-row-label set-place-name">{s.name}</span>
 											{#if !s.present}
 												<span class="set-row-sub">Not on this Mac right now</span>
+											{:else if s.kind === 'category'}
+												<span class="set-row-sub">From your Packs and User Library</span>
 											{:else if s.kind !== 'pack'}
 												<span class="set-place-path" dir="rtl"><bdi dir="ltr">{parentPath(s)}</bdi></span>
 											{/if}

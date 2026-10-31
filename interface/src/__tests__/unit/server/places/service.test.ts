@@ -10,6 +10,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, w
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createPlacesService, loadSource, type PlacesService } from '$lib/server/places/service';
+import { liveIndexFixture } from '../../../helpers/liveIndexFixture';
 
 // `catalog.effectsPlace` per test; the rest of the config is the repo's.
 let effectsPlace = '';
@@ -90,7 +91,8 @@ describe('PlacesService, disk source', () => {
 		const s = make();
 		const listing = s.listing();
 		expect(listing.firstRun).toBe(true);
-		expect(listing.sources.map((x) => `${x.kind}:${x.name}`)).toEqual(['place:Drum', 'place:Key', 'place:Desktop', 'user-library:User Library']);
+		expect(listing.sources.filter((x) => x.kind !== 'category').map((x) => `${x.kind}:${x.name}`)).toEqual(['place:Drum', 'place:Key', 'place:Desktop', 'user-library:User Library']);
+		expect(listing.sources.filter((x) => x.kind === 'category').map((x) => x.name)).toEqual(['Sounds', 'Drums', 'Instruments', 'Audio Effects', 'MIDI Effects', 'Max for Live', 'Clips']);
 		expect(listing.sources.some((x) => x.ticked)).toBe(false);
 		expect(s.indexJson().places).toEqual([]);
 		// Onboarding's step 2: this checkout's Max devices folder is no Place of the scratch library.
@@ -167,6 +169,40 @@ describe('PlacesService, disk source', () => {
 		// The poll is off in tests; a reload is what the poll would do.
 		(s as unknown as { reload(why: string): void }).reload('test');
 		expect(s.indexJson().places.map((p) => [p.id, p.name])).toEqual([['drums', 'Drums']]);
+	});
+});
+
+describe("PlacesService, Live's categories", () => {
+	it('builds a ticked category from the index on a disk-source Mac; each item names its own root', () => {
+		const dbDir = join(root, 'Live Database');
+		mkdirSync(dbDir, { recursive: true });
+		const f = liveIndexFixture(join(dbDir, 'Live-files-12300.db'));
+		f.place(['Users', 'me', 'Packs', 'Drum Booth'], 'Drum Booth', 0);
+		f.vfolder(1, 'Bass', ['Basses']);
+		f.file(['Users', 'me', 'Packs', 'Drum Booth', 'Basses'], 'Sub.adv', { device_id: 'device:ableton:instr:Operator' });
+		f.db.close();
+		vi.stubEnv('LOOPING_CATALOG_SOURCE', 'disk');
+		service = createPlacesService({
+			prefsDir: join(root, 'prefs'),
+			ticksFile: join(root, 'logs', 'places.json'),
+			cacheDir: join(root, 'cache'),
+			liveDatabaseDir: dbDir,
+			auDirs: []
+		});
+		service.setTicks(['category:Sounds']);
+		const entry = service.indexJson().places.find((p) => p.name === 'Sounds')!;
+		// No Place source: the browser keeps each item's own.
+		expect(entry).toMatchObject({ id: 'sounds', path: '', totalItems: 1 });
+		expect(entry.source).toBeUndefined();
+		const file = service.fileJson('sounds.json') as { tree: { folders: Record<string, { presets: Array<Record<string, unknown>> }> } };
+		// One root under Bass: its chain collapses, as a Place's single-child folders do.
+		expect(file.tree.folders.Bass.presets[0]).toMatchObject({
+			name: 'Sub',
+			source: 'pack:Drum Booth',
+			placePath: '/Users/me/Packs/Drum Booth'
+		});
+		// A preset read may open the category's roots, not the whole disk.
+		expect(service.catalogRoots()).toEqual(['/Users/me/Packs/Drum Booth']);
 	});
 });
 

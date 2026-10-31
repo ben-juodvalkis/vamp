@@ -515,6 +515,15 @@ class BrowserCache:
         contain inner chains/devices but those aren't reachable through
         the User Library descent path (and aren't the target of a
         filesystem-keyed load).
+
+        **Except a device** (``is_device``): Live lists a device's presets
+        as its children — a Pack's ``Audio Effects/Color Limiter`` (the
+        ``.amxd`` in ``Ableton Folder Info`` beside them on disk) holds
+        ``Brickwall Limiter.adv`` and twelve more, measured on Live
+        12.4.25b1, 2026-10-31. The device is cached and its children
+        walked, so a preset filed under its device loads by path: before,
+        ``Creative Extensions`` cached 69 entries and a Live category's
+        load of ``Instruments/Bass/Basses/6th Gear Plantation.adv`` missed.
         """
         if len(cache) >= _MAX_ENTRIES_PER_ROOT:
             return
@@ -553,7 +562,12 @@ class BrowserCache:
 
             if is_loadable:
                 cache[child_prefix] = child
-                continue
+                try:
+                    is_device = bool(child.is_device)
+                except _LOM_ERRORS:
+                    is_device = False
+                if not is_device:
+                    continue
 
             self._walk(child, child_prefix, cache, root_label, depth + 1)
             if len(cache) >= _MAX_ENTRIES_PER_ROOT:

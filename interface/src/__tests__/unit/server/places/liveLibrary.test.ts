@@ -36,7 +36,7 @@ describe('parseLiveLibrary', () => {
 });
 
 describe('librarySources', () => {
-	it('lists Places first in sidebar order, then the User Library, then the Packs A→Z, each keyed by kind and path', () => {
+	it('lists Places first in sidebar order, then the User Library, then the Packs A→Z, then Live\'s categories, each keyed by kind and path', () => {
 		const lib = parseLiveLibrary(XML);
 		const present = new Set(['/Users/me/Sidebar/Bass', '/Users/me/Music/Ableton/User Library', '/Packs/Beat Tools']);
 		const sources = librarySources(lib, (p) => present.has(p));
@@ -45,10 +45,19 @@ describe('librarySources', () => {
 			'place:Drum',
 			'user-library:User Library',
 			'pack:Beat Tools',
-			'pack:Session Drums Club'
+			'pack:Session Drums Club',
+			'category:Sounds',
+			'category:Drums',
+			'category:Instruments',
+			'category:Audio Effects',
+			'category:MIDI Effects',
+			'category:Max for Live',
+			'category:Clips'
 		]);
 		expect(sources[0].key).toBe(sourceKey('place', '/Users/me/Sidebar/Bass'));
-		expect(sources.map((s) => s.present)).toEqual([true, false, true, true, false]);
+		expect(sources.map((s) => s.present)).toEqual([true, false, true, true, false, ...Array(7).fill(true)]);
+		// A category has no folder: it is read from Live's index alone.
+		expect(sources[5]).toMatchObject({ key: 'category:Sounds', path: '' });
 		expect(sources[1].icon).toBe('Sidebar/Sidebar_Drums');
 	});
 });

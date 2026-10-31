@@ -55,10 +55,10 @@ import { newestLiveDatabase } from '../../../routes/api/similar-samples/similarS
 /** The one schema this reader was measured against. */
 export const SUPPORTED_SCHEMA = 12300;
 
-const FOLDER_TYPE = fourccOf('fldr');
+export const FOLDER_TYPE = fourccOf('fldr');
 
 /** `metadata.key` for a Pack's own tags and for a user folder's (measured 2026-10-28). */
-const TAG_KEYS = [1264941431, 1431004537];
+export const TAG_KEYS = [1264941431, 1431004537];
 /**
  * The tag groups a preset tile names, in this order: what a sound is like,
  * then what it is for. Live's Packs say the first under Character,
@@ -134,7 +134,7 @@ export interface IndexRow {
 	tags: string | null;
 }
 
-interface Lookups {
+export interface Lookups {
 	/** Device class → the name Live shows for it. */
 	deviceNames: Map<string, string>;
 	/** `name\tsize` of a Pack's `.adg`/`.adv` → its card tags. */
@@ -347,25 +347,7 @@ export function scanIndexPlace(h: IndexHandle, rootId: number, rootPath: string,
 	const stats = new Map<string, { mtimeMs: number; size: number }>();
 	const root = rootPath.replace(/\/+$/, '');
 
-	// Live's index stores names composed (NFC); APFS keeps the form a file was
-	// named in, decomposed (NFD) for the rig's accented samples ("Póg", "Café").
-	// Spell a non-ASCII name as the disk does, so paths match today's catalog
-	// byte for byte (Recent, the loaded ring and the surface compare strings).
-	const listings = new Map<string, Map<string, string>>();
-	const spelledOnDisk = (dir: string, name: string): string => {
-		if (!/[^\x00-\x7f]/.test(name)) return name;
-		let names = listings.get(dir);
-		if (!names) {
-			names = new Map();
-			try {
-				for (const n of readdirSync(dir)) names.set(n.normalize('NFC'), n);
-			} catch {
-				/* a folder the index lists and the disk lacks: keep the index's spelling */
-			}
-			listings.set(dir, names);
-		}
-		return names.get(name.normalize('NFC')) ?? name;
-	};
+	const spelledOnDisk = diskSpeller();
 	const build = (id: number, rel: string, dir: string, name: string): PlaceFolder => {
 		const node: PlaceFolder = { name, path: rel, folders: {}, presets: [], vendorColor: null };
 		for (const r of byParent.get(id) ?? []) {
@@ -384,42 +366,7 @@ export function scanIndexPlace(h: IndexHandle, rootId: number, rootPath: string,
 			const ext = extOf(diskName);
 			if (!PRESET_EXTENSIONS.has(ext) && !SAMPLE_EXTENSIONS.has(ext) && ext !== CLIP_EXTENSION) continue;
 			const full = `${dir}/${diskName}`;
-			const item: PlaceItem = {
-				name: diskName.slice(0, diskName.length - ext.length),
-				path: `${rel}/${diskName}`,
-				fullPath: full,
-				type: ext,
-				variants: [diskName],
-				kind: kindOfRow(r, ext)
-			};
-			if (ext === '.aupreset') {
-				const info = fileInfoOf(full, r, opts.kindCache);
-				// Live's indexer records no plug-in for a preset whose plist it cannot
-				// parse (a bare `&` in the name string, as in "Sad & Noisy Reeds"), so
-				// the file read the patch name needs anyway says which, as the disk scan's does.
-				if (!r.device_id && info) item.kind = info.kind;
-				const key = auKeyOf(r.device_id) ?? (r.device_id ? null : (info?.au ?? null));
-				const component = key ? opts.au.get(key) : undefined;
-				item.installed = !!component;
-				if (component) {
-					item.plugin = component.plugin;
-					item.maker = component.maker;
-				}
-				const patch = info?.patch;
-				if (patch && patch !== item.name) item.patch = patch;
-			}
-			if (ext === '.adg' || ext === '.adv') {
-				const device = deviceNameOf(r.device_id, deviceNames);
-				if (device) item.device = device;
-			}
-			const tags = cardTags(r.tags);
-			const borrowed =
-				tags.length || (ext !== '.adg' && ext !== '.adv')
-					? undefined
-					: (packTags.get(`${r.name}\t${r.file_size ?? ''}`) ?? packTagsByName.get(presetStem(r.name)) ?? undefined);
-			if (tags.length || borrowed) item.tags = tags.length ? tags : borrowed;
-			const tint = tintFor(item, opts.colors);
-			if (tint) item.vendorColor = tint;
+			const item = indexItem(r, diskName, ext, `${rel}/${diskName}`, full, opts, { deviceNames, packTags, packTagsByName });
 			node.presets.push(item);
 			if (r.mod_date || r.file_size) stats.set(full, { mtimeMs: (r.mod_date ?? 0) * 1000, size: r.file_size ?? 0 });
 		}
@@ -427,6 +374,82 @@ export function scanIndexPlace(h: IndexHandle, rootId: number, rootPath: string,
 	};
 	const tree = build(rootId, placeName, root, placeName);
 	return { tree, stats, rows: rows.length };
+}
+
+/**
+ * Live's index stores names composed (NFC); APFS keeps the form a file was
+ * named in, decomposed (NFD) for the rig's accented samples ("Póg", "Café").
+ * The speller spells a non-ASCII name as the disk does, so paths match the
+ * disk scan's byte for byte (Recent, the loaded ring and the surface compare
+ * strings). One speller remembers each folder it lists.
+ */
+export function diskSpeller(): (dir: string, name: string) => string {
+	const listings = new Map<string, Map<string, string>>();
+	return (dir, name) => {
+		if (!/[^\x00-\x7f]/.test(name)) return name;
+		let names = listings.get(dir);
+		if (!names) {
+			names = new Map();
+			try {
+				for (const n of readdirSync(dir)) names.set(n.normalize('NFC'), n);
+			} catch {
+				/* a folder the index lists and the disk lacks: keep the index's spelling */
+			}
+			listings.set(dir, names);
+		}
+		return names.get(name.normalize('NFC')) ?? name;
+	};
+}
+
+/** The lookups every scan reads once per index handle (device names, Pack presets' tags). */
+export function indexLookups(h: IndexHandle): Lookups {
+	return lookupsOf(h);
+}
+
+/**
+ * One catalog item from its index row: the kind, a plug-in preset's plug-in
+ * and patch, a Live preset's device, its card tags (borrowed from the Pack
+ * preset it copies when it has none) and its tint. `diskName` is the file's
+ * name as the disk spells it, `path` the catalog path, `full` the file.
+ */
+export function indexItem(r: IndexRow, diskName: string, ext: string, path: string, full: string, opts: IndexScanOptions, l: Lookups): PlaceItem {
+	const item: PlaceItem = {
+		name: diskName.slice(0, diskName.length - ext.length),
+		path,
+		fullPath: full,
+		type: ext,
+		variants: [diskName],
+		kind: kindOfRow(r, ext)
+	};
+	if (ext === '.aupreset') {
+		const info = fileInfoOf(full, r, opts.kindCache);
+		// Live's indexer records no plug-in for a preset whose plist it cannot
+		// parse (a bare `&` in the name string, as in "Sad & Noisy Reeds"), so
+		// the file read the patch name needs anyway says which, as the disk scan's does.
+		if (!r.device_id && info) item.kind = info.kind;
+		const key = auKeyOf(r.device_id) ?? (r.device_id ? null : (info?.au ?? null));
+		const component = key ? opts.au.get(key) : undefined;
+		item.installed = !!component;
+		if (component) {
+			item.plugin = component.plugin;
+			item.maker = component.maker;
+		}
+		const patch = info?.patch;
+		if (patch && patch !== item.name) item.patch = patch;
+	}
+	if (ext === '.adg' || ext === '.adv') {
+		const device = deviceNameOf(r.device_id, l.deviceNames);
+		if (device) item.device = device;
+	}
+	const tags = cardTags(r.tags);
+	const borrowed =
+		tags.length || (ext !== '.adg' && ext !== '.adv')
+			? undefined
+			: (l.packTags.get(`${r.name}\t${r.file_size ?? ''}`) ?? l.packTagsByName.get(presetStem(r.name)) ?? undefined);
+	if (tags.length || borrowed) item.tags = tags.length ? tags : borrowed;
+	const tint = tintFor(item, opts.colors);
+	if (tint) item.vendorColor = tint;
+	return item;
 }
 
 /** What a plug-in preset's file says (its plug-in and patch name), from the shared kind cache or one read of the file. */
@@ -455,7 +478,7 @@ export function cardTags(raw: string | null): string[] {
 	return out.slice(0, MAX_CARD_TAGS);
 }
 
-function extOf(name: string): string {
+export function extOf(name: string): string {
 	const i = name.lastIndexOf('.');
 	return i < 0 ? '' : name.slice(i).toLowerCase();
 }

@@ -12,8 +12,9 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join, posix } from 'node:path';
 import { decodeXmlEntities, libraryPlaces, newestLibraryCfg, type LivePlace } from '../libraryCfg';
+import { LIVE_CATEGORIES } from './categoryScan';
 
-export type SourceKind = 'place' | 'user-library' | 'pack';
+export type SourceKind = 'place' | 'user-library' | 'pack' | 'category';
 
 /** One folder the browser can catalog: a sidebar Place, the User Library, or a Pack. */
 export interface LibrarySource {
@@ -107,7 +108,9 @@ export function readLiveLibrary(prefsDir = DEFAULT_PREFS_DIR): LiveLibrary {
 
 /**
  * Every folder a user can tick, in the order Settings lists them: the sidebar
- * Places in Live's order, then the User Library, then the Packs A→Z.
+ * Places in Live's order, then the User Library, then the Packs A→Z, then
+ * Live's categories in its sidebar order (`categoryScan.ts`). A category is
+ * no folder: its `path` is empty, and it is built only from Live's index.
  */
 export function librarySources(lib: LiveLibrary, exists: (p: string) => boolean = existsSync): LibrarySource[] {
 	const out: LibrarySource[] = [];
@@ -123,6 +126,10 @@ export function librarySources(lib: LiveLibrary, exists: (p: string) => boolean 
 	if (lib.userLibrary) add('user-library', 'User Library', lib.userLibrary);
 	for (const p of [...lib.packs].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))) {
 		add('pack', p.name, p.path);
+	}
+	for (const name of LIVE_CATEGORIES) {
+		const key = sourceKey('category', name);
+		out.push({ key, kind: 'category', name, path: '', icon: '', present: true });
 	}
 	return out;
 }

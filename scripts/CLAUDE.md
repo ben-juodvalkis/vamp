@@ -67,7 +67,8 @@ Automation, run from the repo root through `npm run`.
 Since 2026-09-26 the interface server builds the browser's catalog at runtime,
 for the Places ticked in Settings, and serves it over `/api/places/*`
 (`interface/src/lib/server/places/`: `service.ts`, the disk scan
-`diskScan.ts`, Live's index `indexScan.ts`, `catalogShape.ts`, the thumbnail
+`diskScan.ts`, Live's index `indexScan.ts`, Live's own categories
+`categoryScan.ts` (ADR-493), `catalogShape.ts`, the thumbnail
 baker `audioThumbnailCache.ts`, and `placesManifest.ts`, the alias map).
 `dev` and `prep:ipad` no longer build one. Three scripts remain:
 

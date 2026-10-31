@@ -48,7 +48,8 @@ function main(): number {
 	const sources = librarySources(lib);
 	const ticks = readTicks(join(repoRoot(), 'logs', 'places.json'));
 	const ticked = ticks.firstRun ? seedTicks(sources, configPath('sidebarRoot')) : ticks.ticked;
-	const chosen = sources.filter((s) => s.present && (only ? s.name === only : all || ticked.has(s.key)));
+	// A Live category has no folder to scan from the disk: nothing to compare.
+	const chosen = sources.filter((s) => s.kind !== 'category' && s.present && (only ? s.name === only : all || ticked.has(s.key)));
 	if (!chosen.length) {
 		console.log('nothing to compare: no ticked Place exists here (tick some in Settings, or pass --all / --name)');
 		return 0;

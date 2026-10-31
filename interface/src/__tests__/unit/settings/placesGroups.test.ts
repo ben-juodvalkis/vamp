@@ -39,6 +39,14 @@ describe('groupPlaces', () => {
 		expect(groups[3].sources.map((s) => s.name)).toEqual(['Drum Booth']);
 	});
 
+	it("gives Live's categories a group of their own, after the ticked ones", () => {
+		const withCategories = [...sources, src('category', 'Sounds', ''), src('category', 'Drums', '', true)];
+		const groups = groupPlaces(withCategories, new Map());
+		expect(groups.map((g) => g.id)).toEqual(['shown', 'categories', 'places', 'user-library', 'packs']);
+		expect(groups[1].sources.map((s) => s.name)).toEqual(['Sounds']);
+		expect(groups[0].sources.map((s) => s.name)).toContain('Drums');
+	});
+
 	it('leaves an empty group out', () => {
 		const groups = groupPlaces(sources.filter((s) => s.kind !== 'user-library'), new Map());
 		expect(groups.map((g) => g.id)).toEqual(['shown', 'places', 'packs']);

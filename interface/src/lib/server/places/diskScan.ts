@@ -75,6 +75,9 @@ export interface PlaceItem {
 	device?: string;
 	/** What the sound is like, from Live's tags (`indexScan.cardTags`): index scans only. */
 	tags?: string[];
+	/** Where a Live category's item lives, for a load that names it (`categoryScan`): `library` or `pack:<name>`, and that root's folder. A Place's items take their Place's. */
+	source?: string;
+	placePath?: string;
 }
 
 export interface PlaceFolder {

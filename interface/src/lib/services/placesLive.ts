@@ -72,7 +72,7 @@ export const PLACES_TICKS_URL = '/api/places/ticks';
 
 export interface PlacesSource {
 	key: string;
-	kind: 'place' | 'user-library' | 'pack';
+	kind: 'place' | 'user-library' | 'pack' | 'category';
 	name: string;
 	path: string;
 	icon: string;

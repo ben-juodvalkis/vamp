@@ -352,6 +352,9 @@ source and the Phase 4 switch that chose between them.
 
 - **The rail** is Recent + one button per Place in `places/index.json` (Live's
   sidebar order, read from `Library.cfg` by `scripts/generate-places-catalog.ts`),
+  then any of Live's categories ticked in Settings (Sounds, Drums, Instruments,
+  Audio / MIDI Effects, Max for Live, Clips; ADR-493), whose items each name
+  their own Pack or the User Library as their load source,
   split into the rail's three bands by `drillDownModel.railBands` (plan §2: as
   evenly as they go, later bands taking the extra; Record always leads the first).
   **Today's seven Places draw the old type rail exactly: `shot places` vs `shot

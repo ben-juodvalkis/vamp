@@ -409,3 +409,36 @@ def test_find_leaf_misses_outside_the_folder_and_for_other_sources():
     cache, _packs = _core_library_cache()
     assert cache.find_leaf("pack:Core Library", "Grooves", "Nope.agr") is None
     assert cache.find_leaf("place:Core Library", "Grooves", "Swing 16ths 57.agr") is None
+
+
+# --- a preset filed under its device (Live categories, 2026-10-31) -----------
+
+
+def test_a_preset_under_its_device_loads_by_path():
+    """Live lists a device's presets as its children (``is_device``); the
+    walk caches the device and goes on into them. Measured on Live
+    12.4.25b1: Creative Extensions › Audio Effects › Color Limiter holds
+    ``Brickwall Limiter.adv``, and a category load of a preset there missed."""
+    limiter = CountingBrowserItem("Brickwall Limiter.adv", is_loadable=True)
+    sub = CountingBrowserItem("Sub.adv", is_loadable=True)
+    color_limiter = CountingBrowserItem("Color Limiter", is_loadable=True, children=[limiter])
+    color_limiter.is_device = True
+    bass = CountingBrowserItem(
+        "Bass", is_loadable=True, children=[CountingBrowserItem("Basses", children=[sub])]
+    )
+    bass.is_device = True
+    # A loadable item that is no device keeps its inside to itself.
+    kit = CountingBrowserItem("Kit.adg", is_loadable=True, children=[CountingBrowserItem("inner", is_loadable=True)])
+    pack = CountingBrowserItem("Creative Extensions", children=[
+        CountingBrowserItem("Audio Effects", children=[color_limiter]),
+        CountingBrowserItem("Instruments", children=[bass, kit]),
+    ])
+    browser = StubBrowser()
+    browser.packs = CountingBrowserItem("Packs", children=[pack])
+    cache = BrowserCache(browser=browser, user_library_base=None, places_roots={})
+    src = "pack:Creative Extensions"
+    assert cache.lookup_named(src, "Audio Effects/Color Limiter/Brickwall Limiter.adv") is limiter
+    assert cache.lookup_named(src, "Instruments/Bass/Basses/Sub.adv") is sub
+    assert cache.lookup_named(src, "Audio Effects/Color Limiter") is color_limiter
+    assert cache.lookup_named(src, "Instruments/Kit.adg/inner") is None
+    assert kit.children_reads == 0

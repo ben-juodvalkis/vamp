@@ -28,7 +28,7 @@ export async function recentThroughAliases(presets: Preset[]): Promise<Preset[]>
 		return presets;
 	}
 	const roleOf = (fullPath: string) =>
-		index.places.find((pl) => fullPath.startsWith(`${pl.path.replace(/\/+$/, '')}/`))?.role;
+		index.places.find((pl) => !!pl.path && fullPath.startsWith(`${pl.path.replace(/\/+$/, '')}/`))?.role;
 	const seen = new Set<string>();
 	const out: Preset[] = [];
 	for (const p of presets) {

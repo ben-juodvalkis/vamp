@@ -57,6 +57,7 @@ import {
 } from './diskScan';
 import { findLiveDatabase, indexRowsFingerprint, indexRowsOf, openIndex, placeFileId, scanIndexPlace, type IndexHandle } from './indexScan';
 import { MANIFEST_NAME, readManifest } from './placesManifest';
+import { CATEGORY_ROLES, categoryRoots, categoryStamp, scanCategories, type CategoryScanResult, type LiveCategory } from './categoryScan';
 import { bakeThumbnails } from './audioThumbnailCache';
 
 /** How the effects Place is drawn (`tidyEffectsPlace`): 3, every preset on one screen in its folder's section (2026-10-26; 2 as on disk, 1 grouped by kind). */
@@ -93,6 +94,8 @@ export interface BuiltCatalog {
 	totalItems: number;
 	/** Whether the thumbnail bake has run over this build. */
 	baked: boolean;
+	/** A Live category's roots (the User Library, the Packs): the folders its items may be read from. */
+	roots?: string[];
 	/** A fingerprint of what the build produced, before thumbnails: a rebuild that matches it changed nothing. */
 	content?: string;
 }
@@ -122,7 +125,8 @@ export interface PlacesIndexJson {
 		path: string;
 		icon: string;
 		role: string | null;
-		source: string;
+		/** The load source of every item; absent for a Live category, whose items each name their own. */
+		source?: string;
 		file: string;
 		samplesFile?: string;
 		totalItems: number;
@@ -136,6 +140,13 @@ export interface PlacesIndexJson {
 }
 
 const POLL_MS = 2000;
+
+/**
+ * How often an index write may make the categories look at their roots
+ * (`categoryStamp`, 82 ms on the rig). A build is ~4 s cold, so it runs only
+ * when that stamp moved, and the look itself waits this long between turns.
+ */
+const CATEGORY_STAMP_MS = 30_000;
 
 /** Where the service reads and writes; the defaults are the checkout's, tests pass their own. */
 export interface PlacesServiceOptions {
@@ -237,6 +248,10 @@ export class PlacesService {
 	private baking = false;
 	private bakeChild: ChildProcess | null = null;
 	private aliasCache: { file: string; mtimeMs: number; aliases: PlaceAliasMap } | null = null;
+	/** The categories' stamp and when it was read (`CATEGORY_STAMP_MS`). */
+	private categoryStampRead: { at: number; stamp: string } | null = null;
+	/** Every category's tree from one read of the index, kept while its stamp holds. */
+	private categoryScan: { stamp: string; result: CategoryScanResult } | null = null;
 
 	constructor(opts: PlacesServiceOptions = {}) {
 		this.prefsDir = opts.prefsDir ?? DEFAULT_PREFS_DIR;
@@ -410,14 +425,16 @@ export class PlacesService {
 			}
 		}
 		const source = preferredSource();
+		// A Live category is only ever built from the index, whatever the Places use.
+		const needsIndex = source === 'index' || wanted.some((s) => s.kind === 'category');
 		let index: IndexHandle | null = null;
-		if (source === 'index') index = this.openIndexOrNull();
+		if (needsIndex) index = this.openIndexOrNull();
 		this.lastDbStamp = this.dbStamp();
 		const ctx = wanted.length ? this.ensureScanContext() : null;
 		try {
 			for (const s of wanted) {
 				const id = this.ids.get(s.key)!;
-				const built = this.buildOne(s, id, index, ctx!);
+				const built = s.kind === 'category' ? this.buildCategory(s, id, index, ctx!) : this.buildOne(s, id, source === 'index' ? index : null, ctx!);
 				if (built) {
 					this.catalogs.set(s.key, built);
 					changed = true;
@@ -508,6 +525,57 @@ export class PlacesService {
 		}
 		if (effects) raw = tidyEffectsPlace(raw, effects);
 		const tree = shapePlace(raw, { maxFolderDepth: tuning.maxFolderDepth, flattenFolders: tuning.flattenFolders, keepNestingFolders: tuning.keepNestingFolders });
+		return this.finishBuild(s, id, role, source, stamp, t, tree, have);
+	}
+
+	/**
+	 * A Live category's catalog (`categoryScan.ts`): every category's tree
+	 * comes from one read of the index, rebuilt only when the files under the
+	 * User Library and the Packs changed. Null when nothing changed, or when
+	 * there is no index to read (a category has no folder to scan).
+	 */
+	private buildCategory(s: LibrarySource, id: string, index: IndexHandle | null, ctx: { au: Map<string, AuComponent>; colors: Record<string, string | undefined> }): BuiltCatalog | null {
+		if (!index) return null;
+		const tuning = tuningFor(s.name);
+		const role = tuning.role !== undefined ? tuning.role : (CATEGORY_ROLES[s.name as LiveCategory] ?? null);
+		const now = Date.now();
+		if (!this.categoryStampRead || now - this.categoryStampRead.at >= CATEGORY_STAMP_MS) {
+			this.categoryStampRead = { at: now, stamp: categoryStamp(index, categoryRoots(index)) };
+		}
+		const indexStamp = this.categoryStampRead.stamp;
+		const stamp = `category:${indexStamp}:${CATALOG_FORMAT}:${s.name}:${id}:${JSON.stringify(tuning)}`;
+		const have = this.catalogs.get(s.key);
+		if (have && have.stamp === stamp) return null;
+		const cached = this.readCache(s.key, stamp);
+		if (cached) return cached;
+
+		const t = Date.now();
+		this.scanned = true;
+		if (this.categoryScan?.stamp !== indexStamp) {
+			if (!this.kindCache) this.kindCache = loadKindCache(join(this.cacheDir, 'places-kind-cache.json'));
+			const result = scanCategories(index, { ...ctx, kindCache: this.kindCache });
+			this.categoryScan = { stamp: indexStamp, result };
+			logger.info('places: categories scanned', { component: 'places', rows: result.rows, roots: result.roots.length, ms: Date.now() - t });
+		}
+		const { result } = this.categoryScan;
+		const raw = result.trees.get(s.name as LiveCategory);
+		if (!raw) return null;
+		const tree = shapePlace(raw, { maxFolderDepth: tuning.maxFolderDepth, flattenFolders: tuning.flattenFolders, keepNestingFolders: tuning.keepNestingFolders });
+		return this.finishBuild(s, id, role, 'index', stamp, t, tree, have, result.roots.map((r) => r.path));
+	}
+
+	/** The catalog of a shaped tree; null when it is the one already held (its stamp is moved on). */
+	private finishBuild(
+		s: LibrarySource,
+		id: string,
+		role: string | null,
+		source: CatalogSource,
+		stamp: string,
+		t: number,
+		tree: PlaceFolder,
+		have: BuiltCatalog | undefined,
+		roots?: string[]
+	): BuiltCatalog | null {
 		const kinds = tree.kinds ?? {};
 		const samples = tree.folders[SAMPLES_FOLDER] ?? null;
 		if (samples) {
@@ -529,6 +597,7 @@ export class PlacesService {
 			kinds,
 			totalItems: totalOf(kinds),
 			baked: false,
+			...(roots ? { roots } : {}),
 			content: createHash('sha1').update(JSON.stringify([source, role, s.name, s.icon, id, tree, samples])).digest('hex')
 		};
 		// Live writes its index for anything it indexes, a file on the Desktop
@@ -580,6 +649,8 @@ export class PlacesService {
 	/** Forget every built catalog and build again. */
 	rebuild(): void {
 		this.catalogs.clear();
+		this.categoryStampRead = null;
+		this.categoryScan = null;
 		try {
 			for (const f of readdirSync(this.catalogCacheDir())) if (f.endsWith('.json')) unlinkSync(join(this.catalogCacheDir(), f));
 		} catch {
@@ -763,7 +834,7 @@ export class PlacesService {
 
 	/** The folders of every Place the browser has a catalog of: what a preset read may open (`/api/places/preset-params`). */
 	catalogRoots(): string[] {
-		return this.sources.filter((s) => this.catalogs.has(s.key)).map((s) => s.path);
+		return this.sources.filter((s) => this.catalogs.has(s.key)).flatMap((s) => this.catalogs.get(s.key)!.roots ?? [s.path]);
 	}
 
 	/** Today's `index.json`: the ticked Places in sidebar order. */
@@ -778,7 +849,7 @@ export class PlacesService {
 					path: c.path,
 					icon: c.icon,
 					role: c.role,
-					source: loadSource(s),
+					...(s.kind === 'category' ? {} : { source: loadSource(s) }),
 					file: `${c.id}.json`,
 					samplesFile: c.samples ? `${c.id}-samples.json` : undefined,
 					totalItems: c.totalItems,

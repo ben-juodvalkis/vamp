@@ -1,8 +1,10 @@
 /**
  * How Settings → Places lays out the folders Live lists (a hundred and more on
- * the rig: 21 Places, the User Library, 81 Packs), in four groups:
+ * the rig: 21 Places, the User Library, 81 Packs) and Live's own categories,
+ * in five groups:
  *
  *   In the browser   the ticked ones, whatever their kind
+ *   Live's categories  Sounds, Drums, Instruments… not ticked
  *   Places in Live   the sidebar Places not ticked
  *   User Library     Live's User Library, when not ticked
  *   Packs            the installed Packs not ticked (collapsed until opened)
@@ -18,7 +20,7 @@
  */
 import type { PlacesSource } from '$lib/services/placesLive';
 
-export type PlacesGroupId = 'shown' | 'places' | 'user-library' | 'packs';
+export type PlacesGroupId = 'shown' | 'categories' | 'places' | 'user-library' | 'packs';
 
 export interface PlacesGroup {
 	id: PlacesGroupId;
@@ -33,12 +35,13 @@ export interface PlacesGroup {
 
 export const GROUP_TITLES: Record<PlacesGroupId, string> = {
 	shown: 'In the browser',
+	categories: 'Live’s categories',
 	places: 'Places in Live',
 	'user-library': 'User Library',
 	packs: 'Packs'
 };
 
-const ORDER: PlacesGroupId[] = ['shown', 'places', 'user-library', 'packs'];
+const ORDER: PlacesGroupId[] = ['shown', 'categories', 'places', 'user-library', 'packs'];
 
 /** Settle every folder not seen before by its tick now. Returns the same map when nothing is new. */
 export function settleTicks(settled: ReadonlyMap<string, boolean>, sources: PlacesSource[]): ReadonlyMap<string, boolean> {
@@ -51,6 +54,7 @@ export function settleTicks(settled: ReadonlyMap<string, boolean>, sources: Plac
 
 function groupOf(s: PlacesSource, settled: ReadonlyMap<string, boolean>): PlacesGroupId {
 	if (settled.get(s.key) ?? s.ticked) return 'shown';
+	if (s.kind === 'category') return 'categories';
 	return s.kind === 'pack' ? 'packs' : s.kind === 'user-library' ? 'user-library' : 'places';
 }
 
@@ -60,7 +64,7 @@ export function matchesFilter(s: PlacesSource, filter: string): boolean {
 	return s.name.toLowerCase().includes(q) || s.path.toLowerCase().includes(q);
 }
 
-/** The four groups, empty ones left out. */
+/** The five groups, empty ones left out. */
 export function groupPlaces(sources: PlacesSource[], settled: ReadonlyMap<string, boolean>, filter = ''): PlacesGroup[] {
 	const groups = new Map<PlacesGroupId, PlacesGroup>(
 		ORDER.map((id) => [id, { id, title: GROUP_TITLES[id], sources: [], total: 0, ticked: 0 }])
