@@ -414,6 +414,17 @@ async function tap(ui, fingers, target) {
 		await ui.cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...m });
 		return;
 	}
+	// `fingers: 2`: two fingers side by side on the target, down and up together (a strip's solo).
+	if (target.fingers === 2) {
+		const b = await boxOf(ui.page, target);
+		const dx = b.w * 0.22 * ui.scale;
+		const a = await fingers.down(x - dx, y);
+		const c = await fingers.down(x + dx, y);
+		await wait(hold);
+		await fingers.up(c);
+		await fingers.up(a);
+		return;
+	}
 	const id = await fingers.down(x, y);
 	await wait(hold);
 	await fingers.up(id);
