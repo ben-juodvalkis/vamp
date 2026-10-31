@@ -70,7 +70,7 @@ for the Places ticked in Settings, and serves it over `/api/places/*`
 `diskScan.ts`, Live's index `indexScan.ts`, Live's own categories
 `categoryScan.ts` (ADR-493), `catalogShape.ts`, the thumbnail
 baker `audioThumbnailCache.ts`, and `placesManifest.ts`, the alias map).
-`dev` and `prep:ipad` no longer build one. Three scripts remain:
+`dev` and `prep:ipad` no longer build one. Four scripts remain:
 
 - `generate-places-catalog.ts` (`npm run generate-places`): warms the
   server's cache (`scripts/.cache/places/`) and reports what it would build;
@@ -78,6 +78,10 @@ baker `audioThumbnailCache.ts`, and `placesManifest.ts`, the alias map).
 - `places-diff.ts` (`npm run places:diff`): every ticked Place built from
   Live's index and from the disk, and every item the two disagree on
   (onboarding.plan.md §10). `-- --all`, `-- --name <Place>`.
+- `scan-categories.ts`: not run by hand. The service spawns it at low
+  priority to build Live's categories and the Packs button from Live's index
+  (ADR-493), so the 4–6 s build leaves the server answering; it falls back to
+  building in-process if it cannot start.
 - `bake-thumbnails.ts`: not run by hand. The service spawns it at low
   priority to decode sample thumbnails into the shared peaks cache, so a cold
   bake (about 16 minutes on the rig) leaves the server responsive; it exits

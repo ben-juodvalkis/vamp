@@ -109,6 +109,29 @@ installed Pack in place of one per Pack.
   (Drums › Kits) and Core Library's Echo preset `8DotBall` each loaded
   onto a new track or its chain through the surface.
 
+## Addendum: off the server's thread, opened on demand (2026-10-31)
+Review of the above found three costs on the Mac's server, and one worry
+on Live's side, which measured fine.
+
+- **The build runs in a child** (`scripts/scan-categories.ts`, low
+  priority, spawned as the thumbnail bake is). The server keeps serving the
+  catalogs it has and swaps the new ones in when the child lands. Measured
+  with Sounds, Drums and Packs ticked: `/api/places/list` answered in
+  0.004–0.15 s through the build and 0.73 s at the swap, against 4–6 s
+  blocked before. Tests and tools build inline (`categoriesInline`).
+- **Every category is split by top-level folder**, as the Packs are. The
+  Drums button opens on 4 KB (14 MB whole), Sounds on 5 KB; Drums › Kick
+  is 860 KB and Kits 2.3 MB when tapped.
+- **A part's thumbnails bake once it is opened** (`openedParts`,
+  `partsBaked`): the Packs' 43,000 samples and Drums' 12,000 are no work
+  until someone taps in. Measured: Drums › Kick and › Snare took their
+  waveforms within a minute of being opened, while › Clap stayed bare
+  until it was.
+- **The surface's walk of a big Pack is fast.** Big Band Essentials 2's
+  4,337 entries took 33 ms (Log.txt: track created 11:05:08.524, cache
+  built .557). That load's 9 s went to Live creating the track, with
+  "Audio queue timeout" lines every 3 s while the Mac's screen was locked.
+
 ## Consequences
 - The rail grows by one button per ticked category, and its bands share
   out the extra. With all eight ticked (the seven and Packs) beside the

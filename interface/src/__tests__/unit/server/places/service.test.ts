@@ -200,9 +200,12 @@ describe("PlacesService, Live's categories", () => {
 		// No Place source: the browser keeps each item's own.
 		expect(entry).toMatchObject({ id: 'sounds', path: '', totalItems: 1 });
 		expect(entry.source).toBeUndefined();
-		const file = service.fileJson('sounds.json') as { tree: { folders: Record<string, { presets: Array<Record<string, unknown>> }> } };
+		// Each sub-folder is a file of its own, read when it is opened.
+		const file = service.fileJson('sounds.json') as { tree: { folders: Record<string, { external?: string }> } };
+		expect(file.tree.folders.Bass.external).toBe('sounds~bass.json');
+		const bass = service.fileJson('sounds~bass.json') as { tree: { presets: Array<Record<string, unknown>> } };
 		// One root under Bass: its chain collapses, as a Place's single-child folders do.
-		expect(file.tree.folders.Bass.presets[0]).toMatchObject({
+		expect(bass.tree.presets[0]).toMatchObject({
 			name: 'Sub',
 			source: 'pack:Drum Booth',
 			placePath: '/Users/me/Packs/Drum Booth'
@@ -210,6 +213,31 @@ describe("PlacesService, Live's categories", () => {
 		// A preset read may open the category's roots, not the whole disk.
 		expect(service.catalogRoots()).toEqual(['/Users/me/Packs/Drum Booth']);
 	});
+
+	it('builds the categories in a process of its own, serving nothing new until it lands', async () => {
+		const dbDir = join(root, 'Live Database');
+		mkdirSync(dbDir, { recursive: true });
+		const f = liveIndexFixture(join(dbDir, 'Live-files-12300.db'));
+		f.place(['Users', 'me', 'Packs', 'Drum Booth'], 'Drum Booth', 0);
+		f.vfolder(1, 'Bass', ['Basses']);
+		f.file(['Users', 'me', 'Packs', 'Drum Booth', 'Basses'], 'Sub.adv', { device_id: 'device:ableton:instr:Operator' });
+		f.db.close();
+		vi.stubEnv('LOOPING_CATALOG_SOURCE', 'disk');
+		service = createPlacesService({
+			prefsDir: join(root, 'prefs'),
+			ticksFile: join(root, 'logs', 'places.json'),
+			cacheDir: join(root, 'cache'),
+			liveDatabaseDir: dbDir,
+			auDirs: [],
+			categoriesInline: false
+		});
+		const landed = new Promise<void>((resolve) => service!.subscribe(() => service!.indexJson().places.some((p) => p.name === 'Sounds') && resolve()));
+		service.setTicks(['category:Sounds']);
+		// The tick returns at once; the build is in the child.
+		expect(service.indexJson().places).toEqual([]);
+		await landed;
+		expect(service.indexJson().places.find((p) => p.name === 'Sounds')).toMatchObject({ totalItems: 1 });
+	}, 30_000);
 
 	it('serves every Pack as one button whose Packs are files of their own, read when opened', () => {
 		const dbDir = join(root, 'Live Database');

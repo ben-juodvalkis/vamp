@@ -107,8 +107,18 @@ export interface BuiltCatalog {
 	 * rig. The tree holds an `external` stub for each, its `kinds` kept.
 	 */
 	parts?: Record<string, PlaceFolder>;
+	/** The parts whose thumbnails are in (a part is baked once a client opens it). */
+	partsBaked?: string[];
 	/** A fingerprint of what the build produced, before thumbnails: a rebuild that matches it changed nothing. */
 	content?: string;
+}
+
+/** One stretch of a bake pass: a catalog's tree, or one opened part of it. */
+interface BakeUnit {
+	c: BuiltCatalog;
+	label: string;
+	folders: PlaceFolder[];
+	done: () => void;
 }
 
 export interface PlacesListing {
@@ -173,6 +183,12 @@ export interface PlacesServiceOptions {
 	poll?: boolean;
 	/** The AU component folders to read the installed plug-ins from; the system's by default. */
 	auDirs?: string[];
+	/**
+	 * Build Live's categories on this thread instead of in a child process
+	 * (`scripts/scan-categories.ts`). Tests and tools, which want the catalog
+	 * when `setTicks` returns; the server never does.
+	 */
+	categoriesInline?: boolean;
 }
 
 function defaultLiveDatabaseDir(): string | null {
@@ -265,6 +281,14 @@ export class PlacesService {
 	private categoryScan: { stamp: string; result: CategoryScanResult } | null = null;
 	/** Every Pack's tree (`scanPacks`), kept while the same stamp holds. */
 	private packsScan: { stamp: string; tree: PlaceFolder; roots: string[] } | null = null;
+	private readonly categoriesInline: boolean;
+	/** The category build running in a child, and whether another was asked for meanwhile. */
+	private categoryChild: ChildProcess | null = null;
+	private categoryRescan = false;
+	/** The child could not run (no tsx, a crash): build on this thread from now on. */
+	private categoryChildFailed = false;
+	/** The parts a client has read (`<key>\t<file>`): those are baked. */
+	private openedParts = new Set<string>();
 
 	constructor(opts: PlacesServiceOptions = {}) {
 		this.prefsDir = opts.prefsDir ?? DEFAULT_PREFS_DIR;
@@ -273,6 +297,7 @@ export class PlacesService {
 		this.auDirs = opts.auDirs;
 		this.dbDir = opts.liveDatabaseDir === undefined ? defaultLiveDatabaseDir() : opts.liveDatabaseDir;
 		this.polls = opts.poll ?? true;
+		this.categoriesInline = opts.categoriesInline ?? false;
 		this.lib = readLiveLibrary(this.prefsDir);
 	}
 
@@ -293,6 +318,7 @@ export class PlacesService {
 
 	stop(): void {
 		this.bakeChild?.kill();
+		this.categoryChild?.kill();
 		if (this.timer) clearInterval(this.timer);
 		this.timer = null;
 		this.started = false;
@@ -569,29 +595,116 @@ export class PlacesService {
 		const cached = this.readCache(s.key, stamp);
 		if (cached) return cached;
 
+		// The trees come from a scan of the index at this stamp. Built in a child
+		// process, the server keeps serving what it has (`have`) until it lands.
+		const ready = packs ? this.packsScan?.stamp === indexStamp : this.categoryScan?.stamp === indexStamp;
+		if (!ready) {
+			if (!this.categoriesInline && !this.categoryChildFailed) {
+				this.scanCategoriesInChild(indexStamp, index.file);
+				return null;
+			}
+			this.scanCategoriesHere(index, indexStamp, packs, ctx);
+		}
+		const t = Date.now();
+		const shape = (raw: PlaceFolder) => shapePlace(raw, { maxFolderDepth: tuning.maxFolderDepth, flattenFolders: tuning.flattenFolders, keepNestingFolders: tuning.keepNestingFolders });
+		// Each top-level folder is a file of its own, read when it is opened:
+		// Drums is 14 MB whole, the Packs 30 MB (`finishBuild`'s parts).
+		if (packs) return this.finishBuild(s, id, role, 'index', stamp, t, shape(this.packsScan!.tree), have, this.packsScan!.roots, true);
+		const { result } = this.categoryScan!;
+		const raw = result.trees.get(s.name as LiveCategory);
+		if (!raw) return null;
+		return this.finishBuild(s, id, role, 'index', stamp, t, shape(raw), have, result.roots.map((r) => r.path), true);
+	}
+
+	/** Whether the Packs button is ticked: only then is the Packs scan worth its 60,000 rows. */
+	private packsWanted(): boolean {
+		return this.sources.some((x) => x.kind === 'category' && x.name === PACKS_SOURCE && this.ticks.ticked.has(x.key));
+	}
+
+	/** Every category's tree, and the Packs' when asked, on this thread. */
+	private scanCategoriesHere(index: IndexHandle, indexStamp: string, packs: boolean, ctx: { au: Map<string, AuComponent>; colors: Record<string, string | undefined> }): void {
 		const t = Date.now();
 		this.scanned = true;
 		if (!this.kindCache) this.kindCache = loadKindCache(join(this.cacheDir, 'places-kind-cache.json'));
+		const opts = { ...ctx, kindCache: this.kindCache };
+		const roots = categoryRoots(index);
 		if (packs) {
-			if (this.packsScan?.stamp !== indexStamp) {
-				const roots = categoryRoots(index);
-				const { tree, rows } = scanPacks(index, { ...ctx, kindCache: this.kindCache }, roots);
-				this.packsScan = { stamp: indexStamp, tree, roots: roots.filter((r) => r.source.startsWith('pack:')).map((r) => r.path) };
-				logger.info('places: packs scanned', { component: 'places', rows, packs: this.packsScan.roots.length, ms: Date.now() - t });
+			const { tree, rows } = scanPacks(index, opts, roots);
+			this.packsScan = { stamp: indexStamp, tree, roots: roots.filter((r) => r.source.startsWith('pack:')).map((r) => r.path) };
+			logger.info('places: packs scanned', { component: 'places', rows, packs: this.packsScan.roots.length, ms: Date.now() - t });
+			return;
+		}
+		const result = scanCategories(index, opts, roots);
+		this.categoryScan = { stamp: indexStamp, result };
+		logger.info('places: categories scanned', { component: 'places', rows: result.rows, roots: result.roots.length, ms: Date.now() - t });
+	}
+
+	/**
+	 * Every category's tree, and the Packs' when that button is ticked, built
+	 * by `scripts/scan-categories.ts` at low priority. When it lands the ticked
+	 * categories rebuild from it; one asked for meanwhile runs after it. If
+	 * the child cannot run, the build moves to this thread for good.
+	 */
+	private scanCategoriesInChild(indexStamp: string, dbFile: string): void {
+		if (this.categoryChild) {
+			this.categoryRescan = true;
+			return;
+		}
+		const root = repoRoot();
+		const tsx = join(root, 'node_modules', 'tsx', 'dist', 'cli.mjs');
+		const script = join(root, 'scripts', 'scan-categories.ts');
+		const fail = (why: string) => {
+			logger.warn('places: the category build could not run in its own process; building here', { component: 'places', why });
+			this.categoryChildFailed = true;
+			setTimeout(() => this.rebuildTicked('categories: building here'), 0);
+		};
+		if (!existsSync(tsx) || !existsSync(script)) return fail('no tsx or script');
+		const packs = this.packsWanted();
+		const job = join(this.cacheDir, 'places-category-job.json');
+		const outFile = join(this.cacheDir, 'places-category-scan.json');
+		mkdirSync(this.cacheDir, { recursive: true });
+		writeFileSync(job, JSON.stringify({ dbFile, kindCacheFile: join(this.cacheDir, 'places-kind-cache.json'), auDirs: this.auDirs, colors: brandColors(), packs, outFile }));
+		const t0 = Date.now();
+		const child = spawn(process.execPath, [tsx, '--tsconfig', join(root, 'interface', 'tsconfig.json'), script, job], { cwd: root, stdio: ['pipe', 'pipe', 'pipe'] });
+		this.categoryChild = child;
+		try {
+			if (child.pid) setPriority(child.pid, 10);
+		} catch {
+			/* runs at normal priority */
+		}
+		let err = '';
+		child.stderr?.on('data', (d) => (err += d));
+		child.on('error', (e) => {
+			this.categoryChild = null;
+			fail(String(e));
+		});
+		child.on('close', (code, signal) => {
+			if (this.categoryChild !== child) return;
+			this.categoryChild = null;
+			if (signal) return; // stopped with the server
+			if (code !== 0) return fail(err.slice(-500) || `exit ${code}`);
+			try {
+				const t1 = Date.now();
+				const out = JSON.parse(readFileSync(outFile, 'utf8')) as {
+					categories: Record<string, PlaceFolder>;
+					roots: CategoryScanResult['roots'];
+					packs: { tree: PlaceFolder; roots: string[] } | null;
+					rows: number;
+				};
+				this.categoryScan = { stamp: indexStamp, result: { trees: new Map(Object.entries(out.categories)) as CategoryScanResult['trees'], roots: out.roots, rows: out.rows } };
+				if (out.packs) this.packsScan = { stamp: indexStamp, ...out.packs };
+				// The child added to the kind cache on disk: read it again rather than write the older copy over it.
+				this.kindCache = null;
+				logger.info('places: categories built in their own process', { component: 'places', rows: out.rows, packs: !!out.packs, ms: t1 - t0, readMs: Date.now() - t1 });
+			} catch (e) {
+				return fail(String(e));
 			}
-			const tree = shapePlace(this.packsScan.tree, { maxFolderDepth: tuning.maxFolderDepth, flattenFolders: tuning.flattenFolders, keepNestingFolders: tuning.keepNestingFolders });
-			return this.finishBuild(s, id, role, 'index', stamp, t, tree, have, this.packsScan.roots, true);
-		}
-		if (this.categoryScan?.stamp !== indexStamp) {
-			const result = scanCategories(index, { ...ctx, kindCache: this.kindCache });
-			this.categoryScan = { stamp: indexStamp, result };
-			logger.info('places: categories scanned', { component: 'places', rows: result.rows, roots: result.roots.length, ms: Date.now() - t });
-		}
-		const { result } = this.categoryScan;
-		const raw = result.trees.get(s.name as LiveCategory);
-		if (!raw) return null;
-		const tree = shapePlace(raw, { maxFolderDepth: tuning.maxFolderDepth, flattenFolders: tuning.flattenFolders, keepNestingFolders: tuning.keepNestingFolders });
-		return this.finishBuild(s, id, role, 'index', stamp, t, tree, have, result.roots.map((r) => r.path));
+			if (this.categoryRescan) {
+				this.categoryRescan = false;
+				this.categoryStampRead = null;
+			}
+			this.rebuildTicked('categories scanned');
+		});
 	}
 
 	/** The catalog of a shaped tree; null when it is the one already held (its stamp is moved on). */
@@ -697,6 +810,8 @@ export class PlacesService {
 		this.categoryStampRead = null;
 		this.categoryScan = null;
 		this.packsScan = null;
+		this.categoryChild?.kill();
+		this.categoryChild = null;
 		try {
 			for (const f of readdirSync(this.catalogCacheDir())) if (f.endsWith('.json')) unlinkSync(join(this.catalogCacheDir(), f));
 		} catch {
@@ -707,6 +822,40 @@ export class PlacesService {
 
 	// --- thumbnails, in the background ----------------------------------------
 
+	/**
+	 * What one bake pass works through: each catalog's own tree (and Samples)
+	 * not baked yet, and each part a client has opened and that is not baked
+	 * yet. A part waits to be opened: the Packs' 43,000 samples and Drums'
+	 * 12,000 are no work until someone looks.
+	 */
+	private bakeUnits(): BakeUnit[] {
+		const units: BakeUnit[] = [];
+		for (const c of this.catalogs.values()) {
+			if (!c.baked) {
+				units.push({
+					c,
+					label: c.name,
+					folders: [c.tree, ...(c.samples ? [c.samples] : [])],
+					done: () => {
+						c.baked = true;
+					}
+				});
+			}
+			for (const file of Object.keys(c.parts ?? {})) {
+				if (!this.openedParts.has(`${c.key}\t${file}`) || c.partsBaked?.includes(file)) continue;
+				units.push({
+					c,
+					label: `${c.name} ${c.parts![file].name}`,
+					folders: [c.parts![file]],
+					done: () => {
+						c.partsBaked = [...(c.partsBaked ?? []), file];
+					}
+				});
+			}
+		}
+		return units;
+	}
+
 	private scheduleBake(): void {
 		const wave = (runtimeConstants().ui as { browser?: { audioWaveforms?: boolean } } | undefined)?.browser?.audioWaveforms;
 		if (wave === false) return;
@@ -714,34 +863,32 @@ export class PlacesService {
 			this.rebuildQueued = true;
 			return;
 		}
-		const pending = [...this.catalogs.values()].filter((c) => !c.baked);
+		const pending = this.bakeUnits();
 		if (!pending.length) return;
 		this.baking = true;
 		setTimeout(() => void this.bake(pending), 50);
 	}
 
-	private async bake(pending: BuiltCatalog[]): Promise<void> {
+	private async bake(pending: BakeUnit[]): Promise<void> {
 		// One bump for the whole pass, and only when a thumbnail was decoded:
 		// a pass that reused every cached one changed nothing a page shows.
 		let decoded = 0;
 		const peaksCache = join(this.cacheDir, 'places-peaks-cache.json');
 		const failureLog = join(this.cacheDir, 'places-peaks-failures.json');
 		try {
-			const itemsOf = (c: BuiltCatalog): PlaceItem[] => {
+			const itemsOf = (u: BakeUnit): PlaceItem[] => {
 				const items: PlaceItem[] = [];
 				const collect = (n: PlaceFolder) => {
 					for (const p of n.presets) if (p.kind === 'sample' || p.kind === 'audio-clip') items.push(p);
 					for (const child of Object.values(n.folders)) collect(child);
 				};
-				collect(c.tree);
-				if (c.samples) collect(c.samples);
-				for (const part of Object.values(c.parts ?? {})) collect(part);
+				for (const f of u.folders) collect(f);
 				return items;
 			};
 			// Decode in a low-priority process of its own, so a cold bake leaves
 			// this server (and Live) responsive; the pass below then reads every
 			// thumbnail back from the cache. Without the child it decodes here.
-			const paths = [...new Set(pending.flatMap((c) => itemsOf(c).map((p) => p.fullPath)))];
+			const paths = [...new Set(pending.flatMap((u) => itemsOf(u).map((p) => p.fullPath)))];
 			const t0 = Date.now();
 			const child = paths.length ? await this.decodeInChild(paths, peaksCache, failureLog) : null;
 			if (child?.stopped) return;
@@ -749,9 +896,10 @@ export class PlacesService {
 				decoded += child.decoded;
 				logger.info('places: thumbnails decoded in the background', { component: 'places', ...child, ms: Date.now() - t0 });
 			}
-			for (const c of pending) {
-				if (this.catalogs.get(c.key) !== c) continue; // rebuilt meanwhile
-				const items = itemsOf(c);
+			const touched = new Set<BuiltCatalog>();
+			for (const u of pending) {
+				if (this.catalogs.get(u.c.key) !== u.c) continue; // rebuilt meanwhile
+				const items = itemsOf(u);
 				if (items.length) {
 					const t = Date.now();
 					const stats = await bakeThumbnails(items, peaksCache, child ? undefined : failureLog, {
@@ -759,13 +907,14 @@ export class PlacesService {
 						keepUnseen: true
 					});
 					const { failures: _failures, ...summary } = stats;
-					logger.info('places: thumbnails baked', { component: 'places', place: c.name, ...summary, ms: Date.now() - t });
+					logger.info('places: thumbnails baked', { component: 'places', place: u.label, ...summary, ms: Date.now() - t });
 					decoded += stats.decoded;
 				}
-				if (this.catalogs.get(c.key) !== c) continue;
-				c.baked = true;
-				this.writeCache(c);
+				if (this.catalogs.get(u.c.key) !== u.c) continue;
+				u.done();
+				touched.add(u.c);
 			}
+			for (const c of touched) this.writeCache(c);
 			if (decoded > 0) this.bump(`thumbnails: ${decoded} decoded`);
 		} catch (err) {
 			logger.warn('places: thumbnail bake failed', { component: 'places', err: String(err) });
@@ -964,13 +1113,20 @@ export class PlacesService {
 		if (!hit) return null;
 		// The content, not the stamp: an index write that changed nothing in the
 		// Place moves the stamp and must not make every page re-download it.
-		return `"${keyHash(`${hit.c.content ?? hit.c.stamp}:${hit.c.builtAt}:${hit.c.baked}:${hit.samples}:${hit.part ? name : ''}`)}"`;
+		const part = hit.part ? `${name}:${!!hit.c.partsBaked?.includes(name)}` : '';
+		return `"${keyHash(`${hit.c.content ?? hit.c.stamp}:${hit.c.builtAt}:${hit.c.baked}:${hit.samples}:${part}`)}"`;
 	}
 
 	/** `<id>.json`, `<id>-samples.json` or one of a catalog's parts (`<id>~<slug>.json`), or null. */
 	fileJson(name: string): unknown | null {
 		const hit = this.catalogOf(name);
 		if (hit?.part) {
+			// Opened: its samples are worth baking now.
+			const opened = `${hit.c.key}\t${name}`;
+			if (!this.openedParts.has(opened)) {
+				this.openedParts.add(opened);
+				this.scheduleBake();
+			}
 			return {
 				metadata: { placeId: hit.c.id, name: hit.part.name, generatedAt: hit.c.builtAt },
 				tree: { folders: hit.part.folders, presets: hit.part.presets, kinds: hit.part.kinds }
@@ -1026,7 +1182,7 @@ export function placesService(): PlacesService {
 
 /** A service of its own, for tests and tools: nothing shared, no poll unless asked. */
 export function createPlacesService(opts: PlacesServiceOptions): PlacesService {
-	const s = new PlacesService({ poll: false, ...opts });
+	const s = new PlacesService({ poll: false, categoriesInline: true, ...opts });
 	s.start();
 	return s;
 }
