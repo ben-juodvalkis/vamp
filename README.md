@@ -105,7 +105,8 @@ iPad / browser  ⇄  bridge (WebSocket ⇄ OSC)  ⇄  control surface inside Liv
   `Vamp Devices/` ([docs/plans/general-release/plan.md](docs/plans/general-release/plan.md)
   §6).
 - **A device pairs once** before it can drive your Live set, with a code in Live's status bar or
-  Allow on a screen already connected; the Mac and Vamp for iPad on the cable never do. The page is
+  Allow on a screen already connected; the Mac never does, and Vamp for iPad on the cable pairs
+  once with Vamp for Mac, with a code the Mac shows in its menu bar. The page is
   plain HTTP, so prefer the cable or a network you trust: see [SECURITY.md](SECURITY.md).
 
 ## Documentation

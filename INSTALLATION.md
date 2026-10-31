@@ -84,8 +84,9 @@ run it full screen. It is laid out for landscape.
   address>:8889`.
 
 **A device other than the Mac pairs once** (ADR-491): a code in Live's status bar, or Allow on a
-screen already connected. Vamp for iPad on the cable never does. [SECURITY.md](SECURITY.md) says
-what is exposed.
+screen already connected. Vamp for iPad on the cable pairs once with Vamp for Mac instead
+(ADR-494): it asks for the six-digit code the Mac shows in its menu bar, beside a key.
+[SECURITY.md](SECURITY.md) says what is exposed.
 
 ## 7. Optional
 
