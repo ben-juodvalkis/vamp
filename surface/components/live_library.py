@@ -164,8 +164,15 @@ def repo_root() -> str:
 
 
 def m4l_devices_root() -> str:
-    """``<repo>/Vamp Devices``, where Permute, MidiWheels and Random Start live."""
-    return os.path.join(repo_root(), M4L_DEVICES_PLACE)
+    """The Vamp Devices folder, where Permute, MidiWheels and Random Start
+    live: the one the user chose when installed (``vamp-paths.json``), else
+    ``<repo>/Vamp Devices``."""
+    try:
+        from .. import config_loader
+    except ImportError:
+        import config_loader  # type: ignore[no-redef]
+
+    return config_loader.vamp_paths().get("devices") or os.path.join(repo_root(), M4L_DEVICES_PLACE)
 
 
 #: The devices the surface loads on its own, relative to the Vamp Devices folder.

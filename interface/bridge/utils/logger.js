@@ -25,9 +25,9 @@ const LogLevel = {
 };
 
 // Append-mode file sink for WARN/ERROR so bridge crashes/restarts survive
-// past the terminal buffer. Repo-root `logs/` is already gitignored.
-// __dirname = interface/bridge/utils → three parents up is the repo root.
-const LOG_DIR = path.resolve(__dirname, '..', '..', '..', 'logs');
+// past the terminal buffer. In the data folder's `logs/` (dataPaths.js):
+// the checkout's gitignored `logs/` from a clone.
+const LOG_DIR = require('./dataPaths').dataDir('logs');
 const LOG_FILE = path.join(LOG_DIR, 'bridge.log');
 
 // Rotation policy: cap the active log at MAX_LOG_BYTES; on overrun,

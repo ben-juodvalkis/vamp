@@ -8,6 +8,7 @@
    */
   import { sendPitchWheel, sendModWheel } from '$lib/api/midiWheels';
   import MidiWheel from './MidiWheel.svelte';
+  import { vampDevicesAvailable } from '$lib/services/effectSources.svelte';
   import { PITCH_COLOR, MOD_COLOR, type DeviceColorScheme } from '$lib/config/devicePresets';
   import { deviceInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -36,6 +37,8 @@
   const modInk = $derived(modColor ?? selectedTrackScheme() ?? inked(MOD_COLOR));
 </script>
 
+<!-- MidiWheels is a Vamp Devices utility: no wheels until that folder is a Place in Live. -->
+{#if vampDevicesAvailable()}
 <div class="midi-wheels-panel" class:side-by-side={sideBySide}>
   <div class="wheel-cell">
     <MidiWheel type="pitch" onInteraction={sendPitchWheel} color={pitchInk} />
@@ -44,6 +47,7 @@
     <MidiWheel type="modwheel" onInteraction={sendModWheel} color={modInk} />
   </div>
 </div>
+{/if}
 
 <style>
   .midi-wheels-panel {

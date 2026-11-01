@@ -98,6 +98,7 @@ export function createDeviceStore(file: string, now: () => number = Date.now) {
 
 export type DeviceStore = ReturnType<typeof createDeviceStore>;
 
-export function defaultDevicesFile(root: string): string {
-	return join(root, 'config', '.paired-devices.json');
+/** In the data folder's `config/` (`runtimeConfig.dataDir`). */
+export function defaultDevicesFile(configDir: string): string {
+	return join(configDir, '.paired-devices.json');
 }

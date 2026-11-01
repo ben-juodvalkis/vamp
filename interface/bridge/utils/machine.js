@@ -13,8 +13,8 @@
  * What travels:
  *   paths.instrumentsBase     the folder a preset path recorded before the
  *                             Places is read against (`presetPath.ts`)
- *   paths.m4lDevicesRoot      this checkout's `Vamp Devices`, derived
- *                             from the bridge's own location
+ *   paths.m4lDevicesRoot      the Vamp Devices folder (dataPaths.js), derived
+ *                             from VAMP_DEVICES or this checkout
  *   totalmix                  the mixer's dB range (`osc.totalmix`), or null
  *                             with no block
  * Anything the same on every machine (the role palette, gesture timing) stays
@@ -22,13 +22,14 @@
  */
 
 const path = require('path');
+const { appRoot, devicesDir } = require('./dataPaths');
 
 /** The wire address clients read the snapshot from. */
 const MACHINE_ADDRESS = '/bridge/machine';
 
 /** This checkout's root, from the bridge's own folder (`interface/bridge/`). */
 function repoRootFromHere() {
-    return path.resolve(__dirname, '..', '..', '..');
+    return appRoot();
 }
 
 function stringOr(v, fallback = '') {
@@ -40,7 +41,7 @@ function stringOr(v, fallback = '') {
  * @param {{repoRoot?: string}} [opts]
  * @returns {{paths: {instrumentsBase: string, m4lDevicesRoot: string}, totalmix: {minDb: number, maxDb: number, silenceDb: number} | null}}
  */
-function machineSnapshot(constants, { repoRoot = repoRootFromHere() } = {}) {
+function machineSnapshot(constants, { repoRoot } = {}) {
     const paths = (constants && constants.paths) || {};
     const tm = constants && constants.osc && constants.osc.totalmix;
     const totalmix =
@@ -50,7 +51,7 @@ function machineSnapshot(constants, { repoRoot = repoRootFromHere() } = {}) {
     return {
         paths: {
             instrumentsBase: stringOr(paths.instrumentsBase),
-            m4lDevicesRoot: path.join(repoRoot, 'Vamp Devices')
+            m4lDevicesRoot: repoRoot ? path.join(repoRoot, 'Vamp Devices') : devicesDir()
         },
         totalmix
     };

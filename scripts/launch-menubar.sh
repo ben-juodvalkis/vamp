@@ -91,6 +91,7 @@ fi
 
 echo "📎 building + launching Vamp for Mac (a first build takes ~30s)…"
 # Incremental: a few seconds when nothing changed.
+bash "$ROOT/scripts/fetch-sparkle.sh"
 if ! xcodebuild build -project "$APPS_DIR/Vamp.xcodeproj" -scheme VampMac \
      -configuration Debug -destination "generic/platform=macOS" \
      -derivedDataPath "$APPS_DIR/build" -quiet; then

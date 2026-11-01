@@ -35,6 +35,9 @@ fi
 # rebuilds for at its next launch, rather than one recorded as built.
 FINGERPRINT="$(bash "$ROOT/scripts/mac-app-fingerprint.sh")"
 
+# Sparkle, which the app links (off from a checkout, but built in).
+bash "$ROOT/scripts/fetch-sparkle.sh"
+
 echo "🔨 building Vamp for Mac (Release)…"
 # Its own build folder: launch-menubar.sh builds the Debug copy into
 # build/, and two xcodebuilds into one folder at once collide.

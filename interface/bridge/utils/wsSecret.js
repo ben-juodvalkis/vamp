@@ -45,19 +45,14 @@ const { logger } = require('./logger');
 /** Env override, checked first. */
 const SECRET_ENV_VAR = 'LOOPING_WS_SECRET';
 
-/** Gitignored file, relative to the repo root. */
-const SECRET_FILENAME = path.join('config', '.ws-secret');
+/** Gitignored file, in the data folder's `config/` (dataPaths.js). */
+const SECRET_FILENAME = '.ws-secret';
 
 /** 256 bits, hex-encoded. */
 const SECRET_BYTES = 32;
 
-function repoRoot() {
-    // utils/ -> bridge/ -> interface/ -> repo root
-    return path.resolve(__dirname, '..', '..', '..');
-}
-
 function secretPath() {
-    return path.join(repoRoot(), SECRET_FILENAME);
+    return path.join(require('./dataPaths').dataDir('config'), SECRET_FILENAME);
 }
 
 /**

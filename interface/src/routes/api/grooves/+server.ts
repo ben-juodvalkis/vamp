@@ -7,7 +7,7 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { join } from 'node:path';
 import { groovesListing, writeGrooveTicks } from '$lib/server/grooves';
-import { repoRoot } from '$lib/server/runtimeConfig';
+import { dataDir } from '$lib/server/runtimeConfig';
 
 const NO_STORE = { 'cache-control': 'no-store' };
 
@@ -24,6 +24,6 @@ export const PUT: RequestHandler = async ({ request }) => {
 	if (!Array.isArray(ticked) || !ticked.every((k) => typeof k === 'string')) {
 		return json({ ok: false, code: 'bad-request', detail: 'ticked must be a list of groove names' }, { status: 400 });
 	}
-	writeGrooveTicks(join(repoRoot(), 'logs', 'grooves.json'), ticked);
+	writeGrooveTicks(join(dataDir('logs'), 'grooves.json'), ticked);
 	return json(groovesListing(), { headers: NO_STORE });
 };

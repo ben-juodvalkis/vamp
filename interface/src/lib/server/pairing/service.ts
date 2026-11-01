@@ -9,7 +9,7 @@
  * `trust.ts` — and a device whose cookie is a paired token.
  */
 import type { Cookies } from '@sveltejs/kit';
-import { configSection, repoRoot } from '$lib/server/runtimeConfig';
+import { configSection, dataDir } from '$lib/server/runtimeConfig';
 import { resolveSecret } from '$lib/server/wsSecret';
 import { createDeviceStore, defaultDevicesFile, type DeviceStore, type PairedDevice } from './devices';
 import { createPairingRequests, type PairingEvent, type PairingRequests } from './requests';
@@ -54,7 +54,7 @@ let store: DeviceStore | null = null;
 let requests: PairingRequests | null = null;
 
 export function deviceStore(): DeviceStore {
-	store ??= createDeviceStore(defaultDevicesFile(repoRoot()));
+	store ??= createDeviceStore(defaultDevicesFile(dataDir('config')));
 	return store;
 }
 

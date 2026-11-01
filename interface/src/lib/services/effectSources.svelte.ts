@@ -9,14 +9,24 @@
  * The places index carries the effects folder's files by name
  * (`PlaceInfo.devices`); this module keeps the latest, re-read whenever the
  * Mac says the catalog changed. Live's Audio Effects category has none.
+ *
+ * Vamp's utilities load through the "Vamp Devices" Place, which is optional
+ * (installer.plan.md Phase 4): until the user adds the folder to Live's
+ * Places, nothing that loads one is offered — Permute, the on-screen wheels,
+ * REC. Read from the listing's `m4lDevices`; unknown until it lands, which
+ * counts as there, so a rig that has the Place never sees them flicker.
  */
 import { getPlacesIndex, type PlaceInfo } from '$lib/services/adapters/placesAdapter';
-import { PLACES_CHANGED_EVENT } from '$lib/services/placesLive';
+import { fetchPlacesListing, PLACES_CHANGED_EVENT } from '$lib/services/placesLive';
 import { DEVICE_PRESETS, type DevicePresetConfig } from '$lib/config/devicePresets';
 import { logger } from '$lib/utils/logger';
 
 let folder = $state<Pick<PlaceInfo, 'name' | 'source' | 'devices'> | null>(null);
+let vampDevicesPlace = $state<boolean | null>(null);
 let started = false;
+
+/** The utilities' load source (`devicePresets.ts`, the surface's `m4l_source`). */
+const VAMP_DEVICES_SOURCE = 'place:Vamp Devices';
 
 async function refresh(): Promise<void> {
 	try {
@@ -26,6 +36,17 @@ async function refresh(): Promise<void> {
 	} catch (err) {
 		logger.warn('Effects folder: no places index', { component: 'effectSources', err: String(err) });
 	}
+	try {
+		const m4l = (await fetchPlacesListing()).m4lDevices;
+		vampDevicesPlace = m4l ? m4l.place !== null : null;
+	} catch (err) {
+		logger.warn('Vamp Devices: no places listing', { component: 'effectSources', err: String(err) });
+	}
+}
+
+/** Whether Live has the Vamp Devices Place, so the utilities can load. True until known. Reactive. */
+export function vampDevicesAvailable(): boolean {
+	return vampDevicesPlace !== false;
 }
 
 /** Read the effects folder now and on every catalog change. Idempotent. */
@@ -56,14 +77,20 @@ export function effectSource(config: Pick<DevicePresetConfig, 'defaultName' | 'a
 	return null;
 }
 
-/** Whether the Vamp effect of this `DEVICE_PRESETS` type can load: a native device or a utility always; an effect when its file is in the effects folder. */
+/** Whether the Vamp effect of this `DEVICE_PRESETS` type can load: a native device always; a utility while Vamp Devices is a Place; an effect when its file is in the effects folder. */
 export function effectAvailable(key: string): boolean {
 	const config = DEVICE_PRESETS[key];
 	if (!config) return false;
+	if (config.source === VAMP_DEVICES_SOURCE) return vampDevicesAvailable();
 	return !config.effect || effectSource(config) !== null;
 }
 
 /** Tests: set the effects folder directly. */
 export function _setEffectsFolderForTests(next: Pick<PlaceInfo, 'name' | 'source' | 'devices'> | null): void {
 	folder = next;
+}
+
+/** Tests: whether Live has the Vamp Devices Place (null: not known yet). */
+export function _setVampDevicesPlaceForTests(next: boolean | null): void {
+	vampDevicesPlace = next;
 }

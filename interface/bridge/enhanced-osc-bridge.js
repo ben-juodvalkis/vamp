@@ -36,12 +36,6 @@ const { createHealthMonitor } = require('./utils/healthMonitor');
 const bridgeProfiler = require('./utils/bridgeProfiler');
 const { createBroadcastBatcher } = require('./utils/broadcastBatcher');
 
-// Log module resolution paths for debugging
-logger.debug('Module Resolution', {
-    ws: require.resolve('ws'),
-    wsVersion: require('ws/package.json').version
-});
-
 // Try to create Bonjour service, but don't crash if it fails
 let bonjour = null;
 try {

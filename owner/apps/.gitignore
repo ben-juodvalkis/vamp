@@ -3,3 +3,5 @@ build/
 DerivedData/
 *.xcuserstate
 xcuserdata/
+# Sparkle, fetched by scripts/fetch-sparkle.sh
+Vendor/

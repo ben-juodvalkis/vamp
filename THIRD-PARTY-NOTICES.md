@@ -4,6 +4,17 @@ Vamp's own code is under the MIT license in [LICENSE](LICENSE). Its npm dependen
 own licenses in `node_modules`. The code below was copied into this repository and is used under
 its authors' terms.
 
+## Inside Vamp for Mac
+
+The installed app (installer.plan.md) carries two things that are not Vamp's own code, each with
+its license beside it in the app:
+
+- **Node.js**, the official macOS release, in `Contents/Resources/node/` with its `LICENSE` (MIT,
+  and the licenses of what Node itself includes).
+- **The npm packages bundled into the server**, in `Contents/Resources/vamp/THIRD-PARTY-LICENSES.md`,
+  which `scripts/build-server.mjs` writes from every package the bundles take in. `osc` and `slip`
+  are offered under MIT or GPL; Vamp uses them under MIT.
+
 ## shadcn-svelte
 
 The UI components in `interface/src/lib/components/ui/` started from

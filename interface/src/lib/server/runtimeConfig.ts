@@ -10,6 +10,13 @@
  * (`interface/` under `npm run dev` and `vite preview`, the root under the
  * gate) to the first folder holding `config/constants.json`. Both files are
  * re-read when either's mtime changes, so an edit lands on the next request.
+ *
+ * Installed (installer.plan.md Phase 1), the app passes three folders by
+ * environment, the same ones the bridge reads (`interface/bridge/utils/dataPaths.js`):
+ * `VAMP_APP_ROOT` (what ships: the tracked constants, `scripts/`),
+ * `VAMP_DATA` (everything written: `config/`, `logs/`, `cache/`) and
+ * `VAMP_DEVICES` (the Vamp Devices folder the user chose). Unset, all three
+ * are this checkout, and a clone writes where it always has.
  */
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -18,6 +25,7 @@ let repoRootCache: string | null = null;
 
 /** The checkout's root: the nearest ancestor of cwd with `config/constants.json`. */
 export function repoRoot(): string {
+	if (process.env.VAMP_APP_ROOT) return process.env.VAMP_APP_ROOT;
 	if (repoRootCache) return repoRootCache;
 	let dir = resolve(process.cwd());
 	for (let i = 0; i < 8; i++) {
@@ -36,9 +44,24 @@ export function constantsPath(): string {
 	return join(repoRoot(), 'config', 'constants.json');
 }
 
+/**
+ * Where Vamp writes: `VAMP_DATA/<kind>` when installed, else the checkout's
+ * own `config/`, `logs/` and `scripts/.cache/`.
+ */
+export function dataDir(kind: 'config' | 'logs' | 'cache'): string {
+	const data = process.env.VAMP_DATA;
+	if (data) return join(data, kind);
+	return kind === 'cache' ? join(repoRoot(), 'scripts', '.cache') : join(repoRoot(), kind);
+}
+
+/** The Vamp Devices folder: `VAMP_DEVICES`, else the checkout's. */
+export function devicesDir(): string {
+	return process.env.VAMP_DEVICES || join(repoRoot(), 'Vamp Devices');
+}
+
 /** This Mac's differences, gitignored (general-release plan.md §3). */
 export function localConstantsPath(): string {
-	return join(repoRoot(), 'config', 'constants.local.json');
+	return join(dataDir('config'), 'constants.local.json');
 }
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {

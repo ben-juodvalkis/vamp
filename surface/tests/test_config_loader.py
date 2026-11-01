@@ -156,3 +156,35 @@ def test_feature_on_needs_an_explicit_true(caplog):
     # A non-boolean is off, and says so rather than failing silently.
     assert not feature_on({"features": {"expressionPedal": "yes"}}, "expressionPedal")
     assert "expressionPedal" in caplog.text
+
+
+def test_installed_surface_reads_its_folders_from_vamp_paths(tmp_path, monkeypatch):
+    # installer.plan.md Phase 1: a copied (not symlinked) surface finds the
+    # app, data and devices folders in vamp-paths.json beside it.
+    import json
+    import os
+
+    import config_loader
+    from components import live_library
+    from components.SessionSettingsComponent import _find_repo_logs_path
+
+    app = tmp_path / "app"
+    (app / "config").mkdir(parents=True)
+    (app / "config" / "constants.json").write_text(json.dumps({"osc": {"pythonSurface": {"localPort": 1, "remotePort": 2}}}))
+    data = tmp_path / "data"
+    (data / "config").mkdir(parents=True)
+    (data / "config" / "constants.local.json").write_text(json.dumps({"osc": {"pythonSurface": {"localPort": 7}}}))
+    paths = {"app": str(app), "data": str(data), "devices": str(tmp_path / "Devices")}
+    monkeypatch.setattr(config_loader, "vamp_paths", lambda: paths)
+
+    loaded = load()["osc"]["pythonSurface"]
+    assert (loaded["localPort"], loaded["remotePort"]) == (7, 2)
+    assert _find_repo_logs_path("foot-switch.json") == os.path.join(str(data), "logs", "foot-switch.json")
+    assert live_library.m4l_devices_root() == str(tmp_path / "Devices")
+
+
+def test_a_checkout_has_no_vamp_paths():
+    import config_loader
+
+    assert config_loader.vamp_paths() == {}
+    assert config_loader.data_path("logs", "x.json") is None

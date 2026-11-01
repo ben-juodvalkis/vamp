@@ -49,9 +49,9 @@ export function firstRunSteps(input: FirstRunInput): FirstRunStep[] {
 			label: 'The “Vamp Devices” folder is a Place in Live',
 			how: m4lOk
 				? m4l?.exact
-					? `Live lists it as the Place “${m4l.place}”. Permute and the on-screen wheels load from it.`
+					? `Live lists it as the Place “${m4l.place}”. Permute, the on-screen wheels and REC load from it; until then they are not shown.`
 					: `Reachable through the Place “${m4l?.place}”, which holds it.`
-				: `In Live’s browser, Places → Add Folder… and pick ${m4l?.path ?? 'Vamp Devices in this checkout'}. Permute and the on-screen wheels load from it.`
+				: `In Live’s browser, Places → Add Folder… and pick ${m4l?.path ?? 'Vamp Devices in this checkout'}. Permute, the on-screen wheels and REC load from it; until then they are not shown.`
 		},
 		{
 			key: 'places',

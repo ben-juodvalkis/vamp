@@ -36,7 +36,8 @@ import { createHash } from 'node:crypto';
 import { logger } from '$lib/utils/logger';
 import { categoryForFolderName, folderSlug, type PlaceAliasMap } from '$lib/utils/presetPath';
 import type { KindCounts } from '$lib/utils/placeKinds';
-import { configPath, configSection, repoRoot, runtimeConstants } from '../runtimeConfig';
+import { configPath, configSection, dataDir, devicesDir, runtimeConstants } from '../runtimeConfig';
+import { childScript } from '../childScript';
 import { DEFAULT_PREFS_DIR, librarySources, readLiveLibrary, type LibrarySource, type LiveLibrary } from './liveLibrary';
 import { newestLibraryCfg } from '../libraryCfg';
 import { readTicks, seedTicks, writeTicks, type Ticks } from './ticks';
@@ -294,11 +295,11 @@ export class PlacesService {
 
 	constructor(opts: PlacesServiceOptions = {}) {
 		this.prefsDir = opts.prefsDir ?? DEFAULT_PREFS_DIR;
-		this.ticksFile = opts.ticksFile ?? join(repoRoot(), 'logs', 'places.json');
+		this.ticksFile = opts.ticksFile ?? join(dataDir('logs'), 'places.json');
 		// Beside the ticks file, so a test's own ticks folder holds its own choice.
 		this.effectsFile = opts.effectsFile ?? join(dirname(this.ticksFile), 'effects.json');
 		this.effectsChoice = readEffectsChoice(this.effectsFile);
-		this.cacheDir = opts.cacheDir ?? join(repoRoot(), 'scripts', '.cache');
+		this.cacheDir = opts.cacheDir ?? dataDir('cache');
 		this.auDirs = opts.auDirs;
 		this.dbDir = opts.liveDatabaseDir === undefined ? defaultLiveDatabaseDir() : opts.liveDatabaseDir;
 		this.polls = opts.poll ?? true;
@@ -888,21 +889,20 @@ export class PlacesService {
 	}
 
 	/**
-	 * Decode `paths` into the peaks cache in `scripts/bake-thumbnails.ts`, run
-	 * by tsx at low priority. Resolves the child's stats, or null when it could
-	 * not run (no tsx, a crash), and the caller decodes in this process.
+	 * Decode `paths` into the peaks cache in `scripts/bake-thumbnails.ts`, in
+	 * a process of its own at low priority (`childScript`). Resolves the
+	 * child's stats, or null when it could not run (no script, a crash), and
+	 * the caller decodes in this process.
 	 */
 	private decodeInChild(paths: string[], cacheFile: string, failureLogFile: string): Promise<{ decoded: number; reused: number; tombstoned: number; total: number; stopped?: boolean } | null> {
-		const root = repoRoot();
-		const tsx = join(root, 'node_modules', 'tsx', 'dist', 'cli.mjs');
-		const script = join(root, 'scripts', 'bake-thumbnails.ts');
-		if (!existsSync(tsx) || !existsSync(script)) return Promise.resolve(null);
 		const job = join(this.cacheDir, 'places-bake-job.json');
+		const run = childScript('bake-thumbnails', job);
+		if (!run) return Promise.resolve(null);
 		mkdirSync(this.cacheDir, { recursive: true });
 		writeFileSync(job, JSON.stringify({ cacheFile, failureLogFile, paths }));
 		return new Promise((resolve) => {
-			const child = spawn(process.execPath, [tsx, '--tsconfig', join(root, 'interface', 'tsconfig.json'), script, job], {
-				cwd: root,
+			const child = spawn(process.execPath, run.argv, {
+				cwd: run.cwd,
 				// stdin stays open for the child's life: it exits when this process does.
 				stdio: ['pipe', 'pipe', 'pipe']
 			});
@@ -948,7 +948,7 @@ export class PlacesService {
 	// --- what clients read ------------------------------------------------------
 
 	private m4lDevices(): PlacesListing['m4lDevices'] {
-		const path = join(repoRoot(), 'Vamp Devices');
+		const path = devicesDir();
 		const places = this.sources.filter((s) => s.kind === 'place');
 		const exact = places.find((s) => s.path === path);
 		if (exact) return { path, place: exact.name, exact: true };

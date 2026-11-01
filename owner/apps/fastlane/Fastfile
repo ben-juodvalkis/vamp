@@ -6,8 +6,9 @@
 #                           review once submitted there (never auto-submits)
 #   fastlane ios screenshots  replace the listing's iPad screenshots with
 #                           AppStore/screenshots/*.png, in filename order
-#   fastlane mac notarized  Vamp for Mac signed with Developer ID, notarized
-#                           by Apple and stapled, zipped into build/dist/
+#
+# Vamp for Mac's release is scripts/release-mac.sh (installer.plan.md Phase 5):
+# the whole app with its server and Node, which no lane here builds.
 #
 # AUTH: an App Store Connect API key, so no Apple ID password or 2FA. Its
 # three values go in fastlane/.env beside this file (gitignored), which
@@ -125,34 +126,6 @@ platform :ios do
       end
     end
     UI.success("#{files.size} screenshots on #{version.version_string}")
-  end
-end
-
-platform :mac do
-  desc "Vamp for Mac: Developer ID signed, notarized, stapled and zipped"
-  lane :notarized do
-    api_key = load_api_key
-    # The project signs Vamp for Mac ad hoc for running on this Mac; a copy
-    # for anyone else is signed with Developer ID and the hardened runtime
-    # that notarization requires. Still unsandboxed: the Mac App Store is
-    # not this route.
-    build_mac_app(
-      project: PROJECT,
-      scheme: "VampMac",
-      configuration: "Release",
-      export_method: "developer-id",
-      output_directory: OUT_DIR,
-      derived_data_path: "build/fastlane",
-      clean: true,
-      xcargs: "CODE_SIGN_IDENTITY='Developer ID Application' CODE_SIGN_STYLE=Manual " \
-              "ENABLE_HARDENED_RUNTIME=YES OTHER_CODE_SIGN_FLAGS=--timestamp",
-      export_options: { signingStyle: "manual", signingCertificate: "Developer ID Application" },
-    )
-    app = File.join(OUT_DIR, "Vamp.app")
-    notarize(package: app, api_key: api_key, print_log: true)
-    zip = File.join(OUT_DIR, "Vamp-mac.zip")
-    sh("cd .. && rm -f '#{zip}' && ditto -c -k --keepParent '#{app}' '#{zip}'")
-    UI.success("Notarized: owner/apps/#{zip}")
   end
 end
 

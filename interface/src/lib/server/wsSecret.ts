@@ -49,8 +49,9 @@ export function resolveSecret(): string | null {
 	const fromEnv = process.env[SECRET_ENV_VAR];
 	if (fromEnv && fromEnv.trim()) return fromEnv.trim();
 
-	const file = findSecretFile();
-	if (!file) return null;
+	// Installed, the bridge writes it in the data folder (`dataPaths.js`).
+	const file = process.env.VAMP_DATA ? join(process.env.VAMP_DATA, 'config', '.ws-secret') : findSecretFile();
+	if (!file || !existsSync(file)) return null;
 
 	const secret = readFileSync(file, 'utf8').trim();
 	return secret || null;

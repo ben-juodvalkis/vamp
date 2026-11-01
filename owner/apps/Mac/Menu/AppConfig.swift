@@ -13,6 +13,7 @@ import Foundation
 ///   2. $LOOPING_PROJECT_ROOT      — <root>/config/constants.json
 ///   3. the `repoRoot` default `npm run install-mac-app` records
 ///   4. walk up from the current directory looking for config/constants.json
+///   5. the copy inside the app, when it carries the server (installed)
 ///
 /// If none is found the built-in fallbacks are used (same values the web UI
 /// inlines in WebSocketConnection.ts for bootstrap), so the app still runs on
@@ -37,10 +38,15 @@ struct AppConfig {
     /// same Mac as the bridge and the file is the bridge's own store.
     let wsSecret: String?
 
-    /// The checkout the config came from (`<root>/config/constants.json`).
+    /// The checkout the config came from (`<root>/config/constants.json`),
+    /// or nil when it came from inside the app (installed).
     var repoRoot: URL? {
-        sourcePath.map { URL(fileURLWithPath: $0).deletingLastPathComponent().deletingLastPathComponent() }
+        guard let sourcePath, !sourcePath.hasPrefix(Bundle.main.bundlePath + "/") else { return nil }
+        return URL(fileURLWithPath: sourcePath).deletingLastPathComponent().deletingLastPathComponent()
     }
+
+    /// Where Vamp reads and writes (`VampPaths`).
+    var paths: VampPaths? { VampPaths.current(repoRoot: repoRoot) }
 
     static let fallback = AppConfig(
         host: "localhost",
@@ -63,15 +69,16 @@ struct AppConfig {
         else {
             return fallback
         }
-        let local = url.deletingLastPathComponent().appendingPathComponent("constants.local.json")
+        // This Mac's own files are in the data folder: the checkout's
+        // config/ from a clone, Application Support when installed.
+        let configDir = installedPaths(constantsAt: url)?.dataDir("config") ?? url.deletingLastPathComponent()
+        let local = configDir.appendingPathComponent("constants.local.json")
         if let localData = try? Data(contentsOf: local),
            let overlay = try? JSONSerialization.jsonObject(with: localData) as? [String: Any] {
             json = merged(json, overlay)
         }
 
-        // The secret sits beside constants.json, in the same config/
-        // directory — so locating one locates the other.
-        let secret = loadSecret(besideConstantsAt: url)
+        let secret = loadSecret(in: configDir)
 
         let osc = json["osc"] as? [String: Any]
         let ws = osc?["webSocket"] as? [String: Any]
@@ -118,15 +125,13 @@ struct AppConfig {
     /// one — the bridge owns the file's lifecycle, and a client minting
     /// its own secret would simply fail the challenge in a more
     /// confusing way.
-    private static func loadSecret(besideConstantsAt constantsURL: URL) -> String? {
+    private static func loadSecret(in configDir: URL) -> String? {
         let env = ProcessInfo.processInfo.environment
         if let fromEnv = env["LOOPING_WS_SECRET"]?.trimmingCharacters(in: .whitespacesAndNewlines),
            !fromEnv.isEmpty {
             return fromEnv
         }
-        let secretURL = constantsURL
-            .deletingLastPathComponent()
-            .appendingPathComponent(".ws-secret")
+        let secretURL = configDir.appendingPathComponent(".ws-secret")
         guard
             let raw = try? String(contentsOf: secretURL, encoding: .utf8)
         else {
@@ -159,6 +164,14 @@ struct AppConfig {
             dir.deleteLastPathComponent()
         }
 
+        candidates.append(Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/vamp/config/constants.json").path)
+
         return candidates.first(where: { fm.fileExists(atPath: $0) }).map { URL(fileURLWithPath: $0) }
+    }
+
+    /// The installed folders when `url` is the copy inside the app.
+    private static func installedPaths(constantsAt url: URL) -> VampPaths? {
+        guard url.path.hasPrefix(Bundle.main.bundlePath + "/") else { return nil }
+        return VampPaths.current(repoRoot: nil)
     }
 }
