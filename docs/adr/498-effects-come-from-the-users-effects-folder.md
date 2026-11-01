@@ -29,9 +29,14 @@ tiles ignored it.
   (`PlaceInfo.devices`, file name without the extension → path inside the
   folder); `services/effectSources` matches a `DEVICE_PRESETS` entry marked
   `effect: true` by its `defaultName` or an alias, and the load names that
-  folder and path. Not there: the load is refused with a banner ("Not in your
-  effects folder") and the chain offers no ghost of it. Native devices and
-  Permute are unaffected.
+  folder and path. Native devices and Permute are unaffected.
+- **Nothing is ever offered for a file that is not on the Mac.** An effect not
+  in the folder has no chain ghost; a central view of one that is neither on
+  the chain nor in the folder is left (`CentralDisplay`); a chain recent whose
+  file is gone is dropped from the list at startup and on every catalog change
+  (`recentEffects.pruneMissingRecents`, `POST /api/places/exists`, preset files
+  only). The load's refusal ("Not in your effects folder") is only a backstop
+  for a folder changed mid-tap.
 - **Vamp Devices holds only utilities**: Permute, MidiWheels, random start,
   Vamp-Capture, Vamp-Recorder, the groove, the abstractions. The effects left
   the repo; on the owner's Mac they live on the Audio-Midi Effects shelf (which

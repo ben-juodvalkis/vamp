@@ -1,6 +1,9 @@
 <script lang="ts">
 import { logger } from '$lib/utils/logger';
 	import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
+	import { selectedTrackStore, type SlotKey } from '$lib/stores/v6/selectedTrackStore.svelte';
+	import { DEVICE_PRESETS } from '$lib/config/devicePresets';
+	import { effectAvailable } from '$lib/services/effectSources.svelte';
 	import { resolveViewComponent } from './viewRegistry';
 	import { shouldReloadForImportError } from '$lib/utils/chunkReload';
 	import { deviceInk } from '$lib/utils/formatters/trackFormatters';
@@ -31,6 +34,17 @@ import { logger } from '$lib/utils/logger';
 	// This prevents component reload when only view.data changes (e.g., during XY drag)
 	let viewType = $derived(view.type);
 	let viewSubType = $derived(view.subType);
+
+	// One of Vamp's own effects (ADR-498) is offered only when its file is in
+	// the effects folder: a view of one that is neither on the chain nor in
+	// the folder would draw ghost controls for a file that is not there, so
+	// it is left.
+	$effect(() => {
+		const type = viewType === 'device' ? viewSubType : undefined;
+		if (!type || !DEVICE_PRESETS[type]?.effect) return;
+		if (selectedTrackStore.getFxGridSlot(type as SlotKey).device || effectAvailable(type)) return;
+		centralDisplayStore.clearView();
+	});
 
 	// Extract props to pass to the view component (reactive to data changes)
 	let viewProps = $derived(view.data || {});

@@ -20,7 +20,7 @@ vi.mock('$lib/stores/v6/selectedTrackStore.svelte', () => ({
 	}
 }));
 
-import { recordRecentEffect, recentEffects, recentForChain, addEffectToChain, _resetRecentEffectsForTests, RECENT_EFFECTS_MAX, DEFAULT_EFFECTS } from '$lib/services/recentEffects.svelte';
+import { recordRecentEffect, recentEffects, recentForChain, addEffectToChain, pruneMissingRecents, _resetRecentEffectsForTests, RECENT_EFFECTS_MAX, DEFAULT_EFFECTS } from '$lib/services/recentEffects.svelte';
 import type { ItemKind } from '$lib/utils/placeKinds';
 import { _setEffectsFolderForTests } from '$lib/services/effectSources.svelte';
 
@@ -100,6 +100,22 @@ describe('recent effects', () => {
 		send.mockClear();
 		await addEffectToChain(DEFAULT_EFFECTS.find((d) => d.name === 'Bass Amp')!);
 		expect(send).toHaveBeenCalledWith(expect.stringContaining('device/load'), ['tracks/0', '', '', 'place:Audio-Midi Effects', 'Guitar/Bass Amp.adg']);
+	});
+
+	it('drops a recent whose file the Mac reports gone, and keeps Live devices by name', async () => {
+		recordRecentEffect(fx('Echo'));
+		recordRecentEffect(fx('Tone Shaper'));
+		recordRecentEffect({ name: 'Reverb', fullPath: 'native:Hybrid', source: 'native:Hybrid', rel: 'Reverb', kind: 'audio-effect' });
+		const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
+			const { paths } = JSON.parse(String(init.body)) as { paths: string[] };
+			expect(paths).toEqual(['/shelf/Tone Shaper.adv', '/shelf/Echo.adv']);
+			return new Response(JSON.stringify({ exists: { '/shelf/Echo.adv': true, '/shelf/Tone Shaper.adv': false } }));
+		});
+		vi.stubGlobal('fetch', fetchMock);
+		await pruneMissingRecents();
+		vi.unstubAllGlobals();
+		expect(recentEffects().map((r) => r.name)).toEqual(['Reverb', 'Echo']);
+		expect(JSON.parse(localStorage.getItem('vamp.recentEffects')!).map((r: { name: string }) => r.name)).toEqual(['Reverb', 'Echo']);
 	});
 
 	it('offers no amp rack the effects folder lacks', () => {

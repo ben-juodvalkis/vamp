@@ -14,6 +14,11 @@
  * Bass Amp racks, offered only when the user's effects folder has them and
  * loaded from there by name (ADR-498, `effectSources`).
  *
+ * A recent whose file is gone from the Mac (moved, deleted, or one of the
+ * effects Vamp no longer ships) is dropped from the list, at startup and on
+ * every catalog change (`pruneMissingRecents`): the chain never offers a
+ * file that is not there (ADR-498).
+ *
  * Shared across tracks: one just used on one track is ready on the next.
  * Kept in this browser's localStorage, a per-viewer convenience, and
  * followed across its tabs; a private window or blocked storage starts
@@ -96,6 +101,32 @@ if (typeof window !== 'undefined') {
 	window.addEventListener('storage', (e) => {
 		if (e.key === STORAGE_KEY) recent = readStored();
 	});
+}
+
+/**
+ * Drop the recents whose file the Mac reports gone (`/api/places/exists`).
+ * Live devices by name have no file and stay; a Mac that cannot answer
+ * leaves the list as it is.
+ */
+export async function pruneMissingRecents(): Promise<void> {
+	const paths = recent.filter((r) => !nativeClassOf(r) && r.fullPath.startsWith('/')).map((r) => r.fullPath);
+	if (paths.length === 0) return;
+	try {
+		const res = await fetch('/api/places/exists', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ paths })
+		});
+		if (!res.ok) return;
+		const { exists } = (await res.json()) as { exists: Record<string, boolean> };
+		const kept = recent.filter((r) => exists[r.fullPath] !== false);
+		if (kept.length === recent.length) return;
+		logger.info('Recent effects: dropped files that are gone', { component: 'recentEffects', gone: recent.filter((r) => exists[r.fullPath] === false).map((r) => r.name) });
+		recent = kept;
+		globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(recent));
+	} catch (err) {
+		logger.debug('Recent effects: could not check files', { component: 'recentEffects', err: String(err) });
+	}
 }
 
 /** The recents, newest first. Reactive. */
