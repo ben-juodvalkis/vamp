@@ -267,6 +267,10 @@ lean server the rig can run too) and none needs Apple.
   `~/Library/Application Support/Vamp Release/` (back it up). Not yet published: the GitHub
   release `v1.0` with both files is Ben's call.
 - **Phase 6:** Vamp for iPad is submitted to the App Store (Ben, 2026-11-01).
+- **Vamp Devices (ADR-501, Ben 2026-11-01):** always copied into the User Library, loaded
+  through the Place when Live has one, else from there; no Place step for a new user.
+- **`v1.0` is published** (2026-11-01): github.com/ben-juodvalkis/vamp/releases/tag/v1.0, with
+  `Vamp.dmg`, `Vamp-1.0.dmg` and `appcast.xml`. Still asks where Vamp Devices goes; 1.1 won't.
 - **Phase 7, done:** README and INSTALLATION open with the download
   (`releases/latest/download/Vamp.dmg`, a name every release carries beside `Vamp-<version>.dmg`)
   and keep the clone as "From the code". The link works once the `v1.0` release is published.

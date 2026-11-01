@@ -1,7 +1,8 @@
 # ADR-500: The Installed App: First Launch, Optional Vamp Devices, Updates
 
 ## Status
-**Accepted** (2026-11-01). Phases 3–5 of
+**Accepted** (2026-11-01); where Vamp Devices goes and how it loads amended by
+[ADR-501](501-vamp-devices-in-the-user-library.md). Phases 3–5 of
 [installer.plan.md](../plans/general-release/installer.plan.md), on
 [ADR-499](499-one-data-folder.md)'s three folders. Nothing changes on a
 checkout except that REC, the wheels and Permute now hide while Live has no

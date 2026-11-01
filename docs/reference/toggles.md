@@ -315,8 +315,8 @@ row here once it is wired. The capture recorder is **not** a switch (decided
 the start, since REC loads Vamp-Capture onto the track it records when that
 track has none (`interface/bridge/handlers/captureRecorder.js`,
 wire-protocol §2.15). REC, the on-screen wheels and Permute in + Effect do
-hide while Live has no "Vamp Devices" Place, the utilities' folder
-(ADR-500): the page reads `m4lDevices.place` from `/api/places/list`
+hide while Live can reach no Vamp Devices folder, as a Place or in the User
+Library (ADR-500, ADR-501): the page reads `m4lDevices.place` from `/api/places/list`
 (`effectSources.vampDevicesAvailable`), counting it there until it is read.
 Two names from §7b's first list will not become switches: the Skaka view
 already appears only for a rack whose first macro reads "Pattern N", and

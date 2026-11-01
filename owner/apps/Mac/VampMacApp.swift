@@ -68,7 +68,7 @@ struct MenuContent: View {
         if vamp.paths?.installed == true && !(state.autoArm != nil && vamp.checklist.place && vamp.checklist.iPad) {
             // Ticks itself as each is done (`SetupChecklist`).
             Text(checkLine(state.autoArm != nil, "Vamp is a Control Surface in Live"))
-            Text(checkLine(vamp.checklist.place, "Vamp Devices is a Place in Live (optional)"))
+            Text(checkLine(vamp.checklist.place, "Live can reach Vamp Devices"))
             Text(checkLine(vamp.checklist.iPad, "An iPad is paired"))
         }
         if !vamp.fromNpm {

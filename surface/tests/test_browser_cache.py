@@ -442,3 +442,39 @@ def test_a_preset_under_its_device_loads_by_path():
     assert cache.lookup_named(src, "Audio Effects/Color Limiter") is color_limiter
     assert cache.lookup_named(src, "Instruments/Kit.adg/inner") is None
     assert kit.children_reads == 0
+
+
+# --- Vamp Devices in the User Library (ADR-501) ---------------------------
+
+
+def test_vamp_devices_falls_back_to_the_user_library_copy(tmp_path):
+    """No "Vamp Devices" Place: a `place:Vamp Devices` load names the copy
+    in the User Library, which a path lookup then finds. A real Place of
+    that name still wins."""
+    base = tmp_path / "UserLibrary"
+    (base / "Vamp Devices" / "Permute").mkdir(parents=True)
+    cache = BrowserCache(
+        browser=StubBrowser(user_library=CountingBrowserItem("User Library", children=[])),
+        user_library_base=str(base),
+        places_roots={},
+    )
+    assert cache.root_path("place:Vamp Devices") == str(base / "Vamp Devices")
+    assert cache.root_path("place:Elsewhere") is None
+
+    placed = BrowserCache(
+        browser=StubBrowser(user_library=CountingBrowserItem("User Library", children=[])),
+        user_library_base=str(base),
+        places_roots={"Vamp Devices": str(tmp_path / "checkout" / "Vamp Devices")},
+    )
+    assert placed.root_path("place:Vamp Devices") == str(tmp_path / "checkout" / "Vamp Devices")
+
+
+def test_vamp_devices_without_either_is_nowhere(tmp_path):
+    base = tmp_path / "UserLibrary"
+    base.mkdir()
+    cache = BrowserCache(
+        browser=StubBrowser(user_library=CountingBrowserItem("User Library", children=[])),
+        user_library_base=str(base),
+        places_roots={},
+    )
+    assert cache.root_path("place:Vamp Devices") is None

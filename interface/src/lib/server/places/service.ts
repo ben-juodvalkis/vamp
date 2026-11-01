@@ -953,7 +953,13 @@ export class PlacesService {
 		const exact = places.find((s) => s.path === path);
 		if (exact) return { path, place: exact.name, exact: true };
 		const holder = places.filter((s) => path.startsWith(`${s.path}/`)).sort((a, b) => b.path.length - a.path.length)[0];
-		return { path, place: holder ? holder.name : null, exact: false };
+		if (holder) return { path, place: holder.name, exact: false };
+		// No Place: the copy in the User Library loads instead (ADR-501), as
+		// the surface's `BrowserCache.root_path` finds it.
+		const library = this.sources.find((s) => s.kind === 'user-library');
+		const inLibrary = library ? join(library.path, 'Vamp Devices') : null;
+		if (inLibrary && existsSync(inLibrary)) return { path: inLibrary, place: library!.name, exact: false };
+		return { path, place: null, exact: false };
 	}
 
 	listing(): PlacesListing {

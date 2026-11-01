@@ -17,7 +17,7 @@ describe('firstRunSteps', () => {
 			['places', false],
 			['foot', false]
 		]);
-		expect(firstRunProgress(steps)).toEqual({ done: 0, total: 3 });
+		expect(firstRunProgress(steps)).toEqual({ done: 0, total: 2 });
 
 		const done = firstRunSteps({
 			surfaceProtocol: '3.11.0',
@@ -25,7 +25,7 @@ describe('firstRunSteps', () => {
 			tickedCount: 3,
 			footLearned: true
 		});
-		expect(firstRunProgress(done)).toEqual({ done: 3, total: 3 });
+		expect(firstRunProgress(done)).toEqual({ done: 2, total: 2 });
 		expect(done[3].done).toBe(true);
 		expect(done[0].how).toContain('3.11.0');
 		expect(done[2].how).toContain('3 ticked');

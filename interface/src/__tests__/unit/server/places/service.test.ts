@@ -106,6 +106,14 @@ describe('PlacesService, disk source', () => {
 		expect(listing.m4lDevices.place).toBeNull();
 	});
 
+	it('counts a Vamp Devices folder in the User Library as there, with no Place (ADR-501)', () => {
+		mkdirSync(join(root, 'User Library', 'Vamp Devices'), { recursive: true });
+		const m4l = make().listing().m4lDevices;
+		expect(m4l.place).toBe('User Library');
+		expect(m4l.path).toBe(join(root, 'User Library', 'Vamp Devices'));
+		expect(m4l.exact).toBe(false);
+	});
+
 	it('a tick builds the Place in the browser shapes, saves the file, ends the first run and bumps once', () => {
 		const s = make();
 		const v0 = s.currentVersion;

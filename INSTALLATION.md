@@ -10,15 +10,12 @@ You need **macOS 14** or later (Apple Silicon or Intel) and **Ableton Live 12.4 
 1. **[Download Vamp.dmg](https://github.com/ben-juodvalkis/vamp/releases/latest/download/Vamp.dmg)**,
    open it and drag **Vamp** to Applications. Open Vamp from there: it lives in the menu bar, as
    a V.
-2. It asks where the **Vamp Devices** folder goes: your Music folder, Live's User Library, or a
-   folder you pick. It copies Vamp's utilities there (Permute, the wheels, the recorder, the
-   groove) and puts its control surface in Live's User Library.
+2. It puts its control surface and a **Vamp Devices** folder (Permute, the wheels, the recorder,
+   the groove) in Live's User Library. Nothing to add in Live's browser: Live lists the User
+   Library already.
 3. In **Live → Settings → Link, Tempo & MIDI**, pick **Vamp** in an empty Control Surface slot,
    then quit Live and open it again.
-4. Optional: in Live's browser, **Places → Add Folder…**, and pick the Vamp Devices folder from
-   step 2. Keep its name. Until it is a Place, Permute, the on-screen wheels and REC are not
-   shown.
-5. On the iPad: open **Vamp for iPad** with the USB-C cable in, and type the six-digit code the
+4. On the iPad: open **Vamp for iPad** with the USB-C cable in, and type the six-digit code the
    Mac's menu bar shows. Without the app, choose **Show iPad Address as QR Code** in Vamp's menu
    and point the iPad's camera at it, then **Share → Add to Home Screen** in Safari.
 
@@ -80,7 +77,8 @@ Live's log (`~/Library/Preferences/Ableton/Live <version>/Log.txt`) now has a li
 
 In Live's browser sidebar, **Places → Add Folder…**, and pick the `Vamp Devices` folder in this
 checkout. Keep its name: the app loads Permute, the on-screen wheels and Random Start from the
-Place called "Vamp Devices".
+Place called "Vamp Devices", or, with no such Place, from a `Vamp Devices` folder in your User
+Library. Without either, those controls are not shown.
 
 ### 5. Start it on the Mac
 
@@ -169,8 +167,8 @@ The `features` switches (all off) are the author's own gear;
   `lsof -i :11020` shows Live listening, and read `logs/bridge.log`.
 - **"Vamp" isn't in Live's Control Surface list.** Run `npm run setup` again and read what the
   linking step printed, then restart Live.
-- **No Permute, wheels or REC.** The Vamp Devices folder isn't a Place in Live, or it was
-  renamed (step 4). Restart Live after fixing it.
+- **No Permute, wheels or REC.** Live can't reach the Vamp Devices folder: it isn't a Place
+  (step 4) nor in your User Library, or it was renamed. Restart Live after fixing it.
 - **The iPad can't reach the Mac.** Over USB-C, check the cable carries data and the manual address
   in step 6. Over Wi-Fi, some networks block devices from reaching each other.
 - **Something changed in the surface and nothing happened.** Live loads it once: quit Live fully

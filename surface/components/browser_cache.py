@@ -39,7 +39,7 @@ import time
 import unicodedata
 from typing import Callable, Dict, List, Optional, Tuple
 
-from .live_library import LiveLibrary
+from .live_library import M4L_DEVICES_PLACE, LiveLibrary
 
 logger = logging.getLogger("looping")
 
@@ -211,7 +211,8 @@ class BrowserCache:
             return self._lookup_in_root("user_library", tail, rel)
         if source.startswith(SOURCE_PLACE_PREFIX):
             name = source[len(SOURCE_PLACE_PREFIX):]
-            root = self._places_roots.get(name)
+            # The Place's folder, or Vamp Devices' User Library copy (root_path).
+            root = self.root_path(source)
             # A Place inside the User Library is not in ``user_folders`` (the
             # rig's seven Sidebar Places all missed there, "Vamp Devices"
             # outside it did not): go straight to the User Library by path.
@@ -282,7 +283,17 @@ class BrowserCache:
         if source == SOURCE_LIBRARY:
             return self._user_library_bases[0] if self._user_library_bases else None
         if source.startswith(SOURCE_PLACE_PREFIX):
-            return self._places_roots.get(source[len(SOURCE_PLACE_PREFIX):])
+            name = source[len(SOURCE_PLACE_PREFIX):]
+            root = self._places_roots.get(name)
+            if root is None and name == M4L_DEVICES_PLACE:
+                # Vamp's utilities without their Place: the copy in the User
+                # Library the installed app puts there (ADR-501). Live's
+                # browser lists the User Library, so a path lookup finds it.
+                for base in self._user_library_bases:
+                    candidate = os.path.join(base, M4L_DEVICES_PLACE)
+                    if os.path.isdir(candidate):
+                        return candidate
+            return root
         if source.startswith(SOURCE_PACK_PREFIX):
             return self._packs.get(source[len(SOURCE_PACK_PREFIX):])
         return None

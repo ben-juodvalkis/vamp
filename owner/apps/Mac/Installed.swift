@@ -47,8 +47,8 @@ extension Supervisor {
         return "\(info?["CFBundleShortVersionString"] ?? "0") (\(info?["CFBundleVersion"] ?? "0"))"
     }
 
-    /// At launch: ask once where Vamp Devices goes, then copy the devices
-    /// and the surface. Says in the menu what Live still needs. Starts the
+    /// At launch: copy Vamp Devices into the User Library (ADR-501; a 1.0
+    /// install that chose another folder keeps it), then the surface. Says in the menu what Live still needs. Starts the
     /// updater: an update replaces the app, and the next launch copies the
     /// new surface and says to restart Live.
     func setUpInstalled() {
@@ -56,8 +56,10 @@ extension Supervisor {
         if updater == nil, Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") as? String != "" {
             updater = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
         }
-        if UserDefaults.standard.string(forKey: VampPaths.devicesKey) == nil, let picked = askWhereDevicesGo() {
-            UserDefaults.standard.set(picked.path, forKey: VampPaths.devicesKey)
+        if UserDefaults.standard.string(forKey: VampPaths.devicesKey) == nil {
+            // Live's browser lists the User Library, so the utilities load from
+            // there with no Place to add (the surface's BrowserCache.root_path).
+            UserDefaults.standard.set(userLibrary.appendingPathComponent("Vamp Devices").path, forKey: VampPaths.devicesKey)
             choseDevices()
         }
         guard let paths else { return }
@@ -79,39 +81,6 @@ extension Supervisor {
             setLiveNote("Could not put the control surface in Live's User Library: \(why)")
         case .current, .leftSymlink:
             setLiveNote(nil)
-        }
-    }
-
-    /// The user's choice of folder for Vamp Devices: their own Music folder
-    /// (the default) or Live's User Library (Ben, 2026-11-01). Either way they
-    /// add it to Live's Places themselves.
-    private func askWhereDevicesGo() -> URL? {
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        let music = home.appendingPathComponent("Music/Vamp/Vamp Devices")
-        let library = userLibrary.appendingPathComponent("Vamp Devices")
-        let alert = NSAlert()
-        alert.messageText = "Where should Vamp Devices go?"
-        alert.informativeText = """
-            Permute, the on-screen wheels, Capture and Vamp's groove come from this folder. \
-            Add it to Live's Places to turn them on.
-
-            Your Music folder: \(music.path)
-            Live's User Library: \(library.path)
-            """
-        alert.addButton(withTitle: "Music Folder")
-        alert.addButton(withTitle: "User Library")
-        alert.addButton(withTitle: "Choose…")
-        NSApp.activate(ignoringOtherApps: true)
-        switch alert.runModal() {
-        case .alertFirstButtonReturn: return music
-        case .alertSecondButtonReturn: return library
-        default:
-            let panel = NSOpenPanel()
-            panel.canChooseDirectories = true
-            panel.canChooseFiles = false
-            panel.canCreateDirectories = true
-            panel.prompt = "Put Vamp Devices Here"
-            return panel.runModal() == .OK ? panel.url?.appendingPathComponent("Vamp Devices") : music
         }
     }
 

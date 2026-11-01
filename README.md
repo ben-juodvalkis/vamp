@@ -56,13 +56,11 @@ carries everything it runs.
 ## Quick start
 
 1. **[Download Vamp.dmg](https://github.com/ben-juodvalkis/vamp/releases/latest/download/Vamp.dmg)**,
-   drag **Vamp** to Applications and open it. It asks where to put the Vamp Devices folder and
-   puts its control surface in Live.
+   drag **Vamp** to Applications and open it. It puts its control surface and its devices
+   (Permute, the wheels, Capture) in Live's User Library.
 2. In Live, **Settings → Link, Tempo & MIDI:** pick **Vamp** as a Control Surface, then quit and
    reopen Live.
-3. Optional: in Live's browser, **Places → Add Folder…** and pick the Vamp Devices folder. That
-   turns on Permute, the on-screen wheels and Capture.
-4. On the iPad, open **Vamp for iPad** with the cable in and type the code the Mac's menu bar
+3. On the iPad, open **Vamp for iPad** with the cable in and type the code the Mac's menu bar
    shows. Or scan the QR code in Vamp's menu to open it in Safari.
 
 Vamp's menu-bar menu ticks each step off as it is done.

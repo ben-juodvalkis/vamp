@@ -1940,13 +1940,16 @@ scan runs synchronously on Live's tick. Curve calibration table lives in
 `components/sample_normalize.py`; re-run `owner/probes/sample_gain_curve_probe.js` if
 Live's `sample.gain` mapping ever changes.
 
-### `Vamp Devices/` — the one Place a user adds
+### `Vamp Devices/` — the utilities' folder
 
 The app's utilities, and nothing else (plan.md §8). The effects left it on
 2026-11-01: Vamp's effect tiles find their files by name in the user's
 effects folder (ADR-498). Live
 names a Place after its folder, so the folder's name is what the loads name
 (`place:Vamp Devices`, `live_library.M4L_DEVICES_PLACE`, `devicePresets.ts`).
+With no Place of that name, `BrowserCache.root_path` answers
+`<User Library>/Vamp Devices` when it exists (ADR-501): where the installed
+app puts it, and a path lookup in the User Library root finds the file.
 
 - `Permute/` - `Permute.amxd` + `.maxpat`, the **thin** sequencer device
   (permute ADR-020 / ADR-429): Device On + the 38 `live.*` pattern

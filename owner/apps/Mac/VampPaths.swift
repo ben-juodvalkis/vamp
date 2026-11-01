@@ -13,8 +13,9 @@ import Foundation
 /// From a checkout (a `repoRoot`), all three are the checkout, so the rig
 /// writes where it always has. Installed (no `repoRoot`, the server inside
 /// the app), `app` is the bundle's `Resources/vamp`, `data` is
-/// `~/Library/Application Support/Vamp`, and `devices` is the folder the
-/// user picked, `~/Music/Vamp/Vamp Devices` until they pick.
+/// `~/Library/Application Support/Vamp`, and `devices` is Live's User
+/// Library's `Vamp Devices`, recorded at first launch (ADR-501; a 1.0
+/// install keeps the folder it chose), `~/Music/Vamp/Vamp Devices` until then.
 struct VampPaths: Equatable {
     let app: URL
     let data: URL
@@ -26,7 +27,7 @@ struct VampPaths: Equatable {
         app.deletingLastPathComponent().appendingPathComponent("node/bin/node")
     }
 
-    /// Recorded when the user picks where Vamp Devices goes.
+    /// Where Vamp Devices was put, recorded at first launch.
     static let devicesKey = "devicesFolder"
 
     static func checkout(_ root: URL) -> VampPaths {
