@@ -1128,16 +1128,16 @@ Live's temp project for an unsaved one.
 
 | Address | Dir | Args | Semantics |
 | ------- | --- | ---- | --------- |
-| `/capture/start` (`/capture/arm`) | UI→Device | — | Start recording a WAV. The bridge sends `/capture/folder` first, on the same socket. A start while recording is ignored. |
-| `/capture/stop` (`/capture/disarm`) | UI→Device | — | Stop; the device then sends `/capture/state idle` and `/capture/file`. |
-| `/capture/query` | UI→Device | — | Replays `/capture/state` and the last `/capture/file`. **Not a presence check:** the UI takes the file as a fresh capture and loads it. |
+| `/capture/start` (`/capture/arm`) | UI→Device | — (Vamp-Capture: `track:int, source:string, channel:string`, all optional) | Start recording a WAV. The bridge sends `/capture/folder` first, on the same socket. A start while recording is ignored. **Vamp-Capture** (branch `capture-on-track`, capture.plan.md): one copy per track shares the port, so a start is for one track, Live's index or `-1`/absent for the selected one, and every other copy ignores it. `source` `track` (what the track plays) or `input` (the device's extra input on Ext. In); absent keeps the device's Track \| Input switch. `channel` names Ext. In's channel (`1/2`, `1`…); absent keeps the one the device is on, or takes Live's first real one. |
+| `/capture/stop` (`/capture/disarm`) | UI→Device | — | Stop; the device then sends `/capture/state idle` and `/capture/file`. With Vamp-Capture, whichever copy is recording stops. |
+| `/capture/query` | UI→Device | — | Replays `/capture/state` and the last `/capture/file` (with Vamp-Capture, only the selected track's copy answers). **Not a presence check:** the UI takes the file as a fresh capture and loads it. |
 | `/capture/folder` | Bridge→Device | `path:string` | Where an unsaved set records: the newest `<YYYY-MM-DD HHMMSS> Temp Project` holding `Ableton Project Info` under `paths.liveRecordingsDir` (Live's temporary folder, default `~/Music/Ableton/Live Recordings`), picked by name. Empty when none exists. Bridge-originated, never from a client. The device ignores it for a saved set, whose `live_set file_path` names its folder. Reaches the device's script straight from `OSC-route` (the `sel` path drops arguments), so it needs the 2026-09-27 `.amxd`. |
-| `/capture/hello` | Device→Bridge | — | Once a second from the moment the script loads. **Bridge-terminated.** Any packet from the device makes `captureRecorder` available; 3 s without one makes it unavailable, `No recorder on Return A`. |
+| `/capture/hello` | Device→Bridge | — (Vamp-Capture: `track:int`, its track's index, `-1` on a return or the master) | Once a second from the moment the script loads. **Bridge-terminated.** Any packet from the device makes `captureRecorder` available; 3 s without one makes it unavailable, `No recorder on Return A`. |
 | `/capture/bye` | Device→Bridge | — | Sent as the device is deleted (Max's `notifydeleted`), best effort. **Bridge-terminated.** Unavailable at once. |
 | `/capture/state` | Device→UI | `state:string` | `idle` or `recording`, on every change and once as the device loads. Any state ends the UI's pending start. |
 | `/capture/file` | Device→UI | `path:string` | The finished WAV, `LOOPING_CAPTURE_<YYYYMMDD_HHMMSS>.wav`. The UI prepares a MIDI track and loads it into a Simpler (`clipOperations.loadCaptureIntoSimpler`). |
-| `/capture/error` | Device→UI | `code:string, detail:string` | A refused start. `no-project-folder`: the set is unsaved and no temp project was named; `sfrecord-missing`: the patch has lost its `sfrecord~`. The UI shows it in the error banner, ends its pending start and turns back down the Send A the tap turned up. |
-| `/capture/meter` | Device→UI | `level:float` | 0–1. The device's meter chain is unwired today, so it never arrives. |
+| `/capture/error` | Device→UI | `code:string, detail:string` | A refused start. `no-project-folder`: the set is unsaved and no temp project was named; `sfrecord-missing`: the patch has lost its `sfrecord~`. Vamp-Capture adds `no-ext-in` (Live offers its extra input no Ext. In) and `no-input-channel` (Ext. In has no channel by that name). The UI shows it in the error banner, ends its pending start and turns back down the Send A the tap turned up. |
+| `/capture/meter` | Device→UI | `level:float` | 0–1. The old recorder's meter chain is unwired, so it never arrives from it; Vamp-Capture sends it ~15 times a second while it records, and never while idle. |
 
 ### 2.16 Tone Shaper frames (Vamp Devices/ToneShaper, 2026-10-07)
 

@@ -344,7 +344,7 @@
     "maxFolderDepth": 2,
     "_maxFolderDepth_note": "Cap folder nesting at this many levels in every Place (a Place can set its own, below). A folder at exactly this depth (root folders are depth 1) keeps its own presets, absorbs every preset nested below it, drops its subfolders, and de-dupes by name. e.g. Electric(1) \u2192 Rhodes Synth(2) \u2192 sub-genre folders(3+) collapse into one flat list under Rhodes Synth. Each Place's Samples folder is exempt and keeps its full nesting.",
     "effectsPlace": "",
-    "effectsHidden": ["Vamp-Recorder", "random-start", "Abstractions", "Grooves"],
+    "effectsHidden": ["Vamp-Recorder", "Vamp-Capture", "random-start", "Abstractions", "Grooves"],
     "_effectsHiddenNote": "Folders (or files, by name without the extension) at the effects Place's top level the browser leaves out: the plumbing the app and the surface load on their own (2026-10-26). The rest is laid out as Audio Effects and MIDI Effects by what each item is (diskScan.groupEffectsPlace).",
     "_effectsPlaceNote": "The Place the chain overview's + Effect cell opens the browser on, by its name in Live's sidebar (2026-10-25, ADR-478). It is cataloged whether or not it is ticked in Settings, and stays off the browser's rail unless it is ticked; a named Place is laid out as one screen, its plumbing hidden (catalog.effectsHidden). Empty, the default since 2026-10-31 (Ben): Live's Audio Effects category, every audio effect with its presets, ticked or not (ADR-493). It was Vamp Devices from 2026-10-26, and the rig named its Audio-Midi Effects shelf in config/constants.local.json.",
     "places": {
