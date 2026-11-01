@@ -434,7 +434,8 @@ export const TOURS = {
 			...[
 				['chain-recents', 'the instrument alone, on one row: the ghost section two cells wide, recents in three columns of four and + Effect the full-height last column; Auto Filter draws its curve', 1],
 				['chain-recents-crowded', 'a chain on two rows: recents in five columns of two and + Effect double height; Echo and Auto Filter are on it, so they are skipped', 5],
-				['chain-recents-few', 'three recents on two rows: they fill two columns top to bottom and + Effect widens over the rest', 5, 5]
+				['chain-recents-fresh', 'a fresh browser with no recents: Live\'s own effects fill the section (no Utility, the sidebar has its own)', 1, 0],
+				['chain-recents-some', 'three recents: they come first, Live\'s own effects fill the rest', 1, 3]
 			].map(([name, what, n, seed = RECENT_SEED.length]) => ({
 				name,
 				description: `The Recent column (ADR-484): ${what}`,

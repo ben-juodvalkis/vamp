@@ -2,7 +2,8 @@
 
 ## Status
 **Accepted** (2026-10-26). Supersedes ADR-483 (a short chain's suggested
-ghost devices). No Live restart: interface only.
+ghost devices). Amended by [ADR-497](497-live-effects-fill-the-recents.md):
+Live's own effects fill what the recents leave. No Live restart: interface only.
 
 ## Context
 ADR-483 stood ghost devices on a short chain (a Drum Buss, an Echo and an

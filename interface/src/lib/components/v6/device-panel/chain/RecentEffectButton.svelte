@@ -12,7 +12,7 @@
 	import constants from '$config/constants.json';
 	import { presetParams, type PresetParams } from '$lib/services/presetParams';
 	import { presetControl, resolveParam, deviceKeyForPreset, DEVICE_CONTROLS, type ParamRef } from '$lib/components/v6/device-panel/deviceControls';
-	import { addEffectToChain, type RecentEffect } from '$lib/services/recentEffects.svelte';
+	import { addEffectToChain, nativeClassOf, type RecentEffect } from '$lib/services/recentEffects.svelte';
 	import { press } from '$lib/actions/press';
 
 	// Not `effect`: a variable of that name turns `$effect` into a store read.
@@ -28,11 +28,20 @@
 		return () => (cancelled = true);
 	});
 
+	// A Live device inserted by name (a default) has no file: its class, and
+	// its control at rest, as Live's own default opens it.
+	const nativeClass = $derived(nativeClassOf(recent));
+	const className = $derived(saved?.className ?? nativeClass ?? '');
+	const found = $derived.by(() => {
+		if (saved) return presetControl(saved, recent.name);
+		const control = nativeClass ? DEVICE_CONTROLS[deviceKeyForPreset(nativeClass, recent.name) ?? '']?.control : undefined;
+		return control ? { control, values: {} as Record<number, number> } : null;
+	});
+
 	const CURVE_MAX_CUTOFF = 0.55;
 	// A filter (the Auto Filter) draws its response curve at the saved
 	// cutoff and resonance, as its tile does (the user, 2026-10-26).
 	const curve = $derived.by(() => {
-		const found = presetControl(saved, recent.name);
 		if (!found || found.control.kind !== 'xy' || !found.control.curve) return null;
 		const get = (ref: ParamRef) => found.values[resolveParam(ref)];
 		const type = found.control.curve(get);
@@ -49,7 +58,7 @@
 	const isWheels = $derived(recent.name === constants.devices.midiWheels.deviceName);
 	// A control with a mark and no picture (the Wah, the amp racks) draws its mark.
 	// By the device's type, so a rack whose file saves no readable macro still has it.
-	const key = $derived(deviceKeyForPreset(saved?.className ?? '', recent.name));
+	const key = $derived(deviceKeyForPreset(className, recent.name));
 	const mark = $derived.by(() => {
 		// The Utility's cell is its meter: here, its gain mark.
 		if (key === 'utility') return 'gain' as const;
@@ -57,12 +66,11 @@
 		return control && control.kind !== 'eq' && !control.picture ? (control.icon ?? null) : null;
 	});
 	/** Devices drawn generically, having no picture of their own (the user, 2026-10-26). */
-	const generic = $derived(genericPicture(saved?.className, recent.name));
+	const generic = $derived(genericPicture(className, recent.name));
 
 	const picture = $derived.by(() => {
 		if (isWheels) return { kind: 'wheels' as const, x: 0, y: 0 };
 		if (generic) return { kind: generic, x: 0, y: 0 };
-		const found = presetControl(saved, recent.name);
 		// An EQ (the tone pad) draws a generic EQ curve (the user, 2026-10-26).
 		if (found?.control.kind === 'eq') return { kind: 'eqcurve' as const, x: 0, y: 0 };
 		if (!found || !found.control.picture) return null;

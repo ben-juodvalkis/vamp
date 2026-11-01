@@ -7,6 +7,11 @@
  * nothing the chain already holds; the list keeps more than that so the
  * column stays full after the filter.
  *
+ * Short of that (a fresh browser, a short list), Live's own effects fill
+ * the rest (`DEFAULT_EFFECTS`, the user, 2026-11-01), so the section is
+ * never empty: inserted by name (`native:<class>`, protocol 3.12.0), the
+ * user's own default for each applies and no file is read.
+ *
  * Shared across tracks: one just used on one track is ready on the next.
  * Kept in this browser's localStorage, a per-viewer convenience, and
  * followed across its tabs; a private window or blocked storage starts
@@ -22,6 +27,7 @@ import { openViewWhenLanded } from '$lib/services/effectView.svelte';
 import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { v3ErrorBannerStore } from '$lib/stores/v6/v3ErrorBannerStore.svelte';
+import { DEVICE_PRESETS } from '$lib/config/devicePresets';
 import { MIDI_EFFECT_KINDS, type ItemKind } from '$lib/utils/placeKinds';
 import { logger } from '$lib/utils/logger';
 
@@ -40,6 +46,32 @@ export interface RecentEffect {
 export const RECENT_EFFECTS_MAX = 32;
 export const RECENT_EFFECTS_SHOWN = 12;
 const STORAGE_KEY = 'vamp.recentEffects';
+
+/**
+ * The effects that fill the section past the recents, first first: Live's
+ * own, so they are on every Mac. More than it shows, so it stays full
+ * after the chain's own are skipped.
+ * No Utility: the right sidebar always has its ghost (the user, the same day).
+ */
+const DEFAULT_EFFECT_KEYS = ['echo', 'reverb', 'filter', 'eq', 'saturator', 'compressor', 'squash', 'chorus', 'phaser', 'drum', 'redux', 'gate', 'shifter', 'ott', 'tremolo'] as const;
+
+/** Other names a default's device goes by, as a recent or on a chain (a Hybrid Reverb preset is the Reverb). */
+const DEFAULT_ALSO_NAMED: Partial<Record<(typeof DEFAULT_EFFECT_KEYS)[number], readonly string[]>> = {
+	reverb: ['Hybrid Reverb'],
+	squash: ['Glue'],
+	ott: ['OTT']
+};
+
+export const DEFAULT_EFFECTS: readonly RecentEffect[] = DEFAULT_EFFECT_KEYS.map((key) => {
+	const preset = DEVICE_PRESETS[key];
+	const source = `native:${preset.expectedClassName}`;
+	return { name: preset.defaultName, fullPath: source, source, rel: preset.defaultName, kind: 'audio-effect' };
+});
+
+/** A Live device inserted by name has no file: its class, else null. */
+export function nativeClassOf(effect: Pick<RecentEffect, 'source'>): string | null {
+	return effect.source.startsWith('native:') ? effect.source.slice('native:'.length) : null;
+}
 
 function readStored(): RecentEffect[] {
 	try {
@@ -78,11 +110,14 @@ export function recordRecentEffect(effect: RecentEffect): void {
 /**
  * The recents the column shows for a chain whose devices are named
  * `loaded`: the first `max` that fit the selected track and that the chain
- * does not already hold (Live names a loaded preset's device after it).
+ * does not already hold (Live names a loaded preset's device after it),
+ * then the defaults the recents leave room for.
  */
 export function recentForChain(loaded: readonly string[], max: number = RECENT_EFFECTS_SHOWN): RecentEffect[] {
 	const have = new Set(loaded);
-	return recent.filter((r) => fitsSelectedTrack(r) && !have.has(r.name)).slice(0, max);
+	const named = new Set(recent.map((r) => r.name));
+	const defaults = DEFAULT_EFFECTS.filter((d, i) => ![d.name, ...(DEFAULT_ALSO_NAMED[DEFAULT_EFFECT_KEYS[i]] ?? [])].some((n) => named.has(n) || have.has(n)));
+	return [...recent, ...defaults].filter((r) => fitsSelectedTrack(r) && !have.has(r.name)).slice(0, max);
 }
 
 /** Whether an effect can go on the selected track: a MIDI effect only on a MIDI track. */
@@ -102,7 +137,9 @@ export async function addEffectToChain(effect: RecentEffect): Promise<void> {
 	if (!fitsSelectedTrack(effect)) return reportFailure(effect.name, new Error('A MIDI effect goes on a MIDI track'));
 	const cancelView = openViewWhenLanded({ trackPath, padPath: pad?.padPath ?? '', name: effect.name });
 	try {
-		await addPresetToChain(trackPath, pad?.padPath ?? '', effect.fullPath, effect.source, effect.rel);
+		// A Live device by name sends no file (3.12.0).
+		const file = nativeClassOf(effect) ? '' : effect.fullPath;
+		await addPresetToChain(trackPath, pad?.padPath ?? '', file, effect.source, effect.rel);
 	} catch (err) {
 		cancelView();
 		logger.error('Effect load failed', { component: 'recentEffects', err });

@@ -1,12 +1,15 @@
 /**
  * The chain's Recent column (ADR-484): the effects added lately, newest
  * first, once each; the column shows the first four that fit the chain:
- * no MIDI effect off a MIDI track, nothing the chain already holds.
+ * no MIDI effect off a MIDI track, nothing the chain already holds; Live's
+ * own effects fill what the recents leave.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const track = vi.hoisted(() => ({ type: 'midi' as 'midi' | 'audio' }));
-vi.mock('$lib/api/simpleClient', () => ({ send: vi.fn() }));
+const send = vi.hoisted(() => vi.fn());
+vi.mock('$lib/api/simpleClient', () => ({ send }));
+vi.mock('$lib/services/effectView.svelte', () => ({ openViewWhenLanded: () => () => {} }));
 vi.mock('$lib/utils/logger', () => ({ logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock('$lib/stores/v6/selectedTrackStore.svelte', () => ({
 	selectedTrackStore: {
@@ -17,7 +20,7 @@ vi.mock('$lib/stores/v6/selectedTrackStore.svelte', () => ({
 	}
 }));
 
-import { recordRecentEffect, recentEffects, recentForChain, _resetRecentEffectsForTests, RECENT_EFFECTS_MAX } from '$lib/services/recentEffects.svelte';
+import { recordRecentEffect, recentEffects, recentForChain, addEffectToChain, _resetRecentEffectsForTests, RECENT_EFFECTS_MAX, DEFAULT_EFFECTS } from '$lib/services/recentEffects.svelte';
 import type { ItemKind } from '$lib/utils/placeKinds';
 
 const fx = (name: string, kind: ItemKind = 'audio-effect') => ({ name, fullPath: `/shelf/${name}.adv`, source: '', rel: '', kind });
@@ -52,8 +55,37 @@ describe('recent effects', () => {
 		recordRecentEffect(fx('Echo'));
 		recordRecentEffect(fx('Arpeggiator', 'midi-effect'));
 		recordRecentEffect(fx('Note Chance', 'max-midi-effect'));
-		expect(recentForChain([]).map((r) => r.name)).toEqual(['Note Chance', 'Arpeggiator', 'Echo']);
+		expect(recentForChain([]).map((r) => r.name).slice(0, 3)).toEqual(['Note Chance', 'Arpeggiator', 'Echo']);
 		track.type = 'audio';
-		expect(recentForChain([]).map((r) => r.name)).toEqual(['Echo']);
+		expect(recentForChain([]).map((r) => r.name).slice(0, 2)).toEqual(['Echo', 'Reverb']);
+	});
+
+	it('fills an empty list with Live\'s own effects, skipping what the chain holds', () => {
+		expect(recentForChain([])).toHaveLength(12);
+		expect(recentForChain([]).map((r) => r.name).slice(0, 4)).toEqual(['Echo', 'Reverb', 'Auto Filter', 'Channel EQ']);
+		expect(recentForChain(['Wavetable', 'Echo', 'Reverb']).map((r) => r.name).slice(0, 2)).toEqual(['Auto Filter', 'Channel EQ']);
+		// The right sidebar always has its ghost Utility.
+		expect(DEFAULT_EFFECTS.map((d) => d.name)).not.toContain('Utility');
+	});
+
+	it('puts the recents first, then the defaults they do not already name', () => {
+		recordRecentEffect(fx('Echo'));
+		recordRecentEffect(fx('Wah'));
+		const names = recentForChain([]).map((r) => r.name);
+		expect(names.slice(0, 3)).toEqual(['Wah', 'Echo', 'Reverb']);
+		expect(names.filter((n) => n === 'Echo')).toHaveLength(1);
+	});
+
+	it('skips a default whose device is a recent or on the chain under another name', () => {
+		recordRecentEffect(fx('Hybrid Reverb'));
+		expect(recentForChain([]).map((r) => r.name)).not.toContain('Reverb');
+		_resetRecentEffectsForTests();
+		expect(recentForChain(['Hybrid Reverb']).map((r) => r.name)).not.toContain('Reverb');
+	});
+
+	it('inserts a default by name, with no file', async () => {
+		send.mockClear();
+		await addEffectToChain(DEFAULT_EFFECTS.find((d) => d.name === 'Reverb')!);
+		expect(send).toHaveBeenCalledWith(expect.stringContaining('device/load'), ['tracks/0', '', '', 'native:Hybrid', 'Reverb']);
 	});
 });
