@@ -25,10 +25,9 @@ const path = require('path');
 const { logger } = require('../utils/logger');
 const { helperReadiness } = require('../transport/AxHelperClient');
 
-// Monotonic counter state lives next to bridge.log in the repo-root
-// `logs/` dir (already gitignored). __dirname = interface/bridge/handlers
-// → three parents up is the repo root.
-const COUNTER_FILE = path.resolve(__dirname, '..', '..', '..', 'logs', 'save-as-counter.json');
+// Monotonic counter state lives next to bridge.log in the data folder's
+// `logs/` (utils/dataPaths.js).
+const COUNTER_FILE = path.join(require('../utils/dataPaths').dataDir('logs'), 'save-as-counter.json');
 
 // Zero-pad width for the leading counter (001, 002, …).
 const COUNTER_PAD = 3;

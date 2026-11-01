@@ -43,13 +43,44 @@ _FALLBACK = {
 }
 
 
+#: Written beside the surface by the installed app (installer.plan.md
+#: Phase 1): ``{"app": ..., "data": ..., "devices": ...}``, the same three
+#: folders the bridge and the interface server get by environment. Absent
+#: in a checkout, whose symlinked surface walks up to the repo instead.
+VAMP_PATHS_FILE = "vamp-paths.json"
+
+
+def vamp_paths():
+    """The installed app's folders, or ``{}`` for a checkout."""
+    f = os.path.join(os.path.dirname(os.path.abspath(__file__)), VAMP_PATHS_FILE)
+    try:
+        with open(f, "r") as fh:
+            data = json.load(fh)
+    except (IOError, OSError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {k: v for k, v in data.items() if isinstance(v, str) and v}
+
+
+def data_path(kind, *rest):
+    """``<data>/<kind>/...`` when installed, else ``None``."""
+    data = vamp_paths().get("data")
+    return os.path.join(data, kind, *rest) if data else None
+
+
 def _find_constants_path():
     """Walk up from this file to find ``config/constants.json``.
 
     Returns the absolute path, or ``None`` if not found. Uses
     ``realpath`` so the symlink installed into the Remote Scripts
-    directory resolves to the actual repo location.
+    directory resolves to the actual repo location. Installed, the file
+    is in the app's folder (``vamp-paths.json``).
     """
+    app = vamp_paths().get("app")
+    if app:
+        candidate = os.path.join(app, "config", "constants.json")
+        return candidate if os.path.isfile(candidate) else None
     here = os.path.dirname(os.path.realpath(__file__))
     # Expected repo layout:
     #   <repo>/surface/  <- `here`
@@ -114,7 +145,9 @@ def load():
     # This Mac's differences, gitignored (general-release plan.md §3). A
     # local file that can't be read leaves the tracked defaults: logged
     # loudly, since the owner's rig then runs as the general edition.
-    local_path = os.path.join(os.path.dirname(path), "constants.local.json")
+    local_path = data_path("config", "constants.local.json") or os.path.join(
+        os.path.dirname(path), "constants.local.json"
+    )
     if os.path.isfile(local_path):
         try:
             with open(local_path, "r") as f:

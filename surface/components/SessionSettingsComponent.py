@@ -84,7 +84,16 @@ def _find_repo_logs_path(filename: str = "session-settings.json"):
     dir that holds ``config/`` (the repo root) and target its ``logs/`` sibling.
     Returns the absolute path, or ``None`` if the repo root can't be located
     (in which case persistence silently no-ops — settings still work in-memory).
+    Installed, ``<data>/logs/<filename>`` (``config_loader.vamp_paths``).
     """
+    try:
+        from .. import config_loader
+    except ImportError:
+        import config_loader  # type: ignore[no-redef]
+
+    installed = config_loader.data_path("logs", filename)
+    if installed:
+        return installed
     here = os.path.dirname(os.path.realpath(__file__))
     current = here
     for _ in range(6):

@@ -50,7 +50,7 @@ final class Supervisor: ObservableObject {
         repoRoot = config.repoRoot
         pagePort = config.padPagePort
         fromNpm = ProcessInfo.processInfo.environment["VAMP_FROM_NPM"] == "1"
-        VampLog.url = repoRoot?.appendingPathComponent("logs/vamp-mac.log")
+        VampLog.url = config.paths?.dataDir("logs").appendingPathComponent("vamp-mac.log")
         Self.current = self
         healthTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
             Task { @MainActor in await self?.checkHealth() }

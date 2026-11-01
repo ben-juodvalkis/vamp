@@ -45,7 +45,9 @@ const fs = require('fs');
 const path = require('path');
 const { logger } = require('./logger');
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
+const { appRoot, dataDir } = require('./dataPaths');
+
+const REPO_ROOT = appRoot();
 
 const enabled = process.env.BRIDGE_PROFILE === '1' || process.env.BRIDGE_PROFILE === 'true';
 const rawFile = process.env.BRIDGE_PROFILE_FILE;
@@ -54,7 +56,7 @@ const windowMs = parseInt(process.env.BRIDGE_PROFILE_WINDOW_MS || '1000', 10);
 const dumpPath = enabled
     ? (rawFile
         ? (path.isAbsolute(rawFile) ? rawFile : path.resolve(REPO_ROOT, rawFile))
-        : path.resolve(REPO_ROOT, 'logs', 'bridge-profile.ndjson'))
+        : path.join(dataDir('logs'), 'bridge-profile.ndjson'))
     : null;
 
 let stream = null;

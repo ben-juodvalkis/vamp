@@ -36,7 +36,7 @@ import { createHash } from 'node:crypto';
 import { logger } from '$lib/utils/logger';
 import { categoryForFolderName, folderSlug, type PlaceAliasMap } from '$lib/utils/presetPath';
 import type { KindCounts } from '$lib/utils/placeKinds';
-import { configPath, configSection, repoRoot, runtimeConstants } from '../runtimeConfig';
+import { configPath, configSection, dataDir, devicesDir, repoRoot, runtimeConstants } from '../runtimeConfig';
 import { DEFAULT_PREFS_DIR, librarySources, readLiveLibrary, type LibrarySource, type LiveLibrary } from './liveLibrary';
 import { newestLibraryCfg } from '../libraryCfg';
 import { readTicks, seedTicks, writeTicks, type Ticks } from './ticks';
@@ -294,11 +294,11 @@ export class PlacesService {
 
 	constructor(opts: PlacesServiceOptions = {}) {
 		this.prefsDir = opts.prefsDir ?? DEFAULT_PREFS_DIR;
-		this.ticksFile = opts.ticksFile ?? join(repoRoot(), 'logs', 'places.json');
+		this.ticksFile = opts.ticksFile ?? join(dataDir('logs'), 'places.json');
 		// Beside the ticks file, so a test's own ticks folder holds its own choice.
 		this.effectsFile = opts.effectsFile ?? join(dirname(this.ticksFile), 'effects.json');
 		this.effectsChoice = readEffectsChoice(this.effectsFile);
-		this.cacheDir = opts.cacheDir ?? join(repoRoot(), 'scripts', '.cache');
+		this.cacheDir = opts.cacheDir ?? dataDir('cache');
 		this.auDirs = opts.auDirs;
 		this.dbDir = opts.liveDatabaseDir === undefined ? defaultLiveDatabaseDir() : opts.liveDatabaseDir;
 		this.polls = opts.poll ?? true;
@@ -948,7 +948,7 @@ export class PlacesService {
 	// --- what clients read ------------------------------------------------------
 
 	private m4lDevices(): PlacesListing['m4lDevices'] {
-		const path = join(repoRoot(), 'Vamp Devices');
+		const path = devicesDir();
 		const places = this.sources.filter((s) => s.kind === 'place');
 		const exact = places.find((s) => s.path === path);
 		if (exact) return { path, place: exact.name, exact: true };

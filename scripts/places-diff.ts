@@ -14,7 +14,7 @@
  */
 import { basename, join } from 'node:path';
 import { homedir } from 'node:os';
-import { configPath, configSection, repoRoot } from '../interface/src/lib/server/runtimeConfig';
+import { configPath, configSection, dataDir } from '../interface/src/lib/server/runtimeConfig';
 import { librarySources, readLiveLibrary } from '../interface/src/lib/server/places/liveLibrary';
 import { readTicks, seedTicks } from '../interface/src/lib/server/places/ticks';
 import {
@@ -46,7 +46,7 @@ function main(): number {
 
 	const lib = readLiveLibrary();
 	const sources = librarySources(lib);
-	const ticks = readTicks(join(repoRoot(), 'logs', 'places.json'));
+	const ticks = readTicks(join(dataDir('logs'), 'places.json'));
 	const ticked = ticks.firstRun ? seedTicks(sources, configPath('sidebarRoot')) : ticks.ticked;
 	// A Live category has no folder to scan from the disk: nothing to compare.
 	const chosen = sources.filter((s) => s.kind !== 'category' && s.kind !== 'collection' && s.present && (only ? s.name === only : all || ticked.has(s.key)));
@@ -75,7 +75,7 @@ function main(): number {
 	const brands = (configSection<Record<string, { color?: string }>>('vendors').brands ?? {}) as Record<string, { color?: string }>;
 	const colors = Object.fromEntries(Object.entries(brands).map(([k, v]) => [k, v?.color]));
 	const catalog = configSection<{ maxFolderDepth?: number; places?: Record<string, PlaceTuning> }>('catalog');
-	const kindCache = loadKindCache(join(repoRoot(), 'scripts', '.cache', 'places-kind-cache.json'));
+	const kindCache = loadKindCache(join(dataDir('cache'), 'places-kind-cache.json'));
 
 	let differences = 0;
 	let totalIndexMs = 0;

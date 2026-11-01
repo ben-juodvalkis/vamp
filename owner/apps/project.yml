@@ -101,6 +101,7 @@ targets:
       - Mac/SupervisorRules.swift
       - Mac/PairedIPads.swift
       - Mac/VampLog.swift
+      - Mac/VampPaths.swift
       - Tests
     settings:
       base:

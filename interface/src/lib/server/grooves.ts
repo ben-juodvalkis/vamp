@@ -42,7 +42,7 @@ import { gunzipSync } from 'node:zlib';
 import { logger } from '$lib/utils/logger';
 import { GROOVE_GROUPS, USER_GROOVE_PREFIX, type GrooveEvent, type GrooveFile, type GroovesListing } from '$lib/types/grooves';
 import { readLiveLibrary } from './places/liveLibrary';
-import { configPath, repoRoot } from './runtimeConfig';
+import { configPath, dataDir, repoRoot } from './runtimeConfig';
 
 export { GROOVE_GROUPS, type GrooveEvent, type GrooveFile, type GroovesListing };
 
@@ -215,7 +215,7 @@ let library: { root: string; files: GrooveFile[] } | null = null;
 /** The listing, the library read once per `Grooves` folder. */
 export function groovesListing(
 	root: string | null = grooveRoot(),
-	ticksFile: string = join(repoRoot(), 'logs', 'grooves.json'),
+	ticksFile: string = join(dataDir('logs'), 'grooves.json'),
 	userRoot: string | null = userGrooveRoot()
 ): GroovesListing {
 	if (root && library?.root !== root) library = { root, files: readGrooveLibrary(root) };

@@ -21,9 +21,11 @@
 const fs = require('fs');
 const path = require('path');
 
-const CONFIG_DIR = path.resolve(__dirname, '..', '..', '..', 'config');
-const CONSTANTS_PATH = path.join(CONFIG_DIR, 'constants.json');
-const LOCAL_PATH = path.join(CONFIG_DIR, 'constants.local.json');
+const { appRoot, dataDir } = require('./dataPaths');
+
+// The defaults ship with Vamp; this Mac's own file is in the data folder.
+const CONSTANTS_PATH = path.join(appRoot(), 'config', 'constants.json');
+const LOCAL_PATH = path.join(dataDir('config'), 'constants.local.json');
 
 function isPlainObject(v) {
     return v !== null && typeof v === 'object' && !Array.isArray(v);

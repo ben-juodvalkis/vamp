@@ -34,9 +34,8 @@ const { logger } = require('./logger');
 // Resolve OSC_TAP_FILE against the repo root, not the bridge's cwd.
 // `npm run dev` launches the bridge with `cd interface/bridge && …`,
 // so a relative path in the env var would otherwise resolve inside
-// `interface/bridge/`. __dirname is `.../interface/bridge/utils`, so
-// three parents up is the repo root.
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
+// `interface/bridge/`.
+const REPO_ROOT = require('./dataPaths').appRoot();
 
 const rawTapPath = process.env.OSC_TAP_FILE;
 const tapPath = rawTapPath
