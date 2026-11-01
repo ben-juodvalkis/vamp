@@ -27,6 +27,8 @@ final class Supervisor: ObservableObject {
     @Published private(set) var updateNote: String?
 
     let repoRoot: URL?
+    /// Where Vamp runs from: the checkout, or the server inside this app.
+    let paths: VampPaths?
     let pagePort: UInt16
     let fromNpm: Bool
 
@@ -48,6 +50,7 @@ final class Supervisor: ObservableObject {
 
     init(config: AppConfig) {
         repoRoot = config.repoRoot
+        paths = config.paths
         pagePort = config.padPagePort
         fromNpm = ProcessInfo.processInfo.environment["VAMP_FROM_NPM"] == "1"
         VampLog.url = config.paths?.dataDir("logs").appendingPathComponent("vamp-mac.log")
@@ -82,14 +85,14 @@ final class Supervisor: ObservableObject {
     }
 
     var canStart: Bool {
-        SupervisorRules.canStart(state, fromNpm: fromNpm, hasRepo: repoRoot != nil, hasChild: hasChild)
+        SupervisorRules.canStart(state, fromNpm: fromNpm, hasRepo: paths != nil, hasChild: hasChild)
     }
 
     var canStop: Bool { SupervisorRules.canStop(state, fromNpm: fromNpm, hasChild: hasChild) }
 
     var statusLine: String {
         switch state {
-        case .stopped: return repoRoot == nil ? "Vamp: can't find the repo" : "Vamp: stopped"
+        case .stopped: return paths == nil ? "Vamp: can't find the repo" : "Vamp: stopped"
         case .updating: return "Vamp: updating Vamp for Mac…"
         case .starting: return "Vamp: starting…"
         case .running: return pageUp ? "Vamp: running" : "Vamp: running, page server restarting…"
@@ -207,25 +210,37 @@ final class Supervisor: ObservableObject {
 
     // MARK: - Start / stop
 
+    /// What the child is called in the log.
+    private var childName: String { repoRoot == nil ? "vamp-server" : "npm run ipad" }
+
     func start() {
-        guard canStart, let root = repoRoot else { return }
+        guard canStart, let paths else { return }
         stopRequested = false
         state = .starting
         starting = Date()
 
         let log = VampLog.open()
         let process = Process()
-        // A login shell, for the PATH a Terminal would have: an app opened
-        // from the Dock gets launchd's bare one, with no node or npm on it.
-        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["-lc", "exec npm run ipad"]
-        process.currentDirectoryURL = root
+        if let root = repoRoot {
+            // A login shell, for the PATH a Terminal would have: an app opened
+            // from the Dock gets launchd's bare one, with no node or npm on it.
+            process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+            process.arguments = ["-lc", "exec npm run ipad"]
+            process.currentDirectoryURL = root
+        } else {
+            // Installed (installer.plan.md Phase 3): the app's own Node runs
+            // the standalone server, which runs the bridge.
+            process.executableURL = paths.node
+            process.arguments = [paths.app.appendingPathComponent("vamp-server.mjs").path]
+            process.currentDirectoryURL = paths.app
+        }
         var env = ProcessInfo.processInfo.environment
+        env.merge(paths.environment) { _, ours in ours }
         // This app is the menu bar; setup-ipad.js must not launch another.
         env["SKIP_MENUBAR"] = "1"
         // The menu is the status page: setup-ipad.js opens no Safari windows.
         env["VAMP_MAC_APP"] = "1"
-        env["LOOPING_PROJECT_ROOT"] = root.path
+        if let root = repoRoot { env["LOOPING_PROJECT_ROOT"] = root.path }
         // Node 24.7 reading the macOS Keychain's certificates segfaults on a
         // background thread (ReadMacOSKeychainCertificates → X509 null read,
         // crash report 2026-10-30 16:47): a start died with exit 1 after a
@@ -244,7 +259,7 @@ final class Supervisor: ObservableObject {
             try process.run()
             child = process
             Self.recordChild(process.processIdentifier)
-            VampLog.line("— Vamp for Mac started npm run ipad (pid \(process.processIdentifier)) —")
+            VampLog.line("— Vamp for Mac started \(childName) (pid \(process.processIdentifier)) —")
         } catch {
             state = .failed("could not start: \(error.localizedDescription)")
         }
@@ -320,7 +335,7 @@ final class Supervisor: ObservableObject {
         child = nil
         adopted = nil
         Self.recordChild(nil)
-        VampLog.line("— npm run ipad exited\(process == nil ? "" : " with \(code)") —")
+        VampLog.line("— \(childName) exited\(process == nil ? "" : " with \(code)") —")
         if stopRequested {
             state = .stopped
             return
@@ -332,7 +347,7 @@ final class Supervisor: ObservableObject {
             let up = await pageAnswers()
             let decision = SupervisorRules.afterExit(recentExits: recentExits, now: Date(), pageUp: up)
             recentExits = decision.exits
-            state = .failed("npm run ipad exited; see the log")
+            state = .failed("\(childName) exited; see the log")
             guard decision.restart else {
                 VampLog.line(up
                     ? "— not restarting: the page server answers, started elsewhere —"

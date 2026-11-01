@@ -21,6 +21,11 @@ struct VampPaths: Equatable {
     let devices: URL
     let installed: Bool
 
+    /// The Node the app ships, beside the server (`Resources/node/bin/node`).
+    var node: URL {
+        app.deletingLastPathComponent().appendingPathComponent("node/bin/node")
+    }
+
     /// Recorded when the user picks where Vamp Devices goes.
     static let devicesKey = "devicesFolder"
 
