@@ -227,6 +227,6 @@ describe('Settings on a first run', () => {
 		expect(getByText(/set up Vamp/)).toBeTruthy();
 		expect(queryByRole('button', { name: 'Set up later' })).toBeNull();
 		expect(getByRole('button', { name: 'Finish setup' })).not.toBeDisabled();
-		expect(getByRole('tab', { name: /Setup/ }).textContent).toContain('1/3');
+		expect(getByRole('tab', { name: /Setup/ }).textContent).toContain('1/2');
 	});
 });
