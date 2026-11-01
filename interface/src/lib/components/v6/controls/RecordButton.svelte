@@ -3,6 +3,7 @@
 	import { captureSettings } from '$lib/stores/v6/captureSettingsStore.svelte';
 	import { session } from '$lib/stores/session.svelte';
 	import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
+	import { vampDevicesAvailable } from '$lib/services/effectSources.svelte';
 	import { onDestroy } from 'svelte';
 
 	// Shared record button — used both at the top of the browser rail
@@ -116,6 +117,8 @@
 	let meterHeight = $derived(fillLevel * 100);
 </script>
 
+<!-- The recorder is a Vamp Devices utility: no REC until that folder is a Place in Live. -->
+{#if vampDevicesAvailable()}
 <div class="record-button-fit">
 	<button
 		class="record-button font-bold text-3xl flex items-center justify-center select-none touch-manipulation"
@@ -142,6 +145,7 @@
 		</span>
 	</button>
 </div>
+{/if}
 
 <style>
 	/* Perfect circle in EITHER orientation. The wrapper fills the parent cell

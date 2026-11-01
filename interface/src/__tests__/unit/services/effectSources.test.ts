@@ -6,10 +6,13 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 
 vi.mock('$lib/utils/logger', () => ({ logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
-import { effectSource, effectAvailable, effectsFolderName, _setEffectsFolderForTests } from '$lib/services/effectSources.svelte';
+import { effectSource, effectAvailable, effectsFolderName, vampDevicesAvailable, _setEffectsFolderForTests, _setVampDevicesPlaceForTests } from '$lib/services/effectSources.svelte';
 import { DEVICE_PRESETS } from '$lib/config/devicePresets';
 
-afterEach(() => _setEffectsFolderForTests(null));
+afterEach(() => {
+	_setEffectsFolderForTests(null);
+	_setVampDevicesPlaceForTests(null);
+});
 
 describe('effect sources', () => {
 	it('finds an effect by its name in the effects folder', () => {
@@ -31,5 +34,16 @@ describe('effect sources', () => {
 		expect(effectAvailable('reverb')).toBe(true);
 		expect(effectAvailable('sequencer')).toBe(true);
 		expect(effectsFolderName()).toBe('');
+	});
+
+	it('offers the utilities only while Vamp Devices is a Place, and counts it there until the listing says', () => {
+		_setVampDevicesPlaceForTests(null);
+		expect(vampDevicesAvailable()).toBe(true);
+		expect(effectAvailable('sequencer')).toBe(true);
+		_setVampDevicesPlaceForTests(false);
+		expect(vampDevicesAvailable()).toBe(false);
+		expect(effectAvailable('sequencer')).toBe(false);
+		_setVampDevicesPlaceForTests(true);
+		expect(effectAvailable('sequencer')).toBe(true);
 	});
 });
