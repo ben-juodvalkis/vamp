@@ -121,7 +121,10 @@ drives Live and passes the gate's page-load check. **Size:** 2 days.
   symlink there (the rig's) is left alone.
 - **Vamp Devices, optional (Ben, 2026-10-31):** the install ships a folder of utility devices —
   Permute, MidiWheels, the recorder ([capture.plan.md](capture.plan.md)), random-start, the
-  groove, and the effect tiles' own devices — copied to `~/Music/Vamp/Vamp Devices`. Vamp works
+  groove, and the effect tiles' own devices. **The user picks where it goes (Ben, 2026-11-01):**
+  first launch offers `~/Music/Vamp/Vamp Devices` or a folder inside their User Library, and
+  copies it there; the app remembers the choice, so an update refreshes the devices in the same
+  place. Either way the folder is added to Live's Places by the user. Vamp works
   without it: **adding it to Live's Places is what turns those features on**, and while it is
   not a Place they are not shown. The server already knows whether the Place exists (the
   listing's `m4lDevices`), and the bridge's feature switches already turn controls off with a
@@ -141,9 +144,7 @@ drives Live and passes the gate's page-load check. **Size:** 2 days.
   and ticks itself when it is there. **To check in Live:** whether a Place added while Live
   runs reaches the surface at once, or only after a restart (the rig's notes say fixing a Place
   needed one). If it needs the restart, the instructions order it: add the folder, pick the
-  control surface, restart Live once. **Later, if it tests out:** copy the devices into the
-  User Library instead, which Live's browser already lists, so there is no Place step at all
-  (capture.plan.md §6).
+  control surface, restart Live once.
 - **The checklist** becomes Vamp for Mac's too: the menu says what is left (control surface
   picked, Place added, iPad paired), from the same signals `firstRunSteps.ts` reads, and opens
   Settings on the Mac for the rest.
@@ -190,8 +191,8 @@ two Live steps) and **develop** (the clone, as now). The README's "there's no ap
 - **Adding the Vamp Devices Place.** Measured 2026-09-26: Live rewrites `Library.cfg` itself
   when a Place is added, at once, while it runs (`liveLibrary.ts`). Editing that file from
   outside would race it the same way. The checklist ticks itself when the Place appears. The
-  step is optional (Phase 4: without it, Vamp runs with those features hidden), and it goes
-  altogether if the devices can live in the User Library.
+  step is optional (Phase 4: without it, Vamp runs with those features hidden). It stays
+  wherever the user puts the folder, the User Library included (Ben, 2026-11-01).
 - **Not the recorder on Return A:** that step goes with [capture.plan.md](capture.plan.md).
 
 ## 6. The rig is not touched
@@ -217,11 +218,10 @@ two Live steps) and **develop** (the clone, as now). The README's "there's no ap
 ## 8. Open questions for Ben
 
 1. ~~Intel Macs?~~ **Yes** (Ben, 2026-10-31): the app and its Node are universal (Phase 3).
-2. **Where should `Vamp Devices` live:** `~/Music/Vamp/` (recommended, visible, beside the
-   user's music) or inside Application Support (hidden, harder to point Live at)?
-3. **Price and terms:** free, as the repo is (MIT)? The App Store needs a decision for Vamp for
-   iPad.
-4. **Update channel:** one stable feed, or also a beta feed for testers?
+2. ~~Where should `Vamp Devices` live?~~ **The user chooses** (Ben, 2026-11-01): their own
+   folder (`~/Music/Vamp/`, the default) or the User Library; they add it as a Place either way.
+3. ~~Price and terms?~~ **Free** (Ben, 2026-11-01), for Vamp for Mac and Vamp for iPad.
+4. ~~Update channel?~~ **One stable feed** (Ben, 2026-11-01); testers use TestFlight for the iPad.
 5. ~~A QR code of the Safari address in the menu?~~ **Yes** (Ben, 2026-10-31; Phase 4).
 
 ## 9. Order and size
