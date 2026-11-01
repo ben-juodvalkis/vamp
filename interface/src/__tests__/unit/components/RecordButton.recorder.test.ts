@@ -66,6 +66,17 @@ describe('RecordButton', () => {
 		expect(button.classList.contains('recording')).toBe(true);
 	});
 
+	it('stops on a second tap while the first is still waiting for its answer', async () => {
+		bridgeUp();
+		session.selectTrackOptimistically(2);
+		const { container } = render(RecordButton);
+		const button = container.querySelector('button')!;
+		await tap(button);
+		await tap(button);
+		const sent = vi.mocked(send).mock.calls.map((c) => c[0]);
+		expect(sent).toEqual(['/capture/start', '/capture/stop']);
+	});
+
 	it('records the interface input on the channel Settings names', async () => {
 		bridgeUp();
 		session.selectTrackOptimistically(1);

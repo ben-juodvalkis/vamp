@@ -70,17 +70,38 @@ let inputApi = null;             // this_device audio_inputs <n>, the extra inpu
 
 const helloTask = new Task(sayHello);
 
+// Set up once Live can answer for this device. Right after a load from the
+// browser it cannot yet (measured 2026-10-31: `get: no valid object set`
+// 40 ms after load_item returned), so setup retries until it can.
+const BOOT_RETRY_MS = 100;
+const BOOT_TRIES = 50;
+const bootTask = new Task(init);
+let bootTries = 0;
+let isReady = false;
+
 // ─── load ───────────────────────────────────────────────────────────────────
 
-// [live.thisdevice] bangs `init` once Live has the device: LiveAPI works
-// from then on, not while the script parses.
+// [live.thisdevice] bangs `init` once Live has the device, and the script
+// schedules it too (an autowatch reload gets no bang). Safe to call twice.
 function init() {
     recorder = patcher.getnamed("recorder");
     sourceTab = patcher.getnamed("source");
     recButton = patcher.getnamed("Capture Record");
     if (!selfApi) selfApi = new LiveAPI("this_device");
+    else selfApi.path = "this_device";
     if (!lookApi) lookApi = new LiveAPI("live_set");
-    if (!inputApi) inputApi = new LiveAPI(extraInputPath());
+    const answered = Number(selfApi.id) !== 0
+        && /^live_set /.test(String(selfApi.unquotedpath))
+        && selfApi.getcount("audio_inputs") > 0;
+    if (!answered) {
+        if (bootTries++ < BOOT_TRIES) bootTask.schedule(BOOT_RETRY_MS);
+        else post("[init] Live never answered for this device\n");
+        return;
+    }
+    const inputPath = extraInputPath();
+    if (!inputApi) inputApi = new LiveAPI(inputPath);
+    else inputApi.path = inputPath;
+    isReady = true;
     outlet(2, SOURCE_IDLE);
     fillInputMenu();
     broadcastState();
@@ -92,20 +113,19 @@ function init() {
     }
 }
 
-// Live's start bang does not come again when autowatch reloads this
-// script, so every entry point sets up first if it has to.
+// Every entry point sets up first if it has to.
 function ready() {
-    if (!selfApi) init();
+    if (!isReady) init();
+    return isReady;
 }
 
 // The extra input is the last of the device's audio inputs ([plugin~ 3 4]).
 function extraInputPath() {
-    const count = selfApi.getcount("audio_inputs");
-    return count > 0 ? `this_device audio_inputs ${count - 1}` : "this_device";
+    return `this_device audio_inputs ${selfApi.getcount("audio_inputs") - 1}`;
 }
 
 function sayHello() {
-    outlet(1, "/capture/hello", ownTrackIndex());
+    if (isReady) outlet(1, "/capture/hello", ownTrackIndex());
 }
 
 function notifydeleted() {
@@ -149,7 +169,7 @@ function isForMe(trackIndex) {
 // ─── commands ───────────────────────────────────────────────────────────────
 
 function anything() {
-    ready();
+    if (!ready()) return;
     const args = arrayfromargs(arguments);
     switch (messagename) {
     case "/folder":
@@ -176,14 +196,14 @@ function anything() {
 
 // The device's own REC button and the Track | Input switch.
 function record(on) {
-    ready();
+    if (!ready()) return;
     if (on) start(); else stop();
 }
 
 // Input puts the extra input on Ext. In, keeping its channel if it is
 // there already.
 function source(index) {
-    ready();
+    if (!ready()) return;
     if (index === 1) routeExtraInputTo("");
     if (capturing) outlet(2, index === 1 ? SOURCE_INPUT : SOURCE_TRACK);
 }
@@ -191,7 +211,7 @@ function source(index) {
 // The input menu: an Ext. In channel, by its name. While the extra input is
 // on something else the menu holds only that name, which is not a channel.
 function channel() {
-    ready();
+    if (!ready()) return;
     const name = arrayfromargs(arguments).join(" ");
     const type = readOne(inputApi, "routing_type");
     if (name && type && type.display_name === EXT_IN) routeExtraInputTo(name);
@@ -339,3 +359,6 @@ function timestamp(d) {
     return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + "_" +
         pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
 }
+
+// The first setup try; it repeats until Live answers.
+bootTask.schedule(BOOT_RETRY_MS);

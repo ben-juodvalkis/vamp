@@ -142,6 +142,17 @@ describe('createCaptureRecorder', () => {
 		expect(clients).toEqual([]);
 	});
 
+	it('loads one recorder however many starts come while it loads', () => {
+		vi.useFakeTimers();
+		const { sent, surface, recorder } = setup();
+		recorder.start([2]);
+		recorder.start([2, 'input', '3']);
+		expect(surface).toHaveLength(1);
+		recorder.onDeviceMessage(hello(2));
+		expect(addresses(sent)).toEqual(['/capture/folder', '/capture/start']);
+		expect(sent[1].args).toEqual(startArgs(2, 'input', '3'));
+	});
+
 	it('says so when the recorder never loads, and lets REC go back to idle', () => {
 		vi.useFakeTimers();
 		const { sent, clients, recorder } = setup();

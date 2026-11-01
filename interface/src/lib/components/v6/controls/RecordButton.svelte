@@ -93,7 +93,9 @@
 		if (isHolding && holdTriggered) {
 			stopRecording();
 		} else if (isHolding && !holdTriggered) {
-			if (captureStore.state === 'idle') {
+			// A start still waiting for its answer (the recorder loading) is a
+			// take in progress: the second tap stops it, never starts another.
+			if (captureStore.state === 'idle' && !captureStore.pending) {
 				startRecording();
 			} else {
 				stopRecording();

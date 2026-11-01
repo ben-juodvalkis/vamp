@@ -184,6 +184,12 @@ function createCaptureRecorder({
                 refuse('no-track', 'REC records the selected track, and none is selected');
                 return;
             }
+            // Already loading one for this track: this start replaces that
+            // one's arguments; a second load would put two on the track.
+            if (waiting && waiting.track === track) {
+                waiting.args = rest;
+                return;
+            }
             cancelWaiting();
             if (hasRecorder(track)) {
                 sendStart(track, rest);
