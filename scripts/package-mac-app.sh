@@ -20,6 +20,11 @@ APPS_DIR="$ROOT/owner/apps"
 OUT="$ROOT/dist/Vamp.app"
 CACHE="$ROOT/scripts/.cache/node"
 SIGN_IDENTITY="${SIGN_IDENTITY:--}"
+# Sparkle's public key (scripts/release-mac.sh passes it); empty, the app
+# never checks for updates.
+SPARKLE_PUBLIC_KEY="${SPARKLE_PUBLIC_KEY:-}"
+# A Developer ID signature carries Apple's secure timestamp; ad hoc has none.
+if [[ "$SIGN_IDENTITY" == "-" ]]; then TS="--timestamp=none"; else TS="--timestamp"; fi
 
 # --- Node, both chips, joined ------------------------------------------------
 if [[ -z "${NODE_VERSION:-}" ]]; then
@@ -47,10 +52,12 @@ fi
 # --- the server and the app --------------------------------------------------
 npm run --prefix "$ROOT" build:server
 
+bash "$ROOT/scripts/fetch-sparkle.sh"
 echo "🔨 building Vamp for Mac (Release)…"
 xcodebuild build -project "$APPS_DIR/Vamp.xcodeproj" -scheme VampMac \
   -configuration Release -destination "generic/platform=macOS" \
-  -derivedDataPath "$APPS_DIR/build/package" -quiet
+  -derivedDataPath "$APPS_DIR/build/package" -quiet \
+  SPARKLE_PUBLIC_KEY="$SPARKLE_PUBLIC_KEY"
 
 rm -rf "$OUT"
 mkdir -p "$(dirname "$OUT")"
@@ -67,10 +74,20 @@ rsync -a --exclude .venv --exclude tests --exclude __pycache__ --exclude '*.pyc'
 ditto "$ROOT/Vamp Devices" "$OUT/Contents/Resources/Vamp Devices"
 
 # --- signing: the inside first, then the app around it -----------------------
-codesign --force --options runtime --timestamp=none \
+codesign --force --options runtime $TS \
   --entitlements "$APPS_DIR/Config/node.entitlements" \
   --sign "$SIGN_IDENTITY" "$OUT/Contents/Resources/node/bin/node"
-codesign --force --options runtime --timestamp=none --sign "$SIGN_IDENTITY" "$OUT"
+# Sparkle's helpers, innermost first, as Sparkle's own docs sign them; the
+# downloader keeps its entitlements.
+SPK="$OUT/Contents/Frameworks/Sparkle.framework"
+if [[ -d "$SPK" ]]; then
+  codesign -f -s "$SIGN_IDENTITY" -o runtime $TS "$SPK/Versions/B/XPCServices/Installer.xpc"
+  codesign -f -s "$SIGN_IDENTITY" -o runtime $TS --preserve-metadata=entitlements "$SPK/Versions/B/XPCServices/Downloader.xpc"
+  codesign -f -s "$SIGN_IDENTITY" -o runtime $TS "$SPK/Versions/B/Autoupdate"
+  codesign -f -s "$SIGN_IDENTITY" -o runtime $TS "$SPK/Versions/B/Updater.app"
+  codesign -f -s "$SIGN_IDENTITY" -o runtime $TS "$SPK"
+fi
+codesign --force --options runtime $TS --sign "$SIGN_IDENTITY" "$OUT"
 codesign --verify --deep --strict "$OUT"
 
 echo "✅ $OUT ($(du -sh "$OUT" | cut -f1), Node $NODE_VERSION, $(lipo -archs "$OUT/Contents/Resources/node/bin/node"))"

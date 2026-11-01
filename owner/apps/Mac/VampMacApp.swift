@@ -65,6 +65,12 @@ struct MenuContent: View {
         Text(vamp.statusLine)
         if let note = vamp.updateNote { Text(note) }
         if let note = vamp.liveNote { Text(note) }
+        if vamp.paths?.installed == true && !(state.autoArm != nil && vamp.checklist.place && vamp.checklist.iPad) {
+            // Ticks itself as each is done (`SetupChecklist`).
+            Text(checkLine(state.autoArm != nil, "Vamp is a Control Surface in Live"))
+            Text(checkLine(vamp.checklist.place, "Vamp Devices is a Place in Live (optional)"))
+            Text(checkLine(vamp.checklist.iPad, "An iPad is paired"))
+        }
         if !vamp.fromNpm {
             Button("Start Vamp") { vamp.start() }.disabled(!vamp.canStart)
             Button("Restart Vamp") { vamp.restart() }.disabled(!vamp.canStop)
@@ -112,10 +118,15 @@ struct MenuContent: View {
         Divider()
 
         if vamp.paths?.installed == true {
+            Button("Check for Updates…") { vamp.checkForUpdates() }.disabled(vamp.updater == nil)
             Button("Uninstall Vamp…") { vamp.uninstall() }
         }
         Button(vamp.fromNpm || vamp.state == .external ? "Quit" : "Quit (stops Vamp)") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
+    }
+
+    private func checkLine(_ done: Bool, _ text: String) -> String {
+        "\(done ? "✓" : "○") \(text)"
     }
 
     /// "Bridge connected · ipad" when the mode beacon has landed, otherwise

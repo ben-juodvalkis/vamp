@@ -31,6 +31,10 @@ final class Supervisor: ObservableObject {
     private(set) var paths: VampPaths?
     /// What Live still needs after setup put the surface in place, installed only.
     @Published private(set) var liveNote: String?
+    /// Installed: what setting Vamp up still leaves to do (`Installed.swift`).
+    @Published var checklist = SetupChecklist()
+    /// Installed: Sparkle, started once setup has run (`Installed.swift`).
+    var updater: AnyObject?
     /// The QR code's window, held while it is open.
     var qrWindow: NSWindow?
 
@@ -446,6 +450,7 @@ final class Supervisor: ObservableObject {
         let up = await pageAnswers()
         pageUp = up
         state = SupervisorRules.afterHealth(state, pageUp: up, hasChild: hasChild, startedAt: starting, now: Date())
+        if paths?.installed == true, up { await refreshChecklist() }
     }
 
     private func pageAnswers() async -> Bool {

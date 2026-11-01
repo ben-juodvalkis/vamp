@@ -1,11 +1,39 @@
 import AppKit
 import CoreImage.CIFilterBuiltins
 import Foundation
+import Sparkle
 
 /// The installed app's own menu work (installer.plan.md Phase 4): putting
 /// the surface and Vamp Devices in place at launch, the iPad's address as a
 /// QR code, and uninstalling. None of it runs from a checkout.
+/// The menu's setup checklist, each line ticking itself from what Vamp sees:
+/// the surface answering (Vamp picked as a Control Surface, Live restarted),
+/// the Vamp Devices Place in Live's listing, an iPad paired (in Safari or
+/// Vamp for iPad). The same three as Settings' first-run steps.
+struct SetupChecklist: Equatable {
+    var place = false
+    var iPad = false
+}
+
 extension Supervisor {
+    /// Re-read the checklist: the Place from the page server's listing, the
+    /// iPads from their files. (The surface line is the menu's own bridge
+    /// link: a setting echoed back means the surface answered.)
+    func refreshChecklist() async {
+        var next = checklist
+        if let url = URL(string: "http://127.0.0.1:\(pagePort)/api/places/list"),
+           let (data, _) = try? await URLSession.shared.data(from: url),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let m4l = json["m4lDevices"] as? [String: Any] {
+            next.place = m4l["place"] is String
+        }
+        let webPaired = paths.map { $0.dataDir("config").appendingPathComponent(".paired-devices.json") }
+            .flatMap { try? Data(contentsOf: $0) }
+            .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [Any] }
+        next.iPad = !(webPaired ?? []).isEmpty || !PairedIPads().isEmpty
+        if next != checklist { checklist = next }
+    }
+
     /// Where the app keeps what it ships beside the server.
     private var resources: URL? { paths.map { $0.app.deletingLastPathComponent() } }
 
@@ -20,9 +48,14 @@ extension Supervisor {
     }
 
     /// At launch: ask once where Vamp Devices goes, then copy the devices
-    /// and the surface. Says in the menu what Live still needs.
+    /// and the surface. Says in the menu what Live still needs. Starts the
+    /// updater: an update replaces the app, and the next launch copies the
+    /// new surface and says to restart Live.
     func setUpInstalled() {
         guard let resources else { return }
+        if updater == nil, Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") as? String != "" {
+            updater = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+        }
         if UserDefaults.standard.string(forKey: VampPaths.devicesKey) == nil, let picked = askWhereDevicesGo() {
             UserDefaults.standard.set(picked.path, forKey: VampPaths.devicesKey)
             choseDevices()
@@ -134,5 +167,9 @@ extension Supervisor {
         NSWorkspace.shared.recycle([Bundle.main.bundleURL]) { _, _ in
             DispatchQueue.main.async { NSApp.terminate(nil) }
         }
+    }
+
+    func checkForUpdates() {
+        (updater as? SPUStandardUpdaterController)?.checkForUpdates(nil)
     }
 }

@@ -255,8 +255,15 @@ lean server the rig can run too) and none needs Apple.
   both chips (x86_64 under Rosetta), on shifted ports: page, places list, socket to the bridge
   in `ipad` mode, clean stop. Opened from Finder in a separate macOS account, it worked (Ben,
   2026-11-01).
-- **Phase 4, first half done:** first launch asks where Vamp Devices goes and copies it, copies
-  the surface with `vamp-paths.json`, says what Live still needs; QR code; Uninstall. Left:
-  Sparkle (a package to fetch, and the appcast's host), the menu checklist ticking itself, and
-  hiding the device features while Vamp Devices is not a Place.
+- **Phase 4, done** (ADR-500): first launch asks where Vamp Devices goes and copies it,
+  copies the surface with `vamp-paths.json`, says what Live still needs; a menu checklist that
+  ticks itself; REC, the wheels and Permute hidden while Vamp Devices is not a Place; QR code;
+  Uninstall; Sparkle (prebuilt and pinned, `scripts/fetch-sparkle.sh`), the feed the latest
+  GitHub release's `appcast.xml`. Not yet done: the Live check, whether a Place added while
+  Live runs reaches the surface at once.
+- **Phase 5, done:** `scripts/release-mac.sh` → `dist/Vamp-1.0.dmg` (96 MB), Developer ID,
+  notarized by Apple (accepted), stapled, Gatekeeper "Notarized Developer ID"; and
+  `dist/appcast.xml`, EdDSA-signed. Sparkle's key is a file in
+  `~/Library/Application Support/Vamp Release/` (back it up). Not yet published: the GitHub
+  release `v1.0` with both files is Ben's call.
 - **Phase 6:** Vamp for iPad is submitted to the App Store (Ben, 2026-11-01).

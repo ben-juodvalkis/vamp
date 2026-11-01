@@ -30,6 +30,7 @@
 		4BC2611245B8F4A620A02F2B /* Splice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DED6AF0A86F7612C3229FAC /* Splice.swift */; };
 		52D5924A409F4976681368CF /* SupervisorRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF619CFF5A80D9A062278B4C /* SupervisorRules.swift */; };
 		607E3A52004476820E4C3739 /* PadLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 915CB9013A537FFC92E573BC /* PadLink.swift */; };
+		6DC8340B53F7F8A9239D76CA /* Sparkle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 52C388D89FD4A8D62CC69C6D /* Sparkle.framework */; };
 		6F86F4371199619823A7C1FE /* VampLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 870C5481D7B847F8CFD2D8DE /* VampLog.swift */; };
 		82074817F87A77DB97E2A305 /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DD360D6442DE26552DCA9DA /* AppConfig.swift */; };
 		87360A7F7941CF489CD2CBEC /* VampMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FF8FFE78D61C16CCE0245DE /* VampMacApp.swift */; };
@@ -50,7 +51,22 @@
 		E24F836EE087E1B6F9C03BD5 /* PairedIPads.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31F6DB32688F85B1071884DF /* PairedIPads.swift */; };
 		EEC75B180FBEFF546FE023AB /* LinkServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E6A855106B6835A56B03903 /* LinkServer.swift */; };
 		F4BF36B2086C7A176787FF2F /* LinkAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02A893BE8392F15CE8413C11 /* LinkAuth.swift */; };
+		F82434A56DC50532E1C92937 /* Sparkle.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 52C388D89FD4A8D62CC69C6D /* Sparkle.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		614464D0D82B3CBFAA312451 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				F82434A56DC50532E1C92937 /* Sparkle.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		02A893BE8392F15CE8413C11 /* LinkAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkAuth.swift; sourceTree = "<group>"; };
@@ -66,6 +82,7 @@
 		3E71B2FC18F7AE4133AC5215 /* LinkProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkProtocol.swift; sourceTree = "<group>"; };
 		3F813656117C8E51E0B9EA5B /* Wire.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Wire.swift; sourceTree = "<group>"; };
 		48DAE09A3ED042760066FDE2 /* OSCEnvelope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSCEnvelope.swift; sourceTree = "<group>"; };
+		52C388D89FD4A8D62CC69C6D /* Sparkle.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Sparkle.framework; path = Vendor/Sparkle/Sparkle.framework; sourceTree = "<group>"; };
 		74B0495CB8AA31F268733826 /* VampPaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VampPaths.swift; sourceTree = "<group>"; };
 		7588887B3FEC5F945688A7D6 /* Supervisor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Supervisor.swift; sourceTree = "<group>"; };
 		7B83BED9048B5F511FD8DC9C /* LinkClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkClient.swift; sourceTree = "<group>"; };
@@ -88,6 +105,17 @@
 		EEFD5FE887B2161B36F4E7BE /* FirstLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstLaunchTests.swift; sourceTree = "<group>"; };
 		F3BB2F13DF6908B1C162FFDE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D0374E0D0106DCC28DBD4776 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6DC8340B53F7F8A9239D76CA /* Sparkle.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		4B63692741D6CDD7BBEF8960 /* Menu */ = {
@@ -142,6 +170,14 @@
 			path = Shared;
 			sourceTree = "<group>";
 		};
+		AE3199A1C81112F1DA0A631B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				52C388D89FD4A8D62CC69C6D /* Sparkle.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		B7C414E7FA5A25E20D5C2D1D /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -182,6 +218,7 @@
 				BC9B18BC1725816BDE7BCC43 /* Pad */,
 				A8E03AE9981FCFD5DDBFD8DC /* Shared */,
 				DF0751AB5A60846693FEF234 /* Tests */,
+				AE3199A1C81112F1DA0A631B /* Frameworks */,
 				B7C414E7FA5A25E20D5C2D1D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -230,6 +267,8 @@
 			buildPhases = (
 				F3D8344E87CEBF2132A80E71 /* Sources */,
 				2E504357D01ACD50548CC6E0 /* Resources */,
+				D0374E0D0106DCC28DBD4776 /* Frameworks */,
+				614464D0D82B3CBFAA312451 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -521,6 +560,10 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"Vendor/Sparkle\"",
+				);
 				INFOPLIST_FILE = Mac/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -530,6 +573,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.benjuodvalkis.vamp.mac;
 				PRODUCT_NAME = Vamp;
 				SDKROOT = macosx;
+				SPARKLE_PUBLIC_KEY = "";
 			};
 			name = Release;
 		};
@@ -543,6 +587,10 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"Vendor/Sparkle\"",
+				);
 				INFOPLIST_FILE = Mac/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -552,6 +600,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.benjuodvalkis.vamp.mac;
 				PRODUCT_NAME = Vamp;
 				SDKROOT = macosx;
+				SPARKLE_PUBLIC_KEY = "";
 			};
 			name = Debug;
 		};
