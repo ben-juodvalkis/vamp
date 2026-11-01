@@ -248,9 +248,12 @@ lean server the rig can run too) and none needs Apple.
 - **Phase 2, done:** `npm run build:server` → `dist/vamp/`, 19.5 MB, with
   `THIRD-PARTY-LICENSES.md` for what the bundles take in. Run isolated on shifted ports: page,
   host check, socket pass-through, child scripts, places list all answered.
-- **Phase 3, code done, not run:** the supervisor runs the app's Node on `vamp-server.mjs`
-  when installed; `scripts/package-mac-app.sh` assembles `dist/Vamp.app`. Waiting on Ben's OK
-  to download Node from nodejs.org, then a try in a clean macOS account.
+- **Phase 3, done:** the supervisor runs the app's Node on `vamp-server.mjs` when installed;
+  `scripts/package-mac-app.sh` assembles `dist/Vamp.app` (243 MB unpacked: Node v22.23.4 is
+  217 MB of it), app and Node both arm64 + x86_64, Node signed with the hardened runtime and
+  V8's two entitlements (ad-hoc until Phase 5). The app's own Node ran the app's own server on
+  both chips (x86_64 under Rosetta), on shifted ports: page, places list, socket to the bridge
+  in `ipad` mode, clean stop. Not yet: the app opened from Finder in a clean macOS account.
 - **Phase 4, first half done:** first launch asks where Vamp Devices goes and copies it, copies
   the surface with `vamp-paths.json`, says what Live still needs; QR code; Uninstall. Left:
   Sparkle (a package to fetch, and the appcast's host), the menu checklist ticking itself, and
