@@ -7,8 +7,9 @@ and load instruments, shape sounds and effects, and sequence variations, without
 laptop. It was built by a dance accompanist for playing ballet class and is shared as is.
 More about it at [benjuodvalkis.com/other/vamp](https://benjuodvalkis.com/other/vamp).
 
-There's no app to install and nothing from the App Store. Vamp is a web page served from the Mac
-running Live: open it in Safari on the iPad over USB-C or Wi-Fi, or in a browser on the Mac itself.
+**[Download Vamp for Mac](https://github.com/ben-juodvalkis/vamp/releases/latest/download/Vamp.dmg)**
+(free, notarized by Apple, updates itself). It runs in the Mac's menu bar and serves Vamp to the
+iPad: open it in Vamp for iPad over the USB-C cable, or in Safari over USB-C or Wi-Fi.
 
 ![Recording a loop: tap an empty slot, tap its dot, play, and tap again to close the loop. Vamp on the iPad at left, Ableton Live at right.](docs/readme/record-a-loop.gif)
 
@@ -45,36 +46,27 @@ running Live: open it in Safari on the iPad over USB-C or Wi-Fi, or in a browser
 
 ## Requirements
 
-- **macOS 13** or later
+- **macOS 14** or later, Apple Silicon or Intel
 - **Ableton Live 12.4 Suite** (Max for Live is included in Suite)
-- **Node.js 22.13** or later ([nodejs.org](https://nodejs.org/))
-- An **iPad** with Safari, over USB-C or Wi-Fi. A Mac browser works too.
+- An **iPad**: Vamp for iPad over USB-C, or Safari over USB-C or Wi-Fi. A Mac browser works too.
 
-No third-party plug-ins and no special hardware are needed.
+No third-party plug-ins and no special hardware are needed. Nothing else to install: Vamp for Mac
+carries everything it runs.
 
 ## Quick start
 
-```bash
-git clone https://github.com/ben-juodvalkis/vamp.git
-cd vamp
-npm run setup
-```
+1. **[Download Vamp.dmg](https://github.com/ben-juodvalkis/vamp/releases/latest/download/Vamp.dmg)**,
+   drag **Vamp** to Applications and open it. It asks where to put the Vamp Devices folder and
+   puts its control surface in Live.
+2. In Live, **Settings → Link, Tempo & MIDI:** pick **Vamp** as a Control Surface, then quit and
+   reopen Live.
+3. Optional: in Live's browser, **Places → Add Folder…** and pick the Vamp Devices folder. That
+   turns on Permute, the on-screen wheels and Capture.
+4. On the iPad, open **Vamp for iPad** with the cable in and type the code the Mac's menu bar
+   shows. Or scan the QR code in Vamp's menu to open it in Safari.
 
-Then, in Live:
-
-1. **Settings → Link, Tempo & MIDI:** pick **Vamp** as a Control Surface, then quit and reopen
-   Live.
-2. In Live's browser, **Places → Add Folder…** and pick this checkout's `Vamp Devices` folder.
-
-Then start it:
-
-```bash
-npm run dev
-```
-
-The first run opens **Settings** on the Mac as a checklist of what is left. For the iPad, use
-`npm run ipad` and open the address Settings → Connection shows.
-[INSTALLATION.md](INSTALLATION.md) has every step.
+Vamp's menu-bar menu ticks each step off as it is done.
+[INSTALLATION.md](INSTALLATION.md) has every step, and how to run Vamp from the code to work on it.
 
 ## How it fits together
 

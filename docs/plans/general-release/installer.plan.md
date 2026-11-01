@@ -267,3 +267,6 @@ lean server the rig can run too) and none needs Apple.
   `~/Library/Application Support/Vamp Release/` (back it up). Not yet published: the GitHub
   release `v1.0` with both files is Ben's call.
 - **Phase 6:** Vamp for iPad is submitted to the App Store (Ben, 2026-11-01).
+- **Phase 7, done:** README and INSTALLATION open with the download
+  (`releases/latest/download/Vamp.dmg`, a name every release carries beside `Vamp-<version>.dmg`)
+  and keep the clone as "From the code". The link works once the `v1.0` release is published.

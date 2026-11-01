@@ -1,8 +1,40 @@
 # Installing Vamp
 
+Two ways in: **download Vamp for Mac** (below, about five minutes), or
+[**run it from the code**](#from-the-code) to work on it.
+
+## Download
+
+You need **macOS 14** or later (Apple Silicon or Intel) and **Ableton Live 12.4 Suite**.
+
+1. **[Download Vamp.dmg](https://github.com/ben-juodvalkis/vamp/releases/latest/download/Vamp.dmg)**,
+   open it and drag **Vamp** to Applications. Open Vamp from there: it lives in the menu bar, as
+   a V.
+2. It asks where the **Vamp Devices** folder goes: your Music folder, Live's User Library, or a
+   folder you pick. It copies Vamp's utilities there (Permute, the wheels, the recorder, the
+   groove) and puts its control surface in Live's User Library.
+3. In **Live → Settings → Link, Tempo & MIDI**, pick **Vamp** in an empty Control Surface slot,
+   then quit Live and open it again.
+4. Optional: in Live's browser, **Places → Add Folder…**, and pick the Vamp Devices folder from
+   step 2. Keep its name. Until it is a Place, Permute, the on-screen wheels and REC are not
+   shown.
+5. On the iPad: open **Vamp for iPad** with the USB-C cable in, and type the six-digit code the
+   Mac's menu bar shows. Without the app, choose **Show iPad Address as QR Code** in Vamp's menu
+   and point the iPad's camera at it, then **Share → Add to Home Screen** in Safari.
+
+Vamp's menu lists what is left and ticks each step off. It checks for updates itself (**Check for
+Updates…** in the menu); an update that changes the control surface says to restart Live.
+**Uninstall Vamp…** in the menu removes the control surface from Live and moves the app to the
+Trash, and asks before deleting your settings; Vamp Devices stays.
+
+The iPad's links and pairing ([step 6](#6-connect-the-ipad)) and the optional extras
+([step 7](#7-optional): a foot switch, Capture) apply to both ways in.
+
+## From the code
+
 About 15 minutes. You need a terminal, and Live open for part of it.
 
-## 1. Check the requirements
+### 1. Check the requirements
 
 - **macOS 13** or later
 - **Ableton Live 12.4 Suite**
@@ -15,7 +47,7 @@ node --version
 
 If Node is missing or older, install the current LTS from [nodejs.org](https://nodejs.org/).
 
-## 2. Get the code and install
+### 2. Get the code and install
 
 ```bash
 git clone https://github.com/ben-juodvalkis/vamp.git
@@ -34,7 +66,7 @@ It finds your User Library from Live's own preferences. If it can't, point it th
 LOOPING_USER_LIBRARY="/path/to/User Library" npm run setup
 ```
 
-## 3. Pick the control surface in Live
+### 3. Pick the control surface in Live
 
 1. Open **Live → Settings → Link, Tempo & MIDI**.
 2. In an empty **Control Surface** slot, pick **Vamp**. Input and Output stay **None** (unless a
@@ -44,13 +76,13 @@ LOOPING_USER_LIBRARY="/path/to/User Library" npm run setup
 Live's log (`~/Library/Preferences/Ableton/Live <version>/Log.txt`) now has a line reading
 `Vamp surface init`.
 
-## 4. Add the Vamp Devices folder to Live's browser
+### 4. Add the Vamp Devices folder to Live's browser
 
 In Live's browser sidebar, **Places → Add Folder…**, and pick the `Vamp Devices` folder in this
 checkout. Keep its name: the app loads Permute, the on-screen wheels and Random Start from the
 Place called "Vamp Devices".
 
-## 5. Start it on the Mac
+### 5. Start it on the Mac
 
 ```bash
 npm run dev
@@ -67,6 +99,8 @@ This runs the setup check, starts the bridge and the web app, and opens the page
 Settings stays one tap away afterwards, from the gear in the master track's view.
 
 ## 6. Connect the iPad
+
+From the code (the downloaded app does this itself):
 
 ```bash
 npm run ipad
@@ -135,7 +169,7 @@ The `features` switches (all off) are the author's own gear;
   `lsof -i :11020` shows Live listening, and read `logs/bridge.log`.
 - **"Vamp" isn't in Live's Control Surface list.** Run `npm run setup` again and read what the
   linking step printed, then restart Live.
-- **Permute or the wheels don't load.** The Vamp Devices folder isn't a Place in Live, or it was
+- **No Permute, wheels or REC.** The Vamp Devices folder isn't a Place in Live, or it was
   renamed (step 4). Restart Live after fixing it.
 - **The iPad can't reach the Mac.** Over USB-C, check the cable carries data and the manual address
   in step 6. Over Wi-Fi, some networks block devices from reaching each other.

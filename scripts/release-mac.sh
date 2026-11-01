@@ -3,10 +3,11 @@
 # Vamp.dmg for the public (installer.plan.md Phase 5): the packaged app
 # (scripts/package-mac-app.sh) signed with this Mac's Developer ID, in a dmg
 # with an Applications link, notarized by Apple and stapled, plus the
-# Sparkle appcast that announces it. Writes dist/Vamp-<version>.dmg and
-# dist/appcast.xml; publishes nothing. Uploading both to a GitHub release
-# tagged v<version> is what ships it: the app's feed is the latest release's
-# appcast.xml.
+# Sparkle appcast that announces it. Writes dist/Vamp-<version>.dmg, the same
+# file as dist/Vamp.dmg, and dist/appcast.xml; publishes nothing. Uploading
+# all three to a GitHub release tagged v<version> is what ships it: the app's
+# feed is the latest release's appcast.xml, and the site and the README link
+# to the latest release's Vamp.dmg, a name that never changes.
 #
 #   bash scripts/release-mac.sh
 #
@@ -94,5 +95,7 @@ cat > "$DIST/appcast.xml" <<EOF
 </rss>
 EOF
 
-echo "✅ $DMG (notarized, stapled) and $DIST/appcast.xml"
-echo "   To ship: a GitHub release tagged v$VERSION with both files attached."
+cp "$DMG" "$DIST/Vamp.dmg"
+
+echo "✅ $DMG (notarized, stapled), $DIST/Vamp.dmg and $DIST/appcast.xml"
+echo "   To ship: a GitHub release tagged v$VERSION with all three attached."
