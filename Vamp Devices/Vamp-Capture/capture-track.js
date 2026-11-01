@@ -102,7 +102,10 @@ function init() {
     if (!inputApi) inputApi = new LiveAPI(inputPath);
     else inputApi.path = inputPath;
     isReady = true;
-    outlet(2, SOURCE_IDLE);
+    // Setup runs again when Live's bang comes after the retry already set
+    // up and a capture started: closing the tap then silenced the take
+    // ~100 ms in (Ben, 2026-10-31).
+    if (!capturing) outlet(2, SOURCE_IDLE);
     fillInputMenu();
     broadcastState();
     // The bridge waits for this hello to start a capture it loaded us for.
