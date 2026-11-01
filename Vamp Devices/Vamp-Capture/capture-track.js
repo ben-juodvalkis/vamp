@@ -23,7 +23,8 @@
 //   /arm, /disarm                     /start, /stop
 //   /query                            the selected track's copy answers
 //
-// Replies out (udpsend 11017): /capture/state | file | error | hello | bye,
+// Replies out (udpsend 11017): /capture/state | file <wav> <its device path>
+// | error | hello | bye,
 // and /capture/meter while recording (the patch sends that one). LED
 // state goes to udpsend 11012.
 //
@@ -259,7 +260,15 @@ function stop() {
     capturing = false;
     outlet(0, "/looping/capture/led", RECORD_PEDAL, LED_OFF);
     broadcastState();
-    outlet(1, "/capture/file", lastFilePath);
+    // The device's own path rides along so the bridge can delete it once
+    // the take is safely written (Ben, 2026-10-31).
+    outlet(1, "/capture/file", lastFilePath, ownDevicePath());
+}
+
+// "tracks/2/devices/3", as the surface's device/delete takes it.
+function ownDevicePath() {
+    const m = /^live_set tracks (\d+) devices (\d+)$/.exec(String(selfApi.unquotedpath).replace(/"/g, ""));
+    return m ? `tracks/${m[1]}/devices/${m[2]}` : "";
 }
 
 // A saved set records beside its .als, read now so a save-as between

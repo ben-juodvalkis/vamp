@@ -286,6 +286,11 @@
     "sequencer": {
       "description": "The Permute sequencer (permute ADR-020: the thin Permute and its surface engine are developed here; the permute repo is frozen). The Python TrackPrepareComponent appends it on every successful prepare_for_preset (idempotent — skipped when already present on the chain) so a single round-trip leaves the track ready; FootTriggerComponent appends it inline on hold-create. Since 2026-09-26 its path is the checkout's own Vamp Devices/Permute/Permute.amxd, found by the surface from its own location and loaded through the \"Vamp Devices\" sidebar Place (onboarding.plan.md §6.3), so no devicePath is configured; an older config's devicePath is still honored verbatim."
     },
+    "captureRecorder": {
+      "className": "MxDeviceAudioEffect",
+      "deviceName": "Vamp-Capture",
+      "_note": "REC's recorder (ADR-495), found by Live's class and the name it gives the loaded .amxd. The chain overview leaves it out: it is there only while a take records."
+    },
     "midiWheels": {
       "className": "MxDeviceMidiEffect",
       "deviceName": "MidiWheels",

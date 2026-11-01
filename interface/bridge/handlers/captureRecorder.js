@@ -16,8 +16,14 @@
  * surface loads Vamp-Capture at the end of its chain (`device/load`, the
  * Vamp Devices Place), and the start goes out when that copy's first hello
  * arrives, or fails after `loadTimeoutMs` with `/capture/error
- * recorder-not-loaded`. A stop before then cancels the start. The recorder
- * stays on the track afterwards: removing it would add an undo step.
+ * recorder-not-loaded`. A stop before then cancels the start.
+ *
+ * **Delete it after the take** (Ben, 2026-10-31). The device's
+ * `/capture/file <wav> <devicePath>` names itself; `deleteAfterMs` later,
+ * once `sfrecord~` has finished the file, the surface deletes it
+ * (`device/delete`) and the track counts as having none, so the next REC
+ * loads a fresh one. Each take costs two undo steps in Live: Insert Device
+ * and Delete Device.
  *
  * **Where does an unsaved set record?** Live gives every unsaved set a real
  * project folder as it opens: `<YYYY-MM-DD HHMMSS> Temp Project` under its
@@ -44,7 +50,9 @@ const STOP_ADDRESS = '/capture/stop';
 const ERROR_ADDRESS = '/capture/error';
 const STATE_ADDRESS = '/capture/state';
 
+const FILE_ADDRESS = '/capture/file';
 const DEVICE_LOAD_ADDRESS = '/looping/v3/device/load';
+const DEVICE_DELETE_ADDRESS = '/looping/v3/device/delete';
 const DEVICE_SOURCE = 'place:Vamp Devices';
 const DEVICE_REL = 'Vamp-Capture/Vamp-Capture.amxd';
 
@@ -52,6 +60,8 @@ const DEVICE_REL = 'Vamp-Capture/Vamp-Capture.amxd';
 const SILENCE_MS = 3000;
 /** A Max device's first load in a set takes longest. */
 const LOAD_TIMEOUT_MS = 8000;
+/** Time for `sfrecord~` to close the file before its device goes. */
+const DELETE_AFTER_MS = 500;
 
 const TEMP_PROJECT_SUFFIX = ' Temp Project';
 const LIVE_PROJECT_MARKER = 'Ableton Project Info';
@@ -102,16 +112,33 @@ function argValue(arg) {
  * @param {Object} [deps.fsImpl]
  * @param {number} [deps.silenceMs]
  * @param {number} [deps.loadTimeoutMs]
+ * @param {number} [deps.deleteAfterMs]
  */
 function createCaptureRecorder({
     features, sendToDevice, sendToSurface, broadcast, recordingsDir, logger,
-    fsImpl = fs, silenceMs = SILENCE_MS, loadTimeoutMs = LOAD_TIMEOUT_MS
+    fsImpl = fs, silenceMs = SILENCE_MS, loadTimeoutMs = LOAD_TIMEOUT_MS,
+    deleteAfterMs = DELETE_AFTER_MS
 }) {
     const tempRoot = expandHome(recordingsDir || '~/Music/Ableton/Live Recordings');
     /** track index → when its recorder last said hello */
     const lastHello = new Map();
     /** A start waiting for the recorder it loaded: {track, args, timer}. */
     let waiting = null;
+    /** Deletes scheduled after a take, cleared on dispose. */
+    const deleteTimers = new Set();
+
+    function deleteAfterTake(devicePath) {
+        const m = /^tracks\/(\d+)\/devices\/\d+$/.exec(devicePath);
+        if (!m) return;
+        // Gone as far as REC is concerned: the next start loads a fresh one.
+        lastHello.delete(Number(m[1]));
+        const timer = setTimeout(() => {
+            deleteTimers.delete(timer);
+            sendToSurface(DEVICE_DELETE_ADDRESS, [devicePath]);
+        }, deleteAfterMs);
+        timer.unref?.();
+        deleteTimers.add(timer);
+    }
 
     // REC can always load a recorder, so it is never greyed out for want of one.
     features.setAvailability(FEATURE_ID, true);
@@ -168,6 +195,11 @@ function createCaptureRecorder({
                 }
                 return true;
             }
+            if (msg.address === FILE_ADDRESS) {
+                const devicePath = argValue(msg.args?.[1]);
+                if (typeof devicePath === 'string' && devicePath) deleteAfterTake(devicePath);
+                return false;
+            }
             // A bye does not say which track; its hellos stop, which does.
             return msg.address === BYE_ADDRESS;
         },
@@ -223,6 +255,8 @@ function createCaptureRecorder({
 
         dispose() {
             cancelWaiting();
+            for (const timer of deleteTimers) clearTimeout(timer);
+            deleteTimers.clear();
         }
     };
 }
@@ -235,6 +269,7 @@ module.exports = {
     BYE_ADDRESS,
     FOLDER_ADDRESS,
     DEVICE_LOAD_ADDRESS,
+    DEVICE_DELETE_ADDRESS,
     DEVICE_SOURCE,
     DEVICE_REL
 };

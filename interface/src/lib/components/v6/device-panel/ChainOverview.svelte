@@ -206,10 +206,16 @@
   /** Picks are the pad's under a pad scope, as the grid's tiles read them. */
   const pickScope = $derived(padScope?.padPath ?? trackPath);
 
+  /** REC's recorder, there only while a take records: never a cell (ADR-495). */
+  const CAPTURE = constants.devices.captureRecorder;
+  const isCaptureRecorder = (d: DeviceRecord) => d.className === CAPTURE.className && d.name === CAPTURE.deviceName;
+
   const devices = $derived(
     padChain
       ? padChain.map((c) => c.device)
-      : [...selectedTrackStore.devicesByPath].sort((a, b) => indexOf(a.devicePath) - indexOf(b.devicePath))
+      : [...selectedTrackStore.devicesByPath]
+          .filter((d) => !isCaptureRecorder(d))
+          .sort((a, b) => indexOf(a.devicePath) - indexOf(b.devicePath))
   );
   const padInk = $derived(padScope && padScope.color !== null ? trackInk(rgbToHex(padScope.color), paintModeReactive()) : null);
   const glance = $derived(trackDeviceGlance(trackPath));

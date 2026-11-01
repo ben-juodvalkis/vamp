@@ -100,3 +100,18 @@ describe('two of one device in the chain', () => {
 		expect(Number(fills[0])).toBe(0);
 	});
 });
+
+describe("REC's recorder in the chain", () => {
+	it('draws no cell for Vamp-Capture, and the devices around it keep theirs', async () => {
+		replaceTree(3, [
+			track([device(0, 'Saturator', 'Saturator'), device(1, 'Vamp-Capture', 'MxDeviceAudioEffect'), device(2, 'Saturator', 'Saturator')], false)
+		]);
+		selectedTrackStore.handleTrackSelected(0);
+		fxGrid.resetForTrackChange();
+		const { container } = render(ChainOverview, { props: {} });
+		await tick();
+		const cells = Array.from(container.querySelectorAll('.chain-cell'));
+		expect(cells).toHaveLength(2);
+		expect(container.textContent).not.toContain('Vamp-Capture');
+	});
+});

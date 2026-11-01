@@ -16,6 +16,7 @@ const {
 	createCaptureRecorder,
 	newestTempProject,
 	DEVICE_LOAD_ADDRESS,
+	DEVICE_DELETE_ADDRESS,
 	DEVICE_SOURCE,
 	DEVICE_REL
 } = nodeRequire('../../../../bridge/handlers/captureRecorder.js');
@@ -79,7 +80,8 @@ describe('createCaptureRecorder', () => {
 			sendToSurface: (address: string, args: unknown[]) => surface.push({ address, args }),
 			broadcast: (address: string, args: unknown[]) => clients.push({ address, args }),
 			silenceMs: 3000,
-			loadTimeoutMs: 8000
+			loadTimeoutMs: 8000,
+			deleteAfterMs: 500
 		});
 		return { features, sent, surface, clients, recorder };
 	}
@@ -174,6 +176,29 @@ describe('createCaptureRecorder', () => {
 		expect(addresses(sent)).toEqual(['/capture/stop']);
 		vi.advanceTimersByTime(10000);
 		expect(clients).toEqual([]);
+	});
+
+	it('deletes the recorder half a second after its take, and the next start loads a fresh one', () => {
+		vi.useFakeTimers();
+		const { sent, surface, recorder } = setup();
+		recorder.onDeviceMessage(hello(2));
+		const file = { address: '/capture/file', args: [{ type: 's', value: '/x/LOOPING_CAPTURE_1.wav' }, { type: 's', value: 'tracks/2/devices/3' }] };
+		expect(recorder.onDeviceMessage(file)).toBe(false);
+		expect(surface).toEqual([]);
+		vi.advanceTimersByTime(500);
+		expect(surface).toEqual([{ address: DEVICE_DELETE_ADDRESS, args: ['tracks/2/devices/3'] }]);
+		recorder.start([2]);
+		expect(surface[1].address).toBe(DEVICE_LOAD_ADDRESS);
+		expect(sent).toEqual([]);
+	});
+
+	it('deletes nothing for a file that names no device (the old recorder)', () => {
+		vi.useFakeTimers();
+		const { surface, recorder } = setup();
+		recorder.onDeviceMessage({ address: '/capture/file', args: ['/x/a.wav'] });
+		recorder.onDeviceMessage({ address: '/capture/file', args: ['/x/a.wav', 'master'] });
+		vi.advanceTimersByTime(1000);
+		expect(surface).toEqual([]);
 	});
 
 	it('refuses a start with no track', () => {

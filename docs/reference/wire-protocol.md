@@ -1127,7 +1127,9 @@ said hello within 3 s starts at once; one with none gets one, the bridge
 sending `/looping/v3/device/load` (`place:Vamp Devices`,
 `Vamp-Capture/Vamp-Capture.amxd`) to the surface and the start when that
 copy's first hello arrives, or `/capture/error recorder-not-loaded` and
-`/capture/state idle` after 8 s. Every edition has it; it is not a feature
+`/capture/state idle` after 8 s. After the take the bridge deletes the
+recorder again (`/capture/file`, below), so a track holds one only while it
+records; the chain overview never draws it. Every edition has it; it is not a feature
 switch, and it rides `/bridge/features` as `captureRecorder`, available from
 the start. A capture lands in the current set's own project folder: beside
 the `.als` for a saved set, and in Live's temp project for an unsaved one.
@@ -1143,7 +1145,7 @@ now; its hellos carry no track and are ignored.
 | `/capture/hello` | Device→Bridge | `track:int` | Each copy, as it loads and once a second after: its track's index, `-1` on a return or the master. **Bridge-terminated.** A track has a recorder while its hellos arrive (3 s); the hello a loaded copy sends first releases the start waiting for it. A hello with no track (the old Return A recorder) is ignored. |
 | `/capture/bye` | Device→Bridge | — | Sent as a copy is deleted (Max's `notifydeleted`), best effort. **Bridge-terminated**; its track's hellos stopping is what counts. |
 | `/capture/state` | Device→UI | `state:string` | `idle` or `recording`, on every change and once as the device loads. Any state ends the UI's pending start. |
-| `/capture/file` | Device→UI | `path:string` | The finished WAV, `LOOPING_CAPTURE_<YYYYMMDD_HHMMSS>.wav`. The UI prepares a MIDI track and loads it into a Simpler (`clipOperations.loadCaptureIntoSimpler`). |
+| `/capture/file` | Device→UI | `path:string, devicePath:string` | The finished WAV, `LOOPING_CAPTURE_<YYYYMMDD_HHMMSS>.wav`, and the recorder's own path (`tracks/2/devices/3`). The UI prepares a MIDI track and loads the WAV into a Simpler (`clipOperations.loadCaptureIntoSimpler`). The bridge passes it on, forgets the track's recorder, and 500 ms later, once `sfrecord~` has closed the file, has the surface delete that device (`/looping/v3/device/delete`); the next REC on the track loads a fresh one. |
 | `/capture/error` | Device/Bridge→UI | `code:string, detail:string` | A refused start. From a copy: `no-project-folder` (the set is unsaved and no temp project was named), `sfrecord-missing` (the patch has lost its `sfrecord~`), `no-ext-in` (Live offers its extra input no Ext. In), `no-input-channel` (Ext. In has no channel by that name). From the bridge, with `/capture/state idle` after it: `no-track`, `recorder-not-loaded`. The UI shows it in the error banner and ends its pending start. |
 | `/capture/meter` | Device→UI | `level:float` | 0–1 (−70 dB to 0 dB), about 15 times a second from the copy that is recording, and never while idle. |
 

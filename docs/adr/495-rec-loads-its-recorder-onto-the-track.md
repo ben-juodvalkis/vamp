@@ -44,9 +44,14 @@ state, meter and file. Loading it onto the selected track left arm alone
   says hello starts at once; one with none has the surface load Vamp-Capture
   (`device/load`, the Vamp Devices Place) and starts on that copy's first
   hello, or answers `recorder-not-loaded` after 8 s. A stop before then
-  drops the start. The recorder stays on the track: removing it would add an
-  undo step, and undoing a freshly loaded Max device has aborted Live
-  (ADR-437).
+  drops the start; a second start while it loads loads nothing more.
+- **The recorder goes once the take is written** (Ben, 2026-10-31): its
+  `/capture/file` names its own device path, and 500 ms later the bridge has
+  the surface delete it (`device/delete`). Each take costs two undo steps in
+  Live, Insert Device and Delete Device; the plan kept the device to avoid
+  the second, since undoing a moved, freshly loaded Max device has aborted
+  Live (ADR-437). Undoing these two is unmeasured. The chain overview never
+  draws a Vamp-Capture (`constants.devices.captureRecorder`).
 - **The page sends the selected track**, and the source and Ext. In channel
   from Settings → General → Capture (this screen's own setting: the input
   belongs to the rig, not to a track or a take). REC no longer turns up
@@ -57,8 +62,9 @@ state, meter and file. Loading it onto the selected track left arm alone
 
 ## Consequences
 - REC works in any set with the Vamp Devices Place, with nothing to set up.
-- The first REC on a track waits for the device to load before recording
-  (to be measured on the rig); later ones start at once.
+- Every REC waits for the device to load before recording: about 0.1 s
+  for `load_item`, then the device's own setup (measured 2026-10-31: a
+  start 150 ms after the load recorded from its first block).
 - A MIDI track with no instrument records silence; REC does not yet say so.
 - `captureRecorder` is always available, so it no longer tells anyone a
   recorder is missing; a load that fails says so in the error banner.
