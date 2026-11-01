@@ -1,3 +1,18 @@
+<script lang="ts" module>
+  import type { CellSize } from './cellSize';
+
+  /**
+   * The pitch row is drawn only in a wide, tall cell. A medium or narrow
+   * cell, or a two-row chain's short one, keeps the mute row alone, so its
+   * switches stay big enough to tap (2026-11-01). No cell at all (outside
+   * the chain) draws both.
+   */
+  export function permuteShowsPitch(size: CellSize | null): boolean {
+    if (!size || size.widthClass === null || size.heightClass === null) return true;
+    return size.widthClass === 'wide' && size.heightClass === 'tall';
+  }
+</script>
+
 <script lang="ts">
   /**
    * A Permute's face in the chain overview (2026-10-25): its mute row over
@@ -6,8 +21,10 @@
    * through `sequencerStore`, which follows the selected track's (or the
    * scoped pad's) Permute and would steer every copy at once. The running
    * step is the device's telemetry (`permuteStepStore`). Length and rate
-   * stay in the Permute view.
+   * stay in the Permute view. A medium or narrow cell, or a two-row
+   * chain, draws the mute row alone (`permuteShowsPitch`).
    */
+  import { useCellSize } from './cellSize';
   import SequencerPatternGrid from '$lib/components/v6/clips/SequencerPatternGrid.svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { permuteStepStore } from '$lib/stores/v3/permuteSteps.svelte';
@@ -29,6 +46,9 @@
 
   let { device, color }: Props = $props();
 
+  const cellSize = useCellSize();
+  const showPitch = $derived(permuteShowsPitch(cellSize()));
+
   const layout = $derived(resolvePermuteLayout(device));
 
   function read(role: PermuteRole): number {
@@ -46,7 +66,7 @@
   }
 </script>
 
-<div class="permute-face" data-debug="permute-face">
+<div class="permute-face" data-debug="permute-face" data-pitch={showPitch}>
   <div class="row">
     <SequencerPatternGrid
       variant="mute"
@@ -61,6 +81,7 @@
       onStepSet={(i, v) => setStep(MUTE_STEP_ROLES[i], v)}
     />
   </div>
+  {#if showPitch}
   <div class="row">
     <SequencerPatternGrid
       variant="pitch"
@@ -74,6 +95,7 @@
       onStepSet={(i, v) => setStep(PITCH_STEP_ROLES[i], v)}
     />
   </div>
+  {/if}
 </div>
 
 <style>

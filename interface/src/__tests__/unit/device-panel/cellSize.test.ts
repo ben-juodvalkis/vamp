@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { cellHeightClass, cellWidthClass, CELL_TALL_MIN, CELL_WIDTH_STEPS } from '$lib/components/v6/device-panel/chain/cellSize';
 import { rackMacrosFill } from '$lib/components/v6/device-panel/chain/RackFace.svelte';
+import { permuteShowsPitch } from '$lib/components/v6/device-panel/chain/PermuteStepsFace.svelte';
 
 describe('cellWidthClass (ADR-492)', () => {
 	it('is null until the cell is measured', () => {
@@ -30,5 +31,21 @@ describe('rackMacrosFill (ADR-492)', () => {
 		expect(rackMacrosFill(size('short'))).toBe(false);
 		expect(rackMacrosFill(size(null))).toBe(false);
 		expect(rackMacrosFill(null)).toBe(false);
+	});
+});
+
+describe('permuteShowsPitch', () => {
+	type W = 'narrow' | 'medium' | 'wide' | null;
+	type H = 'short' | 'tall' | null;
+	const size = (widthClass: W, heightClass: H) => ({ width: 0, height: 0, widthClass, heightClass });
+	it('draws the pitch row only in a wide, tall cell', () => {
+		expect(permuteShowsPitch(size('wide', 'tall'))).toBe(true);
+		expect(permuteShowsPitch(size('medium', 'tall'))).toBe(false);
+		expect(permuteShowsPitch(size('narrow', 'tall'))).toBe(false);
+		expect(permuteShowsPitch(size('wide', 'short'))).toBe(false);
+	});
+	it('draws both rows outside a chain cell or before it is measured', () => {
+		expect(permuteShowsPitch(null)).toBe(true);
+		expect(permuteShowsPitch(size(null, null))).toBe(true);
 	});
 });
