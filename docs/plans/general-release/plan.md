@@ -249,7 +249,8 @@ vamp/
 **One Place for the devices** (Ben, 2026-09-27). Everything the app loads by itself goes through
 one Place, loaded by name: `place:Vamp Devices` + the path inside (`live_library.M4L_DEVICES_PLACE`,
 `devicePresets.ts`'s `source`). A Place is named after its folder, so the folder is `Vamp Devices`.
-Only a user's devices go in it; the owner's live in `owner/`.
+Only the app's utilities go in it; the owner's live in `owner/`. Since ADR-498 (2026-11-01) Vamp's
+own effects are not in it either: the tiles find them by name in the user's effects folder.
 
 **The ADRs.** The three un-numbered files became 451–453 (the plan counted four; the fourth was
 `CLAUDE.md`). Of each duplicate pair the one nothing cites was renumbered: 111 → 448

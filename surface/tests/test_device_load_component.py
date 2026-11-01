@@ -1464,10 +1464,12 @@ def test_a_wire_load_of_any_other_preset_appends_as_before(tmp_path):
     assert rec.errors() == []
 
 
-def test_loads_at_head_matches_by_normalized_path(tmp_path):
+def test_loads_at_head_matches_by_file_name(tmp_path):
     comp, _song, _rack, _browser, _rec, preset = _pad_rig(tmp_path, head_presets=[preset_of(tmp_path)])
     assert comp.loads_at_head(preset)
     assert comp.loads_at_head(preset.replace("/Effects/", "/Effects//"))
+    # The same file name in another folder (the user's effects folder, ADR-498).
+    assert comp.loads_at_head(os.path.join("/elsewhere/Shelf/Guitar", os.path.basename(preset)))
     assert not comp.loads_at_head(preset + ".bak")
     assert not comp.loads_at_head("")
     bare, *_ = _pad_rig(tmp_path / "bare")                  # no head presets named

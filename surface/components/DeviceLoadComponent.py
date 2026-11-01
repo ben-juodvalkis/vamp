@@ -418,12 +418,13 @@ class DeviceLoadComponent:
         # Pad loads still waiting for Live, each holding an open undo step.
         self._pending: List[_Placement] = []
         # ADR-445: presets a wire-level track load lands at the head of the
-        # track's audio effects (the wah — ``constants.devices.wah.presetPath``),
-        # the same placement the pedal's own load uses, so the Pedal view's
-        # Wah button and the toe switch put the rack in one place. Compared
-        # by normalized path; anything else takes Live's own placement.
+        # track's audio effects (the wah), the same placement the pedal's own
+        # load uses, so the Pedal view's Wah button and the toe switch put the
+        # rack in one place. Compared by FILE NAME since ADR-498: the Wah is
+        # the user's own, loaded from their effects folder, wherever that is.
+        # Anything else takes Live's own placement.
         self._head_presets = {
-            os.path.normpath(p) for p in (head_preset_paths or ())
+            os.path.basename(os.path.normpath(p)) for p in (head_preset_paths or ())
             if isinstance(p, str) and p
         }
         # Live's own library (2026-09-26): every sidebar Place, the User
@@ -651,10 +652,11 @@ class DeviceLoadComponent:
 
     def loads_at_head(self, preset_path: str) -> bool:
         """Whether a wire-level track load of ``preset_path`` lands at the
-        head of the track's audio effects (ADR-445: the wah)."""
+        head of the track's audio effects (ADR-445: the wah), by its file
+        name (ADR-498)."""
         if not preset_path or not self._head_presets:
             return False
-        return os.path.normpath(preset_path) in self._head_presets
+        return os.path.basename(os.path.normpath(preset_path)) in self._head_presets
 
     # --- pad-targeted load (issue #491, protocol 3.8.0) -------------------
 

@@ -98,9 +98,9 @@ that's not gonna really be workable for people."
   first-run checklist, and no greyed-out REC waiting for it.
 - **The installer's minimal Vamp Devices** (installer.plan.md): Permute (every new track),
   MidiWheels (the on-screen wheels), random-start (every Simpler), the groove
-  (`Grooves/Vamp Groove.agr`), and the recorder. The effect tiles' own devices (Tone Shaper,
-  Comb, Pitch Hack, Blur, Octave, Wah) load only when chosen; the owner's private ones (Guitar,
-  Bass Amp, Note Chance, GlitchLoop) are not in the public repo.
+  (`Grooves/Vamp Groove.agr`), and the recorder. The effect tiles' own devices are not in it
+  since ADR-498 (2026-11-01): each loads by file name from the user's effects folder, when
+  it is there.
 - **The Vamp Devices Place may go too** (installer.plan.md §5): copied into the user's User
   Library, which Live's browser already lists, the devices load with no Place to add. That
   needs the loads that name `place:Vamp Devices` and the surface's `live_library` to look in the

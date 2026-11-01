@@ -42,6 +42,7 @@ import BassControl from '$lib/components/v6/device-panel/BassControl.svelte';
 import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
 import { CENTRAL_VIEW_REGISTRY, resolveViewComponent } from '$lib/components/v6/central/viewRegistry';
 import { DEVICE_PRESETS } from '$lib/config/devicePresets';
+import { _setEffectsFolderForTests } from '$lib/services/effectSources.svelte';
 import {
 	_resetForTests,
 	replaceTree,
@@ -100,6 +101,8 @@ const loads = () => sendMock.mock.calls.filter(([addr]) => addr === '/looping/v3
 const moves = () => sendMock.mock.calls.filter(([addr]) => addr === '/looping/v3/device/move_to_top');
 
 beforeEach(() => {
+	// Vamp's own effects load from the user's effects folder (ADR-498).
+	_setEffectsFolderForTests({ name: 'Audio-Midi Effects', source: 'place:Audio-Midi Effects', devices: { Guitar: 'Guitar/Guitar.adg', 'Bass Amp': 'Guitar/Bass Amp.adg' } });
 	vi.clearAllMocks();
 	_resetForTests();
 	replaceTree(3, [audioTrack()]);
@@ -169,7 +172,7 @@ describe('BassControl', () => {
 		pointer(el, 'pointerup', 60);
 		await tick();
 		expect(loads()).toHaveLength(1);
-		expect((loads()[0][1] as unknown[])[2]).toBe(DEVICE_PRESETS.bass.presetPath);
+		expect((loads()[0][1] as unknown[]).slice(2)).toEqual(['', 'place:Audio-Midi Effects', 'Guitar/Bass Amp.adg']);
 		expect(selectedTrackStore.getFxGridSlot('bass').state).toBe('loading');
 	});
 

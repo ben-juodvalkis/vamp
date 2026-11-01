@@ -36,7 +36,7 @@ No Node, no git, no Terminal. Updates arrive by themselves. The two Live steps s
 | **Server state** | `interface/src/lib/server/runtimeConfig.ts: repoRoot()` and 7 callers | Writes into the checkout: `logs/places.json`, `logs/grooves.json`, `scripts/.cache/` (catalogs, thumbnails, kind cache), `config/.paired-devices.json`. Reads `scripts/open-live.js` and `Vamp Devices/` from it |
 | **Child processes** | the thumbnail bake and the category build (`scripts/bake-thumbnails.ts`, `scripts/scan-categories.ts`) | Run as TypeScript through `node_modules/tsx`, from the checkout |
 | **The Live control surface** | Python, `surface/` (47 MB, 31 MB of it the test venv) | `npm run setup` symlinks it into `<User Library>/Remote Scripts/Vamp` (`surface/install.sh`, which finds the User Library from Live's `Library.cfg`). It then finds everything else by walking up from its real path: `config_loader.py` (`config/constants.json`), `SessionSettingsComponent.py` and `FootSwitchComponent.py` (`logs/`), `components/live_library.py` (`Vamp Devices/`) |
-| **Vamp Devices** | 4.9 MB of Max devices and presets | A Live Place named exactly "Vamp Devices" pointing at the checkout's folder |
+| **Vamp Devices** | The app's utility devices (the effects left it on 2026-11-01, ADR-498) | A Live Place named exactly "Vamp Devices" pointing at the checkout's folder |
 | **Vamp for Mac** | the menu-bar app (ADR-490/494) | The `repoRoot` default `install-mac-app.sh` records; it rebuilds itself from the checkout when its code changes |
 | **Vamp for iPad** | the native shell (ADR-488/494) | Nothing about the Mac's files: it only needs Vamp for Mac at the other end of the cable |
 
@@ -120,8 +120,10 @@ drives Live and passes the gate's page-load check. **Size:** 2 days.
   `surface/install.sh` finds it (ported to Swift), with `vamp-paths.json` beside it. A
   symlink there (the rig's) is left alone.
 - **Vamp Devices, optional (Ben, 2026-10-31):** the install ships a folder of utility devices —
-  Permute, MidiWheels, the recorder ([capture.plan.md](capture.plan.md)), random-start, the
-  groove, and the effect tiles' own devices. **The user picks where it goes (Ben, 2026-11-01):**
+  Permute, MidiWheels, the recorder ([capture.plan.md](capture.plan.md)), random-start and the
+  groove. The effect tiles' devices are not part of the package (ADR-498, 2026-11-01): a tile
+  loads its file by name from the user's effects folder (Settings → Places), and is refused with
+  a banner when the file is not there. **The user picks where it goes (Ben, 2026-11-01):**
   first launch offers `~/Music/Vamp/Vamp Devices` or a folder inside their User Library, and
   copies it there; the app remembers the choice, so an update refreshes the devices in the same
   place. Either way the folder is added to Live's Places by the user. Vamp works
@@ -137,7 +139,6 @@ drives Live and passes the gate's page-load check. **Size:** 2 days.
   | The recorder | REC is not shown |
   | random-start | A Simpler loads without the Random knob, silently |
   | Vamp Groove | The groove chooser offers the Core Library's grooves only |
-  | The effect tiles' devices | Those tiles are not offered in + Effect |
 
   Hidden in the performance views, but not hidden from the person: Settings → Places says
   "Add the Vamp Devices folder to Live's Places to turn on Permute, the wheels and Capture",

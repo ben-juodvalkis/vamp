@@ -916,8 +916,9 @@ either way. `WahPedalComponent` owns the two wires (their addresses keep
 the `wah` name) and, since ADR-445 (2026-09-19), drives **one of two
 devices by the kind of track under the selection**:
 
-- **Audio track → the Wah** (`Vamp Devices/Wah/Wah.adg`, an Audio Effect
-  Rack, `constants.devices.wah`) — exactly as before.
+- **Audio track → the Wah** (`Wah.adg`, an Audio Effect Rack at
+  `constants.devices.wah.presetPath`, the owner's shelf since ADR-498,
+  2026-11-01) — exactly as before.
 - **MIDI track → MidiWheels** (`Vamp Devices/MidiWheels.amxd`,
   `constants.devices.midiWheels`, since 2026-09-25): the pedal sweeps its
   Mod Wheel parameter (CC 1) into the instrument behind it — the same
@@ -1023,10 +1024,10 @@ indices against a live dump (`parameters[0]` is Device On, macros follow
 at `[1..]`). Load reuses the lazy `load_into_track` closure in
 `LoopingSurface` — `(track, preset_path, at_head)`, `at_head` per rack
 (DeviceLoad ordering / 12.3.7 gate safe). `DeviceLoadComponent` is built
-with `head_preset_paths=[wah_preset_path(...)]` (`devices.wah.presetPath`
-when configured, else the checkout's `Vamp Devices/Wah/Wah.adg`,
-`live_library.WAH_REL`), so a wire-level track
-load of the wah lands at the head too (`loads_at_head`). Tests:
+with `head_preset_paths=[WAH_FILE, wah_preset_path(...)]` (`Wah.adg` plus
+`devices.wah.presetPath` when configured; there is no checkout fallback
+since ADR-498), compared by file name, so a wire-level track load of any
+`Wah.adg`, wherever it lives, lands at the head too (`loads_at_head`). Tests:
 `tests/test_wah_pedal_component.py` (the ADR-445 block at its end) and the
 wire-level head tests in `tests/test_device_load_component.py`.
 
@@ -1941,7 +1942,9 @@ Live's `sample.gain` mapping ever changes.
 
 ### `Vamp Devices/` — the one Place a user adds
 
-Everything the app loads by itself, and nothing else (plan.md §8). Live
+The app's utilities, and nothing else (plan.md §8). The effects left it on
+2026-11-01: Vamp's effect tiles find their files by name in the user's
+effects folder (ADR-498). Live
 names a Place after its folder, so the folder's name is what the loads name
 (`place:Vamp Devices`, `live_library.M4L_DEVICES_PLACE`, `devicePresets.ts`).
 
@@ -1956,6 +1959,7 @@ names a Place after its folder, so the folder's name is what the loads name
   by the Simpler view the first time the knob moves (ADR-496), and never
   drawn in the effect chain (`constants.devices.hiddenFromChain`).
 - `Vamp-Recorder/` - the capture engine (`capture-looping.js`, above).
+- `Vamp-Capture/` and `Grooves/` - the capture device and the groove.
 - `Abstractions/manydeferlows.maxpat` - an abstraction the recorder's
   routing chooser uses (so does the owner's Max Utility patch).
 

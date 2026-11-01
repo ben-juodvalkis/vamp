@@ -87,8 +87,8 @@ iPad / browser  ⇄  bridge (WebSocket ⇄ OSC)  ⇄  control surface inside Liv
 - **`interface/bridge/`**: the Node bridge between the page's WebSocket and the surface's OSC.
 - **`surface/`**: a Python control surface Live loads as "Vamp". It does everything that touches
   Live.
-- **`Vamp Devices/`**: the Max for Live devices the app loads for you (Permute, the wheels,
-  Random Start, the recorder, the Tone Shaper). It is the one folder you add to Live's sidebar.
+- **`Vamp Devices/`**: the Max for Live utilities the app loads for you (Permute, the wheels,
+  Random Start, the recorder, the groove). It is the one folder you add to Live's sidebar.
 - **`owner/`**: parts of the author's own rig (a macOS accessibility helper, a menu-bar app, a
   Max patch for the Ableton Move, test probes). They are switched off unless
   `config/constants.local.json` turns them on; nothing here needs them.
@@ -97,13 +97,11 @@ iPad / browser  ⇄  bridge (WebSocket ⇄ OSC)  ⇄  control surface inside Liv
 
 ## Known gaps
 
-- **Four effects need the author's files.** The Guitar and Bass amp racks (each embeds an amp
-  capture), GlitchLoop in the Chorus view (built on Ableton's PitchLoop89 patch) and Chance in
-  the Arpeggiator view (a third-party Max device) load from the author's library, which this
-  public repo can't ship; on another Mac they don't load. Every other effect inserts Live's own
-  device, set up the way your Live defaults have it, or loads one of Vamp's own devices from
-  `Vamp Devices/` ([docs/plans/general-release/plan.md](docs/plans/general-release/plan.md)
-  §6).
+- **Vamp's own effects need the author's files.** The Guitar and Bass amp racks, the Wah, the
+  Tone Shaper, Pitch Shift, GlitchLoop, Chance and the author's other Max effects are not in this
+  repo. Each tile looks for its file by name in the effects folder you choose in Settings →
+  Places (ADR-498); where it is not there, the tile says so and loads nothing. Every other
+  effect inserts Live's own device, set up the way your Live defaults have it.
 - **A device pairs once** before it can drive your Live set, with a code in Live's status bar or
   Allow on a screen already connected; the Mac never does, and Vamp for iPad on the cable pairs
   once with Vamp for Mac, with a code the Mac shows in its menu bar. The page is

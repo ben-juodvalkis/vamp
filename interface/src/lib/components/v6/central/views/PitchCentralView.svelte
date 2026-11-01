@@ -1,6 +1,6 @@
 <script lang="ts">
 	/**
-	 * The Octave's view, Pitch Shift on the effects shelf (the `octave` slot):
+	 * Pitch Shift's view (the `octave` slot):
 	 * three pick-one tabs, as the Variation view draws them (user,
 	 * 2026-10-26): Pitch (+12, +7, -5, -12, high to low), Response and
 	 * Quality; then Tone, a value box (ADR-477). The grid's Pitch slider is

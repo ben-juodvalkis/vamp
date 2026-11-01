@@ -353,7 +353,7 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0, variant = 0)
 				return { d, o: 0.45 + 0.45 * hash(i + 71) };
 			});
 		}
-		// Octave (Pitch Shift): a keyboard on its side with an up arrow beside
+		// Pitch Shift: a keyboard on its side with an up arrow beside
 		// it (the user, 2026-10-26), the arrow stronger with the mix.
 		case 'octaves': {
 			const keys = 7;

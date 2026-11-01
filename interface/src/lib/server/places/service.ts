@@ -31,7 +31,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { homedir, setPriority } from 'node:os';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { logger } from '$lib/utils/logger';
 import { categoryForFolderName, folderSlug, type PlaceAliasMap } from '$lib/utils/presetPath';
@@ -57,6 +57,7 @@ import {
 } from './diskScan';
 import { findLiveDatabase, indexRowsFingerprint, indexRowsOf, openIndex, placeFileId, scanIndexPlace, type IndexHandle } from './indexScan';
 import { MANIFEST_NAME, readManifest } from './placesManifest';
+import { readEffectsChoice, writeEffectsChoice } from './effectsChoice';
 import { CATEGORY_ROLES, PACKS_SOURCE, type LiveCategory } from './categoryScan';
 
 /** Where + Effect opens when `catalog.effectsPlace` names no Place. */
@@ -141,6 +142,8 @@ export interface PlacesListing {
 	indexState: { ok: boolean; note: string; file: string | null };
 	sources: Array<LibrarySource & { ticked: boolean; id: string | null; totalItems: number | null }>;
 	libraryCfg: string | null;
+	/** The effects folder's sidebar name, '' for Live's Audio Effects (ADR-498). */
+	effectsPlace: string;
 }
 
 export interface PlacesIndexJson {
@@ -161,6 +164,12 @@ export interface PlacesIndexJson {
 		effects?: boolean;
 		/** Cataloged as the effects Place but not ticked: off the rail. */
 		hidden?: boolean;
+		/**
+		 * The effects Place's files by name (without the extension), each the
+		 * path inside the Place: how the app finds its own effects there
+		 * (ADR-498). Absent on a Live category.
+		 */
+		devices?: Record<string, string>;
 	}>;
 	aliases: PlaceAliasMap;
 }
@@ -174,6 +183,8 @@ export interface PlacesServiceOptions {
 	prefsDir?: string;
 	/** The ticks file. */
 	ticksFile?: string;
+	/** The effects folder chosen in Settings (`effectsChoice.ts`). */
+	effectsFile?: string;
 	/** The cache folder (`places/`, the kind and peaks caches). */
 	cacheDir?: string;
 	/** Live's database folder; null for none. */
@@ -251,6 +262,8 @@ function totalOf(kinds: KindCounts): number {
 export class PlacesService {
 	private readonly prefsDir: string;
 	private readonly ticksFile: string;
+	private readonly effectsFile: string;
+	private effectsChoice: string | null = null;
 	private readonly cacheDir: string;
 	private readonly dbDir: string | null;
 	private readonly polls: boolean;
@@ -282,6 +295,9 @@ export class PlacesService {
 	constructor(opts: PlacesServiceOptions = {}) {
 		this.prefsDir = opts.prefsDir ?? DEFAULT_PREFS_DIR;
 		this.ticksFile = opts.ticksFile ?? join(repoRoot(), 'logs', 'places.json');
+		// Beside the ticks file, so a test's own ticks folder holds its own choice.
+		this.effectsFile = opts.effectsFile ?? join(dirname(this.ticksFile), 'effects.json');
+		this.effectsChoice = readEffectsChoice(this.effectsFile);
 		this.cacheDir = opts.cacheDir ?? join(repoRoot(), 'scripts', '.cache');
 		this.auDirs = opts.auDirs;
 		this.dbDir = opts.liveDatabaseDir === undefined ? defaultLiveDatabaseDir() : opts.liveDatabaseDir;
@@ -445,13 +461,22 @@ export class PlacesService {
 	}
 
 	/**
-	 * Whether a source is the effects Place, the one + Effect opens: the
-	 * Place `catalog.effectsPlace` names (by its sidebar name), else Live's
-	 * Audio Effects category (Ben, 2026-10-31). It is cataloged ticked or not.
+	 * The effects folder's sidebar name: the choice saved in Settings
+	 * (ADR-498), else `catalog.effectsPlace`; '' is Live's Audio Effects.
+	 */
+	effectsPlaceName(): string {
+		return this.effectsChoice ?? configSection<{ effectsPlace?: string }>('catalog').effectsPlace ?? '';
+	}
+
+	/**
+	 * Whether a source is the effects Place, the one + Effect opens and the
+	 * app's own effects are found in: the Place `effectsPlaceName` names (by
+	 * its sidebar name), else Live's Audio Effects category (Ben,
+	 * 2026-10-31). It is cataloged ticked or not.
 	 */
 	private isEffectsPlace(s: Pick<LibrarySource, 'name' | 'kind'>): boolean {
-		const name = configSection<{ effectsPlace?: string }>('catalog').effectsPlace;
-		if (name) return s.name === name;
+		const name = this.effectsPlaceName();
+		if (name) return s.name === name && s.kind !== 'category' && s.kind !== 'collection';
 		return s.kind === 'category' && s.name === EFFECTS_CATEGORY;
 	}
 
@@ -939,6 +964,7 @@ export class PlacesService {
 			source: preferredSource(),
 			indexState: this.indexState,
 			libraryCfg: this.lib.cfgFile,
+			effectsPlace: this.effectsPlaceName(),
 			sources: this.sources.map((s) => {
 				const c = this.catalogs.get(s.key);
 				return {
@@ -960,6 +986,18 @@ export class PlacesService {
 		// The listing changed even when no catalog did (a tick on a folder
 		// that is not on this Mac), so a rebuild that bumped nothing still bumps.
 		if (!this.rebuildTicked('ticks saved')) this.bump('ticks saved');
+		return this.listing();
+	}
+
+	/**
+	 * Save the effects folder (ADR-498): a Place's sidebar name, or '' for
+	 * Live's Audio Effects. A name no Place has is refused (null).
+	 */
+	setEffectsPlace(name: string): PlacesListing | null {
+		if (name && !this.sources.some((s) => s.name === name && s.kind !== 'category' && s.kind !== 'collection')) return null;
+		writeEffectsChoice(this.effectsFile, name);
+		this.effectsChoice = name;
+		if (!this.rebuildTicked('effects folder saved')) this.bump('effects folder saved');
 		return this.listing();
 	}
 
@@ -985,7 +1023,9 @@ export class PlacesService {
 					samplesFile: c.samples ? `${c.id}-samples.json` : undefined,
 					totalItems: c.totalItems,
 					kinds: c.kinds,
-					...(this.isEffectsPlace(s) ? { effects: true, hidden: !this.ticks.ticked.has(s.key) } : {})
+					...(this.isEffectsPlace(s)
+						? { effects: true, hidden: !this.ticks.ticked.has(s.key), ...(s.kind === 'category' ? {} : { devices: devicesByName(c.tree, c.path) }) }
+						: {})
 				};
 			});
 		const sidebarRoot = configPath('sidebarRoot') ?? '';
@@ -1122,3 +1162,21 @@ export function createPlacesService(opts: PlacesServiceOptions): PlacesService {
 	return s;
 }
 
+/**
+ * The effects Place's files by name, each the path inside the Place (ADR-498):
+ * the first of a name wins, in the order the catalog lists them.
+ */
+export function devicesByName(tree: PlaceFolder, placePath: string): Record<string, string> {
+	const root = `${placePath.replace(/\/+$/, '')}/`;
+	const out: Record<string, string> = {};
+	const walk = (folder: PlaceFolder) => {
+		for (const item of folder.presets) {
+			if (!item.fullPath.startsWith(root)) continue;
+			const name = item.fullPath.slice(item.fullPath.lastIndexOf('/') + 1).replace(/\.[^.]+$/, '');
+			if (!(name in out)) out[name] = item.fullPath.slice(root.length);
+		}
+		for (const sub of Object.values(folder.folders)) walk(sub);
+	};
+	walk(tree);
+	return out;
+}

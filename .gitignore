@@ -33,24 +33,12 @@ audio/
 # is checked in at `owner/Skaka Metronome Picker/`.
 !owner/Skaka Metronome Rack.adg
 
-# Exception: the presets the app loads ship in Vamp Devices, beside the Max
-# devices, and load through that Place (2026-10-03). Only the ones that are
-# the owner's own work: racks embedding someone else's content (TONE3000
-# captures, third-party Max devices) stay in the User Library.
-!Vamp Devices/Pitch Hack/Pitch Hack.adv
-!Vamp Devices/Wah/Wah.adg
-!Vamp Devices/Comb/Comb.aupreset
-!Vamp Devices/Octave/Octave.aupreset
-
-# The amp racks (Guitar, Bass Amp) and Note Chance load from Vamp Devices
-# too (2026-10-26), copied there from the User Library's Effect Patches, and
-# stay on this Mac: the racks hold TONE3000 captures, Note Chance is
-# downloaded. *.adg is ignored above; the .amxd needs saying.
+# Vamp Devices holds only the app's utilities since 2026-11-01 (ADR-498):
+# the effects (amp racks, Max effects) are the user's own, found in their
+# effects folder. Two stay ignored so a build that still copies them here
+# never commits them: Note Chance (downloaded) and GlitchLoop (the owner's
+# private device, its engine a port of PitchLoop89). *.adg is ignored above.
 Vamp Devices/Note Chance/
-
-# GlitchLoop is the owner's private device (its engine is a port of
-# PitchLoop89): the glitchloop repo's build copies it here so it loads
-# through the Vamp Devices Place, and it never enters this repo.
 Vamp Devices/GlitchLoop/
 
 # ============================================================================

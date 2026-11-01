@@ -64,7 +64,7 @@ export const CHARACTER_DEVICE_KEYS: readonly string[] = ['guitar', 'bass', 'voca
 export const DEVICE_GLYPHS: Readonly<Record<string, DeviceGlyph>> = {
 	guitar: 'guitar',
 	bass: 'guitar', // the Bass Amp rack — an amp is a guitar's mark here
-	octave: 'guitar', // the Octave pitch shifter on a guitar or bass track
+	octave: 'guitar', // Pitch Shift on a guitar or bass track
 	vocal: 'mic',
 
 	filter: 'filter',

@@ -29,10 +29,9 @@ describe('machineStore', () => {
 	});
 
 	it('sends a file tile’s Place and path inside it on device/load', () => {
-		// Every file tile is in Vamp Devices since 2026-10-26: the load names
-		// the Place, and the surface fills the path in.
-		expect(deviceLoadArgs('tracks/1', '', DEVICE_PRESETS.guitar)).toEqual(['tracks/1', '', '', 'place:Vamp Devices', 'Guitar/Guitar.adg']);
-		expect(deviceLoadArgs('tracks/1', '', DEVICE_PRESETS.bass)).toEqual(['tracks/1', '', '', 'place:Vamp Devices', 'Bass Amp/Bass Amp.adg']);
+		// Vamp's own effects name no Place of their own (ADR-498): they are found in the user's effects folder.
+		expect(DEVICE_PRESETS.guitar.source).toBeUndefined();
+		expect(DEVICE_PRESETS.guitar.effect).toBe(true);
 		// A native tile names its device, not a file, whatever the snapshot says (3.12.0).
 		expect(deviceLoadArgs('tracks/1', '', DEVICE_PRESETS.reverb)).toEqual(['tracks/1', '', '', 'native:Hybrid', 'Reverb']);
 		expect(loadKey(DEVICE_PRESETS.reverb)).toBe('native:Hybrid');

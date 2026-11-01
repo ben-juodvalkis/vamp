@@ -244,9 +244,7 @@ def test_engage_no_selected_track_is_noop(constants):
 
 
 def test_engage_missing_preset_path_skips_load(constants, monkeypatch):
-    # No configured path and no checkout copy: nothing to load.
-    from components import live_library
-    monkeypatch.setattr(live_library, "WAH_REL", "no-such/Wah.adg")
+    # No configured path: nothing to load (the Wah is not shipped, ADR-498).
     constants["devices"]["wah"].pop("presetPath")
     track = StubTrack(devices=[])
     song = StubSong(selected_track=track)
@@ -1098,13 +1096,9 @@ def test_addresses_are_stable():
     assert V3_WAH_FREQ_ADDRESS == "/looping/v3/wah/freq"
 
 
-def test_wah_path_falls_back_to_the_checkout(tmp_path, monkeypatch):
-    # No configured path: the checkout's Vamp Devices/Wah/Wah.adg.
-    from components import live_library
+def test_wah_path_is_the_configured_one_only():
+    # The Wah is the user's own (ADR-498): no checkout fallback.
     from components.WahPedalComponent import wah_preset_path
-    wah = tmp_path / "Wah" / "Wah.adg"
-    wah.parent.mkdir()
-    wah.write_bytes(b"")
-    monkeypatch.setattr(live_library, "m4l_devices_root", lambda: str(tmp_path))
-    assert wah_preset_path({}) == str(wah)
+    assert wah_preset_path({}) == ""
+    assert wah_preset_path(None) == ""
     assert wah_preset_path({"presetPath": "/x/Wah.adg"}) == "/x/Wah.adg"

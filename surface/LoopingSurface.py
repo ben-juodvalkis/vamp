@@ -200,6 +200,7 @@ from .components.FootTriggerComponent import (
 )
 from .components.WahPedalComponent import (
     WahPedalComponent,
+    WAH_FILE,
     wah_preset_path,
     V3_WAH_ENGAGE_ADDRESS,
     V3_WAH_FREQ_ADDRESS,
@@ -2268,8 +2269,9 @@ class LoopingSurface(ControlSurface):
             # ADR-445: the wah preset lands at the head of the track's audio
             # effects from the wire too, so the Pedal view's Wah button and
             # the pedal's own engage place it identically.
+            # By file name (ADR-498): any Wah.adg, and the configured one's.
             wah_path = wah_preset_path((constants.get("devices") or {}).get("wah"))
-            head_presets = [wah_path] if wah_path else []
+            head_presets = [WAH_FILE] + ([wah_path] if wah_path else [])
             self._device_load_component = DeviceLoadComponent(
                 song=self.song,
                 browser=browser,

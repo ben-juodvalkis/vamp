@@ -35,7 +35,9 @@ npm run dev
 ```
 
 Then in Live: **Settings → Link, Tempo & MIDI → Control Surface →
-Vamp**, and add this checkout's `Vamp Devices` folder as a Place. Output stays **None**; Input
+Vamp**, and add this checkout's `Vamp Devices` folder (the app's utilities) as a Place.
+Vamp's own effects are found by name in the effects folder chosen in
+Settings → Places (ADR-498). Output stays **None**; Input
 too, unless a pedal is on USB (§5, USB pedal).
 
 If validation passes and Live's log shows
@@ -123,7 +125,8 @@ which exist only while `features.expressionPedal` is on:
    certainly on another channel — flip to `channel: 0` to confirm
    before hunting elsewhere.
 6. What the expression pedal drives depends on the selected track
-   (ADR-445): the **Wah** (`Vamp Devices/Wah/Wah.adg`) on
+   (ADR-445): the **Wah** (`Wah.adg`, at `devices.wah.presetPath` in your
+   `constants.local.json`; not in the checkout since ADR-498) on
    an audio track, **MidiWheels** (`Vamp Devices/MidiWheels.amxd`,
    the device the on-screen pitch/mod wheels drive; the pedal sweeps its
    mod wheel) on a MIDI track. Both paths are in `config/constants.json` →

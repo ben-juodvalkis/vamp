@@ -517,7 +517,7 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 	},
 	// Max devices (2026-10-26): parameters by the name Live gives them, the
 	// `.amxd`'s `parameter_shortname`, with the measured index as fallback;
-	// the file saves each at the value Live opens it at (measured: Octave
+	// the file saves each at the value Live opens it at (measured: Pitch Shift
 	// Mix 100, Comb Mix and Feedback 17.58, Blur Mix 0, Note Chance 100,
 	// GlitchLoop Dry/Wet 35.7033), in Live's units.
 	smudge: {

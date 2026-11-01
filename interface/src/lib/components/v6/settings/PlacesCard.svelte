@@ -17,6 +17,10 @@
 	 * and Downloads. The rig is seeded from `paths.sidebarRoot`, so nothing
 	 * changes there. A folder that is not on this Mac right now (a Pack on an
 	 * unmounted drive) is listed greyed and cannot be ticked.
+	 *
+	 * Above the list, the effects folder (ADR-498): the Place + Effect opens
+	 * and Vamp's own effects (an amp rack, a Max effect) are found in by
+	 * name, or Live's Audio Effects. An effect not in it has no tile.
 	 */
 	import { untrack } from 'svelte';
 	import Check from '@lucide/svelte/icons/check';
@@ -78,6 +82,10 @@
 		box.checked = places.listing?.sources.find((x) => x.key === s.key)?.ticked ?? box.checked;
 	}
 
+	/** Folders that can be the effects folder: the sidebar Places and the User Library, on this Mac. */
+	const effectsChoices = $derived(sources.filter((s) => s.present && (s.kind === 'place' || s.kind === 'user-library')));
+	const effectsPlace = $derived(places.listing?.effectsPlace ?? '');
+
 	const sourceLine = $derived.by(() => {
 		const l = places.listing;
 		if (!l) return '';
@@ -126,6 +134,29 @@
 					{/if}
 				</div>
 			{/if}
+		</div>
+
+		<div class="set-list set-effects" data-debug="places-effects">
+			<label class="set-row set-row-stack">
+				<span class="set-row-main">
+					<span class="set-row-label">Effects folder</span>
+					<span class="set-row-sub">
+						Where + Effect opens, and where Vamp looks for its own effects by name (an amp rack, a Max effect). Live’s
+						built-in effects work either way.
+					</span>
+				</span>
+				<select
+					class="set-effects-select"
+					value={effectsPlace}
+					disabled={places.saving}
+					onchange={(e) => void places.setEffectsPlace((e.currentTarget as HTMLSelectElement).value)}
+				>
+					<option value="">Live’s Audio Effects</option>
+					{#each effectsChoices as s (s.key)}
+						<option value={s.name}>{s.name}</option>
+					{/each}
+				</select>
+			</label>
 		</div>
 
 		{#if filtering && matches === 0}
@@ -216,6 +247,21 @@
 		padding: var(--spacing-xl) var(--spacing-xl) var(--spacing-md);
 		background: var(--background);
 		border-bottom: 1px solid var(--line-strong);
+	}
+	.set-effects {
+		margin-bottom: var(--spacing-md);
+	}
+	.set-effects-select {
+		flex: 0 1 16rem;
+		min-width: 10rem;
+		min-height: 2.5rem;
+		padding: 0 var(--spacing-md);
+		background: var(--secondary);
+		color: var(--foreground);
+		border: 1px solid var(--line-strong);
+		border-radius: var(--radius-md);
+		font: inherit;
+		font-size: 0.9375rem;
 	}
 	.set-places-bar .set-lead {
 		flex: 1 1 22rem;

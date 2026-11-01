@@ -53,10 +53,17 @@ export interface DevicePresetConfig {
   /** A load that names its Place (protocol 3.11.0): `place:<name>` and the path inside it. */
   source?: string;
   rel?: string;
+  /**
+   * One of Vamp's own effects (an amp rack, a Max effect), not shipped with
+   * it: found by name in the user's effects folder (ADR-498,
+   * `services/effectSources`), never a fixed path. Absent: a native device or
+   * a Vamp utility (Permute) the app loads from Vamp Devices.
+   */
+  effect?: boolean;
   defaultName: string;
   /** Other names Live gives the same device: Live names a loaded file after
-   *  itself, so a copy on the user's shelf under another name (the Octave's
-   *  "Pitch Shift.amxd", a hard link) arrives under that name. */
+   *  itself, so a copy under another name (the shelf's "Tone Shaper.amxd",
+   *  a Pitch Shift saved while it was "Octave.amxd") arrives under that name. */
   aliases?: readonly string[];
   expectedClassName: string;
   curveType?: CurveType;
@@ -227,18 +234,17 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   toneShaper: {
     // Ben's Adaptive Tone Shaper, beside the Channel EQ in the EQ view
     // (2026-10-07; oeksound bloom's sliders stood there the day before). Our
-    // own Max for Live device, shipped in Vamp Devices and loaded through
-    // that Place like Octave. Its graph (ToneShaperGraph) is the whole view
+    // own Max for Live device, found by name in the user's effects folder
+    // (ADR-498; the owner's shelf calls it "Tone Shaper"). Its graph (ToneShaperGraph) is the whole view
     // of it; the spectrum and the curve come from the device itself over
     // `/toneshaper/frame`, not from the LOM. Parameters, read off the
     // running device: 1 Amount 0..10, 2..5 Lows / Lo-mids / Hi-mids / Highs
     // -10..10, 6 Latency (1 = zero), 7 Quality (1 = eco), 8..11 the four
     // centers in Hz. Live names a loaded .amxd after its file.
     padScoped: true,
-    presetPath: '',
-    source: 'place:Vamp Devices',
-    rel: "ToneShaper/Ben's Adaptive Tone Shaper.amxd",
+    effect: true,
     defaultName: "Ben's Adaptive Tone Shaper",
+    aliases: ['Tone Shaper'],
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
     color: familyScheme('filter')       // A tone balancer, the EQ's family
@@ -326,16 +332,13 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     color: familyScheme('pitchSeq')
   },
   comb: {
-    // Comb ships in the repo beside Blur and loads the same way, through the
-    // "Vamp Devices" Place. It is a Max rebuild of the owner's Zebrify
+    // Comb is found by name in the user's effects folder (ADR-498). It is a Max rebuild of the owner's Zebrify
     // "Dissonant" comb patch (four cross-fed delays with a level limiter),
     // and took this slot from that plug-in preset (2026-10-05), so the tile
     // no longer needs a plug-in. The name is load-bearing: Blur, Permute and
     // Pitch Hack are MxDeviceAudioEffect too.
     padScoped: true,
-    presetPath: '',
-    source: 'place:Vamp Devices',
-    rel: 'Comb/Comb.amxd',
+    effect: true,
     defaultName: 'Comb',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
@@ -355,11 +358,9 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     // through the browser — a Max device has no insert-by-name path — and
     // Live names it after the .adv. The name is load-bearing: Permute is an
     // MxDeviceAudioEffect too.
-    // In Vamp Devices since 2026-10-03.
+    // Found by name in the user's effects folder (ADR-498).
     padScoped: true,
-    presetPath: '',
-    source: 'place:Vamp Devices',
-    rel: 'Pitch Hack/Pitch Hack.adv',
+    effect: true,
     defaultName: 'Pitch Hack',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
@@ -368,33 +369,28 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   glitchLoop: {
     // GlitchLoop: PitchLoop89 with built-in mod slots, built by the owner's
     // glitchloop repo. Its engine is a port of PitchLoop89, so it stays out
-    // of this public repo: glitchloop's build copies dist/GlitchLoop.amxd
-    // into Vamp Devices/GlitchLoop/ (gitignored) and it loads through that
-    // Place (2026-10-15, the user's call). Live's browser lists no symlink
+    // of this public repo; it is found by name in the user's effects folder
+    // (ADR-498), where glitchloop's build copies dist/GlitchLoop.amxd on the
+    // owner's Mac. Live's browser lists no symlink
     // (measured: a linked folder never appeared, a real one within 20 s),
     // and a copy elsewhere went stale. The Glitch tile and view drive it by
     // parameter name (glitchLoopParams.ts). The name is load-bearing: Blur,
     // Permute and Pitch Hack are MxDeviceAudioEffect too.
     padScoped: true,
-    presetPath: '',
-    source: 'place:Vamp Devices',
-    rel: 'GlitchLoop/GlitchLoop.amxd',
+    effect: true,
     defaultName: 'GlitchLoop',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
     color: familyScheme('rackVoice')    // Rose (user, 2026-10-07): violet sat too close to Octave, and Comb and Phaser here are magenta
   },
   smudge: {
-    // Blur ships in the repo beside Permute and loads the same way, through
-    // the "Vamp Devices" Place. It is a Max freeze-looper: two voices take
+    // Blur is found by name in the user's effects folder (ADR-498). It is a Max freeze-looper: two voices take
     // turns holding a 45 ms slice of the input under long crossfades. It took
     // this slot from the owner's Saturn 2 preset (2026-10-03), so the tile no
     // longer needs a plug-in. The name is load-bearing: Permute and Pitch
     // Hack are MxDeviceAudioEffect too.
     padScoped: true,
-    presetPath: '',
-    source: 'place:Vamp Devices',
-    rel: 'Blur/Blur.amxd',
+    effect: true,
     defaultName: 'Blur',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
@@ -404,23 +400,19 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   guitar: {
     // The amp rack lives on a pad as well as on a track (user, 2026-09-11); it loads through the browser and is moved into the chain.
     padScoped: true,
-    presetPath: '',
-    source: 'place:Vamp Devices',
-    rel: 'Guitar/Guitar.adg',
+    effect: true,
     defaultName: 'Guitar',
     expectedClassName: 'AudioEffectGroupDevice',
     color: familyScheme('distortion')
   },
   bass: {
     // Same as Guitar: a rack, through the browser and into the chain. It was
-    // a Helix Native preset until 2026-10-03; the rack (Octave Pedal → Glue
+    // a Helix Native preset until 2026-10-03; the rack (Pitch Shift → Glue
     // Compressor → TONE3000) shows one macro, the mix, which is all the
     // tile drives; no view repeats it. Live names it after the .adg, which
     // is how the slot re-finds it.
     padScoped: true,
-    presetPath: '',
-    source: 'place:Vamp Devices',
-    rel: 'Bass Amp/Bass Amp.adg',
+    effect: true,
     defaultName: 'Bass Amp',
     expectedClassName: 'AudioEffectGroupDevice',
     // Violet, not the Guitar's orange (2026-10-01): it shares the Guitar
@@ -428,21 +420,21 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     color: familyScheme('pitchSeq')
   },
   octave: {
-    // The Chorus view's Octave panel: Ben's Polyphonic Pitch Shifter
-    // (2026-10-05, in place of a Helix Native preset), the frozen 0.1.0
-    // Max device from the BensPolyphonicPitchShifter repo, so it carries
-    // `polypitch~` inside and needs no Max package. Saved as Octave.amxd,
-    // so Live names it "Octave"; the name is load-bearing, since Comb,
-    // Blur and Permute are MxDeviceAudioEffect too. Measured off the
+    // Pitch Shift: Ben's Polyphonic Pitch Shifter (2026-10-05, in place of
+    // a Helix Native preset), the frozen 0.1.0 Max device from the
+    // BensPolyphonicPitchShifter repo, so it carries `polypitch~` inside and
+    // needs no Max package. Found by name in the user's effects folder
+    // (ADR-498) as "Pitch Shift.amxd", so Live names it "Pitch Shift"; the
+    // name is load-bearing, since Comb, Blur and Permute are
+    // MxDeviceAudioEffect too. Called the Octave until 2026-11-01 (the user):
+    // the key stays `octave`, and the old name is an alias for the devices
+    // saved sets already hold. Measured off the
     // running device: 1 Semitones (-12..12), 2 Mix (0..100). No tile of
     // its own: the view is its only control.
     padScoped: true,
-    presetPath: '',
-    source: 'place:Vamp Devices',
-    rel: 'Octave/Octave.amxd',
-    defaultName: 'Octave',
-    // The same file on the effects shelf as "Pitch Shift.amxd" (2026-10-26).
-    aliases: ['Pitch Shift'],
+    effect: true,
+    defaultName: 'Pitch Shift',
+    aliases: ['Octave'],
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
     color: familyScheme('pitchSeq')
@@ -485,29 +477,25 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   chance: {
     // A Max MIDI effect (one parameter: [1] Chance, 0-100 %, 101 steps),
     // so it never takes the insert-by-name path — no native class, no
-    // Live default; the browser loads the .amxd out of Vamp Devices
-    // and Live names the device after the file. MIDI effect all the
+    // Live default; the .amxd is found by name in the user's effects
+    // folder (ADR-498) and Live names the device after the file. MIDI effect all the
     // same, so a pad load lands at the head of the pad's chain like
     // Random/Velocity/Chord. The library copy's own parameter_initial
     // is 100 (the Downloads original ships 50), so a fresh insert passes
     // every note until a finger says otherwise.
     padScoped: true,
-    presetPath: '',
-    source: 'place:Vamp Devices',
-    rel: 'Note Chance/Note Chance.amxd',
+    effect: true,
     defaultName: 'Note Chance',
     expectedClassName: 'MxDeviceMidiEffect',
     gridSlot: false,
     color: familyScheme('pitchSeq')
   },
   wah: {
-    // In Vamp Devices since 2026-10-03. The surface finds
-    // the same file for the pedal (`live_library.WAH_REL`), and its path is
-    // what lands the rack at the head of the chain.
+    // Found by name in the user's effects folder (ADR-498). The pedal's own
+    // load is the owner's `devices.wah.presetPath`; a load of a file named
+    // Wah.adg lands at the head of the chain.
     padScoped: true,
-    presetPath: '',
-    source: 'place:Vamp Devices',
-    rel: 'Wah/Wah.adg',
+    effect: true,
     defaultName: 'Wah',
     expectedClassName: 'AudioEffectGroupDevice',
     gridSlot: false,                    // Virtual device

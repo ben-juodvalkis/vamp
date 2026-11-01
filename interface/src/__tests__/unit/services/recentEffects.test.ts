@@ -22,11 +22,15 @@ vi.mock('$lib/stores/v6/selectedTrackStore.svelte', () => ({
 
 import { recordRecentEffect, recentEffects, recentForChain, addEffectToChain, _resetRecentEffectsForTests, RECENT_EFFECTS_MAX, DEFAULT_EFFECTS } from '$lib/services/recentEffects.svelte';
 import type { ItemKind } from '$lib/utils/placeKinds';
+import { _setEffectsFolderForTests } from '$lib/services/effectSources.svelte';
+
+const SHELF = { name: 'Audio-Midi Effects', source: 'place:Audio-Midi Effects', devices: { Guitar: 'Guitar/Guitar.adg', 'Bass Amp': 'Guitar/Bass Amp.adg', Wah: 'Guitar/Wah.adg', 'Tone Shaper': 'Tone/Tone Shaper.amxd' } };
 
 const fx = (name: string, kind: ItemKind = 'audio-effect') => ({ name, fullPath: `/shelf/${name}.adv`, source: '', rel: '', kind });
 
 beforeEach(() => {
 	_resetRecentEffectsForTests();
+	_setEffectsFolderForTests(SHELF);
 	track.type = 'midi';
 	localStorage.clear();
 });
@@ -92,9 +96,17 @@ describe('recent effects', () => {
 		expect(send).toHaveBeenCalledWith(expect.stringContaining('device/load'), ['tracks/0', '', '', 'native:Hybrid', 'Reverb']);
 	});
 
-	it('loads the amp racks from the Vamp Devices Place, as their tiles do', async () => {
+	it('loads the amp racks from the effects folder, by name (ADR-498)', async () => {
 		send.mockClear();
 		await addEffectToChain(DEFAULT_EFFECTS.find((d) => d.name === 'Bass Amp')!);
-		expect(send).toHaveBeenCalledWith(expect.stringContaining('device/load'), ['tracks/0', '', '', 'place:Vamp Devices', 'Bass Amp/Bass Amp.adg']);
+		expect(send).toHaveBeenCalledWith(expect.stringContaining('device/load'), ['tracks/0', '', '', 'place:Audio-Midi Effects', 'Guitar/Bass Amp.adg']);
+	});
+
+	it('offers no amp rack the effects folder lacks', () => {
+		_setEffectsFolderForTests(null);
+		const names = recentForChain([]).map((r) => r.name);
+		expect(names).not.toContain('Guitar');
+		expect(names).not.toContain('Bass Amp');
+		expect(names).toHaveLength(12);
 	});
 });

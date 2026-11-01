@@ -1,7 +1,7 @@
 # ADR-493: Live's Categories on the Browser Rail
 
 ## Status
-**Accepted** (2026-10-31). The browser half is interface only. The surface
+**Accepted** (2026-10-31). Amended by [ADR-498](498-effects-come-from-the-users-effects-folder.md): the effects Place is a Settings choice, and Vamp's own effects are found in it by name. The browser half is interface only. The surface
 half (presets filed under a device) needs a Live restart.
 
 ## Context

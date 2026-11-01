@@ -50,6 +50,7 @@ vi.mock('$lib/stores/v6/slotRegistry.svelte', () => ({
 import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { setTrackName } from '$lib/services/trackCommands';
 import { DEVICE_PRESETS } from '$lib/config/devicePresets';
+import { _setEffectsFolderForTests } from '$lib/services/effectSources.svelte';
 import {
 	replaceTree,
 	_resetForTests,
@@ -93,6 +94,8 @@ function mkTrack(
 
 describe('fxGridStore.loadDevice — guitar/bass rename guard', () => {
 	beforeEach(() => {
+	// Vamp's own effects load from the user's effects folder (ADR-498).
+	_setEffectsFolderForTests({ name: 'Audio-Midi Effects', source: 'place:Audio-Midi Effects', devices: { Guitar: 'Guitar/Guitar.adg', 'Bass Amp': 'Guitar/Bass Amp.adg' } });
 		vi.clearAllMocks();
 		_resetForTests();
 		// resetForTrackChange clears any 'loading' slot state + pending

@@ -133,7 +133,6 @@ from __future__ import annotations
 import logging
 from typing import Callable, Optional, Tuple
 
-from . import live_library
 from .MidiWheelsComponent import (
     CONFIG_KEY as MIDI_WHEELS_CONFIG_KEY,
     read_midi_wheels_config,
@@ -282,11 +281,17 @@ class _PedalTarget:
         )
 
 
+#: The wah rack's file name: a track load of a file by this name lands at the
+#: head of the audio effects wherever it lives (ADR-498).
+WAH_FILE = "Wah.adg"
+
+
 def wah_preset_path(cfg) -> str:
-    """The wah rack's path: ``devices.wah.presetPath`` when the config
-    carries one, else the checkout's ``Vamp Devices/Wah/Wah.adg``, else ''."""
+    """The wah rack's path for the pedal: ``devices.wah.presetPath``, else ''.
+    The Wah is the user's own effect, not shipped in Vamp Devices since
+    2026-11-01 (ADR-498): the owner's config names it on the effects shelf."""
     configured = cfg.get("presetPath") if isinstance(cfg, dict) else None
-    return live_library.device_path(live_library.WAH_REL, configured)
+    return configured if isinstance(configured, str) and configured else ""
 
 
 class WahPedalComponent:

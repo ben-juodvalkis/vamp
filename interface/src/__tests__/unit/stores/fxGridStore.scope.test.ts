@@ -22,6 +22,7 @@ import { flushSync } from 'svelte';
 import { selectedTrackStore, fxGrid } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { send } from '$lib/api/simpleClient';
 import { DEVICE_PRESETS } from '$lib/config/devicePresets';
+import { _setEffectsFolderForTests } from '$lib/services/effectSources.svelte';
 import {
 	_resetForTests,
 	applyPropertyValue,
@@ -120,8 +121,11 @@ describe('a scoped slot', () => {
 		expect(sendMock).toHaveBeenCalledWith('/looping/v3/device/load', [TRACK, PAD, '', 'native:Hybrid', 'Reverb']);
 		expect(selectedTrackStore.getFxGridSlot('reverb', PAD).state).toBe('loading');
 		expect(selectedTrackStore.getFxGridSlot('reverb').state).toBe('ghost'); // the track's slot is untouched
+		// Vamp's own effect loads from the user's effects folder, by name (ADR-498).
+		_setEffectsFolderForTests({ name: 'Audio-Midi Effects', source: 'place:Audio-Midi Effects', devices: { Guitar: 'Guitar/Guitar.adg', 'Bass Amp': 'Guitar/Bass Amp.adg', Wah: 'Guitar/Wah.adg', 'Tone Shaper': 'Tone/Tone Shaper.amxd' } });
 		await selectedTrackStore.loadFxGridDevice('guitar', PAD);
-		expect(sendMock).toHaveBeenCalledWith('/looping/v3/device/load', [TRACK, PAD, '', 'place:Vamp Devices', 'Guitar/Guitar.adg']);
+		expect(sendMock).toHaveBeenCalledWith('/looping/v3/device/load', [TRACK, PAD, '', 'place:Audio-Midi Effects', 'Guitar/Guitar.adg']);
+		_setEffectsFolderForTests(null);
 		const { setTrackName } = await import('$lib/services/trackCommands');
 		expect(setTrackName).not.toHaveBeenCalled();
 	});

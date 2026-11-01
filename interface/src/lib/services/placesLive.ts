@@ -71,6 +71,7 @@ export function placeArgs(preset: { source?: string; placePath?: string; fullPat
 export const PLACES_EVENTS_URL = '/api/places/events';
 export const PLACES_LIST_URL = '/api/places/list';
 export const PLACES_TICKS_URL = '/api/places/ticks';
+export const PLACES_EFFECTS_URL = '/api/places/effects';
 
 export interface PlacesSource {
 	key: string;
@@ -93,6 +94,8 @@ export interface PlacesListing {
 	indexState: { ok: boolean; note: string; file: string | null };
 	libraryCfg: string | null;
 	sources: PlacesSource[];
+	/** The effects folder's sidebar name, '' for Live's Audio Effects (ADR-498). */
+	effectsPlace?: string;
 }
 
 let source: EventSource | null = null;
@@ -164,6 +167,17 @@ export async function savePlacesTicks(ticked: string[]): Promise<PlacesListing> 
 	const listing = (await res.json()) as PlacesListing;
 	settingsStore.firstRun = listing.firstRun === true;
 	return listing;
+}
+
+/** Save the effects folder on the Mac (ADR-498): a Place's sidebar name, '' for Live's Audio Effects. The answer is the new listing. */
+export async function saveEffectsPlace(place: string): Promise<PlacesListing> {
+	const res = await fetch(PLACES_EFFECTS_URL, {
+		method: 'PUT',
+		headers: { 'content-type': 'application/json' },
+		body: JSON.stringify({ place })
+	});
+	if (!res.ok) throw new Error(`Failed to save the effects folder (${res.status})`);
+	return (await res.json()) as PlacesListing;
 }
 
 /** On a first run, open Settings by itself, once. */

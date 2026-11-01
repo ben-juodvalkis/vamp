@@ -12,8 +12,8 @@ stays on disk. "Looping" remains the internal name (the `/looping/v3` wire,
 file and class names).
 
 The tree: `surface/` (Live's Remote Script, linked as `Remote Scripts/Vamp`),
-`Vamp Devices/` (the Max devices the app loads: the one Place a user adds in
-Live), `owner/` (the owner's rig only, behind `features` switches: AX helper,
+`Vamp Devices/` (the app's utilities, the one Place a user adds in Live; the
+effects come from the user's effects folder, ADR-498), `owner/` (the owner's rig only, behind `features` switches: AX helper,
 menubar app, Max patch, Skaka picker and rack, rig probes), `config/`,
 `scripts/`, `data/`, and `docs/{reference,plans,adr}`.
 

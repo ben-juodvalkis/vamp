@@ -31,6 +31,7 @@ import {
 	type ParamRecord
 } from '$lib/stores/v3/normalized.svelte';
 import { _refcountForTest } from '$lib/stores/v3/propertySubscriptions.svelte';
+import { _setEffectsFolderForTests } from '$lib/services/effectSources.svelte';
 import PedalCentralView from '$lib/components/v6/central/views/PedalCentralView.svelte';
 import SaturatorCentralView from '$lib/components/v6/central/views/SaturatorCentralView.svelte';
 import ShifterCentralView from '$lib/components/v6/central/views/ShifterCentralView.svelte';
@@ -318,13 +319,25 @@ describe('WahCentralView', () => {
 		}
 	});
 
-	it('a tap on a ghost Wah loads Wah.adg onto the selected track through device/load', async () => {
+	it('a tap on a ghost Wah loads Wah.adg from the effects folder onto the selected track', async () => {
+		_setEffectsFolderForTests({ name: 'Audio-Midi Effects', source: 'place:Audio-Midi Effects', devices: { Guitar: 'Guitar/Guitar.adg', 'Bass Amp': 'Guitar/Bass Amp.adg', Wah: 'Guitar/Wah.adg', 'Tone Shaper': 'Tone/Tone Shaper.amxd' } });
 		seed([]);
 		const { container } = render(WahCentralView);
 		await tick();
 		tapOn(slider(container, 'Wah')!);
 		await tick();
-		expect(send).toHaveBeenCalledWith('/looping/v3/device/load', [TRACK, '', '', 'place:Vamp Devices', 'Wah/Wah.adg']);
+		expect(send).toHaveBeenCalledWith('/looping/v3/device/load', [TRACK, '', '', 'place:Audio-Midi Effects', 'Guitar/Wah.adg']);
+		_setEffectsFolderForTests(null);
+	});
+
+	it('a Wah the effects folder lacks does not load, and says so', async () => {
+		vi.mocked(send).mockClear();
+		seed([]);
+		const { container } = render(WahCentralView);
+		await tick();
+		tapOn(slider(container, 'Wah')!);
+		await tick();
+		expect(send).not.toHaveBeenCalledWith('/looping/v3/device/load', expect.anything());
 	});
 });
 

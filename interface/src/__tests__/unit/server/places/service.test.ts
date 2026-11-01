@@ -320,6 +320,24 @@ describe('PlacesService, the effects Place', () => {
 		expect(s.indexJson().places.find((p) => p.id === 'key')).toMatchObject({ effects: true, hidden: false });
 	});
 
+	it('saves the effects folder chosen in Settings over the config, and lists its files by name (ADR-498)', () => {
+		preset('Sidebar/Key/Amps/Guitar.aupreset');
+		const s = make();
+		expect(s.listing().effectsPlace).toBe('');
+		expect(s.setEffectsPlace('Nowhere')).toBeNull();
+		const listing = s.setEffectsPlace('Key')!;
+		expect(listing.effectsPlace).toBe('Key');
+		const key = s.indexJson().places.find((p) => p.effects);
+		expect(key).toMatchObject({ name: 'Key', hidden: true, source: 'place:Key' });
+		expect(key?.devices).toMatchObject({ Guitar: 'Amps/Guitar.aupreset', Grand: 'Piano/Grand.aupreset' });
+		// Saved on the Mac, beside the ticks: a new service reads it back.
+		service?.stop();
+		expect(make().listing().effectsPlace).toBe('Key');
+		// '' is Live's Audio Effects again, over a config that names a Place.
+		effectsPlace = 'Drum';
+		expect(service!.setEffectsPlace('')!.effectsPlace).toBe('');
+	});
+
 	it('names no effects Place by default on a Mac with no Live index', () => {
 		const s = make();
 		s.setTicks([firstPlace(s).key]);

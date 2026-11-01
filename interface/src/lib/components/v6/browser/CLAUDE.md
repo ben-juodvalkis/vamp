@@ -388,14 +388,17 @@ source and the Phase 4 switch that chose between them.
   (`.has-plugin`, column flex) applies only to tiles that carry one.
 - **Where + Effect opens**: Live's Audio Effects category by default since
   2026-10-31 (Ben), ticked or not, cataloged and kept off the rail unless
-  ticked; or the Place `catalog.effectsPlace` names. A button holding only
+  ticked; or the Effects folder chosen in Settings → Places
+  (`logs/effects.json`, ADR-498, 2026-11-01), else the Place
+  `catalog.effectsPlace` names. Vamp's own effect tiles load their files by
+  name from that same folder; a tile whose file is not there is refused
+  with a banner and the chain shows no ghost of it. A button holding only
   effects opens on the Effect segment, whatever segment was on before.
 - **The effects Place** (`catalog.effectsPlace`, a Place's sidebar name;
   "Vamp Devices" by default from 2026-10-26 until 2026-10-31; the
   rig named its own shelf, "Audio-Midi Effects", in `constants.local.json`,
-  which holds its presets beside hard links to the Vamp Devices effects —
-  `ln`, so the two names are one file and cannot drift, until an editor
-  saves by writing a new file): one screen (user, 2026-10-26). The server
+  which holds its presets beside Vamp's effects, the only copies since they
+  left Vamp Devices on 2026-11-01, ADR-498): one screen (user, 2026-10-26). The server
   lifts every preset in it to its top level, each keeping its own path, and
   leaves out `catalog.effectsHidden` (the Recorder, random-start and their
   plumbing) — `diskScan.tidyEffectsPlace`; the browser draws each folder's

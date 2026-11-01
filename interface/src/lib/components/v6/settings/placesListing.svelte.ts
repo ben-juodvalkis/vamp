@@ -10,7 +10,7 @@
  * first-run checklist's last word, which ends the first run even with
  * nothing ticked.
  */
-import { fetchPlacesListing, savePlacesTicks, PLACES_CHANGED_EVENT, type PlacesListing, type PlacesSource } from '$lib/services/placesLive';
+import { fetchPlacesListing, saveEffectsPlace, savePlacesTicks, PLACES_CHANGED_EVENT, type PlacesListing, type PlacesSource } from '$lib/services/placesLive';
 import { logger } from '$lib/utils/logger';
 
 export function createPlacesListing() {
@@ -72,6 +72,20 @@ export function createPlacesListing() {
 		async toggle(s: PlacesSource): Promise<void> {
 			if (!listing || saving || !s.present) return;
 			await save(listing.sources.filter((x) => (x.key === s.key ? !s.ticked : x.ticked)).map((x) => x.key));
+		},
+		/** Choose the effects folder (ADR-498): a Place's sidebar name, '' for Live's Audio Effects. */
+		async setEffectsPlace(name: string): Promise<void> {
+			if (!listing || saving) return;
+			saving = true;
+			try {
+				listing = await saveEffectsPlace(name);
+				saveError = '';
+			} catch (err) {
+				saveError = String(err);
+				logger.warn('Settings: effects folder not saved', { component: 'placesListing', err: String(err) });
+			} finally {
+				saving = false;
+			}
 		},
 		/** Save the ticks as they stand, which ends a first run. False when it could not. */
 		async finish(): Promise<boolean> {

@@ -292,7 +292,7 @@ tested against the same numbers in `deviceControls.presets.test.ts`).
 - **Max devices** (`.amxd`, 2026-10-26): the file is the `ampf` header (type
   code `aaaa` audio, `mmmm` MIDI) and its patcher JSON; a frozen device
   (`mx@c`) embeds its patchers among its files. Each `live.*` box saves
-  `parameter_initial`, and Live opens the device at it: Octave Mix 100,
+  `parameter_initial`, and Live opens the device at it: Pitch Shift (then the Octave) Mix 100,
   Comb Tune 0 and Mix/Feedback 17.58, Blur Mix 0, Note Chance 100,
   GlitchLoop Dry/Wet 35.7033 (loaded, dumped, deleted). Live names each
   parameter by its `parameter_shortname`, not its long name: Blur's "Loop
@@ -302,11 +302,12 @@ tested against the same numbers in `deviceControls.presets.test.ts`).
 - **A loaded preset's device takes the preset's file name** (Disco
   Filter.adv → an `AutoFilter2` named "Disco Filter"), which is how a drag
   on a browser tile finds the device its load landed. A hard link under
-  another name loads under that name: the shelf's "Pitch Shift.amxd" is
-  `Vamp Devices/Octave/Octave.amxd` and arrives as "Pitch Shift" (loaded,
-  dumped, deleted, 2026-10-26: 1 Semitones -12..12, 2 Mix 0..100, 3 Tone
-  0..100, 4 Response 0..2, 5 Quality 0..2). The app matches it by
-  `aliases` in `devicePresets.ts`.
+  another name loads under that name: the shelf's "Pitch Shift.amxd" was
+  then a hard link of the repo's `Octave.amxd` and arrived as "Pitch Shift"
+  (loaded, dumped, deleted, 2026-10-26: 1 Semitones -12..12, 2 Mix 0..100,
+  3 Tone 0..100, 4 Response 0..2, 5 Quality 0..2). The repo copy is gone
+  since ADR-498 (2026-11-01) and the device is named Pitch Shift in the app;
+  "Octave" stays an alias in `devicePresets.ts`, so saved sets still match.
 - **Random** (MidiRandom, read off the set's "Random Octave" with
   device_dump, 2026-10-26): 1 Chance 0..1, 2 Choices 1..24, 3 Interval
   1..24, 4 Sign 0..2 (Add, Sub, Bi), 5 Mode 0..1 (Rnd, Alt), 6 Use Current

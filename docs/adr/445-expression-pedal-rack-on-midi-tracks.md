@@ -1,7 +1,7 @@
 # ADR-445: The expression pedal drives the wah on audio tracks and the Expression Pedal rack on MIDI tracks
 
 ## Status
-**Accepted** (2026-09-19; extends ADR-407 and ADR-422, the pedal on the surface; ADR-437, placement by the load)
+**Accepted** (2026-09-19; extends ADR-407 and ADR-422, the pedal on the surface; ADR-437, placement by the load). Amended by [ADR-498](498-effects-come-from-the-users-effects-folder.md): the head-of-chain Wah is matched by file name, and the pedal's Wah is `devices.wah.presetPath` only.
 
 ## Context
 

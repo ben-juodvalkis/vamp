@@ -11,8 +11,8 @@
  * the rest (`DEFAULT_EFFECTS`, the user, 2026-11-01), so the section is
  * never empty: Live's devices inserted by name (`native:<class>`, protocol
  * 3.12.0, the user's own default for each applying) and the Guitar and
- * Bass Amp racks from the Vamp Devices Place, each loaded as its FX tile
- * loads it (`deviceLoadArgs`).
+ * Bass Amp racks, offered only when the user's effects folder has them and
+ * loaded from there by name (ADR-498, `effectSources`).
  *
  * Shared across tracks: one just used on one track is ready on the next.
  * Kept in this browser's localStorage, a per-viewer convenience, and
@@ -30,6 +30,7 @@ import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { v3ErrorBannerStore } from '$lib/stores/v6/v3ErrorBannerStore.svelte';
 import { DEVICE_PRESETS, deviceLoadArgs } from '$lib/config/devicePresets';
+import { effectAvailable, effectSource } from '$lib/services/effectSources.svelte';
 import { MIDI_EFFECT_KINDS, type ItemKind } from '$lib/utils/placeKinds';
 import { logger } from '$lib/utils/logger';
 
@@ -121,7 +122,7 @@ export function recordRecentEffect(effect: RecentEffect): void {
 export function recentForChain(loaded: readonly string[], max: number = RECENT_EFFECTS_SHOWN): RecentEffect[] {
 	const have = new Set(loaded);
 	const named = new Set(recent.map((r) => r.name));
-	const defaults = DEFAULT_EFFECTS.filter((d, i) => ![d.name, ...(DEFAULT_ALSO_NAMED[DEFAULT_EFFECT_KEYS[i]] ?? [])].some((n) => named.has(n) || have.has(n)));
+	const defaults = DEFAULT_EFFECTS.filter((d, i) => effectAvailable(DEFAULT_EFFECT_KEYS[i]) && ![d.name, ...(DEFAULT_ALSO_NAMED[DEFAULT_EFFECT_KEYS[i]] ?? [])].some((n) => named.has(n) || have.has(n)));
 	return [...recent, ...defaults].filter((r) => fitsSelectedTrack(r) && !have.has(r.name)).slice(0, max);
 }
 
@@ -142,9 +143,14 @@ export async function addEffectToChain(effect: RecentEffect): Promise<void> {
 	if (!fitsSelectedTrack(effect)) return reportFailure(effect.name, new Error('A MIDI effect goes on a MIDI track'));
 	const cancelView = openViewWhenLanded({ trackPath, padPath: pad?.padPath ?? '', name: effect.name });
 	try {
-		// A default loads as its tile does; a Live device by name sends no file (3.12.0).
-		const file = effect.preset ? (DEVICE_PRESETS[effect.preset]?.presetPath ?? '') : nativeClassOf(effect) ? '' : effect.fullPath;
-		await addPresetToChain(trackPath, pad?.padPath ?? '', file, effect.source, effect.rel);
+		// A default loads as its tile does: one of Vamp's own effects from the
+		// effects folder, by name (ADR-498); a Live device by name sends no file (3.12.0).
+		const config = effect.preset ? DEVICE_PRESETS[effect.preset] : undefined;
+		const found = config?.effect ? effectSource(config) : null;
+		if (config?.effect && !found) throw new Error('Not in your effects folder (Settings → Places)');
+		const { source, rel } = found ?? effect;
+		const file = effect.preset ? (config?.presetPath ?? '') : nativeClassOf(effect) ? '' : effect.fullPath;
+		await addPresetToChain(trackPath, pad?.padPath ?? '', file, source, rel);
 	} catch (err) {
 		cancelView();
 		logger.error('Effect load failed', { component: 'recentEffects', err });

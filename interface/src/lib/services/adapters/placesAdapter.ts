@@ -59,6 +59,8 @@ export interface PlaceInfo {
 	effects?: boolean;
 	/** The effects Place, cataloged though not ticked: kept off the rail. */
 	hidden?: boolean;
+	/** The effects Place's files by name, each the path inside it: where the app's own effects are found (ADR-498). */
+	devices?: Record<string, string>;
 }
 
 export interface PlacesIndex {

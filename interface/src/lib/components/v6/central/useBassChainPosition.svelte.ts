@@ -12,9 +12,9 @@
  * is async, so the device does not exist yet when we ask for it.
  *
  * Two controls use it: the Bass tile (`BassControl`, the audio track's fx1
- * column, 2026-09-14) and the Octave's controls in the Pitch view
+ * column, 2026-09-14) and Pitch Shift's controls in the Pitch view
  * (`views/PitchCentralView`, the Pitch tile until 2026-10-15), whose
- * Octave belongs at the head of the chain too. It was a view-local
+ * Pitch Shift belongs at the head of the chain too. It was a view-local
  * `let` + `$effect` until a second control needed the same twenty lines.
  *
  * `arm()` is called by the gesture that MIGHT load, before the write that

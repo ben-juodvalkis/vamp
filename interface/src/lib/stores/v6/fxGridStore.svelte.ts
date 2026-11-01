@@ -20,6 +20,8 @@ import { isTrackScopeKey, trackOfDevicePath } from '$lib/utils/trackScopePaths';
 import { setNewDeviceHook, v3Store } from '$lib/stores/v3/normalized.svelte';
 import { matchesSlot, pickSlotDevice } from '$lib/utils/deviceSlotMatch';
 import { fxChainStore } from './fxChainStore.svelte';
+import { effectSource } from '$lib/services/effectSources.svelte';
+import { v3ErrorBannerStore } from './v3ErrorBannerStore.svelte';
 import {
 	armParam,
 	armSpeculative,
@@ -484,6 +486,16 @@ export class FXGridState {
 			return;
 		}
 
+		// One of Vamp's own effects loads from the user's effects folder, by
+		// name (ADR-498); not there, it cannot load, and the banner says where
+		// to look rather than the slot waiting out its timeout.
+		const found = config.effect ? effectSource(config) : null;
+		if (config.effect && !found) {
+			v3ErrorBannerStore.show('preset-load-failed', config.defaultName, 'Not in your effects folder (Settings → Places)');
+			return;
+		}
+		const load = found ? { ...config, ...found } : config;
+
 		this.patchSlot(slotKey, { loadState: 'loading', error: undefined }, scope);
 
 		// Clear any existing timeout to prevent leaks if loadDevice is called rapidly
@@ -511,10 +523,10 @@ export class FXGridState {
 		// A held track's scope (track hold) loads onto THAT track, at its top
 		// level, and never renames it: its type is not the selected track's.
 		if (isTrackScopeKey(scope)) {
-			await send('/looping/v3/device/load', deviceLoadArgs(scope, '', config));
+			await send('/looping/v3/device/load', deviceLoadArgs(scope, '', load));
 			return;
 		}
-		await send('/looping/v3/device/load', deviceLoadArgs(selectedTrackStore.selectedTrackPath, scope, config));
+		await send('/looping/v3/device/load', deviceLoadArgs(selectedTrackStore.selectedTrackPath, scope, load));
 		if (scope) return; // a pad's effect never renames the track
 
 		// Rename track when loading guitar or bass effect.

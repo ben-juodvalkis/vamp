@@ -5,6 +5,7 @@
 	import { themeManager } from '$lib/stores/theme';
 	import { destroyAllServices, initializeAllServices } from '$lib/services/serviceCleanup';
 	import { startPlacesLive, openSettingsOnFirstRun } from '$lib/services/placesLive';
+	import { watchEffectSources } from '$lib/services/effectSources.svelte';
 
 	// Import client without auto-connect
 	import { connectToLive } from '$lib/api/simpleClient';
@@ -80,6 +81,7 @@
 		// first-run verdict: with nothing saved there, Settings opens by
 		// itself as the onboarding checklist (onboarding.plan.md §7).
 		startPlacesLive();
+		watchEffectSources();
 		void openSettingsOnFirstRun();
 
 		// ROW 13a (2026-04-21): clipStateStore.requestRefresh() deleted —
