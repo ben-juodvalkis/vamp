@@ -71,7 +71,10 @@ cp "$NODE_DIR/universal/LICENSE" "$OUT/Contents/Resources/node/LICENSE"
 rsync -a --exclude .venv --exclude tests --exclude __pycache__ --exclude '*.pyc' \
   --exclude pytest.ini --exclude requirements-dev.txt --exclude install.sh --exclude '*.md' \
   "$ROOT/surface/" "$OUT/Contents/Resources/surface/"
-ditto "$ROOT/Vamp Devices" "$OUT/Contents/Resources/Vamp Devices"
+# Without Finder's metadata, which codesign refuses: Live stamps a type code
+# on a device it saves, and Finder leaves .DS_Store.
+ditto --norsrc --noextattr --noqtn "$ROOT/Vamp Devices" "$OUT/Contents/Resources/Vamp Devices"
+find "$OUT/Contents/Resources" -name .DS_Store -delete
 
 # --- signing: the inside first, then the app around it -----------------------
 codesign --force --options runtime $TS \
