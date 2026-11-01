@@ -291,8 +291,21 @@
         "className": "MxDeviceAudioEffect",
         "deviceName": "Vamp-Capture",
         "why": "REC's recorder (ADR-495): on a track only while a take records, then deleted."
+      },
+      {
+        "className": "MxDeviceMidiEffect",
+        "deviceName": "random-start",
+        "why": "The Simpler view's Random slider: loaded the first time it moves, drawn only as that slider."
       }
     ],
+    "randomStart": {
+      "className": "MxDeviceMidiEffect",
+      "deviceName": "random-start",
+      "place": "Vamp Devices",
+      "rel": "random-start/random-start.amxd",
+      "amountParam": "Random Amount",
+      "_note": "The Simpler view's Random slider (0..100 %). Not on a track until the slider first moves: the view loads it through device/load (the Place, the path inside it), and Live puts a MIDI effect at the head of the chain, ahead of the Simpler (2026-11-01). Live names the device after the .amxd file."
+    },
     "_hiddenFromChainNote": "Devices Vamp puts on a track for its own work, which the interface never draws as a device: not a chain overview cell (the track's or a drum pad's), and never the device a strip's band shows. Matched by Live's class and the name Live gives the loaded file (a .amxd's file name). The track's device list keeps them, since views index it by chain position, and a drag in the chain moves by Live's own index, so one hidden anywhere cannot shift where a dragged device lands. interface/src/lib/config/hiddenDevices.ts reads this.",
     "midiWheels": {
       "className": "MxDeviceMidiEffect",

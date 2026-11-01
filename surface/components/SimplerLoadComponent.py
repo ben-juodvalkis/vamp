@@ -46,7 +46,6 @@ import time
 from typing import Callable, Dict, Optional, Tuple
 
 from . import alc_resolver
-from . import live_library
 from . import path_resolver
 from . import sample_normalize
 from .drum_vm_functions import DEVICE_TYPE_INSTRUMENT, DEVICE_TYPE_MIDI_EFFECT, device_type
@@ -66,10 +65,8 @@ logger = logging.getLogger("looping")
 # returns the same trackPath), then each sends
 # ``/looping/v3/simpler/replace_sample_onto_track``.
 #
-# We can't dedupe via ``_track_has_random_start`` after the fact because
-# Live's ``load_item`` is async — it returns before the device appears in
-# ``track.devices``, so call #2's idempotency check sees an empty chain
-# and load-and-prepends a second time. Instead, lock at request-time on
+# We can't dedupe by looking at the track after the fact: call #2 runs
+# before call #1's devices have settled. Instead, lock at request-time on
 # ``(track_path, file_path)`` for a few seconds: same args → silent drop.
 # Different file on the same track is still allowed (legitimate retake).
 _DEDUPE_TTL_SECONDS = 10.0
@@ -113,10 +110,6 @@ V3_ERROR_REPLACE_SAMPLE_FAILED = "replace-sample-failed"
 # Live's display name for Simpler, what ``insert_device`` takes.
 SIMPLER_DEVICE_NAME = "Simpler"
 
-# How many ~100 ms ticks the success ack waits for the Random Start
-# prepend (``DeviceInitComponent``, deferred one tick) before it goes out
-# anyway. The prepend normally lands on the first.
-_ACK_SETTLE_TICKS = 5
 
 
 # Tuple of exceptions every LOM touch catches. Same as DeviceLoadComponent.
@@ -129,25 +122,6 @@ class SimplerLoadComponent:
     Args:
         song: The Live ``Song``.
         emit: ``(address, args)`` OSC sender — ``OSCTransport.send``.
-        random_start_device_path: Absolute path to the Random Start
-            ``.amxd`` MIDI utility: the checkout's own, loaded through the
-            "Vamp Devices" Place (``live_library.RANDOM_START_REL``), or
-            ``devices.randomStart.devicePath`` when a config names one.
-            When set, both Simpler-load flows prepend it onto the
-            track after ``replace_sample`` succeeds (idempotent — a
-            track that already carries a ``"Random Start"`` device is
-            left alone). Empty string disables the auto-prepend.
-        resolve_device_loader: ``() -> DeviceLoadComponent | None``
-            callback. Resolved lazily at call time because the DLC is
-            constructed *after* this component in ``LoopingSurface``
-            (the surface's load_preset closure does the same). When
-            it returns ``None`` the Random Start prepend is silently
-            skipped.
-        schedule_delayed: ``(delay_ms, fn) -> None``, the surface's
-            ``_schedule_delayed``. Holds the success ack until the
-            Random Start prepend has shifted the Simpler (see
-            ``_emit_replaced_when_settled``). ``None`` sends the ack
-            at once.
     """
 
     V3_SIMPLER_REPLACE_SAMPLE_ADDRESS = V3_SIMPLER_REPLACE_SAMPLE_ADDRESS
@@ -156,40 +130,19 @@ class SimplerLoadComponent:
     )
     V3_SIMPLER_REPLACED_ADDRESS = V3_SIMPLER_REPLACED_ADDRESS
 
-    # Load-bearing literal: must match the M4L device's user-facing
-    # ``device.name`` in Live. Live falls back to the .amxd basename
-    # (``random-start``) when the patch doesn't set a friendly name via
-    # ``live.thisdevice`` — verified against the running device on
-    # 2026-05-01. If the .amxd is ever rebuilt with an explicit
-    # ``device.name`` override, update this and the matching UI literal
-    # in SimplerCentralView.svelte. Same name-based idempotency the
-    # Permute appender uses (class_name ``MxDeviceMidiEffect`` is
-    # shared with other Max utilities).
-    RANDOM_START_DEVICE_NAME = "random-start"
-
     def __init__(
         self,
         song,
         emit: Callable[[str, tuple], None],
-        random_start_device_path: str = "",
-        resolve_device_loader: Optional[Callable[[], object]] = None,
-        schedule_delayed: Optional[Callable[[int, Callable[[], None]], None]] = None,
     ) -> None:
         self._song = song
         self._emit = emit
-        self._random_start_device_path = random_start_device_path or ""
-        self._resolve_device_loader = resolve_device_loader
-        self._schedule_delayed = schedule_delayed
         self._disconnected = False
         # Dedupe key → monotonic timestamp. See module-level comment on
         # ``_DEDUPE_TTL_SECONDS`` for the bridge-broadcast race we're
         # closing. Insertion-order dict so eviction is O(1).
         self._inflight: Dict[Tuple[str, str], float] = {}
-        logger.info(
-            "SimplerLoadComponent: ready (random_start=%r, dlc_resolver=%s)",
-            self._random_start_device_path,
-            "yes" if resolve_device_loader is not None else "no",
-        )
+        logger.info("SimplerLoadComponent: ready")
 
     # --- wire handler -----------------------------------------------------
 
@@ -463,9 +416,8 @@ class SimplerLoadComponent:
         if normalize:
             self._apply_peak_normalization(simpler, file_path)
 
-        # Random Start prepend is now handled by DeviceInitComponent's
-        # on_device_added observer (ADR-378) — fires for every OriginalSimpler
-        # insertion regardless of load path, so no explicit call needed here.
+        # No Random Start here: the Simpler view loads it the first time its
+        # Random slider moves (2026-11-01, Ben), not on every Simpler.
 
         logger.info(
             "SimplerLoadComponent: replace_sample OK — track idx=%d, sample=%r",
@@ -477,44 +429,13 @@ class SimplerLoadComponent:
         # back of it is already settled. The UI's auto-trim + Recent
         # bookkeeping keys on this instead of inferring the device from
         # property-echo traffic.
-        self._emit_replaced_when_settled(
-            address, track, target_idx, file_path, _ACK_SETTLE_TICKS,
-        )
+        self._ack_replaced(address, track, target_idx, file_path)
 
-    def _emit_replaced_when_settled(
-        self, address: str, track, target_idx: int, file_path: str,
-        ticks_left: int,
-    ) -> None:
-        """Send the success ack once the Simpler's slot is final.
-
-        Random Start is prepended on a deferred tick
-        (``DeviceInitComponent``, ADR-378) and lands at the head of the
-        chain, which moves the Simpler from ``devices/0`` to ``devices/1``
-        after this handler has returned. An ack sent straight away named
-        Random Start's slot (measured on the rig 2026-09-27: ack
-        ``tracks/2/devices/0``, chain afterwards ``['random-start',
-        'Clap Aquarius']``), and the UI trimmed and subscribed on that
-        path. So while a prepend is still due, the ack waits a tick at a
-        time, up to ``ticks_left``, and the Simpler's slot and the
-        track's index are read when it goes out. A prepend that fails
-        still gets its ack when the ticks run out, at the slot the
-        Simpler holds then.
-        """
+    def _ack_replaced(self, address: str, track, target_idx: int, file_path: str) -> None:
+        """Send the success ack, naming the Simpler where it sits now and
+        the track's index as it is now."""
         if self._disconnected:
             return
-        if ticks_left > 0 and self._random_start_due(track):
-            try:
-                self._schedule_delayed(
-                    0,
-                    lambda: self._emit_replaced_when_settled(
-                        address, track, target_idx, file_path, ticks_left - 1,
-                    ),
-                )
-                return
-            except Exception as e:  # noqa: BLE001 — scheduler is trusted; log + send now
-                logger.warning(
-                    "SimplerLoadComponent: schedule_delayed for the ack failed: %s", e,
-                )
         _simpler, simpler_idx = self._find_simpler_with_replace_sample(track)
         if simpler_idx < 0:
             logger.warning(
@@ -527,16 +448,6 @@ class SimplerLoadComponent:
             "tracks/%d/devices/%d" % (self._track_index(track, target_idx), simpler_idx),
             file_path,
         )
-
-    def _random_start_due(self, track) -> bool:
-        """Whether a Random Start prepend is still to land on ``track``:
-        it is configured, there is a scheduler to wait with and a loader
-        to do it, and the track does not carry it yet."""
-        if not self._random_start_device_path or self._schedule_delayed is None:
-            return False
-        if self._resolve_device_loader is None or self._resolve_device_loader() is None:
-            return False
-        return not self._track_has_random_start(track)
 
     def _track_index(self, track, fallback: int) -> int:
         """``track``'s index in ``song.tracks`` now, which a track added or
@@ -621,155 +532,6 @@ class SimplerLoadComponent:
             self._song.end_undo_step()
         except _LOM_ERRORS as e:
             logger.warning("SimplerLoadComponent: end_undo_step raised %s: %s", type(e).__name__, e)
-
-    # --- Random Start prepend ---------------------------------------------
-
-    def ensure_random_start(self, track) -> None:
-        """Idempotently prepend ``Random Start`` onto ``track``.
-
-        Called by ``DeviceInitComponent.on_device_added`` for every
-        ``OriginalSimpler`` insertion (ADR-378) so the RANDOM knob is
-        always available in the central view, regardless of load path.
-
-        No-op when:
-
-        - ``random_start_device_path`` is empty (the checkout has no
-          ``random-start.amxd`` and the config names none);
-        - ``device_load_component`` was not supplied (loader missing —
-          the Simpler itself is already loaded);
-        - the track already carries a device named ``random-start``
-          (the .amxd basename — see ``RANDOM_START_DEVICE_NAME``;
-          idempotent across reuse / repeated insertion).
-
-        On every failure mode (browser miss, ``move_device`` raise) we
-        log a warning and return — the Simpler load itself already
-        succeeded, so the user sees the new sample even if the utility
-        prepend slipped.
-        """
-        path = self._random_start_device_path
-        if not path:
-            return
-        dlc = (
-            self._resolve_device_loader()
-            if self._resolve_device_loader is not None else None
-        )
-        if dlc is None:
-            logger.info(
-                "SimplerLoadComponent: Random Start prepend skipped — "
-                "DeviceLoadComponent unavailable",
-            )
-            return
-        if self._track_has_random_start(track):
-            logger.info(
-                "SimplerLoadComponent: Random Start already on track — skip",
-            )
-            return
-
-        err = dlc.load_into_track(
-            track, path,
-            source=live_library.m4l_source(), rel=live_library.RANDOM_START_REL,
-        )
-        if err is not None:
-            logger.warning(
-                "SimplerLoadComponent: Random Start load failed (%s); "
-                "Simpler is usable, utility absent",
-                err,
-            )
-            return
-
-        # Live lands a MIDI effect at the head of the chain, ahead of the
-        # instrument, on its own (measured 2026-09-11), and a device Live has
-        # just loaded through the browser must never be ``move_device``d
-        # afterwards: undoing that move aborts Live (ADR-437, measured
-        # 2026-09-14 with a Max device and a native rack). Until then this
-        # moved ``devices[-1]`` to the top — the wrong device once Live had
-        # put Random Start at the head, which Live then refused ("Couldn't
-        # move device"). Now the utility stays where Live put it and the
-        # order is only checked. Random Start's own chain observer scans
-        # forward by class_name, so utility devices between it and Simpler
-        # don't break the lock.
-        if not self._random_start_precedes_instrument(track):
-            logger.warning(
-                "SimplerLoadComponent: Random Start landed behind the instrument "
-                "on %r; chain order may be wrong (not moved — ADR-437)",
-                getattr(track, "name", "?"),
-            )
-
-        # Force ``Random Amount`` to 0 so the device starts inert. The
-        # .amxd's ``@_parameter_initial 50.`` would otherwise drop the
-        # user into 50% randomization on every fresh capture, which
-        # surprises more often than it helps.
-        self._zero_random_amount(track)
-
-    def _zero_random_amount(self, track) -> None:
-        """Find the first device named ``random-start`` on ``track`` and
-        write 0 to its ``Random Amount`` parameter. Best-effort — every
-        failure mode logs and returns without escalating."""
-        try:
-            devices = list(track.devices)
-        except _LOM_ERRORS:
-            return
-        rs = next(
-            (d for d in devices
-             if getattr(d, "name", None) == self.RANDOM_START_DEVICE_NAME),
-            None,
-        )
-        if rs is None:
-            return
-        try:
-            params = rs.parameters
-        except _LOM_ERRORS:
-            return
-        for p in params:
-            try:
-                if getattr(p, "name", None) == "Random Amount":
-                    p.value = 0
-                    return
-            except _LOM_ERRORS as e:
-                logger.warning(
-                    "SimplerLoadComponent: write 0 to Random Amount raised: "
-                    "%s: %s", type(e).__name__, e,
-                )
-                return
-
-    @classmethod
-    def _track_has_random_start(cls, track) -> bool:
-        """True when a device named ``random-start`` (the .amxd basename
-        — see ``RANDOM_START_DEVICE_NAME``) is already present."""
-        try:
-            devices = list(track.devices)
-        except _LOM_ERRORS:
-            return False
-        for device in devices:
-            try:
-                if getattr(device, "name", None) == cls.RANDOM_START_DEVICE_NAME:
-                    return True
-            except _LOM_ERRORS:
-                continue
-        return False
-
-    @classmethod
-    def _random_start_precedes_instrument(cls, track) -> bool:
-        """Whether every device ahead of the first ``random-start`` is a MIDI
-        effect — i.e. the utility sits before the instrument, where MIDI
-        reaches it first. ``True`` when there is no Random Start to check."""
-        try:
-            devices = list(track.devices)
-        except _LOM_ERRORS as e:
-            logger.warning(
-                "SimplerLoadComponent: track.devices read raised: %s: %s",
-                type(e).__name__, e,
-            )
-            return True
-        for device in devices:
-            try:
-                if getattr(device, "name", None) == cls.RANDOM_START_DEVICE_NAME:
-                    return True
-                if device_type(device) != DEVICE_TYPE_MIDI_EFFECT:
-                    return False
-            except _LOM_ERRORS:
-                return False
-        return True
 
     def _apply_peak_normalization(self, simpler, file_path: str) -> None:
         """Peak-normalize the Simpler sample to -1 dBFS.
@@ -1007,7 +769,7 @@ class SimplerLoadComponent:
         """First device on ``track`` that exposes ``replace_sample``.
 
         Iterates the chain rather than indexing directly so a track
-        with a Random Start utility at index 0 still resolves to the
+        with a MIDI effect at index 0 (Random Start) still resolves to the
         Simpler that follows it. Returns ``(device, slot_index)``, or
         ``(None, -1)`` when the chain is empty or no device exposes the
         attribute (pre-12.4 Simpler, wrong device class).

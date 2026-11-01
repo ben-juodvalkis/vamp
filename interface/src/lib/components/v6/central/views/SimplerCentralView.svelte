@@ -18,6 +18,9 @@
     simplerWarpHalf,
     simplerWarpDouble,
   } from '$lib/services/simplerActions';
+  import { addPresetToChain } from '$lib/services/deviceMoveService';
+  import constants from '$config/constants.json';
+  import { onDestroy } from 'svelte';
 
   // Simpler parameter indices (from device-configs.json). These are the
   // FALLBACK: a Simpler's list is not one shape — the `Acuff Kit` pads
@@ -76,46 +79,87 @@
   // the v2 .find() it replaces.
   let device = $derived(selectedTrackStore.devicesByPath[deviceIndex]);
 
-  // Random Start MIDI utility (M4L). SimplerLoadComponent prepends it
-  // when a Simpler is created via capture or audio-clip → Simpler. We
-  // resolve by `name` rather than chain-index so the knob keeps working
-  // when the user reorders devices, drops a utility between Random
-  // Start and Simpler, etc.
-  //
-  // Name literal must match Live's runtime `device.name` exactly —
-  // currently the .amxd basename (`random-start`) since the Max patch
-  // doesn't override via `live.thisdevice`. Mirror of
-  // `SimplerLoadComponent.RANDOM_START_DEVICE_NAME` on the Python side.
-  // Live shows the param as "Random Amount" (set by the patch's
-  // `live.numbox @parameter_longname`).
-  const RANDOM_START_DEVICE_NAME = 'random-start';
-  const RANDOM_AMOUNT_PARAM_NAME = 'Random Amount';
+  // Random Start, the M4L utility behind the Random slider
+  // (`constants.devices.randomStart`). Not on a track until the slider first
+  // moves (2026-11-01, Ben): the first drag loads it through `device/load`
+  // and the value it was dragged to is written once Live shows the device.
+  // Found by name, not chain index, so a reorder never loses it; its
+  // parameter by name too, since a rebuilt .amxd may shift indices.
+  const RANDOM_START = constants.devices.randomStart;
   let randomStartDevice = $derived(
     selectedTrackStore.devicesByPath.find(
-      (d) => d.name === RANDOM_START_DEVICE_NAME,
+      (d) => d.className === RANDOM_START.className && d.name === RANDOM_START.deviceName,
     ),
   );
-  // Param record matched by name, not by index — Live's M4L params
-  // can shift if the .amxd is rebuilt. The paramPath we read off the
-  // record IS the canonical write/read key.
   let randomAmountParamPath = $derived.by<string | undefined>(() => {
     const dev = randomStartDevice;
     if (!dev) return undefined;
     for (const p of dev.params.values()) {
-      if (p.name === RANDOM_AMOUNT_PARAM_NAME) return p.paramPath;
+      if (p.name === RANDOM_START.amountParam) return p.paramPath;
     }
     return undefined;
   });
-  // Random Amount ships from Live as 0–100 (% of the headroom between
-  // baseStart and the sample end — see the .js script's `state.amount`
-  // and the .amxd's `live.numbox @_parameter_range 0. 100.`). Cold-read
-  // fallback is 0 so the slider starts inert; the user dials in
-  // randomization explicitly.
+
+  // The value a drag reached before the device arrived, and the track its
+  // load was sent for (a second drag sends no second load).
+  const RANDOM_LOAD_TIMEOUT_MS = 5000;
+  let randomPending = $state<number | null>(null);
+  let randomLoadFor = $state<string | null>(null);
+  let randomLoadTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Random Amount is 0–100 (% of the headroom between the start and the
+  // sample's end). With no device the slider shows 0, or the drag's value.
   let randomAmountValue = $derived(
     randomAmountParamPath
       ? selectedTrackStore.paramValueArmed(randomAmountParamPath) ?? 0
-      : 0,
+      : randomPending ?? 0,
   );
+
+  function setRandomAmount(value: number) {
+    if (randomAmountParamPath) {
+      selectedTrackStore.setParamValue(randomAmountParamPath, value);
+      return;
+    }
+    randomPending = value;
+    const trackPath = selectedTrackStore.selectedTrackPath;
+    if (randomLoadFor === trackPath) return;
+    randomLoadFor = trackPath;
+    addPresetToChain(trackPath, '', '', `place:${RANDOM_START.place}`, RANDOM_START.rel).catch(() => {
+      randomLoadFor = null;
+    });
+    if (randomLoadTimer) clearTimeout(randomLoadTimer);
+    // A load that never lands lets the next drag try again.
+    randomLoadTimer = setTimeout(() => {
+      randomLoadFor = null;
+      randomLoadTimer = null;
+    }, RANDOM_LOAD_TIMEOUT_MS);
+  }
+
+  // The device arrived: it starts at its own default (50 %), so the drag's
+  // value goes on at once.
+  $effect(() => {
+    const path = randomAmountParamPath;
+    if (!path || randomPending === null) return;
+    const value = randomPending;
+    randomPending = null;
+    randomLoadFor = null;
+    if (randomLoadTimer) {
+      clearTimeout(randomLoadTimer);
+      randomLoadTimer = null;
+    }
+    selectedTrackStore.setParamValue(path, value);
+  });
+
+  // Another track: whatever was waiting belonged to the last one.
+  $effect(() => {
+    void selectedTrackStore.selectedTrackPath;
+    randomPending = null;
+    randomLoadFor = null;
+  });
+
+  onDestroy(() => {
+    if (randomLoadTimer) clearTimeout(randomLoadTimer);
+  });
 
   // PR-3.5.7-impl: v3 path-keyed lookup for property reads/writes.
   let devicePath = $derived(device?.devicePath);
@@ -379,7 +423,7 @@
          it also gets a seam. -->
     <div
       class="flex-1 min-h-0 grid grid-rows-2"
-      style="gap: var(--central-gap); grid-template-columns: {randomAmountParamPath ? 'repeat(7, minmax(0, 1fr)) auto minmax(0, 1fr)' : 'repeat(7, minmax(0, 1fr))'};"
+      style="gap: var(--central-gap); grid-template-columns: repeat(7, minmax(0, 1fr)) auto minmax(0, 1fr);"
     >
       <!-- TOP-LEFT: the swap pill lying across the top of the left-hand
            column (user's layout, 2026-09-16), then the Classic/Slice toggle,
@@ -637,36 +681,30 @@
         {/if}
       </div>
 
-      <!-- RANDOM (vertical) — Random Start's "Random Amount" param.
-           Only renders when the device is on the chain; resolved by
-           name so reordering / inserting utilities between Random
-           Start and Simpler doesn't break the binding. Range is
-           0–100 (%) to match the .amxd's parameter declaration.
-           Sits in col 9 of the bottom row, past the seam in col 8 (col 7
-           is Warp, which spans both rows). -->
-      {#if randomAmountParamPath}
-        <!-- Random Start is its own device, an M4L utility ahead of the
-             Simpler, so a seam divides it from the Simpler's controls. -->
-        <div class="col-start-8 row-start-2 flex min-h-0">
-          <SectionDivider orientation="vertical" />
-        </div>
-        <div class="col-start-9 row-start-2 col-span-1 row-span-1 min-h-0 min-w-0">
-          <DeviceSlider
-            value={randomAmountValue}
-            title="Random"
-            icon="dice"
-            orientation="vertical"
-            labelOrientation="horizontal"
-            color={simplerInk}
-            min={0}
-            max={100}
-            onInteraction={(value) => {
-              if (!randomAmountParamPath) return;
-              selectedTrackStore.setParamValue(randomAmountParamPath, value);
-            }}
-          />
-        </div>
-      {/if}
+      <!-- RANDOM (vertical) — Random Start's "Random Amount" param, 0–100 (%).
+           Always drawn: a ghost until the track has the device, which the
+           first drag loads (setRandomAmount). Sits in col 9 of the bottom
+           row, past the seam in col 8 (col 7 is Warp, which spans both
+           rows). -->
+      <!-- Random Start is its own device, an M4L utility ahead of the
+           Simpler, so a seam divides it from the Simpler's controls. -->
+      <div class="col-start-8 row-start-2 flex min-h-0">
+        <SectionDivider orientation="vertical" />
+      </div>
+      <div class="col-start-9 row-start-2 col-span-1 row-span-1 min-h-0 min-w-0">
+        <DeviceSlider
+          value={randomAmountValue}
+          title="Random"
+          icon="dice"
+          orientation="vertical"
+          labelOrientation="horizontal"
+          color={simplerInk}
+          min={0}
+          max={100}
+          isGhost={!randomAmountParamPath}
+          onInteraction={setRandomAmount}
+        />
+      </div>
     </div>
   {:else}
     <!-- Default state when no Simpler present -->

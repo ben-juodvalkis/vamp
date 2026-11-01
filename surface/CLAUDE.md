@@ -330,12 +330,13 @@ entry, the User Library for a Place inside it (which `user_folders` omits),
 `BrowserCache.lookup_named` looks there first, by path second, and an empty
 preset path is filled in from the Place's folder. A miss walks the root once
 more, no more often than every 10 s, so a file Live has listed since loads.
-Permute, MidiWheels and Random Start are the checkout's own (`live_library.device_path`,
+Permute and MidiWheels are the checkout's own (`live_library.device_path`,
 found from this file's real path through the Remote Scripts symlink), loaded
 as `place:Vamp Devices` + the path inside; an older config's
 `devices.<name>.devicePath` is honored verbatim. `paths.placesRoots` and the
-two `devicePath`s left `constants.json`; Random Start followed on 2026-09-27, and
-the rig's `random-start.adv` override left its local file. Tests: `tests/test_browser_cache.py`
+two `devicePath`s left `constants.json`. Random Start is not the surface's to
+load since ADR-496 (2026-11-01): the Simpler view loads it, through the same
+Place, the first time its Random slider moves. Tests: `tests/test_browser_cache.py`
 and the arg cases in `test_track_prepare_component.py`.
 
 ## Track preset in the Set — protocol 3.9.0 (ADR-439, 2026-09-15)
@@ -1514,7 +1515,7 @@ nothing on the wire could name one. ADR-430.
   Reverb's IR subscriptions on a path that moved are torn down), re-emits
   `vm.padFx` and re-emits and re-watches every subscribed pad. It never
   republishes the song and **never feeds `on_device_added`** — the
-  Simpler init rules and the random-start prepend would fire per pad.
+  Simpler init rules would fire per pad.
 - **`device/load` reads its `devicePath` at last** — and **inserts a
   native device by name** (`Chain.insert_device` / `Track.insert_device`,
   Live 12.3+, measured on 12.4.15b2). Since protocol 3.12.0 (2026-09-28)
@@ -1563,9 +1564,9 @@ nothing on the wire could name one. ADR-430.
   alike; moving a long-standing device (native or Max) and undoing that
   is clean. The wah now lands at the head of the effects *by the load*
   (`load_into_track(..., at_head=True)`, mode 1 with the first audio
-  effect selected) and the Simpler random-start prepend no longer moves
-  anything — Live lands a MIDI effect at the head on its own; a Random
-  Start behind the instrument is reported, not moved (ADR-437 addendum). A
+  effect selected); a MIDI effect such as Random Start lands at the head
+  on its own (ADR-437 addendum; the surface no longer prepends it,
+  ADR-496). A
   preset that landed in the chain undoes as Live's own "Insert Device"
   (measured: `song.undo()` → `Undo Insert Device`, chain and track back as
   they were). Every pad-load error carries `;scope=` so the UI's slot reset
@@ -1951,7 +1952,9 @@ names a Place after its folder, so the folder's name is what the loads name
   above). `scripts/amxd-inventory.py` verifies a Max save kept the long
   names / orders and grew no logic.
 - `MidiWheels.amxd` - the on-screen wheels' device (above).
-- `random-start/` - the Simpler's Random knob (`random-start.amxd`).
+- `random-start/` - the Simpler's Random knob (`random-start.amxd`), loaded
+  by the Simpler view the first time the knob moves (ADR-496), and never
+  drawn in the effect chain (`constants.devices.hiddenFromChain`).
 - `Vamp-Recorder/` - the capture engine (`capture-looping.js`, above).
 - `Abstractions/manydeferlows.maxpat` - an abstraction the recorder's
   routing chooser uses (so does the owner's Max Utility patch).

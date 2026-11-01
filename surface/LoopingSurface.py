@@ -1128,16 +1128,6 @@ class LoopingSurface(ControlSurface):
         # until after ``MutationComponent`` is built several blocks
         # down.
         #
-        # ADR-378: ``ensure_random_start`` is injected as a lazy closure
-        # because ``SimplerLoadComponent`` is constructed below this block.
-        # The closure reads ``self._simpler_load_component`` at call time;
-        # it returns ``None`` while the surface is mid-init, and
-        # DeviceInitComponent's Pass 2 silently no-ops in that case.
-        def _resolve_ensure_random_start(track):
-            slc = getattr(self, "_simpler_load_component", None)
-            if slc is not None:
-                slc.ensure_random_start(track)
-
         self._device_init_component = DeviceInitComponent(
             song=self.song,
             emit_selection_change=(
@@ -1145,7 +1135,6 @@ class LoopingSurface(ControlSurface):
             ),
             schedule_delayed=self._schedule_delayed,
             compose_track_path=compose_track_path,
-            ensure_random_start=_resolve_ensure_random_start,
         )
 
         # Bound here because the surviving structural-change composite
@@ -2057,37 +2046,11 @@ class LoopingSurface(ControlSurface):
         # 12.4's SimplerDevice.replace_sample. Inserts a Simpler by name
         # on the new MIDI track (no preset file since 2026-09-27), then
         # calls replace_sample with the audio clip's file_path.
-        # SimplerLoadComponent prepends Random Start before the
-        # freshly-loaded Simpler in both the audio-clip and capture flows.
-        # The device is the checkout's own
-        # ``Vamp Devices/random-start/random-start.amxd``, loaded through the
-        # "Vamp Devices" Place like Permute and MidiWheels (2026-09-27); an
-        # older config's ``devices.randomStart.devicePath`` is honored
-        # verbatim. No file → no prepend; Live still ends up with a usable
-        # Simpler track.
-        configured_rs = ""
-        devices_cfg = constants.get("devices") if isinstance(constants, dict) else None
-        if isinstance(devices_cfg, dict):
-            rs = devices_cfg.get("randomStart")
-            if isinstance(rs, dict) and isinstance(rs.get("devicePath"), str):
-                configured_rs = rs["devicePath"]
-        random_start_device_path = live_library.device_path(
-            live_library.RANDOM_START_REL, configured_rs,
-        )
-        # DeviceLoadComponent is constructed *after* this block, so the Random Start prepend reaches it through a closure that
-        # reads ``self._device_load_component`` at call time. Returns
-        # ``None`` while the surface is mid-init or in a Live-version
-        # gate where the DLC is permanently absent — the prepend then
-        # silently no-ops and the Simpler load itself still succeeds.
-        def resolve_device_loader():
-            return getattr(self, "_device_load_component", None)
-
+        # Random Start is not prepended: the Simpler view loads it the first
+        # time its Random slider moves (2026-11-01).
         self._simpler_load_component = SimplerLoadComponent(
             song=self.song,
             emit=self._transport.send,
-            random_start_device_path=random_start_device_path,
-            resolve_device_loader=resolve_device_loader,
-            schedule_delayed=self._schedule_delayed,
         )
         self._transport.add_handler(
             V3_SIMPLER_REPLACE_SAMPLE_ADDRESS,

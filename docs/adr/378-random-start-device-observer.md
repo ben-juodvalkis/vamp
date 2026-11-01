@@ -1,7 +1,7 @@
 # ADR-378: Random Start Prepend via Device Observer
 
 ## Status
-**Accepted**
+**Superseded** by [ADR-496](496-random-start-loads-on-first-move.md) (2026-11-01): Random Start is no longer prepended to every Simpler.
 
 ## Context
 

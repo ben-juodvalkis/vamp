@@ -18,17 +18,10 @@ Both kick off on ``on_device_added`` for pragmatic reasons:
    live in ``_INIT_RULES`` below; ``data/device-configs.json`` does
    **not** carry init rules.
 
-2. **Random Start prepend.** When an ``OriginalSimpler`` is inserted by
-   any means (browser load, clip-flow, capture-flow, drag-and-drop,
-   or manual insertion), idempotently prepend the ``random-start``
-   M4L utility so the RANDOM knob is always available in the central
-   view. The callable is injected at construction time so
-   ``SimplerLoadComponent`` owns the prepend logic; this component
-   just triggers it from the right hook. If the callable is ``None``
-   (feature disabled or surface mid-init), the pass is silently
-   skipped. ADR-378.
+Random Start is no longer prepended here: the Simpler view loads it the
+first time its Random slider moves (ADR-496, superseding ADR-378).
 
-3. **AU-plugin parameter-population retry.** macOS AU plugins
+2. **AU-plugin parameter-population retry.** macOS AU plugins
    (Komplete Kontrol, Omnisphere) don't expose their parameter
    list synchronously at insert; first LOM read finds
    ``device.parameters`` empty. Schedule 400/800/1600ms retries
@@ -142,12 +135,6 @@ class DeviceInitComponent:
             existing ``components.path_resolver.compose_track_path``;
             injected so the component doesn't depend on the module
             at class scope (lets tests pass a stub resolver).
-        ensure_random_start: ``(track) -> None`` or ``None``. When
-            supplied, called (deferred) after every ``OriginalSimpler``
-            insertion to idempotently prepend the Random Start utility.
-            Binds to ``SimplerLoadComponent._ensure_random_start`` in
-            production. ``None`` disables the pass (feature off or
-            surface mid-init).
 
     Lifecycle:
         ``__init__`` stores callables and zeroes the AU-retry epoch
@@ -162,13 +149,11 @@ class DeviceInitComponent:
         emit_selection_change: Callable[[str], None],
         schedule_delayed: Callable[[int, Callable[[], None]], None],
         compose_track_path: Callable[[Any, Any], Optional[str]],
-        ensure_random_start: Optional[Callable] = None,
     ):
         self._song = song
         self._emit_selection_change = emit_selection_change
         self._schedule_delayed = schedule_delayed
         self._compose_track_path = compose_track_path
-        self._ensure_random_start = ensure_random_start
         self._disconnected = False
 
         # Per-track monotonic epoch. A new AU-retry schedule bumps
@@ -181,13 +166,11 @@ class DeviceInitComponent:
     def on_device_added(self, track, device, chain_idx: int) -> None:
         """LOM ``on_device_added`` subscriber.
 
-        Runs three independent passes:
+        Runs two independent passes:
 
         1. Init-rule match by ``device.class_name`` → apply actions
            → scoped re-emit for the track.
-        2. Random Start prepend — when an ``OriginalSimpler`` is added
-           by any means, idempotently prepend the utility (ADR-378).
-        3. AU-plugin check → schedule retry chain.
+        2. AU-plugin check → schedule retry chain.
 
         Guarded so a failing rule on one device doesn't derail the
         other pass (or subsequent devices). Never raises.
@@ -221,24 +204,7 @@ class DeviceInitComponent:
                     "rules failed: %s", e,
                 )
 
-        # Pass 2: Random Start prepend. Fires for every OriginalSimpler
-        # insertion regardless of load path (browser, clip-flow, capture,
-        # drag-and-drop). Deferred for the same reason as Pass 1 — LOM
-        # writes from inside a notification callback are silently dropped.
-        # _ensure_random_start is idempotent; a track that already has the
-        # utility is a no-op. ``on_device_added`` also fires at startup for
-        # already-present devices — the idempotency guard handles that too.
-        if class_name == "OriginalSimpler" and self._ensure_random_start is not None:
-            fn = self._ensure_random_start
-            try:
-                self._schedule_delayed(0, lambda: fn(track))
-            except Exception as e:  # noqa: BLE001 — scheduler is trusted; log + drop
-                logger.warning(
-                    "DeviceInitComponent: schedule_delayed(0) for Random Start "
-                    "prepend failed: %s", e,
-                )
-
-        # Pass 3: AU-plugin retry. The init-rule pass also covers the
+        # Pass 2: AU-plugin retry. The init-rule pass also covers the
         # case where an AU plugin happens to match a rule — not today
         # in practice (rules key on OriginalSimpler) but the two are
         # orthogonal by design.
