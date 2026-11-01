@@ -64,12 +64,14 @@ struct MenuContent: View {
     var body: some View {
         Text(vamp.statusLine)
         if let note = vamp.updateNote { Text(note) }
+        if let note = vamp.liveNote { Text(note) }
         if !vamp.fromNpm {
             Button("Start Vamp") { vamp.start() }.disabled(!vamp.canStart)
             Button("Restart Vamp") { vamp.restart() }.disabled(!vamp.canStop)
             Button("Stop Vamp") { vamp.stop() }.disabled(!vamp.canStop)
         }
         Button("Copy iPad Address (\(vamp.iPadAddress))") { vamp.copyIPadAddress() }
+        Button("Show iPad Address as QR Code") { vamp.showQRCode() }
         Button("Show Log") { vamp.showLog() }.disabled(vamp.logURL == nil)
         Toggle("Open at Login", isOn: Binding(
             get: { openAtLogin },
@@ -109,6 +111,9 @@ struct MenuContent: View {
 
         Divider()
 
+        if vamp.paths?.installed == true {
+            Button("Uninstall Vamp…") { vamp.uninstall() }
+        }
         Button(vamp.fromNpm || vamp.state == .external ? "Quit" : "Quit (stops Vamp)") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
     }

@@ -37,6 +37,16 @@ def _find_device_configs_path() -> Optional[str]:
     symlink is resolved via ``realpath`` so we land in the real
     repo regardless of how the surface was installed.
     """
+    try:
+        from . import config_loader
+    except ImportError:
+        import config_loader  # type: ignore[no-redef]
+
+    # Installed, the file ships in the app's folder (``vamp-paths.json``).
+    app = config_loader.vamp_paths().get("app")
+    if app:
+        candidate = os.path.join(app, "data", "device-configs.json")
+        return candidate if os.path.isfile(candidate) else None
     here = os.path.dirname(os.path.realpath(__file__))
     # Expected repo layout:
     #   <repo>/surface/  <- `here`

@@ -28,7 +28,16 @@ final class Supervisor: ObservableObject {
 
     let repoRoot: URL?
     /// Where Vamp runs from: the checkout, or the server inside this app.
-    let paths: VampPaths?
+    private(set) var paths: VampPaths?
+    /// What Live still needs after setup put the surface in place, installed only.
+    @Published private(set) var liveNote: String?
+    /// The QR code's window, held while it is open.
+    var qrWindow: NSWindow?
+
+    func setLiveNote(_ note: String?) { liveNote = note }
+
+    /// The folders again, after the user picks where Vamp Devices goes.
+    func choseDevices() { paths = VampPaths.current(repoRoot: repoRoot) }
     let pagePort: UInt16
     let fromNpm: Bool
 
@@ -66,6 +75,7 @@ final class Supervisor: ObservableObject {
                 VampLog.line("— Vamp for Mac took back the npm run ipad it started before (pid \(pid)) —")
             }
             await checkHealth()
+            if paths?.installed == true { setUpInstalled() }
             if !fromNpm && !pageUp && !hasChild {
                 // A rebuilt app relaunches itself and starts Vamp from there.
                 if await updateSelfIfStale() { return }

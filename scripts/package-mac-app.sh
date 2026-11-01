@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #
-# Vamp for Mac with everything inside it (installer.plan.md Phase 3): the
-# app, the standalone server (`npm run build:server`) in
-# Contents/Resources/vamp, and a universal Node 22 LTS in
-# Contents/Resources/node. Opened on a Mac with no checkout, it runs that
+# Vamp for Mac with everything inside it (installer.plan.md Phases 3–4):
+# the app, the standalone server (`npm run build:server`) in
+# Contents/Resources/vamp, a universal Node 22 LTS in Contents/Resources/node,
+# and the control surface and Vamp Devices that first launch copies into
+# place (Contents/Resources/surface, Contents/Resources/Vamp Devices). Opened on a Mac with no checkout, it runs that
 # server with that Node. Writes dist/Vamp.app; installs nothing.
 #
 #   bash scripts/package-mac-app.sh               ad-hoc signed, for a local try
@@ -58,6 +59,12 @@ ditto "$ROOT/dist/vamp" "$OUT/Contents/Resources/vamp"
 mkdir -p "$OUT/Contents/Resources/node/bin"
 cp "$NODE_DIR/universal/bin/node" "$OUT/Contents/Resources/node/bin/node"
 cp "$NODE_DIR/universal/LICENSE" "$OUT/Contents/Resources/node/LICENSE"
+# What first launch copies into place (FirstLaunch.swift): the control surface
+# without its tests and venv, and Vamp Devices.
+rsync -a --exclude .venv --exclude tests --exclude __pycache__ --exclude '*.pyc' \
+  --exclude pytest.ini --exclude requirements-dev.txt --exclude install.sh --exclude '*.md' \
+  "$ROOT/surface/" "$OUT/Contents/Resources/surface/"
+ditto "$ROOT/Vamp Devices" "$OUT/Contents/Resources/Vamp Devices"
 
 # --- signing: the inside first, then the app around it -----------------------
 codesign --force --options runtime --timestamp=none \

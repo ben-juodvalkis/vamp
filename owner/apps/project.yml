@@ -102,6 +102,7 @@ targets:
       - Mac/PairedIPads.swift
       - Mac/VampLog.swift
       - Mac/VampPaths.swift
+      - Mac/FirstLaunch.swift
       - Tests
     settings:
       base:

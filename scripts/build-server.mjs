@@ -10,6 +10,7 @@
  *     bridge/bridge.cjs    the bridge, bundled
  *     scripts/             the server's child scripts and open-live, bundled
  *     config/constants.json
+ *     data/device-configs.json   read by the control surface
  *     node_modules/audio-decode   the one package the build leaves external, bundled
  *
  *   npm run build:server            then   node dist/vamp/vamp-server.mjs
@@ -107,6 +108,9 @@ for (const name of ['@sveltejs/kit', 'svelte', 'devalue', 'workbox-precaching'])
 cpSync(join(root, 'scripts', 'server', 'vamp-server.mjs'), join(out, 'vamp-server.mjs'));
 mkdirSync(join(out, 'config'), { recursive: true });
 cpSync(join(root, 'config', 'constants.json'), join(out, 'config', 'constants.json'));
+// The control surface reads the device configs from the app's folder.
+mkdirSync(join(out, 'data'), { recursive: true });
+cpSync(join(root, 'data', 'device-configs.json'), join(out, 'data', 'device-configs.json'));
 writeFileSync(join(out, 'package.json'), JSON.stringify({ name: 'vamp-server', private: true, type: 'module' }, null, 2) + '\n');
 
 // 6. The licenses of every package inside, which bundling strips from the code.
