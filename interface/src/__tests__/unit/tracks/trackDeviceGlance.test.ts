@@ -113,6 +113,18 @@ describe('trackDeviceGlance', () => {
 		expect(glance.glyph).toBe('device');
 	});
 
+	it('never takes a device Vamp hides (REC\'s recorder) as the head', () => {
+		replaceTree(1, [
+			track('tracks/1', 'audio', [
+				device('tracks/1/devices/0', 'Vamp-Capture', 'MxDeviceAudioEffect'),
+				device('tracks/1/devices/1', 'Auto Filter', 'AutoFilter2')
+			]),
+			track('tracks/2', 'audio', [device('tracks/2/devices/0', 'Vamp-Capture', 'MxDeviceAudioEffect')])
+		]);
+		expect(trackDeviceGlance('tracks/1').headPath).toBe('tracks/1/devices/1');
+		expect(trackDeviceGlance('tracks/2').kind).toBe('empty');
+	});
+
 	it('falls back to the chain head on an audio track, and resolves its view type', () => {
 		replaceTree(1, [
 			track('tracks/1', 'audio', [

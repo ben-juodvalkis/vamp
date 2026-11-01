@@ -22,7 +22,7 @@
     "waveformMaxBytes": 78643200,
     "waveformStreamingEnabled": true,
     "liveDatabaseDir": "~/Library/Application Support/Ableton/Live Database",
-    "_liveRecordingsDirNote": "Live's temporary folder (Preferences > File & Folder), where Live makes a '<date time> Temp Project' for every unsaved set as it opens. The bridge hands the newest one to Vamp-Recorder.amxd before each capture, so an unsaved set's capture lands in its own project (interface/bridge/handlers/captureRecorder.js). This is Live's default; a Mac that moved the folder in Live's preferences sets its own in constants.local.json. A leading ~/ is the home directory.",
+    "_liveRecordingsDirNote": "Live's temporary folder (Preferences > File & Folder), where Live makes a '<date time> Temp Project' for every unsaved set as it opens. The bridge hands the newest one to Vamp-Capture.amxd before each capture, so an unsaved set's capture lands in its own project (interface/bridge/handlers/captureRecorder.js). This is Live's default; a Mac that moved the folder in Live's preferences sets its own in constants.local.json. A leading ~/ is the home directory.",
     "liveRecordingsDir": "~/Music/Ableton/Live Recordings"
   },
 
@@ -286,11 +286,14 @@
     "sequencer": {
       "description": "The Permute sequencer (permute ADR-020: the thin Permute and its surface engine are developed here; the permute repo is frozen). The Python TrackPrepareComponent appends it on every successful prepare_for_preset (idempotent — skipped when already present on the chain) so a single round-trip leaves the track ready; FootTriggerComponent appends it inline on hold-create. Since 2026-09-26 its path is the checkout's own Vamp Devices/Permute/Permute.amxd, found by the surface from its own location and loaded through the \"Vamp Devices\" sidebar Place (onboarding.plan.md §6.3), so no devicePath is configured; an older config's devicePath is still honored verbatim."
     },
-    "captureRecorder": {
-      "className": "MxDeviceAudioEffect",
-      "deviceName": "Vamp-Capture",
-      "_note": "REC's recorder (ADR-495), found by Live's class and the name it gives the loaded .amxd. The chain overview leaves it out: it is there only while a take records."
-    },
+    "hiddenFromChain": [
+      {
+        "className": "MxDeviceAudioEffect",
+        "deviceName": "Vamp-Capture",
+        "why": "REC's recorder (ADR-495): on a track only while a take records, then deleted."
+      }
+    ],
+    "_hiddenFromChainNote": "Devices Vamp puts on a track for its own work, which the interface never draws as a device: not a chain overview cell (the track's or a drum pad's), and never the device a strip's band shows. Matched by Live's class and the name Live gives the loaded file (a .amxd's file name). The track's device list keeps them, since views index it by chain position, and a drag in the chain moves by Live's own index, so one hidden anywhere cannot shift where a dragged device lands. interface/src/lib/config/hiddenDevices.ts reads this.",
     "midiWheels": {
       "className": "MxDeviceMidiEffect",
       "deviceName": "MidiWheels",

@@ -29,6 +29,7 @@
  * already in the state/full tree for EVERY track.
  */
 
+import { visibleDevices } from '$lib/config/hiddenDevices';
 import { v3Store } from '$lib/stores/v3/normalized.svelte';
 import type { DeviceRecord, TrackRecord } from '$lib/stores/v3/normalized.svelte';
 import {
@@ -224,7 +225,8 @@ function glyphFor(device: DeviceRecord): DeviceGlyph {
 /** The glance for one track path. Pure over the v3 tree — exported for tests. */
 export function trackDeviceGlance(trackPath: string): TrackDeviceGlance {
 	const track = v3Store.tracks.get(trackPath);
-	const devices = track ? [...track.devices.values()] : [];
+	// A device Vamp keeps for its own work is never the track's head (hiddenDevices).
+	const devices = track ? visibleDevices([...track.devices.values()]) : [];
 
 	// An audio track's one "instrument" is a pattern rack (the Shaker's).
 	const instrument = canHoldInstrument(track)

@@ -102,7 +102,7 @@
         },
         "liveRecordingsDir": {
           "type": "string",
-          "description": "Live's temporary folder, where it makes a Temp Project for every unsaved set (a leading ~/ is the home directory). The bridge hands the newest one to Vamp-Recorder.amxd before each capture (interface/bridge/handlers/captureRecorder.js). Live's default is ~/Music/Ableton/Live Recordings."
+          "description": "Live's temporary folder, where it makes a Temp Project for every unsaved set (a leading ~/ is the home directory). The bridge hands the newest one to Vamp-Capture.amxd before each capture (interface/bridge/handlers/captureRecorder.js). Live's default is ~/Music/Ableton/Live Recordings."
         }
       }
     },
@@ -338,6 +338,15 @@
       "type": "object",
       "description": "Device configuration",
       "properties": {
+        "hiddenFromChain": {
+          "type": "array",
+          "description": "Devices Vamp puts on a track for its own work and never draws as a device (chain overview cells, a strip's device band). Matched by Live's class and the name Live gives the loaded file. Read by interface/src/lib/config/hiddenDevices.ts.",
+          "items": {
+            "type": "object",
+            "required": ["className", "deviceName"],
+            "properties": { "className": { "type": "string" }, "deviceName": { "type": "string" }, "why": { "type": "string" } }
+          }
+        },
         "audioEffectRack": {
           "type": "object",
           "properties": {

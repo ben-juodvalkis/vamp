@@ -50,8 +50,12 @@ state, meter and file. Loading it onto the selected track left arm alone
   the surface delete it (`device/delete`). Each take costs two undo steps in
   Live, Insert Device and Delete Device; the plan kept the device to avoid
   the second, since undoing a moved, freshly loaded Max device has aborted
-  Live (ADR-437). Undoing these two is unmeasured. The chain overview never
-  draws a Vamp-Capture (`constants.devices.captureRecorder`).
+  Live (ADR-437). Undoing these two is unmeasured. The interface never
+  draws a Vamp-Capture as a device: it is the first entry of
+  `constants.devices.hiddenFromChain`, the one list of devices Vamp keeps
+  for its own work (`$lib/config/hiddenDevices.ts`, read by the chain
+  overview and the strip's device band; a chain drag moves by Live's own
+  index, so a hidden device cannot shift where a dragged one lands).
 - **The page sends the selected track**, and the source and Ext. In channel
   from Settings → General → Capture (this screen's own setting: the input
   belongs to the rig, not to a track or a take). REC no longer turns up

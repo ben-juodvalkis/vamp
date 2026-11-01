@@ -26,6 +26,18 @@ export function clampChainIndex(input: {
 	return to;
 }
 
+/**
+ * The chain index Live should move a device to, for a drop at `to` in the
+ * chain as drawn. The drawn chain leaves some devices out (`hiddenDevices`),
+ * so a drawn position is not Live's index once one sits ahead of it: the
+ * device drawn at `to` now is where the moved one lands, so its own index
+ * is the answer. Read off its path (`…/devices/<N>`).
+ */
+export function liveChainIndex(drawn: readonly { path: string }[], to: number): number {
+	const m = /\/devices\/(\d+)$/.exec(drawn[to]?.path ?? '');
+	return m ? Number(m[1]) : to;
+}
+
 /** `items` with the one at `from` moved to `to`. */
 export function moved<T>(items: readonly T[], from: number, to: number): T[] {
 	const out = items.slice();

@@ -85,6 +85,7 @@
   import { swallowNextClick } from '$lib/utils/swallowNextClick';
   import { drag as dragAction, type DragInfo, type DragEndInfo } from '$lib/actions/drag';
   import { moveDevice } from '$lib/services/deviceMoveService';
+  import { isHiddenFromChain, visibleDevices } from '$lib/config/hiddenDevices';
   import {
     arrange,
     chainGrid,
@@ -93,6 +94,7 @@
     clampChainIndex,
     moved,
     planReorder,
+    liveChainIndex,
     REORDER_IDLE,
     sameDevices,
     type ReorderState
@@ -190,7 +192,7 @@
     if (!padScope) return null;
     const fx = parseVmPadFx(selectedTrackStore.propertyValue(padScope.rackPath, VM_PAD_FX))?.get(padScope.note) ?? [];
     const records = new Map(selectedTrackStore.padDevices(padScope.padPath).map((d) => [d.devicePath, d]));
-    return fx.map((d) => {
+    return fx.filter((d) => !isHiddenFromChain(d)).map((d) => {
       const devicePath = `${padScope.padPath}/devices/${d.index}`;
       const device: DeviceRecord = records.get(devicePath) ?? {
         devicePath,
@@ -206,16 +208,11 @@
   /** Picks are the pad's under a pad scope, as the grid's tiles read them. */
   const pickScope = $derived(padScope?.padPath ?? trackPath);
 
-  /** REC's recorder, there only while a take records: never a cell (ADR-495). */
-  const CAPTURE = constants.devices.captureRecorder;
-  const isCaptureRecorder = (d: DeviceRecord) => d.className === CAPTURE.className && d.name === CAPTURE.deviceName;
-
+  // Devices Vamp keeps for its own work are never cells (hiddenDevices).
   const devices = $derived(
     padChain
       ? padChain.map((c) => c.device)
-      : [...selectedTrackStore.devicesByPath]
-          .filter((d) => !isCaptureRecorder(d))
-          .sort((a, b) => indexOf(a.devicePath) - indexOf(b.devicePath))
+      : visibleDevices([...selectedTrackStore.devicesByPath]).sort((a, b) => indexOf(a.devicePath) - indexOf(b.devicePath))
   );
   const padInk = $derived(padScope && padScope.color !== null ? trackInk(rgbToHex(padScope.color), paintModeReactive()) : null);
   const glance = $derived(trackDeviceGlance(trackPath));
@@ -385,7 +382,8 @@
     if (!state.desired) return;
     const now = Date.now();
     const { state: next, send } = planReorder(state, cells, now, MOVE_TIMEOUT_MS);
-    if (send) void moveDevice(send.path, send.to).catch(() => (reorder = REORDER_IDLE));
+    // `send.to` is a position in the chain as drawn; Live moves by its own index.
+    if (send) void moveDevice(send.path, liveChainIndex(cells, send.to)).catch(() => (reorder = REORDER_IDLE));
     if (next !== state) reorder = next;
     if (!next.inflight) return;
     // Wake when the move in flight runs out, if Live never shows it.

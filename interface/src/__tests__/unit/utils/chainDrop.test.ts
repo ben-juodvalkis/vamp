@@ -3,6 +3,7 @@ import {
 	arrange,
 	chainGrid,
 	clampChainIndex,
+	liveChainIndex,
 	moved,
 	planReorder,
 	REORDER_IDLE,
@@ -196,5 +197,20 @@ describe('the ghost section fills an uneven wrap (ADR-484)', () => {
 		// A full row leaves nothing.
 		expect(ghostSpan(6, 2, chainGrid(7, 4))).toBe(2);
 		expect(ghostSpan(3, 2, chainGrid(4, 4))).toBe(2);
+	});
+});
+
+describe('liveChainIndex', () => {
+	const at = (...idx: number[]) => idx.map((n) => ({ path: `tracks/0/devices/${n}` }));
+	it('is the drawn position while nothing is hidden', () => {
+		expect(liveChainIndex(at(0, 1, 2, 3), 2)).toBe(2);
+	});
+	it('skips a hidden device ahead of the drop', () => {
+		// Live's chain 0 1 [2 hidden] 3 4, drawn as 0 1 3 4: a drop at drawn 2 is Live's 3.
+		expect(liveChainIndex(at(0, 1, 3, 4), 2)).toBe(3);
+		expect(liveChainIndex(at(0, 1, 3, 4), 1)).toBe(1);
+	});
+	it('reads a pad chain\'s own index', () => {
+		expect(liveChainIndex([{ path: 'tracks/0/devices/0/pads/36/devices/0' }, { path: 'tracks/0/devices/0/pads/36/devices/2' }], 1)).toBe(2);
 	});
 });
