@@ -1,7 +1,8 @@
 <script lang="ts">
 	/**
-	 * Settings → General: Behavior, Appearance and the Foot Switch, the cards
-	 * that left the System view (plan.md §11) on their old addresses.
+	 * Settings → General: Behavior, Appearance, Capture and the Foot Switch.
+	 * All but Capture left the System view (plan.md §11) on their old
+	 * addresses; Capture says what REC records, kept on this screen.
 	 *
 	 * Each switch is a whole row — the name, what it does, and its state on
 	 * the right — so what a switch does is on the glass rather than in a
@@ -20,6 +21,7 @@
 		setFootSwitchLearn
 	} from '$lib/services/sessionCommands';
 	import { theme, resolvedTheme, themeActions, type Theme } from '$lib/stores/theme';
+	import { captureSettings, CAPTURE_CHANNELS, type CaptureSource } from '$lib/stores/v6/captureSettingsStore.svelte';
 	import Sun from '@lucide/svelte/icons/sun';
 	import Moon from '@lucide/svelte/icons/moon';
 	import Monitor from '@lucide/svelte/icons/monitor';
@@ -69,6 +71,12 @@
 		{ id: 'light', label: 'Light', icon: Sun },
 		{ id: 'dark', label: 'Dark', icon: Moon },
 		{ id: 'system', label: 'Auto', icon: Monitor }
+	];
+
+	// --- Capture ----------------------------------------------------------
+	const CAPTURE_SOURCES: { id: CaptureSource; label: string }[] = [
+		{ id: 'track', label: 'Track' },
+		{ id: 'input', label: 'Input' }
 	];
 
 	// --- Foot switch ------------------------------------------------------
@@ -140,6 +148,57 @@
 				</div>
 			</div>
 		</div>
+	</section>
+
+	<section class="set-group" data-debug="settings-capture">
+		<h2 class="set-group-title">Capture</h2>
+		<div class="set-list">
+			<div class="set-row set-row-stack">
+				<span class="set-row-main">
+					<span class="set-row-label">REC records</span>
+					<span class="set-row-sub">
+						{captureSettings.source === 'track'
+							? 'What the selected track plays, after its instrument and effects.'
+							: 'Your audio interface’s input, on the channel below.'}
+					</span>
+				</span>
+				<div class="set-segmented set-segmented-2" role="group" aria-label="REC records">
+					{#each CAPTURE_SOURCES as c (c.id)}
+						<button
+							class="set-segment"
+							class:on={captureSettings.source === c.id}
+							aria-pressed={captureSettings.source === c.id}
+							onclick={() => captureSettings.setSource(c.id)}
+							data-capture-source={c.id}
+						>
+							<span>{c.label}</span>
+						</button>
+					{/each}
+				</div>
+			</div>
+			{#if captureSettings.source === 'input'}
+				<div class="set-row set-row-stack">
+					<span class="set-row-main">
+						<span class="set-row-label">Input channel</span>
+						<span class="set-row-sub">The jack your mic or instrument is in, as Live numbers its inputs.</span>
+					</span>
+					<div class="set-segmented set-segmented-6" role="group" aria-label="Input channel">
+						{#each CAPTURE_CHANNELS as ch (ch)}
+							<button
+								class="set-segment"
+								class:on={captureSettings.channel === ch}
+								aria-pressed={captureSettings.channel === ch}
+								onclick={() => captureSettings.setChannel(ch)}
+								data-capture-channel={ch}
+							>
+								<span>{ch}</span>
+							</button>
+						{/each}
+					</div>
+				</div>
+			{/if}
+		</div>
+		<p class="set-note">REC puts Vamp-Capture at the end of the track it records the first time, and reuses it after. It needs Vamp Devices in Live’s Places.</p>
 	</section>
 
 	<section class="set-group" data-debug="settings-foot-switch">
@@ -218,6 +277,14 @@
 		gap: var(--spacing-xs);
 		flex-shrink: 0;
 		width: min(100%, 21rem);
+	}
+	.set-segmented-2 {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		width: min(100%, 14rem);
+	}
+	.set-segmented-6 {
+		grid-template-columns: repeat(6, minmax(0, 1fr));
+		width: min(100%, 24rem);
 	}
 	.set-segment {
 		display: inline-flex;

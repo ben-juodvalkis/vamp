@@ -156,20 +156,22 @@ describe('WebSocket server wiring', () => {
 		expect(h.errors.map((e) => e.message)).toEqual([]);
 	});
 
-	it('hands the recorder its folder before a capture start, on the same port', async () => {
-		// The device records an unsaved set into the folder it heard last, so
-		// the folder must reach it first — and must not be dropped between
-		// the connection's context and the handler, as relayTotalMixLevel once was.
-		let h: Harness | null = null;
-		const startsSentBeforeFolder: number[] = [];
+	it('hands capture starts and stops to the recorder handler, with their arguments', async () => {
+		// The handler loads a recorder when the track has none and sends the
+		// folder ahead of the start, so neither may go straight to the port, and
+		// the handler must not be dropped between the connection's context and
+		// the handler, as relayTotalMixLevel once was.
+		const calls: Array<[string, unknown]> = [];
 		const recorder = {
-			sendProjectFolder: () => startsSentBeforeFolder.push(h?.sentToRecorder.length ?? -1)
+			start: (args: unknown) => calls.push(['start', args]),
+			stop: () => calls.push(['stop', null])
 		};
-		h = await startServer(null, recorder);
-		await sendOne(h.port, { address: '/capture/start', args: [] });
+		const h = await startServer(null, recorder);
+		await sendOne(h.port, { address: '/capture/start', args: [3, 'input', '1/2'] });
+		await sendOne(h.port, { address: '/capture/stop', args: [] });
 		expect(h.errors.map((e) => e.message)).toEqual([]);
-		expect(startsSentBeforeFolder).toEqual([0]);
-		expect(h.sentToRecorder).toEqual([{ address: '/capture/start', args: [] }]);
+		expect(calls).toEqual([['start', [3, 'input', '1/2']], ['stop', null]]);
+		expect(h.sentToRecorder).toEqual([]);
 	});
 
 	it('tells a new client the feature switches the moment it connects', async () => {

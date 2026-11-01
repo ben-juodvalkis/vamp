@@ -32,10 +32,10 @@
  * the surface (`FootSwitchComponent`). §7b lists the rest, in the order they
  * will follow; each one joins FEATURE_IDS when it is gated.
  *
- * **Built in, not switched:** `captureRecorder`, the Vamp-Recorder device
+ * **Built in, not switched:** `captureRecorder`, the Vamp-Capture device
  * behind REC. It needs only Max for Live, which every Suite has, so no config
- * turns it off; it rides the same snapshot for its availability alone — REC
- * greys out, saying why, until the device on Return A says hello
+ * turns it off; it rides the same snapshot, available from the start, since
+ * REC loads a recorder onto the track it records when there is none
  * (`handlers/captureRecorder.js`).
  */
 

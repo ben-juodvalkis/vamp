@@ -311,9 +311,10 @@ connect, on change and with the 5 s ping.
 Still to come (`docs/plans/general-release/plan.md` §4): `pluginFx`, a
 row here once it is wired. The capture recorder is **not** a switch (decided
 2026-09-27): every edition has it, since it needs only Max for Live. It rides
-`/bridge/features` as `captureRecorder`, always enabled, so REC greys out
-with `No recorder on Return A` until the device says hello
-(`interface/bridge/handlers/captureRecorder.js`, wire-protocol §2.15).
+`/bridge/features` as `captureRecorder`, always enabled and available from
+the start, since REC loads Vamp-Capture onto the track it records when that
+track has none (`interface/bridge/handlers/captureRecorder.js`,
+wire-protocol §2.15).
 Two names from §7b's first list will not become switches: the Skaka view
 already appears only for a rack whose first macro reads "Pattern N", and
 Permute's Place becomes an onboarding step. (`move` folded into

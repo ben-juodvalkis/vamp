@@ -308,14 +308,18 @@ const healthMonitor = createHealthMonitor({
 });
 
 // The capture recorder behind REC (handlers/captureRecorder.js). Not a switch:
-// every edition has it. Available while the device on Return A says hello;
-// before each start it is told which folder an unsaved set records into.
+// every edition has it. REC on a track with no recorder has the surface load
+// one there and starts it on its first hello; before each start the device is
+// told which folder an unsaved set records into.
 const { createCaptureRecorder } = require('./handlers/captureRecorder');
 const captureRecorder = createCaptureRecorder({
     features,
     logger,
     recordingsDir: (constants.paths || {}).liveRecordingsDir,
-    sendToDevice: (msg) => udpPorts.loopingRecorder?.send(msg)
+    sendToDevice: (msg) => udpPorts.loopingRecorder?.send(msg),
+    sendToSurface: sendTaggedToSurface,
+    // The batcher is made further down; a refusal only ever comes later.
+    broadcast: (address, args) => broadcastBatcher.enqueue({ address, args, source: 'bridge' })
 });
 
 // Ben's Adaptive Tone Shaper's graph (handlers/toneShaper.js): every instance

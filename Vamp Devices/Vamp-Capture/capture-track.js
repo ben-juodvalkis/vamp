@@ -10,7 +10,8 @@
 // for one track: `/capture/start` names it, or means the selected track
 // when it does not. A copy on any other track ignores it.
 //
-// Commands in (udpreceive 11016, through OSC-route /capture):
+// Commands in (udpreceive 11023, through OSC-route /capture; the old
+// Return A recorder's 11016 hears nothing now):
 //   /folder <path>                    where an unsaved set records
 //   /start [track] [source] [channel] track: Live's track index, -1 or
 //                                     absent for the selected track;
@@ -83,6 +84,8 @@ function init() {
     outlet(2, SOURCE_IDLE);
     fillInputMenu();
     broadcastState();
+    // The bridge waits for this hello to start a capture it loaded us for.
+    sayHello();
     if (!helloTask.running) {
         helloTask.interval = HELLO_INTERVAL_MS;
         helloTask.repeat();

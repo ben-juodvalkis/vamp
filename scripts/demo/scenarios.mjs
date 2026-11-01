@@ -1539,7 +1539,7 @@ export const SCENARIOS = {
 	recorder: {
 		...SITE,
 		title: 'Record to Simpler',
-		blurb: "Recording a track's sound through the Vamp Recorder on Return A into Simpler.",
+		blurb: "Recording a track's sound into Simpler through the Vamp-Capture REC puts on it.",
 		steps: [
 			{
 				at: '18.1',
@@ -1556,7 +1556,7 @@ export const SCENARIOS = {
 				boxLabel: 'REC',
 				tap: { css: '[data-debug="middle-panel"] button.record-button', label: 'REC' },
 				caption: "Tap REC to record the track's sound.",
-				note: 'The Vamp Recorder on Return A records it.'
+				note: 'The first time, REC puts Vamp-Capture at the end of the track; it records from there.'
 			},
 			{ at: '20.3', caption: 'Recording.', note: null },
 			{

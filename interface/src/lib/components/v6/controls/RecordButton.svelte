@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { captureStore } from '$lib/stores/v6/captureStore.svelte';
+	import { captureSettings } from '$lib/stores/v6/captureSettingsStore.svelte';
+	import { session } from '$lib/stores/session.svelte';
 	import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
-	import { prepareForPreset } from '$lib/services/trackPreparation';
-	import { setTrackSend } from '$lib/services/trackCommands';
 	import { onDestroy } from 'svelte';
 
 	// Shared record button — used both at the top of the browser rail
@@ -10,13 +10,9 @@
 	// hold-to-record / tap-toggle behavior, same optimistic latch, and the
 	// same single-dot indicator (○ idle → blinking ● while recording).
 	//
-	// The two call sites differ only in backend side-effects, expressed as
-	// props:
-	//  - `armTrackIndex`: when set, also flip the track's send/routing knob
-	//    (`/looping/v3/track/send`) on start/stop, and refuse to record when
-	//    it's negative/null (clip view — no valid selected track).
-	//  - `prepareOnHold`: pre-create/reuse a MIDI track on pointerdown so the
-	//    Simpler lands on it (sidebar — where there's no pre-selected track).
+	// REC records the selected track, or the audio interface's input
+	// (Settings → Capture), through the Vamp-Capture on that track; the
+	// bridge loads one there first if it has none (capture.plan.md).
 	//  - `meterLevel`: which meter drives the fill (capture meter vs track
 	//    meter). Defaults to the capture meter.
 	//  - `shape`: `circle` (default) fits the largest circle its cell allows;
@@ -25,13 +21,9 @@
 	//    would be sized by the SHORT axis and leave most of the 120px width
 	//    empty, shrinking the target rather than just flattening it.
 	let {
-		armTrackIndex = null,
-		prepareOnHold = false,
 		meterLevel = undefined,
 		shape = 'circle'
 	}: {
-		armTrackIndex?: number | null;
-		prepareOnHold?: boolean;
 		meterLevel?: number;
 		shape?: 'circle' | 'rect';
 	} = $props();
@@ -41,54 +33,33 @@
 	let isHolding = $state(false);
 	let holdTriggered = $state(false);
 
-	// The recorder is the Vamp-Recorder device on Return A. Until the
-	// bridge has heard it say hello, REC is greyed out and says why, instead
-	// of latching "recording" over a device that isn't there
-	// (general-release plan.md §4, `captureRecorder`).
+	// REC needs the bridge (it loads the recorder and starts it) and a track
+	// to record: the master is not one.
 	let recorder = $derived(bridgeStatus.feature('captureRecorder'));
+	let trackIndex = $derived(session.selectedTrackIndex);
 	let recorderReason = $derived(
-		recorder.available ? '' : recorder.enabled ? recorder.reason || 'Unavailable' : 'Waiting for the bridge'
+		!recorder.available
+			? recorder.enabled
+				? recorder.reason || 'Unavailable'
+				: 'Waiting for the bridge'
+			: trackIndex < 0
+				? 'Select a track'
+				: ''
 	);
 
-	// True only when this button is allowed to act. When `armTrackIndex` is
-	// supplied (clip view), a negative/null index means "no valid track" and
-	// the button no-ops. When it's not supplied (sidebar), always allowed.
-	let canRecord = $derived(!recorderReason && (armTrackIndex == null || armTrackIndex >= 0));
-
-	// The track whose Send A this button turned up, so a refusal can turn it
-	// back down.
-	let sendArmedIndex: number | null = null;
-
-	function armTrackSend(on: boolean) {
-		const index = on ? armTrackIndex : sendArmedIndex;
-		if (index == null || index < 0) return;
-		setTrackSend(`tracks/${index}`, 0, on ? 1.0 : 0.0);
-		sendArmedIndex = on ? index : null;
-	}
+	let canRecord = $derived(!recorderReason);
 
 	function startRecording() {
-		armTrackSend(true);
-		captureStore.start();
+		captureStore.start(trackIndex, captureSettings.source, captureSettings.channel);
 	}
 
 	function stopRecording() {
-		armTrackSend(false);
 		captureStore.stop();
 	}
 
-	// The device refused a start (no folder to record into, say): the banner
-	// says why, and the send this tap turned up goes back down.
-	let seenErrorAt = captureStore.lastError?.at ?? 0;
+	// The bridge went away: whatever the recorder last said is stale.
 	$effect(() => {
-		const at = captureStore.lastError?.at ?? 0;
-		if (at === seenErrorAt) return;
-		seenErrorAt = at;
-		armTrackSend(false);
-	});
-
-	// The device went away: whatever it last said is stale.
-	$effect(() => {
-		if (recorderReason) captureStore.deviceGone();
+		if (!recorder.available) captureStore.deviceGone();
 	});
 
 	onDestroy(() => {
@@ -102,12 +73,6 @@
 		if (!canRecord) return;
 		isHolding = true;
 		holdTriggered = false;
-
-		if (prepareOnHold && captureStore.state === 'idle') {
-			prepareForPreset('midi', '').catch(() => {
-				/* logged inside prepareForPreset */
-			});
-		}
 
 		holdTimeout = setTimeout(() => {
 			holdTriggered = true;
@@ -138,7 +103,8 @@
 	}
 
 	// `pending` paints "recording" from the tap rather than the device's echo
-	// (~300 ms later), so a quick tap doesn't snap back to idle on release.
+	// (~300 ms later, longer when the recorder has to load first), so a quick
+	// tap doesn't snap back to idle on release.
 	let showRecording = $derived(
 		!recorderReason && (captureStore.state === 'recording' || isHolding || captureStore.pending)
 	);
@@ -298,7 +264,7 @@
 		align-items: center;
 	}
 
-	/* No recorder to drive: greyed and inert, with the reason under the
+	/* Nothing to record: greyed and inert, with the reason under the
 	   glyph — the swap pill's grey-with-a-reason. Readable on the iPad,
 	   where a title tooltip never shows. */
 	.record-button.unavailable,

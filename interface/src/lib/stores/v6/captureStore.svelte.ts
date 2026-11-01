@@ -1,8 +1,8 @@
 /**
- * Capture Store - State management for Simpler-Record audio capture
+ * Capture Store - State management for REC's audio capture
  *
- * Manages the recording state and UI interactions for the
- * Simpler-Record Max for Live device.
+ * Manages the recording state and UI interactions for the Vamp-Capture
+ * Max for Live device on the track REC records (capture.plan.md).
  *
  * State machine: idle ↔ recording (no quantization, no beat sync).
  *
@@ -41,7 +41,9 @@ let meterLevel = $state<number>(0);
  */
 let pending = $state(false);
 let pendingTimer: ReturnType<typeof setTimeout> | null = null;
-const PENDING_TIMEOUT_MS = 2000;
+// Long enough for the bridge to load a recorder onto the track first; it
+// answers a load that never lands with an error and an idle state well inside.
+const PENDING_TIMEOUT_MS = 10000;
 
 /** The device's last refusal: its code, its detail and when it came. */
 export interface CaptureError {
@@ -69,7 +71,16 @@ export function captureErrorMessage(code: string, detail: string): string {
 		return "Nowhere to record: this set is unsaved and Live's temp project folder wasn't found. Save the set, then record.";
 	}
 	if (code === 'sfrecord-missing') {
-		return 'The recorder device is damaged. Put a fresh Vamp-Recorder on Return A.';
+		return 'The recorder on this track is damaged. Delete Vamp-Capture from the track and record again.';
+	}
+	if (code === 'recorder-not-loaded') {
+		return "The recorder didn't load. Check that Vamp Devices is in Live's Places (Settings → Places).";
+	}
+	if (code === 'no-track') {
+		return 'Select a track to record.';
+	}
+	if (code === 'no-ext-in' || code === 'no-input-channel') {
+		return `No such input: ${detail}. Check Live's audio input device, and the input channel in Settings → Capture.`;
 	}
 	return detail ? `${code}: ${detail}` : code;
 }
@@ -118,12 +129,17 @@ function handleCaptureMessage(address: string, args: unknown[]): void {
 
 // ===== OSC SENDERS =====
 
-function start(): void {
-	logger.info('CAPTURE TX: start');
+/**
+ * Record `trackIndex` (Live's index): what it plays, or the interface's
+ * input on `channel`. The bridge loads Vamp-Capture onto the track first
+ * when it has none.
+ */
+function start(trackIndex: number, source: string = 'track', channel: string = ''): void {
+	logger.info('CAPTURE TX: start', { trackIndex, source, channel });
 	settlePending();
 	pending = true;
 	pendingTimer = setTimeout(settlePending, PENDING_TIMEOUT_MS);
-	send('/capture/start', []);
+	send('/capture/start', source === 'input' ? [trackIndex, source, channel] : [trackIndex, source]);
 }
 
 function stop(): void {
@@ -133,8 +149,8 @@ function stop(): void {
 }
 
 /**
- * The device went away (the bridge stopped hearing its hello). Whatever it
- * last said is stale: a device deleted mid-take never sends its idle.
+ * The bridge went away. Whatever the recorder last said is stale: a take
+ * whose bridge is gone never reports its idle.
  */
 function deviceGone(): void {
 	settlePending();

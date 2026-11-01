@@ -165,7 +165,7 @@ function replayTotalMixToClient(ws, totalmixLink, clientId) {
  * @param {Object} [features] - the feature-switch registry (utils/features.js),
  *   whose snapshot each new client gets on connect as /bridge/features
  * @param {Object} [captureRecorder] - the recorder handler
- *   (handlers/captureRecorder.js), which hands the device its folder before a start
+ *   (handlers/captureRecorder.js), which takes every capture start and stop
  * @returns {Object} { httpServer, wss }
  */
 function createWebSocketServer(config, udpPorts, connectionStatus, metrics, healthMonitor, captureOverride, totalmixLink, axHelper = null, drumSwap = null, groupTracks = null, features = null, machine = null, captureRecorder = null, toneShaper = null) {
@@ -601,11 +601,25 @@ function handleBatch(ws, message, context) {
     }
 }
 
-// A capture start: the device first hears which folder an unsaved set
-// records into (`/capture/folder`, handlers/captureRecorder.js), then the
-// start itself, on the same socket so in that order.
+// A capture start or stop goes through the recorder handler
+// (handlers/captureRecorder.js): a start loads Vamp-Capture onto its track
+// when none is there and sends `/capture/folder` ahead of the start itself,
+// and a stop drops a start still waiting for its recorder.
 function handleCaptureStartCmd(_ws, message, context) {
-    context.captureRecorder?.sendProjectFolder();
+    if (context.captureRecorder) {
+        context.captureRecorder.start(message.args || []);
+        return;
+    }
+    routeMessageToUDP(
+        message, context.udpPorts, context.metrics, context.captureOverride
+    );
+}
+
+function handleCaptureStopCmd(_ws, message, context) {
+    if (context.captureRecorder) {
+        context.captureRecorder.stop();
+        return;
+    }
     routeMessageToUDP(
         message, context.udpPorts, context.metrics, context.captureOverride
     );
@@ -624,6 +638,8 @@ function handleToneShaperWatchCmd(_ws, message, context) {
 const ADDRESS_HANDLERS = {
     '/capture/start':     handleCaptureStartCmd,
     '/capture/arm':       handleCaptureStartCmd,
+    '/capture/stop':      handleCaptureStopCmd,
+    '/capture/disarm':    handleCaptureStopCmd,
     '/toneshaper/watch':  handleToneShaperWatchCmd,
     '/bridge/client_log': handleClientLog,
     '/cmd/clip/reverse':  handleClipReverseCmd,

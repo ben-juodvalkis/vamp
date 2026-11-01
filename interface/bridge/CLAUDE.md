@@ -18,7 +18,7 @@ Node.js server that routes messages between browser clients (WebSocket) and Able
 ## Architecture
 
 ```
-Browser (WS:8081) ↔ enhanced-osc-bridge.js ↔ UDP Ports ↔ Python Surface / TotalMix / Vamp-Recorder / MIDI converter
+Browser (WS:8081) ↔ enhanced-osc-bridge.js ↔ UDP Ports ↔ Python Surface / TotalMix / Vamp-Capture / MIDI converter
                                           └─ TCP 11022 ↔ Python Surface (bridge→surface while connected, ADR-489)
 ```
 
@@ -48,7 +48,7 @@ Browser (WS:8081) ↔ enhanced-osc-bridge.js ↔ UDP Ports ↔ Python Surface / 
 | 7003/9003 | TotalMix mixer — Global OSC, remote controller 3 (ADR-423). Only while `features.totalmix` is on |
 | 7002/7001 | TotalMix legacy — borrowed for ~1s at startup only (ADR-423). Only while `features.totalmix` is on |
 | 11018/11019 | TotalMix Max for Live device (ADR-423). Only while `features.totalmix` is on |
-| 11017/11016 | Looping Recorder M4L capture device |
+| 11017/11023 | Vamp-Capture, REC's recorder: one copy per track, a start names its track (ADR-495; the old Return A recorder's 11016 is unused) |
 | 11010 | Foot Trigger (input only) |
 | 8081 | WebSocket (browser clients) |
 

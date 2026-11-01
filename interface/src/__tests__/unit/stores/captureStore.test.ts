@@ -102,10 +102,13 @@ describe('captureStore', () => {
 	});
 
 	describe('OSC command senders', () => {
-		it('start() should send /capture/start', () => {
-			captureStore.start();
-			expect(send).toHaveBeenCalledWith('/capture/start', []);
-			expect(logger.info).toHaveBeenCalledWith('CAPTURE TX: start');
+		it('start() names the track, and the input channel only when it records the input', () => {
+			captureStore.start(2);
+			expect(send).toHaveBeenCalledWith('/capture/start', [2, 'track']);
+			captureStore.handleMessage('/capture/state', ['idle']);
+			captureStore.start(4, 'input', '1/2');
+			expect(send).toHaveBeenCalledWith('/capture/start', [4, 'input', '1/2']);
+			expect(logger.info).toHaveBeenCalledWith('CAPTURE TX: start', { trackIndex: 4, source: 'input', channel: '1/2' });
 		});
 
 		it('stop() should send /capture/stop', () => {
@@ -192,18 +195,20 @@ describe('captureStore', () => {
 
 describe('captureStore - the device answering a start', () => {
 	it('is pending from the start until the device states anything', () => {
-		captureStore.start();
+		captureStore.start(0);
 		expect(captureStore.pending).toBe(true);
 		captureStore.handleMessage('/capture/state', ['recording']);
 		expect(captureStore.pending).toBe(false);
 		captureStore.handleMessage('/capture/state', ['idle']);
 	});
 
-	it('lets a start go after two silent seconds, so it cannot latch forever', () => {
+	it('lets a start go after ten silent seconds (time for a recorder to load), so it cannot latch forever', () => {
 		vi.useFakeTimers();
 		try {
-			captureStore.start();
-			vi.advanceTimersByTime(2000);
+			captureStore.start(0);
+			vi.advanceTimersByTime(9000);
+			expect(captureStore.pending).toBe(true);
+			vi.advanceTimersByTime(1000);
 			expect(captureStore.pending).toBe(false);
 		} finally {
 			vi.useRealTimers();
@@ -211,7 +216,7 @@ describe('captureStore - the device answering a start', () => {
 	});
 
 	it('ends the pending start and keeps the refusal on /capture/error', () => {
-		captureStore.start();
+		captureStore.start(0);
 		captureStore.handleMessage('/capture/error', ['no-project-folder', 'unsaved']);
 		expect(captureStore.pending).toBe(false);
 		expect(captureStore.lastError).toMatchObject({ code: 'no-project-folder', detail: 'unsaved' });

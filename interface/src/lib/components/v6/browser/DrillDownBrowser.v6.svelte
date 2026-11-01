@@ -1867,7 +1867,7 @@
 				{#if browserModeStore.isLocked}<Lock size={32} />{:else}<LockOpen size={32} />{/if}
 			</button>
 		{:else}
-			<RecordButton prepareOnHold shape="rect" />
+			<RecordButton shape="rect" />
 		{/if}
 	</div>
 {/snippet}

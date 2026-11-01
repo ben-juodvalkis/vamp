@@ -491,8 +491,8 @@ export const TOURS = {
 			},
 			{
 				name: 'clip-audio-no-recorder',
-				description: 'Clip view, audio track, no recorder device on Return A — REC greyed out, saying why',
-				features: { captureRecorder: { enabled: true, available: false, reason: 'No recorder on Return A' } },
+				description: 'Clip view, audio track, the bridge not ready to record — REC greyed out, saying why',
+				features: { captureRecorder: { enabled: true, available: false, reason: 'Waiting for the bridge' } },
 				steps: [selectTrack(3)]
 			},
 			{ name: 'clip-session', view: 'session', description: 'Clip view with CLIPS on — no mini column' },

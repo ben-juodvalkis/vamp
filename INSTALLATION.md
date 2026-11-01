@@ -63,7 +63,6 @@ This runs the setup check, starts the bridge and the web app, and opens the page
 - the Vamp Devices folder is a Place in Live
 - which Places the browser shows (your User Library and every Pack, to start)
 - a foot switch, if you have one
-- the recorder on Return A, if you want Capture
 
 Settings stays one tap away afterwards, from the gear in the master track's view.
 
@@ -103,8 +102,10 @@ A tap walks record → close → play → overdub; a hold stops the track and mo
 
 ### Capture
 
-To record what you play and turn it into a Simpler, drop the recorder device from the Vamp Devices
-Place onto **Return A**. Until it is there, the REC control is greyed with the reason.
+REC records what the selected track plays and turns it into a Simpler. The first time on a track
+it puts the Vamp-Capture device at the end of that track's chain (it needs the Vamp Devices Place)
+and reuses it after. To record your audio interface instead, choose **Input** and its channel in
+**Settings → General → Capture**.
 
 ### Your own settings
 

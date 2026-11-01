@@ -83,17 +83,14 @@
 			surfaceProtocol: handshakeState.phase === 'accepted' ? handshakeState.negotiatedVersion : null,
 			m4l: places.listing?.m4lDevices ?? null,
 			tickedCount: places.tickedCount,
-			footLearned: session.footSwitch.cc >= 0,
-			recorderReady: bridgeStatus.feature('captureRecorder').available
+			footLearned: session.footSwitch.cc >= 0
 		})
 	);
 	const progress = $derived(firstRunProgress(steps));
 
-	// The Connection tab's mark: a problem outranks a wait. The recorder is
-	// optional, so its absence is its own row's news, not the tab's.
+	// The Connection tab's mark: a problem outranks a wait.
 	const connectionState = $derived.by((): 'ok' | 'waiting' | 'problem' => {
 		const anyUnavailable = Object.keys(bridgeStatus.features).some((id) => {
-			if (id === 'captureRecorder') return false;
 			const f = bridgeStatus.feature(id);
 			return f.enabled && !f.available;
 		});

@@ -82,7 +82,7 @@ Import from `$lib/components/v6/blocks`.
 
 `interface/src/lib/components/v6/controls/RecordButton.svelte`
 
-`RecordButton`, capture: hold to record, tap to toggle, a single dot that blinks while recording. Reads `captureStore` and whether the bridge has heard the Vamp-Recorder device on Return A (`bridgeStatus.feature('captureRecorder')`). Writes `captureStore.start` / `stop`; with `armTrackIndex` also that track's Send A (`setTrackSend`, turned back down if the recorder refuses); with `prepareOnHold` it prepares a MIDI track on the hold (`prepareForPreset`) so the capture has somewhere to land. Until the recorder has said hello it is greyed out and says why, and a negative `armTrackIndex` means no valid track and makes it inert: pass `null`, not `-1`, where there is no track to arm.
+`RecordButton`, capture: hold to record, tap to toggle, a single dot that blinks while recording. Records the selected track (`session.selectedTrackIndex`), or the interface input on the channel Settings → Capture names (`captureSettings`), through `captureStore.start`; the bridge loads Vamp-Capture onto that track first when it has none. Greyed out and inert, saying why, until the bridge's `captureRecorder` feature is up, and with the master selected (`Select a track`). `meterLevel` picks the meter its fill follows.
 
 ## Layout and display
 

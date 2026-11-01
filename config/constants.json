@@ -67,9 +67,9 @@
     },
     "loopingRecorder": {
       "localPort": 11017,
-      "remotePort": 11016,
+      "remotePort": 11023,
       "host": "127.0.0.1",
-      "description": "Vamp-Recorder.amxd — OSC capture control + state feedback. Bridge sends /capture/{folder,arm,disarm,start,stop,query} to 11016 (device's receive); device replies with /capture/{state,file,error,hello,bye} to 11017 (bridge's receive)."
+      "description": "Vamp-Capture.amxd, the recorder REC loads onto the track it records (capture.plan.md). Bridge sends /capture/{folder,start,stop,query} to 11023 (every copy's receive; a start names its track); every copy replies with /capture/{state,file,error,meter,hello,bye} to 11017 (bridge's receive). 11023 is written into the device's udpreceive: change both. The old Vamp-Recorder on Return A listened on 11016, which nothing sends to now, so a set that still has one does not record twice; its hellos (no track argument) still arrive and are ignored."
     },
     "toneShaper": {
       "localPort": 11032,

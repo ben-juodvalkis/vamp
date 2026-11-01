@@ -1,7 +1,8 @@
 /**
  * The first-run checklist's steps (onboarding.plan.md §7), decided from what
  * the app can see: the surface's handshake, the "Vamp Devices" Place, the
- * ticks, the foot switch, the recorder. Pure, so the checklist and the sidebar's "2/3"
+ * ticks, the foot switch. Capture has no step since REC loads its own recorder
+ * (capture.plan.md). Pure, so the checklist and the sidebar's "2/3"
  * read one answer. The iPad's address is the checklist's last word and not a
  * step here: nothing can tick it.
  */
@@ -14,12 +15,10 @@ export interface FirstRunInput {
 	m4l: { path: string; place: string | null; exact: boolean } | null;
 	tickedCount: number;
 	footLearned: boolean;
-	/** The recorder on Return A answers (the bridge's `captureRecorder`). */
-	recorderReady: boolean;
 }
 
 export interface FirstRunStep {
-	key: 'surface' | 'm4l' | 'places' | 'foot' | 'recorder';
+	key: 'surface' | 'm4l' | 'places' | 'foot';
 	done: boolean;
 	/** An optional step does not count against the total. */
 	optional: boolean;
@@ -30,7 +29,7 @@ export interface FirstRunStep {
 }
 
 export function firstRunSteps(input: FirstRunInput): FirstRunStep[] {
-	const { surfaceProtocol, m4l, tickedCount, footLearned, recorderReady } = input;
+	const { surfaceProtocol, m4l, tickedCount, footLearned } = input;
 	const surfaceOk = surfaceProtocol !== null;
 	const m4lOk = !!m4l?.place;
 	return [
@@ -74,15 +73,6 @@ export function firstRunSteps(input: FirstRunInput): FirstRunStep[] {
 				? 'Learned. Turn it on and off under General.'
 				: 'Optional. Set your pedal as the Vamp control surface’s Input in Live’s MIDI settings, then Learn it under General.',
 			goTo: { section: 'general', label: 'Open General' }
-		},
-		{
-			key: 'recorder',
-			done: recorderReady,
-			optional: true,
-			label: 'Capture, if you want it',
-			how: recorderReady
-				? 'The recorder is on Return A. REC turns what you just played into a Simpler.'
-				: 'Optional. Drop Vamp-Recorder from the Vamp Devices Place onto Return A in your set.'
 		}
 	];
 }

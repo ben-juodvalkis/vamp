@@ -1,7 +1,8 @@
 /**
- * The capture recorder's two bridge-side facts (handlers/captureRecorder.js):
- * whether the device is there, from its once-a-second hello, and which folder
- * an unsaved set records into, from Live's newest temp project.
+ * The capture recorder's bridge-side facts (handlers/captureRecorder.js):
+ * which tracks have a recorder, from each copy's once-a-second hello; load,
+ * then record, on a track without one; and which folder an unsaved set
+ * records into, from Live's newest temp project.
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
@@ -14,8 +15,9 @@ const nodeRequire = createRequire(import.meta.url);
 const {
 	createCaptureRecorder,
 	newestTempProject,
-	REASON_WAITING,
-	REASON_ABSENT
+	DEVICE_LOAD_ADDRESS,
+	DEVICE_SOURCE,
+	DEVICE_REL
 } = nodeRequire('../../../../bridge/handlers/captureRecorder.js');
 const { createFeatureRegistry } = nodeRequire('../../../../bridge/utils/features.js');
 
@@ -63,53 +65,113 @@ describe('newestTempProject', () => {
 });
 
 describe('createCaptureRecorder', () => {
+	type Msg = { address: string; args: unknown[] };
 	function setup(recordings = '') {
 		const features = createFeatureRegistry({}, { logger: quiet });
-		const sent: Array<{ address: string; args: unknown[] }> = [];
+		const sent: Msg[] = [];
+		const surface: Msg[] = [];
+		const clients: Msg[] = [];
 		const recorder = createCaptureRecorder({
 			features,
 			logger: quiet,
 			recordingsDir: recordings || join(tmpdir(), 'no-such-live-recordings-dir'),
-			sendToDevice: (msg: { address: string; args: unknown[] }) => sent.push(msg),
-			silenceMs: 3000
+			sendToDevice: (msg: Msg) => sent.push(msg),
+			sendToSurface: (address: string, args: unknown[]) => surface.push({ address, args }),
+			broadcast: (address: string, args: unknown[]) => clients.push({ address, args }),
+			silenceMs: 3000,
+			loadTimeoutMs: 8000
 		});
-		return { features, sent, recorder };
+		return { features, sent, surface, clients, recorder };
 	}
+	const hello = (track?: number) => ({ address: '/capture/hello', args: track === undefined ? [] : [{ type: 'i', value: track }] });
+	const addresses = (msgs: Msg[]) => msgs.map((m) => m.address);
+	const startArgs = (track: number, ...rest: string[]) => [{ type: 'i', value: track }, ...rest.map((value) => ({ type: 's', value }))];
 
-	it('starts waiting, and says the device is missing after three silent seconds', () => {
-		vi.useFakeTimers();
-		const { features } = setup();
-		expect(features.snapshot().captureRecorder).toEqual({ enabled: true, available: false, reason: REASON_WAITING });
-		vi.advanceTimersByTime(3000);
-		expect(features.snapshot().captureRecorder.reason).toBe(REASON_ABSENT);
-	});
-
-	it('is available while hellos arrive, and consumes them', () => {
-		vi.useFakeTimers();
+	it('is available from the start: REC can always load a recorder', () => {
 		const { features, recorder } = setup();
-		for (let i = 0; i < 5; i++) {
-			expect(recorder.onDeviceMessage({ address: '/capture/hello', args: [] })).toBe(true);
-			vi.advanceTimersByTime(1000);
-		}
 		expect(features.isAvailable('captureRecorder')).toBe(true);
-		vi.advanceTimersByTime(3000);
-		expect(features.snapshot().captureRecorder).toEqual({ enabled: true, available: false, reason: REASON_ABSENT });
+		recorder.dispose();
 	});
 
-	it('goes unavailable at once on bye', () => {
-		vi.useFakeTimers();
-		const { features, recorder } = setup();
-		recorder.onDeviceMessage({ address: '/capture/hello', args: [] });
+	it('consumes hellos and byes, and passes state, file, meter and error on', () => {
+		const { recorder } = setup();
+		expect(recorder.onDeviceMessage(hello(2))).toBe(true);
+		expect(recorder.onDeviceMessage(hello())).toBe(true);
 		expect(recorder.onDeviceMessage({ address: '/capture/bye', args: [] })).toBe(true);
-		expect(features.snapshot().captureRecorder.reason).toBe(REASON_ABSENT);
+		for (const address of ['/capture/state', '/capture/file', '/capture/meter', '/capture/error']) {
+			expect(recorder.onDeviceMessage({ address, args: [] })).toBe(false);
+		}
 	});
 
-	it('passes state, file and error on to the clients', () => {
+	it('knows a track has a recorder while its hellos arrive, and ignores the old recorder\'s', () => {
 		vi.useFakeTimers();
-		const { features, recorder } = setup();
-		expect(recorder.onDeviceMessage({ address: '/capture/state', args: ['idle'] })).toBe(false);
-		expect(recorder.onDeviceMessage({ address: '/capture/error', args: ['no-project-folder', ''] })).toBe(false);
-		expect(features.isAvailable('captureRecorder')).toBe(true);
+		const { recorder } = setup();
+		recorder.onDeviceMessage(hello(2));
+		recorder.onDeviceMessage(hello(0));
+		recorder.onDeviceMessage(hello());
+		recorder.onDeviceMessage({ address: '/capture/hello', args: [-1] });
+		expect(recorder.tracksWithRecorder()).toEqual([0, 2]);
+		vi.advanceTimersByTime(2000);
+		recorder.onDeviceMessage(hello(2));
+		vi.advanceTimersByTime(1500);
+		expect(recorder.tracksWithRecorder()).toEqual([2]);
+	});
+
+	it('starts at once on a track that has a recorder: the folder first, then the start for that track', () => {
+		const { sent, surface, recorder } = setup();
+		recorder.onDeviceMessage(hello(3));
+		recorder.start([{ type: 'i', value: 3 }, { type: 's', value: 'input' }, { type: 's', value: '1/2' }]);
+		expect(surface).toEqual([]);
+		expect(addresses(sent)).toEqual(['/capture/folder', '/capture/start']);
+		expect(sent[1].args).toEqual(startArgs(3, 'input', '1/2'));
+	});
+
+	it('loads a recorder onto a track without one, and starts it on that copy\'s first hello', () => {
+		vi.useFakeTimers();
+		const { sent, surface, clients, recorder } = setup();
+		recorder.start([1]);
+		expect(surface).toEqual([{ address: DEVICE_LOAD_ADDRESS, args: ['tracks/1', '', '', DEVICE_SOURCE, DEVICE_REL] }]);
+		expect(sent).toEqual([]);
+		recorder.onDeviceMessage(hello(0));
+		expect(sent).toEqual([]);
+		vi.advanceTimersByTime(400);
+		recorder.onDeviceMessage(hello(1));
+		expect(addresses(sent)).toEqual(['/capture/folder', '/capture/start']);
+		expect(sent[1].args).toEqual(startArgs(1));
+		vi.advanceTimersByTime(10000);
+		expect(clients).toEqual([]);
+	});
+
+	it('says so when the recorder never loads, and lets REC go back to idle', () => {
+		vi.useFakeTimers();
+		const { sent, clients, recorder } = setup();
+		recorder.start([4]);
+		vi.advanceTimersByTime(8000);
+		expect(addresses(clients)).toEqual(['/capture/error', '/capture/state']);
+		expect(clients[0].args[0]).toBe('recorder-not-loaded');
+		expect(clients[1].args).toEqual(['idle']);
+		recorder.onDeviceMessage(hello(4));
+		expect(sent).toEqual([]);
+	});
+
+	it('drops a start still waiting for its recorder when stop comes first', () => {
+		vi.useFakeTimers();
+		const { sent, clients, recorder } = setup();
+		recorder.start([2]);
+		recorder.stop();
+		recorder.onDeviceMessage(hello(2));
+		expect(addresses(sent)).toEqual(['/capture/stop']);
+		vi.advanceTimersByTime(10000);
+		expect(clients).toEqual([]);
+	});
+
+	it('refuses a start with no track', () => {
+		const { sent, surface, clients, recorder } = setup();
+		recorder.start([]);
+		recorder.start([-1]);
+		expect(sent).toEqual([]);
+		expect(surface).toEqual([]);
+		expect(clients.filter((m) => m.address === '/capture/error').map((m) => m.args[0])).toEqual(['no-track', 'no-track']);
 	});
 
 	it('sends the newest temp project as /capture/folder', () => {
@@ -120,7 +182,6 @@ describe('createCaptureRecorder', () => {
 		dirs.push(dir);
 		const { sent, recorder } = setup(dir);
 		recorder.sendProjectFolder();
-		recorder.stop();
 		expect(sent).toEqual([
 			{ address: '/capture/folder', args: [{ type: 's', value: join(dir, '2026-09-27 120922 Temp Project') }] }
 		]);
@@ -129,7 +190,6 @@ describe('createCaptureRecorder', () => {
 	it('sends an empty folder when there is no temp project, so the device refuses and says why', () => {
 		const { sent, recorder } = setup();
 		recorder.sendProjectFolder();
-		recorder.stop();
 		expect(sent).toEqual([{ address: '/capture/folder', args: [{ type: 's', value: '' }] }]);
 	});
 });

@@ -480,10 +480,7 @@ import { logger } from '$lib/utils/logger';
 		<div class="col col-3">
 			<div class="stacked-btns">
 				<div class="btn-cell">
-					<RecordButton
-						armTrackIndex={session.selectedTrackIndex}
-						meterLevel={trackMeterLevel}
-					/>
+					<RecordButton meterLevel={trackMeterLevel} />
 				</div>
 				<div class="btn-cell">
 					<button
