@@ -10,12 +10,12 @@
  * keeps what it does with the trees: the tuning, the catalog's stamp, its
  * cache and its shaping.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { setPriority } from 'node:os';
 import { join } from 'node:path';
 import { logger } from '$lib/utils/logger';
-import { repoRoot } from '../runtimeConfig';
+import { childScript } from '../childScript';
 import { categoryRoots, categoryStamp, scanCategories, scanPacks, type CategoryScanResult } from './categoryScan';
 import type { AuComponent, KindCache, PlaceFolder } from './diskScan';
 import type { IndexHandle } from './indexScan';
@@ -133,22 +133,20 @@ export class CategoryScans {
 			return;
 		}
 		const { cacheDir } = this.opts;
-		const root = repoRoot();
-		const tsx = join(root, 'node_modules', 'tsx', 'dist', 'cli.mjs');
-		const script = join(root, 'scripts', 'scan-categories.ts');
 		const fail = (why: string) => {
 			logger.warn('places: the category build could not run in its own process; building here', { component: 'places', why });
 			this.childFailed = true;
 			setTimeout(() => this.opts.onLanded('categories: building here'), 0);
 		};
-		if (!existsSync(tsx) || !existsSync(script)) return fail('no tsx or script');
-		const packs = this.opts.packsWanted();
 		const job = join(cacheDir, 'places-category-job.json');
+		const run = childScript('scan-categories', job);
+		if (!run) return fail('no tsx or script');
+		const packs = this.opts.packsWanted();
 		const outFile = join(cacheDir, 'places-category-scan.json');
 		mkdirSync(cacheDir, { recursive: true });
 		writeFileSync(job, JSON.stringify({ dbFile, kindCacheFile: join(cacheDir, 'places-kind-cache.json'), auDirs: this.opts.auDirs, colors: this.opts.colors(), packs, outFile }));
 		const t0 = Date.now();
-		const child = spawn(process.execPath, [tsx, '--tsconfig', join(root, 'interface', 'tsconfig.json'), script, job], { cwd: root, stdio: ['pipe', 'pipe', 'pipe'] });
+		const child = spawn(process.execPath, run.argv, { cwd: run.cwd, stdio: ['pipe', 'pipe', 'pipe'] });
 		this.child = child;
 		try {
 			if (child.pid) setPriority(child.pid, 10);
