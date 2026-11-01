@@ -253,7 +253,8 @@ lean server the rig can run too) and none needs Apple.
   217 MB of it), app and Node both arm64 + x86_64, Node signed with the hardened runtime and
   V8's two entitlements (ad-hoc until Phase 5). The app's own Node ran the app's own server on
   both chips (x86_64 under Rosetta), on shifted ports: page, places list, socket to the bridge
-  in `ipad` mode, clean stop. Not yet: the app opened from Finder in a clean macOS account.
+  in `ipad` mode, clean stop. Opened from Finder in a separate macOS account, it worked (Ben,
+  2026-11-01).
 - **Phase 4, first half done:** first launch asks where Vamp Devices goes and copies it, copies
   the surface with `vamp-paths.json`, says what Live still needs; QR code; Uninstall. Left:
   Sparkle (a package to fetch, and the appcast's host), the menu checklist ticking itself, and
