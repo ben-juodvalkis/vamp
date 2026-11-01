@@ -239,3 +239,20 @@ two Live steps) and **develop** (the clone, as now). The README's "there's no ap
 
 About two working weeks, Phases 1–3 first: each is useful on its own (a clean data folder; a
 lean server the rig can run too) and none needs Apple.
+
+## 10. Where it stands (2026-11-01, branch `installer`)
+
+- **Phase 1, done** (ADR-499): the three folders, `VAMP_APP_ROOT` / `VAMP_DATA` /
+  `VAMP_DEVICES` for the bridge and the server, `vamp-paths.json` for a copied surface,
+  `VampPaths` in Vamp for Mac. The surface's `data/device-configs.json` joined them in Phase 4.
+- **Phase 2, done:** `npm run build:server` → `dist/vamp/`, 19.5 MB, with
+  `THIRD-PARTY-LICENSES.md` for what the bundles take in. Run isolated on shifted ports: page,
+  host check, socket pass-through, child scripts, places list all answered.
+- **Phase 3, code done, not run:** the supervisor runs the app's Node on `vamp-server.mjs`
+  when installed; `scripts/package-mac-app.sh` assembles `dist/Vamp.app`. Waiting on Ben's OK
+  to download Node from nodejs.org, then a try in a clean macOS account.
+- **Phase 4, first half done:** first launch asks where Vamp Devices goes and copies it, copies
+  the surface with `vamp-paths.json`, says what Live still needs; QR code; Uninstall. Left:
+  Sparkle (a package to fetch, and the appcast's host), the menu checklist ticking itself, and
+  hiding the device features while Vamp Devices is not a Place.
+- **Phase 6:** Vamp for iPad is submitted to the App Store (Ben, 2026-11-01).
