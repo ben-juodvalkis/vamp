@@ -57,6 +57,7 @@ const HELLO_INTERVAL_MS = 1000;
 
 let recorder = null;             // [sfrecord~ 2], scripting name "recorder"
 let sourceTab = null;            // [live.tab] Track | Input, scripting name "source"
+let recButton = null;            // [live.text] REC, scripting name "Capture Record"
 let capturing = false;
 let lastFilePath = "";
 let unsavedSetFolder = "";
@@ -75,6 +76,7 @@ const helloTask = new Task(sayHello);
 function init() {
     recorder = patcher.getnamed("recorder");
     sourceTab = patcher.getnamed("source");
+    recButton = patcher.getnamed("Capture Record");
     if (!selfApi) selfApi = new LiveAPI("this_device");
     if (!lookApi) lookApi = new LiveAPI("live_set");
     if (!inputApi) inputApi = new LiveAPI(extraInputPath());
@@ -316,7 +318,10 @@ function fillInputMenu() {
 
 // ─── replies ────────────────────────────────────────────────────────────────
 
+// The REC button follows the recorder, whoever started or stopped it
+// (`set` changes it without sending it on).
 function broadcastState() {
+    if (recButton) recButton.message("set", capturing ? 1 : 0);
     outlet(1, "/capture/state", capturing ? "recording" : "idle");
 }
 
