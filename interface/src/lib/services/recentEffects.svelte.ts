@@ -9,8 +9,10 @@
  *
  * Short of that (a fresh browser, a short list), Live's own effects fill
  * the rest (`DEFAULT_EFFECTS`, the user, 2026-11-01), so the section is
- * never empty: inserted by name (`native:<class>`, protocol 3.12.0), the
- * user's own default for each applies and no file is read.
+ * never empty: Live's devices inserted by name (`native:<class>`, protocol
+ * 3.12.0, the user's own default for each applying) and the Guitar and
+ * Bass Amp racks from the Vamp Devices Place, each loaded as its FX tile
+ * loads it (`deviceLoadArgs`).
  *
  * Shared across tracks: one just used on one track is ready on the next.
  * Kept in this browser's localStorage, a per-viewer convenience, and
@@ -27,7 +29,7 @@ import { openViewWhenLanded } from '$lib/services/effectView.svelte';
 import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { v3ErrorBannerStore } from '$lib/stores/v6/v3ErrorBannerStore.svelte';
-import { DEVICE_PRESETS } from '$lib/config/devicePresets';
+import { DEVICE_PRESETS, deviceLoadArgs } from '$lib/config/devicePresets';
 import { MIDI_EFFECT_KINDS, type ItemKind } from '$lib/utils/placeKinds';
 import { logger } from '$lib/utils/logger';
 
@@ -40,6 +42,8 @@ export interface RecentEffect {
 	source: string;
 	rel: string;
 	kind?: ItemKind;
+	/** A default: its `DEVICE_PRESETS` type, which says how it loads. */
+	preset?: string;
 }
 
 /** How many the list keeps, and the most the column shows. */
@@ -49,11 +53,12 @@ const STORAGE_KEY = 'vamp.recentEffects';
 
 /**
  * The effects that fill the section past the recents, first first: Live's
- * own, so they are on every Mac. More than it shows, so it stays full
- * after the chain's own are skipped.
- * No Utility: the right sidebar always has its ghost (the user, the same day).
+ * own, so they are on every Mac, and the app's own amp racks. More than it
+ * shows, so it stays full after the chain's own are skipped.
+ * No Utility: the right sidebar always has its ghost; no Compressor or
+ * Phaser, to make room for the Guitar and Bass Amp (the user, the same day).
  */
-const DEFAULT_EFFECT_KEYS = ['echo', 'reverb', 'filter', 'eq', 'saturator', 'compressor', 'squash', 'chorus', 'phaser', 'drum', 'redux', 'gate', 'shifter', 'ott', 'tremolo'] as const;
+const DEFAULT_EFFECT_KEYS = ['echo', 'reverb', 'filter', 'guitar', 'bass', 'eq', 'saturator', 'squash', 'chorus', 'drum', 'redux', 'gate', 'shifter', 'ott', 'tremolo'] as const;
 
 /** Other names a default's device goes by, as a recent or on a chain (a Hybrid Reverb preset is the Reverb). */
 const DEFAULT_ALSO_NAMED: Partial<Record<(typeof DEFAULT_EFFECT_KEYS)[number], readonly string[]>> = {
@@ -64,8 +69,8 @@ const DEFAULT_ALSO_NAMED: Partial<Record<(typeof DEFAULT_EFFECT_KEYS)[number], r
 
 export const DEFAULT_EFFECTS: readonly RecentEffect[] = DEFAULT_EFFECT_KEYS.map((key) => {
 	const preset = DEVICE_PRESETS[key];
-	const source = `native:${preset.expectedClassName}`;
-	return { name: preset.defaultName, fullPath: source, source, rel: preset.defaultName, kind: 'audio-effect' };
+	const [, , , source = '', rel = ''] = deviceLoadArgs('', '', preset);
+	return { name: preset.defaultName, fullPath: `default:${key}`, source, rel, kind: 'audio-effect', preset: key };
 });
 
 /** A Live device inserted by name has no file: its class, else null. */
@@ -137,8 +142,8 @@ export async function addEffectToChain(effect: RecentEffect): Promise<void> {
 	if (!fitsSelectedTrack(effect)) return reportFailure(effect.name, new Error('A MIDI effect goes on a MIDI track'));
 	const cancelView = openViewWhenLanded({ trackPath, padPath: pad?.padPath ?? '', name: effect.name });
 	try {
-		// A Live device by name sends no file (3.12.0).
-		const file = nativeClassOf(effect) ? '' : effect.fullPath;
+		// A default loads as its tile does; a Live device by name sends no file (3.12.0).
+		const file = effect.preset ? (DEVICE_PRESETS[effect.preset]?.presetPath ?? '') : nativeClassOf(effect) ? '' : effect.fullPath;
 		await addPresetToChain(trackPath, pad?.padPath ?? '', file, effect.source, effect.rel);
 	} catch (err) {
 		cancelView();

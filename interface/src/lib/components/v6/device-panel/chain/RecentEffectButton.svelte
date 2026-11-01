@@ -28,13 +28,13 @@
 		return () => (cancelled = true);
 	});
 
-	// A Live device inserted by name (a default) has no file: its class, and
-	// its control at rest, as Live's own default opens it.
+	// A default (a Live device by name, an amp rack by its Place) reads no
+	// file: its class, and its control at rest.
 	const nativeClass = $derived(nativeClassOf(recent));
 	const className = $derived(saved?.className ?? nativeClass ?? '');
 	const found = $derived.by(() => {
 		if (saved) return presetControl(saved, recent.name);
-		const control = nativeClass ? DEVICE_CONTROLS[deviceKeyForPreset(nativeClass, recent.name) ?? '']?.control : undefined;
+		const control = recent.preset || nativeClass ? DEVICE_CONTROLS[recent.preset ?? deviceKeyForPreset(className, recent.name) ?? '']?.control : undefined;
 		return control ? { control, values: {} as Record<number, number> } : null;
 	});
 

@@ -62,10 +62,13 @@ describe('recent effects', () => {
 
 	it('fills an empty list with Live\'s own effects, skipping what the chain holds', () => {
 		expect(recentForChain([])).toHaveLength(12);
-		expect(recentForChain([]).map((r) => r.name).slice(0, 4)).toEqual(['Echo', 'Reverb', 'Auto Filter', 'Channel EQ']);
-		expect(recentForChain(['Wavetable', 'Echo', 'Reverb']).map((r) => r.name).slice(0, 2)).toEqual(['Auto Filter', 'Channel EQ']);
+		expect(recentForChain([]).map((r) => r.name).slice(0, 4)).toEqual(['Echo', 'Reverb', 'Auto Filter', 'Guitar']);
+		expect(recentForChain(['Wavetable', 'Echo', 'Reverb']).map((r) => r.name).slice(0, 2)).toEqual(['Auto Filter', 'Guitar']);
 		// The right sidebar always has its ghost Utility.
 		expect(DEFAULT_EFFECTS.map((d) => d.name)).not.toContain('Utility');
+		expect(DEFAULT_EFFECTS.map((d) => d.name)).toEqual(expect.arrayContaining(['Guitar', 'Bass Amp']));
+		expect(DEFAULT_EFFECTS.map((d) => d.name)).not.toEqual(expect.arrayContaining(['Compressor']));
+		expect(DEFAULT_EFFECTS.map((d) => d.name)).not.toEqual(expect.arrayContaining(['Phaser']));
 	});
 
 	it('puts the recents first, then the defaults they do not already name', () => {
@@ -87,5 +90,11 @@ describe('recent effects', () => {
 		send.mockClear();
 		await addEffectToChain(DEFAULT_EFFECTS.find((d) => d.name === 'Reverb')!);
 		expect(send).toHaveBeenCalledWith(expect.stringContaining('device/load'), ['tracks/0', '', '', 'native:Hybrid', 'Reverb']);
+	});
+
+	it('loads the amp racks from the Vamp Devices Place, as their tiles do', async () => {
+		send.mockClear();
+		await addEffectToChain(DEFAULT_EFFECTS.find((d) => d.name === 'Bass Amp')!);
+		expect(send).toHaveBeenCalledWith(expect.stringContaining('device/load'), ['tracks/0', '', '', 'place:Vamp Devices', 'Bass Amp/Bass Amp.adg']);
 	});
 });

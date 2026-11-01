@@ -13,17 +13,20 @@ options always there.
 
 ## Decision
 - The recents come first, as before. What they leave of the section's
-  room is filled from a fixed list of Live's own effects
-  (`recentEffects.DEFAULT_EFFECTS`): Echo, Reverb, Auto Filter, Channel
-  EQ, Saturator, Compressor, Glue Compressor, Chorus, Phaser, Drum Buss,
-  Redux, Gate, Shifter, Multiband Dynamics, Auto Pan, in that order of
-  preference. The ones shown are still drawn in alphabetical order.
-- Live's own, so they are on every Mac: each is inserted by name
-  (`native:<class>`, protocol 3.12.0), as the FX grid's native tiles
-  are. No file is read, and the user's own default for the device
-  (`Defaults/Audio Effects` in their User Library) applies.
-- No Utility: the right sidebar always has its ghost (ADR-482, the user,
-  the same day).
+  room is filled from a fixed list (`recentEffects.DEFAULT_EFFECTS`):
+  Echo, Reverb, Auto Filter, Guitar, Bass Amp, Channel EQ, Saturator,
+  Glue Compressor, Chorus, Drum Buss, Redux, Gate, Shifter, Multiband
+  Dynamics, Auto Pan, in that order of preference. The ones shown are
+  still drawn in alphabetical order.
+- Each loads as its FX tile does (`deviceLoadArgs`). Live's own devices
+  are inserted by name (`native:<class>`, protocol 3.12.0): no file is
+  read, and the user's own default for the device (`Defaults/Audio
+  Effects` in their User Library) applies. The Guitar and Bass Amp racks
+  load from the Vamp Devices Place (`place:Vamp Devices` and the path
+  inside it).
+- No Utility: the right sidebar always has its ghost (ADR-482). No
+  Compressor or Phaser, to make room for the amp racks (the user, the
+  same day).
 - The same skipping as the recents: nothing the chain already holds, and
   no default whose device is already a recent. A device known by two
   names counts under both (a Hybrid Reverb preset is the Reverb).
