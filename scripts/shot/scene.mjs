@@ -31,9 +31,13 @@
  * real surface.
  */
 
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+// JSON imports rather than `readFileSync`, so this module runs in a browser
+// as well as in Node: the browser demo (`interface/src/lib/demo`) replays the
+// same scene through the same engine as the screenshot harness.
+import WAVETABLE_NAMES_JSON from './fixtures/wavetable-names.json' with { type: 'json' };
+import HYBRID_IR_LISTS_JSON from './fixtures/hybrid-ir-lists.json' with { type: 'json' };
+import FIXTURE_INDEX from './fixtures/data/places/index.json' with { type: 'json' };
+import OPERATOR_DUMP from '../../docs/reference/instruments/dumps/Operator.json' with { type: 'json' };
 
 export const PROTOCOL_VERSION = '3.12.0';
 
@@ -43,13 +47,9 @@ export const PROTOCOL_VERSION = '3.12.0';
  * and the mock re-sends a category's file names when the IR category is set.
  */
 /** Wavetable's categories and their tables, as Live 12.4 lists them (measured 2026-10-22). */
-export const WAVETABLE_NAMES = JSON.parse(
-	readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'wavetable-names.json'), 'utf8')
-);
+export const WAVETABLE_NAMES = WAVETABLE_NAMES_JSON;
 
-export const HYBRID_IR_LISTS = JSON.parse(
-	readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'hybrid-ir-lists.json'), 'utf8')
-);
+export const HYBRID_IR_LISTS = HYBRID_IR_LISTS_JSON;
 
 /**
  * The feature switches a scene's bridge publishes when it names none
@@ -77,11 +77,8 @@ export const DEFAULT_FEATURES = Object.freeze({
  * `paths.sidebarRoot` is a Mac's own now (constants.local.json), absent on a
  * clone; the fixture is tracked and holds its own.
  */
-const FIXTURE_INDEX = JSON.parse(
-	readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'fixtures/data/places/index.json'), 'utf8')
-);
 const SIDEBAR_ROOT = FIXTURE_INDEX.metadata.sidebarRoot.replace(/\/+$/, '');
-const INSTRUMENTS_BASE = dirname(SIDEBAR_ROOT);
+const INSTRUMENTS_BASE = SIDEBAR_ROOT.slice(0, SIDEBAR_ROOT.lastIndexOf('/'));
 
 /**
  * The preset the FM track's last load recorded — protocol 3.9.0's `preset`
@@ -775,8 +772,9 @@ const AUTUMN_KIT_PROPERTIES = Object.freeze({
 
 // An instrument's parameters as the rig's Live lists them, at Live's defaults
 // (docs/reference/instruments/dumps, measured 2026-10-27).
+const INSTRUMENT_DUMPS = { Operator: OPERATOR_DUMP };
 function referenceParams(instrument) {
-	const dump = JSON.parse(readFileSync(new URL(`../../docs/reference/instruments/dumps/${instrument}.json`, import.meta.url), 'utf8'));
+	const dump = INSTRUMENT_DUMPS[instrument];
 	return dump.parameters.map((p) => [p.name, p.original_name ?? p.name, p.min, p.max, p.value, '']);
 }
 
@@ -1472,6 +1470,36 @@ export function padChainRecords(rackPath, note, rack) {
 		pushDeviceRecords(args, `${rackPath}/pads/${note}/devices/${d.index}`, d.name, d.className, d.params);
 	}
 	return args;
+}
+
+/**
+ * Append an effect to a track's own chain in a built scene — the browser
+ * demo's track-level `device/load` (ADR-502). Its D and P records go after
+ * the track's last device, with the parameters this file carries for that
+ * name (none for a device it has no table for: the view draws ghosts, as a
+ * shot of an unknown device does). Returns the new device's path.
+ */
+export function appendTrackDevice(scene, trackPath, name, className) {
+	const args = scene.treeArgs;
+	const prefix = `${trackPath}/devices/`;
+	const topLevel = new RegExp(`^${prefix.replace(/[/]/g, '\\/')}(\\d+)$`);
+	let insertAt = -1;
+	let count = 0;
+	for (let k = 0; k < args.length; k++) {
+		const path = String(args[k + 1]);
+		if (args[k] === 'D' && path.startsWith(prefix)) {
+			if (topLevel.test(path)) count += 1;
+			insertAt = k + 4;
+		} else if (args[k] === 'P' && path.startsWith(prefix)) {
+			insertAt = k + 8;
+		}
+	}
+	if (insertAt < 0) throw new Error(`appendTrackDevice: no device records on ${trackPath}`);
+	const devicePath = `${prefix}${count}`;
+	const records = [];
+	pushDeviceRecords(records, devicePath, name, className ?? deviceClassName(name), DEVICE_PARAMS[name] ?? []);
+	args.splice(insertAt, 0, ...records);
+	return devicePath;
 }
 
 /**

@@ -116,6 +116,8 @@ __pycache__/
 # Svelte/SvelteKit
 .svelte-kit/
 build/
+# The browser demo's static output (npm run demo:build, ADR-502).
+build-demo/
 dist/
 
 # ============================================================================
