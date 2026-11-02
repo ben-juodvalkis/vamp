@@ -166,6 +166,8 @@ export default defineConfig({
 		revalidateOptimizedDeps(),
 		tailwindcss(),
 		sveltekit(),
+		// Not in the browser demo (ADR-502), which registers no service worker.
+		process.env.VAMP_DEMO_BUILD !== '1' &&
 		SvelteKitPWA({
 			srcDir: 'src',
 			filename: 'service-worker.ts',
