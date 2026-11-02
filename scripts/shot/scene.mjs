@@ -178,7 +178,7 @@ function echoParams() {
 	return p;
 }
 
-function permuteParams({ mute, pitch, muteLength = 8, pitchLength = 8 }) {
+export function permuteParams({ mute, pitch, muteLength = 8, pitchLength = 8 }) {
 	const steps = (pattern, fill) => Array.from({ length: 16 }, (_, i) => pattern[i] ?? fill);
 	const m = steps(mute, 1);
 	const pt = steps(pitch, 0);
@@ -1242,6 +1242,17 @@ export const OMNISPHERE_STANDIN = {
 	params: Array.from({ length: 27 }, (_, i) =>
 		i === 0 ? ['Device On', 'Device On', 0, 1, 1, ''] : [`Param ${i}`, `Param ${i}`, 0, 1, i === 25 ? 0.3 : i === 26 ? 0.7 : 0.5, '']
 	)
+};
+
+/** A Permute running all sixteen steps of both lanes: what wraps in a narrow chain cell. */
+export const PERMUTE_16_DEVICE = {
+	name: 'Permute',
+	params: permuteParams({
+		mute: [1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1],
+		pitch: [1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0],
+		muteLength: 16,
+		pitchLength: 16
+	})
 };
 
 export const CHAIN_DEMO_DEVICES = [

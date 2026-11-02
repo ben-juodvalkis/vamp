@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { cellHeightClass, cellWidthClass, CELL_TALL_MIN, CELL_WIDTH_STEPS } from '$lib/components/v6/device-panel/chain/cellSize';
 import { rackMacrosFill } from '$lib/components/v6/device-panel/chain/RackFace.svelte';
-import { permuteShowsPitch } from '$lib/components/v6/device-panel/chain/PermuteStepsFace.svelte';
+import { permuteFaceLayout, PERMUTE_PITCH_FLOOR } from '$lib/components/v6/device-panel/chain/PermuteStepsFace.svelte';
 
 describe('cellWidthClass (ADR-492)', () => {
 	it('is null until the cell is measured', () => {
@@ -34,18 +34,31 @@ describe('rackMacrosFill (ADR-492)', () => {
 	});
 });
 
-describe('permuteShowsPitch', () => {
-	type W = 'narrow' | 'medium' | 'wide' | null;
-	type H = 'short' | 'tall' | null;
-	const size = (widthClass: W, heightClass: H) => ({ width: 0, height: 0, widthClass, heightClass });
-	it('draws the pitch row only in a wide, tall cell', () => {
-		expect(permuteShowsPitch(size('wide', 'tall'))).toBe(true);
-		expect(permuteShowsPitch(size('medium', 'tall'))).toBe(false);
-		expect(permuteShowsPitch(size('narrow', 'tall'))).toBe(false);
-		expect(permuteShowsPitch(size('wide', 'short'))).toBe(false);
+describe('permuteFaceLayout', () => {
+	const size = (width: number, height: number) => ({ width, height, widthClass: null, heightClass: null });
+	it('draws both lanes where each fits in half the cell at the floor, wrapping each to two lines', () => {
+		// A one-row chain's medium cell, 8 + 8: two lines of four each, about 49 x 56.
+		expect(permuteFaceLayout(size(198, 230), 8, 8)).toEqual({ showPitch: true, muteLines: 2, pitchLines: 2 });
+		// A wide one: one line of eight each, about 75 x 112, beats two of four (150 x 56).
+		expect(permuteFaceLayout(size(600, 230), 8, 8)).toEqual({ showPitch: true, muteLines: 1, pitchLines: 1 });
 	});
-	it('draws both rows outside a chain cell or before it is measured', () => {
-		expect(permuteShowsPitch(null)).toBe(true);
-		expect(permuteShowsPitch(size(null, null))).toBe(true);
+	it('never wraps a lane past two lines beside the other', () => {
+		const tall = permuteFaceLayout(size(PERMUTE_PITCH_FLOOR * 8, 1000), 16, 16);
+		expect(tall.showPitch).toBe(true);
+		expect(tall.muteLines).toBeLessThanOrEqual(2);
+		expect(tall.pitchLines).toBeLessThanOrEqual(2);
+	});
+	it('hides pitch when either lane would fall under the floor, the mute lane then filling the cell', () => {
+		// 16 + 16 in the medium cell: half the height leaves 25 x 56 at best.
+		expect(permuteFaceLayout(size(198, 230), 16, 16)).toEqual({ showPitch: false, muteLines: 4, pitchLines: 1 });
+		// A long pitch lane alone hides it too.
+		expect(permuteFaceLayout(size(198, 230), 8, 16).showPitch).toBe(false);
+		// A two-row chain's short cell.
+		expect(permuteFaceLayout(size(198, 116), 8, 8)).toEqual({ showPitch: false, muteLines: 2, pitchLines: 1 });
+		expect(permuteFaceLayout(size(198, 116), 16, 8)).toEqual({ showPitch: false, muteLines: 4, pitchLines: 1 });
+	});
+	it('draws both lanes, one line each, outside the chain or before measuring', () => {
+		expect(permuteFaceLayout(null, 16, 16)).toEqual({ showPitch: true, muteLines: 1, pitchLines: 1 });
+		expect(permuteFaceLayout(size(0, 0), 16, 16)).toEqual({ showPitch: true, muteLines: 1, pitchLines: 1 });
 	});
 });

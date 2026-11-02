@@ -27,6 +27,12 @@
     onLengthChange?: (length: number) => void;
     onRateChange?: (mode: string, value: number) => void;
     onEnable?: () => void;
+    /**
+     * Lay the steps out in this many lines, reading left to right, then down
+     * (a chain cell too narrow for one, 2026-11-02). A length the lines do
+     * not divide leaves the last line short; the gap is drawn as the well.
+     */
+    lines?: number;
   }
 
   let {
@@ -47,8 +53,25 @@
     onStepSet,
     onLengthChange,
     onRateChange,
-    onEnable
+    onEnable,
+    lines = 1
   }: Props = $props();
+
+  /** Wrapped: how many lines are drawn, steps per line, and the empty slots closing the last. */
+  let lineCount = $derived(Math.max(1, Math.min(Math.round(lines), length)));
+  let lineCols = $derived(Math.max(1, Math.ceil(length / lineCount)));
+  let fillers = $derived(lineCount * lineCols - length);
+
+  /** Wrapped: the outer corner a slot sits on (for the frame's radius), or ''. */
+  function wrapCorner(slot: number): string {
+    const total = lineCount * lineCols;
+    const c: string[] = [];
+    if (slot === 0) c.push('corner-tl');
+    if (slot === lineCols - 1) c.push('corner-tr');
+    if (slot === total - lineCols) c.push('corner-bl');
+    if (slot === total - 1) c.push('corner-br');
+    return c.join(' ');
+  }
 
   // Drag interaction state for pattern
   let isDragging = $state(false);
@@ -388,6 +411,30 @@
     class="seq-grid glass-panel flex-1 h-full {currentSize.border} {currentSize.rounded} overflow-hidden"
     title="Sequencer Pattern - {length} steps"
   >
+    {#if lineCount > 1}
+    <div
+      class="seq-lines h-full touch-manipulation"
+      style="grid-template-columns: repeat({lineCols}, minmax(0, 1fr)); grid-template-rows: repeat({lineCount}, minmax(0, 1fr));"
+      data-lines={lineCount}
+    >
+      {#each Array(length) as _, stepIndex}
+        <div
+          class="step-cell wrapped {wrapCorner(stepIndex)} {getStepSegmentClass(stepIndex)}"
+          data-step-index={stepIndex}
+          onpointerdown={(e) => handleStepPointerDown(e, stepIndex)}
+          onpointerup={handleStepPointerUp}
+          onpointercancel={handleStepPointerUp}
+          title="Step {stepIndex + 1}: {isStepEnabled(stepIndex) ? 'Enabled' : 'Disabled'}"
+          aria-label="Step {stepIndex + 1}"
+          role="button"
+          tabindex={readonly ? -1 : 0}
+        ></div>
+      {/each}
+      {#each Array(fillers) as _, f}
+        <div class="step-filler {wrapCorner(length + f)}" aria-hidden="true"></div>
+      {/each}
+    </div>
+    {:else}
     <div class="h-full flex touch-manipulation">
       {#each Array(length) as _, stepIndex}
         <div
@@ -407,6 +454,7 @@
         {/if}
       {/each}
     </div>
+    {/if}
   </div>
 
   <!-- Rate Slider (if enabled) -->
@@ -494,6 +542,34 @@
     border-top-right-radius: calc(var(--radius-lg) - 2px);
     border-bottom-right-radius: calc(var(--radius-lg) - 2px);
   }
+
+  /* Wrapped: the steps sit on a grid whose 1px gaps show the hairline
+     behind them, the separators of the one-line row; only the four outer
+     corners round. */
+  .seq-lines {
+    display: grid;
+    gap: 1px;
+    background: var(--border);
+  }
+  .step-cell.wrapped {
+    flex: none;
+    border-radius: 0;
+  }
+  /* The slots closing a short last line: hatched, so an empty slot never
+     reads as an OFF step (13 steps in four lines of four leave three). */
+  .step-filler {
+    background:
+      repeating-linear-gradient(
+        135deg,
+        transparent 0 5px,
+        color-mix(in oklab, var(--muted-foreground) 25%, transparent) 5px 6px
+      ),
+      var(--surface-well);
+  }
+  .seq-lines .corner-tl { border-top-left-radius: calc(var(--radius-lg) - 2px); }
+  .seq-lines .corner-tr { border-top-right-radius: calc(var(--radius-lg) - 2px); }
+  .seq-lines .corner-bl { border-bottom-left-radius: calc(var(--radius-lg) - 2px); }
+  .seq-lines .corner-br { border-bottom-right-radius: calc(var(--radius-lg) - 2px); }
 
   /* ---- Live skin: the step row is a ControlBackground well in a 1px dark
      frame; an OFF step is the bare well, an ON step a SOLID block of the
