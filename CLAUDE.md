@@ -25,6 +25,21 @@ menubar app, Max patch, Skaka picker and rack, rig probes), `config/`,
    No feature branches, worktrees or PRs. If the session started in a
    worktree, use the checkout by absolute path instead. At session start,
    `git pull --ff-only origin main`.
+
+   **A cloud session sets up the rig's toolchain before anything else.** Its
+   container has Node 22 and no surface venv, so `vitest` cannot load
+   `node:sqlite` and the surface tests cannot run, and the pre-push gate
+   fails on work that isn't yours (2026-11-02). Install the Node `.nvmrc`
+   names (24.x) and the venv, then `npm ci` under that Node:
+
+   ```bash
+   v=$(cat .nvmrc); curl -fsSL "https://nodejs.org/dist/v$v/node-v$v-linux-x64.tar.xz" | tar xJ -C ~
+   export PATH=~/node-v$(cat .nvmrc)-linux-x64/bin:$PATH && node -v && npm ci
+   python3 -m venv surface/.venv && surface/.venv/bin/pip install -q -r surface/requirements-dev.txt
+   ```
+
+   The shell keeps no `PATH` between commands, so repeat that `export` in the
+   same command as every `npm`, `npx` or `git push`.
 2. While iterating, run only the tests for what you changed:
    `cd interface && npx vitest run <path>`,
    `cd surface && .venv/bin/python3 -m pytest -q tests/<file>`.

@@ -311,6 +311,18 @@ export const TOURS = {
 				steps: [openInstrument(CHAIN_DEMO_TRACK)]
 			},
 			{
+				name: 'chain-permute-16-crowded',
+				description: 'A 16-step Permute in a crowded two-row chain\'s small, narrow cell: the mute lane alone, four lines of four, the squarest the cell allows',
+				scenePatch: (scene) =>
+					setTrackDevices(scene, CHAIN_DEMO_TRACK, [
+						CHAIN_DEMO_DEVICES[0],
+						PERMUTE_16_DEVICE,
+						...CHAIN_DEMO_DEVICES.slice(2, 7),
+						'Reverb', 'Saturator', 'Redux', 'Chorus', 'Gate', 'Compressor', 'Phaser', 'Shifter', 'Utility'
+					]),
+				steps: [openInstrument(CHAIN_DEMO_TRACK)]
+			},
+			{
 				name: 'chain-permute-8-one-row',
 				description: 'An 8-step Permute in a one-row chain\'s medium cell: both lanes fit at 44px, two lines of four each, mute over pitch',
 				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], CHAIN_DEMO_DEVICES[1], 'Echo']),
