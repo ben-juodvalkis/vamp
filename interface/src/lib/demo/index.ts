@@ -28,6 +28,9 @@ type EngineClient = ReturnType<Engine['connect']>;
 
 let engine: Engine | null = null;
 
+/** `uiPrefsStore`'s clip-grid switch (`scripts/shot/views.mjs`). */
+const SESSION_MODE_KEY = 'uiPrefsStore.sessionMode';
+
 /** Every demo socket shares one engine, so a reconnect finds the same set. */
 function getEngine(): Engine {
 	if (!engine) {
@@ -138,6 +141,14 @@ export function installDemo(): void {
 		}
 		return realFetch(input, init);
 	}) as typeof fetch;
+
+	// Open with the clip grid showing, so a visitor has clips to launch (the
+	// harness's `session` view). Only when unset: a visitor's own toggle stays.
+	try {
+		if (localStorage.getItem(SESSION_MODE_KEY) === null) localStorage.setItem(SESSION_MODE_KEY, '1');
+	} catch {
+		/* storage blocked: the shipped layout, without the grid */
+	}
 
 	(globalThis as { WebSocket: unknown }).WebSocket = DemoWebSocket;
 	delete (globalThis as { EventSource?: unknown }).EventSource;
