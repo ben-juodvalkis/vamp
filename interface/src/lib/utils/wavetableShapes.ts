@@ -15,6 +15,7 @@
  * The file is fetched once, the first time a view asks, and decoded table
  * by table as asked. User tables (the User category) are not in it.
  */
+import { base } from '$app/paths';
 import { logger } from '$lib/utils/logger';
 
 export interface WavetableBundle {
@@ -32,7 +33,8 @@ export interface WavetableBundle {
 /** One table, decoded: `frames` cycles of `points` samples, -1..1. */
 export type WavetableFrames = Float32Array[];
 
-export const FACTORY_URL = '/wavetables/factory.json';
+/** Under the app's base path: the browser demo is served from one (ADR-502). */
+export const FACTORY_URL = `${base}/wavetables/factory.json`;
 
 export function decodeTable(bundle: WavetableBundle, encoded: string): WavetableFrames {
 	const bin = atob(encoded);
