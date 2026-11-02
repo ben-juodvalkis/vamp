@@ -39,6 +39,14 @@ const trackName = (scene: Scene, path: string) =>
 const deviceName = (scene: Scene, path: string) => String(record(scene, 'D', path)?.[1] ?? 'This device');
 const trackOf = (path: string) => /^(tracks\/\d+|master)/.exec(path)?.[1] ?? '';
 const slotNumber = (path: string) => Number(/\/slots\/(\d+)/.exec(path)?.[1] ?? 0) + 1;
+/** A preset's name from the path or `native:<class>` a load names. */
+const presetName = (...refs: unknown[]) => {
+	for (const ref of refs) {
+		const file = String(ref ?? '').replace(/^native:/, '').split('/').pop() ?? '';
+		if (file) return file.replace(/\.(adg|adv|aupreset|amxd)$/i, '');
+	}
+	return '';
+};
 const words = (name: string) =>
 	name
 		.replace(/^vm\./, '')
@@ -64,10 +72,16 @@ export function describeWrite(scene: Scene, address: string, args: unknown[]): s
 			return `${deviceName(scene, path)}: all of its controls are in the middle of the screen.`;
 		case '/looping/v3/device/move':
 			return `${deviceName(scene, path)} moved in the chain. Live’s order changes with it.`;
-		case '/looping/v3/device/load':
-			return `Added to ${trackName(scene, path)}’s effects chain, at the end.`;
-		case '/looping/v3/track/prepare_for_preset':
-			return 'Loading an instrument from the browser onto a track.';
+		case '/looping/v3/device/load': {
+			const name = presetName(args[4], args[2], args[3]);
+			return `${name || 'An effect'} added to the end of ${trackName(scene, path)}’s effects chain.`;
+		}
+		case '/looping/v3/track/prepare_for_preset': {
+			const name = presetName(args[5], args[2], args[4]);
+			return name
+				? `${name} loaded onto a track of its own, its controls in the middle of the screen.`
+				: 'A new, empty track: load an instrument onto it from the browser.';
+		}
 		case '/looping/v3/clip/launch':
 			return `${trackName(scene, trackOf(path))}: clip ${slotNumber(path)} launched. In Live, a launch waits for the next bar.`;
 		case '/looping/v3/clip/stop':
