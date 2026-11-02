@@ -133,6 +133,14 @@ class DemoWebSocket extends EventTarget {
 }
 
 export function installDemo(): void {
+	// A host that serves the build's `index.html` only by its own name (a
+	// plain static server, Vite's) leaves that name in the address, where the
+	// router finds no route. Drop it before the router starts.
+	if (location.pathname.endsWith('/index.html')) {
+		const path = location.pathname.slice(0, -'index.html'.length);
+		history.replaceState(history.state, '', `${path}${location.search}${location.hash}`);
+	}
+
 	const realFetch = globalThis.fetch.bind(globalThis);
 	globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
 		const url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url, location.href);
