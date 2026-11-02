@@ -19,7 +19,7 @@
  */
 
 import { createMockEngine } from '$shot/mock-engine.mjs';
-import { buildDefaultScene } from '$shot/scene.mjs';
+import { buildDemoScene } from '$shot/demo-scene.mjs';
 import { logger } from '$lib/utils/logger';
 import { demoApiResponse } from './api';
 
@@ -35,7 +35,7 @@ const SESSION_MODE_KEY = 'uiPrefsStore.sessionMode';
 function getEngine(): Engine {
 	if (!engine) {
 		engine = createMockEngine({
-			scene: buildDefaultScene(),
+			scene: buildDemoScene(),
 			live: true,
 			log: (m: string) => logger.debug(`[demo] ${m}`)
 		});

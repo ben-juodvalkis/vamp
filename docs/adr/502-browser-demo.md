@@ -45,6 +45,10 @@ WebSocket server.
 - The demo is the shipped interface, so it cannot fall behind the app. The
   mock can still drift from the surface, as the harness README warns, and now
   a drift shows in the demo too.
+- The demo's set is `buildDemoScene` (`scripts/shot/demo-scene.mjs`): the
+  synthetic default cut to six tracks, so a visitor meets a set small enough
+  to take in, with the Guitar loop playing rather than frozen mid-recording
+  and nothing muted.
 - The default scene is synthetic (`buildDefaultScene`). A set captured with
   `npm run shot:capture` replays the same way and would make the demo a real
   set.
