@@ -19,7 +19,7 @@
 
 /** iPad Pro 12.9" landscape, the machine this interface is built for. */
 import { readFileSync } from 'node:fs';
-import { CHAIN_DEMO_DEVICES, CHAIN_DEMO_TRACK, OMNISPHERE_STANDIN, PERMUTE_16_DEVICE, driftParams, setTrackDevices } from './scene.mjs';
+import { CHAIN_DEMO_DEVICES, CHAIN_DEMO_TRACK, OMNISPHERE_STANDIN, PERMUTE_16_DEVICE, driftParams, permuteParams, setTrackDevices } from './scene.mjs';
 
 // The rig's "106 Bass 01" Analog, all 172 parameters as the running Live
 // reported them (device_dump.js, 2026-10-22): [name, min, max, value].
@@ -320,6 +320,25 @@ export const TOURS = {
 						...CHAIN_DEMO_DEVICES.slice(2, 7),
 						'Reverb', 'Saturator', 'Redux', 'Chorus', 'Gate', 'Compressor', 'Phaser', 'Shifter', 'Utility'
 					]),
+				steps: [openInstrument(CHAIN_DEMO_TRACK)]
+			},
+			{
+				name: 'chain-permute-13-crowded',
+				description: 'A 13-step Permute in the crowded chain\'s narrow cell: four lines of four, the last holding one step and three empty slots',
+				scenePatch: (scene) =>
+					setTrackDevices(scene, CHAIN_DEMO_TRACK, [
+						CHAIN_DEMO_DEVICES[0],
+						{ name: 'Permute', params: permuteParams({ mute: [1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1], pitch: [1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0], muteLength: 13, pitchLength: 13 }) },
+						...CHAIN_DEMO_DEVICES.slice(2, 7),
+						'Reverb', 'Saturator', 'Redux', 'Chorus', 'Gate', 'Compressor', 'Phaser', 'Shifter', 'Utility'
+					]),
+				steps: [openInstrument(CHAIN_DEMO_TRACK)]
+			},
+			{
+				name: 'chain-permute-7-two-rows',
+				description: 'A 7-step Permute on a two-row chain: two lines, four over three and an empty slot',
+				scenePatch: (scene) =>
+					setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], { name: 'Permute', params: permuteParams({ mute: [1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1], pitch: [1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0], muteLength: 7, pitchLength: 7 }) }, ...CHAIN_DEMO_DEVICES.slice(2, 7)]),
 				steps: [openInstrument(CHAIN_DEMO_TRACK)]
 			},
 			{

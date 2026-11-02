@@ -178,7 +178,7 @@ function echoParams() {
 	return p;
 }
 
-function permuteParams({ mute, pitch, muteLength = 8, pitchLength = 8 }) {
+export function permuteParams({ mute, pitch, muteLength = 8, pitchLength = 8 }) {
 	const steps = (pattern, fill) => Array.from({ length: 16 }, (_, i) => pattern[i] ?? fill);
 	const m = steps(mute, 1);
 	const pt = steps(pitch, 0);

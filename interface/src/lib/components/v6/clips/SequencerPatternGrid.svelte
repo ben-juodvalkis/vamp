@@ -555,8 +555,16 @@
     flex: none;
     border-radius: 0;
   }
+  /* The slots closing a short last line: hatched, so an empty slot never
+     reads as an OFF step (13 steps in four lines of four leave three). */
   .step-filler {
-    background: var(--surface-well);
+    background:
+      repeating-linear-gradient(
+        135deg,
+        transparent 0 5px,
+        color-mix(in oklab, var(--muted-foreground) 25%, transparent) 5px 6px
+      ),
+      var(--surface-well);
   }
   .seq-lines .corner-tl { border-top-left-radius: calc(var(--radius-lg) - 2px); }
   .seq-lines .corner-tr { border-top-right-radius: calc(var(--radius-lg) - 2px); }
