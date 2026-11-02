@@ -311,8 +311,14 @@ export const TOURS = {
 				steps: [openInstrument(CHAIN_DEMO_TRACK)]
 			},
 			{
+				name: 'chain-permute-8-one-row',
+				description: 'An 8-step Permute in a one-row chain\'s medium cell: both lanes fit at 44px, two lines of four each, mute over pitch',
+				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], CHAIN_DEMO_DEVICES[1], 'Echo']),
+				steps: [openInstrument(CHAIN_DEMO_TRACK)]
+			},
+			{
 				name: 'chain-permute-16-wide',
-				description: 'The same Permute in a wide, tall cell: one line of sixteen, with its pitch row',
+				description: 'The same Permute in a wide, tall cell: sixteen steps a lane do not fit twice at 44px, so the mute lane takes the cell',
 				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [PERMUTE_16_DEVICE, 'Echo']),
 				steps: [openInstrument(CHAIN_DEMO_TRACK)]
 			},
