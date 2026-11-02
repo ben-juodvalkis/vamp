@@ -22,6 +22,7 @@ import { createMockEngine } from '$shot/mock-engine.mjs';
 import { buildDemoScene } from '$shot/demo-scene.mjs';
 import { demoPreset } from '$shot/demo-catalog.mjs';
 import { logger } from '$lib/utils/logger';
+import { CENTRAL_VIEW_REGISTRY } from '$lib/components/v6/central/viewRegistry';
 import { demoApiResponse } from './api';
 import { describePress, describeWrite, FIRST_HINT } from './hints';
 
@@ -191,6 +192,28 @@ function showHint(text: string) {
 	hintBar.textContent = text;
 }
 
+/**
+ * Fetch every central view's code once the demo has drawn. The app loads a
+ * view the first time it opens, which costs nothing from the Mac beside the
+ * iPad; served over the web, each first tap on a device or a track waited on
+ * a download (0.7–1 s measured on benjuodvalkis.com) and looked like the tap
+ * had done nothing. One at a time, so the warm-up never competes with a tap.
+ */
+function warmCentralViews() {
+	const { device, instrument, ...rest } = CENTRAL_VIEW_REGISTRY;
+	const loaders = [...Object.values(device), ...Object.values(instrument), ...Object.values(rest)];
+	void (async () => {
+		for (const load of new Set(loaders)) {
+			try {
+				await load();
+			} catch {
+				/* offline or a failed chunk: that view loads on its first tap, as in the app */
+			}
+		}
+		logger.debug(`[demo] ${loaders.length} central views loaded ahead of a tap`);
+	})();
+}
+
 export function installDemo(): void {
 	// A host that serves the build's `index.html` only by its own name (a
 	// plain static server, Vite's) leaves that name in the address, where the
@@ -232,6 +255,7 @@ export function installDemo(): void {
 	// Not on `load`, which has usually fired by the time this runs.
 	setTimeout(() => {
 		if (!lastHint) showHint(FIRST_HINT);
+		warmCentralViews();
 	}, 1500);
 	delete (globalThis as { EventSource?: unknown }).EventSource;
 	logger.info('[demo] Vamp is running against the in-page mock surface');
