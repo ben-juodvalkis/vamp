@@ -33,6 +33,8 @@ const PING_INTERVAL_MS = 5_000;
 const SURFACE_HEARTBEAT_MS = 1_000;
 /** The surface throttles song time to 10 Hz; the demo's clock ticks at it. */
 const LIVE_TICK_MS = 100;
+/** Live meters at 30 Hz; the demo's at 20, which reads as smooth. */
+const METER_TICK_MS = 50;
 
 /**
  * One scene's mock surface. Every client that connects sees the same scene,
@@ -261,6 +263,43 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 		entry.status = 0;
 		sendPlayingSlot(ws, entry);
 	};
+	/**
+	 * Meters for the playing set: a level per playing, audible track that
+	 * pulses on the beat at the scene's tempo (each track a little off the
+	 * others, so the strips don't move as one), scaled by the track's volume,
+	 * and the Main meter riding the loudest. Muted, stopped and solo-silenced
+	 * tracks fall to zero. Invented, as everything here is, but it moves the
+	 * way a playing set's meters move.
+	 */
+	const meterLevels = () => {
+		const args = resolved.treeArgs;
+		const tracks = new Map();
+		for (let k = 0; k < args.length; k++) {
+			if (args[k] === 'T' && /^tracks\/\d+$/.test(String(args[k + 1]))) {
+				tracks.set(String(args[k + 1]), { mute: args[k + 4] === 1, solo: args[k + 5] === 1, volume: Number(args[k + 10]) || 0 });
+			}
+		}
+		const anySolo = [...tracks.values()].some((t) => t.solo);
+		const beat = songTime();
+		const levels = [];
+		let i = 0;
+		for (const [trackPath, t] of tracks) {
+			const entry = playingOn(trackPath);
+			const audible = entry?.status === 1 && !t.mute && (!anySolo || t.solo);
+			let left = 0;
+			let right = 0;
+			if (audible) {
+				const phase = (beat + i * 0.13) % 1;
+				const pulse = 0.55 + 0.4 * Math.exp(-phase * 5) + 0.05 * Math.sin(beat * 7.3 + i);
+				const gain = Math.min(1, t.volume / 0.85);
+				left = Math.min(1, pulse * gain * 0.92);
+				right = Math.min(1, pulse * gain * (0.86 + 0.06 * Math.sin(beat * 3.1 + i)));
+			}
+			levels.push([trackPath, left, right]);
+			i += 1;
+		}
+		return levels;
+	};
 	const trackPaths = () => [...new Set(Object.keys(resolved.clipLengths ?? {}).map((c) => c.split('/slots/')[0]))];
 
 	/**
@@ -434,6 +473,25 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 			}, LIVE_TICK_MS);
 			timers.add(tick);
 			ticks.push(tick);
+			// Meters: every track's, then Main's. A silent track is sent once
+			// at zero and then left alone, so its meter falls and stays.
+			const lastZero = new Set();
+			const meter = setInterval(() => {
+				let mainL = 0;
+				let mainR = 0;
+				for (const [trackPath, left, right] of meterLevels()) {
+					if (left === 0 && right === 0) {
+						if (lastZero.has(trackPath)) continue;
+						lastZero.add(trackPath);
+					} else lastZero.delete(trackPath);
+					send(ws, '/looping/v3/track/meter', [trackPath, left, right]);
+					mainL = Math.max(mainL, left);
+					mainR = Math.max(mainR, right);
+				}
+				send(ws, '/looping/v3/master/meter', [mainL, mainR]);
+			}, METER_TICK_MS);
+			timers.add(meter);
+			ticks.push(meter);
 		}
 
 		function receive(raw) {
