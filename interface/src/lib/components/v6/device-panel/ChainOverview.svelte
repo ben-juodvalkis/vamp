@@ -511,12 +511,9 @@
   // press's own target — Svelte delegates the tiles' pointer handlers to
   // the root, so stopping the event on the way up would starve them.
   let pressInControl = false;
-  /** The press landed on a Permute face too small to edit, which only shows its steps. */
-  let pressOnInertSteps = false;
   function pressDown(cell: Cell, info: DragInfo) {
     const target = info.event?.target;
     pressInControl = target instanceof Element && target.closest('.cell-control') !== null;
-    pressOnInertSteps = target instanceof Element && target.closest('[data-steps-inert="true"]') !== null;
     if (pressInControl && cell.presetKey) fxChainStore.pick(pickScope, cell.presetKey, cell.device.devicePath);
   }
 
@@ -526,11 +523,9 @@
    * own tap only under 200 ms and 5 px, which a finger on the iPad often
    * is not; the cell's tap has no time limit and a touch's slop. Except
    * where a tap IS the control's: Permute's steps, the MIDI wheels, a Drum Rack's pads.
-   * A Permute face too small to edit is a picture, so a tap on it opens.
    */
   function tapOpensFromControl(cell: Cell): boolean {
-    if (cell.presetKey === 'sequencer') return pressOnInertSteps;
-    return !isMidiWheels(cell.device) && !cell.kit;
+    return cell.presetKey !== 'sequencer' && !isMidiWheels(cell.device) && !cell.kit;
   }
 
   function dragStart(cell: Cell, position: number, info: DragInfo) {

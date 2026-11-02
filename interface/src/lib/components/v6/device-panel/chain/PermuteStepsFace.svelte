@@ -12,28 +12,17 @@
     return size.widthClass === 'wide' && size.heightClass === 'tall';
   }
 
-  /** The touch floor: a step narrower or shorter than this is not a target. */
-  export const PERMUTE_STEP_FLOOR = 44;
-
-  export interface PermuteMuteLayout {
-    /** Lines the mute steps take. */
-    lines: number;
-    /** False when even the best lines leave a step under the floor: the face only shows. */
-    editable: boolean;
-  }
-
   /**
-   * How a chain cell lays out the mute row when it draws it alone
-   * (2026-11-02): in one, two or four lines (the bar, its halves, its
+   * How many lines a chain cell lays the mute row out in when it draws it
+   * alone (2026-11-02): one, two or four (the bar, its halves, its
    * quarters: three would split 8 steps 3 · 3 · 2), whichever makes a step
-   * closest to square, its shorter side as long as it can be. When
-   * that side still falls under `PERMUTE_STEP_FLOOR` the steps are too
-   * small to aim at, so the face only shows the pattern and a tap opens the
-   * Permute view, where they are full size. A cell drawing the pitch row
-   * too, or no cell (outside the chain, unmeasured), keeps one line, editable.
+   * closest to square, its shorter side as long as it can be. The steps stay
+   * live however small that leaves them: a swipe across a run of them still
+   * mutes it. A cell drawing the pitch row too, or no cell (outside the
+   * chain, unmeasured), keeps one line.
    */
-  export function permuteMuteLayout(size: CellSize | null, length: number): PermuteMuteLayout {
-    if (!size || size.width <= 0 || size.height <= 0 || permuteShowsPitch(size)) return { lines: 1, editable: true };
+  export function permuteMuteLines(size: CellSize | null, length: number): number {
+    if (!size || size.width <= 0 || size.height <= 0 || permuteShowsPitch(size)) return 1;
     const n = Math.max(1, Math.round(length));
     let best = { lines: 1, side: 0 };
     for (const lines of [1, 2, 4]) {
@@ -41,7 +30,7 @@
       const side = Math.min(size.width / Math.ceil(n / lines), size.height / lines);
       if (side > best.side) best = { lines, side };
     }
-    return { lines: best.lines, editable: best.side >= PERMUTE_STEP_FLOOR };
+    return best.lines;
   }
 </script>
 
@@ -55,9 +44,7 @@
    * step is the device's telemetry (`permuteStepStore`). Length and rate
    * stay in the Permute view. A medium or narrow cell, or a two-row
    * chain, draws the mute row alone (`permuteShowsPitch`), in as many
-   * lines as make its steps squarest, and only shows them where even those
-   * are under the touch floor (`permuteMuteLayout`): a tap then opens the
-   * Permute view (`ChainOverview`, `data-steps-inert`).
+   * lines as make its steps squarest (`permuteMuteLines`).
    */
   import { useCellSize } from './cellSize';
   import SequencerPatternGrid from '$lib/components/v6/clips/SequencerPatternGrid.svelte';
@@ -93,7 +80,7 @@
   const muteSteps = $derived(MUTE_STEP_ROLES.map((r) => read(r) === 1));
   const pitchSteps = $derived(PITCH_STEP_ROLES.map((r) => read(r) === 1));
   const muteLength = $derived(read('muteLength'));
-  const muteLayout = $derived(permuteMuteLayout(cellSize(), muteLength));
+  const muteLines = $derived(permuteMuteLines(cellSize(), muteLength));
   const pitchLength = $derived(read('pitchLength'));
   const running = $derived(permuteStepStore.get(device.devicePath));
 
@@ -102,12 +89,11 @@
   }
 </script>
 
-<div class="permute-face" data-debug="permute-face" data-pitch={showPitch} data-mute-lines={muteLayout.lines} data-steps-inert={!muteLayout.editable}>
+<div class="permute-face" data-debug="permute-face" data-pitch={showPitch} data-mute-lines={muteLines}>
   <div class="row">
     <SequencerPatternGrid
       variant="mute"
-      lines={muteLayout.lines}
-      readonly={!muteLayout.editable}
+      lines={muteLines}
       steps={muteSteps}
       length={muteLength}
       currentStep={running.mute}

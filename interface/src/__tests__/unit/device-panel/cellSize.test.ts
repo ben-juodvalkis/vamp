@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { cellHeightClass, cellWidthClass, CELL_TALL_MIN, CELL_WIDTH_STEPS } from '$lib/components/v6/device-panel/chain/cellSize';
 import { rackMacrosFill } from '$lib/components/v6/device-panel/chain/RackFace.svelte';
-import { permuteMuteLayout, permuteShowsPitch, PERMUTE_STEP_FLOOR } from '$lib/components/v6/device-panel/chain/PermuteStepsFace.svelte';
+import { permuteMuteLines, permuteShowsPitch } from '$lib/components/v6/device-panel/chain/PermuteStepsFace.svelte';
 
 describe('cellWidthClass (ADR-492)', () => {
 	it('is null until the cell is measured', () => {
@@ -50,7 +50,7 @@ describe('permuteShowsPitch', () => {
 	});
 });
 
-describe('permuteMuteLayout', () => {
+describe('permuteMuteLines', () => {
 	type W = 'narrow' | 'medium' | 'wide';
 	type H = 'short' | 'tall';
 	const size = (width: number, height: number, widthClass: W = 'medium', heightClass: H = 'short') => ({
@@ -60,23 +60,20 @@ describe('permuteMuteLayout', () => {
 		heightClass
 	});
 	it('picks the one, two or four lines that make a step squarest', () => {
-		// One-row chain, medium cell: 4 lines of 4 at about 50 x 57.
-		expect(permuteMuteLayout(size(198, 230, 'medium', 'tall'), 16)).toEqual({ lines: 4, editable: true });
-		// Eight steps in the same cell: 4 lines of 2 (99 x 57) beats 2 of 4 (49 x 115).
-		expect(permuteMuteLayout(size(198, 230, 'medium', 'tall'), 8).lines).toBe(4);
+		// One-row chain: 4 lines of 4 at about 50 x 57.
+		expect(permuteMuteLines(size(198, 230, 'medium', 'tall'), 16)).toBe(4);
+		// Two-row chain: 4 lines of 4 (50 x 29) beats 2 of 8 (25 x 58).
+		expect(permuteMuteLines(size(198, 116), 16)).toBe(4);
+		// Eight steps there: 2 lines of 4 (49 x 58) beats 4 of 2 (99 x 29).
+		expect(permuteMuteLines(size(198, 116), 8)).toBe(2);
+		// Never three: 8 steps in a cell where 3 would win still get 4.
+		expect(permuteMuteLines(size(198, 230, 'medium', 'tall'), 8)).toBe(4);
+		// A short pattern in a long cell stays one line.
+		expect(permuteMuteLines(size(198, 116), 2)).toBe(1);
 	});
-	it('only shows the steps when even the best lines are under the floor', () => {
-		// Two-row chain: 4 lines of 4 at about 50 x 29, the best of 1, 2 or 4.
-		expect(permuteMuteLayout(size(198, 116), 16)).toEqual({ lines: 4, editable: false });
-		// Eight steps there: 2 lines of 4 at about 49 x 58.
-		expect(permuteMuteLayout(size(198, 116), 8)).toEqual({ lines: 2, editable: true });
-	});
-	it('edits at exactly the floor', () => {
-		expect(permuteMuteLayout(size(PERMUTE_STEP_FLOOR * 4, PERMUTE_STEP_FLOOR * 4), 16)).toEqual({ lines: 4, editable: true });
-	});
-	it('keeps one editable line beside the pitch row, outside the chain, and before measuring', () => {
-		expect(permuteMuteLayout(size(400, 230, 'wide', 'tall'), 16)).toEqual({ lines: 1, editable: true });
-		expect(permuteMuteLayout(null, 16)).toEqual({ lines: 1, editable: true });
-		expect(permuteMuteLayout(size(0, 0), 16)).toEqual({ lines: 1, editable: true });
+	it('keeps one line beside the pitch row, outside the chain, and before measuring', () => {
+		expect(permuteMuteLines(size(400, 230, 'wide', 'tall'), 16)).toBe(1);
+		expect(permuteMuteLines(null, 16)).toBe(1);
+		expect(permuteMuteLines(size(0, 0), 16)).toBe(1);
 	});
 });
