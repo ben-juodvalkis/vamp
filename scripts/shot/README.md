@@ -682,7 +682,9 @@ specifically.
 ## Keeping it working
 
 The mock is a second implementation of the surface's half of the wire
-protocol, so it drifts if the protocol moves. Two places bind it:
+protocol, so it drifts if the protocol moves. Its protocol half is
+`mock-engine.mjs`, which the browser demo (`npm run demo`, ADR-502) also runs
+in the page, so a drift shows there too. Two places bind it:
 
 - **T/D/P/S/C record arity** (`scene.mjs`) tracks wire-protocol §3. A
   protocol bump that changes arity has to land here in the same commit,
