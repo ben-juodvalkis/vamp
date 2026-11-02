@@ -52,8 +52,20 @@ WebSocket server.
 - The default scene is synthetic (`buildDefaultScene`). A set captured with
   `npm run shot:capture` replays the same way and would make the demo a real
   set.
-- No sound. Loading presets from the browser rail, recording, Capture, Record
-  to Simpler and anything else that needs Live, its index or the Mac's disk
+- **The browser has a library** (`scripts/shot/demo-catalog.mjs`): a few
+  invented presets in every rail category, each standing for a device the
+  scene has parameters for. An instrument loads through `prepare_for_preset`
+  (onto the empty track the browser made, as the surface reuses it, else a
+  new one; onto a pinned track by swapping its instrument), an effect through
+  `device/load` onto the chain. The catalog keeps the fixture index's root:
+  with another the interface drew no tracks.
+- **A one-line hint** (`interface/src/lib/demo/hints.ts`) says what the last
+  touch did, from the write it sent (the parameter, track or clip, named from
+  the scene) or, for a press that sends nothing, the button. Framed, it is
+  posted to the embedding page (`{ type: 'vamp-demo-hint', text }`); on its
+  own, the demo draws it along the bottom of the screen.
+- No sound. Recording, Capture, Record to Simpler, samples and clips from the
+  browser, and anything else that needs Live, its index or the Mac's disk
   answer as on a Mac without the file: a "not available" or a load that fails.
 - Effects the scene has no parameter table for load with ghosted controls.
 - Hosting it on benjuodvalkis.com, a base path, and the phone fallback are not

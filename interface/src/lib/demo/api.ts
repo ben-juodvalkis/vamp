@@ -2,24 +2,19 @@
  * The browser demo's stand-in for the interface server's `/api/*` routes.
  *
  * A static build has no server, so every route the page reaches is answered
- * here, from the same committed fixtures the screenshot harness serves
- * (`scripts/shot/screenshot-page.mjs`, `installCatalogFixtures`): the Places
- * catalog, the Settings list, the network card. What needs the Mac's disk or
+ * here: the Places catalog from the demo's own library
+ * (`scripts/shot/demo-catalog.mjs`), the Settings list and the network card
+ * from the harness's fixtures (`scripts/shot/screenshot-page.mjs`). What needs the Mac's disk or
  * Live's index (sample peaks, reverb IRs, similar samples, grooves) answers
  * the way that route does on a Mac without the file: a 404 the UI already
  * draws as "not available".
  */
 
 import placesList from '$shot/fixtures/places-list.json';
-import placesIndex from '$shot/fixtures/data/places/index.json';
-import synthPlace from '$shot/fixtures/data/places/synth.json';
-import synthSamples from '$shot/fixtures/data/places/synth-samples.json';
+import { demoPlaceFiles } from '$shot/demo-catalog.mjs';
 
-const PLACE_FILES: Record<string, unknown> = {
-	'index.json': placesIndex,
-	'synth.json': synthPlace,
-	'synth-samples.json': synthSamples
-};
+/** The demo's own library: a few presets per rail button (`demo-catalog.mjs`). */
+const PLACE_FILES: Record<string, unknown> = demoPlaceFiles();
 
 const json = (body: unknown, status = 200) =>
 	new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });

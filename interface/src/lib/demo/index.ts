@@ -20,8 +20,10 @@
 
 import { createMockEngine } from '$shot/mock-engine.mjs';
 import { buildDemoScene } from '$shot/demo-scene.mjs';
+import { demoPreset } from '$shot/demo-catalog.mjs';
 import { logger } from '$lib/utils/logger';
 import { demoApiResponse } from './api';
+import { describePress, describeWrite, FIRST_HINT } from './hints';
 
 type Engine = ReturnType<typeof createMockEngine>;
 type EngineClient = ReturnType<Engine['connect']>;
@@ -34,9 +36,16 @@ const SESSION_MODE_KEY = 'uiPrefsStore.sessionMode';
 /** Every demo socket shares one engine, so a reconnect finds the same set. */
 function getEngine(): Engine {
 	if (!engine) {
+		const scene = buildDemoScene();
 		engine = createMockEngine({
-			scene: buildDemoScene(),
+			scene,
+			// Every write the page sends: the hint line names what it touched.
+			onInbound: (address: string, args: unknown[]) => {
+				const text = describeWrite(scene, address, args);
+				if (text) showHint(text);
+			},
 			live: true,
+			resolvePreset: demoPreset,
 			log: (m: string) => logger.debug(`[demo] ${m}`)
 		});
 	}
@@ -132,6 +141,56 @@ class DemoWebSocket extends EventTarget {
 	}
 }
 
+/** The message the embedding page listens for (benjuodvalkis.com's `vamp-play.svelte`). */
+const HINT_MESSAGE = 'vamp-demo-hint';
+const framed = (() => {
+	try {
+		return window.parent !== window;
+	} catch {
+		return true;
+	}
+})();
+let hintBar: HTMLDivElement | null = null;
+let lastHint = '';
+
+/**
+ * Put a sentence on the hint line. Framed, it goes to the embedding page,
+ * which shows it under the frame; on its own, the demo draws a bar along the
+ * bottom of the screen that touches pass through.
+ */
+function showHint(text: string) {
+	if (text === lastHint) return;
+	lastHint = text;
+	if (framed) {
+		window.parent.postMessage({ type: HINT_MESSAGE, text }, '*');
+		return;
+	}
+	if (!hintBar) {
+		hintBar = document.createElement('div');
+		hintBar.setAttribute('aria-live', 'off');
+		Object.assign(hintBar.style, {
+			position: 'fixed',
+			left: '50%',
+			bottom: '6px',
+			transform: 'translateX(-50%)',
+			maxWidth: 'calc(100% - 24px)',
+			padding: '6px 12px',
+			borderRadius: '4px',
+			background: 'color-mix(in srgb, var(--canvas, #1f2126) 88%, transparent)',
+			border: '1px solid var(--line-strong, #0f1013)',
+			color: 'var(--foreground, #d3d6db)',
+			font: '13px/1.3 ui-sans-serif, system-ui, -apple-system, sans-serif',
+			whiteSpace: 'nowrap',
+			overflow: 'hidden',
+			textOverflow: 'ellipsis',
+			pointerEvents: 'none',
+			zIndex: '2147483647'
+		});
+		document.body.appendChild(hintBar);
+	}
+	hintBar.textContent = text;
+}
+
 export function installDemo(): void {
 	// A host that serves the build's `index.html` only by its own name (a
 	// plain static server, Vite's) leaves that name in the address, where the
@@ -159,6 +218,21 @@ export function installDemo(): void {
 	}
 
 	(globalThis as { WebSocket: unknown }).WebSocket = DemoWebSocket;
+
+	// The hint line: a first sentence once the page has drawn, then one per
+	// press that sends nothing (a write names itself through `onInbound`).
+	addEventListener(
+		'pointerdown',
+		(event) => {
+			const text = describePress(event.target instanceof Element ? event.target : null);
+			if (text) showHint(text);
+		},
+		{ capture: true, passive: true }
+	);
+	// Not on `load`, which has usually fired by the time this runs.
+	setTimeout(() => {
+		if (!lastHint) showHint(FIRST_HINT);
+	}, 1500);
 	delete (globalThis as { EventSource?: unknown }).EventSource;
 	logger.info('[demo] Vamp is running against the in-page mock surface');
 }

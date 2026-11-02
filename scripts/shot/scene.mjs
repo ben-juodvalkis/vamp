@@ -1479,7 +1479,7 @@ export function padChainRecords(rackPath, note, rack) {
  * name (none for a device it has no table for: the view draws ghosts, as a
  * shot of an unknown device does). Returns the new device's path.
  */
-export function appendTrackDevice(scene, trackPath, name, className) {
+export function appendTrackDevice(scene, trackPath, name, className, like) {
 	const args = scene.treeArgs;
 	const prefix = `${trackPath}/devices/`;
 	const topLevel = new RegExp(`^${prefix.replace(/[/]/g, '\\/')}(\\d+)$`);
@@ -1497,8 +1497,78 @@ export function appendTrackDevice(scene, trackPath, name, className) {
 	if (insertAt < 0) throw new Error(`appendTrackDevice: no device records on ${trackPath}`);
 	const devicePath = `${prefix}${count}`;
 	const records = [];
-	pushDeviceRecords(records, devicePath, name, className ?? deviceClassName(name), DEVICE_PARAMS[name] ?? []);
+	pushDeviceRecords(records, devicePath, name, className ?? deviceClassName(like ?? name), DEVICE_PARAMS[like ?? name] ?? []);
 	args.splice(insertAt, 0, ...records);
+	return devicePath;
+}
+
+/** Track colours a new track takes in turn (the demo's loads). */
+const NEW_TRACK_COLORS = [COLOR.purple, COLOR.teal, COLOR.pink, COLOR.cyan, COLOR.yellow, COLOR.green];
+
+/**
+ * Add a track to a built scene, before the master — the browser demo's
+ * `prepare_for_preset` (ADR-502). `instrument` is `{ name, like }` (a preset
+ * named for itself, with the parameters of a device this file has a table
+ * for), or null for an empty track (New Audio / New MIDI). No clips. Returns
+ * the new track's path.
+ */
+export function appendTrack(scene, { name, kind = 'midi', role = '', preset = '', instrument = null }) {
+	const args = scene.treeArgs;
+	const master = args.findIndex((v, k) => v === 'T' && args[k + 1] === 'master');
+	const count = args.filter((v, k) => v === 'T' && /^tracks\/\d+$/.test(String(args[k + 1]))).length;
+	const trackPath = `tracks/${count}`;
+	const records = [];
+	pushTrack(records, trackPath, { name, kind, role, preset, color: NEW_TRACK_COLORS[count % NEW_TRACK_COLORS.length] });
+	const devices = instrument ? [{ name: instrument.name, like: instrument.like }] : [];
+	pushDevices(records, trackPath, devices, (scene.deviceProperties ??= {}), (scene.padRacks ??= {}));
+	pushSlots(records, trackPath, {});
+	args.splice(master < 0 ? args.length : master, 0, ...records);
+	return trackPath;
+}
+
+/**
+ * The last track, when it is empty (no devices, no clips) and of `kind` — the
+ * one a load reuses rather than adding another, as the surface's prepare does
+ * with the empty track the browser made on opening. Its records are removed,
+ * so the `appendTrack` that follows takes its place and path. Returns the
+ * path, or null.
+ */
+export function takeEmptyLastTrack(scene, kind) {
+	const args = scene.treeArgs;
+	const tracks = [];
+	for (let k = 0; k < args.length; k++) {
+		if (args[k] === 'T' && /^tracks\/\d+$/.test(String(args[k + 1]))) tracks.push(k);
+	}
+	const at = tracks.at(-1);
+	if (at === undefined) return null;
+	const trackPath = String(args[at + 1]);
+	const isMidi = args[at + 7] === 1;
+	if (isMidi !== (kind === 'midi')) return null;
+	const owned = (k) => String(args[k + 1]).startsWith(`${trackPath}/`);
+	for (let k = at + 1; k < args.length; k++) {
+		if ((args[k] === 'D' || args[k] === 'C') && owned(k)) return null;
+	}
+	// T (16 values with its tag), then its S records (3 each), with nothing
+	// else between.
+	let end = at + 16;
+	while (args[end] === 'S' && owned(end)) end += 3;
+	args.splice(at, end - at);
+	return trackPath;
+}
+
+/**
+ * Put a different instrument at the head of a track's chain (a preset
+ * loaded onto a pinned track): its D and P records replaced in place.
+ */
+export function replaceInstrument(scene, trackPath, { name, like }) {
+	const devicePath = `${trackPath}/devices/0`;
+	const className = deviceClassName(like ?? name);
+	swapDevice(scene, devicePath, { name, className, params: DEVICE_PARAMS[like ?? name] ?? [] });
+	if (className === 'DrumGroupDevice' && !scene.padRacks?.[devicePath]) {
+		// A kit needs its pad table, as `pushDevices` builds one.
+		const scratch = [];
+		pushDevices(scratch, trackPath, [{ name, like }], (scene.deviceProperties ??= {}), (scene.padRacks ??= {}));
+	}
 	return devicePath;
 }
 

@@ -23,7 +23,10 @@ import {
 	padChainRecords,
 	appendPadDevice,
 	deviceClassName,
-	appendTrackDevice
+	appendTrackDevice,
+	appendTrack,
+	replaceInstrument,
+	takeEmptyLastTrack
 } from './scene.mjs';
 
 const PING_INTERVAL_MS = 5_000;
@@ -44,7 +47,10 @@ const LIVE_TICK_MS = 100;
  * and playheads move at the scene's tempo — and the performance writes a
  * visitor makes are answered as Live would answer them: launching and
  * stopping clips and scenes, mute, solo, volume, pan and sends, and a native
- * effect loaded onto a track. The harnesses leave it off: their captures must
+ * effect loaded onto a track, and — given `resolvePreset`, which names the
+ * device a preset file stands for — a preset loaded from the browser (an
+ * instrument onto a new or pinned track, an effect onto a chain). The
+ * harnesses leave it off: their captures must
  * be the same frame every run, and their scenarios assert on exactly what
  * the mock answers today.
  *
@@ -52,10 +58,11 @@ const LIVE_TICK_MS = 100;
  *   scene?: object,
  *   log?: (message: string) => void,
  *   onInbound?: ((address: string, args: unknown[]) => void) | null,
- *   live?: boolean
+ *   live?: boolean,
+ *   resolvePreset?: ((path: string) => { name: string, like: string, role?: string, effect?: boolean } | null) | null
  * }} [options]
  */
-export function createMockEngine({ scene, log = () => {}, onInbound = null, live = false } = {}) {
+export function createMockEngine({ scene, log = () => {}, onInbound = null, live = false, resolvePreset = null } = {}) {
 	const resolved = scene ?? buildDefaultScene();
 	const version = resolved.version ?? PROTOCOL_VERSION;
 	// `let`: a pad load is a structural change and advances it, exactly as
@@ -295,9 +302,15 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 				send(ws, address, args);
 				return true;
 			}
+			case '/looping/v3/track/name': {
+				const [trackPath, name] = args;
+				const at = resolved.treeArgs.findIndex((v, k) => v === 'T' && resolved.treeArgs[k + 1] === trackPath);
+				if (at >= 0 && typeof name === 'string') resolved.treeArgs[at + 2] = name;
+				send(ws, address, args);
+				return true;
+			}
 			case '/looping/v3/track/pan':
 			case '/looping/v3/track/send':
-			case '/looping/v3/track/name':
 			case '/looping/v3/master/volume':
 				send(ws, address, args);
 				return true;
@@ -309,17 +322,66 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 				const [trackPath, devicePath, filePath, source, rel] = args;
 				if (parsePadPath(devicePath)) return false;
 				const native = typeof source === 'string' && source.startsWith('native:');
-				if (!native || typeof trackPath !== 'string' || !/^tracks\/\d+$/.test(trackPath)) {
+				const preset = native ? null : resolvePreset?.(String(rel || filePath || ''));
+				if ((!native && !preset?.effect) || typeof trackPath !== 'string' || !/^tracks\/\d+$/.test(trackPath)) {
 					send(ws, '/looping/v3/error', [address, 'load-failed', String(filePath || source || ''), 'not-in-demo']);
 					return true;
 				}
-				const className = source.slice('native:'.length);
-				const name = (typeof rel === 'string' && rel) || className;
-				const added = appendTrackDevice(resolved, trackPath, name, className);
+				const className = native ? source.slice('native:'.length) : undefined;
+				const name = native ? (typeof rel === 'string' && rel) || className : preset.name;
+				const added = appendTrackDevice(resolved, trackPath, name, className, preset?.like);
 				generation += 1;
 				sendStateFull(ws, 'structural');
 				send(ws, '/looping/v3/device/appointed', [added]);
 				log(`device/load ${name} (${className}) → ${added}`);
+				return true;
+			}
+			case '/looping/v3/track/prepare_for_preset': {
+				// [requestId, trackType, presetPath, targetTrackPath?, source?, rel?]
+				// An instrument from the browser: onto the pinned track (its
+				// instrument swapped), else onto a new one at the end, as the
+				// surface's `new`/auto modes leave it. Empty preset and no
+				// source: an empty track (New Audio / New MIDI).
+				const [requestId, trackType, presetPath, target, source, rel] = args;
+				const nack = (code, detail) => send(ws, `${address}/nack`, [String(requestId), code, detail]);
+				if (typeof requestId !== 'string') return true;
+				const kind = trackType === 'audio' ? 'audio' : 'midi';
+				const ref = String(rel || presetPath || '');
+				const native = typeof source === 'string' && source.startsWith('native:');
+				const preset = native
+					? { name: String(rel || source.slice('native:'.length)), like: source.slice('native:'.length) }
+					: ref
+						? resolvePreset?.(ref)
+						: null;
+				if (ref && !preset) {
+					nack('load-failed', 'not-in-demo');
+					return true;
+				}
+				const pinned = typeof target === 'string' && /^tracks\/\d+$/.test(target) ? target : '';
+				let trackPath;
+				let created = 1;
+				if (pinned && preset) {
+					replaceInstrument(resolved, pinned, preset);
+					trackPath = pinned;
+					created = 0;
+				} else {
+					// A preset reuses the empty track the browser made, as the
+					// surface does; an empty request always makes a new one.
+					if (preset && takeEmptyLastTrack(resolved, kind)) created = 0;
+					trackPath = appendTrack(resolved, {
+						name: preset?.name ?? (kind === 'audio' ? 'Audio' : 'MIDI'),
+						kind,
+						role: preset?.role ?? '',
+						preset: preset ? ref : '',
+						instrument: preset
+					});
+				}
+				generation += 1;
+				send(ws, `${address}/ack`, [requestId, trackPath, created]);
+				sendStateFull(ws, 'structural');
+				send(ws, '/looping/v3/selected_track', [trackPath]);
+				if (preset) send(ws, '/looping/v3/device/appointed', [`${trackPath}/devices/0`]);
+				log(`prepare_for_preset ${preset?.name ?? '(empty)'} → ${trackPath}`);
 				return true;
 			}
 			default:
