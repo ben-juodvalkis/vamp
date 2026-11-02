@@ -196,22 +196,17 @@ function showHint(text: string) {
  * Fetch every central view's code once the demo has drawn. The app loads a
  * view the first time it opens, which costs nothing from the Mac beside the
  * iPad; served over the web, each first tap on a device or a track waited on
- * a download (0.7–1 s measured on benjuodvalkis.com) and looked like the tap
- * had done nothing. One at a time, so the warm-up never competes with a tap.
+ * a download (0.7–1 s measured on benjuodvalkis.com, 2–3 s a file on slow
+ * Wi-Fi) and looked like the tap had done nothing. All at once: the site is
+ * HTTP/2, and one at a time took minutes on that Wi-Fi.
  */
 function warmCentralViews() {
 	const { device, instrument, ...rest } = CENTRAL_VIEW_REGISTRY;
 	const loaders = [...Object.values(device), ...Object.values(instrument), ...Object.values(rest)];
-	void (async () => {
-		for (const load of new Set(loaders)) {
-			try {
-				await load();
-			} catch {
-				/* offline or a failed chunk: that view loads on its first tap, as in the app */
-			}
-		}
-		logger.debug(`[demo] ${loaders.length} central views loaded ahead of a tap`);
-	})();
+	// A failed chunk (offline) is left to load on its first tap, as in the app.
+	void Promise.allSettled([...new Set(loaders)].map((load) => load())).then(() =>
+		logger.debug(`[demo] ${loaders.length} central views loaded ahead of a tap`)
+	);
 }
 
 export function installDemo(): void {
