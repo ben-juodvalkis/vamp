@@ -291,10 +291,23 @@ export const TOURS = {
 				steps: [openInstrument(CHAIN_DEMO_TRACK)]
 			},
 			{
-				name: 'chain-permute-16-narrow',
-				description: 'A 16-step Permute on a two-row chain: too narrow for one line, its mute row wraps into two lines of eight',
+				name: 'chain-permute-16-two-rows',
+				description: 'A 16-step Permute on a two-row chain: even four lines of four leave a step under 44px, so the face only shows them and a tap opens the Permute view',
 				scenePatch: (scene) =>
 					setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], PERMUTE_16_DEVICE, ...CHAIN_DEMO_DEVICES.slice(2, 7)]),
+				steps: [openInstrument(CHAIN_DEMO_TRACK)]
+			},
+			{
+				name: 'chain-permute-8-two-rows',
+				description: 'An 8-step Permute on the same two-row chain: two lines of four, each step over 44px, editable',
+				scenePatch: (scene) =>
+					setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], CHAIN_DEMO_DEVICES[1], ...CHAIN_DEMO_DEVICES.slice(2, 7)]),
+				steps: [openInstrument(CHAIN_DEMO_TRACK)]
+			},
+			{
+				name: 'chain-permute-16-one-row',
+				description: 'A 16-step Permute in a one-row chain\'s medium cell: four lines of four, editable',
+				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], PERMUTE_16_DEVICE, 'Echo']),
 				steps: [openInstrument(CHAIN_DEMO_TRACK)]
 			},
 			{

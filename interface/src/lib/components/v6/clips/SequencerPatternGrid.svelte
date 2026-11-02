@@ -28,11 +28,11 @@
     onRateChange?: (mode: string, value: number) => void;
     onEnable?: () => void;
     /**
-     * Lay the steps out in two lines, the first half over the second, when
-     * one line would make each too narrow to tap (a narrow chain cell,
-     * 2026-11-02). An odd length leaves the bottom line one short.
+     * Lay the steps out in this many lines, reading left to right, then down
+     * (a chain cell too narrow for one, 2026-11-02). A length the lines do
+     * not divide leaves the last line short; the gap is drawn as the well.
      */
-    rows?: 1 | 2;
+    lines?: number;
   }
 
   let {
@@ -54,20 +54,23 @@
     onLengthChange,
     onRateChange,
     onEnable,
-    rows = 1
+    lines = 1
   }: Props = $props();
 
-  /** Steps per line when wrapped. */
-  let lineCols = $derived(Math.max(1, Math.ceil(length / 2)));
+  /** Wrapped: how many lines are drawn, steps per line, and the empty slots closing the last. */
+  let lineCount = $derived(Math.max(1, Math.min(Math.round(lines), length)));
+  let lineCols = $derived(Math.max(1, Math.ceil(length / lineCount)));
+  let fillers = $derived(lineCount * lineCols - length);
 
-  /** In two lines, the corner a step sits on (for the outer radius), or ''. */
-  function wrapCorner(i: number): string {
-    const lastLine = length - lineCols;
-    if (i === 0) return lastLine > 0 ? 'corner-tl' : 'corner-tl corner-bl';
-    if (i === lineCols - 1) return lastLine > 0 ? 'corner-tr' : 'corner-tr corner-br';
-    if (i === lineCols) return 'corner-bl';
-    if (i === length - 1 && length % 2 === 0) return 'corner-br';
-    return '';
+  /** Wrapped: the outer corner a slot sits on (for the frame's radius), or ''. */
+  function wrapCorner(slot: number): string {
+    const total = lineCount * lineCols;
+    const c: string[] = [];
+    if (slot === 0) c.push('corner-tl');
+    if (slot === lineCols - 1) c.push('corner-tr');
+    if (slot === total - lineCols) c.push('corner-bl');
+    if (slot === total - 1) c.push('corner-br');
+    return c.join(' ');
   }
 
   // Drag interaction state for pattern
@@ -408,11 +411,11 @@
     class="seq-grid glass-panel flex-1 h-full {currentSize.border} {currentSize.rounded} overflow-hidden"
     title="Sequencer Pattern - {length} steps"
   >
-    {#if rows === 2}
+    {#if lineCount > 1}
     <div
       class="seq-lines h-full touch-manipulation"
-      style="grid-template-columns: repeat({lineCols}, minmax(0, 1fr));"
-      data-rows="2"
+      style="grid-template-columns: repeat({lineCols}, minmax(0, 1fr)); grid-template-rows: repeat({lineCount}, minmax(0, 1fr));"
+      data-lines={lineCount}
     >
       {#each Array(length) as _, stepIndex}
         <div
@@ -427,9 +430,9 @@
           tabindex={readonly ? -1 : 0}
         ></div>
       {/each}
-      {#if length % 2 === 1 && length > 1}
-        <div class="step-filler corner-br" aria-hidden="true"></div>
-      {/if}
+      {#each Array(fillers) as _, f}
+        <div class="step-filler {wrapCorner(length + f)}" aria-hidden="true"></div>
+      {/each}
     </div>
     {:else}
     <div class="h-full flex touch-manipulation">
@@ -540,12 +543,11 @@
     border-bottom-right-radius: calc(var(--radius-lg) - 2px);
   }
 
-  /* Two lines: the steps sit on a grid whose 1px gaps show the hairline
+  /* Wrapped: the steps sit on a grid whose 1px gaps show the hairline
      behind them, the separators of the one-line row; only the four outer
      corners round. */
   .seq-lines {
     display: grid;
-    grid-template-rows: repeat(2, minmax(0, 1fr));
     gap: 1px;
     background: var(--border);
   }

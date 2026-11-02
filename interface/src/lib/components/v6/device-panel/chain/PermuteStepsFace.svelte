@@ -12,19 +12,36 @@
     return size.widthClass === 'wide' && size.heightClass === 'tall';
   }
 
-  /** Narrower than this, a step in one line is too thin to tap. */
-  export const PERMUTE_MIN_STEP_W = 24;
+  /** The touch floor: a step narrower or shorter than this is not a target. */
+  export const PERMUTE_STEP_FLOOR = 44;
+
+  export interface PermuteMuteLayout {
+    /** Lines the mute steps take. */
+    lines: number;
+    /** False when even the best lines leave a step under the floor: the face only shows. */
+    editable: boolean;
+  }
 
   /**
-   * How many lines the mute row takes (2026-11-02): two in a cell narrower
-   * than wide when one line would make its steps thinner than
-   * `PERMUTE_MIN_STEP_W`, else one. Such a cell draws no pitch row, so the
-   * second line has the height. A wide cell keeps one line and its pitch row.
+   * How a chain cell lays out the mute row when it draws it alone
+   * (2026-11-02): in one, two or four lines (the bar, its halves, its
+   * quarters: three would split 8 steps 3 · 3 · 2), whichever makes a step
+   * closest to square, its shorter side as long as it can be. When
+   * that side still falls under `PERMUTE_STEP_FLOOR` the steps are too
+   * small to aim at, so the face only shows the pattern and a tap opens the
+   * Permute view, where they are full size. A cell drawing the pitch row
+   * too, or no cell (outside the chain, unmeasured), keeps one line, editable.
    */
-  export function permuteMuteRows(size: CellSize | null, length: number): 1 | 2 {
-    if (!size || size.widthClass === null || size.widthClass === 'wide') return 1;
-    if (length < 2) return 1;
-    return size.width / length < PERMUTE_MIN_STEP_W ? 2 : 1;
+  export function permuteMuteLayout(size: CellSize | null, length: number): PermuteMuteLayout {
+    if (!size || size.width <= 0 || size.height <= 0 || permuteShowsPitch(size)) return { lines: 1, editable: true };
+    const n = Math.max(1, Math.round(length));
+    let best = { lines: 1, side: 0 };
+    for (const lines of [1, 2, 4]) {
+      if (lines > n) break;
+      const side = Math.min(size.width / Math.ceil(n / lines), size.height / lines);
+      if (side > best.side) best = { lines, side };
+    }
+    return { lines: best.lines, editable: best.side >= PERMUTE_STEP_FLOOR };
   }
 </script>
 
@@ -37,8 +54,10 @@
    * scoped pad's) Permute and would steer every copy at once. The running
    * step is the device's telemetry (`permuteStepStore`). Length and rate
    * stay in the Permute view. A medium or narrow cell, or a two-row
-   * chain, draws the mute row alone (`permuteShowsPitch`), in two lines
-   * where one would be too thin to tap (`permuteMuteRows`).
+   * chain, draws the mute row alone (`permuteShowsPitch`), in as many
+   * lines as make its steps squarest, and only shows them where even those
+   * are under the touch floor (`permuteMuteLayout`): a tap then opens the
+   * Permute view (`ChainOverview`, `data-steps-inert`).
    */
   import { useCellSize } from './cellSize';
   import SequencerPatternGrid from '$lib/components/v6/clips/SequencerPatternGrid.svelte';
@@ -74,7 +93,7 @@
   const muteSteps = $derived(MUTE_STEP_ROLES.map((r) => read(r) === 1));
   const pitchSteps = $derived(PITCH_STEP_ROLES.map((r) => read(r) === 1));
   const muteLength = $derived(read('muteLength'));
-  const muteRows = $derived(permuteMuteRows(cellSize(), muteLength));
+  const muteLayout = $derived(permuteMuteLayout(cellSize(), muteLength));
   const pitchLength = $derived(read('pitchLength'));
   const running = $derived(permuteStepStore.get(device.devicePath));
 
@@ -83,11 +102,12 @@
   }
 </script>
 
-<div class="permute-face" data-debug="permute-face" data-pitch={showPitch} data-mute-rows={muteRows}>
+<div class="permute-face" data-debug="permute-face" data-pitch={showPitch} data-mute-lines={muteLayout.lines} data-steps-inert={!muteLayout.editable}>
   <div class="row">
     <SequencerPatternGrid
       variant="mute"
-      rows={muteRows}
+      lines={muteLayout.lines}
+      readonly={!muteLayout.editable}
       steps={muteSteps}
       length={muteLength}
       currentStep={running.mute}
