@@ -27,6 +27,12 @@
     onLengthChange?: (length: number) => void;
     onRateChange?: (mode: string, value: number) => void;
     onEnable?: () => void;
+    /**
+     * Lay the steps out in two lines, the first half over the second, when
+     * one line would make each too narrow to tap (a narrow chain cell,
+     * 2026-11-02). An odd length leaves the bottom line one short.
+     */
+    rows?: 1 | 2;
   }
 
   let {
@@ -47,8 +53,22 @@
     onStepSet,
     onLengthChange,
     onRateChange,
-    onEnable
+    onEnable,
+    rows = 1
   }: Props = $props();
+
+  /** Steps per line when wrapped. */
+  let lineCols = $derived(Math.max(1, Math.ceil(length / 2)));
+
+  /** In two lines, the corner a step sits on (for the outer radius), or ''. */
+  function wrapCorner(i: number): string {
+    const lastLine = length - lineCols;
+    if (i === 0) return lastLine > 0 ? 'corner-tl' : 'corner-tl corner-bl';
+    if (i === lineCols - 1) return lastLine > 0 ? 'corner-tr' : 'corner-tr corner-br';
+    if (i === lineCols) return 'corner-bl';
+    if (i === length - 1 && length % 2 === 0) return 'corner-br';
+    return '';
+  }
 
   // Drag interaction state for pattern
   let isDragging = $state(false);
@@ -388,6 +408,30 @@
     class="seq-grid glass-panel flex-1 h-full {currentSize.border} {currentSize.rounded} overflow-hidden"
     title="Sequencer Pattern - {length} steps"
   >
+    {#if rows === 2}
+    <div
+      class="seq-lines h-full touch-manipulation"
+      style="grid-template-columns: repeat({lineCols}, minmax(0, 1fr));"
+      data-rows="2"
+    >
+      {#each Array(length) as _, stepIndex}
+        <div
+          class="step-cell wrapped {wrapCorner(stepIndex)} {getStepSegmentClass(stepIndex)}"
+          data-step-index={stepIndex}
+          onpointerdown={(e) => handleStepPointerDown(e, stepIndex)}
+          onpointerup={handleStepPointerUp}
+          onpointercancel={handleStepPointerUp}
+          title="Step {stepIndex + 1}: {isStepEnabled(stepIndex) ? 'Enabled' : 'Disabled'}"
+          aria-label="Step {stepIndex + 1}"
+          role="button"
+          tabindex={readonly ? -1 : 0}
+        ></div>
+      {/each}
+      {#if length % 2 === 1 && length > 1}
+        <div class="step-filler corner-br" aria-hidden="true"></div>
+      {/if}
+    </div>
+    {:else}
     <div class="h-full flex touch-manipulation">
       {#each Array(length) as _, stepIndex}
         <div
@@ -407,6 +451,7 @@
         {/if}
       {/each}
     </div>
+    {/if}
   </div>
 
   <!-- Rate Slider (if enabled) -->
@@ -494,6 +539,27 @@
     border-top-right-radius: calc(var(--radius-lg) - 2px);
     border-bottom-right-radius: calc(var(--radius-lg) - 2px);
   }
+
+  /* Two lines: the steps sit on a grid whose 1px gaps show the hairline
+     behind them, the separators of the one-line row; only the four outer
+     corners round. */
+  .seq-lines {
+    display: grid;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: 1px;
+    background: var(--border);
+  }
+  .step-cell.wrapped {
+    flex: none;
+    border-radius: 0;
+  }
+  .step-filler {
+    background: var(--surface-well);
+  }
+  .seq-lines .corner-tl { border-top-left-radius: calc(var(--radius-lg) - 2px); }
+  .seq-lines .corner-tr { border-top-right-radius: calc(var(--radius-lg) - 2px); }
+  .seq-lines .corner-bl { border-bottom-left-radius: calc(var(--radius-lg) - 2px); }
+  .seq-lines .corner-br { border-bottom-right-radius: calc(var(--radius-lg) - 2px); }
 
   /* ---- Live skin: the step row is a ControlBackground well in a 1px dark
      frame; an OFF step is the bare well, an ON step a SOLID block of the

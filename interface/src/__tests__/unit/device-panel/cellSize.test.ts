@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { cellHeightClass, cellWidthClass, CELL_TALL_MIN, CELL_WIDTH_STEPS } from '$lib/components/v6/device-panel/chain/cellSize';
 import { rackMacrosFill } from '$lib/components/v6/device-panel/chain/RackFace.svelte';
-import { permuteShowsPitch } from '$lib/components/v6/device-panel/chain/PermuteStepsFace.svelte';
+import { permuteMuteRows, permuteShowsPitch, PERMUTE_MIN_STEP_W } from '$lib/components/v6/device-panel/chain/PermuteStepsFace.svelte';
 
 describe('cellWidthClass (ADR-492)', () => {
 	it('is null until the cell is measured', () => {
@@ -47,5 +47,21 @@ describe('permuteShowsPitch', () => {
 	it('draws both rows outside a chain cell or before it is measured', () => {
 		expect(permuteShowsPitch(null)).toBe(true);
 		expect(permuteShowsPitch(size(null, null))).toBe(true);
+	});
+});
+
+describe('permuteMuteRows', () => {
+	type W = 'narrow' | 'medium' | 'wide' | null;
+	const size = (widthClass: W, width: number) => ({ width, height: 200, widthClass, heightClass: 'tall' as const });
+	it('wraps the mute row into two lines when a step would be too thin to tap', () => {
+		expect(permuteMuteRows(size('narrow', 100), 16)).toBe(2);
+		expect(permuteMuteRows(size('medium', 200), 16)).toBe(2);
+		expect(permuteMuteRows(size('medium', 16 * PERMUTE_MIN_STEP_W), 16)).toBe(1);
+		expect(permuteMuteRows(size('medium', 200), 4)).toBe(1);
+	});
+	it('keeps one line in a wide cell, outside the chain, and before measuring', () => {
+		expect(permuteMuteRows(size('wide', 240), 16)).toBe(1);
+		expect(permuteMuteRows(null, 16)).toBe(1);
+		expect(permuteMuteRows(size(null, 0), 16)).toBe(1);
 	});
 });

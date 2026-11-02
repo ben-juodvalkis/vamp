@@ -11,6 +11,21 @@
     if (!size || size.widthClass === null || size.heightClass === null) return true;
     return size.widthClass === 'wide' && size.heightClass === 'tall';
   }
+
+  /** Narrower than this, a step in one line is too thin to tap. */
+  export const PERMUTE_MIN_STEP_W = 24;
+
+  /**
+   * How many lines the mute row takes (2026-11-02): two in a cell narrower
+   * than wide when one line would make its steps thinner than
+   * `PERMUTE_MIN_STEP_W`, else one. Such a cell draws no pitch row, so the
+   * second line has the height. A wide cell keeps one line and its pitch row.
+   */
+  export function permuteMuteRows(size: CellSize | null, length: number): 1 | 2 {
+    if (!size || size.widthClass === null || size.widthClass === 'wide') return 1;
+    if (length < 2) return 1;
+    return size.width / length < PERMUTE_MIN_STEP_W ? 2 : 1;
+  }
 </script>
 
 <script lang="ts">
@@ -22,7 +37,8 @@
    * scoped pad's) Permute and would steer every copy at once. The running
    * step is the device's telemetry (`permuteStepStore`). Length and rate
    * stay in the Permute view. A medium or narrow cell, or a two-row
-   * chain, draws the mute row alone (`permuteShowsPitch`).
+   * chain, draws the mute row alone (`permuteShowsPitch`), in two lines
+   * where one would be too thin to tap (`permuteMuteRows`).
    */
   import { useCellSize } from './cellSize';
   import SequencerPatternGrid from '$lib/components/v6/clips/SequencerPatternGrid.svelte';
@@ -58,6 +74,7 @@
   const muteSteps = $derived(MUTE_STEP_ROLES.map((r) => read(r) === 1));
   const pitchSteps = $derived(PITCH_STEP_ROLES.map((r) => read(r) === 1));
   const muteLength = $derived(read('muteLength'));
+  const muteRows = $derived(permuteMuteRows(cellSize(), muteLength));
   const pitchLength = $derived(read('pitchLength'));
   const running = $derived(permuteStepStore.get(device.devicePath));
 
@@ -66,10 +83,11 @@
   }
 </script>
 
-<div class="permute-face" data-debug="permute-face" data-pitch={showPitch}>
+<div class="permute-face" data-debug="permute-face" data-pitch={showPitch} data-mute-rows={muteRows}>
   <div class="row">
     <SequencerPatternGrid
       variant="mute"
+      rows={muteRows}
       steps={muteSteps}
       length={muteLength}
       currentStep={running.mute}

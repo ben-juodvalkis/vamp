@@ -1244,6 +1244,17 @@ export const OMNISPHERE_STANDIN = {
 	)
 };
 
+/** A Permute running all sixteen steps of both lanes: what wraps in a narrow chain cell. */
+export const PERMUTE_16_DEVICE = {
+	name: 'Permute',
+	params: permuteParams({
+		mute: [1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1],
+		pitch: [1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0],
+		muteLength: 16,
+		pitchLength: 16
+	})
+};
+
 export const CHAIN_DEMO_DEVICES = [
 	{ name: 'Wavetable', params: wavetableParams({ osc2On: 1 }) },
 	{ name: 'Permute', params: permuteParams({ mute: [1, 1, 1, 1, 1, 1, 1, 1], pitch: [1, 0, 0, 1, 0, 1, 0, 0] }) },
