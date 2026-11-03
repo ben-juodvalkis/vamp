@@ -175,6 +175,24 @@ removed; the classes are also in 12.4.2 Suite.
   companion of `has_macro_mappings` (Live 12; 2026-09-07).
 - **`view.selected_drum_pad` is settable** with a `DrumPad` object
   (`view.selected_drum_pad = rack.drum_pads[36]`, 2026-09-07); it retargets the Move knob lane.
+- **No ungroup.** `RackDevice`, `Chain`, `Track` and `Song` offer nothing that groups or
+  ungroups (`py_introspect`, 12.4.25b1, 2026-11-02). It can be done by hand: `Song.move_device`
+  each chain device onto the track behind the rack, then `Track.delete_device` the empty rack.
+  Measured that day on two single-chain racks in a throwaway set:
+  - **An Audio Effect Rack ungroups cleanly.** Every parameter value came out unchanged (27 of
+    27 on a Delay). Macro mappings go with the rack: the Max device's `Pattern`, held by a macro
+    (`is_enabled` False), came out free. Chain volume, pan and mute go too, with no warning
+    (that chain sat at 0 dB, 0.85, so nothing moved).
+  - **An Instrument Rack cannot be ungrouped that way.** `Song.find_device_position(device,
+    target, index)` returns where a move would land without making it, and answered `-1` for
+    the rack's Operator at every track index, on another track and in another rack's chain: the
+    rack is the track's instrument, and a track holds one. Its effects can come out, but never
+    ahead of the rack (asked for index 0, it answers 1).
+  - **The moves and the delete leave no undo step on their own.** Three bare calls, then four
+    `song.undo()`s: each undid an older step of the user's on the other track. Wrapped in
+    `begin_undo_step()` / `end_undo_step()` they are one `Custom Action`, and one undo of a
+    move plus the rack's delete put the whole rack back: its chain, devices in order, macro
+    values and chain volume.
 
 ## Chain (a drum pad's chain)
 

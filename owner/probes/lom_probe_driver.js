@@ -7,6 +7,7 @@
 // address, last-sender-wins):
 //   {"kind":"introspect","path":"tracks/1/devices/0","attrs":"a,b[3].c,parameters.*name","dir":"regex"}
 //   {"kind":"invoke","path":"song","method":"start_playing","observe":"is_playing","args":[...]}
+//     an arg {"$ref":"tracks[1].devices[0]"} is a LOM object walked from path
 //   {"kind":"set","path":"tracks/1/devices/0","sets":[["parameters[4].value",63.5],["view.selected_drum_pad",{"$ref":"drum_pads[36]"}]],"undo":0}
 //   {"kind":"songtime","cmd":"start|stats|stop"}
 //   {"kind":"py","module":"Live.Browser | app","chain":"FilterType","dir":"regex"}

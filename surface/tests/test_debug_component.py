@@ -272,6 +272,26 @@ def test_lom_invoke_preserves_json_arg_types():
     assert isinstance(track.store["k2"], float)
 
 
+def test_lom_invoke_resolves_ref_args_from_the_target():
+    """`Song.move_device(device, target, index)` takes LOM objects, which
+    JSON cannot carry: `{"$ref": chain}` names one from the target."""
+    class _Holder:
+        pass
+    song = _Holder()
+    song.tracks = [_Holder()]
+    song.tracks[0].devices = ["rack"]
+    calls = []
+    song.move_device = lambda *a: calls.append(a)
+    comp, _ = _invoke_component(song)
+    r = _invoke(comp, "song", "move_device", "",
+                '[{"$ref": "tracks[0].devices[0]"}, {"$ref": "tracks[0]"}, 2]')
+    assert r["invoke_error"] is None
+    assert calls == [("rack", song.tracks[0], 2)]
+    r = _invoke(comp, "song", "move_device", "", '[{"$ref": "nope"}]')
+    assert r["invoke_error"].startswith("$ref:")
+    assert len(calls) == 1
+
+
 def test_lom_invoke_without_args_json_is_a_niladic_call():
     """Every existing driver sends three args — they must keep working."""
     track = _DataStoreTrack()

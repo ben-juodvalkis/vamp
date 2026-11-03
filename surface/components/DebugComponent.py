@@ -558,6 +558,19 @@ class DebugComponent:
             payload["resolve_error"] = err
             return (json.dumps(payload),)
 
+        # An argument ``{"$ref": "<chain>"}`` is a LOM object walked from
+        # the target, as in ``lom_set``: ``Song.move_device(device,
+        # target, index)`` takes two of them.
+        try:
+            call_args = [
+                _walk_chain(target, str(a["$ref"]))
+                if isinstance(a, dict) and "$ref" in a else a
+                for a in call_args
+            ]
+        except Exception as e:
+            payload["invoke_error"] = "$ref: %s: %s" % (type(e).__name__, e)
+            return (json.dumps(payload),)
+
         observed = []
         for raw in (a.strip() for a in observe_csv.split(",") if a.strip()):
             entry = {"name": raw, "before": "", "after": "",

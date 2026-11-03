@@ -4,9 +4,11 @@
 
 - Live loads it once: a change runs only after a full Live restart. The
   `reload_on_reselect` probe (below; `{"kind":"reload"}`, then re-select
-  the surface in Live's Settings) re-imports it without one; not yet
-  confirmed on the rig, and not for `__init__.py`, the transports or
-  `disconnect`.
+  the surface in Live's Settings) re-imports it without one, not for
+  `__init__.py`, the transports or `disconnect`. Picking Vamp again in
+  its slot does nothing: set the slot to None, then back to Vamp
+  (2026-11-02). The arm's reply is broadcast, so the probe driver
+  reports a timeout; Log.txt's `armed` line is the confirmation.
 - A component imports its siblings relatively (`from . import path_resolver`,
   `from .key_detect import …`). The absolute `from components.x import` form
   passes pytest, because the tests put the surface root on `sys.path`, and
@@ -1814,7 +1816,7 @@ its own address back to the sender. Driver:
 | Address | Args | Does |
 |---|---|---|
 | `/looping/probe/lom_introspect` | `path, attrs_csv, dir_regex` | reads attribute chains on a resolved object → `{attrs:[{name, exists, callable, value_repr, error}], dir_matches}`. The safe way to ask "does this attribute exist" — `hasattr` alone raises on Live 12. |
-| `/looping/probe/lom_invoke` | `path, method, observe_csv, args_json?` | calls a method (positional args as a JSON array — `Track.set_data(key, value)` needs it) and reports the observed chains before / after. **Mutates the set.** |
+| `/looping/probe/lom_invoke` | `path, method, observe_csv, args_json?` | calls a method (positional args as a JSON array — `Track.set_data(key, value)` needs it; an arg `{"$ref": "<chain>"}` is a LOM object walked from `path`, so `song` + `move_device` takes a device and a track) and reports the observed chains before / after. **Mutates the set.** |
 | `/looping/probe/lom_set` | `path, sets_json, undo_group?` | assigns `[chain, value]` pairs inside one handler call (one control tick — the shape of a fan-out); a value `{"$ref": "<chain>"}` assigns a LOM object (`view.selected_drum_pad` ← `drum_pads[36]`); `undo_group=1` wraps the writes in one undo step; replies before / after / `changed` / `error` / µs per write. **Mutates the set.** |
 | `/looping/probe/song_time_probe` | `start` / `stats` / `stop` | cadence of the `Song.current_song_time` listener — count, Hz, interval mean / p50 / p95 / p99 / max / min, beat delta. Measured 65.8 Hz; the number behind ADR-429's clock decision. |
 | `/looping/probe/sequencer_stats` | `reset?` | the sequencer engine's apply-lag distribution and tick maxima (`SequencerComponent.handle_stats`). |
