@@ -53,8 +53,10 @@ platform :ios do
     # Build numbers must rise with every upload of a version: take the next
     # one after what App Store Connect already has, not a local counter.
     # Without the key (an archive-only check) the project's own number stands.
-    # The signing flags go to both the build and the export (the export
-    # signs too); the build number only to the build, where it is a setting.
+    # gym hands xcargs to the export as well as the build (2.227), so the
+    # signing flags reach the export through them; naming them again in
+    # export_xcargs gave xcodebuild -authenticationKeyPath twice, which it
+    # refuses (2026-11-04).
     signing = "-allowProvisioningUpdates"
     version = ""
     if api_key
@@ -81,7 +83,6 @@ platform :ios do
       derived_data_path: "build/fastlane",
       clean: true,
       xcargs: signing + version,
-      export_xcargs: signing,
       export_options: { signingStyle: "automatic" },
     )
   end
