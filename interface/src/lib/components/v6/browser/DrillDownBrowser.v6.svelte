@@ -2670,6 +2670,23 @@
 		height: 24px;
 	}
 
+	/* The phone (ADR-503) has Rec in its tab bar, so the closed rail draws
+	   none of its own (open, the slot is the close X and the Lock), and its
+	   Places are one grid of equal rows rather than the iPad's three bands,
+	   which would stretch whichever band Rec left. */
+	:global([data-phone-layout]) .drill-browser:not(.expanded) .record-button-container {
+		display: none;
+	}
+	:global([data-phone-layout]) .drill-browser:not(.expanded) .places-rail {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		grid-auto-rows: minmax(var(--height-touch, 44px), 1fr);
+		gap: var(--spacing-sm);
+		overflow-y: auto;
+	}
+	:global([data-phone-layout]) .drill-browser:not(.expanded) .places-rail .button-group {
+		display: contents;
+	}
 	/* The phone on its side (ADR-503): 393 points of height. Closed, the
 	   Browse tab's rail is a grid of Place tiles, four across, rather than a
 	   stack of rows two inches wide and a finger tall. Open, the rail is one
@@ -2677,17 +2694,7 @@
 	   head, and the bar and the type step down so the stage keeps the height. */
 	@media (orientation: landscape) {
 		:global([data-phone-layout]) .drill-browser:not(.expanded) .places-rail {
-			display: grid;
 			grid-template-columns: repeat(4, minmax(0, 1fr));
-			grid-auto-rows: minmax(var(--height-touch, 44px), 1fr);
-			gap: var(--spacing-sm);
-			overflow-y: auto;
-		}
-		:global([data-phone-layout]) .drill-browser:not(.expanded) .places-rail .button-group {
-			display: contents;
-		}
-		:global([data-phone-layout]) .drill-browser:not(.expanded) .record-button-container {
-			display: none;
 		}
 		:global([data-phone-layout]) .drill-browser .category-name {
 			font-size: var(--text-base);
