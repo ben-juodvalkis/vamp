@@ -6,10 +6,9 @@
 	 * iPad's right sidebar has it.
 	 *
 	 * The cells are the iPad's: a tap on the action strip records, plays or
-	 * stops; a tap on the body aims the pedal; a long press shows the clip
-	 * (and here takes you to the Track tab, where the clip view is). A
+	 * stops; a tap on the body aims the pedal; a long press shows the clip. A
 	 * vertical drag scrolls the scenes, every column and the rail together
-	 * (`sceneWindowStore`), which this tab holds at eight rows.
+	 * (`sceneWindowStore`), which this tab holds at four rows.
 	 *
 	 * The row pitch is measured, as on the iPad: the body under the name
 	 * tabs divided by the rows drawn plus the stop row. The rail measures

@@ -130,7 +130,7 @@ export const VIEWS = {
 		steps: [phoneTab('clips')]
 	},
 	'phone-track': {
-		description: 'The phone layout, Track tab: the selected track\'s chain over its central view.',
+		description: 'The phone layout, Track tab: the selected track\'s chain, the whole tab.',
 		prefs: {},
 		viewport: PHONE_VIEWPORT,
 		steps: [phoneTab('track')]

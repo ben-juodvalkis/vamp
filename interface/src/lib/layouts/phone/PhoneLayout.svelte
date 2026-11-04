@@ -19,8 +19,6 @@
 	 * tab it is parked in a zero-size box instead of hidden, where its
 	 * closed rail is clipped away but its overlay still covers the screen.
 	 */
-	import { onMount } from 'svelte';
-	import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
 	import { session } from '$lib/stores/session.svelte';
 	import { clipStateStore } from '$lib/stores/v6/clipStateStore.svelte';
 	import { settingsStore } from '$lib/stores/v6/settingsStore.svelte';
@@ -61,11 +59,6 @@
 		}
 	}
 
-	onMount(() => {
-		// The iPad layout's opening view, so the Track tab starts on it too.
-		centralDisplayStore.setView('default');
-	});
-
 	let tracks = $derived(clipStateStore.getVisibleTracks(session.numTracks, session.selectedTrackIndex));
 
 	// Mix and Clips scroll as one: the columns are the same width at the
@@ -78,17 +71,19 @@
 </script>
 
 <div class="phone-root" data-phone-layout data-debug="phone-root" data-phone-tab-shown={tab} style={PHONE_GEOMETRY_STYLE}>
-	<div class="transport"><SessionHeaderV6 compact /></div>
+	<div class="top">
+		<div class="transport"><SessionHeaderV6 compact /></div>
 
-	{#if tab !== 'browse'}
-		<div class="ribbon-row">
-			<PhoneTrackRibbon
-				{tracks}
-				window={showsTracks ? ribbonWindow : null}
-				onPick={(i) => selectTrackByIndex(i)}
-			/>
-		</div>
-	{/if}
+		{#if tab !== 'browse'}
+			<div class="ribbon-row">
+				<PhoneTrackRibbon
+					{tracks}
+					window={showsTracks ? ribbonWindow : null}
+					onPick={(i) => selectTrackByIndex(i)}
+				/>
+			</div>
+		{/if}
+	</div>
 
 	<div class="body">
 		<div class="pane" class:is-hidden={tab !== 'mix'} data-debug="phone-pane-mix">
@@ -107,7 +102,6 @@
 				scrollLeft={sharedScroll}
 				onScroll={(x) => (sharedScroll = x)}
 				onWindow={(w) => (ribbonWindow = w)}
-				onShowClip={() => selectTab('track')}
 			/>
 		</div>
 		<div class="pane" class:is-hidden={tab !== 'track'} data-debug="phone-pane-track">
@@ -118,7 +112,7 @@
 		</div>
 	</div>
 
-	<PhoneTabBar {tab} onSelect={selectTab} />
+	<div class="tabs"><PhoneTabBar {tab} onSelect={selectTab} /></div>
 
 	<V3ErrorBanner />
 	<LiveConnectionBanner />
@@ -143,8 +137,11 @@
 		overscroll-behavior: none;
 	}
 
-	.transport {
+	.top {
 		flex: none;
+	}
+
+	.transport {
 		padding: 6px var(--phone-inset);
 	}
 
@@ -180,5 +177,46 @@
 		width: 0;
 		height: 0;
 		overflow: hidden;
+	}
+
+	/* Landscape: the tab bar a rail on the left, the transport and the
+	   ribbon side by side above the tab. */
+	@media (orientation: landscape) {
+		.phone-root {
+			display: grid;
+			grid-template-columns: auto minmax(0, 1fr);
+			grid-template-rows: auto minmax(0, 1fr);
+			grid-template-areas:
+				'tabs top'
+				'tabs body';
+		}
+		.tabs {
+			grid-area: tabs;
+			min-height: 0;
+		}
+		.top {
+			grid-area: top;
+			display: flex;
+			align-items: center;
+			min-width: 0;
+		}
+		.transport {
+			flex: 0 0 58%;
+			min-width: 0;
+			padding-right: 0;
+		}
+		/* Browse draws no ribbon: the transport takes the row. */
+		.transport:only-child {
+			flex-basis: 100%;
+			padding-right: var(--phone-inset);
+		}
+		.ribbon-row {
+			flex: 1 1 0;
+			min-width: 0;
+			padding: 6px var(--phone-inset);
+		}
+		.body {
+			grid-area: body;
+		}
 	}
 </style>

@@ -16,7 +16,7 @@ export const PHONE_COLUMN_PITCH = PHONE_COLUMN_WIDTH + PHONE_COLUMN_GAP;
 export const PHONE_RAIL_WIDTH = 64;
 
 /** Scenes on screen at once on the Clips tab, which is all grid. */
-export const PHONE_SCENE_ROWS = 8;
+export const PHONE_SCENE_ROWS = 4;
 
 export const PHONE_GEOMETRY_STYLE =
 	`--phone-col-w: ${PHONE_COLUMN_WIDTH}px; --phone-gap: ${PHONE_COLUMN_GAP}px; ` +

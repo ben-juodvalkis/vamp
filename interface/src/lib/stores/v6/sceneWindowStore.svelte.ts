@@ -83,7 +83,7 @@ function computeVisibleCount(): number {
 /**
  * A layout that is not the iPad's section stack names its own window
  * (ADR-503): the phone's Clips tab is the whole screen, whatever the
- * section prefs say, so it holds the window at 8 while it is mounted and
+ * section prefs say, so it holds the window at 4 while it is mounted and
  * hands it back on unmount. `null` is "no override".
  */
 let visibleCountOverride = $state<number | null>(null);

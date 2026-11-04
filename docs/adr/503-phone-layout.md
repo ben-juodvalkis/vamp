@@ -28,12 +28,12 @@ points; it does not shrink to a phone.
     always true, so a sideways start pans the row.
   - **Clips**: `SlotGrid` per track under a name tab in its colour, the stop
     row at the foot, `SceneRail` pinned at the right edge. The tab holds the
-    scene window at 8 rows (`sceneWindowStore.setVisibleCountOverride`) while
-    mounted. A long press on a cell shows the clip and goes to Track.
+    scene window at 4 rows (`sceneWindowStore.setVisibleCountOverride`) while
+    mounted, so four scenes are on screen at a time.
   - **Mix and Clips share one scroll position**, at the same column pitch,
     so switching tabs keeps the same tracks in front of you.
-  - **Track**: the chain (`DevicesPanelV6`) over the central view
-    (`MiddlePanelV6`), as the flipped iPad stacks them.
+  - **Track**: the chain (`DevicesPanelV6`) alone, the whole tab. No
+    central view: the phone keeps the track to its chain.
   - **Browse**: `DrillDownBrowser`'s rail fills the tab; a tap opens the
     browser as it always opens, full screen with its own close.
   - **Rec** is the shared `RecordButton`, with the selected track's name
@@ -59,11 +59,9 @@ points; it does not shrink to a phone.
 ## Consequences
 - The phone shows everything the iPad does except the group brackets over
   member strips (a folded group still folds from its strip's chevron), the
-  New Audio / New MIDI column, and the time signature outside the master
-  view.
-- The central views are drawn at phone width. ADR-476 already makes them
-  compact under 1366 points; some are still cramped at 369 points, and any
-  that need it get a phone pass of their own.
+  New Audio / New MIDI column, the time signature outside the master
+  view, and the central views (instrument, clip, master): the Track tab is
+  the chain alone.
 - The scene rail's names truncate at 64px; scenes still launch from it.
 - A phone loads the iPad layout once before switching (the first render is
   the server's). It costs one mount and one unmount on a phone only.

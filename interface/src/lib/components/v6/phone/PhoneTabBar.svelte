@@ -4,6 +4,8 @@
 	 * in the middle, under the thumb, and is the iPad's own Record button —
 	 * the same hold-to-record or tap-to-toggle on the selected track — with
 	 * that track's name under it so it is clear what it will record.
+	 * In landscape it stands as a rail down the left edge, top to bottom
+	 * in the same order.
 	 */
 	import SlidersVertical from '@lucide/svelte/icons/sliders-vertical';
 	import LayoutGrid from '@lucide/svelte/icons/layout-grid';
@@ -71,6 +73,21 @@
 		align-items: stretch;
 		border-top: 1px solid var(--line);
 		padding-inline: 4px;
+	}
+	@media (orientation: landscape) {
+		.tab-bar {
+			width: 72px;
+			height: 100%;
+			grid-template-columns: none;
+			grid-template-rows: 1fr 1fr 76px 1fr 1fr;
+			border-top: 0;
+			border-right: 1px solid var(--line);
+			padding-inline: 0;
+			padding-block: 4px;
+		}
+		.rec-target {
+			max-width: 68px;
+		}
 	}
 
 	.tab {

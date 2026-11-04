@@ -389,6 +389,11 @@
 	// doubles the tiles onscreen vs the folder floors (more columns AND more rows).
 	// 92 (78 before 2026-10-28): room for two rows of tags under a two-line name.
 	const PRESET_COMFORT = { gap: GRID_GAP, minTile: 112, minTileHeight: 92, targetAspect: 1.5 };
+	// A short stage (a phone on its side, ~320px under the bar) would fit only
+	// two rows of the roomy folder slabs; it takes the folder floors down so
+	// three or four rows show. The iPad's stage is twice that and never does.
+	const SHORT_STAGE_PX = 420;
+	const SHORT_FOLDER_COMFORT = { gap: GRID_GAP, minTile: 120, minTileHeight: 64, targetAspect: 1.5 };
 
 	const gridLayout = $derived.by(() => {
 		const count = isScale
@@ -441,7 +446,11 @@
 			width,
 			height,
 			count,
-			...(screen === 'presets' ? PRESET_COMFORT : FOLDER_COMFORT)
+			...(screen === 'presets'
+				? PRESET_COMFORT
+				: stageHeight < SHORT_STAGE_PX
+					? SHORT_FOLDER_COMFORT
+					: FOLDER_COMFORT)
 		});
 	});
 
@@ -2659,6 +2668,75 @@
 	:global([data-phone-layout]) .seg-switch .seg-icon {
 		width: 24px;
 		height: 24px;
+	}
+
+	/* The phone on its side (ADR-503): 393 points of height. Closed, the
+	   Browse tab's rail is a grid of Place tiles, four across, rather than a
+	   stack of rows two inches wide and a finger tall. Open, the rail is one
+	   slim column that scrolls, the close X and the Lock a short row at its
+	   head, and the bar and the type step down so the stage keeps the height. */
+	@media (orientation: landscape) {
+		:global([data-phone-layout]) .drill-browser:not(.expanded) .places-rail {
+			display: grid;
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+			grid-auto-rows: minmax(var(--height-touch, 44px), 1fr);
+			gap: var(--spacing-sm);
+			overflow-y: auto;
+		}
+		:global([data-phone-layout]) .drill-browser:not(.expanded) .places-rail .button-group {
+			display: contents;
+		}
+		:global([data-phone-layout]) .drill-browser:not(.expanded) .record-button-container {
+			display: none;
+		}
+		:global([data-phone-layout]) .drill-browser .category-name {
+			font-size: var(--text-base);
+		}
+
+		:global([data-phone-layout]) .drill-browser.expanded {
+			padding: max(env(safe-area-inset-top, 0px), 8px) max(env(safe-area-inset-right, 0px), 8px)
+				max(env(safe-area-inset-bottom, 0px), 8px) max(env(safe-area-inset-left, 0px), 8px);
+		}
+		:global([data-phone-layout]) .drill-browser.expanded .vendor-buttons {
+			width: 96px;
+			gap: var(--spacing-xs);
+			overflow-y: auto;
+		}
+		:global([data-phone-layout]) .drill-browser.expanded .button-group {
+			display: contents;
+		}
+		:global([data-phone-layout]) .drill-browser.expanded .button-group .selection-button {
+			flex: 0 0 var(--height-touch, 44px);
+			padding: 0 var(--spacing-xs);
+		}
+		:global([data-phone-layout]) .drill-browser.expanded .record-button-container {
+			flex: 0 0 var(--height-touch, 44px);
+			padding-top: 0;
+			align-items: stretch;
+			gap: var(--spacing-xs);
+		}
+		:global([data-phone-layout]) .drill-browser.expanded .record-button-container .close-x,
+		:global([data-phone-layout]) .drill-browser.expanded .record-button-container .lock {
+			height: 100%;
+			border-radius: var(--radius-md);
+		}
+		:global([data-phone-layout]) .drill-browser.expanded .record-button-container :global(svg) {
+			width: 22px;
+			height: 22px;
+		}
+		:global([data-phone-layout]) .drill-browser.expanded .pane {
+			margin-left: var(--spacing-sm);
+		}
+		:global([data-phone-layout]) .drill-browser.expanded .bar {
+			padding: var(--spacing-xs) var(--spacing-sm);
+		}
+		:global([data-phone-layout]) .drill-browser.expanded .bar-controls {
+			height: var(--height-touch, 44px);
+		}
+		:global([data-phone-layout]) .drill-browser.expanded .crumb {
+			line-height: calc(var(--height-touch, 44px) - 2px);
+			font-size: var(--text-sm);
+		}
 	}
 	.seg-switch .seg:active { transform: scale(0.96); }
 	.seg-switch .seg.on {
