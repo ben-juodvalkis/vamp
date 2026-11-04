@@ -95,7 +95,7 @@ the row has nothing to scroll.
 ## Entry Points
 
 - `routes/+layout.svelte` - Root layout: theme, WebSocket connection, service init
-- `routes/+page.svelte` - Mounts `layouts/default/Layout.svelte`: the main UI with 5-panel layout (browser, tracks, middle, central display, right sidebar)
+- `routes/+page.svelte` - Mounts `layouts/default/Layout.svelte`: the main UI with 5-panel layout (browser, tracks, middle, central display, right sidebar). On a phone-sized screen (`utils/phoneLayout.ts`, `ui.phoneLayout`) it mounts `layouts/phone/PhoneLayout.svelte` instead: the transport, a colour ribbon and Mix · Clips · Track · Browse tabs with Rec in the tab bar, each tab the iPad's own components (ADR-503)
 
 ## Conventions
 

@@ -37,6 +37,11 @@ const referenceParams = (instrument) =>
 
 export const DEFAULT_VIEWPORT = { width: 1366, height: 1024 };
 
+/** iPhone 16 Pro portrait, in points: the phone layout's design size (ADR-503). */
+const PHONE_VIEWPORT = { width: 393, height: 852 };
+/** A tap on one of the phone layout's tabs. */
+const phoneTab = (tab) => ({ click: `[data-phone-tab="${tab}"]` });
+
 const P = {
 	session: 'uiPrefsStore.sessionMode',
 	fx: 'uiPrefsStore.showFxGrid',
@@ -108,6 +113,39 @@ export const VIEWS = {
 		description: 'TotalMix switched on but not answering — the faders greyed out, saying why.',
 		prefs: { [P.transport]: '1' },
 		features: { totalmix: { enabled: true, available: false, reason: 'TotalMix not answering' } }
+	},
+	// The phone layout (ADR-503), at an iPhone 16 Pro's 393 x 852 points. A
+	// view's `viewport` is its size unless --viewport names another; its
+	// `steps` run before the flags' clicks.
+	phone: {
+		description: 'The phone layout on an iPhone (393x852): the Mix tab, every strip full height.',
+		prefs: {},
+		viewport: PHONE_VIEWPORT,
+		steps: [phoneTab('mix')]
+	},
+	'phone-clips': {
+		description: 'The phone layout, Clips tab: the session grid at full height, scenes pinned right.',
+		prefs: {},
+		viewport: PHONE_VIEWPORT,
+		steps: [phoneTab('clips')]
+	},
+	'phone-track': {
+		description: 'The phone layout, Track tab: the selected track\'s chain, the whole tab.',
+		prefs: {},
+		viewport: PHONE_VIEWPORT,
+		steps: [phoneTab('track')]
+	},
+	'phone-browse': {
+		description: 'The phone layout, Browse tab: the browser\'s rail, a tap from opening full screen.',
+		prefs: {},
+		viewport: PHONE_VIEWPORT,
+		steps: [phoneTab('browse')]
+	},
+	'phone-landscape': {
+		description: 'The phone layout turned sideways (852x393): the Mix tab, short strips.',
+		prefs: {},
+		viewport: { width: 852, height: 393 },
+		steps: [phoneTab('mix')]
 	}
 };
 

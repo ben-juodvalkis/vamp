@@ -168,7 +168,8 @@ const log = (msg) => {
 	if (!quiet) console.log(`[shot] ${msg}`);
 };
 
-const [vw, vh] = String(flag('viewport', `${DEFAULT_VIEWPORT.width}x${DEFAULT_VIEWPORT.height}`))
+const viewViewport = view.viewport ?? DEFAULT_VIEWPORT;
+const [vw, vh] = String(flag('viewport', `${viewViewport.width}x${viewViewport.height}`))
 	.split('x')
 	.map(Number);
 const viewport = { width: vw || DEFAULT_VIEWPORT.width, height: vh || DEFAULT_VIEWPORT.height };
@@ -313,6 +314,7 @@ try {
 	const [dragDx, dragDy] = String(flag('drag-by', '24,-24')).split(',').map(Number);
 	const holdSelector = flag('hold');
 	const steps = [
+		...(view.steps ?? []),
 		...flagAll('click').map((click) => ({ click })),
 		...flagAll('drag').map((drag) => ({ drag, by: [dragDx, dragDy] })),
 		...(holdSelector ? [{ hold: holdSelector, ms: Number(flag('hold-ms', 450)) }] : [])

@@ -36,6 +36,13 @@
   import Play from '@lucide/svelte/icons/play';
   import Pause from '@lucide/svelte/icons/pause';
 
+  /**
+   * `compact`: the phone's transport (ADR-503). Play, Tempo, Position,
+   * Click and Overdub on one 52px row at phone width: no time signature
+   * (the master view keeps it), no word on the Play button.
+   */
+  let { compact = false }: { compact?: boolean } = $props();
+
 
   // Control functions
   function toggleTransport() {
@@ -215,7 +222,7 @@
 
      Fixed height so enabling it compresses the flex rows below rather
      than reflowing them. -->
-<div class="session-header" class:is-playing={session.isPlaying}>
+<div class="session-header" class:is-playing={session.isPlaying} class:is-compact={compact}>
   <div class="hdr-row">
 
     <!-- Transport. The one control that changes what you HEAR, so it
@@ -284,7 +291,11 @@
     <!-- Song position: bar.beat, Live's reading without the sixteenth. -->
     <div class="hdr-field is-readout" aria-label="Song position: bar {bar}, beat {beat}">
       <span class="hdr-value">{bar}.{beat}</span>
-      <span class="hdr-caption">Position</span>
+      <!-- Compact has no time-signature field, so the bar's own
+           signature stands where the caption was. -->
+      <span class="hdr-caption">{compact
+        ? `${session.timeSignature.numerator}/${session.timeSignature.denominator}`
+        : 'Position'}</span>
       <!-- Where in the bar: a tick per beat along the foot, and a line
            that sweeps the field once a bar. -->
       <span class="hdr-bar" aria-hidden="true">
@@ -365,6 +376,28 @@
   .hdr-ruler > :nth-child(2) { grid-column: 5 / span 2; }
   .hdr-ruler > :nth-child(3) { grid-column: 7 / span 3; }
   .hdr-ruler > :nth-child(4) { grid-column: 10 / span 1; }
+
+  /* The phone's row (ADR-503): Play · Tempo · Position · Click · Overdub,
+     the two values sharing what the three fixed cells leave. */
+  .session-header.is-compact .hdr-row {
+    grid-template-columns: 52px minmax(0, 1fr) 76px;
+    gap: 6px;
+  }
+  .session-header.is-compact .hdr-ruler {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 58px;
+    gap: 6px;
+  }
+  .session-header.is-compact .hdr-ruler > :nth-child(1) { grid-column: 1; }
+  .session-header.is-compact .hdr-ruler > :nth-child(2) { display: none; }
+  .session-header.is-compact .hdr-ruler > :nth-child(3) { grid-column: 2; }
+  .session-header.is-compact .hdr-ruler > :nth-child(4) { grid-column: 3; }
+  .session-header.is-compact .hdr-btn { padding: 0; }
+  .session-header.is-compact .hdr-btn-label { display: none; }
+  .session-header.is-compact .hdr-field { gap: 0.25rem; }
+  .session-header.is-compact .hdr-switch {
+    padding: 0 2px;
+    font-size: 0.8125rem;
+  }
 
   /* The master view's value field: a well in a 1px frame. */
   .hdr-btn,

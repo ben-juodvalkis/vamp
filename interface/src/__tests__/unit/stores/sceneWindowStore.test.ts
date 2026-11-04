@@ -202,6 +202,19 @@ describe('window size vs. the section stack', () => {
 		expect(visibleCountForSections(5)).toBe(4);
 	});
 
+	it("holds a layout's own window over the sections' and hands it back (ADR-503)", () => {
+		seedGrid(2, 16);
+		try {
+			sceneWindowStore.setVisibleCountOverride(8);
+			expect(sceneWindowStore.visibleCount).toBe(8);
+			expect(sceneWindowStore.renderedRows).toBe(8);
+			expect(sceneWindowStore.maxOffset).toBe(8);
+		} finally {
+			sceneWindowStore.setVisibleCountOverride(null);
+		}
+		expect(sceneWindowStore.visibleCount).toBe(VISIBLE);
+	});
+
 	it('grows the live window as sections are switched off', () => {
 		seedGrid(2, 16);
 		expect(sceneWindowStore.visibleCount).toBe(4);

@@ -284,6 +284,9 @@ phone. `npm run shot:list`:
 | `header`       | Transport header on, with the rig's TotalMix faders |
 | `general`      | `header` with TotalMix switched off (the general edition) |
 | `totalmix-down` | `header` with TotalMix on but not answering: faders greyed, saying why |
+| `phone`        | The phone layout (ADR-503) at 393x852: the Mix tab |
+| `phone-clips` / `phone-track` / `phone-browse` | The phone layout's other tabs |
+| `phone-landscape` | The phone layout turned sideways, 852x393 |
 
 Every view captures the **flipped** stack (ADR-421): FX grid on top,
 track strips against the bottom edge, each track's name at the foot of
@@ -297,7 +300,9 @@ carry `features`, which replaces the scene's bridge switches
 that is how `general` and `totalmix-down` differ from `header`. The mock
 sends the rig's switches (every one on and answering) when a scene names
 none, and the UI draws nothing for a feature until they arrive. A tour
-state takes `features` the same way it takes `axHelper`.
+state takes `features` the same way it takes `axHelper`. A view can name its
+`viewport` (the phone views do; `--viewport` still wins) and `steps`, run
+before the flags' clicks (the phone views tap their tab).
 
 ## Tours — many states, one boot
 
@@ -387,7 +392,7 @@ npm run shot -- <view> [options]
 
   --list                 Available views
   --out <path>           Output file (default screenshots/<view>.png)
-  --viewport <WxH>       Default 1366x1024 (iPad Pro landscape)
+  --viewport <WxH>       Default the view's own, else 1366x1024 (iPad Pro landscape)
   --scale <n>            Device pixel ratio (default 2)
   --theme <dark|light>   Default dark
   --scene <default|path> Fixture to replay

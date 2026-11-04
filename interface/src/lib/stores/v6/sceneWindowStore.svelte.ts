@@ -77,8 +77,16 @@ export function visibleCountForSections(sectionCount: number): number {
  * a section toggle flips.
  */
 function computeVisibleCount(): number {
-	return visibleCountForSections(uiPrefsStore.visibleSectionCount);
+	return visibleCountOverride ?? visibleCountForSections(uiPrefsStore.visibleSectionCount);
 }
+
+/**
+ * A layout that is not the iPad's section stack names its own window
+ * (ADR-503): the phone's Clips tab is the whole screen, whatever the
+ * section prefs say, so it holds the window at 4 while it is mounted and
+ * hands it back on unmount. `null` is "no override".
+ */
+let visibleCountOverride = $state<number | null>(null);
 
 /**
  * Highest legal offset for a given grid — scrolling further would show
@@ -153,6 +161,11 @@ export const sceneWindowStore = {
 	/** Scene rows shown at once. */
 	get visibleCount(): number {
 		return computeVisibleCount();
+	},
+
+	/** Set (or with `null`, clear) the window a non-iPad layout asks for. */
+	setVisibleCountOverride(count: number | null): void {
+		visibleCountOverride = count;
 	},
 
 	/**

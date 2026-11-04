@@ -377,6 +377,11 @@
     "meters": {
       "opacity": 0.4
     },
+    "phoneLayout": {
+      "maxWidth": 599,
+      "maxHeight": 499,
+      "_note": "ADR-503. A screen at most this wide, or at most this tall, gets the phone layout (tabs) instead of the iPad's: an iPhone in either orientation, or iPad Slide Over. Points, as CSS reads them."
+    },
     "gestures": {
       "momentaryHoldMs": 300,
       "_momentaryHoldMs_note": "ADR-427/432. A press released under this many ms is a tap (latch); at or over it, a hold (momentary). One number for Solo, the pad tiles and the Move pad; owner/Max Patches/move_pad_hold.js mirrors it by hand (Max ES5 cannot read JSON).",
