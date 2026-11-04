@@ -4,8 +4,10 @@
 #   fastlane ios beta       archive and upload it to TestFlight
 #   fastlane ios release    archive and upload it to App Store Connect, for
 #                           review once submitted there (never auto-submits)
-#   fastlane ios screenshots  replace the listing's iPad screenshots with
-#                           AppStore/screenshots/*.png, in filename order
+#   fastlane ios screenshots  replace the listing's screenshots: the iPad's
+#                           with AppStore/screenshots/*.png and the iPhone's
+#                           with AppStore/screenshots/iphone/*.png, each in
+#                           filename order
 #
 # Vamp for Mac's release is scripts/release-mac.sh (installer.plan.md Phase 5):
 # the whole app with its server and Node, which no lane here builds.
@@ -23,8 +25,17 @@
 APP_ID_PAD = "com.benjuodvalkis.vamp.ipad"
 PROJECT    = "Vamp.xcodeproj"
 OUT_DIR    = "build/dist"
-# The App Store screenshots: 13-inch iPad, landscape (untracked, repo root).
+# The App Store screenshots (untracked, repo root): 13-inch iPad landscape
+# at the top, 6.9-inch iPhone portrait (1320x2868, `npm run shot -- phone
+# --viewport 440x956 --scale 3`) in iphone/.
 SCREENSHOTS_DIR = File.expand_path("../../../AppStore/screenshots", __dir__)
+# Display types named directly, not detected: fastlane's own screenshot
+# upload (deliver, 2.227) doesn't know the 13-inch iPad's 2752x2064, which
+# App Store Connect takes in this set. APP_IPHONE_67 is the 6.9-inch set.
+SCREENSHOT_SETS = {
+  "APP_IPAD_PRO_3GEN_129" => SCREENSHOTS_DIR,
+  "APP_IPHONE_67" => File.join(SCREENSHOTS_DIR, "iphone"),
+}
 
 skip_docs
 default_platform(:ios)
@@ -101,31 +112,29 @@ platform :ios do
     )
   end
 
-  desc "Replace the iPad screenshots on the version being prepared with AppStore/screenshots"
+  desc "Replace the iPad and iPhone screenshots on the version being prepared with AppStore/screenshots"
   lane :screenshots do
     api_key = load_api_key
     Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.from(hash: api_key)
-    files = Dir[File.join(SCREENSHOTS_DIR, "*.png")].sort
-    UI.user_error!("No screenshots in #{SCREENSHOTS_DIR}") if files.empty?
+    sets = SCREENSHOT_SETS.transform_values { |dir| Dir[File.join(dir, "*.png")].sort }
+    sets.each { |type, files| UI.user_error!("No #{type} screenshots in #{SCREENSHOT_SETS[type]}") if files.empty? }
 
     app = Spaceship::ConnectAPI::App.find(APP_ID_PAD)
     version = app.get_edit_app_store_version(platform: Spaceship::ConnectAPI::Platform::IOS)
     UI.user_error!("No version in Prepare for Submission to put screenshots on") unless version
-    # Named directly, not detected: fastlane's own screenshot upload (deliver,
-    # 2.227) doesn't know the 13-inch iPad's 2752x2064, which App Store
-    # Connect takes in this set.
-    display_type = "APP_IPAD_PRO_3GEN_129"
 
     version.get_app_store_version_localizations.each do |loc|
-      set = loc.get_app_screenshot_sets.find { |s| s.screenshot_display_type == display_type } ||
-            loc.create_app_screenshot_set(attributes: { screenshotDisplayType: display_type })
-      (set.app_screenshots || []).each(&:delete!)
-      files.each do |f|
-        UI.message("#{loc.locale}: #{File.basename(f)}")
-        set.upload_screenshot(path: f, wait_for_processing: true)
+      sets.each do |display_type, files|
+        set = loc.get_app_screenshot_sets.find { |s| s.screenshot_display_type == display_type } ||
+              loc.create_app_screenshot_set(attributes: { screenshotDisplayType: display_type })
+        (set.app_screenshots || []).each(&:delete!)
+        files.each do |f|
+          UI.message("#{loc.locale} #{display_type}: #{File.basename(f)}")
+          set.upload_screenshot(path: f, wait_for_processing: true)
+        end
       end
     end
-    UI.success("#{files.size} screenshots on #{version.version_string}")
+    UI.success(sets.map { |type, files| "#{files.size} #{type}" }.join(", ") + " on #{version.version_string}")
   end
 end
 

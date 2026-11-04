@@ -1,5 +1,5 @@
 # Vamp's native apps: Vamp for Mac (the menu-bar host) and Vamp for iPad
-# (full-screen Vamp over the USB cable), sharing the link code in Shared/.
+# (full-screen Vamp over the USB cable, on an iPad or an iPhone), sharing the link code in Shared/.
 # Generate the Xcode project with `xcodegen` in this folder; the generated
 # Vamp.xcodeproj is committed, so building needs only Xcode.
 name: Vamp
@@ -44,6 +44,12 @@ targets:
           - UIInterfaceOrientationLandscapeRight
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationPortraitUpsideDown
+        # An iPhone turns either way too, but not upside down (ADR-503's
+        # phone layout has a portrait and a landscape arrangement).
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         # The page is loaded from localhost, where the app's own listener
         # hands it to the Mac: plain http to loopback only.
         NSAppTransportSecurity:
@@ -53,10 +59,11 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.benjuodvalkis.vamp.ipad
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         PRODUCT_NAME: Vamp
-        # iPad only for the App Store (2026-10-30): an iPhone build needs
-        # iPhone screenshots too. "1,2" ran it on a phone (2026-10-28).
-        TARGETED_DEVICE_FAMILY: "2"
-        MARKETING_VERSION: "1.0"
+        # iPhone and iPad since 1.1 (2026-11-04): the interface has a phone
+        # layout (ADR-503). 1.0 was iPad only. An App Store app can never
+        # drop a device family again once it has shipped with it.
+        TARGETED_DEVICE_FAMILY: "1,2"
+        MARKETING_VERSION: "1.1"
         CURRENT_PROJECT_VERSION: "1"
         CODE_SIGN_STYLE: Automatic
   VampMac:

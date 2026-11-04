@@ -3,7 +3,7 @@ import UIKit
 import WebKit
 import os
 
-/// Vamp for iPad: Vamp's own interface, full screen, reached over the USB
+/// Vamp for iPad (and iPhone, since 1.1): Vamp's own interface, full screen, reached over the USB
 /// cable through Vamp for Mac rather than over a network.
 ///
 /// The interface is not in the app. The web view loads it from
@@ -167,7 +167,7 @@ struct WaitingView: View {
             Text(linked ? "Loading Vamp…" : "Waiting for the Mac")
                 .font(.title2.weight(.semibold))
             if !linked {
-                Text("Plug the iPad into the Mac with a USB cable, and start Vamp there.")
+                Text("Plug the \(UIDevice.current.localizedModel) into the Mac with a USB cable, and start Vamp there.")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -226,7 +226,7 @@ struct PairingView: View {
         case .ended:
             return "The Mac will show a new code in a few seconds: type that one."
         default:
-            return "Vamp for Mac shows a six-digit code in the Mac's menu bar, beside a key. Type it here, once: after that this iPad and this Mac know each other."
+            return "Vamp for Mac shows a six-digit code in the Mac's menu bar, beside a key. Type it here, once: after that this \(UIDevice.current.localizedModel) and this Mac know each other."
         }
     }
 }
