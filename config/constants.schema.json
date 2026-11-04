@@ -494,6 +494,14 @@
             }
           }
         },
+        "phoneLayout": {
+          "type": "object",
+          "description": "ADR-503: the screen size below which the phone layout replaces the iPad's",
+          "properties": {
+            "maxWidth": { "type": "number", "minimum": 0 },
+            "maxHeight": { "type": "number", "minimum": 0 }
+          }
+        },
         "gestures": {
           "type": "object",
           "description": "Touch gesture thresholds shared by the interface and the Move pad script",

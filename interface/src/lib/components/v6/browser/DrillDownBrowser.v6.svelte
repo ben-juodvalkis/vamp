@@ -2649,6 +2649,17 @@
 		width: 100%;
 		height: 100%;
 	}
+	/* The phone layout (ADR-503): half of a phone's top bar is about 160px,
+	   40px a segment, so the switch shows its icons alone. The words stay
+	   in the button for its accessible name. */
+	:global([data-phone-layout]) .seg-switch .seg {
+		font-size: 0;
+		padding: 0;
+	}
+	:global([data-phone-layout]) .seg-switch .seg-icon {
+		width: 24px;
+		height: 24px;
+	}
 	.seg-switch .seg:active { transform: scale(0.96); }
 	.seg-switch .seg.on {
 		background: var(--seg-ink);
