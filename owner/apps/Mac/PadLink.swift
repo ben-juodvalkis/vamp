@@ -49,6 +49,10 @@ final class PadLink: ObservableObject {
     /// iPads on Wi-Fi, by their key's id: the Bonjour results seen, the
     /// clients dialling the paired ones, and the linked ones.
     private var wifiBrowser: NWBrowser?
+    private var browserRenewal: DispatchWorkItem?
+    /// While no iPad is linked over Wi-Fi, the browse is started afresh
+    /// this often (see `renewWifiBrowserSoon`).
+    static let browserRenewalInterval: TimeInterval = 20
     private var wifiSeen: [String: NWEndpoint] = [:]
     private var wifiClients: [String: LinkClient] = [:]
     /// The endpoint each Wi-Fi client dials: a new one (the iPad seen by
@@ -247,11 +251,39 @@ final class PadLink: ObservableObject {
         pairingCode = nil
         VampLog.line("iPad link: the iPad was unplugged")
         refresh()
+        renewWifiBrowserSoon()
     }
 
     // MARK: - Wi-Fi (ADR-504)
 
+    /// Measured on the rig, 2026-11-05: with the iPad on the cable and on
+    /// Wi-Fi, NWBrowser listed it once; when the cable came out the listing
+    /// went with the cable's network link and never came back for the Wi-Fi
+    /// one, though a fresh browse (and `dns-sd`) found it at once. So when an
+    /// iPad drops out of the listing, or the cable comes out, with no Wi-Fi
+    /// link up, browse afresh, and keep doing so every
+    /// `browserRenewalInterval` until there is one. A working Wi-Fi link is
+    /// never touched: a fresh browse starts with an empty listing.
+    private func renewWifiBrowserSoon(after delay: TimeInterval = 1) {
+        browserRenewal?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            Task { @MainActor in
+                guard let self else { return }
+                guard self.wifiLinked.isEmpty else { return }
+                self.wifiBrowser?.cancel()
+                self.wifiBrowser = nil
+                // "Dropped" compares within one browse, never across two.
+                self.wifiSeen = [:]
+                self.startWifiBrowser()
+            }
+        }
+        browserRenewal = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
+    }
+
     private func startWifiBrowser() {
+        // Renewed while nothing is linked over Wi-Fi.
+        renewWifiBrowserSoon(after: Self.browserRenewalInterval)
         let params = NWParameters()
         params.includePeerToPeer = false
         let browser = NWBrowser(for: .bonjourWithTXTRecord(type: LinkProtocol.bonjourType, domain: nil), using: params)
@@ -264,9 +296,12 @@ final class PadLink: ObservableObject {
                 if let pairingId = txt[LinkProtocol.txtPairingId], pairings[pairingId] == nil { pairings[pairingId] = result.endpoint }
             }
             Task { @MainActor in
-                self?.wifiSeen = seen
-                self?.pairingSeen = pairings
-                self?.reconcileWifi()
+                guard let self else { return }
+                let dropped = !Set(self.wifiSeen.keys).subtracting(seen.keys).isEmpty
+                self.wifiSeen = seen
+                self.pairingSeen = pairings
+                self.reconcileWifi()
+                if dropped { self.renewWifiBrowserSoon() }
             }
         }
         browser.stateUpdateHandler = { state in
@@ -315,6 +350,7 @@ final class PadLink: ObservableObject {
                 guard let self, self.wifiClients[id] === client else { return }
                 if up { self.wifiLinked.insert(id) } else { self.wifiLinked.remove(id) }
                 self.refresh()
+                if !up { self.renewWifiBrowserSoon(after: Self.browserRenewalInterval) }
             }
         }
         wifiClients[id] = client
