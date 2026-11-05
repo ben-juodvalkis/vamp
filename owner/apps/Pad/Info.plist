@@ -29,6 +29,12 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_vamplink._tcp</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Vamp connects to Vamp for Mac over your Wi-Fi network when the cable is out.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -96,6 +96,32 @@ enum UsbMux {
         }
     }
 
+    /// The iPad app on the network (ADR-504): `endpoint` is its Bonjour
+    /// service (or, in the tests, an address), `params` the Wi-Fi link's
+    /// TLS for the pair's key. Ready means TLS finished: the iPad holds
+    /// the key too.
+    static func networkDialer(to endpoint: NWEndpoint, using params: @escaping () -> NWParameters) -> LinkDialer {
+        return { queue, done in
+            let conn = NWConnection(to: endpoint, using: params())
+            var finished = false
+            let finish: (NWConnection?) -> Void = { result in
+                guard !finished else { return }
+                finished = true
+                if result == nil { conn.cancel() }
+                done(result, Data())
+            }
+            conn.stateUpdateHandler = { state in
+                switch state {
+                case .ready: finish(conn)
+                case .failed, .waiting, .cancelled: finish(nil)
+                default: break
+                }
+            }
+            conn.start(queue: queue)
+            queue.asyncAfter(deadline: .now() + 5) { finish(nil) }
+        }
+    }
+
     private static func readResult(_ conn: NWConnection, pending: Data, finish: @escaping (NWConnection?, Data) -> Void) {
         conn.receive(minimumIncompleteLength: 1, maximumLength: 4096) { data, _, isComplete, error in
             var pending = pending

@@ -54,6 +54,12 @@ final class LinkClient {
     private let paired: PairedIPads
     private let serial: String?
     private let legacyAllowed: () -> Bool
+    /// False over Wi-Fi (ADR-504): an iPad this Mac has not paired with is
+    /// denied, never shown a code. Pairing is the cable's alone.
+    private let allowPairing: Bool
+    /// Over Wi-Fi another Mac may hold the iPad: a link the iPad drops
+    /// within a few seconds of coming up redials slowly, not every second.
+    var slowAfterShortLink = false
     private var control: NWConnection?
     private var phase = Phase.idle
     private var heardAny = false
@@ -73,7 +79,8 @@ final class LinkClient {
 
     init(
         dial: @escaping LinkDialer, macHost: String = "127.0.0.1", macPort: UInt16, queue: DispatchQueue,
-        paired: PairedIPads, serial: String? = nil, legacyAllowed: @escaping () -> Bool = { true }
+        paired: PairedIPads, serial: String? = nil, legacyAllowed: @escaping () -> Bool = { true },
+        allowPairing: Bool = true
     ) {
         self.dial = dial
         self.macHost = NWEndpoint.Host(macHost)
@@ -82,6 +89,7 @@ final class LinkClient {
         self.paired = paired
         self.serial = serial
         self.legacyAllowed = legacyAllowed
+        self.allowPairing = allowPairing
     }
 
     func start() {
@@ -232,6 +240,8 @@ final class LinkClient {
                 control.sendLine(LinkProtocol.line(.authOK(proof: LinkAuth.proof(key.symmetric, "mac", macNonce, padNonce))))
                 phase = .linked(key: key, macNonce: macNonce, padNonce: padNonce)
                 linkUp(legacy: false)
+            } else if !allowPairing {
+                deny("an iPad this Mac has not paired with (pair it by cable)")
             } else {
                 let code = LinkAuth.newCode()
                 phase = .pairing(macNonce: macNonce, padNonce: padNonce, keyId: keyId, code: code, triesLeft: LinkProtocol.pairingTries)
@@ -288,6 +298,9 @@ final class LinkClient {
         control = nil
         phase = .idle
         if closeNow { conn.cancel() }
+        if wasUp && slowAfterShortLink && Date().timeIntervalSince(lastUp) < LinkProtocol.healthyWithin {
+            lastUp = .distantPast
+        }
         if wasUp {
             log?("unlinked: \(why)")
             notify(false)

@@ -1,5 +1,6 @@
 import Foundation
 import Network
+import Security
 
 /// Two connections joined end to end: whatever arrives on one is written to
 /// the other, both ways, until either side ends. Then both are cancelled,
@@ -86,6 +87,28 @@ extension NWParameters {
     static func loopbackListener(port: UInt16) -> NWParameters {
         let params = linkTCP()
         params.requiredLocalEndpoint = .hostPort(host: .ipv4(.loopback), port: NWEndpoint.Port(rawValue: port)!)
+        return params
+    }
+
+    /// The link over Wi-Fi (ADR-504), both ends: TCP with no delay inside
+    /// TLS 1.2 with a pre-shared key derived from the pair's key. A device
+    /// without the key cannot finish the TLS handshake, so on the network
+    /// the iPad answers only a Mac it has paired with, and everything
+    /// between them is encrypted. Apple's own TLS (Network.framework), the
+    /// pattern of its peer-to-peer sample: no other cryptography.
+    /// Not over peer-to-peer Wi-Fi: a shared network only.
+    static func wifiLink(key: LinkKey) -> NWParameters {
+        let tls = NWProtocolTLS.Options()
+        let psk = LinkAuth.wifiPSK(key).withUnsafeBytes { DispatchData(bytes: $0) }
+        let identity = Data("vamp-link-\(key.id)".utf8).withUnsafeBytes { DispatchData(bytes: $0) }
+        sec_protocol_options_add_pre_shared_key(tls.securityProtocolOptions, psk as __DispatchData, identity as __DispatchData)
+        sec_protocol_options_append_tls_ciphersuite(
+            tls.securityProtocolOptions, tls_ciphersuite_t(rawValue: UInt16(TLS_PSK_WITH_AES_128_GCM_SHA256))!)
+        sec_protocol_options_set_max_tls_protocol_version(tls.securityProtocolOptions, .TLSv12)
+        let tcp = NWProtocolTCP.Options()
+        tcp.noDelay = true
+        let params = NWParameters(tls: tls, tcp: tcp)
+        params.includePeerToPeer = false
         return params
     }
 }

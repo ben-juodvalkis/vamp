@@ -13,6 +13,9 @@ play safely, and what is coming.
 - **The Mac itself and Vamp for iPad on the USB cable never pair.** The app reaches the Mac through
   Apple's device channel over the cable, which nothing on a network can. Play over it whenever you
   can. Safari over the cable pairs once, like Wi-Fi: its link can't be told from Wi-Fi by address.
+- **Vamp for iPad on Wi-Fi works only after it has paired by cable** (ADR-504). The iPad listens on
+  Wi-Fi inside TLS keyed by the key it shares with the Mac, so only that Mac can reach it and the
+  traffic is encrypted. It never pairs over Wi-Fi.
 - **On Wi-Fi, prefer a network you trust.** The page is plain HTTP, so someone who can watch the
   network's traffic could copy a paired device's cookie. Pairing stops anyone who merely opens the
   page, not that. The design is

@@ -1,7 +1,12 @@
 import Foundation
 
 /// The wire between Vamp for Mac and Vamp for iPad (ADR-488; authenticated
-/// since version 2, ADR-494).
+/// since version 2, ADR-494; over Wi-Fi as well as the cable, ADR-504).
+///
+/// Over Wi-Fi the same wire runs inside TLS whose pre-shared key comes from
+/// the pair's key, so only a paired Mac can reach the iPad there at all;
+/// the handshake below then runs as it does on the cable, minus pairing,
+/// which is the cable's alone.
 ///
 /// usbmux (Apple's device channel over the USB cable) only lets the Mac
 /// open connections to a port on the iPad, never the other way. So the iPad
@@ -61,6 +66,13 @@ enum LinkProtocol {
     static let pairingLimit: TimeInterval = 180
     /// Wrong codes before the Mac ends the pairing (a new code on the next).
     static let pairingTries = 5
+
+    /// Over Wi-Fi (ADR-504) the iPad also listens on its network, inside
+    /// TLS keyed by the pair's key (`NWParameters.wifiLink`), and advertises
+    /// itself with Bonjour under this type. Its TXT record carries the key's
+    /// id under `txtKeyId`, so a Mac dials only an iPad it has paired with.
+    static let bonjourType = "_vamplink._tcp"
+    static let txtKeyId = "k"
 
     /// The first line of an iPad's refusal of a version it does not speak.
     static let unsupported = "VAMPLINK-UNSUPPORTED"

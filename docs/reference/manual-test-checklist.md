@@ -461,6 +461,14 @@ iPad with Developer Mode on (Settings → Privacy & Security), plugged in.
 - [ ] The iPad never dims or locks while the app is in front
 - [ ] Menu bar on the Mac: "iPad: connected by cable" / "plugged in, Vamp not open" / "not plugged in" as you go
 
+**Vamp for iPad over Wi-Fi (ADR-504; iPad and Mac on the same network)**
+- [ ] First cable link with the new app: iPadOS asks to find devices on the local network once; Allow
+- [ ] Unplug: "Reconnecting to the Mac…", then back over Wi-Fi; the menu says "iPad: connected over Wi-Fi"
+- [ ] Play a few minutes over Wi-Fi: gestures land, no drops; note any lag against the cable
+- [ ] Plug in mid-play, holding a fader or wheel: nothing cuts, no audio glitch; the menu says "by cable and Wi-Fi"
+- [ ] Turn the iPad's Wi-Fi off while plugged in: the page carries on over the cable (a brief reconnect at most)
+- [ ] Walk out of Wi-Fi range unplugged: "Reconnecting…" within ~6 s; back in range, it returns by itself
+
 **Pairing (a phone, or Safari on the iPad)**
 - [ ] Mac browser and Vamp for iPad: no pairing screen, ever
 - [ ] Safari on the phone over Wi-Fi: "Pair this device" → Ask the Mac → Live's status bar shows "Vamp: … wants to connect. Code ……" and the trusted screens show an Allow banner

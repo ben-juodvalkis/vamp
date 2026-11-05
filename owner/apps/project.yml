@@ -1,5 +1,5 @@
 # Vamp's native apps: Vamp for Mac (the menu-bar host) and Vamp for iPad
-# (full-screen Vamp over the USB cable, on an iPad or an iPhone), sharing the link code in Shared/.
+# (full-screen Vamp over the USB cable or Wi-Fi, on an iPad or an iPhone), sharing the link code in Shared/.
 # Generate the Xcode project with `xcodegen` in this folder; the generated
 # Vamp.xcodeproj is committed, so building needs only Xcode.
 name: Vamp
@@ -31,8 +31,14 @@ targets:
         # the build number without editing this file.
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
-        # Only standard HTTPS/TLS: no export-compliance question per build.
+        # Only Apple's own TLS (Network.framework, the Wi-Fi link since
+        # ADR-504) and HMAC: exempt, so no export-compliance question per build.
         ITSAppUsesNonExemptEncryption: false
+        # Over Wi-Fi (ADR-504) the app listens and advertises itself with
+        # Bonjour; iPadOS asks once, after the first link by cable.
+        NSLocalNetworkUsageDescription: Vamp connects to Vamp for Mac over your Wi-Fi network when the cable is out.
+        NSBonjourServices:
+          - _vamplink._tcp
         LSRequiresIPhoneOS: true
         UIRequiresFullScreen: true
         UIStatusBarHidden: true
@@ -91,6 +97,10 @@ targets:
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         # A menu-bar agent: no Dock icon, no main window.
         LSUIElement: true
+        # Finding paired iPads on Wi-Fi (ADR-504): macOS asks once.
+        NSLocalNetworkUsageDescription: Vamp finds Vamp for iPad on your Wi-Fi network, to connect when the cable is out.
+        NSBonjourServices:
+          - _vamplink._tcp
         # Sparkle: the feed is the latest GitHub release's appcast (the repo
         # is public; no site needed), signed with this key's private half,
         # kept in the release Mac's keychain (`generate_keys`).

@@ -3,16 +3,26 @@ import Network
 
 /// The iPad's end of the link (it compiles on the Mac too, for the tests).
 ///
-/// Two loopback listeners:
+/// Two loopback listeners, and one on Wi-Fi once it is switched on:
 /// - `pagePort`, where the app's web view loads Vamp. Each connection the
-///   page opens is parked and announced to the Mac on the control
+///   page opens is parked and announced to the Mac on a control
 ///   connection as `OPEN <id>`.
-/// - `devicePort`, which the Mac reaches through usbmux: the control
-///   connection, and the stream connections that answer each `OPEN`. A
-///   stream is spliced to the parked page connection with the same id.
+/// - `devicePort`, which the Mac reaches through usbmux (the cable): the
+///   control connection, and the stream connections that answer each
+///   `OPEN`. A stream is spliced to the parked page connection with the
+///   same id.
+/// - Wi-Fi (ADR-504, `setWifi`): the same, inside TLS keyed by the pair's
+///   key, on a port of the system's choosing that Bonjour advertises.
 ///
-/// With no Mac on the control connection, a page connection is refused at
-/// once, so the web view fails fast and can say so, instead of hanging.
+/// The cable and Wi-Fi each hold their own control connection. A new page
+/// connection goes over the cable when it is linked, else over Wi-Fi; one
+/// already open stays where it is, so plugging the cable in never cuts a
+/// connection the page is using. When Wi-Fi's control connection goes, so
+/// do the page connections it carried, at once, and the page reconnects
+/// over the cable if it is there.
+///
+/// With no Mac on either, a page connection is refused at once, so the web
+/// view fails fast and can say so, instead of hanging.
 ///
 /// Anything on the iPad can reach `devicePort`, so nothing is trusted for
 /// being there (ADR-494). A control connection is the Mac only once it has
@@ -20,9 +30,31 @@ import Network
 /// given it); a stream only with the tag that session's key makes. Even
 /// then, a second control connection replaces the first only once the first
 /// has gone quiet (`LinkProtocol.healthyWithin`). Stream ids are random.
+/// On Wi-Fi only a holder of the key gets through TLS at all, and a pairing
+/// is refused there: pairing is the cable's alone.
 final class LinkServer {
     let devicePort: UInt16
     let pagePort: UInt16
+
+    /// How the Mac reached this iPad.
+    enum Transport: Hashable {
+        case cable
+        case wifi
+    }
+
+    /// Listening on Wi-Fi (ADR-504).
+    struct Wifi: Equatable {
+        /// Advertise with Bonjour (a test dials the port instead).
+        var advertise = true
+        /// Listen on this kind of interface only; nil for any (the
+        /// Simulator, whose network is the Mac's, and the tests).
+        var interface: NWInterface.InterfaceType? = .wifi
+
+        init(advertise: Bool = true, interface: NWInterface.InterfaceType? = .wifi) {
+            self.advertise = advertise
+            self.interface = interface
+        }
+    }
 
     enum PairingEvent: Equatable {
         /// The Mac does not know this iPad yet: ask for the code it shows.
@@ -34,11 +66,15 @@ final class LinkServer {
         case ended
     }
 
-    /// Called on the main queue when the Mac's control connection comes or
-    /// goes.
+    /// Called on the main queue when the iPad becomes linked to a Mac (by
+    /// either way) or stops being linked at all.
     var onLinkChange: ((Bool) -> Void)?
+    /// Called on the main queue with the ways linked now, on every change.
+    var onTransportsChange: ((Set<Transport>) -> Void)?
     /// Called on the main queue as a pairing goes along.
     var onPairing: ((PairingEvent) -> Void)?
+    /// Called on the main queue with the Wi-Fi listener's port once it is up.
+    var onWifiReady: ((UInt16) -> Void)?
     /// The link's state changes, one line each (never per message).
     var log: ((String) -> Void)?
 
@@ -49,14 +85,16 @@ final class LinkServer {
     /// One control connection: proving itself, pairing, or the link.
     private final class Session {
         let conn: NWConnection
+        let transport: Transport
         let macNonce: String
         let padNonce = LinkAuth.nonce()
         var buffer = LineBuffer()
         var pairing = false
         var code: String?
 
-        init(conn: NWConnection, macNonce: String) {
+        init(conn: NWConnection, transport: Transport, macNonce: String) {
             self.conn = conn
+            self.transport = transport
             self.macNonce = macNonce
         }
     }
@@ -65,13 +103,16 @@ final class LinkServer {
     private let queue = DispatchQueue(label: "vamp.link.server")
     private var linkListener: NWListener?
     private var pageListener: NWListener?
-    private var control: Session?
+    private var wifiListener: NWListener?
+    private var wifi: Wifi?
+    private var controls: [Transport: Session] = [:]
     /// Control connections still proving themselves or pairing.
     private var handshakes: [ObjectIdentifier: Session] = [:]
-    private var lastHeard = Date.distantPast
+    private var lastHeard: [Transport: Date] = [:]
     private var silenceTimer: DispatchSourceTimer?
-    private var pending: [UInt32: NWConnection] = [:]
-    private var splices: [ObjectIdentifier: Splice] = [:]
+    /// Page connections waiting for their stream, and the way it will come.
+    private var pending: [UInt32: (conn: NWConnection, transport: Transport)] = [:]
+    private var splices: [ObjectIdentifier: (splice: Splice, transport: Transport)] = [:]
     private var running = false
 
     init(devicePort: UInt16, pagePort: UInt16, key: LinkKey) {
@@ -93,10 +134,26 @@ final class LinkServer {
             running = false
             linkListener?.cancel(); linkListener = nil
             pageListener?.cancel(); pageListener = nil
+            wifiListener?.cancel(); wifiListener = nil
             silenceTimer?.cancel(); silenceTimer = nil
             for session in handshakes.values { session.conn.cancel() }
             handshakes.removeAll()
-            dropControl("stopped")
+            for transport in Array(controls.keys) { dropControl(transport, "stopped") }
+        }
+    }
+
+    /// Listen on Wi-Fi as `config` says, or not at all (nil). A change
+    /// starts the listener again; the cable is not touched.
+    func setWifi(_ config: Wifi?) {
+        queue.async { [self] in
+            guard config != wifi else { return }
+            wifi = config
+            wifiListener?.cancel(); wifiListener = nil
+            if config == nil {
+                dropControl(.wifi, "Wi-Fi switched off")
+            } else if running {
+                startListeners()
+            }
         }
     }
 
@@ -123,28 +180,61 @@ final class LinkServer {
 
     private func startListeners() {
         if linkListener == nil {
-            linkListener = makeListener(port: devicePort) { [weak self] in self?.acceptLink($0) }
+            linkListener = makeListener(.loopbackListener(port: devicePort), name: "port \(devicePort)") { [weak self] in
+                self?.acceptLink($0, .cable)
+            }
         }
         if pageListener == nil {
-            pageListener = makeListener(port: pagePort) { [weak self] in self?.acceptPage($0) }
+            pageListener = makeListener(.loopbackListener(port: pagePort), name: "port \(pagePort)") { [weak self] in
+                self?.acceptPage($0)
+            }
+        }
+        if wifiListener == nil, let wifi {
+            let params = NWParameters.wifiLink(key: key)
+            if let interface = wifi.interface { params.requiredInterfaceType = interface }
+            var service: NWListener.Service?
+            if wifi.advertise {
+                var txt = NWTXTRecord()
+                txt[LinkProtocol.txtKeyId] = key.id
+                // Named by the key's id, not the iPad's name: a Mac matches
+                // it to a paired iPad by the TXT record either way.
+                service = NWListener.Service(name: "Vamp \(key.id.prefix(6))", type: LinkProtocol.bonjourType, domain: nil, txtRecord: txt)
+            }
+            wifiListener = makeListener(params, name: "Wi-Fi", service: service) { [weak self] in
+                self?.acceptLink($0, .wifi)
+            }
         }
     }
 
-    private func makeListener(port: UInt16, accept: @escaping (NWConnection) -> Void) -> NWListener? {
-        guard let listener = try? NWListener(using: .loopbackListener(port: port)) else {
-            log?("could not listen on port \(port); retrying")
+    private func makeListener(
+        _ params: NWParameters, name: String, service: NWListener.Service? = nil,
+        accept: @escaping (NWConnection) -> Void
+    ) -> NWListener? {
+        guard let listener = try? NWListener(using: params) else {
+            log?("could not listen on \(name); retrying")
             retryListenersSoon()
             return nil
         }
+        listener.service = service
         listener.newConnectionHandler = accept
         listener.stateUpdateHandler = { [weak self, weak listener] state in
             guard let self, let listener else { return }
-            if case .failed(let error) = state {
-                self.log?("listener on port \(port) failed (\(error)); retrying")
+            switch state {
+            case .ready:
+                if self.wifiListener === listener, let port = listener.port?.rawValue {
+                    self.log?("listening on Wi-Fi")
+                    let handler = self.onWifiReady
+                    DispatchQueue.main.async { handler?(port) }
+                }
+            case .failed(let error):
+                self.log?("listener on \(name) failed (\(error)); retrying")
                 listener.cancel()
                 if self.linkListener === listener { self.linkListener = nil }
                 if self.pageListener === listener { self.pageListener = nil }
+                if self.wifiListener === listener { self.wifiListener = nil }
                 self.retryListenersSoon()
+            default:
+                break
             }
         }
         listener.start(queue: queue)
@@ -162,46 +252,47 @@ final class LinkServer {
 
     private func acceptPage(_ conn: NWConnection) {
         conn.start(queue: queue)
-        guard let control else {
+        // The cable when it is linked, else Wi-Fi.
+        guard let control = controls[.cable] ?? controls[.wifi] else {
             conn.cancel()
             return
         }
         // Random, so a stream cannot be guessed and claimed by another app.
         var id = UInt32.random(in: 1...UInt32.max)
         while pending[id] != nil { id = UInt32.random(in: 1...UInt32.max) }
-        pending[id] = conn
+        pending[id] = (conn, control.transport)
         control.conn.sendLine(LinkProtocol.line(.open(id)))
         queue.asyncAfter(deadline: .now() + LinkProtocol.streamWait) { [weak self] in
-            if let stale = self?.pending.removeValue(forKey: id) { stale.cancel() }
+            if let stale = self?.pending.removeValue(forKey: id) { stale.conn.cancel() }
         }
     }
 
     // MARK: - The Mac side
 
-    private func acceptLink(_ conn: NWConnection) {
+    private func acceptLink(_ conn: NWConnection, _ transport: Transport) {
         conn.start(queue: queue)
-        readHello(conn, pending: Data())
+        readHello(conn, transport, pending: Data())
     }
 
     /// Read up to the first newline. The bytes after it are kept raw: on a
     /// stream they are already payload, which may not be text.
-    private func readHello(_ conn: NWConnection, pending: Data) {
+    private func readHello(_ conn: NWConnection, _ transport: Transport, pending: Data) {
         conn.receive(minimumIncompleteLength: 1, maximumLength: 4096) { [weak self] data, _, isComplete, error in
             guard let self else { return }
             var pending = pending
             if let data { pending.append(data) }
             guard let newline = pending.firstIndex(of: 0x0A) else {
                 if isComplete || error != nil || pending.count > LineBuffer.maxLine { conn.cancel() }
-                else { self.readHello(conn, pending: pending) }
+                else { self.readHello(conn, transport, pending: pending) }
                 return
             }
             let hello = String(decoding: pending[pending.startIndex..<newline], as: UTF8.self)
             let rest = Data(pending[pending.index(after: newline)...])
             switch LinkProtocol.parseHello(hello) {
             case .control(let nonce):
-                self.beginHandshake(conn, macNonce: nonce, rest: rest)
+                self.beginHandshake(conn, transport, macNonce: nonce, rest: rest)
             case .stream(let id, let tag):
-                self.attachStream(conn, id: id, tag: tag, leading: rest)
+                self.attachStream(conn, transport, id: id, tag: tag, leading: rest)
             case nil:
                 if LinkProtocol.isOtherVersion(hello) {
                     self.log?("refused a link of another version: \(hello.split(separator: " ").prefix(3).joined(separator: " "))")
@@ -213,30 +304,31 @@ final class LinkServer {
         }
     }
 
-    private func attachStream(_ link: NWConnection, id: UInt32, tag: String, leading: Data) {
-        guard let control,
+    private func attachStream(_ link: NWConnection, _ transport: Transport, id: UInt32, tag: String, leading: Data) {
+        guard let control = controls[transport],
               LinkAuth.same(tag, LinkAuth.streamTag(key.symmetric, macNonce: control.macNonce, padNonce: control.padNonce, id: id))
         else {
             log?("a stream without this session's tag; closed")
             link.cancel()
             return
         }
-        guard let page = pending.removeValue(forKey: id) else {
+        guard let page = pending[id], page.transport == transport else {
             log?("a stream for an unknown or expired id; closed")
             link.cancel()
             return
         }
-        let splice = Splice(link, page, queue: queue)
+        pending.removeValue(forKey: id)
+        let splice = Splice(link, page.conn, queue: queue)
         let key = ObjectIdentifier(splice)
         splice.onEnd = { [weak self] in self?.splices.removeValue(forKey: key) }
-        splices[key] = splice
+        splices[key] = (splice, transport)
         splice.start(leadingToB: leading)
     }
 
     // MARK: - The handshake
 
-    private func beginHandshake(_ conn: NWConnection, macNonce: String, rest: Data) {
-        let session = Session(conn: conn, macNonce: macNonce)
+    private func beginHandshake(_ conn: NWConnection, _ transport: Transport, macNonce: String, rest: Data) {
+        let session = Session(conn: conn, transport: transport, macNonce: macNonce)
         handshakes[ObjectIdentifier(session)] = session
         conn.stateUpdateHandler = { [weak self, weak session] state in
             guard let self, let session else { return }
@@ -262,11 +354,15 @@ final class LinkServer {
             guard let self else { return }
             if let data, !data.isEmpty { self.consume(session, data) }
             if isComplete || error != nil {
-                self.sessionEnded(session, why: self.control === session ? "the Mac closed the link" : "the handshake was closed")
-            } else if self.control === session || self.handshakes[ObjectIdentifier(session)] != nil {
+                self.sessionEnded(session, why: self.isControl(session) ? "the Mac closed the link" : "the handshake was closed")
+            } else if self.isControl(session) || self.handshakes[ObjectIdentifier(session)] != nil {
                 self.read(session)
             }
         }
+    }
+
+    private func isControl(_ session: Session) -> Bool {
+        controls[session.transport] === session
     }
 
     private func consume(_ session: Session, _ data: Data) {
@@ -275,9 +371,9 @@ final class LinkServer {
             session.conn.cancel()
             return
         }
-        if control === session { lastHeard = Date() }
+        if isControl(session) { lastHeard[session.transport] = Date() }
         for line in lines {
-            if control === session {
+            if isControl(session) {
                 if LinkProtocol.parseControl(line) == .ping {
                     session.conn.sendLine(LinkProtocol.line(.pong))
                 }
@@ -301,6 +397,11 @@ final class LinkServer {
                 notifyPairing(.paired)
             }
             adopt(session)
+        case .pair where session.transport == .wifi:
+            // Only a holder of the key gets through Wi-Fi's TLS, and that
+            // Mac has paired already. Pairing is the cable's alone.
+            log?("refused a pairing over Wi-Fi: pair by cable")
+            session.conn.cancel()
         case .pair:
             log?("the Mac does not know this iPad yet: pairing")
             session.pairing = true
@@ -315,7 +416,7 @@ final class LinkServer {
         case .pairOK(let proof):
             // The other end knows the code shown on the Mac: it is the Mac.
             // Only now does the key leave this iPad.
-            guard let code = session.code,
+            guard session.transport == .cable, let code = session.code,
                   LinkAuth.same(proof, LinkAuth.proof(LinkAuth.codeKey(code), "pair-mac", session.macNonce, session.padNonce))
             else {
                 log?("a pairing reply that does not know the code; closed")
@@ -336,42 +437,57 @@ final class LinkServer {
             if session.pairing { notifyPairing(.ended) }
             return
         }
-        if control === session { dropControl(why) }
+        if isControl(session) { dropControl(session.transport, why) }
     }
 
-    /// A control connection that has proved itself becomes the link, unless
-    /// a working one is already there.
+    /// A control connection that has proved itself becomes the link for its
+    /// way (cable or Wi-Fi), unless a working one is already there.
     private func adopt(_ session: Session) {
+        let transport = session.transport
         handshakes.removeValue(forKey: ObjectIdentifier(session))
-        if let old = control {
-            guard Date().timeIntervalSince(lastHeard) > LinkProtocol.healthyWithin else {
-                log?("refused a second control connection: the link is working")
+        if let old = controls[transport] {
+            guard Date().timeIntervalSince(lastHeard[transport] ?? .distantPast) > LinkProtocol.healthyWithin else {
+                log?("refused a second control connection\(label(transport)): the link is working")
                 session.conn.cancel()
                 return
             }
-            log?("replaced a quiet control connection")
-            control = nil
+            log?("replaced a quiet control connection\(label(transport))")
+            controls[transport] = nil
             old.conn.cancel()
-            dropPending()
+            dropPending(transport)
         }
-        control = session
-        lastHeard = Date()
-        log?("linked to the Mac")
-        notify(true)
+        let wasLinked = !controls.isEmpty
+        controls[transport] = session
+        lastHeard[transport] = Date()
+        log?("linked to the Mac\(label(transport))")
+        notify(wasLinked: wasLinked)
     }
 
-    private func dropControl(_ why: String) {
-        guard let session = control else { return }
-        log?("unlinked: \(why)")
-        control = nil
+    private func dropControl(_ transport: Transport, _ why: String) {
+        guard let session = controls[transport] else { return }
+        log?("unlinked\(label(transport)): \(why)")
+        controls[transport] = nil
         session.conn.cancel()
-        dropPending()
-        notify(false)
+        dropPending(transport)
+        // A Wi-Fi connection can linger half-open long after the network
+        // has gone: end what it carried now, so the page reconnects (over
+        // the cable, if it is there) instead of waiting on a dead socket.
+        // The cable's go with the cable.
+        if transport == .wifi {
+            for entry in splices.values where entry.transport == .wifi { entry.splice.end() }
+        }
+        notify(wasLinked: true)
     }
 
-    private func dropPending() {
-        for (_, page) in pending { page.cancel() }
-        pending.removeAll()
+    private func dropPending(_ transport: Transport) {
+        for (id, page) in pending where page.transport == transport {
+            page.conn.cancel()
+            pending.removeValue(forKey: id)
+        }
+    }
+
+    private func label(_ transport: Transport) -> String {
+        transport == .wifi ? " over Wi-Fi" : (wifi == nil ? "" : " by cable")
     }
 
     private func startSilenceTimer() {
@@ -379,18 +495,26 @@ final class LinkServer {
         let timer = DispatchSource.makeTimerSource(queue: queue)
         timer.schedule(deadline: .now() + 1, repeating: 1)
         timer.setEventHandler { [weak self] in
-            guard let self, self.control != nil else { return }
-            if Date().timeIntervalSince(self.lastHeard) > self.silenceLimit {
-                self.dropControl("nothing heard in \(Int(self.silenceLimit)) s")
+            guard let self else { return }
+            for transport in Array(self.controls.keys)
+            where Date().timeIntervalSince(self.lastHeard[transport] ?? .distantPast) > self.silenceLimit {
+                self.dropControl(transport, "nothing heard in \(Int(self.silenceLimit)) s")
             }
         }
         timer.resume()
         silenceTimer = timer
     }
 
-    private func notify(_ linked: Bool) {
-        let handler = onLinkChange
-        DispatchQueue.main.async { handler?(linked) }
+    /// Tell the app the ways linked now and, when linked turned on or off,
+    /// that too.
+    private func notify(wasLinked: Bool) {
+        let ways = Set(controls.keys)
+        let linked = !ways.isEmpty
+        let onLink = onLinkChange, onWays = onTransportsChange
+        DispatchQueue.main.async {
+            onWays?(ways)
+            if linked != wasLinked { onLink?(linked) }
+        }
     }
 
     private func notifyPairing(_ event: PairingEvent) {

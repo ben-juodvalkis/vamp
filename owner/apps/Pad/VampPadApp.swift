@@ -4,7 +4,8 @@ import WebKit
 import os
 
 /// Vamp for iPad (and iPhone, since 1.1): Vamp's own interface, full screen, reached over the USB
-/// cable through Vamp for Mac rather than over a network.
+/// cable through Vamp for Mac — and, once it has linked by cable, over Wi-Fi
+/// too, when the cable is out (ADR-504).
 ///
 /// The interface is not in the app. The web view loads it from
 /// `localhost:pagePort`, where `LinkServer` hands each connection to the Mac
@@ -66,6 +67,12 @@ final class PadModel: ObservableObject {
     }
     @Published private(set) var pairing: Pairing = .none
 
+    /// This app has linked to a Mac by cable at least once: from then on
+    /// it listens on Wi-Fi as well (ADR-504). Not before, so iPadOS asks
+    /// for the local network only once there is a paired Mac to find.
+    @Published private(set) var wifiOn = UserDefaults.standard.bool(forKey: PadModel.wifiOnKey)
+    private static let wifiOnKey = "wifiLinkOn"
+
     private let server = LinkServer(devicePort: PadPorts.device, pagePort: PadPorts.localPage, key: LinkKeychain.loadOrCreate())
     /// The link's state changes, for Console.app and Xcode's console.
     private static let log = Logger(subsystem: "com.benjuodvalkis.vamp.ipad", category: "link")
@@ -78,6 +85,10 @@ final class PadModel: ObservableObject {
         server.onPairing = { [weak self] event in
             Task { @MainActor in self?.pairingChanged(event) }
         }
+        server.onTransportsChange = { [weak self] ways in
+            Task { @MainActor in self?.transportsChanged(ways) }
+        }
+        if wifiOn { server.setWifi(Self.wifiConfig) }
         server.start()
         updateIdleTimer()
     }
@@ -98,6 +109,23 @@ final class PadModel: ObservableObject {
         case .paired: pairing = .none
         case .ended: pairing = pairing == .none ? .none : .ended
         }
+    }
+
+    /// Wi-Fi only: the Simulator's network is the Mac's, which may be on
+    /// Ethernet, so there any interface will do.
+    private static var wifiConfig: LinkServer.Wifi {
+        #if targetEnvironment(simulator)
+        return LinkServer.Wifi(interface: nil)
+        #else
+        return LinkServer.Wifi()
+        #endif
+    }
+
+    private func transportsChanged(_ ways: Set<LinkServer.Transport>) {
+        guard ways.contains(.cable), !wifiOn else { return }
+        wifiOn = true
+        UserDefaults.standard.set(true, forKey: Self.wifiOnKey)
+        server.setWifi(Self.wifiConfig)
     }
 
     func submitPairingCode(_ code: String) {
@@ -141,7 +169,7 @@ struct PadRoot: View {
             if model.pairing != .none && !model.linked {
                 PairingView(model: model)
             } else if !model.pageLoaded {
-                WaitingView(linked: model.linked)
+                WaitingView(linked: model.linked, wifiOn: model.wifiOn)
             } else if !model.linked {
                 VStack {
                     Spacer()
@@ -159,6 +187,7 @@ struct PadRoot: View {
 
 struct WaitingView: View {
     let linked: Bool
+    let wifiOn: Bool
 
     var body: some View {
         VStack(spacing: 16) {
@@ -167,7 +196,9 @@ struct WaitingView: View {
             Text(linked ? "Loading Vamp…" : "Waiting for the Mac")
                 .font(.title2.weight(.semibold))
             if !linked {
-                Text("Plug the \(UIDevice.current.localizedModel) into the Mac with a USB cable, and start Vamp there.")
+                Text(wifiOn
+                     ? "Start Vamp on the Mac, then plug the \(UIDevice.current.localizedModel) in with a USB cable or join the Mac's Wi-Fi network."
+                     : "Plug the \(UIDevice.current.localizedModel) into the Mac with a USB cable, and start Vamp there.")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

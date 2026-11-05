@@ -48,6 +48,12 @@ enum LinkAuth {
         SymmetricKey(data: SHA256.hash(data: Data("vamp-link-pair|\(code)".utf8)))
     }
 
+    /// The pre-shared key of the Wi-Fi link's TLS (ADR-504): derived from
+    /// the pair's key, never the key itself, so the two uses stay apart.
+    static func wifiPSK(_ key: LinkKey) -> Data {
+        Data(HMAC<SHA256>.authenticationCode(for: Data("vamp-link-wifi-tls".utf8), using: key.symmetric))
+    }
+
     /// The tag a stream connection carries: only an end that holds the key
     /// and was part of this control session can make it.
     static func streamTag(_ key: SymmetricKey, macNonce: String, padNonce: String, id: UInt32) -> String {

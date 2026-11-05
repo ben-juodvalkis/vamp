@@ -16,6 +16,7 @@
 		09E25C1F5DB590222D21BD05 /* LinkServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E6A855106B6835A56B03903 /* LinkServer.swift */; };
 		0B7B8FCECB1E1AB755BA819F /* PairedIPads.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31F6DB32688F85B1071884DF /* PairedIPads.swift */; };
 		0FA909E5A877918C5C079C25 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EBA6AF1690AE6F51DC7D2B2A /* Assets.xcassets */; };
+		13BE2EAB1E794810B7FFD230 /* WifiLinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C7164729014C9C253EBCB13 /* WifiLinkTests.swift */; };
 		17FA54C04AC69BECF2DED920 /* VampPathsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB8D1464A25B0B0AA5D747CA /* VampPathsTests.swift */; };
 		1D58B1CF20FD7E8B0538559A /* OSCEnvelope.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48DAE09A3ED042760066FDE2 /* OSCEnvelope.swift */; };
 		21F3F6B16514E462747028BF /* SupervisorRulesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 332A1156D1916DA942ADD3C0 /* SupervisorRulesTests.swift */; };
@@ -71,6 +72,7 @@
 /* Begin PBXFileReference section */
 		02A893BE8392F15CE8413C11 /* LinkAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkAuth.swift; sourceTree = "<group>"; };
 		0A274A47EF8CB1FB15CE2231 /* UsbMux.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsbMux.swift; sourceTree = "<group>"; };
+		0C7164729014C9C253EBCB13 /* WifiLinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WifiLinkTests.swift; sourceTree = "<group>"; };
 		1DED6AF0A86F7612C3229FAC /* Splice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Splice.swift; sourceTree = "<group>"; };
 		25B9BD3695516F19720AAA2E /* BridgeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeClient.swift; sourceTree = "<group>"; };
 		2947AB166D4E2928A980A4A7 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
@@ -206,6 +208,7 @@
 				E205C25310E6D86E3D913802 /* LinkTests.swift */,
 				332A1156D1916DA942ADD3C0 /* SupervisorRulesTests.swift */,
 				AB8D1464A25B0B0AA5D747CA /* VampPathsTests.swift */,
+				0C7164729014C9C253EBCB13 /* WifiLinkTests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -361,6 +364,7 @@
 				9AAC9CD3B9545B11EA81AB11 /* VampLog.swift in Sources */,
 				4791ACCFF0040C0E1FF18D2B /* VampPaths.swift in Sources */,
 				17FA54C04AC69BECF2DED920 /* VampPathsTests.swift in Sources */,
+				13BE2EAB1E794810B7FFD230 /* WifiLinkTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

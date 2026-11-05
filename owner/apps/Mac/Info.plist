@@ -22,6 +22,12 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_vamplink._tcp</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Vamp finds Vamp for iPad on your Wi-Fi network, to connect when the cable is out.</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUFeedURL</key>
