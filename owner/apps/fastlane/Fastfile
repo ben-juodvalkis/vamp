@@ -12,6 +12,10 @@
 # Vamp for Mac's release is scripts/release-mac.sh (installer.plan.md Phase 5):
 # the whole app with its server and Node, which no lane here builds.
 #
+# After either app's release: update benjuodvalkis.com/vamp (the benjuodvalkis
+# repo, src/lib/data/vamp.ts for setup and requirements, vamp-app.ts for the
+# privacy policy the listing links to) wherever the release changed them.
+#
 # AUTH: an App Store Connect API key, so no Apple ID password or 2FA. Its
 # three values go in fastlane/.env beside this file (gitignored), which
 # fastlane reads on its own:

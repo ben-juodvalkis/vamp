@@ -99,3 +99,5 @@ cp "$DMG" "$DIST/Vamp.dmg"
 
 echo "✅ $DMG (notarized, stapled), $DIST/Vamp.dmg and $DIST/appcast.xml"
 echo "   To ship: a GitHub release tagged v$VERSION with all three attached."
+echo "   Then update benjuodvalkis.com/vamp (benjuodvalkis repo, src/lib/data/vamp.ts and"
+echo "   vamp-app.ts) if setup, requirements or what the apps store changed."
