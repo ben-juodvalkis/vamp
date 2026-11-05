@@ -4,7 +4,7 @@
 **Proposed** (2026-11-05). Builds on ADR-504 (the link over Wi-Fi) and
 ADR-494 (pairing). Vamp for Mac takes it when it is next opened from the
 Dock; Vamp for iPad when it is next installed from Xcode. No Live restart.
-Not yet run on a real device.
+Run on an iPhone 2026-11-05 (below).
 
 ## Context
 ADR-504 put the link on Wi-Fi but kept pairing on the cable, because the
@@ -58,9 +58,14 @@ so it can key the pairing's TLS outright.
   `Vamp pairing f3ddc3._vamplink._tcp`. The Mac's half (showing the window,
   finding and pairing the iPad) was not run outside the tests: it needs the
   menu clicked and would add the Simulator to this Mac's paired iPads.
-- **Not yet measured on a device:** the Camera app's banner, the local
-  network prompt arriving mid-pairing, and the whole round trip with the
-  iPhone and the iPad (rig checklist §15).
+- **Measured on a device (2026-11-05, Ben's iPhone 16, never paired, no
+  cable, the office building's Wi-Fi):** the code shown at 15:07:59;
+  scanned with the Camera app, Vamp opened, and the Mac found the pairing
+  and paired at 15:08:06; the ordinary Wi-Fi link was up at 15:08:08, nine
+  seconds from code to link, nothing typed. Ben: "it works". The Mac
+  recorded the iPhone's key with no serial, beside the iPad's.
+- **Not yet measured on a device:** an iPad paired from a QR code, and an
+  old code scanned after its window has closed (rig checklist §15).
 - **Security:** anyone who can see the Mac's screen while the window is up
   can pair, once. Closing the window or pairing ends the code; a photo of
   it is useless afterwards. Unlike the six-digit code, it cannot be worked
