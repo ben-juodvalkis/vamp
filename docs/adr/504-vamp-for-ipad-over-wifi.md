@@ -81,10 +81,24 @@ the iPad could reach the link; on Wi-Fi any device on the network can.
   Vamp for Mac (run with `VAMP_FROM_NPM=1`) found it and logged it as not
   paired, dialling nothing. The Simulator was not paired with this Mac, so
   a whole link through Bonjour was not run.
-- **Not yet measured on a real iPad:** the iPadOS local network prompt,
-  the link over the home network, a walk out of range and back, the cable
-  plugged in mid-set, and latency over Wi-Fi against the cable. The rig
-  checklist (§15) has the steps.
+- **Measured on the rig's iPad (2026-11-05, an office building's network:
+  the Mac wired at 10.1.1.139, the iPad on Wi-Fi at 10.10.20.52, IPv4
+  between them blocked, IPv6 link-local through):** the cable linked with no
+  pairing (the key survived the reinstall), Wi-Fi linked beside it within
+  seconds, over IPv6 link-local from the Mac's Ethernet to the iPad's Wi-Fi.
+  Three faults found and fixed on the rig: (1) the Mac's long-running browse
+  lost the iPad when the cable came out and never listed it again on Wi-Fi,
+  though a fresh browse found it at once: the browse is now renewed when an
+  iPad drops out, the cable comes out, or every 20 s with no Wi-Fi link;
+  (2) that dropped listing also cut a working Wi-Fi link: a linked client now
+  stays until its pings fail; (3) a Wi-Fi-listener connection is checked to
+  have really come over Wi-Fi. After them: plugged in, waited, unplugged at
+  15:05:35: the cable's link ended, the Wi-Fi link never did, and the page
+  on it never reconnected.
+- **Not yet measured on a real iPad:** the iPadOS local network prompt (none
+  showed on the rig's iPad), the home network, a walk out of range and back,
+  and latency over Wi-Fi against the cable. The rig checklist (§15) has the
+  steps.
 - macOS may ask Vamp for Mac for the local network when it first browses;
   an ad-hoc signed build from a checkout may be asked again after it
   rebuilds itself.

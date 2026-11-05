@@ -315,13 +315,20 @@ final class PadLink: ObservableObject {
     private func reconcileWifi() {
         reconcileQRPairing()
         let seen = wifiSeen
+        // Every iPad in the listing or with a client: one that has dropped
+        // out of the listing is still paired, not forgotten.
+        let ids = Set(seen.keys).union(wifiClients.keys)
         queue.async { [weak self, paired] in
             var keys: [String: LinkKey] = [:]
-            for id in seen.keys { keys[id] = paired.key(for: id) }
+            for id in ids { keys[id] = paired.key(for: id) }
             Task { @MainActor in
                 guard let self else { return }
-                for id in Array(self.wifiClients.keys) where keys[id] == nil || seen[id] == nil || seen[id] != self.wifiEndpoints[id] {
-                    self.detachWifi(id)
+                // A working link stays whatever the listing does (it flickers
+                // when the cable comes out, measured 2026-11-05): its pings
+                // say when it has really gone. Only a forgotten iPad's goes.
+                for id in Array(self.wifiClients.keys) {
+                    let moved = seen[id] == nil || seen[id] != self.wifiEndpoints[id]
+                    if keys[id] == nil || (moved && !self.wifiLinked.contains(id)) { self.detachWifi(id) }
                 }
                 for (id, endpoint) in seen {
                     guard let key = keys[id] else {
@@ -350,7 +357,11 @@ final class PadLink: ObservableObject {
                 guard let self, self.wifiClients[id] === client else { return }
                 if up { self.wifiLinked.insert(id) } else { self.wifiLinked.remove(id) }
                 self.refresh()
-                if !up { self.renewWifiBrowserSoon(after: Self.browserRenewalInterval) }
+                if !up {
+                    // Gone for real now: let the listing decide what is left.
+                    self.reconcileWifi()
+                    self.renewWifiBrowserSoon(after: Self.browserRenewalInterval)
+                }
             }
         }
         wifiClients[id] = client
