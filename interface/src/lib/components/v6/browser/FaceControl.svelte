@@ -13,8 +13,7 @@
 	import type { Control, Get, ParamRef, Writes } from '$lib/components/v6/device-panel/deviceControls';
 	import { getContext } from 'svelte';
 	import DevicePicture from './DevicePicture.svelte';
-	import { PICTURE_CONTEXT, PICTURE_LIVE_CONTEXT, tremoloDot } from './devicePictures';
-	import { useSongBeats } from '$lib/utils/songBeats.svelte';
+	import { PICTURE_CONTEXT } from './devicePictures';
 
 	interface Props {
 		control: Control;
@@ -59,13 +58,6 @@
 	// doesn't clash with the icon"); where pictures draw, the device is named
 	// above the control already (the chain cell's head, the tile's name band).
 	const title = $derived(titled && !picture ? control.title : '');
-	// The LFO's position as a dot on the picture, on a chain cell only (a
-	// browser tile draws a file, not a running device), while it follows the song.
-	const live = getContext<boolean>(PICTURE_LIVE_CONTEXT) === true;
-	const cycleBeats = $derived(
-		live && picture === 'tremolo' && control.kind === 'xy' ? control.pictureCycleBeats?.(get) : undefined
-	);
-	const song = useSongBeats(() => cycleBeats !== undefined && cycleBeats > 0);
 	const mark = $derived(icon ?? (pictured && control.kind !== 'eq' ? control.icon : undefined));
 	/** The slider's filled region as a clip-path, as `DeviceSlider` clips its inverse label: from the floor, or from `center`. */
 	function fillClip(level: number, center?: number): string {
@@ -80,17 +72,7 @@
 	{@const at = control.read(get)}
 	{@const curve = control.curve?.(get)}
 	{#snippet xyPicture()}
-		{#if picture}
-			{@const variant = control.pictureVariant?.(get)}
-			<DevicePicture
-				kind={picture}
-				x={at.x}
-				y={at.y}
-				{variant}
-				ink={color.primary}
-				dot={cycleBeats ? tremoloDot(song.beats / cycleBeats, at.y, variant ?? 2) : undefined}
-			/>
-		{/if}
+		{#if picture}<DevicePicture kind={picture} x={at.x} y={at.y} variant={control.pictureVariant?.(get)} ink={color.primary} />{/if}
 	{/snippet}
 	<DeviceXY
 		xValue={at.x}

@@ -302,12 +302,6 @@ export const TOURS = {
 				scenePatch: chainDemo,
 				steps: [openInstrument(CHAIN_DEMO_TRACK)]
 			},
-			{
-				name: 'chain-tremolo',
-				description: "A synced Tremolo's cell: the dot on its wave marks the LFO's place in the song",
-				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], 'Auto Pan Legacy', 'Echo']),
-				steps: [openInstrument(CHAIN_DEMO_TRACK)]
-			},
 			...[2, 4, 5, 8].map((n) => ({
 				name: `chain-len-${n}`,
 				description: `A chain of ${n} devices: one row up to five, then two rows split evenly, the + cell always last`,

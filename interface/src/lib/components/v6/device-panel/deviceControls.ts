@@ -29,7 +29,6 @@ import {
 	frequencyValue,
 	shapeIndex,
 	syncRateLabel,
-	syncRateBeats,
 	tileAmount,
 	tileFrequency,
 	tileSyncStep,
@@ -70,8 +69,6 @@ export interface XyControl {
 	picture?: PictureKind;
 	/** A further reading the picture draws from (Tremolo's LFO shape), beyond the pad's position. */
 	pictureVariant?(get: Get): number;
-	/** One cycle of the device's LFO in beats while it follows the song (Tremolo synced), for the picture's moving dot on a chain cell; undefined while it runs free. */
-	pictureCycleBeats?(get: Get): number | undefined;
 	/** A mark beside its title. */
 	icon?: ControlGlyphName;
 	read(get: Get): { x: number; y: number };
@@ -229,7 +226,6 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 			title: 'Tremolo', picture: 'tremolo',
 			// The LFO shape the Tremolo view's tab shows (the user, 2026-10-26): 0 saw down, 1 square, 2 sine, 3 triangle.
 			pictureVariant: (g) => shapeIndex(g(AUTO_PAN.waveform) ?? 2, g(AUTO_PAN.shape) ?? 0) ?? 2,
-			pictureCycleBeats: (g) => ((g(AUTO_PAN.lfoType) ?? 1) >= 0.5 ? syncRateBeats(g(AUTO_PAN.syncRate) ?? 6) : undefined),
 			read: (g) => {
 				const synced = (g(AUTO_PAN.lfoType) ?? 1) >= 0.5;
 				return {

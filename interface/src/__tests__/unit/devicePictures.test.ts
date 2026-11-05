@@ -49,27 +49,3 @@ describe('device pictures follow their control', () => {
 			}
 	});
 });
-
-describe("Tremolo's position dot", () => {
-	it('rides the drawn wave, crossing the box once every two cycles', async () => {
-		const { tremoloDot } = await import('$lib/components/v6/browser/devicePictures');
-		// Sine: at the start on the middle line, a quarter cycle in at the crest.
-		expect(tremoloDot(0, 1, 2)).toEqual({ x: 0, y: 50 });
-		expect(tremoloDot(0.25, 1, 2).x).toBeCloseTo(12.5);
-		expect(tremoloDot(0.25, 1, 2).y).toBeCloseTo(10);
-		expect(tremoloDot(1, 1, 2).x).toBeCloseTo(50);
-		expect(tremoloDot(2.25, 1, 2).x).toBeCloseTo(12.5);
-		// Square: the top half of each cycle first, as drawn.
-		expect(tremoloDot(0.1, 0, 1).y).toBe(42);
-		expect(tremoloDot(0.6, 0, 1).y).toBe(58);
-	});
-});
-
-describe('the song position runs on between reports', () => {
-	it('at the tempo while playing, never past two reports, and holds when stopped', async () => {
-		const { songBeatsAt } = await import('$lib/utils/songBeats.svelte');
-		expect(songBeatsAt(8, 1000, 1100, 120, true)).toBeCloseTo(8.2);
-		expect(songBeatsAt(8, 1000, 5000, 120, true)).toBeCloseTo(8.4);
-		expect(songBeatsAt(8, 1000, 1100, 120, false)).toBe(8);
-	});
-});

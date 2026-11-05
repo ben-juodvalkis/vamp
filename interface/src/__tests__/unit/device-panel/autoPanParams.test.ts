@@ -66,16 +66,3 @@ describe('autoPanParams', () => {
 		expect(shapeIndex(3, 0)).toBeNull();
 	});
 });
-
-describe('a Sync Rate in beats', () => {
-	it('is its note length in quarter notes', async () => {
-		const { syncRateBeats, SYNC_RATE_LABELS } = await import('$lib/components/v6/device-panel/autoPanParams');
-		const at = (label: string) => syncRateBeats(SYNC_RATE_LABELS.indexOf(label as never));
-		expect(at('1/4')).toBe(1);
-		expect(at('1/16')).toBe(0.25);
-		expect(at('3/16')).toBe(0.75);
-		expect(at('1')).toBe(4);
-		expect(at('1.5')).toBe(6);
-		expect(at('8')).toBe(32);
-	});
-});
