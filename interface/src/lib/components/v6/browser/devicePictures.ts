@@ -69,6 +69,30 @@ const hash = (i: number) => {
 const circle = (cx: number, cy: number, r: number) => `M${f(cx - r)},${f(cy)}a${f(r)},${f(r)} 0 1,0 ${f(2 * r)},0a${f(r)},${f(r)} 0 1,0 ${f(-2 * r)},0`;
 const bar = (x: number, y: number, w: number, h: number) => `M${f(x)},${f(y)}h${f(w)}v${f(h)}h${f(-w)}Z`;
 
+/** Tremolo's swing about the middle line, in box units, at its depth. */
+const tremoloAmp = (y: number) => 8 + clamp01(y) * 32;
+
+/** One cycle of Tremolo's LFO at `u` 0..1, -1..1: `variant` 0 saw down, 1 square, 2 sine, 3 triangle. */
+function tremoloWave(variant: number, u: number): number {
+	switch (Math.round(variant)) {
+		case 0: return 1 - 2 * u;
+		case 1: return u < 0.5 ? 1 : -1;
+		case 3: return u < 0.25 ? 4 * u : u < 0.75 ? 2 - 4 * u : 4 * u - 4;
+		default: return Math.sin(2 * Math.PI * u);
+	}
+}
+
+/**
+ * Where the LFO is on Tremolo's picture (the user, 2026-11-04: "a subtle
+ * moving dot that shows the current position" in sync mode): `cycles` is
+ * how many LFO cycles have run, and the picture draws two, so the dot
+ * crosses the box once every two. A point in box units, on the line.
+ */
+export function tremoloDot(cycles: number, y: number, variant: number): { x: number; y: number } {
+	const span = (((cycles % 2) + 2) % 2) / 2;
+	return { x: span * 100, y: 50 - tremoloAmp(y) * tremoloWave(variant, (span * 2) % 1) };
+}
+
 /**
  * The strokes of a picture at a control's position: `x` (a slider's level,
  * or a pad's across) and `y` (a pad's up), and `variant`, a further reading
@@ -106,15 +130,7 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0, variant = 0)
 		// (the user, 2026-10-26: "match the actual shape"): `variant` 0 saw
 		// down, 1 square, 2 sine, 3 triangle. Deeper with its depth.
 		case 'tremolo': {
-			const amp = 8 + y * 32;
-			const wave = (u: number) => {
-				switch (Math.round(variant)) {
-					case 0: return 1 - 2 * u;
-					case 1: return u < 0.5 ? 1 : -1;
-					case 3: return u < 0.25 ? 4 * u : u < 0.75 ? 2 - 4 * u : 4 * u - 4;
-					default: return Math.sin(2 * Math.PI * u);
-				}
-			};
+			const amp = tremoloAmp(y);
 			const square = Math.round(variant) === 1;
 			const saw = Math.round(variant) === 0;
 			// Two cycles (the user, 2026-10-26). The saw and the square rise from
@@ -125,7 +141,7 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0, variant = 0)
 				? `M0,${lo}V${hi}H25V${lo}H50V${hi}H75V${lo}H100`
 				: saw
 					? `M2,${lo}V${hi}L50,${lo}V${hi}L100,${lo}`
-					: trace((u) => 50 - amp * wave((u * 2) % 1), 128);
+					: trace((u) => 50 - amp * tremoloWave(variant, (u * 2) % 1), 128);
 			return [
 				{ d: 'M0,50H100', o: 0.2 },
 				{ d, o: 0.85 }
@@ -458,3 +474,5 @@ export function genericPicture(className: string | undefined, name: string): Pic
 
 /** Pictures draw where a provider asks for them (the chain overview, a browser tile), not on the FX grid. */
 export const PICTURE_CONTEXT = Symbol('device-pictures');
+/** Where a picture follows the running device (the chain overview), not a file's saved values (a browser tile). */
+export const PICTURE_LIVE_CONTEXT = Symbol('device-pictures-live');

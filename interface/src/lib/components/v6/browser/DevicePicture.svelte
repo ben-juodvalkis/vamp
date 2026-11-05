@@ -13,9 +13,11 @@
 		/** A further reading the control names (`pictureVariant`). */
 		variant?: number;
 		ink: string;
+		/** A point on the picture marking where the device is now (Tremolo's LFO, synced), in box units. */
+		dot?: { x: number; y: number };
 	}
 
-	let { kind, x, y = 0, variant = 0, ink }: Props = $props();
+	let { kind, x, y = 0, variant = 0, ink, dot }: Props = $props();
 	const strokes = $derived(pictureStrokes(kind, x, y, variant));
 	/** Shapes that must keep their proportions (a pedal, a drum, an amp stack); the rest stretch to the cell, Echo's arcs with it as Live draws them. */
 	const KEEP_ASPECT = new Set<PictureKind>(['stompbox', 'drum', 'stack', 'wheels', 'reverse', 'smear', 'glitch', 'octaves', 'chord', 'vu']);
@@ -31,6 +33,10 @@
 	{#each strokes as s, i (i)}
 		<path d={s.d} style="opacity: {s.o};" class:fill={s.fill} vector-effect="non-scaling-stroke" />
 	{/each}
+	{#if dot}
+		<!-- A zero-length line with a round cap: stays round however the box stretches. -->
+		<path class="dot" d="M{dot.x},{dot.y}h0.01" vector-effect="non-scaling-stroke" />
+	{/if}
 </svg>
 
 <style>
@@ -49,6 +55,10 @@
 		stroke-width: 1.5px;
 		stroke-linecap: round;
 		stroke-linejoin: round;
+	}
+	path.dot {
+		stroke-width: 5px;
+		opacity: 0.7;
 	}
 	path.fill {
 		fill: var(--picture-ink);

@@ -47,6 +47,16 @@ export function syncRateLabel(value: number): string {
 	return SYNC_RATE_LABELS[i];
 }
 
+/**
+ * One LFO cycle in beats at a Sync Rate value: its label is a note length
+ * (1/4 a quarter note, 1 a whole note), so a quarter-note beat makes it
+ * four times the fraction.
+ */
+export function syncRateBeats(value: number): number {
+	const [n, d = '1'] = syncRateLabel(value).split('/');
+	return (4 * Number(n)) / Number(d);
+}
+
 /** Frequency's rail, measured: 0 → 0.05 Hz, 0.5 → 2.12 Hz, 1 → 90 Hz. */
 const HZ_MIN = 0.05;
 const HZ_RATIO = 1800;

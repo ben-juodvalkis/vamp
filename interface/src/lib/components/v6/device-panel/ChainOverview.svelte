@@ -61,7 +61,7 @@
   import CellSize from './chain/CellSize.svelte';
   import MidiWheelsFace from './chain/MidiWheelsFace.svelte';
   import RackFace from './chain/RackFace.svelte';
-  import { PICTURE_CONTEXT } from '$lib/components/v6/browser/devicePictures';
+  import { PICTURE_CONTEXT, PICTURE_LIVE_CONTEXT } from '$lib/components/v6/browser/devicePictures';
   import type { Component } from 'svelte';
   import { FX_GRID_LAYOUT, type DeviceTypeKey } from '$lib/config/fxGridLayout';
   import { provideFxScope } from '$lib/components/v6/central/fxScope';
@@ -122,6 +122,7 @@
   /** The tiles that control a device, by preset key, and what each is called on the grid. */
   // The devices' pictures draw here (devicePictures), not on the FX grid.
   setContext(PICTURE_CONTEXT, true);
+  setContext(PICTURE_LIVE_CONTEXT, true);
 
   const TILE_LABELS: Record<string, string> = {
     random: 'Rand Oct',
