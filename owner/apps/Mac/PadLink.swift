@@ -51,6 +51,9 @@ final class PadLink: ObservableObject {
     private var wifiBrowser: NWBrowser?
     private var wifiSeen: [String: NWEndpoint] = [:]
     private var wifiClients: [String: LinkClient] = [:]
+    /// The endpoint each Wi-Fi client dials: a new one (the iPad seen by
+    /// another way) gets a new client.
+    private var wifiEndpoints: [String: NWEndpoint] = [:]
     private var wifiLinked = Set<String>()
     /// Said once per iPad: one on Wi-Fi this Mac has not paired with.
     private var wifiUnpairedSaid = Set<String>()
@@ -282,7 +285,7 @@ final class PadLink: ObservableObject {
             for id in seen.keys { keys[id] = paired.key(for: id) }
             Task { @MainActor in
                 guard let self else { return }
-                for id in Array(self.wifiClients.keys) where keys[id] == nil || seen[id] == nil {
+                for id in Array(self.wifiClients.keys) where keys[id] == nil || seen[id] == nil || seen[id] != self.wifiEndpoints[id] {
                     self.detachWifi(id)
                 }
                 for (id, endpoint) in seen {
@@ -315,10 +318,12 @@ final class PadLink: ObservableObject {
             }
         }
         wifiClients[id] = client
+        wifiEndpoints[id] = endpoint
         client.start()
     }
 
     private func detachWifi(_ id: String) {
+        wifiEndpoints.removeValue(forKey: id)
         guard let client = wifiClients.removeValue(forKey: id) else { return }
         client.stop()
         if wifiLinked.remove(id) != nil { VampLog.line("iPad link: the iPad left Wi-Fi") }

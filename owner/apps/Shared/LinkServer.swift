@@ -121,6 +121,7 @@ final class LinkServer {
     /// pairing's timeout does not end a newer one.
     private var pairingSecret: String?
     private var pairingToken = 0
+    private var pairingInterface: NWInterface.InterfaceType?
     private var controls: [Transport: Session] = [:]
     /// Control connections still proving themselves or pairing.
     private var handshakes: [ObjectIdentifier: Session] = [:]
@@ -182,6 +183,7 @@ final class LinkServer {
         queue.async { [self] in
             pairingListener?.cancel(); pairingListener = nil
             pairingSecret = secret
+            pairingInterface = network.interface
             pairingToken += 1
             let token = pairingToken
             let params = NWParameters.wifiPairing(secret: secret)
@@ -336,8 +338,39 @@ final class LinkServer {
     // MARK: - The Mac side
 
     private func acceptLink(_ conn: NWConnection, _ transport: Transport) {
+        let required: NWInterface.InterfaceType?
+        switch transport {
+        case .cable: required = nil
+        case .wifi: required = wifi?.interface
+        case .wifiPairing: required = pairingInterface
+        }
+        guard let required else {
+            conn.start(queue: queue)
+            readHello(conn, transport, pending: Data())
+            return
+        }
+        // Measured on the iPad, 2026-11-05: a listener required to use
+        // Wi-Fi still took the Mac's connection over the cable's own network
+        // link, so the "Wi-Fi" link died with the cable. Check the path the
+        // connection actually came by, once it (and its TLS) is up.
+        conn.stateUpdateHandler = { [weak self, weak conn] state in
+            guard let self, let conn else { return }
+            switch state {
+            case .ready:
+                conn.stateUpdateHandler = nil
+                if conn.currentPath?.usesInterfaceType(required) == true {
+                    self.readHello(conn, transport, pending: Data())
+                } else {
+                    self.log?("refused a connection that did not come over Wi-Fi")
+                    conn.cancel()
+                }
+            case .failed, .cancelled:
+                conn.stateUpdateHandler = nil
+            default:
+                break
+            }
+        }
         conn.start(queue: queue)
-        readHello(conn, transport, pending: Data())
     }
 
     /// Read up to the first newline. The bytes after it are kept raw: on a
