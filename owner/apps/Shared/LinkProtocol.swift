@@ -73,6 +73,25 @@ enum LinkProtocol {
     /// id under `txtKeyId`, so a Mac dials only an iPad it has paired with.
     static let bonjourType = "_vamplink._tcp"
     static let txtKeyId = "k"
+    /// A QR pairing (ADR-505): the iPad advertises a second service, inside
+    /// TLS keyed by the QR code's one-time secret, with the secret's id
+    /// under `txtPairingId`. Only the Mac that showed the code knows the id
+    /// and can make the key. The pairing then runs as on the cable, with
+    /// the secret as its code, typed by nobody.
+    static let txtPairingId = "p"
+    /// The link a QR code carries: `vamp://pair?s=<secret>`.
+    static let urlScheme = "vamp"
+    static let pairHost = "pair"
+
+    static func pairingURL(secret: String) -> String { "\(urlScheme)://\(pairHost)?s=\(secret)" }
+
+    /// The secret in a scanned pairing link, if it is one.
+    static func pairingSecret(from url: URL) -> String? {
+        guard url.scheme == urlScheme, url.host == pairHost,
+              let s = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "s" })?.value,
+              LinkAuth.isPairingSecret(s) else { return nil }
+        return s.lowercased()
+    }
 
     /// The first line of an iPad's refusal of a version it does not speak.
     static let unsupported = "VAMPLINK-UNSUPPORTED"

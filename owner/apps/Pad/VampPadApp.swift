@@ -4,8 +4,9 @@ import WebKit
 import os
 
 /// Vamp for iPad (and iPhone, since 1.1): Vamp's own interface, full screen, reached over the USB
-/// cable through Vamp for Mac — and, once it has linked by cable, over Wi-Fi
-/// too, when the cable is out (ADR-504).
+/// cable through Vamp for Mac — and, once paired, over Wi-Fi too, when the
+/// cable is out (ADR-504). It pairs by cable, or over Wi-Fi from the QR code
+/// Vamp for Mac shows, scanned with the camera (`vamp://pair`, ADR-505).
 ///
 /// The interface is not in the app. The web view loads it from
 /// `localhost:pagePort`, where `LinkServer` hands each connection to the Mac
@@ -23,6 +24,7 @@ struct VampPadApp: App {
                 .statusBarHidden()
                 .persistentSystemOverlays(.hidden)
                 .preferredColorScheme(.dark)
+                .onOpenURL { model.openURL($0) }
         }
         .onChange(of: scenePhase) { _, phase in
             model.scenePhaseChanged(phase)
@@ -67,11 +69,21 @@ final class PadModel: ObservableObject {
     }
     @Published private(set) var pairing: Pairing = .none
 
-    /// This app has linked to a Mac by cable at least once: from then on
-    /// it listens on Wi-Fi as well (ADR-504). Not before, so iPadOS asks
-    /// for the local network only once there is a paired Mac to find.
+    /// This app has paired with a Mac (or linked to one by cable): from then
+    /// on it listens on Wi-Fi as well (ADR-504). Not before, so iPadOS asks
+    /// for the local network only once there is a Mac to find.
     @Published private(set) var wifiOn = UserDefaults.standard.bool(forKey: PadModel.wifiOnKey)
     private static let wifiOnKey = "wifiLinkOn"
+
+    /// A pairing from a scanned QR code (ADR-505).
+    enum QRPairing: Equatable {
+        case none
+        case pairing
+        /// Paired; the Wi-Fi link is on its way.
+        case paired
+        case failed
+    }
+    @Published private(set) var qrPairing: QRPairing = .none
 
     private let server = LinkServer(devicePort: PadPorts.device, pagePort: PadPorts.localPage, key: LinkKeychain.loadOrCreate())
     /// The link's state changes, for Console.app and Xcode's console.
@@ -103,6 +115,18 @@ final class PadModel: ObservableObject {
     var pageURL: URL { URL(string: "http://localhost:\(PadPorts.localPage)/")! }
 
     private func pairingChanged(_ event: LinkServer.PairingEvent) {
+        if qrPairing == .pairing {
+            switch event {
+            case .paired:
+                qrPairing = .paired
+                turnWifiOn()
+            case .ended:
+                qrPairing = .failed
+            default:
+                break
+            }
+            return
+        }
         switch event {
         case .codeNeeded: pairing = .askCode
         case .wrongCode(let left): pairing = .wrongCode(triesLeft: left)
@@ -122,10 +146,29 @@ final class PadModel: ObservableObject {
     }
 
     private func transportsChanged(_ ways: Set<LinkServer.Transport>) {
-        guard ways.contains(.cable), !wifiOn else { return }
+        if ways.contains(.cable) { turnWifiOn() }
+    }
+
+    private func turnWifiOn() {
+        guard !wifiOn else { return }
         wifiOn = true
         UserDefaults.standard.set(true, forKey: Self.wifiOnKey)
         server.setWifi(Self.wifiConfig)
+    }
+
+    /// A link the camera opened: `vamp://pair?s=…` from Vamp for Mac's
+    /// pairing QR code. Anything else is ignored.
+    func openURL(_ url: URL) {
+        guard let secret = LinkProtocol.pairingSecret(from: url) else {
+            Self.log.notice("ignored a link that is not a pairing code")
+            return
+        }
+        qrPairing = .pairing
+        server.startPairing(secret: secret, on: Self.wifiConfig)
+    }
+
+    func dismissQRPairing() {
+        qrPairing = .none
     }
 
     func submitPairingCode(_ code: String) {
@@ -134,7 +177,10 @@ final class PadModel: ObservableObject {
 
     private func linkChanged(_ up: Bool) {
         linked = up
-        if up { pairing = .none }
+        if up {
+            pairing = .none
+            if qrPairing != .pairing { qrPairing = .none }
+        }
         updateIdleTimer()
         // A loaded page reconnects by itself (its socket retries every
         // second); only a page that never loaded needs loading again.
@@ -166,7 +212,9 @@ struct PadRoot: View {
             Color.black
             PadWebView(model: model)
                 .opacity(model.pageLoaded ? 1 : 0)
-            if model.pairing != .none && !model.linked {
+            if model.qrPairing != .none && !model.linked {
+                QRPairingView(model: model)
+            } else if model.pairing != .none && !model.linked {
                 PairingView(model: model)
             } else if !model.pageLoaded {
                 WaitingView(linked: model.linked, wifiOn: model.wifiOn)
@@ -198,7 +246,7 @@ struct WaitingView: View {
             if !linked {
                 Text(wifiOn
                      ? "Start Vamp on the Mac, then plug the \(UIDevice.current.localizedModel) in with a USB cable or join the Mac's Wi-Fi network."
-                     : "Plug the \(UIDevice.current.localizedModel) into the Mac with a USB cable, and start Vamp there.")
+                     : "Start Vamp on the Mac, then plug the \(UIDevice.current.localizedModel) in with a USB cable, or scan the QR code from Vamp's menu on the Mac: Pair an iPad or iPhone with a QR Code.")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -209,7 +257,55 @@ struct WaitingView: View {
     }
 }
 
-/// The first link with a Mac: type the code its menu shows.
+/// Pairing from a scanned QR code: progress, then the Wi-Fi link takes over.
+struct QRPairingView: View {
+    @ObservedObject var model: PadModel
+
+    var body: some View {
+        VStack(spacing: 20) {
+            if model.qrPairing == .failed {
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.system(size: 56, weight: .light))
+            } else {
+                ProgressView().controlSize(.large).tint(.white)
+            }
+            Text(title)
+                .font(.title2.weight(.semibold))
+            Text(message)
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 460)
+            if model.qrPairing == .failed {
+                Button("OK") { model.dismissQRPairing() }
+                    .buttonStyle(.bordered)
+                    .tint(.white)
+            }
+        }
+        .foregroundStyle(.white)
+    }
+
+    private var title: String {
+        switch model.qrPairing {
+        case .paired: return "Paired"
+        case .failed: return "Pairing didn't finish"
+        default: return "Pairing with the Mac"
+        }
+    }
+
+    private var message: String {
+        switch model.qrPairing {
+        case .paired:
+            return "Connecting over Wi-Fi…"
+        case .failed:
+            return "Check that this \(UIDevice.current.localizedModel) is on the Mac's Wi-Fi network and allowed to find local devices, then show a new QR code on the Mac and scan it again."
+        default:
+            return "Looking for the Mac that showed the code, on this Wi-Fi network."
+        }
+    }
+}
+
+/// The first link with a Mac by cable: type the code its menu shows.
 struct PairingView: View {
     @ObservedObject var model: PadModel
     @State private var code = ""

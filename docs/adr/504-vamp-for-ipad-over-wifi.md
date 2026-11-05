@@ -1,7 +1,7 @@
 # ADR-504: Vamp for iPad over Wi-Fi Too, Once Paired by Cable
 
 ## Status
-**Proposed** (2026-11-05). Builds on ADR-488 (the cable link) and ADR-494
+**Proposed** (2026-11-05). Pairing without the cable, from a QR code: ADR-505. Builds on ADR-488 (the cable link) and ADR-494
 (the link proves itself). Vamp for Mac takes it when it is next opened from
 the Dock (it rebuilds itself); Vamp for iPad when it is next installed from
 Xcode. No Live restart. Not yet run on a real iPad.
@@ -40,7 +40,8 @@ the iPad could reach the link; on Wi-Fi any device on the network can.
 - **The Mac dials, as on the cable.** Vamp for Mac browses for the service
   (`PadLink`), and dials only an iPad whose key id it has paired with: the
   Mac opens no port, so there is no firewall question on the Mac.
-- **Pairing is the cable's alone.** Both ends refuse it over Wi-Fi: the Mac
+- **The Wi-Fi link never pairs** (a QR code pairs on a listener of its own,
+  ADR-505). Both ends refuse it on the Wi-Fi link: the Mac
   denies an unknown key there instead of showing a code (`allowPairing:
   false`), the iPad closes a `PAIR` there and never sends its key. The
   unauthenticated version 1 link is never spoken there either

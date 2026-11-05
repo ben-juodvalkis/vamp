@@ -54,6 +54,28 @@ enum LinkAuth {
         Data(HMAC<SHA256>.authenticationCode(for: Data("vamp-link-wifi-tls".utf8), using: key.symmetric))
     }
 
+    /// A QR pairing's one-time secret (ADR-505): 32 random bytes in hex,
+    /// made by the Mac and shown only in its QR code.
+    static func newPairingSecret() -> String { LinkKey.random().hex }
+
+    /// Whether `s` is shaped like a pairing secret (from a scanned link).
+    static func isPairingSecret(_ s: String) -> Bool {
+        s.count == 64 && s.allSatisfy(\.isHexDigit)
+    }
+
+    /// The pre-shared key of the TLS a QR pairing runs in: only a device
+    /// that read the QR code can make it.
+    static func pairingPSK(_ secret: String) -> Data {
+        let key = SymmetricKey(data: SHA256.hash(data: Data("vamp-link-pair-secret|\(secret)".utf8)))
+        return Data(HMAC<SHA256>.authenticationCode(for: Data("vamp-link-pair-tls".utf8), using: key))
+    }
+
+    /// How a QR pairing names itself on the network (the iPad's Bonjour TXT
+    /// record), without revealing the secret: 8 bytes of a hash, in hex.
+    static func pairingId(_ secret: String) -> String {
+        Data(SHA256.hash(data: Data("vamp-link-pair-id|\(secret)".utf8))).prefix(8).hexString
+    }
+
     /// The tag a stream connection carries: only an end that holds the key
     /// and was part of this control session can make it.
     static func streamTag(_ key: SymmetricKey, macNonce: String, padNonce: String, id: UInt32) -> String {

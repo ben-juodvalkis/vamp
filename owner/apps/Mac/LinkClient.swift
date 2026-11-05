@@ -28,6 +28,8 @@ final class LinkClient {
     var onPairingCode: ((String?) -> Void)?
     /// Whether the link up now is version 1, unauthenticated.
     var onLegacy: ((Bool) -> Void)?
+    /// Called once the iPad has paired (by code, or a QR code's secret).
+    var onPaired: (() -> Void)?
     /// The link's state changes, one line each (never per message).
     var log: ((String) -> Void)?
 
@@ -57,6 +59,10 @@ final class LinkClient {
     /// False over Wi-Fi (ADR-504): an iPad this Mac has not paired with is
     /// denied, never shown a code. Pairing is the cable's alone.
     private let allowPairing: Bool
+    /// A QR pairing (ADR-505): the code is the QR code's secret, already in
+    /// the iPad's hands, so none is shown. The iPad closes the connection
+    /// once paired, and links again on its ordinary Wi-Fi listener.
+    private let fixedCode: String?
     /// Over Wi-Fi another Mac may hold the iPad: a link the iPad drops
     /// within a few seconds of coming up redials slowly, not every second.
     var slowAfterShortLink = false
@@ -80,7 +86,7 @@ final class LinkClient {
     init(
         dial: @escaping LinkDialer, macHost: String = "127.0.0.1", macPort: UInt16, queue: DispatchQueue,
         paired: PairedIPads, serial: String? = nil, legacyAllowed: @escaping () -> Bool = { true },
-        allowPairing: Bool = true
+        allowPairing: Bool = true, fixedCode: String? = nil
     ) {
         self.dial = dial
         self.macHost = NWEndpoint.Host(macHost)
@@ -90,6 +96,7 @@ final class LinkClient {
         self.serial = serial
         self.legacyAllowed = legacyAllowed
         self.allowPairing = allowPairing
+        self.fixedCode = fixedCode
     }
 
     func start() {
@@ -243,10 +250,16 @@ final class LinkClient {
             } else if !allowPairing {
                 deny("an iPad this Mac has not paired with (pair it by cable)")
             } else {
-                let code = LinkAuth.newCode()
-                phase = .pairing(macNonce: macNonce, padNonce: padNonce, keyId: keyId, code: code, triesLeft: LinkProtocol.pairingTries)
-                log?("an iPad this Mac does not know: pairing (the code is in the menu)")
-                onPairingCode?(code)
+                let code = fixedCode ?? LinkAuth.newCode()
+                // One try for a QR secret: it is right, or not that Mac's.
+                let tries = fixedCode == nil ? LinkProtocol.pairingTries : 1
+                phase = .pairing(macNonce: macNonce, padNonce: padNonce, keyId: keyId, code: code, triesLeft: tries)
+                if fixedCode == nil {
+                    log?("an iPad this Mac does not know: pairing (the code is in the menu)")
+                    onPairingCode?(code)
+                } else {
+                    log?("pairing from the QR code")
+                }
                 control.sendLine(LinkProtocol.line(.pair))
             }
         case (.pairing(let macNonce, let padNonce, let keyId, let code, let triesLeft), .pairCode(let proof)):
@@ -268,6 +281,7 @@ final class LinkClient {
             paired.add(key, serial: serial)
             log?("paired with the iPad")
             onPairingCode?(nil)
+            onPaired?()
             control.sendLine(LinkProtocol.line(.authOK(proof: LinkAuth.proof(key.symmetric, "mac", macNonce, padNonce))))
             phase = .linked(key: key, macNonce: macNonce, padNonce: padNonce)
             linkUp(legacy: false)

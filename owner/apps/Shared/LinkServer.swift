@@ -31,7 +31,14 @@ import Network
 /// then, a second control connection replaces the first only once the first
 /// has gone quiet (`LinkProtocol.healthyWithin`). Stream ids are random.
 /// On Wi-Fi only a holder of the key gets through TLS at all, and a pairing
-/// is refused there: pairing is the cable's alone.
+/// is refused there.
+///
+/// A QR pairing (ADR-505, `startPairing`) is the one way to pair without
+/// the cable: a second Wi-Fi listener, for a few minutes, inside TLS keyed
+/// by the one-time secret the Mac's QR code carried. Only the Mac that
+/// showed the code can reach it; the pairing runs as on the cable with the
+/// secret as the code, then that connection closes and the Mac links on the
+/// ordinary Wi-Fi listener with the key.
 final class LinkServer {
     let devicePort: UInt16
     let pagePort: UInt16
@@ -40,6 +47,8 @@ final class LinkServer {
     enum Transport: Hashable {
         case cable
         case wifi
+        /// A QR pairing's listener: pairs, never carries the link.
+        case wifiPairing
     }
 
     /// Listening on Wi-Fi (ADR-504).
@@ -75,6 +84,8 @@ final class LinkServer {
     var onPairing: ((PairingEvent) -> Void)?
     /// Called on the main queue with the Wi-Fi listener's port once it is up.
     var onWifiReady: ((UInt16) -> Void)?
+    /// Called on the main queue with a QR pairing listener's port once it is up.
+    var onPairingReady: ((UInt16) -> Void)?
     /// The link's state changes, one line each (never per message).
     var log: ((String) -> Void)?
 
@@ -105,6 +116,11 @@ final class LinkServer {
     private var pageListener: NWListener?
     private var wifiListener: NWListener?
     private var wifi: Wifi?
+    private var pairingListener: NWListener?
+    /// The QR pairing under way: its secret, and a token so an old
+    /// pairing's timeout does not end a newer one.
+    private var pairingSecret: String?
+    private var pairingToken = 0
     private var controls: [Transport: Session] = [:]
     /// Control connections still proving themselves or pairing.
     private var handshakes: [ObjectIdentifier: Session] = [:]
@@ -135,6 +151,8 @@ final class LinkServer {
             linkListener?.cancel(); linkListener = nil
             pageListener?.cancel(); pageListener = nil
             wifiListener?.cancel(); wifiListener = nil
+            pairingListener?.cancel(); pairingListener = nil
+            pairingSecret = nil
             silenceTimer?.cancel(); silenceTimer = nil
             for session in handshakes.values { session.conn.cancel() }
             handshakes.removeAll()
@@ -155,6 +173,44 @@ final class LinkServer {
                 startListeners()
             }
         }
+    }
+
+    /// Pair with the Mac whose QR code carried `secret` (ADR-505): listen on
+    /// Wi-Fi, keyed by it, for `LinkProtocol.pairingLimit`. `onPairing` says
+    /// `.paired` or `.ended`. A newer pairing replaces this one.
+    func startPairing(secret: String, on network: Wifi = Wifi()) {
+        queue.async { [self] in
+            pairingListener?.cancel(); pairingListener = nil
+            pairingSecret = secret
+            pairingToken += 1
+            let token = pairingToken
+            let params = NWParameters.wifiPairing(secret: secret)
+            if let interface = network.interface { params.requiredInterfaceType = interface }
+            var service: NWListener.Service?
+            if network.advertise {
+                var txt = NWTXTRecord()
+                txt[LinkProtocol.txtPairingId] = LinkAuth.pairingId(secret)
+                service = NWListener.Service(name: "Vamp pairing \(LinkAuth.pairingId(secret).prefix(6))",
+                                             type: LinkProtocol.bonjourType, domain: nil, txtRecord: txt)
+            }
+            log?("pairing from a QR code: listening on Wi-Fi")
+            pairingListener = makeListener(params, name: "Wi-Fi pairing", service: service, retry: false) { [weak self] in
+                self?.acceptLink($0, .wifiPairing)
+            }
+            queue.asyncAfter(deadline: .now() + LinkProtocol.pairingLimit) { [weak self] in
+                guard let self, self.pairingToken == token, self.pairingSecret != nil else { return }
+                self.log?("the QR pairing timed out")
+                self.endPairing(.ended)
+            }
+        }
+    }
+
+    /// Stop a QR pairing, telling the app how it ended.
+    private func endPairing(_ event: PairingEvent) {
+        pairingListener?.cancel(); pairingListener = nil
+        pairingSecret = nil
+        for session in handshakes.values where session.transport == .wifiPairing { session.conn.cancel() }
+        notifyPairing(event)
     }
 
     /// iOS can tear listeners down while the app is in the background; on
@@ -207,12 +263,12 @@ final class LinkServer {
     }
 
     private func makeListener(
-        _ params: NWParameters, name: String, service: NWListener.Service? = nil,
+        _ params: NWParameters, name: String, service: NWListener.Service? = nil, retry: Bool = true,
         accept: @escaping (NWConnection) -> Void
     ) -> NWListener? {
         guard let listener = try? NWListener(using: params) else {
-            log?("could not listen on \(name); retrying")
-            retryListenersSoon()
+            log?("could not listen on \(name)\(retry ? "; retrying" : "")")
+            if retry { retryListenersSoon() } else { notifyPairing(.ended) }
             return nil
         }
         listener.service = service
@@ -226,12 +282,22 @@ final class LinkServer {
                     let handler = self.onWifiReady
                     DispatchQueue.main.async { handler?(port) }
                 }
+                if self.pairingListener === listener, let port = listener.port?.rawValue {
+                    let handler = self.onPairingReady
+                    DispatchQueue.main.async { handler?(port) }
+                }
             case .failed(let error):
                 self.log?("listener on \(name) failed (\(error)); retrying")
                 listener.cancel()
                 if self.linkListener === listener { self.linkListener = nil }
                 if self.pageListener === listener { self.pageListener = nil }
                 if self.wifiListener === listener { self.wifiListener = nil }
+                if self.pairingListener === listener {
+                    self.pairingListener = nil
+                    self.pairingSecret = nil
+                    self.notifyPairing(.ended)
+                    return
+                }
                 self.retryListenersSoon()
             default:
                 break
@@ -394,14 +460,37 @@ final class LinkServer {
             }
             if session.pairing {
                 session.pairing = false
+                if session.transport == .wifiPairing {
+                    // Paired from the QR code. This connection only pairs:
+                    // the Mac links on the ordinary Wi-Fi listener now.
+                    log?("paired from the QR code")
+                    handshakes.removeValue(forKey: ObjectIdentifier(session))
+                    session.conn.cancel()
+                    endPairing(.paired)
+                    return
+                }
                 notifyPairing(.paired)
+            }
+            guard session.transport != .wifiPairing else {
+                // Already paired: a pairing connection still never links.
+                session.conn.cancel()
+                return
             }
             adopt(session)
         case .pair where session.transport == .wifi:
             // Only a holder of the key gets through Wi-Fi's TLS, and that
-            // Mac has paired already. Pairing is the cable's alone.
-            log?("refused a pairing over Wi-Fi: pair by cable")
+            // Mac has paired already. Pairing is the cable's, or a QR code's.
+            log?("refused a pairing on the Wi-Fi link: pair by cable or QR code")
             session.conn.cancel()
+        case .pair where session.transport == .wifiPairing:
+            // The Mac that showed the QR code (no one else gets through its
+            // TLS): the secret is the code, typed by nobody.
+            guard let secret = pairingSecret else { session.conn.cancel(); return }
+            log?("pairing from the QR code with the Mac")
+            session.pairing = true
+            session.code = secret
+            let proof = LinkAuth.proof(LinkAuth.codeKey(secret), "pair-ipad", session.macNonce, session.padNonce)
+            session.conn.sendLine(LinkProtocol.line(.pairCode(proof: proof)))
         case .pair:
             log?("the Mac does not know this iPad yet: pairing")
             session.pairing = true
@@ -411,12 +500,15 @@ final class LinkServer {
                 self.log?("the pairing timed out")
                 session.conn.cancel()
             }
+        case .pairWrong where session.transport == .wifiPairing:
+            log?("the Mac refused the QR code's secret")
+            endPairing(.ended)
         case .pairWrong(let left):
             notifyPairing(.wrongCode(triesLeft: left))
         case .pairOK(let proof):
             // The other end knows the code shown on the Mac: it is the Mac.
             // Only now does the key leave this iPad.
-            guard session.transport == .cable, let code = session.code,
+            guard session.transport != .wifi, let code = session.code,
                   LinkAuth.same(proof, LinkAuth.proof(LinkAuth.codeKey(code), "pair-mac", session.macNonce, session.padNonce))
             else {
                 log?("a pairing reply that does not know the code; closed")
@@ -427,6 +519,7 @@ final class LinkServer {
         case .denied:
             log?("the Mac refused this iPad")
             session.conn.cancel()
+            if session.transport == .wifiPairing { endPairing(.ended) }
         default:
             break
         }
@@ -434,7 +527,8 @@ final class LinkServer {
 
     private func sessionEnded(_ session: Session, why: String) {
         if handshakes.removeValue(forKey: ObjectIdentifier(session)) != nil {
-            if session.pairing { notifyPairing(.ended) }
+            // A QR pairing outlives one connection: it ends by itself.
+            if session.pairing && session.transport != .wifiPairing { notifyPairing(.ended) }
             return
         }
         if isControl(session) { dropControl(session.transport, why) }
@@ -487,7 +581,10 @@ final class LinkServer {
     }
 
     private func label(_ transport: Transport) -> String {
-        transport == .wifi ? " over Wi-Fi" : (wifi == nil ? "" : " by cable")
+        switch transport {
+        case .wifi, .wifiPairing: return " over Wi-Fi"
+        case .cable: return wifi == nil ? "" : " by cable"
+        }
     }
 
     private func startSilenceTimer() {

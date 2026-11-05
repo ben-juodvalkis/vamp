@@ -39,6 +39,11 @@ targets:
         NSLocalNetworkUsageDescription: Vamp connects to Vamp for Mac over your Wi-Fi network when the cable is out.
         NSBonjourServices:
           - _vamplink._tcp
+        # A pairing QR code from Vamp for Mac opens the app (ADR-505).
+        CFBundleURLTypes:
+          - CFBundleURLName: com.benjuodvalkis.vamp.pair
+            CFBundleURLSchemes:
+              - vamp
         LSRequiresIPhoneOS: true
         UIRequiresFullScreen: true
         UIStatusBarHidden: true

@@ -30,6 +30,7 @@
 		47AE04D3A8CF38C3C72B4801 /* VampPadApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DAE9F4E122B2D6291B30B4B /* VampPadApp.swift */; };
 		4BC2611245B8F4A620A02F2B /* Splice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DED6AF0A86F7612C3229FAC /* Splice.swift */; };
 		52D5924A409F4976681368CF /* SupervisorRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF619CFF5A80D9A062278B4C /* SupervisorRules.swift */; };
+		5D43232B7B310D17675792F5 /* QRWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3504E0B3D0D7BB563377C6 /* QRWindow.swift */; };
 		607E3A52004476820E4C3739 /* PadLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 915CB9013A537FFC92E573BC /* PadLink.swift */; };
 		6DC8340B53F7F8A9239D76CA /* Sparkle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 52C388D89FD4A8D62CC69C6D /* Sparkle.framework */; };
 		6F86F4371199619823A7C1FE /* VampLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 870C5481D7B847F8CFD2D8DE /* VampLog.swift */; };
@@ -97,6 +98,7 @@
 		915CB9013A537FFC92E573BC /* PadLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PadLink.swift; sourceTree = "<group>"; };
 		A6B13582108DC5D088C2AB67 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		A908C651CE459585CE047490 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AA3504E0B3D0D7BB563377C6 /* QRWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRWindow.swift; sourceTree = "<group>"; };
 		AB8D1464A25B0B0AA5D747CA /* VampPathsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VampPathsTests.swift; sourceTree = "<group>"; };
 		BA98A5B137CB6D8CE7BF97B8 /* VampMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VampMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D368FE577FEB550B9CC1A9D4 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
@@ -150,6 +152,7 @@
 				7B83BED9048B5F511FD8DC9C /* LinkClient.swift */,
 				915CB9013A537FFC92E573BC /* PadLink.swift */,
 				31F6DB32688F85B1071884DF /* PairedIPads.swift */,
+				AA3504E0B3D0D7BB563377C6 /* QRWindow.swift */,
 				7588887B3FEC5F945688A7D6 /* Supervisor.swift */,
 				DF619CFF5A80D9A062278B4C /* SupervisorRules.swift */,
 				0A274A47EF8CB1FB15CE2231 /* UsbMux.swift */,
@@ -397,6 +400,7 @@
 				1D58B1CF20FD7E8B0538559A /* OSCEnvelope.swift in Sources */,
 				607E3A52004476820E4C3739 /* PadLink.swift in Sources */,
 				0B7B8FCECB1E1AB755BA819F /* PairedIPads.swift in Sources */,
+				5D43232B7B310D17675792F5 /* QRWindow.swift in Sources */,
 				4BC2611245B8F4A620A02F2B /* Splice.swift in Sources */,
 				01E43854851150E2A88BD20F /* Supervisor.swift in Sources */,
 				D884A53FED7EA3C281FDC057 /* SupervisorRules.swift in Sources */,

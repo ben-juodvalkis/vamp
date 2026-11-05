@@ -461,7 +461,12 @@ iPad with Developer Mode on (Settings → Privacy & Security), plugged in.
 - [ ] The iPad never dims or locks while the app is in front
 - [ ] Menu bar on the Mac: "iPad: connected by cable" / "plugged in, Vamp not open" / "not plugged in" as you go
 
-**Vamp for iPad over Wi-Fi (ADR-504; iPad and Mac on the same network)**
+**Vamp for iPad over Wi-Fi (ADR-504, ADR-505; iPad and Mac on the same network)**
+- [ ] Vamp menu → "Get Vamp for iPad on the App Store…" opens the app's page (Vamp for Live), with Share
+- [ ] Forget Paired iPads, then Vamp menu → "Pair an iPad or iPhone with a QR Code…": scan it with the iPad's Camera app, tap the banner → Vamp opens to "Pairing with the Mac", iPadOS asks for the local network (Allow), then "Paired", then the set loads with no cable; the window closes itself
+- [ ] The same with the iPhone
+- [ ] Close the QR window, then scan an old screenshot of it: "Pairing didn't finish"
+- [ ] Re-pair the iPad by cable afterwards if you want its serial on record (an iPad paired by QR has none)
 - [ ] First cable link with the new app: iPadOS asks to find devices on the local network once; Allow
 - [ ] Unplug: "Reconnecting to the Mac…", then back over Wi-Fi; the menu says "iPad: connected over Wi-Fi"
 - [ ] Play a few minutes over Wi-Fi: gestures land, no drops; note any lag against the cable

@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Network
 
@@ -8,8 +9,10 @@ import Network
 /// (the cable, when both are up).
 ///
 /// An iPad on Wi-Fi is dialled only when its advertised key id is one this
-/// Mac paired with, over TLS keyed by that key; it is never paired there
-/// and never given the unauthenticated link.
+/// Mac paired with, over TLS keyed by that key; it is never given the
+/// unauthenticated link. It pairs there only from a QR code this Mac shows
+/// (ADR-505, `showPairingQR`): the iPad that scanned it advertises the
+/// code's id, and this Mac alone can make the TLS key from its secret.
 ///
 /// `VAMP_LINK_DIRECT=1` dials the app's port on this Mac's own loopback
 /// instead of through usbmux: that is where the app listens when it runs in
@@ -51,6 +54,16 @@ final class PadLink: ObservableObject {
     private var wifiLinked = Set<String>()
     /// Said once per iPad: one on Wi-Fi this Mac has not paired with.
     private var wifiUnpairedSaid = Set<String>()
+    /// QR pairings advertised on Wi-Fi, by their id.
+    private var pairingSeen: [String: NWEndpoint] = [:]
+    /// The QR pairing this Mac is showing (ADR-505): its secret and id, the
+    /// window, and the client pairing the iPad that scanned it.
+    private var qrSecret: String?
+    private var qrWindow: NSPanel?
+    private var qrClient: LinkClient?
+    private var qrToken = 0
+    /// How long a pairing QR code is good for.
+    static let qrLifetime: TimeInterval = 600
     /// Read and written on `queue` only, like the clients that use it.
     private let paired = PairedIPads()
 
@@ -100,6 +113,81 @@ final class PadLink: ObservableObject {
         VampLog.line("iPad link: forgot the paired iPads")
         for id in Array(wifiClients.keys) { detachWifi(id) }
         wifiUnpairedSaid.removeAll()
+    }
+
+    // MARK: - QR pairing (ADR-505)
+
+    /// Show a QR code that pairs the iPad or iPhone whose camera reads it,
+    /// over Wi-Fi. A new secret each time, good for `qrLifetime` or one
+    /// pairing, whichever comes first; closing the window ends it.
+    func showPairingQR() {
+        endQRPairing()
+        let secret = LinkAuth.newPairingSecret()
+        guard let window = QRWindow.make(
+            message: LinkProtocol.pairingURL(secret: secret),
+            title: "Pair Vamp for iPad",
+            caption: "Scan with the iPad's or iPhone's camera, on this Mac's Wi-Fi network.",
+            button: ("Get Vamp for iPad on the App Store…", { NSWorkspace.shared.open(QRWindow.appStoreURL) })
+        ) else { return }
+        qrSecret = secret
+        qrToken += 1
+        let token = qrToken
+        qrWindow = window
+        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, self.qrToken == token else { return }
+                self.endQRPairing(closeWindow: false)
+            }
+        }
+        QRWindow.show(window)
+        VampLog.line("iPad link: showing a pairing QR code")
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(Self.qrLifetime))
+            if self.qrToken == token, self.qrSecret != nil {
+                VampLog.line("iPad link: the pairing QR code expired")
+                self.endQRPairing()
+            }
+        }
+        reconcileWifi()
+    }
+
+    private func endQRPairing(closeWindow: Bool = true) {
+        qrToken += 1
+        qrSecret = nil
+        qrClient?.stop()
+        qrClient = nil
+        if closeWindow { qrWindow?.close() }
+        qrWindow = nil
+    }
+
+    /// Pair the iPad advertising this Mac's QR code, if it is on the network.
+    private func reconcileQRPairing() {
+        guard let secret = qrSecret else { return }
+        let id = LinkAuth.pairingId(secret)
+        guard let endpoint = pairingSeen[id] else {
+            qrClient?.stop()
+            qrClient = nil
+            return
+        }
+        guard qrClient == nil else { return }
+        VampLog.line("iPad link: the iPad that scanned the QR code is on Wi-Fi: pairing")
+        let client = LinkClient(
+            dial: UsbMux.networkDialer(to: endpoint, using: { .wifiPairing(secret: secret) }),
+            macPort: pagePort, queue: queue, paired: paired,
+            legacyAllowed: { false }, allowPairing: true, fixedCode: secret
+        )
+        client.log = { VampLog.line("iPad link (QR pairing): \($0)") }
+        client.onPaired = { [weak self] in
+            Task { @MainActor in
+                guard let self, self.qrClient === client else { return }
+                VampLog.line("iPad link: paired from the QR code")
+                self.endQRPairing()
+                // It links on its ordinary Wi-Fi listener next.
+                self.reconcileWifi()
+            }
+        }
+        qrClient = client
+        client.start()
     }
 
     private func attach(_ id: Int, serial: String?, dial: @escaping LinkDialer) {
@@ -166,12 +254,15 @@ final class PadLink: ObservableObject {
         let browser = NWBrowser(for: .bonjourWithTXTRecord(type: LinkProtocol.bonjourType, domain: nil), using: params)
         browser.browseResultsChangedHandler = { [weak self] results, _ in
             var seen: [String: NWEndpoint] = [:]
+            var pairings: [String: NWEndpoint] = [:]
             for result in results {
-                guard case .bonjour(let txt) = result.metadata, let keyId = txt[LinkProtocol.txtKeyId] else { continue }
-                if seen[keyId] == nil { seen[keyId] = result.endpoint }
+                guard case .bonjour(let txt) = result.metadata else { continue }
+                if let keyId = txt[LinkProtocol.txtKeyId], seen[keyId] == nil { seen[keyId] = result.endpoint }
+                if let pairingId = txt[LinkProtocol.txtPairingId], pairings[pairingId] == nil { pairings[pairingId] = result.endpoint }
             }
             Task { @MainActor in
                 self?.wifiSeen = seen
+                self?.pairingSeen = pairings
                 self?.reconcileWifi()
             }
         }
@@ -184,6 +275,7 @@ final class PadLink: ObservableObject {
 
     /// Dial each paired iPad seen on Wi-Fi; stop dialling one that has gone.
     private func reconcileWifi() {
+        reconcileQRPairing()
         let seen = wifiSeen
         queue.async { [weak self, paired] in
             var keys: [String: LinkKey] = [:]

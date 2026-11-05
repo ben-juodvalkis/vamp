@@ -98,9 +98,18 @@ extension NWParameters {
     /// pattern of its peer-to-peer sample: no other cryptography.
     /// Not over peer-to-peer Wi-Fi: a shared network only.
     static func wifiLink(key: LinkKey) -> NWParameters {
+        pskTLS(LinkAuth.wifiPSK(key), identity: "vamp-link-\(key.id)")
+    }
+
+    /// A QR pairing's TLS (ADR-505): the same, keyed by the QR code's secret.
+    static func wifiPairing(secret: String) -> NWParameters {
+        pskTLS(LinkAuth.pairingPSK(secret), identity: "vamp-pair-\(LinkAuth.pairingId(secret))")
+    }
+
+    private static func pskTLS(_ pskData: Data, identity name: String) -> NWParameters {
         let tls = NWProtocolTLS.Options()
-        let psk = LinkAuth.wifiPSK(key).withUnsafeBytes { DispatchData(bytes: $0) }
-        let identity = Data("vamp-link-\(key.id)".utf8).withUnsafeBytes { DispatchData(bytes: $0) }
+        let psk = pskData.withUnsafeBytes { DispatchData(bytes: $0) }
+        let identity = Data(name.utf8).withUnsafeBytes { DispatchData(bytes: $0) }
         sec_protocol_options_add_pre_shared_key(tls.securityProtocolOptions, psk as __DispatchData, identity as __DispatchData)
         sec_protocol_options_append_tls_ciphersuite(
             tls.securityProtocolOptions, tls_ciphersuite_t(rawValue: UInt16(TLS_PSK_WITH_AES_128_GCM_SHA256))!)

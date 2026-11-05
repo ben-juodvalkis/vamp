@@ -277,4 +277,93 @@ final class WifiLinkTests: XCTestCase {
         let closed = try! XCTUnwrap(held.closed, "the page's connection is closed, so it reconnects")
         XCTAssertLessThan(closed.timeIntervalSince(gone), 1)
     }
+    // MARK: - QR pairing (ADR-505)
+
+    /// The iPad's end with a QR pairing under way for `secret`, not
+    /// advertised: the pairing listener's port.
+    private func startPairing(_ secret: String) -> UInt16 {
+        let ready = expectation(description: "pairing listener up")
+        var port: UInt16 = 0
+        server.onPairingReady = { port = $0; ready.fulfill() }
+        server.startPairing(secret: secret, on: LinkServer.Wifi(advertise: false, interface: nil))
+        wait(for: [ready], timeout: 5)
+        return port
+    }
+
+    /// The Mac's client for a QR pairing, as `PadLink` makes it.
+    private func pairingClient(port: UInt16, secret: String, macPort: UInt16) -> LinkClient {
+        let client = LinkClient(
+            dial: UsbMux.networkDialer(to: .hostPort(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: port)!),
+                                       using: { .wifiPairing(secret: secret) }),
+            macPort: macPort, queue: queue, paired: paired, legacyAllowed: { false },
+            allowPairing: true, fixedCode: secret)
+        clients.append(client)
+        return client
+    }
+
+    func testThePairingLinkIsReadFromAScannedCode() {
+        let secret = LinkAuth.newPairingSecret()
+        XCTAssertEqual(LinkProtocol.pairingSecret(from: URL(string: LinkProtocol.pairingURL(secret: secret))!), secret)
+        XCTAssertNil(LinkProtocol.pairingSecret(from: URL(string: "vamp://pair?s=1234")!), "too short")
+        XCTAssertNil(LinkProtocol.pairingSecret(from: URL(string: "vamp://other?s=\(secret)")!))
+        XCTAssertNil(LinkProtocol.pairingSecret(from: URL(string: "https://pair?s=\(secret)")!))
+        XCTAssertNotEqual(LinkAuth.pairingId(secret), LinkAuth.pairingId(LinkAuth.newPairingSecret()))
+    }
+
+    func testAQRCodePairsOverWifiAndTheLinkFollows() {
+        let wifiPort = startServer()
+        let secret = LinkAuth.newPairingSecret()
+        let pairingPort = startPairing(secret)
+        var ways = Set<LinkServer.Transport>()
+        server.onTransportsChange = { ways.formUnion($0) }
+        let ipadPaired = expectation(description: "the iPad says paired")
+        server.onPairing = { if $0 == .paired { ipadPaired.fulfill() } }
+        let macPaired = expectation(description: "the Mac says paired")
+        var shown: String?
+        let pairer = pairingClient(port: pairingPort, secret: secret, macPort: startEchoServer())
+        pairer.onPaired = { macPaired.fulfill() }
+        pairer.onPairingCode = { if let code = $0 { shown = code } }
+        pairer.start()
+        wait(for: [ipadPaired, macPaired], timeout: 5)
+        pairer.stop()
+        XCTAssertEqual(paired.key(for: key.id), key, "the Mac has the iPad's key")
+        XCTAssertNil(shown, "no code shown or typed")
+        XCTAssertFalse(ways.contains(.wifiPairing), "the pairing connection never carried the link")
+
+        // Then the Mac links on the ordinary Wi-Fi listener, with the key.
+        wifiClient(port: wifiPort, macPort: startEchoServer()).start()
+        waitForWays([.wifi])
+        XCTAssertTrue(PageConnection(port: pagePort, queue: queue).echo("paired by QR"))
+    }
+
+    func testAWrongSecretCannotPair() {
+        _ = startServer()
+        let pairingPort = startPairing(LinkAuth.newPairingSecret())
+        var paired = false
+        server.onPairing = { if $0 == .paired { paired = true } }
+        let guesser = pairingClient(port: pairingPort, secret: LinkAuth.newPairingSecret(), macPort: startEchoServer())
+        var macPaired = false
+        guesser.onPaired = { macPaired = true }
+        guesser.start()
+        Thread.sleep(forTimeInterval: 2)
+        XCTAssertFalse(paired)
+        XCTAssertFalse(macPaired)
+        XCTAssertNil(self.paired.key(for: key.id))
+    }
+
+    func testAPairingConnectionNeverBecomesTheLink() {
+        // A Mac that has paired already reaches the pairing listener: it
+        // proves itself, and is closed, not linked there.
+        paired.add(key, serial: nil)
+        _ = startServer()
+        let secret = LinkAuth.newPairingSecret()
+        let pairingPort = startPairing(secret)
+        var ways = Set<LinkServer.Transport>()
+        server.onTransportsChange = { ways.formUnion($0) }
+        pairingClient(port: pairingPort, secret: secret, macPort: startEchoServer()).start()
+        Thread.sleep(forTimeInterval: 1.5)
+        XCTAssertTrue(ways.isEmpty, "linked over: \(ways)")
+        let refused = PageConnection(port: pagePort, queue: queue)
+        XCTAssertFalse(refused.echo("nothing to carry it", timeout: 1))
+    }
 }

@@ -87,29 +87,8 @@ extension Supervisor {
     /// The iPad's address as a QR code, for an iPad without Vamp for iPad to
     /// open in Safari by pointing its camera at it (Ben, 2026-10-31).
     func showQRCode() {
-        let filter = CIFilter.qrCodeGenerator()
-        filter.message = Data(iPadAddress.utf8)
-        filter.correctionLevel = "M"
-        guard let code = filter.outputImage?.transformed(by: CGAffineTransform(scaleX: 10, y: 10)) else { return }
-        let rep = NSCIImageRep(ciImage: code)
-        let image = NSImage(size: rep.size)
-        image.addRepresentation(rep)
-        let side: CGFloat = 280
-        let view = NSImageView(frame: NSRect(x: 20, y: 44, width: side, height: side))
-        view.image = image
-        view.imageScaling = .scaleProportionallyUpOrDown
-        let label = NSTextField(labelWithString: iPadAddress)
-        label.frame = NSRect(x: 20, y: 14, width: side, height: 20)
-        label.alignment = .center
-        let window = NSPanel(contentRect: NSRect(x: 0, y: 0, width: side + 40, height: side + 64),
-                             styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        window.title = "Open Vamp on the iPad"
-        window.contentView?.addSubview(view)
-        window.contentView?.addSubview(label)
-        window.isReleasedWhenClosed = false
-        window.center()
-        NSApp.activate(ignoringOtherApps: true)
-        window.makeKeyAndOrderFront(nil)
+        guard let window = QRWindow.make(message: iPadAddress, title: "Open Vamp on the iPad", caption: iPadAddress) else { return }
+        QRWindow.show(window)
         qrWindow = window
     }
 

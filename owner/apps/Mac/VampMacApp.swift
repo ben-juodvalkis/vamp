@@ -101,6 +101,8 @@ struct MenuContent: View {
             // Spaced in threes, as the iPad's field shows it.
             Text("Pair Vamp for iPad: type \(code.prefix(3)) \(code.suffix(3)) on the iPad")
         }
+        Button("Pair an iPad or iPhone with a QR Code…") { pad.showPairingQR() }
+        Button("Get Vamp for iPad on the App Store…") { NSWorkspace.shared.open(QRWindow.appStoreURL) }
         Button("Forget Paired iPads") { pad.forgetPairedIPads() }
 
         Divider()
