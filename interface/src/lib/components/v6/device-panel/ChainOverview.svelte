@@ -307,6 +307,8 @@
    */
   const ROW_UNITS = 12;
   const GHOST_UNITS = 4;
+  /** On two rows the ghost section gives up a unit rather than widen a slider (`chainUnitLayout`). */
+  const GHOST_MIN_UNITS = 3;
   function unitsOf(cell: Cell): number {
     if (cell.kit || isMidiWheels(cell.device)) return 1;
     return cell.presetKey && controlFor(cell.presetKey)?.kind === 'slider' ? 1 : 2;
@@ -436,11 +438,12 @@
    * every one a tile of the same size, down each column (the user,
    * 2026-11-05; a ghost Utility tile sat before + Effect until the column
    * below took its place, the same day). On a one-row chain four columns of four,
-   * on two rows six columns of two (`recentLayout`).
+   * on two rows six columns of two, five when the section is three units
+   * (`recentLayout`).
    */
-  const layout = $derived(chainUnitLayout(drawn.map(unitsOf), GHOST_UNITS, ROW_UNITS));
+  const layout = $derived(chainUnitLayout(drawn.map(unitsOf), GHOST_UNITS, ROW_UNITS, GHOST_MIN_UNITS));
   const grid = $derived({ cols: layout.cols, rows: layout.rows });
-  const recentGrid = $derived(recentLayout(grid.rows));
+  const recentGrid = $derived(recentLayout(grid.rows, layout.ghost.span));
   const recentPool = $derived(recentForChain(cells.map((c) => c.device.name), recentLayout(1).shown));
   /** The most recent that fit, shown in alphabetical order (the user, 2026-10-26), down each column. */
   const recents = $derived(

@@ -169,6 +169,7 @@ describe('the Recent block (ADR-484)', () => {
 	it('is four columns of four on one row, six of two on two rows, + Effect the last tile', () => {
 		expect(recentLayout(1)).toEqual({ columns: 4, rows: 4, shown: 15 });
 		expect(recentLayout(2)).toEqual({ columns: 6, rows: 2, shown: 11 });
+		expect(recentLayout(2, 3)).toEqual({ columns: 5, rows: 2, shown: 9 });
 	});
 });
 
@@ -206,6 +207,23 @@ describe('chainUnitLayout: sliders one unit, pads two, the ghost section four', 
 		}
 		expect(l.ghost.row).toBe(1);
 		expect(l.ghost.span).toBeGreaterThanOrEqual(4);
+	});
+
+	it('gives the ghost section a unit rather than widen a slider at a row\'s end', () => {
+		// Rack Reverb Redux Pedal | Phaser Chorus: at a ghost of four, Pedal ends row 0 two units wide.
+		const widths = [2, 2, 2, 1, 2, 2];
+		expect(chainUnitLayout(widths, 4, 12).places[3].span).toBe(2);
+		const l = chainUnitLayout(widths, 4, 12, 3);
+		expect(l.cols).toBe(7);
+		expect(l.places.map((p) => [p.row, p.span])).toEqual([[0, 2], [0, 2], [0, 2], [0, 1], [1, 2], [1, 2]]);
+		expect(l.ghost).toEqual({ row: 1, col: 4, span: 3 });
+	});
+
+	it('keeps the ghost of four when no slider widens, and when shrinking it cannot help', () => {
+		const pads = [2, 2, 2, 2, 2, 2];
+		expect(chainUnitLayout(pads, 4, 12, 3)).toEqual(chainUnitLayout(pads, 4, 12));
+		const onePad = [2, 2, 2, 1, 2];
+		expect(chainUnitLayout(onePad, 4, 12, 3).ghost.span).toBeGreaterThanOrEqual(3);
 	});
 
 	it('finds the landing index under a point, and past a row\'s last cell', () => {
