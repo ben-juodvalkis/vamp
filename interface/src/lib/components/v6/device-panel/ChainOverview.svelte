@@ -786,8 +786,7 @@
       data-debug="chain-add"
       use:press={{ onPress: addEffect, touchAction: 'none' }}
     >
-      <span class="chain-add-icons" aria-hidden="true"><Plus /><ControlGlyph name="rack" /></span>
-      <span class="chain-add-label">Effect</span>
+      <span class="chain-add-plus" aria-hidden="true"><Plus /></span>
     </button>
   </div>
   {#if padScope}
@@ -863,18 +862,19 @@
   .chain-add:active > span {
     opacity: 1;
   }
-  .chain-add-icons {
+  /* A big +, as tall as the tile allows (the user, 2026-11-05). */
+  .chain-add-plus {
     display: flex;
     align-items: center;
-    gap: 2px;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
   }
-  .chain-add-icons :global(svg) {
-    width: 22px;
-    height: 22px;
-  }
-  .chain-add-label {
-    font-size: 0.8125rem;
-    font-weight: var(--font-weight-medium);
+  .chain-add-plus :global(svg) {
+    width: auto;
+    height: min(60%, 56px);
+    aspect-ratio: 1;
+    stroke-width: 1.5;
   }
 
   .chain-cell {
@@ -905,14 +905,10 @@
     grid-auto-flow: column;
     gap: 4px;
   }
-  /* + Effect as one of the tiles: the recents' label size and padding. */
+  /* + Effect as one of the tiles: the recents' padding. */
   .chain-ghosts > .chain-add {
-    gap: 2px;
     padding: 4px;
     overflow: hidden;
-  }
-  .chain-ghosts > .chain-add .chain-add-label {
-    font-size: 0.75rem;
   }
   .chain-cell.off > :not(.cell-head) {
     opacity: 0.45;
