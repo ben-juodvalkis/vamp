@@ -81,6 +81,7 @@
 		icon={mark}
 		{isGhost}
 		rateLabel={control.label?.(get, display)}
+		rateWhileDragging={soft}
 		background={picture ? xyPicture : undefined}
 		showCurve={curve !== undefined && curve !== 'none'}
 		curveType={curve}

@@ -16,6 +16,8 @@
     // of a picture drawn across the middle (Wavetable's wave).
     titleAt?: 'center' | 'bottom';
     rateLabel?: string;
+    /** Draw the rate label only while a finger drags the pad (a browser tile, 2026-11-06). */
+    rateWhileDragging?: boolean;
     xAxisLabels?: string[];
     onInteraction?: (x: number, y: number) => void;
     onRelease?: (x: number, y: number) => void;
@@ -54,6 +56,7 @@
     titleClass = "",
     titleAt = 'center',
     rateLabel,
+    rateWhileDragging = false,
     xAxisLabels,
     onInteraction,
     onRelease,
@@ -338,7 +341,7 @@
 
 
     <!-- Rate label (centered, below title) - only show when active (not ghost) -->
-    {#if rateLabel && !isGhost}
+    {#if rateLabel && !isGhost && (!rateWhileDragging || isDragging)}
       <div class="rate-label-centered">{rateLabel}</div>
     {/if}
 

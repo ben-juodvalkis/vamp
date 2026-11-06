@@ -94,6 +94,9 @@
 	const refKey = (ref: ParamRef) => (typeof ref === 'number' ? String(ref) : ref.name);
 	const get = (ref: ParamRef) => dragged.get(refKey(ref))?.[1] ?? found?.values[resolveParam(ref)];
 
+	// Dimmed at rest, full while a finger is on it (user, 2026-11-06).
+	let touched = $state(false);
+
 	let drag: PresetDrag | null = null;
 	function move(writes: Writes) {
 		if (!found) return;
@@ -117,10 +120,14 @@
 	});
 </script>
 
+<svelte:window onpointerup={() => (touched = false)} onpointercancel={() => (touched = false)} />
+
 <!-- The tile's own click is a load too: a press here is the face's alone. -->
 <div
 	class="preset-face"
 	class:live={found !== null}
+	class:touched
+	onpointerdowncapture={() => (touched = true)}
 	bind:this={host}
 	role="presentation"
 	onclick={(e) => e.stopPropagation()}
@@ -140,6 +147,14 @@
 		inset: 0;
 		z-index: 0;
 		display: flex;
+		/* The picture, fill, line and handle sit back so the name leads; a
+		   touch brings the control up to full. */
+		opacity: 0.4;
+		transition: opacity 120ms ease-out;
+	}
+	.preset-face.touched {
+		opacity: 1;
+		transition: none;
 	}
 	/* Nothing to drive yet: the tile underneath takes the press. */
 	.preset-face:not(.live) {

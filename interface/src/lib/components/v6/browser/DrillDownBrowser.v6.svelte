@@ -3230,10 +3230,35 @@
 		color: var(--foreground, #fff);
 		text-shadow: none;
 	}
+	/* The name large and centred OVER the control (user, 2026-11-06: "the
+	   name much bigger in the center of the slider/XY"): the control takes
+	   the whole tile, and a halo of the well's colour keeps the name
+	   readable over the picture and the handle. */
 	.preset-tile.faced .tile-name {
-		font-size: max(var(--type-min), min(9cqw, 1.05rem, calc(100cqw / var(--fit-em, 0.001))));
-		-webkit-line-clamp: 1;
-		line-clamp: 1;
+		position: absolute;
+		inset-inline: 0;
+		top: 50%;
+		transform: translateY(-50%);
+		z-index: 2;
+		padding: 0 8px;
+		text-align: center;
+		font-size: max(var(--type-min), min(14cqw, 2rem, calc((100cqw - 16px) / var(--fit-em, 0.001))));
+		font-weight: 800;
+		line-height: 1.05;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		text-shadow:
+			0 0 2px var(--surface-well),
+			0 0 4px var(--surface-well),
+			0 0 8px var(--surface-well),
+			0 0 14px var(--surface-well);
+	}
+	/* While the control is held the name steps aside for it and its readout. */
+	.preset-tile.faced .tile-name {
+		transition: opacity 120ms ease-out;
+	}
+	.preset-tile.faced:has(:global(.preset-face.touched)) .tile-name {
+		opacity: 0.15;
 	}
 	.preset-tile.faced .tile-plugin {
 		margin-top: -4px;
