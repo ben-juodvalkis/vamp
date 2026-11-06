@@ -853,6 +853,12 @@
     min-width: 0;
     min-height: 0;
   }
+  /* On two rows the chain ends at the bottom right, so the column is the
+     bottom row's height, beside it (the user, 2026-11-05). */
+  .chain-wrap.two-rows > .ghost-utility {
+    align-self: flex-end;
+    height: calc((100% - 8px) / 2);
+  }
   .ghost-utility > .cell-control {
     flex: 1 1 0;
     min-height: 0;
