@@ -99,8 +99,9 @@
 			<span class="recent-mark"><ControlGlyph name={mark} /></span>
 		{/if}
 	</span>
-	<!-- "+ Echo": what a tap does (the user, 2026-10-26). -->
-	<span class="recent-name">+ {recent.name}</span>
+	<!-- The name alone: the dashed ghost already says a tap adds it (the
+	     user, 2026-11-05; "+ Echo" from 2026-10-26). -->
+	<span class="recent-name">{recent.name}</span>
 </button>
 
 <style>
