@@ -41,7 +41,7 @@
 
 <div class="guitar-layout" data-view="guitar">
   <div class="gain" class:slot-ghost={guitar.isGhost}>
-    <GuitarControl device={guitar.device} disableCentralViewOnTap={true} icon="amp" />
+    <GuitarControl device={guitar.device} disableCentralViewOnTap={true} icon="guitar" />
   </div>
 
   <div class="pads" class:slot-ghost={guitar.isGhost}>
