@@ -285,6 +285,7 @@ const FACE_GROUPS = [
 	['omni', CHAIN_DEMO_TRACK, [MIDI_WHEELS_DEVICE, OMNISPHERE_STANDIN, CHAIN_DEMO_DEVICES[1], CHAIN_DEMO_DEVICES[5], CHAIN_DEMO_DEVICES[8], CHAIN_DEMO_DEVICES[7], { name: 'Mystery', className: 'MxDeviceAudioEffect' }, 'Echo']],
 	['drift', CHAIN_DEMO_TRACK, [{ name: 'Drift', params: driftParams() }, CHAIN_DEMO_DEVICES[1], MIDI_WHEELS_DEVICE, 'Echo', 'Reverb', 'Auto Filter', CHAIN_DEMO_DEVICES[5], 'Saturator']],
 	['wavetable', CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], CHAIN_DEMO_DEVICES[1], 'Echo', 'Reverb', 'Auto Filter', CHAIN_DEMO_DEVICES[5], 'Saturator', 'Drum Buss']],
+	['meld', CHAIN_DEMO_TRACK, [{ name: 'Meld', className: 'InstrumentMeld', params: referenceParams('Meld') }, 'Echo', 'Reverb', 'Auto Filter', CHAIN_DEMO_DEVICES[5], 'Saturator', 'Drum Buss', 'Channel EQ']],
 	['simpler', CHAIN_DEMO_TRACK, ['Simpler', 'Echo', 'Reverb', 'Auto Filter', CHAIN_DEMO_DEVICES[5], 'Saturator', 'Drum Buss', 'Channel EQ']],
 	['kit', 0, [{ name: 'Drum-Rack', padChains: { 50: ['Echo'] } }, 'Compressor', 'Auto Pan Legacy', 'Echo', 'Reverb', 'Auto Filter', 'Saturator', 'Drum Buss']]
 ];

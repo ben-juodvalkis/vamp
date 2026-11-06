@@ -634,7 +634,7 @@ export function presetControl(saved: SavedPreset | null, name: string): { contro
  * is known by, in each parameter's own range (the face reads and writes
  * through Live's min..max). The parameters are the views' own, read off the
  * running device when each view was built (the `*Params.ts` tables and the
- * views' constants): Operator's, Analog's and Meld's filter, Wavetable's Osc 1 pad,
+ * views' constants): Operator's and Analog's filter, Wavetable's Osc 1 pad, Meld's Osc A pad,
  * Sampler's and Simpler's by name, Collision's first resonator, Electric's
  * hammer. `on` is the switch a gesture turns on first (a filter heard only
  * while on). An Instrument Rack is its first macro, named as the rack names
@@ -660,8 +660,8 @@ export const INSTRUMENT_CONTROLS: Readonly<Record<string, InstrumentControl>> = 
 	analog: { kind: 'xy', title: 'Filter', x: 57, y: 59, on: 53, rest: [1, 0] },
 	// WavetableCentralView OSC[1]'s pad: 1 on, 6 Effect 2 across, 4 wave position up.
 	wavetable: { kind: 'xy', title: 'Osc 1', x: 6, y: 4, on: 1, rest: [0, 0.5] },
-	// meldParams MELD_ENGINE.A: 13 filterOn, 15 freq, 16 q.
-	meld: { kind: 'xy', title: 'Filter', x: 15, y: 16, on: 13, rest: [1, 0] },
+	// MeldCentralView's Osc A pad (meldParams MELD_ENGINE.A): 1 engine on, 8 Osc Shape across, 9 Osc Tone up.
+	meld: { kind: 'xy', title: 'Osc A', x: 8, y: 9, on: 1, rest: [0, 0] },
 	// SamplerCentralView: 'F On', 'Filter Freq', 'Filter Res' (Simpler alike).
 	sampler: { kind: 'xy', title: 'Filter', x: byNameOnly('Filter Freq'), y: byNameOnly('Filter Res'), on: byNameOnly('F On'), rest: [1, 0] },
 	simpler: { kind: 'xy', title: 'Filter', x: byNameOnly('Filter Freq'), y: byNameOnly('Filter Res'), on: byNameOnly('F On'), rest: [1, 0] },
