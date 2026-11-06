@@ -187,11 +187,11 @@ export function chainGrid(count: number, wrapAfter: number): { cols: number; row
 /**
  * The ghost section's tiles (ADR-484; the user, 2026-11-05): two cells
  * wide, four columns of four on a chain of one row, six columns of two
- * once the chain wraps to two rows. The last two tiles are the ghost
- * Utility and + Effect; the recents get the rest (`shown`).
+ * once the chain wraps to two rows. The last tile is + Effect; the
+ * recents get the rest (`shown`).
  */
 export function recentLayout(chainRows: number): { columns: number; rows: number; shown: number } {
-	return chainRows > 1 ? { columns: 6, rows: 2, shown: 10 } : { columns: 4, rows: 4, shown: 14 };
+	return chainRows > 1 ? { columns: 6, rows: 2, shown: 11 } : { columns: 4, rows: 4, shown: 15 };
 }
 
 /**

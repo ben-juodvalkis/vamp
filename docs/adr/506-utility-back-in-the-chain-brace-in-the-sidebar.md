@@ -16,10 +16,14 @@ back in that row.
 - The sidebar's row level with the FX chain is the clip loop brace
   (`RightControlsSidebar section="loop"`); the row level with the central
   view is Quantize alone (`section="quantize"`).
-- The chain's ghost section always offers a ghost Utility, second to
-  last, with + Effect last (`UTILITY_GHOST`): every tile one size, the
-  recents filling the rest. A Utility on the chain is drawn as any other
-  cell.
+- A chain with no Utility ends in a ghost one: a narrow column (72 px)
+  after the ghost section, full height with no title, the track's meter
+  under a Gain fader (`UtilityControl`); its first drag adds a Utility to
+  the chain, and the column stays under the finger until it lifts. A
+  Utility on the chain is drawn as any other cell. (For an hour the same
+  day it was a "+ Utility" tile in the ghost section, second to last.)
+- The ghost section is the recents and + Effect last, every tile one
+  size.
 - The section's slots are fixed (four columns of four on a one-row chain,
   six of two on two rows), so Live's Compressor, Phaser and Pedal joined
   the default effects, last, to fill them.

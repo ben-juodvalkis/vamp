@@ -81,9 +81,8 @@ export const DEFAULT_EFFECTS: readonly RecentEffect[] = DEFAULT_EFFECT_KEYS.map(
 });
 
 /**
- * The chain's ghost Utility, always second to last in its ghost section
- * (the user, 2026-11-05): Live's Utility, inserted by name. Never a recent
- * too, so it shows once.
+ * Live's Utility, inserted by name: never offered as a recent, since the
+ * chain has a ghost Utility column of its own (the user, 2026-11-05).
  */
 export const UTILITY_GHOST: RecentEffect = (() => {
 	const preset = DEVICE_PRESETS.utility;

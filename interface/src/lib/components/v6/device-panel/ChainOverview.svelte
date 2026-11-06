@@ -72,7 +72,7 @@
   import SquashControl from './SquashControl.svelte';
   import ControlTile from './ControlTile.svelte';
   import RecentEffectButton from './chain/RecentEffectButton.svelte';
-  import { recentForChain, UTILITY_GHOST } from '$lib/services/recentEffects.svelte';
+  import { recentForChain } from '$lib/services/recentEffects.svelte';
   import { controlFor } from './deviceControls';
   import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
   import InstrumentFace, { FACED_INSTRUMENTS } from './chain/InstrumentFace.svelte';
@@ -418,14 +418,15 @@
    * chain's ghost section, the last effects added from the browser, grey, a
    * tap adding one here again. Only what fits: no MIDI effect off a MIDI track, nothing
    * this chain already holds. It replaced the suggested ghost devices
-   * (ADR-483). A ghost Utility and + Effect always close it.
+   * (ADR-483). + Effect always closes it; the ghost Utility is its own column.
    */
   const drawn = $derived(kitCell ? [kitCell, ...shown] : shown);
 
   /*
-   * The ghost section is always two cells: the recents, then a ghost
-   * Utility, then + Effect, every one a tile of the same size, down each
-   * column (the user, 2026-11-05). On a one-row chain four columns of four,
+   * The ghost section is always two cells: the recents, then + Effect,
+   * every one a tile of the same size, down each column (the user,
+   * 2026-11-05; a ghost Utility tile sat before + Effect until the column
+   * below took its place, the same day). On a one-row chain four columns of four,
    * on two rows six columns of two (`recentLayout`).
    */
   const grid = $derived(chainGrid(drawn.length + 1, CHAIN_WRAP_AFTER));
@@ -437,6 +438,28 @@
   const recents = $derived(
     recentPool.slice(0, recentGrid.shown).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }))
   );
+
+  /*
+   * The ghost Utility (the user, 2026-11-05; ADR-482's column, back from the
+   * right sidebar): a narrow column after the chain, the track's meter under
+   * a Gain fader, whose first drag adds a Utility to the chain. Shown while
+   * the chain holds none, and kept under the finger through the drag that
+   * loads one; the loaded Utility is then a cell of the chain.
+   */
+  const UTILITY_TILE = TILE_COMPONENTS.utility;
+  const hasUtility = $derived(cells.some((c) => c.presetKey === 'utility'));
+  let utilityHeld = $state(false);
+  function holdUtility() {
+    utilityHeld = true;
+    const release = () => {
+      utilityHeld = false;
+      window.removeEventListener('pointerup', release, true);
+      window.removeEventListener('pointercancel', release, true);
+    };
+    window.addEventListener('pointerup', release, true);
+    window.addEventListener('pointercancel', release, true);
+  }
+  const showGhostUtility = $derived(!!UTILITY_TILE && (!hasUtility || utilityHeld));
 
   /** The cell position under a point, by the grid's geometry at lift — not the cells, which are sliding. */
   function positionAt(d: Drag, x: number, y: number): number {
@@ -762,8 +785,8 @@
       {@render cellBody(cell, position)}
     </div>
   {/each}
-  <!-- The ghost section (ADR-484): two cells, the recents, a ghost Utility
-       second to last and + Effect last, each a tile of one size. -->
+  <!-- The ghost section (ADR-484): two cells, the recents and + Effect
+       last, each a tile of one size. -->
   <div
     class="chain-ghosts"
     style:grid-column="span {ghostCells}"
@@ -776,7 +799,6 @@
     {#each recents as recent (recent.fullPath)}
       <RecentEffectButton {recent} />
     {/each}
-    <RecentEffectButton recent={UTILITY_GHOST} />
     <!-- Add an effect: the browser on Effect, landing on this chain. -->
     <button
       type="button"
@@ -795,6 +817,21 @@
     </div>
   {/if}
 </div>
+{#if showGhostUtility && UTILITY_TILE}
+  <!-- The ghost Utility: a narrow column after the chain, full height with
+       no title, the track's meter under a Gain fader; its first drag adds a
+       Utility to the chain. -->
+  <div
+    class="ghost-utility"
+    data-debug="chain-ghost-utility"
+    role="presentation"
+    onpointerdowncapture={holdUtility}
+  >
+    <div class="cell-control" role="presentation"><CellSize>
+      <UTILITY_TILE.Tile position={UTILITY_TILE.position} />
+    </CellSize></div>
+  </div>
+{/if}
 </div>
 
 <style>
@@ -806,6 +843,20 @@
     display: flex;
     gap: 8px;
     min-width: 0;
+  }
+  /* The ghost Utility's column: narrow, a fader's width, the tile's own
+     ghost frame its only edge. */
+  .chain-wrap > .ghost-utility {
+    flex: 0 0 72px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
+  .ghost-utility > .cell-control {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
   }
   .chain-wrap.pad-scoped {
     outline: 2px solid var(--scope-ink, var(--track-ink, var(--phosphor)));
