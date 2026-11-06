@@ -1,6 +1,7 @@
 <script lang="ts">
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
+  import KnobGrid from '../../device-panel/KnobGrid.svelte';
   import { glyphForName } from '$lib/config/controlGlyphMap';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
@@ -85,13 +86,17 @@
          wide as tall). The wheels left for the MidiWheels device's chain
          cell (user, 2026-10-26). -->
     <div class="controls-panel">
-      <div class="param-grid">
-      {#each SLIDER_PARAMS as paramIndex (paramIndex)}
+      <!-- The plug-in's eight parameters as knobs, as Live draws a rack's
+           macros: the grid that gives each the most room (ADR-509). -->
+      <KnobGrid count={SLIDER_PARAMS.length}>
+      {#snippet item(i, size)}
+        {@const paramIndex = SLIDER_PARAMS[i]}
         {@const name = parameterNames[paramIndex - 1] ? cleanParameterName(parameterNames[paramIndex - 1]) : `Param ${paramIndex}`}
-        <div class="control-slot">
           <DeviceSlider
             value={getParamValue(paramIndex)}
             title={name}
+            face="knob"
+            knobSize={size}
             icon={glyphForName(name)}
             color={kompleteKontrolInk}
             readout={device ? selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(device, paramIndex)) : undefined}
@@ -100,10 +105,8 @@
               selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, paramIndex), value);
             }}
           />
-        </div>
-      {/each}
-
-      </div>
+      {/snippet}
+      </KnobGrid>
     </div>
   {:else}
     <!-- Default state when no Komplete Kontrol present -->
@@ -122,23 +125,4 @@
     overflow: hidden;
   }
 
-  .control-slot {
-    display: flex;
-    min-height: 0;
-    min-width: 0;
-    height: 100%;
-    flex-shrink: 1;
-  }
-
-  /* One row of eight, the whole width. */
-  .param-grid {
-    flex: 1 1 0;
-    min-width: 0;
-    min-height: 0;
-    display: grid;
-    grid-template-rows: minmax(0, 1fr);
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(0, 1fr);
-    gap: var(--central-gap);
-  }
 </style>

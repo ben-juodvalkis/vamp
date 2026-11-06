@@ -111,10 +111,9 @@ async function touchDown(el: HTMLElement) {
 	await tick();
 }
 
-/** Which oscillator the card is showing, read off the badge it lives in. */
+/** Which oscillator the card is showing, off the level column's `data-osc`. */
 function shownOsc(container: HTMLElement): number {
-	const label = container.querySelector('.osc-badge')?.getAttribute('aria-label') ?? '';
-	return Number(/Oscillator (\d)/.exec(label)?.[1]);
+	return Number(container.querySelector<HTMLElement>('[data-osc]')?.dataset.osc);
 }
 
 function paramSets(): unknown[][] {

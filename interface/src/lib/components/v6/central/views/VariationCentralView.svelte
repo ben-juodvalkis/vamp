@@ -7,6 +7,11 @@
 	 * switches, the routing (12) over Triplets (5). Pitch Decay (10) is not
 	 * drawn (the user's call, 2026-10-15).
 	 *
+	 * On the face grid (ADR-510), five one-column sections, each named on
+	 * the header line (the "Variation" title over all five and the column
+	 * heads under it were two header lines). Columns about 167px: Rnd's
+	 * large knob with its caption beside needs 192, so it is medium.
+	 *
 	 * Its own file since 2026-10-24 (the user's call). From 2026-10-15 it was
 	 * a `part` of GlitchCentralView, with which it shares no device and no
 	 * control.
@@ -19,6 +24,10 @@
 	import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+	import FaceGrid from '../FaceGrid.svelte';
+	import FaceSection from '../FaceSection.svelte';
+	import FaceSeam from '../FaceSeam.svelte';
+	import PanelEyebrow from './panel/PanelEyebrow.svelte';
 
 	const variation = useFxGridSlot('variation');
 
@@ -71,12 +80,12 @@
 </script>
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
-<div class="variation-layout relative" data-density="compact">
-	<section class="group" style="--panel-ink: {varInk.primary};">
-		<div class="group-title text-xs font-bold tracking-wider">Variation</div>
-		<div class="var-body" class:slot-ghost={variation.isGhost}>
+<div class="variation-layout relative" style="--btn-tint: {varInk.primary};">
+	<FaceGrid sections={[1, 1, 1, 1, 1]}>
+		<FaceSection span={1}>
+			{#snippet head()}<PanelEyebrow title="Stutter" color={varInk.primary} />{/snippet}
 			<!-- Stutter: the grid tile's slider, Chance. The first drag loads the device. -->
-			<div class="device-wrapper">
+			<div class="device-wrapper" class:slot-ghost={variation.isGhost}>
 				<DeviceSlider
 					value={chance}
 					title="Stutter"
@@ -91,122 +100,98 @@
 					onInteraction={(value) => variation.sendParam(CHANCE_INDEX, value)}
 				/>
 			</div>
+		</FaceSection>
+		<FaceSeam ink={varInk.primary} />
 
-			<div class="var-col">
-				<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Interval</div>
-				<div class="var-stack device-segmented seg-grid" style="--btn-tint: {varInk.primary};">
-					{#each INTERVAL_OPTIONS as option}
+		<FaceSection span={1}>
+			{#snippet head()}<PanelEyebrow title="Interval" color={varInk.primary} />{/snippet}
+			<div class="var-stack device-segmented seg-grid" class:slot-ghost={variation.isGhost}>
+				{#each INTERVAL_OPTIONS as option}
+					<button
+						class="device-segment var-btn"
+						class:active={Math.round(interval) === option.value}
+						onclick={() => variation.sendParam(INTERVAL_INDEX, option.value)}
+					>{option.label}</button>
+				{/each}
+			</div>
+		</FaceSection>
+		<FaceSeam ink={varInk.primary} />
+
+		<FaceSection span={1}>
+			{#snippet head()}<PanelEyebrow title="Grid" color={varInk.primary} />{/snippet}
+			<div class="var-stack" class:slot-ghost={variation.isGhost}>
+				<!-- The grids are one tab; the Rnd knob under it is not one of
+				     them. Medium with its caption beside, 88px tall (ADR-509). -->
+				<div class="var-tab device-segmented seg-grid" style="flex: {GRID_OPTIONS.length} 1 0;">
+					{#each GRID_OPTIONS as option}
 						<button
 							class="device-segment var-btn"
-							class:active={Math.round(interval) === option.value}
-							onclick={() => variation.sendParam(INTERVAL_INDEX, option.value)}
+							class:active={Math.round(grid) === option.value}
+							onclick={() => variation.sendParam(GRID_INDEX, option.value)}
 						>{option.label}</button>
 					{/each}
 				</div>
-			</div>
-
-			<div class="var-col">
-				<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Grid</div>
-				<div class="var-stack">
-					<!-- The grids are one tab; the Rnd slider under it is not one
-					     of them. Each option keeps one share of the column. -->
-					<div class="var-tab device-segmented seg-grid" style="flex: {GRID_OPTIONS.length} 1 0; --btn-tint: {varInk.primary};">
-						{#each GRID_OPTIONS as option}
-							<button
-								class="device-segment var-btn"
-								class:active={Math.round(grid) === option.value}
-								onclick={() => variation.sendParam(GRID_INDEX, option.value)}
-							>{option.label}</button>
-						{/each}
-					</div>
-					<div class="flex-1 min-h-0">
-						<DeviceSlider
-							value={amount / AMOUNT_MAX}
-							title="Rnd"
-							orientation="horizontal"
-							labelOrientation="horizontal"
-							labelSize="small"
-							isGhost={variation.isGhost}
-							color={varInk}
-							readout={variation.paramDisplay(AMOUNT_INDEX)}
-							onInteraction={(value) => variation.sendParam(AMOUNT_INDEX, Math.round(value * AMOUNT_MAX))}
-						/>
-					</div>
+				<div class="flex-none h-[5.5rem] min-h-0">
+					<DeviceSlider
+						value={amount / AMOUNT_MAX}
+						title="Rnd"
+						face="knob"
+						knobSize="m"
+						orientation="horizontal"
+						labelOrientation="horizontal"
+						labelSize="small"
+						isGhost={variation.isGhost}
+						color={varInk}
+						readout={variation.paramDisplay(AMOUNT_INDEX)}
+						onInteraction={(value) => variation.sendParam(AMOUNT_INDEX, Math.round(value * AMOUNT_MAX))}
+					/>
 				</div>
 			</div>
+		</FaceSection>
+		<FaceSeam ink={varInk.primary} />
 
-			<div class="var-col">
-				<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Length</div>
-				<div class="var-stack device-segmented seg-grid" style="--btn-tint: {varInk.primary};">
-					{#each GATE_OPTIONS as option}
-						<button
-							class="device-segment var-btn"
-							class:active={Math.round(gate) === option.value}
-							onclick={() => variation.sendParam(GATE_INDEX, option.value)}
-						>{option.label}</button>
-					{/each}
-				</div>
-			</div>
-
-			<!-- Two switches, each on or off on its own: separate buttons. -->
-			<div class="var-col">
-				<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Mode</div>
-				<div class="var-stack">
+		<FaceSection span={1}>
+			{#snippet head()}<PanelEyebrow title="Length" color={varInk.primary} />{/snippet}
+			<div class="var-stack device-segmented seg-grid" class:slot-ghost={variation.isGhost}>
+				{#each GATE_OPTIONS as option}
 					<button
-						class="physical-button var-btn"
-						class:active={insertMode}
-						aria-pressed={insertMode}
-						style="--btn-tint: {varInk.primary};"
-						onclick={() => variation.sendParam(ROUTING_INDEX, insertMode ? 0 : 1)}
-					>{insertMode ? 'Insert' : 'Mix'}</button>
-					<button
-						class="physical-button var-btn"
-						class:active={triplets}
-						style="--btn-tint: {varInk.primary};"
-						onclick={() => variation.sendParam(TRIPLETS_INDEX, triplets ? 1 : 0)}
-					>Trip</button>
-				</div>
+						class="device-segment var-btn"
+						class:active={Math.round(gate) === option.value}
+						onclick={() => variation.sendParam(GATE_INDEX, option.value)}
+					>{option.label}</button>
+				{/each}
 			</div>
-		</div>
-	</section>
+		</FaceSection>
+		<FaceSeam ink={varInk.primary} />
+
+		<!-- Two switches, each on or off on its own: separate buttons. -->
+		<FaceSection span={1}>
+			{#snippet head()}<PanelEyebrow title="Mode" color={varInk.primary} />{/snippet}
+			<div class="var-stack" class:slot-ghost={variation.isGhost}>
+				<button
+					class="physical-button var-btn"
+					class:active={insertMode}
+					aria-pressed={insertMode}
+					onclick={() => variation.sendParam(ROUTING_INDEX, insertMode ? 0 : 1)}
+				>{insertMode ? 'Insert' : 'Mix'}</button>
+				<button
+					class="physical-button var-btn"
+					class:active={triplets}
+					onclick={() => variation.sendParam(TRIPLETS_INDEX, triplets ? 1 : 0)}
+				>Trip</button>
+			</div>
+		</FaceSection>
+	</FaceGrid>
 </div>
 
 <style>
+	/* The face is the FaceGrid (ADR-510): five equal columns. */
 	.variation-layout {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr);
 		height: 100%;
 		width: 100%;
-		padding: var(--central-inset);
-		gap: var(--central-gap);
 	}
 
-	.group {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-xs);
-		min-width: 0;
-		min-height: 0;
-	}
-
-	/* Centred over the group it names, in the device's ink. */
-	.group-title {
-		flex-shrink: 0;
-		text-align: center;
-		color: var(--panel-ink);
-	}
-
-	.var-body {
-		flex: 1;
-		min-height: 0;
-		min-width: 0;
-		display: grid;
-		grid-template-columns: repeat(5, minmax(0, 1fr));
-		gap: var(--central-gap);
-	}
-
-	.device-wrapper,
-	.var-col {
+	.device-wrapper {
 		display: flex;
 		flex-direction: column;
 		min-height: 0;
@@ -240,9 +225,8 @@
 		font-weight: 700;
 	}
 
-	/* GRATICULE: column headers and button labels are authored mixed-case
-	   and up-cased here for the HUD voice. */
-	.var-head,
+	/* GRATICULE: button labels are authored mixed-case and up-cased here
+	   for the HUD voice. */
 	.var-btn {
 		text-transform: uppercase;
 	}
@@ -250,20 +234,10 @@
 	/* ---- Live skin (flat grammar) ------------------------------------ */
 	/* Live sets control text medium, keeps authored case, and does not
 	   letterspace its section legends; headers are plain secondary text. */
-	:global([data-grammar="flat"]) .group-title {
-		font-weight: var(--font-weight-medium);
-		letter-spacing: 0;
-	}
-	:global([data-grammar="flat"]) .var-head,
 	:global([data-grammar="flat"]) .var-btn {
 		text-transform: none;
 	}
-	:global([data-grammar="flat"]) .var-head {
-		font-weight: var(--font-weight-medium);
-		opacity: 1;
-		color: var(--muted-foreground);
-	}
-	:global([data-grammar="flat"]) .var-body .physical-button {
+	:global([data-grammar="flat"]) .variation-layout .physical-button {
 		font-weight: var(--font-weight-medium);
 	}
 	/* The options wear the Stutter slider's ink (user, 2026-10-15): the name

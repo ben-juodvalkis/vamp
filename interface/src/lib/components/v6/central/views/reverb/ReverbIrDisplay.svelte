@@ -161,6 +161,8 @@
 	}
 	/* The chain cell: the IR alone, without the dashed envelope over it
 	   (the user, 2026-11-05). */
+	.compact .tick,
+	.compact .centre,
 	.compact .tick-label,
 	.compact .missing,
 	.compact .note,

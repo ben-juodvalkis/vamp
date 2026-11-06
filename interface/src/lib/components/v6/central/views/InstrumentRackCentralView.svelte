@@ -62,11 +62,11 @@
   // Macros whose first word is "XY" pair up into pads (the rack's own
   // convention, named in Live): "XY Cutoff" + "XY Res" → a Cutoff/Res pad.
   const layoutItems = $derived(pairXYPrefixedMacros(controlLayout));
-  // One row of tall boxes while they fit (a pad is two columns wide); past
-  // eight columns, two rows filled column by column.
-  const ONE_ROW_MAX_COLUMNS = 8;
+  // Knobs want near-square cells (ADR-509): two rows filled column by
+  // column, neighbours paired top over bottom, past two macros; a pad is
+  // two columns wide, every row.
   const macroColumns = $derived(layoutItems.reduce((n, item) => n + (item.kind === 'xy' ? 2 : 1), 0));
-  const macroRows = $derived(macroColumns > ONE_ROW_MAX_COLUMNS ? 2 : 1);
+  const macroRows = $derived(macroColumns > 2 ? 2 : 1);
 
   // Update all macro values in single effect
   $effect(() => {
@@ -108,10 +108,10 @@
           <HostedSwapPill />
         </div>
 
-        <!-- One value box per named macro (ADR-477): one row of tall boxes
-             while eight columns fit, else two rows filled column by column,
-             neighbours paired top over bottom. An XY pad stands in for two
-             macros: two columns, every row. -->
+        <!-- One knob per named macro (ADR-509), as Live draws a rack's
+             macros: two rows filled column by column, neighbours paired top
+             over bottom. An XY pad stands in for two macros: two columns,
+             every row. -->
         {#if controlLayout.length > 0}
           <div class="macro-grid" style:--macro-rows={macroRows}>
           {#each layoutItems as item, i}
@@ -133,8 +133,9 @@
                 <DeviceSlider
                   value={getNormalizedValue(item.control.macroIndex)}
                   title={item.control.name}
+                  face="knob"
+                  knobSize="l"
                   icon={glyphForName(item.control.name)}
-                  orientation="vertical"
                   color={ctlInk(i)}
                   readout={device ? selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(device, item.control.macroIndex)) : undefined}
                   onInteraction={(val) => handleSliderChange(item.control.macroIndex, val)}

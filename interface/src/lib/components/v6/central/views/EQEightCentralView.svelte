@@ -2,8 +2,10 @@
   /**
    * EQ Eight (the `eq8` slot, 2026-11-06), Live's panel (manual §29.15):
    *
-   *   [Freq / Gain / Q] [the curve, a dot per band] [Band 1-8 · On] [Type]
-   *   [Output / Scale · Adaptive Q]
+   *   [Freq / Gain / Q] | [the curve, a dot per band] | [Band 1-8 · On] [Type]
+   *   | [Output / Scale · Adaptive Q]
+   *
+   * on one face grid (ADR-510), sections 1 · 3 · 2 · 1.
    *
    * Live's per-band choosers and switches under its display become one
    * band picker and one type tab for the band selected, so each stays a
@@ -23,6 +25,10 @@
   import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
   import ParamColumn from './fx/ParamColumn.svelte';
   import ParamSwitch from './fx/ParamSwitch.svelte';
+  import FaceGrid from '../FaceGrid.svelte';
+  import FaceSection from '../FaceSection.svelte';
+  import FaceSeam from '../FaceSeam.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { axisHz, responsePath } from '$lib/utils/filterGraph';
   import {
@@ -84,9 +90,9 @@
   let band = $derived(eq8Band(selected));
   let selectedState = $derived(bands[selected - 1]);
   let bandBoxes = $derived([
-    { index: band.freq, title: 'Freq', rest: EQ8_REST.freq[selected - 1] },
-    { index: band.gain, title: 'Gain', rest: 0, min: -EQ8_GAIN_MAX, max: EQ8_GAIN_MAX, center: 0 },
-    { index: band.q, title: 'Q', rest: EQ8_REST.q }
+    { index: band.freq, title: 'Freq', rest: EQ8_REST.freq[selected - 1], mark: 'F' },
+    { index: band.gain, title: 'Gain', rest: 0, min: -EQ8_GAIN_MAX, max: EQ8_GAIN_MAX, center: 0, mark: 'G' },
+    { index: band.q, title: 'Q', rest: EQ8_REST.q, mark: 'Q' }
   ]);
   const GLOBAL = [
     { index: EQ8.output, title: 'Output', rest: 0, min: -12, max: 12, center: 0 },
@@ -95,79 +101,97 @@
   let adaptiveQ = $derived((fx.paramValue(EQ8.adaptiveQ) ?? 1) >= 0.5);
 </script>
 
-<div class="fx-layout" data-view="eq8">
-  <ParamColumn {fx} ink={fx.color} boxes={bandBoxes} />
+<!-- One face grid (ADR-510), seven columns of ~121px at 1366 x 1024:
+     the band's knobs 1 · the curve 3 · the band choosers 2 · Global 1. -->
+<div class="face-root" data-view="eq8">
+<FaceGrid sections={[1, 3, 2, 1]}>
+  <!-- Freq, Gain and Q stacked: three medium knobs with no caption, their
+       letters saying which (a captioned medium knob needs more than a
+       third of the column). -->
+  <FaceSection span={1}>
+    {#snippet head()}<PanelEyebrow title="Band {selected}" color={fx.color.primary} />{/snippet}
+    <ParamColumn face="knob" knobSize="m" caption={false} {fx} ink={fx.color} boxes={bandBoxes} />
+  </FaceSection>
+  <FaceSeam />
 
-  <div class="cell graph" class:slot-ghost={fx.isGhost}>
-    <FilterDotsGraph {dots} {curves} onGrab={(i) => (selected = i + 1)} onMove={move} ariaLabel="EQ Eight bands" />
-  </div>
+  <FaceSection span={3}>
+    {#snippet head()}<PanelEyebrow title="EQ" color={fx.color.primary} />{/snippet}
+    <div class="cell graph face-span-3" class:slot-ghost={fx.isGhost}>
+      <FilterDotsGraph {dots} {curves} onGrab={(i) => (selected = i + 1)} onMove={move} ariaLabel="EQ Eight bands" />
+    </div>
+  </FaceSection>
+  <FaceSeam />
 
-  <div class="cell">
-    <ScrubTabs
-      options={BAND_NUMBERS}
-      selected={selected - 1}
-      onSelect={(i) => (selected = i + 1)}
-      cols={2}
-      tint={fx.color.primary}
-      inked
-      ghost={fx.isGhost}
-      label={(b) => `Band ${b}`}
-      groupLabel="Band"
-      name="band"
-      style="flex: 4 1 0;"
-    >
-      {#snippet item(b)}
-        <span class:band-off={!bands[b - 1].on}>{b}</span>
-      {/snippet}
-    </ScrubTabs>
-    <ParamSwitch
-      row
-      label="On"
-      on={selectedState.on}
-      tint={fx.color.primary}
-      ghost={fx.isGhost}
-      onToggle={() => fx.sendParam(band.on, selectedState.on ? 0 : 1)}
-    />
-  </div>
+  <FaceSection span={2}>
+    {#snippet head()}<PanelEyebrow title="Bands" color={fx.color.primary} />{/snippet}
+    <div class="cell">
+      <ScrubTabs
+        options={BAND_NUMBERS}
+        selected={selected - 1}
+        onSelect={(i) => (selected = i + 1)}
+        cols={2}
+        tint={fx.color.primary}
+        inked
+        ghost={fx.isGhost}
+        label={(b) => `Band ${b}`}
+        groupLabel="Band"
+        name="band"
+        style="flex: 4 1 0;"
+      >
+        {#snippet item(b)}
+          <span class:band-off={!bands[b - 1].on}>{b}</span>
+        {/snippet}
+      </ScrubTabs>
+      <ParamSwitch
+        row
+        label="On"
+        on={selectedState.on}
+        tint={fx.color.primary}
+        ghost={fx.isGhost}
+        onToggle={() => fx.sendParam(band.on, selectedState.on ? 0 : 1)}
+      />
+    </div>
+    <div class="cell">
+      <ScrubTabs
+        options={EQ8_TYPES}
+        selected={selectedState.type}
+        onSelect={(i) => fx.sendParam(band.type, i)}
+        cols={1}
+        tint={fx.color.primary}
+        inked
+        ghost={fx.isGhost}
+        label={(t) => t}
+        groupLabel="Filter type"
+        name="type"
+        class="flex-1"
+      />
+    </div>
+  </FaceSection>
+  <FaceSeam />
 
-  <div class="cell">
-    <ScrubTabs
-      options={EQ8_TYPES}
-      selected={selectedState.type}
-      onSelect={(i) => fx.sendParam(band.type, i)}
-      cols={1}
-      tint={fx.color.primary}
-      inked
-      ghost={fx.isGhost}
-      label={(t) => t}
-      groupLabel="Filter type"
-      name="type"
-      class="flex-1"
-    />
-  </div>
-
-  <div class="cell">
-    <div class="grow"><ParamColumn {fx} ink={fx.color} boxes={GLOBAL} /></div>
-    <ParamSwitch label="Adaptive Q" on={adaptiveQ} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => fx.sendParam(EQ8.adaptiveQ, adaptiveQ ? 0 : 1)} />
-  </div>
+  <FaceSection span={1}>
+    {#snippet head()}<PanelEyebrow title="Global" color={fx.color.primary} />{/snippet}
+    <div class="cell">
+      <div class="grow"><ParamColumn {fx} ink={fx.color} boxes={GLOBAL} /></div>
+      <ParamSwitch label="Adaptive Q" on={adaptiveQ} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => fx.sendParam(EQ8.adaptiveQ, adaptiveQ ? 0 : 1)} />
+    </div>
+  </FaceSection>
+</FaceGrid>
 </div>
 
 <style>
-  /* Live's order: the band's dials, the curve (three shares), then the band
-     choosers and the global controls. */
-  .fx-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 3fr) repeat(3, minmax(0, 1fr));
-    gap: var(--central-gap);
+  /* Live's order on the face grid (ADR-510): the band's dials, the curve,
+     then the band choosers and the global controls. */
+  .face-root {
     height: 100%;
     width: 100%;
-    padding: var(--central-inset);
+    min-height: 0;
   }
 
   .cell {
     display: flex;
     flex-direction: column;
-    gap: var(--central-gap);
+    gap: var(--face-gutter);
     min-height: 0;
     min-width: 0;
   }

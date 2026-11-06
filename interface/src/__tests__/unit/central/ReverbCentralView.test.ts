@@ -102,8 +102,10 @@ describe('ReverbCentralView, an algorithm', () => {
 	it('draws what every algorithm shares, in Live’s words', async () => {
 		const c = await mount({ 6: 1 });
 		expect(labels(c.querySelector('[data-reverb-shared]'))).toEqual([
-			'Decay 3.50 s', 'Dry/Wet 50 %', 'Size 50 %', 'Predelay 10.0 ms', 'Feedback 0.0 %', 'Delay 0.00 ms', 'Stereo 100 %', 'Vintage Off'
+			'Decay 3.50 s', 'Size 50 %', 'Predelay 10.0 ms', 'Feedback 0.0 %', 'Delay 0.00 ms', 'Stereo 100 %', 'Vintage Off'
 		]);
+		// Dry/Wet stands apart at the right edge, a box among knobs (ADR-509).
+		expect(labels(c.querySelector('[data-reverb-wet]'))).toEqual(['Dry/Wet 50 %']);
 		const switches = [...c.querySelectorAll('[data-reverb-shared] [data-reverb-switch]')].map((b) => b.textContent?.trim());
 		expect(switches).toEqual(['Sync', 'Mono']);
 	});
@@ -152,7 +154,10 @@ describe('ReverbCentralView, the EQ tab', () => {
 			'Lo Slope 18 dB', 'Peak 1 Q 0.71', 'Peak 2 Q 0.71', 'Hi Gain 0.0 dB'
 		]);
 		const own = [...c.querySelectorAll('[data-reverb-own] [data-reverb-switch]')].map((b) => b.textContent?.trim());
-		expect(own).toEqual(['Cut', 'Shelf', 'On', 'Pre Algo', 'Freeze', 'In']);
+		expect(own).toEqual(['On', 'Pre Algo', 'Freeze', 'In']);
+		// Each end's Cut / Shelf sits under the curve, Lo then Hi (2026-11-06).
+		const ends = [...c.querySelectorAll('[data-reverb-eq-types] [data-reverb-switch]')].map((b) => b.textContent?.trim());
+		expect(ends).toEqual(['Lo Cut', 'Hi Shelf']);
 		expect(c.querySelector('[data-reverb-eq]')?.getAttribute('aria-label')).toBe('Reverb EQ: Lo Cut 121 Hz · 18 dB');
 
 		await fireEvent.click(c.querySelector('[data-reverb-tab="reverb"]')!);
@@ -162,7 +167,7 @@ describe('ReverbCentralView, the EQ tab', () => {
 	it('switches an end between Cut and Shelf, and the EQ on and before the algorithm', async () => {
 		const c = await mount(RIG_EQ);
 		await fireEvent.click(c.querySelector('[data-reverb-tab="eq"]')!);
-		await fireEvent.click(c.querySelector('[data-reverb-own] [data-reverb-switch="33"]')!);
+		await fireEvent.click(c.querySelector('[data-reverb-eq-types] [data-reverb-switch="33"]')!);
 		expect(sendMock).toHaveBeenCalledWith('/looping/v3/param/set', [`${DEVICE}/params/33`, 1, 3]);
 		await fireEvent.click(c.querySelector('[data-reverb-own] [data-reverb-switch="31"]')!);
 		expect(sendMock).toHaveBeenCalledWith('/looping/v3/param/set', [`${DEVICE}/params/31`, 0, 3]);
@@ -210,7 +215,9 @@ describe('ReverbCentralView, convolution', () => {
 		const c = await mount({ 48: 3 }, SPRING);
 		expect(labels(c.querySelector('[data-reverb-own]'))).toEqual(['Attack 0.00 ms', 'Decay 20.0 s', 'Size 100 %']);
 		expect(labels(c.querySelector('[data-reverb-shared]'))).toEqual([
-			'Predelay 10.0 ms', 'Feedback 0.0 %', 'Stereo 100 %', 'Vintage Off', 'Dry/Wet 50 %'
+			// Stereo starts a column so its Mono sits under it; Vintage fills the
+			// cell ahead of it (ADR-509).
+			'Predelay 10.0 ms', 'Feedback 0.0 %', 'Vintage Off', 'Stereo 100 %'
 		]);
 		// Freeze, Size and Delay are the algorithm's.
 		expect(c.querySelector('[data-reverb-switch="8"]')).toBeNull();

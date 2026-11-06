@@ -6,9 +6,13 @@
    * the same day (user: "add more controls to shifter central view", "just
    * one slider for amount, and the 3-way switch", "more LFO controls"):
    *
-   *   [Amount] [Mode: Pitch Freq Ring, Wide] [Drive / Tone / Dry/Wet] |
-   *   [LFO pad: rate across, amount up] [Wave, 2 × 5] [Morph / Width / Offset]
-   *   [Sync, Stereo: Phase Spin, Phase or Spin]
+   *   Shifter [Amount] [Mode: Pitch Freq Ring, Wide] [Drive / Tone] |
+   *   LFO [pad: rate across, amount up] [Wave, 2 × 5] [Morph / Width]
+   *   [Sync / Offset] [Stereo: Phase Spin, Phase or Spin] | Mix [Dry/Wet]
+   *
+   * On the face grid (ADR-510), sections [3, 6, 1]: ten columns of about
+   * 85px, every knob medium (two to a column), the pad two columns. Dry/Wet,
+   * the played level, past a seam at the right edge (ADR-509).
    *
    * Amount is the `shifter` control (`deviceControls`, ADR-479): the mode's
    * own amount (Pitch Coarse, FShift Coarse or RM Coarse), so the chain cell
@@ -30,7 +34,10 @@
   import ControlTile from '$lib/components/v6/device-panel/ControlTile.svelte';
   import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
   import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
-  import SectionDivider from '$lib/components/v6/central/SectionDivider.svelte';
+  import FaceGrid from '../FaceGrid.svelte';
+  import FaceSection from '../FaceSection.svelte';
+  import FaceSeam from '../FaceSeam.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -104,10 +111,11 @@
   }
 
   const MODES = ['Pitch', 'Freq', 'Ring'];
+  // The shifter's character as knobs, its Dry/Wet a box of its own, the
+  // level a set rides (ADR-509).
   const BOXES = [
     { index: P.driveGain, title: 'Drive', write: setDrive },
-    { index: P.tone, title: 'Tone', write: (v: number) => shifter.sendParam(P.tone, v) },
-    { index: P.dryWet, title: 'Dry/Wet', icon: 'mix' as const, write: (v: number) => shifter.sendParam(P.dryWet, v) }
+    { index: P.tone, title: 'Tone', write: (v: number) => shifter.sendParam(P.tone, v) }
   ];
   const LFO_BOXES = [
     { index: P.morph, title: 'Morph', center: 0.5 },
@@ -116,164 +124,190 @@
   ];
 </script>
 
-<div class="shifter-layout" data-view="shifter" style="--btn-tint: {ink.primary};">
-  <div class="col">
-    <ControlTile type="shifter" device={shifter.device} icon="ringmod" disableCentralViewOnTap tapLoads labelSize="large" />
-  </div>
-
-  <div class="col" class:slot-ghost={shifter.isGhost}>
-    <ScrubTabs
-      options={MODES}
-      selected={shifter.isGhost ? -1 : mode}
-      onSelect={(i) => shifter.sendParam(P.mode, i)}
-      cols={1}
-      tint={ink.primary}
-      inked
-      label={(l) => l}
-      groupLabel="Mode"
-      style="flex: 3 1 0; --scrub-font-size: 1rem; --scrub-font-weight: var(--font-weight-medium);"
-    />
-    <button class="physical-button switch" class:active={on(P.wide)} aria-pressed={on(P.wide)} onclick={() => toggle(P.wide)}>Wide</button>
-  </div>
-
-  <div class="col boxes" class:slot-ghost={shifter.isGhost}>
-    {#each BOXES as b (b.index)}
-      <DeviceSlider
-        value={value(b.index)}
-        title={b.title}
-        icon={b.icon}
-        orientation="vertical"
-        min={0}
-        max={1}
-        isGhost={shifter.isGhost}
-        color={ink}
-        readout={shifter.paramDisplay(b.index)}
-        onInteraction={b.write}
-      />
-    {/each}
-  </div>
-
-  <SectionDivider orientation="vertical" />
-
-  <div class="col" class:slot-ghost={shifter.isGhost}>
-    <DeviceXY
-      xValue={synced ? value(P.lfoSynced) / SYNCED_MAX : value(P.lfoFreq)}
-      yValue={value(lfoAmount)}
-      title="LFO"
-      rateLabel={shifter.paramDisplay(synced ? P.lfoSynced : P.lfoFreq)}
+{#snippet knob(index: number, title: string, write: (v: number) => void, center?: number)}
+  <div class="knob">
+    <DeviceSlider
+      value={value(index)}
+      {title}
+      face="knob"
+      knobSize="m"
+      min={0}
+      max={1}
+      centerOrigin={center !== undefined}
+      centerValue={center}
       isGhost={shifter.isGhost}
-      showCurve={false}
       color={ink}
-      onTap={() => shifter.loadIfGhost()}
-      onInteraction={(x, y) => {
-        if (synced) shifter.sendParam(P.lfoSynced, Math.round(x * SYNCED_MAX));
-        else shifter.sendParam(P.lfoFreq, x);
-        shifter.sendParam(lfoAmount, y);
-      }}
+      readout={shifter.paramDisplay(index)}
+      onInteraction={write}
     />
   </div>
+{/snippet}
 
-  <div class="col" class:slot-ghost={shifter.isGhost}>
-    <ScrubTabs
-      options={WAVES}
-      selected={shifter.isGhost ? -1 : wave}
-      onSelect={(i) => shifter.sendParam(P.wave, i)}
-      cols={WAVE_COLS}
-      tint={ink.primary}
-      inked
-      label={(l) => `LFO wave ${l}`}
-      name="shifter-lfo-wave"
-      style="flex: 1 1 0; --scrub-padding: 6px;"
-    >
-      {#snippet item(_, i)}
-        <svg class="wave-glyph" viewBox="0 0 24 12" aria-hidden="true" focusable="false">
-          <path d={WAVE_GLYPHS[i]} fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
-        </svg>
-      {/snippet}
-    </ScrubTabs>
-  </div>
+<div class="shifter-layout" data-view="shifter" style="--btn-tint: {ink.primary};">
+  <FaceGrid sections={[3, 6, 1]}>
+    <FaceSection span={3}>
+      {#snippet head()}<PanelEyebrow title="Shifter" color={ink.primary} />{/snippet}
+      <div class="col">
+        <ControlTile type="shifter" device={shifter.device} icon="ringmod" disableCentralViewOnTap tapLoads labelSize="large" />
+      </div>
 
-  <div class="col boxes" class:slot-ghost={shifter.isGhost}>
-    {#each LFO_BOXES as b (b.index)}
-      <DeviceSlider
-        value={value(b.index)}
-        title={b.title}
-        orientation="vertical"
-        min={0}
-        max={1}
-        centerOrigin={b.center !== undefined}
-        centerValue={b.center}
-        isGhost={shifter.isGhost}
-        color={ink}
-        readout={shifter.paramDisplay(b.index)}
-        onInteraction={(v) => shifter.sendParam(b.index, v)}
-      />
-    {/each}
-  </div>
+      <div class="col" class:slot-ghost={shifter.isGhost}>
+        <ScrubTabs
+          options={MODES}
+          selected={shifter.isGhost ? -1 : mode}
+          onSelect={(i) => shifter.sendParam(P.mode, i)}
+          cols={1}
+          tint={ink.primary}
+          inked
+          label={(l) => l}
+          groupLabel="Mode"
+          style="flex: 3 1 0; --scrub-font-size: 1rem; --scrub-font-weight: var(--font-weight-medium);"
+        />
+        <button class="physical-button switch" class:active={on(P.wide)} aria-pressed={on(P.wide)} onclick={() => toggle(P.wide)}>Wide</button>
+      </div>
 
-  <div class="col" class:slot-ghost={shifter.isGhost}>
-    <button class="physical-button switch" class:active={synced} aria-pressed={synced} onclick={() => toggle(P.sync)}>Sync</button>
-    <ScrubTabs
-      options={['Phase', 'Spin']}
-      selected={shifter.isGhost ? -1 : Number(spin)}
-      onSelect={(i) => shifter.sendParam(P.stereo, i)}
-      cols={1}
-      tint={ink.primary}
-      inked
-      label={(l) => l}
-      groupLabel="Stereo"
-      style="flex: 2 1 0; --scrub-font-size: 1rem; --scrub-font-weight: var(--font-weight-medium);"
-    />
-    <div class="boxes stereo-box">
-      <DeviceSlider
-        value={value(spin ? P.spin : P.phase)}
-        title={spin ? 'Spin' : 'Phase'}
-        orientation="vertical"
-        min={0}
-        max={1}
-        isGhost={shifter.isGhost}
-        color={ink}
-        readout={shifter.paramDisplay(spin ? P.spin : P.phase)}
-        onInteraction={(v) => shifter.sendParam(spin ? P.spin : P.phase, v)}
-      />
-    </div>
-  </div>
+      <!-- Drive over Tone, medium (ADR-509): two captioned 96px knobs need
+           316px of the band. -->
+      <div class="col" class:slot-ghost={shifter.isGhost}>
+        {#each BOXES as b (b.index)}{@render knob(b.index, b.title, b.write)}{/each}
+      </div>
+    </FaceSection>
+    <FaceSeam ink={ink.primary} />
+
+    <FaceSection span={6}>
+      {#snippet head()}<PanelEyebrow title="LFO" color={ink.primary} />{/snippet}
+      <div class="col face-span-2" class:slot-ghost={shifter.isGhost}>
+        <DeviceXY
+          xValue={synced ? value(P.lfoSynced) / SYNCED_MAX : value(P.lfoFreq)}
+          yValue={value(lfoAmount)}
+          title="LFO"
+          rateLabel={shifter.paramDisplay(synced ? P.lfoSynced : P.lfoFreq)}
+          isGhost={shifter.isGhost}
+          showCurve={false}
+          color={ink}
+          onTap={() => shifter.loadIfGhost()}
+          onInteraction={(x, y) => {
+            if (synced) shifter.sendParam(P.lfoSynced, Math.round(x * SYNCED_MAX));
+            else shifter.sendParam(P.lfoFreq, x);
+            shifter.sendParam(lfoAmount, y);
+          }}
+        />
+      </div>
+
+      <div class="col" class:slot-ghost={shifter.isGhost}>
+        <ScrubTabs
+          options={WAVES}
+          selected={shifter.isGhost ? -1 : wave}
+          onSelect={(i) => shifter.sendParam(P.wave, i)}
+          cols={WAVE_COLS}
+          tint={ink.primary}
+          inked
+          label={(l) => `LFO wave ${l}`}
+          name="shifter-lfo-wave"
+          style="flex: 1 1 0; --scrub-padding: 6px;"
+        >
+          {#snippet item(_, i)}
+            <svg class="wave-glyph" viewBox="0 0 24 12" aria-hidden="true" focusable="false">
+              <path d={WAVE_GLYPHS[i]} fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
+            </svg>
+          {/snippet}
+        </ScrubTabs>
+      </div>
+
+      <!-- Morph over Width, then Sync over Offset: two medium knobs a
+           column (ADR-509), on the face's own columns. -->
+      <div class="col" class:slot-ghost={shifter.isGhost}>
+        {#each LFO_BOXES.slice(0, 2) as b (b.index)}{@render knob(b.index, b.title, (v) => shifter.sendParam(b.index, v), b.center)}{/each}
+      </div>
+
+      <div class="col" class:slot-ghost={shifter.isGhost}>
+        <button class="physical-button switch touch-row" class:active={synced} aria-pressed={synced} onclick={() => toggle(P.sync)}>Sync</button>
+        {#each LFO_BOXES.slice(2) as b (b.index)}{@render knob(b.index, b.title, (v) => shifter.sendParam(b.index, v), b.center)}{/each}
+      </div>
+
+      <div class="col" class:slot-ghost={shifter.isGhost}>
+        <ScrubTabs
+          options={['Phase', 'Spin']}
+          selected={shifter.isGhost ? -1 : Number(spin)}
+          onSelect={(i) => shifter.sendParam(P.stereo, i)}
+          cols={1}
+          tint={ink.primary}
+          inked
+          label={(l) => l}
+          groupLabel="Stereo"
+          style="flex: 1 1 0; --scrub-font-size: 1rem; --scrub-font-weight: var(--font-weight-medium);"
+        />
+        <div class="knob stereo-box">
+          <DeviceSlider
+            value={value(spin ? P.spin : P.phase)}
+            title={spin ? 'Spin' : 'Phase'}
+            face="knob"
+            knobSize="m"
+            min={0}
+            max={1}
+            isGhost={shifter.isGhost}
+            color={ink}
+            readout={shifter.paramDisplay(spin ? P.spin : P.phase)}
+            onInteraction={(v) => shifter.sendParam(spin ? P.spin : P.phase, v)}
+          />
+        </div>
+      </div>
+    </FaceSection>
+    <FaceSeam ink={ink.primary} />
+
+    <FaceSection span={1}>
+      {#snippet head()}<PanelEyebrow title="Mix" color={ink.primary} />{/snippet}
+      <div class="col" class:slot-ghost={shifter.isGhost}>
+        <DeviceSlider
+          value={value(P.dryWet)}
+          title="Dry/Wet"
+          icon="mix"
+          orientation="vertical"
+          min={0}
+          max={1}
+          isGhost={shifter.isGhost}
+          color={ink}
+          readout={shifter.paramDisplay(P.dryWet)}
+          onInteraction={(v) => shifter.sendParam(P.dryWet, v)}
+        />
+      </div>
+    </FaceSection>
+  </FaceGrid>
 </div>
 
 <style>
-  /* Amount and the LFO pad the widest; a seam between the shifter and its LFO. */
+  /* The face is the FaceGrid (ADR-510): ten equal columns, Shifter 3,
+     LFO 6 (its pad two), Mix 1. */
   .shifter-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 1fr)) auto minmax(0, 1.75fr) repeat(3, minmax(0, 1fr));
     height: 100%;
     width: 100%;
-    padding: var(--central-inset);
-    gap: var(--central-gap);
   }
 
   .col {
     display: flex;
     flex-direction: column;
-    gap: var(--central-gap);
+    gap: var(--face-gutter);
     min-width: 0;
     min-height: 0;
   }
   .col > :global(*) {
     min-height: 0;
   }
-  .boxes {
+  .knob,
+  .col > :global(.device-control),
+  .col > :global(.xy-pad),
+  .col > :global(.device-slider) {
+    flex: 1 1 0;
     display: flex;
-    flex-direction: column;
-    gap: var(--central-gap);
     min-height: 0;
   }
-  .boxes > :global(*),
-  .col > :global(.device-control),
-  .col > :global(.xy-pad) {
+  .knob > :global(*) {
     flex: 1 1 0;
+    min-width: 0;
   }
+  /* A medium knob and its caption (70px + 50, ADR-509). */
   .stereo-box {
-    flex: 2 1 0;
+    flex: 0 0 7.5rem;
   }
 
   .wave-glyph {
@@ -287,6 +321,10 @@
     min-height: var(--height-touch);
     font-size: 1rem;
     font-weight: 600;
+  }
+  /* A switch among knobs is one touch row (ADR-509). */
+  .switch.touch-row {
+    flex: 0 0 var(--height-touch);
   }
 
   :global([data-grammar="flat"]) .switch {

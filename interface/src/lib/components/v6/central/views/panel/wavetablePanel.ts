@@ -137,6 +137,7 @@ function modEnvPage(n: 2 | 3): PanelPage {
 			[
 				{
 					title: E,
+					face: 'slider',
 					controls: [
 						{ kind: 'box', param: `${E} Initial`, title: 'Initial' },
 						{ kind: 'box', param: `${E} Attack`, title: 'A' },
@@ -188,6 +189,8 @@ function lfoPage(n: 1 | 2): PanelPage {
 }
 
 export const WAVETABLE_PANEL: InstrumentPanel = {
+	// Knobs, but an envelope's stages stay boxes: their heights draw it (ADR-509).
+	boxFace: 'knob',
 	// Drawn by the view's own face.
 	frame: [],
 	pages: [
@@ -200,11 +203,11 @@ export const WAVETABLE_PANEL: InstrumentPanel = {
 			title: 'Mod Sources',
 			rows: [
 				[
-					{ title: 'Amp', page: 'amp', controls: adsr('Amp') },
-					{ title: 'Env 2', page: 'env2', controls: adsr('Env 2') }
+					{ title: 'Amp', page: 'amp', face: 'slider', controls: adsr('Amp') },
+					{ title: 'Env 2', page: 'env2', face: 'slider', controls: adsr('Env 2') }
 				],
 				[
-					{ title: 'Env 3', page: 'env3', controls: adsr('Env 3') },
+					{ title: 'Env 3', page: 'env3', face: 'slider', controls: adsr('Env 3') },
 					{
 						title: 'LFO 1',
 						page: 'lfo1',
@@ -228,7 +231,7 @@ export const WAVETABLE_PANEL: InstrumentPanel = {
 			id: 'amp',
 			title: 'Amp',
 			parent: 'mod',
-			rows: [[{ title: 'Amp', controls: adsr('Amp') }], [slopes('Amp'), loop('Amp')]]
+			rows: [[{ title: 'Amp', face: 'slider', controls: adsr('Amp') }], [slopes('Amp'), loop('Amp')]]
 		},
 		modEnvPage(2),
 		modEnvPage(3),

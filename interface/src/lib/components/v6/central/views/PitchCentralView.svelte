@@ -5,7 +5,8 @@
 	 * 2026-10-26): Pitch (+12, +7, -5, -12, high to low), Response and
 	 * Quality; then Tone, a value box (ADR-477). The grid's Pitch slider is
 	 * its Mix. Indices and labels in
-	 * `octaveParams.ts`, measured on the rig.
+	 * `octaveParams.ts`, measured on the rig. On the face grid (ADR-510),
+	 * four one-column sections, each named on the header line.
 	 *
 	 * A step on a ghost loads the device with its Mix at 50, dry and shifted
 	 * both at full level, and lands it at the head of the chain, as the Pitch
@@ -29,6 +30,10 @@
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+	import FaceGrid from '../FaceGrid.svelte';
+	import FaceSection from '../FaceSection.svelte';
+	import FaceSeam from '../FaceSeam.svelte';
+	import PanelEyebrow from './panel/PanelEyebrow.svelte';
 
 	const octave = useFxGridSlot('octave');
 	const octaveChain = useBassChainPosition(octave, 'PitchCentralView');
@@ -63,48 +68,52 @@
 </script>
 
 <div class="pitch-layout" data-view="octave" style="--btn-tint: {ink};">
-	{#each COLUMNS as column (column.index)}
-		<div class="pitch-col" class:slot-ghost={octave.isGhost}>
-			<div class="pitch-head text-xs font-bold text-center pb-1">{column.title}</div>
-			<div class="pitch-stack device-segmented seg-grid" role="radiogroup" aria-label={column.title}>
-				{#each column.steps as step (step.value)}
-					<button
-						class="device-segment pitch-btn"
-						class:active={current(column.index) === step.value}
-						role="radio"
-						aria-checked={current(column.index) === step.value}
-						onclick={() => send(column.index, step.value)}
-					>{step.label}</button>
-				{/each}
+	<FaceGrid sections={[1, 1, 1, 1]}>
+		{#each COLUMNS as column (column.index)}
+			<FaceSection span={1}>
+				{#snippet head()}<PanelEyebrow title={column.title} color={ink} />{/snippet}
+				<div class="pitch-col" class:slot-ghost={octave.isGhost}>
+					<div class="pitch-stack device-segmented seg-grid" role="radiogroup" aria-label={column.title}>
+						{#each column.steps as step (step.value)}
+							<button
+								class="device-segment pitch-btn"
+								class:active={current(column.index) === step.value}
+								role="radio"
+								aria-checked={current(column.index) === step.value}
+								onclick={() => send(column.index, step.value)}
+							>{step.label}</button>
+						{/each}
+					</div>
+				</div>
+			</FaceSection>
+			<FaceSeam ink={ink} />
+		{/each}
+		<FaceSection span={1}>
+			{#snippet head()}<PanelEyebrow title="Tone" color={ink} />{/snippet}
+			<div class="pitch-col tone" class:slot-ghost={octave.isGhost}>
+				<DeviceSlider
+					value={octave.paramValue(OCTAVE_TONE_PARAM) ?? OCTAVE_TONE_MAX}
+					title="Tone"
+					face="knob"
+					knobSize="l"
+					orientation="vertical"
+					min={0}
+					max={OCTAVE_TONE_MAX}
+					isGhost={octave.isGhost}
+					color={inkScheme}
+					readout={octave.paramDisplay(OCTAVE_TONE_PARAM)}
+					onInteraction={(v) => send(OCTAVE_TONE_PARAM, Math.max(0, Math.min(OCTAVE_TONE_MAX, v)))}
+				/>
 			</div>
-		</div>
-	{/each}
-	<div class="pitch-col" class:slot-ghost={octave.isGhost}>
-		<div class="pitch-head text-xs font-bold text-center pb-1">Tone</div>
-		<div class="tone">
-			<DeviceSlider
-				value={octave.paramValue(OCTAVE_TONE_PARAM) ?? OCTAVE_TONE_MAX}
-				title="Tone"
-				orientation="vertical"
-				min={0}
-				max={OCTAVE_TONE_MAX}
-				isGhost={octave.isGhost}
-				color={inkScheme}
-				readout={octave.paramDisplay(OCTAVE_TONE_PARAM)}
-				onInteraction={(v) => send(OCTAVE_TONE_PARAM, Math.max(0, Math.min(OCTAVE_TONE_MAX, v)))}
-			/>
-		</div>
-	</div>
+		</FaceSection>
+	</FaceGrid>
 </div>
 
 <style>
+	/* The face is the FaceGrid (ADR-510): four equal columns. */
 	.pitch-layout {
-		display: grid;
-		grid-template-columns: repeat(4, minmax(0, 1fr));
-		gap: var(--central-gap);
 		height: 100%;
 		width: 100%;
-		padding: var(--central-inset);
 	}
 
 	.pitch-col {
@@ -123,9 +132,7 @@
 	}
 
 	.tone {
-		flex: 1;
-		min-height: 0;
-		display: flex;
+		flex-direction: row;
 	}
 	.tone > :global(*) {
 		flex: 1 1 auto;
@@ -138,11 +145,6 @@
 		padding: 0 0.25rem;
 		font-size: 1rem;
 		font-weight: 700;
-	}
-
-	.pitch-head {
-		color: var(--muted-foreground);
-		font-weight: var(--font-weight-medium);
 	}
 
 	/* As the Variation view's tabs: the name in the device ink, the lit one

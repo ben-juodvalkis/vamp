@@ -251,8 +251,11 @@
 	}
 	/* A tile: the picture alone under the pad's title, without the guides
 	   (the dashed Decay, crossover and climb lines) or the faint rest of each
-	   ridge (the user, 2026-11-05). */
+	   ridge (the user, 2026-11-05), the time ticks or the dry hit's line
+	   (2026-11-06). */
 	.compact .readouts,
+	.compact .tick,
+	.compact .dry,
 	.compact .tick-label,
 	.compact .dry-label,
 	.compact .crossover-label,

@@ -1,7 +1,8 @@
 <script lang="ts">
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
-  import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
+  import ScrubTabs from '../../device-panel/ScrubTabs.svelte';
+  import type { ControlGlyphName } from '../../device-panel/ControlGlyph.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -9,14 +10,16 @@
   import { familyScheme } from '$lib/config/devicePresets';
   import { SECTION_SWITCH_ON_ABOVE } from '$lib/services/drumVirtualMacros';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
-  import SectionDivider from '../SectionDivider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
-  import EnvelopeGroup from './EnvelopeGroup.svelte';
+  import ChoicePicker from '../ChoicePicker.svelte';
+  import AnalogPages from './analog/AnalogPages.svelte';
+  import FaceGrid from '../FaceGrid.svelte';
+  import FaceSection from '../FaceSection.svelte';
+  import FaceSeam from '../FaceSeam.svelte';
   import InstrumentPanelView from './panel/InstrumentPanelView.svelte';
   import PanelEyebrow from './panel/PanelEyebrow.svelte';
   import { usePanelParams } from './panel/usePanelParams.svelte';
   import { ANALOG_PANEL } from './panel/analogPanel';
-  import { analogFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
   import {
     ANALOG_VOICE,
     ANALOG_VOICES,
@@ -36,10 +39,6 @@
     ANALOG_FILTER_FAMILIES,
     ANALOG_DRIVES,
     filterTypeForFamily,
-    driveAmount,
-    driveIsAsym,
-    driveForAmount,
-    driveToggleAsym,
     routeOf,
     nextRouteBalance,
     type AnalogVoice
@@ -92,6 +91,14 @@
 
   /** The pages behind the face's eyebrows, the shown voice's, by Live's names (ADR-487). */
   const panelParams = usePanelParams(() => device);
+
+  /**
+   * The section page on screen in place of the face, or none. Analog draws
+   * its own pages (`analog/AnalogPages.svelte`, ADR-510) rather than the
+   * panel's rule-laid ones, so the face's eyebrows open these.
+   */
+  let analogPage = $state<string | null>(null);
+  const openAnalogPage = (page: string) => (analogPage = page);
   let p = $derived(ANALOG_VOICE[voice]);
   let voiceInk = $derived(sourceInk(voice));
 
@@ -158,6 +165,8 @@
   }
 
   const octaveLabel = (n: number) => (n > 0 ? `+${n}` : `${n}`);
+  /** Octaves top to bottom, +3 first. */
+  const OCTAVES_UP = [...ANALOG_OCTAVES].reverse();
 
   /** One cycle each, peak y=2, floor y=10, in Drift's glyph grammar. */
   const SHAPE_GLYPHS: Record<string, string> = {
@@ -179,37 +188,30 @@
   let filterFamily = $derived(Math.floor(filterType / 2));
   let drive = $derived(Math.round(raw(p.drive, 0)));
   let f2Slave = $derived(raw(ANALOG_F2_SLAVE, 0) >= 0.5);
-  let filterOn = $derived(raw(p.filterOn, 1) >= 0.5);
-  let filterCurve = $derived(analogFilterCurve(filterType));
+  /** Live's drive names, for the face's chooser: the value written is the index. */
+  const DRIVE_NAMES = [...ANALOG_DRIVES];
 
-  function handleFilterXY(x: number, y: number) {
-    writeNorm(p.freq, x);
-    writeNorm(p.res, y);
-  }
-
-  // ---- envelopes: Amp over Filter, both in view (ADR-477). The first box
-  // of each is the stage that envelope drives — the amp's level, the
-  // filter's env amount.
+  // ---- envelopes: Amp over Filter, both in view (ADR-477), A D S R each.
+  // What each drives sits beside it as a knob since ADR-510's face: the
+  // amp's level in the Osc card, the filter envelope's amount on Filter.
 
   let envelopes = $derived([
     {
-      title: 'Amp Envelope',
+      title: 'Amp',
       stages: [
-        { index: p.ampLevel, title: 'Lvl', icon: 'gain' as const, atRest: 0.87, bipolar: false },
-        { index: p.aegAttack, title: 'A', icon: 'attack' as const, atRest: 0, bipolar: false },
-        { index: p.aegDecay, title: 'D', icon: 'decay' as const, atRest: 0.6, bipolar: false },
-        { index: p.aegSustain, title: 'S', icon: 'sustain' as const, atRest: 0, bipolar: false },
-        { index: p.aegRelease, title: 'R', icon: 'release' as const, atRest: 0.6, bipolar: false }
+        { index: p.aegAttack, title: 'A', icon: 'attack' as const, atRest: 0 },
+        { index: p.aegDecay, title: 'D', icon: 'decay' as const, atRest: 0.6 },
+        { index: p.aegSustain, title: 'S', icon: 'sustain' as const, atRest: 0 },
+        { index: p.aegRelease, title: 'R', icon: 'release' as const, atRest: 0.6 }
       ]
     },
     {
-      title: 'Filter Envelope',
+      title: 'Filter',
       stages: [
-        { index: p.envAmount, title: 'Amt', icon: 'depth' as const, atRest: 0.5, bipolar: true },
-        { index: p.fegAttack, title: 'A', icon: 'attack' as const, atRest: 0, bipolar: false },
-        { index: p.fegDecay, title: 'D', icon: 'decay' as const, atRest: 0.6, bipolar: false },
-        { index: p.fegSustain, title: 'S', icon: 'sustain' as const, atRest: 0, bipolar: false },
-        { index: p.fegRelease, title: 'R', icon: 'release' as const, atRest: 0.6, bipolar: false }
+        { index: p.fegAttack, title: 'A', icon: 'attack' as const, atRest: 0 },
+        { index: p.fegDecay, title: 'D', icon: 'decay' as const, atRest: 0.6 },
+        { index: p.fegSustain, title: 'S', icon: 'sustain' as const, atRest: 0 },
+        { index: p.fegRelease, title: 'R', icon: 'release' as const, atRest: 0.6 }
       ]
     }
   ]);
@@ -244,22 +246,75 @@
   </svg>
 {/snippet}
 
+<!-- A knob on the face: medium, no caption (its rows are ~100px, a
+     captioned medium knob needs ~126), its mark or glyph saying which. -->
+{#snippet faceKnob(o: { value: number; title: string; mark?: string; icon?: ControlGlyphName; ink: typeof analogInk; ghost?: boolean; readout?: string; bipolar?: boolean; write: (v: number) => void })}
+  <div class="r knob-cell" data-knob={o.title}>
+    <DeviceSlider
+      value={o.value}
+      title={o.title}
+      face="knob"
+      knobSize="m"
+      knobCaption={false}
+      knobMark={o.mark}
+      icon={o.icon}
+      orientation="vertical"
+      labelSize="small"
+      min={o.bipolar ? -1 : 0}
+      max={1}
+      centerOrigin={o.bipolar}
+      centerValue={o.bipolar ? 0 : undefined}
+      isGhost={o.ghost}
+      color={o.ink}
+      readout={o.readout}
+      onInteraction={o.write}
+    />
+  </div>
+{/snippet}
+
 <div class="analog-root h-full w-full overflow-hidden relative">
   {#if instrument && device}
     <InstrumentPanelView panel={ANALOG_PANEL} params={panelParams} color={analogInk}>
-    {#snippet face(openPage: (page: string) => void)}
-    <div class="h-full w-full flex min-h-0 p-(--central-inset)" style="gap: var(--central-gap);">
-
+    {#snippet face()}
+    {#if analogPage}
+    <AnalogPages
+      page={analogPage}
+      params={panelParams}
+      ink={analogInk}
+      voiceInks={{ 1: sourceInk(1), 2: sourceInk(2) }}
+      {noiseInk}
+      onOpen={openAnalogPage}
+      onBack={() => (analogPage = null)}
+      {shapeGlyph}
+    />
+    {:else}
+    <!-- One grid, eleven columns (ADR-510), ~80px each so a medium knob
+         is its full 70px: Osc 4 (the voice's oscillator, and the source
+         levels with Noise's route), Filter 2 (and the voice's amp level,
+         the stage after it), Envelopes 4, Global 1, Osc → Filter → Amp as
+         Live runs them. Every column has the same three rows, a touch row
+         and two knob rows, so every knob on the face sits on one of two
+         lines. The filter's pad is not here: the chain cell draws Filter
+         1's, and the Filter page draws the shown voice's. -->
+    <FaceGrid sections={[4, 2, 4, 1]} data-analog-face={voice}>
       <!-- THE VOICE CARD. Analog is two synths, Osc → Filter → Amp twice,
-           so the switch in its first cell flips the whole half — this
-           card, the filter and the envelope together — and the colour
-           says which half is up. Rows: shapes (the switch, four shapes,
-           the routing chip), octave, Sub/Sync, level. -->
-      <div class="voice-card flex-[2] min-w-[196px] min-h-0 flex flex-col gap-(--central-gap)">
-        <PanelEyebrow title="Osc {voice}" page="osc{voice}" onOpen={openPage} color={voiceInk.primary} />
-        <HostedSwapPill />
-        <div class="osc-body flex-1 min-h-0" style={oscOn ? '' : 'opacity: var(--opacity-ghost);'}>
-          <div class="osc-badge-cell">
+           so the switch in its first cell flips the whole half — this card,
+           the filter and the envelopes together — and the colour says which
+           half is up. The last column is the levels: the oscillator's in
+           the voice's colour, Noise (the one source both halves share) in
+           its own red, Noise's route over them, Noise's eyebrow on top. -->
+      <FaceSection span={4}>
+        {#snippet head()}
+          <div class="head-cols">
+            <span class="head-col face-span-3"><PanelEyebrow title="Osc {voice}" page="osc{voice}" onOpen={openAnalogPage} color={voiceInk.primary} /></span>
+            <span class="head-col"><PanelEyebrow title="Noise" page="noise" onOpen={openAnalogPage} color={analogInk.primary} /></span>
+          </div>
+        {/snippet}
+        <!-- The switch, the four shapes two by two, and where the
+             oscillator goes: Filter 1, 2 or both (its Balance, which is what
+             makes Analog's two halves cross). -->
+        <div class="col">
+          <div class="r1">
             <button
               class="osc-badge"
               style="--osc-badge-ink: {voiceInk.primary};"
@@ -274,285 +329,196 @@
               </span>
             </button>
           </div>
-          <!-- The four shapes, one pick-one tab, two by two beside the
-               switch and the routing chip. -->
-          <div class="device-segmented seg-grid shape-tab" style="--btn-tint: {voiceInk.primary};">
-          {#each ANALOG_SHAPES as label, value}
-            <button
-              class="device-segment wave-button"
-              class:active={shape === value}
-              title={label}
-              aria-label="Osc {voice} shape {label}"
-              aria-pressed={shape === value}
-              onclick={() => writeOsc(p.shape, value)}
+          <div class="r" class:osc-off={!oscOn}>
+            <ScrubTabs
+              options={[0, 1, 2, 3]}
+              selected={shape}
+              onSelect={(_, value) => writeOsc(p.shape, value)}
+              cols={2}
+              tint={voiceInk.primary}
+              inked
+              label={(value) => `Osc ${voice} shape ${ANALOG_SHAPES[value]}`}
+              class="h-full"
             >
-              {@render shapeGlyph(label)}
-            </button>
-          {/each}
+              {#snippet item(value)}{@render shapeGlyph(ANALOG_SHAPES[value])}{/snippet}
+            </ScrubTabs>
           </div>
-          <!-- Where this oscillator goes: Filter 1, Filter 2 or both — its
-               Balance, which is what makes Analog's two halves cross. -->
-          <button
-            class="physical-button route-button"
-            style:grid-column="1"
-            style:grid-row="2"
-            style="--btn-tint: {voiceInk.primary};"
-            title="Osc {voice} Balance"
-            aria-label="Osc {voice} to {route}"
-            onclick={() => write(p.balance, nextRouteBalance(raw(p.balance, 1)))}
+          <div class="r sw-cell">
+            <button
+              class="physical-button route-button route-chip"
+              style="--btn-tint: {voiceInk.primary};"
+              title="Osc {voice} Balance"
+              aria-label="Osc {voice} to {route}"
+              onclick={() => write(p.balance, nextRouteBalance(raw(p.balance, 1)))}
+            >
+              <span class="route-arrow">→</span>{route}
+            </button>
+          </div>
+        </div>
+        <!-- Octaves stand +3 at the top: pitch climbs as the eye does. -->
+        <div class="col" class:osc-off={!oscOn}>
+          <ScrubTabs
+            options={OCTAVES_UP}
+            selected={OCTAVES_UP.indexOf(octave as (typeof OCTAVES_UP)[number])}
+            onSelect={(_, n) => writeOsc(p.octave, n)}
+            cols={1}
+            tint={voiceInk.primary}
+            inked
+            label={(n) => `Osc ${voice} octave ${octaveLabel(n)}`}
+            class="h-full"
           >
-            <span class="route-arrow">→</span>{route}
-          </button>
+            {#snippet item(n)}{octaveLabel(n)}{/snippet}
+          </ScrubTabs>
+        </div>
+        <!-- Sub or Sync, how much, and pulse width (lit on Rect, the one
+             shape it shapes). -->
+        <div class="col">
+          <div class="r1" class:osc-off={!oscOn}>
+            <ScrubTabs
+              options={[0, 1]}
+              selected={oscMode}
+              onSelect={(_, value) => writeOsc(p.mode, value)}
+              cols={2}
+              tint={voiceInk.primary}
+              inked
+              label={(value) => `Osc ${voice} ${value === 1 ? 'Sync' : 'Sub'}`}
+              class="h-full"
+              style="--scrub-font-size: 0.75rem;"
+            >
+              {#snippet item(value)}{value === 1 ? 'Sync' : 'Sub'}{/snippet}
+            </ScrubTabs>
+          </div>
+          {@render faceKnob({ value: norm(p.subSync, 0), title: oscMode === 1 ? 'Sync' : 'Sub', mark: oscMode === 1 ? 'Syn' : 'Sub', ink: voiceInk, ghost: !oscOn, readout: display(p.subSync), write: (v) => writeOsc(p.subSync, v) })}
+          {@render faceKnob({ value: norm(p.pw, 0.5), title: 'PW', mark: 'PW', ink: voiceInk, ghost: !oscOn || shape !== ANALOG_RECT, readout: display(p.pw), write: (v) => writeOsc(p.pw, v) })}
+        </div>
+        <!-- The levels. Noise's switch is its level, Drift's rule: up turns
+             it on, the floor turns it off, from a finger only. -->
+        <div class="col">
+          <div class="r1">
+            <button
+              class="physical-button route-button route-chip"
+              style="--btn-tint: {noiseInk.primary};"
+              title="Noise Balance"
+              aria-label="Noise to {noiseRoute}"
+              onclick={() => write(ANALOG_NOISE_BALANCE, nextRouteBalance(raw(ANALOG_NOISE_BALANCE, 0.5)))}
+            >
+              <span class="route-arrow">→</span>{noiseRoute}
+            </button>
+          </div>
+          {@render faceKnob({ value: norm(p.level, 0.81), title: 'Level', mark: 'Lvl', ink: voiceInk, ghost: !oscOn, readout: display(p.level), write: (v) => writeOsc(p.level, v) })}
+          {@render faceKnob({ value: noiseLevel, title: 'Noise', icon: 'noise', ink: noiseInk, ghost: !noiseOn, readout: display(ANALOG_NOISE_LEVEL), write: (v) => {
+            writeNorm(ANALOG_NOISE_LEVEL, v);
+            writeSwitch(ANALOG_NOISE_ON, v > SECTION_SWITCH_ON_ABOVE, noiseOn);
+          } })}
+        </div>
+      </FaceSection>
+      <FaceSeam ink={voiceInk.primary} />
 
-          <div class="device-segmented octave-row" style="--btn-tint: {voiceInk.primary}; grid-template-columns: repeat({ANALOG_OCTAVES.length}, 1fr);">
-            {#each ANALOG_OCTAVES as n}
+      <!-- The voice's filter: its drive and type (five families; a second
+           tap on the lit one flips its slope), whether Filter 2's cutoff
+           follows Filter 1's, the filter envelope's amount, and the amp's
+           level after the filter. -->
+      <FaceSection span={2}>
+        {#snippet head()}<PanelEyebrow title="Filter {voice}" page="filter{voice}" onOpen={openAnalogPage} color={voiceInk.primary} />{/snippet}
+        <div class="col">
+          <div class="r1 drive-cell">
+            <ChoicePicker options={DRIVE_NAMES} selected={drive} onSelect={(i) => write(p.drive, i)} label="Filter {voice} drive" tint={voiceInk.primary} />
+          </div>
+          <div class="r23 device-segmented family-tab" style="--btn-tint: {voiceInk.primary};">
+            {#each ANALOG_FILTER_FAMILIES as family, i}
               <button
-                class="device-segment octave-step"
-                class:active={octave === n}
-                aria-label="Osc {voice} octave {octaveLabel(n)}"
-                aria-pressed={octave === n}
-                onclick={() => writeOsc(p.octave, n)}
-              >{octaveLabel(n)}</button>
+                class="device-segment strip-step"
+                class:active={filterFamily === i}
+                title={ANALOG_FILTER_TYPES[filterFamily === i ? filterType : i * 2 + (filterType % 2)]}
+                aria-label="Filter {voice} {ANALOG_FILTER_TYPES[filterFamily === i ? filterType : i * 2 + (filterType % 2)]}"
+                aria-pressed={filterFamily === i}
+                onclick={() => write(p.filterType, filterTypeForFamily(filterType, i))}
+              >
+                <span>{family.label}{#if filterFamily === i}<span class="strip-sub"> {family.slopes[filterType % 2]}</span>{/if}</span>
+              </button>
             {/each}
           </div>
-
-          <!-- Sub or Sync, and how much. Pulse width joins the row only on
-               Rect, the one shape it shapes. -->
-          <div class="osc-row">
-            <div class="device-segmented mode-row" style="--btn-tint: {voiceInk.primary};">
-              {#each ['Sub', 'Sync'] as label, value}
-                <button
-                  class="device-segment mode-step"
-                  class:active={oscMode === value}
-                  aria-label="Osc {voice} {label}"
-                  aria-pressed={oscMode === value}
-                  onclick={() => writeOsc(p.mode, value)}
-                >{label}</button>
-              {/each}
-            </div>
-            <div class="flex-1 min-w-0">
-              <DeviceSlider
-                value={norm(p.subSync, 0)}
-                title={oscMode === 1 ? 'Sync' : 'Sub'}
-                icon={oscMode === 1 ? 'oscillator' : 'boom'}
-                orientation="horizontal"
-                labelSize="small"
-                isGhost={!oscOn}
-                color={voiceInk}
-                readout={display(p.subSync)}
-                onInteraction={(v) => writeOsc(p.subSync, v)}
-              />
-            </div>
-            {#if shape === ANALOG_RECT}
-              <div class="flex-1 min-w-0">
-                <DeviceSlider
-                  value={norm(p.pw, 0.5)}
-                  title="PW"
-                  icon="shape"
-                  orientation="horizontal"
-                  labelSize="small"
-                  isGhost={!oscOn}
-                  color={voiceInk}
-                  readout={display(p.pw)}
-                  onInteraction={(v) => writeOsc(p.pw, v)}
-                />
-              </div>
-            {/if}
-          </div>
-
-          <div class="osc-row">
-            <DeviceSlider
-              value={norm(p.level, 0.81)}
-              title="Level"
-              icon="gain"
-              orientation="horizontal"
-              labelSize="small"
-              isGhost={!oscOn}
-              color={voiceInk}
-              readout={display(p.level)}
-              onInteraction={(v) => writeOsc(p.level, v)}
-            />
-          </div>
         </div>
-      </div>
-
-      <!-- Noise is the one source both halves share, so it stands outside
-           the voice card in its own red. Its switch is its level, Drift's
-           rule: up turns it on, the floor turns it off, from a finger only.
-           Glide shares the column as a box under it (ADR-477): it had a
-           full-height column of its own, which the filter has now. -->
-      <div class="noise-col flex-none min-h-0 flex flex-col gap-(--central-gap)">
-        <PanelEyebrow title="Noise" page="noise" onOpen={openPage} color={analogInk.primary} />
-        <div class="flex-1 min-h-0 flex flex-col gap-2">
-          <div class="flex-1 min-h-0">
-            <DeviceSlider
-              value={noiseLevel}
-              title="Noise"
-              icon="noise"
-              orientation="vertical"
-              labelSize="small"
-              isGhost={!noiseOn}
-              color={noiseInk}
-              readout={display(ANALOG_NOISE_LEVEL)}
-              onInteraction={(v) => {
-                writeNorm(ANALOG_NOISE_LEVEL, v);
-                writeSwitch(ANALOG_NOISE_ON, v > SECTION_SWITCH_ON_ABOVE, noiseOn);
-              }}
-            />
-          </div>
-          <button
-            class="physical-button route-button route-chip flex-none"
-            style="--btn-tint: {noiseInk.primary};"
-            title="Noise Balance"
-            aria-label="Noise to {noiseRoute}"
-            onclick={() => write(ANALOG_NOISE_BALANCE, nextRouteBalance(raw(ANALOG_NOISE_BALANCE, 0.5)))}
-          >
-            <span class="route-arrow">→</span>{noiseRoute}
-          </button>
-        </div>
-
-        <!-- Glide, its switch its level like Noise's. -->
-        <div class="flex-1 min-h-0">
-          <DeviceSlider
-            value={glideOn ? glideTime : 0}
-            title="Glide"
-            icon="glide"
-            orientation="vertical"
-            labelSize="small"
-            isGhost={!glideOn}
-            color={analogInk}
-            readout={display(ANALOG_GLIDE_TIME)}
-            onInteraction={(v) => {
-              writeSwitch(ANALOG_GLIDE_ON, v > SECTION_SWITCH_ON_ABOVE, glideOn);
-              if (v > SECTION_SWITCH_ON_ABOVE) writeNorm(ANALOG_GLIDE_TIME, v);
-            }}
-          />
-        </div>
-      </div>
-
-      <SectionDivider orientation="vertical" ink={voiceInk.primary} />
-
-      <!-- The voice's filter: cutoff across, resonance up, then its type
-           (five families; a second tap on the lit one flips its slope) and
-           its drive (amount, and Asym lit for Live's asymmetric three). -->
-      <div class="filter-col flex-[3] min-w-0 min-h-0 flex flex-col" style="gap: var(--central-gap);">
-        <PanelEyebrow title="Filter {voice}" page="filter{voice}" onOpen={openPage} color={voiceInk.primary} />
-        <div class="flex-1 min-h-0 relative">
-          <DeviceXY
-            xValue={norm(p.freq, 1)}
-            yValue={norm(p.res, 0)}
-            title="Filter {voice}"
-            showCurve={filterOn}
-            curveType={filterCurve.curveType}
-            curveOrder={filterCurve.order}
-            curveFreqRange={FILTER_FREQ_RANGE.analog}
-            onInteraction={handleFilterXY}
-            color={voiceInk}
-          />
-          {#if voice === 2}
-            <!-- F2 Slave: Filter 2's cutoff follows Filter 1's. A switch,
-                 not a caption, so it can be turned off from here. -->
+        <div class="col">
+          <!-- F2 Slave: Filter 2's cutoff follows Filter 1's. One switch
+               for both halves, so it reads the same on either. -->
+          <div class="r1">
             <button
               class="physical-button slave-chip"
               class:active={f2Slave}
               style="--btn-tint: {voiceInk.primary};"
+              title="Filter 2's cutoff follows Filter 1's"
+              aria-label="F2 follows F1"
               aria-pressed={f2Slave}
               onclick={() => write(ANALOG_F2_SLAVE, f2Slave ? 0 : 1)}
-            >Follows F1</button>
-          {/if}
+            >F2 Follow</button>
+          </div>
+          {@render faceKnob({ value: raw(p.envAmount, 0), title: 'Env', mark: 'Env', bipolar: true, ink: voiceInk, readout: display(p.envAmount), write: (v) => write(p.envAmount, Math.max(-1, Math.min(1, v))) })}
+          {@render faceKnob({ value: norm(p.ampLevel, 0.87), title: 'Amp', mark: 'Vol', ink: voiceInk, readout: display(p.ampLevel), write: (v) => writeNorm(p.ampLevel, v) })}
         </div>
-        <div class="device-segmented strip-row flex-none" style="--btn-tint: {voiceInk.primary}; grid-template-columns: repeat({ANALOG_FILTER_FAMILIES.length}, 1fr);">
-          {#each ANALOG_FILTER_FAMILIES as family, i}
-            <button
-              class="device-segment strip-step"
-              class:active={filterFamily === i}
-              title={ANALOG_FILTER_TYPES[filterFamily === i ? filterType : i * 2 + (filterType % 2)]}
-              aria-label="Filter {voice} {ANALOG_FILTER_TYPES[filterFamily === i ? filterType : i * 2 + (filterType % 2)]}"
-              aria-pressed={filterFamily === i}
-              onclick={() => write(p.filterType, filterTypeForFamily(filterType, i))}
-            >
-              <span>{family.label}</span>
-              {#if filterFamily === i}<span class="strip-sub">{family.slopes[filterType % 2]}</span>{/if}
-            </button>
-          {/each}
-        </div>
-        <div class="device-segmented strip-row flex-none" style="--btn-tint: {voiceInk.primary}; grid-template-columns: repeat(5, 1fr);">
-          {#each [0, 1, 2, 3] as amount}
-            <button
-              class="device-segment strip-step"
-              class:active={driveAmount(drive) === amount}
-              title={ANALOG_DRIVES[driveForAmount(drive, amount)]}
-              aria-label="Filter {voice} drive {ANALOG_DRIVES[driveForAmount(drive, amount)]}"
-              aria-pressed={driveAmount(drive) === amount}
-              onclick={() => write(p.drive, driveForAmount(drive, amount))}
-            >{amount === 0 ? 'Off' : amount}</button>
-          {/each}
-          <button
-            class="device-segment strip-step"
-            class:active={driveIsAsym(drive)}
-            title="Asymmetric drive"
-            aria-label="Filter {voice} asymmetric drive"
-            aria-pressed={driveIsAsym(drive)}
-            onclick={() => write(p.drive, driveToggleAsym(drive))}
-          >Asym</button>
-        </div>
-      </div>
+      </FaceSection>
+      <FaceSeam ink={voiceInk.primary} />
 
-      <!-- The voice's two envelopes, Amp over Filter, as value boxes
-           (ADR-477). Both are in view, so there is no Amp/Filter switch:
-           each box is half a fader's height and as fine, since a box sweeps
-           its range over the same finger travel whatever its size. A seam
-           between them; the one after them is the voicing column's. -->
-      <div class="env-col flex-none min-h-0 flex gap-(--central-gap)">
-        <SectionDivider orientation="vertical" ink={voiceInk.primary} />
-        <div class="flex-1 min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
-          <PanelEyebrow title="Envelopes" page="env{voice}" onOpen={openPage} color={voiceInk.primary} />
-          {#each envelopes as envelope, i (envelope.title)}
-            {#if i > 0}<SectionDivider orientation="horizontal" ink={voiceInk.primary} />{/if}
-            <EnvelopeGroup ink={voiceInk.primary} title={envelope.title} edges="none">
+      <!-- The swap pill over the voice's two envelopes, Amp over Filter, as
+           value boxes (ADR-477), a stage a column: their heights draw each
+           envelope. -->
+      <FaceSection span={4}>
+        {#snippet head()}<PanelEyebrow title="Envelopes" page="env{voice}" onOpen={openAnalogPage} color={voiceInk.primary} />{/snippet}
+        <div class="env-grid face-span-all">
+          <div class="env-pill"><HostedSwapPill /></div>
+          {#each envelopes as envelope (envelope.title)}
+            <div class="env-row" data-envelope={envelope.title}>
+              <span class="env-label" style="color: {voiceInk.primary};">{envelope.title}</span>
               {#each envelope.stages as stage (stage.index)}
-                <div class="env-slider min-h-0 h-full">
+                <div class="min-h-0 h-full">
                   <DeviceSlider
-                    value={stage.bipolar ? raw(stage.index, 0) : norm(stage.index, stage.atRest)}
+                    value={norm(stage.index, stage.atRest)}
                     title={stage.title}
                     icon={stage.icon}
                     orientation="vertical"
                     labelSize="small"
                     color={voiceInk}
-                    min={stage.bipolar ? -1 : 0}
-                    max={1}
-                    centerOrigin={stage.bipolar}
-                    centerValue={stage.bipolar ? 0 : undefined}
                     readout={display(stage.index)}
-                    onInteraction={(v) => (stage.bipolar ? write(stage.index, Math.max(-1, Math.min(1, v))) : writeNorm(stage.index, v))}
+                    onInteraction={(v) => writeNorm(stage.index, v)}
                   />
                 </div>
               {/each}
-            </EnvelopeGroup>
+            </div>
           {/each}
         </div>
-      </div>
+      </FaceSection>
+      <FaceSeam ink={analogInk.primary} />
 
-      <SectionDivider orientation="vertical" ink={analogInk.primary} />
-
-      <!-- Mono / Poly and the two voicing switches, the column's full
-           height. Vibrato is a switch here because its depth rides the mod
-           wheel. The wheels under them left for the MidiWheels device's
-           chain cell (user, 2026-10-26). -->
-      <div class="voicing-col flex-none flex flex-col gap-(--central-gap) min-h-0">
-        <PanelEyebrow title="Global" page="global" onOpen={openPage} color={analogInk.primary} />
-        <div class="grid grid-cols-2 grid-rows-2 gap-1 flex-1 min-h-0">
-          <!-- Mono or Poly is one choice, a two-cell tab across the row;
-               Uni and Vib under it are switches of their own. -->
-          <div class="col-span-2 device-segmented seg-grid grid grid-cols-2" style="--btn-tint: {analogInk.primary};">
-            <button class="device-segment mode-button px-1 text-center" class:active={isMono} aria-pressed={isMono} onclick={() => setMono(true)}>Mono</button>
-            <button class="device-segment mode-button px-1 text-center" class:active={!isMono} aria-pressed={!isMono} onclick={() => setMono(false)}>Poly</button>
+      <!-- Mono or Poly, one choice; Uni and Vib switches of their own (Vib
+           a switch because its depth rides the mod wheel); Glide, its switch
+           its level as Noise's is. -->
+      <FaceSection span={1}>
+        {#snippet head()}<PanelEyebrow title="Global" page="global" onOpen={openAnalogPage} color={analogInk.primary} />{/snippet}
+        <div class="col">
+          <div class="r1">
+            <ScrubTabs
+              options={[true, false]}
+              selected={isMono ? 0 : 1}
+              onSelect={(_, mono) => setMono(mono)}
+              cols={2}
+              tint={analogInk.primary}
+              label={(mono) => (mono ? 'Mono' : 'Poly')}
+              class="h-full"
+              style="--scrub-font-size: 0.6875rem; --scrub-padding: 0;"
+            />
           </div>
-          <button class="physical-button mode-button px-1 text-center" class:active={unisonOn} style="--btn-tint: {analogInk.primary};" aria-pressed={unisonOn} onclick={() => write(ANALOG_UNISON_ON, unisonOn ? 0 : 1)}>Uni</button>
-          <button class="physical-button mode-button px-1 text-center" class:active={vibOn} style="--btn-tint: {analogInk.primary};" aria-pressed={vibOn} onclick={() => write(ANALOG_VIB_ON, vibOn ? 0 : 1)}>Vib</button>
+          <div class="r sw-pair">
+            <button class="physical-button mode-button" class:active={unisonOn} style="--btn-tint: {analogInk.primary};" aria-pressed={unisonOn} onclick={() => write(ANALOG_UNISON_ON, unisonOn ? 0 : 1)}>Uni</button>
+            <button class="physical-button mode-button" class:active={vibOn} style="--btn-tint: {analogInk.primary};" aria-pressed={vibOn} onclick={() => write(ANALOG_VIB_ON, vibOn ? 0 : 1)}>Vib</button>
+          </div>
+          {@render faceKnob({ value: glideOn ? glideTime : 0, title: 'Glide', icon: 'glide', ink: analogInk, ghost: !glideOn, readout: display(ANALOG_GLIDE_TIME), write: (v) => {
+            writeSwitch(ANALOG_GLIDE_ON, v > SECTION_SWITCH_ON_ABOVE, glideOn);
+            if (v > SECTION_SWITCH_ON_ABOVE) writeNorm(ANALOG_GLIDE_TIME, v);
+          } })}
         </div>
-      </div>
-    </div>
+      </FaceSection>
+    </FaceGrid>
+    {/if}
     {/snippet}
     </InstrumentPanelView>
   {:else}
@@ -561,50 +527,77 @@
 </div>
 
 <style>
-  .analog-root {
-    --analog-slider-w: 56px;
-    --analog-env-w: var(--height-touch);
-  }
-
-  /* Shapes two rows (the badge over the route chip, then the shapes' 2 x 2
-     tab across two columns), then three bands: octave, Sub/Sync, Level.
-     One grid, so every row is one height. Its gaps are 4px: at 8px the five
-     rows came to 41px on the 12.9-inch, under the 44px touch floor. */
-  .osc-body {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-rows: repeat(5, minmax(0, 1fr));
-    gap: var(--spacing-xs);
-  }
-  .octave-row,
-  .osc-row {
-    grid-column: 1 / -1;
-  }
-  .osc-row {
+  /* The face's layout is the FaceGrid (ADR-510): eleven equal columns,
+     Osc 4, Filter 2, Envelopes 4, Global 1. Every column is three rows:
+     a touch row (`.r1`), then two equal rows (`.r`), or the two together
+     (`.r23`), or the whole height. */
+  .col {
     display: flex;
-    gap: var(--spacing-xs);
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    min-width: 0;
+    min-height: 0;
+  }
+  .r1 {
+    flex: none;
+    height: var(--height-touch);
+    min-width: 0;
+  }
+  .r1 > .physical-button {
+    width: 100%;
+    height: 100%;
+  }
+  .r {
+    flex: 1 1 0;
     min-height: 0;
     min-width: 0;
   }
-  .shape-tab {
-    grid-column: 2 / span 2;
-    grid-row: 1 / span 2;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: repeat(2, minmax(0, 1fr));
+  .r23 {
+    flex: 1 1 0;
     min-height: 0;
-    min-width: 0;
   }
-  .wave-button,
+  .osc-off {
+    opacity: var(--opacity-ghost);
+  }
+  /* A switch: one touch row, centred in its row. */
+  .sw-cell {
+    display: flex;
+    align-items: center;
+  }
+  .sw-cell > button {
+    width: 100%;
+    height: var(--height-touch);
+  }
+  /* Two switches stacked in one knob row: Uni over Vib. */
+  .sw-pair {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--spacing-sm);
+  }
+  .sw-pair > button {
+    flex: none;
+    height: var(--height-touch);
+  }
+  .route-chip {
+    height: var(--height-touch);
+  }
+  .drive-cell {
+    display: flex;
+    align-items: center;
+  }
+  .drive-cell > :global(*) {
+    width: 100%;
+  }
   .route-button {
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 100%;
+    height: 100%;
     padding: 2px;
     min-height: 0;
     min-width: 0;
-  }
-  .route-button {
     font-size: 0.75rem;
     font-weight: 600;
     gap: 2px;
@@ -613,42 +606,22 @@
   .route-arrow {
     opacity: 0.7;
   }
-  .route-chip {
-    height: var(--height-touch);
-  }
   .wave-glyph {
     width: 100%;
     height: 100%;
     max-height: 22px;
   }
 
-  .octave-row,
-  .mode-row,
-  .strip-row {
+  /* The filter's five families down a column, the lit one naming its slope. */
+  .family-tab {
     display: grid;
+    grid-auto-rows: minmax(0, 1fr);
+    min-height: 0;
   }
-  .mode-row {
-    grid-template-columns: repeat(2, 1fr);
+  .family-tab .device-segment + .device-segment {
+    border-left: 0;
+    border-top: 1px solid var(--line-faint);
   }
-  .mode-row {
-    flex: 0 0 auto;
-    width: 6rem;
-  }
-  .octave-row .device-segment + .device-segment,
-  .mode-row .device-segment + .device-segment,
-  .strip-row .device-segment + .device-segment {
-    border-top: 0;
-    border-left: 1px solid var(--line-faint);
-  }
-  .device-segment.active,
-  .device-segment.active + .device-segment {
-    border-left-color: transparent;
-  }
-  .strip-row {
-    height: var(--height-touch);
-  }
-  .octave-step,
-  .mode-step,
   .strip-step {
     display: flex;
     flex-direction: column;
@@ -660,77 +633,73 @@
     font-size: 0.75rem;
     font-weight: 600;
     line-height: 1.1;
-    font-variant-numeric: tabular-nums;
   }
   .strip-sub {
     font-size: 0.625rem;
     font-weight: 500;
     opacity: 0.85;
   }
-
-  .slave-chip {
-    position: absolute;
-    right: 6px;
-    bottom: 6px;
-    padding: 2px 8px;
-    min-height: 0;
-    font-size: 0.6875rem;
-    font-weight: 600;
-  }
-
-  .noise-col {
-    width: var(--analog-slider-w);
-  }
-  /* Two slider widths: the switches' 2 x 2, the column's full height. */
-  .voicing-col {
-    width: calc(2 * var(--analog-slider-w) + var(--central-gap));
-  }
-  /* Five stages and their four gaps, plus the leading seam and the gap
-     after it; the seam that closes the pair is the voicing column's. */
-  .env-col {
-    width: calc(5 * var(--analog-env-w) + 5 * var(--central-gap) + 1px);
-  }
-  .env-slider {
-    flex: 0 0 var(--analog-env-w);
-    width: var(--analog-env-w);
-  }
-
-  /* Smaller iPads (ADR-476). Every column but the filter's is fixed or
-     floored, so the filter took the whole shortfall. The voicing column comes
-     down to two 44px touch floors (Noise keeps 56px: its route chip,
-     "→F1+F2", needs it), and the voice card and the filter share what is left from their
-     12.9-inch widths, 196 and 249px: an 11-inch draws both at those, a
-     10.2-inch gives up ~20% of each, and the voice card stops at 152px. After
-     the rules it overrides, which it matches in specificity. */
-  @media (max-width: 1365.98px) {
-    .voicing-col {
-      width: calc(2 * var(--height-touch) + var(--central-gap));
-    }
-    .voice-card {
-      flex: 0 1 196px;
-      min-width: 152px;
-    }
-    .filter-col {
-      flex: 1 1 249px;
-    }
-  }
+  .slave-chip,
   .mode-button {
-    min-height: var(--height-touch);
-    font-size: 0.8125rem;
+    padding: 0 2px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
   }
 
-  /* The Voice 1/2 switch: Drift's OSC badge, a circle in the grid's first cell. */
-  .osc-badge-cell {
-    container-type: size;
+  /* The Osc section's header line: Osc over the voice card's four
+     columns, Noise over its own, on the face's gutters. */
+  .head-cols {
+    flex: 1 1 auto;
+    align-self: stretch;
     display: grid;
-    place-items: center;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    column-gap: var(--face-gutter);
+    min-width: 0;
+  }
+  .head-col {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 0;
+  }
+  .head-col.face-span-3 {
+    grid-column: span 3;
+  }
+  /* The pill over the two envelopes, a stage a face column; each row
+     named in a line over its boxes. */
+  .env-grid {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: var(--height-touch) minmax(0, 1fr) minmax(0, 1fr);
+    row-gap: var(--spacing-sm);
     min-width: 0;
     min-height: 0;
   }
+  .env-pill {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+  .env-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: auto minmax(0, 1fr);
+    row-gap: 2px;
+    min-height: 0;
+  }
+  .env-label {
+    grid-column: 1 / -1;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 0.75rem;
+  }
+
+  /* The Voice 1/2 switch: Drift's OSC badge, one touch row in the voice's ink. */
   .osc-badge {
-    width: 100cqmin;
-    height: 100cqmin;
-    border-radius: 999px;
+    width: 100%;
+    height: 100%;
+    border-radius: var(--radius-sm, 2px);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -773,30 +742,20 @@
     padding: 0 1px;
   }
 
-  /* ---- Flat grammar. The segmented rows' dividers, and the voice colour
-     re-asserted against the house pair: here the colour IS the meaning
-     (which half you are holding), as on Drift's source cards. */
-  :global([data-grammar="flat"]) .analog-root .device-segmented:not(.seg-grid) .device-segment + .device-segment {
-    border-top: 0;
-    border-left: 1px solid var(--line-strong);
-  }
-  :global([data-grammar="flat"]) .analog-root .device-segment.active,
-  :global([data-grammar="flat"]) .analog-root .device-segment.active + .device-segment {
-    border-left-color: transparent;
-  }
-  :global([data-grammar="flat"]) .analog-root .device-segment {
+  /* ---- Flat grammar. The voice colour re-asserted against the house
+     pair: here the colour IS the meaning (which half you are holding), as
+     on Drift's source cards. */
+  :global([data-grammar="flat"]) .analog-root .family-tab .device-segment {
     color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
   }
-  :global([data-grammar="flat"]) .analog-root .device-segment:hover:not(.active) {
+  :global([data-grammar="flat"]) .analog-root .family-tab .device-segment:hover:not(.active) {
     color: var(--btn-tint);
     background: color-mix(in srgb, var(--btn-tint) 12%, transparent);
   }
-  :global([data-grammar="flat"]) .analog-root .device-segment.active {
+  :global([data-grammar="flat"]) .analog-root .family-tab .device-segment.active {
     background: var(--btn-tint);
     color: var(--flat-on-fg);
   }
-  :global([data-grammar="flat"]) .analog-root .shape-tab .device-segment:not(.active),
-  :global([data-grammar="flat"]) .analog-root .voice-card .physical-button,
   :global([data-grammar="flat"]) .analog-root .route-chip,
   :global([data-grammar="flat"]) .analog-root .slave-chip {
     color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));

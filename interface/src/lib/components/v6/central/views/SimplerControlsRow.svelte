@@ -8,11 +8,11 @@
    * semitones for pitch. The host decides what a write means — on a kit
    * each control is a function fanned out to every pad by name.
    *
-   *   Trnsp  [Time]
+   *   Kit [Gain/Trnsp] · Envelope [Time] · Filter
    *
-   * The Drum Rack lays it out on its own grid (`.simpler-row` is `display:
-   * contents` there), on the DrumCell kit's cells: Trnsp beside the view's
-   * Gain, the Time pad where Start, FX and Time are (2026-09-27).
+   * on the face grid (ADR-510), the Drum Rack's Gain and Filter passed in
+   * as snippets: eight columns, as on a DrumCell kit, so Gain over Trnsp
+   * is on the same pixels on both.
    *
    * Not a registry view: it drops the `*CentralView` suffix the
    * reachability test enforces, like `SamplerControlsRow`.
@@ -20,6 +20,11 @@
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import Lock from '@lucide/svelte/icons/lock';
+  import FaceGrid from '../FaceGrid.svelte';
+  import FaceSection from '../FaceSection.svelte';
+  import FaceSeam from '../FaceSeam.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
+  import type { Snippet } from 'svelte';
   import {
     VM_PITCH_MIN,
     VM_PITCH_MAX,
@@ -40,9 +45,13 @@
     badges?: Partial<Record<SimplerRowSlot, string | null>>;
     color: DeviceColorScheme;
     onWrite: (control: SimplerRowControl, value: number) => void;
+    /** The Drum Rack's Gain, drawn over Trnsp. */
+    gain?: Snippet;
+    /** The Drum Rack's Filter pad, the face's last section. */
+    filter?: Snippet;
   }
 
-  let { values, states = {}, badges = {}, color, onWrite }: Props = $props();
+  let { values, states = {}, badges = {}, color, onWrite, gain, filter }: Props = $props();
 
   function t(control: SimplerRowControl, atRest: number): number {
     const v = values[control];
@@ -66,65 +75,100 @@
   </span>
 {/snippet}
 
-<!-- No padding of its own, like the DrumCell and rack-macros rows beside
-     it: an 8px p-2 here set the first control 16px off the pad grid's seam
-     against 8 on the seam's other side (measured, 2026-09-14). -->
-<div class="simpler-row flex-1 flex gap-(--central-gap) min-h-0">
-  <!-- Trnsp where it always sits: beside the view's Gain. -->
-  <div
-    class="vm-slot slider-column min-w-0 flex flex-col"
-    class:vm-none={pitchState === 'none'}
-    class:vm-held={pitchState === 'held'}
-    data-vm-state={pitchState}
-    data-vm-function="pitch"
-  >
-    <DeviceSlider
-      value={t('pitch', 0)}
-      labelOrientation="horizontal"
-      title="Trnsp"
-      icon="transpose"
-      {color}
-      min={VM_PITCH_MIN}
-      max={VM_PITCH_MAX}
-      centerOrigin={true}
-      centerValue={0}
-      isGhost={pitchState === 'none'}
-      onInteraction={(value) => write('pitch', Math.round(value))}
-    />
-    {#if badges.pitch}{@render heldBadge(badges.pitch)}{/if}
-  </div>
+<!-- The face (ADR-510), on the Drum Rack's kit columns: Kit (the view's
+     Gain over Trnsp, the first column on every kit) · Envelope (the Time
+     pad, four columns) · Filter (the view's, three columns, where the
+     DrumCell kit's Time / Filter section sits). Eight columns, as on a
+     DrumCell kit, so Gain and Trnsp land on its pixels. No padding of
+     its own: the Drum Rack owns the inset. -->
+<FaceGrid sections={filter ? [1, 4, 3] : [1, 4]} class="simpler-row">
+  <FaceSection span={1}>
+    {#snippet head()}<PanelEyebrow title="Kit" color={color.primary} />{/snippet}
+    <div class="kit-col">
+      {#if gain}{@render gain()}{/if}
+      <div
+        class="vm-slot slider-column min-w-0 flex flex-col"
+        class:vm-none={pitchState === 'none'}
+        class:vm-held={pitchState === 'held'}
+        data-vm-state={pitchState}
+        data-vm-function="pitch"
+      >
+        <DeviceSlider
+          value={t('pitch', 0)}
+          labelOrientation="horizontal"
+          title="Trnsp"
+          icon="transpose"
+          {color}
+          min={VM_PITCH_MIN}
+          max={VM_PITCH_MAX}
+          centerOrigin={true}
+          centerValue={0}
+          isGhost={pitchState === 'none'}
+          onInteraction={(value) => write('pitch', Math.round(value))}
+        />
+        {#if badges.pitch}{@render heldBadge(badges.pitch)}{/if}
+      </div>
+    </div>
+  </FaceSection>
+  <FaceSeam ink={color.primary} />
 
   <!-- Time: Attack across, Release up (the regular Simpler view's axes). -->
-  <div
-    class="vm-slot time-column min-w-0 h-full"
-    class:vm-none={timeState === 'none'}
-    class:vm-held={timeState === 'held'}
-    data-vm-state={timeState}
-    data-vm-function="attack|release"
-  >
-    <DeviceXY
-      xValue={t('attack', 0.5)}
-      yValue={t('release', 0.5)}
-      title="Time"
-      icon="envelope"
-      {color}
-      isGhost={timeState === 'none'}
-      onInteraction={(x, y) => {
-        write('attack', x);
-        write('release', y);
-      }}
-    />
-    {#if badges.time}{@render heldBadge(badges.time)}{/if}
-  </div>
-</div>
+  <FaceSection span={4}>
+    {#snippet head()}<PanelEyebrow title="Envelope" color={color.primary} />{/snippet}
+    <div
+      class="vm-slot time-column face-span-all min-w-0 h-full"
+      class:vm-none={timeState === 'none'}
+      class:vm-held={timeState === 'held'}
+      data-vm-state={timeState}
+      data-vm-function="attack|release"
+    >
+      <DeviceXY
+        xValue={t('attack', 0.5)}
+        yValue={t('release', 0.5)}
+        title="Time"
+        icon="envelope"
+        {color}
+        isGhost={timeState === 'none'}
+        onInteraction={(x, y) => {
+          write('attack', x);
+          write('release', y);
+        }}
+      />
+      {#if badges.time}{@render heldBadge(badges.time)}{/if}
+    </div>
+  </FaceSection>
+
+  {#if filter}
+    <FaceSeam ink={color.primary} />
+    <FaceSection span={3}>
+      {#snippet head()}<PanelEyebrow title="Filter" color={color.primary} />{/snippet}
+      <div class="filter-cell face-span-all">{@render filter()}</div>
+    </FaceSection>
+  {/if}
+</FaceGrid>
 
 <style>
-  /* Cell names for the Drum Rack's grid, which places them. */
-  .time-column {
-    grid-area: time;
+  /* Gain over Trnsp, sharing the column's height evenly. */
+  .kit-col {
+    display: flex;
+    flex-direction: column;
+    gap: var(--central-gap);
+    min-width: 0;
+    min-height: 0;
   }
-  .slider-column[data-vm-function='pitch'] {
-    grid-area: trnsp;
+  .kit-col > :global(*) {
+    flex: 1 1 0;
+    min-height: 0;
+    min-width: 0;
+  }
+  .filter-cell {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+  }
+  .filter-cell > :global(*) {
+    flex: 1 1 0;
+    min-width: 0;
   }
   /* Same slot grammar as DrumRackCentralView. */
   .vm-slot {

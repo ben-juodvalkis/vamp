@@ -94,7 +94,7 @@ export function measureLayout() {
 	inner.b = inner.t + frame.clientHeight;
 
 	// Every painted, in-flow box inside the frame: a background, a border,
-	// media, or a run of text.
+	// media, a run of text, or a touch target marked `data-layout-box`.
 	const boxes = [];
 	for (const el of frame.querySelectorAll('*')) {
 		if (el.classList.contains('section-divider')) continue;
@@ -108,9 +108,12 @@ export function measureLayout() {
 			(s) => parseFloat(cs[`border${s}Width`]) > 0 && cs[`border${s}Style`] !== 'none'
 		);
 		const media = ['CANVAS', 'IMG', 'svg', 'SVG', 'INPUT'].includes(el.tagName);
+		// A control that paints less than its cell but answers to all of it
+		// (a knob, ADR-509) is measured by the cell it answers to.
+		const target = el.hasAttribute('data-layout-box');
 		// An element's own box is cut by its ancestors' overflow, never by its
 		// own; a text run inside it is cut by the element too.
-		if (bg || border || media) {
+		if (bg || border || media || target) {
 			const box = paintedPart(r, el.parentElement);
 			if (box) boxes.push({ r: box, el });
 		}

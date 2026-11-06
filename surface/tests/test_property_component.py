@@ -823,7 +823,7 @@ def test_allowlist_contains_documented_simpler_keys():
 
 def test_allowlist_contains_documented_drift_key():
     actual = {prop for (cls, prop) in ALLOWLIST if cls == "Drift"}
-    assert actual == {"voice_mode_index"}
+    assert actual == {"voice_mode_index", "voice_count_index", "mod_matrix_pitch_source_1_index", "mod_matrix_pitch_source_2_index", "mod_matrix_shape_source_index", "mod_matrix_filter_source_1_index", "mod_matrix_filter_source_2_index", "mod_matrix_lfo_source_index", "mod_matrix_source_1_index", "mod_matrix_source_2_index", "mod_matrix_source_3_index", "mod_matrix_target_1_index", "mod_matrix_target_2_index", "mod_matrix_target_3_index"}
 
 
 def test_allowlist_contains_documented_hybrid_reverb_keys():

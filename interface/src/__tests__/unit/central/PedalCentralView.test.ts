@@ -137,13 +137,13 @@ beforeEach(() => {
 });
 
 describe('PedalCentralView — the Pedal alone', () => {
-	it('carries the Drive slider, the tone pad and the type tabs, and no other device', async () => {
+	it('carries the tone pad and the type tabs, no Drive (the chain cell\'s), and no other device', async () => {
 		seed([saturator({}), guitarRack(), wahRack(), pedal()]);
 		const { container } = render(PedalCentralView);
 		await tick();
 		expect(container.querySelector('.pedal-tone .eq-panel')).not.toBeNull();
 		expect(container.querySelector('.pedal-tone')?.classList.contains('slot-ghost')).toBe(false);
-		expect(container.querySelector('.pedal-drive [role="slider"]')).not.toBeNull();
+		expect(slider(container, 'Drive')).toBeUndefined();
 		expect(container.textContent).toContain('Distort');
 		for (const title of ['Output', 'Mix', 'Shifter', 'Wah', 'Gtr']) {
 			expect(slider(container, title), title).toBeUndefined();
@@ -156,7 +156,6 @@ describe('PedalCentralView — the Pedal alone', () => {
 		const { container } = render(PedalCentralView);
 		await tick();
 		expect(container.querySelector('.pedal-tone')?.classList.contains('slot-ghost')).toBe(true);
-		expect(container.querySelector('.pedal-drive')?.classList.contains('slot-ghost')).toBe(true);
 	});
 
 	it('keeps a tap on the tone pad inside this view', async () => {
@@ -183,32 +182,6 @@ describe('PedalCentralView — the Pedal alone', () => {
 		expect(send).toHaveBeenCalledWith(expect.any(String), expect.arrayContaining([`${PEDAL}/params/4`, 1]));
 	});
 
-	it('writes Drive and Dry/Wet together from the one Drive slider', async () => {
-		seed([pedal()]);
-		const { container } = render(PedalCentralView);
-		await tick();
-		const drive = container.querySelector<HTMLElement>('.pedal-drive [role="slider"]')!;
-		const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
-			x: 0, y: 0, top: 0, left: 0, right: 100, bottom: 400, width: 100, height: 400, toJSON: () => ({})
-		} as DOMRect);
-		const at = (type: string, y: number) =>
-			drive.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: 1, clientX: 50, clientY: y, buttons: type === 'pointerup' ? 0 : 1 }));
-		at('pointerdown', 300);
-		at('pointermove', 280);
-		at('pointermove', 100);
-		await new Promise((r) => setTimeout(r, 50));
-		at('pointerup', 100);
-		rect.mockRestore();
-		const writes = (index: number) =>
-			vi.mocked(send).mock.calls
-				.map(([, args]) => args as unknown[])
-				.filter((a) => a.includes(`${PEDAL}/params/${index}`))
-				.map((a) => a[a.indexOf(`${PEDAL}/params/${index}`) + 1] as number);
-		const drv = writes(2);
-		expect(drv.length).toBeGreaterThan(0);
-		expect(drv.at(-1)).toBeGreaterThan(0);
-		expect(writes(9).at(-1)).toBe(drv.at(-1));
-	});
 });
 
 describe('SaturatorCentralView', () => {
@@ -246,11 +219,13 @@ describe('ShifterCentralView', () => {
 });
 
 describe('ReduxCentralView', () => {
-	it('draws the Redux pad, not a placeholder', async () => {
+	it('draws its knobs, not the Redux pad (the chain cell\'s) nor a placeholder', async () => {
 		seed([]);
 		const { container } = render(ReduxCentralView);
 		await tick();
-		expect(container.querySelector('[data-view="redux"] .device-control')).not.toBeNull();
+		expect(container.querySelector('[data-view="redux"]')).not.toBeNull();
+		expect(container.querySelector('[data-view="redux"] .device-control')).toBeNull();
+		expect(container.textContent).toMatch(/Jitter/);
 		expect(container.textContent).not.toContain('No device loaded');
 	});
 });
@@ -263,7 +238,7 @@ describe('GuitarCentralView — the Guitar rack alone', () => {
 		const tile = container.querySelector('.gain .device-control');
 		expect(tile?.classList.contains('device-ghost')).toBe(false);
 		expect(tile?.textContent).toContain('Gtr');
-		const pads = Array.from(container.querySelectorAll('.pads .guitar-xy'));
+		const pads = Array.from(container.querySelectorAll('.guitar-xy'));
 		expect(pads.map((p) => p.textContent)).toEqual([expect.stringContaining('Spring/Room'), expect.stringContaining('Tremolo')]);
 		expect(container.textContent).not.toMatch(/Dirty|Clean|Distort|Wah/);
 	});

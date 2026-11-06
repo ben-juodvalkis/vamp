@@ -74,9 +74,8 @@ async function mountTile(devices: DeviceRecord[]): Promise<HTMLElement> {
 	const device = devices.find((d) => d.className === 'Hybrid') ?? null;
 	const { container } = render(ReverbControl, { props: { device, position: getSlotByDeviceType('reverb')!.position } });
 	await tick();
-	const tile = Array.from(container.querySelectorAll<HTMLElement>('.device-control')).find((t) =>
-		t.textContent?.includes('Reverb')
-	);
+	// The pad names the algorithm or IR now (2026-11-06), not "Reverb".
+	const tile = container.querySelector<HTMLElement>('.device-control');
 	if (!tile) throw new Error('no Reverb tile');
 	return tile;
 }
@@ -116,9 +115,10 @@ describe('the Reverb tile', () => {
 		const tile = await mountTile([reverb({ 48: 2, 6: 0 })]);
 		expect(tile.querySelector('[data-reverb-portrait="darkHall"]')).not.toBeNull();
 		expect(tile.querySelectorAll('[data-reverb-portrait] .ridge-line').length).toBeGreaterThan(0);
-		// A tile's size: the picture and the title, no readouts.
+		// A tile's size: the picture, no readouts; the pad is named for its
+		// algorithm (kept for VoiceOver, not drawn — 2026-11-06).
 		expect(tile.querySelector('[data-reverb-portrait]')?.classList.contains('compact')).toBe(true);
-		expect(tile.textContent).toContain('Reverb');
+		expect(tile.querySelector('[role="slider"]')?.getAttribute('aria-label')).toMatch(/^Dark Hall:/);
 	});
 
 	it('draws the loaded IR’s waveform while the reverb runs an IR', async () => {

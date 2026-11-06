@@ -3,13 +3,16 @@
    * Live 12's Auto Pan-Tremolo (the `autoPanTremolo` slot, 2026-11-06), laid
    * out as Live's panel reads (Live 12 manual §29.3), left to right:
    *
-   *   [pad: rate across, amount up] [Panning | Tremolo · Time mode]
-   *   [Panning: Waveform; Tremolo: Harmonic · Vintage]
-   *   [Panning: Phase | Spin and its value; Offset · Invert] [Shape / Att / Mod]
+   *   [Panning | Tremolo · Time mode]
+   *   | [Panning: Waveform; Tremolo: Harmonic · Vintage]
+   *   | [Panning: Phase | Spin · Invert] [Phase or Spin / Offset] | [Shape / Att / Mod]
    *
-   * The pad is Live's Amount and rate knobs in one (`autoPanTremolo` in
-   * deviceControls): X the rate the Time mode picks, Y the depth from the
-   * middle, Invert below it. As in Live, the waveform and the stereo
+   * on one face grid (ADR-510), sections 1 · 1 · 2 · 1.
+   *
+   * Live's Amount and rate knobs are the chain cell's pad
+   * (`autoPanTremolo` in deviceControls, ADR-479: X the rate the Time mode
+   * picks, Y the depth from the middle, Invert below it), drawn above this
+   * view, so the view no longer draws that pad too (user, 2026-11-06). As in Live, the waveform and the stereo
    * controls are Panning's, and Tremolo shows Harmonic and Vintage in their
    * place; Shape is Panning's or Tremolo's own (two parameters), whichever
    * mode is on. Live allows Spin on all but Random, Wander and S&H. Indices
@@ -17,10 +20,13 @@
    *
    * NO {#if device} gate - every control handles its own ghost state.
    */
-  import ControlTile from '$lib/components/v6/device-panel/ControlTile.svelte';
   import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
   import ParamColumn from './fx/ParamColumn.svelte';
   import ParamSwitch from './fx/ParamSwitch.svelte';
+  import FaceGrid from '../FaceGrid.svelte';
+  import FaceSection from '../FaceSection.svelte';
+  import FaceSeam from '../FaceSeam.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { AUTO_PAN2, LFO_MODES, MODES, WAVES } from '$lib/components/v6/device-panel/autoPan2Params';
 
@@ -59,110 +65,117 @@
   ]);
 </script>
 
-<div class="fx-layout" data-view="autoPanTremolo">
-  <div class="cell" class:slot-ghost={fx.isGhost}>
-    <ControlTile type="autoPanTremolo" device={fx.device} disableCentralViewOnTap tapLoads />
-  </div>
-
-  <div class="cell">
-    <ScrubTabs
-      options={MODES}
-      selected={step(AUTO_PAN2.mode)}
-      onSelect={(i) => fx.sendParam(AUTO_PAN2.mode, i)}
-      cols={1}
-      tint={fx.color.primary}
-      inked
-      ghost={fx.isGhost}
-      label={(m) => m}
-      groupLabel="Mode"
-      name="mode"
-      style="flex: 2 1 0;"
-    />
-    <ScrubTabs
-      options={LFO_MODES}
-      selected={step(AUTO_PAN2.lfoMode)}
-      onSelect={(i) => fx.sendParam(AUTO_PAN2.lfoMode, i)}
-      cols={1}
-      tint={fx.color.primary}
-      inked
-      ghost={fx.isGhost}
-      label={(m) => m}
-      groupLabel="Time mode"
-      name="lfo-mode"
-      style="flex: 6 1 0;"
-    />
-  </div>
-
-  <div class="cell">
-    {#if tremolo}
-      <ParamSwitch label="Harmonic" on={value(AUTO_PAN2.harmonic) >= 0.5} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => toggle(AUTO_PAN2.harmonic)} />
-      <ParamSwitch label="Vintage" on={value(AUTO_PAN2.vintage) >= 0.5} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => toggle(AUTO_PAN2.vintage)} />
-    {:else}
+<!-- One face grid (ADR-510), five columns of ~185px at 1366 x 1024:
+     Mode 1 · Wave 1 · Stereo 2 · Shape 1. -->
+<div class="face-root" data-view="autoPanTremolo">
+<FaceGrid sections={[1, 1, 2, 1]}>
+  <FaceSection span={1}>
+    {#snippet head()}<PanelEyebrow title="Mode" color={fx.color.primary} />{/snippet}
+    <div class="cell">
       <ScrubTabs
-        options={WAVES}
-        selected={step(AUTO_PAN2.wave)}
-        onSelect={(i) => fx.sendParam(AUTO_PAN2.wave, i)}
+        options={MODES}
+        selected={step(AUTO_PAN2.mode)}
+        onSelect={(i) => fx.sendParam(AUTO_PAN2.mode, i)}
         cols={1}
         tint={fx.color.primary}
         inked
         ghost={fx.isGhost}
-        label={(w) => w}
-        groupLabel="Waveform"
-        name="wave"
-        class="flex-1"
+        label={(m) => m}
+        groupLabel="Mode"
+        name="mode"
+        style="flex: 2 1 0;"
       />
-    {/if}
-  </div>
-
-  <div class="cell">
-    {#if !tremolo}
       <ScrubTabs
-        options={STEREO_MODES}
-        selected={spin ? 1 : 0}
-        onSelect={(i) => fx.sendParam(AUTO_PAN2.stereoMode, i)}
-        cols={2}
+        options={LFO_MODES}
+        selected={step(AUTO_PAN2.lfoMode)}
+        onSelect={(i) => fx.sendParam(AUTO_PAN2.lfoMode, i)}
+        cols={1}
         tint={fx.color.primary}
         inked
         ghost={fx.isGhost}
         label={(m) => m}
-        groupLabel="Stereo mode"
-        name="stereo-mode"
-        style="flex: 1 1 0;"
+        groupLabel="Time mode"
+        name="lfo-mode"
+        style="flex: 6 1 0;"
       />
-    {/if}
-    <div class="grow"><ParamColumn {fx} ink={fx.color} boxes={tremolo ? stereo.slice(1) : stereo} /></div>
-    <ParamSwitch label="Invert" on={value(AUTO_PAN2.invert) >= 0.5} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => toggle(AUTO_PAN2.invert)} />
-  </div>
+    </div>
+  </FaceSection>
+  <FaceSeam />
 
-  <ParamColumn {fx} ink={fx.color} boxes={shaping} />
+  <FaceSection span={1}>
+    {#snippet head()}<PanelEyebrow title={tremolo ? 'Tremolo' : 'Wave'} color={fx.color.primary} />{/snippet}
+    <div class="cell">
+      {#if tremolo}
+        <ParamSwitch label="Harmonic" on={value(AUTO_PAN2.harmonic) >= 0.5} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => toggle(AUTO_PAN2.harmonic)} />
+        <ParamSwitch label="Vintage" on={value(AUTO_PAN2.vintage) >= 0.5} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => toggle(AUTO_PAN2.vintage)} />
+      {:else}
+        <ScrubTabs
+          options={WAVES}
+          selected={step(AUTO_PAN2.wave)}
+          onSelect={(i) => fx.sendParam(AUTO_PAN2.wave, i)}
+          cols={1}
+          tint={fx.color.primary}
+          inked
+          ghost={fx.isGhost}
+          label={(w) => w}
+          groupLabel="Waveform"
+          name="wave"
+          class="flex-1"
+        />
+      {/if}
+    </div>
+  </FaceSection>
+  <FaceSeam />
+
+  <!-- Phase | Spin over Invert, beside Phase (or Spin) over Offset: two
+       medium knobs in a column of their own. -->
+  <FaceSection span={2}>
+    {#snippet head()}<PanelEyebrow title="Stereo" color={fx.color.primary} />{/snippet}
+    <div class="cell">
+      {#if !tremolo}
+        <ScrubTabs
+          options={STEREO_MODES}
+          selected={spin ? 1 : 0}
+          onSelect={(i) => fx.sendParam(AUTO_PAN2.stereoMode, i)}
+          cols={1}
+          tint={fx.color.primary}
+          inked
+          ghost={fx.isGhost}
+          label={(m) => m}
+          groupLabel="Stereo mode"
+          name="stereo-mode"
+          class="flex-1"
+        />
+      {:else}
+        <div class="flex-1"></div>
+      {/if}
+      <ParamSwitch row label="Invert" on={value(AUTO_PAN2.invert) >= 0.5} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => toggle(AUTO_PAN2.invert)} />
+    </div>
+    <ParamColumn face="knob" knobSize="m" {fx} ink={fx.color} boxes={tremolo ? stereo.slice(1) : stereo} fullest={2} />
+  </FaceSection>
+  <FaceSeam />
+
+  <!-- Three knobs stacked: medium, their names beside them (ADR-509). -->
+  <FaceSection span={1}>
+    {#snippet head()}<PanelEyebrow title="Shape" color={fx.color.primary} />{/snippet}
+    <ParamColumn face="knob" knobSize="m" {fx} ink={fx.color} boxes={shaping} />
+  </FaceSection>
+</FaceGrid>
 </div>
 
 <style>
-  /* The pad two shares; the tabs and the box columns one each. */
-  .fx-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) repeat(4, minmax(0, 1fr));
-    gap: var(--central-gap);
+  /* The face is the FaceGrid (ADR-510); a cell is how one column fills its height. */
+  .face-root {
     height: 100%;
     width: 100%;
-    padding: var(--central-inset);
+    min-height: 0;
   }
 
   .cell {
     display: flex;
     flex-direction: column;
-    gap: var(--central-gap);
+    gap: var(--face-gutter);
     min-height: 0;
     min-width: 0;
-  }
-
-  .grow {
-    flex: 4 1 0;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-  .grow > :global(*) {
-    flex: 1 1 0;
   }
 </style>

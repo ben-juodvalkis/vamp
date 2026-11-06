@@ -4,10 +4,12 @@
    * (Live 12 manual §29.11):
    *
    *   [Left: Sync · 1 2 / 3 4 / 5 6 / 8 16 · Offset] [Right: the same]
-   *   [Feedback · Link · Freeze] (under the channels in Live; beside them
-   *   here, where the band is short) [the band-pass display: Freq across,
+   *   | [Feedback · Link · Freeze] (under the channels in Live; beside them
+   *   here, where the band is short) | [the band-pass display: Freq across,
    *   Width up · Filter]
-   *   [LFO: Delay / Filter / Rate] [Smoothing · Ping Pong · Dry/Wet]
+   *   | [LFO: Delay / Filter / Rate] | [Smoothing · Ping Pong · Dry/Wet]
+   *
+   * on one face grid (ADR-510), sections 2 · 1 · 2 · 1 · 1.
    *
    * As in Live the display is the filter's pad, so this view mounts no
    * time x feedback pad; that is the chain cell's and the browser tile's
@@ -24,6 +26,10 @@
   import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
   import ParamColumn from './fx/ParamColumn.svelte';
   import ParamSwitch from './fx/ParamSwitch.svelte';
+  import FaceGrid from '../FaceGrid.svelte';
+  import FaceSection from '../FaceSection.svelte';
+  import FaceSeam from '../FaceSeam.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { axisHz, responsePath } from '$lib/utils/filterGraph';
   import { DELAY, DELAY_FILTER_RANGE, DELAY_SIXTEENTHS, DELAY_SMOOTHING, delayFilterDb } from '$lib/components/v6/device-panel/delayParams';
@@ -91,103 +97,128 @@
   const DRY_WET = [{ index: DELAY.dryWet, title: 'Dry/Wet', rest: 0.5 }];
 </script>
 
-<div class="fx-layout" data-view="delay">
-  {#each channels as ch (ch.name)}
-    <div class="cell">
-      <ParamSwitch
-        label={on(ch.sync) ? `${ch.name} Sync` : `${ch.name} Time`}
-        on={on(ch.sync)}
-        tint={fx.color.primary}
-        ghost={fx.isGhost}
-        row
-        onToggle={() => toggle(ch.sync)}
-      />
-      {#if on(ch.sync)}
-        <ScrubTabs
-          options={DELAY_SIXTEENTHS}
-          selected={Math.round(value(ch.sixteenth))}
-          onSelect={(i) => fx.sendParam(ch.sixteenth, i)}
-          cols={2}
+<!-- One face grid (ADR-510), seven columns of ~117px at 1366 x 1024:
+     the two channels 2 · Feedback 1 · the filter display 2 · LFO 1 · Global 1. -->
+<div class="face-root" data-view="delay">
+<FaceGrid sections={[2, 1, 2, 1, 1]}>
+  <FaceSection span={2}>
+    {#snippet head()}<PanelEyebrow title="Left · Right" color={fx.color.primary} />{/snippet}
+    {#each channels as ch (ch.name)}
+      <div class="cell">
+        <ParamSwitch
+          label={on(ch.sync) ? `${ch.name} Sync` : `${ch.name} Time`}
+          on={on(ch.sync)}
           tint={fx.color.primary}
-          inked
           ghost={fx.isGhost}
-          label={(s) => `${ch.name} ${s} sixteenths`}
-          groupLabel={`${ch.name} time`}
-          name={`sixteenth-${ch.name}`}
-          style="flex: 3 1 0;"
-        >
-          {#snippet item(s)}{s}{/snippet}
-        </ScrubTabs>
-      {:else}
-        <div class="grow" class:slot-ghost={fx.isGhost}>
-          <DeviceSlider
-            value={value(ch.time)}
-            title="Time"
-            orientation="vertical"
-            isGhost={fx.isGhost}
-            color={fx.color}
-            readout={fx.paramDisplay(ch.time)}
-            onInteraction={(v) => fx.sendParam(ch.time, v)}
-          />
+          row
+          onToggle={() => toggle(ch.sync)}
+        />
+        {#if on(ch.sync)}
+          <ScrubTabs
+            options={DELAY_SIXTEENTHS}
+            selected={Math.round(value(ch.sixteenth))}
+            onSelect={(i) => fx.sendParam(ch.sixteenth, i)}
+            cols={2}
+            tint={fx.color.primary}
+            inked
+            ghost={fx.isGhost}
+            label={(s) => `${ch.name} ${s} sixteenths`}
+            groupLabel={`${ch.name} time`}
+            name={`sixteenth-${ch.name}`}
+            style="flex: 3 1 0;"
+          >
+            {#snippet item(s)}{s}{/snippet}
+          </ScrubTabs>
+        {:else}
+          <!-- Medium: what is left of the column over Offset holds a
+               medium knob and its caption, not a large one (ADR-509). -->
+          <div class="grow" class:slot-ghost={fx.isGhost}>
+            <DeviceSlider
+              value={value(ch.time)}
+              title="Time"
+              face="knob"
+              knobSize="m"
+              orientation="vertical"
+              isGhost={fx.isGhost}
+              color={fx.color}
+              readout={fx.paramDisplay(ch.time)}
+              onInteraction={(v) => fx.sendParam(ch.time, v)}
+            />
+          </div>
+        {/if}
+        <div class="offset">
+          <ParamColumn face="knob" knobSize="s" {fx} ink={fx.color} boxes={[{ index: ch.offset, title: 'Offset', rest: 0.5, center: 0.5 }]} />
         </div>
-      {/if}
-      <div class="offset">
-        <ParamColumn {fx} ink={fx.color} boxes={[{ index: ch.offset, title: 'Offset', rest: 0.5, center: 0.5 }]} />
       </div>
+    {/each}
+  </FaceSection>
+  <FaceSeam />
+
+  <FaceSection span={1}>
+    {#snippet head()}<PanelEyebrow title="Feedback" color={fx.color.primary} />{/snippet}
+    <div class="cell">
+      <div class="grow"><ParamColumn {fx} ink={fx.color} boxes={FEEDBACK} /></div>
+      <ParamSwitch label="Link" on={linked} tint={fx.color.primary} ghost={fx.isGhost} row onToggle={() => toggle(DELAY.link)} />
+      <ParamSwitch label="Freeze" on={on(DELAY.freeze)} tint={fx.color.primary} ghost={fx.isGhost} row onToggle={() => toggle(DELAY.freeze)} />
     </div>
-  {/each}
+  </FaceSection>
+  <FaceSeam />
 
-  <div class="cell">
-    <div class="grow"><ParamColumn {fx} ink={fx.color} boxes={FEEDBACK} /></div>
-    <ParamSwitch label="Link" on={linked} tint={fx.color.primary} ghost={fx.isGhost} row onToggle={() => toggle(DELAY.link)} />
-    <ParamSwitch label="Freeze" on={on(DELAY.freeze)} tint={fx.color.primary} ghost={fx.isGhost} row onToggle={() => toggle(DELAY.freeze)} />
-  </div>
-
-  <div class="cell" class:slot-ghost={fx.isGhost}>
-    <div class="graph">
-      <FilterDotsGraph {dots} {curves} onMove={moveFilter} ariaLabel="Delay band-pass filter" />
+  <FaceSection span={2}>
+    {#snippet head()}<PanelEyebrow title="Filter" color={fx.color.primary} />{/snippet}
+    <div class="cell face-span-2" class:slot-ghost={fx.isGhost}>
+      <div class="graph">
+        <FilterDotsGraph {dots} {curves} onMove={moveFilter} ariaLabel="Delay band-pass filter" />
+      </div>
+      <ParamSwitch label="Filter" on={filterOn} tint={fx.color.primary} ghost={fx.isGhost} row onToggle={() => toggle(DELAY.filterOn)} />
     </div>
-    <ParamSwitch label="Filter" on={filterOn} tint={fx.color.primary} ghost={fx.isGhost} row onToggle={() => toggle(DELAY.filterOn)} />
-  </div>
+  </FaceSection>
+  <FaceSeam />
 
-  <ParamColumn {fx} ink={fx.color} boxes={lfo} />
+  <!-- Three knobs stacked: small, their names beside them (ADR-509). -->
+  <FaceSection span={1}>
+    {#snippet head()}<PanelEyebrow title="LFO" color={fx.color.primary} />{/snippet}
+    <ParamColumn face="knob" knobSize="s" {fx} ink={fx.color} boxes={lfo} />
+  </FaceSection>
+  <FaceSeam />
 
-  <div class="cell">
-    <ScrubTabs
-      options={DELAY_SMOOTHING}
-      selected={Math.round(value(DELAY.smoothing))}
-      onSelect={(i) => fx.sendParam(DELAY.smoothing, i)}
-      cols={1}
-      tint={fx.color.primary}
-      inked
-      ghost={fx.isGhost}
-      label={(m) => m}
-      groupLabel="Smoothing"
-      name="smoothing"
-      style="flex: 3 1 0;"
-    />
-    <ParamSwitch label="Ping Pong" on={on(DELAY.pingPong)} tint={fx.color.primary} ghost={fx.isGhost} row onToggle={() => toggle(DELAY.pingPong)} />
-    <div class="grow"><ParamColumn {fx} ink={fx.color} boxes={DRY_WET} /></div>
-  </div>
+  <FaceSection span={1}>
+    {#snippet head()}<PanelEyebrow title="Global" color={fx.color.primary} />{/snippet}
+    <div class="cell">
+      <ScrubTabs
+        options={DELAY_SMOOTHING}
+        selected={Math.round(value(DELAY.smoothing))}
+        onSelect={(i) => fx.sendParam(DELAY.smoothing, i)}
+        cols={1}
+        tint={fx.color.primary}
+        inked
+        ghost={fx.isGhost}
+        label={(m) => m}
+        groupLabel="Smoothing"
+        name="smoothing"
+        style="flex: 3 1 0;"
+      />
+      <ParamSwitch label="Ping Pong" on={on(DELAY.pingPong)} tint={fx.color.primary} ghost={fx.isGhost} row onToggle={() => toggle(DELAY.pingPong)} />
+      <div class="grow"><ParamColumn {fx} ink={fx.color} boxes={DRY_WET} /></div>
+    </div>
+  </FaceSection>
+</FaceGrid>
 </div>
 
 <style>
-  /* Live's order: the two channels, Feedback with Link and Freeze (under
-     the channels in Live; beside them here, the band being short), the
-     display two and a half shares, then the LFO and the right-hand column. */
-  .fx-layout {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 2.5fr) repeat(2, minmax(0, 1fr));
-    gap: var(--central-gap);
+  /* Live's order on the face grid (ADR-510): the two channels, Feedback
+     with Link and Freeze (under the channels in Live; beside them here, the
+     band being short), the display, then the LFO and the right-hand column. */
+  .face-root {
     height: 100%;
     width: 100%;
-    padding: var(--central-inset);
+    min-height: 0;
   }
 
   .cell {
     display: flex;
     flex-direction: column;
-    gap: var(--central-gap);
+    gap: var(--face-gutter);
     min-height: 0;
     min-width: 0;
   }
@@ -204,8 +235,10 @@
     flex: 1 1 0;
   }
 
+  /* A small knob with its caption beside it (48px + 12, ADR-509): the
+     sixteenths' tab, or Time's medium knob, keeps the rest of the column. */
   .offset {
-    flex: 1 1 0;
+    flex: 0 0 3.75rem;
     min-height: 0;
     display: flex;
     flex-direction: column;

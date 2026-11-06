@@ -44,25 +44,26 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe('Chorus family views', () => {
-	it('draws the Chorus XY alone, on a drum track or off one', async () => {
+	it('draws its panel without the Chorus XY (the chain cell\'s), on a drum track or off one', async () => {
 		for (const role of ['drum', 'synth']) {
 			seed(role);
 			const { container } = render(ChorusCentralView);
 			await tick();
 			expect(container.querySelector('[data-view="chorus"]'), role).not.toBeNull();
-			expect(deviceControls(container), role).toBe(1);
+			expect(deviceControls(container), role).toBe(0);
+			expect(container.textContent, role).toMatch(/Amount/);
 			expect(container.textContent, role).not.toMatch(/Phaser|Comb|Tremolo/);
 			cleanup();
 		}
 	});
 
-	it('gives Blur, Comb and Phaser a view each, one control apiece', async () => {
+	it('gives Blur, Comb and Phaser a view each; only Blur, a lone slider, repeats its chain cell\'s control', async () => {
 		seed('synth');
-		for (const [View, type] of [[BlurCentralView, 'smudge'], [CombCentralView, 'comb'], [PhaserCentralView, 'phaser']] as Array<[Component, string]>) {
+		for (const [View, type, controls] of [[BlurCentralView, 'smudge', 1], [CombCentralView, 'comb', 0], [PhaserCentralView, 'phaser', 0]] as Array<[Component, string, number]>) {
 			const { container } = render(View);
 			await tick();
 			expect(container.querySelector(`[data-view="${type}"]`), type).not.toBeNull();
-			expect(deviceControls(container), type).toBe(1);
+			expect(deviceControls(container), type).toBe(controls);
 			cleanup();
 		}
 	});

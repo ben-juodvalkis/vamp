@@ -18,6 +18,8 @@ const SYNCED = [
 const RATE_MODES = ['Freq', 'Time', 'Ratio', 'Sync'];
 
 export const DRIFT_PANEL: InstrumentPanel = {
+	// Knobs, but an envelope's stages stay boxes: their heights draw it (ADR-509).
+	boxFace: 'knob',
 	// Drawn by the view's own face; the frame is what a face-less render would show.
 	frame: [],
 	pages: [
@@ -36,9 +38,9 @@ export const DRIFT_PANEL: InstrumentPanel = {
 								title: 'Wave',
 								labels: ['Sine', 'Triangle', 'Shark Tooth', 'Saturated', 'Saw', 'Pulse', 'Rectangle']
 							},
-							{ kind: 'box', param: 'Osc 1 Shape', title: 'Shape' },
+							{ kind: 'box', param: 'Osc 1 Shape', title: 'Shape', units: 2 },
 							{ kind: 'step', param: 'Osc 1 Oct', title: 'Oct', labels: ['-2', '-1', '0', '+1', '+2', '+3'] },
-							{ kind: 'box', param: 'Osc 1 Shape Mod Amt', title: 'Shape Mod' }
+							{ kind: 'box', param: 'Osc 1 Shape Mod Amt', title: 'Shape Mod', units: 2 }
 						]
 					},
 					{
@@ -51,15 +53,8 @@ export const DRIFT_PANEL: InstrumentPanel = {
 								title: 'Wave',
 								labels: ['Sine', 'Triangle', 'Saturated', 'Saw', 'Rectangle']
 							},
-							{ kind: 'box', param: 'Osc 2 Detune', title: 'Detune' },
+							{ kind: 'box', param: 'Osc 2 Detune', title: 'Detune', units: 2 },
 							{ kind: 'step', param: 'Osc 2 Oct', title: 'Oct', labels: ['-3', '-2', '-1', '0', '+1', '+2'] }
-						]
-					},
-					{
-						title: 'Pitch Mod',
-						controls: [
-							{ kind: 'box', param: 'Pitch Mod Amt 1', title: 'Amt 1' },
-							{ kind: 'box', param: 'Pitch Mod Amt 2', title: 'Amt 2' }
 						]
 					}
 				],
@@ -67,20 +62,30 @@ export const DRIFT_PANEL: InstrumentPanel = {
 					{
 						title: 'Osc Mix',
 						controls: [
-							{ kind: 'switch', param: 'Osc 1 On', title: 'Osc 1' },
-							{ kind: 'box', param: 'Osc 1 Gain', title: 'Gain 1' },
-							{ kind: 'switch', param: 'Osc 2 On', title: 'Osc 2' },
-							{ kind: 'box', param: 'Osc 2 Gain', title: 'Gain 2' },
-							{ kind: 'switch', param: 'Noise On', title: 'Noise' },
-							{ kind: 'box', param: 'Noise Gain', title: 'Noise' }
+							// Each source's switch under its level (ADR-509).
+							{ kind: 'box', param: 'Osc 1 Gain', title: 'Osc 1', toggle: { param: 'Osc 1 On', title: 'On' } },
+							{ kind: 'box', param: 'Osc 2 Gain', title: 'Osc 2', toggle: { param: 'Osc 2 On', title: 'On' } },
+							{ kind: 'box', param: 'Noise Gain', title: 'Noise', toggle: { param: 'Noise On', title: 'On' } }
 						]
 					},
 					{
 						title: 'To Filter',
+						// Narrower than three boxes, so Osc Mix's knobs and Pitch Mod's
+						// keep the width for their size (ADR-509).
+						units: 2.25,
 						controls: [
 							{ kind: 'switch', param: 'Osc 1 Flt On', title: 'Osc 1' },
 							{ kind: 'switch', param: 'Osc 2 Flt On', title: 'Osc 2' },
 							{ kind: 'switch', param: 'Noise Flt On', title: 'Noise' }
+						]
+					},
+					// On the second row, so the oscillators' knobs have the width
+					// for their size (ADR-509).
+					{
+						title: 'Pitch Mod',
+						controls: [
+							{ kind: 'box', param: 'Pitch Mod Amt 1', title: 'Amt 1' },
+							{ kind: 'box', param: 'Pitch Mod Amt 2', title: 'Amt 2' }
 						]
 					}
 				]
@@ -89,6 +94,8 @@ export const DRIFT_PANEL: InstrumentPanel = {
 		{
 			id: 'filter',
 			title: 'Filter',
+			// The face's filter pad, full height beside the knobs (ADR-509).
+			aside: { slot: 'filter', units: 3, params: ['LP Freq', 'LP Res', 'HP Freq'] },
 			rows: [
 				[
 					{
@@ -99,7 +106,9 @@ export const DRIFT_PANEL: InstrumentPanel = {
 							{ kind: 'choice', param: 'LP Type', options: ['I', 'II'] },
 							{ kind: 'box', param: 'Key > LPF', title: 'Key' }
 						]
-					},
+					}
+				],
+				[
 					{
 						title: 'High Pass',
 						controls: [{ kind: 'box', param: 'HP Freq', title: 'Freq' }]
@@ -121,6 +130,7 @@ export const DRIFT_PANEL: InstrumentPanel = {
 				[
 					{
 						title: 'Env 1',
+						face: 'slider',
 						controls: [
 							{ kind: 'box', param: 'Env 1 Attack', title: 'A' },
 							{ kind: 'box', param: 'Env 1 Decay', title: 'D' },
@@ -130,6 +140,7 @@ export const DRIFT_PANEL: InstrumentPanel = {
 					},
 					{
 						title: 'Env 2',
+						face: 'slider',
 						controls: [
 							{ kind: 'choice', param: 'Env 2 Cyc On', options: ['Env', 'Cyc'] },
 							{ kind: 'box', param: 'Env 2 Attack', title: 'A' },
@@ -195,6 +206,9 @@ export const DRIFT_PANEL: InstrumentPanel = {
 		{
 			id: 'global',
 			title: 'Global',
+			// Poly / Mono / Stereo / Unison: a device property, not a
+			// parameter, so the view draws it (it left the face 2026-11-06).
+			aside: { slot: 'voiceMode', units: 2, params: [] },
 			rows: [
 				[
 					{

@@ -59,6 +59,10 @@ export function useReverbIrPicture(devicePath: () => string | undefined, active:
 		get category() {
 			return category;
 		},
+		/** The IR's file name, as Live lists it. */
+		get file() {
+			return file;
+		},
 		get attack() {
 			return number('ir_attack_time', 0);
 		},

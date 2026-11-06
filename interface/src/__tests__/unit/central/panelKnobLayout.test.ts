@@ -1,0 +1,277 @@
+/**
+ * How an instrument panel lays out its knobs (ADR-509): a group of knobs
+ * wraps into the grid that gives each knob the most room, and boxes kept as
+ * boxes in a knob panel go thin so the knobs beside them get the width.
+ */
+import { describe, it, expect } from 'vitest';
+import {
+	controlUnits,
+	groupUnits,
+	isKnobGroup,
+	knobGridRows,
+	knobSizeFor,
+	controlKnobSize,
+	faceKnobFit,
+	frameColumns,
+	pageCells,
+	pageGroupGrid,
+	pageOneRow,
+	pageSections,
+	pagePicks,
+	panelParamNames,
+	regionSections,
+	tabOptions,
+	TAB_MAX_OPTIONS,
+	type PanelGroup
+} from '$lib/components/v6/central/views/panel/panelTypes';
+import { KNOB_PX, knobDiameter, knobGridFit, knobSizeFits } from '$lib/components/v6/device-panel/knobLayout';
+import { DRIFT_PANEL } from '$lib/components/v6/central/views/panel/driftPanel';
+import { OPERATOR_PANEL } from '$lib/components/v6/central/views/panel/operatorPanel';
+import { ELECTRIC_PANEL } from '$lib/components/v6/central/views/panel/electricPanel';
+import { COLLISION_PANEL } from '$lib/components/v6/central/views/panel/collisionPanel';
+import { ANALOG_PANEL } from '$lib/components/v6/central/views/panel/analogPanel';
+import { WAVETABLE_PANEL } from '$lib/components/v6/central/views/panel/wavetablePanel';
+import { MELD_PANEL } from '$lib/components/v6/central/views/panel/meldPanel';
+
+const knobs: PanelGroup = {
+	title: 'Global',
+	controls: [
+		{ kind: 'box', param: 'Time', title: 'Time' },
+		{ kind: 'box', param: 'Tone', title: 'Tone' },
+		{ kind: 'box', param: 'Volume', title: 'Volume' }
+	]
+};
+const envelope: PanelGroup = { ...knobs, title: 'Envelope', face: 'slider' };
+
+describe('knobGridRows', () => {
+	it('stands knobs side by side in a wide, short box', () => {
+		expect(knobGridRows(3, 600, 160)).toBe(1);
+	});
+	it('wraps them two to a row in a box as tall as it is wide', () => {
+		expect(knobGridRows(3, 260, 300)).toBe(2);
+	});
+	it('stacks them in a tall, narrow one', () => {
+		expect(knobGridRows(3, 160, 520)).toBe(3);
+	});
+	it('picks the grid whose knobs are largest, counting the caption under each', () => {
+		// 4 in 400 x 300: one row gives 80px cells but 248px of height; two
+		// rows give 192px cells and 142px of height less the caption.
+		expect(knobGridRows(4, 400, 300)).toBe(2);
+	});
+});
+
+describe('which groups are knob grids', () => {
+	it('is a group of value boxes drawn as knobs', () => {
+		expect(isKnobGroup(knobs, 'knob')).toBe(true);
+		expect(isKnobGroup(knobs, undefined)).toBe(false);
+		expect(isKnobGroup(envelope, 'knob')).toBe(false);
+	});
+	it('is not a group with a switch or a chooser in it', () => {
+		const mixed: PanelGroup = { controls: [...knobs.controls, { kind: 'switch', param: 'On', title: 'On' }] };
+		expect(isKnobGroup(mixed, 'knob')).toBe(false);
+	});
+});
+
+describe('a group’s share of its row', () => {
+	it('stacks knobs two high on a full-height band: half as many columns as knobs', () => {
+		expect(groupUnits(knobs, 1, 'knob')).toBe(2);
+		expect(groupUnits({ ...knobs, controls: [...knobs.controls, knobs.controls[0]] }, 1, 'knob')).toBe(2);
+	});
+	it('stands them in one row on a two-row page, where there is no height to stack in', () => {
+		expect(groupUnits(knobs, 2, 'knob')).toBe(3);
+	});
+	it('gives boxes their full width, knob panel or not', () => {
+		expect(groupUnits(envelope, 1, 'knob')).toBe(3);
+		expect(groupUnits(envelope, 1, undefined)).toBe(3);
+		expect(controlUnits({ kind: 'switch', param: 'On', title: 'On' }, 1)).toBe(1);
+	});
+	it('takes a group’s own units over its count', () => {
+		expect(groupUnits({ ...knobs, units: 1 }, 1, 'knob')).toBe(1);
+	});
+});
+
+describe.each([
+	['Drift', DRIFT_PANEL],
+	['Operator', OPERATOR_PANEL],
+	['Electric', ELECTRIC_PANEL],
+	['Collision', COLLISION_PANEL],
+	['Analog', ANALOG_PANEL],
+	['Wavetable', WAVETABLE_PANEL],
+	['Meld', MELD_PANEL]
+])('%s panel', (_name, panel) => {
+	it('draws knobs but keeps every envelope’s stages as boxes', () => {
+		expect(panel.boxFace).toBe('knob');
+		const groups = [
+			...panel.pages.flatMap((p) => p.rows.flat()),
+			...panel.frame.flatMap((r) => (r.kind === 'group' ? [r.group] : r.kind === 'tabs' ? r.tabs.flatMap((t) => t.groups) : []))
+		];
+		// An envelope's stages: an Attack and a Release in one group.
+		const stages = groups.filter((g) => g.controls.some((c) => / Attack$/.test(c.param)) && g.controls.some((c) => / (Release|Rel)$/.test(c.param)));
+				expect(stages.filter((g) => g.face !== 'slider').map((g) => `${g.title}: ${g.controls.map((c) => c.param).join(', ')}`)).toEqual([]);
+	});
+});
+
+describe('switches under knobs and a page’s aside', () => {
+	it('binds a box’s toggle and a page aside’s parameters, so the reference test reads them', () => {
+		const names = panelParamNames(DRIFT_PANEL);
+		expect(names).toEqual(expect.arrayContaining(['Osc 1 On', 'Osc 2 On', 'Noise On']));
+		expect(DRIFT_PANEL.pages.find((p) => p.id === 'filter')?.aside?.slot).toBe('filter');
+	});
+	it('draws Drift’s sources as levels with their switch under each', () => {
+		const mix = DRIFT_PANEL.pages.flatMap((p) => p.rows.flat()).find((g) => g.title === 'Osc Mix')!;
+		expect(mix.controls.map((c) => (c.kind === 'box' ? c.toggle?.param : c.kind))).toEqual(['Osc 1 On', 'Osc 2 On', 'Noise On']);
+	});
+});
+
+describe('few values are a tab, many a knob (ADR-509)', () => {
+	it('draws a stepper with up to eight named values as a tab of them', () => {
+		const oct = { kind: 'step', param: 'Osc 1 Oct', title: 'Oct', labels: ['-2', '-1', '0', '+1', '+2', '+3'] } as const;
+		expect(tabOptions(oct)).toEqual(oct.labels);
+		expect(controlUnits(oct, 1)).toBeGreaterThanOrEqual(1);
+	});
+	it('keeps a stepper with more values, or none named, a knob', () => {
+		const many = { kind: 'step', param: 'Wave', title: 'Wave', labels: Array.from({ length: TAB_MAX_OPTIONS + 1 }, (_, i) => String(i)) } as const;
+		expect(tabOptions(many)).toBeUndefined();
+		expect(tabOptions({ kind: 'step', param: 'Voices', title: 'Voices' })).toBeUndefined();
+	});
+	it('takes a group with a tab out of the knob grid: it stands in a row', () => {
+		const group: PanelGroup = { controls: [knobs.controls[0], { kind: 'step', param: 'Oct', title: 'Oct', labels: ['0', '1'] }] };
+		expect(isKnobGroup(group, 'knob')).toBe(false);
+	});
+	it('turns Drift’s octaves into a tab and keeps Operator’s 23 waves a knob', () => {
+		const steps = (p: typeof DRIFT_PANEL) => p.pages.flatMap((pg) => pg.rows.flat()).flatMap((g) => g.controls).filter((c) => c.kind === 'step');
+		expect(steps(DRIFT_PANEL).find((c) => c.title === 'Oct') && tabOptions(steps(DRIFT_PANEL).find((c) => c.title === 'Oct')!)).toHaveLength(6);
+		expect(tabOptions(steps(OPERATOR_PANEL).find((c) => c.title === 'Wave')!)).toBeUndefined();
+	});
+});
+
+describe('a knob’s size, by how many its column stacks', () => {
+	it('is large for one or two, medium for three, small for four or more', () => {
+		expect([1, 2, 3, 4, 6].map(knobSizeFor)).toEqual(['l', 'l', 'm', 's', 's']);
+	});
+	it('takes a panel control’s own size, then its group’s, then the count', () => {
+		const box = knobs.controls[0];
+		expect(controlKnobSize(box, knobs, 3)).toBe('m');
+		expect(controlKnobSize(box, { ...knobs, knobSize: 's' }, 1)).toBe('s');
+		expect(controlKnobSize({ kind: 'box', param: 'Time', title: 'Time', knobSize: 'l' }, { ...knobs, knobSize: 's' }, 4)).toBe('l');
+	});
+});
+
+describe('a grid of knobs laid out so each draws at its size (ADR-509 addendum)', () => {
+	it('mirrors KnobFace: caption under in an upright cell, beside in a wide one', () => {
+		expect(knobDiameter('l', 104, 150)).toBe(96);
+		expect(knobDiameter('l', 81, 123)).toBe(69);
+		expect(knobDiameter('l', 200, 108)).toBe(96);
+		expect(knobDiameter('s', 60, 79)).toBe(35);
+		expect(knobDiameter('m', 60, 40, false)).toBe(28);
+	});
+	it('steps a size down only to the largest the cell holds', () => {
+		expect(knobSizeFits('l', 104, 150)).toBe('l');
+		expect(knobSizeFits('l', 81, 123)).toBe('m');
+		expect(knobSizeFits('l', 60, 123)).toBe('s');
+		expect(knobSizeFits('m', 200, 200)).toBe('m');
+	});
+	it('picks the rows whose cells hold the largest size', () => {
+		// Five knobs in a short wide box: one row of small ones.
+		expect(knobGridFit(5, 364, 125)).toEqual({ rows: 1, size: 's' });
+		// Two knobs in a 238 x 120 box: side by side, medium.
+		expect(knobGridFit(2, 238, 120)).toEqual({ rows: 1, size: 'm' });
+		// Two knobs in a tall narrow column: stacked, large where it holds them.
+		expect(knobGridFit(2, 120, 320)).toEqual({ rows: 2, size: 'l' });
+		// A ceiling the host names caps it.
+		expect(knobGridFit(2, 120, 320, 16, 'm').size).toBe('m');
+	});
+	it('every size it returns is drawn at its full diameter, where any size fits', () => {
+		for (const [count, w, h] of [[3, 300, 280], [4, 400, 140], [6, 500, 280], [12, 520, 262]]) {
+			const { rows, size } = knobGridFit(count, w, h);
+			const cols = Math.ceil(count / rows);
+			const cw = (w - 16 * (cols - 1)) / cols;
+			const ch = (h - 16 * (rows - 1)) / rows;
+			expect(knobDiameter(size, cw, ch)).toBeGreaterThanOrEqual(KNOB_PX[size] - 0.5);
+		}
+	});
+});
+
+/** A column's width at a face `w` wide: the inset, a seam track each, the face's gutters. */
+const column = (secs: number[], w: number) => {
+	const cols = secs.reduce((a, b) => a + b, 0);
+	const tracks = cols + secs.length - 1;
+	return (w - 32 - 17 * (secs.length - 1) - 8 * (tracks - 1)) / cols;
+};
+const RULE_PANELS = { Operator: OPERATOR_PANEL, Electric: ELECTRIC_PANEL, Collision: COLLISION_PANEL };
+
+describe('a panel’s frame on the face grid (ADR-510)', () => {
+	const sections = (p: typeof DRIFT_PANEL) => p.frame.flatMap((r) => regionSections(r));
+	it('gives each region its columns, a tab strip of like tabs a section a group', () => {
+		expect(sections(ELECTRIC_PANEL)).toEqual([2, 2, 2, 1]);
+		expect(sections(OPERATOR_PANEL)).toEqual([3, 3, 2, 2]);
+		expect(sections(COLLISION_PANEL)).toEqual([1, 1, 6, 1]);
+	});
+	it('gives every column of the three frames the width of a medium knob at 1000px', () => {
+		for (const panel of Object.values(RULE_PANELS)) expect(column(sections(panel), 1000)).toBeGreaterThanOrEqual(KNOB_PX.m + 8);
+	});
+	it('draws Electric’s knobs large, in a row on one line', () => {
+		const w = column(sections(ELECTRIC_PANEL), 1000);
+		expect(faceKnobFit(2, 2, w, 263)).toEqual({ knobCols: 2, rows: 1, size: 'l' });
+		expect(faceKnobFit(1, 1, w, 263).size).toBe('l');
+	});
+	it('stacks Operator’s Global three high over two columns, medium, names beside', () => {
+		const w = column(sections(OPERATOR_PANEL), 1000);
+		expect(faceKnobFit(3, 2, w, 263)).toEqual({ knobCols: 1, rows: 3, size: 'm' });
+	});
+	it('lays Collision’s resonator knobs in one row under the tabs, and its five MIDI amounts over six columns', () => {
+		const w = column(sections(COLLISION_PANEL), 1000);
+		expect(faceKnobFit(6, 6, w, 263 - 44 - 16)).toEqual({ knobCols: 6, rows: 1, size: 'm' });
+		expect(faceKnobFit(5, 6, w, 263 - 44 - 16)).toEqual({ knobCols: 5, rows: 1, size: 'm' });
+	});
+	it('pairs a mixed group’s knobs where it has fewer columns than controls (Operator’s Filter)', () => {
+		const filter = OPERATOR_PANEL.frame.find((r) => r.kind === 'group' && r.group.title === 'Filter');
+		if (filter?.kind !== 'group') throw new Error('no Filter');
+		expect(frameColumns(filter.group, 2).map((c) => c.controls.map((x) => x.param))).toEqual([['Filter Type'], ['Fe Amount', 'Filter Drive']]);
+	});
+	it('draws no XY the chain cell already plays: Operator’s filter pad is its page’s, not the frame’s', () => {
+		const frameParams = panelParamNames({ ...OPERATOR_PANEL, pages: [] });
+		expect(frameParams).not.toContain('Filter Freq');
+		expect(frameParams).not.toContain('Filter Res');
+		expect(OPERATOR_PANEL.pages.find((p) => p.id === 'filter')?.aside?.slot).toBe('filter');
+	});
+});
+
+describe('a section page on the face grid (ADR-510)', () => {
+	const page = (p: typeof DRIFT_PANEL, id: string) => p.pages.find((pg) => pg.id === id)!;
+	it('lays ten cells or fewer in one row, more two high, an envelope’s stages two to a column', () => {
+		expect(pageOneRow(page(ELECTRIC_PANEL, 'hammer'))).toBe(true);
+		expect(pageSections(page(ELECTRIC_PANEL, 'hammer'))).toEqual([3, 3, 4]);
+		const lfo = page(OPERATOR_PANEL, 'lfo');
+		expect(pageOneRow(lfo)).toBe(false);
+		expect(lfo.rows.flat().map((g) => pageGroupGrid(g))).toEqual([
+			{ columns: 2, rows: 2, cells: 4 },
+			{ columns: 2, rows: 2, cells: 3 },
+			{ columns: 2, rows: 2, cells: 3 },
+			{ columns: 1, rows: 2, cells: 2 },
+			{ columns: 2, rows: 1, cells: 4 }
+		]);
+	});
+	it('gives every page of the three panels at most ten columns, each holding a medium knob at 1000px', () => {
+		for (const [name, panel] of Object.entries(RULE_PANELS))
+			for (const pg of panel.pages) {
+				const secs = pageSections(pg);
+				expect(secs.reduce((a, b) => a + b, 0), `${name} ${pg.id}`).toBeLessThanOrEqual(10);
+				expect(column(secs, 1000), `${name} ${pg.id}`).toBeGreaterThanOrEqual(KNOB_PX.m + 8);
+			}
+	});
+	it('makes a long pick a picker and pairs it with the amount it names', () => {
+		const dest = page(COLLISION_PANEL, 'lfo1').rows.flat().find((g) => g.title === 'Destination A')!;
+		const cells = pageCells(dest);
+		expect(cells).toHaveLength(1);
+		expect(cells[0].control.param).toBe('LFO 1 Amt A');
+		expect(cells[0].picker?.param).toBe('LFO 1 Dest A');
+		expect(cells[0].mark).toBe('A');
+		// A loop's Retrig is not what R Vel amounts: two cells.
+		const loop = page(OPERATOR_PANEL, 'osc-A-env').rows.flat().find((g) => g.title === 'Loop')!;
+		expect(pageCells(loop).every((c) => !c.picker)).toBe(true);
+		expect(pagePicks({ kind: 'choice', param: 'T', options: ['a', 'b', 'c', 'd'] })).toBe(false);
+		expect(pagePicks({ kind: 'choice', param: 'T', options: ['a', 'b', 'c', 'd', 'e'] })).toBe(true);
+		expect(pagePicks({ kind: 'choice', param: 'T', options: ['a', 'b', 'c', 'd', 'e'] }, true)).toBe(false);
+	});
+});

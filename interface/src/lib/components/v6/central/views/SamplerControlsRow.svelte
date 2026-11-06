@@ -7,22 +7,22 @@
    * pad). Unit-free: every value is `t` in 0..1 except `pitch`, whole
    * semitones on ±48. The host decides what a write means.
    *
-   * Its cells (user's layout, 2026-09-07; the envelope rebuilt 2026-09-12):
+   * Its face (ADR-510; the cells are the user's, 2026-09-07, the
+   * envelope rebuilt 2026-09-12):
    *
-   *   [Osc over Pitch]  [Amp Envelope: A D S R]  Spread  Select  Trnsp
+   *   Kit [Gain/Trnsp | Spread/Select] · Pitch/Osc [Osc over Pitch]
+   *   · Amp Envelope [A D S R] · Filter
    *
-   * Both hosts lay them out on their own grid, where `.sampler-row` is
-   * `display: contents` and each cell names its `grid-area` — on the
-   * DrumCell kit's cells since 2026-09-27: Trnsp and Spread lead, beside
-   * the host's Gain, and the host's Filter closes the row.
+   * on one grid of equal columns, the host's Gain and Filter passed in as
+   * snippets. Gain over Trnsp is the first column on every Drum Rack kit.
    *
-   * The amp envelope is four sliders in ADSR order inside their own card.
+   * The amp envelope is four sliders in ADSR order in their own section.
    * It used to be a Time XY pad (Attack across, Release up) with Decay
    * and Sustain as two separate sliders further along — one envelope
    * split across two idioms, read out of order. Four sliders costs a
-   * gesture and buys the whole envelope in one place; the card is what
-   * says where it stops, which in turn lets each slider be one letter.
-   * A KIT hides Decay and Sustain, so there the card holds A and R.
+   * gesture and buys the whole envelope in one place; the section's name and
+   * seams say where it stops, which in turn lets each slider be one letter.
+   * A KIT hides Decay and Sustain, so there it holds A and R.
    *
    * Every pad reads its amount up and its time or tune across: Osc —
    * coarse tune across (O Coarse), oscillator amount up (O Volume);
@@ -38,7 +38,11 @@
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import type { ControlGlyphName } from '$lib/config/controlGlyphMap';
-  import EnvelopeGroup from './EnvelopeGroup.svelte';
+  import FaceGrid from '../FaceGrid.svelte';
+  import FaceSection from '../FaceSection.svelte';
+  import FaceSeam from '../FaceSeam.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
+  import type { Snippet } from 'svelte';
   import Lock from '@lucide/svelte/icons/lock';
   import {
     VM_PITCH_MIN,
@@ -68,10 +72,41 @@
      * not hideable.
      */
     hidden?: readonly SamplerRowControl[];
+    /** The host's Gain, drawn over Trnsp in the face's first column. */
+    gain?: Snippet;
+    /** The host's Filter pad, the face's last section. */
+    filter?: Snippet;
+    /** Drawn across the top of the kit section (the single Sampler's swap pill). */
+    lead?: Snippet;
+    /** The kit section's name. */
+    kitTitle?: string;
+    /** A class for the face, for the host to fit it into its own box. */
+    faceClass?: string;
   }
 
-  let { values, states = {}, badges = {}, color, onWrite, hidden = [] }: Props = $props();
+  let {
+    values,
+    states = {},
+    badges = {},
+    color,
+    onWrite,
+    hidden = [],
+    gain,
+    filter,
+    lead,
+    kitTitle = 'Kit',
+    faceClass = ''
+  }: Props = $props();
   let hide = $derived(new Set(hidden));
+
+  // The face's columns (ADR-510): the kit section is Gain / Trnsp plus a
+  // column for Spread / Select when either shows; the envelope one column
+  // a stage; Osc / Pitch and Filter two each. A kit: [2, 2, 2, 2]; the
+  // single Sampler: [2, 2, 4, 2].
+  let voiceCount = $derived((hide.has('spread') ? 0 : 1) + (hide.has('selector') ? 0 : 1));
+  let kitSpan = $derived(voiceCount > 0 ? 2 : 1);
+  let stageCount = $derived(2 + (hide.has('decay') ? 0 : 1) + (hide.has('sustain') ? 0 : 1));
+  let sectionSpans = $derived(filter ? [kitSpan, 2, stageCount, 2] : [kitSpan, 2, stageCount]);
 
   function t(control: SamplerRowControl, atRest: number): number {
     const v = values[control];
@@ -127,126 +162,175 @@
   </div>
 {/snippet}
 
-<!-- One row: the two pitch-side pads stacked in one pad-width column,
-     then the sliders at one width each — the amp envelope in ADSR order,
-     then Spread and Trnsp. Every pad reads the "amount" up and the
-     "time/tune" across. No padding of its own: the host owns the inset.
-     Its old p-2 put 16px between this row and a seam beside it where the
-     seam's other side had 8 — the Drum Rack's pad grid, the Sampler
-     view's wheels (measured, 2026-09-14). -->
-<div class="sampler-row flex-1 flex gap-(--central-gap) min-h-0">
+<!-- The face (ADR-510): one grid of equal columns, a header line every
+     section shares, identical seams. Left to right: the kit's own column
+     (the host's Gain over Trnsp, with Spread over Select beside it, the
+     host's swap pill across the two where it places one), Osc over Pitch,
+     the amp envelope's stages one column each, and the host's Filter.
+     Gain over Trnsp is the face's first column on every Drum Rack kit, so
+     it sits on the same pixels whichever kit is loaded. The section's
+     header and its two seams are the envelope's bracket (it was
+     `EnvelopeGroup`'s hairlines until ADR-510), and what lets each stage
+     be one letter. No padding of its own on a kit: the Drum Rack owns the
+     inset there. -->
+<FaceGrid sections={sectionSpans} class="sampler-row {faceClass}">
+  <FaceSection span={kitSpan}>
+    {#snippet head()}<PanelEyebrow title={kitTitle} color={color.primary} />{/snippet}
+    <div class="kit-stack face-span-all" class:kit-has-lead={!!lead}>
+      {#if lead}
+        <div class="kit-lead">{@render lead()}</div>
+      {/if}
+      <!-- Gain over Trnsp: the column every kit shares. -->
+      <div class="kit-col">
+        {#if gain}{@render gain()}{/if}
+        <div
+          class="vm-slot slider-column min-w-0 flex flex-col"
+          class:vm-none={pitchState === 'none'}
+          class:vm-held={pitchState === 'held'}
+          data-vm-state={pitchState}
+          data-vm-function="pitch"
+        >
+          <DeviceSlider
+            value={t('pitch', 0)}
+            labelOrientation="horizontal"
+            title="Trnsp"
+            icon="transpose"
+            {color}
+            min={VM_PITCH_MIN}
+            max={VM_PITCH_MAX}
+            centerOrigin={true}
+            centerValue={0}
+            isGhost={pitchState === 'none'}
+            onInteraction={(value) => write('pitch', Math.round(value))}
+          />
+          {#if badges.pitch}{@render heldBadge(badges.pitch)}{/if}
+        </div>
+      </div>
+      {#if voiceCount > 0}
+        <!-- Spread over Sample Selector (0..127: which zone of the Sel
+             editor plays — a kit's control, 2026-10-04; the single-Sampler
+             view hides it). -->
+        <div class="kit-col">
+          {#if !hide.has('spread')}{@render slider('spread', 'Spread', 'width', spreadState, badges.spread, 0)}{/if}
+          {#if !hide.has('selector')}{@render slider('selector', 'Select', 'select', selectorState, badges.selector, 0)}{/if}
+        </div>
+      {/if}
+    </div>
+  </FaceSection>
+  <FaceSeam ink={color.primary} />
+
   <!-- Osc over Pitch. Osc: coarse tune across, oscillator amount up.
        Pitch: envelope attack across, envelope amount up (centre = none). -->
-  <div class="pad-column flex flex-col gap-(--central-gap) min-w-0 h-full">
-    <div
-      class="vm-slot min-w-0 min-h-0 flex-1"
-      class:vm-none={oscState === 'none'}
-      class:vm-held={oscState === 'held'}
-      data-vm-state={oscState}
-      data-vm-function="oscAmount|oscCoarse"
-    >
-      <DeviceXY
-        xValue={t('oscCoarse', 0)}
-        yValue={t('oscAmount', 0)}
-        title="Osc"
-        icon="oscillator"
-        {color}
-        isGhost={oscState === 'none'}
-        onInteraction={(x, y) => {
-          write('oscCoarse', x);
-          write('oscAmount', y);
-        }}
-      />
-      {#if badges.osc}{@render heldBadge(badges.osc)}{/if}
+  <FaceSection span={2}>
+    {#snippet head()}<PanelEyebrow title="Pitch / Osc" color={color.primary} />{/snippet}
+    <div class="pad-column face-span-all flex flex-col gap-(--central-gap) min-w-0 h-full">
+      <div
+        class="vm-slot min-w-0 min-h-0 flex-1"
+        class:vm-none={oscState === 'none'}
+        class:vm-held={oscState === 'held'}
+        data-vm-state={oscState}
+        data-vm-function="oscAmount|oscCoarse"
+      >
+        <DeviceXY
+          xValue={t('oscCoarse', 0)}
+          yValue={t('oscAmount', 0)}
+          title="Osc"
+          icon="oscillator"
+          {color}
+          isGhost={oscState === 'none'}
+          onInteraction={(x, y) => {
+            write('oscCoarse', x);
+            write('oscAmount', y);
+          }}
+        />
+        {#if badges.osc}{@render heldBadge(badges.osc)}{/if}
+      </div>
+      <div
+        class="vm-slot min-w-0 min-h-0 flex-1"
+        class:vm-none={pitchEnvState === 'none'}
+        class:vm-held={pitchEnvState === 'held'}
+        data-vm-state={pitchEnvState}
+        data-vm-function="pitchEnvAmount|pitchEnvAttack"
+      >
+        <DeviceXY
+          xValue={t('pitchEnvAttack', 0.5)}
+          yValue={t('pitchEnvAmount', 0.5)}
+          title="Pitch"
+          icon="pitchdrop"
+          {color}
+          isGhost={pitchEnvState === 'none'}
+          onInteraction={(x, y) => {
+            write('pitchEnvAttack', x);
+            write('pitchEnvAmount', y);
+          }}
+        />
+        {#if badges.pitchEnv}{@render heldBadge(badges.pitchEnv)}{/if}
+      </div>
     </div>
-    <div
-      class="vm-slot min-w-0 min-h-0 flex-1"
-      class:vm-none={pitchEnvState === 'none'}
-      class:vm-held={pitchEnvState === 'held'}
-      data-vm-state={pitchEnvState}
-      data-vm-function="pitchEnvAmount|pitchEnvAttack"
-    >
-      <DeviceXY
-        xValue={t('pitchEnvAttack', 0.5)}
-        yValue={t('pitchEnvAmount', 0.5)}
-        title="Pitch"
-        icon="pitchdrop"
-        {color}
-        isGhost={pitchEnvState === 'none'}
-        onInteraction={(x, y) => {
-          write('pitchEnvAttack', x);
-          write('pitchEnvAmount', y);
-        }}
-      />
-      {#if badges.pitchEnv}{@render heldBadge(badges.pitchEnv)}{/if}
-    </div>
-  </div>
+  </FaceSection>
+  <FaceSeam ink={color.primary} />
 
-  <!-- The amp envelope: four sliders in ADSR order, bracketed by two
-       hairlines, replacing the Time XY pad (user's call, 2026-09-12). The
-       pad read Attack across and Release up and reached neither Decay nor
-       Sustain, which had to ride as two more sliders further along the row
-       — so the envelope was split across two idioms and read out of order.
-       A KIT still hides Decay and Sustain, so there the bracket holds A
-       and R. -->
-  <div class="envelope-column min-w-0 h-full flex gap-(--central-gap)">
-    <EnvelopeGroup ink={color.primary}>
-      {@render slider('attack', 'A', 'attack', attackState, badges.attack, 0.5)}
-      {#if !hide.has('decay')}{@render slider('decay', 'D', 'decay', decayState, badges.decay, 0.5)}{/if}
-      {#if !hide.has('sustain')}{@render slider('sustain', 'S', 'sustain', sustainState, badges.sustain, 1)}{/if}
-      {@render slider('release', 'R', 'release', releaseState, badges.release, 0.5)}
-    </EnvelopeGroup>
-  </div>
-  {#if !hide.has('spread')}{@render slider('spread', 'Spread', 'width', spreadState, badges.spread, 0)}{/if}
-  <!-- Sample Selector (0..127): which zone of the Sel editor plays. A
-       kit's control (2026-10-04); the single-Sampler view hides it. -->
-  {#if !hide.has('selector')}{@render slider('selector', 'Select', 'select', selectorState, badges.selector, 0)}{/if}
-  <div
-    class="vm-slot slider-column min-w-0 flex flex-col"
-    class:vm-none={pitchState === 'none'}
-    class:vm-held={pitchState === 'held'}
-    data-vm-state={pitchState}
-    data-vm-function="pitch"
-  >
-    <DeviceSlider
-      value={t('pitch', 0)}
-      labelOrientation="horizontal"
-      title="Trnsp"
-      icon="transpose"
-      {color}
-      min={VM_PITCH_MIN}
-      max={VM_PITCH_MAX}
-      centerOrigin={true}
-      centerValue={0}
-      isGhost={pitchState === 'none'}
-      onInteraction={(value) => write('pitch', Math.round(value))}
-    />
-    {#if badges.pitch}{@render heldBadge(badges.pitch)}{/if}
-  </div>
-</div>
+  <!-- The amp envelope: its stages in ADSR order, one column each (user's
+       call, 2026-09-12, replacing a Time XY pad that reached neither Decay
+       nor Sustain). A KIT hides Decay and Sustain, so there it holds A and R. -->
+  <FaceSection span={stageCount} data-envelope-group="amp">
+    {#snippet head()}<PanelEyebrow title="Amp Envelope" color={color.primary} />{/snippet}
+    {@render slider('attack', 'A', 'attack', attackState, badges.attack, 0.5)}
+    {#if !hide.has('decay')}{@render slider('decay', 'D', 'decay', decayState, badges.decay, 0.5)}{/if}
+    {#if !hide.has('sustain')}{@render slider('sustain', 'S', 'sustain', sustainState, badges.sustain, 1)}{/if}
+    {@render slider('release', 'R', 'release', releaseState, badges.release, 0.5)}
+  </FaceSection>
+
+  {#if filter}
+    <FaceSeam ink={color.primary} />
+    <FaceSection span={2}>
+      {#snippet head()}<PanelEyebrow title="Filter" color={color.primary} />{/snippet}
+      <div class="filter-cell face-span-all">{@render filter()}</div>
+    </FaceSection>
+  {/if}
+</FaceGrid>
 
 <style>
-  /* Cell names for the host's grid, which places them. */
-  .pad-column {
-    grid-area: osc;
+  /* The kit section: its columns on the face's own (subgrid), the host's
+     swap pill across them where it places one. */
+  .kit-stack {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: minmax(0, 1fr);
+    row-gap: var(--central-gap);
+    min-width: 0;
+    min-height: 0;
   }
-  .envelope-column {
-    grid-area: env;
+  .kit-stack.kit-has-lead {
+    grid-template-rows: auto minmax(0, 1fr);
   }
-  .slider-column[data-vm-function='spread'] {
-    grid-area: spread;
+  .kit-lead {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
   }
-  .slider-column[data-vm-function='selector'] {
-    grid-area: sel;
+  /* A column of value boxes sharing its height evenly (Gain over Trnsp). */
+  .kit-col {
+    display: flex;
+    flex-direction: column;
+    gap: var(--central-gap);
+    min-width: 0;
+    min-height: 0;
   }
-  .vm-slot[data-vm-function='pitch'] {
-    grid-area: trnsp;
-  }
-  /* The envelope's stages share its bracket (`EnvelopeGroup` is a flex row);
-     on the host's grid the other sliders are sized by their cells. */
-  .slider-column {
+  .kit-col > :global(*) {
     flex: 1 1 0;
-    min-width: 40px;
+    min-height: 0;
+    min-width: 0;
+  }
+  .filter-cell {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+  }
+  .filter-cell > :global(*) {
+    flex: 1 1 0;
+    min-width: 0;
   }
   /* Same slot grammar as DrumRackCentralView: `vm-none` ghosts and
      takes no input, `vm-held` keeps the reading and takes no input. */

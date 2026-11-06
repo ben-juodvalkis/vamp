@@ -15,7 +15,10 @@
 	import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-	import SectionDivider from '../SectionDivider.svelte';
+	import FaceGrid from '../FaceGrid.svelte';
+	import FaceSection from '../FaceSection.svelte';
+	import FaceSeam from '../FaceSeam.svelte';
+	import PanelEyebrow from './panel/PanelEyebrow.svelte';
 
 	const fx = useFxGridSlot('filter');
 
@@ -150,18 +153,20 @@
 </script>
 
 <!--
-	10-share flex layout: each column = flex-[1], the two tabs span 2, the LFO
-	XY 3.
-	  shapes:2 | morph:1 | LFO XY:3 | filter types:2 | circuit+slope:1 | drive/mix:1
-	A `SectionDivider` sits between the LFO group (cols 1-3) and the rest.
-	Drive and Mix are value boxes stacked in the last column (ADR-477); the
-	column they freed went to the LFO pad, which was 2 shares.
+	One face grid (ADR-510), eight columns of ~108px at 1366 x 1024:
+	  LFO 4 (shapes · Morph · the LFO pad over two) | Filter 3 (types over
+	  two · circuit + slope) | Output 1 (Drive over Mix)
+	A column holds a large knob (96px + 8, ADR-509), so Morph and Drive
+	draw at their size.
 -->
-<div class="h-full w-full flex min-h-0 p-(--central-inset) relative" style="gap: var(--central-gap);" class:slot-ghost={fx.isGhost}>
+<div class="h-full w-full min-h-0 relative" class:slot-ghost={fx.isGhost}>
+<FaceGrid sections={[4, 3, 1]}>
+	<FaceSection span={4}>
+	{#snippet head()}<PanelEyebrow title="LFO" color={lfoInk.primary} />{/snippet}
 	<!-- The eight LFO shapes, one segmented tab, two columns of
 	     four filled down then across. -->
 	<div
-		class="flex-[2] min-h-0 device-segmented seg-grid grid grid-cols-2 grid-rows-4 grid-flow-col"
+		class="min-h-0 device-segmented seg-grid grid grid-cols-2 grid-rows-4 grid-flow-col"
 		style="--btn-tint: {lfoInk.primary};"
 	>
 		{#each LFO_SHAPE_OPTIONS.slice(0, 8) as option}
@@ -178,13 +183,13 @@
 		{/each}
 	</div>
 
-	<!-- vertical MORPH slider -->
-	<div
-		class="flex-[1] min-h-0"
-	>
+	<!-- MORPH: one large knob (ADR-509), one column. -->
+	<div class="min-h-0">
 		<DeviceSlider
 			value={morphAmount}
 			title="Morph"
+			face="knob"
+			knobSize="l"
 			icon="morph"
 			orientation="vertical"
 			isGhost={fx.isGhost}
@@ -196,8 +201,8 @@
 		/>
 	</div>
 
-	<!-- LFO XY pad (three shares) over its Time/Sync switch -->
-	<div class="flex-[3] min-h-0 flex flex-col gap-(--central-gap)">
+	<!-- LFO XY pad (two columns) over its Time/Sync switch -->
+	<div class="face-span-2 min-h-0 flex flex-col gap-(--face-gutter)">
 		<div class="flex-1 min-h-0">
 			<DeviceXY
 				xValue={1 - lfoTime}
@@ -235,16 +240,17 @@
 		</button>
 	</div>
 
-	<!-- Divider between LFO controls and the rest. This view had the
-	     interface's first hand-rolled seam; since 2026-09-13 it is the shared
-	     `SectionDivider` every other central view uses, and it names what
-	     follows it. -->
-	<SectionDivider orientation="vertical" ink={fxInk.primary} />
+	</FaceSection>
+	<!-- The seam between the LFO and the filter. This view had the
+	     interface's first hand-rolled seam; it is the face grid's now. -->
+	<FaceSeam ink={fxInk.primary} />
 
+	<FaceSection span={3}>
+	{#snippet head()}<PanelEyebrow title="Filter" color={fxInk.primary} />{/snippet}
 	<!-- The ten filter types, one segmented tab, two columns of
 	     five filled down then across. -->
 	<div
-		class="flex-[2] min-h-0 device-segmented seg-grid grid grid-cols-2 grid-rows-5 grid-flow-col"
+		class="face-span-2 min-h-0 device-segmented seg-grid grid grid-cols-2 grid-rows-5 grid-flow-col"
 		style="--btn-tint: {fxInk.primary};"
 	>
 		{#each FILTER_TYPES.slice(0, 10) as type}
@@ -259,9 +265,7 @@
 	</div>
 
 	<!-- Circuit buttons + Slope toggle -->
-	<div
-		class="flex-[1] h-full flex flex-col gap-1"
-	>
+	<div class="h-full min-h-0 flex flex-col gap-(--face-gutter)">
 		<!-- The circuits are one pick-one tab; the slope under it is a
 		     switch of its own, so a separate button. Each option keeps one
 		     share of the column. -->
@@ -294,14 +298,22 @@
 		</button>
 	</div>
 
-	<!-- Drive over Mix (Dry/Wet), two value boxes (ADR-477). Last because
+	</FaceSection>
+	<FaceSeam ink={fxInk.primary} />
+
+	<FaceSection span={1}>
+	{#snippet head()}<PanelEyebrow title="Output" color={fxInk.primary} />{/snippet}
+	<!-- Drive over Mix (Dry/Wet): a knob over a value box. Last because
 	     Mix is the device's last stage (Live's own panel ends on Output,
 	     Soft Clip and Dry/Wet), and Drive, which sets Output, sits over it. -->
-	<div class="flex-[1] h-full flex flex-col gap-(--central-gap)">
-		<div class="flex-1 min-h-0">
+	<div class="h-full min-h-0 flex flex-col gap-(--face-gutter)">
+		<!-- A large knob and its caption: 104 x 150px (ADR-509); Mix takes the rest. -->
+		<div class="flex-none h-[9.375rem] min-h-0">
 			<DeviceSlider
 				value={drive}
 				title="Drive"
+				face="knob"
+				knobSize="l"
 				icon="drive"
 				orientation="vertical"
 				isGhost={fx.isGhost}
@@ -328,7 +340,8 @@
 			/>
 		</div>
 	</div>
-
+	</FaceSection>
+</FaceGrid>
 </div>
 
 <style>

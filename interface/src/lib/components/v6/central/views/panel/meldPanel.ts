@@ -132,15 +132,15 @@ function enginePages(id: MeldEngineId): PanelPage[] {
 			id: `env-${id}`,
 			title: `Envelopes ${X}`,
 			rows: [
-				[{ title: 'Amp Env', page: `amp-${id}`, controls: ads(`${X} Amp`) }],
-				[{ title: 'Mod Env', page: `menv-${id}`, controls: ads(`${X} Mod`) }]
+				[{ title: 'Amp Env', page: `amp-${id}`, face: 'slider', controls: ads(`${X} Amp`) }],
+				[{ title: 'Mod Env', page: `menv-${id}`, face: 'slider', controls: ads(`${X} Mod`) }]
 			]
 		},
 		{
 			id: `amp-${id}`,
 			title: `Amp Env ${X}`,
 			parent: `env-${id}`,
-			rows: [[{ title: 'Amp Env', controls: ads(`${X} Amp`) }], slopesAndLoop(`${X} Amp`)]
+			rows: [[{ title: 'Amp Env', face: 'slider', controls: ads(`${X} Amp`) }], slopesAndLoop(`${X} Amp`)]
 		},
 		{
 			id: `menv-${id}`,
@@ -150,6 +150,7 @@ function enginePages(id: MeldEngineId): PanelPage[] {
 				[
 					{
 						title: 'Mod Env',
+						face: 'slider',
 						controls: [
 							{ kind: 'box', param: `${X} Mod Initial`, title: 'Initial' },
 							{ kind: 'box', param: `${X} Mod Attack`, title: 'A' },
@@ -242,6 +243,8 @@ const mix = (X: 'A' | 'B'): PanelGroup => ({
 });
 
 export const MELD_PANEL: InstrumentPanel = {
+	// Knobs, but an envelope's stages stay boxes: their heights draw it (ADR-509).
+	boxFace: 'knob',
 	// Drawn by the view's own face.
 	frame: [],
 	pages: [

@@ -2,9 +2,11 @@
 	/**
 	 * EchoCentralView — what the Echo tile opens (2026-09-14).
 	 *
-	 *   [Time over Sync] [Filter  Filter  Filter  Filter  Filter]
+	 *   [Time over Sync] [Filter  Filter]
 	 *   | [LFO Wave 2x3] [Rate over LFO Sync] [LFO > Time over LFO > Filter]
 	 *   | [Input over Output] [Feedback over Mix]
+	 *
+	 * on one face grid (ADR-510), sections 3 · 3 · 2.
 	 *
 	 * Every slider is a value box (ADR-477): the depths and levels stand in
 	 * pairs, each box half a fader's height and as fine, and the three
@@ -30,7 +32,10 @@
 	 */
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import FilterCurve from '$lib/components/v6/device-panel/FilterCurve.svelte';
-	import SectionDivider from '$lib/components/v6/central/SectionDivider.svelte';
+	import FaceGrid from '$lib/components/v6/central/FaceGrid.svelte';
+	import FaceSection from '$lib/components/v6/central/FaceSection.svelte';
+	import FaceSeam from '$lib/components/v6/central/FaceSeam.svelte';
+	import PanelEyebrow from './panel/PanelEyebrow.svelte';
 	import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
 	import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 	import {
@@ -221,12 +226,20 @@
 {/snippet}
 
 <!-- An unloaded Echo dims as one: every control here is the one device. -->
+<!-- One face grid (ADR-510), eight columns of ~108px at 1366 x 1024:
+     Delay 3 (Time, the filter graph over two) · LFO 3 · Levels 2. -->
 <div class="echo-layout" class:slot-ghost={echo.isGhost}>
+<FaceGrid sections={[3, 3, 2]}>
+	<FaceSection span={3}>
+	{#snippet head()}<PanelEyebrow title="Delay" color={echo.color.primary} />{/snippet}
 	<div class="col slider-over-switch">
 		<div class="slider-part">
 			<DeviceSlider
 				value={timeT}
-				title="Time {timeLabel}"
+				title="Time"
+				valueText={timeLabel}
+				face="knob"
+				knobSize="l"
 				icon="delay"
 				orientation="vertical"
 				labelSize="small"
@@ -248,7 +261,7 @@
 	</div>
 
 	<div
-		class="col filter-graph"
+		class="col filter-graph face-span-2"
 		style="--curve-color: {echo.color.primary};"
 		role="slider"
 		aria-label="Filter: high-pass {Math.round(hpT * 100)}%, low-pass {Math.round(lpT * 100)}%"
@@ -261,9 +274,11 @@
 		<FilterCurve curveType="eq" {bands} filterDots={dots} width={400} height={300} curveColor={echo.color.primary} />
 		<span class="graph-title">Filter</span>
 	</div>
+	</FaceSection>
+	<FaceSeam />
 
-	<SectionDivider orientation="vertical" />
-
+	<FaceSection span={3}>
+	{#snippet head()}<PanelEyebrow title="LFO" color={echo.color.primary} />{/snippet}
 	<ScrubTabs
 		options={ECHO_LFO_WAVES}
 		selected={lfoWave}
@@ -281,7 +296,10 @@
 		<div class="slider-part">
 			<DeviceSlider
 				value={lfoRate}
-				title="Rate {lfoLabel}"
+				title="Rate"
+				valueText={lfoLabel}
+				face="knob"
+				knobSize="l"
 				icon="rate"
 				orientation="vertical"
 				labelSize="small"
@@ -302,12 +320,14 @@
 		</button>
 	</div>
 
-	<!-- The LFO's two depths, Time over Filter: a pair of value boxes. -->
+	<!-- The LFO's two depths, Time over Filter: a pair of knobs (ADR-509). -->
 	<div class="col box-pair">
 		<div class="box">
 			<DeviceSlider
 				value={lfoToTime}
 				title="LFO > Time"
+				face="knob"
+				knobSize="m"
 				icon="lfo"
 				orientation="vertical"
 				labelSize="small"
@@ -322,6 +342,8 @@
 			<DeviceSlider
 				value={lfoToFilter}
 				title="LFO > Filter"
+				face="knob"
+				knobSize="m"
 				icon="cutoff"
 				orientation="vertical"
 				labelSize="small"
@@ -334,15 +356,21 @@
 		</div>
 	</div>
 
-	<SectionDivider orientation="vertical" />
+	</FaceSection>
+	<FaceSeam />
 
+	<FaceSection span={2}>
+	{#snippet head()}<PanelEyebrow title="Levels" color={echo.color.primary} />{/snippet}
 	<!-- The levels in two pairs: Input over Output (Input drags Output the
-	     other way), Feedback over Mix. -->
+	     other way) as knobs, then Feedback over Mix, the pair the Echo tile
+	     plays, as boxes (ADR-509). -->
 	<div class="col box-pair">
 		<div class="box">
 			<DeviceSlider
 				value={input}
 				title="Input"
+				face="knob"
+				knobSize="m"
 				icon="gain"
 				sensitivity={GAIN_SENSITIVITY}
 				orientation="vertical"
@@ -359,6 +387,8 @@
 			<DeviceSlider
 				value={output}
 				title="Output"
+				face="knob"
+				knobSize="m"
 				icon="output"
 				sensitivity={GAIN_SENSITIVITY}
 				orientation="vertical"
@@ -402,21 +432,19 @@
 			/>
 		</div>
 	</div>
+	</FaceSection>
+</FaceGrid>
 </div>
 
 <style>
-	/* Eleven equal columns — the filter graph spans five — with an `auto`
-	   track for each seam: Time + Filter | LFO (wave, rate, depths) | levels. */
+	/* The face is the FaceGrid (ADR-510): Delay (Time, the filter graph
+	   over two columns) | LFO (wave, rate, depths) | levels, eight equal
+	   columns. A column of ~108px holds Time's and Rate's large knobs
+	   (96px + 8) over their switches, and the pairs' medium ones. */
 	.echo-layout {
-		display: grid;
-		grid-template-columns:
-			repeat(6, minmax(0, 1fr)) auto
-			repeat(3, minmax(0, 1fr)) auto
-			repeat(2, minmax(0, 1fr));
-		gap: var(--central-gap);
 		height: 100%;
 		width: 100%;
-		padding: var(--central-inset);
+		min-height: 0;
 	}
 
 	.col {
@@ -429,7 +457,7 @@
 	.box-pair {
 		display: flex;
 		flex-direction: column;
-		gap: var(--central-gap);
+		gap: var(--face-gutter);
 	}
 	.box {
 		flex: 1 1 0;
@@ -440,16 +468,18 @@
 	.slider-over-switch {
 		display: flex;
 		flex-direction: column;
-		gap: var(--central-gap);
+		gap: var(--face-gutter);
 	}
 	.slider-part {
-		flex: 3 1 0;
+		flex: 1 1 0;
 		min-height: 0;
 	}
+	/* A knob's switch: a pill one touch row tall under it (ADR-509). */
 	.echo-switch {
-		flex: 1 1 0;
-		min-height: var(--height-touch);
-		font-size: 1rem;
+		flex: 0 0 var(--height-touch);
+		align-self: center;
+		width: min(100%, 6.5rem);
+		font-size: 0.9375rem;
 		text-transform: uppercase;
 	}
 
@@ -461,7 +491,6 @@
 	}
 
 	.filter-graph {
-		grid-column: span 5;
 		position: relative;
 		overflow: hidden;
 		border: 1px solid var(--line-strong);

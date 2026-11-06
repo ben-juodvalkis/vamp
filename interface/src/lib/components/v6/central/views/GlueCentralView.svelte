@@ -19,6 +19,10 @@
 
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
+  import FaceGrid from '../FaceGrid.svelte';
+  import FaceSection from '../FaceSection.svelte';
+  import FaceSeam from '../FaceSeam.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
 
   // The disabled/idle scheme is the neutral utility family (deviceInk-safe greys).
   const IDLE_SCHEME = { primary: '#a2acb7', secondary: 'color-mix(in oklab, var(--signal-dim) 10%, transparent)', accent: '#bbc5d1' };
@@ -53,9 +57,13 @@
      `sendParam` is fire-and-forget on a ghost — it queues and triggers
      the load. -->
 <div class="glue-central-layout relative">
+<!-- One face grid (ADR-510): Threshold over two columns, Output one. -->
+<FaceGrid sections={[2, 1]}>
+  <FaceSection span={2}>
+  {#snippet head()}<PanelEyebrow title="Compressor" color={(squash.isGhost ? IDLE_SCHEME : squashInk).primary} />{/snippet}
   <!-- Live's own direction: up is a higher threshold, i.e. less
        squash — the opposite of the tile, whose up is MORE. -->
-  <div class="glue-slider" class:slot-ghost={squash.isGhost}>
+  <div class="glue-slider face-span-2" class:slot-ghost={squash.isGhost}>
     <DeviceSlider
       value={glueThreshold}
       title="Threshold"
@@ -70,10 +78,17 @@
       onInteraction={(value) => squash.sendParam(GLUE_THRESHOLD_PARAM, value)}
     />
   </div>
+  </FaceSection>
+  <FaceSeam />
+
+  <FaceSection span={1}>
+  {#snippet head()}<PanelEyebrow title="Output" color={(squash.isGhost ? IDLE_SCHEME : squashInk).primary} />{/snippet}
   <div class="glue-slider" class:slot-ghost={squash.isGhost}>
     <DeviceSlider
       value={glueOutput}
       title="Output"
+      face="knob"
+      knobSize="l"
       icon="output"
       orientation="vertical"
       min={GLUE_OUTPUT_MIN}
@@ -85,17 +100,17 @@
       onInteraction={(value) => squash.sendParam(GLUE_OUTPUT_PARAM, value)}
     />
   </div>
+  </FaceSection>
+</FaceGrid>
 </div>
 
 <style>
-  /* threshold | output */
+  /* threshold | output: the threshold a set rides as a box, the output
+     set once as a knob in a narrower column (ADR-509). */
   .glue-central-layout {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
     height: 100%;
     width: 100%;
-    padding: var(--central-inset);
-    gap: var(--central-gap);
+    min-height: 0;
   }
 
   .glue-slider {

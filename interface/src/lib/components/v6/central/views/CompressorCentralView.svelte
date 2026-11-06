@@ -18,6 +18,10 @@
   import CompressorControl from '../../device-panel/CompressorControl.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
+  import FaceGrid from '../FaceGrid.svelte';
+  import FaceSection from '../FaceSection.svelte';
+  import FaceSeam from '../FaceSeam.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
 
   const compressor = useFxGridSlot('compressor');
 
@@ -168,12 +172,15 @@
 </script>
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states.
-     sidechain | makeup | compressor: the sidechain grid keeps half the
-     width (it is the one section whose content grows with the set) and
-     makeup and the compressor module split the rest. -->
+     One face grid (ADR-510), four columns of ~224px at 1366 x 1024:
+     sidechain 2 | makeup 1 | compressor 1. The sidechain grid keeps half
+     the width (it is the one section whose content grows with the set). -->
 <div class="comp-central-layout relative">
+<FaceGrid sections={[2, 1, 1]}>
+  <FaceSection span={2}>
+  {#snippet head()}<PanelEyebrow title="Sidechain" color={liveInk.primary} />{/snippet}
   <!-- Sidechain Routing + Cutoff -->
-  <div class="device-wrapper sidechain-section" style={compressor.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
+  <div class="device-wrapper sidechain-section face-span-2" style={compressor.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
     <div class="sidechain-body">
       {#if Array.isArray(availableTypes) && availableTypes.length > 0}
         <!-- Adaptive grid: adjusts rows/columns based on item count -->
@@ -213,6 +220,8 @@
         <DeviceSlider
           value={cutoffValue}
           title="Cutoff"
+          face="knob"
+          knobSize="l"
           icon="cutoff"
           orientation="horizontal"
           min={CUTOFF_MIN}
@@ -226,7 +235,12 @@
     </div>
   </div>
 
-  <!-- Makeup Section: Auto toggle + Gain Slider -->
+  </FaceSection>
+  <FaceSeam />
+
+  <FaceSection span={1}>
+  {#snippet head()}<PanelEyebrow title="Output" color={liveInk.primary} />{/snippet}
+  <!-- Makeup Section: Auto toggle (one touch row) + the Output knob -->
   <div class="device-wrapper makeup-section">
     <!-- Makeup Auto toggle (top) -->
     <button
@@ -243,6 +257,8 @@
       <DeviceSlider
         value={makeupGainValue}
         title="Output"
+        face="knob"
+        knobSize="l"
         icon="output"
         orientation="vertical"
         min={MAKEUP_GAIN_MIN}
@@ -255,21 +271,25 @@
     </div>
   </div>
 
+  </FaceSection>
+  <FaceSeam />
+
+  <FaceSection span={1}>
+  {#snippet head()}<PanelEyebrow title="Compressor" color={liveInk.primary} />{/snippet}
   <!-- Compressor Control (virtual device - handles its own slot state) -->
   <div class="device-wrapper compressor-wrapper">
     <CompressorControl device={compressor.device} icon="compress" />
   </div>
+  </FaceSection>
+</FaceGrid>
 </div>
 
 <style>
-  /* sidechain | makeup | compressor */
+  /* sidechain | makeup | compressor, on the FaceGrid (ADR-510). */
   .comp-central-layout {
-    display: grid;
-    grid-template-columns: 2fr 0.9fr 1fr;
     height: 100%;
     width: 100%;
-    padding: var(--central-inset);
-    gap: var(--central-gap);
+    min-height: 0;
   }
 
   .device-wrapper {
@@ -287,25 +307,27 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: var(--central-gap);
+    gap: var(--face-gutter);
     min-height: 0;
   }
 
+  /* A large knob with its caption beside it: 96px + 12 (ADR-509). */
   .cutoff-slider-wrapper {
     flex-shrink: 0;
-    height: 72px;
+    height: 6.75rem;
   }
 
   .makeup-section {
     display: flex;
     flex-direction: column;
-    gap: var(--central-gap);
+    gap: var(--face-gutter);
   }
 
+  /* One touch row over its knob (ADR-509): the knob keeps the height. */
   .makeup-toggle {
     flex-shrink: 0;
-    height: 80px;
-    min-height: 80px;
+    height: var(--height-touch);
+    min-height: var(--height-touch);
   }
   /* Ghost compressor dims the toggle (was inline `opacity: 0.7`; lifted
      onto the .is-ghost class so the flat grammar can re-read it without

@@ -3,11 +3,16 @@
    * The Phaser-Flanger's view (the `phaser` slot), its unfolded panel left
    * to right (2026-11-06, was the pad alone; Live 12 manual §29.29):
    *
-   *   [pad: Freq across, Feedback up] [Mode · FB Invert]
-   *   [Phaser: Notches / Center / Spread / Blend; Flanger or Doubler: Time]
-   *   [LFO Waveform] [Amount / Duty Cyc / Env · Env Fol] [Warmth / Output / Dry/Wet]
+   *   [Mode · FB Invert]
+   *   | [Phaser: Notches  Center / Spread  Blend; Flanger or Doubler: Time]
+   *   | [LFO Waveform] [Amount  Duty Cyc / Env  Env Fol] | [Warmth / Output / Dry/Wet]
    *
-   * The pad is the `phaser` control (deviceControls, PhaserPad). Indices,
+   * on one face grid (ADR-510), sections 1 · 2 · 3 · 1, every knob medium,
+   * two to a row.
+   *
+   * LFO 1's Freq and Feedback are the chain cell's pad (the `phaser`
+   * control, deviceControls, ADR-479), drawn above this view, so the view
+   * no longer draws that pad too (user, 2026-11-06). Indices,
    * ranges and labels measured on the rig (device_dump, 2026-11-06): 1 LFO
    * Amount, 2 LFO Wave 0..9, 12 LFO Morph (Live's Duty Cycle, -100..100 %),
    * 14 Env Enabled, 15 Env Amount (-1..1 on 0..1), 18 Mode 0..2, 19 Notches
@@ -18,10 +23,13 @@
    *
    * NO {#if device} gate - every control handles its own ghost state.
    */
-  import PhaserPad from './chorus/PhaserPad.svelte';
   import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
   import ParamColumn from './fx/ParamColumn.svelte';
   import ParamSwitch from './fx/ParamSwitch.svelte';
+  import FaceGrid from '../FaceGrid.svelte';
+  import FaceSection from '../FaceSection.svelte';
+  import FaceSeam from '../FaceSeam.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
 
   const fx = useFxGridSlot('phaser');
@@ -75,31 +83,42 @@
   ];
 </script>
 
-<div class="fx-layout" data-view="phaser">
-  <div class="cell" class:slot-ghost={fx.isGhost}>
-    <PhaserPad />
-  </div>
+<!-- One face grid (ADR-510), seven columns of ~130px at 1366 x 1024:
+     Mode 1 · Voice 2 · LFO / Env 3 · Output 1. -->
+<div class="face-root" data-view="phaser">
+<FaceGrid sections={[1, 2, 3, 1]}>
+  <FaceSection span={1}>
+    {#snippet head()}<PanelEyebrow title="Mode" color={fx.color.primary} />{/snippet}
+    <div class="cell">
+      <ScrubTabs
+        options={MODES}
+        selected={mode}
+        onSelect={(i) => fx.sendParam(PHASER.mode, i)}
+        cols={1}
+        tint={fx.color.primary}
+        inked
+        ghost={fx.isGhost}
+        label={(m) => m}
+        groupLabel="Mode"
+        name="mode"
+        class="flex-1"
+      />
+      <ParamSwitch row label="FB Invert" on={fbInvert} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => fx.sendParam(PHASER.fbInvert, fbInvert ? 0 : 1)} />
+    </div>
+  </FaceSection>
+  <FaceSeam />
 
-  <div class="cell">
-    <ScrubTabs
-      options={MODES}
-      selected={mode}
-      onSelect={(i) => fx.sendParam(PHASER.mode, i)}
-      cols={1}
-      tint={fx.color.primary}
-      inked
-      ghost={fx.isGhost}
-      label={(m) => m}
-      groupLabel="Mode"
-      name="mode"
-      style="flex: 3 1 0;"
-    />
-    <ParamSwitch label="FB Invert" on={fbInvert} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => fx.sendParam(PHASER.fbInvert, fbInvert ? 0 : 1)} />
-  </div>
+  <!-- Up to four knobs, two to a row: medium (ADR-509). -->
+  <FaceSection span={2}>
+    {#snippet head()}<PanelEyebrow title="Voice" color={fx.color.primary} />{/snippet}
+    <ParamColumn face="knob" knobSize="m" span={2} {fx} ink={fx.color} boxes={voicing} fullest={4} />
+  </FaceSection>
+  <FaceSeam />
 
-  <ParamColumn {fx} ink={fx.color} boxes={voicing} />
-
-  <div class="cell">
+  <!-- The wave, then Amount and Duty Cyc over Env and its switch, two to a
+       row: medium. -->
+  <FaceSection span={3}>
+    {#snippet head()}<PanelEyebrow title="LFO / Env" color={fx.color.primary} />{/snippet}
     <ScrubTabs
       options={WAVES}
       selected={Math.round(fx.paramValue(PHASER.wave) ?? 1)}
@@ -111,43 +130,35 @@
       label={(w) => w}
       groupLabel="LFO wave"
       name="wave"
-      class="flex-1"
     />
-  </div>
+    <ParamColumn face="knob" knobSize="m" span={2} {fx} ink={fx.color} boxes={MOTION}>
+      {#snippet after()}
+        <ParamSwitch row label="Env Fol" on={envOn} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => fx.sendParam(PHASER.envOn, envOn ? 0 : 1)} />
+      {/snippet}
+    </ParamColumn>
+  </FaceSection>
+  <FaceSeam />
 
-  <div class="cell">
-    <div class="grow"><ParamColumn {fx} ink={fx.color} boxes={MOTION} /></div>
-    <ParamSwitch label="Env Fol" on={envOn} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => fx.sendParam(PHASER.envOn, envOn ? 0 : 1)} />
-  </div>
-  <ParamColumn {fx} ink={fx.color} boxes={OUT} />
+  <FaceSection span={1}>
+    {#snippet head()}<PanelEyebrow title="Output" color={fx.color.primary} />{/snippet}
+    <ParamColumn {fx} ink={fx.color} boxes={OUT} />
+  </FaceSection>
+</FaceGrid>
 </div>
 
 <style>
-  /* The pad two shares; the tab and box columns one each. */
-  .fx-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) repeat(5, minmax(0, 1fr));
-    gap: var(--central-gap);
+  /* The face is the FaceGrid (ADR-510); a cell is how one column fills its height. */
+  .face-root {
     height: 100%;
     width: 100%;
-    padding: var(--central-inset);
+    min-height: 0;
   }
 
   .cell {
     display: flex;
     flex-direction: column;
-    gap: var(--central-gap);
+    gap: var(--face-gutter);
     min-height: 0;
     min-width: 0;
-  }
-
-  .grow {
-    flex: 3 1 0;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-  .grow > :global(*) {
-    flex: 1 1 0;
   }
 </style>

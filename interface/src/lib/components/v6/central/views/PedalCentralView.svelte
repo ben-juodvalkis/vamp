@@ -8,6 +8,8 @@
    * `SaturatorCentralView`, `ReduxCentralView`; the chain is the door to
    * the Drum Buss).
    *
+   * On the face grid (ADR-510), sections [1, 2]: Drive, then Tone.
+   *
    * One Drive/Mix slider at the left, full height, then the tone stack on
    * the EQ tile's pad over the type switch (2026-10-07). Indices and ranges
    * measured off the running device: 1 Type (Drive · Distort · Fuzz),
@@ -22,10 +24,13 @@
    */
 
   import ToneCurvePad from '$lib/components/v6/device-panel/ToneCurvePad.svelte';
-  import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+  import FaceGrid from '../FaceGrid.svelte';
+  import FaceSection from '../FaceSection.svelte';
+  import FaceSeam from '../FaceSeam.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
 
   const fx = useFxGridSlot('pedal');
 
@@ -49,103 +54,76 @@
 
   let pedalType = $derived(fx.paramValue(PEDAL.type) ?? 0);
   let pedalMidFreq = $derived((fx.paramValue(PEDAL.midFreq) ?? 1) / MID_FREQ_STEPS);
-  let pedalDrive = $derived(fx.paramValue(PEDAL.drive) ?? 0);
 </script>
 
+<!-- On the face grid (ADR-510): the pedal's type, a vertical tab on the
+     left, then the tone pad over three columns. No Drive: the chain cell's
+     control sets it, Drive and Dry/Wet together (user, 2026-11-06). -->
 <div class="pedal-layout" data-view="pedal">
-  <!-- Drive and Dry/Wet together on one slider, as the old pad's Y was. -->
-  <div class="pedal-drive" class:slot-ghost={fx.isGhost}>
-    <DeviceSlider
-      value={pedalDrive}
-      title="Drive"
-      icon="drive"
-      orientation="vertical"
-      isGhost={fx.isGhost}
-      color={pedalInk}
-      readout={fx.paramDisplay(PEDAL.drive)}
-      min={0}
-      max={1}
-      onTap={() => fx.loadIfGhost()}
-      onInteraction={(v) => {
-        fx.sendParam(PEDAL.drive, v);
-        fx.sendParam(PEDAL.dryWet, v);
-      }}
-    />
-  </div>
+  <FaceGrid sections={[1, 3]}>
+    <FaceSection span={1}>
+      {#snippet head()}<PanelEyebrow title="Type" color={pedalInk.primary} />{/snippet}
+      <div class="pedal-type-buttons device-segmented seg-grid" style="--btn-tint: {pedalInk.primary};{fx.isGhost ? ' opacity: var(--opacity-ghost);' : ''}">
+        {#each PEDAL_TYPE_OPTIONS as option}
+          <button
+            class="device-segment w-full px-2 text-sm text-center font-medium"
+            class:active={pedalType === option.value}
+            onclick={() => fx.sendParam(PEDAL.type, option.value)}
+          >
+            {option.label}
+          </button>
+        {/each}
+      </div>
+    </FaceSection>
+    <FaceSeam ink={pedalInk.primary} />
 
-  <div class="pedal-tone" class:slot-ghost={fx.isGhost}>
-    <ToneCurvePad
-      title="Tone"
-      ariaLabel="Pedal tone: bass, mid and treble"
-      low={toneValue(PEDAL.bass)}
-      mid={toneValue(PEDAL.mid)}
-      midFreq={pedalMidFreq}
-      high={toneValue(PEDAL.treble)}
-      isGhost={fx.isGhost}
-      color={pedalInk}
-      curveColor={pedalInk.primary}
-      midFreqHz={pedalMidFreqHz}
-      onTap={() => fx.loadIfGhost()}
-      onLow={(v) => sendTone(PEDAL.bass, v)}
-      onHigh={(v) => sendTone(PEDAL.treble, v)}
-      onMid={(x, y) => {
-        const step = Math.round(x * MID_FREQ_STEPS);
-        if (step !== fx.paramValue(PEDAL.midFreq)) fx.sendParam(PEDAL.midFreq, step);
-        sendTone(PEDAL.mid, y);
-      }}
-    />
-  </div>
-
-  <!-- The pedal types, one pick-one tab. -->
-  <div class="pedal-type-buttons device-segmented seg-grid" style="--btn-tint: {pedalInk.primary};{fx.isGhost ? ' opacity: var(--opacity-ghost);' : ''}">
-    {#each PEDAL_TYPE_OPTIONS as option}
-      <button
-        class="device-segment w-full px-2 text-xs text-center font-medium"
-        class:active={pedalType === option.value}
-        onclick={() => fx.sendParam(PEDAL.type, option.value)}
-      >
-        {option.label}
-      </button>
-    {/each}
-  </div>
+    <FaceSection span={3}>
+      {#snippet head()}<PanelEyebrow title="Tone" color={pedalInk.primary} />{/snippet}
+      <div class="pedal-tone face-span-all" class:slot-ghost={fx.isGhost}>
+        <ToneCurvePad
+          title="Tone"
+          ariaLabel="Pedal tone: bass, mid and treble"
+          low={toneValue(PEDAL.bass)}
+          mid={toneValue(PEDAL.mid)}
+          midFreq={pedalMidFreq}
+          high={toneValue(PEDAL.treble)}
+          isGhost={fx.isGhost}
+          color={pedalInk}
+          curveColor={pedalInk.primary}
+          midFreqHz={pedalMidFreqHz}
+          onTap={() => fx.loadIfGhost()}
+          onLow={(v) => sendTone(PEDAL.bass, v)}
+          onHigh={(v) => sendTone(PEDAL.treble, v)}
+          onMid={(x, y) => {
+            const step = Math.round(x * MID_FREQ_STEPS);
+            if (step !== fx.paramValue(PEDAL.midFreq)) fx.sendParam(PEDAL.midFreq, step);
+            sendTone(PEDAL.mid, y);
+          }}
+        />
+      </div>
+    </FaceSection>
+  </FaceGrid>
 </div>
 
 <style>
-  /* Drive at the left, full height; the tone pad over the type switch on
-     the two tracks beside it (a slider one share, a pad two). */
+  /* The face is the FaceGrid (ADR-510): four equal columns, Type, then
+     Tone over three. */
   .pedal-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto;
     height: 100%;
     width: 100%;
-    padding: var(--central-inset);
-    gap: var(--central-gap);
-  }
-
-  .pedal-drive {
-    grid-column: 1;
-    grid-row: 1 / span 2;
-    min-width: 0;
-    min-height: 0;
   }
 
   .pedal-tone {
-    grid-column: 2 / span 2;
-    grid-row: 1;
     min-width: 0;
     min-height: 0;
   }
 
-  /* Drive · Distort · Fuzz across the foot of the pad, one row a
-     slider-label tall. */
+  /* Drive · Distort · Fuzz stacked, the column's height shared. */
   .pedal-type-buttons {
-    grid-column: 2 / span 2;
-    grid-row: 2;
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     gap: 1px;
-    height: 3rem;
+    min-height: 0;
   }
 
   .pedal-type-buttons button {

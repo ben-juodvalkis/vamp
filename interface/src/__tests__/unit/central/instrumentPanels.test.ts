@@ -85,10 +85,12 @@ describe.each(PANELS)('%s panel', (_name, panel, dump) => {
 	});
 
 	it('switches only on/off parameters', () => {
-		for (const c of controls) {
-			if (c.kind !== 'switch') continue;
-			const p = byName.get(c.param)!;
-			expect([p.min, p.max], c.param).toEqual([0, 1]);
+		const switches = controls.flatMap((c) =>
+			c.kind === 'switch' ? [c.param] : c.kind === 'box' && c.toggle ? [c.toggle.param] : []
+		);
+		for (const name of switches) {
+			const p = byName.get(name)!;
+			expect([p.min, p.max], name).toEqual([0, 1]);
 		}
 	});
 

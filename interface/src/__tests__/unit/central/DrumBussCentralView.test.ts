@@ -90,13 +90,15 @@ describe('DrumBussCentralView', () => {
 	});
 });
 
-describe('DrumBussCentralView — the Drum XY (ADR-485: no grid tile carries it)', () => {
-	it('leads with the Drum XY on a drum track and any other', async () => {
+describe('DrumBussCentralView — the Drum XY is the chain cell\'s alone', () => {
+	it('draws no Transients x Dry/Wet pad, on a drum track or any other, and keeps Boom', async () => {
 		for (const role of [undefined, 'synth'] as const) {
 			seed([drumBuss({})], role);
 			const { container, unmount } = render(DrumBussCentralView);
 			await tick();
-			expect(container.querySelector('.drum-buss-layout.with-xy .drum-xy')).not.toBeNull();
+			expect(container.querySelector('.drum-xy')).toBeNull();
+			expect(container.querySelector('.device-control')).toBeNull();
+			expect(container.querySelector('.boom')).not.toBeNull();
 			unmount();
 		}
 	});

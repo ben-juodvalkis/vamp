@@ -11,7 +11,9 @@
 	 */
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
-	import { choiceColumns, type PanelControl } from './panelTypes';
+	import { choiceColumns, tabOptions, type KnobSize, type PanelControl, type PanelFace } from './panelTypes';
+	import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
+	import ChoicePicker from '../../ChoicePicker.svelte';
 	import type { PanelParams } from './usePanelParams.svelte';
 
 	interface Props {
@@ -22,9 +24,21 @@
 		switchParam?: string;
 		/** Rows on the page: see `choiceColumns`. */
 		pageRows?: number;
+		/** Box or knob (ADR-509), decided by the group and the panel. */
+		face?: PanelFace;
+		/** A knob's size (ADR-509): by its column's count, unless the panel names one. */
+		knobSize?: KnobSize;
+		/** A knob with this letter inside and no caption: a pick under it names it (a page's amount). */
+		mark?: string;
+		/** On a page (ADR-510): a pick too long for a tab is a `ChoicePicker`, its name over it. */
+		pick?: boolean;
+		/** With `pick`, draw the picker alone, no name over it: it is a knob's caption. */
+		bareCaption?: boolean;
 	}
 
-	let { control, params, color, switchParam, pageRows = 1 }: Props = $props();
+	let { control, params, color, switchParam, pageRows = 1, face = 'slider', knobSize = 'm', mark, pick = false, bareCaption = false }: Props = $props();
+	let pickOptions = $derived(control.kind === 'choice' ? control.options : control.kind === 'step' ? control.labels : undefined);
+	let pickTitle = $derived(control.kind === 'choice' ? (control.title ?? control.param) : control.title);
 
 	let listed = $derived(params.has(control.param));
 	let range = $derived(params.range(control.param));
@@ -38,14 +52,41 @@
 	let bipolar = $derived(lo < 0 && hi > 0);
 	let step = $derived(raw === undefined ? undefined : Math.round(raw - lo));
 
+	// The on/off parameter that belongs to a box, drawn small under it.
+	let toggle = $derived(control.kind === 'box' ? control.toggle : undefined);
+	let toggleListed = $derived(toggle ? params.has(toggle.param) : false);
+	let toggleOn = $derived(toggle ? toggleListed && (params.raw(toggle.param) ?? 0) >= 0.5 : false);
+	function flipToggle() {
+		if (!toggle || !toggleListed) return;
+		const r = params.range(toggle.param);
+		params.write(toggle.param, toggleOn ? (r?.min ?? 0) : (r?.max ?? 1));
+	}
+	// A pick of few values draws as a tab (ADR-509).
+	let tabs = $derived(tabOptions(control));
+	// Among knobs a switch is one touch row high, not a full cell (ADR-509).
+	let compact = $derived(face === 'knob');
+
 	function write(value: number) {
 		if (!listed) return;
 		params.write(control.param, value, control.param === switchParam ? undefined : switchParam);
 	}
 </script>
 
-{#if control.kind === 'box'}
-	<div class="panel-control" class:ghost data-param={control.param}>
+{#if pick && pickOptions}
+	<!-- A long pick on a page: its name, and the picker that opens over the view. -->
+	<div class="panel-pick" class:ghost data-param={control.param}>
+		{#if !bareCaption}<span class="pick-title" style="color: {color.primary};">{pickTitle}</span>{/if}
+		<ChoicePicker
+			options={pickOptions}
+			selected={listed && step !== undefined ? step : -1}
+			onSelect={(i) => write(lo + i)}
+			label={pickTitle}
+			tint={color.primary}
+			ghost={!listed}
+		/>
+	</div>
+{:else if control.kind === 'box'}
+	<div class="panel-control" class:ghost class:with-toggle={toggle} data-param={control.param}>
 		<DeviceSlider
 			value={raw ?? lo}
 			title={control.title}
@@ -56,8 +97,45 @@
 			centerValue={bipolar ? 0 : undefined}
 			isGhost={!listed}
 			{color}
+			{face}
+			{knobSize}
+			knobFit
+			knobCaption={!mark}
+			knobMark={mark}
 			readout={params.display(control.param)}
+			valueText={face === 'knob' ? params.display(control.param) : undefined}
 			onInteraction={write}
+		/>
+		{#if toggle}
+			<button
+				class="physical-button panel-switch compact"
+				class:active={toggleOn}
+				aria-pressed={toggleOn}
+				disabled={!toggleListed}
+				style="--btn-tint: {color.primary};"
+				data-param={toggle.param}
+				onclick={flipToggle}
+			>{toggle.title}</button>
+		{/if}
+	</div>
+{:else if tabs}
+	<!-- A pick of few values: a tab scrubbed across them, as Echo's LFO wave
+	     (ADR-509); a stepper with few named values draws the same way. -->
+	{@const cols = choiceColumns(tabs.length, pageRows)}
+	{@const rows = Math.ceil(tabs.length / cols)}
+	<div class="panel-choice" class:ghost class:compact data-param={control.param}>
+		<ScrubTabs
+			options={tabs}
+			selected={listed && step !== undefined ? step : -1}
+			onSelect={(i) => write(lo + i)}
+			{cols}
+			{rows}
+			tint={color.primary}
+			inked
+			ghost={!listed}
+			label={(o) => o}
+			groupLabel={control.kind === 'choice' ? (control.title ?? control.param) : control.kind === 'step' ? control.title : control.param}
+			style="height: {compact ? `calc(${rows} * var(--height-touch))` : '100%'}; width: 100%; --scrub-font-size: {Math.max(...tabs.map((o) => o.length)) > 5 ? '0.6875rem' : '0.8125rem'};"
 		/>
 	</div>
 {:else if control.kind === 'step'}
@@ -66,7 +144,12 @@
 	<div class="panel-control" class:ghost data-param={control.param}>
 		<DeviceSlider
 			value={raw ?? lo}
-			title={`${name} ${shown}`}
+			title={face === 'knob' ? name : `${name} ${shown}`}
+			{face}
+			{knobSize}
+			knobFit
+			valueText={shown}
+			steps={Math.round(hi - lo) + 1}
 			labelAt="top"
 			min={lo}
 			max={hi}
@@ -82,29 +165,11 @@
 			{/snippet}
 		</DeviceSlider>
 	</div>
-{:else if control.kind === 'choice'}
-	<div
-		class="device-segmented panel-choice"
-		class:ghost
-		style="--btn-tint: {color.primary}; grid-template-columns: repeat({choiceColumns(control.options.length, pageRows)}, minmax(0, 1fr)); grid-template-rows: repeat({Math.ceil(control.options.length / choiceColumns(control.options.length, pageRows))}, minmax(0, 1fr)); grid-auto-flow: column;"
-		role="group"
-		aria-label={control.param}
-		data-param={control.param}
-	>
-		{#each control.options as option, i (option)}
-			<button
-				class="device-segment panel-choice-option"
-				class:active={listed && step === i}
-				aria-pressed={listed && step === i}
-				disabled={!listed}
-				onclick={() => write(lo + i)}
-			><span class="option-text">{option}</span></button>
-		{/each}
-	</div>
-{:else}
+{:else if control.kind === 'switch'}
 	{@const on = listed && (raw ?? 0) >= 0.5}
 	<button
 		class="physical-button panel-switch"
+		class:compact
 		class:active={on}
 		class:ghost={!listed}
 		aria-pressed={on}
@@ -146,33 +211,31 @@
 		font-size: 0.85em;
 	}
 
-	.panel-choice {
-		display: grid;
+	/* A long pick on a page: its name over a picker, centred in the cell. */
+	.panel-pick {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		gap: var(--spacing-xs);
 		min-width: 0;
 		min-height: 0;
 		height: 100%;
 	}
-	.panel-choice-option + .panel-choice-option {
-		border-top: 0;
-	}
-	/* Each option its own cell, edged, so a grid of them reads as cells. */
-	.panel-choice-option {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		min-width: 0;
-		min-height: 0;
-		padding: 2px 4px;
+	.pick-title {
 		font-size: 0.75rem;
-		line-height: 1.1;
+		font-weight: 600;
 		text-align: center;
-		box-shadow: inset 0 0 0 0.5px var(--line-faint);
-	}
-	.option-text {
-		min-width: 0;
+		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-		white-space: nowrap;
+	}
+
+	/* A tab of few values (ScrubTabs), filling its cell. */
+	.panel-choice {
+		display: flex;
+		min-width: 0;
+		min-height: 0;
+		height: 100%;
 	}
 
 	.panel-switch {
@@ -181,14 +244,32 @@
 		height: 100%;
 		font-size: 0.9375rem;
 	}
+	/* Among knobs a tab is a touch row a row of values, centred in its cell,
+	   and a switch one touch row: full height they outweigh the knobs (ADR-509). */
+	.panel-choice.compact {
+		align-self: center;
+		height: auto;
+	}
+	.panel-switch.compact {
+		height: var(--height-touch);
+		align-self: center;
+		width: 100%;
+	}
+	/* A box with its switch under it: the box takes what the switch leaves. */
+	.panel-control.with-toggle {
+		flex-direction: column;
+		gap: var(--spacing-xs);
+	}
+	.panel-control.with-toggle > .panel-switch.compact {
+		flex: 0 0 auto;
+		width: min(100%, 5.5rem);
+	}
 
-	:global([data-grammar='flat']) .panel-choice .device-segment.active,
 	:global([data-grammar='flat']) .panel-switch.active {
 		background: var(--btn-tint);
 		border-color: var(--btn-tint);
 		color: var(--flat-on-fg);
 	}
-	:global([data-grammar='flat']) .panel-choice .device-segment:not(.active),
 	:global([data-grammar='flat']) .panel-switch:not(.active) {
 		color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
 	}

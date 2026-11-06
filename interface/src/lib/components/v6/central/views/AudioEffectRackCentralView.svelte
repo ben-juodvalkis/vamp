@@ -5,6 +5,7 @@
 	 * One slider per named macro; empty/unnamed macros are skipped.
 	 */
 	import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
+	import KnobGrid from '../../device-panel/KnobGrid.svelte';
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import { familyScheme, type DeviceColorScheme } from '$lib/config/devicePresets';
 	import { buildMacroLayout, cleanParameterName, type ControlLayout } from '$lib/utils/macroLayoutUtils';
@@ -89,24 +90,24 @@
 	<div class="audio-effect-rack-view" data-density="compact">
 		<!-- Which rack: a track can carry several, and the chain overview picks one. -->
 		<div class="rack-name">{audioEffectRack.name}</div>
-		<!-- One value box per named macro, two to a column, filled column by
-		     column (ADR-477), as the Instrument Rack's; a lone one full height. -->
+		<!-- One knob per named macro, as Live draws a rack's macros, in the
+		     grid that gives each the most room (ADR-509). -->
 		{#if controlLayout.length > 0}
-			<div class="controls-panel" style="grid-template-rows: repeat({controlLayout.length > 1 ? 2 : 1}, minmax(0, 1fr));">
-				{#each controlLayout as control}
-					<div class="control-slot">
-						<DeviceSlider
-							value={getNormalizedValue(control.macroIndex)}
-							title={control.name}
-							icon={glyphForName(control.name)}
-							orientation="vertical"
-							color={effectiveColor}
-							readout={selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(audioEffectRack, control.macroIndex))}
-							onInteraction={(val) => handleSliderChange(control.macroIndex, val)}
-						/>
-					</div>
-				{/each}
-			</div>
+			<KnobGrid count={controlLayout.length}>
+				{#snippet item(i, size)}
+					{@const control = controlLayout[i]}
+					<DeviceSlider
+						value={getNormalizedValue(control.macroIndex)}
+						title={control.name}
+						face="knob"
+						knobSize={size}
+						icon={glyphForName(control.name)}
+						color={effectiveColor}
+						readout={selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(audioEffectRack, control.macroIndex))}
+						onInteraction={(val) => handleSliderChange(control.macroIndex, val)}
+					/>
+				{/snippet}
+			</KnobGrid>
 		{:else}
 			<!-- Fallback: show grid of all 16 macros when no named macros found -->
 			<div class="macro-grid">
@@ -117,7 +118,8 @@
 					<div class="macro-control">
 						<DeviceSlider
 							value={macroValue / MACRO_MAX}
-							labelOrientation="horizontal"
+							face="knob"
+							knobSize="s"
 							title={paramName}
 							icon={glyphForName(paramName)}
 							color={effectiveColor}
@@ -146,27 +148,6 @@
 		flex-direction: column;
 		gap: var(--central-gap);
 	}
-
-	/* The named macros: rows set inline, filled column by column, every
-	   column one share (ADR-477). */
-	.controls-panel {
-		flex: 1;
-		display: grid;
-		grid-auto-flow: column;
-		grid-auto-columns: minmax(0, 1fr);
-		gap: var(--central-gap);
-		min-height: 0;
-		overflow: hidden;
-	}
-
-	.control-slot {
-		display: flex;
-		min-height: 0;
-		min-width: 0;
-		height: 100%;
-		flex-shrink: 1;
-	}
-
 
 	/* Fallback grid layout for unnamed macros */
 	.macro-grid {

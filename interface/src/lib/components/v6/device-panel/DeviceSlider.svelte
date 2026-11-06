@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy, type Snippet } from 'svelte';
   import ControlGlyph, { type ControlGlyphName } from './ControlGlyph.svelte';
+  import KnobFace from './KnobFace.svelte';
   import { inValueBoxScope, VALUE_BOX_TRAVEL } from '../central/valueBox';
   import { familyScheme, type DeviceColorScheme } from '$lib/config/devicePresets';
   import MeterVisualization from '$lib/components/v6/looping/MeterVisualizationV6.svelte';
@@ -71,6 +72,25 @@
     track?: MeterTrack | null;  // Optional track for meter visualization
     trackIndex?: number;       // Track index for meter
     meterColor?: string;       // Optional track-color tint for the meter fill
+    // 'knob' draws the value as an arc (ADR-509) with the same gesture and
+    // target as the box. For tone-shaping and set-and-forget controls; a level
+    // ridden mid-set, a meter or an envelope's stages stay boxes. A knob
+    // ignores `label`, `labelAt`, `orientation` and the handle line.
+    face?: 'slider' | 'knob';
+    // Under a knob's name at rest: the value in Live's words.
+    valueText?: string;
+    // A stepped knob's value count: a detent each (KnobFace, up to 24).
+    steps?: number;
+    // A knob's size (ADR-509), by how many knobs its column stacks
+    // (`knobSizeFor`): 'l' 96px for one or two, 'm' 70px for three, 's'
+    // 48px for four or more.
+    knobSize?: 's' | 'm' | 'l';
+    /** False drops the knob's caption (KnobFace `caption`); the aria-label keeps the title. */
+    knobCaption?: boolean;
+    /** A short text in the knob's middle at rest, in place of the glyph (KnobFace `centreMark`). */
+    knobMark?: string;
+    /** `knobSize` is a ceiling: the largest size the cell holds (KnobFace `fit`). */
+    knobFit?: boolean;
   }
 
   let {
@@ -98,13 +118,26 @@
     handleLine = false,
     track = null,
     trackIndex = 0,
-    meterColor
+    meterColor,
+    face = 'slider',
+    valueText,
+    steps,
+    knobSize = 'm',
+    knobCaption = true,
+    knobMark,
+    knobFit = false
   }: Props = $props();
 
   // Resolve label orientation - 'auto' follows slider orientation
   // A central view makes every slider a value box (ADR-477, `valueBox.ts`).
   const valueBox = inValueBoxScope();
   let effectiveTravel = $derived(travel ?? (valueBox ? VALUE_BOX_TRAVEL : undefined));
+
+  // A knob (ADR-509) is a value box drawn as an arc: same gesture, same
+  // travel, the whole cell its target. Only a vertical drag turns it, up
+  // raising it (user, 2026-11-06; either axis until then), so a sideways
+  // slip of the finger never moves it.
+  let knobFace = $derived(face === 'knob');
 
   let effectiveLabelOrientation = $derived.by(() => {
     const asked = labelOrientation ?? (valueBox ? 'horizontal' : 'auto');
@@ -253,8 +286,12 @@
     const size = effectiveTravel ? Math.max(length, effectiveTravel) : length;
     const delta = ((currentPointer - startPointer) / size) * sensitivity;
 
-    // Apply delta to start value (invert for vertical)
-    const normalizedDelta = orientation === 'vertical' ? -delta : delta;
+    // Apply delta to start value (invert for vertical). A knob takes the
+    // vertical alone, up clockwise, over its height or the box travel.
+    const knobSize = effectiveTravel ? Math.max(rect.height, effectiveTravel) : rect.height;
+    const normalizedDelta = knobFace
+      ? -(event.clientY - tapStartY) / knobSize * sensitivity
+      : orientation === 'vertical' ? -delta : delta;
     const normalizedValue = (startValue - min) / (max - min);
     const newNormalizedValue = Math.max(0, Math.min(1, normalizedValue + normalizedDelta));
     const newValue = min + (newNormalizedValue * (max - min));
@@ -267,6 +304,44 @@
   }
 </script>
 
+{#if knobFace}
+  {@const origin = centerOrigin ? (max > min ? ((centerValue ?? (min + max) / 2) - min) / (max - min) : 0.5) : undefined}
+  <div class="device-knob">
+    <div
+      class="knob-container"
+      class:ghost={isGhost}
+      bind:this={container}
+      onpointerdown={handlePointerDown}
+      onpointermove={handlePointerMove}
+      onpointerup={handlePointerUp}
+      onpointercancel={handlePointerUp}
+      role="slider"
+      tabindex="0"
+      aria-label="{valueText ? `${title} ${valueText}` : title}: {localValue.toFixed(2)}"
+      aria-valuenow={localValue}
+      aria-valuemin={min}
+      aria-valuemax={max}
+      data-face="knob"
+      data-layout-box
+    >
+      <KnobFace
+        position={max > min ? (localValue - min) / (max - min) : 0}
+        {origin}
+        {title}
+        {valueText}
+        {readout}
+        {icon}
+        {steps}
+        size={knobSize}
+        caption={knobCaption}
+        centreMark={knobMark}
+        fit={knobFit}
+        dragging={isDragging}
+        ink={color.primary}
+      />
+    </div>
+  </div>
+{:else}
 <div class="device-slider {orientation}">
   <div
     class="slider-container"
@@ -403,6 +478,7 @@
     {/if}
   </div>
 </div>
+{/if}
 
 <style>
   .device-slider {
@@ -709,5 +785,30 @@
     width: 2px;
     bottom: 0;
     height: 15%; /* Large gap for label */
+  }
+
+  /* ---- Knob face (ADR-509): the cell is the target; KnobFace draws. */
+  .device-knob {
+    width: 100%;
+    height: 100%;
+    user-select: none;
+    font-family: var(--font-sans);
+  }
+  .knob-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    /* Same reason as the box's: a touch drag must not be claimed as a pan. */
+    touch-action: none;
+    border-radius: var(--radius-sm);
+  }
+  .knob-container:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ring);
+  }
+  .knob-container.ghost :global(.knob-value),
+  .knob-container.ghost :global(.knob-centre) {
+    opacity: var(--opacity-ghost);
   }
 </style>

@@ -6,7 +6,12 @@
 	 * (2026-10-26). The device gained an LFO on Tune (2026-10-27; user: "add
 	 * the LFO controls to the central view"):
 	 *
-	 *   [Comb pad] | [LFO pad: rate across, amount up] [Shape, 7; Sync]
+	 *   [LFO pad: rate across, amount up] [Shape, 7 · Sync]
+	 *
+	 * on one face grid (ADR-510), one section of four columns, the pad
+	 * three. Tune and Feedback / Mix are the chain cell's pad (the `comb`
+	 * control, deviceControls, ADR-479), drawn above this view, so the
+	 * view no longer draws that pad too (user, 2026-11-06).
 	 *
 	 * The pad's rate is Live's synced step while Sync is on, the free Rate
 	 * otherwise. Parameters are `COMB` in `deviceControls`, by name with the
@@ -16,9 +21,10 @@
 	 * NO {#if device} gate - every control handles its own ghost state.
 	 */
 
-	import CombControl from '$lib/components/v6/device-panel/CombControl.svelte';
 	import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
-	import SectionDivider from '$lib/components/v6/central/SectionDivider.svelte';
+	import FaceGrid from '$lib/components/v6/central/FaceGrid.svelte';
+	import FaceSection from '$lib/components/v6/central/FaceSection.svelte';
+	import PanelEyebrow from './panel/PanelEyebrow.svelte';
 	import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
 	import { COMB, COMB_LFO, resolveParam, type ParamRef } from '$lib/components/v6/device-panel/deviceControls';
 	import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
@@ -70,14 +76,13 @@
 	];
 </script>
 
+<!-- One face grid (ADR-510), four columns of ~250px at 1366 x 1024:
+     the LFO's pad over three, the shapes over Sync one. -->
 <div class="comb-layout" data-view="comb" style="--btn-tint: {ink.primary};">
-	<div class="col" class:slot-ghost={fx.isGhost}>
-		<CombControl device={fx.device} icon="comb" />
-	</div>
-
-	<SectionDivider orientation="vertical" />
-
-	<div class="col" class:slot-ghost={fx.isGhost} class:no-lfo={!hasLfo}>
+<FaceGrid sections={[4]}>
+	<FaceSection span={4}>
+	{#snippet head()}<PanelEyebrow title="LFO" color={ink.primary} />{/snippet}
+	<div class="col face-span-3" class:slot-ghost={fx.isGhost} class:no-lfo={!hasLfo}>
 		<DeviceXY
 			xValue={synced ? value(COMB.lfoSyncRate) / COMB_LFO.syncRateMax : (value(COMB.lfoRate) - COMB_LFO.rateMin) / rateSpan}
 			yValue={value(COMB.lfoAmount) / COMB_LFO.amountMax}
@@ -116,23 +121,23 @@
 		</ScrubTabs>
 		<button class="physical-button switch" class:active={synced} aria-pressed={synced} onclick={() => send(COMB.lfoSync, synced ? 0 : 1)}>Sync</button>
 	</div>
+	</FaceSection>
+</FaceGrid>
 </div>
 
 <style>
-	/* The comb pad and the LFO pad the widest; a seam between the comb and its LFO. */
+	/* The face is the FaceGrid (ADR-510): the LFO's pad three columns,
+	   the shapes one. */
 	.comb-layout {
-		display: grid;
-		grid-template-columns: minmax(0, 2fr) auto minmax(0, 2fr) minmax(0, 0.75fr);
 		height: 100%;
 		width: 100%;
-		padding: var(--central-inset);
-		gap: var(--central-gap);
+		min-height: 0;
 	}
 
 	.col {
 		display: flex;
 		flex-direction: column;
-		gap: var(--central-gap);
+		gap: var(--face-gutter);
 		min-width: 0;
 		min-height: 0;
 	}
@@ -153,8 +158,9 @@
 		height: 100%;
 		max-height: 22px;
 	}
+	/* Sync: one touch row under the shapes (ADR-509). */
 	.switch {
-		flex: 1 1 0;
+		flex: 0 0 var(--height-touch);
 		min-height: var(--height-touch);
 		font-size: 1rem;
 		font-weight: 600;

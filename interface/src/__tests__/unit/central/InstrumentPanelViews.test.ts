@@ -101,6 +101,14 @@ function option(container: HTMLElement, param: string, label: string): HTMLEleme
 	return button;
 }
 
+/** A long pick on a page (ADR-510): open its picker, then tap the value. */
+async function pick(container: HTMLElement, param: string, label: string) {
+	await fireEvent.click(el(container, `.panel-pick[data-param="${param}"] .picker-button`));
+	const button = [...container.querySelectorAll<HTMLElement>('.picker-option')].find((b) => b.textContent?.trim() === label);
+	if (!button) throw new Error(`no ${label} in ${param}`);
+	await fireEvent.click(button);
+}
+
 describe('ElectricCentralView — Live\'s four sections', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -178,13 +186,26 @@ describe('CollisionCentralView — Live\'s tabs over the middle', () => {
 		expect(el(container, '[data-panel-page]').dataset.panelPage).toBe('frame');
 	});
 
+	it('opens LFO 1 from its eyebrow on the LFO tab; the page names itself once, on its way back', async () => {
+		const { container } = render(CollisionCentralView, { props: { instrument: instrument('Collision', 'Collision') } });
+		await tick();
+		await fireEvent.click(el(container, '[data-tab="LFO"]'));
+		await fireEvent.click(el(container, '[data-group="LFO 1"] .eyebrow-link'));
+		expect(el(container, '[data-panel-page]').dataset.panelPage).toBe('lfo1');
+		expect(el(container, '.panel-back').textContent?.trim()).toBe('‹ LFO 1');
+		const head = el(container, '[data-panel-page] .face-head');
+		expect(head.textContent?.match(/LFO 1/g)).toHaveLength(1);
+		expect(paramSets()).toEqual([]);
+	});
+
 	it('turns a switched-off resonator on before its first write', async () => {
 		const { container } = render(CollisionCentralView, { props: { instrument: instrument('Collision', 'Collision') } });
 		await tick();
 		await fireEvent.click(el(container, '[data-tab="Res 2"]'));
 		await fireEvent.click(el(container, '[data-group="Resonator 2"] .eyebrow-link'));
 		expect(el(container, '[data-panel-page]').dataset.panelPage).toBe('res2');
-		await fireEvent.click(option(container, 'Res 2 Type', 'Plate'));
+		// Seven types are too long a list for a page's tab: a picker (ADR-510).
+		await pick(container, 'Res 2 Type', 'Plate');
 		const dump = COLLISION as Dump;
 		expect(paramSets()).toEqual([
 			[indexOf(dump, 'Res 2 On/Off'), 1],
@@ -204,19 +225,26 @@ describe('DriftCentralView — its own face, Live\'s sections behind the eyebrow
 
 	const pageLink = (container: HTMLElement, page: string) => el(container, `.eyebrow-link[data-page="${page}"]`);
 
+	// Drift draws its own section pages (drift/DriftPages.svelte, ADR-510).
 	it('opens each of Live\'s sections from the face and comes back to it', async () => {
 		const { container } = render(DriftCentralView, { props: { instrument: instrument('Drift', 'Drift') } });
 		await tick();
 		for (const page of ['oscillators', 'filter', 'envelopes', 'lfo-mod', 'global']) {
-			expect(el(container, '[data-panel-page]').dataset.panelPage).toBe('frame');
+			expect(container.querySelector('[data-drift-page]')).toBeNull();
 			await fireEvent.click(pageLink(container, page));
-			expect(el(container, '[data-panel-page]').dataset.panelPage).toBe(page);
-			await fireEvent.click(el(container, '.panel-back'));
+			expect(el(container, '[data-drift-page]').dataset.driftPage).toBe(page);
+			await fireEvent.click(el(container, '.page-back'));
 		}
 		expect(paramSets()).toEqual([]);
 	});
 
-	it('writes the cycling envelope\'s mode by its name', async () => {
+	it('writes the cycling envelope\'s mode by its name, once Env 2 cycles', async () => {
+		const cycling = {
+			...(DRIFT as Dump),
+			parameters: (DRIFT as Dump).parameters.map((p) => (p.name === 'Env 2 Cyc On' ? { ...p, value: 1 } : p))
+		};
+		replaceTree(8, [track(cycling, 'Drift', 'Drift')]);
+		selectedTrackStore.handleTrackSelected(0);
 		const { container } = render(DriftCentralView, { props: { instrument: instrument('Drift', 'Drift') } });
 		await tick();
 		await fireEvent.click(pageLink(container, 'envelopes'));
@@ -249,10 +277,12 @@ describe.each([
 		if (name === 'Meld') await fireEvent.pointerDown(el(container, '[data-engine-level="B"] [role="slider"]'), { pointerId: 1 });
 		else await fireEvent.click(el(container, '.osc-badge'));
 		expect(links(container)).toEqual(expect.arrayContaining([...second]));
+		// Both draw their own pages on the face grid (ADR-510 addendum).
+		const marker = name === 'Meld' ? 'data-meld-page' : 'data-analog-page';
 		await fireEvent.click(el(container, `.eyebrow-link[data-page="${second[1]}"]`));
-		expect(el(container, '[data-panel-page]').dataset.panelPage).toBe(second[1]);
-		await fireEvent.click(el(container, '.panel-back'));
-		expect(el(container, '[data-panel-page]').dataset.panelPage).toBe('frame');
+		expect(el(container, `[${marker}]`).getAttribute(marker)).toBe(second[1]);
+		await fireEvent.click(el(container, '.page-back'));
+		expect(container.querySelector(`[${marker}]`)).toBeNull();
 		expect(paramSets()).toEqual([]);
 	});
 });

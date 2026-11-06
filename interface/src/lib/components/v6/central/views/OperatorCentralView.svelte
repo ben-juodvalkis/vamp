@@ -1,11 +1,13 @@
 <script lang="ts">
   /**
    * Operator in Live's arrangement (ADR-487): Live's oscillator, LFO and
-   * pitch-envelope tabs over the middle (each its main boxes and its
-   * envelope), the Filter pad with its response curve, and Time · Tone ·
-   * Volume; every eyebrow opens its section's page. The panel is data
-   * (`panel/operatorPanel.ts`), bound by Live's parameter names; the Filter
-   * pad is this view's own (`slot`), bound the same way. Until 2026-10-27 the
+   * pitch-envelope tabs over the middle (each its main knobs and its
+   * envelope), the Filter's type, Env and Drive, and Time · Tone · Volume;
+   * every eyebrow opens its section's page. The Filter pad with its response
+   * curve is the Filter page's picture (`aside`), not the frame's: the chain
+   * cell's XY is the same Freq and Res. The panel is data
+   * (`panel/operatorPanel.ts`), bound by Live's parameter names; the pad is
+   * this view's own (`slots.filter`), bound the same way. Until 2026-10-27 the
    * view was the amp envelope, Feedback, Time, Tone and the Filter pad,
    * bound by index.
    */

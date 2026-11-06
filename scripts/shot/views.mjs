@@ -702,7 +702,7 @@ export const TOURS = {
 					{ click: '[data-reverb-tab="eq"]' },
 					{ drag: '[data-eq-band="peak1"]', by: [-20, -45] },
 					{ drag: '[data-eq-band="peak2"]', by: [40, 35] },
-					{ click: '[data-reverb-own] [data-reverb-switch="43"]' }
+					{ click: '[data-reverb-eq-types] [data-reverb-switch="43"]' }
 				]
 			},
 			// Convolution: the IR the button loads, then shaped by its Attack and
@@ -949,6 +949,13 @@ function instrumentSwapStates() {
 		['operator-lfo', 'Operator', 'Operator', referenceParams('Operator'), [{ click: '[data-tab="LFO"]' }]],
 		['operator-filter', 'Operator', 'Operator', referenceParams('Operator'), [{ click: '[data-group="Filter"] .eyebrow-link' }]],
 		['operator-global', 'Operator', 'Operator', referenceParams('Operator'), [{ click: '[data-group="Global"] .eyebrow-link' }]],
+		// Every other page (ADR-510): the oscillator's envelope, the LFO's and
+		// its envelope, the pitch envelope and the filter's envelope.
+		['operator-osc-env', 'Operator', 'Operator', referenceParams('Operator'), [{ click: '[data-group="Envelope"] .eyebrow-link' }]],
+		['operator-lfo-page', 'Operator', 'Operator', referenceParams('Operator'), [{ click: '[data-tab="LFO"]' }, { click: '[data-group="LFO"] .eyebrow-link' }]],
+		['operator-lfo-env', 'Operator', 'Operator', referenceParams('Operator'), [{ click: '[data-tab="LFO"]' }, { click: '[data-group="LFO"] .eyebrow-link' }, { click: '[data-group="Envelope"] .eyebrow-link' }]],
+		['operator-pitch', 'Operator', 'Operator', referenceParams('Operator'), [{ click: '[data-tab="Pitch"]' }, { click: '[data-group="Pitch Env"] .eyebrow-link' }]],
+		['operator-filter-env', 'Operator', 'Operator', referenceParams('Operator'), [{ click: '[data-group="Filter"] .eyebrow-link' }, { click: '[data-group="Envelope"] .eyebrow-link' }]],
 		['collision', 'Collision', 'Collision', referenceParams('Collision')],
 		// Live's tabs over the middle, and the pages behind the eyebrows (ADR-487).
 		['collision-lfo', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-tab="LFO"]' }]],
@@ -958,6 +965,8 @@ function instrumentSwapStates() {
 		['collision-lfo1', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-tab="LFO"]' }, { click: '[data-group="LFO 1"] .eyebrow-link' }]],
 		['collision-res1-mod', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-group="Resonator 1"] .eyebrow-link' }, { click: '[data-group="Body"] .eyebrow-link' }]],
 		['collision-midi-page', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-tab="MIDI"]' }, { click: '[data-group="MIDI"] .eyebrow-link' }]],
+		['collision-mallet', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-group="Mallet"] .eyebrow-link' }]],
+		['collision-global', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-group="Global"] .eyebrow-link' }]],
 		['electric', 'Electric', 'LoungeLizard', referenceParams('Electric')],
 		// Live's arrangement (ADR-487): a section's eyebrow opens its page.
 		// Drift's face, its own (ADR-487), on Live's measured list, and the
@@ -974,36 +983,46 @@ function instrumentSwapStates() {
 		['analog-osc1', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="osc1"]' }]],
 		['analog-filter2', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.osc-badge' }, { click: '.eyebrow-link[data-page="filter2"]' }]],
 		['analog-env1', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="env1"]' }]],
-		['analog-aeg1', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="env1"]' }, { click: '[data-group="Amp Env"] .eyebrow-link' }]],
-		['analog-lfo1', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="osc1"]' }, { click: '[data-group="LFO 1"] .eyebrow-link' }]],
+		['analog-aeg1', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="env1"]' }, { click: '.eyebrow-link[data-page="aeg1"]' }]],
+		['analog-lfo1', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="osc1"]' }, { click: '.eyebrow-link[data-page="lfo1"]' }]],
 		['analog-global', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="global"]' }]],
-		['analog-mpe', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="global"]' }, { click: '[data-group="MPE"] .eyebrow-link' }]],
-		// Wavetable's face on Live's measured list (ADR-487) and its pages.
+		['analog-noise', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="noise"]' }]],
+		['analog-amp1', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="env1"]' }, { click: '.eyebrow-link[data-page="amp1"]' }]],
+		['analog-filter1', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="filter1"]' }]],
+		['analog-vibrato', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="global"]' }, { click: '.eyebrow-link[data-page="vibrato"]' }]],
+		['analog-mpe', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="global"]' }, { click: '.eyebrow-link[data-page="mpe"]' }]],
+		// Wavetable's face on Live's measured list (ADR-487) and its own pages
+		// (wavetable/WavetablePages.svelte); the mod sources' names open theirs.
 		['wavetable-reference', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable')],
 		['wavetable-osc1', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable'), [{ click: '.eyebrow-link[data-page="osc1"]' }]],
 		['wavetable-filter1', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable'), [{ click: '.eyebrow-link[data-page="filter1"]' }]],
-		['wavetable-mod', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable'), [{ click: '.eyebrow-link[data-page="mod"]' }]],
-		['wavetable-env2', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable'), [{ click: '.eyebrow-link[data-page="mod"]' }, { click: '[data-group="Env 2"] .eyebrow-link' }]],
-		['wavetable-lfo1', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable'), [{ click: '.eyebrow-link[data-page="mod"]' }, { click: '[data-group="LFO 1"] .eyebrow-link' }]],
+		['wavetable-mod', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable'), [{ click: '[data-page="mod"]' }]],
+		['wavetable-amp', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable'), [{ click: '[data-page="mod"]' }, { click: '.page-link[data-page="amp"]' }]],
+		['wavetable-env2', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable'), [{ click: '[data-page="mod"]' }, { click: '.page-link[data-page="env2"]' }]],
+		['wavetable-lfo1', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable'), [{ click: '[data-page="mod"]' }, { click: '.page-link[data-page="lfo1"]' }]],
 		['wavetable-global', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable'), [{ click: '.eyebrow-link[data-page="global"]' }]],
-		// Meld's face (ADR-487), the measured patch, and the pages its eyebrows open.
+		// Meld's face (ADR-487), the measured patch, and the pages its eyebrows
+		// open: each hand-laid on the face grid (meld/MeldPages, ADR-510).
 		['meld-osc-a', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '.eyebrow-link[data-page="osc-a"]' }]],
 		['meld-filter-b', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '[data-engine-level="B"] [role="slider"]' }, { click: '.eyebrow-link[data-page="filter-b"]' }]],
-		['meld-menv-a', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '.eyebrow-link[data-page="env-a"]' }, { click: '[data-group="Mod Env"] .eyebrow-link' }]],
+		['meld-env-a', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '.eyebrow-link[data-page="env-a"]' }]],
 		['meld-lfo-a', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '.eyebrow-link[data-page="lfo-a"]' }]],
-		['meld-lfofx-a', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '.eyebrow-link[data-page="lfo-a"]' }, { click: '[data-group="LFO 1"] .eyebrow-link' }]],
 		['meld-global', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '.eyebrow-link[data-page="global"]' }]],
 		['electric-hammer', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Hammer"] .eyebrow-link' }]],
+		['electric-fork', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Fork"] .eyebrow-link' }]],
 		['electric-pickup', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Damper / Pickup"] .eyebrow-link' }]],
 		['electric-global', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Global"] .eyebrow-link' }]],
 		['meld', 'Meld', 'InstrumentMeld', meld],
 		// Engine B up: the other half, in blue (both its envelopes in view, ADR-477).
 		['meld-engine-b', 'Meld', 'InstrumentMeld', meld, [{ click: '[data-engine-level="B"] [role="slider"]' }]],
-		// The oscillator type grid open over the Osc pad.
-		['meld-osc-types', 'Meld', 'InstrumentMeld', meld, [{ click: '.engine-head .chooser-name' }]],
+		// The effect chain's Meld cell with Engine B shown in the view: its
+		// pad is Osc B, B's Shape and Tone (meldEngineStore), cropped to the chain.
+		['meld-chain-b', 'Meld', 'InstrumentMeld', meld, [{ click: '[data-engine-level="B"] [role="slider"]' }], '.chain-wrap'],
+		// The oscillator type grid open over the face.
+		['meld-osc-types', 'Meld', 'InstrumentMeld', meld, [{ click: '.osc-tile' }]],
 		// Plate picked from the filter grid: the second macro reads Ratio.
 		['meld-filter-plate', 'Meld', 'InstrumentMeld', meld,
-			[{ click: '.filter-col .chooser-name' }, { click: '[data-tab="meld-filter-types"] .scrub-option:nth-child(16)', force: true }]],
+			[{ click: '.filter-type .chooser-name' }, { click: '[data-tab="meld-filter-types"] .scrub-option:nth-child(16)', force: true }]],
 		// Amp and Filter envelopes both in view (ADR-477): the Filter row takes
 		// the track's ink, not Amp's orange. (An omnisphere-filter state flipped
 		// the switch that showed one or the other until then.)
@@ -1040,11 +1059,12 @@ function instrumentSwapStates() {
 			macros(['Pattern 4', 'Offset', 'Macro 3', 'Macro 4', 'Macro 5', 'Macro 6', 'Macro 7', 'Macro 8']),
 			[{ click: '.offbeat-button' }]]
 	];
-	return swaps.map(([key, name, className, params, extraSteps = []]) => ({
+	return swaps.map(([key, name, className, params, extraSteps = [], crop]) => ({
 		name: `inst-${key}`,
 		description: `${name}, swapped onto the FM track`,
 		swap: { path: 'tracks/11/devices/0', name, className, params },
-		steps: [openInstrument(11), ...extraSteps]
+		steps: [openInstrument(11), ...extraSteps],
+		...(crop ? { crop } : {})
 	}));
 }
 

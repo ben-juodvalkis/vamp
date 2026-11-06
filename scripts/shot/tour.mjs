@@ -43,6 +43,11 @@
  *   --prod              Drive the production build under `vite preview`
  *                       instead of the dev server (see below).
  *
+ * KNOB_AUDIT=<file.jsonl> appends, per state, the central frame's height and
+ * every knob's drawn diameter, its cell and its `data-knob-size`: the
+ * measurement the knob-size audit (ADR-509, 2026-11-06) was made with. A
+ * knob is at its size when the diameter is 48 / 70 / 96 for s / m / l.
+ *
  * Writes one PNG per state, plus contact.png (every state in a labelled grid)
  * and the contact.html it was rendered from.
  *
@@ -245,7 +250,9 @@ try {
 						/* storage disabled — fall through to defaults */
 					}
 				},
-				{ prefs: state.prefs, theme }
+				// SHOT_PREFS='{"key":"value"}' lays extra localStorage over every
+				// state's own (an A/B of a UI switch across a whole tour).
+				{ prefs: { ...state.prefs, ...JSON.parse(process.env.SHOT_PREFS || '{}') }, theme }
 			);
 
 			const page = await context.newPage();
@@ -276,6 +283,22 @@ try {
 			// check sees exactly the screen the picture does.
 			const problems = checkLayout ? layoutViolations(await page.evaluate(measureLayout), state.layout) : [];
 
+			// The knob audit (header): what each knob draws, before the shutter.
+			if (process.env.KNOB_AUDIT) {
+				const m = await page.evaluate(() => {
+					const r = (el) => el && el.getBoundingClientRect();
+					const central = document.querySelector('.central-frame');
+					const knobs = [...document.querySelectorAll('.knob-face')].map((f) => {
+						const cell = f.closest('.knob');
+						const sz = f.closest('[data-knob-size]');
+						const lab = cell?.getAttribute('aria-label') ?? cell?.querySelector('[aria-label]')?.getAttribute('aria-label') ?? cell?.textContent?.trim().slice(0, 20);
+						return { w: Math.round(r(f).width), cw: cell ? Math.round(r(cell).width) : null, ch: cell ? Math.round(r(cell).height) : null, size: sz?.getAttribute('data-knob-size') ?? null, label: (lab ?? '').slice(0, 30) };
+					});
+					return { centralH: central ? Math.round(r(central).height) : null, knobs };
+				});
+				const { appendFile } = await import('node:fs/promises');
+				await appendFile(process.env.KNOB_AUDIT, JSON.stringify({ state: state.name, ...m }) + '\n');
+			}
 			const file = join(outDir, `${state.name}.png`);
 			const crop = full ? null : state.crop;
 			if (crop) await page.locator(crop).first().screenshot({ path: file });
