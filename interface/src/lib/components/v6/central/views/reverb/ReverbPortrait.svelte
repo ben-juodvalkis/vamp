@@ -249,11 +249,18 @@
 		color: var(--fg-tertiary);
 		white-space: nowrap;
 	}
-	/* A tile: the picture alone under the pad's title. */
+	/* A tile: the picture alone under the pad's title, without the guides
+	   (the dashed Decay, crossover and climb lines) or the faint rest of each
+	   ridge (the user, 2026-11-05). */
 	.compact .readouts,
 	.compact .tick-label,
 	.compact .dry-label,
-	.compact .crossover-label {
+	.compact .crossover-label,
+	.compact .decay-mark,
+	.compact .crossover,
+	.compact .climb,
+	.compact .climb-dot,
+	.compact .ridge-rest {
 		display: none;
 	}
 	/* Narrow — a drum pad's pane — the tabs take the top-left corner's
