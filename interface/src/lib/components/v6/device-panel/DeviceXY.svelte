@@ -42,6 +42,9 @@
     // Under 1 when the top of the pad belongs to something else (the Reverb
     // view's tabs and readouts over its tail).
     yTop?: number;
+    // How far a drag moves each axis, as [x, y]: 1 spans the axis over the
+    // pad's size, 0.25 takes four pads' travel (a fine, stepped parameter).
+    sensitivity?: readonly [number, number];
   }
 
   let {
@@ -64,7 +67,8 @@
     invertResonance = false,
     background,
     icon,
-    yTop = 1
+    yTop = 1,
+    sensitivity = [1, 1]
   }: Props = $props();
 
   let isDragging = $state(false);
@@ -273,8 +277,8 @@
     const fingerDeltaY = event.clientY - initialTouchY;
 
     // Convert pixel delta to normalized coordinates (0-1)
-    const deltaX = fingerDeltaX / cachedRect.width;
-    const deltaY = -fingerDeltaY / (cachedRect.height * yTop); // Invert Y (up = positive)
+    const deltaX = (fingerDeltaX / cachedRect.width) * sensitivity[0];
+    const deltaY = (-fingerDeltaY / (cachedRect.height * yTop)) * sensitivity[1]; // Invert Y (up = positive)
 
     // Apply delta to initial dot position and clamp to bounds
     const x = Math.max(0, Math.min(1, initialDotX + deltaX));

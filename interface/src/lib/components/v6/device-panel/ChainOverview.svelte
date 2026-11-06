@@ -74,6 +74,7 @@
   import { recentForChain } from '$lib/services/recentEffects.svelte';
   import { controlFor } from './deviceControls';
   import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
+  import OperatorHeadAlgorithm from './chain/OperatorHeadAlgorithm.svelte';
   import InstrumentFace, { FACED_INSTRUMENTS } from './chain/InstrumentFace.svelte';
   import DrumRackFace from './chain/DrumRackFace.svelte';
   import { schemeFromInk } from '$lib/config/devicePresets';
@@ -689,6 +690,7 @@
       <CellSize><div class="cell-head">
         <span class="name" lang="en">{cell.device.name}</span>
         <span class="head-end">
+        {#if cell.kind === 'instrument' && glance.instrumentViewType === 'operator'}<OperatorHeadAlgorithm device={cell.device} />{/if}
         {#if isPowered(cell)}
         {@const on = isOn(cell)}
         <button

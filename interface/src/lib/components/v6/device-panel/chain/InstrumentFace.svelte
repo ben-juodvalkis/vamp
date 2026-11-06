@@ -9,7 +9,7 @@
    * The instrument's face in the chain overview (2026-10-25): the one
    * control its own view is known by, on the cell's device — Omnisphere's
    * ORB, Drift's filter, Wavetable's Osc 1 pad with its wave, Meld's Osc A pad with its type's mark, and every instrument in `INSTRUMENT_CONTROLS`
-   * (Operator's filter with its algorithm behind it, Collision's first resonator, an Instrument Rack's
+   * (Operator's four oscillators, Collision's first resonator, an Instrument Rack's
    * first macro…, 2026-10-26). The parameter slots are the views' own
    * (measured there); an instrument with no face here keeps its mark.
    */
@@ -25,7 +25,8 @@
   import { useOscWave } from '../../central/views/wavetable/useOscWave.svelte';
   import MeldOscIcon from '../../central/views/meld/MeldOscIcon.svelte';
   import { MELD_ENGINE } from '../../central/views/meldParams';
-  import OperatorAlgorithm from './OperatorAlgorithm.svelte';
+  import { OPERATOR_OSC_COLORS } from './OperatorAlgorithm.svelte';
+  import { schemeFromInk } from '$lib/config/devicePresets';
 
   interface Props {
     device: DeviceRecord;
@@ -85,16 +86,44 @@
   // Meld: Engine A's oscillator type, its mark the pad's only picture.
   const meldOscType = $derived(type === 'meld' ? Math.round(raw(MELD_ENGINE.A.oscType, 0)) : 0);
 
-  // Operator: the algorithm behind the filter pad, each oscillator filled
-  // while its switch is on. By name: Operator's indices move with its sections.
+  // Operator: a pad per oscillator, Coarse across (ratios 1 to 4, two
+  // octaves, of Live's 0.5..48) and Level up, in Live's oscillator colors;
+  // one switched off dims and turns on at the first touch. The algorithm
+  // is the cell header's (OperatorHeadAlgorithm). By name: Operator's
+  // indices move with its sections.
+  const OP_OSCS = ['A', 'B', 'C', 'D'] as const;
+  const OP_COARSE_MAX = 48; // the parameter's own 0..48 (0 is ratio 0.5)
+  const OP_RATIO_LO = 1;
+  const OP_RATIO_HI = 4;
+  // Level takes a drag twice the pad's height to cross.
+  const OP_SENSITIVITY = [1, 0.5] as const;
+  const OP_SCHEMES = OPERATOR_OSC_COLORS.map((ink) => schemeFromInk(ink));
   const opRaw = (name: string, fallback: number) => {
     const i = names.indexOf(name);
     return i < 0 ? fallback : raw(i, fallback);
   };
-  const opAlgorithm = $derived(type === 'operator' ? opRaw('Algorithm', 0) : 0);
+  const opRead = (name: string, fallback: number) => {
+    const i = names.indexOf(name);
+    return i < 0 ? fallback : read(i, fallback);
+  };
+  function opWrite(name: string, t: number) {
+    const i = names.indexOf(name);
+    if (i >= 0) write(i, t);
+  }
+  /** A Coarse ratio as the pad's X: 1 at the left, 4 at the right, pinned outside. */
+  const opRatioX = (o: string) =>
+    Math.min(1, Math.max(0, (opRaw(`${o} Coarse`, 1) - OP_RATIO_LO) / (OP_RATIO_HI - OP_RATIO_LO)));
   const opOn = $derived(
-    (type === 'operator' ? (['A', 'B', 'C', 'D'] as const).map((o) => opRaw(`Osc-${o} On`, 1) >= 0.5) : [true, true, true, true]) as [boolean, boolean, boolean, boolean]
+    (type === 'operator' ? OP_OSCS.map((o) => opRaw(`Osc-${o} On`, 1) >= 0.5) : [true, true, true, true]) as [boolean, boolean, boolean, boolean]
   );
+  function opPlay(i: number, x: number, level: number) {
+    const o = OP_OSCS[i];
+    if (!opOn[i]) opWrite(`Osc-${o} On`, 1);
+    const ratio = Math.round(OP_RATIO_LO + x * (OP_RATIO_HI - OP_RATIO_LO));
+    opWrite(`${o} Coarse`, ratio / OP_COARSE_MAX);
+    opWrite(`Osc-${o} Level`, level);
+  }
+
 
   // Omnisphere: the ORB's angle and radius (OmnisphereCentralView, 25 / 26).
   // Drift: cutoff and resonance, the LP type for the curve (DriftCentralView, 1 / 2 / 3).
@@ -126,12 +155,29 @@
     }}
     {color}
   />
+{:else if type === 'operator'}
+  <div class="op-pads" data-operator-pads>
+    {#each OP_OSCS as o, i (o)}
+      <div class="op-pad" class:off={!opOn[i]} data-osc={o} data-on={opOn[i] ? '1' : '0'}>
+        <DeviceXY
+          xValue={opRatioX(o)}
+          yValue={opRead(`Osc-${o} Level`, i === 0 ? 1 : 0)}
+          title={o}
+          titleAt="bottom"
+          showCurve={false}
+          sensitivity={OP_SENSITIVITY}
+          onInteraction={(x, y) => opPlay(i, x, y)}
+          color={OP_SCHEMES[i]}
+        />
+      </div>
+    {/each}
+  </div>
 {:else if control?.kind === 'xy'}
   <DeviceXY
     xValue={readRef(control.x, control.rest[0])}
     yValue={readRef(control.y, control.rest[1])}
     title={type === 'meld' ? '' : control.title}
-    titleAt={type === 'wavetable' || type === 'operator' ? 'bottom' : 'center'}
+    titleAt={type === 'wavetable' ? 'bottom' : 'center'}
     showCurve={false}
     onInteraction={(x, y) => {
       switchOn();
@@ -143,7 +189,6 @@
     {#snippet background()}
       {#if type === 'wavetable'}<WavetableWave cycle={oscCycle} color={color.primary} />{/if}
       {#if type === 'meld'}<MeldOscIcon type={meldOscType} color={color.primary} />{/if}
-      {#if type === 'operator'}<OperatorAlgorithm algorithm={opAlgorithm} on={opOn} />{/if}
     {/snippet}
   </DeviceXY>
 {:else if control?.kind === 'macro'}
@@ -159,3 +204,23 @@
     {color}
   />
 {/if}
+
+<style>
+  .op-pads {
+    display: grid;
+    grid-template: 1fr 1fr / 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+    height: 100%;
+  }
+
+  .op-pad {
+    min-width: 0;
+    min-height: 0;
+  }
+
+  /* An oscillator switched off: dim, still live (a touch turns it on). */
+  .op-pad.off {
+    opacity: 0.4;
+  }
+</style>
