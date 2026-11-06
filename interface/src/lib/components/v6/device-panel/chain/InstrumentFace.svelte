@@ -114,6 +114,7 @@
     xValue={readRef(control.x, control.rest[0])}
     yValue={readRef(control.y, control.rest[1])}
     title={control.title}
+    titleAt={type === 'wavetable' ? 'bottom' : 'center'}
     showCurve={false}
     onInteraction={(x, y) => {
       switchOn();

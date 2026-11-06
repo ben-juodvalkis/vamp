@@ -388,6 +388,7 @@
               xValue={oscEffect2}
               yValue={oscPosition}
               title="OSC {oscTab}"
+              titleAt="bottom"
               isGhost={!oscOn}
               onInteraction={handleOscXY}
               color={oscInk}

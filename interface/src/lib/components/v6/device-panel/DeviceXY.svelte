@@ -12,6 +12,9 @@
     yValue?: number;
     title?: string;
     titleClass?: string;
+    // Where the title sits: the pad's middle, or its foot, out of the way
+    // of a picture drawn across the middle (Wavetable's wave).
+    titleAt?: 'center' | 'bottom';
     rateLabel?: string;
     xAxisLabels?: string[];
     onInteraction?: (x: number, y: number) => void;
@@ -46,6 +49,7 @@
     yValue = 0.5,
     title = "",
     titleClass = "",
+    titleAt = 'center',
     rateLabel,
     xAxisLabels,
     onInteraction,
@@ -322,7 +326,7 @@
 
     <!-- Center title -->
     {#if title}
-      <div class="center-title {titleClass}">
+      <div class="center-title {titleClass}" class:title-bottom={titleAt === 'bottom'}>
         {#if icon}<span class="title-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}
         <span class="fit-label" use:fitText={title}>{title}</span>
       </div>
@@ -436,6 +440,12 @@
     flex-direction: column;
     align-items: center;
     gap: 0.15em;
+  }
+
+  .center-title.title-bottom {
+    top: auto;
+    bottom: var(--spacing-sm);
+    transform: translateX(-50%);
   }
 
   .title-icon {
