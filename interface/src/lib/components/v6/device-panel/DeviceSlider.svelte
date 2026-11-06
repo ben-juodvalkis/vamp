@@ -89,6 +89,8 @@
     knobCaption?: boolean;
     /** A short text in the knob's middle at rest, in place of the glyph (KnobFace `centreMark`). */
     knobMark?: string;
+    /** `knobSize` is a ceiling: the largest size the cell holds (KnobFace `fit`). */
+    knobFit?: boolean;
   }
 
   let {
@@ -122,7 +124,8 @@
     steps,
     knobSize = 'm',
     knobCaption = true,
-    knobMark
+    knobMark,
+    knobFit = false
   }: Props = $props();
 
   // Resolve label orientation - 'auto' follows slider orientation
@@ -330,6 +333,7 @@
         size={knobSize}
         caption={knobCaption}
         centreMark={knobMark}
+        fit={knobFit}
         dragging={isDragging}
         ink={color.primary}
       />

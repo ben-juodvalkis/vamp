@@ -38,9 +38,9 @@ export const DRIFT_PANEL: InstrumentPanel = {
 								title: 'Wave',
 								labels: ['Sine', 'Triangle', 'Shark Tooth', 'Saturated', 'Saw', 'Pulse', 'Rectangle']
 							},
-							{ kind: 'box', param: 'Osc 1 Shape', title: 'Shape' },
+							{ kind: 'box', param: 'Osc 1 Shape', title: 'Shape', units: 2 },
 							{ kind: 'step', param: 'Osc 1 Oct', title: 'Oct', labels: ['-2', '-1', '0', '+1', '+2', '+3'] },
-							{ kind: 'box', param: 'Osc 1 Shape Mod Amt', title: 'Shape Mod' }
+							{ kind: 'box', param: 'Osc 1 Shape Mod Amt', title: 'Shape Mod', units: 2 }
 						]
 					},
 					{
@@ -53,15 +53,8 @@ export const DRIFT_PANEL: InstrumentPanel = {
 								title: 'Wave',
 								labels: ['Sine', 'Triangle', 'Saturated', 'Saw', 'Rectangle']
 							},
-							{ kind: 'box', param: 'Osc 2 Detune', title: 'Detune' },
+							{ kind: 'box', param: 'Osc 2 Detune', title: 'Detune', units: 2 },
 							{ kind: 'step', param: 'Osc 2 Oct', title: 'Oct', labels: ['-3', '-2', '-1', '0', '+1', '+2'] }
-						]
-					},
-					{
-						title: 'Pitch Mod',
-						controls: [
-							{ kind: 'box', param: 'Pitch Mod Amt 1', title: 'Amt 1' },
-							{ kind: 'box', param: 'Pitch Mod Amt 2', title: 'Amt 2' }
 						]
 					}
 				],
@@ -77,10 +70,22 @@ export const DRIFT_PANEL: InstrumentPanel = {
 					},
 					{
 						title: 'To Filter',
+						// Narrower than three boxes, so Osc Mix's knobs and Pitch Mod's
+						// keep the width for their size (ADR-509).
+						units: 2.25,
 						controls: [
 							{ kind: 'switch', param: 'Osc 1 Flt On', title: 'Osc 1' },
 							{ kind: 'switch', param: 'Osc 2 Flt On', title: 'Osc 2' },
 							{ kind: 'switch', param: 'Noise Flt On', title: 'Noise' }
+						]
+					},
+					// On the second row, so the oscillators' knobs have the width
+					// for their size (ADR-509).
+					{
+						title: 'Pitch Mod',
+						controls: [
+							{ kind: 'box', param: 'Pitch Mod Amt 1', title: 'Amt 1' },
+							{ kind: 'box', param: 'Pitch Mod Amt 2', title: 'Amt 2' }
 						]
 					}
 				]

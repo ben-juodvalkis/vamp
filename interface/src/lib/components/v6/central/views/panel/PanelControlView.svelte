@@ -77,6 +77,7 @@
 			{color}
 			{face}
 			{knobSize}
+			knobFit
 			readout={params.display(control.param)}
 			valueText={face === 'knob' ? params.display(control.param) : undefined}
 			onInteraction={write}
@@ -122,6 +123,7 @@
 			title={face === 'knob' ? name : `${name} ${shown}`}
 			{face}
 			{knobSize}
+			knobFit
 			valueText={shown}
 			steps={Math.round(hi - lo) + 1}
 			labelAt="top"

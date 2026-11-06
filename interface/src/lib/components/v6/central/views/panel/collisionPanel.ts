@@ -63,6 +63,8 @@ function resonatorPage(n: 1 | 2): PanelPage {
 					title: 'Body',
 					page: `res${n}-mod`,
 					switchParam,
+					// Wide enough for its five knobs in one row at their size (ADR-509).
+					units: 6.5,
 					controls: [
 						{ kind: 'box', param: `${r} Decay`, title: 'Decay' },
 						{ kind: 'box', param: `${r} Material`, title: 'Material' },

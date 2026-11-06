@@ -16,6 +16,7 @@ import {
 	TAB_MAX_OPTIONS,
 	type PanelGroup
 } from '$lib/components/v6/central/views/panel/panelTypes';
+import { KNOB_PX, knobDiameter, knobGridFit, knobSizeFits } from '$lib/components/v6/device-panel/knobLayout';
 import { DRIFT_PANEL } from '$lib/components/v6/central/views/panel/driftPanel';
 import { OPERATOR_PANEL } from '$lib/components/v6/central/views/panel/operatorPanel';
 import { ELECTRIC_PANEL } from '$lib/components/v6/central/views/panel/electricPanel';
@@ -145,5 +146,40 @@ describe('a knob’s size, by how many its column stacks', () => {
 		expect(controlKnobSize(box, knobs, 3)).toBe('m');
 		expect(controlKnobSize(box, { ...knobs, knobSize: 's' }, 1)).toBe('s');
 		expect(controlKnobSize({ kind: 'box', param: 'Time', title: 'Time', knobSize: 'l' }, { ...knobs, knobSize: 's' }, 4)).toBe('l');
+	});
+});
+
+describe('a grid of knobs laid out so each draws at its size (ADR-509 addendum)', () => {
+	it('mirrors KnobFace: caption under in an upright cell, beside in a wide one', () => {
+		expect(knobDiameter('l', 104, 150)).toBe(96);
+		expect(knobDiameter('l', 81, 123)).toBe(69);
+		expect(knobDiameter('l', 200, 108)).toBe(96);
+		expect(knobDiameter('s', 60, 79)).toBe(35);
+		expect(knobDiameter('m', 60, 40, false)).toBe(28);
+	});
+	it('steps a size down only to the largest the cell holds', () => {
+		expect(knobSizeFits('l', 104, 150)).toBe('l');
+		expect(knobSizeFits('l', 81, 123)).toBe('m');
+		expect(knobSizeFits('l', 60, 123)).toBe('s');
+		expect(knobSizeFits('m', 200, 200)).toBe('m');
+	});
+	it('picks the rows whose cells hold the largest size', () => {
+		// Five knobs in a short wide box: one row of small ones.
+		expect(knobGridFit(5, 364, 125)).toEqual({ rows: 1, size: 's' });
+		// Two knobs in a 238 x 120 box: side by side, medium.
+		expect(knobGridFit(2, 238, 120)).toEqual({ rows: 1, size: 'm' });
+		// Two knobs in a tall narrow column: stacked, large where it holds them.
+		expect(knobGridFit(2, 120, 320)).toEqual({ rows: 2, size: 'l' });
+		// A ceiling the host names caps it.
+		expect(knobGridFit(2, 120, 320, 16, 'm').size).toBe('m');
+	});
+	it('every size it returns is drawn at its full diameter, where any size fits', () => {
+		for (const [count, w, h] of [[3, 300, 280], [4, 400, 140], [6, 500, 280], [12, 520, 262]]) {
+			const { rows, size } = knobGridFit(count, w, h);
+			const cols = Math.ceil(count / rows);
+			const cw = (w - 16 * (cols - 1)) / cols;
+			const ch = (h - 16 * (rows - 1)) / rows;
+			expect(knobDiameter(size, cw, ch)).toBeGreaterThanOrEqual(KNOB_PX[size] - 0.5);
+		}
 	});
 });

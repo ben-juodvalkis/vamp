@@ -27,6 +27,7 @@
    * mark, the one it rests on in the ink.
    */
   import ControlGlyph, { type ControlGlyphName } from './ControlGlyph.svelte';
+  import { knobSizeFits } from './knobLayout';
 
   interface Props {
     /** The value's position along the arc, 0..1. */
@@ -53,9 +54,27 @@
     caption?: boolean;
     /** A short text drawn in the middle at rest in place of the glyph ("1", "2"). */
     centreMark?: string;
+    /**
+     * Treat `size` as a ceiling: draw the largest size the cell holds at its
+     * full diameter (`knobSizeFits`), never a clamped one. For hosts whose
+     * cells come from data, not a hand layout: the instrument panels.
+     */
+    fit?: boolean;
   }
 
-  let { position, origin, title = '', valueText, readout, icon, dragging = false, ink, steps, size = 'm', caption = true, centreMark }: Props = $props();
+  let { position, origin, title = '', valueText, readout, icon, dragging = false, ink, steps, size = 'm', caption = true, centreMark, fit = false }: Props = $props();
+
+  let cell = $state<HTMLDivElement>();
+  let box = $state({ w: 0, h: 0 });
+  $effect(() => {
+    if (!fit || !cell || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(([entry]) => {
+      box = { w: entry.contentRect.width, h: entry.contentRect.height };
+    });
+    observer.observe(cell);
+    return () => observer.disconnect();
+  });
+  let drawn = $derived<'s' | 'm' | 'l'>(fit && box.w > 0 ? knobSizeFits(size, box.w, box.h, caption) : size);
 
   const MAX_DETENTS = 24;
 
@@ -93,7 +112,7 @@
   });
 </script>
 
-<div class="knob size-{size}" class:dragging class:no-caption={!caption} data-knob-size={size} style="--knob-ink: {ink};">
+<div class="knob size-{drawn}" bind:this={cell} class:dragging class:no-caption={!caption} data-knob-size={drawn} style="--knob-ink: {ink};">
   <div class="knob-body">
   <div class="knob-face">
     <svg class="knob-svg" viewBox="0 0 100 100" aria-hidden="true">

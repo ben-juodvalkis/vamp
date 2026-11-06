@@ -22,11 +22,11 @@ export type PanelControl =
 	 * spans 0. `toggle` is the on/off parameter that belongs to it (a source's
 	 * switch over its level), drawn small under it (ADR-509).
 	 */
-	| { kind: 'box'; param: string; title: string; toggle?: PanelToggle; knobSize?: KnobSize }
+	| { kind: 'box'; param: string; title: string; toggle?: PanelToggle; knobSize?: KnobSize; units?: number }
 	/** A quantized parameter with few values: one cell a value, its labels Live's own. */
 	| { kind: 'choice'; param: string; options: readonly string[] }
 	/** A quantized parameter with many values: a value box that steps, naming the value. */
-	| { kind: 'step'; param: string; title: string; labels?: readonly string[]; knobSize?: KnobSize }
+	| { kind: 'step'; param: string; title: string; labels?: readonly string[]; knobSize?: KnobSize; units?: number }
 	/** An on/off parameter: one cell, lit while on. */
 	| { kind: 'switch'; param: string; title: string };
 
@@ -145,7 +145,8 @@ export function tabOptions(control: PanelControl): readonly string[] | undefined
 /** A control's width in boxes: what a group's share of its row is counted in. */
 export function controlUnits(control: PanelControl, pageRows = 1): number {
 	const options = tabOptions(control);
-	if (!options) return 1;
+	// A knob beside tabs can need more than one box's width to hold its size (ADR-509).
+	if (!options) return control.kind === 'box' || control.kind === 'step' ? (control.units ?? 1) : 1;
 	// Names ("Shark Tooth", "Rectangle") want wider cells than numbers.
 	const perColumn = Math.max(...options.map((o) => o.length)) > 5 ? 1.4 : 0.9;
 	return Math.max(1, choiceColumns(options.length, pageRows) * perColumn);
@@ -177,7 +178,7 @@ export function isKnobGroup(group: PanelGroup, boxFace?: PanelFace): boolean {
 	);
 }
 
-export { knobGridRows, knobSizeFor, type KnobSize } from '$lib/components/v6/device-panel/knobLayout';
+export { knobGridFit, knobGridRows, knobSizeFor, type KnobSize } from '$lib/components/v6/device-panel/knobLayout';
 
 /** Every parameter name a panel binds: its controls' and its switches'. */
 export function panelParamNames(panel: InstrumentPanel): string[] {

@@ -162,5 +162,32 @@ Ben asked for standard knob sizes in place of each knob filling its cell.
   change.** Where a cell clamps a knob below its size, the column is to be
   widened or heightened; the rule's size stays.
 
+## Addendum (2026-11-06): a grid lays out for its size, and the audit
+
+Every central view was measured at 1366 x 1024 with the chain above the
+central view (329px tall) after the three sizes landed: about 80 of 138
+tour states had knobs off their size, nearly all clamped by width or
+height. What changed:
+
+- **A grid whose rows come from its box picks the rows that hold its size**
+  (`knobGridFit`, in `KnobGrid` and a panel's knob group): of the row
+  counts, the one whose cells draw the largest size at its full diameter,
+  a row count's size being at most what its columns stack. Where no row
+  count holds the rule's size it steps down rather than clamp.
+  `knobDiameter` is KnobFace's sizing rule in TypeScript, for checking a
+  layout without rendering it.
+- **An instrument panel's knob is a ceiling, fitted to its cell**
+  (`DeviceSlider`'s `knobFit`, KnobFace `fit`): its cells come from data,
+  not a hand layout, so a knob draws the largest size its cell holds. A box
+  or stepper can take more than one box's width (`units`) where a row of
+  tabs would leave it too narrow (Drift's Oscillators page).
+- **Two captioned large knobs do not stack in the band.** They need 316px
+  (2 x (96 + 54) + a gap) and a column under an inset has about 300, so a
+  hand-laid column of two goes medium (Wavetable's and Meld's Global,
+  Glitch's Duck / Glue, Shifter's Drive / Tone, Echo's two pairs). Nine
+  knobs abreast (Chord) and Reverb's six columns of two are medium too, as
+  are Reverb's knobs on the EQ tab small, where the curve keeps the width.
+  These are the rule's size stepped down, named in each view.
+
 ## Tags
 `knob`, `value-box`, `central-view`, `instrument-panel`, `touch`

@@ -9,7 +9,7 @@
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
 	import PanelControlView from './PanelControlView.svelte';
 	import PanelEyebrow from './PanelEyebrow.svelte';
-	import { controlKnobSize, controlUnits, groupFace, groupUnits, isKnobGroup, knobGridRows, type PanelFace, type PanelGroup } from './panelTypes';
+	import { controlKnobSize, controlUnits, groupFace, groupUnits, isKnobGroup, knobGridFit, type PanelFace, type PanelGroup } from './panelTypes';
 	import type { PanelParams } from './usePanelParams.svelte';
 
 	interface Props {
@@ -44,7 +44,11 @@
 		return () => observer.disconnect();
 	});
 	let gap = $derived(row ? parseFloat(getComputedStyle(row).columnGap) || 16 : 16);
-	let rows = $derived(knobGrid && size.w > 0 ? knobGridRows(group.controls.length, size.w, size.h, gap) : 1);
+	// The rows whose cells hold the knobs at full size (`knobGridFit`, ADR-509
+	// addendum); the size the rows give is each knob's ceiling, and a knob
+	// draws the largest size its own cell holds (PanelControlView's `knobFit`).
+	let fit = $derived(knobGrid && size.w > 0 ? knobGridFit(group.controls.length, size.w, size.h, gap, group.knobSize) : undefined);
+	let rows = $derived(fit?.rows ?? 1);
 	let cols = $derived(Math.ceil(group.controls.length / rows));
 </script>
 
@@ -61,7 +65,7 @@
 	>
 		{#each group.controls as control (control.param)}
 			<div class="panel-cell" style="flex: {controlUnits(control, pageRows)} 1 0;">
-				<PanelControlView {control} {params} {color} switchParam={group.switchParam} {pageRows} {face} knobSize={controlKnobSize(control, group, knobGrid ? rows : 1)} />
+				<PanelControlView {control} {params} {color} switchParam={group.switchParam} {pageRows} {face} knobSize={controlKnobSize(control, fit ? { ...group, knobSize: fit.size } : group, 1)} />
 			</div>
 		{/each}
 	</div>
