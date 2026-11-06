@@ -58,9 +58,9 @@
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import WavetableWave from './wavetable/WavetableWave.svelte';
   import { useOscWave } from './wavetable/useOscWave.svelte';
-  import WavetableFilterGraph from './wavetable/WavetableFilterGraph.svelte';
+  import FilterDotsGraph from '../FilterDotsGraph.svelte';
   import ScrubTabs from '../../device-panel/ScrubTabs.svelte';
-  import { FILTER_ROUTINGS, type GraphFilter } from '$lib/utils/wavetableFilterGraph';
+  import { FILTER_ROUTINGS, graphCurves, type GraphFilter } from '$lib/utils/wavetableFilterGraph';
 
   interface Props {
     instrument?: InstrumentInfo | null;
@@ -218,6 +218,16 @@
     };
   }
   let graphFilters = $derived([graphFilter(1, flt1On), graphFilter(2, flt2On)] as const);
+  let graphDots = $derived(
+    ([1, 2] as const).map((n) => ({
+      label: String(n),
+      x: graphFilters[n - 1].x,
+      y: graphFilters[n - 1].y,
+      color: (n === 1 ? osc1Ink : osc2Ink).primary,
+      on: graphFilters[n - 1].on,
+      filled: n === fltTab
+    }))
+  );
 
   // Serial, Parallel or Split: Live's `filter_routing` property, serial 0,
   // parallel 1, split 2 (measured on the running Live, 2026-11-05).
@@ -403,6 +413,7 @@
                oscillator, so the card has no 1/2 switch. -->
           <div class="osc-side flex-none min-h-0 flex flex-col gap-(--central-gap)">
             <ScrubTabs
+              inked
               options={OCTAVES_DOWN}
               selected={OCTAVES_DOWN.findIndex((n) => oscTransp === n * 12)}
               onSelect={(_, n) => writeOsc(o.transp, n * 12)}
@@ -453,18 +464,20 @@
       <div class="filter-col flex-1 min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
         <PanelEyebrow title="Filter {fltTab}" page="filter{fltTab}" onOpen={openPage} color={fltInk.primary} />
         <div class="flex-1 min-h-0">
-          <WavetableFilterGraph
-            filters={graphFilters}
-            routing={filterRouting}
-            selected={fltTab}
-            colors={[osc1Ink.primary, osc2Ink.primary]}
-            serialColor={wavetableInk.primary}
-            onGrab={(n) => (fltTab = n)}
-            onMove={moveFilter}
+          <FilterDotsGraph
+            dots={graphDots}
+            curves={graphCurves(graphFilters, filterRouting).map((c) => ({
+              d: c.d,
+              color: c.filter === null ? wavetableInk.primary : (c.filter === 1 ? osc1Ink : osc2Ink).primary
+            }))}
+            ariaLabel="Filters: 1 at {Math.round(graphFilters[0].x * 100)}%, 2 at {Math.round(graphFilters[1].x * 100)}%"
+            onGrab={(i) => (fltTab = i === 0 ? 1 : 2)}
+            onMove={(i, x, y) => moveFilter(i === 0 ? 1 : 2, x, y)}
           />
         </div>
         <div class="strip-row flex-none">
         <ScrubTabs
+              inked
           options={FILTER_ROUTINGS}
           selected={filterRouting}
           onSelect={(i) => writeRouting(i)}
@@ -484,6 +497,7 @@
             <button class="type-step" aria-label="Next filter type" onclick={() => stepFilterType(1)}>›</button>
           </div>
           <ScrubTabs
+              inked
             options={SLOPES}
             selected={fltSlope}
             onSelect={(i) => write(f.slope, i)}

@@ -141,7 +141,7 @@ describe('DriftCentralView — the level mixer aims the oscillator card', () => 
 		const { container } = render(DriftCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
 		expect(shownOsc(container)).toBe(1);
-		expect(container.querySelectorAll('.wave-button')).toHaveLength(7);
+		expect(container.querySelectorAll('[data-tab="osc-wave"] .scrub-option')).toHaveLength(7);
 	});
 
 	it('brings OSC 2 up when the Osc 2 level is touched, and back on Osc 1', async () => {
@@ -151,11 +151,11 @@ describe('DriftCentralView — the level mixer aims the oscillator card', () => 
 		await touchDown(slider(container, 'Osc 2'));
 		expect(shownOsc(container)).toBe(2);
 		// OSC 2 lists five waveforms to OSC 1's seven — the card really swapped.
-		expect(container.querySelectorAll('.wave-button')).toHaveLength(5);
+		expect(container.querySelectorAll('[data-tab="osc-wave"] .scrub-option')).toHaveLength(5);
 
 		await touchDown(slider(container, 'Osc 1'));
 		expect(shownOsc(container)).toBe(1);
-		expect(container.querySelectorAll('.wave-button')).toHaveLength(7);
+		expect(container.querySelectorAll('[data-tab="osc-wave"] .scrub-option')).toHaveLength(7);
 	});
 
 	it('switches on the touch alone — no movement, no release, nothing written to Drift', async () => {

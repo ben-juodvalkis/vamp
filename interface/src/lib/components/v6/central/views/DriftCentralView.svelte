@@ -7,9 +7,9 @@
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
   import { SECTION_SWITCH_ON_ABOVE } from '$lib/services/drumVirtualMacros';
-  import { drag } from '$lib/actions';
-  import type { DragInfo } from '$lib/actions/drag';
-  import { segmentIndex, gridCellIndex, scrubBoxOf, type ScrubBox } from '$lib/utils/segmentScrub';
+  import ScrubTabs from '../../device-panel/ScrubTabs.svelte';
+  import FilterDotsGraph from '../FilterDotsGraph.svelte';
+  import { axisHz, axisX, responseDb, responsePath, seriesDb } from '$lib/utils/filterGraph';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import SectionDivider from '../SectionDivider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
@@ -145,61 +145,10 @@
   const OCTAVES = [-2, -1, 0, 1, 2, 3] as const;
   const octaveLabel = (octave: number) => (octave > 0 ? `+${octave}` : `${octave}`);
 
-  /**
-   * The octave strip SCRUBS (user, 2026-09-12: "can I slide my finger to
-   * scrub octaves?"). The strip owns the gesture through `use:drag`
-   * (ADR-427) and resolves which step the finger is over from geometry,
-   * the way the session grid's slot zone does — so the step you land on
-   * follows the finger across the whole strip instead of needing six
-   * separate taps, and the hairlines between steps are part of a step
-   * rather than dead bands between buttons.
-   *
-   * The steps stay real `<button>`s for the keyboard and the accessible
-   * name, with `pointer-events: none` so they never compete with the
-   * strip for the pointer; Enter still activates one.
-   *
-   * The box is measured once at press time and reused for the gesture —
-   * re-measuring mid-drag reads a box a re-render may have moved.
-   */
-  let octaveStrip = $state<HTMLElement | null>(null);
-  let octaveBox: ScrubBox | null = null;
-
-  function octaveAt(clientX: number) {
-    if (!octaveBox) return;
-    const next = OCTAVES[segmentIndex(clientX, octaveBox.left, octaveBox.width, OCTAVES.length)];
-    // A scrub crosses many frames inside one step; only edges reach Live.
-    if (next === oscOctave) return;
-    writeOsc(oscTab, oscTab === 1 ? 22 : 26, next);
-  }
-
-  function octaveScrubDown(info: DragInfo) {
-    octaveBox = scrubBoxOf(octaveStrip);
-    octaveAt(info.x);
-  }
-
-  /**
-   * The waveform grid scrubs too (user, 2026-09-12) — same rule in two
-   * dimensions. Cell 0 is the OSC 1/2 badge, so the wave index is one
-   * less; a finger over the badge changes no waveform, and dragging
-   * ONTO the badge is not a switch either. Switching oscillator is a tap
-   * on it, never something a scrub can do by passing through.
-   */
-  let waveGrid = $state<HTMLElement | null>(null);
-  let waveBox: ScrubBox | null = null;
-
-  function waveAt(clientX: number, clientY: number) {
-    if (!waveBox) return;
-    const cols = Math.ceil((oscWaveOptions.length + 1) / 2);
-    const cell = gridCellIndex(clientX, clientY, waveBox, cols, 2);
-    const option = oscWaveOptions[cell - 1];
-    if (!option || option.value === oscWave) return;
-    writeOsc(oscTab, oscTab === 1 ? 20 : 24, option.value);
-  }
-
-  function waveScrubDown(info: DragInfo) {
-    waveBox = scrubBoxOf(waveGrid);
-    waveAt(info.x, info.y);
-  }
+  // The octave strip and the waveform grid SCRUB (user, 2026-09-12: "can I
+  // slide my finger to scrub octaves?"), through ScrubTabs. The grid's first
+  // cell is the OSC 1/2 badge, its lead: a scrub across it changes no
+  // waveform and never switches oscillator; that is a tap on it.
 
   // Display order is the mockup's — Mono then Poly on the top row. `value` is
   // the LOM `voice_mode_index` and travels with each entry, so reordering the
@@ -335,10 +284,48 @@
     return selectedTrackStore.subscribeProperty(devicePath, 'voice_mode_index');
   });
 
-  function handleFilterXYInteraction(x: number, y: number) {
+  /**
+   * The filter pad carries both of Drift's filters (user, 2026-11-05), as
+   * Wavetable's does: the low-pass dot with cutoff across and resonance up,
+   * and the high-pass dot, which has no resonance, halfway up (the 0 dB
+   * line), sliding across only. One curve, the two in series. The chain
+   * cell keeps the low-pass alone (InstrumentFace).
+   *
+   * The pad's axis is LP Freq's own sweep, so the LP dot's X is its 0..1.
+   * HP Freq runs 10 Hz..20.5 kHz on a log sweep (Live's labels, device
+   * dump: 0.5 reads 453 Hz), so its dot is placed by Hz on the same axis;
+   * below 20 Hz it rests at the left edge.
+   */
+  const HP_FREQ = 4;
+  const HP_RANGE = [10, 20500] as const;
+  const DRIFT_AXIS = FILTER_FREQ_RANGE.drift;
+  const HP_DOT_Y = 0.5;
+  let hpValue = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, HP_FREQ)) ?? 0 : 0);
+  const hpHz = (t: number) => HP_RANGE[0] * Math.pow(HP_RANGE[1] / HP_RANGE[0], t);
+  const hpParam = (hz: number) => Math.min(1, Math.max(0, Math.log(hz / HP_RANGE[0]) / Math.log(HP_RANGE[1] / HP_RANGE[0])));
+  /** The dot the LP Type row beside the pad belongs with: LP until HP is touched. */
+  let filterDot = $state<0 | 1>(0);
+  let filterDots = $derived([
+    { label: 'LP', x: cutoffValue, y: resonanceValue, color: driftInk.primary, on: true, filled: filterDot === 0 },
+    { label: 'HP', x: axisX(DRIFT_AXIS, hpHz(hpValue)), y: HP_DOT_Y, color: driftInk.primary, on: true, filled: filterDot === 1 }
+  ]);
+  let filterCurve = $derived(
+    responsePath(
+      seriesDb([
+        responseDb(DRIFT_AXIS, { hz: axisHz(DRIFT_AXIS, cutoffValue), res: resonanceValue, curve: driftFilterCurve(lpType) }),
+        responseDb(DRIFT_AXIS, { hz: hpHz(hpValue), res: 0, curve: { curveType: 'highpass', order: 1 } })
+      ])
+    )
+  );
+
+  function moveFilterDot(i: number, x: number, y: number) {
     if (!device) return;
-    selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, 1), x);
-    selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, 2), y);
+    if (i === 0) {
+      selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, 1), x);
+      selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, 2), y);
+    } else {
+      selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, HP_FREQ), hpParam(axisHz(DRIFT_AXIS, x)));
+    }
   }
 
   function handleTimeXYInteraction(x: number, y: number) {
@@ -463,28 +450,27 @@
           class="osc-body flex-1 min-h-0"
           style="grid-template-columns: repeat({Math.ceil((oscWaveOptions.length + 1) / 2)}, minmax(0, 1fr)); {oscOn ? '' : 'opacity: var(--opacity-ghost);'}"
         >
-          <!-- The waveform cells are scrubbed from the GRID, which spans
-               all four rows — so the drag surface has to be the two
-               waveform rows alone, not the body. Hence the inner wrapper
-               below rather than `use:drag` up here. -->
-          <div
-            class="wave-grid device-segmented seg-grid"
-            bind:this={waveGrid}
-            use:drag={{ commit: 'immediate', onDown: waveScrubDown, onMove: (i) => waveAt(i.x, i.y) }}
-            style="grid-template-columns: repeat({Math.ceil((oscWaveOptions.length + 1) / 2)}, minmax(0, 1fr));"
+          <!-- The waveform tab spans the body's first two rows: the scrub
+               surface is the waveforms, not the whole card. -->
+          <ScrubTabs
+            options={oscWaveOptions}
+            selected={oscWaveOptions.findIndex((o) => o.value === oscWave)}
+            onSelect={(_, o) => writeOsc(oscTab, oscTab === 1 ? 20 : 24, o.value)}
+            cols={Math.ceil((oscWaveOptions.length + 1) / 2)}
+            rows={2}
+            tint={oscInk.primary}
+            inked
+            label={(o) => `OSC ${oscTab} wave ${o.label}`}
+            name="osc-wave"
+            style="grid-column: 1 / -1; grid-row: 1 / 3;"
           >
-            <!-- The switch is the grid's FIRST CELL (user's sketch,
-                 2026-09-12) — 1 badge + 7 waveforms is exactly 4x2, and
-                 1 + 5 is exactly 3x2, so it fills the hole the odd
-                 waveform count left instead of costing the card a header
-                 band of its own. (The card's original wave grid put its
-                 TITLE in this cell for the same reason.) It wears the
-                 shown oscillator's colour, so the corner says orange or
-                 blue before the digit is read, and carries BOTH numbers
-                 so the oscillator you are not looking at is still
-                 accounted for — each digit dimming on its own when that
-                 oscillator is switched off. -->
-            <div class="osc-badge-cell">
+            {#snippet lead()}
+              <!-- The switch is the grid's FIRST CELL (user's sketch,
+                   2026-09-12) — 1 badge + 7 waveforms is exactly 4x2, and
+                   1 + 5 is exactly 3x2. It wears the shown oscillator's
+                   colour and carries BOTH numbers, each digit dimming on its
+                   own when that oscillator is switched off. -->
+              <div class="osc-badge-cell">
               <button
                 class="osc-badge"
                 style="--osc-badge-ink: {oscInk.primary};"
@@ -498,42 +484,22 @@
                     class="osc-badge-n" class:on={oscTab === 2} class:silent={!osc2On}>2</span>
                 </span>
               </button>
-            </div>
-            {#each oscWaveOptions as option}
-              <button
-                class="device-segment wave-button"
-                class:active={oscWave === option.value}
-                style="--btn-tint: {oscInk.primary};"
-                title={option.label}
-                aria-label="OSC {oscTab} wave {option.label}"
-                aria-pressed={oscWave === option.value}
-                onclick={() => writeOsc(oscTab, oscTab === 1 ? 20 : 24, option.value)}
-              >
-                {@render waveGlyph(option.label)}
-              </button>
-            {/each}
-          </div>
+              </div>
+            {/snippet}
+            {#snippet item(o)}{@render waveGlyph(o.label)}{/snippet}
+          </ScrubTabs>
 
-          <div
-            class="device-segmented octave-row"
-            style="--btn-tint: {oscInk.primary}; grid-template-columns: repeat({OCTAVES.length}, 1fr);"
-            bind:this={octaveStrip}
-            use:drag={{
-              commit: 'immediate',
-              onDown: octaveScrubDown,
-              onMove: (info) => octaveAt(info.x)
-            }}
+          <ScrubTabs
+            options={OCTAVES}
+            selected={OCTAVES.findIndex((o) => o === oscOctave)}
+            onSelect={(_, octave) => writeOsc(oscTab, oscTab === 1 ? 22 : 26, octave)}
+            tint={oscInk.primary}
+            inked
+            label={(octave) => `OSC ${oscTab} octave ${octaveLabel(octave)}`}
+            style="grid-column: 1 / -1;"
           >
-            {#each OCTAVES as octave}
-              <button
-                class="device-segment octave-step"
-                class:active={oscOctave === octave}
-                aria-label="OSC {oscTab} octave {octaveLabel(octave)}"
-                aria-pressed={oscOctave === octave}
-                onclick={() => writeOsc(oscTab, oscTab === 1 ? 22 : 26, octave)}
-              >{octaveLabel(octave)}</button>
-            {/each}
-          </div>
+            {#snippet item(octave)}{octaveLabel(octave)}{/snippet}
+          </ScrubTabs>
 
           <div class="osc-fader">
             <DeviceSlider
@@ -667,33 +633,25 @@
           />
         </div>
         <div class="min-h-0 min-w-0">
-          <DeviceXY
-            xValue={cutoffValue}
-            yValue={resonanceValue}
-            title="Filter"
-            showCurve
-            curveType="lowpass"
-            curveOrder={driftFilterCurve(lpType).order}
-            curveFreqRange={FILTER_FREQ_RANGE.drift}
-            onInteraction={handleFilterXYInteraction}
-            color={driftInk}
+          <FilterDotsGraph
+            dots={filterDots}
+            curves={[{ d: filterCurve, color: driftInk.primary }]}
+            ariaLabel="Filter: low-pass {Math.round(cutoffValue * 100)}%, high-pass {Math.round(hpValue * 100)}%"
+            onGrab={(i) => (filterDot = i === 0 ? 0 : 1)}
+            onMove={moveFilterDot}
           />
         </div>
-        <div
-          class="device-segmented filter-type-row"
-          style="--btn-tint: {driftInk.primary}; grid-template-columns: repeat({LP_TYPE_OPTIONS.length}, 1fr);"
+        <ScrubTabs
+          options={LP_TYPE_OPTIONS}
+          selected={LP_TYPE_OPTIONS.findIndex((o) => o.value === lpType)}
+          onSelect={(_, o) => writeLpType(o.value)}
+          tint={driftInk.primary}
+          inked
+          label={(o) => `Filter type ${o.label}`}
+          style="height: var(--height-touch);"
         >
-          {#each LP_TYPE_OPTIONS as option}
-            <button
-              class="device-segment filter-type-step"
-              class:active={lpType === option.value}
-              title="LP Type {option.label}"
-              aria-label="Filter type {option.label}"
-              aria-pressed={lpType === option.value}
-              onclick={() => writeLpType(option.value)}
-            >{option.label}</button>
-          {/each}
-        </div>
+          {#snippet item(o)}{o.label}{/snippet}
+        </ScrubTabs>
       </div>
 
       <SectionDivider orientation="vertical" ink={driftInk.primary} />
@@ -770,20 +728,18 @@
       <div class="mode-col flex-none flex flex-col gap-(--central-gap) min-h-0">
         <PanelEyebrow title="Global" page="global" onOpen={openPage} color={driftInk.primary} />
         <!-- One pick-one tab, two by two. -->
-        <div class="device-segmented seg-grid grid grid-cols-2 grid-rows-2 flex-1 min-h-0" style="--btn-tint: {driftInk.primary};">
-          {#each VOICE_MODE_OPTIONS as option}
-            <button
-              class="device-segment mode-button px-1 text-center"
-              class:active={voiceMode === option.value}
-              onclick={() => {
-                if (!devicePath) return;
-                selectedTrackStore.setPropertyValue(devicePath, 'voice_mode_index', option.value);
-              }}
-            >
-              {option.label}
-            </button>
-          {/each}
-        </div>
+        <ScrubTabs
+          options={VOICE_MODE_OPTIONS}
+          selected={VOICE_MODE_OPTIONS.findIndex((o) => o.value === voiceMode)}
+          onSelect={(_, o) => {
+            if (devicePath) selectedTrackStore.setPropertyValue(devicePath, 'voice_mode_index', o.value);
+          }}
+          cols={2}
+          tint={driftInk.primary}
+          label={(o) => o.label}
+          class="flex-1"
+          style="--scrub-font-size: 0.8125rem; --scrub-font-weight: 500; --scrub-padding: 0 0.25rem;"
+        />
       </div>
     </div>
     {/snippet}
@@ -811,17 +767,6 @@
     --drift-slider-w: 56px;
   }
 
-  /* The oscillator card reads across and stacks down: a two-row waveform
-     grid that takes the slack, then three fixed bands — the octave strip
-     and the two faders. */
-  .wave-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2px;
-    min-height: 0;
-    min-width: 0;
-  }
   /* The body is ONE grid of four equal rows with one uniform gap — two
      rows of waveforms, the octave strip, then Shape (user: "can each row
      height be equal"). Nesting the waveform grid inside a flex column
@@ -833,57 +778,8 @@
     grid-template-rows: repeat(4, minmax(0, 1fr));
     gap: var(--spacing-sm);
   }
-  .octave-row,
   .osc-fader {
     grid-column: 1 / -1;
-  }
-  /* The waveform block spans the body's first TWO rows plus the gap
-     between them. It is one segmented tab (2026-10-24), so its rows are
-     divided by the tab's 1px hairline rather than the body's gap and come
-     out half a gap taller than a body row each. (It needs to be one box
-     rather than eight loose cells because it owns the scrub gesture: the
-     drag surface is the waveforms, not the whole card.) */
-  .wave-grid {
-    display: grid;
-    grid-column: 1 / -1;
-    grid-row: 1 / 3;
-    grid-template-rows: repeat(2, minmax(0, 1fr));
-    min-height: 0;
-    min-width: 0;
-  }
-  /* The octave strip and the filter type strip are the house segmented
-     control laid on its side. The shared rules divide segments with a TOP
-     border (a vertical stack) and clear it around an active fill; a row
-     divides on the left instead, and an active segment clears the divider
-     on both of its own sides — its own left border and its right
-     neighbor's. */
-  .octave-row,
-  .filter-type-row {
-    display: grid;
-  }
-  .octave-row .device-segment + .device-segment,
-  .filter-type-row .device-segment + .device-segment {
-    border-top: 0;
-    border-left: 1px solid var(--line-faint);
-  }
-  .octave-row .device-segment.active,
-  .octave-row .device-segment.active + .device-segment,
-  .filter-type-row .device-segment.active,
-  .filter-type-row .device-segment.active + .device-segment {
-    border-left-color: transparent;
-  }
-  /* The filter type strip is one touch-height band under the Filter pad. */
-  .filter-type-row {
-    height: var(--height-touch);
-  }
-  .filter-type-step {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 0;
-    padding: 2px;
-    font-size: 0.75rem;
-    font-weight: 600;
   }
   /* The level mixer and the voicing group are value boxes stacked in a
      column at the view's slider width (ADR-477), sharing its height. The
@@ -898,26 +794,9 @@
   .voicing-card {
     width: var(--drift-slider-w);
   }
-  /* The strip owns the pointer; the steps are its face. Keyboard focus
-     and Enter still reach them. */
-  .octave-step {
-    pointer-events: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 0;
-    padding: 2px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-  }
   /* Two slider widths: the 2 x 2 mode tab, the column's full height. */
   .mode-col {
     width: calc(2 * var(--drift-slider-w) + var(--central-gap));
-  }
-  .mode-button {
-    min-height: var(--height-touch);
-    font-size: 0.8125rem;
   }
   .wave-glyph {
     width: 100%;
@@ -941,6 +820,8 @@
   /* The switch sits inside the waveform tab as its first cell, on the
      tab's own field. */
   .osc-badge-cell {
+    width: 100%;
+    height: 100%;
     background: var(--surface-well);
     container-type: size;
     display: grid;
@@ -998,52 +879,9 @@
     padding: 0 1px;
   }
 
-  /* ---- Live skin (flat grammar). Wave / voice buttons are segmented tabs,
-     the pads / sliders are DeviceXY / DeviceSlider —
-     all flat on their own, and since 2026-09-13 the three section groups
-     have no frame of their own either: the seams between them are
-     `SectionDivider`s, which carry their own flat fork. What is left here
-     is the segmented strips' dividers and the source colours. Every rule
-     sits under [data-grammar="flat"] / [data-skin]. */
-  :global([data-grammar="flat"]) .octave-row .device-segment + .device-segment,
-  :global([data-grammar="flat"]) .filter-type-row .device-segment + .device-segment {
-    border-top: 0;
-    border-left: 1px solid var(--line-strong);
-  }
-  :global([data-grammar="flat"]) .octave-row .device-segment.active,
-  :global([data-grammar="flat"]) .octave-row .device-segment.active + .device-segment,
-  :global([data-grammar="flat"]) .filter-type-row .device-segment.active,
-  :global([data-grammar="flat"]) .filter-type-row .device-segment.active + .device-segment {
-    border-left-color: transparent;
-  }
-
-  /* ---- The source colours have to be re-asserted against the flat
-     grammar (2026-09-12). app.css's flat fork pins every segmented
-     control to the house pair — `--foreground` at rest, `--phosphor`
-     when lit — and ignores `--btn-tint` entirely, which is right for a
-     control whose colour means nothing. Here the colour IS the meaning:
-     without these rules the wave picker and the octave column read house
-     amber on an OSC 2 card that is otherwise blue, and the OSC 2 tab
-     could not say it was blue at all while OSC 1 was showing.
-
-     `--btn-tint` is set on the two columns from the shown oscillator's
-     ink and on each TAB from its own, so the tabs stay orange and blue
-     whichever is selected. The filter type strip takes the same rules in
-     the view's ink, so its lit step matches the Filter pad above it. */
-  :global([data-grammar="flat"]) .osc-card .device-segment,
-  :global([data-grammar="flat"]) .filter-type-row .device-segment {
-    color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
-  }
-  :global([data-grammar="flat"]) .osc-card .device-segment:hover:not(.active),
-  :global([data-grammar="flat"]) .filter-type-row .device-segment:hover:not(.active) {
-    color: var(--btn-tint);
-    background: color-mix(in srgb, var(--btn-tint) 12%, transparent);
-  }
-  :global([data-grammar="flat"]) .osc-card .device-segment.active,
-  :global([data-grammar="flat"]) .filter-type-row .device-segment.active {
-    background: var(--btn-tint);
-    color: var(--flat-on-fg);
-  }
+  /* ---- Live skin (flat grammar): the pads, sliders and tabs carry their
+     own flat forks (the tabs are ScrubTabs, `inked` where the colour is the
+     meaning: an oscillator's, or the view's on the filter type). */
 
   /* Time | Filter, the type switch under Filter. */
   .time-filter-grid {

@@ -51,7 +51,7 @@
 	import { FilterResponseCalculator } from '$lib/utils/filterResponseCalculator';
 	import { drag } from '$lib/actions';
 	import type { DragInfo } from '$lib/actions/drag';
-	import { gridCellIndex, scrubBoxOf, type ScrubBox } from '$lib/utils/segmentScrub';
+	import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
 
 	const echo = useFxGridSlot('echo');
 
@@ -99,7 +99,6 @@
 	 * the cell from geometry, so only a cell EDGE reaches Live.
 	 */
 	const WAVE_COLS = 2;
-	const WAVE_ROWS = 3;
 	const LFO_WAVE_GLYPHS: Record<(typeof ECHO_LFO_WAVES)[number], string> = {
 		Sine: 'M0 6 Q6 -1 12 6 T24 6',
 		Triangle: 'M0 6 L6 2 L18 10 L24 6',
@@ -113,20 +112,6 @@
 	// At rest (ghost) Echo.adv's LFO is Saw Up (2).
 	let lfoWave = $derived(Math.round(echo.paramValue(ECHO_LFO.wave) ?? 2));
 
-	let waveGrid = $state<HTMLElement | null>(null);
-	let waveBox: ScrubBox | null = null;
-
-	function waveAt(clientX: number, clientY: number) {
-		if (!waveBox) return;
-		const cell = gridCellIndex(clientX, clientY, waveBox, WAVE_COLS, WAVE_ROWS);
-		if (cell < 0 || cell >= ECHO_LFO_WAVES.length || cell === lfoWave) return;
-		echo.sendParam(ECHO_LFO.wave, cell);
-	}
-
-	function waveScrubDown(info: DragInfo) {
-		waveBox = scrubBoxOf(waveGrid);
-		waveAt(info.x, info.y);
-	}
 
 	// ── Input / Output / Feedback / Mix ─────────────────────────────────
 	// Input and Output span each parameter's full LOM rail (user, 2026-09-14),
@@ -279,26 +264,18 @@
 
 	<SectionDivider orientation="vertical" />
 
-	<div
-		class="col wave-grid device-segmented seg-grid"
-		style="--btn-tint: {echo.color.primary};"
-		data-echo-lfo-wave
-		bind:this={waveGrid}
-		use:drag={{ commit: 'immediate', onDown: waveScrubDown, onMove: (i) => waveAt(i.x, i.y) }}
+	<ScrubTabs
+		options={ECHO_LFO_WAVES}
+		selected={lfoWave}
+		onSelect={(i) => echo.sendParam(ECHO_LFO.wave, i)}
+		cols={WAVE_COLS}
+		tint={echo.color.primary}
+		label={(w) => `LFO wave ${w}`}
+		name="echo-lfo-wave"
+		style="height: 100%; --scrub-padding: 4px;"
 	>
-		{#each ECHO_LFO_WAVES as label, value}
-			<button
-				class="device-segment wave-button"
-				class:active={lfoWave === value}
-				title={label}
-				aria-label="LFO wave {label}"
-				aria-pressed={lfoWave === value}
-				onclick={() => echo.sendParam(ECHO_LFO.wave, value)}
-			>
-				{@render waveGlyph(label)}
-			</button>
-		{/each}
-	</div>
+		{#snippet item(w)}{@render waveGlyph(w)}{/snippet}
+	</ScrubTabs>
 
 	<div class="col slider-over-switch" data-echo-lfo>
 		<div class="slider-part">
@@ -476,24 +453,7 @@
 		text-transform: uppercase;
 	}
 
-	/* LFO Wave: two columns of three, as Drift's waveform grid. The grid owns
-	   the pointer (it scrubs); the buttons are its face, and keyboard focus
-	   and Enter still reach them. */
-	.wave-grid {
-		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		grid-template-rows: repeat(3, minmax(0, 1fr));
-	}
-	/* The LFO waves are one pick-one tab (2026-10-24), hairlines between. */
-	.wave-button {
-		pointer-events: none;
-		min-height: 0;
-		min-width: 0;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 4px;
-	}
+	/* LFO Wave: two columns of three, a ScrubTabs. */
 	.wave-glyph {
 		width: 100%;
 		height: 100%;
@@ -526,7 +486,6 @@
 	}
 	/* One ink for the view: a lit switch wears the Echo's own teal rather
 	   than the house --phosphor, as the Drum Buss view's Comp does. */
-	:global([data-grammar="flat"]) .wave-button.active,
 	:global([data-grammar="flat"]) .echo-switch.active {
 		background: var(--btn-tint);
 		border-color: var(--btn-tint);

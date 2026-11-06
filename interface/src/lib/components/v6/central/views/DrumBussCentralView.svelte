@@ -28,9 +28,7 @@
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-  import { drag } from '$lib/actions';
-  import type { DragInfo } from '$lib/actions/drag';
-  import { segmentIndex, scrubBoxOf, type ScrubBox } from '$lib/utils/segmentScrub';
+  import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
   import DrumBussControl from '$lib/components/v6/device-panel/DrumBussControl.svelte';
 
   const drum = useFxGridSlot('drum');
@@ -106,26 +104,6 @@
     { value: damp, title: 'Damp', icon: 'cutoff', param: PARAM.damp }
   ] as const);
 
-  /**
-   * Drive type is a VERTICAL tab, the grammar of Drift's waveform list,
-   * and it scrubs up and down: the column owns one pointer and resolves
-   * the step from geometry (the shared segmentScrub helper, on Y), so a
-   * finger slides Soft → Medium → Hard. Only a step EDGE reaches Live.
-   */
-  let typeStrip = $state<HTMLElement | null>(null);
-  let typeBox: ScrubBox | null = null;
-
-  function driveTypeAt(clientY: number) {
-    if (!typeBox) return;
-    const step = segmentIndex(clientY, typeBox.top, typeBox.height, DRIVE_TYPES.length);
-    if (step === driveType) return;
-    drum.sendParam(PARAM.driveType, step);
-  }
-
-  function driveTypeDown(info: DragInfo) {
-    typeBox = scrubBoxOf(typeStrip);
-    driveTypeAt(info.y);
-  }
 </script>
 
 <div class="drum-buss-layout with-xy" class:slot-ghost={drum.isGhost}>
@@ -161,22 +139,18 @@
 
   <!-- Column 2: drive type, the house segmented control in its native
        stacked direction — no border overrides needed. -->
-  <div
-    class="col device-segmented drive-type"
-    style="--btn-tint: {drumInk.primary}; grid-template-rows: repeat({DRIVE_TYPES.length}, 1fr);"
-    bind:this={typeStrip}
-    use:drag={{ commit: 'immediate', onDown: driveTypeDown, onMove: (i) => driveTypeAt(i.y) }}
-  >
-    {#each DRIVE_TYPES as label, step}
-      <button
-        class="device-segment drive-type-step"
-        class:active={driveType === step}
-        aria-label="Drive type {label}"
-        aria-pressed={driveType === step}
-        onclick={() => drum.sendParam(PARAM.driveType, step)}
-      >{label}</button>
-    {/each}
-  </div>
+  <!-- Drive type is a VERTICAL tab that scrubs, Soft → Medium → Hard. -->
+  <ScrubTabs
+    options={DRIVE_TYPES}
+    selected={driveType}
+    onSelect={(step) => drum.sendParam(PARAM.driveType, step)}
+    cols={1}
+    tint={drumInk.primary}
+    inked
+    label={(t) => `Drive type ${t}`}
+    name="drive-type"
+    style="height: 100%; --scrub-font-size: 0.8125rem; --scrub-font-weight: var(--font-weight-medium);"
+  />
 
   <!-- Column 3: the distortion and its tone, top to bottom in Live's
        order, three value boxes. -->
@@ -292,24 +266,9 @@
     text-transform: uppercase;
   }
 
-  .drive-type {
-    display: grid;
-  }
-  /* The column owns the pointer; the steps are its face. Keyboard focus
-     and Enter still activate one. */
-  .drive-type-step {
-    pointer-events: none;
-    min-height: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8125rem;
-    font-weight: 600;
-  }
 
   /* Flat grammar: Live sets control text at medium weight and mixed-case. */
-  :global([data-grammar="flat"]) .physical-button,
-  :global([data-grammar="flat"]) .drive-type-step {
+  :global([data-grammar="flat"]) .physical-button {
     font-weight: var(--font-weight-medium);
   }
   :global([data-grammar="flat"]) .comp-toggle {
@@ -324,14 +283,10 @@
      own ink: two oranges in one view. Both take `--btn-tint` (the device
      ink) here, and an unlit step's word takes a mix of it, the same
      override DriftCentralView makes for its oscillator controls. */
-  :global([data-grammar="flat"]) .comp-toggle.active,
-  :global([data-grammar="flat"]) .drive-type .device-segment.active {
+  :global([data-grammar="flat"]) .comp-toggle.active {
     background: var(--btn-tint);
     border-color: var(--btn-tint);
     color: var(--flat-on-fg);
-  }
-  :global([data-grammar="flat"]) .drive-type .device-segment:not(.active) {
-    color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
   }
   :global([data-grammar="flat"]) .comp-toggle:not(.active) {
     color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));

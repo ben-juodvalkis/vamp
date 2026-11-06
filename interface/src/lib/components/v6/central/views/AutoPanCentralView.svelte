@@ -15,9 +15,7 @@
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-  import { drag } from '$lib/actions';
-  import type { DragInfo } from '$lib/actions/drag';
-  import { segmentIndex, scrubBoxOf, type ScrubBox } from '$lib/utils/segmentScrub';
+  import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
   import {
     AUTO_PAN,
     SYNC_RATE_MAX,
@@ -66,23 +64,6 @@
     for (const [i, v] of shapeWrites(SHAPES[step].key)) fx.sendParam(i, v);
   }
 
-  /**
-   * The tab scrubs on Y like the Drum Buss's drive type: the column owns
-   * the pointer and resolves the step from geometry, and only a step edge
-   * reaches Live.
-   */
-  let shapeStrip = $state<HTMLElement | null>(null);
-  let shapeBox: ScrubBox | null = null;
-
-  function shapeAt(clientY: number) {
-    if (!shapeBox) return;
-    writeShape(segmentIndex(clientY, shapeBox.top, shapeBox.height, SHAPES.length));
-  }
-
-  function shapeDown(info: DragInfo) {
-    shapeBox = scrubBoxOf(shapeStrip);
-    shapeAt(info.y);
-  }
 
   /** One cycle each, Drift's glyph grammar: peak y=2, floor y=10, midline 6. */
   const GLYPHS: Record<ShapeKey, string> = {
@@ -120,35 +101,32 @@
         </div>
       </div>
 
-      <div
-        class="device-segmented shape-tab"
-        style="--btn-tint: {fxInk.primary}; grid-template-rows: repeat({SHAPES.length}, 1fr);"
-        bind:this={shapeStrip}
-        use:drag={{ commit: 'immediate', onDown: shapeDown, onMove: (i) => shapeAt(i.y) }}
+      <!-- The shape tab scrubs on Y, as the Drum Buss's drive type. -->
+      <ScrubTabs
+        options={SHAPES}
+        selected={currentShape ?? -1}
+        onSelect={(step) => writeShape(step)}
+        cols={1}
+        tint={fxInk.primary}
+        inked
+        label={(s) => `Shape ${s.label}`}
+        name="shape"
+        class="flex-1"
       >
-        {#each SHAPES as s, step}
-          <button
-            class="device-segment shape-step"
-            class:active={currentShape === step}
-            title={s.label}
-            aria-label="Shape {s.label}"
-            aria-pressed={currentShape === step}
-            onclick={() => writeShape(step)}
-          >
-            <svg class="shape-glyph" viewBox="0 0 24 12" aria-hidden="true" focusable="false">
-              <path
-                d={GLYPHS[s.key]}
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.6"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                vector-effect="non-scaling-stroke"
-              />
-            </svg>
-          </button>
-        {/each}
-      </div>
+        {#snippet item(s)}
+          <svg class="shape-glyph" viewBox="0 0 24 12" aria-hidden="true" focusable="false">
+                  <path
+                    d={GLYPHS[s.key]}
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    vector-effect="non-scaling-stroke"
+                  />
+                </svg>
+        {/snippet}
+      </ScrubTabs>
     </div>
   </div>
 </div>
@@ -218,22 +196,6 @@
     text-transform: uppercase;
   }
 
-  .shape-tab {
-    flex: 1 1 0;
-    min-height: 0;
-    min-width: 0;
-    display: grid;
-  }
-  /* The row owns the pointer; the steps are its face. Keyboard focus
-     and Enter still activate one. */
-  .shape-step {
-    pointer-events: none;
-    min-width: 0;
-    min-height: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
   .shape-glyph {
     width: min(70%, 3rem);
     height: auto;
@@ -247,13 +209,11 @@
 
   /* One ink for the device, as the Drum Buss does: the lit switch and the
      lit shape take the device's ink rather than the house --phosphor. */
-  :global([data-grammar="flat"]) .sync-toggle.active,
-  :global([data-grammar="flat"]) .shape-tab .device-segment.active {
+  :global([data-grammar="flat"]) .sync-toggle.active {
     background: var(--btn-tint);
     border-color: var(--btn-tint);
     color: var(--flat-on-fg);
   }
-  :global([data-grammar="flat"]) .shape-tab .device-segment:not(.active),
   :global([data-grammar="flat"]) .sync-toggle:not(.active) {
     color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
   }

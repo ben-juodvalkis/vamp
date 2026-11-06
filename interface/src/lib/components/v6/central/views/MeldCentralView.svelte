@@ -244,6 +244,7 @@
               onSelect={(_, n) => writeOsc(p.octave, n)}
               cols={1}
               tint={engineInk.primary}
+              inked
               label={(n) => `Engine ${engine} octave ${octaveLabel(n)}`}
               class="flex-1"
             >
@@ -306,32 +307,34 @@
 
         <!-- A type grid lies over both pads, so 25 names have room to read. -->
         {#if chooser === 'osc'}
-          <div class="device-segmented seg-grid type-grid osc-types" style="--btn-tint: {engineInk.primary};">
-            {#each MELD_OSC_TYPES as label, value}
-              <button
-                class="device-segment type-option"
-                class:active={oscType === value}
-                onclick={() => {
-                  writeOsc(p.oscType, value);
-                  chooser = null;
-                }}
-              >{label}</button>
-            {/each}
-          </div>
+          <!-- Scrubs: the type follows the finger, and the grid closes when it lifts. -->
+          <ScrubTabs
+            options={MELD_OSC_TYPES}
+            selected={oscType}
+            onSelect={(i) => writeOsc(p.oscType, i)}
+            onDone={() => (chooser = null)}
+            cols={5}
+            tint={engineInk.primary}
+            inked
+            label={(l) => l}
+            name="meld-osc-types"
+            style="position: absolute; inset: 0; z-index: 10; --scrub-padding: 2px 4px; --scrub-font-weight: var(--font-weight-medium);"
+          />
         {/if}
         {#if chooser === 'filter'}
-          <div class="device-segmented seg-grid type-grid filter-types" style="--btn-tint: {engineInk.primary};">
-            {#each MELD_FILTER_TYPES as label, value}
-              <button
-                class="device-segment type-option"
-                class:active={filterType === value}
-                onclick={() => {
-                  write(p.filterType, value);
-                  chooser = null;
-                }}
-              >{label}</button>
-            {/each}
-          </div>
+          <ScrubTabs
+            options={MELD_FILTER_TYPES}
+            selected={filterType}
+            onSelect={(i) => write(p.filterType, i)}
+            onDone={() => (chooser = null)}
+            cols={5}
+            rows={4}
+            tint={engineInk.primary}
+            inked
+            label={(l) => l}
+            name="meld-filter-types"
+            style="position: absolute; inset: 0; z-index: 10; --scrub-padding: 2px 4px; --scrub-font-weight: var(--font-weight-medium);"
+          />
         {/if}
       </div>
 
@@ -462,29 +465,6 @@
     flex: 1 1 0;
   }
 
-  .type-grid {
-    position: absolute;
-    inset: 0;
-    z-index: 10;
-    display: grid;
-  }
-  .osc-types {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    grid-template-rows: repeat(5, minmax(0, 1fr));
-  }
-  .filter-types {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    grid-template-rows: repeat(4, minmax(0, 1fr));
-  }
-  .type-option {
-    min-height: 0;
-    min-width: 0;
-    padding: 2px 4px;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    line-height: 1.1;
-    overflow: hidden;
-  }
 
   .filter-extra {
     height: var(--height-touch);
@@ -509,34 +489,5 @@
   /* The global column: one slider width. */
   .global-col {
     width: var(--meld-global-w);
-  }
-
-  /* ---- Flat grammar: Analog's, so the two two-engine synths read alike.
-     The engine colour is re-asserted against the house pair — here the
-     colour IS the meaning (which half you are holding). */
-  :global([data-grammar="flat"]) .meld-root .type-grid .device-segment {
-    font-weight: var(--font-weight-medium);
-  }
-  :global([data-grammar="flat"]) .meld-root .type-grid .device-segment:not(.active) {
-    color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
-  }
-  :global([data-grammar="flat"]) .meld-root .device-segmented:not(.seg-grid) .device-segment + .device-segment {
-    border-top: 0;
-    border-left: 1px solid var(--line-strong);
-  }
-  :global([data-grammar="flat"]) .meld-root .device-segment.active,
-  :global([data-grammar="flat"]) .meld-root .device-segment.active + .device-segment {
-    border-left-color: transparent;
-  }
-  :global([data-grammar="flat"]) .meld-root .device-segment {
-    color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
-  }
-  :global([data-grammar="flat"]) .meld-root .device-segment:hover:not(.active) {
-    color: var(--btn-tint);
-    background: color-mix(in srgb, var(--btn-tint) 12%, transparent);
-  }
-  :global([data-grammar="flat"]) .meld-root .device-segment.active {
-    background: var(--btn-tint);
-    color: var(--flat-on-fg);
   }
 </style>

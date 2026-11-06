@@ -326,10 +326,13 @@ function wavetableParams({ osc2On = 0 } = {}) {
 export function driftParams({ osc2On = 1 } = {}) {
 	const p = [
 		['On', 'On', 0, 1, 1, ''], // 0
-		['Filter Frequency', 'Filter Freq', 19.999998, 19999.9961, 3200, ''], // 1
-		['Filter Resonance', 'Filter Res', 0, 1.01, 0.35, ''], // 2
-		['Filter Type', 'Filter Type', 0, 1, 0, ''], // 3
-		['Filter Hi Pass Frequency', 'Filter Hi Pa', 9.999999, 20479.998, 9.999999, ''], // 4
+		// 1-4 as the running Live reports them (device dump,
+		// docs/reference/instruments/Drift.md): 0..1 rails on log sweeps,
+		// not the .adv's Hz. Set off the ends so the filter pad shows both dots.
+		['LP Freq', 'LP Freq', 0, 1, 0.68, ''], // 1
+		['LP Res', 'LP Res', 0, 1, 0.35, ''], // 2
+		['LP Type', 'LP Type', 0, 1, 0, ''], // 3
+		['HP Freq', 'HP Freq', 0, 1, 0.3, ''], // 4
 		['Filter Tracking', 'Filter Track', 0, 1, 0, ''], // 5
 		['Filter Mod Amount1', 'Filter Mod A', -1, 1, 0.8, ''], // 6
 		['Filter Mod Amount2', 'Filter Mod A', -1, 1, 0.15, ''], // 7

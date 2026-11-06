@@ -24,9 +24,7 @@
 	import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-	import { drag } from '$lib/actions';
-	import type { DragInfo } from '$lib/actions/drag';
-	import { gridCellIndex, scrubBoxOf, type ScrubBox } from '$lib/utils/segmentScrub';
+	import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
 
 	const fx = useFxGridSlot('comb');
 
@@ -70,19 +68,6 @@
 		'M0 7 L5 7 L5 3 L10 3 L10 9 L15 9 L15 5 L20 5 L20 8 L24 8',
 		'M0 7 C3 2 6 3 8 6 S13 11 16 8 S21 3 24 5'
 	];
-	/** The grid scrubs, so only a cell edge reaches Live (as Echo's and the Shifter's). */
-	let shapeGrid = $state<HTMLElement | null>(null);
-	let shapeBox: ScrubBox | null = null;
-	function shapeAt(clientX: number, clientY: number) {
-		if (!shapeBox) return;
-		const cell = gridCellIndex(clientX, clientY, shapeBox, 1, SHAPES.length);
-		if (cell < 0 || cell >= SHAPES.length || cell === shape) return;
-		send(COMB.lfoShape, cell);
-	}
-	function shapeScrubDown(info: DragInfo) {
-		shapeBox = scrubBoxOf(shapeGrid);
-		shapeAt(info.x, info.y);
-	}
 </script>
 
 <div class="comb-layout" data-view="comb" style="--btn-tint: {ink.primary};">
@@ -111,26 +96,24 @@
 	</div>
 
 	<div class="col" class:slot-ghost={fx.isGhost} class:no-lfo={!hasLfo}>
-		<div
-			class="shape-grid device-segmented seg-grid"
-			bind:this={shapeGrid}
-			use:drag={{ commit: 'immediate', onDown: shapeScrubDown, onMove: (i) => shapeAt(i.x, i.y) }}
+		<!-- The LFO shapes, one column of seven, a tab that scrubs. -->
+		<ScrubTabs
+			options={SHAPES}
+			selected={fx.isGhost ? -1 : shape}
+			onSelect={(i) => send(COMB.lfoShape, i)}
+			cols={1}
+			tint={ink.primary}
+			inked
+			label={(l) => `LFO shape ${l}`}
+			name="comb-lfo-shape"
+			style="flex: 7 1 0; --scrub-padding: 6px;"
 		>
-			{#each SHAPES as label, i (label)}
-				<button
-					class="device-segment shape-button"
-					class:active={!fx.isGhost && shape === i}
-					title={label}
-					aria-label="LFO shape {label}"
-					aria-pressed={shape === i}
-					onclick={() => send(COMB.lfoShape, i)}
-				>
-					<svg class="shape-glyph" viewBox="0 0 24 12" aria-hidden="true" focusable="false">
-						<path d={SHAPE_GLYPHS[i]} fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
-					</svg>
-				</button>
-			{/each}
-		</div>
+			{#snippet item(_, i)}
+				<svg class="shape-glyph" viewBox="0 0 24 12" aria-hidden="true" focusable="false">
+					<path d={SHAPE_GLYPHS[i]} fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
+				</svg>
+			{/snippet}
+		</ScrubTabs>
 		<button class="physical-button switch" class:active={synced} aria-pressed={synced} onclick={() => send(COMB.lfoSync, synced ? 0 : 1)}>Sync</button>
 	</div>
 </div>
@@ -165,25 +148,6 @@
 		pointer-events: none;
 	}
 
-	/* Shape: one column of seven. The grid owns the pointer (it scrubs); the
-	   buttons are its face, and keyboard focus still reaches them. */
-	.shape-grid {
-		flex: 7 1 0;
-		display: grid;
-		grid-template-columns: minmax(0, 1fr);
-		grid-template-rows: repeat(7, minmax(0, 1fr));
-		gap: 1px;
-	}
-	.shape-button {
-		pointer-events: none;
-		min-height: 0;
-		min-width: 0;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 6px;
-		color: var(--btn-tint);
-	}
 	.shape-glyph {
 		width: 100%;
 		height: 100%;
@@ -199,7 +163,6 @@
 	:global([data-grammar="flat"]) .switch {
 		font-weight: var(--font-weight-medium);
 	}
-	:global([data-grammar="flat"]) .shape-button.active,
 	:global([data-grammar="flat"]) .switch.active {
 		background: var(--btn-tint);
 		border-color: var(--btn-tint);

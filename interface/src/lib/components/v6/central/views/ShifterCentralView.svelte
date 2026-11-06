@@ -34,9 +34,7 @@
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-  import { drag } from '$lib/actions';
-  import type { DragInfo } from '$lib/actions/drag';
-  import { gridCellIndex, scrubBoxOf, type ScrubBox } from '$lib/utils/segmentScrub';
+  import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
 
   const shifter = useFxGridSlot('shifter');
 
@@ -89,19 +87,6 @@
     'M0 7 L5 7 L5 3 L10 3 L10 9 L15 9 L15 5 L20 5 L20 8 L24 8'
   ];
   const WAVE_COLS = 2;
-  const WAVE_ROWS = 5;
-  let waveGrid = $state<HTMLElement | null>(null);
-  let waveBox: ScrubBox | null = null;
-  function waveAt(clientX: number, clientY: number) {
-    if (!waveBox) return;
-    const cell = gridCellIndex(clientX, clientY, waveBox, WAVE_COLS, WAVE_ROWS);
-    if (cell < 0 || cell >= WAVES.length || cell === wave) return;
-    shifter.sendParam(P.wave, cell);
-  }
-  function waveScrubDown(info: DragInfo) {
-    waveBox = scrubBoxOf(waveGrid);
-    waveAt(info.x, info.y);
-  }
 
   const value = (index: number) => shifter.paramValue(index) ?? REST[index];
   const on = (index: number) => value(index) >= 0.5;
@@ -137,17 +122,17 @@
   </div>
 
   <div class="col" class:slot-ghost={shifter.isGhost}>
-    <div class="tabs device-segmented seg-grid" role="radiogroup" aria-label="Mode">
-      {#each MODES as label, i (label)}
-        <button
-          class="device-segment tab"
-          class:active={!shifter.isGhost && mode === i}
-          role="radio"
-          aria-checked={mode === i}
-          onclick={() => shifter.sendParam(P.mode, i)}
-        >{label}</button>
-      {/each}
-    </div>
+    <ScrubTabs
+      options={MODES}
+      selected={shifter.isGhost ? -1 : mode}
+      onSelect={(i) => shifter.sendParam(P.mode, i)}
+      cols={1}
+      tint={ink.primary}
+      inked
+      label={(l) => l}
+      groupLabel="Mode"
+      style="flex: 3 1 0; --scrub-font-size: 1rem; --scrub-font-weight: var(--font-weight-medium);"
+    />
     <button class="physical-button switch" class:active={on(P.wide)} aria-pressed={on(P.wide)} onclick={() => toggle(P.wide)}>Wide</button>
   </div>
 
@@ -188,26 +173,24 @@
     />
   </div>
 
-  <div
-    class="col wave-grid device-segmented seg-grid"
-    class:slot-ghost={shifter.isGhost}
-    bind:this={waveGrid}
-    use:drag={{ commit: 'immediate', onDown: waveScrubDown, onMove: (i) => waveAt(i.x, i.y) }}
-  >
-    {#each WAVES as label, i (label)}
-      <button
-        class="device-segment wave-button"
-        class:active={!shifter.isGhost && wave === i}
-        title={label}
-        aria-label="LFO wave {label}"
-        aria-pressed={wave === i}
-        onclick={() => shifter.sendParam(P.wave, i)}
-      >
+  <div class="col" class:slot-ghost={shifter.isGhost}>
+    <ScrubTabs
+      options={WAVES}
+      selected={shifter.isGhost ? -1 : wave}
+      onSelect={(i) => shifter.sendParam(P.wave, i)}
+      cols={WAVE_COLS}
+      tint={ink.primary}
+      inked
+      label={(l) => `LFO wave ${l}`}
+      name="shifter-lfo-wave"
+      style="flex: 1 1 0; --scrub-padding: 6px;"
+    >
+      {#snippet item(_, i)}
         <svg class="wave-glyph" viewBox="0 0 24 12" aria-hidden="true" focusable="false">
           <path d={WAVE_GLYPHS[i]} fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
         </svg>
-      </button>
-    {/each}
+      {/snippet}
+    </ScrubTabs>
   </div>
 
   <div class="col boxes" class:slot-ghost={shifter.isGhost}>
@@ -230,17 +213,17 @@
 
   <div class="col" class:slot-ghost={shifter.isGhost}>
     <button class="physical-button switch" class:active={synced} aria-pressed={synced} onclick={() => toggle(P.sync)}>Sync</button>
-    <div class="tabs stereo device-segmented seg-grid" role="radiogroup" aria-label="Stereo">
-      {#each ['Phase', 'Spin'] as label, i (label)}
-        <button
-          class="device-segment tab"
-          class:active={!shifter.isGhost && Number(spin) === i}
-          role="radio"
-          aria-checked={Number(spin) === i}
-          onclick={() => shifter.sendParam(P.stereo, i)}
-        >{label}</button>
-      {/each}
-    </div>
+    <ScrubTabs
+      options={['Phase', 'Spin']}
+      selected={shifter.isGhost ? -1 : Number(spin)}
+      onSelect={(i) => shifter.sendParam(P.stereo, i)}
+      cols={1}
+      tint={ink.primary}
+      inked
+      label={(l) => l}
+      groupLabel="Stereo"
+      style="flex: 2 1 0; --scrub-font-size: 1rem; --scrub-font-weight: var(--font-weight-medium);"
+    />
     <div class="boxes stereo-box">
       <DeviceSlider
         value={value(spin ? P.spin : P.phase)}
@@ -293,45 +276,12 @@
     flex: 2 1 0;
   }
 
-  /* LFO Wave: two columns of five, as Echo's. The grid owns the pointer (it
-     scrubs); the buttons are its face, and keyboard focus still reaches them. */
-  .wave-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: repeat(5, minmax(0, 1fr));
-    gap: 1px;
-  }
-  .wave-button {
-    pointer-events: none;
-    min-height: 0;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6px;
-    color: var(--btn-tint);
-  }
   .wave-glyph {
     width: 100%;
     height: 100%;
     max-height: 22px;
   }
 
-  .tabs {
-    flex: 3 1 0;
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-  }
-  .tabs.stereo {
-    flex: 2 1 0;
-  }
-  .tab {
-    flex: 1;
-    min-height: 0;
-    font-size: 1rem;
-    font-weight: 700;
-  }
   .switch {
     flex: 1 1 0;
     min-height: var(--height-touch);
@@ -339,19 +289,9 @@
     font-weight: 600;
   }
 
-  /* As the Random view's tabs: the name in the device ink, the lit one filled with it. */
-  :global([data-skin="hybrid"]) .tab {
-    color: var(--btn-tint);
-  }
-  :global(.light[data-skin="hybrid"]) .tab {
-    color: color-mix(in oklab, var(--btn-tint) 55%, var(--foreground));
-  }
-  :global([data-grammar="flat"]) .tab,
   :global([data-grammar="flat"]) .switch {
     font-weight: var(--font-weight-medium);
   }
-  :global([data-grammar="flat"]) .wave-button.active,
-  :global([data-grammar="flat"]) .tab.active,
   :global([data-grammar="flat"]) .switch.active {
     background: var(--btn-tint);
     border-color: var(--btn-tint);
