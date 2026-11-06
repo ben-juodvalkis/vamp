@@ -187,3 +187,6 @@ config/.paired-devices.json.tmp
 owner/apps/fastlane/.env
 owner/apps/fastlane/report.xml
 owner/apps/fastlane/README.md
+
+# App Store review video, footage and screenshots: kept local, not in history
+AppStore/
