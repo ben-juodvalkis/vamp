@@ -8,7 +8,8 @@
  *   Frequency 0..1 = 10 Hz · 2200^v (Live's labels: 10.0 Hz, 469 Hz at 0.5, 22.0 kHz)
  *   Gain -15..15 dB, as the LOM
  *   Q 0..1 = 0.1 · 180^v (0.10 .. 18.0, 0.71 at 0.3767)
- *   Type 0..7: HP 48, HP 12, Low Shelf, Bell, Notch, High Shelf, LP 12, LP 48
+ *   Type 0..7: Low Cut 48, Low Cut 12, Low Shelf, Peak, Notch, High Shelf,
+ *   High Cut 12, High Cut 48 (Live's labels say High/Low Pass)
  *
  * A preset saves the same bands in the same order, each half as IsOn,
  * Mode, Freq (Hz), Gain (dB), Q (as is): the server keys the n-th
@@ -21,7 +22,8 @@ export const EQ8_BANDS = 8;
 export const EQ8_GAIN_MAX = 15;
 export const EQ8_FREQ_RANGE = [10, 22000] as const;
 
-export const EQ8_TYPES = ['HP 48', 'HP 12', 'Low Shelf', 'Bell', 'Notch', 'High Shelf', 'LP 12', 'LP 48'] as const;
+/** The manual's names for Live's eight responses (its chooser, top to bottom). */
+export const EQ8_TYPES = ['Low Cut 48', 'Low Cut 12', 'Low Shelf', 'Peak', 'Notch', 'High Shelf', 'High Cut 12', 'High Cut 48'] as const;
 
 /** Band b's (1..8) A half: its five LOM indices. */
 export function eq8Band(b: number) {

@@ -1,13 +1,18 @@
 <script lang="ts">
   /**
-   * Live's Limiter (the `limiter` slot, 2026-11-06), its panel left to right:
+   * Live's Limiter (the `limiter` slot, 2026-11-06), its panel left to right
+   * (Live 12 manual §29.24):
    *
-   *   [Gain] [Ceiling, or Threshold / Output under Maximize] [Release · Auto]
-   *   [Maximize · Mode] [Lookahead · Routing] [Link / M/S Link]
+   *   [Input Gain · Maximize] [Release · Auto] [Ceiling / Link]
+   *   [Lookahead] [Mode · Routing]
    *
-   * Gain is the `limiter` control (deviceControls), 0 dB at the middle.
-   * Maximize swaps Ceiling for Threshold and Output, as Live's panel does.
-   * Indices and labels are `delayParams.ts` (LIMITER), measured on the rig.
+   * The level knob is the `limiter` control (deviceControls): Input Gain,
+   * 0 dB at the middle, and under Maximize the Output, as in Live, where
+   * Maximize also turns Ceiling into Threshold. Live's display (the ceiling
+   * and its gain reduction meter, Link under it) is the Ceiling box over
+   * Link; the meter is not drawn. Indices and labels are `delayParams.ts`
+   * (LIMITER), measured on the rig. M/S Link, which Live's panel does not
+   * show, is not drawn either.
    *
    * NO {#if device} gate - every control handles its own ghost state.
    */
@@ -25,49 +30,27 @@
   const toggle = (index: number) => fx.sendParam(index, on(index) ? 0 : 1);
 
   let maximize = $derived(on(LIMITER.maximize));
-  let level = $derived(
-    maximize
-      ? [
-          { index: LIMITER.threshold, title: 'Threshold', rest: 1 },
-          { index: LIMITER.output, title: 'Output', rest: 1 }
-        ]
-      : [{ index: LIMITER.ceiling, title: 'Ceiling', rest: 0.9701 }]
-  );
+  let display = $derived([
+    maximize ? { index: LIMITER.threshold, title: 'Threshold', rest: 1 } : { index: LIMITER.ceiling, title: 'Ceiling', rest: 0.9701 },
+    { index: LIMITER.link, title: 'Link', rest: 1 }
+  ]);
   const RELEASE = [{ index: LIMITER.release, title: 'Release', rest: 0.7303 }];
-  const LINK = [
-    { index: LIMITER.link, title: 'Link', rest: 1 },
-    { index: LIMITER.msLink, title: 'M/S Link', rest: 0 }
-  ];
 </script>
 
 <div class="fx-layout" data-view="limiter">
-  <div class="cell" class:slot-ghost={fx.isGhost}>
-    <ControlTile type="limiter" device={fx.device} disableCentralViewOnTap tapLoads />
+  <div class="cell">
+    <div class="grow" class:slot-ghost={fx.isGhost}>
+      <ControlTile type="limiter" device={fx.device} disableCentralViewOnTap tapLoads />
+    </div>
+    <ParamSwitch label="Maximize" on={maximize} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => toggle(LIMITER.maximize)} />
   </div>
 
-  <ParamColumn {fx} ink={fx.color} boxes={level} />
-
   <div class="cell">
-    <div class="fill"><ParamColumn {fx} ink={fx.color} boxes={RELEASE} /></div>
+    <div class="grow"><ParamColumn {fx} ink={fx.color} boxes={RELEASE} /></div>
     <ParamSwitch label="Auto" on={on(LIMITER.auto)} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => toggle(LIMITER.auto)} />
   </div>
 
-  <div class="cell">
-    <ParamSwitch label="Maximize" on={maximize} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => toggle(LIMITER.maximize)} />
-    <ScrubTabs
-      options={LIMITER_MODES}
-      selected={Math.round(value(LIMITER.mode))}
-      onSelect={(i) => fx.sendParam(LIMITER.mode, i)}
-      cols={1}
-      tint={fx.color.primary}
-      inked
-      ghost={fx.isGhost}
-      label={(m) => m}
-      groupLabel="Mode"
-      name="mode"
-      style="flex: 3 1 0;"
-    />
-  </div>
+  <ParamColumn {fx} ink={fx.color} boxes={display} />
 
   <div class="cell">
     <ScrubTabs
@@ -81,32 +64,46 @@
       label={(m) => `Lookahead ${m}`}
       groupLabel="Lookahead"
       name="lookahead"
-      style="flex: 3 1 0;"
+      class="flex-1"
     >
       {#snippet item(m)}{m}{/snippet}
     </ScrubTabs>
+  </div>
+
+  <div class="cell">
+    <ScrubTabs
+      options={LIMITER_MODES}
+      selected={Math.round(value(LIMITER.mode))}
+      onSelect={(i) => fx.sendParam(LIMITER.mode, i)}
+      cols={1}
+      tint={fx.color.primary}
+      inked
+      ghost={fx.isGhost}
+      label={(m) => m}
+      groupLabel="Mode"
+      name="mode"
+      style="flex: 3 1 0;"
+    />
     <ScrubTabs
       options={LIMITER_ROUTING}
       selected={Math.round(value(LIMITER.routing))}
       onSelect={(i) => fx.sendParam(LIMITER.routing, i)}
-      cols={1}
+      cols={2}
       tint={fx.color.primary}
       inked
       ghost={fx.isGhost}
       label={(m) => m}
       groupLabel="Routing"
       name="routing"
-      style="flex: 2 1 0;"
+      style="flex: 1 1 0;"
     />
   </div>
-
-  <ParamColumn {fx} ink={fx.color} boxes={LINK} />
 </div>
 
 <style>
   .fx-layout {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: var(--central-gap);
     height: 100%;
     width: 100%;
@@ -121,13 +118,13 @@
     min-width: 0;
   }
 
-  .fill {
+  .grow {
     flex: 3 1 0;
     min-height: 0;
     display: flex;
     flex-direction: column;
   }
-  .fill > :global(*) {
+  .grow > :global(*) {
     flex: 1 1 0;
   }
 </style>

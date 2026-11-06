@@ -3,11 +3,13 @@
    * The Chorus's view (Live's Chorus-Ensemble, the `chorus` slot), its
    * panel left to right (2026-11-06; Mode and four boxes from 2026-10-26):
    *
-   *   [pad: Rate across, Dry/Wet up] [Mode, then Chorus's Delay and 2 Taps
+   *   [pad: Rate across, Dry/Wet up] [Mode, then Chorus's Time and Taps 1 | 2
    *   or Vibrato's Shape / Offset] [Amount / Feedback · FB Invert]
    *   [Width / Warmth] [HP On · HP Freq / Output]
    *
-   * The pad is the `chorus` control (deviceControls, ADR-479). Indices,
+   * Live 12 manual §29.8: Width belongs to Chorus and Ensemble, Shape and
+   * Offset to Vibrato, Time and Taps to Chorus alone; Feedback is disabled
+   * in Vibrato. The pad is the `chorus` control (deviceControls, ADR-479). Indices,
    * ranges and labels measured on the rig (device_dump, 2026-11-06): 1 Mode
    * 0..2 Chorus / Ensemble / Vibrato, 2 Shape, 4 Amount, 5 Feedback (99 %
    * at 1), 6 FB Invert, 7 Offset (0..180°), 8 Delay Time 0..5 (Auto, 7, 10,
@@ -34,6 +36,8 @@
   const CHORUS = { mode: 1, shape: 2, amount: 4, feedback: 5, fbInvert: 6, offset: 7, delay: 8, taps: 9, hpOn: 10, hpFreq: 11, width: 12, warmth: 13, output: 14 } as const;
   const MODES = ['Chorus', 'Ensemble', 'Vibrato'] as const;
   const DELAYS = ['Auto', '7 ms', '10 ms', '20 ms', '35 ms', '50 ms'] as const;
+  /** Live's Taps toggles, 1 | 2 (Delay Taps 0 | 1). */
+  const TAPS = ['1', '2'] as const;
   /** Live's values on a fresh Chorus-Ensemble. */
   const REST: Record<number, number> = { [CHORUS.mode]: 0, [CHORUS.fbInvert]: 0, [CHORUS.delay]: 2, [CHORUS.taps]: 1, [CHORUS.hpOn]: 0 };
 
@@ -95,18 +99,34 @@
       >
         {#snippet item(d)}{d}{/snippet}
       </ScrubTabs>
-      <ParamSwitch label="2 Taps" on={on(CHORUS.taps)} tint={chorus.color.primary} ghost={chorus.isGhost} onToggle={() => toggle(CHORUS.taps)} />
+      <ScrubTabs
+        options={TAPS}
+        selected={Math.round(value(CHORUS.taps))}
+        onSelect={(i) => chorus.sendParam(CHORUS.taps, i)}
+        cols={2}
+        tint={chorus.color.primary}
+        inked
+        ghost={chorus.isGhost}
+        label={(t) => `${t} ${t === '1' ? 'tap' : 'taps'}`}
+        groupLabel="Taps"
+        name="taps"
+        style="flex: 1 1 0;"
+      >
+        {#snippet item(t)}{t}{/snippet}
+      </ScrubTabs>
     {:else if mode === 2}
       <div class="fill"><ParamColumn fx={chorus} ink={chorus.color} boxes={VIBRATO} /></div>
     {/if}
   </div>
 
   <div class="cell">
-    <div class="fill"><ParamColumn fx={chorus} ink={chorus.color} boxes={DEPTH} /></div>
-    <ParamSwitch label="FB Invert" on={on(CHORUS.fbInvert)} tint={chorus.color.primary} ghost={chorus.isGhost} onToggle={() => toggle(CHORUS.fbInvert)} />
+    <div class="fill"><ParamColumn fx={chorus} ink={chorus.color} boxes={mode === 2 ? DEPTH.slice(0, 1) : DEPTH} /></div>
+    {#if mode !== 2}
+      <ParamSwitch label="FB Invert" on={on(CHORUS.fbInvert)} tint={chorus.color.primary} ghost={chorus.isGhost} onToggle={() => toggle(CHORUS.fbInvert)} />
+    {/if}
   </div>
 
-  <ParamColumn fx={chorus} ink={chorus.color} boxes={SPACE} />
+  <ParamColumn fx={chorus} ink={chorus.color} boxes={mode === 2 ? SPACE.slice(1) : SPACE} />
 
   <div class="cell">
     <ParamSwitch label="High Pass" on={on(CHORUS.hpOn)} tint={chorus.color.primary} ghost={chorus.isGhost} onToggle={() => toggle(CHORUS.hpOn)} />

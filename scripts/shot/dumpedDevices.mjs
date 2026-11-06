@@ -5,7 +5,7 @@
 export const DUMPED_DEVICES = {
 	autoPanTremolo: { name: "Auto Pan-Tremolo", className: "AutoPan2", params: [
 		["Device On", "Device On", 0, 1, 1, "On"],
-		["Mode", "Mode", 0, 1, 1, "Tremolo"],
+		["Mode", "Mode", 0, 1, 0, "Panning"],
 		["LFO Amount", "LFO Amount", 0, 1, 0.6, ""],
 		["LFO Wave", "LFO Wave", 0, 8, 0, "Sine"],
 		["LFO Invert", "LFO Invert", 0, 1, 0, "Off"],

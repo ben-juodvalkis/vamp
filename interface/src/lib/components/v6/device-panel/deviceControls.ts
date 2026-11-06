@@ -183,6 +183,8 @@ const autoPan2Mode = (g: Get) => g(AUTO_PAN2.lfoMode) ?? 5;
 const EQ8_TILE_BAND = 3;
 /** A repeated saved name's n-th occurrence (1-based), as the server keys it (`Freq#5`). */
 const nth = (s: SavedPreset, name: string, n: number) => s.params[n === 1 ? name : `${name}#${n}`];
+/** The Limiter's level knob: Input Gain, or Output under Maximize. */
+const limiterLevel = (g: Get) => ((g(LIMITER.maximize) ?? 0) >= 0.5 ? LIMITER.output : LIMITER.gain);
 const delaySynced = (g: Get) => (g(DELAY.syncL) ?? 1) >= 0.5;
 
 export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> = {
@@ -194,7 +196,8 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 		control: {
 			kind: 'xy',
 			title: 'Auto Pan', picture: 'tremolo',
-			pictureVariant: (g) => pictureShape(g(AUTO_PAN2.wave) ?? 0),
+			// Tremolo mode takes no waveform (Live shows Harmonic and Vintage there): a sine.
+			pictureVariant: (g) => ((g(AUTO_PAN2.mode) ?? 1) >= 0.5 ? 2 : pictureShape(g(AUTO_PAN2.wave) ?? 0)),
 			read: (g) => {
 				const rate = rateParam(autoPan2Mode(g));
 				return {
@@ -273,17 +276,18 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 				[DELAY.feedback]: s.params.Feedback / DELAY_FEEDBACK_MAX
 			})
 	},
-	// Limiter (2026-11-06): its Gain, -24..24 dB on 0..1 with 0 dB at the
-	// middle. No preset of it on the rig to measure, so a browser tile draws
-	// the rest value.
+	// Limiter (2026-11-06): its Input Gain, -24..24 dB on 0..1 with 0 dB at
+	// the middle; under Maximize the same knob is Output, -24..0 dB (the
+	// manual, §29.24). No preset of it on the rig to measure, so a browser
+	// tile draws the rest value.
 	limiter: {
 		control: {
 			kind: 'slider',
 			title: 'Limit', picture: 'ceiling',
-			readout: LIMITER.gain,
-			center: 0.5,
-			read: (g) => clamp01(g(LIMITER.gain) ?? 0.5),
-			write: (t) => [[LIMITER.gain, clamp01(t)]]
+			readout: (g) => limiterLevel(g),
+			center: (g) => (limiterLevel(g) === LIMITER.gain ? 0.5 : undefined),
+			read: (g) => clamp01(g(limiterLevel(g)) ?? (limiterLevel(g) === LIMITER.gain ? 0.5 : 1)),
+			write: (t, g) => [[limiterLevel(g), clamp01(t)]]
 		}
 	},
 	// Measured: Disco Filter. Frequency in Hz → log(hz/20)/log(1000).

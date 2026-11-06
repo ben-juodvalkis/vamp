@@ -1,9 +1,13 @@
 <script lang="ts">
   /**
-   * EQ Eight (the `eq8` slot, 2026-11-06), Live's panel turned on its side:
+   * EQ Eight (the `eq8` slot, 2026-11-06), Live's panel (manual §29.15):
    *
-   *   [the curve, a dot per band] [Band 1-8 · On] [Type] [Freq / Gain / Q]
+   *   [Freq / Gain / Q] [the curve, a dot per band] [Band 1-8 · On] [Type]
    *   [Output / Scale · Adaptive Q]
+   *
+   * Live's per-band choosers and switches under its display become one
+   * band picker and one type tab for the band selected, so each stays a
+   * touch target.
    *
    * The curve is every band that is on, in series (`eq8Params.eq8Db`), on
    * the device's own 10 Hz - 22 kHz sweep, so a dot's X is its Frequency
@@ -92,6 +96,8 @@
 </script>
 
 <div class="fx-layout" data-view="eq8">
+  <ParamColumn {fx} ink={fx.color} boxes={bandBoxes} />
+
   <div class="cell graph" class:slot-ghost={fx.isGhost}>
     <FilterDotsGraph {dots} {curves} onGrab={(i) => (selected = i + 1)} onMove={move} ariaLabel="EQ Eight bands" />
   </div>
@@ -115,6 +121,7 @@
       {/snippet}
     </ScrubTabs>
     <ParamSwitch
+      row
       label="On"
       on={selectedState.on}
       tint={fx.color.primary}
@@ -139,8 +146,6 @@
     />
   </div>
 
-  <ParamColumn {fx} ink={fx.color} boxes={bandBoxes} />
-
   <div class="cell">
     <div class="grow"><ParamColumn {fx} ink={fx.color} boxes={GLOBAL} /></div>
     <ParamSwitch label="Adaptive Q" on={adaptiveQ} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => fx.sendParam(EQ8.adaptiveQ, adaptiveQ ? 0 : 1)} />
@@ -148,10 +153,11 @@
 </div>
 
 <style>
-  /* The curve three shares; the band, type and box columns one each. */
+  /* Live's order: the band's dials, the curve (three shares), then the band
+     choosers and the global controls. */
   .fx-layout {
     display: grid;
-    grid-template-columns: minmax(0, 3fr) repeat(4, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr) minmax(0, 3fr) repeat(3, minmax(0, 1fr));
     gap: var(--central-gap);
     height: 100%;
     width: 100%;

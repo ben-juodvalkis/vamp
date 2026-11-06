@@ -10,15 +10,18 @@
     tint: string;
     onToggle: () => void;
     ghost?: boolean;
+    /** One touch row tall rather than an equal share of its column (a switch under a graph or a tab). */
+    row?: boolean;
   }
 
-  let { label, on, tint, onToggle, ghost = false }: Props = $props();
+  let { label, on, tint, onToggle, ghost = false, row = false }: Props = $props();
 </script>
 
 <button
   class="physical-button param-switch w-full"
   class:active={on}
   class:slot-ghost={ghost}
+  class:row
   style="--btn-tint: {tint};"
   aria-pressed={on}
   onclick={onToggle}
@@ -28,6 +31,11 @@
   .param-switch {
     flex: 1 1 0;
     min-height: var(--height-touch);
+  }
+  .param-switch.row {
+    flex: 0 0 var(--height-touch);
+  }
+  .param-switch {
     font-size: 0.9375rem;
     font-weight: 600;
   }
