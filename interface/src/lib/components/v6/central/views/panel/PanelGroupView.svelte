@@ -28,8 +28,6 @@
 
 	let { group, params, color, onOpen, bare = false, pageRows = 1, boxFace }: Props = $props();
 	let face = $derived(groupFace(group, boxFace));
-	// Boxes kept as boxes in a knob panel go thin (ADR-508).
-	let thin = $derived(boxFace === 'knob' && face === 'slider');
 
 	// A group of knobs wraps into the grid that gives each knob the most
 	// room, measured off the row's own box: three knobs in a tall, narrow
@@ -62,7 +60,7 @@
 		style={knobGrid ? `grid-template-columns: repeat(${cols}, minmax(0, 1fr)); grid-template-rows: repeat(${rows}, minmax(0, 1fr));` : undefined}
 	>
 		{#each group.controls as control (control.param)}
-			<div class="panel-cell" style="flex: {controlUnits(control, pageRows, thin)} 1 0;">
+			<div class="panel-cell" style="flex: {controlUnits(control, pageRows)} 1 0;">
 				<PanelControlView {control} {params} {color} switchParam={group.switchParam} {pageRows} {face} />
 			</div>
 		{/each}

@@ -235,8 +235,6 @@ export const OPERATOR_PANEL: InstrumentPanel = {
 			group: {
 				title: 'Global',
 				page: 'global',
-				// Its three knobs wrap two to a row (ADR-508).
-				units: 2,
 				controls: [
 					{ kind: 'box', param: 'Time', title: 'Time' },
 					{ kind: 'box', param: 'Tone', title: 'Tone' },

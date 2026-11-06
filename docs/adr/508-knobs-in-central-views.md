@@ -53,11 +53,12 @@ the flat ring with nothing on it but the arc.
     (`knobGridRows`, measured off the group's own box, counting the caption
     under each knob): three knobs side by side in a wide group, two to a row
     in a square one, stacked in a tall one;
-  - boxes kept as boxes in a knob panel (an envelope's stages) count half a
-    cell's width (`THIN_BOX_UNITS`), so the knobs beside them get it;
-  - a group can name its share of the row in `units` where its count
-    mis-states it: Operator's Global wraps its three knobs two to a row, so
-    it takes two boxes' width, and its filter pad two rather than 2.5.
+  - on a full-height band a group of knobs stacks them two high, so it
+    takes half as many columns as it has knobs (`groupUnits`), and the boxes
+    beside it (an envelope's stages) keep their full width; on a two-row
+    page there is no height to stack in, and its knobs stand in a row;
+  - a group can name its share of the row in `units` where that rule
+    mis-states it, and Operator's filter pad takes two boxes rather than 2.5.
 - **Switches and choosers among knobs are one touch row high.** A
   full-height switch outweighed the knobs beside it. In a knob group a
   switch is a pill one touch row tall, and a chooser a touch row an option,

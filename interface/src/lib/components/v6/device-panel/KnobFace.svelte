@@ -252,6 +252,10 @@
   }
 
   /* Light: the ink's fill envelope is too pale for text on paper. */
+  /* Light: the well is near white on paper, so the empty ring would vanish. */
+  :global(.light) .knob-track {
+    stroke: color-mix(in oklab, var(--foreground) 14%, var(--surface-well));
+  }
   :global(.light) .knob-title,
   :global(.light) .knob-readout,
   :global(.light) .knob-icon {

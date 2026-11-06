@@ -10,7 +10,6 @@ import {
 	isKnobGroup,
 	knobGridRows,
 	panelParamNames,
-	THIN_BOX_UNITS,
 	type PanelGroup
 } from '$lib/components/v6/central/views/panel/panelTypes';
 import { DRIFT_PANEL } from '$lib/components/v6/central/views/panel/driftPanel';
@@ -55,15 +54,21 @@ describe('which groups are knob grids', () => {
 	});
 });
 
-describe('thin boxes', () => {
-	it('narrows an envelope kept as boxes in a knob panel, and nowhere else', () => {
-		expect(groupUnits(envelope, 1, 'knob')).toBeCloseTo(3 * THIN_BOX_UNITS, 9);
+describe('a group’s share of its row', () => {
+	it('stacks knobs two high on a full-height band: half as many columns as knobs', () => {
+		expect(groupUnits(knobs, 1, 'knob')).toBe(2);
+		expect(groupUnits({ ...knobs, controls: [...knobs.controls, knobs.controls[0]] }, 1, 'knob')).toBe(2);
+	});
+	it('stands them in one row on a two-row page, where there is no height to stack in', () => {
+		expect(groupUnits(knobs, 2, 'knob')).toBe(3);
+	});
+	it('gives boxes their full width, knob panel or not', () => {
+		expect(groupUnits(envelope, 1, 'knob')).toBe(3);
 		expect(groupUnits(envelope, 1, undefined)).toBe(3);
-		expect(groupUnits(knobs, 1, 'knob')).toBe(3);
-		expect(controlUnits({ kind: 'switch', param: 'On', title: 'On' }, 1, true)).toBe(1);
+		expect(controlUnits({ kind: 'switch', param: 'On', title: 'On' }, 1)).toBe(1);
 	});
 	it('takes a group’s own units over its count', () => {
-		expect(groupUnits({ ...knobs, units: 2 }, 1, 'knob')).toBe(2);
+		expect(groupUnits({ ...knobs, units: 1 }, 1, 'knob')).toBe(1);
 	});
 });
 

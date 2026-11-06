@@ -107,32 +107,27 @@ export function choiceColumns(options: number, pageRows = 1): number {
 	return Math.ceil(options / (pageRows >= 2 ? 2 : 5));
 }
 
-/**
- * A box among knobs is thinner than a knob's cell (ADR-508): it reads tall
- * and narrow, and the width it gives up goes to the knobs beside it.
- */
-export const THIN_BOX_UNITS = 0.5;
-
 /** How a group's value boxes draw: its own `face`, else the panel's. */
 export function groupFace(group: PanelGroup, boxFace?: PanelFace): PanelFace {
 	return group.face ?? boxFace ?? 'slider';
 }
 
 /** A control's width in boxes: what a group's share of its row is counted in. */
-export function controlUnits(control: PanelControl, pageRows = 1, thinBoxes = false): number {
-	if (control.kind === 'choice') return Math.max(1, choiceColumns(control.options.length, pageRows) * 0.9);
-	return thinBoxes && (control.kind === 'box' || control.kind === 'step') ? THIN_BOX_UNITS : 1;
+export function controlUnits(control: PanelControl, pageRows = 1): number {
+	if (control.kind !== 'choice') return 1;
+	return Math.max(1, choiceColumns(control.options.length, pageRows) * 0.9);
 }
 
-/** Boxes go thin in a knob panel, where a group keeps them as boxes. */
-function thinBoxes(group: PanelGroup, boxFace?: PanelFace): boolean {
-	return boxFace === 'knob' && groupFace(group, boxFace) === 'slider';
-}
-
+/**
+ * A group's share of its row, in boxes. A group of knobs on a full-height
+ * band stacks them two high (ADR-508), so it takes half as many columns as
+ * it has knobs, and the boxes beside it (an envelope's stages) keep their
+ * width; on a two-row page there is no height to stack in.
+ */
 export function groupUnits(group: PanelGroup, pageRows = 1, boxFace?: PanelFace): number {
 	if (group.units !== undefined) return group.units;
-	const thin = thinBoxes(group, boxFace);
-	return group.controls.reduce((n, c) => n + controlUnits(c, pageRows, thin), 0);
+	if (pageRows < 2 && isKnobGroup(group, boxFace)) return Math.ceil(group.controls.length / 2);
+	return group.controls.reduce((n, c) => n + controlUnits(c, pageRows), 0);
 }
 
 export function regionUnits(region: PanelRegion, boxFace?: PanelFace): number {
