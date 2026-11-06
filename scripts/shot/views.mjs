@@ -837,10 +837,11 @@ export const TOURS = {
 				steps: [openInstrument(1), { click: '[role="slider"][aria-label^="Osc 2:"]' }]
 			},
 			// Filter 2 up: a press on its dot, which also switches it on (ADR-507).
+			// `force`: the dot takes no pointer, so the press lands on the pad there.
 			{
 				name: 'inst-wavetable-flt2',
 				description: 'Wavetable (Bass), Filter 2',
-				steps: [openInstrument(1), { click: '.graph-dot[data-dot="2"]' }]
+				steps: [openInstrument(1), { click: '.graph-dot[data-dot="2"]', force: true }]
 			},
 			{ name: 'inst-drift', description: 'Drift (Keys)', steps: [openInstrument(2)] },
 			// No single-Simpler state: the scene's only Simpler is on Texture, an
@@ -1000,7 +1001,7 @@ function instrumentSwapStates() {
 		['meld-osc-types', 'Meld', 'InstrumentMeld', meld, [{ click: '.engine-head .chooser-name' }]],
 		// Plate picked from the filter grid: the second macro reads Ratio.
 		['meld-filter-plate', 'Meld', 'InstrumentMeld', meld,
-			[{ click: '.filter-col .chooser-name' }, { click: '[data-tab="meld-filter-types"] .scrub-option:nth-child(16)' }]],
+			[{ click: '.filter-col .chooser-name' }, { click: '[data-tab="meld-filter-types"] .scrub-option:nth-child(16)', force: true }]],
 		// Amp and Filter envelopes both in view (ADR-477): the Filter row takes
 		// the track's ink, not Amp's orange. (An omnisphere-filter state flipped
 		// the switch that showed one or the other until then.)

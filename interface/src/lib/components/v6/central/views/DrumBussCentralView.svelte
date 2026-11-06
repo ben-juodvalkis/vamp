@@ -150,7 +150,9 @@
     label={(t) => `Drive type ${t}`}
     name="drive-type"
     style="height: 100%; --scrub-font-size: 0.8125rem; --scrub-font-weight: var(--font-weight-medium);"
-  />
+  >
+    {#snippet item(t)}{t}{/snippet}
+  </ScrubTabs>
 
   <!-- Column 3: the distortion and its tone, top to bottom in Live's
        order, three value boxes. -->

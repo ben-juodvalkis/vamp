@@ -39,5 +39,20 @@ serial 0, parallel 1, split 2.
 - A filter's dot sits at its resonance, not on its curve, so the dot stays
   under the finger.
 
+## Addendum: one shared pad, and Drift's two filters (2026-11-05)
+
+The pad is now `central/FilterDotsGraph.svelte`, a filter pad with a dot per
+filter, its curves from `utils/filterGraph.ts`; Wavetable and Drift draw it.
+
+Drift's filter pad carries its low-pass and its high-pass (Ben's call): the LP
+dot with cutoff across and resonance up, the HP dot halfway up (the 0 dB
+line) sliding across only, since HP Freq has no resonance. One curve, the two
+in series. HP Freq is placed by Hz on LP Freq's axis (HP runs 10 Hz to
+20.5 kHz, Live's labels in the device dump), so below 20 Hz its dot rests at
+the left edge. The chain cell keeps the low-pass alone.
+
+The shot mock's Drift reported LP Freq, LP Res and HP Freq in the `.adv`'s Hz;
+the running Live reports 0..1 rails (device dump), and the mock now does too.
+
 ## Tags
 `wavetable`, `filter`, `filter-routing`, `central-view`, `property-channel`

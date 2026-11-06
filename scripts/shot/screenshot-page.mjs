@@ -262,7 +262,7 @@ export async function performSteps(page, steps, { log = () => {} } = {}) {
 		if (step.click) {
 			log(`clicking ${step.click}`);
 			if (step.dom) await page.locator(step.click).first().evaluate((el) => el.click(), undefined, { timeout: 5000 });
-			else await page.click(step.click, { timeout: 5000 });
+			else await page.click(step.click, { timeout: 5000, force: step.force === true });
 			await page.waitForTimeout(400);
 		} else if (step.storage) {
 			// Seed this page's localStorage and announce it as another tab would
