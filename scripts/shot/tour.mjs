@@ -245,7 +245,9 @@ try {
 						/* storage disabled — fall through to defaults */
 					}
 				},
-				{ prefs: state.prefs, theme }
+				// SHOT_PREFS='{"key":"value"}' lays extra localStorage over every
+				// state's own (an A/B of a UI switch across a whole tour).
+				{ prefs: { ...state.prefs, ...JSON.parse(process.env.SHOT_PREFS || '{}') }, theme }
 			);
 
 			const page = await context.newPage();

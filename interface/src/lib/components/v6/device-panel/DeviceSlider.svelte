@@ -106,6 +106,27 @@
   const valueBox = inValueBoxScope();
   let effectiveTravel = $derived(travel ?? (valueBox ? VALUE_BOX_TRAVEL : undefined));
 
+  // PROTOTYPE (knobs vs value boxes): `localStorage['vamp.controlStyle'] =
+  // 'knob'` draws every central-view value box as a rotary knob instead. Same
+  // gesture (relative drag, up or right raises it), same travel; only the
+  // face changes. Never in the chain or the browser.
+  const knobFace = valueBox && (() => {
+    try { return localStorage.getItem('vamp.controlStyle') === 'knob'; } catch { return false; }
+  })();
+  const KNOB_START = 135;   // degrees, SVG frame (0 = right, clockwise)
+  const KNOB_SWEEP = 270;
+  function polar(deg: number, r: number): [number, number] {
+    const a = (deg * Math.PI) / 180;
+    return [50 + r * Math.cos(a), 50 + r * Math.sin(a)];
+  }
+  function arc(fromDeg: number, toDeg: number, r: number): string {
+    if (toDeg < fromDeg) [fromDeg, toDeg] = [toDeg, fromDeg];
+    if (toDeg - fromDeg < 0.01) return '';
+    const [x0, y0] = polar(fromDeg, r);
+    const [x1, y1] = polar(toDeg, r);
+    return `M ${x0} ${y0} A ${r} ${r} 0 ${toDeg - fromDeg > 180 ? 1 : 0} 1 ${x1} ${y1}`;
+  }
+
   let effectiveLabelOrientation = $derived.by(() => {
     const asked = labelOrientation ?? (valueBox ? 'horizontal' : 'auto');
     return asked === 'auto' ? orientation : asked;
@@ -253,8 +274,11 @@
     const size = effectiveTravel ? Math.max(length, effectiveTravel) : length;
     const delta = ((currentPointer - startPointer) / size) * sensitivity;
 
-    // Apply delta to start value (invert for vertical)
-    const normalizedDelta = orientation === 'vertical' ? -delta : delta;
+    // Apply delta to start value (invert for vertical). A knob takes either
+    // axis: up or right turns it clockwise.
+    const normalizedDelta = knobFace
+      ? ((event.clientX - tapStartX) - (event.clientY - tapStartY)) / (effectiveTravel ?? VALUE_BOX_TRAVEL) * sensitivity
+      : orientation === 'vertical' ? -delta : delta;
     const normalizedValue = (startValue - min) / (max - min);
     const newNormalizedValue = Math.max(0, Math.min(1, normalizedValue + normalizedDelta));
     const newValue = min + (newNormalizedValue * (max - min));
@@ -267,6 +291,53 @@
   }
 </script>
 
+{#if knobFace}
+  {@const t = max > min ? Math.max(0, Math.min(1, (localValue - min) / (max - min))) : 0}
+  {@const c = max > min ? Math.max(0, Math.min(1, ((centerValue ?? (min + max) / 2) - min) / (max - min))) : 0.5}
+  {@const angle = KNOB_START + KNOB_SWEEP * t}
+  {@const from = KNOB_START + KNOB_SWEEP * (centerOrigin ? c : 0)}
+  {@const tip = polar(angle, 30)}
+  <div class="device-knob">
+    <div
+      class="knob-container"
+      class:ghost={isGhost}
+      class:dragging={isDragging}
+      bind:this={container}
+      onpointerdown={handlePointerDown}
+      onpointermove={handlePointerMove}
+      onpointerup={handlePointerUp}
+      onpointercancel={handlePointerUp}
+      role="slider"
+      tabindex="0"
+      aria-label="{title}: {localValue.toFixed(2)}"
+      aria-valuenow={localValue}
+      aria-valuemin={min}
+      aria-valuemax={max}
+      style="--knob-ink: {color.primary}; --knob-secondary: {color.secondary};"
+    >
+      <div class="knob-face">
+      <svg class="knob-svg" viewBox="0 0 100 100" aria-hidden="true">
+        <path class="knob-track" d={arc(KNOB_START, KNOB_START + KNOB_SWEEP, 44)} />
+        {#if centerOrigin}
+          {@const [mx0, my0] = polar(from, 38)}
+          {@const [mx1, my1] = polar(from, 49)}
+          <line class="knob-centre-tick" x1={mx0} y1={my0} x2={mx1} y2={my1} />
+        {/if}
+        <path class="knob-value" d={arc(from, angle, 44)} />
+        <circle class="knob-body" cx="50" cy="50" r="33" />
+        <circle class="knob-cap" cx="50" cy="50" r="27" />
+        <line class="knob-pointer" x1={polar(angle, icon ? 21 : 12)[0]} y1={polar(angle, icon ? 21 : 12)[1]} x2={tip[0]} y2={tip[1]} />
+      </svg>
+      {#if icon}<span class="knob-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}
+      </div>
+      {#if title || label || icon}
+        <div class="knob-label">
+          {#if label}{@render label()}{:else}<span>{shownTitle}</span>{/if}
+        </div>
+      {/if}
+    </div>
+  </div>
+{:else}
 <div class="device-slider {orientation}">
   <div
     class="slider-container"
@@ -403,6 +474,7 @@
     {/if}
   </div>
 </div>
+{/if}
 
 <style>
   .device-slider {
@@ -710,4 +782,40 @@
     bottom: 0;
     height: 15%; /* Large gap for label */
   }
+
+  /* ---- PROTOTYPE knob face (vamp.controlStyle = 'knob') ---- */
+  .device-knob { width: 100%; height: 100%; user-select: none; font-family: var(--font-sans); }
+  .knob-container {
+    position: relative; width: 100%; height: 100%;
+    container-type: size;
+    display: grid; grid-template-rows: minmax(0, 1fr) auto; justify-items: center; align-items: center;
+    gap: 0.25rem; padding: 0.35rem 0.25rem;
+    cursor: pointer; touch-action: none;
+  }
+  @container (min-aspect-ratio: 5/2) {
+    .knob-container { grid-template-rows: 1fr; grid-template-columns: auto minmax(0, 1fr); justify-items: start; gap: 0.75rem; }
+  }
+  .knob-face { position: relative; --knob-d: max(28px, min(100cqw - 0.5rem, 100cqh - 2.9rem, 150px)); width: var(--knob-d); height: var(--knob-d); }
+  @container (min-aspect-ratio: 5/2) { .knob-face { --knob-d: max(28px, min(100cqh - 0.7rem, 150px)); } }
+  .knob-svg { width: 100%; height: 100%; overflow: visible; display: block; }
+  .knob-icon {
+    position: absolute; left: 50%; top: 50%; width: 30%; height: 30%; transform: translate(-50%, -50%);
+    color: color-mix(in oklab, var(--knob-ink) 75%, transparent); pointer-events: none; display: flex;
+  }
+  .knob-icon :global(svg) { width: 100%; height: 100%; }
+  .knob-track { fill: none; stroke: var(--surface-well); stroke-width: 7; stroke-linecap: round; }
+  .knob-value { fill: none; stroke: var(--knob-ink); stroke-width: 7; stroke-linecap: round; }
+  .knob-body { fill: var(--surface-well); stroke: var(--line-strong); stroke-width: 1; }
+  .knob-cap { fill: color-mix(in oklab, var(--knob-ink) 8%, var(--card)); stroke: color-mix(in oklab, var(--knob-ink) 35%, transparent); stroke-width: 1; }
+  .knob-pointer { stroke: color-mix(in oklab, var(--knob-ink) 55%, white); stroke-width: 4; stroke-linecap: round; }
+  .knob-centre-tick { stroke: var(--signal-dim); stroke-width: 1.5; }
+  .knob-container.dragging .knob-value { stroke-width: 9; }
+  .knob-container.ghost .knob-value, .knob-container.ghost .knob-pointer { opacity: var(--opacity-ghost); }
+  .knob-label {
+    flex: 0 0 auto; max-width: 100%;
+    font-size: clamp(11px, 0.85rem, 15px); font-weight: 500; line-height: 1.1;
+    text-align: center; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere;
+    color: var(--knob-ink);
+  }
+  :global(.light) .knob-label { color: color-mix(in oklab, var(--knob-ink) 55%, var(--foreground)); }
 </style>
