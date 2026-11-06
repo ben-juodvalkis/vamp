@@ -95,7 +95,10 @@ the flat ring with nothing on it but the arc.
     Sampler's Pitch and Gain (placed for muscle memory); the clip, groove
     and system views, which are not devices; and the hand-laid faces of
     Drift, Analog, Wavetable, Meld and Omnisphere and the Shifter view,
-    whose cells are too small for a knob until they are laid out again.
+    whose cells are too small for a knob until they are laid out again;
+    likewise the views ADR-508 laid out as Live's panels the same day
+    (Auto Pan-Tremolo, EQ Eight, Delay, Limiter, Phaser, Chorus), whose
+    `ParamColumn` stacks boxes two and three high in narrow columns.
   - Chain cells and browser tiles are unchanged.
 - **The shot harness measures a knob by its cell.** The layout check counts
   painted boxes; a knob paints less than the cell it answers to, so its cell
