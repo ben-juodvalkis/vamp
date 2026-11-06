@@ -138,13 +138,15 @@
     <button class="physical-button switch" class:active={on(P.wide)} aria-pressed={on(P.wide)} onclick={() => toggle(P.wide)}>Wide</button>
   </div>
 
+  <!-- Drive over Tone, medium (ADR-509): two captioned 96px knobs need
+       316px of a 300px band. -->
   <div class="col boxes" class:slot-ghost={shifter.isGhost}>
     {#each BOXES as b (b.index)}
       <DeviceSlider
         value={value(b.index)}
         title={b.title}
         face="knob"
-        knobSize="l"
+        knobSize="m"
         min={0}
         max={1}
         isGhost={shifter.isGhost}
@@ -250,7 +252,7 @@
         value={value(spin ? P.spin : P.phase)}
         title={spin ? 'Spin' : 'Phase'}
         face="knob"
-        knobSize="l"
+        knobSize="m"
         min={0}
         max={1}
         isGhost={shifter.isGhost}
@@ -296,8 +298,10 @@
   .col > :global(.xy-pad) {
     flex: 1 1 0;
   }
+  /* A medium knob and its caption (70px + 50, ADR-509); the column is too
+     narrow for a large one. */
   .stereo-box {
-    flex: 2 1 0;
+    flex: 0 0 7.5rem;
   }
 
   .wave-glyph {

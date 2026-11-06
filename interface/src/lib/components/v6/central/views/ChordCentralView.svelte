@@ -76,7 +76,7 @@
 				value={shift}
 				title={signed(shift, scaled ? 'sd' : 'st')}
 				face="knob"
-				knobSize="l"
+				knobSize="m"
 				min={-SHIFT_MAX}
 				max={SHIFT_MAX}
 				centerOrigin
@@ -93,7 +93,7 @@
 				value={value(note.velocity)}
 				title={percent(value(note.velocity))}
 				face="knob"
-				knobSize="l"
+				knobSize="m"
 				min={VELOCITY_MIN}
 				max={2}
 				isGhost={chord.isGhost}
@@ -107,7 +107,7 @@
 				value={value(note.chance)}
 				title={percent(value(note.chance))}
 				face="knob"
-				knobSize="l"
+				knobSize="m"
 				min={0}
 				max={1}
 				isGhost={chord.isGhost}
@@ -134,7 +134,7 @@
 				value={value(b.index)}
 				title={b.title}
 				face="knob"
-				knobSize="l"
+				knobSize="m"
 				min={b.min}
 				max={b.max}
 				centerOrigin
@@ -149,8 +149,10 @@
 </div>
 
 <style>
-	/* Nine tall value boxes on one ruler: each note's three under its name and
-	   their captions, a seam, the strum's three under the Scale switch. */
+	/* Nine knobs on one ruler: each note's three under its name and their
+	   captions, a seam, the strum's three under the Scale switch. Medium
+	   (ADR-509): one knob a column would take a large one, but nine 104px
+	   columns and their gaps need 1100px of 1026. */
 	.chord-layout {
 		display: grid;
 		grid-template-columns:

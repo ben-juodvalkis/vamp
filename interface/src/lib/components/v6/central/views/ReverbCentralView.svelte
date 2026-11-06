@@ -490,6 +490,13 @@
   // The EQ keeps its curve; an algorithm's tail and an IR's waveform are the
   // Reverb tile's (ADR-477), so the controls take the width.
   let hasPicture = $derived(panel === 'eq');
+  /**
+   * The knobs' size (ADR-509). Two rows of knobs a column would take large
+   * ones, but two captioned 96px knobs need 316px of a 300px band, and the
+   * ~80px columns hold 70px: medium. On the EQ tab the curve keeps the width
+   * and the columns are 60px: small.
+   */
+  let knobSize = $derived<'s' | 'm'>(hasPicture ? 's' : 'm');
   /** A box group `n` columns of ~60px boxes wide, as the panel was. */
   const groupWidth = (n: number) => `calc(${n} * 60px + ${n - 1} * var(--spacing-sm))`;
   let layoutColumns = $derived(
@@ -597,7 +604,7 @@
 <!-- One value box, its switch (Sync, Mono, Cut / Shelf) under it. -->
 <!-- `ownCellChip`: the switch is drawn in the cell under the box (the
      shared knobs, ADR-509), not inside it. -->
-{#snippet sliderBox(row: Row, ownCellChip = false)}
+{#snippet sliderBox(row: Row, ownCellChip = false, size: 's' | 'm' | 'l' = knobSize)}
   {#snippet label()}{@render boxLabel(row.name, row.label)}{/snippet}
   <div class="cell" class:knob-cell={knobRow(row.key)}>
     <div class="box">
@@ -605,7 +612,7 @@
         value={row.position}
         title={knobRow(row.key) ? row.name : `${row.name} ${row.label}`}
         face={knobRow(row.key) ? 'knob' : 'slider'}
-        knobSize="l"
+        knobSize={size}
         icon={knobRow(row.key) ? ROW_GLYPHS[row.name] : undefined}
         valueText={row.label}
         {label}
@@ -751,8 +758,9 @@
                 {@render chip('Pre Algo', HYBRID.eqPreAlgo, 'Pre Algo: the EQ before the algorithm, not after both engines')}
               </div>
             {:else if isConvolution}
+              <!-- One high, full height: large (ADR-509). -->
               {#each irRows as row (row.key)}
-                {@render sliderBox(row)}
+                {@render sliderBox(row, false, 'l')}
               {/each}
             {:else}
               {#each algorithm.controls as control (control.index)}
@@ -763,7 +771,7 @@
                       value={controlPosition(control, raw(control.index))}
                       title={control.name}
                       face="knob"
-                      knobSize="l"
+                      {knobSize}
                       icon={ROW_GLYPHS[control.name]}
                       valueText={control.label(raw(control.index))}
                       label={ownLabel}

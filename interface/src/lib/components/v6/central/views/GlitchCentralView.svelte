@@ -189,15 +189,16 @@
 				/>
 			</div>
 
-			<!-- Duck over Glue, two value boxes in one column (ADR-477): two
-			     controls, not a pair on one pad. -->
+			<!-- Duck over Glue, two knobs in one column (ADR-509): two
+			     controls, not a pair on one pad. Medium: two captioned 96px
+			     knobs need 316px and the band has 300. -->
 			{#each [{ key: 'duck', title: 'Duck', row: 1 }, { key: 'glue', title: 'Glue', row: 2 }] as const as s}
 				<div class="fx-box" style:grid-column={6} style:grid-row={s.row} class:slot-ghost={glitchLoop.isGhost}>
 					<DeviceSlider
 						value={unit(s.key, 0)}
 						title={s.title}
 						face="knob"
-						knobSize="l"
+						knobSize="m"
 						orientation="vertical"
 						labelSize="small"
 						isGhost={glitchLoop.isGhost}

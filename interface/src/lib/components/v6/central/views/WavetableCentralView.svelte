@@ -542,7 +542,8 @@
 
       <!-- Time over Global Mod Amount: the device-wide scalers of every
            envelope and LFO time and of the mod matrix, two knobs in one
-           column (ADR-509). -->
+           column (ADR-509). Medium, not the large two knobs a column would
+           take: two captioned 96px knobs need 300px and the column has 264. -->
       <div class="scaler-col flex-none min-h-0 flex flex-col gap-(--central-gap)">
         <PanelEyebrow title="Global" page="global" onOpen={openPage} color={wavetableInk.primary} />
         <div class="flex-1 min-h-0">
@@ -550,7 +551,7 @@
             value={time}
             title="Time"
             face="knob"
-            knobSize="l"
+            knobSize="m"
             orientation="vertical"
             labelSize="small"
             centerOrigin
@@ -565,7 +566,7 @@
             value={globalMod}
             title="Mod Amt"
             face="knob"
-            knobSize="l"
+            knobSize="m"
             orientation="vertical"
             labelSize="small"
             color={wavetableInk}

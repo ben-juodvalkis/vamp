@@ -373,7 +373,8 @@
       </div>
 
       <!-- Drive over Voice Spread: Meld's own, after both engines, two
-           boxes in one column (ADR-477). -->
+           knobs in one column (ADR-509), medium: two captioned 96px knobs
+           need 300px and the column has 264. -->
       <div class="global-col flex-none min-h-0 flex flex-col gap-(--central-gap)">
         <PanelEyebrow title="Global" page="global" onOpen={openPage} color={meldInk.primary} />
         <div class="flex-1 min-h-0">
@@ -381,7 +382,7 @@
             value={drive}
             title="Drive"
             face="knob"
-            knobSize="l"
+            knobSize="m"
             icon="drive"
             orientation="vertical"
             labelSize="small"
@@ -395,7 +396,7 @@
             value={spread}
             title="Spread"
             face="knob"
-            knobSize="l"
+            knobSize="m"
             icon="width"
             orientation="vertical"
             labelSize="small"
