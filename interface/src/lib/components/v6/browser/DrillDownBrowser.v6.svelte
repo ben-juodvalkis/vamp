@@ -3242,16 +3242,20 @@
 		z-index: 2;
 		padding: 0 8px;
 		text-align: center;
-		font-size: max(var(--type-min), min(14cqw, 2rem, calc((100cqw - 16px) / var(--fit-em, 0.001))));
+		/* One size on every tile (user, 2026-11-06: "equalize the font
+		   sizes"): a long name wraps rather than shrinking, and only a word
+		   wider than its tile takes a smaller size. */
+		font-size: max(var(--type-min), min(1.5rem, calc((100cqw - 16px) / var(--fit-em, 0.001))));
+		overflow-wrap: normal;
 		/* The app's own weight and a softened white, as a greyed MIDI effect's
 		   name reads (user, 2026-11-06: "less jarring"); a thin halo only
 		   lifts it off the picture. */
 		font-weight: var(--font-weight-medium);
 		letter-spacing: 0;
 		color: color-mix(in oklab, var(--foreground) 82%, var(--surface-well));
-		line-height: 1.05;
-		-webkit-line-clamp: 2;
-		line-clamp: 2;
+		line-height: 1.1;
+		-webkit-line-clamp: 3;
+		line-clamp: 3;
 		text-shadow:
 			0 0 3px var(--surface-well),
 			0 0 8px var(--surface-well);
