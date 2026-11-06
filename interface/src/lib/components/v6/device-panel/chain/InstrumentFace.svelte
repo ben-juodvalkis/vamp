@@ -8,7 +8,7 @@
   /**
    * The instrument's face in the chain overview (2026-10-25): the one
    * control its own view is known by, on the cell's device — Omnisphere's
-   * ORB, Drift's filter, and every instrument in `INSTRUMENT_CONTROLS`
+   * ORB, Drift's filter, Wavetable's Osc 1 pad with its wave, and every instrument in `INSTRUMENT_CONTROLS`
    * (Operator's filter, Collision's first resonator, an Instrument Rack's
    * first macro…, 2026-10-26). The parameter slots are the views' own
    * (measured there); an instrument with no face here keeps its mark.
@@ -21,6 +21,8 @@
   import { driftFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
   import type { DeviceRecord } from '$lib/stores/v3/normalized.svelte';
   import type { DeviceColorScheme } from '$lib/config/devicePresets';
+  import WavetableWave from '../../central/views/wavetable/WavetableWave.svelte';
+  import { useOscWave } from '../../central/views/wavetable/useOscWave.svelte';
 
   interface Props {
     device: DeviceRecord;
@@ -69,6 +71,14 @@
     if (i >= 0 && raw(i, 1) < 0.5) write(i, 1);
   }
 
+  // Wavetable: Osc 1's wave, as the view's Osc pad draws it (Effect 1 is 5).
+  const oscWaves = useOscWave(() => (type === 'wavetable' ? device.devicePath : undefined));
+  const oscCycle = $derived(
+    type === 'wavetable' && control
+      ? oscWaves.wave(1, readRef(control.y, control.rest[1]), read(5, 0.5), readRef(control.x, control.rest[0]))
+      : null
+  );
+
   // Omnisphere: the ORB's angle and radius (OmnisphereCentralView, 25 / 26).
   // Drift: cutoff and resonance, the LP type for the curve (DriftCentralView, 1 / 2 / 3).
 </script>
@@ -111,7 +121,11 @@
       writeRef(control.y, y);
     }}
     {color}
-  />
+  >
+    {#snippet background()}
+      {#if type === 'wavetable'}<WavetableWave cycle={oscCycle} color={color.primary} />{/if}
+    {/snippet}
+  </DeviceXY>
 {:else if control?.kind === 'macro'}
   <DeviceSlider
     value={readRef(control.x, control.rest[0])}

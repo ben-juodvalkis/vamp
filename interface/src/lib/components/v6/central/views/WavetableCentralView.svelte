@@ -56,8 +56,7 @@
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import WavetableWave from './wavetable/WavetableWave.svelte';
-  import { loadFactoryWavetables, tableFrames, cycleAt, type WavetableBundle } from '$lib/utils/wavetableShapes';
-  import { applyOscEffect, effectModeFromLive } from '$lib/utils/wavetableEffects';
+  import { useOscWave } from './wavetable/useOscWave.svelte';
 
   interface Props {
     instrument?: InstrumentInfo | null;
@@ -207,60 +206,7 @@
   let fltCurve = $derived(liveFilterCurve(fltType, fltSlope, read(f.morph, 0)));
 
   // ===== The oscillators' waves =====
-  let devicePath = $derived(device?.devicePath);
-  const OSC_PROPERTIES = [1, 2].flatMap((n) => [
-    `oscillator_${n}_wavetable_category`,
-    `oscillator_${n}_wavetable_index`,
-    `oscillator_${n}_wavetables`,
-    `oscillator_${n}_effect_mode`
-  ]).concat('oscillator_wavetable_categories');
-
-  $effect(() => {
-    const path = devicePath;
-    if (!path) return;
-    const releases = OSC_PROPERTIES.map((name) => selectedTrackStore.subscribeProperty(path, name));
-    return () => releases.forEach((release) => release());
-  });
-
-  let shapes = $state<WavetableBundle | null>(null);
-  $effect(() => {
-    if (!devicePath || shapes) return;
-    let live = true;
-    loadFactoryWavetables().then((bundle) => {
-      if (live) shapes = bundle;
-    });
-    return () => {
-      live = false;
-    };
-  });
-
-  function property(name: string): unknown {
-    return devicePath ? selectedTrackStore.propertyValue(devicePath, name) : undefined;
-  }
-
-  /** A JSON-string property (Live's name lists) as an array of names. */
-  function nameList(name: string): string[] {
-    const value = property(name);
-    if (typeof value !== 'string') return [];
-    try {
-      const parsed = JSON.parse(value);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  }
-
-  /** One cycle of oscillator `n` as it plays, or null when its table has no render. */
-  function oscWave(n: 1 | 2, position: number, effect1: number, effect2: number): Float32Array | null {
-    if (!shapes) return null;
-    const category = nameList('oscillator_wavetable_categories')[Number(property(`oscillator_${n}_wavetable_category`))];
-    const table = nameList(`oscillator_${n}_wavetables`)[Number(property(`oscillator_${n}_wavetable_index`))];
-    if (!category || !table) return null;
-    const cycle = cycleAt(tableFrames(shapes, category, table), position);
-    if (!cycle) return null;
-    const mode = effectModeFromLive(Number(property(`oscillator_${n}_effect_mode`) ?? 0));
-    return mode === 'none' ? cycle : applyOscEffect(cycle, mode, effect1, effect2);
-  }
+  const oscWaves = useOscWave(() => device?.devicePath);
 
   /**
    * Effect 1's name on Live's panel under each effect mode. The LOM calls it
@@ -269,12 +215,12 @@
    * rig in FM, PW and Warp from Live's manual. Mode None has no effect.
    */
   const EFFECT1_TITLES = { none: 'Fx 1', fm: 'Tune', classic: 'PW', modern: 'Warp' } as const;
-  let oscEffectMode = $derived(effectModeFromLive(Number(property(`oscillator_${oscTab}_effect_mode`) ?? 0)));
+  let oscEffectMode = $derived(oscWaves.effectMode(oscTab));
 
   let time = $derived(read(TIME, 0.5));
   let globalMod = $derived(read(GLOBAL_MOD, 0.5));
 
-  let oscWaveCycle = $derived(oscWave(oscTab, oscPosition, read(o.effect1, 0.5), oscEffect2));
+  let oscWaveCycle = $derived(oscWaves.wave(oscTab, oscPosition, read(o.effect1, 0.5), oscEffect2));
 
   /** Both envelopes in view, Amp over Envelope 2 (ADR-477). */
   const ENVELOPES = [
