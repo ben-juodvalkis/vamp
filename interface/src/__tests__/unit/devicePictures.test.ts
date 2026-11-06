@@ -31,11 +31,22 @@ describe('device pictures follow their control', () => {
 		expect(spread(1)).toBeGreaterThan(spread(0));
 	});
 
-	it('Tremolo draws two cycles of the LFO shape its view shows: saw down, square, sine, triangle', () => {
-		const line = (variant: number) => pictureStrokes('tremolo', 0.5, 1, variant)[1].d;
-		expect(line(0)).toMatch(/^M2,[\d.]+V[\d.]+L50,[\d.]+V[\d.]+L100,[\d.]+$/);
-		expect(line(1)).toMatch(/^M0,[\d.]+V[\d.]+H25V[\d.]+H50V[\d.]+H75V[\d.]+H100$/);
-		expect(new Set([0, 1, 2, 3].map(line)).size).toBe(4);
+	it('Tremolo draws the LFO shape its view shows, one cycle at the slowest rate and more as it speeds up', () => {
+		const line = (variant: number, x = 0) => pictureStrokes('tremolo', x, 1, variant)[1].d;
+		// One cycle at the left edge (X is the rate): saw down, then square.
+		expect(line(0)).toMatch(/^M0,[\d.]+V[\d.]+L100,[\d.]+$/);
+		expect(line(1)).toMatch(/^M0,[\d.]+V[\d.]+H50V[\d.]+H100$/);
+		expect(new Set([0, 1, 2, 3].map((v) => line(v))).size).toBe(4);
+		// Six at the right edge: twelve level changes on the square.
+		expect(line(1, 1).match(/V/g)).toHaveLength(12);
+	});
+
+	it('Tremolo is as tall as its depth from the middle, and upside down below it (Invert)', () => {
+		const square = (y: number) => pictureStrokes('tremolo', 0, y, 1)[1].d;
+		const firstLevel = (d: string) => Number(/V([\d.]+)/.exec(d)![1]);
+		expect(firstLevel(square(1))).toBeLessThan(50);
+		expect(firstLevel(square(0))).toBeGreaterThan(50);
+		expect(firstLevel(square(1)) + firstLevel(square(0))).toBeCloseTo(100, 5);
 	});
 
 	it('every kind draws, at every corner, and holds still for the same values', () => {

@@ -121,15 +121,30 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0, variant = 0)
 			};
 			const square = Math.round(variant) === 1;
 			const saw = Math.round(variant) === 0;
-			// Two cycles (the user, 2026-10-26). The saw and the square rise from
-			// the floor first, as the view's tab draws them.
+			// More cycles the faster it runs: X is the rate, one cycle at the
+			// left edge to six at the right (the user, 2026-11-05; two always
+			// before). The saw and the square rise from the floor first, as
+			// the view's tab draws them.
+			const cycles = 1 + clamp01(x) * 5;
+			const period = 100 / cycles;
 			const hi = f(50 - amp);
 			const lo = f(50 + amp);
-			const d = square
-				? `M0,${lo}V${hi}H25V${lo}H50V${hi}H75V${lo}H100`
-				: saw
-					? `M2,${lo}V${hi}L50,${lo}V${hi}L100,${lo}`
-					: trace((u) => 50 - amp * wave((u * 2) % 1), 128);
+			let d: string;
+			if (square) {
+				d = `M0,${lo}`;
+				for (let k = 0, level = true; k * (period / 2) < 100; k++, level = !level) {
+					d += `V${level ? hi : lo}H${f(Math.min(100, (k + 1) * (period / 2)))}`;
+				}
+			} else if (saw) {
+				d = `M0,${lo}`;
+				for (let k = 0; k * period < 100; k++) {
+					const end = (k + 1) * period;
+					const y = end <= 100 ? lo : f(50 - amp + 2 * amp * ((100 - k * period) / period));
+					d += `V${hi}L${f(Math.min(100, end))},${y}`;
+				}
+			} else {
+				d = trace((u) => 50 - amp * wave((u * cycles) % 1), 192);
+			}
 			return [
 				{ d: 'M0,50H100', o: 0.2 },
 				{ d, o: 0.85 }
