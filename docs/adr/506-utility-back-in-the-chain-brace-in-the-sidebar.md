@@ -16,8 +16,9 @@ back in that row.
 - The sidebar's row level with the FX chain is the clip loop brace
   (`RightControlsSidebar section="loop"`); the row level with the central
   view is Quantize alone (`section="quantize"`).
-- A chain with no Utility ends in a ghost one: a narrow column (72 px)
-  after the ghost section, full height with no title, the track's meter
+- A chain with no Utility ends in a ghost one: the ghost section's last
+  column, narrow (72 px) and the section's full height on one row and on
+  two, with no title, the track's meter
   under a Gain fader (`UtilityControl`); its first drag adds a Utility to
   the chain, and the column stays under the finger until it lifts. A
   Utility on the chain is drawn as any other cell. (For an hour the same

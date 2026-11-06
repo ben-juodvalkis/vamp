@@ -441,8 +441,8 @@
 
   /*
    * The ghost Utility (the user, 2026-11-05; ADR-482's column, back from the
-   * right sidebar): a narrow column after the chain, the track's meter under
-   * a Gain fader, whose first drag adds a Utility to the chain. Shown while
+   * right sidebar): the ghost section's last column, narrow, the track's
+   * meter under a Gain fader, whose first drag adds a Utility to the chain. Shown while
    * the chain holds none, and kept under the finger through the drag that
    * loads one; the loaded Utility is then a cell of the chain.
    */
@@ -789,6 +789,7 @@
        last, each a tile of one size. -->
   <div
     class="chain-ghosts"
+    class:has-utility={showGhostUtility && !!UTILITY_TILE}
     style:grid-column="span {ghostCells}"
     style:--recent-cols={recentGrid.columns}
     style:--recent-rows={recentGrid.rows}
@@ -809,6 +810,21 @@
     >
       <span class="chain-add-plus" aria-hidden="true"><Plus /></span>
     </button>
+    {#if showGhostUtility && UTILITY_TILE}
+      <!-- The ghost Utility: the ghost section's last column, narrow and its
+           full height, the track's meter under a Gain fader; its first drag
+           adds a Utility to the chain. -->
+      <div
+        class="ghost-utility"
+        data-debug="chain-ghost-utility"
+        role="presentation"
+        onpointerdowncapture={holdUtility}
+      >
+        <div class="cell-control" role="presentation"><CellSize>
+          <UTILITY_TILE.Tile position={UTILITY_TILE.position} />
+        </CellSize></div>
+      </div>
+    {/if}
   </div>
   {#if padScope}
     <!-- Whose chain this is, as the grid's scope chip says it. -->
@@ -817,21 +833,6 @@
     </div>
   {/if}
 </div>
-{#if showGhostUtility && UTILITY_TILE}
-  <!-- The ghost Utility: a narrow column after the chain, full height with
-       no title, the track's meter under a Gain fader; its first drag adds a
-       Utility to the chain. -->
-  <div
-    class="ghost-utility"
-    data-debug="chain-ghost-utility"
-    role="presentation"
-    onpointerdowncapture={holdUtility}
-  >
-    <div class="cell-control" role="presentation"><CellSize>
-      <UTILITY_TILE.Tile position={UTILITY_TILE.position} />
-    </CellSize></div>
-  </div>
-{/if}
 </div>
 
 <style>
@@ -844,20 +845,19 @@
     gap: 8px;
     min-width: 0;
   }
-  /* The ghost Utility's column: narrow, a fader's width, the tile's own
-     ghost frame its only edge. */
-  .chain-wrap > .ghost-utility {
-    flex: 0 0 72px;
+  /* The ghost Utility: one more column of the ghost section, narrow and
+     its full height, so it ends the chain on one row and on two (the
+     user, 2026-11-05). */
+  .chain-ghosts.has-utility {
+    grid-template-columns: repeat(var(--recent-cols, 4), minmax(0, 1fr)) 72px;
+  }
+  .chain-ghosts > .ghost-utility {
+    grid-column: -2 / -1;
+    grid-row: 1 / -1;
     display: flex;
     flex-direction: column;
     min-width: 0;
     min-height: 0;
-  }
-  /* On two rows the chain ends at the bottom right, so the column is the
-     bottom row's height, beside it (the user, 2026-11-05). */
-  .chain-wrap.two-rows > .ghost-utility {
-    align-self: flex-end;
-    height: calc((100% - 8px) / 2);
   }
   .ghost-utility > .cell-control {
     flex: 1 1 0;
