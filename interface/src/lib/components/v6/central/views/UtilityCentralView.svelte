@@ -2,11 +2,11 @@
   /**
    * UtilityCentralView — the Utility's view (slot `utility`, StereoGain).
    *
-   *   [Gain, over the track's meter] [Width / Balance] [Bass Freq / Channel] [switches]
+   *   [Width] [Balance] [Bass Freq] [Channel] [switches]
    *
-   * Gain is the `utility` control (`deviceControls`, ADR-479), the tile at
-   * full size. The rest are value boxes (ADR-477), a four-way channel picker
-   * and switches, Live's own parameters as measured on the rig (2026-11-05,
+   * No Gain: it is the Utility's chain cell (the `utility` control,
+   * `deviceControls`), always beside this view (the user, 2026-11-05).
+   * Value boxes (ADR-477), a four-way channel picker and switches, Live's own parameters as measured on the rig (2026-11-05,
    * `device_dump.js` on a Utility, 12.4 beta): 1 Left Inv, 2 Right Inv
    * (switches), 3 Channel Mode 0..3 (Left · Stereo · Right · Swap), 4 Stereo
    * Width 0..2 (1 = 100 %, 2 = 400 %), 5 Mono, 6 Bass Mono (switches), 7 Bass
@@ -17,7 +17,6 @@
    * NO {#if device} gate - every control handles its own ghost state.
    */
 
-  import ControlTile from '../../device-panel/ControlTile.svelte';
   import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
@@ -56,10 +55,6 @@
 </script>
 
 <div class="utility-layout" data-view="utility" style="--btn-tint: {ink.primary};">
-  <div class="gain">
-    <ControlTile type="utility" device={utility.device} disableCentralViewOnTap tapLoads labelSize="large" />
-  </div>
-
   <div class="column" class:slot-ghost={utility.isGhost}>
     <DeviceSlider
       value={value(UTIL.width)}
@@ -74,6 +69,9 @@
       readout={utility.paramDisplay(UTIL.width)}
       onInteraction={(v) => utility.sendParam(UTIL.width, v)}
     />
+  </div>
+
+  <div class="column" class:slot-ghost={utility.isGhost}>
     <DeviceSlider
       value={value(UTIL.balance)}
       title="Balance"
@@ -101,19 +99,20 @@
       readout={utility.paramDisplay(UTIL.bassFreq)}
       onInteraction={(v) => utility.sendParam(UTIL.bassFreq, v)}
     />
-    <div class="channel" role="radiogroup" aria-label="Channel">
-      {#each CHANNEL_MODES as label, i (label)}
-        <button
-          class="physical-button utility-switch"
-          class:active={channelMode === i}
-          role="radio"
-          aria-checked={channelMode === i}
-          onclick={() => utility.sendParam(UTIL.channelMode, i)}
-        >
-          {label}
-        </button>
-      {/each}
-    </div>
+  </div>
+
+  <div class="column channel" class:slot-ghost={utility.isGhost} role="radiogroup" aria-label="Channel">
+    {#each CHANNEL_MODES as label, i (label)}
+      <button
+        class="physical-button utility-switch"
+        class:active={channelMode === i}
+        role="radio"
+        aria-checked={channelMode === i}
+        onclick={() => utility.sendParam(UTIL.channelMode, i)}
+      >
+        {label}
+      </button>
+    {/each}
   </div>
 
   <div class="column switches" class:slot-ghost={utility.isGhost}>
@@ -130,17 +129,16 @@
 </div>
 
 <style>
-  /* Gain two shares; the value-box columns and the switches one each. */
+  /* Five equal columns: three value boxes, the channel picker, the switches. */
   .utility-layout {
     display: grid;
-    grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     height: 100%;
     width: 100%;
     padding: var(--central-inset);
     gap: var(--central-gap);
   }
 
-  .gain,
   .column {
     display: flex;
     flex-direction: column;
@@ -149,17 +147,9 @@
     min-height: 0;
   }
 
-  .gain > :global(*),
   .column > :global(*) {
     flex: 1 1 0;
     min-height: 0;
-  }
-
-  .channel {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-auto-rows: minmax(0, 1fr);
-    gap: var(--central-gap);
   }
 
   .switch-row {

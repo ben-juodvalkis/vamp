@@ -73,10 +73,10 @@ describe('the dynamics views, one per device (ADR-478)', () => {
 		expect(container.querySelector('.mb-slider')).toBeNull();
 	});
 
-	it('Utility: the Gain, Width, Balance, Bass Freq, the channel picker and the switches', () => {
+	it('Utility: Width, Balance, Bass Freq, the channel picker and the switches (Gain is the chain cell)', () => {
 		const { container } = render(UtilityCentralView);
-		expect(container.querySelectorAll('.gain')).toHaveLength(1);
-		for (const label of ['Gain', 'Width', 'Balance', 'Bass Freq']) expect(container.textContent).toContain(label);
+		expect(container.textContent).not.toContain('Gain');
+		for (const label of ['Width', 'Balance', 'Bass Freq']) expect(container.textContent).toContain(label);
 		const modes = [...container.querySelectorAll('[role="radio"]')];
 		expect(modes.map((b) => b.textContent?.trim())).toEqual(['Left', 'Stereo', 'Right', 'Swap']);
 		// A ghost shows Live's defaults: Stereo, every switch off.
