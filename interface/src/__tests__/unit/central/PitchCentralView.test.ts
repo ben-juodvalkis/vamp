@@ -101,7 +101,7 @@ describe('Reverse view: Pitch Hack', () => {
 		expect(written(2)).toEqual([]);
 	});
 
-	it('draws Reverse and Mix as boxes, then every other parameter as a knob (ADR-508)', async () => {
+	it('draws Reverse and Mix as boxes, then every other parameter as a knob (ADR-509)', async () => {
 		seed(pitchHack(13));
 		const { container } = render(ReverseCentralView);
 		await tick();

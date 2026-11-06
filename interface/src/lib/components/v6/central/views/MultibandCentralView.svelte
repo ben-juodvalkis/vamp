@@ -74,7 +74,7 @@
   /* threshold | output */
   .mb-central-layout {
     display: grid;
-    /* The threshold a set rides as a box, the output set once as a knob (ADR-508). */
+    /* The threshold a set rides as a box, the output set once as a knob (ADR-509). */
     grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
     height: 100%;
     width: 100%;

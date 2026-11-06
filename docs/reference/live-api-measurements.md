@@ -290,6 +290,24 @@ tested against the same numbers in `deviceControls.presets.test.ts`).
   - Phaser-Flanger (2026-10-26): LFO 1 Freq is 0..1 on Live's rail
     `0.01 Hz · 4000^v`, the file in Hz (0.1486 → 0.3254); Feedback 0..1,
     Live's 99 % at 1 (saved 0 → 0, the one point measured).
+  - Auto Pan-Tremolo (AutoPan2, 2026-11-06, Live 12.4.25b1): saved in the
+    LOM's order, as saved but LFO Freq, Hz on `0.1 · 600^v` (1 → 0.3600).
+    LFO Mode picks the rate's parameter: 0 Rate (Freq), 1 Time, 2-4
+    Synced (0..21, 8 bars .. 1/64), 5 16th (1..64). A fresh insert takes
+    the User Library default (on the rig: Tremolo, 16th, 2/16).
+  - EQ Eight (Eq8): eight bands of ten parameters from index 4, each an A
+    half (On, Type 0..7, Frequency, Gain, Q) and a B half used only in
+    L/R or M/S. Frequency 0..1 is `10 Hz · 2200^v`, Q 0..1 `0.1 · 180^v`,
+    Gain -15..15 dB as the LOM. The file saves every band as `IsOn`,
+    `Mode`, `Freq` (Hz), `Gain`, `Q`, band by band, A before B, so the
+    names repeat: band b's A half is each name's (2b - 1)-th occurrence
+    (Bancroft Studio Resonances: band 3 2548.2 Hz → 0.7199).
+  - Delay: Sync and the 16th step (0..7: 1, 2, 3, 4, 5, 6, 8, 16) as
+    saved; L Time seconds on Live's rail (sampled, 1 ms .. 5 s, 0.375 →
+    0.5954); Feedback a fraction of Live's 95 % top (PingPong v 8: 0.6 →
+    0.6316).
+  - Limiter: every level 0..1 on Live's dB rails (Gain -24..24, 0 dB at
+    0.5; Ceiling, Threshold, Output -24..0). No preset of it on the rig.
   - Redux: Sample Rate Hz on Live's rail (sampled; 40 kHz → 1, 3.99 kHz at
     0.5); Post-Filter -4..4 → `(v + 4) / 8` (0 → 0.5).
   - Shifter: RM Coarse Hz, `1 · 10000^v` (1 Hz → 0); Mode as saved (2 Ring).

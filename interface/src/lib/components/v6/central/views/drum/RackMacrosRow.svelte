@@ -7,7 +7,7 @@
    * of that name. The kit's transpose-named macro is `pitch`'s member, so
    * Trnsp (a snippet the parent supplies) stands in that macro's place.
    *
-   * Two rows filled column by column (ADR-477), the macros knobs (ADR-508), the view's
+   * Two rows filled column by column (ADR-477), the macros knobs (ADR-509), the view's
    * Gain first so it sits over Trnsp as it does on every other kit.
    *
    * A dumb row: values, states and badges in, a write out.

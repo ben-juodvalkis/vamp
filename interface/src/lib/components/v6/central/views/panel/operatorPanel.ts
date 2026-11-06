@@ -181,7 +181,7 @@ function envPage(id: string, title: string, prefix: string, parent: string, extr
 const OSCS: Osc[] = ['A', 'B', 'C', 'D'];
 
 export const OPERATOR_PANEL: InstrumentPanel = {
-	// Knobs, but an envelope's stages stay boxes: their heights draw it (ADR-508).
+	// Knobs, but an envelope's stages stay boxes: their heights draw it (ADR-509).
 	boxFace: 'knob',
 	frame: [
 		{

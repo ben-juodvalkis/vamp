@@ -22,7 +22,7 @@
 		switchParam?: string;
 		/** Rows on the page: see `choiceColumns`. */
 		pageRows?: number;
-		/** Box or knob (ADR-508), decided by the group and the panel. */
+		/** Box or knob (ADR-509), decided by the group and the panel. */
 		face?: PanelFace;
 	}
 
@@ -49,7 +49,7 @@
 		const r = params.range(toggle.param);
 		params.write(toggle.param, toggleOn ? (r?.min ?? 0) : (r?.max ?? 1));
 	}
-	// Among knobs a switch is one touch row high, not a full cell (ADR-508).
+	// Among knobs a switch is one touch row high, not a full cell (ADR-509).
 	let compact = $derived(face === 'knob');
 
 	function write(value: number) {
@@ -214,7 +214,7 @@
 		font-size: 0.9375rem;
 	}
 	/* One touch row, centred in its cell: among knobs a full-height switch
-	   outweighs them (ADR-508). */
+	   outweighs them (ADR-509). */
 	/* Among knobs a chooser is a touch row an option, centred in its cell. */
 	.panel-choice.compact {
 		align-self: center;

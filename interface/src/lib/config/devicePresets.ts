@@ -275,6 +275,44 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     expectedClassName: 'AutoPan',
     color: familyScheme('modulation')
   },
+  autoPanTremolo: {
+    // Live 12's Auto Pan-Tremolo (2026-11-06), beside the Legacy one the
+    // Tremolo slot drives. Live accepts its display name for an insert, so
+    // the surface needs no row for it. Class measured off the running device.
+    padScoped: true,
+    native: true,
+    defaultName: 'Auto Pan-Tremolo',
+    expectedClassName: 'AutoPan2',
+    gridSlot: false,                    // Virtual device
+    color: familyScheme('modulation')
+  },
+  eq8: {
+    // EQ Eight (2026-11-06): eight bands on a curve, Live's panel.
+    padScoped: true,
+    native: true,
+    defaultName: 'EQ Eight',
+    expectedClassName: 'Eq8',
+    gridSlot: false,                    // Virtual device
+    color: familyScheme('filter')
+  },
+  delay: {
+    // Live's Delay (2026-11-06), the plain two-line delay beside Echo.
+    padScoped: true,
+    native: true,
+    defaultName: 'Delay',
+    expectedClassName: 'Delay',
+    gridSlot: false,                    // Virtual device
+    color: familyScheme('timeSpace')
+  },
+  limiter: {
+    // Live's Limiter (2026-11-06).
+    padScoped: true,
+    native: true,
+    defaultName: 'Limiter',
+    expectedClassName: 'Limiter',
+    gridSlot: false,                    // Virtual device
+    color: familyScheme('dynamics')
+  },
   arpeggiator: {
     // MIDI effects go BEFORE the pad's instrument; the surface inserts them at the chain's head (2026-09-11).
     padScoped: true,

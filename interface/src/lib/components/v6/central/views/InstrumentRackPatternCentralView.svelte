@@ -195,7 +195,7 @@
   const ROW_UNITS = 12;
   let macroRows = $derived(controlLayout.length > 1 ? 2 : 1);
   let macroColumns = $derived(Math.ceil(controlLayout.length / macroRows));
-  // Knobs want near-square cells (ADR-508): a macro column counts two units.
+  // Knobs want near-square cells (ADR-509): a macro column counts two units.
   let macroGrow = $derived(macroColumns * 2);
   let gridGrow = $derived(Math.max(ROW_UNITS - macroGrow, 6));
 </script>
@@ -268,7 +268,7 @@
         <SectionDivider orientation="vertical" />
       {/if}
 
-      <!-- A knob for each named macro 3-16 (ADR-508), two to a column,
+      <!-- A knob for each named macro 3-16 (ADR-509), two to a column,
            filled column by column. -->
       {#if controlLayout.length > 0}
         <div class="macro-grid" style="flex-grow: {macroGrow}; grid-template-rows: repeat({macroRows}, minmax(0, 1fr));">

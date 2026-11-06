@@ -109,7 +109,7 @@ export function measureLayout() {
 		);
 		const media = ['CANVAS', 'IMG', 'svg', 'SVG', 'INPUT'].includes(el.tagName);
 		// A control that paints less than its cell but answers to all of it
-		// (a knob, ADR-508) is measured by the cell it answers to.
+		// (a knob, ADR-509) is measured by the cell it answers to.
 		const target = el.hasAttribute('data-layout-box');
 		// An element's own box is cut by its ancestors' overflow, never by its
 		// own; a text run inside it is cut by the element too.

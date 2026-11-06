@@ -62,7 +62,7 @@
   // Macros whose first word is "XY" pair up into pads (the rack's own
   // convention, named in Live): "XY Cutoff" + "XY Res" → a Cutoff/Res pad.
   const layoutItems = $derived(pairXYPrefixedMacros(controlLayout));
-  // Knobs want near-square cells (ADR-508): two rows filled column by
+  // Knobs want near-square cells (ADR-509): two rows filled column by
   // column, neighbours paired top over bottom, past two macros; a pad is
   // two columns wide, every row.
   const macroColumns = $derived(layoutItems.reduce((n, item) => n + (item.kind === 'xy' ? 2 : 1), 0));
@@ -108,7 +108,7 @@
           <HostedSwapPill />
         </div>
 
-        <!-- One knob per named macro (ADR-508), as Live draws a rack's
+        <!-- One knob per named macro (ADR-509), as Live draws a rack's
              macros: two rows filled column by column, neighbours paired top
              over bottom. An XY pad stands in for two macros: two columns,
              every row. -->

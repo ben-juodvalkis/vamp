@@ -18,7 +18,7 @@ export type PanelControl =
 	/**
 	 * A value box over the parameter's own range; centre-origin when the range
 	 * spans 0. `toggle` is the on/off parameter that belongs to it (a source's
-	 * switch over its level), drawn small under it (ADR-508).
+	 * switch over its level), drawn small under it (ADR-509).
 	 */
 	| { kind: 'box'; param: string; title: string; toggle?: PanelToggle }
 	/** A quantized parameter with few values: one cell a value, its labels Live's own. */
@@ -43,7 +43,7 @@ export interface PanelGroup {
 	/** A page id: the eyebrow opens it ("Hammer ›"). */
 	page?: string;
 	/**
-	 * How the group's value boxes draw, over the panel's `boxFace` (ADR-508):
+	 * How the group's value boxes draw, over the panel's `boxFace` (ADR-509):
 	 * an envelope's stages stay boxes, since their heights draw its shape.
 	 */
 	face?: PanelFace;
@@ -54,7 +54,7 @@ export interface PanelGroup {
 	units?: number;
 }
 
-/** A value box drawn as a box or as a knob (ADR-508). */
+/** A value box drawn as a box or as a knob (ADR-509). */
 export type PanelFace = 'slider' | 'knob';
 
 export interface PanelTab {
@@ -120,7 +120,7 @@ export function controlUnits(control: PanelControl, pageRows = 1): number {
 
 /**
  * A group's share of its row, in boxes. A group of knobs on a full-height
- * band stacks them two high (ADR-508), so it takes half as many columns as
+ * band stacks them two high (ADR-509), so it takes half as many columns as
  * it has knobs, and the boxes beside it (an envelope's stages) keep their
  * width; on a two-row page there is no height to stack in.
  */

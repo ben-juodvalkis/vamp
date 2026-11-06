@@ -47,7 +47,7 @@
 	type Param = { index: number; min: number; max: number; rest: number };
 	// The two the device is played by, as full-height boxes: how often it
 	// reverses, and how much of it you hear. The rest set its character, as
-	// knobs in a grid of their own (ADR-508).
+	// knobs in a grid of their own (ADR-509).
 	const BOXES: { title: string; param: Param }[] = [
 		{ title: 'Reverse', param: PITCH_HACK.reverse },
 		{ title: 'Mix', param: PITCH_HACK.mix }

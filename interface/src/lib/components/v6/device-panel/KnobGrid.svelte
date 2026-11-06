@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * A grid of knobs (ADR-508) for a hand-laid view: it measures its own box
+   * A grid of knobs (ADR-509) for a hand-laid view: it measures its own box
    * and takes the rows that give each knob the most room (`knobGridRows`),
    * the rule an instrument panel's groups follow. Filled row by row, left to
    * right. `item` draws the knob at an index, usually a `DeviceSlider

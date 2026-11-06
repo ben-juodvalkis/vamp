@@ -9,8 +9,11 @@
  * Audio-Midi Effects): `Filter_Frequency` is in Hz, `Filter_Resonance` and
  * `Filter_Type` in the units Live's LOM reports. The mapping from these
  * names onto LOM values is the device's own (`autoFilterParams.ts`); this
- * module only reads. The first occurrence of a name wins, which on a single
- * device's preset is the device's own.
+ * module only reads. The first occurrence of a name keeps the name, which on
+ * a single device's preset is the device's own; a later one is keyed
+ * `<name>#<n>`, n counting from 1, so a device that repeats its names
+ * (EQ Eight's eight bands, each `IsOn`, `Mode`, `Freq`, `Gain`, `Q`) is
+ * read band by band, in the file's order.
  */
 import { readFile, stat } from 'node:fs/promises';
 import { gunzipSync } from 'node:zlib';
@@ -18,7 +21,7 @@ import { gunzipSync } from 'node:zlib';
 export interface PresetParams {
 	/** The device's class as the file names it (`AutoFilter2`, a rack's `AudioEffectGroupDevice`), or '' when unreadable. */
 	className: string;
-	/** Saved name → value; `true`/`false` read as 1/0. A rack's macros are `MacroControls.<n>`. */
+	/** Saved name → value; `true`/`false` read as 1/0. A rack's macros are `MacroControls.<n>`; a name's n-th occurrence past the first is `<name>#<n>`. */
 	params: Record<string, number>;
 	/** Saved names that carry text: a rack's `MacroDisplayNames.<n>`. */
 	labels: Record<string, string>;
@@ -44,11 +47,15 @@ export function parsePresetXml(xml: string): PresetParams {
 	const params: Record<string, number> = {};
 	const labels: Record<string, string> = {};
 	for (const m of xml.matchAll(LABEL)) if (!(m[1] in labels)) labels[m[1]] = m[2];
+	const seen: Record<string, number> = {};
 	for (const m of [...xml.matchAll(MXD_PARAM), ...xml.matchAll(PARAM)]) {
 		const [, name, raw] = m;
-		if (name in params) continue;
+		const n = (seen[name] = (seen[name] ?? 0) + 1);
+		// A rack's repeats are its inner devices', which nothing reads.
+		if (n > 1 && root?.[1] === 'GroupDevicePreset') continue;
+		const key = n === 1 ? name : `${name}#${n}`;
 		const value = raw === 'true' ? 1 : raw === 'false' ? 0 : Number(raw);
-		if (Number.isFinite(value)) params[name] = value;
+		if (Number.isFinite(value)) params[key] = value;
 	}
 	return { className, params, labels };
 }

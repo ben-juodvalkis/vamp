@@ -156,7 +156,7 @@
     {#snippet item(t)}{t}{/snippet}
   </ScrubTabs>
 
-  <!-- The distortion and its tone in Live's order, as knobs (ADR-508):
+  <!-- The distortion and its tone in Live's order, as knobs (ADR-509):
        two columns wide, so they wrap into the grid that gives each the
        most room rather than stacking three to a thin column. -->
   <div class="col box-stack">
@@ -243,7 +243,7 @@
     grid-column: span 3;
   }
 
-  /* The distortion knobs: two columns, their own grid inside (ADR-508). */
+  /* The distortion knobs: two columns, their own grid inside (ADR-509). */
   .box-stack {
     grid-column: span 2;
     display: flex;

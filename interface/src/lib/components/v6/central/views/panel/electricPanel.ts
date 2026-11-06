@@ -14,7 +14,7 @@ import type { InstrumentPanel } from './panelTypes';
 const VOICES = Array.from({ length: 31 }, (_, i) => String(i + 2));
 
 export const ELECTRIC_PANEL: InstrumentPanel = {
-	// Knobs, but an envelope's stages stay boxes: their heights draw it (ADR-508).
+	// Knobs, but an envelope's stages stay boxes: their heights draw it (ADR-509).
 	boxFace: 'knob',
 	frame: [
 		{

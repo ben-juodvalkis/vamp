@@ -1,5 +1,5 @@
 /**
- * How an instrument panel lays out its knobs (ADR-508): a group of knobs
+ * How an instrument panel lays out its knobs (ADR-509): a group of knobs
  * wraps into the grid that gives each knob the most room, and boxes kept as
  * boxes in a knob panel go thin so the knobs beside them get the width.
  */

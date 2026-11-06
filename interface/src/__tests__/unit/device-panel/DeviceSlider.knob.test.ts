@@ -1,5 +1,5 @@
 /**
- * DeviceSlider `face="knob"` (ADR-508): a value box drawn as an arc. The
+ * DeviceSlider `face="knob"` (ADR-509): a value box drawn as an arc. The
  * gesture is the box's — relative, over the value-box travel — and either
  * axis turns it: up or right raises it.
  */

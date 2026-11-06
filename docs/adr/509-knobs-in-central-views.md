@@ -1,4 +1,4 @@
-# ADR-508: Knobs in central views
+# ADR-509: Knobs in central views
 
 ## Status
 **Accepted** (2026-11-06)

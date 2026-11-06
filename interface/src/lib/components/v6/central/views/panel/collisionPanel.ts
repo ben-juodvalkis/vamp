@@ -248,7 +248,7 @@ function midiGroup(title: string, source: string, both: boolean): PanelGroup {
 }
 
 export const COLLISION_PANEL: InstrumentPanel = {
-	// Knobs, but an envelope's stages stay boxes: their heights draw it (ADR-508).
+	// Knobs, but an envelope's stages stay boxes: their heights draw it (ADR-509).
 	boxFace: 'knob',
 	frame: [
 		{

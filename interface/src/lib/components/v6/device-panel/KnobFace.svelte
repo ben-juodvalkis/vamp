@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * The knob face (ADR-508): a value drawn as an arc, nothing else.
+   * The knob face (ADR-509): a value drawn as an arc, nothing else.
    *
    * Drawing only. `DeviceSlider face="knob"` owns the gesture (the same
    * relative drag as a value box, over the same travel) and mounts this in

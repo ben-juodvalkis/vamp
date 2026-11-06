@@ -104,7 +104,7 @@ describe('ReverbCentralView, an algorithm', () => {
 		expect(labels(c.querySelector('[data-reverb-shared]'))).toEqual([
 			'Decay 3.50 s', 'Size 50 %', 'Predelay 10.0 ms', 'Feedback 0.0 %', 'Delay 0.00 ms', 'Stereo 100 %', 'Vintage Off'
 		]);
-		// Dry/Wet stands apart at the right edge, a box among knobs (ADR-508).
+		// Dry/Wet stands apart at the right edge, a box among knobs (ADR-509).
 		expect(labels(c.querySelector('[data-reverb-wet]'))).toEqual(['Dry/Wet 50 %']);
 		const switches = [...c.querySelectorAll('[data-reverb-shared] [data-reverb-switch]')].map((b) => b.textContent?.trim());
 		expect(switches).toEqual(['Sync', 'Mono']);
@@ -213,7 +213,7 @@ describe('ReverbCentralView, convolution', () => {
 		expect(labels(c.querySelector('[data-reverb-own]'))).toEqual(['Attack 0.00 ms', 'Decay 20.0 s', 'Size 100 %']);
 		expect(labels(c.querySelector('[data-reverb-shared]'))).toEqual([
 			// Stereo starts a column so its Mono sits under it; Vintage fills the
-			// cell ahead of it (ADR-508).
+			// cell ahead of it (ADR-509).
 			'Predelay 10.0 ms', 'Feedback 0.0 %', 'Vintage Off', 'Stereo 100 %'
 		]);
 		// Freeze, Size and Delay are the algorithm's.

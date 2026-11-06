@@ -82,7 +82,7 @@
   {#if instrument}
     <!-- One slider per mapped macro -->
     {#if usedMacros.length > 0}
-      <!-- The rack's mapped macros as knobs, as Live draws them (ADR-508). -->
+      <!-- The rack's mapped macros as knobs, as Live draws them (ADR-509). -->
       <KnobGrid count={usedMacros.length}>
         {#snippet item(i)}
           {@const paramIndex = usedMacros[i]}

@@ -1,5 +1,5 @@
 /**
- * How a grid of knobs lays out (ADR-508). Pure: the panels' groups
+ * How a grid of knobs lays out (ADR-509). Pure: the panels' groups
  * (`central/views/panel/PanelGroupView`) and the hand-laid views' `KnobGrid`
  * both measure their box and ask this for the rows.
  */

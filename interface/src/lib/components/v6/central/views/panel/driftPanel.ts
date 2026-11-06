@@ -18,7 +18,7 @@ const SYNCED = [
 const RATE_MODES = ['Freq', 'Time', 'Ratio', 'Sync'];
 
 export const DRIFT_PANEL: InstrumentPanel = {
-	// Knobs, but an envelope's stages stay boxes: their heights draw it (ADR-508).
+	// Knobs, but an envelope's stages stay boxes: their heights draw it (ADR-509).
 	boxFace: 'knob',
 	// Drawn by the view's own face; the frame is what a face-less render would show.
 	frame: [],
@@ -69,7 +69,7 @@ export const DRIFT_PANEL: InstrumentPanel = {
 					{
 						title: 'Osc Mix',
 						controls: [
-							// Each source's switch under its level (ADR-508).
+							// Each source's switch under its level (ADR-509).
 							{ kind: 'box', param: 'Osc 1 Gain', title: 'Osc 1', toggle: { param: 'Osc 1 On', title: 'On' } },
 							{ kind: 'box', param: 'Osc 2 Gain', title: 'Osc 2', toggle: { param: 'Osc 2 On', title: 'On' } },
 							{ kind: 'box', param: 'Noise Gain', title: 'Noise', toggle: { param: 'Noise On', title: 'On' } }
@@ -89,7 +89,7 @@ export const DRIFT_PANEL: InstrumentPanel = {
 		{
 			id: 'filter',
 			title: 'Filter',
-			// The face's filter pad, full height beside the knobs (ADR-508).
+			// The face's filter pad, full height beside the knobs (ADR-509).
 			aside: { slot: 'filter', units: 3, params: ['LP Freq', 'LP Res', 'HP Freq'] },
 			rows: [
 				[

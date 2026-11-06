@@ -390,7 +390,7 @@
 <!-- The waveform drawing. `currentColor`, so it takes the button's own
      ink in every state — including the inverse a lit segment needs — and
      `aria-hidden`, because the button already carries Live's name. -->
-<!-- The face's filter pad, again beside the Filter page's knobs (ADR-508). -->
+<!-- The face's filter pad, again beside the Filter page's knobs (ADR-509). -->
 {#snippet filterPad()}
   <div class="min-h-0 min-w-0 h-full w-full">
     <FilterDotsGraph

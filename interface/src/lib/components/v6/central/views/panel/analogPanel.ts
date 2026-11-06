@@ -270,7 +270,7 @@ function lfoPage(v: 1 | 2): PanelPage {
 }
 
 export const ANALOG_PANEL: InstrumentPanel = {
-	// Knobs, but an envelope's stages stay boxes: their heights draw it (ADR-508).
+	// Knobs, but an envelope's stages stay boxes: their heights draw it (ADR-509).
 	boxFace: 'knob',
 	// Drawn by the view's own face.
 	frame: [],

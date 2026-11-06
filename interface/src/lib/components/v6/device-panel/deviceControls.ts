@@ -37,6 +37,9 @@ import {
 	tileYFor
 } from './autoPanParams';
 import { decayValue } from './hybridReverbParams';
+import { AUTO_PAN2, freqValue as autoPan2FreqValue, pictureShape, rateOf, rateParam, rateWrite } from './autoPan2Params';
+import { EQ8_GAIN_MAX, EQ8_REST, eq8Band, eq8FreqValue } from './eq8Params';
+import { DELAY, DELAY_FEEDBACK_MAX, DELAY_SIXTEENTHS, DELAY_SIXTEENTH_MAX, LIMITER } from './delayParams';
 import { AUTO_FILTER_PARAM, autoFilterCurve, frequencyToValue } from './autoFilterParams';
 import { GLITCH_LOOP_PARAMS } from './glitchLoopParams';
 import { OCTAVE_MIX_MAX, OCTAVE_MIX_PARAM } from './octaveParams';
@@ -44,6 +47,7 @@ import { MB_BELOW_RATIO_MID, ratioFromSlider, sliderFromRatio } from './multiban
 import type { CurveType } from './FilterCurve.svelte';
 import {
 	CHORUS_RATE_HZ,
+	DELAY_TIME_SECONDS,
 	ECHO_TIME_SECONDS,
 	REDUX_SAMPLE_RATE_HZ,
 	THRESHOLD_DB,
@@ -172,7 +176,120 @@ const SHIFTER = { pitch: 13, freq: 17, ringMod: 18, mode: 32, ring: 2, ringModMa
 const shifterMode = (g: Get) => Math.round(g(SHIFTER.mode) ?? SHIFTER.ring);
 const shifterAmount = (g: Get) => [SHIFTER.pitch, SHIFTER.freq, SHIFTER.ringMod][shifterMode(g)] ?? SHIFTER.ringMod;
 
+/** Auto Pan-Tremolo's rate parameters at a fresh insert on the rig (its User Library default: 16th mode, 2/16). */
+const AUTO_PAN2_RATE_REST: Record<number, number> = { [AUTO_PAN2.freq]: 0.36, [AUTO_PAN2.time]: 0.1974, [AUTO_PAN2.synced]: 6, [AUTO_PAN2.sixteenth]: 2 };
+const autoPan2Mode = (g: Get) => g(AUTO_PAN2.lfoMode) ?? 5;
+/** EQ Eight's tile plays band 3 (a bell at 1 kHz on a fresh insert). */
+const EQ8_TILE_BAND = 3;
+/** A repeated saved name's n-th occurrence (1-based), as the server keys it (`Freq#5`). */
+const nth = (s: SavedPreset, name: string, n: number) => s.params[n === 1 ? name : `${name}#${n}`];
+/** The Limiter's level knob: Input Gain, or Output under Maximize. */
+const limiterLevel = (g: Get) => ((g(LIMITER.maximize) ?? 0) >= 0.5 ? LIMITER.output : LIMITER.gain);
+const delaySynced = (g: Get) => (g(DELAY.syncL) ?? 1) >= 0.5;
+
 export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> = {
+	// Measured: Auto Pan-Tremolo (2026-11-06, the rig's default preset).
+	// Saved in the LOM's order and units but LFO Freq, in Hz (0.1 · 600^v:
+	// 1 Hz → 0.3600). X is the rate LFO Mode picks, slow to fast; Y is the
+	// Tremolo tile's (depth from the middle, Invert below it).
+	autoPanTremolo: {
+		control: {
+			kind: 'xy',
+			title: 'Auto Pan', picture: 'tremolo',
+			// Tremolo mode takes no waveform (Live shows Harmonic and Vintage there): a sine.
+			pictureVariant: (g) => ((g(AUTO_PAN2.mode) ?? 1) >= 0.5 ? 2 : pictureShape(g(AUTO_PAN2.wave) ?? 0)),
+			read: (g) => {
+				const rate = rateParam(autoPan2Mode(g));
+				return {
+					x: rateOf(autoPan2Mode(g), g(rate) ?? AUTO_PAN2_RATE_REST[rate]),
+					y: tileYFor(g(AUTO_PAN2.amount) ?? 0, (g(AUTO_PAN2.invert) ?? 0) >= 0.5)
+				};
+			},
+			write: (x, y, g) => {
+				const { amount, invert } = tileAmount(y);
+				return [rateWrite(autoPan2Mode(g), x), [AUTO_PAN2.amount, amount], [AUTO_PAN2.invert, invert]];
+			},
+			label: (g, display) => display(rateParam(autoPan2Mode(g)))
+		},
+		fromPreset: (s) =>
+			all({
+				[AUTO_PAN2.mode]: s.params.Mode,
+				[AUTO_PAN2.amount]: s.params.Modulation_Amount,
+				[AUTO_PAN2.wave]: s.params.Modulation_Waveform,
+				[AUTO_PAN2.invert]: s.params.Modulation_Invert,
+				[AUTO_PAN2.lfoMode]: s.params.Modulation_TimeMode,
+				[AUTO_PAN2.freq]: autoPan2FreqValue(s.params.Modulation_Frequency),
+				[AUTO_PAN2.synced]: s.params.Modulation_SyncedRate,
+				[AUTO_PAN2.sixteenth]: s.params.Modulation_Sixteenth
+			})
+	},
+	// Measured: EQ Eight and Bancroft Studio Resonances (2026-11-06). Each
+	// band saves IsOn, Mode, Freq (Hz → log(hz/10)/log(2200): 2548 Hz →
+	// 0.7199), Gain (dB, as the LOM) and Q, band by band, A then B; band 3's
+	// A is each name's fifth. The tile is band 3: frequency across, gain up.
+	eq8: {
+		control: {
+			kind: 'xy',
+			title: 'EQ Eight', picture: 'bell',
+			read: (g) => {
+				const b = eq8Band(EQ8_TILE_BAND);
+				return { x: g(b.freq) ?? EQ8_REST.freq[EQ8_TILE_BAND - 1], y: clamp01(((g(b.gain) ?? 0) + EQ8_GAIN_MAX) / (2 * EQ8_GAIN_MAX)) };
+			},
+			write: (x, y, g) => {
+				const b = eq8Band(EQ8_TILE_BAND);
+				const on: Writes = (g(b.on) ?? EQ8_REST.on[EQ8_TILE_BAND - 1]) < 0.5 ? [[b.on, 1]] : [];
+				return [...on, [b.freq, clamp01(x)], [b.gain, (2 * clamp01(y) - 1) * EQ8_GAIN_MAX]];
+			},
+			label: (g, display) => display(eq8Band(EQ8_TILE_BAND).freq)
+		},
+		fromPreset: (s) => {
+			const b = eq8Band(EQ8_TILE_BAND);
+			const n = 2 * EQ8_TILE_BAND - 1;
+			const hz = nth(s, 'Freq', n);
+			return all({ [b.on]: nth(s, 'IsOn', n), [b.freq]: hz === undefined ? NaN : eq8FreqValue(hz), [b.gain]: nth(s, 'Gain', n) });
+		}
+	},
+	// Measured: Delay, PingPong v 8 and Simple Delay v8 (2026-11-06). Sync
+	// and the 16th step (0..7) as saved; L Time in seconds on Live's rail
+	// (0.375 s → 0.5954); Feedback a fraction of 95 % (0.6 → 0.6316). X is
+	// the time (the 16th steps when synced), Y the feedback.
+	delay: {
+		control: {
+			kind: 'xy',
+			title: 'Delay', picture: 'taps',
+			read: (g) => ({
+				x: delaySynced(g) ? clamp01((g(DELAY.sixteenthL) ?? 1) / DELAY_SIXTEENTH_MAX) : clamp01(g(DELAY.timeL) ?? 0.5954),
+				y: clamp01(g(DELAY.feedback) ?? 0)
+			}),
+			write: (x, y, g) => [
+				delaySynced(g) ? [DELAY.sixteenthL, Math.round(clamp01(x) * DELAY_SIXTEENTH_MAX)] : [DELAY.timeL, clamp01(x)],
+				[DELAY.feedback, clamp01(y)]
+			],
+			label: (g, display) =>
+				delaySynced(g) ? `${DELAY_SIXTEENTHS[Math.round(g(DELAY.sixteenthL) ?? 1)] ?? ''} / 16` : display(DELAY.timeL)
+		},
+		fromPreset: (s) =>
+			all({
+				[DELAY.syncL]: s.params.DelayLine_SyncL,
+				[DELAY.timeL]: railFor(DELAY_TIME_SECONDS, s.params.DelayLine_TimeL),
+				[DELAY.sixteenthL]: s.params.DelayLine_SyncedSixteenthL,
+				[DELAY.feedback]: s.params.Feedback / DELAY_FEEDBACK_MAX
+			})
+	},
+	// Limiter (2026-11-06): its Input Gain, -24..24 dB on 0..1 with 0 dB at
+	// the middle; under Maximize the same knob is Output, -24..0 dB (the
+	// manual, §29.24). No preset of it on the rig to measure, so a browser
+	// tile draws the rest value.
+	limiter: {
+		control: {
+			kind: 'slider',
+			title: 'Limit', picture: 'ceiling',
+			readout: (g) => limiterLevel(g),
+			center: (g) => (limiterLevel(g) === LIMITER.gain ? 0.5 : undefined),
+			read: (g) => clamp01(g(limiterLevel(g)) ?? (limiterLevel(g) === LIMITER.gain ? 0.5 : 1)),
+			write: (t, g) => [[limiterLevel(g), clamp01(t)]]
+		}
+	},
 	// Measured: Disco Filter. Frequency in Hz → log(hz/20)/log(1000).
 	filter: {
 		control: {

@@ -465,7 +465,7 @@
 
   let allShared = $derived(isConvolution ? convolutionShared : shared);
   // Dry/Wet stands apart, a full-height box at the right edge: the level a
-  // set rides, where every other control is a knob (ADR-508).
+  // set rides, where every other control is a knob (ADR-509).
   let sharedRows = $derived(allShared.filter((r) => r.key !== 'drywet'));
   let wetRow = $derived(allShared.find((r) => r.key === 'drywet'));
   // Two rows of knobs filled column by column. A knob with a switch takes
@@ -506,7 +506,7 @@
    * row is whichever applies, beside the chip that switches the type.
    */
   /** A row's glyph, by the name the row wears (shared, IR, EQ and the algorithms' own). */
-  // Every box is a knob but Dry/Wet, the level a set rides (ADR-508).
+  // Every box is a knob but Dry/Wet, the level a set rides (ADR-509).
   const knobRow = (key: string) => key !== 'drywet';
 
   const ROW_GLYPHS: Record<string, ControlGlyphName> = {
@@ -596,7 +596,7 @@
 
 <!-- One value box, its switch (Sync, Mono, Cut / Shelf) under it. -->
 <!-- `ownCellChip`: the switch is drawn in the cell under the box (the
-     shared knobs, ADR-508), not inside it. -->
+     shared knobs, ADR-509), not inside it. -->
 {#snippet sliderBox(row: Row, ownCellChip = false)}
   {#snippet label()}{@render boxLabel(row.name, row.label)}{/snippet}
   <div class="cell" class:knob-cell={knobRow(row.key)}>
@@ -859,7 +859,7 @@
     flex: 0 0 2.25rem;
   }
   /* Under a knob its switch is a pill as wide as the knob's caption, not
-     the cell (ADR-508). */
+     the cell (ADR-509). */
   .cell.knob-cell > .reverb-chip {
     align-self: center;
     width: min(100%, 5.5rem);

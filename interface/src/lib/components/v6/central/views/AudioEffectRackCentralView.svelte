@@ -91,7 +91,7 @@
 		<!-- Which rack: a track can carry several, and the chain overview picks one. -->
 		<div class="rack-name">{audioEffectRack.name}</div>
 		<!-- One knob per named macro, as Live draws a rack's macros, in the
-		     grid that gives each the most room (ADR-508). -->
+		     grid that gives each the most room (ADR-509). -->
 		{#if controlLayout.length > 0}
 			<KnobGrid count={controlLayout.length}>
 				{#snippet item(i)}

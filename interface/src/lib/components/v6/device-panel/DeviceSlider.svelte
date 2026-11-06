@@ -72,7 +72,7 @@
     track?: MeterTrack | null;  // Optional track for meter visualization
     trackIndex?: number;       // Track index for meter
     meterColor?: string;       // Optional track-color tint for the meter fill
-    // 'knob' draws the value as an arc (ADR-508) with the same gesture and
+    // 'knob' draws the value as an arc (ADR-509) with the same gesture and
     // target as the box. For tone-shaping and set-and-forget controls; a level
     // ridden mid-set, a meter or an envelope's stages stay boxes. A knob
     // ignores `label`, `labelAt`, `orientation` and the handle line.
@@ -119,7 +119,7 @@
   const valueBox = inValueBoxScope();
   let effectiveTravel = $derived(travel ?? (valueBox ? VALUE_BOX_TRAVEL : undefined));
 
-  // A knob (ADR-508) is a value box drawn as an arc: same gesture, same
+  // A knob (ADR-509) is a value box drawn as an arc: same gesture, same
   // travel, the whole cell its target. Either axis turns it: up or right
   // raises it, as a box's own axis does.
   let knobFace = $derived(face === 'knob');
@@ -767,7 +767,7 @@
     height: 15%; /* Large gap for label */
   }
 
-  /* ---- Knob face (ADR-508): the cell is the target; KnobFace draws. */
+  /* ---- Knob face (ADR-509): the cell is the target; KnobFace draws. */
   .device-knob {
     width: 100%;
     height: 100%;

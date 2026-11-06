@@ -456,6 +456,8 @@ const DEVICE_CLASS_NAMES = {
 	Shifter: 'Shifter',
 	Reverb: 'Hybrid',
 	'Auto Pan Legacy': 'AutoPan',
+	'Auto Pan-Tremolo': 'AutoPan2',
+	'EQ Eight': 'Eq8',
 	// The Bass Amp is a rack, and the Bass tile's `bass` slot matches
 	// it on name AND class — without the entry the Bass panel reads ghost
 	// on every shot and its reorder arrows (which need a resolved device)

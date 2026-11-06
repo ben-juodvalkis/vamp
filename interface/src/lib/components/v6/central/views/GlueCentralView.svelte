@@ -90,7 +90,7 @@
 
 <style>
   /* threshold | output: the threshold a set rides as a box, the output
-     set once as a knob in a narrower column (ADR-508). */
+     set once as a knob in a narrower column (ADR-509). */
   .glue-central-layout {
     display: grid;
     grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);

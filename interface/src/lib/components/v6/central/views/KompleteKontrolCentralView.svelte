@@ -87,7 +87,7 @@
          cell (user, 2026-10-26). -->
     <div class="controls-panel">
       <!-- The plug-in's eight parameters as knobs, as Live draws a rack's
-           macros: the grid that gives each the most room (ADR-508). -->
+           macros: the grid that gives each the most room (ADR-509). -->
       <KnobGrid count={SLIDER_PARAMS.length}>
       {#snippet item(i)}
         {@const paramIndex = SLIDER_PARAMS[i]}

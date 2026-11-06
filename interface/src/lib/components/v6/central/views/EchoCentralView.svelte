@@ -306,7 +306,7 @@
 		</button>
 	</div>
 
-	<!-- The LFO's two depths, Time over Filter: a pair of knobs (ADR-508). -->
+	<!-- The LFO's two depths, Time over Filter: a pair of knobs (ADR-509). -->
 	<div class="col box-pair">
 		<div class="box">
 			<DeviceSlider
@@ -344,7 +344,7 @@
 
 	<!-- The levels in two pairs: Input over Output (Input drags Output the
 	     other way) as knobs, then Feedback over Mix, the pair the Echo tile
-	     plays, as boxes (ADR-508). -->
+	     plays, as boxes (ADR-509). -->
 	<div class="col box-pair">
 		<div class="box">
 			<DeviceSlider
@@ -414,7 +414,7 @@
 </div>
 
 <style>
-	/* Eleven equal columns — Time spans two for its knob (ADR-508), the
+	/* Eleven equal columns — Time spans two for its knob (ADR-509), the
 	   filter graph four — with an `auto` track for each seam: Time + Filter
 	   | LFO (wave, rate, depths) | levels. */
 	.echo-layout {
@@ -456,7 +456,7 @@
 		flex: 1 1 0;
 		min-height: 0;
 	}
-	/* A knob's switch: a pill one touch row tall under it (ADR-508). */
+	/* A knob's switch: a pill one touch row tall under it (ADR-509). */
 	.echo-switch {
 		flex: 0 0 var(--height-touch);
 		align-self: center;
