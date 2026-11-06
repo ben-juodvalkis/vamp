@@ -244,7 +244,10 @@ describe.each([
 		const { container } = render(View, { props: { instrument: instrument(name, className) } });
 		await tick();
 		expect(links(container)).toEqual(expect.arrayContaining([...first]));
-		await fireEvent.click(el(container, '.osc-badge'));
+		// Meld's half is picked by touching Engine B's level box, Analog's by its badge.
+		HTMLElement.prototype.setPointerCapture ??= () => {};
+		if (name === 'Meld') await fireEvent.pointerDown(el(container, '[data-engine-level="B"] [role="slider"]'), { pointerId: 1 });
+		else await fireEvent.click(el(container, '.osc-badge'));
 		expect(links(container)).toEqual(expect.arrayContaining([...second]));
 		await fireEvent.click(el(container, `.eyebrow-link[data-page="${second[1]}"]`));
 		expect(el(container, '[data-panel-page]').dataset.panelPage).toBe(second[1]);

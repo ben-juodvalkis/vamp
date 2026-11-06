@@ -9,6 +9,10 @@
   import { usePanelParams } from './panel/usePanelParams.svelte';
   import { MELD_PANEL } from './panel/meldPanel';
   import EnvelopeGroup from './EnvelopeGroup.svelte';
+  import MeldOscIcon from './meld/MeldOscIcon.svelte';
+  import { drag } from '$lib/actions';
+  import type { DragInfo } from '$lib/actions/drag';
+  import { gridCellIndex, scrubBoxOf, type ScrubBox } from '$lib/utils/segmentScrub';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -59,7 +63,8 @@
   } as const;
 
   /**
-   * Which engine the view is showing. View state only, as on Analog: it
+   * Which engine the view is showing, picked by touching its level box at
+   * the view's left (2026-11-05; an A/B badge before). View state only: it
    * writes nothing to Live (not even Meld's own `selected_engine`), so a
    * patch change never takes the half away mid-edit.
    */
@@ -69,11 +74,12 @@
   const panelParams = usePanelParams(() => device);
   let pageEngine = $derived(engine === 'A' ? 'a' : 'b');
   let p = $derived(MELD_ENGINE[engine]);
-  let engineInk = $derived.by(() => {
-    const raw = ENGINE_COLORS[engine];
+  function inkOf(e: MeldEngine) {
+    const raw = ENGINE_COLORS[e];
     const mode = paintModeReactive();
     return { primary: trackInk(raw.primary, mode), secondary: raw.secondary, accent: trackInk(raw.accent, mode) };
-  });
+  }
+  let engineInk = $derived(inkOf(engine));
 
   /** Every parameter the view drives is natively 0..1 or a raw step, so no rescaling. */
   function read(index: number, atRest: number): number {
@@ -114,6 +120,26 @@
 
   const octaveLabel = (n: number) => (n > 0 ? `+${n}` : `${n}`);
 
+  /** The octave column, +3 at the top: a finger sweeps through it (Echo's wave grid's scrub). */
+  const OCTAVES_DOWN = [...MELD_OCTAVES].reverse();
+  let octStack = $state<HTMLElement | null>(null);
+  let octBox: ScrubBox | null = null;
+  function octaveAt(clientX: number, clientY: number) {
+    if (!octBox) return;
+    const n = OCTAVES_DOWN[gridCellIndex(clientX, clientY, octBox, 1, OCTAVES_DOWN.length)];
+    if (n !== undefined && n !== octave) writeOsc(p.octave, n);
+  }
+  function octaveScrubDown(info: DragInfo) {
+    octBox = scrubBoxOf(octStack);
+    octaveAt(info.x, info.y);
+  }
+
+  /** An engine's level; reaching for it shows that engine and turns it on. */
+  function writeLevel(e: MeldEngine, value: number) {
+    if (!(e === 'A' ? aOn : bOn)) write(MELD_ENGINE[e].on, 1);
+    write(MELD_ENGINE[e].volume, value);
+  }
+
   // ---- filter
 
   let filterType = $derived(Math.round(read(p.filterType, 0)));
@@ -136,15 +162,14 @@
    */
   let chooser = $state<'osc' | 'filter' | null>(null);
 
-  // ---- envelopes: Amp over Mod, both in view (ADR-477). The first box of
-  // each is what that envelope ends in — the engine's volume, the mod
-  // envelope's peak.
+  // ---- envelopes: Amp over Mod, both in view (ADR-477). The engine's
+  // volume is its level box at the view's left; the mod envelope's first
+  // box is its peak.
 
   let envelopes = $derived([
     {
       title: 'Amp Envelope',
       stages: [
-        { index: p.volume, title: 'Vol', icon: 'gain' as const, atRest: 0.635 },
         { index: p.ampAttack, title: 'A', icon: 'attack' as const, atRest: 0.07 },
         { index: p.ampDecay, title: 'D', icon: 'decay' as const, atRest: 0.35 },
         { index: p.ampSustain, title: 'S', icon: 'sustain' as const, atRest: 1 },
@@ -188,6 +213,29 @@
     <InstrumentPanelView panel={MELD_PANEL} params={panelParams} color={meldInk}>
     {#snippet face(openPage: (page: string) => void)}
     <div class="h-full w-full flex min-h-0 p-(--central-inset)" style="gap: var(--central-gap);">
+      <!-- THE LEVELS: Engine A over Engine B at the view's left edge, each
+           in its colour, as on Wavetable (user, 2026-11-05). Touching one
+           brings its engine up, so there is no A/B switch. -->
+      <div class="mixer-col flex-none min-h-0 flex flex-col gap-(--central-gap)">
+        <PanelEyebrow color={meldInk.primary} />
+        {#each ['A', 'B'] as const as e (e)}
+          <div class="flex-1 min-h-0" data-engine-level={e} class:shown={engine === e}>
+            <DeviceSlider
+              value={read(MELD_ENGINE[e].volume, 0.635)}
+              title="Engine {e}"
+              icon="gain"
+              orientation="vertical"
+              labelSize="small"
+              isGhost={!(e === 'A' ? aOn : bOn)}
+              color={inkOf(e)}
+              readout={display(MELD_ENGINE[e].volume)}
+              onDown={() => (engine = e)}
+              onInteraction={(v) => writeLevel(e, v)}
+            />
+          </div>
+        {/each}
+      </div>
+
 
       <!-- THE ENGINE. Meld is two synths, Osc → Filter → Amp twice, so the
            A/B switch flips this pad, the filter and the envelopes together
@@ -197,41 +245,42 @@
         <PanelEyebrow title="Engine {engine}" page="osc-{pageEngine}" onOpen={openPage} color={engineInk.primary} />
         <HostedSwapPill />
         <div class="engine-head flex-none">
-          <button
-            class="osc-badge"
-            style="--osc-badge-ink: {engineInk.primary};"
-            aria-label="Engine {engine} — switch to engine {engine === 'A' ? 'B' : 'A'}"
-            onclick={() => (engine = engine === 'A' ? 'B' : 'A')}
-          >
-            <span class="osc-badge-eyebrow">Engine</span>
-            <span class="osc-badge-pair">
-              <span class="osc-badge-n" class:on={engine === 'A'} class:silent={!aOn}>A</span><span
-                class="osc-badge-slash">/</span><span
-                class="osc-badge-n" class:on={engine === 'B'} class:silent={!bOn}>B</span>
-            </span>
-          </button>
           {@render typeChooser('osc', MELD_OSC_TYPES[oscType] ?? '—', (step) => writeOsc(p.oscType, stepOscType(oscType, step)))}
         </div>
-        <div class="flex-1 min-h-0 relative" style={engineOn ? '' : 'opacity: var(--opacity-ghost);'}>
-          <DeviceXY
-            xValue={read(p.oscShape, 0)}
-            yValue={read(p.oscTone, 0)}
-            title="Osc {engine}"
-            isGhost={!engineOn}
-            onInteraction={handleOscXY}
-            color={engineInk}
-          />
-        </div>
-        <div class="device-segmented octave-row flex-none" style="--btn-tint: {engineInk.primary}; grid-template-columns: repeat({MELD_OCTAVES.length}, 1fr);">
-          {#each MELD_OCTAVES as n}
-            <button
-              class="device-segment strip-step"
-              class:active={octave === n}
-              aria-label="Engine {engine} octave {octaveLabel(n)}"
-              aria-pressed={octave === n}
-              onclick={() => writeOsc(p.octave, n)}
-            >{octaveLabel(n)}</button>
-          {/each}
+        <div class="flex-1 min-h-0 flex gap-(--central-gap)">
+          <!-- The octaves, +3 at the top, one column down the pad's left
+               (user, 2026-11-05), as on Wavetable. -->
+          <div
+            class="device-segmented oct-stack flex-none min-h-0"
+            style="--btn-tint: {engineInk.primary}; grid-template-rows: repeat({OCTAVES_DOWN.length}, 1fr);"
+            bind:this={octStack}
+            use:drag={{ commit: 'immediate', onDown: octaveScrubDown, onMove: (i) => octaveAt(i.x, i.y) }}
+          >
+            {#each OCTAVES_DOWN as n}
+              <button
+                class="device-segment strip-step"
+                class:active={octave === n}
+                aria-label="Engine {engine} octave {octaveLabel(n)}"
+                aria-pressed={octave === n}
+                onclick={() => writeOsc(p.octave, n)}
+              >{octaveLabel(n)}</button>
+            {/each}
+          </div>
+          <!-- Shape across, Tone up, the type's mark behind and its name at
+               the pad's foot. -->
+          <div class="flex-1 min-w-0 min-h-0 relative" style={engineOn ? '' : 'opacity: var(--opacity-ghost);'}>
+            <DeviceXY
+              xValue={read(p.oscShape, 0)}
+              yValue={read(p.oscTone, 0)}
+              title={MELD_OSC_TYPES[oscType] ?? `Osc ${engine}`}
+              titleAt="bottom"
+              isGhost={!engineOn}
+              onInteraction={handleOscXY}
+              color={engineInk}
+            >
+              {#snippet background()}<MeldOscIcon type={oscType} color={engineInk.primary} raised />{/snippet}
+            </DeviceXY>
+          </div>
         </div>
       </div>
 
@@ -457,17 +506,21 @@
     height: var(--height-touch);
   }
 
-  .octave-row {
+  /* The level column and the octave column, a touch row wide each. */
+  .mixer-col {
+    width: var(--meld-slider-w);
+  }
+  .oct-stack {
     display: grid;
-    height: var(--height-touch);
+    width: var(--height-touch);
   }
-  .octave-row .device-segment + .device-segment {
-    border-top: 0;
-    border-left: 1px solid var(--line-faint);
+  .meld-root .oct-stack .device-segment + .device-segment {
+    border-left: 0;
+    border-top: 1px solid var(--line-faint);
   }
-  .device-segment.active,
-  .device-segment.active + .device-segment {
-    border-left-color: transparent;
+  .meld-root .oct-stack .device-segment.active,
+  .meld-root .oct-stack .device-segment.active + .device-segment {
+    border-top-color: transparent;
   }
   .strip-step {
     display: flex;
@@ -495,53 +548,6 @@
     width: var(--meld-global-w);
   }
 
-  /* The Engine A/B switch: Analog's voice badge, a circle a touch row tall. */
-  .osc-badge {
-    flex: 0 0 auto;
-    width: var(--height-touch);
-    height: var(--height-touch);
-    border-radius: 999px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 1px;
-    line-height: 1;
-    background: var(--osc-badge-ink);
-    border: 1px solid var(--osc-badge-ink);
-    color: var(--flat-on-fg);
-    cursor: pointer;
-    transition: background-color var(--t-fast) var(--ease-precise);
-  }
-  .osc-badge-eyebrow {
-    font-size: 7px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    opacity: 0.8;
-  }
-  .osc-badge-pair {
-    display: flex;
-    align-items: baseline;
-    font-size: 14px;
-    font-weight: 700;
-  }
-  .osc-badge-n {
-    opacity: 0.45;
-  }
-  .osc-badge-n.on {
-    opacity: 1;
-  }
-  .osc-badge-n.silent {
-    opacity: 0.25;
-  }
-  .osc-badge-n.on.silent {
-    opacity: 0.55;
-  }
-  .osc-badge-slash {
-    opacity: 0.45;
-    padding: 0 1px;
-  }
-
   /* ---- Flat grammar: Analog's, so the two two-engine synths read alike.
      The engine colour is re-asserted against the house pair — here the
      colour IS the meaning (which half you are holding). */
@@ -551,13 +557,20 @@
   :global([data-grammar="flat"]) .meld-root .type-grid .device-segment:not(.active) {
     color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
   }
-  :global([data-grammar="flat"]) .meld-root .device-segmented:not(.seg-grid) .device-segment + .device-segment {
+  :global([data-grammar="flat"]) .meld-root .device-segmented:not(.seg-grid):not(.oct-stack) .device-segment + .device-segment {
     border-top: 0;
     border-left: 1px solid var(--line-strong);
   }
   :global([data-grammar="flat"]) .meld-root .device-segment.active,
   :global([data-grammar="flat"]) .meld-root .device-segment.active + .device-segment {
     border-left-color: transparent;
+  }
+  :global([data-grammar="flat"]) .meld-root .oct-stack .device-segment + .device-segment {
+    border-top: 1px solid var(--line-strong);
+  }
+  :global([data-grammar="flat"]) .meld-root .oct-stack .device-segment.active,
+  :global([data-grammar="flat"]) .meld-root .oct-stack .device-segment.active + .device-segment {
+    border-top-color: transparent;
   }
   :global([data-grammar="flat"]) .meld-root .device-segment {
     color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));

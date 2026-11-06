@@ -984,7 +984,7 @@ function instrumentSwapStates() {
 		['wavetable-global', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable'), [{ click: '.eyebrow-link[data-page="global"]' }]],
 		// Meld's face (ADR-487), the measured patch, and the pages its eyebrows open.
 		['meld-osc-a', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '.eyebrow-link[data-page="osc-a"]' }]],
-		['meld-filter-b', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '.osc-badge' }, { click: '.eyebrow-link[data-page="filter-b"]' }]],
+		['meld-filter-b', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '[data-engine-level="B"] [role="slider"]' }, { click: '.eyebrow-link[data-page="filter-b"]' }]],
 		['meld-menv-a', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '.eyebrow-link[data-page="env-a"]' }, { click: '[data-group="Mod Env"] .eyebrow-link' }]],
 		['meld-lfo-a', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '.eyebrow-link[data-page="lfo-a"]' }]],
 		['meld-lfofx-a', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '.eyebrow-link[data-page="lfo-a"]' }, { click: '[data-group="LFO 1"] .eyebrow-link' }]],
@@ -994,7 +994,7 @@ function instrumentSwapStates() {
 		['electric-global', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Global"] .eyebrow-link' }]],
 		['meld', 'Meld', 'InstrumentMeld', meld],
 		// Engine B up: the other half, in blue (both its envelopes in view, ADR-477).
-		['meld-engine-b', 'Meld', 'InstrumentMeld', meld, [{ click: '.osc-badge' }]],
+		['meld-engine-b', 'Meld', 'InstrumentMeld', meld, [{ click: '[data-engine-level="B"] [role="slider"]' }]],
 		// The oscillator type grid open over the Osc pad.
 		['meld-osc-types', 'Meld', 'InstrumentMeld', meld, [{ click: '.engine-head .chooser-name' }]],
 		// Plate picked from the filter grid: the second macro reads Ratio.

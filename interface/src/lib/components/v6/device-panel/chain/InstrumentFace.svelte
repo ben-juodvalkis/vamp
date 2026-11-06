@@ -8,7 +8,7 @@
   /**
    * The instrument's face in the chain overview (2026-10-25): the one
    * control its own view is known by, on the cell's device — Omnisphere's
-   * ORB, Drift's filter, Wavetable's Osc 1 pad with its wave, and every instrument in `INSTRUMENT_CONTROLS`
+   * ORB, Drift's filter, Wavetable's Osc 1 pad with its wave, Meld's Osc A pad with its type's mark, and every instrument in `INSTRUMENT_CONTROLS`
    * (Operator's filter, Collision's first resonator, an Instrument Rack's
    * first macro…, 2026-10-26). The parameter slots are the views' own
    * (measured there); an instrument with no face here keeps its mark.
@@ -23,6 +23,8 @@
   import type { DeviceColorScheme } from '$lib/config/devicePresets';
   import WavetableWave from '../../central/views/wavetable/WavetableWave.svelte';
   import { useOscWave } from '../../central/views/wavetable/useOscWave.svelte';
+  import MeldOscIcon from '../../central/views/meld/MeldOscIcon.svelte';
+  import { MELD_ENGINE } from '../../central/views/meldParams';
 
   interface Props {
     device: DeviceRecord;
@@ -79,6 +81,9 @@
       : null
   );
 
+  // Meld: Engine A's oscillator type, its mark the pad's only picture.
+  const meldOscType = $derived(type === 'meld' ? Math.round(raw(MELD_ENGINE.A.oscType, 0)) : 0);
+
   // Omnisphere: the ORB's angle and radius (OmnisphereCentralView, 25 / 26).
   // Drift: cutoff and resonance, the LP type for the curve (DriftCentralView, 1 / 2 / 3).
 </script>
@@ -113,7 +118,7 @@
   <DeviceXY
     xValue={readRef(control.x, control.rest[0])}
     yValue={readRef(control.y, control.rest[1])}
-    title={control.title}
+    title={type === 'meld' ? '' : control.title}
     titleAt={type === 'wavetable' ? 'bottom' : 'center'}
     showCurve={false}
     onInteraction={(x, y) => {
@@ -125,6 +130,7 @@
   >
     {#snippet background()}
       {#if type === 'wavetable'}<WavetableWave cycle={oscCycle} color={color.primary} />{/if}
+      {#if type === 'meld'}<MeldOscIcon type={meldOscType} color={color.primary} />{/if}
     {/snippet}
   </DeviceXY>
 {:else if control?.kind === 'macro'}

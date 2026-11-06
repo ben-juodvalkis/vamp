@@ -442,10 +442,16 @@
     gap: 0.15em;
   }
 
+  /* At the foot the title takes the pad's whole width, so a long name
+     (Meld's "Basic Shapes") stays one line rather than wrapping in the
+     right half a centred box is left. */
   .center-title.title-bottom {
     top: auto;
+    left: var(--spacing-sm);
+    right: var(--spacing-sm);
     bottom: var(--spacing-sm);
-    transform: translateX(-50%);
+    transform: none;
+    text-align: center;
   }
 
   .title-icon {
