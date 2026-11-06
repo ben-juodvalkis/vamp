@@ -474,12 +474,32 @@ import { logger } from '$lib/utils/logger';
 			{/if}
 		</div>
 
-		<!-- Col 3: Dup Trk top + Delete bottom. Delete moved here from col 5
+		<!-- Col 3: Delete top + Dup Trk bottom. Delete moved here from col 5
 		     on 2026-11-06, trading places with the left loop arrow so both
 		     arrows share col 5; Dup Trk came from col 9 the same day, so the
 		     two toggles (REC, Group) share the first column. -->
 		<div class="col col-3">
 			<div class="stacked-btns">
+				<div class="btn-cell">
+					<button
+						onclick={handleDeleteClip}
+						disabled={!hasClip}
+						class="btn btn-well btn-action fam-del"
+					>
+						<span class="flex items-center justify-center btn-caps" aria-label="Delete clip">
+								<!-- Wide clip box with MIDI note bars, big red X overlaid -->
+								<svg class="w-12 h-12" fill="none" viewBox="0 0 36 24">
+									<rect x="2" y="4" width="32" height="16" rx="2" stroke="currentColor" stroke-width="2" />
+									<rect x="6" y="12" width="6" height="2.5" rx="0.75" fill="currentColor" />
+									<rect x="13" y="8" width="5" height="2.5" rx="0.75" fill="currentColor" />
+									<rect x="19" y="14" width="7" height="2.5" rx="0.75" fill="currentColor" />
+									<rect x="24" y="10" width="5" height="2.5" rx="0.75" fill="currentColor" />
+									<line x1="9" y1="3" x2="27" y2="21" style="stroke: var(--act-rec)" stroke-width="3" stroke-linecap="round" />
+									<line x1="27" y1="3" x2="9" y2="21" style="stroke: var(--act-rec)" stroke-width="3" stroke-linecap="round" />
+								</svg>
+						</span>
+					</button>
+				</div>
 				<div class="btn-cell">
 					<button
 						onclick={handleDupTrack}
@@ -507,26 +527,6 @@ import { logger } from '$lib/utils/logger';
 									<rect x="20" y="22.5" width="6" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" />
 								</svg>
 							{/if}
-						</span>
-					</button>
-				</div>
-				<div class="btn-cell">
-					<button
-						onclick={handleDeleteClip}
-						disabled={!hasClip}
-						class="btn btn-well btn-action fam-del"
-					>
-						<span class="flex items-center justify-center btn-caps" aria-label="Delete clip">
-								<!-- Wide clip box with MIDI note bars, big red X overlaid -->
-								<svg class="w-12 h-12" fill="none" viewBox="0 0 36 24">
-									<rect x="2" y="4" width="32" height="16" rx="2" stroke="currentColor" stroke-width="2" />
-									<rect x="6" y="12" width="6" height="2.5" rx="0.75" fill="currentColor" />
-									<rect x="13" y="8" width="5" height="2.5" rx="0.75" fill="currentColor" />
-									<rect x="19" y="14" width="7" height="2.5" rx="0.75" fill="currentColor" />
-									<rect x="24" y="10" width="5" height="2.5" rx="0.75" fill="currentColor" />
-									<line x1="9" y1="3" x2="27" y2="21" style="stroke: var(--act-rec)" stroke-width="3" stroke-linecap="round" />
-									<line x1="27" y1="3" x2="9" y2="21" style="stroke: var(--act-rec)" stroke-width="3" stroke-linecap="round" />
-								</svg>
 						</span>
 					</button>
 				</div>
@@ -775,7 +775,7 @@ import { logger } from '$lib/utils/logger';
 
 	/* Equal columns at fixed positions (audio adds Pitch's), plus
 	   the `auto` seam track that groups them (2026-09-13):
-	     REC/Group · Dup Trk/Del · nav | Loop X2 · ±12 · Temp over Chance
+	     REC/Group · Del/Dup Trk · nav | Loop X2 · ±12 · Temp over Chance
 	   The seam is `auto`, so a track is a hairline wide and the six content
 	   columns still divide the rest evenly. Regrouped on the user's call the
 	   same day: what acts on the track or the clip | what shapes what the
