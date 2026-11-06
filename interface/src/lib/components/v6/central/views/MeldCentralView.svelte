@@ -10,9 +10,7 @@
   import { MELD_PANEL } from './panel/meldPanel';
   import EnvelopeGroup from './EnvelopeGroup.svelte';
   import MeldOscIcon from './meld/MeldOscIcon.svelte';
-  import { drag } from '$lib/actions';
-  import type { DragInfo } from '$lib/actions/drag';
-  import { gridCellIndex, scrubBoxOf, type ScrubBox } from '$lib/utils/segmentScrub';
+  import ScrubTabs from '../../device-panel/ScrubTabs.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -120,19 +118,8 @@
 
   const octaveLabel = (n: number) => (n > 0 ? `+${n}` : `${n}`);
 
-  /** The octave column, +3 at the top: a finger sweeps through it (Echo's wave grid's scrub). */
+  /** The octave column, +3 at the top; a finger sweeps through it (ScrubTabs). */
   const OCTAVES_DOWN = [...MELD_OCTAVES].reverse();
-  let octStack = $state<HTMLElement | null>(null);
-  let octBox: ScrubBox | null = null;
-  function octaveAt(clientX: number, clientY: number) {
-    if (!octBox) return;
-    const n = OCTAVES_DOWN[gridCellIndex(clientX, clientY, octBox, 1, OCTAVES_DOWN.length)];
-    if (n !== undefined && n !== octave) writeOsc(p.octave, n);
-  }
-  function octaveScrubDown(info: DragInfo) {
-    octBox = scrubBoxOf(octStack);
-    octaveAt(info.x, info.y);
-  }
 
   /** An engine's level; reaching for it shows that engine and turns it on. */
   function writeLevel(e: MeldEngine, value: number) {
@@ -250,21 +237,18 @@
         <div class="flex-1 min-h-0 flex gap-(--central-gap)">
           <!-- The octaves, +3 at the top, one column down the pad's left
                (user, 2026-11-05), as on Wavetable. -->
-          <div
-            class="device-segmented oct-stack flex-none min-h-0"
-            style="--btn-tint: {engineInk.primary}; grid-template-rows: repeat({OCTAVES_DOWN.length}, 1fr);"
-            bind:this={octStack}
-            use:drag={{ commit: 'immediate', onDown: octaveScrubDown, onMove: (i) => octaveAt(i.x, i.y) }}
-          >
-            {#each OCTAVES_DOWN as n}
-              <button
-                class="device-segment strip-step"
-                class:active={octave === n}
-                aria-label="Engine {engine} octave {octaveLabel(n)}"
-                aria-pressed={octave === n}
-                onclick={() => writeOsc(p.octave, n)}
-              >{octaveLabel(n)}</button>
-            {/each}
+          <div class="oct-col flex-none min-h-0 flex flex-col">
+            <ScrubTabs
+              options={OCTAVES_DOWN}
+              selected={OCTAVES_DOWN.indexOf(octave as (typeof OCTAVES_DOWN)[number])}
+              onSelect={(_, n) => writeOsc(p.octave, n)}
+              cols={1}
+              tint={engineInk.primary}
+              label={(n) => `Engine ${engine} octave ${octaveLabel(n)}`}
+              class="flex-1"
+            >
+              {#snippet item(n)}{octaveLabel(n)}{/snippet}
+            </ScrubTabs>
           </div>
           <!-- Shape across, Tone up, the type's mark behind and its name at
                the pad's foot. -->
@@ -510,30 +494,9 @@
   .mixer-col {
     width: var(--meld-slider-w);
   }
-  .oct-stack {
-    display: grid;
+  .oct-col {
     width: var(--height-touch);
   }
-  .meld-root .oct-stack .device-segment + .device-segment {
-    border-left: 0;
-    border-top: 1px solid var(--line-faint);
-  }
-  .meld-root .oct-stack .device-segment.active,
-  .meld-root .oct-stack .device-segment.active + .device-segment {
-    border-top-color: transparent;
-  }
-  .strip-step {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 0;
-    min-width: 0;
-    padding: 2px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-  }
-
   /* Five stages and their four gaps, plus the bracket's two seams and the
      gap beside each, all drawn inside this column. */
   .env-col {
@@ -557,20 +520,13 @@
   :global([data-grammar="flat"]) .meld-root .type-grid .device-segment:not(.active) {
     color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
   }
-  :global([data-grammar="flat"]) .meld-root .device-segmented:not(.seg-grid):not(.oct-stack) .device-segment + .device-segment {
+  :global([data-grammar="flat"]) .meld-root .device-segmented:not(.seg-grid) .device-segment + .device-segment {
     border-top: 0;
     border-left: 1px solid var(--line-strong);
   }
   :global([data-grammar="flat"]) .meld-root .device-segment.active,
   :global([data-grammar="flat"]) .meld-root .device-segment.active + .device-segment {
     border-left-color: transparent;
-  }
-  :global([data-grammar="flat"]) .meld-root .oct-stack .device-segment + .device-segment {
-    border-top: 1px solid var(--line-strong);
-  }
-  :global([data-grammar="flat"]) .meld-root .oct-stack .device-segment.active,
-  :global([data-grammar="flat"]) .meld-root .oct-stack .device-segment.active + .device-segment {
-    border-top-color: transparent;
   }
   :global([data-grammar="flat"]) .meld-root .device-segment {
     color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
