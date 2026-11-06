@@ -104,9 +104,13 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0, variant = 0)
 		}
 		// Tremolo: two cycles of its LFO in the shape the Tremolo view shows
 		// (the user, 2026-10-26: "match the actual shape"): `variant` 0 saw
-		// down, 1 square, 2 sine, 3 triangle. Deeper with its depth.
+		// down, 1 square, 2 sine, 3 triangle. Y is the tile's: depth is the
+		// distance from the middle, and below it Invert is on
+		// (`autoPanParams.tileAmount`), so the wave is drawn upside down
+		// there (the user, 2026-11-05).
 		case 'tremolo': {
-			const amp = 8 + y * 32;
+			const inverted = y < 0.5;
+			const amp = (8 + Math.abs(2 * y - 1) * 32) * (inverted ? -1 : 1);
 			const wave = (u: number) => {
 				switch (Math.round(variant)) {
 					case 0: return 1 - 2 * u;
