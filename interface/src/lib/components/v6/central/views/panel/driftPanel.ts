@@ -69,12 +69,10 @@ export const DRIFT_PANEL: InstrumentPanel = {
 					{
 						title: 'Osc Mix',
 						controls: [
-							{ kind: 'switch', param: 'Osc 1 On', title: 'Osc 1' },
-							{ kind: 'box', param: 'Osc 1 Gain', title: 'Gain 1' },
-							{ kind: 'switch', param: 'Osc 2 On', title: 'Osc 2' },
-							{ kind: 'box', param: 'Osc 2 Gain', title: 'Gain 2' },
-							{ kind: 'switch', param: 'Noise On', title: 'Noise' },
-							{ kind: 'box', param: 'Noise Gain', title: 'Noise' }
+							// Each source's switch under its level (ADR-508).
+							{ kind: 'box', param: 'Osc 1 Gain', title: 'Osc 1', toggle: { param: 'Osc 1 On', title: 'On' } },
+							{ kind: 'box', param: 'Osc 2 Gain', title: 'Osc 2', toggle: { param: 'Osc 2 On', title: 'On' } },
+							{ kind: 'box', param: 'Noise Gain', title: 'Noise', toggle: { param: 'Noise On', title: 'On' } }
 						]
 					},
 					{
@@ -91,6 +89,8 @@ export const DRIFT_PANEL: InstrumentPanel = {
 		{
 			id: 'filter',
 			title: 'Filter',
+			// The face's filter pad, full height beside the knobs (ADR-508).
+			aside: { slot: 'filter', units: 3, params: ['LP Freq', 'LP Res', 'HP Freq'] },
 			rows: [
 				[
 					{
@@ -101,7 +101,9 @@ export const DRIFT_PANEL: InstrumentPanel = {
 							{ kind: 'choice', param: 'LP Type', options: ['I', 'II'] },
 							{ kind: 'box', param: 'Key > LPF', title: 'Key' }
 						]
-					},
+					}
+				],
+				[
 					{
 						title: 'High Pass',
 						controls: [{ kind: 'box', param: 'HP Freq', title: 'Freq' }]

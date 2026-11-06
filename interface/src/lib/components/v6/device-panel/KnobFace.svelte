@@ -125,7 +125,7 @@
     padding: 0.375rem 0.25rem;
   }
   /* A wide, short cell puts the caption beside the knob. */
-  @container (min-aspect-ratio: 3/2) {
+  @container (min-aspect-ratio: 6/5) {
     .knob-body {
       grid-template-rows: auto;
       grid-template-columns: auto auto;
@@ -143,9 +143,9 @@
     width: var(--knob-d);
     height: var(--knob-d);
   }
-  @container (min-aspect-ratio: 3/2) {
+  @container (min-aspect-ratio: 6/5) {
     .knob-face {
-      --knob-d: max(28px, min(100cqh - 0.75rem, 40cqw, 150px));
+      --knob-d: max(28px, min(100cqh - 0.75rem, 50cqw, 150px));
     }
   }
   .knob-svg {
@@ -222,7 +222,7 @@
     line-height: 1.15;
     text-align: center;
   }
-  @container (min-aspect-ratio: 3/2) {
+  @container (min-aspect-ratio: 6/5) {
     .knob-caption {
       align-items: flex-start;
       text-align: left;
@@ -239,9 +239,9 @@
     white-space: nowrap;
   }
   /* Beside the knob the name has the cell's width less the knob's. */
-  @container (min-aspect-ratio: 3/2) {
+  @container (min-aspect-ratio: 6/5) {
     .knob-title {
-      font-size: clamp(10px, 10.5cqw, 15px);
+      font-size: clamp(10px, 9.5cqw, 15px);
     }
   }
   .knob-value-text {

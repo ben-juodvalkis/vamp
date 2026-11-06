@@ -390,6 +390,19 @@
 <!-- The waveform drawing. `currentColor`, so it takes the button's own
      ink in every state — including the inverse a lit segment needs — and
      `aria-hidden`, because the button already carries Live's name. -->
+<!-- The face's filter pad, again beside the Filter page's knobs (ADR-508). -->
+{#snippet filterPad()}
+  <div class="min-h-0 min-w-0 h-full w-full">
+    <FilterDotsGraph
+      dots={filterDots}
+      curves={[{ d: filterCurve, color: driftInk.primary }]}
+      ariaLabel="Filter: low-pass {Math.round(cutoffValue * 100)}%, high-pass {Math.round(hpValue * 100)}%"
+      onGrab={(i) => (filterDot = i === 0 ? 0 : 1)}
+      onMove={moveFilterDot}
+    />
+  </div>
+{/snippet}
+
 {#snippet waveGlyph(label: string)}
   <svg class="wave-glyph" viewBox="0 0 24 12" aria-hidden="true" focusable="false">
     <path
@@ -412,7 +425,7 @@
       on the pad, set its level — so the two cards are the same gesture twice.
       Mirrors AutoFilterCentralView's flex-[N] idiom for consistency across views.
     -->
-    <InstrumentPanelView panel={DRIFT_PANEL} params={panelParams} color={driftInk}>
+    <InstrumentPanelView panel={DRIFT_PANEL} params={panelParams} color={driftInk} slots={{ filter: filterPad }}>
     {#snippet face(openPage: (page: string) => void)}
     <div class="h-full w-full flex min-h-0 p-(--central-inset)" style="gap: var(--central-gap);">
 

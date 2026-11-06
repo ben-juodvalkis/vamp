@@ -15,7 +15,7 @@
 	import PanelGroupView from './PanelGroupView.svelte';
 	import PanelTabs from './PanelTabs.svelte';
 	import PanelEyebrow from './PanelEyebrow.svelte';
-	import { groupUnits, regionUnits, type InstrumentPanel } from './panelTypes';
+	import { groupUnits, regionUnits, type InstrumentPanel, type PanelPage } from './panelTypes';
 	import type { PanelParams } from './usePanelParams.svelte';
 
 	interface Props {
@@ -51,17 +51,29 @@
 			<span class="back-title">{page.title}</span>
 		</button>
 		<SectionDivider orientation="vertical" ink={color.primary} />
-		<div class="panel-rows">
-			{#each page.rows as row, r (r)}
-				<div class="panel-page-row">
-					{#each row as group, g (g)}
-						{#if g > 0}<SectionDivider orientation="vertical" ink={color.primary} />{/if}
-						<PanelGroupView {group} {params} {color} pageRows={page.rows.length} onOpen={openPage} boxFace={panel.boxFace} />
-					{/each}
-				</div>
-			{/each}
-		</div>
+		{#if page.aside}
+			{@const rowUnits = Math.max(...page.rows.map((row) => row.reduce((n, g) => n + groupUnits(g, page.rows.length, panel.boxFace), 0)))}
+			<div class="panel-aside" style="flex: {page.aside.units} 1 0;" data-group={page.aside.slot}>{@render slots[page.aside.slot]?.()}</div>
+			<SectionDivider orientation="vertical" ink={color.primary} />
+			<div class="panel-rows" style="flex: {rowUnits} 1 0;">
+				{@render pageRows(page)}
+			</div>
+		{:else}
+			<div class="panel-rows">
+				{@render pageRows(page)}
+			</div>
+		{/if}
 	</div>
+	{#snippet pageRows(p: PanelPage)}
+		{#each p.rows as row, r (r)}
+			<div class="panel-page-row">
+				{#each row as group, g (g)}
+					{#if g > 0}<SectionDivider orientation="vertical" ink={color.primary} />{/if}
+					<PanelGroupView {group} {params} {color} pageRows={p.rows.length} onOpen={openPage} boxFace={panel.boxFace} />
+				{/each}
+			</div>
+		{/each}
+	{/snippet}
 {:else if face}
 	<div class="h-full w-full" data-panel-page="frame">{@render face(openPage)}</div>
 {:else}
@@ -149,6 +161,15 @@
 		gap: var(--central-gap);
 		min-width: 0;
 		min-height: 0;
+	}
+	.panel-aside {
+		display: flex;
+		min-width: 0;
+		min-height: 0;
+	}
+	.panel-aside > :global(*) {
+		flex: 1 1 0;
+		min-width: 0;
 	}
 	.panel-page-row {
 		flex: 1 1 0;

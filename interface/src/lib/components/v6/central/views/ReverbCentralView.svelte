@@ -463,9 +463,30 @@
   /** What the picture shows: the tail, or the reverb's EQ — Live's two tabs. */
   let panel = $state<'reverb' | 'eq'>('reverb');
 
-  let sharedRows = $derived(isConvolution ? convolutionShared : shared);
-  // Two rows of boxes, so a column per two.
-  let sharedCols = $derived(Math.ceil(sharedRows.length / 2));
+  let allShared = $derived(isConvolution ? convolutionShared : shared);
+  // Dry/Wet stands apart, a full-height box at the right edge: the level a
+  // set rides, where every other control is a knob (ADR-508).
+  let sharedRows = $derived(allShared.filter((r) => r.key !== 'drywet'));
+  let wetRow = $derived(allShared.find((r) => r.key === 'drywet'));
+  // Two rows of knobs filled column by column. A knob with a switch takes
+  // a column's top cell and its switch the cell under it, so a knob without
+  // one that would land in a column's foot ahead of it moves up to fill it.
+  let sharedCells = $derived.by(() => {
+    const queue = [...sharedRows];
+    const cells: { row: Row; chip: boolean }[] = [];
+    while (queue.length) {
+      let next = queue[0];
+      if (next.chip && cells.length % 2 === 1) {
+        const filler = queue.findIndex((r) => !r.chip);
+        if (filler >= 0) next = queue[filler];
+      }
+      queue.splice(queue.indexOf(next), 1);
+      cells.push({ row: next, chip: false });
+      if (next.chip) cells.push({ row: next, chip: true });
+    }
+    return cells;
+  });
+  let sharedCols = $derived(Math.ceil(sharedCells.length / 2));
   // The EQ keeps its curve; an algorithm's tail and an IR's waveform are the
   // Reverb tile's (ADR-477), so the controls take the width.
   let hasPicture = $derived(panel === 'eq');
@@ -473,8 +494,8 @@
   const groupWidth = (n: number) => `calc(${n} * 60px + ${n - 1} * var(--spacing-sm))`;
   let layoutColumns = $derived(
     hasPicture
-      ? `minmax(0, 1fr) auto ${groupWidth(3)} auto ${groupWidth(sharedCols)}`
-      : `minmax(0, 3fr) auto minmax(0, ${sharedCols}fr)`
+      ? `minmax(0, 1fr) auto ${groupWidth(3)} auto ${groupWidth(sharedCols)} auto 60px`
+      : `minmax(0, 3fr) auto minmax(0, ${sharedCols}fr) auto minmax(60px, 0.6fr)`
   );
   /** The EQ band last touched: lit on the curve, named in its readout. */
   let eqFocus = $state<EqBandKey>('lo');
@@ -574,9 +595,11 @@
 {/snippet}
 
 <!-- One value box, its switch (Sync, Mono, Cut / Shelf) under it. -->
-{#snippet sliderBox(row: Row)}
+<!-- `ownCellChip`: the switch is drawn in the cell under the box (the
+     shared knobs, ADR-508), not inside it. -->
+{#snippet sliderBox(row: Row, ownCellChip = false)}
   {#snippet label()}{@render boxLabel(row.name, row.label)}{/snippet}
-  <div class="cell">
+  <div class="cell" class:knob-cell={knobRow(row.key)}>
     <div class="box">
       <DeviceSlider
         value={row.position}
@@ -595,7 +618,7 @@
         onRelease={row.commit}
       />
     </div>
-    {#if row.chip}{@render chip(row.chip.name, row.chip.index)}{/if}
+    {#if row.chip && !ownCellChip}{@render chip(row.chip.name, row.chip.index)}{/if}
     {#if row.type !== undefined}{@render typeChip(row.type)}{/if}
   </div>
 {/snippet}
@@ -766,10 +789,19 @@
 
           <!-- What the device has besides its engines. -->
           <div class="box-group" style="grid-template-columns: repeat({sharedCols}, minmax(0, 1fr));" data-reverb-shared>
-            {#each sharedRows as row (row.key)}
-              {@render sliderBox(row)}
+            {#each sharedCells as cell (cell.row.key + (cell.chip ? ':chip' : ''))}
+              {#if cell.chip}
+                <div class="cell chip-cell">{@render chip(cell.row.chip!.name, cell.row.chip!.index)}</div>
+              {:else}
+                {@render sliderBox(cell.row, true)}
+              {/if}
             {/each}
           </div>
+
+          {#if wetRow}
+            <SectionDivider orientation="vertical" />
+            <div class="wet-strip" data-reverb-wet>{@render sliderBox(wetRow)}</div>
+          {/if}
         </div>
 
     </div>
@@ -825,6 +857,28 @@
   }
   .cell > .reverb-chip {
     flex: 0 0 2.25rem;
+  }
+  /* Under a knob its switch is a pill as wide as the knob's caption, not
+     the cell (ADR-508). */
+  .cell.knob-cell > .reverb-chip {
+    align-self: center;
+    width: min(100%, 5.5rem);
+  }
+  .chip-cell {
+    justify-content: center;
+    align-items: center;
+  }
+  .chip-cell > .reverb-chip {
+    flex: 0 0 var(--height-touch);
+    width: min(100%, 5.5rem);
+  }
+  .wet-strip {
+    display: flex;
+    min-height: 0;
+    min-width: 0;
+  }
+  .wet-strip > :global(.cell) {
+    flex: 1 1 0;
   }
   .chips > .reverb-chip {
     flex: 1 1 0;

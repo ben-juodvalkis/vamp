@@ -91,8 +91,7 @@ function oscPage(o: Osc): PanelPage {
 						{ kind: 'box', param: `${o} Fine`, title: 'Fine' },
 						{ kind: 'box', param: `${o} Freq<Vel`, title: 'Vel' },
 						{ kind: 'switch', param: `${o} Quantize`, title: 'Quant' },
-						{ kind: 'switch', param: `${o} Fix On `, title: 'Fixed' },
-						{ kind: 'box', param: `${o} Fix Freq`, title: 'Freq' },
+						{ kind: 'box', param: `${o} Fix Freq`, title: 'Freq', toggle: { param: `${o} Fix On `, title: 'Fixed' } },
 						{ kind: 'step', param: `${o} Fix Freq Mul`, title: 'Mul', labels: FIX_MUL }
 					]
 				}

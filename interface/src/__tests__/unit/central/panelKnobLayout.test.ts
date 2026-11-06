@@ -9,6 +9,7 @@ import {
 	groupUnits,
 	isKnobGroup,
 	knobGridRows,
+	panelParamNames,
 	THIN_BOX_UNITS,
 	type PanelGroup
 } from '$lib/components/v6/central/views/panel/panelTypes';
@@ -79,5 +80,17 @@ describe.each([
 		const stages = groups.filter((g) => g.controls.some((c) => c.kind === 'box' && / (Attack|Decay|Sustain|Release)$/.test(c.param)));
 		expect(stages.length).toBeGreaterThan(0);
 		expect(stages.filter((g) => g.face !== 'slider').map((g) => g.title)).toEqual([]);
+	});
+});
+
+describe('switches under knobs and a page’s aside', () => {
+	it('binds a box’s toggle and a page aside’s parameters, so the reference test reads them', () => {
+		const names = panelParamNames(DRIFT_PANEL);
+		expect(names).toEqual(expect.arrayContaining(['Osc 1 On', 'Osc 2 On', 'Noise On']));
+		expect(DRIFT_PANEL.pages.find((p) => p.id === 'filter')?.aside?.slot).toBe('filter');
+	});
+	it('draws Drift’s sources as levels with their switch under each', () => {
+		const mix = DRIFT_PANEL.pages.flatMap((p) => p.rows.flat()).find((g) => g.title === 'Osc Mix')!;
+		expect(mix.controls.map((c) => (c.kind === 'box' ? c.toggle?.param : c.kind))).toEqual(['Osc 1 On', 'Osc 2 On', 'Noise On']);
 	});
 });

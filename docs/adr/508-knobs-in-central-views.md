@@ -32,7 +32,7 @@ the flat ring with nothing on it but the arc.
   glyph sits in the middle at rest, hidden on a knob under 56px across; Live's
   value takes its place while a finger drags. The name sits under the knob,
   `valueText` (the value in Live's words) under the name. A cell wider than
-  3:2 puts the caption beside the knob. A stepped control (`steps`, up to 24
+  6:5 puts the caption beside the knob. A stepped control (`steps`, up to 24
   values) wears a detent for each value in place of the zero mark, the one it
   rests on in the ink.
 - **When a knob, when a box.** A box for a level ridden mid-set (Mix,
@@ -58,6 +58,20 @@ the flat ring with nothing on it but the arc.
   - a group can name its share of the row in `units` where its count
     mis-states it: Operator's Global wraps its three knobs two to a row, so
     it takes two boxes' width, and its filter pad two rather than 2.5.
+- **Switches and choosers among knobs are one touch row high.** A
+  full-height switch outweighed the knobs beside it. In a knob group a
+  switch is a pill one touch row tall, and a chooser a touch row an option,
+  centred in their cells. A switch that belongs to a knob is drawn under it:
+  a panel's box names it as `toggle` (Drift's Osc Mix: each source's On under
+  its level; Operator's Fixed under its Freq), and Reverb gives Sync and Mono
+  the cell under Predelay and Stereo, a knob with a switch always starting a
+  column.
+- **The played control stands apart.** Reverb's Dry/Wet is a full-height
+  box at the right edge, past a seam, where it was one cell among the knobs.
+- **A page can hold a picture beside its knobs.** A page's `aside` is a
+  device's own control drawn full height left of its rows; Drift's Filter
+  page shows the face's filter pad there, its knobs in two rows beside it,
+  where a single row of knobs left the page's height empty.
 - **First: Drift's and Operator's panels, and Reverb.** Both panels draw
   knobs but their envelopes; Reverb draws knobs but Dry/Wet. Drift's own face
   keeps its boxes: its Shape strip and voicing column are too small for a

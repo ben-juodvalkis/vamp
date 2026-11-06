@@ -15,14 +15,24 @@
 
 /** One control, bound to one parameter by its Live name. */
 export type PanelControl =
-	/** A value box over the parameter's own range; centre-origin when the range spans 0. */
-	| { kind: 'box'; param: string; title: string }
+	/**
+	 * A value box over the parameter's own range; centre-origin when the range
+	 * spans 0. `toggle` is the on/off parameter that belongs to it (a source's
+	 * switch over its level), drawn small under it (ADR-508).
+	 */
+	| { kind: 'box'; param: string; title: string; toggle?: PanelToggle }
 	/** A quantized parameter with few values: one cell a value, its labels Live's own. */
 	| { kind: 'choice'; param: string; options: readonly string[] }
 	/** A quantized parameter with many values: a value box that steps, naming the value. */
 	| { kind: 'step'; param: string; title: string; labels?: readonly string[] }
 	/** An on/off parameter: one cell, lit while on. */
 	| { kind: 'switch'; param: string; title: string };
+
+/** An on/off parameter drawn small under the box it belongs to. */
+export interface PanelToggle {
+	param: string;
+	title: string;
+}
 
 export interface PanelGroup {
 	/** The eyebrow: Live's section name. Omitted, the group draws an empty eyebrow line. */
@@ -72,6 +82,13 @@ export interface PanelPage {
 	parent?: string;
 	/** One or two rows of groups, seamed within a row. */
 	rows: readonly (readonly PanelGroup[])[];
+	/**
+	 * A device's own control drawn full height left of the rows (Drift's
+	 * filter pad on its Filter page), from the view's `slots`; it takes
+	 * `units` boxes of width. `params` names what it binds, for the
+	 * reference test.
+	 */
+	aside?: { slot: string; units: number; params: readonly string[] };
 }
 
 export interface InstrumentPanel {
@@ -155,7 +172,10 @@ export function panelParamNames(panel: InstrumentPanel): string[] {
 	const names = new Set<string>();
 	const addGroup = (g: PanelGroup) => {
 		if (g.switchParam) names.add(g.switchParam);
-		for (const c of g.controls) names.add(c.param);
+		for (const c of g.controls) {
+			names.add(c.param);
+			if (c.kind === 'box' && c.toggle) names.add(c.toggle.param);
+		}
 	};
 	for (const region of panel.frame) {
 		if (region.kind === 'group') addGroup(region.group);
@@ -166,6 +186,9 @@ export function panelParamNames(panel: InstrumentPanel): string[] {
 				tab.groups.forEach(addGroup);
 			}
 	}
-	for (const page of panel.pages) page.rows.forEach((row) => row.forEach(addGroup));
+	for (const page of panel.pages) {
+		page.rows.forEach((row) => row.forEach(addGroup));
+		page.aside?.params.forEach((n) => names.add(n));
+	}
 	return [...names];
 }

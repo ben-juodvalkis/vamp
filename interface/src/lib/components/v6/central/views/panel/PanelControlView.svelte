@@ -40,6 +40,18 @@
 	let bipolar = $derived(lo < 0 && hi > 0);
 	let step = $derived(raw === undefined ? undefined : Math.round(raw - lo));
 
+	// The on/off parameter that belongs to a box, drawn small under it.
+	let toggle = $derived(control.kind === 'box' ? control.toggle : undefined);
+	let toggleListed = $derived(toggle ? params.has(toggle.param) : false);
+	let toggleOn = $derived(toggle ? toggleListed && (params.raw(toggle.param) ?? 0) >= 0.5 : false);
+	function flipToggle() {
+		if (!toggle || !toggleListed) return;
+		const r = params.range(toggle.param);
+		params.write(toggle.param, toggleOn ? (r?.min ?? 0) : (r?.max ?? 1));
+	}
+	// Among knobs a switch is one touch row high, not a full cell (ADR-508).
+	let compact = $derived(face === 'knob');
+
 	function write(value: number) {
 		if (!listed) return;
 		params.write(control.param, value, control.param === switchParam ? undefined : switchParam);
@@ -47,7 +59,7 @@
 </script>
 
 {#if control.kind === 'box'}
-	<div class="panel-control" class:ghost data-param={control.param}>
+	<div class="panel-control" class:ghost class:with-toggle={toggle} data-param={control.param}>
 		<DeviceSlider
 			value={raw ?? lo}
 			title={control.title}
@@ -63,6 +75,17 @@
 			valueText={face === 'knob' ? params.display(control.param) : undefined}
 			onInteraction={write}
 		/>
+		{#if toggle}
+			<button
+				class="physical-button panel-switch compact"
+				class:active={toggleOn}
+				aria-pressed={toggleOn}
+				disabled={!toggleListed}
+				style="--btn-tint: {color.primary};"
+				data-param={toggle.param}
+				onclick={flipToggle}
+			>{toggle.title}</button>
+		{/if}
 	</div>
 {:else if control.kind === 'step'}
 	{@const name = control.title}
@@ -93,7 +116,8 @@
 	<div
 		class="device-segmented panel-choice"
 		class:ghost
-		style="--btn-tint: {color.primary}; grid-template-columns: repeat({choiceColumns(control.options.length, pageRows)}, minmax(0, 1fr)); grid-template-rows: repeat({Math.ceil(control.options.length / choiceColumns(control.options.length, pageRows))}, minmax(0, 1fr)); grid-auto-flow: column;"
+		class:compact
+		style="--btn-tint: {color.primary}; grid-template-columns: repeat({choiceColumns(control.options.length, pageRows)}, minmax(0, 1fr)); grid-template-rows: repeat({Math.ceil(control.options.length / choiceColumns(control.options.length, pageRows))}, {compact ? 'var(--height-touch)' : 'minmax(0, 1fr)'}); grid-auto-flow: column;"
 		role="group"
 		aria-label={control.param}
 		data-param={control.param}
@@ -112,6 +136,7 @@
 	{@const on = listed && (raw ?? 0) >= 0.5}
 	<button
 		class="physical-button panel-switch"
+		class:compact
 		class:active={on}
 		class:ghost={!listed}
 		aria-pressed={on}
@@ -187,6 +212,27 @@
 		min-height: 0;
 		height: 100%;
 		font-size: 0.9375rem;
+	}
+	/* One touch row, centred in its cell: among knobs a full-height switch
+	   outweighs them (ADR-508). */
+	/* Among knobs a chooser is a touch row an option, centred in its cell. */
+	.panel-choice.compact {
+		align-self: center;
+		height: auto;
+	}
+	.panel-switch.compact {
+		height: var(--height-touch);
+		align-self: center;
+		width: 100%;
+	}
+	/* A box with its switch under it: the box takes what the switch leaves. */
+	.panel-control.with-toggle {
+		flex-direction: column;
+		gap: var(--spacing-xs);
+	}
+	.panel-control.with-toggle > .panel-switch.compact {
+		flex: 0 0 auto;
+		width: min(100%, 5.5rem);
 	}
 
 	:global([data-grammar='flat']) .panel-choice .device-segment.active,
