@@ -9,7 +9,7 @@
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
 	import PanelControlView from './PanelControlView.svelte';
 	import PanelEyebrow from './PanelEyebrow.svelte';
-	import { controlUnits, groupUnits, type PanelGroup } from './panelTypes';
+	import { controlUnits, groupUnits, type PanelFace, type PanelGroup } from './panelTypes';
 	import type { PanelParams } from './usePanelParams.svelte';
 
 	interface Props {
@@ -22,9 +22,12 @@
 		bare?: boolean;
 		/** Rows on the page the group stands in: a two-row page's choices spread wider. */
 		pageRows?: number;
+		/** The panel's face for value boxes; the group's own `face` wins. */
+		boxFace?: PanelFace;
 	}
 
-	let { group, params, color, onOpen, bare = false, pageRows = 1 }: Props = $props();
+	let { group, params, color, onOpen, bare = false, pageRows = 1, boxFace }: Props = $props();
+	let face = $derived(group.face ?? boxFace ?? 'slider');
 </script>
 
 <div class="panel-group" style="flex: {groupUnits(group, pageRows)} 1 0;" data-group={group.title ?? ''}>
@@ -34,7 +37,7 @@
 	<div class="panel-row">
 		{#each group.controls as control (control.param)}
 			<div class="panel-cell" style="flex: {controlUnits(control, pageRows)} 1 0;">
-				<PanelControlView {control} {params} {color} switchParam={group.switchParam} {pageRows} />
+				<PanelControlView {control} {params} {color} switchParam={group.switchParam} {pageRows} {face} />
 			</div>
 		{/each}
 	</div>

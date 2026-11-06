@@ -11,7 +11,7 @@
 	 */
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
-	import { choiceColumns, type PanelControl } from './panelTypes';
+	import { choiceColumns, type PanelControl, type PanelFace } from './panelTypes';
 	import type { PanelParams } from './usePanelParams.svelte';
 
 	interface Props {
@@ -22,9 +22,11 @@
 		switchParam?: string;
 		/** Rows on the page: see `choiceColumns`. */
 		pageRows?: number;
+		/** Box or knob (ADR-508), decided by the group and the panel. */
+		face?: PanelFace;
 	}
 
-	let { control, params, color, switchParam, pageRows = 1 }: Props = $props();
+	let { control, params, color, switchParam, pageRows = 1, face = 'slider' }: Props = $props();
 
 	let listed = $derived(params.has(control.param));
 	let range = $derived(params.range(control.param));
@@ -56,7 +58,9 @@
 			centerValue={bipolar ? 0 : undefined}
 			isGhost={!listed}
 			{color}
+			{face}
 			readout={params.display(control.param)}
+			valueText={face === 'knob' ? params.display(control.param) : undefined}
 			onInteraction={write}
 		/>
 	</div>
@@ -66,7 +70,9 @@
 	<div class="panel-control" class:ghost data-param={control.param}>
 		<DeviceSlider
 			value={raw ?? lo}
-			title={`${name} ${shown}`}
+			title={face === 'knob' ? name : `${name} ${shown}`}
+			{face}
+			valueText={shown}
 			labelAt="top"
 			min={lo}
 			max={hi}

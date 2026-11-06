@@ -32,7 +32,15 @@ export interface PanelGroup {
 	switchParam?: string;
 	/** A page id: the eyebrow opens it ("Hammer ›"). */
 	page?: string;
+	/**
+	 * How the group's value boxes draw, over the panel's `boxFace` (ADR-508):
+	 * an envelope's stages stay boxes, since their heights draw its shape.
+	 */
+	face?: PanelFace;
 }
+
+/** A value box drawn as a box or as a knob (ADR-508). */
+export type PanelFace = 'slider' | 'knob';
 
 export interface PanelTab {
 	title: string;
@@ -64,6 +72,8 @@ export interface PanelPage {
 export interface InstrumentPanel {
 	frame: readonly PanelRegion[];
 	pages: readonly PanelPage[];
+	/** How its value and stepping boxes draw unless a group says otherwise; unset, as boxes. */
+	boxFace?: PanelFace;
 }
 
 /**

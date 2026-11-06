@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy, type Snippet } from 'svelte';
   import ControlGlyph, { type ControlGlyphName } from './ControlGlyph.svelte';
+  import KnobFace from './KnobFace.svelte';
   import { inValueBoxScope, VALUE_BOX_TRAVEL } from '../central/valueBox';
   import { familyScheme, type DeviceColorScheme } from '$lib/config/devicePresets';
   import MeterVisualization from '$lib/components/v6/looping/MeterVisualizationV6.svelte';
@@ -71,6 +72,13 @@
     track?: MeterTrack | null;  // Optional track for meter visualization
     trackIndex?: number;       // Track index for meter
     meterColor?: string;       // Optional track-color tint for the meter fill
+    // 'knob' draws the value as an arc (ADR-508) with the same gesture and
+    // target as the box. For tone-shaping and set-and-forget controls; a level
+    // ridden mid-set, a meter or an envelope's stages stay boxes. A knob
+    // ignores `label`, `labelAt`, `orientation` and the handle line.
+    face?: 'slider' | 'knob';
+    // Under a knob's name at rest: the value in Live's words.
+    valueText?: string;
   }
 
   let {
@@ -98,7 +106,9 @@
     handleLine = false,
     track = null,
     trackIndex = 0,
-    meterColor
+    meterColor,
+    face = 'slider',
+    valueText
   }: Props = $props();
 
   // Resolve label orientation - 'auto' follows slider orientation
@@ -106,29 +116,10 @@
   const valueBox = inValueBoxScope();
   let effectiveTravel = $derived(travel ?? (valueBox ? VALUE_BOX_TRAVEL : undefined));
 
-  // PROTOTYPE (knobs vs value boxes): `localStorage['vamp.controlStyle'] =
-  // 'knob'` draws every central-view value box as a rotary knob instead. Same
-  // gesture (relative drag, up or right raises it), same travel; only the
-  // face changes. Never in the chain or the browser.
-  // 'arc' is the same knob with no hand: the arc alone says the value.
-  const knobStyle = valueBox ? (() => {
-    try { return localStorage.getItem('vamp.controlStyle'); } catch { return null; }
-  })() : null;
-  const knobFace = knobStyle === 'knob' || knobStyle === 'arc';
-  const arcOnly = knobStyle === 'arc';
-  const KNOB_START = 135;   // degrees, SVG frame (0 = right, clockwise)
-  const KNOB_SWEEP = 270;
-  function polar(deg: number, r: number): [number, number] {
-    const a = (deg * Math.PI) / 180;
-    return [50 + r * Math.cos(a), 50 + r * Math.sin(a)];
-  }
-  function arc(fromDeg: number, toDeg: number, r: number): string {
-    if (toDeg < fromDeg) [fromDeg, toDeg] = [toDeg, fromDeg];
-    if (toDeg - fromDeg < 0.01) return '';
-    const [x0, y0] = polar(fromDeg, r);
-    const [x1, y1] = polar(toDeg, r);
-    return `M ${x0} ${y0} A ${r} ${r} 0 ${toDeg - fromDeg > 180 ? 1 : 0} 1 ${x1} ${y1}`;
-  }
+  // A knob (ADR-508) is a value box drawn as an arc: same gesture, same
+  // travel, the whole cell its target. Either axis turns it: up or right
+  // raises it, as a box's own axis does.
+  let knobFace = $derived(face === 'knob');
 
   let effectiveLabelOrientation = $derived.by(() => {
     const asked = labelOrientation ?? (valueBox ? 'horizontal' : 'auto');
@@ -278,9 +269,9 @@
     const delta = ((currentPointer - startPointer) / size) * sensitivity;
 
     // Apply delta to start value (invert for vertical). A knob takes either
-    // axis: up or right turns it clockwise.
+    // axis: up or right turns it clockwise, over the same size as a box.
     const normalizedDelta = knobFace
-      ? ((event.clientX - tapStartX) - (event.clientY - tapStartY)) / (effectiveTravel ?? VALUE_BOX_TRAVEL) * sensitivity
+      ? ((event.clientX - tapStartX) - (event.clientY - tapStartY)) / size * sensitivity
       : orientation === 'vertical' ? -delta : delta;
     const normalizedValue = (startValue - min) / (max - min);
     const newNormalizedValue = Math.max(0, Math.min(1, normalizedValue + normalizedDelta));
@@ -295,17 +286,11 @@
 </script>
 
 {#if knobFace}
-  {@const t = max > min ? Math.max(0, Math.min(1, (localValue - min) / (max - min))) : 0}
-  {@const c = max > min ? Math.max(0, Math.min(1, ((centerValue ?? (min + max) / 2) - min) / (max - min))) : 0.5}
-  {@const angle = KNOB_START + KNOB_SWEEP * t}
-  {@const from = KNOB_START + KNOB_SWEEP * (centerOrigin ? c : 0)}
-  {@const tip = polar(angle, 35)}
+  {@const origin = centerOrigin ? (max > min ? ((centerValue ?? (min + max) / 2) - min) / (max - min) : 0.5) : undefined}
   <div class="device-knob">
     <div
       class="knob-container"
-      class:arc-only={arcOnly}
       class:ghost={isGhost}
-      class:dragging={isDragging}
       bind:this={container}
       onpointerdown={handlePointerDown}
       onpointermove={handlePointerMove}
@@ -313,33 +298,23 @@
       onpointercancel={handlePointerUp}
       role="slider"
       tabindex="0"
-      aria-label="{title}: {localValue.toFixed(2)}"
+      aria-label="{valueText ? `${title} ${valueText}` : title}: {localValue.toFixed(2)}"
       aria-valuenow={localValue}
       aria-valuemin={min}
       aria-valuemax={max}
-      style="--knob-ink: {color.primary}; --knob-secondary: {color.secondary};"
+      data-face="knob"
+      data-layout-box
     >
-      <div class="knob-face">
-      <svg class="knob-svg" viewBox="0 0 100 100" aria-hidden="true">
-        <path class="knob-track" d={arc(KNOB_START, KNOB_START + KNOB_SWEEP, 44)} />
-        {#if centerOrigin}
-          {@const [mx0, my0] = polar(from, 38)}
-          {@const [mx1, my1] = polar(from, 49)}
-          <line class="knob-centre-tick" x1={mx0} y1={my0} x2={mx1} y2={my1} />
-        {/if}
-        <path class="knob-value" d={arc(from, angle, 44)} />
-        {#if !arcOnly}
-          <line class="knob-pointer" x1={polar(angle, icon ? 21 : 0)[0]} y1={polar(angle, icon ? 21 : 0)[1]} x2={tip[0]} y2={tip[1]} />
-          {#if !icon}<circle class="knob-hub" cx="50" cy="50" r="5" />{/if}
-        {/if}
-      </svg>
-      {#if icon}<span class="knob-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}
-      </div>
-      {#if title || label || icon}
-        <div class="knob-label">
-          {#if label}{@render label()}{:else}<span>{shownTitle}</span>{/if}
-        </div>
-      {/if}
+      <KnobFace
+        position={max > min ? (localValue - min) / (max - min) : 0}
+        {origin}
+        {title}
+        {valueText}
+        {readout}
+        {icon}
+        dragging={isDragging}
+        ink={color.primary}
+      />
     </div>
   </div>
 {:else}
@@ -788,42 +763,28 @@
     height: 15%; /* Large gap for label */
   }
 
-  /* ---- PROTOTYPE knob face (vamp.controlStyle = 'knob') ---- */
-  .device-knob { width: 100%; height: 100%; user-select: none; font-family: var(--font-sans); }
+  /* ---- Knob face (ADR-508): the cell is the target; KnobFace draws. */
+  .device-knob {
+    width: 100%;
+    height: 100%;
+    user-select: none;
+    font-family: var(--font-sans);
+  }
   .knob-container {
-    position: relative; width: 100%; height: 100%;
-    container-type: size;
-    display: grid; grid-template-rows: minmax(0, 1fr) auto; justify-items: center; align-items: center;
-    gap: 0.25rem; padding: 0.35rem 0.25rem;
-    cursor: pointer; touch-action: none;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    /* Same reason as the box's: a touch drag must not be claimed as a pan. */
+    touch-action: none;
+    border-radius: var(--radius-sm);
   }
-  @container (min-aspect-ratio: 5/2) {
-    .knob-container { grid-template-rows: 1fr; grid-template-columns: auto minmax(0, 1fr); justify-items: start; gap: 0.75rem; }
+  .knob-container:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ring);
   }
-  .knob-face { position: relative; --knob-d: max(28px, min(100cqw - 0.5rem, 100cqh - 2.9rem, 150px)); width: var(--knob-d); height: var(--knob-d); }
-  @container (min-aspect-ratio: 5/2) { .knob-face { --knob-d: max(28px, min(100cqh - 0.7rem, 150px)); } }
-  .knob-svg { width: 100%; height: 100%; overflow: visible; display: block; }
-  .knob-icon {
-    position: absolute; left: 50%; top: 50%; width: 34%; height: 34%; transform: translate(-50%, -50%);
-    color: color-mix(in oklab, var(--knob-ink) 75%, transparent); pointer-events: none; display: flex;
+  .knob-container.ghost :global(.knob-value),
+  .knob-container.ghost :global(.knob-centre) {
+    opacity: var(--opacity-ghost);
   }
-  .knob-icon :global(svg) { width: 100%; height: 100%; }
-  .knob-track { fill: none; stroke: var(--surface-well); stroke-width: 10; stroke-linecap: round; }
-  .knob-value { fill: none; stroke: var(--knob-ink); stroke-width: 10; stroke-linecap: round; }
-  .knob-container.arc-only .knob-track,
-  .knob-container.arc-only .knob-value { stroke-width: 12; stroke-linecap: butt; }
-  .knob-container.arc-only.dragging .knob-value { stroke-width: 14; }
-  .knob-container.arc-only .knob-icon { color: var(--knob-ink); width: 40%; height: 40%; }
-  .knob-hub { fill: color-mix(in oklab, var(--knob-ink) 55%, white); }
-  .knob-pointer { stroke: color-mix(in oklab, var(--knob-ink) 55%, white); stroke-width: 4; stroke-linecap: round; }
-  .knob-centre-tick { stroke: var(--signal-dim); stroke-width: 1.5; }
-  .knob-container.dragging .knob-value { stroke-width: 12; }
-  .knob-container.ghost .knob-value, .knob-container.ghost .knob-pointer { opacity: var(--opacity-ghost); }
-  .knob-label {
-    flex: 0 0 auto; max-width: 100%;
-    font-size: clamp(11px, 0.85rem, 15px); font-weight: 500; line-height: 1.1;
-    text-align: center; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere;
-    color: var(--knob-ink);
-  }
-  :global(.light) .knob-label { color: color-mix(in oklab, var(--knob-ink) 55%, var(--foreground)); }
 </style>

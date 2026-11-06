@@ -36,6 +36,7 @@ function adsr(prefix: string, page: string, switchParam?: string): PanelGroup {
 		title: 'Envelope',
 		page,
 		switchParam,
+		face: 'slider',
 		controls: [
 			{ kind: 'box', param: `${prefix} Attack`, title: 'A' },
 			{ kind: 'box', param: `${prefix} Decay`, title: 'D' },
@@ -138,6 +139,7 @@ function envPage(id: string, title: string, prefix: string, parent: string, extr
 			[
 				{
 					title: 'Stages',
+					face: 'slider',
 					controls: [
 						{ kind: 'box', param: `${prefix} Attack`, title: 'Attack' },
 						{ kind: 'box', param: `${prefix} Init`, title: 'Initial' },
@@ -179,6 +181,8 @@ function envPage(id: string, title: string, prefix: string, parent: string, extr
 const OSCS: Osc[] = ['A', 'B', 'C', 'D'];
 
 export const OPERATOR_PANEL: InstrumentPanel = {
+	// Knobs, but an envelope's stages stay boxes: their heights draw it (ADR-508).
+	boxFace: 'knob',
 	frame: [
 		{
 			kind: 'tabs',

@@ -485,6 +485,9 @@
    * row is whichever applies, beside the chip that switches the type.
    */
   /** A row's glyph, by the name the row wears (shared, IR, EQ and the algorithms' own). */
+  // Every box is a knob but Dry/Wet, the level a set rides (ADR-508).
+  const knobRow = (key: string) => key !== 'drywet';
+
   const ROW_GLYPHS: Record<string, ControlGlyphName> = {
     Size: 'size',
     // Predelay draws none: beside its Sync chip the glyph would cut the name.
@@ -577,7 +580,10 @@
     <div class="box">
       <DeviceSlider
         value={row.position}
-        title="{row.name} {row.label}"
+        title={knobRow(row.key) ? row.name : `${row.name} ${row.label}`}
+        face={knobRow(row.key) ? 'knob' : 'slider'}
+        icon={knobRow(row.key) ? ROW_GLYPHS[row.name] : undefined}
+        valueText={row.label}
         {label}
         orientation="vertical"
         labelOrientation="horizontal"
@@ -731,7 +737,10 @@
                   <div class="box">
                     <DeviceSlider
                       value={controlPosition(control, raw(control.index))}
-                      title="{control.name} {control.label(raw(control.index))}"
+                      title={control.name}
+                      face="knob"
+                      icon={ROW_GLYPHS[control.name]}
+                      valueText={control.label(raw(control.index))}
                       label={ownLabel}
                       orientation="vertical"
                       labelOrientation="horizontal"

@@ -56,7 +56,7 @@
 				<div class="panel-page-row">
 					{#each row as group, g (g)}
 						{#if g > 0}<SectionDivider orientation="vertical" ink={color.primary} />{/if}
-						<PanelGroupView {group} {params} {color} pageRows={page.rows.length} onOpen={openPage} />
+						<PanelGroupView {group} {params} {color} pageRows={page.rows.length} onOpen={openPage} boxFace={panel.boxFace} />
 					{/each}
 				</div>
 			{/each}
@@ -69,7 +69,7 @@
 		{#each panel.frame as region, i (i)}
 			{#if i > 0}<SectionDivider orientation="vertical" ink={color.primary} />{/if}
 			{#if region.kind === 'group'}
-				<PanelGroupView group={region.group} {params} {color} onOpen={openPage} />
+				<PanelGroupView group={region.group} {params} {color} onOpen={openPage} boxFace={panel.boxFace} />
 			{:else if region.kind === 'slot'}
 				<div class="panel-slot" style="flex: {region.units} 1 0;" data-group={region.title ?? region.slot}>
 					<PanelEyebrow title={region.title} page={region.page} onOpen={openPage} color={color.primary} />
@@ -83,7 +83,7 @@
 					<div class="panel-tab-body">
 						{#each tab.groups as group, g (g)}
 							{#if g > 0}<SectionDivider orientation="vertical" ink={color.primary} />{/if}
-							<PanelGroupView {group} {params} {color} onOpen={openPage} bare={tab.groups.length === 1 && !group.page} />
+							<PanelGroupView {group} {params} {color} onOpen={openPage} bare={tab.groups.length === 1 && !group.page} boxFace={panel.boxFace} />
 						{/each}
 						<!-- A tab with fewer boxes than the widest keeps their width. -->
 						{#if tab.groups.reduce((n, g) => n + groupUnits(g), 0) < regionUnits(region)}

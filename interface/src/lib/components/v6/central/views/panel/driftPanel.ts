@@ -18,6 +18,8 @@ const SYNCED = [
 const RATE_MODES = ['Freq', 'Time', 'Ratio', 'Sync'];
 
 export const DRIFT_PANEL: InstrumentPanel = {
+	// Knobs, but an envelope's stages stay boxes: their heights draw it (ADR-508).
+	boxFace: 'knob',
 	// Drawn by the view's own face; the frame is what a face-less render would show.
 	frame: [],
 	pages: [
@@ -121,6 +123,7 @@ export const DRIFT_PANEL: InstrumentPanel = {
 				[
 					{
 						title: 'Env 1',
+						face: 'slider',
 						controls: [
 							{ kind: 'box', param: 'Env 1 Attack', title: 'A' },
 							{ kind: 'box', param: 'Env 1 Decay', title: 'D' },
@@ -130,6 +133,7 @@ export const DRIFT_PANEL: InstrumentPanel = {
 					},
 					{
 						title: 'Env 2',
+						face: 'slider',
 						controls: [
 							{ kind: 'choice', param: 'Env 2 Cyc On', options: ['Env', 'Cyc'] },
 							{ kind: 'box', param: 'Env 2 Attack', title: 'A' },
