@@ -40,6 +40,12 @@ Import from `$lib/components/v6/blocks`.
 
 `DeviceXY`, the pad: two values on one square, relative to where the finger lands. Reads `xValue` / `yValue` in 0..1 and ignores them while a finger is down, so an echo cannot move the dot mid-drag. Writes through `onInteraction(x, y)`, both axes in one call at most 60 Hz, and `onRelease(x, y)`; mapping 0..1 onto each parameter's range is the caller's job. Write both parameters inside that one handler, synchronously: the outbound batcher then sends them in one frame, where an `await` or a timer between them sends two.
 
+### ScrubTabs
+
+`interface/src/lib/components/v6/device-panel/ScrubTabs.svelte`
+
+`ScrubTabs`, the pick-one tab a finger can scrub: a row, a column (`cols={1}`) or a grid, drawn as the house `.seg-grid`. Reads `options` and the chosen `selected` index; writes through `onSelect(index, option)`, once per option the finger crosses, and never for a press on the option already chosen. It owns the pointer for the whole tab and finds the option by geometry (`segmentScrub`), so its options are buttons for the keyboard only: put nothing that needs its own touch inside it. Styles from the host do not reach its options (Svelte scopes them); size it with a wrapper or utility classes on `class`.
+
 ### BaseDeviceControl
 
 `interface/src/lib/components/v6/device-panel/BaseDeviceControl.svelte`

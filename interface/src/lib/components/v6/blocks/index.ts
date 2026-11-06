@@ -42,6 +42,11 @@ export { default as DeviceSlider } from '$lib/components/v6/device-panel/DeviceS
 export { default as DeviceXY } from '$lib/components/v6/device-panel/DeviceXY.svelte';
 
 /**
+ * `ScrubTabs`, the pick-one tab a finger can scrub: a row, a column (`cols={1}`) or a grid, drawn as the house `.seg-grid`. Reads `options` and the chosen `selected` index; writes through `onSelect(index, option)`, once per option the finger crosses, and never for a press on the option already chosen. It owns the pointer for the whole tab and finds the option by geometry (`segmentScrub`), so its options are buttons for the keyboard only: put nothing that needs its own touch inside it. Styles from the host do not reach its options (Svelte scopes them); size it with a wrapper or utility classes on `class`.
+ */
+export { default as ScrubTabs } from '$lib/components/v6/device-panel/ScrubTabs.svelte';
+
+/**
  * `BaseDeviceControl`, the shell every FX-grid tile is built in: it resolves its `position` or `slotKey` to an FX-grid slot and hands its snippet the device, the ghost and loading state, and the actions. Reads the slot (`slotRegistry`, `selectedTrackStore`) and the pad scope a held Drum Rack pad sets. Writes through what it hands down: `sendParam` (`services/deviceParams`, which drops a write while there is no device), `storePendingParam`, `triggerLoad`, and `handleTap` (opens the view, selects the device). Reordering is the chain overview's drag. A tap never loads a ghost tile: call `triggerLoad` from the first drag frame (ADR-167). It reads `position` / `slotKey` once at mount, so a host that changes slot must re-key the component.
  */
 export { default as BaseDeviceControl } from '$lib/components/v6/device-panel/BaseDeviceControl.svelte';

@@ -59,6 +59,7 @@
   import WavetableWave from './wavetable/WavetableWave.svelte';
   import { useOscWave } from './wavetable/useOscWave.svelte';
   import WavetableFilterGraph from './wavetable/WavetableFilterGraph.svelte';
+  import ScrubTabs from '../../device-panel/ScrubTabs.svelte';
   import { FILTER_ROUTINGS, type GraphFilter } from '$lib/utils/wavetableFilterGraph';
 
   interface Props {
@@ -192,6 +193,9 @@
   /** Octave steps on Transp's -24..24 semitones; a step between them lights none. */
   const OCTAVES = [-2, -1, 0, 1, 2] as const;
   const octaveLabel = (n: number) => (n > 0 ? `+${n}` : `${n}`);
+  /** The octave column reads +2 at the top. */
+  const OCTAVES_DOWN = [...OCTAVES].reverse();
+  const SLOPES = ['12 dB', '24 dB'] as const;
 
   // Both filters on one pad, a dot each (2026-11-05, Live's panel): a
   // press grabs the nearer dot, and that filter is the one the type and
@@ -398,17 +402,17 @@
                (user, 2026-11-05). The mixer's level boxes pick the
                oscillator, so the card has no 1/2 switch. -->
           <div class="osc-side flex-none min-h-0 flex flex-col gap-(--central-gap)">
-            <div class="device-segmented oct-stack flex-1 min-h-0" style="--btn-tint: {oscInk.primary}; grid-template-rows: repeat({OCTAVES.length}, 1fr);">
-              {#each [...OCTAVES].reverse() as n}
-                <button
-                  class="device-segment strip-step"
-                  class:active={oscTransp === n * 12}
-                  aria-label="Osc {oscTab} octave {octaveLabel(n)}"
-                  aria-pressed={oscTransp === n * 12}
-                  onclick={() => writeOsc(o.transp, n * 12)}
-                >{octaveLabel(n)}</button>
-              {/each}
-            </div>
+            <ScrubTabs
+              options={OCTAVES_DOWN}
+              selected={OCTAVES_DOWN.findIndex((n) => oscTransp === n * 12)}
+              onSelect={(_, n) => writeOsc(o.transp, n * 12)}
+              cols={1}
+              tint={oscInk.primary}
+              label={(n) => `Osc ${oscTab} octave ${octaveLabel(n)}`}
+              class="flex-1"
+            >
+              {#snippet item(n)}{octaveLabel(n)}{/snippet}
+            </ScrubTabs>
           </div>
           <div class="flex-1 min-w-0 min-h-0" style={oscOn ? '' : 'opacity: var(--opacity-ghost);'}>
             <DeviceXY
@@ -459,16 +463,17 @@
             onMove={moveFilter}
           />
         </div>
-        <div class="device-segmented strip-row flex-none" style="--btn-tint: {wavetableInk.primary}; grid-template-columns: repeat({FILTER_ROUTINGS.length}, 1fr);">
-          {#each FILTER_ROUTINGS as label, value}
-            <button
-              class="device-segment strip-step"
-              class:active={filterRouting === value}
-              aria-label="Filter routing {label}"
-              aria-pressed={filterRouting === value}
-              onclick={() => writeRouting(value)}
-            >{label}</button>
-          {/each}
+        <div class="strip-row flex-none">
+        <ScrubTabs
+          options={FILTER_ROUTINGS}
+          selected={filterRouting}
+          onSelect={(i) => writeRouting(i)}
+          tint={wavetableInk.primary}
+          label={(r) => `Filter routing ${r}`}
+          class="h-full"
+        >
+          {#snippet item(r)}{r}{/snippet}
+        </ScrubTabs>
         </div>
         <!-- ‹ type › beside the slope, one row (Meld's chooser): the
              graph keeps the height the routing row took. -->
@@ -478,17 +483,16 @@
             <span class="type-stepper-name" aria-live="polite">{FILTER_TYPES[fltType] ?? '—'}</span>
             <button class="type-step" aria-label="Next filter type" onclick={() => stepFilterType(1)}>›</button>
           </div>
-          <div class="device-segmented strip-row min-w-0" style="--btn-tint: {fltInk.primary}; grid-template-columns: repeat(2, 1fr);">
-            {#each ['12 dB', '24 dB'] as label, value}
-              <button
-                class="device-segment strip-step"
-                class:active={fltSlope === value}
-                aria-label="Filter slope {label}"
-                aria-pressed={fltSlope === value}
-                onclick={() => write(f.slope, value)}
-              >{label}</button>
-            {/each}
-          </div>
+          <ScrubTabs
+            options={SLOPES}
+            selected={fltSlope}
+            onSelect={(i) => write(f.slope, i)}
+            tint={fltInk.primary}
+            label={(l) => `Filter slope ${l}`}
+            class="h-full"
+            >
+            {#snippet item(l)}{l}{/snippet}
+          </ScrubTabs>
         </div>
       </div>
 
@@ -570,44 +574,10 @@
   .osc-side {
     width: var(--height-touch);
   }
-  .oct-stack {
-    display: grid;
-  }
-  .wt-root .oct-stack .device-segment + .device-segment {
-    border-left: 0;
-    border-top: 1px solid var(--line-faint);
-  }
-  .wt-root .oct-stack .device-segment.active,
-  .wt-root .oct-stack .device-segment.active + .device-segment {
-    border-top-color: transparent;
-  }
 
   .strip-row {
     height: var(--height-touch);
     min-width: 0;
-  }
-  .strip-row.device-segmented {
-    display: grid;
-  }
-  .device-segmented .device-segment + .device-segment {
-    border-top: 0;
-    border-left: 1px solid var(--line-faint);
-  }
-  .device-segment.active,
-  .device-segment.active + .device-segment {
-    border-left-color: transparent;
-  }
-  .strip-step {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 0;
-    min-width: 0;
-    padding: 2px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
   }
 
   /* Four stages and their three gaps, plus the bracket's two seams and the
@@ -653,35 +623,5 @@
   /* The type and slope of a filter that is off. */
   .ghost-row {
     opacity: var(--opacity-ghost);
-  }
-
-  /* ---- Flat grammar: Drift's and Analog's segmented rows, the ink
-     re-asserted against the house pair so the oscillator colour reads. */
-  :global([data-grammar="flat"]) .wt-root .device-segmented .device-segment + .device-segment {
-    border-top: 0;
-    border-left: 1px solid var(--line-strong);
-  }
-  :global([data-grammar="flat"]) .wt-root .device-segment.active,
-  :global([data-grammar="flat"]) .wt-root .device-segment.active + .device-segment {
-    border-left-color: transparent;
-  }
-  :global([data-grammar="flat"]) .wt-root .oct-stack .device-segment + .device-segment {
-    border-left: 0;
-    border-top: 1px solid var(--line-strong);
-  }
-  :global([data-grammar="flat"]) .wt-root .oct-stack .device-segment.active,
-  :global([data-grammar="flat"]) .wt-root .oct-stack .device-segment.active + .device-segment {
-    border-top-color: transparent;
-  }
-  :global([data-grammar="flat"]) .wt-root .device-segment {
-    color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
-  }
-  :global([data-grammar="flat"]) .wt-root .device-segment:hover:not(.active) {
-    color: var(--btn-tint);
-    background: color-mix(in srgb, var(--btn-tint) 12%, transparent);
-  }
-  :global([data-grammar="flat"]) .wt-root .device-segment.active {
-    background: var(--btn-tint);
-    color: var(--flat-on-fg);
   }
 </style>
