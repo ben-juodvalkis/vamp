@@ -2,7 +2,7 @@
   /**
    * ChainOverview — the FX section's second face: every device on the
    * selected track, in chain order, as wide as their number allows: one
-   * row while the chain is short, two once it is long (`chainGrid`).
+   * row while the chain is short, two once it is long (`chainUnitLayout`).
    *
    * A tap appoints the device (Live's blue hand) and opens its controls in
    * the central view, which stays up beside this list — so choosing
@@ -88,9 +88,10 @@
   import { isHiddenFromChain, visibleDevices } from '$lib/config/hiddenDevices';
   import {
     arrange,
-    chainGrid,
+    chainUnitLayout,
+    chainIndexAt,
     recentLayout,
-    ghostSpan,
+    type ChainPlace,
     clampChainIndex,
     moved,
     planReorder,
@@ -297,14 +298,19 @@
   }
 
   /**
-   * Cells past which the chain takes a second row, counting the ghost
-   * section's two cells as one (`chainGrid` adds the other). Up to it the
-   * devices and the ghost section share one row, wide as the track strips
-   * get; past it the cells split evenly over two rows. Reads like Live's
-   * chain: left to right, then the next row. Five, so one row holds four
-   * devices (the user, 2026-11-05; three before).
+   * The chain in width units (the user, 2026-11-05): a device its slider
+   * draws (Gtr, Bass, a Utility, a Drum Rack's Trnsp) takes one, one with a
+   * pad or a picture two, the ghost section four. One row holds twelve, the
+   * room it had for four devices and the ghost section; past that the chain
+   * takes two rows, as even as the cells allow (`chainUnitLayout`). Reads
+   * like Live's chain: left to right, then the next row.
    */
-  const CHAIN_WRAP_AFTER = 5;
+  const ROW_UNITS = 12;
+  const GHOST_UNITS = 4;
+  function unitsOf(cell: Cell): number {
+    if (cell.kit || isMidiWheels(cell.device)) return 1;
+    return cell.presetKey && controlFor(cell.presetKey)?.kind === 'slider' ? 1 : 2;
+  }
 
   function indexOf(path: string): number {
     const m = /\/devices\/(\d+)$/.exec(path);
@@ -369,6 +375,9 @@
     box: { left: number; top: number; width: number; height: number };
     /** The chain's box in client coordinates, measured once at lift. */
     chain: { left: number; top: number; width: number; height: number };
+    /** The grid at lift: its unit columns and each cell's place. */
+    cols: number;
+    places: ChainPlace[];
   };
   let drag = $state<Drag | null>(null);
   /** The dragged cell's own node. */
@@ -429,11 +438,10 @@
    * below took its place, the same day). On a one-row chain four columns of four,
    * on two rows six columns of two (`recentLayout`).
    */
-  const grid = $derived(chainGrid(drawn.length + 1, CHAIN_WRAP_AFTER));
+  const layout = $derived(chainUnitLayout(drawn.map(unitsOf), GHOST_UNITS, ROW_UNITS));
+  const grid = $derived({ cols: layout.cols, rows: layout.rows });
   const recentGrid = $derived(recentLayout(grid.rows));
   const recentPool = $derived(recentForChain(cells.map((c) => c.device.name), recentLayout(1).shown));
-  /** The ghost section's cells: two, plus any the wrap leaves empty in its row. */
-  const ghostCells = $derived(ghostSpan(drawn.length, 2, grid));
   /** The most recent that fit, shown in alphabetical order (the user, 2026-10-26), down each column. */
   const recents = $derived(
     recentPool.slice(0, recentGrid.shown).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }))
@@ -463,10 +471,9 @@
 
   /** The cell position under a point, by the grid's geometry at lift — not the cells, which are sliding. */
   function positionAt(d: Drag, x: number, y: number): number {
-    const { cols, rows } = grid;
-    const col = Math.max(0, Math.min(cols - 1, Math.floor(((x - d.chain.left) * cols) / (d.chain.width + GRID_GAP))));
-    const row = rows === 1 ? 0 : y < d.chain.top + d.chain.height / 2 ? 0 : 1;
-    return row * cols + col;
+    const col = Math.max(0, Math.min(d.cols - 1, Math.floor(((x - d.chain.left) * d.cols) / (d.chain.width + GRID_GAP))));
+    const row = grid.rows === 1 ? 0 : y < d.chain.top + d.chain.height / 2 ? 0 : 1;
+    return chainIndexAt(d.places, row, col);
   }
 
   // The dragged cell's offset from where it was lifted, written once a
@@ -482,7 +489,10 @@
     // One row: the cell slides along it, level, wherever the finger goes
     // up or down (Ben, 2026-10-26). Two rows need the vertical.
     const dy = grid.rows === 1 ? 0 : offset.dy;
-    const y = d.box.top - dy - dragNode.offsetTop;
+    // Never past the chain's top or bottom edge: the cell stays whole on
+    // screen, however far the finger goes (the user, 2026-11-05).
+    const top = Math.max(0, Math.min(d.chain.height - d.box.height, d.box.top - dy));
+    const y = top - dragNode.offsetTop;
     dragNode.style.transform = `translate3d(${x}px, ${y}px, 0)`;
   }
   function scheduleDragged() {
@@ -573,7 +583,9 @@
       base: shown.map(({ key, sig }) => ({ key, sig })),
       instrument: instrument >= 0 ? instrument : null,
       box: { left: r.left - c.left, top: r.top - c.top, width: r.width, height: r.height },
-      chain: { left: c.left, top: c.top, width: c.width, height: c.height }
+      chain: { left: c.left, top: c.top, width: c.width, height: c.height },
+      cols: layout.cols,
+      places: layout.places.map((p) => ({ ...p }))
     };
     paintDragged();
   }
@@ -764,7 +776,10 @@
       class:dragging={drag?.key === cell.key}
       class:appointed={fxChainStore.appointed === cell.device.devicePath}
       class:instrument={cell.kind === 'instrument'}
+      class:half={layout.places[position]?.span === 1}
       style="--cell-ink: {cell.ink};"
+      style:grid-column={layout.places[position] ? `${layout.places[position].col + 1} / span ${layout.places[position].span}` : undefined}
+      style:grid-row={layout.places[position] ? `${layout.places[position].row + 1}` : undefined}
       data-cell-key={cell.key}
       data-device-path={cell.device.devicePath}
       data-kind={cell.kind}
@@ -790,7 +805,8 @@
   <div
     class="chain-ghosts"
     class:has-utility={showGhostUtility && !!UTILITY_TILE}
-    style:grid-column="span {ghostCells}"
+    style:grid-column="{layout.ghost.col + 1} / span {layout.ghost.span}"
+    style:grid-row="{layout.ghost.row + 1}"
     style:--recent-cols={recentGrid.columns}
     style:--recent-rows={recentGrid.rows}
     data-debug="chain-recents"
@@ -836,7 +852,7 @@
 </div>
 
 <style>
-  /* As many columns and rows as the chain needs (`chainGrid`), on the FX
+  /* As many unit columns and rows as the chain needs (`chainUnitLayout`), on the FX
      grid's 8px trough. */
   /* The chain's frame: the pad scope's outline and the two-row header. */
   .chain-wrap {
@@ -1115,6 +1131,21 @@
     line-height: 1.2;
     hyphens: auto;
     overflow-wrap: anywhere;
+  }
+  /* A one-unit cell (a slider's): a size smaller, broken only between
+     words, so "Pedal" stays whole (the user, 2026-11-05). */
+  .chain-cell.half .name {
+    font-size: 0.8125rem;
+    overflow-wrap: normal;
+    hyphens: manual;
+  }
+  /* Its power button narrower (32 px across, still the band's height), so
+     the name keeps the room. */
+  .chain-cell.half .power {
+    width: 32px;
+  }
+  .chain-cell.half .cell-head {
+    gap: 2px;
   }
   /* A narrow cell leaves the name what the power button does not: a size
      smaller. */

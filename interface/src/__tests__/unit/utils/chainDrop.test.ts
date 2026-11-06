@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
 	arrange,
-	chainGrid,
 	clampChainIndex,
 	liveChainIndex,
 	moved,
@@ -9,7 +8,7 @@ import {
 	REORDER_IDLE,
 	sameDevices,
 	type ChainEntry,
-	type ReorderState, recentLayout, ghostSpan } from '$lib/utils/chainDrop';
+	type ReorderState, recentLayout, chainUnitLayout, chainIndexAt } from '$lib/utils/chainDrop';
 
 describe('clampChainIndex', () => {
 	it('lands where the finger is', () => {
@@ -34,21 +33,6 @@ describe('moved', () => {
 	it('moves one item and keeps the rest in order', () => {
 		expect(moved(['a', 'b', 'c', 'd'], 3, 1)).toEqual(['a', 'd', 'b', 'c']);
 		expect(moved(['a', 'b', 'c', 'd'], 0, 2)).toEqual(['b', 'c', 'a', 'd']);
-	});
-});
-
-describe('chainGrid', () => {
-	it('keeps a short chain on one row, the + cell included', () => {
-		expect(chainGrid(2, 4)).toEqual({ cols: 3, rows: 1 });
-		expect(chainGrid(4, 4)).toEqual({ cols: 5, rows: 1 });
-	});
-	it('splits a longer chain evenly over two rows', () => {
-		expect(chainGrid(5, 4)).toEqual({ cols: 3, rows: 2 });
-		expect(chainGrid(8, 4)).toEqual({ cols: 5, rows: 2 });
-		expect(chainGrid(12, 4)).toEqual({ cols: 7, rows: 2 });
-	});
-	it('an empty chain is the + cell alone', () => {
-		expect(chainGrid(0, 4)).toEqual({ cols: 1, rows: 1 });
 	});
 });
 
@@ -182,23 +166,12 @@ describe('planReorder', () => {
 });
 
 describe('the Recent block (ADR-484)', () => {
-	it('is three columns of four on one row, five of two on two rows (+ Effect the last column)', () => {
+	it('is four columns of four on one row, six of two on two rows, + Effect the last tile', () => {
 		expect(recentLayout(1)).toEqual({ columns: 4, rows: 4, shown: 15 });
 		expect(recentLayout(2)).toEqual({ columns: 6, rows: 2, shown: 11 });
 	});
 });
 
-describe('the ghost section fills an uneven wrap (ADR-484)', () => {
-	it('spans the empty cells its row would leave', () => {
-		// 5 devices + the two-cell section on 4 x 2: one cell left over, beside it.
-		expect(ghostSpan(5, 2, chainGrid(6, 4))).toBe(3);
-		// + Effect alone after 6 devices on 4 x 2: one cell left over.
-		expect(ghostSpan(6, 1, chainGrid(6, 4))).toBe(2);
-		// A full row leaves nothing.
-		expect(ghostSpan(6, 2, chainGrid(7, 4))).toBe(2);
-		expect(ghostSpan(3, 2, chainGrid(4, 4))).toBe(2);
-	});
-});
 
 describe('liveChainIndex', () => {
 	const at = (...idx: number[]) => idx.map((n) => ({ path: `tracks/0/devices/${n}` }));
@@ -214,3 +187,33 @@ describe('liveChainIndex', () => {
 		expect(liveChainIndex([{ path: 'tracks/0/devices/0/pads/36/devices/0' }, { path: 'tracks/0/devices/0/pads/36/devices/2' }], 1)).toBe(2);
 	});
 });
+
+describe('chainUnitLayout: sliders one unit, pads two, the ghost section four', () => {
+	it('keeps a chain that fits twelve units on one row, the ghost last', () => {
+		const l = chainUnitLayout([2, 1, 2, 1, 2], 4, 12);
+		expect(l.rows).toBe(1);
+		expect(l.cols).toBe(12);
+		expect(l.places.map((p) => p.col)).toEqual([0, 2, 3, 5, 6]);
+		expect(l.ghost).toEqual({ row: 0, col: 8, span: 4 });
+	});
+
+	it('splits a longer chain over two rows with no hole: a cell that does not fit starts the next row, the one before widens', () => {
+		const l = chainUnitLayout([2, 2, 2, 2, 1, 2, 2], 4, 12);
+		expect(l.rows).toBe(2);
+		for (const row of [0, 1]) {
+			const used = [...l.places, l.ghost].filter((p) => p.row === row).reduce((a, p) => a + p.span, 0);
+			expect(used, `row ${row}`).toBe(l.cols);
+		}
+		expect(l.ghost.row).toBe(1);
+		expect(l.ghost.span).toBeGreaterThanOrEqual(4);
+	});
+
+	it('finds the landing index under a point, and past a row\'s last cell', () => {
+		const l = chainUnitLayout([2, 1, 2], 4, 12);
+		expect(chainIndexAt(l.places, 0, 0)).toBe(0);
+		expect(chainIndexAt(l.places, 0, 2)).toBe(1);
+		expect(chainIndexAt(l.places, 0, 4)).toBe(2);
+		expect(chainIndexAt(l.places, 0, 9)).toBe(3);
+	});
+});
+

@@ -172,19 +172,6 @@ function firstFix(sigs: string[], want: string[], i: number): { from: number; to
 }
 
 /**
- * The chain overview's grid for `count` devices plus its + cell
- * (2026-10-25): one row while the chain is short, so a few devices get the
- * width the track strips would; past `wrapAfter` devices, two rows, the
- * cells split evenly between them so each stays wide. Never more than two:
- * the FX section is two tile rows tall.
- */
-export function chainGrid(count: number, wrapAfter: number): { cols: number; rows: number } {
-	const slots = count + 1;
-	const rows = count > wrapAfter ? 2 : 1;
-	return { cols: Math.max(1, Math.ceil(slots / rows)), rows };
-}
-
-/**
  * The ghost section's tiles (ADR-484; the user, 2026-11-05): two cells
  * wide, four columns of four on a chain of one row, six columns of two
  * once the chain wraps to two rows. The last tile is + Effect; the
@@ -194,14 +181,80 @@ export function recentLayout(chainRows: number): { columns: number; rows: number
 	return chainRows > 1 ? { columns: 6, rows: 2, shown: 11 } : { columns: 4, rows: 4, shown: 15 };
 }
 
+/** Where one cell of the chain sits: its row, its first unit column and how many it spans. */
+export interface ChainPlace {
+	row: number;
+	col: number;
+	span: number;
+}
+
 /**
- * How many grid cells the chain's ghost section takes (ADR-484): its own
- * `cells` (two with recents, one for + Effect alone), plus the empty cells
- * an uneven wrap leaves after it in its row, so the row ends flush (the
- * user, 2026-10-26: no dead space). `devices` is the cells before it.
+ * The chain overview's grid in width units (the user, 2026-11-05): a
+ * device a slider draws takes one unit, one with a pad or a picture two,
+ * and the ghost section `ghost` units at the end. Up to `rowUnits` the
+ * whole chain is one row; past it two, as even as the cells allow. A cell
+ * that would not fit at the end of a row starts the next one, and the cell
+ * before it widens to the row's end, so no row has a hole; the ghost
+ * section takes its row's rest. Never more than two rows: the FX section
+ * is two tiles tall.
  */
-export function ghostSpan(devices: number, cells: number, grid: { cols: number; rows: number }): number {
-	const empty = Math.max(0, grid.cols * grid.rows - (devices + cells));
-	const col = devices % grid.cols;
-	return col + cells + empty <= grid.cols ? cells + empty : cells;
+export function chainUnitLayout(
+	widths: readonly number[],
+	ghost: number,
+	rowUnits: number
+): { cols: number; rows: number; places: ChainPlace[]; ghost: ChainPlace } {
+	const total = widths.reduce((a, w) => a + w, 0) + ghost;
+	if (total <= rowUnits) {
+		let col = 0;
+		const places = widths.map((span) => {
+			const p = { row: 0, col, span };
+			col += span;
+			return p;
+		});
+		return { cols: total, rows: 1, places, ghost: { row: 0, col, span: ghost } };
+	}
+	for (let cols = Math.ceil(total / 2); ; cols++) {
+		const laid = placeInRows(widths, ghost, cols);
+		if (laid) return { cols, rows: 2, ...laid };
+	}
+}
+
+function placeInRows(widths: readonly number[], ghost: number, cols: number): { places: ChainPlace[]; ghost: ChainPlace } | null {
+	const places: ChainPlace[] = [];
+	let row = 0;
+	let col = 0;
+	const wrap = () => {
+		const last = places[places.length - 1];
+		if (last && last.row === row) last.span += cols - col;
+		row += 1;
+		col = 0;
+	};
+	for (const w of widths) {
+		const span = Math.min(w, cols);
+		if (col + span > cols) wrap();
+		if (row > 1) return null;
+		places.push({ row, col, span });
+		col += span;
+	}
+	if (col + ghost > cols) wrap();
+	if (row > 1) return null;
+	return { places, ghost: { row, col, span: cols - col } };
+}
+
+/**
+ * The index a dragged cell lands at, for a point at unit column `col` on
+ * `row` of a layout taken at lift: the cell under it, or past the last cell
+ * of that row when the point is beyond them (the ghost section).
+ */
+export function chainIndexAt(places: readonly ChainPlace[], row: number, col: number): number {
+	let after = -1;
+	for (let i = 0; i < places.length; i++) {
+		const p = places[i];
+		if (p.row !== row) continue;
+		if (col >= p.col && col < p.col + p.span) return i;
+		if (p.col <= col) after = i;
+	}
+	if (after >= 0) return after + 1;
+	const first = places.findIndex((p) => p.row === row);
+	return first >= 0 ? first : places.length;
 }
