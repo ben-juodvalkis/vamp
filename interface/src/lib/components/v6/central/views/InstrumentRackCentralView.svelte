@@ -134,6 +134,7 @@
                   value={getNormalizedValue(item.control.macroIndex)}
                   title={item.control.name}
                   face="knob"
+                  knobSize="l"
                   icon={glyphForName(item.control.name)}
                   color={ctlInk(i)}
                   readout={device ? selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(device, item.control.macroIndex)) : undefined}

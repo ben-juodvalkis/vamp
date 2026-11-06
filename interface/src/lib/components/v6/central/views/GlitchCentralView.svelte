@@ -176,6 +176,7 @@
 					value={clockUnit}
 					title="Clock"
 					face="knob"
+					knobSize="l"
 					orientation="vertical"
 					labelSize="small"
 					isGhost={glitchLoop.isGhost}
@@ -196,6 +197,7 @@
 						value={unit(s.key, 0)}
 						title={s.title}
 						face="knob"
+						knobSize="l"
 						orientation="vertical"
 						labelSize="small"
 						isGhost={glitchLoop.isGhost}

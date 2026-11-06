@@ -65,6 +65,7 @@
         value={value(control.name)}
         title={control.label}
         face="knob"
+        knobSize="l"
         icon={glyphForName(control.label)}
         orientation="vertical"
         labelOrientation="horizontal"

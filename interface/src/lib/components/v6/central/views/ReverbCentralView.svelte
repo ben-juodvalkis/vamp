@@ -605,6 +605,7 @@
         value={row.position}
         title={knobRow(row.key) ? row.name : `${row.name} ${row.label}`}
         face={knobRow(row.key) ? 'knob' : 'slider'}
+        knobSize="l"
         icon={knobRow(row.key) ? ROW_GLYPHS[row.name] : undefined}
         valueText={row.label}
         {label}
@@ -762,6 +763,7 @@
                       value={controlPosition(control, raw(control.index))}
                       title={control.name}
                       face="knob"
+                      knobSize="l"
                       icon={ROW_GLYPHS[control.name]}
                       valueText={control.label(raw(control.index))}
                       label={ownLabel}

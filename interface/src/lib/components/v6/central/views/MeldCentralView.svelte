@@ -381,6 +381,7 @@
             value={drive}
             title="Drive"
             face="knob"
+            knobSize="l"
             icon="drive"
             orientation="vertical"
             labelSize="small"
@@ -394,6 +395,7 @@
             value={spread}
             title="Spread"
             face="knob"
+            knobSize="l"
             icon="width"
             orientation="vertical"
             labelSize="small"

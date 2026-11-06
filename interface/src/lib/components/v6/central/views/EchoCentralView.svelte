@@ -229,6 +229,7 @@
 				title="Time"
 				valueText={timeLabel}
 				face="knob"
+				knobSize="l"
 				icon="delay"
 				orientation="vertical"
 				labelSize="small"
@@ -286,6 +287,7 @@
 				title="Rate"
 				valueText={lfoLabel}
 				face="knob"
+				knobSize="l"
 				icon="rate"
 				orientation="vertical"
 				labelSize="small"
@@ -313,6 +315,7 @@
 				value={lfoToTime}
 				title="LFO > Time"
 				face="knob"
+				knobSize="l"
 				icon="lfo"
 				orientation="vertical"
 				labelSize="small"
@@ -328,6 +331,7 @@
 				value={lfoToFilter}
 				title="LFO > Filter"
 				face="knob"
+				knobSize="l"
 				icon="cutoff"
 				orientation="vertical"
 				labelSize="small"
@@ -351,6 +355,7 @@
 				value={input}
 				title="Input"
 				face="knob"
+				knobSize="l"
 				icon="gain"
 				sensitivity={GAIN_SENSITIVITY}
 				orientation="vertical"
@@ -368,6 +373,7 @@
 				value={output}
 				title="Output"
 				face="knob"
+				knobSize="l"
 				icon="output"
 				sensitivity={GAIN_SENSITIVITY}
 				orientation="vertical"

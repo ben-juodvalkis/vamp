@@ -9,6 +9,8 @@ import {
 	groupUnits,
 	isKnobGroup,
 	knobGridRows,
+	knobSizeFor,
+	controlKnobSize,
 	panelParamNames,
 	tabOptions,
 	TAB_MAX_OPTIONS,
@@ -131,5 +133,17 @@ describe('few values are a tab, many a knob (ADR-509)', () => {
 		const steps = (p: typeof DRIFT_PANEL) => p.pages.flatMap((pg) => pg.rows.flat()).flatMap((g) => g.controls).filter((c) => c.kind === 'step');
 		expect(steps(DRIFT_PANEL).find((c) => c.title === 'Oct') && tabOptions(steps(DRIFT_PANEL).find((c) => c.title === 'Oct')!)).toHaveLength(6);
 		expect(tabOptions(steps(OPERATOR_PANEL).find((c) => c.title === 'Wave')!)).toBeUndefined();
+	});
+});
+
+describe('a knob’s size, by how many its column stacks', () => {
+	it('is large for one or two, medium for three, small for four or more', () => {
+		expect([1, 2, 3, 4, 6].map(knobSizeFor)).toEqual(['l', 'l', 'm', 's', 's']);
+	});
+	it('takes a panel control’s own size, then its group’s, then the count', () => {
+		const box = knobs.controls[0];
+		expect(controlKnobSize(box, knobs, 3)).toBe('m');
+		expect(controlKnobSize(box, { ...knobs, knobSize: 's' }, 1)).toBe('s');
+		expect(controlKnobSize({ kind: 'box', param: 'Time', title: 'Time', knobSize: 'l' }, { ...knobs, knobSize: 's' }, 4)).toBe('l');
 	});
 });

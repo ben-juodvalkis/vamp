@@ -84,12 +84,13 @@
     {#if usedMacros.length > 0}
       <!-- The rack's mapped macros as knobs, as Live draws them (ADR-509). -->
       <KnobGrid count={usedMacros.length}>
-        {#snippet item(i)}
+        {#snippet item(i, size)}
           {@const paramIndex = usedMacros[i]}
           <DeviceSlider
             value={getParamValue(paramIndex) / 127}
             title={cleanParameterName(parameterNames[paramIndex])}
             face="knob"
+            knobSize={size}
             icon={glyphForName(cleanParameterName(parameterNames[paramIndex]))}
             color={drumRackKKInk}
             onInteraction={(value) => {

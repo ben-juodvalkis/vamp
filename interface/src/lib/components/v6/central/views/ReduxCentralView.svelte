@@ -64,6 +64,7 @@
           value={value(s.index)}
           title={s.title}
           face={s.title === 'Dry/Wet' ? 'slider' : 'knob'}
+          knobSize="l"
           icon={s.icon}
           orientation="vertical"
           min={s.min}

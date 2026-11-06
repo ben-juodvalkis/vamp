@@ -60,6 +60,7 @@
       value={value(UTIL.width)}
       title="Width"
       face="knob"
+      knobSize="l"
       orientation="vertical"
       min={0}
       max={2}
@@ -77,6 +78,7 @@
       value={value(UTIL.balance)}
       title="Balance"
       face="knob"
+      knobSize="l"
       orientation="horizontal"
       min={-1}
       max={1}
@@ -94,6 +96,7 @@
       value={value(UTIL.bassFreq)}
       title="Bass Freq"
       face="knob"
+      knobSize="l"
       orientation="vertical"
       min={0}
       max={1}

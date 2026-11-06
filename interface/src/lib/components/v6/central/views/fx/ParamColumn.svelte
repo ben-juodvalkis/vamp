@@ -8,6 +8,7 @@
    */
   import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
   import KnobGrid from '$lib/components/v6/device-panel/KnobGrid.svelte';
+  import type { KnobSize } from '$lib/components/v6/device-panel/knobLayout';
   import type { FxGridSlotHandle } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import type { DeviceColorScheme } from '$lib/config/devicePresets';
 
@@ -31,16 +32,19 @@
      * gives each the most room; boxes, the default, for a column of levels.
      */
     face?: 'slider' | 'knob';
+    /** The most knobs this column ever shows, where a mode drops some: sizes them (ADR-509). */
+    fullest?: number;
   }
 
-  let { fx, ink, boxes, face = 'slider' }: Props = $props();
+  let { fx, ink, boxes, face = 'slider', fullest }: Props = $props();
 </script>
 
-{#snippet control(box: ParamBox)}
+{#snippet control(box: ParamBox, knobSize: KnobSize = 'm')}
   <DeviceSlider
     value={fx.paramValue(box.index) ?? box.rest}
     title={box.title}
     {face}
+    {knobSize}
     orientation="vertical"
     min={box.min ?? 0}
     max={box.max ?? 1}
@@ -55,8 +59,8 @@
 
 {#if face === 'knob'}
   <div class="param-column param-knobs" class:slot-ghost={fx.isGhost}>
-    <KnobGrid count={boxes.length}>
-      {#snippet item(i)}{@render control(boxes[i])}{/snippet}
+    <KnobGrid count={boxes.length} {fullest}>
+      {#snippet item(i, size)}{@render control(boxes[i], size)}{/snippet}
     </KnobGrid>
   </div>
 {:else}

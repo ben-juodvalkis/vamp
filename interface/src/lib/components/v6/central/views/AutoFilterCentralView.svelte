@@ -186,6 +186,7 @@
 			value={morphAmount}
 			title="Morph"
 			face="knob"
+			knobSize="l"
 			icon="morph"
 			orientation="vertical"
 			isGhost={fx.isGhost}
@@ -304,6 +305,7 @@
 				value={drive}
 				title="Drive"
 				face="knob"
+				knobSize="l"
 				icon="drive"
 				orientation="vertical"
 				isGhost={fx.isGhost}

@@ -93,4 +93,13 @@ describe('DeviceSlider face="knob"', () => {
 		expect(detents.map((d) => d.classList.contains('on'))).toEqual([false, false, true, false, false, false]);
 		expect(container.querySelector('.knob-zero')).toBeNull();
 	});
+
+	it('draws at the size it is given, medium unless told', async () => {
+		const { container } = await knob({ value: 0.5 });
+		expect(container.querySelector('.knob')?.getAttribute('data-knob-size')).toBe('m');
+		cleanup();
+		const large = await knob({ value: 0.5, knobSize: 'l' });
+		expect(large.container.querySelector('.knob')?.getAttribute('data-knob-size')).toBe('l');
+		expect(large.container.querySelector('.knob')?.classList.contains('size-l')).toBe(true);
+	});
 });

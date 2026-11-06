@@ -144,6 +144,7 @@
         value={value(b.index)}
         title={b.title}
         face="knob"
+        knobSize="l"
         min={0}
         max={1}
         isGhost={shifter.isGhost}
@@ -211,12 +212,13 @@
 
   <div class="col" class:slot-ghost={shifter.isGhost}>
     <KnobGrid count={LFO_BOXES.length}>
-      {#snippet item(i)}
+      {#snippet item(i, size)}
         {@const b = LFO_BOXES[i]}
         <DeviceSlider
           value={value(b.index)}
           title={b.title}
           face="knob"
+          knobSize={size}
           min={0}
           max={1}
           centerOrigin={b.center !== undefined}
@@ -248,6 +250,7 @@
         value={value(spin ? P.spin : P.phase)}
         title={spin ? 'Spin' : 'Phase'}
         face="knob"
+        knobSize="l"
         min={0}
         max={1}
         isGhost={shifter.isGhost}

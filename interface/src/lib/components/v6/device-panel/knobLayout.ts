@@ -24,3 +24,15 @@ export function knobGridRows(count: number, width: number, height: number, gap =
 	}
 	return best;
 }
+
+/** A knob's size (ADR-509): s 48px, m 70px, l 96px across. */
+export type KnobSize = 's' | 'm' | 'l';
+
+/**
+ * A knob's size from how many knobs its column stacks (ADR-509): one or two
+ * 'l', three 'm', four or more 's'. Count the most the column ever shows, so
+ * a mode that adds or drops a knob never resizes the others.
+ */
+export function knobSizeFor(stacked: number): KnobSize {
+	return stacked <= 2 ? 'l' : stacked === 3 ? 'm' : 's';
+}

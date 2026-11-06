@@ -89,6 +89,7 @@
       value={outputGainValue}
       title="Output"
       face="knob"
+      knobSize="l"
       icon="output"
       isGhost={fx.isGhost}
       color={fx.isGhost ? ghostInk : fxInk}

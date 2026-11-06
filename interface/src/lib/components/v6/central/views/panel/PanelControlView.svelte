@@ -11,7 +11,7 @@
 	 */
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
-	import { choiceColumns, tabOptions, type PanelControl, type PanelFace } from './panelTypes';
+	import { choiceColumns, tabOptions, type KnobSize, type PanelControl, type PanelFace } from './panelTypes';
 	import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
 	import type { PanelParams } from './usePanelParams.svelte';
 
@@ -25,9 +25,11 @@
 		pageRows?: number;
 		/** Box or knob (ADR-509), decided by the group and the panel. */
 		face?: PanelFace;
+		/** A knob's size (ADR-509): by its column's count, unless the panel names one. */
+		knobSize?: KnobSize;
 	}
 
-	let { control, params, color, switchParam, pageRows = 1, face = 'slider' }: Props = $props();
+	let { control, params, color, switchParam, pageRows = 1, face = 'slider', knobSize = 'm' }: Props = $props();
 
 	let listed = $derived(params.has(control.param));
 	let range = $derived(params.range(control.param));
@@ -74,6 +76,7 @@
 			isGhost={!listed}
 			{color}
 			{face}
+			{knobSize}
 			readout={params.display(control.param)}
 			valueText={face === 'knob' ? params.display(control.param) : undefined}
 			onInteraction={write}
@@ -118,6 +121,7 @@
 			value={raw ?? lo}
 			title={face === 'knob' ? name : `${name} ${shown}`}
 			{face}
+			{knobSize}
 			valueText={shown}
 			steps={Math.round(hi - lo) + 1}
 			labelAt="top"

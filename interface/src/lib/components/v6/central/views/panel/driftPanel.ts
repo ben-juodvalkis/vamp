@@ -201,6 +201,9 @@ export const DRIFT_PANEL: InstrumentPanel = {
 		{
 			id: 'global',
 			title: 'Global',
+			// Poly / Mono / Stereo / Unison: a device property, not a
+			// parameter, so the view draws it (it left the face 2026-11-06).
+			aside: { slot: 'voiceMode', units: 2, params: [] },
 			rows: [
 				[
 					{

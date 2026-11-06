@@ -12,9 +12,17 @@
    * for a bipolar control. A short mark outside the ring at the start (or at
    * the top) says where zero is, since an arc at zero is otherwise an empty
    * ring. The control's glyph sits in the middle at rest and Live's value
-   * while a finger drags it; the name sits under the knob, and the value at
-   * rest under the name when the host passes one. The glyph goes on a knob
-   * under 56px across, where it is too small to read. A stepped control
+   * while a finger drags it. The caption (the name, and the value at rest
+   * under it when the host passes one) sits under the knob, or beside it,
+   * left-aligned, in a cell wider than 6:5: a short, wide cell has no height
+   * to spare for a caption under it.
+   * A knob is one of three sizes (`size`), set by how many knobs its column
+   * stacks (`knobSizeFor`): 'l' 96px across for one or two, 'm' 70px for
+   * three, 's' 48px for four or more; it is that size centred in its cell, and
+   * shrinks (to a 28px floor) only in a cell too small to hold it with its
+   * caption. Its caption's type is fixed by the size, not the cell.
+   * The glyph goes on a knob under 56px across, where it is too small to
+   * read. A stepped control
    * (`steps`, up to 24) wears a detent for each value in place of the zero
    * mark, the one it rests on in the ink.
    */
@@ -35,9 +43,19 @@
     ink: string;
     /** How many values a stepped control has: a detent each, up to 24. */
     steps?: number;
+    /** The knob's size, by its column's count (`knobSizeFor`): s 48px, m 70px, l 96px. */
+    size?: 's' | 'm' | 'l';
+    /**
+     * False draws no caption: the knob takes the cell's height, and `centreMark`
+     * or the glyph alone says what it is (Drift's level knobs, 2026-11-06).
+     * The name still reaches assistive tech through the host's aria-label.
+     */
+    caption?: boolean;
+    /** A short text drawn in the middle at rest in place of the glyph ("1", "2"). */
+    centreMark?: string;
   }
 
-  let { position, origin, title = '', valueText, readout, icon, dragging = false, ink, steps }: Props = $props();
+  let { position, origin, title = '', valueText, readout, icon, dragging = false, ink, steps, size = 'm', caption = true, centreMark }: Props = $props();
 
   const MAX_DETENTS = 24;
 
@@ -75,7 +93,7 @@
   });
 </script>
 
-<div class="knob" class:dragging style="--knob-ink: {ink};">
+<div class="knob size-{size}" class:dragging class:no-caption={!caption} data-knob-size={size} style="--knob-ink: {ink};">
   <div class="knob-body">
   <div class="knob-face">
     <svg class="knob-svg" viewBox="0 0 100 100" aria-hidden="true">
@@ -91,11 +109,13 @@
     </svg>
     {#if centreText}
       <span class="knob-centre knob-readout">{centreText}</span>
+    {:else if centreMark}
+      <span class="knob-centre knob-mark" aria-hidden="true">{centreMark}</span>
     {:else if icon}
       <span class="knob-centre knob-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>
     {/if}
   </div>
-  {#if title || valueText}
+  {#if caption && (title || valueText)}
     <div class="knob-caption">
       {#if title}<span class="knob-title">{title}</span>{/if}
       {#if valueText}<span class="knob-value-text">{valueText}</span>{/if}
@@ -106,12 +126,30 @@
 
 <style>
   /* The cell is the query container; the body lays the knob and its
-     caption out inside it, centred together. */
+     caption under it out inside it, centred together. Each size fixes the
+     knob's diameter, its caption's type, and the height that caption takes
+     (gap and padding included) for the guard against a small cell. */
   .knob {
     width: 100%;
     height: 100%;
     container-type: size;
     pointer-events: none;
+    --knob-want: 70px;
+    --knob-title-fs: 15px;
+    --knob-value-fs: 12px;
+    --knob-caption-h: 3.125rem;
+  }
+  .knob.size-s {
+    --knob-want: 48px;
+    --knob-title-fs: 12px;
+    --knob-value-fs: 10px;
+    --knob-caption-h: 2.75rem;
+  }
+  .knob.size-l {
+    --knob-want: 96px;
+    --knob-title-fs: 17px;
+    --knob-value-fs: 14px;
+    --knob-caption-h: 3.375rem;
   }
   .knob-body {
     width: 100%;
@@ -124,7 +162,7 @@
     gap: 0.375rem;
     padding: 0.375rem 0.25rem;
   }
-  /* A wide, short cell puts the caption beside the knob. */
+  /* A short, wide cell puts the caption beside the knob. */
   @container (min-aspect-ratio: 6/5) {
     .knob-body {
       grid-template-rows: auto;
@@ -134,20 +172,31 @@
       gap: 0.625rem;
     }
   }
-
-  /* Sized off the cell's short side, less the caption under it. */
+  /* Its size's diameter, less only what a small cell cannot hold: the
+     cell's width, and its height less the caption under it. Never wider
+     than the cell, even at the 28px floor. */
   .knob-face {
     position: relative;
     container-type: size;
-    /* Never wider than the cell, even at the 28px floor. */
-    --knob-d: min(100cqw - 0.5rem, max(28px, min(100cqw - 0.5rem, 100cqh - 3.25rem, 150px)));
+    --knob-d: min(100cqw - 0.5rem, max(28px, min(var(--knob-want), 100cqw - 0.5rem, 100cqh - var(--knob-caption-h))));
     width: var(--knob-d);
     height: var(--knob-d);
   }
+  /* Beside: the cell's height, and half its width for the caption. */
   @container (min-aspect-ratio: 6/5) {
     .knob-face {
-      --knob-d: min(50cqw, max(28px, min(100cqh - 0.75rem, 50cqw, 150px)));
+      --knob-d: min(50cqw, max(28px, min(var(--knob-want), 50cqw, 100cqh - 0.75rem)));
     }
+  }
+  /* No caption: the cell's height is all the knob's, beside or below. */
+  .knob.no-caption .knob-face {
+    --knob-d: min(100cqw - 0.5rem, max(28px, min(var(--knob-want), 100cqw - 0.5rem, 100cqh - 0.75rem)));
+  }
+  .knob-mark {
+    font-size: clamp(12px, 34cqw, 30px);
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
   }
   .knob-svg {
     display: block;
@@ -199,7 +248,7 @@
     width: 100%;
     height: 100%;
   }
-  @container (max-width: 56px) {
+  @container (width < 56px) {
     .knob-icon {
       display: none;
     }
@@ -231,22 +280,16 @@
   }
   .knob-title {
     max-width: 100%;
-    /* Shrinks in a narrow cell rather than breaking a word. */
-    font-size: clamp(10px, 15cqw, 15px);
+    /* Fixed by the size; a name too long for the cell ends in an ellipsis. */
+    font-size: var(--knob-title-fs);
     font-weight: 500;
     color: var(--knob-ink);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  /* Beside the knob the name has the cell's width less the knob's. */
-  @container (min-aspect-ratio: 6/5) {
-    .knob-title {
-      font-size: clamp(10px, 9.5cqw, 15px);
-    }
-  }
   .knob-value-text {
-    font-size: 0.75rem;
+    font-size: var(--knob-value-fs);
     font-variant-numeric: tabular-nums;
     color: var(--signal-dim);
     white-space: nowrap;

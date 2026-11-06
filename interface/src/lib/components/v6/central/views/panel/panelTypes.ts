@@ -13,6 +13,8 @@
  * `instrumentPanels.test.ts`.
  */
 
+import { knobSizeFor, type KnobSize } from '$lib/components/v6/device-panel/knobLayout';
+
 /** One control, bound to one parameter by its Live name. */
 export type PanelControl =
 	/**
@@ -20,11 +22,11 @@ export type PanelControl =
 	 * spans 0. `toggle` is the on/off parameter that belongs to it (a source's
 	 * switch over its level), drawn small under it (ADR-509).
 	 */
-	| { kind: 'box'; param: string; title: string; toggle?: PanelToggle }
+	| { kind: 'box'; param: string; title: string; toggle?: PanelToggle; knobSize?: KnobSize }
 	/** A quantized parameter with few values: one cell a value, its labels Live's own. */
 	| { kind: 'choice'; param: string; options: readonly string[] }
 	/** A quantized parameter with many values: a value box that steps, naming the value. */
-	| { kind: 'step'; param: string; title: string; labels?: readonly string[] }
+	| { kind: 'step'; param: string; title: string; labels?: readonly string[]; knobSize?: KnobSize }
 	/** An on/off parameter: one cell, lit while on. */
 	| { kind: 'switch'; param: string; title: string };
 
@@ -52,10 +54,24 @@ export interface PanelGroup {
 	 * mis-state it: three knobs that wrap two to a row want two boxes' width.
 	 */
 	units?: number;
+	/**
+	 * How large its knobs draw (ADR-509). Unset, by how many its column
+	 * stacks (`knobSizeFor`); a control's own wins.
+	 */
+	knobSize?: KnobSize;
 }
 
 /** A value box drawn as a box or as a knob (ADR-509). */
 export type PanelFace = 'slider' | 'knob';
+
+/**
+ * How large a control's knob draws: its own size, else its group's, else by
+ * how many knobs its column stacks (`knobSizeFor`, ADR-509).
+ */
+export function controlKnobSize(control: PanelControl, group: PanelGroup | undefined, stacked: number): KnobSize {
+	const own = control.kind === 'box' || control.kind === 'step' ? control.knobSize : undefined;
+	return own ?? group?.knobSize ?? knobSizeFor(stacked);
+}
 
 export interface PanelTab {
 	title: string;
@@ -161,7 +177,7 @@ export function isKnobGroup(group: PanelGroup, boxFace?: PanelFace): boolean {
 	);
 }
 
-export { knobGridRows } from '$lib/components/v6/device-panel/knobLayout';
+export { knobGridRows, knobSizeFor, type KnobSize } from '$lib/components/v6/device-panel/knobLayout';
 
 /** Every parameter name a panel binds: its controls' and its switches'. */
 export function panelParamNames(panel: InstrumentPanel): string[] {

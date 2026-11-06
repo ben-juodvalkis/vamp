@@ -57,12 +57,13 @@
 		<div class="eyebrow">{device.name}</div>
 		<!-- A plug-in's parameters as knobs, as Live draws a rack's macros (ADR-509). -->
 		<KnobGrid count={params.length}>
-			{#snippet item(i)}
+			{#snippet item(i, size)}
 				{@const p = params[i]}
 				<DeviceSlider
 					value={(p.value - p.min) / (p.max - p.min || 1)}
 					title={p.name}
 					face="knob"
+					knobSize={size}
 					icon={glyphForName(p.name)}
 					{color}
 					onInteraction={(t) => write(p.index, p.min, p.max, t)}

@@ -61,6 +61,7 @@
 				valueText={String(step(box.index))}
 				steps={24}
 				face="knob"
+				knobSize="l"
 				orientation="vertical"
 				min={1}
 				max={24}

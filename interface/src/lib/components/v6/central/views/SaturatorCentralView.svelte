@@ -56,6 +56,7 @@
       value={value(COLOR.low, REST.low)}
       title="Bass"
       face="knob"
+      knobSize="l"
       icon="tone"
       orientation="vertical"
       isGhost={saturator.isGhost}
@@ -91,6 +92,7 @@
         value={saturator.paramValue(fader.index) ?? fader.fallback}
         title={fader.title}
         face={fader.title === 'Mix' ? 'slider' : 'knob'}
+        knobSize="l"
         icon={fader.icon}
         orientation="vertical"
         isGhost={saturator.isGhost}

@@ -244,6 +244,7 @@
         title="Rate"
         valueText={rateDisplay ?? (syncIsOn ? RATE_LABELS[Math.round(rateValue)] : 'Free')}
         face="knob"
+        knobSize="l"
         icon="rate"
         orientation="vertical"
         labelOrientation="horizontal"
@@ -286,6 +287,7 @@
       title="Gate"
       valueText={gateDisplay}
       face="knob"
+      knobSize="l"
       icon="notelength"
       orientation="vertical"
       labelOrientation="horizontal"

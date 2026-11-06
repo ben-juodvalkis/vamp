@@ -550,6 +550,7 @@
             value={time}
             title="Time"
             face="knob"
+            knobSize="l"
             orientation="vertical"
             labelSize="small"
             centerOrigin
@@ -564,6 +565,7 @@
             value={globalMod}
             title="Mod Amt"
             face="knob"
+            knobSize="l"
             orientation="vertical"
             labelSize="small"
             color={wavetableInk}

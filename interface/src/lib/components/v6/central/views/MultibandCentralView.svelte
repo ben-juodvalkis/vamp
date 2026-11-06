@@ -55,6 +55,7 @@
       value={mbOutput}
       title="Output"
       face="knob"
+      knobSize="l"
       icon="output"
       orientation="vertical"
       min={MB_OUTPUT_MIN}

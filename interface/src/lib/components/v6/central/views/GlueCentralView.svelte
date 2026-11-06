@@ -75,6 +75,7 @@
       value={glueOutput}
       title="Output"
       face="knob"
+      knobSize="l"
       icon="output"
       orientation="vertical"
       min={GLUE_OUTPUT_MIN}

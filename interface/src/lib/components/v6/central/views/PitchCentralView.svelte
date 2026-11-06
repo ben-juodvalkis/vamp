@@ -86,6 +86,7 @@
 				value={octave.paramValue(OCTAVE_TONE_PARAM) ?? OCTAVE_TONE_MAX}
 				title="Tone"
 				face="knob"
+				knobSize="l"
 				orientation="vertical"
 				min={0}
 				max={OCTAVE_TONE_MAX}

@@ -130,5 +130,37 @@ the flat ring with nothing on it but the arc.
 - An arc reads less at a distance than a fill. That is why the played
   controls stay boxes.
 
+## Addendum (2026-11-06): three sizes, sized by the column
+
+Ben asked for standard knob sizes in place of each knob filling its cell.
+
+- **Three sizes.** `KnobFace`'s `size` (`DeviceSlider`'s `knobSize`): 's'
+  48px across, 'm' 70px, 'l' 96px. These are what fits the rig's central
+  view (about 327px tall at 1366 x 1024): 72/120/152 were tried the same
+  day and every Drift knob came out clamped, three "medium" knobs at 64,
+  70 and 80px. Medium is the size of Drift's level knobs, which Ben
+  picked. A knob is that size, centred in its
+  cell; it shrinks (to the 28px floor) only where the cell cannot hold it
+  with its caption, so it never overflows. The caption's type is
+  fixed by the size (titles 12, 15 and 17px), not by the cell.
+- **The caption is under the knob unless the cell is short and wide.** In a
+  cell wider than 6:5 it sits beside the knob, left-aligned, and the knob
+  takes the cell's height and up to half its width. Measured at 1366 x 1024
+  with the effects chain above it, the central view is about 327px tall: a
+  column of three knobs gets cells about 128 x 80, where a caption under
+  the knob left it 28-32px across. Beside it, the knob has the cell's
+  height.
+- **The size follows how many knobs the column stacks**
+  (`knobSizeFor`): one or two 'l', three 'm', four or more 's'. Count the
+  most the column can ever show: a column whose knobs come and go with a
+  mode keeps the size of its fullest state (`KnobGrid`'s and
+  `ParamColumn`'s `fullest`), so a mode switch never resizes a knob. In a
+  grid whose rows come from its box (a panel's knob group, `KnobGrid`), its
+  row count is the count. A panel group or control can still name its own
+  `knobSize`.
+- **A column too small for its size is a layout to fix, not a size to
+  change.** Where a cell clamps a knob below its size, the column is to be
+  widened or heightened; the rule's size stays.
+
 ## Tags
 `knob`, `value-box`, `central-view`, `instrument-panel`, `touch`

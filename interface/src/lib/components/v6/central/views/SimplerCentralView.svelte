@@ -602,6 +602,7 @@
             value={slicingSensitivity}
             title="Sens"
             face="knob"
+            knobSize="l"
             icon="slice"
             orientation="vertical"
             labelOrientation="horizontal"
@@ -618,6 +619,7 @@
             value={fadeValue}
             title="Fade"
             face="knob"
+            knobSize="l"
             icon="fade"
             orientation="vertical"
             labelOrientation="horizontal"
@@ -698,6 +700,7 @@
           value={randomAmountValue}
           title="Random"
           face="knob"
+          knobSize="l"
           icon="dice"
           orientation="vertical"
           labelOrientation="horizontal"

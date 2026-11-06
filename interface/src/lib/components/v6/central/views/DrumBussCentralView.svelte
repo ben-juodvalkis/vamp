@@ -120,6 +120,7 @@
         value={trim}
         title="Trim"
         face="knob"
+        knobSize="l"
         icon="gain"
         orientation="vertical"
         labelSize="small"
@@ -161,12 +162,13 @@
        most room rather than stacking three to a thin column. -->
   <div class="col box-stack">
     <KnobGrid count={distortion.length}>
-      {#snippet item(i)}
+      {#snippet item(i, size)}
         {@const box = distortion[i]}
         <DeviceSlider
           value={box.value}
           title={box.title}
           face="knob"
+          knobSize={size}
           icon={box.icon}
           isGhost={drum.isGhost}
           color={drumInk}

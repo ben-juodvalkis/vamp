@@ -9,7 +9,7 @@
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
 	import PanelControlView from './PanelControlView.svelte';
 	import PanelEyebrow from './PanelEyebrow.svelte';
-	import { controlUnits, groupFace, groupUnits, isKnobGroup, knobGridRows, type PanelFace, type PanelGroup } from './panelTypes';
+	import { controlKnobSize, controlUnits, groupFace, groupUnits, isKnobGroup, knobGridRows, type PanelFace, type PanelGroup } from './panelTypes';
 	import type { PanelParams } from './usePanelParams.svelte';
 
 	interface Props {
@@ -61,7 +61,7 @@
 	>
 		{#each group.controls as control (control.param)}
 			<div class="panel-cell" style="flex: {controlUnits(control, pageRows)} 1 0;">
-				<PanelControlView {control} {params} {color} switchParam={group.switchParam} {pageRows} {face} />
+				<PanelControlView {control} {params} {color} switchParam={group.switchParam} {pageRows} {face} knobSize={controlKnobSize(control, group, knobGrid ? rows : 1)} />
 			</div>
 		{/each}
 	</div>

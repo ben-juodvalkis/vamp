@@ -97,7 +97,7 @@
     <ParamSwitch label="FB Invert" on={fbInvert} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => fx.sendParam(PHASER.fbInvert, fbInvert ? 0 : 1)} />
   </div>
 
-  <ParamColumn face="knob" {fx} ink={fx.color} boxes={voicing} />
+  <ParamColumn face="knob" {fx} ink={fx.color} boxes={voicing} fullest={4} />
 
   <div class="cell">
     <ScrubTabs

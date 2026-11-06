@@ -214,6 +214,7 @@
           value={cutoffValue}
           title="Cutoff"
           face="knob"
+          knobSize="l"
           icon="cutoff"
           orientation="horizontal"
           min={CUTOFF_MIN}
@@ -245,6 +246,7 @@
         value={makeupGainValue}
         title="Output"
         face="knob"
+        knobSize="l"
         icon="output"
         orientation="vertical"
         min={MAKEUP_GAIN_MIN}

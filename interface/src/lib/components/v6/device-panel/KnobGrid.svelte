@@ -4,20 +4,25 @@
    * and takes the rows that give each knob the most room (`knobGridRows`),
    * the rule an instrument panel's groups follow. Filled row by row, left to
    * right. `item` draws the knob at an index, usually a `DeviceSlider
-   * face="knob"`; the grid draws nothing of its own.
+   * face="knob"`, and is handed the knob's size: by how many knobs a column
+   * stacks (`knobSizeFor`), counted at `fullest` where a mode shows fewer
+   * than the most, so a mode switch never resizes a knob. The grid draws
+   * nothing of its own.
    */
   import type { Snippet } from 'svelte';
-  import { knobGridRows } from './knobLayout';
+  import { knobGridRows, knobSizeFor, type KnobSize } from './knobLayout';
 
   interface Props {
     count: number;
-    item: Snippet<[number]>;
+    item: Snippet<[number, KnobSize]>;
     /** At most this many rows, where a view wants a single row or two. */
     maxRows?: number;
+    /** The most knobs this grid ever shows, where a mode shows fewer: sizes them. */
+    fullest?: number;
     class?: string;
   }
 
-  let { count, item, maxRows, class: className = '' }: Props = $props();
+  let { count, item, maxRows, fullest, class: className = '' }: Props = $props();
 
   let box = $state<HTMLDivElement>();
   let size = $state({ w: 0, h: 0 });
@@ -34,16 +39,24 @@
     count > 0 && size.w > 0 ? Math.min(maxRows ?? count, knobGridRows(count, size.w, size.h, gap)) : 1
   );
   let cols = $derived(Math.max(1, Math.ceil(count / rows)));
+  // Sized for the fullest grid this box would lay out.
+  let sizeRows = $derived(
+    fullest && fullest > count && size.w > 0
+      ? Math.min(maxRows ?? fullest, knobGridRows(fullest, size.w, size.h, gap))
+      : rows
+  );
+  let knobSize = $derived(knobSizeFor(sizeRows));
 </script>
 
 <div
   class="knob-grid {className}"
   bind:this={box}
   data-knob-rows={rows}
+  data-knob-size={knobSize}
   style="grid-template-columns: repeat({cols}, minmax(0, 1fr)); grid-template-rows: repeat({rows}, minmax(0, 1fr));"
 >
   {#each { length: count } as _, i (i)}
-    <div class="knob-cell">{@render item(i)}</div>
+    <div class="knob-cell">{@render item(i, knobSize)}</div>
   {/each}
 </div>
 

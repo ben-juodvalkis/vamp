@@ -18,6 +18,7 @@
 	import { PITCH_HACK, PITCH_HACK_RATES } from '$lib/components/v6/device-panel/pitchHackParams';
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import KnobGrid from '$lib/components/v6/device-panel/KnobGrid.svelte';
+	import type { KnobSize } from '$lib/components/v6/device-panel/knobLayout';
 	import SectionDivider from '$lib/components/v6/central/SectionDivider.svelte';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -61,11 +62,12 @@
 	];
 </script>
 
-{#snippet control(title: string, param: Param, face: 'slider' | 'knob')}
+{#snippet control(title: string, param: Param, face: 'slider' | 'knob', knobSize: KnobSize = 'm')}
 	<DeviceSlider
 		value={pitchHack.paramValue(param.index) ?? param.rest}
 		{title}
 		{face}
+		{knobSize}
 		orientation="vertical"
 		min={param.min}
 		max={param.max}
@@ -104,8 +106,8 @@
 	<SectionDivider orientation="vertical" />
 	<div class="ph-knobs" class:slot-ghost={pitchHack.isGhost}>
 		<KnobGrid count={KNOBS.length}>
-			{#snippet item(i)}
-				<div class="box" data-param={KNOBS[i].title}>{@render control(KNOBS[i].title, KNOBS[i].param, 'knob')}</div>
+			{#snippet item(i, size)}
+				<div class="box" data-param={KNOBS[i].title}>{@render control(KNOBS[i].title, KNOBS[i].param, 'knob', size)}</div>
 			{/snippet}
 		</KnobGrid>
 	</div>

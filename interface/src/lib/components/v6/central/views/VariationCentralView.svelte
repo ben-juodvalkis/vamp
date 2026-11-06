@@ -124,6 +124,7 @@
 							value={amount / AMOUNT_MAX}
 							title="Rnd"
 							face="knob"
+							knobSize="l"
 							orientation="horizontal"
 							labelOrientation="horizontal"
 							labelSize="small"

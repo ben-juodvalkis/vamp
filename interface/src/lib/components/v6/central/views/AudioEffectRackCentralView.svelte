@@ -94,12 +94,13 @@
 		     grid that gives each the most room (ADR-509). -->
 		{#if controlLayout.length > 0}
 			<KnobGrid count={controlLayout.length}>
-				{#snippet item(i)}
+				{#snippet item(i, size)}
 					{@const control = controlLayout[i]}
 					<DeviceSlider
 						value={getNormalizedValue(control.macroIndex)}
 						title={control.name}
 						face="knob"
+						knobSize={size}
 						icon={glyphForName(control.name)}
 						color={effectiveColor}
 						readout={selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(audioEffectRack, control.macroIndex))}
@@ -118,6 +119,7 @@
 						<DeviceSlider
 							value={macroValue / MACRO_MAX}
 							face="knob"
+							knobSize="s"
 							title={paramName}
 							icon={glyphForName(paramName)}
 							color={effectiveColor}

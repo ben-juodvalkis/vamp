@@ -124,6 +124,7 @@
             value={value(ch.time)}
             title="Time"
             face="knob"
+            knobSize="l"
             orientation="vertical"
             isGhost={fx.isGhost}
             color={fx.color}

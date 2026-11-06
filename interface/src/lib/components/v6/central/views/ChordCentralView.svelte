@@ -76,6 +76,7 @@
 				value={shift}
 				title={signed(shift, scaled ? 'sd' : 'st')}
 				face="knob"
+				knobSize="l"
 				min={-SHIFT_MAX}
 				max={SHIFT_MAX}
 				centerOrigin
@@ -92,6 +93,7 @@
 				value={value(note.velocity)}
 				title={percent(value(note.velocity))}
 				face="knob"
+				knobSize="l"
 				min={VELOCITY_MIN}
 				max={2}
 				isGhost={chord.isGhost}
@@ -105,6 +107,7 @@
 				value={value(note.chance)}
 				title={percent(value(note.chance))}
 				face="knob"
+				knobSize="l"
 				min={0}
 				max={1}
 				isGhost={chord.isGhost}
@@ -131,6 +134,7 @@
 				value={value(b.index)}
 				title={b.title}
 				face="knob"
+				knobSize="l"
 				min={b.min}
 				max={b.max}
 				centerOrigin

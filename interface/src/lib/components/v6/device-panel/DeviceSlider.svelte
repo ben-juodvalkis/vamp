@@ -81,6 +81,14 @@
     valueText?: string;
     // A stepped knob's value count: a detent each (KnobFace, up to 24).
     steps?: number;
+    // A knob's size (ADR-509), by how many knobs its column stacks
+    // (`knobSizeFor`): 'l' 96px for one or two, 'm' 70px for three, 's'
+    // 48px for four or more.
+    knobSize?: 's' | 'm' | 'l';
+    /** False drops the knob's caption (KnobFace `caption`); the aria-label keeps the title. */
+    knobCaption?: boolean;
+    /** A short text in the knob's middle at rest, in place of the glyph (KnobFace `centreMark`). */
+    knobMark?: string;
   }
 
   let {
@@ -111,7 +119,10 @@
     meterColor,
     face = 'slider',
     valueText,
-    steps
+    steps,
+    knobSize = 'm',
+    knobCaption = true,
+    knobMark
   }: Props = $props();
 
   // Resolve label orientation - 'auto' follows slider orientation
@@ -316,6 +327,9 @@
         {readout}
         {icon}
         {steps}
+        size={knobSize}
+        caption={knobCaption}
+        centreMark={knobMark}
         dragging={isDragging}
         ink={color.primary}
       />

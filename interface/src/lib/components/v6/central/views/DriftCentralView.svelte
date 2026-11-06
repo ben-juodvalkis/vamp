@@ -12,7 +12,6 @@
   import { axisHz, axisX, responseDb, responsePath, seriesDb } from '$lib/utils/filterGraph';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import SectionDivider from '../SectionDivider.svelte';
-  import HostedSwapPill from '../HostedSwapPill.svelte';
   import { driftFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
   import InstrumentPanelView from './panel/InstrumentPanelView.svelte';
   import PanelEyebrow from './panel/PanelEyebrow.svelte';
@@ -143,12 +142,13 @@
    * the same finger whether you wanted it to or not.
    */
   const OCTAVES = [-2, -1, 0, 1, 2, 3] as const;
+  const OCTAVES_UP = [...OCTAVES].reverse();
   const octaveLabel = (octave: number) => (octave > 0 ? `+${octave}` : `${octave}`);
 
   // The octave strip and the waveform grid SCRUB (user, 2026-09-12: "can I
-  // slide my finger to scrub octaves?"), through ScrubTabs. The grid's first
-  // cell is the OSC 1/2 badge, its lead: a scrub across it changes no
-  // waveform and never switches oscillator; that is a tap on it.
+  // slide my finger to scrub octaves?"), through ScrubTabs. Which
+  // oscillator they edit follows a touch on its level knob (the Osc 1/2
+  // badge left 2026-11-06).
 
   // Display order is the mockup's — Mono then Poly on the top row. `value` is
   // the LOM `voice_mode_index` and travels with each entry, so reordering the
@@ -181,9 +181,46 @@
     if (!device || value === lpType) return;
     selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, LP_TYPE), value);
   }
-  // Time XY: 35 / 37
-  let timeXValue = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 35)) ?? 0.5 : 0.5);
-  let timeYValue = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 37)) ?? 0.5 : 0.5);
+  /**
+   * The envelope shown as four knobs, A D S R (user, 2026-11-06), switched
+   * between Env 1 and Env 2 by the tab beside the Envelopes eyebrow. View
+   * state only, like the oscillator switch.
+   */
+  let envTab = $state<1 | 2>(1);
+  const ENV_STAGES = [
+    { stage: 'Attack', mark: 'A' },
+    { stage: 'Decay', mark: 'D' },
+    { stage: 'Sustain', mark: 'S' },
+    { stage: 'Release', mark: 'R' }
+  ] as const;
+  const ENV_OPTIONS = [1, 2] as const;
+
+  /**
+   * The LFO pad (user, 2026-11-06): rate across, slow to fast, and LFO
+   * Amount up. Drift's rate is a different parameter in each LFO Mode
+   * (0 Freq, 1 Time, 2 Ratio, 3 Sync; docs/reference/instruments/Drift.md),
+   * so the pad moves the one the mode uses. Freq, Ratio and Synced rise
+   * with speed (Synced runs 8 bars at 0 to 1/64 at 21, whole steps); Time
+   * is a period, so its axis is turned over.
+   */
+  const LFO_RATE_PARAMS = ['LFO Freq', 'LFO Time', 'LFO Ratio', 'LFO Synced'] as const;
+  let lfoMode = $derived(Math.round(panelParams.raw('LFO Mode') ?? 0));
+  let lfoRateParam = $derived(LFO_RATE_PARAMS[lfoMode] ?? 'LFO Freq');
+  let lfoX = $derived.by(() => {
+    const t = panelParams.unit(lfoRateParam) ?? 0.5;
+    return lfoRateParam === 'LFO Time' ? 1 - t : t;
+  });
+  let lfoY = $derived(panelParams.unit('LFO Amount') ?? 0);
+  function writeLfo(x: number, y: number) {
+    const t = lfoRateParam === 'LFO Time' ? 1 - x : x;
+    if (lfoRateParam === 'LFO Synced') {
+      const r = panelParams.range('LFO Synced');
+      if (r) panelParams.write('LFO Synced', Math.round(r.min + t * (r.max - r.min)));
+    } else {
+      panelParams.writeUnit(lfoRateParam, t);
+    }
+    panelParams.writeUnit('LFO Amount', y);
+  }
   // Global Drift (60)
   let driftValue = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 60)) ?? 0.5 : 0.5);
   // Osc on/off: 31 / 32 (`Mixer_OscillatorOn1` / `...On2`). Both ship TRUE, so
@@ -328,12 +365,6 @@
     }
   }
 
-  function handleTimeXYInteraction(x: number, y: number) {
-    if (!device) return;
-    selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, 35), x);
-    selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, 37), y);
-  }
-
   /**
    * Which oscillator the card is showing (2026-09-12). View state only —
    * it never touches Drift, and it deliberately does NOT follow which
@@ -342,12 +373,13 @@
    *
    * It DOES follow a finger (user, 2026-09-16): touching Osc 1 or Osc 2 in
    * the level mixer brings that oscillator's card up. The distinction that
-   * keeps the paragraph above true is the same one the badge's tap makes —
+   * keeps the paragraph above true —
    * a hand reaching for a source is a statement about which one you are
    * working on, where a patch load is not. It costs nothing to be wrong
    * about, since the card is the only thing that moves, and it saves the
-   * two-step the mixer created: balance the levels, then walk back to the
-   * badge to shape the one you were just holding.
+   * two-step of balancing the levels and then picking the oscillator again
+   * to shape the one you were just holding. Since 2026-11-06 the level
+   * knobs are the only way to switch.
    */
   let oscTab = $state<1 | 2>(1);
 
@@ -403,6 +435,23 @@
   </div>
 {/snippet}
 
+{#snippet voiceModeTab()}
+  <!-- Poly / Mono / Stereo / Unison, on the Global page: one pick-one tab,
+       two by two. -->
+  <ScrubTabs
+    options={VOICE_MODE_OPTIONS}
+    selected={VOICE_MODE_OPTIONS.findIndex((o) => o.value === voiceMode)}
+    onSelect={(_, o) => {
+      if (devicePath) selectedTrackStore.setPropertyValue(devicePath, 'voice_mode_index', o.value);
+    }}
+    cols={2}
+    tint={driftInk.primary}
+    label={(o) => o.label}
+    class="h-full"
+    style="--scrub-font-size: 0.8125rem; --scrub-font-weight: 500; --scrub-padding: 0 0.25rem;"
+  />
+{/snippet}
+
 {#snippet waveGlyph(label: string)}
   <svg class="wave-glyph" viewBox="0 0 24 12" aria-hidden="true" focusable="false">
     <path
@@ -425,7 +474,7 @@
       on the pad, set its level — so the two cards are the same gesture twice.
       Mirrors AutoFilterCentralView's flex-[N] idiom for consistency across views.
     -->
-    <InstrumentPanelView panel={DRIFT_PANEL} params={panelParams} color={driftInk} slots={{ filter: filterPad }}>
+    <InstrumentPanelView panel={DRIFT_PANEL} params={panelParams} color={driftInk} slots={{ filter: filterPad, voiceMode: voiceModeTab }}>
     {#snippet face(openPage: (page: string) => void)}
     <div class="h-full w-full flex min-h-0 p-(--central-inset)" style="gap: var(--central-gap);">
 
@@ -441,75 +490,115 @@
            oscillators are actually SOUNDING is a different question, and
            the tab says so on its own: an oscillator that is switched off
            reads dim, whether or not it is the one on screen. -->
-      <div class="drift-card osc-card flex-[2] min-w-[212px] min-h-0 flex flex-col gap-(--central-gap)"
+      <div class="drift-card osc-card flex-[2] min-h-0 flex flex-col gap-(--central-gap)"
            style="--drift-ink: {oscInk.primary};">
-        <!-- The swap pill lies across the top of the oscillator card (user's
-             layout, 2026-09-16): the card is the view's leading column. -->
+        <!-- No hosted swap pill (user, 2026-11-06): the view keeps
+             CentralDisplay's upright column on its left edge. -->
         <PanelEyebrow title="Oscillators" page="oscillators" onOpen={openPage} color={driftInk.primary} />
-        <HostedSwapPill />
         <!-- Everything reads across, stacked down the card (user's call,
              2026-09-12): the waveform grid two rows deep, then the octave
              as one segmented strip, then Shape and Gain as horizontal
              faders. The card is wider than it was and the Time/Filter
              column narrower to pay for it.
 
-             The waveforms are `physical-button`s rather than the house
-             segmented control: segmented reads as ONE strip, and these
-             are two rows. `ceil((n + 1) / 2)` columns — the +1 being the
-             OSC 1/2 badge in the first cell — is what makes it exactly
-             two FULL rows for both oscillators: 4 across for OSC 1's
-             seven, 3 for OSC 2's five, no empty cell either way. -->
+             Since 2026-11-06 the waveforms and octaves stand as columns,
+             one tab each, and the Osc 1/2 badge is gone. -->
         <div
           class="osc-body flex-1 min-h-0"
-          style="grid-template-columns: repeat({Math.ceil((oscWaveOptions.length + 1) / 2)}, minmax(0, 1fr)); {oscOn ? '' : 'opacity: var(--opacity-ghost);'}"
+          data-osc={oscTab}
+          class:osc-ghost={!oscOn}
         >
+          <!-- The three source levels, the grid's first column, left of the waveforms (user,
+               2026-11-06): no names: 1, 2 and the noise glyph say which. -->
+          <div class="osc-levels min-h-0 flex flex-col gap-(--spacing-sm)">
+            <!-- Touching either oscillator's level brings ITS card up on the
+                 left (`onDown`, so the switch lands on the touch rather than
+                 on the first frame a finger has moved). The card is what says
+                 which oscillator that colour belongs to, and reaching for one
+                 of these is already a choice of oscillator. -->
+            <div class="mixer-slider min-h-0">
+              <DeviceSlider
+                value={osc1Gain}
+                title="Osc 1"
+                face="knob"
+                knobCaption={false}
+                knobMark="1"
+                icon="oscillator"
+                orientation="vertical"
+                labelSize="small"
+                isGhost={!osc1On}
+                color={osc1Ink}
+                readout={display(29)}
+                onDown={() => (oscTab = 1)}
+                onInteraction={(value) => writeOsc(1, 29, value)}
+              />
+            </div>
+            <div class="mixer-slider min-h-0">
+              <DeviceSlider
+                value={osc2Gain}
+                title="Osc 2"
+                face="knob"
+                knobCaption={false}
+                knobMark="2"
+                icon="oscillator"
+                orientation="vertical"
+                labelSize="small"
+                isGhost={!osc2On}
+                color={osc2Ink}
+                readout={display(30)}
+                onDown={() => (oscTab = 2)}
+                onInteraction={(value) => writeOsc(2, 30, value)}
+              />
+            </div>
+            <div class="mixer-slider min-h-0">
+              <DeviceSlider
+                value={noiseGain}
+                title="Noise"
+                face="knob"
+                knobCaption={false}
+                icon="noise"
+                orientation="vertical"
+                labelSize="small"
+                isGhost={!noiseOn}
+                color={noiseInk}
+                readout={display(33)}
+                onInteraction={(value) => {
+                  if (!device) return;
+                  selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, 33), value);
+                  const on = value > SECTION_SWITCH_ON_ABOVE;
+                  if (on !== noiseOn) {
+                    selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, 34), on ? 1 : 0);
+                  }
+                }}
+              />
+            </div>
+          </div>
+
           <!-- The waveform tab spans the body's first two rows: the scrub
                surface is the waveforms, not the whole card. -->
           <ScrubTabs
             options={oscWaveOptions}
             selected={oscWaveOptions.findIndex((o) => o.value === oscWave)}
             onSelect={(_, o) => writeOsc(oscTab, oscTab === 1 ? 20 : 24, o.value)}
-            cols={Math.ceil((oscWaveOptions.length + 1) / 2)}
-            rows={2}
+            cols={1}
             tint={oscInk.primary}
             inked
             label={(o) => `OSC ${oscTab} wave ${o.label}`}
             name="osc-wave"
-            style="grid-column: 1 / -1; grid-row: 1 / 3;"
           >
-            {#snippet lead()}
-              <!-- The switch is the grid's FIRST CELL (user's sketch,
-                   2026-09-12) — 1 badge + 7 waveforms is exactly 4x2, and
-                   1 + 5 is exactly 3x2. It wears the shown oscillator's
-                   colour and carries BOTH numbers, each digit dimming on its
-                   own when that oscillator is switched off. -->
-              <div class="osc-badge-cell">
-              <button
-                class="osc-badge"
-                style="--osc-badge-ink: {oscInk.primary};"
-                aria-label="Oscillator {oscTab} of 2 — switch to oscillator {oscTab === 1 ? 2 : 1}"
-                onclick={() => (oscTab = oscTab === 1 ? 2 : 1)}
-              >
-                <span class="osc-badge-eyebrow">Osc</span>
-                <span class="osc-badge-pair">
-                  <span class="osc-badge-n" class:on={oscTab === 1} class:silent={!osc1On}>1</span><span
-                    class="osc-badge-slash">/</span><span
-                    class="osc-badge-n" class:on={oscTab === 2} class:silent={!osc2On}>2</span>
-                </span>
-              </button>
-              </div>
-            {/snippet}
             {#snippet item(o)}{@render waveGlyph(o.label)}{/snippet}
           </ScrubTabs>
 
+          <!-- Octaves stand +3 at the top, -2 at the foot: pitch climbs
+               as the eye does. -->
           <ScrubTabs
-            options={OCTAVES}
-            selected={OCTAVES.findIndex((o) => o === oscOctave)}
+            options={OCTAVES_UP}
+            cols={1}
+            selected={OCTAVES_UP.findIndex((o) => o === oscOctave)}
             onSelect={(_, octave) => writeOsc(oscTab, oscTab === 1 ? 22 : 26, octave)}
             tint={oscInk.primary}
             inked
             label={(octave) => `OSC ${oscTab} octave ${octaveLabel(octave)}`}
-            style="grid-column: 1 / -1;"
           >
             {#snippet item(octave)}{octaveLabel(octave)}{/snippet}
           </ScrubTabs>
@@ -518,15 +607,16 @@
             <DeviceSlider
               value={oscShape}
               title="Shape"
-              face="knob"
               icon="shape"
-              orientation="horizontal"
+              orientation="vertical"
               labelSize="small"
               isGhost={!oscOn}
               color={oscInk}
               onInteraction={(value) => writeOsc(oscTab, oscTab === 1 ? 21 : 25, value)}
             />
           </div>
+
+
 
         </div>
       </div>
@@ -561,111 +651,99 @@
            colours already say, and the seam's width went to the pads. -->
       <!-- Stacked, one column of three boxes (ADR-477): still the three
            sources in one place, and two columns' width went to the pads. -->
-      <div class="drift-card mixer-card flex-none min-h-0 flex flex-col gap-(--central-gap)" style="--drift-ink: {driftInk.primary};">
-        <PanelEyebrow color={driftInk.primary} />
-        <div class="flex-1 min-h-0 flex flex-col gap-(--central-gap)">
-          <!-- Touching either oscillator's level brings ITS card up on the
-               left (`onDown`, so the switch lands on the touch rather than
-               on the first frame a finger has moved). The card is what says
-               which oscillator that colour belongs to, and reaching for one
-               of these is already a choice of oscillator. -->
-          <div class="mixer-slider min-h-0">
+
+      <SectionDivider orientation="vertical" ink={driftInk.primary} />
+
+      <!-- Envelope knobs | LFO pad | Filter (user, 2026-11-06). The Time
+           pad gave way to the envelope's four stages and an LFO pad. The
+           low-pass pad left the face: the chain cell already draws Drift's
+           low-pass, so Filter here is its type, I over II, over a
+           High-pass knob; the pad itself stays on the Filter page. -->
+      <div class="flex-[3] min-h-0 time-filter-grid">
+        <!-- The Envelopes eyebrow carries the Env 1 | 2 switch beside it
+             (user, 2026-11-06); the tab hangs into the gaps around the
+             eyebrow's line, so the knobs start on the other columns' pixel. -->
+        <div class="env-head">
+          <PanelEyebrow title="Envelopes" page="envelopes" onOpen={openPage} color={driftInk.primary} />
+          <ScrubTabs
+            options={ENV_OPTIONS}
+            selected={envTab - 1}
+            onSelect={(_, n) => (envTab = n)}
+            tint={driftInk.primary}
+            label={(n) => `Envelope ${n}`}
+            class="env-tab"
+            style="--scrub-font-size: 0.75rem;"
+          >
+            {#snippet item(n)}{n}{/snippet}
+          </ScrubTabs>
+          <span class="lfo-eyebrow"><PanelEyebrow title="LFO / Mod" page="lfo-mod" onOpen={openPage} color={driftInk.primary} /></span>
+        </div>
+        <span class="filter-eyebrow"><PanelEyebrow title="Filter" page="filter" onOpen={openPage} color={driftInk.primary} /></span>
+        <!-- A D S R of the shown envelope: four small knobs in a column,
+             their letter inside, no caption. -->
+        <div class="env-col min-h-0 flex flex-col gap-(--spacing-sm)">
+          {#each ENV_STAGES as { stage, mark } (stage)}
+            {@const name = `Env ${envTab} ${stage}`}
+            <div class="flex-1 min-h-0">
+              <DeviceSlider
+                value={panelParams.unit(name) ?? 0}
+                title="Env {envTab} {stage}"
+                face="knob"
+                knobSize="s"
+                knobCaption={false}
+                knobMark={mark}
+                orientation="vertical"
+                labelSize="small"
+                color={driftInk}
+                readout={panelParams.display(name)}
+                onInteraction={(v) => panelParams.writeUnit(name, v)}
+              />
+            </div>
+          {/each}
+        </div>
+        <span class="seam-env"><SectionDivider orientation="vertical" ink={driftInk.primary} /></span>
+        <div class="lfo-pad min-h-0 min-w-0">
+          <DeviceXY
+            xValue={lfoX}
+            yValue={lfoY}
+            title="LFO"
+            icon="lfo"
+            onInteraction={writeLfo}
+            color={driftInk}
+          />
+        </div>
+        <span class="seam-filter"><SectionDivider orientation="vertical" ink={driftInk.primary} /></span>
+        <div class="filter-col min-h-0 min-w-0 flex flex-col gap-(--central-gap)">
+          <ScrubTabs
+            options={LP_TYPE_OPTIONS}
+            selected={LP_TYPE_OPTIONS.findIndex((o) => o.value === lpType)}
+            onSelect={(_, o) => writeLpType(o.value)}
+            tint={driftInk.primary}
+            inked
+            label={(o) => `Filter type ${o.label}`}
+            cols={1}
+            style="height: calc(2 * var(--height-touch)); flex: none;"
+          >
+            {#snippet item(o)}{o.label}{/snippet}
+          </ScrubTabs>
+          <div class="flex-1 min-h-0">
             <DeviceSlider
-              value={osc1Gain}
-              title="Osc 1"
-              icon="oscillator"
+              value={hpValue}
+              title="High-pass"
+              face="knob"
+              knobSize="m"
+              icon="highpass"
               orientation="vertical"
               labelSize="small"
-              isGhost={!osc1On}
-              color={osc1Ink}
-              readout={display(29)}
-              onDown={() => (oscTab = 1)}
-              onInteraction={(value) => writeOsc(1, 29, value)}
-            />
-          </div>
-          <div class="mixer-slider min-h-0">
-            <DeviceSlider
-              value={osc2Gain}
-              title="Osc 2"
-              icon="oscillator"
-              orientation="vertical"
-              labelSize="small"
-              isGhost={!osc2On}
-              color={osc2Ink}
-              readout={display(30)}
-              onDown={() => (oscTab = 2)}
-              onInteraction={(value) => writeOsc(2, 30, value)}
-            />
-          </div>
-          <div class="mixer-slider min-h-0">
-            <DeviceSlider
-              value={noiseGain}
-              title="Noise"
-              icon="noise"
-              orientation="vertical"
-              labelSize="small"
-              isGhost={!noiseOn}
-              color={noiseInk}
-              readout={display(33)}
+              color={driftInk}
+              readout={display(HP_FREQ)}
               onInteraction={(value) => {
                 if (!device) return;
-                selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, 33), value);
-                const on = value > SECTION_SWITCH_ON_ABOVE;
-                if (on !== noiseOn) {
-                  selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, 34), on ? 1 : 0);
-                }
+                selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, HP_FREQ), value);
               }}
             />
           </div>
         </div>
-      </div>
-
-      <SectionDivider orientation="vertical" ink={driftInk.primary} />
-
-      <!-- Time beside Filter (2026-10-27; stacked until then, two 370 x 100
-           pads, 75 tall on the iPad mini, where Time's label fell off its
-           own foot). Time runs the column's full height; Filter shares
-           its column with the filter's type switch at its foot, under the
-           pad it belongs to. -->
-      <div class="flex-[3] min-h-0 time-filter-grid">
-        <!-- Live's Envelopes and LFO/Mod sit between its Filter and Global;
-             here they are the Time pad's (Env 1's Attack and Release), and
-             Filter's eyebrow is the pad's own. -->
-        <div class="eyebrow-pair">
-          <PanelEyebrow title="Envelopes" page="envelopes" onOpen={openPage} color={driftInk.primary} />
-          <PanelEyebrow title="LFO / Mod" page="lfo-mod" onOpen={openPage} color={driftInk.primary} />
-        </div>
-        <PanelEyebrow title="Filter" page="filter" onOpen={openPage} color={driftInk.primary} />
-        <div class="min-h-0 min-w-0 time-pad">
-          <DeviceXY
-            xValue={timeXValue}
-            yValue={timeYValue}
-            title="Time"
-            icon="envelope"
-            onInteraction={handleTimeXYInteraction}
-            color={driftInk}
-          />
-        </div>
-        <div class="min-h-0 min-w-0">
-          <FilterDotsGraph
-            dots={filterDots}
-            curves={[{ d: filterCurve, color: driftInk.primary }]}
-            ariaLabel="Filter: low-pass {Math.round(cutoffValue * 100)}%, high-pass {Math.round(hpValue * 100)}%"
-            onGrab={(i) => (filterDot = i === 0 ? 0 : 1)}
-            onMove={moveFilterDot}
-          />
-        </div>
-        <ScrubTabs
-          options={LP_TYPE_OPTIONS}
-          selected={LP_TYPE_OPTIONS.findIndex((o) => o.value === lpType)}
-          onSelect={(_, o) => writeLpType(o.value)}
-          tint={driftInk.primary}
-          inked
-          label={(o) => `Filter type ${o.label}`}
-          style="height: var(--height-touch);"
-        >
-          {#snippet item(o)}{o.label}{/snippet}
-        </ScrubTabs>
       </div>
 
       <SectionDivider orientation="vertical" ink={driftInk.primary} />
@@ -675,11 +753,13 @@
            column (user, 2026-09-12) — it chooses what the card MEANS
            rather than being one of its controls. -->
       <div class="drift-card voicing-card flex-none min-h-0 flex flex-col gap-(--central-gap)" style="--drift-ink: {driftInk.primary};">
-        <PanelEyebrow color={driftInk.primary} />
+        <!-- Global's door sits over the voicing column; the voice mode
+             itself lives on the Global page (user, 2026-11-06). -->
+        <PanelEyebrow title="Global" page="global" onOpen={openPage} color={driftInk.primary} />
         <!-- The mode's own knob, absent in Poly (it has nothing to write
              there), Glide, then Drift: knobs stacked in one column
              (ADR-509), so a mode change moves no edge. -->
-        <div class="flex-1 min-h-0 flex flex-col gap-(--central-gap)">
+        <div class="flex-1 min-h-0 flex flex-col gap-(--spacing-sm)">
           {#if voiceMode !== 0}
           <div class="voicing-slider min-h-0">
             <DeviceSlider
@@ -736,28 +816,6 @@
         </div>
       </div>
 
-      <SectionDivider orientation="vertical" ink={driftInk.primary} />
-
-      <!-- Voice mode, a column of its own. The four modes choose what the
-           voicing group means, so they are not one of its controls. The
-           wheels under it left for the MidiWheels device's chain cell
-           (user, 2026-10-26), so the tab takes the column's height. -->
-      <div class="mode-col flex-none flex flex-col gap-(--central-gap) min-h-0">
-        <PanelEyebrow title="Global" page="global" onOpen={openPage} color={driftInk.primary} />
-        <!-- One pick-one tab, two by two. -->
-        <ScrubTabs
-          options={VOICE_MODE_OPTIONS}
-          selected={VOICE_MODE_OPTIONS.findIndex((o) => o.value === voiceMode)}
-          onSelect={(_, o) => {
-            if (devicePath) selectedTrackStore.setPropertyValue(devicePath, 'voice_mode_index', o.value);
-          }}
-          cols={2}
-          tint={driftInk.primary}
-          label={(o) => o.label}
-          class="flex-1"
-          style="--scrub-font-size: 0.8125rem; --scrub-font-weight: 500; --scrub-padding: 0 0.25rem;"
-        />
-      </div>
     </div>
     {/snippet}
     </InstrumentPanelView>
@@ -782,6 +840,11 @@
      is left. */
   .drift-root {
     --drift-slider-w: 56px;
+    /* One knob column. The level column and the voicing column are both
+       this wide, so their knobs are twins (user, 2026-11-06); in the rig's
+       ~327px band a knob's slot is short and wide, so its name sits beside
+       it. */
+    --drift-knob-col: 8rem;
   }
 
   /* The body is ONE grid of four equal rows with one uniform gap — two
@@ -790,15 +853,18 @@
      could not do it: its own internal row gap came out of its share, so
      a waveform row landed exactly one gap shorter than the octave strip
      beside it. As direct children of one grid they are all 1fr. */
-  /* Waveforms over two rows, the octave strip, then the Shape knob with
-     the height of nearly two (ADR-509). */
+  /* Upright columns (user, 2026-11-06): the three source levels first,
+     knobs with no names, then the waveforms, the octaves and Shape as a
+     slider: four equal columns. A switched-off
+     oscillator dims its own three columns; the levels keep theirs. */
+  .osc-ghost > :not(.osc-levels) {
+    opacity: var(--opacity-ghost);
+  }
   .osc-body {
     display: grid;
-    grid-template-rows: repeat(3, minmax(0, 1fr)) minmax(0, 1.8fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
     gap: var(--spacing-sm);
-  }
-  .osc-fader {
-    grid-column: 1 / -1;
   }
   /* The level mixer and the voicing group are value boxes stacked in a
      column at the view's slider width (ADR-477), sharing its height. The
@@ -809,17 +875,14 @@
     flex: 1 1 0;
     min-height: 0;
   }
-  .mixer-card {
-    width: var(--drift-slider-w);
-  }
-  /* The voicing knobs (ADR-509): two slider widths, so a knob stacked in
-     the column is a readable size. */
+  /* The voicing knobs: one knob column, the level column's twin. */
+  /* Wide enough that a medium knob with its name beside it is 70px. */
   .voicing-card {
-    width: calc(2 * var(--drift-slider-w) + var(--central-gap));
+    width: 9rem;
   }
-  /* Two slider widths: the 2 x 2 mode tab, the column's full height. */
-  .mode-col {
-    width: calc(2 * var(--drift-slider-w) + var(--central-gap));
+  /* Four equal columns, each wide enough for a 70px level knob. */
+  .osc-card {
+    min-width: calc(4 * 5.5rem + 3 * var(--spacing-sm));
   }
   .wave-glyph {
     width: 100%;
@@ -827,98 +890,54 @@
     max-height: 22px;
   }
 
-  /* ---- The OSC 1/2 switch: a circle in the waveform grid's first cell.
-     A two-tab bar used to take a full touch-height band plus a gap across
-     the whole card, and the corner-badge draft that replaced it cost 44px
-     of top padding; in the grid it costs nothing at all, because the
-     waveform counts (7 and 5) leave exactly one cell over in a two-row
-     grid. A circle among the rounded squares, so it reads as a different
-     kind of thing than the seven waveforms beside it. */
-  /* The badge's cell is a size container, so the circle can be as big as
-     the SMALLER of the cell's two sides. It was the row's height, and on
-     the iPad band a row is taller than a waveform column is wide — the
-     circle overflowed its cell and the card sideways, 6.8px from the
-     frame's edge against the view's 16px inset (tour layout check,
-     2026-09-14). */
-  /* The switch sits inside the waveform tab as its first cell, on the
-     tab's own field. */
-  .osc-badge-cell {
-    width: 100%;
-    height: 100%;
-    background: var(--surface-well);
-    container-type: size;
-    display: grid;
-    place-items: center;
-    min-width: 0;
-    min-height: 0;
-  }
-  .osc-badge {
-    width: 100cqmin;
-    height: 100cqmin;
-    border-radius: 999px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 1px;
-    line-height: 1;
-    background: var(--osc-badge-ink);
-    border: 1px solid var(--osc-badge-ink);
-    color: var(--flat-on-fg);
-    cursor: pointer;
-    transition: background-color var(--t-fast) var(--ease-precise);
-  }
-  .osc-badge-eyebrow {
-    font-size: 8px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    opacity: 0.8;
-  }
-  .osc-badge-pair {
-    display: flex;
-    align-items: baseline;
-    font-size: 15px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-  }
-  /* The digit you are NOT on stays legible but recedes, so the badge
-     still says there are two. A digit dims further when THAT oscillator
-     is switched off — the one reading the two-tab bar had that a single
-     badge would otherwise lose. */
-  .osc-badge-n {
-    opacity: 0.45;
-  }
-  .osc-badge-n.on {
-    opacity: 1;
-  }
-  .osc-badge-n.silent {
-    opacity: 0.25;
-  }
-  .osc-badge-n.on.silent {
-    opacity: 0.55;
-  }
-  .osc-badge-slash {
-    opacity: 0.45;
-    padding: 0 1px;
-  }
-
   /* ---- Live skin (flat grammar): the pads, sliders and tabs carry their
      own flat forks (the tabs are ScrubTabs, `inked` where the colour is the
      meaning: an oscillator's, or the view's on the filter type). */
 
-  /* Time | Filter, the type switch under Filter. */
+  /* Envelope knobs | LFO pad | Filter, seamed (user, 2026-11-06): the
+     pad takes the width. Every cell is placed, since the header spans
+     the envelope column, its seam and the pad. */
   .time-filter-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-columns: 4rem auto minmax(0, 1fr) auto 5.5rem;
+    grid-template-rows: auto minmax(0, 1fr);
     gap: var(--central-gap);
   }
-  .time-pad {
-    grid-row: 2 / span 2;
+  /* One header across the envelope knobs and the LFO pad: the Envelopes
+     eyebrow and its tab are wider than the knob column. */
+  .env-head {
+    grid-column: 1 / 4;
+    grid-row: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--spacing-sm);
+    height: 1rem;
+    min-width: 0;
+    overflow: visible;
+    white-space: nowrap;
   }
-  .eyebrow-pair {
+  .filter-eyebrow {
+    grid-column: 5;
+    grid-row: 1;
     display: flex;
     justify-content: center;
     min-width: 0;
+  }
+  .env-col { grid-column: 1; grid-row: 2; }
+  .seam-env { grid-column: 2; grid-row: 2; display: flex; }
+  .lfo-pad { grid-column: 3; grid-row: 2; }
+  .seam-filter { grid-column: 4; grid-row: 2; display: flex; }
+  .filter-col { grid-column: 5; grid-row: 2; }
+  .lfo-eyebrow {
+    flex: 1 1 auto;
+    display: flex;
+    justify-content: center;
+    min-width: 0;
+  }
+  .env-head :global(.env-tab) {
+    flex: 0 0 auto;
+    width: 4rem;
+    height: 1.75rem;
   }
 </style>

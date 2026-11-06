@@ -185,6 +185,7 @@
               value={paramValue(FILTER_ENV_AMOUNT)}
               title="Amt"
               face="knob"
+              knobSize="l"
               icon="depth"
               orientation="vertical"
               color={omniInk}

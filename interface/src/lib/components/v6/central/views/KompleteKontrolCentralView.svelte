@@ -89,13 +89,14 @@
       <!-- The plug-in's eight parameters as knobs, as Live draws a rack's
            macros: the grid that gives each the most room (ADR-509). -->
       <KnobGrid count={SLIDER_PARAMS.length}>
-      {#snippet item(i)}
+      {#snippet item(i, size)}
         {@const paramIndex = SLIDER_PARAMS[i]}
         {@const name = parameterNames[paramIndex - 1] ? cleanParameterName(parameterNames[paramIndex - 1]) : `Param ${paramIndex}`}
           <DeviceSlider
             value={getParamValue(paramIndex)}
             title={name}
             face="knob"
+            knobSize={size}
             icon={glyphForName(name)}
             color={kompleteKontrolInk}
             readout={device ? selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(device, paramIndex)) : undefined}
