@@ -45,7 +45,10 @@ export type PictureKind =
 	| 'chance'
 	| 'velocity'
 	| 'arp'
-	| 'chord';
+	| 'chord'
+	| 'bell'
+	| 'taps'
+	| 'ceiling';
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, Number.isFinite(v) ? v : 0));
 const f = (n: number) => Math.round(n * 10) / 10;
@@ -242,6 +245,38 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0, variant = 0)
 				{ d: 'M56,82H76', o: 0.95 },
 				{ d: 'M27,24H41M27,32H41M27,68H41M27,76H41M59,24H73M59,32H73M59,40H73M59,48H73', o: 0.3 }
 			];
+		// EQ Eight: one bell, where the tile's band sits (X frequency) lifted
+		// or cut by its gain (Y, 0 dB at the middle), on the 0 dB line.
+		case 'bell': {
+			const lift = (2 * y - 1) * 38;
+			return [
+				{ d: 'M0,50H100', o: 0.2 },
+				{ d: trace((u) => 50 - lift * Math.exp(-(((u - x) / 0.09) ** 2))), o: 0.85 }
+			];
+		}
+		// Delay: the dry hit and its repeats, spaced by the time (X) and
+		// dying away slower with more feedback (Y).
+		case 'taps': {
+			const spacing = 0.07 + 0.25 * x;
+			const keep = 0.2 + 0.72 * y;
+			const strokes: PictureStroke[] = [];
+			for (let k = 0, at = 0.06; at < 0.98 && k < 14; k++, at += spacing) {
+				const h = 84 * Math.pow(keep, k);
+				if (h < 2) break;
+				strokes.push({ d: `M${f(at * 100)},96V${f(96 - h)}`, o: k === 0 ? 0.95 : 0.4 + 0.5 * Math.pow(keep, k) });
+			}
+			return strokes;
+		}
+		// Limiter: a wave driven up by the gain (X) and held flat at the
+		// ceiling, drawn as two faint lines.
+		case 'ceiling': {
+			const amp = 14 + 56 * x;
+			const lid = 34;
+			return [
+				{ d: `M0,${50 - lid}H100M0,${50 + lid}H100`, o: 0.3 },
+				{ d: trace((u) => 50 - Math.max(-lid, Math.min(lid, amp * Math.sin(2 * Math.PI * u * 2.5)))), o: 0.85 }
+			];
+		}
 		// An EQ, generic (the Recent column's Channel EQ, the user,
 		// 2026-10-26): a low shelf lifted, a dip in the mids, an air lift.
 		case 'eqcurve':
@@ -468,7 +503,9 @@ export function pictureStrokes(kind: PictureKind, x: number, y = 0, variant = 0)
 /**
  * The picture of a device drawn generically, having no control or picture of
  * its own (the user, 2026-10-26): EQ Eight and the Tone Shaper an EQ curve.
- * A Recent ghost and a browser tile both ask.
+ * A Recent ghost and a browser tile both ask; a browser tile only when its
+ * device has no control, so an EQ Eight preset draws its control's bell
+ * (ADR-508) and a Recent EQ Eight, which reads no file, this curve.
  */
 export function genericPicture(className: string | undefined, name: string): PictureKind | null {
 	if (className === 'Eq8' || name === 'Tone Shaper') return 'eqcurve';

@@ -36,6 +36,21 @@ afterEach(() => {
 });
 
 describe('preset params', () => {
+	it("keys a repeated name's later occurrences <name>#<n>, in file order (EQ Eight's bands)", () => {
+		const band = (on: boolean, hz: number) =>
+			`<IsOn><LomId Value="0" /><Manual Value="${on}" /></IsOn><Freq><LomId Value="0" /><Manual Value="${hz}" /></Freq>`;
+		const xml = `<Ableton><Eq8><On><LomId Value="0" /><Manual Value="true" /></On>${band(true, 30)}${band(false, 40)}${band(true, 200)}</Eq8></Ableton>`;
+		const { className, params } = parsePresetXml(xml);
+		expect(className).toBe('Eq8');
+		expect(params).toMatchObject({ IsOn: 1, Freq: 30, 'IsOn#2': 0, 'Freq#2': 40, 'IsOn#3': 1, 'Freq#3': 200 });
+	});
+
+	it("keeps no repeats in a rack, whose are its inner devices'", () => {
+		const xml = `<Ableton><GroupDevicePreset><AudioEffectGroupDevice><On><LomId Value="0" /><Manual Value="true" /></On>
+			<Echo><On><LomId Value="0" /><Manual Value="false" /></On></Echo></AudioEffectGroupDevice></GroupDevicePreset></Ableton>`;
+		expect(parsePresetXml(xml).params).toEqual({ On: 1 });
+	});
+
 	it("reads a Max device's .adv by each parameter's short name (Pitch Hack's shape, trimmed)", () => {
 		const mxd = `<Ableton><MxDeviceAudioEffect>
 			<MxDIntParameter Id="1"><Index Value="1" /><Name Value="Dry / Wet" /><ShortName Value="Dry / Wet" /><MinValue Value="0" />

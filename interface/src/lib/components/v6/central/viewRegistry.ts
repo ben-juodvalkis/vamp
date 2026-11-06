@@ -71,6 +71,7 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 	// chain's generic view ('chain-device').
 	device: {
 		'arpeggiator': () => import('./views/ArpeggiatorCentralView.svelte'),
+		'autoPanTremolo': () => import('./views/AutoPanTremoloCentralView.svelte'), // Live 12's Auto Pan-Tremolo
 		'audio-effect-rack': () => import('./views/AudioEffectRackCentralView.svelte'),
 		'bass': () => import('./views/BassCentralView.svelte'),
 		// The chain overview's view for a device with no view of its own.
@@ -80,13 +81,16 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 		'chorus': () => import('./views/ChorusCentralView.svelte'),
 		'comb': () => import('./views/CombCentralView.svelte'),
 		'compressor': () => import('./views/CompressorCentralView.svelte'),
+		'delay': () => import('./views/DelayCentralView.svelte'),
 		'drum': () => import('./views/DrumBussCentralView.svelte'), // the Drum Buss (ADR-431)
 		'echo': () => import('./views/EchoCentralView.svelte'),
 		'eq': () => import('./views/EQCentralView.svelte'),
+		'eq8': () => import('./views/EQEightCentralView.svelte'),
 		'filter': () => import('./views/AutoFilterCentralView.svelte'),
 		'gate': () => import('./views/GateCentralView.svelte'),
 		'glitchLoop': () => import('./views/GlitchCentralView.svelte'),
 		'guitar': () => import('./views/GuitarCentralView.svelte'), // the Guitar rack (Gtr tile)
+		'limiter': () => import('./views/LimiterCentralView.svelte'),
 		'octave': () => import('./views/PitchCentralView.svelte'), // the Pitch slider's view
 		'ott': () => import('./views/MultibandCentralView.svelte'), // Multiband Dynamics
 		'pedal': () => import('./views/PedalCentralView.svelte'),
