@@ -240,7 +240,12 @@
 	// Current-screen data (loaded from the adapter for `currentPath`).
 	let folders = $state<string[]>([]);
 	let folderColors = $state<Record<string, string>>({});
-	let presets = $state<Preset[]>([]);
+	let loadedPresets = $state<Preset[]>([]);
+	// A MIDI effect is left out unless the selected track is a MIDI track
+	// (user, 2026-11-06: hidden, not greyed); it returns when one is selected.
+	const presets = $derived(
+		selectedTrackStore.trackType === 'midi' ? loadedPresets : loadedPresets.filter((p) => !MIDI_EFFECT_KINDS.has(p.kind ?? 'unknown'))
+	);
 	let loading = $state(false);
 	let navToken = 0; // guards against out-of-order async loads
 	// The rail button whose level is on screen. A load for another button clears
@@ -354,7 +359,10 @@
 	const presetSectionGap = $derived(fillRows ? FILL_SECTION_GAP : SECTION_GAP);
 	const sectionInkOf = $derived.by(() => {
 		if (!onEffectsScreen) return null;
-		return sectionInks(presetGroups.flatMap((g) => (g.folder ? [g.folder] : [])));
+		// From every folder, the hidden MIDI effects' included, so a section
+		// keeps its ink whichever track is selected.
+		const all = screen === 'presets' && onEffectsPlace ? groupPresetsByOrigin(loadedPresets, currentPath) : presetGroups;
+		return sectionInks(all.flatMap((g) => (g.folder ? [g.folder] : [])));
 	});
 	const presetInkOf = $derived.by(() => {
 		const inks = sectionInkOf;
@@ -582,7 +590,7 @@
 		clearCharge();
 		if (!selectedVendor || !vendorState?.adapter) {
 			folders = [];
-			presets = [];
+			loadedPresets = [];
 			return;
 		}
 		const adapter = vendorState.adapter;
@@ -600,7 +608,7 @@
 		if (selectedVendorId !== shownButtonId) {
 			folders = [];
 			folderColors = {};
-			presets = [];
+			loadedPresets = [];
 			shownButtonId = selectedVendorId;
 		}
 		try {
@@ -652,14 +660,14 @@
 			}
 			folders = nextFolders;
 			folderColors = nextColors;
-			presets = nextPresets;
+			loadedPresets = nextPresets;
 			paneAmongSamples = amongSamples;
 		} catch (err) {
 			if (token !== navToken) return;
 			pendingRestoreKey = null;
 			logger.error('Drill-down level load failed', { component: 'DrillDownBrowser', err });
 			folders = [];
-			presets = [];
+			loadedPresets = [];
 		} finally {
 			if (token === navToken) loading = false;
 		}

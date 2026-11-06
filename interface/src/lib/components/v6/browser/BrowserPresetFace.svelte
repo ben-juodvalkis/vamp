@@ -149,7 +149,7 @@
 		display: flex;
 		/* The picture, fill, line and handle sit back so the name leads; a
 		   touch brings the control up to full. */
-		opacity: 0.4;
+		opacity: 0.22;
 		transition: opacity 120ms ease-out;
 	}
 	.preset-face.touched {
