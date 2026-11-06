@@ -85,4 +85,12 @@ describe('DeviceSlider face="knob"', () => {
 		expect(Number(zero.getAttribute('x1'))).toBeCloseTo(50, 6);
 		expect(Number(zero.getAttribute('y1'))).toBeLessThan(50);
 	});
+
+	it('wears a detent per value when stepped, the one it rests on lit, in place of the zero mark', async () => {
+		const { container } = await knob({ value: 2, min: 0, max: 5, steps: 6 });
+		const detents = [...container.querySelectorAll('.knob-detent')];
+		expect(detents).toHaveLength(6);
+		expect(detents.map((d) => d.classList.contains('on'))).toEqual([false, false, true, false, false, false]);
+		expect(container.querySelector('.knob-zero')).toBeNull();
+	});
 });

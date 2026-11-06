@@ -32,7 +32,9 @@ the flat ring with nothing on it but the arc.
   glyph sits in the middle at rest, hidden on a knob under 56px across; Live's
   value takes its place while a finger drags. The name sits under the knob,
   `valueText` (the value in Live's words) under the name. A cell wider than
-  3:2 puts the caption beside the knob.
+  3:2 puts the caption beside the knob. A stepped control (`steps`, up to 24
+  values) wears a detent for each value in place of the zero mark, the one it
+  rests on in the ink.
 - **When a knob, when a box.** A box for a level ridden mid-set (Mix,
   Dry/Wet, Gain, the Drum Rack's Gain and Trnsp), for a control that carries a
   meter, and for an envelope's stages, whose heights draw its shape. A knob
@@ -45,6 +47,17 @@ the flat ring with nothing on it but the arc.
   view passes `face`; an instrument panel names `boxFace` for its value and
   stepping boxes and a group overrides it (`face: 'slider'` on an envelope's
   stages).
+- **Knobs change the layout around them.** A knob wants a near-square
+  cell, where a box is happy tall and thin, so on an instrument panel:
+  - a group of knobs wraps into the grid that gives each knob the most room
+    (`knobGridRows`, measured off the group's own box, counting the caption
+    under each knob): three knobs side by side in a wide group, two to a row
+    in a square one, stacked in a tall one;
+  - boxes kept as boxes in a knob panel (an envelope's stages) count half a
+    cell's width (`THIN_BOX_UNITS`), so the knobs beside them get it;
+  - a group can name its share of the row in `units` where its count
+    mis-states it: Operator's Global wraps its three knobs two to a row, so
+    it takes two boxes' width, and its filter pad two rather than 2.5.
 - **First: Drift's and Operator's panels, and Reverb.** Both panels draw
   knobs but their envelopes; Reverb draws knobs but Dry/Wet. Drift's own face
   keeps its boxes: its Shape strip and voicing column are too small for a
@@ -55,9 +68,11 @@ the flat ring with nothing on it but the arc.
 
 ## Consequences
 
-- Operator's frame gives its knobs columns about 65pt wide, so they draw
-  small. Its layout was made for tall boxes; widening those columns is the
-  next step there.
+- Other panels adopting knobs need the same pass: which groups keep boxes,
+  and whether a group's share needs `units`.
+- A panel's knobs show their value at rest only where the view knows it:
+  Live sends a parameter's display text only while the UI writes it, so the
+  panels show a name alone until the surface sends it at rest too.
 - An arc reads less at a distance than a fill. That is why the played
   controls stay boxes.
 - Other views move to knobs one at a time, each with its own call on which

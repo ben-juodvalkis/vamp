@@ -14,7 +14,9 @@
    * ring. The control's glyph sits in the middle at rest and Live's value
    * while a finger drags it; the name sits under the knob, and the value at
    * rest under the name when the host passes one. The glyph goes on a knob
-   * under 56px across, where it is too small to read.
+   * under 56px across, where it is too small to read. A stepped control
+   * (`steps`, up to 24) wears a detent for each value in place of the zero
+   * mark, the one it rests on in the ink.
    */
   import ControlGlyph, { type ControlGlyphName } from './ControlGlyph.svelte';
 
@@ -31,9 +33,13 @@
     icon?: ControlGlyphName;
     dragging?: boolean;
     ink: string;
+    /** How many values a stepped control has: a detent each, up to 24. */
+    steps?: number;
   }
 
-  let { position, origin, title = '', valueText, readout, icon, dragging = false, ink }: Props = $props();
+  let { position, origin, title = '', valueText, readout, icon, dragging = false, ink, steps }: Props = $props();
+
+  const MAX_DETENTS = 24;
 
   const START = 135; // degrees in SVG's frame: 0 = right, clockwise
   const SWEEP = 270;
@@ -57,6 +63,16 @@
   let zero = $derived(START + SWEEP * clamp01(origin ?? 0));
   let mark = $derived([polar(zero, 46), polar(zero, 51)]);
   let centreText = $derived(dragging && readout ? readout : '');
+
+  // One detent a value, the one the knob rests on lit.
+  let detents = $derived.by(() => {
+    if (!steps || steps < 2 || steps > MAX_DETENTS) return [];
+    const at = Math.round(clamp01(position) * (steps - 1));
+    return Array.from({ length: steps }, (_, i) => {
+      const a = START + (SWEEP * i) / (steps - 1);
+      return { from: polar(a, 46), to: polar(a, 51), on: i === at };
+    });
+  });
 </script>
 
 <div class="knob" class:dragging style="--knob-ink: {ink};">
@@ -64,7 +80,13 @@
   <div class="knob-face">
     <svg class="knob-svg" viewBox="0 0 100 100" aria-hidden="true">
       <path class="knob-track" d={arc(START, START + SWEEP)} />
-      <line class="knob-zero" x1={mark[0][0]} y1={mark[0][1]} x2={mark[1][0]} y2={mark[1][1]} />
+      {#if detents.length}
+        {#each detents as d, i (i)}
+          <line class="knob-detent" class:on={d.on} x1={d.from[0]} y1={d.from[1]} x2={d.to[0]} y2={d.to[1]} />
+        {/each}
+      {:else}
+        <line class="knob-zero" x1={mark[0][0]} y1={mark[0][1]} x2={mark[1][0]} y2={mark[1][1]} />
+      {/if}
       <path class="knob-value" d={arc(zero, angle)} />
     </svg>
     {#if centreText}
@@ -123,7 +145,7 @@
   }
   @container (min-aspect-ratio: 3/2) {
     .knob-face {
-      --knob-d: max(28px, min(100cqh - 0.75rem, 55cqw, 150px));
+      --knob-d: max(28px, min(100cqh - 0.75rem, 40cqw, 150px));
     }
   }
   .knob-svg {
@@ -149,10 +171,15 @@
   .dragging .knob-value {
     stroke-width: 14;
   }
-  .knob-zero {
+  .knob-zero,
+  .knob-detent {
     stroke: var(--signal-dim);
     stroke-width: 2;
     stroke-linecap: round;
+  }
+  .knob-detent.on {
+    stroke: var(--knob-ink);
+    stroke-width: 3;
   }
 
   .knob-centre {
@@ -210,6 +237,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  /* Beside the knob the name has the cell's width less the knob's. */
+  @container (min-aspect-ratio: 3/2) {
+    .knob-title {
+      font-size: clamp(10px, 10.5cqw, 15px);
+    }
   }
   .knob-value-text {
     font-size: 0.75rem;

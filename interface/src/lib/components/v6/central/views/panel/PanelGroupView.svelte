@@ -9,7 +9,7 @@
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
 	import PanelControlView from './PanelControlView.svelte';
 	import PanelEyebrow from './PanelEyebrow.svelte';
-	import { controlUnits, groupUnits, type PanelFace, type PanelGroup } from './panelTypes';
+	import { controlUnits, groupFace, groupUnits, isKnobGroup, knobGridRows, type PanelFace, type PanelGroup } from './panelTypes';
 	import type { PanelParams } from './usePanelParams.svelte';
 
 	interface Props {
@@ -27,16 +27,42 @@
 	}
 
 	let { group, params, color, onOpen, bare = false, pageRows = 1, boxFace }: Props = $props();
-	let face = $derived(group.face ?? boxFace ?? 'slider');
+	let face = $derived(groupFace(group, boxFace));
+	// Boxes kept as boxes in a knob panel go thin (ADR-508).
+	let thin = $derived(boxFace === 'knob' && face === 'slider');
+
+	// A group of knobs wraps into the grid that gives each knob the most
+	// room, measured off the row's own box: three knobs in a tall, narrow
+	// group stack, in a wide one they stand side by side.
+	let knobGrid = $derived(isKnobGroup(group, boxFace));
+	let row = $state<HTMLDivElement>();
+	let size = $state({ w: 0, h: 0 });
+	$effect(() => {
+		if (!row || !knobGrid || typeof ResizeObserver === 'undefined') return;
+		const observer = new ResizeObserver(([entry]) => {
+			size = { w: entry.contentRect.width, h: entry.contentRect.height };
+		});
+		observer.observe(row);
+		return () => observer.disconnect();
+	});
+	let gap = $derived(row ? parseFloat(getComputedStyle(row).columnGap) || 16 : 16);
+	let rows = $derived(knobGrid && size.w > 0 ? knobGridRows(group.controls.length, size.w, size.h, gap) : 1);
+	let cols = $derived(Math.ceil(group.controls.length / rows));
 </script>
 
-<div class="panel-group" style="flex: {groupUnits(group, pageRows)} 1 0;" data-group={group.title ?? ''}>
+<div class="panel-group" style="flex: {groupUnits(group, pageRows, boxFace)} 1 0;" data-group={group.title ?? ''}>
 	{#if !bare}
 		<PanelEyebrow title={group.title} page={group.page} {onOpen} color={color.primary} />
 	{/if}
-	<div class="panel-row">
+	<div
+		class="panel-row"
+		class:knob-grid={knobGrid}
+		bind:this={row}
+		data-knob-rows={knobGrid ? rows : undefined}
+		style={knobGrid ? `grid-template-columns: repeat(${cols}, minmax(0, 1fr)); grid-template-rows: repeat(${rows}, minmax(0, 1fr));` : undefined}
+	>
 		{#each group.controls as control (control.param)}
-			<div class="panel-cell" style="flex: {controlUnits(control, pageRows)} 1 0;">
+			<div class="panel-cell" style="flex: {controlUnits(control, pageRows, thin)} 1 0;">
 				<PanelControlView {control} {params} {color} switchParam={group.switchParam} {pageRows} {face} />
 			</div>
 		{/each}
@@ -57,6 +83,9 @@
 		gap: var(--central-gap);
 		min-width: 0;
 		min-height: 0;
+	}
+	.panel-row.knob-grid {
+		display: grid;
 	}
 	.panel-cell {
 		display: flex;

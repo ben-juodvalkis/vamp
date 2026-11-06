@@ -228,7 +228,7 @@ export const OPERATOR_PANEL: InstrumentPanel = {
 			slot: 'filter',
 			title: 'Filter',
 			page: 'filter',
-			units: 2.5,
+			units: 2,
 			params: ['Filter On', 'Filter Type', 'Filter Slope', 'Filter Morph', 'Filter Freq', 'Filter Res']
 		},
 		{
@@ -236,6 +236,8 @@ export const OPERATOR_PANEL: InstrumentPanel = {
 			group: {
 				title: 'Global',
 				page: 'global',
+				// Its three knobs wrap two to a row (ADR-508).
+				units: 2,
 				controls: [
 					{ kind: 'box', param: 'Time', title: 'Time' },
 					{ kind: 'box', param: 'Tone', title: 'Tone' },
@@ -326,6 +328,7 @@ export const OPERATOR_PANEL: InstrumentPanel = {
 					{
 						title: 'Stages',
 						switchParam: 'Pe On',
+						face: 'slider',
 						controls: [
 							{ kind: 'box', param: 'Pe Attack', title: 'A' },
 							{ kind: 'box', param: 'Pe Init', title: 'Init' },

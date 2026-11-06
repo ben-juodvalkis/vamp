@@ -37,6 +37,11 @@ export interface PanelGroup {
 	 * an envelope's stages stay boxes, since their heights draw its shape.
 	 */
 	face?: PanelFace;
+	/**
+	 * Its share of the row, in boxes, where counting its controls would
+	 * mis-state it: three knobs that wrap two to a row want two boxes' width.
+	 */
+	units?: number;
 }
 
 /** A value box drawn as a box or as a knob (ADR-508). */
@@ -85,20 +90,64 @@ export function choiceColumns(options: number, pageRows = 1): number {
 	return Math.ceil(options / (pageRows >= 2 ? 2 : 5));
 }
 
+/**
+ * A box among knobs is thinner than a knob's cell (ADR-508): it reads tall
+ * and narrow, and the width it gives up goes to the knobs beside it.
+ */
+export const THIN_BOX_UNITS = 0.5;
+
+/** How a group's value boxes draw: its own `face`, else the panel's. */
+export function groupFace(group: PanelGroup, boxFace?: PanelFace): PanelFace {
+	return group.face ?? boxFace ?? 'slider';
+}
+
 /** A control's width in boxes: what a group's share of its row is counted in. */
-export function controlUnits(control: PanelControl, pageRows = 1): number {
-	if (control.kind !== 'choice') return 1;
-	return Math.max(1, choiceColumns(control.options.length, pageRows) * 0.9);
+export function controlUnits(control: PanelControl, pageRows = 1, thinBoxes = false): number {
+	if (control.kind === 'choice') return Math.max(1, choiceColumns(control.options.length, pageRows) * 0.9);
+	return thinBoxes && (control.kind === 'box' || control.kind === 'step') ? THIN_BOX_UNITS : 1;
 }
 
-export function groupUnits(group: PanelGroup, pageRows = 1): number {
-	return group.controls.reduce((n, c) => n + controlUnits(c, pageRows), 0);
+/** Boxes go thin in a knob panel, where a group keeps them as boxes. */
+function thinBoxes(group: PanelGroup, boxFace?: PanelFace): boolean {
+	return boxFace === 'knob' && groupFace(group, boxFace) === 'slider';
 }
 
-export function regionUnits(region: PanelRegion): number {
-	if (region.kind === 'group') return groupUnits(region.group);
+export function groupUnits(group: PanelGroup, pageRows = 1, boxFace?: PanelFace): number {
+	if (group.units !== undefined) return group.units;
+	const thin = thinBoxes(group, boxFace);
+	return group.controls.reduce((n, c) => n + controlUnits(c, pageRows, thin), 0);
+}
+
+export function regionUnits(region: PanelRegion, boxFace?: PanelFace): number {
+	if (region.kind === 'group') return groupUnits(region.group, 1, boxFace);
 	if (region.kind === 'slot') return region.units;
-	return Math.max(...region.tabs.map((t) => t.groups.reduce((n, g) => n + groupUnits(g), 0)));
+	return Math.max(...region.tabs.map((t) => t.groups.reduce((n, g) => n + groupUnits(g, 1, boxFace), 0)));
+}
+
+/** A group drawn as a grid of knobs: every control a value or stepping box, drawn as a knob. */
+export function isKnobGroup(group: PanelGroup, boxFace?: PanelFace): boolean {
+	return groupFace(group, boxFace) === 'knob' && group.controls.every((c) => c.kind === 'box' || c.kind === 'step');
+}
+
+/**
+ * The rows a grid of `count` knobs takes in a `width` x `height` box so each
+ * knob is as large as it can be: a knob is as wide as its cell less a little,
+ * and as tall as its cell less its caption. Ties go to fewer rows.
+ */
+export function knobGridRows(count: number, width: number, height: number, gap = 16, caption = 52): number {
+	let best = 1;
+	let bestD = -Infinity;
+	for (let rows = 1; rows <= count; rows++) {
+		const cols = Math.ceil(count / rows);
+		const w = (width - gap * (cols - 1)) / cols;
+		const h = (height - gap * (rows - 1)) / rows;
+		const d = Math.min(w - 8, h - caption);
+		if (d > bestD + 0.5) {
+			best = rows;
+			bestD = d;
+		}
+	}
+	return best;
 }
 
 /** Every parameter name a panel binds: its controls' and its switches'. */

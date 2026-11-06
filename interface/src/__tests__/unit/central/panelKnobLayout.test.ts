@@ -1,0 +1,83 @@
+/**
+ * How an instrument panel lays out its knobs (ADR-508): a group of knobs
+ * wraps into the grid that gives each knob the most room, and boxes kept as
+ * boxes in a knob panel go thin so the knobs beside them get the width.
+ */
+import { describe, it, expect } from 'vitest';
+import {
+	controlUnits,
+	groupUnits,
+	isKnobGroup,
+	knobGridRows,
+	THIN_BOX_UNITS,
+	type PanelGroup
+} from '$lib/components/v6/central/views/panel/panelTypes';
+import { DRIFT_PANEL } from '$lib/components/v6/central/views/panel/driftPanel';
+import { OPERATOR_PANEL } from '$lib/components/v6/central/views/panel/operatorPanel';
+
+const knobs: PanelGroup = {
+	title: 'Global',
+	controls: [
+		{ kind: 'box', param: 'Time', title: 'Time' },
+		{ kind: 'box', param: 'Tone', title: 'Tone' },
+		{ kind: 'box', param: 'Volume', title: 'Volume' }
+	]
+};
+const envelope: PanelGroup = { ...knobs, title: 'Envelope', face: 'slider' };
+
+describe('knobGridRows', () => {
+	it('stands knobs side by side in a wide, short box', () => {
+		expect(knobGridRows(3, 600, 160)).toBe(1);
+	});
+	it('wraps them two to a row in a box as tall as it is wide', () => {
+		expect(knobGridRows(3, 260, 300)).toBe(2);
+	});
+	it('stacks them in a tall, narrow one', () => {
+		expect(knobGridRows(3, 160, 520)).toBe(3);
+	});
+	it('picks the grid whose knobs are largest, counting the caption under each', () => {
+		// 4 in 400 x 300: one row gives 80px cells but 248px of height; two
+		// rows give 192px cells and 142px of height less the caption.
+		expect(knobGridRows(4, 400, 300)).toBe(2);
+	});
+});
+
+describe('which groups are knob grids', () => {
+	it('is a group of value boxes drawn as knobs', () => {
+		expect(isKnobGroup(knobs, 'knob')).toBe(true);
+		expect(isKnobGroup(knobs, undefined)).toBe(false);
+		expect(isKnobGroup(envelope, 'knob')).toBe(false);
+	});
+	it('is not a group with a switch or a chooser in it', () => {
+		const mixed: PanelGroup = { controls: [...knobs.controls, { kind: 'switch', param: 'On', title: 'On' }] };
+		expect(isKnobGroup(mixed, 'knob')).toBe(false);
+	});
+});
+
+describe('thin boxes', () => {
+	it('narrows an envelope kept as boxes in a knob panel, and nowhere else', () => {
+		expect(groupUnits(envelope, 1, 'knob')).toBeCloseTo(3 * THIN_BOX_UNITS, 9);
+		expect(groupUnits(envelope, 1, undefined)).toBe(3);
+		expect(groupUnits(knobs, 1, 'knob')).toBe(3);
+		expect(controlUnits({ kind: 'switch', param: 'On', title: 'On' }, 1, true)).toBe(1);
+	});
+	it('takes a group’s own units over its count', () => {
+		expect(groupUnits({ ...knobs, units: 2 }, 1, 'knob')).toBe(2);
+	});
+});
+
+describe.each([
+	['Drift', DRIFT_PANEL],
+	['Operator', OPERATOR_PANEL]
+])('%s panel', (_name, panel) => {
+	it('draws knobs but keeps every envelope’s stages as boxes', () => {
+		expect(panel.boxFace).toBe('knob');
+		const groups = [
+			...panel.pages.flatMap((p) => p.rows.flat()),
+			...panel.frame.flatMap((r) => (r.kind === 'group' ? [r.group] : r.kind === 'tabs' ? r.tabs.flatMap((t) => t.groups) : []))
+		];
+		const stages = groups.filter((g) => g.controls.some((c) => c.kind === 'box' && / (Attack|Decay|Sustain|Release)$/.test(c.param)));
+		expect(stages.length).toBeGreaterThan(0);
+		expect(stages.filter((g) => g.face !== 'slider').map((g) => g.title)).toEqual([]);
+	});
+});

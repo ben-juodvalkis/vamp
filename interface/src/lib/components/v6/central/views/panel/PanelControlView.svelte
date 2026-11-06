@@ -73,6 +73,7 @@
 			title={face === 'knob' ? name : `${name} ${shown}`}
 			{face}
 			valueText={shown}
+			steps={Math.round(hi - lo) + 1}
 			labelAt="top"
 			min={lo}
 			max={hi}

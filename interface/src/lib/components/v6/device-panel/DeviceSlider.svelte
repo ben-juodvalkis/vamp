@@ -79,6 +79,8 @@
     face?: 'slider' | 'knob';
     // Under a knob's name at rest: the value in Live's words.
     valueText?: string;
+    // A stepped knob's value count: a detent each (KnobFace, up to 24).
+    steps?: number;
   }
 
   let {
@@ -108,7 +110,8 @@
     trackIndex = 0,
     meterColor,
     face = 'slider',
-    valueText
+    valueText,
+    steps
   }: Props = $props();
 
   // Resolve label orientation - 'auto' follows slider orientation
@@ -312,6 +315,7 @@
         {valueText}
         {readout}
         {icon}
+        {steps}
         dragging={isDragging}
         ink={color.primary}
       />

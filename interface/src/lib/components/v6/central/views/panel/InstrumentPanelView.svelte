@@ -78,7 +78,9 @@
 			{:else}
 				{@const sel = Math.min(tabSelected[i] ?? 0, region.tabs.length - 1)}
 				{@const tab = region.tabs[sel]}
-				<div class="panel-tab-region" style="flex: {regionUnits(region)} 1 0;">
+				{@const units = regionUnits(region, panel.boxFace)}
+				{@const used = tab.groups.reduce((n, g) => n + groupUnits(g, 1, panel.boxFace), 0)}
+				<div class="panel-tab-region" style="flex: {units} 1 0;">
 					<PanelTabs tabs={region.tabs} selected={sel} {params} {color} onSelect={(t) => (tabSelected = { ...tabSelected, [i]: t })} />
 					<div class="panel-tab-body">
 						{#each tab.groups as group, g (g)}
@@ -86,8 +88,8 @@
 							<PanelGroupView {group} {params} {color} onOpen={openPage} bare={tab.groups.length === 1 && !group.page} boxFace={panel.boxFace} />
 						{/each}
 						<!-- A tab with fewer boxes than the widest keeps their width. -->
-						{#if tab.groups.reduce((n, g) => n + groupUnits(g), 0) < regionUnits(region)}
-							<div class="panel-filler" style="flex: {regionUnits(region) - tab.groups.reduce((n, g) => n + groupUnits(g), 0)} 1 0;"></div>
+						{#if used < units}
+							<div class="panel-filler" style="flex: {units - used} 1 0;"></div>
 						{/if}
 					</div>
 				</div>
