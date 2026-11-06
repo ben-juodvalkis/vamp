@@ -2,8 +2,9 @@
   /**
    * WavetableCentralView — Ableton Wavetable (LOM class `InstrumentVector`).
    *
-   * Layout: one oscillator card with Drift's OSC 1/2 switch (2026-10-22,
-   * the user's call — it was a pad per oscillator), the filter with its
+   * Layout: one oscillator card, the oscillator picked by touching its level
+   * box in the mixer (the OSC 1/2 switch went 2026-11-05; it was a pad per
+   * oscillator before 2026-10-22), its octaves a column down the pad's left, the filter with its
    * type and slope, the envelopes as Amp or Env 2 in one bracket, Time and
    * Global Mod Amount. No pitch/mod wheels (user's call, 2026-10-22). The oscillator pad puts
    * **wave position on Y and Effect 2 on X** for both oscillators, so the
@@ -361,37 +362,27 @@
       <div class="osc-col flex-[1.2] min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
         <PanelEyebrow title="Osc {oscTab}" page="osc{oscTab}" onOpen={openPage} color={oscInk.primary} />
         <HostedSwapPill />
-        <div class="osc-head flex-none">
-          <button
-            class="osc-badge"
-            style="--osc-badge-ink: {oscInk.primary};"
-            aria-label="Osc {oscTab} of 2 — switch to Osc {oscTab === 1 ? 2 : 1}"
-            onclick={() => (oscTab = oscTab === 1 ? 2 : 1)}
-          >
-            <span class="osc-badge-eyebrow">Osc</span>
-            <span class="osc-badge-pair">
-              <span class="osc-badge-n" class:on={oscTab === 1} class:silent={!osc1On}>1</span><span
-                class="osc-badge-slash">/</span><span
-                class="osc-badge-n" class:on={oscTab === 2} class:silent={!osc2On}>2</span>
-            </span>
-          </button>
-          <div class="device-segmented strip-row flex-1 min-w-0" style="--btn-tint: {oscInk.primary}; grid-template-columns: repeat({OCTAVES.length}, 1fr);">
-            {#each OCTAVES as n}
-              <button
-                class="device-segment strip-step"
-                class:active={oscTransp === n * 12}
-                aria-label="Osc {oscTab} octave {octaveLabel(n)}"
-                aria-pressed={oscTransp === n * 12}
-                onclick={() => writeOsc(o.transp, n * 12)}
-              >{octaveLabel(n)}</button>
-            {/each}
-          </div>
-        </div>
         <!-- Effect 2 (X) / Wave Position (Y), its wave drawn beneath. Ghosted
              while the oscillator is off; still draggable, and the drag turns
              it on. The parent blankets, `isGhost` dims only the pad body, so
              the title rides a single dim instead of two (DeviceXY). -->
         <div class="flex-1 min-h-0 flex gap-(--central-gap)">
+          <!-- The octaves, +2 at the top, one column down the pad's left
+               (user, 2026-11-05). The mixer's level boxes pick the
+               oscillator, so the card has no 1/2 switch. -->
+          <div class="osc-side flex-none min-h-0 flex flex-col gap-(--central-gap)">
+            <div class="device-segmented oct-stack flex-1 min-h-0" style="--btn-tint: {oscInk.primary}; grid-template-rows: repeat({OCTAVES.length}, 1fr);">
+              {#each [...OCTAVES].reverse() as n}
+                <button
+                  class="device-segment strip-step"
+                  class:active={oscTransp === n * 12}
+                  aria-label="Osc {oscTab} octave {octaveLabel(n)}"
+                  aria-pressed={oscTransp === n * 12}
+                  onclick={() => writeOsc(o.transp, n * 12)}
+                >{octaveLabel(n)}</button>
+              {/each}
+            </div>
+          </div>
           <div class="flex-1 min-w-0 min-h-0" style={oscOn ? '' : 'opacity: var(--opacity-ghost);'}>
             <DeviceXY
               xValue={oscEffect2}
@@ -552,11 +543,20 @@
     --wt-slider-w: var(--height-touch);
   }
 
-  .osc-head {
-    display: flex;
-    gap: var(--spacing-sm);
-    height: var(--height-touch);
-    min-width: 0;
+  /* The octave column, a touch row wide. */
+  .osc-side {
+    width: var(--height-touch);
+  }
+  .oct-stack {
+    display: grid;
+  }
+  .wt-root .oct-stack .device-segment + .device-segment {
+    border-left: 0;
+    border-top: 1px solid var(--line-faint);
+  }
+  .wt-root .oct-stack .device-segment.active,
+  .wt-root .oct-stack .device-segment.active + .device-segment {
+    border-top-color: transparent;
   }
 
   .strip-row {
@@ -629,7 +629,7 @@
     z-index: 2;
   }
 
-  /* The OSC 1/2 switch: Drift's badge, a circle a touch row tall. */
+  /* The FLT 1/2 switch: Drift's badge, a circle a touch row tall. */
   .osc-badge {
     flex: 0 0 auto;
     width: var(--height-touch);
@@ -686,6 +686,14 @@
   :global([data-grammar="flat"]) .wt-root .device-segment.active,
   :global([data-grammar="flat"]) .wt-root .device-segment.active + .device-segment {
     border-left-color: transparent;
+  }
+  :global([data-grammar="flat"]) .wt-root .oct-stack .device-segment + .device-segment {
+    border-left: 0;
+    border-top: 1px solid var(--line-strong);
+  }
+  :global([data-grammar="flat"]) .wt-root .oct-stack .device-segment.active,
+  :global([data-grammar="flat"]) .wt-root .oct-stack .device-segment.active + .device-segment {
+    border-top-color: transparent;
   }
   :global([data-grammar="flat"]) .wt-root .device-segment {
     color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
