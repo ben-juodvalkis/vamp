@@ -1,37 +1,28 @@
 <script lang="ts">
 	/**
-	 * RightControlsSidebar - the clip controls and the track's Utility
+	 * RightControlsSidebar - the clip controls, a row each
 	 *
-	 * Renders either:
-	 * - The clip row (section="clip"): the clip loop brace over
-	 *   Quantize/Groove, each half the row (the user, 2026-10-26), in the
-	 *   order they stood in the flipped layout. They had a row
-	 *   each until the Utility took the brace's.
-	 * - The track's Utility (section="utility"): the FX grid's Gain tile,
-	 *   a ghost until the track has one, whose first drag loads it. It was
-	 *   a column at the end of the FX chain overview (ADR-482) until the
-	 *   same day.
-	 *
-	 * Adapted for vertical 120px-wide layout
-	 * Each section aligns with a main content row
+	 * - section="loop": the clip loop brace, level with the FX chain (the
+	 *   track's Utility had that row until 2026-11-05, the user's call;
+	 *   the Utility is the chain's own now, its ghost always offered).
+	 * - section="quantize": Quantize/Groove, level with the central view.
+	 *   The two shared that row, half each, from 2026-10-26 until the same
+	 *   day.
 	 */
 	import { clipDisplayCoordinator } from '$lib/services/clipDisplayCoordinator.svelte';
 	import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
 	import { focusPlayingClipOnSelectedTrack } from '$lib/components/v6/tracks/composables/slotActions';
 	import { press } from '$lib/actions/press';
-	import { getSlotByDeviceType } from '$lib/config/fxGridLayout';
 
 	// Vertical control components
 	import VerticalQuantizeControl from '$lib/components/v6/clips/VerticalQuantizeControl.svelte';
 	import VerticalLoopControl from '$lib/components/v6/clips/VerticalLoopControl.svelte';
 
 	interface Props {
-		section: 'clip' | 'utility';
+		section: 'loop' | 'quantize';
 	}
 
 	let { section }: Props = $props();
-
-	const utility = getSlotByDeviceType('utility');
 
 	/**
 	 * A tap anywhere in a clip control shows its view: the Groove view for
@@ -58,30 +49,12 @@
 	}
 </script>
 
-{#if section === 'clip'}
-	<div class="clip-pair h-full w-full">
-		<div class="half" use:press={{ onPress: showClip, touchAction: 'none' }} role="region" aria-label="Loop control">
-			<VerticalLoopControl />
-		</div>
-		<div class="half" use:press={{ onPress: showGroove, touchAction: 'none' }} role="region" aria-label="Quantize control">
-			<VerticalQuantizeControl />
-		</div>
+{#if section === 'loop'}
+	<div class="h-full w-full" use:press={{ onPress: showClip, touchAction: 'none' }} role="region" aria-label="Loop control">
+		<VerticalLoopControl />
 	</div>
-{:else if utility}
-	<div class="h-full w-full flex" role="region" aria-label="Utility" data-debug="sidebar-utility">
-		<utility.component position={utility.position} />
+{:else}
+	<div class="h-full w-full" use:press={{ onPress: showGroove, touchAction: 'none' }} role="region" aria-label="Quantize control">
+		<VerticalQuantizeControl />
 	</div>
 {/if}
-
-<style>
-	/* The brace over Q, each half the row, the stack's own gap between. */
-	.clip-pair {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-sm, 8px);
-	}
-	.half {
-		flex: 1 1 0;
-		min-height: 0;
-	}
-</style>

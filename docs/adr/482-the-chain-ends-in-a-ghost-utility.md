@@ -6,7 +6,9 @@ ADR-483: the ghost sits in its own column, the side bars' width. Then
 moved, the same day, at the user's call: the Utility is the right
 sidebar's top row (level with the FX section), in the loop brace's place,
 ghost or live; the chain no longer draws it. No Live
-restart: interface only.
+restart: interface only. **Superseded by ADR-506** (2026-11-05): the
+sidebar row is the loop brace's again, and the ghost Utility is a tile of
+the chain's ghost section.
 
 ## Context
 The track strips always end in Main. The user wanted the effect chain to end
