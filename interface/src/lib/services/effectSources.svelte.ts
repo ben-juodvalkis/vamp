@@ -21,7 +21,7 @@ import { fetchPlacesListing, PLACES_CHANGED_EVENT } from '$lib/services/placesLi
 import { DEVICE_PRESETS, type DevicePresetConfig } from '$lib/config/devicePresets';
 import { logger } from '$lib/utils/logger';
 
-let folder = $state<Pick<PlaceInfo, 'name' | 'source' | 'devices'> | null>(null);
+let folder = $state<(Pick<PlaceInfo, 'name' | 'source' | 'devices'> & { path?: string }) | null>(null);
 let vampDevicesPlace = $state<boolean | null>(null);
 let started = false;
 
@@ -32,7 +32,7 @@ async function refresh(): Promise<void> {
 	try {
 		const index = await getPlacesIndex();
 		const effects = index.places.find((p) => p.effects);
-		folder = effects ? { name: effects.name, source: effects.source, devices: effects.devices } : null;
+		folder = effects ? { name: effects.name, source: effects.source, devices: effects.devices, path: effects.path } : null;
 	} catch (err) {
 		logger.warn('Effects folder: no places index', { component: 'effectSources', err: String(err) });
 	}
@@ -64,15 +64,21 @@ export function effectsFolderName(): string {
 
 /**
  * Where a Vamp effect loads from: its file in the effects folder, by name or
- * alias, as `place:<name>` (or `library`) and the path inside it; null when
- * the folder has no file of that name. Reactive.
+ * alias, as `place:<name>` (or `library`), the path inside it, and the file's
+ * full path on the Mac (`presetPath`); null when the folder has no file of
+ * that name. Reactive.
+ *
+ * The full path is what Live finds the file by: a Place renamed in Live
+ * (the rig's "+Effect" is the folder "Audio-Midi Effects") is not found by
+ * its name on the surface, which then refused the empty path the load sent
+ * (`empty-preset-path`, 2026-11-05: Guitar and Bass Amp did nothing).
  */
-export function effectSource(config: Pick<DevicePresetConfig, 'defaultName' | 'aliases'>): { source: string; rel: string } | null {
+export function effectSource(config: Pick<DevicePresetConfig, 'defaultName' | 'aliases'>): { source: string; rel: string; presetPath: string } | null {
 	const devices = folder?.devices;
 	if (!devices || !folder?.source) return null;
 	for (const name of [config.defaultName, ...(config.aliases ?? [])]) {
 		const rel = devices[name];
-		if (rel) return { source: folder.source, rel };
+		if (rel) return { source: folder.source, rel, presetPath: folder.path ? `${folder.path.replace(/\/+$/, '')}/${rel.replace(/^\/+/, '')}` : '' };
 	}
 	return null;
 }
@@ -86,7 +92,7 @@ export function effectAvailable(key: string): boolean {
 }
 
 /** Tests: set the effects folder directly. */
-export function _setEffectsFolderForTests(next: Pick<PlaceInfo, 'name' | 'source' | 'devices'> | null): void {
+export function _setEffectsFolderForTests(next: (Pick<PlaceInfo, 'name' | 'source' | 'devices'> & { path?: string }) | null): void {
 	folder = next;
 }
 

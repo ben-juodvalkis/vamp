@@ -192,7 +192,7 @@ export async function addEffectToChain(effect: RecentEffect): Promise<void> {
 		const found = config?.effect ? effectSource(config) : null;
 		if (config?.effect && !found) throw new Error('Not in your effects folder (Settings → Places)');
 		const { source, rel } = found ?? effect;
-		const file = effect.preset ? (config?.presetPath ?? '') : nativeClassOf(effect) ? '' : effect.fullPath;
+		const file = effect.preset ? (found?.presetPath || config?.presetPath || '') : nativeClassOf(effect) ? '' : effect.fullPath;
 		await addPresetToChain(trackPath, pad?.padPath ?? '', file, source, rel);
 	} catch (err) {
 		cancelView();

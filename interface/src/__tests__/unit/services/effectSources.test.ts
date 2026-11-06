@@ -17,8 +17,13 @@ afterEach(() => {
 describe('effect sources', () => {
 	it('finds an effect by its name in the effects folder', () => {
 		_setEffectsFolderForTests({ name: 'Shelf', source: 'place:Shelf', devices: { Guitar: 'Guitar/Guitar.adg' } });
-		expect(effectSource(DEVICE_PRESETS.guitar)).toEqual({ source: 'place:Shelf', rel: 'Guitar/Guitar.adg' });
+		expect(effectSource(DEVICE_PRESETS.guitar)).toEqual({ source: 'place:Shelf', rel: 'Guitar/Guitar.adg', presetPath: '' });
 		expect(effectsFolderName()).toBe('Shelf');
+	});
+
+	it('names the file by its full path, which Live finds even when the Place was renamed in Live', () => {
+		_setEffectsFolderForTests({ name: '+Effect', source: 'place:+Effect', path: '/Lib/Sidebar/Audio-Midi Effects/', devices: { Guitar: 'Guitar/Guitar.adg' } });
+		expect(effectSource(DEVICE_PRESETS.guitar)?.presetPath).toBe('/Lib/Sidebar/Audio-Midi Effects/Guitar/Guitar.adg');
 	});
 
 	it('finds one by an alias: the shelf calls the Tone Shaper "Tone Shaper", the Octave "Pitch Shift"', () => {

@@ -537,6 +537,14 @@ export function handleV3Error(args: OSCArg[]): void {
 			fxGrid.handleLoadFailed(path, scope);
 		});
 	}
+	// Say a refused load (2026-11-05: Guitar and Bass Amp were refused with
+	// no path and nothing on screen, so a tap looked like a miss).
+	if (originatingAddress === '/looping/v3/device/load') {
+		const name = path ? (path.split('/').pop() ?? path).replace(/\.[^.]+$/, '') : 'Effect';
+		import('$lib/stores/v6/v3ErrorBannerStore.svelte').then(({ v3ErrorBannerStore }) => {
+			v3ErrorBannerStore.show('preset-load-failed', name, detail);
+		});
+	}
 
 	// Non-handshake v3 error. Log and move on; the per-address handlers
 	// don't have a common error channel to route to yet. Adding one is

@@ -494,7 +494,8 @@ export class FXGridState {
 			v3ErrorBannerStore.show('preset-load-failed', config.defaultName, 'Not in your effects folder (Settings → Places)');
 			return;
 		}
-		const load = found ? { ...config, ...found } : config;
+		// The full path from the folder (a renamed Place is not found by name).
+		const load = found ? { ...config, ...found, presetPath: found.presetPath || config.presetPath } : config;
 
 		this.patchSlot(slotKey, { loadState: 'loading', error: undefined }, scope);
 
@@ -639,7 +640,9 @@ export class FXGridState {
 		if (scope && !this.scoped.has(scope)) return;
 		for (const [key, slot] of this.table(scope).entries()) {
 			const config = this.slotKeyConfig(key);
-			if (!config || loadKey(config) !== presetPath) continue;
+			// One of Vamp's own effects fails under its path in the effects folder.
+			const failedKey = config?.effect ? (effectSource(config)?.presetPath ?? '') : config ? loadKey(config) : '';
+			if (!config || failedKey !== presetPath) continue;
 
 			if (slot.loadTimeout) {
 				clearTimeout(slot.loadTimeout);
