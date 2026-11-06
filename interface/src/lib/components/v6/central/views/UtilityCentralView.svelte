@@ -2,47 +2,193 @@
   /**
    * UtilityCentralView — the Utility's view (slot `utility`, StereoGain).
    *
-   * The Gain tile's one control, large: the same parameter and rail
-   * `UtilityControl` drives (index 9, -1..1), as a value box (ADR-477).
-   * Until the FX chain overview gave every device its own view (ADR-478)
-   * the Gain tile opened the shared dynamics view, which drew no Utility
-   * control at all.
+   *   [Gain, over the track's meter] [Width / Balance] [Bass Freq / Channel] [switches]
    *
-   * Only index 9 is drawn: it is the one Utility index the code
-   * establishes. The Utility's saved parameters do not follow LOM order
-   * (live-api-measurements.md), so Width, Pan and the rest wait for a
-   * measurement rather than a guess.
+   * Gain is the `utility` control (`deviceControls`, ADR-479), the tile at
+   * full size. The rest are value boxes (ADR-477), a four-way channel picker
+   * and switches, Live's own parameters as measured on the rig (2026-11-05,
+   * `device_dump.js` on a Utility, 12.4 beta): 1 Left Inv, 2 Right Inv
+   * (switches), 3 Channel Mode 0..3 (Left · Stereo · Right · Swap), 4 Stereo
+   * Width 0..2 (1 = 100 %, 2 = 400 %), 5 Mono, 6 Bass Mono (switches), 7 Bass
+   * Freq 0..1 (50..500 Hz), 8 Balance -1..1, 10 Mute, 11 DC Filter
+   * (switches). The LOM indices, not the saved order (live-api-measurements.md).
+   * A ghost draws Live's defaults, and its first write loads it.
    *
-   * Self-contained: queries its own slot state, takes no props, and
-   * renders through ghost/loading/active without a `{#if device}` gate.
+   * NO {#if device} gate - every control handles its own ghost state.
    */
 
   import ControlTile from '../../device-panel/ControlTile.svelte';
+  import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
+  import { trackInk } from '$lib/utils/formatters/trackFormatters';
+  import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 
   const utility = useFxGridSlot('utility');
+
+  const UTIL = {
+    leftInv: 1, rightInv: 2, channelMode: 3, width: 4, mono: 5,
+    bassMono: 6, bassFreq: 7, balance: 8, mute: 10, dcFilter: 11
+  } as const;
+  /** Live's values on a freshly inserted Utility, what a ghost shows. */
+  const REST: Record<number, number> = { 1: 0, 2: 0, 3: 1, 4: 1, 5: 0, 6: 0, 7: 0.3802112340927124, 8: 0, 10: 0, 11: 0 };
+
+  let ink = $derived({
+    primary: trackInk(utility.color.primary, paintModeReactive()),
+    secondary: utility.color.secondary,
+    accent: trackInk(utility.color.accent, paintModeReactive())
+  });
+
+  const value = (index: number) => utility.paramValue(index) ?? REST[index];
+  const on = (index: number) => value(index) >= 0.5;
+  const toggle = (index: number) => utility.sendParam(index, on(index) ? 0 : 1);
+
+  const CHANNEL_MODES = ['Left', 'Stereo', 'Right', 'Swap'];
+  const channelMode = $derived(Math.round(value(UTIL.channelMode)));
+
+  /** Rows of switches; the two phase inverts share one, so five rows fit the band at the touch floor. */
+  const SWITCH_ROWS = [
+    [{ index: UTIL.mono, label: 'Mono' }],
+    [{ index: UTIL.bassMono, label: 'Bass Mono' }],
+    [{ index: UTIL.leftInv, label: 'Invert L' }, { index: UTIL.rightInv, label: 'Invert R' }],
+    [{ index: UTIL.dcFilter, label: 'DC Filter' }],
+    [{ index: UTIL.mute, label: 'Mute' }]
+  ];
 </script>
 
-<!-- The `utility` control (deviceControls, ADR-479) at full size; a tap on
-     a ghost loads it. -->
-<div class="utility-central-layout relative">
-  <div class="utility-slider">
+<div class="utility-layout" data-view="utility" style="--btn-tint: {ink.primary};">
+  <div class="gain">
     <ControlTile type="utility" device={utility.device} disableCentralViewOnTap tapLoads labelSize="large" />
+  </div>
+
+  <div class="column" class:slot-ghost={utility.isGhost}>
+    <DeviceSlider
+      value={value(UTIL.width)}
+      title="Width"
+      orientation="vertical"
+      min={0}
+      max={2}
+      centerOrigin
+      centerValue={1}
+      isGhost={utility.isGhost}
+      color={ink}
+      readout={utility.paramDisplay(UTIL.width)}
+      onInteraction={(v) => utility.sendParam(UTIL.width, v)}
+    />
+    <DeviceSlider
+      value={value(UTIL.balance)}
+      title="Balance"
+      orientation="horizontal"
+      min={-1}
+      max={1}
+      centerOrigin
+      centerValue={0}
+      isGhost={utility.isGhost}
+      color={ink}
+      readout={utility.paramDisplay(UTIL.balance)}
+      onInteraction={(v) => utility.sendParam(UTIL.balance, v)}
+    />
+  </div>
+
+  <div class="column" class:slot-ghost={utility.isGhost}>
+    <DeviceSlider
+      value={value(UTIL.bassFreq)}
+      title="Bass Freq"
+      orientation="vertical"
+      min={0}
+      max={1}
+      isGhost={utility.isGhost}
+      color={ink}
+      readout={utility.paramDisplay(UTIL.bassFreq)}
+      onInteraction={(v) => utility.sendParam(UTIL.bassFreq, v)}
+    />
+    <div class="channel" role="radiogroup" aria-label="Channel">
+      {#each CHANNEL_MODES as label, i (label)}
+        <button
+          class="physical-button utility-switch"
+          class:active={channelMode === i}
+          role="radio"
+          aria-checked={channelMode === i}
+          onclick={() => utility.sendParam(UTIL.channelMode, i)}
+        >
+          {label}
+        </button>
+      {/each}
+    </div>
+  </div>
+
+  <div class="column switches" class:slot-ghost={utility.isGhost}>
+    {#each SWITCH_ROWS as row, r (r)}
+      <div class="switch-row">
+        {#each row as s (s.index)}
+          <button class="physical-button utility-switch" class:active={on(s.index)} aria-pressed={on(s.index)} onclick={() => toggle(s.index)}>
+            {s.label}
+          </button>
+        {/each}
+      </div>
+    {/each}
   </div>
 </div>
 
 <style>
-  .utility-central-layout {
+  /* Gain two shares; the value-box columns and the switches one each. */
+  .utility-layout {
     display: grid;
-    grid-template-rows: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
     height: 100%;
     width: 100%;
     padding: var(--central-inset);
     gap: var(--central-gap);
   }
 
-  .utility-slider {
+  .gain,
+  .column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--central-gap);
     min-width: 0;
     min-height: 0;
+  }
+
+  .gain > :global(*),
+  .column > :global(*) {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .channel {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: minmax(0, 1fr);
+    gap: var(--central-gap);
+  }
+
+  .switch-row {
+    display: flex;
+    gap: var(--central-gap);
+  }
+
+  .switch-row > .utility-switch {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .utility-switch {
+    min-height: var(--height-touch);
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  /* Flat grammar: medium weight, and the device's own ink when on (as
+     Redux's switches), not the house ON color beside its faders. */
+  :global([data-grammar="flat"]) .utility-switch {
+    font-weight: var(--font-weight-medium);
+  }
+  :global([data-grammar="flat"]) .utility-switch.active {
+    background: var(--btn-tint);
+    border-color: var(--btn-tint);
+    color: var(--flat-on-fg);
+  }
+  :global([data-grammar="flat"]) .utility-switch:not(.active) {
+    color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
   }
 </style>

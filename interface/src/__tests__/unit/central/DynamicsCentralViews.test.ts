@@ -73,9 +73,16 @@ describe('the dynamics views, one per device (ADR-478)', () => {
 		expect(container.querySelector('.mb-slider')).toBeNull();
 	});
 
-	it('Utility: the Gain', () => {
+	it('Utility: the Gain, Width, Balance, Bass Freq, the channel picker and the switches', () => {
 		const { container } = render(UtilityCentralView);
-		expect(container.querySelectorAll('.utility-slider')).toHaveLength(1);
-		expect(container.textContent).toContain('Gain');
+		expect(container.querySelectorAll('.gain')).toHaveLength(1);
+		for (const label of ['Gain', 'Width', 'Balance', 'Bass Freq']) expect(container.textContent).toContain(label);
+		const modes = [...container.querySelectorAll('[role="radio"]')];
+		expect(modes.map((b) => b.textContent?.trim())).toEqual(['Left', 'Stereo', 'Right', 'Swap']);
+		// A ghost shows Live's defaults: Stereo, every switch off.
+		expect(modes[1].getAttribute('aria-checked')).toBe('true');
+		const switches = [...container.querySelectorAll('button[aria-pressed]')];
+		expect(switches.map((b) => b.textContent?.trim())).toEqual(['Mono', 'Bass Mono', 'Invert L', 'Invert R', 'DC Filter', 'Mute']);
+		expect(switches.every((b) => b.getAttribute('aria-pressed') === 'false')).toBe(true);
 	});
 });
