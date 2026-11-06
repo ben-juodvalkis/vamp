@@ -72,7 +72,7 @@
   import SquashControl from './SquashControl.svelte';
   import ControlTile from './ControlTile.svelte';
   import RecentEffectButton from './chain/RecentEffectButton.svelte';
-  import { recentForChain } from '$lib/services/recentEffects.svelte';
+  import { recentForChain, UTILITY_GHOST } from '$lib/services/recentEffects.svelte';
   import { controlFor } from './deviceControls';
   import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
   import InstrumentFace, { FACED_INSTRUMENTS } from './chain/InstrumentFace.svelte';
@@ -419,27 +419,25 @@
    * chain's ghost section, the last effects added from the browser, grey, a
    * tap adding one here again. Only what fits: no MIDI effect off a MIDI track, nothing
    * this chain already holds. It replaced the suggested ghost devices
-   * (ADR-483); the ghost Utility had already left for the right sidebar.
+   * (ADR-483). A ghost Utility and + Effect always close it.
    */
-  const recentPool = $derived(recentForChain(cells.map((c) => c.device.name)));
   const drawn = $derived(kitCell ? [kitCell, ...shown] : shown);
 
-  const grid = $derived(chainGrid(drawn.length + (recentPool.length > 0 ? 1 : 0), CHAIN_WRAP_AFTER));
   /*
-   * The ghost section is two cells, the recents and + Effect together:
-   * on a one-row chain three columns of four and + Effect a full-height
-   * fourth; on two rows five columns of two and + Effect a double-height
-   * sixth (`recentLayout`, the user, 2026-10-26).
+   * The ghost section is always two cells: the recents, then a ghost
+   * Utility, then + Effect, every one a tile of the same size, down each
+   * column (the user, 2026-11-05). On a one-row chain four columns of four,
+   * on two rows six columns of two (`recentLayout`).
    */
+  const grid = $derived(chainGrid(drawn.length + 1, CHAIN_WRAP_AFTER));
   const recentGrid = $derived(recentLayout(grid.rows));
-  /** The ghost section's cells: two with recents, one without, plus any the wrap leaves empty in its row. */
-  const ghostCells = $derived(ghostSpan(drawn.length, recentPool.length > 0 ? 2 : 1, grid));
+  const recentPool = $derived(recentForChain(cells.map((c) => c.device.name), recentLayout(1).shown));
+  /** The ghost section's cells: two, plus any the wrap leaves empty in its row. */
+  const ghostCells = $derived(ghostSpan(drawn.length, 2, grid));
   /** The most recent that fit, shown in alphabetical order (the user, 2026-10-26), down each column. */
   const recents = $derived(
     recentPool.slice(0, recentGrid.shown).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }))
   );
-  /** The columns the recents fill, top to bottom; + Effect widens over the rest (the user, the same day: no dead space). */
-  const recentColsUsed = $derived(Math.max(1, Math.ceil(recents.length / recentGrid.rows)));
 
   /** The cell position under a point, by the grid's geometry at lift — not the cells, which are sliding. */
   function positionAt(d: Drag, x: number, y: number): number {
@@ -765,13 +763,24 @@
       {@render cellBody(cell, position)}
     </div>
   {/each}
-  <!-- The ghost section (ADR-484): two cells, the recents in columns and
-       + Effect the last column, full height; just + Effect with no recents. -->
-  {#snippet addCell(span: number | null)}
+  <!-- The ghost section (ADR-484): two cells, the recents, a ghost Utility
+       second to last and + Effect last, each a tile of one size. -->
+  <div
+    class="chain-ghosts"
+    style:grid-column="span {ghostCells}"
+    style:--recent-cols={recentGrid.columns}
+    style:--recent-rows={recentGrid.rows}
+    data-debug="chain-recents"
+    role="group"
+    aria-label="Recent effects"
+  >
+    {#each recents as recent (recent.fullPath)}
+      <RecentEffectButton {recent} />
+    {/each}
+    <RecentEffectButton recent={UTILITY_GHOST} />
     <!-- Add an effect: the browser on Effect, landing on this chain. -->
     <button
       type="button"
-      style:grid-column={span ? `span ${span}` : undefined}
       class="chain-add"
       aria-label="Add an effect"
       data-debug="chain-add"
@@ -780,26 +789,7 @@
       <span class="chain-add-icons" aria-hidden="true"><Plus /><ControlGlyph name="rack" /></span>
       <span class="chain-add-label">Effect</span>
     </button>
-  {/snippet}
-  {#if recents.length > 0}
-    <div
-      class="chain-ghosts"
-      style:grid-column="span {ghostCells}"
-      style:--recent-cols={recentGrid.columns}
-      style:--recent-rows={recentGrid.rows}
-      style:--add-from={recentColsUsed + 1}
-      data-debug="chain-recents"
-      role="group"
-      aria-label="Recent effects"
-    >
-      {#each recents as recent (recent.fullPath)}
-        <RecentEffectButton {recent} />
-      {/each}
-      {@render addCell(null)}
-    </div>
-  {:else}
-    {@render addCell(ghostCells)}
-  {/if}
+  </div>
   {#if padScope}
     <!-- Whose chain this is, as the grid's scope chip says it. -->
     <div class="pad-chip chain-scope-chip" aria-label="Chain of pad {padScope.note}">
@@ -910,14 +900,19 @@
     min-width: 0;
     min-height: 0;
     display: grid;
-    grid-template-columns: repeat(calc(var(--recent-cols, 3) + 1), minmax(0, 1fr));
+    grid-template-columns: repeat(var(--recent-cols, 4), minmax(0, 1fr));
     grid-template-rows: repeat(var(--recent-rows, 4), minmax(0, 1fr));
     grid-auto-flow: column;
     gap: 4px;
   }
+  /* + Effect as one of the tiles: the recents' label size and padding. */
   .chain-ghosts > .chain-add {
-    grid-column: var(--add-from, -2) / -1;
-    grid-row: 1 / -1;
+    gap: 2px;
+    padding: 4px;
+    overflow: hidden;
+  }
+  .chain-ghosts > .chain-add .chain-add-label {
+    font-size: 0.75rem;
   }
   .chain-cell.off > :not(.cell-head) {
     opacity: 0.45;

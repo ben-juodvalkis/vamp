@@ -2,7 +2,7 @@
  * The effects added most recently (ADR-484, user 2026-10-26): the effect
  * presets loaded from the browser, newest first, so the chain overview's
  * Recent column can put one on a chain again in one tap. It shows the first
- * that fit the chain (`recentForChain`), up to twelve, as many as the ghost
+ * that fit the chain (`recentForChain`), as many as the ghost
  * section has room for (`chainDrop.recentLayout`): no MIDI effect off a MIDI track,
  * nothing the chain already holds; the list keeps more than that so the
  * column stays full after the filter.
@@ -61,7 +61,7 @@ const STORAGE_KEY = 'vamp.recentEffects';
  * The effects that fill the section past the recents, first first: Live's
  * own, so they are on every Mac, and the app's own amp racks. More than it
  * shows, so it stays full after the chain's own are skipped.
- * No Utility: the right sidebar always has its ghost; no Compressor or
+ * No Utility: the chain always has its own ghost (`UTILITY_GHOST`); no Compressor or
  * Phaser, to make room for the Guitar and Bass Amp (the user, the same day).
  */
 const DEFAULT_EFFECT_KEYS = ['echo', 'reverb', 'filter', 'guitar', 'bass', 'eq', 'saturator', 'squash', 'chorus', 'drum', 'redux', 'gate', 'shifter', 'ott', 'tremolo'] as const;
@@ -78,6 +78,17 @@ export const DEFAULT_EFFECTS: readonly RecentEffect[] = DEFAULT_EFFECT_KEYS.map(
 	const [, , , source = '', rel = ''] = deviceLoadArgs('', '', preset);
 	return { name: preset.defaultName, fullPath: `default:${key}`, source, rel, kind: 'audio-effect', preset: key };
 });
+
+/**
+ * The chain's ghost Utility, always second to last in its ghost section
+ * (the user, 2026-11-05): Live's Utility, inserted by name. Never a recent
+ * too, so it shows once.
+ */
+export const UTILITY_GHOST: RecentEffect = (() => {
+	const preset = DEVICE_PRESETS.utility;
+	const [, , , source = '', rel = ''] = deviceLoadArgs('', '', preset);
+	return { name: preset.defaultName, fullPath: 'default:utility', source, rel, kind: 'audio-effect', preset: 'utility' };
+})();
 
 /** A Live device inserted by name has no file: its class, else null. */
 export function nativeClassOf(effect: Pick<RecentEffect, 'source'>): string | null {
@@ -154,7 +165,7 @@ export function recentForChain(loaded: readonly string[], max: number = RECENT_E
 	const have = new Set(loaded);
 	const named = new Set(recent.map((r) => r.name));
 	const defaults = DEFAULT_EFFECTS.filter((d, i) => effectAvailable(DEFAULT_EFFECT_KEYS[i]) && ![d.name, ...(DEFAULT_ALSO_NAMED[DEFAULT_EFFECT_KEYS[i]] ?? [])].some((n) => named.has(n) || have.has(n)));
-	return [...recent, ...defaults].filter((r) => fitsSelectedTrack(r) && !have.has(r.name)).slice(0, max);
+	return [...recent, ...defaults].filter((r) => fitsSelectedTrack(r) && !have.has(r.name) && r.name !== UTILITY_GHOST.name).slice(0, max);
 }
 
 /** Whether an effect can go on the selected track: a MIDI effect only on a MIDI track. */
