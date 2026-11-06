@@ -110,9 +110,12 @@
   // 'knob'` draws every central-view value box as a rotary knob instead. Same
   // gesture (relative drag, up or right raises it), same travel; only the
   // face changes. Never in the chain or the browser.
-  const knobFace = valueBox && (() => {
-    try { return localStorage.getItem('vamp.controlStyle') === 'knob'; } catch { return false; }
-  })();
+  // 'arc' is the same knob with no hand: the arc alone says the value.
+  const knobStyle = valueBox ? (() => {
+    try { return localStorage.getItem('vamp.controlStyle'); } catch { return null; }
+  })() : null;
+  const knobFace = knobStyle === 'knob' || knobStyle === 'arc';
+  const arcOnly = knobStyle === 'arc';
   const KNOB_START = 135;   // degrees, SVG frame (0 = right, clockwise)
   const KNOB_SWEEP = 270;
   function polar(deg: number, r: number): [number, number] {
@@ -300,6 +303,7 @@
   <div class="device-knob">
     <div
       class="knob-container"
+      class:arc-only={arcOnly}
       class:ghost={isGhost}
       class:dragging={isDragging}
       bind:this={container}
@@ -324,8 +328,10 @@
           <line class="knob-centre-tick" x1={mx0} y1={my0} x2={mx1} y2={my1} />
         {/if}
         <path class="knob-value" d={arc(from, angle, 44)} />
-        <line class="knob-pointer" x1={polar(angle, icon ? 21 : 0)[0]} y1={polar(angle, icon ? 21 : 0)[1]} x2={tip[0]} y2={tip[1]} />
-        {#if !icon}<circle class="knob-hub" cx="50" cy="50" r="5" />{/if}
+        {#if !arcOnly}
+          <line class="knob-pointer" x1={polar(angle, icon ? 21 : 0)[0]} y1={polar(angle, icon ? 21 : 0)[1]} x2={tip[0]} y2={tip[1]} />
+          {#if !icon}<circle class="knob-hub" cx="50" cy="50" r="5" />{/if}
+        {/if}
       </svg>
       {#if icon}<span class="knob-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}
       </div>
@@ -804,6 +810,10 @@
   .knob-icon :global(svg) { width: 100%; height: 100%; }
   .knob-track { fill: none; stroke: var(--surface-well); stroke-width: 10; stroke-linecap: round; }
   .knob-value { fill: none; stroke: var(--knob-ink); stroke-width: 10; stroke-linecap: round; }
+  .knob-container.arc-only .knob-track,
+  .knob-container.arc-only .knob-value { stroke-width: 12; stroke-linecap: butt; }
+  .knob-container.arc-only.dragging .knob-value { stroke-width: 14; }
+  .knob-container.arc-only .knob-icon { color: var(--knob-ink); width: 40%; height: 40%; }
   .knob-hub { fill: color-mix(in oklab, var(--knob-ink) 55%, white); }
   .knob-pointer { stroke: color-mix(in oklab, var(--knob-ink) 55%, white); stroke-width: 4; stroke-linecap: round; }
   .knob-centre-tick { stroke: var(--signal-dim); stroke-width: 1.5; }
