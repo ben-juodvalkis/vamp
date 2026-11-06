@@ -474,10 +474,10 @@ import { logger } from '$lib/utils/logger';
 			{/if}
 		</div>
 
-		<!-- Col 3: Dup Trk top + > bottom. Delete and > traded places on the
-		     user's call (2026-09-13): Delete now sits over < in col 5. Dup
-		     Trk and REC traded places on 2026-11-06, so the two toggles
-		     (REC, Group) share the first column. -->
+		<!-- Col 3: Dup Trk top + Delete bottom. Delete moved here from col 5
+		     on 2026-11-06, trading places with the left loop arrow so both
+		     arrows share col 5; Dup Trk came from col 9 the same day, so the
+		     two toggles (REC, Group) share the first column. -->
 		<div class="col col-3">
 			<div class="stacked-btns">
 				<div class="btn-cell">
@@ -512,12 +512,22 @@ import { logger } from '$lib/utils/logger';
 				</div>
 				<div class="btn-cell">
 					<button
-						onclick={halveLoopFromStart}
+						onclick={handleDeleteClip}
 						disabled={!hasClip}
-						class="btn btn-well btn-action fam-quant"
-						aria-label="Clip left"
+						class="btn btn-well btn-action fam-del"
 					>
-						<!-- The clip, with the loop bar over the half that keeps looping and an arrow the way its start moves --><svg class="w-16 h-16" fill="none" viewBox="0 0 36 24"><path d="M4 3.5h11M12 1l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /><rect x="20" y="2" width="14" height="3" rx="1" fill="currentColor" /><rect x="2" y="8" width="32" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="6" y="15" width="6" height="2.5" rx="0.75" fill="currentColor" /><rect x="13" y="11" width="5" height="2.5" rx="0.75" fill="currentColor" /><rect x="20" y="16" width="6" height="2.5" rx="0.75" fill="currentColor" /><rect x="27" y="12" width="4.5" height="2.5" rx="0.75" fill="currentColor" /></svg>
+						<span class="flex items-center justify-center btn-caps" aria-label="Delete clip">
+								<!-- Wide clip box with MIDI note bars, big red X overlaid -->
+								<svg class="w-12 h-12" fill="none" viewBox="0 0 36 24">
+									<rect x="2" y="4" width="32" height="16" rx="2" stroke="currentColor" stroke-width="2" />
+									<rect x="6" y="12" width="6" height="2.5" rx="0.75" fill="currentColor" />
+									<rect x="13" y="8" width="5" height="2.5" rx="0.75" fill="currentColor" />
+									<rect x="19" y="14" width="7" height="2.5" rx="0.75" fill="currentColor" />
+									<rect x="24" y="10" width="5" height="2.5" rx="0.75" fill="currentColor" />
+									<line x1="9" y1="3" x2="27" y2="21" style="stroke: var(--act-rec)" stroke-width="3" stroke-linecap="round" />
+									<line x1="27" y1="3" x2="9" y2="21" style="stroke: var(--act-rec)" stroke-width="3" stroke-linecap="round" />
+								</svg>
+						</span>
 					</button>
 				</div>
 			</div>
@@ -587,7 +597,8 @@ import { logger } from '$lib/utils/logger';
 			</div>
 		{/if}
 
-		<!-- Col 5: Delete top + < bottom (both track types). The loop-halving
+		<!-- Col 5: > top + < bottom, the two loop arrows (Delete top until
+		     2026-11-06; both track types). The loop-halving
 			 arrows used to share cols 4/5 with the transpose buttons, then were
 			 stacked together to free a full column for the PITCH slider; since
 			 2026-09-13 > sits under REC in col 3 and Delete took its place. -->
@@ -595,22 +606,12 @@ import { logger } from '$lib/utils/logger';
 			<div class="stacked-btns">
 				<div class="btn-cell">
 					<button
-						onclick={handleDeleteClip}
+						onclick={halveLoopFromStart}
 						disabled={!hasClip}
-						class="btn btn-well btn-action fam-del"
+						class="btn btn-well btn-action fam-quant"
+						aria-label="Clip left"
 					>
-						<span class="flex items-center justify-center btn-caps" aria-label="Delete clip">
-								<!-- Wide clip box with MIDI note bars, big red X overlaid -->
-								<svg class="w-12 h-12" fill="none" viewBox="0 0 36 24">
-									<rect x="2" y="4" width="32" height="16" rx="2" stroke="currentColor" stroke-width="2" />
-									<rect x="6" y="12" width="6" height="2.5" rx="0.75" fill="currentColor" />
-									<rect x="13" y="8" width="5" height="2.5" rx="0.75" fill="currentColor" />
-									<rect x="19" y="14" width="7" height="2.5" rx="0.75" fill="currentColor" />
-									<rect x="24" y="10" width="5" height="2.5" rx="0.75" fill="currentColor" />
-									<line x1="9" y1="3" x2="27" y2="21" style="stroke: var(--act-rec)" stroke-width="3" stroke-linecap="round" />
-									<line x1="27" y1="3" x2="9" y2="21" style="stroke: var(--act-rec)" stroke-width="3" stroke-linecap="round" />
-								</svg>
-						</span>
+						<!-- The clip, with the loop bar over the half that keeps looping and an arrow the way its start moves --><svg class="w-16 h-16" fill="none" viewBox="0 0 36 24"><path d="M4 3.5h11M12 1l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /><rect x="20" y="2" width="14" height="3" rx="1" fill="currentColor" /><rect x="2" y="8" width="32" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="6" y="15" width="6" height="2.5" rx="0.75" fill="currentColor" /><rect x="13" y="11" width="5" height="2.5" rx="0.75" fill="currentColor" /><rect x="20" y="16" width="6" height="2.5" rx="0.75" fill="currentColor" /><rect x="27" y="12" width="4.5" height="2.5" rx="0.75" fill="currentColor" /></svg>
 					</button>
 				</div>
 				<div class="btn-cell">
@@ -774,7 +775,7 @@ import { logger } from '$lib/utils/logger';
 
 	/* Equal columns at fixed positions (audio adds Pitch's), plus
 	   the `auto` seam track that groups them (2026-09-13):
-	     REC/Group · Dup Trk/nav · Del/nav | Loop X2 · ±12 · Temp over Chance
+	     REC/Group · Dup Trk/Del · nav | Loop X2 · ±12 · Temp over Chance
 	   The seam is `auto`, so a track is a hairline wide and the six content
 	   columns still divide the rest evenly. Regrouped on the user's call the
 	   same day: what acts on the track or the clip | what shapes what the
