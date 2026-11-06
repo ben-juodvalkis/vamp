@@ -9,7 +9,7 @@
    * The instrument's face in the chain overview (2026-10-25): the one
    * control its own view is known by, on the cell's device — Omnisphere's
    * ORB, Drift's filter, Wavetable's Osc 1 pad with its wave, Meld's Osc A pad with its type's mark, and every instrument in `INSTRUMENT_CONTROLS`
-   * (Operator's filter, Collision's first resonator, an Instrument Rack's
+   * (Operator's filter with its algorithm behind it, Collision's first resonator, an Instrument Rack's
    * first macro…, 2026-10-26). The parameter slots are the views' own
    * (measured there); an instrument with no face here keeps its mark.
    */
@@ -25,6 +25,7 @@
   import { useOscWave } from '../../central/views/wavetable/useOscWave.svelte';
   import MeldOscIcon from '../../central/views/meld/MeldOscIcon.svelte';
   import { MELD_ENGINE } from '../../central/views/meldParams';
+  import OperatorAlgorithm from './OperatorAlgorithm.svelte';
 
   interface Props {
     device: DeviceRecord;
@@ -84,6 +85,17 @@
   // Meld: Engine A's oscillator type, its mark the pad's only picture.
   const meldOscType = $derived(type === 'meld' ? Math.round(raw(MELD_ENGINE.A.oscType, 0)) : 0);
 
+  // Operator: the algorithm behind the filter pad, each oscillator filled
+  // while its switch is on. By name: Operator's indices move with its sections.
+  const opRaw = (name: string, fallback: number) => {
+    const i = names.indexOf(name);
+    return i < 0 ? fallback : raw(i, fallback);
+  };
+  const opAlgorithm = $derived(type === 'operator' ? opRaw('Algorithm', 0) : 0);
+  const opOn = $derived(
+    (type === 'operator' ? (['A', 'B', 'C', 'D'] as const).map((o) => opRaw(`Osc-${o} On`, 1) >= 0.5) : [true, true, true, true]) as [boolean, boolean, boolean, boolean]
+  );
+
   // Omnisphere: the ORB's angle and radius (OmnisphereCentralView, 25 / 26).
   // Drift: cutoff and resonance, the LP type for the curve (DriftCentralView, 1 / 2 / 3).
 </script>
@@ -119,7 +131,7 @@
     xValue={readRef(control.x, control.rest[0])}
     yValue={readRef(control.y, control.rest[1])}
     title={type === 'meld' ? '' : control.title}
-    titleAt={type === 'wavetable' ? 'bottom' : 'center'}
+    titleAt={type === 'wavetable' || type === 'operator' ? 'bottom' : 'center'}
     showCurve={false}
     onInteraction={(x, y) => {
       switchOn();
@@ -131,6 +143,7 @@
     {#snippet background()}
       {#if type === 'wavetable'}<WavetableWave cycle={oscCycle} color={color.primary} />{/if}
       {#if type === 'meld'}<MeldOscIcon type={meldOscType} color={color.primary} />{/if}
+      {#if type === 'operator'}<OperatorAlgorithm algorithm={opAlgorithm} on={opOn} />{/if}
     {/snippet}
   </DeviceXY>
 {:else if control?.kind === 'macro'}
