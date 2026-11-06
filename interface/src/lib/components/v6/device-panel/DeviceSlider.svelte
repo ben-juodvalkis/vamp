@@ -296,7 +296,7 @@
   {@const c = max > min ? Math.max(0, Math.min(1, ((centerValue ?? (min + max) / 2) - min) / (max - min))) : 0.5}
   {@const angle = KNOB_START + KNOB_SWEEP * t}
   {@const from = KNOB_START + KNOB_SWEEP * (centerOrigin ? c : 0)}
-  {@const tip = polar(angle, 30)}
+  {@const tip = polar(angle, 35)}
   <div class="device-knob">
     <div
       class="knob-container"
@@ -324,9 +324,8 @@
           <line class="knob-centre-tick" x1={mx0} y1={my0} x2={mx1} y2={my1} />
         {/if}
         <path class="knob-value" d={arc(from, angle, 44)} />
-        <circle class="knob-body" cx="50" cy="50" r="33" />
-        <circle class="knob-cap" cx="50" cy="50" r="27" />
-        <line class="knob-pointer" x1={polar(angle, icon ? 21 : 12)[0]} y1={polar(angle, icon ? 21 : 12)[1]} x2={tip[0]} y2={tip[1]} />
+        <line class="knob-pointer" x1={polar(angle, icon ? 21 : 0)[0]} y1={polar(angle, icon ? 21 : 0)[1]} x2={tip[0]} y2={tip[1]} />
+        {#if !icon}<circle class="knob-hub" cx="50" cy="50" r="5" />{/if}
       </svg>
       {#if icon}<span class="knob-icon" aria-hidden="true"><ControlGlyph name={icon} /></span>{/if}
       </div>
@@ -799,17 +798,16 @@
   @container (min-aspect-ratio: 5/2) { .knob-face { --knob-d: max(28px, min(100cqh - 0.7rem, 150px)); } }
   .knob-svg { width: 100%; height: 100%; overflow: visible; display: block; }
   .knob-icon {
-    position: absolute; left: 50%; top: 50%; width: 30%; height: 30%; transform: translate(-50%, -50%);
+    position: absolute; left: 50%; top: 50%; width: 34%; height: 34%; transform: translate(-50%, -50%);
     color: color-mix(in oklab, var(--knob-ink) 75%, transparent); pointer-events: none; display: flex;
   }
   .knob-icon :global(svg) { width: 100%; height: 100%; }
-  .knob-track { fill: none; stroke: var(--surface-well); stroke-width: 7; stroke-linecap: round; }
-  .knob-value { fill: none; stroke: var(--knob-ink); stroke-width: 7; stroke-linecap: round; }
-  .knob-body { fill: var(--surface-well); stroke: var(--line-strong); stroke-width: 1; }
-  .knob-cap { fill: color-mix(in oklab, var(--knob-ink) 8%, var(--card)); stroke: color-mix(in oklab, var(--knob-ink) 35%, transparent); stroke-width: 1; }
+  .knob-track { fill: none; stroke: var(--surface-well); stroke-width: 10; stroke-linecap: round; }
+  .knob-value { fill: none; stroke: var(--knob-ink); stroke-width: 10; stroke-linecap: round; }
+  .knob-hub { fill: color-mix(in oklab, var(--knob-ink) 55%, white); }
   .knob-pointer { stroke: color-mix(in oklab, var(--knob-ink) 55%, white); stroke-width: 4; stroke-linecap: round; }
   .knob-centre-tick { stroke: var(--signal-dim); stroke-width: 1.5; }
-  .knob-container.dragging .knob-value { stroke-width: 9; }
+  .knob-container.dragging .knob-value { stroke-width: 12; }
   .knob-container.ghost .knob-value, .knob-container.ghost .knob-pointer { opacity: var(--opacity-ghost); }
   .knob-label {
     flex: 0 0 auto; max-width: 100%;
