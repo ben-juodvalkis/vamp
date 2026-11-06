@@ -66,11 +66,13 @@ export function frequencyLabel(value: number): string {
 }
 
 /**
- * The tile's X axis. Synced: four zones, 1/16 · 1/8 · 3/16 · 1/4. Free:
- * the bottom of the rail up to 10 Hz — about 0.707, which is where Live puts
- * 10 Hz (0.7 itself reads 9.50 Hz).
+ * The tile's X axis, slow on the left and fast on the right in both modes
+ * (the user, 2026-11-05; synced ran fast to slow before). Synced: four
+ * zones, 1/4 · 3/16 · 1/8 · 1/16. Free: the bottom of the rail up to
+ * 10 Hz — about 0.707, which is where Live puts 10 Hz (0.7 itself reads
+ * 9.50 Hz).
  */
-export const TILE_SYNC_STEPS = [4, 6, 8, 9] as const;
+export const TILE_SYNC_STEPS = [9, 8, 6, 4] as const;
 export const TILE_FREQ_MAX = frequencyValue(10);
 
 export function tileSyncStep(x: number): number {

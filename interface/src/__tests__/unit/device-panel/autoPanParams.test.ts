@@ -36,9 +36,9 @@ describe('autoPanParams', () => {
 		for (const [v, label] of cases) expect(frequencyLabel(v)).toBe(label);
 	});
 
-	it('tile X: four synced steps, free up to 10 Hz', () => {
-		expect([0, 0.3, 0.6, 0.99].map(tileSyncStep)).toEqual([4, 6, 8, 9]);
-		expect(tileXForSyncRate(8)).toBeCloseTo(0.625);
+	it('tile X: slow to fast, four synced steps, free up to 10 Hz', () => {
+		expect([0, 0.3, 0.6, 0.99].map(tileSyncStep)).toEqual([9, 8, 6, 4]);
+		expect(tileXForSyncRate(8)).toBeCloseTo(0.375);
 		expect(tileFrequency(0)).toBe(0);
 		expect(frequencyLabel(tileFrequency(1))).toBe('10.0 Hz');
 		expect(TILE_FREQ_MAX).toBeCloseTo(0.707, 3); // Live: 0.7063 reads 9.96 Hz, 0.7 reads 9.50
