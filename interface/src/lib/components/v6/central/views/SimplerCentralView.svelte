@@ -601,6 +601,7 @@
           <DeviceSlider
             value={slicingSensitivity}
             title="Sens"
+            face="knob"
             icon="slice"
             orientation="vertical"
             labelOrientation="horizontal"
@@ -616,6 +617,7 @@
           <DeviceSlider
             value={fadeValue}
             title="Fade"
+            face="knob"
             icon="fade"
             orientation="vertical"
             labelOrientation="horizontal"
@@ -695,6 +697,7 @@
         <DeviceSlider
           value={randomAmountValue}
           title="Random"
+          face="knob"
           icon="dice"
           orientation="vertical"
           labelOrientation="horizontal"

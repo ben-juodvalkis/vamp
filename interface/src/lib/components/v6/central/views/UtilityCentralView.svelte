@@ -59,6 +59,7 @@
     <DeviceSlider
       value={value(UTIL.width)}
       title="Width"
+      face="knob"
       orientation="vertical"
       min={0}
       max={2}
@@ -75,6 +76,7 @@
     <DeviceSlider
       value={value(UTIL.balance)}
       title="Balance"
+      face="knob"
       orientation="horizontal"
       min={-1}
       max={1}
@@ -91,6 +93,7 @@
     <DeviceSlider
       value={value(UTIL.bassFreq)}
       title="Bass Freq"
+      face="knob"
       orientation="vertical"
       min={0}
       max={1}

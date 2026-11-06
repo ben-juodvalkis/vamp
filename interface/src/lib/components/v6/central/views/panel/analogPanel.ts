@@ -158,7 +158,7 @@ function envPages(v: 1 | 2): PanelPage[] {
 		title,
 		parent: `env${v}`,
 		rows: [
-			[{ title, controls: stages(E) }],
+			[{ title, face: 'slider', controls: stages(E) }],
 			[
 				{ title: 'Loop', controls: [{ kind: 'choice', param: `${E} Loop`, options: LOOP_MODES }] },
 				{
@@ -185,7 +185,7 @@ function envPages(v: 1 | 2): PanelPage[] {
 			title: `Envelopes ${v}`,
 			rows: [
 				[
-					{ title: 'Amp Env', page: `aeg${v}`, controls: stages(`AEG${v}`) },
+					{ title: 'Amp Env', page: `aeg${v}`, face: 'slider', controls: stages(`AEG${v}`) },
 					{
 						title: `Amp ${v}`,
 						page: `amp${v}`,
@@ -195,7 +195,7 @@ function envPages(v: 1 | 2): PanelPage[] {
 						]
 					}
 				],
-				[{ title: 'Filter Env', page: `feg${v}`, controls: stages(`FEG${v}`) }]
+				[{ title: 'Filter Env', page: `feg${v}`, face: 'slider', controls: stages(`FEG${v}`) }]
 			]
 		},
 		detail(`AEG${v}`, `aeg${v}`, 'Amp Env'),
@@ -270,6 +270,8 @@ function lfoPage(v: 1 | 2): PanelPage {
 }
 
 export const ANALOG_PANEL: InstrumentPanel = {
+	// Knobs, but an envelope's stages stay boxes: their heights draw it (ADR-508).
+	boxFace: 'knob',
 	// Drawn by the view's own face.
 	frame: [],
 	pages: [

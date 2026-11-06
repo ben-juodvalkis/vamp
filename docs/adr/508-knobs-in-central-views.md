@@ -73,24 +73,44 @@ the flat ring with nothing on it but the arc.
   device's own control drawn full height left of its rows; Drift's Filter
   page shows the face's filter pad there, its knobs in two rows beside it,
   where a single row of knobs left the page's height empty.
-- **First: Drift's and Operator's panels, and Reverb.** Both panels draw
-  knobs but their envelopes; Reverb draws knobs but Dry/Wet. Drift's own face
-  keeps its boxes: its Shape strip and voicing column are too small for a
-  knob. Chain cells and browser tiles are unchanged.
+- **Where (2026-11-06, every central view).**
+  - Instrument panels (Drift, Operator, Electric, Collision, Analog,
+    Wavetable, Meld): `boxFace: 'knob'`, every envelope's stages
+    `face: 'slider'` (a group with an Attack and a Release;
+    `panelKnobLayout.test.ts` checks every panel).
+  - Rack and plug-in macros (Instrument Rack, Pattern Rack, Audio Effect
+    Rack, Komplete Kontrol, the Drum Rack's macro grid and nested-rack
+    kits, the generic plug-in view): knobs, as Live draws a rack's macros,
+    in `KnobGrid` where the view has no grid of its own.
+  - Effects: Echo (Feedback and Mix stay boxes), Reverb (Dry/Wet), Auto
+    Filter (Mix), Saturator (Mix), Redux (Dry/Wet), Pitch Hack (Reverse and
+    Mix), Glue and Multiband (Threshold), Variation (Stutter); Drum Buss,
+    Chorus, Glitch, Utility, the Channel EQ's Output, Compressor's Cutoff
+    and Output and the Pitch view's Tone are all knobs.
+  - MIDI effects: Chord, Arpeggiator, Random's Choices and Interval.
+  - Simpler's Sens, Fade and Random.
+  - **Boxes kept on purpose:** a lone control filling its view (Bass, Blur,
+    Gate, Velocity, Chance, Phaser, Wah, Pedal's Drive, Random's Rand Oct,
+    Auto Pan's rate); the Drum Rack's Gain and Trnsp and Simpler's and
+    Sampler's Pitch and Gain (placed for muscle memory); the clip, groove
+    and system views, which are not devices; and the hand-laid faces of
+    Drift, Analog, Wavetable, Meld and Omnisphere and the Shifter view,
+    whose cells are too small for a knob until they are laid out again.
+  - Chain cells and browser tiles are unchanged.
 - **The shot harness measures a knob by its cell.** The layout check counts
   painted boxes; a knob paints less than the cell it answers to, so its cell
   carries `data-layout-box`.
 
 ## Consequences
 
-- Other panels adopting knobs need the same pass: which groups keep boxes,
-  and whether a group's share needs `units`.
+- A new panel or view decides the same way: which groups keep boxes, and
+  whether a group's share needs `units`.
+- The hand-laid faces that kept boxes, and Collision's tabbed middle (its
+  knobs small under the tab strip), are the next layout pass.
 - A panel's knobs show their value at rest only where the view knows it:
   Live sends a parameter's display text only while the UI writes it, so the
   panels show a name alone until the surface sends it at rest too.
 - An arc reads less at a distance than a fill. That is why the played
-  controls stay boxes.
-- Other views move to knobs one at a time, each with its own call on which
   controls stay boxes.
 
 ## Tags

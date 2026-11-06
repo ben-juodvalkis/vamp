@@ -75,6 +75,7 @@
 			<DeviceSlider
 				value={shift}
 				title={signed(shift, scaled ? 'sd' : 'st')}
+				face="knob"
 				min={-SHIFT_MAX}
 				max={SHIFT_MAX}
 				centerOrigin
@@ -90,6 +91,7 @@
 			<DeviceSlider
 				value={value(note.velocity)}
 				title={percent(value(note.velocity))}
+				face="knob"
 				min={VELOCITY_MIN}
 				max={2}
 				isGhost={chord.isGhost}
@@ -102,6 +104,7 @@
 			<DeviceSlider
 				value={value(note.chance)}
 				title={percent(value(note.chance))}
+				face="knob"
 				min={0}
 				max={1}
 				isGhost={chord.isGhost}
@@ -127,6 +130,7 @@
 			<DeviceSlider
 				value={value(b.index)}
 				title={b.title}
+				face="knob"
 				min={b.min}
 				max={b.max}
 				centerOrigin

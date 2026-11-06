@@ -11,6 +11,7 @@
 	 */
 	import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 	import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
+	import KnobGrid from '../../device-panel/KnobGrid.svelte';
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import { familyScheme } from '$lib/config/devicePresets';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
@@ -54,21 +55,20 @@
 {#if device}
 	<div class="chain-device-view" data-density="compact">
 		<div class="eyebrow">{device.name}</div>
-		<div class="sliders">
-			{#each params as p (p.index)}
-				<div class="slot">
-					<DeviceSlider
-						value={(p.value - p.min) / (p.max - p.min || 1)}
-						title={p.name}
-						icon={glyphForName(p.name)}
-						orientation="vertical"
-						labelOrientation="horizontal"
-						{color}
-						onInteraction={(t) => write(p.index, p.min, p.max, t)}
-					/>
-				</div>
-			{/each}
-		</div>
+		<!-- A plug-in's parameters as knobs, as Live draws a rack's macros (ADR-508). -->
+		<KnobGrid count={params.length}>
+			{#snippet item(i)}
+				{@const p = params[i]}
+				<DeviceSlider
+					value={(p.value - p.min) / (p.max - p.min || 1)}
+					title={p.name}
+					face="knob"
+					icon={glyphForName(p.name)}
+					{color}
+					onInteraction={(t) => write(p.index, p.min, p.max, t)}
+				/>
+			{/snippet}
+		</KnobGrid>
 	</div>
 {:else}
 	<DeviceEmptyState glyph="◌" message="Tap a device in the chain" color={color.primary} />
@@ -86,17 +86,5 @@
 		text-align: center;
 		font-size: 0.75rem;
 		color: var(--muted-foreground);
-	}
-	.sliders {
-		flex: 1;
-		display: flex;
-		gap: var(--central-gap);
-		min-height: 0;
-	}
-	.slot {
-		flex: 1 1 0;
-		min-width: 40px;
-		display: flex;
-		min-height: 0;
 	}
 </style>

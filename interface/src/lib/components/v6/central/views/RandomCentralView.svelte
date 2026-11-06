@@ -57,7 +57,10 @@
 		{#each BOXES as box (box.index)}
 			<DeviceSlider
 				value={value(box.index)}
-				title="{box.title} {step(box.index)}"
+				title={box.title}
+				valueText={String(step(box.index))}
+				steps={24}
+				face="knob"
 				orientation="vertical"
 				min={1}
 				max={24}

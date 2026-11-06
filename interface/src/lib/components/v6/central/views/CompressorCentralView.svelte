@@ -213,6 +213,7 @@
         <DeviceSlider
           value={cutoffValue}
           title="Cutoff"
+          face="knob"
           icon="cutoff"
           orientation="horizontal"
           min={CUTOFF_MIN}
@@ -243,6 +244,7 @@
       <DeviceSlider
         value={makeupGainValue}
         title="Output"
+        face="knob"
         icon="output"
         orientation="vertical"
         min={MAKEUP_GAIN_MIN}

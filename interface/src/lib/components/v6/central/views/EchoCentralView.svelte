@@ -222,11 +222,13 @@
 
 <!-- An unloaded Echo dims as one: every control here is the one device. -->
 <div class="echo-layout" class:slot-ghost={echo.isGhost}>
-	<div class="col slider-over-switch">
+	<div class="col slider-over-switch time-col">
 		<div class="slider-part">
 			<DeviceSlider
 				value={timeT}
-				title="Time {timeLabel}"
+				title="Time"
+				valueText={timeLabel}
+				face="knob"
 				icon="delay"
 				orientation="vertical"
 				labelSize="small"
@@ -281,7 +283,9 @@
 		<div class="slider-part">
 			<DeviceSlider
 				value={lfoRate}
-				title="Rate {lfoLabel}"
+				title="Rate"
+				valueText={lfoLabel}
+				face="knob"
 				icon="rate"
 				orientation="vertical"
 				labelSize="small"
@@ -302,12 +306,13 @@
 		</button>
 	</div>
 
-	<!-- The LFO's two depths, Time over Filter: a pair of value boxes. -->
+	<!-- The LFO's two depths, Time over Filter: a pair of knobs (ADR-508). -->
 	<div class="col box-pair">
 		<div class="box">
 			<DeviceSlider
 				value={lfoToTime}
 				title="LFO > Time"
+				face="knob"
 				icon="lfo"
 				orientation="vertical"
 				labelSize="small"
@@ -322,6 +327,7 @@
 			<DeviceSlider
 				value={lfoToFilter}
 				title="LFO > Filter"
+				face="knob"
 				icon="cutoff"
 				orientation="vertical"
 				labelSize="small"
@@ -337,12 +343,14 @@
 	<SectionDivider orientation="vertical" />
 
 	<!-- The levels in two pairs: Input over Output (Input drags Output the
-	     other way), Feedback over Mix. -->
+	     other way) as knobs, then Feedback over Mix, the pair the Echo tile
+	     plays, as boxes (ADR-508). -->
 	<div class="col box-pair">
 		<div class="box">
 			<DeviceSlider
 				value={input}
 				title="Input"
+				face="knob"
 				icon="gain"
 				sensitivity={GAIN_SENSITIVITY}
 				orientation="vertical"
@@ -359,6 +367,7 @@
 			<DeviceSlider
 				value={output}
 				title="Output"
+				face="knob"
 				icon="output"
 				sensitivity={GAIN_SENSITIVITY}
 				orientation="vertical"
@@ -405,8 +414,9 @@
 </div>
 
 <style>
-	/* Eleven equal columns — the filter graph spans five — with an `auto`
-	   track for each seam: Time + Filter | LFO (wave, rate, depths) | levels. */
+	/* Eleven equal columns — Time spans two for its knob (ADR-508), the
+	   filter graph four — with an `auto` track for each seam: Time + Filter
+	   | LFO (wave, rate, depths) | levels. */
 	.echo-layout {
 		display: grid;
 		grid-template-columns:
@@ -443,13 +453,15 @@
 		gap: var(--central-gap);
 	}
 	.slider-part {
-		flex: 3 1 0;
+		flex: 1 1 0;
 		min-height: 0;
 	}
+	/* A knob's switch: a pill one touch row tall under it (ADR-508). */
 	.echo-switch {
-		flex: 1 1 0;
-		min-height: var(--height-touch);
-		font-size: 1rem;
+		flex: 0 0 var(--height-touch);
+		align-self: center;
+		width: min(100%, 6.5rem);
+		font-size: 0.9375rem;
 		text-transform: uppercase;
 	}
 
@@ -460,8 +472,11 @@
 		max-height: 22px;
 	}
 
+	.time-col {
+		grid-column: span 2;
+	}
 	.filter-graph {
-		grid-column: span 5;
+		grid-column: span 4;
 		position: relative;
 		overflow: hidden;
 		border: 1px solid var(--line-strong);

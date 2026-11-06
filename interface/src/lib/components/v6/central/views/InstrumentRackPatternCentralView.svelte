@@ -195,7 +195,9 @@
   const ROW_UNITS = 12;
   let macroRows = $derived(controlLayout.length > 1 ? 2 : 1);
   let macroColumns = $derived(Math.ceil(controlLayout.length / macroRows));
-  let gridGrow = $derived(Math.max(ROW_UNITS - macroColumns, 6));
+  // Knobs want near-square cells (ADR-508): a macro column counts two units.
+  let macroGrow = $derived(macroColumns * 2);
+  let gridGrow = $derived(Math.max(ROW_UNITS - macroGrow, 6));
 </script>
 
 <div class="h-full w-full flex flex-col" data-density="compact">
@@ -266,17 +268,17 @@
         <SectionDivider orientation="vertical" />
       {/if}
 
-      <!-- A value box for each named macro 3-16, two to a column, filled
-           column by column (ADR-477). -->
+      <!-- A knob for each named macro 3-16 (ADR-508), two to a column,
+           filled column by column. -->
       {#if controlLayout.length > 0}
-        <div class="macro-grid" style="flex-grow: {macroColumns}; grid-template-rows: repeat({macroRows}, minmax(0, 1fr));">
+        <div class="macro-grid" style="flex-grow: {macroGrow}; grid-template-rows: repeat({macroRows}, minmax(0, 1fr));">
           {#each controlLayout as control, i}
             <div class="control-slot">
               <DeviceSlider
                 value={getNormalizedValue(control.macroIndex)}
                 title={control.name}
+                face="knob"
                 icon={glyphForName(control.name)}
-                orientation="vertical"
                 color={ctlInk(i)}
                 readout={device ? selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(device, control.macroIndex)) : undefined}
                 onInteraction={(val) => handleSliderChange(control.macroIndex, val)}

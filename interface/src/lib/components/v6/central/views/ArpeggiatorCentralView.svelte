@@ -190,11 +190,7 @@
   let rateDisplay = $derived(
     syncIsOn ? arp.paramDisplay(ARP_PARAMS.RATE) : arp.paramDisplay(ARP_PARAMS.FREE_RATE)
   );
-  let rateTitle = $derived(
-    rateDisplay ?? (syncIsOn ? (RATE_LABELS[Math.round(rateValue)] ?? 'Rate') : 'Free')
-  );
   let gateDisplay = $derived(arp.paramDisplay(ARP_PARAMS.GATE));
-  let gateTitle = $derived(gateDisplay ? `Gate · ${gateDisplay}` : 'Gate');
 
   function handleSyncToggle() {
     arp.sendParam(ARP_PARAMS.SYNCED_RATE, syncIsOn ? 0 : 1);
@@ -245,7 +241,9 @@
     <div class="flex-1" class:slot-ghost={arp.isGhost}>
       <DeviceSlider
         value={rateValue / 13}
-        title={rateTitle}
+        title="Rate"
+        valueText={rateDisplay ?? (syncIsOn ? RATE_LABELS[Math.round(rateValue)] : 'Free')}
+        face="knob"
         icon="rate"
         orientation="vertical"
         labelOrientation="horizontal"
@@ -285,7 +283,9 @@
   <div class="flex-1" class:slot-ghost={arp.isGhost}>
     <DeviceSlider
       value={gateValue / 200}
-      title={gateTitle}
+      title="Gate"
+      valueText={gateDisplay}
+      face="knob"
       icon="notelength"
       orientation="vertical"
       labelOrientation="horizontal"

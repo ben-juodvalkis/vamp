@@ -22,6 +22,7 @@
    */
 
   import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
+  import KnobGrid from '../../device-panel/KnobGrid.svelte';
   import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
   import SectionDivider from '$lib/components/v6/central/SectionDivider.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
@@ -118,6 +119,7 @@
       <DeviceSlider
         value={trim}
         title="Trim"
+        face="knob"
         icon="gain"
         orientation="vertical"
         labelSize="small"
@@ -154,24 +156,25 @@
     {#snippet item(t)}{t}{/snippet}
   </ScrubTabs>
 
-  <!-- Column 3: the distortion and its tone, top to bottom in Live's
-       order, three value boxes. -->
+  <!-- The distortion and its tone in Live's order, as knobs (ADR-508):
+       two columns wide, so they wrap into the grid that gives each the
+       most room rather than stacking three to a thin column. -->
   <div class="col box-stack">
-    {#each distortion as box (box.param)}
-      <div class="box">
+    <KnobGrid count={distortion.length}>
+      {#snippet item(i)}
+        {@const box = distortion[i]}
         <DeviceSlider
           value={box.value}
           title={box.title}
+          face="knob"
           icon={box.icon}
-          orientation="vertical"
-          labelSize="small"
           isGhost={drum.isGhost}
           color={drumInk}
           readout={drum.paramDisplay(box.param)}
           onInteraction={(t) => writeT(box.param, t)}
         />
-      </div>
-    {/each}
+      {/snippet}
+    </KnobGrid>
   </div>
 
   <!-- Boom is Live's separate low-end section, and the only pad here. -->
@@ -197,20 +200,20 @@
 </div>
 
 <style>
-  /* Seven equal columns; Boom spans the last four, past an `auto` track for
-     the seam before it. */
+  /* Seven equal columns: Trim, the drive type, the distortion knobs across
+     two, then Boom across three past an `auto` track for the seam. */
   .drum-buss-layout {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) auto repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr)) auto repeat(3, minmax(0, 1fr));
     gap: var(--central-gap);
     height: 100%;
     width: 100%;
     padding: var(--central-inset);
   }
   /* With the Drum XY leading, a pad two columns wide, and Boom back to two:
-     still seven columns. */
+     eight columns. */
   .drum-buss-layout.with-xy {
-    grid-template-columns: repeat(5, minmax(0, 1fr)) auto repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr)) auto repeat(2, minmax(0, 1fr));
   }
   .drum-buss-layout.with-xy .boom {
     grid-column: span 2;
@@ -237,18 +240,13 @@
   }
 
   .boom {
-    grid-column: span 4;
+    grid-column: span 3;
   }
 
-  /* Value boxes stacked in one column, sharing its height (ADR-477). */
+  /* The distortion knobs: two columns, their own grid inside (ADR-508). */
   .box-stack {
+    grid-column: span 2;
     display: flex;
-    flex-direction: column;
-    gap: var(--central-gap);
-  }
-  .box {
-    flex: 1 1 0;
-    min-height: 0;
   }
 
   /* Trim takes most of the column; Comp is a button at its foot. */

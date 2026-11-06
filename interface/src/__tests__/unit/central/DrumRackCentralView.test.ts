@@ -289,7 +289,7 @@ describe('DrumRackCentralView — mode from the census', () => {
 		expect(container.querySelector('[data-vm-mode]')?.getAttribute('data-vm-mode')).toBe('macro-grid');
 		expect(container.querySelectorAll('.vm-slot')).toHaveLength(0);
 		// The macro grid draws the rack's mapped macros: FX1 and FX2.
-		expect(container.querySelectorAll('.device-slider')).toHaveLength(2);
+		expect(container.querySelectorAll('.device-slider, .device-knob')).toHaveLength(2);
 
 		await setCensus(DRUMCELL);
 		expect(container.querySelector('[data-vm-mode]')?.getAttribute('data-vm-mode')).toBe('full');
@@ -303,7 +303,7 @@ describe('DrumRackCentralView — mode from the census', () => {
 		expect(container.querySelector('[data-vm-mode]')?.getAttribute('data-vm-mode')).toBe('macro-grid');
 		// No virtual-macro controls: no Gain, Trnsp, FX or Filter.
 		expect(container.querySelectorAll('.vm-slot')).toHaveLength(0);
-		const titles = Array.from(container.querySelectorAll('.device-slider')).map((el) => el.textContent?.trim());
+		const titles = Array.from(container.querySelectorAll('.device-slider, .device-knob')).map((el) => el.textContent?.trim());
 		expect(titles).toHaveLength(2);
 		expect(titles[0]).toContain('FX1');
 		expect(titles[1]).toContain('Macro 3'); // mapped but never renamed: still drawn
@@ -601,7 +601,7 @@ describe('DrumRackCentralView — rack macros on a nested-rack kit', () => {
 			'Room',
 			null // Filter — no member on a nested-rack kit, so ghosted
 		]);
-		expect(container.querySelectorAll('.device-slider')).toHaveLength(8); // six macros + Trnsp + Gain
+		expect(container.querySelectorAll('.device-slider, .device-knob')).toHaveLength(8); // six macros + Trnsp + Gain
 		expect(container.querySelector('[data-vm-function="pitch"]')?.textContent).toContain('Trnsp');
 		expect(stateOf(container, 'Trnsp')).toBe('live');
 		expect(slider(container, 'Trnsp').getAttribute('aria-valuenow')).toBe('-7');

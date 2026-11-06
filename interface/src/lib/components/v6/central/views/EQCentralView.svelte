@@ -88,6 +88,7 @@
     <DeviceSlider
       value={outputGainValue}
       title="Output"
+      face="knob"
       icon="output"
       isGhost={fx.isGhost}
       color={fx.isGhost ? ghostInk : fxInk}

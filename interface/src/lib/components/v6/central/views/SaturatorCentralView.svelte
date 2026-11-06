@@ -55,6 +55,7 @@
     <DeviceSlider
       value={value(COLOR.low, REST.low)}
       title="Bass"
+      face="knob"
       icon="tone"
       orientation="vertical"
       isGhost={saturator.isGhost}
@@ -89,6 +90,7 @@
       <DeviceSlider
         value={saturator.paramValue(fader.index) ?? fader.fallback}
         title={fader.title}
+        face={fader.title === 'Mix' ? 'slider' : 'knob'}
         icon={fader.icon}
         orientation="vertical"
         isGhost={saturator.isGhost}

@@ -17,6 +17,8 @@
 	import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
 	import { PITCH_HACK, PITCH_HACK_RATES } from '$lib/components/v6/device-panel/pitchHackParams';
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
+	import KnobGrid from '$lib/components/v6/device-panel/KnobGrid.svelte';
+	import SectionDivider from '$lib/components/v6/central/SectionDivider.svelte';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 
@@ -43,14 +45,39 @@
 	});
 
 	type Param = { index: number; min: number; max: number; rest: number };
-	// Columns left to right; a column of two is two half-height boxes.
-	const COLUMNS: { title: string; param: Param }[][] = [
-		[{ title: 'Mix', param: PITCH_HACK.mix }, { title: 'Level', param: PITCH_HACK.level }],
-		[{ title: 'Reverse', param: PITCH_HACK.reverse }],
-		[{ title: 'Recycle', param: PITCH_HACK.recycle }, { title: 'Int Var', param: PITCH_HACK.intVar }],
-		[{ title: 'Coarse', param: PITCH_HACK.coarse }, { title: 'Cents', param: PITCH_HACK.cents }]
+	// The two the device is played by, as full-height boxes: how often it
+	// reverses, and how much of it you hear. The rest set its character, as
+	// knobs in a grid of their own (ADR-508).
+	const BOXES: { title: string; param: Param }[] = [
+		{ title: 'Reverse', param: PITCH_HACK.reverse },
+		{ title: 'Mix', param: PITCH_HACK.mix }
+	];
+	const KNOBS: { title: string; param: Param }[] = [
+		{ title: 'Level', param: PITCH_HACK.level },
+		{ title: 'Recycle', param: PITCH_HACK.recycle },
+		{ title: 'Int Var', param: PITCH_HACK.intVar },
+		{ title: 'Coarse', param: PITCH_HACK.coarse },
+		{ title: 'Cents', param: PITCH_HACK.cents }
 	];
 </script>
+
+{#snippet control(title: string, param: Param, face: 'slider' | 'knob')}
+	<DeviceSlider
+		value={pitchHack.paramValue(param.index) ?? param.rest}
+		{title}
+		{face}
+		orientation="vertical"
+		min={param.min}
+		max={param.max}
+		centerOrigin={param.min < 0 && param.max > 0}
+		centerValue={param.min < 0 && param.max > 0 ? 0 : undefined}
+		isGhost={pitchHack.isGhost}
+		color={inkScheme}
+		readout={pitchHack.paramDisplay(param.index)}
+		onTap={() => pitchHack.loadIfGhost()}
+		onInteraction={(v) => send(param.index, Math.max(param.min, Math.min(param.max, v)))}
+	/>
+{/snippet}
 
 <div class="reverse-layout" data-view="pitchHack" style="--btn-tint: {ink};">
 	<div class="ph-col" class:slot-ghost={pitchHack.isGhost}>
@@ -67,32 +94,28 @@
 			{/each}
 		</div>
 	</div>
-	{#each COLUMNS as column, c (c)}
+	{#each BOXES as { title, param } (param.index)}
 		<div class="ph-col boxes" class:slot-ghost={pitchHack.isGhost}>
-			{#each column as { title, param } (param.index)}
-				<div class="box" data-param={title}>
-					<DeviceSlider
-						value={pitchHack.paramValue(param.index) ?? param.rest}
-						{title}
-						orientation="vertical"
-						min={param.min}
-						max={param.max}
-						isGhost={pitchHack.isGhost}
-						color={inkScheme}
-						readout={pitchHack.paramDisplay(param.index)}
-						onTap={() => pitchHack.loadIfGhost()}
-						onInteraction={(v) => send(param.index, Math.max(param.min, Math.min(param.max, v)))}
-					/>
-				</div>
-			{/each}
+			<div class="box" data-param={title}>
+				{@render control(title, param, 'slider')}
+			</div>
 		</div>
 	{/each}
+	<SectionDivider orientation="vertical" />
+	<div class="ph-knobs" class:slot-ghost={pitchHack.isGhost}>
+		<KnobGrid count={KNOBS.length}>
+			{#snippet item(i)}
+				<div class="box" data-param={KNOBS[i].title}>{@render control(KNOBS[i].title, KNOBS[i].param, 'knob')}</div>
+			{/snippet}
+		</KnobGrid>
+	</div>
 </div>
 
 <style>
 	.reverse-layout {
 		display: grid;
-		grid-template-columns: repeat(5, minmax(0, 1fr));
+		/* Rate, Reverse, Mix | the knobs across two. */
+		grid-template-columns: repeat(3, minmax(0, 1fr)) auto minmax(0, 2fr);
 		gap: var(--central-gap);
 		height: 100%;
 		width: 100%;
@@ -108,6 +131,11 @@
 
 	.boxes {
 		gap: var(--central-gap);
+	}
+	.ph-knobs {
+		display: flex;
+		min-height: 0;
+		min-width: 0;
 	}
 
 	.ph-stack {

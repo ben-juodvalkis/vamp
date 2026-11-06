@@ -37,6 +37,11 @@ export { createSliderThrottle } from '$lib/utils/sliderThrottle';
 export { default as DeviceSlider } from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 
 /**
+ * `KnobGrid`, a grid of knobs for a hand-laid view (ADR-508): give it a `count` and an `item(i)` snippet that draws the knob at that index (usually a `DeviceSlider face="knob"`), and it measures its own box and takes the rows that give each knob the most room, side by side when wide, stacked when tall, the rule an instrument panel's groups follow (`knobGridRows`). `maxRows` caps the rows. Draws nothing of its own; fill its parent with it.
+ */
+export { default as KnobGrid } from '$lib/components/v6/device-panel/KnobGrid.svelte';
+
+/**
  * `DeviceXY`, the pad: two values on one square, relative to where the finger lands. Reads `xValue` / `yValue` in 0..1 and ignores them while a finger is down, so an echo cannot move the dot mid-drag. Writes through `onInteraction(x, y)`, both axes in one call at most 60 Hz, and `onRelease(x, y)`; mapping 0..1 onto each parameter's range is the caller's job. Write both parameters inside that one handler, synchronously: the outbound batcher then sends them in one frame, where an `await` or a timer between them sends two.
  */
 export { default as DeviceXY } from '$lib/components/v6/device-panel/DeviceXY.svelte';

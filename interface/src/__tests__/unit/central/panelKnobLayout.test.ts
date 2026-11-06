@@ -14,6 +14,11 @@ import {
 } from '$lib/components/v6/central/views/panel/panelTypes';
 import { DRIFT_PANEL } from '$lib/components/v6/central/views/panel/driftPanel';
 import { OPERATOR_PANEL } from '$lib/components/v6/central/views/panel/operatorPanel';
+import { ELECTRIC_PANEL } from '$lib/components/v6/central/views/panel/electricPanel';
+import { COLLISION_PANEL } from '$lib/components/v6/central/views/panel/collisionPanel';
+import { ANALOG_PANEL } from '$lib/components/v6/central/views/panel/analogPanel';
+import { WAVETABLE_PANEL } from '$lib/components/v6/central/views/panel/wavetablePanel';
+import { MELD_PANEL } from '$lib/components/v6/central/views/panel/meldPanel';
 
 const knobs: PanelGroup = {
 	title: 'Global',
@@ -74,7 +79,12 @@ describe('a group’s share of its row', () => {
 
 describe.each([
 	['Drift', DRIFT_PANEL],
-	['Operator', OPERATOR_PANEL]
+	['Operator', OPERATOR_PANEL],
+	['Electric', ELECTRIC_PANEL],
+	['Collision', COLLISION_PANEL],
+	['Analog', ANALOG_PANEL],
+	['Wavetable', WAVETABLE_PANEL],
+	['Meld', MELD_PANEL]
 ])('%s panel', (_name, panel) => {
 	it('draws knobs but keeps every envelope’s stages as boxes', () => {
 		expect(panel.boxFace).toBe('knob');
@@ -82,9 +92,9 @@ describe.each([
 			...panel.pages.flatMap((p) => p.rows.flat()),
 			...panel.frame.flatMap((r) => (r.kind === 'group' ? [r.group] : r.kind === 'tabs' ? r.tabs.flatMap((t) => t.groups) : []))
 		];
-		const stages = groups.filter((g) => g.controls.some((c) => c.kind === 'box' && / (Attack|Decay|Sustain|Release)$/.test(c.param)));
-		expect(stages.length).toBeGreaterThan(0);
-		expect(stages.filter((g) => g.face !== 'slider').map((g) => g.title)).toEqual([]);
+		// An envelope's stages: an Attack and a Release in one group.
+		const stages = groups.filter((g) => g.controls.some((c) => / Attack$/.test(c.param)) && g.controls.some((c) => / (Release|Rel)$/.test(c.param)));
+				expect(stages.filter((g) => g.face !== 'slider').map((g) => `${g.title}: ${g.controls.map((c) => c.param).join(', ')}`)).toEqual([]);
 	});
 });
 

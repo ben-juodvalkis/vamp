@@ -175,6 +175,7 @@
 				<DeviceSlider
 					value={clockUnit}
 					title="Clock"
+					face="knob"
 					orientation="vertical"
 					labelSize="small"
 					isGhost={glitchLoop.isGhost}
@@ -194,6 +195,7 @@
 					<DeviceSlider
 						value={unit(s.key, 0)}
 						title={s.title}
+						face="knob"
 						orientation="vertical"
 						labelSize="small"
 						isGhost={glitchLoop.isGhost}

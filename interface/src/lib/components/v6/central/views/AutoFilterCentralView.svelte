@@ -185,6 +185,7 @@
 		<DeviceSlider
 			value={morphAmount}
 			title="Morph"
+			face="knob"
 			icon="morph"
 			orientation="vertical"
 			isGhost={fx.isGhost}
@@ -302,6 +303,7 @@
 			<DeviceSlider
 				value={drive}
 				title="Drive"
+				face="knob"
 				icon="drive"
 				orientation="vertical"
 				isGhost={fx.isGhost}

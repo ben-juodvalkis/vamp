@@ -14,6 +14,7 @@
    * Milestone 1b), so it deliberately drops the `*CentralView` suffix.
    */
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
+  import KnobGrid from '../../device-panel/KnobGrid.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import { glyphForName } from '$lib/config/controlGlyphMap';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
@@ -69,9 +70,6 @@
 
   let usedMacros = $derived(mapped.filter((paramIndex) => paramIndex < parameterNames.length));
 
-  // Past two macros, two rows of value boxes filled column by column
-  // (ADR-477); one or two stay side by side.
-  let gridRows = $derived(usedMacros.length > 2 ? 2 : 1);
 
   // Handle parameter changes - just send to store, control component handles local state
   function handleParameterChange(paramIndex: number, value: number) {
@@ -84,26 +82,22 @@
   {#if instrument}
     <!-- One slider per mapped macro -->
     {#if usedMacros.length > 0}
-      <div
-        class="flex-1 min-h-0 grid gap-(--central-gap) macro-grid"
-        style="grid-template-rows: repeat({gridRows}, minmax(0, 1fr));"
-      >
-        {#each usedMacros as paramIndex (paramIndex)}
-          <div class="flex flex-col min-h-0">
-            <DeviceSlider
-              value={getParamValue(paramIndex) / 127}
-              title={cleanParameterName(parameterNames[paramIndex])}
-              icon={glyphForName(cleanParameterName(parameterNames[paramIndex]))}
-              orientation="vertical"
-              labelOrientation="horizontal"
-              color={drumRackKKInk}
-              onInteraction={(value) => {
-                handleParameterChange(paramIndex, Math.round(value * 127));
-              }}
-            />
-          </div>
-        {/each}
-      </div>
+      <!-- The rack's mapped macros as knobs, as Live draws them (ADR-508). -->
+      <KnobGrid count={usedMacros.length}>
+        {#snippet item(i)}
+          {@const paramIndex = usedMacros[i]}
+          <DeviceSlider
+            value={getParamValue(paramIndex) / 127}
+            title={cleanParameterName(parameterNames[paramIndex])}
+            face="knob"
+            icon={glyphForName(cleanParameterName(parameterNames[paramIndex]))}
+            color={drumRackKKInk}
+            onInteraction={(value) => {
+              handleParameterChange(paramIndex, Math.round(value * 127));
+            }}
+          />
+        {/snippet}
+      </KnobGrid>
     {:else}
       <!-- Nothing mapped, or the census has not said yet -->
       <div class="flex-1 flex items-center justify-center text-muted-foreground">
@@ -115,9 +109,3 @@
   {/if}
 </div>
 
-<style>
-  .macro-grid {
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(0, 1fr);
-  }
-</style>

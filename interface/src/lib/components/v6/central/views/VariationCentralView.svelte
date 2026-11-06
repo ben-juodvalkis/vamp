@@ -123,6 +123,7 @@
 						<DeviceSlider
 							value={amount / AMOUNT_MAX}
 							title="Rnd"
+							face="knob"
 							orientation="horizontal"
 							labelOrientation="horizontal"
 							labelSize="small"

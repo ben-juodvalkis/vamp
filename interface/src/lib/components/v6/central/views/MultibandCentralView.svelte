@@ -54,6 +54,7 @@
     <DeviceSlider
       value={mbOutput}
       title="Output"
+      face="knob"
       icon="output"
       orientation="vertical"
       min={MB_OUTPUT_MIN}
@@ -73,7 +74,8 @@
   /* threshold | output */
   .mb-central-layout {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* The threshold a set rides as a box, the output set once as a knob (ADR-508). */
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
     height: 100%;
     width: 100%;
     padding: var(--central-inset);

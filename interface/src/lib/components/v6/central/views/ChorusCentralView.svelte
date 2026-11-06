@@ -82,6 +82,7 @@
 				<DeviceSlider
 					value={chorus.paramValue(box.index) ?? box.rest}
 					title={box.title}
+					face="knob"
 					orientation="vertical"
 					min={0}
 					max={1}

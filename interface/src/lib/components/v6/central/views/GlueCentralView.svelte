@@ -74,6 +74,7 @@
     <DeviceSlider
       value={glueOutput}
       title="Output"
+      face="knob"
       icon="output"
       orientation="vertical"
       min={GLUE_OUTPUT_MIN}
@@ -88,10 +89,11 @@
 </div>
 
 <style>
-  /* threshold | output */
+  /* threshold | output: the threshold a set rides as a box, the output
+     set once as a knob in a narrower column (ADR-508). */
   .glue-central-layout {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
     height: 100%;
     width: 100%;
     padding: var(--central-inset);
