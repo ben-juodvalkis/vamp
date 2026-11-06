@@ -27,7 +27,8 @@
   import { MELD_ENGINE } from '../../central/views/meldParams';
   import { OPERATOR_OSC_COLORS } from './OperatorAlgorithm.svelte';
   import { schemeFromInk } from '$lib/config/devicePresets';
-  import { OP_COARSE_MAX, coarseRatio, coarseStepAt } from './operatorCoarse';
+  import { OP_COARSE_MAX, coarseRatio, coarseX, coarseStepAtX } from './operatorCoarse';
+  import { v3Store } from '$lib/stores/v3/normalized.svelte';
 
   interface Props {
     device: DeviceRecord;
@@ -88,16 +89,14 @@
   const meldOscType = $derived(type === 'meld' ? Math.round(raw(MELD_ENGINE.A.oscType, 0)) : 0);
 
   // Operator: a pad per oscillator, Coarse across and Level up, in Live's
-  // oscillator colors. Coarse is relative: the dot rests at the middle,
-  // and a drag reaches an octave either side of the ratio the oscillator
-  // held at touch-down (a preset at 24 sweeps 12..48), landing on Live's
-  // whole ratios; the ratio reads beside the letter while dragging.
-  // one switched off dims and turns on at the first touch. The algorithm
-  // is the cell header's (OperatorHeadAlgorithm). By name: Operator's
-  // indices move with its sections.
+  // oscillator colors. Coarse spans two octaves either side of the ratio
+  // each oscillator held when the track was arrived at or its preset
+  // loaded (operatorCoarse): the dot sits where the ratio falls in that
+  // window and stays there on release; the ratio reads beside the letter
+  // while dragging. One switched off dims and turns on at the first touch.
+  // The algorithm is the cell header's (OperatorHeadAlgorithm). By name:
+  // Operator's indices move with its sections.
   const OP_OSCS = ['A', 'B', 'C', 'D'] as const;
-  // The ratio each pad's drag is centered on, from touch-down to release.
-  let opAnchor: (number | null)[] = [null, null, null, null];
   // Which pads a finger is dragging: only they show their ratio.
   let opDragging = $state([false, false, false, false]);
   // Level takes a drag twice the pad's height to cross.
@@ -116,6 +115,25 @@
     if (i >= 0) write(i, t);
   }
   const opRatioOf = (o: string) => coarseRatio(opRaw(`${o} Coarse`, 1));
+  // The window's anchors, taken once per arrival: a new track or device
+  // (devicePath) or a new preset on the track (its recorded path, '' after
+  // a swap in Live) starts a fresh set. An oscillator whose Coarse has not
+  // arrived yet is anchored on its first real value.
+  const opTrackPath = $derived(device.devicePath.split('/devices/')[0]);
+  const opArrival = $derived(`${device.devicePath}|${v3Store.tracks.get(opTrackPath)?.preset ?? ''}`);
+  let opAnchorKey = '';
+  let opAnchors: (number | undefined)[] = [];
+  function opAnchor(i: number): number {
+    if (opAnchorKey !== opArrival) {
+      opAnchorKey = opArrival;
+      opAnchors = [];
+    }
+    const name = `${OP_OSCS[i]} Coarse`;
+    const at = names.indexOf(name);
+    const value = at < 0 ? undefined : selectedTrackStore.paramValue(selectedTrackStore.paramPath(device, at));
+    if (opAnchors[i] === undefined && value !== undefined) opAnchors[i] = coarseRatio(value);
+    return opAnchors[i] ?? coarseRatio(value ?? 1);
+  }
   const opOn = $derived(
     (type === 'operator' ? OP_OSCS.map((o) => opRaw(`Osc-${o} On`, 1) >= 0.5) : [true, true, true, true]) as [boolean, boolean, boolean, boolean]
   );
@@ -123,8 +141,7 @@
     const o = OP_OSCS[i];
     if (!opOn[i]) opWrite(`Osc-${o} On`, 1);
     opDragging[i] = true;
-    const anchor = (opAnchor[i] ??= opRatioOf(o));
-    opWrite(`${o} Coarse`, coarseStepAt(anchor, x) / OP_COARSE_MAX);
+    opWrite(`${o} Coarse`, coarseStepAtX(opAnchor(i), x) / OP_COARSE_MAX);
     opWrite(`Osc-${o} Level`, level);
   }
 
@@ -165,17 +182,14 @@
     {#each OP_OSCS as o, i (o)}
       <div class="op-pad" class:off={!opOn[i]} data-osc={o} data-on={opOn[i] ? '1' : '0'}>
         <DeviceXY
-          xValue={0.5}
+          xValue={coarseX(opAnchor(i), opRaw(`${o} Coarse`, 1))}
           yValue={opRead(`Osc-${o} Level`, i === 0 ? 1 : 0)}
           title={opDragging[i] ? `${o} ×${opRatioOf(o)}` : o}
           titleAt="bottom"
           showCurve={false}
           sensitivity={OP_SENSITIVITY}
           onInteraction={(x, y) => opPlay(i, x, y)}
-          onRelease={() => {
-            opAnchor[i] = null;
-            opDragging[i] = false;
-          }}
+          onRelease={() => (opDragging[i] = false)}
           color={OP_SCHEMES[i]}
         />
       </div>
