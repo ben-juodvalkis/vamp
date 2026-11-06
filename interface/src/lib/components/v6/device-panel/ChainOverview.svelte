@@ -51,7 +51,6 @@
    * view's pane, as a tile does under the same scope.
    */
   import Box from '@lucide/svelte/icons/box';
-  import Hand from '@lucide/svelte/icons/hand';
   import Plug from '@lucide/svelte/icons/plug';
   import Power from '@lucide/svelte/icons/power';
   import Plus from '@lucide/svelte/icons/plus';
@@ -684,14 +683,12 @@
   {@const tile = cell.kind !== 'instrument' && cell.presetKey ? TILE_COMPONENTS[cell.presetKey] : undefined}
       <!-- The device's name alone, on a band as tall as a strip's mute
            button, so there is room to grab the cell (the user, 2026-10-26);
-           then the blue hand and Device On. Measured as the faces are
+           then Device On (the blue hand is the cell's frame alone since
+           2026-11-05). Measured as the faces are
            (ADR-492), so a narrow cell's name steps down a size. -->
       <CellSize><div class="cell-head">
         <span class="name" lang="en">{cell.device.name}</span>
         <span class="head-end">
-        {#if fxChainStore.appointed === cell.device.devicePath}
-          <span class="hand" aria-label="Selected in Live"><Hand /></span>
-        {/if}
         {#if isPowered(cell)}
         {@const on = isOn(cell)}
         <button
@@ -775,6 +772,7 @@
       class:off={!isOn(cell)}
       class:dragging={drag?.key === cell.key}
       class:appointed={fxChainStore.appointed === cell.device.devicePath}
+      aria-current={fxChainStore.appointed === cell.device.devicePath ? 'true' : undefined}
       class:instrument={cell.kind === 'instrument'}
       class:half={layout.places[position]?.span === 1}
       style="--cell-ink: {cell.ink};"
@@ -1024,13 +1022,6 @@
     display: flex;
     align-items: center;
     gap: 2px;
-  }
-  .hand {
-    display: flex;
-  }
-  .hand :global(svg) {
-    width: 18px;
-    height: 18px;
   }
   /* Device On. Lit while the device runs, dim when bypassed. */
   .power {
