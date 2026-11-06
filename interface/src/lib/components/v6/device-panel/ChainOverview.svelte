@@ -298,14 +298,14 @@
   }
 
   /**
-   * Devices past which the chain takes a second row. Up to it the cells and
-   * the + cell share one row, wide as the track strips get; past it the
-   * cells split evenly over two rows (`chainGrid`). Reads like Live's chain:
-   * left to right, then the next row. Four since the user's call
-   * (2026-10-26; five before). The ghost section (recents and + Effect)
-   * is two cells.
+   * Cells past which the chain takes a second row, counting the ghost
+   * section's two cells as one (`chainGrid` adds the other). Up to it the
+   * devices and the ghost section share one row, wide as the track strips
+   * get; past it the cells split evenly over two rows. Reads like Live's
+   * chain: left to right, then the next row. Five, so one row holds four
+   * devices (the user, 2026-11-05; three before).
    */
-  const CHAIN_WRAP_AFTER = 4;
+  const CHAIN_WRAP_AFTER = 5;
 
   function indexOf(path: string): number {
     const m = /\/devices\/(\d+)$/.exec(path);
