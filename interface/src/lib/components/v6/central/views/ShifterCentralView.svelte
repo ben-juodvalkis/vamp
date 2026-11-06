@@ -28,6 +28,7 @@
    * NO {#if device} gate - every control handles its own ghost state.
    */
   import ControlTile from '$lib/components/v6/device-panel/ControlTile.svelte';
+  import KnobGrid from '$lib/components/v6/device-panel/KnobGrid.svelte';
   import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
   import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
   import SectionDivider from '$lib/components/v6/central/SectionDivider.svelte';
@@ -104,10 +105,11 @@
   }
 
   const MODES = ['Pitch', 'Freq', 'Ring'];
+  // The shifter's character as knobs, its Dry/Wet a box of its own, the
+  // level a set rides (ADR-509).
   const BOXES = [
     { index: P.driveGain, title: 'Drive', write: setDrive },
-    { index: P.tone, title: 'Tone', write: (v: number) => shifter.sendParam(P.tone, v) },
-    { index: P.dryWet, title: 'Dry/Wet', icon: 'mix' as const, write: (v: number) => shifter.sendParam(P.dryWet, v) }
+    { index: P.tone, title: 'Tone', write: (v: number) => shifter.sendParam(P.tone, v) }
   ];
   const LFO_BOXES = [
     { index: P.morph, title: 'Morph', center: 0.5 },
@@ -141,8 +143,7 @@
       <DeviceSlider
         value={value(b.index)}
         title={b.title}
-        icon={b.icon}
-        orientation="vertical"
+        face="knob"
         min={0}
         max={1}
         isGhost={shifter.isGhost}
@@ -151,6 +152,21 @@
         onInteraction={b.write}
       />
     {/each}
+  </div>
+
+  <div class="col boxes" class:slot-ghost={shifter.isGhost}>
+    <DeviceSlider
+      value={value(P.dryWet)}
+      title="Dry/Wet"
+      icon="mix"
+      orientation="vertical"
+      min={0}
+      max={1}
+      isGhost={shifter.isGhost}
+      color={ink}
+      readout={shifter.paramDisplay(P.dryWet)}
+      onInteraction={(v) => shifter.sendParam(P.dryWet, v)}
+    />
   </div>
 
   <SectionDivider orientation="vertical" />
@@ -193,22 +209,25 @@
     </ScrubTabs>
   </div>
 
-  <div class="col boxes" class:slot-ghost={shifter.isGhost}>
-    {#each LFO_BOXES as b (b.index)}
-      <DeviceSlider
-        value={value(b.index)}
-        title={b.title}
-        orientation="vertical"
-        min={0}
-        max={1}
-        centerOrigin={b.center !== undefined}
-        centerValue={b.center}
-        isGhost={shifter.isGhost}
-        color={ink}
-        readout={shifter.paramDisplay(b.index)}
-        onInteraction={(v) => shifter.sendParam(b.index, v)}
-      />
-    {/each}
+  <div class="col" class:slot-ghost={shifter.isGhost}>
+    <KnobGrid count={LFO_BOXES.length}>
+      {#snippet item(i)}
+        {@const b = LFO_BOXES[i]}
+        <DeviceSlider
+          value={value(b.index)}
+          title={b.title}
+          face="knob"
+          min={0}
+          max={1}
+          centerOrigin={b.center !== undefined}
+          centerValue={b.center}
+          isGhost={shifter.isGhost}
+          color={ink}
+          readout={shifter.paramDisplay(b.index)}
+          onInteraction={(v) => shifter.sendParam(b.index, v)}
+        />
+      {/snippet}
+    </KnobGrid>
   </div>
 
   <div class="col" class:slot-ghost={shifter.isGhost}>
@@ -228,7 +247,7 @@
       <DeviceSlider
         value={value(spin ? P.spin : P.phase)}
         title={spin ? 'Spin' : 'Phase'}
-        orientation="vertical"
+        face="knob"
         min={0}
         max={1}
         isGhost={shifter.isGhost}
@@ -244,7 +263,9 @@
   /* Amount and the LFO pad the widest; a seam between the shifter and its LFO. */
   .shifter-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 1fr)) auto minmax(0, 1.75fr) repeat(3, minmax(0, 1fr));
+    /* Amount, Mode, the Drive and Tone knobs, Dry/Wet | the LFO pad, its
+       waves, its knobs two wide, Sync and Stereo (ADR-509). */
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 0.8fr) auto minmax(0, 1.75fr) minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
     height: 100%;
     width: 100%;
     padding: var(--central-inset);

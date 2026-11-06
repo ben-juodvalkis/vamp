@@ -46,7 +46,7 @@
   </div>
 
   <div class="cell">
-    <div class="grow"><ParamColumn {fx} ink={fx.color} boxes={RELEASE} /></div>
+    <div class="grow"><ParamColumn face="knob" {fx} ink={fx.color} boxes={RELEASE} /></div>
     <ParamSwitch label="Auto" on={on(LIMITER.auto)} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => toggle(LIMITER.auto)} />
   </div>
 

@@ -61,7 +61,7 @@
   const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
   let angle = $derived(START + SWEEP * clamp01(position));
   let zero = $derived(START + SWEEP * clamp01(origin ?? 0));
-  let mark = $derived([polar(zero, 46), polar(zero, 51)]);
+  let mark = $derived([polar(zero, 46), polar(zero, 49.5)]);
   let centreText = $derived(dragging && readout ? readout : '');
 
   // One detent a value, the one the knob rests on lit.
@@ -70,7 +70,7 @@
     const at = Math.round(clamp01(position) * (steps - 1));
     return Array.from({ length: steps }, (_, i) => {
       const a = START + (SWEEP * i) / (steps - 1);
-      return { from: polar(a, 46), to: polar(a, 51), on: i === at };
+      return { from: polar(a, 46), to: polar(a, 49.5), on: i === at };
     });
   });
 </script>
@@ -128,7 +128,7 @@
   @container (min-aspect-ratio: 6/5) {
     .knob-body {
       grid-template-rows: auto;
-      grid-template-columns: auto auto;
+      grid-template-columns: auto minmax(0, max-content);
       justify-content: center;
       align-items: center;
       gap: 0.625rem;
@@ -139,13 +139,14 @@
   .knob-face {
     position: relative;
     container-type: size;
-    --knob-d: max(28px, min(100cqw - 0.5rem, 100cqh - 3.25rem, 150px));
+    /* Never wider than the cell, even at the 28px floor. */
+    --knob-d: min(100cqw - 0.5rem, max(28px, min(100cqw - 0.5rem, 100cqh - 3.25rem, 150px)));
     width: var(--knob-d);
     height: var(--knob-d);
   }
   @container (min-aspect-ratio: 6/5) {
     .knob-face {
-      --knob-d: max(28px, min(100cqh - 0.75rem, 50cqw, 150px));
+      --knob-d: min(50cqw, max(28px, min(100cqh - 0.75rem, 50cqw, 150px)));
     }
   }
   .knob-svg {

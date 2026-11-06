@@ -123,6 +123,7 @@
           <DeviceSlider
             value={value(ch.time)}
             title="Time"
+            face="knob"
             orientation="vertical"
             isGhost={fx.isGhost}
             color={fx.color}
@@ -132,7 +133,7 @@
         </div>
       {/if}
       <div class="offset">
-        <ParamColumn {fx} ink={fx.color} boxes={[{ index: ch.offset, title: 'Offset', rest: 0.5, center: 0.5 }]} />
+        <ParamColumn face="knob" {fx} ink={fx.color} boxes={[{ index: ch.offset, title: 'Offset', rest: 0.5, center: 0.5 }]} />
       </div>
     </div>
   {/each}
@@ -150,7 +151,7 @@
     <ParamSwitch label="Filter" on={filterOn} tint={fx.color.primary} ghost={fx.isGhost} row onToggle={() => toggle(DELAY.filterOn)} />
   </div>
 
-  <ParamColumn {fx} ink={fx.color} boxes={lfo} />
+  <ParamColumn face="knob" {fx} ink={fx.color} boxes={lfo} />
 
   <div class="cell">
     <ScrubTabs

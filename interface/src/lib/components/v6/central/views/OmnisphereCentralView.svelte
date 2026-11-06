@@ -147,8 +147,8 @@
 
       <!-- Cols 3-4, every row: both envelopes, Amp over Filter, as value
            boxes (ADR-477) — no switch, each box half a slider's height and
-           as fine. The Filter envelope's Amount is its fifth box, narrower:
-           one control beside a curve. A seam between the two. -->
+           as fine. The Filter envelope's Amount is a knob past its stages
+           (ADR-509): an amount, not a stage. A seam between the two. -->
       <div class="omni-envelopes min-w-0 min-h-0 flex flex-col gap-(--central-gap)" style="grid-column: 3 / 5; grid-row: 1 / 4;">
         <EnvelopeGroup ink={AMP_INK.primary} title="Amp Envelope" edges="none">
           {#each AMP_ENV as [label, index, glyph] (index)}
@@ -184,6 +184,7 @@
             <DeviceSlider
               value={paramValue(FILTER_ENV_AMOUNT)}
               title="Amt"
+              face="knob"
               icon="depth"
               orientation="vertical"
               color={omniInk}
@@ -329,8 +330,10 @@
   }
 
   /* The Filter envelope's Amount: one control beside a curve, narrower. */
+  /* The envelope's amount, a knob past its stages (ADR-509): wider than a
+     stage, so the knob is a readable size. */
   .env-amount {
-    flex: 0.8 1 0;
+    flex: 1.6 1 0;
   }
 
   :global([data-grammar="flat"]) .omni-fx {

@@ -130,11 +130,11 @@
         style="flex: 1 1 0;"
       />
     {/if}
-    <div class="grow"><ParamColumn {fx} ink={fx.color} boxes={tremolo ? stereo.slice(1) : stereo} /></div>
+    <div class="grow"><ParamColumn face="knob" {fx} ink={fx.color} boxes={tremolo ? stereo.slice(1) : stereo} /></div>
     <ParamSwitch label="Invert" on={value(AUTO_PAN2.invert) >= 0.5} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => toggle(AUTO_PAN2.invert)} />
   </div>
 
-  <ParamColumn {fx} ink={fx.color} boxes={shaping} />
+  <ParamColumn face="knob" {fx} ink={fx.color} boxes={shaping} />
 </div>
 
 <style>

@@ -115,18 +115,18 @@
         {#snippet item(t)}{t}{/snippet}
       </ScrubTabs>
     {:else if mode === 2}
-      <div class="fill"><ParamColumn fx={chorus} ink={chorus.color} boxes={VIBRATO} /></div>
+      <div class="fill"><ParamColumn face="knob" fx={chorus} ink={chorus.color} boxes={VIBRATO} /></div>
     {/if}
   </div>
 
   <div class="cell">
-    <div class="fill"><ParamColumn fx={chorus} ink={chorus.color} boxes={mode === 2 ? DEPTH.slice(0, 1) : DEPTH} /></div>
+    <div class="fill"><ParamColumn face="knob" fx={chorus} ink={chorus.color} boxes={mode === 2 ? DEPTH.slice(0, 1) : DEPTH} /></div>
     {#if mode !== 2}
       <ParamSwitch label="FB Invert" on={on(CHORUS.fbInvert)} tint={chorus.color.primary} ghost={chorus.isGhost} onToggle={() => toggle(CHORUS.fbInvert)} />
     {/if}
   </div>
 
-  <ParamColumn fx={chorus} ink={chorus.color} boxes={mode === 2 ? SPACE.slice(1) : SPACE} />
+  <ParamColumn face="knob" fx={chorus} ink={chorus.color} boxes={mode === 2 ? SPACE.slice(1) : SPACE} />
 
   <div class="cell">
     <ParamSwitch label="High Pass" on={on(CHORUS.hpOn)} tint={chorus.color.primary} ghost={chorus.isGhost} onToggle={() => toggle(CHORUS.hpOn)} />

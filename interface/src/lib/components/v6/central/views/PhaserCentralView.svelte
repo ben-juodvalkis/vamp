@@ -97,7 +97,7 @@
     <ParamSwitch label="FB Invert" on={fbInvert} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => fx.sendParam(PHASER.fbInvert, fbInvert ? 0 : 1)} />
   </div>
 
-  <ParamColumn {fx} ink={fx.color} boxes={voicing} />
+  <ParamColumn face="knob" {fx} ink={fx.color} boxes={voicing} />
 
   <div class="cell">
     <ScrubTabs
@@ -116,7 +116,7 @@
   </div>
 
   <div class="cell">
-    <div class="grow"><ParamColumn {fx} ink={fx.color} boxes={MOTION} /></div>
+    <div class="grow"><ParamColumn face="knob" {fx} ink={fx.color} boxes={MOTION} /></div>
     <ParamSwitch label="Env Fol" on={envOn} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => fx.sendParam(PHASER.envOn, envOn ? 0 : 1)} />
   </div>
   <ParamColumn {fx} ink={fx.color} boxes={OUT} />

@@ -541,14 +541,15 @@
       </div>
 
       <!-- Time over Global Mod Amount: the device-wide scalers of every
-           envelope and LFO time and of the mod matrix, two boxes in one
-           column (ADR-477). -->
+           envelope and LFO time and of the mod matrix, two knobs in one
+           column (ADR-509). -->
       <div class="scaler-col flex-none min-h-0 flex flex-col gap-(--central-gap)">
         <PanelEyebrow title="Global" page="global" onOpen={openPage} color={wavetableInk.primary} />
         <div class="flex-1 min-h-0">
           <DeviceSlider
             value={time}
             title="Time"
+            face="knob"
             orientation="vertical"
             labelSize="small"
             centerOrigin
@@ -562,6 +563,7 @@
           <DeviceSlider
             value={globalMod}
             title="Mod Amt"
+            face="knob"
             orientation="vertical"
             labelSize="small"
             color={wavetableInk}
@@ -623,9 +625,12 @@
 
   /* One column, Osc 1 over Osc 2; the width is for WebKit, as Drift's.
      Time over Mod Amt is the same. */
-  .mixer-col,
-  .scaler-col {
+  .mixer-col {
     width: var(--wt-slider-w);
+  }
+  /* Time over Mod Amt as knobs (ADR-509): two slider widths and a gap. */
+  .scaler-col {
+    width: calc(2 * var(--wt-slider-w) + var(--central-gap));
   }
 
   .flt-row {

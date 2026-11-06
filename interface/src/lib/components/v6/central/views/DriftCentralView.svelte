@@ -518,6 +518,7 @@
             <DeviceSlider
               value={oscShape}
               title="Shape"
+              face="knob"
               icon="shape"
               orientation="horizontal"
               labelSize="small"
@@ -675,15 +676,16 @@
            rather than being one of its controls. -->
       <div class="drift-card voicing-card flex-none min-h-0 flex flex-col gap-(--central-gap)" style="--drift-ink: {driftInk.primary};">
         <PanelEyebrow color={driftInk.primary} />
-        <!-- The mode's own slider, absent in Poly (it has nothing to write
-             there), Glide, then Drift: boxes stacked in one column
-             (ADR-477), so a mode change moves no edge. -->
+        <!-- The mode's own knob, absent in Poly (it has nothing to write
+             there), Glide, then Drift: knobs stacked in one column
+             (ADR-509), so a mode change moves no edge. -->
         <div class="flex-1 min-h-0 flex flex-col gap-(--central-gap)">
           {#if voiceMode !== 0}
           <div class="voicing-slider min-h-0">
             <DeviceSlider
               value={voicingSliderValue}
               title={voicingSliderTitle}
+              face="knob"
               icon="unison"
               orientation="vertical"
               labelSize="small"
@@ -705,6 +707,7 @@
               <DeviceSlider
                 value={glideValue}
                 title="Glide"
+                face="knob"
                 icon="glide"
                 orientation="vertical"
                 labelSize="small"
@@ -718,6 +721,7 @@
             <DeviceSlider
               value={driftValue}
               title="Drift"
+              face="knob"
               icon="drift"
               orientation="vertical"
               labelSize="small"
@@ -786,9 +790,11 @@
      could not do it: its own internal row gap came out of its share, so
      a waveform row landed exactly one gap shorter than the octave strip
      beside it. As direct children of one grid they are all 1fr. */
+  /* Waveforms over two rows, the octave strip, then the Shape knob with
+     the height of nearly two (ADR-509). */
   .osc-body {
     display: grid;
-    grid-template-rows: repeat(4, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr)) minmax(0, 1.8fr);
     gap: var(--spacing-sm);
   }
   .osc-fader {
@@ -803,9 +809,13 @@
     flex: 1 1 0;
     min-height: 0;
   }
-  .mixer-card,
-  .voicing-card {
+  .mixer-card {
     width: var(--drift-slider-w);
+  }
+  /* The voicing knobs (ADR-509): two slider widths, so a knob stacked in
+     the column is a readable size. */
+  .voicing-card {
+    width: calc(2 * var(--drift-slider-w) + var(--central-gap));
   }
   /* Two slider widths: the 2 x 2 mode tab, the column's full height. */
   .mode-col {

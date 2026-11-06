@@ -67,6 +67,12 @@ the flat ring with nothing on it but the arc.
   its level; Operator's Fixed under its Freq), and Reverb gives Sync and Mono
   the cell under Predelay and Stereo, a knob with a switch always starting a
   column.
+- **Few values are a tab, many are a knob.** A stepped control with up to
+  `TAB_MAX_OPTIONS` (8) named values is a tab of them, scrubbed like
+  Echo's LFO wave (`ScrubTabs`); a panel's chooser is the same tab. One with
+  more values (Operator's 23 waves, Collision's destinations) or none named
+  (Voices) stays a knob with a detent a value. A tab of names takes more
+  width than one of numbers.
 - **The played control stands apart.** Reverb's Dry/Wet is a full-height
   box at the right edge, past a seam, where it was one cell among the knobs.
 - **A page can hold a picture beside its knobs.** A page's `aside` is a
@@ -89,16 +95,24 @@ the flat ring with nothing on it but the arc.
     and Output and the Pitch view's Tone are all knobs.
   - MIDI effects: Chord, Arpeggiator, Random's Choices and Interval.
   - Simpler's Sens, Fade and Random.
+  - The hand-laid faces, re-laid for knobs (second pass, the same day):
+    Drift's Shape, voicing knob, Glide and Drift (the voicing column two
+    slider widths, Shape's row taller); Wavetable's Time and Mod Amt and
+    Meld's Drive and Spread (their Global columns two slider widths);
+    Omnisphere's filter-envelope Amount (wider, past the stages); Shifter's
+    Drive and Tone, its LFO's Morph, Width and Offset in a `KnobGrid`, and
+    Spin/Phase, with Dry/Wet a box of its own.
+  - ADR-508's Live-panel views (Auto Pan-Tremolo, EQ Eight, Delay, Limiter,
+    Phaser, Chorus): `ParamColumn face="knob"` for their tone and motion
+    columns, Live's order kept; their levels (Feedback, Dry/Wet, Output,
+    Ceiling, Scale) stay boxes.
   - **Boxes kept on purpose:** a lone control filling its view (Bass, Blur,
-    Gate, Velocity, Chance, Phaser, Wah, Pedal's Drive, Random's Rand Oct,
-    Auto Pan's rate); the Drum Rack's Gain and Trnsp and Simpler's and
+    Gate, Velocity, Chance, Phaser's pad, Wah, Pedal's Drive, Random's Rand
+    Oct, Auto Pan's rate); the Drum Rack's Gain and Trnsp and Simpler's and
     Sampler's Pitch and Gain (placed for muscle memory); the clip, groove
-    and system views, which are not devices; and the hand-laid faces of
-    Drift, Analog, Wavetable, Meld and Omnisphere and the Shifter view,
-    whose cells are too small for a knob until they are laid out again;
-    likewise the views ADR-508 laid out as Live's panels the same day
-    (Auto Pan-Tremolo, EQ Eight, Delay, Limiter, Phaser, Chorus), whose
-    `ParamColumn` stacks boxes two and three high in narrow columns.
+    and system views, which are not devices; envelopes and mixer levels
+    everywhere; and Analog's face, whose voice card has no room a knob can
+    use (tried: the Sub knob came out under 30px).
   - Chain cells and browser tiles are unchanged.
 - **The shot harness measures a knob by its cell.** The layout check counts
   painted boxes; a knob paints less than the cell it answers to, so its cell
@@ -108,8 +122,8 @@ the flat ring with nothing on it but the arc.
 
 - A new panel or view decides the same way: which groups keep boxes, and
   whether a group's share needs `units`.
-- The hand-laid faces that kept boxes, and Collision's tabbed middle (its
-  knobs small under the tab strip), are the next layout pass.
+- Analog's face and Collision's tabbed middle (its knobs small under the
+  tab strip) are still to lay out for knobs.
 - A panel's knobs show their value at rest only where the view knows it:
   Live sends a parameter's display text only while the UI writes it, so the
   panels show a name alone until the surface sends it at rest too.

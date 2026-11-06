@@ -96,7 +96,7 @@
 </script>
 
 <div class="fx-layout" data-view="eq8">
-  <ParamColumn {fx} ink={fx.color} boxes={bandBoxes} />
+  <ParamColumn face="knob" {fx} ink={fx.color} boxes={bandBoxes} />
 
   <div class="cell graph" class:slot-ghost={fx.isGhost}>
     <FilterDotsGraph {dots} {curves} onGrab={(i) => (selected = i + 1)} onMove={move} ariaLabel="EQ Eight bands" />

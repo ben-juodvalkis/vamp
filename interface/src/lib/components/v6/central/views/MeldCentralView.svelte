@@ -380,6 +380,7 @@
           <DeviceSlider
             value={drive}
             title="Drive"
+            face="knob"
             icon="drive"
             orientation="vertical"
             labelSize="small"
@@ -392,6 +393,7 @@
           <DeviceSlider
             value={spread}
             title="Spread"
+            face="knob"
             icon="width"
             orientation="vertical"
             labelSize="small"
@@ -486,8 +488,9 @@
     flex: 0 0 var(--meld-slider-w);
     width: var(--meld-slider-w);
   }
-  /* The global column: one slider width. */
+  /* The global column: Drive over Spread as knobs (ADR-509), two slider
+     widths. */
   .global-col {
-    width: var(--meld-global-w);
+    width: calc(2 * var(--meld-global-w) + var(--central-gap));
   }
 </style>

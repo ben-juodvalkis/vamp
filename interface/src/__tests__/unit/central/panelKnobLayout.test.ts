@@ -10,6 +10,8 @@ import {
 	isKnobGroup,
 	knobGridRows,
 	panelParamNames,
+	tabOptions,
+	TAB_MAX_OPTIONS,
 	type PanelGroup
 } from '$lib/components/v6/central/views/panel/panelTypes';
 import { DRIFT_PANEL } from '$lib/components/v6/central/views/panel/driftPanel';
@@ -107,5 +109,27 @@ describe('switches under knobs and a page’s aside', () => {
 	it('draws Drift’s sources as levels with their switch under each', () => {
 		const mix = DRIFT_PANEL.pages.flatMap((p) => p.rows.flat()).find((g) => g.title === 'Osc Mix')!;
 		expect(mix.controls.map((c) => (c.kind === 'box' ? c.toggle?.param : c.kind))).toEqual(['Osc 1 On', 'Osc 2 On', 'Noise On']);
+	});
+});
+
+describe('few values are a tab, many a knob (ADR-509)', () => {
+	it('draws a stepper with up to eight named values as a tab of them', () => {
+		const oct = { kind: 'step', param: 'Osc 1 Oct', title: 'Oct', labels: ['-2', '-1', '0', '+1', '+2', '+3'] } as const;
+		expect(tabOptions(oct)).toEqual(oct.labels);
+		expect(controlUnits(oct, 1)).toBeGreaterThanOrEqual(1);
+	});
+	it('keeps a stepper with more values, or none named, a knob', () => {
+		const many = { kind: 'step', param: 'Wave', title: 'Wave', labels: Array.from({ length: TAB_MAX_OPTIONS + 1 }, (_, i) => String(i)) } as const;
+		expect(tabOptions(many)).toBeUndefined();
+		expect(tabOptions({ kind: 'step', param: 'Voices', title: 'Voices' })).toBeUndefined();
+	});
+	it('takes a group with a tab out of the knob grid: it stands in a row', () => {
+		const group: PanelGroup = { controls: [knobs.controls[0], { kind: 'step', param: 'Oct', title: 'Oct', labels: ['0', '1'] }] };
+		expect(isKnobGroup(group, 'knob')).toBe(false);
+	});
+	it('turns Drift’s octaves into a tab and keeps Operator’s 23 waves a knob', () => {
+		const steps = (p: typeof DRIFT_PANEL) => p.pages.flatMap((pg) => pg.rows.flat()).flatMap((g) => g.controls).filter((c) => c.kind === 'step');
+		expect(steps(DRIFT_PANEL).find((c) => c.title === 'Oct') && tabOptions(steps(DRIFT_PANEL).find((c) => c.title === 'Oct')!)).toHaveLength(6);
+		expect(tabOptions(steps(OPERATOR_PANEL).find((c) => c.title === 'Wave')!)).toBeUndefined();
 	});
 });

@@ -112,10 +112,27 @@ export function groupFace(group: PanelGroup, boxFace?: PanelFace): PanelFace {
 	return group.face ?? boxFace ?? 'slider';
 }
 
+/**
+ * A stepped control with this many named values or fewer is a tab of its
+ * values, scrubbed like Echo's LFO wave; one with more, or with none
+ * named, is a knob with a detent a value (ADR-509).
+ */
+export const TAB_MAX_OPTIONS = 8;
+
+/** The values a control draws as a tab, or nothing for a control that is not one. */
+export function tabOptions(control: PanelControl): readonly string[] | undefined {
+	if (control.kind === 'choice') return control.options;
+	if (control.kind === 'step' && control.labels && control.labels.length <= TAB_MAX_OPTIONS) return control.labels;
+	return undefined;
+}
+
 /** A control's width in boxes: what a group's share of its row is counted in. */
 export function controlUnits(control: PanelControl, pageRows = 1): number {
-	if (control.kind !== 'choice') return 1;
-	return Math.max(1, choiceColumns(control.options.length, pageRows) * 0.9);
+	const options = tabOptions(control);
+	if (!options) return 1;
+	// Names ("Shark Tooth", "Rectangle") want wider cells than numbers.
+	const perColumn = Math.max(...options.map((o) => o.length)) > 5 ? 1.4 : 0.9;
+	return Math.max(1, choiceColumns(options.length, pageRows) * perColumn);
 }
 
 /**
@@ -138,7 +155,10 @@ export function regionUnits(region: PanelRegion, boxFace?: PanelFace): number {
 
 /** A group drawn as a grid of knobs: every control a value or stepping box, drawn as a knob. */
 export function isKnobGroup(group: PanelGroup, boxFace?: PanelFace): boolean {
-	return groupFace(group, boxFace) === 'knob' && group.controls.every((c) => c.kind === 'box' || c.kind === 'step');
+	return (
+		groupFace(group, boxFace) === 'knob' &&
+		group.controls.every((c) => c.kind === 'box' || (c.kind === 'step' && !tabOptions(c)))
+	);
 }
 
 export { knobGridRows } from '$lib/components/v6/device-panel/knobLayout';
