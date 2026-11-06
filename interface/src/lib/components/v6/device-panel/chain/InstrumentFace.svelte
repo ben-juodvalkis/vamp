@@ -27,6 +27,7 @@
   import { MELD_ENGINE } from '../../central/views/meldParams';
   import { OPERATOR_OSC_COLORS } from './OperatorAlgorithm.svelte';
   import { schemeFromInk } from '$lib/config/devicePresets';
+  import { OP_COARSE_MAX, coarseRatio, coarseStepAt } from './operatorCoarse';
 
   interface Props {
     device: DeviceRecord;
@@ -86,15 +87,17 @@
   // Meld: Engine A's oscillator type, its mark the pad's only picture.
   const meldOscType = $derived(type === 'meld' ? Math.round(raw(MELD_ENGINE.A.oscType, 0)) : 0);
 
-  // Operator: a pad per oscillator, Coarse across (ratios 1 to 4, two
-  // octaves, of Live's 0.5..48) and Level up, in Live's oscillator colors;
+  // Operator: a pad per oscillator, Coarse across and Level up, in Live's
+  // oscillator colors. Coarse is relative: the dot rests at the middle,
+  // and a drag reaches an octave either side of the ratio the oscillator
+  // held at touch-down (a preset at 24 sweeps 12..48), landing on Live's
+  // whole ratios; the ratio reads beside the letter.
   // one switched off dims and turns on at the first touch. The algorithm
   // is the cell header's (OperatorHeadAlgorithm). By name: Operator's
   // indices move with its sections.
   const OP_OSCS = ['A', 'B', 'C', 'D'] as const;
-  const OP_COARSE_MAX = 48; // the parameter's own 0..48 (0 is ratio 0.5)
-  const OP_RATIO_LO = 1;
-  const OP_RATIO_HI = 4;
+  // The ratio each pad's drag is centered on, from touch-down to release.
+  let opAnchor: (number | null)[] = [null, null, null, null];
   // Level takes a drag twice the pad's height to cross.
   const OP_SENSITIVITY = [1, 0.5] as const;
   const OP_SCHEMES = OPERATOR_OSC_COLORS.map((ink) => schemeFromInk(ink));
@@ -110,19 +113,18 @@
     const i = names.indexOf(name);
     if (i >= 0) write(i, t);
   }
-  /** A Coarse ratio as the pad's X: 1 at the left, 4 at the right, pinned outside. */
-  const opRatioX = (o: string) =>
-    Math.min(1, Math.max(0, (opRaw(`${o} Coarse`, 1) - OP_RATIO_LO) / (OP_RATIO_HI - OP_RATIO_LO)));
+  const opRatioOf = (o: string) => coarseRatio(opRaw(`${o} Coarse`, 1));
   const opOn = $derived(
     (type === 'operator' ? OP_OSCS.map((o) => opRaw(`Osc-${o} On`, 1) >= 0.5) : [true, true, true, true]) as [boolean, boolean, boolean, boolean]
   );
   function opPlay(i: number, x: number, level: number) {
     const o = OP_OSCS[i];
     if (!opOn[i]) opWrite(`Osc-${o} On`, 1);
-    const ratio = Math.round(OP_RATIO_LO + x * (OP_RATIO_HI - OP_RATIO_LO));
-    opWrite(`${o} Coarse`, ratio / OP_COARSE_MAX);
+    const anchor = (opAnchor[i] ??= opRatioOf(o));
+    opWrite(`${o} Coarse`, coarseStepAt(anchor, x) / OP_COARSE_MAX);
     opWrite(`Osc-${o} Level`, level);
   }
+
 
 
   // Omnisphere: the ORB's angle and radius (OmnisphereCentralView, 25 / 26).
@@ -160,13 +162,14 @@
     {#each OP_OSCS as o, i (o)}
       <div class="op-pad" class:off={!opOn[i]} data-osc={o} data-on={opOn[i] ? '1' : '0'}>
         <DeviceXY
-          xValue={opRatioX(o)}
+          xValue={0.5}
           yValue={opRead(`Osc-${o} Level`, i === 0 ? 1 : 0)}
-          title={o}
+          title={`${o} ×${opRatioOf(o)}`}
           titleAt="bottom"
           showCurve={false}
           sensitivity={OP_SENSITIVITY}
           onInteraction={(x, y) => opPlay(i, x, y)}
+          onRelease={() => (opAnchor[i] = null)}
           color={OP_SCHEMES[i]}
         />
       </div>
