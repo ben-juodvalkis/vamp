@@ -3243,15 +3243,18 @@
 		padding: 0 8px;
 		text-align: center;
 		font-size: max(var(--type-min), min(14cqw, 2rem, calc((100cqw - 16px) / var(--fit-em, 0.001))));
-		font-weight: 800;
+		/* The app's own weight and a softened white, as a greyed MIDI effect's
+		   name reads (user, 2026-11-06: "less jarring"); a thin halo only
+		   lifts it off the picture. */
+		font-weight: var(--font-weight-medium);
+		letter-spacing: 0;
+		color: color-mix(in oklab, var(--foreground) 82%, var(--surface-well));
 		line-height: 1.05;
 		-webkit-line-clamp: 2;
 		line-clamp: 2;
 		text-shadow:
-			0 0 2px var(--surface-well),
-			0 0 4px var(--surface-well),
-			0 0 8px var(--surface-well),
-			0 0 14px var(--surface-well);
+			0 0 3px var(--surface-well),
+			0 0 8px var(--surface-well);
 	}
 	/* While the control is held the name steps aside for it and its readout. */
 	.preset-tile.faced .tile-name {
