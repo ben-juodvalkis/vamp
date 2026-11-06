@@ -89,9 +89,9 @@
   const meldOscType = $derived(type === 'meld' ? Math.round(raw(MELD_ENGINE.A.oscType, 0)) : 0);
 
   // Operator: a pad per oscillator, Coarse across and Level up, in Live's
-  // oscillator colors. Coarse spans two octaves either side of the ratio
+  // oscillator colors. Coarse spans two steps either side of the step
   // each oscillator held when the track was arrived at or its preset
-  // loaded (operatorCoarse): the dot sits where the ratio falls in that
+  // loaded (operatorCoarse): the dot sits where the step falls in that
   // window and stays there on release; the ratio reads beside the letter
   // while dragging. One switched off dims and turns on at the first touch.
   // The algorithm is the cell header's (OperatorHeadAlgorithm). By name:
@@ -131,8 +131,8 @@
     const name = `${OP_OSCS[i]} Coarse`;
     const at = names.indexOf(name);
     const value = at < 0 ? undefined : selectedTrackStore.paramValue(selectedTrackStore.paramPath(device, at));
-    if (opAnchors[i] === undefined && value !== undefined) opAnchors[i] = coarseRatio(value);
-    return opAnchors[i] ?? coarseRatio(value ?? 1);
+    if (opAnchors[i] === undefined && value !== undefined) opAnchors[i] = Math.round(value);
+    return opAnchors[i] ?? Math.round(value ?? 1);
   }
   const opOn = $derived(
     (type === 'operator' ? OP_OSCS.map((o) => opRaw(`Osc-${o} On`, 1) >= 0.5) : [true, true, true, true]) as [boolean, boolean, boolean, boolean]
