@@ -4,8 +4,8 @@
    * control every native kit gets — `vm.pitch`, whole semitones on ±48, the
    * surface fanning it out to every pad's Transpose. Under a held or latched
    * pad it is that pad's, by `useDrumVm`'s rule, as the Drum Rack view's own
-   * Trnsp is. It is labelled with the kit's own name, large (the user,
-   * 2026-11-05; "Trnsp" before), with the drum mark beside it.
+   * Trnsp is. It wears the drum mark and no word (the user, 2026-11-05;
+   * "Trnsp" before): the kit's name is the cell's header.
    *
    * Back from the pads (2026-10-27 to 2026-11-05, the user's call: one
    * important control, not the pads). The pads, and holding one to scope
@@ -33,7 +33,7 @@
   <DeviceSlider
     value={vm.value('pitch') ?? 0}
     labelOrientation="horizontal"
-    title={device.name}
+    title=""
     icon="drum"
     {color}
     min={VM_PITCH_MIN}
