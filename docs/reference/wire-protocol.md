@@ -225,7 +225,9 @@ Key rules:
   `oscillator_N_wavetables` (a JSON array naming the tables of that
   oscillator's current category, re-sent when it changes) and
   `oscillator_wavetable_categories` (a JSON array of the categories, fixed:
-  Live offers no listener, so a cold read only), Compressor2's sidechain
+  Live offers no listener, so a cold read only), `filter_routing` (int,
+  writable, 2026-11-05: Live's `FilterRouting`, 0 serial, 1 parallel,
+  2 split), Compressor2's sidechain
   routing pair, an Audio Effect Rack's read-only `chain_names` (a JSON array
   of its chains' names in chain order, re-sent when a chain is added,
   removed or renamed — the Pedal view titles the Wah slider with the

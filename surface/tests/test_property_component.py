@@ -939,7 +939,7 @@ def test_allowlist_contains_the_wavetable_oscillator_keys():
         "oscillator_%d_%s" % (n, attr)
         for n in (1, 2)
         for attr in ("wavetable_category", "wavetable_index", "effect_mode", "wavetables")
-    } | {"oscillator_wavetable_categories"}
+    } | {"oscillator_wavetable_categories", "filter_routing"}
     actual = {prop for (cls, prop) in ALLOWLIST if cls == "InstrumentVector"}
     assert actual == expected
     for n in (1, 2):
@@ -959,7 +959,7 @@ class StubWavetable(_StubDevice):
 
     _observable = (
         "oscillator_1_wavetable_category", "oscillator_1_wavetable_index",
-        "oscillator_1_effect_mode", "oscillator_1_wavetables",
+        "oscillator_1_effect_mode", "oscillator_1_wavetables", "filter_routing",
     )
     _tables = {0: ["Basic Shapes", "Harmonic Series"], 10: ["Brds Dual Saw", "BS Sync"]}
 
@@ -969,6 +969,7 @@ class StubWavetable(_StubDevice):
         self.oscillator_1_wavetable_category = 0
         self.oscillator_1_wavetable_index = 1
         self.oscillator_1_effect_mode = 3
+        self.filter_routing = 0
 
     @property
     def oscillator_wavetable_categories(self):
@@ -1005,6 +1006,21 @@ def test_wavetable_oscillator_subscribes_as_names_and_indices(emits, generation)
     wt.fire("oscillator_1_wavetables")
     values = [args for (addr, args) in emits if addr == V3_PROPERTY_VALUE_ADDRESS]
     assert json.loads(values[-1][2]) == ["Brds Dual Saw", "BS Sync"]
+
+
+def test_wavetable_filter_routing_reads_and_writes(emits, generation):
+    """Serial 0, parallel 1, split 2 (Live's FilterRouting, measured)."""
+    wt = StubWavetable()
+    comp = PropertyComponent(
+        song=StubSong(tracks=[StubTrack(tid=302, devices=[wt])]),
+        emit=lambda a, args: emits.append((a, args)),
+    )
+    comp.set_generation(generation)
+    comp.handle_subscribe(args=("tracks/0/devices/0", "filter_routing"), source_addr=None)
+    values = [args for (addr, args) in emits if addr == V3_PROPERTY_VALUE_ADDRESS]
+    assert list(values[-1][1:]) == ["filter_routing", 0]
+    comp.handle_set(args=("tracks/0/devices/0", "filter_routing", 2.0, generation.current), source_addr=None)
+    assert wt.filter_routing == 2
 
 
 def test_simpler_keys_use_lom_class_name_not_display_name():

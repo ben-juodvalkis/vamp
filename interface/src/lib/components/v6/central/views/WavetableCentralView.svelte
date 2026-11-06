@@ -45,7 +45,7 @@
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import EnvelopeGroup from './EnvelopeGroup.svelte';
   import SectionDivider from '../SectionDivider.svelte';
-  import { liveFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
+  import { liveFilterCurve } from '$lib/utils/instrumentFilterCurves';
   import HostedSwapPill from '../HostedSwapPill.svelte';
   import InstrumentPanelView from './panel/InstrumentPanelView.svelte';
   import PanelEyebrow from './panel/PanelEyebrow.svelte';
@@ -58,6 +58,8 @@
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import WavetableWave from './wavetable/WavetableWave.svelte';
   import { useOscWave } from './wavetable/useOscWave.svelte';
+  import WavetableFilterGraph from './wavetable/WavetableFilterGraph.svelte';
+  import { FILTER_ROUTINGS, type GraphFilter } from '$lib/utils/wavetableFilterGraph';
 
   interface Props {
     instrument?: InstrumentInfo | null;
@@ -191,20 +193,42 @@
   const OCTAVES = [-2, -1, 0, 1, 2] as const;
   const octaveLabel = (n: number) => (n > 0 ? `+${n}` : `${n}`);
 
-  // Filter 1: cutoff across, resonance up, its response drawn beneath.
-  // Like Osc 2, a drag on the pad switches it on.
-  // The FLT 1/2 switch flips the column between the two filters, as the
-  // OSC switch does the card. View state only; it writes nothing to Live.
+  // Both filters on one pad, a dot each (2026-11-05, Live's panel): a
+  // press grabs the nearer dot, and that filter is the one the type and
+  // slope rows edit. View state only; it writes nothing to Live. A drag
+  // switches a filter that is off on.
   let fltTab = $state<1 | 2>(1);
   let f = $derived(FLT[fltTab]);
   let flt1On = $derived(read(FLT[1].on, 1) >= 0.5);
   let flt2On = $derived(read(FLT[2].on, 0) >= 0.5);
   let fltOn = $derived(fltTab === 1 ? flt1On : flt2On);
-  let fltFreq = $derived(read(f.freq, 1));
-  let fltRes = $derived(read(f.res, 0));
   let fltType = $derived(Math.round(read(f.type, 0)));
   let fltSlope = $derived(Math.round(read(f.slope, 0)));
-  let fltCurve = $derived(liveFilterCurve(fltType, fltSlope, read(f.morph, 0)));
+  function graphFilter(n: 1 | 2, on: boolean): GraphFilter {
+    const p = FLT[n];
+    return {
+      x: read(p.freq, n === 1 ? 1 : 0.5),
+      y: read(p.res, 0),
+      curve: liveFilterCurve(Math.round(read(p.type, 0)), Math.round(read(p.slope, 0)), read(p.morph, 0)),
+      on
+    };
+  }
+  let graphFilters = $derived([graphFilter(1, flt1On), graphFilter(2, flt2On)] as const);
+
+  // Serial, Parallel or Split: Live's `filter_routing` property, serial 0,
+  // parallel 1, split 2 (measured on the running Live, 2026-11-05).
+  $effect(() => {
+    const path = device?.devicePath;
+    if (!path) return;
+    return selectedTrackStore.subscribeProperty(path, 'filter_routing');
+  });
+  let filterRouting = $derived(
+    Number(device ? selectedTrackStore.propertyValue(device.devicePath, 'filter_routing') ?? 0 : 0)
+  );
+  function writeRouting(value: number) {
+    if (!device) return;
+    void selectedTrackStore.setPropertyValue(device.devicePath, 'filter_routing', value);
+  }
 
   // ===== The oscillators' waves =====
   const oscWaves = useOscWave(() => device?.devicePath);
@@ -252,6 +276,8 @@
   let osc1Ink = $derived(inkFor(1));
   let osc2Ink = $derived(inkFor(2));
   let oscInk = $derived(oscTab === 1 ? osc1Ink : osc2Ink);
+  /** A filter wears its oscillator's ink, so Split reads Osc 1 → Filter 1. */
+  let fltInk = $derived(fltTab === 1 ? osc1Ink : osc2Ink);
 
   // Wavetable color scheme (purple/violet - matches Wavetable's UI aesthetic)
   const wavetableColor = {
@@ -293,11 +319,12 @@
     writeOsc(o.position, y);
   }
 
-  function handleFilterXY(x: number, y: number) {
+  function moveFilter(n: 1 | 2, x: number, y: number) {
     if (!device) return;
-    if (!fltOn) write(f.on, 1);
-    write(f.freq, x);
-    write(f.res, y);
+    const p = FLT[n];
+    if (!(n === 1 ? flt1On : flt2On)) write(p.on, 1);
+    write(p.freq, x);
+    write(p.res, y);
   }
 
   function stepFilterType(step: number) {
@@ -415,58 +442,53 @@
 
       <SectionDivider orientation="vertical" ink={wavetableInk.primary} />
 
-      <!-- The filter the FLT 1/2 switch shows: cutoff across, resonance up,
-           its curve beneath, then its type and slope. Ghosted while that
-           filter is off; a drag turns it on. -->
+      <!-- Both filters on one pad, a numbered dot each: cutoff across,
+           resonance up, Serial one curve and Parallel / Split two (Live's
+           panel, 2026-11-05). The routing under it, then the type and
+           slope of the filter last touched, in its ink. -->
       <div class="filter-col flex-1 min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
-        <PanelEyebrow title="Filter {fltTab}" page="filter{fltTab}" onOpen={openPage} color={wavetableInk.primary} />
-        <div class="flex-1 min-h-0 relative">
-          <!-- The FLT 1/2 switch rides the pad's top-left corner (user,
-               2026-10-22), outside the ghost so it never dims. -->
-          <button
-            class="osc-badge flt-badge"
-            style="--osc-badge-ink: {wavetableInk.primary};"
-            aria-label="Filter {fltTab} of 2 — switch to Filter {fltTab === 1 ? 2 : 1}"
-            onclick={() => (fltTab = fltTab === 1 ? 2 : 1)}
-          >
-            <span class="osc-badge-eyebrow">Flt</span>
-            <span class="osc-badge-pair">
-              <span class="osc-badge-n" class:on={fltTab === 1} class:silent={!flt1On}>1</span><span
-                class="osc-badge-slash">/</span><span
-                class="osc-badge-n" class:on={fltTab === 2} class:silent={!flt2On}>2</span>
-            </span>
-          </button>
-          <div class="h-full" style={fltOn ? '' : 'opacity: var(--opacity-ghost);'}>
-          <DeviceXY
-            xValue={fltFreq}
-            yValue={fltRes}
-            title="Filter {fltTab}"
-            isGhost={!fltOn}
-            showCurve={fltOn}
-            curveType={fltCurve.curveType}
-            curveOrder={fltCurve.order}
-            curveFreqRange={FILTER_FREQ_RANGE.wavetable}
-            onInteraction={handleFilterXY}
-            color={wavetableInk}
+        <PanelEyebrow title="Filter {fltTab}" page="filter{fltTab}" onOpen={openPage} color={fltInk.primary} />
+        <div class="flex-1 min-h-0">
+          <WavetableFilterGraph
+            filters={graphFilters}
+            routing={filterRouting}
+            selected={fltTab}
+            colors={[osc1Ink.primary, osc2Ink.primary]}
+            serialColor={wavetableInk.primary}
+            onGrab={(n) => (fltTab = n)}
+            onMove={moveFilter}
           />
-          </div>
         </div>
-        <!-- ‹ type ›, Meld's chooser: five buttons no longer fit beside the mixer. -->
-        <div class="type-stepper stepper strip-row flex-none" style="--btn-tint: {wavetableInk.primary};">
-          <button class="type-step" aria-label="Previous filter type" onclick={() => stepFilterType(-1)}>‹</button>
-          <span class="type-stepper-name" aria-live="polite">{FILTER_TYPES[fltType] ?? '—'}</span>
-          <button class="type-step" aria-label="Next filter type" onclick={() => stepFilterType(1)}>›</button>
-        </div>
-        <div class="device-segmented strip-row flex-none" style="--btn-tint: {wavetableInk.primary}; grid-template-columns: repeat(2, 1fr);">
-          {#each ['12 dB', '24 dB'] as label, value}
+        <div class="device-segmented strip-row flex-none" style="--btn-tint: {wavetableInk.primary}; grid-template-columns: repeat({FILTER_ROUTINGS.length}, 1fr);">
+          {#each FILTER_ROUTINGS as label, value}
             <button
               class="device-segment strip-step"
-              class:active={fltSlope === value}
-              aria-label="Filter slope {label}"
-              aria-pressed={fltSlope === value}
-              onclick={() => write(f.slope, value)}
+              class:active={filterRouting === value}
+              aria-label="Filter routing {label}"
+              aria-pressed={filterRouting === value}
+              onclick={() => writeRouting(value)}
             >{label}</button>
           {/each}
+        </div>
+        <!-- ‹ type › beside the slope, one row (Meld's chooser): the
+             graph keeps the height the routing row took. -->
+        <div class="flt-row strip-row flex-none" class:ghost-row={!fltOn}>
+          <div class="type-stepper stepper strip-row min-w-0" style="--btn-tint: {fltInk.primary};">
+            <button class="type-step" aria-label="Previous filter type" onclick={() => stepFilterType(-1)}>‹</button>
+            <span class="type-stepper-name" aria-live="polite">{FILTER_TYPES[fltType] ?? '—'}</span>
+            <button class="type-step" aria-label="Next filter type" onclick={() => stepFilterType(1)}>›</button>
+          </div>
+          <div class="device-segmented strip-row min-w-0" style="--btn-tint: {fltInk.primary}; grid-template-columns: repeat(2, 1fr);">
+            {#each ['12 dB', '24 dB'] as label, value}
+              <button
+                class="device-segment strip-step"
+                class:active={fltSlope === value}
+                aria-label="Filter slope {label}"
+                aria-pressed={fltSlope === value}
+                onclick={() => write(f.slope, value)}
+              >{label}</button>
+            {/each}
+          </div>
         </div>
       </div>
 
@@ -622,60 +644,15 @@
     width: var(--wt-slider-w);
   }
 
-  /* The FLT 1/2 switch, over the filter pad's top-left corner. */
-  .flt-badge {
-    position: absolute;
-    top: var(--spacing-sm);
-    left: var(--spacing-sm);
-    z-index: 2;
+  .flt-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--central-gap);
   }
 
-  /* The FLT 1/2 switch: Drift's badge, a circle a touch row tall. */
-  .osc-badge {
-    flex: 0 0 auto;
-    width: var(--height-touch);
-    height: var(--height-touch);
-    border-radius: 999px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 1px;
-    line-height: 1;
-    background: var(--osc-badge-ink);
-    border: 1px solid var(--osc-badge-ink);
-    color: var(--flat-on-fg);
-    cursor: pointer;
-    transition: background-color var(--t-fast) var(--ease-precise);
-  }
-  .osc-badge-eyebrow {
-    font-size: 8px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    opacity: 0.8;
-  }
-  .osc-badge-pair {
-    display: flex;
-    align-items: baseline;
-    font-size: 14px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-  }
-  .osc-badge-n {
-    opacity: 0.45;
-  }
-  .osc-badge-n.on {
-    opacity: 1;
-  }
-  .osc-badge-n.silent {
-    opacity: 0.25;
-  }
-  .osc-badge-n.on.silent {
-    opacity: 0.55;
-  }
-  .osc-badge-slash {
-    opacity: 0.45;
-    padding: 0 1px;
+  /* The type and slope of a filter that is off. */
+  .ghost-row {
+    opacity: var(--opacity-ghost);
   }
 
   /* ---- Flat grammar: Drift's and Analog's segmented rows, the ink

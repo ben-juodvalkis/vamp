@@ -471,6 +471,14 @@ ALLOWLIST: Dict[Tuple[str, str], PropertySpec] = {
         for _osc in (1, 2)
         for _attr in ("wavetable_category", "wavetable_index", "effect_mode")
     },
+    # Wavetable's filter routing (2026-11-05), the view's Serial | Parallel |
+    # Split row: Live's ``WavetableDevice.FilterRouting``, read off the
+    # running Live 12.4.25b1 with ``py_introspect`` — serial 0, parallel 1,
+    # split 2. A settable int with a listener (device dump).
+    ("InstrumentVector", "filter_routing"): PropertySpec(
+        listener_path="", attr_name="filter_routing",
+        writable=True, coerce_to_int=True,
+    ),
     ("InstrumentVector", "oscillator_1_wavetables"): PropertySpec(
         listener_path="", attr_name="oscillator_1_wavetables", writable=False,
         coerce_dict_to_json=True,
