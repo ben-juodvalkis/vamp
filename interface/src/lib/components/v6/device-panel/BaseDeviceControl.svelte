@@ -10,16 +10,12 @@ import { logger } from '$lib/utils/logger';
   import { deviceInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import { selectedTrackInk } from '$lib/utils/selectedTrackInk';
-  import { selectDevice, moveDeviceToTop, moveDeviceToEnd } from '$lib/services/deviceMoveService';
+  import { selectDevice } from '$lib/services/deviceMoveService';
   import { openDeviceView } from '$lib/services/deviceViewRouter.svelte';
   import { sendParam } from '$lib/services/deviceParams';
   import { readFxScope } from '$lib/components/v6/central/fxScope';
   import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
   import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
-  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
-  import ArrowRight from '@lucide/svelte/icons/arrow-right';
-  import Check from '@lucide/svelte/icons/check';
-  import X from '@lucide/svelte/icons/x';
 
   interface Props {
     // Either position (for grid devices) OR slotKey (for virtual devices - backward compat)
@@ -28,8 +24,6 @@ import { logger } from '$lib/utils/logger';
     device?: DeviceRecord | null;  // Optional - derived from slot when not provided
     title: string;
     disableCentralViewOnTap?: boolean;
-    showMoveToTop?: boolean;
-    showMoveToEnd?: boolean;
     /** Off by default — the top-center device micro-label (the {title} headline). */
     showHeadline?: boolean;
     children: Snippet<[{
@@ -46,7 +40,7 @@ import { logger } from '$lib/utils/logger';
     }]>;
   }
 
-  let { position, slotKey, device: deviceProp, title, disableCentralViewOnTap = false, showMoveToTop = false, showMoveToEnd = false, showHeadline = false, children }: Props = $props();
+  let { position, slotKey, device: deviceProp, title, disableCentralViewOnTap = false, showHeadline = false, children }: Props = $props();
 
   // Determine the key to use (position for grid devices, slotKey for virtual devices)
   const keyOrUndefined = position || slotKey;
@@ -182,108 +176,6 @@ import { logger } from '$lib/utils/logger';
   // Pending parameters are drained by FXGridState's $effect.root watcher,
   // which fires checkLoadingCompletion() on each newly-arrived device.
 
-  // ===== MOVE TO TOP FUNCTIONALITY =====
-  let isMoving = $state(false);
-  let moveResult = $state<'idle' | 'success' | 'error'>('idle');
-
-  // Compute button classes based on move state
-  const buttonClasses = $derived(() => {
-    const base = 'move-btn absolute top-2 left-2 z-10 p-1.5 rounded transition-colors duration-200';
-
-    // Success state (play-green state ink; was text-green-500)
-    if (moveResult === 'success') {
-      return `${base} move-ok`;
-    }
-
-    // Error state (rec-red state ink; was text-red-500)
-    if (moveResult === 'error') {
-      return `${base} move-err`;
-    }
-
-    // Moving state
-    if (isMoving) {
-      return `${base} text-muted-foreground`;
-    }
-
-    // Idle state with hover
-    return `${base} text-muted-foreground hover:text-foreground cursor-pointer`;
-  });
-
-  // Handle move to top button click
-  async function handleMoveToTop() {
-    if (isMoving || !device) return;
-
-    isMoving = true;
-    moveResult = 'idle';
-
-    try {
-      // ROW 5 (2026-04-21): path-addressed; the Python
-      // DeviceCommandsComponent reads canonical_parent + calls
-      // song.move_device directly, no pre-select handshake.
-      await moveDeviceToTop(device.devicePath);
-      // Keep the view's selection in sync with the user's gesture so
-      // the central-display focus follows the re-ordered device.
-      await selectDevice(device.devicePath);
-      // Show success state
-      moveResult = 'success';
-      setTimeout(() => {
-        moveResult = 'idle';
-      }, 1000);
-    } catch (error) {
-      logger.error('Failed to move device:', { component: 'BaseDeviceControl', error });
-      // Show error state
-      moveResult = 'error';
-      setTimeout(() => {
-        moveResult = 'idle';
-      }, 1000);
-    } finally {
-      isMoving = false;
-    }
-  }
-
-  // ===== MOVE TO END FUNCTIONALITY =====
-  let isMovingEnd = $state(false);
-  let moveEndResult = $state<'idle' | 'success' | 'error'>('idle');
-
-  const buttonEndClasses = $derived(() => {
-    const base = 'move-btn absolute top-2 right-2 z-10 p-1.5 rounded transition-colors duration-200';
-
-    if (moveEndResult === 'success') {
-      return `${base} move-ok`;
-    }
-    if (moveEndResult === 'error') {
-      return `${base} move-err`;
-    }
-    if (isMovingEnd) {
-      return `${base} text-muted-foreground`;
-    }
-    return `${base} text-muted-foreground hover:text-foreground cursor-pointer`;
-  });
-
-  async function handleMoveToEnd() {
-    if (isMovingEnd || !device) return;
-
-    isMovingEnd = true;
-    moveEndResult = 'idle';
-
-    try {
-      // ROW 5 (2026-04-21): see handleMoveToTop note.
-      await moveDeviceToEnd(device.devicePath);
-      await selectDevice(device.devicePath);
-      moveEndResult = 'success';
-      setTimeout(() => {
-        moveEndResult = 'idle';
-      }, 1000);
-    } catch (error) {
-      logger.error('Failed to move device to end:', { component: 'BaseDeviceControl', error });
-      moveEndResult = 'error';
-      setTimeout(() => {
-        moveEndResult = 'idle';
-      }, 1000);
-    } finally {
-      isMovingEnd = false;
-    }
-  }
 </script>
 
 <div
@@ -308,46 +200,6 @@ import { logger } from '$lib/utils/logger';
     </div>
   {/if}
 
-  <!-- The reorder arrows are the TRACK chain's (issue #491): a pad's chain
-       is its instrument and an effect or two, and "first position" there
-       would put an audio effect ahead of the instrument. Hidden under a scope. -->
-  {#if showMoveToTop && device && fxScope === null && !trackHeld}
-    <button
-      class={buttonClasses()}
-      onclick={handleMoveToTop}
-      disabled={isMoving || moveResult !== 'idle'}
-      aria-label="Move device to first position"
-    >
-      {#if isMoving}
-        <div class="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full"></div>
-      {:else if moveResult === 'success'}
-        <Check class="w-4 h-4" />
-      {:else if moveResult === 'error'}
-        <X class="w-4 h-4" />
-      {:else}
-        <ArrowLeft class="w-4 h-4" />
-      {/if}
-    </button>
-  {/if}
-
-  {#if showMoveToEnd && device && fxScope === null && !trackHeld}
-    <button
-      class={buttonEndClasses()}
-      onclick={handleMoveToEnd}
-      disabled={isMovingEnd || moveEndResult !== 'idle'}
-      aria-label="Move device to last position"
-    >
-      {#if isMovingEnd}
-        <div class="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full"></div>
-      {:else if moveEndResult === 'success'}
-        <Check class="w-4 h-4" />
-      {:else if moveEndResult === 'error'}
-        <X class="w-4 h-4" />
-      {:else}
-        <ArrowRight class="w-4 h-4" />
-      {/if}
-    </button>
-  {/if}
 </div>
 
 <style>
@@ -384,14 +236,13 @@ import { logger } from '$lib/utils/logger';
     border-color: var(--line) !important;
   }
 
-  /* Always-on device micro-label (HUD voice, §5.6). Top-CENTER so it clears the
-     top-left move-to-top / top-right move-to-end reorder buttons on active slots. */
+  /* Always-on device micro-label (HUD voice, §5.6), top-center. */
   .device-headline {
     position: absolute;
     top: 4px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 9; /* below the z-10 move buttons; label is pointer-events:none so this is paint order only */
+    z-index: 9; /* pointer-events:none, so this is paint order only */
     pointer-events: none;
     font-size: 9px;
     font-weight: 600;
@@ -447,36 +298,4 @@ import { logger } from '$lib/utils/logger';
     }
   }
 
-  /* Move-to-top / move-to-end result inks — every skin. Was Tailwind
-     text-green-500 / text-red-500 (chrome literals); the state tokens are the
-     cookbook's Graticule-equivalent for those (play-green / rec-red), so the
-     1s ✓/✗ flash reads the same here and picks up ChosenPlay / ChosenRecord
-     under the Live palettes. */
-  .move-ok {
-    color: var(--act-play);
-  }
-  .move-err {
-    color: var(--act-rec);
-  }
-
-  /* ---- Live skin: the reorder buttons are square-cornered glyph buttons
-     (the global rounded-* squash lands at --radius-md; Live's device-title
-     buttons are 2px). Their disabled state (mid-move / result flash) keeps
-     the disabled foreground on the same field — never an opacity dim — with
-     the ✓/✗ inks winning over it. The loading pulse under the Live palette
-     is monochrome (RangeDefault) like every other device value there; hybrid
-     keeps the family accent. */
-  :global([data-grammar="flat"]) .move-btn {
-    border-radius: 2px;
-  }
-  :global([data-grammar="flat"]) .move-btn:disabled {
-    opacity: 1;
-    color: var(--flat-disabled-fg);
-  }
-  :global([data-grammar="flat"]) .move-btn.move-ok {
-    color: var(--act-play);
-  }
-  :global([data-grammar="flat"]) .move-btn.move-err {
-    color: var(--act-rec);
-  }
 </style>

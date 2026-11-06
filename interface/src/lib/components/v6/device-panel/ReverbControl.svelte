@@ -60,7 +60,7 @@
   }
 </script>
 
-<BaseDeviceControl {position} {device} title="Reverb" showMoveToTop={true} showMoveToEnd={true}>
+<BaseDeviceControl {position} {device} title="Reverb">
   {#snippet children({ sendParam, storePendingParam, triggerLoad, handleTap, isGhost, isLoading, color, openView })}
     {#if tail && !isGhost && !isLoading}
       {@const onset = tail.input.onset}

@@ -62,7 +62,7 @@
   );
 </script>
 
-<BaseDeviceControl {position} {device} title="Utility" showMoveToTop={true} showMoveToEnd={true}>
+<BaseDeviceControl {position} {device} title="Utility">
   {#snippet children({ sendParam, storePendingParam, triggerLoad, handleTap, isGhost, isLoading, color, openView })}
     <!-- `color` is the chokepoint scheme: the focused track's ink for this
          trackTint device (ADR-400), grey utility family when no track. -->

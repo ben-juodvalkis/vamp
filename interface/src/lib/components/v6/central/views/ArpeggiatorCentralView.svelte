@@ -12,13 +12,7 @@
    * NO props required - all controls query their slots internally.
    */
 
-  import { logger } from '$lib/utils/logger';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
-  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
-  import ArrowRight from '@lucide/svelte/icons/arrow-right';
-  import Check from '@lucide/svelte/icons/check';
-  import X from '@lucide/svelte/icons/x';
-  import { selectDevice, moveDeviceToTop, moveDeviceToEnd } from '$lib/services/deviceMoveService';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -207,102 +201,10 @@
   }
 
   let patternPickerOpen = $state(false);
-
-  // ===== MOVE ARP DEVICE FUNCTIONALITY =====
-  let isMovingArpLeft = $state(false);
-  let moveArpLeftResult = $state<'idle' | 'success' | 'error'>('idle');
-  let isMovingArpRight = $state(false);
-  let moveArpRightResult = $state<'idle' | 'success' | 'error'>('idle');
-
-  function getMoveButtonClasses(position: 'left' | 'right', isMoving: boolean, result: 'idle' | 'success' | 'error') {
-    const side = position === 'left' ? 'left-2' : 'right-2';
-    const base = `absolute top-2 ${side} z-10 p-1.5 rounded transition-colors duration-200`;
-
-    // Status inks are tokens for every skin (Graticule-equivalent fallbacks
-    // for the old text-green-500 / text-red-500 literals — see the style block).
-    if (result === 'success') return `${base} move-ok`;
-    if (result === 'error') return `${base} move-err`;
-    if (isMoving) return `${base} text-muted-foreground`;
-    return `${base} text-muted-foreground hover:text-foreground cursor-pointer`;
-  }
-
-  async function handleMoveArpToTop() {
-    const d = arp.device;
-    if (isMovingArpLeft || !d) return;
-    isMovingArpLeft = true;
-    moveArpLeftResult = 'idle';
-    try {
-      await moveDeviceToTop(d.devicePath);
-      await selectDevice(d.devicePath);
-      moveArpLeftResult = 'success';
-      setTimeout(() => { moveArpLeftResult = 'idle'; }, 1000);
-    } catch (error) {
-      logger.error('Failed to move arp device to top:', { component: 'ArpeggiatorCentralView', error });
-      moveArpLeftResult = 'error';
-      setTimeout(() => { moveArpLeftResult = 'idle'; }, 1000);
-    } finally {
-      isMovingArpLeft = false;
-    }
-  }
-
-  async function handleMoveArpToEnd() {
-    const d = arp.device;
-    if (isMovingArpRight || !d) return;
-    isMovingArpRight = true;
-    moveArpRightResult = 'idle';
-    try {
-      await moveDeviceToEnd(d.devicePath);
-      await selectDevice(d.devicePath);
-      moveArpRightResult = 'success';
-      setTimeout(() => { moveArpRightResult = 'idle'; }, 1000);
-    } catch (error) {
-      logger.error('Failed to move arp device to end:', { component: 'ArpeggiatorCentralView', error });
-      moveArpRightResult = 'error';
-      setTimeout(() => { moveArpRightResult = 'idle'; }, 1000);
-    } finally {
-      isMovingArpRight = false;
-    }
-  }
 </script>
 
 <!-- NO {#if device} gate - always render, each control handles its own state -->
 <div class="arp-root h-full w-full flex p-(--central-inset) gap-(--central-gap) relative">
-  {#if arp.device}
-    <button
-      class={getMoveButtonClasses('left', isMovingArpLeft, moveArpLeftResult)}
-      onclick={handleMoveArpToTop}
-      disabled={isMovingArpLeft || moveArpLeftResult !== 'idle'}
-      aria-label="Move arp device to first position"
-    >
-      {#if isMovingArpLeft}
-        <div class="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full"></div>
-      {:else if moveArpLeftResult === 'success'}
-        <Check class="w-4 h-4" />
-      {:else if moveArpLeftResult === 'error'}
-        <X class="w-4 h-4" />
-      {:else}
-        <ArrowLeft class="w-4 h-4" />
-      {/if}
-    </button>
-
-    <button
-      class={getMoveButtonClasses('right', isMovingArpRight, moveArpRightResult)}
-      onclick={handleMoveArpToEnd}
-      disabled={isMovingArpRight || moveArpRightResult !== 'idle'}
-      aria-label="Move arp device to last position"
-    >
-      {#if isMovingArpRight}
-        <div class="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full"></div>
-      {:else if moveArpRightResult === 'success'}
-        <Check class="w-4 h-4" />
-      {:else if moveArpRightResult === 'error'}
-        <X class="w-4 h-4" />
-      {:else}
-        <ArrowRight class="w-4 h-4" />
-      {/if}
-    </button>
-  {/if}
-
   <!-- Pattern (Style param) — tap to open full-view picker -->
   <div class="flex-1 flex flex-col">
     <button
@@ -436,13 +338,6 @@
      / .device-segment classes (§5.5). -->
 
 <style>
-  /* Move-button status inks — tokens for EVERY skin. Graticule-equivalent
-     replacements for the old text-green-500 / text-red-500 literals so the
-     Graticule render is unchanged while the flat skins get ChosenPlay /
-     ChosenRecord. */
-  .move-ok { color: var(--act-play); }
-  .move-err { color: var(--act-rec); }
-
   /* Pattern chooser: the ink that used to be inline (border + glyph colour)
      is lifted into --pattern-ink so the flat skins can re-read it below. Same
      three declarations, same values — Graticule is unchanged. */

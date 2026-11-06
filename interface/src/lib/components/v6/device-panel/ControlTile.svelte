@@ -59,8 +59,6 @@
 		{device}
 		title={DEVICE_PRESETS[type]?.defaultName ?? control.title}
 		{disableCentralViewOnTap}
-		showMoveToTop={true}
-		showMoveToEnd={true}
 	>
 		{#snippet children({ device: live, sendParam, storePendingParam, triggerLoad, handleTap, isGhost, isLoading, color, openView })}
 			{@const names = live ? selectedTrackStore.paramNamesForDevice(live) : []}

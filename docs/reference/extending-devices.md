@@ -154,7 +154,7 @@ Key points:
   );
 </script>
 
-<BaseDeviceControl {position} {device} title="Delay" showMoveToTop={true}>
+<BaseDeviceControl {position} {device} title="Delay">
   {#snippet children({ sendParam, storePendingParam, triggerLoad, handleTap, isGhost, isLoading, color })}
     <DeviceXY
       xValue={timeValue}
@@ -182,8 +182,8 @@ Rules:
 - `$derived` reads from the selected-track store (which proxies to
   the v3 normalized store). Never hold a `$state` snapshot that
   shadows the store.
-- Use `BaseDeviceControl` — it handles tap-to-load, ghost state,
-  move-to-top, and central-view transitions.
+- Use `BaseDeviceControl` — it handles tap-to-load, ghost state
+  and central-view transitions.
 - Normalize to 0–1 for display; multiply by `max-min` when sending
   to Ableton. `sendParam` forwards a 0–1 value — the device
   metadata in `data/device-configs.json` rescales on the UI side.
@@ -233,7 +233,6 @@ Virtual device controls:
 - Use `slotKey` instead of `position`.
 - Set `disableCentralViewOnTap={true}` — the user is already in the
   right view, re-triggering navigation would loop.
-- Set `showMoveToTop={true}` to get the reorder arrow.
 
 ### 1.7 Step 5 — (optional) central display view
 
@@ -416,18 +415,10 @@ with `/looping/v3/error` carrying
 `write-rejected detail="property-not-allowed"`. The UI error banner
 store surfaces this as a toast. There is no silent drop.
 
-## 4. Move-to-top arrows
+## 4. Reordering
 
-All device controls should enable `showMoveToTop={true}` on
-`BaseDeviceControl`. The arrow appoints the device (blue-hand in
-Ableton) and moves it to position 0 in the chain.
-
-- **Grid devices** — use `position` prop; arrow goes top-left.
-- **Virtual devices** — use `slotKey` prop; arrow goes top-left.
-
-Implementation lives in `BaseDeviceControl.svelte`; it uses
-`deviceMoveService.ts` which fires `/looping/v3/device/move`
-(addresses carry `devicePath`, not int IDs).
+A device is reordered by dragging its cell in the chain overview
+(`ChainOverview`); tiles carry no reorder arrows (removed 2026-11-05).
 
 ## 5. Parameter index verification
 

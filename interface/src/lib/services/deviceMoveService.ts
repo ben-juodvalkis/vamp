@@ -17,7 +17,6 @@ import { logger } from '$lib/utils/logger';
 
 const V3_DEVICE_SELECT_ADDRESS = '/looping/v3/device/select';
 const V3_DEVICE_MOVE_TO_TOP_ADDRESS = '/looping/v3/device/move_to_top';
-const V3_DEVICE_MOVE_TO_END_ADDRESS = '/looping/v3/device/move_to_end';
 const V3_DEVICE_MOVE_ADDRESS = '/looping/v3/device/move';
 
 /**
@@ -49,28 +48,6 @@ export async function moveDeviceToTop(devicePath: string): Promise<void> {
 		await send(V3_DEVICE_MOVE_TO_TOP_ADDRESS, [devicePath]);
 	} catch (error) {
 		logger.error('Failed to move device to top:', {
-			component: 'deviceMove',
-			devicePath,
-			error,
-		});
-		throw error;
-	}
-}
-
-/**
- * Move the device at `devicePath` to the last index in its parent's
- * chain. Wire shape mirrors `moveDeviceToTop`; the Python handler
- * passes `len(parent.devices)` as the target index. Live's
- * `move_device` treats the index as the position before the source
- * is removed, so `count` (not `count - 1`) means "append" — using
- * `count - 1` would land on second-from-end after Live shifts the
- * source out first.
- */
-export async function moveDeviceToEnd(devicePath: string): Promise<void> {
-	try {
-		await send(V3_DEVICE_MOVE_TO_END_ADDRESS, [devicePath]);
-	} catch (error) {
-		logger.error('Failed to move device to end:', {
 			component: 'deviceMove',
 			devicePath,
 			error,

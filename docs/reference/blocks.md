@@ -44,7 +44,7 @@ Import from `$lib/components/v6/blocks`.
 
 `interface/src/lib/components/v6/device-panel/BaseDeviceControl.svelte`
 
-`BaseDeviceControl`, the shell every FX-grid tile is built in: it resolves its `position` or `slotKey` to an FX-grid slot and hands its snippet the device, the ghost and loading state, and the actions. Reads the slot (`slotRegistry`, `selectedTrackStore`) and the pad scope a held Drum Rack pad sets. Writes through what it hands down: `sendParam` (`services/deviceParams`, which drops a write while there is no device), `storePendingParam`, `triggerLoad`, `handleTap` (opens the view, selects the device) and move-to-top / end (`deviceMoveService`). A tap never loads a ghost tile: call `triggerLoad` from the first drag frame (ADR-167). It reads `position` / `slotKey` once at mount, so a host that changes slot must re-key the component.
+`BaseDeviceControl`, the shell every FX-grid tile is built in: it resolves its `position` or `slotKey` to an FX-grid slot and hands its snippet the device, the ghost and loading state, and the actions. Reads the slot (`slotRegistry`, `selectedTrackStore`) and the pad scope a held Drum Rack pad sets. Writes through what it hands down: `sendParam` (`services/deviceParams`, which drops a write while there is no device), `storePendingParam`, `triggerLoad`, and `handleTap` (opens the view, selects the device). Reordering is the chain overview's drag. A tap never loads a ghost tile: call `triggerLoad` from the first drag frame (ADR-167). It reads `position` / `slotKey` once at mount, so a host that changes slot must re-key the component.
 
 ### MidiWheel
 
