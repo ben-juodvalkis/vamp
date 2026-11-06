@@ -3243,11 +3243,9 @@
 	   the whole tile, and a halo of the well's colour keeps the name
 	   readable over the picture and the handle. */
 	.preset-tile.faced .tile-name {
-		/* Centred in the TOP half (user, 2026-11-06): the handles rest low
-		   and the fills rise from the floor, so the top is the clear half. */
 		position: absolute;
 		inset-inline: 0;
-		top: 25%;
+		top: 50%;
 		transform: translateY(-50%);
 		z-index: 2;
 		padding: 0 8px;
