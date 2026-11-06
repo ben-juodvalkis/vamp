@@ -4,6 +4,12 @@
 #   fastlane ios beta       archive and upload it to TestFlight
 #   fastlane ios release    archive and upload it to App Store Connect, for
 #                           review once submitted there (never auto-submits)
+#   fastlane ios submit version:1.2 notes:/abs/whats-new.txt
+#                           put What's New on that version (made if need be),
+#                           attach its newest processed build and submit it
+#                           for review; nothing else on the listing changes
+#                           (submit:false stops before submitting, for a
+#                           person to press Submit in App Store Connect)
 #   fastlane ios screenshots  replace the listing's screenshots: the iPad's
 #                           with AppStore/screenshots/*.png and the iPhone's
 #                           with AppStore/screenshots/iphone/*.png, each in
@@ -22,6 +28,12 @@
 #   ASC_KEY_ID      the key's ID (App Store Connect → Users and Access → Integrations)
 #   ASC_ISSUER_ID   the issuer ID, shown above the key table on that page
 #   ASC_KEY_PATH    path to AuthKey_<ID>.p8 (downloadable once)
+#
+# 2026-11-05, run from an agent's background shell: `ios release` hung twice
+# right after ARCHIVE SUCCEEDED, before the export, with nothing running. The
+# same archive exported at once with `xcodebuild -exportArchive ... </dev/null`
+# and uploaded with `xcrun altool --upload-app` (the API key's values). Give a
+# lane stdin from /dev/null when no one is at the terminal.
 #
 # The archives build into build/ (gitignored), apart from the build
 # scripts/install-mac-app.sh installs from.
@@ -115,6 +127,59 @@ platform :ios do
       precheck_include_in_app_purchases: false,
       force: true,
     )
+  end
+
+  desc "Put What's New on a version, attach its newest processed build, submit it for review"
+  lane :submit do |options|
+    version_string = options[:version].to_s
+    notes_path = options[:notes].to_s
+    UI.user_error!("Usage: fastlane ios submit version:1.2 notes:/absolute/whats-new.txt") if version_string.empty? || notes_path.empty?
+    notes = File.read(File.expand_path(notes_path), encoding: "UTF-8").strip
+    UI.user_error!("#{notes_path} is empty") if notes.empty?
+
+    api_key = load_api_key
+    Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.from(hash: api_key)
+    platform = Spaceship::ConnectAPI::Platform::IOS
+    app = Spaceship::ConnectAPI::App.find(APP_ID_PAD)
+
+    # The version in Prepare for Submission: this one, renamed to it, or made.
+    version = app.get_edit_app_store_version(platform: platform)
+    if version.nil?
+      Spaceship::ConnectAPI.post_app_store_version(app_id: app.id, attributes: { versionString: version_string, platform: platform })
+      version = app.get_edit_app_store_version(platform: platform)
+    elsif version.version_string != version_string
+      version.update(attributes: { versionString: version_string })
+      version = app.get_edit_app_store_version(platform: platform)
+    end
+    UI.user_error!("No editable #{version_string} on App Store Connect") unless version&.version_string == version_string
+
+    version.get_app_store_version_localizations.each do |loc|
+      loc.update(attributes: { whatsNew: notes })
+      UI.message("What's New set for #{loc.locale}")
+    end
+
+    # Apple processes an upload for some minutes before it can be chosen.
+    build = nil
+    60.times do
+      build = Spaceship::ConnectAPI::Build.all(app_id: app.id, version: version_string, platform: platform,
+                                               processing_states: "VALID", limit: 1).first
+      break if build
+      UI.message("Waiting for a processed #{version_string} build…")
+      sleep(30)
+    end
+    UI.user_error!("No processed #{version_string} build after 30 minutes") unless build
+    version.select_build(build_id: build.id)
+    UI.message("Build #{build.version} chosen for #{version_string}")
+    if options[:submit] == false || options[:submit].to_s == "false"
+      UI.success("#{version_string} (build #{build.version}) ready to submit in App Store Connect")
+      next
+    end
+
+    submission = app.get_in_progress_review_submission(platform: platform) ||
+                 app.create_review_submission(platform: platform)
+    submission.add_app_store_version_to_review_items(app_store_version_id: version.id)
+    submission.submit_for_review
+    UI.success("#{version_string} (build #{build.version}) submitted for review")
   end
 
   desc "Replace the iPad and iPhone screenshots on the version being prepared with AppStore/screenshots"
