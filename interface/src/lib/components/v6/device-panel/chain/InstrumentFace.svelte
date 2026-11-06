@@ -91,13 +91,15 @@
   // oscillator colors. Coarse is relative: the dot rests at the middle,
   // and a drag reaches an octave either side of the ratio the oscillator
   // held at touch-down (a preset at 24 sweeps 12..48), landing on Live's
-  // whole ratios; the ratio reads beside the letter.
+  // whole ratios; the ratio reads beside the letter while dragging.
   // one switched off dims and turns on at the first touch. The algorithm
   // is the cell header's (OperatorHeadAlgorithm). By name: Operator's
   // indices move with its sections.
   const OP_OSCS = ['A', 'B', 'C', 'D'] as const;
   // The ratio each pad's drag is centered on, from touch-down to release.
   let opAnchor: (number | null)[] = [null, null, null, null];
+  // Which pads a finger is dragging: only they show their ratio.
+  let opDragging = $state([false, false, false, false]);
   // Level takes a drag twice the pad's height to cross.
   const OP_SENSITIVITY = [1, 0.5] as const;
   const OP_SCHEMES = OPERATOR_OSC_COLORS.map((ink) => schemeFromInk(ink));
@@ -120,6 +122,7 @@
   function opPlay(i: number, x: number, level: number) {
     const o = OP_OSCS[i];
     if (!opOn[i]) opWrite(`Osc-${o} On`, 1);
+    opDragging[i] = true;
     const anchor = (opAnchor[i] ??= opRatioOf(o));
     opWrite(`${o} Coarse`, coarseStepAt(anchor, x) / OP_COARSE_MAX);
     opWrite(`Osc-${o} Level`, level);
@@ -164,12 +167,15 @@
         <DeviceXY
           xValue={0.5}
           yValue={opRead(`Osc-${o} Level`, i === 0 ? 1 : 0)}
-          title={`${o} ×${opRatioOf(o)}`}
+          title={opDragging[i] ? `${o} ×${opRatioOf(o)}` : o}
           titleAt="bottom"
           showCurve={false}
           sensitivity={OP_SENSITIVITY}
           onInteraction={(x, y) => opPlay(i, x, y)}
-          onRelease={() => (opAnchor[i] = null)}
+          onRelease={() => {
+            opAnchor[i] = null;
+            opDragging[i] = false;
+          }}
           color={OP_SCHEMES[i]}
         />
       </div>
