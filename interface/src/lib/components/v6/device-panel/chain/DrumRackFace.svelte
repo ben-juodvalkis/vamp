@@ -1,24 +1,20 @@
 <script lang="ts">
   /**
-   * A Drum Rack's face in the chain overview: its pads, laid out as Live's
-   * rack lays them (rows, lowest along the bottom; 2026-10-28), lit as the
-   * Drum Rack view lights them (2026-10-27, in place of the kit's Trnsp) — the pads in
-   * play (the playing clip's, Live's selection, the held), flashing as the
-   * clip plays them. A hold scopes the chain to that pad and lifting
-   * returns; a tap latches, by `drumPadScope`'s rule, the view's own.
+   * A Drum Rack's face in the chain overview: the kit's Trnsp, the one
+   * control every native kit gets — `vm.pitch`, whole semitones on ±48, the
+   * surface fanning it out to every pad's Transpose. Under a held or latched
+   * pad it is that pad's, by `useDrumVm`'s rule, as the Drum Rack view's own
+   * Trnsp is. It wears the drum mark beside its label, so the cell says what
+   * the device is.
    *
-   * The chain keeps this cell, first, while a pad is scoped (ChainOverview's
-   * kit cell), so the pads stay under the finger as the chain turns into
-   * the pad's.
+   * Back from the pads (2026-10-27 to 2026-11-05, the user's call: one
+   * important control, not the pads). The pads, and holding one to scope
+   * the chain, are the Drum Rack view's.
    */
-  import DrumPadGrid from '$lib/components/v6/central/views/DrumPadGrid.svelte';
-  import { useClipPads } from '$lib/components/v6/central/views/drum/useClipPads.svelte';
+  import DeviceSlider from '../DeviceSlider.svelte';
+  import VmSlot from '$lib/components/v6/central/views/drum/VmSlot.svelte';
   import { useDrumVm } from '$lib/components/v6/central/useDrumVm.svelte';
-  import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
-  import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
-  import { VM } from '$lib/services/drumVirtualMacros';
-  import { useCellSize } from './cellSize';
-  import type { MomentaryReleaseReason } from '$lib/components/v6/tracks/TrackStrip/utils/momentaryPress';
+  import { VM_PITCH_MIN, VM_PITCH_MAX } from '$lib/services/drumVirtualMacros';
   import type { DeviceRecord } from '$lib/stores/v3/normalized.svelte';
   import type { DeviceColorScheme } from '$lib/config/devicePresets';
 
@@ -29,59 +25,22 @@
 
   let { device, color }: Props = $props();
 
-
-  const devicePath = $derived(device.devicePath);
-  const clip = useClipPads(() => devicePath.split('/devices/')[0]);
-  const vm = useDrumVm(() => devicePath, { kitFunctions: [], functions: () => [] });
-
-  // A rack hot-swapped in place keeps its path, so a latch could outlive
-  // the pad it named. As the view does.
-  $effect(() => {
-    const notes = (vm.members?.pads ?? []).map((p) => p.note);
-    if (notes.length) drumPadScope.retainLatched(devicePath, notes);
-  });
-
-  function onPress(note: number, pointerId: number) {
-    drumPadScope.press(devicePath, note, pointerId);
-    selectedTrackStore.setPropertyValue(devicePath, VM.selectedPad, note);
-  }
-
-  // Live's layout, four across as the rack is, or two where the cell is
-  // too narrow for four tiles to take a name (user, 2026-10-28; the
-  // cell's size, ADR-492).
-  const cellSize = useCellSize();
-  const rackColumns = $derived(cellSize()?.widthClass === 'wide' || !cellSize()?.widthClass ? 4 : 2);
-
-  function onRelease(pointerId: number, reason: MomentaryReleaseReason = 'up') {
-    drumPadScope.release(pointerId, reason);
-  }
+  const vm = useDrumVm(() => device.devicePath, { kitFunctions: ['pitch'], functions: () => ['pitch'] });
+  const pitchState = $derived(vm.state('pitch'));
 </script>
 
-<div class="drum-face">
-  <DrumPadGrid
-    pads={vm.members?.pads ?? []}
-    selectedNote={vm.selectedNote}
-    heldNotes={vm.heldNotes}
-    clipNotes={clip.clipNotes}
-    litNotes={clip.litNotes}
+<VmSlot state={pitchState} fn="pitch" class="flex-1 flex flex-col" badge={vm.badge('pitch')}>
+  <DeviceSlider
+    value={vm.value('pitch') ?? 0}
+    labelOrientation="horizontal"
+    title="Trnsp"
+    icon="drum"
     {color}
-    {rackColumns}
-    {onPress}
-    {onRelease}
+    min={VM_PITCH_MIN}
+    max={VM_PITCH_MAX}
+    centerOrigin={true}
+    centerValue={0}
+    isGhost={pitchState === 'none'}
+    onInteraction={(value) => vm.write('pitch', Math.round(value))}
   />
-</div>
-
-<style>
-  /* The grid sizes itself for a column beside the view's controls; here
-     it has the cell, so it takes the whole of it. */
-  .drum-face {
-    flex: 1;
-    min-width: 0;
-    min-height: 0;
-    display: flex;
-  }
-  .drum-face :global(.pad-grid) {
-    flex: 1 1 auto;
-    width: 100%;
-  }
-</style>
+</VmSlot>

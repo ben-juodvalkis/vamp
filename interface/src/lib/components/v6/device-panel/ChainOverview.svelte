@@ -40,8 +40,8 @@
    * Permute carries its mute and pitch steps (`chain/PermuteStepsFace`),
    * the track's instrument the control its view is known by
    * (`chain/InstrumentFace`: Omnisphere's ORB, Drift's filter), and a
-   * Drum Rack its pads (`chain/DrumRackFace`, as the Drum Rack view
-   * draws them, 2026-10-27).
+   * Drum Rack its kit's Trnsp (`chain/DrumRackFace`, `vm.pitch`; its pads
+   * from 2026-10-27 until 2026-11-05).
    *
    * **A pad follows the Drum Rack view.** While a pad is held or latched
    * on the selected track's Drum Rack, the overview is that pad's chain —
@@ -174,7 +174,7 @@
     presetKey: string | null;
     tile: string | null;
     ink: string;
-    /** The track's Drum Rack, drawn as its pads, and kept first while a pad is scoped. */
+    /** The track's Drum Rack, drawn as its Trnsp, and kept first while a pad is scoped. */
     kit: boolean;
   };
 
@@ -268,9 +268,8 @@
 
   /*
    * The kit cell (2026-10-27): while a pad is scoped the chain is the
-   * pad's, but the rack's own cell stays first, with its pads, so a pad
-   * pressed there stays under the finger as the chain turns into its pad's
-   * — a hold lasts, and another pad is a tap away. Same key as the cell the
+   * pad's, but the rack's own cell stays first, its Trnsp then the scoped
+   * pad's (it carried the pads, held there, until 2026-11-05). Same key as the cell the
    * unscoped chain draws for it, so it is the same cell, never remounted.
    * Outside `cells`: the drops and their positions are the pad chain's.
    */
@@ -673,7 +672,7 @@
       </div></CellSize>
 
       {#if cell.kit}
-        <!-- A Drum Rack: its pads, as its view draws them. -->
+        <!-- A Drum Rack: the kit's Trnsp. -->
         <div class="cell-control" role="presentation"><CellSize>
           <DrumRackFace device={cell.device} color={selectedTrackScheme() ?? schemeFromInk(cell.ink)} />
         </CellSize></div>
