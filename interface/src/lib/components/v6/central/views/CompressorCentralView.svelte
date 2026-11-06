@@ -295,9 +295,10 @@
     min-height: 0;
   }
 
+  /* A large knob with its caption beside it: 96px + 12 (ADR-509). */
   .cutoff-slider-wrapper {
     flex-shrink: 0;
-    height: 72px;
+    height: 6.75rem;
   }
 
   .makeup-section {

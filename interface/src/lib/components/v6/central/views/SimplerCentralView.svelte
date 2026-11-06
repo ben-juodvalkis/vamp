@@ -420,10 +420,12 @@
          Start loaded the grid had an empty top cell right of Warp: the first
          bottom control flowed up into it and the rest of the row shifted one
          to the left (audit, 2026-09-13). Random Start is its own device, so
-         it also gets a seam. -->
+         it also gets a seam. The bottom row is a large knob and its caption
+         tall (150px, ADR-509), so Fade / Sens and Random draw at 96px; the
+         waveform takes the rest. -->
     <div
-      class="flex-1 min-h-0 grid grid-rows-2"
-      style="gap: var(--central-gap); grid-template-columns: repeat(7, minmax(0, 1fr)) auto minmax(0, 1fr);"
+      class="flex-1 min-h-0 grid"
+      style="gap: var(--central-gap); grid-template-rows: minmax(0, 1fr) 9.375rem; grid-template-columns: repeat(7, minmax(0, 1fr)) auto minmax(0, 1fr);"
     >
       <!-- TOP-LEFT: the swap pill lying across the top of the left-hand
            column (user's layout, 2026-09-16), then the Classic/Slice toggle,

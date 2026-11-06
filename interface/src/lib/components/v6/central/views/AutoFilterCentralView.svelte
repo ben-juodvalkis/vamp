@@ -150,9 +150,9 @@
 </script>
 
 <!--
-	10-share flex layout: each column = flex-[1], the two tabs span 2, the LFO
-	XY 3.
-	  shapes:2 | morph:1 | LFO XY:3 | filter types:2 | circuit+slope:1 | drive/mix:1
+	Flex layout: the two tabs span 2 shares, the LFO XY 3, circuit+slope 1;
+	Morph and Drive/Mix are fixed at a large knob's width (6.5rem, ADR-509).
+	  shapes:2 | morph | LFO XY:3 | filter types:2 | circuit+slope:1 | drive/mix
 	A `SectionDivider` sits between the LFO group (cols 1-3) and the rest.
 	Drive and Mix are value boxes stacked in the last column (ADR-477); the
 	column they freed went to the LFO pad, which was 2 shares.
@@ -178,9 +178,10 @@
 		{/each}
 	</div>
 
-	<!-- vertical MORPH slider -->
+	<!-- MORPH: one large knob (ADR-509), its column exactly as wide as the
+	     knob needs (96px + its 8px margin). -->
 	<div
-		class="flex-[1] min-h-0"
+		class="flex-none w-[6.5rem] min-h-0"
 	>
 		<DeviceSlider
 			value={morphAmount}
@@ -299,8 +300,9 @@
 	<!-- Drive over Mix (Dry/Wet), two value boxes (ADR-477). Last because
 	     Mix is the device's last stage (Live's own panel ends on Output,
 	     Soft Clip and Dry/Wet), and Drive, which sets Output, sits over it. -->
-	<div class="flex-[1] h-full flex flex-col gap-(--central-gap)">
-		<div class="flex-1 min-h-0">
+	<div class="flex-none w-[6.5rem] h-full flex flex-col gap-(--central-gap)">
+		<!-- A large knob and its caption: 104 x 150px (ADR-509); Mix takes the rest. -->
+		<div class="flex-none h-[9.375rem] min-h-0">
 			<DeviceSlider
 				value={drive}
 				title="Drive"

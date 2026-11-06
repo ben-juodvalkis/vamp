@@ -185,7 +185,7 @@
               value={paramValue(FILTER_ENV_AMOUNT)}
               title="Amt"
               face="knob"
-              knobSize="l"
+              knobSize="m"
               icon="depth"
               orientation="vertical"
               color={omniInk}
@@ -333,8 +333,11 @@
   /* The Filter envelope's Amount: one control beside a curve, narrower. */
   /* The envelope's amount, a knob past its stages (ADR-509): wider than a
      stage, so the knob is a readable size. */
+  /* Wide enough for a medium knob with its caption beside it (ADR-509):
+     the row is one envelope stage tall (109px), too short for a large one
+     or for a caption under a medium one. */
   .env-amount {
-    flex: 1.6 1 0;
+    flex: 0 0 9rem;
   }
 
   :global([data-grammar="flat"]) .omni-fx {

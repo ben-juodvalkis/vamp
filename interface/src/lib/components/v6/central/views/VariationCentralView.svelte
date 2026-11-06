@@ -109,7 +109,8 @@
 				<div class="var-head text-xs font-bold text-center opacity-70 pb-1">Grid</div>
 				<div class="var-stack">
 					<!-- The grids are one tab; the Rnd slider under it is not one
-					     of them. Each option keeps one share of the column. -->
+					     of them. Each option keeps one share of the column; the knob
+					     is a large one with its caption beside it, 108px tall (ADR-509). -->
 					<div class="var-tab device-segmented seg-grid" style="flex: {GRID_OPTIONS.length} 1 0; --btn-tint: {varInk.primary};">
 						{#each GRID_OPTIONS as option}
 							<button
@@ -119,7 +120,7 @@
 							>{option.label}</button>
 						{/each}
 					</div>
-					<div class="flex-1 min-h-0">
+					<div class="flex-none h-[6.75rem] min-h-0">
 						<DeviceSlider
 							value={amount / AMOUNT_MAX}
 							title="Rnd"

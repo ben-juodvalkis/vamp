@@ -315,7 +315,7 @@
 				value={lfoToTime}
 				title="LFO > Time"
 				face="knob"
-				knobSize="l"
+				knobSize="m"
 				icon="lfo"
 				orientation="vertical"
 				labelSize="small"
@@ -331,7 +331,7 @@
 				value={lfoToFilter}
 				title="LFO > Filter"
 				face="knob"
-				knobSize="l"
+				knobSize="m"
 				icon="cutoff"
 				orientation="vertical"
 				labelSize="small"
@@ -355,7 +355,7 @@
 				value={input}
 				title="Input"
 				face="knob"
-				knobSize="l"
+				knobSize="m"
 				icon="gain"
 				sensitivity={GAIN_SENSITIVITY}
 				orientation="vertical"
@@ -373,7 +373,7 @@
 				value={output}
 				title="Output"
 				face="knob"
-				knobSize="l"
+				knobSize="m"
 				icon="output"
 				sensitivity={GAIN_SENSITIVITY}
 				orientation="vertical"
@@ -420,15 +420,17 @@
 </div>
 
 <style>
-	/* Eleven equal columns — Time spans two for its knob (ADR-509), the
-	   filter graph four — with an `auto` track for each seam: Time + Filter
-	   | LFO (wave, rate, depths) | levels. */
+	/* Columns, with an `auto` track for each seam: Time + Filter | LFO
+	   (wave, rate, depths) | levels. Time spans two shares for its knob
+	   (ADR-509), the filter graph four. The knob columns are as wide as
+	   their knobs need, so each draws at its size: Rate a large knob
+	   (96px + 8), the two pairs medium ones (70px + 8). */
 	.echo-layout {
 		display: grid;
 		grid-template-columns:
 			repeat(6, minmax(0, 1fr)) auto
-			repeat(3, minmax(0, 1fr)) auto
-			repeat(2, minmax(0, 1fr));
+			minmax(0, 1fr) 6.5rem 4.875rem auto
+			4.875rem minmax(0, 1fr);
 		gap: var(--central-gap);
 		height: 100%;
 		width: 100%;

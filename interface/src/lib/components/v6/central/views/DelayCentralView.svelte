@@ -206,8 +206,10 @@
     flex: 1 1 0;
   }
 
+  /* A small knob with its caption beside it (48px + 12, ADR-509): the
+     sixteenths' tab, or Time's large knob, keeps the rest of the column. */
   .offset {
-    flex: 1 1 0;
+    flex: 0 0 3.75rem;
     min-height: 0;
     display: flex;
     flex-direction: column;
