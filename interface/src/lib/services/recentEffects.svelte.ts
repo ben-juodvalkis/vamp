@@ -61,11 +61,11 @@ const STORAGE_KEY = 'vamp.recentEffects';
  * The effects that fill the section past the recents, first first: Live's
  * own, so they are on every Mac, and the app's own amp racks. More than it
  * shows, so it stays full after the chain's own are skipped.
- * No Utility: the chain always has its own ghost (`UTILITY_GHOST`). Compressor and
- * Phaser come last, back since the section's tiles are one size and an
+ * No Utility: the chain always has its own ghost (`UTILITY_GHOST`). Compressor,
+ * Phaser and Pedal come last, back since the section's tiles are one size and an
  * empty slot shows (the user, 2026-11-05).
  */
-const DEFAULT_EFFECT_KEYS = ['echo', 'reverb', 'filter', 'guitar', 'bass', 'eq', 'saturator', 'squash', 'chorus', 'drum', 'redux', 'gate', 'shifter', 'ott', 'tremolo', 'compressor', 'phaser'] as const;
+const DEFAULT_EFFECT_KEYS = ['echo', 'reverb', 'filter', 'guitar', 'bass', 'eq', 'saturator', 'squash', 'chorus', 'drum', 'redux', 'gate', 'shifter', 'ott', 'tremolo', 'compressor', 'phaser', 'pedal'] as const;
 
 /** Other names a default's device goes by, as a recent or on a chain (a Hybrid Reverb preset is the Reverb). */
 const DEFAULT_ALSO_NAMED: Partial<Record<(typeof DEFAULT_EFFECT_KEYS)[number], readonly string[]>> = {

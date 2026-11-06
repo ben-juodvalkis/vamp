@@ -71,8 +71,8 @@ describe('recent effects', () => {
 		// The chain always has its own ghost Utility.
 		expect(DEFAULT_EFFECTS.map((d) => d.name)).not.toContain('Utility');
 		expect(DEFAULT_EFFECTS.map((d) => d.name)).toEqual(expect.arrayContaining(['Guitar', 'Bass Amp']));
-		// Compressor and Phaser last, so they fill only what the rest leave.
-		expect(DEFAULT_EFFECTS.map((d) => d.name).slice(-2)).toEqual(['Compressor', 'Phaser']);
+		// Compressor, Phaser and Pedal last, so they fill only what the rest leave.
+		expect(DEFAULT_EFFECTS.map((d) => d.name).slice(-3)).toEqual(['Compressor', 'Phaser', 'Pedal']);
 	});
 
 	it('puts the recents first, then the defaults they do not already name', () => {
