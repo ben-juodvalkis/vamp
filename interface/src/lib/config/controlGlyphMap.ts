@@ -23,6 +23,7 @@ export const CONTROL_GLYPHS = [
 	'output',
 	'pedal',
 	'amp',
+	'guitar',
 	'wah',
 	'spring',
 	'room',
