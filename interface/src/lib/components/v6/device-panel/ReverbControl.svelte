@@ -8,7 +8,7 @@
   import ReverbIrDisplay from '../central/views/reverb/ReverbIrDisplay.svelte';
   import { reverbTail, decayAtTailX } from '../central/views/reverb/reverbTail';
   import { useReverbIrPicture } from '../central/views/reverb/useReverbIrPicture.svelte';
-  import { HYBRID, LIVE_DEFAULTS, ROUTING_CONVOLUTION } from './hybridReverbParams';
+  import { HYBRID, LIVE_DEFAULTS, ROUTING_CONVOLUTION, algorithmFor } from './hybridReverbParams';
   import { controlFor, resolveParam, type ParamRef, type XyControl } from './deviceControls';
 
   interface Props {
@@ -45,6 +45,17 @@
   let tail = $derived(device && !runsIr ? reverbTail(raw, session.tempo) : null);
   const irPicture = useReverbIrPicture(() => devicePath, () => runsIr);
 
+  /**
+   * The pad names what the reverb is (user, 2026-11-06): the algorithm, or
+   * the IR's file (its extension dropped), not the device's name, which the
+   * cell's header already says. "Reverb" while there is nothing to name.
+   */
+  let padTitle = $derived.by(() => {
+    if (!device) return 'Reverb';
+    if (runsIr) return irPicture.file ? irPicture.file.replace(/\.[a-z0-9]+$/i, '') : 'IR';
+    return algorithmFor(raw(HYBRID.algoType)).name;
+  });
+
   // Convert 0-1 slider value to IR size factor range (0.2 to 5, with 1.0 at halfway)
   function mapToIRSizeFactor(sliderValue: number): number {
     // Clamp input to 0-1 range
@@ -62,13 +73,14 @@
 
 <BaseDeviceControl {position} {device} title="Reverb">
   {#snippet children({ sendParam, storePendingParam, triggerLoad, handleTap, isGhost, isLoading, color, openView })}
+    <div class="reverb-cell">
     {#if tail && !isGhost && !isLoading}
       {@const onset = tail.input.onset}
       <ReverbPortrait
         input={tail.input}
         crossoverLabel={tail.crossoverLabel}
         compact
-        title="Reverb"
+        title={padTitle}
         {color}
         onTap={handleTap}
         onMove={(x, y) => {
@@ -98,7 +110,7 @@
     <DeviceXY
       xValue={decayTimeValue}
       yValue={dryWetValue}
-      title="Reverb"
+      title={padTitle}
       {isGhost}
       {color}
       background={runsIr && !isGhost && !isLoading ? irBackground : undefined}
@@ -127,5 +139,18 @@
       }}
     />
     {/if}
+    </div>
   {/snippet}
 </BaseDeviceControl>
+
+<style>
+  .reverb-cell {
+    display: contents;
+  }
+  /* The pad's name (the algorithm or IR) is not drawn for now: a plate
+     behind it read as a black box over the picture, and plain text was lost
+     in the tail (user, 2026-11-06). It still names the pad for VoiceOver. */
+  .reverb-cell :global(.center-title) {
+    display: none;
+  }
+</style>

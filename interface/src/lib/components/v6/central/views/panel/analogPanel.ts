@@ -9,6 +9,11 @@
  * loop and velocity, and the amp, one more tap in), its LFO, Noise, Global,
  * Vibrato and MPE. Every parameter but Device On, by Live's names
  * (docs/reference/instruments/Analog.md).
+ *
+ * Since ADR-510 the view draws these sections itself, hand-laid on the face
+ * grid (`analog/AnalogPages.svelte`, as Drift's are), binding the same
+ * names; this description stays as the checked list of what Analog's
+ * pages cover (`instrumentPanels.test.ts`).
  */
 import type { InstrumentPanel, PanelGroup, PanelPage } from './panelTypes';
 

@@ -11,7 +11,15 @@ import {
 	knobGridRows,
 	knobSizeFor,
 	controlKnobSize,
+	faceKnobFit,
+	frameColumns,
+	pageCells,
+	pageGroupGrid,
+	pageOneRow,
+	pageSections,
+	pagePicks,
 	panelParamNames,
+	regionSections,
 	tabOptions,
 	TAB_MAX_OPTIONS,
 	type PanelGroup
@@ -181,5 +189,89 @@ describe('a grid of knobs laid out so each draws at its size (ADR-509 addendum)'
 			const ch = (h - 16 * (rows - 1)) / rows;
 			expect(knobDiameter(size, cw, ch)).toBeGreaterThanOrEqual(KNOB_PX[size] - 0.5);
 		}
+	});
+});
+
+/** A column's width at a face `w` wide: the inset, a seam track each, the face's gutters. */
+const column = (secs: number[], w: number) => {
+	const cols = secs.reduce((a, b) => a + b, 0);
+	const tracks = cols + secs.length - 1;
+	return (w - 32 - 17 * (secs.length - 1) - 8 * (tracks - 1)) / cols;
+};
+const RULE_PANELS = { Operator: OPERATOR_PANEL, Electric: ELECTRIC_PANEL, Collision: COLLISION_PANEL };
+
+describe('a panel’s frame on the face grid (ADR-510)', () => {
+	const sections = (p: typeof DRIFT_PANEL) => p.frame.flatMap((r) => regionSections(r));
+	it('gives each region its columns, a tab strip of like tabs a section a group', () => {
+		expect(sections(ELECTRIC_PANEL)).toEqual([2, 2, 2, 1]);
+		expect(sections(OPERATOR_PANEL)).toEqual([3, 3, 2, 2]);
+		expect(sections(COLLISION_PANEL)).toEqual([1, 1, 6, 1]);
+	});
+	it('gives every column of the three frames the width of a medium knob at 1000px', () => {
+		for (const panel of Object.values(RULE_PANELS)) expect(column(sections(panel), 1000)).toBeGreaterThanOrEqual(KNOB_PX.m + 8);
+	});
+	it('draws Electric’s knobs large, in a row on one line', () => {
+		const w = column(sections(ELECTRIC_PANEL), 1000);
+		expect(faceKnobFit(2, 2, w, 263)).toEqual({ knobCols: 2, rows: 1, size: 'l' });
+		expect(faceKnobFit(1, 1, w, 263).size).toBe('l');
+	});
+	it('stacks Operator’s Global three high over two columns, medium, names beside', () => {
+		const w = column(sections(OPERATOR_PANEL), 1000);
+		expect(faceKnobFit(3, 2, w, 263)).toEqual({ knobCols: 1, rows: 3, size: 'm' });
+	});
+	it('lays Collision’s resonator knobs in one row under the tabs, and its five MIDI amounts over six columns', () => {
+		const w = column(sections(COLLISION_PANEL), 1000);
+		expect(faceKnobFit(6, 6, w, 263 - 44 - 16)).toEqual({ knobCols: 6, rows: 1, size: 'm' });
+		expect(faceKnobFit(5, 6, w, 263 - 44 - 16)).toEqual({ knobCols: 5, rows: 1, size: 'm' });
+	});
+	it('pairs a mixed group’s knobs where it has fewer columns than controls (Operator’s Filter)', () => {
+		const filter = OPERATOR_PANEL.frame.find((r) => r.kind === 'group' && r.group.title === 'Filter');
+		if (filter?.kind !== 'group') throw new Error('no Filter');
+		expect(frameColumns(filter.group, 2).map((c) => c.controls.map((x) => x.param))).toEqual([['Filter Type'], ['Fe Amount', 'Filter Drive']]);
+	});
+	it('draws no XY the chain cell already plays: Operator’s filter pad is its page’s, not the frame’s', () => {
+		const frameParams = panelParamNames({ ...OPERATOR_PANEL, pages: [] });
+		expect(frameParams).not.toContain('Filter Freq');
+		expect(frameParams).not.toContain('Filter Res');
+		expect(OPERATOR_PANEL.pages.find((p) => p.id === 'filter')?.aside?.slot).toBe('filter');
+	});
+});
+
+describe('a section page on the face grid (ADR-510)', () => {
+	const page = (p: typeof DRIFT_PANEL, id: string) => p.pages.find((pg) => pg.id === id)!;
+	it('lays ten cells or fewer in one row, more two high, an envelope’s stages two to a column', () => {
+		expect(pageOneRow(page(ELECTRIC_PANEL, 'hammer'))).toBe(true);
+		expect(pageSections(page(ELECTRIC_PANEL, 'hammer'))).toEqual([3, 3, 4]);
+		const lfo = page(OPERATOR_PANEL, 'lfo');
+		expect(pageOneRow(lfo)).toBe(false);
+		expect(lfo.rows.flat().map((g) => pageGroupGrid(g))).toEqual([
+			{ columns: 2, rows: 2, cells: 4 },
+			{ columns: 2, rows: 2, cells: 3 },
+			{ columns: 2, rows: 2, cells: 3 },
+			{ columns: 1, rows: 2, cells: 2 },
+			{ columns: 2, rows: 1, cells: 4 }
+		]);
+	});
+	it('gives every page of the three panels at most ten columns, each holding a medium knob at 1000px', () => {
+		for (const [name, panel] of Object.entries(RULE_PANELS))
+			for (const pg of panel.pages) {
+				const secs = pageSections(pg);
+				expect(secs.reduce((a, b) => a + b, 0), `${name} ${pg.id}`).toBeLessThanOrEqual(10);
+				expect(column(secs, 1000), `${name} ${pg.id}`).toBeGreaterThanOrEqual(KNOB_PX.m + 8);
+			}
+	});
+	it('makes a long pick a picker and pairs it with the amount it names', () => {
+		const dest = page(COLLISION_PANEL, 'lfo1').rows.flat().find((g) => g.title === 'Destination A')!;
+		const cells = pageCells(dest);
+		expect(cells).toHaveLength(1);
+		expect(cells[0].control.param).toBe('LFO 1 Amt A');
+		expect(cells[0].picker?.param).toBe('LFO 1 Dest A');
+		expect(cells[0].mark).toBe('A');
+		// A loop's Retrig is not what R Vel amounts: two cells.
+		const loop = page(OPERATOR_PANEL, 'osc-A-env').rows.flat().find((g) => g.title === 'Loop')!;
+		expect(pageCells(loop).every((c) => !c.picker)).toBe(true);
+		expect(pagePicks({ kind: 'choice', param: 'T', options: ['a', 'b', 'c', 'd'] })).toBe(false);
+		expect(pagePicks({ kind: 'choice', param: 'T', options: ['a', 'b', 'c', 'd', 'e'] })).toBe(true);
+		expect(pagePicks({ kind: 'choice', param: 'T', options: ['a', 'b', 'c', 'd', 'e'] }, true)).toBe(false);
 	});
 });

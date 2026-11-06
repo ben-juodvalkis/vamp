@@ -22,8 +22,9 @@ the flat ring with nothing on it but the arc.
 - **A knob is a face, not a new control.** `DeviceSlider face="knob"` keeps
   the box's gesture exactly: a relative drag from where the finger lands, over
   the same length (the cell's, or the value-box travel when that is longer),
-  with the same throttle, tap, `onRelease` and `readout`. Either axis turns
-  it: up or right raises it. The whole cell is the touch target, so a knob is
+  with the same throttle, tap, `onRelease` and `readout`. A vertical drag
+  turns it, up raising it (either axis until 2026-11-06; see the last
+  addendum). The whole cell is the touch target, so a knob is
   as easy to hit as the box it replaces. `KnobFace.svelte` only draws.
 - **The face is the arc alone.** 270 degrees in the device ink, filled from
   its start, or from its top for a bipolar control; square ends. A short mark
@@ -189,5 +190,20 @@ height. What changed:
   are Reverb's knobs on the EQ tab small, where the curve keeps the width.
   These are the rule's size stepped down, named in each view.
 
+## Addendum (2026-11-06): vertical only, marks, and knobs for levels
+
+- **A knob turns on a vertical drag alone** (Ben, 2026-11-06), over its
+  height or the value-box travel: a sideways slip of the finger leaves it
+  where it was. Either axis turned it until then.
+- **A knob can drop its caption and carry a mark** (`DeviceSlider`'s
+  `knobCaption={false}`, `knobMark`): a letter or number in its middle at
+  rest, where the name is obvious from its neighbours — Drift's and
+  Wavetable's "1" / "2" levels, A D S R, a mod amount whose source chooser
+  (`central/ChoicePicker.svelte`) sits under it as its caption. The
+  aria-label keeps the name. A caption-less knob is centred in its cell.
+- **Levels and envelope stages may be knobs** where a hand-laid face or
+  page puts them in a knob column (Drift, Wavetable): the "played controls
+  stay boxes" line above holds for the rule-laid panels and the effects,
+  not for those.
+
 ## Tags
-`knob`, `value-box`, `central-view`, `instrument-panel`, `touch`

@@ -130,8 +130,8 @@
   });
 
   // Always true (PADS went 2026-09-26; uiPrefsStore pins it). The clear
-  // below, the pads-off layout (`:not(.vm-lead-pads)`) and the markup's
-  // no-pads path are UNREACHABLE since 2026-09-26, kept until the flag goes.
+  // below and the markup's no-pads path are UNREACHABLE since 2026-09-26,
+  // kept until the flag goes.
   let showPads = $derived(uiPrefsStore.showDrumPads);
   $effect(() => {
     if (!showPads) drumPadScope.clear();
@@ -218,20 +218,18 @@
   }
   let paneOpen = $derived(paneType !== null && fxScope !== null);
 
-  // ---- The lead group (user's layout, 2026-09-16) -------------------------
+  // ---- The face (ADR-510) -------------------------------------------------
   //
-  // On a DrumCell, Sampler or Simpler kit the swap pill lies across the top
-  // of the view's leading group — the pads plus Gain, Trnsp and the kit's
-  // third slider — instead of standing down the left of the view. All three
-  // are laid out on one grid (`.vm-lead-grid`) with the SAME columns, so
-  // Gain, Trnsp and Filter land on the same spot whichever kit is loaded
-  // (user, 2026-09-27: "make them more uniform so the muscle memory
-  // sticks"), and a pad is still exactly two sliders wide across the pill's
-  // edge. Every other profile, and an effect's pane, puts it over the pads
-  // alone (`.vm-pads-stack`); with PADS off there it keeps the column, since
-  // nothing mounts `HostedSwapPill`. A pads-alone pill sets the column's
-  // FLOOR, because the pill's name is the door to the browser (ADR-442) —
-  // see `.vm-pads-with-pill`.
+  // A DrumCell, Sampler or Simpler kit draws its row as a face: one grid of
+  // equal columns right of the pads, eight columns on every kit, whose
+  // first column is the view's Gain over Trnsp — so they land on the same
+  // spot whichever kit is loaded (user, 2026-09-27: "make them more uniform
+  // so the muscle memory sticks"). Every other profile, and an effect's
+  // pane, keeps the flex row. The swap pill lies over the pads on every
+  // kit (it lay across the pads and the kit's first sliders from
+  // 2026-09-16); a pads-alone pill sets the column's FLOOR, because the
+  // pill's name is the door to the browser (ADR-442) — see
+  // `.vm-pads-with-pill`.
   const swapHost = useSwapHost();
   let lead = $derived<'full' | 'sampler' | 'simpler' | null>(
     paneOpen
@@ -401,32 +399,21 @@
   {#if instrument}
   <div
     class="flex-1 min-h-0 flex gap-(--central-gap) p-(--central-inset) vm-with-pads"
-    class:vm-lead-grid={lead !== null}
-    class:vm-lead-pads={showPads}
-    class:vm-lead-pill={swapHost?.present ?? false}
     class:vm-with-strip={showStrip}
     data-vm-lead={lead ?? undefined}
   >
-    {#if lead !== null}
-      <div class="vm-lead-pill-cell">
-        <HostedSwapPill />
-      </div>
-    {/if}
     <!-- Live's pad view: hold to scope the controls to a pad (2026-09-08).
          Always on since its PADS switch went (2026-09-26). -->
     {#if showPads}
-      <!-- One cell on the lead grid; in the flex row it is `display: contents`
-           and the pads and the seam sit in the row as before. -->
+      <!-- `display: contents`: the pads and the seam sit in the row. -->
       <div class="vm-pads-cell">
-      <!-- Every other kit, and an effect's pane, puts the swap pill over the
-           pads alone (user, 2026-09-16) — as wide as the pad column, except
-           where the pill's own name needs more (see `.vm-pads-with-pill`). -->
-      <div class="vm-pads-stack" class:vm-pads-with-pill={lead === null && (swapHost?.present ?? false)}>
-        {#if lead === null}
-          <div class="vm-pads-pill">
-            <HostedSwapPill />
-          </div>
-        {/if}
+      <!-- The swap pill lies over the pads on every kit (ADR-510) — as wide
+           as the pad column, except where the pill's own name needs more
+           (see `.vm-pads-with-pill`). -->
+      <div class="vm-pads-stack" class:vm-pads-with-pill={swapHost?.present ?? false}>
+        <div class="vm-pads-pill">
+          <HostedSwapPill />
+        </div>
         <DrumPadGrid
           pads={members?.pads ?? []}
           {selectedNote}
@@ -451,31 +438,78 @@
       <!-- The pads pick WHAT you are moving; everything right of the seam
            moves it. Without the hairline the tiles ran straight into Gain
            at the same gap that separates two sliders, so nothing said the
-           two halves were different kinds of thing (2026-09-13). -->
+           two halves were different kinds of thing (2026-09-13). With a
+           central gap either side it is the face's own seam. -->
       <SectionDivider orientation="vertical" ink={drumRackInk.primary} />
       </div>
     {/if}
     {#if paneType !== null && fxScope !== null}
       <!-- An effect's view for the scoped pad, in place of every control. -->
       <PadFxPane deviceType={paneType} scope={() => fxScope} onBack={closePane} />
+    {:else if lead !== null}
+    <!-- A DrumCell, Sampler or Simpler kit: its face (ADR-510), one grid
+         of equal columns right of the pads, eight on every kit. Each row
+         draws the same first column, the view's Gain over Trnsp (user,
+         2026-09-27: "gain to be the same on both, and it to be the
+         leftmost slider"), so they sit on the same pixels whichever kit
+         is loaded; the view's Filter is the row's last section (under
+         the Time pad on a DrumCell kit). -->
+    <div class="flex-1 min-w-0 min-h-0 flex flex-col gap-(--central-gap) vm-controls vm-face-col" class:vm-face-strip={showStrip}>
+      {#if scopedProfile === 'sampler'}
+        <!-- Sampler kits: the Sampler row, every control a function fanned
+             out to each pad's Sampler by name (SamplerControlsRow). -->
+        <SamplerControlsRow
+          values={samplerValues}
+          states={samplerStates}
+          badges={samplerBadges}
+          color={controlInk}
+          hidden={['decay', 'sustain']}
+          onWrite={(control, value) => vm.write(control, value)}
+          gain={gainSlot}
+          filter={filterSlot}
+        />
+      {:else if scopedProfile === 'simpler'}
+        <!-- Simpler kits: the Simpler row, every control a function fanned
+             out to each pad's Simpler by name (SimplerControlsRow). -->
+        <SimplerControlsRow
+          values={simplerValues}
+          states={simplerStates}
+          badges={simplerBadges}
+          color={controlInk}
+          onWrite={(control, value) => vm.write(control, value)}
+          gain={gainSlot}
+          filter={filterSlot}
+        />
+      {:else}
+        <!-- DrumCell kits: Gain over Trnsp and Start, the FX pad over the
+             FX-type grid, the Time pad over Filter. -->
+        <DrumCellControlsRow
+          values={cellValues}
+          states={cellStates}
+          badges={cellBadges}
+          color={controlInk}
+          fxTypes={FX_TYPES}
+          onWrite={(control, value) => vm.write(control, value)}
+          gain={gainSlot}
+          filter={filterSlot}
+        />
+      {/if}
+      {#if showStrip && scopeNote !== null}
+        <!-- The scoped pad's notes in the playing clip, under the face, from
+             Gain to the right edge (2026-10-24, the user's call). -->
+        <div class="vm-strip">
+          <PadNotesStrip trackPath={trackPath ?? ''} clipPath={clip.playingClipPath} clipWindow={clip.clipWindow} note={scopeNote} ink={controlInk.primary} />
+        </div>
+      {/if}
+    </div>
     {:else}
-    <!-- Gain and Filter sit outside the profile switch, so they are in the
-         same place whatever the kit is: Gain the first slider after the
-         pads, Filter the last pad (user, 2026-09-27: "gain to be the same
-         on both, and it to be the leftmost slider"). Neither is drawn on a
-         macro-grid kit: the rack's mapped macros are its controls. On the
-         lead grid `grid-area` places them; in the flex row this markup
-         order does. A nested-rack or pitch-only kit draws Gain itself,
-         over Trnsp (ADR-477). -->
-    {#if scopedProfile !== 'macro-grid' && scopedProfile !== 'rack-macros' && scopedProfile !== 'pitch-only'}
-      <div class="flex h-full vm-gain-col">
-        {@render gainSlot()}
-      </div>
-    {/if}
-    <div
-      class="flex-1 min-w-0 min-h-0 flex flex-col vm-controls"
-      class:vm-controls-flat={lead !== null}
-    >
+    <!-- The kits off the face: a nested-rack kit's macros and a plugin
+         kit's mapped macros come and go with the kit, so their count is
+         the kit's, not a face's; a pitch-only kit is Gain over Trnsp and
+         a card. A nested-rack or pitch-only kit draws Gain itself, over
+         Trnsp (ADR-477); a macro-grid kit draws neither Gain nor Filter:
+         the rack's mapped macros are its controls. -->
+    <div class="flex-1 min-w-0 min-h-0 flex flex-col vm-controls">
     {#if scopedProfile === 'macro-grid'}
       <!-- A rack with mapped macros (or plugin-hosted pads): one slider per
            mapped macro, and nothing else. -->
@@ -494,28 +528,7 @@
         trnsp={members?.pitchMacro ? trnspSlot : undefined}
         gain={gainSlot}
       />
-    {:else if scopedProfile === 'sampler'}
-      <!-- Sampler kits: the Sampler row, every control a function fanned
-           out to each pad's Sampler by name (SamplerControlsRow). -->
-      <SamplerControlsRow
-        values={samplerValues}
-        states={samplerStates}
-        badges={samplerBadges}
-        color={controlInk}
-        hidden={['decay', 'sustain']}
-        onWrite={(control, value) => vm.write(control, value)}
-      />
-    {:else if scopedProfile === 'simpler'}
-      <!-- Simpler kits: the Simpler row, every control a function fanned
-           out to each pad's Simpler by name (SimplerControlsRow). -->
-      <SimplerControlsRow
-        values={simplerValues}
-        states={simplerStates}
-        badges={simplerBadges}
-        color={controlInk}
-        onWrite={(control, value) => vm.write(control, value)}
-      />
-    {:else if scopedProfile === 'pitch-only'}
+    {:else}
       <!-- Any other native class: Gain over Trnsp, where every kit keeps
            them (ADR-477), then the pad class. -->
       <div class="flex-1 grid grid-cols-4 gap-(--central-gap) min-h-0">
@@ -528,32 +541,17 @@
           <div class="vm-kit-detail">{kitSummary?.detail ?? ''}</div>
         </div>
       </div>
-    {:else}
-      <!-- DrumCell kits: FX pad over the FX-type grid, Time pad over
-           Filter, Start and Trnsp. -->
-      <DrumCellControlsRow
-        values={cellValues}
-        states={cellStates}
-        badges={cellBadges}
-        color={controlInk}
-        fxTypes={FX_TYPES}
-        onWrite={(control, value) => vm.write(control, value)}
-        filter={filterSlot}
-      />
     {/if}
     {#if showStrip && scopeNote !== null}
-      <!-- The scoped pad's notes in the playing clip, under the controls
-           (2026-10-24, the user's call). On the lead grid this is a cell of
-           its own row (`.vm-controls-flat` is `display: contents`); in the
-           flex row, the column's foot. -->
+      <!-- The scoped pad's notes in the playing clip, the column's foot. -->
       <div class="vm-strip">
         <PadNotesStrip trackPath={trackPath ?? ''} clipPath={clip.playingClipPath} clipWindow={clip.clipWindow} note={scopeNote} ink={controlInk.primary} />
       </div>
     {/if}
     </div>
-    <!-- The Filter pad closes the row (see Gain above); a DrumCell kit
-         stacks it under its Time pad instead. -->
-    {#if scopedProfile !== 'macro-grid' && scopedProfile !== 'full'}
+    <!-- The Filter pad closes the row on these kits (on the face kits it is
+         the row's own last section). -->
+    {#if scopedProfile !== 'macro-grid'}
       {#if scopedProfile === 'rack-macros'}
         <!-- A nested-rack kit's controls are the macros its author named;
              Filter is a function every kit gets. Same ink, same size — only
@@ -592,43 +590,18 @@
     min-width: 0;
   }
 
-  /* ---- Gain: the same slider width, outside the profile switch, so it
-     is in the same place whatever the kit is (2026-09-08). */
-  .vm-gain-col {
-    flex: 0 0 var(--vm-slider-w, 56px);
-    width: var(--vm-slider-w, 56px);
-    min-height: 0;
-  }
-
-  /* ---- The lead grid (user's layout, 2026-09-16): the DrumCell, Sampler and
-     Simpler kits' rows on ONE grid with the view's own cells, the swap pill
-     lying across the top of the leading group. `.vm-controls-flat` is
-     `display: contents`, and so are the rows' own boxes, so every pad and
-     slider is a cell of this grid; each row names its cells (`fx`, `time`,
-     `start`, `trnsp` / `osc`, `env`, `spread`, `sel`, `trnsp` / `time`,
-     `trnsp`) and the templates below say where they go. A kit's pads are
-     equal (the ruler of 2026-09-12, "each XY should be equal width"); a
-     slider column was half a pad until ADR-477 and is narrower now, its
-     boxes as fine at any width. With no pill to show, its row is empty and
-     its gap goes too.
-     Every kit puts Gain and Trnsp on the same pixels (user, 2026-09-27,
-     after the Sampler kit had Gain at the far right): since ADR-477 one
-     column, Gain over Trnsp, two value boxes as fine as the faders they
-     replace, the kit's own sliders in the column beside it, and the pads
-     sharing what is left — the controls are two rows under the pill. Each
-     kit's template is below. */
-  .vm-controls-flat {
-    display: contents;
-  }
+  /* ---- The pad column, with the swap pill over it on every kit (ADR-510;
+     from 2026-09-16 it lay across the pads and the kit's first sliders on
+     the DrumCell, Sampler and Simpler kits, which a face's header line
+     cannot hold). A column, so the pad grid's own flex basis (its WIDTH,
+     written for a row) is overridden to take the height instead; its
+     `width` keeps the column as wide as the pads. The pill contributes no
+     width of its own (`width: 0`, then stretched to the column by
+     `min-width: 100%`), or its name would widen the pad column to fit — a
+     single pad is 68px. */
   .vm-pads-cell {
     display: contents;
   }
-  /* The pad column, with the pill over it where no wider group takes it. A
-     column, so the pad grid's own flex basis (its WIDTH, written for a row)
-     is overridden to take the height instead; its `width` keeps the column
-     as wide as the pads. The pill contributes no width of its own (`width:
-     0`, then stretched to the column by `min-width: 100%`), or its name
-     would widen the pad column to fit — a single pad is 68px. */
   .vm-pads-stack {
     flex: 0 0 auto;
     display: flex;
@@ -650,138 +623,49 @@
      (ADR-442), and `SwapControl` hides it outright on a flat pill under
      6.5rem and caps it at the pill less a touch target per arrow. A single
      pad is 68px, which is under both, so the door vanished exactly where a
-     drum track sits at rest: nothing playing draws one pad
-     (`padGridNotes`), and every profile but DrumCell and Sampler — plus any
-     profile with a pad's effect pane open — puts the pill here.
+     drum track sits at rest: nothing playing draws one pad.
      Three touch targets is the honest floor: one for each arrow and one for
      the name between them. Two pad columns are already 140px, so this only
-     ever moves the ONE-column case, and the width comes out of the controls
-     beside it — which is the trade (the alternative was no door at all).
-     The pads keep their own 68px (`.pad-grid` sets an explicit width) and
-     stay anchored at the column's leading edge, so a pad does not move
-     under the finger when another comes into play. */
+     ever moves the ONE-column case, and the width comes out of the face
+     beside it — on every kit alike, so Gain and Trnsp still sit on the
+     same pixels from kit to kit. The pads keep their own 68px (`.pad-grid`
+     sets an explicit width) and stay anchored at the column's leading
+     edge, so a pad does not move under the finger when another comes into
+     play. */
   .vm-pads-stack.vm-pads-with-pill {
     min-width: calc(3 * var(--height-touch, 44px));
   }
-  .vm-lead-grid {
-    display: grid;
-    grid-template-rows: auto repeat(2, minmax(0, 1fr));
+
+  /* ---- The face (ADR-510): a DrumCell, Sampler or Simpler kit's row is a
+     FaceGrid right of the pads' seam. The row's own padding gives way to
+     the view's (the inset is the view's, and the seam's central gap either
+     side is the face's own seam), so the face fills the column. */
+  .vm-face-col > :global(.face-grid) {
+    flex: 1 1 0;
+    height: auto;
+    padding: 0;
   }
-  /* No pill: its row is empty, and the inset takes back the gap under it. */
-  .vm-lead-grid:not(.vm-lead-pill) {
-    padding-top: calc(var(--central-inset) - var(--central-gap));
-  }
-  /* The scoped pad's notes strip (2026-10-24): a third row under the
-     controls, from Gain to the right edge, the pads running down beside it.
-     One pad row tall (the user's call): the controls' two rows and the
-     strip split the pads' height 3:1, which lands the strip's top within a
-     pixel of the fourth pad's (the pads' 4px gaps against the grid's). */
-  .vm-lead-grid.vm-with-strip {
-    grid-template-rows: auto repeat(2, minmax(0, 1.5fr)) minmax(0, 1fr);
+  /* The scoped pad's notes strip (2026-10-24): under the face, from Gain
+     to the right edge, one pad row tall (the user's call) — a quarter of
+     the column, the face taking the other three. */
+  .vm-face-col.vm-face-strip > :global(.face-grid) {
+    flex-grow: 3;
   }
   .vm-strip {
-    grid-area: strip;
     display: flex;
     flex-direction: column;
     min-width: 0;
     min-height: 0;
   }
-  /* In the flex row (the other kits) it is the controls column's foot,
-     one pad row tall: a quarter of the column less the pads' three 4px
-     gaps, past the view's gap. */
-  .vm-controls:not(.vm-controls-flat) > .vm-strip {
+  .vm-face-col > .vm-strip {
+    flex: 1 1 0;
+  }
+  /* In the flex row (the kits off the face) it is the controls column's
+     foot, one pad row tall: a quarter of the column less the pads' three
+     4px gaps, past the view's gap. */
+  .vm-controls:not(.vm-face-col) > .vm-strip {
     flex: 0 0 calc((100% - 12px) / 4);
     margin-top: var(--central-gap);
-  }
-  .vm-lead-pill-cell {
-    grid-area: pill;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  }
-  .vm-lead-grid .vm-pads-cell {
-    grid-area: pads;
-    display: flex;
-    gap: var(--central-gap);
-    min-height: 0;
-  }
-  .vm-lead-grid .vm-filter-col {
-    grid-area: filter;
-    max-width: none;
-  }
-  .vm-lead-grid .vm-gain-col {
-    grid-area: gain;
-    width: auto;
-  }
-  /* DrumCell: pads · Gain over Trnsp · Start under the pill, then two
-     columns — FX over its type grid, Time over Filter (user, 2026-10-04).
-     The kits' columns all come to 9fr past the pads, so Gain and Trnsp
-     land on the same pixels on each: here a slider 2fr of 18, a pad 7. */
-  .vm-lead-grid[data-vm-lead='full'] {
-    grid-template-columns: auto repeat(2, minmax(0, 2fr)) repeat(2, minmax(0, 7fr));
-    grid-template-areas:
-      'pill pill  pill  fx time'
-      'pads gain  start fx time'
-      'pads trnsp start fx time';
-  }
-  .vm-lead-grid.vm-with-strip[data-vm-lead='full'] {
-    grid-template-areas:
-      'pill pill  pill  fx    time'
-      'pads gain  start fx    time'
-      'pads trnsp start fx    time'
-      'pads strip strip strip strip';
-  }
-  /* UNREACHABLE since 2026-09-26 (showDrumPads is pinned on). */
-  .vm-lead-grid[data-vm-lead='full']:not(.vm-lead-pads) {
-    grid-template-columns: repeat(2, minmax(0, 2fr)) repeat(2, minmax(0, 7fr));
-    grid-template-areas:
-      'pill  pill  fx time'
-      'gain  start fx time'
-      'trnsp start fx time';
-  }
-  /* Sampler (the Abbey Road kits): the DrumCell's cells, one for one — Spread
-     where Start is, Osc over Pitch where FX is, the Amp Envelope's A and R
-     where Time is (both are the amp envelope's times), Filter last. Until
-     2026-09-27 this kit put Osc / Pitch first and Gain at the far right. */
-  /* Select (the Sample Selector, 2026-10-04) sits under Spread, as Trnsp
-     under Gain; the three pads share 7 of the 9 equally (a slider 3fr of
-     27, a pad 7). */
-  .vm-lead-grid[data-vm-lead='sampler'] {
-    grid-template-columns: auto repeat(2, minmax(0, 3fr)) repeat(3, minmax(0, 7fr));
-    grid-template-areas:
-      'pill pill  pill   osc env filter'
-      'pads gain  spread osc env filter'
-      'pads trnsp sel    osc env filter';
-  }
-  .vm-lead-grid.vm-with-strip[data-vm-lead='sampler'] {
-    grid-template-areas:
-      'pill pill  pill   osc   env   filter'
-      'pads gain  spread osc   env   filter'
-      'pads trnsp sel    osc   env   filter'
-      'pads strip strip  strip strip strip';
-  }
-  .vm-lead-grid[data-vm-lead='sampler'] :global(.sampler-row) {
-    display: contents;
-  }
-  /* Simpler (the Jazz kit): no slider of its own and one pad, so the Time
-     pad starts where the DrumCell kit's Start does and shares the rest
-     with Filter equally (a slider 1fr of 9, each pad 4). */
-  .vm-lead-grid[data-vm-lead='simpler'] {
-    grid-template-columns: auto minmax(0, 1fr) repeat(2, minmax(0, 4fr));
-    grid-template-areas:
-      'pill pill  time filter'
-      'pads gain  time filter'
-      'pads trnsp time filter';
-  }
-  .vm-lead-grid.vm-with-strip[data-vm-lead='simpler'] {
-    grid-template-areas:
-      'pill pill  time  filter'
-      'pads gain  time  filter'
-      'pads trnsp time  filter'
-      'pads strip strip strip';
-  }
-  .vm-lead-grid[data-vm-lead='simpler'] :global(.simpler-row) {
-    display: contents;
   }
 
   /* ---- Kit card (pitch-only profile) --------------------------------

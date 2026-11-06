@@ -4,7 +4,10 @@
    * file since the FX chain overview took over from the grid (2026-10-26);
    * it was the `effects` part of the Pedal view.
    *
-   *   [Bass] [Color pad: Freq across, Hi up] [Output] [Mix]
+   *   Color [Bass] [Color pad: Freq across, Hi up] | Output [Output] | Mix [Mix]
+   *
+   * On the face grid (ADR-510), sections [3, 1, 1], in Live's order; Mix,
+   * the played level, past a seam at the right edge (ADR-509).
    *
    * The Color section as a slider and a pad (user, 2026-10-26; one Color Hi
    * fader before). Indices and rails measured on the rig the same day (the
@@ -23,6 +26,10 @@
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+  import FaceGrid from '../FaceGrid.svelte';
+  import FaceSection from '../FaceSection.svelte';
+  import FaceSeam from '../FaceSeam.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
 
   const saturator = useFxGridSlot('saturator');
 
@@ -50,72 +57,80 @@
   ] as const;
 </script>
 
-<div class="saturator-layout" data-view="saturator">
+{#snippet fader(f: (typeof SATURATOR_FADERS)[number])}
   <div class="slider-col" class:slot-ghost={saturator.isGhost}>
     <DeviceSlider
-      value={value(COLOR.low, REST.low)}
-      title="Bass"
-      face="knob"
+      value={saturator.paramValue(f.index) ?? f.fallback}
+      title={f.title}
+      face={f.title === 'Mix' ? 'slider' : 'knob'}
       knobSize="l"
-      icon="tone"
+      icon={f.icon}
       orientation="vertical"
       isGhost={saturator.isGhost}
       color={saturatorInk}
-      readout={saturator.paramDisplay(COLOR.low)}
+      readout={saturator.paramDisplay(f.index)}
       min={0}
       max={1}
-      centerOrigin={true}
-      centerValue={0.5}
       onTap={() => saturator.loadIfGhost()}
-      onInteraction={(v) => writeColor([[COLOR.low, v]])}
+      onInteraction={(v) => saturator.sendParam(f.index, v)}
     />
   </div>
+{/snippet}
 
-  <div class="pad-col" class:slot-ghost={saturator.isGhost}>
-    <DeviceXY
-      xValue={value(COLOR.freq, REST.freq)}
-      yValue={value(COLOR.hi, REST.hi)}
-      title="Color"
-      icon="tone"
-      rateLabel={saturator.paramDisplay(COLOR.freq)}
-      isGhost={saturator.isGhost}
-      showCurve={false}
-      color={saturatorInk}
-      onTap={() => saturator.loadIfGhost()}
-      onInteraction={(x, y) => writeColor([[COLOR.freq, x], [COLOR.hi, y]])}
-    />
-  </div>
+<div class="saturator-layout" data-view="saturator">
+  <FaceGrid sections={[3, 1, 1]}>
+    <FaceSection span={3}>
+      {#snippet head()}<PanelEyebrow title="Color" color={saturatorInk.primary} />{/snippet}
+      <div class="slider-col" class:slot-ghost={saturator.isGhost}>
+        <DeviceSlider
+          value={value(COLOR.low, REST.low)}
+          title="Bass"
+          face="knob"
+          knobSize="l"
+          icon="tone"
+          orientation="vertical"
+          isGhost={saturator.isGhost}
+          color={saturatorInk}
+          readout={saturator.paramDisplay(COLOR.low)}
+          min={0}
+          max={1}
+          centerOrigin={true}
+          centerValue={0.5}
+          onTap={() => saturator.loadIfGhost()}
+          onInteraction={(v) => writeColor([[COLOR.low, v]])}
+        />
+      </div>
 
-  {#each SATURATOR_FADERS as fader (fader.index)}
-    <div class="slider-col" class:slot-ghost={saturator.isGhost}>
-      <DeviceSlider
-        value={saturator.paramValue(fader.index) ?? fader.fallback}
-        title={fader.title}
-        face={fader.title === 'Mix' ? 'slider' : 'knob'}
-        knobSize="l"
-        icon={fader.icon}
-        orientation="vertical"
-        isGhost={saturator.isGhost}
-        color={saturatorInk}
-        readout={saturator.paramDisplay(fader.index)}
-        min={0}
-        max={1}
-        onTap={() => saturator.loadIfGhost()}
-        onInteraction={(v) => saturator.sendParam(fader.index, v)}
-      />
-    </div>
-  {/each}
+      <div class="pad-col face-span-2" class:slot-ghost={saturator.isGhost}>
+        <DeviceXY
+          xValue={value(COLOR.freq, REST.freq)}
+          yValue={value(COLOR.hi, REST.hi)}
+          title="Color"
+          icon="tone"
+          rateLabel={saturator.paramDisplay(COLOR.freq)}
+          isGhost={saturator.isGhost}
+          showCurve={false}
+          color={saturatorInk}
+          onTap={() => saturator.loadIfGhost()}
+          onInteraction={(x, y) => writeColor([[COLOR.freq, x], [COLOR.hi, y]])}
+        />
+      </div>
+    </FaceSection>
+    {#each SATURATOR_FADERS as f (f.index)}
+      <FaceSeam ink={saturatorInk.primary} />
+      <FaceSection span={1}>
+        {#snippet head()}<PanelEyebrow title={f.title} color={saturatorInk.primary} />{/snippet}
+        {@render fader(f)}
+      </FaceSection>
+    {/each}
+  </FaceGrid>
 </div>
 
 <style>
-  /* A slider one share, the pad two. */
+  /* The face is the FaceGrid (ADR-510): five equal columns, the pad two. */
   .saturator-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) repeat(2, minmax(0, 1fr));
     height: 100%;
     width: 100%;
-    padding: var(--central-inset);
-    gap: var(--central-gap);
   }
 
   .slider-col,

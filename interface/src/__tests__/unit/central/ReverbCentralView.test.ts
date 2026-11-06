@@ -154,7 +154,10 @@ describe('ReverbCentralView, the EQ tab', () => {
 			'Lo Slope 18 dB', 'Peak 1 Q 0.71', 'Peak 2 Q 0.71', 'Hi Gain 0.0 dB'
 		]);
 		const own = [...c.querySelectorAll('[data-reverb-own] [data-reverb-switch]')].map((b) => b.textContent?.trim());
-		expect(own).toEqual(['Cut', 'Shelf', 'On', 'Pre Algo', 'Freeze', 'In']);
+		expect(own).toEqual(['On', 'Pre Algo', 'Freeze', 'In']);
+		// Each end's Cut / Shelf sits under the curve, Lo then Hi (2026-11-06).
+		const ends = [...c.querySelectorAll('[data-reverb-eq-types] [data-reverb-switch]')].map((b) => b.textContent?.trim());
+		expect(ends).toEqual(['Lo Cut', 'Hi Shelf']);
 		expect(c.querySelector('[data-reverb-eq]')?.getAttribute('aria-label')).toBe('Reverb EQ: Lo Cut 121 Hz · 18 dB');
 
 		await fireEvent.click(c.querySelector('[data-reverb-tab="reverb"]')!);
@@ -164,7 +167,7 @@ describe('ReverbCentralView, the EQ tab', () => {
 	it('switches an end between Cut and Shelf, and the EQ on and before the algorithm', async () => {
 		const c = await mount(RIG_EQ);
 		await fireEvent.click(c.querySelector('[data-reverb-tab="eq"]')!);
-		await fireEvent.click(c.querySelector('[data-reverb-own] [data-reverb-switch="33"]')!);
+		await fireEvent.click(c.querySelector('[data-reverb-eq-types] [data-reverb-switch="33"]')!);
 		expect(sendMock).toHaveBeenCalledWith('/looping/v3/param/set', [`${DEVICE}/params/33`, 1, 3]);
 		await fireEvent.click(c.querySelector('[data-reverb-own] [data-reverb-switch="31"]')!);
 		expect(sendMock).toHaveBeenCalledWith('/looping/v3/param/set', [`${DEVICE}/params/31`, 0, 3]);

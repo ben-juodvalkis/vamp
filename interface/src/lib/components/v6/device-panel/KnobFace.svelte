@@ -207,7 +207,14 @@
       --knob-d: min(50cqw, max(28px, min(var(--knob-want), 50cqw, 100cqh - 0.75rem)));
     }
   }
-  /* No caption: the cell's height is all the knob's, beside or below. */
+  /* No caption: the knob alone, centred (no room kept for a caption beside
+     it), and the cell's height is all the knob's. */
+  .knob.no-caption .knob-body {
+    grid-template-columns: auto;
+    grid-template-rows: auto;
+    justify-content: center;
+    gap: 0;
+  }
   .knob.no-caption .knob-face {
     --knob-d: min(100cqw - 0.5rem, max(28px, min(var(--knob-want), 100cqw - 0.5rem, 100cqh - 0.75rem)));
   }

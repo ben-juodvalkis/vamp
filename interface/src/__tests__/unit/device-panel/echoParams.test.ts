@@ -55,9 +55,12 @@ describe('Echo LFO rate', () => {
 });
 
 describe('Echo time', () => {
-	it('writes both time controls: the tile 1..4 sixteenths, the view 1..16, free time 1 -> 0', () => {
-		expect(ECHO.timeWrites(0)).toEqual([[ECHO.sixteenths, 1], [ECHO.time, 1]]);
-		expect(ECHO.timeWrites(1)).toEqual([[ECHO.sixteenths, 4], [ECHO.time, 0]]);
+	it('writes both time controls: the tile 4..1 sixteenths (long to short, as free time), the view 1..16, free time 1 -> 0', () => {
+		expect(ECHO.timeWrites(0)).toEqual([[ECHO.sixteenths, 4], [ECHO.time, 1]]);
+		expect(ECHO.timeWrites(1)).toEqual([[ECHO.sixteenths, 1], [ECHO.time, 0]]);
+		// The tile draws where it wrote: 1/4 at the left, 1/16 at the right.
+		expect(ECHO.timeTFrom(true, 4, undefined)).toBe(0);
+		expect(ECHO.timeTFrom(true, 1, undefined)).toBe(1);
 		expect(ECHO.timeWrites(1, true)).toEqual([[ECHO.sixteenths, 16], [ECHO.time, 0]]);
 	});
 

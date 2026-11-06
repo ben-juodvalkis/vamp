@@ -18,6 +18,10 @@
   import { deviceInk } from '$lib/utils/formatters/trackFormatters';
   import { familyScheme } from '$lib/config/devicePresets';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+  import FaceGrid from '../FaceGrid.svelte';
+  import FaceSection from '../FaceSection.svelte';
+  import FaceSeam from '../FaceSeam.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
 
   const fx = useFxGridSlot('eq');
 
@@ -74,6 +78,10 @@
      view's shape). They were two full-width rows (ADR-477's first cut), a
      1000 x 120 switch over a 1000 x 120 slider that swept sideways. -->
 <div class="eq-layout" class:slot-ghost={fx.isGhost}>
+<!-- One face grid (ADR-510): two sections of one column. -->
+<FaceGrid sections={[1, 1]}>
+  <FaceSection span={1}>
+  {#snippet head()}<PanelEyebrow title="Filter" color={(fx.isGhost ? ghostInk : fxInk).primary} />{/snippet}
   <!-- A switch: one cell, lit while the low cut is on. -->
   <button
     onclick={toggleLowCut}
@@ -84,6 +92,11 @@
   >
     Low Cut
   </button>
+  </FaceSection>
+  <FaceSeam />
+
+  <FaceSection span={1}>
+  {#snippet head()}<PanelEyebrow title="Output" color={(fx.isGhost ? ghostInk : fxInk).primary} />{/snippet}
   <div class="eq-cell">
     <DeviceSlider
       value={outputGainValue}
@@ -99,17 +112,16 @@
       }}
     />
   </div>
+  </FaceSection>
+</FaceGrid>
 </div>
 
 <style>
   /* low cut | output */
   .eq-layout {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
     height: 100%;
     width: 100%;
-    padding: var(--central-inset);
-    gap: var(--central-gap);
+    min-height: 0;
   }
   .eq-switch {
     min-width: 0;

@@ -14,7 +14,9 @@
    *
    * The Gain at the left, full height (the Gtr tile, mounted here with its
    * tap disabled: this is its home), then the Spring (X) / Room (Y) pad over
-   * the Tremolo pad, rate (X) / amount (Y) (user, 2026-10-05).
+   * the Tremolo pad, rate (X) / amount (Y) (user, 2026-10-05), side by side
+   * since 2026-10-26. On the face grid (ADR-510), sections [1, 2, 2]: Amp,
+   * Reverb, Tremolo, in the rack's macro order.
    *
    * NO {#if device} gate - always renders, handles its own state.
    */
@@ -24,6 +26,10 @@
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+  import FaceGrid from '../FaceGrid.svelte';
+  import FaceSection from '../FaceSection.svelte';
+  import FaceSeam from '../FaceSeam.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
 
   const guitar = useFxGridSlot('guitar');
 
@@ -40,73 +46,76 @@
 </script>
 
 <div class="guitar-layout" data-view="guitar">
-  <div class="gain" class:slot-ghost={guitar.isGhost}>
-    <GuitarControl device={guitar.device} disableCentralViewOnTap={true} icon="guitar" />
-  </div>
+  <FaceGrid sections={[1, 2, 2]}>
+    <FaceSection span={1}>
+      {#snippet head()}<PanelEyebrow title="Amp" color={guitarInk.primary} />{/snippet}
+      <div class="gain" class:slot-ghost={guitar.isGhost}>
+        <GuitarControl device={guitar.device} disableCentralViewOnTap={true} icon="guitar" />
+      </div>
+    </FaceSection>
+    <FaceSeam ink={guitarInk.primary} />
 
-  <div class="pads" class:slot-ghost={guitar.isGhost}>
-    <div class="guitar-xy">
-      <DeviceXY
-        xValue={gtrValue(GTR.spring)}
-        yValue={gtrValue(GTR.room)}
-        title="Spring/Room"
-        icon="reverb"
-        isGhost={guitar.isGhost}
-        showCurve={false}
-        color={guitarInk}
-        onTap={() => guitar.loadIfGhost()}
-        onInteraction={(x, y) => {
-          sendGtr(GTR.spring, x);
-          sendGtr(GTR.room, y);
-        }}
-      />
-    </div>
-    <div class="guitar-xy">
-      <DeviceXY
-        xValue={gtrValue(GTR.tremRate)}
-        yValue={gtrValue(GTR.tremAmount)}
-        title="Tremolo"
-        icon="tremolo"
-        isGhost={guitar.isGhost}
-        showCurve={false}
-        color={guitarInk}
-        onTap={() => guitar.loadIfGhost()}
-        onInteraction={(x, y) => {
-          sendGtr(GTR.tremRate, x);
-          sendGtr(GTR.tremAmount, y);
-        }}
-      />
-    </div>
-  </div>
+    <FaceSection span={2}>
+      {#snippet head()}<PanelEyebrow title="Reverb" color={guitarInk.primary} />{/snippet}
+      <div class="guitar-xy face-span-all" class:slot-ghost={guitar.isGhost}>
+        <DeviceXY
+          xValue={gtrValue(GTR.spring)}
+          yValue={gtrValue(GTR.room)}
+          title="Spring/Room"
+          icon="reverb"
+          isGhost={guitar.isGhost}
+          showCurve={false}
+          color={guitarInk}
+          onTap={() => guitar.loadIfGhost()}
+          onInteraction={(x, y) => {
+            sendGtr(GTR.spring, x);
+            sendGtr(GTR.room, y);
+          }}
+        />
+      </div>
+    </FaceSection>
+    <FaceSeam ink={guitarInk.primary} />
+
+    <FaceSection span={2}>
+      {#snippet head()}<PanelEyebrow title="Tremolo" color={guitarInk.primary} />{/snippet}
+      <div class="guitar-xy face-span-all" class:slot-ghost={guitar.isGhost}>
+        <DeviceXY
+          xValue={gtrValue(GTR.tremRate)}
+          yValue={gtrValue(GTR.tremAmount)}
+          title="Tremolo"
+          icon="tremolo"
+          isGhost={guitar.isGhost}
+          showCurve={false}
+          color={guitarInk}
+          onTap={() => guitar.loadIfGhost()}
+          onInteraction={(x, y) => {
+            sendGtr(GTR.tremRate, x);
+            sendGtr(GTR.tremAmount, y);
+          }}
+        />
+      </div>
+    </FaceSection>
+  </FaceGrid>
 </div>
 
 <style>
-  /* A slider one share, a pad two; the two pads side by side (user,
-     2026-10-26; stacked before). */
+  /* The face is the FaceGrid (ADR-510): five equal columns, the Gain one,
+     each pad two. */
   .guitar-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 4fr);
     height: 100%;
     width: 100%;
-    padding: var(--central-inset);
-    gap: var(--central-gap);
   }
 
   .gain,
-  .pads {
+  .guitar-xy {
     display: flex;
     flex-direction: column;
-    gap: var(--central-gap);
     min-width: 0;
     min-height: 0;
   }
 
-  .pads {
-    flex-direction: row;
-  }
-
   .gain > :global(*),
-  .guitar-xy {
+  .guitar-xy > :global(*) {
     flex: 1 1 0;
     min-width: 0;
     min-height: 0;

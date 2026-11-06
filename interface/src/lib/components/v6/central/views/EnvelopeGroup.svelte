@@ -62,12 +62,25 @@
      * and not the seam — Operator's swap pill (user's layout, 2026-09-16).
      */
     header?: Snippet;
+    /**
+     * On a face grid (ADR-510): the group is a subgrid of its parent's
+     * columns, the name across them and a stage a column, so its boxes sit
+     * on the face's columns. No hairlines: the face's seams bracket it, and
+     * its parent must itself be a grid on those columns.
+     */
+    onGrid?: boolean;
     children: Snippet;
   }
 
-  let { ink, title = 'Amp Envelope', edges = 'both', header, children }: Props = $props();
+  let { ink, title = 'Amp Envelope', edges = 'both', header, onGrid = false, children }: Props = $props();
 </script>
 
+{#if onGrid}
+<div class="envelope-grid" data-envelope-group>
+  <span class="envelope-title" style="color: {ink};">{title}</span>
+  {@render children()}
+</div>
+{:else}
 {#if edges === 'both'}
   <SectionDivider orientation="vertical" {ink} />
 {/if}
@@ -82,6 +95,7 @@
 </div>
 {#if edges !== 'none'}
   <SectionDivider orientation="vertical" {ink} />
+{/if}
 {/if}
 
 <style>
@@ -102,6 +116,24 @@
     flex-direction: column;
     gap: var(--spacing-xs);
     flex: 1 1 0;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  /* On the face grid: the name across the columns, a stage a column under it. */
+  .envelope-grid {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: auto minmax(0, 1fr);
+    row-gap: var(--spacing-xs);
+    min-width: 0;
+    min-height: 0;
+  }
+  .envelope-grid > .envelope-title {
+    grid-column: 1 / -1;
+  }
+  .envelope-grid > :global(*) {
     min-width: 0;
     min-height: 0;
   }

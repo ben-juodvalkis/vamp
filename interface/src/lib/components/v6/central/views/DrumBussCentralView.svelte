@@ -14,23 +14,29 @@
    * height is as fine as the fader was. Boom took the two columns they
    * spread over (it was two columns wide).
    *
-   * The Drum XY (transients x dry/wet) leads the view, so it is the Drum
-   * Buss's whole face (on every track since the FX grid went, ADR-485).
-   * Same slot machinery as every device view — ghost until the track
+   * On the face grid (ADR-510) since 2026-11-06, sections [5, 2]: Drive
+   * (Trim over Comp, the drive type, Drive, Crunch, Damp) and Boom, seven
+   * columns of about 137px. One knob a column, large.
+   *
+   * The Drum XY (transients x dry/wet) is the chain cell's control (the
+   * `drum` control, deviceControls, ADR-479), drawn above this view, so the
+   * view no longer draws it too (user, 2026-11-06); its two columns went
+   * to the knobs. Same slot machinery as every device view — ghost until the track
    * carries a Drum Buss, and a first write loads `Drum Buss.adv` through
    * `sendParam`.
    */
 
   import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
-  import KnobGrid from '../../device-panel/KnobGrid.svelte';
   import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
-  import SectionDivider from '$lib/components/v6/central/SectionDivider.svelte';
+  import FaceGrid from '../FaceGrid.svelte';
+  import FaceSection from '../FaceSection.svelte';
+  import FaceSeam from '../FaceSeam.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
-  import DrumBussControl from '$lib/components/v6/device-panel/DrumBussControl.svelte';
 
   const drum = useFxGridSlot('drum');
 
@@ -107,162 +113,131 @@
 
 </script>
 
-<div class="drum-buss-layout with-xy" class:slot-ghost={drum.isGhost}>
-  <!-- The Drum XY (transients x dry/wet), its chain cell's control. -->
-  <div class="col drum-xy">
-    <DrumBussControl device={drum.device} disableCentralViewOnTap={true} />
-  </div>
-  <div class="drum-buss-faces" class:ghost={drum.isGhost}>
-  <!-- Column 1: input Trim, first in Live's chain, over the Comp switch. -->
-  <div class="col trim-comp">
-    <div class="trim">
-      <DeviceSlider
-        value={trim}
-        title="Trim"
-        face="knob"
-        knobSize="l"
-        icon="gain"
-        orientation="vertical"
-        labelSize="small"
-        isGhost={drum.isGhost}
-        color={drumInk}
-        readout={drum.paramDisplay(PARAM.trim)}
-        onInteraction={(t) => writeT(PARAM.trim, t)}
-      />
+<div class="drum-buss-layout" class:slot-ghost={drum.isGhost}>
+  <FaceGrid sections={[5, 2]}>
+  <!-- Live's chain, in its order: Trim, Comp, the drive type, Drive, Crunch, Damp. -->
+  <FaceSection span={5} class={drum.isGhost ? 'drum-buss-faces-ghost' : ''}>
+    {#snippet head()}<PanelEyebrow title="Drive" color={drumInk.primary} />{/snippet}
+    <!-- Input Trim, first in Live's chain, over the Comp switch. -->
+    <div class="col trim-comp">
+      <div class="trim">
+        <DeviceSlider
+          value={trim}
+          title="Trim"
+          face="knob"
+          knobSize="l"
+          icon="gain"
+          orientation="vertical"
+          labelSize="small"
+          isGhost={drum.isGhost}
+          color={drumInk}
+          readout={drum.paramDisplay(PARAM.trim)}
+          onInteraction={(t) => writeT(PARAM.trim, t)}
+        />
+      </div>
+      <button
+        class="physical-button comp-toggle w-full font-bold"
+        class:active={compressorOn}
+        style="--btn-tint: {drumInk.primary};"
+        onclick={toggleComp}
+      >
+        Comp
+      </button>
     </div>
-    <button
-      class="physical-button comp-toggle w-full font-bold"
-      class:active={compressorOn}
-      style="--btn-tint: {drumInk.primary};"
-      onclick={toggleComp}
+
+    <!-- Drive type is a VERTICAL tab that scrubs, Soft → Medium → Hard. -->
+    <ScrubTabs
+      options={DRIVE_TYPES}
+      selected={driveType}
+      onSelect={(step) => drum.sendParam(PARAM.driveType, step)}
+      cols={1}
+      tint={drumInk.primary}
+      inked
+      label={(t) => `Drive type ${t}`}
+      name="drive-type"
+      style="height: 100%; --scrub-font-size: 0.8125rem; --scrub-font-weight: var(--font-weight-medium);"
     >
-      Comp
-    </button>
-  </div>
+      {#snippet item(t)}{t}{/snippet}
+    </ScrubTabs>
 
-  <!-- Column 2: drive type, the house segmented control in its native
-       stacked direction — no border overrides needed. -->
-  <!-- Drive type is a VERTICAL tab that scrubs, Soft → Medium → Hard. -->
-  <ScrubTabs
-    options={DRIVE_TYPES}
-    selected={driveType}
-    onSelect={(step) => drum.sendParam(PARAM.driveType, step)}
-    cols={1}
-    tint={drumInk.primary}
-    inked
-    label={(t) => `Drive type ${t}`}
-    name="drive-type"
-    style="height: 100%; --scrub-font-size: 0.8125rem; --scrub-font-weight: var(--font-weight-medium);"
-  >
-    {#snippet item(t)}{t}{/snippet}
-  </ScrubTabs>
-
-  <!-- The distortion and its tone in Live's order, as knobs (ADR-509):
-       two columns wide, so they wrap into the grid that gives each the
-       most room rather than stacking three to a thin column. -->
-  <div class="col box-stack">
-    <KnobGrid count={distortion.length}>
-      {#snippet item(i, size)}
-        {@const box = distortion[i]}
+    <!-- The distortion and its tone in Live's order, as knobs (ADR-509),
+         one to a column on the face's own columns. -->
+    {#each distortion as box (box.param)}
+      <div class="col knob">
         <DeviceSlider
           value={box.value}
           title={box.title}
           face="knob"
-          knobSize={size}
+          knobSize="l"
           icon={box.icon}
           isGhost={drum.isGhost}
           color={drumInk}
           readout={drum.paramDisplay(box.param)}
           onInteraction={(t) => writeT(box.param, t)}
         />
-      {/snippet}
-    </KnobGrid>
-  </div>
+      </div>
+    {/each}
+  </FaceSection>
+  <FaceSeam ink={drumInk.primary} />
 
   <!-- Boom is Live's separate low-end section, and the only pad here. -->
-  <SectionDivider orientation="vertical" />
-
-  <div class="col boom">
-    <DeviceXY
-      xValue={boomDecay}
-      yValue={boomAmount}
-      title="Boom"
-      icon="boom"
-      isGhost={drum.isGhost}
-      showCurve={false}
-      color={drumInk}
-      onTap={() => drum.loadIfGhost()}
-      onInteraction={(x, y) => {
-        drum.sendParam(PARAM.boomDecay, x);
-        drum.sendParam(PARAM.boomAmount, y);
-      }}
-    />
-  </div>
-  </div>
+  <FaceSection span={2} class={drum.isGhost ? 'drum-buss-faces-ghost' : ''}>
+    {#snippet head()}<PanelEyebrow title="Boom" color={drumInk.primary} />{/snippet}
+    <div class="col boom face-span-2">
+      <DeviceXY
+        xValue={boomDecay}
+        yValue={boomAmount}
+        title="Boom"
+        icon="boom"
+        isGhost={drum.isGhost}
+        showCurve={false}
+        color={drumInk}
+        onTap={() => drum.loadIfGhost()}
+        onInteraction={(x, y) => {
+          drum.sendParam(PARAM.boomDecay, x);
+          drum.sendParam(PARAM.boomAmount, y);
+        }}
+      />
+    </div>
+  </FaceSection>
+  </FaceGrid>
 </div>
 
 <style>
-  /* Seven equal columns: Trim, the drive type, the distortion knobs across
-     two, then Boom across three past an `auto` track for the seam. */
+  /* The face is the FaceGrid (ADR-510): seven equal columns, Trim, the
+     drive type, Drive, Crunch and Damp one each, Boom two. */
   .drum-buss-layout {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr)) auto repeat(3, minmax(0, 1fr));
-    gap: var(--central-gap);
     height: 100%;
     width: 100%;
-    padding: var(--central-inset);
   }
-  /* With the Drum XY leading, a pad two columns wide, and Boom back to two:
-     eight columns. */
-  .drum-buss-layout.with-xy {
-    grid-template-columns: repeat(6, minmax(0, 1fr)) auto repeat(2, minmax(0, 1fr));
-  }
-  .drum-buss-layout.with-xy .boom {
-    grid-column: span 2;
-  }
-  .drum-xy {
-    grid-column: span 2;
-    display: flex;
-    flex-direction: column;
-  }
-  /* The faces' wrapper takes no box: its columns are this grid's. It
-     carries the ghost dim to each of them (a box-less element cannot be
-     dimmed itself); the Drum XY draws its own. */
-  .drum-buss-faces {
-    display: contents;
-  }
-  .drum-buss-faces.ghost > :global(*) {
+  /* The ghost dim on each face (the Boom pad draws its own). */
+  :global(.drum-buss-faces-ghost) > :global(.face-body) > :global(*) {
     opacity: var(--opacity-ghost);
   }
 
   .col {
+    display: flex;
+    flex-direction: column;
     min-height: 0;
     min-width: 0;
     height: 100%;
   }
-
-  .boom {
-    grid-column: span 3;
+  .knob > :global(*),
+  .boom > :global(*) {
+    flex: 1 1 0;
+    min-height: 0;
   }
 
-  /* The distortion knobs: two columns, their own grid inside (ADR-509). */
-  .box-stack {
-    grid-column: span 2;
-    display: flex;
-  }
-
-  /* Trim takes most of the column; Comp is a button at its foot. */
+  /* Trim takes the column; Comp is one touch row at its foot (ADR-509). */
   .trim-comp {
-    display: flex;
-    flex-direction: column;
-    gap: var(--central-gap);
+    gap: var(--face-gutter);
   }
   .trim {
-    flex: 3 1 0;
+    flex: 1 1 0;
     min-height: 0;
   }
   .comp-toggle {
-    flex: 1 1 0;
+    flex: 0 0 var(--height-touch);
     min-height: var(--height-touch);
     font-size: 1rem;
     text-transform: uppercase;

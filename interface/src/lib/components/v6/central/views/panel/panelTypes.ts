@@ -13,7 +13,7 @@
  * `instrumentPanels.test.ts`.
  */
 
-import { knobSizeFor, type KnobSize } from '$lib/components/v6/device-panel/knobLayout';
+import { KNOB_PX, knobDiameter, knobSizeFits, knobSizeFor, type KnobSize } from '$lib/components/v6/device-panel/knobLayout';
 
 /** One control, bound to one parameter by its Live name. */
 export type PanelControl =
@@ -23,8 +23,11 @@ export type PanelControl =
 	 * switch over its level), drawn small under it (ADR-509).
 	 */
 	| { kind: 'box'; param: string; title: string; toggle?: PanelToggle; knobSize?: KnobSize; units?: number }
-	/** A quantized parameter with few values: one cell a value, its labels Live's own. */
-	| { kind: 'choice'; param: string; options: readonly string[] }
+	/**
+	 * A quantized parameter with few values: one cell a value, its labels
+	 * Live's own. `title` names it over a page's picker (else Live's name).
+	 */
+	| { kind: 'choice'; param: string; options: readonly string[]; title?: string }
 	/** A quantized parameter with many values: a value box that steps, naming the value. */
 	| { kind: 'step'; param: string; title: string; labels?: readonly string[]; knobSize?: KnobSize; units?: number }
 	/** An on/off parameter: one cell, lit while on. */
@@ -59,6 +62,12 @@ export interface PanelGroup {
 	 * stacks (`knobSizeFor`); a control's own wins.
 	 */
 	knobSize?: KnobSize;
+	/**
+	 * How many of the face's columns it takes on a panel's frame (ADR-510),
+	 * where its count would mis-state it: three knobs stacked over two
+	 * columns, names beside them. Unset, a column a control (`groupColumns`).
+	 */
+	columns?: number;
 }
 
 /** A value box drawn as a box or as a knob (ADR-509). */
@@ -89,7 +98,7 @@ export type PanelRegion =
 	 * takes `units` boxes of width, under an eyebrow like a group's. `params`
 	 * names what it binds, for the reference test.
 	 */
-	| { kind: 'slot'; slot: string; title?: string; page?: string; units: number; params: readonly string[] };
+	| { kind: 'slot'; slot: string; title?: string; page?: string; units: number; columns?: number; params: readonly string[] };
 
 export interface PanelPage {
 	id: string;
@@ -176,6 +185,192 @@ export function isKnobGroup(group: PanelGroup, boxFace?: PanelFace): boolean {
 		groupFace(group, boxFace) === 'knob' &&
 		group.controls.every((c) => c.kind === 'box' || (c.kind === 'step' && !tabOptions(c)))
 	);
+}
+
+/**
+ * How many of the face's columns a group takes on a panel's frame (ADR-510):
+ * its own `columns`, else one a control, a tab of values as many as its
+ * cells want (`controlUnits`, rounded).
+ */
+export function groupColumns(group: PanelGroup): number {
+	if (group.columns !== undefined) return group.columns;
+	return group.controls.reduce((n, c) => n + controlColumns(c), 0);
+}
+
+/** A control's columns on the face grid: one, or a tab's rounded width. */
+export function controlColumns(control: PanelControl): number {
+	return Math.max(1, Math.round(controlUnits(control, 1)));
+}
+
+/**
+ * A frame region's sections on the face grid (ADR-510), each a column
+ * count. A group or a slot is one section. A tab strip whose every tab
+ * has the same number of groups (Operator's: its main knobs, then its
+ * envelope) is a section a group, each as wide as its widest tab's, with
+ * a seam between, since its knobs and boxes mix only across a seam
+ * (ADR-509); one whose tabs differ (Collision's) is one section as wide as
+ * its widest tab. Either way a tab switch moves no column.
+ */
+export function regionSections(region: PanelRegion): number[] {
+	if (region.kind === 'group') return [groupColumns(region.group)];
+	if (region.kind === 'slot') return [region.columns ?? region.units];
+	return tabsByPosition(region.tabs)
+		? region.tabs[0].groups.map((_, k) => Math.max(...region.tabs.map((t) => groupColumns(t.groups[k]))))
+		: [Math.max(...region.tabs.map((t) => t.groups.reduce((n, g) => n + groupColumns(g), 0)))];
+}
+
+/** Whether a tab strip's tabs share their shape: as many groups each, more than one. */
+export function tabsByPosition(tabs: readonly PanelTab[]): boolean {
+	const n = tabs[0]?.groups.length ?? 0;
+	return n > 1 && tabs.every((t) => t.groups.length === n);
+}
+
+/**
+ * How a group of `count` knobs lays out over `cols` face columns `colW`
+ * wide, in a box `height` tall (ADR-510 with ADR-509's sizes): each knob
+ * column spans a whole number of face columns (the counts that divide
+ * `cols`, or a knob a column in one row, any columns left over empty at
+ * the end), and of those the one whose cells draw the largest size at its
+ * full diameter. A row count's size is at most what its column stacks
+ * (`knobSizeFor`), or `ceiling`. Ties go to one row (knobs in a row on one
+ * line, as Drift's pages), then to the roomier cell.
+ */
+export function faceKnobFit(
+	count: number,
+	cols: number,
+	colW: number,
+	height: number,
+	gap = 8,
+	ceiling?: KnobSize
+): { knobCols: number; rows: number; size: KnobSize } {
+	const most = Math.max(1, Math.min(count, cols));
+	let best = { knobCols: most, rows: Math.ceil(count / most), size: ceiling ?? knobSizeFor(Math.ceil(count / most)), px: -1, room: -Infinity };
+	for (let k = 1; k <= most; k++) {
+		if (cols % k && k !== count) continue;
+		const rows = Math.ceil(count / k);
+		const span = Math.floor(cols / k);
+		const w = span * colW + (span - 1) * gap;
+		const h = (height - gap * (rows - 1)) / rows;
+		const size = knobSizeFits(ceiling ?? knobSizeFor(rows), w, h);
+		const px = knobDiameter(size, w, h) >= KNOB_PX[size] - 0.5 ? KNOB_PX[size] : 0;
+		const room = Math.min(w, h);
+		const better =
+			px > best.px ||
+			(px === best.px && rows === 1 && best.rows > 1) ||
+			(px === best.px && (rows === 1) === (best.rows === 1) && room > best.room + 0.5);
+		if (better) best = { knobCols: k, rows, size, px, room };
+	}
+	return { knobCols: best.knobCols, rows: best.rows, size: best.size };
+}
+
+/** A control drawn as a knob in a knob-faced group: a value box, or a stepper with no tab. */
+export function isKnobControl(control: PanelControl): boolean {
+	return control.kind === 'box' || (control.kind === 'step' && !tabOptions(control));
+}
+
+/**
+ * A mixed group's columns on a frame (ADR-510), when its `columns` is fewer
+ * than a column a control: its knobs pair up, two to a column, first to
+ * last, until the group fits (Operator's Filter: its type's tab, then Env
+ * over Drive). Each entry is one column's controls and the columns it spans.
+ */
+export function frameColumns(group: PanelGroup, columns: number): { controls: PanelControl[]; span: number }[] {
+	const cols = group.controls.map((c) => ({ controls: [c], span: controlColumns(c) }));
+	let total = cols.reduce((n, c) => n + c.span, 0);
+	for (let i = 0; i < cols.length - 1 && total > columns; ) {
+		const a = cols[i];
+		const b = cols[i + 1];
+		if (a.controls.length === 1 && isKnobControl(a.controls[0]) && isKnobControl(b.controls[0])) {
+			a.controls.push(b.controls[0]);
+			cols.splice(i + 1, 1);
+			total -= b.span;
+		}
+		i++;
+	}
+	return cols;
+}
+
+/**
+ * On a section page (ADR-510) a tab holds this many values at most: a
+ * two-high page cell is about 127px tall, room for two rows of two touch
+ * cells; a one-row page's cell is the page's height, room for a column of
+ * five. A longer pick is a `ChoicePicker` that opens over the view.
+ */
+export const PAGE_TAB_MAX = 4;
+export const PAGE_TAB_MAX_ONE_ROW = 5;
+
+/** Whether a control draws on a page as a `ChoicePicker`: a pick too long for a page's tab. */
+export function pagePicks(control: PanelControl, oneRow = false): boolean {
+	const max = oneRow ? PAGE_TAB_MAX_ONE_ROW : PAGE_TAB_MAX;
+	if (control.kind === 'choice') return control.options.length > max;
+	return control.kind === 'step' && !!control.labels && control.labels.length > max;
+}
+
+/**
+ * One cell of a page's group: a control, or an amount with the pick that
+ * names what it reaches under it as its caption (Collision's Dest A over
+ * Amt A: a knob with its mark, the picker under it, Drift's pages' rule).
+ */
+export interface PageCell {
+	control: PanelControl;
+	picker?: PanelControl;
+	mark?: string;
+}
+
+/**
+ * A group's cells on a page, each pick paired with the amount after it that
+ * it names: a destination and its amount end on the same letter ("Dest B"
+ * over "Amt B"). A pick and an unrelated box (a loop's Retrig, then R Vel)
+ * stay two cells.
+ */
+export function pageCells(group: PanelGroup, oneRow = false): PageCell[] {
+	const cells: PageCell[] = [];
+	const cs = group.controls;
+	const last = (title: string) => title.split(' ').at(-1) ?? title;
+	for (let i = 0; i < cs.length; i++) {
+		const c = cs[i];
+		const next = cs[i + 1];
+		if (pagePicks(c, oneRow) && c.kind === 'step' && next?.kind === 'box' && !next.toggle && c.title.includes(' ') && last(c.title) === last(next.title)) {
+			cells.push({ control: next, picker: c, mark: last(next.title).slice(0, 1) });
+			i++;
+		} else cells.push({ control: c });
+	}
+	return cells;
+}
+
+/**
+ * A page lays its cells in one row, each a column the page's full height
+ * (Drift's Envelopes and LFO pages), when it has this many cells or fewer:
+ * at 1000px ten columns are ~85px, which holds a medium knob, and seven or
+ * fewer hold a large one. A page with more stacks its cells two high.
+ */
+export const PAGE_ONE_ROW_MAX = 10;
+
+/** Whether a page lays its cells in one row (`PAGE_ONE_ROW_MAX`). */
+export function pageOneRow(page: PanelPage): boolean {
+	const cells = page.rows.flat().reduce((n, g) => n + pageCells(g, true).length, 0);
+	return cells + (page.aside?.units ?? 0) <= PAGE_ONE_ROW_MAX;
+}
+
+/**
+ * A page group's columns and rows on the face grid (ADR-510). On a one-row
+ * page a cell a column. On a two-high page its cells stack two high,
+ * column after column, so a medium knob has its caption under it, and an
+ * envelope's stages (`face: 'slider'`) stand the page's full height, two to
+ * a column (their heights still draw it; a stage needs no knob's width).
+ */
+export function pageGroupGrid(group: PanelGroup, oneRow = false): { columns: number; rows: number; cells: number } {
+	const cells = pageCells(group, oneRow).length;
+	if (oneRow) return { columns: Math.max(1, cells), rows: 1, cells };
+	if (group.face === 'slider') return { columns: Math.max(1, Math.ceil(cells / 2)), rows: 1, cells };
+	if (cells <= 1) return { columns: 1, rows: 1, cells };
+	return { columns: Math.ceil(cells / 2), rows: 2, cells };
+}
+
+/** A page's sections, its aside's first: one a group, every row's groups in one row. */
+export function pageSections(page: PanelPage): number[] {
+	const oneRow = pageOneRow(page);
+	return [...(page.aside ? [page.aside.units] : []), ...page.rows.flat().map((g) => pageGroupGrid(g, oneRow).columns)];
 }
 
 export { knobGridFit, knobGridRows, knobSizeFor, type KnobSize } from '$lib/components/v6/device-panel/knobLayout';

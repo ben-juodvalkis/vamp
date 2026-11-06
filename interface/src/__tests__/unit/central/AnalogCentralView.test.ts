@@ -116,7 +116,7 @@ describe('AnalogCentralView — the Voice switch', () => {
 		expect(button(container, 'Osc 1 shape Saw').getAttribute('aria-pressed')).toBe('true');
 		expect(button(container, 'Osc 1 octave 0').getAttribute('aria-pressed')).toBe('true');
 		expect(button(container, 'Filter 1 Low-pass 24dB/oct').getAttribute('aria-pressed')).toBe('true');
-		expect(button(container, 'Filter 1 drive Asym2').getAttribute('aria-pressed')).toBe('true');
+		expect(button(container, 'Filter 1 drive: Asym2')).toBeTruthy();
 		expect(button(container, 'Osc 1 to F1')).toBeTruthy();
 	});
 
@@ -127,7 +127,7 @@ describe('AnalogCentralView — the Voice switch', () => {
 
 		// Osc 2 sits an octave down in this patch; Filter 2 drives Sym1 and follows F1.
 		expect(button(container, 'Osc 2 octave -1').getAttribute('aria-pressed')).toBe('true');
-		expect(button(container, 'Filter 2 drive Sym1').getAttribute('aria-pressed')).toBe('true');
+		expect(button(container, 'Filter 2 drive: Sym1')).toBeTruthy();
 		expect(container.querySelector('.slave-chip')?.getAttribute('aria-pressed')).toBe('true');
 
 		// A write now lands on Voice 2's indices, not Voice 1's.
@@ -152,6 +152,57 @@ describe('AnalogCentralView — the Voice switch', () => {
 			[ANALOG_VOICE[1].filterType, 0],
 			[ANALOG_VOICE[1].filterType, 6]
 		]);
+	});
+});
+
+describe('AnalogCentralView — the face and its pages (ADR-510)', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		_resetForTests();
+		replaceTree(7, [analogTrack()]);
+		selectedTrackStore.handleTrackSelected(0);
+	});
+	afterEach(() => cleanup());
+
+	it('draws no filter pad on the face: the chain cell draws Filter 1’s', async () => {
+		const { container } = render(AnalogCentralView, { props: { instrument: INSTRUMENT } });
+		await tick();
+		expect(container.querySelector('[data-analog-face]')).toBeTruthy();
+		expect(container.querySelector('.device-xy')).toBeNull();
+	});
+
+	it('draws the face’s seven knobs in column order', async () => {
+		const { container } = render(AnalogCentralView, { props: { instrument: INSTRUMENT } });
+		await tick();
+		const knobs = Array.from(container.querySelectorAll('[data-knob]')).map((el) => el.getAttribute('data-knob'));
+		expect(knobs).toEqual(['Sub', 'PW', 'Level', 'Noise', 'Env', 'Amp', 'Glide']);
+	});
+
+	it('opens the shown voice’s Filter page from its eyebrow, its pad on that voice, and back', async () => {
+		const { container } = render(AnalogCentralView, { props: { instrument: INSTRUMENT } });
+		await tick();
+		await fireEvent.click(button(container, 'Voice 1 of 2 — switch to voice 2'));
+		await fireEvent.click(container.querySelector<HTMLElement>('.eyebrow-link[data-page="filter2"]')!);
+		expect(container.querySelector('[data-analog-page="filter2"]')).toBeTruthy();
+		expect(container.querySelector('[data-analog-face]')).toBeNull();
+
+		// A family tap on the page writes Filter 2's type, as the face's does.
+		await fireEvent.click(button(container, 'Filter 2 High-pass 24dB/oct'));
+		const typeIndex = (BASS_106 as [string][]).findIndex(([n]) => n === 'F2 Type');
+		expect(paramSets().filter(([i]) => i === typeIndex).map(([, v]) => v)).toEqual([7]);
+
+		await fireEvent.click(container.querySelector<HTMLElement>('[data-back="face"]')!);
+		expect(container.querySelector('[data-analog-face]')).toBeTruthy();
+	});
+
+	it('leads a detail page back to its parent page', async () => {
+		const { container } = render(AnalogCentralView, { props: { instrument: INSTRUMENT } });
+		await tick();
+		await fireEvent.click(container.querySelector<HTMLElement>('.eyebrow-link[data-page="env1"]')!);
+		await fireEvent.click(container.querySelector<HTMLElement>('.eyebrow-link[data-page="aeg1"]')!);
+		expect(container.querySelector('[data-analog-page="aeg1"]')).toBeTruthy();
+		await fireEvent.click(container.querySelector<HTMLElement>('[data-back="env1"]')!);
+		expect(container.querySelector('[data-analog-page="env1"]')).toBeTruthy();
 	});
 });
 

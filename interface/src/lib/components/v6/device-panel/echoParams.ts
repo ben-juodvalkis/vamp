@@ -17,8 +17,12 @@ const lerp = (a: number, b: number, t: number) => a + clamp01(t) * (b - a);
 /** Where `v` sits between `a` (t = 0) and `b` (t = 1), clamped. */
 const unlerp = (a: number, b: number, v: number) => clamp01((v - a) / (b - a));
 
-/** The tile's synced sixteenths, left to right (1..4 — user, 2026-09-14). */
-const TILE_SIXTEENTHS = [1, 4] as const;
+/**
+ * The tile's synced sixteenths, left to right: 4 down to 1 (user,
+ * 2026-11-06; 1..4 from 2026-09-14), so synced time runs long to short
+ * across the pad as free time (TIME_SPAN) already did.
+ */
+const TILE_SIXTEENTHS = [4, 1] as const;
 /** The central view's synced sixteenths, bottom to top. */
 const VIEW_SIXTEENTHS = [1, 16] as const;
 /** Free time (param 2) across a time gesture — 1 → 0, as specified. */

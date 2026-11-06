@@ -213,7 +213,7 @@ Key rules:
   Current allowlist: Simpler's `{playback_mode, sample.warp_mode,
   sample.warping, sample.slicing_sensitivity, sample.gain,
   sample.start_marker, sample.end_marker, sample.length,
-  sample.file_path, sample.slices}`, Drift's `{voice_mode_index}`,
+  sample.file_path, sample.slices}`, Drift's `{voice_mode_index, voice_count_index, mod_matrix_*_source_*_index, mod_matrix_target_{1,2,3}_index}`,
   Hybrid Reverb's 5 scalar IR properties plus `ir_time_shaping_on` (0/1)
   and the read-only `ir_category_list` / `ir_file_list` (JSON arrays of
   Live's names, a stereo IR listed as `<Name> LR`), Wavetable's

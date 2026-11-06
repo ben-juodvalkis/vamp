@@ -717,17 +717,17 @@ describe('DrumRackCentralView — the Sampler row on a Sampler kit', () => {
 		});
 		const { container } = render(DrumRackCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
-		// DOM order; the lead grid draws them Gain · Trnsp · Spread · Osc /
-		// Pitch · A R · Filter, on the DrumCell kit's cells.
+		// DOM order is the face's (ADR-510): Kit [Gain over Trnsp | Spread
+		// over Select] · Osc over Pitch · A R · Filter.
 		expect(Array.from(container.querySelectorAll('.vm-slot')).map((s) => s.getAttribute('data-vm-function'))).toEqual([
 			'gain',
+			'pitch',
+			'spread',
+			'selector',
 			'oscAmount|oscCoarse',
 			'pitchEnvAmount|pitchEnvAttack',
 			'attack',
 			'release',
-			'spread',
-			'selector',
-			'pitch',
 			'filterFreq|filterRes'
 		]);
 		// Every pad: the amount up, the time or tune across.
@@ -948,8 +948,9 @@ describe('DrumRackCentralView — the pad grid and hold-to-scope', () => {
 		expect(tile(container, 36).style.getPropertyValue('--pad-fg')).toBe('#141414');
 		expect(tile(container, 38).classList.contains('pad-colored')).toBe(false);
 		expect(tile(container, 38).style.getPropertyValue('--pad-fill')).toBe('');
-		// The controls are still there, beside the grid (Filter stacked under Time).
-		expect(container.querySelectorAll('.vm-controls .vm-slot')).toHaveLength(6);
+		// The controls are still there, beside the grid (Filter stacked under
+		// Time; Gain inside the face since ADR-510).
+		expect(container.querySelectorAll('.vm-controls .vm-slot')).toHaveLength(7);
 	});
 
 	it('starts a second column at the fifth pad, four down the first, lowest at the foot', async () => {
@@ -1550,12 +1551,12 @@ describe('DrumRackCentralView — Trnsp whether or not the FX grid is on', () =>
 		const { container } = render(DrumRackCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
 		expect(container.querySelector('[data-vm-mode]')?.getAttribute('data-vm-mode')).toBe('full');
-		expect(container.querySelectorAll('.vm-controls .vm-slot')).toHaveLength(6);
+		expect(container.querySelectorAll('.vm-controls .vm-slot')).toHaveLength(7); // Gain is in the face since ADR-510
 		expect(slider(container, 'Trnsp').getAttribute('aria-valuenow')).toBe('-7');
 		expect(container.querySelector('[role="slider"][aria-label^="Start"]')).not.toBeNull();
 		uiPrefsStore.showFxGrid = false;
 		await tick();
-		expect(container.querySelectorAll('.vm-controls .vm-slot')).toHaveLength(6);
+		expect(container.querySelectorAll('.vm-controls .vm-slot')).toHaveLength(7); // Gain is in the face since ADR-510
 		expect(slider(container, 'Trnsp').getAttribute('aria-valuenow')).toBe('-7');
 	});
 });

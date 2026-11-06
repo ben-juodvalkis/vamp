@@ -24,6 +24,10 @@
 	 * 2026-10-24, then a `part` of it; it is `VariationCentralView` now, its
 	 * own file (the user's call, the same day).
 	 *
+	 * The face is one grid (ADR-510), sections 2 · 4 · 2: Presets, the four
+	 * pads, Duck over Glue beside Clock. It was compact (8px gaps) until
+	 * then; it takes the house 16px now, so its seams match every other face.
+	 *
 	 * Self-contained: queries its own slots and renders through
 	 * ghost/loading/active without a `{#if device}` gate.
 	 */
@@ -31,7 +35,10 @@
 	import { onMount } from 'svelte';
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
-	import SectionDivider from '$lib/components/v6/central/SectionDivider.svelte';
+	import FaceGrid from '$lib/components/v6/central/FaceGrid.svelte';
+	import FaceSection from '$lib/components/v6/central/FaceSection.svelte';
+	import FaceSeam from '$lib/components/v6/central/FaceSeam.svelte';
+	import PanelEyebrow from './panel/PanelEyebrow.svelte';
 	import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
 	import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 	import { sendParamsByName } from '$lib/services/deviceParams';
@@ -82,10 +89,10 @@
 
 	// Two by two: the loop on top, Drive × Space and Drift × Chaos under it.
 	const PADS = [
-		{ title: 'Length Reach', x: 'length', y: 'reach', col: 2, row: 1 },
-		{ title: 'Tone Repeats', x: 'tone', y: 'repeats', col: 4, row: 1 },
-		{ title: 'Drive Space', x: 'drive', y: 'space', col: 2, row: 2 },
-		{ title: 'Drift Chaos', x: 'drift', y: 'chaos', col: 4, row: 2 }
+		{ title: 'Length Reach', x: 'length', y: 'reach', col: 1, row: 1 },
+		{ title: 'Tone Repeats', x: 'tone', y: 'repeats', col: 3, row: 1 },
+		{ title: 'Drive Space', x: 'drive', y: 'space', col: 1, row: 2 },
+		{ title: 'Drift Chaos', x: 'drift', y: 'chaos', col: 3, row: 2 }
 	] as const satisfies readonly { title: string; x: GlitchLoopParam; y: GlitchLoopParam; col: number; row: number }[];
 
 	const NOON = 0.5;
@@ -130,28 +137,34 @@
 	}
 </script>
 
-<!-- NO {#if device} gate - always render, handle ghost/loading states -->
-<div class="glitch-central-layout relative" data-density="compact">
-	<!-- ===== GlitchLoop ===== -->
-	<section class="group" style="--panel-ink: {glitchInk.primary}; --btn-tint: {glitchInk.primary};">
-		<div class="group-title text-xs font-bold tracking-wider">GlitchLoop</div>
-		<div class="glitch-body">
-			<!-- The preset bank, top to bottom in the device's order: one
-			     segmented tab, like the Reverse rate column beside it. -->
-			<div class="device-segmented seg-grid presets" class:is-ghost-tab={glitchLoop.isGhost} role="group" aria-label="GlitchLoop presets">
-				{#if presets}
-					{#each presets.bank as name, i}
-						<button
-							class="device-segment preset-btn"
-							class:active={!glitchLoop.isGhost && litPreset === i}
-							aria-pressed={!glitchLoop.isGhost && litPreset === i}
-							onclick={() => loadPreset(name)}
-						>{name}</button>
-					{/each}
-				{/if}
-			</div>
+<!-- NO {#if device} gate - always render, handle ghost/loading states.
+     One face grid (ADR-510), eight columns of ~108px at 1366 x 1024:
+     Presets 2 · the four pads 4 (two by two) · Duck over Glue, and Clock 2. -->
+<div class="glitch-central-layout relative" style="--panel-ink: {glitchInk.primary}; --btn-tint: {glitchInk.primary};">
+<FaceGrid sections={[2, 4, 2]}>
+	<!-- The preset bank, top to bottom in the device's order: one segmented tab. -->
+	<FaceSection span={2}>
+		{#snippet head()}<PanelEyebrow title="Presets" color={glitchInk.primary} />{/snippet}
+		<div class="device-segmented seg-grid presets face-span-2" class:is-ghost-tab={glitchLoop.isGhost} role="group" aria-label="GlitchLoop presets">
+			{#if presets}
+				{#each presets.bank as name, i}
+					<button
+						class="device-segment preset-btn"
+						class:active={!glitchLoop.isGhost && litPreset === i}
+						aria-pressed={!glitchLoop.isGhost && litPreset === i}
+						onclick={() => loadPreset(name)}
+					>{name}</button>
+				{/each}
+			{/if}
+		</div>
+	</FaceSection>
+	<FaceSeam ink={glitchInk.primary} />
 
-			<!-- The macros and Drive × Space, a pad each pair. -->
+	<!-- The macros and Drive × Space, a pad each pair, two by two on the
+	     face's columns. -->
+	<FaceSection span={4}>
+		{#snippet head()}<PanelEyebrow title="GlitchLoop" color={glitchInk.primary} />{/snippet}
+		<div class="pads face-span-all">
 			{#each PADS as pad}
 				<div class="pad" style:grid-column="{pad.col} / span 2" style:grid-row={pad.row} class:slot-ghost={glitchLoop.isGhost}>
 					<DeviceXY
@@ -169,31 +182,18 @@
 					/>
 				</div>
 			{/each}
+		</div>
+	</FaceSection>
+	<FaceSeam ink={glitchInk.primary} />
 
-			<!-- Clock, full height, in its detents. -->
-			<div class="fx-slider" style:grid-column={7} class:slot-ghost={glitchLoop.isGhost}>
-				<DeviceSlider
-					value={clockUnit}
-					title="Clock"
-					face="knob"
-					knobSize="l"
-					orientation="vertical"
-					labelSize="small"
-					isGhost={glitchLoop.isGhost}
-					color={glitchInk}
-					min={0}
-					max={1}
-					readout={glitchLoop.paramDisplay(gIndex('clock'))}
-					onTap={() => glitchLoop.loadIfGhost()}
-					onInteraction={(t) => sendClock(t)}
-				/>
-			</div>
-
-			<!-- Duck over Glue, two knobs in one column (ADR-509): two
-			     controls, not a pair on one pad. Medium: two captioned 96px
-			     knobs need 316px and the band has 300. -->
-			{#each [{ key: 'duck', title: 'Duck', row: 1 }, { key: 'glue', title: 'Glue', row: 2 }] as const as s}
-				<div class="fx-box" style:grid-column={6} style:grid-row={s.row} class:slot-ghost={glitchLoop.isGhost}>
+	<FaceSection span={2}>
+		{#snippet head()}<PanelEyebrow title="Glue · Clock" color={glitchInk.primary} />{/snippet}
+		<!-- Duck over Glue, two knobs in one column (ADR-509): two
+		     controls, not a pair on one pad. Medium: two captioned 96px
+		     knobs need 316px and the band has 263. -->
+		<div class="knob-pair">
+			{#each [{ key: 'duck', title: 'Duck' }, { key: 'glue', title: 'Glue' }] as const as s}
+				<div class="fx-box" class:slot-ghost={glitchLoop.isGhost}>
 					<DeviceSlider
 						value={unit(s.key, 0)}
 						title={s.title}
@@ -212,48 +212,45 @@
 				</div>
 			{/each}
 		</div>
-	</section>
 
+		<!-- Clock, full height, in its detents: one large knob. -->
+		<div class="fx-slider" class:slot-ghost={glitchLoop.isGhost}>
+			<DeviceSlider
+				value={clockUnit}
+				title="Clock"
+				face="knob"
+				knobSize="l"
+				orientation="vertical"
+				labelSize="small"
+				isGhost={glitchLoop.isGhost}
+				color={glitchInk}
+				min={0}
+				max={1}
+				readout={glitchLoop.paramDisplay(gIndex('clock'))}
+				onTap={() => glitchLoop.loadIfGhost()}
+				onInteraction={(t) => sendClock(t)}
+			/>
+		</div>
+	</FaceSection>
+</FaceGrid>
 </div>
 
 <style>
-	/* GlitchLoop's presets and seven columns. */
+	/* The face is the FaceGrid (ADR-510). */
 	.glitch-central-layout {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr);
 		height: 100%;
 		width: 100%;
-		padding: var(--central-inset);
-		gap: var(--central-gap);
-	}
-
-	.group {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-xs);
-		min-width: 0;
 		min-height: 0;
 	}
 
-	/* Centred over the group it names, in that device's ink. */
-	.group-title {
-		flex-shrink: 0;
-		text-align: center;
-		color: var(--panel-ink);
-	}
-
-	/* presets (two columns of three) · four pads two by two (two tracks each)
-	   · Duck over Glue · Clock, over two rows. The pad tracks are 1.25fr: the
-	   column Duck and Glue freed when they stacked (ADR-477) went to the pads,
-	   so the slider columns keep the width they had. */
-	.glitch-body {
-		flex: 1;
-		min-height: 0;
-		min-width: 0;
+	/* The four pads two by two, on the section's own columns (subgrid), two
+	   equal rows with the face's gutter between. */
+	.pads {
 		display: grid;
-		grid-template-columns: minmax(0, 2.4fr) repeat(4, minmax(0, 1.25fr)) repeat(2, minmax(0, 1fr));
+		grid-template-columns: subgrid;
 		grid-template-rows: repeat(2, minmax(0, 1fr));
-		gap: var(--central-gap);
+		row-gap: var(--face-gutter);
+		min-height: 0;
 	}
 
 	/* Two columns of three, filled down then across, so the bank still
@@ -261,8 +258,6 @@
 	   of six before). One segmented tab, as the Reverse column and Drift's
 	   choosers are: an outer frame, hairlines between, the lit one filled. */
 	.presets {
-		grid-column: 1;
-		grid-row: 1 / span 2;
 		display: grid;
 		grid-template-rows: repeat(3, minmax(0, 1fr));
 		grid-auto-flow: column;
@@ -288,8 +283,14 @@
 		flex-direction: column;
 	}
 
-	.fx-slider {
-		grid-row: 1 / span 2;
+	.knob-pair {
+		display: flex;
+		flex-direction: column;
+		gap: var(--face-gutter);
+		min-height: 0;
+	}
+	.fx-box {
+		flex: 1 1 0;
 	}
 
 	.is-ghost-tab {
@@ -297,12 +298,7 @@
 	}
 
 	/* ---- Live skin (flat grammar) ------------------------------------ */
-	/* Live sets control text medium, keeps authored case, and does not
-	   letterspace its section legends; headers are plain secondary text. */
-	:global([data-grammar="flat"]) .group-title {
-		font-weight: var(--font-weight-medium);
-		letter-spacing: 0;
-	}
+	/* Live sets control text medium and keeps authored case. */
 	:global([data-grammar="flat"]) .preset-btn {
 		font-weight: var(--font-weight-medium);
 	}

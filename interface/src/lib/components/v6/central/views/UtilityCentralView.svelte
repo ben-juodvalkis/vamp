@@ -2,7 +2,10 @@
   /**
    * UtilityCentralView — the Utility's view (slot `utility`, StereoGain).
    *
-   *   [Width] [Balance] [Bass Freq] [Channel] [switches]
+   *   Stereo [Width] [Balance] [Bass Freq] | Channel | Switches
+   *
+   * On the face grid (ADR-510), sections [3, 1, 1]: five columns of about
+   * 177px, one large knob to a column.
    *
    * No Gain: it is the Utility's chain cell (the `utility` control,
    * `deviceControls`), always beside this view (the user, 2026-11-05).
@@ -21,6 +24,10 @@
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+  import FaceGrid from '../FaceGrid.svelte';
+  import FaceSection from '../FaceSection.svelte';
+  import FaceSeam from '../FaceSeam.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
 
   const utility = useFxGridSlot('utility');
 
@@ -55,6 +62,9 @@
 </script>
 
 <div class="utility-layout" data-view="utility" style="--btn-tint: {ink.primary};">
+  <FaceGrid sections={[3, 1, 1]}>
+  <FaceSection span={3}>
+  {#snippet head()}<PanelEyebrow title="Stereo" color={ink.primary} />{/snippet}
   <div class="column" class:slot-ghost={utility.isGhost}>
     <DeviceSlider
       value={value(UTIL.width)}
@@ -107,6 +117,11 @@
     />
   </div>
 
+  </FaceSection>
+  <FaceSeam ink={ink.primary} />
+
+  <FaceSection span={1}>
+  {#snippet head()}<PanelEyebrow title="Channel" color={ink.primary} />{/snippet}
   <div class="column channel" class:slot-ghost={utility.isGhost} role="radiogroup" aria-label="Channel">
     {#each CHANNEL_MODES as label, i (label)}
       <button
@@ -121,6 +136,11 @@
     {/each}
   </div>
 
+  </FaceSection>
+  <FaceSeam ink={ink.primary} />
+
+  <FaceSection span={1}>
+  {#snippet head()}<PanelEyebrow title="Switches" color={ink.primary} />{/snippet}
   <div class="column switches" class:slot-ghost={utility.isGhost}>
     {#each SWITCH_ROWS as row, r (r)}
       <div class="switch-row">
@@ -132,23 +152,23 @@
       </div>
     {/each}
   </div>
+  </FaceSection>
+  </FaceGrid>
 </div>
 
 <style>
-  /* Five equal columns: three value boxes, the channel picker, the switches. */
+  /* The face is the FaceGrid (ADR-510): five equal columns, three knobs,
+     the channel picker, the switches. A column's rows are a gutter apart,
+     so five switch rows keep the touch floor in the band (5 x 44 + 4 x 8). */
   .utility-layout {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
     height: 100%;
     width: 100%;
-    padding: var(--central-inset);
-    gap: var(--central-gap);
   }
 
   .column {
     display: flex;
     flex-direction: column;
-    gap: var(--central-gap);
+    gap: var(--face-gutter);
     min-width: 0;
     min-height: 0;
   }
@@ -160,7 +180,7 @@
 
   .switch-row {
     display: flex;
-    gap: var(--central-gap);
+    gap: var(--face-gutter);
   }
 
   .switch-row > .utility-switch {

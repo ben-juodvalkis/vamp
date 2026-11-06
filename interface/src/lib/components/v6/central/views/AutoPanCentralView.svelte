@@ -16,6 +16,9 @@
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
+  import FaceGrid from '../FaceGrid.svelte';
+  import FaceSection from '../FaceSection.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
   import {
     AUTO_PAN,
     SYNC_RATE_MAX,
@@ -74,11 +77,12 @@
   };
 </script>
 
-<div class="autopan-layout">
-  <!-- Auto Pan: rate, shape and Sync stacked in one column (2026-10-15). -->
-  <div class="stack autopan-col" class:slot-ghost={fx.isGhost} style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
-    <span class="col-title" style="color: {fxInk.primary};">Tremolo</span>
-    <div class="pair">
+<!-- One face grid (ADR-510): one section of two columns, the rate under
+     its Sync switch beside the shape tab. -->
+<div class="autopan-layout" class:slot-ghost={fx.isGhost} style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
+  <FaceGrid sections={[2]}>
+    <FaceSection span={2}>
+      {#snippet head()}<PanelEyebrow title="Tremolo" color={fxInk.primary} />{/snippet}
       <!-- Sync, small, over the rate it switches. -->
       <div class="rate-col">
         <button
@@ -111,7 +115,6 @@
         inked
         label={(s) => `Shape ${s.label}`}
         name="shape"
-        class="flex-1"
       >
         {#snippet item(s)}
           <svg class="shape-glyph" viewBox="0 0 24 12" aria-hidden="true" focusable="false">
@@ -127,44 +130,24 @@
                 </svg>
         {/snippet}
       </ScrubTabs>
-    </div>
-  </div>
+    </FaceSection>
+  </FaceGrid>
 </div>
 
 <style>
+  /* The face is the FaceGrid (ADR-510). */
   .autopan-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--central-gap);
     height: 100%;
     width: 100%;
-    padding: var(--central-inset);
-  }
-
-  .stack {
-    display: flex;
-    flex-direction: column;
-    gap: var(--central-gap);
     min-height: 0;
-    min-width: 0;
-  }
-
-  /* Under the title, the rate and the shape stand upright side by side. */
-  .pair {
-    flex: 1 1 0;
-    min-height: 0;
-    min-width: 0;
-    display: flex;
-    gap: var(--central-gap);
   }
 
   .rate-col {
-    flex: 1 1 0;
     min-height: 0;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-sm, 8px);
+    gap: var(--face-gutter);
   }
 
   .rate-slider {
@@ -172,20 +155,6 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-  }
-
-  /* The house eyebrow, naming the column's device. */
-  .col-title {
-    flex: 0 0 auto;
-    font-size: 0.75rem;
-    line-height: 1rem;
-    letter-spacing: 0.05em;
-    font-weight: 700;
-    text-align: center;
-  }
-  :global([data-grammar="flat"]) .col-title {
-    text-transform: none;
-    letter-spacing: normal;
   }
 
   /* Small: one touch row over the slider. */

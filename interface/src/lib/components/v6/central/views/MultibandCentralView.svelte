@@ -17,6 +17,10 @@
 
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
+  import FaceGrid from '../FaceGrid.svelte';
+  import FaceSection from '../FaceSection.svelte';
+  import FaceSeam from '../FaceSeam.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
   import {
     MB_BELOW_THRESHOLD_MID,
     MB_THRESHOLD_MIN,
@@ -35,7 +39,11 @@
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
 <div class="mb-central-layout relative" data-device="multiband">
-  <div class="mb-slider" class:slot-ghost={multiband.isGhost}>
+<!-- One face grid (ADR-510): Threshold over two columns, Output one. -->
+<FaceGrid sections={[2, 1]}>
+  <FaceSection span={2}>
+  {#snippet head()}<PanelEyebrow title="Mid Band" color={multiband.color.primary} />{/snippet}
+  <div class="mb-slider face-span-2" class:slot-ghost={multiband.isGhost}>
     <DeviceSlider
       value={mbThreshold}
       title="Threshold"
@@ -50,6 +58,11 @@
       onInteraction={(value) => multiband.sendParam(MB_BELOW_THRESHOLD_MID, value)}
     />
   </div>
+  </FaceSection>
+  <FaceSeam />
+
+  <FaceSection span={1}>
+  {#snippet head()}<PanelEyebrow title="Output" color={multiband.color.primary} />{/snippet}
   <div class="mb-slider" class:slot-ghost={multiband.isGhost}>
     <DeviceSlider
       value={mbOutput}
@@ -69,18 +82,18 @@
       onInteraction={(value) => multiband.sendParam(MB_OUTPUT, value)}
     />
   </div>
+  </FaceSection>
+</FaceGrid>
 </div>
 
 <style>
   /* threshold | output */
+  /* The threshold a set rides as a box, the output set once as a knob
+     (ADR-509), on the FaceGrid (ADR-510). */
   .mb-central-layout {
-    display: grid;
-    /* The threshold a set rides as a box, the output set once as a knob (ADR-509). */
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
     height: 100%;
     width: 100%;
-    padding: var(--central-inset);
-    gap: var(--central-gap);
+    min-height: 0;
   }
 
   .mb-slider {

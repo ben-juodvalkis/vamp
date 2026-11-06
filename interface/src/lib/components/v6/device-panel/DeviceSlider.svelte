@@ -134,8 +134,9 @@
   let effectiveTravel = $derived(travel ?? (valueBox ? VALUE_BOX_TRAVEL : undefined));
 
   // A knob (ADR-509) is a value box drawn as an arc: same gesture, same
-  // travel, the whole cell its target. Either axis turns it: up or right
-  // raises it, as a box's own axis does.
+  // travel, the whole cell its target. Only a vertical drag turns it, up
+  // raising it (user, 2026-11-06; either axis until then), so a sideways
+  // slip of the finger never moves it.
   let knobFace = $derived(face === 'knob');
 
   let effectiveLabelOrientation = $derived.by(() => {
@@ -285,10 +286,11 @@
     const size = effectiveTravel ? Math.max(length, effectiveTravel) : length;
     const delta = ((currentPointer - startPointer) / size) * sensitivity;
 
-    // Apply delta to start value (invert for vertical). A knob takes either
-    // axis: up or right turns it clockwise, over the same size as a box.
+    // Apply delta to start value (invert for vertical). A knob takes the
+    // vertical alone, up clockwise, over its height or the box travel.
+    const knobSize = effectiveTravel ? Math.max(rect.height, effectiveTravel) : rect.height;
     const normalizedDelta = knobFace
-      ? ((event.clientX - tapStartX) - (event.clientY - tapStartY)) / size * sensitivity
+      ? -(event.clientY - tapStartY) / knobSize * sensitivity
       : orientation === 'vertical' ? -delta : delta;
     const normalizedValue = (startValue - min) / (max - min);
     const newNormalizedValue = Math.max(0, Math.min(1, normalizedValue + normalizedDelta));

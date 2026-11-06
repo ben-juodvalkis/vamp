@@ -55,6 +55,8 @@ import {
 	railFor
 } from '$lib/components/v6/browser/presetCurves';
 import { DEVICE_PRESETS } from '$lib/config/devicePresets';
+import { MELD_ENGINE, type MeldEngine } from '$lib/components/v6/central/views/meldParams';
+import { meldEngineStore } from '$lib/stores/v6/meldEngineStore.svelte';
 import { namesDevice } from '$lib/utils/deviceSlotMatch';
 import type { PictureKind } from '$lib/components/v6/browser/devicePictures';
 import type { ControlGlyphName } from './ControlGlyph.svelte';
@@ -751,7 +753,7 @@ export function presetControl(saved: SavedPreset | null, name: string): { contro
  * is known by, in each parameter's own range (the face reads and writes
  * through Live's min..max). The parameters are the views' own, read off the
  * running device when each view was built (the `*Params.ts` tables and the
- * views' constants): Operator's and Analog's filter, Wavetable's Osc 1 pad, Meld's Osc A pad,
+ * views' constants): Operator's and Analog's filter, Wavetable's Osc 1 pad, Meld's oscillator pad (the engine its view shows),
  * Sampler's and Simpler's by name, Collision's first resonator, Electric's
  * hammer. `on` is the switch a gesture turns on first (a filter heard only
  * while on). An Instrument Rack is its first macro, named as the rack names
@@ -766,9 +768,28 @@ export interface InstrumentControl {
 	/** Positions 0..1 shown before the device answers. */
 	rest: [number, number];
 	on?: ParamRef;
+	/**
+	 * The control as it stands for one device, where it follows something
+	 * the device's view picks (Meld's pad follows the engine its view shows,
+	 * 2026-11-06). Read through `instrumentControlFor`, inside a reactive
+	 * scope, so the cell follows the pick.
+	 */
+	follow?: (devicePath: string) => InstrumentControl;
 }
 
 const byNameOnly = (name: string): ParamRef => ({ name, index: -1 });
+
+/** Meld's pad for one engine: its Osc Shape across, Osc Tone up, its On the switch a touch turns on. */
+function meldOscControl(engine: MeldEngine): InstrumentControl {
+	const p = MELD_ENGINE[engine];
+	return { kind: 'xy', title: `Osc ${engine}`, x: p.oscShape, y: p.oscTone, on: p.on, rest: [0, 0] };
+}
+
+/** An instrument's chain-cell control for one device: the table's entry, or what it follows on that device. */
+export function instrumentControlFor(type: string, devicePath: string | undefined): InstrumentControl | undefined {
+	const entry = INSTRUMENT_CONTROLS[type];
+	return entry?.follow && devicePath ? entry.follow(devicePath) : entry;
+}
 
 export const INSTRUMENT_CONTROLS: Readonly<Record<string, InstrumentControl>> = {
 	// OperatorCentralView: 165 'Filter On', 170 'Filter Freq', 171 'Filter Res'.
@@ -777,8 +798,9 @@ export const INSTRUMENT_CONTROLS: Readonly<Record<string, InstrumentControl>> = 
 	analog: { kind: 'xy', title: 'Filter', x: 57, y: 59, on: 53, rest: [1, 0] },
 	// WavetableCentralView OSC[1]'s pad: 1 on, 6 Effect 2 across, 4 wave position up.
 	wavetable: { kind: 'xy', title: 'Osc 1', x: 6, y: 4, on: 1, rest: [0, 0.5] },
-	// MeldCentralView's Osc A pad (meldParams MELD_ENGINE.A): 1 engine on, 8 Osc Shape across, 9 Osc Tone up.
-	meld: { kind: 'xy', title: 'Osc A', x: 8, y: 9, on: 1, rest: [0, 0] },
+	// Meld's oscillator macros (meldParams MELD_ENGINE): the engine on, Osc Shape across, Osc Tone up,
+	// of the engine the Meld view shows (meldEngineStore): A's 1 / 8 / 9 until B is picked, then 61 / 68 / 69.
+	meld: { ...meldOscControl('A'), follow: (devicePath) => meldOscControl(meldEngineStore.engineOf(devicePath)) },
 	// SamplerCentralView: 'F On', 'Filter Freq', 'Filter Res' (Simpler alike).
 	sampler: { kind: 'xy', title: 'Filter', x: byNameOnly('Filter Freq'), y: byNameOnly('Filter Res'), on: byNameOnly('F On'), rest: [1, 0] },
 	simpler: { kind: 'xy', title: 'Filter', x: byNameOnly('Filter Freq'), y: byNameOnly('Filter Res'), on: byNameOnly('F On'), rest: [1, 0] },

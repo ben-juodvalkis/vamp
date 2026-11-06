@@ -589,19 +589,19 @@
   <span class="box-label">{#if glyph}<span class="box-glyph"><ControlGlyph name={glyph} /></span>{/if}<span class="box-name">{name}</span><span class="box-value">{value}</span></span>
 {/snippet}
 
-{#snippet typeChip(index: number)}
+{#snippet typeChip(end: string, index: number)}
   <button
     class="physical-button reverb-chip"
     style="--btn-tint: {currentColor.primary};"
-    title="Cut or Shelf"
+    title="{end}: Cut or Shelf"
     data-reverb-switch={index}
     onclick={() => toggle(index)}
   >
-    {EQ_TYPE_LABELS[on(index) ? 1 : 0]}
+    {end} {EQ_TYPE_LABELS[on(index) ? 1 : 0]}
   </button>
 {/snippet}
 
-<!-- One value box, its switch (Sync, Mono, Cut / Shelf) under it. -->
+<!-- One value box, its switch (Sync, Mono) under it. -->
 <!-- `ownCellChip`: the switch is drawn in the cell under the box (the
      shared knobs, ADR-509), not inside it. -->
 {#snippet sliderBox(row: Row, ownCellChip = false, size: 's' | 'm' | 'l' = knobSize)}
@@ -627,7 +627,6 @@
       />
     </div>
     {#if row.chip && !ownCellChip}{@render chip(row.chip.name, row.chip.index)}{/if}
-    {#if row.type !== undefined}{@render typeChip(row.type)}{/if}
   </div>
 {/snippet}
 
@@ -732,15 +731,25 @@
             <!-- The EQ's curve. An algorithm's tail and an IR's waveform are
                  drawn on the Reverb tile now (ADR-477). -->
             <div class="picture">
-              <ReverbEqEditor
-                bands={eq}
-                on={eqOn}
-                color={currentColor}
-                isGhost={fx.isGhost}
-                selected={eqFocus}
-                onSelect={(key) => (eqFocus = key)}
-                onWrite={(index, value) => fx.sendParam(index, value)}
-              />
+              <div class="picture-curve">
+                <ReverbEqEditor
+                  bands={eq}
+                  on={eqOn}
+                  color={currentColor}
+                  isGhost={fx.isGhost}
+                  selected={eqFocus}
+                  onSelect={(key) => (eqFocus = key)}
+                  onWrite={(index, value) => fx.sendParam(index, value)}
+                />
+              </div>
+              <!-- Each end's Cut / Shelf under the curve's own end, one
+                   touch row: under its knob it left the knob 35px
+                   (2026-11-06), where the cell keeps 48 without it. -->
+              <div class="end-types" data-reverb-eq-types>
+                {#each [eqRows[0], eqRows[3]] as row, i (row.key)}
+                  {#if row.type !== undefined}{@render typeChip(i === 0 ? 'Lo' : 'Hi', row.type)}{/if}
+                {/each}
+              </div>
             </div>
 
             <SectionDivider orientation="vertical" />
@@ -935,12 +944,26 @@
     white-space: nowrap;
   }
 
-  /* The EQ's curve. */
+  /* The EQ's curve over its ends' Cut / Shelf switches. */
   .picture {
-    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
     height: 100%;
     min-width: 0;
     min-height: 0;
+  }
+  .picture-curve {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 0;
+  }
+  .end-types {
+    flex: 0 0 var(--height-touch);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--spacing-sm);
   }
   .picture-tabs {
     grid-column: 1 / -1;

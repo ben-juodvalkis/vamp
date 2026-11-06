@@ -51,26 +51,27 @@ function resonatorPage(n: 1 | 2): PanelPage {
 		rows: [
 			[
 				{
+					// The type and its shape (Ratio sets a membrane's or a
+					// plate's proportions): two columns, as each group here,
+					// so the page is ten columns of medium knobs (ADR-510).
 					title: `Resonator ${n}`,
 					switchParam,
 					controls: [
 						{ kind: 'switch', param: switchParam, title: 'On' },
-						{ kind: 'choice', param: `${r} Type`, options: RES_TYPES },
-						{ kind: 'choice', param: `${r} Quality`, options: QUALITY }
+						{ kind: 'choice', param: `${r} Type`, title: 'Type', options: RES_TYPES },
+						{ kind: 'choice', param: `${r} Quality`, options: QUALITY },
+						{ kind: 'box', param: `${r} Ratio`, title: 'Ratio' }
 					]
 				},
 				{
 					title: 'Body',
 					page: `res${n}-mod`,
 					switchParam,
-					// Wide enough for its five knobs in one row at their size (ADR-509).
-					units: 6.5,
 					controls: [
 						{ kind: 'box', param: `${r} Decay`, title: 'Decay' },
 						{ kind: 'box', param: `${r} Material`, title: 'Material' },
 						{ kind: 'box', param: `${r} Brightness`, title: 'Bright' },
-						{ kind: 'box', param: `${r} Inharmonics`, title: 'Inharm' },
-						{ kind: 'box', param: `${r} Ratio`, title: 'Ratio' }
+						{ kind: 'box', param: `${r} Inharmonics`, title: 'Inharm' }
 					]
 				}
 			],
@@ -186,7 +187,7 @@ function lfoPage(n: 1 | 2): PanelPage {
 					switchParam,
 					controls: [
 						{ kind: 'switch', param: switchParam, title: 'On' },
-						{ kind: 'choice', param: `${l} Wave`, options: LFO_WAVES },
+						{ kind: 'choice', param: `${l} Wave`, title: 'Wave', options: LFO_WAVES },
 						{ kind: 'choice', param: `${l} Sync`, options: ['Free', 'Sync'] },
 						{ kind: 'switch', param: `${l} Retrig On`, title: 'Retrig' }
 					]
@@ -259,6 +260,8 @@ export const COLLISION_PANEL: InstrumentPanel = {
 				title: 'Mallet',
 				page: 'mallet',
 				switchParam: 'Mallet On/Off',
+				// One column, its two knobs stacked (ADR-510).
+				columns: 1,
 				controls: [
 					{ kind: 'box', param: 'Mallet Volume', title: 'Volume' },
 					{ kind: 'box', param: 'Mallet Stiffness', title: 'Stiffness' }
@@ -271,6 +274,7 @@ export const COLLISION_PANEL: InstrumentPanel = {
 				title: 'Noise',
 				page: 'noise',
 				switchParam: 'Noise On/Off',
+				columns: 1,
 				controls: [
 					{ kind: 'box', param: 'Noise Volume', title: 'Volume' },
 					{ kind: 'box', param: 'Noise Filter Freq', title: 'Freq' }
@@ -405,7 +409,7 @@ export const COLLISION_PANEL: InstrumentPanel = {
 			id: 'midi',
 			title: 'MIDI',
 			rows: [
-				[midiGroup('Pitch Bend', 'PB', false), midiGroup('Mod Wheel', 'MW', true)],
+				[midiGroup('Bend', 'PB', false), midiGroup('Mod Wheel', 'MW', true)],
 				[midiGroup('Pressure', 'Press', true), midiGroup('Slide', 'Slide', true)]
 			]
 		},
@@ -414,10 +418,11 @@ export const COLLISION_PANEL: InstrumentPanel = {
 			title: 'Global',
 			rows: [
 				[
-					{ title: 'Structure', controls: [{ kind: 'choice', param: 'Structure', options: ['1 > 2', '1 + 2'] }] },
 					{
-						title: 'Voices',
+						// Under the page's own name: the header line is its way back.
+						title: 'Global',
 						controls: [
+							{ kind: 'choice', param: 'Structure', options: ['1 > 2', '1 + 2'] },
 							{ kind: 'step', param: 'Voices', title: 'Voices', labels: VOICES },
 							{ kind: 'switch', param: 'Retrig On', title: 'Retrig' }
 						]

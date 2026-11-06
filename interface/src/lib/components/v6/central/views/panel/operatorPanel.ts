@@ -5,9 +5,12 @@
  * envelope and oscillator settings in the middle display, then LFO, Filter,
  * Pitch Env and the global Time / Tone / Volume down the right. Here Live's
  * oscillators, its LFO and its pitch envelope are tabs over the middle (the
- * display Live swaps), each showing its main boxes and its envelope; the
- * Filter is the view's own XY pad with its response curve (`slot`); Time,
- * Tone and Volume close the frame. Every eyebrow opens its section's page.
+ * display Live swaps), each showing its main knobs and its envelope; the
+ * Filter's type and its Env and Drive; Time, Tone and Volume close the
+ * frame. Every eyebrow opens its section's page. The filter pad (Freq
+ * across, Res up) is not on the frame: the chain cell's XY is the same two
+ * parameters (`INSTRUMENT_CONTROLS.operator`), so it is the Filter page's
+ * picture (`aside`) instead.
  * Names are Live's (docs/reference/instruments/Operator.md); note Live's
  * trailing space in "A Fix On ".
  */
@@ -30,13 +33,17 @@ const DESTS = [
 ];
 const ALGORITHMS = Array.from({ length: 11 }, (_, i) => `Alg. ${i + 1}`);
 
-/** The envelope a tab or page shows: four stages under one eyebrow. */
+/**
+ * The envelope a tab or page shows: four stages under one eyebrow, on three
+ * of the frame's columns (a stage needs no knob's width, ADR-510).
+ */
 function adsr(prefix: string, page: string, switchParam?: string): PanelGroup {
 	return {
 		title: 'Envelope',
 		page,
 		switchParam,
 		face: 'slider',
+		columns: 3,
 		controls: [
 			{ kind: 'box', param: `${prefix} Attack`, title: 'A' },
 			{ kind: 'box', param: `${prefix} Decay`, title: 'D' },
@@ -56,6 +63,7 @@ function oscTab(o: Osc): PanelTab {
 				title: `Oscillator ${o}`,
 				page: `osc-${o}`,
 				switchParam: on,
+				// A knob a column, in one row under the tabs (ADR-510).
 				controls: [
 					{ kind: 'box', param: `${o} Coarse`, title: 'Coarse' },
 					{ kind: 'box', param: `Osc-${o} Level`, title: 'Level' },
@@ -122,8 +130,10 @@ function oscPage(o: Osc): PanelPage {
 						{ kind: 'switch', param: `Osc-${o} < Pe`, title: 'Pitch Env' },
 						{ kind: 'switch', param: `Osc-${o} < LFO`, title: 'LFO' }
 					]
-				},
-				adsr(`${o}e`, `osc-${o}-env`, on)
+				}
+				// The oscillator's envelope is its own page, opened from the
+				// frame's Envelope: drawn here too it took four of fourteen
+				// columns and left every knob too narrow (2026-11-06).
 			]
 		]
 	};
@@ -155,7 +165,7 @@ function envPage(id: string, title: string, prefix: string, parent: string, extr
 				{
 					title: 'Loop',
 					controls: [
-						{ kind: 'choice', param: `${prefix} Mode`, options: ENV_MODES },
+						{ kind: 'choice', param: `${prefix} Mode`, title: 'Mode', options: ENV_MODES },
 						{ kind: 'box', param: `${prefix} Loop`, title: 'Loop' },
 						{ kind: 'step', param: `${prefix} Retrig`, title: 'Retrig', labels: RETRIG },
 						{ kind: 'box', param: `${prefix} R < Vel`, title: 'R Vel' }
@@ -224,18 +234,27 @@ export const OPERATOR_PANEL: InstrumentPanel = {
 			]
 		},
 		{
-			kind: 'slot',
-			slot: 'filter',
-			title: 'Filter',
-			page: 'filter',
-			units: 2,
-			params: ['Filter On', 'Filter Type', 'Filter Slope', 'Filter Morph', 'Filter Freq', 'Filter Res']
+			kind: 'group',
+			group: {
+				title: 'Filter',
+				page: 'filter',
+				switchParam: 'Filter On',
+				// Two face columns: the type's tab, then Env over Drive (`frameColumns`).
+				columns: 2,
+				controls: [
+					{ kind: 'choice', param: 'Filter Type', title: 'Type', options: ['LP', 'HP', 'BP', 'Notch', 'Morph'] },
+					{ kind: 'box', param: 'Fe Amount', title: 'Env' },
+					{ kind: 'box', param: 'Filter Drive', title: 'Drive' }
+				]
+			}
 		},
 		{
 			kind: 'group',
 			group: {
 				title: 'Global',
 				page: 'global',
+				// Three knobs stacked over two columns, names beside: medium (ADR-510).
+				columns: 2,
 				controls: [
 					{ kind: 'box', param: 'Time', title: 'Time' },
 					{ kind: 'box', param: 'Tone', title: 'Tone' },
@@ -256,7 +275,7 @@ export const OPERATOR_PANEL: InstrumentPanel = {
 						switchParam: 'LFO On',
 						controls: [
 							{ kind: 'switch', param: 'LFO On', title: 'On' },
-							{ kind: 'choice', param: 'LFO Type', options: ['Sine', 'Square', 'Tri', 'Saw Up', 'Saw Dn', 'S&H', 'Noise'] },
+							{ kind: 'choice', param: 'LFO Type', title: 'Wave', options: ['Sine', 'Square', 'Tri', 'Saw Up', 'Saw Dn', 'S&H', 'Noise'] },
 							{ kind: 'choice', param: 'LFO Range', options: ['Low', 'High', 'Sync'] },
 							{ kind: 'switch', param: 'LFO Retrigger', title: 'Retrig' }
 						]
@@ -315,7 +334,7 @@ export const OPERATOR_PANEL: InstrumentPanel = {
 						title: 'Loop',
 						switchParam: 'Pe On',
 						controls: [
-							{ kind: 'choice', param: 'Pe Mode', options: ENV_MODES },
+							{ kind: 'choice', param: 'Pe Mode', title: 'Mode', options: ENV_MODES },
 							{ kind: 'box', param: 'Pe Loop', title: 'Loop' },
 							{ kind: 'step', param: 'Pe Retrig', title: 'Retrig', labels: RETRIG },
 							{ kind: 'box', param: 'Pe R < Vel', title: 'R Vel' }
@@ -352,6 +371,9 @@ export const OPERATOR_PANEL: InstrumentPanel = {
 		{
 			id: 'filter',
 			title: 'Filter',
+			// The pad, two columns as on any face (ADR-510): Freq across, Res up,
+			// its response under them (the view's `slots.filter`).
+			aside: { slot: 'filter', units: 2, params: ['Filter On', 'Filter Freq', 'Filter Res'] },
 			rows: [
 				[
 					{
@@ -359,22 +381,19 @@ export const OPERATOR_PANEL: InstrumentPanel = {
 						switchParam: 'Filter On',
 						controls: [
 							{ kind: 'switch', param: 'Filter On', title: 'On' },
-							{ kind: 'choice', param: 'Filter Type', options: ['LP', 'HP', 'BP', 'Notch', 'Morph'] },
-							{ kind: 'choice', param: 'Filter Slope', options: ['12 dB', '24 dB'] }
+							{ kind: 'choice', param: 'Filter Type', title: 'Type', options: ['LP', 'HP', 'BP', 'Notch', 'Morph'] },
+							{ kind: 'choice', param: 'Filter Slope', options: ['12 dB', '24 dB'] },
+							// Live's circuit, by the type it applies to.
+							{ kind: 'choice', param: 'Filter Circuit - LP/HP', title: 'LP / HP', options: ['Clean', 'OSR', 'MS2', 'SMP', 'PRD'] },
+							{ kind: 'choice', param: 'Filter Circuit - BP/NO/Morph', title: 'BP / Morph', options: ['Clean', 'OSR'] }
 						]
 					},
 					{
-						title: 'Circuit',
-						switchParam: 'Filter On',
-						controls: [
-							{ kind: 'choice', param: 'Filter Circuit - LP/HP', options: ['Clean', 'OSR', 'MS2', 'SMP', 'PRD'] },
-							{ kind: 'choice', param: 'Filter Circuit - BP/NO/Morph', options: ['Clean', 'OSR'] }
-						]
-					},
-					{
+						// The whole Shaper here: a page of its three controls alone
+						// left most of the view empty (2026-11-06).
 						title: 'Shaper',
-						page: 'shaper',
 						controls: [
+							{ kind: 'choice', param: 'Shaper Type', title: 'Type', options: ['Off', 'Soft', 'Hard', 'Sine', '4Bit'] },
 							{ kind: 'box', param: 'Shaper Mix', title: 'Mix' },
 							{ kind: 'box', param: 'Shaper Drive', title: 'Drive' }
 						]
@@ -385,8 +404,6 @@ export const OPERATOR_PANEL: InstrumentPanel = {
 						title: 'Tone',
 						switchParam: 'Filter On',
 						controls: [
-							{ kind: 'box', param: 'Filter Freq', title: 'Freq' },
-							{ kind: 'box', param: 'Filter Res', title: 'Res' },
 							{ kind: 'box', param: 'Filter Morph', title: 'Morph' },
 							{ kind: 'box', param: 'Filter Drive', title: 'Drive' }
 						]
@@ -406,23 +423,6 @@ export const OPERATOR_PANEL: InstrumentPanel = {
 			]
 		},
 		envPage('filter-env', 'Filter Envelope', 'Fe', 'filter', { end: true, slopes: true }),
-		{
-			id: 'shaper',
-			title: 'Shaper',
-			parent: 'filter',
-			rows: [
-				[
-					{
-						title: 'Shaper',
-						controls: [
-							{ kind: 'choice', param: 'Shaper Type', options: ['Off', 'Soft', 'Hard', 'Sine', '4Bit'] },
-							{ kind: 'box', param: 'Shaper Mix', title: 'Mix' },
-							{ kind: 'box', param: 'Shaper Drive', title: 'Drive' }
-						]
-					}
-				]
-			]
-		},
 		{
 			id: 'global',
 			title: 'Global',

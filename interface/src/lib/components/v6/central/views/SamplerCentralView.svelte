@@ -1,11 +1,16 @@
 <script lang="ts">
   /**
    * Sampler Central View — the Sampler row (`SamplerControlsRow`) on
-   * one Sampler, with Gain and a Filter pad (the wheels left for the
-   * MidiWheels device's chain cell, user, 2026-10-26). Laid out on the
-   * Drum Rack's Sampler-kit cells (2026-09-27, user's call: the same
-   * muscle memory in both): Gain · Trnsp · Spread under the swap pill,
-   * then Osc over Pitch · the amp envelope · Filter.
+   * one Sampler, with Gain (the wheels left for the MidiWheels device's
+   * chain cell, user, 2026-10-26). Laid out on the Drum Rack's
+   * Sampler-kit cells (2026-09-27, user's call: the same muscle memory in
+   * both), on the face grid since ADR-510: Gain over Trnsp and Spread
+   * under the swap pill, then Osc over Pitch · the amp envelope's four
+   * stages, eight equal columns. The Filter pad (cutoff across, resonance
+   * up) is the chain cell's (`sampler` in deviceControls), drawn above
+   * this view, so the view no longer draws it too (user, 2026-11-06); a
+   * Sampler KIT in the Drum Rack keeps it, where no chain cell carries a
+   * pad's Sampler.
    *
    * Parameters are resolved by NAME off the device's own list
    * (`SAMPLER_ROW_PARAM_NAMES`, the names the surface binds on a kit
@@ -20,18 +25,14 @@
    * Every 0..1 control maps through the parameter's own LOM range
    * (`paramRange`); Trnsp writes whole semitones.
    *
-   * Gain and Filter bind the names the surface binds on a kit's Sampler
-   * pad, read off a running Sampler (2026-09-27, the 70-parameter
-   * variant): `Volume` −36..36 dB, `F On`, `Filter Freq` 0..1, `Filter
-   * Res` 0..1.25. The filter's switch turns on with a write and never off,
-   * as on a kit: cutoff at the floor with the filter on is silence, and
-   * switching it off there would open it wide instead.
+   * Gain binds the name the surface binds on a kit's Sampler pad, read off
+   * a running Sampler (2026-09-27, the 70-parameter variant): `Volume`
+   * −36..36 dB.
    */
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import SamplerControlsRow from './SamplerControlsRow.svelte';
   import VmSlot from './drum/VmSlot.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
-  import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
@@ -39,7 +40,6 @@
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
   import { familyScheme } from '$lib/config/devicePresets';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
-  import { liveFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
   import {
     SAMPLER_ROW_PARAM_NAMES,
     SAMPLER_ROW_SECTION_SWITCH,
@@ -151,119 +151,49 @@
   }
 
   const GAIN = 'Volume';
-  const FILTER_ON = 'F On';
-  const FILTER_FREQ = 'Filter Freq';
-  const FILTER_RES = 'Filter Res';
   let gainState = $derived(stateAt(GAIN));
-  let filterState = $derived(stateAt(FILTER_FREQ, FILTER_ON));
-  let filterOn = $derived((valueAt(FILTER_ON, true) ?? 1) >= 0.5);
-  let filterCurve = $derived(
-    liveFilterCurve(valueAt('Filter Type', true) ?? 0, valueAt('Filter Slope', true) ?? 1, valueAt('Filter Morph', true) ?? 0)
-  );
 
 </script>
 
+{#snippet pillSlot()}
+  <HostedSwapPill />
+{/snippet}
+
+{#snippet gainSlot()}
+  <VmSlot state={gainState} class="sampler-gain flex flex-col min-w-0" fn="gain">
+    <DeviceSlider
+      value={valueAt(GAIN) ?? 0.5}
+      labelOrientation="horizontal"
+      title="Gain"
+      icon="gain"
+      color={samplerInk}
+      isGhost={gainState === 'none'}
+      onInteraction={(value) => writeAt(GAIN, value)}
+    />
+  </VmSlot>
+{/snippet}
+
+
 <div class="h-full w-full overflow-hidden relative">
   {#if instrument && device}
-    <!-- Layout: the Sampler's controls, the whole width. The inset is all
-         here (--central-inset); the row carries none of its own. The wheels
-         left for the MidiWheels device's chain cell (user, 2026-10-26). -->
-    <div class="h-full w-full grid gap-(--central-gap) p-(--central-inset)" style="grid-template-columns: minmax(0, 1fr);">
-      <!-- The Sampler kit's cells (see `.sampler-grid`); the row names its own. -->
-      <div class="sampler-grid min-w-0 h-full">
-        <div class="sampler-pill">
-          <HostedSwapPill />
-        </div>
-        <VmSlot state={gainState} class="sampler-gain flex flex-col min-w-0" fn="gain">
-          <DeviceSlider
-            value={valueAt(GAIN) ?? 0.5}
-            labelOrientation="horizontal"
-            title="Gain"
-            icon="gain"
-            color={samplerInk}
-            isGhost={gainState === 'none'}
-            onInteraction={(value) => writeAt(GAIN, value)}
-          />
-        </VmSlot>
-        <SamplerControlsRow {values} {states} color={samplerInk} hidden={['selector']} onWrite={write} />
-        <!-- Cutoff across, resonance up, as on a kit. -->
-        <VmSlot state={filterState} class="sampler-filter min-w-0 h-full" fn="filterFreq|filterRes">
-          <DeviceXY
-            xValue={valueAt(FILTER_FREQ) ?? 1}
-            yValue={valueAt(FILTER_RES) ?? 0}
-            title="Filter"
-            showCurve={filterOn}
-            curveType={filterCurve.curveType}
-            curveOrder={filterCurve.order}
-            curveFreqRange={FILTER_FREQ_RANGE.sampler}
-            color={samplerInk}
-            isGhost={filterState === 'none'}
-            onInteraction={(x, y) => {
-              writeAt(FILTER_FREQ, x, { switchName: FILTER_ON });
-              writeAt(FILTER_RES, y);
-            }}
-          />
-        </VmSlot>
-      </div>
-    </div>
+    <!-- The face (ADR-510): the Sampler kit's sections, less the pads,
+         on one grid of equal columns — Global [Gain/Trnsp | Spread] under
+         the swap pill · Pitch / Osc · Amp Envelope A D S R, eight
+         columns (the Filter pad is the chain cell's). The face owns the inset (--central-inset); the row
+         carries none of its own. The wheels left for the MidiWheels
+         device's chain cell (user, 2026-10-26). -->
+    <SamplerControlsRow
+      {values}
+      {states}
+      color={samplerInk}
+      hidden={['selector']}
+      onWrite={write}
+      kitTitle="Global"
+      gain={gainSlot}
+      lead={pillSlot}
+    />
   {:else}
     <!-- Default state when no Sampler present -->
     <DeviceEmptyState glyph="~" message="Load Sampler to access envelope controls" color={samplerInk.primary} />
   {/if}
 </div>
-
-<style>
-  /* The Drum Rack's Sampler-kit cells, less the pads (2026-09-27): Gain
-     over Trnsp and Spread beside them under the swap pill (value boxes,
-     ADR-477), the swap pill across them and Osc / Pitch (under it, so the
-     pill has room to name the preset), the envelope and Filter full height
-     beside them. The column the stacked boxes gave up widens the rest.
-     The envelope keeps all four stages here (a kit hides Decay and
-     Sustain). The row is `display: contents` and its cells name themselves
-     (`SamplerControlsRow`).
-     The envelope's bracket is flattened onto this grid too — its two
-     hairlines (`envl` / `envr`, 1px `auto` tracks) and the stages between
-     them (four 1fr tracks) — so A, D, S and R are each exactly as wide as
-     Gain (user, 2026-09-27). In one 4fr cell the hairlines and their gaps
-     came out of the stages' share, ~8px off each. The kits keep the
-     bracket in one cell: their columns are the DrumCell kit's, which
-     keeps Filter on the same spot on every kit. */
-  .sampler-grid {
-    display: grid;
-    gap: var(--central-gap);
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr)) minmax(0, 2fr)
-      auto repeat(4, minmax(0, 1fr)) auto
-      minmax(0, 2fr);
-    grid-template-rows: auto repeat(2, minmax(0, 1fr));
-    grid-template-areas:
-      'pill  pill   pill envl env env env env envr filter'
-      'gain  spread osc  envl env env env env envr filter'
-      'trnsp spread osc  envl env env env env envr filter';
-  }
-  .sampler-grid :global(.sampler-row),
-  .sampler-grid :global(.envelope-column) {
-    display: contents;
-  }
-  .sampler-grid :global(.envelope-column > :first-child) {
-    grid-area: envl;
-  }
-  .sampler-grid :global(.envelope-column > .envelope-group) {
-    grid-area: env;
-  }
-  .sampler-grid :global(.envelope-column > :last-child) {
-    grid-area: envr;
-  }
-  .sampler-pill {
-    grid-area: pill;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  }
-  .sampler-grid :global(.sampler-gain) {
-    grid-area: gain;
-  }
-  .sampler-grid :global(.sampler-filter) {
-    grid-area: filter;
-  }
-</style>

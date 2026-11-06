@@ -180,19 +180,6 @@
               />
             </div>
           {/each}
-          <div class="env-amount min-w-0 h-full">
-            <DeviceSlider
-              value={paramValue(FILTER_ENV_AMOUNT)}
-              title="Amt"
-              face="knob"
-              knobSize="m"
-              icon="depth"
-              orientation="vertical"
-              color={omniInk}
-              readout={display(FILTER_ENV_AMOUNT)}
-              onInteraction={(value) => writeParam(FILTER_ENV_AMOUNT, value)}
-            />
-          </div>
         </EnvelopeGroup>
       </div>
 
@@ -248,15 +235,38 @@
         />
       </div>
 
-      <!-- Col 7, every row: the FX switch. -->
-      <button
-        class="physical-button omni-fx w-full h-full min-w-0 min-h-0 text-xl font-bold"
-        class:active={fxIsOn}
-        style="--btn-tint: {omniInk.primary}; grid-column: 5; grid-row: 1 / 4;"
-        onclick={handleFxToggle}
-      >
-        FX
-      </button>
+      <!-- Col 5: the FX switch over the Filter envelope's Amount, a slider
+           (user, 2026-11-06; a knob past the envelope's stages until then).
+           The column is built like the envelopes beside it — a title line,
+           the control, the seam, a title line, the control — so FX is
+           exactly as tall as the Amp stages and Env Amt as the Filter's. -->
+      <div class="omni-fx-col min-w-0 min-h-0 flex flex-col gap-(--central-gap)" style="grid-column: 5; grid-row: 1 / 4;">
+        <EnvelopeGroup ink={omniInk.primary} title={'\u00a0'} edges="none">
+          <button
+            class="physical-button omni-fx w-full h-full min-w-0 min-h-0 text-xl font-bold"
+            class:active={fxIsOn}
+            style="--btn-tint: {omniInk.primary};"
+            onclick={handleFxToggle}
+          >
+            FX
+          </button>
+        </EnvelopeGroup>
+        <!-- The seam's 1px, kept so the rows line up, but not drawn: the
+             envelopes' seam is the one that reads. -->
+        <div class="flex-none" style="height: 1px;" aria-hidden="true"></div>
+        <EnvelopeGroup ink={omniInk.primary} title={'\u00a0'} edges="none">
+          <div class="env-amount w-full min-w-0 min-h-0 h-full" data-param="filter-env-amount">
+            <DeviceSlider
+              value={paramValue(FILTER_ENV_AMOUNT)}
+              title="Env Amt"
+              orientation="vertical"
+              color={omniInk}
+              readout={display(FILTER_ENV_AMOUNT)}
+              onInteraction={(value) => writeParam(FILTER_ENV_AMOUNT, value)}
+            />
+          </div>
+        </EnvelopeGroup>
+      </div>
 
       <!-- EQ Sliders commented out for now
       <div class="flex gap-1 min-h-0 col-span-2">
@@ -330,15 +340,6 @@
     grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
   }
 
-  /* The Filter envelope's Amount: one control beside a curve, narrower. */
-  /* The envelope's amount, a knob past its stages (ADR-509): wider than a
-     stage, so the knob is a readable size. */
-  /* Wide enough for a medium knob with its caption beside it (ADR-509):
-     the row is one envelope stage tall (109px), too short for a large one
-     or for a caption under a medium one. */
-  .env-amount {
-    flex: 0 0 9rem;
-  }
 
   :global([data-grammar="flat"]) .omni-fx {
     font-weight: var(--font-weight-medium);

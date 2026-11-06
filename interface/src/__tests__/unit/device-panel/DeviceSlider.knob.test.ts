@@ -54,14 +54,16 @@ describe('DeviceSlider face="knob"', () => {
 		expect(onRelease.mock.calls[0][0]).toBeCloseTo(0.75, 9);
 	});
 
-	it('turns on a sideways drag too: right raises, left lowers', async () => {
+	it('ignores a sideways drag: only vertical turns it (user, 2026-11-06)', async () => {
 		const onRelease = vi.fn();
 		const { el } = await knob({ value: 0.5, onRelease });
 		const quarter = VALUE_BOX_TRAVEL / 4;
 		pointer(el, 'pointerdown', 50, 100);
 		pointer(el, 'pointermove', 50 - quarter, 100);
 		pointer(el, 'pointerup', 50 - quarter, 100);
-		expect(onRelease.mock.calls[0][0]).toBeCloseTo(0.25, 9);
+		// No value moved: a release reports the value it started at, or none.
+		const released = onRelease.mock.calls[0]?.[0];
+		if (released !== undefined) expect(released).toBeCloseTo(0.5, 9);
 	});
 
 	it('names itself at rest with its value under it, and shows Live’s value in the middle while dragged', async () => {

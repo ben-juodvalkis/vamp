@@ -111,9 +111,9 @@ async function touchDown(el: HTMLElement) {
 	await tick();
 }
 
-/** Which oscillator the card is showing, off its grid's \`data-osc\`. */
+/** Which oscillator the card is showing, off the level column's `data-osc`. */
 function shownOsc(container: HTMLElement): number {
-	return Number(container.querySelector<HTMLElement>('.osc-body')?.dataset.osc);
+	return Number(container.querySelector<HTMLElement>('[data-osc]')?.dataset.osc);
 }
 
 function paramSets(): unknown[][] {

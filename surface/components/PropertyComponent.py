@@ -25,7 +25,9 @@ Allowlist (closed, day-one set per ADR-002 §Context):
   ``sample.end_marker``, ``sample.length`` (read-only),
   ``sample.file_path`` (read-only), ``sample.slices`` (read-only,
   list-of-int → JSON-string on the wire).
-- ``Drift``:  ``voice_mode_index``.
+- ``Drift``:  ``voice_mode_index``, ``voice_count_index``, the nine
+  ``mod_matrix_*_source_*_index`` and three ``mod_matrix_target_*_index``
+  (2026-11-06).
 - ``DrumGroupDevice``: ``vm.fx1``, ``vm.fx2``, ``vm.fxType``,
   ``vm.attack``, ``vm.decay``, ``vm.start``, ``vm.pitch``, ``vm.release``,
   ``vm.sustain``, ``vm.oscAmount``, ``vm.oscCoarse``, ``vm.pitchEnvAmount``,
@@ -406,9 +408,67 @@ ALLOWLIST: Dict[Tuple[str, str], PropertySpec] = {
         listener_path="sample", attr_name="slices", writable=False,
         coerce_dict_to_json=True,
     ),
-    # Drift — single allowlist entry, direct device attribute.
+    # Drift — direct device attributes, each settable with a listener
+    # (measured on the rig, 2026-11-06). The voice mode; the modulation
+    # sources Drift's choosers pick (Env 1, Env 2, LFO, Key, Vel, Mod,
+    # Press, Slide — every `*_source_*_list` read the same eight) and the
+    # matrix's three targets (`mod_matrix_target_*_list`, twelve names);
+    # the voice count (4, 8, 16, 24, 32). The lists are fixed, so only the
+    # indices ride the wire; the interface names them.
     ("Drift", "voice_mode_index"): PropertySpec(
         listener_path="", attr_name="voice_mode_index", writable=True,
+        coerce_to_int=True,
+    ),
+    ("Drift", "mod_matrix_pitch_source_1_index"): PropertySpec(
+        listener_path="", attr_name="mod_matrix_pitch_source_1_index", writable=True,
+        coerce_to_int=True,
+    ),
+    ("Drift", "mod_matrix_pitch_source_2_index"): PropertySpec(
+        listener_path="", attr_name="mod_matrix_pitch_source_2_index", writable=True,
+        coerce_to_int=True,
+    ),
+    ("Drift", "mod_matrix_shape_source_index"): PropertySpec(
+        listener_path="", attr_name="mod_matrix_shape_source_index", writable=True,
+        coerce_to_int=True,
+    ),
+    ("Drift", "mod_matrix_filter_source_1_index"): PropertySpec(
+        listener_path="", attr_name="mod_matrix_filter_source_1_index", writable=True,
+        coerce_to_int=True,
+    ),
+    ("Drift", "mod_matrix_filter_source_2_index"): PropertySpec(
+        listener_path="", attr_name="mod_matrix_filter_source_2_index", writable=True,
+        coerce_to_int=True,
+    ),
+    ("Drift", "mod_matrix_lfo_source_index"): PropertySpec(
+        listener_path="", attr_name="mod_matrix_lfo_source_index", writable=True,
+        coerce_to_int=True,
+    ),
+    ("Drift", "mod_matrix_source_1_index"): PropertySpec(
+        listener_path="", attr_name="mod_matrix_source_1_index", writable=True,
+        coerce_to_int=True,
+    ),
+    ("Drift", "mod_matrix_source_2_index"): PropertySpec(
+        listener_path="", attr_name="mod_matrix_source_2_index", writable=True,
+        coerce_to_int=True,
+    ),
+    ("Drift", "mod_matrix_source_3_index"): PropertySpec(
+        listener_path="", attr_name="mod_matrix_source_3_index", writable=True,
+        coerce_to_int=True,
+    ),
+    ("Drift", "mod_matrix_target_1_index"): PropertySpec(
+        listener_path="", attr_name="mod_matrix_target_1_index", writable=True,
+        coerce_to_int=True,
+    ),
+    ("Drift", "mod_matrix_target_2_index"): PropertySpec(
+        listener_path="", attr_name="mod_matrix_target_2_index", writable=True,
+        coerce_to_int=True,
+    ),
+    ("Drift", "mod_matrix_target_3_index"): PropertySpec(
+        listener_path="", attr_name="mod_matrix_target_3_index", writable=True,
+        coerce_to_int=True,
+    ),
+    ("Drift", "voice_count_index"): PropertySpec(
+        listener_path="", attr_name="voice_count_index", writable=True,
         coerce_to_int=True,
     ),
     # Hybrid Reverb — 5 scalar properties, all direct device

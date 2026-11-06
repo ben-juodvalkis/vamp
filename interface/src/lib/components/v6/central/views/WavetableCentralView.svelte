@@ -2,13 +2,18 @@
   /**
    * WavetableCentralView — Ableton Wavetable (LOM class `InstrumentVector`).
    *
-   * Layout: one oscillator card, the oscillator picked by touching its level
-   * box in the mixer (the OSC 1/2 switch went 2026-11-05; it was a pad per
-   * oscillator before 2026-10-22), its octaves a column down the pad's left, the filter with its
-   * type and slope, the envelopes as Amp or Env 2 in one bracket, Time and
-   * Global Mod Amount. No pitch/mod wheels (user's call, 2026-10-22). The oscillator pad puts
-   * **wave position on Y and Effect 2 on X** for both oscillators, so the
-   * switch never changes what an axis means.
+   * Layout (re-laid 2026-11-06 on Drift's model, ADR-509/510): the two
+   * oscillators' levels (a touch picks the oscillator the section shows),
+   * its octaves, its wave drawn over its Position, Effect 1 and Effect 2
+   * knobs; the filter pad with its type as a tab of all five, the routing
+   * and the slope; the Amp and Env 2 stages; Time and Global Mod Amount.
+   * No pitch/mod wheels (user's call, 2026-10-22).
+   *
+   * The face has no oscillator PAD since 2026-11-06 (user: "we don't need
+   * to duplicate XY controls between the effect chain and central views"):
+   * the chain cell's XY is Osc 1's Effect 2 / Wave Position. The pad lives
+   * on the oscillator's page, which `wavetable/WavetablePages.svelte` draws
+   * for every section the face's eyebrows open, as Drift's do.
    *
    * Parameter indices and rails are measured off the `.adv` artifact
    * (`Looping Presets/Instruments/Ableton/Synth/Ableton/Wavetable/Default.adv`,
@@ -43,8 +48,9 @@
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
-  import EnvelopeGroup from './EnvelopeGroup.svelte';
-  import SectionDivider from '../SectionDivider.svelte';
+  import FaceGrid from '../FaceGrid.svelte';
+  import FaceSection from '../FaceSection.svelte';
+  import FaceSeam from '../FaceSeam.svelte';
   import { liveFilterCurve } from '$lib/utils/instrumentFilterCurves';
   import HostedSwapPill from '../HostedSwapPill.svelte';
   import InstrumentPanelView from './panel/InstrumentPanelView.svelte';
@@ -57,6 +63,7 @@
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import WavetableWave from './wavetable/WavetableWave.svelte';
+  import WavetablePages from './wavetable/WavetablePages.svelte';
   import { useOscWave } from './wavetable/useOscWave.svelte';
   import FilterDotsGraph from '../FilterDotsGraph.svelte';
   import ScrubTabs from '../../device-panel/ScrubTabs.svelte';
@@ -195,7 +202,8 @@
   const octaveLabel = (n: number) => (n > 0 ? `+${n}` : `${n}`);
   /** The octave column reads +2 at the top. */
   const OCTAVES_DOWN = [...OCTAVES].reverse();
-  const SLOPES = ['12 dB', '24 dB'] as const;
+  /** The slope's tab, in numbers: the filter column has no room for "dB". */
+  const SLOPES = ['12', '24'] as const;
 
   // Both filters on one pad, a dot each (2026-11-05, Live's panel): a
   // press grabs the nearer dot, and that filter is the one the type and
@@ -248,18 +256,36 @@
   const oscWaves = useOscWave(() => device?.devicePath);
 
   /**
-   * Effect 1's name on Live's panel under each effect mode. The LOM calls it
-   * "Osc N Effect 1" in every mode and AX describes it only as "Device"
-   * (both read 2026-10-22), so the words are the panel's: Tune seen on the
-   * rig in FM, PW and Warp from Live's manual. Mode None has no effect.
+   * Effect 1's and Effect 2's names on Live's panel under each effect mode.
+   * The LOM calls them "Osc N Effect 1/2" in every mode and AX describes them
+   * only as "Device" (both read 2026-10-22), so the words are the panel's:
+   * Tune seen on the rig in FM, the rest from Live's manual (FM Tune / Amt,
+   * Classic PW / Sync, Modern Warp / Fold). Mode None has no effect.
    */
-  const EFFECT1_TITLES = { none: 'Fx 1', fm: 'Tune', classic: 'PW', modern: 'Warp' } as const;
+  const EFFECT_TITLES = {
+    none: ['Fx 1', 'Fx 2'],
+    fm: ['Tune', 'Amt'],
+    classic: ['PW', 'Sync'],
+    modern: ['Warp', 'Fold']
+  } as const;
+  const effectTitles = (n: OscN) => EFFECT_TITLES[oscWaves.effectMode(n)];
   let oscEffectMode = $derived(oscWaves.effectMode(oscTab));
 
   let time = $derived(read(TIME, 0.5));
   let globalMod = $derived(read(GLOBAL_MOD, 0.5));
 
   let oscWaveCycle = $derived(oscWaves.wave(oscTab, oscPosition, read(o.effect1, 0.5), oscEffect2));
+  /** One oscillator's cycle, for its page's pad. */
+  const waveOf = (n: OscN) =>
+    oscWaves.wave(n, read(OSC[n].position, 0.5), read(OSC[n].effect1, 0.5), read(OSC[n].effect2, 0));
+
+  /**
+   * The section page on screen in place of the face, or none. Wavetable
+   * draws its own pages (`wavetable/WavetablePages.svelte`, ADR-510), as
+   * Drift does, rather than the panel's rule-laid ones.
+   */
+  let wtPage = $state<string | null>(null);
+  const openWtPage = (page: string | null) => (wtPage = page);
 
   /** Both envelopes in view, Amp over Envelope 2 (ADR-477). */
   const ENVELOPES = [
@@ -315,22 +341,21 @@
    * control that moves a silent oscillator is a dead control, so the first
    * touch switches it on and the ghost lifts under the finger.
    */
-  function writeOsc(index: number, value: number) {
+  function writeOsc(index: number, value: number, n: OscN = oscTab) {
     if (!device) return;
-    if (!oscOn) write(o.on, 1);
+    if (!(n === 1 ? osc1On : osc2On)) write(OSC[n].on, 1);
     write(index, value);
   }
 
   /** A level in the mixer: the same rule, for the oscillator it belongs to. */
   function writeLevel(n: OscN, value: number) {
-    if (!device) return;
-    if (!(n === 1 ? osc1On : osc2On)) write(OSC[n].on, 1);
-    write(OSC[n].gain, value);
+    writeOsc(OSC[n].gain, value, n);
   }
 
-  function handleOscXY(x: number, y: number) {
-    writeOsc(o.effect2, x);
-    writeOsc(o.position, y);
+  /** An oscillator's pad (its page): Effect 2 across, Wave Position up. */
+  function handleOscXY(n: OscN, x: number, y: number) {
+    writeOsc(OSC[n].effect2, x, n);
+    writeOsc(OSC[n].position, y, n);
   }
 
   function moveFilter(n: 1 | 2, x: number, y: number) {
@@ -341,241 +366,212 @@
     write(p.res, y);
   }
 
-  function stepFilterType(step: number) {
-    const n = FILTER_TYPES.length;
-    write(f.type, (((fltType + step) % n) + n) % n);
-  }
-
   function writeEnv(index: number, fallback: { min: number; max: number }, value: number) {
     const { min, max } = rangeOf(index, fallback);
     write(index, denorm(value, min, max));
   }
 </script>
 
+<!-- An oscillator's pad, on its page: Effect 2 across, Wave Position up,
+     its wave drawn beneath. Ghosted while the oscillator is off; still
+     draggable, and the drag turns it on. -->
+{#snippet oscPad(n: OscN)}
+  {@const on = n === 1 ? osc1On : osc2On}
+  {@const ink = n === 1 ? osc1Ink : osc2Ink}
+  <DeviceXY
+    xValue={read(OSC[n].effect2, 0)}
+    yValue={read(OSC[n].position, 0.5)}
+    title="OSC {n}"
+    titleAt="bottom"
+    isGhost={!on}
+    onInteraction={(x, y) => handleOscXY(n, x, y)}
+    color={ink}
+  >
+    {#snippet background()}<WavetableWave cycle={waveOf(n)} color={ink.primary} />{/snippet}
+  </DeviceXY>
+{/snippet}
+
+<!-- A knob in a face column: medium, its name under it, or its mark inside. -->
+{#snippet faceKnob(index: number, value: number, title: string, color: typeof wavetableInk, onInteraction: (v: number) => void, opts: { size?: 's' | 'm'; mark?: string; ghost?: boolean; bipolar?: boolean; onDown?: () => void } = {})}
+  <div class="knob-cell min-h-0 min-w-0">
+    <DeviceSlider
+      {value}
+      {title}
+      face="knob"
+      knobSize={opts.size ?? 'm'}
+      knobCaption={!opts.mark}
+      knobMark={opts.mark}
+      orientation="vertical"
+      labelSize="small"
+      centerOrigin={opts.bipolar}
+      centerValue={opts.bipolar ? 0.5 : undefined}
+      isGhost={opts.ghost}
+      {color}
+      readout={display(index)}
+      onDown={opts.onDown}
+      {onInteraction}
+    />
+  </div>
+{/snippet}
+
 <div class="wt-root h-full w-full overflow-hidden relative">
   {#if instrument && device}
     <InstrumentPanelView panel={WAVETABLE_PANEL} params={panelParams} color={wavetableInk}>
-    {#snippet face(openPage: (page: string) => void)}
-    <div class="h-full w-full flex min-h-0 p-(--central-inset)" style="gap: var(--central-gap);">
-      <!-- THE LEVELS, Drift's mixer reduced to its oscillators: Osc 1 over
-           Osc 2 in one column at the view's left edge (user, 2026-10-22),
-           each in its own colour, so balancing them never means switching
-           the card. Value boxes (ADR-477): half a fader's height and as
-           fine, which retired their half-speed drag. Touching a level
-           brings its oscillator's card up. -->
-      <div class="mixer-col flex-none min-h-0 flex">
-        <div class="env-slider min-h-0 h-full flex flex-col gap-(--central-gap)">
-          <PanelEyebrow color={wavetableInk.primary} />
-          <div class="flex-1 min-h-0">
-          <DeviceSlider
-            value={osc1Gain}
-            title="Osc 1"
-            icon="oscillator"
-            orientation="vertical"
-            labelSize="small"
-            isGhost={!osc1On}
-            color={osc1Ink}
-            readout={display(OSC[1].gain)}
-            onDown={() => (oscTab = 1)}
-            onInteraction={(v) => writeLevel(1, v)}
-          />
-          </div>
-          <div class="flex-1 min-h-0">
-          <DeviceSlider
-            value={osc2Gain}
-            title="Osc 2"
-            icon="oscillator"
-            orientation="vertical"
-            labelSize="small"
-            isGhost={!osc2On}
-            color={osc2Ink}
-            readout={display(OSC[2].gain)}
-            onDown={() => (oscTab = 2)}
-            onInteraction={(v) => writeLevel(2, v)}
-          />
-          </div>
+    {#snippet face(_openPage: (page: string) => void)}
+    {#if wtPage}
+    <WavetablePages
+      page={wtPage}
+      params={panelParams}
+      ink={wavetableInk}
+      oscInks={{ 1: osc1Ink, 2: osc2Ink }}
+      onNavigate={openWtPage}
+      {oscPad}
+      {effectTitles}
+    />
+    {:else}
+    <!-- One grid, eleven columns (ADR-510, re-laid 2026-11-06): Oscillator
+         5 (the levels, the octaves, the wave over Position, Effect 1 and
+         Effect 2), Filter 3, Mod Sources 2 (Amp, Env 2), Global 1, in
+         Live's signal order. The swap pill rides over the wave, so the
+         face keeps the column the pill would take: ~80px columns, every
+         knob medium (70px) and the envelopes' small (48px). -->
+    <FaceGrid sections={[5, 3, 2, 1]}>
+      <FaceSection span={5}>
+        {#snippet head()}<PanelEyebrow title="Osc {oscTab}" page="osc{oscTab}" onOpen={openWtPage} color={oscInk.primary} />{/snippet}
+        <!-- The levels, Osc 1 over Osc 2, each in its own colour and
+             marked with its number, as Drift's: touching one brings its
+             oscillator up in the rest of the section. -->
+        <div class="knob-stack min-h-0 min-w-0">
+          {@render faceKnob(OSC[1].gain, osc1Gain, 'Osc 1', osc1Ink, (v) => writeLevel(1, v), { mark: '1', ghost: !osc1On, onDown: () => (oscTab = 1) })}
+          {@render faceKnob(OSC[2].gain, osc2Gain, 'Osc 2', osc2Ink, (v) => writeLevel(2, v), { mark: '2', ghost: !osc2On, onDown: () => (oscTab = 2) })}
         </div>
-      </div>
-
-      <!-- THE OSCILLATOR CARD, Drift's: the switch flips the card between
-           Osc 1 and Osc 2 and the colour says which is up. The swap pill
-           lies across its top (user's layout, 2026-09-16). -->
-      <div class="osc-col flex-[1.2] min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
-        <PanelEyebrow title="Osc {oscTab}" page="osc{oscTab}" onOpen={openPage} color={oscInk.primary} />
-        <HostedSwapPill />
-        <!-- Effect 2 (X) / Wave Position (Y), its wave drawn beneath. Ghosted
-             while the oscillator is off; still draggable, and the drag turns
-             it on. The parent blankets, `isGhost` dims only the pad body, so
-             the title rides a single dim instead of two (DeviceXY). -->
-        <div class="flex-1 min-h-0 flex gap-(--central-gap)">
-          <!-- The octaves, +2 at the top, one column down the pad's left
-               (user, 2026-11-05). The mixer's level boxes pick the
-               oscillator, so the card has no 1/2 switch. -->
-          <div class="osc-side flex-none min-h-0 flex flex-col gap-(--central-gap)">
-            <ScrubTabs
-              inked
-              options={OCTAVES_DOWN}
-              selected={OCTAVES_DOWN.findIndex((n) => oscTransp === n * 12)}
-              onSelect={(_, n) => writeOsc(o.transp, n * 12)}
-              cols={1}
-              tint={oscInk.primary}
-              label={(n) => `Osc ${oscTab} octave ${octaveLabel(n)}`}
-              class="flex-1"
-            >
-              {#snippet item(n)}{octaveLabel(n)}{/snippet}
-            </ScrubTabs>
-          </div>
-          <div class="flex-1 min-w-0 min-h-0" style={oscOn ? '' : 'opacity: var(--opacity-ghost);'}>
-            <DeviceXY
-              xValue={oscEffect2}
-              yValue={oscPosition}
-              title="OSC {oscTab}"
-              titleAt="bottom"
-              isGhost={!oscOn}
-              onInteraction={handleOscXY}
-              color={oscInk}
-            >
-              {#snippet background()}<WavetableWave cycle={oscWaveCycle} color={oscInk.primary} />{/snippet}
-            </DeviceXY>
-          </div>
-          <!-- Effect 1 beside the pad, whose X is Effect 2. -->
-          <div class="env-slider min-h-0 h-full">
-            <DeviceSlider
-              value={oscEffect1}
-              title={EFFECT1_TITLES[oscEffectMode]}
-              icon="shape"
-              orientation="vertical"
-              labelSize="small"
-              isGhost={!oscOn || oscEffectMode === 'none'}
-              color={oscInk}
-              readout={display(o.effect1)}
-              onInteraction={(v) => writeOsc(o.effect1, v)}
-            />
-          </div>
+        <!-- The octaves, +2 at the top (user, 2026-11-05). -->
+        <div class="min-h-0 flex flex-col">
+          <ScrubTabs
+            inked
+            options={OCTAVES_DOWN}
+            selected={OCTAVES_DOWN.findIndex((n) => oscTransp === n * 12)}
+            onSelect={(_, n) => writeOsc(o.transp, n * 12)}
+            cols={1}
+            tint={oscInk.primary}
+            label={(n) => `Osc ${oscTab} octave ${octaveLabel(n)}`}
+            class="flex-1"
+          >
+            {#snippet item(n)}{octaveLabel(n)}{/snippet}
+          </ScrubTabs>
         </div>
-      </div>
-
-      <SectionDivider orientation="vertical" ink={wavetableInk.primary} />
+        <!-- The swap pill, the oscillator's wave (a picture: the pad is on
+             the oscillator's page and Osc 1's on the chain cell), and under
+             it the three knobs that shape it. -->
+        <div class="osc-card face-span-3">
+          <div class="span-all"><HostedSwapPill /></div>
+          <div class="span-all wave-well" style={oscOn ? '' : 'opacity: var(--opacity-ghost);'} data-osc-wave={oscTab}>
+            <WavetableWave cycle={oscWaveCycle} color={oscInk.primary} />
+          </div>
+          {@render faceKnob(o.position, oscPosition, 'Position', oscInk, (v) => writeOsc(o.position, v), { ghost: !oscOn })}
+          {@render faceKnob(o.effect1, oscEffect1, effectTitles(oscTab)[0], oscInk, (v) => writeOsc(o.effect1, v), { ghost: !oscOn || oscEffectMode === 'none' })}
+          {@render faceKnob(o.effect2, oscEffect2, effectTitles(oscTab)[1], oscInk, (v) => writeOsc(o.effect2, v), { ghost: !oscOn || oscEffectMode === 'none' })}
+        </div>
+      </FaceSection>
+      <FaceSeam ink={wavetableInk.primary} />
 
       <!-- Both filters on one pad, a numbered dot each: cutoff across,
            resonance up, Serial one curve and Parallel / Split two (Live's
-           panel, 2026-11-05). The routing under it, then the type and
-           slope of the filter last touched, in its ink. -->
-      <div class="filter-col flex-1 min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
-        <PanelEyebrow title="Filter {fltTab}" page="filter{fltTab}" onOpen={openPage} color={fltInk.primary} />
-        <div class="flex-1 min-h-0">
-          <FilterDotsGraph
-            dots={graphDots}
-            curves={graphCurves(graphFilters, filterRouting).map((c) => ({
-              d: c.d,
-              color: c.filter === null ? wavetableInk.primary : (c.filter === 1 ? osc1Ink : osc2Ink).primary
-            }))}
-            ariaLabel="Filters: 1 at {Math.round(graphFilters[0].x * 100)}%, 2 at {Math.round(graphFilters[1].x * 100)}%"
-            onGrab={(i) => (fltTab = i === 0 ? 1 : 2)}
-            onMove={(i, x, y) => moveFilter(i === 0 ? 1 : 2, x, y)}
-          />
-        </div>
-        <div class="strip-row flex-none">
-        <ScrubTabs
-              inked
-          options={FILTER_ROUTINGS}
-          selected={filterRouting}
-          onSelect={(i) => writeRouting(i)}
-          tint={wavetableInk.primary}
-          label={(r) => `Filter routing ${r}`}
-          class="h-full"
-        >
-          {#snippet item(r)}{r}{/snippet}
-        </ScrubTabs>
-        </div>
-        <!-- ‹ type › beside the slope, one row (Meld's chooser): the
-             graph keeps the height the routing row took. -->
-        <div class="flt-row strip-row flex-none" class:ghost-row={!fltOn}>
-          <div class="type-stepper stepper strip-row min-w-0" style="--btn-tint: {fltInk.primary};">
-            <button class="type-step" aria-label="Previous filter type" onclick={() => stepFilterType(-1)}>‹</button>
-            <span class="type-stepper-name" aria-live="polite">{FILTER_TYPES[fltType] ?? '—'}</span>
-            <button class="type-step" aria-label="Next filter type" onclick={() => stepFilterType(1)}>›</button>
+           panel, 2026-11-05). Under it the type of the filter last
+           touched, all five at once (it was a ‹ type › stepper), then the
+           routing and its slope. -->
+      <FaceSection span={3}>
+        {#snippet head()}<PanelEyebrow title="Filter {fltTab}" page="filter{fltTab}" onOpen={openWtPage} color={fltInk.primary} />{/snippet}
+        <div class="flt-card face-span-all">
+          <div class="span-all min-h-0">
+            <FilterDotsGraph
+              dots={graphDots}
+              curves={graphCurves(graphFilters, filterRouting).map((c) => ({
+                d: c.d,
+                color: c.filter === null ? wavetableInk.primary : (c.filter === 1 ? osc1Ink : osc2Ink).primary
+              }))}
+              ariaLabel="Filters: 1 at {Math.round(graphFilters[0].x * 100)}%, 2 at {Math.round(graphFilters[1].x * 100)}%"
+              onGrab={(i) => (fltTab = i === 0 ? 1 : 2)}
+              onMove={(i, x, y) => moveFilter(i === 0 ? 1 : 2, x, y)}
+            />
           </div>
-          <ScrubTabs
+          <div class="span-all strip-row" class:ghost-row={!fltOn} data-filter-type>
+            <ScrubTabs
               inked
-            options={SLOPES}
-            selected={fltSlope}
-            onSelect={(i) => write(f.slope, i)}
-            tint={fltInk.primary}
-            label={(l) => `Filter slope ${l}`}
-            class="h-full"
+              options={FILTER_TYPES}
+              selected={fltType}
+              onSelect={(i) => write(f.type, i)}
+              tint={fltInk.primary}
+              label={(t) => `Filter ${fltTab} type ${t}`}
+              class="h-full"
+              style="--scrub-font-size: 0.75rem; --scrub-padding: 0 0.125rem;"
             >
-            {#snippet item(l)}{l}{/snippet}
-          </ScrubTabs>
+              {#snippet item(t)}{t}{/snippet}
+            </ScrubTabs>
+          </div>
+          <div class="face-span-2 strip-row">
+            <ScrubTabs
+              inked
+              options={FILTER_ROUTINGS}
+              selected={filterRouting}
+              onSelect={(i) => writeRouting(i)}
+              tint={wavetableInk.primary}
+              label={(r) => `Filter routing ${r}`}
+              class="h-full"
+              style="--scrub-font-size: 0.75rem; --scrub-padding: 0 0.125rem;"
+            >
+              {#snippet item(r)}{r}{/snippet}
+            </ScrubTabs>
+          </div>
+          <div class="strip-row" class:ghost-row={!fltOn}>
+            <ScrubTabs
+              inked
+              options={SLOPES}
+              selected={fltSlope}
+              onSelect={(i) => write(f.slope, i)}
+              tint={fltInk.primary}
+              label={(l) => `Filter ${fltTab} slope ${l} dB`}
+              class="h-full"
+              style="--scrub-font-size: 0.75rem;"
+            >
+              {#snippet item(l)}{l}{/snippet}
+            </ScrubTabs>
+          </div>
         </div>
-      </div>
+      </FaceSection>
+      <FaceSeam ink={wavetableInk.primary} />
 
-      <!-- The two envelopes, Amp over Envelope 2, one box a stage, A → D →
-           S → R (ADR-477): both in view, so there is no switch, each box
-           half a fader's height and as fine. One bracket, a seam between. -->
-      <div class="env-col flex-none min-h-0 flex gap-(--central-gap)">
-        <SectionDivider orientation="vertical" ink={wavetableInk.primary} />
-        <div class="flex-1 min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
-          <PanelEyebrow title="Mod Sources" page="mod" onOpen={openPage} color={wavetableInk.primary} />
-          {#each ENVELOPES as envelope, e (envelope.title)}
-            {#if e > 0}<SectionDivider orientation="horizontal" ink={wavetableInk.primary} />{/if}
-            <EnvelopeGroup ink={wavetableInk.primary} title={envelope.title} edges="none">
-              {#each envelope.stages as stage (stage.index)}
-                <div class="env-slider min-h-0 h-full">
-                  <DeviceSlider
-                    value={envelopeValue(stage)}
-                    title={stage.title}
-                    icon={stage.icon}
-                    orientation="vertical"
-                    labelSize="small"
-                    color={wavetableInk}
-                    readout={display(stage.index)}
-                    onInteraction={(value) => writeEnv(stage.index, stage.fallback, value)}
-                  />
-                </div>
-              {/each}
-            </EnvelopeGroup>
-          {/each}
-        </div>
-        <SectionDivider orientation="vertical" ink={wavetableInk.primary} />
-      </div>
+      <!-- The two envelopes, Amp then Env 2, a column each, A over D over
+           S over R: small knobs marked with the stage (Drift's face), their
+           names over the columns. The name line opens the mod sources. -->
+      <FaceSection span={2}>
+        {#snippet head()}
+          <button class="mod-link" style="color: {wavetableInk.primary};" data-page="mod" onclick={() => openWtPage('mod')}>
+            <span>Amp</span><span>Env 2 ›</span>
+          </button>
+        {/snippet}
+        {#each ENVELOPES as envelope (envelope.title)}
+          <div class="knob-stack env-stack min-h-0 min-w-0" data-envelope={envelope.title}>
+            {#each envelope.stages as stage (stage.index)}
+              {@render faceKnob(stage.index, envelopeValue(stage), `${envelope.title} ${stage.title}`, wavetableInk, (v) => writeEnv(stage.index, stage.fallback, v), { size: 's', mark: stage.title })}
+            {/each}
+          </div>
+        {/each}
+      </FaceSection>
+      <FaceSeam ink={wavetableInk.primary} />
 
       <!-- Time over Global Mod Amount: the device-wide scalers of every
-           envelope and LFO time and of the mod matrix, two knobs in one
-           column (ADR-509). Medium, not the large two knobs a column would
-           take: two captioned 96px knobs need 300px and the column has 264. -->
-      <div class="scaler-col flex-none min-h-0 flex flex-col gap-(--central-gap)">
-        <PanelEyebrow title="Global" page="global" onOpen={openPage} color={wavetableInk.primary} />
-        <div class="flex-1 min-h-0">
-          <DeviceSlider
-            value={time}
-            title="Time"
-            face="knob"
-            knobSize="m"
-            orientation="vertical"
-            labelSize="small"
-            centerOrigin
-            centerValue={0.5}
-            color={wavetableInk}
-            readout={display(TIME)}
-            onInteraction={(value) => write(TIME, value)}
-          />
+           envelope and LFO time and of the mod matrix. Medium: two
+           captioned large knobs need 300px and the band has about 263. -->
+      <FaceSection span={1}>
+        {#snippet head()}<PanelEyebrow title="Global" page="global" onOpen={openWtPage} color={wavetableInk.primary} />{/snippet}
+        <div class="knob-stack min-h-0 min-w-0">
+          {@render faceKnob(TIME, time, 'Time', wavetableInk, (v) => write(TIME, v), { bipolar: true })}
+          {@render faceKnob(GLOBAL_MOD, globalMod, 'Mod Amt', wavetableInk, (v) => write(GLOBAL_MOD, v))}
         </div>
-        <div class="flex-1 min-h-0">
-          <DeviceSlider
-            value={globalMod}
-            title="Mod Amt"
-            face="knob"
-            knobSize="m"
-            orientation="vertical"
-            labelSize="small"
-            color={wavetableInk}
-            readout={display(GLOBAL_MOD)}
-            onInteraction={(value) => write(GLOBAL_MOD, value)}
-          />
-        </div>
-      </div>
-    </div>
+      </FaceSection>
+    </FaceGrid>
+    {/if}
     {/snippet}
     </InstrumentPanelView>
   {:else}
@@ -585,61 +581,85 @@
 </div>
 
 <style>
-  .wt-root {
-    --wt-slider-w: var(--height-touch);
-  }
-
-  /* The octave column, a touch row wide. */
-  .osc-side {
-    width: var(--height-touch);
-  }
-
+  /* The face's layout is the FaceGrid (ADR-510): eleven equal columns,
+     Oscillator 5, Filter 3, Mod Sources 2, Global 1. What is left here is
+     how a column fills its height. */
   .strip-row {
     height: var(--height-touch);
     min-width: 0;
   }
-
-  /* Four stages and their three gaps, plus the bracket's two seams and the
-     gap beside each, all drawn inside this column. */
-  .env-col {
-    width: calc(4 * var(--wt-slider-w) + 5 * var(--central-gap) + 2px);
+  /* A column of knobs sharing its height evenly. */
+  .knob-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
   }
-  .env-slider {
-    flex: 0 0 var(--wt-slider-w);
-    width: var(--wt-slider-w);
+  .knob-stack > :global(*) {
+    flex: 1 1 0;
+    min-height: 0;
   }
-  /* One `.stepper` (app.css): ‹ type › in a single frame. */
-  .type-stepper {
-    --stepper-arrow: var(--height-touch);
+  /* Four small knobs to a column: a tighter gap, so each cell holds 48px. */
+  .env-stack {
+    gap: 0.25rem;
   }
-  .type-step {
-    font-size: 1.125rem;
-    font-weight: 600;
+  .knob-cell {
+    height: 100%;
   }
-  .type-stepper-name {
-    text-align: center;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--btn-tint);
+  /* The oscillator: the pill and the wave across its three columns, the
+     knobs one a column under them, tall enough for a medium knob and its
+     name (70 + 50). */
+  .osc-card {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: auto minmax(0, 1fr) 7.5rem;
+    row-gap: var(--central-gap);
+    min-width: 0;
+    min-height: 0;
+  }
+  /* The filter: the pad, then the type, then the routing beside the slope. */
+  .flt-card {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: minmax(0, 1fr) auto auto;
+    row-gap: var(--central-gap);
+    min-width: 0;
+    min-height: 0;
+  }
+  .span-all {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+  .face-span-2 {
+    grid-column: span 2;
+  }
+  .wave-well {
+    position: relative;
+    min-height: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: 2px;
+    background: var(--surface-well);
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
-
-  /* One column, Osc 1 over Osc 2; the width is for WebKit, as Drift's.
-     Time over Mod Amt is the same. */
-  .mixer-col {
-    width: var(--wt-slider-w);
-  }
-  /* Time over Mod Amt as knobs (ADR-509): two slider widths and a gap. */
-  .scaler-col {
-    width: calc(2 * var(--wt-slider-w) + var(--central-gap));
-  }
-
-  .flt-row {
+  /* The mod sources' name line: each envelope's name over its column, the
+     whole line one link to the sources' page. */
+  .mod-link {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: var(--central-gap);
+    column-gap: var(--face-gutter, 0.5rem);
+    width: 100%;
+    background: none;
+    border: 0;
+    padding: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1rem;
+    white-space: nowrap;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+  :global([data-grammar='flat']) .mod-link {
+    font-weight: var(--font-weight-medium);
   }
 
   /* The type and slope of a filter that is off. */

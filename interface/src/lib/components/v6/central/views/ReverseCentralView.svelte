@@ -8,6 +8,10 @@
 	 * `pitchHackParams.ts`, measured on the rig. It drew only Rate and Mix
 	 * through `autopan/PitchGroup` until then.
 	 *
+	 * On the face grid (ADR-510), sections [1, 2, 5]: Rate, Amount (Reverse
+	 * and Mix, the two it is played by) and Voice (the five knobs, one to a
+	 * column, large), eight columns of about 108px.
+	 *
 	 * A write on a ghost loads the device with Dry / Wet at full, so it is
 	 * heard once touched (user, 2026-10-08); on a loaded device the Mix
 	 * slider owns Dry / Wet.
@@ -17,9 +21,11 @@
 	import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
 	import { PITCH_HACK, PITCH_HACK_RATES } from '$lib/components/v6/device-panel/pitchHackParams';
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
-	import KnobGrid from '$lib/components/v6/device-panel/KnobGrid.svelte';
 	import type { KnobSize } from '$lib/components/v6/device-panel/knobLayout';
-	import SectionDivider from '$lib/components/v6/central/SectionDivider.svelte';
+	import FaceGrid from '../FaceGrid.svelte';
+	import FaceSection from '../FaceSection.svelte';
+	import FaceSeam from '../FaceSeam.svelte';
+	import PanelEyebrow from './panel/PanelEyebrow.svelte';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 
@@ -48,7 +54,7 @@
 	type Param = { index: number; min: number; max: number; rest: number };
 	// The two the device is played by, as full-height boxes: how often it
 	// reverses, and how much of it you hear. The rest set its character, as
-	// knobs in a grid of their own (ADR-509).
+	// knobs, one to a column (ADR-509).
 	const BOXES: { title: string; param: Param }[] = [
 		{ title: 'Reverse', param: PITCH_HACK.reverse },
 		{ title: 'Mix', param: PITCH_HACK.mix }
@@ -82,60 +88,59 @@
 {/snippet}
 
 <div class="reverse-layout" data-view="pitchHack" style="--btn-tint: {ink};">
-	<div class="ph-col" class:slot-ghost={pitchHack.isGhost}>
-		<div class="ph-head text-xs font-bold text-center pb-1">Rate</div>
-		<div class="ph-stack device-segmented seg-grid pitch-hack-rate" role="radiogroup" aria-label="Rate">
-			{#each PITCH_HACK_RATES as stop (stop.value)}
-				<button
-					class="device-segment ph-btn"
-					class:active={rate === stop.value}
-					role="radio"
-					aria-checked={rate === stop.value}
-					onclick={() => send(PITCH_HACK.rate.index, stop.value)}
-				>{stop.label}</button>
-			{/each}
-		</div>
-	</div>
-	{#each BOXES as { title, param } (param.index)}
-		<div class="ph-col boxes" class:slot-ghost={pitchHack.isGhost}>
-			<div class="box" data-param={title}>
-				{@render control(title, param, 'slider')}
+	<FaceGrid sections={[1, 2, 5]}>
+		<FaceSection span={1}>
+			{#snippet head()}<PanelEyebrow title="Rate" color={ink} />{/snippet}
+			<div class="ph-col" class:slot-ghost={pitchHack.isGhost}>
+				<div class="ph-stack device-segmented seg-grid pitch-hack-rate" role="radiogroup" aria-label="Rate">
+					{#each PITCH_HACK_RATES as stop (stop.value)}
+						<button
+							class="device-segment ph-btn"
+							class:active={rate === stop.value}
+							role="radio"
+							aria-checked={rate === stop.value}
+							onclick={() => send(PITCH_HACK.rate.index, stop.value)}
+						>{stop.label}</button>
+					{/each}
+				</div>
 			</div>
-		</div>
-	{/each}
-	<SectionDivider orientation="vertical" />
-	<div class="ph-knobs" class:slot-ghost={pitchHack.isGhost}>
-		<KnobGrid count={KNOBS.length}>
-			{#snippet item(i, size)}
-				<div class="box" data-param={KNOBS[i].title}>{@render control(KNOBS[i].title, KNOBS[i].param, 'knob', size)}</div>
-			{/snippet}
-		</KnobGrid>
-	</div>
+		</FaceSection>
+		<FaceSeam ink={ink} />
+
+		<FaceSection span={2}>
+			{#snippet head()}<PanelEyebrow title="Amount" color={ink} />{/snippet}
+			{#each BOXES as { title, param } (param.index)}
+				<div class="ph-col" class:slot-ghost={pitchHack.isGhost}>
+					<div class="box" data-param={title}>
+						{@render control(title, param, 'slider')}
+					</div>
+				</div>
+			{/each}
+		</FaceSection>
+		<FaceSeam ink={ink} />
+
+		<FaceSection span={5}>
+			{#snippet head()}<PanelEyebrow title="Voice" color={ink} />{/snippet}
+			{#each KNOBS as { title, param } (param.index)}
+				<div class="ph-col" class:slot-ghost={pitchHack.isGhost}>
+					<div class="box" data-param={title}>{@render control(title, param, 'knob', 'l')}</div>
+				</div>
+			{/each}
+		</FaceSection>
+	</FaceGrid>
 </div>
 
 <style>
+	/* The face is the FaceGrid (ADR-510): eight equal columns, Rate, Reverse
+	   and Mix, then a knob to a column. */
 	.reverse-layout {
-		display: grid;
-		/* Rate, Reverse, Mix | the knobs across two. */
-		grid-template-columns: repeat(3, minmax(0, 1fr)) auto minmax(0, 2fr);
-		gap: var(--central-gap);
 		height: 100%;
 		width: 100%;
-		padding: var(--central-inset);
 	}
 
 	.ph-col {
 		display: flex;
 		flex-direction: column;
-		min-height: 0;
-		min-width: 0;
-	}
-
-	.boxes {
-		gap: var(--central-gap);
-	}
-	.ph-knobs {
-		display: flex;
 		min-height: 0;
 		min-width: 0;
 	}
@@ -164,11 +169,6 @@
 		padding: 0 0.25rem;
 		font-size: 1rem;
 		font-weight: 700;
-	}
-
-	.ph-head {
-		color: var(--muted-foreground);
-		font-weight: var(--font-weight-medium);
 	}
 
 	/* As the Pitch view's tabs: the name in the device ink, the lit one

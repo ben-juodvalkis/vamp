@@ -4,7 +4,11 @@
 	 * Chance, the `random` control (`deviceControls`, ADR-479), then the rest
 	 * of the device (the user, 2026-10-26: "more params"):
 	 *
-	 *   [Chance] [Choices / Interval] [Sign: Add Sub Bi] [Mode: Rnd Alt, Scale]
+	 *   Chance [Chance] | Notes [Choices] [Interval] | Sign [Add Sub Bi] |
+	 *   Mode [Rnd Alt, Scale]
+	 *
+	 * On the face grid (ADR-510), sections [2, 2, 1, 1]: six columns of
+	 * about 142px, Chance two, Choices and Interval a large knob each.
 	 *
 	 * Measured on the rig (device_dump on the set's "Random Octave",
 	 * 2026-10-26): 1 Chance 0..1, 2 Choices 1..24, 3 Interval 1..24, 4 Sign
@@ -23,6 +27,10 @@
 	import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+	import FaceGrid from '../FaceGrid.svelte';
+	import FaceSection from '../FaceSection.svelte';
+	import FaceSeam from '../FaceSeam.svelte';
+	import PanelEyebrow from './panel/PanelEyebrow.svelte';
 
 	const random = useFxGridSlot('random');
 
@@ -48,82 +56,93 @@
 
 <!-- NO {#if device} gate - always render, each control handles its own state -->
 <div class="random-layout" data-view="random" style="--btn-tint: {ink.primary};">
-	<!-- Chance: the `random` control. A drag loads a ghost; a tap loads nothing (ADR-167). -->
-	<div class="col">
-		<ControlTile type="random" device={random.device} disableCentralViewOnTap />
-	</div>
+	<FaceGrid sections={[2, 2, 1, 1]}>
+		<!-- Chance: the `random` control. A drag loads a ghost; a tap loads nothing (ADR-167). -->
+		<FaceSection span={2}>
+			{#snippet head()}<PanelEyebrow title="Chance" color={ink.primary} />{/snippet}
+			<div class="col face-span-2">
+				<ControlTile type="random" device={random.device} disableCentralViewOnTap />
+			</div>
+		</FaceSection>
+		<FaceSeam ink={ink.primary} />
 
-	<div class="col boxes" class:slot-ghost={random.isGhost}>
-		{#each BOXES as box (box.index)}
-			<DeviceSlider
-				value={value(box.index)}
-				title={box.title}
-				valueText={String(step(box.index))}
-				steps={24}
-				face="knob"
-				knobSize="l"
-				orientation="vertical"
-				min={1}
-				max={24}
-				isGhost={random.isGhost}
-				color={ink}
-				onInteraction={(v) => random.sendParam(box.index, Math.round(Math.max(1, Math.min(24, v))))}
-			/>
-		{/each}
-	</div>
-
-	<div class="col" class:slot-ghost={random.isGhost}>
-		<div class="head">Sign</div>
-		<div class="tabs device-segmented seg-grid" role="radiogroup" aria-label="Sign">
-			{#each SIGNS as label, i (label)}
-				<button
-					class="device-segment tab"
-					class:active={!random.isGhost && step(P.sign) === i}
-					role="radio"
-					aria-checked={step(P.sign) === i}
-					onclick={() => random.sendParam(P.sign, i)}
-				>{label}</button>
+		<FaceSection span={2}>
+			{#snippet head()}<PanelEyebrow title="Notes" color={ink.primary} />{/snippet}
+			{#each BOXES as box (box.index)}
+				<div class="col boxes" class:slot-ghost={random.isGhost}>
+					<DeviceSlider
+						value={value(box.index)}
+						title={box.title}
+						valueText={String(step(box.index))}
+						steps={24}
+						face="knob"
+						knobSize="l"
+						orientation="vertical"
+						min={1}
+						max={24}
+						isGhost={random.isGhost}
+						color={ink}
+						onInteraction={(v) => random.sendParam(box.index, Math.round(Math.max(1, Math.min(24, v))))}
+					/>
+				</div>
 			{/each}
-		</div>
-	</div>
+		</FaceSection>
+		<FaceSeam ink={ink.primary} />
 
-	<div class="col" class:slot-ghost={random.isGhost}>
-		<div class="head">Mode</div>
-		<div class="tabs device-segmented seg-grid" role="radiogroup" aria-label="Mode">
-			{#each MODES as label, i (label)}
+		<FaceSection span={1}>
+			{#snippet head()}<PanelEyebrow title="Sign" color={ink.primary} />{/snippet}
+			<div class="col" class:slot-ghost={random.isGhost}>
+				<div class="tabs device-segmented seg-grid" role="radiogroup" aria-label="Sign">
+					{#each SIGNS as label, i (label)}
+						<button
+							class="device-segment tab"
+							class:active={!random.isGhost && step(P.sign) === i}
+							role="radio"
+							aria-checked={step(P.sign) === i}
+							onclick={() => random.sendParam(P.sign, i)}
+						>{label}</button>
+					{/each}
+				</div>
+			</div>
+		</FaceSection>
+		<FaceSeam ink={ink.primary} />
+
+		<FaceSection span={1}>
+			{#snippet head()}<PanelEyebrow title="Mode" color={ink.primary} />{/snippet}
+			<div class="col" class:slot-ghost={random.isGhost}>
+				<div class="tabs device-segmented seg-grid" role="radiogroup" aria-label="Mode">
+					{#each MODES as label, i (label)}
+						<button
+							class="device-segment tab"
+							class:active={!random.isGhost && step(P.mode) === i}
+							role="radio"
+							aria-checked={step(P.mode) === i}
+							onclick={() => random.sendParam(P.mode, i)}
+						>{label}</button>
+					{/each}
+				</div>
 				<button
-					class="device-segment tab"
-					class:active={!random.isGhost && step(P.mode) === i}
-					role="radio"
-					aria-checked={step(P.mode) === i}
-					onclick={() => random.sendParam(P.mode, i)}
-				>{label}</button>
-			{/each}
-		</div>
-		<button
-			class="physical-button scale"
-			class:active={step(P.scale) === 1}
-			aria-pressed={step(P.scale) === 1}
-			onclick={() => random.sendParam(P.scale, step(P.scale) === 1 ? 0 : 1)}
-		>Scale</button>
-	</div>
+					class="physical-button scale"
+					class:active={step(P.scale) === 1}
+					aria-pressed={step(P.scale) === 1}
+					onclick={() => random.sendParam(P.scale, step(P.scale) === 1 ? 0 : 1)}
+				>Scale</button>
+			</div>
+		</FaceSection>
+	</FaceGrid>
 </div>
 
 <style>
-	/* Chance takes two shares; the boxes and the two tab columns one each. */
+	/* The face is the FaceGrid (ADR-510): six equal columns, Chance two. */
 	.random-layout {
-		display: grid;
-		grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
-		gap: var(--central-gap);
 		height: 100%;
 		width: 100%;
-		padding: var(--central-inset);
 	}
 
 	.col {
 		display: flex;
 		flex-direction: column;
-		gap: var(--central-gap);
+		gap: var(--face-gutter);
 		min-width: 0;
 		min-height: 0;
 	}
@@ -132,14 +151,6 @@
 	}
 	.boxes > :global(*) {
 		flex: 1 1 0;
-	}
-
-	.head {
-		flex: 0 0 auto;
-		text-align: center;
-		font-size: 0.75rem;
-		font-weight: var(--font-weight-medium);
-		color: var(--muted-foreground);
 	}
 
 	.tabs {

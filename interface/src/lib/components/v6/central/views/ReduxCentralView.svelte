@@ -1,13 +1,20 @@
 <script lang="ts">
   /**
-   * Redux's view (Live's Redux, the `redux` slot): its pad and the rest of
+   * Redux's view (Live's Redux, the `redux` slot): the rest of
    * the device (user, 2026-10-26: "add more of redux's controls").
    *
-   *   [pad: Post-Filter across, Sample Rate up] [Bit Depth / Jitter]
-   *   [Shape / Dry/Wet] [Pre-Filter · Post-Filter · DC Shift]
+   *   Crush [Jitter] [Bit Depth] [Shape] | [Pre-Filter · Post-Filter ·
+   *   DC Shift] | Mix [Dry/Wet]
    *
-   * The pad is the `redux` control (`deviceControls`, ADR-479). The rest are
-   * value boxes (ADR-477) and switches, Live's own parameters as measured
+   * On the face grid (ADR-510), sections [3, 1, 1], in Live's order: the
+   * downsampler's Jitter, the bit reduction, the switches, then Dry/Wet,
+   * the played level, past a seam at the right edge as Reverb's (ADR-509).
+   * Every knob one to a column, so large.
+   *
+   * Sample Rate and Post-Filter are the chain cell's pad (the `redux`
+   * control, `deviceControls`, ADR-479), drawn above this view, so the view
+   * no longer draws that pad too (user, 2026-11-06). The rest are knobs,
+   * a value box and switches, Live's own parameters as measured
    * on the rig (2026-10-26, the Redux preset loaded and dumped): 2 Jitter
    * 0..1, 3 Bit Depth 1..16, 4 Quantizer Shape 0..1, 5 DC Shift, 6
    * Pre-Filter On, 7 Post-Filter On (switches), 9 Dry/Wet 0..1. A ghost
@@ -15,11 +22,14 @@
    *
    * NO {#if device} gate - every control handles its own ghost state.
    */
-  import ReduxControl from '$lib/components/v6/device-panel/ReduxControl.svelte';
   import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
   import { trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+  import FaceGrid from '../FaceGrid.svelte';
+  import FaceSection from '../FaceSection.svelte';
+  import FaceSeam from '../FaceSeam.svelte';
+  import PanelEyebrow from './panel/PanelEyebrow.svelte';
 
   const redux = useFxGridSlot('redux');
 
@@ -39,12 +49,13 @@
   const on = (index: number) => value(index) >= 0.5;
   const toggle = (index: number) => redux.sendParam(index, on(index) ? 0 : 1);
 
-  const SLIDERS = [
-    { index: REDUX.bitDepth, title: 'Bit Depth', min: BIT_DEPTH_MIN, max: BIT_DEPTH_MAX },
+  type Slider = { index: number; title: string; min: number; max: number; icon?: 'mix' };
+  const CRUSH: Slider[] = [
     { index: REDUX.jitter, title: 'Jitter', min: 0, max: 1 },
-    { index: REDUX.shape, title: 'Shape', min: 0, max: 1 },
-    { index: REDUX.dryWet, title: 'Dry/Wet', min: 0, max: 1, icon: 'mix' as const }
+    { index: REDUX.bitDepth, title: 'Bit Depth', min: BIT_DEPTH_MIN, max: BIT_DEPTH_MAX },
+    { index: REDUX.shape, title: 'Shape', min: 0, max: 1 }
   ];
+  const DRY_WET: Slider = { index: REDUX.dryWet, title: 'Dry/Wet', min: 0, max: 1, icon: 'mix' };
   const SWITCHES = [
     { index: REDUX.preFilter, label: 'Pre-Filter' },
     { index: REDUX.postFilterOn, label: 'Post-Filter' },
@@ -52,70 +63,79 @@
   ];
 </script>
 
+{#snippet control(s: Slider)}
+  <div class="box" class:slot-ghost={redux.isGhost}>
+    <DeviceSlider
+      value={value(s.index)}
+      title={s.title}
+      face={s.index === REDUX.dryWet ? 'slider' : 'knob'}
+      knobSize="l"
+      icon={s.icon}
+      orientation="vertical"
+      min={s.min}
+      max={s.max}
+      isGhost={redux.isGhost}
+      color={reduxInk}
+      readout={redux.paramDisplay(s.index)}
+      onInteraction={(v) => redux.sendParam(s.index, v)}
+    />
+  </div>
+{/snippet}
+
 <div class="redux-layout" data-view="redux" style="--btn-tint: {reduxInk.primary};">
-  <div class="pad" class:slot-ghost={redux.isGhost}>
-    <ReduxControl device={redux.device} icon="redux" />
-  </div>
+  <FaceGrid sections={[3, 1, 1]}>
+    <FaceSection span={3}>
+      {#snippet head()}<PanelEyebrow title="Crush" color={reduxInk.primary} />{/snippet}
+      {#each CRUSH as s (s.index)}{@render control(s)}{/each}
+    </FaceSection>
+    <FaceSeam ink={reduxInk.primary} />
 
-  {#each [SLIDERS.slice(0, 2), SLIDERS.slice(2)] as column, c (c)}
-    <div class="boxes" class:slot-ghost={redux.isGhost}>
-      {#each column as s (s.index)}
-        <DeviceSlider
-          value={value(s.index)}
-          title={s.title}
-          face={s.title === 'Dry/Wet' ? 'slider' : 'knob'}
-          knobSize="l"
-          icon={s.icon}
-          orientation="vertical"
-          min={s.min}
-          max={s.max}
-          isGhost={redux.isGhost}
-          color={reduxInk}
-          readout={redux.paramDisplay(s.index)}
-          onInteraction={(v) => redux.sendParam(s.index, v)}
-        />
-      {/each}
-    </div>
-  {/each}
+    <FaceSection span={1}>
+      {#snippet head()}<PanelEyebrow color={reduxInk.primary} />{/snippet}
+      <div class="switches" class:slot-ghost={redux.isGhost}>
+        {#each SWITCHES as s (s.index)}
+          <button class="physical-button redux-switch w-full" class:active={on(s.index)} aria-pressed={on(s.index)} onclick={() => toggle(s.index)}>
+            {s.label}
+          </button>
+        {/each}
+      </div>
+    </FaceSection>
+    <FaceSeam ink={reduxInk.primary} />
 
-  <div class="switches" class:slot-ghost={redux.isGhost}>
-    {#each SWITCHES as s (s.index)}
-      <button class="physical-button redux-switch w-full" class:active={on(s.index)} aria-pressed={on(s.index)} onclick={() => toggle(s.index)}>
-        {s.label}
-      </button>
-    {/each}
-  </div>
+    <FaceSection span={1}>
+      {#snippet head()}<PanelEyebrow title="Mix" color={reduxInk.primary} />{/snippet}
+      {@render control(DRY_WET)}
+    </FaceSection>
+  </FaceGrid>
 </div>
 
 <style>
-  /* The pad two shares; two columns of value boxes and the switches one each. */
+  /* The face is the FaceGrid (ADR-510): five equal columns. */
   .redux-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
     height: 100%;
     width: 100%;
-    padding: var(--central-inset);
-    gap: var(--central-gap);
   }
 
-  .pad,
-  .boxes,
+  .box,
   .switches {
     display: flex;
     flex-direction: column;
-    gap: var(--central-gap);
+    gap: var(--face-gutter);
     min-width: 0;
     min-height: 0;
   }
 
-  .boxes > :global(*),
-  .redux-switch {
+  .box > :global(*) {
     flex: 1 1 0;
     min-height: 0;
   }
 
+  /* The switches: one touch row each, centred in their column (ADR-509). */
+  .switches {
+    justify-content: center;
+  }
   .redux-switch {
-    min-height: var(--height-touch);
+    flex: 0 0 var(--height-touch);
     font-size: 1rem;
     font-weight: 600;
   }

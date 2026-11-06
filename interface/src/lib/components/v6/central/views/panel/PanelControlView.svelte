@@ -13,6 +13,7 @@
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
 	import { choiceColumns, tabOptions, type KnobSize, type PanelControl, type PanelFace } from './panelTypes';
 	import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
+	import ChoicePicker from '../../ChoicePicker.svelte';
 	import type { PanelParams } from './usePanelParams.svelte';
 
 	interface Props {
@@ -27,9 +28,17 @@
 		face?: PanelFace;
 		/** A knob's size (ADR-509): by its column's count, unless the panel names one. */
 		knobSize?: KnobSize;
+		/** A knob with this letter inside and no caption: a pick under it names it (a page's amount). */
+		mark?: string;
+		/** On a page (ADR-510): a pick too long for a tab is a `ChoicePicker`, its name over it. */
+		pick?: boolean;
+		/** With `pick`, draw the picker alone, no name over it: it is a knob's caption. */
+		bareCaption?: boolean;
 	}
 
-	let { control, params, color, switchParam, pageRows = 1, face = 'slider', knobSize = 'm' }: Props = $props();
+	let { control, params, color, switchParam, pageRows = 1, face = 'slider', knobSize = 'm', mark, pick = false, bareCaption = false }: Props = $props();
+	let pickOptions = $derived(control.kind === 'choice' ? control.options : control.kind === 'step' ? control.labels : undefined);
+	let pickTitle = $derived(control.kind === 'choice' ? (control.title ?? control.param) : control.title);
 
 	let listed = $derived(params.has(control.param));
 	let range = $derived(params.range(control.param));
@@ -63,7 +72,20 @@
 	}
 </script>
 
-{#if control.kind === 'box'}
+{#if pick && pickOptions}
+	<!-- A long pick on a page: its name, and the picker that opens over the view. -->
+	<div class="panel-pick" class:ghost data-param={control.param}>
+		{#if !bareCaption}<span class="pick-title" style="color: {color.primary};">{pickTitle}</span>{/if}
+		<ChoicePicker
+			options={pickOptions}
+			selected={listed && step !== undefined ? step : -1}
+			onSelect={(i) => write(lo + i)}
+			label={pickTitle}
+			tint={color.primary}
+			ghost={!listed}
+		/>
+	</div>
+{:else if control.kind === 'box'}
 	<div class="panel-control" class:ghost class:with-toggle={toggle} data-param={control.param}>
 		<DeviceSlider
 			value={raw ?? lo}
@@ -78,6 +100,8 @@
 			{face}
 			{knobSize}
 			knobFit
+			knobCaption={!mark}
+			knobMark={mark}
 			readout={params.display(control.param)}
 			valueText={face === 'knob' ? params.display(control.param) : undefined}
 			onInteraction={write}
@@ -110,7 +134,7 @@
 			inked
 			ghost={!listed}
 			label={(o) => o}
-			groupLabel={control.kind === 'step' ? control.title : control.param}
+			groupLabel={control.kind === 'choice' ? (control.title ?? control.param) : control.kind === 'step' ? control.title : control.param}
 			style="height: {compact ? `calc(${rows} * var(--height-touch))` : '100%'}; width: 100%; --scrub-font-size: {Math.max(...tabs.map((o) => o.length)) > 5 ? '0.6875rem' : '0.8125rem'};"
 		/>
 	</div>
@@ -185,6 +209,25 @@
 	}
 	.step-value {
 		font-size: 0.85em;
+	}
+
+	/* A long pick on a page: its name over a picker, centred in the cell. */
+	.panel-pick {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		gap: var(--spacing-xs);
+		min-width: 0;
+		min-height: 0;
+		height: 100%;
+	}
+	.pick-title {
+		font-size: 0.75rem;
+		font-weight: 600;
+		text-align: center;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	/* A tab of few values (ScrubTabs), filling its cell. */

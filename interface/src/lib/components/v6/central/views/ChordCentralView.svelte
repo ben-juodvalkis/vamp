@@ -4,7 +4,13 @@
 	 * central view to give us more control"), as Live's panel lays it out.
 	 *
 	 *   Note 1: [Shift] [Vel] [Chance] | Note 2: [Shift] [Vel] [Chance] |
-	 *   [Scale] over [Strum] [Tension] [Crescendo]
+	 *   Strum: [Scale] [Strum] [Tension] [Crescendo]
+	 *
+	 * On the face grid (ADR-510), sections [3, 3, 4]: ten columns of about
+	 * 85px, one medium knob to a column, each note's names on a caption line
+	 * over its knobs (a note's knobs are titled with their values). The
+	 * Scale switch is a touch-row pill in the strum's first column, level
+	 * with the knobs.
 	 *
 	 * Two notes, not Live's six (the user, 2026-10-27: "we don't need all 6"),
 	 * and every control a tall value box side by side, not a short row of
@@ -26,7 +32,10 @@
 	 * NO {#if device} gate - every control handles its own ghost state.
 	 */
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
-	import SectionDivider from '$lib/components/v6/central/SectionDivider.svelte';
+	import FaceGrid from '../FaceGrid.svelte';
+	import FaceSection from '../FaceSection.svelte';
+	import FaceSeam from '../FaceSeam.svelte';
+	import PanelEyebrow from './panel/PanelEyebrow.svelte';
 	import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -61,117 +70,133 @@
 </script>
 
 <div class="chord-layout" data-view="chord" style="--btn-tint: {ink.primary};">
-	{#each NOTES as note, i (note.n)}
-		{@const shiftIndex = scaled ? note.degrees : note.shift}
-		{@const shift = value(shiftIndex)}
-		{@const silent = Math.round(shift) === 0}
-		{@const col = 1 + i * 4}
-		{#if i > 0}<div class="seam" style="grid-column: {col - 1};"><SectionDivider orientation="vertical" /></div>{/if}
-		<div class="group-head" style="grid-column: {col} / span 3;">Note {note.n}</div>
-		{#each [['Shift', col], ['Velocity', col + 1], ['Chance', col + 2]] as [name, c] (name)}
-			<div class="caption" class:silent={silent && name !== 'Shift'} style="grid-column: {c};">{name}</div>
+	<FaceGrid sections={[3, 3, 4]}>
+		{#each NOTES as note (note.n)}
+			{@const shiftIndex = scaled ? note.degrees : note.shift}
+			{@const shift = value(shiftIndex)}
+			{@const silent = Math.round(shift) === 0}
+			<FaceSection span={3}>
+				{#snippet head()}<PanelEyebrow title="Note {note.n}" color={ink.primary} />{/snippet}
+				<div class="col">
+					<div class="caption">Shift</div>
+					<div class="cell" data-note={note.n} data-fn="shift">
+						<DeviceSlider
+							value={shift}
+							title={signed(shift, scaled ? 'sd' : 'st')}
+							face="knob"
+							knobSize="m"
+							min={-SHIFT_MAX}
+							max={SHIFT_MAX}
+							centerOrigin
+							centerValue={0}
+							travel={SHIFT_TRAVEL}
+							isGhost={chord.isGhost}
+							color={ink}
+							readout={chord.paramDisplay(shiftIndex)}
+							onInteraction={(v) => chord.sendParam(shiftIndex, Math.round(v))}
+						/>
+					</div>
+				</div>
+				<div class="col">
+					<div class="caption" class:silent>Velocity</div>
+					<div class="cell" class:silent data-note={note.n} data-fn="velocity">
+						<DeviceSlider
+							value={value(note.velocity)}
+							title={percent(value(note.velocity))}
+							face="knob"
+							knobSize="m"
+							min={VELOCITY_MIN}
+							max={2}
+							isGhost={chord.isGhost}
+							color={ink}
+							readout={chord.paramDisplay(note.velocity)}
+							onInteraction={(v) => chord.sendParam(note.velocity, v)}
+						/>
+					</div>
+				</div>
+				<div class="col">
+					<div class="caption" class:silent>Chance</div>
+					<div class="cell" class:silent data-note={note.n} data-fn="chance">
+						<DeviceSlider
+							value={value(note.chance)}
+							title={percent(value(note.chance))}
+							face="knob"
+							knobSize="m"
+							min={0}
+							max={1}
+							isGhost={chord.isGhost}
+							color={ink}
+							readout={chord.paramDisplay(note.chance)}
+							onInteraction={(v) => chord.sendParam(note.chance, v)}
+						/>
+					</div>
+				</div>
+			</FaceSection>
+			<FaceSeam ink={ink.primary} />
 		{/each}
-		<div class="cell" style="grid-column: {col};" data-note={note.n} data-fn="shift">
-			<DeviceSlider
-				value={shift}
-				title={signed(shift, scaled ? 'sd' : 'st')}
-				face="knob"
-				knobSize="m"
-				min={-SHIFT_MAX}
-				max={SHIFT_MAX}
-				centerOrigin
-				centerValue={0}
-				travel={SHIFT_TRAVEL}
-				isGhost={chord.isGhost}
-				color={ink}
-				readout={chord.paramDisplay(shiftIndex)}
-				onInteraction={(v) => chord.sendParam(shiftIndex, Math.round(v))}
-			/>
-		</div>
-		<div class="cell" class:silent style="grid-column: {col + 1};" data-note={note.n} data-fn="velocity">
-			<DeviceSlider
-				value={value(note.velocity)}
-				title={percent(value(note.velocity))}
-				face="knob"
-				knobSize="m"
-				min={VELOCITY_MIN}
-				max={2}
-				isGhost={chord.isGhost}
-				color={ink}
-				readout={chord.paramDisplay(note.velocity)}
-				onInteraction={(v) => chord.sendParam(note.velocity, v)}
-			/>
-		</div>
-		<div class="cell" class:silent style="grid-column: {col + 2};" data-note={note.n} data-fn="chance">
-			<DeviceSlider
-				value={value(note.chance)}
-				title={percent(value(note.chance))}
-				face="knob"
-				knobSize="m"
-				min={0}
-				max={1}
-				isGhost={chord.isGhost}
-				color={ink}
-				readout={chord.paramDisplay(note.chance)}
-				onInteraction={(v) => chord.sendParam(note.chance, v)}
-			/>
-		</div>
-	{/each}
 
-	<div class="seam" style="grid-column: 8;"><SectionDivider orientation="vertical" /></div>
-
-	<button
-		class="physical-button switch"
-		class:active={!chord.isGhost && scaled}
-		class:slot-ghost={chord.isGhost}
-		aria-pressed={scaled}
-		data-fn="scale"
-		onclick={() => chord.sendParam(P.scale, scaled ? 0 : 1)}
-	>Scale</button>
-	{#each STRUM as b, i (b.index)}
-		<div class="cell" style="grid-column: {9 + i};" data-fn={b.title.toLowerCase()}>
-			<DeviceSlider
-				value={value(b.index)}
-				title={b.title}
-				face="knob"
-				knobSize="m"
-				min={b.min}
-				max={b.max}
-				centerOrigin
-				centerValue={0}
-				isGhost={chord.isGhost}
-				color={ink}
-				readout={chord.paramDisplay(b.index)}
-				onInteraction={(v) => chord.sendParam(b.index, b.round ? Math.round(v) : v)}
-			/>
-		</div>
-	{/each}
+		<FaceSection span={4}>
+			{#snippet head()}<PanelEyebrow title="Strum" color={ink.primary} />{/snippet}
+			<div class="col">
+				<div class="caption" aria-hidden="true">&nbsp;</div>
+				<div class="cell switch-cell">
+					<button
+						class="physical-button switch"
+						class:active={!chord.isGhost && scaled}
+						class:slot-ghost={chord.isGhost}
+						aria-pressed={scaled}
+						data-fn="scale"
+						onclick={() => chord.sendParam(P.scale, scaled ? 0 : 1)}
+					>Scale</button>
+				</div>
+			</div>
+			{#each STRUM as b (b.index)}
+				<div class="col">
+					<div class="caption" aria-hidden="true">&nbsp;</div>
+					<div class="cell" data-fn={b.title.toLowerCase()}>
+						<DeviceSlider
+							value={value(b.index)}
+							title={b.title}
+							face="knob"
+							knobSize="m"
+							min={b.min}
+							max={b.max}
+							centerOrigin
+							centerValue={0}
+							isGhost={chord.isGhost}
+							color={ink}
+							readout={chord.paramDisplay(b.index)}
+							onInteraction={(v) => chord.sendParam(b.index, b.round ? Math.round(v) : v)}
+						/>
+					</div>
+				</div>
+			{/each}
+		</FaceSection>
+	</FaceGrid>
 </div>
 
 <style>
-	/* Nine knobs on one ruler: each note's three under its name and their
-	   captions, a seam, the strum's three under the Scale switch. Medium
-	   (ADR-509): one knob a column would take a large one, but nine 104px
-	   columns and their gaps need 1100px of 1026. */
+	/* The face is the FaceGrid (ADR-510): ten equal columns, each note's
+	   three and the strum's four, one medium knob a column (two captioned
+	   large knobs would not stack, and a large one needs a 104px column). A
+	   caption line over each knob names it; the strum's knobs name
+	   themselves, so theirs is empty and their knobs stay level. */
 	.chord-layout {
-		display: grid;
-		grid-template-columns:
-			repeat(3, minmax(0, 1fr)) auto
-			repeat(3, minmax(0, 1fr)) auto
-			repeat(3, minmax(0, 1fr));
-		grid-template-rows: auto auto minmax(0, 1fr);
 		height: 100%;
 		width: 100%;
-		padding: var(--central-inset);
-		column-gap: var(--central-gap);
-		row-gap: 4px;
+	}
+	.col {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		min-width: 0;
+		min-height: 0;
 	}
 	.cell {
-		grid-row: 3;
+		flex: 1 1 0;
 		display: flex;
 		min-width: 0;
 		min-height: 0;
-		margin-top: calc(var(--central-gap) - 4px);
 	}
 	.cell > :global(*) {
 		flex: 1 1 0;
@@ -182,25 +207,21 @@
 	.caption.silent {
 		opacity: var(--opacity-ghost);
 	}
-	.group-head {
-		grid-row: 1;
-		text-align: center;
-		font-size: 0.75rem;
-		color: var(--btn-tint);
-	}
 	.caption {
-		grid-row: 2;
+		flex: none;
 		text-align: center;
 		font-size: 0.75rem;
+		line-height: 1rem;
+		white-space: nowrap;
 		color: var(--muted-foreground);
 	}
-	.seam {
-		grid-row: 1 / -1;
-		display: flex;
+	/* A switch among knobs is one touch row, centred (ADR-509). */
+	.switch-cell {
+		flex-direction: column;
+		justify-content: center;
 	}
 	.switch {
-		grid-column: 9 / span 3;
-		grid-row: 1 / span 2;
+		flex: 0 0 var(--height-touch);
 		min-height: var(--height-touch);
 		font-size: 1rem;
 		font-weight: 600;

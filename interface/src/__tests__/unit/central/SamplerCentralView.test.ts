@@ -148,12 +148,11 @@ describe('SamplerCentralView — the Sampler row by name', () => {
 		expect(slider(container, 'S').getAttribute('aria-valuenow')).toBe('1'); // Ve Sustain
 		expect(slider(container, 'Trnsp').getAttribute('aria-valuenow')).toBe('-16');
 		expect(container.querySelectorAll('.midi-wheel')).toHaveLength(0); // the wheels are the MidiWheels device's (2026-10-26)
-		// Gain and Filter, as a kit draws them (2026-09-27).
+		// Gain, as a kit draws it (2026-09-27).
 		expect(slider(container, 'Gain').getAttribute('aria-valuenow')).toBe('0.5'); // Volume 0 dB on ±36
-		expect(slider(container, 'Filter').getAttribute('aria-label')).toBe('Filter: X 80%, Y 20%'); // 0.25 of 1.25 up
 	});
 
-	it('a Gain drag writes Volume in dB; a Filter drag turns F On on and writes cutoff and resonance through their ranges', async () => {
+	it('a Gain drag writes Volume in dB', async () => {
 		const { container } = render(SamplerCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
 		drag(slider(container, 'Gain'), [50, 100], [50, 40]);
@@ -161,30 +160,13 @@ describe('SamplerCentralView — the Sampler row by name', () => {
 		expect(volume.length).toBeGreaterThan(0);
 		expect(volume.at(-1)![1] as number).toBeGreaterThan(0); // dragged up from 0 dB
 		expect(volume.at(-1)![1] as number).toBeLessThanOrEqual(36);
-
-		sendMock.mockClear();
-		// Down and to the left, to the floor: the switch still only turns on.
-		drag(slider(container, 'Filter'), [50, 100], [0, 200]);
-		const on = paramSets().filter((a) => a[0] === `${DEVICE}/params/${INDEX['F On']}`);
-		expect(on.length).toBeGreaterThan(0);
-		expect(on.every((a) => a[1] === 1)).toBe(true);
-		const res = paramSets().filter((a) => a[0] === `${DEVICE}/params/${INDEX['Filter Res']}`);
-		expect(res.length).toBeGreaterThan(0);
-		for (const a of res) {
-			expect(a[1] as number).toBeGreaterThanOrEqual(0);
-			expect(a[1] as number).toBeLessThanOrEqual(1.25);
-		}
-		expect(paramSets().some((a) => a[0] === `${DEVICE}/params/${INDEX['Filter Freq']}`)).toBe(true);
 	});
 
-	it('ghosts the Filter pad on a Sampler that lists no filter', async () => {
-		cleanup();
-		_resetForTests();
-		replaceTree(GENERATION, [samplerTrack(PARAMS.filter(([name]) => !name.startsWith('F')))]);
-		selectedTrackStore.handleTrackSelected(0);
+	it('draws no Filter pad: cutoff x resonance is the chain cell\'s (2026-11-06)', async () => {
 		const { container } = render(SamplerCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
-		expect(container.querySelector('[data-vm-function="filterFreq|filterRes"]')?.getAttribute('data-vm-state')).toBe('none');
+		expect(container.querySelector('[data-vm-function="filterFreq|filterRes"]')).toBeNull();
+		expect(container.querySelector('[role="slider"][aria-label^="Filter"]')).toBeNull();
 		expect(container.querySelector('[data-vm-function="gain"]')?.getAttribute('data-vm-state')).toBe('live');
 	});
 

@@ -2,9 +2,11 @@
 	/**
 	 * EchoCentralView — what the Echo tile opens (2026-09-14).
 	 *
-	 *   [Time over Sync] [Filter  Filter  Filter  Filter  Filter]
+	 *   [Time over Sync] [Filter  Filter]
 	 *   | [LFO Wave 2x3] [Rate over LFO Sync] [LFO > Time over LFO > Filter]
 	 *   | [Input over Output] [Feedback over Mix]
+	 *
+	 * on one face grid (ADR-510), sections 3 · 3 · 2.
 	 *
 	 * Every slider is a value box (ADR-477): the depths and levels stand in
 	 * pairs, each box half a fader's height and as fine, and the three
@@ -30,7 +32,10 @@
 	 */
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import FilterCurve from '$lib/components/v6/device-panel/FilterCurve.svelte';
-	import SectionDivider from '$lib/components/v6/central/SectionDivider.svelte';
+	import FaceGrid from '$lib/components/v6/central/FaceGrid.svelte';
+	import FaceSection from '$lib/components/v6/central/FaceSection.svelte';
+	import FaceSeam from '$lib/components/v6/central/FaceSeam.svelte';
+	import PanelEyebrow from './panel/PanelEyebrow.svelte';
 	import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
 	import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 	import {
@@ -221,8 +226,13 @@
 {/snippet}
 
 <!-- An unloaded Echo dims as one: every control here is the one device. -->
+<!-- One face grid (ADR-510), eight columns of ~108px at 1366 x 1024:
+     Delay 3 (Time, the filter graph over two) · LFO 3 · Levels 2. -->
 <div class="echo-layout" class:slot-ghost={echo.isGhost}>
-	<div class="col slider-over-switch time-col">
+<FaceGrid sections={[3, 3, 2]}>
+	<FaceSection span={3}>
+	{#snippet head()}<PanelEyebrow title="Delay" color={echo.color.primary} />{/snippet}
+	<div class="col slider-over-switch">
 		<div class="slider-part">
 			<DeviceSlider
 				value={timeT}
@@ -251,7 +261,7 @@
 	</div>
 
 	<div
-		class="col filter-graph"
+		class="col filter-graph face-span-2"
 		style="--curve-color: {echo.color.primary};"
 		role="slider"
 		aria-label="Filter: high-pass {Math.round(hpT * 100)}%, low-pass {Math.round(lpT * 100)}%"
@@ -264,9 +274,11 @@
 		<FilterCurve curveType="eq" {bands} filterDots={dots} width={400} height={300} curveColor={echo.color.primary} />
 		<span class="graph-title">Filter</span>
 	</div>
+	</FaceSection>
+	<FaceSeam />
 
-	<SectionDivider orientation="vertical" />
-
+	<FaceSection span={3}>
+	{#snippet head()}<PanelEyebrow title="LFO" color={echo.color.primary} />{/snippet}
 	<ScrubTabs
 		options={ECHO_LFO_WAVES}
 		selected={lfoWave}
@@ -344,8 +356,11 @@
 		</div>
 	</div>
 
-	<SectionDivider orientation="vertical" />
+	</FaceSection>
+	<FaceSeam />
 
+	<FaceSection span={2}>
+	{#snippet head()}<PanelEyebrow title="Levels" color={echo.color.primary} />{/snippet}
 	<!-- The levels in two pairs: Input over Output (Input drags Output the
 	     other way) as knobs, then Feedback over Mix, the pair the Echo tile
 	     plays, as boxes (ADR-509). -->
@@ -417,24 +432,19 @@
 			/>
 		</div>
 	</div>
+	</FaceSection>
+</FaceGrid>
 </div>
 
 <style>
-	/* Columns, with an `auto` track for each seam: Time + Filter | LFO
-	   (wave, rate, depths) | levels. Time spans two shares for its knob
-	   (ADR-509), the filter graph four. The knob columns are as wide as
-	   their knobs need, so each draws at its size: Rate a large knob
-	   (96px + 8), the two pairs medium ones (70px + 8). */
+	/* The face is the FaceGrid (ADR-510): Delay (Time, the filter graph
+	   over two columns) | LFO (wave, rate, depths) | levels, eight equal
+	   columns. A column of ~108px holds Time's and Rate's large knobs
+	   (96px + 8) over their switches, and the pairs' medium ones. */
 	.echo-layout {
-		display: grid;
-		grid-template-columns:
-			repeat(6, minmax(0, 1fr)) auto
-			minmax(0, 1fr) 6.5rem 4.875rem auto
-			4.875rem minmax(0, 1fr);
-		gap: var(--central-gap);
 		height: 100%;
 		width: 100%;
-		padding: var(--central-inset);
+		min-height: 0;
 	}
 
 	.col {
@@ -447,7 +457,7 @@
 	.box-pair {
 		display: flex;
 		flex-direction: column;
-		gap: var(--central-gap);
+		gap: var(--face-gutter);
 	}
 	.box {
 		flex: 1 1 0;
@@ -458,7 +468,7 @@
 	.slider-over-switch {
 		display: flex;
 		flex-direction: column;
-		gap: var(--central-gap);
+		gap: var(--face-gutter);
 	}
 	.slider-part {
 		flex: 1 1 0;
@@ -480,11 +490,7 @@
 		max-height: 22px;
 	}
 
-	.time-col {
-		grid-column: span 2;
-	}
 	.filter-graph {
-		grid-column: span 4;
 		position: relative;
 		overflow: hidden;
 		border: 1px solid var(--line-strong);

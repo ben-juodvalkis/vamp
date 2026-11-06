@@ -1,9 +1,13 @@
 <script lang="ts">
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
+  import MeldPages from './meld/MeldPages.svelte';
+  import { meldEngineStore } from '$lib/stores/v6/meldEngineStore.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import SectionDivider from '../SectionDivider.svelte';
-  import HostedSwapPill from '../HostedSwapPill.svelte';
+  import FaceGrid from '../FaceGrid.svelte';
+  import FaceSection from '../FaceSection.svelte';
+  import FaceSeam from '../FaceSeam.svelte';
   import InstrumentPanelView from './panel/InstrumentPanelView.svelte';
   import PanelEyebrow from './panel/PanelEyebrow.svelte';
   import { usePanelParams } from './panel/usePanelParams.svelte';
@@ -62,11 +66,23 @@
 
   /**
    * Which engine the view is showing, picked by touching its level box at
-   * the view's left (2026-11-05; an A/B badge before). View state only: it
-   * writes nothing to Live (not even Meld's own `selected_engine`), so a
-   * patch change never takes the half away mid-edit.
+   * the view's left (2026-11-05; an A/B badge before). Shared with the
+   * effect chain's Meld cell (`meldEngineStore`, 2026-11-06), whose pad
+   * then drives this engine's oscillator. It writes nothing to Live (not
+   * even Meld's own `selected_engine`), so a patch change never takes the
+   * half away mid-edit.
    */
-  let engine = $state<MeldEngine>('A');
+  let devicePath = $derived(device?.devicePath);
+  let engine = $derived(meldEngineStore.engineOf(devicePath));
+  const showEngine = (e: MeldEngine) => meldEngineStore.select(devicePath, e);
+
+  /**
+   * The section page on screen in place of the face, or none. Meld draws
+   * its own pages (`meld/MeldPages.svelte`, ADR-510), as Drift does,
+   * rather than the panel's rule-laid ones.
+   */
+  let meldPage = $state<string | null>(null);
+  const openMeldPage = (page: string) => (meldPage = page);
 
   /** The pages behind the face's eyebrows, the shown engine's, by Live's names (ADR-487). */
   const panelParams = usePanelParams(() => device);
@@ -111,11 +127,6 @@
     write(index, value);
   }
 
-  function handleOscXY(x: number, y: number) {
-    writeOsc(p.oscShape, x);
-    writeOsc(p.oscTone, y);
-  }
-
   const octaveLabel = (n: number) => (n > 0 ? `+${n}` : `${n}`);
 
   /** The octave column, +3 at the top; a finger sweeps through it (ScrubTabs). */
@@ -138,14 +149,19 @@
     write(p.q, y);
   }
 
+  function stepFilter(step: number) {
+    const n = MELD_FILTER_TYPES.length;
+    write(p.filterType, (((filterType + step) % n) + n) % n);
+  }
+
   /** The filter's second macro, titled with the name Live gives it under this type. */
   let filterExtra = $derived(read(p.lbhn, 0));
   let filterExtraTitle = $derived(MELD_FILTER_EXTRA_NAMES[filterType] ?? 'Extra');
 
   /**
    * The open type chooser, if any: 25 oscillator types and 17 filter types
-   * are too many for a row, so the name between the step arrows opens a
-   * grid over its own pad, and a choice closes it.
+   * are too many for a row, so the oscillator's tile and the filter's name
+   * open a grid over the face, and a choice closes it.
    */
   let chooser = $state<'osc' | 'filter' | null>(null);
 
@@ -181,30 +197,38 @@
   let spread = $derived(read(MELD_SPREAD, 0));
 </script>
 
-{#snippet typeChooser(kind: 'osc' | 'filter', label: string, onStep: (step: number) => void)}
-  <div class="type-chooser stepper" style="--btn-tint: {engineInk.primary};">
-    <button class="chooser-step" aria-label="Previous {kind} type" onclick={() => onStep(-1)}>‹</button>
-    <button
-      class="chooser-name"
-      class:active={chooser === kind}
-      aria-expanded={chooser === kind}
-      aria-label="Choose {kind === 'osc' ? 'oscillator' : 'filter'} type, now {label}"
-      onclick={() => (chooser = chooser === kind ? null : kind)}
-    >{label}</button>
-    <button class="chooser-step" aria-label="Next {kind} type" onclick={() => onStep(1)}>›</button>
-  </div>
+{#snippet typeStep(kind: 'osc' | 'filter', onStep: (step: number) => void)}
+  <button class="chooser-step" aria-label="Previous {kind === 'osc' ? 'oscillator' : 'filter'} type" onclick={() => onStep(-1)}>‹</button>
+  <button class="chooser-step" aria-label="Next {kind === 'osc' ? 'oscillator' : 'filter'} type" onclick={() => onStep(1)}>›</button>
 {/snippet}
 
 <div class="meld-root h-full w-full overflow-hidden relative">
   {#if instrument && device}
     <InstrumentPanelView panel={MELD_PANEL} params={panelParams} color={meldInk}>
-    {#snippet face(openPage: (page: string) => void)}
-    <div class="h-full w-full flex min-h-0 p-(--central-inset)" style="gap: var(--central-gap);">
-      <!-- THE LEVELS: Engine A over Engine B at the view's left edge, each
-           in its colour, as on Wavetable (user, 2026-11-05). Touching one
-           brings its engine up, so there is no A/B switch. -->
-      <div class="mixer-col flex-none min-h-0 flex flex-col gap-(--central-gap)">
-        <PanelEyebrow color={meldInk.primary} />
+    {#snippet face()}
+    {#if meldPage}
+    <MeldPages
+      page={meldPage}
+      params={panelParams}
+      ink={meldInk}
+      engineInks={{ A: inkOf('A'), B: inkOf('B') }}
+      onBack={() => (meldPage = null)}
+    />
+    {:else}
+    <!-- One grid, twelve columns (ADR-510, 2026-11-06): Engine 3 (the
+         levels, the octaves, the oscillator), Filter 2, Envelopes 5,
+         Global 2, Osc → Filter → Amp as Live runs them. The oscillator's
+         Shape and Tone are the effect chain's pad (it follows the engine
+         shown here, meldEngineStore), so the face has no pad of its own
+         for them (user, 2026-11-06). -->
+    <FaceGrid sections={[3, 2, 5, 2]} class="meld-face">
+      <!-- THE ENGINE. Meld is two synths, Osc → Filter → Amp twice; the
+           levels, Engine A over Engine B in the first column, each in its
+           colour (user, 2026-11-05), pick which half is up: touching one
+           flips the oscillator, the filter and the envelopes together. -->
+      <FaceSection span={3}>
+        {#snippet head()}<PanelEyebrow title="Engine {engine}" page="osc-{pageEngine}" onOpen={openMeldPage} color={engineInk.primary} />{/snippet}
+        <div class="min-h-0 flex flex-col gap-(--spacing-sm)">
         {#each ['A', 'B'] as const as e (e)}
           <div class="flex-1 min-h-0" data-engine-level={e} class:shown={engine === e}>
             <DeviceSlider
@@ -216,28 +240,16 @@
               isGhost={!(e === 'A' ? aOn : bOn)}
               color={inkOf(e)}
               readout={display(MELD_ENGINE[e].volume)}
-              onDown={() => (engine = e)}
+              onDown={() => showEngine(e)}
               onInteraction={(v) => writeLevel(e, v)}
             />
           </div>
         {/each}
-      </div>
-
-
-      <!-- THE ENGINE. Meld is two synths, Osc → Filter → Amp twice, so the
-           A/B switch flips this pad, the filter and the envelopes together
-           and the colour says which half is up. -->
-      <div class="paths flex-[2.3] min-w-0 min-h-0 flex relative" style="gap: var(--central-gap);">
-      <div class="engine-col flex-[1.3] min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
-        <PanelEyebrow title="Engine {engine}" page="osc-{pageEngine}" onOpen={openPage} color={engineInk.primary} />
-        <HostedSwapPill />
-        <div class="engine-head flex-none">
-          {@render typeChooser('osc', MELD_OSC_TYPES[oscType] ?? '—', (step) => writeOsc(p.oscType, stepOscType(oscType, step)))}
         </div>
-        <div class="flex-1 min-h-0 flex gap-(--central-gap)">
-          <!-- The octaves, +3 at the top, one column down the pad's left
+        <div class="engine-body face-span-2">
+          <!-- The octaves, +3 at the top, a column left of the oscillator
                (user, 2026-11-05), as on Wavetable. -->
-          <div class="oct-col flex-none min-h-0 flex flex-col">
+          <div class="min-h-0 flex flex-col">
             <ScrubTabs
               options={OCTAVES_DOWN}
               selected={OCTAVES_DOWN.indexOf(octave as (typeof OCTAVES_DOWN)[number])}
@@ -251,30 +263,34 @@
               {#snippet item(n)}{octaveLabel(n)}{/snippet}
             </ScrubTabs>
           </div>
-          <!-- Shape across, Tone up, the type's mark behind and its name at
-               the pad's foot. -->
-          <div class="flex-1 min-w-0 min-h-0 relative" style={engineOn ? '' : 'opacity: var(--opacity-ghost);'}>
-            <DeviceXY
-              xValue={read(p.oscShape, 0)}
-              yValue={read(p.oscTone, 0)}
-              title={MELD_OSC_TYPES[oscType] ?? `Osc ${engine}`}
-              titleAt="bottom"
-              isGhost={!engineOn}
-              onInteraction={handleOscXY}
-              color={engineInk}
+          <!-- The oscillator's type: its mark and name, which open the type
+               grid, over the arrows that step it. -->
+          <div class="osc-col" style={engineOn ? '' : 'opacity: var(--opacity-ghost);'}>
+            <button
+              class="osc-tile"
+              class:active={chooser === 'osc'}
+              style="--btn-tint: {engineInk.primary};"
+              aria-expanded={chooser === 'osc'}
+              aria-label="Choose oscillator type, now {MELD_OSC_TYPES[oscType] ?? 'unknown'}"
+              onclick={() => (chooser = chooser === 'osc' ? null : 'osc')}
             >
-              {#snippet background()}<MeldOscIcon type={oscType} color={engineInk.primary} raised />{/snippet}
-            </DeviceXY>
+              <span class="osc-mark"><MeldOscIcon type={oscType} color={engineInk.primary} /></span>
+              <span class="osc-name">{MELD_OSC_TYPES[oscType] ?? '—'}</span>
+            </button>
+            <div class="type-steps stepper" style="--btn-tint: {engineInk.primary};">
+              {@render typeStep('osc', (step) => writeOsc(p.oscType, stepOscType(oscType, step)))}
+            </div>
           </div>
         </div>
-      </div>
+      </FaceSection>
+      <FaceSeam ink={engineInk.primary} />
 
-      <SectionDivider orientation="vertical" ink={engineInk.primary} />
-
-      <!-- The engine's filter: cutoff across, Q up, its second macro and
-           its type under it. -->
-      <div class="filter-col flex-1 min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
-        <PanelEyebrow title="Filter {engine}" page="filter-{pageEngine}" onOpen={openPage} color={engineInk.primary} />
+      <!-- The engine's filter: cutoff across, Q up, its second macro (a
+           knob, named as Live names it under the type) and its type under
+           it. -->
+      <FaceSection span={2}>
+        {#snippet head()}<PanelEyebrow title="Filter {engine}" page="filter-{pageEngine}" onOpen={openMeldPage} color={engineInk.primary} />{/snippet}
+        <div class="face-span-all min-w-0 min-h-0 flex flex-col gap-(--spacing-sm)">
         <div class="flex-1 min-h-0 relative">
           <DeviceXY
             xValue={read(p.freq, 1)}
@@ -292,68 +308,45 @@
           <DeviceSlider
             value={filterExtra}
             title={filterExtraTitle}
+            face="knob"
+            knobSize="m"
             icon="morph"
-            orientation="horizontal"
+            orientation="vertical"
             labelSize="small"
             color={engineInk}
+            readout={display(p.lbhn)}
             onInteraction={(v) => write(p.lbhn, v)}
           />
         </div>
-        {@render typeChooser('filter', MELD_FILTER_TYPES[filterType] ?? '—', (step) => {
-          const n = MELD_FILTER_TYPES.length;
-          write(p.filterType, (((filterType + step) % n) + n) % n);
-        })}
-      </div>
-
-        <!-- A type grid lies over both pads, so 25 names have room to read. -->
-        {#if chooser === 'osc'}
-          <!-- Scrubs: the type follows the finger, and the grid closes when it lifts. -->
-          <ScrubTabs
-            options={MELD_OSC_TYPES}
-            selected={oscType}
-            onSelect={(i) => writeOsc(p.oscType, i)}
-            onDone={() => (chooser = null)}
-            cols={5}
-            tint={engineInk.primary}
-            inked
-            label={(l) => l}
-            name="meld-osc-types"
-            style="position: absolute; inset: 0; z-index: 10; --scrub-padding: 2px 4px; --scrub-font-weight: var(--font-weight-medium);"
-          />
-        {/if}
-        {#if chooser === 'filter'}
-          <ScrubTabs
-            options={MELD_FILTER_TYPES}
-            selected={filterType}
-            onSelect={(i) => write(p.filterType, i)}
-            onDone={() => (chooser = null)}
-            cols={5}
-            rows={4}
-            tint={engineInk.primary}
-            inked
-            label={(l) => l}
-            name="meld-filter-types"
-            style="position: absolute; inset: 0; z-index: 10; --scrub-padding: 2px 4px; --scrub-font-weight: var(--font-weight-medium);"
-          />
-        {/if}
-      </div>
+        <div class="filter-type type-chooser stepper" style="--btn-tint: {engineInk.primary};">
+          <button class="chooser-step" aria-label="Previous filter type" onclick={() => stepFilter(-1)}>‹</button>
+          <button
+            class="chooser-name"
+            class:active={chooser === 'filter'}
+            aria-expanded={chooser === 'filter'}
+            aria-label="Choose filter type, now {MELD_FILTER_TYPES[filterType] ?? 'unknown'}"
+            onclick={() => (chooser = chooser === 'filter' ? null : 'filter')}
+          >{MELD_FILTER_TYPES[filterType] ?? '—'}</button>
+          <button class="chooser-step" aria-label="Next filter type" onclick={() => stepFilter(1)}>›</button>
+        </div>
+        </div>
+      </FaceSection>
+      <FaceSeam ink={engineInk.primary} />
 
       <!-- The engine's two envelopes, Amp over Mod, as value boxes
-           (ADR-477): both in view, so there is no Amp/Mod switch, and each
-           box half a fader's height and as fine. One bracket around the
-           pair, a seam between them. -->
-      <div class="env-col flex-none min-h-0 flex gap-(--central-gap)">
-        <SectionDivider orientation="vertical" ink={engineInk.primary} />
-        <div class="flex-1 min-w-0 min-h-0 flex flex-col gap-(--central-gap)">
-          <div class="eyebrow-pair">
-            <PanelEyebrow title="Envelopes" page="env-{pageEngine}" onOpen={openPage} color={engineInk.primary} />
-            <PanelEyebrow title="LFOs" page="lfo-{pageEngine}" onOpen={openPage} color={engineInk.primary} />
-          </div>
+           (ADR-477), a stage a column: both in view, so there is no
+           Amp/Mod switch. A seam between them. -->
+      <FaceSection span={5}>
+        {#snippet head()}
+          <PanelEyebrow title="Envelopes" page="env-{pageEngine}" onOpen={openMeldPage} color={engineInk.primary} />
+          <PanelEyebrow title="LFOs" page="lfo-{pageEngine}" onOpen={openMeldPage} color={engineInk.primary} />
+        {/snippet}
+        <div class="env-stack face-span-all">
           {#each envelopes as envelope, i (envelope.title)}
-            {#if i > 0}<SectionDivider orientation="horizontal" ink={engineInk.primary} />{/if}
-            <EnvelopeGroup ink={engineInk.primary} title={envelope.title} edges="none">
+            {#if i > 0}<div class="env-seam"><SectionDivider orientation="horizontal" ink={engineInk.primary} /></div>{/if}
+            <EnvelopeGroup ink={engineInk.primary} title={envelope.title} onGrid>
               {#each envelope.stages as stage (stage.index)}
-                <div class="env-slider min-h-0 h-full">
+                <div class="min-h-0 h-full">
                   <DeviceSlider
                     value={read(stage.index, stage.atRest)}
                     title={stage.title}
@@ -369,46 +362,73 @@
             </EnvelopeGroup>
           {/each}
         </div>
-        <SectionDivider orientation="vertical" ink={engineInk.primary} />
-      </div>
+      </FaceSection>
+      <FaceSeam ink={meldInk.primary} />
 
       <!-- Drive over Voice Spread: Meld's own, after both engines, two
-           knobs in one column (ADR-509), medium: two captioned 96px knobs
-           need 300px and the column has 264. -->
-      <div class="global-col flex-none min-h-0 flex flex-col gap-(--central-gap)">
-        <PanelEyebrow title="Global" page="global" onOpen={openPage} color={meldInk.primary} />
-        <div class="flex-1 min-h-0">
-          <DeviceSlider
-            value={drive}
-            title="Drive"
-            face="knob"
-            knobSize="m"
-            icon="drive"
-            orientation="vertical"
-            labelSize="small"
-            color={meldInk}
-            readout={display(MELD_DRIVE)}
-            onInteraction={(v) => write(MELD_DRIVE, v)}
-          />
+           medium knobs over two columns (ADR-509: two captioned large
+           knobs do not stack in the band; one column, ~67px, clamped a
+           medium one to 66). -->
+      <FaceSection span={2}>
+        {#snippet head()}<PanelEyebrow title="Global" page="global" onOpen={openMeldPage} color={meldInk.primary} />{/snippet}
+        <div class="face-span-all min-h-0 flex flex-col gap-(--spacing-sm)">
+        {#each [{ index: MELD_DRIVE, title: 'Drive', icon: 'drive' as const, value: drive }, { index: MELD_SPREAD, title: 'Spread', icon: 'width' as const, value: spread }] as k (k.index)}
+          <div class="flex-1 min-h-0">
+            <DeviceSlider
+              value={k.value}
+              title={k.title}
+              face="knob"
+              knobSize="m"
+              icon={k.icon}
+              orientation="vertical"
+              labelSize="small"
+              color={meldInk}
+              readout={display(k.index)}
+              onInteraction={(v) => write(k.index, v)}
+            />
+          </div>
+        {/each}
         </div>
-        <div class="flex-1 min-h-0">
-          <DeviceSlider
-            value={spread}
-            title="Spread"
-            face="knob"
-            knobSize="m"
-            icon="width"
-            orientation="vertical"
-            labelSize="small"
-            color={meldInk}
-            readout={display(MELD_SPREAD)}
-            onInteraction={(v) => write(MELD_SPREAD, v)}
+      </FaceSection>
+
+      <!-- A type grid lies over the whole face's controls, so 25 names
+           have room to read: out of the grid's flow, on its second row. -->
+      {#if chooser}
+        <div class="type-overlay">
+        {#if chooser === 'osc'}
+          <!-- Scrubs: the type follows the finger, and the grid closes when it lifts. -->
+          <ScrubTabs
+            options={MELD_OSC_TYPES}
+            selected={oscType}
+            onSelect={(i) => writeOsc(p.oscType, i)}
+            onDone={() => (chooser = null)}
+            cols={5}
+            tint={engineInk.primary}
+            inked
+            label={(l) => l}
+            name="meld-osc-types"
+            style="--scrub-padding: 2px 4px; --scrub-font-weight: var(--font-weight-medium);"
           />
+        {/if}
+        {#if chooser === 'filter'}
+          <ScrubTabs
+            options={MELD_FILTER_TYPES}
+            selected={filterType}
+            onSelect={(i) => write(p.filterType, i)}
+            onDone={() => (chooser = null)}
+            cols={5}
+            rows={4}
+            tint={engineInk.primary}
+            inked
+            label={(l) => l}
+            name="meld-filter-types"
+            style="--scrub-padding: 2px 4px; --scrub-font-weight: var(--font-weight-medium);"
+          />
+        {/if}
         </div>
-      </div>
-      <!-- The wheels that closed the row left for the MidiWheels device's
-           chain cell (user, 2026-10-26). -->
-    </div>
+      {/if}
+    </FaceGrid>
+    {/if}
     {/snippet}
     </InstrumentPanelView>
   {:else}
@@ -417,36 +437,103 @@
 </div>
 
 <style>
-  .eyebrow-pair {
+  /* The face's layout is the FaceGrid (ADR-510): twelve equal columns,
+     Engine 3, Filter 2, Envelopes 5, Global 2. What is left here is how a
+     column fills its height. */
+  :global(.meld-face) {
+    position: relative;
+  }
+  /* The type grid over the face's controls (its second row, every column). */
+  .type-overlay {
+    position: absolute;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    inset: 0;
+    /* Over every control's own layers (a value box's label stacks above
+       its fill), on a solid ground so nothing under it reads through. */
+    z-index: 30;
+    isolation: isolate;
+    background: var(--background);
     display: flex;
-    justify-content: center;
+  }
+  .type-overlay > :global(*) {
+    flex: 1 1 0;
     min-width: 0;
   }
-  .meld-root {
-    --meld-slider-w: var(--height-touch);
-    --meld-global-w: 56px;
+
+  /* The octaves and the oscillator, a column each. The swap pill is
+     CentralDisplay's column at the view's left, as on Drift's face. */
+  .engine-body {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: minmax(0, 1fr);
+    min-width: 0;
+    min-height: 0;
   }
 
-  /* Smaller iPads (ADR-476): the two engine columns are the only ones that
-     flex, so they take the whole shortfall; the global column comes down
-     to the 44px touch floor and gives them 12px back. */
-  @media (max-width: 1365.98px) {
-    .meld-root {
-      --meld-global-w: var(--height-touch);
-    }
-  }
-
-  .engine-head {
+  /* The oscillator: its mark and name over the step arrows. */
+  .osc-col {
     display: flex;
+    flex-direction: column;
     gap: var(--spacing-sm);
+    min-width: 0;
+    min-height: 0;
+  }
+  .osc-tile {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    padding: 0.375rem 0.25rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface-well);
+    color: var(--btn-tint);
+    cursor: pointer;
+  }
+  .osc-tile.active {
+    border-color: var(--btn-tint);
+  }
+  .osc-mark {
+    position: relative;
+    flex: 1 1 0;
+    width: 100%;
+    min-height: 0;
+  }
+  .osc-name {
+    flex: none;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.15;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+  .type-steps {
+    flex: none;
     height: var(--height-touch);
     min-width: 0;
   }
 
+  /* Amp over Mod, a stage a face column, a seam between. */
+  .env-stack {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
+    row-gap: var(--central-gap);
+    min-width: 0;
+    min-height: 0;
+  }
+  .env-seam {
+    grid-column: 1 / -1;
+  }
+
   /* ‹ name › — one `.stepper` (app.css): the arrows step, the name opens
-     the grid over its pad. */
+     the grid. */
   .type-chooser {
-    flex: 0 0 auto;
+    flex: none;
     min-width: 0;
     height: var(--height-touch);
   }
@@ -455,7 +542,6 @@
     min-height: 0;
     min-width: 0;
     padding: 0 4px;
-    font-size: 0.8125rem;
     font-weight: 600;
   }
   .chooser-step {
@@ -466,34 +552,9 @@
     font-size: 0.75rem;
     line-height: 1.1;
   }
-  .engine-head .type-chooser {
-    flex: 1 1 0;
-  }
 
-
+  /* The filter's second macro: a medium knob, its name beside it. */
   .filter-extra {
-    height: var(--height-touch);
-  }
-
-  /* The level column and the octave column, a touch row wide each. */
-  .mixer-col {
-    width: var(--meld-slider-w);
-  }
-  .oct-col {
-    width: var(--height-touch);
-  }
-  /* Five stages and their four gaps, plus the bracket's two seams and the
-     gap beside each, all drawn inside this column. */
-  .env-col {
-    width: calc(5 * var(--meld-slider-w) + 6 * var(--central-gap) + 2px);
-  }
-  .env-slider {
-    flex: 0 0 var(--meld-slider-w);
-    width: var(--meld-slider-w);
-  }
-  /* The global column: Drive over Spread as knobs (ADR-509), two slider
-     widths. */
-  .global-col {
-    width: calc(2 * var(--meld-global-w) + var(--central-gap));
+    height: 92px;
   }
 </style>
