@@ -72,8 +72,8 @@
      * not hideable.
      */
     hidden?: readonly SamplerRowControl[];
-    /** The host's Gain, drawn over Trnsp in the face's first column. */
-    gain?: Snippet;
+    /** The host's Gain, a knob beside the full-height Trnsp (`gain(true)`). */
+    gain?: Snippet<[knob?: boolean]>;
     /** The host's Filter pad, the face's last section. */
     filter?: Snippet;
     /** Drawn across the top of the kit section (the single Sampler's swap pill). */
@@ -104,7 +104,9 @@
   // a stage; Osc / Pitch and Filter two each. A kit: [2, 2, 2, 2]; the
   // single Sampler: [2, 2, 4, 2].
   let voiceCount = $derived((hide.has('spread') ? 0 : 1) + (hide.has('selector') ? 0 : 1));
-  let kitSpan = $derived(voiceCount > 0 ? 2 : 1);
+  /** Select gets a column of its own on a kit (the single Sampler hides it). */
+  let showSelect = $derived(voiceCount > 0 && !hide.has('selector'));
+  let kitSpan = 2;
   let stageCount = $derived(2 + (hide.has('decay') ? 0 : 1) + (hide.has('sustain') ? 0 : 1));
   let sectionSpans = $derived(filter ? [kitSpan, 2, stageCount, 2] : [kitSpan, 2, stageCount]);
 
@@ -140,7 +142,7 @@
   </span>
 {/snippet}
 
-{#snippet slider(control: SamplerRowControl, title: string, icon: ControlGlyphName, state: VmState, badge: string | null | undefined, atRest: number)}
+{#snippet slider(control: SamplerRowControl, title: string, icon: ControlGlyphName, state: VmState, badge: string | null | undefined, atRest: number, knob = false)}
   <div
     class="vm-slot slider-column min-w-0 flex flex-col"
     class:vm-none={state === 'none'}
@@ -152,6 +154,9 @@
       value={t(control, atRest)}
       {title}
       {icon}
+      face={knob ? 'knob' : 'slider'}
+      knobSize="m"
+      knobCaption={!knob}
       orientation="vertical"
       labelOrientation="horizontal"
       {color}
@@ -180,9 +185,11 @@
       {#if lead}
         <div class="kit-lead">{@render lead()}</div>
       {/if}
-      <!-- Gain over Trnsp: the column every kit shares. -->
+      <!-- Kit (user, 2026-11-06): Trnsp the full-height column; Gain, Spread
+           and Select knobs stacked in the next, an icon inside each and no
+           caption, so three hold their size in one column. Gain and Trnsp sit
+           on the same pixels on every kit. -->
       <div class="kit-col">
-        {#if gain}{@render gain()}{/if}
         <div
           class="vm-slot slider-column min-w-0 flex flex-col"
           class:vm-none={pitchState === 'none'}
@@ -206,15 +213,11 @@
           {#if badges.pitch}{@render heldBadge(badges.pitch)}{/if}
         </div>
       </div>
-      {#if voiceCount > 0}
-        <!-- Spread over Sample Selector (0..127: which zone of the Sel
-             editor plays — a kit's control, 2026-10-04; the single-Sampler
-             view hides it). -->
-        <div class="kit-col">
-          {#if !hide.has('spread')}{@render slider('spread', 'Spread', 'width', spreadState, badges.spread, 0)}{/if}
-          {#if !hide.has('selector')}{@render slider('selector', 'Select', 'select', selectorState, badges.selector, 0)}{/if}
-        </div>
-      {/if}
+      <div class="kit-col">
+        {#if gain}{@render gain(true)}{/if}
+        {#if voiceCount > 0 && !hide.has('spread')}{@render slider('spread', 'Spread', 'width', spreadState, badges.spread, 0, true)}{/if}
+        {#if showSelect}{@render slider('selector', 'Select', 'select', selectorState, badges.selector, 0, true)}{/if}
+      </div>
     </div>
   </FaceSection>
   <FaceSeam ink={color.primary} />

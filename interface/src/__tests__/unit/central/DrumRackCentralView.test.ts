@@ -250,7 +250,10 @@ function stateOf(container: HTMLElement, title: string): string | null {
 	// control's own label (the slider / pad title).
 	const labels = Array.from(container.querySelectorAll('.vm-slot'));
 	for (const slot of labels) {
-		if (slot.textContent?.includes(title)) return slot.getAttribute('data-vm-state');
+		// A caption-less knob (Gain, Start, 2026-11-06) names itself only to
+		// assistive tech: read its slider's aria-label too.
+		const spoken = slot.querySelector('[role="slider"]')?.getAttribute('aria-label') ?? '';
+		if (slot.textContent?.includes(title) || spoken.startsWith(`${title}:`)) return slot.getAttribute('data-vm-state');
 	}
 	return null;
 }
@@ -336,8 +339,8 @@ describe('DrumRackCentralView — mode from the census', () => {
 		expect(container.querySelector('[data-vm-mode]')?.getAttribute('data-vm-mode')).toBe('simpler');
 		expect(container.querySelector('.vm-kit-card')).toBeNull();
 		expect(Array.from(container.querySelectorAll('.vm-slot')).map((s) => s.getAttribute('data-vm-function'))).toEqual([
-			'gain',
 			'pitch',
+			'gain',
 			'attack|release',
 			'filterFreq|filterRes'
 		]);
@@ -717,11 +720,11 @@ describe('DrumRackCentralView — the Sampler row on a Sampler kit', () => {
 		});
 		const { container } = render(DrumRackCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
-		// DOM order is the face's (ADR-510): Kit [Gain over Trnsp | Spread
-		// over Select] · Osc over Pitch · A R · Filter.
+		// DOM order is the face's (ADR-510): Kit [Trnsp | Gain, Spread and
+		// Select knobs] · Osc over Pitch · A R · Filter.
 		expect(Array.from(container.querySelectorAll('.vm-slot')).map((s) => s.getAttribute('data-vm-function'))).toEqual([
-			'gain',
 			'pitch',
+			'gain',
 			'spread',
 			'selector',
 			'oscAmount|oscCoarse',
@@ -1141,7 +1144,7 @@ describe('DrumRackCentralView — the pad grid and hold-to-scope', () => {
 		// While a pad is scoped the controls ARE that pad's, so they wear its
 		// chain colour. Pad 38 is uncoloured in this kit and 36 is olive.
 		const { container } = await mounted({ 'vm.members': DRUMCELL_WITH_PADS, 'vm.selectedPad': 42, 'vm.start': 0.4 });
-		const tint = () => slider(container, 'Start').style.getPropertyValue('--slider-tint').trim();
+		const tint = () => slider(container, 'Trnsp').style.getPropertyValue('--slider-tint').trim();
 		const atRest = tint();
 		expect(atRest).not.toBe('');
 
@@ -1161,7 +1164,7 @@ describe('DrumRackCentralView — the pad grid and hold-to-scope', () => {
 		// Live gives a chain no colour and the census carries null: there is
 		// nothing to take, so the controls stay the track's.
 		const { container } = await mounted({ 'vm.members': DRUMCELL_WITH_PADS, 'vm.selectedPad': 42, 'vm.start': 0.4 });
-		const tint = () => slider(container, 'Start').style.getPropertyValue('--slider-tint').trim();
+		const tint = () => slider(container, 'Trnsp').style.getPropertyValue('--slider-tint').trim();
 		const atRest = tint();
 		padPointer(tile(container, 38), 'pointerdown', 4); // PADS_16 colours only pad 36
 		await tick();
@@ -1323,16 +1326,18 @@ describe('DrumRackCentralView — the Gain slider', () => {
 		seed({ 'vm.members': DRUMCELL, 'vm.gain': 0.4 });
 		const { container } = render(DrumRackCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
-		// First slot of the row after the pads, outside the profile switch
-		// (user, 2026-09-27: "the leftmost slider").
+		// Trnsp is the first column on every kit, full height, and Gain the
+		// knob at the top of the next (user, 2026-11-06; Gain led until then).
 		const slots = Array.from(container.querySelectorAll('.vm-slot'));
-		expect(slots[0].getAttribute('data-vm-function')).toBe('gain');
+		expect(slots[0].getAttribute('data-vm-function')).toBe('pitch');
+		expect(slots[1].getAttribute('data-vm-function')).toBe('gain');
 		expect(slider(container, 'Gain').getAttribute('aria-label')).toBe('Gain: 0.40');
 
 		for (const kit of [JAZZ, AUTUMN_UNMAPPED, ETHNIC]) {
 			await setCensus(kit);
-			const all = Array.from(container.querySelectorAll('.vm-slot'));
-			expect(all[0].getAttribute('data-vm-function')).toBe('gain');
+			const all = Array.from(container.querySelectorAll('[data-vm-function]')).map((s) => s.getAttribute('data-vm-function'));
+			expect(all.indexOf('pitch')).toBeLessThan(all.indexOf('gain'));
+			expect(all.indexOf('gain')).toBeLessThanOrEqual(2);
 		}
 
 		// A plugin kit has no gain member and no slider: the rack's own

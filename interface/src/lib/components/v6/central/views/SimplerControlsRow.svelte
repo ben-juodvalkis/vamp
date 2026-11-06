@@ -45,8 +45,8 @@
     badges?: Partial<Record<SimplerRowSlot, string | null>>;
     color: DeviceColorScheme;
     onWrite: (control: SimplerRowControl, value: number) => void;
-    /** The Drum Rack's Gain, drawn over Trnsp. */
-    gain?: Snippet;
+    /** The Drum Rack's Gain, a knob beside the full-height Trnsp (`gain(true)`). */
+    gain?: Snippet<[knob?: boolean]>;
     /** The Drum Rack's Filter pad, the face's last section. */
     filter?: Snippet;
   }
@@ -81,11 +81,12 @@
      DrumCell kit's Time / Filter section sits). Eight columns, as on a
      DrumCell kit, so Gain and Trnsp land on its pixels. No padding of
      its own: the Drum Rack owns the inset. -->
-<FaceGrid sections={filter ? [1, 4, 3] : [1, 4]} class="simpler-row">
-  <FaceSection span={1}>
+<!-- Kit: Trnsp the full-height column, Gain a knob at the top of the
+     next (user, 2026-11-06), the same two columns on every kit. -->
+<FaceGrid sections={filter ? [2, 4, 3] : [2, 4]} class="simpler-row">
+  <FaceSection span={2}>
     {#snippet head()}<PanelEyebrow title="Kit" color={color.primary} />{/snippet}
     <div class="kit-col">
-      {#if gain}{@render gain()}{/if}
       <div
         class="vm-slot slider-column min-w-0 flex flex-col"
         class:vm-none={pitchState === 'none'}
@@ -108,6 +109,10 @@
         />
         {#if badges.pitch}{@render heldBadge(badges.pitch)}{/if}
       </div>
+    </div>
+    <div class="kit-col">
+      {#if gain}{@render gain(true)}{/if}
+      <div aria-hidden="true"></div>
     </div>
   </FaceSection>
   <FaceSeam ink={color.primary} />

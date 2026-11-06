@@ -33,23 +33,23 @@
     /** Trnsp, drawn in the transpose macro's place when the kit has one. */
     trnsp?: Snippet;
     /** The view's Gain, the first box. */
-    gain?: Snippet;
+    gain?: Snippet<[knob?: boolean]>;
   }
 
   let { layout, value, state, badge, coverage, color, onWrite, trnsp, gain }: Props = $props();
 </script>
 
 <div class="flex-1 min-h-0 gap-(--central-gap) vm-rack-macros">
-  {#if gain}
-    <div class="rack-slot rack-slider" data-vm-function="gain">
-      {@render gain()}
+  <!-- Trnsp first, the full-height column; Gain a knob at the top of the
+       next (user, 2026-11-06), as on every kit. -->
+  {#if trnsp}
+    <div class="rack-slot rack-slider rack-trnsp" data-vm-function="pitch">
+      {@render trnsp()}
     </div>
   {/if}
-  {#if trnsp}
-    <!-- Trnsp in the transpose macro's place: the same knob, in semitones.
-         First, beside the view's Gain, where every kit keeps it (2026-09-27). -->
-    <div class="rack-slot rack-slider" data-vm-function="pitch">
-      {@render trnsp()}
+  {#if gain}
+    <div class="rack-slot rack-slider" data-vm-function="gain">
+      {@render gain(true)}
     </div>
   {/if}
   {#each layout as control (control.name)}
@@ -85,6 +85,9 @@
     grid-auto-flow: column;
     grid-template-rows: repeat(2, minmax(0, 1fr));
     grid-auto-columns: minmax(0, 1fr);
+  }
+  .vm-rack-macros > :global(.rack-trnsp) {
+    grid-row: span 2;
   }
   .vm-rack-macros > :global(.rack-slot) {
     display: flex;

@@ -159,13 +159,16 @@
   <HostedSwapPill />
 {/snippet}
 
-{#snippet gainSlot()}
+{#snippet gainSlot(knob = false)}
   <VmSlot state={gainState} class="sampler-gain flex flex-col min-w-0" fn="gain">
     <DeviceSlider
       value={valueAt(GAIN) ?? 0.5}
       labelOrientation="horizontal"
       title="Gain"
       icon="gain"
+      face={knob ? 'knob' : 'slider'}
+      knobSize="m"
+      knobCaption={!knob}
       color={samplerInk}
       isGhost={gainState === 'none'}
       onInteraction={(value) => writeAt(GAIN, value)}

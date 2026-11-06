@@ -206,4 +206,15 @@ height. What changed:
   stay boxes" line above holds for the rule-laid panels and the effects,
   not for those.
 
+## Addendum (2026-11-06): the Drum Rack's kits
+
+- **Trnsp stays a slider, full height, the first column on every kit**: it
+  is played, under a held pad as on the kit. **Gain is a knob** at the top
+  of the next column on every kit, with the kit's set-once controls as
+  knobs under it — DrumCell's Start, the Sampler's Spread and Select (all
+  three in one column) — and the single Sampler likewise. They carry their
+  icon and no caption, so three hold 70px in one column and nothing clamps
+  under a scoped pad's notes strip. Gain and Trnsp keep one position across
+  kits (the 2026-09-27 muscle-memory rule), now Trnsp first.
+
 ## Tags

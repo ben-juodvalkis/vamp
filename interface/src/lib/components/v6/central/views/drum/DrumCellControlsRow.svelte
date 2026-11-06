@@ -59,8 +59,8 @@
     onWrite: (control: DrumCellRowControl, value: number) => void;
     /** The view's Filter pad, drawn under the Time pad. */
     filter?: Snippet;
-    /** The view's Gain, drawn over Trnsp in the face's first column. */
-    gain?: Snippet;
+    /** The view's Gain: here a knob over Start (`gain(true)`), Trnsp the full-height column beside. */
+    gain?: Snippet<[knob?: boolean]>;
   }
 
   let {
@@ -94,7 +94,7 @@
   let selectedFxType = $derived(Math.max(0, Math.min(fxTypes.length - 1, Math.round(t('fxType', 0)))));
 </script>
 
-<!-- The face (ADR-510): Kit [the view's Gain over Trnsp | Start] · FX
+<!-- The face (ADR-510): Kit [Trnsp | Gain over Start, knobs] · FX
      [the FX pad over its nine types] · Time / Filter [the Time pad over
      the view's Filter], eight equal columns, the kit columns every Drum
      Rack kit shares, so Gain and Trnsp sit on the same pixels whichever
@@ -103,14 +103,15 @@
   <FaceSection span={2}>
     {#snippet head()}<PanelEyebrow title="Kit" color={color.primary} />{/snippet}
     <div class="vm-kit-col">
-      {#if gain}{@render gain()}{/if}
+      <!-- Trnsp full height, Gain and Start knobs beside it (user,
+           2026-11-06): Trnsp is played, Gain and Start are set. -->
       <!-- Trnsp, always (user, 2026-09-12). From 2026-09-08 it was drawn only
            while the FX grid was off, because the grid's top-left Pitch slider
            is the same knob; with the grid on — the default — the kit's pitch
            was simply missing from its own view. Both now show it: they read
            and write the same `vm.pitch` and obey the same hold, so they
            cannot disagree. -->
-      <VmSlot state={pitchState} class="vm-slot-pitch flex-1 flex flex-col" badge={badges.pitch}>
+      <VmSlot state={pitchState} class="vm-slot-pitch flex-1 flex flex-col" fn="pitch" badge={badges.pitch}>
         <DeviceSlider
           value={t('pitch', 0)}
           labelOrientation="horizontal"
@@ -126,17 +127,23 @@
         />
       </VmSlot>
     </div>
+    <div class="vm-kit-col">
+    {#if gain}{@render gain(true)}{/if}
     <VmSlot state={startState} class="vm-slot-start flex-1 flex flex-col" badge={badges.start}>
       <DeviceSlider
         value={t('start', 0.5)}
         labelOrientation="horizontal"
         title="Start"
+        face="knob"
+        knobSize="m"
+        knobCaption={false}
         icon="start"
         {color}
         isGhost={startState === 'none'}
         onInteraction={(value) => write('start', value)}
       />
     </VmSlot>
+    </div>
   </FaceSection>
   <FaceSeam ink={color.primary} />
   <FaceSection span={3}>

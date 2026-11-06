@@ -348,7 +348,7 @@
   </VmSlot>
 {/snippet}
 
-{#snippet gainSlot()}
+{#snippet gainSlot(knob = false)}
   <!-- How loud the kit is — or, with pads held, how loud those pads are
        (2026-09-08, user's request). One `t` slider over three different
        measurements: DrumCell's Volume is 0..1, a Sampler's and a
@@ -362,6 +362,9 @@
       labelOrientation="horizontal"
       title="Gain"
       icon="gain"
+      face={knob ? 'knob' : 'slider'}
+      knobSize="m"
+      knobCaption={!knob}
       color={controlInk}
       isGhost={gainState === 'none'}
       onInteraction={(value) => vm.write('gain', value)}
