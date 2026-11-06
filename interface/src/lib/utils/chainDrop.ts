@@ -172,13 +172,15 @@ function firstFix(sigs: string[], want: string[], i: number): { from: number; to
 }
 
 /**
- * The ghost section's tiles (ADR-484; the user, 2026-11-05): two cells
- * wide, four columns of four on a chain of one row, six columns of two
- * once the chain wraps to two rows. The last tile is + Effect; the
- * recents get the rest (`shown`).
+ * The ghost section's tiles (ADR-484; the user, 2026-11-05): four columns
+ * of four on a chain of one row, six columns of two once the chain wraps
+ * to two rows, five when the section is down to three units there
+ * (`chainUnitLayout`), so a tile keeps its size. The last tile is
+ * + Effect; the recents get the rest (`shown`).
  */
-export function recentLayout(chainRows: number): { columns: number; rows: number; shown: number } {
-	return chainRows > 1 ? { columns: 6, rows: 2, shown: 11 } : { columns: 4, rows: 4, shown: 15 };
+export function recentLayout(chainRows: number, ghostSpan = 4): { columns: number; rows: number; shown: number } {
+	if (chainRows <= 1) return { columns: 4, rows: 4, shown: 15 };
+	return ghostSpan < 4 ? { columns: 5, rows: 2, shown: 9 } : { columns: 6, rows: 2, shown: 11 };
 }
 
 /** Where one cell of the chain sits: its row, its first unit column and how many it spans. */
@@ -197,13 +199,22 @@ export interface ChainPlace {
  * before it widens to the row's end, so no row has a hole; the ghost
  * section takes its row's rest. Never more than two rows: the FX section
  * is two tiles tall.
+ *
+ * **A slider keeps its one unit** (the user, 2026-11-06): when the
+ * widening would land on a one-unit cell, the two rows may give the ghost
+ * section as little as `ghostMin` instead, at the first width where no
+ * slider widens. Pedal, Rack Reverb Redux Pedal | Phaser Chorus, was two
+ * units wide at a ghost of four and is one at three. Where no such width
+ * exists the ghost of four stands.
  */
 export function chainUnitLayout(
 	widths: readonly number[],
 	ghost: number,
-	rowUnits: number
+	rowUnits: number,
+	ghostMin = ghost
 ): { cols: number; rows: number; places: ChainPlace[]; ghost: ChainPlace } {
-	const total = widths.reduce((a, w) => a + w, 0) + ghost;
+	const sum = widths.reduce((a, w) => a + w, 0);
+	const total = sum + ghost;
 	if (total <= rowUnits) {
 		let col = 0;
 		const places = widths.map((span) => {
@@ -213,10 +224,27 @@ export function chainUnitLayout(
 		});
 		return { cols: total, rows: 1, places, ghost: { row: 0, col, span: ghost } };
 	}
-	for (let cols = Math.ceil(total / 2); ; cols++) {
+	const laid = twoRows(widths, ghost, Math.ceil(total / 2));
+	if (!widensSlider(widths, laid.places)) return laid;
+	for (let g = ghost - 1; g >= ghostMin; g--) {
+		for (let cols = Math.ceil((sum + g) / 2); cols <= laid.cols; cols++) {
+			const fit = placeInRows(widths, g, cols);
+			if (fit && !widensSlider(widths, fit.places)) return { cols, rows: 2, ...fit };
+		}
+	}
+	return laid;
+}
+
+function twoRows(widths: readonly number[], ghost: number, from: number): { cols: number; rows: number; places: ChainPlace[]; ghost: ChainPlace } {
+	for (let cols = from; ; cols++) {
 		const laid = placeInRows(widths, ghost, cols);
 		if (laid) return { cols, rows: 2, ...laid };
 	}
+}
+
+/** Whether a one-unit cell was widened to end its row. */
+function widensSlider(widths: readonly number[], places: readonly ChainPlace[]): boolean {
+	return places.some((p, i) => widths[i] === 1 && p.span > 1);
 }
 
 function placeInRows(widths: readonly number[], ghost: number, cols: number): { places: ChainPlace[]; ghost: ChainPlace } | null {
