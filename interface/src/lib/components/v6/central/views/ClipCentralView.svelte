@@ -474,12 +474,41 @@ import { logger } from '$lib/utils/logger';
 			{/if}
 		</div>
 
-		<!-- Col 3: REC top + > bottom. Delete and > traded places on the
-		     user's call (2026-09-13): Delete now sits over < in col 5. -->
+		<!-- Col 3: Dup Trk top + > bottom. Delete and > traded places on the
+		     user's call (2026-09-13): Delete now sits over < in col 5. Dup
+		     Trk and REC traded places on 2026-11-06, so the two toggles
+		     (REC, Group) share the first column. -->
 		<div class="col col-3">
 			<div class="stacked-btns">
 				<div class="btn-cell">
-					<RecordButton meterLevel={trackMeterLevel} />
+					<button
+						onclick={handleDupTrack}
+						disabled={isDuplicatingTrack}
+						class="btn btn-well btn-action fam-monitor dup-trk-btn font-bold text-base {isDuplicatingTrack ? 'cursor-wait' : ''}"
+					>
+						<span class="flex items-center justify-center btn-caps" aria-label="Duplicate track">
+							{#if isDuplicatingTrack}
+								...
+							{:else}
+								<!-- Source track lane copied down to a duplicate lane (with notes + a + cue) -->
+								<svg class="w-12 h-12" fill="none" viewBox="0 0 32 28" style="transform: rotate(-90deg)">
+									<!-- source lane -->
+									<rect x="3" y="1.5" width="26" height="9" rx="1.5" stroke="currentColor" stroke-width="2" />
+									<rect x="6" y="4.5" width="6" height="3" rx="0.75" fill="currentColor" />
+									<rect x="14" y="4.5" width="4" height="3" rx="0.75" fill="currentColor" />
+									<rect x="20" y="4.5" width="6" height="3" rx="0.75" fill="currentColor" />
+									<!-- duplicate arrow -->
+									<path d="M16 12.5v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+									<path d="M12.5 14.5l3.5 3 3.5-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+									<!-- duplicate lane -->
+									<rect x="3" y="19.5" width="26" height="9" rx="1.5" stroke="currentColor" stroke-width="2" stroke-dasharray="2.5 2" />
+									<rect x="6" y="22.5" width="6" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" />
+									<rect x="14" y="22.5" width="4" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" />
+									<rect x="20" y="22.5" width="6" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" />
+								</svg>
+							{/if}
+						</span>
+					</button>
 				</div>
 				<div class="btn-cell">
 					<button
@@ -656,7 +685,7 @@ import { logger } from '$lib/utils/logger';
 		     undifferentiated rail until the seams landed (2026-09-13). -->
 		<div class="seam seam-a"><SectionDivider orientation="vertical" /></div>
 
-		<!-- Col 9: Dup Trk top + Group bottom. Dup Trk had the column to
+		<!-- Col 9: REC top + Group bottom (Dup Trk top until 2026-11-06). Dup Trk had the column to
 		     itself from 2026-09-13, when Replace left for the swap pill in the
 		     instrument and clip views (ADR-442); Group joined it because they
 		     are the same gesture on the same subject — both restructure the
@@ -665,38 +694,12 @@ import { logger } from '$lib/utils/logger';
 		     other track strips to add them, release = commit) — see
 		     groupGestureStore and TrackStrip's dispatchSectionTap. -->
 		<div class="col col-9">
-			<!-- Without the AX helper there is no Group, and Dup Trk takes the
+			<!-- REC over Group since 2026-11-06 (Dup Trk moved to col 3).
+			     Without the AX helper there is no Group, and REC takes the
 			     column's whole height. -->
 			<div class="stacked-btns" class:single={!axOn}>
 				<div class="btn-cell">
-					<button
-						onclick={handleDupTrack}
-						disabled={isDuplicatingTrack}
-						class="btn btn-well btn-action fam-monitor dup-trk-btn font-bold text-base {isDuplicatingTrack ? 'cursor-wait' : ''}"
-					>
-						<span class="flex items-center justify-center btn-caps" aria-label="Duplicate track">
-							{#if isDuplicatingTrack}
-								...
-							{:else}
-								<!-- Source track lane copied down to a duplicate lane (with notes + a + cue) -->
-								<svg class="w-12 h-12" fill="none" viewBox="0 0 32 28" style="transform: rotate(-90deg)">
-									<!-- source lane -->
-									<rect x="3" y="1.5" width="26" height="9" rx="1.5" stroke="currentColor" stroke-width="2" />
-									<rect x="6" y="4.5" width="6" height="3" rx="0.75" fill="currentColor" />
-									<rect x="14" y="4.5" width="4" height="3" rx="0.75" fill="currentColor" />
-									<rect x="20" y="4.5" width="6" height="3" rx="0.75" fill="currentColor" />
-									<!-- duplicate arrow -->
-									<path d="M16 12.5v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-									<path d="M12.5 14.5l3.5 3 3.5-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-									<!-- duplicate lane -->
-									<rect x="3" y="19.5" width="26" height="9" rx="1.5" stroke="currentColor" stroke-width="2" stroke-dasharray="2.5 2" />
-									<rect x="6" y="22.5" width="6" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" />
-									<rect x="14" y="22.5" width="4" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" />
-									<rect x="20" y="22.5" width="6" height="3" rx="0.75" fill="currentColor" fill-opacity="0.55" />
-								</svg>
-							{/if}
-						</span>
-					</button>
+					<RecordButton meterLevel={trackMeterLevel} />
 				</div>
 				{#if axOn}
 				<div class="btn-cell">
@@ -771,7 +774,7 @@ import { logger } from '$lib/utils/logger';
 
 	/* Equal columns at fixed positions (audio adds Pitch's), plus
 	   the `auto` seam track that groups them (2026-09-13):
-	     Replace/Dup Trk · REC/Del · nav | Loop X2 · ±12 · Temp over Chance
+	     REC/Group · Dup Trk/nav · Del/nav | Loop X2 · ±12 · Temp over Chance
 	   The seam is `auto`, so a track is a hairline wide and the six content
 	   columns still divide the rest evenly. Regrouped on the user's call the
 	   same day: what acts on the track or the clip | what shapes what the
