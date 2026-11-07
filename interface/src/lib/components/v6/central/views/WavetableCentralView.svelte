@@ -295,7 +295,7 @@
    * Mod Sources page, a summary of the five, has no tile.
    */
   const BOARD: readonly BoardRow[] = [
-    { tiles: [{ id: 'osc1', cols: 10 }, { id: 'osc2', cols: 10 }], weight: 1.2 },
+    { tiles: [{ id: 'osc1', cols: 8 }, { id: 'osc2', cols: 8 }], weight: 1.2 },
     { tiles: [{ id: 'filter1', cols: 7 }, { id: 'filter2', cols: 7 }] },
     { tiles: [{ id: 'amp', cols: 4 }, { id: 'env2', cols: 6 }, { id: 'env3', cols: 6 }] },
     { tiles: [{ id: 'lfo1', cols: 5 }, { id: 'lfo2', cols: 5 }, { id: 'global', cols: 3 }] }

@@ -209,24 +209,22 @@
 
 <div class="wt-page" data-wavetable-page={page}>
 {#if (page === 'osc1' || page === 'osc2') && board && tables}
-  <!-- On the board (ADR-512) the page's eight columns with the wavetable
-       ahead of them: its category over its table, each a pick naming it
-       (user, 2026-11-07). Picking a category puts the oscillator on that
+  <!-- On the board (ADR-512) the page's eight columns, the wavetable over
+       the pad: its category beside its table, each a pick naming it (user,
+       2026-11-07). Picking a category puts the oscillator on that
        category's first table, as Live does. -->
   {@const osc = n === 2 ? 2 : 1}
   {@const t = tables.choice(osc)}
-  <FaceGrid sections={[2, 6, 2]}>
-    <FaceSection span={2}>
-      {#snippet head()}{@render back(oscInk.primary)}{/snippet}
-      <div class="stack face-span-2" data-wavetable-choosers={osc}>
-        <div class="cell sw-cell"><ChoicePicker options={t.categories} selected={t.category} onSelect={(i) => tables.setCategory(osc, i)} label="Osc {osc} wavetable category" tint={oscInk.primary} ghost={t.categories.length === 0} /></div>
-        <div class="cell sw-cell"><ChoicePicker options={t.tables} selected={t.table} onSelect={(i) => tables.setTable(osc, i)} label="Osc {osc} wavetable" tint={oscInk.primary} ghost={t.tables.length === 0} /></div>
-      </div>
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
+  <FaceGrid sections={[6, 2]}>
     <FaceSection span={6}>
-      {#snippet head()}{@render sub('Wave', oscInk.primary)}{/snippet}
-      <div class="face-span-3 pad" style={isOn(`${O} On`) ? '' : 'opacity: var(--opacity-ghost);'}>{@render oscPad(osc)}</div>
+      {#snippet head()}{@render back(oscInk.primary)}{/snippet}
+      <div class="face-span-3 wave-col">
+        <div class="choosers" data-wavetable-choosers={osc}>
+          <ChoicePicker options={t.categories} selected={t.category} onSelect={(i) => tables.setCategory(osc, i)} label="Osc {osc} wavetable category" tint={oscInk.primary} ghost={t.categories.length === 0} />
+          <ChoicePicker options={t.tables} selected={t.table} onSelect={(i) => tables.setTable(osc, i)} label="Osc {osc} wavetable" tint={oscInk.primary} ghost={t.tables.length === 0} />
+        </div>
+        <div class="pad grow" style={isOn(`${O} On`) ? '' : 'opacity: var(--opacity-ghost);'}>{@render oscPad(osc)}</div>
+      </div>
       <div class="stack">{@render knob(`${O} Effect 1`, fx[0], 'm', { sw: `${O} On`, color: oscInk })}{@render knob(`${O} Transp`, 'Semi', 'm', { sw: `${O} On`, color: oscInk })}</div>
       <div class="stack">{@render knob(`${O} Detune`, 'Detune', 'm', { sw: `${O} On`, color: oscInk })}{@render knob(`${O} Pan`, 'Pan', 'm', { sw: `${O} On`, color: oscInk })}</div>
       <div class="stack">{@render knob(`${O} Gain`, 'Gain', 'm', { sw: `${O} On`, color: oscInk })}{@render sw(`${O} On`, 'On', oscInk.primary)}</div>
@@ -508,6 +506,24 @@
   .pad {
     min-height: 0;
     min-width: 0;
+  }
+  /* The board's oscillator: the wavetable's two picks on one touch row,
+     the pad taking what is left under them. */
+  .wave-col {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    min-width: 0;
+    min-height: 0;
+  }
+  .wave-col > .grow {
+    flex: 1 1 0;
+  }
+  .choosers {
+    flex: none;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--spacing-sm);
   }
   /* A tab of a few values beside a knob is one touch row, centred. */
   .panel-choice.row {
