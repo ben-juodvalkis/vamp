@@ -376,7 +376,8 @@ import { logger } from '$lib/utils/logger';
 	Manual device↔clip-editor toggle (clip-view-mirror decision 8):
 	the clip central area shows EITHER the editor canvas OR the button
 	rail, never both. Focusing a clip never auto-switches; the user taps
-	the toggle. The toggle chip floats top-right in both modes.
+	the toggle. The toggle chip floats top-right in both modes, beside the
+	frame's full-screen icon (ADR-511).
 -->
 <div class="clip-central-root h-full w-full relative" style="--clip-track-wash: {trackWash}; --clip-track-tint: {trackTint};">
 	<button
@@ -745,10 +746,12 @@ import { logger } from '$lib/utils/logger';
 		background: var(--clip-track-wash); /* faint track wash (lifted off inline) */
 	}
 
+	/* Left of the frame's full-screen icon (ADR-511), whose 44px touch box
+	   holds the corner: the two read as a pair along the top edge. */
 	.editor-toggle {
 		position: absolute;
 		top: 6px;
-		right: 6px;
+		right: calc(var(--height-touch) + 4px);
 		z-index: 20;
 		display: flex;
 		align-items: center;
