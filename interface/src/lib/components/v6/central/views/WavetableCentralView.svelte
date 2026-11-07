@@ -439,7 +439,7 @@
     </InstrumentBoard>
   {:else if instrument && device}
     <InstrumentPanelView panel={WAVETABLE_PANEL} params={panelParams} color={wavetableInk}>
-    {#snippet face(_openPage: (page: string) => void)}
+    {#snippet face()}
     <!-- One grid, eleven columns (ADR-510, re-laid 2026-11-06): Oscillator
          5 (the levels, the octaves, the wave over Position, Effect 1 and
          Effect 2), Filter 3, Mod Sources 2 (Amp, Env 2), Global 1, in

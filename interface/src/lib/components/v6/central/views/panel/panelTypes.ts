@@ -175,7 +175,20 @@ export type PanelBoardSection =
 	/** Twin sections as a table: a section a group of its columns (ADR-512). */
 	| { kind: 'matrix'; matrix: PanelMatrix }
 	/** A device's own control (Operator's filter pad), from the view's `slots`. */
-	| { kind: 'slot'; slot: string; title?: string; columns: number; params: readonly string[] };
+	/**
+	 * The view's own control (`slots`), `columns` wide; `below` lays groups
+	 * under it across the same columns, each `columns` of them and its cells
+	 * `stack` high (Operator's filter: the pad over its type and shaper,
+	 * 2026-11-07).
+	 */
+	| {
+			kind: 'slot';
+			slot: string;
+			title?: string;
+			columns: number;
+			params: readonly string[];
+			below?: readonly { group: PanelGroup; columns: number; stack: number }[];
+	  };
 
 /**
  * Twin sections as a table (ADR-512). A row a section, named at its left
@@ -517,7 +530,7 @@ export function boardControls(panel: InstrumentPanel): PanelControl[] {
 			? [...s.group.controls]
 			: s.kind === 'matrix'
 				? s.matrix.groups.flatMap((g) => g.columns.flatMap((c) => c.cells.filter((x): x is PanelControl => !!x)))
-				: []
+				: (s.below ?? []).flatMap((b) => [...b.group.controls])
 	);
 }
 
@@ -530,7 +543,7 @@ export function boardSwitches(panel: InstrumentPanel): string[] {
 				: []
 			: s.kind === 'matrix'
 				? s.matrix.rows.flatMap((r) => (r.switchParam ? [r.switchParam] : []))
-				: [...s.params]
+				: [...s.params, ...(s.below ?? []).flatMap((b) => (b.group.switchParam ? [b.group.switchParam] : []))]
 	);
 }
 

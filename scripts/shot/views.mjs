@@ -945,32 +945,15 @@ function instrumentSwapStates() {
 		['analog', 'Analog', 'UltraAnalog', analog],
 		// Voice 2 up: the other half, in blue (both its envelopes in view, ADR-477).
 		['analog-voice2', 'Analog', 'UltraAnalog', analog, [{ click: '.osc-badge' }]],
-		// Operator in Live's arrangement (ADR-487), at Live's defaults: an
-		// oscillator's page, the LFO tab, the filter's page and Global's.
-		['operator-osc-b', 'Operator', 'Operator', referenceParams('Operator'), [{ click: '[data-tab="Osc B"]' }, { click: '[data-group="Oscillator B"] .eyebrow-link' }]],
-		['operator-lfo', 'Operator', 'Operator', referenceParams('Operator'), [{ click: '[data-tab="LFO"]' }]],
-		['operator-filter', 'Operator', 'Operator', referenceParams('Operator'), [{ click: '[data-group="Filter"] .eyebrow-link' }]],
-		['operator-global', 'Operator', 'Operator', referenceParams('Operator'), [{ click: '[data-group="Global"] .eyebrow-link' }]],
-		// Every other page (ADR-510): the oscillator's envelope, the LFO's and
-		// its envelope, the pitch envelope and the filter's envelope.
-		['operator-osc-env', 'Operator', 'Operator', referenceParams('Operator'), [{ click: '[data-group="Envelope"] .eyebrow-link' }]],
-		['operator-lfo-page', 'Operator', 'Operator', referenceParams('Operator'), [{ click: '[data-tab="LFO"]' }, { click: '[data-group="LFO"] .eyebrow-link' }]],
-		['operator-lfo-env', 'Operator', 'Operator', referenceParams('Operator'), [{ click: '[data-tab="LFO"]' }, { click: '[data-group="LFO"] .eyebrow-link' }, { click: '[data-group="Envelope"] .eyebrow-link' }]],
-		['operator-pitch', 'Operator', 'Operator', referenceParams('Operator'), [{ click: '[data-tab="Pitch"]' }, { click: '[data-group="Pitch Env"] .eyebrow-link' }]],
-		['operator-filter-env', 'Operator', 'Operator', referenceParams('Operator'), [{ click: '[data-group="Filter"] .eyebrow-link' }, { click: '[data-group="Envelope"] .eyebrow-link' }]],
+		// Operator in Live's arrangement (ADR-487), at Live's defaults: the
+		// oscillator its chain cell touched last (A until one is, ADR-513);
+		// every page is a tile of board-operator.
+		['operator-face', 'Operator', 'Operator', referenceParams('Operator')],
 		['collision', 'Collision', 'Collision', referenceParams('Collision')],
-		// Live's tabs over the middle, and the pages behind the eyebrows (ADR-487).
+		// Live's tabs over the middle (ADR-487); its pages are board-collision's tiles.
 		['collision-lfo', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-tab="LFO"]' }]],
 		['collision-midi', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-tab="MIDI"]' }]],
-		['collision-res1', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-group="Resonator 1"] .eyebrow-link' }]],
-		['collision-noise', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-group="Noise"] .eyebrow-link' }]],
-		['collision-lfo1', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-tab="LFO"]' }, { click: '[data-group="LFO 1"] .eyebrow-link' }]],
-		['collision-res1-mod', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-group="Resonator 1"] .eyebrow-link' }, { click: '[data-group="Body"] .eyebrow-link' }]],
-		['collision-midi-page', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-tab="MIDI"]' }, { click: '[data-group="MIDI"] .eyebrow-link' }]],
-		['collision-mallet', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-group="Mallet"] .eyebrow-link' }]],
-		['collision-global', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-group="Global"] .eyebrow-link' }]],
 		['electric', 'Electric', 'LoungeLizard', referenceParams('Electric')],
-		// Live's arrangement (ADR-487): a section's eyebrow opens its page.
 		// Drift's face, its own (ADR-487), on Live's measured list; its pages
 		// are the full-screen board's tiles (board-drift).
 		['drift-face', 'Drift', 'Drift', referenceParams('Drift')],
@@ -980,10 +963,6 @@ function instrumentSwapStates() {
 		// Wavetable's face on Live's measured list (ADR-487); its pages are the
 		// full-screen board's tiles (board-wavetable).
 		['wavetable-reference', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable')],
-		['electric-hammer', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Hammer"] .eyebrow-link' }]],
-		['electric-fork', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Fork"] .eyebrow-link' }]],
-		['electric-pickup', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Damper / Pickup"] .eyebrow-link' }]],
-		['electric-global', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Global"] .eyebrow-link' }]],
 		['meld', 'Meld', 'InstrumentMeld', meld],
 		// Engine B up: the other half, in blue (both its envelopes in view, ADR-477).
 		['meld-engine-b', 'Meld', 'InstrumentMeld', meld, [{ click: '[data-engine-level="B"] [role="slider"]' }]],

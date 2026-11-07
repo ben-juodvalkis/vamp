@@ -3,19 +3,12 @@
 	 * An instrument in Live's own arrangement (ADR-487): the panel's frame,
 	 * left to right in Live's signal order with Global at the right edge,
 	 * seams between its sections and Live's tab strip over the region Live
-	 * swaps; or, after a tap on a section's eyebrow, that section's page,
-	 * every control of it, with the way back to the panel at its left.
+	 * swaps, or the tab its view picks (`tabOf`: Operator's oscillator, from
+	 * its chain cell). A section's eyebrow is its name: the band opens no
+	 * page (ADR-513); the panel's `pages` are the list of everything the
+	 * instrument holds, which its board must reach.
 	 *
-	 * A page is laid on the face grid too, as Drift's hand-laid pages are: a
-	 * section a group, every row's groups in one row; ten cells or fewer
-	 * stand in one row, a column each, their knobs as large as the column
-	 * holds, and more stack two high, medium (`pageGroupGrid`); a long pick
-	 * is a `ChoicePicker`. The first section's header line is the way back,
-	 * "‹ Page", and its group's own name only where that differs and the
-	 * section has the width for both.
-	 *
-	 * Which page or tab is up is view state: it never writes to Live, and a
-	 * view arrives on its frame.
+	 * Which tab is up is view state: it never writes to Live.
 	 *
 	 * The frame is laid on the face grid (ADR-510): a section a region (a
 	 * tab strip whose tabs share their shape, a section a group), its
@@ -40,7 +33,7 @@
 	import PanelEyebrow from './PanelEyebrow.svelte';
 	import PanelControlView from './PanelControlView.svelte';
 	import InstrumentBoard, { type BoardRow } from '../../InstrumentBoard.svelte';
-	import { boardGroupColumns, boardTileSections, boardTileWeight, groupColumns, pageGroupGrid, pageOneRow, pageSections, regionSections, tabsByPosition, type InstrumentPanel, type PanelGroup, type PanelMatrix, type PanelPage, type PanelTab } from './panelTypes';
+	import { boardGroupColumns, boardTileSections, boardTileWeight, groupColumns, regionSections, tabsByPosition, type InstrumentPanel, type PanelGroup, type PanelMatrix, type PanelPage, type PanelTab } from './panelTypes';
 	import type { PanelParams } from './usePanelParams.svelte';
 
 	interface Props {
@@ -52,14 +45,19 @@
 		/**
 		 * A hand-laid face in place of the frame (a view whose layout carries
 		 * widgets of its own: Drift's oscillator card, Analog's voice switch).
-		 * It is handed the way to open a page, for its `PanelEyebrow`s.
 		 */
-		face?: Snippet<[(page: string) => void]>;
+		face?: Snippet;
 		/** Full screen (ADR-512): draw the panel's `board`, where it has one. */
 		board?: boolean;
+		/**
+		 * The tab a `tabs` region shows, by the region's index, when the view
+		 * picks it (Operator's oscillator, from its chain cell: ADR-513). A
+		 * region so picked draws no tab strip.
+		 */
+		tabOf?: (region: number) => number | undefined;
 	}
 
-	let { panel, params, color, slots = {}, face, board = false }: Props = $props();
+	let { panel, params, color, slots = {}, face, board = false, tabOf }: Props = $props();
 
 	// The board's rows for InstrumentBoard: a tile's share of its row is its
 	// face columns, plus what its inset and seams take in columns, so a
@@ -82,21 +80,7 @@
 		});
 	}
 
-	let pageId = $state<string | null>(null);
 	let tabSelected = $state<Record<number, number>>({});
-
-	/**
-	 * The widest a page's column grows: a page of few cells (Operator's
-	 * Shaper) stops at this and centres, rather than spreading three knobs
-	 * over the whole view. Every page the tour shoots fills the width.
-	 */
-	const PAGE_COLUMN_MAX = 160;
-
-	let page = $derived(pageId ? panel.pages.find((p) => p.id === pageId) : undefined);
-
-	function openPage(id: string) {
-		if (panel.pages.some((p) => p.id === id)) pageId = id;
-	}
 
 	// The frame's sections, region by region, and where each region's
 	// columns start on the face (a grid line: a column a track, a seam a
@@ -143,7 +127,20 @@
 						{:else if section.kind === 'slot'}
 							<FaceSection span={section.columns} data-group={section.title ?? section.slot}>
 								{#snippet head()}<PanelEyebrow title={section.title} color={color.primary} />{/snippet}
-								<div class="panel-slot-body face-span-all">{@render slots[section.slot]?.()}</div>
+								{#if section.below}
+									<!-- The view's control across the section, its groups under it on the same columns. -->
+									<div class="slot-stack face-span-all" data-slot-stack={section.slot}>
+										<div class="panel-slot-body slot-main">{@render slots[section.slot]?.()}</div>
+										{#each section.below as b, k (k)}
+											<div class="slot-below" style="grid-column: span {b.columns};" data-group={b.group.title ?? ''}>
+												<span class="slot-below-name"><PanelEyebrow title={b.group.title} color={color.primary} /></span>
+												<PanelGroupView group={b.group} {params} {color} boxFace={panel.boxFace} columns={b.columns} stack={b.stack} tabMax={1} />
+											</div>
+										{/each}
+									</div>
+								{:else}
+									<div class="panel-slot-body face-span-all">{@render slots[section.slot]?.()}</div>
+								{/if}
 							</FaceSection>
 						{:else}
 							{@render matrix(section.matrix)}
@@ -219,46 +216,8 @@
 			</FaceSection>
 		{/each}
 	{/snippet}
-{:else if page}
-	<!-- A section's page on the face grid (ADR-510): a section a group, every
-	     row's groups in one row (so its seams run the page's height), the
-	     page's way back on the first section's header line. -->
-	{@const groups = page.rows.flat()}
-	{@const oneRow = pageOneRow(page)}
-	{@const secs = pageSections(page)}
-	{@const cols = secs.reduce((a, b) => a + b, 0)}
-	<!-- A sparse page stops at PAGE_COLUMN_MAX columns and centres: the
-	     face's inset, its columns, seams and gutters. -->
-	<div class="h-full w-full" data-panel-page={page.id} data-page-rows={oneRow ? 1 : 2}>
-		<div class="h-full" style="margin-inline: auto; max-width: calc(2 * var(--central-inset) + {cols} * {PAGE_COLUMN_MAX}px + {secs.length - 1} * max(1px, 2 * var(--central-gap) + 1px - 2 * var(--spacing-sm)) + {cols + secs.length - 2} * var(--spacing-sm));">
-		<FaceGrid sections={secs}>
-			{#if page.aside}
-				<FaceSection span={page.aside.units} data-group={page.aside.slot}>
-					{#snippet head()}{@render back(page)}{/snippet}
-					<div class="panel-slot-body face-span-all">{@render slots[page.aside.slot]?.()}</div>
-				</FaceSection>
-				<FaceSeam ink={color.primary} />
-			{/if}
-			{#each groups as group, g (g)}
-				{@const span = pageGroupGrid(group, oneRow).columns}
-				{@const first = g === 0 && !page.aside}
-				{#if g > 0}<FaceSeam ink={color.primary} />{/if}
-				<FaceSection {span} data-group={group.title ?? ''}>
-					{#snippet head()}
-						{#if first}{@render back(page)}{/if}
-						{#if (group.title || group.page) && (!first || group.page || (group.title !== page.title && span >= 2))}<PanelEyebrow title={group.title} page={group.page} onOpen={openPage} color={color.primary} />{/if}
-					{/snippet}
-					<PanelGroupView {group} {params} {color} onOpen={openPage} boxFace={panel.boxFace} onPage {oneRow} />
-				</FaceSection>
-			{/each}
-		</FaceGrid>
-		</div>
-	</div>
-	{#snippet back(p: PanelPage)}
-		<button class="panel-back" style="color: {color.primary};" onclick={() => (pageId = p.parent ?? null)}>‹ {p.title}</button>
-	{/snippet}
 {:else if face}
-	<div class="h-full w-full" data-panel-page="frame">{@render face(openPage)}</div>
+	<div class="h-full w-full" data-panel-page="frame">{@render face()}</div>
 {:else}
 	<div class="h-full w-full" data-panel-page="frame">
 		<FaceGrid {sections} class="panel-face">
@@ -266,24 +225,25 @@
 				{#if i > 0}<FaceSeam ink={color.primary} />{/if}
 				{#if region.kind === 'group'}
 					<FaceSection span={regionCols[i][0]} data-group={region.group.title ?? ''}>
-						{#snippet head()}<PanelEyebrow title={region.group.title} page={region.group.page} onOpen={openPage} color={color.primary} />{/snippet}
-						<PanelGroupView group={region.group} {params} {color} onOpen={openPage} boxFace={panel.boxFace} columns={regionCols[i][0]} />
+						{#snippet head()}<PanelEyebrow title={region.group.title} color={color.primary} />{/snippet}
+						<PanelGroupView group={region.group} {params} {color} boxFace={panel.boxFace} columns={regionCols[i][0]} />
 					</FaceSection>
 				{:else if region.kind === 'slot'}
 					<FaceSection span={regionCols[i][0]} data-group={region.title ?? region.slot}>
-						{#snippet head()}<PanelEyebrow title={region.title} page={region.page} onOpen={openPage} color={color.primary} />{/snippet}
+						{#snippet head()}<PanelEyebrow title={region.title} color={color.primary} />{/snippet}
 						<div class="panel-slot-body face-span-all">{@render slots[region.slot]?.()}</div>
 					</FaceSection>
 				{:else}
-					{@const sel = Math.min(tabSelected[i] ?? 0, region.tabs.length - 1)}
+					{@const picked = tabOf?.(i)}
+					{@const sel = Math.min(picked ?? tabSelected[i] ?? 0, region.tabs.length - 1)}
 					{@const tab = region.tabs[sel]}
 					{#if tabsByPosition(region.tabs)}
 						<!-- A section a group, the shown tab's in each, seamed. -->
 						{#each tab.groups as group, g (g)}
 							{#if g > 0}<FaceSeam ink={color.primary} />{/if}
 							<FaceSection span={regionCols[i][g]} data-group={group.title ?? ''}>
-								{#snippet head()}<PanelEyebrow title={group.title} page={group.page} onOpen={openPage} color={color.primary} />{/snippet}
-								<PanelGroupView {group} {params} {color} onOpen={openPage} boxFace={panel.boxFace} columns={regionCols[i][g]} underTabs />
+								{#snippet head()}<PanelEyebrow title={group.title} color={color.primary} />{/snippet}
+								<PanelGroupView {group} {params} {color} boxFace={panel.boxFace} columns={regionCols[i][g]} underTabs={picked === undefined} />
 							</FaceSection>
 						{/each}
 					{:else}
@@ -291,8 +251,8 @@
 						{#if placed.length === 1}
 							{@const group = placed[0].group}
 							<FaceSection span={regionCols[i][0]} data-group={group.title ?? ''}>
-								{#snippet head()}{#if group.page}<PanelEyebrow title={group.title} page={group.page} onOpen={openPage} color={color.primary} />{/if}{/snippet}
-								<PanelGroupView {group} {params} {color} onOpen={openPage} boxFace={panel.boxFace} columns={regionCols[i][0]} underTabs />
+								{#snippet head()}{#if group.page}<PanelEyebrow title={group.title} color={color.primary} />{/if}{/snippet}
+								<PanelGroupView {group} {params} {color} boxFace={panel.boxFace} columns={regionCols[i][0]} underTabs={picked === undefined} />
 							</FaceSection>
 						{:else}
 							<!-- Several groups in one section: each eyebrow over its own columns. -->
@@ -300,20 +260,22 @@
 								{#snippet head()}
 									<div class="head-cols" style="grid-template-columns: repeat({regionCols[i][0]}, minmax(0, 1fr));">
 										{#each placed as { group, cols }, g (g)}
-											<span class="head-col" style="grid-column: span {cols};" data-group={group.title ?? ''}><PanelEyebrow title={group.title} page={group.page} onOpen={openPage} color={color.primary} /></span>
+											<span class="head-col" style="grid-column: span {cols};" data-group={group.title ?? ''}><PanelEyebrow title={group.title} color={color.primary} /></span>
 										{/each}
 									</div>
 								{/snippet}
 								{#each placed as { group, cols }, g (g)}
-									<PanelGroupView {group} {params} {color} onOpen={openPage} boxFace={panel.boxFace} columns={cols} underTabs dataGroup={group.title ?? ''} />
+									<PanelGroupView {group} {params} {color} boxFace={panel.boxFace} columns={cols} underTabs={picked === undefined} dataGroup={group.title ?? ''} />
 								{/each}
 							</FaceSection>
 						{/if}
 					{/if}
-					<!-- Live's tabs, across the region's sections under the header line. -->
-					<div class="face-tabs" style="grid-column: {regionLines[i].start} / {regionLines[i].end};">
-						<PanelTabs tabs={region.tabs} selected={sel} {params} {color} onSelect={(t) => (tabSelected = { ...tabSelected, [i]: t })} />
-					</div>
+					{#if picked === undefined}
+						<!-- Live's tabs, across the region's sections under the header line. -->
+						<div class="face-tabs" style="grid-column: {regionLines[i].start} / {regionLines[i].end};">
+							<PanelTabs tabs={region.tabs} selected={sel} {params} {color} onSelect={(t) => (tabSelected = { ...tabSelected, [i]: t })} />
+						</div>
+					{/if}
 				{/if}
 			{/each}
 		</FaceGrid>
@@ -406,25 +368,39 @@
 		flex: 1 1 0;
 		min-width: 0;
 	}
+	/* A board slot with groups under it: the control takes what the groups
+	   leave, the groups sit on the section's own columns. */
+	.slot-stack {
+		display: grid;
+		grid-template-columns: subgrid;
+		/* The pad and the controls under it, a half each. */
+		grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+		row-gap: var(--central-gap);
+		min-width: 0;
+		min-height: 0;
+	}
+	.slot-main {
+		grid-column: 1 / -1;
+	}
+	.slot-below {
+		display: grid;
+		grid-template-columns: subgrid;
+		grid-template-rows: auto minmax(0, 1fr);
+		row-gap: 0.25rem;
+		min-width: 0;
+		min-height: 0;
+	}
+	.slot-below-name {
+		grid-column: 1 / -1;
+		display: flex;
+		justify-content: center;
+		min-width: 0;
+	}
 	/* A board tile's page name (ADR-512): the way back's type, but plain. */
 	.board-title {
 		font-size: 0.75rem;
 		font-weight: 700;
 		line-height: 1rem;
 		white-space: nowrap;
-	}
-	/* The way back, on the first section's header line: the page's name,
-	   a "‹" before it, as Drift's pages draw it. */
-	.panel-back {
-		background: none;
-		border: 0;
-		padding: 0 0.5rem 0 0;
-		font-size: 0.75rem;
-		font-weight: 700;
-		line-height: 1rem;
-		white-space: nowrap;
-		cursor: pointer;
-		text-decoration: underline;
-		text-underline-offset: 2px;
 	}
 </style>

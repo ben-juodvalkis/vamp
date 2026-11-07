@@ -25,6 +25,7 @@
   import { usePanelParams } from './panel/usePanelParams.svelte';
   import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
   import { OPERATOR_PANEL } from './panel/operatorPanel';
+  import { operatorOscStore } from '$lib/stores/v6/operatorOscStore.svelte';
 
   interface Props {
     instrument?: InstrumentInfo | null;
@@ -83,7 +84,14 @@
 
 <div class="h-full w-full overflow-hidden relative">
   {#if instrument && device}
-    <InstrumentPanelView panel={OPERATOR_PANEL} {params} color={operatorInk} slots={{ filter: filterPad }} board={centralDisplayStore.expanded} />
+    <InstrumentPanelView
+      panel={OPERATOR_PANEL}
+      {params}
+      color={operatorInk}
+      slots={{ filter: filterPad }}
+      board={centralDisplayStore.expanded}
+      tabOf={(region) => (region === 0 ? operatorOscStore.oscOf(device.devicePath) : undefined)}
+    />
   {:else}
     <!-- Default state when no Operator present -->
     <DeviceEmptyState glyph="~" message="Load Operator to access FM controls" color={operatorInk.primary} />

@@ -272,9 +272,8 @@ const lfo = (title: string, name: string) => col(title, LFOS, (n) => box(`LFO ${
  * another, every control of their pages. Under them Mallet, Noise (its
  * envelope's stages as knobs: four boxes over the touch floor want a
  * column the row does not have), the MIDI amounts (a source a row) and
- * Global, three to a column. The MIDI page's destinations (which parameter each of Bend,
- * Wheel, Pressure and Slide reaches) stay on that page: a destination's
- * names want two columns each, and the row has none to spare.
+ * Global, three to a column. The MIDI table carries each source's
+ * destinations beside its amounts (ADR-513), as pickers naming them.
  */
 const COLLISION_BOARD: PanelBoard = {
 	rows: [
@@ -473,14 +472,17 @@ const COLLISION_BOARD: PanelBoard = {
 						{
 							kind: 'matrix',
 							matrix: {
-								// A source a row, its two amounts across: what the frame's MIDI tab shows.
+								// A source a row, each destination before its amount (ADR-513: the
+								// destinations were the MIDI page's alone; the band opens no page).
 								title: 'MIDI',
 								rows: MIDI_SOURCES.map(([title]) => ({ title })),
 								groups: [
 									{
-										title: 'Amounts',
+										title: 'Destinations',
 										columns: [
+											col('Dest A', MIDI_SOURCES, ([, s]) => ({ kind: 'step', param: `${s} Dest A`, title: 'Dest A', labels: MOD_DESTS })),
 											col('Amt A', MIDI_SOURCES, ([, s]) => box(`${s} Amt A`, 'Amt A')),
+											col('Dest B', MIDI_SOURCES, ([, s, both]) => (both ? { kind: 'step', param: `${s} Dest B`, title: 'Dest B', labels: MOD_DESTS } : undefined)),
 											col('Amt B', MIDI_SOURCES, ([, s, both]) => (both ? box(`${s} Amt B`, 'Amt B') : undefined))
 										]
 									}

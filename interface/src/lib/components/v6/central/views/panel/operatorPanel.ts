@@ -222,7 +222,7 @@ const ALGORITHM_NUMBERS = ALGORITHMS.map((_, i) => String(i + 1));
 const OPERATOR_BOARD: PanelBoard = {
 	rows: [
 		{
-			weight: 3.28,
+			weight: 2.9,
 			tiles: [
 				{
 					id: 'oscillators',
@@ -272,7 +272,7 @@ const OPERATOR_BOARD: PanelBoard = {
 			]
 		},
 		{
-			weight: 4.2,
+			weight: 3.3,
 			tiles: [
 				{
 					id: 'envelopes',
@@ -295,45 +295,74 @@ const OPERATOR_BOARD: PanelBoard = {
 											col('Release', ENVS, (e) => ({ kind: 'box', param: `${e.prefix} Release`, title: 'Release' }), { face: 'slider' }),
 											col('End', ENVS, (e) => (e.end ? { kind: 'box', param: `${e.prefix} End`, title: 'End' } : undefined), { face: 'slider' })
 										]
+									},
+									{
+										// Each envelope's loop (ADR-513: on the board, since the band opens no page).
+										title: 'Loop',
+										columns: [
+											col('Mode', ENVS, (e) => ({ kind: 'choice', param: `${e.prefix} Mode`, title: 'Mode', options: ENV_MODES })),
+											col('Loop', ENVS, (e) => ({ kind: 'box', param: `${e.prefix} Loop`, title: 'Loop' })),
+											col('Retrig', ENVS, (e) => ({ kind: 'step', param: `${e.prefix} Retrig`, title: 'Retrig', labels: RETRIG })),
+											col('R Vel', ENVS, (e) => ({ kind: 'box', param: `${e.prefix} R < Vel`, title: 'R Vel' }))
+										]
 									}
 								]
 							}
 						}
 					]
-				},
+				}
+			]
+		},
+		{
+			// The filter, its LFO and pan, under the envelopes: the envelopes take the
+			// full width with their loop settings (ADR-513).
+			weight: 2.8,
+			tiles: [
 				{
 					id: 'filter',
+					// The pad across the tile, its type and shaper under it (user,
+					// 2026-11-07: "the XY for cutoff and resonance wider, and the
+					// filter controls on its right moved below it").
 					sections: [
-						{ kind: 'slot', slot: 'filter', title: 'Filter', columns: 2, params: ['Filter On', 'Filter Freq', 'Filter Res'] },
 						{
-							kind: 'group',
-							stack: 3,
-							group: {
-								title: 'Type · Circuit',
-								switchParam: 'Filter On',
-								controls: [
-									{ kind: 'switch', param: 'Filter On', title: 'On' },
-									{ kind: 'choice', param: 'Filter Type', title: 'Type', options: ['LP', 'HP', 'BP', 'Notch', 'Morph'] },
-									{ kind: 'choice', param: 'Filter Slope', title: 'Slope', options: ['12 dB', '24 dB'] },
-									{ kind: 'choice', param: 'Filter Circuit - LP/HP', title: 'LP / HP', options: ['Clean', 'OSR', 'MS2', 'SMP', 'PRD'] },
-									{ kind: 'choice', param: 'Filter Circuit - BP/NO/Morph', title: 'BP / Morph', options: ['Clean', 'OSR'] },
-									{ kind: 'switch', param: 'Filt < LFO', title: 'LFO' },
-									{ kind: 'box', param: 'Filter Morph', title: 'Morph' },
-									{ kind: 'box', param: 'Filter Drive', title: 'Drive' }
-								]
-							}
-						},
-						{
-							kind: 'group',
-							stack: 3,
-							group: {
-								title: 'Shaper',
-								controls: [
-									{ kind: 'choice', param: 'Shaper Type', title: 'Type', options: ['Off', 'Soft', 'Hard', 'Sine', '4Bit'] },
-									{ kind: 'box', param: 'Shaper Mix', title: 'Mix' },
-									{ kind: 'box', param: 'Shaper Drive', title: 'Drive' }
-								]
-							}
+							kind: 'slot',
+							slot: 'filter',
+							title: 'Filter',
+							columns: 11,
+							params: ['Filter On', 'Filter Freq', 'Filter Res'],
+							// One row of controls: the row under the envelopes is wide and short.
+							below: [
+								{
+									columns: 8,
+									stack: 1,
+									group: {
+										title: 'Type · Circuit',
+										switchParam: 'Filter On',
+										controls: [
+											{ kind: 'switch', param: 'Filter On', title: 'On' },
+											{ kind: 'choice', param: 'Filter Type', title: 'Type', options: ['LP', 'HP', 'BP', 'Notch', 'Morph'] },
+											{ kind: 'choice', param: 'Filter Slope', title: 'Slope', options: ['12 dB', '24 dB'] },
+											{ kind: 'choice', param: 'Filter Circuit - LP/HP', title: 'LP / HP', options: ['Clean', 'OSR', 'MS2', 'SMP', 'PRD'] },
+											{ kind: 'choice', param: 'Filter Circuit - BP/NO/Morph', title: 'BP / Morph', options: ['Clean', 'OSR'] },
+											{ kind: 'switch', param: 'Filt < LFO', title: 'LFO' },
+											{ kind: 'box', param: 'Filter Morph', title: 'Morph' },
+											{ kind: 'box', param: 'Filter Drive', title: 'Drive' }
+										]
+									}
+								},
+								{
+									columns: 3,
+									stack: 1,
+									group: {
+										title: 'Shaper',
+										controls: [
+											{ kind: 'choice', param: 'Shaper Type', title: 'Type', options: ['Off', 'Soft', 'Hard', 'Sine', '4Bit'] },
+											{ kind: 'box', param: 'Shaper Mix', title: 'Mix' },
+											{ kind: 'box', param: 'Shaper Drive', title: 'Drive' }
+										]
+									}
+								}
+							]
 						}
 					]
 				},
@@ -378,7 +407,7 @@ const OPERATOR_BOARD: PanelBoard = {
 			]
 		},
 		{
-			weight: 2.74,
+			weight: 2.3,
 			tiles: [
 				{
 					id: 'modulation',

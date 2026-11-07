@@ -122,29 +122,22 @@ describe.each([
 
 /**
  * The full-screen boards (ADR-512): a board binds only what the panel's
- * frame and pages bind, and leaves out exactly what it says it does. The
- * envelopes' loop settings on Operator and the MIDI destinations on
- * Collision stay on the band's pages; Electric's board holds everything.
+ * frame and pages bind, and reaches all of it. Since ADR-513 the band opens
+ * no page, so nothing may be left to one: Operator's envelope loop settings
+ * and Collision's MIDI destinations moved onto their boards.
  */
-describe('full-screen boards (ADR-512)', () => {
-	const OPERATOR_LOOPS = ['Ae', 'Be', 'Ce', 'De', 'Le', 'Pe', 'Fe'].flatMap((p) => [
-		`${p} Mode`,
-		`${p} Loop`,
-		`${p} Retrig`,
-		`${p} R < Vel`
-	]);
-	const COLLISION_MIDI_DESTS = ['PB Dest A', 'MW Dest A', 'MW Dest B', 'Press Dest A', 'Press Dest B', 'Slide Dest A', 'Slide Dest B'];
-	const cases: [string, InstrumentPanel, string[]][] = [
-		['Operator', OPERATOR_PANEL, OPERATOR_LOOPS],
-		['Electric', ELECTRIC_PANEL, []],
-		['Collision', COLLISION_PANEL, COLLISION_MIDI_DESTS]
+describe('full-screen boards (ADR-512, ADR-513)', () => {
+	const cases: [string, InstrumentPanel][] = [
+		['Operator', OPERATOR_PANEL],
+		['Electric', ELECTRIC_PANEL],
+		['Collision', COLLISION_PANEL]
 	];
-	for (const [name, panel, omitted] of cases) {
-		it(`${name}: binds nothing the panel does not, and leaves out only what it names`, () => {
+	for (const [name, panel] of cases) {
+		it(`${name}: binds nothing the panel does not, and leaves nothing out`, () => {
 			const board = new Set(boardParamNames(panel));
 			const all = panelParamNames(panel);
 			expect([...board].filter((n) => !all.includes(n))).toEqual([]);
-			expect(all.filter((n) => !board.has(n)).sort()).toEqual([...omitted].sort());
+			expect(all.filter((n) => !board.has(n)).sort()).toEqual([]);
 		});
 	}
 });

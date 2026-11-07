@@ -539,7 +539,7 @@
       Mirrors AutoFilterCentralView's flex-[N] idiom for consistency across views.
     -->
     <InstrumentPanelView panel={DRIFT_PANEL} params={panelParams} color={driftInk} slots={{ filter: filterPad, voiceMode: voiceModeTab }}>
-    {#snippet face(openPage: (page: string) => void)}
+    {#snippet face()}
     <!-- One grid, ten columns (ADR-510, user 2026-11-06): Oscillators 4,
          Filter 1, Envelopes 1, LFO 2, Global 2, in Live's signal order.
          Every column, gutter and seam is the same, so the face reads on

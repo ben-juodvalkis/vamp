@@ -27,6 +27,7 @@
   import { MELD_ENGINE } from '../../central/views/meldParams';
   import { meldEngineStore } from '$lib/stores/v6/meldEngineStore.svelte';
   import { OPERATOR_OSC_COLORS } from './OperatorAlgorithm.svelte';
+  import { operatorOscStore } from '$lib/stores/v6/operatorOscStore.svelte';
   import { schemeFromInk } from '$lib/config/devicePresets';
   import { OP_COARSE_MAX, coarseRatio, coarseX, coarseStepAtX } from './operatorCoarse';
   import { v3Store } from '$lib/stores/v3/normalized.svelte';
@@ -143,6 +144,8 @@
   );
   function opPlay(i: number, x: number, level: number) {
     const o = OP_OSCS[i];
+    // The view shows the oscillator whose pad was touched last (ADR-513).
+    operatorOscStore.select(device.devicePath, i);
     if (!opOn[i]) opWrite(`Osc-${o} On`, 1);
     opDragging[i] = true;
     opWrite(`${o} Coarse`, coarseStepAtX(opAnchor(i), x) / OP_COARSE_MAX);

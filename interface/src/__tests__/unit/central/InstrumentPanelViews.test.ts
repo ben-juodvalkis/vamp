@@ -137,15 +137,21 @@ describe('ElectricCentralView — Live\'s four sections', () => {
 		expect(paramSets()).toEqual([[indexOf(ELECTRIC as Dump, 'Pickup Model'), 1]]);
 	});
 
-	it('opens a section\'s page from its eyebrow and goes back, writing nothing', async () => {
+	it('opens no page from its eyebrows (ADR-513); its page\'s controls are on the board', async () => {
 		const { container } = render(ElectricCentralView, { props: { instrument: instrument('Electric', 'LoungeLizard') } });
 		await tick();
-		await fireEvent.click(el(container, '[data-group="Hammer"] .eyebrow-link'));
-		expect(el(container, '[data-panel-page]').dataset.panelPage).toBe('hammer');
-		expect(container.querySelector('[data-param="M Force < Vel"]')).toBeTruthy();
-		await fireEvent.click(el(container, '.panel-back'));
-		expect(el(container, '[data-panel-page]').dataset.panelPage).toBe('frame');
-		expect(paramSets()).toEqual([]);
+		expect(container.querySelector('.eyebrow-link')).toBeNull();
+		expect(container.querySelector('[data-param="M Force < Vel"]')).toBeNull();
+		cleanup();
+		centralDisplayStore.setExpanded(true);
+		try {
+			const board = render(ElectricCentralView, { props: { instrument: instrument('Electric', 'LoungeLizard') } });
+			await tick();
+			expect(board.container.querySelector('[data-param="M Force < Vel"]')).toBeTruthy();
+			expect(paramSets()).toEqual([]);
+		} finally {
+			centralDisplayStore.setExpanded(false);
+		}
 	});
 });
 
@@ -175,43 +181,27 @@ describe('CollisionCentralView — Live\'s tabs over the middle', () => {
 		expect(paramSets()).toEqual([]);
 	});
 
-	it('leads back from a page opened on a page to that page, then to the frame', async () => {
+	it('opens no page from its eyebrows (ADR-513)', async () => {
 		const { container } = render(CollisionCentralView, { props: { instrument: instrument('Collision', 'Collision') } });
 		await tick();
-		await fireEvent.click(el(container, '[data-group="Resonator 1"] .eyebrow-link'));
-		await fireEvent.click(el(container, '[data-group="Body"] .eyebrow-link'));
-		expect(el(container, '[data-panel-page]').dataset.panelPage).toBe('res1-mod');
-		await fireEvent.click(el(container, '.panel-back'));
-		expect(el(container, '[data-panel-page]').dataset.panelPage).toBe('res1');
-		await fireEvent.click(el(container, '.panel-back'));
+		expect(container.querySelector('.eyebrow-link')).toBeNull();
 		expect(el(container, '[data-panel-page]').dataset.panelPage).toBe('frame');
 	});
 
-	it('opens LFO 1 from its eyebrow on the LFO tab; the page names itself once, on its way back', async () => {
-		const { container } = render(CollisionCentralView, { props: { instrument: instrument('Collision', 'Collision') } });
-		await tick();
-		await fireEvent.click(el(container, '[data-tab="LFO"]'));
-		await fireEvent.click(el(container, '[data-group="LFO 1"] .eyebrow-link'));
-		expect(el(container, '[data-panel-page]').dataset.panelPage).toBe('lfo1');
-		expect(el(container, '.panel-back').textContent?.trim()).toBe('‹ LFO 1');
-		const head = el(container, '[data-panel-page] .face-head');
-		expect(head.textContent?.match(/LFO 1/g)).toHaveLength(1);
-		expect(paramSets()).toEqual([]);
-	});
-
-	it('turns a switched-off resonator on before its first write', async () => {
-		const { container } = render(CollisionCentralView, { props: { instrument: instrument('Collision', 'Collision') } });
-		await tick();
-		await fireEvent.click(el(container, '[data-tab="Res 2"]'));
-		await fireEvent.click(el(container, '[data-group="Resonator 2"] .eyebrow-link'));
-		expect(el(container, '[data-panel-page]').dataset.panelPage).toBe('res2');
-		// Seven types are too long a list for a page's tab: a picker (ADR-510).
-		await pick(container, 'Res 2 Type', 'Plate');
-		const dump = COLLISION as Dump;
-		expect(paramSets()).toEqual([
-			[indexOf(dump, 'Res 2 On/Off'), 1],
-			[indexOf(dump, 'Res 2 Type'), 4]
-		]);
+	it('at full screen turns a switched-off resonator on before its first write', async () => {
+		centralDisplayStore.setExpanded(true);
+		try {
+			const { container } = render(CollisionCentralView, { props: { instrument: instrument('Collision', 'Collision') } });
+			await tick();
+			await pick(container, 'Res 2 Type', 'Plate');
+			const dump = COLLISION as Dump;
+			expect(paramSets()).toEqual([
+				[indexOf(dump, 'Res 2 On/Off'), 1],
+				[indexOf(dump, 'Res 2 Type'), 4]
+			]);
+		} finally {
+			centralDisplayStore.setExpanded(false);
+		}
 	});
 });
 

@@ -27,11 +27,23 @@ screen."
   sources are each a tile.
 - **The half switch stays the face's** (Osc 1/2, Voice 1/2, Engine A/B):
   it picks what the one face shows, and the chain cell follows it.
-- **Done for Wavetable, Drift, Meld and Analog.** Operator, Electric and
-  Collision (drawn from panel data, `InstrumentPanelView`) follow: Operator's
-  face shows the oscillator whose pad was touched last on its chain cell,
-  and what ADR-512 left only on their pages (Operator's envelope loop
-  settings, Collision's MIDI destinations) moves onto their boards first.
+- **Operator's face shows the oscillator touched last on its chain cell**
+  (`operatorOscStore`, as Meld's view and cell share `meldEngineStore`):
+  a touch on one of the cell's four pads puts that oscillator's controls
+  on the face, where Live's Osc A to D, LFO and Pitch tab strip was
+  (`InstrumentPanelView`'s `tabOf`: a region its view picks draws no
+  strip). The LFO and the pitch envelope are on the board. Collision's and
+  Electric's tab strips stay: they swap sections in place and open no page.
+- **Nothing is left to a page.** What ADR-512 kept on the band's pages is
+  on the boards: Operator's envelope loop settings (Mode, Loop, Retrig,
+  R Vel, a table beside its envelopes, which now take the board's width on
+  a row of their own) and Collision's MIDI destinations (beside their
+  amounts). `instrumentPanels.test.ts` pins that every panel's board
+  reaches all its frame and pages bind. The panels' `pages` stay as that
+  list.
+- **Operator's board filter** is a pad across eleven columns with its type,
+  circuit and shaper in one row under it (a board slot's `below`, user,
+  2026-11-07).
 
 ## Consequences
 
@@ -40,8 +52,9 @@ screen."
   against its board tile (`centralDisplayStore.setExpanded(true)`).
 - A control on no face is now two touches away (the icon, then the
   control), never three (eyebrow, page, back).
-- The `board` flag on the hand-laid pages is now always set; it stays
-  until the panel instruments are done, then goes.
+- The `board` flag on the hand-laid pages is now always set, and
+  `PanelGroupView`'s page layout (`onPage`) is drawn by nothing: both can
+  go in a cleanup.
 
 ## Tags
 `central-view`, `instruments`, `full-screen`, `layout`

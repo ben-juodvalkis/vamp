@@ -43,6 +43,7 @@ import {
 	type DeviceRecord,
 	type ParamRecord
 } from '$lib/stores/v3/normalized.svelte';
+import { operatorOscStore } from '$lib/stores/v6/operatorOscStore.svelte';
 import OperatorCentralView from '$lib/components/v6/central/views/OperatorCentralView.svelte';
 
 const sendMock = send as unknown as ReturnType<typeof vi.fn>;
@@ -215,5 +216,26 @@ describe('OperatorCentralView — Time and Tone', () => {
 		const [, value] = writes[writes.length - 1];
 		expect(value).toBeCloseTo(0.5, 6);
 		expect(paramSets(120)).toHaveLength(0);
+	});
+});
+
+describe('OperatorCentralView — the oscillator its chain cell touched (ADR-513)', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		_resetForTests();
+		operatorOscStore.reset();
+	});
+	afterEach(() => cleanup());
+
+	it('shows oscillator A until a pad is touched, then the touched one, with no tab strip', async () => {
+		seed({});
+		const { container } = render(OperatorCentralView, { props: { instrument: INSTRUMENT } });
+		await tick();
+		expect(container.querySelector('[data-tab]')).toBeNull();
+		expect(container.querySelector('[data-param="A Coarse"]')).toBeTruthy();
+		operatorOscStore.select(DEVICE, 2);
+		await tick();
+		expect(container.querySelector('[data-param="A Coarse"]')).toBeNull();
+		expect(container.querySelector('[data-param="C Coarse"]')).toBeTruthy();
 	});
 });
