@@ -288,6 +288,8 @@ const FACE_GROUPS = [
 	['drift', CHAIN_DEMO_TRACK, [{ name: 'Drift', params: driftParams() }, CHAIN_DEMO_DEVICES[1], MIDI_WHEELS_DEVICE, 'Echo', 'Reverb', 'Auto Filter', CHAIN_DEMO_DEVICES[5], 'Saturator']],
 	['wavetable', CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], CHAIN_DEMO_DEVICES[1], 'Echo', 'Reverb', 'Auto Filter', CHAIN_DEMO_DEVICES[5], 'Saturator', 'Drum Buss']],
 	['meld', CHAIN_DEMO_TRACK, [{ name: 'Meld', className: 'InstrumentMeld', params: referenceParams('Meld') }, 'Echo', 'Reverb', 'Auto Filter', CHAIN_DEMO_DEVICES[5], 'Saturator', 'Drum Buss', 'Channel EQ']],
+	// Analog: its pad draws Filter 1's response curve (2026-11-07).
+	['analog', CHAIN_DEMO_TRACK, [{ name: 'Analog', className: 'UltraAnalog', params: referenceParams('Analog') }, 'Echo', 'Reverb', 'Auto Filter', CHAIN_DEMO_DEVICES[5], 'Saturator', 'Drum Buss', 'Channel EQ']],
 	['simpler', CHAIN_DEMO_TRACK, ['Simpler', 'Echo', 'Reverb', 'Auto Filter', CHAIN_DEMO_DEVICES[5], 'Saturator', 'Drum Buss', 'Channel EQ']],
 	['kit', 0, [{ name: 'Drum-Rack', padChains: { 50: ['Echo'] } }, 'Compressor', 'Auto Pan Legacy', 'Echo', 'Reverb', 'Auto Filter', 'Saturator', 'Drum Buss']]
 ];

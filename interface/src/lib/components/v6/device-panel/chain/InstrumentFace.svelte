@@ -18,7 +18,7 @@
   import DeviceSlider from '../DeviceSlider.svelte';
   import { resolveParam, instrumentControlFor, type ParamRef } from '../deviceControls';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
-  import { driftFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
+  import { driftFilterCurve, analogFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
   import type { DeviceRecord } from '$lib/stores/v3/normalized.svelte';
   import type { DeviceColorScheme } from '$lib/config/devicePresets';
   import WavetableWave from '../../central/views/wavetable/WavetableWave.svelte';
@@ -151,6 +151,12 @@
 
 
 
+  // Analog: its pad is Filter 1's cutoff and resonance (deviceControls), so it
+  // draws Filter 1's response for its type while the filter is on
+  // (2026-11-07). analogParams: 53 F1 On/Off, 54 F1 Type.
+  const analogCurve = $derived(type === 'analog' ? analogFilterCurve(raw(54, 0)) : null);
+  const analogFilterOn = $derived(type === 'analog' && raw(53, 1) >= 0.5);
+
   // Omnisphere: the ORB's angle and radius (OmnisphereCentralView, 25 / 26).
   // Drift: cutoff and resonance, the LP type for the curve (DriftCentralView, 1 / 2 / 3).
 </script>
@@ -205,7 +211,10 @@
     yValue={readRef(control.y, control.rest[1])}
     title={control.title}
     titleAt={type === 'wavetable' || type === 'meld' ? 'bottom' : 'center'}
-    showCurve={false}
+    showCurve={analogFilterOn && !!analogCurve}
+    curveType={analogCurve?.curveType}
+    curveOrder={analogCurve?.order}
+    curveFreqRange={type === 'analog' ? FILTER_FREQ_RANGE.analog : undefined}
     onInteraction={(x, y) => {
       switchOn();
       writeRef(control.x, x);
