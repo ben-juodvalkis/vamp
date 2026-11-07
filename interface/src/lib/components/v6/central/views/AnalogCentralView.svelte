@@ -13,6 +13,8 @@
   import HostedSwapPill from '../HostedSwapPill.svelte';
   import ChoicePicker from '../ChoicePicker.svelte';
   import AnalogPages from './analog/AnalogPages.svelte';
+  import InstrumentBoard, { type BoardRow } from '../InstrumentBoard.svelte';
+  import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
   import FaceGrid from '../FaceGrid.svelte';
   import FaceSection from '../FaceSection.svelte';
   import FaceSeam from '../FaceSeam.svelte';
@@ -99,6 +101,40 @@
    */
   let analogPage = $state<string | null>(null);
   const openAnalogPage = (page: string) => (analogPage = page);
+
+  /**
+   * Full screen (ADR-512): every page at once, the two voices side by side
+   * in every row and the shared sections at its right. Osc 1 and 2 with
+   * Vibrato; Filter and Amp of each voice with Noise; each voice's
+   * envelopes (both as boxes, then the Amp and Filter envelopes' modes and
+   * velocity) with MPE; both LFOs and Global, which hosts the swap pill so
+   * the board has the frame's whole width. Analog holds the most of any
+   * instrument, so its board is compact (8px inset and gap, ADR-434) and
+   * every column holds two knobs, small: four rows of two-high columns are
+   * the only way all of it is on one screen with every knob's name under
+   * it. The tiles whose knobs have long names (Osc, Vibrato, LFO, Global)
+   * sit in the rows of fewest columns, the short-named ones (Filter, Amp,
+   * Noise, the envelopes' boxes, MPE) in the others. The weights give each
+   * row what its tallest column needs: Osc's four touch rows (On, Mode,
+   * Octave, Semi), and the five filter families and LFO shapes at the 44px
+   * floor.
+   */
+  const BOARD: readonly BoardRow[] = [
+    { tiles: [{ id: 'osc1', cols: 7 }, { id: 'osc2', cols: 7 }, { id: 'vibrato', cols: 4 }] },
+    {
+      tiles: [{ id: 'filter1', cols: 6 }, { id: 'amp1', cols: 4 }, { id: 'filter2', cols: 6 }, { id: 'amp2', cols: 4 }, { id: 'noise', cols: 2 }],
+      weight: 1.02
+    },
+    {
+      tiles: [
+        { id: 'env1', cols: 5 }, { id: 'aeg1', cols: 2 }, { id: 'feg1', cols: 2 },
+        { id: 'env2', cols: 5 }, { id: 'aeg2', cols: 2 }, { id: 'feg2', cols: 2 },
+        { id: 'mpe', cols: 5 }
+      ],
+      weight: 0.92
+    },
+    { tiles: [{ id: 'lfo1', cols: 5 }, { id: 'lfo2', cols: 5 }, { id: 'global', cols: 9 }], weight: 1.02 }
+  ];
   let p = $derived(ANALOG_VOICE[voice]);
   let voiceInk = $derived(sourceInk(voice));
 
@@ -272,8 +308,24 @@
   </div>
 {/snippet}
 
-<div class="analog-root h-full w-full overflow-hidden relative">
-  {#if instrument && device}
+<div class="analog-root h-full w-full overflow-hidden relative" data-density={instrument && device && centralDisplayStore.expanded ? 'compact' : undefined}>
+  {#if instrument && device && centralDisplayStore.expanded}
+    <InstrumentBoard rows={BOARD} ink={analogInk.primary}>
+      {#snippet tile(id)}
+        <AnalogPages
+          page={id}
+          params={panelParams}
+          ink={analogInk}
+          voiceInks={{ 1: sourceInk(1), 2: sourceInk(2) }}
+          {noiseInk}
+          onOpen={() => {}}
+          onBack={() => {}}
+          {shapeGlyph}
+          board
+        />
+      {/snippet}
+    </InstrumentBoard>
+  {:else if instrument && device}
     <InstrumentPanelView panel={ANALOG_PANEL} params={panelParams} color={analogInk}>
     {#snippet face()}
     {#if analogPage}
