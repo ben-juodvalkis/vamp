@@ -9,7 +9,8 @@
    * (`panel/operatorPanel.ts`), bound by Live's parameter names; the pad is
    * this view's own (`slots.filter`), bound the same way. Until 2026-10-27 the
    * view was the amp envelope, Feedback, Time, Tone and the Filter pad,
-   * bound by index.
+   * bound by index. At full screen it draws the panel's board (ADR-512):
+   * the oscillators and the envelopes as tables, every page at once.
    */
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
@@ -22,6 +23,7 @@
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import InstrumentPanelView from './panel/InstrumentPanelView.svelte';
   import { usePanelParams } from './panel/usePanelParams.svelte';
+  import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
   import { OPERATOR_PANEL } from './panel/operatorPanel';
 
   interface Props {
@@ -81,7 +83,7 @@
 
 <div class="h-full w-full overflow-hidden relative">
   {#if instrument && device}
-    <InstrumentPanelView panel={OPERATOR_PANEL} {params} color={operatorInk} slots={{ filter: filterPad }} />
+    <InstrumentPanelView panel={OPERATOR_PANEL} {params} color={operatorInk} slots={{ filter: filterPad }} board={centralDisplayStore.expanded} />
   {:else}
     <!-- Default state when no Operator present -->
     <DeviceEmptyState glyph="~" message="Load Operator to access FM controls" color={operatorInk.primary} />

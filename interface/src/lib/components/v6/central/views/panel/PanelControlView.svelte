@@ -34,9 +34,14 @@
 		pick?: boolean;
 		/** With `pick`, draw the picker alone, no name over it: it is a knob's caption. */
 		bareCaption?: boolean;
+		/**
+		 * False draws a knob with no caption and a switch reading "On": a
+		 * board matrix's cell, its column's name said once over it (ADR-512).
+		 */
+		caption?: boolean;
 	}
 
-	let { control, params, color, switchParam, pageRows = 1, face = 'slider', knobSize = 'm', mark, pick = false, bareCaption = false }: Props = $props();
+	let { control, params, color, switchParam, pageRows = 1, face = 'slider', knobSize = 'm', mark, pick = false, bareCaption = false, caption = true }: Props = $props();
 	let pickOptions = $derived(control.kind === 'choice' ? control.options : control.kind === 'step' ? control.labels : undefined);
 	let pickTitle = $derived(control.kind === 'choice' ? (control.title ?? control.param) : control.title);
 
@@ -72,6 +77,9 @@
 	}
 </script>
 
+<!-- A matrix's box: its column says its name, so it draws none (the title still names it to assistive tech). -->
+{#snippet noLabel()}{/snippet}
+
 {#if pick && pickOptions}
 	<!-- A long pick on a page: its name, and the picker that opens over the view. -->
 	<div class="panel-pick" class:ghost data-param={control.param}>
@@ -100,8 +108,9 @@
 			{face}
 			{knobSize}
 			knobFit
-			knobCaption={!mark}
+			knobCaption={caption && !mark}
 			knobMark={mark}
+			label={caption || face === 'knob' ? undefined : noLabel}
 			readout={params.display(control.param)}
 			valueText={face === 'knob' ? params.display(control.param) : undefined}
 			onInteraction={write}
@@ -148,6 +157,7 @@
 			{face}
 			{knobSize}
 			knobFit
+			knobCaption={caption}
 			valueText={shown}
 			steps={Math.round(hi - lo) + 1}
 			labelAt="top"
@@ -177,7 +187,7 @@
 		style="--btn-tint: {color.primary};"
 		data-param={control.param}
 		onclick={() => write(on ? lo : hi)}
-	>{control.title}</button>
+	>{caption ? control.title : 'On'}</button>
 {/if}
 
 <style>

@@ -14,7 +14,7 @@
  * Names are Live's (docs/reference/instruments/Operator.md); note Live's
  * trailing space in "A Fix On ".
  */
-import type { InstrumentPanel, PanelGroup, PanelPage, PanelTab } from './panelTypes';
+import { matrixColumn as col, type InstrumentPanel, type PanelBoard, type PanelControl, type PanelGroup, type PanelPage, type PanelTab } from './panelTypes';
 
 type Osc = 'A' | 'B' | 'C' | 'D';
 
@@ -190,9 +190,272 @@ function envPage(id: string, title: string, prefix: string, parent: string, extr
 
 const OSCS: Osc[] = ['A', 'B', 'C', 'D'];
 
+/** The envelopes' rows on the board: the four oscillators', the LFO's, the pitch envelope and the filter's. */
+const ENVS = [
+	{ title: 'A', prefix: 'Ae', on: 'Osc-A On', end: false },
+	{ title: 'B', prefix: 'Be', on: 'Osc-B On', end: false },
+	{ title: 'C', prefix: 'Ce', on: 'Osc-C On', end: false },
+	{ title: 'D', prefix: 'De', on: 'Osc-D On', end: false },
+	{ title: 'LFO', prefix: 'Le', on: 'LFO On', end: true },
+	{ title: 'Pitch', prefix: 'Pe', on: 'Pe On', end: true },
+	{ title: 'Filter', prefix: 'Fe', on: 'Filter On', end: true }
+] as const;
+
+/** The sections the LFO and the two envelopes beyond the oscillators shape, a row each in the modulation table. */
+const MODS = ['LFO', 'Pitch', 'Filter'] as const;
+type Mod = (typeof MODS)[number];
+const by = (m: Mod, table: Partial<Record<Mod, PanelControl>>) => table[m];
+
+/** Algorithm's eleven values by number: "Alg. 11" does not fit a board column. */
+const ALGORITHM_NUMBERS = ALGORITHMS.map((_, i) => String(i + 1));
+
+/**
+ * Operator at full screen (ADR-512). The four oscillators are a table, a
+ * row each with every control of their pages. Under them the seven
+ * envelopes' stages, a row each, beside the Filter (its pad, type,
+ * circuits and Shaper) and the LFO; then a table of what the LFO, the
+ * pitch envelope and the filter envelope reach (their slopes, amounts,
+ * destination and scaling) beside Global. Each envelope's loop (Mode,
+ * Loop, Retrig, R Vel) stays on its page: seven rows of four more
+ * columns do not fit beside the stages at a touchable size.
+ */
+const OPERATOR_BOARD: PanelBoard = {
+	rows: [
+		{
+			weight: 3.28,
+			tiles: [
+				{
+					id: 'oscillators',
+					sections: [
+						{
+							kind: 'matrix',
+							matrix: {
+								title: 'Osc',
+								rows: OSCS.map((o) => ({ title: o, switchParam: `Osc-${o} On` })),
+								groups: [
+									{
+										title: 'Wave · Pitch',
+										columns: [
+											col('Wave', OSCS, (o) => ({ kind: 'step', param: `Osc-${o} Wave`, title: 'Wave', labels: WAVES }), { span: 2 }),
+											col('Coarse', OSCS, (o) => ({ kind: 'box', param: `${o} Coarse`, title: 'Coarse' })),
+											col('Fine', OSCS, (o) => ({ kind: 'box', param: `${o} Fine`, title: 'Fine' })),
+											col('Freq Vel', OSCS, (o) => ({ kind: 'box', param: `${o} Freq<Vel`, title: 'Freq Vel' })),
+											col('Quant', OSCS, (o) => ({ kind: 'switch', param: `${o} Quantize`, title: 'Quant' })),
+											col('Fixed', OSCS, (o) => ({ kind: 'switch', param: `${o} Fix On `, title: 'Fixed' })),
+											col('Freq', OSCS, (o) => ({ kind: 'box', param: `${o} Fix Freq`, title: 'Freq' })),
+											col('Mul', OSCS, (o) => ({ kind: 'step', param: `${o} Fix Freq Mul`, title: 'Mul', labels: FIX_MUL }))
+										]
+									},
+									{
+										title: 'Level',
+										columns: [
+											col('Level', OSCS, (o) => ({ kind: 'box', param: `Osc-${o} Level`, title: 'Level' })),
+											col('Vel', OSCS, (o) => ({ kind: 'box', param: `Osc-${o} Lev < Vel`, title: 'Vel' })),
+											col('Key', OSCS, (o) => ({ kind: 'box', param: `Osc-${o} Lev < Key`, title: 'Key' }))
+										]
+									},
+									{
+										title: 'Tone · Mod',
+										columns: [
+											col('Feedback', OSCS, (o) => ({ kind: 'box', param: `Osc-${o} Feedb`, title: 'Feedback' })),
+											col('Phase', OSCS, (o) => ({ kind: 'box', param: `Osc-${o} Phase`, title: 'Phase' })),
+											col('Retrig', OSCS, (o) => ({ kind: 'switch', param: `Osc-${o} Retrig`, title: 'Retrig' })),
+											col('Pitch Env', OSCS, (o) => ({ kind: 'switch', param: `Osc-${o} < Pe`, title: 'Pitch Env' })),
+											col('LFO', OSCS, (o) => ({ kind: 'switch', param: `Osc-${o} < LFO`, title: 'LFO' }))
+										]
+									}
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			weight: 4.2,
+			tiles: [
+				{
+					id: 'envelopes',
+					sections: [
+						{
+							kind: 'matrix',
+							matrix: {
+								title: 'Env',
+								// Each row's switch is drawn elsewhere on the board: here it only ghosts the row.
+								rows: ENVS.map((e) => ({ title: e.title, switchParam: e.on, quiet: true })),
+								groups: [
+									{
+										title: 'Envelope',
+										columns: [
+											col('Attack', ENVS, (e) => ({ kind: 'box', param: `${e.prefix} Attack`, title: 'Attack' }), { face: 'slider' }),
+											col('Initial', ENVS, (e) => ({ kind: 'box', param: `${e.prefix} Init`, title: 'Initial' }), { face: 'slider' }),
+											col('Decay', ENVS, (e) => ({ kind: 'box', param: `${e.prefix} Decay`, title: 'Decay' }), { face: 'slider' }),
+											col('Peak', ENVS, (e) => ({ kind: 'box', param: `${e.prefix} Peak`, title: 'Peak' }), { face: 'slider' }),
+											col('Sustain', ENVS, (e) => ({ kind: 'box', param: `${e.prefix} Sustain`, title: 'Sustain' }), { face: 'slider' }),
+											col('Release', ENVS, (e) => ({ kind: 'box', param: `${e.prefix} Release`, title: 'Release' }), { face: 'slider' }),
+											col('End', ENVS, (e) => (e.end ? { kind: 'box', param: `${e.prefix} End`, title: 'End' } : undefined), { face: 'slider' })
+										]
+									}
+								]
+							}
+						}
+					]
+				},
+				{
+					id: 'filter',
+					sections: [
+						{ kind: 'slot', slot: 'filter', title: 'Filter', columns: 2, params: ['Filter On', 'Filter Freq', 'Filter Res'] },
+						{
+							kind: 'group',
+							stack: 3,
+							group: {
+								title: 'Type · Circuit',
+								switchParam: 'Filter On',
+								controls: [
+									{ kind: 'switch', param: 'Filter On', title: 'On' },
+									{ kind: 'choice', param: 'Filter Type', title: 'Type', options: ['LP', 'HP', 'BP', 'Notch', 'Morph'] },
+									{ kind: 'choice', param: 'Filter Slope', title: 'Slope', options: ['12 dB', '24 dB'] },
+									{ kind: 'choice', param: 'Filter Circuit - LP/HP', title: 'LP / HP', options: ['Clean', 'OSR', 'MS2', 'SMP', 'PRD'] },
+									{ kind: 'choice', param: 'Filter Circuit - BP/NO/Morph', title: 'BP / Morph', options: ['Clean', 'OSR'] },
+									{ kind: 'switch', param: 'Filt < LFO', title: 'LFO' },
+									{ kind: 'box', param: 'Filter Morph', title: 'Morph' },
+									{ kind: 'box', param: 'Filter Drive', title: 'Drive' }
+								]
+							}
+						},
+						{
+							kind: 'group',
+							stack: 3,
+							group: {
+								title: 'Shaper',
+								controls: [
+									{ kind: 'choice', param: 'Shaper Type', title: 'Type', options: ['Off', 'Soft', 'Hard', 'Sine', '4Bit'] },
+									{ kind: 'box', param: 'Shaper Mix', title: 'Mix' },
+									{ kind: 'box', param: 'Shaper Drive', title: 'Drive' }
+								]
+							}
+						}
+					]
+				},
+				{
+					id: 'lfo',
+					sections: [
+						{
+							kind: 'group',
+							stack: 3,
+							group: {
+								title: 'LFO',
+								switchParam: 'LFO On',
+								controls: [
+									{ kind: 'choice', param: 'LFO Type', title: 'Wave', options: ['Sine', 'Square', 'Tri', 'Saw Up', 'Saw Dn', 'S&H', 'Noise'] },
+									{ kind: 'choice', param: 'LFO Range', title: 'Range', options: ['Low', 'High', 'Sync'] },
+									{ kind: 'switch', param: 'LFO Retrigger', title: 'Retrig' },
+									{ kind: 'box', param: 'LFO Rate', title: 'Rate' },
+									{ kind: 'step', param: 'LFO Sync', title: 'Sync', labels: RETRIG },
+									{ kind: 'switch', param: 'LFO < Pe', title: 'Pitch Env' }
+								]
+							}
+						}
+					]
+				},
+				{
+					id: 'pan',
+					sections: [
+						{
+							kind: 'group',
+							stack: 3,
+							group: {
+								title: 'Pan',
+								controls: [
+									{ kind: 'box', param: 'Panorama', title: 'Pan' },
+									{ kind: 'box', param: 'Pan < Key', title: 'Key' },
+									{ kind: 'box', param: 'Pan < Rnd', title: 'Rnd' }
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			weight: 2.74,
+			tiles: [
+				{
+					id: 'modulation',
+					sections: [
+						{
+							kind: 'matrix',
+							matrix: {
+								rows: [
+									{ title: 'LFO', switchParam: 'LFO On' },
+									{ title: 'Pitch', switchParam: 'Pe On' },
+									// The filter's switch is on its tile.
+									{ title: 'Filter', switchParam: 'Filter On', quiet: true }
+								],
+								groups: [
+									{
+										title: 'Modulation',
+										columns: [
+											...(['A', 'D', 'R'] as const).map((k) =>
+												col(`${k} Slope`, MODS, (m) => by(m, { Pitch: { kind: 'box', param: `Pe ${k} Slope`, title: `${k} Slope` }, Filter: { kind: 'box', param: `Fe ${k} Slope`, title: `${k} Slope` } }))
+											),
+											col('Amount', MODS, (m) =>
+												by(m, { LFO: { kind: 'box', param: 'LFO Amt', title: 'Amount' }, Pitch: { kind: 'box', param: 'Pe Amount', title: 'Amount' }, Filter: { kind: 'box', param: 'Fe Amount', title: 'Env' } })
+											),
+											col('Amt A', MODS, (m) => by(m, { LFO: { kind: 'box', param: 'LFO Amt A', title: 'Amt A' }, Pitch: { kind: 'box', param: 'Pe Amt A', title: 'Amt A' } })),
+											col('Dest B', MODS, (m) => by(m, { LFO: { kind: 'step', param: 'LFO Dst B', title: 'Dest B', labels: DESTS }, Pitch: { kind: 'step', param: 'Pe Dst B', title: 'Dest B', labels: DESTS } }), { span: 2 }),
+											col('Amt B', MODS, (m) => by(m, { LFO: { kind: 'box', param: 'LFO Amt B', title: 'Amt B' }, Pitch: { kind: 'box', param: 'Pe Amt B', title: 'Amt B' } })),
+											col('Vel', MODS, (m) => by(m, { LFO: { kind: 'box', param: 'LFO < Vel', title: 'Vel' }, Filter: { kind: 'box', param: 'Filt < Vel', title: 'Vel' } })),
+											col('Key', MODS, (m) => by(m, { LFO: { kind: 'box', param: 'LFO R < K', title: 'Key' }, Filter: { kind: 'box', param: 'Filt < Key', title: 'Key' } }))
+										]
+									}
+								]
+							}
+						}
+					]
+				},
+				{
+					id: 'global',
+					sections: [
+						{
+							kind: 'group',
+							stack: 2,
+							group: {
+								title: 'Global',
+								controls: [
+									{ kind: 'step', param: 'Algorithm', title: 'Algorithm', labels: ALGORITHM_NUMBERS },
+									{ kind: 'switch', param: 'Glide On', title: 'Glide' },
+									{ kind: 'box', param: 'Glide Time', title: 'Glide' },
+									{ kind: 'box', param: 'Transpose', title: 'Transp' },
+									{ kind: 'box', param: 'Spread', title: 'Spread' },
+									{ kind: 'box', param: 'PB Range', title: 'PB' }
+								]
+							}
+						},
+						{
+							kind: 'group',
+							stack: 2,
+							group: {
+								title: 'Output',
+								controls: [
+									{ kind: 'box', param: 'Time', title: 'Time' },
+									{ kind: 'box', param: 'Time < Key', title: 'Key' },
+									{ kind: 'box', param: 'Tone', title: 'Tone' },
+									{ kind: 'box', param: 'Volume', title: 'Volume' }
+								]
+							}
+						}
+					]
+				}
+			]
+		}
+	]
+};
+
 export const OPERATOR_PANEL: InstrumentPanel = {
 	// Knobs, but an envelope's stages stay boxes: their heights draw it (ADR-509).
 	boxFace: 'knob',
+	board: OPERATOR_BOARD,
 	frame: [
 		{
 			kind: 'tabs',

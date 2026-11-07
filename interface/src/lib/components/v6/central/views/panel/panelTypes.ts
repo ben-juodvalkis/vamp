@@ -121,6 +121,105 @@ export interface InstrumentPanel {
 	pages: readonly PanelPage[];
 	/** How its value and stepping boxes draw unless a group says otherwise; unset, as boxes. */
 	boxFace?: PanelFace;
+	/**
+	 * The instrument at full screen (ADR-512): every control its frame and
+	 * pages hold, on screen at once, in rows of tiles. Unset, full screen
+	 * draws the frame as the band does.
+	 */
+	board?: PanelBoard;
+}
+
+/**
+ * A full-screen board (ADR-512): rows of tiles, each tile a face grid of
+ * sections, seamed, with no tab strip and no page to open. Twin sections
+ * (Operator's four oscillators, Collision's two resonators and two LFOs)
+ * are a `matrix`: a row a section, a column a control, each column's name
+ * said once over it, so its knobs need no caption and four oscillators
+ * take the height of four knobs. The rest are groups whose cells stack
+ * `stack` high, column after column, with their captions.
+ */
+export interface PanelBoard {
+	rows: readonly PanelBoardRow[];
+}
+
+export interface PanelBoardRow {
+	tiles: readonly PanelBoardTile[];
+	/** Its share of the board's height (1). */
+	weight?: number;
+}
+
+export interface PanelBoardTile {
+	/** The tile's name, `data-board-tile`. */
+	id: string;
+	/**
+	 * The page it shows, named on its first section's header line, as a
+	 * page's way back is on the band but plain: there is no page to leave.
+	 */
+	title?: string;
+	sections: readonly PanelBoardSection[];
+	/**
+	 * How wide its columns come out against the row's others, px at the
+	 * board's `BOARD_COLUMN_PX`: a tile whose captions are long (Collision's
+	 * "Stiffness") takes a little from its neighbours.
+	 */
+	columnPx?: number;
+}
+
+export type PanelBoardSection =
+	/**
+	 * A group's cells `stack` high, column after column, each knob as large
+	 * as its cell holds; an envelope's stages (`face: 'slider'`) a column
+	 * each, full height, over `columns` face columns.
+	 */
+	| { kind: 'group'; group: PanelGroup; stack: number; columns?: number }
+	/** Twin sections as a table: a section a group of its columns (ADR-512). */
+	| { kind: 'matrix'; matrix: PanelMatrix }
+	/** A device's own control (Operator's filter pad), from the view's `slots`. */
+	| { kind: 'slot'; slot: string; title?: string; columns: number; params: readonly string[] };
+
+/**
+ * Twin sections as a table (ADR-512). A row a section, named at its left
+ * (the section's switch, where it has one, is that name: lit while on); a
+ * column a control of each, its name over it on the header line, columns
+ * in groups with a seam between two (a group's name is drawn only with
+ * `groupLine`: the header line has room for one line of names). A knob draws
+ * no caption, a pick is a `ChoicePicker` naming its value, a switch a
+ * touch row; a row a control does not apply to leaves its cell empty.
+ */
+export interface PanelMatrix {
+	/** Over the rows' names, on the header line. */
+	title?: string;
+	/**
+	 * The groups' names on the header line and the columns' on a line under
+	 * it: where a column's name repeats across groups (a resonator's Decay
+	 * under Velocity and under Key).
+	 */
+	groupLine?: boolean;
+	rows: readonly PanelMatrixRow[];
+	groups: readonly PanelMatrixGroup[];
+}
+
+export interface PanelMatrixRow {
+	title: string;
+	/** The row's section switch: its name is the switch, and its cells ghost while it is off. */
+	switchParam?: string;
+	/** Its switch only ghosts the row; the name stays text (the switch is drawn elsewhere on the board). */
+	quiet?: boolean;
+}
+
+export interface PanelMatrixGroup {
+	title: string;
+	columns: readonly PanelMatrixColumn[];
+}
+
+export interface PanelMatrixColumn {
+	title: string;
+	/** A control a row, in the matrix's row order; none where it does not apply. */
+	cells: readonly (PanelControl | undefined)[];
+	/** Face columns it spans (a pick of long names: 2). */
+	span?: number;
+	/** Its value boxes' face, over the panel's `boxFace` (an envelope's stages: 'slider'). */
+	face?: PanelFace;
 }
 
 /**
@@ -399,4 +498,91 @@ export function panelParamNames(panel: InstrumentPanel): string[] {
 		page.aside?.params.forEach((n) => names.add(n));
 	}
 	return [...names];
+}
+
+/** A matrix column: its name, and each row's control from `make` (none where it returns none). */
+export function matrixColumn<R>(title: string, rows: readonly R[], make: (row: R) => PanelControl | undefined, extra: Partial<PanelMatrixColumn> = {}): PanelMatrixColumn {
+	return { title, cells: rows.map(make), ...extra };
+}
+
+/** Every section of a panel's board, row by row, tile by tile. */
+export function boardSections(panel: InstrumentPanel): PanelBoardSection[] {
+	return (panel.board?.rows ?? []).flatMap((r) => r.tiles.flatMap((t) => [...t.sections]));
+}
+
+/** Every control a panel's board draws: its groups' and its matrices' cells. */
+export function boardControls(panel: InstrumentPanel): PanelControl[] {
+	return boardSections(panel).flatMap((s) =>
+		s.kind === 'group'
+			? [...s.group.controls]
+			: s.kind === 'matrix'
+				? s.matrix.groups.flatMap((g) => g.columns.flatMap((c) => c.cells.filter((x): x is PanelControl => !!x)))
+				: []
+	);
+}
+
+/** The on/off parameters a board's sections and matrix rows switch, and its slots' parameters. */
+export function boardSwitches(panel: InstrumentPanel): string[] {
+	return boardSections(panel).flatMap((s) =>
+		s.kind === 'group'
+			? s.group.switchParam
+				? [s.group.switchParam]
+				: []
+			: s.kind === 'matrix'
+				? s.matrix.rows.flatMap((r) => (r.switchParam ? [r.switchParam] : []))
+				: [...s.params]
+	);
+}
+
+/**
+ * Every parameter a board reaches (ADR-512): what a full-screen view puts
+ * on screen without a page to open. A board binds nothing its frame and
+ * pages do not (so `panelParamNames`, the frame's and pages', is what the
+ * reference test checks), and should reach all of them.
+ */
+export function boardParamNames(panel: InstrumentPanel): string[] {
+	const names = new Set<string>();
+	for (const c of boardControls(panel)) {
+		names.add(c.param);
+		if (c.kind === 'box' && c.toggle) names.add(c.toggle.param);
+	}
+	for (const n of boardSwitches(panel)) names.add(n);
+	return [...names];
+}
+
+/** A board group's columns: its own, else its stages a column each, else its cells `stack` high. */
+export function boardGroupColumns(section: { group: PanelGroup; stack: number; columns?: number }): number {
+	if (section.columns !== undefined) return section.columns;
+	const n = section.group.controls.length;
+	return section.group.face === 'slider' ? n : Math.max(1, Math.ceil(n / section.stack));
+}
+
+/**
+ * A board tile's share of its row (InstrumentBoard's `cols`): its face
+ * columns, plus its inset (two, less a gutter) and its seams (each a seam
+ * track and two gutters, less one) in columns of `BOARD_COLUMN_PX` with
+ * their gutter, so columns come out one width across a row whatever each
+ * tile's count.
+ */
+export const BOARD_COLUMN_PX = 60;
+export function boardTileWeight(sections: readonly number[], columnPx = BOARD_COLUMN_PX): number {
+	const cols = sections.reduce((a, b) => a + b, 0);
+	const gutter = 8;
+	const inset = 16;
+	const seam = 17;
+	const extra = 2 * inset - gutter + (sections.length - 1) * (seam + gutter);
+	return (cols * (columnPx + gutter) + extra) / (BOARD_COLUMN_PX + gutter);
+}
+
+/**
+ * A board tile's sections on its face grid, each a column count: a group
+ * or a slot one section, a matrix a section a group of its columns, the
+ * first with the rows' names before it.
+ */
+export function boardTileSections(tile: PanelBoardTile): number[] {
+	return tile.sections.flatMap((s) => {
+		if (s.kind === 'group') return [boardGroupColumns(s)];
+		if (s.kind === 'slot') return [s.columns];
+		return s.matrix.groups.map((g, i) => g.columns.reduce((n, c) => n + (c.span ?? 1), i === 0 ? 1 : 0));
+	});
 }
