@@ -47,10 +47,10 @@
 <div class="board" data-instrument-board>
   {#each rows as row, r (r)}
     {#if r > 0}<div class="board-rule" aria-hidden="true"><SectionDivider orientation="horizontal" {ink} /></div>{/if}
-    <div class="board-row" style="flex: {row.weight ?? 1} 1 0;">
+    <div class="board-row" style="flex-grow: {row.weight ?? 1};">
       {#each row.tiles as t, i (t.id)}
         {#if i > 0}<div class="board-seam" aria-hidden="true"><SectionDivider orientation="vertical" {ink} /></div>{/if}
-        <div class="board-tile" style="flex: {t.cols} 1 0;" data-board-tile={t.id}>{@render tile(t.id)}</div>
+        <div class="board-tile" style="flex-grow: {t.cols};" data-board-tile={t.id}>{@render tile(t.id)}</div>
       {/each}
     </div>
   {/each}
@@ -66,11 +66,13 @@
     min-height: 0;
   }
   .board-row {
+    flex: 1 1 0;
     display: flex;
     min-width: 0;
     min-height: 0;
   }
   .board-tile {
+    flex: 1 1 0;
     min-width: 0;
     min-height: 0;
     height: 100%;
