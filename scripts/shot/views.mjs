@@ -1023,6 +1023,17 @@ function instrumentSwapStates() {
 		// Plate picked from the filter grid: the second macro reads Ratio.
 		['meld-filter-plate', 'Meld', 'InstrumentMeld', meld,
 			[{ click: '.filter-type .chooser-name' }, { click: '[data-tab="meld-filter-types"] .scrub-option:nth-child(16)', force: true }]],
+		// Full screen (ADR-511/512): the corner icon, and every page on one
+		// board, both halves side by side.
+		...[
+			['board-wavetable', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable')],
+			['board-drift', 'Drift', 'Drift', referenceParams('Drift')],
+			['board-meld', 'Meld', 'InstrumentMeld', referenceParams('Meld')],
+			['board-analog', 'Analog', 'UltraAnalog', referenceParams('Analog')],
+			['board-operator', 'Operator', 'Operator', referenceParams('Operator')],
+			['board-electric', 'Electric', 'LoungeLizard', referenceParams('Electric')],
+			['board-collision', 'Collision', 'Collision', referenceParams('Collision')]
+		].map(([state, name, cls, params]) => [state, name, cls, params, [{ click: '[data-central-expand]' }]]),
 		// Amp and Filter envelopes both in view (ADR-477): the Filter row takes
 		// the track's ink, not Amp's orange. (An omnisphere-filter state flipped
 		// the switch that showed one or the other until then.)
