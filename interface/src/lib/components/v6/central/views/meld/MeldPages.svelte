@@ -30,6 +30,8 @@
   import FaceSection from '../../FaceSection.svelte';
   import FaceSeam from '../../FaceSeam.svelte';
   import ChoicePicker from '../../ChoicePicker.svelte';
+  import EnvelopeGraph from '../../EnvelopeGraph.svelte';
+  import LfoGraph from '../../LfoGraph.svelte';
   import type { PanelParams } from '../panel/usePanelParams.svelte';
   import type { DeviceColorScheme } from '$lib/config/devicePresets';
   import type { MeldEngine } from '../meldParams';
@@ -278,24 +280,30 @@
     </FaceSection>
   </FaceGrid>
 {:else if section === 'env' && board}
-  <!-- On the board (ADR-512) seven columns, three knobs to a column:
-       the times on the first row, their slopes on the second, the levels on
-       the third. Amp's sustain and loop mode end its levels; Mod's loop mode
-       ends its slopes. -->
-  <FaceGrid sections={[3, 4]}>
-    <FaceSection span={3}>
+  <!-- On the board (ADR-514) each envelope as Live draws it: the times and
+       levels dragged on the picture (Mod's four levels too), its three
+       slopes and its loop mode under it. -->
+  <FaceGrid sections={[4, 4]}>
+    <FaceSection span={4}>
       {#snippet head()}{@render back()}{@render sub('Amp')}{/snippet}
-      <div class="stack">{@render knob(`${X} Amp Attack`, 'Attack')}{@render knob(`${X} Amp A Slope`, 'A Slope')}{@render empty()}</div>
-      <div class="stack">{@render knob(`${X} Amp Decay`, 'Decay')}{@render knob(`${X} Amp D Slope`, 'D Slope')}{@render knob(`${X} Amp Sustain`, 'Sustain')}</div>
-      <div class="stack">{@render knob(`${X} Amp Release`, 'Release')}{@render knob(`${X} Amp R Slope`, 'R Slope')}{@render picker(`${X} Amp Loop Mode`, LOOP_MODES, `Engine ${X} amp loop`)}</div>
+      <div class="face-span-all graph-board">
+        <div class="graph"><EnvelopeGraph {params} ink={eInk.primary} names={{ attack: `${X} Amp Attack`, decay: `${X} Amp Decay`, sustain: `${X} Amp Sustain`, release: `${X} Amp Release` }} /></div>
+        {@render knob(`${X} Amp A Slope`, 'A Slope')}
+        {@render knob(`${X} Amp D Slope`, 'D Slope')}
+        {@render knob(`${X} Amp R Slope`, 'R Slope')}
+        <div class="cell sw-cell">{@render picker(`${X} Amp Loop Mode`, LOOP_MODES, `Engine ${X} amp loop`)}</div>
+      </div>
     </FaceSection>
     <FaceSeam ink={eInk.primary} />
     <FaceSection span={4}>
       {#snippet head()}{@render sub('Mod')}{/snippet}
-      <div class="stack">{@render knob(`${X} Mod Attack`, 'Attack')}{@render knob(`${X} Mod A Slope`, 'A Slope')}{@render knob(`${X} Mod Initial`, 'Initial')}</div>
-      <div class="stack">{@render knob(`${X} Mod Decay`, 'Decay')}{@render knob(`${X} Mod D Slope`, 'D Slope')}{@render knob(`${X} Mod Peak`, 'Peak')}</div>
-      <div class="stack">{@render knob(`${X} Mod Release`, 'Release')}{@render knob(`${X} Mod R Slope`, 'R Slope')}{@render knob(`${X} Mod Sustain`, 'Sustain')}</div>
-      <div class="stack">{@render empty()}{@render picker(`${X} Mod Loop Mode`, LOOP_MODES, `Engine ${X} mod loop`)}{@render knob(`${X} Mod Final`, 'Final')}</div>
+      <div class="face-span-all graph-board">
+        <div class="graph"><EnvelopeGraph {params} ink={eInk.primary} names={{ attack: `${X} Mod Attack`, decay: `${X} Mod Decay`, sustain: `${X} Mod Sustain`, release: `${X} Mod Release`, initial: `${X} Mod Initial`, peak: `${X} Mod Peak`, final: `${X} Mod Final` }} /></div>
+        {@render knob(`${X} Mod A Slope`, 'A Slope')}
+        {@render knob(`${X} Mod D Slope`, 'D Slope')}
+        {@render knob(`${X} Mod R Slope`, 'R Slope')}
+        <div class="cell sw-cell">{@render picker(`${X} Mod Loop Mode`, LOOP_MODES, `Engine ${X} mod loop`)}</div>
+      </div>
     </FaceSection>
   </FaceGrid>
 {:else if section === 'lfo' && board}
@@ -306,6 +314,8 @@
   <FaceGrid sections={[3, 2, 2]}>
     <FaceSection span={3}>
       {#snippet head()}{@render back()}{@render sub('LFO 1')}{/snippet}
+      <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 0.6fr) minmax(0, 2fr);">
+      <div class="graph"><LfoGraph {params} ink={eInk.primary} shape={LFO1_WAVES[step(`${X} LFO 1 Wave`)]} rate={rateParam(1)} /></div>
       <div class="stack">
         {@render picker(`${X} LFO 1 Wave`, LFO1_WAVES, `Engine ${X} LFO 1 wave`)}
         {@render sw(`${X} LFO 1 Sync`, 'Sync')}
@@ -316,6 +326,7 @@
         {@render knob(`${X} LFO 1 Offset`, 'Offset')}
       </div>
       <div class="stack">{@render knob(`${X} LFO 1 Shape`, 'Shape')}{@render knob(`${X} LFO 1 Fold`, 'Fold')}</div>
+      </div>
     </FaceSection>
     <FaceSeam ink={eInk.primary} />
     <FaceSection span={2}>
@@ -332,6 +343,8 @@
     <FaceSeam ink={eInk.primary} />
     <FaceSection span={2}>
       {#snippet head()}{@render sub('LFO 2')}{/snippet}
+      <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 0.6fr) minmax(0, 2fr);">
+      <div class="graph"><LfoGraph {params} ink={eInk.primary} shape={LFO2_WAVES[step(`${X} LFO 2 Wave`)]} rate={rateParam(2)} /></div>
       <div class="stack">
         {@render picker(`${X} LFO 2 Wave`, LFO2_WAVES, `Engine ${X} LFO 2 wave`)}
         {@render sw(`${X} LFO 2 Sync`, 'Sync')}
@@ -340,6 +353,7 @@
       <div class="stack">
         {@render knob(rateParam(2), isOn(`${X} LFO 2 Sync`) ? 'Sync' : 'Rate', { steps: isOn(`${X} LFO 2 Sync`) ? 22 : undefined })}
         {@render knob(`${X} LFO 2 Offset`, 'Offset')}
+      </div>
       </div>
     </FaceSection>
   </FaceGrid>

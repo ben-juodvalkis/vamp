@@ -14,7 +14,7 @@
  * Names are Live's (docs/reference/instruments/Operator.md); note Live's
  * trailing space in "A Fix On ".
  */
-import { matrixColumn as col, type InstrumentPanel, type PanelBoard, type PanelControl, type PanelGroup, type PanelPage, type PanelTab } from './panelTypes';
+import { matrixColumn as col, type InstrumentPanel, type PanelBoard, type PanelControl, type PanelEnvelope, type PanelGroup, type PanelPage, type PanelTab } from './panelTypes';
 
 type Osc = 'A' | 'B' | 'C' | 'D';
 
@@ -191,7 +191,7 @@ function envPage(id: string, title: string, prefix: string, parent: string, extr
 const OSCS: Osc[] = ['A', 'B', 'C', 'D'];
 
 /** The envelopes' rows on the board: the four oscillators', the LFO's, the pitch envelope and the filter's. */
-const ENVS = [
+export const OPERATOR_ENVS = [
 	{ title: 'A', prefix: 'Ae', on: 'Osc-A On', end: false },
 	{ title: 'B', prefix: 'Be', on: 'Osc-B On', end: false },
 	{ title: 'C', prefix: 'Ce', on: 'Osc-C On', end: false },
@@ -200,6 +200,20 @@ const ENVS = [
 	{ title: 'Pitch', prefix: 'Pe', on: 'Pe On', end: true },
 	{ title: 'Filter', prefix: 'Fe', on: 'Filter On', end: true }
 ] as const;
+const ENVS = OPERATOR_ENVS;
+
+/** The envelope a row of `OPERATOR_ENVS`, by Live's names, as `EnvelopeGraph` draws it (ADR-514). */
+export function operatorEnvelope(e: (typeof OPERATOR_ENVS)[number]): PanelEnvelope {
+	return {
+		attack: `${e.prefix} Attack`,
+		decay: `${e.prefix} Decay`,
+		sustain: `${e.prefix} Sustain`,
+		release: `${e.prefix} Release`,
+		initial: `${e.prefix} Init`,
+		peak: `${e.prefix} Peak`,
+		final: e.end ? `${e.prefix} End` : undefined
+	};
+}
 
 /** The sections the LFO and the two envelopes beyond the oscillators shape, a row each in the modulation table. */
 const MODS = ['LFO', 'Pitch', 'Filter'] as const;
@@ -222,7 +236,7 @@ const ALGORITHM_NUMBERS = ALGORITHMS.map((_, i) => String(i + 1));
 const OPERATOR_BOARD: PanelBoard = {
 	rows: [
 		{
-			weight: 2.9,
+			weight: 2.95,
 			tiles: [
 				{
 					id: 'oscillators',
@@ -272,11 +286,21 @@ const OPERATOR_BOARD: PanelBoard = {
 			]
 		},
 		{
-			weight: 3.3,
+			weight: 3.45,
 			tiles: [
 				{
 					id: 'envelopes',
 					sections: [
+						{
+							// One envelope as Live draws it (ADR-514), the one picked over it
+							// (the face's oscillator until another is picked), its stages
+							// dragged on the picture.
+							kind: 'slot',
+							slot: 'envelope',
+							title: 'Envelope',
+							columns: 9,
+							params: OPERATOR_ENVS.flatMap((e) => Object.values(operatorEnvelope(e)).filter((n): n is string => !!n))
+						},
 						{
 							kind: 'matrix',
 							matrix: {
@@ -284,18 +308,6 @@ const OPERATOR_BOARD: PanelBoard = {
 								// Each row's switch is drawn elsewhere on the board: here it only ghosts the row.
 								rows: ENVS.map((e) => ({ title: e.title, switchParam: e.on, quiet: true })),
 								groups: [
-									{
-										title: 'Envelope',
-										columns: [
-											col('Attack', ENVS, (e) => ({ kind: 'box', param: `${e.prefix} Attack`, title: 'Attack' }), { face: 'slider' }),
-											col('Initial', ENVS, (e) => ({ kind: 'box', param: `${e.prefix} Init`, title: 'Initial' }), { face: 'slider' }),
-											col('Decay', ENVS, (e) => ({ kind: 'box', param: `${e.prefix} Decay`, title: 'Decay' }), { face: 'slider' }),
-											col('Peak', ENVS, (e) => ({ kind: 'box', param: `${e.prefix} Peak`, title: 'Peak' }), { face: 'slider' }),
-											col('Sustain', ENVS, (e) => ({ kind: 'box', param: `${e.prefix} Sustain`, title: 'Sustain' }), { face: 'slider' }),
-											col('Release', ENVS, (e) => ({ kind: 'box', param: `${e.prefix} Release`, title: 'Release' }), { face: 'slider' }),
-											col('End', ENVS, (e) => (e.end ? { kind: 'box', param: `${e.prefix} End`, title: 'End' } : undefined), { face: 'slider' })
-										]
-									},
 									{
 										// Each envelope's loop (ADR-513: on the board, since the band opens no page).
 										title: 'Loop',
@@ -407,7 +419,7 @@ const OPERATOR_BOARD: PanelBoard = {
 			]
 		},
 		{
-			weight: 2.3,
+			weight: 2.25,
 			tiles: [
 				{
 					id: 'modulation',

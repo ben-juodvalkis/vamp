@@ -278,7 +278,7 @@ const lfo = (title: string, name: string) => col(title, LFOS, (n) => box(`LFO ${
 const COLLISION_BOARD: PanelBoard = {
 	rows: [
 		{
-			weight: 1.92,
+			weight: 1.75,
 			tiles: [
 				{
 					id: 'resonators',
@@ -308,7 +308,7 @@ const COLLISION_BOARD: PanelBoard = {
 			]
 		},
 		{
-			weight: 2.16,
+			weight: 2.0,
 			tiles: [
 				{
 					id: 'resonators-mod',
@@ -346,7 +346,7 @@ const COLLISION_BOARD: PanelBoard = {
 			]
 		},
 		{
-			weight: 1.92,
+			weight: 1.75,
 			tiles: [
 				{
 					id: 'lfos',
@@ -384,14 +384,14 @@ const COLLISION_BOARD: PanelBoard = {
 			]
 		},
 		{
-			weight: 4.21,
+			weight: 2.45,
 			tiles: [
 				{
 					id: 'mallet',
 					sections: [
 						{
 							kind: 'group',
-							stack: 3,
+							stack: 2,
 							group: {
 								title: 'Mallet',
 								switchParam: 'Mallet On/Off',
@@ -406,7 +406,7 @@ const COLLISION_BOARD: PanelBoard = {
 						},
 						{
 							kind: 'group',
-							stack: 3,
+							stack: 2,
 							group: {
 								title: 'Velocity',
 								switchParam: 'Mallet On/Off',
@@ -415,7 +415,7 @@ const COLLISION_BOARD: PanelBoard = {
 						},
 						{
 							kind: 'group',
-							stack: 3,
+							stack: 2,
 							group: {
 								title: 'Key',
 								switchParam: 'Mallet On/Off',
@@ -429,7 +429,7 @@ const COLLISION_BOARD: PanelBoard = {
 					sections: [
 						{
 							kind: 'group',
-							stack: 3,
+							stack: 2,
 							group: {
 								title: 'Noise',
 								switchParam: 'Noise On/Off',
@@ -444,28 +444,33 @@ const COLLISION_BOARD: PanelBoard = {
 							}
 						},
 						{
-							kind: 'group',
-							stack: 3,
-							group: {
-								// Knobs here, where the page draws boxes (ADR-509): four boxes
-								// over the touch floor take a column more than the row has.
-								title: 'Envelope',
-								switchParam: 'Noise On/Off',
-								controls: [box('Noise Attack', 'Attack'), box('Noise Decay', 'Decay'), box('Noise Sustain', 'Sustain'), box('Noise Release', 'Release')]
-							}
+							// The noise's envelope as Live draws it (ADR-514), its four stages
+							// dragged on the picture (the view's `noiseEnvelope` slot).
+							kind: 'slot',
+							slot: 'noiseEnvelope',
+							title: 'Envelope',
+							columns: 3,
+							params: ['Noise Attack', 'Noise Decay', 'Noise Sustain', 'Noise Release']
 						},
 						{
 							kind: 'group',
-							stack: 3,
+							stack: 2,
 							group: { title: 'Velocity', switchParam: 'Noise On/Off', controls: [box('Noise Volume < Vel', 'Volume'), box('Noise Freq < Vel', 'Freq')] }
 						},
 						{
 							kind: 'group',
-							stack: 3,
+							stack: 2,
 							group: { title: 'Key', switchParam: 'Noise On/Off', controls: [box('Noise Volume < Key', 'Volume'), box('Noise Freq < Key', 'Freq')] }
 						}
 					]
-				},
+				}
+			]
+		},
+		{
+			// The MIDI amounts and Global their own row (ADR-514): beside the mallet
+			// and the noise every caption was cut.
+			weight: 2.25,
+			tiles: [
 				{
 					id: 'midi',
 					sections: [
@@ -496,7 +501,7 @@ const COLLISION_BOARD: PanelBoard = {
 					sections: [
 						{
 							kind: 'group',
-							stack: 3,
+							stack: 2,
 							group: {
 								title: 'Global',
 								controls: [

@@ -20,6 +20,7 @@
   import { usePanelParams } from './panel/usePanelParams.svelte';
   import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
   import { COLLISION_PANEL } from './panel/collisionPanel';
+  import EnvelopeGraph from '../EnvelopeGraph.svelte';
 
   interface Props {
     instrument?: InstrumentInfo | null;
@@ -52,7 +53,10 @@
 
 <div class="h-full w-full overflow-hidden relative">
   {#if instrument && device}
-    <InstrumentPanelView panel={COLLISION_PANEL} {params} color={collisionInk} board={centralDisplayStore.expanded} />
+    {#snippet noiseEnvelope()}
+      <EnvelopeGraph {params} ink={collisionInk.primary} sw="Noise On/Off" names={{ attack: 'Noise Attack', decay: 'Noise Decay', sustain: 'Noise Sustain', release: 'Noise Release' }} />
+    {/snippet}
+    <InstrumentPanelView panel={COLLISION_PANEL} {params} color={collisionInk} board={centralDisplayStore.expanded} slots={{ noiseEnvelope }} />
   {:else}
     <DeviceEmptyState glyph="~" message="Load Collision to access resonator controls" color={collisionInk.primary} />
   {/if}

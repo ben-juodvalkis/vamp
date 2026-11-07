@@ -87,4 +87,27 @@
   .face-body > :global(.face-span-all) {
     grid-column: 1 / -1;
   }
+  /* A picture over controls (ADR-514): an envelope's or an LFO's graph
+     across the section's columns, the controls on its columns under it.
+     `--graph-rows` sets the rows (graph first). */
+  .face-body > :global(.graph-board) {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: var(--graph-rows, minmax(0, 1.25fr) minmax(0, 1fr));
+    row-gap: var(--spacing-sm);
+  }
+  :global(.graph-board > *) {
+    min-width: 0;
+    min-height: 0;
+  }
+  :global(.graph-board > .graph) {
+    grid-column: 1 / -1;
+  }
+  :global(.graph-board > .span-2) {
+    grid-column: span 2;
+  }
+  :global(.graph-board > .span-3) {
+    grid-column: span 3;
+  }
 </style>

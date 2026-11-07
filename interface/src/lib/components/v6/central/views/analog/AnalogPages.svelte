@@ -32,6 +32,8 @@
   import FaceSection from '../../FaceSection.svelte';
   import FaceSeam from '../../FaceSeam.svelte';
   import ChoicePicker from '../../ChoicePicker.svelte';
+  import EnvelopeGraph from '../../EnvelopeGraph.svelte';
+  import LfoGraph from '../../LfoGraph.svelte';
   import HostedSwapPill from '../../HostedSwapPill.svelte';
   import PanelEyebrow from '../panel/PanelEyebrow.svelte';
   import type { PanelParams } from '../panel/usePanelParams.svelte';
@@ -390,13 +392,10 @@
                 <ChoicePicker options={LOOP_MODES} selected={step(loopParam)} onSelect={(i) => params.write(loopParam, lo(loopParam) + i)} label="{label} Env {v} loop" tint={vInk.primary} ghost={!params.has(loopParam)} />
               </div>
             </div>
-            {@render stage(`${pre}${v} Attack`, 'A', 'attack')}
-            {@render stage(`${pre}${v} Decay`, 'D', 'decay')}
-            {@render stage(`${pre}${v} Sustain`, 'S', 'sustain')}
-            <!-- One word (a non-breaking hyphen), so the label shrinks to the
-                 box's width on one line: a short box has no room for two. -->
+            <!-- The envelope as Live draws it (ADR-514), A, D, S and R dragged
+                 on it; Sustain Time, which Live draws as a number, a box. -->
+            <div class="env-graph-cell"><EnvelopeGraph {params} ink={vInk.primary} names={{ attack: `${pre}${v} Attack`, decay: `${pre}${v} Decay`, sustain: `${pre}${v} Sustain`, release: `${pre}${v} Rel` }} /></div>
             {@render stage(`${pre}${v} S Time`, 'S\u2011Time', 'sustain')}
-            {@render stage(`${pre}${v} Rel`, 'R', 'release')}
           </div>
         {/each}
       </div>
@@ -421,6 +420,8 @@
   <FaceGrid sections={[5]}>
     <FaceSection span={5}>
       {#snippet head()}{@render back()}{/snippet}
+      <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 0.7fr) minmax(0, 1.7fr);">
+      <div class="graph"><LfoGraph {params} ink={vInk.primary} shape={LFO_SHAPES[step(`${L} Shape`)]} rate={lfoBeat ? `${L} SncRate` : `${L} Speed`} sw={`${L} On/Off`} /></div>
       {@render tab(`${L} Shape`, LFO_SHAPES, { glyph: 'lfo', sw: `${L} On/Off` })}
       <div class="col">
         <div class="touch">{@render sw(`${L} On/Off`, 'On')}</div>
@@ -437,6 +438,7 @@
       </div>
       <div class="stack">{@render knob(`${L} Phase`, 'Phase', { sw: `${L} On/Off` })}{@render knob(`${L} Delay`, 'Delay', { sw: `${L} On/Off` })}</div>
       <div class="stack">{@render knob(`${L} Fade In`, 'Fade In', { sw: `${L} On/Off` })}<div class="cell"></div></div>
+      </div>
     </FaceSection>
   </FaceGrid>
 {:else if board && kind === 'noise'}
@@ -735,6 +737,11 @@
   .loop-pick {
     grid-column: span 2;
     min-width: 0;
+  }
+  .env-graph-cell {
+    grid-column: span 4;
+    min-width: 0;
+    min-height: 0;
   }
   .vel-label {
     text-align: center;

@@ -30,6 +30,8 @@
   import FaceSeam from '../../FaceSeam.svelte';
   import ChoicePicker from '../../ChoicePicker.svelte';
   import DeviceXY from '../../../device-panel/DeviceXY.svelte';
+  import EnvelopeGraph from '../../EnvelopeGraph.svelte';
+  import LfoGraph from '../../LfoGraph.svelte';
   import { liveFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
   import type { PanelParams } from '../panel/usePanelParams.svelte';
   import type { DeviceColorScheme } from '$lib/config/devicePresets';
@@ -281,56 +283,65 @@
     </FaceSection>
   </FaceGrid>
 {:else if page === 'amp' && board}
-  <!-- On the board (ADR-512) four columns, as an envelope page: each stage
-       over its slope, Sustain over the loop mode. -->
+  <!-- On the board (ADR-514) the envelope is Live's picture: its line
+       across the tile, Attack, Decay, Sustain and Release dragged on it;
+       under it the three slopes and the loop mode. -->
   <FaceGrid sections={[4]}>
     <FaceSection span={4}>
       {#snippet head()}{@render back()}{/snippet}
-      <div class="stack">{@render knob('Amp Attack', 'Attack', 'm')}{@render knob('Amp A Slope', 'A Slope', 'm')}</div>
-      <div class="stack">{@render knob('Amp Decay', 'Decay', 'm')}{@render knob('Amp D Slope', 'D Slope', 'm')}</div>
-      <div class="stack">{@render knob('Amp Sustain', 'Sustain', 'm')}{@render pick('Amp Loop Mode', LOOP_MODES, 'Amp loop')}</div>
-      <div class="stack">{@render knob('Amp Release', 'Release', 'm')}{@render knob('Amp R Slope', 'R Slope', 'm')}</div>
+      <div class="face-span-all graph-board">
+        <div class="graph">
+          <EnvelopeGraph {params} ink={ink.primary} names={{ attack: 'Amp Attack', decay: 'Amp Decay', sustain: 'Amp Sustain', release: 'Amp Release' }} />
+        </div>
+        {@render knob('Amp A Slope', 'A Slope', 'm')}
+        {@render knob('Amp D Slope', 'D Slope', 'm')}
+        {@render knob('Amp R Slope', 'R Slope', 'm')}
+        {@render pick('Amp Loop Mode', LOOP_MODES, 'Amp loop')}
+      </div>
     </FaceSection>
   </FaceGrid>
 {:else if (page === 'env2' || page === 'env3') && board}
-  <!-- On the board (ADR-512) six columns: each stage over its slope, then
-       the levels and the loop mode two to a column, so every name fits. -->
-  <FaceGrid sections={[4, 2]}>
+  <!-- On the board (ADR-514) as Amp: the picture carries the times and all
+       four levels (Initial, Peak, Sustain, Final), the slopes and the loop
+       mode under it. -->
+  <FaceGrid sections={[4]}>
     <FaceSection span={4}>
       {#snippet head()}{@render back()}{/snippet}
-      <div class="stack">{@render knob(`${E} Attack`, 'Attack', 'm')}{@render knob(`${E} A Slope`, 'A Slope', 'm')}</div>
-      <div class="stack">{@render knob(`${E} Decay`, 'Decay', 'm')}{@render knob(`${E} D Slope`, 'D Slope', 'm')}</div>
-      <div class="stack">{@render knob(`${E} Sustain`, 'Sustain', 'm')}<div></div></div>
-      <div class="stack">{@render knob(`${E} Release`, 'Release', 'm')}{@render knob(`${E} R Slope`, 'R Slope', 'm')}</div>
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={2}>
-      {#snippet head()}{@render sub('Levels · Loop')}{/snippet}
-      <div class="stack">{@render knob(`${E} Initial`, 'Initial', 'm')}{@render knob(`${E} Final`, 'Final', 'm')}</div>
-      <div class="stack">{@render knob(`${E} Peak`, 'Peak', 'm')}{@render pick(`${E} Loop Mode`, LOOP_MODES, `${E} loop`)}</div>
+      <div class="face-span-all graph-board">
+        <div class="graph">
+          <EnvelopeGraph {params} ink={ink.primary} names={{ attack: `${E} Attack`, decay: `${E} Decay`, sustain: `${E} Sustain`, release: `${E} Release`, initial: `${E} Initial`, peak: `${E} Peak`, final: `${E} Final` }} />
+        </div>
+        {@render knob(`${E} A Slope`, 'A Slope', 'm')}
+        {@render knob(`${E} D Slope`, 'D Slope', 'm')}
+        {@render knob(`${E} R Slope`, 'R Slope', 'm')}
+        {@render pick(`${E} Loop Mode`, LOOP_MODES, `${E} loop`)}
+      </div>
     </FaceSection>
   </FaceGrid>
 {:else if (page === 'lfo1' || page === 'lfo2') && board}
-  <!-- On the board (ADR-512) five columns: the shape's pictures, the sync
-       over Retrig, then Rate over Amount, Morph over Offset, and Attack. -->
+  <!-- On the board (ADR-514) the LFO's wave across the tile, rate across
+       and amount up; the shapes, the sync and Retrig one touch row under it,
+       then the knobs. -->
   <FaceGrid sections={[5]}>
     <FaceSection span={5}>
       {#snippet head()}{@render back()}{/snippet}
-      {@render tab(`${L} Wave`, LFO_WAVES, { glyph: true })}
-      <div class="column">
-        <div class="grow">{@render tab(`${L} Sync`, ['Free', 'Tempo'])}</div>
+      <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 1fr) auto minmax(0, 1.15fr);">
+        <div class="graph">
+          <LfoGraph {params} ink={ink.primary} shape={LFO_WAVES[step(`${L} Wave`)]} rate={lfoTempo ? `${L} Synced` : `${L} Freq`} amount={`${L} Amount`} />
+        </div>
+        <div class="span-2 touch-row">{@render tab(`${L} Wave`, LFO_WAVES, { glyph: true, cols: 5 })}</div>
+        <div class="span-2 touch-row">{@render tab(`${L} Sync`, ['Free', 'Tempo'], { cols: 2 })}</div>
         {@render sw(`${L} Retrig On`, 'Retrig')}
-      </div>
-      <div class="stack">
         {#if lfoTempo}
           {@render knob(`${L} Synced`, 'Sync', 'm', { steps: SYNCED.length, labels: SYNCED })}
         {:else}
           {@render knob(`${L} Freq`, 'Rate', 'm')}
         {/if}
         {@render knob(`${L} Amount`, 'Amount', 'm')}
+        {@render knob(`${L} Morph`, 'Morph', 'm')}
+        {@render knob(`${L} Offset`, 'Offset', 'm')}
+        {@render knob(`${L} Attack`, 'Attack', 'm')}
       </div>
-      <div class="stack">{@render knob(`${L} Morph`, 'Morph', 'm')}{@render knob(`${L} Offset`, 'Offset', 'm')}</div>
-      <div class="stack">{@render knob(`${L} Attack`, 'Attack', 'm')}<div></div></div>
     </FaceSection>
   </FaceGrid>
 {:else if page === 'global' && board}
@@ -409,6 +420,9 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: var(--spacing-sm);
+  }
+  .touch-row {
+    height: var(--height-touch);
   }
   /* A tab of a few values beside a knob is one touch row, centred. */
   .panel-choice.row {

@@ -235,6 +235,17 @@ export interface PanelMatrixColumn {
 	face?: PanelFace;
 }
 
+/** An envelope's parameters by Live name, as `EnvelopeGraph` draws it (ADR-514). */
+export interface PanelEnvelope {
+	attack: string;
+	decay: string;
+	sustain: string;
+	release: string;
+	initial?: string;
+	peak?: string;
+	final?: string;
+}
+
 /**
  * How many columns a choice's cells take so each stays on the 44px touch
  * floor: five cells stand in a full-height row, two in one of a two-row

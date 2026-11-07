@@ -21,6 +21,8 @@
    */
   import type { Snippet } from 'svelte';
   import DeviceSlider from '../../../device-panel/DeviceSlider.svelte';
+  import EnvelopeGraph from '../../EnvelopeGraph.svelte';
+  import LfoGraph from '../../LfoGraph.svelte';
   import ScrubTabs from '../../../device-panel/ScrubTabs.svelte';
   import FaceGrid from '../../FaceGrid.svelte';
   import FaceSection from '../../FaceSection.svelte';
@@ -293,31 +295,40 @@
     </FaceSection>
   </FaceGrid>
 {:else if page === 'envelopes'}
+  <!-- Each envelope as Live draws it (ADR-514), its four stages dragged on
+       the picture, their knobs under it. Env 2's switch to Cyc trades its
+       picture for the cycling envelope's rate mode. -->
   <FaceGrid sections={[4, 5]}>
     <FaceSection span={4}>
       {#snippet head()}{@render back()}<span class="sub" style="color: {ink.primary};">Env 1 (Amp)</span>{/snippet}
-      {@render knob('Env 1 Attack', 'Attack')}
-      {@render knob('Env 1 Decay', 'Decay')}
-      {@render knob('Env 1 Sustain', 'Sustain')}
-      {@render knob('Env 1 Release', 'Release')}
+      <div class="face-span-all graph-board">
+        <div class="graph"><EnvelopeGraph {params} ink={ink.primary} names={{ attack: 'Env 1 Attack', decay: 'Env 1 Decay', sustain: 'Env 1 Sustain', release: 'Env 1 Release' }} /></div>
+        {@render knob('Env 1 Attack', 'Attack')}
+        {@render knob('Env 1 Decay', 'Decay')}
+        {@render knob('Env 1 Sustain', 'Sustain')}
+        {@render knob('Env 1 Release', 'Release')}
+      </div>
     </FaceSection>
     <FaceSeam ink={ink.primary} />
-    <!-- Env 2 is an ADSR or, switched to Cyc, the cycling envelope: the
-         four columns after the switch draw whichever it is. -->
     <FaceSection span={5}>
       {#snippet head()}<span class="sub" style="color: {ink.primary};">Env 2</span>{/snippet}
-      {@render tab('Env 2 Cyc On', ['Env', 'Cyc'])}
-      {#if env2Cyc}
-        {@render tab('Cyc Env Mode', RATE_MODES)}
-        {@render knob(cycRate, step('Cyc Env Mode') === 3 ? 'Sync' : 'Rate', step('Cyc Env Mode') === 3 ? 22 : undefined)}
-        {@render knob('Cyc Env Tilt', 'Tilt')}
-        {@render knob('Cyc Env Hold', 'Hold')}
-      {:else}
-        {@render knob('Env 2 Attack', 'Attack')}
-        {@render knob('Env 2 Decay', 'Decay')}
-        {@render knob('Env 2 Sustain', 'Sustain')}
-        {@render knob('Env 2 Release', 'Release')}
-      {/if}
+      <div class="face-span-all graph-board">
+        {#if env2Cyc}
+          <div class="graph">{@render tab('Cyc Env Mode', RATE_MODES, { cols: 4 })}</div>
+          {@render tab('Env 2 Cyc On', ['Env', 'Cyc'])}
+          {@render knob(cycRate, step('Cyc Env Mode') === 3 ? 'Sync' : 'Rate', step('Cyc Env Mode') === 3 ? 22 : undefined)}
+          {@render knob('Cyc Env Tilt', 'Tilt')}
+          {@render knob('Cyc Env Hold', 'Hold')}
+          <div class="cell"></div>
+        {:else}
+          <div class="graph"><EnvelopeGraph {params} ink={ink.primary} names={{ attack: 'Env 2 Attack', decay: 'Env 2 Decay', sustain: 'Env 2 Sustain', release: 'Env 2 Release' }} /></div>
+          {@render tab('Env 2 Cyc On', ['Env', 'Cyc'])}
+          {@render knob('Env 2 Attack', 'Attack')}
+          {@render knob('Env 2 Decay', 'Decay')}
+          {@render knob('Env 2 Sustain', 'Sustain')}
+          {@render knob('Env 2 Release', 'Release')}
+        {/if}
+      </div>
     </FaceSection>
   </FaceGrid>
 {:else if page === 'lfo-mod' && board}
@@ -327,7 +338,9 @@
   <FaceGrid sections={[4, 3]}>
     <FaceSection span={4}>
       {#snippet head()}{@render back()}<span class="sub" style="color: {ink.primary};">LFO</span>{/snippet}
-      <div class="face-span-2 lfo-shape">
+      <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 0.8fr) minmax(0, 1.6fr);">
+      <div class="graph"><LfoGraph {params} ink={ink.primary} shape={LFO_WAVES[step('LFO Wave')]} rate={lfoRate} amount="LFO Amount" /></div>
+      <div class="span-2 lfo-shape">
         <div class="lfo-waves">{@render tab('LFO Wave', LFO_WAVES, { cols: 3, lfo: true })}</div>
         <div class="lfo-mode">{@render pick('LFO Mode', RATE_MODES, 'LFO rate mode')}</div>
         {@render sw('LFO Retrig On', 'Retrig')}
@@ -337,6 +350,7 @@
         {@render knob('LFO Amount', 'Amount')}
       </div>
       {@render modKnob('LFO Mod Amt', 'M', 'LFO Mod', 'mod_matrix_lfo_source_index', undefined, ink, 'l', true)}
+      </div>
     </FaceSection>
     <FaceSeam ink={ink.primary} />
     <FaceSection span={3}>

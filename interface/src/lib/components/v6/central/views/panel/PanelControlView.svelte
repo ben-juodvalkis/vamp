@@ -182,12 +182,14 @@
 		class:compact
 		class:active={on}
 		class:ghost={!listed}
+		class:lamp={!caption}
 		aria-pressed={on}
+		aria-label={control.title}
 		disabled={!listed}
 		style="--btn-tint: {color.primary};"
 		data-param={control.param}
 		onclick={() => write(on ? lo : hi)}
-	>{caption ? control.title : 'On'}</button>
+	>{caption ? control.title : ''}</button>
 {/if}
 
 <style>
@@ -264,6 +266,14 @@
 		height: var(--height-touch);
 		align-self: center;
 		width: 100%;
+	}
+	/* In a table (no caption) a switch is a lamp: a touch square under its
+	   column's name, lit while on, no word repeated down the column (ADR-514). */
+	.panel-switch.lamp {
+		width: 100%;
+		height: var(--height-touch);
+		max-height: 100%;
+		align-self: center;
 	}
 	/* A box with its switch under it: the box takes what the switch leaves. */
 	.panel-control.with-toggle {

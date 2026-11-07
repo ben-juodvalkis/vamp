@@ -26,6 +26,9 @@
   import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
   import { OPERATOR_PANEL } from './panel/operatorPanel';
   import { operatorOscStore } from '$lib/stores/v6/operatorOscStore.svelte';
+  import { OPERATOR_ENVS, operatorEnvelope } from './panel/operatorPanel';
+  import EnvelopeGraph from '../EnvelopeGraph.svelte';
+  import ScrubTabs from '../../device-panel/ScrubTabs.svelte';
 
   interface Props {
     instrument?: InstrumentInfo | null;
@@ -58,6 +61,16 @@
     liveFilterCurve(params.raw('Filter Type') ?? 0, params.raw('Filter Slope') ?? 1, params.raw('Filter Morph') ?? 0)
   );
 
+  // The board's envelope (ADR-514): the face's oscillator's until one is
+  // picked over the picture, as Live's display shows the shown tab's.
+  let envPicked = $state<number | null>(null);
+  let envShown = $derived.by(() => {
+    if (envPicked !== null) return envPicked;
+    const osc = device ? operatorOscStore.oscOf(device.devicePath) : undefined;
+    return typeof osc === 'number' && osc >= 0 && osc < 4 ? osc : 0;
+  });
+  let env = $derived(OPERATOR_ENVS[envShown]);
+
   function handleFilterXY(x: number, y: number) {
     params.writeUnit('Filter Freq', x, 'Filter On');
     params.writeUnit('Filter Res', y, 'Filter On');
@@ -82,13 +95,32 @@
     </div>
   {/snippet}
 
+  {#snippet envelopePanel()}
+    <div class="op-env" data-operator-envelope={env.title}>
+      <ScrubTabs
+        options={OPERATOR_ENVS.map((_, i) => i)}
+        selected={envShown}
+        onSelect={(i) => (envPicked = i)}
+        cols={OPERATOR_ENVS.length}
+        tint={operatorInk.primary}
+        inked
+        label={(i) => OPERATOR_ENVS[i].title}
+        groupLabel="Envelope shown"
+        style="height: var(--height-touch); --scrub-font-size: 0.8125rem;"
+      />
+      <div class="op-env-graph">
+        <EnvelopeGraph {params} names={operatorEnvelope(env)} ink={operatorInk.primary} sw={env.on} />
+      </div>
+    </div>
+  {/snippet}
+
 <div class="h-full w-full overflow-hidden relative">
   {#if instrument && device}
     <InstrumentPanelView
       panel={OPERATOR_PANEL}
       {params}
       color={operatorInk}
-      slots={{ filter: filterPad }}
+      slots={{ filter: filterPad, envelope: envelopePanel }}
       board={centralDisplayStore.expanded}
       tabOf={(region) => (region === 0 ? operatorOscStore.oscOf(device.devicePath) : undefined)}
     />
@@ -97,3 +129,17 @@
     <DeviceEmptyState glyph="~" message="Load Operator to access FM controls" color={operatorInk.primary} />
   {/if}
 </div>
+
+<style>
+  .op-env {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    height: 100%;
+    min-height: 0;
+  }
+  .op-env-graph {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+</style>

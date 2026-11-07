@@ -90,7 +90,7 @@ const PAGES: PanelPage[] = [
 					title: 'Pickup',
 					controls: [
 						{ kind: 'choice', param: 'Pickup Model', options: ['R', 'W'] },
-						{ kind: 'box', param: 'P Symmetry', title: 'Symmetry' },
+						{ kind: 'box', param: 'P Symmetry', title: 'Sym' },
 						{ kind: 'box', param: 'P Distance', title: 'Distance' },
 						{ kind: 'box', param: 'P Amp In', title: 'Amp In' },
 						{ kind: 'box', param: 'P Amp Out', title: 'Amp Out' },
@@ -127,20 +127,26 @@ const PAGES: PanelPage[] = [
 	}
 ];
 
-/** A page as a board tile: its groups, their cells two high (ADR-512). */
-const tile = (id: string, title?: string) => ({
-	id,
-	title,
-	sections: PAGES.find((p) => p.id === id)!.rows.flat().map((group) => ({ kind: 'group' as const, stack: 2, group }))
-});
+/** A page's groups by title, as board sections a knob a column (ADR-514). */
+const groups = (id: string, titles?: readonly string[]) =>
+	PAGES.find((p) => p.id === id)!
+		.rows.flat()
+		.filter((g) => !titles || titles.includes(g.title ?? ''))
+		.map((group) => ({ kind: 'group' as const, stack: 1, group }));
 
 /**
- * Electric at full screen (ADR-512): its four pages, two to a row, Hammer
- * beside Fork over Damper / Pickup beside Global, each named as its page is
- * (Damper and Pickup by their groups). Nothing is left on a page.
+ * Electric at full screen (ADR-512, re-laid by ADR-514): an instrument of
+ * 29 controls, so every knob is large and a column to itself, three rows
+ * read in the signal's order: the hammer (Stiffness, Force, Noise), the
+ * fork and the damper, then the pickup and Global. Two to a column
+ * (ADR-512's layout) left most of the screen empty between small knobs.
  */
 const BOARD: PanelBoard = {
-	rows: [{ tiles: [tile('hammer', 'Hammer'), tile('fork', 'Fork')] }, { tiles: [tile('damper-pickup'), tile('global', 'Global')] }]
+	rows: [
+		{ tiles: [{ id: 'hammer', title: 'Hammer', sections: groups('hammer') }] },
+		{ tiles: [{ id: 'fork', title: 'Fork', sections: groups('fork') }, { id: 'damper', sections: groups('damper-pickup', ['Damper']) }] },
+		{ tiles: [{ id: 'pickup', sections: groups('damper-pickup', ['Pickup']) }, { id: 'global', title: 'Global', sections: groups('global') }] }
+	]
 };
 
 export const ELECTRIC_PANEL: InstrumentPanel = {
@@ -175,7 +181,7 @@ export const ELECTRIC_PANEL: InstrumentPanel = {
 				title: 'Damper / Pickup',
 				page: 'damper-pickup',
 				controls: [
-					{ kind: 'box', param: 'P Symmetry', title: 'Symmetry' },
+					{ kind: 'box', param: 'P Symmetry', title: 'Sym' },
 					{ kind: 'choice', param: 'Pickup Model', options: ['R', 'W'] }
 				]
 			}

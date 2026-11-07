@@ -87,13 +87,13 @@
    * all on these pages (the engine levels are Global's Mix).
    */
   const engineRows = (e: 'a' | 'b'): BoardRow[] => [
-    { tiles: [{ id: `osc-${e}`, cols: 7 }, { id: `filter-${e}`, cols: 4 }], weight: 0.53 },
-    { tiles: [{ id: `env-${e}`, cols: 7 }, { id: `lfo-${e}`, cols: 7 }], weight: 0.97 }
+    { tiles: [{ id: `osc-${e}`, cols: 7 }, { id: `filter-${e}`, cols: 4 }], weight: 0.64 },
+    { tiles: [{ id: `env-${e}`, cols: 8 }, { id: `lfo-${e}`, cols: 7 }], weight: 0.9 }
   ];
   const BOARD: readonly BoardRow[] = [
     ...engineRows('a'),
     ...engineRows('b'),
-    { tiles: [{ id: 'global', cols: 9 }], weight: 0.43 }
+    { tiles: [{ id: 'global', cols: 9 }], weight: 0.46 }
   ];
 
   /** The pages behind the face's eyebrows, the shown engine's, by Live's names (ADR-487). */
