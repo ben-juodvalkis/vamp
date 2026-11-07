@@ -1,8 +1,9 @@
 <script lang="ts">
   import { FilterResponseCalculator, type FilterType as CalcFilterType } from '$lib/utils/filterResponseCalculator';
   import { DEVICE_FAMILY_INKS } from '$lib/config/devicePresets';
+  import { esotericResponse, isEsotericCurve, type EsotericCurve } from '$lib/utils/esotericFilterCurves';
 
-  export type CurveType = 'lowpass' | 'highpass' | 'bandpass' | 'bandpass-flat' | 'notch' | 'peak' | 'lowshelf' | 'highshelf' | 'eq' | 'none';
+  export type CurveType = 'lowpass' | 'highpass' | 'bandpass' | 'bandpass-flat' | 'notch' | 'peak' | 'lowshelf' | 'highshelf' | 'eq' | 'none' | EsotericCurve;
 
   export interface FilterDot {
     freq: number;      // 0-1 normalized frequency
@@ -51,6 +52,9 @@
 
   // Generate logarithmic frequency points
   const frequencies = calculator.generateLogFrequencies(20, 20000, 200);
+  // A comb's teeth and a resonator's modes are spaced linearly, so on this
+  // log axis they crowd at the top: those curves get three times the points.
+  const denseFrequencies = calculator.generateLogFrequencies(20, 20000, 600);
 
   // Convert frequencies to X coordinates
   const freqToX = (freq: number): number => {
@@ -72,8 +76,14 @@
     if (curveType === 'none') return '';
 
     let magnitudeResponse: number[];
+    let freqs = frequencies;
 
-    if (curveType === 'eq' && bands.length > 0) {
+    if (isEsotericCurve(curveType)) {
+      // Best guesses for the filters a biquad has no shape for
+      // (utils/esotericFilterCurves.ts): combs, phaser, vowel, resonators, Redux.
+      freqs = denseFrequencies;
+      magnitudeResponse = esotericResponse(curveType, calculator.normalizedToFrequency(cutoff), resonance, freqs);
+    } else if (curveType === 'eq' && bands.length > 0) {
       // Multi-band parametric EQ with different filter types per band
       const filters = bands.map(band => ({
         type: (band.type || 'peak') as CalcFilterType,
@@ -133,7 +143,7 @@
     }
 
     // Generate SVG path
-    const points = frequencies.map((freq, i) => {
+    const points = freqs.map((freq, i) => {
       const x = freqToX(freq);
       const y = dbToY(magnitudeResponse[i]);
       return [x, y];

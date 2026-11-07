@@ -1021,8 +1021,10 @@ function instrumentSwapStates() {
 		// The oscillator type grid open over the face.
 		['meld-osc-types', 'Meld', 'InstrumentMeld', meld, [{ click: '.osc-tile' }]],
 		// Plate picked from the filter grid: the second macro reads Ratio.
-		['meld-filter-plate', 'Meld', 'InstrumentMeld', meld,
-			[{ click: '.filter-type .chooser-name' }, { click: '[data-tab="meld-filter-types"] .scrub-option:nth-child(16)', force: true }]],
+		// The filters a biquad has no shape for, each drawn as a best guess
+		// (utils/esotericFilterCurves.ts): Phaser 11, Vowel 13, Comb + 14, Plate 16.
+		...[['phaser', 11], ['vowel', 13], ['comb', 14], ['plate', 16]].map(([state, nth]) => [`meld-filter-${state}`, 'Meld', 'InstrumentMeld', meld,
+			[{ click: '.filter-type .chooser-name' }, { click: `[data-tab="meld-filter-types"] .scrub-option:nth-child(${nth})`, force: true }]]),
 		// Full screen (ADR-511/512): the corner icon, and every page on one
 		// board, both halves side by side.
 		...[

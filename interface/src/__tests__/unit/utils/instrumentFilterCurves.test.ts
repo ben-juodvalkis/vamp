@@ -33,7 +33,10 @@ describe('instrumentFilterCurves', () => {
 		expect(analogFilterCurve(6)).toEqual({ curveType: 'highpass', order: 1 }); // High-pass 12dB/oct
 		expect(meldFilterCurve(1, 2 / 3)).toEqual({ curveType: 'highpass', order: 2 }); // SVF 24dB at H
 		expect(meldFilterCurve(8).curveType).toBe('peak');
-		expect(meldFilterCurve(10).curveType).toBe('none'); // Phaser: no filter shape to draw
+		expect(meldFilterCurve(10).curveType).toBe('phaser'); // a best guess (esotericFilterCurves)
+		expect(meldFilterCurve(13).curveType).toBe('comb-plus');
+		expect(meldFilterCurve(16).curveType).toBe('membrane');
+		expect(analogFilterCurve(8).curveType).toBe('vowel'); // Formant
 		expect(driftFilterCurve(1).order).toBe(2);
 	});
 });

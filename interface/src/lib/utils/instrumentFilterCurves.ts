@@ -9,9 +9,11 @@
  * read as a fraction of its own rail (Operator, Sampler, Simpler and
  * Wavetable run to 125 %, the rest to 100 %).
  *
- * The curve is the house biquad, so a type the biquad has no shape for
- * draws the nearest one (Analog's Formant as a band-pass) or nothing at
- * all (Meld's Phaser, Comb, Vowel, resonators), never a made-up shape.
+ * The curve is the house biquad where one fits. A type the biquad has no
+ * shape for draws a best guess at its response (user, 2026-11-07:
+ * `esotericFilterCurves.ts`): Meld's Phaser, Redux, Vowel, the two Combs
+ * and the Plate and Membrane resonators, and Analog's Formant as a vowel.
+ * Those shapes are not measured off Live.
  */
 import type { CurveType } from '$lib/components/v6/device-panel/FilterCurve.svelte';
 
@@ -57,7 +59,7 @@ export function liveFilterCurve(type: number, slope: number, morph = 0): Instrum
  */
 export function analogFilterCurve(type: number): InstrumentCurve {
 	const t = Math.round(type);
-	const family = (['lowpass', 'bandpass', 'notch', 'highpass', 'bandpass'] as const)[Math.floor(t / 2)] ?? 'lowpass';
+	const family = (['lowpass', 'bandpass', 'notch', 'highpass', 'vowel'] as const)[Math.floor(t / 2)] ?? 'lowpass';
 	return { curveType: family, order: (t % 2) + 1 };
 }
 
@@ -83,8 +85,23 @@ export function meldFilterCurve(type: number, lbhn = 0): InstrumentCurve {
 			return { curveType: 'peak', order: 1 }; // Eq Peak
 		case 9:
 			return { curveType: 'notch', order: 1 }; // Eq Notch
+		case 7:
+			return { curveType: 'lowpass', order: 2 }; // Filther: a driven low-pass
+		case 10:
+			return { curveType: 'phaser', order: 1 };
+		case 11:
+			return { curveType: 'redux', order: 1 };
+		case 12:
+			return { curveType: 'vowel', order: 1 };
+		case 13:
+			return { curveType: 'comb-plus', order: 1 }; // Comb +
+		case 14:
+			return { curveType: 'comb-minus', order: 1 }; // Comb −
+		case 15:
+			return { curveType: 'plate', order: 1 }; // Plate Resonator
+		case 16:
+			return { curveType: 'membrane', order: 1 }; // Membrane Resonator
 		default:
-			// Filther, Phaser, Redux, Vowel, Comb ±, Plate and Membrane Resonator
 			return { curveType: 'none', order: 1 };
 	}
 }
