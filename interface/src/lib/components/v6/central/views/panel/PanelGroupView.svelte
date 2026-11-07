@@ -15,7 +15,7 @@
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
 	import PanelControlView from './PanelControlView.svelte';
 	import PanelEyebrow from './PanelEyebrow.svelte';
-	import { controlKnobSize, controlUnits, faceKnobFit, frameColumns, groupFace, groupUnits, isKnobGroup, knobGridFit, pageCells, pageGroupGrid, pagePicks, type PanelFace, type PanelGroup } from './panelTypes';
+	import { controlKnobSize, controlUnits, faceKnobFit, frameColumns, groupFace, groupUnits, isKnobGroup, knobGridFit, pageCells, pageGroupGrid, pagePicks, type PanelControl, type PanelFace, type PanelGroup } from './panelTypes';
 	import type { PanelParams } from './usePanelParams.svelte';
 
 	interface Props {
@@ -43,9 +43,19 @@
 		onPage?: boolean;
 		/** On a one-row page: a cell a column, the page's height, knobs as large as the column holds. */
 		oneRow?: boolean;
+		/**
+		 * On a full-screen board's face grid (ADR-512): its cells this many
+		 * high, column after column over `columns`, each knob as large as its
+		 * cell holds; an envelope's stages a column each, full height.
+		 */
+		stack?: number;
+		/** On a board: a pick of this many values or fewer is a tab, more a `ChoicePicker`. */
+		tabMax?: number;
 	}
 
-	let { group, params, color, onOpen, bare = false, pageRows = 1, boxFace, columns, underTabs = false, dataGroup, onPage = false, oneRow = false }: Props = $props();
+	let { group, params, color, onOpen, bare = false, pageRows = 1, boxFace, columns, underTabs = false, dataGroup, onPage = false, oneRow = false, stack, tabMax = 2 }: Props = $props();
+	// On a board: a pick too long for a tab its cell can hold opens over the view.
+	const boardPick = (c: PanelControl) => (c.kind === 'choice' ? c.options.length > tabMax : c.kind === 'step' && !!c.labels && c.labels.length > tabMax);
 	let pageGrid = $derived(onPage ? pageGroupGrid(group, oneRow) : undefined);
 	// A page's stages draw on their own equal columns where they take fewer face columns than stages.
 	let pageOwnGrid = $derived(!!pageGrid && pageGrid.rows === 1 && pageGrid.columns < pageGrid.cells);
@@ -93,7 +103,26 @@
 	let cols = $derived(Math.ceil(group.controls.length / rows));
 </script>
 
-{#if pageGrid}
+{#if stack && columns}
+	<!-- On a board (ADR-512): cells `stack` high, column after column; an
+	     envelope's stages a column each, the tile's full height. -->
+	{@const stages = face === 'slider'}
+	<!-- A lone control stands the full height; any more keep the row's
+	     `stack` rows, so their knobs line up with the next section's. -->
+	{@const rowsOf = stages || group.controls.length === 1 ? 1 : stack}
+	<div
+		class="panel-group-grid page-cells"
+		class:own-grid={stages && columns !== group.controls.length}
+		data-board-stack={rowsOf}
+		style="grid-column: span {columns}; grid-template-rows: repeat({rowsOf}, minmax(0, 1fr));{stages && columns !== group.controls.length ? ` grid-template-columns: repeat(${group.controls.length}, minmax(0, 1fr));` : ''}"
+	>
+		{#each group.controls as control (control.param)}
+			<div class="panel-cell">
+				<PanelControlView {control} {params} {color} switchParam={group.switchParam} {face} knobSize={rowsOf === 1 ? 'l' : 'm'} pick={boardPick(control)} />
+			</div>
+		{/each}
+	</div>
+{:else if pageGrid}
 	<!-- On a page's face grid: a cell a column on a one-row page, else two
 	     high, column after column. -->
 	{@const pageSize = oneRow ? 'l' : 'm'}

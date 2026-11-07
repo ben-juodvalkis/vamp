@@ -5,7 +5,9 @@
    * every section's eyebrow opens its page. The panel is data
    * (`panel/collisionPanel.ts`), bound by Live's parameter names. Until
    * 2026-10-27 the view was one XY pad per resonator, bound by index, and
-   * Resonator 2's had Decay and Material swapped.
+   * Resonator 2's had Decay and Material swapped. At full screen it draws
+   * the panel's board (ADR-512): the resonators and the LFOs as tables,
+   * no tab strip and no page to open.
    */
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
@@ -16,6 +18,7 @@
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import InstrumentPanelView from './panel/InstrumentPanelView.svelte';
   import { usePanelParams } from './panel/usePanelParams.svelte';
+  import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
   import { COLLISION_PANEL } from './panel/collisionPanel';
 
   interface Props {
@@ -49,7 +52,7 @@
 
 <div class="h-full w-full overflow-hidden relative">
   {#if instrument && device}
-    <InstrumentPanelView panel={COLLISION_PANEL} {params} color={collisionInk} />
+    <InstrumentPanelView panel={COLLISION_PANEL} {params} color={collisionInk} board={centralDisplayStore.expanded} />
   {:else}
     <DeviceEmptyState glyph="~" message="Load Collision to access resonator controls" color={collisionInk.primary} />
   {/if}

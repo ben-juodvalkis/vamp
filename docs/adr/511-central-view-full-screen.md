@@ -46,7 +46,8 @@ corner that expands it to the whole screen, for now.
   height: pads, wave and filter pictures and value boxes grow, knobs keep
   their size and spread out. A face drawn for the full screen (Wavetable's
   two oscillators and both filters at once, Operator's four operators side
-  by side) is the next step, one instrument at a time.
+  by side) is the next step, one instrument at a time: ADR-512 does it
+  for the seven paged instruments.
 - While expanded the strips, the clip grid and the chain are out of reach;
   the pedals still reach the surface (ADR-422). Collapsing on a track
   change was considered and left out for now.

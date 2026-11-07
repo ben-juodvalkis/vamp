@@ -22,6 +22,13 @@
 	 * eyebrow on the one header line, every column one width and every seam
 	 * the same. A tab strip lies over the top of its sections' controls,
 	 * under the header line, which names the shown tab's groups.
+	 *
+	 * At full screen (`board`, ADR-512) a panel with a `board` draws it in
+	 * place of the frame: `InstrumentBoard`'s rows of tiles, each tile a face
+	 * grid of the panel's board sections, every control on screen at once,
+	 * no tab strip and no page to open. A matrix section draws twin sections
+	 * as a table (a row each, its name at the left; a column a control, its
+	 * name once over it). Off the board the panel draws exactly as before.
 	 */
 	import type { Snippet } from 'svelte';
 	import FaceGrid from '../../FaceGrid.svelte';
@@ -31,7 +38,9 @@
 	import PanelGroupView from './PanelGroupView.svelte';
 	import PanelTabs from './PanelTabs.svelte';
 	import PanelEyebrow from './PanelEyebrow.svelte';
-	import { groupColumns, pageGroupGrid, pageOneRow, pageSections, regionSections, tabsByPosition, type InstrumentPanel, type PanelGroup, type PanelPage, type PanelTab } from './panelTypes';
+	import PanelControlView from './PanelControlView.svelte';
+	import InstrumentBoard, { type BoardRow } from '../../InstrumentBoard.svelte';
+	import { boardGroupColumns, boardTileSections, boardTileWeight, groupColumns, pageGroupGrid, pageOneRow, pageSections, regionSections, tabsByPosition, type InstrumentPanel, type PanelGroup, type PanelMatrix, type PanelPage, type PanelTab } from './panelTypes';
 	import type { PanelParams } from './usePanelParams.svelte';
 
 	interface Props {
@@ -46,9 +55,32 @@
 		 * It is handed the way to open a page, for its `PanelEyebrow`s.
 		 */
 		face?: Snippet<[(page: string) => void]>;
+		/** Full screen (ADR-512): draw the panel's `board`, where it has one. */
+		board?: boolean;
 	}
 
-	let { panel, params, color, slots = {}, face }: Props = $props();
+	let { panel, params, color, slots = {}, face, board = false }: Props = $props();
+
+	// The board's rows for InstrumentBoard: a tile's share of its row is its
+	// face columns, plus what its inset and seams take in columns, so a
+	// one-column tile's column comes out as wide as a sixteen-column one's.
+	let boardRows = $derived<BoardRow[]>(
+		(panel.board?.rows ?? []).map((r) => ({
+			weight: r.weight,
+			tiles: r.tiles.map((t) => ({ id: t.id, cols: boardTileWeight(boardTileSections(t), t.columnPx) }))
+		}))
+	);
+	const boardTile = (id: string) => panel.board?.rows.flatMap((r) => r.tiles).find((t) => t.id === id);
+
+	/** Where a matrix group's column starts on its section's grid lines (the rows' names take the first's first). */
+	function matrixStarts(m: PanelMatrix, g: number): number[] {
+		let line = g === 0 ? 2 : 1;
+		return m.groups[g].columns.map((c) => {
+			const at = line;
+			line += c.span ?? 1;
+			return at;
+		});
+	}
 
 	let pageId = $state<string | null>(null);
 	let tabSelected = $state<Record<number, number>>({});
@@ -89,7 +121,105 @@
 	}
 </script>
 
-{#if page}
+{#if board && panel.board}
+	<!-- Full screen (ADR-512): the panel's board, every control at once. -->
+	<InstrumentBoard rows={boardRows} ink={color.primary}>
+		{#snippet tile(id)}
+			{@const t = boardTile(id)}
+			{#if t}
+				<FaceGrid sections={boardTileSections(t)} data-board-face={id}>
+					{#each t.sections as section, s (s)}
+						{#if s > 0}<FaceSeam ink={color.primary} />{/if}
+						{#if section.kind === 'group'}
+							{@const span = boardGroupColumns(section)}
+							{@const named = s === 0 && t.title}
+							<FaceSection {span} data-group={section.group.title ?? ''}>
+								{#snippet head()}
+									{#if named}<span class="board-title" style="color: {color.primary};">{t.title}</span>{/if}
+									{#if !named || (section.group.title && section.group.title !== t.title && span >= 2)}<PanelEyebrow title={section.group.title} color={color.primary} />{/if}
+								{/snippet}
+								<PanelGroupView group={section.group} {params} {color} boxFace={panel.boxFace} columns={span} stack={section.stack} />
+							</FaceSection>
+						{:else if section.kind === 'slot'}
+							<FaceSection span={section.columns} data-group={section.title ?? section.slot}>
+								{#snippet head()}<PanelEyebrow title={section.title} color={color.primary} />{/snippet}
+								<div class="panel-slot-body face-span-all">{@render slots[section.slot]?.()}</div>
+							</FaceSection>
+						{:else}
+							{@render matrix(section.matrix)}
+						{/if}
+					{/each}
+				</FaceGrid>
+			{/if}
+		{/snippet}
+	</InstrumentBoard>
+	<!-- A matrix (ADR-512): a section a group of its columns, seamed; the
+	     header line names each column over it (the rows' names under the
+	     matrix's own), then a row a twin, the first section starting with
+	     the rows' names. A matrix whose columns repeat a name across groups
+	     (`groupLine`) puts the groups' names on the header line and the
+	     columns' on a line under it. Cells sit on the face's own columns. -->
+	{#snippet matrix(m: PanelMatrix)}
+		{#each m.groups as mg, g (g)}
+			{@const starts = matrixStarts(m, g)}
+			{@const span = mg.columns.reduce((n, c) => n + (c.span ?? 1), g === 0 ? 1 : 0)}
+			{#if g > 0}<FaceSeam ink={color.primary} />{/if}
+			<FaceSection {span} data-group={mg.title}>
+				{#snippet head()}
+					{#if m.groupLine}
+						<PanelEyebrow title={mg.title} color={color.primary} />
+					{:else}
+						<div class="head-cols" style="grid-template-columns: repeat({span}, minmax(0, 1fr));">
+							{#if g === 0}<span class="matrix-col-name matrix-title" style="grid-column: 1; color: {color.primary};">{m.title ?? ''}</span>{/if}
+							{#each mg.columns as col, c (c)}
+								<span class="matrix-col-name" style="grid-column: {starts[c]} / span {col.span ?? 1}; color: {color.primary};">{col.title}</span>
+							{/each}
+						</div>
+					{/if}
+				{/snippet}
+				{@const top = m.groupLine ? 2 : 1}
+				<div class="matrix face-span-all" data-matrix={mg.title} style="grid-template-rows: {m.groupLine ? 'auto ' : ''}repeat({m.rows.length}, minmax(0, 1fr));">
+					{#if m.groupLine}
+						{#if g === 0}<span class="matrix-col-name matrix-title" style="grid-column: 1; grid-row: 1; color: {color.primary};">{m.title ?? ''}</span>{/if}
+						{#each mg.columns as col, c (c)}
+							<span class="matrix-col-name" style="grid-column: {starts[c]} / span {col.span ?? 1}; grid-row: 1; color: {color.primary};">{col.title}</span>
+						{/each}
+					{/if}
+					{#if g === 0}
+						{#each m.rows as row, r (r)}
+							<div class="matrix-cell matrix-name" style="grid-column: 1; grid-row: {r + top};">
+								{#if row.switchParam && !row.quiet}
+									<PanelControlView control={{ kind: 'switch', param: row.switchParam, title: row.title }} {params} {color} switchParam={row.switchParam} face="knob" />
+								{:else}
+									<span class="matrix-row-name" style="color: {color.primary};">{row.title}</span>
+								{/if}
+							</div>
+						{/each}
+					{/if}
+					{#each mg.columns as col, c (c)}
+						{#each col.cells as cell, r (r)}
+							{#if cell}
+								<div class="matrix-cell" style="grid-column: {starts[c]} / span {col.span ?? 1}; grid-row: {r + top};">
+									<PanelControlView
+										control={cell}
+										{params}
+										{color}
+										switchParam={m.rows[r]?.switchParam}
+										face={col.face ?? panel.boxFace ?? 'slider'}
+										knobSize="m"
+										pick={cell.kind === 'choice' || (cell.kind === 'step' && !!cell.labels)}
+										bareCaption
+										caption={false}
+									/>
+								</div>
+							{/if}
+						{/each}
+					{/each}
+				</div>
+			</FaceSection>
+		{/each}
+	{/snippet}
+{:else if page}
 	<!-- A section's page on the face grid (ADR-510): a section a group, every
 	     row's groups in one row (so its seams run the page's height), the
 	     page's way back on the first section's header line. -->
@@ -222,6 +352,51 @@
 		align-items: center;
 		min-width: 0;
 	}
+	/* A board's matrix (ADR-512): the face's columns, a line of names over
+	   rows of equal height. */
+	.matrix {
+		display: grid;
+		grid-template-columns: subgrid;
+		row-gap: var(--face-gutter, var(--spacing-sm));
+		min-width: 0;
+		min-height: 0;
+	}
+	.matrix-col-name,
+	.matrix-row-name {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		font-size: 0.75rem;
+		font-weight: 600;
+		line-height: 1rem;
+		text-align: center;
+		white-space: nowrap;
+		min-width: 0;
+		opacity: 0.85;
+	}
+	.matrix-row-name {
+		align-self: center;
+		font-weight: 700;
+		opacity: 1;
+	}
+	.matrix-cell {
+		display: flex;
+		align-items: center;
+		min-width: 0;
+		min-height: 0;
+	}
+	.matrix-cell > :global(*) {
+		flex: 1 1 0;
+		min-width: 0;
+	}
+	/* The rows' names stand at the section's left edge, as a table's do,
+	   so a seam before the matrix keeps its gap to them. */
+	.matrix-name {
+		justify-content: flex-start;
+	}
+	.matrix-row-name,
+	.matrix-col-name.matrix-title {
+		text-align: left;
+	}
 	.panel-slot-body {
 		display: flex;
 		min-width: 0;
@@ -230,6 +405,13 @@
 	.panel-slot-body > :global(*) {
 		flex: 1 1 0;
 		min-width: 0;
+	}
+	/* A board tile's page name (ADR-512): the way back's type, but plain. */
+	.board-title {
+		font-size: 0.75rem;
+		font-weight: 700;
+		line-height: 1rem;
+		white-space: nowrap;
 	}
 	/* The way back, on the first section's header line: the page's name,
 	   a "‹" before it, as Drift's pages draw it. */

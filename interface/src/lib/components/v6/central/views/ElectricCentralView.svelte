@@ -5,7 +5,8 @@
    * section's eyebrow opening its detail, as Live's display does. The panel
    * is data (`panel/electricPanel.ts`), bound by Live's parameter names.
    * Until 2026-10-27 the view was two XY pads, Hammer and Fork, bound by
-   * index.
+   * index. At full screen it draws the panel's board (ADR-512): the four
+   * pages at once, two to a row.
    */
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
@@ -15,6 +16,7 @@
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import InstrumentPanelView from './panel/InstrumentPanelView.svelte';
   import { usePanelParams } from './panel/usePanelParams.svelte';
+  import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
   import { ELECTRIC_PANEL } from './panel/electricPanel';
 
   interface Props {
@@ -46,7 +48,7 @@
 
 <div class="h-full w-full overflow-hidden relative">
   {#if instrument && device}
-    <InstrumentPanelView panel={ELECTRIC_PANEL} {params} color={electricInk} />
+    <InstrumentPanelView panel={ELECTRIC_PANEL} {params} color={electricInk} board={centralDisplayStore.expanded} />
   {:else}
     <!-- Default state when no Electric present -->
     <DeviceEmptyState glyph="~" message="Load Electric to access controls" color={electricInk.primary} />
