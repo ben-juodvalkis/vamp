@@ -14,6 +14,9 @@ import { logger } from '$lib/utils/logger';
 	import { useClipSwap } from './useClipSwap.svelte';
 	import { provideSwapHost } from './swapHost.svelte';
 	import { provideValueBoxes } from './valueBox';
+	import { press } from '$lib/actions/press';
+	import Maximize from '@lucide/svelte/icons/maximize';
+	import Minimize from '@lucide/svelte/icons/minimize';
 	import type { Component } from 'svelte';
 
 	// Component loading state
@@ -112,6 +115,17 @@ import { logger } from '$lib/utils/logger';
 		const observer = new MutationObserver(read);
 		observer.observe(host, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-density'] });
 		return () => observer.disconnect();
+	});
+
+	// Full screen (ADR-511): the corner icon blows the view up over the whole
+	// screen and brings it back. Not on the master track's System view, whose
+	// Settings gear owns that corner and which has nothing to design; a jump
+	// to it while expanded (the master selected from Live) lands it back in
+	// the stack, since its corner would offer no way out.
+	let expandable = $derived(viewType !== 'system');
+	let expanded = $derived(centralDisplayStore.expanded);
+	$effect(() => {
+		if (expanded && !expandable) centralDisplayStore.setExpanded(false);
 	});
 
 	// Reactive effect to load the appropriate component when view type/subType changes
@@ -238,9 +252,62 @@ import { logger } from '$lib/utils/logger';
 		{/if}
 	</div>
 
+	{#if expandable}
+		<!-- Full screen and back (ADR-511), in the frame's top-right corner,
+		     over the view: absolute, so it costs no view any room. -->
+		<button
+			type="button"
+			class="central-expand"
+			aria-label={expanded ? 'Exit full screen' : 'Full screen'}
+			aria-pressed={expanded}
+			data-central-expand
+			use:press={{ onPress: () => centralDisplayStore.toggleExpanded(), touchAction: 'none' }}
+		>
+			{#if expanded}
+				<Minimize class="h-4 w-4" />
+			{:else}
+				<Maximize class="h-4 w-4" />
+			{/if}
+		</button>
+	{/if}
+
 </div>
 
+<svelte:window
+	onkeydown={(e) => {
+		if (e.key === 'Escape' && expanded) centralDisplayStore.setExpanded(false);
+	}}
+/>
+
 <style>
+	/* The full-screen switch (ADR-511): a quiet 16px glyph pushed into the
+	   corner of a 44px touch box, so the mark sits in the view's inset,
+	   clear of a header line's last name, while the box keeps the touch
+	   floor. Over the view (z-index) so a view's own corner content never
+	   swallows it. */
+	.central-expand {
+		position: absolute;
+		top: 0;
+		right: 0;
+		width: var(--height-touch, 44px);
+		height: var(--height-touch, 44px);
+		padding: 5px;
+		display: inline-flex;
+		align-items: flex-start;
+		justify-content: flex-end;
+		color: var(--muted-foreground);
+		opacity: 0.7;
+		border: none;
+		background: transparent;
+		cursor: pointer;
+		z-index: 30;
+	}
+	.central-expand:hover,
+	.central-expand[aria-pressed='true'] {
+		color: var(--foreground);
+		opacity: 1;
+	}
+
 	/* Zone frame (§5.4): 2px ring in the zone accent — device colour, else
 	   the focused track's ink — echoing the strip. Set here (over
 	   .glass-panel's 1px hairline) from the inline `--zone-accent`. */

@@ -28,6 +28,23 @@ class CentralDisplayStore {
 	private lastDeviceView = $state<CentralViewData | null>(null);
 	private lastClipView = $state<CentralViewData | null>(null);
 
+	// The view blown up to the whole screen for sound design (ADR-511).
+	// View state only, never stored: a reload comes back to the stack.
+	private isExpanded = $state(false);
+
+	/** True while the central view covers the whole screen (ADR-511). */
+	get expanded(): boolean {
+		return this.isExpanded;
+	}
+
+	setExpanded(expanded: boolean) {
+		this.isExpanded = expanded;
+	}
+
+	toggleExpanded() {
+		this.isExpanded = !this.isExpanded;
+	}
+
 	/**
 	 * Set the current view
 	 */
