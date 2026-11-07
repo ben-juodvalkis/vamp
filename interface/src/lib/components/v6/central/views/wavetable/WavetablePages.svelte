@@ -16,6 +16,11 @@
    * Pages: `osc1` / `osc2`, `filter1` / `filter2`, `mod` (the modulation
    * sources, each section's name opening its own page), `amp`, `env2`,
    * `env3`, `lfo1`, `lfo2` (whose way back is `mod`), and `global`.
+   *
+   * On the full-screen board (`board`, ADR-512) every page is a tile at
+   * once: a page's way back is its plain name, and Amp, the LFOs and Global
+   * stack two knobs to a column so a row holds more of them; a loop mode is
+   * a `ChoicePicker`, its tab too narrow for a board column.
    */
   import type { Snippet } from 'svelte';
   import DeviceSlider from '../../../device-panel/DeviceSlider.svelte';
@@ -23,6 +28,7 @@
   import FaceGrid from '../../FaceGrid.svelte';
   import FaceSection from '../../FaceSection.svelte';
   import FaceSeam from '../../FaceSeam.svelte';
+  import ChoicePicker from '../../ChoicePicker.svelte';
   import type { PanelParams } from '../panel/usePanelParams.svelte';
   import type { DeviceColorScheme } from '$lib/config/devicePresets';
 
@@ -38,9 +44,14 @@
     oscPad: Snippet<[1 | 2]>;
     /** Effect 1's and Effect 2's names under the oscillator's effect mode. */
     effectTitles: (osc: 1 | 2) => readonly [string, string];
+    /**
+     * A tile of the full-screen board (ADR-512): every page is on screen, so
+     * a page's way back is its plain name and a section's link is its name.
+     */
+    board?: boolean;
   }
 
-  let { page, params, ink, oscInks, onNavigate, oscPad, effectTitles }: Props = $props();
+  let { page, params, ink, oscInks, onNavigate, oscPad, effectTitles, board = false }: Props = $props();
 
   const TITLES: Record<string, string> = {
     osc1: 'Osc 1', osc2: 'Osc 2', filter1: 'Filter 1', filter2: 'Filter 2', mod: 'Mod Sources',
@@ -164,14 +175,26 @@
   </div>
 {/snippet}
 
+<!-- A pick as a button naming the value, opening the values over the
+     view: a board tile's column is too narrow for its tab. -->
+{#snippet pick(param: string, labels: readonly string[], title: string)}
+  <div class="cell sw-cell" data-param={param}>
+    <ChoicePicker options={labels} selected={params.has(param) ? step(param) : undefined} onSelect={(i) => params.write(param, lo(param) + i)} label={title} tint={ink.primary} ghost={!params.has(param)} />
+  </div>
+{/snippet}
+
 {#snippet back(color: string = ink.primary)}
-  <button class="page-back" style="color: {color};" onclick={() => onNavigate(PARENT[page] ?? null)}>‹ {title}</button>
+  {#if board}
+    <span class="sub" style="color: {color};">{title}</span>
+  {:else}
+    <button class="page-back" style="color: {color};" onclick={() => onNavigate(PARENT[page] ?? null)}>‹ {title}</button>
+  {/if}
 {/snippet}
 
 {#snippet sub(text: string, color: string = ink.primary)}<span class="sub" style="color: {color};">{text}</span>{/snippet}
 
 {#snippet link(text: string, to: string)}
-  <button class="sub page-link" style="color: {ink.primary};" data-page={to} onclick={() => onNavigate(to)}>{text} ›</button>
+  {#if board}<span class="sub" style="color: {ink.primary};">{text}</span>{:else}<button class="sub page-link" style="color: {ink.primary};" data-page={to} onclick={() => onNavigate(to)}>{text} ›</button>{/if}
 {/snippet}
 
 <div class="wt-page" data-wavetable-page={page}>
@@ -248,6 +271,18 @@
       </FaceSection>
     {/each}
   </FaceGrid>
+{:else if page === 'amp' && board}
+  <!-- On the board (ADR-512) four columns, as an envelope page: each stage
+       over its slope, Sustain over the loop mode. -->
+  <FaceGrid sections={[4]}>
+    <FaceSection span={4}>
+      {#snippet head()}{@render back()}{/snippet}
+      <div class="stack">{@render knob('Amp Attack', 'Attack', 'm')}{@render knob('Amp A Slope', 'A Slope', 'm')}</div>
+      <div class="stack">{@render knob('Amp Decay', 'Decay', 'm')}{@render knob('Amp D Slope', 'D Slope', 'm')}</div>
+      <div class="stack">{@render knob('Amp Sustain', 'Sustain', 'm')}{@render pick('Amp Loop Mode', LOOP_MODES, 'Amp loop')}</div>
+      <div class="stack">{@render knob('Amp Release', 'Release', 'm')}{@render knob('Amp R Slope', 'R Slope', 'm')}</div>
+    </FaceSection>
+  </FaceGrid>
 {:else if page === 'amp'}
   <!-- Eight columns (~107px), a knob each, all large: the stages, their
        slopes, and the loop mode. -->
@@ -272,6 +307,24 @@
       {@render tab('Amp Loop Mode', LOOP_MODES)}
     </FaceSection>
   </FaceGrid>
+{:else if (page === 'env2' || page === 'env3') && board}
+  <!-- On the board (ADR-512) six columns: each stage over its slope, then
+       the levels and the loop mode two to a column, so every name fits. -->
+  <FaceGrid sections={[4, 2]}>
+    <FaceSection span={4}>
+      {#snippet head()}{@render back()}{/snippet}
+      <div class="stack">{@render knob(`${E} Attack`, 'Attack', 'm')}{@render knob(`${E} A Slope`, 'A Slope', 'm')}</div>
+      <div class="stack">{@render knob(`${E} Decay`, 'Decay', 'm')}{@render knob(`${E} D Slope`, 'D Slope', 'm')}</div>
+      <div class="stack">{@render knob(`${E} Sustain`, 'Sustain', 'm')}<div></div></div>
+      <div class="stack">{@render knob(`${E} Release`, 'Release', 'm')}{@render knob(`${E} R Slope`, 'R Slope', 'm')}</div>
+    </FaceSection>
+    <FaceSeam ink={ink.primary} />
+    <FaceSection span={2}>
+      {#snippet head()}{@render sub('Levels · Loop')}{/snippet}
+      <div class="stack">{@render knob(`${E} Initial`, 'Initial', 'm')}{@render knob(`${E} Final`, 'Final', 'm')}</div>
+      <div class="stack">{@render knob(`${E} Peak`, 'Peak', 'm')}{@render pick(`${E} Loop Mode`, LOOP_MODES, `${E} loop`)}</div>
+    </FaceSection>
+  </FaceGrid>
 {:else if page === 'env2' || page === 'env3'}
   <!-- Five columns (~181px): each stage over its slope (Sustain over the
        loop mode), then the three levels the envelope moves between. Two
@@ -288,6 +341,29 @@
     <FaceSection span={1}>
       {#snippet head()}{@render sub('Levels')}{/snippet}
       <div class="stack tight">{@render knob(`${E} Initial`, 'Initial', 'm')}{@render knob(`${E} Peak`, 'Peak', 'm')}{@render knob(`${E} Final`, 'Final', 'm')}</div>
+    </FaceSection>
+  </FaceGrid>
+{:else if (page === 'lfo1' || page === 'lfo2') && board}
+  <!-- On the board (ADR-512) five columns: the shape's pictures, the sync
+       over Retrig, then Rate over Amount, Morph over Offset, and Attack. -->
+  <FaceGrid sections={[5]}>
+    <FaceSection span={5}>
+      {#snippet head()}{@render back()}{/snippet}
+      {@render tab(`${L} Wave`, LFO_WAVES, { glyph: true })}
+      <div class="column">
+        <div class="grow">{@render tab(`${L} Sync`, ['Free', 'Tempo'])}</div>
+        {@render sw(`${L} Retrig On`, 'Retrig')}
+      </div>
+      <div class="stack">
+        {#if lfoTempo}
+          {@render knob(`${L} Synced`, 'Sync', 'm', { steps: SYNCED.length, labels: SYNCED })}
+        {:else}
+          {@render knob(`${L} Freq`, 'Rate', 'm')}
+        {/if}
+        {@render knob(`${L} Amount`, 'Amount', 'm')}
+      </div>
+      <div class="stack">{@render knob(`${L} Morph`, 'Morph', 'm')}{@render knob(`${L} Offset`, 'Offset', 'm')}</div>
+      <div class="stack">{@render knob(`${L} Attack`, 'Attack', 'm')}<div></div></div>
     </FaceSection>
   </FaceGrid>
 {:else if page === 'lfo1' || page === 'lfo2'}
@@ -315,6 +391,16 @@
       {@render knob(`${L} Morph`, 'Morph', 'l')}
       {@render knob(`${L} Offset`, 'Offset', 'l')}
       {@render knob(`${L} Attack`, 'Attack', 'l')}
+    </FaceSection>
+  </FaceGrid>
+{:else if page === 'global' && board}
+  <!-- On the board (ADR-512) three columns, two knobs to a column. -->
+  <FaceGrid sections={[3]}>
+    <FaceSection span={3}>
+      {#snippet head()}{@render back()}{/snippet}
+      <div class="stack">{@render knob('Volume', 'Volume', 'm')}{@render knob('Transpose', 'Transp', 'm')}</div>
+      <div class="stack">{@render knob('Glide', 'Glide', 'm')}{@render knob('Unison Amount', 'Unison', 'm')}</div>
+      <div class="stack">{@render knob('Time', 'Time', 'm')}{@render knob('Global Mod Amount', 'Mod Amt', 'm')}</div>
     </FaceSection>
   </FaceGrid>
 {:else if page === 'global'}

@@ -64,6 +64,8 @@
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import WavetableWave from './wavetable/WavetableWave.svelte';
   import WavetablePages from './wavetable/WavetablePages.svelte';
+  import InstrumentBoard, { type BoardRow } from '../InstrumentBoard.svelte';
+  import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
   import { useOscWave } from './wavetable/useOscWave.svelte';
   import FilterDotsGraph from '../FilterDotsGraph.svelte';
   import ScrubTabs from '../../device-panel/ScrubTabs.svelte';
@@ -287,6 +289,18 @@
   let wtPage = $state<string | null>(null);
   const openWtPage = (page: string | null) => (wtPage = page);
 
+  /**
+   * Full screen (ADR-512): every page at once, both oscillators side by
+   * side, both filters, the three envelopes, both LFOs and Global. The
+   * Mod Sources page, a summary of the five, has no tile.
+   */
+  const BOARD: readonly BoardRow[] = [
+    { tiles: [{ id: 'osc1', cols: 8 }, { id: 'osc2', cols: 8 }], weight: 1.2 },
+    { tiles: [{ id: 'filter1', cols: 7 }, { id: 'filter2', cols: 7 }] },
+    { tiles: [{ id: 'amp', cols: 4 }, { id: 'env2', cols: 6 }, { id: 'env3', cols: 6 }] },
+    { tiles: [{ id: 'lfo1', cols: 5 }, { id: 'lfo2', cols: 5 }, { id: 'global', cols: 3 }] }
+  ];
+
   /** Both envelopes in view, Amp over Envelope 2 (ADR-477). */
   const ENVELOPES = [
     { title: 'Amp Envelope', stages: ENVELOPE },
@@ -415,7 +429,22 @@
 {/snippet}
 
 <div class="wt-root h-full w-full overflow-hidden relative">
-  {#if instrument && device}
+  {#if instrument && device && centralDisplayStore.expanded}
+    <InstrumentBoard rows={BOARD} ink={wavetableInk.primary}>
+      {#snippet tile(id)}
+        <WavetablePages
+          page={id}
+          params={panelParams}
+          ink={wavetableInk}
+          oscInks={{ 1: osc1Ink, 2: osc2Ink }}
+          onNavigate={() => {}}
+          {oscPad}
+          {effectTitles}
+          board
+        />
+      {/snippet}
+    </InstrumentBoard>
+  {:else if instrument && device}
     <InstrumentPanelView panel={WAVETABLE_PANEL} params={panelParams} color={wavetableInk}>
     {#snippet face(_openPage: (page: string) => void)}
     {#if wtPage}
