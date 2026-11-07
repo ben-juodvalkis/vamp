@@ -173,18 +173,6 @@
   </div>
 {/snippet}
 
-<!-- A knob in a row of footed mod knobs: the same knob box, its name and
-     value in the foot, so every knob in the row sits on one line. -->
-{#snippet footKnob(param: string, title: string, steps?: number)}
-  <div class="mod-cell footed" data-param={param}>
-    <div class="mod-knob">{@render knob(param, title, steps, ' ', ink, 'l')}</div>
-    <div class="mod-foot foot-label" style="color: {ink.primary};">
-      <span class="foot-title">{title}</span>
-      <span class="foot-value">{params.display(param) ?? ''}</span>
-    </div>
-  </div>
-{/snippet}
-
 {#snippet lfoGlyph(label: string)}
   <svg class="lfo-glyph" viewBox="0 0 24 12" role="img" aria-label={label}>
     <path d={LFO_GLYPHS[label] ?? ''} fill="none" stroke="currentColor" stroke-width="1.6"
@@ -304,25 +292,6 @@
       <div class="stack">{@render modKnob('LP Mod Amt 1', '1', 'Filter Mod 1', 'mod_matrix_filter_source_1_index')}{@render modKnob('LP Mod Amt 2', '2', 'Filter Mod 2', 'mod_matrix_filter_source_2_index')}</div>
     </FaceSection>
   </FaceGrid>
-{:else if page === 'filter'}
-  <!-- The pad sets LP Freq, LP Res and HP Freq (its two dots), so they
-       have no knobs here (user, 2026-11-06). -->
-  <FaceGrid sections={[8, 1, 1]}>
-    <FaceSection span={8}>
-      {#snippet head()}{@render back()}{/snippet}
-      <div class="face-span-all pad">{@render filterPad()}</div>
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={1}>
-      {#snippet head()}<span class="sub" style="color: {ink.primary};">Low Pass</span>{/snippet}
-      <div class="stack">{@render tab('LP Type', ['I', 'II'])}{@render knob('Key > LPF', 'Key')}</div>
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={1}>
-      {#snippet head()}<span class="sub" style="color: {ink.primary};">Mod</span>{/snippet}
-      <div class="stack">{@render modKnob('LP Mod Amt 1', '1', 'Filter Mod 1', 'mod_matrix_filter_source_1_index')}{@render modKnob('LP Mod Amt 2', '2', 'Filter Mod 2', 'mod_matrix_filter_source_2_index')}</div>
-    </FaceSection>
-  </FaceGrid>
 {:else if page === 'envelopes'}
   <FaceGrid sections={[4, 5]}>
     <FaceSection span={4}>
@@ -377,32 +346,6 @@
       {@render modKnob('Mod Matrix Amt 3', '3', 'Matrix 3', 'mod_matrix_source_3_index', 'mod_matrix_target_3_index', ink, 'l', true)}
     </FaceSection>
   </FaceGrid>
-{:else if page === 'lfo-mod'}
-  <!-- Eight columns (~111px), so every knob is large (user, 2026-11-06):
-       the shape as pictures over the rate mode and Retrig in two columns,
-       then Rate, Amount and LFO Mod a column each; the matrix's three slots
-       a column each, the amount over its source and target. -->
-  <FaceGrid sections={[5, 3]}>
-    <FaceSection span={5}>
-      {#snippet head()}{@render back()}<span class="sub" style="color: {ink.primary};">LFO</span>{/snippet}
-      <div class="face-span-2 lfo-shape">
-        <div class="lfo-waves">{@render tab('LFO Wave', LFO_WAVES, { cols: 3, lfo: true })}</div>
-        <div class="lfo-mode">{@render tab('LFO Mode', RATE_MODES, { cols: 4 })}</div>
-        {@render sw('LFO Retrig On', 'Retrig')}
-      </div>
-      {@render footKnob(lfoRate, step('LFO Mode') === 3 ? 'Sync' : 'Rate', step('LFO Mode') === 3 ? 22 : undefined)}
-      {@render footKnob('LFO Amount', 'Amount')}
-      {@render modKnob('LFO Mod Amt', 'M', 'LFO Mod', 'mod_matrix_lfo_source_index', undefined, ink, 'l', true)}
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <!-- Drift's matrix: three slots, each an amount, a source and a target. -->
-    <FaceSection span={3}>
-      {#snippet head()}<span class="sub" style="color: {ink.primary};">Matrix</span>{/snippet}
-      {@render modKnob('Mod Matrix Amt 1', '1', 'Matrix 1', 'mod_matrix_source_1_index', 'mod_matrix_target_1_index', ink, 'l', true)}
-      {@render modKnob('Mod Matrix Amt 2', '2', 'Matrix 2', 'mod_matrix_source_2_index', 'mod_matrix_target_2_index', ink, 'l', true)}
-      {@render modKnob('Mod Matrix Amt 3', '3', 'Matrix 3', 'mod_matrix_source_3_index', 'mod_matrix_target_3_index', ink, 'l', true)}
-    </FaceSection>
-  </FaceGrid>
 {:else if page === 'global' && board}
   <!-- On the board (ADR-512) seven columns in two sections: the voice
        mode, one pick a row, over the voice count, then the Voice knobs;
@@ -440,37 +383,6 @@
       <div class="stack">{@render knob('Transpose', 'Transp')}{@render knob('Volume', 'Volume')}</div>
     </FaceSection>
   </FaceGrid>
-{:else if page === 'global'}
-  <FaceGrid sections={[2, 3, 2, 1]}>
-    <FaceSection span={2}>
-      {#snippet head()}{@render back()}{/snippet}
-      <div class="face-span-all stack">
-        <div class="voice-mode">{@render voiceModeTab()}</div>
-        <div class="voices">
-          <span class="sub" style="color: {ink.primary};">Voices</span>
-          <ChoicePicker options={VOICES} selected={prop('voice_count_index')} onSelect={(i) => setProp('voice_count_index', i)} label="Voices" tint={ink.primary} ghost={prop('voice_count_index') === undefined} />
-        </div>
-      </div>
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={3}>
-      {#snippet head()}<span class="sub" style="color: {ink.primary};">Voice</span>{/snippet}
-      <div class="stack">{@render knob('Poly Voice Depth', 'Depth')}{@render knob('Thickness', 'Thick')}</div>
-      <div class="stack">{@render knob('Spread', 'Spread')}{@render knob('Glide Time', 'Glide')}</div>
-      <div class="stack">{@render knob('Strength', 'Strength')}{@render sw('Legato On', 'Legato')}</div>
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={2}>
-      {#snippet head()}<span class="sub" style="color: {ink.primary};">Play</span>{/snippet}
-      <div class="stack">{@render knob('Drift', 'Drift')}{@render knob('Vel > Vol', 'Vel > Vol')}</div>
-      <div class="stack">{@render sw('Osc Retrig On', 'Retrig')}{@render sw('Note Pitch Bend On', 'Note PB')}</div>
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={1}>
-      {#snippet head()}<span class="sub" style="color: {ink.primary};">Output</span>{/snippet}
-      <div class="stack">{@render knob('Transpose', 'Transp')}{@render knob('Volume', 'Volume')}</div>
-    </FaceSection>
-  </FaceGrid>
 {/if}
 </div>
 
@@ -498,13 +410,6 @@
     min-height: 0;
     height: 100%;
   }
-  .cells {
-    display: flex;
-    min-height: 0;
-  }
-  .cells > :global(*) {
-    flex: 1 1 0;
-  }
   .pad {
     min-height: 0;
   }
@@ -530,17 +435,6 @@
   .mod-cell.footed .mod-foot {
     flex: none;
     height: calc(2 * 2.25rem + 0.25rem);
-  }
-  .foot-label {
-    align-items: center;
-    justify-content: flex-start;
-    font-size: 0.875rem;
-    font-weight: 500;
-  }
-  .foot-value {
-    font-size: 0.75rem;
-    color: var(--signal-dim);
-    font-variant-numeric: tabular-nums;
   }
   /* The LFO's shape grid over its rate mode and Retrig. */
   .lfo-shape {
@@ -574,12 +468,6 @@
     flex-direction: column;
     align-items: center;
     gap: 0.25rem;
-  }
-  .stack > .voices {
-    flex: none;
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
   }
   /* A switch is one touch-height button, centred in its cell, so it lines
      up with the knob beside it rather than filling the column. */

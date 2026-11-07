@@ -21,6 +21,7 @@ import { send } from '$lib/api/simpleClient';
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { replaceTree, _resetForTests, type TrackRecord, type DeviceRecord, type ParamRecord } from '$lib/stores/v3/normalized.svelte';
 import { instrumentService } from '$lib/services/instrumentService';
+import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
 import AnalogCentralView from '$lib/components/v6/central/views/AnalogCentralView.svelte';
 import {
 	ANALOG_VOICE,
@@ -178,31 +179,26 @@ describe('AnalogCentralView — the face and its pages (ADR-510)', () => {
 		expect(knobs).toEqual(['Sub', 'PW', 'Level', 'Noise', 'Env', 'Amp', 'Glide']);
 	});
 
-	it('opens the shown voice’s Filter page from its eyebrow, its pad on that voice, and back', async () => {
+	it('opens no page from the face: a section\'s name is its name (2026-11-07)', async () => {
 		const { container } = render(AnalogCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
-		await fireEvent.click(button(container, 'Voice 1 of 2 — switch to voice 2'));
-		await fireEvent.click(container.querySelector<HTMLElement>('.eyebrow-link[data-page="filter2"]')!);
-		expect(container.querySelector('[data-analog-page="filter2"]')).toBeTruthy();
-		expect(container.querySelector('[data-analog-face]')).toBeNull();
-
-		// A family tap on the page writes Filter 2's type, as the face's does.
-		await fireEvent.click(button(container, 'Filter 2 High-pass 24dB/oct'));
-		const typeIndex = (BASS_106 as [string][]).findIndex(([n]) => n === 'F2 Type');
-		expect(paramSets().filter(([i]) => i === typeIndex).map(([, v]) => v)).toEqual([7]);
-
-		await fireEvent.click(container.querySelector<HTMLElement>('[data-back="face"]')!);
 		expect(container.querySelector('[data-analog-face]')).toBeTruthy();
+		expect(container.querySelector('.eyebrow-link')).toBeNull();
+		expect(container.querySelector('[data-analog-page]')).toBeNull();
 	});
 
-	it('leads a detail page back to its parent page', async () => {
-		const { container } = render(AnalogCentralView, { props: { instrument: INSTRUMENT } });
-		await tick();
-		await fireEvent.click(container.querySelector<HTMLElement>('.eyebrow-link[data-page="env1"]')!);
-		await fireEvent.click(container.querySelector<HTMLElement>('.eyebrow-link[data-page="aeg1"]')!);
-		expect(container.querySelector('[data-analog-page="aeg1"]')).toBeTruthy();
-		await fireEvent.click(container.querySelector<HTMLElement>('[data-back="env1"]')!);
-		expect(container.querySelector('[data-analog-page="env1"]')).toBeTruthy();
+	it('at full screen draws both voices\' pages as tiles, writing nothing', async () => {
+		centralDisplayStore.setExpanded(true);
+		try {
+			const { container } = render(AnalogCentralView, { props: { instrument: INSTRUMENT } });
+			await tick();
+			const tiles = [...container.querySelectorAll<HTMLElement>('[data-board-tile]')].map((t) => t.dataset.boardTile);
+			for (const id of ['osc1', 'osc2', 'filter1', 'filter2', 'global']) expect(tiles).toContain(id);
+			expect(container.querySelector('[data-analog-face]')).toBeNull();
+			expect(paramSets()).toEqual([]);
+		} finally {
+			centralDisplayStore.setExpanded(false);
+		}
 	});
 });
 

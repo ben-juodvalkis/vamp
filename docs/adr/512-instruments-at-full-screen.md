@@ -1,7 +1,9 @@
 # ADR-512: An instrument at full screen is every page on one board
 
 ## Status
-**Accepted** (2026-11-07). Builds on ADR-511 (the full-screen icon).
+**Accepted** (2026-11-07). Builds on ADR-511 (the full-screen icon). Its
+band half ("the half switch and the pages stay the band's") is superseded
+by ADR-513: the band is one face, and the pages are this board's only.
 Interface only; no Live restart.
 
 ## Context

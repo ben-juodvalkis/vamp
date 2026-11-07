@@ -282,14 +282,6 @@
     oscWaves.wave(n, read(OSC[n].position, 0.5), read(OSC[n].effect1, 0.5), read(OSC[n].effect2, 0));
 
   /**
-   * The section page on screen in place of the face, or none. Wavetable
-   * draws its own pages (`wavetable/WavetablePages.svelte`, ADR-510), as
-   * Drift does, rather than the panel's rule-laid ones.
-   */
-  let wtPage = $state<string | null>(null);
-  const openWtPage = (page: string | null) => (wtPage = page);
-
-  /**
    * Full screen (ADR-512): every page at once, both oscillators side by
    * side, both filters, the three envelopes, both LFOs and Global. The
    * Mod Sources page, a summary of the five, has no tile.
@@ -448,17 +440,6 @@
   {:else if instrument && device}
     <InstrumentPanelView panel={WAVETABLE_PANEL} params={panelParams} color={wavetableInk}>
     {#snippet face(_openPage: (page: string) => void)}
-    {#if wtPage}
-    <WavetablePages
-      page={wtPage}
-      params={panelParams}
-      ink={wavetableInk}
-      oscInks={{ 1: osc1Ink, 2: osc2Ink }}
-      onNavigate={openWtPage}
-      {oscPad}
-      {effectTitles}
-    />
-    {:else}
     <!-- One grid, eleven columns (ADR-510, re-laid 2026-11-06): Oscillator
          5 (the levels, the octaves, the wave over Position, Effect 1 and
          Effect 2), Filter 3, Mod Sources 2 (Amp, Env 2), Global 1, in
@@ -467,7 +448,7 @@
          knob medium (70px) and the envelopes' small (48px). -->
     <FaceGrid sections={[5, 3, 2, 1]}>
       <FaceSection span={5}>
-        {#snippet head()}<PanelEyebrow title="Osc {oscTab}" page="osc{oscTab}" onOpen={openWtPage} color={oscInk.primary} />{/snippet}
+        {#snippet head()}<PanelEyebrow title="Osc {oscTab}" color={oscInk.primary} />{/snippet}
         <!-- The levels, Osc 1 over Osc 2, each in its own colour and
              marked with its number, as Drift's: touching one brings its
              oscillator up in the rest of the section. -->
@@ -511,7 +492,7 @@
            touched, all five at once (it was a ‹ type › stepper), then the
            routing and its slope. -->
       <FaceSection span={3}>
-        {#snippet head()}<PanelEyebrow title="Filter {fltTab}" page="filter{fltTab}" onOpen={openWtPage} color={fltInk.primary} />{/snippet}
+        {#snippet head()}<PanelEyebrow title="Filter {fltTab}" color={fltInk.primary} />{/snippet}
         <div class="flt-card face-span-all">
           <div class="span-all min-h-0">
             <FilterDotsGraph
@@ -573,12 +554,12 @@
 
       <!-- The two envelopes, Amp then Env 2, a column each, A over D over
            S over R: small knobs marked with the stage (Drift's face), their
-           names over the columns. The name line opens the mod sources. -->
+           names over the columns. -->
       <FaceSection span={2}>
         {#snippet head()}
-          <button class="mod-link" style="color: {wavetableInk.primary};" data-page="mod" onclick={() => openWtPage('mod')}>
-            <span>Amp</span><span>Env 2 ›</span>
-          </button>
+          <span class="mod-names" style="color: {wavetableInk.primary};">
+            <span>Amp</span><span>Env 2</span>
+          </span>
         {/snippet}
         {#each ENVELOPES as envelope (envelope.title)}
           <div class="knob-stack env-stack min-h-0 min-w-0" data-envelope={envelope.title}>
@@ -594,14 +575,13 @@
            envelope and LFO time and of the mod matrix. Medium: two
            captioned large knobs need 300px and the band has about 263. -->
       <FaceSection span={1}>
-        {#snippet head()}<PanelEyebrow title="Global" page="global" onOpen={openWtPage} color={wavetableInk.primary} />{/snippet}
+        {#snippet head()}<PanelEyebrow title="Global" color={wavetableInk.primary} />{/snippet}
         <div class="knob-stack min-h-0 min-w-0">
           {@render faceKnob(TIME, time, 'Time', wavetableInk, (v) => write(TIME, v), { bipolar: true })}
           {@render faceKnob(GLOBAL_MOD, globalMod, 'Mod Amt', wavetableInk, (v) => write(GLOBAL_MOD, v))}
         </div>
       </FaceSection>
     </FaceGrid>
-    {/if}
     {/snippet}
     </InstrumentPanelView>
   {:else}
@@ -670,25 +650,19 @@
     background: var(--surface-well);
     overflow: hidden;
   }
-  /* The mod sources' name line: each envelope's name over its column, the
-     whole line one link to the sources' page. */
-  .mod-link {
+  /* The envelopes' name line: each envelope's name over its column. */
+  .mod-names {
     display: grid;
     grid-template-columns: 1fr 1fr;
     column-gap: var(--face-gutter, 0.5rem);
     width: 100%;
-    background: none;
-    border: 0;
-    padding: 0;
     font-size: 0.75rem;
     font-weight: 700;
     line-height: 1rem;
     white-space: nowrap;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    cursor: pointer;
+    text-align: center;
   }
-  :global([data-grammar='flat']) .mod-link {
+  :global([data-grammar='flat']) .mod-names {
     font-weight: var(--font-weight-medium);
   }
 

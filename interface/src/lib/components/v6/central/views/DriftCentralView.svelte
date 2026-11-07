@@ -341,7 +341,7 @@
     'voice_count_index'
   ] as const;
   $effect(() => {
-    if (!devicePath || !(driftPage || centralDisplayStore.expanded)) return;
+    if (!devicePath || !centralDisplayStore.expanded) return;
     const path = devicePath;
     const offs = PAGE_PROPERTIES.map((name) => selectedTrackStore.subscribeProperty(path, name));
     return () => offs.forEach((off) => off?.());
@@ -416,14 +416,6 @@
    * knobs are the only way to switch.
    */
   let oscTab = $state<1 | 2>(1);
-
-  /**
-   * The section page on screen in place of the face, or none. Drift draws
-   * its own pages (`drift/DriftPages.svelte`, ADR-510) rather than the
-   * panel's rule-laid ones, so the face's eyebrows open these.
-   */
-  let driftPage = $state<string | null>(null);
-  const openDriftPage = (page: string) => (driftPage = page);
 
   /**
    * Full screen (ADR-512): every page at once, in Live's signal order. The
@@ -552,23 +544,9 @@
          Filter 1, Envelopes 1, LFO 2, Global 2, in Live's signal order.
          Every column, gutter and seam is the same, so the face reads on
          one beat. -->
-    {#if driftPage}
-    <DriftPages
-      page={driftPage}
-      params={panelParams}
-      ink={driftInk}
-      sourceInks={{ osc1: osc1Ink, osc2: osc2Ink, noise: noiseInk }}
-      onBack={() => (driftPage = null)}
-      {filterPad}
-      {voiceModeTab}
-      {waveGlyph}
-      prop={deviceProp}
-      setProp={setDeviceProp}
-    />
-    {:else}
     <FaceGrid sections={[4, 1, 1, 2, 2]}>
       <FaceSection span={4} style="--drift-ink: {oscInk.primary};">
-        {#snippet head()}<PanelEyebrow title="Oscillators" page="oscillators" onOpen={openDriftPage} color={driftInk.primary} />{/snippet}
+        {#snippet head()}<PanelEyebrow title="Oscillators" color={driftInk.primary} />{/snippet}
           <!-- The three source levels, the grid's first column, left of the waveforms (user,
                2026-11-06): no names: 1, 2 and the noise glyph say which. -->
           <div class="osc-levels min-h-0 flex flex-col gap-(--spacing-sm)" data-osc={oscTab}>
@@ -685,7 +663,7 @@
            Drift's low-pass; the pad stays on the Filter page), so here it
            is the LP type, I over II, over a High-pass knob. -->
       <FaceSection span={1}>
-        {#snippet head()}<PanelEyebrow title="Filter" page="filter" onOpen={openDriftPage} color={driftInk.primary} />{/snippet}
+        {#snippet head()}<PanelEyebrow title="Filter" color={driftInk.primary} />{/snippet}
         <div class="filter-col min-h-0 min-w-0 flex flex-col gap-(--central-gap)">
           <ScrubTabs
             options={LP_TYPE_OPTIONS}
@@ -723,7 +701,7 @@
       <!-- Envelopes: A D S R of Env 1, the amp envelope. Env 2 and the
            cycling envelope are on the Envelopes page, which shows both. -->
       <FaceSection span={1}>
-        {#snippet head()}<PanelEyebrow title="Envelopes" page="envelopes" onOpen={openDriftPage} color={driftInk.primary} />{/snippet}
+        {#snippet head()}<PanelEyebrow title="Envelopes" color={driftInk.primary} />{/snippet}
         <div class="env-col min-h-0 flex flex-col gap-(--spacing-sm)">
           {#each ENV_STAGES as { stage, mark } (stage)}
             {@const name = `Env ${envTab} ${stage}`}
@@ -749,7 +727,7 @@
 
       <!-- LFO: rate slow to fast across, amount up. -->
       <FaceSection span={2}>
-        {#snippet head()}<PanelEyebrow title="LFO / Mod" page="lfo-mod" onOpen={openDriftPage} color={driftInk.primary} />{/snippet}
+        {#snippet head()}<PanelEyebrow title="LFO / Mod" color={driftInk.primary} />{/snippet}
         <div class="lfo-pad face-span-2">
           <DeviceXY
             xValue={lfoX}
@@ -767,7 +745,7 @@
            Mono, Drift, names beside; the voice mode itself is on the
            Global page. -->
       <FaceSection span={2}>
-        {#snippet head()}<PanelEyebrow title="Global" page="global" onOpen={openDriftPage} color={driftInk.primary} />{/snippet}
+        {#snippet head()}<PanelEyebrow title="Global" color={driftInk.primary} />{/snippet}
         <div class="voicing-card face-span-all flex flex-col gap-(--spacing-sm)">
           {#if voiceMode !== 0}
           <div class="voicing-slider min-h-0">
@@ -825,7 +803,6 @@
         </div>
       </FaceSection>
     </FaceGrid>
-    {/if}
     {/snippet}
     </InstrumentPanelView>
   {:else}

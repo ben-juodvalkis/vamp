@@ -969,45 +969,15 @@ function instrumentSwapStates() {
 		['collision-global', 'Collision', 'Collision', referenceParams('Collision'), [{ click: '[data-group="Global"] .eyebrow-link' }]],
 		['electric', 'Electric', 'LoungeLizard', referenceParams('Electric')],
 		// Live's arrangement (ADR-487): a section's eyebrow opens its page.
-		// Drift's face, its own (ADR-487), on Live's measured list, and the
-		// sections its eyebrows open.
+		// Drift's face, its own (ADR-487), on Live's measured list; its pages
+		// are the full-screen board's tiles (board-drift).
 		['drift-face', 'Drift', 'Drift', referenceParams('Drift')],
-		['drift-oscillators', 'Drift', 'Drift', referenceParams('Drift'), [{ click: '.eyebrow-link[data-page="oscillators"]' }]],
-		['drift-filter', 'Drift', 'Drift', referenceParams('Drift'), [{ click: '.eyebrow-link[data-page="filter"]' }]],
-		['drift-envelopes', 'Drift', 'Drift', referenceParams('Drift'), [{ click: '.eyebrow-link[data-page="envelopes"]' }]],
-		['drift-lfo-mod', 'Drift', 'Drift', referenceParams('Drift'), [{ click: '.eyebrow-link[data-page="lfo-mod"]' }]],
-		['drift-global', 'Drift', 'Drift', referenceParams('Drift'), [{ click: '.eyebrow-link[data-page="global"]' }]],
-		// Analog's face on Live's measured list (ADR-487) and the pages its
-		// eyebrows open, voice 1's, and voice 2's filter.
+		// Analog's face on Live's measured list (ADR-487); its pages are the
+		// full-screen board's tiles (board-analog).
 		['analog-reference', 'Analog', 'UltraAnalog', referenceParams('Analog')],
-		['analog-osc1', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="osc1"]' }]],
-		['analog-filter2', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.osc-badge' }, { click: '.eyebrow-link[data-page="filter2"]' }]],
-		['analog-env1', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="env1"]' }]],
-		['analog-aeg1', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="env1"]' }, { click: '.eyebrow-link[data-page="aeg1"]' }]],
-		['analog-lfo1', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="osc1"]' }, { click: '.eyebrow-link[data-page="lfo1"]' }]],
-		['analog-global', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="global"]' }]],
-		['analog-noise', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="noise"]' }]],
-		['analog-amp1', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="env1"]' }, { click: '.eyebrow-link[data-page="amp1"]' }]],
-		['analog-filter1', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="filter1"]' }]],
-		['analog-vibrato', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="global"]' }, { click: '.eyebrow-link[data-page="vibrato"]' }]],
-		['analog-mpe', 'Analog', 'UltraAnalog', referenceParams('Analog'), [{ click: '.eyebrow-link[data-page="global"]' }, { click: '.eyebrow-link[data-page="mpe"]' }]],
-		// Wavetable's face on Live's measured list (ADR-487) and its own pages
-		// (wavetable/WavetablePages.svelte); the mod sources' names open theirs.
+		// Wavetable's face on Live's measured list (ADR-487); its pages are the
+		// full-screen board's tiles (board-wavetable).
 		['wavetable-reference', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable')],
-		['wavetable-osc1', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable'), [{ click: '.eyebrow-link[data-page="osc1"]' }]],
-		['wavetable-filter1', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable'), [{ click: '.eyebrow-link[data-page="filter1"]' }]],
-		['wavetable-mod', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable'), [{ click: '[data-page="mod"]' }]],
-		['wavetable-amp', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable'), [{ click: '[data-page="mod"]' }, { click: '.page-link[data-page="amp"]' }]],
-		['wavetable-env2', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable'), [{ click: '[data-page="mod"]' }, { click: '.page-link[data-page="env2"]' }]],
-		['wavetable-lfo1', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable'), [{ click: '[data-page="mod"]' }, { click: '.page-link[data-page="lfo1"]' }]],
-		['wavetable-global', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable'), [{ click: '.eyebrow-link[data-page="global"]' }]],
-		// Meld's face (ADR-487), the measured patch, and the pages its eyebrows
-		// open: each hand-laid on the face grid (meld/MeldPages, ADR-510).
-		['meld-osc-a', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '.eyebrow-link[data-page="osc-a"]' }]],
-		['meld-filter-b', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '[data-engine-level="B"] [role="slider"]' }, { click: '.eyebrow-link[data-page="filter-b"]' }]],
-		['meld-env-a', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '.eyebrow-link[data-page="env-a"]' }]],
-		['meld-lfo-a', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '.eyebrow-link[data-page="lfo-a"]' }]],
-		['meld-global', 'Meld', 'InstrumentMeld', referenceParams('Meld'), [{ click: '.eyebrow-link[data-page="global"]' }]],
 		['electric-hammer', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Hammer"] .eyebrow-link' }]],
 		['electric-fork', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Fork"] .eyebrow-link' }]],
 		['electric-pickup', 'Electric', 'LoungeLizard', referenceParams('Electric'), [{ click: '[data-group="Damper / Pickup"] .eyebrow-link' }]],

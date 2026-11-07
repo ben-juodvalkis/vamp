@@ -95,14 +95,6 @@
   const panelParams = usePanelParams(() => device);
 
   /**
-   * The section page on screen in place of the face, or none. Analog draws
-   * its own pages (`analog/AnalogPages.svelte`, ADR-510) rather than the
-   * panel's rule-laid ones, so the face's eyebrows open these.
-   */
-  let analogPage = $state<string | null>(null);
-  const openAnalogPage = (page: string) => (analogPage = page);
-
-  /**
    * Full screen (ADR-512): every page at once, the two voices side by side
    * in every row and the shared sections at its right. Osc 1 and 2 with
    * Vibrato; Filter and Amp of each voice with Noise; each voice's
@@ -328,18 +320,6 @@
   {:else if instrument && device}
     <InstrumentPanelView panel={ANALOG_PANEL} params={panelParams} color={analogInk}>
     {#snippet face()}
-    {#if analogPage}
-    <AnalogPages
-      page={analogPage}
-      params={panelParams}
-      ink={analogInk}
-      voiceInks={{ 1: sourceInk(1), 2: sourceInk(2) }}
-      {noiseInk}
-      onOpen={openAnalogPage}
-      onBack={() => (analogPage = null)}
-      {shapeGlyph}
-    />
-    {:else}
     <!-- One grid, eleven columns (ADR-510), ~80px each so a medium knob
          is its full 70px: Osc 4 (the voice's oscillator, and the source
          levels with Noise's route), Filter 2 (and the voice's amp level,
@@ -358,8 +338,8 @@
       <FaceSection span={4}>
         {#snippet head()}
           <div class="head-cols">
-            <span class="head-col face-span-3"><PanelEyebrow title="Osc {voice}" page="osc{voice}" onOpen={openAnalogPage} color={voiceInk.primary} /></span>
-            <span class="head-col"><PanelEyebrow title="Noise" page="noise" onOpen={openAnalogPage} color={analogInk.primary} /></span>
+            <span class="head-col face-span-3"><PanelEyebrow title="Osc {voice}" color={voiceInk.primary} /></span>
+            <span class="head-col"><PanelEyebrow title="Noise" color={analogInk.primary} /></span>
           </div>
         {/snippet}
         <!-- The switch, the four shapes two by two, and where the
@@ -471,7 +451,7 @@
            follows Filter 1's, the filter envelope's amount, and the amp's
            level after the filter. -->
       <FaceSection span={2}>
-        {#snippet head()}<PanelEyebrow title="Filter {voice}" page="filter{voice}" onOpen={openAnalogPage} color={voiceInk.primary} />{/snippet}
+        {#snippet head()}<PanelEyebrow title="Filter {voice}" color={voiceInk.primary} />{/snippet}
         <div class="col">
           <div class="r1 drive-cell">
             <ChoicePicker options={DRIVE_NAMES} selected={drive} onSelect={(i) => write(p.drive, i)} label="Filter {voice} drive" tint={voiceInk.primary} />
@@ -515,7 +495,7 @@
            value boxes (ADR-477), a stage a column: their heights draw each
            envelope. -->
       <FaceSection span={4}>
-        {#snippet head()}<PanelEyebrow title="Envelopes" page="env{voice}" onOpen={openAnalogPage} color={voiceInk.primary} />{/snippet}
+        {#snippet head()}<PanelEyebrow title="Envelopes" color={voiceInk.primary} />{/snippet}
         <div class="env-grid face-span-all">
           <div class="env-pill"><HostedSwapPill /></div>
           {#each envelopes as envelope (envelope.title)}
@@ -545,7 +525,7 @@
            a switch because its depth rides the mod wheel); Glide, its switch
            its level as Noise's is. -->
       <FaceSection span={1}>
-        {#snippet head()}<PanelEyebrow title="Global" page="global" onOpen={openAnalogPage} color={analogInk.primary} />{/snippet}
+        {#snippet head()}<PanelEyebrow title="Global" color={analogInk.primary} />{/snippet}
         <div class="col">
           <div class="r1">
             <ScrubTabs
@@ -570,7 +550,6 @@
         </div>
       </FaceSection>
     </FaceGrid>
-    {/if}
     {/snippet}
     </InstrumentPanelView>
   {:else}

@@ -205,10 +205,6 @@
 
 {#snippet sub(text: string, color: string = ink.primary)}<span class="sub" style="color: {color};">{text}</span>{/snippet}
 
-{#snippet link(text: string, to: string)}
-  {#if board}<span class="sub" style="color: {ink.primary};">{text}</span>{:else}<button class="sub page-link" style="color: {ink.primary};" data-page={to} onclick={() => onNavigate(to)}>{text} ›</button>{/if}
-{/snippet}
-
 <div class="wt-page" data-wavetable-page={page}>
 {#if (page === 'osc1' || page === 'osc2') && board && tables}
   <!-- On the board (ADR-512) the page's eight columns, the wavetable's
@@ -231,26 +227,6 @@
         <div class="stack">{@render knob(`${O} Detune`, 'Detune', 'm', { sw: `${O} On`, color: oscInk })}{@render knob(`${O} Pan`, 'Pan', 'm', { sw: `${O} On`, color: oscInk })}</div>
         <div class="stack">{@render knob(`${O} Gain`, 'Gain', 'm', { sw: `${O} On`, color: oscInk })}{@render sw(`${O} On`, 'On', oscInk.primary)}</div>
       </div>
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={2}>
-      {#snippet head()}{@render sub('Sub')}{/snippet}
-      <div class="stack">{@render knob('Sub Gain', 'Gain', 'm', { sw: 'Sub On' })}{@render sw('Sub On', 'On')}</div>
-      <div class="stack">{@render knob('Sub Tone', 'Tone', 'm', { sw: 'Sub On' })}{@render tab('Sub Transpose', ['0', '-1', '-2'], { cols: 3, sw: 'Sub On', row: true })}</div>
-    </FaceSection>
-  </FaceGrid>
-{:else if page === 'osc1' || page === 'osc2'}
-  <!-- Eight columns (~110px): the pad over three, Effect 1, Detune and the
-       oscillator's level in a row over Semi, Pan and its switch; the Sub
-       its level over its switch, its tone over its octave. Two to a column,
-       so every knob is medium. -->
-  <FaceGrid sections={[6, 2]}>
-    <FaceSection span={6}>
-      {#snippet head()}{@render back(oscInk.primary)}{/snippet}
-      <div class="face-span-3 pad" style={isOn(`${O} On`) ? '' : 'opacity: var(--opacity-ghost);'}>{@render oscPad(n === 2 ? 2 : 1)}</div>
-      <div class="stack">{@render knob(`${O} Effect 1`, fx[0], 'm', { sw: `${O} On`, color: oscInk })}{@render knob(`${O} Transp`, 'Semi', 'm', { sw: `${O} On`, color: oscInk })}</div>
-      <div class="stack">{@render knob(`${O} Detune`, 'Detune', 'm', { sw: `${O} On`, color: oscInk })}{@render knob(`${O} Pan`, 'Pan', 'm', { sw: `${O} On`, color: oscInk })}</div>
-      <div class="stack">{@render knob(`${O} Gain`, 'Gain', 'm', { sw: `${O} On`, color: oscInk })}{@render sw(`${O} On`, 'On', oscInk.primary)}</div>
     </FaceSection>
     <FaceSeam ink={ink.primary} />
     <FaceSection span={2}>
@@ -304,59 +280,6 @@
       </div>
     </FaceSection>
   </FaceGrid>
-{:else if page === 'filter1' || page === 'filter2'}
-  <!-- Seven columns (~127px): Freq, Res, Drive and Morph a column each,
-       large; then the type, its circuit (LP and HP have five, BP, Notch
-       and Morph two) and the slope over the filter's switch. The face's
-       pad keeps both filters' cutoff and resonance in one place. -->
-  <FaceGrid sections={[4, 3]}>
-    <FaceSection span={4}>
-      {#snippet head()}{@render back(n === 2 ? oscInks[2].primary : oscInks[1].primary)}{/snippet}
-      {@render knob(`${F} Freq`, 'Freq', 'l', { sw: `${F} On` })}
-      {@render knob(`${F} Res`, 'Res', 'l', { sw: `${F} On` })}
-      {@render knob(`${F} Drive`, 'Drive', 'l', { sw: `${F} On` })}
-      {@render knob(`${F} Morph`, 'Morph', 'l', { sw: `${F} On` })}
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={3}>
-      {#snippet head()}{@render sub('Type · Circuit · Slope')}{/snippet}
-      {@render tab(`${F} Type`, FILTER_TYPES, { sw: `${F} On` })}
-      {#if lpHp}
-        {@render tab(`${F} LP/HP`, LP_HP_CIRCUITS, { sw: `${F} On` })}
-      {:else}
-        {@render tab(`${F} BP/NO/MO`, BP_CIRCUITS, { sw: `${F} On` })}
-      {/if}
-      <div class="column">
-        <div class="grow">{@render tab(`${F} Slope`, ['12 dB', '24 dB'], { sw: `${F} On` })}</div>
-        {@render sw(`${F} On`, 'On')}
-      </div>
-    </FaceSection>
-  </FaceGrid>
-{:else if page === 'mod'}
-  <!-- Eight columns (~101px): each envelope's A D S R two by two, each
-       LFO's amount over its rate; a section's name opens its page. -->
-  <FaceGrid sections={[2, 2, 2, 1, 1]}>
-    <FaceSection span={2}>
-      {#snippet head()}{@render back()}{@render link('Amp', 'amp')}{/snippet}
-      <div class="stack">{@render knob('Amp Attack', 'Attack', 'm')}{@render knob('Amp Sustain', 'Sustain', 'm')}</div>
-      <div class="stack">{@render knob('Amp Decay', 'Decay', 'm')}{@render knob('Amp Release', 'Release', 'm')}</div>
-    </FaceSection>
-    {#each [2, 3] as e (e)}
-      <FaceSeam ink={ink.primary} />
-      <FaceSection span={2}>
-        {#snippet head()}{@render link(`Env ${e}`, `env${e}`)}{/snippet}
-        <div class="stack">{@render knob(`Env ${e} Attack`, 'Attack', 'm')}{@render knob(`Env ${e} Sustain`, 'Sustain', 'm')}</div>
-        <div class="stack">{@render knob(`Env ${e} Decay`, 'Decay', 'm')}{@render knob(`Env ${e} Release`, 'Release', 'm')}</div>
-      </FaceSection>
-    {/each}
-    {#each [1, 2] as l (l)}
-      <FaceSeam ink={ink.primary} />
-      <FaceSection span={1}>
-        {#snippet head()}{@render link(`LFO ${l}`, `lfo${l}`)}{/snippet}
-        <div class="stack">{@render knob(`LFO ${l} Amount`, 'Amount', 'm')}{@render knob(`LFO ${l} Freq`, 'Rate', 'm')}</div>
-      </FaceSection>
-    {/each}
-  </FaceGrid>
 {:else if page === 'amp' && board}
   <!-- On the board (ADR-512) four columns, as an envelope page: each stage
        over its slope, Sustain over the loop mode. -->
@@ -367,30 +290,6 @@
       <div class="stack">{@render knob('Amp Decay', 'Decay', 'm')}{@render knob('Amp D Slope', 'D Slope', 'm')}</div>
       <div class="stack">{@render knob('Amp Sustain', 'Sustain', 'm')}{@render pick('Amp Loop Mode', LOOP_MODES, 'Amp loop')}</div>
       <div class="stack">{@render knob('Amp Release', 'Release', 'm')}{@render knob('Amp R Slope', 'R Slope', 'm')}</div>
-    </FaceSection>
-  </FaceGrid>
-{:else if page === 'amp'}
-  <!-- Eight columns (~107px), a knob each, all large: the stages, their
-       slopes, and the loop mode. -->
-  <FaceGrid sections={[4, 3, 1]}>
-    <FaceSection span={4}>
-      {#snippet head()}{@render back()}{/snippet}
-      {@render knob('Amp Attack', 'Attack', 'l')}
-      {@render knob('Amp Decay', 'Decay', 'l')}
-      {@render knob('Amp Sustain', 'Sustain', 'l')}
-      {@render knob('Amp Release', 'Release', 'l')}
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={3}>
-      {#snippet head()}{@render sub('Slopes')}{/snippet}
-      {@render knob('Amp A Slope', 'A Slope', 'l')}
-      {@render knob('Amp D Slope', 'D Slope', 'l')}
-      {@render knob('Amp R Slope', 'R Slope', 'l')}
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={1}>
-      {#snippet head()}{@render sub('Loop')}{/snippet}
-      {@render tab('Amp Loop Mode', LOOP_MODES)}
     </FaceSection>
   </FaceGrid>
 {:else if (page === 'env2' || page === 'env3') && board}
@@ -409,24 +308,6 @@
       {#snippet head()}{@render sub('Levels · Loop')}{/snippet}
       <div class="stack">{@render knob(`${E} Initial`, 'Initial', 'm')}{@render knob(`${E} Final`, 'Final', 'm')}</div>
       <div class="stack">{@render knob(`${E} Peak`, 'Peak', 'm')}{@render pick(`${E} Loop Mode`, LOOP_MODES, `${E} loop`)}</div>
-    </FaceSection>
-  </FaceGrid>
-{:else if page === 'env2' || page === 'env3'}
-  <!-- Five columns (~181px): each stage over its slope (Sustain over the
-       loop mode), then the three levels the envelope moves between. Two
-       and three to a column, so medium, the name beside the knob. -->
-  <FaceGrid sections={[4, 1]}>
-    <FaceSection span={4}>
-      {#snippet head()}{@render back()}{/snippet}
-      <div class="stack">{@render knob(`${E} Attack`, 'Attack', 'm')}{@render knob(`${E} A Slope`, 'A Slope', 'm')}</div>
-      <div class="stack">{@render knob(`${E} Decay`, 'Decay', 'm')}{@render knob(`${E} D Slope`, 'D Slope', 'm')}</div>
-      <div class="stack">{@render knob(`${E} Sustain`, 'Sustain', 'm')}{@render tab(`${E} Loop Mode`, LOOP_MODES, { cols: 3, row: true })}</div>
-      <div class="stack">{@render knob(`${E} Release`, 'Release', 'm')}{@render knob(`${E} R Slope`, 'R Slope', 'm')}</div>
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={1}>
-      {#snippet head()}{@render sub('Levels')}{/snippet}
-      <div class="stack tight">{@render knob(`${E} Initial`, 'Initial', 'm')}{@render knob(`${E} Peak`, 'Peak', 'm')}{@render knob(`${E} Final`, 'Final', 'm')}</div>
     </FaceSection>
   </FaceGrid>
 {:else if (page === 'lfo1' || page === 'lfo2') && board}
@@ -452,33 +333,6 @@
       <div class="stack">{@render knob(`${L} Attack`, 'Attack', 'm')}<div></div></div>
     </FaceSection>
   </FaceGrid>
-{:else if page === 'lfo1' || page === 'lfo2'}
-  <!-- Seven columns (~127px), Drift's LFO page: the shape as pictures, the
-       sync over Retrig, then Rate (a step of Live's note values when
-       synced), Amount, Morph, Offset and Attack, a large knob each. -->
-  <FaceGrid sections={[4, 3]}>
-    <FaceSection span={4}>
-      {#snippet head()}{@render back()}{/snippet}
-      {@render tab(`${L} Wave`, LFO_WAVES, { glyph: true })}
-      <div class="column">
-        <div class="grow">{@render tab(`${L} Sync`, ['Free', 'Tempo'])}</div>
-        {@render sw(`${L} Retrig On`, 'Retrig')}
-      </div>
-      {#if lfoTempo}
-        {@render knob(`${L} Synced`, 'Sync', 'l', { steps: SYNCED.length, labels: SYNCED })}
-      {:else}
-        {@render knob(`${L} Freq`, 'Rate', 'l')}
-      {/if}
-      {@render knob(`${L} Amount`, 'Amount', 'l')}
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={3}>
-      {#snippet head()}{@render sub('Shape')}{/snippet}
-      {@render knob(`${L} Morph`, 'Morph', 'l')}
-      {@render knob(`${L} Offset`, 'Offset', 'l')}
-      {@render knob(`${L} Attack`, 'Attack', 'l')}
-    </FaceSection>
-  </FaceGrid>
 {:else if page === 'global' && board}
   <!-- On the board (ADR-512) three columns, two knobs to a column. -->
   <FaceGrid sections={[3]}>
@@ -487,23 +341,6 @@
       <div class="stack">{@render knob('Volume', 'Volume', 'm')}{@render knob('Transpose', 'Transp', 'm')}</div>
       <div class="stack">{@render knob('Glide', 'Glide', 'm')}{@render knob('Unison Amount', 'Unison', 'm')}</div>
       <div class="stack">{@render knob('Time', 'Time', 'm')}{@render knob('Global Mod Amount', 'Mod Amt', 'm')}</div>
-    </FaceSection>
-  </FaceGrid>
-{:else if page === 'global'}
-  <!-- Six columns (~150px), a large knob each. -->
-  <FaceGrid sections={[4, 2]}>
-    <FaceSection span={4}>
-      {#snippet head()}{@render back()}{/snippet}
-      {@render knob('Volume', 'Volume', 'l')}
-      {@render knob('Transpose', 'Transp', 'l')}
-      {@render knob('Glide', 'Glide', 'l')}
-      {@render knob('Unison Amount', 'Unison', 'l')}
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={2}>
-      {#snippet head()}{@render sub('Scale')}{/snippet}
-      {@render knob('Time', 'Time', 'l')}
-      {@render knob('Global Mod Amount', 'Mod Amt', 'l')}
     </FaceSection>
   </FaceGrid>
 {/if}
@@ -522,9 +359,6 @@
     gap: var(--spacing-sm);
     min-height: 0;
     min-width: 0;
-  }
-  .stack.tight {
-    gap: 0.25rem;
   }
   .stack > :global(*) {
     flex: 1 1 0;
@@ -611,8 +445,7 @@
     line-height: 1rem;
     white-space: nowrap;
   }
-  .page-back,
-  .page-link {
+  .page-back {
     background: none;
     border: 0;
     padding: 0;

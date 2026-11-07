@@ -79,14 +79,6 @@
   const showEngine = (e: MeldEngine) => meldEngineStore.select(devicePath, e);
 
   /**
-   * The section page on screen in place of the face, or none. Meld draws
-   * its own pages (`meld/MeldPages.svelte`, ADR-510), as Drift does,
-   * rather than the panel's rule-laid ones.
-   */
-  let meldPage = $state<string | null>(null);
-  const openMeldPage = (page: string) => (meldPage = page);
-
-  /**
    * Full screen (ADR-512): every page of both engines at once, so there is
    * no engine switch. Engine A on top and Engine B under it, the same two
    * rows each (user, 2026-11-07): the oscillator and the filter, then the
@@ -239,15 +231,6 @@
   {:else if instrument && device}
     <InstrumentPanelView panel={MELD_PANEL} params={panelParams} color={meldInk}>
     {#snippet face()}
-    {#if meldPage}
-    <MeldPages
-      page={meldPage}
-      params={panelParams}
-      ink={meldInk}
-      engineInks={{ A: inkOf('A'), B: inkOf('B') }}
-      onBack={() => (meldPage = null)}
-    />
-    {:else}
     <!-- One grid, twelve columns (ADR-510, 2026-11-06): Engine 3 (the
          levels, the octaves, the oscillator), Filter 2, Envelopes 5,
          Global 2, Osc → Filter → Amp as Live runs them. The oscillator's
@@ -260,7 +243,7 @@
            colour (user, 2026-11-05), pick which half is up: touching one
            flips the oscillator, the filter and the envelopes together. -->
       <FaceSection span={3}>
-        {#snippet head()}<PanelEyebrow title="Engine {engine}" page="osc-{pageEngine}" onOpen={openMeldPage} color={engineInk.primary} />{/snippet}
+        {#snippet head()}<PanelEyebrow title="Engine {engine}" color={engineInk.primary} />{/snippet}
         <div class="min-h-0 flex flex-col gap-(--spacing-sm)">
         {#each ['A', 'B'] as const as e (e)}
           <div class="flex-1 min-h-0" data-engine-level={e} class:shown={engine === e}>
@@ -322,7 +305,7 @@
            knob, named as Live names it under the type) and its type under
            it. -->
       <FaceSection span={2}>
-        {#snippet head()}<PanelEyebrow title="Filter {engine}" page="filter-{pageEngine}" onOpen={openMeldPage} color={engineInk.primary} />{/snippet}
+        {#snippet head()}<PanelEyebrow title="Filter {engine}" color={engineInk.primary} />{/snippet}
         <div class="face-span-all min-w-0 min-h-0 flex flex-col gap-(--spacing-sm)">
         <div class="flex-1 min-h-0 relative">
           <DeviceXY
@@ -371,8 +354,8 @@
            Amp/Mod switch. A seam between them. -->
       <FaceSection span={5}>
         {#snippet head()}
-          <PanelEyebrow title="Envelopes" page="env-{pageEngine}" onOpen={openMeldPage} color={engineInk.primary} />
-          <PanelEyebrow title="LFOs" page="lfo-{pageEngine}" onOpen={openMeldPage} color={engineInk.primary} />
+          <PanelEyebrow title="Envelopes" color={engineInk.primary} />
+          <PanelEyebrow title="LFOs" color={engineInk.primary} />
         {/snippet}
         <div class="env-stack face-span-all">
           {#each envelopes as envelope, i (envelope.title)}
@@ -403,7 +386,7 @@
            knobs do not stack in the band; one column, ~67px, clamped a
            medium one to 66). -->
       <FaceSection span={2}>
-        {#snippet head()}<PanelEyebrow title="Global" page="global" onOpen={openMeldPage} color={meldInk.primary} />{/snippet}
+        {#snippet head()}<PanelEyebrow title="Global" color={meldInk.primary} />{/snippet}
         <div class="face-span-all min-h-0 flex flex-col gap-(--spacing-sm)">
         {#each [{ index: MELD_DRIVE, title: 'Drive', icon: 'drive' as const, value: drive }, { index: MELD_SPREAD, title: 'Spread', icon: 'width' as const, value: spread }] as k (k.index)}
           <div class="flex-1 min-h-0">
@@ -461,7 +444,6 @@
         </div>
       {/if}
     </FaceGrid>
-    {/if}
     {/snippet}
     </InstrumentPanelView>
   {:else}

@@ -25,6 +25,7 @@ import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { replaceTree, _resetForTests, type TrackRecord, type DeviceRecord, type ParamRecord } from '$lib/stores/v3/normalized.svelte';
 import ElectricCentralView from '$lib/components/v6/central/views/ElectricCentralView.svelte';
 import CollisionCentralView from '$lib/components/v6/central/views/CollisionCentralView.svelte';
+import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
 import DriftCentralView from '$lib/components/v6/central/views/DriftCentralView.svelte';
 import MeldCentralView from '$lib/components/v6/central/views/MeldCentralView.svelte';
 import AnalogCentralView from '$lib/components/v6/central/views/AnalogCentralView.svelte';
@@ -223,40 +224,37 @@ describe('DriftCentralView — its own face, Live\'s sections behind the eyebrow
 	});
 	afterEach(() => cleanup());
 
-	const pageLink = (container: HTMLElement, page: string) => el(container, `.eyebrow-link[data-page="${page}"]`);
-
-	// Drift draws its own section pages (drift/DriftPages.svelte, ADR-510).
-	it('opens each of Live\'s sections from the face and comes back to it', async () => {
+	// The normal view is one page (2026-11-07); the pages are the full-screen board's tiles.
+	it('opens no page from the face: a section\'s name is its name', async () => {
 		const { container } = render(DriftCentralView, { props: { instrument: instrument('Drift', 'Drift') } });
 		await tick();
-		for (const page of ['oscillators', 'filter', 'envelopes', 'lfo-mod', 'global']) {
-			expect(container.querySelector('[data-drift-page]')).toBeNull();
-			await fireEvent.click(pageLink(container, page));
-			expect(el(container, '[data-drift-page]').dataset.driftPage).toBe(page);
-			await fireEvent.click(el(container, '.page-back'));
-		}
-		expect(paramSets()).toEqual([]);
+		expect(container.querySelector('.eyebrow-link')).toBeNull();
+		expect(container.querySelector('[data-drift-page]')).toBeNull();
 	});
 
-	it('writes the cycling envelope\'s mode by its name, once Env 2 cycles', async () => {
+	it('writes the cycling envelope\'s mode by its name at full screen, once Env 2 cycles', async () => {
 		const cycling = {
 			...(DRIFT as Dump),
 			parameters: (DRIFT as Dump).parameters.map((p) => (p.name === 'Env 2 Cyc On' ? { ...p, value: 1 } : p))
 		};
 		replaceTree(8, [track(cycling, 'Drift', 'Drift')]);
 		selectedTrackStore.handleTrackSelected(0);
-		const { container } = render(DriftCentralView, { props: { instrument: instrument('Drift', 'Drift') } });
-		await tick();
-		await fireEvent.click(pageLink(container, 'envelopes'));
-		await fireEvent.click(option(container, 'Cyc Env Mode', 'Sync'));
-		expect(paramSets()).toEqual([[indexOf(DRIFT as Dump, 'Cyc Env Mode'), 3]]);
+		centralDisplayStore.setExpanded(true);
+		try {
+			const { container } = render(DriftCentralView, { props: { instrument: instrument('Drift', 'Drift') } });
+			await tick();
+			await fireEvent.click(option(el(container, '[data-board-tile="envelopes"]'), 'Cyc Env Mode', 'Sync'));
+			expect(paramSets()).toEqual([[indexOf(DRIFT as Dump, 'Cyc Env Mode'), 3]]);
+		} finally {
+			centralDisplayStore.setExpanded(false);
+		}
 	});
 });
 
 describe.each([
-	['Meld', MeldCentralView, MELD, 'InstrumentMeld', ['osc-a', 'filter-a'], ['osc-b', 'filter-b']],
-	['Analog', AnalogCentralView, ANALOG, 'UltraAnalog', ['osc1', 'filter1', 'env1'], ['osc2', 'filter2', 'env2']]
-] as const)('%sCentralView — the eyebrows open the shown half\'s pages', (name, View, dump, className, first, second) => {
+	['Meld', MeldCentralView, MELD, 'InstrumentMeld', ['Engine A', 'Filter A'], ['Engine B', 'Filter B']],
+	['Analog', AnalogCentralView, ANALOG, 'UltraAnalog', ['Osc 1', 'Filter 1'], ['Osc 2', 'Filter 2']]
+] as const)('%sCentralView — the section names follow the shown half', (name, View, dump, className, first, second) => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		_resetForTests();
@@ -265,24 +263,19 @@ describe.each([
 	});
 	afterEach(() => cleanup());
 
-	const links = (container: HTMLElement) =>
-		[...container.querySelectorAll<HTMLElement>('.eyebrow-link')].map((l) => l.dataset.page);
+	const names = (container: HTMLElement) =>
+		[...container.querySelectorAll<HTMLElement>('.panel-eyebrow')].map((l) => l.textContent?.trim() ?? '');
 
-	it('follows the half switch, and opens a page writing nothing', async () => {
+	it('follows the half switch in its section names, and opens no page', async () => {
 		const { container } = render(View, { props: { instrument: instrument(name, className) } });
 		await tick();
-		expect(links(container)).toEqual(expect.arrayContaining([...first]));
+		expect(container.querySelector('.eyebrow-link')).toBeNull();
+		expect(names(container)).toEqual(expect.arrayContaining([...first]));
 		// Meld's half is picked by touching Engine B's level box, Analog's by its badge.
 		HTMLElement.prototype.setPointerCapture ??= () => {};
 		if (name === 'Meld') await fireEvent.pointerDown(el(container, '[data-engine-level="B"] [role="slider"]'), { pointerId: 1 });
 		else await fireEvent.click(el(container, '.osc-badge'));
-		expect(links(container)).toEqual(expect.arrayContaining([...second]));
-		// Both draw their own pages on the face grid (ADR-510 addendum).
-		const marker = name === 'Meld' ? 'data-meld-page' : 'data-analog-page';
-		await fireEvent.click(el(container, `.eyebrow-link[data-page="${second[1]}"]`));
-		expect(el(container, `[${marker}]`).getAttribute(marker)).toBe(second[1]);
-		await fireEvent.click(el(container, '.page-back'));
-		expect(container.querySelector(`[${marker}]`)).toBeNull();
+		expect(names(container)).toEqual(expect.arrayContaining([...second]));
 		expect(paramSets()).toEqual([]);
 	});
 });

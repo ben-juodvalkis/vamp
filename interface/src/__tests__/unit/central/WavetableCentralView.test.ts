@@ -23,6 +23,7 @@ import { SvelteMap } from 'svelte/reactivity';
 import { send } from '$lib/api/simpleClient';
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { replaceTree, _resetForTests, type TrackRecord, type DeviceRecord, type ParamRecord } from '$lib/stores/v3/normalized.svelte';
+import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
 import WavetableCentralView from '$lib/components/v6/central/views/WavetableCentralView.svelte';
 import WAVETABLE from '../../../../../docs/reference/instruments/dumps/Wavetable.json';
 
@@ -87,9 +88,11 @@ function button(scope: HTMLElement, label: string): HTMLElement {
 	return found;
 }
 
-const page = (container: HTMLElement) => container.querySelector<HTMLElement>('[data-wavetable-page]')?.dataset.wavetablePage ?? null;
+/** One tile of the full-screen board (ADR-512), by its page id. */
+const tile = (container: HTMLElement, id: string) => el(container, `[data-board-tile="${id}"]`);
 
-async function mount() {
+async function mount(expanded = false) {
+	centralDisplayStore.setExpanded(expanded);
 	const result = render(WavetableCentralView, { props: { instrument } });
 	await tick();
 	return result.container;
@@ -102,40 +105,20 @@ describe('WavetableCentralView — its face and its own pages (ADR-510)', () => 
 		replaceTree(7, [track(DUMP)]);
 		selectedTrackStore.handleTrackSelected(0);
 	});
-	afterEach(() => cleanup());
+	afterEach(() => {
+		cleanup();
+		centralDisplayStore.setExpanded(false);
+	});
 
-	it('lays its sections in signal order, with no oscillator pad', async () => {
+	it('lays its sections in signal order, with no oscillator pad and no page to open', async () => {
 		const container = await mount();
 		expect(el(container, '[data-face-columns]').dataset.faceColumns).toBe('11');
-		const links = [...container.querySelectorAll<HTMLElement>('[data-page]')].map((l) => l.dataset.page);
-		expect(links).toEqual(['osc1', 'filter1', 'mod', 'global']);
+		// The normal view is one page (2026-11-07): a section's name is its name, not a link.
+		expect(container.querySelector('[data-page]')).toBeNull();
+		expect(container.querySelector('[data-wavetable-page]')).toBeNull();
 		// The chain cell's XY is Osc 1's Effect 2 / Wave Position: the face draws its wave, not a pad.
 		expect(container.querySelector('.device-xy')).toBeNull();
 		expect(container.querySelector('[data-osc-wave]')).not.toBeNull();
-	});
-
-	it('opens each section\'s page and comes back to the face, writing nothing', async () => {
-		const container = await mount();
-		for (const p of ['osc1', 'filter1', 'mod', 'global']) {
-			expect(page(container)).toBeNull();
-			await fireEvent.click(el(container, `[data-page="${p}"]`));
-			expect(page(container)).toBe(p);
-			await fireEvent.click(el(container, '.page-back'));
-		}
-		expect(page(container)).toBeNull();
-		expect(paramSets()).toEqual([]);
-	});
-
-	it('reaches every modulation source from the mod page, and leads back to it', async () => {
-		const container = await mount();
-		await fireEvent.click(el(container, '[data-page="mod"]'));
-		for (const p of ['amp', 'env2', 'env3', 'lfo1', 'lfo2']) {
-			await fireEvent.click(el(container, `.page-link[data-page="${p}"]`));
-			expect(page(container)).toBe(p);
-			await fireEvent.click(el(container, '.page-back'));
-			expect(page(container)).toBe('mod');
-		}
-		expect(paramSets()).toEqual([]);
 	});
 
 	it('picks the filter type from a tab of all five', async () => {
@@ -146,43 +129,40 @@ describe('WavetableCentralView — its face and its own pages (ADR-510)', () => 
 		expect(paramSets()).toEqual([[indexOf('Flt 1 Type'), 3]]);
 	});
 
-	it('the oscillator page carries its pad', async () => {
-		const container = await mount();
-		await fireEvent.click(el(container, '[data-page="osc1"]'));
-		expect(container.querySelector('.device-xy')).not.toBeNull();
+	it('at full screen draws every page as a tile, writing nothing', async () => {
+		const container = await mount(true);
+		const tiles = [...container.querySelectorAll<HTMLElement>('[data-board-tile]')].map((t) => t.dataset.boardTile);
+		expect(tiles).toEqual(['osc1', 'osc2', 'filter1', 'filter2', 'amp', 'env2', 'env3', 'lfo1', 'lfo2', 'global']);
+		expect(paramSets()).toEqual([]);
+	});
+
+	it('an oscillator tile carries its pad and its wavetable choosers', async () => {
+		const container = await mount(true);
+		expect(tile(container, 'osc1').querySelector('.device-xy')).not.toBeNull();
+		expect(tile(container, 'osc1').querySelector('[data-wavetable-choosers="1"]')).not.toBeNull();
 	});
 
 	it('a Sub control switches the Sub on first, as the panel did', async () => {
-		const container = await mount();
-		await fireEvent.click(el(container, '[data-page="osc1"]'));
-		await fireEvent.click(button(el(container, '.panel-choice[data-param="Sub Transpose"]'), '-2'));
+		const container = await mount(true);
+		await fireEvent.click(button(el(tile(container, 'osc1'), '.panel-choice[data-param="Sub Transpose"]'), '-2'));
 		expect(paramSets()).toEqual([
 			[indexOf('Sub On'), 1],
 			[indexOf('Sub Transpose'), 2]
 		]);
 	});
 
-	it('the filter page writes by name, and follows the type to its circuit', async () => {
-		const container = await mount();
-		await fireEvent.click(el(container, '[data-page="filter1"]'));
-		expect(container.querySelector('[data-param="Flt 1 LP/HP"]')).not.toBeNull();
-		await fireEvent.click(button(el(container, '.panel-choice[data-param="Flt 1 Slope"]'), '24 dB'));
+	it('a filter tile is a pad, writes by name, and follows the type to its circuit', async () => {
+		const container = await mount(true);
+		const filter = tile(container, 'filter1');
+		expect(filter.querySelector('[data-filter-pad="1"]')).not.toBeNull();
+		expect(filter.querySelector('[data-param="Flt 1 LP/HP"]')).not.toBeNull();
+		await fireEvent.click(button(el(filter, '.panel-choice[data-param="Flt 1 Slope"]'), '24 dB'));
 		expect(paramSets()).toEqual([[indexOf('Flt 1 Slope'), 1]]);
 	});
 
-	it('an LFO page writes its sync by name', async () => {
-		const container = await mount();
-		await fireEvent.click(el(container, '[data-page="mod"]'));
-		await fireEvent.click(el(container, '.page-link[data-page="lfo2"]'));
-		await fireEvent.click(button(el(container, '.panel-choice[data-param="LFO 2 Sync"]'), 'Tempo'));
+	it('an LFO tile writes its sync by name', async () => {
+		const container = await mount(true);
+		await fireEvent.click(button(el(tile(container, 'lfo2'), '.panel-choice[data-param="LFO 2 Sync"]'), 'Tempo'));
 		expect(paramSets()).toEqual([[indexOf('LFO 2 Sync'), 1]]);
-	});
-
-	it('an envelope page writes its loop mode by name', async () => {
-		const container = await mount();
-		await fireEvent.click(el(container, '[data-page="mod"]'));
-		await fireEvent.click(el(container, '.page-link[data-page="env3"]'));
-		await fireEvent.click(button(el(container, '.panel-choice[data-param="Env 3 Loop Mode"]'), 'Trigger'));
-		expect(paramSets()).toEqual([[indexOf('Env 3 Loop Mode'), 1]]);
 	});
 });
