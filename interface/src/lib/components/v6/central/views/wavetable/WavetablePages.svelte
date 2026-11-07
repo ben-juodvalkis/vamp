@@ -29,6 +29,8 @@
   import FaceSection from '../../FaceSection.svelte';
   import FaceSeam from '../../FaceSeam.svelte';
   import ChoicePicker from '../../ChoicePicker.svelte';
+  import DeviceXY from '../../../device-panel/DeviceXY.svelte';
+  import { liveFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
   import type { PanelParams } from '../panel/usePanelParams.svelte';
   import type { DeviceColorScheme } from '$lib/config/devicePresets';
 
@@ -255,6 +257,51 @@
       {#snippet head()}{@render sub('Sub')}{/snippet}
       <div class="stack">{@render knob('Sub Gain', 'Gain', 'm', { sw: 'Sub On' })}{@render sw('Sub On', 'On')}</div>
       <div class="stack">{@render knob('Sub Tone', 'Tone', 'm', { sw: 'Sub On' })}{@render tab('Sub Transpose', ['0', '-1', '-2'], { cols: 3, sw: 'Sub On', row: true })}</div>
+    </FaceSection>
+  </FaceGrid>
+{:else if (page === 'filter1' || page === 'filter2') && board}
+  <!-- On the board (ADR-512) the filter's cutoff and resonance are one pad,
+       Freq across and Res up, its curve drawn (user, 2026-11-07: a filter
+       on the full screen is an XY, not two knobs); then Drive and Morph,
+       and the type, its circuit and the slope over the filter's switch. -->
+  {@const fInk = n === 2 ? oscInks[2] : oscInks[1]}
+  {@const curve = liveFilterCurve(step(`${F} Type`), step(`${F} Slope`), params.unit(`${F} Morph`) ?? 0)}
+  <FaceGrid sections={[4, 3]}>
+    <FaceSection span={4}>
+      {#snippet head()}{@render back(fInk.primary)}{/snippet}
+      <div class="face-span-2 pad" data-filter-pad={n}>
+        <DeviceXY
+          xValue={params.unit(`${F} Freq`) ?? 1}
+          yValue={params.unit(`${F} Res`) ?? 0}
+          title="Filter {n}"
+          titleAt="bottom"
+          showCurve={isOn(`${F} On`)}
+          curveType={curve.curveType}
+          curveOrder={curve.order}
+          curveFreqRange={FILTER_FREQ_RANGE.wavetable}
+          onInteraction={(x, y) => {
+            params.writeUnit(`${F} Freq`, x, `${F} On`);
+            params.writeUnit(`${F} Res`, y, `${F} On`);
+          }}
+          color={fInk}
+        />
+      </div>
+      {@render knob(`${F} Drive`, 'Drive', 'l', { sw: `${F} On` })}
+      {@render knob(`${F} Morph`, 'Morph', 'l', { sw: `${F} On` })}
+    </FaceSection>
+    <FaceSeam ink={ink.primary} />
+    <FaceSection span={3}>
+      {#snippet head()}{@render sub('Type · Circuit · Slope')}{/snippet}
+      {@render tab(`${F} Type`, FILTER_TYPES, { sw: `${F} On` })}
+      {#if lpHp}
+        {@render tab(`${F} LP/HP`, LP_HP_CIRCUITS, { sw: `${F} On` })}
+      {:else}
+        {@render tab(`${F} BP/NO/MO`, BP_CIRCUITS, { sw: `${F} On` })}
+      {/if}
+      <div class="column">
+        <div class="grow">{@render tab(`${F} Slope`, ['12 dB', '24 dB'], { sw: `${F} On` })}</div>
+        {@render sw(`${F} On`, 'On')}
+      </div>
     </FaceSection>
   </FaceGrid>
 {:else if page === 'filter1' || page === 'filter2'}
