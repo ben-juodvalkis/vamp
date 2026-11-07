@@ -74,8 +74,12 @@
 
   let { params, names, ink, sw, label }: Props = $props();
 
-  let w = $state(0);
-  let h = $state(0);
+  /** The cell's size; the picture keeps a landscape shape inside it (ADR-514: a tall, narrow one reads badly). */
+  let cw = $state(0);
+  let ch = $state(0);
+  const MAX_ASPECT = 0.6;
+  let w = $derived(cw);
+  let h = $derived(Math.min(ch, Math.round(cw * MAX_ASPECT)));
   /** The inset around the line: a square's half and a little, less on a short strip. */
   let PAD = $derived(h > 0 && h < 90 ? 7 : 10);
 
@@ -176,11 +180,11 @@
   let ghost = $derived(!params.has(names.attack) && !params.has(names.decay));
 </script>
 
+<div class="graph-cell" bind:clientWidth={cw} bind:clientHeight={ch}>
 <div
   class="env-graph"
+  style:height={cw > 0 ? `${h}px` : '100%'}
   class:off={!on || ghost}
-  bind:clientWidth={w}
-  bind:clientHeight={h}
   style="--env-ink: {ink};"
   data-envelope-graph={names.attack}
 >
@@ -218,8 +222,17 @@
   {#if label}<span class="label">{label}</span>{/if}
   {#if active && activeReadout}<span class="readout">{activeReadout}</span>{/if}
 </div>
+</div>
 
 <style>
+  .graph-cell {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+  }
   .env-graph {
     position: relative;
     width: 100%;

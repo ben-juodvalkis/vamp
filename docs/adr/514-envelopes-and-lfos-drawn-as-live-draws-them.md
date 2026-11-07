@@ -42,8 +42,10 @@ fifteen switches.
     of shapes, sync and Retrig, then five knobs.
   - Drift: both envelopes a graph over their four knobs (Env 2's Cyc mode
     trades it for the rate mode); the LFO a wave over its controls.
-  - Meld: each engine's Amp and Mod envelopes a graph over slopes and loop;
-    each LFO a wave.
+  - Meld: each engine's Amp and Mod envelopes a graph over slopes and loop.
+    Its LFOs draw no wave: Meld's shapes (Basic, Ramp, Wander, Euclid ...)
+    are not simple waves, and the board's densest rows needed the height
+    for their captions.
   - Analog: each voice's Amp and Filter envelopes a graph beside S-Time;
     each LFO a wave.
   - Operator: **one** large envelope, picked by a tab row (A, B, C, D, LFO,
@@ -58,8 +60,12 @@ fifteen switches.
   keeps its A and R boxes, which ride virtual macros. Auto Pan-Tremolo and
   Phaser draw their LFO's wave as a picture only (`interactive={false}`):
   their rate and amount are the chain cell's XY, which no view repeats
-  (ADR-510). Phaser's ten shapes became a pick under it.
+  (ADR-510). Phaser's ten shapes became a pick.
   `pictureParams` serves a view that binds by index.
+- **A picture keeps a landscape shape**: never taller than 0.6 of its
+  width, centred in a taller cell (Ben: tall, narrow envelope and wave
+  displays read awkwardly). Phaser's LFO section is five columns wide so
+  its wave runs across it, its knobs one row under it.
 - **A switch in a table is a lamp**: no word, its column's name over it
   (`PanelControlView`'s caption-less switch).
 - **Electric is a knob a column**: three rows in the signal's order

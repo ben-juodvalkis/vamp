@@ -31,7 +31,6 @@
   import FaceSeam from '../../FaceSeam.svelte';
   import ChoicePicker from '../../ChoicePicker.svelte';
   import EnvelopeGraph from '../../EnvelopeGraph.svelte';
-  import LfoGraph from '../../LfoGraph.svelte';
   import type { PanelParams } from '../panel/usePanelParams.svelte';
   import type { DeviceColorScheme } from '$lib/config/devicePresets';
   import type { MeldEngine } from '../meldParams';
@@ -314,8 +313,6 @@
   <FaceGrid sections={[3, 2, 2]}>
     <FaceSection span={3}>
       {#snippet head()}{@render back()}{@render sub('LFO 1')}{/snippet}
-      <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 0.6fr) minmax(0, 2fr);">
-      <div class="graph"><LfoGraph {params} ink={eInk.primary} shape={LFO1_WAVES[step(`${X} LFO 1 Wave`)]} rate={rateParam(1)} /></div>
       <div class="stack">
         {@render picker(`${X} LFO 1 Wave`, LFO1_WAVES, `Engine ${X} LFO 1 wave`)}
         {@render sw(`${X} LFO 1 Sync`, 'Sync')}
@@ -326,7 +323,6 @@
         {@render knob(`${X} LFO 1 Offset`, 'Offset')}
       </div>
       <div class="stack">{@render knob(`${X} LFO 1 Shape`, 'Shape')}{@render knob(`${X} LFO 1 Fold`, 'Fold')}</div>
-      </div>
     </FaceSection>
     <FaceSeam ink={eInk.primary} />
     <FaceSection span={2}>
@@ -343,8 +339,6 @@
     <FaceSeam ink={eInk.primary} />
     <FaceSection span={2}>
       {#snippet head()}{@render sub('LFO 2')}{/snippet}
-      <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 0.6fr) minmax(0, 2fr);">
-      <div class="graph"><LfoGraph {params} ink={eInk.primary} shape={LFO2_WAVES[step(`${X} LFO 2 Wave`)]} rate={rateParam(2)} /></div>
       <div class="stack">
         {@render picker(`${X} LFO 2 Wave`, LFO2_WAVES, `Engine ${X} LFO 2 wave`)}
         {@render sw(`${X} LFO 2 Sync`, 'Sync')}
@@ -353,7 +347,6 @@
       <div class="stack">
         {@render knob(rateParam(2), isOn(`${X} LFO 2 Sync`) ? 'Sync' : 'Rate', { steps: isOn(`${X} LFO 2 Sync`) ? 22 : undefined })}
         {@render knob(`${X} LFO 2 Offset`, 'Offset')}
-      </div>
       </div>
     </FaceSection>
   </FaceGrid>
@@ -388,6 +381,7 @@
 </div>
 
 <style>
+
   .meld-page {
     width: 100%;
     height: 100%;

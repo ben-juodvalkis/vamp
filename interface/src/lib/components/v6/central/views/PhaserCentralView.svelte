@@ -89,10 +89,10 @@
   ];
 </script>
 
-<!-- One face grid (ADR-510), seven columns of ~130px at 1366 x 1024:
-     Mode 1 · Voice 2 · LFO / Env 3 · Output 1. -->
+<!-- One face grid (ADR-510), nine columns of ~105px at 1366 x 1024:
+     Mode 1 · Voice 2 · LFO / Env 5 · Output 1. -->
 <div class="face-root" data-view="phaser">
-<FaceGrid sections={[1, 2, 3, 1]}>
+<FaceGrid sections={[1, 2, 5, 1]}>
   <FaceSection span={1}>
     {#snippet head()}<PanelEyebrow title="Mode" color={fx.color.primary} />{/snippet}
     <div class="cell">
@@ -121,23 +121,24 @@
   </FaceSection>
   <FaceSeam />
 
-  <!-- The LFO's wave drawn (ADR-514) over its ten shapes as a pick, then
-       Amount and Duty Cyc over Env and its switch, two to a row. -->
-  <FaceSection span={3}>
+  <!-- The LFO's wave drawn wide across the section (ADR-514), its ten
+       shapes a pick under it, beside Amount, Duty Cyc, Env and its switch
+       in one row. -->
+  <FaceSection span={5}>
     {#snippet head()}<PanelEyebrow title="LFO / Env" color={fx.color.primary} />{/snippet}
-    <div class="cell">
-      <div class="wave-pic">
+    <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 1fr) minmax(0, 1.25fr);">
+      <div class="graph">
         <LfoGraph params={lfo} shape={WAVES[wave]} amount="Amount" ink={fx.color.primary} interactive={false} label="LFO" />
       </div>
-      <div data-param="LFO Wave">
+      <div class="cell pick" data-param="LFO Wave">
         <ChoicePicker options={[...WAVES]} selected={wave} onSelect={(i) => fx.sendParam(PHASER.wave, i)} label="LFO wave" tint={fx.color.primary} ghost={fx.isGhost} />
       </div>
+      <ParamColumn face="knob" knobSize="m" span={4} {fx} ink={fx.color} boxes={MOTION}>
+        {#snippet after()}
+          <ParamSwitch row label="Env Fol" on={envOn} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => fx.sendParam(PHASER.envOn, envOn ? 0 : 1)} />
+        {/snippet}
+      </ParamColumn>
     </div>
-    <ParamColumn face="knob" knobSize="m" span={2} {fx} ink={fx.color} boxes={MOTION}>
-      {#snippet after()}
-        <ParamSwitch row label="Env Fol" on={envOn} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => fx.sendParam(PHASER.envOn, envOn ? 0 : 1)} />
-      {/snippet}
-    </ParamColumn>
   </FaceSection>
   <FaceSeam />
 
@@ -156,9 +157,8 @@
     min-height: 0;
   }
 
-  .wave-pic {
-    flex: 1 1 0;
-    min-height: 0;
+  .cell.pick {
+    justify-content: center;
   }
 
   .cell {

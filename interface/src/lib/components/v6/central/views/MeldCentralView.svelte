@@ -87,8 +87,8 @@
    * all on these pages (the engine levels are Global's Mix).
    */
   const engineRows = (e: 'a' | 'b'): BoardRow[] => [
-    { tiles: [{ id: `osc-${e}`, cols: 7 }, { id: `filter-${e}`, cols: 4 }], weight: 0.64 },
-    { tiles: [{ id: `env-${e}`, cols: 8 }, { id: `lfo-${e}`, cols: 7 }], weight: 0.9 }
+    { tiles: [{ id: `osc-${e}`, cols: 7 }, { id: `filter-${e}`, cols: 4 }], weight: 0.86 },
+    { tiles: [{ id: `env-${e}`, cols: 8 }, { id: `lfo-${e}`, cols: 7 }], weight: 0.8 }
   ];
   const BOARD: readonly BoardRow[] = [
     ...engineRows('a'),

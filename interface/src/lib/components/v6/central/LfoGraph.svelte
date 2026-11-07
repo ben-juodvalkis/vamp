@@ -52,8 +52,12 @@
 
   let { params, shape, rate, amount, ink, sw, label, interactive = true, phase = 0 }: Props = $props();
 
-  let w = $state(0);
-  let h = $state(0);
+  /** The cell's size; the picture keeps a landscape shape inside it (ADR-514: a tall, narrow one reads badly). */
+  let cw = $state(0);
+  let ch = $state(0);
+  const MAX_ASPECT = 0.6;
+  let w = $derived(cw);
+  let h = $derived(Math.min(ch, Math.round(cw * MAX_ASPECT)));
   const PAD = 8;
 
   let fn = $derived(lfoShape(shape));
@@ -103,7 +107,9 @@
   );
 </script>
 
-<div class="lfo-graph" class:off={!on} bind:clientWidth={w} bind:clientHeight={h} style="--lfo-ink: {ink};" data-lfo-graph={shape ?? ''}>
+<div class="graph-cell" bind:clientWidth={cw} bind:clientHeight={ch}>
+<div class="lfo-graph"
+  style:height={cw > 0 ? `${h}px` : '100%'} class:off={!on} style="--lfo-ink: {ink};" data-lfo-graph={shape ?? ''}>
   <svg
     width={w}
     height={h}
@@ -125,8 +131,17 @@
   {#if label}<span class="label">{label}</span>{/if}
   {#if hot && readout}<span class="readout">{readout}</span>{/if}
 </div>
+</div>
 
 <style>
+  .graph-cell {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+  }
   .lfo-graph {
     position: relative;
     width: 100%;
