@@ -243,12 +243,13 @@
 {#if section === 'osc' && board}
   <!-- On the board (ADR-512): the octave a pick over Semi (seven cells
        are too short in a board row), Detune over Scale St, the two
-       switches a column. -->
+       switches a column. Each engine has its own short rows on the board,
+       so no column stacks more than two touch rows: the type's pick over
+       the engine's On, without the mark (the pick names the type). -->
   <FaceGrid sections={[2, 3, 1, 1]}>
     <FaceSection span={2}>
       {#snippet head()}{@render back()}{/snippet}
       <div class="stack">
-        <div class="osc-mark"><MeldOscIcon type={Math.max(0, step(`${X} Osc Type`))} color={eInk.primary} /></div>
         {@render picker(`${X} Osc Type`, OSC_TYPES, `Engine ${X} oscillator type`)}
         {@render sw(`${X} On`, 'On')}
       </div>
@@ -310,9 +311,9 @@
     </FaceSection>
   </FaceGrid>
 {:else if section === 'filter' && board}
-  <!-- On the board (ADR-512) four columns in one section, so the second
-       macro's name fits: the pad over two, the type with its switches, the
-       second macro. -->
+  <!-- On the board (ADR-512) four columns in one section: the pad over two,
+       the type over On, Scale over the second macro (two touch rows a
+       column: each engine's rows are short). -->
   <FaceGrid sections={[4]}>
     <FaceSection span={4}>
       {#snippet head()}{@render back()}{@render sub('Type')}{/snippet}
@@ -320,9 +321,11 @@
       <div class="stack">
         {@render picker(`${X} Filter Type`, FILTER_TYPES, `Filter ${X} type`)}
         {@render sw(`${X} Filter On`, 'On')}
-        {@render sw(`${X} Filter Filter Scale Aware`, 'Scale')}
       </div>
-      {@render knob(`${X} Filter L-B-H-N`, extraTitle)}
+      <div class="stack">
+        {@render sw(`${X} Filter Filter Scale Aware`, 'Scale')}
+        {@render knob(`${X} Filter L-B-H-N`, extraTitle)}
+      </div>
     </FaceSection>
   </FaceGrid>
 {:else if section === 'filter'}
@@ -470,10 +473,10 @@
     </FaceSection>
   </FaceGrid>
 {:else if section === 'global' && board}
-  <!-- On the board (ADR-512) the Play switches go two to a column, so the
-       row keeps its height for the engine filters beside it, and the mix
-       reads "A Vol", its column too narrow for "A Volume". -->
-  <FaceGrid sections={[3, 2, 2]}>
+  <!-- On the board (ADR-512) Global is its own row under both engines, as
+       wide as the screen and short: the Play switches go four across, and
+       the mix reads "A Vol". -->
+  <FaceGrid sections={[3, 2, 4]}>
     <FaceSection span={3}>
       {#snippet head()}{@render back()}{@render sub('Mix A / B')}{/snippet}
       {#each [['Volume', 'Vol'], ['Pan', 'Pan'], ['Tone Filter', 'Tone']] as [name, label] (name)}
@@ -490,10 +493,10 @@
       <div class="stack">{@render knob('Engine B Delay', 'B Delay', { color: ink })}{@render knob('Volume', 'Volume', { color: ink })}</div>
     </FaceSection>
     <FaceSeam ink={ink.primary} />
-    <FaceSection span={2}>
+    <FaceSection span={4}>
       {#snippet head()}{@render sub('Play', ink.primary)}{/snippet}
-      <div class="stack">{@render sw('Limiter On', 'Limiter', ink.primary)}{@render sw('Link Envelopes', 'Link Env', ink.primary)}</div>
-      <div class="stack">{@render sw('Scale Aware', 'Scale', ink.primary)}{@render sw('Mono Legato', 'Legato', ink.primary)}</div>
+      {@render sw('Limiter On', 'Limiter', ink.primary)}{@render sw('Link Envelopes', 'Link Env', ink.primary)}
+      {@render sw('Scale Aware', 'Scale', ink.primary)}{@render sw('Mono Legato', 'Legato', ink.primary)}
     </FaceSection>
   </FaceGrid>
 {:else if section === 'global'}

@@ -87,17 +87,21 @@
   const openMeldPage = (page: string) => (meldPage = page);
 
   /**
-   * Full screen (ADR-512): every page of both engines at once, Engine A
-   * beside Engine B on each row, so there is no engine switch: the
-   * oscillators, the filters with Global beside them, the envelopes (the
-   * tallest row, three knobs to a column), the LFOs. The face's controls
-   * are all on these pages (the engine levels are Global's Mix).
+   * Full screen (ADR-512): every page of both engines at once, so there is
+   * no engine switch. Engine A on top and Engine B under it, the same two
+   * rows each (user, 2026-11-07): the oscillator and the filter, then the
+   * envelopes (the tallest row, three knobs to a column) and the LFOs.
+   * Global is its own short row across the foot. The face's controls are
+   * all on these pages (the engine levels are Global's Mix).
    */
+  const engineRows = (e: 'a' | 'b'): BoardRow[] => [
+    { tiles: [{ id: `osc-${e}`, cols: 7 }, { id: `filter-${e}`, cols: 4 }], weight: 0.53 },
+    { tiles: [{ id: `env-${e}`, cols: 7 }, { id: `lfo-${e}`, cols: 7 }], weight: 0.97 }
+  ];
   const BOARD: readonly BoardRow[] = [
-    { tiles: [{ id: 'osc-a', cols: 7 }, { id: 'osc-b', cols: 7 }] },
-    { tiles: [{ id: 'filter-a', cols: 4 }, { id: 'filter-b', cols: 4 }, { id: 'global', cols: 7 }], weight: 0.9 },
-    { tiles: [{ id: 'env-a', cols: 7 }, { id: 'env-b', cols: 7 }], weight: 1.25 },
-    { tiles: [{ id: 'lfo-a', cols: 7 }, { id: 'lfo-b', cols: 7 }], weight: 0.95 }
+    ...engineRows('a'),
+    ...engineRows('b'),
+    { tiles: [{ id: 'global', cols: 9 }], weight: 0.43 }
   ];
 
   /** The pages behind the face's eyebrows, the shown engine's, by Live's names (ADR-487). */
