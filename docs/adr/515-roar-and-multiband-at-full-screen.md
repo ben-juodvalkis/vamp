@@ -54,6 +54,15 @@ ratio rails, log-time rails).
   drags its ratio, up louder in both, a line and fill reading it), Output,
   Attack and Release; then the globals (Output, Amount, Time, Soft Knee,
   Peak) and the sidechain (on, Gain, Mix). The band face stays as it was.
+- **A fourth knob size, `xl`, 128px** (ADR-509's 48 / 70 / 96 below it),
+  for a board's lead controls where a column holds one knob: Roar's
+  Drive, Blend and Mod Amt, Multiband's globals and sidechain. A board
+  stands controls two to a column wherever they pair (Roar's Feedback
+  2 x 2, each stage's shaper and filter two knobs deep, the envelope
+  follower's three pairs), so a row needs fewer columns and each is filled
+  top to bottom (user, the same day: the first boards left most of each
+  tile empty). Multiband's band rows are too short for two knobs stacked,
+  so Input, Output, Attack and Release stand side by side there.
 - Mod matrix assignments, solo buttons, sidechain routing and Roar's
   Envelope Listen are not on the LOM's parameter list and are left out.
 

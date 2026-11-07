@@ -4,14 +4,15 @@
   /**
    * Multiband Dynamics at full screen (ADR-515), as Live lays it: a row a
    * band, High over Mid over Low, each its switch (and crossover), its
-   * Input, its Below and Above blocks, its Output and its times; then the
-   * device's globals and its sidechain.
+   * Below and Above blocks, its gains (Input, Output) and its times
+   * (Attack, Release), one large knob a column: a band's row is too short
+   * for two knobs stacked. Then the device's globals and its sidechain.
    */
   export const MULTIBAND_BOARD: readonly BoardRow[] = [
     { tiles: [{ id: 'band-High', cols: 11 }], weight: 1 },
     { tiles: [{ id: 'band-Mid', cols: 11 }], weight: 1 },
     { tiles: [{ id: 'band-Low', cols: 11 }], weight: 1 },
-    { tiles: [{ id: 'global', cols: 5 }, { id: 'sidechain', cols: 3 }], weight: 0.85 }
+    { tiles: [{ id: 'global', cols: 4 }, { id: 'sidechain', cols: 3 }], weight: 0.8 }
   ];
 </script>
 
@@ -46,7 +47,7 @@
 </script>
 
 <!-- A knob bound by name; a range either side of zero draws from zero. -->
-{#snippet knob(param: string, title: string, size: 's' | 'm' | 'l' = 'm', switchName?: string)}
+{#snippet knob(param: string, title: string, size: 's' | 'm' | 'l' | 'xl' = 'm', switchName?: string)}
   {@const l = lo(param)}
   {@const h = hi(param)}
   {@const bipolar = l < 0 && h > 0}
@@ -92,19 +93,14 @@
   {@const band = page.slice(5) as 'Low' | 'Mid' | 'High'}
   {@const active = `Band Activator (${band})`}
   {@const crossover = CROSSOVER[band]}
-  <FaceGrid sections={[1, 1, 6, 1, 2]}>
+  <FaceGrid sections={[1, 6, 2, 2]}>
     <FaceSection span={1}>
       {#snippet head()}{@render title(band)}{/snippet}
       {#if crossover}
-        <div class="stack">{@render sw(active, band)}{@render knob(crossover, 'X-Over', 's')}</div>
+        <div class="stack">{@render sw(active, band)}<div class="grow">{@render knob(crossover, 'X-Over', 'l')}</div></div>
       {:else}
         {@render sw(active, band)}
       {/if}
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={1}>
-      {#snippet head()}{@render title('Input')}{/snippet}
-      {@render knob(`Input Gain (${band})`, 'Input', 'm', active)}
     </FaceSection>
     <FaceSeam ink={ink.primary} />
     <FaceSection span={6}>
@@ -112,26 +108,26 @@
       <div class="face-span-all"><BandDynamicsDisplay {params} {band} ink={ink.primary} sw={active} /></div>
     </FaceSection>
     <FaceSeam ink={ink.primary} />
-    <FaceSection span={1}>
-      {#snippet head()}{@render title('Output')}{/snippet}
-      {@render knob(`Output Gain (${band})`, 'Output', 'm', active)}
+    <FaceSection span={2}>
+      {#snippet head()}{@render title('Gain')}{/snippet}
+      {@render knob(`Input Gain (${band})`, 'Input', 'l', active)}
+      {@render knob(`Output Gain (${band})`, 'Output', 'l', active)}
     </FaceSection>
     <FaceSeam ink={ink.primary} />
     <FaceSection span={2}>
       {#snippet head()}{@render title('Time')}{/snippet}
-      {@render knob(`Attack Time (${band})`, 'Attack', 'm', active)}
-      {@render knob(`Release Time (${band})`, 'Release', 'm', active)}
+      {@render knob(`Attack Time (${band})`, 'Attack', 'l', active)}
+      {@render knob(`Release Time (${band})`, 'Release', 'l', active)}
     </FaceSection>
   </FaceGrid>
 {:else if page === 'global'}
-  <FaceGrid sections={[5]}>
-    <FaceSection span={5}>
+  <FaceGrid sections={[4]}>
+    <FaceSection span={4}>
       {#snippet head()}{@render title('Global')}{/snippet}
-      {@render knob('Output', 'Output')}
-      {@render knob('Amount', 'Amount')}
-      {@render knob('Time Scaling', 'Time')}
-      {@render sw('Soft Knee On/Off', 'Soft Knee')}
-      {@render sw('Peak/RMS Mode', 'Peak')}
+      {@render knob('Output', 'Output', 'xl')}
+      {@render knob('Amount', 'Amount', 'xl')}
+      {@render knob('Time Scaling', 'Time', 'xl')}
+      <div class="stack">{@render sw('Soft Knee On/Off', 'Soft Knee')}{@render sw('Peak/RMS Mode', 'Peak')}</div>
     </FaceSection>
   </FaceGrid>
 {:else if page === 'sidechain'}
@@ -139,8 +135,8 @@
     <FaceSection span={3}>
       {#snippet head()}{@render title('Sidechain')}{/snippet}
       {@render sw('S/C On', 'S/C')}
-      {@render knob('S/C Gain', 'Gain', 'm', 'S/C On')}
-      {@render knob('S/C Mix', 'Mix', 'm', 'S/C On')}
+      {@render knob('S/C Gain', 'Gain', 'xl', 'S/C On')}
+      {@render knob('S/C Mix', 'Mix', 'xl', 'S/C On')}
     </FaceSection>
   </FaceGrid>
 {/if}
@@ -155,6 +151,7 @@
   .stack {
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: var(--spacing-sm);
     min-height: 0;
     min-width: 0;
@@ -162,6 +159,14 @@
   .stack > :global(*) {
     flex: 1 1 0;
     min-height: 0;
+  }
+  .stack > .grow {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+  .stack > .sw-cell {
+    flex: none;
+    height: var(--height-touch);
   }
   .cell {
     min-width: 0;

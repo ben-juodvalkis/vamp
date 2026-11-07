@@ -5,12 +5,15 @@
    * Roar at full screen (ADR-515), in the order of Live's expanded Roar:
    * what feeds the stages (Input, Routing) and what follows them
    * (Feedback, Global) on top, the three stages side by side, then the four
-   * modulation sources. About 16 face columns a row (ADR-512's budget).
+   * modulation sources. Controls stand two to a column wherever a pair
+   * belongs together (user, 2026-11-07: the first board's single rows of
+   * knobs left most of each tile empty), so a row needs fewer columns and
+   * each column is filled top to bottom.
    */
   export const ROAR_BOARD: readonly BoardRow[] = [
-    { tiles: [{ id: 'input', cols: 3 }, { id: 'routing', cols: 3 }, { id: 'feedback', cols: 5 }, { id: 'global', cols: 4 }], weight: 1 },
-    { tiles: [{ id: 'stage-1', cols: 6 }, { id: 'stage-2', cols: 6 }, { id: 'stage-3', cols: 6 }], weight: 1.25 },
-    { tiles: [{ id: 'lfo-1', cols: 4 }, { id: 'lfo-2', cols: 4 }, { id: 'env', cols: 4 }, { id: 'noise', cols: 3 }], weight: 1 }
+    { tiles: [{ id: 'input', cols: 2 }, { id: 'routing', cols: 2 }, { id: 'feedback', cols: 3 }, { id: 'global', cols: 3 }], weight: 1 },
+    { tiles: [{ id: 'stage-1', cols: 4 }, { id: 'stage-2', cols: 4 }, { id: 'stage-3', cols: 4 }], weight: 1.2 },
+    { tiles: [{ id: 'lfo-1', cols: 4 }, { id: 'lfo-2', cols: 4 }, { id: 'env', cols: 4 }, { id: 'noise', cols: 2 }], weight: 1 }
   ];
 </script>
 
@@ -89,7 +92,7 @@
 
 <!-- A knob bound by name. A parameter whose range is integers wider than a
      switch (a synced division, a note, a count of sixteenths) steps. -->
-{#snippet knob(param: string, title: string, size: 's' | 'm' | 'l' = 'm', ghost = false)}
+{#snippet knob(param: string, title: string, size: 's' | 'm' | 'l' | 'xl' = 'm', ghost = false)}
   {@const l = lo(param)}
   {@const h = hi(param)}
   {@const bipolar = BIPOLAR.test(param) || (l < 0 && h > 0)}
@@ -182,20 +185,41 @@
   </div>
 {/snippet}
 
-<!-- An LFO: its wave as Live draws it (ADR-514), rate across, over its
-     wave and rate mode, rate, morph and smoothing. Roar's LFOs have no
-     amount of their own (the matrix sets how far they reach), so the
-     picture is drawn full height. -->
+<!-- A stage on the board: the shaper's two columns and the filter's two,
+     each its type over two rows of knobs, its switches paired with the
+     last knob. -->
+{#snippet stageBoard(n: number)}
+  {@const type = step(`Flt ${n} Type`)}
+  {@const extra = roarFilterExtra(type)}
+  <div class="face-span-all stage-board" data-roar-stage-grid={n}>
+    <div class="span-2-cell">{@render pick(`Shaper ${n} Type`, ROAR_SHAPERS, `${names[n - 1]} shaper`)}</div>
+    <div class="span-2-cell">{@render pick(`Flt ${n} Type`, ROAR_FILTERS, `${names[n - 1]} filter`)}</div>
+    {@render knob(`Shaper ${n} Amt`, 'Amount', 'l')}
+    {@render knob(`Shaper ${n} Bias`, 'Bias', 'l')}
+    {@render knob(`Flt ${n} Freq`, 'Freq', 'l')}
+    {@render knob(`Flt ${n} Res`, 'Res', 'l', !roarFilterHasRes(type))}
+    {@render knob(`Shaper ${n} Level`, 'Level', 'l')}
+    <div class="stack sw-pair">{@render sw(`Shaper ${n} On`, 'Shaper')}{@render sw(`Stage ${n} On`, 'Stage')}</div>
+    {#if extra}{@render knob(`Flt ${n} ${extra}`, extra, 'l')}{:else}<div class="cell"></div>{/if}
+    <div class="stack sw-pair">{@render sw(`Flt ${n} On`, 'Filter')}{@render sw(`Flt ${n} Pre On`, 'Pre')}</div>
+  </div>
+{/snippet}
+
+<!-- An LFO: its wave as Live draws it (ADR-514), rate across, across the
+     tile over its wave and rate mode, rate, morph and smoothing. Roar's LFOs
+     have no amount of their own (the matrix sets how far they reach), so
+     the picture is drawn full height. Beside the controls the wave was too
+     narrow to draw tall, so it stays on top. -->
 {#snippet lfo(n: 1 | 2)}
   {@const prefix = `LFO ${n}` as const}
   {@const mode = step(`${prefix} Mode`)}
   {@const rate = roarRateParam(prefix, mode)}
-  <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 0.9fr) minmax(0, 1.4fr);">
+  <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 0.85fr) minmax(0, 1fr);">
     <div class="graph"><LfoGraph {params} ink={ink.primary} shape={ROAR_LFO_WAVES[step(`${prefix} Wave`)]} {rate} label={prefix} /></div>
     <div class="stack">{@render pick(`${prefix} Wave`, ROAR_LFO_WAVES, `${prefix} wave`)}{@render pick(`${prefix} Mode`, ROAR_RATE_MODES, `${prefix} rate mode`)}</div>
-    {@render knob(rate, rateTitle(mode))}
-    {@render knob(`${prefix} Morph`, 'Morph')}
-    {@render knob(`${prefix} Smooth`, 'Smooth')}
+    {@render knob(rate, rateTitle(mode), 'l')}
+    {@render knob(`${prefix} Morph`, 'Morph', 'l')}
+    {@render knob(`${prefix} Smooth`, 'Smooth', 'l')}
   </div>
 {/snippet}
 
@@ -233,49 +257,59 @@
     </FaceSection>
   </FaceGrid>
 {:else if page === 'input'}
-  <FaceGrid sections={[3]}>
-    <FaceSection span={3}>
+  <FaceGrid sections={[2]}>
+    <FaceSection span={2}>
       {#snippet head()}{@render title('Input')}{/snippet}
-      {@render knob('Drive', 'Drive', 'l')}
-      <div class="stack">{@render knob('Tone Amt', 'Tone', 's')}{@render sw('Color On', 'Color')}</div>
-      {@render knob('Tone Freq', 'Freq')}
+      <div class="stack">
+        <div class="grow">{@render knob('Drive', 'Drive', 'xl')}</div>
+        {@render sw('Color On', 'Color')}
+      </div>
+      <div class="stack">{@render knob('Tone Amt', 'Tone')}{@render knob('Tone Freq', 'Freq')}</div>
     </FaceSection>
   </FaceGrid>
 {:else if page === 'routing'}
-  <FaceGrid sections={[3]}>
-    <FaceSection span={3}>
+  <FaceGrid sections={[2]}>
+    <FaceSection span={2}>
       {#snippet head()}{@render title('Routing')}{/snippet}
-      {@render routingTile()}
+      <div class="face-span-all routing-board">
+        <div class="span-2-cell">{@render routingPick()}</div>
+        {#if multiBand}
+          {@render knob('Low Mid X-Over', 'Low', 'l')}
+          {@render knob('Mid High X-Over', 'High', 'l')}
+        {:else}
+          <div class="span-2-cell">{@render knob('Blend', 'Blend', 'xl', !blend)}</div>
+        {/if}
+      </div>
     </FaceSection>
   </FaceGrid>
 {:else if page === 'feedback'}
   {@const mode = step('FB Time Mode')}
-  <FaceGrid sections={[5]}>
-    <FaceSection span={5}>
+  <FaceGrid sections={[3]}>
+    <FaceSection span={3}>
       {#snippet head()}{@render title('Feedback')}{/snippet}
       <div class="stack">{@render pick('FB Time Mode', ROAR_FB_MODES, 'Feedback mode')}{@render sw('FB Invert', 'Invert')}{@render sw('Fb Gate On', 'Gate')}</div>
-      {@render knob('Feedback', 'Amount', 'l')}
-      {@render knob(roarFeedbackTimeParam(mode), mode === 4 ? 'Note' : 'Time')}
-      {@render knob('FB Freq', 'Freq')}
-      {@render knob('FB Width', 'Width')}
+      <div class="stack">{@render knob('Feedback', 'Amount', 'l')}{@render knob(roarFeedbackTimeParam(mode), mode === 4 ? 'Note' : 'Time', 'l')}</div>
+      <div class="stack">{@render knob('FB Freq', 'Freq', 'l')}{@render knob('FB Width', 'Width', 'l')}</div>
     </FaceSection>
   </FaceGrid>
 {:else if page === 'global'}
-  <FaceGrid sections={[4]}>
-    <FaceSection span={4}>
+  <FaceGrid sections={[3]}>
+    <FaceSection span={3}>
       {#snippet head()}{@render title('Global')}{/snippet}
-      <div class="stack">{@render knob('Comp Amt', 'Comp', 's')}{@render sw('Comp Hp On', 'Comp HP')}</div>
-      {@render knob('Output', 'Output')}
-      {@render knob('Dry/Wet', 'Dry/Wet')}
-      {@render knob('Global Mod Amt', 'Mod Amt')}
+      <div class="stack">
+        <div class="grow">{@render knob('Comp Amt', 'Comp', 'l')}</div>
+        {@render sw('Comp Hp On', 'Comp HP')}
+      </div>
+      <div class="stack">{@render knob('Output', 'Output', 'l')}{@render knob('Dry/Wet', 'Dry/Wet', 'l')}</div>
+      {@render knob('Global Mod Amt', 'Mod Amt', 'xl')}
     </FaceSection>
   </FaceGrid>
 {:else if page.startsWith('stage-')}
   {@const n = Number(page.slice(6))}
-  <FaceGrid sections={[6]}>
-    <FaceSection span={6} ghost={n > stages} data-roar-stage={n} data-roar-stage-used={n <= stages}>
+  <FaceGrid sections={[4]}>
+    <FaceSection span={4} ghost={n > stages} data-roar-stage={n} data-roar-stage-used={n <= stages}>
       {#snippet head()}{@render title(names[n - 1])}{/snippet}
-      {@render stage(n, true)}
+      {@render stageBoard(n)}
     </FaceSection>
   </FaceGrid>
 {:else if page === 'lfo-1' || page === 'lfo-2'}
@@ -286,24 +320,28 @@
     </FaceSection>
   </FaceGrid>
 {:else if page === 'env'}
-  <!-- The envelope follower: its sensitivity, its response, the band it listens to. -->
+  <!-- The envelope follower: its sensitivity, its response, the band it
+       listens to, two to a column; Hold beside them. -->
   <FaceGrid sections={[4]}>
     <FaceSection span={4}>
       {#snippet head()}{@render title('Envelope')}{/snippet}
-      <div class="stack">{@render knob('Env Thresh', 'Thresh', 's')}{@render knob('Env Gain', 'Gain', 's')}</div>
-      <div class="stack">{@render knob('Env Attack', 'Attack', 's')}{@render knob('Env Release', 'Release', 's')}</div>
-      <div class="stack">{@render knob('Env Freq', 'Freq', 's')}{@render knob('Env Width', 'Width', 's')}</div>
-      <div class="stack">{@render sw('Env Hold On', 'Hold')}<div class="cell"></div></div>
+      <div class="stack">{@render knob('Env Thresh', 'Thresh', 'l')}{@render knob('Env Gain', 'Gain', 'l')}</div>
+      <div class="stack">{@render knob('Env Attack', 'Attack', 'l')}{@render knob('Env Release', 'Release', 'l')}</div>
+      <div class="stack">{@render knob('Env Freq', 'Freq', 'l')}{@render knob('Env Width', 'Width', 'l')}</div>
+      {@render sw('Env Hold On', 'Hold')}
     </FaceSection>
   </FaceGrid>
 {:else if page === 'noise'}
   {@const mode = step('Noise Mode')}
-  <FaceGrid sections={[3]}>
-    <FaceSection span={3}>
+  <FaceGrid sections={[2]}>
+    <FaceSection span={2}>
       {#snippet head()}{@render title('Noise')}{/snippet}
-      <div class="stack">{@render pick('Noise Type', ROAR_NOISES, 'Noise type')}{@render pick('Noise Mode', ROAR_RATE_MODES, 'Noise rate mode')}</div>
-      {@render knob(roarRateParam('Noise', mode), rateTitle(mode))}
-      {@render knob('Noise Smooth', 'Smooth')}
+      <div class="stack">
+        {@render pick('Noise Type', ROAR_NOISES, 'Noise type')}
+        {@render pick('Noise Mode', ROAR_RATE_MODES, 'Noise rate mode')}
+        <div class="grow">{@render knob(roarRateParam('Noise', mode), rateTitle(mode), 'l')}</div>
+      </div>
+      {@render knob('Noise Smooth', 'Smooth', 'l')}
     </FaceSection>
   </FaceGrid>
 {/if}
@@ -319,6 +357,7 @@
   .stack {
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: var(--spacing-sm);
     min-height: 0;
     min-width: 0;
@@ -370,6 +409,45 @@
     display: flex;
     align-items: center;
   }
+  /* A stage on the board: types, then two rows of knobs. */
+  .stage-board {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: var(--height-touch) minmax(0, 1fr) minmax(0, 1fr);
+    row-gap: var(--spacing-sm);
+    min-height: 0;
+  }
+  /* The routing on the board: its pick over Blend or the crossovers. */
+  .routing-board {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: var(--height-touch) minmax(0, 1fr);
+    row-gap: var(--spacing-sm);
+    min-height: 0;
+  }
+  .stage-board > :global(*),
+  .routing-board > :global(*) {
+    min-width: 0;
+    min-height: 0;
+  }
+  /* Two switches where a knob would be, centred as a pair. */
+  .stack.sw-pair {
+    justify-content: center;
+  }
+  .stack.sw-pair > :global(*) {
+    flex: none;
+  }
+  /* In a stack of touch rows, the knob takes what they leave. */
+  .stack > .grow {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+  .stack > .sw-cell,
+  .stack > :global(.sw-cell) {
+    flex: none;
+    height: var(--height-touch);
+  }
+
   .sub {
     font-size: 0.75rem;
     font-weight: 700;

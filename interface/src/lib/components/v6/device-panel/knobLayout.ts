@@ -25,8 +25,8 @@ export function knobGridRows(count: number, width: number, height: number, gap =
 	return best;
 }
 
-/** A knob's size (ADR-509): s 48px, m 70px, l 96px across. */
-export type KnobSize = 's' | 'm' | 'l';
+/** A knob's size (ADR-509): s 48px, m 70px, l 96px across; xl 128px, for a full-screen board's lead controls (ADR-515). */
+export type KnobSize = 's' | 'm' | 'l' | 'xl';
 
 /**
  * A knob's size from how many knobs its column stacks (ADR-509): one or two
@@ -38,12 +38,12 @@ export function knobSizeFor(stacked: number): KnobSize {
 }
 
 /** A size's diameter, px (KnobFace's `--knob-want`). */
-export const KNOB_PX: Record<KnobSize, number> = { s: 48, m: 70, l: 96 };
+export const KNOB_PX: Record<KnobSize, number> = { s: 48, m: 70, l: 96, xl: 128 };
 
 /** The height a caption under a knob takes, gaps and padding included (KnobFace's `--knob-caption-h`). */
-const CAPTION_PX: Record<KnobSize, number> = { s: 44, m: 50, l: 54 };
+const CAPTION_PX: Record<KnobSize, number> = { s: 44, m: 50, l: 54, xl: 58 };
 
-const SIZES_DOWN: readonly KnobSize[] = ['l', 'm', 's'];
+const SIZES_DOWN: readonly KnobSize[] = ['xl', 'l', 'm', 's'];
 
 /**
  * The diameter a knob of `size` draws in a `width` x `height` cell: KnobFace's

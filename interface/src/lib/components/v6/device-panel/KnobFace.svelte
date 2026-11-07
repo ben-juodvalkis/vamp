@@ -45,7 +45,7 @@
     /** How many values a stepped control has: a detent each, up to 24. */
     steps?: number;
     /** The knob's size, by its column's count (`knobSizeFor`): s 48px, m 70px, l 96px. */
-    size?: 's' | 'm' | 'l';
+    size?: 's' | 'm' | 'l' | 'xl';
     /**
      * False draws no caption: the knob takes the cell's height, and `centreMark`
      * or the glyph alone says what it is (Drift's level knobs, 2026-11-06).
@@ -74,7 +74,7 @@
     observer.observe(cell);
     return () => observer.disconnect();
   });
-  let drawn = $derived<'s' | 'm' | 'l'>(fit && box.w > 0 ? knobSizeFits(size, box.w, box.h, caption) : size);
+  let drawn = $derived<'s' | 'm' | 'l' | 'xl'>(fit && box.w > 0 ? knobSizeFits(size, box.w, box.h, caption) : size);
 
   const MAX_DETENTS = 24;
 
@@ -169,6 +169,13 @@
     --knob-title-fs: 17px;
     --knob-value-fs: 14px;
     --knob-caption-h: 3.375rem;
+  }
+  /* A full-screen board's lead controls (ADR-515). */
+  .knob.size-xl {
+    --knob-want: 128px;
+    --knob-title-fs: 18px;
+    --knob-value-fs: 15px;
+    --knob-caption-h: 3.625rem;
   }
   .knob-body {
     width: 100%;

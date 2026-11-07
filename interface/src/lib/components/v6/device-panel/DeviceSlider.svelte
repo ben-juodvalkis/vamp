@@ -84,7 +84,7 @@
     // A knob's size (ADR-509), by how many knobs its column stacks
     // (`knobSizeFor`): 'l' 96px for one or two, 'm' 70px for three, 's'
     // 48px for four or more.
-    knobSize?: 's' | 'm' | 'l';
+    knobSize?: 's' | 'm' | 'l' | 'xl';
     /** False drops the knob's caption (KnobFace `caption`); the aria-label keeps the title. */
     knobCaption?: boolean;
     /** A short text in the knob's middle at rest, in place of the glyph (KnobFace `centreMark`). */
