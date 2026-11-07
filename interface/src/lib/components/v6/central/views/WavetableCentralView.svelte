@@ -287,10 +287,10 @@
    * Mod Sources page, a summary of the five, has no tile.
    */
   const BOARD: readonly BoardRow[] = [
-    { tiles: [{ id: 'osc1', cols: 8 }, { id: 'osc2', cols: 8 }], weight: 1.05 },
+    { tiles: [{ id: 'osc1', cols: 8 }, { id: 'osc2', cols: 8 }], weight: 1.3 },
     { tiles: [{ id: 'filter1', cols: 7 }, { id: 'filter2', cols: 7 }], weight: 0.85 },
-    { tiles: [{ id: 'amp', cols: 4 }, { id: 'env2', cols: 4 }, { id: 'env3', cols: 4 }], weight: 1.4 },
-    { tiles: [{ id: 'lfo1', cols: 5 }, { id: 'lfo2', cols: 5 }, { id: 'global', cols: 3 }], weight: 1.05 }
+    { tiles: [{ id: 'amp', cols: 4 }, { id: 'env2', cols: 4 }, { id: 'env3', cols: 4 }], weight: 1.15 },
+    { tiles: [{ id: 'lfo1', cols: 5 }, { id: 'lfo2', cols: 5 }, { id: 'global', cols: 4 }], weight: 1.05 }
   ];
 
   /** Both envelopes in view, Amp over Envelope 2 (ADR-477). */

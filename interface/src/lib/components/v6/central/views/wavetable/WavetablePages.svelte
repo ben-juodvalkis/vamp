@@ -212,7 +212,8 @@
   <!-- On the board (ADR-512) the page's eight columns, the wavetable's
        picks one touch row across the oscillator's six, its category beside
        its table, each naming it (user, 2026-11-07); the pad and the knobs
-       under them. Picking a category puts the oscillator on that
+       under them, the effect and Gain a column each at full height, their
+       names under them (user, the same day: bigger, labels below). Picking a category puts the oscillator on that
        category's first table, as Live does. -->
   {@const osc = n === 2 ? 2 : 1}
   {@const t = tables.choice(osc)}
@@ -224,10 +225,11 @@
           <ChoicePicker options={t.categories} selected={t.category} onSelect={(i) => tables.setCategory(osc, i)} label="Osc {osc} wavetable category" tint={oscInk.primary} ghost={t.categories.length === 0} />
           <ChoicePicker options={t.tables} selected={t.table} onSelect={(i) => tables.setTable(osc, i)} label="Osc {osc} wavetable" tint={oscInk.primary} ghost={t.tables.length === 0} />
         </div>
-        <div class="face-span-3 pad" style={isOn(`${O} On`) ? '' : 'opacity: var(--opacity-ghost);'}>{@render oscPad(osc)}</div>
-        <div class="stack">{@render knob(`${O} Effect 1`, fx[0], 'l', { sw: `${O} On`, color: oscInk })}{@render knob(`${O} Transp`, 'Semi', 's', { sw: `${O} On`, color: oscInk })}</div>
-        <div class="stack">{@render knob(`${O} Detune`, 'Detune', 'm', { sw: `${O} On`, color: oscInk })}{@render knob(`${O} Pan`, 'Pan', 's', { sw: `${O} On`, color: oscInk })}</div>
-        <div class="stack">{@render knob(`${O} Gain`, 'Gain', 'l', { sw: `${O} On`, color: oscInk })}{@render sw(`${O} On`, 'On', oscInk.primary)}</div>
+        <div class="face-span-2 pad" style={isOn(`${O} On`) ? '' : 'opacity: var(--opacity-ghost);'}>{@render oscPad(osc)}</div>
+        {@render knob(`${O} Effect 1`, fx[0], 'l', { sw: `${O} On`, color: oscInk })}
+        <div class="stack">{@render knob(`${O} Detune`, 'Detune', 'm', { sw: `${O} On`, color: oscInk })}{@render knob(`${O} Transp`, 'Semi', 'm', { sw: `${O} On`, color: oscInk })}</div>
+        {@render knob(`${O} Gain`, 'Gain', 'l', { sw: `${O} On`, color: oscInk })}
+        <div class="stack">{@render knob(`${O} Pan`, 'Pan', 'm', { sw: `${O} On`, color: oscInk })}{@render sw(`${O} On`, 'On', oscInk.primary)}</div>
       </div>
     </FaceSection>
     <FaceSeam ink={ink.primary} />
@@ -339,13 +341,16 @@
     </FaceSection>
   </FaceGrid>
 {:else if page === 'global' && board}
-  <!-- On the board (ADR-512) three columns, two knobs to a column. -->
-  <FaceGrid sections={[3]}>
-    <FaceSection span={3}>
+  <!-- On the board (ADR-512) four columns: Volume, the lead, a column to
+       itself; the rest two to a column, alike in rank, so each cell is
+       tall enough for its name under its knob. -->
+  <FaceGrid sections={[4]}>
+    <FaceSection span={4}>
       {#snippet head()}{@render back()}{/snippet}
-      <div class="stack">{@render knob('Volume', 'Volume', 'l')}{@render knob('Transpose', 'Transp', 's')}</div>
-      <div class="stack">{@render knob('Unison Amount', 'Unison', 'm')}{@render knob('Glide', 'Glide', 's')}</div>
-      <div class="stack">{@render knob('Time', 'Time', 's')}{@render knob('Global Mod Amount', 'Mod Amt', 's')}</div>
+      {@render knob('Volume', 'Volume', 'l')}
+      <div class="stack">{@render knob('Unison Amount', 'Unison', 'm')}{@render knob('Glide', 'Glide', 'm')}</div>
+      <div class="stack">{@render knob('Transpose', 'Transp', 's')}{@render knob('Time', 'Time', 's')}</div>
+      {@render knob('Global Mod Amount', 'Mod Amt', 's')}
     </FaceSection>
   </FaceGrid>
 {/if}
@@ -409,8 +414,8 @@
     min-width: 0;
     min-height: 0;
   }
-  .osc-board > .face-span-3 {
-    grid-column: span 3;
+  .osc-board > .face-span-2 {
+    grid-column: span 2;
   }
   .choosers {
     grid-column: 1 / -1;
