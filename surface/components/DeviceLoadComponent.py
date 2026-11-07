@@ -158,7 +158,7 @@ TRACK_INSERT_MODE_BESIDE_SELECTION = 2
 #
 # This map has NO fallback of its own: an unknown class inserts by the
 # load's ``rel`` (Live's index name, a Collection's item) and is refused as
-# ``unknown-device`` when that is empty. 13 of its 22 rows are not recoverable from the
+# ``unknown-device`` when that is empty. 13 of its 24 rows are not recoverable from the
 # class string by any rule (StereoGain -> Utility, Hybrid -> Hybrid Reverb,
 # Chorus2 -> Chorus-Ensemble, PhaserNew -> Phaser-Flanger), and a guessed
 # name is one Live refuses.
@@ -176,6 +176,7 @@ NATIVE_DEVICE_NAMES: Dict[str, str] = {
     "GlueCompressor": "Glue Compressor",
     "MultibandDynamics": "Multiband Dynamics",
     "Saturator": "Saturator",
+    "Roar": "Roar",
     "BeatRepeat": "Beat Repeat",
     "ChannelEq": "Channel EQ",
     "DrumBuss": "Drum Buss",

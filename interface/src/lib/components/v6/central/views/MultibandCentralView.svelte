@@ -13,10 +13,18 @@
    *
    * Self-contained: queries its own slot state, takes no props, and
    * renders through ghost/loading/active without a `{#if device}` gate.
+   *
+   * Full screen (ADR-515) is the board, as Live lays the device out: a row
+   * a band with its Below and Above blocks to drag, then the globals and
+   * the sidechain (`multiband/MultibandBoardTile.svelte`).
    */
 
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
+  import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
+  import InstrumentBoard from '../InstrumentBoard.svelte';
+  import MultibandBoardTile, { MULTIBAND_BOARD } from './multiband/MultibandBoardTile.svelte';
+  import { usePanelParams } from './panel/usePanelParams.svelte';
   import FaceGrid from '../FaceGrid.svelte';
   import FaceSection from '../FaceSection.svelte';
   import FaceSeam from '../FaceSeam.svelte';
@@ -31,6 +39,8 @@
   } from '../../device-panel/multibandParams';
 
   const multiband = useFxGridSlot('ott');
+  /** The board binds by Live's names (ADR-515). */
+  const params = usePanelParams(() => multiband.device ?? undefined);
 
   // A ghost draws Live's factory defaults (the dump's `default`s).
   let mbThreshold = $derived(multiband.paramValue(MB_BELOW_THRESHOLD_MID) ?? -60);
@@ -39,6 +49,13 @@
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
 <div class="mb-central-layout relative" data-device="multiband">
+{#if multiband.device && centralDisplayStore.expanded}
+<InstrumentBoard rows={MULTIBAND_BOARD} ink={multiband.color.primary}>
+  {#snippet tile(id)}
+    <MultibandBoardTile page={id} {params} ink={multiband.color} />
+  {/snippet}
+</InstrumentBoard>
+{:else}
 <!-- One face grid (ADR-510): Threshold over two columns, Output one. -->
 <FaceGrid sections={[2, 1]}>
   <FaceSection span={2}>
@@ -84,6 +101,7 @@
   </div>
   </FaceSection>
 </FaceGrid>
+{/if}
 </div>
 
 <style>

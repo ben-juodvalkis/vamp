@@ -99,6 +99,7 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 		'random': () => import('./views/RandomCentralView.svelte'), // the Rand Oct tile
 		'redux': () => import('./views/ReduxCentralView.svelte'),
 		'reverb': () => import('./views/ReverbCentralView.svelte'),
+		'roar': () => import('./views/RoarCentralView.svelte'), // Roar (ADR-515)
 		'saturator': () => import('./views/SaturatorCentralView.svelte'), // the Drive tile
 		'shifter': () => import('./views/ShifterCentralView.svelte'),
 		'smudge': () => import('./views/BlurCentralView.svelte'), // Blur

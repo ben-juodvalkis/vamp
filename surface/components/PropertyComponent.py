@@ -28,6 +28,8 @@ Allowlist (closed, day-one set per ADR-002 §Context):
 - ``Drift``:  ``voice_mode_index``, ``voice_count_index``, the nine
   ``mod_matrix_*_source_*_index`` and three ``mod_matrix_target_*_index``
   (2026-11-06).
+- ``Roar``: ``routing_mode_index`` (Single, Serial, Parallel, Multi Band,
+  Mid Side, Feedback, Delay; 2026-11-07).
 - ``DrumGroupDevice``: ``vm.fx1``, ``vm.fx2``, ``vm.fxType``,
   ``vm.attack``, ``vm.decay``, ``vm.start``, ``vm.pitch``, ``vm.release``,
   ``vm.sustain``, ``vm.oscAmount``, ``vm.oscCoarse``, ``vm.pitchEnvAmount``,
@@ -415,6 +417,14 @@ ALLOWLIST: Dict[Tuple[str, str], PropertySpec] = {
     # matrix's three targets (`mod_matrix_target_*_list`, twelve names);
     # the voice count (4, 8, 16, 24, 32). The lists are fixed, so only the
     # indices ride the wire; the interface names them.
+    # Roar — its routing mode, a direct attribute, settable with a
+    # listener (measured on the rig, 2026-11-07). `routing_mode_list` is
+    # fixed (Single, Serial, Parallel, Multi Band, Mid Side, Feedback,
+    # Delay), so only the index rides the wire.
+    ("Roar", "routing_mode_index"): PropertySpec(
+        listener_path="", attr_name="routing_mode_index", writable=True,
+        coerce_to_int=True,
+    ),
     ("Drift", "voice_mode_index"): PropertySpec(
         listener_path="", attr_name="voice_mode_index", writable=True,
         coerce_to_int=True,

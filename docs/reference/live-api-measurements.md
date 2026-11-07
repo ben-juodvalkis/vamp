@@ -313,6 +313,14 @@ tested against the same numbers in `deviceControls.presets.test.ts`).
   - Shifter: RM Coarse Hz, `1 · 10000^v` (1 Hz → 0); Mode as saved (2 Ring).
   - Multiband Dynamics: Below Ratio (Mid) -3..1, Below Threshold (Mid) dB
     and Output dB, all as saved (0 → 0, -27.125 → -27.125).
+  - Roar (2026-11-07, not loaded: no Roar preset sits where Live's browser
+    loads from, only the Core Library): Drive saves as `Input_InputGain`, a
+    linear factor, onto a 0..1 rail Live labels -24, -12, 0, 12, 24 dB at
+    each quarter, so `(20·log10(g) + 24) / 48` (Basic Mid Side 1.41254 →
+    0.5625); Dry/Wet as `Output_DryWet`, as is. Its routing mode is not a
+    parameter: the device property `routing_mode_index`, settable with a
+    listener, over a fixed `routing_mode_list` (Single, Serial, Parallel,
+    Multi Band, Mid Side, Feedback, Delay).
   - The MIDI effects, as saved: Velocity Random **0..64** (not 0..127),
     Out Hi/Low 0..127; Arpeggiator Synced Rate 0..13, Gate **1..200** %
     (its preset saves the device off), Free Rate ms on `10 · 100^v`

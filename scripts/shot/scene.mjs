@@ -1372,7 +1372,7 @@ export function setTrackDevices(scene, trackIndex, devices) {
 		else break;
 	}
 	const records = [];
-	pushDevices(records, `tracks/${trackIndex}`, devices);
+	pushDevices(records, `tracks/${trackIndex}`, devices, (scene.deviceProperties ??= {}), (scene.padRacks ??= {}));
 	args.splice(at, end - at, ...records);
 	return scene;
 }

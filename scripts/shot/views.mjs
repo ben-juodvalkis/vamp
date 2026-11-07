@@ -246,7 +246,9 @@ const CHAIN_VIEW_DEVICES = [
 		['chorus', { name: 'Chorus-Ensemble', className: 'Chorus2', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Mode', 'Mode', 0, 2, 0, 'Chorus'], ['Shape', 'Shape', 0, 1, 0, ''], ['Rate', 'Rate', 0, 1, 0.42, '1.20 Hz'], ['Amount', 'Amount', 0, 1, 0.6, '60 %'], ['Feedback', 'Feedback', 0, 1, 0.25, '25 %'], ['FB Invert', 'FB Invert', 0, 1, 0, ''], ['Offset', 'Offset', 0, 1, 0, ''], ['Delay Time', 'Delay Time', 0, 5, 2, ''], ['Delay Taps', 'Delay Taps', 0, 1, 1, ''], ['HP On', 'HP On', 0, 1, 0, ''], ['HP Freq', 'HP Freq', 0, 1, 0.28, ''], ['Width', 'Width', 0, 1, 0.7, '140 %'], ['Warmth', 'Warmth', 0, 1, 0.3, '9.0 %'], ['Output', 'Output', 0, 1, 0.71, ''], ['Dry/Wet', 'Dry/Wet', 0, 1, 0.5, '50 %']] }],
 		['redux', { name: 'Redux', className: 'Redux2', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Sample Rate', 'Sample Rate', 0, 1, 0.62, '9.08 kHz'], ['Jitter', 'Jitter', 0, 1, 0.2, '4.0 %'], ['Bit Depth', 'Bit Depth', 1, 16, 8, '8'], ['Quantizer Shape', 'Quantizer Shape', 0, 1, 0.35, '35 %'], ['DC Shift', 'DC Shift', 0, 1, 0, 'Off'], ['Pre-Filter On', 'Pre-Filter On', 0, 1, 1, 'On'], ['Post-Filter On', 'Post-Filter On', 0, 1, 1, 'On'], ['Post-Filter', 'Post-Filter', 0, 1, 0.5, '0.00'], ['Dry/Wet', 'Dry/Wet', 0, 1, 0.8, '80 %']] }],
 		...['autoPanTremolo', 'eq8', 'delay', 'limiter'].map((key) => [key, DUMPED_DEVICES[key]]),
-		['multiband', { name: 'Multiband Dynamics', className: 'MultibandDynamics', params: Array.from({ length: 28 }, (_, i) => i === 0 ? ['Device On', 'Device On', 0, 1, 1, ''] : i === 5 ? ['Output', 'Output', -24, 24, 0, '0.00 dB'] : i === 21 ? ['Below Threshold (Mid)', 'Below Threshold (Mid)', -80, 0, -27.125, '-27.1 dB'] : i === 27 ? ['Below Ratio (Mid)', 'Below Ratio (Mid)', -3, 1, 0.4, '1 : 1.67'] : [`P${i}`, `P${i}`, 0, 1, 0, '']) }]
+		['multiband', DUMPED_DEVICES.multiband],
+		// Roar in Serial: two stages run, the third ghosts (ADR-515).
+		['roar', { ...DUMPED_DEVICES.roar, properties: { routing_mode_index: 1 } }]
 ];
 
 // The views no other state reaches (layout audit, 2026-10-27), opened from
@@ -479,6 +481,17 @@ export const TOURS = {
 				description: `Tapped the ${device.name} cell: its own view, the control its browser tiles and chain cell draw`,
 				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], device]),
 				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(1)} .cell-head .name` }, { wait: 500 }]
+			})),
+			// Full screen (ADR-511, ADR-515): an effect's board, every section at once.
+			...[
+				['roar', { ...DUMPED_DEVICES.roar, properties: { routing_mode_index: 1 } }],
+				['roar-multiband', { ...DUMPED_DEVICES.roar, properties: { routing_mode_index: 3 } }],
+				['multiband', DUMPED_DEVICES.multiband]
+			].map(([key, device]) => ({
+				name: `chain-board-${key}`,
+				description: `The ${device.name} view at full screen: its board`,
+				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], device]),
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(1)} .cell-head .name` }, { wait: 500 }, { click: '[data-central-expand]' }, { wait: 400 }]
 			})),
 			// An instrument's cell carries its view's signature control (INSTRUMENT_CONTROLS).
 			...[

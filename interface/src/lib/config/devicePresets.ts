@@ -216,6 +216,16 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     expectedClassName: 'Saturator',
     color: familyScheme('distortion')
   },
+  roar: {
+    // Roar (Live 12): three stages of shaper and filter, a routing mode,
+    // feedback and four mod sources. Measured on the rig, 2026-11-07.
+    padScoped: true,
+    native: true,
+    defaultName: 'Roar',
+    expectedClassName: 'Roar',
+    gridSlot: false,                    // Virtual device
+    color: familyScheme('distortion')
+  },
   variation: {
     padScoped: true,
     native: true,

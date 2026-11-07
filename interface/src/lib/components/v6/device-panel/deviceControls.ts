@@ -44,6 +44,7 @@ import { AUTO_FILTER_PARAM, autoFilterCurve, frequencyToValue } from './autoFilt
 import { GLITCH_LOOP_PARAMS } from './glitchLoopParams';
 import { OCTAVE_MIX_MAX, OCTAVE_MIX_PARAM } from './octaveParams';
 import { MB_BELOW_RATIO_MID, ratioFromSlider, sliderFromRatio } from './multibandParams';
+import { ROAR, roarDriveFromGain } from './roarParams';
 import type { CurveType } from './FilterCurve.svelte';
 import {
 	CHORUS_RATE_HZ,
@@ -452,6 +453,26 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 			]
 		},
 		fromPreset: (s) => all({ 1: clamp01((s.params.PreDrive + 36) / 72), 10: clamp01((s.params.PostDrive + 36) / 36), 11: s.params.DryWet })
+	},
+	// Measured: Roar (2026-11-07). Drive across (1, 0..1 = -24..+24 dB,
+	// linear in dB), Dry/Wet up (87, 0..1). A preset saves Drive as
+	// `Input_InputGain`, a linear factor (Basic Mid Side 1.41254 = +3 dB →
+	// 0.5625), and Dry/Wet as `Output_DryWet`, as is.
+	roar: {
+		control: {
+			kind: 'xy',
+			title: 'Roar',
+			picture: 'shaper',
+			read: (g) => ({ x: g(ROAR.drive) ?? 0.5, y: g(ROAR.dryWet) ?? 1 }),
+			write: (x, y) => [
+				[ROAR.drive, x],
+				[ROAR.dryWet, y]
+			]
+		},
+		fromPreset: (s) =>
+			s.params.Input_InputGain === undefined || s.params.Output_DryWet === undefined
+				? null
+				: { [ROAR.drive]: roarDriveFromGain(s.params.Input_InputGain), [ROAR.dryWet]: s.params.Output_DryWet }
 	},
 	// Measured: Pedal (2026-10-26). Gain is Drive (2), 0..1 as saved. Drive
 	// alone (user, 2026-10-26), not the Pedal view's Drive/Mix pair.

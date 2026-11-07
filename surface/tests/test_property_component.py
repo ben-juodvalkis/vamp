@@ -826,6 +826,13 @@ def test_allowlist_contains_documented_drift_key():
     assert actual == {"voice_mode_index", "voice_count_index", "mod_matrix_pitch_source_1_index", "mod_matrix_pitch_source_2_index", "mod_matrix_shape_source_index", "mod_matrix_filter_source_1_index", "mod_matrix_filter_source_2_index", "mod_matrix_lfo_source_index", "mod_matrix_source_1_index", "mod_matrix_source_2_index", "mod_matrix_source_3_index", "mod_matrix_target_1_index", "mod_matrix_target_2_index", "mod_matrix_target_3_index"}
 
 
+def test_allowlist_contains_roar_routing_mode():
+    actual = {prop for (cls, prop) in ALLOWLIST if cls == "Roar"}
+    assert actual == {"routing_mode_index"}
+    spec = ALLOWLIST[("Roar", "routing_mode_index")]
+    assert spec.writable and spec.coerce_to_int and spec.listener_path == ""
+
+
 def test_allowlist_contains_documented_hybrid_reverb_keys():
     """Followup-a (2026-04-16): 5 scalar properties on Hybrid Reverb;
     2026-10-02: the two IR name lists and time shaping, for the Reverb
