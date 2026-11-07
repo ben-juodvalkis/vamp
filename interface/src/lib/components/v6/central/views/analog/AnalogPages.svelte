@@ -394,7 +394,7 @@
             </div>
             <!-- The envelope as Live draws it (ADR-514), A, D, S and R dragged
                  on it; Sustain Time, which Live draws as a number, a box. -->
-            <div class="env-graph-cell"><EnvelopeGraph {params} ink={vInk.primary} names={{ attack: `${pre}${v} Attack`, decay: `${pre}${v} Decay`, sustain: `${pre}${v} Sustain`, release: `${pre}${v} Rel` }} /></div>
+            <div class="env-graph-cell"><EnvelopeGraph {params} ink={vInk.primary} names={{ attack: `${pre}${v} Attack`, decay: `${pre}${v} Decay`, sustain: `${pre}${v} Sustain`, release: `${pre}${v} Rel` }} knobs="side" /></div>
             {@render stage(`${pre}${v} S Time`, 'S\u2011Time', 'sustain')}
           </div>
         {/each}
@@ -420,7 +420,7 @@
   <FaceGrid sections={[5]}>
     <FaceSection span={5}>
       {#snippet head()}{@render back()}{/snippet}
-      <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 0.7fr) minmax(0, 1.7fr);">
+      <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 0.45fr) minmax(0, 1.7fr);">
       <div class="graph"><LfoGraph {params} ink={vInk.primary} shape={LFO_SHAPES[step(`${L} Shape`)]} rate={lfoBeat ? `${L} SncRate` : `${L} Speed`} sw={`${L} On/Off`} /></div>
       {@render tab(`${L} Shape`, LFO_SHAPES, { glyph: 'lfo', sw: `${L} On/Off` })}
       <div class="col">

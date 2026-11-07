@@ -75,7 +75,7 @@
      * Small Attack, Decay, Sustain and Release knobs under the picture (Ben,
      * 2026-11-07: the graph alone hides the numbers a knob shows at a glance).
      */
-    knobs?: boolean;
+    knobs?: boolean | 'side';
   }
 
   let { params, names, ink, sw, label, knobs = true }: Props = $props();
@@ -194,7 +194,7 @@
   let ghost = $derived(!params.has(names.attack) && !params.has(names.decay));
 </script>
 
-<div class="env-wrap" class:with-knobs={knobs}>
+<div class="env-wrap" class:with-knobs={!!knobs} class:side={knobs === 'side'}>
 <div class="graph-cell" bind:clientWidth={cw} bind:clientHeight={ch}>
 <div
   class="env-graph"
@@ -246,7 +246,7 @@
       <div class="env-knob" data-param={n}>
         <DeviceSlider
           value={params.raw(n) ?? r?.min ?? 0}
-          {title}
+          title={knobs === 'side' ? title[0] : title}
           face="knob"
           knobSize="s"
           min={r?.min ?? 0}
@@ -283,6 +283,18 @@
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--spacing-sm);
+  }
+  /* Beside the picture, two by two: a short, wide cell (Analog's two
+     envelopes a voice, stacked). */
+  .env-wrap.side {
+    flex-direction: row;
+  }
+  .env-wrap.side > .env-knobs {
+    height: auto;
+    width: 7.5rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: 2px var(--spacing-xs);
   }
   .env-knob {
     min-width: 0;

@@ -52,8 +52,10 @@ fifteen switches.
     Its LFOs draw no wave: Meld's shapes (Basic, Ramp, Wander, Euclid ...)
     are not simple waves, and the board's densest rows needed the height
     for their captions.
-  - Analog: each voice's Amp and Filter envelopes a graph beside S-Time;
-    each LFO a wave.
+  - Analog: each voice's Amp and Filter envelopes a graph with its stage
+    knobs two by two beside it (`knobs="side"`, lettered A, D, S, R: two
+    envelopes a voice stacked leave no room under a graph), then S-Time;
+    each LFO a short wave.
   - Operator: **one** large envelope, picked by a tab row (A, B, C, D, LFO,
     Pitch, Filter) that follows the face's oscillator until another is
     picked, as Live's display shows the shown tab's; the loop table beside
