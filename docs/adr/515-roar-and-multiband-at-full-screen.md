@@ -63,6 +63,23 @@ ratio rails, log-time rails).
   top to bottom (user, the same day: the first boards left most of each
   tile empty). Multiband's band rows are too short for two knobs stacked,
   so Input, Output, Attack and Release stand side by side there.
+- **A board sizes a control by its rank, not by the room left** (user,
+  the same day: "the actual primary, secondary, tertiary uses of controls
+  to determine size, not just available space"), the rank read off Live's
+  own panel: primary large (`l`, `xl` where it stands alone in its
+  column), secondary medium, tertiary small; in a column two controls
+  share, the higher rank takes the larger share (`.rank-*` flex weights).
+  Roar, by Live's panel: Drive, each stage's Amount and Frequency and the
+  feedback's Amount primary; Bias, Res, Tone, Blend, the feedback's time,
+  the compressor, Output, Dry/Wet and an LFO's rate secondary; Level,
+  Tone Freq, Peak and Morph, the feedback filter, Smooth, the follower's
+  gain and band, Mod Amt tertiary. Each stage carries Live's two
+  pictures: its **shaper curve** (`ShaperCurve`, dragged up for Amount and
+  across for Bias; the curves are pictures of each type from the manual,
+  not measured) and its **filter's response** as a pad, Freq across and Res
+  up. Multiband, by Live's panel, is its display: the gains medium, the
+  times small (Live shows them as numbers), Amount the lead global, the
+  sidechain small.
 - Mod matrix assignments, solo buttons, sidechain routing and Roar's
   Envelope Listen are not on the LOM's parameter list and are left out.
 

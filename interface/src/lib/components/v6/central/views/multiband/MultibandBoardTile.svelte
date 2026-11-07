@@ -5,14 +5,16 @@
    * Multiband Dynamics at full screen (ADR-515), as Live lays it: a row a
    * band, High over Mid over Low, each its switch (and crossover), its
    * Below and Above blocks, its gains (Input, Output) and its times
-   * (Attack, Release), one large knob a column: a band's row is too short
-   * for two knobs stacked. Then the device's globals and its sidechain.
+   * (Attack over Release); then the device's globals and its sidechain.
+   * Sized by rank, as Live's panel ranks them (manual 29.26): the display
+   * is the device and takes the width; the gains are medium, the times,
+   * which Live shows as numbers, small; of the globals Amount leads.
    */
   export const MULTIBAND_BOARD: readonly BoardRow[] = [
     { tiles: [{ id: 'band-High', cols: 11 }], weight: 1 },
     { tiles: [{ id: 'band-Mid', cols: 11 }], weight: 1 },
     { tiles: [{ id: 'band-Low', cols: 11 }], weight: 1 },
-    { tiles: [{ id: 'global', cols: 4 }, { id: 'sidechain', cols: 3 }], weight: 0.8 }
+    { tiles: [{ id: 'global', cols: 4 }, { id: 'sidechain', cols: 3 }], weight: 0.7 }
   ];
 </script>
 
@@ -93,40 +95,39 @@
   {@const band = page.slice(5) as 'Low' | 'Mid' | 'High'}
   {@const active = `Band Activator (${band})`}
   {@const crossover = CROSSOVER[band]}
-  <FaceGrid sections={[1, 6, 2, 2]}>
+  <FaceGrid sections={[1, 7, 2, 1]}>
     <FaceSection span={1}>
       {#snippet head()}{@render title(band)}{/snippet}
       {#if crossover}
-        <div class="stack">{@render sw(active, band)}<div class="grow">{@render knob(crossover, 'X-Over', 'l')}</div></div>
+        <div class="stack">{@render sw(active, band)}<div class="grow">{@render knob(crossover, 'X-Over', 'm')}</div></div>
       {:else}
         {@render sw(active, band)}
       {/if}
     </FaceSection>
     <FaceSeam ink={ink.primary} />
-    <FaceSection span={6}>
+    <FaceSection span={7}>
       {#snippet head()}{@render title('Below · Above')}{/snippet}
       <div class="face-span-all"><BandDynamicsDisplay {params} {band} ink={ink.primary} sw={active} /></div>
     </FaceSection>
     <FaceSeam ink={ink.primary} />
     <FaceSection span={2}>
       {#snippet head()}{@render title('Gain')}{/snippet}
-      {@render knob(`Input Gain (${band})`, 'Input', 'l', active)}
-      {@render knob(`Output Gain (${band})`, 'Output', 'l', active)}
+      {@render knob(`Input Gain (${band})`, 'Input', 'm', active)}
+      {@render knob(`Output Gain (${band})`, 'Output', 'm', active)}
     </FaceSection>
     <FaceSeam ink={ink.primary} />
-    <FaceSection span={2}>
+    <FaceSection span={1}>
       {#snippet head()}{@render title('Time')}{/snippet}
-      {@render knob(`Attack Time (${band})`, 'Attack', 'l', active)}
-      {@render knob(`Release Time (${band})`, 'Release', 'l', active)}
+      <div class="stack">{@render knob(`Attack Time (${band})`, 'Attack', 's', active)}{@render knob(`Release Time (${band})`, 'Release', 's', active)}</div>
     </FaceSection>
   </FaceGrid>
 {:else if page === 'global'}
   <FaceGrid sections={[4]}>
     <FaceSection span={4}>
       {#snippet head()}{@render title('Global')}{/snippet}
-      {@render knob('Output', 'Output', 'xl')}
-      {@render knob('Amount', 'Amount', 'xl')}
-      {@render knob('Time Scaling', 'Time', 'xl')}
+      {@render knob('Amount', 'Amount', 'l')}
+      {@render knob('Time Scaling', 'Time', 'm')}
+      {@render knob('Output', 'Output', 'm')}
       <div class="stack">{@render sw('Soft Knee On/Off', 'Soft Knee')}{@render sw('Peak/RMS Mode', 'Peak')}</div>
     </FaceSection>
   </FaceGrid>
@@ -135,8 +136,8 @@
     <FaceSection span={3}>
       {#snippet head()}{@render title('Sidechain')}{/snippet}
       {@render sw('S/C On', 'S/C')}
-      {@render knob('S/C Gain', 'Gain', 'xl', 'S/C On')}
-      {@render knob('S/C Mix', 'Mix', 'xl', 'S/C On')}
+      {@render knob('S/C Gain', 'Gain', 's', 'S/C On')}
+      {@render knob('S/C Mix', 'Mix', 's', 'S/C On')}
     </FaceSection>
   </FaceGrid>
 {/if}
