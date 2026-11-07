@@ -57,6 +57,8 @@
 	import { drag } from '$lib/actions';
 	import type { DragInfo } from '$lib/actions/drag';
 	import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
+	import LfoGraph from '../LfoGraph.svelte';
+	import { pictureParams } from './panel/usePanelParams.svelte';
 
 	const echo = useFxGridSlot('echo');
 
@@ -116,6 +118,8 @@
 
 	// At rest (ghost) Echo.adv's LFO is Saw Up (2).
 	let lfoWave = $derived(Math.round(echo.paramValue(ECHO_LFO.wave) ?? 2));
+	/** The LFO's wave as a picture over its shapes (ADR-514), as many cycles as its rate. */
+	const lfoPicture = pictureParams(() => ({ Rate: lfoRate }));
 
 
 	// ── Input / Output / Feedback / Mix ─────────────────────────────────
@@ -279,18 +283,23 @@
 
 	<FaceSection span={3}>
 	{#snippet head()}<PanelEyebrow title="LFO" color={echo.color.primary} />{/snippet}
-	<ScrubTabs
-		options={ECHO_LFO_WAVES}
-		selected={lfoWave}
-		onSelect={(i) => echo.sendParam(ECHO_LFO.wave, i)}
-		cols={WAVE_COLS}
-		tint={echo.color.primary}
-		label={(w) => `LFO wave ${w}`}
-		name="echo-lfo-wave"
-		style="height: 100%; --scrub-padding: 4px;"
-	>
-		{#snippet item(w)}{@render waveGlyph(w)}{/snippet}
-	</ScrubTabs>
+	<div class="col wave-col">
+		<div class="wave-pic">
+			<LfoGraph params={lfoPicture} shape={ECHO_LFO_WAVES[lfoWave]} rate="Rate" ink={echo.color.primary} interactive={false} />
+		</div>
+		<ScrubTabs
+			options={ECHO_LFO_WAVES}
+			selected={lfoWave}
+			onSelect={(i) => echo.sendParam(ECHO_LFO.wave, i)}
+			cols={WAVE_COLS}
+			tint={echo.color.primary}
+			label={(w) => `LFO wave ${w}`}
+			name="echo-lfo-wave"
+			style="flex: 1.4 1 0; min-height: 0; --scrub-padding: 4px;"
+		>
+			{#snippet item(w)}{@render waveGlyph(w)}{/snippet}
+		</ScrubTabs>
+	</div>
 
 	<div class="col slider-over-switch" data-echo-lfo>
 		<div class="slider-part">
@@ -451,6 +460,17 @@
 		min-height: 0;
 		min-width: 0;
 		height: 100%;
+	}
+
+	/* The LFO's wave drawn over its six shapes (ADR-514). */
+	.wave-col {
+		display: flex;
+		flex-direction: column;
+		gap: var(--face-gutter);
+	}
+	.wave-pic {
+		flex: 1 1 0;
+		min-height: 0;
 	}
 
 	/* Two value boxes in one column, each half its height (ADR-477). */

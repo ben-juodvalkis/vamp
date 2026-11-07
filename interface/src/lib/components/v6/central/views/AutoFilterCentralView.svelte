@@ -10,11 +10,12 @@
 	 * NO props required - queries selectedTrackStore directly.
 	 */
 
-	import DeviceXY from '$lib/components/v6/device-panel/DeviceXY.svelte';
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
 	import { trackInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+	import LfoGraph from '../LfoGraph.svelte';
+	import type { PanelParams } from './panel/usePanelParams.svelte';
 	import FaceGrid from '../FaceGrid.svelte';
 	import FaceSection from '../FaceSection.svelte';
 	import FaceSeam from '../FaceSeam.svelte';
@@ -137,6 +138,23 @@
 	let lfoXDisplay = $derived(
 		lfoSync >= 3 ? fx.paramDisplay(18) : fx.paramDisplay(16)
 	);
+	/** The LFO picture's two axes over Live's parameters: Rate is Time inverted, with the synced division beside it. */
+	const lfoParams: PanelParams = {
+		has: () => true,
+		raw: (n) => (n === 'Rate' ? 1 - lfoTime : n === 'Amount' ? lfoAmount : undefined),
+		range: () => ({ min: 0, max: 1 }),
+		display: (n) => (n === 'Rate' ? lfoXDisplay : fx.paramDisplay(12)),
+		isOn: () => true,
+		write: () => {},
+		unit: (n) => (n === 'Rate' ? 1 - lfoTime : n === 'Amount' ? lfoAmount : undefined),
+		writeUnit: (n, t) => {
+			const x = Math.max(0, Math.min(1, t));
+			if (n === 'Rate') {
+				fx.sendParam(16, 1 - x); // LFO Time, inverted
+				fx.sendParam(18, Math.round(16 - x * 12)); // the synced division, 16 (slow) to 4
+			} else if (n === 'Amount') fx.sendParam(12, x);
+		}
+	};
 	let lfoTitle = $derived(lfoXDisplay ? `LFO · ${lfoXDisplay}` : 'LFO');
 
 	function selectFilterType(typeValue: number) {
@@ -204,26 +222,16 @@
 	<!-- LFO XY pad (two columns) over its Time/Sync switch -->
 	<div class="face-span-2 min-h-0 flex flex-col gap-(--face-gutter)">
 		<div class="flex-1 min-h-0">
-			<DeviceXY
-				xValue={1 - lfoTime}
-				yValue={lfoAmount}
-				title={lfoTitle}
-				icon="lfo"
-				isGhost={fx.isGhost}
-				showCurve={false}
-				color={lfoInk}
-				onInteraction={(x, y) => {
-					// LFO Time parameter (continuous)
-					fx.sendParam(16, 1 - x); // LFO Time - inverted
-
-					// LFO Rate/Division parameter (integer 4-16)
-					// X=0 (left) → value 16, X=1 (right) → value 4
-					const lfoRate = Math.round(16 - (x * 12)); // Maps X from 0-1 to 16-4
-					fx.sendParam(18, lfoRate); // LFO Rate as integer
-
-					// LFO Amount
-					fx.sendParam(12, y); // LFO Amount
-				}}
+			<!-- The LFO drawn as Live draws it (ADR-514): its shape, as many
+			     cycles as its rate and as tall as its amount; across is the rate
+			     (Time, inverted), up the amount, as the XY it replaces. -->
+			<LfoGraph
+				params={lfoParams}
+				shape={LFO_SHAPE_OPTIONS.find((o) => o.value === Math.round(lfoShape))?.label}
+				rate="Rate"
+				amount="Amount"
+				ink={lfoInk.primary}
+				label={lfoTitle}
 			/>
 		</div>
 		<!-- Time/Sync, one touch row under the pad it switches. It floated

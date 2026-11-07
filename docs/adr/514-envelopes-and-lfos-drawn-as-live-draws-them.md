@@ -32,17 +32,23 @@ fifteen switches.
   words. Parameters by name through `PanelParams`, so it serves the
   hand-laid pages and the panel instruments alike; a section that is off
   ghosts it and turns on at the first drag.
+  Small Attack, Decay, Sustain and Release knobs sit under the picture
+  (Ben: the graph alone hides the numbers a knob shows at a glance);
+  `knobs={false}` leaves them out.
 - **`central/LfoGraph.svelte`**: the LFO's wave, as many cycles as its
   rate and as tall as its amount; across sets the rate, up the amount. A
   shape's name is read loosely, since each instrument spells its list its
   own way.
 - **Where they are**:
-  - Wavetable: Amp, Env 2 and Env 3 are a graph over their slopes and loop
-    mode (the levels are on the graph); the LFOs a wave over one touch row
-    of shapes, sync and Retrig, then five knobs.
-  - Drift: both envelopes a graph over their four knobs (Env 2's Cyc mode
+  - Wavetable: Amp, Env 2 and Env 3 are a graph three columns wide over
+    their stage knobs, the slopes and loop mode a column beside it (the
+    levels are on the graph); the LFOs a short wave over one touch row of
+    shapes, sync and Retrig, then five knobs.
+  - Drift: both envelopes a graph over their stage knobs (Env 2's Cyc mode
     trades it for the rate mode); the LFO a wave over its controls.
-  - Meld: each engine's Amp and Mod envelopes a graph over slopes and loop.
+  - Meld: each engine's Amp and Mod envelopes a graph over its stage
+    knobs, the slopes and loop mode a column beside it; with both engines
+    stacked (ADR-512's order, Ben's) its envelopes draw flatter than 0.6.
     Its LFOs draw no wave: Meld's shapes (Basic, Ramp, Wander, Euclid ...)
     are not simple waves, and the board's densest rows needed the height
     for their captions.
@@ -61,10 +67,21 @@ fifteen switches.
   Phaser draw their LFO's wave as a picture only (`interactive={false}`):
   their rate and amount are the chain cell's XY, which no view repeats
   (ADR-510). Phaser's ten shapes became a pick.
-  `pictureParams` serves a view that binds by index.
+  `pictureParams` serves a view that binds by index. Then Echo (its wave
+  over its six shapes, as many cycles as its rate), Tremolo (Auto Pan
+  Legacy: the wave between the rate and the shape tab) and Auto Filter,
+  whose LFO pad becomes the wave itself, rate across and amount up, as
+  the pad was (its chain cell's XY is the filter, so this one is not
+  repeated).
+- **Operator's board filter** is a near-square pad two columns wide with
+  its type, circuits, Morph, Drive and Shaper in columns on its right,
+  every choice a pick (Ben, superseding ADR-513's pad across the tile with
+  its controls under it).
 - **A picture keeps a landscape shape**: never taller than 0.6 of its
   width, centred in a taller cell (Ben: tall, narrow envelope and wave
-  displays read awkwardly). Phaser's LFO section is five columns wide so
+  displays read awkwardly). An envelope, which a finger drags, is laid out
+  to reach about 0.6; a wave the finger does not move may be short and
+  wide. Phaser's LFO section is five columns wide so
   its wave runs across it, its knobs one row under it.
 - **A switch in a table is a lamp**: no word, its column's name over it
   (`PanelControlView`'s caption-less switch).

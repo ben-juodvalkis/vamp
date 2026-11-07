@@ -332,49 +332,50 @@ const OPERATOR_BOARD: PanelBoard = {
 			tiles: [
 				{
 					id: 'filter',
-					// The pad across the tile, its type and shaper under it (user,
-					// 2026-11-07: "the XY for cutoff and resonance wider, and the
-					// filter controls on its right moved below it").
+					// The pad near square on the left, its type, circuit and shaper in
+					// columns on its right (user, 2026-11-07: "make the filter XY taller
+					// and narrower so it's more square ... controls to the right side").
 					sections: [
 						{
 							kind: 'slot',
 							slot: 'filter',
 							title: 'Filter',
-							columns: 11,
-							params: ['Filter On', 'Filter Freq', 'Filter Res'],
-							// One row of controls: the row under the envelopes is wide and short.
-							below: [
-								{
-									columns: 8,
-									stack: 1,
-									group: {
-										title: 'Type · Circuit',
-										switchParam: 'Filter On',
-										controls: [
-											{ kind: 'switch', param: 'Filter On', title: 'On' },
-											{ kind: 'choice', param: 'Filter Type', title: 'Type', options: ['LP', 'HP', 'BP', 'Notch', 'Morph'] },
-											{ kind: 'choice', param: 'Filter Slope', title: 'Slope', options: ['12 dB', '24 dB'] },
-											{ kind: 'choice', param: 'Filter Circuit - LP/HP', title: 'LP / HP', options: ['Clean', 'OSR', 'MS2', 'SMP', 'PRD'] },
-											{ kind: 'choice', param: 'Filter Circuit - BP/NO/Morph', title: 'BP / Morph', options: ['Clean', 'OSR'] },
-											{ kind: 'switch', param: 'Filt < LFO', title: 'LFO' },
-											{ kind: 'box', param: 'Filter Morph', title: 'Morph' },
-											{ kind: 'box', param: 'Filter Drive', title: 'Drive' }
-										]
-									}
-								},
-								{
-									columns: 3,
-									stack: 1,
-									group: {
-										title: 'Shaper',
-										controls: [
-											{ kind: 'choice', param: 'Shaper Type', title: 'Type', options: ['Off', 'Soft', 'Hard', 'Sine', '4Bit'] },
-											{ kind: 'box', param: 'Shaper Mix', title: 'Mix' },
-											{ kind: 'box', param: 'Shaper Drive', title: 'Drive' }
-										]
-									}
-								}
-							]
+							columns: 2,
+							params: ['Filter On', 'Filter Freq', 'Filter Res']
+						},
+						{
+							kind: 'group',
+							stack: 2,
+							// Every choice a pick: tabs beside picks read as two kinds of control.
+							tabMax: 1,
+							group: {
+								title: 'Type · Circuit',
+								switchParam: 'Filter On',
+								controls: [
+									{ kind: 'switch', param: 'Filter On', title: 'On' },
+									{ kind: 'choice', param: 'Filter Type', title: 'Type', options: ['LP', 'HP', 'BP', 'Notch', 'Morph'] },
+									{ kind: 'choice', param: 'Filter Slope', title: 'Slope', options: ['12 dB', '24 dB'] },
+									{ kind: 'switch', param: 'Filt < LFO', title: 'LFO' },
+									{ kind: 'choice', param: 'Filter Circuit - LP/HP', title: 'LP / HP', options: ['Clean', 'OSR', 'MS2', 'SMP', 'PRD'] },
+									{ kind: 'choice', param: 'Filter Circuit - BP/NO/Morph', title: 'BP / Morph', options: ['Clean', 'OSR'] },
+									{ kind: 'box', param: 'Filter Morph', title: 'Morph' },
+									{ kind: 'box', param: 'Filter Drive', title: 'Drive' }
+								]
+							}
+						},
+						{
+							kind: 'group',
+							stack: 2,
+							// Every choice a pick: tabs beside picks read as two kinds of control.
+							tabMax: 1,
+							group: {
+								title: 'Shaper',
+								controls: [
+									{ kind: 'choice', param: 'Shaper Type', title: 'Type', options: ['Off', 'Soft', 'Hard', 'Sine', '4Bit'] },
+									{ kind: 'box', param: 'Shaper Mix', title: 'Mix' },
+									{ kind: 'box', param: 'Shaper Drive', title: 'Drive' }
+								]
+							}
 						}
 					]
 				},

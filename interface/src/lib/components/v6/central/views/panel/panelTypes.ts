@@ -171,7 +171,7 @@ export type PanelBoardSection =
 	 * as its cell holds; an envelope's stages (`face: 'slider'`) a column
 	 * each, full height, over `columns` face columns.
 	 */
-	| { kind: 'group'; group: PanelGroup; stack: number; columns?: number }
+	| { kind: 'group'; group: PanelGroup; stack: number; columns?: number; /** Options a choice may have and still be a tab; more is a pick (1: every choice a pick). */ tabMax?: number }
 	/** Twin sections as a table: a section a group of its columns (ADR-512). */
 	| { kind: 'matrix'; matrix: PanelMatrix }
 	/** A device's own control (Operator's filter pad), from the view's `slots`. */

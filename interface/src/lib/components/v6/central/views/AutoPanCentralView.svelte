@@ -19,6 +19,9 @@
   import FaceGrid from '../FaceGrid.svelte';
   import FaceSection from '../FaceSection.svelte';
   import PanelEyebrow from './panel/PanelEyebrow.svelte';
+  import FaceSeam from '../FaceSeam.svelte';
+  import LfoGraph from '../LfoGraph.svelte';
+  import { pictureParams } from './panel/usePanelParams.svelte';
   import {
     AUTO_PAN,
     SYNC_RATE_MAX,
@@ -49,6 +52,9 @@
   let rateValue = $derived(isSynced ? syncRate / SYNC_RATE_MAX : frequency);
   let rateLabel = $derived(isSynced ? syncRateLabel(syncRate) : frequencyLabel(frequency));
 
+  /** The tremolo as a picture (ADR-514): its rate in cycles, its amount (the chain tile's Y) as its depth. */
+  const picture = pictureParams(() => ({ Rate: rateValue, Amount: fx.paramValue(AUTO_PAN.amount) ?? 1 }));
+
   function writeRate(t: number) {
     if (isSynced) {
       const step = Math.round(t * SYNC_RATE_MAX);
@@ -77,12 +83,12 @@
   };
 </script>
 
-<!-- One face grid (ADR-510): one section of two columns, the rate under
-     its Sync switch beside the shape tab. -->
+<!-- One face grid (ADR-510): the rate under its Sync switch, the wave
+     drawn across two columns (ADR-514), then the shape tab. -->
 <div class="autopan-layout" class:slot-ghost={fx.isGhost} style={fx.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
-  <FaceGrid sections={[2]}>
-    <FaceSection span={2}>
-      {#snippet head()}<PanelEyebrow title="Tremolo" color={fxInk.primary} />{/snippet}
+  <FaceGrid sections={[1, 2, 1]}>
+    <FaceSection span={1}>
+      {#snippet head()}<PanelEyebrow title="Rate" color={fxInk.primary} />{/snippet}
       <!-- Sync, small, over the rate it switches. -->
       <div class="rate-col">
         <button
@@ -105,6 +111,17 @@
         </div>
       </div>
 
+    </FaceSection>
+    <FaceSeam />
+    <FaceSection span={2}>
+      {#snippet head()}<PanelEyebrow title="Tremolo" color={fxInk.primary} />{/snippet}
+      <div class="face-span-all">
+        <LfoGraph params={picture} shape={SHAPES[currentShape ?? 0]?.key} rate="Rate" amount="Amount" ink={fxInk.primary} interactive={false} />
+      </div>
+    </FaceSection>
+    <FaceSeam />
+    <FaceSection span={1}>
+      {#snippet head()}<PanelEyebrow title="Shape" color={fxInk.primary} />{/snippet}
       <!-- The shape tab scrubs on Y, as the Drum Buss's drive type. -->
       <ScrubTabs
         options={SHAPES}

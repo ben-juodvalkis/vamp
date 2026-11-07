@@ -117,6 +117,7 @@
     tabindex="-1"
     aria-label={interactive ? `${label ?? 'LFO'}: rate across, amount up` : `${label ?? 'LFO'}: ${shape ?? ''}`}
     aria-valuenow={interactive ? Math.round(depth * 100) : undefined}
+    aria-valuetext={interactive ? `rate ${Math.round((rate ? (params.unit(rate) ?? 0) : 0) * 100)}%, amount ${Math.round(depth * 100)}%` : undefined}
     onpointerdown={down}
     onpointermove={move}
     onpointerup={up}

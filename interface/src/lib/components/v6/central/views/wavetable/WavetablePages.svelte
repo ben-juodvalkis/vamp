@@ -283,39 +283,33 @@
     </FaceSection>
   </FaceGrid>
 {:else if page === 'amp' && board}
-  <!-- On the board (ADR-514) the envelope is Live's picture: its line
-       across the tile, Attack, Decay, Sustain and Release dragged on it;
-       under it the three slopes and the loop mode. -->
-  <FaceGrid sections={[4]}>
-    <FaceSection span={4}>
+  <!-- On the board (ADR-514) the envelope is Live's picture over its small
+       Attack, Decay, Sustain and Release knobs; the three slopes and the
+       loop mode a column beside it. -->
+  <FaceGrid sections={[3, 1]}>
+    <FaceSection span={3}>
       {#snippet head()}{@render back()}{/snippet}
-      <div class="face-span-all graph-board">
-        <div class="graph">
-          <EnvelopeGraph {params} ink={ink.primary} names={{ attack: 'Amp Attack', decay: 'Amp Decay', sustain: 'Amp Sustain', release: 'Amp Release' }} />
-        </div>
-        {@render knob('Amp A Slope', 'A Slope', 'm')}
-        {@render knob('Amp D Slope', 'D Slope', 'm')}
-        {@render knob('Amp R Slope', 'R Slope', 'm')}
-        {@render pick('Amp Loop Mode', LOOP_MODES, 'Amp loop')}
-      </div>
+      <div class="face-span-all"><EnvelopeGraph {params} ink={ink.primary} names={{ attack: 'Amp Attack', decay: 'Amp Decay', sustain: 'Amp Sustain', release: 'Amp Release' }} /></div>
+    </FaceSection>
+    <FaceSeam ink={ink.primary} />
+    <FaceSection span={1}>
+      {#snippet head()}{@render sub('Slope')}{/snippet}
+      <div class="stack">{@render knob('Amp A Slope', 'A', 's')}{@render knob('Amp D Slope', 'D', 's')}{@render knob('Amp R Slope', 'R', 's')}{@render pick('Amp Loop Mode', LOOP_MODES, 'Amp loop')}</div>
     </FaceSection>
   </FaceGrid>
 {:else if (page === 'env2' || page === 'env3') && board}
-  <!-- On the board (ADR-514) as Amp: the picture carries the times and all
-       four levels (Initial, Peak, Sustain, Final), the slopes and the loop
-       mode under it. -->
-  <FaceGrid sections={[4]}>
-    <FaceSection span={4}>
+  <!-- As Amp: the picture carries the times and all four levels (Initial,
+       Peak, Sustain, Final), its stage knobs under it, the slopes and loop
+       mode a column beside it. -->
+  <FaceGrid sections={[3, 1]}>
+    <FaceSection span={3}>
       {#snippet head()}{@render back()}{/snippet}
-      <div class="face-span-all graph-board">
-        <div class="graph">
-          <EnvelopeGraph {params} ink={ink.primary} names={{ attack: `${E} Attack`, decay: `${E} Decay`, sustain: `${E} Sustain`, release: `${E} Release`, initial: `${E} Initial`, peak: `${E} Peak`, final: `${E} Final` }} />
-        </div>
-        {@render knob(`${E} A Slope`, 'A Slope', 'm')}
-        {@render knob(`${E} D Slope`, 'D Slope', 'm')}
-        {@render knob(`${E} R Slope`, 'R Slope', 'm')}
-        {@render pick(`${E} Loop Mode`, LOOP_MODES, `${E} loop`)}
-      </div>
+      <div class="face-span-all"><EnvelopeGraph {params} ink={ink.primary} names={{ attack: `${E} Attack`, decay: `${E} Decay`, sustain: `${E} Sustain`, release: `${E} Release`, initial: `${E} Initial`, peak: `${E} Peak`, final: `${E} Final` }} /></div>
+    </FaceSection>
+    <FaceSeam ink={ink.primary} />
+    <FaceSection span={1}>
+      {#snippet head()}{@render sub('Slope')}{/snippet}
+      <div class="stack">{@render knob(`${E} A Slope`, 'A', 's')}{@render knob(`${E} D Slope`, 'D', 's')}{@render knob(`${E} R Slope`, 'R', 's')}{@render pick(`${E} Loop Mode`, LOOP_MODES, `${E} loop`)}</div>
     </FaceSection>
   </FaceGrid>
 {:else if (page === 'lfo1' || page === 'lfo2') && board}
@@ -325,7 +319,7 @@
   <FaceGrid sections={[5]}>
     <FaceSection span={5}>
       {#snippet head()}{@render back()}{/snippet}
-      <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 1fr) auto minmax(0, 1.15fr);">
+      <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 0.5fr) auto minmax(0, 1.5fr);">
         <div class="graph">
           <LfoGraph {params} ink={ink.primary} shape={LFO_WAVES[step(`${L} Wave`)]} rate={lfoTempo ? `${L} Synced` : `${L} Freq`} amount={`${L} Amount`} />
         </div>

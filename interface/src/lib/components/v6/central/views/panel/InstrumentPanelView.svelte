@@ -122,7 +122,7 @@
 									{#if named}<span class="board-title" style="color: {color.primary};">{t.title}</span>{/if}
 									{#if !named || (section.group.title && section.group.title !== t.title && span >= 2)}<PanelEyebrow title={section.group.title} color={color.primary} />{/if}
 								{/snippet}
-								<PanelGroupView group={section.group} {params} {color} boxFace={panel.boxFace} columns={span} stack={section.stack} />
+								<PanelGroupView group={section.group} {params} {color} boxFace={panel.boxFace} columns={span} stack={section.stack} tabMax={section.tabMax} />
 							</FaceSection>
 						{:else if section.kind === 'slot'}
 							<FaceSection span={section.columns} data-group={section.title ?? section.slot}>

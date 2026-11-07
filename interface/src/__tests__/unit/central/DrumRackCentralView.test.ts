@@ -1680,13 +1680,14 @@ describe('DrumRackCentralView — the pane and the scoped pad\'s own row', () =>
 		await tick();
 		drumPadScope.setPane(DEVICE, 'filter');
 		// The view arrives through the registry's lazy import.
-		await vi.waitFor(() => expect(container.querySelector('.pad-fx-pane [aria-label*=": X "]')).not.toBeNull());
+		// The LFO is a wave since ADR-514: rate across (1 − time), amount up.
+		await vi.waitFor(() => expect(container.querySelector('.pad-fx-pane [data-lfo-graph] [role="slider"]')).not.toBeNull());
 		const pane = container.querySelector('.pad-fx-pane')!;
-		const xy = () => pane.querySelector('[aria-label*=": X "]')!.getAttribute('aria-label')!;
+		const xy = () => pane.querySelector('[data-lfo-graph] [role="slider"]')!.getAttribute('aria-valuetext')!;
 		// Ghost: the pad has no filter, whatever the track carries — and the
 		// XY does NOT show the track's filter (X 10%, Y 90%).
 		expect(pane.querySelector('.slot-ghost')).not.toBeNull();
-		expect(xy()).not.toMatch(/X 10%, Y 90%$/);
+		expect(xy()).not.toBe('rate 10%, amount 90%');
 
 		// A filter lands on the pad (the surface's pad bundle): the view is
 		// live and draws THAT device's LFO.
@@ -1694,7 +1695,7 @@ describe('DrumRackCentralView — the pane and the scoped pad\'s own row', () =>
 		mergePadChain(GENERATION + 1, `${DEVICE}/pads/38`, new Map([[padDevice, filterRecord(padDevice, 0.8, 0.7)]]));
 		await tick();
 		expect(pane.querySelector('.slot-ghost')).toBeNull();
-		expect(xy()).toMatch(/X 30%, Y 80%$/);
+		expect(xy()).toBe('rate 30%, amount 80%');
 
 		// Lift, and the pane goes with the hold.
 		holdPast();

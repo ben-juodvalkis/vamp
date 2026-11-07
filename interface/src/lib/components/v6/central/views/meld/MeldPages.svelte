@@ -279,30 +279,28 @@
     </FaceSection>
   </FaceGrid>
 {:else if section === 'env' && board}
-  <!-- On the board (ADR-514) each envelope as Live draws it: the times and
-       levels dragged on the picture (Mod's four levels too), its three
-       slopes and its loop mode under it. -->
-  <FaceGrid sections={[4, 4]}>
-    <FaceSection span={4}>
+  <!-- On the board (ADR-514) each envelope as Live draws it over its small
+       stage knobs (Mod's four levels dragged on it too), its slopes and loop
+       mode two to a column beside it. -->
+  <FaceGrid sections={[3, 1, 3, 1]}>
+    <FaceSection span={3}>
       {#snippet head()}{@render back()}{@render sub('Amp')}{/snippet}
-      <div class="face-span-all graph-board">
-        <div class="graph"><EnvelopeGraph {params} ink={eInk.primary} names={{ attack: `${X} Amp Attack`, decay: `${X} Amp Decay`, sustain: `${X} Amp Sustain`, release: `${X} Amp Release` }} /></div>
-        {@render knob(`${X} Amp A Slope`, 'A Slope')}
-        {@render knob(`${X} Amp D Slope`, 'D Slope')}
-        {@render knob(`${X} Amp R Slope`, 'R Slope')}
-        <div class="cell sw-cell">{@render picker(`${X} Amp Loop Mode`, LOOP_MODES, `Engine ${X} amp loop`)}</div>
-      </div>
+      <div class="face-span-all"><EnvelopeGraph {params} ink={eInk.primary} names={{ attack: `${X} Amp Attack`, decay: `${X} Amp Decay`, sustain: `${X} Amp Sustain`, release: `${X} Amp Release` }} /></div>
     </FaceSection>
     <FaceSeam ink={eInk.primary} />
-    <FaceSection span={4}>
+    <FaceSection span={1}>
+      {#snippet head()}{@render sub('Slope')}{/snippet}
+      <div class="stack">{@render knob(`${X} Amp A Slope`, 'A', { size: 's' })}{@render knob(`${X} Amp D Slope`, 'D', { size: 's' })}{@render knob(`${X} Amp R Slope`, 'R', { size: 's' })}{@render picker(`${X} Amp Loop Mode`, LOOP_MODES, `Engine ${X} amp loop`)}</div>
+    </FaceSection>
+    <FaceSeam ink={eInk.primary} />
+    <FaceSection span={3}>
       {#snippet head()}{@render sub('Mod')}{/snippet}
-      <div class="face-span-all graph-board">
-        <div class="graph"><EnvelopeGraph {params} ink={eInk.primary} names={{ attack: `${X} Mod Attack`, decay: `${X} Mod Decay`, sustain: `${X} Mod Sustain`, release: `${X} Mod Release`, initial: `${X} Mod Initial`, peak: `${X} Mod Peak`, final: `${X} Mod Final` }} /></div>
-        {@render knob(`${X} Mod A Slope`, 'A Slope')}
-        {@render knob(`${X} Mod D Slope`, 'D Slope')}
-        {@render knob(`${X} Mod R Slope`, 'R Slope')}
-        <div class="cell sw-cell">{@render picker(`${X} Mod Loop Mode`, LOOP_MODES, `Engine ${X} mod loop`)}</div>
-      </div>
+      <div class="face-span-all"><EnvelopeGraph {params} ink={eInk.primary} names={{ attack: `${X} Mod Attack`, decay: `${X} Mod Decay`, sustain: `${X} Mod Sustain`, release: `${X} Mod Release`, initial: `${X} Mod Initial`, peak: `${X} Mod Peak`, final: `${X} Mod Final` }} /></div>
+    </FaceSection>
+    <FaceSeam ink={eInk.primary} />
+    <FaceSection span={1}>
+      {#snippet head()}{@render sub('Slope')}{/snippet}
+      <div class="stack">{@render knob(`${X} Mod A Slope`, 'A', { size: 's' })}{@render knob(`${X} Mod D Slope`, 'D', { size: 's' })}{@render knob(`${X} Mod R Slope`, 'R', { size: 's' })}{@render picker(`${X} Mod Loop Mode`, LOOP_MODES, `Engine ${X} mod loop`)}</div>
     </FaceSection>
   </FaceGrid>
 {:else if section === 'lfo' && board}

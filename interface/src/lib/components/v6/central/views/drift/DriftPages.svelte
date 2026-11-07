@@ -295,40 +295,26 @@
     </FaceSection>
   </FaceGrid>
 {:else if page === 'envelopes'}
-  <!-- Each envelope as Live draws it (ADR-514), its four stages dragged on
-       the picture, their knobs under it. Env 2's switch to Cyc trades its
-       picture for the cycling envelope's rate mode. -->
+  <!-- Each envelope as Live draws it (ADR-514), its stages dragged on the
+       picture and its small knobs under it. Env 2's switch to Cyc trades
+       the picture for the cycling envelope's rate mode and knobs. -->
   <FaceGrid sections={[4, 5]}>
     <FaceSection span={4}>
       {#snippet head()}{@render back()}<span class="sub" style="color: {ink.primary};">Env 1 (Amp)</span>{/snippet}
-      <div class="face-span-all graph-board">
-        <div class="graph"><EnvelopeGraph {params} ink={ink.primary} names={{ attack: 'Env 1 Attack', decay: 'Env 1 Decay', sustain: 'Env 1 Sustain', release: 'Env 1 Release' }} /></div>
-        {@render knob('Env 1 Attack', 'Attack')}
-        {@render knob('Env 1 Decay', 'Decay')}
-        {@render knob('Env 1 Sustain', 'Sustain')}
-        {@render knob('Env 1 Release', 'Release')}
-      </div>
+      <div class="face-span-all"><EnvelopeGraph {params} ink={ink.primary} names={{ attack: 'Env 1 Attack', decay: 'Env 1 Decay', sustain: 'Env 1 Sustain', release: 'Env 1 Release' }} /></div>
     </FaceSection>
     <FaceSeam ink={ink.primary} />
     <FaceSection span={5}>
       {#snippet head()}<span class="sub" style="color: {ink.primary};">Env 2</span>{/snippet}
-      <div class="face-span-all graph-board">
-        {#if env2Cyc}
-          <div class="graph">{@render tab('Cyc Env Mode', RATE_MODES, { cols: 4 })}</div>
-          {@render tab('Env 2 Cyc On', ['Env', 'Cyc'])}
-          {@render knob(cycRate, step('Cyc Env Mode') === 3 ? 'Sync' : 'Rate', step('Cyc Env Mode') === 3 ? 22 : undefined)}
-          {@render knob('Cyc Env Tilt', 'Tilt')}
-          {@render knob('Cyc Env Hold', 'Hold')}
-          <div class="cell"></div>
-        {:else}
-          <div class="graph"><EnvelopeGraph {params} ink={ink.primary} names={{ attack: 'Env 2 Attack', decay: 'Env 2 Decay', sustain: 'Env 2 Sustain', release: 'Env 2 Release' }} /></div>
-          {@render tab('Env 2 Cyc On', ['Env', 'Cyc'])}
-          {@render knob('Env 2 Attack', 'Attack')}
-          {@render knob('Env 2 Decay', 'Decay')}
-          {@render knob('Env 2 Sustain', 'Sustain')}
-          {@render knob('Env 2 Release', 'Release')}
-        {/if}
-      </div>
+      {@render tab('Env 2 Cyc On', ['Env', 'Cyc'])}
+      {#if env2Cyc}
+        {@render tab('Cyc Env Mode', RATE_MODES)}
+        {@render knob(cycRate, step('Cyc Env Mode') === 3 ? 'Sync' : 'Rate', step('Cyc Env Mode') === 3 ? 22 : undefined)}
+        {@render knob('Cyc Env Tilt', 'Tilt')}
+        {@render knob('Cyc Env Hold', 'Hold')}
+      {:else}
+        <div class="face-span-4"><EnvelopeGraph {params} ink={ink.primary} names={{ attack: 'Env 2 Attack', decay: 'Env 2 Decay', sustain: 'Env 2 Sustain', release: 'Env 2 Release' }} /></div>
+      {/if}
     </FaceSection>
   </FaceGrid>
 {:else if page === 'lfo-mod' && board}

@@ -60,6 +60,7 @@
    * the graph and turns on at the first drag.
    */
   import type { PanelParams } from './views/panel/usePanelParams.svelte';
+  import DeviceSlider from '../device-panel/DeviceSlider.svelte';
 
   interface Props {
     params: PanelParams;
@@ -70,9 +71,22 @@
     sw?: string;
     /** Drawn small in the top-left corner (an envelope's name). */
     label?: string;
+    /**
+     * Small Attack, Decay, Sustain and Release knobs under the picture (Ben,
+     * 2026-11-07: the graph alone hides the numbers a knob shows at a glance).
+     */
+    knobs?: boolean;
   }
 
-  let { params, names, ink, sw, label }: Props = $props();
+  let { params, names, ink, sw, label, knobs = true }: Props = $props();
+
+  const STAGES = [
+    ['attack', 'Attack'],
+    ['decay', 'Decay'],
+    ['sustain', 'Sustain'],
+    ['release', 'Release']
+  ] as const;
+  let scheme = $derived({ primary: ink, secondary: ink, accent: ink });
 
   /** The cell's size; the picture keeps a landscape shape inside it (ADR-514: a tall, narrow one reads badly). */
   let cw = $state(0);
@@ -180,6 +194,7 @@
   let ghost = $derived(!params.has(names.attack) && !params.has(names.decay));
 </script>
 
+<div class="env-wrap" class:with-knobs={knobs}>
 <div class="graph-cell" bind:clientWidth={cw} bind:clientHeight={ch}>
 <div
   class="env-graph"
@@ -223,8 +238,57 @@
   {#if active && activeReadout}<span class="readout">{activeReadout}</span>{/if}
 </div>
 </div>
+{#if knobs}
+  <div class="env-knobs">
+    {#each STAGES as [key, title] (key)}
+      {@const n = names[key]}
+      {@const r = params.range(n)}
+      <div class="env-knob" data-param={n}>
+        <DeviceSlider
+          value={params.raw(n) ?? r?.min ?? 0}
+          {title}
+          face="knob"
+          knobSize="s"
+          min={r?.min ?? 0}
+          max={r?.max ?? 1}
+          orientation="vertical"
+          labelSize="small"
+          isGhost={!params.has(n) || !on}
+          color={scheme}
+          readout={params.display(n)}
+          onInteraction={(v) => params.write(n, v, sw)}
+        />
+      </div>
+    {/each}
+  </div>
+{/if}
+</div>
 
 <style>
+  .env-wrap {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+  .env-wrap > .graph-cell {
+    flex: 1 1 0;
+  }
+  .env-knobs {
+    flex: 0 0 auto;
+    height: 4.5rem;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--spacing-sm);
+  }
+  .env-knob {
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+  }
   .graph-cell {
     width: 100%;
     height: 100%;
