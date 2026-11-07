@@ -94,7 +94,7 @@
       {#snippet head()}<PanelEyebrow color={reduxInk.primary} />{/snippet}
       <div class="switches" class:slot-ghost={redux.isGhost}>
         {#each SWITCHES as s (s.index)}
-          <button class="physical-button redux-switch w-full" class:active={on(s.index)} aria-pressed={on(s.index)} onclick={() => toggle(s.index)}>
+          <button class="physical-button btn-toggle redux-switch w-full" class:active={on(s.index)} aria-pressed={on(s.index)} onclick={() => toggle(s.index)}>
             {s.label}
           </button>
         {/each}

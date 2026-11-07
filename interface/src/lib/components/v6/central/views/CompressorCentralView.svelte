@@ -245,7 +245,7 @@
     <!-- Makeup Auto toggle (top) -->
     <button
       onclick={toggleMakeupAuto}
-      class="physical-button makeup-toggle text-lg font-bold"
+      class="physical-button btn-toggle makeup-toggle text-lg font-bold"
       class:active={makeupAutoEnabled}
       class:is-ghost={compressor.isGhost}
       style="--btn-tint: {liveInk.primary};"

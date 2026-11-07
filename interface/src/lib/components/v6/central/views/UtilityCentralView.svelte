@@ -125,7 +125,7 @@
   <div class="column channel" class:slot-ghost={utility.isGhost} role="radiogroup" aria-label="Channel">
     {#each CHANNEL_MODES as label, i (label)}
       <button
-        class="physical-button utility-switch"
+        class="physical-button btn-toggle utility-switch"
         class:active={channelMode === i}
         role="radio"
         aria-checked={channelMode === i}
@@ -145,7 +145,7 @@
     {#each SWITCH_ROWS as row, r (r)}
       <div class="switch-row">
         {#each row as s (s.index)}
-          <button class="physical-button utility-switch" class:active={on(s.index)} aria-pressed={on(s.index)} onclick={() => toggle(s.index)}>
+          <button class="physical-button btn-toggle utility-switch" class:active={on(s.index)} aria-pressed={on(s.index)} onclick={() => toggle(s.index)}>
             {s.label}
           </button>
         {/each}

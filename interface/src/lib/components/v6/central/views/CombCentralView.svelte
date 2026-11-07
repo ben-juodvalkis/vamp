@@ -119,7 +119,7 @@
 				</svg>
 			{/snippet}
 		</ScrubTabs>
-		<button class="physical-button switch" class:active={synced} aria-pressed={synced} onclick={() => send(COMB.lfoSync, synced ? 0 : 1)}>Sync</button>
+		<button class="physical-button btn-toggle switch" class:active={synced} aria-pressed={synced} onclick={() => send(COMB.lfoSync, synced ? 0 : 1)}>Sync</button>
 	</div>
 	</FaceSection>
 </FaceGrid>

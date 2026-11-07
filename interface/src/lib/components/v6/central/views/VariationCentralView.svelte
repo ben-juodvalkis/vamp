@@ -169,13 +169,13 @@
 			{#snippet head()}<PanelEyebrow title="Mode" color={varInk.primary} />{/snippet}
 			<div class="var-stack" class:slot-ghost={variation.isGhost}>
 				<button
-					class="physical-button var-btn"
+					class="physical-button btn-toggle var-btn"
 					class:active={insertMode}
 					aria-pressed={insertMode}
 					onclick={() => variation.sendParam(ROUTING_INDEX, insertMode ? 0 : 1)}
 				>{insertMode ? 'Insert' : 'Mix'}</button>
 				<button
-					class="physical-button var-btn"
+					class="physical-button btn-toggle var-btn"
 					class:active={triplets}
 					onclick={() => variation.sendParam(TRIPLETS_INDEX, triplets ? 1 : 0)}
 				>Trip</button>

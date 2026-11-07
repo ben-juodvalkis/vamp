@@ -243,7 +243,7 @@
       <div class="omni-fx-col min-w-0 min-h-0 flex flex-col gap-(--central-gap)" style="grid-column: 5; grid-row: 1 / 4;">
         <EnvelopeGroup ink={omniInk.primary} title={'\u00a0'} edges="none">
           <button
-            class="physical-button omni-fx w-full h-full min-w-0 min-h-0 text-xl font-bold"
+            class="physical-button btn-toggle omni-fx w-full h-full min-w-0 min-h-0 text-xl font-bold"
             class:active={fxIsOn}
             style="--btn-tint: {omniInk.primary};"
             onclick={handleFxToggle}

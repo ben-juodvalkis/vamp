@@ -141,7 +141,7 @@
 				<div class="caption" aria-hidden="true">&nbsp;</div>
 				<div class="cell switch-cell">
 					<button
-						class="physical-button switch"
+						class="physical-button btn-toggle switch"
 						class:active={!chord.isGhost && scaled}
 						class:slot-ghost={chord.isGhost}
 						aria-pressed={scaled}

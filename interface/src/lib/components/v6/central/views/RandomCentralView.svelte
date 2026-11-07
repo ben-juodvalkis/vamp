@@ -122,7 +122,7 @@
 					{/each}
 				</div>
 				<button
-					class="physical-button scale"
+					class="physical-button btn-toggle scale"
 					class:active={step(P.scale) === 1}
 					aria-pressed={step(P.scale) === 1}
 					onclick={() => random.sendParam(P.scale, step(P.scale) === 1 ? 0 : 1)}

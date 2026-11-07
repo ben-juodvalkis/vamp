@@ -86,7 +86,7 @@
       <!-- Sync, small, over the rate it switches. -->
       <div class="rate-col">
         <button
-          class="physical-button sync-toggle w-full font-bold"
+          class="physical-button btn-toggle sync-toggle w-full font-bold"
           class:active={isSynced}
           style="--btn-tint: {fxInk.primary};"
           onclick={toggleSync}

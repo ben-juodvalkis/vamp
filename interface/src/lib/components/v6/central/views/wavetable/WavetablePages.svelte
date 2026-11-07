@@ -49,9 +49,19 @@
      * a page's way back is its plain name and a section's link is its name.
      */
     board?: boolean;
+    /**
+     * The oscillator's wavetable as two choices, Live's category and the
+     * table in it, and their writers: the board's Osc pages draw a chooser
+     * of each (user, 2026-11-07).
+     */
+    tables?: {
+      choice: (osc: 1 | 2) => { categories: string[]; category: number; tables: string[]; table: number };
+      setCategory: (osc: 1 | 2, index: number) => void;
+      setTable: (osc: 1 | 2, index: number) => void;
+    };
   }
 
-  let { page, params, ink, oscInks, onNavigate, oscPad, effectTitles, board = false }: Props = $props();
+  let { page, params, ink, oscInks, onNavigate, oscPad, effectTitles, board = false, tables }: Props = $props();
 
   const TITLES: Record<string, string> = {
     osc1: 'Osc 1', osc2: 'Osc 2', filter1: 'Filter 1', filter2: 'Filter 2', mod: 'Mod Sources',
@@ -164,7 +174,7 @@
   {@const on = isOn(param)}
   <div class="cell sw-cell">
   <button
-    class="physical-button switch"
+    class="physical-button btn-toggle switch"
     class:active={on}
     aria-pressed={on}
     disabled={!params.has(param)}
@@ -198,7 +208,37 @@
 {/snippet}
 
 <div class="wt-page" data-wavetable-page={page}>
-{#if page === 'osc1' || page === 'osc2'}
+{#if (page === 'osc1' || page === 'osc2') && board && tables}
+  <!-- On the board (ADR-512) the page's eight columns with the wavetable
+       ahead of them: its category over its table, each a pick naming it
+       (user, 2026-11-07). Picking a category puts the oscillator on that
+       category's first table, as Live does. -->
+  {@const osc = n === 2 ? 2 : 1}
+  {@const t = tables.choice(osc)}
+  <FaceGrid sections={[2, 6, 2]}>
+    <FaceSection span={2}>
+      {#snippet head()}{@render back(oscInk.primary)}{/snippet}
+      <div class="stack face-span-2" data-wavetable-choosers={osc}>
+        <div class="cell sw-cell"><ChoicePicker options={t.categories} selected={t.category} onSelect={(i) => tables.setCategory(osc, i)} label="Osc {osc} wavetable category" tint={oscInk.primary} ghost={t.categories.length === 0} /></div>
+        <div class="cell sw-cell"><ChoicePicker options={t.tables} selected={t.table} onSelect={(i) => tables.setTable(osc, i)} label="Osc {osc} wavetable" tint={oscInk.primary} ghost={t.tables.length === 0} /></div>
+      </div>
+    </FaceSection>
+    <FaceSeam ink={ink.primary} />
+    <FaceSection span={6}>
+      {#snippet head()}{@render sub('Wave', oscInk.primary)}{/snippet}
+      <div class="face-span-3 pad" style={isOn(`${O} On`) ? '' : 'opacity: var(--opacity-ghost);'}>{@render oscPad(osc)}</div>
+      <div class="stack">{@render knob(`${O} Effect 1`, fx[0], 'm', { sw: `${O} On`, color: oscInk })}{@render knob(`${O} Transp`, 'Semi', 'm', { sw: `${O} On`, color: oscInk })}</div>
+      <div class="stack">{@render knob(`${O} Detune`, 'Detune', 'm', { sw: `${O} On`, color: oscInk })}{@render knob(`${O} Pan`, 'Pan', 'm', { sw: `${O} On`, color: oscInk })}</div>
+      <div class="stack">{@render knob(`${O} Gain`, 'Gain', 'm', { sw: `${O} On`, color: oscInk })}{@render sw(`${O} On`, 'On', oscInk.primary)}</div>
+    </FaceSection>
+    <FaceSeam ink={ink.primary} />
+    <FaceSection span={2}>
+      {#snippet head()}{@render sub('Sub')}{/snippet}
+      <div class="stack">{@render knob('Sub Gain', 'Gain', 'm', { sw: 'Sub On' })}{@render sw('Sub On', 'On')}</div>
+      <div class="stack">{@render knob('Sub Tone', 'Tone', 'm', { sw: 'Sub On' })}{@render tab('Sub Transpose', ['0', '-1', '-2'], { cols: 3, sw: 'Sub On', row: true })}</div>
+    </FaceSection>
+  </FaceGrid>
+{:else if page === 'osc1' || page === 'osc2'}
   <!-- Eight columns (~110px): the pad over three, Effect 1, Detune and the
        oscillator's level in a row over Semi, Pan and its switch; the Sub
        its level over its switch, its tone over its octave. Two to a column,

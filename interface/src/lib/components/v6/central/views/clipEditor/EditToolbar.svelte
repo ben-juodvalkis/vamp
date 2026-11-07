@@ -38,7 +38,7 @@
 
 <div class="edit-toolbar" style:width="{width}px">
 	<button
-		class="edit-chip"
+		class="edit-chip btn-toggle"
 		class:active={fold}
 		onclick={() => (fold = !fold)}
 		title="Fold: show only the pitches this clip plays"
@@ -52,7 +52,7 @@
 		{gridLabel}
 	</button>
 	<button
-		class="edit-chip"
+		class="edit-chip btn-toggle"
 		class:active={gridTriplet}
 		onclick={() => (gridTriplet = !gridTriplet)}
 		title="Triplet grid"
@@ -63,7 +63,7 @@
 	<span class="toolbar-sep"></span>
 
 	<button
-		class="edit-chip"
+		class="edit-chip btn-action"
 		disabled={!canQuantize}
 		onclick={onQuantize}
 		title="Quantize every note in the clip to the grid"

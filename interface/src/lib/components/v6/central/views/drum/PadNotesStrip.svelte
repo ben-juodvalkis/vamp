@@ -410,7 +410,7 @@
 {#if offGrid.length > 0}
 	<!-- Only while a note in the bar is off a step: nothing to quantize, no Q. -->
 	<button
-		class="physical-button strip-q"
+		class="physical-button btn-action strip-q"
 		onclick={quantize}
 		title="Quantize this pad's notes to the steps"
 		aria-label="Quantize this pad's notes to the steps"

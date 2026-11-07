@@ -322,10 +322,10 @@ import { logger } from '$lib/utils/logger';
 				</div>
 
 				<div class="sys-list sys-list-row">
-					<button class="sys-switch" class:on={session.metronome} aria-pressed={session.metronome} onclick={toggleMetronome}>
+					<button class="sys-switch btn-toggle" class:on={session.metronome} aria-pressed={session.metronome} onclick={toggleMetronome}>
 						<span class="sys-switch-label">Click</span>
 					</button>
-					<button class="sys-switch" class:on={session.keyFollowEnabled} aria-pressed={session.keyFollowEnabled} title={keyFollowTitle} onclick={toggleKeyFollow}>
+					<button class="sys-switch btn-toggle" class:on={session.keyFollowEnabled} aria-pressed={session.keyFollowEnabled} title={keyFollowTitle} onclick={toggleKeyFollow}>
 						<span class="sys-switch-label">Follow Key</span>
 					</button>
 				</div>
@@ -340,7 +340,7 @@ import { logger } from '$lib/utils/logger';
 			<div class="sys-list sys-sections">
 				{#each surfaceToggles as t (t.label)}
 					<button
-						class="sys-switch"
+						class="sys-switch btn-toggle"
 						class:on={t.on()}
 						aria-pressed={t.on()}
 						aria-label={t.ariaLabel}

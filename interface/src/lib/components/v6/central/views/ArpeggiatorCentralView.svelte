@@ -242,7 +242,7 @@
     <div class="flex flex-col gap-(--face-gutter) min-h-0">
     <!-- Sync button -->
     <button
-      class="physical-button arp-caps w-full text-sm font-bold h-16 flex-none"
+      class="physical-button btn-toggle arp-caps w-full text-sm font-bold h-16 flex-none"
       class:active={syncIsOn}
       style="--btn-tint: {arpInk.primary};{arp.isGhost ? ' opacity: var(--opacity-ghost);' : ''}"
       onclick={handleSyncToggle}

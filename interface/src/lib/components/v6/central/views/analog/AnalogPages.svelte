@@ -252,7 +252,7 @@
   {@const on = isOn(param)}
   <div class="cell sw-cell">
     <button
-      class="physical-button switch"
+      class="physical-button btn-toggle switch"
       class:active={on}
       aria-pressed={on}
       disabled={!params.has(param)}

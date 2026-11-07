@@ -1049,8 +1049,9 @@ import { logger } from '$lib/utils/logger';
 	   square or tall cell, a pill in a wide one, as large as the cell allows — and a toggle stays a rectangle with a lamp
 	   along its top edge, dim while off and lit while on, so a switch reads
 	   as a switch before it is pressed. Sliders and pickers keep their
-	   plain rectangles. After the flat rules so they win at equal
-	   specificity. */
+	   plain rectangles. The lamp and the round radius are app.css's shared
+	   `.btn-toggle` / `.btn-action`; this view adds only the sizing. After
+	   the flat rules so they win at equal specificity. */
 	.btn-action,
 	:global([data-grammar="flat"]) .btn-action {
 		border-radius: 9999px;
@@ -1059,20 +1060,4 @@ import { logger } from '$lib/utils/logger';
 		   pill. A tall capsule read as a slot, not a button. */
 		height: min(100cqh, 100cqw);
 	}
-	.btn-toggle { position: relative; }
-	.btn-toggle::after {
-		content: '';
-		position: absolute;
-		top: 10px;
-		left: 50%;
-		width: 28px;
-		height: 4px;
-		margin-left: -14px;
-		border-radius: 2px;
-		background: currentColor;
-		opacity: 0.3;
-		pointer-events: none;
-	}
-	.btn-toggle.active::after { opacity: 1; }
-	.btn-toggle:disabled::after { opacity: 0.15; }
 </style>

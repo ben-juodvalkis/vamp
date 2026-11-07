@@ -34,7 +34,7 @@
 <div class="pad-mixer" data-pad-muted={isMuted ? 'true' : undefined}>
   <button
     type="button"
-    class="pad-mute physical-button"
+    class="pad-mute physical-button btn-toggle"
     class:active={isMuted}
     class:pad-mute-none={muteGhost}
     style="--btn-tint: {color.primary};"

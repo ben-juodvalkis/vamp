@@ -76,5 +76,34 @@ export function useOscWave(devicePath: () => string | undefined) {
 		return mode === 'none' ? cycle : applyOscEffect(cycle, mode, effect1, effect2);
 	}
 
-	return { wave, effectMode };
+	/**
+	 * Oscillator `n`'s table as two choices: Live's categories and the
+	 * tables of the one it is in, each with the index it is on (-1 unknown).
+	 */
+	function tableChoice(n: 1 | 2) {
+		const at = (name: string) => {
+			const v = property(name);
+			return typeof v === 'number' || (typeof v === 'string' && v !== '') ? Number(v) : -1;
+		};
+		return {
+			categories: nameList('oscillator_wavetable_categories'),
+			category: at(`oscillator_${n}_wavetable_category`),
+			tables: nameList(`oscillator_${n}_wavetables`),
+			table: at(`oscillator_${n}_wavetable_index`)
+		};
+	}
+
+	/** Picks oscillator `n`'s category; Live then puts it on that category's first table. */
+	function setCategory(n: 1 | 2, index: number) {
+		const path = devicePath();
+		if (path) selectedTrackStore.setPropertyValue(path, `oscillator_${n}_wavetable_category`, index);
+	}
+
+	/** Picks oscillator `n`'s table within its category. */
+	function setTable(n: 1 | 2, index: number) {
+		const path = devicePath();
+		if (path) selectedTrackStore.setPropertyValue(path, `oscillator_${n}_wavetable_index`, index);
+	}
+
+	return { wave, effectMode, tableChoice, setCategory, setTable };
 }

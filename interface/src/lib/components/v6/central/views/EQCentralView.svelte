@@ -85,7 +85,7 @@
   <!-- A switch: one cell, lit while the low cut is on. -->
   <button
     onclick={toggleLowCut}
-    class="physical-button eq-switch text-lg font-bold"
+    class="physical-button btn-toggle eq-switch text-lg font-bold"
     class:active={lowCutEnabled}
     aria-pressed={lowCutEnabled}
     style="--btn-tint: {fxInk.primary};"

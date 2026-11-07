@@ -1240,6 +1240,50 @@ html, body {
 .light[data-grammar="flat"] .physical-button.active {
   border-color: var(--line-strong);
 }
+
+/* Button roles (2026-11-07, from the clip view's 2026-11-06 pass). Add one
+   to a button's classes; its own chrome (physical-button, a view's own
+   class) stays.
+   - `.btn-action`: a one-shot that does something once (Quantize, Rev,
+     Delete) is round. The radius only; the view sizes the button — a
+     square box makes a circle, a wide one a pill.
+   - `.btn-toggle`: an on/off switch keeps its rectangle and wears a lamp
+     along its top edge, dim while off and lit while on, so it
+     reads as a switch before it is pressed.
+   Sliders and pick-one choosers wear neither. */
+/* !important because a view's own scoped chrome (and its flat block) set a
+   radius at higher specificity and load after this sheet; the role is
+   the one thing that must win. */
+.btn-action {
+  border-radius: 9999px !important;
+}
+.btn-toggle {
+  position: relative;
+}
+.btn-toggle::after {
+  content: '';
+  position: absolute;
+  top: clamp(4px, 9%, 10px);
+  left: 50%;
+  width: clamp(14px, 28%, 28px);
+  height: clamp(3px, 5%, 4px);
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.3;
+  pointer-events: none;
+}
+/* Lit: whichever way the view marks ON. */
+.btn-toggle.active::after,
+.btn-toggle.on::after,
+.btn-toggle.is-on::after,
+.btn-toggle[aria-pressed="true"]::after,
+.btn-toggle[data-on="true"]::after {
+  opacity: 1;
+}
+.btn-toggle:disabled::after {
+  opacity: 0.15;
+}
 [data-grammar="flat"] .device-segmented {
   border: 1px solid var(--button-frame);
   border-radius: var(--radius-sm);

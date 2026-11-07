@@ -230,7 +230,7 @@
 		     over the pad's top-right corner until 2026-10-27, 8px past it,
 		     which on a small iPad put it across the frame's edge. -->
 		<button
-			class="physical-button lfo-sync-toggle text-sm font-medium"
+			class="physical-button btn-toggle lfo-sync-toggle text-sm font-medium"
 			class:active={lfoSync >= 3}
 			style="--btn-tint: {lfoInk.primary};"
 			onclick={toggleLfoSync}

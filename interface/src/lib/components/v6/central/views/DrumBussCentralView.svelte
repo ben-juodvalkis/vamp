@@ -136,7 +136,7 @@
         />
       </div>
       <button
-        class="physical-button comp-toggle w-full font-bold"
+        class="physical-button btn-toggle comp-toggle w-full font-bold"
         class:active={compressorOn}
         style="--btn-tint: {drumInk.primary};"
         onclick={toggleComp}

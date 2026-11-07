@@ -18,7 +18,7 @@
 </script>
 
 <button
-  class="physical-button param-switch w-full"
+  class="physical-button btn-toggle param-switch w-full"
   class:active={on}
   class:slot-ghost={ghost}
   class:row

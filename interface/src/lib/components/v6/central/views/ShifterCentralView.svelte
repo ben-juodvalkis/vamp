@@ -163,7 +163,7 @@
           groupLabel="Mode"
           style="flex: 3 1 0; --scrub-font-size: 1rem; --scrub-font-weight: var(--font-weight-medium);"
         />
-        <button class="physical-button switch" class:active={on(P.wide)} aria-pressed={on(P.wide)} onclick={() => toggle(P.wide)}>Wide</button>
+        <button class="physical-button btn-toggle switch" class:active={on(P.wide)} aria-pressed={on(P.wide)} onclick={() => toggle(P.wide)}>Wide</button>
       </div>
 
       <!-- Drive over Tone, medium (ADR-509): two captioned 96px knobs need
@@ -221,7 +221,7 @@
       </div>
 
       <div class="col" class:slot-ghost={shifter.isGhost}>
-        <button class="physical-button switch touch-row" class:active={synced} aria-pressed={synced} onclick={() => toggle(P.sync)}>Sync</button>
+        <button class="physical-button btn-toggle switch touch-row" class:active={synced} aria-pressed={synced} onclick={() => toggle(P.sync)}>Sync</button>
         {#each LFO_BOXES.slice(2) as b (b.index)}{@render knob(b.index, b.title, (v) => shifter.sendParam(b.index, v), b.center)}{/each}
       </div>
 

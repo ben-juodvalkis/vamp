@@ -309,7 +309,7 @@
     <!-- Metronome: the whole cell is the switch, lit while on. -->
     <button
       type="button"
-      class="hdr-switch role-metronome"
+      class="hdr-switch btn-toggle role-metronome"
       class:is-on={session.metronome}
       data-on={session.metronome}
       data-role="metronome"
@@ -326,7 +326,7 @@
     <!-- Session overdub: an INDICATOR, not a control (nothing here
          writes it) — the same cell, but no press, and its On is record red. -->
     <div
-      class="hdr-switch role-record is-readonly"
+      class="hdr-switch btn-toggle role-record is-readonly"
       class:is-on={session.sessionRecord}
       data-on={session.sessionRecord}
       role="status"

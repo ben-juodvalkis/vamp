@@ -250,7 +250,7 @@
 			/>
 		</div>
 		<button
-			class="physical-button echo-switch w-full font-bold"
+			class="physical-button btn-toggle echo-switch w-full font-bold"
 			class:active={synced}
 			style="--btn-tint: {echo.color.primary};"
 			aria-pressed={synced}
@@ -310,7 +310,7 @@
 			/>
 		</div>
 		<button
-			class="physical-button echo-switch w-full font-bold"
+			class="physical-button btn-toggle echo-switch w-full font-bold"
 			class:active={lfoSynced}
 			style="--btn-tint: {echo.color.primary};"
 			aria-pressed={lfoSynced}

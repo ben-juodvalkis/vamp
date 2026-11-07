@@ -591,7 +591,7 @@
 
 {#snippet typeChip(end: string, index: number)}
   <button
-    class="physical-button reverb-chip"
+    class="physical-button btn-toggle reverb-chip"
     style="--btn-tint: {currentColor.primary};"
     title="{end}: Cut or Shelf"
     data-reverb-switch={index}
@@ -632,7 +632,7 @@
 
 {#snippet chip(name: string, index: number, title?: string)}
   <button
-    class="physical-button reverb-chip"
+    class="physical-button btn-toggle reverb-chip"
     class:active={on(index)}
     style="--btn-tint: {currentColor.primary};"
     aria-pressed={on(index)}

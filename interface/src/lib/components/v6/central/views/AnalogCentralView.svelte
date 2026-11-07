@@ -508,8 +508,8 @@
             />
           </div>
           <div class="r sw-pair">
-            <button class="physical-button mode-button" class:active={unisonOn} style="--btn-tint: {analogInk.primary};" aria-pressed={unisonOn} onclick={() => write(ANALOG_UNISON_ON, unisonOn ? 0 : 1)}>Uni</button>
-            <button class="physical-button mode-button" class:active={vibOn} style="--btn-tint: {analogInk.primary};" aria-pressed={vibOn} onclick={() => write(ANALOG_VIB_ON, vibOn ? 0 : 1)}>Vib</button>
+            <button class="physical-button btn-toggle mode-button" class:active={unisonOn} style="--btn-tint: {analogInk.primary};" aria-pressed={unisonOn} onclick={() => write(ANALOG_UNISON_ON, unisonOn ? 0 : 1)}>Uni</button>
+            <button class="physical-button btn-toggle mode-button" class:active={vibOn} style="--btn-tint: {analogInk.primary};" aria-pressed={vibOn} onclick={() => write(ANALOG_VIB_ON, vibOn ? 0 : 1)}>Vib</button>
           </div>
           {@render faceKnob({ value: glideOn ? glideTime : 0, title: 'Glide', icon: 'glide', ink: analogInk, ghost: !glideOn, readout: display(ANALOG_GLIDE_TIME), write: (v) => {
             writeSwitch(ANALOG_GLIDE_ON, v > SECTION_SWITCH_ON_ABOVE, glideOn);

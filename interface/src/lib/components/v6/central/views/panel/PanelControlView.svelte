@@ -108,7 +108,7 @@
 		/>
 		{#if toggle}
 			<button
-				class="physical-button panel-switch compact"
+				class="physical-button btn-toggle panel-switch compact"
 				class:active={toggleOn}
 				aria-pressed={toggleOn}
 				disabled={!toggleListed}
@@ -168,7 +168,7 @@
 {:else if control.kind === 'switch'}
 	{@const on = listed && (raw ?? 0) >= 0.5}
 	<button
-		class="physical-button panel-switch"
+		class="physical-button btn-toggle panel-switch"
 		class:compact
 		class:active={on}
 		class:ghost={!listed}

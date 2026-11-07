@@ -442,7 +442,7 @@
           {#if !isSlicing}
             <button
               onclick={toggleLoopOn}
-              class="physical-button row-start-2 h-full w-full flex items-center justify-center"
+              class="physical-button btn-toggle row-start-2 h-full w-full flex items-center justify-center"
               class:active={loopOn}
               style="--btn-tint: {simplerInk.primary};"
               aria-label="Loop {loopOn ? 'on' : 'off'}"
@@ -655,7 +655,7 @@
           <div class="row-start-2 col-span-1 row-span-1 min-h-0 min-w-0 grid {warping ? 'grid-rows-3' : 'grid-rows-1'}" style="gap: var(--spacing-sm);">
             <button
               onclick={handleReverse}
-              class="physical-button h-full w-full flex items-center justify-center text-[18px] font-bold uppercase tracking-wider"
+              class="physical-button btn-action h-full w-full flex items-center justify-center text-[18px] font-bold uppercase tracking-wider"
               style="--btn-tint: {simplerInk.primary};"
               aria-label="Reverse sample"
             >
@@ -664,7 +664,7 @@
             {#if warping}
               <button
                 onclick={handleWarpHalf}
-                class="physical-button h-full w-full flex items-center justify-center text-[18px] font-bold uppercase tracking-wider"
+                class="physical-button btn-action h-full w-full flex items-center justify-center text-[18px] font-bold uppercase tracking-wider"
                 style="--btn-tint: {simplerInk.primary};"
                 aria-label="Halve warped tempo"
               >
@@ -672,7 +672,7 @@
               </button>
               <button
                 onclick={handleWarpDouble}
-                class="physical-button h-full w-full flex items-center justify-center text-[18px] font-bold uppercase tracking-wider"
+                class="physical-button btn-action h-full w-full flex items-center justify-center text-[18px] font-bold uppercase tracking-wider"
                 style="--btn-tint: {simplerInk.primary};"
                 aria-label="Double warped tempo"
               >
