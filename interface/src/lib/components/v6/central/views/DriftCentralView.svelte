@@ -15,6 +15,8 @@
   import FaceSection from '../FaceSection.svelte';
   import FaceSeam from '../FaceSeam.svelte';
   import DriftPages from './drift/DriftPages.svelte';
+  import InstrumentBoard, { type BoardRow } from '../InstrumentBoard.svelte';
+  import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
   import { driftFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
   import InstrumentPanelView from './panel/InstrumentPanelView.svelte';
   import PanelEyebrow from './panel/PanelEyebrow.svelte';
@@ -328,7 +330,8 @@
   /**
    * Drift's modulation sources, matrix targets and voice count: device
    * properties, not parameters (measured 2026-11-06; the surface allowlists
-   * them). Subscribed only while a page that shows them is open.
+   * them). Subscribed only while a page that shows them is open, or the
+   * full-screen board, which shows every page.
    */
   const PAGE_PROPERTIES = [
     'mod_matrix_pitch_source_1_index', 'mod_matrix_pitch_source_2_index', 'mod_matrix_shape_source_index',
@@ -338,7 +341,7 @@
     'voice_count_index'
   ] as const;
   $effect(() => {
-    if (!devicePath || !driftPage) return;
+    if (!devicePath || !(driftPage || centralDisplayStore.expanded)) return;
     const path = devicePath;
     const offs = PAGE_PROPERTIES.map((name) => selectedTrackStore.subscribeProperty(path, name));
     return () => offs.forEach((off) => off?.());
@@ -421,6 +424,18 @@
    */
   let driftPage = $state<string | null>(null);
   const openDriftPage = (page: string) => (driftPage = page);
+
+  /**
+   * Full screen (ADR-512): every page at once, in Live's signal order. The
+   * Oscillators page alone on the first row, taller, so its waveform and
+   * octave picks keep their touch height; Filter beside the Envelopes; LFO /
+   * Mod beside Global. The face's controls are all on these pages.
+   */
+  const BOARD: readonly BoardRow[] = [
+    { tiles: [{ id: 'oscillators', cols: 10 }], weight: 1.25 },
+    { tiles: [{ id: 'filter', cols: 6 }, { id: 'envelopes', cols: 9 }] },
+    { tiles: [{ id: 'lfo-mod', cols: 7 }, { id: 'global', cols: 7 }] }
+  ];
 
   let oscOn = $derived(oscTab === 1 ? osc1On : osc2On);
   let oscWave = $derived(oscTab === 1 ? osc1Wave : osc2Wave);
@@ -506,7 +521,25 @@
 {/snippet}
 
 <div class="drift-root h-full w-full overflow-hidden relative">
-  {#if instrument && device}
+  {#if instrument && device && centralDisplayStore.expanded}
+    <InstrumentBoard rows={BOARD} ink={driftInk.primary}>
+      {#snippet tile(id)}
+        <DriftPages
+          page={id}
+          params={panelParams}
+          ink={driftInk}
+          sourceInks={{ osc1: osc1Ink, osc2: osc2Ink, noise: noiseInk }}
+          onBack={() => {}}
+          {filterPad}
+          {voiceModeTab}
+          {waveGlyph}
+          prop={deviceProp}
+          setProp={setDeviceProp}
+          board
+        />
+      {/snippet}
+    </InstrumentBoard>
+  {:else if instrument && device}
     <!--
       Signal-flow row: Sources (OSC 1 + OSC 2 + Noise) → Filter/Time → Voicing → voice mode.
       Each oscillator is one card reading top-to-bottom: pick a waveform, shape it

@@ -14,6 +14,14 @@
    * (slopes, loop mode, LFO 1's shape and effects) on it, so no page opens
    * another. The first section's header line carries the page's name with
    * a "‹" that leads back to the face.
+   *
+   * On the full-screen board (`board`, ADR-512) every page of both engines
+   * is a tile at once, so each page is a narrower, shorter variant: a page's
+   * way back is its plain name; a pick too long for a board row's height (the
+   * octave, an LFO's wave) is a `ChoicePicker`, and an LFO's sync a switch;
+   * the Filter pad takes two columns; the envelopes stand three knobs to a
+   * column (times, slopes, levels); and Global's Play switches go two to a
+   * column.
    */
   import DeviceSlider from '../../../device-panel/DeviceSlider.svelte';
   import DeviceXY from '../../../device-panel/DeviceXY.svelte';
@@ -37,9 +45,14 @@
     /** Engine A's and B's colours, as on the face. */
     engineInks: Record<MeldEngine, DeviceColorScheme>;
     onBack: () => void;
+    /**
+     * A tile of the full-screen board (ADR-512): every page of both engines
+     * is on screen, so a page's way back is its plain name.
+     */
+    board?: boolean;
   }
 
-  let { page, params, ink, engineInks, onBack }: Props = $props();
+  let { page, params, ink, engineInks, onBack, board = false }: Props = $props();
 
   // Live's value lists (meldPanel.ts, read off the running Meld).
   const OSC_TYPES = [
@@ -182,15 +195,87 @@
 {/snippet}
 
 {#snippet back()}
-  <button class="page-back" style="color: {eInk.primary};" onclick={onBack}>‹ {title}</button>
+  {#if board}
+    <span class="sub" style="color: {eInk.primary};">{title}</span>
+  {:else}
+    <button class="page-back" style="color: {eInk.primary};" onclick={onBack}>‹ {title}</button>
+  {/if}
 {/snippet}
 
 {#snippet sub(text: string, color: string = eInk.primary)}<span class="sub" style="color: {color};">{text}</span>{/snippet}
 
 {#snippet empty()}<div class="cell"></div>{/snippet}
 
+<!-- The engine's filter pad: Freq across, Q up, its curve drawn. -->
+{#snippet filterPad()}
+  <DeviceXY
+    xValue={params.unit(`${X} Filter Freq`) ?? 1}
+    yValue={params.unit(`${X} Filter Q`) ?? 0}
+    title="Filter {X}"
+    titleAt={board ? 'bottom' : 'center'}
+    showCurve={isOn(`${X} Filter On`) && filterCurve.curveType !== 'none'}
+    curveType={filterCurve.curveType}
+    curveOrder={filterCurve.order}
+    curveFreqRange={FILTER_FREQ_RANGE.meld}
+    onInteraction={(x, y) => {
+      params.writeUnit(`${X} Filter Freq`, x, `${X} Filter On`);
+      params.writeUnit(`${X} Filter Q`, y, `${X} Filter On`);
+    }}
+    color={eInk}
+  />
+{/snippet}
+
+<!-- The octave as a pick (the board): +3 first, as the column reads. -->
+{#snippet octavePick()}
+  {@const order = OCTAVES.map((_, i) => OCTAVES.length - 1 - i)}
+  {@const at = step(`${X} Octave`)}
+  <ChoicePicker
+    options={order.map((i) => OCTAVES[i])}
+    selected={params.has(`${X} Octave`) && at >= 0 ? order.indexOf(at) : undefined}
+    onSelect={(k) => params.write(`${X} Octave`, lo(`${X} Octave`) + order[k])}
+    label="Engine {X} octave"
+    tint={eInk.primary}
+    ghost={!params.has(`${X} Octave`)}
+  />
+{/snippet}
+
 <div class="meld-page" data-meld-page={page}>
-{#if section === 'osc'}
+{#if section === 'osc' && board}
+  <!-- On the board (ADR-512): the octave a pick over Semi (seven cells
+       are too short in a board row), Detune over Scale St, the two
+       switches a column. -->
+  <FaceGrid sections={[2, 3, 1, 1]}>
+    <FaceSection span={2}>
+      {#snippet head()}{@render back()}{/snippet}
+      <div class="stack">
+        <div class="osc-mark"><MeldOscIcon type={Math.max(0, step(`${X} Osc Type`))} color={eInk.primary} /></div>
+        {@render picker(`${X} Osc Type`, OSC_TYPES, `Engine ${X} oscillator type`)}
+        {@render sw(`${X} On`, 'On')}
+      </div>
+      <div class="stack">{@render knob(`${X} Osc Shape`, 'Shape')}{@render knob(`${X} Osc Tone`, 'Tone')}</div>
+    </FaceSection>
+    <FaceSeam ink={eInk.primary} />
+    <FaceSection span={3}>
+      {#snippet head()}{@render sub('Pitch')}{/snippet}
+      <div class="stack">
+        <div class="cell sw-cell octave-pick">{@render octavePick()}</div>
+        {@render knob(`${X} Transpose`, 'Semi', { steps: 25 })}
+      </div>
+      <div class="stack">{@render knob(`${X} Detune`, 'Detune')}{@render knob(`${X} Transp Scale`, 'Scale St')}</div>
+      <div class="stack">{@render sw(`${X} Keytracking`, 'Key')}{@render sw(`${X} Osc Scale Aware`, 'Scale')}</div>
+    </FaceSection>
+    <FaceSeam ink={eInk.primary} />
+    <FaceSection span={1}>
+      {#snippet head()}{@render sub('Reset')}{/snippet}
+      <div class="stack">{@render sw(`${X} Reset`, 'Reset')}{@render sw(`${X} Reset To Voice Offset`, 'Offset')}</div>
+    </FaceSection>
+    <FaceSeam ink={eInk.primary} />
+    <FaceSection span={1}>
+      {#snippet head()}{@render sub('Glide')}{/snippet}
+      <div class="stack">{@render tab(`${X} Glide Mode`, ['Port', 'Gliss'])}{@render knob(`${X} Glide Time`, 'Time')}</div>
+    </FaceSection>
+  </FaceGrid>
+{:else if section === 'osc'}
   <!-- The oscillator (its type, Shape and Tone, the engine's On), its
        pitch, reset and glide. -->
   <FaceGrid sections={[2, 3, 1, 1]}>
@@ -224,27 +309,28 @@
       <div class="stack">{@render tab(`${X} Glide Mode`, ['Port', 'Gliss'])}{@render knob(`${X} Glide Time`, 'Time')}</div>
     </FaceSection>
   </FaceGrid>
+{:else if section === 'filter' && board}
+  <!-- On the board (ADR-512) four columns in one section, so the second
+       macro's name fits: the pad over two, the type with its switches, the
+       second macro. -->
+  <FaceGrid sections={[4]}>
+    <FaceSection span={4}>
+      {#snippet head()}{@render back()}{@render sub('Type')}{/snippet}
+      <div class="face-span-2 pad">{@render filterPad()}</div>
+      <div class="stack">
+        {@render picker(`${X} Filter Type`, FILTER_TYPES, `Filter ${X} type`)}
+        {@render sw(`${X} Filter On`, 'On')}
+        {@render sw(`${X} Filter Filter Scale Aware`, 'Scale')}
+      </div>
+      {@render knob(`${X} Filter L-B-H-N`, extraTitle)}
+    </FaceSection>
+  </FaceGrid>
 {:else if section === 'filter'}
   <!-- The pad sets Freq and Q, so they have no knobs here. -->
   <FaceGrid sections={[5, 1, 1]}>
     <FaceSection span={5}>
       {#snippet head()}{@render back()}{/snippet}
-      <div class="face-span-all pad">
-        <DeviceXY
-          xValue={params.unit(`${X} Filter Freq`) ?? 1}
-          yValue={params.unit(`${X} Filter Q`) ?? 0}
-          title="Filter {X}"
-          showCurve={isOn(`${X} Filter On`) && filterCurve.curveType !== 'none'}
-          curveType={filterCurve.curveType}
-          curveOrder={filterCurve.order}
-          curveFreqRange={FILTER_FREQ_RANGE.meld}
-          onInteraction={(x, y) => {
-            params.writeUnit(`${X} Filter Freq`, x, `${X} Filter On`);
-            params.writeUnit(`${X} Filter Q`, y, `${X} Filter On`);
-          }}
-          color={eInk}
-        />
-      </div>
+      <div class="face-span-all pad">{@render filterPad()}</div>
     </FaceSection>
     <FaceSeam ink={eInk.primary} />
     <FaceSection span={1}>
@@ -259,6 +345,27 @@
     <FaceSection span={1}>
       {#snippet head()}{@render sub(extraTitle)}{/snippet}
       {@render knob(`${X} Filter L-B-H-N`, extraTitle, { size: 'l' })}
+    </FaceSection>
+  </FaceGrid>
+{:else if section === 'env' && board}
+  <!-- On the board (ADR-512) seven columns, three knobs to a column:
+       the times on the first row, their slopes on the second, the levels on
+       the third. Amp's sustain and loop mode end its levels; Mod's loop mode
+       ends its slopes. -->
+  <FaceGrid sections={[3, 4]}>
+    <FaceSection span={3}>
+      {#snippet head()}{@render back()}{@render sub('Amp')}{/snippet}
+      <div class="stack">{@render knob(`${X} Amp Attack`, 'Attack')}{@render knob(`${X} Amp A Slope`, 'A Slope')}{@render empty()}</div>
+      <div class="stack">{@render knob(`${X} Amp Decay`, 'Decay')}{@render knob(`${X} Amp D Slope`, 'D Slope')}{@render knob(`${X} Amp Sustain`, 'Sustain')}</div>
+      <div class="stack">{@render knob(`${X} Amp Release`, 'Release')}{@render knob(`${X} Amp R Slope`, 'R Slope')}{@render picker(`${X} Amp Loop Mode`, LOOP_MODES, `Engine ${X} amp loop`)}</div>
+    </FaceSection>
+    <FaceSeam ink={eInk.primary} />
+    <FaceSection span={4}>
+      {#snippet head()}{@render sub('Mod')}{/snippet}
+      <div class="stack">{@render knob(`${X} Mod Attack`, 'Attack')}{@render knob(`${X} Mod A Slope`, 'A Slope')}{@render knob(`${X} Mod Initial`, 'Initial')}</div>
+      <div class="stack">{@render knob(`${X} Mod Decay`, 'Decay')}{@render knob(`${X} Mod D Slope`, 'D Slope')}{@render knob(`${X} Mod Peak`, 'Peak')}</div>
+      <div class="stack">{@render knob(`${X} Mod Release`, 'Release')}{@render knob(`${X} Mod R Slope`, 'R Slope')}{@render knob(`${X} Mod Sustain`, 'Sustain')}</div>
+      <div class="stack">{@render empty()}{@render picker(`${X} Mod Loop Mode`, LOOP_MODES, `Engine ${X} mod loop`)}{@render knob(`${X} Mod Final`, 'Final')}</div>
     </FaceSection>
   </FaceGrid>
 {:else if section === 'env'}
@@ -282,6 +389,51 @@
       <div class="stack">{@render knob(`${X} Mod Sustain`, 'Sustain')}{@render tab(`${X} Mod Loop Mode`, LOOP_MODES, { cols: 2 })}</div>
       <div class="stack">{@render knob(`${X} Mod Release`, 'Release')}{@render knob(`${X} Mod R Slope`, 'R Slope')}</div>
       <div class="stack">{@render knob(`${X} Mod Final`, 'Final')}{@render empty()}</div>
+    </FaceSection>
+  </FaceGrid>
+{:else if section === 'lfo' && board}
+  <!-- On the board (ADR-512) seven columns: each LFO's wave a pick over
+       its sync and retrigger switches (a six-cell tab is too short in a
+       board row), its rate over its offset; LFO 1's shape over fold, and
+       its two effects a column each. -->
+  <FaceGrid sections={[3, 2, 2]}>
+    <FaceSection span={3}>
+      {#snippet head()}{@render back()}{@render sub('LFO 1')}{/snippet}
+      <div class="stack">
+        {@render picker(`${X} LFO 1 Wave`, LFO1_WAVES, `Engine ${X} LFO 1 wave`)}
+        {@render sw(`${X} LFO 1 Sync`, 'Sync')}
+        {@render sw(`${X} LFO 1 Retrig On`, 'Retrig')}
+      </div>
+      <div class="stack">
+        {@render knob(rateParam(1), isOn(`${X} LFO 1 Sync`) ? 'Sync' : 'Rate', { steps: isOn(`${X} LFO 1 Sync`) ? 22 : undefined })}
+        {@render knob(`${X} LFO 1 Offset`, 'Offset')}
+      </div>
+      <div class="stack">{@render knob(`${X} LFO 1 Shape`, 'Shape')}{@render knob(`${X} LFO 1 Fold`, 'Fold')}</div>
+    </FaceSection>
+    <FaceSeam ink={eInk.primary} />
+    <FaceSection span={2}>
+      {#snippet head()}{@render sub('LFO 1 FX')}{/snippet}
+      <!-- The two amounts side by side, their types under them, 1 over 2,
+           each across both columns so an effect's name reads whole. -->
+      <div class="face-span-2 fx-pair">
+        {@render knob(`${X} LFO 1 FX 1 Scale`, 'FX 1', { mark: '1' })}
+        {@render knob(`${X} LFO 1 FX 2 Ramp`, 'FX 2', { mark: '2' })}
+        {@render picker(`${X} LFO 1 FX 1 Type`, LFO_FX, 'FX 1 type')}
+        {@render picker(`${X} LFO 1 FX 2 Type`, LFO_FX, 'FX 2 type')}
+      </div>
+    </FaceSection>
+    <FaceSeam ink={eInk.primary} />
+    <FaceSection span={2}>
+      {#snippet head()}{@render sub('LFO 2')}{/snippet}
+      <div class="stack">
+        {@render picker(`${X} LFO 2 Wave`, LFO2_WAVES, `Engine ${X} LFO 2 wave`)}
+        {@render sw(`${X} LFO 2 Sync`, 'Sync')}
+        {@render sw(`${X} LFO 2 Retrig On`, 'Retrig')}
+      </div>
+      <div class="stack">
+        {@render knob(rateParam(2), isOn(`${X} LFO 2 Sync`) ? 'Sync' : 'Rate', { steps: isOn(`${X} LFO 2 Sync`) ? 22 : undefined })}
+        {@render knob(`${X} LFO 2 Offset`, 'Offset')}
+      </div>
     </FaceSection>
   </FaceGrid>
 {:else if section === 'lfo'}
@@ -315,6 +467,33 @@
         {@render knob(rateParam(2), isOn(`${X} LFO 2 Sync`) ? 'Sync' : 'Rate', { steps: isOn(`${X} LFO 2 Sync`) ? 22 : undefined })}
         {@render knob(`${X} LFO 2 Offset`, 'Offset')}
       </div>
+    </FaceSection>
+  </FaceGrid>
+{:else if section === 'global' && board}
+  <!-- On the board (ADR-512) the Play switches go two to a column, so the
+       row keeps its height for the engine filters beside it, and the mix
+       reads "A Vol", its column too narrow for "A Volume". -->
+  <FaceGrid sections={[3, 2, 2]}>
+    <FaceSection span={3}>
+      {#snippet head()}{@render back()}{@render sub('Mix A / B')}{/snippet}
+      {#each [['Volume', 'Vol'], ['Pan', 'Pan'], ['Tone Filter', 'Tone']] as [name, label] (name)}
+        <div class="stack">
+          {@render knob(`A ${name}`, `A ${label}`, { color: engineInks.A })}
+          {@render knob(`B ${name}`, `B ${label}`, { color: engineInks.B })}
+        </div>
+      {/each}
+    </FaceSection>
+    <FaceSeam ink={ink.primary} />
+    <FaceSection span={2}>
+      {#snippet head()}{@render sub('Global', ink.primary)}{/snippet}
+      <div class="stack">{@render knob('Drive', 'Drive', { color: ink })}{@render knob('Voice Spread', 'Spread', { color: ink })}</div>
+      <div class="stack">{@render knob('Engine B Delay', 'B Delay', { color: ink })}{@render knob('Volume', 'Volume', { color: ink })}</div>
+    </FaceSection>
+    <FaceSeam ink={ink.primary} />
+    <FaceSection span={2}>
+      {#snippet head()}{@render sub('Play', ink.primary)}{/snippet}
+      <div class="stack">{@render sw('Limiter On', 'Limiter', ink.primary)}{@render sw('Link Envelopes', 'Link Env', ink.primary)}</div>
+      <div class="stack">{@render sw('Scale Aware', 'Scale', ink.primary)}{@render sw('Mono Legato', 'Legato', ink.primary)}</div>
     </FaceSection>
   </FaceGrid>
 {:else if section === 'global'}
@@ -404,6 +583,19 @@
   .mod-knob {
     flex: 1 1 0;
     min-height: 0;
+  }
+  /* LFO 1's effects on the board: the two knobs on a row, each type
+     across both columns under them. */
+  .fx-pair {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: minmax(0, 1fr) auto auto;
+    row-gap: 0.25rem;
+    min-height: 0;
+  }
+  .fx-pair > .sw-cell {
+    grid-column: 1 / -1;
+    height: auto;
   }
   /* A switch or a chooser is one touch row, centred in its cell, so it
      lines up with the knob beside it rather than filling the column. */

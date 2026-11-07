@@ -2,6 +2,8 @@
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import MeldPages from './meld/MeldPages.svelte';
+  import InstrumentBoard, { type BoardRow } from '../InstrumentBoard.svelte';
+  import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
   import { meldEngineStore } from '$lib/stores/v6/meldEngineStore.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import SectionDivider from '../SectionDivider.svelte';
@@ -83,6 +85,20 @@
    */
   let meldPage = $state<string | null>(null);
   const openMeldPage = (page: string) => (meldPage = page);
+
+  /**
+   * Full screen (ADR-512): every page of both engines at once, Engine A
+   * beside Engine B on each row, so there is no engine switch: the
+   * oscillators, the filters with Global beside them, the envelopes (the
+   * tallest row, three knobs to a column), the LFOs. The face's controls
+   * are all on these pages (the engine levels are Global's Mix).
+   */
+  const BOARD: readonly BoardRow[] = [
+    { tiles: [{ id: 'osc-a', cols: 7 }, { id: 'osc-b', cols: 7 }] },
+    { tiles: [{ id: 'filter-a', cols: 4 }, { id: 'filter-b', cols: 4 }, { id: 'global', cols: 7 }], weight: 0.9 },
+    { tiles: [{ id: 'env-a', cols: 7 }, { id: 'env-b', cols: 7 }], weight: 1.25 },
+    { tiles: [{ id: 'lfo-a', cols: 7 }, { id: 'lfo-b', cols: 7 }], weight: 0.95 }
+  ];
 
   /** The pages behind the face's eyebrows, the shown engine's, by Live's names (ADR-487). */
   const panelParams = usePanelParams(() => device);
@@ -203,7 +219,20 @@
 {/snippet}
 
 <div class="meld-root h-full w-full overflow-hidden relative">
-  {#if instrument && device}
+  {#if instrument && device && centralDisplayStore.expanded}
+    <InstrumentBoard rows={BOARD} ink={meldInk.primary}>
+      {#snippet tile(id)}
+        <MeldPages
+          page={id}
+          params={panelParams}
+          ink={meldInk}
+          engineInks={{ A: inkOf('A'), B: inkOf('B') }}
+          onBack={() => {}}
+          board
+        />
+      {/snippet}
+    </InstrumentBoard>
+  {:else if instrument && device}
     <InstrumentPanelView panel={MELD_PANEL} params={panelParams} color={meldInk}>
     {#snippet face()}
     {#if meldPage}
