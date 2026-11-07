@@ -31,6 +31,9 @@
   import FaceSeam from '../FaceSeam.svelte';
   import PanelEyebrow from './panel/PanelEyebrow.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
+  import ChoicePicker from '../ChoicePicker.svelte';
+  import LfoGraph from '../LfoGraph.svelte';
+  import { pictureParams } from './panel/usePanelParams.svelte';
 
   const fx = useFxGridSlot('phaser');
 
@@ -56,6 +59,9 @@
   const WAVES = ['Sine', 'Triangle', 'Tri Analog', 'Triangle 8', 'Triangle 16', 'Saw Up', 'Saw Down', 'Rectangle', 'Random', 'Random S&H'] as const;
 
   let mode = $derived(Math.round(fx.paramValue(PHASER.mode) ?? 0));
+  /** The LFO as a picture (ADR-514): its rate is the chain cell's pad. */
+  const lfo = pictureParams(() => ({ Amount: fx.paramValue(PHASER.lfoAmount) ?? 0.9762 }));
+  let wave = $derived(Math.round(fx.paramValue(PHASER.wave) ?? 1));
   let fbInvert = $derived((fx.paramValue(PHASER.fbInvert) ?? 0) >= 0.5);
 
   let voicing = $derived(
@@ -115,22 +121,18 @@
   </FaceSection>
   <FaceSeam />
 
-  <!-- The wave, then Amount and Duty Cyc over Env and its switch, two to a
-       row: medium. -->
+  <!-- The LFO's wave drawn (ADR-514) over its ten shapes as a pick, then
+       Amount and Duty Cyc over Env and its switch, two to a row. -->
   <FaceSection span={3}>
     {#snippet head()}<PanelEyebrow title="LFO / Env" color={fx.color.primary} />{/snippet}
-    <ScrubTabs
-      options={WAVES}
-      selected={Math.round(fx.paramValue(PHASER.wave) ?? 1)}
-      onSelect={(i) => fx.sendParam(PHASER.wave, i)}
-      cols={1}
-      tint={fx.color.primary}
-      inked
-      ghost={fx.isGhost}
-      label={(w) => w}
-      groupLabel="LFO wave"
-      name="wave"
-    />
+    <div class="cell">
+      <div class="wave-pic">
+        <LfoGraph params={lfo} shape={WAVES[wave]} amount="Amount" ink={fx.color.primary} interactive={false} label="LFO" />
+      </div>
+      <div data-param="LFO Wave">
+        <ChoicePicker options={[...WAVES]} selected={wave} onSelect={(i) => fx.sendParam(PHASER.wave, i)} label="LFO wave" tint={fx.color.primary} ghost={fx.isGhost} />
+      </div>
+    </div>
     <ParamColumn face="knob" knobSize="m" span={2} {fx} ink={fx.color} boxes={MOTION}>
       {#snippet after()}
         <ParamSwitch row label="Env Fol" on={envOn} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => fx.sendParam(PHASER.envOn, envOn ? 0 : 1)} />
@@ -151,6 +153,11 @@
   .face-root {
     height: 100%;
     width: 100%;
+    min-height: 0;
+  }
+
+  .wave-pic {
+    flex: 1 1 0;
     min-height: 0;
   }
 

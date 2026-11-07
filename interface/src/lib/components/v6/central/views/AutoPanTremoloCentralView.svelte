@@ -28,7 +28,9 @@
   import FaceSeam from '../FaceSeam.svelte';
   import PanelEyebrow from './panel/PanelEyebrow.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
-  import { AUTO_PAN2, LFO_MODES, MODES, WAVES } from '$lib/components/v6/device-panel/autoPan2Params';
+  import { AUTO_PAN2, LFO_MODES, MODES, WAVES, rateOf, rateParam } from '$lib/components/v6/device-panel/autoPan2Params';
+  import LfoGraph from '../LfoGraph.svelte';
+  import { pictureParams } from './panel/usePanelParams.svelte';
 
   const fx = useFxGridSlot('autoPanTremolo');
 
@@ -56,6 +58,11 @@
     spin ? { index: AUTO_PAN2.spin, title: 'Spin', rest: 0 } : { index: AUTO_PAN2.phase, title: 'Phase', rest: 0.5 },
     { index: AUTO_PAN2.offset, title: 'Offset', rest: 0 }
   ]);
+  /** The LFO as a picture (ADR-514): its rate and amount are the chain cell's pad. */
+  const lfo = pictureParams(() => ({
+    Rate: rateOf(step(AUTO_PAN2.lfoMode), value(rateParam(step(AUTO_PAN2.lfoMode)))),
+    Amount: value(AUTO_PAN2.amount)
+  }));
   let shaping = $derived([
     tremolo
       ? { index: AUTO_PAN2.tremoloMorph, title: 'Shape', rest: 0.5, center: 0.5 }
@@ -66,9 +73,10 @@
 </script>
 
 <!-- One face grid (ADR-510), five columns of ~185px at 1366 x 1024:
-     Mode 1 · Wave 1 · Stereo 2 · Shape 1. -->
+     Mode 1 · Wave 2 · Stereo 2 · Shape 1. The wave is drawn over its
+     list (ADR-514). -->
 <div class="face-root" data-view="autoPanTremolo">
-<FaceGrid sections={[1, 1, 2, 1]}>
+<FaceGrid sections={[1, 2, 2, 1]}>
   <FaceSection span={1}>
     {#snippet head()}<PanelEyebrow title="Mode" color={fx.color.primary} />{/snippet}
     <div class="cell">
@@ -102,9 +110,12 @@
   </FaceSection>
   <FaceSeam />
 
-  <FaceSection span={1}>
+  <FaceSection span={2}>
     {#snippet head()}<PanelEyebrow title={tremolo ? 'Tremolo' : 'Wave'} color={fx.color.primary} />{/snippet}
-    <div class="cell">
+    <div class="cell face-span-all">
+      <div class="wave-pic">
+        <LfoGraph params={lfo} shape={tremolo ? 'Sine' : WAVES[step(AUTO_PAN2.wave)]} rate="Rate" amount="Amount" ink={fx.color.primary} interactive={false} label={tremolo ? 'Tremolo' : 'Pan'} />
+      </div>
       {#if tremolo}
         <ParamSwitch label="Harmonic" on={value(AUTO_PAN2.harmonic) >= 0.5} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => toggle(AUTO_PAN2.harmonic)} />
         <ParamSwitch label="Vintage" on={value(AUTO_PAN2.vintage) >= 0.5} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => toggle(AUTO_PAN2.vintage)} />
@@ -113,13 +124,13 @@
           options={WAVES}
           selected={step(AUTO_PAN2.wave)}
           onSelect={(i) => fx.sendParam(AUTO_PAN2.wave, i)}
-          cols={1}
           tint={fx.color.primary}
           inked
           ghost={fx.isGhost}
           label={(w) => w}
           groupLabel="Waveform"
           name="wave"
+          cols={3}
           class="flex-1"
         />
       {/if}
@@ -168,6 +179,11 @@
   .face-root {
     height: 100%;
     width: 100%;
+    min-height: 0;
+  }
+
+  .wave-pic {
+    flex: 1 1 0;
     min-height: 0;
   }
 

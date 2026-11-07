@@ -41,16 +41,26 @@
     ink: string;
     sw?: string;
     label?: string;
+    /**
+     * False draws the picture alone: an effect whose chain cell already
+     * moves its rate and amount on an XY (ADR-510: no view repeats it).
+     */
+    interactive?: boolean;
+    /** The wave's horizontal shift, 0..1 of a cycle (an effect's phase or offset). */
+    phase?: number;
   }
 
-  let { params, shape, rate, amount, ink, sw, label }: Props = $props();
+  let { params, shape, rate, amount, ink, sw, label, interactive = true, phase = 0 }: Props = $props();
 
   let w = $state(0);
   let h = $state(0);
   const PAD = 8;
 
   let fn = $derived(lfoShape(shape));
-  let cycles = $derived(1 + Math.round((rate ? (params.unit(rate) ?? 0.4) : 0.4) * 6));
+  // With no rate to read, as many cycles as the picture's shape suits.
+  let cycles = $derived(
+    rate ? 1 + Math.round((params.unit(rate) ?? 0.4) * 6) : Math.max(1, Math.min(4, Math.round((w / Math.max(1, h)) * 1.2)))
+  );
   let depth = $derived(amount ? (params.unit(amount) ?? 1) : 1);
   let path = $derived.by(() => {
     if (w <= 0 || h <= 0) return '';
@@ -61,7 +71,7 @@
     for (let i = 0; i <= n; i++) {
       const t = i / n;
       const x = PAD + t * (w - 2 * PAD);
-      const y = mid - fn(t * cycles) * amp;
+      const y = mid - fn(t * cycles + phase) * amp;
       d += `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
     }
     return d;
@@ -72,7 +82,7 @@
   let hot = $state(false);
 
   function down(e: PointerEvent) {
-    if (drag) return;
+    if (drag || !interactive) return;
     drag = { pointer: e.pointerId, x0: e.clientX, y0: e.clientY, r: rate ? params.unit(rate) : undefined, a: amount ? params.unit(amount) : undefined };
     hot = true;
     (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
@@ -97,15 +107,15 @@
   <svg
     width={w}
     height={h}
-    role="slider"
+    role={interactive ? 'slider' : 'img'}
     tabindex="-1"
-    aria-label="{label ?? 'LFO'}: rate across, amount up"
-    aria-valuenow={Math.round(depth * 100)}
+    aria-label={interactive ? `${label ?? 'LFO'}: rate across, amount up` : `${label ?? 'LFO'}: ${shape ?? ''}`}
+    aria-valuenow={interactive ? Math.round(depth * 100) : undefined}
     onpointerdown={down}
     onpointermove={move}
     onpointerup={up}
     onpointercancel={up}
-    style="touch-action: none;"
+    style="touch-action: {interactive ? 'none' : 'auto'}; cursor: {interactive ? 'grab' : 'default'};"
   >
     {#if w > 0 && h > 0}
       <line class="axis" x1={PAD} x2={w - PAD} y1={h / 2} y2={h / 2} />

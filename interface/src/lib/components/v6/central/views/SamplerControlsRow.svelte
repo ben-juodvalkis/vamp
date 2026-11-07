@@ -63,6 +63,8 @@
     /** Per slot: the "held by macro" text, or nothing. */
     badges?: Partial<Record<SamplerRowSlot, string | null>>;
     color: DeviceColorScheme;
+    /** The amp envelope drawn in place of its four stages (ADR-514), by a host that reaches the device's parameters. */
+    envelope?: Snippet;
     onWrite: (control: SamplerRowControl, value: number) => void;
     /**
      * Sliders to leave out. A Sampler KIT hides Decay and Sustain (user's
@@ -88,6 +90,7 @@
     values,
     states = {},
     badges = {},
+    envelope,
     color,
     onWrite,
     hidden = [],
@@ -278,10 +281,16 @@
        nor Sustain). A KIT hides Decay and Sustain, so there it holds A and R. -->
   <FaceSection span={stageCount} data-envelope-group="amp">
     {#snippet head()}<PanelEyebrow title="Amp Envelope" color={color.primary} />{/snippet}
-    {@render slider('attack', 'A', 'attack', attackState, badges.attack, 0.5)}
-    {#if !hide.has('decay')}{@render slider('decay', 'D', 'decay', decayState, badges.decay, 0.5)}{/if}
-    {#if !hide.has('sustain')}{@render slider('sustain', 'S', 'sustain', sustainState, badges.sustain, 1)}{/if}
-    {@render slider('release', 'R', 'release', releaseState, badges.release, 0.5)}
+    {#if envelope}
+      <!-- A host that reaches the device's own parameters draws the envelope
+           as Live does (ADR-514): the single Sampler. -->
+      <div class="face-span-all">{@render envelope()}</div>
+    {:else}
+      {@render slider('attack', 'A', 'attack', attackState, badges.attack, 0.5)}
+      {#if !hide.has('decay')}{@render slider('decay', 'D', 'decay', decayState, badges.decay, 0.5)}{/if}
+      {#if !hide.has('sustain')}{@render slider('sustain', 'S', 'sustain', sustainState, badges.sustain, 1)}{/if}
+      {@render slider('release', 'R', 'release', releaseState, badges.release, 0.5)}
+    {/if}
   </FaceSection>
 
   {#if filter}

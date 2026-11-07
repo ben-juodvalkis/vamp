@@ -66,6 +66,18 @@ describe('EnvelopeGraph', () => {
 		expect(container.querySelector('.env-graph')!.classList.contains('off')).toBe(true);
 	});
 
+	it('moves the stage under the square nearest the finger, and draws none for a stage the device does not list', () => {
+		// jsdom lays nothing out, so every square sits at one point: the
+		// first listed one (Attack's; no Initial is listed) is the nearest.
+		const { params, writes } = fakeParams({ Atk: 0.1, Dec: 0.4, Sus: 0.6, Rel: 0.3 });
+		const { container } = render(EnvelopeGraph, { params, names: { ...names, initial: 'Init' }, ink: '#f80' });
+		expect([...container.querySelectorAll('[data-env-handle]')].map((h) => h.getAttribute('data-env-handle'))).toEqual([]);
+		const svg = container.querySelector('svg')!;
+		svg.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, clientY: 0, bubbles: true }));
+		svg.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 10, clientY: 0, bubbles: true }));
+		expect(writes.map((w) => w[0])).toEqual(['Atk']);
+	});
+
 	it('ghosts an envelope the device does not list', () => {
 		const { params } = fakeParams({});
 		const { container } = render(EnvelopeGraph, { params, names, ink: '#f80' });

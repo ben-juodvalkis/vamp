@@ -81,6 +81,8 @@
 
   const u = (n: string | undefined, fallback: number) => (n ? (params.unit(n) ?? fallback) : fallback);
 
+  type Handle = 'start' | 'peak' | 'sustain' | 'end';
+
   let shape = $derived(
     envelopeShape({
       a: u(names.attack, 0),
@@ -101,15 +103,15 @@
   );
   let fill = $derived(`${line} L${X(shape.end.x).toFixed(1)} ${Y(1)} L${X(0)} ${Y(1)} Z`);
 
-  type Handle = 'start' | 'peak' | 'sustain' | 'end';
   /** Each square's two parameters: across (a time) and up (a level). */
+  const listed = (n: string | undefined) => (n && params.has(n) ? n : undefined);
   let handles = $derived(
-    ([
-      { id: 'start', at: shape.start, x: undefined, y: names.initial },
-      { id: 'peak', at: shape.peak, x: names.attack, y: names.peak },
-      { id: 'sustain', at: shape.sustain, x: names.decay, y: names.sustain },
-      { id: 'end', at: shape.end, x: names.release, y: names.final }
-    ] as const).filter((hd) => hd.x !== undefined || hd.y !== undefined)
+    [
+      { id: 'start' as Handle, at: shape.start, x: undefined, y: listed(names.initial) },
+      { id: 'peak' as Handle, at: shape.peak, x: listed(names.attack), y: listed(names.peak) },
+      { id: 'sustain' as Handle, at: shape.sustain, x: listed(names.decay), y: listed(names.sustain) },
+      { id: 'end' as Handle, at: shape.end, x: listed(names.release), y: listed(names.final) }
+    ].filter((hd) => hd.x !== undefined || hd.y !== undefined)
   );
 
   let on = $derived(!sw || params.isOn(sw));

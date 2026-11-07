@@ -94,3 +94,22 @@ export function usePanelParams(getDevice: () => PanelDevice | undefined): PanelP
 		}
 	};
 }
+
+/**
+ * A picture's parameters (ADR-514): named values already 0..1, read only.
+ * For a view that binds by index and draws an `LfoGraph` or
+ * `EnvelopeGraph` it does not let a finger move.
+ */
+export function pictureParams(units: () => Record<string, number | undefined>): PanelParams {
+	const get = (n: string) => units()[n];
+	return {
+		has: (n) => get(n) !== undefined,
+		raw: get,
+		range: (n) => (get(n) === undefined ? undefined : { min: 0, max: 1 }),
+		display: () => undefined,
+		isOn: () => true,
+		write: () => {},
+		unit: get,
+		writeUnit: () => {}
+	};
+}

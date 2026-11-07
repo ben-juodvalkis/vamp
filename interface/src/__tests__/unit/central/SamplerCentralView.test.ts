@@ -140,12 +140,11 @@ describe('SamplerCentralView — the Sampler row by name', () => {
 		await tick();
 		// The amp envelope is four sliders in its own card since 2026-09-12,
 		// labelled one letter each; A and R carry what the Time pad's axes did.
-		expect(slider(container, 'A').getAttribute('aria-valuenow')).toBe('0.2'); // Ve Attack
-		expect(slider(container, 'R').getAttribute('aria-valuenow')).toBe('0.345'); // Ve Release
+		// The amp envelope is a graph of the Ve stages (ADR-514), its sustain read on the slider.
+		expect(container.querySelector('[data-envelope-graph="Ve Attack"] [role="slider"]')!.getAttribute('aria-valuenow')).toBe('100');
 		expect(slider(container, 'Pitch').getAttribute('aria-label')).toBe('Pitch: X 0%, Y 75%'); // Pe Attack 0 across, +24 st on ±48 up
 		expect(slider(container, 'Spread').getAttribute('aria-valuenow')).toBe('0.25'); // 25 of 100
 		expect(container.querySelector('[data-vm-function="selector"]')).toBeNull(); // a kit's control only
-		expect(slider(container, 'S').getAttribute('aria-valuenow')).toBe('1'); // Ve Sustain
 		expect(slider(container, 'Trnsp').getAttribute('aria-valuenow')).toBe('-16');
 		expect(container.querySelectorAll('.midi-wheel')).toHaveLength(0); // the wheels are the MidiWheels device's (2026-10-26)
 		// Gain, as a kit draws it (2026-09-27).
@@ -179,14 +178,14 @@ describe('SamplerCentralView — the Sampler row by name', () => {
 		expect(container.querySelectorAll('.vm-slot.vm-none')).toHaveLength(0);
 	});
 
-	it('the A and R sliders write Ve Attack and Ve Release at their own indices, not 59 and 66', async () => {
+	it('the envelope graph writes Ve Attack at its own index, not 59', async () => {
 		const { container } = render(SamplerCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
-		drag(slider(container, 'A'), [50, 100], [50, 40]);
-		drag(slider(container, 'R'), [50, 100], [50, 40]);
+		// jsdom lays nothing out: every square is at one point, and Attack's
+		// (the first listed) is the nearest to any finger.
+		drag(container.querySelector<HTMLElement>('[data-envelope-graph="Ve Attack"] svg')!, [50, 100], [60, 100]);
 		const paths = paramSets().map((a) => a[0]);
 		expect(paths).toContain(`${DEVICE}/params/${INDEX['Ve Attack']}`);
-		expect(paths).toContain(`${DEVICE}/params/${INDEX['Ve Release']}`);
 		expect(paths).not.toContain(`${DEVICE}/params/59`);
 		for (const a of paramSets()) {
 			expect(a[1] as number).toBeGreaterThanOrEqual(0);

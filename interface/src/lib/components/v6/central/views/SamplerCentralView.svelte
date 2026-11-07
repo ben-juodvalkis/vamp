@@ -31,6 +31,8 @@
    */
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import SamplerControlsRow from './SamplerControlsRow.svelte';
+  import EnvelopeGraph from '../EnvelopeGraph.svelte';
+  import { usePanelParams } from './panel/usePanelParams.svelte';
   import VmSlot from './drum/VmSlot.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
@@ -61,6 +63,8 @@
   // Returns `undefined` on cold start — same "show ghost" posture as
   // the v2 .find() it replaces.
   let device = $derived(selectedTrackStore.devicesByPath[deviceIndex]);
+  /** The device's parameters by name, for the amp envelope's graph (ADR-514). */
+  const params = usePanelParams(() => device);
 
   // rackVoice rose (sound-source family, ADR-400) — deliberately distinct
   // from Simpler's chartreuse/teal mode pair so the two sample views differ.
@@ -177,6 +181,10 @@
 {/snippet}
 
 
+{#snippet ampEnvelope()}
+  <EnvelopeGraph {params} ink={samplerInk.primary} names={{ attack: 'Ve Attack', decay: 'Ve Decay', sustain: 'Ve Sustain', release: 'Ve Release', initial: 'Ve Init', peak: 'Ve Peak' }} />
+{/snippet}
+
 <div class="h-full w-full overflow-hidden relative">
   {#if instrument && device}
     <!-- The face (ADR-510): the Sampler kit's sections, less the pads,
@@ -190,6 +198,7 @@
       {states}
       color={samplerInk}
       hidden={['selector']}
+      envelope={ampEnvelope}
       onWrite={write}
       kitTitle="Global"
       gain={gainSlot}

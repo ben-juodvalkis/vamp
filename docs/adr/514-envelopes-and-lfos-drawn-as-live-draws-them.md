@@ -52,6 +52,14 @@ fifteen switches.
     it keeps a row per envelope. Seven strips, the first try, came out
     30px tall and read as nothing.
   - Collision: the noise envelope (a board `slot`, `noiseEnvelope`).
+- **Beyond the boards** (a sweep of every central view, the same day):
+  the single Sampler's amp envelope is the graph (Ve Attack, Decay,
+  Sustain, Release, Init, Peak) where it drew four boxes; a Sampler kit
+  keeps its A and R boxes, which ride virtual macros. Auto Pan-Tremolo and
+  Phaser draw their LFO's wave as a picture only (`interactive={false}`):
+  their rate and amount are the chain cell's XY, which no view repeats
+  (ADR-510). Phaser's ten shapes became a pick under it.
+  `pictureParams` serves a view that binds by index.
 - **A switch in a table is a lamp**: no word, its column's name over it
   (`PanelControlView`'s caption-less switch).
 - **Electric is a knob a column**: three rows in the signal's order
