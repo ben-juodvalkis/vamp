@@ -9,6 +9,7 @@
  * (docs/reference/instruments/Collision.md): every parameter but Device On.
  */
 import { matrixColumn as col, type InstrumentPanel, type PanelBoard, type PanelControl, type PanelGroup, type PanelPage } from './panelTypes';
+import type { KnobSize } from '$lib/components/v6/device-panel/knobLayout';
 
 const RES_TYPES = ['Beam', 'Marimba', 'String', 'Membrane', 'Plate', 'Pipe', 'Tube'];
 const QUALITY = ['Eco', 'Low', 'Med', 'High'];
@@ -259,7 +260,8 @@ const MIDI_SOURCES = [
 	['Slide', 'Slide', true]
 ] as const;
 const LFOS = [1, 2] as const;
-const box = (param: string, title: string): PanelControl => ({ kind: 'box', param, title });
+/** A knob; `knobSize` its rank on the board (ADR-515), else its column's. */
+const box = (param: string, title: string, knobSize?: KnobSize): PanelControl => ({ kind: 'box', param, title, ...(knobSize ? { knobSize } : {}) });
 /** A resonator's column: `name` is its parameter's name after "Res N ". */
 const res = (title: string, name: string) => col(title, RES, (n) => box(`Res ${n} ${name}`, title));
 const lfo = (title: string, name: string) => col(title, LFOS, (n) => box(`LFO ${n} ${name}`, title));
@@ -397,10 +399,10 @@ const COLLISION_BOARD: PanelBoard = {
 								switchParam: 'Mallet On/Off',
 								controls: [
 									{ kind: 'switch', param: 'Mallet On/Off', title: 'On' },
-									box('Mallet Volume', 'Volume'),
-									box('Mallet Stiffness', 'Stiffness'),
-									box('Mallet Noise Amount', 'Noise'),
-									box('Mallet Noise Color', 'Color')
+									box('Mallet Volume', 'Volume', 'l'),
+									box('Mallet Stiffness', 'Stiffness', 'l'),
+									box('Mallet Noise Amount', 'Noise', 's'),
+									box('Mallet Noise Color', 'Color', 's')
 								]
 							}
 						},
@@ -410,7 +412,7 @@ const COLLISION_BOARD: PanelBoard = {
 							group: {
 								title: 'Velocity',
 								switchParam: 'Mallet On/Off',
-								controls: [box('Mallet Volume < Vel', 'Volume'), box('Mallet Stiffness < Vel', 'Stiffness'), box('Mallet Noise Amount < Vel', 'Noise')]
+								controls: [box('Mallet Volume < Vel', 'Volume', 's'), box('Mallet Stiffness < Vel', 'Stiffness', 's'), box('Mallet Noise Amount < Vel', 'Noise', 's')]
 							}
 						},
 						{
@@ -419,7 +421,7 @@ const COLLISION_BOARD: PanelBoard = {
 							group: {
 								title: 'Key',
 								switchParam: 'Mallet On/Off',
-								controls: [box('Mallet Volume < Key', 'Volume'), box('Mallet Stiffness < Key', 'Stiffness'), box('Mallet Noise Amount < Key', 'Noise')]
+								controls: [box('Mallet Volume < Key', 'Volume', 's'), box('Mallet Stiffness < Key', 'Stiffness', 's'), box('Mallet Noise Amount < Key', 'Noise', 's')]
 							}
 						}
 					]
@@ -436,10 +438,10 @@ const COLLISION_BOARD: PanelBoard = {
 								controls: [
 									{ kind: 'switch', param: 'Noise On/Off', title: 'On' },
 									{ kind: 'choice', param: 'Noise Filter Type', title: 'Filter', options: ['LP', 'HP', 'BP', 'LP+HP'] },
-									box('Noise Volume', 'Volume'),
-									box('Noise Filter Freq', 'Freq'),
-									box('Noise Filter Q', 'Res'),
-									box('Noise Freq < Env', 'Env Amt')
+									box('Noise Volume', 'Volume', 'l'),
+									box('Noise Filter Freq', 'Freq', 'm'),
+									box('Noise Filter Q', 'Res', 's'),
+									box('Noise Freq < Env', 'Env Amt', 's')
 								]
 							}
 						},
@@ -455,12 +457,12 @@ const COLLISION_BOARD: PanelBoard = {
 						{
 							kind: 'group',
 							stack: 2,
-							group: { title: 'Velocity', switchParam: 'Noise On/Off', controls: [box('Noise Volume < Vel', 'Volume'), box('Noise Freq < Vel', 'Freq')] }
+							group: { title: 'Velocity', switchParam: 'Noise On/Off', controls: [box('Noise Volume < Vel', 'Volume', 's'), box('Noise Freq < Vel', 'Freq', 's')] }
 						},
 						{
 							kind: 'group',
 							stack: 2,
-							group: { title: 'Key', switchParam: 'Noise On/Off', controls: [box('Noise Volume < Key', 'Volume'), box('Noise Freq < Key', 'Freq')] }
+							group: { title: 'Key', switchParam: 'Noise On/Off', controls: [box('Noise Volume < Key', 'Volume', 's'), box('Noise Freq < Key', 'Freq', 's')] }
 						}
 					]
 				}
@@ -508,9 +510,9 @@ const COLLISION_BOARD: PanelBoard = {
 									{ kind: 'choice', param: 'Structure', title: 'Structure', options: ['1 > 2', '1 + 2'] },
 									{ kind: 'step', param: 'Voices', title: 'Voices', labels: VOICES },
 									{ kind: 'switch', param: 'Retrig On', title: 'Retrig' },
-									box('PB Range', 'PB'),
-									box('Note PB Range', 'Note PB'),
-									box('Volume', 'Volume')
+									box('PB Range', 'PB', 's'),
+									box('Note PB Range', 'Note PB', 's'),
+									box('Volume', 'Volume', 'l')
 								]
 							}
 						}

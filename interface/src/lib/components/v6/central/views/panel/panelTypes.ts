@@ -171,7 +171,20 @@ export type PanelBoardSection =
 	 * as its cell holds; an envelope's stages (`face: 'slider'`) a column
 	 * each, full height, over `columns` face columns.
 	 */
-	| { kind: 'group'; group: PanelGroup; stack: number; columns?: number; /** Options a choice may have and still be a tab; more is a pick (1: every choice a pick). */ tabMax?: number }
+	| {
+			kind: 'group';
+			group: PanelGroup;
+			stack: number;
+			columns?: number;
+			/** Options a choice may have and still be a tab; more is a pick (1: every choice a pick). */
+			tabMax?: number;
+			/**
+			 * Its first `lead` controls each stand a column, the full height,
+			 * the rest `stack` high after them (ADR-515: a section's primary
+			 * controls large, its secondary ones stacked small beside them).
+			 */
+			lead?: number;
+	  }
 	/** Twin sections as a table: a section a group of its columns (ADR-512). */
 	| { kind: 'matrix'; matrix: PanelMatrix }
 	/** A device's own control (Operator's filter pad), from the view's `slots`. */
@@ -575,10 +588,23 @@ export function boardParamNames(panel: InstrumentPanel): string[] {
 }
 
 /** A board group's columns: its own, else its stages a column each, else its cells `stack` high. */
-export function boardGroupColumns(section: { group: PanelGroup; stack: number; columns?: number }): number {
+export function boardGroupColumns(section: { group: PanelGroup; stack: number; columns?: number; lead?: number }): number {
 	if (section.columns !== undefined) return section.columns;
 	const n = section.group.controls.length;
-	return section.group.face === 'slider' ? n : Math.max(1, Math.ceil(n / section.stack));
+	if (section.group.face === 'slider') return n;
+	const lead = Math.min(n, section.lead ?? 0);
+	return lead + (n > lead ? Math.ceil((n - lead) / section.stack) : 0) || 1;
+}
+
+/**
+ * Where a board group's control sits (ADR-515): a lead control a column of
+ * its own, the full height; the rest `stack` high, column after column.
+ * Lines are 1-based grid lines.
+ */
+export function boardCellPlace(i: number, lead: number, stack: number): { column: number; row: string } {
+	if (i < lead) return { column: i + 1, row: '1 / -1' };
+	const j = i - lead;
+	return { column: lead + 1 + Math.floor(j / stack), row: String((j % stack) + 1) };
 }
 
 /**

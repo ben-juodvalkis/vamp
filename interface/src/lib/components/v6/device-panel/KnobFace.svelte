@@ -188,8 +188,12 @@
     gap: 0.375rem;
     padding: 0.375rem 0.25rem;
   }
-  /* A short, wide cell puts the caption beside the knob. */
-  @container (min-aspect-ratio: 6/5) {
+  /* A short, wide cell puts the caption beside the knob, if the cell is
+     wide enough to keep the caption whole there (9rem, ADR-515: narrower,
+     a caption beside was cut to "S.." and "Tr..."), or too short to hold
+     one under it (5.5rem); otherwise it stays under the knob, which draws
+     smaller. */
+  @container (min-aspect-ratio: 6/5) and ((min-width: 9rem) or (max-height: 5.5rem)) {
     .knob-body {
       grid-template-rows: auto;
       grid-template-columns: auto minmax(0, max-content);
@@ -209,7 +213,7 @@
     height: var(--knob-d);
   }
   /* Beside: the cell's height, and half its width for the caption. */
-  @container (min-aspect-ratio: 6/5) {
+  @container (min-aspect-ratio: 6/5) and ((min-width: 9rem) or (max-height: 5.5rem)) {
     .knob-face {
       --knob-d: min(50cqw, max(28px, min(var(--knob-want), 50cqw, 100cqh - 0.75rem)));
     }
@@ -305,7 +309,7 @@
     line-height: 1.15;
     text-align: center;
   }
-  @container (min-aspect-ratio: 6/5) {
+  @container (min-aspect-ratio: 6/5) and ((min-width: 9rem) or (max-height: 5.5rem)) {
     .knob-caption {
       align-items: flex-start;
       text-align: left;

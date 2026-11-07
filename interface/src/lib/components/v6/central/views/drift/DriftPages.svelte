@@ -137,7 +137,7 @@
   {@const l = lo(param)}
   {@const h = hi(param)}
   {@const bipolar = BIPOLAR.has(param) || (l < 0 && h > 0)}
-  <div class="cell" data-param={param}>
+  <div class="cell rank-{size}" data-param={param}>
     <DeviceSlider
       value={params.raw(param) ?? l}
       {title}
@@ -243,14 +243,14 @@
       {#snippet head()}{@render back()}<span class="sub" style="color: {o1.primary};">Osc 1</span>{/snippet}
       {@render tab('Osc 1 Wave', OSC1_WAVES, { glyph: true, color: o1.primary })}
       {@render tab('Osc 1 Oct', ['-2', '-1', '0', '+1', '+2', '+3'], { up: true, color: o1.primary })}
-      <div class="stack">{@render knob('Osc 1 Shape', 'Shape', undefined, undefined, o1)}{@render modKnob('Osc 1 Shape Mod Amt', 'M', 'Shape Mod', 'mod_matrix_shape_source_index', undefined, o1)}</div>
+      <div class="stack">{@render knob('Osc 1 Shape', 'Shape', undefined, undefined, o1, 'l')}{@render modKnob('Osc 1 Shape Mod Amt', 'M', 'Shape Mod', 'mod_matrix_shape_source_index', undefined, o1, 's')}</div>
     </FaceSection>
     <FaceSeam ink={ink.primary} />
     <FaceSection span={3}>
       {#snippet head()}<span class="sub" style="color: {o2.primary};">Osc 2</span>{/snippet}
       {@render tab('Osc 2 Wave', OSC2_WAVES, { glyph: true, color: o2.primary })}
       {@render tab('Osc 2 Oct', ['-3', '-2', '-1', '0', '+1', '+2'], { up: true, color: o2.primary })}
-      <div class="stack">{@render knob('Osc 2 Detune', 'Detune', undefined, undefined, o2)}<div class="cell"></div></div>
+      <div class="stack">{@render knob('Osc 2 Detune', 'Detune', undefined, undefined, o2, 'l')}<div class="cell"></div></div>
     </FaceSection>
     <FaceSeam ink={ink.primary} />
     <!-- Each source's level, its switch and its route to the filter, in
@@ -272,7 +272,7 @@
     <FaceSeam ink={ink.primary} />
     <FaceSection span={1}>
       {#snippet head()}<span class="sub" style="color: {ink.primary};">Pitch Mod</span>{/snippet}
-      <div class="stack">{@render modKnob('Pitch Mod Amt 1', '1', 'Pitch Mod 1', 'mod_matrix_pitch_source_1_index')}{@render modKnob('Pitch Mod Amt 2', '2', 'Pitch Mod 2', 'mod_matrix_pitch_source_2_index')}</div>
+      <div class="stack">{@render modKnob('Pitch Mod Amt 1', '1', 'Pitch Mod 1', 'mod_matrix_pitch_source_1_index', undefined, ink, 's')}{@render modKnob('Pitch Mod Amt 2', '2', 'Pitch Mod 2', 'mod_matrix_pitch_source_2_index', undefined, ink, 's')}</div>
     </FaceSection>
   </FaceGrid>
 {:else if page === 'filter' && board}
@@ -286,12 +286,12 @@
     <FaceSeam ink={ink.primary} />
     <FaceSection span={1}>
       {#snippet head()}<span class="sub" style="color: {ink.primary};">Low Pass</span>{/snippet}
-      <div class="stack">{@render tab('LP Type', ['I', 'II'])}{@render knob('Key > LPF', 'Key')}</div>
+      <div class="stack">{@render tab('LP Type', ['I', 'II'])}{@render knob('Key > LPF', 'Key', undefined, undefined, ink, 's')}</div>
     </FaceSection>
     <FaceSeam ink={ink.primary} />
     <FaceSection span={1}>
       {#snippet head()}<span class="sub" style="color: {ink.primary};">Mod</span>{/snippet}
-      <div class="stack">{@render modKnob('LP Mod Amt 1', '1', 'Filter Mod 1', 'mod_matrix_filter_source_1_index')}{@render modKnob('LP Mod Amt 2', '2', 'Filter Mod 2', 'mod_matrix_filter_source_2_index')}</div>
+      <div class="stack">{@render modKnob('LP Mod Amt 1', '1', 'Filter Mod 1', 'mod_matrix_filter_source_1_index', undefined, ink, 's')}{@render modKnob('LP Mod Amt 2', '2', 'Filter Mod 2', 'mod_matrix_filter_source_2_index', undefined, ink, 's')}</div>
     </FaceSection>
   </FaceGrid>
 {:else if page === 'envelopes'}
@@ -332,18 +332,18 @@
         {@render sw('LFO Retrig On', 'Retrig')}
       </div>
       <div class="stack">
-        {@render knob(lfoRate, step('LFO Mode') === 3 ? 'Sync' : 'Rate', step('LFO Mode') === 3 ? 22 : undefined)}
-        {@render knob('LFO Amount', 'Amount')}
+        {@render knob(lfoRate, step('LFO Mode') === 3 ? 'Sync' : 'Rate', step('LFO Mode') === 3 ? 22 : undefined, undefined, ink, 'l')}
+        {@render knob('LFO Amount', 'Amount', undefined, undefined, ink, 'l')}
       </div>
-      {@render modKnob('LFO Mod Amt', 'M', 'LFO Mod', 'mod_matrix_lfo_source_index', undefined, ink, 'l', true)}
+      {@render modKnob('LFO Mod Amt', 'M', 'LFO Mod', 'mod_matrix_lfo_source_index', undefined, ink, 's', true)}
       </div>
     </FaceSection>
     <FaceSeam ink={ink.primary} />
     <FaceSection span={3}>
       {#snippet head()}<span class="sub" style="color: {ink.primary};">Matrix</span>{/snippet}
-      {@render modKnob('Mod Matrix Amt 1', '1', 'Matrix 1', 'mod_matrix_source_1_index', 'mod_matrix_target_1_index', ink, 'l', true)}
-      {@render modKnob('Mod Matrix Amt 2', '2', 'Matrix 2', 'mod_matrix_source_2_index', 'mod_matrix_target_2_index', ink, 'l', true)}
-      {@render modKnob('Mod Matrix Amt 3', '3', 'Matrix 3', 'mod_matrix_source_3_index', 'mod_matrix_target_3_index', ink, 'l', true)}
+      {@render modKnob('Mod Matrix Amt 1', '1', 'Matrix 1', 'mod_matrix_source_1_index', 'mod_matrix_target_1_index', ink, 'm', true)}
+      {@render modKnob('Mod Matrix Amt 2', '2', 'Matrix 2', 'mod_matrix_source_2_index', 'mod_matrix_target_2_index', ink, 'm', true)}
+      {@render modKnob('Mod Matrix Amt 3', '3', 'Matrix 3', 'mod_matrix_source_3_index', 'mod_matrix_target_3_index', ink, 'm', true)}
     </FaceSection>
   </FaceGrid>
 {:else if page === 'global' && board}
@@ -371,16 +371,16 @@
           <ChoicePicker options={VOICES} selected={prop('voice_count_index')} onSelect={(i) => setProp('voice_count_index', i)} label="Voices" tint={ink.primary} ghost={prop('voice_count_index') === undefined} />
         </div>
       </div>
-      <div class="stack">{@render knob('Poly Voice Depth', 'Depth')}{@render knob('Thickness', 'Thick')}</div>
-      <div class="stack">{@render knob('Spread', 'Spread')}{@render knob('Glide Time', 'Glide')}</div>
-      <div class="stack">{@render knob('Strength', 'Strength')}{@render sw('Legato On', 'Legato')}</div>
+      <div class="stack">{@render knob('Poly Voice Depth', 'Depth', undefined, undefined, ink, 's')}{@render knob('Thickness', 'Thick', undefined, undefined, ink, 's')}</div>
+      <div class="stack">{@render knob('Spread', 'Spread', undefined, undefined, ink, 's')}{@render knob('Glide Time', 'Glide', undefined, undefined, ink, 'm')}</div>
+      <div class="stack">{@render knob('Strength', 'Strength', undefined, undefined, ink, 's')}{@render sw('Legato On', 'Legato')}</div>
     </FaceSection>
     <FaceSeam ink={ink.primary} />
     <FaceSection span={3}>
       {#snippet head()}<span class="sub" style="color: {ink.primary};">Play · Output</span>{/snippet}
-      <div class="stack">{@render knob('Drift', 'Drift')}{@render knob('Vel > Vol', 'Vel > Vol')}</div>
+      <div class="stack">{@render knob('Drift', 'Drift', undefined, undefined, ink, 's')}{@render knob('Vel > Vol', 'Vel > Vol', undefined, undefined, ink, 's')}</div>
       <div class="stack">{@render sw('Osc Retrig On', 'Retrig')}{@render sw('Note Pitch Bend On', 'Note PB')}</div>
-      <div class="stack">{@render knob('Transpose', 'Transp')}{@render knob('Volume', 'Volume')}</div>
+      <div class="stack">{@render knob('Transpose', 'Transp', undefined, undefined, ink, 's')}{@render knob('Volume', 'Volume', undefined, undefined, ink, 'l')}</div>
     </FaceSection>
   </FaceGrid>
 {/if}
@@ -404,6 +404,9 @@
     flex: 1 1 0;
     min-height: 0;
   }
+  /* In a shared column the higher rank takes the larger share (ADR-515). */
+  .stack > :global(.rank-l) { flex-grow: 1.6; }
+  .stack > :global(.rank-m) { flex-grow: 1.25; }
   .cell,
   :global(.cell) {
     min-width: 0;

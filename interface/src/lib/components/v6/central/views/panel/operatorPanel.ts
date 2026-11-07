@@ -392,7 +392,7 @@ const OPERATOR_BOARD: PanelBoard = {
 									{ kind: 'choice', param: 'LFO Type', title: 'Wave', options: ['Sine', 'Square', 'Tri', 'Saw Up', 'Saw Dn', 'S&H', 'Noise'] },
 									{ kind: 'choice', param: 'LFO Range', title: 'Range', options: ['Low', 'High', 'Sync'] },
 									{ kind: 'switch', param: 'LFO Retrigger', title: 'Retrig' },
-									{ kind: 'box', param: 'LFO Rate', title: 'Rate' },
+									{ kind: 'box', param: 'LFO Rate', title: 'Rate', knobSize: 'l' },
 									{ kind: 'step', param: 'LFO Sync', title: 'Sync', labels: RETRIG },
 									{ kind: 'switch', param: 'LFO < Pe', title: 'Pitch Env' }
 								]
@@ -409,9 +409,9 @@ const OPERATOR_BOARD: PanelBoard = {
 							group: {
 								title: 'Pan',
 								controls: [
-									{ kind: 'box', param: 'Panorama', title: 'Pan' },
-									{ kind: 'box', param: 'Pan < Key', title: 'Key' },
-									{ kind: 'box', param: 'Pan < Rnd', title: 'Rnd' }
+									{ kind: 'box', param: 'Panorama', title: 'Pan', knobSize: 'm' },
+									{ kind: 'box', param: 'Pan < Key', title: 'Key', knobSize: 's' },
+									{ kind: 'box', param: 'Pan < Rnd', title: 'Rnd', knobSize: 's' }
 								]
 							}
 						}
@@ -467,10 +467,10 @@ const OPERATOR_BOARD: PanelBoard = {
 								controls: [
 									{ kind: 'step', param: 'Algorithm', title: 'Algorithm', labels: ALGORITHM_NUMBERS },
 									{ kind: 'switch', param: 'Glide On', title: 'Glide' },
-									{ kind: 'box', param: 'Glide Time', title: 'Glide' },
-									{ kind: 'box', param: 'Transpose', title: 'Transp' },
-									{ kind: 'box', param: 'Spread', title: 'Spread' },
-									{ kind: 'box', param: 'PB Range', title: 'PB' }
+									{ kind: 'box', param: 'Glide Time', title: 'Glide', knobSize: 's' },
+									{ kind: 'box', param: 'Transpose', title: 'Transp', knobSize: 's' },
+									{ kind: 'box', param: 'Spread', title: 'Spread', knobSize: 'm' },
+									{ kind: 'box', param: 'PB Range', title: 'PB', knobSize: 's' }
 								]
 							}
 						},
@@ -480,10 +480,10 @@ const OPERATOR_BOARD: PanelBoard = {
 							group: {
 								title: 'Output',
 								controls: [
-									{ kind: 'box', param: 'Time', title: 'Time' },
-									{ kind: 'box', param: 'Time < Key', title: 'Key' },
-									{ kind: 'box', param: 'Tone', title: 'Tone' },
-									{ kind: 'box', param: 'Volume', title: 'Volume' }
+									{ kind: 'box', param: 'Time', title: 'Time', knobSize: 's' },
+									{ kind: 'box', param: 'Time < Key', title: 'Key', knobSize: 's' },
+									{ kind: 'box', param: 'Tone', title: 'Tone', knobSize: 'm' },
+									{ kind: 'box', param: 'Volume', title: 'Volume', knobSize: 'l' }
 								]
 							}
 						}

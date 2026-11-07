@@ -80,6 +80,35 @@ ratio rails, log-time rails).
   up. Multiband, by Live's panel, is its display: the gains medium, the
   times small (Live shows them as numbers), Amount the lead global, the
   sidechain small.
+- **The instrument boards take the same rule** (user, the same day: "go
+  through all the other expanded central views"):
+  - Electric: each section's leads (the stiffness and force amounts, the
+    tine's color and decay, the damper's amount, the pickup's model and
+    distance, the output) a full-height column each, `xl` or `l`, their
+    velocity and key amounts stacked small beside them: a board section's
+    new `lead` count. Every knob large and a column to itself (ADR-514's)
+    had left nothing leading.
+  - Drift: the LFO's rate and amount large and its mod amount small (the
+    other way round before); the oscillator's shape and detune large, the
+    pitch, filter and shape mod amounts and the matrix smaller; Volume the
+    one large global.
+  - Wavetable: each LFO's rate and amount large, its morph, offset and
+    attack small; an oscillator's position effect and gain large, semi and
+    pan small; Volume the lead global; the filters' drive and morph medium.
+  - Analog: each filter's cutoff large and resonance medium, the oscillator
+    and amp levels, detune and the LFO, vibrato and noise rates medium, the
+    rest small.
+  - Meld: the LFO rates large, offsets and folds small. Its rows are too
+    short for a large knob anywhere else: a large knob's caption left the
+    knob itself smaller.
+  - Operator and Collision: Volume, the LFO rate, the mallet's volume and
+    stiffness and the noise volume rank first. Their boards are tables,
+    rows too short for sizes to differ much, and stay so.
+  - Every envelope's stage knobs under its picture draw at their full small
+    size (a 5.875rem row; 4.5rem drew them at about 28px).
+  - A knob's caption stands beside it only in a cell at least 9rem wide or
+    at most 5.5rem tall; between, beside cut it to "S.." and "Tr...", so
+    it stays under the knob.
 - Mod matrix assignments, solo buttons, sidechain routing and Roar's
   Envelope Listen are not on the LOM's parameter list and are left out.
 

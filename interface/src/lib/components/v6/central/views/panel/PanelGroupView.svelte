@@ -15,7 +15,7 @@
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
 	import PanelControlView from './PanelControlView.svelte';
 	import PanelEyebrow from './PanelEyebrow.svelte';
-	import { controlKnobSize, controlUnits, faceKnobFit, frameColumns, groupFace, groupUnits, isKnobGroup, knobGridFit, pageCells, pageGroupGrid, pagePicks, type PanelControl, type PanelFace, type PanelGroup } from './panelTypes';
+	import { boardCellPlace, controlKnobSize, controlUnits, faceKnobFit, frameColumns, groupFace, groupUnits, isKnobGroup, knobGridFit, pageCells, pageGroupGrid, pagePicks, type PanelControl, type PanelFace, type PanelGroup } from './panelTypes';
 	import type { PanelParams } from './usePanelParams.svelte';
 
 	interface Props {
@@ -49,11 +49,13 @@
 		 * cell holds; an envelope's stages a column each, full height.
 		 */
 		stack?: number;
+		/** On a board: its first `lead` controls a full-height column each (ADR-515). */
+		lead?: number;
 		/** On a board: a pick of this many values or fewer is a tab, more a `ChoicePicker`. */
 		tabMax?: number;
 	}
 
-	let { group, params, color, onOpen, bare = false, pageRows = 1, boxFace, columns, underTabs = false, dataGroup, onPage = false, oneRow = false, stack, tabMax = 2 }: Props = $props();
+	let { group, params, color, onOpen, bare = false, pageRows = 1, boxFace, columns, underTabs = false, dataGroup, onPage = false, oneRow = false, stack, lead = 0, tabMax = 2 }: Props = $props();
 	// On a board: a pick too long for a tab its cell can hold opens over the view.
 	const boardPick = (c: PanelControl) => (c.kind === 'choice' ? c.options.length > tabMax : c.kind === 'step' && !!c.labels && c.labels.length > tabMax);
 	let pageGrid = $derived(onPage ? pageGroupGrid(group, oneRow) : undefined);
@@ -110,15 +112,19 @@
 	<!-- A lone control stands the full height; any more keep the row's
 	     `stack` rows, so their knobs line up with the next section's. -->
 	{@const rowsOf = stages || group.controls.length === 1 ? 1 : stack}
+	{@const placed = !stages && lead > 0 && rowsOf > 1}
 	<div
 		class="panel-group-grid page-cells"
 		class:own-grid={stages && columns !== group.controls.length}
 		data-board-stack={rowsOf}
-		style="grid-column: span {columns}; grid-template-rows: repeat({rowsOf}, minmax(0, 1fr));{stages && columns !== group.controls.length ? ` grid-template-columns: repeat(${group.controls.length}, minmax(0, 1fr));` : ''}"
+		data-board-lead={placed ? lead : undefined}
+		style="grid-column: span {columns}; grid-template-rows: repeat({rowsOf}, minmax(0, 1fr));{stages && columns !== group.controls.length ? ` grid-template-columns: repeat(${group.controls.length}, minmax(0, 1fr));` : ''}{placed ? ' grid-auto-flow: row;' : ''}"
 	>
-		{#each group.controls as control (control.param)}
-			<div class="panel-cell">
-				<PanelControlView {control} {params} {color} switchParam={group.switchParam} {face} knobSize={rowsOf === 1 ? 'l' : 'm'} pick={boardPick(control)} />
+		{#each group.controls as control, i (control.param)}
+			{@const at = placed ? boardCellPlace(i, lead, rowsOf) : undefined}
+			{@const own = control.kind === 'box' || control.kind === 'step' ? control.knobSize : undefined}
+			<div class="panel-cell" style={at ? `grid-column: ${at.column}; grid-row: ${at.row};` : undefined}>
+				<PanelControlView {control} {params} {color} switchParam={group.switchParam} {face} knobSize={own ?? (rowsOf === 1 || (at && i < lead) ? 'l' : 'm')} pick={boardPick(control)} />
 			</div>
 		{/each}
 	</div>

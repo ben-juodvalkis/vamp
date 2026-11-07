@@ -110,7 +110,7 @@
   {@const l = lo(param)}
   {@const h = hi(param)}
   {@const bipolar = BIPOLAR_SUFFIX.some((s) => param.endsWith(s))}
-  <div class="cell" data-param={param}>
+  <div class="cell rank-{opts.size ?? 'm'}" data-param={param}>
     <DeviceSlider
       value={params.raw(param) ?? l}
       {title}
@@ -246,7 +246,7 @@
         <div class="cell sw-cell octave-pick">{@render octavePick()}</div>
         {@render knob(`${X} Transpose`, 'Semi', { steps: 25 })}
       </div>
-      <div class="stack">{@render knob(`${X} Detune`, 'Detune')}{@render knob(`${X} Transp Scale`, 'Scale St')}</div>
+      <div class="stack">{@render knob(`${X} Detune`, 'Detune')}{@render knob(`${X} Transp Scale`, 'Scale St', { size: 's' })}</div>
       <div class="stack">{@render sw(`${X} Keytracking`, 'Key')}{@render sw(`${X} Osc Scale Aware`, 'Scale')}</div>
     </FaceSection>
     <FaceSeam ink={eInk.primary} />
@@ -257,7 +257,7 @@
     <FaceSeam ink={eInk.primary} />
     <FaceSection span={1}>
       {#snippet head()}{@render sub('Glide')}{/snippet}
-      <div class="stack">{@render tab(`${X} Glide Mode`, ['Port', 'Gliss'])}{@render knob(`${X} Glide Time`, 'Time')}</div>
+      <div class="stack">{@render tab(`${X} Glide Mode`, ['Port', 'Gliss'])}{@render knob(`${X} Glide Time`, 'Time', { size: 's' })}</div>
     </FaceSection>
   </FaceGrid>
 {:else if section === 'filter' && board}
@@ -317,10 +317,10 @@
         {@render sw(`${X} LFO 1 Retrig On`, 'Retrig')}
       </div>
       <div class="stack">
-        {@render knob(rateParam(1), isOn(`${X} LFO 1 Sync`) ? 'Sync' : 'Rate', { steps: isOn(`${X} LFO 1 Sync`) ? 22 : undefined })}
-        {@render knob(`${X} LFO 1 Offset`, 'Offset')}
+        {@render knob(rateParam(1), isOn(`${X} LFO 1 Sync`) ? 'Sync' : 'Rate', { steps: isOn(`${X} LFO 1 Sync`) ? 22 : undefined, size: 'l' })}
+        {@render knob(`${X} LFO 1 Offset`, 'Offset', { size: 's' })}
       </div>
-      <div class="stack">{@render knob(`${X} LFO 1 Shape`, 'Shape')}{@render knob(`${X} LFO 1 Fold`, 'Fold')}</div>
+      <div class="stack">{@render knob(`${X} LFO 1 Shape`, 'Shape')}{@render knob(`${X} LFO 1 Fold`, 'Fold', { size: 's' })}</div>
     </FaceSection>
     <FaceSeam ink={eInk.primary} />
     <FaceSection span={2}>
@@ -343,8 +343,8 @@
         {@render sw(`${X} LFO 2 Retrig On`, 'Retrig')}
       </div>
       <div class="stack">
-        {@render knob(rateParam(2), isOn(`${X} LFO 2 Sync`) ? 'Sync' : 'Rate', { steps: isOn(`${X} LFO 2 Sync`) ? 22 : undefined })}
-        {@render knob(`${X} LFO 2 Offset`, 'Offset')}
+        {@render knob(rateParam(2), isOn(`${X} LFO 2 Sync`) ? 'Sync' : 'Rate', { steps: isOn(`${X} LFO 2 Sync`) ? 22 : undefined, size: 'l' })}
+        {@render knob(`${X} LFO 2 Offset`, 'Offset', { size: 's' })}
       </div>
     </FaceSection>
   </FaceGrid>
@@ -397,6 +397,9 @@
     flex: 1 1 0;
     min-height: 0;
   }
+  /* In a shared column the higher rank takes the larger share (ADR-515). */
+  .stack > :global(.rank-l) { flex-grow: 1.6; }
+  .stack > :global(.rank-m) { flex-grow: 1.25; }
   .cell {
     min-width: 0;
     min-height: 0;

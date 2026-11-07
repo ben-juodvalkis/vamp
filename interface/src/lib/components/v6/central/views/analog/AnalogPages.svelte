@@ -161,7 +161,7 @@
   {@const h = hi(param)}
   {@const mid = MID_ZERO.test(param)}
   {@const bipolar = mid || (l < 0 && h > 0)}
-  <div class="cell" data-param={param}>
+  <div class="cell rank-{opt.size ?? (board ? 's' : 'm')}" data-param={param}>
     <DeviceSlider
       value={params.raw(param) ?? l}
       {title}
@@ -312,9 +312,9 @@
     <FaceSeam ink={vInk.primary} />
     <FaceSection span={5}>
       {#snippet head()}{@render heads([['Tone', 2], ['Out', 1], ['Pitch Env', 1], [`LFO ${v}`, 1]])}{/snippet}
-      <div class="stack">{@render knob(`${o} Sub/Sync`, step(`${O} Mode`) === 1 ? 'Sync' : 'Sub', { sw: `${O} On/Off` })}{@render knob(`${O} Detune`, 'Detune', { sw: `${O} On/Off` })}</div>
+      <div class="stack">{@render knob(`${o} Sub/Sync`, step(`${O} Mode`) === 1 ? 'Sync' : 'Sub', { sw: `${O} On/Off` })}{@render knob(`${O} Detune`, 'Detune', { sw: `${O} On/Off`, size: 'm' })}</div>
       <div class="stack">{@render knob(`${O} PW`, 'PW', { sw: `${O} On/Off` })}{@render knob(`${o} Keytrack`, 'Key')}</div>
-      <div class="stack">{@render knob(`${O} Level`, 'Level')}{@render knob(`${O} Balance`, 'F1/F2')}</div>
+      <div class="stack">{@render knob(`${O} Level`, 'Level', { size: 'm' })}{@render knob(`${O} Balance`, 'F1/F2')}</div>
       <div class="stack">{@render knob(`PEG${v} Amount`, 'Amount')}{@render knob(`PEG${v} Time`, 'Time')}</div>
       <div class="stack">{@render knob(`${O} < LFO`, 'Pitch')}{@render knob(`${o} PW < LFO`, 'PW')}</div>
     </FaceSection>
@@ -352,7 +352,7 @@
           <div class="grow sw-cell">{@render sw('F2 Slave', 'Follow', vInk.primary, `${F} On/Off`)}</div>
         {/if}
       </div>
-      <div class="stack">{@render knob(`${F} Freq`, 'Freq', { sw: `${F} On/Off` })}{@render knob(`${F} Resonance`, 'Res', { sw: `${F} On/Off` })}</div>
+      <div class="stack">{@render knob(`${F} Freq`, 'Freq', { sw: `${F} On/Off`, size: 'l' })}{@render knob(`${F} Resonance`, 'Res', { sw: `${F} On/Off`, size: 'm' })}</div>
     </FaceSection>
     <FaceSeam ink={vInk.primary} />
     <FaceSection span={3}>
@@ -368,7 +368,7 @@
   <FaceGrid sections={[4]}>
     <FaceSection span={4}>
       {#snippet head()}{@render heads([[title, 1], ['Key', 1], [`LFO ${v}`, 1], ['', 1]])}{/snippet}
-      <div class="stack">{@render knob(`AMP${v} Level`, 'Level', { sw: `AMP${v} On/Off` })}{@render knob(`AMP${v} Pan`, 'Pan', { sw: `AMP${v} On/Off` })}</div>
+      <div class="stack">{@render knob(`AMP${v} Level`, 'Level', { sw: `AMP${v} On/Off`, size: 'm' })}{@render knob(`AMP${v} Pan`, 'Pan', { sw: `AMP${v} On/Off` })}</div>
       <div class="stack">{@render knob(`AMP${v} < Key`, 'Level', { sw: `AMP${v} On/Off` })}{@render knob(`A${v} Pan < Key`, 'Pan', { sw: `AMP${v} On/Off` })}</div>
       <div class="stack">{@render knob(`AMP${v} < LFO`, 'Level')}{@render knob(`A${v} Pan < LFO`, 'Pan')}</div>
       <div class="stack">{@render sw(`AMP${v} On/Off`, 'On')}{@render knob(`A${v} Pan < Env`, 'Env')}</div>
@@ -432,7 +432,7 @@
         {#if lfoBeat}
           {@render knob(`${L} SncRate`, 'Rate', { sw: `${L} On/Off`, steps: SYNC_RATES.length })}
         {:else}
-          {@render knob(`${L} Speed`, 'Speed', { sw: `${L} On/Off` })}
+          {@render knob(`${L} Speed`, 'Speed', { sw: `${L} On/Off`, size: 'm' })}
         {/if}
         {@render knob(`${L} PW`, 'PW', { sw: `${L} On/Off` })}
       </div>
@@ -449,7 +449,7 @@
       {#snippet head()}{@render back()}{/snippet}
       <div class="col">
         <div class="touch">{@render sw('Noise On/Off', 'On', noiseInk.primary)}</div>
-        <div class="grow">{@render knob('Noise Level', 'Level', { color: noiseInk, sw: 'Noise On/Off' })}</div>
+        <div class="grow">{@render knob('Noise Level', 'Level', { color: noiseInk, sw: 'Noise On/Off', size: 'm' })}</div>
       </div>
       <div class="stack">{@render knob('Noise Balance', 'F1/F2', { color: noiseInk, sw: 'Noise On/Off' })}{@render knob('Noise Color', 'Color', { color: noiseInk, sw: 'Noise On/Off' })}</div>
     </FaceSection>
@@ -511,7 +511,7 @@
         <div class="touch">{@render sw('Vib On/Off', 'On')}</div>
         <div class="grow">{@render knob('Vib Amount', 'Amount', { sw: 'Vib On/Off' })}</div>
       </div>
-      <div class="stack">{@render knob('Vib Speed', 'Speed', { sw: 'Vib On/Off' })}{@render knob('Vib Fade-In', 'Fade In', { sw: 'Vib On/Off' })}</div>
+      <div class="stack">{@render knob('Vib Speed', 'Speed', { sw: 'Vib On/Off', size: 'm' })}{@render knob('Vib Fade-In', 'Fade In', { sw: 'Vib On/Off' })}</div>
       <div class="stack">{@render knob('Vib Delay', 'Delay', { sw: 'Vib On/Off' })}{@render knob('Vib Error', 'Error', { sw: 'Vib On/Off' })}</div>
       <div class="stack">{@render knob('Vib < ModWh', 'Mod Wh', { sw: 'Vib On/Off' })}<div class="cell"></div></div>
     </FaceSection>
@@ -554,6 +554,9 @@
     flex: 1 1 0;
     min-height: 0;
   }
+  /* In a shared column the higher rank takes the larger share (ADR-515). */
+  .stack > :global(.rank-l) { flex-grow: 1.6; }
+  .stack > :global(.rank-m) { flex-grow: 1.25; }
   /* A column of a touch row, a growing tab and another touch row. */
   .col {
     display: flex;

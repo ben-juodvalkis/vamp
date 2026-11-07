@@ -124,7 +124,7 @@
   {@const h = hi(param)}
   {@const bipolar = BIPOLAR.test(param)}
   {@const raw = params.raw(param)}
-  <div class="cell" data-param={param}>
+  <div class="cell rank-{size}" data-param={param}>
     <DeviceSlider
       value={raw ?? l}
       {title}
@@ -225,16 +225,16 @@
           <ChoicePicker options={t.tables} selected={t.table} onSelect={(i) => tables.setTable(osc, i)} label="Osc {osc} wavetable" tint={oscInk.primary} ghost={t.tables.length === 0} />
         </div>
         <div class="face-span-3 pad" style={isOn(`${O} On`) ? '' : 'opacity: var(--opacity-ghost);'}>{@render oscPad(osc)}</div>
-        <div class="stack">{@render knob(`${O} Effect 1`, fx[0], 'm', { sw: `${O} On`, color: oscInk })}{@render knob(`${O} Transp`, 'Semi', 'm', { sw: `${O} On`, color: oscInk })}</div>
-        <div class="stack">{@render knob(`${O} Detune`, 'Detune', 'm', { sw: `${O} On`, color: oscInk })}{@render knob(`${O} Pan`, 'Pan', 'm', { sw: `${O} On`, color: oscInk })}</div>
-        <div class="stack">{@render knob(`${O} Gain`, 'Gain', 'm', { sw: `${O} On`, color: oscInk })}{@render sw(`${O} On`, 'On', oscInk.primary)}</div>
+        <div class="stack">{@render knob(`${O} Effect 1`, fx[0], 'l', { sw: `${O} On`, color: oscInk })}{@render knob(`${O} Transp`, 'Semi', 's', { sw: `${O} On`, color: oscInk })}</div>
+        <div class="stack">{@render knob(`${O} Detune`, 'Detune', 'm', { sw: `${O} On`, color: oscInk })}{@render knob(`${O} Pan`, 'Pan', 's', { sw: `${O} On`, color: oscInk })}</div>
+        <div class="stack">{@render knob(`${O} Gain`, 'Gain', 'l', { sw: `${O} On`, color: oscInk })}{@render sw(`${O} On`, 'On', oscInk.primary)}</div>
       </div>
     </FaceSection>
     <FaceSeam ink={ink.primary} />
     <FaceSection span={2}>
       {#snippet head()}{@render sub('Sub')}{/snippet}
       <div class="stack">{@render knob('Sub Gain', 'Gain', 'm', { sw: 'Sub On' })}{@render sw('Sub On', 'On')}</div>
-      <div class="stack">{@render knob('Sub Tone', 'Tone', 'm', { sw: 'Sub On' })}{@render tab('Sub Transpose', ['0', '-1', '-2'], { cols: 3, sw: 'Sub On', row: true })}</div>
+      <div class="stack">{@render knob('Sub Tone', 'Tone', 's', { sw: 'Sub On' })}{@render tab('Sub Transpose', ['0', '-1', '-2'], { cols: 3, sw: 'Sub On', row: true })}</div>
     </FaceSection>
   </FaceGrid>
 {:else if (page === 'filter1' || page === 'filter2') && board}
@@ -264,8 +264,8 @@
           color={fInk}
         />
       </div>
-      {@render knob(`${F} Drive`, 'Drive', 'l', { sw: `${F} On` })}
-      {@render knob(`${F} Morph`, 'Morph', 'l', { sw: `${F} On` })}
+      {@render knob(`${F} Drive`, 'Drive', 'm', { sw: `${F} On` })}
+      {@render knob(`${F} Morph`, 'Morph', 'm', { sw: `${F} On` })}
     </FaceSection>
     <FaceSeam ink={ink.primary} />
     <FaceSection span={3}>
@@ -327,14 +327,14 @@
         <div class="span-2 touch-row">{@render tab(`${L} Sync`, ['Free', 'Tempo'], { cols: 2 })}</div>
         {@render sw(`${L} Retrig On`, 'Retrig')}
         {#if lfoTempo}
-          {@render knob(`${L} Synced`, 'Sync', 'm', { steps: SYNCED.length, labels: SYNCED })}
+          {@render knob(`${L} Synced`, 'Sync', 'l', { steps: SYNCED.length, labels: SYNCED })}
         {:else}
-          {@render knob(`${L} Freq`, 'Rate', 'm')}
+          {@render knob(`${L} Freq`, 'Rate', 'l')}
         {/if}
-        {@render knob(`${L} Amount`, 'Amount', 'm')}
-        {@render knob(`${L} Morph`, 'Morph', 'm')}
-        {@render knob(`${L} Offset`, 'Offset', 'm')}
-        {@render knob(`${L} Attack`, 'Attack', 'm')}
+        {@render knob(`${L} Amount`, 'Amount', 'l')}
+        {@render knob(`${L} Morph`, 'Morph', 's')}
+        {@render knob(`${L} Offset`, 'Offset', 's')}
+        {@render knob(`${L} Attack`, 'Attack', 's')}
       </div>
     </FaceSection>
   </FaceGrid>
@@ -343,9 +343,9 @@
   <FaceGrid sections={[3]}>
     <FaceSection span={3}>
       {#snippet head()}{@render back()}{/snippet}
-      <div class="stack">{@render knob('Volume', 'Volume', 'm')}{@render knob('Transpose', 'Transp', 'm')}</div>
-      <div class="stack">{@render knob('Glide', 'Glide', 'm')}{@render knob('Unison Amount', 'Unison', 'm')}</div>
-      <div class="stack">{@render knob('Time', 'Time', 'm')}{@render knob('Global Mod Amount', 'Mod Amt', 'm')}</div>
+      <div class="stack">{@render knob('Volume', 'Volume', 'l')}{@render knob('Transpose', 'Transp', 's')}</div>
+      <div class="stack">{@render knob('Unison Amount', 'Unison', 'm')}{@render knob('Glide', 'Glide', 's')}</div>
+      <div class="stack">{@render knob('Time', 'Time', 's')}{@render knob('Global Mod Amount', 'Mod Amt', 's')}</div>
     </FaceSection>
   </FaceGrid>
 {/if}
@@ -369,6 +369,9 @@
     flex: 1 1 0;
     min-height: 0;
   }
+  /* In a shared column the higher rank takes the larger share (ADR-515). */
+  .stack > :global(.rank-l) { flex-grow: 1.6; }
+  .stack > :global(.rank-m) { flex-grow: 1.25; }
   /* A tab over a switch: the tab takes what the switch's row leaves. */
   .column {
     display: flex;

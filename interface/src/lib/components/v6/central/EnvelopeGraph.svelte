@@ -277,9 +277,12 @@
   .env-wrap > .graph-cell {
     flex: 1 1 0;
   }
+  /* Tall enough for a small knob and its caption at full size (48px, KnobFace
+     size-s), so the stages read at a glance (ADR-515: 4.5rem drew them at
+     about 28px). */
   .env-knobs {
     flex: 0 0 auto;
-    height: 4.5rem;
+    height: 5.875rem;
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--spacing-sm);
