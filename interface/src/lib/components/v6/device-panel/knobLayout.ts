@@ -42,8 +42,6 @@ export const KNOB_PX: Record<KnobSize, number> = { s: 48, m: 70, l: 96, xl: 128 
 
 /** The narrowest cell that puts a caption beside its knob (KnobFace's 9rem): narrower, it would be cut. */
 const BESIDE_MIN_W = 144;
-/** The tallest cell that keeps a caption beside however narrow (KnobFace's 5.5rem): shorter, one under would not fit. */
-const BESIDE_MAX_H = 88;
 
 /** The height a caption under a knob takes, gaps and padding included (KnobFace's `--knob-caption-h`). */
 const CAPTION_PX: Record<KnobSize, number> = { s: 44, m: 50, l: 54, xl: 58 };
@@ -53,15 +51,15 @@ const SIZES_DOWN: readonly KnobSize[] = ['xl', 'l', 'm', 's'];
 /**
  * The diameter a knob of `size` draws in a `width` x `height` cell: KnobFace's
  * own rule, so a layout can be checked without rendering. Caption beside the
- * knob in a cell wider than 6:5 and at least 9rem across or at most 5.5rem
- * tall, under it otherwise,
- * none with `caption` false.
+ * knob in a cell wider than 6:5 and at least 9rem across, under it otherwise
+ * (ADR-516: a short cell narrower than that cut its caption to "S..", so the
+ * knob now shrinks and the word stays whole), none with `caption` false.
  */
 export function knobDiameter(size: KnobSize, width: number, height: number, caption = true): number {
 	const want = KNOB_PX[size];
 	if (width <= 0 || height <= 0) return 0;
 	if (!caption) return Math.min(want, width - 8, height - 12);
-	if (width / height > 6 / 5 && (width >= BESIDE_MIN_W || height <= BESIDE_MAX_H)) return Math.min(want, width / 2, height - 12);
+	if (width / height > 6 / 5 && width >= BESIDE_MIN_W) return Math.min(want, width / 2, height - 12);
 	return Math.min(want, width - 8, height - CAPTION_PX[size]);
 }
 

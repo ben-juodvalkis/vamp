@@ -154,8 +154,8 @@ const groups = (id: string, titles?: readonly string[]) =>
 const BOARD: PanelBoard = {
 	rows: [
 		{ tiles: [{ id: 'hammer', title: 'Hammer', sections: groups('hammer') }] },
-		{ tiles: [{ id: 'fork', title: 'Fork', sections: groups('fork') }, { id: 'damper', sections: groups('damper-pickup', ['Damper']) }] },
-		{ tiles: [{ id: 'pickup', sections: groups('damper-pickup', ['Pickup']) }, { id: 'global', title: 'Global', sections: groups('global') }] }
+		{ tiles: [{ id: 'fork', title: 'Fork', sections: groups('fork') }, { id: 'damper', title: 'Damper', sections: groups('damper-pickup', ['Damper']) }] },
+		{ tiles: [{ id: 'pickup', title: 'Pickup', sections: groups('damper-pickup', ['Pickup']) }, { id: 'global', title: 'Global', sections: groups('global') }] }
 	]
 };
 

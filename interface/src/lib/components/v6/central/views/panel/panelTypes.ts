@@ -151,11 +151,15 @@ export interface PanelBoardRow {
 export interface PanelBoardTile {
 	/** The tile's name, `data-board-tile`. */
 	id: string;
-	/**
-	 * The page it shows, named on its first section's header line, as a
-	 * page's way back is on the band but plain: there is no page to leave.
-	 */
+	/** The section it shows, named on the tile's header bar (ADR-516). */
 	title?: string;
+	/**
+	 * The section's on/off parameter, drawn as the switch on the tile's bar
+	 * (ADR-516): the Filter's, the LFO's, the mallet's. Counted among the
+	 * board's parameters (`boardSwitches`), so the groups need no On of
+	 * their own.
+	 */
+	switchParam?: string;
 	sections: readonly PanelBoardSection[];
 	/**
 	 * How wide its columns come out against the row's others, px at the
@@ -558,9 +562,12 @@ export function boardControls(panel: InstrumentPanel): PanelControl[] {
 	);
 }
 
-/** The on/off parameters a board's sections and matrix rows switch, and its slots' parameters. */
+/** The on/off parameters a board's tiles, sections and matrix rows switch, and its slots' parameters. */
 export function boardSwitches(panel: InstrumentPanel): string[] {
-	return boardSections(panel).flatMap((s) =>
+	const tiles = (panel.board?.rows ?? []).flatMap((r) => r.tiles);
+	return tiles
+		.flatMap((t) => (t.switchParam ? [t.switchParam] : []))
+		.concat(boardSections(panel).flatMap((s) =>
 		s.kind === 'group'
 			? s.group.switchParam
 				? [s.group.switchParam]
@@ -568,7 +575,7 @@ export function boardSwitches(panel: InstrumentPanel): string[] {
 			: s.kind === 'matrix'
 				? s.matrix.rows.flatMap((r) => (r.switchParam ? [r.switchParam] : []))
 				: [...s.params, ...(s.below ?? []).flatMap((b) => (b.group.switchParam ? [b.group.switchParam] : []))]
-	);
+	));
 }
 
 /**

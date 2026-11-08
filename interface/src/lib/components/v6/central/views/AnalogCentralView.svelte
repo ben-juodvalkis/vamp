@@ -310,10 +310,7 @@
           ink={analogInk}
           voiceInks={{ 1: sourceInk(1), 2: sourceInk(2) }}
           {noiseInk}
-          onOpen={() => {}}
-          onBack={() => {}}
           {shapeGlyph}
-          board
         />
       {/snippet}
     </InstrumentBoard>

@@ -240,6 +240,7 @@ const OPERATOR_BOARD: PanelBoard = {
 			tiles: [
 				{
 					id: 'oscillators',
+					title: 'Oscillators',
 					sections: [
 						{
 							kind: 'matrix',
@@ -290,6 +291,7 @@ const OPERATOR_BOARD: PanelBoard = {
 			tiles: [
 				{
 					id: 'envelopes',
+					title: 'Envelopes',
 					sections: [
 						{
 							// One envelope as Live draws it (ADR-514), the one picked over it
@@ -332,6 +334,9 @@ const OPERATOR_BOARD: PanelBoard = {
 			tiles: [
 				{
 					id: 'filter',
+					title: 'Filter',
+					// Its switch is on the tile's bar (ADR-516).
+					switchParam: 'Filter On',
 					// The pad near square on the left, its type, circuit and shaper in
 					// columns on its right (user, 2026-11-07: "make the filter XY taller
 					// and narrower so it's more square ... controls to the right side").
@@ -352,7 +357,6 @@ const OPERATOR_BOARD: PanelBoard = {
 								title: 'Type · Circuit',
 								switchParam: 'Filter On',
 								controls: [
-									{ kind: 'switch', param: 'Filter On', title: 'On' },
 									{ kind: 'choice', param: 'Filter Type', title: 'Type', options: ['LP', 'HP', 'BP', 'Notch', 'Morph'] },
 									{ kind: 'choice', param: 'Filter Slope', title: 'Slope', options: ['12 dB', '24 dB'] },
 									{ kind: 'switch', param: 'Filt < LFO', title: 'LFO' },
@@ -381,6 +385,9 @@ const OPERATOR_BOARD: PanelBoard = {
 				},
 				{
 					id: 'lfo',
+					title: 'LFO',
+					// Its switch is on the tile's bar (ADR-516).
+					switchParam: 'LFO On',
 					sections: [
 						{
 							kind: 'group',
@@ -402,6 +409,7 @@ const OPERATOR_BOARD: PanelBoard = {
 				},
 				{
 					id: 'pan',
+					title: 'Pan',
 					sections: [
 						{
 							kind: 'group',
@@ -424,12 +432,14 @@ const OPERATOR_BOARD: PanelBoard = {
 			tiles: [
 				{
 					id: 'modulation',
+					title: 'Modulation',
 					sections: [
 						{
 							kind: 'matrix',
 							matrix: {
 								rows: [
-									{ title: 'LFO', switchParam: 'LFO On' },
+									// The LFO's switch is on its tile's bar (ADR-516), as the filter's is.
+										{ title: 'LFO', switchParam: 'LFO On', quiet: true },
 									{ title: 'Pitch', switchParam: 'Pe On' },
 									// The filter's switch is on its tile.
 									{ title: 'Filter', switchParam: 'Filter On', quiet: true }
@@ -458,6 +468,7 @@ const OPERATOR_BOARD: PanelBoard = {
 				},
 				{
 					id: 'global',
+					title: 'Global',
 					sections: [
 						{
 							kind: 'group',

@@ -1,23 +1,17 @@
 <script lang="ts">
   /**
-   * Drift's section pages (Oscillators, Filter, Envelopes, LFO / Mod,
-   * Global), each hand-laid on the face grid (ADR-510, user 2026-11-06):
-   * equal columns on a page, identical seams, one header line, every knob
-   * a medium 70px. They replace the rule-laid panel pages for Drift, whose
-   * groups each took their own width and whose knobs came out at 49 to
-   * 96px. Every control binds a parameter by Live's name
-   * (docs/reference/instruments/Drift.md) through `usePanelParams`, so a
-   * write is exactly what the panel page wrote.
+   * Drift's board tiles (ADR-512, ADR-513), each a `BoardTile` panel
+   * (ADR-516) hand-laid on the face grid (ADR-510): a header bar naming
+   * the section, then equal columns, identical seams, knobs at their
+   * ADR-509 size. Every control binds a parameter by Live's name
+   * (docs/reference/instruments/Drift.md) through `usePanelParams`; the
+   * modulation sources, the matrix targets and the voice count are device
+   * properties (`prop` / `setProp`).
    *
-   * The first section's header line carries the page's name with a "‹" that
-   * leads back to the face, so no column is spent on a back button.
-   *
-   * On the full-screen board (`board`, ADR-512) every page is a tile at
-   * once: a page's way back is its plain name, the Filter page's pad takes
-   * four columns rather than eight, the LFO stands Rate over Amount and its
-   * rate mode is a `ChoicePicker` (its tab too narrow for a board column),
-   * and Global stands the voice mode in one column and Play beside Output,
-   * so their row keeps every caption whole.
+   * Tiles: `oscillators` (Osc 1, Osc 2, and the Mixer: a row a source, its
+   * level, its switch and its route to the filter, where three columns of
+   * lamps stood before ADR-516), `pitch-mod`, `filter`, `envelopes`, `lfo`,
+   * `matrix` and `global`.
    */
   import type { Snippet } from 'svelte';
   import DeviceSlider from '../../../device-panel/DeviceSlider.svelte';
@@ -27,6 +21,7 @@
   import FaceGrid from '../../FaceGrid.svelte';
   import FaceSection from '../../FaceSection.svelte';
   import FaceSeam from '../../FaceSeam.svelte';
+  import BoardTile from '../../BoardTile.svelte';
   import ChoicePicker from '../../ChoicePicker.svelte';
   import type { PanelParams } from '../panel/usePanelParams.svelte';
   import type { DeviceColorScheme } from '$lib/config/devicePresets';
@@ -37,21 +32,14 @@
     ink: DeviceColorScheme;
     /** The sources' own colours, as on the face: Osc 1, Osc 2, Noise. */
     sourceInks: { osc1: DeviceColorScheme; osc2: DeviceColorScheme; noise: DeviceColorScheme };
-    onBack: () => void;
     filterPad: Snippet;
-    voiceModeTab: Snippet;
     waveGlyph: Snippet<[string]>;
     /** A Drift device property (the mod sources, voice count), or undefined. */
     prop: (name: string) => number | undefined;
     setProp: (name: string, value: number) => void;
-    /**
-     * A tile of the full-screen board (ADR-512): every page is on screen, so
-     * a page's way back is its plain name.
-     */
-    board?: boolean;
   }
 
-  let { page, params, ink, sourceInks, onBack, filterPad, voiceModeTab, waveGlyph, prop, setProp, board = false }: Props = $props();
+  let { page, params, ink, sourceInks, filterPad, waveGlyph, prop, setProp }: Props = $props();
 
   /**
    * Live's own lists, read off the running Drift (12.4.15b2, 2026-11-06):
@@ -72,14 +60,6 @@
     { value: 2, label: 'Stereo' },
     { value: 3, label: 'Unison' }
   ];
-
-  const TITLES: Record<string, string> = {
-    oscillators: 'Oscillators',
-    filter: 'Filter',
-    envelopes: 'Envelopes',
-    'lfo-mod': 'LFO / Mod',
-    global: 'Global'
-  };
 
   // Waveforms by the face's glyph names, in each oscillator's own order.
   const OSC1_WAVES = ['Sin', 'Tri', 'Shark', 'Bump', 'Saw', 'Pulse', 'Sqr'];
@@ -129,6 +109,13 @@
   let o1 = $derived(sourceInks.osc1);
   let o2 = $derived(sourceInks.osc2);
   let nz = $derived(sourceInks.noise);
+
+  /** The mixer's rows: a source, its ink, its level, its switch and its route to the filter. */
+  let mixer = $derived([
+    { title: 'Osc 1', mark: '1', ink: o1, gain: 'Osc 1 Gain', on: 'Osc 1 On', flt: 'Osc 1 Flt On' },
+    { title: 'Osc 2', mark: '2', ink: o2, gain: 'Osc 2 Gain', on: 'Osc 2 On', flt: 'Osc 2 Flt On' },
+    { title: 'Noise', mark: 'N', ink: nz, gain: 'Noise Gain', on: 'Noise On', flt: 'Noise Flt On' }
+  ]);
 </script>
 
 <!-- A knob bound by name: medium, its name under it or beside it. A
@@ -161,15 +148,15 @@
 {/snippet}
 
 <!-- A modulation amount: the knob with its mark inside, and under it the
-     chooser naming its source, which is the knob's caption. A matrix slot
-     adds a second chooser, its target. -->
-{#snippet modKnob(param: string, mark: string, title: string, source: string, target?: string, color: DeviceColorScheme = ink, size: 's' | 'm' | 'l' = 'm', footed = false)}
-  <div class="mod-cell" class:footed data-param={param}>
+     field naming its source, which is the knob's caption. A matrix slot
+     adds a second field, its target. -->
+{#snippet modKnob(param: string, mark: string, title: string, source: string, target?: string, color: DeviceColorScheme = ink, size: 's' | 'm' | 'l' = 'm')}
+  <div class="mod-cell" class:two={!!target} data-param={param}>
     <div class="mod-knob">{@render knob(param, title, undefined, mark, color, size)}</div>
     <div class="mod-foot">
-      <ChoicePicker options={SOURCES} selected={prop(source)} onSelect={(i) => setProp(source, i)} label="{title} source" tint={color.primary} ghost={prop(source) === undefined} />
+      <ChoicePicker options={SOURCES} selected={prop(source)} onSelect={(i) => setProp(source, i)} label="{title} source" caption="Source" tint={color.primary} ghost={prop(source) === undefined} />
       {#if target}
-        <ChoicePicker options={TARGETS} selected={prop(target)} onSelect={(i) => setProp(target, i)} label="{title} target" tint={color.primary} ghost={prop(target) === undefined} />
+        <ChoicePicker options={TARGETS} selected={prop(target)} onSelect={(i) => setProp(target, i)} label="{title} target" caption="Target" tint={color.primary} ghost={prop(target) === undefined} />
       {/if}
     </div>
   </div>
@@ -204,185 +191,203 @@
   </div>
 {/snippet}
 
-<!-- An on/off parameter: one cell, lit while on. -->
-{#snippet sw(param: string, title: string, color: string = ink.primary)}
+<!-- An on/off parameter: one touch row, centred in its cell, lit while on.
+     A `lamp` has no word (its column's name over it says what it is) and
+     is a touch square, so a table of them is not a wall of slabs. -->
+{#snippet sw(param: string, title: string, color: string = ink.primary, lamp = false)}
   {@const on = isOn(param)}
-  <div class="cell sw-cell">
+  <div class="cell sw-cell" class:lamp-cell={lamp}>
   <button
     class="physical-button btn-toggle switch"
+    class:lamp
     class:active={on}
     aria-pressed={on}
     disabled={!params.has(param)}
     style="--btn-tint: {color};"
     data-param={param}
+    aria-label={title}
     onclick={() => params.write(param, on ? lo(param) : hi(param))}
-  >{title}</button>
+  >{lamp ? '' : title}</button>
   </div>
 {/snippet}
 
-{#snippet back()}
-  {#if board}
-    <span class="sub" style="color: {ink.primary};">{TITLES[page] ?? page}</span>
-  {:else}
-    <button class="page-back" style="color: {ink.primary};" onclick={onBack}>‹ {TITLES[page] ?? page}</button>
-  {/if}
+<!-- A pick as a field naming the value, its own name over it, opening the
+     values over the view. -->
+{#snippet pick(param: string, labels: readonly string[], title: string, caption: string)}
+  <div class="cell sw-cell" data-param={param}>
+    <ChoicePicker options={labels} selected={params.has(param) ? step(param) : undefined} onSelect={(i) => params.write(param, lo(param) + i)} label={title} {caption} tint={ink.primary} ghost={!params.has(param)} />
+  </div>
 {/snippet}
 
-<!-- A pick as a button naming the value, opening the values over the
-     view: a board tile's column is too narrow for its tab. -->
-{#snippet pick(param: string, labels: readonly string[], title: string)}
-  <div class="cell sw-cell" data-param={param}>
-    <ChoicePicker options={labels} selected={params.has(param) ? step(param) : undefined} onSelect={(i) => params.write(param, lo(param) + i)} label={title} tint={ink.primary} ghost={!params.has(param)} />
+{#snippet sub(text: string, color: string = ink.primary)}<span class="sub" style="color: {color};">{text}</span>{/snippet}
+
+<!-- A section's header line: a name over each run of columns. -->
+{#snippet heads(items: readonly (readonly [string, number])[], color: string = ink.primary)}
+  <div class="col-heads" style="grid-template-columns: repeat({items.reduce((n, [, span]) => n + span, 0)}, minmax(0, 1fr));">
+    {#each items as [text, span], i (i)}<span class="sub" style="color: {color}; grid-column: span {span};">{text}</span>{/each}
   </div>
 {/snippet}
 
 <div class="drift-page" data-drift-page={page}>
 {#if page === 'oscillators'}
-  <FaceGrid sections={[3, 3, 1, 1, 1, 1]}>
-    <FaceSection span={3}>
-      {#snippet head()}{@render back()}<span class="sub" style="color: {o1.primary};">Osc 1</span>{/snippet}
-      {@render tab('Osc 1 Wave', OSC1_WAVES, { glyph: true, color: o1.primary })}
-      {@render tab('Osc 1 Oct', ['-2', '-1', '0', '+1', '+2', '+3'], { up: true, color: o1.primary })}
-      <div class="stack">{@render knob('Osc 1 Shape', 'Shape', undefined, undefined, o1, 'l')}{@render modKnob('Osc 1 Shape Mod Amt', 'M', 'Shape Mod', 'mod_matrix_shape_source_index', undefined, o1, 's')}</div>
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={3}>
-      {#snippet head()}<span class="sub" style="color: {o2.primary};">Osc 2</span>{/snippet}
-      {@render tab('Osc 2 Wave', OSC2_WAVES, { glyph: true, color: o2.primary })}
-      {@render tab('Osc 2 Oct', ['-3', '-2', '-1', '0', '+1', '+2'], { up: true, color: o2.primary })}
-      <div class="stack">{@render knob('Osc 2 Detune', 'Detune', undefined, undefined, o2, 'l')}<div class="cell"></div></div>
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <!-- Each source's level, its switch and its route to the filter, in
-         rows: Osc 1, Osc 2, Noise. -->
-    <FaceSection span={1}>
-      {#snippet head()}<span class="sub" style="color: {ink.primary};">Level</span>{/snippet}
-      <div class="stack">{@render knob('Osc 1 Gain', 'Osc 1', undefined, '1', o1)}{@render knob('Osc 2 Gain', 'Osc 2', undefined, '2', o2)}{@render knob('Noise Gain', 'Noise', undefined, 'N', nz)}</div>
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={1}>
-      {#snippet head()}<span class="sub" style="color: {ink.primary};">On</span>{/snippet}
-      <div class="stack">{@render sw('Osc 1 On', 'Osc 1', o1.primary)}{@render sw('Osc 2 On', 'Osc 2', o2.primary)}{@render sw('Noise On', 'Noise', nz.primary)}</div>
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={1}>
-      {#snippet head()}<span class="sub" style="color: {ink.primary};">To Filter</span>{/snippet}
-      <div class="stack">{@render sw('Osc 1 Flt On', 'Osc 1', o1.primary)}{@render sw('Osc 2 Flt On', 'Osc 2', o2.primary)}{@render sw('Noise Flt On', 'Noise', nz.primary)}</div>
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={1}>
-      {#snippet head()}<span class="sub" style="color: {ink.primary};">Pitch Mod</span>{/snippet}
-      <div class="stack">{@render modKnob('Pitch Mod Amt 1', '1', 'Pitch Mod 1', 'mod_matrix_pitch_source_1_index', undefined, ink, 's')}{@render modKnob('Pitch Mod Amt 2', '2', 'Pitch Mod 2', 'mod_matrix_pitch_source_2_index', undefined, ink, 's')}</div>
-    </FaceSection>
-  </FaceGrid>
-{:else if page === 'filter' && board}
-  <!-- On the board (ADR-512) the pad takes four columns, so the page sits
-       beside the Envelopes. -->
-  <FaceGrid sections={[4, 1, 1]}>
-    <FaceSection span={4}>
-      {#snippet head()}{@render back()}{/snippet}
-      <div class="face-span-all pad">{@render filterPad()}</div>
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={1}>
-      {#snippet head()}<span class="sub" style="color: {ink.primary};">Low Pass</span>{/snippet}
-      <div class="stack">{@render tab('LP Type', ['I', 'II'])}{@render knob('Key > LPF', 'Key', undefined, undefined, ink, 's')}</div>
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={1}>
-      {#snippet head()}<span class="sub" style="color: {ink.primary};">Mod</span>{/snippet}
-      <div class="stack">{@render modKnob('LP Mod Amt 1', '1', 'Filter Mod 1', 'mod_matrix_filter_source_1_index', undefined, ink, 's')}{@render modKnob('LP Mod Amt 2', '2', 'Filter Mod 2', 'mod_matrix_filter_source_2_index', undefined, ink, 's')}</div>
-    </FaceSection>
-  </FaceGrid>
+  <!-- The two oscillators, each its waves, its octaves and what shapes it,
+       and the Mixer: a row a source in its colour, its level, its switch
+       and its route to the filter. -->
+  <BoardTile title="Oscillators" ink={ink.primary}>
+    <FaceGrid sections={[3, 3, 3]}>
+      <FaceSection span={3}>
+        {#snippet head()}{@render sub('Osc 1', o1.primary)}{/snippet}
+        {@render tab('Osc 1 Wave', OSC1_WAVES, { glyph: true, color: o1.primary })}
+        {@render tab('Osc 1 Oct', ['-2', '-1', '0', '+1', '+2', '+3'], { up: true, color: o1.primary })}
+        <div class="stack">{@render knob('Osc 1 Shape', 'Shape', undefined, undefined, o1, 'l')}{@render modKnob('Osc 1 Shape Mod Amt', 'M', 'Shape Mod', 'mod_matrix_shape_source_index', undefined, o1, 's')}</div>
+      </FaceSection>
+      <FaceSeam ink={ink.primary} />
+      <FaceSection span={3}>
+        {#snippet head()}{@render sub('Osc 2', o2.primary)}{/snippet}
+        {@render tab('Osc 2 Wave', OSC2_WAVES, { glyph: true, color: o2.primary })}
+        {@render tab('Osc 2 Oct', ['-3', '-2', '-1', '0', '+1', '+2'], { up: true, color: o2.primary })}
+        {@render knob('Osc 2 Detune', 'Detune', undefined, undefined, o2, 'l')}
+      </FaceSection>
+      <FaceSeam ink={ink.primary} />
+      <FaceSection span={3}>
+        {#snippet head()}{@render heads([['Level', 1], ['On', 1], ['Filter', 1]])}{/snippet}
+        <div class="face-span-all mixer" data-drift-mixer>
+          {#each mixer as row (row.title)}
+            {@render knob(row.gain, row.title, undefined, row.mark, row.ink)}
+            {@render sw(row.on, `${row.title} on`, row.ink.primary, true)}
+            {@render sw(row.flt, `${row.title} to filter`, row.ink.primary, true)}
+          {/each}
+        </div>
+      </FaceSection>
+    </FaceGrid>
+  </BoardTile>
+{:else if page === 'pitch-mod'}
+  <!-- The two pitch modulations: an amount over the source it listens to. -->
+  <BoardTile title="Pitch Mod" ink={ink.primary}>
+    <FaceGrid sections={[2]} heads={false}>
+      <FaceSection span={2}>
+        {@render modKnob('Pitch Mod Amt 1', '1', 'Pitch Mod 1', 'mod_matrix_pitch_source_1_index', undefined, ink, 'l')}
+        {@render modKnob('Pitch Mod Amt 2', '2', 'Pitch Mod 2', 'mod_matrix_pitch_source_2_index', undefined, ink, 'l')}
+      </FaceSection>
+    </FaceGrid>
+  </BoardTile>
+{:else if page === 'filter'}
+  <!-- Both filters on the pad, the low-pass's model and key tracking,
+       and the two modulations of its cutoff. -->
+  <BoardTile title="Filter" ink={ink.primary}>
+    <FaceGrid sections={[4, 1, 2]}>
+      <FaceSection span={4}>
+        <div class="face-span-all pad">{@render filterPad()}</div>
+      </FaceSection>
+      <FaceSeam ink={ink.primary} />
+      <FaceSection span={1}>
+        {#snippet head()}{@render sub('Low Pass')}{/snippet}
+        <div class="stack">{@render tab('LP Type', ['I', 'II'])}{@render knob('Key > LPF', 'Key', undefined, undefined, ink, 's')}</div>
+      </FaceSection>
+      <FaceSeam ink={ink.primary} />
+      <FaceSection span={2}>
+        {#snippet head()}{@render sub('Cutoff Mod')}{/snippet}
+        {@render modKnob('LP Mod Amt 1', '1', 'Filter Mod 1', 'mod_matrix_filter_source_1_index', undefined, ink, 'm')}
+        {@render modKnob('LP Mod Amt 2', '2', 'Filter Mod 2', 'mod_matrix_filter_source_2_index', undefined, ink, 'm')}
+      </FaceSection>
+    </FaceGrid>
+  </BoardTile>
 {:else if page === 'envelopes'}
   <!-- Each envelope as Live draws it (ADR-514), its stages dragged on the
        picture and its small knobs under it. Env 2's switch to Cyc trades
        the picture for the cycling envelope's rate mode and knobs. -->
-  <FaceGrid sections={[4, 5]}>
-    <FaceSection span={4}>
-      {#snippet head()}{@render back()}<span class="sub" style="color: {ink.primary};">Env 1 (Amp)</span>{/snippet}
-      <div class="face-span-all"><EnvelopeGraph {params} ink={ink.primary} names={{ attack: 'Env 1 Attack', decay: 'Env 1 Decay', sustain: 'Env 1 Sustain', release: 'Env 1 Release' }} /></div>
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={5}>
-      {#snippet head()}<span class="sub" style="color: {ink.primary};">Env 2</span>{/snippet}
-      {@render tab('Env 2 Cyc On', ['Env', 'Cyc'])}
-      {#if env2Cyc}
-        {@render tab('Cyc Env Mode', RATE_MODES)}
-        {@render knob(cycRate, step('Cyc Env Mode') === 3 ? 'Sync' : 'Rate', step('Cyc Env Mode') === 3 ? 22 : undefined)}
-        {@render knob('Cyc Env Tilt', 'Tilt')}
-        {@render knob('Cyc Env Hold', 'Hold')}
-      {:else}
-        <div class="face-span-4"><EnvelopeGraph {params} ink={ink.primary} names={{ attack: 'Env 2 Attack', decay: 'Env 2 Decay', sustain: 'Env 2 Sustain', release: 'Env 2 Release' }} /></div>
-      {/if}
-    </FaceSection>
-  </FaceGrid>
-{:else if page === 'lfo-mod' && board}
-  <!-- On the board (ADR-512) seven columns, so Global beside it keeps every
-       caption: Rate over Amount in one column, and the rate mode a pick
-       (four cells are too narrow for a board column). -->
-  <FaceGrid sections={[4, 3]}>
-    <FaceSection span={4}>
-      {#snippet head()}{@render back()}<span class="sub" style="color: {ink.primary};">LFO</span>{/snippet}
-      <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 0.8fr) minmax(0, 1.6fr);">
-      <div class="graph"><LfoGraph {params} ink={ink.primary} shape={LFO_WAVES[step('LFO Wave')]} rate={lfoRate} amount="LFO Amount" /></div>
-      <div class="span-2 lfo-shape">
-        <div class="lfo-waves">{@render tab('LFO Wave', LFO_WAVES, { cols: 3, lfo: true })}</div>
-        <div class="lfo-mode">{@render pick('LFO Mode', RATE_MODES, 'LFO rate mode')}</div>
-        {@render sw('LFO Retrig On', 'Retrig')}
-      </div>
-      <div class="stack">
-        {@render knob(lfoRate, step('LFO Mode') === 3 ? 'Sync' : 'Rate', step('LFO Mode') === 3 ? 22 : undefined, undefined, ink, 'l')}
-        {@render knob('LFO Amount', 'Amount', undefined, undefined, ink, 'l')}
-      </div>
-      {@render modKnob('LFO Mod Amt', 'M', 'LFO Mod', 'mod_matrix_lfo_source_index', undefined, ink, 's', true)}
-      </div>
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={3}>
-      {#snippet head()}<span class="sub" style="color: {ink.primary};">Matrix</span>{/snippet}
-      {@render modKnob('Mod Matrix Amt 1', '1', 'Matrix 1', 'mod_matrix_source_1_index', 'mod_matrix_target_1_index', ink, 'm', true)}
-      {@render modKnob('Mod Matrix Amt 2', '2', 'Matrix 2', 'mod_matrix_source_2_index', 'mod_matrix_target_2_index', ink, 'm', true)}
-      {@render modKnob('Mod Matrix Amt 3', '3', 'Matrix 3', 'mod_matrix_source_3_index', 'mod_matrix_target_3_index', ink, 'm', true)}
-    </FaceSection>
-  </FaceGrid>
-{:else if page === 'global' && board}
-  <!-- On the board (ADR-512) seven columns in two sections: the voice
-       mode, one pick a row, over the voice count, then the Voice knobs;
-       Play beside Output. -->
-  <FaceGrid sections={[4, 3]}>
-    <FaceSection span={4}>
-      {#snippet head()}{@render back()}<span class="sub" style="color: {ink.primary};">Voice</span>{/snippet}
-      <div class="stack">
-        <div class="voice-mode">
-          <ScrubTabs
-            options={VOICE_MODES}
-            selected={VOICE_MODES.findIndex((o) => o.value === prop('voice_mode_index'))}
-            onSelect={(_, o) => setProp('voice_mode_index', o.value)}
-            cols={1}
-            tint={ink.primary}
-            label={(o) => o.label}
-            class="h-full"
-            style="--scrub-font-size: 0.75rem; --scrub-font-weight: 500; --scrub-padding: 0 0.25rem;"
-          />
+  <BoardTile title="Envelopes" ink={ink.primary}>
+    <FaceGrid sections={[4, 5]}>
+      <FaceSection span={4}>
+        {#snippet head()}{@render sub('Env 1 · Amp')}{/snippet}
+        <div class="face-span-all"><EnvelopeGraph {params} ink={ink.primary} names={{ attack: 'Env 1 Attack', decay: 'Env 1 Decay', sustain: 'Env 1 Sustain', release: 'Env 1 Release' }} /></div>
+      </FaceSection>
+      <FaceSeam ink={ink.primary} />
+      <FaceSection span={5}>
+        {#snippet head()}{@render sub('Env 2')}{/snippet}
+        {@render tab('Env 2 Cyc On', ['Env', 'Cyc'])}
+        {#if env2Cyc}
+          {@render tab('Cyc Env Mode', RATE_MODES)}
+          {@render knob(cycRate, step('Cyc Env Mode') === 3 ? 'Sync' : 'Rate', step('Cyc Env Mode') === 3 ? 22 : undefined)}
+          {@render knob('Cyc Env Tilt', 'Tilt')}
+          {@render knob('Cyc Env Hold', 'Hold')}
+        {:else}
+          <div class="face-span-4"><EnvelopeGraph {params} ink={ink.primary} names={{ attack: 'Env 2 Attack', decay: 'Env 2 Decay', sustain: 'Env 2 Sustain', release: 'Env 2 Release' }} /></div>
+        {/if}
+      </FaceSection>
+    </FaceGrid>
+  </BoardTile>
+{:else if page === 'lfo'}
+  <!-- The LFO: its wave across the tile, rate across and amount up; its
+       nine shapes, its rate mode and Retrig; Rate over Amount; and how far
+       something else moves it. -->
+  <BoardTile title="LFO" ink={ink.primary}>
+    <FaceGrid sections={[4]} heads={false}>
+      <FaceSection span={4}>
+        <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 0.8fr) minmax(0, 1.6fr);">
+          <div class="graph"><LfoGraph {params} ink={ink.primary} shape={LFO_WAVES[step('LFO Wave')]} rate={lfoRate} amount="LFO Amount" /></div>
+          <div class="span-2 lfo-shape">
+            <div class="lfo-waves">{@render tab('LFO Wave', LFO_WAVES, { cols: 3, lfo: true })}</div>
+            <div class="lfo-mode">{@render pick('LFO Mode', RATE_MODES, 'LFO rate mode', 'Rate mode')}</div>
+            {@render sw('LFO Retrig On', 'Retrig')}
+          </div>
+          <div class="stack">
+            {@render knob(lfoRate, step('LFO Mode') === 3 ? 'Sync' : 'Rate', step('LFO Mode') === 3 ? 22 : undefined, undefined, ink, 'l')}
+            {@render knob('LFO Amount', 'Amount', undefined, undefined, ink, 'l')}
+          </div>
+          {@render modKnob('LFO Mod Amt', 'M', 'LFO Mod', 'mod_matrix_lfo_source_index', undefined, ink, 's')}
         </div>
-        <div class="voices-col">
-          <span class="sub" style="color: {ink.primary};">Voices</span>
-          <ChoicePicker options={VOICES} selected={prop('voice_count_index')} onSelect={(i) => setProp('voice_count_index', i)} label="Voices" tint={ink.primary} ghost={prop('voice_count_index') === undefined} />
+      </FaceSection>
+    </FaceGrid>
+  </BoardTile>
+{:else if page === 'matrix'}
+  <!-- Three free routes: an amount over its source and its target. -->
+  <BoardTile title="Matrix" ink={ink.primary}>
+    <FaceGrid sections={[3]} heads={false}>
+      <FaceSection span={3}>
+        {@render modKnob('Mod Matrix Amt 1', '1', 'Matrix 1', 'mod_matrix_source_1_index', 'mod_matrix_target_1_index', ink, 'm')}
+        {@render modKnob('Mod Matrix Amt 2', '2', 'Matrix 2', 'mod_matrix_source_2_index', 'mod_matrix_target_2_index', ink, 'm')}
+        {@render modKnob('Mod Matrix Amt 3', '3', 'Matrix 3', 'mod_matrix_source_3_index', 'mod_matrix_target_3_index', ink, 'm')}
+      </FaceSection>
+    </FaceGrid>
+  </BoardTile>
+{:else if page === 'global'}
+  <!-- The voice: its mode down one column over the voice count, then the
+       voice knobs; then how it plays and the output. -->
+  <BoardTile title="Global" ink={ink.primary}>
+    <FaceGrid sections={[4, 3]}>
+      <FaceSection span={4}>
+        {#snippet head()}{@render sub('Voice')}{/snippet}
+        <div class="stack">
+          <div class="voice-mode">
+            <ScrubTabs
+              options={VOICE_MODES}
+              selected={VOICE_MODES.findIndex((o) => o.value === prop('voice_mode_index'))}
+              onSelect={(_, o) => setProp('voice_mode_index', o.value)}
+              cols={1}
+              tint={ink.primary}
+              label={(o) => o.label}
+              class="h-full"
+              style="--scrub-font-size: 0.75rem; --scrub-font-weight: 500; --scrub-padding: 0 0.25rem;"
+            />
+          </div>
+          <div class="cell sw-cell" data-voice-count>
+            <ChoicePicker options={VOICES} selected={prop('voice_count_index')} onSelect={(i) => setProp('voice_count_index', i)} label="Voices" caption="Voices" tint={ink.primary} ghost={prop('voice_count_index') === undefined} />
+          </div>
         </div>
-      </div>
-      <div class="stack">{@render knob('Poly Voice Depth', 'Depth', undefined, undefined, ink, 's')}{@render knob('Thickness', 'Thick', undefined, undefined, ink, 's')}</div>
-      <div class="stack">{@render knob('Spread', 'Spread', undefined, undefined, ink, 's')}{@render knob('Glide Time', 'Glide', undefined, undefined, ink, 'm')}</div>
-      <div class="stack">{@render knob('Strength', 'Strength', undefined, undefined, ink, 's')}{@render sw('Legato On', 'Legato')}</div>
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={3}>
-      {#snippet head()}<span class="sub" style="color: {ink.primary};">Play · Output</span>{/snippet}
-      <div class="stack">{@render knob('Drift', 'Drift', undefined, undefined, ink, 's')}{@render knob('Vel > Vol', 'Vel > Vol', undefined, undefined, ink, 's')}</div>
-      <div class="stack">{@render sw('Osc Retrig On', 'Retrig')}{@render sw('Note Pitch Bend On', 'Note PB')}</div>
-      <div class="stack">{@render knob('Transpose', 'Transp', undefined, undefined, ink, 's')}{@render knob('Volume', 'Volume', undefined, undefined, ink, 'l')}</div>
-    </FaceSection>
-  </FaceGrid>
+        <div class="stack">{@render knob('Poly Voice Depth', 'Depth', undefined, undefined, ink, 's')}{@render knob('Thickness', 'Thick', undefined, undefined, ink, 's')}</div>
+        <div class="stack">{@render knob('Spread', 'Spread', undefined, undefined, ink, 's')}{@render knob('Glide Time', 'Glide', undefined, undefined, ink, 'm')}</div>
+        <div class="stack">{@render knob('Strength', 'Strength', undefined, undefined, ink, 's')}{@render sw('Legato On', 'Legato')}</div>
+      </FaceSection>
+      <FaceSeam ink={ink.primary} />
+      <FaceSection span={3}>
+        {#snippet head()}{@render sub('Play · Output')}{/snippet}
+        <div class="stack">{@render knob('Drift', 'Drift', undefined, undefined, ink, 's')}{@render knob('Vel > Vol', 'Vel > Vol', undefined, undefined, ink, 's')}</div>
+        <div class="stack">{@render sw('Osc Retrig On', 'Retrig')}{@render sw('Note Pitch Bend On', 'Note PB')}</div>
+        <div class="stack">{@render knob('Transpose', 'Transp', undefined, undefined, ink, 's')}{@render knob('Volume', 'Volume', undefined, undefined, ink, 'l')}</div>
+      </FaceSection>
+    </FaceGrid>
+  </BoardTile>
 {/if}
 </div>
 
@@ -391,6 +396,11 @@
     width: 100%;
     height: 100%;
     min-height: 0;
+    display: flex;
+  }
+  .drift-page > :global(*) {
+    flex: 1 1 0;
+    min-width: 0;
   }
   /* A column of controls sharing its height evenly. */
   .stack {
@@ -416,7 +426,19 @@
   .pad {
     min-height: 0;
   }
-  /* A mod amount: the knob takes what the choosers leave. */
+  /* The mixer: a row a source, its level, its switch and its route. */
+  .mixer {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    row-gap: var(--spacing-sm);
+    min-height: 0;
+  }
+  .mixer > :global(*) {
+    min-width: 0;
+    min-height: 0;
+  }
+  /* A mod amount: the knob takes what the fields leave. */
   .mod-cell {
     display: flex;
     flex-direction: column;
@@ -429,15 +451,14 @@
     min-height: 0;
   }
   .mod-foot {
+    flex: none;
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    height: var(--picker-h, 2.25rem);
   }
-  /* In a row of footed knobs every foot is two choosers tall, so the
-     knobs above them line up whatever each foot holds. */
-  .mod-cell.footed .mod-foot {
-    flex: none;
-    height: calc(2 * 2.25rem + 0.25rem);
+  .mod-cell.two > .mod-foot {
+    height: calc(2 * var(--picker-h, 2.25rem) + 0.25rem);
   }
   /* The LFO's shape grid over its rate mode and Retrig. */
   .lfo-shape {
@@ -463,14 +484,10 @@
   .stack > .voice-mode {
     flex: 1 1 0;
   }
-  /* On the board the voice mode stands in one column, a pick a row, over
-     the voice count. */
-  .stack > .voices-col {
+  /* A switch or a field in a stack is one touch row. */
+  .stack > :global(.sw-cell) {
     flex: none;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.25rem;
+    height: var(--height-touch);
   }
   /* A switch is one touch-height button, centred in its cell, so it lines
      up with the knob beside it rather than filling the column. */
@@ -478,25 +495,35 @@
     display: flex;
     align-items: center;
   }
+  .sw-cell > :global(*) {
+    width: 100%;
+  }
   .switch {
     width: 100%;
     height: var(--height-touch);
     font-size: 0.8125rem;
   }
-  /* The header line: the page's way back, then section names. */
-  .page-back,
+  .lamp-cell {
+    justify-content: center;
+  }
+  .switch.lamp {
+    width: var(--height-touch);
+  }
+  /* A section's column names, one over each run of columns. */
+  .col-heads {
+    flex: 1 1 auto;
+    align-self: stretch;
+    display: grid;
+    column-gap: var(--face-gutter);
+    justify-items: center;
+    align-items: center;
+    min-width: 0;
+  }
   .sub {
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-size: 0.6875rem;
+    font-weight: 600;
     line-height: 1rem;
     white-space: nowrap;
-  }
-  .page-back {
-    background: none;
-    border: 0;
-    padding: 0;
-    cursor: pointer;
-    text-decoration: underline;
-    text-underline-offset: 2px;
+    opacity: 0.8;
   }
 </style>

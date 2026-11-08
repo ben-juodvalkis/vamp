@@ -151,7 +151,7 @@
     min-height: 0;
     background: var(--surface-well);
     border: 1px solid var(--line-strong);
-    border-radius: 2px;
+    border-radius: 4px;
     overflow: hidden;
   }
   .lfo-graph.off {

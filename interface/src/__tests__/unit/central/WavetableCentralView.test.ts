@@ -132,7 +132,7 @@ describe('WavetableCentralView — its face and its own pages (ADR-510)', () => 
 	it('at full screen draws every page as a tile, writing nothing', async () => {
 		const container = await mount(true);
 		const tiles = [...container.querySelectorAll<HTMLElement>('[data-board-tile]')].map((t) => t.dataset.boardTile);
-		expect(tiles).toEqual(['osc1', 'osc2', 'filter1', 'filter2', 'amp', 'env2', 'env3', 'lfo1', 'lfo2', 'global']);
+		expect(tiles).toEqual(['osc1', 'osc2', 'sub', 'filter1', 'routing', 'filter2', 'amp', 'env2', 'env3', 'lfo1', 'lfo2', 'global']);
 		expect(paramSets()).toEqual([]);
 	});
 
@@ -142,9 +142,10 @@ describe('WavetableCentralView — its face and its own pages (ADR-510)', () => 
 		expect(tile(container, 'osc1').querySelector('[data-wavetable-choosers="1"]')).not.toBeNull();
 	});
 
-	it('a Sub control switches the Sub on first, as the panel did', async () => {
+	it('a Sub control switches the Sub on first, as the panel did (the Sub is its own tile, ADR-516)', async () => {
 		const container = await mount(true);
-		await fireEvent.click(button(el(tile(container, 'osc1'), '.panel-choice[data-param="Sub Transpose"]'), '-2'));
+		expect(container.querySelectorAll('[data-param="Sub Transpose"]')).toHaveLength(1);
+		await fireEvent.click(button(el(tile(container, 'sub'), '.panel-choice[data-param="Sub Transpose"]'), '-2'));
 		expect(paramSets()).toEqual([
 			[indexOf('Sub On'), 1],
 			[indexOf('Sub Transpose'), 2]

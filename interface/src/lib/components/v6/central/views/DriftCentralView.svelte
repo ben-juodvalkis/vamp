@@ -418,15 +418,16 @@
   let oscTab = $state<1 | 2>(1);
 
   /**
-   * Full screen (ADR-512): every page at once, in Live's signal order. The
-   * Oscillators page alone on the first row, taller, so its waveform and
-   * octave picks keep their touch height; Filter beside the Envelopes; LFO /
-   * Mod beside Global. The face's controls are all on these pages.
+   * Full screen (ADR-512, re-laid by ADR-516): every page at once as a
+   * panel, in Live's signal order. The Oscillators (with the mixer) and the
+   * pitch modulation on the first row, taller, so the waveform and octave
+   * picks keep their touch height; Filter beside the Envelopes; the LFO,
+   * the Matrix and Global. The face's controls are all on these pages.
    */
   const BOARD: readonly BoardRow[] = [
-    { tiles: [{ id: 'oscillators', cols: 10 }], weight: 1.25 },
-    { tiles: [{ id: 'filter', cols: 6 }, { id: 'envelopes', cols: 9 }] },
-    { tiles: [{ id: 'lfo-mod', cols: 7 }, { id: 'global', cols: 7 }] }
+    { tiles: [{ id: 'oscillators', cols: 9 }, { id: 'pitch-mod', cols: 2 }], weight: 1.25 },
+    { tiles: [{ id: 'filter', cols: 7 }, { id: 'envelopes', cols: 9 }] },
+    { tiles: [{ id: 'lfo', cols: 4 }, { id: 'matrix', cols: 3 }, { id: 'global', cols: 7 }] }
   ];
 
   let oscOn = $derived(oscTab === 1 ? osc1On : osc2On);
@@ -521,13 +522,10 @@
           params={panelParams}
           ink={driftInk}
           sourceInks={{ osc1: osc1Ink, osc2: osc2Ink, noise: noiseInk }}
-          onBack={() => {}}
           {filterPad}
-          {voiceModeTab}
           {waveGlyph}
           prop={deviceProp}
           setProp={setDeviceProp}
-          board
         />
       {/snippet}
     </InstrumentBoard>

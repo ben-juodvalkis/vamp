@@ -3,8 +3,10 @@
 ## Status
 **Accepted** (2026-11-07). Builds on ADR-511 (the full-screen icon),
 ADR-512/513 (an instrument's board) and ADR-514 (pictures as Live draws
-them). Interface, plus one surface allowlist row: Roar's routing mode
-reaches the rig after a Live restart.
+them). Its caption clause ("a knob's caption stands beside it ... or at
+most 5.5rem tall") is superseded by ADR-516: beside only in a cell at
+least 9rem wide. Interface, plus one surface allowlist row: Roar's routing
+mode reaches the rig after a Live restart.
 
 ## Context
 

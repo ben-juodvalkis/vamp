@@ -23,33 +23,32 @@
    * page it opens one at a time on the band, on screen at once, in rows.
    *
    * Each tile is one of the instrument's own pages, drawn by the view (the
-   * `tile` snippet) exactly as the band draws it, its face grid and its
-   * inset its own. Tiles sit edge to edge with a hairline between, so two
-   * tiles' controls are an inset, the hairline and an inset apart: the
-   * distance a seam keeps inside a page (ADR-510). A tile takes the row's
-   * width in proportion to its face columns, so columns come out near one
-   * width across a row, and a row takes the height in proportion to its
+   * `tile` snippet), usually as a `BoardTile`: a header bar naming the
+   * section over its face grid. The tiles are panels (ADR-516): each on a
+   * surface a shade off the frame's, framed by a hairline, a gap between
+   * two, so a board of a hundred knobs reads as its sections first. (Until
+   * ADR-516 the tiles met edge to edge with a hairline between, which on
+   * the dark skin was all but invisible.) A tile takes the row's width in
+   * proportion to its face columns, so columns come out near one width
+   * across a row, and a row takes the height in proportion to its
    * `weight`.
    */
   import type { Snippet } from 'svelte';
-  import SectionDivider from './SectionDivider.svelte';
 
   interface Props {
     rows: readonly BoardRow[];
     tile: Snippet<[string]>;
-    /** The hairlines' ink: the device's. */
+    /** The device's ink: the board's own tint (`--board-ink`). */
     ink?: string;
   }
 
   let { rows, tile, ink }: Props = $props();
 </script>
 
-<div class="board" data-instrument-board>
+<div class="board" data-instrument-board style={ink ? `--board-ink: ${ink};` : undefined}>
   {#each rows as row, r (r)}
-    {#if r > 0}<div class="board-rule" aria-hidden="true"><SectionDivider orientation="horizontal" {ink} /></div>{/if}
     <div class="board-row" style="flex-grow: {row.weight ?? 1};">
-      {#each row.tiles as t, i (t.id)}
-        {#if i > 0}<div class="board-seam" aria-hidden="true"><SectionDivider orientation="vertical" {ink} /></div>{/if}
+      {#each row.tiles as t (t.id)}
         <div class="board-tile" style="flex-grow: {t.cols};" data-board-tile={t.id}>{@render tile(t.id)}</div>
       {/each}
     </div>
@@ -58,16 +57,29 @@
 
 <style>
   .board {
+    /* The gap between two panels, and the board's own margin. */
+    --board-gap: 0.5rem;
+    /* A panel's surface: between the frame's ground and a well, so a
+       well (a picture, a field) still reads as sunk into it. */
+    --board-panel-bg: color-mix(in oklab, var(--surface-well) 42%, var(--central-display-default-bg));
+    --board-panel-line: var(--line);
+    --board-head-h: 2.25rem;
+    /* A pick on a board is a touch row (ChoicePicker's height). */
+    --picker-h: var(--height-touch);
     display: flex;
     flex-direction: column;
+    gap: var(--board-gap);
     width: 100%;
     height: 100%;
     min-width: 0;
     min-height: 0;
+    box-sizing: border-box;
+    padding: var(--board-gap);
   }
   .board-row {
     flex: 1 1 0;
     display: flex;
+    gap: var(--board-gap);
     min-width: 0;
     min-height: 0;
   }
@@ -77,24 +89,13 @@
     min-height: 0;
     height: 100%;
     display: flex;
+    background: var(--board-panel-bg);
+    border: 1px solid var(--board-panel-line);
+    border-radius: 6px;
+    overflow: hidden;
   }
   .board-tile > :global(*) {
     flex: 1 1 0;
     min-width: 0;
-  }
-  .board-seam {
-    flex: none;
-    width: 1px;
-    display: flex;
-  }
-  .board-rule {
-    flex: none;
-    height: 1px;
-    display: flex;
-    padding-inline: var(--central-inset);
-  }
-  .board-rule > :global(*),
-  .board-seam > :global(*) {
-    flex: 1 1 auto;
   }
 </style>
