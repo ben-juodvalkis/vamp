@@ -117,7 +117,9 @@ describe('MIDI-effect central views (ADR-478)', () => {
 		seed([midiDevice('Chord', 'MidiChord', { 1: 12, 3: 0.8, 4: 1, 5: 7, 7: 1.2, 8: 0.5, 28: 0 })]);
 		const { container, getByText } = render(ChordCentralView);
 		await tick();
-		expect(labels(container)).toEqual(['+12 st', '80 %', '100 %', '+7 st', '120 %', '50 %', 'Strum', 'Tension', 'Crescendo']);
+		// A knob is named, its value in Live's words under the name (ADR-517; the values were the titles).
+		expect(labels(container).slice(0, 6)).toEqual(['Shift +12 st', 'Velocity 80 %', 'Chance 100 %', 'Shift +7 st', 'Velocity 120 %', 'Chance 50 %']);
+		expect(labels(container).slice(6).map((l) => l?.split(' ')[0])).toEqual(['Strum', 'Tension', 'Crescendo']);
 		await fireEvent.click(getByText('Scale'));
 		expect(sendMock.mock.calls.find(([addr, args]) =>
 			addr === '/looping/v3/param/set' && (args as unknown[])[0] === `${DEVICE}/params/28`
@@ -126,6 +128,6 @@ describe('MIDI-effect central views (ADR-478)', () => {
 		seed([midiDevice('Chord', 'MidiChord', { 1: 12, 2: 3, 28: 1 })]);
 		const scaled = render(ChordCentralView);
 		await tick();
-		expect(labels(scaled.container)[0]).toBe('+3 sd');
+		expect(labels(scaled.container)[0]).toBe('Shift +3 sd');
 	});
 });
