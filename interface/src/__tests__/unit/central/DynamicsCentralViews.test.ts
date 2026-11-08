@@ -57,10 +57,11 @@ describe('the dynamics views, one per device (ADR-478)', () => {
 		expect(container.querySelector('.gate-body')).not.toBeNull();
 	});
 
-	it('Multiband: Threshold and Output; the Ratio is its chain cell (2026-10-26)', () => {
+	it('Multiband: the Mid band’s display, then Amount and Output (2026-11-08); no Ratio knob, that is its chain cell', () => {
 		const { container } = render(MultibandCentralView);
-		expect(container.querySelectorAll('.mb-slider')).toHaveLength(2);
-		expect(container.textContent).toContain('Threshold');
+		expect(container.querySelector('[data-band-display="Mid"]')).not.toBeNull();
+		const knobs = [...container.querySelectorAll<HTMLElement>('.mb-knob')].map((k) => k.dataset.param);
+		expect(knobs).toEqual(['Amount', 'Output']);
 		expect(container.textContent).not.toContain('Ratio');
 	});
 

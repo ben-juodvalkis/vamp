@@ -3,18 +3,19 @@
 
   /**
    * Multiband Dynamics at full screen (ADR-515), as Live lays it: a row a
-   * band, High over Mid over Low, each its switch (and crossover), its
-   * Below and Above blocks, its gains (Input, Output) and its times
-   * (Attack over Release); then the device's globals and its sidechain.
+   * band, High over Mid over Low, each a panel with its switch on its bar
+   * (ADR-516), its Below and Above blocks, its gains (Input, Output) and
+   * its times (Attack over Release); then the device's globals with the
+   * two crossovers, and its sidechain.
    * Sized by rank, as Live's panel ranks them (manual 29.26): the display
    * is the device and takes the width; the gains are medium, the times,
    * which Live shows as numbers, small; of the globals Amount leads.
    */
   export const MULTIBAND_BOARD: readonly BoardRow[] = [
-    { tiles: [{ id: 'band-High', cols: 11 }], weight: 1 },
-    { tiles: [{ id: 'band-Mid', cols: 11 }], weight: 1 },
-    { tiles: [{ id: 'band-Low', cols: 11 }], weight: 1 },
-    { tiles: [{ id: 'global', cols: 4 }, { id: 'sidechain', cols: 3 }], weight: 0.7 }
+    { tiles: [{ id: 'band-High', cols: 10 }], weight: 1 },
+    { tiles: [{ id: 'band-Mid', cols: 10 }], weight: 1 },
+    { tiles: [{ id: 'band-Low', cols: 10 }], weight: 1 },
+    { tiles: [{ id: 'global', cols: 6 }, { id: 'sidechain', cols: 2 }], weight: 0.72 }
   ];
 </script>
 
@@ -29,6 +30,7 @@
   import FaceGrid from '../../FaceGrid.svelte';
   import FaceSection from '../../FaceSection.svelte';
   import FaceSeam from '../../FaceSeam.svelte';
+  import BoardTile from '../../BoardTile.svelte';
   import BandDynamicsDisplay from './BandDynamicsDisplay.svelte';
   import type { PanelParams } from '../panel/usePanelParams.svelte';
   import type { DeviceColorScheme } from '$lib/config/devicePresets';
@@ -44,8 +46,7 @@
   const lo = (p: string) => params.range(p)?.min ?? 0;
   const hi = (p: string) => params.range(p)?.max ?? 1;
   const isOn = (p: string) => params.has(p) && (params.raw(p) ?? 0) >= 0.5;
-  /** The crossover a band's row carries: High the upper, Low the lower; Mid none. */
-  const CROSSOVER: Record<string, string | undefined> = { High: 'Mid-High Crossover', Low: 'Low-Mid Crossover' };
+  const flip = (p: string) => params.write(p, isOn(p) ? lo(p) : hi(p));
 </script>
 
 <!-- A knob bound by name; a range either side of zero draws from zero. -->
@@ -92,54 +93,56 @@
 
 <div class="mb-tile" data-multiband-tile={page}>
 {#if page.startsWith('band-')}
+  <!-- A band (ADR-516): its switch on its bar; its display across seven
+       columns, its gains and its times beside it. The crossovers are on
+       the Global tile, between no band in particular. -->
   {@const band = page.slice(5) as 'Low' | 'Mid' | 'High'}
   {@const active = `Band Activator (${band})`}
-  {@const crossover = CROSSOVER[band]}
-  <FaceGrid sections={[1, 7, 2, 1]}>
-    <FaceSection span={1}>
-      {#snippet head()}{@render title(band)}{/snippet}
-      {#if crossover}
-        <div class="stack">{@render sw(active, band)}<div class="grow">{@render knob(crossover, 'X-Over', 'm')}</div></div>
-      {:else}
-        {@render sw(active, band)}
-      {/if}
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={7}>
-      {#snippet head()}{@render title('Below · Above')}{/snippet}
-      <div class="face-span-all"><BandDynamicsDisplay {params} {band} ink={ink.primary} sw={active} /></div>
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={2}>
-      {#snippet head()}{@render title('Gain')}{/snippet}
-      {@render knob(`Input Gain (${band})`, 'Input', 'm', active)}
-      {@render knob(`Output Gain (${band})`, 'Output', 'm', active)}
-    </FaceSection>
-    <FaceSeam ink={ink.primary} />
-    <FaceSection span={1}>
-      {#snippet head()}{@render title('Time')}{/snippet}
-      <div class="stack">{@render knob(`Attack Time (${band})`, 'Attack', 's', active)}{@render knob(`Release Time (${band})`, 'Release', 's', active)}</div>
-    </FaceSection>
-  </FaceGrid>
+  <BoardTile title="{band} Band" ink={ink.primary} on={isOn(active)} onToggle={() => flip(active)} switchParam={active} switchDisabled={!params.has(active)}>
+    <FaceGrid sections={[7, 2, 1]}>
+      <FaceSection span={7}>
+        {#snippet head()}{@render title('Below · Above')}{/snippet}
+        <div class="face-span-all"><BandDynamicsDisplay {params} {band} ink={ink.primary} sw={active} /></div>
+      </FaceSection>
+      <FaceSeam ink={ink.primary} />
+      <FaceSection span={2}>
+        {#snippet head()}{@render title('Gain')}{/snippet}
+        {@render knob(`Input Gain (${band})`, 'Input', 'm', active)}
+        {@render knob(`Output Gain (${band})`, 'Output', 'm', active)}
+      </FaceSection>
+      <FaceSeam ink={ink.primary} />
+      <FaceSection span={1}>
+        {#snippet head()}{@render title('Time')}{/snippet}
+        <div class="stack">{@render knob(`Attack Time (${band})`, 'Attack', 's', active)}{@render knob(`Release Time (${band})`, 'Release', 's', active)}</div>
+      </FaceSection>
+    </FaceGrid>
+  </BoardTile>
 {:else if page === 'global'}
-  <FaceGrid sections={[4]}>
-    <FaceSection span={4}>
-      {#snippet head()}{@render title('Global')}{/snippet}
-      {@render knob('Amount', 'Amount', 'l')}
-      {@render knob('Time Scaling', 'Time', 'm')}
-      {@render knob('Output', 'Output', 'm')}
-      <div class="stack">{@render sw('Soft Knee On/Off', 'Soft Knee')}{@render sw('Peak/RMS Mode', 'Peak')}</div>
-    </FaceSection>
-  </FaceGrid>
+  <!-- The device's globals, Amount the lead, and the two crossovers. -->
+  <BoardTile title="Global" ink={ink.primary}>
+    <FaceGrid sections={[4, 2]} heads={false}>
+      <FaceSection span={4}>
+        {@render knob('Amount', 'Amount', 'l')}
+        {@render knob('Time Scaling', 'Time', 'm')}
+        {@render knob('Output', 'Output', 'm')}
+        <div class="stack">{@render sw('Soft Knee On/Off', 'Soft Knee')}{@render sw('Peak/RMS Mode', 'Peak')}</div>
+      </FaceSection>
+      <FaceSeam ink={ink.primary} />
+      <FaceSection span={2}>
+        {@render knob('Low-Mid Crossover', 'Low/Mid', 'm')}
+        {@render knob('Mid-High Crossover', 'Mid/High', 'm')}
+      </FaceSection>
+    </FaceGrid>
+  </BoardTile>
 {:else if page === 'sidechain'}
-  <FaceGrid sections={[3]}>
-    <FaceSection span={3}>
-      {#snippet head()}{@render title('Sidechain')}{/snippet}
-      {@render sw('S/C On', 'S/C')}
-      {@render knob('S/C Gain', 'Gain', 's', 'S/C On')}
-      {@render knob('S/C Mix', 'Mix', 's', 'S/C On')}
-    </FaceSection>
-  </FaceGrid>
+  <BoardTile title="Sidechain" ink={ink.primary} on={isOn('S/C On')} onToggle={() => flip('S/C On')} switchParam="S/C On" switchDisabled={!params.has('S/C On')}>
+    <FaceGrid sections={[2]} heads={false}>
+      <FaceSection span={2}>
+        {@render knob('S/C Gain', 'Gain', 'm', 'S/C On')}
+        {@render knob('S/C Mix', 'Mix', 'm', 'S/C On')}
+      </FaceSection>
+    </FaceGrid>
+  </BoardTile>
 {/if}
 </div>
 
@@ -148,6 +151,11 @@
     width: 100%;
     height: 100%;
     min-height: 0;
+    display: flex;
+  }
+  .mb-tile > :global(*) {
+    flex: 1 1 0;
+    min-width: 0;
   }
   .stack {
     display: flex;
@@ -158,10 +166,6 @@
     min-width: 0;
   }
   .stack > :global(*) {
-    flex: 1 1 0;
-    min-height: 0;
-  }
-  .stack > .grow {
     flex: 1 1 0;
     min-height: 0;
   }

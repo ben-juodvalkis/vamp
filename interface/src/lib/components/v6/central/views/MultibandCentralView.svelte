@@ -2,11 +2,16 @@
   /**
    * MultibandCentralView — the Multiband Dynamics' view (slot `ott`).
    *
-   * The Mid band's Below Threshold and the device's Output, two value
-   * boxes side by side. The Below Ratio is the device's chain cell, so it
-   * left this view (user, 2026-10-26; three boxes, stacked before ADR-477). A ghost loads it on the first
-   * drag, inserted by name with the user's own default. Indices and rails
-   * live in `multibandParams.ts`.
+   * The band (2026-11-08): the Mid band as Live draws it, its Below and
+   * Above blocks on a dB scale (`multiband/BandDynamicsDisplay.svelte`:
+   * a threshold's edge drags across, a block's ratio up and down), across
+   * six columns, then the device's Amount and Output, large. Until then
+   * the face was one value box, the Mid band's Below Threshold, beside an
+   * Output knob, most of the band empty; the Below Ratio alone is the
+   * device's chain cell (user, 2026-10-26), and the display moves it only
+   * as one of the band's four handles. Every parameter binds by Live's
+   * name (`usePanelParams`); a ghost draws the face at Live's defaults and
+   * the first touch loads it.
    *
    * Split out of the shared dynamics view (`SquashCentralView`) when the
    * FX chain overview gave every device its own view (ADR-478).
@@ -24,28 +29,47 @@
   import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
   import InstrumentBoard from '../InstrumentBoard.svelte';
   import MultibandBoardTile, { MULTIBAND_BOARD } from './multiband/MultibandBoardTile.svelte';
+  import BandDynamicsDisplay from './multiband/BandDynamicsDisplay.svelte';
   import { usePanelParams } from './panel/usePanelParams.svelte';
   import FaceGrid from '../FaceGrid.svelte';
   import FaceSection from '../FaceSection.svelte';
   import FaceSeam from '../FaceSeam.svelte';
   import PanelEyebrow from './panel/PanelEyebrow.svelte';
-  import {
-    MB_BELOW_THRESHOLD_MID,
-    MB_THRESHOLD_MIN,
-    MB_THRESHOLD_MAX,
-    MB_OUTPUT,
-    MB_OUTPUT_MIN,
-    MB_OUTPUT_MAX
-  } from '../../device-panel/multibandParams';
 
   const multiband = useFxGridSlot('ott');
-  /** The board binds by Live's names (ADR-515). */
+  /** The face and the board bind by Live's names (ADR-515). */
   const params = usePanelParams(() => multiband.device ?? undefined);
 
-  // A ghost draws Live's factory defaults (the dump's `default`s).
-  let mbThreshold = $derived(multiband.paramValue(MB_BELOW_THRESHOLD_MID) ?? -60);
-  let mbOutput = $derived(multiband.paramValue(MB_OUTPUT) ?? 0);
+  const MID_ON = 'Band Activator (Mid)';
+  const lo = (p: string) => params.range(p)?.min ?? 0;
+  const hi = (p: string) => params.range(p)?.max ?? 1;
 </script>
+
+<!-- A knob bound by name, large: a range either side of zero draws from zero. -->
+{#snippet knob(param: string, title: string, fallback: number)}
+  {@const l = lo(param)}
+  {@const h = hi(param)}
+  {@const bipolar = l < 0 && h > 0}
+  <div class="mb-knob" data-param={param}>
+    <DeviceSlider
+      value={params.raw(param) ?? fallback}
+      {title}
+      face="knob"
+      knobSize="l"
+      min={l}
+      max={h}
+      centerOrigin={bipolar}
+      centerValue={bipolar ? 0 : undefined}
+      orientation="vertical"
+      labelSize="small"
+      isGhost={multiband.isGhost}
+      color={multiband.color}
+      readout={params.display(param)}
+      onTap={() => multiband.loadIfGhost()}
+      onInteraction={(v) => params.write(param, v)}
+    />
+  </div>
+{/snippet}
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
 <div class="mb-central-layout relative" data-device="multiband">
@@ -56,66 +80,47 @@
   {/snippet}
 </InstrumentBoard>
 {:else}
-<!-- One face grid (ADR-510): Threshold over two columns, Output one. -->
-<FaceGrid sections={[2, 1]}>
-  <FaceSection span={2}>
+<!-- One face grid (ADR-510): the Mid band's display over six columns,
+     Amount and Output a column each. -->
+<FaceGrid sections={[6, 2]}>
+  <FaceSection span={6}>
   {#snippet head()}<PanelEyebrow title="Mid Band" color={multiband.color.primary} />{/snippet}
-  <div class="mb-slider face-span-2" class:slot-ghost={multiband.isGhost}>
-    <DeviceSlider
-      value={mbThreshold}
-      title="Threshold"
-      icon="threshold"
-      orientation="vertical"
-      min={MB_THRESHOLD_MIN}
-      max={MB_THRESHOLD_MAX}
-      isGhost={multiband.isGhost}
-      color={multiband.color}
-      readout={multiband.paramDisplay(MB_BELOW_THRESHOLD_MID)}
-      onTap={() => multiband.loadIfGhost()}
-      onInteraction={(value) => multiband.sendParam(MB_BELOW_THRESHOLD_MID, value)}
-    />
+  <!-- A ghost's first touch loads the device (the display has no tap of its own). -->
+  <div class="mb-display face-span-all" class:slot-ghost={multiband.isGhost} onpointerdowncapture={() => multiband.loadIfGhost()}>
+    <BandDynamicsDisplay {params} band="Mid" ink={multiband.color.primary} sw={MID_ON} />
   </div>
   </FaceSection>
-  <FaceSeam />
+  <FaceSeam ink={multiband.color.primary} />
 
-  <FaceSection span={1}>
-  {#snippet head()}<PanelEyebrow title="Output" color={multiband.color.primary} />{/snippet}
-  <div class="mb-slider" class:slot-ghost={multiband.isGhost}>
-    <DeviceSlider
-      value={mbOutput}
-      title="Output"
-      face="knob"
-      knobSize="l"
-      icon="output"
-      orientation="vertical"
-      min={MB_OUTPUT_MIN}
-      max={MB_OUTPUT_MAX}
-      centerOrigin={true}
-      centerValue={0}
-      isGhost={multiband.isGhost}
-      color={multiband.color}
-      readout={multiband.paramDisplay(MB_OUTPUT)}
-      onTap={() => multiband.loadIfGhost()}
-      onInteraction={(value) => multiband.sendParam(MB_OUTPUT, value)}
-    />
-  </div>
+  <FaceSection span={2}>
+  {#snippet head()}<PanelEyebrow title="Global" color={multiband.color.primary} />{/snippet}
+  {@render knob('Amount', 'Amount', 1)}
+  {@render knob('Output', 'Output', 0)}
   </FaceSection>
 </FaceGrid>
 {/if}
 </div>
 
 <style>
-  /* threshold | output */
-  /* The threshold a set rides as a box, the output set once as a knob
-     (ADR-509), on the FaceGrid (ADR-510). */
+  /* The Mid band's picture, then Amount and Output (ADR-509: set once, as
+     knobs), on the FaceGrid (ADR-510). */
   .mb-central-layout {
     height: 100%;
     width: 100%;
     min-height: 0;
   }
 
-  .mb-slider {
+  .mb-display,
+  .mb-knob {
     min-width: 0;
     min-height: 0;
+    height: 100%;
+  }
+  .mb-display {
+    display: flex;
+  }
+  .mb-display > :global(*) {
+    flex: 1 1 0;
+    min-width: 0;
   }
 </style>

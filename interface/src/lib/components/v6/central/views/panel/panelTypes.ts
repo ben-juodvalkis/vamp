@@ -151,11 +151,15 @@ export interface PanelBoardRow {
 export interface PanelBoardTile {
 	/** The tile's name, `data-board-tile`. */
 	id: string;
-	/**
-	 * The page it shows, named on its first section's header line, as a
-	 * page's way back is on the band but plain: there is no page to leave.
-	 */
+	/** The section it shows, named on the tile's header bar (ADR-516). */
 	title?: string;
+	/**
+	 * The section's on/off parameter, drawn as the switch on the tile's bar
+	 * (ADR-516): the Filter's, the LFO's, the mallet's. Counted among the
+	 * board's parameters (`boardSwitches`), so the groups need no On of
+	 * their own.
+	 */
+	switchParam?: string;
 	sections: readonly PanelBoardSection[];
 	/**
 	 * How wide its columns come out against the row's others, px at the
@@ -369,7 +373,9 @@ export function tabsByPosition(tabs: readonly PanelTab[]): boolean {
  * the end), and of those the one whose cells draw the largest size at its
  * full diameter. A row count's size is at most what its column stacks
  * (`knobSizeFor`), or `ceiling`. Ties go to one row (knobs in a row on one
- * line, as Drift's pages), then to the roomier cell.
+ * line, as Drift's pages), then to a grid with no empty cell (three knobs
+ * over two columns stack three high, names beside, rather than two and an
+ * orphan: Operator's groups, 2026-11-08), then to the roomier cell.
  */
 export function faceKnobFit(
 	count: number,
@@ -380,7 +386,7 @@ export function faceKnobFit(
 	ceiling?: KnobSize
 ): { knobCols: number; rows: number; size: KnobSize } {
 	const most = Math.max(1, Math.min(count, cols));
-	let best = { knobCols: most, rows: Math.ceil(count / most), size: ceiling ?? knobSizeFor(Math.ceil(count / most)), px: -1, room: -Infinity };
+	let best = { knobCols: most, rows: Math.ceil(count / most), size: ceiling ?? knobSizeFor(Math.ceil(count / most)), px: -1, full: false, room: -Infinity };
 	for (let k = 1; k <= most; k++) {
 		if (cols % k && k !== count) continue;
 		const rows = Math.ceil(count / k);
@@ -389,12 +395,14 @@ export function faceKnobFit(
 		const h = (height - gap * (rows - 1)) / rows;
 		const size = knobSizeFits(ceiling ?? knobSizeFor(rows), w, h);
 		const px = knobDiameter(size, w, h) >= KNOB_PX[size] - 0.5 ? KNOB_PX[size] : 0;
+		const full = count % k === 0;
 		const room = Math.min(w, h);
 		const better =
 			px > best.px ||
 			(px === best.px && rows === 1 && best.rows > 1) ||
-			(px === best.px && (rows === 1) === (best.rows === 1) && room > best.room + 0.5);
-		if (better) best = { knobCols: k, rows, size, px, room };
+			(px === best.px && (rows === 1) === (best.rows === 1) && full && !best.full) ||
+			(px === best.px && (rows === 1) === (best.rows === 1) && full === best.full && room > best.room + 0.5);
+		if (better) best = { knobCols: k, rows, size, px, full, room };
 	}
 	return { knobCols: best.knobCols, rows: best.rows, size: best.size };
 }
@@ -558,9 +566,12 @@ export function boardControls(panel: InstrumentPanel): PanelControl[] {
 	);
 }
 
-/** The on/off parameters a board's sections and matrix rows switch, and its slots' parameters. */
+/** The on/off parameters a board's tiles, sections and matrix rows switch, and its slots' parameters. */
 export function boardSwitches(panel: InstrumentPanel): string[] {
-	return boardSections(panel).flatMap((s) =>
+	const tiles = (panel.board?.rows ?? []).flatMap((r) => r.tiles);
+	return tiles
+		.flatMap((t) => (t.switchParam ? [t.switchParam] : []))
+		.concat(boardSections(panel).flatMap((s) =>
 		s.kind === 'group'
 			? s.group.switchParam
 				? [s.group.switchParam]
@@ -568,7 +579,7 @@ export function boardSwitches(panel: InstrumentPanel): string[] {
 			: s.kind === 'matrix'
 				? s.matrix.rows.flatMap((r) => (r.switchParam ? [r.switchParam] : []))
 				: [...s.params, ...(s.below ?? []).flatMap((b) => (b.group.switchParam ? [b.group.switchParam] : []))]
-	);
+	));
 }
 
 /**

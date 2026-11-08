@@ -284,6 +284,7 @@ const COLLISION_BOARD: PanelBoard = {
 			tiles: [
 				{
 					id: 'resonators',
+					title: 'Resonators',
 					sections: [
 						{
 							kind: 'matrix',
@@ -314,6 +315,7 @@ const COLLISION_BOARD: PanelBoard = {
 			tiles: [
 				{
 					id: 'resonators-mod',
+					title: 'Resonators · Mix, Velocity, Key',
 					sections: [
 						{
 							kind: 'matrix',
@@ -352,6 +354,7 @@ const COLLISION_BOARD: PanelBoard = {
 			tiles: [
 				{
 					id: 'lfos',
+					title: 'LFOs',
 					sections: [
 						{
 							kind: 'matrix',
@@ -390,6 +393,9 @@ const COLLISION_BOARD: PanelBoard = {
 			tiles: [
 				{
 					id: 'mallet',
+					title: 'Mallet',
+					// Its switch is on the tile's bar (ADR-516).
+					switchParam: 'Mallet On/Off',
 					sections: [
 						{
 							kind: 'group',
@@ -398,7 +404,6 @@ const COLLISION_BOARD: PanelBoard = {
 								title: 'Mallet',
 								switchParam: 'Mallet On/Off',
 								controls: [
-									{ kind: 'switch', param: 'Mallet On/Off', title: 'On' },
 									box('Mallet Volume', 'Volume', 'l'),
 									box('Mallet Stiffness', 'Stiffness', 'l'),
 									box('Mallet Noise Amount', 'Noise', 's'),
@@ -428,6 +433,9 @@ const COLLISION_BOARD: PanelBoard = {
 				},
 				{
 					id: 'noise',
+					title: 'Noise',
+					// Its switch is on the tile's bar (ADR-516).
+					switchParam: 'Noise On/Off',
 					sections: [
 						{
 							kind: 'group',
@@ -436,7 +444,6 @@ const COLLISION_BOARD: PanelBoard = {
 								title: 'Noise',
 								switchParam: 'Noise On/Off',
 								controls: [
-									{ kind: 'switch', param: 'Noise On/Off', title: 'On' },
 									{ kind: 'choice', param: 'Noise Filter Type', title: 'Filter', options: ['LP', 'HP', 'BP', 'LP+HP'] },
 									box('Noise Volume', 'Volume', 'l'),
 									box('Noise Filter Freq', 'Freq', 'm'),
@@ -475,6 +482,7 @@ const COLLISION_BOARD: PanelBoard = {
 			tiles: [
 				{
 					id: 'midi',
+					title: 'MIDI',
 					sections: [
 						{
 							kind: 'matrix',
@@ -500,6 +508,7 @@ const COLLISION_BOARD: PanelBoard = {
 				},
 				{
 					id: 'global',
+					title: 'Global',
 					sections: [
 						{
 							kind: 'group',

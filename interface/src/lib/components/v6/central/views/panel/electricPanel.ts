@@ -1,10 +1,9 @@
 /**
  * Electric (`LoungeLizard`) in Live's arrangement (ADR-487).
  *
- * Live's panel is four sections of two knobs each, Hammer · Fork ·
- * Damper/Pickup · Global, over a display showing the clicked section's
- * detail; here the four are the frame and each eyebrow opens that detail
- * as a page. Names are Live's (docs/reference/instruments/Electric.md):
+ * Live's panel is five sections, Hammer · Fork · Damper · Pickup · Global,
+ * over a display showing the clicked section's detail; here the five are
+ * the frame, two rows of knobs each, and the pages hold the detail. Names are Live's (docs/reference/instruments/Electric.md):
  * the old view wrote these same parameters by index (8, 16, 20, 24), with
  * comments that named two of them wrongly.
  */
@@ -154,23 +153,31 @@ const groups = (id: string, titles?: readonly string[]) =>
 const BOARD: PanelBoard = {
 	rows: [
 		{ tiles: [{ id: 'hammer', title: 'Hammer', sections: groups('hammer') }] },
-		{ tiles: [{ id: 'fork', title: 'Fork', sections: groups('fork') }, { id: 'damper', sections: groups('damper-pickup', ['Damper']) }] },
-		{ tiles: [{ id: 'pickup', sections: groups('damper-pickup', ['Pickup']) }, { id: 'global', title: 'Global', sections: groups('global') }] }
+		{ tiles: [{ id: 'fork', title: 'Fork', sections: groups('fork') }, { id: 'damper', title: 'Damper', sections: groups('damper-pickup', ['Damper']) }] },
+		{ tiles: [{ id: 'pickup', title: 'Pickup', sections: groups('damper-pickup', ['Pickup']) }, { id: 'global', title: 'Global', sections: groups('global') }] }
 	]
 };
 
 export const ELECTRIC_PANEL: InstrumentPanel = {
 	// Knobs, but an envelope's stages stay boxes: their heights draw it (ADR-509).
 	boxFace: 'knob',
+	// Live's five sections (2026-11-08; four of two large knobs until then,
+	// which left the band's height empty above and below each row): the
+	// hammer and the fork two columns of two rows of medium knobs, the
+	// damper one column, the pickup its distance over its symmetry beside
+	// its model, and Global's volume over its voices. The pages hold the rest.
 	frame: [
 		{
 			kind: 'group',
 			group: {
 				title: 'Hammer',
 				page: 'hammer',
+				columns: 2,
 				controls: [
 					{ kind: 'box', param: 'M Stiffness', title: 'Stiffness' },
-					{ kind: 'box', param: 'Noise Amount', title: 'Noise' }
+					{ kind: 'box', param: 'M Force', title: 'Force' },
+					{ kind: 'box', param: 'Noise Amount', title: 'Noise' },
+					{ kind: 'box', param: 'Noise Decay', title: 'Decay' }
 				]
 			}
 		},
@@ -179,18 +186,36 @@ export const ELECTRIC_PANEL: InstrumentPanel = {
 			group: {
 				title: 'Fork',
 				page: 'fork',
+				columns: 2,
 				controls: [
 					{ kind: 'box', param: 'F Tine Vol', title: 'Tine' },
-					{ kind: 'box', param: 'F Tone Vol', title: 'Tone' }
+					{ kind: 'box', param: 'F Tone Vol', title: 'Tone' },
+					{ kind: 'box', param: 'F Tine Color', title: 'Color' },
+					{ kind: 'box', param: 'F Tine Decay', title: 'Decay' }
 				]
 			}
 		},
 		{
 			kind: 'group',
 			group: {
-				title: 'Damper / Pickup',
+				title: 'Damper',
 				page: 'damper-pickup',
+				columns: 1,
 				controls: [
+					{ kind: 'box', param: 'Damp Amount', title: 'Amount' },
+					{ kind: 'box', param: 'Damp Tone', title: 'Tone' }
+				]
+			}
+		},
+		{
+			kind: 'group',
+			group: {
+				title: 'Pickup',
+				page: 'damper-pickup',
+				// Distance over Symmetry, the model's R | W beside them (`frameColumns`).
+				columns: 2,
+				controls: [
+					{ kind: 'box', param: 'P Distance', title: 'Distance' },
 					{ kind: 'box', param: 'P Symmetry', title: 'Sym' },
 					{ kind: 'choice', param: 'Pickup Model', options: ['R', 'W'] }
 				]
@@ -201,7 +226,12 @@ export const ELECTRIC_PANEL: InstrumentPanel = {
 			group: {
 				title: 'Global',
 				page: 'global',
-				controls: [{ kind: 'box', param: 'Volume', title: 'Volume' }]
+				// Volume over Voices, as the other columns stack two.
+				columns: 1,
+				controls: [
+					{ kind: 'box', param: 'Volume', title: 'Volume' },
+					{ kind: 'step', param: 'Voices', title: 'Voices', labels: VOICES }
+				]
 			}
 		}
 	],

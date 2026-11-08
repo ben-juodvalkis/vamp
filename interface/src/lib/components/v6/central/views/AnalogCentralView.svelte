@@ -274,17 +274,17 @@
   </svg>
 {/snippet}
 
-<!-- A knob on the face: medium, no caption (its rows are ~100px, a
-     captioned medium knob needs ~126), its mark or glyph saying which. -->
-{#snippet faceKnob(o: { value: number; title: string; mark?: string; icon?: ControlGlyphName; ink: typeof analogInk; ghost?: boolean; readout?: string; bipolar?: boolean; write: (v: number) => void })}
+<!-- A knob on the face: small, its whole name under it (2026-11-08). Its
+     rows are ~100px, which holds a small knob and its caption (48 + 44) but
+     not a medium one's (70 + 50); until then the knobs were medium with a
+     three-letter mark inside ("Lvl", "Syn"), the one face that abbreviated. -->
+{#snippet faceKnob(o: { value: number; title: string; icon?: ControlGlyphName; ink: typeof analogInk; ghost?: boolean; readout?: string; bipolar?: boolean; write: (v: number) => void })}
   <div class="r knob-cell" data-knob={o.title}>
     <DeviceSlider
       value={o.value}
       title={o.title}
       face="knob"
-      knobSize="m"
-      knobCaption={false}
-      knobMark={o.mark}
+      knobSize="s"
       icon={o.icon}
       orientation="vertical"
       labelSize="small"
@@ -310,10 +310,7 @@
           ink={analogInk}
           voiceInks={{ 1: sourceInk(1), 2: sourceInk(2) }}
           {noiseInk}
-          onOpen={() => {}}
-          onBack={() => {}}
           {shapeGlyph}
-          board
         />
       {/snippet}
     </InstrumentBoard>
@@ -420,8 +417,8 @@
               {#snippet item(value)}{value === 1 ? 'Sync' : 'Sub'}{/snippet}
             </ScrubTabs>
           </div>
-          {@render faceKnob({ value: norm(p.subSync, 0), title: oscMode === 1 ? 'Sync' : 'Sub', mark: oscMode === 1 ? 'Syn' : 'Sub', ink: voiceInk, ghost: !oscOn, readout: display(p.subSync), write: (v) => writeOsc(p.subSync, v) })}
-          {@render faceKnob({ value: norm(p.pw, 0.5), title: 'PW', mark: 'PW', ink: voiceInk, ghost: !oscOn || shape !== ANALOG_RECT, readout: display(p.pw), write: (v) => writeOsc(p.pw, v) })}
+          {@render faceKnob({ value: norm(p.subSync, 0), title: oscMode === 1 ? 'Sync' : 'Sub', ink: voiceInk, ghost: !oscOn, readout: display(p.subSync), write: (v) => writeOsc(p.subSync, v) })}
+          {@render faceKnob({ value: norm(p.pw, 0.5), title: 'PW', ink: voiceInk, ghost: !oscOn || shape !== ANALOG_RECT, readout: display(p.pw), write: (v) => writeOsc(p.pw, v) })}
         </div>
         <!-- The levels. Noise's switch is its level, Drift's rule: up turns
              it on, the floor turns it off, from a finger only. -->
@@ -437,7 +434,7 @@
               <span class="route-arrow">→</span>{noiseRoute}
             </button>
           </div>
-          {@render faceKnob({ value: norm(p.level, 0.81), title: 'Level', mark: 'Lvl', ink: voiceInk, ghost: !oscOn, readout: display(p.level), write: (v) => writeOsc(p.level, v) })}
+          {@render faceKnob({ value: norm(p.level, 0.81), title: 'Level', ink: voiceInk, ghost: !oscOn, readout: display(p.level), write: (v) => writeOsc(p.level, v) })}
           {@render faceKnob({ value: noiseLevel, title: 'Noise', icon: 'noise', ink: noiseInk, ghost: !noiseOn, readout: display(ANALOG_NOISE_LEVEL), write: (v) => {
             writeNorm(ANALOG_NOISE_LEVEL, v);
             writeSwitch(ANALOG_NOISE_ON, v > SECTION_SWITCH_ON_ABOVE, noiseOn);
@@ -485,8 +482,8 @@
               onclick={() => write(ANALOG_F2_SLAVE, f2Slave ? 0 : 1)}
             >F2 Follow</button>
           </div>
-          {@render faceKnob({ value: raw(p.envAmount, 0), title: 'Env', mark: 'Env', bipolar: true, ink: voiceInk, readout: display(p.envAmount), write: (v) => write(p.envAmount, Math.max(-1, Math.min(1, v))) })}
-          {@render faceKnob({ value: norm(p.ampLevel, 0.87), title: 'Amp', mark: 'Vol', ink: voiceInk, readout: display(p.ampLevel), write: (v) => writeNorm(p.ampLevel, v) })}
+          {@render faceKnob({ value: raw(p.envAmount, 0), title: 'Env', bipolar: true, ink: voiceInk, readout: display(p.envAmount), write: (v) => write(p.envAmount, Math.max(-1, Math.min(1, v))) })}
+          {@render faceKnob({ value: norm(p.ampLevel, 0.87), title: 'Amp', ink: voiceInk, readout: display(p.ampLevel), write: (v) => writeNorm(p.ampLevel, v) })}
         </div>
       </FaceSection>
       <FaceSeam ink={voiceInk.primary} />

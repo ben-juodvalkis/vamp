@@ -3,7 +3,9 @@
 ## Status
 **Accepted** (2026-11-07). Builds on ADR-511 (the full-screen icon). Its
 band half ("the half switch and the pages stay the band's") is superseded
-by ADR-513: the band is one face, and the pages are this board's only.
+by ADR-513: the band is one face, and the pages are this board's only. Its
+seam rule ("tiles meet with a hairline between and no gap") is superseded
+by ADR-516: a tile is a panel with a header bar, a gap between two.
 Interface only; no Live restart.
 
 ## Context

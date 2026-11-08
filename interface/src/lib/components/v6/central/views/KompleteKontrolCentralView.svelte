@@ -91,7 +91,8 @@
       <KnobGrid count={SLIDER_PARAMS.length}>
       {#snippet item(i, size)}
         {@const paramIndex = SLIDER_PARAMS[i]}
-        {@const name = parameterNames[paramIndex - 1] ? cleanParameterName(parameterNames[paramIndex - 1]) : `Param ${paramIndex}`}
+        <!-- Live's parameter list has Device On at 0, so a knob's name is at its own index (an off-by-one named the first knob "Device On", 2026-11-08). -->
+        {@const name = parameterNames[paramIndex] ? cleanParameterName(parameterNames[paramIndex]) : `Param ${paramIndex}`}
           <DeviceSlider
             value={getParamValue(paramIndex)}
             title={name}

@@ -7,10 +7,11 @@
 	 *   Strum: [Scale] [Strum] [Tension] [Crescendo]
 	 *
 	 * On the face grid (ADR-510), sections [3, 3, 4]: ten columns of about
-	 * 85px, one medium knob to a column, each note's names on a caption line
-	 * over its knobs (a note's knobs are titled with their values). The
-	 * Scale switch is a touch-row pill in the strum's first column, level
-	 * with the knobs.
+	 * 85px, one medium knob to a column, each knob named under it with its
+	 * value in Live's words under the name (ADR-517; until 2026-11-08 a
+	 * note's knobs were titled with their values and named on a line over
+	 * them). The Scale switch is a touch-row pill in the strum's first
+	 * column, level with the knobs.
 	 *
 	 * Two notes, not Live's six (the user, 2026-10-27: "we don't need all 6"),
 	 * and every control a tall value box side by side, not a short row of
@@ -78,11 +79,11 @@
 			<FaceSection span={3}>
 				{#snippet head()}<PanelEyebrow title="Note {note.n}" color={ink.primary} />{/snippet}
 				<div class="col">
-					<div class="caption">Shift</div>
 					<div class="cell" data-note={note.n} data-fn="shift">
 						<DeviceSlider
 							value={shift}
-							title={signed(shift, scaled ? 'sd' : 'st')}
+							title="Shift"
+							valueText={signed(shift, scaled ? 'sd' : 'st')}
 							face="knob"
 							knobSize="m"
 							min={-SHIFT_MAX}
@@ -98,11 +99,11 @@
 					</div>
 				</div>
 				<div class="col">
-					<div class="caption" class:silent>Velocity</div>
 					<div class="cell" class:silent data-note={note.n} data-fn="velocity">
 						<DeviceSlider
 							value={value(note.velocity)}
-							title={percent(value(note.velocity))}
+							title="Velocity"
+							valueText={percent(value(note.velocity))}
 							face="knob"
 							knobSize="m"
 							min={VELOCITY_MIN}
@@ -115,11 +116,11 @@
 					</div>
 				</div>
 				<div class="col">
-					<div class="caption" class:silent>Chance</div>
 					<div class="cell" class:silent data-note={note.n} data-fn="chance">
 						<DeviceSlider
 							value={value(note.chance)}
-							title={percent(value(note.chance))}
+							title="Chance"
+							valueText={percent(value(note.chance))}
 							face="knob"
 							knobSize="m"
 							min={0}
@@ -138,7 +139,6 @@
 		<FaceSection span={4}>
 			{#snippet head()}<PanelEyebrow title="Strum" color={ink.primary} />{/snippet}
 			<div class="col">
-				<div class="caption" aria-hidden="true">&nbsp;</div>
 				<div class="cell switch-cell">
 					<button
 						class="physical-button btn-toggle switch"
@@ -152,11 +152,11 @@
 			</div>
 			{#each STRUM as b (b.index)}
 				<div class="col">
-					<div class="caption" aria-hidden="true">&nbsp;</div>
 					<div class="cell" data-fn={b.title.toLowerCase()}>
 						<DeviceSlider
 							value={value(b.index)}
 							title={b.title}
+							valueText={chord.paramDisplay(b.index)}
 							face="knob"
 							knobSize="m"
 							min={b.min}
@@ -178,9 +178,7 @@
 <style>
 	/* The face is the FaceGrid (ADR-510): ten equal columns, each note's
 	   three and the strum's four, one medium knob a column (two captioned
-	   large knobs would not stack, and a large one needs a 104px column). A
-	   caption line over each knob names it; the strum's knobs name
-	   themselves, so theirs is empty and their knobs stay level. */
+	   large knobs would not stack, and a large one needs a 104px column). */
 	.chord-layout {
 		height: 100%;
 		width: 100%;
@@ -203,17 +201,8 @@
 		min-width: 0;
 	}
 	/* A note at 0 adds nothing: its velocity and chance step back. */
-	.cell.silent,
-	.caption.silent {
+	.cell.silent {
 		opacity: var(--opacity-ghost);
-	}
-	.caption {
-		flex: none;
-		text-align: center;
-		font-size: 0.75rem;
-		line-height: 1rem;
-		white-space: nowrap;
-		color: var(--muted-foreground);
 	}
 	/* A switch among knobs is one touch row, centred (ADR-509). */
 	.switch-cell {

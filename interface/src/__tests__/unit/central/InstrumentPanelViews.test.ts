@@ -119,15 +119,15 @@ describe('ElectricCentralView — Live\'s four sections', () => {
 	});
 	afterEach(() => cleanup());
 
-	it('arrives on the frame: Hammer, Fork, Damper / Pickup, Global', async () => {
+	it('arrives on the frame: Hammer, Fork, Damper, Pickup, Global (Live’s five sections, 2026-11-08)', async () => {
 		const { container } = render(ElectricCentralView, { props: { instrument: instrument('Electric', 'LoungeLizard') } });
 		await tick();
 		expect(el(container, '[data-panel-page]').dataset.panelPage).toBe('frame');
 		const groups = [...container.querySelectorAll<HTMLElement>('[data-group]')].map((g) => g.dataset.group);
-		expect(groups).toEqual(['Hammer', 'Fork', 'Damper / Pickup', 'Global']);
-		// The Fork's two boxes are Live's Tine and Tone knobs: the volumes.
+		expect(groups).toEqual(['Hammer', 'Fork', 'Damper', 'Pickup', 'Global']);
+		// The Fork's first two knobs are Live's Tine and Tone: the volumes; then the tine's colour and decay.
 		const fork = [...el(container, '[data-group="Fork"]').querySelectorAll<HTMLElement>('[data-param]')].map((c) => c.dataset.param);
-		expect(fork).toEqual(['F Tine Vol', 'F Tone Vol']);
+		expect(fork).toEqual(['F Tine Vol', 'F Tone Vol', 'F Tine Color', 'F Tine Decay']);
 	});
 
 	it('writes the pickup model by its name', async () => {

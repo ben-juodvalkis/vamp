@@ -33,10 +33,11 @@ describe('InstrumentBoard', () => {
 		expect(rows[1].style.flexGrow).toBe('1');
 	});
 
-	it('puts a hairline between two tiles and between two rows, never at an edge', () => {
+	it('draws the tiles as panels with a gap between, no hairlines (ADR-516)', () => {
 		const { container } = render(InstrumentBoard, { rows: ROWS, tile });
-		expect(container.querySelectorAll('.board-seam')).toHaveLength(3);
-		expect(container.querySelectorAll('.board-rule')).toHaveLength(1);
+		expect(container.querySelectorAll('.board-seam, .board-rule')).toHaveLength(0);
+		expect(container.querySelectorAll('.board-row')).toHaveLength(2);
+		expect(container.querySelector('.board-tile')?.classList.contains('board-tile')).toBe(true);
 	});
 
 	it('counts a row by its columns', () => {

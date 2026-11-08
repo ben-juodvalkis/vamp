@@ -73,9 +73,11 @@
     label?: string;
     /**
      * Small Attack, Decay, Sustain and Release knobs under the picture (Ben,
-     * 2026-11-07: the graph alone hides the numbers a knob shows at a glance).
+     * 2026-11-07: the graph alone hides the numbers a knob shows at a glance);
+     * `side` stands them two by two beside it, lettered; `short` keeps them
+     * under it, lettered, for a picture too narrow for the words.
      */
-    knobs?: boolean | 'side';
+    knobs?: boolean | 'side' | 'short';
   }
 
   let { params, names, ink, sw, label, knobs = true }: Props = $props();
@@ -192,6 +194,8 @@
     return [readout(hd.x), readout(hd.y)].filter(Boolean).join(' · ');
   });
   let ghost = $derived(!params.has(names.attack) && !params.has(names.decay));
+  /** The fill gradient's id: one a graph, since several share a page. */
+  const gradientId = `env-fill-${Math.random().toString(36).slice(2, 8)}`;
 </script>
 
 <div class="env-wrap" class:with-knobs={!!knobs} class:side={knobs === 'side'}>
@@ -217,18 +221,29 @@
     style="touch-action: none;"
   >
     {#if w > 0 && h > 0}
+      <defs>
+        <!-- The envelope's body: its ink, fading to the floor (ADR-516). -->
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color={ink} stop-opacity="0.32" />
+          <stop offset="1" stop-color={ink} stop-opacity="0.04" />
+        </linearGradient>
+      </defs>
       <line class="floor" x1={X(0)} x2={X(1)} y1={Y(1)} y2={Y(1)} />
+      {#each [0.25, 0.5] as q (q)}
+        <line class="grid" x1={X(q)} x2={X(q)} y1={PAD} y2={Y(1)} />
+      {/each}
       <line class="mark" x1={X(0.75)} x2={X(0.75)} y1={PAD} y2={Y(1)} />
-      <path class="fill" d={fill} />
+      <path class="fill" d={fill} fill="url(#{gradientId})" />
       <path class="line" d={line} />
       {#each handles as hd (hd.id)}
         <rect
           class="handle"
           class:hot={active === hd.id}
-          x={X(hd.at.x) - 5}
-          y={Y(hd.at.y) - 5}
-          width="10"
-          height="10"
+          x={X(hd.at.x) - 6}
+          y={Y(hd.at.y) - 6}
+          width="12"
+          height="12"
+          rx="2"
           data-env-handle={hd.id}
         />
       {/each}
@@ -246,7 +261,7 @@
       <div class="env-knob" data-param={n}>
         <DeviceSlider
           value={params.raw(n) ?? r?.min ?? 0}
-          title={knobs === 'side' ? title[0] : title}
+          title={knobs === 'side' || knobs === 'short' ? title[0] : title}
           face="knob"
           knobSize="s"
           min={r?.min ?? 0}
@@ -285,7 +300,8 @@
     height: 5.875rem;
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: var(--spacing-sm);
+    /* A knob is 48px wide: the gap can be small, so a word fits under each. */
+    gap: var(--spacing-xs);
   }
   /* Beside the picture, two by two: a short, wide cell (Analog's two
      envelopes a voice, stacked). */
@@ -320,7 +336,7 @@
     min-height: 0;
     background: var(--surface-well);
     border: 1px solid var(--line-strong);
-    border-radius: 2px;
+    border-radius: 4px;
     overflow: hidden;
   }
   .env-graph.off {
@@ -333,16 +349,23 @@
     cursor: grab;
   }
   .floor,
-  .mark {
+  .mark,
+  .grid {
     stroke: var(--line-strong);
     stroke-width: 1;
+  }
+  /* The slots' edges, faint: a quarter of the width each (the reading
+     Live's own display keeps). */
+  .grid {
+    opacity: 0.6;
+    stroke-dasharray: 1 5;
   }
   .mark {
     stroke-dasharray: 2 4;
   }
+  /* The body's fill is the gradient the markup names (its ink, fading). */
   .fill {
-    fill: var(--env-ink);
-    opacity: 0.14;
+    opacity: 1;
   }
   .line {
     fill: none;

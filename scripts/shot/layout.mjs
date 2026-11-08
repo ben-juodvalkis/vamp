@@ -12,6 +12,9 @@
  *      inner edge on all four sides. A state whose content is deliberately
  *      centred on one axis says so with `layout: { centered: 'x' }` (or
  *      'y'); that axis must then clear the inset and be balanced instead.
+ *      A full-screen board (ADR-516) is panels on the frame's ground, so
+ *      its content is the panels, `--board-gap` from the frame: the board's
+ *      own role token, read off `[data-instrument-board]`.
  *
  * Overlays — anything positioned absolute or fixed, and what is inside it —
  * and anything outside the frame count for neither: a floating toggle or a
@@ -88,15 +91,20 @@ export function measureLayout() {
 		return w;
 	};
 
-	const fr = frame.getBoundingClientRect();
-	const inner = { l: fr.left + frame.clientLeft, t: fr.top + frame.clientTop };
-	inner.r = inner.l + frame.clientWidth;
-	inner.b = inner.t + frame.clientHeight;
+	// A full-screen board (ADR-516) is panels on the frame's ground, so the
+	// inset is measured from the board's own edge to its panels, in its
+	// `--board-gap`; the swap pill beside it is the frame's, not the board's.
+	const board = frame.querySelector('[data-instrument-board]');
+	const host = board ?? frame;
+	const fr = host.getBoundingClientRect();
+	const inner = { l: fr.left + host.clientLeft, t: fr.top + host.clientTop };
+	inner.r = inner.l + host.clientWidth;
+	inner.b = inner.t + host.clientHeight;
 
 	// Every painted, in-flow box inside the frame: a background, a border,
 	// media, a run of text, or a touch target marked `data-layout-box`.
 	const boxes = [];
-	for (const el of frame.querySelectorAll('*')) {
+	for (const el of host.querySelectorAll('*')) {
 		if (el.classList.contains('section-divider')) continue;
 		const cs = getComputedStyle(el);
 		if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity === 0) continue;
@@ -129,7 +137,7 @@ export function measureLayout() {
 		({ r }) =>
 			r.right > inner.l && r.left < inner.r && r.bottom > inner.t && r.top < inner.b &&
 			// a full-bleed background is the view, not its content
-			!(r.width >= frame.clientWidth * 0.95 && r.height >= frame.clientHeight * 0.95)
+			!(r.width >= host.clientWidth * 0.95 && r.height >= host.clientHeight * 0.95)
 	);
 
 	const dividers = [...frame.querySelectorAll('.section-divider')]
@@ -188,7 +196,7 @@ export function measureLayout() {
 	return {
 		density: root.dataset?.density ?? 'standard',
 		gap: probe(root, '--central-gap'),
-		inset: probe(root, '--central-inset'),
+		inset: board ? probe(board, '--board-gap') : probe(root, '--central-inset'),
 		sides,
 		dividers
 	};

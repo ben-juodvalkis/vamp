@@ -188,8 +188,11 @@
 		style="--btn-tint: {lfoInk.primary};"
 	>
 		{#each LFO_SHAPE_OPTIONS.slice(0, 8) as option}
+			<!-- A one-glyph symbol draws large; a word ("S&H") at the tab's own size, so it fits its cell. -->
 			<button
-				class="device-segment min-h-0 px-1 text-3xl text-center flex items-center justify-center"
+				class="device-segment min-h-0 px-1 text-center flex items-center justify-center"
+				class:text-3xl={option.symbol.length === 1}
+				class:text-sm={option.symbol.length > 1}
 				class:active={lfoShape === option.value}
 				onclick={() => {
 					fx.sendParam(13, option.value);

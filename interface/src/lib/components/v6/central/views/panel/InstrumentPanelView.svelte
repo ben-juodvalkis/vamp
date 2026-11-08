@@ -33,7 +33,8 @@
 	import PanelEyebrow from './PanelEyebrow.svelte';
 	import PanelControlView from './PanelControlView.svelte';
 	import InstrumentBoard, { type BoardRow } from '../../InstrumentBoard.svelte';
-	import { boardGroupColumns, boardTileSections, boardTileWeight, groupColumns, regionSections, tabsByPosition, type InstrumentPanel, type PanelGroup, type PanelMatrix, type PanelPage, type PanelTab } from './panelTypes';
+	import BoardTile from '../../BoardTile.svelte';
+	import { boardGroupColumns, boardTileSections, boardTileWeight, groupColumns, regionSections, tabsByPosition, type InstrumentPanel, type PanelBoardTile, type PanelGroup, type PanelMatrix, type PanelPage, type PanelTab } from './panelTypes';
 	import type { PanelParams } from './usePanelParams.svelte';
 
 	interface Props {
@@ -69,6 +70,13 @@
 		}))
 	);
 	const boardTile = (id: string) => panel.board?.rows.flatMap((r) => r.tiles).find((t) => t.id === id);
+	/** A tile's header line: only where a section has a name of its own, or columns to name (a matrix). */
+	const tileHeads = (t: PanelBoardTile) => t.sections.some((s) => s.kind !== 'group' || (!!s.group.title && s.group.title !== t.title));
+	/** The tile's bar switch: its section's on/off, flipped. */
+	function flipSwitch(name: string) {
+		const r = params.range(name);
+		params.write(name, params.isOn(name) ? (r?.min ?? 0) : (r?.max ?? 1));
+	}
 
 	/** Where a matrix group's column starts on its section's grid lines (the rows' names take the first's first). */
 	function matrixStarts(m: PanelMatrix, g: number): number[] {
@@ -111,16 +119,26 @@
 		{#snippet tile(id)}
 			{@const t = boardTile(id)}
 			{#if t}
-				<FaceGrid sections={boardTileSections(t)} data-board-face={id}>
+				{@const sw = t.switchParam}
+				<!-- A panel (ADR-516): the tile's name and its section's switch on
+				     the bar; its sections' own names on the header line below, where
+				     a section has one. -->
+				<BoardTile
+					title={t.title ?? ''}
+					ink={color.primary}
+					on={sw ? params.isOn(sw) : undefined}
+					onToggle={() => sw && flipSwitch(sw)}
+					switchParam={sw}
+					switchDisabled={!!sw && !params.has(sw)}
+				>
+				<FaceGrid sections={boardTileSections(t)} heads={tileHeads(t)} data-board-face={id}>
 					{#each t.sections as section, s (s)}
 						{#if s > 0}<FaceSeam ink={color.primary} />{/if}
 						{#if section.kind === 'group'}
 							{@const span = boardGroupColumns(section)}
-							{@const named = s === 0 && t.title}
 							<FaceSection {span} data-group={section.group.title ?? ''}>
 								{#snippet head()}
-									{#if named}<span class="board-title" style="color: {color.primary};">{t.title}</span>{/if}
-									{#if !named || (section.group.title && section.group.title !== t.title && span >= 2)}<PanelEyebrow title={section.group.title} color={color.primary} />{/if}
+									{#if section.group.title && section.group.title !== t.title}<PanelEyebrow title={section.group.title} color={color.primary} />{/if}
 								{/snippet}
 								<PanelGroupView group={section.group} {params} {color} boxFace={panel.boxFace} columns={span} stack={section.stack} lead={section.lead} tabMax={section.tabMax} />
 							</FaceSection>
@@ -147,6 +165,7 @@
 						{/if}
 					{/each}
 				</FaceGrid>
+				</BoardTile>
 			{/if}
 		{/snippet}
 	</InstrumentBoard>
@@ -395,12 +414,5 @@
 		display: flex;
 		justify-content: center;
 		min-width: 0;
-	}
-	/* A board tile's page name (ADR-512): the way back's type, but plain. */
-	.board-title {
-		font-size: 0.75rem;
-		font-weight: 700;
-		line-height: 1rem;
-		white-space: nowrap;
 	}
 </style>

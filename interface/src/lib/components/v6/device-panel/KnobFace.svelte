@@ -186,14 +186,16 @@
     align-content: center;
     justify-items: center;
     gap: 0.375rem;
-    padding: 0.375rem 0.25rem;
+    /* Little side padding: a board's narrow columns need every pixel for the word. */
+    padding: 0.375rem 0.125rem;
   }
-  /* A short, wide cell puts the caption beside the knob, if the cell is
-     wide enough to keep the caption whole there (9rem, ADR-515: narrower,
-     a caption beside was cut to "S.." and "Tr..."), or too short to hold
-     one under it (5.5rem); otherwise it stays under the knob, which draws
-     smaller. */
-  @container (min-aspect-ratio: 6/5) and ((min-width: 9rem) or (max-height: 5.5rem)) {
+  /* A wide cell puts the caption beside the knob, if the cell is wide
+     enough to keep the caption whole there (9rem, ADR-515: narrower, a
+     caption beside was cut to "S.." and "Tr..."); otherwise it stays under
+     the knob, which draws smaller. A short cell used to put it beside
+     however narrow (ADR-515's 5.5rem), and cut it: the whole word under a
+     smaller knob reads, "Sust..." beside a full one does not (ADR-516). */
+  @container (min-aspect-ratio: 6/5) and (min-width: 9rem) {
     .knob-body {
       grid-template-rows: auto;
       grid-template-columns: auto minmax(0, max-content);
@@ -212,10 +214,11 @@
     width: var(--knob-d);
     height: var(--knob-d);
   }
-  /* Beside: the cell's height, and half its width for the caption. */
-  @container (min-aspect-ratio: 6/5) and ((min-width: 9rem) or (max-height: 5.5rem)) {
+  /* Beside: the cell's height, and a little over half its width for the
+     caption (ADR-516: at half, "Amount" beside a large knob was cut). */
+  @container (min-aspect-ratio: 6/5) and (min-width: 9rem) {
     .knob-face {
-      --knob-d: min(50cqw, max(28px, min(var(--knob-want), 50cqw, 100cqh - 0.75rem)));
+      --knob-d: min(45cqw, max(28px, min(var(--knob-want), 45cqw, 100cqh - 0.75rem)));
     }
   }
   /* No caption: the knob alone, centred (no room kept for a caption beside
@@ -309,7 +312,7 @@
     line-height: 1.15;
     text-align: center;
   }
-  @container (min-aspect-ratio: 6/5) and ((min-width: 9rem) or (max-height: 5.5rem)) {
+  @container (min-aspect-ratio: 6/5) and (min-width: 9rem) {
     .knob-caption {
       align-items: flex-start;
       text-align: left;

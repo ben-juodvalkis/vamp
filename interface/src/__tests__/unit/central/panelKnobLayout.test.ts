@@ -203,19 +203,19 @@ const RULE_PANELS = { Operator: OPERATOR_PANEL, Electric: ELECTRIC_PANEL, Collis
 describe('a panel’s frame on the face grid (ADR-510)', () => {
 	const sections = (p: typeof DRIFT_PANEL) => p.frame.flatMap((r) => regionSections(r));
 	it('gives each region its columns, a tab strip of like tabs a section a group', () => {
-		expect(sections(ELECTRIC_PANEL)).toEqual([2, 2, 2, 1]);
-		expect(sections(OPERATOR_PANEL)).toEqual([3, 3, 2, 2]);
+		expect(sections(ELECTRIC_PANEL)).toEqual([2, 2, 1, 2, 1]);
+		expect(sections(OPERATOR_PANEL)).toEqual([2, 3, 2, 2]);
 		expect(sections(COLLISION_PANEL)).toEqual([1, 1, 6, 1]);
 	});
 	it('gives every column of the three frames the width of a medium knob at 1000px', () => {
 		for (const panel of Object.values(RULE_PANELS)) expect(column(sections(panel), 1000)).toBeGreaterThanOrEqual(KNOB_PX.m + 8);
 	});
-	it('draws Electric’s knobs large, in a row on one line', () => {
+	it('draws Electric’s knobs two by two over two columns and two high in one, medium (2026-11-08)', () => {
 		const w = column(sections(ELECTRIC_PANEL), 1000);
-		expect(faceKnobFit(2, 2, w, 263)).toEqual({ knobCols: 2, rows: 1, size: 'l' });
-		expect(faceKnobFit(1, 1, w, 263).size).toBe('l');
+		expect(faceKnobFit(4, 2, w, 263)).toEqual({ knobCols: 2, rows: 2, size: 'm' });
+		expect(faceKnobFit(2, 1, w, 263)).toEqual({ knobCols: 1, rows: 2, size: 'm' });
 	});
-	it('stacks Operator’s Global three high over two columns, medium, names beside', () => {
+	it('stacks Operator’s Global and its oscillator three high over two columns, medium, names beside', () => {
 		const w = column(sections(OPERATOR_PANEL), 1000);
 		expect(faceKnobFit(3, 2, w, 263)).toEqual({ knobCols: 1, rows: 3, size: 'm' });
 	});

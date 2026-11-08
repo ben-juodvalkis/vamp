@@ -282,14 +282,15 @@
     oscWaves.wave(n, read(OSC[n].position, 0.5), read(OSC[n].effect1, 0.5), read(OSC[n].effect2, 0));
 
   /**
-   * Full screen (ADR-512): every page at once, both oscillators side by
-   * side, both filters, the three envelopes, both LFOs and Global. The
-   * Mod Sources page, a summary of the five, has no tile.
+   * Full screen (ADR-512, re-laid by ADR-516): every page at once as a
+   * panel. Both oscillators side by side with the Sub after them (once:
+   * until ADR-516 each oscillator's tile drew it); the two filters with
+   * their routing between them; the three envelopes; both LFOs and Global.
    */
   const BOARD: readonly BoardRow[] = [
-    { tiles: [{ id: 'osc1', cols: 8 }, { id: 'osc2', cols: 8 }], weight: 1.3 },
-    { tiles: [{ id: 'filter1', cols: 7 }, { id: 'filter2', cols: 7 }], weight: 0.85 },
-    { tiles: [{ id: 'amp', cols: 4 }, { id: 'env2', cols: 4 }, { id: 'env3', cols: 4 }], weight: 1.15 },
+    { tiles: [{ id: 'osc1', cols: 7 }, { id: 'osc2', cols: 7 }, { id: 'sub', cols: 3 }], weight: 1.25 },
+    { tiles: [{ id: 'filter1', cols: 7 }, { id: 'routing', cols: 2 }, { id: 'filter2', cols: 7 }], weight: 0.95 },
+    { tiles: [{ id: 'amp', cols: 6 }, { id: 'env2', cols: 6 }, { id: 'env3', cols: 6 }], weight: 1.1 },
     { tiles: [{ id: 'lfo1', cols: 5 }, { id: 'lfo2', cols: 5 }, { id: 'global', cols: 4 }], weight: 1.05 }
   ];
 
@@ -429,11 +430,10 @@
           params={panelParams}
           ink={wavetableInk}
           oscInks={{ 1: osc1Ink, 2: osc2Ink }}
-          onNavigate={() => {}}
           {oscPad}
           {effectTitles}
-          board
           tables={{ choice: oscWaves.tableChoice, setCategory: oscWaves.setCategory, setTable: oscWaves.setTable }}
+          routing={{ value: filterRouting, set: writeRouting }}
         />
       {/snippet}
     </InstrumentBoard>

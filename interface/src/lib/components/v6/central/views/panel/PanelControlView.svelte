@@ -81,14 +81,15 @@
 {#snippet noLabel()}{/snippet}
 
 {#if pick && pickOptions}
-	<!-- A long pick on a page: its name, and the picker that opens over the view. -->
+	<!-- A long pick: a field naming its value, with its own name inside it
+	     over the value (ADR-516), that opens the values over the view. -->
 	<div class="panel-pick" class:ghost data-param={control.param}>
-		{#if !bareCaption}<span class="pick-title" style="color: {color.primary};">{pickTitle}</span>{/if}
 		<ChoicePicker
 			options={pickOptions}
 			selected={listed && step !== undefined ? step : -1}
 			onSelect={(i) => write(lo + i)}
 			label={pickTitle}
+			caption={bareCaption ? undefined : pickTitle}
 			tint={color.primary}
 			ghost={!listed}
 		/>
@@ -223,23 +224,14 @@
 		font-size: 0.85em;
 	}
 
-	/* A long pick on a page: its name over a picker, centred in the cell. */
+	/* A long pick: its field, centred in the cell. */
 	.panel-pick {
 		display: flex;
 		flex-direction: column;
 		justify-content: center;
-		gap: var(--spacing-xs);
 		min-width: 0;
 		min-height: 0;
 		height: 100%;
-	}
-	.pick-title {
-		font-size: 0.75rem;
-		font-weight: 600;
-		text-align: center;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
 	}
 
 	/* A tab of few values (ScrubTabs), filling its cell. */

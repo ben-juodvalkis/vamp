@@ -79,21 +79,21 @@
   const showEngine = (e: MeldEngine) => meldEngineStore.select(devicePath, e);
 
   /**
-   * Full screen (ADR-512): every page of both engines at once, so there is
-   * no engine switch. Engine A on top and Engine B under it, the same two
-   * rows each (user, 2026-11-07): the oscillator and the filter, then the
-   * envelopes (the tallest row, three knobs to a column) and the LFOs.
-   * Global is its own short row across the foot. The face's controls are
-   * all on these pages (the engine levels are Global's Mix).
+   * Full screen (ADR-512, re-laid by ADR-516): every page of both engines
+   * at once, so there is no engine switch. A row a section, Engine A's
+   * tile beside Engine B's as Wavetable's oscillators stand (the twins
+   * side by side): the engines, then both filters with Global after them,
+   * the envelopes (the tallest row, for their pictures), the LFOs. Each
+   * tile is a selector row over a knob row, so four rows hold what five
+   * rows of two-high columns could not without cutting every caption
+   * (Engine A over Engine B, 2026-11-07, until then). The face's controls
+   * are all on these pages (the engine levels are Global's Mix).
    */
-  const engineRows = (e: 'a' | 'b'): BoardRow[] => [
-    { tiles: [{ id: `osc-${e}`, cols: 7 }, { id: `filter-${e}`, cols: 4 }], weight: 0.82 },
-    { tiles: [{ id: `env-${e}`, cols: 8 }, { id: `lfo-${e}`, cols: 7 }], weight: 0.9 }
-  ];
   const BOARD: readonly BoardRow[] = [
-    ...engineRows('a'),
-    ...engineRows('b'),
-    { tiles: [{ id: 'global', cols: 9 }], weight: 0.5 }
+    { tiles: [{ id: 'osc-a', cols: 7 }, { id: 'osc-b', cols: 7 }], weight: 0.95 },
+    { tiles: [{ id: 'filter-a', cols: 5 }, { id: 'filter-b', cols: 5 }, { id: 'global', cols: 9 }], weight: 0.78 },
+    { tiles: [{ id: 'env-a', cols: 10 }, { id: 'env-b', cols: 10 }], weight: 1.1 },
+    { tiles: [{ id: 'lfo-a', cols: 9 }, { id: 'lfo-b', cols: 9 }], weight: 1.05 }
   ];
 
   /** The pages behind the face's eyebrows, the shown engine's, by Live's names (ADR-487). */
@@ -223,8 +223,6 @@
           params={panelParams}
           ink={meldInk}
           engineInks={{ A: inkOf('A'), B: inkOf('B') }}
-          onBack={() => {}}
-          board
         />
       {/snippet}
     </InstrumentBoard>
@@ -244,13 +242,19 @@
            flips the oscillator, the filter and the envelopes together. -->
       <FaceSection span={3}>
         {#snippet head()}<PanelEyebrow title="Engine {engine}" color={engineInk.primary} />{/snippet}
+        <!-- The levels as knobs marked A and B (2026-11-08; two value boxes
+             reading "Engine A" / "Engine B" until then): the one idiom the
+             source levels share with Wavetable's 1 / 2 and Drift's, and
+             what the board draws. -->
         <div class="min-h-0 flex flex-col gap-(--spacing-sm)">
         {#each ['A', 'B'] as const as e (e)}
           <div class="flex-1 min-h-0" data-engine-level={e} class:shown={engine === e}>
             <DeviceSlider
               value={read(MELD_ENGINE[e].volume, 0.635)}
               title="Engine {e}"
-              icon="gain"
+              face="knob"
+              knobCaption={false}
+              knobMark={e}
               orientation="vertical"
               labelSize="small"
               isGhost={!(e === 'A' ? aOn : bOn)}
@@ -353,10 +357,7 @@
            (ADR-477), a stage a column: both in view, so there is no
            Amp/Mod switch. A seam between them. -->
       <FaceSection span={5}>
-        {#snippet head()}
-          <PanelEyebrow title="Envelopes" color={engineInk.primary} />
-          <PanelEyebrow title="LFOs" color={engineInk.primary} />
-        {/snippet}
+        {#snippet head()}<PanelEyebrow title="Envelopes" color={engineInk.primary} />{/snippet}
         <div class="env-stack face-span-all">
           {#each envelopes as envelope, i (envelope.title)}
             {#if i > 0}<div class="env-seam"><SectionDivider orientation="horizontal" ink={engineInk.primary} /></div>{/if}
