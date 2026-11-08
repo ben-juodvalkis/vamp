@@ -106,8 +106,10 @@
 
 <style>
 	/* A ghost, as the + Effect cell beside it is drawn (the user, the same
-	   day): no fill of its own, a dashed line, the picture and name in muted
-	   ink at the ghost opacity; full ink while pressed. */
+	   day): no fill of its own, a dashed line in the chain's ghost ink
+	   (`--ghost-line`, ChainOverview), the picture faint and the name in
+	   the tertiary ink, so it reads without pulling the eye from the chain;
+	   full ink while pressed. */
 	/* A tile: the picture over the name, centered (two to a row). */
 	.recent-effect {
 		min-height: 0;
@@ -116,20 +118,21 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		gap: 2px;
-		padding: 4px;
-		border: 1px dashed var(--line-strong);
-		border-radius: 2px;
+		gap: 3px;
+		padding: 6px 4px 5px;
+		border: 1px dashed var(--ghost-line, color-mix(in oklab, var(--fg-tertiary) 45%, transparent));
+		border-radius: var(--ghost-radius, 4px);
 		background: transparent;
-		color: var(--muted-foreground);
+		color: var(--fg-tertiary);
 		font: inherit;
 		text-align: center;
 		cursor: pointer;
 		overflow: hidden;
 		-webkit-tap-highlight-color: transparent;
+		transition: background-color var(--t-fast) var(--ease-precise), color var(--t-fast) var(--ease-precise);
 	}
-	.recent-effect > span {
-		opacity: var(--opacity-ghost);
+	.recent-effect > .recent-picture {
+		opacity: 0.6;
 	}
 	.recent-effect:active {
 		background: var(--secondary);
@@ -172,8 +175,9 @@
 		max-width: 100%;
 		min-width: 0;
 		flex: 0 0 auto;
-		font-size: 0.75rem;
-		font-weight: var(--font-weight-medium);
+		font-size: 0.71875rem;
+		font-weight: 500;
+		letter-spacing: 0.005em;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
