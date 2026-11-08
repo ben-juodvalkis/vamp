@@ -8,6 +8,7 @@
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
   import { SECTION_SWITCH_ON_ABOVE } from '$lib/services/drumVirtualMacros';
   import ScrubTabs from '../../device-panel/ScrubTabs.svelte';
+  import ChoicePicker from '../ChoicePicker.svelte';
   import FilterDotsGraph from '../FilterDotsGraph.svelte';
   import { axisHz, axisX, responseDb, responsePath, seriesDb } from '$lib/utils/filterGraph';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
@@ -210,6 +211,9 @@
    * is a period, so its axis is turned over.
    */
   const LFO_RATE_PARAMS = ['LFO Freq', 'LFO Time', 'LFO Ratio', 'LFO Synced'] as const;
+  /** Live's words for the pad's two picks (docs/reference/instruments/Drift.md). */
+  const LFO_WAVE_NAMES = ['Sine', 'Tri', 'Saw Up', 'Saw Dn', 'Square', 'S & H', 'Wander', 'Lin Env', 'Exp Env'];
+  const LFO_RATE_MODES = ['Freq', 'Time', 'Ratio', 'Sync'];
   let lfoMode = $derived(Math.round(panelParams.raw('LFO Mode') ?? 0));
   let lfoRateParam = $derived(LFO_RATE_PARAMS[lfoMode] ?? 'LFO Freq');
   let lfoX = $derived.by(() => {
@@ -482,20 +486,20 @@
   </div>
 {/snippet}
 
-{#snippet voiceModeTab()}
-  <!-- Poly / Mono / Stereo / Unison, on the Global page: one pick-one tab,
-       two by two. -->
+{#snippet voiceModeTab(cols: number = 2)}
+  <!-- Poly / Mono / Stereo / Unison: one pick-one tab, two by two on the
+       Global page, one row of four on the face's touch row. -->
   <ScrubTabs
     options={VOICE_MODE_OPTIONS}
     selected={VOICE_MODE_OPTIONS.findIndex((o) => o.value === voiceMode)}
     onSelect={(_, o) => {
       if (devicePath) selectedTrackStore.setPropertyValue(devicePath, 'voice_mode_index', o.value);
     }}
-    cols={2}
+    {cols}
     tint={driftInk.primary}
     label={(o) => o.label}
     class="h-full"
-    style="--scrub-font-size: 0.8125rem; --scrub-font-weight: 500; --scrub-padding: 0 0.25rem;"
+    style="--scrub-font-size: {cols === 4 ? '0.6875rem' : '0.8125rem'}; --scrub-font-weight: 500; --scrub-padding: 0 {cols === 4 ? '0.125rem' : '0.25rem'};"
   />
 {/snippet}
 
@@ -723,34 +727,66 @@
       </FaceSection>
       <FaceSeam ink={driftInk.primary} />
 
-      <!-- LFO: rate slow to fast across, amount up. -->
+      <!-- LFO: rate slow to fast across, amount up, and under the pad the
+           two picks that say what the pad moves: the wave, and which rate
+           the mode runs (Freq, Time, Ratio or Sync; 2026-11-08). -->
       <FaceSection span={2}>
-        {#snippet head()}<PanelEyebrow title="LFO / Mod" color={driftInk.primary} />{/snippet}
-        <div class="lfo-pad face-span-2">
-          <DeviceXY
-            xValue={lfoX}
-            yValue={lfoY}
-            title="LFO"
-            icon="lfo"
-            onInteraction={writeLfo}
-            color={driftInk}
-          />
+        {#snippet head()}<PanelEyebrow title="LFO" color={driftInk.primary} />{/snippet}
+        <div class="lfo-card face-span-2">
+          <div class="lfo-pad span-all">
+            <DeviceXY
+              xValue={lfoX}
+              yValue={lfoY}
+              title="LFO"
+              icon="lfo"
+              onInteraction={writeLfo}
+              color={driftInk}
+            />
+          </div>
+          <div class="pick-cell" data-param="LFO Wave">
+            <ChoicePicker
+              options={LFO_WAVE_NAMES}
+              selected={Math.round(panelParams.raw('LFO Wave') ?? 0)}
+              onSelect={(i) => panelParams.write('LFO Wave', i)}
+              label="LFO wave"
+              caption="Wave"
+              tint={driftInk.primary}
+              ghost={!panelParams.has('LFO Wave')}
+            />
+          </div>
+          <div class="pick-cell" data-param="LFO Mode">
+            <ChoicePicker
+              options={LFO_RATE_MODES}
+              selected={lfoMode}
+              onSelect={(i) => panelParams.write('LFO Mode', i)}
+              label="LFO rate mode"
+              caption="Rate"
+              tint={driftInk.primary}
+              ghost={!panelParams.has('LFO Mode')}
+            />
+          </div>
         </div>
       </FaceSection>
       <FaceSeam ink={driftInk.primary} />
 
-      <!-- Global: the voice mode's own knob (absent in Poly), Glide in
-           Mono, Drift, names beside; the voice mode itself is on the
-           Global page. -->
+      <!-- Global: the voice mode, one touch row across the section (Poly,
+           Mono, Stereo or Unison, as Live's Global shows it), and under it
+           the knobs the mode brings: Poly's Drift alone, large; otherwise
+           the mode's own (Thick, Spread or Strength) beside Drift, and in
+           Mono Glide between them. Until 2026-11-08 the mode was only on
+           the Global page, and in Poly the section was one medium knob. -->
       <FaceSection span={2}>
         {#snippet head()}<PanelEyebrow title="Global" color={driftInk.primary} />{/snippet}
-        <div class="voicing-card face-span-all flex flex-col gap-(--spacing-sm)">
+        <div class="voicing-card face-span-all">
+          <div class="voice-mode-row">{@render voiceModeTab(4)}</div>
+          <div class="voicing-knobs" data-voice-knobs={voiceMode === 0 ? 1 : voiceMode === 1 ? 3 : 2}>
           {#if voiceMode !== 0}
           <div class="voicing-slider min-h-0">
             <DeviceSlider
               value={voicingSliderValue}
               title={voicingSliderTitle}
               face="knob"
+              knobSize={voiceMode === 1 ? 's' : 'm'}
               icon="unison"
               orientation="vertical"
               labelSize="small"
@@ -773,6 +809,7 @@
                 value={glideValue}
                 title="Glide"
                 face="knob"
+                knobSize="s"
                 icon="glide"
                 orientation="vertical"
                 labelSize="small"
@@ -787,6 +824,7 @@
               value={driftValue}
               title="Drift"
               face="knob"
+              knobSize={voiceMode === 0 ? 'l' : voiceMode === 1 ? 's' : 'm'}
               icon="drift"
               orientation="vertical"
               labelSize="small"
@@ -797,6 +835,7 @@
                 selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, 60), value);
               }}
             />
+          </div>
           </div>
         </div>
       </FaceSection>
@@ -818,6 +857,52 @@
   .voicing-slider {
     flex: 1 1 0;
     min-height: 0;
+  }
+  /* The LFO: its pad over the two picks, one a column. */
+  .lfo-card {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: minmax(0, 1fr) var(--height-touch);
+    row-gap: var(--spacing-sm);
+    min-width: 0;
+    min-height: 0;
+  }
+  .lfo-card > .span-all {
+    grid-column: 1 / -1;
+    min-height: 0;
+  }
+  .pick-cell {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+  .pick-cell > :global(*) {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  /* Global: the voice mode's row, then the mode's knobs side by side. */
+  .voicing-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    min-width: 0;
+    min-height: 0;
+  }
+  .voice-mode-row {
+    flex: none;
+    height: var(--height-touch);
+    min-width: 0;
+  }
+  .voicing-knobs {
+    flex: 1 1 0;
+    display: flex;
+    gap: var(--spacing-sm);
+    min-height: 0;
+    min-width: 0;
+  }
+  .voicing-knobs > .voicing-slider {
+    flex: 1 1 0;
+    min-width: 0;
   }
   .wave-glyph {
     width: 100%;

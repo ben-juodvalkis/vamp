@@ -162,39 +162,41 @@
 
 {#snippet title(text: string)}<span class="sub" style="color: {ink.primary};">{text}</span>{/snippet}
 
-<!-- The routing: its pick across two columns, then what the mode adds:
-     Blend between two stages, or Multi Band's two crossovers. -->
+<!-- The routing on the band: its pick, one touch row across the section,
+     over what the mode adds: Blend between two stages, large across both
+     columns, or Multi Band's two crossovers, a column each. -->
 {#snippet routingTile()}
-  <div class="span-2-cell">{@render routingPick()}</div>
-  {#if multiBand}
-    <div class="stack">{@render knob('Low Mid X-Over', 'Low', 's')}{@render knob('Mid High X-Over', 'High', 's')}</div>
-  {:else}
-    {@render knob('Blend', 'Blend', 'm', !blend)}
-  {/if}
+  <div class="face-span-all routing-face">
+    <div class="span-2-cell">{@render routingPick()}</div>
+    {#if multiBand}
+      {@render knob('Low Mid X-Over', 'Low', 'm')}
+      {@render knob('Mid High X-Over', 'High', 'm')}
+    {:else}
+      <div class="span-2-cell tall">{@render knob('Blend', 'Blend', 'l', !blend)}</div>
+    {/if}
+  </div>
 {/snippet}
 
-<!-- One stage, as Live lays it: the shaper's half on the left, the
-     filter's on the right, each its type across three columns over three
-     knobs over its switches. On the board the stage's own switch and the
-     filter's Pre join them; the band keeps the shaper's and filter's. -->
-{#snippet stage(n: number, board: boolean)}
+<!-- One stage on the band, as Live lays it: the shaper's half on the
+     left, the filter's on the right. One touch row of each half's type
+     with its switch beside it (2026-11-08; the switches were a row of
+     their own at the foot, two slabs under the knobs), then the six knobs
+     under it, medium, a whole name each. The board's stage adds its
+     pictures (`stageBoard`). -->
+{#snippet stage(n: number)}
   {@const type = step(`Flt ${n} Type`)}
   {@const extra = roarFilterExtra(type)}
   <div class="face-span-all stage-grid" data-roar-stage-grid={n}>
-    <div class="span-3">{@render pick(`Shaper ${n} Type`, ROAR_SHAPERS, `${names[n - 1]} shaper`)}</div>
-    <div class="span-3">{@render pick(`Flt ${n} Type`, ROAR_FILTERS, `${names[n - 1]} filter`)}</div>
-    {@render knob(`Shaper ${n} Amt`, 'Amount', 'l')}
-    {@render knob(`Shaper ${n} Bias`, 'Bias', 'm')}
-    {@render knob(`Shaper ${n} Level`, 'Level', 's')}
-    {@render knob(`Flt ${n} Freq`, 'Freq', 'l')}
-    {@render knob(`Flt ${n} Res`, 'Res', 'm', !roarFilterHasRes(type))}
-    {#if extra}{@render knob(`Flt ${n} ${extra}`, extra, 's')}{:else}<div class="cell"></div>{/if}
+    <div class="span-2-cell">{@render pick(`Shaper ${n} Type`, ROAR_SHAPERS, `${names[n - 1]} shaper`, 'Shaper')}</div>
     {@render sw(`Shaper ${n} On`, 'Shaper')}
-    {#if board}{@render sw(`Stage ${n} On`, 'Stage')}{:else}<div class="cell"></div>{/if}
-    <div class="cell"></div>
+    <div class="span-2-cell">{@render pick(`Flt ${n} Type`, ROAR_FILTERS, `${names[n - 1]} filter`, 'Filter')}</div>
     {@render sw(`Flt ${n} On`, 'Filter')}
-    {#if board}{@render sw(`Flt ${n} Pre On`, 'Pre')}{:else}<div class="cell"></div>{/if}
-    <div class="cell"></div>
+    {@render knob(`Shaper ${n} Amt`, 'Amount', 'm')}
+    {@render knob(`Shaper ${n} Bias`, 'Bias', 'm')}
+    {@render knob(`Shaper ${n} Level`, 'Level', 'm')}
+    {@render knob(`Flt ${n} Freq`, 'Freq', 'm')}
+    {@render knob(`Flt ${n} Res`, 'Res', 'm', !roarFilterHasRes(type))}
+    {#if extra}{@render knob(`Flt ${n} ${extra}`, extra, 'm')}{:else}<div class="cell"></div>{/if}
   </div>
 {/snippet}
 
@@ -257,34 +259,38 @@
 <div class="roar-page" data-roar-page={page}>
 {#if page === 'face'}
   <!-- The band (ADR-513: one face): Input's tone, the routing, the first
-       stage, the feedback and the compressor. -->
-  <FaceGrid sections={[2, 3, 6, 2, 2]}>
-    <FaceSection span={2}>
+       stage, the feedback and the compressor. Eleven columns (2026-11-08;
+       fifteen until then, 57px each, which cut "Amount" to "Am…"): a
+       column holds a medium knob with its whole name, so Input, Feedback
+       and Global stack their two in one column each and the stage's six
+       knobs stand one a column. -->
+  <FaceGrid sections={[1, 2, 6, 1, 1]}>
+    <FaceSection span={1}>
       {#snippet head()}{@render title('Input')}{/snippet}
-      <div class="stack">{@render knob('Tone Amt', 'Tone', 's')}{@render sw('Color On', 'Color')}</div>
-      {@render knob('Tone Freq', 'Freq')}
+      <div class="stack">{@render knob('Tone Amt', 'Tone', 's')}{@render knob('Tone Freq', 'Freq', 's')}{@render sw('Color On', 'Color')}</div>
     </FaceSection>
     <FaceSeam ink={ink.primary} />
-    <FaceSection span={3}>
+    <FaceSection span={2}>
       {#snippet head()}{@render title('Routing')}{/snippet}
       {@render routingTile()}
     </FaceSection>
     <FaceSeam ink={ink.primary} />
     <FaceSection span={6}>
       {#snippet head()}{@render title(names[0])}{/snippet}
-      {@render stage(1, false)}
+      {@render stage(1)}
     </FaceSection>
     <FaceSeam ink={ink.primary} />
-    <FaceSection span={2}>
+    <FaceSection span={1}>
       {#snippet head()}{@render title('Feedback')}{/snippet}
-      {@render knob('Feedback', 'Amount')}
-      {@render knob(roarFeedbackTimeParam(step('FB Time Mode')), step('FB Time Mode') === 4 ? 'Note' : 'Time')}
+      <div class="stack">
+        {@render knob('Feedback', 'Amount')}
+        {@render knob(roarFeedbackTimeParam(step('FB Time Mode')), step('FB Time Mode') === 4 ? 'Note' : 'Time')}
+      </div>
     </FaceSection>
     <FaceSeam ink={ink.primary} />
-    <FaceSection span={2}>
+    <FaceSection span={1}>
       {#snippet head()}{@render title('Global')}{/snippet}
-      {@render knob('Comp Amt', 'Comp')}
-      {@render knob('Output', 'Output')}
+      <div class="stack">{@render knob('Comp Amt', 'Comp')}{@render knob('Output', 'Output')}</div>
     </FaceSection>
   </FaceGrid>
 {:else if page === 'input'}
@@ -420,13 +426,32 @@
     height: var(--height-touch);
     font-size: 0.8125rem;
   }
-  /* A stage: types, knobs, switches, three rows on the section's columns. */
+  /* A stage on the band: the types with their switches, then the knobs,
+     two rows on the section's columns. */
   .stage-grid {
     display: grid;
     grid-template-columns: subgrid;
-    grid-template-rows: var(--height-touch) minmax(0, 1fr) var(--height-touch);
+    grid-template-rows: var(--height-touch) minmax(0, 1fr);
     row-gap: var(--spacing-sm);
     min-height: 0;
+  }
+  /* The routing on the band: its pick over Blend, or the crossovers. */
+  .routing-face {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: var(--height-touch) minmax(0, 1fr);
+    row-gap: var(--spacing-sm);
+    min-height: 0;
+  }
+  .routing-face > :global(*) {
+    min-width: 0;
+    min-height: 0;
+  }
+  .span-2-cell.tall {
+    align-items: stretch;
+  }
+  .span-2-cell.tall > :global(*) {
+    height: 100%;
   }
   .stage-grid > :global(*) {
     min-width: 0;

@@ -242,13 +242,19 @@
            flips the oscillator, the filter and the envelopes together. -->
       <FaceSection span={3}>
         {#snippet head()}<PanelEyebrow title="Engine {engine}" color={engineInk.primary} />{/snippet}
+        <!-- The levels as knobs marked A and B (2026-11-08; two value boxes
+             reading "Engine A" / "Engine B" until then): the one idiom the
+             source levels share with Wavetable's 1 / 2 and Drift's, and
+             what the board draws. -->
         <div class="min-h-0 flex flex-col gap-(--spacing-sm)">
         {#each ['A', 'B'] as const as e (e)}
           <div class="flex-1 min-h-0" data-engine-level={e} class:shown={engine === e}>
             <DeviceSlider
               value={read(MELD_ENGINE[e].volume, 0.635)}
               title="Engine {e}"
-              icon="gain"
+              face="knob"
+              knobCaption={false}
+              knobMark={e}
               orientation="vertical"
               labelSize="small"
               isGhost={!(e === 'A' ? aOn : bOn)}
@@ -351,10 +357,7 @@
            (ADR-477), a stage a column: both in view, so there is no
            Amp/Mod switch. A seam between them. -->
       <FaceSection span={5}>
-        {#snippet head()}
-          <PanelEyebrow title="Envelopes" color={engineInk.primary} />
-          <PanelEyebrow title="LFOs" color={engineInk.primary} />
-        {/snippet}
+        {#snippet head()}<PanelEyebrow title="Envelopes" color={engineInk.primary} />{/snippet}
         <div class="env-stack face-span-all">
           {#each envelopes as envelope, i (envelope.title)}
             {#if i > 0}<div class="env-seam"><SectionDivider orientation="horizontal" ink={engineInk.primary} /></div>{/if}

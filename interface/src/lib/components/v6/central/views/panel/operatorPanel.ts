@@ -63,7 +63,10 @@ function oscTab(o: Osc): PanelTab {
 				title: `Oscillator ${o}`,
 				page: `osc-${o}`,
 				switchParam: on,
-				// A knob a column, in one row under the tabs (ADR-510).
+				// Three knobs stacked over two columns, names beside, as Global's
+				// (2026-11-08): a row of three under the tabs left the band's
+				// height empty above and below them.
+				columns: 2,
 				controls: [
 					{ kind: 'box', param: `${o} Coarse`, title: 'Coarse' },
 					{ kind: 'box', param: `Osc-${o} Level`, title: 'Level' },
@@ -522,6 +525,7 @@ export const OPERATOR_PANEL: InstrumentPanel = {
 							title: 'LFO',
 							page: 'lfo',
 							switchParam: 'LFO On',
+							columns: 2,
 							controls: [
 								{ kind: 'box', param: 'LFO Rate', title: 'Rate' },
 								{ kind: 'box', param: 'LFO Amt', title: 'Amount' },

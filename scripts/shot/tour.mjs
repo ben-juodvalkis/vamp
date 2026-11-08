@@ -29,6 +29,8 @@
  *                       Repeatable.
  *   --out-dir <dir>     Default screenshots/tour/<tour>.
  *   --full              Capture the whole viewport instead of the tour's crop.
+ *   --expand            Tap the full-screen icon (ADR-511) after each state's
+ *                       steps: every view at full screen (with --full).
  *   --wait <ms>         Settle time after load, before the steps (default 1500).
  *   --viewport <WxH>    Default 1366x1024 (iPad Pro landscape).
  *   --scale <n>         Device pixel ratio (default 2).
@@ -140,6 +142,7 @@ const serverMode = has('prod') ? 'prod' : 'dev';
 const sceneRef = flag('scene', 'default');
 const outDir = resolve(REPO_ROOT, flag('out-dir', join('screenshots', 'tour', tour.name)));
 const full = has('full');
+const expand = has('expand');
 const checkLayout = !has('no-layout');
 
 const log = (msg) => console.log(`[tour] ${msg}`);
@@ -277,7 +280,9 @@ try {
 			if (mock.clientCount() === 0) {
 				throw new Error(`page never connected to the mock on :${mock.port}`);
 			}
-			const { release } = await performSteps(page, state.steps);
+			// Full screen (ADR-511): the corner icon, after the state's own steps.
+			const steps = expand ? [...(state.steps ?? []), { click: '[data-central-expand]' }, { wait: 400 }] : state.steps;
+			const { release } = await performSteps(page, steps);
 
 			// Measured before the shutter and before a hold is released, so the
 			// check sees exactly the screen the picture does.
