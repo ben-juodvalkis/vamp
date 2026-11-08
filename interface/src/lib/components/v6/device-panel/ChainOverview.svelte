@@ -77,6 +77,7 @@
   import OperatorHeadAlgorithm from './chain/OperatorHeadAlgorithm.svelte';
   import InstrumentFace, { FACED_INSTRUMENTS } from './chain/InstrumentFace.svelte';
   import DrumRackFace from './chain/DrumRackFace.svelte';
+  import { deviceTypeLabel } from './chain/deviceTypeLabel';
   import { schemeFromInk } from '$lib/config/devicePresets';
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
   import constants from '$config/constants.json';
@@ -649,6 +650,11 @@
     );
   }
 
+  /** The caption under a cell's name: what the device is, where its name does not say (`deviceTypeLabel`). */
+  function captionOf(cell: Cell): string | null {
+    return deviceTypeLabel(cell.device.className, cell.device.name);
+  }
+
   /**
    * + Effect: the browser on its Effect segment. Under a pad scope the pad
    * is latched first (user, 2026-10-26): the browser covers the Drum Rack
@@ -685,25 +691,33 @@
 {#snippet cellBody(cell: Cell, position: number)}
   {@const glyph = glyphOf(cell)}
   {@const tile = cell.kind !== 'instrument' && cell.presetKey ? TILE_COMPONENTS[cell.presetKey] : undefined}
-      <!-- The device's name alone, on a band as tall as a strip's mute
-           button, so there is room to grab the cell (the user, 2026-10-26);
-           then Device On (the blue hand is the cell's frame alone since
-           2026-11-05). Measured as the faces are
-           (ADR-492), so a narrow cell's name steps down a size. -->
+  {@const caption = captionOf(cell)}
+      <!-- The header bar (2026-11-08, ADR-518): the panels' bar (ADR-516)
+           at the height of a strip's name band, so there is room to grab
+           the cell (the user, 2026-10-26). The name in the device's ink
+           over a wash of it, what the device IS under it where the name
+           does not say, and Device On at the right as every section's
+           switch sits on its bar, lit in the ink while on. The blue hand
+           is the cell's frame alone (2026-11-05). Measured as the faces
+           are (ADR-492), so a narrow cell's name steps down a size. -->
       <CellSize><div class="cell-head">
-        <span class="name" lang="en">{cell.device.name}</span>
+        <span class="head-text">
+          <span class="name" lang="en">{cell.device.name}</span>
+          {#if caption}<span class="caption">{caption}</span>{/if}
+        </span>
         <span class="head-end">
         {#if cell.kind === 'instrument' && glance.instrumentViewType === 'operator'}<OperatorHeadAlgorithm device={cell.device} />{/if}
         {#if isPowered(cell)}
         {@const on = isOn(cell)}
         <button
           type="button"
-          class="power"
+          class="physical-button power"
+          class:active={on}
           class:on
           aria-label="{on ? 'Turn off' : 'Turn on'} {cell.device.name}"
           aria-pressed={on}
           use:press={{ onPress: () => togglePower(cell), stopPropagation: true }}
-        ><Power /></button>
+        ><span class="power-glyph" aria-hidden="true"><Power /></span></button>
         {/if}
         </span>
       </div></CellSize>
@@ -859,6 +873,15 @@
      grid's 8px trough. */
   /* The chain's frame: the pad scope's outline and the two-row header. */
   .chain-wrap {
+    /* The cells are panels (ADR-518, after the boards' tiles, ADR-516):
+       a surface a shade off the page, a hairline, soft corners. The
+       ghosts (the recents, + Effect, the ghost Utility) are the same
+       shape drawn in a dashed line and no fill. */
+    --cell-radius: 6px;
+    --cell-line: var(--line);
+    --ghost-radius: 4px;
+    --ghost-line: color-mix(in oklab, var(--fg-tertiary) 45%, transparent);
+    --ghost-line-strong: color-mix(in oklab, var(--fg-tertiary) 70%, transparent);
     height: 100%;
     display: flex;
     gap: 8px;
@@ -882,11 +905,12 @@
     flex: 1 1 0;
     min-height: 0;
     display: flex;
+    padding: 0;
   }
   .chain-wrap.pad-scoped {
     outline: 2px solid var(--scope-ink, var(--track-ink, var(--phosphor)));
     outline-offset: -2px;
-    border-radius: var(--radius-sm, 2px);
+    border-radius: var(--cell-radius);
   }
   .chain {
     flex: 1 1 0;
@@ -905,12 +929,14 @@
   .chain-scope-chip {
     --chip-ink: var(--scope-ink, var(--track-ink));
     position: absolute;
-    top: 4px;
-    right: 4px;
+    top: 6px;
+    right: 6px;
     z-index: 3;
     pointer-events: none;
   }
-  /* The + cell: the strips row's add buttons' dashed ghost (NewTrackButtons). */
+  /* The + cell: the strips row's add buttons' dashed ghost (NewTrackButtons),
+     the firmest of the ghosts, since it is the one that always does
+     something. */
   .chain-add {
     display: flex;
     flex-direction: column;
@@ -920,15 +946,16 @@
     min-width: 0;
     min-height: 0;
     padding: 0;
-    border: 1px dashed var(--line-strong);
-    border-radius: 2px;
+    border: 1px dashed var(--ghost-line-strong);
+    border-radius: var(--ghost-radius);
     background: transparent;
     color: var(--muted-foreground);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
+    transition: background-color var(--t-fast) var(--ease-precise), color var(--t-fast) var(--ease-precise);
   }
   .chain-add > span {
-    opacity: var(--opacity-ghost);
+    opacity: 0.7;
   }
   .chain-add:active {
     background: var(--secondary);
@@ -952,20 +979,25 @@
     stroke-width: 1.5;
   }
 
+  /* A cell is a panel: the strips' own surface on the page, a hairline,
+     the header bar across its top and its face in the field below. */
   .chain-cell {
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 4px;
+    gap: 0;
+    padding: 0;
     min-width: 0;
     min-height: 0;
-    border: 1px solid var(--line-strong);
-    border-radius: 2px;
-    background: var(--surface-well);
+    border: 1px solid var(--cell-line);
+    border-radius: var(--cell-radius);
+    background: var(--card);
     color: var(--cell-ink);
     cursor: pointer;
     user-select: none;
+    /* The bar's wash and the face's frame stop at the corners. */
+    overflow: hidden;
+    transition: border-color var(--t-fast) var(--ease-precise), box-shadow var(--t-fast) var(--ease-precise);
   }
   /* The ghost section: two cells wide, the recents filling their columns
      top to bottom (alphabetical) and + Effect every column they leave, full
@@ -978,39 +1010,60 @@
     grid-template-columns: repeat(var(--recent-cols, 4), minmax(0, 1fr));
     grid-template-rows: repeat(var(--recent-rows, 4), minmax(0, 1fr));
     grid-auto-flow: column;
-    gap: 4px;
+    gap: 6px;
   }
   /* + Effect as one of the tiles: the recents' padding. */
   .chain-ghosts > .chain-add {
     padding: 4px;
     overflow: hidden;
   }
-  .chain-cell.off > :not(.cell-head) {
-    opacity: 0.45;
+  /* Bypassed: the bar keeps its name, its wash goes and the face dims, as
+     a board's tile ghosts its body when its section is off (ADR-516). */
+  .chain-cell.off .cell-head {
+    background: transparent;
+  }
+  .chain-cell.off .name {
+    color: var(--muted-foreground);
+  }
+  .chain-cell.off > .cell-control,
+  .chain-cell.off > .cell-face,
+  .chain-cell.off > .mark {
+    opacity: var(--opacity-ghost);
   }
   /* The cell under the finger rides it, over the others. */
   .chain-cell.dragging {
     z-index: 4;
     will-change: transform;
+    border-color: var(--line-strong);
   }
-  /* The blue hand: the device Live's controllers follow. */
+  /* The blue hand: the device Live's controllers follow, framed in the
+     selection ink the selected strip wears, so one colour means "Live's
+     selection" across the screen. */
   .chain-cell.appointed {
-    border-color: var(--cell-ink);
-    box-shadow: inset 0 0 0 1px var(--cell-ink);
-    background: color-mix(in oklab, var(--cell-ink) 14%, var(--surface-well));
+    border-color: var(--flat-selection);
+    box-shadow: inset 0 0 0 1px var(--flat-selection);
   }
 
-  /* The name, then the hand and the power button in the corner: a band
-     the strips' name band's height (--strip-band-h), a handle to drag by. */
+  /* The header bar: the name over a wash of its ink, a hairline under it,
+     the switch at its end. A band the strips' name band's height
+     (--strip-band-h), a handle to drag by. */
   .cell-head {
     display: flex;
     align-items: center;
     gap: 6px;
     min-width: 0;
     height: var(--strip-band-h, 56px);
-    /* Across its CellSize: the whole width, the power button in the corner. */
+    /* Across its CellSize: the whole width, the switch in the corner. */
     flex: 1 1 auto;
-    padding-left: 6px;
+    padding-inline: 10px 6px;
+    background: color-mix(in oklab, var(--cell-ink) 10%, transparent);
+    border-bottom: 1px solid var(--cell-line);
+    transition: background-color var(--t-standard) var(--ease-settle);
+  }
+  /* The chain's head wears its track's colour a shade deeper, the way the
+     strip's name block does, so the chain reads as that strip's. */
+  .chain-cell.instrument .cell-head {
+    background: color-mix(in oklab, var(--cell-ink) 18%, transparent);
   }
   .chain-cell > :global(.cell-size:has(> .cell-head)) {
     flex: none;
@@ -1019,47 +1072,81 @@
      (the user, the same day). */
   .chain-wrap.two-rows .cell-head {
     height: calc(var(--strip-band-h, 56px) / 2);
+    padding-inline: 8px 3px;
+    gap: 4px;
   }
-  /* The hand and Device On close the row. */
+  .head-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1px;
+  }
+  /* The switch and Operator's algorithm close the row. */
   .head-end {
     flex: 0 0 auto;
     margin-left: auto;
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 4px;
   }
-  /* Device On. Lit while the device runs, dim when bypassed. */
+  /* Device On: a section's switch on its bar (ADR-516): one step under
+     the touch floor in height, bought back in width; the power glyph
+     alone, since the word would not fit a narrow cell or a two-row
+     chain's half band and one switch should look the same everywhere;
+     lit in the device's ink while it runs, its frame in the ink while
+     bypassed. */
   .power {
+    --btn-tint: var(--cell-ink);
+    flex: none;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 100%;
-    margin-right: -2px;
-    border: 0;
-    border-radius: var(--radius-sm);
-    background: transparent;
-    color: var(--muted-foreground);
+    height: min(calc(100% - 0.75rem), 2rem);
+    min-width: 2.75rem;
+    padding: 0;
     cursor: pointer;
   }
-  .power.on {
-    color: var(--cell-ink);
+  .power-glyph {
+    display: flex;
+    width: 15px;
+    height: 15px;
   }
-  .power :global(svg) {
-    width: 20px;
-    height: 20px;
+  .power-glyph :global(svg) {
+    width: 100%;
+    height: 100%;
+    stroke-width: 2.25;
+  }
+  .chain-cell.half .power,
+  :global([data-cell-width='narrow']) .cell-head .power {
+    min-width: 2.125rem;
+  }
+  .chain-wrap.two-rows .power {
+    height: calc(100% - 0.375rem);
+    min-width: 2.25rem;
+  }
+  .chain-wrap.two-rows .power-glyph {
+    width: 13px;
+    height: 13px;
   }
 
+  /* The face: the cell's rest, inset from the panel's edge so its own
+     frame reads as a field sunk into it. */
   .mark {
     flex: 1 1 auto;
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 0;
+    padding: 6px;
+    container-type: size;
   }
+  /* A mark alone (a plug-in, a Max device) is drawn to the cell, so a
+     tall cell is not a glyph in a void. */
   .mark :global(svg) {
-    width: 30px;
-    height: 30px;
+    width: clamp(28px, 30cqmin, 72px);
+    height: clamp(28px, 30cqmin, 72px);
     stroke-width: 1.25;
   }
   /* A tile in a cell: the grid's XY or slider, minus its reorder arrows
@@ -1068,7 +1155,12 @@
     flex: 1 1 auto;
     min-height: 0;
     display: flex;
-    margin: 0 -2px;
+    padding: 6px;
+  }
+  .chain-wrap.two-rows .cell-control,
+  .chain-wrap.two-rows .cell-face,
+  .chain-wrap.two-rows .mark {
+    padding: 4px;
   }
   .cell-control > :global(*) {
     flex: 1 1 auto;
@@ -1078,19 +1170,24 @@
   .cell-control :global(.move-btn) {
     display: none;
   }
+  /* The tile's own frame, in the device's ink, is the field's; its
+     control's hairline inside it would be a second line. */
+  .cell-control :global(.device-control) {
+    border-radius: 4px;
+  }
   .glyph {
     display: flex;
-    width: 44px;
-    height: 44px;
+    width: clamp(40px, 44cqmin, 96px);
+    height: clamp(40px, 44cqmin, 96px);
   }
   .glyph :global(svg) {
     width: 100%;
     height: 100%;
-    stroke-width: 1.75;
+    stroke-width: 1.25;
   }
   .instrument-mark {
     width: 100%;
-    height: 56px;
+    height: clamp(48px, 40cqmin, 96px);
   }
 
   /* A rack's face (`chain/RackFace`): its mark and macros, the cell's rest. */
@@ -1098,6 +1195,7 @@
     flex: 1 1 auto;
     min-height: 0;
     display: flex;
+    padding: 6px;
   }
   .cell-face > :global(*) {
     flex: 1 1 auto;
@@ -1105,15 +1203,36 @@
     min-height: 0;
   }
 
-  /* The name keeps its room; the type takes only what is left. */
+  /* The name keeps its room; the switch takes only what it needs. */
   .name {
     flex: 0 1 auto;
     min-width: 0;
-    font-size: 1rem;
-    font-weight: var(--font-weight-medium);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.15;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: color var(--t-standard) var(--ease-settle);
+  }
+  /* What the device is, under its name, small and quiet; only on a
+     one-row chain's full band, which has the line. */
+  .caption {
+    min-width: 0;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+    color: var(--fg-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .chain-wrap.two-rows .caption,
+  .chain-cell.half .caption,
+  :global([data-cell-width='narrow']) .cell-head .caption {
+    display: none;
   }
   /* A one-row chain's band has room for two lines: a long name wraps
      (hyphenated where the browser can, else broken where it must) rather
@@ -1124,7 +1243,6 @@
     -webkit-line-clamp: 2;
     line-clamp: 2;
     white-space: normal;
-    line-height: 1.2;
     hyphens: auto;
     overflow-wrap: anywhere;
   }
@@ -1135,18 +1253,51 @@
     overflow-wrap: normal;
     hyphens: manual;
   }
-  /* Its power button narrower (32 px across, still the band's height), so
-     the name keeps the room. */
-  .chain-cell.half .power {
-    width: 32px;
-  }
   .chain-cell.half .cell-head {
-    gap: 2px;
+    gap: 3px;
+    padding-inline: 8px 4px;
   }
-  /* A narrow cell leaves the name what the power button does not: a size
+  /* A narrow cell leaves the name what the switch does not: a size
      smaller. */
   :global([data-cell-width='narrow']) .cell-head .name {
     font-size: 0.8125rem;
+  }
+  .chain-wrap.two-rows .name {
+    font-size: 0.8125rem;
+  }
+
+  /* ---- Flat grammar (the shipped skin). The cells' material above is
+     already Live's: flat surfaces, hairlines, the ink in the text and the
+     fills. What the tokens cannot say sits here. */
+  /* On the light ladder the inks are too pale for text: pull a name
+     toward the foreground, hue kept, as the sliders' labels are. */
+  :global(.light[data-skin='hybrid']) .name {
+    color: color-mix(in oklab, var(--cell-ink) 55%, var(--foreground));
+  }
+  /* The switch: lit in the ink while on, its frame in the ink off
+     (BoardTile's rule). */
+  :global([data-grammar='flat']) .power.active {
+    background: var(--btn-tint);
+    border-color: var(--btn-tint);
+    color: var(--flat-on-fg);
+  }
+  :global([data-grammar='flat']) .power:not(.active) {
+    color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
+  }
+  /* One frame round a tile's field: the tile's, in its ink; the control's
+     own hairline inside it goes. */
+  :global([data-grammar='flat']) .cell-control :global(.device-control .xy-container),
+  :global([data-grammar='flat']) .cell-control :global(.device-control .slider-container) {
+    border-color: transparent;
+    border-radius: 3px;
+  }
+  /* The ghost Utility: the ghosts' dashed line and no fill, not a tile's
+     slab (BaseDeviceControl's ghost is a solid-framed module; !important
+     because that rule is). */
+  :global([data-grammar='flat']) .ghost-utility :global(.device-control.device-ghost) {
+    background: transparent !important;
+    border: 1px dashed var(--ghost-line) !important;
+    border-radius: var(--ghost-radius);
   }
 
 </style>
