@@ -169,6 +169,12 @@ export default defineConfig({
 		// Not in the browser demo (ADR-502), which registers no service worker.
 		process.env.VAMP_DEMO_BUILD !== '1' &&
 		SvelteKitPWA({
+			// Off for a build with its own folder (the gate, the release server).
+			// The plugin works on `.svelte-kit/output` whichever folder the build
+			// writes to: it deleted service-worker.js from under the iPad's running
+			// page server, which crashed on the next request for it (2026-11-09).
+			// Those builds keep SvelteKit's own worker, as they already did.
+			disable: !!process.env.LOOPING_KIT_OUT_DIR,
 			srcDir: 'src',
 			filename: 'service-worker.ts',
 			mode: process?.env?.NODE_ENV === 'production' ? 'production' : 'development',
