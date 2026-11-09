@@ -1,7 +1,7 @@
 {
   "setlist": {
     "_description": "The port that serves the setlist page at every path (ADR-519).",
-    "port": 8890
+    "port": 8891
   },
   "$schema": "./constants.schema.json",
   "description": "Project-wide configuration constants for the Looping system: the general edition's working defaults, the same on every clone. A Mac's own differences (the owner's switches, paths, hardware maps and library tuning) go in config/constants.local.json, gitignored, which every reader on the Mac lays over this file (interface/bridge/utils/constants.js; general-release plan.md §3). The UI build compiles this file alone.",

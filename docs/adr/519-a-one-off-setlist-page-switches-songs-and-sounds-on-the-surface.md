@@ -32,7 +32,9 @@ Different from the patch:
 - The new sound goes on before the old goes off.
 - `Pommel Horse160` yields a tempo. The patch split on spaces, so it could not.
 
-Port `setlist.port` (8890) shows the page at every path, so a typed address
+`npm run setlist` serves a production build and uses the running bridge or starts
+one. Port `setlist.port` (8891; `npm run ipad`'s status page holds 8890) shows the
+page at every path, so a typed address
 or a home-screen icon that opens at `/` cannot land on the regular interface.
 Every other port keeps it.
 

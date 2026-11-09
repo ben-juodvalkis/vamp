@@ -7,6 +7,7 @@
     "user-facing": {
       "setup": "A fresh clone to a working install: checks Node, installs every dependency, links the control surface into Live as Vamp, then runs the setup check. Safe to run again.",
       "dev": "Mac dev: validate + cleanup + regen + concurrently(bridge, interface, browser).",
+      "setlist": "The setlist remote: production build on setlist.port, using a running bridge or starting one (ADR-519).",
       "ipad": "iPad setup: validate + cleanup + scripts/setup-ipad.js. Live starts at t=0; the catalog scan and Vite build are fingerprint-gated and run alongside it (FORCE=1 to rebuild regardless).",
       "interface": "Interface only (no bridge), e.g. when bridge runs in another shell.",
       "bridge": "Bridge only (no interface).",
@@ -73,6 +74,7 @@
     "dev:interface": "cd interface && npm run dev -- --port 3000 --host 0.0.0.0",
     "open:browser": "sleep 5 && echo \"\\n\ud83d\udda5\ufe0f  Mac: http://localhost:3000\\n\ud83d\udcf1 iPad: http://$(scutil --get LocalHostName 2>/dev/null).local:3000\\n\" && open http://localhost:3000 && node scripts/open-live.js",
     "open:max": "sleep 6 && node scripts/open-max-patch.js",
+    "setlist": "node scripts/setlist.js",
     "ipad": "npm run validate && npm run cleanup && node scripts/setup-ipad.js",
     "setup-ipad-core": "concurrently -n \"BRIDGE,PREVIEW\" -c \"cyan,green\" --restart-tries -1 --restart-after 1500 \"npm run dev:bridge:ipad\" \"npm run preview:ipad\"",
     "prep:ipad": "npm run build:ipad",
