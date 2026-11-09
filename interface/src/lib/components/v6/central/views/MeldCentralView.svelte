@@ -57,13 +57,13 @@
   });
 
   /**
-   * Engine A orange, Engine B blue — Analog's voice colours, so the same
-   * colour means the same half in both synths. The oscillator, the filter
-   * and the envelopes all wear the engine the switch is on.
+   * Engine A blue, Engine B amber (user, 2026-11-08). Analog's two voice
+   * colours, the other way round. The oscillator, the filter and the
+   * envelopes all wear the engine the switch is on.
    */
   const ENGINE_COLORS = {
-    A: { primary: '#ff8244', secondary: 'rgba(255, 130, 68, 0.1)', accent: '#ff9e60' },
-    B: { primary: '#12b2f4', secondary: 'rgba(18, 178, 244, 0.1)', accent: '#33cdff' }
+    A: { primary: '#12b2f4', secondary: 'rgba(18, 178, 244, 0.1)', accent: '#33cdff' },
+    B: { primary: '#ff8244', secondary: 'rgba(255, 130, 68, 0.1)', accent: '#ff9e60' }
   } as const;
 
   /**

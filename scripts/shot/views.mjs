@@ -977,7 +977,7 @@ function instrumentSwapStates() {
 		// full-screen board's tiles (board-wavetable).
 		['wavetable-reference', 'Wavetable', 'InstrumentVector', referenceParams('Wavetable')],
 		['meld', 'Meld', 'InstrumentMeld', meld],
-		// Engine B up: the other half, in blue (both its envelopes in view, ADR-477).
+		// Engine B up: the other half, in amber (both its envelopes in view, ADR-477).
 		['meld-engine-b', 'Meld', 'InstrumentMeld', meld, [{ click: '[data-engine-level="B"] [role="slider"]' }]],
 		// The effect chain's Meld cell with Engine B shown in the view: its
 		// pad is Osc B, B's Shape and Tone (meldEngineStore), cropped to the chain.
