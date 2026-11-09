@@ -65,21 +65,26 @@
 	});
 
 	/**
-	 * Relative at half sensitivity (the user, 2026-10-26): Q is half the
-	 * row since it shares it with the loop brace, so a drag across twice its
-	 * height covers 0..100, as one across the whole row did. It was
-	 * absolute (the value under the finger) before; a touch-down no longer
-	 * jumps it.
+	 * Absolute (Ben, 2026-11-09): the value is the finger's height in the
+	 * well, bottom 0, top 100, and a touch-down jumps it there. It was
+	 * relative at half sensitivity from 2026-10-26 until then.
 	 */
-	const DRAG_SENSITIVITY = 0.5;
-	let dragStartValue = 0;
-	function dragToValue(dy: number, height: number): number {
-		const value = dragStartValue + (dy / Math.max(1, height)) * 100 * DRAG_SENSITIVITY;
-		return Math.max(0, Math.min(100, value));
+	let wellBottom = 0;
+	let wellHeight = 1;
+	function yToValue(y: number): number {
+		const value = ((wellBottom - y) / Math.max(1, wellHeight)) * 100;
+		return Math.round(Math.max(0, Math.min(100, value)));
+	}
+
+	function setFromY(y: number) {
+		const val = yToValue(y);
+		// Update UI immediately, queue for the frame-synchronised send.
+		optimisticValue = val;
+		throttle.push(val);
 	}
 
 	/**
-	 * One press, one pointer, relative from touch-down (ADR-427, `commit: 'immediate'` —
+	 * One press, one pointer, absolute (ADR-427, `commit: 'immediate'` —
 	 * this control has no tap/drag distinction to make, and waiting for a
 	 * slop threshold would drop the first 12px of every gesture).
 	 *
@@ -93,7 +98,7 @@
 		commit: 'immediate',
 		touchAction: 'none',
 		stopPropagation: true,
-		onStart: () => {
+		onStart: (info: DragInfo) => {
 			// Nothing focused: fall back to the clip running on the
 			// selected track, focusing it on the way past so the central
 			// view and this slider's own readout follow. Q needs no clip
@@ -103,15 +108,15 @@
 			centralDisplayStore.setView('groove');
 			// Ahead of the first quantize write, so that write lands on it.
 			loadFirstGrooveIfNone(gestureClipPath);
-			dragStartValue = displayValue;
+			const rect = containerRef?.getBoundingClientRect();
+			wellBottom = rect ? rect.bottom : info.downY;
+			wellHeight = rect ? rect.height : info.height;
 			isDragging = true;
 			throttle.start();
+			setFromY(info.downY);
 		},
-		onMove: ({ dy, height }: DragInfo) => {
-			const val = Math.round(dragToValue(dy, height));
-			// Update UI immediately, queue for the frame-synchronised send.
-			optimisticValue = val;
-			throttle.push(val);
+		onMove: ({ y }: DragInfo) => {
+			setFromY(y);
 		},
 		onEnd: () => {
 			isDragging = false;
