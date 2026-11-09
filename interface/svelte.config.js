@@ -58,7 +58,12 @@ const config = {
 		// another has just truncated. The gate syncs the default folder
 		// once, then gives each its own under `.svelte-kit/`. Everything
 		// else uses the default, which `interface/tsconfig.json` extends.
-		outDir: process.env.LOOPING_KIT_OUT_DIR || '.svelte-kit',
+		// The demo never uses the default: `.svelte-kit/output` is what
+		// `vite preview` serves the iPad, and a demo build there, with its
+		// `/vamp/demo` base, answers 404 at `/` (2026-11-09).
+		outDir:
+			process.env.LOOPING_KIT_OUT_DIR ||
+			(process.env.VAMP_DEMO_BUILD === '1' ? '.svelte-kit/demo-build' : '.svelte-kit'),
 		// The demo is served from someone else's site (benjuodvalkis.com's
 		// `/vamp/demo/`), so it takes that path as its base and registers no
 		// service worker: one there would cache the demo on a site that
