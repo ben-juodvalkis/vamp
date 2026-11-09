@@ -53,8 +53,16 @@ pads instead. Tapping the sound already on changes nothing.
 
 "When the set loaded" means the first read at least five seconds after the
 surface starts. The surface is built during Live's document exchange; reading
-there went with every macro coming back 0, and resets wrote those zeros over
-the set's real values (2026-11-08). The surface logs both reads.
+there read 0 for LoPass, where the same set read 127 ten seconds later, and resets
+wrote those zeros over the set's real values (measured 2026-11-08). The surface
+logs both reads.
+
+The sound on gets two more pads from its own rack, macros 1 and 2, then 3 and 4,
+as the patch mapped them. Every sound's four are read once at set load, and
+choosing a sound returns its own to those values. Reading them again on a song
+change would take a pad's last move as home, so resets would stop resetting. A
+sound that is a bare plug-in gets no pads, since its parameters are not macros;
+the patch moved them anyway.
 
 The controls drag relatively, as the old remote's did: a touch does not jump the
 value. The page has no listeners in Live. It polls, so a macro moved in Live
@@ -62,6 +70,5 @@ shows within about 1.5 s, and nothing can leak or fire at gesture rate.
 
 ## Not yet
 
-Chain volume, the per-sound XY pads and arpeggiator, the foot switch on CC 67
-that steps sounds, and resetting a sound's own macros when leaving it, all of
-which the patch does.
+Chain volume, the arpeggiator and the foot switch on CC 67 that steps sounds,
+all of which the patch does.

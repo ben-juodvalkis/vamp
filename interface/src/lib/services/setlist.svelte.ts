@@ -51,6 +51,8 @@ export const setlist = $state({
 	armed: 0,
 	outputKey: null as string | null,
 	pads: [] as SetlistPad[],
+	/** The two pads on the sound's own macros; none for a bare plug-in. */
+	soundPads: [] as SetlistPad[],
 	/** Macro values by control key. A finger's value wins over Live's here. */
 	values: {} as Record<string, number>
 });
@@ -101,6 +103,20 @@ let pollTimer: ReturnType<typeof setInterval> | null = null;
 let retryTimer: ReturnType<typeof setTimeout> | null = null;
 let armTimer: ReturnType<typeof setTimeout> | null = null;
 
+interface WirePad {
+	label: string;
+	x: { key: string; value: number };
+	y: { key: string; value: number };
+}
+
+function receivePads(pads: WirePad[] | undefined): SetlistPad[] {
+	return (pads ?? []).map((pad) => {
+		receive(pad.x);
+		receive(pad.y);
+		return { label: pad.label, xKey: pad.x.key, yKey: pad.y.key };
+	});
+}
+
 function onMessage(message: OscBusMessage): void {
 	if (message.address !== STATE) return;
 	let parsed;
@@ -120,16 +136,8 @@ function onMessage(message: OscBusMessage): void {
 	setlist.sound = parsed.sound ?? -1;
 	setlist.outputKey = parsed.output?.key ?? null;
 	receive(parsed.output);
-	const pads = parsed.pads ?? [];
-	setlist.pads = pads.map((pad: { label: string; x: { key: string }; y: { key: string } }) => ({
-		label: pad.label,
-		xKey: pad.x.key,
-		yKey: pad.y.key
-	}));
-	for (const pad of pads) {
-		receive(pad.x);
-		receive(pad.y);
-	}
+	setlist.pads = receivePads(parsed.pads);
+	setlist.soundPads = receivePads(parsed.soundPads);
 }
 
 function askAgainUnlessAnswered(): void {

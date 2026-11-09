@@ -582,6 +582,10 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 							sounds: shown.sounds,
 							sound: setlistMock.sound,
 							output: { key: '1/1', value: setlistMock.values['1/1'] },
+							soundPads: [
+								{ label: 'Delay Time', x: { key: 's/1', value: 52 }, y: { key: 's/2', value: 66 } },
+								{ label: 'HiPass', x: { key: 's/3', value: 0 }, y: { key: 's/4', value: 0 } }
+							],
 							pads: setlistMock.pads.map(([label, x, y]) => ({
 								label,
 								x: { key: x, value: setlistMock.values[x] },

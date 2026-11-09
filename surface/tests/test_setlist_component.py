@@ -74,6 +74,19 @@ def macros(name, *pairs):
     return rack
 
 
+def sound_rack(name):
+    """A sound's rack. Ram Birds is a bare plug-in; Lead's macros are named."""
+    if name == "Ram Birds":
+        plugin = Device(class_name="AuPluginDevice")
+        plugin.parameters += [Param("Cutoff", 10.0), Param("Res", 20.0), Param("A", 1.0), Param("B", 2.0)]
+        return plugin
+    rack = Device()
+    names = ["Delay Time", "Delay Feedback", "Macro 3", "."] if name == "Lead" else ["Macro %d" % n for n in range(1, 5)]
+    rack.parameters += [Param(n, 10.0 * (i + 1)) for i, n in enumerate(names)]
+    rack.parameters += [Param("Macro %d" % n, 99.0) for n in range(5, 9)]
+    return rack
+
+
 def effect_racks():
     return [
         macros("Output", ("Output", 100.0)),
@@ -94,7 +107,7 @@ def build():
         "Blank": ["Piano"],
     }
     songs = [
-        Chain(name, [Device(on=True, chains=[Chain(s, [Device()]) for s in parts])])
+        Chain(name, [Device(on=True, chains=[Chain(s, [sound_rack(s)]) for s in parts])])
         for name, parts in sounds.items()
     ]
     midi_rack = Device(class_name="MidiEffectGroupDevice", chains=[Chain("wrong", [])])
@@ -382,3 +395,88 @@ def test_a_move_before_the_set_settles_is_refused():
     )
     component.handle_param(["4/1", 5.0], None)
     assert mfx(song, 1).value == 127.0
+
+
+def sound(songs, song_index, sound_index):
+    return songs[song_index].devices[0].chains[sound_index].devices[0]
+
+
+def test_the_sound_on_gets_two_pads_from_macros_1_to_4():
+    _, _, component, sent = build()
+    component.handle_select_song([0], None)
+    pads = last_state(sent)["soundPads"]
+    assert [pad["label"] for pad in pads] == ["Delay Time", ""]
+    assert pads[0]["x"] == {"key": "s/0/0/1", "value": 10.0}
+    assert pads[0]["y"] == {"key": "s/0/0/2", "value": 20.0}
+    assert pads[1]["x"] == {"key": "s/0/0/3", "value": 30.0}
+    assert pads[1]["y"] == {"key": "s/0/0/4", "value": 40.0}
+
+
+def test_no_sound_on_or_a_bare_plugin_gets_no_pads():
+    _, _, component, sent = build()
+    component.handle_get([], None)
+    assert last_state(sent)["soundPads"] == []
+    component.handle_select_song([1], None)
+    component.handle_select_sound([1], None)
+    assert last_state(sent)["soundPads"] == []
+
+
+def test_a_sound_pad_writes_only_the_sound_on_and_only_macros_1_to_4():
+    _, songs, component, _ = build()
+    component.handle_select_song([0], None)
+    component.handle_param(["s/0/0/2", 500.0], None)
+    assert sound(songs, 0, 0).parameters[2].value == 127.0
+    component.handle_param(["s/0/1/1", 5.0], None)
+    assert sound(songs, 0, 1).parameters[1].value == 10.0
+    component.handle_param(["s/0/0/5", 5.0], None)
+    assert sound(songs, 0, 0).parameters[5].value == 99.0
+    component.handle_param(["s/0/0/0", 0.0], None)
+    assert sound(songs, 0, 0).on
+
+
+def test_choosing_a_sound_returns_its_macros_to_their_set_load_values():
+    _, songs, component, _ = build()
+    component.handle_select_song([0], None)
+    component.handle_param(["s/0/0/1", 77.0], None)
+    component.handle_select_sound([1], None)
+    assert sound(songs, 0, 0).parameters[1].value == 77.0
+    component.handle_select_sound([0], None)
+    assert sound(songs, 0, 0).parameters[1].value == 10.0
+
+
+def test_a_song_change_resets_the_sound_it_lands_on():
+    _, songs, component, _ = build()
+    component.handle_select_song([0], None)
+    component.handle_param(["s/0/0/1", 77.0], None)
+    component.handle_select_song([1], None)
+    component.handle_select_song([0], None)
+    assert sound(songs, 0, 0).parameters[1].value == 10.0
+
+
+def test_tapping_the_sound_on_keeps_its_macros():
+    _, songs, component, _ = build()
+    component.handle_select_song([0], None)
+    component.handle_param(["s/0/0/1", 77.0], None)
+    component.handle_select_sound([0], None)
+    assert sound(songs, 0, 0).parameters[1].value == 77.0
+
+
+def test_sound_macros_read_during_startup_are_never_used():
+    song, songs, _, sent = build()
+    clock["now"] = 0.0
+    scheduled = []
+    real = sound(songs, 0, 0).parameters[1]
+    real.value = 0.0
+    component = SetlistComponent(
+        song=song,
+        emit=lambda a, args: sent.append((a, args)),
+        schedule_delayed=lambda ms, fn: scheduled.append(fn),
+        clock=lambda: clock["now"],
+    )
+    component.handle_get([], None)
+    real.value = 10.0
+    clock["now"] = SETTLE_SECONDS
+    scheduled[0]()
+    real.value = 77.0
+    component.handle_select_song([0], None)
+    assert real.value == 10.0

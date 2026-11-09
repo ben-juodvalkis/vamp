@@ -107,6 +107,15 @@ describe('setlist', () => {
 		expect(setlist.values['3/1']).toBe(127);
 	});
 
+	it('shows the sound pads, and none when the sound has no rack', () => {
+		const pad = { label: 'Delay Time', x: { key: 's/1/0/1', value: 52 }, y: { key: 's/1/0/2', value: 66 } };
+		reply({ ...state, soundPads: [pad] });
+		expect(setlist.soundPads).toEqual([{ label: 'Delay Time', xKey: 's/1/0/1', yKey: 's/1/0/2' }]);
+		expect(setlist.values['s/1/0/2']).toBe(66);
+		reply(state);
+		expect(setlist.soundPads).toEqual([]);
+	});
+
 	it('a finger wins over Live, and a reset reaches a control nobody holds', () => {
 		reply(withControls(64, 127));
 		holdControl('3/1');

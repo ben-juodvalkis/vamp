@@ -14,6 +14,8 @@
 	const YELLOW = '#ffed00';
 	const ORANGE = '#f9a01c';
 	const WHITE = '#ffffff';
+	const TEAL = '#00c4a8';
+	const SOUND_PAD_CELLS = [0, 1];
 	const PAD_COLORS = [
 		[GREEN, RED], [GREEN, RED],
 		[PINK, WHITE], [PINK, WHITE], [RED, WHITE], [RED, WHITE],
@@ -61,6 +63,16 @@
 	</div>
 
 	<div class="pads">
+		{#each SOUND_PAD_CELLS as cell}
+			{@const pad = setlist.soundPads[cell]}
+			{#if pad}
+				{#key pad.xKey}
+					<XYPad {pad} color={TEAL} labelColor={RED} />
+				{/key}
+			{:else}
+				<div class="empty" style:--color={TEAL}></div>
+			{/if}
+		{/each}
 		{#each setlist.pads as pad, i (pad.xKey)}
 			<XYPad {pad} color={PAD_COLORS[i % PAD_COLORS.length][0]} labelColor={PAD_COLORS[i % PAD_COLORS.length][1]} />
 		{/each}
@@ -117,12 +129,12 @@
 		grid-template-rows: repeat(4, 1fr);
 		gap: 2vh 1.3vw;
 		min-height: 0;
-		/* The right edge stays free for the chain volume; the old remote's first
-		   two cells are the sound's own pads, which come later. */
+		/* The right edge stays free for the chain volume. */
 		margin-right: 7.5%;
 	}
-	.pads > :global(:first-child) {
-		grid-column-start: 3;
+	.empty {
+		border: 1px solid color-mix(in srgb, var(--color) 30%, #000);
+		border-radius: 10px;
 	}
 	.sounds {
 		display: grid;

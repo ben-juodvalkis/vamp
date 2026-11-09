@@ -22,6 +22,9 @@ rack named ``Output`` gives its ``Output`` macro to the slider, and every other
 rack's named macros pair up as XY pads (macro 1 and 2, 3 and 4, ...). A sound
 change returns the slider to 64 and the pads to what they held when the set
 loaded, in the same undo step as the switch.
+
+The sound on also gets two pads from its own rack's macros 1 to 4, read for
+every sound at set load and returned to those values when that sound is chosen.
 """
 
 from __future__ import annotations
@@ -47,7 +50,10 @@ _DEVICE_ON = "Device On"
 OUTPUT_NAME = "Output"
 OUTPUT_RESET_VALUE = 64.0
 _MACRO_COUNT = 8
-_UNNAMED_MACRO = re.compile(r"^Macro \d+$")
+_SOUND_MACRO_COUNT = 4
+_SOUND_RACK_CLASSES = (_RACK_CLASS, "DrumGroupDevice")
+# "." is how this set blanks a macro's label.
+_UNNAMED_MACRO = re.compile(r"^(Macro \d+|\.)$")
 # The surface is built while Live is still exchanging documents, before a set's
 # macros can be trusted (2026-11-08: reads then took a saved 127 for 0, and every
 # reset wrote the 0 back). Nothing counts as the set-load value until this long
@@ -111,6 +117,8 @@ class SetlistComponent:
         # (rack name, parameter index) -> the value it held at set load. A
         # surface instance lives as long as one open set.
         self._baselines = {}
+        # (song index, sound index, parameter index) -> value at set load.
+        self._sound_baselines = {}
         self._clock = clock
         self._started = clock()
         try:
@@ -186,6 +194,54 @@ class SetlistComponent:
                 })
         return pads
 
+    def _sound_rack(self, songs: List[Any], song_index: int, sound_index: int) -> Optional[Any]:
+        """The sound's rack, or None for a sound that is a bare plug-in, whose
+        parameters are not macros."""
+        sounds = self._sound_chains(songs[song_index])
+        device = _first_device(sounds[sound_index]) if sound_index < len(sounds) else None
+        if device is None or device.class_name not in _SOUND_RACK_CLASSES:
+            return None
+        return device
+
+    def _sound_pads(self, songs: List[Any], song_index: int, sound_index: int) -> List[dict]:
+        if song_index < 0 or sound_index < 0:
+            return []
+        rack = self._sound_rack(songs, song_index, sound_index)
+        if rack is None:
+            return []
+        parameters = list(rack.parameters)
+        pads = []
+        for x_index in range(1, min(_SOUND_MACRO_COUNT, len(parameters) - 1), 2):
+            x, y = parameters[x_index], parameters[x_index + 1]
+            named = [p.name for p in (x, y) if not _UNNAMED_MACRO.match(p.name)]
+            prefix = "s/%d/%d" % (song_index, sound_index)
+            pads.append({
+                "label": named[0] if named else "",
+                "x": {"key": "%s/%d" % (prefix, x_index), "value": x.value},
+                "y": {"key": "%s/%d" % (prefix, x_index + 1), "value": y.value},
+            })
+        return pads
+
+    def _capture_sound_baselines(self) -> None:
+        songs = self._song_chains()
+        for song_index, song_chain in enumerate(songs):
+            for sound_index in range(len(self._sound_chains(song_chain))):
+                rack = self._sound_rack(songs, song_index, sound_index)
+                if rack is None:
+                    continue
+                parameters = list(rack.parameters)[1:_SOUND_MACRO_COUNT + 1]
+                for offset, parameter in enumerate(parameters):
+                    self._sound_baselines.setdefault((song_index, sound_index, offset + 1), parameter.value)
+
+    def _reset_sound(self, songs: List[Any], song_index: int, sound_index: int) -> None:
+        rack = self._sound_rack(songs, song_index, sound_index)
+        if rack is None:
+            return
+        for parameter_index, parameter in enumerate(rack.parameters):
+            baseline = self._sound_baselines.get((song_index, sound_index, parameter_index))
+            if baseline is not None and parameter.value != baseline:
+                parameter.value = baseline
+
     def _settled(self) -> bool:
         return self._clock() - self._started >= SETTLE_SECONDS
 
@@ -217,6 +273,7 @@ class SetlistComponent:
                 if 1 <= parameter_index <= _MACRO_COUNT and (rack.name, parameter_index) not in self._baselines:
                     self._baselines[(rack.name, parameter_index)] = parameter.value
                     added = True
+        self._capture_sound_baselines()
         if added:
             self._log_macros("taken as set-load values")
 
@@ -269,6 +326,7 @@ class SetlistComponent:
             "tempo": self._song.tempo,
             "output": {"key": output[0], "value": output[1].value} if output else None,
             "pads": self._pads(),
+            "soundPads": self._sound_pads(songs, current_song, current_sound),
         }
         self._emit(V3_SETLIST_STATE_ADDRESS, (json.dumps(payload, separators=(",", ":")),))
 
@@ -301,6 +359,7 @@ class SetlistComponent:
                     if device is not None:
                         _set_on(device, False)
             self._reset_controls()
+            self._reset_sound(songs, song_index, sound_index)
         finally:
             song.end_undo_step()
 
@@ -333,7 +392,23 @@ class SetlistComponent:
         except Exception as error:
             logger.exception("setlist param: %s", error)
 
+    def _write_sound_param(self, key: str, value: float) -> None:
+        """``s/<song>/<sound>/<macro>``, for the sound on only."""
+        _, song_index, sound_index, parameter_index = key.split("/")
+        song_index, sound_index, parameter_index = int(song_index), int(sound_index), int(parameter_index)
+        songs = self._song_chains()
+        if not 1 <= parameter_index <= _SOUND_MACRO_COUNT or not 0 <= song_index < len(songs):
+            return
+        rack = self._sound_rack(songs, song_index, sound_index)
+        if rack is None or not _is_on(rack):
+            return
+        parameter = rack.parameters[parameter_index]
+        parameter.value = max(parameter.min, min(parameter.max, value))
+
     def _write_param(self, key: str, value: float) -> None:
+        if key.startswith("s/"):
+            self._write_sound_param(key, value)
+            return
         device_index, parameter_index = (int(part) for part in key.split("/"))
         if not 1 <= parameter_index <= _MACRO_COUNT:
             return
