@@ -4,6 +4,7 @@ values as the only state, and asking never changing anything."""
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 
 import pytest
 
@@ -31,6 +32,7 @@ class Device:
         self.class_name = class_name
         self.parameters = [Param("Device On", 1.0 if on else 0.0)]
         self.chains = list(chains)
+        self.view = SimpleNamespace(selected_chain=None)
 
     @property
     def on(self):
@@ -480,3 +482,32 @@ def test_sound_macros_read_during_startup_are_never_used():
     real.value = 77.0
     component.handle_select_song([0], None)
     assert real.value == 10.0
+
+
+def test_a_switch_selects_the_song_and_sound_chains_in_live():
+    song, songs, component, _ = build()
+    instruments = song.tracks[1].devices[1]
+    component.handle_select_song([1], None)
+    assert instruments.view.selected_chain is songs[1]
+    assert songs[1].devices[0].view.selected_chain is songs[1].devices[0].chains[0]
+    component.handle_select_sound([2], None)
+    assert instruments.view.selected_chain is songs[1]
+    assert songs[1].devices[0].view.selected_chain is songs[1].devices[0].chains[2]
+
+
+def test_asking_for_state_selects_nothing():
+    song, _, component, _ = build()
+    component.handle_get([], None)
+    assert song.tracks[1].devices[1].view.selected_chain is None
+
+
+def test_a_refused_selection_still_switches_the_sound():
+    class Refuses:
+        def __setattr__(self, key, value):
+            raise RuntimeError("no")
+
+    song, songs, component, sent = build()
+    song.tracks[1].devices[1].view = Refuses()
+    component.handle_select_song([1], None)
+    assert sound(songs, 1, 0).on
+    assert last_state(sent)["song"] == 1

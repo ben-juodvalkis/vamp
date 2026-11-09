@@ -68,6 +68,10 @@ The controls drag relatively, as the old remote's did: a touch does not jump the
 value. The page has no listeners in Live. It polls, so a macro moved in Live
 shows within about 1.5 s, and nothing can leak or fire at gesture rate.
 
+A switch selects the song's and sound's chains in Live's racks, as the patch did,
+so Live's window shows what is playing. A refusal there never fails the switch.
+A page opening selects nothing.
+
 ## Not yet
 
 Chain volume, the arpeggiator and the foot switch on CC 67 that steps sounds,

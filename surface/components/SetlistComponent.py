@@ -25,6 +25,9 @@ loaded, in the same undo step as the switch.
 
 The sound on also gets two pads from its own rack's macros 1 to 4, read for
 every sound at set load and returned to those values when that sound is chosen.
+
+A switch also selects the song's and the sound's chains in Live's racks, so
+Live's window shows what is playing.
 """
 
 from __future__ import annotations
@@ -141,14 +144,18 @@ class SetlistComponent:
                 return track
         return None
 
-    def _song_chains(self) -> List[Any]:
+    def _instrument_rack(self) -> Optional[Any]:
         track = self._track()
         if track is None:
-            return []
+            return None
         for device in track.devices:
             if device.class_name == _RACK_CLASS:
-                return list(device.chains)
-        return []
+                return device
+        return None
+
+    def _song_chains(self) -> List[Any]:
+        rack = self._instrument_rack()
+        return list(rack.chains) if rack is not None else []
 
     def _effect_racks(self) -> List[Tuple[int, Any]]:
         """``(device index, rack)`` for the Audio Effect Racks after the
@@ -362,6 +369,18 @@ class SetlistComponent:
             self._reset_sound(songs, song_index, sound_index)
         finally:
             song.end_undo_step()
+        self._select_chains(chosen_song, sound_index)
+
+    def _select_chains(self, song_chain: Any, sound_index: int) -> None:
+        """Show the switch in Live's racks. Only a view: a refusal here must not
+        look like a failed switch, so it is logged and goes no further."""
+        try:
+            self._instrument_rack().view.selected_chain = song_chain
+            rack = self._song_rack(song_chain)
+            if rack is not None:
+                rack.view.selected_chain = list(rack.chains)[sound_index]
+        except Exception as error:
+            logger.warning("setlist: could not select chains: %s", error)
 
     # --- wire -----------------------------------------------------------
 
