@@ -91,6 +91,8 @@
     knobMark?: string;
     /** `knobSize` is a ceiling: the largest size the cell holds (KnobFace `fit`). */
     knobFit?: boolean;
+    /** The caption stays under the knob however wide the cell (KnobFace `captionBelow`). */
+    knobCaptionBelow?: boolean;
   }
 
   let {
@@ -125,7 +127,8 @@
     knobSize = 'm',
     knobCaption = true,
     knobMark,
-    knobFit = false
+    knobFit = false,
+    knobCaptionBelow = false
   }: Props = $props();
 
   // Resolve label orientation - 'auto' follows slider orientation
@@ -336,6 +339,7 @@
         caption={knobCaption}
         centreMark={knobMark}
         fit={knobFit}
+        captionBelow={knobCaptionBelow}
         dragging={isDragging}
         ink={color.primary}
       />

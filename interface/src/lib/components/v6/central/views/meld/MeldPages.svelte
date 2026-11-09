@@ -94,7 +94,7 @@
 
 <!-- A knob bound by name, its name under it. A parameter that steps
      (Transpose, the synced rates) rounds. -->
-{#snippet knob(param: string, title: string, opts: { steps?: number; mark?: string; color?: DeviceColorScheme; size?: 's' | 'm' | 'l'; span?: number } = {})}
+{#snippet knob(param: string, title: string, opts: { steps?: number; mark?: string; color?: DeviceColorScheme; size?: 's' | 'm' | 'l'; span?: number; below?: boolean } = {})}
   {@const l = lo(param)}
   {@const h = hi(param)}
   {@const bipolar = BIPOLAR_SUFFIX.some((s) => param.endsWith(s))}
@@ -110,6 +110,7 @@
       centerValue={bipolar ? (l < 0 && h > 0 ? 0 : (l + h) / 2) : undefined}
       steps={opts.steps}
       knobCaption={!opts.mark}
+      knobCaptionBelow={opts.below}
       knobMark={opts.mark}
       orientation="vertical"
       labelSize="small"
@@ -220,7 +221,7 @@
           {@render sw(`${X} Osc Scale Aware`, 'Scale')}
           {@render sw(`${X} Reset`, 'Reset')}
           {@render sw(`${X} Reset To Voice Offset`, 'Offset')}
-          {@render knob(`${X} Osc Shape`, 'Shape', { span: 2, size: 'm' })}
+          {@render knob(`${X} Osc Shape`, 'Shape', { span: 2, size: 'm', below: true })}
           {@render knob(`${X} Osc Tone`, 'Tone', { size: 'm' })}
           {@render knob(`${X} Transpose`, 'Semi', { steps: 25, size: 'm' })}
           {@render knob(`${X} Detune`, 'Detune', { size: 'm' })}

@@ -60,9 +60,11 @@
      * cells come from data, not a hand layout: the instrument panels.
      */
     fit?: boolean;
+    /** The caption stays under the knob however wide the cell (a row's wide lead knob among captions under theirs). */
+    captionBelow?: boolean;
   }
 
-  let { position, origin, title = '', valueText, readout, icon, dragging = false, ink, steps, size = 'm', caption = true, centreMark, fit = false }: Props = $props();
+  let { position, origin, title = '', valueText, readout, icon, dragging = false, ink, steps, size = 'm', caption = true, centreMark, fit = false, captionBelow = false }: Props = $props();
 
   let cell = $state<HTMLDivElement>();
   let box = $state({ w: 0, h: 0 });
@@ -112,7 +114,7 @@
   });
 </script>
 
-<div class="knob size-{drawn}" bind:this={cell} class:dragging class:no-caption={!caption} data-knob-size={drawn} style="--knob-ink: {ink};">
+<div class="knob size-{drawn}" bind:this={cell} class:dragging class:no-caption={!caption} class:caption-below={captionBelow} data-knob-size={drawn} style="--knob-ink: {ink};">
   <div class="knob-body">
   <div class="knob-face">
     <svg class="knob-svg" viewBox="0 0 100 100" aria-hidden="true">
@@ -196,7 +198,7 @@
      however narrow (ADR-515's 5.5rem), and cut it: the whole word under a
      smaller knob reads, "Sust..." beside a full one does not (ADR-516). */
   @container (min-aspect-ratio: 6/5) and (min-width: 9rem) {
-    .knob-body {
+    .knob:not(.caption-below) .knob-body {
       grid-template-rows: auto;
       grid-template-columns: auto minmax(0, max-content);
       justify-content: center;
@@ -217,7 +219,7 @@
   /* Beside: the cell's height, and a little over half its width for the
      caption (ADR-516: at half, "Amount" beside a large knob was cut). */
   @container (min-aspect-ratio: 6/5) and (min-width: 9rem) {
-    .knob-face {
+    .knob:not(.caption-below) .knob-face {
       --knob-d: min(45cqw, max(28px, min(var(--knob-want), 45cqw, 100cqh - 0.75rem)));
     }
   }
@@ -313,7 +315,7 @@
     text-align: center;
   }
   @container (min-aspect-ratio: 6/5) and (min-width: 9rem) {
-    .knob-caption {
+    .knob:not(.caption-below) .knob-caption {
       align-items: flex-start;
       text-align: left;
     }
