@@ -82,8 +82,9 @@
    * Full screen (ADR-512, re-laid by ADR-516): every page of both engines
    * at once, so there is no engine switch. A row a section, Engine A's
    * tile beside Engine B's as Wavetable's oscillators stand (the twins
-   * side by side): the engines, then both filters with Global after them,
-   * the envelopes (the tallest row, for their pictures), the LFOs. Each
+   * side by side): the engines, then the filters with Global centered
+   * between them (each filter under its engine, 2026-11-08), the envelopes
+   * (the tallest row, for their pictures), the LFOs. Each
    * tile is a selector row over a knob row, so four rows hold what five
    * rows of two-high columns could not without cutting every caption
    * (Engine A over Engine B, 2026-11-07, until then). The face's controls
@@ -91,7 +92,7 @@
    */
   const BOARD: readonly BoardRow[] = [
     { tiles: [{ id: 'osc-a', cols: 7 }, { id: 'osc-b', cols: 7 }], weight: 0.95 },
-    { tiles: [{ id: 'filter-a', cols: 5 }, { id: 'filter-b', cols: 5 }, { id: 'global', cols: 9 }], weight: 0.78 },
+    { tiles: [{ id: 'filter-a', cols: 5 }, { id: 'global', cols: 9 }, { id: 'filter-b', cols: 5 }], weight: 0.78 },
     { tiles: [{ id: 'env-a', cols: 10 }, { id: 'env-b', cols: 10 }], weight: 1.1 },
     { tiles: [{ id: 'lfo-a', cols: 9 }, { id: 'lfo-b', cols: 9 }], weight: 1.05 }
   ];
