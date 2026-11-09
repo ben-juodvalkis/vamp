@@ -1,6 +1,15 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { dispatchOscMessage } from '$lib/api/connection/oscMessageBus';
-import { DOUBLE_TAP_MS, selectSound, setlist, startSetlist, tapArrow } from '$lib/services/setlist.svelte';
+import {
+	DOUBLE_TAP_MS,
+	holdControl,
+	moveControl,
+	releaseControl,
+	selectSound,
+	setlist,
+	startSetlist,
+	tapArrow
+} from '$lib/services/setlist.svelte';
 
 const send = vi.hoisted(() => vi.fn());
 vi.mock('$lib/api/simpleClient', () => ({ send }));
@@ -81,6 +90,48 @@ describe('setlist', () => {
 		reply(state);
 		vi.advanceTimersByTime(500);
 		expect(send).not.toHaveBeenCalledWith(GET);
+	});
+
+	const withControls = (output: number, x: number) => ({
+		...state,
+		output: { key: '1/1', value: output },
+		pads: [{ label: 'Stutter', x: { key: '3/1', value: x }, y: { key: '3/2', value: 0 } }]
+	});
+	const PARAM = '/looping/v3/setlist/param';
+
+	it('shows the slider and pads Live reports', () => {
+		reply(withControls(64, 127));
+		expect(setlist.outputKey).toBe('1/1');
+		expect(setlist.values['1/1']).toBe(64);
+		expect(setlist.pads).toEqual([{ label: 'Stutter', xKey: '3/1', yKey: '3/2' }]);
+		expect(setlist.values['3/1']).toBe(127);
+	});
+
+	it('a finger wins over Live, and a reset reaches a control nobody holds', () => {
+		reply(withControls(64, 127));
+		holdControl('3/1');
+		moveControl('3/1', 40);
+		reply(withControls(10, 127));
+		expect(setlist.values['3/1']).toBe(40);
+		expect(setlist.values['1/1']).toBe(10);
+		releaseControl('3/1');
+		reply(withControls(10, 127));
+		expect(setlist.values['3/1']).toBe(40);
+		vi.advanceTimersByTime(500);
+		reply(withControls(10, 127));
+		expect(setlist.values['3/1']).toBe(127);
+	});
+
+	it('limits writes while moving, clamps, and sends the last value on release', () => {
+		reply(withControls(64, 0));
+		holdControl('1/1');
+		moveControl('1/1', 70);
+		moveControl('1/1', 80);
+		moveControl('1/1', 900);
+		expect(setlist.values['1/1']).toBe(127);
+		expect(send.mock.calls.filter(([a]) => a === PARAM)).toEqual([[PARAM, ['1/1', 70]]]);
+		releaseControl('1/1');
+		expect(send).toHaveBeenLastCalledWith(PARAM, ['1/1', 127]);
 	});
 
 	it('says so when Live goes quiet', () => {

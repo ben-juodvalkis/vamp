@@ -40,8 +40,23 @@ The selection is never stored: Live's Device On values are read on each
 request. The surface's replies are loopback UDP, so the page polls and re-asks
 after an unanswered select rather than trusting one reply.
 
+## Controls
+
+The song bar is also the `Output` rack's `Output` macro. Every other Audio
+Effect Rack after the instrument rack gives its named macros to XY pads, X the
+odd macro and Y the even one, found by name so a moved rack cannot point a pad
+at the wrong thing. A rack with no named macros, LOOPER today, gets none.
+
+A sound change, including one from a song change, returns `Output` to 64 and the
+pads to what they held when the set loaded, as Ben asked. The patch zeroed its
+pads instead. Tapping the sound already on changes nothing.
+
+The controls drag relatively, as the old remote's did: a touch does not jump the
+value. The page has no listeners in Live. It polls, so a macro moved in Live
+shows within about 1.5 s, and nothing can leak or fire at gesture rate.
+
 ## Not yet
 
-The effect pads, chain volume, song fader, per-sound XY pads and arpeggiator,
-the foot switch on CC 67 that steps sounds, and resetting a sound's macros and
-volume when leaving it, all of which the patch does.
+Chain volume, the per-sound XY pads and arpeggiator, the foot switch on CC 67
+that steps sounds, and resetting a sound's own macros when leaving it, all of
+which the patch does.

@@ -96,12 +96,28 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 	const setlistMock = {
 		song: 1,
 		sound: 0,
+		// The rig's effect racks as read on 2026-11-08: [label, x key, y key].
+		pads: [
+			['Stutter', '3/1', '3/2'], ['Wobble', '3/3', '3/4'], ['Trem', '3/5', '3/6'], ['Shape', '3/7', '3/8'],
+			['Phaser', '4/1', '4/2'], ['Chorus', '4/3', '4/4'], ['LoPass', '4/5', '4/6'], ['HiPass', '4/7', '4/8'],
+			['Ring/Redux', '5/1', '5/2'], ['Pitch', '5/3', '5/4'], ['Dist/Amp', '5/5', '5/6'], ['Comb', '5/7', '5/8'],
+			['Delay', '6/1', '6/2'], ['Reverb', '6/3', '6/4']
+		],
+		loaded: {
+			'1/1': 64, '3/1': 127, '3/2': 0, '3/3': 0, '3/4': 0, '3/5': 64, '3/6': 0, '3/7': 64, '3/8': 125,
+			'4/1': 0, '4/2': 0, '4/3': 0, '4/4': 0, '4/5': 127, '4/6': 11.6, '4/7': 0, '4/8': 0,
+			'5/1': 0, '5/2': 0, '5/3': 0, '5/4': 0, '5/5': 0, '5/6': 0, '5/7': 23.2, '5/8': 0,
+			'6/1': 0, '6/2': 0, '6/3': 0, '6/4': 0
+		},
+		values: {},
 		sets: [
 			{ name: 'Joke', sounds: ['Lead', 'Organ', 'Keys'] },
 			{ name: 'Pickin Fields', sounds: ['Theremin', 'Organ', 'church organ'] },
 			{ name: 'Somersaults', sounds: ['Intro', 'Intro Bass', 'Noise', 'Sweep', 'organ', 'Bass'] }
 		]
 	};
+
+	setlistMock.values = { ...setlistMock.loaded };
 
 	const send = (ws, address, args = []) => {
 		if (ws.readyState !== ws.OPEN) return;
@@ -542,15 +558,20 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 			if (live && handleLive(ws, address, args)) return;
 
 			switch (address) {
+				case '/looping/v3/setlist/param':
+					setlistMock.values[args[0]] = args[1];
+					return;
 				case '/looping/v3/setlist/get':
 				case '/looping/v3/setlist/select_song':
 				case '/looping/v3/setlist/select_sound': {
 					if (address.endsWith('select_song')) {
 						setlistMock.song = args[0];
 						setlistMock.sound = 0;
+						setlistMock.values = { ...setlistMock.loaded };
 					} else if (address.endsWith('select_sound')) {
 						setlistMock.song = Math.max(setlistMock.song, 0);
 						setlistMock.sound = args[0];
+						setlistMock.values = { ...setlistMock.loaded };
 					}
 					const shown = setlistMock.sets[Math.max(setlistMock.song, 0)];
 					send(ws, '/looping/v3/setlist/state', [
@@ -559,7 +580,13 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 							songs: setlistMock.sets.map((set) => set.name),
 							song: setlistMock.song,
 							sounds: shown.sounds,
-							sound: setlistMock.sound
+							sound: setlistMock.sound,
+							output: { key: '1/1', value: setlistMock.values['1/1'] },
+							pads: setlistMock.pads.map(([label, x, y]) => ({
+								label,
+								x: { key: x, value: setlistMock.values[x] },
+								y: { key: y, value: setlistMock.values[y] }
+							}))
 						})
 					]);
 					return;

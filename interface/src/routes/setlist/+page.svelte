@@ -1,9 +1,25 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { setlist, selectSound, startSetlist, tapArrow } from '$lib/services/setlist.svelte';
+	import SongFader from './SongFader.svelte';
+	import XYPad from './XYPad.svelte';
 
 	// The old remote's sound column had eight slots; a song uses what it has.
 	const SLOTS = 8;
+
+	// The old remote's colors, pad by pad, as [tile, label] (Cyborg Ben 8-11-26.tosc).
+	const RED = '#ff281c';
+	const GREEN = '#75cc26';
+	const PINK = '#ff05f2';
+	const YELLOW = '#ffed00';
+	const ORANGE = '#f9a01c';
+	const WHITE = '#ffffff';
+	const PAD_COLORS = [
+		[GREEN, RED], [GREEN, RED],
+		[PINK, WHITE], [PINK, WHITE], [RED, WHITE], [RED, WHITE],
+		[RED, GREEN], [RED, GREEN], [YELLOW, RED], [YELLOW, RED],
+		[ORANGE, PINK], [ORANGE, PINK], [WHITE, RED], [WHITE, RED]
+	];
 
 	onMount(startSetlist);
 
@@ -31,7 +47,7 @@
 		>
 	</div>
 
-	<div class="song" class:idle={setlist.song < 0} data-testid="song">{status || songName}</div>
+	<SongFader label={status || songName} idle={setlist.song < 0} />
 
 	<div class="sounds">
 		{#each { length: SLOTS } as _, i}
@@ -41,6 +57,12 @@
 				disabled={name === undefined}
 				onpointerdown={() => selectSound(i)}>{name ?? ''}</button
 			>
+		{/each}
+	</div>
+
+	<div class="pads">
+		{#each setlist.pads as pad, i (pad.xKey)}
+			<XYPad {pad} color={PAD_COLORS[i % PAD_COLORS.length][0]} labelColor={PAD_COLORS[i % PAD_COLORS.length][1]} />
 		{/each}
 	</div>
 </main>
@@ -89,20 +111,18 @@
 	.arrows button:disabled {
 		opacity: 0.35;
 	}
-	.song {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: #3f3b00;
-		border: 1px solid #ffed00;
-		border-radius: 10px;
-		color: #ff281c;
-		font-size: 6.4vh;
-		white-space: nowrap;
-		overflow: hidden;
+	.pads {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		grid-template-rows: repeat(4, 1fr);
+		gap: 2vh 1.3vw;
+		min-height: 0;
+		/* The right edge stays free for the chain volume; the old remote's first
+		   two cells are the sound's own pads, which come later. */
+		margin-right: 7.5%;
 	}
-	.song.idle {
-		opacity: 0.55;
+	.pads > :global(:first-child) {
+		grid-column-start: 3;
 	}
 	.sounds {
 		display: grid;

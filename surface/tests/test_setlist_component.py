@@ -17,6 +17,9 @@ RACK = "InstrumentGroupDevice"
 
 
 class Param:
+    min = 0.0
+    max = 127.0
+
     def __init__(self, name, value):
         self.name = name
         self.value = value
@@ -60,6 +63,25 @@ class Song:
         self.undo_open -= 1
 
 
+def macros(name, *pairs):
+    """An Audio Effect Rack: Device On, then eight macros, unnamed past `pairs`."""
+    rack = Device(on=True, class_name="AudioEffectGroupDevice")
+    rack.name = name
+    filled = list(pairs) + [("Macro %d" % n, 0.0) for n in range(len(pairs) + 1, 9)]
+    rack.parameters += [Param(n, v) for n, v in filled]
+    rack.parameters.append(Param("Chain Selector", 0.0))
+    return rack
+
+
+def effect_racks():
+    return [
+        macros("Output", ("Output", 100.0)),
+        macros("LOOPER"),
+        macros("MFX 1", ("Stutter", 127.0), ("Variation", 0.0), ("Macro 3", 0.0), ("Macro 4", 0.0),
+               ("Shape", 64.0), ("Macro 6", 125.0)),
+    ]
+
+
 def build():
     """Three songs as the rig's set has them, every rack on and sound off."""
     sounds = {
@@ -72,7 +94,8 @@ def build():
         for name, parts in sounds.items()
     ]
     midi_rack = Device(class_name="MidiEffectGroupDevice", chains=[Chain("wrong", [])])
-    keys = Track("Keys", [midi_rack, Device(on=True, chains=songs)])
+    instruments = Device(on=True, chains=songs)
+    keys = Track("Keys", [midi_rack, instruments] + effect_racks())
     song = Song([Track("Other", [Device(chains=[Chain("wrong", [Device()])])]), keys])
     sent = []
     component = SetlistComponent(song=song, emit=lambda a, args: sent.append((a, args)))
@@ -209,3 +232,87 @@ def test_no_keys_track_answers_not_found():
     state = last_state(sent)
     assert state["found"] is False
     assert state["songs"] == []
+
+
+def by_label(state):
+    return {pad["label"]: pad for pad in state["pads"]}
+
+
+def output_param(song):
+    return song.tracks[1].devices[2].parameters[1]
+
+
+def mfx(song, index):
+    return song.tracks[1].devices[4].parameters[index]
+
+
+def test_state_reports_the_slider_and_a_pad_per_named_pair():
+    _, _, component, sent = build()
+    component.handle_get([], None)
+    state = last_state(sent)
+    assert state["output"] == {"key": "2/1", "value": 100.0}
+    assert [pad["label"] for pad in state["pads"]] == ["Stutter", "Shape"]
+    assert by_label(state)["Shape"]["x"] == {"key": "4/5", "value": 64.0}
+    assert by_label(state)["Shape"]["y"] == {"key": "4/6", "value": 125.0}
+
+
+def test_param_writes_the_macro_clamped_and_changes_nothing_else():
+    song, songs, component, _ = build()
+    before = on_map(songs)
+    component.handle_param(["4/1", 500.0], None)
+    component.handle_param(["2/1", 30.0], None)
+    assert mfx(song, 1).value == 127.0
+    assert output_param(song).value == 30.0
+    assert on_map(songs) == before
+
+
+@pytest.mark.parametrize("key", ["4/0", "4/9", "1/1", "0/1", "junk", "99/1"])
+def test_param_refuses_anything_but_an_effect_rack_macro(key):
+    song, _, component, _ = build()
+    device_on = mfx(song, 0).value
+    instrument_on = song.tracks[1].devices[1].parameters[0].value
+    component.handle_param([key, 0.0], None)
+    assert mfx(song, 0).value == device_on
+    assert song.tracks[1].devices[1].parameters[0].value == instrument_on
+
+
+def test_a_sound_change_resets_output_to_64_and_pads_to_set_load_values():
+    song, _, component, sent = build()
+    component.handle_select_song([1], None)
+    component.handle_param(["2/1", 10.0], None)
+    component.handle_param(["4/1", 5.0], None)
+    component.handle_param(["4/6", 7.0], None)
+    component.handle_select_sound([1], None)
+    assert output_param(song).value == 64.0
+    assert mfx(song, 1).value == 127.0
+    assert mfx(song, 6).value == 125.0
+    state = last_state(sent)
+    assert state["output"]["value"] == 64.0
+    assert by_label(state)["Stutter"]["x"]["value"] == 127.0
+
+
+def test_a_song_change_resets_too():
+    song, _, component, _ = build()
+    component.handle_param(["4/1", 5.0], None)
+    component.handle_select_song([1], None)
+    assert mfx(song, 1).value == 127.0
+    assert output_param(song).value == 64.0
+
+
+def test_tapping_the_sound_already_on_changes_nothing():
+    song, _, component, sent = build()
+    component.handle_select_song([1], None)
+    steps = song.undo_steps
+    component.handle_param(["4/1", 5.0], None)
+    component.handle_select_sound([0], None)
+    assert mfx(song, 1).value == 5.0
+    assert song.undo_steps == steps
+    assert last_state(sent)["sound"] == 0
+
+
+def test_reading_state_never_moves_a_baseline():
+    song, _, component, _ = build()
+    component.handle_param(["4/1", 5.0], None)
+    component.handle_get([], None)
+    component.handle_select_song([1], None)
+    assert mfx(song, 1).value == 127.0

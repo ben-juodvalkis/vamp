@@ -19,14 +19,26 @@ import { logger } from '$lib/utils/logger';
 const GET = '/looping/v3/setlist/get';
 const SELECT_SONG = '/looping/v3/setlist/select_song';
 const SELECT_SOUND = '/looping/v3/setlist/select_sound';
+const PARAM = '/looping/v3/setlist/param';
 const STATE = '/looping/v3/setlist/state';
 
-const POLL_MS = 3000;
+const POLL_MS = 1500;
+/** Macro writes per control while a finger moves. */
+const WRITE_MS = 33;
+/** After a release, how long a reply already on its way may not undo the move. */
+const RELEASE_GRACE_MS = 400;
+export const MACRO_MAX = 127;
 const RETRY_MS = 500;
 const STALE_MS = 8000;
 /** A song change takes two taps this close, as the rig's old remote did: one
  * stray touch must not end the sound mid-song. */
 export const DOUBLE_TAP_MS = 500;
+
+export interface SetlistPad {
+	label: string;
+	xKey: string;
+	yKey: string;
+}
 
 export const setlist = $state({
 	/** False until the surface has answered. */
@@ -36,8 +48,51 @@ export const setlist = $state({
 	song: -1,
 	sounds: [] as string[],
 	sound: -1,
-	armed: 0
+	armed: 0,
+	outputKey: null as string | null,
+	pads: [] as SetlistPad[],
+	/** Macro values by control key. A finger's value wins over Live's here. */
+	values: {} as Record<string, number>
 });
+
+const heldUntil = new Map<string, number>();
+const writes = new Map<string, { at: number; timer: ReturnType<typeof setTimeout> | null }>();
+
+function receive(control: { key: string; value: number } | null | undefined): void {
+	if (!control) return;
+	if ((heldUntil.get(control.key) ?? 0) > Date.now()) return;
+	setlist.values[control.key] = control.value;
+}
+
+/** A finger is down on these controls: Live's replies may not move them. */
+export function holdControl(key: string): void {
+	heldUntil.set(key, Infinity);
+}
+
+export function releaseControl(key: string): void {
+	heldUntil.set(key, Date.now() + RELEASE_GRACE_MS);
+	flushWrite(key);
+}
+
+function flushWrite(key: string): void {
+	const write = writes.get(key);
+	if (write?.timer) clearTimeout(write.timer);
+	if (write) write.timer = null;
+	const value = setlist.values[key];
+	if (value === undefined) return;
+	writes.set(key, { at: Date.now(), timer: null });
+	send(PARAM, [key, value]);
+}
+
+/** Show the value now and send it to Live at most every WRITE_MS. */
+export function moveControl(key: string, value: number): void {
+	setlist.values[key] = Math.min(MACRO_MAX, Math.max(0, value));
+	const write = writes.get(key);
+	if (write?.timer) return;
+	const wait = write ? write.at + WRITE_MS - Date.now() : 0;
+	if (wait <= 0) return flushWrite(key);
+	writes.set(key, { at: write!.at, timer: setTimeout(() => flushWrite(key), wait) });
+}
 
 let lastReply = 0;
 let answered = true;
@@ -63,6 +118,18 @@ function onMessage(message: OscBusMessage): void {
 	setlist.song = parsed.song ?? -1;
 	setlist.sounds = parsed.sounds ?? [];
 	setlist.sound = parsed.sound ?? -1;
+	setlist.outputKey = parsed.output?.key ?? null;
+	receive(parsed.output);
+	const pads = parsed.pads ?? [];
+	setlist.pads = pads.map((pad: { label: string; x: { key: string }; y: { key: string } }) => ({
+		label: pad.label,
+		xKey: pad.x.key,
+		yKey: pad.y.key
+	}));
+	for (const pad of pads) {
+		receive(pad.x);
+		receive(pad.y);
+	}
 }
 
 function askAgainUnlessAnswered(): void {
@@ -115,6 +182,9 @@ export function startSetlist(): () => void {
 		if (retryTimer) clearTimeout(retryTimer);
 		if (armTimer) clearTimeout(armTimer);
 		pollTimer = retryTimer = armTimer = null;
+		for (const write of writes.values()) if (write.timer) clearTimeout(write.timer);
+		writes.clear();
+		heldUntil.clear();
 		disarm();
 	};
 }
