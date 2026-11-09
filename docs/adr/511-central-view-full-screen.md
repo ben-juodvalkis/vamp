@@ -1,7 +1,7 @@
 # ADR-511: The central view goes full screen from its corner
 
 ## Status
-**Accepted** (2026-11-07). Interface only; no Live restart.
+**Accepted** (2026-11-07), amended by ADR-519 (the icon only on views with a full-screen board). Interface only; no Live restart.
 
 ## Context
 

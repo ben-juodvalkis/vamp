@@ -204,6 +204,20 @@ export function resolveViewComponent(
 }
 
 /**
+ * The views that draw a face of their own at full screen (ADR-512, ADR-515):
+ * only these offer the full-screen icon (2026-11-09). Every other view
+ * expanded was itself blown up, which bought nothing a board does.
+ */
+const FULL_SCREEN_BOARDS: Partial<Record<CentralViewType, ReadonlySet<string>>> = {
+	device: new Set(['ott', 'roar']),
+	instrument: new Set(['analog', 'collision', 'drift', 'electric', 'meld', 'operator', 'wavetable']),
+};
+
+export function hasFullScreenBoard(type: CentralViewType, subType?: string): boolean {
+	return !!subType && !!FULL_SCREEN_BOARDS[type]?.has(subType);
+}
+
+/**
  * Get all registered device subtypes
  */
 export function getRegisteredDeviceTypes(): string[] {

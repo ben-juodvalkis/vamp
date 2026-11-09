@@ -4,7 +4,7 @@ import { logger } from '$lib/utils/logger';
 	import { selectedTrackStore, type SlotKey } from '$lib/stores/v6/selectedTrackStore.svelte';
 	import { DEVICE_PRESETS } from '$lib/config/devicePresets';
 	import { effectAvailable } from '$lib/services/effectSources.svelte';
-	import { resolveViewComponent } from './viewRegistry';
+	import { resolveViewComponent, hasFullScreenBoard } from './viewRegistry';
 	import { shouldReloadForImportError } from '$lib/utils/chunkReload';
 	import { deviceInk } from '$lib/utils/formatters/trackFormatters';
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
@@ -118,11 +118,10 @@ import { logger } from '$lib/utils/logger';
 	});
 
 	// Full screen (ADR-511): the corner icon blows the view up over the whole
-	// screen and brings it back. Not on the master track's System view, whose
-	// Settings gear owns that corner and which has nothing to design; a jump
-	// to it while expanded (the master selected from Live) lands it back in
-	// the stack, since its corner would offer no way out.
-	let expandable = $derived(viewType !== 'system');
+	// screen and brings it back. Only on a view with a board of its own for
+	// the full screen (ADR-519); a jump to any other view while expanded
+	// lands it back in the stack, since its corner would offer no way out.
+	let expandable = $derived(hasFullScreenBoard(viewType, viewSubType));
 	let expanded = $derived(centralDisplayStore.expanded);
 	$effect(() => {
 		if (expanded && !expandable) centralDisplayStore.setExpanded(false);

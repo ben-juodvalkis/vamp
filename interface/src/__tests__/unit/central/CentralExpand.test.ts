@@ -1,8 +1,9 @@
 /**
  * The central view's full-screen switch (ADR-511): the corner icon lifts the
  * view over the whole screen and brings it back, Escape brings it back, and
- * the master track's System view (whose gear owns the corner) neither shows
- * the icon nor stays expanded.
+ * only a view with a full-screen board (ADR-519) shows the icon: any other
+ * (an effect without one, the System view) neither shows it nor stays
+ * expanded.
  */
 import { describe, it, expect, afterEach, vi } from 'vitest';
 
@@ -30,7 +31,7 @@ async function pressIcon(c: HTMLElement) {
 
 describe('central view full screen', () => {
 	it('the corner icon expands the view and collapses it again', async () => {
-		centralDisplayStore.setView('device', 'reverb');
+		centralDisplayStore.setView('device', 'roar');
 		const { container } = render(MiddlePanelV6);
 		await tick();
 
@@ -48,7 +49,7 @@ describe('central view full screen', () => {
 	});
 
 	it('Escape collapses it', async () => {
-		centralDisplayStore.setView('device', 'reverb');
+		centralDisplayStore.setView('device', 'roar');
 		const { container } = render(MiddlePanelV6);
 		await tick();
 		await pressIcon(container);
@@ -58,8 +59,15 @@ describe('central view full screen', () => {
 		expect(centralDisplayStore.expanded).toBe(false);
 	});
 
-	it('the System view has no icon, and arriving at it collapses the view', async () => {
+	it('a view without a board has no icon', async () => {
 		centralDisplayStore.setView('device', 'reverb');
+		const { container } = render(MiddlePanelV6);
+		await tick();
+		expect(icon(container)).toBeNull();
+	});
+
+	it('the System view has no icon, and arriving at it collapses the view', async () => {
+		centralDisplayStore.setView('device', 'roar');
 		const { container } = render(MiddlePanelV6);
 		await tick();
 		await pressIcon(container);
