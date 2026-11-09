@@ -32,6 +32,10 @@ Different from the patch:
 - The new sound goes on before the old goes off.
 - `Pommel Horse160` yields a tempo. The patch split on spaces, so it could not.
 
+Port `setlist.port` (8890) shows the page at every path, so a typed address
+or a home-screen icon that opens at `/` cannot land on the regular interface.
+Every other port keeps it.
+
 The selection is never stored: Live's Device On values are read on each
 request. The surface's replies are loopback UDP, so the page polls and re-asks
 after an unanswered select rather than trusting one reply.
