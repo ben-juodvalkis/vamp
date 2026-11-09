@@ -998,7 +998,9 @@ function instrumentSwapStates() {
 			['board-analog', 'Analog', 'UltraAnalog', referenceParams('Analog')],
 			['board-operator', 'Operator', 'Operator', referenceParams('Operator')],
 			['board-electric', 'Electric', 'LoungeLizard', referenceParams('Electric')],
-			['board-collision', 'Collision', 'Collision', referenceParams('Collision')]
+			['board-collision', 'Collision', 'Collision', referenceParams('Collision')],
+			['board-simpler', 'Simpler', 'OriginalSimpler', referenceParams('Simpler')],
+			['board-sampler', 'Sampler', 'MultiSampler', referenceParams('Sampler_all_sections')]
 		].map(([state, name, cls, params]) => [state, name, cls, params, [{ click: '[data-central-expand]' }]]),
 		// Amp and Filter envelopes both in view (ADR-477): the Filter row takes
 		// the track's ink, not Amp's orange. (An omnisphere-filter state flipped

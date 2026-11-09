@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
   import SimplerLoopControl from '$lib/components/v6/simpler/SimplerLoopControl.svelte';
@@ -24,6 +25,13 @@
   import { addPresetToChain } from '$lib/services/deviceMoveService';
   import constants from '$config/constants.json';
   import { onDestroy } from 'svelte';
+  import InstrumentPanelView from './panel/InstrumentPanelView.svelte';
+  import { usePanelParams } from './panel/usePanelParams.svelte';
+  import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
+  import { SIMPLER_PANEL, SAMPLE_LFO_WAVES, sampleEnvelope } from './panel/samplePanels';
+  import EnvelopeGraph from '../EnvelopeGraph.svelte';
+  import LfoGraph from '../LfoGraph.svelte';
+  import { liveFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
 
   // Simpler parameter indices (from device-configs.json). These are the
   // FALLBACK: a Simpler's list is not one shape — the `Acuff Kit` pads
@@ -392,6 +400,15 @@
     simplerWarpDouble(devicePath);
   }
 
+  // The full-screen board (ADR-521) binds by Live's names, like the other
+  // instruments' boards: the filter's pad and curve, the LFO's wave and rate.
+  const params = usePanelParams(() => device);
+  let filterCurve = $derived(
+    liveFilterCurve(params.raw('Filter Type') ?? 0, params.raw('Filter Slope') ?? 1, params.raw('Filter Morph') ?? 0)
+  );
+  let lfoShape = $derived(SAMPLE_LFO_WAVES[Math.round(params.raw('L Wave') ?? 0)]);
+  let lfoRate = $derived(Math.round(params.raw('L Sync') ?? 0) === 1 ? 'L Sync Rate' : 'L Rate');
+
   // XY interaction handlers - just send to store, control components handle local state
   function handleTimeXYInteraction(x: number, y: number) {
     if (!device) return;
@@ -407,8 +424,231 @@
 
 </script>
 
+<!-- The Simpler's own controls, drawn by the band face and by the full-screen
+     board's Sample tile alike (ADR-521): `place` is the cell's grid placement
+     on the host's layout. -->
+{#snippet modeToggle()}
+  <button
+    use:press={{ onPress: () => setPlaybackMode(isSlicing ? PLAYBACK_MODE.CLASSIC : PLAYBACK_MODE.SLICING) }}
+    class="mode-toggle-glass flex-1 min-h-0 w-full rounded-full text-[22px] font-bold uppercase tracking-wider active:scale-95"
+    style="
+      --mode-ink: {simplerInk.primary};
+      transition: background-color var(--t-fast) var(--ease-precise), border-color var(--t-fast) var(--ease-precise), color var(--t-fast) var(--ease-precise), transform var(--t-fast) var(--ease-precise);
+    "
+    aria-label="Toggle playback mode (currently {isSlicing ? 'Slice' : 'Classic'})"
+  >
+    {isSlicing ? 'Slice' : 'Classic'}
+  </button>
+{/snippet}
+
+{#snippet loopOrVoicing(place: string)}
+  <!-- LOOP on/off (Classic); in Slice, Poly / Thru in its place. -->
+  {#if !isSlicing}
+    <button
+      use:press={{ onPress: () => toggleLoopOn() }}
+      class="physical-button btn-toggle h-full w-full flex items-center justify-center {place}"
+      class:active={loopOn}
+      style="--btn-tint: {simplerInk.primary};"
+      aria-label="Loop {loopOn ? 'on' : 'off'}"
+    >
+      <Repeat size={36} strokeWidth={2.5} />
+    </button>
+  {:else}
+    <!-- Poly/Thru, Poly over Thru (a column is too narrow for the two
+         abreast). Mono is intentionally omitted — the capture-into-Simpler
+         flow doesn't benefit from it. -->
+    <div
+      class="device-segmented grid grid-rows-2 min-h-0 {place}"
+      style="--btn-tint: {simplerInk.primary};"
+      role="radiogroup"
+      aria-label="Slicing playback mode"
+    >
+      <button
+        use:press={{ onPress: () => setSlicingPlaybackMode(SLICING_PLAYBACK_MODE.POLY) }}
+        class="device-segment text-[22px] font-bold uppercase"
+        class:active={slicingPlaybackMode === SLICING_PLAYBACK_MODE.POLY}
+        role="radio"
+        aria-checked={slicingPlaybackMode === SLICING_PLAYBACK_MODE.POLY}
+      >
+        Poly
+      </button>
+      <button
+        use:press={{ onPress: () => setSlicingPlaybackMode(SLICING_PLAYBACK_MODE.THRU) }}
+        class="device-segment text-[22px] font-bold uppercase"
+        class:active={slicingPlaybackMode === SLICING_PLAYBACK_MODE.THRU}
+        role="radio"
+        aria-checked={slicingPlaybackMode === SLICING_PLAYBACK_MODE.THRU}
+      >
+        Thru
+      </button>
+    </div>
+  {/if}
+{/snippet}
+
+{#snippet brace()}
+  <SimplerLoopControl device={device} devicePath={devicePath} playbackMode={playbackMode} color={simplerInk} slices={sampleSlices} />
+{/snippet}
+
+{#snippet warpColumn(place: string)}
+  <!-- Off / Beats / Cplx / Pro stacked. -->
+  <div
+    class="device-segmented grid grid-rows-4 min-h-0 {place}"
+    style="--btn-tint: {simplerInk.primary};"
+    role="radiogroup"
+    aria-label="Warp mode"
+  >
+    <button use:press={{ onPress: () => selectWarpOption('off') }} class="device-segment text-[22px] font-bold uppercase" class:active={!warping} role="radio" aria-checked={!warping}>Off</button>
+    <button use:press={{ onPress: () => selectWarpOption('beats') }} class="device-segment text-[22px] font-bold uppercase" class:active={warping && warpMode === 0} role="radio" aria-checked={warping && warpMode === 0}>Beats</button>
+    <button use:press={{ onPress: () => selectWarpOption('complex') }} class="device-segment text-[22px] font-bold uppercase" class:active={warping && warpMode === 4} role="radio" aria-checked={warping && warpMode === 4}>Cplx</button>
+    <button use:press={{ onPress: () => selectWarpOption('pro') }} class="device-segment text-[22px] font-bold uppercase" class:active={warping && warpMode === 6} role="radio" aria-checked={warping && warpMode === 6}>Pro</button>
+  </div>
+{/snippet}
+
+{#snippet gainSlider()}
+  <DeviceSlider
+    value={sampleGain}
+    title="Gain"
+    icon="gain"
+    orientation="vertical"
+    labelOrientation="horizontal"
+    color={simplerInk}
+    min={0}
+    max={1}
+    centerOrigin={true}
+    centerValue={0.5}
+    onInteraction={(value) => {
+      if (!device) return;
+      handleSampleGain(value);
+    }}
+  />
+{/snippet}
+
+{#snippet sensKnob()}
+  <DeviceSlider
+    value={slicingSensitivity}
+    title="Sens"
+    face="knob"
+    knobSize="l"
+    icon="slice"
+    orientation="vertical"
+    labelOrientation="horizontal"
+    color={simplerInk}
+    onInteraction={(value) => {
+      if (!device) return;
+      handleSlicingSensitivity(value);
+    }}
+  />
+{/snippet}
+
+{#snippet actionsColumn(place: string)}
+  <!-- Reverse always; ½× / 2× only when warping is on (the underlying
+       SimplerDevice methods no-op without warping; hiding them keeps the
+       row honest). Reverse is symmetric, so a tap toggles. -->
+  <div class="min-h-0 min-w-0 grid {warping ? 'grid-rows-3' : 'grid-rows-1'} {place}" style="gap: var(--spacing-sm);">
+    <button
+      use:press={{ onPress: () => handleReverse() }}
+      class="physical-button btn-action h-full w-full flex items-center justify-center text-[18px] font-bold uppercase tracking-wider"
+      style="--btn-tint: {simplerInk.primary};"
+      aria-label="Reverse sample"
+    >
+      Rev
+    </button>
+    {#if warping}
+      <button
+        use:press={{ onPress: () => handleWarpHalf() }}
+        class="physical-button btn-action h-full w-full flex items-center justify-center text-[18px] font-bold uppercase tracking-wider"
+        style="--btn-tint: {simplerInk.primary};"
+        aria-label="Halve warped tempo"
+      >
+        ½×
+      </button>
+      <button
+        use:press={{ onPress: () => handleWarpDouble() }}
+        class="physical-button btn-action h-full w-full flex items-center justify-center text-[18px] font-bold uppercase tracking-wider"
+        style="--btn-tint: {simplerInk.primary};"
+        aria-label="Double warped tempo"
+      >
+        2×
+      </button>
+    {/if}
+  </div>
+{/snippet}
+
+{#snippet randomKnob()}
+  <!-- Random Start's "Random Amount", 0–100 (%): a ghost until the track
+       has the device, which the first drag loads (setRandomAmount). -->
+  <DeviceSlider
+    value={randomAmountValue}
+    title="Random"
+    face="knob"
+    knobSize="l"
+    icon="dice"
+    orientation="vertical"
+    labelOrientation="horizontal"
+    color={simplerInk}
+    min={0}
+    max={100}
+    isGhost={!randomAmountParamPath}
+    onInteraction={setRandomAmount}
+  />
+{/snippet}
+
+<!-- The full-screen board's slots (ADR-521). -->
+{#snippet sampleSlot()}
+  <!-- Mode and Loop down the left, the brace, then Warp, Gain, the actions,
+       and Sens (Slice) over Random Start, each a column the full height. -->
+  <div class="simpler-board-sample" data-simpler-board-sample>
+    <div class="min-h-0 min-w-0 flex flex-col" style="gap: var(--central-gap);">
+      {@render modeToggle()}
+      <div class="flex-1 min-h-0">{@render loopOrVoicing('')}</div>
+    </div>
+    <div class="min-h-0 min-w-0 relative">{@render brace()}</div>
+    {@render warpColumn('')}
+    <div class="min-h-0 min-w-0">{@render gainSlider()}</div>
+    {@render actionsColumn('')}
+    <div class="min-h-0 min-w-0 grid" style="grid-template-rows: {isSlicing ? '1fr 1fr' : '1fr'}; gap: var(--central-gap);">
+      {#if isSlicing}<div class="min-h-0 min-w-0">{@render sensKnob()}</div>{/if}
+      <div class="min-h-0 min-w-0">{@render randomKnob()}</div>
+    </div>
+  </div>
+{/snippet}
+
+{#snippet filterSlot()}
+  <div class="h-full min-w-0" style={params.isOn('F On') ? '' : 'opacity: var(--opacity-ghost);'}>
+    <DeviceXY
+      xValue={params.unit('Filter Freq') ?? 1}
+      yValue={params.unit('Filter Res') ?? 0}
+      title="Filter"
+      isGhost={!params.isOn('F On')}
+      showCurve={params.isOn('F On') && filterCurve.curveType !== 'none'}
+      curveType={filterCurve.curveType}
+      curveOrder={filterCurve.order}
+      curveFreqRange={FILTER_FREQ_RANGE.sampler}
+      onInteraction={(x, y) => {
+        params.writeUnit('Filter Freq', x, 'F On');
+        params.writeUnit('Filter Res', y, 'F On');
+      }}
+      color={simplerInk}
+    />
+  </div>
+{/snippet}
+
+{#snippet ampSlot()}<EnvelopeGraph {params} names={sampleEnvelope('Ve', false)} ink={simplerInk.primary} knobs="side" />{/snippet}
+{#snippet filterEnvSlot()}<EnvelopeGraph {params} names={sampleEnvelope('Fe', false)} ink={simplerInk.primary} sw="Fe On" knobs="short" />{/snippet}
+{#snippet pitchEnvSlot()}<EnvelopeGraph {params} names={sampleEnvelope('Pe', false)} ink={simplerInk.primary} sw="Pe On" knobs="short" />{/snippet}
+{#snippet lfoSlot()}<LfoGraph {params} shape={lfoShape} rate={lfoRate} ink={simplerInk.primary} sw="L On" />{/snippet}
+
 <div class="h-full w-full flex flex-col min-h-0">
-  {#if instrument && device}
+  {#if instrument && device && centralDisplayStore.expanded}
+    <!-- Full screen (ADR-521): every section on one board. -->
+    <InstrumentPanelView
+      panel={SIMPLER_PANEL}
+      {params}
+      color={simplerInk}
+      board
+      slots={{ sample: sampleSlot, filter: filterSlot, amp: ampSlot, filterEnv: filterEnvSlot, pitchEnv: pitchEnvSlot, lfo: lfoSlot }}
+    />
+  {:else if instrument && device}
     <!-- The face (ADR-510): one grid of equal columns, a header line
          every section shares, identical seams — Mode (the swap pill and
          Classic / Slice over Loop, or Slice's Poly / Thru) · Sample (the
@@ -426,62 +666,9 @@
                (user's layout, 2026-09-16), then the Classic/Slice toggle. -->
           <div class="min-h-0 min-w-0 flex flex-col" style="gap: var(--central-gap);">
             <HostedSwapPill />
-            <button
-              onclick={() => setPlaybackMode(isSlicing ? PLAYBACK_MODE.CLASSIC : PLAYBACK_MODE.SLICING)}
-              class="mode-toggle-glass flex-1 min-h-0 w-full rounded-full text-[22px] font-bold uppercase tracking-wider active:scale-95"
-              style="
-                --mode-ink: {simplerInk.primary};
-                transition: background-color var(--t-fast) var(--ease-precise), border-color var(--t-fast) var(--ease-precise), color var(--t-fast) var(--ease-precise), transform var(--t-fast) var(--ease-precise);
-              "
-              aria-label="Toggle playback mode (currently {isSlicing ? 'Slice' : 'Classic'})"
-            >
-              {isSlicing ? 'Slice' : 'Classic'}
-            </button>
+            {@render modeToggle()}
           </div>
-          <!-- LOOP on/off (Classic); in Slice, Poly / Thru in its place. -->
-          {#if !isSlicing}
-            <button
-              onclick={toggleLoopOn}
-              class="physical-button btn-toggle row-start-2 h-full w-full flex items-center justify-center"
-              class:active={loopOn}
-              style="--btn-tint: {simplerInk.primary};"
-              aria-label="Loop {loopOn ? 'on' : 'off'}"
-            >
-              <Repeat size={36} strokeWidth={2.5} />
-            </button>
-          {/if}
-          {#if isSlicing}
-            <!-- Poly/Thru segmented control, Poly over Thru (a column is
-                 too narrow for the two abreast). Same chrome family as
-                 the Warp column on the right (.device-segmented). Mono
-                 is intentionally omitted — the capture-into-Simpler
-                 flow doesn't benefit from it. -->
-            <div
-              class="device-segmented row-start-2 grid grid-rows-2 min-h-0"
-              style="--btn-tint: {simplerInk.primary};"
-              role="radiogroup"
-              aria-label="Slicing playback mode"
-            >
-              <button
-                onclick={() => setSlicingPlaybackMode(SLICING_PLAYBACK_MODE.POLY)}
-                class="device-segment text-[22px] font-bold uppercase"
-                class:active={slicingPlaybackMode === SLICING_PLAYBACK_MODE.POLY}
-                role="radio"
-                aria-checked={slicingPlaybackMode === SLICING_PLAYBACK_MODE.POLY}
-              >
-                Poly
-              </button>
-              <button
-                onclick={() => setSlicingPlaybackMode(SLICING_PLAYBACK_MODE.THRU)}
-                class="device-segment text-[22px] font-bold uppercase"
-                class:active={slicingPlaybackMode === SLICING_PLAYBACK_MODE.THRU}
-                role="radio"
-                aria-checked={slicingPlaybackMode === SLICING_PLAYBACK_MODE.THRU}
-              >
-                Thru
-              </button>
-            </div>
-          {/if}
+          {@render loopOrVoicing('row-start-2')}
         </div>
       </FaceSection>
       <FaceSeam ink={simplerInk.primary} />
@@ -490,55 +677,10 @@
         {#snippet head()}<PanelEyebrow title="Sample" color={simplerInk.primary} />{/snippet}
         <div class="simpler-rows face-span-all">
           <!-- The loop brace over the controls, five columns. -->
-          <div class="simpler-brace min-h-0 relative">
-            <SimplerLoopControl device={device} devicePath={devicePath} playbackMode={playbackMode} color={simplerInk} slices={sampleSlices} />
-          </div>
+          <div class="simpler-brace min-h-0 relative">{@render brace()}</div>
 
-          <!-- The Warp column (Off / Beats / Cplx / Pro stacked), the section's
-               last column, over both rows. -->
-          <div
-            class="device-segmented simpler-warp grid grid-rows-4 min-h-0"
-            style="--btn-tint: {simplerInk.primary};"
-            role="radiogroup"
-            aria-label="Warp mode"
-          >
-            <button
-              onclick={() => selectWarpOption('off')}
-              class="device-segment text-[22px] font-bold uppercase"
-              class:active={!warping}
-              role="radio"
-              aria-checked={!warping}
-            >
-              Off
-            </button>
-            <button
-              onclick={() => selectWarpOption('beats')}
-              class="device-segment text-[22px] font-bold uppercase"
-              class:active={warping && warpMode === 0}
-              role="radio"
-              aria-checked={warping && warpMode === 0}
-            >
-              Beats
-            </button>
-            <button
-              onclick={() => selectWarpOption('complex')}
-              class="device-segment text-[22px] font-bold uppercase"
-              class:active={warping && warpMode === 4}
-              role="radio"
-              aria-checked={warping && warpMode === 4}
-            >
-              Cplx
-            </button>
-            <button
-              onclick={() => selectWarpOption('pro')}
-              class="device-segment text-[22px] font-bold uppercase"
-              class:active={warping && warpMode === 6}
-              role="radio"
-              aria-checked={warping && warpMode === 6}
-            >
-              Pro
-            </button>
-          </div>
+          <!-- The Warp column, the section's last column, over both rows. -->
+          {@render warpColumn('simpler-warp')}
 
           <!-- PITCH (vertical) -->
           <div class="row-start-2 col-span-1 row-span-1 min-h-0 min-w-0">
@@ -593,22 +735,7 @@
           <!-- FADE (Classic, only when not warping) / SENS (Slice).
                Hidden in Classic when warping is on — sibling controls expand. -->
           {#if isSlicing}
-            <div class="row-start-2 col-span-1 row-span-1 min-h-0 min-w-0">
-              <DeviceSlider
-                value={slicingSensitivity}
-                title="Sens"
-                face="knob"
-                knobSize="l"
-                icon="slice"
-                orientation="vertical"
-                labelOrientation="horizontal"
-                color={simplerInk}
-                onInteraction={(value) => {
-                  if (!device) return;
-                  handleSlicingSensitivity(value);
-                }}
-              />
-            </div>
+            <div class="row-start-2 col-span-1 row-span-1 min-h-0 min-w-0">{@render sensKnob()}</div>
           {:else if !warping}
             <div class="row-start-2 col-span-1 row-span-1 min-h-0 min-w-0">
               <DeviceSlider
@@ -629,83 +756,18 @@
           {/if}
 
           <!-- GAIN (vertical) -->
-          <div class="row-start-2 col-span-1 row-span-1 min-h-0 min-w-0">
-            <DeviceSlider
-              value={sampleGain}
-              title="Gain"
-              icon="gain"
-              orientation="vertical"
-              labelOrientation="horizontal"
-              color={simplerInk}
-              min={0}
-              max={1}
-              centerOrigin={true}
-              centerValue={0.5}
-              onInteraction={(value) => {
-                if (!device) return;
-                handleSampleGain(value);
-              }}
-            />
-          </div>
+          <div class="row-start-2 col-span-1 row-span-1 min-h-0 min-w-0">{@render gainSlider()}</div>
 
-          <!-- ACTIONS — Reverse always; ½× / 2× only when warping is on
-               (the underlying SimplerDevice methods no-op without warping;
-               hiding them keeps the row honest). Reverse is symmetric so
-               we don't track an "is reversed" state — tap toggles. -->
-          <div class="row-start-2 col-span-1 row-span-1 min-h-0 min-w-0 grid {warping ? 'grid-rows-3' : 'grid-rows-1'}" style="gap: var(--spacing-sm);">
-            <button
-              onclick={handleReverse}
-              class="physical-button btn-action h-full w-full flex items-center justify-center text-[18px] font-bold uppercase tracking-wider"
-              style="--btn-tint: {simplerInk.primary};"
-              aria-label="Reverse sample"
-            >
-              Rev
-            </button>
-            {#if warping}
-              <button
-                onclick={handleWarpHalf}
-                class="physical-button btn-action h-full w-full flex items-center justify-center text-[18px] font-bold uppercase tracking-wider"
-                style="--btn-tint: {simplerInk.primary};"
-                aria-label="Halve warped tempo"
-              >
-                ½×
-              </button>
-              <button
-                onclick={handleWarpDouble}
-                class="physical-button btn-action h-full w-full flex items-center justify-center text-[18px] font-bold uppercase tracking-wider"
-                style="--btn-tint: {simplerInk.primary};"
-                aria-label="Double warped tempo"
-              >
-                2×
-              </button>
-            {/if}
-          </div>
+          {@render actionsColumn('row-start-2 col-span-1 row-span-1')}
         </div>
       </FaceSection>
       <FaceSeam ink={simplerInk.primary} />
 
-      <!-- RANDOM — Random Start's "Random Amount" param, 0–100 (%). Always
-           drawn: a ghost until the track has the device, which the first
-           drag loads (setRandomAmount). In the controls' row. -->
+      <!-- RANDOM, in the controls' row. -->
       <FaceSection span={1}>
         {#snippet head()}<PanelEyebrow title="Random Start" color={simplerInk.primary} />{/snippet}
         <div class="simpler-rows face-span-all">
-          <div class="row-start-2 min-h-0 min-w-0">
-            <DeviceSlider
-              value={randomAmountValue}
-              title="Random"
-              face="knob"
-              knobSize="l"
-              icon="dice"
-              orientation="vertical"
-              labelOrientation="horizontal"
-              color={simplerInk}
-              min={0}
-              max={100}
-              isGhost={!randomAmountParamPath}
-              onInteraction={setRandomAmount}
-            />
-          </div>
+          <div class="row-start-2 min-h-0 min-w-0">{@render randomKnob()}</div>
         </div>
       </FaceSection>
     </FaceGrid>
@@ -739,6 +801,14 @@
   .simpler-warp {
     grid-row: 1 / span 2;
     grid-column: 6;
+  }
+  /* The board's Sample tile (ADR-521): Mode | brace | Warp | Gain | actions | Random. */
+  .simpler-board-sample {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 6fr) repeat(4, minmax(0, 1fr));
+    gap: var(--central-gap);
+    height: 100%;
+    min-height: 0;
   }
 
   /* Classic/Slice mode toggle chrome (GRATICULE) — the same declarations

@@ -42,6 +42,11 @@
   import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
   import { familyScheme } from '$lib/config/devicePresets';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
+  import DeviceXY from '../../device-panel/DeviceXY.svelte';
+  import InstrumentPanelView from './panel/InstrumentPanelView.svelte';
+  import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
+  import { SAMPLER_PANEL, sampleEnvelope } from './panel/samplePanels';
+  import { liveFilterCurve, FILTER_FREQ_RANGE } from '$lib/utils/instrumentFilterCurves';
   import {
     SAMPLER_ROW_PARAM_NAMES,
     SAMPLER_ROW_SECTION_SWITCH,
@@ -157,6 +162,11 @@
   const GAIN = 'Volume';
   let gainState = $derived(stateAt(GAIN));
 
+  // The full-screen board (ADR-521): the filter's pad and curve.
+  let filterCurve = $derived(
+    liveFilterCurve(params.raw('Filter Type') ?? 0, params.raw('Filter Slope') ?? 1, params.raw('Filter Morph') ?? 0)
+  );
+
 </script>
 
 {#snippet pillSlot()}
@@ -185,8 +195,43 @@
   <EnvelopeGraph {params} ink={samplerInk.primary} names={{ attack: 'Ve Attack', decay: 'Ve Decay', sustain: 'Ve Sustain', release: 'Ve Release', initial: 'Ve Init', peak: 'Ve Peak' }} />
 {/snippet}
 
+<!-- The full-screen board's slots (ADR-521). -->
+{#snippet filterSlot()}
+  <div class="h-full min-w-0" style={params.isOn('F On') ? '' : 'opacity: var(--opacity-ghost);'}>
+    <DeviceXY
+      xValue={params.unit('Filter Freq') ?? 1}
+      yValue={params.unit('Filter Res') ?? 0}
+      title="Filter"
+      isGhost={!params.isOn('F On')}
+      showCurve={params.isOn('F On') && filterCurve.curveType !== 'none'}
+      curveType={filterCurve.curveType}
+      curveOrder={filterCurve.order}
+      curveFreqRange={FILTER_FREQ_RANGE.sampler}
+      onInteraction={(x, y) => {
+        params.writeUnit('Filter Freq', x, 'F On');
+        params.writeUnit('Filter Res', y, 'F On');
+      }}
+      color={samplerInk}
+    />
+  </div>
+{/snippet}
+{#snippet oscEnvSlot()}<EnvelopeGraph {params} names={sampleEnvelope('Oe', true)} ink={samplerInk.primary} sw="Osc On" knobs="short" />{/snippet}
+{#snippet pitchEnvSlot()}<EnvelopeGraph {params} names={sampleEnvelope('Pe', true)} ink={samplerInk.primary} sw="Pe On" knobs="short" />{/snippet}
+{#snippet filterEnvSlot()}<EnvelopeGraph {params} names={sampleEnvelope('Fe', true)} ink={samplerInk.primary} sw="Fe On" knobs="short" />{/snippet}
+{#snippet ampSlot()}<EnvelopeGraph {params} names={sampleEnvelope('Ve', true)} ink={samplerInk.primary} knobs="side" />{/snippet}
+{#snippet auxEnvSlot()}<EnvelopeGraph {params} names={sampleEnvelope('Ae', true)} ink={samplerInk.primary} sw="Ae On" knobs="short" />{/snippet}
+
 <div class="h-full w-full overflow-hidden relative">
-  {#if instrument && device}
+  {#if instrument && device && centralDisplayStore.expanded}
+    <!-- Full screen (ADR-521): every section on one board. -->
+    <InstrumentPanelView
+      panel={SAMPLER_PANEL}
+      {params}
+      color={samplerInk}
+      board
+      slots={{ filter: filterSlot, oscEnv: oscEnvSlot, pitchEnv: pitchEnvSlot, filterEnv: filterEnvSlot, amp: ampSlot, auxEnv: auxEnvSlot }}
+    />
+  {:else if instrument && device}
     <!-- The face (ADR-510): the Sampler kit's sections, less the pads,
          on one grid of equal columns — Global [Gain/Trnsp | Spread] under
          the swap pill · Pitch / Osc · Amp Envelope A D S R, eight

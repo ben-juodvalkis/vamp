@@ -210,7 +210,7 @@ export function resolveViewComponent(
  */
 const FULL_SCREEN_BOARDS: Partial<Record<CentralViewType, ReadonlySet<string>>> = {
 	device: new Set(['ott', 'roar']),
-	instrument: new Set(['analog', 'collision', 'drift', 'electric', 'meld', 'operator', 'wavetable']),
+	instrument: new Set(['analog', 'collision', 'drift', 'electric', 'meld', 'operator', 'sampler', 'simpler', 'wavetable']),
 };
 
 export function hasFullScreenBoard(type: CentralViewType, subType?: string): boolean {

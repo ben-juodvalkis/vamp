@@ -24,6 +24,10 @@ import { DRIFT_PANEL } from '$lib/components/v6/central/views/panel/driftPanel';
 import { ANALOG_PANEL } from '$lib/components/v6/central/views/panel/analogPanel';
 import { WAVETABLE_PANEL } from '$lib/components/v6/central/views/panel/wavetablePanel';
 import { MELD_PANEL } from '$lib/components/v6/central/views/panel/meldPanel';
+import SIMPLER from '../../../../../docs/reference/instruments/dumps/Simpler.json';
+import SAMPLER from '../../../../../docs/reference/instruments/dumps/Sampler_all_sections.json';
+import { SIMPLER_PANEL, SAMPLER_PANEL } from '$lib/components/v6/central/views/panel/samplePanels';
+import { boardControls } from '$lib/components/v6/central/views/panel/panelTypes';
 import {
 	boardParamNames,
 	panelParamNames,
@@ -140,4 +144,38 @@ describe('full-screen boards (ADR-512, ADR-513)', () => {
 			expect(all.filter((n) => !board.has(n)).sort()).toEqual([]);
 		});
 	}
+});
+
+/**
+ * Simpler and Sampler have a board and no frame (ADR-521): their band faces
+ * are hand-laid. So the board itself is checked against the dumps: Sampler's
+ * with every section switched on, since an off section lists only its switch.
+ */
+describe.each([
+	['Simpler', SIMPLER_PANEL, SIMPLER],
+	['Sampler', SAMPLER_PANEL, SAMPLER]
+] as const)('%s board (ADR-521)', (_name, panel, dump) => {
+	const byName = new Map((dump as { parameters: DumpParam[] }).parameters.map((p) => [p.name, p]));
+	const controls = boardControls(panel);
+
+	it('binds only parameters Live lists', () => {
+		expect(boardParamNames(panel).filter((n) => !byName.has(n))).toEqual([]);
+	});
+
+	it('gives every chooser and stepper one label per value', () => {
+		for (const c of controls) {
+			const labels = c.kind === 'choice' ? c.options : c.kind === 'step' ? c.labels : undefined;
+			if (!labels) continue;
+			const p = byName.get(c.param)!;
+			expect(labels.length, c.param).toBe(p.max - p.min + 1);
+		}
+	});
+
+	it('switches only on/off parameters', () => {
+		for (const c of controls) {
+			if (c.kind !== 'switch') continue;
+			const p = byName.get(c.param)!;
+			expect([p.min, p.max], c.param).toEqual([0, 1]);
+		}
+	});
 });
