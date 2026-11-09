@@ -82,19 +82,41 @@
 	const MIX_INDEX = 36;
 	const MIX_DEFAULT = 1;
 
-	const FILTER_TYPES = [
-		{ value: 0, label: 'LP' },
-		{ value: 1, label: 'HP' },
-		{ value: 2, label: 'BP' },
-		{ value: 3, label: 'Notch' },
-		{ value: 4, label: 'Morph' },
-		{ value: 5, label: 'DJ' },
+	// Each type wears a small sketch of its response (2026-11-09, the
+	// user's call): x is frequency, y level, passband at the top of a
+	// 40x20 box. A sketch, not a measurement. `faint` paths are the
+	// shapes a sweeping type passes through.
+	type Curve = { d: string; faint?: boolean };
+	const FILTER_TYPES: { value: number; label: string; curves: Curve[] }[] = [
+		{ value: 0, label: 'LP', curves: [{ d: 'M1 6 H20 C26 6 27 3 29 7 S34 17 39 18' }] },
+		{ value: 1, label: 'HP', curves: [{ d: 'M1 18 C6 17 11 7 11 7 S14 6 20 6 H39' }] },
+		{ value: 2, label: 'BP', curves: [{ d: 'M1 18 C11 17 14 5 20 5 S29 17 39 18' }] },
+		{ value: 3, label: 'Notch', curves: [{ d: 'M1 6 H14 C17 6 18 18 20 18 S23 6 26 6 H39' }] },
+		{
+			value: 4,
+			label: 'Morph',
+			curves: [
+				{ d: 'M1 6 H14 C19 6 21 17 26 18 H39', faint: true },
+				{ d: 'M1 18 H14 C19 17 21 6 26 6 H39', faint: true },
+				{ d: 'M1 18 C11 17 14 5 20 5 S29 17 39 18' }
+			]
+		},
+		{
+			value: 5,
+			label: 'DJ',
+			curves: [
+				{ d: 'M1 6 H8 C12 6 13 17 17 18', faint: true },
+				{ d: 'M23 18 C27 17 28 6 32 6 H39', faint: true },
+				{ d: 'M8 12 H32' }
+			]
+		},
 		// Live's own labels from 6 on (dumped 2026-10-25, autoFilterParams):
 		// Comb, Resampling, Notch+LP, Vowel. They read Vowel, Comb, Resamp, SV.
-		{ value: 6, label: 'Comb' },
-		{ value: 7, label: 'Resamp' },
-		{ value: 8, label: 'Notch+LP' },
-		{ value: 9, label: 'Vowel' }
+	// Notch+LP reads N+LP: beside its sketch the whole name did not fit.
+		{ value: 6, label: 'Comb', curves: [{ d: 'M1 6 Q4 20 7 6 Q10 20 13 6 Q16 20 19 6 Q22 20 25 6 Q28 20 31 6 Q34 20 37 6 L39 6' }] },
+		{ value: 7, label: 'Resamp', curves: [{ d: 'M1 6 H22 V9 H26 V12 H30 V15 H34 V18 H39' }] },
+		{ value: 8, label: 'N+LP', curves: [{ d: 'M1 6 H7 C9 6 10 16 12 16 S15 6 17 6 H24 C29 6 30 15 39 18' }] },
+		{ value: 9, label: 'Vowel', curves: [{ d: 'M1 17 C4 17 6 5 9 5 S13 14 16 14 S20 8 23 8 S27 15 30 15 S34 11 36 11 S38 17 39 18' }] }
 	];
 
 	const LFO_SHAPE_OPTIONS = [
@@ -266,11 +288,17 @@
 	>
 		{#each FILTER_TYPES.slice(0, 10) as type}
 			<button
-				class="device-segment min-h-0 px-3 text-sm text-center flex items-center justify-center"
+				class="device-segment type-option min-h-0 px-2 text-sm flex items-center justify-start gap-1.5"
 				class:active={filterType === type.value}
+				title={type.label}
 				onclick={() => selectFilterType(type.value)}
 			>
-				{type.label}
+				<svg class="type-curve" viewBox="0 0 40 20" aria-hidden="true">
+					{#each type.curves as c, i (i)}
+						<path d={c.d} class:faint={c.faint} />
+					{/each}
+				</svg>
+				<span class="type-label">{type.label}</span>
 			</button>
 		{/each}
 	</div>
@@ -365,5 +393,43 @@
 	.lfo-sync-toggle {
 		flex: 0 0 var(--height-touch);
 		min-height: 0;
+	}
+
+	/* A filter type: its response sketch, then its name. The sketch is
+	   drawn in the label's colour, so it lights with the segment. */
+	.type-option {
+		container-type: inline-size;
+	}
+	.type-curve {
+		flex: 0 0 auto;
+		width: 2rem;
+		height: 1rem;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.5px;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		overflow: visible;
+	}
+	.type-curve path {
+		vector-effect: non-scaling-stroke;
+	}
+	.type-curve .faint {
+		opacity: 0.35;
+	}
+	.type-label {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	/* Too narrow for both: the sketch alone, the name in its title. */
+	@container (max-width: 5.5rem) {
+		.type-label {
+			display: none;
+		}
+		.type-option {
+			justify-content: center;
+		}
 	}
 </style>
