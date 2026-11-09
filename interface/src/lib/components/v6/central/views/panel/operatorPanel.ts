@@ -290,7 +290,7 @@ const OPERATOR_BOARD: PanelBoard = {
 			]
 		},
 		{
-			weight: 3.75,
+			weight: 3.6,
 			tiles: [
 				{
 					id: 'envelopes',
@@ -333,7 +333,7 @@ const OPERATOR_BOARD: PanelBoard = {
 		{
 			// The filter, its LFO and pan, under the envelopes: the envelopes take the
 			// full width with their loop settings (ADR-513).
-			weight: 2.6,
+			weight: 2.55,
 			tiles: [
 				{
 					id: 'filter',
@@ -431,7 +431,7 @@ const OPERATOR_BOARD: PanelBoard = {
 			]
 		},
 		{
-			weight: 2.25,
+			weight: 2.4,
 			tiles: [
 				{
 					id: 'modulation',

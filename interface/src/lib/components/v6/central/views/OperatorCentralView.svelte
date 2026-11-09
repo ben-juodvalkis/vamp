@@ -97,19 +97,21 @@
 
   {#snippet envelopePanel()}
     <div class="op-env" data-operator-envelope={env.title}>
-      <ScrubTabs
-        options={OPERATOR_ENVS.map((_, i) => i)}
-        selected={envShown}
-        onSelect={(i) => (envPicked = i)}
-        cols={OPERATOR_ENVS.length}
-        tint={operatorInk.primary}
-        inked
-        label={(i) => OPERATOR_ENVS[i].title}
-        groupLabel="Envelope shown"
-        style="height: var(--height-touch); --scrub-font-size: 0.8125rem;"
-      />
+      <div class="op-env-tabs">
+        <ScrubTabs
+          options={OPERATOR_ENVS.map((_, i) => i)}
+          selected={envShown}
+          onSelect={(i) => (envPicked = i)}
+          cols={1}
+          tint={operatorInk.primary}
+          inked
+          label={(i) => OPERATOR_ENVS[i].title}
+          groupLabel="Envelope shown"
+          style="height: 100%; --scrub-font-size: 0.8125rem;"
+        />
+      </div>
       <div class="op-env-graph">
-        <EnvelopeGraph {params} names={operatorEnvelope(env)} ink={operatorInk.primary} sw={env.on} />
+        <EnvelopeGraph {params} names={operatorEnvelope(env)} ink={operatorInk.primary} sw={env.on} knobs="side" />
       </div>
     </div>
   {/snippet}
@@ -131,15 +133,22 @@
 </div>
 
 <style>
+  /* The envelopes down the left, a row each, as the table beside them lists
+     them; the picture on the full height, its stage knobs two by two beside
+     it (2026-11-08; a tab row and a row of knobs left the picture 70px). */
   .op-env {
     display: flex;
-    flex-direction: column;
     gap: var(--spacing-sm);
     height: 100%;
     min-height: 0;
   }
+  .op-env-tabs {
+    flex: 0 0 4rem;
+    min-height: 0;
+  }
   .op-env-graph {
     flex: 1 1 0;
+    min-width: 0;
     min-height: 0;
   }
 </style>
