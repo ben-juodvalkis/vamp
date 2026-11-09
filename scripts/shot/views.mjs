@@ -54,6 +54,11 @@ export const VIEWS = {
 		description: 'As shipped — strips, central view, FX grid.',
 		prefs: {}
 	},
+	setlist: {
+		path: '/setlist',
+		description: 'Song arrows and sound column of the one-off keys remote (ADR-519).',
+		prefs: {}
+	},
 	session: {
 		description: 'Session mode on: clip grid under the strips (ADR-415/416).',
 		prefs: { [P.session]: '1' }

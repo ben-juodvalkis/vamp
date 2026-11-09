@@ -84,6 +84,12 @@ from ableton.v3.control_surface.elements_base import ElementsBase
 # see 2026-04-12 log entry). Pytest still finds these modules fine
 # because the test harness adds the package dir to ``sys.path``
 # explicitly via ``conftest.py``.
+from .components.SetlistComponent import (
+    SetlistComponent,
+    V3_SETLIST_GET_ADDRESS,
+    V3_SETLIST_SELECT_SONG_ADDRESS,
+    V3_SETLIST_SELECT_SOUND_ADDRESS,
+)
 from .components.BrowserProbe import (
     BrowserProbe,
     LOAD_ADDRESS as BROWSER_PROBE_LOAD_ADDRESS,
@@ -1441,6 +1447,17 @@ class LoopingSurface(ControlSurface):
             emit_pad_chain=self._v3_state_full_component.emit_pad_chain,
             on_param_value_changed=_on_param_value_changed_fanout,
         )
+
+        # Songs and sounds in one nested rack on the Keys track (ADR-519).
+        self._setlist_component = SetlistComponent(
+            song=self.song, emit=self._transport.send,
+        )
+        for address, handler in (
+            (V3_SETLIST_GET_ADDRESS, self._setlist_component.handle_get),
+            (V3_SETLIST_SELECT_SONG_ADDRESS, self._setlist_component.handle_select_song),
+            (V3_SETLIST_SELECT_SOUND_ADDRESS, self._setlist_component.handle_select_sound),
+        ):
+            self._transport.add_handler(address, handler)
 
         # An Audio Effect Rack's chain names (2026-10-12), for the Wah
         # slider's title: follows chains added, removed and renamed.
@@ -3020,6 +3037,9 @@ class LoopingSurface(ControlSurface):
             self._drum_vm_component.disconnect()
             self._drum_pad_chain_component.disconnect()
             self._drum_vm_component = None
+        if getattr(self, "_setlist_component", None) is not None:
+            self._setlist_component.disconnect()
+            self._setlist_component = None
         if getattr(self, "_rack_chain_names_component", None) is not None:
             self._rack_chain_names_component.disconnect()
             self._rack_chain_names_component = None

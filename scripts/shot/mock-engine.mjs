@@ -92,6 +92,17 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 	const timers = new Set();
 	let connectionCount = 0;
 
+	// The setlist page's rack (ADR-519), names from the rig's Battlehooch set.
+	const setlistMock = {
+		song: 1,
+		sound: 0,
+		sets: [
+			{ name: 'Joke', sounds: ['Lead', 'Organ', 'Keys'] },
+			{ name: 'Pickin Fields', sounds: ['Theremin', 'Organ', 'church organ'] },
+			{ name: 'Somersaults', sounds: ['Intro', 'Intro Bass', 'Noise', 'Sweep', 'organ', 'Bass'] }
+		]
+	};
+
 	const send = (ws, address, args = []) => {
 		if (ws.readyState !== ws.OPEN) return;
 		ws.send(JSON.stringify({ address, args }));
@@ -531,6 +542,28 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 			if (live && handleLive(ws, address, args)) return;
 
 			switch (address) {
+				case '/looping/v3/setlist/get':
+				case '/looping/v3/setlist/select_song':
+				case '/looping/v3/setlist/select_sound': {
+					if (address.endsWith('select_song')) {
+						setlistMock.song = args[0];
+						setlistMock.sound = 0;
+					} else if (address.endsWith('select_sound')) {
+						setlistMock.song = Math.max(setlistMock.song, 0);
+						setlistMock.sound = args[0];
+					}
+					const shown = setlistMock.sets[Math.max(setlistMock.song, 0)];
+					send(ws, '/looping/v3/setlist/state', [
+						JSON.stringify({
+							found: true,
+							songs: setlistMock.sets.map((set) => set.name),
+							song: setlistMock.song,
+							sounds: shown.sounds,
+							sound: setlistMock.sound
+						})
+					]);
+					return;
+				}
 				case '/looping/v3/handshake/hello': {
 					const offered = args.map(String);
 					if (!offered.includes(version)) {
