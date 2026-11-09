@@ -51,6 +51,7 @@
 		D98CD979DE6BECF98A5CC6D4 /* LinkAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02A893BE8392F15CE8413C11 /* LinkAuth.swift */; };
 		DDDD4C60D402BAF42D29CCC1 /* LinkAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02A893BE8392F15CE8413C11 /* LinkAuth.swift */; };
 		E24F836EE087E1B6F9C03BD5 /* PairedIPads.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31F6DB32688F85B1071884DF /* PairedIPads.swift */; };
+		E652679B40A0DF1F09DA28B3 /* MainWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE21A0FD5BB902ABB2AE793E /* MainWindow.swift */; };
 		EEC75B180FBEFF546FE023AB /* LinkServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E6A855106B6835A56B03903 /* LinkServer.swift */; };
 		F4BF36B2086C7A176787FF2F /* LinkAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02A893BE8392F15CE8413C11 /* LinkAuth.swift */; };
 		F82434A56DC50532E1C92937 /* Sparkle.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 52C388D89FD4A8D62CC69C6D /* Sparkle.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -108,6 +109,7 @@
 		EE075EDCB8FFD71D84B82266 /* Installed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Installed.swift; sourceTree = "<group>"; };
 		EEFD5FE887B2161B36F4E7BE /* FirstLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstLaunchTests.swift; sourceTree = "<group>"; };
 		F3BB2F13DF6908B1C162FFDE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		FE21A0FD5BB902ABB2AE793E /* MainWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindow.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -150,6 +152,7 @@
 				F3BB2F13DF6908B1C162FFDE /* Info.plist */,
 				EE075EDCB8FFD71D84B82266 /* Installed.swift */,
 				7B83BED9048B5F511FD8DC9C /* LinkClient.swift */,
+				FE21A0FD5BB902ABB2AE793E /* MainWindow.swift */,
 				915CB9013A537FFC92E573BC /* PadLink.swift */,
 				31F6DB32688F85B1071884DF /* PairedIPads.swift */,
 				AA3504E0B3D0D7BB563377C6 /* QRWindow.swift */,
@@ -397,6 +400,7 @@
 				29451632DC10E6832C5F02C1 /* LinkClient.swift in Sources */,
 				C8E7E75FD9BA9FFEC754678C /* LinkProtocol.swift in Sources */,
 				09E25C1F5DB590222D21BD05 /* LinkServer.swift in Sources */,
+				E652679B40A0DF1F09DA28B3 /* MainWindow.swift in Sources */,
 				1D58B1CF20FD7E8B0538559A /* OSCEnvelope.swift in Sources */,
 				607E3A52004476820E4C3739 /* PadLink.swift in Sources */,
 				0B7B8FCECB1E1AB755BA819F /* PairedIPads.swift in Sources */,

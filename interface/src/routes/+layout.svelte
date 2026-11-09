@@ -7,6 +7,7 @@
 	import { startPlacesLive, openSettingsOnFirstRun, PLACES_CHANGED_EVENT } from '$lib/services/placesLive';
 	import { watchEffectSources } from '$lib/services/effectSources.svelte';
 	import { pruneMissingRecents } from '$lib/services/recentEffects.svelte';
+	import { openSettingsFromHash } from '$lib/stores/v6/settingsStore.svelte';
 
 	// Import client without auto-connect
 	import { connectToLive } from '$lib/api/simpleClient';
@@ -87,6 +88,16 @@
 		void pruneMissingRecents();
 		window.addEventListener(PLACES_CHANGED_EVENT, () => void pruneMissingRecents());
 		void openSettingsOnFirstRun();
+
+		// `#settings[/<section>]` opens Settings: Vamp for Mac's "Settings…"
+		// (ADR-520). Cleared once read, so the next one changes the hash again.
+		const settingsFromHash = () => {
+			if (openSettingsFromHash(window.location.hash)) {
+				history.replaceState(history.state, '', window.location.pathname + window.location.search);
+			}
+		};
+		settingsFromHash();
+		window.addEventListener('hashchange', settingsFromHash);
 
 		// ROW 13a (2026-04-21): clipStateStore.requestRefresh() deleted —
 		// empty-track / filter state now $derives from v3Store.tracks,

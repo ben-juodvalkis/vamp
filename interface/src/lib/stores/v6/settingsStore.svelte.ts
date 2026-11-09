@@ -4,7 +4,8 @@
  * §7).
  *
  * Settings is a full-page view over the whole app, opened from the gear in
- * the master track's central view. Its sections are down a sidebar (a row of
+ * the master track's central view, or on the Mac by Vamp for Mac's
+ * "Settings…" (⌘,), which sets `#settings` on its window (ADR-520). Its sections are down a sidebar (a row of
  * tabs on a narrow window): General (Behavior, Appearance, Foot Switch),
  * Places, Connection (Live, the iPad, the features), and on a first run the
  * Setup checklist ahead of them.
@@ -60,3 +61,19 @@ function createSettingsStore() {
 }
 
 export const settingsStore = createSettingsStore();
+
+const SECTIONS: readonly SettingsSection[] = ['setup', 'general', 'places', 'grooves', 'connection'];
+
+/**
+ * Open Settings from an address: `#settings`, or `#settings/<section>`.
+ * Vamp for Mac's "Settings…" (⌘,) sets it on its window's page (ADR-520);
+ * any browser can use it too. Returns whether the hash asked for Settings,
+ * so the caller can clear it and a later "Settings…" lands again.
+ */
+export function openSettingsFromHash(hash: string): boolean {
+	const match = /^#settings(?:\/([a-z]+))?$/.exec(hash);
+	if (!match) return false;
+	const at = match[1] as SettingsSection | undefined;
+	settingsStore.openSettings(at && SECTIONS.includes(at) ? at : undefined);
+	return true;
+}

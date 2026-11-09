@@ -30,10 +30,18 @@ struct VampMacApp: App {
             }
         }
         .menuBarExtraStyle(.menu)
+        .commands {
+            // The app menu while the window is open (ADR-520).
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings…") { MainWindow.shared.show(settings: true) }
+                    .keyboardShortcut(",")
+            }
+        }
     }
 }
 
-/// The app's lifecycle hooks. (No Dock icon: `LSUIElement` in Info.plist.)
+/// The app's lifecycle hooks. (No Dock icon but while the window is open:
+/// `LSUIElement` in Info.plist, `MainWindow`.)
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var sigterm: DispatchSourceSignal?
 
@@ -45,6 +53,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         source.setEventHandler { NSApp.terminate(nil) }
         source.resume()
         sigterm = source
+
+        // Opened by hand (the Dock, Launchpad, Finder), show Vamp's window
+        // (ADR-520). Not at login, and not under `npm run ipad` / `npm run dev`,
+        // where the interface is in a browser already.
+        let event = NSAppleEventManager.shared().currentAppleEvent
+        let atLogin = event?.eventID == kAEOpenApplication
+            && event?.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
+        if !atLogin && ProcessInfo.processInfo.environment["VAMP_FROM_NPM"] != "1" {
+            MainActor.assumeIsolated { MainWindow.shared.show() }
+        }
+    }
+
+    /// Opened again while running (the Dock icon, Launchpad): the window.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        MainActor.assumeIsolated { MainWindow.shared.show() }
+        return false
     }
 
     /// Quitting stops what this app started (never a Terminal's servers).
@@ -63,6 +87,9 @@ struct MenuContent: View {
 
     var body: some View {
         Text(vamp.statusLine)
+        Button("Open Vamp") { MainWindow.shared.show() }
+        Button("Settings…") { MainWindow.shared.show(settings: true) }
+            .keyboardShortcut(",")
         if let note = vamp.updateNote { Text(note) }
         if let note = vamp.liveNote { Text(note) }
         if vamp.paths?.installed == true && !(state.autoArm != nil && vamp.checklist.place && vamp.checklist.iPad) {
