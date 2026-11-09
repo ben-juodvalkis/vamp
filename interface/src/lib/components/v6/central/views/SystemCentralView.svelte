@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
 import { logger } from '$lib/utils/logger';
 	import { Button } from '$lib/components/ui/button';
 	import { session } from '$lib/stores/session.svelte';
@@ -244,7 +245,7 @@ import { logger } from '$lib/utils/logger';
 		class="sys-gear"
 		aria-label="Open Settings"
 		title="Settings: behavior, appearance, foot switch, Places, features, connection"
-		onclick={() => settingsStore.openSettings()}
+		use:press={{ onPress: () => settingsStore.openSettings() }}
 		data-debug="settings-gear"
 	>
 		<Settings class="h-6 w-6" />
@@ -313,7 +314,7 @@ import { logger } from '$lib/utils/logger';
 							aria-haspopup="dialog"
 							aria-expanded={launchQuantOpen}
 							title="Global launch quantization — the grid clip launch and loop record snap to"
-							onclick={() => (launchQuantOpen = true)}
+							use:press={{ onPress: () => (launchQuantOpen = true) }}
 						>
 							{launchQuantLabel}
 						</button>
@@ -322,10 +323,10 @@ import { logger } from '$lib/utils/logger';
 				</div>
 
 				<div class="sys-list sys-list-row">
-					<button class="sys-switch btn-toggle" class:on={session.metronome} aria-pressed={session.metronome} onclick={toggleMetronome}>
+					<button class="sys-switch btn-toggle" class:on={session.metronome} aria-pressed={session.metronome} use:press={{ onPress: () => toggleMetronome() }}>
 						<span class="sys-switch-label">Click</span>
 					</button>
-					<button class="sys-switch btn-toggle" class:on={session.keyFollowEnabled} aria-pressed={session.keyFollowEnabled} title={keyFollowTitle} onclick={toggleKeyFollow}>
+					<button class="sys-switch btn-toggle" class:on={session.keyFollowEnabled} aria-pressed={session.keyFollowEnabled} title={keyFollowTitle} use:press={{ onPress: () => toggleKeyFollow() }}>
 						<span class="sys-switch-label">Follow Key</span>
 					</button>
 				</div>
@@ -345,7 +346,7 @@ import { logger } from '$lib/utils/logger';
 						aria-pressed={t.on()}
 						aria-label={t.ariaLabel}
 						title={t.title}
-						onclick={t.toggle}
+						use:press={{ onPress: () => t.toggle() }}
 						data-section-switch={t.label.toLowerCase()}
 					>
 						<span class="sys-switch-label">{t.label}</span>
@@ -362,7 +363,7 @@ import { logger } from '$lib/utils/logger';
 		<div
 			class="quant-modal-backdrop"
 			role="presentation"
-			onclick={() => (launchQuantOpen = false)}
+			use:press={{ onPress: () => (launchQuantOpen = false) }}
 		></div>
 		<div
 			class="quant-modal"
@@ -378,7 +379,7 @@ import { logger } from '$lib/utils/logger';
 				<button
 					class="sys-toggle-box quant-close"
 					aria-label="Close"
-					onclick={() => (launchQuantOpen = false)}
+					use:press={{ onPress: () => (launchQuantOpen = false) }}
 				>
 					Close
 				</button>
@@ -390,7 +391,7 @@ import { logger } from '$lib/utils/logger';
 						class:active={session.clipTriggerQuantization === value}
 						role="radio"
 						aria-checked={session.clipTriggerQuantization === value}
-						onclick={() => setLaunchQuantization(value)}
+						use:press={{ onPress: () => setLaunchQuantization(value) }}
 					>
 						{label}
 					</button>

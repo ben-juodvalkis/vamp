@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import ScrubTabs from '../../device-panel/ScrubTabs.svelte';
@@ -348,7 +349,7 @@
               class="osc-badge"
               style="--osc-badge-ink: {voiceInk.primary};"
               aria-label="Voice {voice} of 2 — switch to voice {voice === 1 ? 2 : 1}"
-              onclick={() => (voice = voice === 1 ? 2 : 1)}
+              use:press={{ onPress: () => (voice = voice === 1 ? 2 : 1) }}
             >
               <span class="osc-badge-eyebrow">Voice</span>
               <span class="osc-badge-pair">
@@ -378,7 +379,7 @@
               style="--btn-tint: {voiceInk.primary};"
               title="Osc {voice} Balance"
               aria-label="Osc {voice} to {route}"
-              onclick={() => write(p.balance, nextRouteBalance(raw(p.balance, 1)))}
+              use:press={{ onPress: () => write(p.balance, nextRouteBalance(raw(p.balance, 1))) }}
             >
               <span class="route-arrow">→</span>{route}
             </button>
@@ -429,7 +430,7 @@
               style="--btn-tint: {noiseInk.primary};"
               title="Noise Balance"
               aria-label="Noise to {noiseRoute}"
-              onclick={() => write(ANALOG_NOISE_BALANCE, nextRouteBalance(raw(ANALOG_NOISE_BALANCE, 0.5)))}
+              use:press={{ onPress: () => write(ANALOG_NOISE_BALANCE, nextRouteBalance(raw(ANALOG_NOISE_BALANCE, 0.5))) }}
             >
               <span class="route-arrow">→</span>{noiseRoute}
             </button>
@@ -461,7 +462,7 @@
                 title={ANALOG_FILTER_TYPES[filterFamily === i ? filterType : i * 2 + (filterType % 2)]}
                 aria-label="Filter {voice} {ANALOG_FILTER_TYPES[filterFamily === i ? filterType : i * 2 + (filterType % 2)]}"
                 aria-pressed={filterFamily === i}
-                onclick={() => write(p.filterType, filterTypeForFamily(filterType, i))}
+                use:press={{ onPress: () => write(p.filterType, filterTypeForFamily(filterType, i)) }}
               >
                 <span>{family.label}{#if filterFamily === i}<span class="strip-sub"> {family.slopes[filterType % 2]}</span>{/if}</span>
               </button>
@@ -479,7 +480,7 @@
               title="Filter 2's cutoff follows Filter 1's"
               aria-label="F2 follows F1"
               aria-pressed={f2Slave}
-              onclick={() => write(ANALOG_F2_SLAVE, f2Slave ? 0 : 1)}
+              use:press={{ onPress: () => write(ANALOG_F2_SLAVE, f2Slave ? 0 : 1) }}
             >F2 Follow</button>
           </div>
           {@render faceKnob({ value: raw(p.envAmount, 0), title: 'Env', bipolar: true, ink: voiceInk, readout: display(p.envAmount), write: (v) => write(p.envAmount, Math.max(-1, Math.min(1, v))) })}
@@ -537,8 +538,8 @@
             />
           </div>
           <div class="r sw-pair">
-            <button class="physical-button btn-toggle mode-button" class:active={unisonOn} style="--btn-tint: {analogInk.primary};" aria-pressed={unisonOn} onclick={() => write(ANALOG_UNISON_ON, unisonOn ? 0 : 1)}>Uni</button>
-            <button class="physical-button btn-toggle mode-button" class:active={vibOn} style="--btn-tint: {analogInk.primary};" aria-pressed={vibOn} onclick={() => write(ANALOG_VIB_ON, vibOn ? 0 : 1)}>Vib</button>
+            <button class="physical-button btn-toggle mode-button" class:active={unisonOn} style="--btn-tint: {analogInk.primary};" aria-pressed={unisonOn} use:press={{ onPress: () => write(ANALOG_UNISON_ON, unisonOn ? 0 : 1) }}>Uni</button>
+            <button class="physical-button btn-toggle mode-button" class:active={vibOn} style="--btn-tint: {analogInk.primary};" aria-pressed={vibOn} use:press={{ onPress: () => write(ANALOG_VIB_ON, vibOn ? 0 : 1) }}>Vib</button>
           </div>
           {@render faceKnob({ value: glideOn ? glideTime : 0, title: 'Glide', icon: 'glide', ink: analogInk, ghost: !glideOn, readout: display(ANALOG_GLIDE_TIME), write: (v) => {
             writeSwitch(ANALOG_GLIDE_ON, v > SECTION_SWITCH_ON_ABOVE, glideOn);

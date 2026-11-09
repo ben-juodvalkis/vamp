@@ -123,7 +123,11 @@
       role={groupLabel ? 'radio' : undefined}
       aria-checked={groupLabel ? index === selected : undefined}
       aria-pressed={groupLabel ? undefined : index === selected}
-      onclick={() => {
+      onkeydown={(e) => {
+        // The frame's use:drag owns every finger; this is the keyboard path
+        // a click handler gave for free.
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
         if (index !== selected) onSelect(index, option);
         onDone?.();
       }}

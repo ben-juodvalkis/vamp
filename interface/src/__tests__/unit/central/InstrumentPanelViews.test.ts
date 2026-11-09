@@ -10,6 +10,7 @@
  * turns the section on first.
  */
 
+import { pressTap, scrubPick } from '../../helpers/pressTap';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 vi.mock('$lib/api/simpleClient', () => ({ send: vi.fn() }));
@@ -104,10 +105,10 @@ function option(container: HTMLElement, param: string, label: string): HTMLEleme
 
 /** A long pick on a page (ADR-510): open its picker, then tap the value. */
 async function pick(container: HTMLElement, param: string, label: string) {
-	await fireEvent.click(el(container, `.panel-pick[data-param="${param}"] .picker-button`));
+	await pressTap(el(container, `.panel-pick[data-param="${param}"] .picker-button`));
 	const button = [...container.querySelectorAll<HTMLElement>('.picker-option')].find((b) => b.textContent?.trim() === label);
 	if (!button) throw new Error(`no ${label} in ${param}`);
-	await fireEvent.click(button);
+	await pressTap(button);
 }
 
 describe('ElectricCentralView — Live\'s four sections', () => {
@@ -133,7 +134,7 @@ describe('ElectricCentralView — Live\'s four sections', () => {
 	it('writes the pickup model by its name', async () => {
 		const { container } = render(ElectricCentralView, { props: { instrument: instrument('Electric', 'LoungeLizard') } });
 		await tick();
-		await fireEvent.click(option(container, 'Pickup Model', 'W'));
+		await scrubPick(option(container, 'Pickup Model', 'W'));
 		expect(paramSets()).toEqual([[indexOf(ELECTRIC as Dump, 'Pickup Model'), 1]]);
 	});
 
@@ -175,7 +176,7 @@ describe('CollisionCentralView — Live\'s tabs over the middle', () => {
 		const { container } = render(CollisionCentralView, { props: { instrument: instrument('Collision', 'Collision') } });
 		await tick();
 		expect(container.querySelector('[data-param="Res 1 Decay"]')).toBeTruthy();
-		await fireEvent.click(el(container, '[data-tab="Res 2"]'));
+		await pressTap(el(container, '[data-tab="Res 2"]'));
 		expect(container.querySelector('[data-param="Res 1 Decay"]')).toBeNull();
 		expect(container.querySelector('[data-param="Res 2 Decay"]')).toBeTruthy();
 		expect(paramSets()).toEqual([]);
@@ -233,7 +234,7 @@ describe('DriftCentralView — its own face, Live\'s sections behind the eyebrow
 		try {
 			const { container } = render(DriftCentralView, { props: { instrument: instrument('Drift', 'Drift') } });
 			await tick();
-			await fireEvent.click(option(el(container, '[data-board-tile="envelopes"]'), 'Cyc Env Mode', 'Sync'));
+			await scrubPick(option(el(container, '[data-board-tile="envelopes"]'), 'Cyc Env Mode', 'Sync'));
 			expect(paramSets()).toEqual([[indexOf(DRIFT as Dump, 'Cyc Env Mode'), 3]]);
 		} finally {
 			centralDisplayStore.setExpanded(false);
@@ -264,7 +265,7 @@ describe.each([
 		// Meld's half is picked by touching Engine B's level box, Analog's by its badge.
 		HTMLElement.prototype.setPointerCapture ??= () => {};
 		if (name === 'Meld') await fireEvent.pointerDown(el(container, '[data-engine-level="B"] [role="slider"]'), { pointerId: 1 });
-		else await fireEvent.click(el(container, '.osc-badge'));
+		else await pressTap(el(container, '.osc-badge'));
 		expect(names(container)).toEqual(expect.arrayContaining([...second]));
 		expect(paramSets()).toEqual([]);
 	});

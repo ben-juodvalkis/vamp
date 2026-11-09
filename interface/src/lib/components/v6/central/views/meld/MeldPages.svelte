@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
   /**
    * Meld's board tiles (ADR-512, ADR-513), each a `BoardTile` panel
    * (ADR-516) hand-laid on the face grid (ADR-510). An engine's tiles
@@ -133,7 +134,7 @@
     disabled={!params.has(param)}
     style="--btn-tint: {color};"
     data-param={param}
-    onclick={() => flip(param)}
+    use:press={{ onPress: () => flip(param), disabled: !params.has(param) }}
   >{title}</button>
   </div>
 {/snippet}

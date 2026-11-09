@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press as pressAction } from '$lib/actions/press';
 	/**
 	 * PadNotesStrip — the scoped pad's row of the track's playing clip,
 	 * under the Drum Rack view's controls (2026-10-24, the user's call).
@@ -411,7 +412,7 @@
 	<!-- Only while a note in the bar is off a step: nothing to quantize, no Q. -->
 	<button
 		class="physical-button btn-action strip-q"
-		onclick={quantize}
+		use:pressAction={{ onPress: () => quantize() }}
 		title="Quantize this pad's notes to the steps"
 		aria-label="Quantize this pad's notes to the steps"
 	>Q</button>

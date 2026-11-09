@@ -11,6 +11,7 @@
  * running Live.
  */
 
+import { pressTap } from '../../helpers/pressTap';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 vi.mock('$lib/api/simpleClient', () => ({ send: vi.fn() }));
@@ -96,7 +97,7 @@ describe('Reverse view: Pitch Hack', () => {
 		seed(pitchHack(0, 0, 40));
 		const { container } = render(ReverseCentralView);
 		await tick();
-		for (const b of tab(container, 'Rate')) await fireEvent.click(b);
+		for (const b of tab(container, 'Rate')) await pressTap(b);
 		expect(written(5)).toEqual([19, 16, 13, 10, 7]);
 		expect(written(2)).toEqual([]);
 	});
@@ -128,7 +129,7 @@ describe('Pitch view: the Pitch family', () => {
 		await tick();
 		expect(tab(container, 'Pitch').map((b) => b.textContent?.trim())).toEqual(['+12', '+7', '-5', '-12']);
 		expect(tab(container, 'Pitch').map((b) => b.getAttribute('aria-checked'))).toEqual(['false', 'false', 'true', 'false']);
-		for (const b of tab(container, 'Pitch')) await fireEvent.click(b);
+		for (const b of tab(container, 'Pitch')) await pressTap(b);
 		expect(writtenTo(OCT, 1)).toEqual([12, 7, -5, -12]);
 		// A loaded Octave's Mix is the slider's: a step leaves it alone.
 		expect(writtenTo(OCT, 2)).toEqual([]);
@@ -142,8 +143,8 @@ describe('Pitch view: the Pitch family', () => {
 		expect(tab(container, 'Quality').map((b) => b.textContent?.trim())).toEqual(['Full', 'Lite', 'Eco']);
 		expect(tab(container, 'Response').map((b) => b.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false']);
 		expect(tab(container, 'Quality').map((b) => b.getAttribute('aria-checked'))).toEqual(['false', 'false', 'true']);
-		for (const b of tab(container, 'Response')) await fireEvent.click(b);
-		for (const b of tab(container, 'Quality')) await fireEvent.click(b);
+		for (const b of tab(container, 'Response')) await pressTap(b);
+		for (const b of tab(container, 'Quality')) await pressTap(b);
 		expect(writtenTo(OCT, 4)).toEqual([0, 1, 2]);
 		expect(writtenTo(OCT, 5)).toEqual([0, 1, 2]);
 	});

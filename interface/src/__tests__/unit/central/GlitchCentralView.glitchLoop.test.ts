@@ -8,6 +8,7 @@
  * and a press writes them in one `device/params/set`.
  */
 
+import { pressTap } from '../../helpers/pressTap';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 vi.mock('$lib/api/simpleClient', () => ({ send: vi.fn() }));
@@ -119,7 +120,7 @@ describe('GlitchCentralView GlitchLoop', () => {
 		seed(glitchLoop());
 		const { container } = render(GlitchCentralView);
 		await settle();
-		await fireEvent.click(buttons(container, '.preset-btn')[1]);
+		await pressTap(buttons(container, '.preset-btn')[1]);
 		const calls = vi.mocked(send).mock.calls.filter(([addr]) => addr === '/looping/v3/device/params/set');
 		expect(calls).toHaveLength(1);
 		const [path, values] = calls[0][1] as [string, string, number];

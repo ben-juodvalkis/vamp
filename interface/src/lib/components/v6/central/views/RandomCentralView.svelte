@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
 	/**
 	 * RandomCentralView — the Random MIDI effect's own view (MidiRandom).
 	 * Chance, the `random` control (`deviceControls`, ADR-479), then the rest
@@ -99,7 +100,7 @@
 							class:active={!random.isGhost && step(P.sign) === i}
 							role="radio"
 							aria-checked={step(P.sign) === i}
-							onclick={() => random.sendParam(P.sign, i)}
+							use:press={{ onPress: () => random.sendParam(P.sign, i) }}
 						>{label}</button>
 					{/each}
 				</div>
@@ -117,7 +118,7 @@
 							class:active={!random.isGhost && step(P.mode) === i}
 							role="radio"
 							aria-checked={step(P.mode) === i}
-							onclick={() => random.sendParam(P.mode, i)}
+							use:press={{ onPress: () => random.sendParam(P.mode, i) }}
 						>{label}</button>
 					{/each}
 				</div>
@@ -125,7 +126,7 @@
 					class="physical-button btn-toggle scale"
 					class:active={step(P.scale) === 1}
 					aria-pressed={step(P.scale) === 1}
-					onclick={() => random.sendParam(P.scale, step(P.scale) === 1 ? 0 : 1)}
+					use:press={{ onPress: () => random.sendParam(P.scale, step(P.scale) === 1 ? 0 : 1) }}
 				>Scale</button>
 			</div>
 		</FaceSection>

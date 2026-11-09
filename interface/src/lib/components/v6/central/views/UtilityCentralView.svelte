@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
   /**
    * UtilityCentralView — the Utility's view (slot `utility`, StereoGain).
    *
@@ -129,7 +130,7 @@
         class:active={channelMode === i}
         role="radio"
         aria-checked={channelMode === i}
-        onclick={() => utility.sendParam(UTIL.channelMode, i)}
+        use:press={{ onPress: () => utility.sendParam(UTIL.channelMode, i) }}
       >
         {label}
       </button>
@@ -145,7 +146,7 @@
     {#each SWITCH_ROWS as row, r (r)}
       <div class="switch-row">
         {#each row as s (s.index)}
-          <button class="physical-button btn-toggle utility-switch" class:active={on(s.index)} aria-pressed={on(s.index)} onclick={() => toggle(s.index)}>
+          <button class="physical-button btn-toggle utility-switch" class:active={on(s.index)} aria-pressed={on(s.index)} use:press={{ onPress: () => toggle(s.index) }}>
             {s.label}
           </button>
         {/each}

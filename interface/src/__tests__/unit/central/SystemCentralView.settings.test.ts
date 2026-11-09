@@ -5,6 +5,7 @@
  * the foot switch — are Settings' now, and the wire they write is unchanged.
  */
 
+import { pressTap } from '../../helpers/pressTap';
 import { describe, it, expect, afterEach, vi, beforeEach } from 'vitest';
 
 const send = vi.fn();
@@ -45,14 +46,14 @@ describe('SystemCentralView after the Settings split', () => {
 	it('Follow Key writes the same address as before, echo-confirmed', async () => {
 		const { getByText } = render(SystemCentralView);
 		const flipped = session.keyFollowEnabled ? 0 : 1;
-		await fireEvent.click(getByText('Follow Key'));
+		await pressTap(getByText('Follow Key'));
 		expect(send).toHaveBeenCalledWith(V3_SESSION_KEY_FOLLOW_ADDRESS, [flipped]);
 	});
 
 	it('the gear opens Settings', async () => {
 		const { getByLabelText } = render(SystemCentralView);
 		expect(settingsStore.open).toBe(false);
-		await fireEvent.click(getByLabelText('Open Settings'));
+		await pressTap(getByLabelText('Open Settings'));
 		expect(settingsStore.open).toBe(true);
 	});
 });

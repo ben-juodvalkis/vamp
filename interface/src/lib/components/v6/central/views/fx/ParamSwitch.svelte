@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
   /**
    * An on/off switch on one effect parameter, lit in the device's ink while
    * on (the Redux view's switch, shared by the effect views built on Live's
@@ -24,7 +25,7 @@
   class:row
   style="--btn-tint: {tint};"
   aria-pressed={on}
-  onclick={onToggle}
+  use:press={{ onPress: () => onToggle() }}
 >{label}</button>
 
 <style>

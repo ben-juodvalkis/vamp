@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
 	/**
 	 * Ben's Adaptive Tone Shaper's graph, as the device draws its own face
 	 * (`toneShaper.ts` has the geometry): the input's spectrum as a filled
@@ -229,14 +230,14 @@
 				class:on={zero}
 				aria-pressed={zero}
 				data-ts-switch="zero"
-				onclick={() => (isGhost ? onTap?.() : onWrite(TS_PARAM.latency, zero ? 0 : 1))}
+				use:press={{ onPress: () => (isGhost ? onTap?.() : onWrite(TS_PARAM.latency, zero ? 0 : 1)) }}
 			>ZERO</button>
 			<button
 				class="switch"
 				class:on={eco}
 				aria-pressed={eco}
 				data-ts-switch="eco"
-				onclick={() => (isGhost ? onTap?.() : onWrite(TS_PARAM.quality, eco ? 0 : 1))}
+				use:press={{ onPress: () => (isGhost ? onTap?.() : onWrite(TS_PARAM.quality, eco ? 0 : 1)) }}
 			>ECO</button>
 		</div>
 	</div>

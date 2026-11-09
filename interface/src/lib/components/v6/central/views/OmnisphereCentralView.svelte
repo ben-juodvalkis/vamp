@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
   import { session } from '$lib/stores/session.svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
@@ -246,7 +247,7 @@
             class="physical-button btn-toggle omni-fx w-full h-full min-w-0 min-h-0 text-xl font-bold"
             class:active={fxIsOn}
             style="--btn-tint: {omniInk.primary};"
-            onclick={handleFxToggle}
+            use:press={{ onPress: () => handleFxToggle() }}
           >
             FX
           </button>

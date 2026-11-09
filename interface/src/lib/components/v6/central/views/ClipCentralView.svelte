@@ -383,7 +383,7 @@ import { logger } from '$lib/utils/logger';
 	<button
 		class="editor-toggle"
 		class:active={editorActive}
-		onclick={() => clipEditorStore.toggle()}
+		use:press={{ onPress: () => clipEditorStore.toggle() }}
 		title={editorActive ? 'Show clip controls' : 'Show clip editor'}
 		aria-label={editorActive ? 'Show clip controls' : 'Show clip editor'}
 	>
@@ -434,7 +434,7 @@ import { logger } from '$lib/utils/logger';
 				<div class="stacked-switches device-segmented seg-grid">
 					{#each warpModeOptions as option}
 						<button
-							onclick={() => setWarpMode(option.value)}
+							use:press={{ onPress: () => setWarpMode(option.value), disabled: !hasClip }}
 							disabled={!hasClip}
 							class="device-segment warp-option font-bold text-base"
 							class:active={warpMode === option.value}
@@ -483,7 +483,7 @@ import { logger } from '$lib/utils/logger';
 			<div class="stacked-btns">
 				<div class="btn-cell">
 					<button
-						onclick={handleDeleteClip}
+						use:press={{ onPress: () => handleDeleteClip(), disabled: !hasClip }}
 						disabled={!hasClip}
 						class="btn btn-well btn-action fam-del"
 					>
@@ -503,7 +503,7 @@ import { logger } from '$lib/utils/logger';
 				</div>
 				<div class="btn-cell">
 					<button
-						onclick={handleDupTrack}
+						use:press={{ onPress: () => handleDupTrack(), disabled: isDuplicatingTrack }}
 						disabled={isDuplicatingTrack}
 						class="btn btn-well btn-action fam-monitor dup-trk-btn font-bold text-base {isDuplicatingTrack ? 'cursor-wait' : ''}"
 					>
@@ -546,14 +546,14 @@ import { logger } from '$lib/utils/logger';
 				<div class="stacked-btns">
 					<div class="btn-cell">
 						<button
-							onclick={() => setAudioClipPitch(pitchCoarseDisplay + 12)}
+							use:press={{ onPress: () => setAudioClipPitch(pitchCoarseDisplay + 12), disabled: !hasClip || pitchCoarseDisplay >= AUDIO_CLIP_PITCH_RANGE }}
 							disabled={!hasClip || pitchCoarseDisplay >= AUDIO_CLIP_PITCH_RANGE}
 							class="btn btn-well btn-action fam-quant"
 						>+12</button>
 					</div>
 					<div class="btn-cell">
 						<button
-							onclick={() => setAudioClipPitch(pitchCoarseDisplay - 12)}
+							use:press={{ onPress: () => setAudioClipPitch(pitchCoarseDisplay - 12), disabled: !hasClip || pitchCoarseDisplay <= -AUDIO_CLIP_PITCH_RANGE }}
 							disabled={!hasClip || pitchCoarseDisplay <= -AUDIO_CLIP_PITCH_RANGE}
 							class="btn btn-well btn-action fam-quant"
 						>−12</button>
@@ -563,14 +563,14 @@ import { logger } from '$lib/utils/logger';
 				<div class="stacked-btns">
 					<div class="btn-cell">
 						<button
-							onclick={handleTransposeUp}
+							use:press={{ onPress: () => handleTransposeUp(), disabled: !hasTranspose }}
 							disabled={!hasTranspose}
 							class="btn btn-well btn-action fam-quant"
 						>+12</button>
 					</div>
 					<div class="btn-cell">
 						<button
-							onclick={handleTransposeDown}
+							use:press={{ onPress: () => handleTransposeDown(), disabled: !hasTranspose }}
 							disabled={!hasTranspose}
 							class="btn btn-well btn-action fam-quant"
 						>−12</button>
@@ -607,7 +607,7 @@ import { logger } from '$lib/utils/logger';
 			<div class="stacked-btns">
 				<div class="btn-cell">
 					<button
-						onclick={halveLoopFromStart}
+						use:press={{ onPress: () => halveLoopFromStart(), disabled: !hasClip }}
 						disabled={!hasClip}
 						class="btn btn-well btn-action fam-quant"
 						aria-label="Clip left"
@@ -617,7 +617,7 @@ import { logger } from '$lib/utils/logger';
 				</div>
 				<div class="btn-cell">
 					<button
-						onclick={halveLoopFromEnd}
+						use:press={{ onPress: () => halveLoopFromEnd(), disabled: !hasClip }}
 						disabled={!hasClip}
 						class="btn btn-well btn-action fam-quant"
 						aria-label="Clip right"
@@ -642,14 +642,14 @@ import { logger } from '$lib/utils/logger';
 				<div class="btn-cell">
 					{#if trackType === 'midi'}
 						<button
-							onclick={handleDuplicateLoop}
+							use:press={{ onPress: () => handleDuplicateLoop(), disabled: !hasClip || isDuplicatingLoop }}
 							disabled={!hasClip || isDuplicatingLoop}
 							class="btn btn-well btn-action fam-monitor {isDuplicatingLoop ? 'cursor-wait' : ''}"
 							aria-label="Duplicate loop"
 						><!-- The loop and its copy appended after it, the loop bar over the loop and an arrow over the copy: the loop end moves right -->{#if isDuplicatingLoop}...{:else}<svg class="w-16 h-16" fill="none" viewBox="0 0 36 24"><rect x="2" y="2" width="14" height="3" rx="1" fill="currentColor" /><path d="M20 3.5h11M28 1l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /><rect x="2" y="8" width="14" height="13" rx="1.5" stroke="currentColor" stroke-width="2" /><rect x="4.5" y="15" width="4" height="2.5" rx="0.75" fill="currentColor" /><rect x="10" y="11" width="4.5" height="2.5" rx="0.75" fill="currentColor" /><rect x="20" y="8" width="14" height="13" rx="1.5" stroke="currentColor" stroke-width="2" stroke-dasharray="2.5 2" /><rect x="22.5" y="15" width="4" height="2.5" rx="0.75" fill="currentColor" fill-opacity="0.55" /><rect x="28" y="11" width="4.5" height="2.5" rx="0.75" fill="currentColor" fill-opacity="0.55" /></svg>{/if}</button>
 					{:else if trackType === 'audio'}
 							<button
-								onclick={handleReverseClip}
+								use:press={{ onPress: () => handleReverseClip(), disabled: !hasClip || isReversing || !!axReason }}
 								disabled={!hasClip || isReversing || !!axReason}
 								class="btn btn-well btn-action fam-monitor font-bold {isReversing ? 'cursor-wait' : ''}"
 								aria-label={axReason ? `Reverse clip — ${axReason}` : 'Reverse clip'}
@@ -661,7 +661,7 @@ import { logger } from '$lib/utils/logger';
 				{#if trackType === 'midi'}
 					<div class="btn-cell">
 						<button
-							onclick={handleDuplicateClip}
+							use:press={{ onPress: () => handleDuplicateClip(), disabled: !hasClip || !nextSlotEmpty }}
 							disabled={!hasClip || !nextSlotEmpty}
 							class="btn btn-well btn-action fam-monitor"
 							aria-label="Duplicate clip to the next slot"
@@ -671,7 +671,7 @@ import { logger } from '$lib/utils/logger';
 				{#if trackType === 'audio'}
 					<div class="btn-cell">
 						<button
-							onclick={handleSampleToSimpler}
+							use:press={{ onPress: () => handleSampleToSimpler(), disabled: !hasClip || isSampling }}
 							disabled={!hasClip || isSampling}
 							class="btn btn-well btn-action fam-monitor font-bold {isSampling ? 'cursor-wait' : ''}"
 							aria-label="Sample to Simpler"

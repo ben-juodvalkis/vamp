@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
   /**
    * The Shifter's view (Live's Shifter, the `shifter` slot). Its own file
    * since the FX chain overview took over from the grid (2026-10-26); it
@@ -163,7 +164,7 @@
           groupLabel="Mode"
           style="flex: 3 1 0; --scrub-font-size: 1rem; --scrub-font-weight: var(--font-weight-medium);"
         />
-        <button class="physical-button btn-toggle switch" class:active={on(P.wide)} aria-pressed={on(P.wide)} onclick={() => toggle(P.wide)}>Wide</button>
+        <button class="physical-button btn-toggle switch" class:active={on(P.wide)} aria-pressed={on(P.wide)} use:press={{ onPress: () => toggle(P.wide) }}>Wide</button>
       </div>
 
       <!-- Drive over Tone, medium (ADR-509): two captioned 96px knobs need
@@ -221,7 +222,7 @@
       </div>
 
       <div class="col" class:slot-ghost={shifter.isGhost}>
-        <button class="physical-button btn-toggle switch touch-row" class:active={synced} aria-pressed={synced} onclick={() => toggle(P.sync)}>Sync</button>
+        <button class="physical-button btn-toggle switch touch-row" class:active={synced} aria-pressed={synced} use:press={{ onPress: () => toggle(P.sync) }}>Sync</button>
         {#each LFO_BOXES.slice(2) as b (b.index)}{@render knob(b.index, b.title, (v) => shifter.sendParam(b.index, v), b.center)}{/each}
       </div>
 

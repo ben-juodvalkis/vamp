@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
 	/**
 	 * Pitch Shift's view (the `octave` slot):
 	 * three pick-one tabs, as the Variation view draws them (user,
@@ -80,7 +81,7 @@
 								class:active={current(column.index) === step.value}
 								role="radio"
 								aria-checked={current(column.index) === step.value}
-								onclick={() => send(column.index, step.value)}
+								use:press={{ onPress: () => send(column.index, step.value) }}
 							>{step.label}</button>
 						{/each}
 					</div>

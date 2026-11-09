@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
 	/**
 	 * Comb's view (`Vamp Devices/Comb/Comb.amxd`, the `comb` slot). It was a
 	 * column of the Chorus view (and of the Auto Pan view on a drum track)
@@ -119,7 +120,7 @@
 				</svg>
 			{/snippet}
 		</ScrubTabs>
-		<button class="physical-button btn-toggle switch" class:active={synced} aria-pressed={synced} onclick={() => send(COMB.lfoSync, synced ? 0 : 1)}>Sync</button>
+		<button class="physical-button btn-toggle switch" class:active={synced} aria-pressed={synced} use:press={{ onPress: () => send(COMB.lfoSync, synced ? 0 : 1) }}>Sync</button>
 	</div>
 	</FaceSection>
 </FaceGrid>

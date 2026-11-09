@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
 	/**
 	 * Pitch Hack's view, titled Reverse (the `pitchHack` slot). Every
 	 * parameter the device has (user, 2026-10-26: "show more params"): the
@@ -99,7 +100,7 @@
 							class:active={rate === stop.value}
 							role="radio"
 							aria-checked={rate === stop.value}
-							onclick={() => send(PITCH_HACK.rate.index, stop.value)}
+							use:press={{ onPress: () => send(PITCH_HACK.rate.index, stop.value) }}
 						>{stop.label}</button>
 					{/each}
 				</div>

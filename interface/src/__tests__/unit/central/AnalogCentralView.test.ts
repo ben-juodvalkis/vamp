@@ -7,6 +7,7 @@
  * the params tests below, so they assert Live's strings rather than a guess.
  */
 
+import { pressTap, scrubPick } from '../../helpers/pressTap';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 vi.mock('$lib/api/simpleClient', () => ({ send: vi.fn() }));
@@ -124,7 +125,7 @@ describe('AnalogCentralView — the Voice switch', () => {
 	it('flips oscillator, filter and envelope to Voice 2 together', async () => {
 		const { container } = render(AnalogCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
-		await fireEvent.click(button(container, 'Voice 1 of 2 — switch to voice 2'));
+		await pressTap(button(container, 'Voice 1 of 2 — switch to voice 2'));
 
 		// Osc 2 sits an octave down in this patch; Filter 2 drives Sym1 and follows F1.
 		expect(button(container, 'Osc 2 octave -1').getAttribute('aria-pressed')).toBe('true');
@@ -132,14 +133,14 @@ describe('AnalogCentralView — the Voice switch', () => {
 		expect(container.querySelector('.slave-chip')?.getAttribute('aria-pressed')).toBe('true');
 
 		// A write now lands on Voice 2's indices, not Voice 1's.
-		await fireEvent.click(button(container, 'Osc 2 shape Rect'));
+		await scrubPick(button(container, 'Osc 2 shape Rect'));
 		expect(paramSets()).toEqual([[ANALOG_VOICE[2].shape, 2]]);
 	});
 
 	it('writes nothing to Live when the switch is flipped', async () => {
 		const { container } = render(AnalogCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
-		await fireEvent.click(button(container, 'Voice 1 of 2 — switch to voice 2'));
+		await pressTap(button(container, 'Voice 1 of 2 — switch to voice 2'));
 		expect(paramSets()).toEqual([]);
 	});
 
@@ -147,8 +148,8 @@ describe('AnalogCentralView — the Voice switch', () => {
 		const { container } = render(AnalogCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
 		// LP24 lit: a second tap flips it to LP12; HP then keeps the 12.
-		await fireEvent.click(button(container, 'Filter 1 Low-pass 24dB/oct'));
-		await fireEvent.click(button(container, 'Filter 1 High-pass 12dB/oct'));
+		await pressTap(button(container, 'Filter 1 Low-pass 24dB/oct'));
+		await pressTap(button(container, 'Filter 1 High-pass 12dB/oct'));
 		expect(paramSets()).toEqual([
 			[ANALOG_VOICE[1].filterType, 0],
 			[ANALOG_VOICE[1].filterType, 6]

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
 	/**
 	 * AutoFilterCentralView - Slot-Aware Version
 	 *
@@ -210,9 +211,9 @@
 				class:text-3xl={option.symbol.length === 1}
 				class:text-sm={option.symbol.length > 1}
 				class:active={lfoShape === option.value}
-				onclick={() => {
+				use:press={{ onPress: () => {
 					fx.sendParam(13, option.value);
-				}}
+				} }}
 				title={option.label}
 			>
 				{option.symbol}
@@ -260,7 +261,7 @@
 			class="physical-button btn-toggle lfo-sync-toggle text-sm font-medium"
 			class:active={lfoSync >= 3}
 			style="--btn-tint: {lfoInk.primary};"
-			onclick={toggleLfoSync}
+			use:press={{ onPress: () => toggleLfoSync() }}
 			title={lfoSync >= 3 ? 'Sync' : 'Time'}
 		>
 			{lfoSync >= 3 ? 'Sync' : 'Time'}
@@ -285,7 +286,7 @@
 				class="device-segment type-option min-h-0 px-2 text-sm flex items-center justify-start gap-1.5"
 				class:active={filterType === type.value}
 				title={type.label}
-				onclick={() => selectFilterType(type.value)}
+				use:press={{ onPress: () => selectFilterType(type.value) }}
 			>
 				<svg class="type-curve" viewBox="0 0 40 20" aria-hidden="true">
 					{#each type.curves as c, i (i)}
@@ -310,9 +311,9 @@
 				<button
 					class="device-segment flex-1 min-h-0 px-1 text-sm text-center font-medium flex items-center justify-center"
 					class:active={circuit === option.value}
-					onclick={() => {
+					use:press={{ onPress: () => {
 						fx.sendParam(7, option.value);
-					}}
+					} }}
 					title={option.label}
 				>
 					{option.label}
@@ -324,7 +325,7 @@
 			class="physical-button num flex-1 px-1 text-sm text-center flex items-center justify-center"
 			class:active={slope > 0.5}
 			style="--btn-tint: {fxInk.primary};"
-			onclick={toggleSlope}
+			use:press={{ onPress: () => toggleSlope() }}
 			title="Filter Slope"
 		>
 			{slope > 0.5 ? '24' : '12'}

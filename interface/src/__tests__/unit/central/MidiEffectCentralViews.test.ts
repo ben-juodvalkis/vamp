@@ -4,6 +4,7 @@
  * `random` type opened it too. Each now draws only its own device.
  */
 
+import { pressTap } from '../../helpers/pressTap';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 vi.mock('$lib/api/simpleClient', () => ({ send: vi.fn() }));
@@ -71,6 +72,34 @@ describe('MIDI-effect central views (ADR-478)', () => {
 		for (const gone of ['Rand Vel', 'Oct +1', 'Chance']) expect(text).not.toContain(gone);
 	});
 
+	it('a Steps tap lands while another finger is turning the Rate knob', async () => {
+		// Reported on the iPad (2026-11-09): sliding Rate and tapping Steps
+		// at once, the Steps tap did nothing. iOS sends no click for a tap
+		// while another finger is down; a press owns its own pointer.
+		HTMLElement.prototype.setPointerCapture = vi.fn();
+		HTMLElement.prototype.releasePointerCapture = vi.fn();
+		const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+			x: 0, y: 0, top: 0, left: 0, right: 120, bottom: 400, width: 120, height: 400, toJSON: () => ({})
+		} as DOMRect);
+		seed([midiDevice('Arpeggiator', 'MidiArpeggiator', { 4: 1, 5: 6, 14: 0 })]);
+		const { container, getByText } = render(ArpeggiatorCentralView);
+		await tick();
+		const rate = container.querySelector('[role="slider"][aria-label^="Rate"]')!.closest('.knob-container, .slider-container')!;
+		const wrote = (param: number) =>
+			sendMock.mock.calls.filter(([addr, args]) => addr === '/looping/v3/param/set' && (args as unknown[])[0] === `${DEVICE}/params/${param}`).map(([, args]) => (args as unknown[])[1]);
+
+		await fireEvent.pointerDown(rate, { pointerId: 1, pointerType: 'touch', clientX: 50, clientY: 300 });
+		await fireEvent.pointerMove(rate, { pointerId: 1, pointerType: 'touch', clientX: 50, clientY: 200 });
+		await pressTap(getByText('2'), 2);
+		await fireEvent.pointerMove(rate, { pointerId: 1, pointerType: 'touch', clientX: 50, clientY: 100 });
+		await fireEvent.pointerUp(rate, { pointerId: 1, pointerType: 'touch', clientX: 50, clientY: 100 });
+		await new Promise((r) => setTimeout(r, 120));
+
+		rect.mockRestore();
+		expect(wrote(14)).toEqual([2]);
+		expect(wrote(5).length).toBeGreaterThan(0);
+	});
+
 	it('the Velocity view draws Rand Vel', async () => {
 		seed([]);
 		const { container } = render(VelocityCentralView);
@@ -103,9 +132,9 @@ describe('MIDI-effect central views (ADR-478)', () => {
 		expect(getByText('Alt').classList.contains('active')).toBe(true);
 		const wrote = (param: number) =>
 			sendMock.mock.calls.filter(([addr, args]) => addr === '/looping/v3/param/set' && (args as unknown[])[0] === `${DEVICE}/params/${param}`).map(([, args]) => (args as unknown[])[1]);
-		await fireEvent.click(getByText('Sub'));
-		await fireEvent.click(getByText('Rnd'));
-		await fireEvent.click(getByText('Scale'));
+		await pressTap(getByText('Sub'));
+		await pressTap(getByText('Rnd'));
+		await pressTap(getByText('Scale'));
 		expect(wrote(4)).toEqual([1]);
 		expect(wrote(5)).toEqual([0]);
 		expect(wrote(6)).toEqual([1]);
@@ -120,7 +149,7 @@ describe('MIDI-effect central views (ADR-478)', () => {
 		// A knob is named, its value in Live's words under the name (ADR-517; the values were the titles).
 		expect(labels(container).slice(0, 6)).toEqual(['Shift +12 st', 'Velocity 80 %', 'Chance 100 %', 'Shift +7 st', 'Velocity 120 %', 'Chance 50 %']);
 		expect(labels(container).slice(6).map((l) => l?.split(' ')[0])).toEqual(['Strum', 'Tension', 'Crescendo']);
-		await fireEvent.click(getByText('Scale'));
+		await pressTap(getByText('Scale'));
 		expect(sendMock.mock.calls.find(([addr, args]) =>
 			addr === '/looping/v3/param/set' && (args as unknown[])[0] === `${DEVICE}/params/28`
 		)?.[1]).toEqual(expect.arrayContaining([`${DEVICE}/params/28`, 1]));

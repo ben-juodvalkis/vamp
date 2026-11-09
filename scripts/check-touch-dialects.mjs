@@ -32,15 +32,16 @@
  * `touches[0]` is banned across all of `interface/src/lib` — there is no
  * correct use of it left anywhere.
  *
- * `onclick` is banned only under the five performance-surface
- * directories, the ones a performer touches with two hands mid-set:
+ * `onclick` is banned under the performance-surface directories, the
+ * ones a performer touches with two hands mid-set:
  *
  *     components/v6/tracks   layout   session   clips   controls
+ *     central   device-panel
  *
- * Deliberately NOT banned in `central/views/**` and the rest: those are
- * one-at-a-time device editing panels where a click is honest, and a
- * gate that fails on 81 sites nobody has a reason to change is a gate
- * everybody passes with `--no-verify`. See ADR-427's tier 4.
+ * `central` and `device-panel` joined in ADR-522: a device view is played
+ * with two hands too (a knob turning under one finger while the other
+ * taps a switch), and iOS dropped that tap. Settings, pairing and the
+ * browser stay out of scope.
  *
  * ## Why a hand-written lexer
  *
@@ -74,7 +75,9 @@ export const PERFORMANCE_SURFACE = [
 	'components/v6/layout',
 	'components/v6/session',
 	'components/v6/clips',
-	'components/v6/controls'
+	'components/v6/controls',
+	'components/v6/central',
+	'components/v6/device-panel'
 ];
 
 /**

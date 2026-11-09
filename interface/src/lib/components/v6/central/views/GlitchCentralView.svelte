@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
 	/**
 	 * GlitchCentralView — the Glitch tile's view (2026-10-15, the user's
 	 * design). GlitchLoop's Play page, mirrored: the preset bank, the loop
@@ -152,7 +153,7 @@
 						class="device-segment preset-btn"
 						class:active={!glitchLoop.isGhost && litPreset === i}
 						aria-pressed={!glitchLoop.isGhost && litPreset === i}
-						onclick={() => loadPreset(name)}
+						use:press={{ onPress: () => loadPreset(name) }}
 					>{name}</button>
 				{/each}
 			{/if}

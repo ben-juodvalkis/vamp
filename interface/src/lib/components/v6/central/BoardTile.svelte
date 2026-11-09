@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
   /**
    * BoardTile — one panel of a full-screen board (ADR-516): a header bar
    * over the page the tile draws.
@@ -60,7 +61,7 @@
         style="--btn-tint: {ink};"
         data-param={switchParam}
         data-board-switch
-        onclick={() => onToggle?.()}
+        use:press={{ onPress: () => onToggle?.(), disabled: switchDisabled }}
       >{switchTitle}</button>
     {/if}
   </header>

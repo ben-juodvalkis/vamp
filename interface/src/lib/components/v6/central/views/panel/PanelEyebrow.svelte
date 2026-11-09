@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
 	/**
 	 * The eyebrow over a section of an instrument panel (ADR-487): Live's
 	 * section name, centred, 0.75rem, in the device's ink. With a page and a
@@ -18,7 +19,7 @@
 </script>
 
 {#if page && onOpen}
-	<button class="panel-eyebrow eyebrow-link" style="color: {color};" data-page={page} onclick={() => onOpen?.(page)}>
+	<button class="panel-eyebrow eyebrow-link" style="color: {color};" data-page={page} use:press={{ onPress: () => onOpen?.(page) }}>
 		{title} ›
 	</button>
 {:else}

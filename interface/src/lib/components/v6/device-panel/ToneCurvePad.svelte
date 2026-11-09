@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
   /**
    * A three-band tone pad over its own response curve: the left third drags
    * the low shelf, the middle is an invisible XY for the mid band (X its
@@ -129,7 +130,7 @@
   role="button"
   tabindex="0"
   aria-label={ariaLabel ?? title}
-  onclick={() => onTap?.()}
+  use:press={{ onPress: () => onTap?.() }}
   onkeydown={(e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();

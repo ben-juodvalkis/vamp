@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
 	/**
 	 * VariationCentralView — the Stutter slider's view: the Variation (Beat
 	 * Repeat) on its own. Stutter, the grid tile's slider (Chance, param 1),
@@ -110,7 +111,7 @@
 					<button
 						class="device-segment var-btn"
 						class:active={Math.round(interval) === option.value}
-						onclick={() => variation.sendParam(INTERVAL_INDEX, option.value)}
+						use:press={{ onPress: () => variation.sendParam(INTERVAL_INDEX, option.value) }}
 					>{option.label}</button>
 				{/each}
 			</div>
@@ -127,7 +128,7 @@
 						<button
 							class="device-segment var-btn"
 							class:active={Math.round(grid) === option.value}
-							onclick={() => variation.sendParam(GRID_INDEX, option.value)}
+							use:press={{ onPress: () => variation.sendParam(GRID_INDEX, option.value) }}
 						>{option.label}</button>
 					{/each}
 				</div>
@@ -157,7 +158,7 @@
 					<button
 						class="device-segment var-btn"
 						class:active={Math.round(gate) === option.value}
-						onclick={() => variation.sendParam(GATE_INDEX, option.value)}
+						use:press={{ onPress: () => variation.sendParam(GATE_INDEX, option.value) }}
 					>{option.label}</button>
 				{/each}
 			</div>
@@ -172,12 +173,12 @@
 					class="physical-button btn-toggle var-btn"
 					class:active={insertMode}
 					aria-pressed={insertMode}
-					onclick={() => variation.sendParam(ROUTING_INDEX, insertMode ? 0 : 1)}
+					use:press={{ onPress: () => variation.sendParam(ROUTING_INDEX, insertMode ? 0 : 1) }}
 				>{insertMode ? 'Insert' : 'Mix'}</button>
 				<button
 					class="physical-button btn-toggle var-btn"
 					class:active={triplets}
-					onclick={() => variation.sendParam(TRIPLETS_INDEX, triplets ? 1 : 0)}
+					use:press={{ onPress: () => variation.sendParam(TRIPLETS_INDEX, triplets ? 1 : 0) }}
 				>Trip</button>
 			</div>
 		</FaceSection>

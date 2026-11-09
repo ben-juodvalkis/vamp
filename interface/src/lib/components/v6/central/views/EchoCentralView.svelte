@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
 	/**
 	 * EchoCentralView — what the Echo tile opens (2026-09-14).
 	 *
@@ -258,7 +259,7 @@
 			class:active={synced}
 			style="--btn-tint: {echo.color.primary};"
 			aria-pressed={synced}
-			onclick={toggleSync}
+			use:press={{ onPress: () => toggleSync() }}
 		>
 			Sync
 		</button>
@@ -323,7 +324,7 @@
 			class:active={lfoSynced}
 			style="--btn-tint: {echo.color.primary};"
 			aria-pressed={lfoSynced}
-			onclick={toggleLfoSync}
+			use:press={{ onPress: () => toggleLfoSync() }}
 		>
 			LFO Sync
 		</button>

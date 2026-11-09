@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
 	/**
 	 * The Chord's view: all of the device (the user, 2026-10-27: "set up the
 	 * central view to give us more control"), as Live's panel lays it out.
@@ -146,7 +147,7 @@
 						class:slot-ghost={chord.isGhost}
 						aria-pressed={scaled}
 						data-fn="scale"
-						onclick={() => chord.sendParam(P.scale, scaled ? 0 : 1)}
+						use:press={{ onPress: () => chord.sendParam(P.scale, scaled ? 0 : 1) }}
 					>Scale</button>
 				</div>
 			</div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
   /**
    * DrumBussCentralView — what the Drum tile opens (2026-09-10).
    *
@@ -139,7 +140,7 @@
         class="physical-button btn-toggle comp-toggle w-full font-bold"
         class:active={compressorOn}
         style="--btn-tint: {drumInk.primary};"
-        onclick={toggleComp}
+        use:press={{ onPress: () => toggleComp() }}
       >
         Comp
       </button>

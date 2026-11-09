@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
 	/**
 	 * The Groove view (2026-09-29): which groove the focused clip swings to,
 	 * and how much. Opened by touching Q in the right sidebar
@@ -145,7 +146,7 @@
 		{:else if groovesStore.listing && tiles.length === 0}
 			<div class="groove-note">
 				<p>No grooves are ticked for this view.</p>
-				<button class="physical-button text-base" onclick={() => settingsStore.openSettings('grooves')}>
+				<button class="physical-button text-base" use:press={{ onPress: () => settingsStore.openSettings('grooves') }}>
 					Choose grooves in Settings
 				</button>
 			</div>
@@ -165,7 +166,7 @@
 						class="tile"
 						class:on
 						aria-pressed={on}
-						onclick={() => choose(g.name)}
+						use:press={{ onPress: () => choose(g.name) }}
 						data-groove={g.name}
 					>
 						{#if g.events?.length}

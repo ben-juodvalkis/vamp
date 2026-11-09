@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
 	/**
 	 * The MIDI editor's toolbar: a column beside the roll, so the roll
 	 * takes the full height. Own pointer surface, outside the pan/zoom
@@ -40,7 +41,7 @@
 	<button
 		class="edit-chip btn-toggle"
 		class:active={fold}
-		onclick={() => (fold = !fold)}
+		use:press={{ onPress: () => (fold = !fold) }}
 		title="Fold: show only the pitches this clip plays"
 	>
 		Fold
@@ -48,13 +49,13 @@
 
 	<span class="toolbar-sep"></span>
 
-	<button class="edit-chip grid-chip" onclick={cycleGrid} title="Snap grid (tap to cycle)">
+	<button class="edit-chip grid-chip" use:press={{ onPress: () => cycleGrid() }} title="Snap grid (tap to cycle)">
 		{gridLabel}
 	</button>
 	<button
 		class="edit-chip btn-toggle"
 		class:active={gridTriplet}
-		onclick={() => (gridTriplet = !gridTriplet)}
+		use:press={{ onPress: () => (gridTriplet = !gridTriplet) }}
 		title="Triplet grid"
 	>
 		Triplet
@@ -65,7 +66,7 @@
 	<button
 		class="edit-chip btn-action"
 		disabled={!canQuantize}
-		onclick={onQuantize}
+		use:press={{ onPress: () => onQuantize(), disabled: !canQuantize }}
 		title="Quantize every note in the clip to the grid"
 	>
 		Quantize

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
   /**
    * CompressorCentralView — the Compressor's view (slot `compressor`,
    * Compressor2).
@@ -192,7 +193,7 @@
               class="physical-button {sidechainLayout.rows > 2 ? 'text-sm' : 'text-base'} font-medium h-full whitespace-normal text-center leading-tight px-1 py-1 flex items-center justify-center"
               class:active={isActive}
               style="--btn-tint: {sidechainEnabled ? liveInk.primary : 'var(--muted-foreground)'};"
-              onclick={() => handleSidechainSelect(track)}
+              use:press={{ onPress: () => handleSidechainSelect(track) }}
             >
               <span class="w-full break-words">
                 {track.display_name || `Track ${track.identifier}`}
@@ -244,7 +245,7 @@
   <div class="device-wrapper makeup-section">
     <!-- Makeup Auto toggle (top) -->
     <button
-      onclick={toggleMakeupAuto}
+      use:press={{ onPress: () => toggleMakeupAuto() }}
       class="physical-button btn-toggle makeup-toggle text-lg font-bold"
       class:active={makeupAutoEnabled}
       class:is-ghost={compressor.isGhost}

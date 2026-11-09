@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
   /**
    * ReverbCentralView — the Hybrid Reverb, what the Reverb tile opens.
    *
@@ -595,7 +596,7 @@
     style="--btn-tint: {currentColor.primary};"
     title="{end}: Cut or Shelf"
     data-reverb-switch={index}
-    onclick={() => toggle(index)}
+    use:press={{ onPress: () => toggle(index) }}
   >
     {end} {EQ_TYPE_LABELS[on(index) ? 1 : 0]}
   </button>
@@ -638,7 +639,7 @@
     aria-pressed={on(index)}
     title={title ?? name}
     data-reverb-switch={index}
-    onclick={() => toggle(index)}
+    use:press={{ onPress: () => toggle(index) }}
   >
     {name}
   </button>
@@ -664,7 +665,7 @@
                 class:active={isConvolutionTypeActive(index)}
                 style="--btn-tint: {typeColor.primary};"
                 data-reverb-type={type.name}
-                onclick={() => handleReverbTypeChange(index)}
+                use:press={{ onPress: () => handleReverbTypeChange(index) }}
               >
                 {type.name}
               </button>
@@ -676,7 +677,7 @@
                 class:active={isAlgorithmicTypeActive(index)}
                 style="--btn-tint: {typeColor.primary};"
                 data-reverb-type={type.name}
-                onclick={() => handleReverbTypeChange(index + 5)}
+                use:press={{ onPress: () => handleReverbTypeChange(index + 5) }}
               >
                 {type.name}
               </button>
@@ -706,7 +707,7 @@
               aria-selected={panel === 'reverb'}
               style="--btn-tint: {currentColor.primary};"
               data-reverb-tab="reverb"
-              onclick={() => (panel = 'reverb')}
+              use:press={{ onPress: () => (panel = 'reverb') }}
             >
               {isConvolution ? 'IR' : algorithm.name}
             </button>
@@ -717,7 +718,7 @@
               aria-selected={panel === 'eq'}
               style="--btn-tint: {currentColor.primary};"
               data-reverb-tab="eq"
-              onclick={() => (panel = 'eq')}
+              use:press={{ onPress: () => (panel = 'eq') }}
             >
               EQ
             </button>

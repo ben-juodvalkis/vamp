@@ -5,6 +5,7 @@
  * at rest. The tail picture and the IR's waveform are the Reverb tile's.
  */
 
+import { pressTap } from '../../helpers/pressTap';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 vi.mock('$lib/api/simpleClient', () => ({ send: vi.fn() }));
@@ -129,13 +130,13 @@ describe('ReverbCentralView, an algorithm', () => {
 
 	it('Freeze switches param 8', async () => {
 		const c = await mount();
-		await fireEvent.click(c.querySelector('[data-reverb-switch="8"]')!);
+		await pressTap(c.querySelector('[data-reverb-switch="8"]')!);
 		expect(sendMock).toHaveBeenCalledWith('/looping/v3/param/set', [`${DEVICE}/params/8`, 1, 3]);
 	});
 
 	it('the picker sets the routing to Algorithm and the type', async () => {
 		const c = await mount({ 6: 0 });
-		await fireEvent.click(c.querySelector('[data-reverb-type="Tides"]')!);
+		await pressTap(c.querySelector('[data-reverb-type="Tides"]')!);
 		expect(sendMock).toHaveBeenCalledWith('/looping/v3/param/set', [`${DEVICE}/params/48`, 2, 3]);
 		expect(sendMock).toHaveBeenCalledWith('/looping/v3/param/set', [`${DEVICE}/params/6`, 3, 3]);
 	});
@@ -147,7 +148,7 @@ describe('ReverbCentralView, the EQ tab', () => {
 
 	it('swaps the tail for the EQ and the algorithm’s column for the EQ’s, keeping Freeze', async () => {
 		const c = await mount({ 6: 0, ...RIG_EQ });
-		await fireEvent.click(c.querySelector('[data-reverb-tab="eq"]')!);
+		await pressTap(c.querySelector('[data-reverb-tab="eq"]')!);
 		expect(c.querySelector('[data-reverb-eq]')).not.toBeNull();
 		expect(c.querySelector('[data-reverb-portrait]')).toBeNull();
 		expect(labels(c.querySelector('[data-reverb-own]'))).toEqual([
@@ -160,24 +161,24 @@ describe('ReverbCentralView, the EQ tab', () => {
 		expect(ends).toEqual(['Lo Cut', 'Hi Shelf']);
 		expect(c.querySelector('[data-reverb-eq]')?.getAttribute('aria-label')).toBe('Reverb EQ: Lo Cut 121 Hz · 18 dB');
 
-		await fireEvent.click(c.querySelector('[data-reverb-tab="reverb"]')!);
+		await pressTap(c.querySelector('[data-reverb-tab="reverb"]')!);
 		expect(labels(c.querySelector('[data-reverb-own]'))[0]).toBe('Shape 50.0');
 	});
 
 	it('switches an end between Cut and Shelf, and the EQ on and before the algorithm', async () => {
 		const c = await mount(RIG_EQ);
-		await fireEvent.click(c.querySelector('[data-reverb-tab="eq"]')!);
-		await fireEvent.click(c.querySelector('[data-reverb-eq-types] [data-reverb-switch="33"]')!);
+		await pressTap(c.querySelector('[data-reverb-tab="eq"]')!);
+		await pressTap(c.querySelector('[data-reverb-eq-types] [data-reverb-switch="33"]')!);
 		expect(sendMock).toHaveBeenCalledWith('/looping/v3/param/set', [`${DEVICE}/params/33`, 1, 3]);
-		await fireEvent.click(c.querySelector('[data-reverb-own] [data-reverb-switch="31"]')!);
+		await pressTap(c.querySelector('[data-reverb-own] [data-reverb-switch="31"]')!);
 		expect(sendMock).toHaveBeenCalledWith('/looping/v3/param/set', [`${DEVICE}/params/31`, 0, 3]);
-		await fireEvent.click(c.querySelector('[data-reverb-own] [data-reverb-switch="32"]')!);
+		await pressTap(c.querySelector('[data-reverb-own] [data-reverb-switch="32"]')!);
 		expect(sendMock).toHaveBeenCalledWith('/looping/v3/param/set', [`${DEVICE}/params/32`, 1, 3]);
 	});
 
 	it('names the EQ off on its curve', async () => {
 		const c = await mount({ ...RIG_EQ, 31: 0 });
-		await fireEvent.click(c.querySelector('[data-reverb-tab="eq"]')!);
+		await pressTap(c.querySelector('[data-reverb-tab="eq"]')!);
 		expect(c.querySelector('[data-reverb-eq]')?.classList.contains('off')).toBe(true);
 		expect(c.querySelector('[data-reverb-eq]')?.getAttribute('aria-label')).toBe('Reverb EQ: EQ Off');
 	});
@@ -221,7 +222,7 @@ describe('ReverbCentralView, convolution', () => {
 		]);
 		// Freeze, Size and Delay are the algorithm's.
 		expect(c.querySelector('[data-reverb-switch="8"]')).toBeNull();
-		await fireEvent.click(c.querySelector('[data-reverb-tab="eq"]')!);
+		await pressTap(c.querySelector('[data-reverb-tab="eq"]')!);
 		expect(c.querySelector('[data-reverb-eq]')).not.toBeNull();
 		expect(labels(c.querySelector('[data-reverb-own]'))[1]).toBe('Peak 1 Q 0.71');
 	});

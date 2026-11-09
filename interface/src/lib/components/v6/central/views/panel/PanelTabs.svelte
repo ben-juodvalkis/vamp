@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
 	/**
 	 * Live's tab strip over the one region of a panel it swaps (ADR-487):
 	 * Collision's Resonator 1 · Resonator 2 · LFO · MIDI. One touch row, the
@@ -29,7 +30,7 @@
 			role="tab"
 			aria-selected={selected === i}
 			data-tab={tab.title}
-			onclick={() => onSelect(i)}
+			use:press={{ onPress: () => onSelect(i) }}
 		>
 			<span>{tab.title}</span>
 			{#if tab.switchParam && params.has(tab.switchParam)}

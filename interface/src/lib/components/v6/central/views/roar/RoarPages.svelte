@@ -1,4 +1,5 @@
 <script lang="ts" module>
+  import { press } from '$lib/actions/press';
   import type { BoardRow } from '../../InstrumentBoard.svelte';
 
   /**
@@ -142,7 +143,7 @@
       disabled={!params.has(param)}
       style="--btn-tint: {ink.primary};"
       data-param={param}
-      onclick={() => params.write(param, on ? lo(param) : hi(param))}
+      use:press={{ onPress: () => params.write(param, on ? lo(param) : hi(param)), disabled: !params.has(param) }}
     >{title}</button>
   </div>
 {/snippet}

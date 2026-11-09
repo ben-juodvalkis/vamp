@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
   /**
    * Drift's board tiles (ADR-512, ADR-513), each a `BoardTile` panel
    * (ADR-516) hand-laid on the face grid (ADR-510): a header bar naming
@@ -206,7 +207,7 @@
     style="--btn-tint: {color};"
     data-param={param}
     aria-label={title}
-    onclick={() => params.write(param, on ? lo(param) : hi(param))}
+    use:press={{ onPress: () => params.write(param, on ? lo(param) : hi(param)), disabled: !params.has(param) }}
   >{lamp ? '' : title}</button>
   </div>
 {/snippet}

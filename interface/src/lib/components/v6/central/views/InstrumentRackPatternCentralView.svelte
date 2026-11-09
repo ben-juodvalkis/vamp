@@ -224,7 +224,7 @@
               <button
                 class="physical-button pattern-button auto-button"
                 class:active={selectedState() === AUTO_STATE}
-                onclick={() => handleStateSelect(AUTO_STATE)}
+                use:press={{ onPress: () => handleStateSelect(AUTO_STATE) }}
                 style="--btn-tint: {patternInk.primary};"
               >
                 <span class="pattern-face">Auto</span>
@@ -234,7 +234,7 @@
               <button
                 class="physical-button pattern-button"
                 class:active={selectedState() === patternState(cell.pattern)}
-                onclick={() => handleStateSelect(patternState(cell.pattern))}
+                use:press={{ onPress: () => handleStateSelect(patternState(cell.pattern)) }}
                 style="--btn-tint: {patternInk.primary};"
               >
                 <span class="pattern-face">

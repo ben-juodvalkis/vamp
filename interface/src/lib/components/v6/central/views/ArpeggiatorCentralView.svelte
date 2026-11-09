@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
   /**
    * ArpeggiatorCentralView — the Arpeggiator's own view: Pattern (Style),
    * Sync + Rate, Steps and Gate. Velocity, Chord, Note Chance and Random
@@ -216,7 +217,7 @@
       class="pattern-button w-full h-full rounded-lg flex flex-col items-center justify-center gap-2 p-2"
       style={`--pattern-ink: ${arpInk.primary}; opacity: ${arp.isGhost ? 'var(--opacity-ghost)' : 1}; transition: background-color var(--t-fast) var(--ease-precise), border-color var(--t-fast) var(--ease-precise), color var(--t-fast) var(--ease-precise), opacity var(--t-fast) var(--ease-precise);`}
       aria-label="Pattern"
-      onclick={() => { patternPickerOpen = true; }}
+      use:press={{ onPress: () => { patternPickerOpen = true; } }}
     >
       {#if STYLE_GLYPHS[Math.round(styleValue)]}
         {@const currentGlyph = STYLE_GLYPHS[Math.round(styleValue)]}
@@ -245,7 +246,7 @@
       class="physical-button btn-toggle arp-caps w-full text-sm font-bold h-16 flex-none"
       class:active={syncIsOn}
       style="--btn-tint: {arpInk.primary};{arp.isGhost ? ' opacity: var(--opacity-ghost);' : ''}"
-      onclick={handleSyncToggle}
+      use:press={{ onPress: () => handleSyncToggle() }}
     >
       Sync
     </button>
@@ -285,7 +286,7 @@
     >
       {#each [0, 1, 2] as stepValue}
         <button
-          onclick={() => arp.sendParam(ARP_PARAMS.STEPS, stepValue)}
+          use:press={{ onPress: () => arp.sendParam(ARP_PARAMS.STEPS, stepValue) }}
           class="device-segment text-[22px] font-bold uppercase"
           class:active={Math.round(stepsValue) === stepValue}
           role="radio"
@@ -335,10 +336,10 @@
             class="physical-button min-h-0 text-xs font-bold flex flex-col items-center justify-center text-center gap-1 px-1 py-2 overflow-hidden"
             class:active={isOn}
             style="--btn-tint: {arpInk.primary};"
-            onclick={() => {
+            use:press={{ onPress: () => {
               arp.sendParam(ARP_PARAMS.STYLE, idx);
               patternPickerOpen = false;
-            }}
+            } }}
           >
             <svg viewBox="0 0 128 128" class="w-full min-h-0 flex-1" aria-hidden="true">
               {#if glyph.bars}

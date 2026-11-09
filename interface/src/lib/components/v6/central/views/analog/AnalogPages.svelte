@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
   /**
    * Analog's board tiles (ADR-512, ADR-513), each a `BoardTile` panel
    * (ADR-516) hand-laid on the face grid (ADR-510): a header bar naming
@@ -234,7 +235,7 @@
       disabled={!params.has(param)}
       style="--btn-tint: {color};"
       data-param={param}
-      onclick={() => params.write(param, on ? lo(param) : hi(param), section)}
+      use:press={{ onPress: () => params.write(param, on ? lo(param) : hi(param), section), disabled: !params.has(param) }}
     >{title}</button>
   </div>
 {/snippet}
@@ -290,7 +291,7 @@
               title={ANALOG_FILTER_TYPES[t]}
               aria-label="Filter {v} {ANALOG_FILTER_TYPES[t]}"
               aria-pressed={Math.floor(fType / 2) === i}
-              onclick={() => params.write(`${F} Type`, filterTypeForFamily(fType, i), `${F} On/Off`)}
+              use:press={{ onPress: () => params.write(`${F} Type`, filterTypeForFamily(fType, i), `${F} On/Off`) }}
             >
               <span>{family.label}</span>
               {#if Math.floor(fType / 2) === i}<span class="family-sub">{family.slopes[fType % 2]}</span>{/if}

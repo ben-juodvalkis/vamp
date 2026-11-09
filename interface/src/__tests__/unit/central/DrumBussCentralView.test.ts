@@ -4,6 +4,7 @@
  * touch on the ghost loads it; the switch writes param 1 the other way.
  */
 
+import { pressTap } from '../../helpers/pressTap';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 vi.mock('$lib/api/simpleClient', () => ({ send: vi.fn() }));
@@ -76,7 +77,7 @@ describe('DrumBussCentralView', () => {
 		seed([drumBuss({ 1: 1 })]);
 		const { container } = render(DrumBussCentralView);
 		await tick();
-		await fireEvent.click(container.querySelector('.comp-toggle')!);
+		await pressTap(container.querySelector('.comp-toggle')!);
 		expect(sendMock).toHaveBeenCalledWith('/looping/v3/param/set', [`${DEVICE}/params/1`, 0, 3]);
 	});
 
@@ -85,7 +86,7 @@ describe('DrumBussCentralView', () => {
 		const { container } = render(DrumBussCentralView);
 		await tick();
 		expect(container.querySelector('.drum-buss-layout')?.classList.contains('slot-ghost')).toBe(true);
-		await fireEvent.click(container.querySelector('.comp-toggle')!);
+		await pressTap(container.querySelector('.comp-toggle')!);
 		expect(sendMock).toHaveBeenCalledWith('/looping/v3/device/load', [TRACK, '', '', 'native:DrumBuss', 'Drum Buss']);
 	});
 });

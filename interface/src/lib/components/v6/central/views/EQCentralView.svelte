@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
   /**
    * EQCentralView - Slot-Aware Version
    *
@@ -84,7 +85,7 @@
   {#snippet head()}<PanelEyebrow title="Filter" color={(fx.isGhost ? ghostInk : fxInk).primary} />{/snippet}
   <!-- A switch: one cell, lit while the low cut is on. -->
   <button
-    onclick={toggleLowCut}
+    use:press={{ onPress: () => toggleLowCut() }}
     class="physical-button btn-toggle eq-switch text-lg font-bold"
     class:active={lowCutEnabled}
     aria-pressed={lowCutEnabled}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
   /**
    * Auto Pan Legacy in the Tremolo slot (2026-10-01): the rate on one
    * full-rail slider under a small Sync / Free switch, and beside it the
@@ -95,7 +96,7 @@
           class="physical-button btn-toggle sync-toggle w-full font-bold"
           class:active={isSynced}
           style="--btn-tint: {fxInk.primary};"
-          onclick={toggleSync}
+          use:press={{ onPress: () => toggleSync() }}
         >
           {isSynced ? 'Sync' : 'Free'}
         </button>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
   /**
    * ChoicePicker — one value out of a list, picked from a grid that opens
    * over the central view (2026-11-06, Drift's modulation sources).
@@ -46,14 +47,14 @@
   aria-label="{label}: {current ?? 'unknown'}"
   aria-haspopup="dialog"
   disabled={ghost}
-  onclick={() => (open = true)}
+  use:press={{ onPress: () => (open = true), disabled: ghost }}
 >
   {#if caption}<span class="picker-caption">{caption}</span>{/if}
   <span class="picker-line"><span class="picker-value">{current ?? '—'}</span><span class="picker-caret" aria-hidden="true">▾</span></span>
 </button>
 
 {#if open}
-  <div class="picker-scrim" role="presentation" onclick={() => (open = false)}></div>
+  <div class="picker-scrim" role="presentation" use:press={{ onPress: () => (open = false) }}></div>
   <div class="picker-sheet" role="dialog" aria-label={label} style="--picker-tint: {tint};">
     <div class="picker-title">{label}</div>
     <div class="picker-grid" role="radiogroup" style="grid-template-columns: repeat({cols}, minmax(0, 1fr));">
@@ -64,7 +65,7 @@
           role="radio"
           aria-checked={i === selected}
           style="--btn-tint: {tint};"
-          onclick={() => pick(i)}
+          use:press={{ onPress: () => pick(i) }}
         >{option}</button>
       {/each}
     </div>

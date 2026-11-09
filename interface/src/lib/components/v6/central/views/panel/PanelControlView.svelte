@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
 	/**
 	 * One control of an instrument panel (ADR-487), bound to its parameter by
 	 * name: a value box over the parameter's own range (centre-origin when
@@ -124,7 +125,7 @@
 				disabled={!toggleListed}
 				style="--btn-tint: {color.primary};"
 				data-param={toggle.param}
-				onclick={flipToggle}
+				use:press={{ onPress: () => flipToggle(), disabled: !toggleListed }}
 			>{toggle.title}</button>
 		{/if}
 	</div>
@@ -189,7 +190,7 @@
 		disabled={!listed}
 		style="--btn-tint: {color.primary};"
 		data-param={control.param}
-		onclick={() => write(on ? lo : hi)}
+		use:press={{ onPress: () => write(on ? lo : hi), disabled: !listed }}
 	>{caption ? control.title : ''}</button>
 {/if}
 

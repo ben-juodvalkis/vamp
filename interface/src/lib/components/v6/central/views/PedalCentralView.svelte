@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
   /**
    * The Pedal's view (Live's Pedal, the `pedal` slot). One device per view
    * since the FX chain overview took over from the grid (2026-10-26): the
@@ -68,7 +69,7 @@
           <button
             class="device-segment w-full px-2 text-sm text-center font-medium"
             class:active={pedalType === option.value}
-            onclick={() => fx.sendParam(PEDAL.type, option.value)}
+            use:press={{ onPress: () => fx.sendParam(PEDAL.type, option.value) }}
           >
             {option.label}
           </button>

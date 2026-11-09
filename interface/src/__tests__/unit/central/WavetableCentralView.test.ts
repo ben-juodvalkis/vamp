@@ -10,6 +10,7 @@
  * pages did.
  */
 
+import { pressTap, scrubPick } from '../../helpers/pressTap';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 vi.mock('$lib/api/simpleClient', () => ({ send: vi.fn() }));
@@ -125,7 +126,7 @@ describe('WavetableCentralView — its face and its own pages (ADR-510)', () => 
 		const container = await mount();
 		const types = el(container, '[data-filter-type]');
 		expect([...types.querySelectorAll('button')].map((b) => b.textContent?.trim())).toEqual(['LP', 'HP', 'BP', 'Notch', 'Morph']);
-		await fireEvent.click(button(types, 'Notch'));
+		await scrubPick(button(types, 'Notch'));
 		expect(paramSets()).toEqual([[indexOf('Flt 1 Type'), 3]]);
 	});
 
@@ -145,7 +146,7 @@ describe('WavetableCentralView — its face and its own pages (ADR-510)', () => 
 	it('a Sub control switches the Sub on first, as the panel did (the Sub is its own tile, ADR-516)', async () => {
 		const container = await mount(true);
 		expect(container.querySelectorAll('[data-param="Sub Transpose"]')).toHaveLength(1);
-		await fireEvent.click(button(el(tile(container, 'sub'), '.panel-choice[data-param="Sub Transpose"]'), '-2'));
+		await scrubPick(button(el(tile(container, 'sub'), '.panel-choice[data-param="Sub Transpose"]'), '-2'));
 		expect(paramSets()).toEqual([
 			[indexOf('Sub On'), 1],
 			[indexOf('Sub Transpose'), 2]
@@ -157,13 +158,13 @@ describe('WavetableCentralView — its face and its own pages (ADR-510)', () => 
 		const filter = tile(container, 'filter1');
 		expect(filter.querySelector('[data-filter-pad="1"]')).not.toBeNull();
 		expect(filter.querySelector('[data-param="Flt 1 LP/HP"]')).not.toBeNull();
-		await fireEvent.click(button(el(filter, '.panel-choice[data-param="Flt 1 Slope"]'), '24 dB'));
+		await scrubPick(button(el(filter, '.panel-choice[data-param="Flt 1 Slope"]'), '24 dB'));
 		expect(paramSets()).toEqual([[indexOf('Flt 1 Slope'), 1]]);
 	});
 
 	it('an LFO tile writes its sync by name', async () => {
 		const container = await mount(true);
-		await fireEvent.click(button(el(tile(container, 'lfo2'), '.panel-choice[data-param="LFO 2 Sync"]'), 'Tempo'));
+		await scrubPick(button(el(tile(container, 'lfo2'), '.panel-choice[data-param="LFO 2 Sync"]'), 'Tempo'));
 		expect(paramSets()).toEqual([[indexOf('LFO 2 Sync'), 1]]);
 	});
 });

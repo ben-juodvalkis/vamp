@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { press } from '$lib/actions/press';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
   import MeldPages from './meld/MeldPages.svelte';
@@ -211,8 +212,8 @@
 </script>
 
 {#snippet typeStep(kind: 'osc' | 'filter', onStep: (step: number) => void)}
-  <button class="chooser-step" aria-label="Previous {kind === 'osc' ? 'oscillator' : 'filter'} type" onclick={() => onStep(-1)}>‹</button>
-  <button class="chooser-step" aria-label="Next {kind === 'osc' ? 'oscillator' : 'filter'} type" onclick={() => onStep(1)}>›</button>
+  <button class="chooser-step" aria-label="Previous {kind === 'osc' ? 'oscillator' : 'filter'} type" use:press={{ onPress: () => onStep(-1) }}>‹</button>
+  <button class="chooser-step" aria-label="Next {kind === 'osc' ? 'oscillator' : 'filter'} type" use:press={{ onPress: () => onStep(1) }}>›</button>
 {/snippet}
 
 <div class="meld-root h-full w-full overflow-hidden relative">
@@ -293,7 +294,7 @@
               style="--btn-tint: {engineInk.primary};"
               aria-expanded={chooser === 'osc'}
               aria-label="Choose oscillator type, now {MELD_OSC_TYPES[oscType] ?? 'unknown'}"
-              onclick={() => (chooser = chooser === 'osc' ? null : 'osc')}
+              use:press={{ onPress: () => (chooser = chooser === 'osc' ? null : 'osc') }}
             >
               <span class="osc-mark"><MeldOscIcon type={oscType} color={engineInk.primary} /></span>
               <span class="osc-name">{MELD_OSC_TYPES[oscType] ?? '—'}</span>
@@ -340,15 +341,15 @@
           />
         </div>
         <div class="filter-type type-chooser stepper" style="--btn-tint: {engineInk.primary};">
-          <button class="chooser-step" aria-label="Previous filter type" onclick={() => stepFilter(-1)}>‹</button>
+          <button class="chooser-step" aria-label="Previous filter type" use:press={{ onPress: () => stepFilter(-1) }}>‹</button>
           <button
             class="chooser-name"
             class:active={chooser === 'filter'}
             aria-expanded={chooser === 'filter'}
             aria-label="Choose filter type, now {MELD_FILTER_TYPES[filterType] ?? 'unknown'}"
-            onclick={() => (chooser = chooser === 'filter' ? null : 'filter')}
+            use:press={{ onPress: () => (chooser = chooser === 'filter' ? null : 'filter') }}
           >{MELD_FILTER_TYPES[filterType] ?? '—'}</button>
-          <button class="chooser-step" aria-label="Next filter type" onclick={() => stepFilter(1)}>›</button>
+          <button class="chooser-step" aria-label="Next filter type" use:press={{ onPress: () => stepFilter(1) }}>›</button>
         </div>
         </div>
       </FaceSection>

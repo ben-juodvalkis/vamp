@@ -156,12 +156,12 @@ describe('violationsIn', () => {
 		const inside = violationsIn('<button onclick={go}>', 'components/v6/tracks/A.svelte');
 		expect(inside.map((h) => h.rule)).toEqual(['onclick-performance-surface']);
 
-		// Central views are one-at-a-time device panels — tier 4, and
-		// deliberately out of scope. A gate that failed on 81 sites nobody
-		// has a reason to change is a gate everybody bypasses.
-		expect(violationsIn('<button onclick={go}>', 'components/v6/central/views/A.svelte')).toEqual(
-			[]
-		);
+		// Device views are played with two hands too (ADR-522).
+		expect(
+			violationsIn('<button onclick={go}>', 'components/v6/central/views/A.svelte')
+		).toHaveLength(1);
+		// Settings is not the performance surface.
+		expect(violationsIn('<button onclick={go}>', 'components/v6/settings/A.svelte')).toEqual([]);
 	});
 
 	it('flags the legacy on:click spelling as well', () => {
@@ -175,7 +175,7 @@ describe('violationsIn', () => {
 		expect(hits[0].line).toBe(3);
 	});
 
-	it('names all five performance-surface directories', () => {
+	it('names every performance-surface directory', () => {
 		// The list is the gate's whole scope; a directory quietly dropped
 		// from it is a silent hole.
 		expect(PERFORMANCE_SURFACE).toEqual([
@@ -183,7 +183,9 @@ describe('violationsIn', () => {
 			'components/v6/layout',
 			'components/v6/session',
 			'components/v6/clips',
-			'components/v6/controls'
+			'components/v6/controls',
+			'components/v6/central',
+			'components/v6/device-panel'
 		]);
 	});
 });
