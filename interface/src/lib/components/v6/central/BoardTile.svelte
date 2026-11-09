@@ -91,7 +91,7 @@
     min-width: 0;
   }
   .panel-title {
-    flex: 0 1 auto;
+    flex: none;
     margin: 0;
     min-width: 0;
     overflow: hidden;

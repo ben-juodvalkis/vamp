@@ -200,41 +200,56 @@
   </div>
 {/snippet}
 
-<!-- A stage on the board, as Live's expanded Roar draws one: the shaper's
-     two columns and the filter's two, each its type over its picture (the
-     shaper's curve, dragged for Amount and Bias; the filter's response, a
-     pad of Freq across and Res up) over its knobs by rank, its switches at
-     the foot. -->
+<!-- A stage on the board, as Live's expanded Roar draws one: two halves,
+     the shaper's and the filter's, the picture the most of each (2026-11-08;
+     a quarter of the stage until then, under the knobs it repeats). A half
+     is its type with its switches beside it, its picture (the shaper's
+     curve, dragged for Amount and Bias; the filter's response, a pad of
+     Freq across and Res up), then one row of knobs. -->
 {#snippet stageBoard(n: number)}
   {@const type = step(`Flt ${n} Type`)}
   {@const extra = roarFilterExtra(type)}
   {@const fOn = isOn(`Flt ${n} On`)}
-  <div class="face-span-all stage-board" data-roar-stage-grid={n}>
-    <div class="span-2-cell">{@render pick(`Shaper ${n} Type`, ROAR_SHAPERS, `${names[n - 1]} shaper`, 'Shaper')}</div>
-    <div class="span-2-cell">{@render pick(`Flt ${n} Type`, ROAR_FILTERS, `${names[n - 1]} filter`, 'Filter')}</div>
-    <div class="span-2-cell picture"><ShaperCurve {params} {n} ink={ink.primary} /></div>
-    <div class="span-2-cell picture" data-roar-filter-pad={n}>
-      <DeviceXY
-        xValue={params.raw(`Flt ${n} Freq`) ?? 0.97}
-        yValue={params.raw(`Flt ${n} Res`) ?? 0.1}
-        showCurve
-        curveType={roarFilterCurve(type, params.raw(`Flt ${n} Morph`) ?? 0)}
-        curveFreqRange={ROAR_FILTER_FREQ_RANGE}
-        isGhost={!fOn || !params.has(`Flt ${n} Freq`)}
-        color={ink}
-        onInteraction={(x, y) => {
-          params.write(`Flt ${n} Freq`, x, `Flt ${n} On`);
-          if (roarFilterHasRes(type)) params.write(`Flt ${n} Res`, y, `Flt ${n} On`);
-        }}
-      />
+  <div class="face-span-all stage-board" class:unused={n > stages} data-roar-stage-grid={n}>
+    <div class="half" data-roar-half="shaper">
+      <div class="half-head">
+        {@render pick(`Shaper ${n} Type`, ROAR_SHAPERS, `${names[n - 1]} shaper`, 'Shaper')}
+        {@render sw(`Shaper ${n} On`, 'On')}
+      </div>
+      <div class="picture"><ShaperCurve {params} {n} ink={ink.primary} /></div>
+      <div class="half-knobs">
+        {@render knob(`Shaper ${n} Amt`, 'Amount', 'm')}
+        {@render knob(`Shaper ${n} Bias`, 'Bias', 's')}
+        {@render knob(`Shaper ${n} Level`, 'Level', 's')}
+      </div>
     </div>
-    {@render knob(`Shaper ${n} Amt`, 'Amount', 'l')}
-    <div class="stack">{@render knob(`Shaper ${n} Bias`, 'Bias', 'm')}{@render knob(`Shaper ${n} Level`, 'Level', 's')}</div>
-    {@render knob(`Flt ${n} Freq`, 'Freq', 'l')}
-    <div class="stack">{@render knob(`Flt ${n} Res`, 'Res', 'm', !roarFilterHasRes(type))}{#if extra}{@render knob(`Flt ${n} ${extra}`, extra, 's')}{/if}</div>
-    <div class="span-2-cell">{@render sw(`Shaper ${n} On`, 'Shaper')}</div>
-    {@render sw(`Flt ${n} On`, 'Filter')}
-    {@render sw(`Flt ${n} Pre On`, 'Pre')}
+    <div class="half" data-roar-half="filter">
+      <div class="half-head two-switches">
+        {@render pick(`Flt ${n} Type`, ROAR_FILTERS, `${names[n - 1]} filter`, 'Filter')}
+        {@render sw(`Flt ${n} On`, 'On')}
+        {@render sw(`Flt ${n} Pre On`, 'Pre')}
+      </div>
+      <div class="picture" data-roar-filter-pad={n}>
+        <DeviceXY
+          xValue={params.raw(`Flt ${n} Freq`) ?? 0.97}
+          yValue={params.raw(`Flt ${n} Res`) ?? 0.1}
+          showCurve
+          curveType={roarFilterCurve(type, params.raw(`Flt ${n} Morph`) ?? 0)}
+          curveFreqRange={ROAR_FILTER_FREQ_RANGE}
+          isGhost={!fOn || !params.has(`Flt ${n} Freq`)}
+          color={ink}
+          onInteraction={(x, y) => {
+            params.write(`Flt ${n} Freq`, x, `Flt ${n} On`);
+            if (roarFilterHasRes(type)) params.write(`Flt ${n} Res`, y, `Flt ${n} On`);
+          }}
+        />
+      </div>
+      <div class="half-knobs">
+        {@render knob(`Flt ${n} Freq`, 'Freq', 'm')}
+        {@render knob(`Flt ${n} Res`, 'Res', 's', !roarFilterHasRes(type))}
+        {#if extra}{@render knob(`Flt ${n} ${extra}`, extra, 's')}{:else}<div class="cell"></div>{/if}
+      </div>
+    </div>
   </div>
 {/snippet}
 
@@ -247,7 +262,7 @@
   {@const prefix = `LFO ${n}` as const}
   {@const mode = step(`${prefix} Mode`)}
   {@const rate = roarRateParam(prefix, mode)}
-  <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 0.85fr) minmax(0, 1fr);">
+  <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 1.2fr) minmax(0, 1fr);">
     <div class="graph"><LfoGraph {params} ink={ink.primary} shape={ROAR_LFO_WAVES[step(`${prefix} Wave`)]} {rate} /></div>
     <div class="stack">{@render pick(`${prefix} Wave`, ROAR_LFO_WAVES, `${prefix} wave`, 'Wave')}{@render pick(`${prefix} Mode`, ROAR_RATE_MODES, `${prefix} rate mode`, 'Rate')}</div>
     {@render knob(rate, rateTitle(mode), 'l')}
@@ -343,9 +358,11 @@
     </FaceGrid>
   </BoardTile>
 {:else if page.startsWith('stage-')}
-  <!-- A stage the routing does not run is ghosted whole, its switch still on its bar. -->
+  <!-- A stage the routing does not run says so, as Live's does: no name, no
+       switch, and grey over the ghost (a lit On here read as a running stage). -->
   {@const n = Number(page.slice(6))}
-  <BoardTile title={names[n - 1]} ink={ink.primary} on={isOn(`Stage ${n} On`)} onToggle={() => flip(`Stage ${n} On`)} switchParam="Stage {n} On" switchDisabled={!params.has(`Stage ${n} On`)} ghost={n > stages}>
+  {@const unused = n > stages}
+  <BoardTile title={unused ? '---' : names[n - 1]} ink={unused ? 'var(--signal-dim)' : ink.primary} on={unused ? undefined : isOn(`Stage ${n} On`)} onToggle={() => flip(`Stage ${n} On`)} switchParam="Stage {n} On" switchDisabled={!params.has(`Stage ${n} On`)} ghost={unused}>
     <FaceGrid sections={[4]} heads={false}>
       <FaceSection span={4} data-roar-stage={n} data-roar-stage-used={n <= stages}>
         {@render stageBoard(n)}
@@ -472,18 +489,47 @@
     display: flex;
     align-items: center;
   }
-  /* A stage on the board: types, then two rows of knobs. */
+  /* A stage on the board: the shaper's half and the filter's. Each is its
+     type and switches, its picture on all the height left, one row of knobs. */
   .stage-board {
     display: grid;
-    grid-template-columns: subgrid;
-    grid-template-rows: var(--height-touch) minmax(0, 0.8fr) minmax(0, 1.2fr) var(--height-touch);
-    row-gap: var(--spacing-sm);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: var(--central-gap);
     min-height: 0;
   }
-  .stage-board > .picture {
-    align-items: stretch;
+  .stage-board.unused {
+    filter: grayscale(1);
   }
-  .stage-board > .picture > :global(*) {
+  .half {
+    display: grid;
+    grid-template-rows: var(--height-touch) minmax(0, 1fr) 6.5rem;
+    row-gap: var(--spacing-sm);
+    min-width: 0;
+    min-height: 0;
+  }
+  .half-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 3rem;
+    column-gap: var(--spacing-sm);
+    min-width: 0;
+  }
+  .half-head.two-switches {
+    grid-template-columns: minmax(0, 1fr) 3rem 3rem;
+  }
+  .half-knobs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    min-width: 0;
+    min-height: 0;
+  }
+  .picture {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+  }
+  .picture > :global(*) {
+    flex: 1 1 0;
+    min-width: 0;
     height: 100%;
   }
   /* In a shared column the higher rank takes the larger share (ADR-515). */

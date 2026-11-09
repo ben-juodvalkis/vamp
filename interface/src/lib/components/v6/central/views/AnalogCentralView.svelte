@@ -112,10 +112,10 @@
    * floor.
    */
   const BOARD: readonly BoardRow[] = [
-    { tiles: [{ id: 'osc1', cols: 7 }, { id: 'osc2', cols: 7 }, { id: 'vibrato', cols: 4 }], weight: 1.06 },
+    { tiles: [{ id: 'osc1', cols: 7 }, { id: 'osc2', cols: 7 }, { id: 'vibrato', cols: 4 }], weight: 1 },
     {
       tiles: [{ id: 'filter1', cols: 6 }, { id: 'amp1', cols: 4 }, { id: 'filter2', cols: 6 }, { id: 'amp2', cols: 4 }, { id: 'noise', cols: 2 }],
-      weight: 0.97
+      weight: 0.92
     },
     {
       tiles: [
@@ -123,9 +123,9 @@
         { id: 'env2', cols: 5 }, { id: 'aeg2', cols: 2 }, { id: 'feg2', cols: 2 },
         { id: 'mpe', cols: 5 }
       ],
-      weight: 1.15
+      weight: 1.2
     },
-    { tiles: [{ id: 'lfo1', cols: 5 }, { id: 'lfo2', cols: 5 }, { id: 'global', cols: 9 }], weight: 0.9 }
+    { tiles: [{ id: 'lfo1', cols: 5 }, { id: 'lfo2', cols: 5 }, { id: 'global', cols: 9 }], weight: 0.98 }
   ];
   let p = $derived(ANALOG_VOICE[voice]);
   let voiceInk = $derived(sourceInk(voice));

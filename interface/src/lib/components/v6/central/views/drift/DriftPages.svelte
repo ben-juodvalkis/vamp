@@ -324,7 +324,7 @@
   <BoardTile title="LFO" ink={ink.primary}>
     <FaceGrid sections={[4]} heads={false}>
       <FaceSection span={4}>
-        <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 0.8fr) minmax(0, 1.6fr);">
+        <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 0.9fr) minmax(0, 1.6fr);">
           <div class="graph"><LfoGraph {params} ink={ink.primary} shape={LFO_WAVES[step('LFO Wave')]} rate={lfoRate} amount="LFO Amount" /></div>
           <div class="span-2 lfo-shape">
             <div class="lfo-waves">{@render tab('LFO Wave', LFO_WAVES, { cols: 3, lfo: true })}</div>

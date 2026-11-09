@@ -332,7 +332,8 @@
 {:else if kind === 'env' && v}
   <!-- Both envelopes as Live draws them (ADR-514), Amp over Filter, their
        stage knobs two by two beside each picture; each row's name line
-       carries its loop; Sustain Time, which Live draws as a number, a box. -->
+       carries Sustain Time, which Live draws as a number, a box, and its
+       loop, so the picture has the row's width. -->
   <BoardTile title={title} ink={vInk.primary}>
     <FaceGrid sections={[5]} heads={false}>
       <FaceSection span={5}>
@@ -342,12 +343,12 @@
             <div class="env-row">
               <div class="env-head">
                 <span class="env-label" style="color: {vInk.primary};">{label}</span>
+                <div class="env-stime">{@render stage(`${pre}${v} S Time`, 'S‑Time', 'sustain')}</div>
                 <div class="loop-pick" data-param={loopParam}>
                   <ChoicePicker options={LOOP_MODES} selected={step(loopParam)} onSelect={(i) => params.write(loopParam, lo(loopParam) + i)} label="{label} Env {v} loop" caption="Loop" tint={vInk.primary} ghost={!params.has(loopParam)} />
                 </div>
               </div>
               <div class="env-graph-cell"><EnvelopeGraph {params} ink={vInk.primary} names={{ attack: `${pre}${v} Attack`, decay: `${pre}${v} Decay`, sustain: `${pre}${v} Sustain`, release: `${pre}${v} Rel` }} knobs="side" /></div>
-              {@render stage(`${pre}${v} S Time`, 'S‑Time', 'sustain')}
             </div>
           {/each}
         </div>
@@ -372,7 +373,7 @@
   <BoardTile title={title} ink={vInk.primary} on={isOn(`${L} On/Off`)} onToggle={() => flip(`${L} On/Off`)} switchParam="{L} On/Off" switchDisabled={!params.has(`${L} On/Off`)}>
     <FaceGrid sections={[5]} heads={false}>
       <FaceSection span={5}>
-        <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 0.45fr) minmax(0, 1.7fr);">
+        <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 0.8fr) minmax(0, 1.6fr);">
         <div class="graph"><LfoGraph {params} ink={vInk.primary} shape={LFO_SHAPES[step(`${L} Shape`)]} rate={lfoBeat ? `${L} SncRate` : `${L} Speed`} sw={`${L} On/Off`} /></div>
         {@render tab(`${L} Shape`, LFO_SHAPES, { glyph: 'lfo', sw: `${L} On/Off` })}
         <div class="col">
@@ -658,8 +659,21 @@
     grid-template-columns: subgrid;
     align-items: center;
   }
+  .env-stime {
+    grid-column: span 2;
+    height: 2.25rem;
+    min-width: 0;
+  }
+  /* On the name line the box is one bar high: its word at a label's size. */
+  .env-stime :global(.slider-label-text) {
+    font-size: 0.6875rem !important;
+    letter-spacing: 0.02em;
+  }
+  .env-stime :global(.slider-icon) {
+    display: none;
+  }
   .env-label {
-    grid-column: span 3;
+    grid-column: span 1;
     font-size: 0.6875rem;
     font-weight: 600;
     line-height: 0.75rem;
@@ -672,7 +686,7 @@
     --picker-h: 2.25rem;
   }
   .env-graph-cell {
-    grid-column: span 4;
+    grid-column: 1 / -1;
     min-width: 0;
     min-height: 0;
   }

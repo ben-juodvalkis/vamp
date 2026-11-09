@@ -189,11 +189,11 @@
   </div>
 {/snippet}
 
-<!-- An envelope's tile (ADR-514): Live's picture over its small stage
-     knobs, the three slopes and the loop mode two to a column beside it. -->
+<!-- An envelope's tile (ADR-514): Live's picture over its small stage knobs,
+     the three slopes one column beside it (its loop mode is on the bar). -->
 {#snippet envelope(prefix: string, levels: boolean)}
-  <FaceGrid sections={[4, 2]} heads={false}>
-    <FaceSection span={4}>
+  <FaceGrid sections={[5, 1]} heads={false}>
+    <FaceSection span={5}>
       <div class="face-span-all">
         <EnvelopeGraph
           {params}
@@ -205,9 +205,8 @@
       </div>
     </FaceSection>
     <FaceSeam ink={ink.primary} />
-    <FaceSection span={2}>
-      <div class="stack">{@render knob(`${prefix} A Slope`, 'A Slope', 's')}{@render knob(`${prefix} D Slope`, 'D Slope', 's')}</div>
-      <div class="stack">{@render knob(`${prefix} R Slope`, 'R Slope', 's')}{@render pick(`${prefix} Loop Mode`, LOOP_MODES, `${prefix} loop`, 'Loop')}</div>
+    <FaceSection span={1}>
+      <div class="stack">{@render knob(`${prefix} A Slope`, 'A Slope', 's')}{@render knob(`${prefix} D Slope`, 'D Slope', 's')}{@render knob(`${prefix} R Slope`, 'R Slope', 's')}</div>
     </FaceSection>
   </FaceGrid>
 {/snippet}
@@ -215,9 +214,9 @@
 <div class="wt-page" data-wavetable-page={page}>
 {#if (page === 'osc1' || page === 'osc2') && tables}
   <!-- The oscillator (ADR-516): its wavetable's two picks on the bar, each
-       naming itself, with its switch; under them the pad over three columns,
-       then Effect 1 and Gain each a column at full height, Detune over Semi,
-       and Pan. Picking a category puts the oscillator on that category's
+       naming itself, with its switch; under them the wave across the tile, as
+       Live draws it (2026-11-08; three columns of seven until then), over one
+       row of knobs. Picking a category puts the oscillator on that category's
        first table, as Live does. -->
   {@const osc = n === 2 ? 2 : 1}
   {@const t = tables.choice(osc)}
@@ -230,11 +229,14 @@
     {/snippet}
     <FaceGrid sections={[7]} heads={false}>
       <FaceSection span={7}>
-        <div class="face-span-3 pad" style={isOn(`${O} On`) ? '' : 'opacity: var(--opacity-ghost);'}>{@render oscPad(osc)}</div>
-        {@render knob(`${O} Effect 1`, fx[0], 'l', { sw: `${O} On`, color: oscInk })}
-        <div class="stack">{@render knob(`${O} Detune`, 'Detune', 'm', { sw: `${O} On`, color: oscInk })}{@render knob(`${O} Transp`, 'Semi', 's', { sw: `${O} On`, color: oscInk })}</div>
-        {@render knob(`${O} Gain`, 'Gain', 'l', { sw: `${O} On`, color: oscInk })}
-        {@render knob(`${O} Pan`, 'Pan', 'm', { sw: `${O} On`, color: oscInk })}
+        <div class="face-span-all picture-over-knobs" style="--knob-cols: 5;">
+          <div class="pad over" style={isOn(`${O} On`) ? '' : 'opacity: var(--opacity-ghost);'}>{@render oscPad(osc)}</div>
+          {@render knob(`${O} Effect 1`, fx[0], 'm', { sw: `${O} On`, color: oscInk })}
+          {@render knob(`${O} Detune`, 'Detune', 's', { sw: `${O} On`, color: oscInk })}
+          {@render knob(`${O} Transp`, 'Semi', 's', { sw: `${O} On`, color: oscInk })}
+          {@render knob(`${O} Gain`, 'Gain', 'm', { sw: `${O} On`, color: oscInk })}
+          {@render knob(`${O} Pan`, 'Pan', 's', { sw: `${O} On`, color: oscInk })}
+        </div>
       </FaceSection>
     </FaceGrid>
   </BoardTile>
@@ -258,7 +260,7 @@
   <BoardTile title="Filter {n}" ink={fInk.primary} on={isOn(`${F} On`)} onToggle={() => flip(`${F} On`)} switchParam="{F} On" switchDisabled={!params.has(`${F} On`)}>
     <FaceGrid sections={[4, 3]}>
       <FaceSection span={4}>
-        <div class="face-span-2 pad" data-filter-pad={n}>
+        <div class="face-span-3 pad" data-filter-pad={n}>
           <DeviceXY
             xValue={params.unit(`${F} Freq`) ?? 1}
             yValue={params.unit(`${F} Res`) ?? 0}
@@ -275,8 +277,7 @@
             color={fInk}
           />
         </div>
-        {@render knob(`${F} Drive`, 'Drive', 'm', { sw: `${F} On` })}
-        {@render knob(`${F} Morph`, 'Morph', 'm', { sw: `${F} On` })}
+        <div class="stack">{@render knob(`${F} Drive`, 'Drive', 's', { sw: `${F} On` })}{@render knob(`${F} Morph`, 'Morph', 's', { sw: `${F} On` })}</div>
       </FaceSection>
       <FaceSeam ink={ink.primary} />
       <FaceSection span={3}>
@@ -316,31 +317,40 @@
     </FaceGrid>
   </BoardTile>
 {:else if page === 'amp'}
-  <BoardTile title="Amp Envelope" ink={ink.primary}>{@render envelope('Amp', false)}</BoardTile>
+  <BoardTile title="Amp Envelope" ink={ink.primary}>
+    {#snippet tools()}{@render pick('Amp Loop Mode', LOOP_MODES, 'Amp loop', 'Loop')}{/snippet}
+    {@render envelope('Amp', false)}
+  </BoardTile>
 {:else if page === 'env2' || page === 'env3'}
   <!-- As Amp: the picture carries the times and all four levels (Initial,
        Peak, Sustain, Final). -->
-  <BoardTile title="Envelope {n}" ink={ink.primary}>{@render envelope(E, true)}</BoardTile>
+  <BoardTile title="Envelope {n}" ink={ink.primary}>
+    {#snippet tools()}{@render pick(`${E} Loop Mode`, LOOP_MODES, `${E} loop`, 'Loop')}{/snippet}
+    {@render envelope(E, true)}
+  </BoardTile>
 {:else if page === 'lfo1' || page === 'lfo2'}
-  <!-- The LFO (ADR-514): its wave across the tile, rate across and amount
-       up; the shapes, the sync and Retrig one touch row under it, then the
-       knobs by rank. -->
+  <!-- The LFO (ADR-514): the shapes, the sync and Retrig on the bar, so the
+       wave has the body (rate across and amount up), over one row of knobs. -->
   <BoardTile title="LFO {n}" ink={ink.primary}>
+    {#snippet tools()}
+      <div class="bar-tools">
+        <div class="bar-wave">{@render tab(`${L} Wave`, LFO_WAVES, { glyph: true, cols: 5 })}</div>
+        <div class="bar-sync">{@render tab(`${L} Sync`, ['Free', 'Tempo'], { cols: 2 })}</div>
+        <div class="bar-retrig">{@render sw(`${L} Retrig On`, 'Retrig')}</div>
+      </div>
+    {/snippet}
     <FaceGrid sections={[5]} heads={false}>
       <FaceSection span={5}>
-        <div class="face-span-all graph-board" style="--graph-rows: minmax(0, 0.55fr) auto minmax(0, 1.5fr);">
-          <div class="graph">
+        <div class="face-span-all picture-over-knobs" style="--knob-cols: 5;">
+          <div class="over">
             <LfoGraph {params} ink={ink.primary} shape={LFO_WAVES[step(`${L} Wave`)]} rate={lfoTempo ? `${L} Synced` : `${L} Freq`} amount={`${L} Amount`} />
           </div>
-          <div class="span-2 touch-row">{@render tab(`${L} Wave`, LFO_WAVES, { glyph: true, cols: 5 })}</div>
-          <div class="span-2 touch-row">{@render tab(`${L} Sync`, ['Free', 'Tempo'], { cols: 2 })}</div>
-          {@render sw(`${L} Retrig On`, 'Retrig')}
           {#if lfoTempo}
-            {@render knob(`${L} Synced`, 'Sync', 'l', { steps: SYNCED.length, labels: SYNCED })}
+            {@render knob(`${L} Synced`, 'Sync', 'm', { steps: SYNCED.length, labels: SYNCED })}
           {:else}
-            {@render knob(`${L} Freq`, 'Rate', 'l')}
+            {@render knob(`${L} Freq`, 'Rate', 'm')}
           {/if}
-          {@render knob(`${L} Amount`, 'Amount', 'l')}
+          {@render knob(`${L} Amount`, 'Amount', 'm')}
           {@render knob(`${L} Morph`, 'Morph', 's')}
           {@render knob(`${L} Offset`, 'Offset', 's')}
           {@render knob(`${L} Attack`, 'Attack', 's')}
@@ -374,6 +384,45 @@
   .wt-page > :global(*) {
     flex: 1 1 0;
     min-width: 0;
+  }
+  /* A picture across the tile, on all the height one row of knobs leaves. */
+  .picture-over-knobs {
+    display: grid;
+    grid-template-columns: repeat(var(--knob-cols), minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr) 5.875rem;
+    gap: var(--spacing-sm);
+    min-width: 0;
+    min-height: 0;
+  }
+  .picture-over-knobs > .over {
+    grid-column: 1 / -1;
+    min-width: 0;
+    min-height: 0;
+  }
+  /* The LFO's shapes, sync and Retrig on its bar, at the bar's height. */
+  .bar-tools {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--spacing-sm);
+    width: 100%;
+    max-width: none;
+  }
+  :global(.panel-tools) > .bar-tools {
+    max-width: none;
+  }
+  .bar-wave,
+  .bar-sync,
+  .bar-retrig {
+    height: var(--picker-h);
+    min-width: 0;
+  }
+  .bar-wave { flex: 2 1 0; }
+  .bar-sync { flex: 1.4 1 0; }
+  .bar-retrig { flex: 0 0 3.5rem; }
+  .bar-retrig .switch {
+    height: var(--picker-h);
+    font-size: 0.75rem;
   }
   /* A column of controls sharing its height evenly. */
   .stack {
@@ -412,9 +461,6 @@
     flex: 1 1 0;
     min-width: 0;
     max-width: 13rem;
-  }
-  .touch-row {
-    height: var(--height-touch);
   }
   /* A tab of a few values beside a knob is one touch row, centred. */
   .panel-choice.row {

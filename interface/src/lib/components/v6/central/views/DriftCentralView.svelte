@@ -429,8 +429,8 @@
    * the Matrix and Global. The face's controls are all on these pages.
    */
   const BOARD: readonly BoardRow[] = [
-    { tiles: [{ id: 'oscillators', cols: 9 }, { id: 'pitch-mod', cols: 2 }], weight: 1.25 },
-    { tiles: [{ id: 'filter', cols: 7 }, { id: 'envelopes', cols: 9 }] },
+    { tiles: [{ id: 'oscillators', cols: 9 }, { id: 'pitch-mod', cols: 2 }], weight: 1.1 },
+    { tiles: [{ id: 'filter', cols: 7 }, { id: 'envelopes', cols: 9 }], weight: 1.1 },
     { tiles: [{ id: 'lfo', cols: 4 }, { id: 'matrix', cols: 3 }, { id: 'global', cols: 7 }] }
   ];
 

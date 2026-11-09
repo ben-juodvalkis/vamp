@@ -289,9 +289,9 @@
    */
   const BOARD: readonly BoardRow[] = [
     { tiles: [{ id: 'osc1', cols: 7 }, { id: 'osc2', cols: 7 }, { id: 'sub', cols: 3 }], weight: 1.25 },
-    { tiles: [{ id: 'filter1', cols: 7 }, { id: 'routing', cols: 2 }, { id: 'filter2', cols: 7 }], weight: 0.95 },
-    { tiles: [{ id: 'amp', cols: 6 }, { id: 'env2', cols: 6 }, { id: 'env3', cols: 6 }], weight: 1.1 },
-    { tiles: [{ id: 'lfo1', cols: 5 }, { id: 'lfo2', cols: 5 }, { id: 'global', cols: 4 }], weight: 1.05 }
+    { tiles: [{ id: 'filter1', cols: 7 }, { id: 'routing', cols: 2 }, { id: 'filter2', cols: 7 }], weight: 1 },
+    { tiles: [{ id: 'amp', cols: 6 }, { id: 'env2', cols: 6 }, { id: 'env3', cols: 6 }], weight: 1.2 },
+    { tiles: [{ id: 'lfo1', cols: 5 }, { id: 'lfo2', cols: 5 }, { id: 'global', cols: 4 }], weight: 1.1 }
   ];
 
   /** Both envelopes in view, Amp over Envelope 2 (ADR-477). */
@@ -388,7 +388,7 @@
   <DeviceXY
     xValue={read(OSC[n].effect2, 0)}
     yValue={read(OSC[n].position, 0.5)}
-    title="OSC {n}"
+    title={centralDisplayStore.expanded ? undefined : `OSC ${n}`}
     titleAt="bottom"
     isGhost={!on}
     onInteraction={(x, y) => handleOscXY(n, x, y)}
