@@ -8,8 +8,9 @@ laptop. It was built by a dance accompanist for playing ballet class and is shar
 More about it at [benjuodvalkis.com/other/vamp](https://benjuodvalkis.com/other/vamp).
 
 **[Download Vamp for Mac](https://github.com/ben-juodvalkis/vamp/releases/latest/download/Vamp.dmg)**
-(free, notarized by Apple, updates itself). It runs in the Mac's menu bar and serves Vamp to the
-iPad: open it in Vamp for iPad over the USB-C cable, or in Safari over USB-C or Wi-Fi.
+(free, notarized by Apple, updates itself). It opens Vamp in a window on the Mac, keeps a menu in
+the menu bar, and serves Vamp to the iPad: open it in Vamp for iPad over the USB-C cable, or in
+Safari over USB-C or Wi-Fi.
 
 ![Recording a loop: tap an empty slot, tap its dot, play, and tap again to close the loop. Vamp on the iPad at left, Ableton Live at right.](docs/readme/record-a-loop.gif)
 
@@ -63,7 +64,8 @@ carries everything it runs.
 3. On the iPad, open **Vamp for iPad** with the cable in and type the code the Mac's menu bar
    shows. Or scan the QR code in Vamp's menu to open it in Safari.
 
-Vamp's menu-bar menu ticks each step off as it is done.
+Vamp's menu-bar menu ticks each step off as it is done. **Settings…** (⌘,) in that menu opens
+Vamp's Settings in its window.
 [INSTALLATION.md](INSTALLATION.md) has every step, and how to run Vamp from the code to work on it.
 
 ## How it fits together

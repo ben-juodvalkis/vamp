@@ -8,8 +8,8 @@ Two ways in: **download Vamp for Mac** (below, about five minutes), or
 You need **macOS 14** or later (Apple Silicon or Intel) and **Ableton Live 12.4 Suite**.
 
 1. **[Download Vamp.dmg](https://github.com/ben-juodvalkis/vamp/releases/latest/download/Vamp.dmg)**,
-   open it and drag **Vamp** to Applications. Open Vamp from there: it lives in the menu bar, as
-   a V.
+   open it and drag **Vamp** to Applications. Open Vamp from there: it opens Vamp in a window,
+   and keeps a menu in the menu bar, as a V. Closing the window leaves Vamp running there.
 2. It puts its control surface and a **Vamp Devices** folder (Permute, the wheels, the recorder,
    the groove) in Live's User Library. Nothing to add in Live's browser: Live lists the User
    Library already.
@@ -94,7 +94,8 @@ This runs the setup check, starts the bridge and the web app, and opens the page
 - which Places the browser shows (your User Library and every Pack, to start)
 - a foot switch, if you have one
 
-Settings stays one tap away afterwards, from the gear in the master track's view.
+Settings stays one tap away afterwards, from the gear in the master track's view, and on the
+Mac from **Settings…** (⌘,) in Vamp's menu.
 
 ## 6. Connect the iPad
 
