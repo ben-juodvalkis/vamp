@@ -556,10 +556,12 @@
    * a tap on the Auto Filter's XY did nothing). The XY counts a press as its
    * own tap only under 200 ms and 5 px, which a finger on the iPad often
    * is not; the cell's tap has no time limit and a touch's slop. Except
-   * where a tap IS the control's: Permute's steps, the MIDI wheels, a Drum Rack's pads.
+   * where a tap IS the control's: the MIDI wheels, a Drum Rack's pads.
+   * Permute's steps do both (the user, 2026-11-09): the step toggles and
+   * the Permute view opens.
    */
   function tapOpensFromControl(cell: Cell): boolean {
-    return cell.presetKey !== 'sequencer' && !isMidiWheels(cell.device) && !cell.kit;
+    return !isMidiWheels(cell.device) && !cell.kit;
   }
 
   function dragStart(cell: Cell, position: number, info: DragInfo) {

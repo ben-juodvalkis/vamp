@@ -10,6 +10,7 @@
 	import SectionDivider from '../SectionDivider.svelte';
 	import { readFxScope } from '../fxScope';
 	import { PERMUTE_MAX_STEPS } from '$lib/config/permuteLayout';
+	import KnobFace from '$lib/components/v6/device-panel/KnobFace.svelte';
 
 	let device = $derived(sequencerStore.device);
 
@@ -194,8 +195,8 @@
 
   The step block is 8 columns wide whatever the length: it holds as many
   cells as the row's length, 2..16 (ADR-443), so at 16 each cell is half
-  the width it has at 8. The length cell's fill is length / 16 — the
-  default 8 reads half full, which is the headroom it has.
+  the width it has at 8. Length and rate are knobs with a detent per
+  value (2026-11-09).
 
   Two sequencers, one per row, sharing a grid. They run at their own
   lengths and their own rates and only their ink said so; the seam between
@@ -213,8 +214,7 @@
 		title="Mute length: {muteLength} steps"
 		role="slider" aria-valuemin={MIN_LENGTH} aria-valuemax={MAX_LENGTH} aria-valuenow={muteLength} tabindex="0"
 	>
-		<div class="fill" style="height: {(muteLength / MAX_LENGTH) * 100}%"></div>
-		<span class="label">{muteLength}</span>
+		<KnobFace position={(muteLength - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)} title="Length" valueText={`${muteLength}`} readout={`${muteLength}`} steps={MAX_LENGTH - MIN_LENGTH + 1} dragging={isDraggingMuteLength} ink={muteColor} size="l" fit captionBelow />
 	</div>
 
 	<!-- Mute rate — col 10, row 1 -->
@@ -228,8 +228,7 @@
 		title="Mute rate"
 		role="slider" aria-valuemin={0} aria-valuemax={RATE_COUNT - 1} aria-valuenow={muteRateIndex} tabindex="0"
 	>
-		<div class="fill" style="height: {(muteRateIndex / (RATE_COUNT - 1)) * 100}%"></div>
-		<span class="label">{muteRateDisplay}</span>
+		<KnobFace position={Math.max(0, muteRateIndex) / (RATE_COUNT - 1)} title="Rate" valueText={muteRateDisplay} readout={muteRateDisplay} steps={RATE_COUNT} dragging={isDraggingMuteRate} ink={muteColor} size="l" fit captionBelow />
 	</div>
 
 	<!-- Mute steps — cols 2-9, row 1 -->
@@ -256,8 +255,7 @@
 		title="Pitch length: {pitchLength} steps"
 		role="slider" aria-valuemin={MIN_LENGTH} aria-valuemax={MAX_LENGTH} aria-valuenow={pitchLength} tabindex="0"
 	>
-		<div class="fill" style="height: {(pitchLength / MAX_LENGTH) * 100}%"></div>
-		<span class="label">{pitchLength}</span>
+		<KnobFace position={(pitchLength - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)} title="Length" valueText={`${pitchLength}`} readout={`${pitchLength}`} steps={MAX_LENGTH - MIN_LENGTH + 1} dragging={isDraggingPitchLength} ink={pitchColor} size="l" fit captionBelow />
 	</div>
 
 	<!-- Pitch rate — col 10, row 3 -->
@@ -271,8 +269,7 @@
 		title="Pitch rate"
 		role="slider" aria-valuemin={0} aria-valuemax={RATE_COUNT - 1} aria-valuenow={pitchRateIndex} tabindex="0"
 	>
-		<div class="fill" style="height: {(pitchRateIndex / (RATE_COUNT - 1)) * 100}%"></div>
-		<span class="label">{pitchRateDisplay}</span>
+		<KnobFace position={Math.max(0, pitchRateIndex) / (RATE_COUNT - 1)} title="Rate" valueText={pitchRateDisplay} readout={pitchRateDisplay} steps={RATE_COUNT} dragging={isDraggingPitchRate} ink={pitchColor} size="l" fit captionBelow />
 	</div>
 
 	<!-- Pitch steps — cols 2-9, row 2 -->
@@ -327,56 +324,18 @@
 		grid-row: 3;
 	}
 
-	/* --cell-ink is set at the call site (mute / pitch colour); the 70%
-	   frame + fill mixes used to sit inline on each cell — lifted here so
-	   the flat grammar can re-read them without !important. */
+	/* Length and rate are knobs (2026-11-09; filled boxes before): the
+	   cell is the touch target, the knob is drawn in the row's ink. */
 	.ctrl-cell {
 		position: relative;
-		overflow: hidden;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		border: 1px solid;
-		border-color: color-mix(in srgb, var(--cell-ink), transparent 30%);
-		border-radius: var(--radius-sm);
-		background: color-mix(in srgb, var(--background), transparent 50%);
+		min-width: 0;
+		min-height: 0;
+		touch-action: none;
 	}
 
-	.ctrl-cell .fill {
-		position: absolute;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background-color: color-mix(in srgb, var(--cell-ink), transparent 30%);
-		transition: height 0.15s;
-		pointer-events: none;
-	}
-
-	.ctrl-cell .label {
-		position: relative;
-		z-index: 10;
-		font-size: 1rem;
-		font-weight: 700;
-		color: var(--foreground);
-	}
-
-	/* ---- Live skin: length / rate cells are ControlBackground fields in a
-	   1px dark frame (no background wash, no ink-mix frame) with a SOLID value
-	   fill and a medium-weight readout; the muted-track grey rides the
-	   palette's --signal-dim instead of the fixed hsl literal. --cell-ink is
-	   the same ink the Graticule rules mix from, so the fill can go solid
-	   here without touching Graticule. */
+	/* The muted-track grey rides the palette's --signal-dim on the flat
+	   skins instead of the fixed hsl literal. */
 	:global([data-grammar="flat"]) .grid-layout {
 		--permute-dim-ink: var(--signal-dim);
-	}
-	:global([data-grammar="flat"]) .ctrl-cell {
-		background: var(--surface-well);
-		border-color: var(--line-strong);
-	}
-	:global([data-grammar="flat"]) .ctrl-cell .fill {
-		background-color: var(--cell-ink); /* 70% wash → solid */
-	}
-	:global([data-grammar="flat"]) .ctrl-cell .label {
-		font-weight: var(--font-weight-medium);
 	}
 </style>
