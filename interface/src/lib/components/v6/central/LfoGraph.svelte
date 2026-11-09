@@ -26,9 +26,10 @@
    * LfoGraph — an LFO as Live draws it (ADR-514): its wave on a dark
    * display, as many cycles as its rate asks for, as tall as its amount.
    * Up and down sets the amount, left and right the rate, relative to where
-   * the finger lands, so the picture is the LFO's XY. Either may be left
-   * out; then the picture draws it at a middle value and the axis moves
-   * nothing.
+   * the finger lands, so the picture is the LFO's XY, and it wears an XY's
+   * dot at rate across, amount up (2026-11-09, the user's call). Either may
+   * be left out; then the picture draws it at a middle value, the dot sits
+   * mid-axis there, and the axis moves nothing.
    */
   import type { PanelParams } from './views/panel/usePanelParams.svelte';
 
@@ -81,6 +82,16 @@
     return d;
   });
 
+  // The XY's dot: rate across, amount up, inset by its radius so it is
+  // whole at a rail. Only on an interactive graph: a picture is not an XY.
+  const DOT_R = 6;
+  let dot = $derived.by(() => {
+    if (!interactive || w <= 0 || h <= 0) return null;
+    const ux = rate ? Math.max(0, Math.min(1, params.unit(rate) ?? 0.5)) : 0.5;
+    const uy = amount ? Math.max(0, Math.min(1, depth)) : 0.5;
+    return { x: DOT_R + ux * (w - 2 * DOT_R), y: h - DOT_R - uy * (h - 2 * DOT_R) };
+  });
+
   let on = $derived(!sw || params.isOn(sw));
   let drag: { pointer: number; x0: number; y0: number; r?: number; a?: number } | null = null;
   let hot = $state(false);
@@ -127,6 +138,7 @@
     {#if w > 0 && h > 0}
       <line class="axis" x1={PAD} x2={w - PAD} y1={h / 2} y2={h / 2} />
       <path class="wave" class:hot d={path} />
+      {#if dot}<circle class="dot" class:hot cx={dot.x} cy={dot.y} r={hot ? 5.5 : 5} />{/if}
     {/if}
   </svg>
   {#if label}<span class="label">{label}</span>{/if}
@@ -175,6 +187,13 @@
   }
   .wave.hot {
     stroke-width: 2.5;
+  }
+  /* The XY's dot, as DeviceXY draws it: the ink lifted toward white. */
+  .dot {
+    fill: color-mix(in oklab, var(--lfo-ink) 55%, white);
+  }
+  :global([data-grammar="flat"]) .dot {
+    fill: var(--flat-handle);
   }
   .label,
   .readout {
