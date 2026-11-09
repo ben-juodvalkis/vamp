@@ -29,6 +29,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 from typing import Any, Callable, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -47,6 +48,11 @@ OUTPUT_NAME = "Output"
 OUTPUT_RESET_VALUE = 64.0
 _MACRO_COUNT = 8
 _UNNAMED_MACRO = re.compile(r"^Macro \d+$")
+# The surface is built while Live is still exchanging documents, before a set's
+# macros can be trusted (2026-11-08: reads then took a saved 127 for 0, and every
+# reset wrote the 0 back). Nothing counts as the set-load value until this long
+# after the surface started.
+SETTLE_SECONDS = 5.0
 _NAME_WITH_TEMPO = re.compile(r"^(.*?)\s*(\d{2,3})\s*$")
 _TEMPO_MIN = 20
 _TEMPO_MAX = 999
@@ -92,17 +98,29 @@ def _first_device(chain: Any) -> Optional[Any]:
 
 
 class SetlistComponent:
-    def __init__(self, song: Any, emit: Callable[[str, Any], None]):
+    def __init__(
+        self,
+        song: Any,
+        emit: Callable[[str, Any], None],
+        schedule_delayed: Optional[Callable[[int, Callable[[], None]], None]] = None,
+        clock=time.monotonic,
+    ):
         self._song = song
         self._emit = emit
         self._disconnected = False
         # (rack name, parameter index) -> the value it held at set load. A
         # surface instance lives as long as one open set.
         self._baselines = {}
+        self._clock = clock
+        self._started = clock()
         try:
-            self._capture_baselines()
+            self._log_macros("read at startup, not used")
         except Exception as error:
-            logger.exception("setlist baselines: %s", error)
+            logger.exception("setlist startup read: %s", error)
+        if schedule_delayed is not None:
+            # Read once settled whether or not a page ever asks. A tick late
+            # rather than a tick early, since ticks are only roughly 100 ms.
+            schedule_delayed(int(SETTLE_SECONDS * 1000) + 300, self._capture_when_settled)
 
     def disconnect(self) -> None:
         self._disconnected = True
@@ -168,14 +186,39 @@ class SetlistComponent:
                 })
         return pads
 
+    def _settled(self) -> bool:
+        return self._clock() - self._started >= SETTLE_SECONDS
+
+    def _capture_when_settled(self) -> None:
+        if self._disconnected:
+            return
+        try:
+            self._capture_baselines()
+        except Exception as error:
+            logger.exception("setlist baselines: %s", error)
+
+    def _log_macros(self, why: str) -> None:
+        logger.info(
+            "setlist macros (%s): %s", why,
+            {rack.name: [p.value for p in list(rack.parameters)[1:_MACRO_COUNT + 1]]
+             for _, rack in self._effect_racks() if rack.name != OUTPUT_NAME},
+        )
+
     def _capture_baselines(self) -> None:
-        """Record what each pad macro holds the first time it is seen."""
+        """Record what each pad macro holds the first time it is seen once the
+        set has settled. A reset before then leaves the pads alone."""
+        if not self._settled():
+            return
+        added = False
         for _, rack in self._effect_racks():
             if rack.name == OUTPUT_NAME:
                 continue
             for parameter_index, parameter in enumerate(rack.parameters):
-                if 1 <= parameter_index <= _MACRO_COUNT:
-                    self._baselines.setdefault((rack.name, parameter_index), parameter.value)
+                if 1 <= parameter_index <= _MACRO_COUNT and (rack.name, parameter_index) not in self._baselines:
+                    self._baselines[(rack.name, parameter_index)] = parameter.value
+                    added = True
+        if added:
+            self._log_macros("taken as set-load values")
 
     def _reset_controls(self) -> None:
         output = self._output()
@@ -234,6 +277,7 @@ class SetlistComponent:
     def _apply(self, songs: List[Any], song_index: int, sound_index: int) -> None:
         """Turn the chosen song and sound on, then everything else off, in
         one undo step."""
+        self._capture_baselines()
         chosen_song = songs[song_index]
         chosen_rack = self._song_rack(chosen_song)
         chosen_sound = _first_device(self._sound_chains(chosen_song)[sound_index])
@@ -279,10 +323,12 @@ class SetlistComponent:
 
     def handle_param(self, args, source_addr) -> None:
         """A slider or pad move: ``[key, value]``, with the key from the state.
-        Sent at gesture rate, so it does not answer; the poll carries it back."""
-        if self._disconnected or len(args) < 2:
+        Sent at gesture rate, so it does not answer; the poll carries it back.
+        Refused until the set settles, so no move can become a set-load value."""
+        if self._disconnected or len(args) < 2 or not self._settled():
             return
         try:
+            self._capture_baselines()
             self._write_param(str(args[0]), float(args[1]))
         except Exception as error:
             logger.exception("setlist param: %s", error)

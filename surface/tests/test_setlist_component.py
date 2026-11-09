@@ -8,6 +8,7 @@ import json
 import pytest
 
 from components.SetlistComponent import (
+    SETTLE_SECONDS,
     SetlistComponent,
     V3_SETLIST_STATE_ADDRESS,
     split_song_name,
@@ -82,6 +83,9 @@ def effect_racks():
     ]
 
 
+clock = {"now": 0.0}
+
+
 def build():
     """Three songs as the rig's set has them, every rack on and sound off."""
     sounds = {
@@ -98,7 +102,11 @@ def build():
     keys = Track("Keys", [midi_rack, instruments] + effect_racks())
     song = Song([Track("Other", [Device(chains=[Chain("wrong", [Device()])])]), keys])
     sent = []
-    component = SetlistComponent(song=song, emit=lambda a, args: sent.append((a, args)))
+    clock["now"] = 0.0
+    component = SetlistComponent(
+        song=song, emit=lambda a, args: sent.append((a, args)), clock=lambda: clock["now"]
+    )
+    clock["now"] = SETTLE_SECONDS
     return song, songs, component, sent
 
 
@@ -315,4 +323,62 @@ def test_reading_state_never_moves_a_baseline():
     component.handle_param(["4/1", 5.0], None)
     component.handle_get([], None)
     component.handle_select_song([1], None)
+    assert mfx(song, 1).value == 127.0
+
+
+def test_values_read_before_the_set_settles_are_never_used():
+    """2026-11-08: the surface starts mid document exchange, read zeros, and
+    every reset wrote those zeros over the set's real values."""
+    song, _, component, sent = build()
+    clock["now"] = 0.0
+    component = SetlistComponent(
+        song=song, emit=lambda a, args: sent.append((a, args)), clock=lambda: clock["now"]
+    )
+    mfx(song, 1).value = 0.0
+    component.handle_get([], None)
+    clock["now"] = SETTLE_SECONDS
+    mfx(song, 1).value = 127.0
+    component.handle_get([], None)
+    component.handle_param(["4/1", 5.0], None)
+    component.handle_select_song([1], None)
+    assert mfx(song, 1).value == 127.0
+
+
+def test_a_switch_before_the_set_settles_leaves_the_pads_alone():
+    song, _, component, sent = build()
+    clock["now"] = 0.0
+    component = SetlistComponent(
+        song=song, emit=lambda a, args: sent.append((a, args)), clock=lambda: clock["now"]
+    )
+    mfx(song, 1).value = 5.0
+    component.handle_select_song([1], None)
+    assert mfx(song, 1).value == 5.0
+    assert output_param(song).value == 64.0
+
+
+def test_the_set_load_read_happens_on_its_own_with_no_page_open():
+    song, _, _, sent = build()
+    clock["now"] = 0.0
+    scheduled = []
+    component = SetlistComponent(
+        song=song,
+        emit=lambda a, args: sent.append((a, args)),
+        schedule_delayed=lambda ms, fn: scheduled.append((ms, fn)),
+        clock=lambda: clock["now"],
+    )
+    assert scheduled[0][0] > SETTLE_SECONDS * 1000
+    clock["now"] = SETTLE_SECONDS
+    scheduled[0][1]()
+    mfx(song, 1).value = 5.0
+    component.handle_select_song([1], None)
+    assert mfx(song, 1).value == 127.0
+
+
+def test_a_move_before_the_set_settles_is_refused():
+    song, _, _, sent = build()
+    clock["now"] = 0.0
+    component = SetlistComponent(
+        song=song, emit=lambda a, args: sent.append((a, args)), clock=lambda: clock["now"]
+    )
+    component.handle_param(["4/1", 5.0], None)
     assert mfx(song, 1).value == 127.0

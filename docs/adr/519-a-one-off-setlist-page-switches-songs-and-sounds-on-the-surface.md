@@ -51,6 +51,11 @@ A sound change, including one from a song change, returns `Output` to 64 and the
 pads to what they held when the set loaded, as Ben asked. The patch zeroed its
 pads instead. Tapping the sound already on changes nothing.
 
+"When the set loaded" means the first read at least five seconds after the
+surface starts. The surface is built during Live's document exchange; reading
+there went with every macro coming back 0, and resets wrote those zeros over
+the set's real values (2026-11-08). The surface logs both reads.
+
 The controls drag relatively, as the old remote's did: a touch does not jump the
 value. The page has no listeners in Live. It polls, so a macro moved in Live
 shows within about 1.5 s, and nothing can leak or fire at gesture rate.

@@ -1452,6 +1452,7 @@ class LoopingSurface(ControlSurface):
         # Songs and sounds in one nested rack on the Keys track (ADR-519).
         self._setlist_component = SetlistComponent(
             song=self.song, emit=self._transport.send,
+            schedule_delayed=self._schedule_delayed,
         )
         for address, handler in (
             (V3_SETLIST_GET_ADDRESS, self._setlist_component.handle_get),
