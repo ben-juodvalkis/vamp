@@ -263,3 +263,61 @@ final class UsbMuxWatcher {
         }
     }
 }
+
+/// The interfaces the Wi-Fi link must not dial over: an iPad or iPhone on
+/// the cable also shows the Mac a network of its own (USB NCM), with only a
+/// self-assigned 169.254 address. Bonjour finds the iPad's Wi-Fi listener
+/// through it too, and the iPad refuses it there (its listener is Wi-Fi
+/// only), so on 2026-11-09 the "Wi-Fi" dial went over the cable (en15),
+/// was refused, and gave up before trying Wi-Fi: with the cable in, the
+/// Wi-Fi link never came up, and a cable drop left nothing to carry on.
+/// A Mac's own network always has a routable address, so it is never
+/// excluded. Read and updated on the queue it was started on.
+final class CableOnlyInterfaces {
+    private let monitor = NWPathMonitor()
+    private var interfaces: [NWInterface] = []
+
+    init(queue: DispatchQueue) {
+        monitor.pathUpdateHandler = { [weak self] path in
+            self?.interfaces = path.availableInterfaces
+        }
+        monitor.start(queue: queue)
+    }
+
+    deinit { monitor.cancel() }
+
+    /// The interfaces to prohibit now. Call on the monitor's queue.
+    func current() -> [NWInterface] {
+        let names = Self.selfAssignedOnly(Self.ipv4Addresses())
+        return interfaces.filter { names.contains($0.name) }
+    }
+
+    /// Interfaces whose every IPv4 address is link-local (169.254/16).
+    /// One with no IPv4 at all is left alone: nothing says it is a cable.
+    static func selfAssignedOnly(_ addresses: [(name: String, ipv4: String)]) -> Set<String> {
+        var linkLocal = Set<String>()
+        var routable = Set<String>()
+        for (name, ip) in addresses {
+            if ip.hasPrefix("169.254.") { linkLocal.insert(name) } else { routable.insert(name) }
+        }
+        return linkLocal.subtracting(routable)
+    }
+
+    /// Every interface's IPv4 addresses, from getifaddrs.
+    static func ipv4Addresses() -> [(name: String, ipv4: String)] {
+        var head: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&head) == 0, let first = head else { return [] }
+        defer { freeifaddrs(head) }
+        var out: [(name: String, ipv4: String)] = []
+        var cursor: UnsafeMutablePointer<ifaddrs>? = first
+        while let ifa = cursor {
+            defer { cursor = ifa.pointee.ifa_next }
+            guard let sa = ifa.pointee.ifa_addr, sa.pointee.sa_family == UInt8(AF_INET) else { continue }
+            var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+            let ok = getnameinfo(sa, socklen_t(sa.pointee.sa_len), &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST)
+            guard ok == 0 else { continue }
+            out.append((String(cString: ifa.pointee.ifa_name), String(cString: host)))
+        }
+        return out
+    }
+}

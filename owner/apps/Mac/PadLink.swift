@@ -73,11 +73,15 @@ final class PadLink: ObservableObject {
     static let qrLifetime: TimeInterval = 600
     /// Read and written on `queue` only, like the clients that use it.
     private let paired = PairedIPads()
+    /// The iPad's own cable network, which the Wi-Fi dial must not use.
+    private lazy var cableOnly = CableOnlyInterfaces(queue: queue)
 
     init(config: AppConfig) {
         devicePort = config.padDevicePort
         pagePort = config.padPagePort
         watcher = UsbMuxWatcher(queue: queue)
+        // Started now, so its first reading is in before the first dial.
+        _ = cableOnly
 
         startWifiBrowser()
         if ProcessInfo.processInfo.environment["VAMP_LINK_DIRECT"] == "1" {
@@ -179,7 +183,11 @@ final class PadLink: ObservableObject {
         guard qrClient == nil else { return }
         VampLog.line("iPad link: the iPad that scanned the QR code is on Wi-Fi: pairing")
         let client = LinkClient(
-            dial: UsbMux.networkDialer(to: endpoint, using: { .wifiPairing(secret: secret) }),
+            dial: UsbMux.networkDialer(to: endpoint, using: { [cableOnly] in
+                let params = NWParameters.wifiPairing(secret: secret)
+                params.prohibitedInterfaces = cableOnly.current()
+                return params
+            }),
             macPort: pagePort, queue: queue, paired: paired,
             legacyAllowed: { false }, allowPairing: true, fixedCode: secret
         )
@@ -346,7 +354,11 @@ final class PadLink: ObservableObject {
     private func attachWifi(_ id: String, endpoint: NWEndpoint, key: LinkKey) {
         VampLog.line("iPad link: a paired iPad is on Wi-Fi")
         let client = LinkClient(
-            dial: UsbMux.networkDialer(to: endpoint, using: { .wifiLink(key: key) }),
+            dial: UsbMux.networkDialer(to: endpoint, using: { [cableOnly] in
+                let params = NWParameters.wifiLink(key: key)
+                params.prohibitedInterfaces = cableOnly.current()
+                return params
+            }),
             macPort: pagePort, queue: queue, paired: paired,
             legacyAllowed: { false }, allowPairing: false
         )

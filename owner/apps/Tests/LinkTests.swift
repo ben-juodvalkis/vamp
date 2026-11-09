@@ -484,3 +484,22 @@ final class LinkEndToEndTests: XCTestCase {
         listener.cancel()
     }
 }
+
+final class CableOnlyInterfacesTests: XCTestCase {
+    /// The iPad's USB network has only a self-assigned address; the Mac's
+    /// own Wi-Fi and LAN have routable ones and are never excluded.
+    func testOnlyASelfAssignedOnlyInterfaceIsExcluded() {
+        let names = CableOnlyInterfaces.selfAssignedOnly([
+            ("en15", "169.254.252.27"),
+            ("en0", "10.43.159.47"),
+            ("en7", "169.254.3.4"), ("en7", "192.168.50.12"),
+            ("lo0", "127.0.0.1"),
+        ])
+        XCTAssertEqual(names, ["en15"])
+    }
+
+    func testThisMacsInterfacesAreRead() {
+        let found = CableOnlyInterfaces.ipv4Addresses()
+        XCTAssertTrue(found.contains { $0.name == "lo0" && $0.ipv4 == "127.0.0.1" })
+    }
+}
