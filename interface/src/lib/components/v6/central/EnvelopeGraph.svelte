@@ -75,9 +75,10 @@
      * Small Attack, Decay, Sustain and Release knobs under the picture (Ben,
      * 2026-11-07: the graph alone hides the numbers a knob shows at a glance);
      * `side` stands them two by two beside it, lettered; `short` keeps them
-     * under it, lettered, for a picture too narrow for the words.
+     * under it, lettered, for a picture too narrow for the words; `beside`
+     * stands them two by two beside it with their whole names.
      */
-    knobs?: boolean | 'side' | 'short';
+    knobs?: boolean | 'side' | 'short' | 'beside';
   }
 
   let { params, names, ink, sw, label, knobs = true }: Props = $props();
@@ -198,7 +199,7 @@
   const gradientId = `env-fill-${Math.random().toString(36).slice(2, 8)}`;
 </script>
 
-<div class="env-wrap" class:with-knobs={!!knobs} class:side={knobs === 'side'}>
+<div class="env-wrap" class:with-knobs={!!knobs} class:side={knobs === 'side' || knobs === 'beside'}>
 <div class="graph-cell" bind:clientWidth={cw} bind:clientHeight={ch}>
 <div
   class="env-graph"

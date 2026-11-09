@@ -71,7 +71,7 @@
 	);
 	const boardTile = (id: string) => panel.board?.rows.flatMap((r) => r.tiles).find((t) => t.id === id);
 	/** A tile's header line: only where a section has a name of its own, or columns to name (a matrix). */
-	const tileHeads = (t: PanelBoardTile) => t.sections.some((s) => s.kind !== 'group' || (!!s.group.title && s.group.title !== t.title));
+	const tileHeads = (t: PanelBoardTile) => t.sections.some((s) => (s.kind === 'group' ? !!s.group.title && s.group.title !== t.title : s.kind === 'matrix' || !!s.title));
 	/** The tile's bar switch: its section's on/off, flipped. */
 	function flipSwitch(name: string) {
 		const r = params.range(name);

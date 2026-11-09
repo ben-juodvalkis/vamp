@@ -393,6 +393,13 @@ const OPERATOR_BOARD: PanelBoard = {
 					switchParam: 'LFO On',
 					sections: [
 						{
+							// Its wave as Live draws it (ADR-514), rate across and amount up.
+							kind: 'slot',
+							slot: 'lfo',
+							columns: 2,
+							params: ['LFO On', 'LFO Type', 'LFO Range', 'LFO Rate', 'LFO Sync', 'LFO Amt']
+						},
+						{
 							kind: 'group',
 							stack: 3,
 							group: {

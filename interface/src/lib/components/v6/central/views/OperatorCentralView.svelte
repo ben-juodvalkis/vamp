@@ -28,6 +28,7 @@
   import { operatorOscStore } from '$lib/stores/v6/operatorOscStore.svelte';
   import { OPERATOR_ENVS, operatorEnvelope } from './panel/operatorPanel';
   import EnvelopeGraph from '../EnvelopeGraph.svelte';
+  import LfoGraph from '../LfoGraph.svelte';
   import ScrubTabs from '../../device-panel/ScrubTabs.svelte';
 
   interface Props {
@@ -71,6 +72,11 @@
   });
   let env = $derived(OPERATOR_ENVS[envShown]);
 
+  // The board's LFO: its wave by Live's list, its rate the one its range uses.
+  const LFO_SHAPES = ['Sine', 'Square', 'Tri', 'Saw Up', 'Saw Dn', 'S&H', 'Noise'];
+  let lfoShape = $derived(LFO_SHAPES[Math.round(params.raw('LFO Type') ?? 0)]);
+  let lfoRate = $derived(Math.round(params.raw('LFO Range') ?? 0) === 2 ? 'LFO Sync' : 'LFO Rate');
+
   function handleFilterXY(x: number, y: number) {
     params.writeUnit('Filter Freq', x, 'Filter On');
     params.writeUnit('Filter Res', y, 'Filter On');
@@ -95,6 +101,10 @@
     </div>
   {/snippet}
 
+  {#snippet lfoPanel()}
+    <LfoGraph {params} shape={lfoShape} rate={lfoRate} amount="LFO Amt" ink={operatorInk.primary} sw="LFO On" />
+  {/snippet}
+
   {#snippet envelopePanel()}
     <div class="op-env" data-operator-envelope={env.title}>
       <div class="op-env-tabs">
@@ -111,7 +121,7 @@
         />
       </div>
       <div class="op-env-graph">
-        <EnvelopeGraph {params} names={operatorEnvelope(env)} ink={operatorInk.primary} sw={env.on} knobs="side" />
+        <EnvelopeGraph {params} names={operatorEnvelope(env)} ink={operatorInk.primary} sw={env.on} knobs="beside" />
       </div>
     </div>
   {/snippet}
@@ -122,7 +132,7 @@
       panel={OPERATOR_PANEL}
       {params}
       color={operatorInk}
-      slots={{ filter: filterPad, envelope: envelopePanel }}
+      slots={{ filter: filterPad, envelope: envelopePanel, lfo: lfoPanel }}
       board={centralDisplayStore.expanded}
       tabOf={(region) => (region === 0 ? operatorOscStore.oscOf(device.devicePath) : undefined)}
     />
