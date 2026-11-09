@@ -61,6 +61,8 @@ let onlineHandler: (() => void) | null = null;
 let offlineHandler: (() => void) | null = null;
 let errorHandler: ((e: ErrorEvent) => void) | null = null;
 let rejectionHandler: ((e: PromiseRejectionEvent) => void) | null = null;
+let inboundGapHandler: ((e: Event) => void) | null = null;
+let slowFrameHandler: ((e: Event) => void) | null = null;
 
 // Stacks are the whole point of capturing these, but a runaway one
 // shouldn't flood the OSC wire or bridge.log.
@@ -240,6 +242,19 @@ export function startClientWatchdog(): void {
         }
     }, 1000);
 
+    // The socket's own timing (WebSocketConnection): a stretch with no
+    // frames while visible, and a frame the page took long to handle.
+    inboundGapHandler = (e: Event) => {
+        const detail = (e as CustomEvent).detail ?? {};
+        report('warn', 'ws-inbound-gap', {
+            ...detail,
+            sinceLastPaintMs: lastRafTs ? Math.round(performance.now() - lastRafTs) : null
+        });
+    };
+    slowFrameHandler = (e: Event) => report('warn', 'ws-slow-frame', (e as CustomEvent).detail);
+    window.addEventListener('ws-inbound-gap', inboundGapHandler);
+    window.addEventListener('ws-slow-frame', slowFrameHandler);
+
     // rAF heartbeat.
     lastRafTs = 0;
     rafStallActive = false;
@@ -247,6 +262,8 @@ export function startClientWatchdog(): void {
 
     report('info', 'watchdog-started', {
         ua: navigator.userAgent,
+        // iPadOS sends a Mac user agent; touch points tell them apart.
+        touch: navigator.maxTouchPoints ?? 0,
         visibility: document.visibilityState
     });
 }
@@ -256,6 +273,14 @@ export function stopClientWatchdog(): void {
     if (rafHandle !== null) {
         cancelAnimationFrame(rafHandle);
         rafHandle = null;
+    }
+    if (inboundGapHandler) {
+        window.removeEventListener('ws-inbound-gap', inboundGapHandler);
+        inboundGapHandler = null;
+    }
+    if (slowFrameHandler) {
+        window.removeEventListener('ws-slow-frame', slowFrameHandler);
+        slowFrameHandler = null;
     }
     if (visibilityHandler) {
         document.removeEventListener('visibilitychange', visibilityHandler);

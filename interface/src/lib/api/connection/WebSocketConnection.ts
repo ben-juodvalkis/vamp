@@ -439,6 +439,39 @@ function dispatchInbound(message: { address?: string; args?: OSCArg[] }): void {
 	}
 }
 
+// The page's side of a freeze (2026-11-09: the iPad froze while Live and
+// the bridge kept sending). A visible page hears ~50 frames a second, so
+// a gap past INBOUND_GAP_MS means the wire stalled before the page; a
+// frame that takes past SLOW_FRAME_MS to handle means the page stalled
+// on it. Both go to clientWatchdog as window events (no import, so no
+// cycle with simpleClient), which reports them to bridge.log.
+const INBOUND_GAP_MS = 1500;
+const SLOW_FRAME_MS = 250;
+
+function noteInboundTiming(
+	gapMs: number,
+	handleMs: number,
+	data: unknown,
+	addresses: string[]
+): void {
+	if (typeof window === 'undefined') return;
+	const visible = typeof document === 'undefined' || document.visibilityState === 'visible';
+	if (visible && gapMs > INBOUND_GAP_MS) {
+		window.dispatchEvent(new CustomEvent('ws-inbound-gap', { detail: { gapMs } }));
+	}
+	if (handleMs > SLOW_FRAME_MS) {
+		const counts: Record<string, number> = {};
+		for (const a of addresses) counts[a] = (counts[a] ?? 0) + 1;
+		window.dispatchEvent(new CustomEvent('ws-slow-frame', {
+			detail: {
+				handleMs: Math.round(handleMs),
+				bytes: typeof data === 'string' ? data.length : 0,
+				addresses: counts
+			}
+		}));
+	}
+}
+
 /**
  * Setup WebSocket event handlers
  */
@@ -446,7 +479,11 @@ function setupWebSocketHandlers(websocket: WebSocket): void {
 	websocket.onmessage = (event) => {
 		// Any inbound frame counts as liveness — it means the socket
 		// is flowing both directions and the bridge is healthy.
-		lastInboundTs = Date.now();
+		const now = Date.now();
+		const inboundGapMs = lastInboundTs > 0 ? now - lastInboundTs : 0;
+		lastInboundTs = now;
+		const started = performance.now();
+		let addresses: string[] = [];
 
 		try {
 			const parsed = JSON.parse(event.data);
@@ -459,13 +496,15 @@ function setupWebSocketHandlers(websocket: WebSocket): void {
 				for (const inner of parsed.messages) {
 					if (inner) dispatchInbound(inner);
 				}
-				return;
+				addresses = parsed.messages.map((m: { address?: string }) => m?.address ?? '');
+			} else {
+				dispatchInbound(parsed);
+				addresses = [parsed?.address ?? ''];
 			}
-
-			dispatchInbound(parsed);
 		} catch (error) {
 			logger.error('Message parse error', { error });
 		}
+		noteInboundTiming(inboundGapMs, performance.now() - started, event.data, addresses);
 	};
 
 	websocket.onclose = () => {
