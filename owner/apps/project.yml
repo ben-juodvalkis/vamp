@@ -117,8 +117,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.benjuodvalkis.vamp.mac
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         PRODUCT_NAME: Vamp
-        MARKETING_VERSION: "1.4"
-        CURRENT_PROJECT_VERSION: "5"
+        MARKETING_VERSION: "1.5"
+        CURRENT_PROJECT_VERSION: "6"
         SPARKLE_PUBLIC_KEY: ""
         # Run locally, unsandboxed: it opens usbmuxd's socket and reads the
         # repo's config, neither of which a sandboxed app may.
