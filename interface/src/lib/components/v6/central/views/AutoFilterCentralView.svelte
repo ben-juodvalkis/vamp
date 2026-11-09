@@ -62,18 +62,11 @@
 
 	// Drive index 8, Output index 34 (verified against Auto Filter.adv's
 	// automatable-param order, which maps to LOM index - 1; Output is
-	// 0..1, default 1). Drive adds gain as it saturates, so the slider
-	// pulls Output down with it — full drive lands the output at 0.25,
-	// which keeps the level roughly where it started.
+	// 0..1, default 1). Each has its own control: Drive no longer pulls
+	// Output down with it (2026-11-09, the user's call).
 	const DRIVE_INDEX = 8;
 	const OUTPUT_INDEX = 34;
-	const OUTPUT_AT_FULL_DRIVE = 0.25;
-
-	/** Output trim that compensates a given drive amount: 1 → 0.25, linear. */
-	function outputForDrive(driveValue: number): number {
-		const d = Math.min(Math.max(driveValue, 0), 1);
-		return 1 - d * (1 - OUTPUT_AT_FULL_DRIVE);
-	}
+	const OUTPUT_DEFAULT = 1;
 
 	// Dry/Wet index 36, 0..1, ships fully wet. Read off the running device
 	// (2026-09-14), because AutoFilter2 nests a sidechain element, the thing
@@ -147,6 +140,7 @@
 	let drive = $derived(fx.paramValue(DRIVE_INDEX) ?? DRIVE_DEFAULT);
 	let circuit = $derived(fx.paramValue(7) ?? CIRCUIT_DEFAULT);
 	let mix = $derived(fx.paramValue(MIX_INDEX) ?? MIX_DEFAULT);
+	let output = $derived(fx.paramValue(OUTPUT_INDEX) ?? OUTPUT_DEFAULT);
 
 	// LFO X-axis display string from Live's GUI formatter. When the
 	// Time/Sync toggle is in "Sync" mode (lfoSync >= 3) the active
@@ -195,7 +189,7 @@
 <!--
 	One face grid (ADR-510), eight columns of ~108px at 1366 x 1024:
 	  LFO 4 (shapes · Morph · the LFO pad over two) | Filter 3 (types over
-	  two · circuit + slope) | Output 1 (Drive over Mix)
+	  two · circuit + slope) | Output 1 (Drive over Output over Mix)
 	A column holds a large knob (96px + 8, ADR-509), so Morph and Drive
 	draw at their size.
 -->
@@ -342,11 +336,11 @@
 
 	<FaceSection span={1}>
 	{#snippet head()}<PanelEyebrow title="Output" color={fxInk.primary} />{/snippet}
-	<!-- Drive over Mix (Dry/Wet): a knob over a value box. Last because
-	     Mix is the device's last stage (Live's own panel ends on Output,
-	     Soft Clip and Dry/Wet), and Drive, which sets Output, sits over it. -->
+	<!-- Drive over Output over Mix (Dry/Wet): a knob over two value boxes,
+	     in the device's own order (Live's panel ends on Output, Soft Clip
+	     and Dry/Wet). Output is its own control, not tied to Drive. -->
 	<div class="h-full min-h-0 flex flex-col gap-(--face-gutter)">
-		<!-- A large knob and its caption: 104 x 150px (ADR-509); Mix takes the rest. -->
+		<!-- A large knob and its caption: 104 x 150px (ADR-509); Output and Mix share the rest. -->
 		<div class="flex-none h-[9.375rem] min-h-0">
 			<DeviceSlider
 				value={drive}
@@ -360,7 +354,20 @@
 				readout={fx.paramDisplay(DRIVE_INDEX)}
 				onInteraction={(value) => {
 					fx.sendParam(DRIVE_INDEX, value);
-					fx.sendParam(OUTPUT_INDEX, outputForDrive(value));
+				}}
+			/>
+		</div>
+		<div class="flex-1 min-h-0">
+			<DeviceSlider
+				value={output}
+				title="Output"
+				icon="output"
+				orientation="vertical"
+				isGhost={fx.isGhost}
+				color={fxInk}
+				readout={fx.paramDisplay(OUTPUT_INDEX)}
+				onInteraction={(value) => {
+					fx.sendParam(OUTPUT_INDEX, value);
 				}}
 			/>
 		</div>
