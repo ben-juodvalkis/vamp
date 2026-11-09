@@ -55,6 +55,12 @@
     /** A short text drawn in the middle at rest in place of the glyph ("1", "2"). */
     centreMark?: string;
     /**
+     * The value itself, large in the middle at rest and while dragged, in place
+     * of the glyph and the readout (Permute's length and rate, 2026-11-09). Its
+     * type shrinks with its length so "1/16" fits the ring as "8" does.
+     */
+    centreValue?: string;
+    /**
      * Treat `size` as a ceiling: draw the largest size the cell holds at its
      * full diameter (`knobSizeFits`), never a clamped one. For hosts whose
      * cells come from data, not a hand layout: the instrument panels.
@@ -64,7 +70,7 @@
     captionBelow?: boolean;
   }
 
-  let { position, origin, title = '', valueText, readout, icon, dragging = false, ink, steps, size = 'm', caption = true, centreMark, fit = false, captionBelow = false }: Props = $props();
+  let { position, origin, title = '', valueText, readout, icon, dragging = false, ink, steps, size = 'm', caption = true, centreMark, centreValue, fit = false, captionBelow = false }: Props = $props();
 
   let cell = $state<HTMLDivElement>();
   let box = $state({ w: 0, h: 0 });
@@ -128,7 +134,9 @@
       {/if}
       <path class="knob-value" d={arc(zero, angle)} />
     </svg>
-    {#if centreText}
+    {#if centreValue}
+      <span class="knob-centre knob-big" class:len2={centreValue.length === 2} class:len3={centreValue.length === 3} class:len4={centreValue.length >= 4}>{centreValue}</span>
+    {:else if centreText}
       <span class="knob-centre knob-readout">{centreText}</span>
     {:else if centreMark}
       <span class="knob-centre knob-mark" aria-hidden="true">{centreMark}</span>
@@ -240,6 +248,22 @@
     line-height: 1;
     font-variant-numeric: tabular-nums;
   }
+  .knob-big {
+    font-size: 40cqw;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .knob-big.len2 {
+    font-size: 32cqw;
+  }
+  .knob-big.len3 {
+    font-size: 25cqw;
+  }
+  .knob-big.len4 {
+    font-size: 20cqw;
+  }
   .knob-svg {
     display: block;
     width: 100%;
@@ -344,6 +368,7 @@
   }
   :global(.light) .knob-title,
   :global(.light) .knob-readout,
+  :global(.light) .knob-big,
   :global(.light) .knob-icon {
     color: color-mix(in oklab, var(--knob-ink) 55%, var(--foreground));
   }
