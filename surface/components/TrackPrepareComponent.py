@@ -52,9 +52,16 @@ When ``create_audio_track`` returns, Live is still applying the
 ``Default Audio Track.als`` template asynchronously (observed:
 routing/arm writes immediately after create get clobbered when the
 template finalizes). For audio creates the configure step (routing,
-arm) AND the preset load AND the ack are deferred to the next tick
-via ``schedule_delayed(0, …)``, so writes land after Live has
+arm) AND the preset load AND the ack are deferred via
+``schedule_delayed(_AUDIO_SETTLE_MS, …)``, so writes land after Live has
 settled. MIDI creates and reuse paths run inline.
+
+The wait is two ticks (``_AUDIO_SETTLE_MS``), not one. Live sometimes
+runs a one-tick ``schedule_message`` in the same pass it was scheduled
+from: on the rig the finalize then ran 0.2-0.3 ms after the create
+(10:56:03 and 11:11:44 on 2026-11-09) and the 11:11:44 track came up
+without its input; the creates that waited ran 140-216 ms later. Two ticks leaves at least one real tick even when the first is
+eaten.
 
 Permute placement
 -----------------
@@ -141,6 +148,11 @@ NACK_DUPLICATE_FAILED = "duplicate-failed"
 # realistic retransmit windows (a flapping WS reconnect carries at
 # most a handful of inflight messages); the bound is a safety belt
 # against unbounded growth.
+# How long an audio create waits before its routing/arm/load writes, so
+# Live's audio-track template has finished (module docstring, "Audio
+# template settling"). 200 ms is two ticks.
+_AUDIO_SETTLE_MS = 200
+
 _LRU_MAX_ENTRIES = 64
 
 # How long a cached result remains valid for retransmit replay.
@@ -339,7 +351,7 @@ class TrackPrepareComponent:
             # uses (see its `_configure_held_track` deferral).
             try:
                 self._schedule_delayed(
-                    0,
+                    _AUDIO_SETTLE_MS,
                     lambda t=track, i=target_index, p=preset_path, r=request_id, sr=(source, rel):
                         self._finalize_audio_create(t, i, p, r, sr),
                 )

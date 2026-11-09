@@ -859,7 +859,7 @@ def test_new_target_audio_creates_and_defers_like_any_create(scheduler):
 
 def test_audio_create_defers_finalize_via_scheduler(scheduler):
     """create_audio_track returns immediately; routing/arm/load/ack
-    must wait one tick for Live's audio-track template to settle."""
+    must wait for Live's audio-track template to settle."""
     t0 = StubTrack(has_midi_input=False)
     song = StubSong(tracks=[t0], selected=t0)  # selected==index 0 → create
     device_load = StubDeviceLoad()
@@ -883,6 +883,20 @@ def test_audio_create_defers_finalize_via_scheduler(scheduler):
     assert len(acks) == 1
     assert acks[0] == ("req-7", "tracks/1", 1)
     assert [c[1] for c in device_load.calls] == ["/path/to/preset.adv", SEQUENCER_PATH]
+
+
+def test_audio_create_waits_at_least_two_ticks(scheduler):
+    """Live sometimes runs a one-tick schedule in the same pass (the rig,
+    2026-11-09: finalize 0.2 ms after the create, input lost), so the
+    wait must span two ticks to leave one real tick for the template."""
+    t0 = StubTrack(has_midi_input=False)
+    song = StubSong(tracks=[t0], selected=t0)
+    component, _ = make_component(song, scheduler=scheduler)
+    component.handle_prepare(args=("req-9", "audio", ""), source_addr=None)
+    assert len(scheduler.pending) == 1
+    delay_ms, _ = scheduler.pending[0]
+    ticks = max(1, (int(delay_ms) + 99) // 100)  # LoopingSurface._schedule_delayed
+    assert ticks >= 2
 
 
 def test_audio_create_arms_track(scheduler):
