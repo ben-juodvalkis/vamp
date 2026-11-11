@@ -76,13 +76,14 @@ describe('central view full screen', () => {
 		expect(host(container).classList.contains('central-expanded')).toBe(true);
 	});
 
-	it('the clip view at full screen shows controls and editor together, without the toggle (ADR-526)', async () => {
+	it('the clip view is its controls in the stack and adds the note editor at full screen (ADR-526, ADR-528)', async () => {
 		centralDisplayStore.setView('clip');
 		const { container } = render(MiddlePanelV6);
 		// The view is lazy-loaded: wait for its root.
 		await vi.waitFor(() => expect(container.querySelector('.clip-central-root')).not.toBeNull());
-		expect(container.querySelector('.editor-toggle')).not.toBeNull();
+		expect(container.querySelector('.clip-central-root .outer')).not.toBeNull();
 		expect(container.querySelector('[data-clip-combo]')).toBeNull();
+		expect(container.querySelector('[aria-label="Clip editor"], .clip-editor')).toBeNull();
 
 		await pressIcon(container);
 		const combo = container.querySelector('[data-clip-combo]');
@@ -91,11 +92,10 @@ describe('central view full screen', () => {
 		expect(combo!.querySelector('.combo-editor')!.childElementCount).toBeGreaterThan(0);
 		// The right sidebar stays showing beside it (ADR-527).
 		expect(host(container).classList.contains('keep-right')).toBe(true);
-		expect(container.querySelector('.editor-toggle')).toBeNull();
 
 		await pressIcon(container);
 		expect(container.querySelector('[data-clip-combo]')).toBeNull();
-		expect(container.querySelector('.editor-toggle')).not.toBeNull();
+		expect(container.querySelector('.clip-central-root .outer')).not.toBeNull();
 	});
 
 	it('an expanded board still covers the right sidebar (ADR-527 is the clip view only)', async () => {

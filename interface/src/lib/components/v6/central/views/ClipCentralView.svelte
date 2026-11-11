@@ -25,9 +25,6 @@ import { logger } from '$lib/utils/logger';
 	import { browser } from '$app/environment';
 	import { onDestroy } from 'svelte';
 	import { meterStore } from '$lib/stores/v3/meters.svelte';
-	import Pencil from '@lucide/svelte/icons/pencil';
-	import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
-	import { clipEditorStore } from '$lib/stores/v6/clipEditorStore.svelte';
 	import { v3Store } from '$lib/stores/v3/normalized.svelte';
 	import { rgbToHex } from '$lib/utils/formatters/trackFormatters';
 	import { selectedTrackInk, selectedTrackScheme } from '$lib/utils/selectedTrackInk';
@@ -42,7 +39,6 @@ import { logger } from '$lib/utils/logger';
 	import SectionDivider from '../SectionDivider.svelte';
 	import { fitText } from '$lib/utils/fitText';
 
-	let editorActive = $derived(clipEditorStore.active);
 	// Full screen shows controls and editor together (ADR-526).
 	let expanded = $derived(centralDisplayStore.expanded);
 	let toolbarHost = $state<HTMLElement | null>(null);
@@ -377,30 +373,11 @@ import { logger } from '$lib/utils/logger';
 </script>
 
 <!--
-	Manual device↔clip-editor toggle (clip-view-mirror decision 8):
-	the clip central area shows EITHER the editor canvas OR the button
-	rail, never both, in the stack. Focusing a clip never auto-switches;
-	the user taps the toggle. The toggle chip floats top-right in both
-	modes, beside the frame's full-screen icon (ADR-511). At full screen
-	both show, controls over editor, and the toggle hides (ADR-526).
+	In the stack the clip view is its controls alone; the note editor is
+	the full screen's, under the controls in one strip (ADR-528, which
+	retired the pencil that switched the stack between the two).
 -->
 <div class="clip-central-root h-full w-full relative" style="--clip-track-wash: {trackWash}; --clip-track-tint: {trackTint};">
-	{#if !expanded}
-		<button
-			class="editor-toggle"
-			class:active={editorActive}
-			use:press={{ onPress: () => clipEditorStore.toggle() }}
-			title={editorActive ? 'Show clip controls' : 'Show clip editor'}
-			aria-label={editorActive ? 'Show clip controls' : 'Show clip editor'}
-		>
-			{#if editorActive}
-				<SlidersHorizontal class="w-4 h-4" />
-			{:else}
-				<Pencil class="w-4 h-4" />
-			{/if}
-		</button>
-	{/if}
-
 	{#snippet controls()}
 
 <!--
@@ -740,8 +717,8 @@ import { logger } from '$lib/utils/logger';
 </div>
 	{/snippet}
 
-	<!-- Full screen (ADR-526): the two halves at once, the controls at
-	     their stack height over the note editor, so no toggle is needed. -->
+	<!-- Full screen (ADR-526): the controls in one strip over the note
+	     editor, the only place the editor is drawn (ADR-528). -->
 	{#if expanded}
 		<div class="clip-combo h-full w-full" data-clip-combo>
 			<div class="combo-top">
@@ -754,12 +731,6 @@ import { logger } from '$lib/utils/logger';
 				<ClipEditorView color={trackColor} toolbarTarget={toolbarHost} />
 			</div>
 		</div>
-	{:else if editorActive}
-		<!-- Same inset as every other central view; without it the editor
-		     ran to the panel's edges. -->
-		<div class="editor-full h-full w-full p-(--central-inset)">
-			<ClipEditorView color={trackColor} />
-		</div>
 	{:else}
 		{@render controls()}
 	{/if}
@@ -769,36 +740,6 @@ import { logger } from '$lib/utils/logger';
 	.clip-central-root {
 		min-height: 0;
 		background: var(--clip-track-wash); /* faint track wash (lifted off inline) */
-	}
-
-	/* Left of the frame's full-screen icon (ADR-511), whose 44px touch box
-	   holds the corner: the two read as a pair along the top edge. */
-	.editor-toggle {
-		position: absolute;
-		top: 6px;
-		right: calc(var(--height-touch) + 4px);
-		z-index: 20;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 30px;
-		height: 30px;
-		border-radius: var(--radius-sm);
-		border: 1px solid color-mix(in srgb, var(--foreground), transparent 70%);
-		background: color-mix(in srgb, var(--background), transparent 10%);
-		color: var(--muted-foreground);
-		touch-action: manipulation;
-		cursor: pointer;
-		transition: background-color 0.15s, border-color 0.15s, color 0.15s;
-	}
-	.editor-toggle:hover {
-		color: var(--foreground);
-		border-color: color-mix(in srgb, var(--foreground), transparent 40%);
-	}
-	.editor-toggle.active {
-		color: var(--editor-accent);
-		border-color: var(--editor-accent);
-		background: color-mix(in oklab, var(--editor-accent) 12%, transparent);
 	}
 
 	/* Equal columns at fixed positions (audio adds Pitch's), plus
@@ -841,8 +782,6 @@ import { logger } from '$lib/utils/logger';
 	.outer.audio .col-pitch { grid-column: 7; }
 	.outer.audio .col-2 { grid-column: 8; }
 	.outer.audio .col-1 { grid-column: 9; }
-
-	.editor-full { position: relative; min-width: 0; min-height: 0; }
 
 	/* Full screen (ADR-526): the controls in one strip across the top, the
 	   note editor's toolbar at its right end (ADR-527), the note editor
@@ -1006,17 +945,6 @@ import { logger } from '$lib/utils/logger';
 	/* Buttons are framed in their own glyph colour, bright, all the way
 	   round — what tells them from a slider, which has no frame of its own
 	   ink. Disabled dims the frame with the glyph; ON keeps its solid fill. */
-	:global([data-grammar="flat"]) .editor-toggle {
-		border-radius: 2px;
-		border-color: var(--button-frame);
-		background: var(--surface-well);
-		color: var(--foreground);
-	}
-	:global([data-grammar="flat"]) .editor-toggle.active {
-		background: var(--phosphor);
-		border-color: var(--phosphor);
-		color: var(--flat-on-fg);
-	}
 	:global([data-grammar="flat"]) .btn {
 		border-radius: 2px;
 		width: 100%;
@@ -1057,8 +985,7 @@ import { logger } from '$lib/utils/logger';
 	}
 	/* Light: ON fills sit at ~1:1 luminance against the light ladder, so the
 	   frame stays dark. */
-	:global(.light[data-grammar="flat"]) .clip-switch.active,
-	:global(.light[data-grammar="flat"]) .editor-toggle.active {
+	:global(.light[data-grammar="flat"]) .clip-switch.active {
 		border-color: var(--line-strong);
 	}
 	:global([data-grammar="flat"]) .clip-switch {

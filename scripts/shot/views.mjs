@@ -625,16 +625,16 @@ export const TOURS = {
 				steps: [selectTrack(3)]
 			},
 			{ name: 'clip-session', view: 'session', description: 'Clip view with CLIPS on — no mini column' },
-			// The pencil's note editor: Fold on (its default) and off. With the
-			// clip grid off it keeps the mini session column on its left.
-			{ name: 'clip-notes', description: 'Note editor (the pencil), Fold on, the mini session column beside it', steps: [{ click: '.editor-toggle' }] },
-			{ name: 'clip-full', description: 'Clip view at full screen: controls over the note editor (ADR-526)', steps: [{ click: '[data-central-expand]' }, { wait: 400 }] },
+			// The note editor is the full screen's (ADR-528): the controls in
+			// one strip over it, the right sidebar beside it (ADR-527). Fold on
+			// (its default) and off.
+			{ name: 'clip-notes', description: 'Clip view at full screen: controls over the note editor, Fold on (ADR-526..528)', steps: [{ click: '[data-central-expand]' }, { wait: 400 }] },
 			{ name: 'clip-audio-full', description: 'Audio clip at full screen: controls over the waveform (ADR-526)', steps: [selectTrack(3), { click: '[data-central-expand]' }, { wait: 400 }] },
 			{
 				name: 'clip-notes-session',
 				view: 'session',
-				description: 'Note editor with CLIPS on — no mini column, the editor full width',
-				steps: [{ click: '.editor-toggle' }]
+				description: 'Note editor at full screen with CLIPS on',
+				steps: [{ click: '[data-central-expand]' }, { wait: 400 }]
 			},
 			// The mini session sits in the right sidebar (ADR-469), where a tap
 			// launches; a hold past 500 ms focuses the clip and opens the Clip
@@ -650,20 +650,20 @@ export const TOURS = {
 				name: 'clip-notes-drums',
 				description: 'Note editor on the Drums track: pad names, the rows in their chain colours',
 				session: { '/looping/v3/clip/focused': ['tracks/0/slots/0/clip'] },
-				// Drums is the selected track, so a Clip tap on its strip is
-				// the editor's toggle (TrackStrip `clipViewUp`).
+				// Drums is the selected track, so a Clip tap on its strip takes
+				// the Clip view to full screen (TrackStrip `clipViewUp`).
 				steps: [selectTrack(0)]
 			},
 			{
 				name: 'clip-notes-drums-solo',
 				description: 'The same, the Ride row soloed by a tap on its name: lit in its own colour',
 				session: { '/looping/v3/clip/focused': ['tracks/0/slots/0/clip'] },
-				steps: [selectTrack(0), { click: '.pitch-gutter .key:has-text("Ride")' }]
+				steps: [selectTrack(0), { wait: 400 }, { click: '.pitch-gutter .key:has-text("Ride")' }]
 			},
 			{
 				name: 'clip-notes-unfolded',
 				description: 'Note editor, Fold off',
-				steps: [{ click: '.editor-toggle' }, { click: '.edit-chip:has-text("Fold")' }]
+				steps: [{ click: '[data-central-expand]' }, { wait: 400 }, { click: '.edit-chip:has-text("Fold")' }]
 			},
 			{ name: 'permute', description: 'Permute (Bass)', steps: [openPermute(1)] },
 			// Touching Q opens it; the tiles are the Mac's own ticks

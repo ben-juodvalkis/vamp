@@ -1,8 +1,8 @@
 <script lang="ts">
   import { press } from '$lib/actions/press';
 	/**
-	 * The MIDI editor's toolbar: a column beside the roll, so the roll
-	 * takes the full height. Own pointer surface, outside the pan/zoom
+	 * The MIDI editor's toolbar, two by two at the right end of the clip
+	 * view's full-screen strip (ADR-527). Own pointer surface, outside the pan/zoom
 	 * canvas. Fold, the snap grid (1/4·1/8·1/16·1/32 and a triplet toggle,
 	 * driving snap, draw length, quantize and the gridlines — UI-chosen,
 	 * not mirrored from Live's grid_quantization, ADR-382) and Quantize.
@@ -11,25 +11,20 @@
 	const GRID_DENOMS = [4, 8, 16, 32] as const;
 
 	interface Props {
-		width: number;
 		fold: boolean;
 		/** The note value of one grid cell (4 = 1/4, 8 = 1/8, …). */
 		gridDenom: number;
 		gridTriplet: boolean;
 		canQuantize: boolean;
 		onQuantize: () => void;
-		/** 'grid': two by two in the clip view's full-screen strip (ADR-527). */
-		layout?: 'column' | 'grid';
 	}
 
 	let {
-		width,
 		fold = $bindable(),
 		gridDenom = $bindable(),
 		gridTriplet = $bindable(),
 		canQuantize,
-		onQuantize,
-		layout = 'column'
+		onQuantize
 	}: Props = $props();
 
 	let gridLabel = $derived(`1/${gridDenom}${gridTriplet ? 'T' : ''}`);
@@ -40,7 +35,7 @@
 	}
 </script>
 
-<div class="edit-toolbar" class:grid-layout={layout === 'grid'} style:width={layout === 'grid' ? undefined : `${width}px`}>
+<div class="edit-toolbar">
 	<button
 		class="edit-chip btn-toggle"
 		class:active={fold}
@@ -50,7 +45,6 @@
 		Fold
 	</button>
 
-	<span class="toolbar-sep"></span>
 
 	<button class="edit-chip grid-chip" use:press={{ onPress: () => cycleGrid() }} title="Snap grid (tap to cycle)">
 		{gridLabel}
@@ -64,7 +58,6 @@
 		Triplet
 	</button>
 
-	<span class="toolbar-sep"></span>
 
 	<button
 		class="edit-chip btn-action"
@@ -77,49 +70,15 @@
 </div>
 
 <style>
-	/* Its own column beside the roll (the canvas stops TOOLBAR_W short of
-	   the right edge), so the roll keeps the full height. Chips share the
-	   height, up to 72px each. There is no 44px floor (ADR-476): the four
-	   need ~242px at it, which a smaller iPad's editor, or the 12.9-inch's
-	   with four sections, does not have, and the floor pushed Quantize out
-	   of the column; a short chip beats a missing one. The top is padded
-	   clear of ClipCentralView's editor-toggle chip, which floats over this
-	   corner. */
+	/* Fold and the grid over Triplet and Quantize, filling the strip's
+	   slot beside the clip controls (ADR-527). */
 	.edit-toolbar {
-		position: absolute;
-		top: 0;
-		right: 0;
-		bottom: 0;
-		display: flex;
-		flex-direction: column;
-		flex-wrap: nowrap;
-		gap: var(--spacing-xs);
-		padding: 32px 0 0 8px;
-		z-index: 20;
-		pointer-events: none; /* chips opt back in; gaps pass through */
-	}
-	.edit-toolbar > * {
-		pointer-events: auto;
-	}
-	/* In the clip view's full-screen strip (ADR-527): Fold and the grid
-	   over Triplet and Quantize, the strip's height, beside the controls. */
-	.edit-toolbar.grid-layout {
-		position: static;
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 		grid-template-rows: repeat(2, minmax(0, 1fr));
+		gap: var(--spacing-xs);
 		width: 100%;
 		height: 100%;
-		padding: 0;
-	}
-	.edit-toolbar.grid-layout .toolbar-sep { display: none; }
-	.edit-toolbar.grid-layout .edit-chip { max-height: none; }
-	.toolbar-sep {
-		height: 1px;
-		flex: none;
-		margin: 3px 0;
-		background: var(--line);
-		pointer-events: none;
 	}
 	/* Not `.grid`: that is Tailwind's display:grid utility, and it pinned
 	   the label to the top of the chip. */
@@ -128,9 +87,7 @@
 		font-variant-numeric: tabular-nums;
 	}
 	.edit-chip {
-		flex: 1 1 0;
 		min-height: 0;
-		max-height: 72px;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -156,9 +113,6 @@
 	/* Flat grammar: chips as control fields — OFF = ControlBackground +
 	   dark frame, ON = solid ChosenDefault with dark text, disabled = the
 	   disabled foreground on the same field (never opacity). */
-	:global([data-grammar="flat"]) .toolbar-sep {
-		background: var(--line-strong);
-	}
 	:global([data-grammar="flat"]) .edit-chip {
 		border-radius: 2px;
 		border-color: var(--button-frame, var(--line-strong));

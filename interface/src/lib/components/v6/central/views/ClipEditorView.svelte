@@ -69,19 +69,17 @@
 	interface Props {
 		/** Track color for note/waveform tinting. */
 		color?: string;
-		/** Where the toolbar sits instead of beside the roll: the clip view's
-		 *  full-screen strip (ADR-527). The roll takes its width back. */
+		/** Where the MIDI toolbar is drawn: the clip view's full-screen
+		 *  strip (ADR-527, ADR-528). Until it exists there is no toolbar. */
 		toolbarTarget?: HTMLElement | null;
 	}
 
 	let { color, toolbarTarget = null }: Props = $props();
-	let toolbarOut = $derived(!!toolbarTarget);
 
 	const PITCH_AXIS_W = 36; // piano-key gutter width (px)
 	const DRUM_PITCH_AXIS_W = 80; // wide enough for a pad's name
 	const TIME_AXIS_H = 18; // bar/beat ruler height (px)
 	const VELOCITY_LANE_H = 56; // velocity-lane strip height (px, MIDI only)
-	const TOOLBAR_W = 96; // MIDI edit-toolbar column beside the roll (px), so the roll keeps the full height
 
 	const clip = useFocusedClip();
 	const beginGesture = createGestures();
@@ -788,7 +786,6 @@
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 		<div
 			class="canvas-wrap"
-			style:right={isMidi && !toolbarOut ? `${TOOLBAR_W}px` : undefined}
 			bind:this={containerRef}
 			role="application"
 			aria-label="Clip editor"
@@ -969,11 +966,9 @@
 			{/if}
 		</div>
 
-		{#if isMidi}
+		{#if isMidi && toolbarTarget}
 			<div class="toolbar-host" use:portal={toolbarTarget}>
 				<EditToolbar
-					width={TOOLBAR_W}
-					layout={toolbarOut ? 'grid' : 'column'}
 					bind:fold
 					bind:gridDenom
 					bind:gridTriplet
@@ -993,8 +988,7 @@
 		background: var(--surface-well);
 	}
 
-	/* Beside the roll it is nothing of its own (the toolbar positions
-	   against .clip-editor); in the full-screen strip it fills its slot. */
+	/* Nothing of its own: the toolbar fills the strip's slot. */
 	.toolbar-host { display: contents; }
 
 	.canvas-wrap {

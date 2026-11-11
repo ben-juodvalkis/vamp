@@ -18,7 +18,7 @@ vi.mock('$lib/utils/logger', () => ({
 import { render, cleanup } from '@testing-library/svelte';
 import { SvelteMap } from 'svelte/reactivity';
 import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
-import { clipEditorStore } from '$lib/stores/v6/clipEditorStore.svelte';
+
 import { session } from '$lib/stores/session.svelte';
 import {
 	_resetForTests,
@@ -91,7 +91,7 @@ function tapClipSection(container: HTMLElement): void {
 
 beforeEach(() => {
 	_resetForTests();
-	clipEditorStore.set(false);
+	centralDisplayStore.setExpanded(false);
 	session.selectTrackOptimistically(0);
 	centralDisplayStore.setView('permute', undefined, null, 'Permute');
 	replaceTree(1, [track('midi', [])]);
@@ -103,27 +103,27 @@ afterEach(() => {
 });
 
 describe('TrackStrip — tapping the clip section', () => {
-	it('first tap opens the Clip view and leaves the editor as it was', async () => {
+	it('first tap opens the Clip view and leaves it in the stack', async () => {
 		const { container } = render(TrackStrip, { props: { trackIndex: TRACK_INDEX } });
 
 		tapClipSection(container);
 
 		await vi.waitFor(() => expect(centralDisplayStore.view.type).toBe('clip'));
 		expect(session.selectedTrackIndex).toBe(TRACK_INDEX);
-		expect(clipEditorStore.active).toBe(false);
+		expect(centralDisplayStore.expanded).toBe(false);
 	});
 
-	it('each further tap flips controls and editor', async () => {
+	it('each further tap takes it to full screen and back (ADR-528)', async () => {
 		const { container } = render(TrackStrip, { props: { trackIndex: TRACK_INDEX } });
 		tapClipSection(container);
 		await vi.waitFor(() => expect(centralDisplayStore.view.type).toBe('clip'));
 
 		tapClipSection(container);
-		await vi.waitFor(() => expect(clipEditorStore.active).toBe(true));
+		await vi.waitFor(() => expect(centralDisplayStore.expanded).toBe(true));
 		expect(centralDisplayStore.view.type).toBe('clip');
 
 		tapClipSection(container);
-		await vi.waitFor(() => expect(clipEditorStore.active).toBe(false));
+		await vi.waitFor(() => expect(centralDisplayStore.expanded).toBe(false));
 		expect(centralDisplayStore.view.type).toBe('clip');
 	});
 
@@ -135,6 +135,6 @@ describe('TrackStrip — tapping the clip section', () => {
 
 		await vi.waitFor(() => expect(session.selectedTrackIndex).toBe(TRACK_INDEX));
 		expect(centralDisplayStore.view.type).toBe('clip');
-		expect(clipEditorStore.active).toBe(false);
+		expect(centralDisplayStore.expanded).toBe(false);
 	});
 });

@@ -240,12 +240,6 @@ cells: **4 sections → 4 scene rows, 3 → 6, 2 → 8**. The mapping is
 the one derived `visibleCount`, so they cannot disagree. Row pitch stays
 ~48–56px on a 1024px-tall iPad across every configuration.
 
-One automatic condition composes with these: opening the clip editor
-(`clipEditorStore.active`) turns `showCentralView` **on** if it is off,
-so the editor is visible when it opens. It is **edge-triggered on the
-open** — hiding the section again while the editor is still open stands,
-and closing the editor never turns anything back on.
-
 ---
 
 The getters are handed to the gated components as callables, so they

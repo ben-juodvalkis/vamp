@@ -892,10 +892,10 @@ export const SCENARIOS = {
 			},
 			{
 				at: '68.1',
-				box: T.area('.editor-toggle'),
+				box: T.area('[data-central-expand]'),
 				boxLabel: 'Notes',
-				tap: T.area('.editor-toggle'),
-				caption: "The pencil opens the note editor.",
+				tap: T.area('[data-central-expand]'),
+				caption: "Full screen opens the note editor.",
 				note: "Tap to add a note. Tap a note to delete it.",
 				live: LIVE.detail('The same clip, in Live')
 			},
@@ -911,7 +911,7 @@ export const SCENARIOS = {
 				tap: T.area('[aria-label="MIDI note"]'),
 				caption: "Delete a note."
 			},
-			{ at: '71.1', box: T.area('.editor-toggle'), boxLabel: 'Notes', tap: T.area('.editor-toggle'), caption: 'Tap the pencil again to close the editor.', note: null },
+			{ at: '71.1', box: T.area('[data-central-expand]'), boxLabel: 'Notes', tap: T.area('[data-central-expand]'), caption: 'Tap it again to close the editor.', note: null },
 			{
 				at: '72.1',
 				box: T.gridSlot(2, 0, 'action'),
@@ -1610,10 +1610,10 @@ export const SCENARIOS = {
 			},
 			{
 				at: '19.3',
-				box: T.area('.editor-toggle'),
+				box: T.area('[data-central-expand]'),
 				boxLabel: 'Notes',
-				tap: T.area('.editor-toggle'),
-				caption: "The pencil opens the clip's notes.",
+				tap: T.area('[data-central-expand]'),
+				caption: "Full screen opens the clip's notes.",
 				note: "The same notes as Live's clip view."
 			},
 			{ at: '21.2', box: EDITCHIP('Fold'), boxLabel: 'Fold', caption: 'Fold shows only the pitches the clip plays.', note: 'It is on when the editor opens. Pinch to zoom.' },
@@ -1666,7 +1666,7 @@ export const SCENARIOS = {
 				note: null,
 				drag: { target: T.area('[aria-label="Note velocity"]'), path: [[0.5, 0.5], [0.5, 1.4]], beats: 2 }
 			},
-			{ at: '32.2', box: T.area('.editor-toggle'), boxLabel: 'Notes', tap: T.area('.editor-toggle'), caption: 'Tap the pencil again to go back to the clip tools.', note: null },
+			{ at: '32.2', box: T.area('[data-central-expand]'), boxLabel: 'Notes', tap: T.area('[data-central-expand]'), caption: 'Tap it again to go back to the clip tools.', note: null },
 			{ at: '33.1', box: null }
 		],
 		end: '33.3',
