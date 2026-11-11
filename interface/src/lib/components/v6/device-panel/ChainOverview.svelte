@@ -14,7 +14,9 @@
    * Each cell says which tile controls it, when one does, so the grid's
    * choice is visible here too.
    *
-   * The power button in a cell's corner turns the device on and off
+   * A tap on a cell's header bar turns the device on and off (Device On,
+   * the user, 2026-11-11, as a tap on a strip's name mutes it); a drag
+   * from the header still reorders.
    * (Device On, parameter 0). A cell dragged moves the device in Live's
    * chain (`device/move`): the cell rides the finger, the others slide
    * aside to show where it will land, and the new order holds after the
@@ -52,7 +54,6 @@
    */
   import Box from '@lucide/svelte/icons/box';
   import Plug from '@lucide/svelte/icons/plug';
-  import Power from '@lucide/svelte/icons/power';
   import Plus from '@lucide/svelte/icons/plus';
   import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
   import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
@@ -573,9 +574,12 @@
   // press's own target — Svelte delegates the tiles' pointer handlers to
   // the root, so stopping the event on the way up would starve them.
   let pressInControl = false;
+  /** The press landed on the header bar: its tap is Device On. */
+  let pressInHead = false;
   function pressDown(cell: Cell, info: DragInfo) {
     const target = info.event?.target;
     pressInControl = target instanceof Element && target.closest('.cell-control') !== null;
+    pressInHead = target instanceof Element && target.closest('.cell-head') !== null;
     if (pressInControl && cell.presetKey) fxChainStore.pick(pickScope, cell.presetKey, cell.device.devicePath);
   }
 
@@ -584,7 +588,7 @@
    * a tap on the Auto Filter's XY did nothing). The XY counts a press as its
    * own tap only under 200 ms and 5 px, which a finger on the iPad often
    * is not; the cell's tap has no time limit and a touch's slop. Every
-   * control (the user, 2026-11-10: anywhere on a cell but its power
+   * control (the user, 2026-11-10: anywhere on a cell but its header
    * button): Permute's steps toggle and open, the MIDI wheels move and
    * open, a Drum Rack's Trnsp opens the Drum Rack view. (A kit's face was
    * its pads until 2026-11-05, whose tap was the pad's alone.)
@@ -738,18 +742,6 @@
         </span>
         <span class="head-end">
         {#if cell.kind === 'instrument' && glance.instrumentViewType === 'operator'}<OperatorHeadAlgorithm device={cell.device} />{/if}
-        {#if isPowered(cell)}
-        {@const on = isOn(cell)}
-        <button
-          type="button"
-          class="physical-button power"
-          class:active={on}
-          class:on
-          aria-label="{on ? 'Turn off' : 'Turn on'} {cell.device.name}"
-          aria-pressed={on}
-          use:press={{ onPress: () => togglePower(cell), stopPropagation: true }}
-        ><span class="power-glyph" aria-hidden="true"><Power /></span></button>
-        {/if}
         </span>
       </div></CellSize>
 
@@ -874,7 +866,10 @@
         commit: 'either',
         onDown: (info) => pressDown(cell, info),
         onTap: () => {
-          open(cell, pressInControl);
+          // The header is the device's switch, as a strip's name is its
+          // mute; the kit's under a pad scope still leads back to the kit.
+          if (pressInHead && isPowered(cell) && !(cell.kit && padScope)) togglePower(cell);
+          else open(cell, pressInControl);
         },
         onStart: (info) => dragStart(cell, position - kitLead, info),
         onMove: dragMove,
@@ -1121,14 +1116,15 @@
     /* Across its CellSize: the whole width, the switch in the corner. */
     flex: 1 1 auto;
     padding-inline: 10px 6px;
-    background: color-mix(in oklab, var(--cell-ink) 10%, transparent);
+    /* On: the bar washed in the ink, the switch's lit state; off, bare. */
+    background: color-mix(in oklab, var(--cell-ink) 20%, transparent);
     border-bottom: 1px solid var(--cell-line);
     transition: background-color var(--t-standard) var(--ease-settle);
   }
   /* The chain's head wears its track's colour a shade deeper, the way the
      strip's name block does, so the chain reads as that strip's. */
   .chain-cell.instrument .cell-head {
-    background: color-mix(in oklab, var(--cell-ink) 18%, transparent);
+    background: color-mix(in oklab, var(--cell-ink) 28%, transparent);
   }
   .chain-cell > :global(.cell-size:has(> .cell-head)) {
     flex: none;
@@ -1148,7 +1144,7 @@
     justify-content: center;
     gap: 1px;
   }
-  /* The switch and Operator's algorithm close the row. */
+  /* Operator's algorithm closes the row. */
   .head-end {
     flex: 0 0 auto;
     margin-left: auto;
@@ -1156,46 +1152,6 @@
     align-items: center;
     gap: 4px;
   }
-  /* Device On: a section's switch on its bar (ADR-516): one step under
-     the touch floor in height, bought back in width; the power glyph
-     alone, since the word would not fit a narrow cell or a two-row
-     chain's half band and one switch should look the same everywhere;
-     lit in the device's ink while it runs, its frame in the ink while
-     bypassed. */
-  .power {
-    --btn-tint: var(--cell-ink);
-    flex: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: min(calc(100% - 0.75rem), 2rem);
-    min-width: 2.75rem;
-    padding: 0;
-    cursor: pointer;
-  }
-  .power-glyph {
-    display: flex;
-    width: 15px;
-    height: 15px;
-  }
-  .power-glyph :global(svg) {
-    width: 100%;
-    height: 100%;
-    stroke-width: 2.25;
-  }
-  .chain-cell.half .power,
-  :global([data-cell-width='narrow']) .cell-head .power {
-    min-width: 2.125rem;
-  }
-  .chain-wrap.two-rows .power {
-    height: calc(100% - 0.375rem);
-    min-width: 2.25rem;
-  }
-  .chain-wrap.two-rows .power-glyph {
-    width: 13px;
-    height: 13px;
-  }
-
   /* The face: the cell's rest, inset from the panel's edge so its own
      frame reads as a field sunk into it. */
   .mark {
@@ -1338,16 +1294,6 @@
      toward the foreground, hue kept, as the sliders' labels are. */
   :global(.light[data-skin='hybrid']) .name {
     color: color-mix(in oklab, var(--cell-ink) 55%, var(--foreground));
-  }
-  /* The switch: lit in the ink while on, its frame in the ink off
-     (BoardTile's rule). */
-  :global([data-grammar='flat']) .power.active {
-    background: var(--btn-tint);
-    border-color: var(--btn-tint);
-    color: var(--flat-on-fg);
-  }
-  :global([data-grammar='flat']) .power:not(.active) {
-    color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
   }
   /* One frame round a tile's field: the tile's, in its ink; the control's
      own hairline inside it goes. */

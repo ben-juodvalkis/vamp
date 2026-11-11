@@ -415,9 +415,9 @@ export const TOURS = {
 			},
 			{
 				name: 'chain-power',
-				description: 'Tapped the Echo cell\'s power button: Echo off (dimmed, the button unlit); Grit was off already',
+				description: 'Tapped the Echo cell\'s header: Echo off (dimmed, its bar bare); Grit was off already',
 				scenePatch: chainDemo,
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(4)} .power` }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(4)} .cell-head .name` }]
 			},
 			{
 				name: 'chain-dragging',
@@ -477,7 +477,7 @@ export const TOURS = {
 				name: `chain-view-${key}`,
 				description: `Tapped the ${device.name} cell: its own view, the control its browser tiles and chain cell draw`,
 				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], device]),
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(1)} .cell-head .name` }, { wait: 500 }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(1)}` }, { wait: 500 }]
 			})),
 			// Full screen (ADR-511, ADR-515): an effect's board, every section at once.
 			...[
@@ -488,7 +488,7 @@ export const TOURS = {
 				name: `chain-board-${key}`,
 				description: `The ${device.name} view at full screen: its board`,
 				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], device]),
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(1)} .cell-head .name` }, { wait: 500 }, { click: '[data-central-expand]' }, { wait: 400 }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(1)}` }, { wait: 500 }, { click: '[data-central-expand]' }, { wait: 400 }]
 			})),
 			// An instrument's cell carries its view's signature control (INSTRUMENT_CONTROLS).
 			...[
@@ -513,7 +513,7 @@ export const TOURS = {
 						{ name: 'Velocity', className: 'MidiVelocity', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Drive', 'Drive', -1, 1, 0, ''], ['Compand', 'Compand', -1, 1, 0, ''], ['Random', 'Random', 0, 64, 40, '40'], ['Mode', 'Mode', 0, 2, 0, ''], ['Operation', 'Operation', 0, 2, 2, ''], ['Out Hi', 'Out Hi', 0, 127, 110, ''], ['Out Low', 'Out Low', 0, 127, 30, '']] },
 						CHAIN_DEMO_DEVICES[0]
 					]),
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(2)} .cell-head .name` }, { wait: 500 }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(2)}` }, { wait: 500 }]
 			},
 			{
 				name: 'chain-pad-add',
@@ -866,7 +866,7 @@ export const TOURS = {
 				name: `view-${key}`,
 				description: `${device.name}, opened from its chain cell`,
 				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], device]),
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(1)} .cell-head .name` }, { wait: 500 }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(1)}` }, { wait: 500 }]
 			}))
 		]
 	},
