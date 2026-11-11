@@ -64,13 +64,18 @@
 	import LoopBraces from './clipEditor/LoopBraces.svelte';
 	import Waveform from './clipEditor/Waveform.svelte';
 	import EditToolbar from './clipEditor/EditToolbar.svelte';
+	import { portal } from '$lib/actions/portal';
 
 	interface Props {
 		/** Track color for note/waveform tinting. */
 		color?: string;
+		/** Where the toolbar sits instead of beside the roll: the clip view's
+		 *  full-screen strip (ADR-527). The roll takes its width back. */
+		toolbarTarget?: HTMLElement | null;
 	}
 
-	let { color }: Props = $props();
+	let { color, toolbarTarget = null }: Props = $props();
+	let toolbarOut = $derived(!!toolbarTarget);
 
 	const PITCH_AXIS_W = 36; // piano-key gutter width (px)
 	const DRUM_PITCH_AXIS_W = 80; // wide enough for a pad's name
@@ -783,7 +788,7 @@
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 		<div
 			class="canvas-wrap"
-			style:right={isMidi ? `${TOOLBAR_W}px` : undefined}
+			style:right={isMidi && !toolbarOut ? `${TOOLBAR_W}px` : undefined}
 			bind:this={containerRef}
 			role="application"
 			aria-label="Clip editor"
@@ -965,14 +970,17 @@
 		</div>
 
 		{#if isMidi}
-			<EditToolbar
-				width={TOOLBAR_W}
-				bind:fold
-				bind:gridDenom
-				bind:gridTriplet
-				canQuantize={shownNotes.length > 0}
-				onQuantize={quantizeClip}
-			/>
+			<div class="toolbar-host" use:portal={toolbarTarget}>
+				<EditToolbar
+					width={TOOLBAR_W}
+					layout={toolbarOut ? 'grid' : 'column'}
+					bind:fold
+					bind:gridDenom
+					bind:gridTriplet
+					canQuantize={shownNotes.length > 0}
+					onQuantize={quantizeClip}
+				/>
+			</div>
 		{/if}
 	{/if}
 </div>
@@ -984,6 +992,10 @@
 		overflow: hidden;
 		background: var(--surface-well);
 	}
+
+	/* Beside the roll it is nothing of its own (the toolbar positions
+	   against .clip-editor); in the full-screen strip it fills its slot. */
+	.toolbar-host { display: contents; }
 
 	.canvas-wrap {
 		position: absolute;

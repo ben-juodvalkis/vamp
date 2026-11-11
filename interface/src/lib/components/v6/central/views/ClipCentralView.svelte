@@ -45,6 +45,7 @@ import { logger } from '$lib/utils/logger';
 	let editorActive = $derived(clipEditorStore.active);
 	// Full screen shows controls and editor together (ADR-526).
 	let expanded = $derived(centralDisplayStore.expanded);
+	let toolbarHost = $state<HTMLElement | null>(null);
 	let trackColor = $derived.by(() => {
 		const path = selectedTrackStore.selectedTrackPath;
 		if (!path) return undefined;
@@ -743,9 +744,14 @@ import { logger } from '$lib/utils/logger';
 	     their stack height over the note editor, so no toggle is needed. -->
 	{#if expanded}
 		<div class="clip-combo h-full w-full" data-clip-combo>
-			<div class="combo-controls">{@render controls()}</div>
+			<div class="combo-top">
+				<div class="combo-controls">{@render controls()}</div>
+				<!-- The note editor's Fold / grid / Triplet / Quantize, moved
+				     here from beside the roll (ADR-527). Empty on audio. -->
+				<div class="combo-toolbar" bind:this={toolbarHost}></div>
+			</div>
 			<div class="combo-editor px-(--central-inset) pb-(--central-inset)">
-				<ClipEditorView color={trackColor} />
+				<ClipEditorView color={trackColor} toolbarTarget={toolbarHost} />
 			</div>
 		</div>
 	{:else if editorActive}
@@ -839,9 +845,20 @@ import { logger } from '$lib/utils/logger';
 	.editor-full { position: relative; min-width: 0; min-height: 0; }
 
 	/* Full screen (ADR-526): the controls in one strip across the top, the
-	   note editor everything under it. */
+	   note editor's toolbar at its right end (ADR-527), the note editor
+	   everything under it. */
 	.clip-combo { display: flex; flex-direction: column; gap: var(--central-gap); min-height: 0; }
-	.combo-controls { flex: 0 0 clamp(96px, 13%, 136px); min-height: 0; }
+	.combo-top { flex: 0 0 clamp(96px, 13%, 136px); display: flex; min-height: 0; }
+	.combo-controls { flex: 1 1 0; min-width: 0; min-height: 0; }
+	.combo-toolbar {
+		flex: 0 0 clamp(200px, 20%, 260px);
+		display: flex;
+		/* Clear of the frame's full-screen icon, whose 44px touch box
+		   holds the corner (ADR-511). */
+		padding: var(--central-inset) var(--height-touch, 44px) 0 0;
+		min-height: 0;
+	}
+	.combo-toolbar:empty { display: none; }
 
 	/* One row: every column's pair side by side, the columns a flex row in
 	   the grid's own order, a pair twice a slider's width, the three warp modes three. */

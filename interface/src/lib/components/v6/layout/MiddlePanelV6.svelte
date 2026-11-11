@@ -4,6 +4,9 @@
 	import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
 
 	let expanded = $derived(centralDisplayStore.expanded);
+	// The clip view expanded leaves the right sidebar showing (ADR-527): its
+	// mini session, groove quantize and loop brace belong with the notes.
+	let keepRight = $derived(expanded && centralDisplayStore.view.type === 'clip');
 </script>
 
 <!-- Central Display takes full width and height. Expanded (ADR-511) the
@@ -13,6 +16,7 @@
 <div
 	class="central-host h-full w-full"
 	class:central-expanded={expanded}
+	class:keep-right={keepRight}
 	style="touch-action: none;"
 	data-debug="central-host"
 	data-expanded={expanded ? '' : undefined}
@@ -35,5 +39,10 @@
 		width: auto;
 		height: auto;
 		z-index: 40;
+	}
+	/* Stops short of the right sidebar: the root's 16px side plus the
+	   sidebar plus the gap the stack keeps beside it (Layout.svelte). */
+	.central-expanded.keep-right {
+		right: calc(16px + var(--sidebar-width) + var(--spacing-lg));
 	}
 </style>

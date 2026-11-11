@@ -18,6 +18,8 @@
 		gridTriplet: boolean;
 		canQuantize: boolean;
 		onQuantize: () => void;
+		/** 'grid': two by two in the clip view's full-screen strip (ADR-527). */
+		layout?: 'column' | 'grid';
 	}
 
 	let {
@@ -26,7 +28,8 @@
 		gridDenom = $bindable(),
 		gridTriplet = $bindable(),
 		canQuantize,
-		onQuantize
+		onQuantize,
+		layout = 'column'
 	}: Props = $props();
 
 	let gridLabel = $derived(`1/${gridDenom}${gridTriplet ? 'T' : ''}`);
@@ -37,7 +40,7 @@
 	}
 </script>
 
-<div class="edit-toolbar" style:width="{width}px">
+<div class="edit-toolbar" class:grid-layout={layout === 'grid'} style:width={layout === 'grid' ? undefined : `${width}px`}>
 	<button
 		class="edit-chip btn-toggle"
 		class:active={fold}
@@ -98,6 +101,19 @@
 	.edit-toolbar > * {
 		pointer-events: auto;
 	}
+	/* In the clip view's full-screen strip (ADR-527): Fold and the grid
+	   over Triplet and Quantize, the strip's height, beside the controls. */
+	.edit-toolbar.grid-layout {
+		position: static;
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		grid-template-rows: repeat(2, minmax(0, 1fr));
+		width: 100%;
+		height: 100%;
+		padding: 0;
+	}
+	.edit-toolbar.grid-layout .toolbar-sep { display: none; }
+	.edit-toolbar.grid-layout .edit-chip { max-height: none; }
 	.toolbar-sep {
 		height: 1px;
 		flex: none;

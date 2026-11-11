@@ -89,11 +89,21 @@ describe('central view full screen', () => {
 		expect(combo).not.toBeNull();
 		expect(combo!.querySelector('.combo-controls .outer')).not.toBeNull();
 		expect(combo!.querySelector('.combo-editor')!.childElementCount).toBeGreaterThan(0);
+		// The right sidebar stays showing beside it (ADR-527).
+		expect(host(container).classList.contains('keep-right')).toBe(true);
 		expect(container.querySelector('.editor-toggle')).toBeNull();
 
 		await pressIcon(container);
 		expect(container.querySelector('[data-clip-combo]')).toBeNull();
 		expect(container.querySelector('.editor-toggle')).not.toBeNull();
+	});
+
+	it('an expanded board still covers the right sidebar (ADR-527 is the clip view only)', async () => {
+		centralDisplayStore.setView('device', 'roar');
+		const { container } = render(MiddlePanelV6);
+		await tick();
+		await pressIcon(container);
+		expect(host(container).classList.contains('keep-right')).toBe(false);
 	});
 
 	it('the System view has no icon, and arriving at it collapses the view', async () => {
