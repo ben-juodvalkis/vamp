@@ -76,6 +76,26 @@ describe('central view full screen', () => {
 		expect(host(container).classList.contains('central-expanded')).toBe(true);
 	});
 
+	it('the clip view at full screen shows controls and editor together, without the toggle (ADR-526)', async () => {
+		centralDisplayStore.setView('clip');
+		const { container } = render(MiddlePanelV6);
+		// The view is lazy-loaded: wait for its root.
+		await vi.waitFor(() => expect(container.querySelector('.clip-central-root')).not.toBeNull());
+		expect(container.querySelector('.editor-toggle')).not.toBeNull();
+		expect(container.querySelector('[data-clip-combo]')).toBeNull();
+
+		await pressIcon(container);
+		const combo = container.querySelector('[data-clip-combo]');
+		expect(combo).not.toBeNull();
+		expect(combo!.querySelector('.combo-controls .outer')).not.toBeNull();
+		expect(combo!.querySelector('.combo-editor')!.childElementCount).toBeGreaterThan(0);
+		expect(container.querySelector('.editor-toggle')).toBeNull();
+
+		await pressIcon(container);
+		expect(container.querySelector('[data-clip-combo]')).toBeNull();
+		expect(container.querySelector('.editor-toggle')).not.toBeNull();
+	});
+
 	it('the System view has no icon, and arriving at it collapses the view', async () => {
 		centralDisplayStore.setView('device', 'roar');
 		const { container } = render(MiddlePanelV6);

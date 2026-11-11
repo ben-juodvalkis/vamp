@@ -32,6 +32,7 @@ import { logger } from '$lib/utils/logger';
 	import { rgbToHex } from '$lib/utils/formatters/trackFormatters';
 	import { selectedTrackInk, selectedTrackScheme } from '$lib/utils/selectedTrackInk';
 	import ClipEditorView from './ClipEditorView.svelte';
+	import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
 	import {
 		VM,
 		parseVmMembers,
@@ -42,6 +43,8 @@ import { logger } from '$lib/utils/logger';
 	import { fitText } from '$lib/utils/fitText';
 
 	let editorActive = $derived(clipEditorStore.active);
+	// Full screen shows controls and editor together (ADR-526).
+	let expanded = $derived(centralDisplayStore.expanded);
 	let trackColor = $derived.by(() => {
 		const path = selectedTrackStore.selectedTrackPath;
 		if (!path) return undefined;
@@ -375,32 +378,29 @@ import { logger } from '$lib/utils/logger';
 <!--
 	Manual device↔clip-editor toggle (clip-view-mirror decision 8):
 	the clip central area shows EITHER the editor canvas OR the button
-	rail, never both. Focusing a clip never auto-switches; the user taps
-	the toggle. The toggle chip floats top-right in both modes, beside the
-	frame's full-screen icon (ADR-511).
+	rail, never both, in the stack. Focusing a clip never auto-switches;
+	the user taps the toggle. The toggle chip floats top-right in both
+	modes, beside the frame's full-screen icon (ADR-511). At full screen
+	both show, controls over editor, and the toggle hides (ADR-526).
 -->
 <div class="clip-central-root h-full w-full relative" style="--clip-track-wash: {trackWash}; --clip-track-tint: {trackTint};">
-	<button
-		class="editor-toggle"
-		class:active={editorActive}
-		use:press={{ onPress: () => clipEditorStore.toggle() }}
-		title={editorActive ? 'Show clip controls' : 'Show clip editor'}
-		aria-label={editorActive ? 'Show clip controls' : 'Show clip editor'}
-	>
-		{#if editorActive}
-			<SlidersHorizontal class="w-4 h-4" />
-		{:else}
-			<Pencil class="w-4 h-4" />
-		{/if}
-	</button>
+	{#if !expanded}
+		<button
+			class="editor-toggle"
+			class:active={editorActive}
+			use:press={{ onPress: () => clipEditorStore.toggle() }}
+			title={editorActive ? 'Show clip controls' : 'Show clip editor'}
+			aria-label={editorActive ? 'Show clip controls' : 'Show clip editor'}
+		>
+			{#if editorActive}
+				<SlidersHorizontal class="w-4 h-4" />
+			{:else}
+				<Pencil class="w-4 h-4" />
+			{/if}
+		</button>
+	{/if}
 
-	{#if editorActive}
-		<!-- Same inset as every other central view; without it the editor
-		     ran to the panel's edges. -->
-		<div class="editor-full h-full w-full p-(--central-inset)">
-			<ClipEditorView color={trackColor} />
-		</div>
-	{:else}
+	{#snippet controls()}
 
 <!--
 	7 equal columns (8 on audio) plus one hairline seam track over two rows,
@@ -412,7 +412,7 @@ import { logger } from '$lib/utils/logger';
 	The mini session view that led this rail while the full clip grid was
 	hidden moved to the right sidebar's first row on 2026-10-24.
 -->
-<div class="outer h-full w-full p-(--central-inset)" class:audio={trackType === 'audio'}>
+<div class="outer h-full w-full p-(--central-inset)" class:audio={trackType === 'audio'} class:one-row={expanded}>
 	{#if browser}
 
 
@@ -737,6 +737,25 @@ import { logger } from '$lib/utils/logger';
 
 	{/if}
 </div>
+	{/snippet}
+
+	<!-- Full screen (ADR-526): the two halves at once, the controls at
+	     their stack height over the note editor, so no toggle is needed. -->
+	{#if expanded}
+		<div class="clip-combo h-full w-full" data-clip-combo>
+			<div class="combo-controls">{@render controls()}</div>
+			<div class="combo-editor px-(--central-inset) pb-(--central-inset)">
+				<ClipEditorView color={trackColor} />
+			</div>
+		</div>
+	{:else if editorActive}
+		<!-- Same inset as every other central view; without it the editor
+		     ran to the panel's edges. -->
+		<div class="editor-full h-full w-full p-(--central-inset)">
+			<ClipEditorView color={trackColor} />
+		</div>
+	{:else}
+		{@render controls()}
 	{/if}
 </div>
 
@@ -818,6 +837,32 @@ import { logger } from '$lib/utils/logger';
 	.outer.audio .col-1 { grid-column: 9; }
 
 	.editor-full { position: relative; min-width: 0; min-height: 0; }
+
+	/* Full screen (ADR-526): the controls in one strip across the top, the
+	   note editor everything under it. */
+	.clip-combo { display: flex; flex-direction: column; gap: var(--central-gap); min-height: 0; }
+	.combo-controls { flex: 0 0 clamp(96px, 13%, 136px); min-height: 0; }
+
+	/* One row: every column's pair side by side, the columns a flex row in
+	   the grid's own order, a pair twice a slider's width, the three warp modes three. */
+	.outer.one-row { display: flex; padding-bottom: 0; }
+	.outer.one-row .col { flex: 1 1 0; }
+	.outer.one-row .col:has(.stacked-btns:not(.single)) { flex-grow: 2; }
+	.outer.one-row .col:has(.stacked-switches) { flex-grow: 3; }
+	.outer.one-row .seam { flex: none; }
+	.outer.one-row .stacked-btns { grid-template-rows: minmax(0, 1fr); grid-template-columns: 1fr 1fr; }
+	.outer.one-row .stacked-btns.single { grid-template-columns: 1fr; }
+	.outer.one-row .stacked-switches { grid-template-rows: minmax(0, 1fr); grid-template-columns: repeat(3, minmax(0, 1fr)); }
+	.outer.one-row .col-9 { order: 1; }
+	.outer.one-row .col-3 { order: 2; }
+	.outer.one-row .col-5 { order: 3; }
+	.outer.one-row .seam-a { order: 4; }
+	.outer.one-row .col-6 { order: 5; }
+	.outer.one-row .col-4 { order: 6; }
+	.outer.one-row .col-pitch { order: 7; }
+	.outer.one-row .col-2 { order: 8; }
+	.outer.one-row .col-1 { order: 9; }
+	.combo-editor { position: relative; flex: 1 1 0; min-width: 0; min-height: 0; }
 
 	/* Stack of 3 switch buttons (warp modes), the lower box of the last column */
 	/* `minmax(0, 1fr)`, not the implicit `auto` column: auto sizes to the
