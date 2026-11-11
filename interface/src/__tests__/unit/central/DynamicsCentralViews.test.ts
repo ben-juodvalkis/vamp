@@ -45,11 +45,16 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe('the dynamics views, one per device (ADR-478)', () => {
-	it('Glue: Threshold over Output', () => {
+	it('Glue: the whole device but its external sidechain (2026-11-11)', () => {
 		const { container } = render(GlueCentralView);
-		expect(container.querySelectorAll('.glue-slider')).toHaveLength(2);
-		expect(container.textContent).toContain('Threshold');
-		expect(container.textContent).toContain('Output');
+		const radios = (label: string) =>
+			[...container.querySelectorAll(`[role="radiogroup"][aria-label="${label}"] [role="radio"]`)].map((b) => b.textContent);
+		expect(radios('Ratio')).toEqual(['2:1', '4:1', '10:1']);
+		expect(radios('Attack')).toEqual(['0.01', '0.1', '0.3', '1', '3', '10', '30']);
+		expect(radios('Release')).toEqual(['0.1', '0.2', '0.4', '0.6', '0.8', '1.2', 'Auto']);
+		for (const label of ['Threshold', 'Range', 'Makeup', 'Dry/Wet', 'Soft Clip', 'Sidechain EQ', 'Freq', 'Gain', 'Q']) {
+			expect(container.textContent).toContain(label);
+		}
 	});
 
 	it('Gate: the Gate control', () => {
@@ -70,7 +75,7 @@ describe('the dynamics views, one per device (ADR-478)', () => {
 		expect(container.querySelector('.sidechain-section')).not.toBeNull();
 		expect(container.querySelector('.makeup-toggle')).not.toBeNull();
 		expect(container.querySelector('.compressor-wrapper')).not.toBeNull();
-		expect(container.querySelector('.glue-slider')).toBeNull();
+		expect(container.querySelector('[data-view="glue"]')).toBeNull();
 		expect(container.querySelector('.mb-slider')).toBeNull();
 	});
 

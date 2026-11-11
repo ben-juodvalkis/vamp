@@ -203,7 +203,7 @@ const FX_VIEWS = [
 	['Saturator', 'pedal', 'The Saturator view: Color · Output · Mix'],
 	['Guitar', 'guitar', 'The Guitar rack view: Gain, Spring/Room, Tremolo'],
 	['Drum Buss', 'drum-buss', 'Drum Buss: the Drum XY, then its controls'],
-	['Glue Compressor', 'squash', 'Glue: Threshold over Output'],
+	['Glue Compressor', 'squash', 'Glue: Compressor, Attack, Release, Output, Sidechain EQ'],
 	['GlitchLoop', 'glitch', 'Glitch: GlitchLoop'],
 	['Pitch Hack', 'reverse', 'Pitch Hack (Reverse): Rate tabs, then a value box per parameter'],
 	['Octave', 'pitch', 'The Octave (Pitch Shift) view: Pitch, Response and Quality tabs, Tone'],
