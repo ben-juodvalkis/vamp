@@ -3,22 +3,23 @@
   /**
    * GlueCentralView — the Glue Compressor's view (slot `squash`).
    *
-   * The whole device but its external sidechain (the user, 2026-11-11:
-   * "put the rest of the controls in"), on the face grid (ADR-510), eight
-   * columns in Live's own panel order:
+   * Laid out as Live's own panel (the user, 2026-11-11, from a screenshot
+   * of it), on the face grid (ADR-510), five columns:
    *
-   *   Compressor [Threshold] [Ratio / Range] | Attack | Release |
-   *   Output [Makeup, Dry/Wet, Soft Clip] | S/C EQ [On, type, Freq] [Gain, Q]
+   *   SC Filter [switch, Type, Freq, Gain, Res] | [Attack, Release, Ratio]
+   *   | Threshold  Makeup | [Soft Clip, Range, Dry/Wet]
    *
-   * The chain cell's `SquashControl` is one finger over threshold+makeup
-   * together, the performance gesture; this view sets each outright. Ratio,
-   * Attack and Release are pick-one tabs (Live's own steps), Range, Makeup,
-   * Dry/Wet and the EQ's amounts knobs, Soft Clip and EQ switches.
+   * Attack, Release and Ratio are stepped knobs stacked as Live stacks
+   * them, a detent per step. Threshold and Makeup are the two large knobs
+   * in the middle, where Live has them under its gain-reduction meter (the
+   * meter is not on the wire, so it is not drawn). The chain cell's
+   * `SquashControl` moves those two together with one finger.
    *
-   * Left out: the external sidechain (S/C On, its Gain and Mix). It needs
-   * a source to listen to, and the surface carries the routing pair for
-   * Compressor2 only, so it would land as a switch that does nothing. The
-   * S/C EQ works without it: it shapes what the Glue's own detector hears.
+   * Left out: Live's Sidechain column (External, Source, Mix, SC Gain). It
+   * needs a source to listen to, and the surface carries the routing pair
+   * for Compressor2 only, so it would land as a switch that does nothing.
+   * The SC Filter works without it: it shapes what the detector hears.
+   * Gain shows only on the filter types that have one, as in Live.
    *
    * Measured on the rig (device_dump on "3-Audio"'s Glue Compressor,
    * 2026-11-11), 17 parameters, LOM order with Device On at 0:
@@ -29,7 +30,7 @@
    *   12 S/C EQ Type 0..5 (Low Shelf, Bell, High Shelf, Low pass, Peak,
    *      High pass)              13 S/C EQ On 0..1
    *   14 S/C EQ Freq 0..1 (30 Hz..15 kHz)  15 S/C EQ Gain -15..15 dB
-   *   16 S/C EQ Q 0..1 (0.10..12.0)
+   *   16 S/C EQ Q 0..1 (0.10..12.0, Live's "Res")
    * Readouts are Live's own labels (`paramDisplay`). A ghost draws Live's
    * defaults, and its first write loads the device.
    *
@@ -63,22 +64,29 @@
   const value = (index: number) => squash.paramValue(index) ?? REST[index];
   const step = (index: number) => Math.round(value(index));
 
-  const RATIOS = ['2:1', '4:1', '10:1'];
-  const ATTACKS = ['0.01', '0.1', '0.3', '1', '3', '10', '30'];
-  const RELEASES = ['0.1', '0.2', '0.4', '0.6', '0.8', '1.2', 'Auto'];
+  /** Attack, Release and Ratio: Live's steps, stacked as on its panel. */
+  const STEPPED = [
+    { index: P.attack, title: 'Attack', labels: ['0.01 ms', '0.1 ms', '0.3 ms', '1 ms', '3 ms', '10 ms', '30 ms'] },
+    { index: P.release, title: 'Release', labels: ['0.1 s', '0.2 s', '0.4 s', '0.6 s', '0.8 s', '1.2 s', 'Auto'] },
+    { index: P.ratio, title: 'Ratio', labels: ['2:1', '4:1', '10:1'] }
+  ];
   const EQ_TYPES = ['Low Shelf', 'Bell', 'High Shelf', 'Low Pass', 'Peak', 'High Pass'];
 
   // ADR-400: these controls drive the Glue Compressor, so they wear its ink.
   let ink = $derived(squash.isGhost ? IDLE_SCHEME : squash.color);
   let eqOn = $derived(step(P.eqOn) === 1);
-  /** Live greys the EQ's Gain on the two cut filters, which have none. */
+  let eqInk = $derived(squash.isGhost || !eqOn ? IDLE_SCHEME : squash.color);
+  /** Live shows the filter's Gain only on the types that have one (not the two cuts). */
   let eqHasGain = $derived(![3, 5].includes(step(P.eqType)));
 
   const toggle = (index: number) => squash.sendParam(index, step(index) === 1 ? 0 : 1);
-  /** A touch on the EQ's controls while it is off turns it on, as a switched-off section does (ADR-487). */
+  /** A touch on the filter's controls while it is off turns it on, as a switched-off section does (ADR-487). */
   function sendEq(index: number, v: number) {
     if (!eqOn) squash.sendParam(P.eqOn, 1);
     squash.sendParam(index, v);
+  }
+  function sendStep(index: number, count: number, v: number) {
+    squash.sendParam(index, Math.max(0, Math.min(count - 1, Math.round(v))));
   }
 </script>
 
@@ -86,51 +94,74 @@
      `sendParam` is fire-and-forget on a ghost — it queues and triggers
      the load. -->
 <div class="glue-central-layout relative" data-view="glue" style="--btn-tint: {ink.primary};">
-<FaceGrid sections={[2, 1, 1, 1, 2]}>
-  <FaceSection span={2}>
-    {#snippet head()}<PanelEyebrow title="Compressor" color={ink.primary} />{/snippet}
-    <!-- Live's own direction: up is a higher threshold, i.e. less
-         squash — the opposite of the chain cell, whose up is MORE. -->
-    <div class="col" class:slot-ghost={squash.isGhost}>
-      <DeviceSlider
-        value={value(P.threshold)}
-        title="Threshold"
-        icon="threshold"
-        orientation="vertical"
-        min={-40}
-        max={0}
-        isGhost={squash.isGhost}
-        color={ink}
-        readout={squash.paramDisplay(P.threshold)}
-        onTap={() => squash.loadIfGhost()}
-        onInteraction={(v) => squash.sendParam(P.threshold, v)}
-      />
-    </div>
-    <div class="col" class:slot-ghost={squash.isGhost}>
-      <div class="tabs short device-segmented seg-grid" role="radiogroup" aria-label="Ratio">
-        {#each RATIOS as label, i (label)}
-          <button
-            class="device-segment tab"
-            class:active={!squash.isGhost && step(P.ratio) === i}
-            role="radio"
-            aria-checked={step(P.ratio) === i}
-            use:press={{ onPress: () => squash.sendParam(P.ratio, i) }}
-          >{label}</button>
-        {/each}
+<FaceGrid sections={[1, 1, 2, 1]}>
+  <FaceSection span={1}>
+    {#snippet head()}<PanelEyebrow title="SC Filter" color={ink.primary} />{/snippet}
+    <div class="col" class:slot-ghost={squash.isGhost} data-glue-col="filter">
+      <div class="pair">
+        <button
+          class="physical-button btn-toggle switch"
+          class:active={!squash.isGhost && eqOn}
+          aria-pressed={eqOn}
+          use:press={{ onPress: () => toggle(P.eqOn) }}
+        >On</button>
+        <ChoicePicker
+          options={EQ_TYPES}
+          selected={step(P.eqType)}
+          onSelect={(i) => sendEq(P.eqType, i)}
+          label="SC Filter type"
+          tint={ink.primary}
+          ghost={squash.isGhost || !eqOn}
+        />
       </div>
       <div class="knob">
         <DeviceSlider
-          value={value(P.range)}
-          title="Range"
+          value={value(P.eqFreq)}
+          title="Freq"
           face="knob"
           knobSize="m"
+          knobFit
           orientation="vertical"
           min={0}
-          max={70}
-          isGhost={squash.isGhost}
-          color={ink}
-          readout={squash.paramDisplay(P.range)}
-          onInteraction={(v) => squash.sendParam(P.range, v)}
+          max={1}
+          isGhost={squash.isGhost || !eqOn}
+          color={eqInk}
+          readout={squash.paramDisplay(P.eqFreq)}
+          onInteraction={(v) => sendEq(P.eqFreq, v)}
+        />
+      </div>
+      {#if eqHasGain}
+        <div class="knob">
+          <DeviceSlider
+            value={value(P.eqGain)}
+            title="Gain"
+            face="knob"
+            knobSize="m"
+            knobFit
+            orientation="vertical"
+            min={-15}
+            max={15}
+            isGhost={squash.isGhost || !eqOn}
+            color={eqInk}
+            readout={squash.paramDisplay(P.eqGain)}
+            onInteraction={(v) => sendEq(P.eqGain, v)}
+          />
+        </div>
+      {/if}
+      <div class="knob">
+        <DeviceSlider
+          value={value(P.eqQ)}
+          title="Res"
+          face="knob"
+          knobSize="m"
+          knobFit
+          orientation="vertical"
+          min={0}
+          max={1}
+          isGhost={squash.isGhost || !eqOn}
+          color={eqInk}
+          readout={squash.paramDisplay(P.eqQ)}
+          onInteraction={(v) => sendEq(P.eqQ, v)}
         />
       </div>
     </div>
@@ -138,51 +169,62 @@
   <FaceSeam />
 
   <FaceSection span={1}>
-    {#snippet head()}<PanelEyebrow title="Attack ms" color={ink.primary} />{/snippet}
-    <div class="col" class:slot-ghost={squash.isGhost}>
-      <div class="tabs device-segmented seg-grid" role="radiogroup" aria-label="Attack">
-        {#each ATTACKS as label, i (label)}
-          <button
-            class="device-segment tab"
-            class:active={!squash.isGhost && step(P.attack) === i}
-            role="radio"
-            aria-checked={step(P.attack) === i}
-            use:press={{ onPress: () => squash.sendParam(P.attack, i) }}
-          >{label}</button>
-        {/each}
-      </div>
+    {#snippet head()}<PanelEyebrow title="Timing" color={ink.primary} />{/snippet}
+    <div class="col" class:slot-ghost={squash.isGhost} data-glue-col="timing">
+      {#each STEPPED as knob (knob.index)}
+        <div class="knob">
+          <DeviceSlider
+            value={step(knob.index)}
+            title={knob.title}
+            valueText={knob.labels[step(knob.index)]}
+            steps={knob.labels.length}
+            face="knob"
+            knobSize="m"
+            knobFit
+            orientation="vertical"
+            min={0}
+            max={knob.labels.length - 1}
+            isGhost={squash.isGhost}
+            color={ink}
+            onInteraction={(v) => sendStep(knob.index, knob.labels.length, v)}
+          />
+        </div>
+      {/each}
     </div>
   </FaceSection>
   <FaceSeam />
 
-  <FaceSection span={1}>
-    {#snippet head()}<PanelEyebrow title="Release s" color={ink.primary} />{/snippet}
-    <div class="col" class:slot-ghost={squash.isGhost}>
-      <div class="tabs device-segmented seg-grid" role="radiogroup" aria-label="Release">
-        {#each RELEASES as label, i (label)}
-          <button
-            class="device-segment tab"
-            class:active={!squash.isGhost && step(P.release) === i}
-            role="radio"
-            aria-checked={step(P.release) === i}
-            use:press={{ onPress: () => squash.sendParam(P.release, i) }}
-          >{label}</button>
-        {/each}
+  <FaceSection span={2}>
+    {#snippet head()}<PanelEyebrow title="Compressor" color={ink.primary} />{/snippet}
+    <div class="col center" class:slot-ghost={squash.isGhost}>
+      <div class="knob">
+        <DeviceSlider
+          value={value(P.threshold)}
+          title="Threshold"
+          face="knob"
+          knobSize="xl"
+          knobFit
+          knobCaptionBelow
+          orientation="vertical"
+          min={-40}
+          max={0}
+          isGhost={squash.isGhost}
+          color={ink}
+          readout={squash.paramDisplay(P.threshold)}
+          onTap={() => squash.loadIfGhost()}
+          onInteraction={(v) => squash.sendParam(P.threshold, v)}
+        />
       </div>
     </div>
-  </FaceSection>
-  <FaceSeam />
-
-  <FaceSection span={1}>
-    {#snippet head()}<PanelEyebrow title="Output" color={ink.primary} />{/snippet}
-    <div class="col" class:slot-ghost={squash.isGhost}>
+    <div class="col center" class:slot-ghost={squash.isGhost}>
       <div class="knob">
         <DeviceSlider
           value={value(P.output)}
           title="Makeup"
           face="knob"
-          knobSize="m"
-          icon="output"
+          knobSize="xl"
+          knobFit
+          knobCaptionBelow
           orientation="vertical"
           min={0}
           max={20}
@@ -193,12 +235,42 @@
           onInteraction={(v) => squash.sendParam(P.output, v)}
         />
       </div>
+    </div>
+  </FaceSection>
+  <FaceSeam />
+
+  <FaceSection span={1}>
+    {#snippet head()}<PanelEyebrow title="Clip" color={ink.primary} />{/snippet}
+    <div class="col" class:slot-ghost={squash.isGhost} data-glue-col="output">
+      <button
+        class="physical-button btn-toggle switch"
+        class:active={!squash.isGhost && step(P.softClip) === 1}
+        aria-pressed={step(P.softClip) === 1}
+        use:press={{ onPress: () => toggle(P.softClip) }}
+      >Soft</button>
+      <div class="knob">
+        <DeviceSlider
+          value={value(P.range)}
+          title="Range"
+          face="knob"
+          knobSize="m"
+          knobFit
+          orientation="vertical"
+          min={0}
+          max={70}
+          isGhost={squash.isGhost}
+          color={ink}
+          readout={squash.paramDisplay(P.range)}
+          onInteraction={(v) => squash.sendParam(P.range, v)}
+        />
+      </div>
       <div class="knob">
         <DeviceSlider
           value={value(P.dryWet)}
           title="Dry/Wet"
           face="knob"
           knobSize="m"
+          knobFit
           orientation="vertical"
           min={0}
           max={1}
@@ -208,89 +280,15 @@
           onInteraction={(v) => squash.sendParam(P.dryWet, v)}
         />
       </div>
-      <button
-        class="physical-button btn-toggle switch"
-        class:active={!squash.isGhost && step(P.softClip) === 1}
-        aria-pressed={step(P.softClip) === 1}
-        use:press={{ onPress: () => toggle(P.softClip) }}
-      >Soft Clip</button>
-    </div>
-  </FaceSection>
-  <FaceSeam />
-
-  <FaceSection span={2}>
-    {#snippet head()}<PanelEyebrow title="Sidechain EQ" color={ink.primary} />{/snippet}
-    <div class="col" class:slot-ghost={squash.isGhost}>
-      <button
-        class="physical-button btn-toggle switch"
-        class:active={!squash.isGhost && eqOn}
-        aria-pressed={eqOn}
-        use:press={{ onPress: () => toggle(P.eqOn) }}
-      >EQ</button>
-      <ChoicePicker
-        options={EQ_TYPES}
-        selected={step(P.eqType)}
-        onSelect={(i) => sendEq(P.eqType, i)}
-        label="Sidechain EQ type"
-        tint={ink.primary}
-        ghost={squash.isGhost || !eqOn}
-      />
-      <div class="knob">
-        <DeviceSlider
-          value={value(P.eqFreq)}
-          title="Freq"
-          face="knob"
-          knobSize="m"
-          icon="cutoff"
-          orientation="vertical"
-          min={0}
-          max={1}
-          isGhost={squash.isGhost || !eqOn}
-          color={squash.isGhost || !eqOn ? IDLE_SCHEME : ink}
-          readout={squash.paramDisplay(P.eqFreq)}
-          onInteraction={(v) => sendEq(P.eqFreq, v)}
-        />
-      </div>
-    </div>
-    <div class="col" class:slot-ghost={squash.isGhost}>
-      <div class="knob">
-        <DeviceSlider
-          value={value(P.eqGain)}
-          title="Gain"
-          face="knob"
-          knobSize="m"
-          orientation="vertical"
-          min={-15}
-          max={15}
-          isGhost={squash.isGhost || !eqOn || !eqHasGain}
-          color={squash.isGhost || !eqOn || !eqHasGain ? IDLE_SCHEME : ink}
-          readout={squash.paramDisplay(P.eqGain)}
-          onInteraction={(v) => sendEq(P.eqGain, v)}
-        />
-      </div>
-      <div class="knob">
-        <DeviceSlider
-          value={value(P.eqQ)}
-          title="Q"
-          face="knob"
-          knobSize="m"
-          orientation="vertical"
-          min={0}
-          max={1}
-          isGhost={squash.isGhost || !eqOn}
-          color={squash.isGhost || !eqOn ? IDLE_SCHEME : ink}
-          readout={squash.paramDisplay(P.eqQ)}
-          onInteraction={(v) => sendEq(P.eqQ, v)}
-        />
-      </div>
     </div>
   </FaceSection>
 </FaceGrid>
 </div>
 
 <style>
-  /* Compressor 2 | Attack | Release | Output | Sidechain EQ 2, on the
-     FaceGrid (ADR-510): eight equal columns. */
+  /* Live's panel, left to right: SC Filter | Attack, Release, Ratio |
+     Threshold, Makeup | Clip, Range, Dry/Wet. Five equal columns on the
+     FaceGrid (ADR-510), the middle two. */
   .glue-central-layout {
     height: 100%;
     width: 100%;
@@ -311,42 +309,29 @@
     flex: 1 1 0;
     min-height: 0;
   }
+  .center {
+    justify-content: center;
+  }
 
-  .tabs {
-    flex: 1 1 0;
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-  }
-  /* Ratio's three over Range: the tabs take as much as the knob. */
-  .tabs.short {
-    flex: 1 1 0;
-  }
-  .tab {
-    flex: 1;
-    min-height: 0;
-    font-size: 1rem;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
+  /* The filter's switch and type on one touch row. */
+  .pair {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--face-gutter);
+    align-items: stretch;
   }
   .switch {
     flex: 0 0 var(--height-touch);
+    min-height: var(--height-touch);
+    padding-inline: var(--spacing-sm);
     font-size: 1rem;
     font-weight: 600;
   }
 
-  /* As the Random view's tabs: the name in the device ink, the lit one filled with it. */
-  :global([data-skin="hybrid"]) .tab {
-    color: var(--btn-tint);
-  }
-  :global(.light[data-skin="hybrid"]) .tab {
-    color: color-mix(in oklab, var(--btn-tint) 55%, var(--foreground));
-  }
-  :global([data-grammar="flat"]) .tab,
   :global([data-grammar="flat"]) .switch {
     font-weight: var(--font-weight-medium);
   }
-  :global([data-grammar="flat"]) .tab.active,
   :global([data-grammar="flat"]) .switch.active {
     background: var(--btn-tint);
     border-color: var(--btn-tint);
