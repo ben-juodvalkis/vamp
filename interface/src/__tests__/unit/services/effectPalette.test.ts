@@ -24,12 +24,12 @@ describe('effectPalette', () => {
 		expect(names(time.bottom)).toEqual([null, 'Grain Delay']);
 	});
 
-	it('fits whole blocks and room for +, dropping from the end', () => {
+	it('fits whole blocks, dropping from the end', () => {
 		const all = paletteBlocks('kit');
 		const cols = all.reduce((n, b) => n + b.cols, 0);
 		expect(cols).toBe(11);
-		expect(fitBlocks(all, cols + 1)).toHaveLength(all.length);
-		expect(fitBlocks(all, cols)).toHaveLength(all.length - 1);
+		expect(fitBlocks(all, cols)).toHaveLength(all.length);
+		expect(fitBlocks(all, cols - 1)).toHaveLength(all.length - 1);
 	});
 
 	it('loads as the defaults did, with short labels', () => {

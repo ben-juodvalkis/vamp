@@ -92,10 +92,10 @@ export function paletteBlocks(kind: PaletteKind): PaletteBlock[] {
 	}));
 }
 
-/** The blocks that fit `columns` chip columns with + after them: whole blocks, dropped from the end. */
+/** The blocks that fit `columns` chip columns: whole blocks, dropped from the end. */
 export function fitBlocks(blocks: readonly PaletteBlock[], columns: number): PaletteBlock[] {
 	const out: PaletteBlock[] = [];
-	let used = 1; // +
+	let used = 0;
 	for (const block of blocks) {
 		if (used + block.cols > columns) break;
 		out.push(block);

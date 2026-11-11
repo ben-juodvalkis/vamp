@@ -452,8 +452,8 @@
   /*
    * The palette bar (the user, 2026-11-11; `services/effectPalette`): ghost
    * effects across the top in family blocks, each family's main effects on
-   * the first row and its others under them, a seam between blocks, then
-   * one + for anything else. Which effects depends on the kind of track
+   * the first row and its others under them, a seam between blocks. The
+   * chain's own + is the way to anything else (the user, 2026-11-11). Which effects depends on the kind of track
    * alone; how many blocks fit on the width, chips at least
    * `PALETTE_TILE_MIN` wide (whole blocks, dropped from the end).
    */
@@ -482,8 +482,8 @@
       col += block.cols + 1; // its columns, then a seam
       return { block, start };
     });
-    const template = [...blocks.map((b) => `repeat(${b.cols}, minmax(0, 1fr)) ${PALETTE_SEAM}px`), 'minmax(0, 1fr)'].join(' ');
-    return { blocks: out, plusCol: col, template };
+    const template = blocks.map((b) => `repeat(${b.cols}, minmax(0, 1fr))`).join(` ${PALETTE_SEAM}px `);
+    return { blocks: out, template };
   });
   /** A chip's ink: its device's family colour, as the cell it would become wears it. */
   function chipInk(effect: { preset?: string }): string | undefined {
@@ -811,8 +811,8 @@
 {/snippet}
 
 <div class="chain-wrap" style:--palette-h={paletteRows === 2 ? '94px' : '44px'} class:two-rows={grid.rows > 1} class:has-utility={showGhostUtility} class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
-<!-- The palette bar: family blocks (the track's own first: MIDI, or the
-     guitar rig), a seam between them, and + last. Every chip in a fixed place. -->
+<!-- The palette bar: family blocks, a seam between them. Every chip in a
+     fixed place; the chain's own + adds anything else. -->
 <div
   class="palette"
   bind:clientWidth={paletteWidth}
@@ -832,18 +832,6 @@
       {/each}
     {/each}
   {/each}
-  <!-- Add an effect: the browser on Effect, landing on this chain. -->
-  <button
-    type="button"
-    class="chain-add"
-    style:grid-column={placed.plusCol}
-    style:grid-row={1}
-    aria-label="Add an effect"
-    data-debug="chain-add"
-    use:press={{ onPress: addEffect, touchAction: 'none' }}
-  >
-    <span class="chain-add-plus" aria-hidden="true"><Plus /></span>
-  </button>
 </div>
 <div
   class="chain"
@@ -896,7 +884,7 @@
       style:grid-column="{layout.spare.col + 1} / span {layout.spare.span}"
       style:grid-row={layout.spare.row + 1}
       aria-label="Add an effect"
-      data-debug="chain-spare-add"
+      data-debug="chain-add"
       use:press={{ onPress: addEffect, touchAction: 'none' }}
     >
       <span class="chain-add-plus" aria-hidden="true"><Plus /></span>
@@ -1081,11 +1069,6 @@
   .palette-slot.blank {
     border: 1px dashed color-mix(in oklab, var(--ghost-line) 45%, transparent);
     border-radius: var(--ghost-radius);
-  }
-  /* + as one of the chips. */
-  .palette > .chain-add {
-    padding: 4px;
-    overflow: hidden;
   }
   /* Bypassed: the bar keeps its name, its wash goes and the face dims, as
      a board's tile ghosts its body when its section is off (ADR-516). */
