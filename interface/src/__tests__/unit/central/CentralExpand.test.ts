@@ -79,8 +79,9 @@ describe('central view full screen', () => {
 	it('the clip view is its controls in the stack and adds the note editor at full screen (ADR-526, ADR-528)', async () => {
 		centralDisplayStore.setView('clip');
 		const { container } = render(MiddlePanelV6);
-		// The view is lazy-loaded: wait for its root.
-		await vi.waitFor(() => expect(container.querySelector('.clip-central-root')).not.toBeNull());
+		// The view is lazy-loaded, and a large module: under the gate's
+		// parallel load its import ran past waitFor's default 1s.
+		await vi.waitFor(() => expect(container.querySelector('.clip-central-root')).not.toBeNull(), { timeout: 5000 });
 		expect(container.querySelector('.clip-central-root .outer')).not.toBeNull();
 		expect(container.querySelector('[data-clip-combo]')).toBeNull();
 		expect(container.querySelector('[aria-label="Clip editor"], .clip-editor')).toBeNull();
