@@ -492,7 +492,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     aliases: ['Octave'],
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
-    color: familyScheme('distortion')   // With Shifter; violet is the MIDI effects' alone (user, 2026-11-11)
+    color: familyScheme('glitch')       // Glitch, as its folder is (user, 2026-11-11; violet until then)
   },
   // Virtual Smudge Device
   chorus: {
