@@ -449,7 +449,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Blur',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
-    color: familyScheme('distortion')   // Kept from the Saturn tile: its ink tells it apart inside the Chorus view
+    color: familyScheme('glitch')       // Glitch, as its folder is (user, 2026-11-11; orange from the Saturn tile until then)
   },
   // New grid devices to replace saturator slot
   guitar: {

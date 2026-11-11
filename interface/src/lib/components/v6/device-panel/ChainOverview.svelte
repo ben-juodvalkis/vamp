@@ -72,7 +72,7 @@
   import SquashControl from './SquashControl.svelte';
   import ControlTile from './ControlTile.svelte';
   import RecentEffectButton from './chain/RecentEffectButton.svelte';
-  import { MIDI_SLOTS, audioPalette, midiPalette, paletteColumns, paletteLabel, type PaletteKind } from '$lib/services/effectPalette';
+  import { MIDI_SLOTS, midiPalette, paletteColumns, paletteLabel, paletteRows as paletteRowsFor, type PaletteKind } from '$lib/services/effectPalette';
   import { controlFor } from './deviceControls';
   import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
   import OperatorHeadAlgorithm from './chain/OperatorHeadAlgorithm.svelte';
@@ -426,23 +426,26 @@
 
   /*
    * The chain has the section's height under the palette bar, one row up to
-   * `ROW_UNITS` and two past it (`chainUnitLayout`). Whatever the cells
-   * leave at the end is a + (the user, 2026-11-11): `spare`.
+   * `ROW_UNITS` and two past it (`chainUnitLayout`), and always ends in a +
+   * one unit wide, a slider's width (the user, 2026-11-11): `spare`. The
+   * cells take the rest of the width, however few there are; on two rows
+   * the + is the last cell of the second, half the chain's height.
    */
   const layout = $derived.by(() => {
     const widths = drawn.map(unitsOf);
-    const sum = widths.reduce((a, w) => a + w, 0);
-    if (sum <= ROW_UNITS) {
-      let col = 0;
-      const places = widths.map((span) => {
-        const p = { row: 0, col, span };
-        col += span;
-        return p;
-      });
-      return { cols: ROW_UNITS, rows: 1, places, spare: { row: 0, col, span: ROW_UNITS - col } };
+    const laid = chainUnitLayout(widths, 1, ROW_UNITS);
+    const spare = { ...laid.ghost };
+    const places = laid.places.map((p) => ({ ...p }));
+    // A + wider than a unit gives its room to the cell before it on its row.
+    if (spare.span > 1) {
+      const last = places.findLast((p) => p.row === spare.row);
+      if (last) {
+        last.span += spare.span - 1;
+        spare.col += spare.span - 1;
+        spare.span = 1;
+      }
     }
-    const laid = chainUnitLayout(widths, 0, ROW_UNITS);
-    return { ...laid, spare: laid.ghost };
+    return { ...laid, places, spare };
   });
   const grid = $derived({ cols: layout.cols, rows: layout.rows });
 
@@ -473,16 +476,14 @@
     const midi = midiPalette(paletteKind);
     return Array.from({ length: MIDI_SLOTS }, (_, i) => midi[i] ?? null);
   });
-  /** Row 1 (every slot but +) then row 2: the first row never changes, the second comes and goes. */
-  const audioSlots = $derived(audioPalette(paletteKind, audioCols - 1 + (paletteRows === 2 ? audioCols : 0)));
+  /** Row 1 (every slot but +) never changes; row 2, the whole width, comes and goes. */
+  const chips = $derived(paletteRowsFor(paletteKind, audioCols - 1, paletteRows === 2 ? MIDI_SLOTS + audioCols : 0));
+  /** A second-row chip's column: under the MIDI section, then past the seam. */
+  const row2Col = (k: number) => (k < MIDI_SLOTS ? k + 1 : k + 2);
   /** A chip's ink: its device's family colour, as the cell it would become wears it. */
   function chipInk(effect: { preset?: string }): string | undefined {
     const preset = effect.preset ? DEVICE_PRESETS[effect.preset] : undefined;
     return preset ? trackInk(preset.color.primary, paint) : undefined;
-  }
-  function audioPlace(j: number): { col: number; row: number } {
-    const first = audioCols - 1;
-    return j < first ? { col: MIDI_SLOTS + 2 + j, row: 1 } : { col: MIDI_SLOTS + 2 + (j - first), row: 2 };
   }
 
   /*
@@ -823,8 +824,13 @@
       {#if slot}<RecentEffectButton recent={slot} compact label={paletteLabel(slot)} ink={chipInk(slot)} />{/if}
     </div>
   {/each}
-  {#each audioSlots as fx, j (fx.fullPath)}
-    <div class="palette-slot" style:grid-column={audioPlace(j).col} style:grid-row={audioPlace(j).row}>
+  {#each chips.row1 as fx, j (fx.fullPath)}
+    <div class="palette-slot" style:grid-column={MIDI_SLOTS + 2 + j} style:grid-row={1}>
+      <RecentEffectButton recent={fx} compact label={paletteLabel(fx)} ink={chipInk(fx)} />
+    </div>
+  {/each}
+  {#each chips.row2 as fx, k (fx.fullPath)}
+    <div class="palette-slot" style:grid-column={row2Col(k)} style:grid-row={2}>
       <RecentEffectButton recent={fx} compact label={paletteLabel(fx)} ink={chipInk(fx)} />
     </div>
   {/each}
