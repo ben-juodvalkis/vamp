@@ -751,9 +751,7 @@
           <span class="name" lang="en">{cell.device.name}</span>
           {#if caption}<span class="caption">{caption}</span>{/if}
         </span>
-        <span class="head-end">
-        {#if cell.kind === 'instrument' && glance.instrumentViewType === 'operator'}<OperatorHeadAlgorithm device={cell.device} />{/if}
-        </span>
+        {#if cell.kind === 'instrument' && glance.instrumentViewType === 'operator'}<span class="head-end"><OperatorHeadAlgorithm device={cell.device} /></span>{/if}
       </div></CellSize>
 
       {#if cell.kit}
@@ -1108,7 +1106,7 @@
     height: var(--strip-band-h, 56px);
     /* Across its CellSize: the whole width, the switch in the corner. */
     flex: 1 1 auto;
-    padding-inline: 10px 6px;
+    padding-inline: 8px;
     /* On: the bar washed in the ink, the switch's lit state; off, bare. */
     background: color-mix(in oklab, var(--cell-ink) 20%, transparent);
     border-bottom: 1px solid var(--cell-line);
@@ -1126,15 +1124,19 @@
      (the user, the same day). */
   .chain-wrap.two-rows .cell-head {
     height: calc(var(--strip-band-h, 56px) / 2);
-    padding-inline: 8px 3px;
+    padding-inline: 6px;
     gap: 4px;
   }
+  /* The name centered on its bar (the user, 2026-11-11), with no switch
+     beside it since a tap on the bar is the switch. */
   .head-text {
     flex: 1 1 auto;
     min-width: 0;
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
+    text-align: center;
     gap: 1px;
   }
   /* Operator's algorithm closes the row. */
@@ -1269,7 +1271,7 @@
   }
   .chain-cell.half .cell-head {
     gap: 3px;
-    padding-inline: 8px 4px;
+    padding-inline: 6px;
   }
   /* A narrow cell leaves the name what the switch does not: a size
      smaller. */

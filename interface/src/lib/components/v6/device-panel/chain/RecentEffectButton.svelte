@@ -177,14 +177,14 @@
 		width: auto;
 	}
 	/* Inked (the palette bar): quiet at rest, the family's colour in a
-	   hairline only, the name in the tertiary grey and no fill, so 26 chips
-	   do not compete with the chain under them (the user, 2026-11-11); the
-	   colour fills in under the finger. */
+	   hairline and the name, no fill, so the chips do not compete with the
+	   chain under them (the user, 2026-11-11); the colour fills in under
+	   the finger. */
 	.recent-effect.inked {
 		border-style: solid;
 		border-color: color-mix(in oklab, var(--chip-ink) 38%, transparent);
 		background: transparent;
-		color: var(--fg-tertiary);
+		color: color-mix(in oklab, var(--chip-ink) 75%, var(--fg-tertiary));
 	}
 	.recent-effect.inked:active {
 		border-color: var(--chip-ink);
