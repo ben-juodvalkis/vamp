@@ -194,8 +194,16 @@
 	.recent-effect.compact > .recent-picture {
 		display: none;
 	}
+	/* A long name (Drum Buss, Pitch Hack) wraps to two lines, between words. */
 	.recent-effect.compact > .recent-name {
 		font-size: 0.8125rem;
+		line-height: 1.1;
+		white-space: normal;
+		overflow-wrap: normal;
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
 	}
 	.recent-name {
 		max-width: 100%;

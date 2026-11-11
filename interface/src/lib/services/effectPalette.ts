@@ -21,9 +21,9 @@ export type PaletteKind = 'kit' | 'instrument' | 'audio';
 
 /** What a chip in the palette bar says: short, so a row holds many. */
 const LABELS: Record<string, string> = {
-	arpeggiator: 'Arp', chance: 'Chance', velocity: 'Velocity', chord: 'Chord', random: 'Random',
+	arpeggiator: 'Arp', chance: 'Chance', velocity: 'Vel', chord: 'Chord', random: 'Random',
 	filter: 'Filter', eq: 'EQ', saturator: 'Drive', squash: 'Glue', compressor: 'Comp', echo: 'Echo',
-	reverb: 'Reverb', chorus: 'Chorus', phaser: 'Phaser', tremolo: 'Tremolo', drum: 'Drum Buss',
+	reverb: 'Reverb', chorus: 'Chorus', phaser: 'Phaser', tremolo: 'Trem', drum: 'Drum Buss',
 	redux: 'Redux', gate: 'Gate', ott: 'OTT', shifter: 'Shifter', pedal: 'Pedal', roar: 'Roar',
 	guitar: 'Guitar', bass: 'Bass Amp', wah: 'Wah', delay: 'Delay', limiter: 'Limiter', eq8: 'EQ Eight',
 	toneShaper: 'Tone Shaper', comb: 'Comb', glitchLoop: 'Glitch', pitchHack: 'Pitch Hack', smudge: 'Blur',

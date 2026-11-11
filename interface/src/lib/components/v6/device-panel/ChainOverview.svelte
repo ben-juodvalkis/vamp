@@ -953,9 +953,10 @@
   .chain-wrap.has-utility {
     grid-template-columns: minmax(0, 1fr) 72px;
   }
+  /* The real devices' height, under the bar (the user, 2026-11-11). */
   .chain-wrap > .ghost-utility {
     grid-column: 2;
-    grid-row: 1 / -1;
+    grid-row: 2;
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -1062,8 +1063,9 @@
   }
   /* The palette bar: the MIDI chips, a seam, the audio chips and +, one
      row of chips of one size, each placed by its slot. */
+  /* The bar runs to the right edge, over the ghost Utility's column too. */
   .palette {
-    grid-column: 1;
+    grid-column: 1 / -1;
     grid-row: 1;
     min-width: 0;
     min-height: 0;
