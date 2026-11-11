@@ -228,9 +228,6 @@ const SHIFTER_PARAMS = [
 	['Delay Sync', 0, 1, 1, 'On'], ['Delay Time', 0, 1, 0.35, '250 ms'], ['Delay Synced', 0, 17, 9, '1/4'], ['Delay Feedback', 0, 1, 0, '0.0 %'],
 	['Mode', 0, 2, 2, 'Ring'], ['Tone', 0, 1, 0.75, '9.45 kHz'], ['Wide', 0, 1, 0, 'Off'], ['Dry/Wet', 0, 1, 0.8, '80 %']
 ].map(([name, ...rest]) => [name, name, ...rest]);
-/** The rig's effects shelf (catalog.effectsPlace), for states that name its files. */
-const SHELF = '/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Audio-Midi Effects';
-const RECENT_SEED = [['Echo', 'Time'], ['Auto Filter', 'Tone'], ['Hybrid Reverb', 'Time'], ['EQ Eight', 'Tone'], ['Tone Shaper', 'Tone', 'amxd'], ['Utility', 'Utility'], ['Channel EQ', 'Tone'], ['Wah', 'Guitar', 'adg'], ['MidiWheels', 'Midi Effect', 'amxd'], ['Saturator', 'Distortion'], ['Chorus', 'Modulation'], ['Drum Buss', 'Distortion'], ['Glue', 'Dynamics'], ['Redux', 'Distortion'], ['Phaser', 'Modulation'], ['Gate', 'Dynamics'], ['Tremolo', 'Modulation'], ['Compressor', 'Dynamics']];
 const chainOf = (n) => (scene) =>
 	setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], 'Auto Filter', 'Echo', 'Reverb', CHAIN_DEMO_DEVICES[5], 'Auto Filter', CHAIN_DEMO_DEVICES[7], CHAIN_DEMO_DEVICES[8]].slice(0, n));
 const chainCell = (index) => `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/${index}"]`;
@@ -547,22 +544,16 @@ export const TOURS = {
 				scenePatch: chainDemo,
 				steps: [select, { click: '[data-debug="chain-add"]' }, { wait: 2500 }]
 			})),
-			// The Recent column beside + Effect (ADR-484), seeded from the rig's
-			// shelf so --real-data draws each one's picture. Echo is on the chain
-			// already, so it is skipped.
+			// The palette under the chain: fixed ghost effects for each kind of
+			// track, MIDI on the left, audio on the right, then +.
 			...[
-				['chain-recents', 'the instrument alone, on one row: the ghost section two cells wide, recents in three columns of four and + Effect the full-height last column; Auto Filter draws its curve', 1],
-				['chain-recents-crowded', 'a chain on two rows: recents in five columns of two and + Effect double height; Echo and Auto Filter are on it, so they are skipped', 5],
-				['chain-recents-fresh', 'a fresh browser with no recents: Live\'s own effects fill the section (no Utility, the sidebar has its own)', 1, 0],
-				['chain-recents-some', 'three recents: they come first, Live\'s own effects fill the rest', 1, 3]
-			].map(([name, what, n, seed = RECENT_SEED.length]) => ({
+				['chain-palette-kit', 'a Drum Rack track: Arpeggiator, Note Chance and Velocity; Drum Buss after the shared ten', openInstrument(1)],
+				['chain-palette-instrument', 'an instrument track: Chord and Random join the MIDI effects; Pedal and Roar after the shared ten', openInstrument(CHAIN_DEMO_TRACK)],
+				['chain-palette-audio', 'an audio track: the MIDI slots empty; the amps after the shared ten', selectTrack(3)]
+			].map(([name, what, select]) => ({
 				name,
-				description: `The Recent column (ADR-484): ${what}`,
-				scenePatch: chainOf(n),
-				steps: [
-					{ storage: { 'vamp.recentEffects': JSON.stringify(RECENT_SEED.slice(0, seed).map(([n, dir, ext = 'adv']) => ({ name: n, fullPath: `${SHELF}/${dir}/${n}.${ext}`, source: '', rel: '' }))) } },
-					openInstrument(CHAIN_DEMO_TRACK)
-				]
+				description: `The chain's palette: ${what}`,
+				steps: [select, { wait: 500 }]
 			})),
 			{
 				name: 'chain-plugin',
