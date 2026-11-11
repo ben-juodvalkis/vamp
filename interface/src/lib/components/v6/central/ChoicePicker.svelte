@@ -1,5 +1,6 @@
 <script lang="ts">
   import { press } from '$lib/actions/press';
+  import { Portal } from 'bits-ui';
   /**
    * ChoicePicker — one value out of a list, picked from a grid that opens
    * over the central view (2026-11-06, Drift's modulation sources).
@@ -13,6 +14,13 @@
    * options stand in a grid of touch-size cells; a tap picks and closes, a
    * tap on the scrim closes. For lists a tab cannot hold in a column:
    * Drift's twelve matrix targets, its eight sources under every amount.
+   *
+   * The open grid is moved INTO that ancestor (a portal), not left beside
+   * the field: on a full-screen board the field sits in a rounded,
+   * `overflow: hidden` tile, and Safari clips an absolute child to it even
+   * though the tile is not its containing block, so on the iPad the scrim
+   * dimmed the tile and the grid never showed (2026-11-10, Operator's
+   * Algorithm). Chromium draws it either way.
    */
   interface Props {
     options: readonly string[];
@@ -30,6 +38,15 @@
   let { options, selected, onSelect, label, tint, ghost = false, caption }: Props = $props();
 
   let open = $state(false);
+  let field: HTMLButtonElement | undefined = $state();
+  /** The box the open grid covers: the field's nearest positioned ancestor. */
+  let host = $derived.by(() => {
+    if (!open || !field) return undefined;
+    for (let el = field.parentElement; el; el = el.parentElement) {
+      if (getComputedStyle(el).position !== 'static') return el;
+    }
+    return document.body;
+  });
   let current = $derived(selected !== undefined && selected >= 0 ? options[selected] : undefined);
   let cols = $derived(options.length > 8 ? 4 : options.length > 4 ? 4 : options.length);
 
@@ -40,6 +57,7 @@
 </script>
 
 <button
+  bind:this={field}
   class="picker-button"
   class:ghost
   class:captioned={!!caption}
@@ -53,7 +71,8 @@
   <span class="picker-line"><span class="picker-value">{current ?? '—'}</span><span class="picker-caret" aria-hidden="true">▾</span></span>
 </button>
 
-{#if open}
+{#if open && host}
+  <Portal to={host}>
   <div class="picker-scrim" role="presentation" use:press={{ onPress: () => (open = false) }}></div>
   <div class="picker-sheet" role="dialog" aria-label={label} style="--picker-tint: {tint};">
     <div class="picker-title">{label}</div>
@@ -70,6 +89,7 @@
       {/each}
     </div>
   </div>
+  </Portal>
 {/if}
 
 <style>
