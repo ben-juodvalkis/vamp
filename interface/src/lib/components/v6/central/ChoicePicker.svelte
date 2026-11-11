@@ -71,7 +71,12 @@
   use:press={{ onPress: () => (open = true), disabled: ghost }}
 >
   {#if caption}<span class="picker-caption">{caption}</span>{/if}
-  <span class="picker-line"><span class="picker-value">{current ?? '—'}</span><span class="picker-caret" aria-hidden="true">▾</span></span>
+  {#if art && current !== undefined && selected !== undefined}
+    <!-- A pictured pick shows its picture closed too, not just its name. -->
+    <span class="picker-line picker-line-art"><span class="picker-field-art" aria-hidden="true">{@render art(selected)}</span><span class="picker-caret" aria-hidden="true">▾</span></span>
+  {:else}
+    <span class="picker-line"><span class="picker-value">{current ?? '—'}</span><span class="picker-caret" aria-hidden="true">▾</span></span>
+  {/if}
 </button>
 
 {#if open && host}
@@ -147,6 +152,26 @@
     overflow: hidden;
     text-overflow: ellipsis;
     min-width: 0;
+  }
+  /* The closed field's picture takes the line's whole height. */
+  .picker-line-art {
+    align-self: stretch;
+    flex: 1 1 0;
+    min-height: 0;
+    padding: 0.125rem 0;
+  }
+  .picker-field-art {
+    position: relative;
+    align-self: stretch;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .picker-field-art :global(.op-alg) {
+    opacity: 1;
+  }
+  .picker-field-art :global(.op-alg svg) {
+    width: 100cqmin;
+    height: 100cqmin;
   }
   .picker-caret {
     flex: none;
