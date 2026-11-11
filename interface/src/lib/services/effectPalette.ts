@@ -22,7 +22,7 @@ const LABELS: Record<string, string> = {
 	filter: 'Filter', eq: 'EQ', saturator: 'Drive', squash: 'Glue', compressor: 'Comp', echo: 'Echo',
 	reverb: 'Reverb', chorus: 'Chorus', phaser: 'Phaser', tremolo: 'Trem', drum: 'Drum Buss',
 	redux: 'Redux', gate: 'Gate', ott: 'OTT', shifter: 'Shifter', pedal: 'Pedal', roar: 'Roar',
-	guitar: 'Guitar', bass: 'Bass Amp', wah: 'Wah', delay: 'Delay', limiter: 'Limiter', eq8: 'EQ Eight',
+	guitar: 'Guitar', bass: 'Bass', wah: 'Wah', delay: 'Delay', limiter: 'Limiter', eq8: 'EQ Eight',
 	toneShaper: 'Tone Shaper', comb: 'Comb', glitchLoop: 'Glitch', pitchHack: 'Pitch Hack', smudge: 'Blur',
 	octave: 'Pitch Shift', variation: 'Stutter', randomOctave: 'Rand Oct', grainDelay: 'Grain'
 };
