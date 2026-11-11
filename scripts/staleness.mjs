@@ -268,7 +268,7 @@ async function runBuild() {
 			cwd: path.join(REPO_ROOT, 'interface'),
 			stdio: 'inherit',
 			shell: false,
-			env: { ...process.env, NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --disable-warning=ExperimentalWarning`.trim() }
+			env: { ...process.env, VAMP_LIVE_BUILD: '1', NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --disable-warning=ExperimentalWarning`.trim() }
 		});
 		child.on('close', resolve);
 		child.on('error', () => resolve(1));

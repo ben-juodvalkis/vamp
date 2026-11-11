@@ -1,5 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
+import { connect } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { configDefaults, defineConfig } from 'vitest/config';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
@@ -37,6 +38,52 @@ function revalidateOptimizedDeps(): Plugin {
 			});
 		}
 	};
+}
+
+/**
+ * No build into the folder Vamp's page server is serving while it serves it
+ * (2026-11-11).
+ *
+ * `npm run ipad` builds into `.svelte-kit/output` and `vite preview` serves
+ * it on the page port. Another `npm run build` there a minute later (another
+ * session's) replaced every hashed file under it: the iPad, which had loaded
+ * the page from the first build, asked for a file that was gone, the server
+ * crashed on it, and Vamp for iPad sat at "Loading Vamp…". The live folder
+ * can't move (the PWA plugin below works on `.svelte-kit/output` alone), so a
+ * build there is refused while the page port answers, unless it is the live
+ * build itself (`VAMP_LIVE_BUILD=1`: scripts/staleness.mjs, `npm run rebuild`).
+ * A build with its own folder (LOOPING_KIT_OUT_DIR, the demo) is not affected.
+ */
+function guardLiveBuild(): Plugin {
+	return {
+		name: 'looping:guard-live-build',
+		apply: 'build',
+		enforce: 'pre',
+		async config() {
+			const env = process.env;
+			if (env.LOOPING_KIT_OUT_DIR || env.VAMP_DEMO_BUILD === '1' || env.VAMP_LIVE_BUILD === '1') return;
+			const port = constants.padLink.pagePort;
+			if (!(await portAnswers(port))) return;
+			throw new Error(
+				`Vamp's page server (:${port}) is serving .svelte-kit/output, and a build there ` +
+					`would pull files from under the iPad. Build into your own folder instead ` +
+					`(LOOPING_KIT_OUT_DIR=.svelte-kit/<name> npm run build), or stop Vamp first.`
+			);
+		}
+	};
+}
+
+function portAnswers(port: number): Promise<boolean> {
+	return new Promise((resolve) => {
+		const socket = connect({ host: '127.0.0.1', port });
+		const done = (up: boolean) => {
+			socket.destroy();
+			resolve(up);
+		};
+		socket.setTimeout(500, () => done(false));
+		socket.once('connect', () => done(true));
+		socket.once('error', () => done(false));
+	});
 }
 
 /** Tests that load the repo's CommonJS scripts or run ESLint: plain threads (see `projects`). */
@@ -163,6 +210,7 @@ export default defineConfig({
 		}
 	},
 	plugins: [
+		guardLiveBuild(),
 		revalidateOptimizedDeps(),
 		tailwindcss(),
 		sveltekit(),

@@ -187,6 +187,31 @@ final class PadModel: ObservableObject {
         if up && !pageLoaded { reloadToken += 1 }
     }
 
+    /// A load that never finishes and never fails: the page server crashed
+    /// under one of its files (2026-11-11), and Vamp sat at "Loading Vamp…"
+    /// with the link up until the app was force-quit. A load in flight this
+    /// long is started again.
+    static let loadTimeout: TimeInterval = 15
+    private var loadWatchdog: Task<Void, Never>?
+
+    /// The web view started loading the page.
+    func loadStarted() {
+        loadWatchdog?.cancel()
+        let token = reloadToken
+        loadWatchdog = Task {
+            try? await Task.sleep(for: .seconds(Self.loadTimeout))
+            guard !Task.isCancelled, self.linked, !self.pageLoaded, self.reloadToken == token else { return }
+            Self.log.notice("the page did not finish loading in \(Int(Self.loadTimeout), privacy: .public) s: loading it again")
+            self.reloadToken += 1
+        }
+    }
+
+    /// Always the server's own page, never a cached copy: a copy from an
+    /// earlier build names files the server no longer has.
+    var pageRequest: URLRequest {
+        URLRequest(url: pageURL, cachePolicy: .reloadIgnoringLocalCacheData)
+    }
+
     func pageFailed() {
         pageLoaded = false
         guard linked else { return }
@@ -383,14 +408,16 @@ struct PadWebView: UIViewRepresentable {
         // Safari's Web Inspector on the Mac can attach, as it can to a page.
         webView.isInspectable = true
         context.coordinator.lastToken = model.reloadToken
-        webView.load(URLRequest(url: model.pageURL))
+        webView.load(model.pageRequest)
+        model.loadStarted()
         return webView
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
         if context.coordinator.lastToken != model.reloadToken {
             context.coordinator.lastToken = model.reloadToken
-            webView.load(URLRequest(url: model.pageURL))
+            webView.load(model.pageRequest)
+            model.loadStarted()
         }
     }
 

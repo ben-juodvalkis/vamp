@@ -102,7 +102,7 @@
     "test:run": "cd interface && npm run test:run",
     "test:ax-helper": "uv run --directory owner/ax-helper pytest -q",
     "test:coverage": "cd interface && npm run test:coverage",
-    "rebuild": "cd interface && npm run build && echo '\u2705 Interface rebuilt - restart preview server if needed'",
+    "rebuild": "cd interface && VAMP_LIVE_BUILD=1 npm run build && echo '\u2705 Interface rebuilt - restart preview server if needed'",
     "restart-preview": "lsof -ti tcp:8889 | xargs kill 2>/dev/null || true",
     "update": "npm run rebuild && npm run restart-preview && npm run status",
     "bridge": "cd interface/bridge && LOG_LEVEL=WARN npm run dev",
