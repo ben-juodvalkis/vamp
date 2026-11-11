@@ -1,6 +1,7 @@
 <script lang="ts">
   import { press } from '$lib/actions/press';
   import { Portal } from 'bits-ui';
+  import type { Snippet } from 'svelte';
   /**
    * ChoicePicker — one value out of a list, picked from a grid that opens
    * over the central view (2026-11-06, Drift's modulation sources).
@@ -33,9 +34,11 @@
     ghost?: boolean;
     /** Drawn small over the value inside the field: what the pick is. */
     caption?: string;
+    /** A picture of option i, drawn in its cell over its name (Operator's algorithms). */
+    art?: Snippet<[number]>;
   }
 
-  let { options, selected, onSelect, label, tint, ghost = false, caption }: Props = $props();
+  let { options, selected, onSelect, label, tint, ghost = false, caption, art }: Props = $props();
 
   let open = $state(false);
   let field: HTMLButtonElement | undefined = $state();
@@ -80,12 +83,13 @@
       {#each options as option, i (i)}
         <button
           class="physical-button picker-option"
+          class:pictured={!!art}
           class:active={i === selected}
           role="radio"
           aria-checked={i === selected}
           style="--btn-tint: {tint};"
           use:press={{ onPress: () => pick(i) }}
-        >{option}</button>
+        >{#if art}<span class="picker-art" aria-hidden="true">{@render art(i)}</span><span class="picker-art-name">{option}</span>{:else}{option}{/if}</button>
       {/each}
     </div>
   </div>
@@ -185,5 +189,40 @@
   .picker-option {
     min-height: var(--height-touch);
     font-size: 0.8125rem;
+  }
+  /* A pictured option: the picture over its name, the cell square enough to read it. */
+  .picker-option.pictured {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 7rem;
+    padding: 0.5rem 0.25rem 0.375rem;
+  }
+  /* The current one keeps its dark cell, so the picture's own colors read
+     (an orange fill hid Osc D): a ring in the ON color and its name lit. */
+  :global([data-grammar="flat"]) .picker-option.pictured.active {
+    background: var(--surface-well);
+    border-color: var(--phosphor);
+    box-shadow: inset 0 0 0 1px var(--phosphor);
+    color: var(--phosphor);
+  }
+  .picker-art {
+    position: relative;
+    flex: 1 1 0;
+    width: 100%;
+    min-height: 0;
+  }
+  .picker-art :global(.op-alg) {
+    opacity: 1;
+  }
+  .picker-art :global(.op-alg svg) {
+    width: 100cqmin;
+    height: 100cqmin;
+  }
+  .picker-art-name {
+    flex: none;
+    font-size: 0.75rem;
+    line-height: 1;
   }
 </style>

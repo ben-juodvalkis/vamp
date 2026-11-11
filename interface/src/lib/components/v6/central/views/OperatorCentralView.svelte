@@ -30,6 +30,8 @@
   import EnvelopeGraph from '../EnvelopeGraph.svelte';
   import LfoGraph from '../LfoGraph.svelte';
   import ScrubTabs from '../../device-panel/ScrubTabs.svelte';
+  import OperatorAlgorithm from '../../device-panel/chain/OperatorAlgorithm.svelte';
+  import { providePickArt } from './panel/pickArt';
 
   interface Props {
     instrument?: InstrumentInfo | null;
@@ -77,6 +79,14 @@
   let lfoShape = $derived(LFO_SHAPES[Math.round(params.raw('LFO Type') ?? 0)]);
   let lfoRate = $derived(Math.round(params.raw('LFO Range') ?? 0) === 2 ? 'LFO Sync' : 'LFO Rate');
 
+  // The Algorithm pick draws each algorithm as Live's strip does: every one
+  // hollow but the current, whose oscillators that are on are filled (as
+  // the chain cell's header draws it).
+  const HOLLOW = [false, false, false, false] as const;
+  let algorithmNow = $derived(Math.round(params.raw('Algorithm') ?? 0));
+  let oscOn = $derived((['A', 'B', 'C', 'D'] as const).map((o) => (params.raw(`Osc-${o} On`) ?? 1) >= 0.5) as [boolean, boolean, boolean, boolean]);
+  providePickArt({ Algorithm: algorithmArt });
+
   function handleFilterXY(x: number, y: number) {
     params.writeUnit('Filter Freq', x, 'Filter On');
     params.writeUnit('Filter Res', y, 'Filter On');
@@ -99,6 +109,10 @@
         color={operatorInk}
       />
     </div>
+  {/snippet}
+
+  {#snippet algorithmArt(i: number)}
+    <OperatorAlgorithm algorithm={i} on={i === algorithmNow ? oscOn : HOLLOW} uniform />
   {/snippet}
 
   {#snippet lfoPanel()}

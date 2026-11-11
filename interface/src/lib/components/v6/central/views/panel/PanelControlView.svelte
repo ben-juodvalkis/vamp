@@ -16,6 +16,7 @@
 	import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
 	import ChoicePicker from '../../ChoicePicker.svelte';
 	import type { PanelParams } from './usePanelParams.svelte';
+	import { usePickArt } from './pickArt';
 
 	interface Props {
 		control: PanelControl;
@@ -44,6 +45,7 @@
 
 	let { control, params, color, switchParam, pageRows = 1, face = 'slider', knobSize = 'm', mark, pick = false, bareCaption = false, caption = true }: Props = $props();
 	let pickOptions = $derived(control.kind === 'choice' ? control.options : control.kind === 'step' ? control.labels : undefined);
+	const pickArt = usePickArt();
 	let pickTitle = $derived(control.kind === 'choice' ? (control.title ?? control.param) : control.title);
 
 	let listed = $derived(params.has(control.param));
@@ -93,6 +95,7 @@
 			caption={bareCaption ? undefined : pickTitle}
 			tint={color.primary}
 			ghost={!listed}
+			art={pickArt?.[control.param]}
 		/>
 	</div>
 {:else if control.kind === 'box'}

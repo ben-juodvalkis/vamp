@@ -34,16 +34,20 @@
     algorithm: number;
     /** Osc-A On … Osc-D On. */
     on: readonly [boolean, boolean, boolean, boolean];
+    /** Draw at the scale of the widest algorithm, so a row of them share one square size (the Algorithm pick). */
+    uniform?: boolean;
   }
 
-  let { algorithm, on }: Props = $props();
+  let { algorithm, on, uniform = false }: Props = $props();
 
   const SQ = 10 / 8; // a square in grid units (Live: 10px on an 8px grid)
   let cells = $derived(OPERATOR_ALGORITHMS[Math.min(10, Math.max(0, Math.round(algorithm)))]);
+  /** The widest and tallest any algorithm reaches: 6 grid units, plus a square. */
+  const FULL = Math.max(...OPERATOR_ALGORITHMS.flat().flat()) + SQ;
   let box = $derived.by(() => {
     const cols = Math.max(...cells.map((c) => c[0])) + SQ;
     const rows = Math.max(...cells.map((c) => c[1])) + SQ;
-    const side = Math.max(cols, rows);
+    const side = uniform ? FULL : Math.max(cols, rows);
     return { x: (cols - side) / 2, y: (rows - side) / 2, side };
   });
 </script>
