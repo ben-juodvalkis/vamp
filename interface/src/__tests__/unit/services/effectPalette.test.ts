@@ -1,38 +1,46 @@
 import { describe, expect, it } from 'vitest';
-import { audioPalette, midiPalette, paletteColumns, paletteRows, MIDI_SLOTS } from '$lib/services/effectPalette';
+import { fitBlocks, paletteBlocks, paletteColumns, paletteLabel } from '$lib/services/effectPalette';
+
+const names = (row: ({ name: string } | null)[]) => row.map((e) => e?.name ?? null);
 
 describe('effectPalette', () => {
-	it('keeps the MIDI slots in place, empty where a kind has none', () => {
-		// No effects folder here, so Note Chance (a Max device found in it) is
-		// an empty slot, and Velocity keeps its place after it.
-		expect(midiPalette('kit').map((e) => e?.name ?? null)).toEqual(['Arpeggiator', null, 'Velocity']);
-		expect(midiPalette('instrument').map((e) => e?.name ?? null)).toEqual(['Arpeggiator', 'Chord', 'Random']);
-		expect(midiPalette('audio')).toEqual([]);
-		expect(midiPalette('instrument')).toHaveLength(MIDI_SLOTS);
+	it("leads with the track's own block: MIDI on a MIDI track, the guitar rig on audio", () => {
+		expect(paletteBlocks('kit')[0].family).toBe('midi');
+		expect(paletteBlocks('instrument')[0].family).toBe('midi');
+		expect(paletteBlocks('audio')[0].family).toBe('guitar');
+		// No effects folder here: Note Chance (a Max device) is an empty slot that keeps its place.
+		expect(names(paletteBlocks('kit')[0].top)).toEqual(['Arpeggiator', null, 'Velocity']);
+		expect(names(paletteBlocks('instrument')[0].top)).toEqual(['Arpeggiator', 'Chord', 'Random']);
 	});
 
-	it('puts the shared audio effects first, the same for every kind', () => {
-		const core = ['Auto Filter', 'Channel EQ', 'Saturator', 'Glue Compressor', 'Compressor', 'Echo', 'Reverb', 'Chorus', 'Phaser', 'Auto Pan Legacy'];
+	it('groups by family in the same order on every track, main effects on top', () => {
 		for (const kind of ['kit', 'instrument', 'audio'] as const) {
-			expect(audioPalette(kind, 10).map((e) => e.name)).toEqual(core);
+			expect(paletteBlocks(kind).slice(1).map((b) => b.family)).toEqual(['tone', 'dynamics', 'distortion', 'modulation', 'time', 'glitch']);
 		}
-		expect(audioPalette('kit', 11)[10].name).toBe('Drum Buss');
-		expect(audioPalette('instrument', 99).map((e) => e.name)).not.toContain('Drum Buss');
+		const time = paletteBlocks('instrument').find((b) => b.family === 'time')!;
+		expect(names(time.top)).toEqual(['Echo', 'Reverb']);
 	});
 
-	it('fills the second row: more MIDI under the MIDI section, then the audio effects after row 1', () => {
-		const { row1, row2 } = paletteRows('instrument', 9, 10);
-		expect(row1).toHaveLength(9);
-		expect(row2).toHaveLength(10);
-		expect(row2[0].name).toBe('Velocity');
-		expect(row2.map((e) => e.name)).not.toContain(row1[0].name);
-		expect([...row1, ...row2].map((e) => e.name)).not.toContain('Drum Buss');
-		expect(paletteRows('kit', 9, 13).row2.map((e) => e.name)).toContain('Drum Buss');
+	it('offers Drum Buss on a kit only', () => {
+		const has = (kind: 'kit' | 'instrument' | 'audio') =>
+			paletteBlocks(kind).some((b) => [...b.top, ...b.bottom].some((e) => e?.name === 'Drum Buss'));
+		expect(has('kit')).toBe(true);
+		expect(has('instrument')).toBe(false);
+		expect(has('audio')).toBe(false);
+	});
+
+	it('fits whole blocks and room for +, dropping from the end', () => {
+		const all = paletteBlocks('instrument');
+		const cols = all.reduce((n, b) => n + b.cols, 0);
+		expect(fitBlocks(all, cols + 1)).toHaveLength(all.length);
+		expect(fitBlocks(all, cols)).toHaveLength(all.length - 1);
+		expect(fitBlocks(all, 1)).toHaveLength(0);
 	});
 
 	it('loads as the defaults did: a MIDI effect is one', () => {
-		expect(midiPalette('kit')[0]).toMatchObject({ kind: 'midi-effect', preset: 'arpeggiator', fullPath: 'default:arpeggiator' });
-		expect(audioPalette('kit', 1)[0]).toMatchObject({ kind: 'audio-effect', preset: 'filter' });
+		expect(paletteBlocks('kit')[0].top[0]).toMatchObject({ kind: 'midi-effect', preset: 'arpeggiator', fullPath: 'default:arpeggiator' });
+		expect(paletteBlocks('kit')[1].top[0]).toMatchObject({ kind: 'audio-effect', preset: 'filter' });
+		expect(paletteLabel({ name: 'Glue Compressor', preset: 'squash' })).toBe('Glue');
 	});
 
 	it('fits as many tile columns as the width holds', () => {

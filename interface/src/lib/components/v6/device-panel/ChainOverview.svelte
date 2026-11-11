@@ -72,7 +72,7 @@
   import SquashControl from './SquashControl.svelte';
   import ControlTile from './ControlTile.svelte';
   import RecentEffectButton from './chain/RecentEffectButton.svelte';
-  import { MIDI_SLOTS, midiPalette, paletteColumns, paletteLabel, paletteRows as paletteRowsFor, type PaletteKind } from '$lib/services/effectPalette';
+  import { fitBlocks, paletteBlocks, paletteColumns, paletteLabel, type PaletteKind } from '$lib/services/effectPalette';
   import { controlFor } from './deviceControls';
   import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
   import OperatorHeadAlgorithm from './chain/OperatorHeadAlgorithm.svelte';
@@ -450,15 +450,16 @@
   const grid = $derived({ cols: layout.cols, rows: layout.rows });
 
   /*
-   * The palette bar (the user, 2026-11-11; `services/effectPalette`): one
-   * row of ghost effects across the top, in fixed places, MIDI on the left
-   * and audio on the right, then one + for anything else. Which effects
-   * depends on the kind of track alone; how many audio ones on the width,
-   * chips at least `PALETTE_TILE_MIN` wide.
+   * The palette bar (the user, 2026-11-11; `services/effectPalette`): ghost
+   * effects across the top in family blocks, each family's main effects on
+   * the first row and its others under them, a seam between blocks, then
+   * one + for anything else. Which effects depends on the kind of track
+   * alone; how many blocks fit on the width, chips at least
+   * `PALETTE_TILE_MIN` wide (whole blocks, dropped from the end).
    */
   const PALETTE_TILE_MIN = 60;
   const PALETTE_GAP = 6;
-  /** The seam between the MIDI and the audio effects, a column of its own. */
+  /** The seam between two family blocks, a column of its own. */
   const PALETTE_SEAM = 4;
   let paletteWidth = $state(0);
   const paletteKind = $derived<PaletteKind>(
@@ -470,16 +471,20 @@
   );
   /** Two rows of chips while the chain is one row; one once it splits (the user, 2026-11-11). */
   const paletteRows = $derived(grid.rows === 1 ? 2 : 1);
-  /** Audio columns, + included: the row less the MIDI slots and the seam. */
-  const audioCols = $derived(Math.max(1, paletteColumns(paletteWidth - PALETTE_SEAM - PALETTE_GAP, PALETTE_TILE_MIN, PALETTE_GAP) - MIDI_SLOTS));
-  const midiSlots = $derived.by(() => {
-    const midi = midiPalette(paletteKind);
-    return Array.from({ length: MIDI_SLOTS }, (_, i) => midi[i] ?? null);
+  /** The blocks that fit, each placed: its first column, after the seams before it. */
+  const placed = $derived.by(() => {
+    const all = paletteBlocks(paletteKind);
+    const room = paletteColumns(paletteWidth - all.length * (PALETTE_SEAM + PALETTE_GAP), PALETTE_TILE_MIN, PALETTE_GAP);
+    const blocks = paletteWidth > 0 ? fitBlocks(all, room) : all;
+    let col = 1;
+    const out = blocks.map((block) => {
+      const start = col;
+      col += block.cols + 1; // its columns, then a seam
+      return { block, start };
+    });
+    const template = [...blocks.map((b) => `repeat(${b.cols}, minmax(0, 1fr)) ${PALETTE_SEAM}px`), 'minmax(0, 1fr)'].join(' ');
+    return { blocks: out, plusCol: col, template };
   });
-  /** Row 1 (every slot but +) never changes; row 2, the whole width, comes and goes. */
-  const chips = $derived(paletteRowsFor(paletteKind, audioCols - 1, paletteRows === 2 ? MIDI_SLOTS + audioCols : 0));
-  /** A second-row chip's column: under the MIDI section, then past the seam. */
-  const row2Col = (k: number) => (k < MIDI_SLOTS ? k + 1 : k + 2);
   /** A chip's ink: its device's family colour, as the cell it would become wears it. */
   function chipInk(effect: { preset?: string }): string | undefined {
     const preset = effect.preset ? DEVICE_PRESETS[effect.preset] : undefined;
@@ -806,39 +811,32 @@
 {/snippet}
 
 <div class="chain-wrap" style:--palette-h={paletteRows === 2 ? '94px' : '44px'} class:two-rows={grid.rows > 1} class:has-utility={showGhostUtility} class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
-<!-- The palette bar: MIDI effects on the left, a seam, the audio effects,
-     and + last. Every chip in a fixed place. -->
+<!-- The palette bar: family blocks (the track's own first: MIDI, or the
+     guitar rig), a seam between them, and + last. Every chip in a fixed place. -->
 <div
   class="palette"
   bind:clientWidth={paletteWidth}
-  style:--midi-cols={MIDI_SLOTS}
   style:--palette-rows={paletteRows}
-  style:--audio-cols={audioCols}
+  style:grid-template-columns={placed.template}
   data-debug="chain-palette"
   data-palette-kind={paletteKind}
   role="group"
   aria-label="Effects to add"
 >
-  {#each midiSlots as slot, i (i)}
-    <div class="palette-slot" class:blank={!slot} style:grid-column={i + 1} style:grid-row={1}>
-      {#if slot}<RecentEffectButton recent={slot} compact label={paletteLabel(slot)} ink={chipInk(slot)} />{/if}
-    </div>
-  {/each}
-  {#each chips.row1 as fx, j (fx.fullPath)}
-    <div class="palette-slot" style:grid-column={MIDI_SLOTS + 2 + j} style:grid-row={1}>
-      <RecentEffectButton recent={fx} compact label={paletteLabel(fx)} ink={chipInk(fx)} />
-    </div>
-  {/each}
-  {#each chips.row2 as fx, k (fx.fullPath)}
-    <div class="palette-slot" style:grid-column={row2Col(k)} style:grid-row={2}>
-      <RecentEffectButton recent={fx} compact label={paletteLabel(fx)} ink={chipInk(fx)} />
-    </div>
+  {#each placed.blocks as { block, start } (block.family)}
+    {#each [block.top, ...(paletteRows === 2 ? [block.bottom] : [])] as row, r (r)}
+      {#each Array.from({ length: block.cols }, (_, i) => row[i] ?? null) as fx, i (i)}
+        <div class="palette-slot" class:blank={!fx} style:grid-column={start + i} style:grid-row={r + 1} data-family={block.family}>
+          {#if fx}<RecentEffectButton recent={fx} compact label={paletteLabel(fx)} ink={chipInk(fx)} />{/if}
+        </div>
+      {/each}
+    {/each}
   {/each}
   <!-- Add an effect: the browser on Effect, landing on this chain. -->
   <button
     type="button"
     class="chain-add"
-    style:grid-column={MIDI_SLOTS + 1 + audioCols}
+    style:grid-column={placed.plusCol}
     style:grid-row={1}
     aria-label="Add an effect"
     data-debug="chain-add"
@@ -1070,7 +1068,6 @@
     min-width: 0;
     min-height: 0;
     display: grid;
-    grid-template-columns: repeat(var(--midi-cols, 4), minmax(0, 1fr)) 4px repeat(var(--audio-cols, 8), minmax(0, 1fr));
     grid-template-rows: repeat(var(--palette-rows, 1), minmax(0, 1fr));
     gap: 6px;
   }
@@ -1079,8 +1076,8 @@
     min-height: 0;
     display: grid;
   }
-  /* A MIDI slot this kind of track leaves empty: a faint outline, so the
-     chips beside it read as where they always are. */
+  /* A slot a block leaves empty (a shorter row, an effect not on this
+     Mac): a faint outline, so the chips beside it read as where they are. */
   .palette-slot.blank {
     border: 1px dashed color-mix(in oklab, var(--ghost-line) 45%, transparent);
     border-radius: var(--ghost-radius);
