@@ -226,10 +226,9 @@
         <!-- The envelope's body: its ink, fading to the floor (ADR-516). -->
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stop-color={ink} stop-opacity="0.32" />
-          <stop offset="1" stop-color={ink} stop-opacity="0.04" />
+          <stop offset="1" stop-color={ink} stop-opacity="0" />
         </linearGradient>
       </defs>
-      <line class="floor" x1={X(0)} x2={X(1)} y1={Y(1)} y2={Y(1)} />
       {#each [0.25, 0.5] as q (q)}
         <line class="grid" x1={X(q)} x2={X(q)} y1={PAD} y2={Y(1)} />
       {/each}
@@ -349,7 +348,6 @@
     display: block;
     cursor: grab;
   }
-  .floor,
   .mark,
   .grid {
     stroke: var(--line-strong);
