@@ -102,6 +102,7 @@
 <FaceGrid sections={[2, 3, 3]} class="vm-full-row">
   <FaceSection span={2}>
     {#snippet head()}<PanelEyebrow title="Kit" color={color.primary} />{/snippet}
+    <div class="kit-split face-span-all">
     <div class="vm-kit-col">
       <!-- Trnsp full height, Gain and Start knobs beside it (user,
            2026-11-06): Trnsp is played, Gain and Start are set. -->
@@ -135,7 +136,8 @@
         labelOrientation="horizontal"
         title="Start"
         face="knob"
-        knobSize="m"
+        knobSize="l"
+        knobFit
         knobCaption={false}
         icon="start"
         {color}
@@ -143,6 +145,7 @@
         onInteraction={(value) => write('start', value)}
       />
     </VmSlot>
+    </div>
     </div>
   </FaceSection>
   <FaceSeam ink={color.primary} />
@@ -240,6 +243,16 @@
   .vm-full-filter > :global(.vm-slot) {
     flex: 1 1 0;
     min-width: 0;
+  }
+  /* The kit's two columns, Trnsp narrower so the knob column holds a large
+     knob (2026-11-10): the same split on every kit row, so Gain and Trnsp
+     still sit on the same pixels whichever kit is loaded. */
+  .kit-split {
+    display: grid;
+    grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);
+    gap: var(--central-gap);
+    min-width: 0;
+    min-height: 0;
   }
   /* Gain over Trnsp, sharing the column's height evenly. */
   .vm-kit-col {

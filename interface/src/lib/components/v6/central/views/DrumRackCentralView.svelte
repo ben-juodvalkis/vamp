@@ -363,7 +363,8 @@
       title="Gain"
       icon="gain"
       face={knob ? 'knob' : 'slider'}
-      knobSize="m"
+      knobSize="l"
+      knobFit
       knobCaption={!knob}
       color={controlInk}
       isGhost={gainState === 'none'}

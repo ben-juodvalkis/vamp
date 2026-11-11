@@ -307,7 +307,10 @@
      swap pill across them where it places one. */
   .kit-stack {
     display: grid;
-    grid-template-columns: subgrid;
+    /* Trnsp narrower, the knob column wider (2026-11-10): the DrumCell and
+       Simpler rows' `.kit-split`, so Gain and Trnsp keep their pixels. */
+    grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);
+    column-gap: var(--central-gap);
     grid-template-rows: minmax(0, 1fr);
     row-gap: var(--central-gap);
     min-width: 0;

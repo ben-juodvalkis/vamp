@@ -86,6 +86,7 @@
 <FaceGrid sections={filter ? [2, 4, 3] : [2, 4]} class="simpler-row">
   <FaceSection span={2}>
     {#snippet head()}<PanelEyebrow title="Kit" color={color.primary} />{/snippet}
+    <div class="kit-split face-span-all">
     <div class="kit-col">
       <div
         class="vm-slot slider-column min-w-0 flex flex-col"
@@ -113,6 +114,7 @@
     <div class="kit-col">
       {#if gain}{@render gain(true)}{/if}
       <div aria-hidden="true"></div>
+    </div>
     </div>
   </FaceSection>
   <FaceSeam ink={color.primary} />
@@ -153,6 +155,16 @@
 </FaceGrid>
 
 <style>
+  /* The kit's two columns, Trnsp narrower so the knob column holds a large
+     knob (2026-11-10): the same split on every kit row, so Gain and Trnsp
+     still sit on the same pixels whichever kit is loaded. */
+  .kit-split {
+    display: grid;
+    grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);
+    gap: var(--central-gap);
+    min-width: 0;
+    min-height: 0;
+  }
   /* Gain over Trnsp, sharing the column's height evenly. */
   .kit-col {
     display: flex;
