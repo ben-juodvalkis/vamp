@@ -436,13 +436,17 @@
     const laid = chainUnitLayout(widths, 1, ROW_UNITS);
     const spare = { ...laid.ghost };
     const places = laid.places.map((p) => ({ ...p }));
-    // A + wider than a unit gives its room to the cell before it on its row.
-    if (spare.span > 1) {
+    // The + takes up to two units of the room its row leaves; only room
+    // past that widens the cell before it (the user, 2026-11-11: a Redux
+    // three units wide beside a one-unit + read worse than a double +).
+    const PLUS_MAX = 2;
+    if (spare.span > PLUS_MAX) {
       const last = places.findLast((p) => p.row === spare.row);
       if (last) {
-        last.span += spare.span - 1;
-        spare.col += spare.span - 1;
-        spare.span = 1;
+        const give = spare.span - PLUS_MAX;
+        last.span += give;
+        spare.col += give;
+        spare.span = PLUS_MAX;
       }
     }
     return { ...laid, places, spare };

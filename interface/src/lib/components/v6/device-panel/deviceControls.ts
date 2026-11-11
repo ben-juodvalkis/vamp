@@ -511,6 +511,26 @@ export const DEVICE_CONTROLS: Readonly<Partial<Record<string, DeviceControl>>> =
 				? null
 				: { 1: thresholdValue(s.params.Threshold), 4: clamp01(Math.log(s.params.Release / 0.1) / Math.log(30000)) }
 	},
+	// Measured: Grain Delay (2026-11-11, the rig's set, device_dump.js): 3 Pitch
+	// -36..12 semitones (not quantized; Live labels "-12.0", "0.00", "7.00"),
+	// 5 Feedback 0..0.95 ("0.0 %" .. "95 %"). The user's call: Pitch across,
+	// Feedback up. Pitch lands on whole semitones; it rests at 0, three
+	// quarters across. No preset reading yet: not measured.
+	grainDelay: {
+		control: {
+			kind: 'xy',
+			title: 'Grain',
+			read: (g) => ({ x: ((g(3) ?? 0) + 36) / 48, y: (g(5) ?? 0) / 0.95 }),
+			write: (x, y) => [
+				[3, Math.round(x * 48) - 36],
+				[5, y * 0.95]
+			],
+			label: (g) => {
+				const st = Math.round(g(3) ?? 0);
+				return `${st > 0 ? '+' : ''}${st} st`;
+			}
+		}
+	},
 	// Measured: Compressor (2026-10-26). Threshold a linear factor on the
 	// same dB rail as Gate's (Live's labels agree at every quarter): 1.995
 	// (+6 dB) → 1.

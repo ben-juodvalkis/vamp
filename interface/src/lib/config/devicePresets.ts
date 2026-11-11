@@ -496,8 +496,8 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
   },
   grainDelay: {
     // Live's Grain Delay, inserted by name for the palette chip (2026-11-11).
-    // Class measured off Live's own preset file (Core Library, Ascent.adv).
-    // No control of its own yet: its chain cell is the generic mark.
+    // Class measured off Live's own preset file (Core Library, Ascent.adv)
+    // and the running device. Its control: Pitch across, Feedback up.
     padScoped: true,
     native: true,
     defaultName: 'Grain Delay',

@@ -357,6 +357,13 @@ tested against the same numbers in `deviceControls.presets.test.ts`).
   1..24, 4 Sign 0..2 (Add, Sub, Bi), 5 Mode 0..1 (Rnd, Alt), 6 Use Current
   Scale 0..1. The same day `device/load` of `Random.adv` onto a MIDI track
   added nothing and reported no error, twice (cause not found).
+- **Grain Delay** (GrainDelay, read off the set's own with device_dump,
+  2026-11-11): 1 Spray 0..1 (0–500 ms), 2 Frequency 0..1 (1–150 Hz), 3
+  Pitch -36..12 semitones (not quantized; labels "-12.0", "0.00", "7.00"),
+  4 Random 0..1, 5 Feedback 0..0.95 ("0.0 %" .. "95 %"), 6 DryWet 0..1,
+  7 Delay Mode 0..1 (Off, On), 8 Beat Delay 0..7 (1 2 3 4 5 6 8 16), 9
+  Beat Swing ±0.333, 10 Time Delay 1..128 ms. Its preset files' saved
+  values are not measured.
 - **A Max device saved as an `.adv`** (Pitch Hack) keeps each Live
   parameter as `<MxDIntParameter>` / `<MxDFloatParameter>` with its
   `ShortName` and, under `<Timeable>`, its `Manual` value: Dry / Wet 100,
