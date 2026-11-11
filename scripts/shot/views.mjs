@@ -505,14 +505,14 @@ export const TOURS = {
 			// Grain Delay's XY on its cell: Pitch across (+7 st), Feedback up.
 			{
 				name: 'chain-grain-delay',
-				description: 'A Grain Delay on the chain: Pitch across (+7 st), Feedback up (47 %)',
+				description: 'A Grain Delay on the chain, its view open: Pitch across (+7 st), Feedback up (47 %); the view Grain, Delay and Mix',
 				scenePatch: (scene) =>
 					setTrackDevices(scene, CHAIN_DEMO_TRACK, [
 						CHAIN_DEMO_DEVICES[0],
 						{ name: 'Grain Delay', className: 'GrainDelay', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Spray', 'Spray', 0, 1, 0, '0.00 ms'], ['Frequency', 'Frequency', 0, 1, 0.817, '60.0 Hz'], ['Pitch', 'Pitch', -36, 12, 7, '7.00'], ['Random', 'Random', 0, 1, 0, '0.00'], ['Feedback', 'Feedback', 0, 0.95, 0.475, '47 %'], ['DryWet', 'DryWet', 0, 1, 1, '100 %']] },
 						'Echo'
 					]),
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { wait: 500 }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { wait: 500 }, { click: chainCell(1) }, { wait: 800 }]
 			},
 			// The MIDI effects' controls on their chain cells (deviceControls).
 			{

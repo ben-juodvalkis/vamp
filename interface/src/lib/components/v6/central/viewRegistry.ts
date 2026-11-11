@@ -98,6 +98,7 @@ export const CENTRAL_VIEW_REGISTRY: ViewRegistry = {
 		'pitchHack': () => import('./views/ReverseCentralView.svelte'), // Pitch Hack, titled Reverse
 		'random': () => import('./views/RandomCentralView.svelte'), // the Rand Oct tile
 		'redux': () => import('./views/ReduxCentralView.svelte'),
+		'grainDelay': () => import('./views/GrainDelayCentralView.svelte'),
 		'reverb': () => import('./views/ReverbCentralView.svelte'),
 		'roar': () => import('./views/RoarCentralView.svelte'), // Roar (ADR-515)
 		'saturator': () => import('./views/SaturatorCentralView.svelte'), // the Drive tile

@@ -15,20 +15,22 @@ say what the devices do.
 
 ## Decision
 - **Modulation (magenta)**: Chorus, Phaser, Auto Pan.
-- **Time and space (teal)**: Echo, Reverb, Delay, Grain Delay, and Comb.
+- **Time and space (teal)**: Echo, Reverb, Delay, Grain Delay, Comb and
+  Blur.
 - **MIDI (violet)** holds MIDI effects and nothing that processes audio:
   Arpeggiator, Chord, Random, Random Octave, Velocity, Note Chance,
   Permute.
 - **Glitch (new, green H135, `#79c24a`)**: GlitchLoop, Stutter (Beat
-  Repeat), Pitch Hack, Pitch Shift, Blur.
+  Repeat), Pitch Hack, Pitch Shift.
 - **Guitar (new, amber H62, `#d38c49`)**: Guitar, Bass Amp, Wah.
 - Both new inks are fixed points of the ink chain, which the fixed-point
   test in `trackFormatters.test.ts` checks for every family.
 - **The + Effect browser's sections** read the same families from folder
   names (`browser/utils/sectionInks`), which now know Glitch and Guitar.
   Ben's effects folder was rearranged to match: Comb.amxd moved from
-  Modulation to Time, Pitch Shift.amxd from Utility to Glitch (a copy
-  went into the three projects whose sets use it first). Every folder now
+  Modulation to Time, Pitch Shift.amxd from Utility to Glitch and
+  Blur.amxd from Glitch to Time (each first copied into the projects whose
+  sets use it). Every folder now
   wears the colour its devices wear on the chain.
 
 ## Consequences

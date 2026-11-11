@@ -61,8 +61,8 @@ const BLOCKS: readonly BlockSpec[] = [
 	{ family: 'dynamics', top: ['squash'], bottom: ['ott'] },
 	{ family: 'distortion', top: ['drum', 'roar'], bottom: ['pedal', 'redux'] },
 	{ family: 'modulation', top: ['tremolo'], bottom: ['chorus'] },
-	{ family: 'time', top: ['echo', 'reverb'], bottom: ['comb', 'grainDelay'] },
-	{ family: 'glitch', top: ['glitchLoop', 'variation'], bottom: ['pitchHack', 'smudge'] }
+	{ family: 'time', top: ['echo', 'reverb'], bottom: ['comb', 'smudge'] },
+	{ family: 'glitch', top: ['glitchLoop', 'variation'], bottom: ['pitchHack'] }
 ];
 
 const MIDI_KEYS = new Set(['arpeggiator', 'chance', 'velocity', 'chord', 'random', 'randomOctave']);

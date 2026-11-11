@@ -15,6 +15,7 @@
 	import FaceControl from '$lib/components/v6/browser/FaceControl.svelte';
 	import type { ControlGlyphName } from './ControlGlyph.svelte';
 	import { controlFor, resolveParam, type Get, type ParamRef, type Writes } from './deviceControls';
+	import { isViewRegistered } from '$lib/components/v6/central/viewRegistry';
 
 	interface Props {
 		/** The device type, a `DEVICE_PRESETS` key with a `deviceControls` entry. */
@@ -39,6 +40,10 @@
 	}
 
 	let { type, device, position, icon, orientation, disableCentralViewOnTap = false, onGesture, tapLoads = false, labelSize, labelOrientation }: Props = $props();
+	// A type with no view of its own (Grain Delay) opens none from here: the
+	// chain cell around it opens the generic view, on a tap and a drag alike,
+	// and a drag asking for the type's view swapped that for an empty one.
+	const hasView = $derived(isViewRegistered('device', type));
 
 	/** What the control writes where it rests now: a tap's load carries it. */
 	function restWrites(c: NonNullable<typeof control>, get: Get): Writes {
@@ -58,7 +63,7 @@
 		{...position ? { position } : { slotKey: type }}
 		{device}
 		title={DEVICE_PRESETS[type]?.defaultName ?? control.title}
-		{disableCentralViewOnTap}
+		disableCentralViewOnTap={disableCentralViewOnTap || !hasView}
 	>
 		{#snippet children({ device: live, sendParam, storePendingParam, triggerLoad, handleTap, isGhost, isLoading, color, openView })}
 			{@const names = live ? selectedTrackStore.paramNamesForDevice(live) : []}

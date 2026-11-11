@@ -449,7 +449,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Blur',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
-    color: familyScheme('glitch')       // Glitch, as its folder is (user, 2026-11-11; orange from the Saturn tile until then)
+    color: familyScheme('timeSpace')    // Time and space, with Echo, Reverb and Comb (user, 2026-11-11; Glitch earlier that day, orange from the Saturn tile before)
   },
   // New grid devices to replace saturator slot
   guitar: {

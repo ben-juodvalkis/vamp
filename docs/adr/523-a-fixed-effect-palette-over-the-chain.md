@@ -49,11 +49,15 @@ short chain left dead space and a long one squeezed the ghosts.
   on a strip's name mutes it; a drag from the header still reorders, and
   a tap on the face opens the device's view. The power button is gone;
   the name is centered on its bar.
-- Two new types for the palette: **Random Octave** (Ben's Random preset,
-  loaded by name from the effects folder; on the chain it is a
+- Two new types: **Random Octave** (Ben's Random preset, loaded by name
+  from the effects folder, a palette chip; on the chain it is a
   `MidiRandom` and keeps Random's control) and **Grain Delay** (Live's
-  device by name, class `GrainDelay` read off Live's own preset file; no
-  control of its own yet).
+  device by name, class `GrainDelay`): an XY on its cell, Pitch across and
+  Feedback up, and a view of its own with the rest (Grain, Delay, Mix).
+- **A control whose type has no view of its own opens none** (`ControlTile`
+  passes `disableCentralViewOnTap`): the chain cell around it opens the
+  generic view on a tap and a drag alike, where a drag used to swap it for
+  an empty placeholder.
 
 ## Consequences
 - The effect recents are gone: their list, storage, pruning and the
@@ -68,7 +72,6 @@ short chain left dead space and a long one squeezed the ghosts.
   order is the same, so the hand still finds them.
 - A one-unit cell (the Drum Rack's Trnsp, a slider) and the + share a
   width; a very short chain gets very wide cells.
-- Grain Delay has no control on its cell until it is given one.
 
 ## Tags
 `fx-chain`, `palette`, `muscle-memory`, `device-on`

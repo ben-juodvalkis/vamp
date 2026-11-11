@@ -21,7 +21,8 @@ describe('effectPalette', () => {
 		expect(names(midi.bottom)).toEqual(['Arpeggiator']);
 		const time = paletteBlocks('kit').find((b) => b.family === 'time')!;
 		expect(names(time.top)).toEqual(['Echo', 'Reverb']);
-		expect(names(time.bottom)).toEqual([null, 'Grain Delay']);
+		// Comb and Blur are files in the effects folder, absent here.
+		expect(names(time.bottom)).toEqual([null, null]);
 	});
 
 	it('fits whole blocks, dropping from the end', () => {
@@ -35,7 +36,7 @@ describe('effectPalette', () => {
 	it('loads as the defaults did, with short labels', () => {
 		expect(paletteBlocks('kit')[0].bottom[0]).toMatchObject({ kind: 'midi-effect', preset: 'arpeggiator', fullPath: 'default:arpeggiator' });
 		expect(paletteLabel({ name: 'Glue Compressor', preset: 'squash' })).toBe('Glue');
-		expect(paletteLabel({ name: 'Grain Delay', preset: 'grainDelay' })).toBe('Grain');
+		expect(paletteLabel({ name: 'Blur', preset: 'smudge' })).toBe('Blur');
 	});
 
 	it('fits as many tile columns as the width holds', () => {
