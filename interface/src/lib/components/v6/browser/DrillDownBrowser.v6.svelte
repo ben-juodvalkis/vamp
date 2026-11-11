@@ -73,7 +73,7 @@
 	import { DEVICE_ICONS } from './deviceIcons';
 	import BrowserWheelsFace from './BrowserWheelsFace.svelte';
 	import { startPresetDrag, type PresetDrag } from '$lib/services/presetDragLoad.svelte';
-	import { addEffectToChain, fitsSelectedTrack, recordRecentEffect, type RecentEffect } from '$lib/services/recentEffects.svelte';
+	import { addEffectToChain, type ChainEffect } from '$lib/services/chainEffects.svelte';
 	import type { Writes } from '$lib/components/v6/device-panel/deviceControls';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { sectionInks } from './utils/sectionInks';
@@ -985,13 +985,11 @@
 		handlePostLoad(closeDelayMs);
 		// A random pick can land on a MIDI effect the tile would have
 		// refused; `addEffectToChain` refuses it there too.
-		const effect = recentOf(preset);
-		if (selectedTrackStore.selectedTrackPath && fitsSelectedTrack(effect)) recordRecentEffect(effect);
-		await addEffectToChain(effect);
+		await addEffectToChain(effectOf(preset));
 	}
 
-	/** An effect preset as the chain's Recent column keeps it (ADR-484). */
-	function recentOf(preset: Preset): RecentEffect {
+	/** An effect preset as the chain's load path takes it. */
+	function effectOf(preset: Preset): ChainEffect {
 		const [source, rel] = placeArgs(preset);
 		return { name: preset.name, fullPath: preset.fullPath, source, rel, kind: preset.kind };
 	}
@@ -1009,7 +1007,6 @@
 		}
 		const pad = trackHoldScope.active ? null : activeDrumRackScope();
 		browserNavigationStore.loadedPresetPath = preset.path;
-		recordRecentEffect(recentOf(preset));
 		const [source, rel] = placeArgs(preset);
 		return startPresetDrag({
 			trackPath,

@@ -71,7 +71,7 @@
   import GlitchControl from './GlitchControl.svelte';
   import SquashControl from './SquashControl.svelte';
   import ControlTile from './ControlTile.svelte';
-  import RecentEffectButton from './chain/RecentEffectButton.svelte';
+  import PaletteChip from './chain/PaletteChip.svelte';
   import { fitBlocks, paletteBlocks, paletteColumns, paletteLabel, type PaletteKind } from '$lib/services/effectPalette';
   import { controlFor } from './deviceControls';
   import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
@@ -825,7 +825,7 @@
     {#each [block.top, ...(paletteRows === 2 ? [block.bottom] : [])] as row, r (r)}
       {#each Array.from({ length: block.cols }, (_, i) => row[i] ?? null) as fx, i (i)}
         <div class="palette-slot" class:blank={!fx} style:grid-column={start + i} style:grid-row={r + 1} data-family={block.family}>
-          {#if fx}<RecentEffectButton recent={fx} compact label={paletteLabel(fx)} ink={chipInk(fx)} />{/if}
+          {#if fx}<PaletteChip {fx} label={paletteLabel(fx)} ink={chipInk(fx)} />{/if}
         </div>
       {/each}
     {/each}

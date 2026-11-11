@@ -68,8 +68,12 @@ never in a central view; a control's
 
 **The FX grid is gone (2026-10-26, the user's call).** The FX section is
 `ChainOverview` alone: the selected track's chain (or a scoped pad's), one
-cell per device, each drawing its tile, then the Recent ghosts and + Effect
-(ADR-484); the track's Utility is the right sidebar's top row (ADR-482).
+cell per device, each drawing its tile, across the whole width and ending
+in a + one unit wide; above it the palette bar (ADR-523), a fixed set of
+effect chips in family blocks, the same on every track
+(`services/effectPalette`, `chain/PaletteChip`); the ghost Utility a column
+at its right. A tap on a cell's header bar is Device On (no power button);
+a drag from it reorders.
 `FXGrid.svelte`, the grid/chain switch (`FxPanelSwitch`), the ten-column
 placement (`col` / `row` / `span`, `cellFor`, the `*_CELL`s) and the Drum
 cell's Chorus rule (`drumCell.svelte.ts`) went with it.

@@ -1,8 +1,8 @@
 /**
- * The chain's palette (the user, 2026-11-10): a fixed set of ghost effects
- * under the chain, the same ones in the same places every time, so a hand
- * learns where each one is. It replaced the Recent column (ADR-484), whose
- * order changed with every effect added.
+ * The chain's palette (ADR-523): a fixed set of effect chips over the
+ * chain, the same ones in the same places every time, so a hand learns
+ * where each one is. It replaced the Recent column (ADR-484), whose order
+ * changed with every effect added.
  *
  * Every track has the same palette, but an audio track has no MIDI block.
  * An effect already on the chain stays in its slot.
@@ -12,7 +12,7 @@
  */
 import { DEVICE_PRESETS, deviceLoadArgs } from '$lib/config/devicePresets';
 import { effectAvailable } from '$lib/services/effectSources.svelte';
-import type { RecentEffect } from '$lib/services/recentEffects.svelte';
+import type { ChainEffect } from '$lib/services/chainEffects.svelte';
 
 export type PaletteKind = 'kit' | 'instrument' | 'audio';
 
@@ -28,7 +28,7 @@ const LABELS: Record<string, string> = {
 };
 
 /** A palette entry's short name, else its device's. */
-export function paletteLabel(effect: Pick<RecentEffect, 'name' | 'preset'>): string {
+export function paletteLabel(effect: Pick<ChainEffect, 'name' | 'preset'>): string {
 	return (effect.preset && LABELS[effect.preset]) || effect.name;
 }
 
@@ -43,8 +43,8 @@ export interface PaletteBlock {
 	/** Columns: the longer of its two rows. */
 	cols: number;
 	/** Each row, `null` where an effect is not on this Mac (its slot stays). */
-	top: (RecentEffect | null)[];
-	bottom: (RecentEffect | null)[];
+	top: (ChainEffect | null)[];
+	bottom: (ChainEffect | null)[];
 }
 
 type BlockSpec = { family: string; top: readonly string[]; bottom: readonly string[] };
@@ -67,7 +67,7 @@ const BLOCKS: readonly BlockSpec[] = [
 
 const MIDI_KEYS = new Set(['arpeggiator', 'chance', 'velocity', 'chord', 'random', 'randomOctave']);
 
-function entry(key: string): RecentEffect {
+function entry(key: string): ChainEffect {
 	const preset = DEVICE_PRESETS[key];
 	const [, , , source = '', rel = ''] = deviceLoadArgs('', '', preset);
 	return {

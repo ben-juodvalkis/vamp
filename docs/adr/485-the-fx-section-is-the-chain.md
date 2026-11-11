@@ -4,7 +4,7 @@
 **Accepted** (2026-10-26). Supersedes the FX grid's layout decisions
 (ADR-438 and its addendum, ADR-465's Drum-cell Chorus, ADR-467) and
 ADR-478's switch between the grid and the chain overview. No Live restart:
-interface only.
+interface only. Amended by [ADR-523](523-a-fixed-effect-palette-over-the-chain.md): the palette bar over the chain, the chain's cells across the width.
 
 ## Context
 Since ADR-478 the FX section had two faces behind a switch: the FX grid (a

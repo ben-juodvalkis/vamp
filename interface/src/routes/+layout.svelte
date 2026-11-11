@@ -4,9 +4,8 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { themeManager } from '$lib/stores/theme';
 	import { destroyAllServices, initializeAllServices } from '$lib/services/serviceCleanup';
-	import { startPlacesLive, openSettingsOnFirstRun, PLACES_CHANGED_EVENT } from '$lib/services/placesLive';
+	import { startPlacesLive, openSettingsOnFirstRun } from '$lib/services/placesLive';
 	import { watchEffectSources } from '$lib/services/effectSources.svelte';
-	import { pruneMissingRecents } from '$lib/services/recentEffects.svelte';
 	import { openSettingsFromHash } from '$lib/stores/v6/settingsStore.svelte';
 
 	// Import client without auto-connect
@@ -84,9 +83,6 @@
 		// itself as the onboarding checklist (onboarding.plan.md §7).
 		startPlacesLive();
 		watchEffectSources();
-		// The chain's recents never offer a file that is gone (ADR-498).
-		void pruneMissingRecents();
-		window.addEventListener(PLACES_CHANGED_EVENT, () => void pruneMissingRecents());
 		void openSettingsOnFirstRun();
 
 		// `#settings[/<section>]` opens Settings: Vamp for Mac's "Settings…"
