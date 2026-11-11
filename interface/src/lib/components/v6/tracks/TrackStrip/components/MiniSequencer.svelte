@@ -14,6 +14,14 @@
 	let { sequencerState, color, dimmed = false, scopeLabel = null, scopeInk = null }: Props = $props();
 
 	let isGhost = $derived(!sequencerState || !sequencerState.active);
+	// Hidden unless changed from default (2026-11-11, the user's call): a
+	// track with no Permute, or one whose mute row mutes no step and whose
+	// pitch row transposes none, draws nothing. The band stays — it is still
+	// the strip's tap target for the Permute view, and the strip keeps its
+	// four equal bands — and a pad scope keeps its frame.
+	let isDefault = $derived(
+		!sequencerState || isGhost || (!sequencerState.mute.enabled && !sequencerState.pitch.enabled)
+	);
 	let scoped = $derived(scopeLabel !== null);
 	let title = $derived(
 		scoped
@@ -32,32 +40,13 @@
 <!-- Presentational only. The parent TrackStrip owns all pointer gestures. -->
 <div
 	class="mini-sequencer w-full touch-manipulation"
-	class:ghost={isGhost}
+	class:is-default={isDefault}
 	class:scoped
 	style="--mute-color: {muteColor}; --scope-ink: {scopeInk ?? muteColor};"
 	{title}
 	data-permute-scope={scoped ? scopeLabel : undefined}
 >
-	{#if isGhost || !sequencerState}
-		<div class="ghost-content">
-			<div class="ghost-row mute-ghost">
-				{#each Array(8) as _, i}
-					<div class="ghost-step mute-filled"></div>
-					{#if i < 7}
-						<div class="ghost-separator"></div>
-					{/if}
-				{/each}
-			</div>
-			<div class="ghost-row pitch-ghost">
-				{#each Array(8) as _, i}
-					<div class="ghost-step pitch-empty"></div>
-					{#if i < 7}
-						<div class="ghost-separator"></div>
-					{/if}
-				{/each}
-			</div>
-		</div>
-	{:else}
+	{#if !isDefault && sequencerState}
 		{@const mute = sequencerState.mute}
 		{@const pitch = sequencerState.pitch}
 		<div class="sequencer-content">
@@ -109,12 +98,6 @@
 		box-shadow: inset 0 0 0 2px var(--scope-ink);
 	}
 
-	.ghost-content {
-		display: flex;
-		flex-direction: column;
-		gap: 3px;
-		height: 100%;
-	}
 
 	.sequencer-content {
 		display: flex;
@@ -124,39 +107,12 @@
 		opacity: 0.7;
 	}
 
-	.ghost-row {
-		display: flex;
-		flex: 1;
-		border-radius: var(--radius-sm);
-		overflow: hidden;
-		background: transparent;
-	}
 
-	.ghost-row.mute-ghost {
-		border: 1px dashed color-mix(in srgb, var(--mute-color), transparent 70%);
-	}
 
-	.ghost-row.pitch-ghost {
-		border: 1px dashed color-mix(in oklab, var(--act-pitch) 30%, transparent);
-	}
 
-	.ghost-step {
-		flex: 1;
-		background: transparent;
-	}
 
-	.ghost-step.mute-filled {
-		background: color-mix(in srgb, var(--mute-color), transparent 75%);
-	}
 
-	.ghost-step.pitch-empty {
-		background: color-mix(in oklab, var(--act-pitch) 8%, transparent);
-	}
 
-	.ghost-separator {
-		width: 1px;
-		background: var(--line-faint);
-	}
 
 	/* Sequencer rows are recessed wells (§2.9). */
 	.sequencer-row {
@@ -270,15 +226,5 @@
 	   because its rows start at full opacity where GRATICULE's start at 0.7. */
 	:global([data-grammar="flat"]) .sequencer-content {
 		--seq-inactive-opacity: 0.3;
-	}
-	:global([data-grammar="flat"]) .ghost-row.mute-ghost,
-	:global([data-grammar="flat"]) .ghost-row.pitch-ghost {
-		border: 1px solid var(--line);
-	}
-	:global([data-grammar="flat"]) .ghost-step.mute-filled {
-		background: var(--secondary);
-	}
-	:global([data-grammar="flat"]) .ghost-step.pitch-empty {
-		background: transparent;
 	}
 </style>
