@@ -14,7 +14,9 @@
    * Each cell says which tile controls it, when one does, so the grid's
    * choice is visible here too.
    *
-   * The power button in a cell's corner turns the device on and off
+   * A tap on a cell's header bar turns the device on and off (Device On,
+   * the user, 2026-11-11, as a tap on a strip's name mutes it); a drag
+   * from the header still reorders.
    * (Device On, parameter 0). A cell dragged moves the device in Live's
    * chain (`device/move`): the cell rides the finger, the others slide
    * aside to show where it will land, and the new order holds after the
@@ -52,7 +54,6 @@
    */
   import Box from '@lucide/svelte/icons/box';
   import Plug from '@lucide/svelte/icons/plug';
-  import Power from '@lucide/svelte/icons/power';
   import Plus from '@lucide/svelte/icons/plus';
   import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
   import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
@@ -70,8 +71,8 @@
   import GlitchControl from './GlitchControl.svelte';
   import SquashControl from './SquashControl.svelte';
   import ControlTile from './ControlTile.svelte';
-  import RecentEffectButton from './chain/RecentEffectButton.svelte';
-  import { recentForChain } from '$lib/services/recentEffects.svelte';
+  import PaletteChip from './chain/PaletteChip.svelte';
+  import { fitBlocks, paletteBlocks, paletteColumns, paletteLabel, type PaletteKind } from '$lib/services/effectPalette';
   import { controlFor } from './deviceControls';
   import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
   import OperatorHeadAlgorithm from './chain/OperatorHeadAlgorithm.svelte';
@@ -91,7 +92,6 @@
     arrange,
     chainUnitLayout,
     chainIndexAt,
-    recentLayout,
     type ChainPlace,
     clampChainIndex,
     moved,
@@ -307,9 +307,6 @@
    * like Live's chain: left to right, then the next row.
    */
   const ROW_UNITS = 12;
-  const GHOST_UNITS = 4;
-  /** On two rows the ghost section gives up a unit rather than widen a slider (`chainUnitLayout`). */
-  const GHOST_MIN_UNITS = 3;
   function unitsOf(cell: Cell): number {
     if (cell.kit || isMidiWheels(cell.device)) return 1;
     return cell.presetKey && controlFor(cell.presetKey)?.kind === 'slider' ? 1 : 2;
@@ -425,31 +422,74 @@
   /** The cells in the order to draw them: the drag's preview, else `settled`. */
   const shown = $derived((drag && arrange(cells, moved(drag.base, drag.from, drag.to))) || settled);
 
-  /*
-   * The recents (ADR-484, the user's call, 2026-10-26): with + Effect, the
-   * chain's ghost section, the last effects added from the browser, grey, a
-   * tap adding one here again. Only what fits: no MIDI effect off a MIDI track, nothing
-   * this chain already holds. It replaced the suggested ghost devices
-   * (ADR-483). + Effect always closes it; the ghost Utility is its own column.
-   */
   const drawn = $derived(kitCell ? [kitCell, ...shown] : shown);
 
   /*
-   * The ghost section is always two cells: the recents, then + Effect,
-   * every one a tile of the same size, down each column (the user,
-   * 2026-11-05; a ghost Utility tile sat before + Effect until the column
-   * below took its place, the same day). On a one-row chain four columns of four,
-   * on two rows six columns of two, five when the section is three units
-   * (`recentLayout`).
+   * The chain has the section's height under the palette bar, one row up to
+   * `ROW_UNITS` and two past it (`chainUnitLayout`), and always ends in a +
+   * one unit wide, a slider's width (the user, 2026-11-11): `spare`. The
+   * cells take the rest of the width, however few there are; on two rows
+   * the + is the last cell of the second, half the chain's height.
    */
-  const layout = $derived(chainUnitLayout(drawn.map(unitsOf), GHOST_UNITS, ROW_UNITS, GHOST_MIN_UNITS));
+  const layout = $derived.by(() => {
+    const widths = drawn.map(unitsOf);
+    const laid = chainUnitLayout(widths, 1, ROW_UNITS);
+    const spare = { ...laid.ghost };
+    const places = laid.places.map((p) => ({ ...p }));
+    // A + wider than a unit gives its room to the cell before it on its row.
+    if (spare.span > 1) {
+      const last = places.findLast((p) => p.row === spare.row);
+      if (last) {
+        last.span += spare.span - 1;
+        spare.col += spare.span - 1;
+        spare.span = 1;
+      }
+    }
+    return { ...laid, places, spare };
+  });
   const grid = $derived({ cols: layout.cols, rows: layout.rows });
-  const recentGrid = $derived(recentLayout(grid.rows, layout.ghost.span));
-  const recentPool = $derived(recentForChain(cells.map((c) => c.device.name), recentLayout(1).shown));
-  /** The most recent that fit, shown in alphabetical order (the user, 2026-10-26), down each column. */
-  const recents = $derived(
-    recentPool.slice(0, recentGrid.shown).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }))
+
+  /*
+   * The palette bar (the user, 2026-11-11; `services/effectPalette`): ghost
+   * effects across the top in family blocks, each family's main effects on
+   * the first row and its others under them, a seam between blocks. The
+   * chain's own + is the way to anything else (the user, 2026-11-11). Which effects depends on the kind of track
+   * alone; how many blocks fit on the width, chips at least
+   * `PALETTE_TILE_MIN` wide (whole blocks, dropped from the end).
+   */
+  const PALETTE_TILE_MIN = 60;
+  const PALETTE_GAP = 6;
+  /** The seam between two family blocks, a column of its own. */
+  const PALETTE_SEAM = 4;
+  let paletteWidth = $state(0);
+  const paletteKind = $derived<PaletteKind>(
+    padScope || cells.some((c) => c.kind === 'instrument' && c.device.className === 'DrumGroupDevice')
+      ? 'kit'
+      : selectedTrackStore.trackType === 'audio'
+        ? 'audio'
+        : 'instrument'
   );
+  /** Two rows of chips while the chain is one row; one once it splits (the user, 2026-11-11). */
+  const paletteRows = $derived(grid.rows === 1 ? 2 : 1);
+  /** The blocks that fit, each placed: its first column, after the seams before it. */
+  const placed = $derived.by(() => {
+    const all = paletteBlocks(paletteKind);
+    const room = paletteColumns(paletteWidth - all.length * (PALETTE_SEAM + PALETTE_GAP), PALETTE_TILE_MIN, PALETTE_GAP);
+    const blocks = paletteWidth > 0 ? fitBlocks(all, room) : all;
+    let col = 1;
+    const out = blocks.map((block) => {
+      const start = col;
+      col += block.cols + 1; // its columns, then a seam
+      return { block, start };
+    });
+    const template = blocks.map((b) => `repeat(${b.cols}, minmax(0, 1fr))`).join(` ${PALETTE_SEAM}px `);
+    return { blocks: out, template };
+  });
+  /** A chip's ink: its device's family colour, as the cell it would become wears it. */
+  function chipInk(effect: { preset?: string }): string | undefined {
+    const preset = effect.preset ? DEVICE_PRESETS[effect.preset] : undefined;
+    return preset ? trackInk(preset.color.primary, paint) : undefined;
+  }
 
   /*
    * The ghost Utility (the user, 2026-11-05; ADR-482's column, back from the
@@ -545,9 +585,12 @@
   // press's own target — Svelte delegates the tiles' pointer handlers to
   // the root, so stopping the event on the way up would starve them.
   let pressInControl = false;
+  /** The press landed on the header bar: its tap is Device On. */
+  let pressInHead = false;
   function pressDown(cell: Cell, info: DragInfo) {
     const target = info.event?.target;
     pressInControl = target instanceof Element && target.closest('.cell-control') !== null;
+    pressInHead = target instanceof Element && target.closest('.cell-head') !== null;
     if (pressInControl && cell.presetKey) fxChainStore.pick(pickScope, cell.presetKey, cell.device.devicePath);
   }
 
@@ -556,7 +599,7 @@
    * a tap on the Auto Filter's XY did nothing). The XY counts a press as its
    * own tap only under 200 ms and 5 px, which a finger on the iPad often
    * is not; the cell's tap has no time limit and a touch's slop. Every
-   * control (the user, 2026-11-10: anywhere on a cell but its power
+   * control (the user, 2026-11-10: anywhere on a cell but its header
    * button): Permute's steps toggle and open, the MIDI wheels move and
    * open, a Drum Rack's Trnsp opens the Drum Rack view. (A kit's face was
    * its pads until 2026-11-05, whose tap was the pad's alone.)
@@ -708,21 +751,7 @@
           <span class="name" lang="en">{cell.device.name}</span>
           {#if caption}<span class="caption">{caption}</span>{/if}
         </span>
-        <span class="head-end">
-        {#if cell.kind === 'instrument' && glance.instrumentViewType === 'operator'}<OperatorHeadAlgorithm device={cell.device} />{/if}
-        {#if isPowered(cell)}
-        {@const on = isOn(cell)}
-        <button
-          type="button"
-          class="physical-button power"
-          class:active={on}
-          class:on
-          aria-label="{on ? 'Turn off' : 'Turn on'} {cell.device.name}"
-          aria-pressed={on}
-          use:press={{ onPress: () => togglePower(cell), stopPropagation: true }}
-        ><span class="power-glyph" aria-hidden="true"><Power /></span></button>
-        {/if}
-        </span>
+        {#if cell.kind === 'instrument' && glance.instrumentViewType === 'operator'}<span class="head-end"><OperatorHeadAlgorithm device={cell.device} /></span>{/if}
       </div></CellSize>
 
       {#if cell.kit}
@@ -779,7 +808,29 @@
       {/if}
 {/snippet}
 
-<div class="chain-wrap" class:two-rows={grid.rows > 1} class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
+<div class="chain-wrap" style:--palette-h={paletteRows === 2 ? '94px' : '44px'} class:two-rows={grid.rows > 1} class:has-utility={showGhostUtility} class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
+<!-- The palette bar: family blocks, a seam between them. Every chip in a
+     fixed place; the chain's own + adds anything else. -->
+<div
+  class="palette"
+  bind:clientWidth={paletteWidth}
+  style:--palette-rows={paletteRows}
+  style:grid-template-columns={placed.template}
+  data-debug="chain-palette"
+  data-palette-kind={paletteKind}
+  role="group"
+  aria-label="Effects to add"
+>
+  {#each placed.blocks as { block, start } (block.family)}
+    {#each [block.top, ...(paletteRows === 2 ? [block.bottom] : [])] as row, r (r)}
+      {#each Array.from({ length: block.cols }, (_, i) => row[i] ?? null) as fx, i (i)}
+        <div class="palette-slot" class:blank={!fx} style:grid-column={start + i} style:grid-row={r + 1} data-family={block.family}>
+          {#if fx}<PaletteChip {fx} label={paletteLabel(fx)} ink={chipInk(fx)} />{/if}
+        </div>
+      {/each}
+    {/each}
+  {/each}
+</div>
 <div
   class="chain"
   style:--chain-cols={grid.cols}
@@ -810,7 +861,10 @@
         commit: 'either',
         onDown: (info) => pressDown(cell, info),
         onTap: () => {
-          open(cell, pressInControl);
+          // The header is the device's switch, as a strip's name is its
+          // mute; the kit's under a pad scope still leads back to the kit.
+          if (pressInHead && isPowered(cell) && !(cell.kit && padScope)) togglePower(cell);
+          else open(cell, pressInControl);
         },
         onStart: (info) => dragStart(cell, position - kitLead, info),
         onMove: dragMove,
@@ -820,48 +874,20 @@
       {@render cellBody(cell, position)}
     </div>
   {/each}
-  <!-- The ghost section (ADR-484): two cells, the recents and + Effect
-       last, each a tile of one size. -->
-  <div
-    class="chain-ghosts"
-    class:has-utility={showGhostUtility && !!UTILITY_TILE}
-    style:grid-column="{layout.ghost.col + 1} / span {layout.ghost.span}"
-    style:grid-row="{layout.ghost.row + 1}"
-    style:--recent-cols={recentGrid.columns}
-    style:--recent-rows={recentGrid.rows}
-    data-debug="chain-recents"
-    role="group"
-    aria-label="Recent effects"
-  >
-    {#each recents as recent (recent.fullPath)}
-      <RecentEffectButton {recent} />
-    {/each}
-    <!-- Add an effect: the browser on Effect, landing on this chain. -->
+  {#if layout.spare.span > 0}
+    <!-- The room the cells leave: a +, the browser on Effect. -->
     <button
       type="button"
-      class="chain-add"
+      class="chain-add chain-spare"
+      style:grid-column="{layout.spare.col + 1} / span {layout.spare.span}"
+      style:grid-row={layout.spare.row + 1}
       aria-label="Add an effect"
       data-debug="chain-add"
       use:press={{ onPress: addEffect, touchAction: 'none' }}
     >
       <span class="chain-add-plus" aria-hidden="true"><Plus /></span>
     </button>
-    {#if showGhostUtility && UTILITY_TILE}
-      <!-- The ghost Utility: the ghost section's last column, narrow and its
-           full height, the track's meter under a Gain fader; its first drag
-           adds a Utility to the chain. -->
-      <div
-        class="ghost-utility"
-        data-debug="chain-ghost-utility"
-        role="presentation"
-        onpointerdowncapture={holdUtility}
-      >
-        <div class="cell-control" role="presentation"><CellSize>
-          <UTILITY_TILE.Tile position={UTILITY_TILE.position} />
-        </CellSize></div>
-      </div>
-    {/if}
-  </div>
+  {/if}
   {#if padScope}
     <!-- Whose chain this is, as the grid's scope chip says it. -->
     <div class="pad-chip chain-scope-chip" aria-label="Chain of pad {padScope.note}">
@@ -869,6 +895,20 @@
     </div>
   {/if}
 </div>
+{#if showGhostUtility && UTILITY_TILE}
+  <!-- The ghost Utility: all the way on the right, the full height, the
+       track's meter under a Gain fader; its first drag adds a Utility. -->
+  <div
+    class="ghost-utility"
+    data-debug="chain-ghost-utility"
+    role="presentation"
+    onpointerdowncapture={holdUtility}
+  >
+    <div class="cell-control" role="presentation"><CellSize>
+      <UTILITY_TILE.Tile position={UTILITY_TILE.position} />
+    </CellSize></div>
+  </div>
+{/if}
 </div>
 
 <style>
@@ -878,7 +918,7 @@
   .chain-wrap {
     /* The cells are panels (ADR-518, after the boards' tiles, ADR-516):
        a surface a shade off the page, a hairline, soft corners. The
-       ghosts (the recents, + Effect, the ghost Utility) are the same
+       ghosts (the palette, +, the ghost Utility) are the same
        shape drawn in a dashed line and no fill. */
     --cell-radius: 6px;
     --cell-line: var(--line);
@@ -886,19 +926,21 @@
     --ghost-line: color-mix(in oklab, var(--fg-tertiary) 45%, transparent);
     --ghost-line-strong: color-mix(in oklab, var(--fg-tertiary) 70%, transparent);
     height: 100%;
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: var(--palette-h) minmax(0, 1fr);
     gap: 8px;
     min-width: 0;
   }
-  /* The ghost Utility: one more column of the ghost section, narrow and
-     its full height, so it ends the chain on one row and on two (the
-     user, 2026-11-05). */
-  .chain-ghosts.has-utility {
-    grid-template-columns: repeat(var(--recent-cols, 4), minmax(0, 1fr)) 72px;
+  /* The ghost Utility: a narrow column all the way on the right, the
+     full height (the user, 2026-11-10). */
+  .chain-wrap.has-utility {
+    grid-template-columns: minmax(0, 1fr) 72px;
   }
-  .chain-ghosts > .ghost-utility {
-    grid-column: -2 / -1;
-    grid-row: 1 / -1;
+  /* The real devices' height, under the bar (the user, 2026-11-11). */
+  .chain-wrap > .ghost-utility {
+    grid-column: 2;
+    grid-row: 2;
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -916,9 +958,10 @@
     border-radius: var(--cell-radius);
   }
   .chain {
-    flex: 1 1 0;
+    grid-column: 1;
+    grid-row: 2;
     min-width: 0;
-    height: 100%;
+    min-height: 0;
     display: grid;
     grid-template-columns: repeat(var(--chain-cols, 10), minmax(0, 1fr));
     grid-template-rows: repeat(var(--chain-rows, 2), minmax(0, 1fr));
@@ -1002,23 +1045,28 @@
     overflow: hidden;
     transition: border-color var(--t-fast) var(--ease-precise), box-shadow var(--t-fast) var(--ease-precise);
   }
-  /* The ghost section: two cells wide, the recents filling their columns
-     top to bottom (alphabetical) and + Effect every column they leave, full
-     height, so a short list widens it rather than leaving gaps. The rows
-     are fixed, so the tiles keep their size. */
-  .chain-ghosts {
+  /* The palette bar: the MIDI chips, a seam, the audio chips and +, one
+     row of chips of one size, each placed by its slot. */
+  /* The bar runs to the right edge, over the ghost Utility's column too. */
+  .palette {
+    grid-column: 1 / -1;
+    grid-row: 1;
     min-width: 0;
     min-height: 0;
     display: grid;
-    grid-template-columns: repeat(var(--recent-cols, 4), minmax(0, 1fr));
-    grid-template-rows: repeat(var(--recent-rows, 4), minmax(0, 1fr));
-    grid-auto-flow: column;
+    grid-template-rows: repeat(var(--palette-rows, 1), minmax(0, 1fr));
     gap: 6px;
   }
-  /* + Effect as one of the tiles: the recents' padding. */
-  .chain-ghosts > .chain-add {
-    padding: 4px;
-    overflow: hidden;
+  .palette-slot {
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+  }
+  /* A slot a block leaves empty (a shorter row, an effect not on this
+     Mac): a faint outline, so the chips beside it read as where they are. */
+  .palette-slot.blank {
+    border: 1px dashed color-mix(in oklab, var(--ghost-line) 45%, transparent);
+    border-radius: var(--ghost-radius);
   }
   /* Bypassed: the bar keeps its name, its wash goes and the face dims, as
      a board's tile ghosts its body when its section is off (ADR-516). */
@@ -1058,15 +1106,16 @@
     height: var(--strip-band-h, 56px);
     /* Across its CellSize: the whole width, the switch in the corner. */
     flex: 1 1 auto;
-    padding-inline: 10px 6px;
-    background: color-mix(in oklab, var(--cell-ink) 10%, transparent);
+    padding-inline: 8px;
+    /* On: the bar washed in the ink, the switch's lit state; off, bare. */
+    background: color-mix(in oklab, var(--cell-ink) 20%, transparent);
     border-bottom: 1px solid var(--cell-line);
     transition: background-color var(--t-standard) var(--ease-settle);
   }
   /* The chain's head wears its track's colour a shade deeper, the way the
      strip's name block does, so the chain reads as that strip's. */
   .chain-cell.instrument .cell-head {
-    background: color-mix(in oklab, var(--cell-ink) 18%, transparent);
+    background: color-mix(in oklab, var(--cell-ink) 28%, transparent);
   }
   .chain-cell > :global(.cell-size:has(> .cell-head)) {
     flex: none;
@@ -1075,18 +1124,22 @@
      (the user, the same day). */
   .chain-wrap.two-rows .cell-head {
     height: calc(var(--strip-band-h, 56px) / 2);
-    padding-inline: 8px 3px;
+    padding-inline: 6px;
     gap: 4px;
   }
+  /* The name centered on its bar (the user, 2026-11-11), with no switch
+     beside it since a tap on the bar is the switch. */
   .head-text {
     flex: 1 1 auto;
     min-width: 0;
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
+    text-align: center;
     gap: 1px;
   }
-  /* The switch and Operator's algorithm close the row. */
+  /* Operator's algorithm closes the row. */
   .head-end {
     flex: 0 0 auto;
     margin-left: auto;
@@ -1094,46 +1147,6 @@
     align-items: center;
     gap: 4px;
   }
-  /* Device On: a section's switch on its bar (ADR-516): one step under
-     the touch floor in height, bought back in width; the power glyph
-     alone, since the word would not fit a narrow cell or a two-row
-     chain's half band and one switch should look the same everywhere;
-     lit in the device's ink while it runs, its frame in the ink while
-     bypassed. */
-  .power {
-    --btn-tint: var(--cell-ink);
-    flex: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: min(calc(100% - 0.75rem), 2rem);
-    min-width: 2.75rem;
-    padding: 0;
-    cursor: pointer;
-  }
-  .power-glyph {
-    display: flex;
-    width: 15px;
-    height: 15px;
-  }
-  .power-glyph :global(svg) {
-    width: 100%;
-    height: 100%;
-    stroke-width: 2.25;
-  }
-  .chain-cell.half .power,
-  :global([data-cell-width='narrow']) .cell-head .power {
-    min-width: 2.125rem;
-  }
-  .chain-wrap.two-rows .power {
-    height: calc(100% - 0.375rem);
-    min-width: 2.25rem;
-  }
-  .chain-wrap.two-rows .power-glyph {
-    width: 13px;
-    height: 13px;
-  }
-
   /* The face: the cell's rest, inset from the panel's edge so its own
      frame reads as a field sunk into it. */
   .mark {
@@ -1258,7 +1271,7 @@
   }
   .chain-cell.half .cell-head {
     gap: 3px;
-    padding-inline: 8px 4px;
+    padding-inline: 6px;
   }
   /* A narrow cell leaves the name what the switch does not: a size
      smaller. */
@@ -1276,16 +1289,6 @@
      toward the foreground, hue kept, as the sliders' labels are. */
   :global(.light[data-skin='hybrid']) .name {
     color: color-mix(in oklab, var(--cell-ink) 55%, var(--foreground));
-  }
-  /* The switch: lit in the ink while on, its frame in the ink off
-     (BoardTile's rule). */
-  :global([data-grammar='flat']) .power.active {
-    background: var(--btn-tint);
-    border-color: var(--btn-tint);
-    color: var(--flat-on-fg);
-  }
-  :global([data-grammar='flat']) .power:not(.active) {
-    color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
   }
   /* One frame round a tile's field: the tile's, in its ink; the control's
      own hairline inside it goes. */

@@ -228,9 +228,6 @@ const SHIFTER_PARAMS = [
 	['Delay Sync', 0, 1, 1, 'On'], ['Delay Time', 0, 1, 0.35, '250 ms'], ['Delay Synced', 0, 17, 9, '1/4'], ['Delay Feedback', 0, 1, 0, '0.0 %'],
 	['Mode', 0, 2, 2, 'Ring'], ['Tone', 0, 1, 0.75, '9.45 kHz'], ['Wide', 0, 1, 0, 'Off'], ['Dry/Wet', 0, 1, 0.8, '80 %']
 ].map(([name, ...rest]) => [name, name, ...rest]);
-/** The rig's effects shelf (catalog.effectsPlace), for states that name its files. */
-const SHELF = '/Users/Shared/Music/Soundbanks/Ableton/Live Libraries/User Library/Looping Presets/Instruments/Sidebar/Audio-Midi Effects';
-const RECENT_SEED = [['Echo', 'Time'], ['Auto Filter', 'Tone'], ['Hybrid Reverb', 'Time'], ['EQ Eight', 'Tone'], ['Tone Shaper', 'Tone', 'amxd'], ['Utility', 'Utility'], ['Channel EQ', 'Tone'], ['Wah', 'Guitar', 'adg'], ['MidiWheels', 'Midi Effect', 'amxd'], ['Saturator', 'Distortion'], ['Chorus', 'Modulation'], ['Drum Buss', 'Distortion'], ['Glue', 'Dynamics'], ['Redux', 'Distortion'], ['Phaser', 'Modulation'], ['Gate', 'Dynamics'], ['Tremolo', 'Modulation'], ['Compressor', 'Dynamics']];
 const chainOf = (n) => (scene) =>
 	setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], 'Auto Filter', 'Echo', 'Reverb', CHAIN_DEMO_DEVICES[5], 'Auto Filter', CHAIN_DEMO_DEVICES[7], CHAIN_DEMO_DEVICES[8]].slice(0, n));
 const chainCell = (index) => `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/${index}"]`;
@@ -418,9 +415,9 @@ export const TOURS = {
 			},
 			{
 				name: 'chain-power',
-				description: 'Tapped the Echo cell\'s power button: Echo off (dimmed, the button unlit); Grit was off already',
+				description: 'Tapped the Echo cell\'s header: Echo off (dimmed, its bar bare); Grit was off already',
 				scenePatch: chainDemo,
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(4)} .power` }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(4)} .cell-head .name` }]
 			},
 			{
 				name: 'chain-dragging',
@@ -480,7 +477,7 @@ export const TOURS = {
 				name: `chain-view-${key}`,
 				description: `Tapped the ${device.name} cell: its own view, the control its browser tiles and chain cell draw`,
 				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], device]),
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(1)} .cell-head .name` }, { wait: 500 }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(1)}` }, { wait: 500 }]
 			})),
 			// Full screen (ADR-511, ADR-515): an effect's board, every section at once.
 			...[
@@ -491,7 +488,7 @@ export const TOURS = {
 				name: `chain-board-${key}`,
 				description: `The ${device.name} view at full screen: its board`,
 				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], device]),
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(1)} .cell-head .name` }, { wait: 500 }, { click: '[data-central-expand]' }, { wait: 400 }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(1)}` }, { wait: 500 }, { click: '[data-central-expand]' }, { wait: 400 }]
 			})),
 			// An instrument's cell carries its view's signature control (INSTRUMENT_CONTROLS).
 			...[
@@ -516,7 +513,7 @@ export const TOURS = {
 						{ name: 'Velocity', className: 'MidiVelocity', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Drive', 'Drive', -1, 1, 0, ''], ['Compand', 'Compand', -1, 1, 0, ''], ['Random', 'Random', 0, 64, 40, '40'], ['Mode', 'Mode', 0, 2, 0, ''], ['Operation', 'Operation', 0, 2, 2, ''], ['Out Hi', 'Out Hi', 0, 127, 110, ''], ['Out Low', 'Out Low', 0, 127, 30, '']] },
 						CHAIN_DEMO_DEVICES[0]
 					]),
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(2)} .cell-head .name` }, { wait: 500 }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(2)}` }, { wait: 500 }]
 			},
 			{
 				name: 'chain-pad-add',
@@ -547,23 +544,23 @@ export const TOURS = {
 				scenePatch: chainDemo,
 				steps: [select, { click: '[data-debug="chain-add"]' }, { wait: 2500 }]
 			})),
-			// The Recent column beside + Effect (ADR-484), seeded from the rig's
-			// shelf so --real-data draws each one's picture. Echo is on the chain
-			// already, so it is skipped.
+			// The palette under the chain: fixed ghost effects for each kind of
+			// track, MIDI on the left, audio on the right, then +.
 			...[
-				['chain-recents', 'the instrument alone, on one row: the ghost section two cells wide, recents in three columns of four and + Effect the full-height last column; Auto Filter draws its curve', 1],
-				['chain-recents-crowded', 'a chain on two rows: recents in five columns of two and + Effect double height; Echo and Auto Filter are on it, so they are skipped', 5],
-				['chain-recents-fresh', 'a fresh browser with no recents: Live\'s own effects fill the section (no Utility, the sidebar has its own)', 1, 0],
-				['chain-recents-some', 'three recents: they come first, Live\'s own effects fill the rest', 1, 3]
-			].map(([name, what, n, seed = RECENT_SEED.length]) => ({
+				['chain-palette-kit', 'a Drum Rack track: Arpeggiator, Note Chance and Velocity; Drum Buss after the shared ten', openInstrument(0)],
+				['chain-palette-instrument', 'an instrument track: Chord and Random join the MIDI effects; Pedal and Roar after the shared ten', openInstrument(CHAIN_DEMO_TRACK)],
+				['chain-palette-audio', 'an audio track: the MIDI slots empty; the amps after the shared ten', selectTrack(3)]
+			].map(([name, what, select]) => ({
 				name,
-				description: `The Recent column (ADR-484): ${what}`,
-				scenePatch: chainOf(n),
-				steps: [
-					{ storage: { 'vamp.recentEffects': JSON.stringify(RECENT_SEED.slice(0, seed).map(([n, dir, ext = 'adv']) => ({ name: n, fullPath: `${SHELF}/${dir}/${n}.${ext}`, source: '', rel: '' }))) } },
-					openInstrument(CHAIN_DEMO_TRACK)
-				]
+				description: `The chain's palette: ${what}`,
+				steps: [select, { wait: 500 }]
 			})),
+			{
+				name: 'chain-palette-long',
+				description: "The chain's palette over a chain on two rows: one row of chips, the kind's extras gone",
+				scenePatch: chainOf(8),
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { wait: 500 }]
+			},
 			{
 				name: 'chain-plugin',
 				description: 'Tapped the plug-in: the generic view, one slider per parameter',
@@ -869,7 +866,7 @@ export const TOURS = {
 				name: `view-${key}`,
 				description: `${device.name}, opened from its chain cell`,
 				scenePatch: (scene) => setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], device]),
-				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(1)} .cell-head .name` }, { wait: 500 }]
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { click: `${chainCell(1)}` }, { wait: 500 }]
 			}))
 		]
 	},

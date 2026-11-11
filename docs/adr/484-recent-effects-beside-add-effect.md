@@ -1,7 +1,7 @@
 # ADR-484: Recent Effects Beside + Effect
 
 ## Status
-**Accepted** (2026-10-26). Supersedes ADR-483 (a short chain's suggested
+**Superseded** by [ADR-523](523-a-fixed-effect-palette-over-the-chain.md) (2026-11-11). Accepted 2026-10-26. Supersedes ADR-483 (a short chain's suggested
 ghost devices). Amended by [ADR-497](497-live-effects-fill-the-recents.md):
 Live's own effects fill what the recents leave. No Live restart: interface only.
 

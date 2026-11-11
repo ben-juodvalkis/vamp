@@ -4,7 +4,7 @@
 **Accepted** (2026-11-08). Builds on ADR-485 (the FX section is the
 chain), ADR-492 (faces pick their layout by cell size), ADR-506 (the ghost
 Utility) and ADR-516 (a board's tiles are panels with header bars), whose
-grammar it carries into the chain. Interface only; no Live restart.
+grammar it carries into the chain. Interface only; no Live restart. Amended by [ADR-523](523-a-fixed-effect-palette-over-the-chain.md): a tap on the bar is Device On; no power button, the name centered.
 
 ## Context
 

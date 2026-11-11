@@ -1,7 +1,7 @@
 # ADR-497: Live's Own Effects Fill the Recents
 
 ## Status
-**Accepted** (2026-11-01). Amends [ADR-484](484-recent-effects-beside-add-effect.md):
+**Superseded** by [ADR-523](523-a-fixed-effect-palette-over-the-chain.md) (2026-11-11). Accepted 2026-11-01. Amends [ADR-484](484-recent-effects-beside-add-effect.md):
 the section is never empty now. No Live restart: interface only.
 
 ## Context

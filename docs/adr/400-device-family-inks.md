@@ -2,7 +2,7 @@
 
 ## Status
 **Accepted** — implements the color audit's R5 (`documentation/color-audit.md`);
-companion to ADR-399 (track role palette).
+companion to ADR-399 (track role palette). Amended by [ADR-524](524-device-families-mean-what-they-say.md): Glitch and Guitar families, MIDI alone in violet.
 
 ## Context
 

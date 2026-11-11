@@ -4,7 +4,7 @@ import { DEVICE_FAMILY_INKS } from '$lib/config/devicePresets';
 
 describe('sectionInks', () => {
 	// The rig's effects Place, 2026-10-26.
-	const inks = sectionInks(['Distortion', 'Dynamics', 'Glitch', 'Midi Effect', 'Modulation', 'Time', 'Tone', 'Utility']);
+	const inks = sectionInks(['Distortion', 'Dynamics', 'Glitch', 'Guitar', 'Midi Effect', 'Modulation', 'Time', 'Tone', 'Utility']);
 
 	it("gives a folder the device family its name says", () => {
 		expect(inks.get('distortion')).toBe(DEVICE_FAMILY_INKS.distortion.primary);
@@ -14,10 +14,13 @@ describe('sectionInks', () => {
 		expect(inks.get('time')).toBe(DEVICE_FAMILY_INKS.timeSpace.primary);
 		expect(inks.get('tone')).toBe(DEVICE_FAMILY_INKS.filter.primary);
 		expect(inks.get('utility')).toBe(DEVICE_FAMILY_INKS.utility.primary);
+		expect(inks.get('glitch')).toBe(DEVICE_FAMILY_INKS.glitch.primary);
+		expect(inks.get('guitar')).toBe(DEVICE_FAMILY_INKS.guitar.primary);
 	});
 
 	it('gives a folder whose name says none a family no other folder took', () => {
-		expect(inks.get('glitch')).toBe(DEVICE_FAMILY_INKS.rackVoice.primary);
-		expect(new Set(inks.values()).size).toBe(8);
+		const more = sectionInks(['Distortion', 'Strange']);
+		expect(more.get('strange')).not.toBe(DEVICE_FAMILY_INKS.distortion.primary);
+		expect(new Set(inks.values()).size).toBe(9);
 	});
 });
