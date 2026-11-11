@@ -33,6 +33,12 @@
      * not divide leaves the last line short; the gap is drawn as the well.
      */
     lines?: number;
+    /**
+     * One-line row only: past 8 steps, split the row into framed groups of
+     * this many steps with a small gap between them, so a long pattern can
+     * be counted by beat (the Permute view, 2026-11-11). 0 = never.
+     */
+    groupBy?: number;
   }
 
   let {
@@ -54,8 +60,19 @@
     onLengthChange,
     onRateChange,
     onEnable,
-    lines = 1
+    lines = 1,
+    groupBy = 0
   }: Props = $props();
+
+  /** One-line row, grouped: the step indices of each group, in order. */
+  let groups = $derived.by(() => {
+    if (lines > 1 || groupBy < 1 || length <= 8) return null;
+    const out: number[][] = [];
+    for (let i = 0; i < length; i += groupBy) {
+      out.push(Array.from({ length: Math.min(groupBy, length - i) }, (_, k) => i + k));
+    }
+    return out;
+  });
 
   /** Wrapped: how many lines are drawn, steps per line, and the empty slots closing the last. */
   let lineCount = $derived(Math.max(1, Math.min(Math.round(lines), length)));
@@ -407,6 +424,35 @@
   {/if}
 
   <!-- Pattern Segments -->
+  {#if groups}
+  <!-- Grouped: one framed well per group, a gap between them. Each group
+       grows by its step count, so a short last group keeps the step width. -->
+  <div class="seq-groups flex-1 h-full flex touch-manipulation" title="Sequencer Pattern - {length} steps" data-group-by={groupBy}>
+    {#each groups as group}
+      <div
+        class="seq-grid seq-group glass-panel h-full {currentSize.border} {currentSize.rounded} overflow-hidden flex"
+        style="flex: {group.length} 1 0;"
+      >
+        {#each group as stepIndex, k}
+          <div
+            class="step-cell {getStepSegmentClass(stepIndex)}"
+            data-step-index={stepIndex}
+            onpointerdown={(e) => handleStepPointerDown(e, stepIndex)}
+            onpointerup={handleStepPointerUp}
+            onpointercancel={handleStepPointerUp}
+            title="Step {stepIndex + 1}: {isStepEnabled(stepIndex) ? 'Enabled' : 'Disabled'}"
+            aria-label="Step {stepIndex + 1}"
+            role="button"
+            tabindex={readonly ? -1 : 0}
+          ></div>
+          {#if k < group.length - 1}
+            <div class="w-px bg-border"></div>
+          {/if}
+        {/each}
+      </div>
+    {/each}
+  </div>
+  {:else}
   <div
     class="seq-grid glass-panel flex-1 h-full {currentSize.border} {currentSize.rounded} overflow-hidden"
     title="Sequencer Pattern - {length} steps"
@@ -456,6 +502,7 @@
     </div>
     {/if}
   </div>
+  {/if}
 
   <!-- Rate Slider (if enabled) -->
   <!-- (see <style> below for current-step playhead styling) -->
@@ -526,6 +573,13 @@
   .seq-grid {
     background: var(--surface-well);
     border-color: var(--line);
+  }
+  /* Grouped row: the gap between groups of four. */
+  .seq-groups {
+    gap: 6px;
+  }
+  .seq-group {
+    min-width: 0;
   }
   .seq-fill {
     background-color: color-mix(in oklab, var(--seq-color) 70%, transparent);

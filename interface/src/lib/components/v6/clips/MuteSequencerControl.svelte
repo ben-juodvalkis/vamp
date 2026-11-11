@@ -93,6 +93,7 @@
       dimmed={trackMuted}
       {showLengthSlider}
       {showRateSlider}
+      groupBy={4}
       {rateMode}
       {rateValue}
       {rateDisplayString}
@@ -113,6 +114,7 @@
       dimmed={trackMuted}
       {showLengthSlider}
       {showRateSlider}
+      groupBy={4}
       {rateMode}
       {rateValue}
       {rateDisplayString}

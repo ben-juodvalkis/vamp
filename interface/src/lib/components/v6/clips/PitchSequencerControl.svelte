@@ -65,6 +65,7 @@
       variant="pitch"
       {showLengthSlider}
       {showRateSlider}
+      groupBy={4}
       {rateMode}
       {rateValue}
       {rateDisplayString}
@@ -83,6 +84,7 @@
       variant="pitch"
       {showLengthSlider}
       {showRateSlider}
+      groupBy={4}
       {rateMode}
       {rateValue}
       {rateDisplayString}
