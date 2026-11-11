@@ -9,6 +9,9 @@ import WebKit
 /// bar with Settings… and Edit); closed, it is a menu-bar agent again and
 /// the page goes with the window, so a closed window is not a client of
 /// the bridge.
+///
+/// Until the page has drawn, a progress screen covers it: the start's steps,
+/// read from the log, or "Updating Vamp for Mac…" while it rebuilds itself.
 @MainActor
 final class MainWindow: NSObject, NSWindowDelegate, WKNavigationDelegate {
     static let shared = MainWindow()
