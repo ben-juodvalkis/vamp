@@ -555,21 +555,19 @@
    * A tap on a cell's control opens the device too (the user, 2026-10-26:
    * a tap on the Auto Filter's XY did nothing). The XY counts a press as its
    * own tap only under 200 ms and 5 px, which a finger on the iPad often
-   * is not; the cell's tap has no time limit and a touch's slop. Except
-   * where a tap IS the control's: the MIDI wheels, a Drum Rack's pads.
-   * Permute's steps do both (the user, 2026-11-09): the step toggles and
-   * the Permute view opens.
+   * is not; the cell's tap has no time limit and a touch's slop. Every
+   * control (the user, 2026-11-10: anywhere on a cell but its power
+   * button): Permute's steps toggle and open, the MIDI wheels move and
+   * open, a Drum Rack's Trnsp opens the Drum Rack view. (A kit's face was
+   * its pads until 2026-11-05, whose tap was the pad's alone.)
    */
-  function tapOpensFromControl(cell: Cell): boolean {
-    return !isMidiWheels(cell.device) && !cell.kit;
-  }
 
   function dragStart(cell: Cell, position: number, info: DragInfo) {
     // A drag on a cell's control is that control's, and it opens the
     // device's view as a tap on the cell does — every control here, not
     // only the grid's tiles, which open their own (2026-10-26).
     if (pressInControl) {
-      if (!cell.kit) open(cell);
+      open(cell, true);
       return;
     }
     if (cell.kind === 'instrument' || !chainEl) return;
@@ -669,11 +667,14 @@
     browserModeStore.openEffectsBrowser();
   }
 
-  function open(cell: Cell) {
+  /** `fromControl`: the press landed on the cell's control, not its frame. */
+  function open(cell: Cell, fromControl = false) {
     const { device } = cell;
     if (cell.kind === 'instrument') {
-      // The kit cell under a pad: back to the kit.
+      // The kit cell under a pad: back to the kit — from its frame. Its
+      // Trnsp is the pad's under the scope, so a touch there keeps it.
       if (cell.kit && padScope) {
+        if (fromControl) return;
         drumPadScope.clear();
         return;
       }
@@ -809,7 +810,7 @@
         commit: 'either',
         onDown: (info) => pressDown(cell, info),
         onTap: () => {
-          if (!pressInControl || tapOpensFromControl(cell)) open(cell);
+          open(cell, pressInControl);
         },
         onStart: (info) => dragStart(cell, position - kitLead, info),
         onMove: dragMove,
