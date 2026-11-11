@@ -1,7 +1,7 @@
 # ADR-519: Full screen only where a view has a board for it
 
 ## Status
-**Accepted** (2026-11-09). Interface only; no Live restart. Amends ADR-511. Simpler and Sampler gained boards in ADR-521.
+**Accepted** (2026-11-09). Interface only; no Live restart. Amends ADR-511. Simpler and Sampler gained boards in ADR-521; the clip view has the icon again under ADR-525.
 
 ## Context
 

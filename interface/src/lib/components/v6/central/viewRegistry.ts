@@ -206,7 +206,7 @@ export function resolveViewComponent(
 
 /**
  * The views that draw a face of their own at full screen (ADR-512, ADR-515):
- * only these offer the full-screen icon (2026-11-09). Every other view
+ * only these, and the clip view (ADR-525), offer the full-screen icon. Every other view
  * expanded was itself blown up, which bought nothing a board does.
  */
 const FULL_SCREEN_BOARDS: Partial<Record<CentralViewType, ReadonlySet<string>>> = {
@@ -214,7 +214,14 @@ const FULL_SCREEN_BOARDS: Partial<Record<CentralViewType, ReadonlySet<string>>> 
 	instrument: new Set(['analog', 'collision', 'drift', 'electric', 'meld', 'operator', 'sampler', 'simpler', 'wavetable']),
 };
 
+/**
+ * Top-level views that expand as themselves (ADR-525): the clip view, whose
+ * editor and controls use the extra room as it comes.
+ */
+const FULL_SCREEN_VIEWS: ReadonlySet<CentralViewType> = new Set(['clip']);
+
 export function hasFullScreenBoard(type: CentralViewType, subType?: string): boolean {
+	if (FULL_SCREEN_VIEWS.has(type)) return true;
 	return !!subType && !!FULL_SCREEN_BOARDS[type]?.has(subType);
 }
 

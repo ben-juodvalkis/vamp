@@ -66,6 +66,16 @@ describe('central view full screen', () => {
 		expect(icon(container)).toBeNull();
 	});
 
+	it('the clip view has the icon and expands (ADR-525)', async () => {
+		centralDisplayStore.setView('clip');
+		const { container } = render(MiddlePanelV6);
+		await tick();
+		expect(icon(container)?.getAttribute('aria-label')).toBe('Full screen');
+		await pressIcon(container);
+		expect(centralDisplayStore.expanded).toBe(true);
+		expect(host(container).classList.contains('central-expanded')).toBe(true);
+	});
+
 	it('the System view has no icon, and arriving at it collapses the view', async () => {
 		centralDisplayStore.setView('device', 'roar');
 		const { container } = render(MiddlePanelV6);

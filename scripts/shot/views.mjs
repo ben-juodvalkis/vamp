@@ -628,6 +628,8 @@ export const TOURS = {
 			// The pencil's note editor: Fold on (its default) and off. With the
 			// clip grid off it keeps the mini session column on its left.
 			{ name: 'clip-notes', description: 'Note editor (the pencil), Fold on, the mini session column beside it', steps: [{ click: '.editor-toggle' }] },
+			{ name: 'clip-full', description: 'Clip view at full screen (ADR-525)', steps: [{ click: '[data-central-expand]' }, { wait: 400 }] },
+			{ name: 'clip-notes-full', description: 'Note editor at full screen (ADR-525)', steps: [{ click: '.editor-toggle' }, { click: '[data-central-expand]' }, { wait: 400 }] },
 			{
 				name: 'clip-notes-session',
 				view: 'session',
