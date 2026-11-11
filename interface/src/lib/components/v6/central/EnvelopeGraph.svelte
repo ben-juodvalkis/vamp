@@ -97,8 +97,12 @@
   const MAX_ASPECT = 0.6;
   let w = $derived(cw);
   let h = $derived(Math.min(ch, Math.round(cw * MAX_ASPECT)));
-  /** The inset around the line: a square's half and a little, less on a short strip. */
-  let PAD = $derived(h > 0 && h < 90 ? 7 : 10);
+  /** The drawing's size: the frame's inside, its 1px border off each edge, so nothing drawn is clipped by it. */
+  const BORDER = 1;
+  let gw = $derived(Math.max(0, w - 2 * BORDER));
+  let gh = $derived(Math.max(0, h - 2 * BORDER));
+  /** The inset around the line: a square's half and its stroke, more where there is room. */
+  let PAD = $derived(gh > 0 && gh < 90 ? 7 : 10);
 
   const u = (n: string | undefined, fallback: number) => (n ? (params.unit(n) ?? fallback) : fallback);
 
@@ -116,8 +120,8 @@
     })
   );
 
-  const X = (x: number) => PAD + x * Math.max(0, w - 2 * PAD);
-  const Y = (y: number) => PAD + y * Math.max(0, h - 2 * PAD);
+  const X = (x: number) => PAD + x * Math.max(0, gw - 2 * PAD);
+  const Y = (y: number) => PAD + y * Math.max(0, gh - 2 * PAD);
 
   let line = $derived(
     [shape.start, shape.peak, shape.sustain, shape.hold, shape.end].map((p, i) => `${i ? 'L' : 'M'}${X(p.x).toFixed(1)} ${Y(p.y).toFixed(1)}`).join(' ')
@@ -169,8 +173,8 @@
     const hd = handles.find((x) => x.id === drag!.id);
     if (!hd) return;
     // A slot is a quarter of the width: a drag across one sweeps a time end to end.
-    const slot = Math.max(1, (w - 2 * PAD) / 4);
-    const tall = Math.max(1, h - 2 * PAD);
+    const slot = Math.max(1, (gw - 2 * PAD) / 4);
+    const tall = Math.max(1, gh - 2 * PAD);
     if (hd.x && drag.ux !== undefined) params.writeUnit(hd.x, drag.ux + (e.clientX - drag.x0) / slot, sw);
     if (hd.y && drag.uy !== undefined) params.writeUnit(hd.y, drag.uy - (e.clientY - drag.y0) / tall, sw);
   }
@@ -209,8 +213,8 @@
   data-envelope-graph={names.attack}
 >
   <svg
-    width={w}
-    height={h}
+    width={gw}
+    height={gh}
     role="slider"
     tabindex="-1"
     aria-label="{label ?? 'Envelope'}: attack, decay, sustain, release"
@@ -221,7 +225,7 @@
     onpointercancel={up}
     style="touch-action: none;"
   >
-    {#if w > 0 && h > 0}
+    {#if gw > 0 && gh > 0}
       <defs>
         <!-- The envelope's body: its ink, fading to the floor (ADR-516). -->
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
