@@ -547,7 +547,7 @@ export const TOURS = {
 			// The palette under the chain: fixed ghost effects for each kind of
 			// track, MIDI on the left, audio on the right, then +.
 			...[
-				['chain-palette-kit', 'a Drum Rack track: Arpeggiator, Note Chance and Velocity; Drum Buss after the shared ten', openInstrument(1)],
+				['chain-palette-kit', 'a Drum Rack track: Arpeggiator, Note Chance and Velocity; Drum Buss after the shared ten', openInstrument(0)],
 				['chain-palette-instrument', 'an instrument track: Chord and Random join the MIDI effects; Pedal and Roar after the shared ten', openInstrument(CHAIN_DEMO_TRACK)],
 				['chain-palette-audio', 'an audio track: the MIDI slots empty; the amps after the shared ten', selectTrack(3)]
 			].map(([name, what, select]) => ({

@@ -19,6 +19,20 @@ import type { RecentEffect } from '$lib/services/recentEffects.svelte';
 
 export type PaletteKind = 'kit' | 'instrument' | 'audio';
 
+/** What a chip in the palette bar says: short, so a row holds many. */
+const LABELS: Record<string, string> = {
+	arpeggiator: 'Arp', chance: 'Chance', velocity: 'Velocity', chord: 'Chord', random: 'Random',
+	filter: 'Filter', eq: 'EQ', saturator: 'Drive', squash: 'Glue', compressor: 'Comp', echo: 'Echo',
+	reverb: 'Reverb', chorus: 'Chorus', phaser: 'Phaser', tremolo: 'Tremolo', drum: 'Drum Buss',
+	redux: 'Redux', gate: 'Gate', ott: 'OTT', shifter: 'Shifter', pedal: 'Pedal', roar: 'Roar',
+	guitar: 'Guitar', bass: 'Bass Amp', wah: 'Wah'
+};
+
+/** A palette entry's short name, else its device's. */
+export function paletteLabel(effect: Pick<RecentEffect, 'name' | 'preset'>): string {
+	return (effect.preset && LABELS[effect.preset]) || effect.name;
+}
+
 /** The MIDI section's slots, two columns of two. `null` is a slot left empty, so the others keep their places. */
 export const MIDI_SLOTS = 4;
 const MIDI: Record<PaletteKind, readonly (string | null)[]> = {

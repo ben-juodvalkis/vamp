@@ -16,7 +16,8 @@
 	import { press } from '$lib/actions/press';
 
 	// Not `effect`: a variable of that name turns `$effect` into a store read.
-	let { recent }: { recent: RecentEffect } = $props();
+	// `compact`: one line, the name alone, `label` in its place when given (the chain's palette bar).
+	let { recent, compact = false, label }: { recent: RecentEffect; compact?: boolean; label?: string } = $props();
 
 	let saved = $state<PresetParams | null>(null);
 	$effect(() => {
@@ -86,6 +87,7 @@
 <button
 	type="button"
 	class="recent-effect"
+	class:compact
 	aria-label="Add {recent.name} again"
 	data-debug="chain-recent"
 	use:press={{ onPress: () => void addEffectToChain(recent), touchAction: 'none', stopPropagation: true }}
@@ -101,7 +103,7 @@
 	</span>
 	<!-- The name alone: the dashed ghost already says a tap adds it (the
 	     user, 2026-11-05; "+ Echo" from 2026-10-26). -->
-	<span class="recent-name">{recent.name}</span>
+	<span class="recent-name">{label ?? recent.name}</span>
 </button>
 
 <style>
@@ -170,6 +172,16 @@
 	.recent-mark :global(svg) {
 		height: 100%;
 		width: auto;
+	}
+	/* One line, the name alone. */
+	.recent-effect.compact {
+		padding: 2px 4px;
+	}
+	.recent-effect.compact > .recent-picture {
+		display: none;
+	}
+	.recent-effect.compact > .recent-name {
+		font-size: 0.8125rem;
 	}
 	.recent-name {
 		max-width: 100%;

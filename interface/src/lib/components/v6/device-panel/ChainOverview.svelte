@@ -71,7 +71,7 @@
   import SquashControl from './SquashControl.svelte';
   import ControlTile from './ControlTile.svelte';
   import RecentEffectButton from './chain/RecentEffectButton.svelte';
-  import { MIDI_SLOTS, audioPalette, midiPalette, paletteColumns, type PaletteKind } from '$lib/services/effectPalette';
+  import { MIDI_SLOTS, audioPalette, midiPalette, paletteColumns, paletteLabel, type PaletteKind } from '$lib/services/effectPalette';
   import { controlFor } from './deviceControls';
   import PermuteStepsFace from './chain/PermuteStepsFace.svelte';
   import OperatorHeadAlgorithm from './chain/OperatorHeadAlgorithm.svelte';
@@ -306,6 +306,8 @@
    * like Live's chain: left to right, then the next row.
    */
   const ROW_UNITS = 12;
+  /** A short chain is drawn on at least this many units, so one device is not the whole width. */
+  const MIN_UNITS = 8;
   function unitsOf(cell: Cell): number {
     if (cell.kit || isMidiWheels(cell.device)) return 1;
     return cell.presetKey && controlFor(cell.presetKey)?.kind === 'slider' ? 1 : 2;
@@ -424,24 +426,24 @@
   const drawn = $derived(kitCell ? [kitCell, ...shown] : shown);
 
   /*
-   * The chain is one row at half the section's height (the user,
-   * 2026-11-10), its cells their unit widths on a ruler of at least
-   * `ROW_UNITS`; a longer chain narrows every cell rather than wrapping.
+   * The chain has the section's height under the palette bar, one row up to
+   * `ROW_UNITS` and two past it (`chainUnitLayout`), with no ghost section
+   * of its own: the cells take the width (at least `MIN_UNITS`).
    */
   const layout = $derived.by(() => {
-    const laid = chainUnitLayout(drawn.map(unitsOf), 0, Number.MAX_SAFE_INTEGER);
-    return { ...laid, cols: Math.max(ROW_UNITS, laid.cols) };
+    const laid = chainUnitLayout(drawn.map(unitsOf), 0, ROW_UNITS);
+    return laid.rows === 1 ? { ...laid, cols: Math.max(MIN_UNITS, laid.cols) } : laid;
   });
-  const grid = $derived({ cols: layout.cols, rows: 1 });
+  const grid = $derived({ cols: layout.cols, rows: layout.rows });
 
   /*
-   * The palette (the user, 2026-11-10; `services/effectPalette`): the other
-   * half, ghost effects in fixed places, MIDI on the left and audio on the
-   * right, then one + for anything else. Which effects depends on the kind
-   * of track alone; how many audio ones on the screen's width, tiles at
-   * least `PALETTE_TILE_MIN` wide, two rows.
+   * The palette bar (the user, 2026-11-11; `services/effectPalette`): one
+   * row of ghost effects across the top, in fixed places, MIDI on the left
+   * and audio on the right, then one + for anything else. Which effects
+   * depends on the kind of track alone; how many audio ones on the width,
+   * chips at least `PALETTE_TILE_MIN` wide.
    */
-  const PALETTE_TILE_MIN = 80;
+  const PALETTE_TILE_MIN = 60;
   const PALETTE_GAP = 6;
   /** The seam between the MIDI and the audio effects, a column of its own. */
   const PALETTE_SEAM = 4;
@@ -453,13 +455,13 @@
         ? 'audio'
         : 'instrument'
   );
-  const audioCols = $derived(Math.max(1, paletteColumns(paletteWidth - PALETTE_SEAM - PALETTE_GAP, PALETTE_TILE_MIN, PALETTE_GAP) - 2));
+  /** Audio columns, + included: the row less the MIDI slots and the seam. */
+  const audioCols = $derived(Math.max(1, paletteColumns(paletteWidth - PALETTE_SEAM - PALETTE_GAP, PALETTE_TILE_MIN, PALETTE_GAP) - MIDI_SLOTS));
   const midiSlots = $derived.by(() => {
     const midi = midiPalette(paletteKind);
     return Array.from({ length: MIDI_SLOTS }, (_, i) => midi[i] ?? null);
   });
-  /** Every slot but the last, which is +. */
-  const audioSlots = $derived(audioPalette(paletteKind, audioCols * 2 - 1));
+  const audioSlots = $derived(audioPalette(paletteKind, audioCols - 1));
 
   /*
    * The ghost Utility (the user, 2026-11-05; ADR-482's column, back from the
@@ -789,7 +791,41 @@
       {/if}
 {/snippet}
 
-<div class="chain-wrap" class:has-utility={showGhostUtility} class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
+<div class="chain-wrap" class:two-rows={grid.rows > 1} class:has-utility={showGhostUtility} class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
+<!-- The palette bar: MIDI effects on the left, a seam, the audio effects,
+     and + last. Every chip in a fixed place. -->
+<div
+  class="palette"
+  bind:clientWidth={paletteWidth}
+  style:--midi-cols={MIDI_SLOTS}
+  style:--audio-cols={audioCols}
+  data-debug="chain-palette"
+  data-palette-kind={paletteKind}
+  role="group"
+  aria-label="Effects to add"
+>
+  {#each midiSlots as slot, i (i)}
+    <div class="palette-slot" class:blank={!slot} style:grid-column={i + 1}>
+      {#if slot}<RecentEffectButton recent={slot} compact label={paletteLabel(slot)} />{/if}
+    </div>
+  {/each}
+  {#each audioSlots as fx, j (fx.fullPath)}
+    <div class="palette-slot" style:grid-column={MIDI_SLOTS + 2 + j}>
+      <RecentEffectButton recent={fx} compact label={paletteLabel(fx)} />
+    </div>
+  {/each}
+  <!-- Add an effect: the browser on Effect, landing on this chain. -->
+  <button
+    type="button"
+    class="chain-add"
+    style:grid-column={MIDI_SLOTS + 1 + audioCols}
+    aria-label="Add an effect"
+    data-debug="chain-add"
+    use:press={{ onPress: addEffect, touchAction: 'none' }}
+  >
+    <span class="chain-add-plus" aria-hidden="true"><Plus /></span>
+  </button>
+</div>
 <div
   class="chain"
   style:--chain-cols={grid.cols}
@@ -837,42 +873,8 @@
     </div>
   {/if}
 </div>
-<!-- The palette: MIDI effects in two columns on the left, a seam, the
-     audio effects, and + in the last slot. Every tile in a fixed place. -->
-<div
-  class="palette"
-  bind:clientWidth={paletteWidth}
-  style:--audio-cols={audioCols}
-  data-debug="chain-palette"
-  data-palette-kind={paletteKind}
-  role="group"
-  aria-label="Effects to add"
->
-  {#each midiSlots as slot, i (i)}
-    <div class="palette-slot" class:blank={!slot} style:grid-column={(i % 2) + 1} style:grid-row={Math.floor(i / 2) + 1}>
-      {#if slot}<RecentEffectButton recent={slot} />{/if}
-    </div>
-  {/each}
-  {#each audioSlots as fx, j (fx.fullPath)}
-    <div class="palette-slot" style:grid-column={4 + (j % audioCols)} style:grid-row={Math.floor(j / audioCols) + 1}>
-      <RecentEffectButton recent={fx} />
-    </div>
-  {/each}
-  <!-- Add an effect: the browser on Effect, landing on this chain. -->
-  <button
-    type="button"
-    class="chain-add"
-    style:grid-column={3 + audioCols}
-    style:grid-row={2}
-    aria-label="Add an effect"
-    data-debug="chain-add"
-    use:press={{ onPress: addEffect, touchAction: 'none' }}
-  >
-    <span class="chain-add-plus" aria-hidden="true"><Plus /></span>
-  </button>
-</div>
 {#if showGhostUtility && UTILITY_TILE}
-  <!-- The ghost Utility: all the way on the right, both halves tall, the
+  <!-- The ghost Utility: all the way on the right, the full height, the
        track's meter under a Gain fader; its first drag adds a Utility. -->
   <div
     class="ghost-utility"
@@ -904,12 +906,13 @@
     height: 100%;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-template-rows: var(--palette-h) minmax(0, 1fr);
     gap: 8px;
     min-width: 0;
+    --palette-h: 44px;
   }
-  /* The ghost Utility: a narrow column all the way on the right, both
-     halves tall (the user, 2026-11-10). */
+  /* The ghost Utility: a narrow column all the way on the right, the
+     full height (the user, 2026-11-10). */
   .chain-wrap.has-utility {
     grid-template-columns: minmax(0, 1fr) 72px;
   }
@@ -934,7 +937,7 @@
   }
   .chain {
     grid-column: 1;
-    grid-row: 1;
+    grid-row: 2;
     min-width: 0;
     min-height: 0;
     display: grid;
@@ -1020,31 +1023,33 @@
     overflow: hidden;
     transition: border-color var(--t-fast) var(--ease-precise), box-shadow var(--t-fast) var(--ease-precise);
   }
-  /* The palette: two MIDI columns, a seam, the audio columns; two rows of
-     tiles of one size, each placed by its slot. */
+  /* The palette bar: the MIDI chips, a seam, the audio chips and +, one
+     row of chips of one size, each placed by its slot. */
   .palette {
     grid-column: 1;
-    grid-row: 2;
+    grid-row: 1;
     min-width: 0;
     min-height: 0;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) 4px repeat(var(--audio-cols, 8), minmax(0, 1fr));
-    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--midi-cols, 4), minmax(0, 1fr)) 4px repeat(var(--audio-cols, 8), minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
     gap: 6px;
   }
   .palette-slot {
+    grid-row: 1;
     min-width: 0;
     min-height: 0;
     display: grid;
   }
   /* A MIDI slot this kind of track leaves empty: a faint outline, so the
-     slots beside it read as where they always are. */
+     chips beside it read as where they always are. */
   .palette-slot.blank {
     border: 1px dashed color-mix(in oklab, var(--ghost-line) 45%, transparent);
     border-radius: var(--ghost-radius);
   }
-  /* + as one of the tiles. */
+  /* + as one of the chips. */
   .palette > .chain-add {
+    grid-row: 1;
     padding: 4px;
     overflow: hidden;
   }
@@ -1101,7 +1106,7 @@
   }
   /* Two rows of cells: half that, so the controls keep their height
      (the user, the same day). */
-  .chain-wrap .cell-head {
+  .chain-wrap.two-rows .cell-head {
     height: calc(var(--strip-band-h, 56px) / 2);
     padding-inline: 8px 3px;
     gap: 4px;
@@ -1153,11 +1158,11 @@
   :global([data-cell-width='narrow']) .cell-head .power {
     min-width: 2.125rem;
   }
-  .chain-wrap .power {
+  .chain-wrap.two-rows .power {
     height: calc(100% - 0.375rem);
     min-width: 2.25rem;
   }
-  .chain-wrap .power-glyph {
+  .chain-wrap.two-rows .power-glyph {
     width: 13px;
     height: 13px;
   }
@@ -1188,9 +1193,9 @@
     display: flex;
     padding: 6px;
   }
-  .chain-wrap .cell-control,
-  .chain-wrap .cell-face,
-  .chain-wrap .mark {
+  .chain-wrap.two-rows .cell-control,
+  .chain-wrap.two-rows .cell-face,
+  .chain-wrap.two-rows .mark {
     padding: 4px;
   }
   .cell-control > :global(*) {
@@ -1260,10 +1265,22 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .chain-wrap .caption,
+  .chain-wrap.two-rows .caption,
   .chain-cell.half .caption,
   :global([data-cell-width='narrow']) .cell-head .caption {
     display: none;
+  }
+  /* A one-row chain's band has room for two lines: a long name wraps
+     (hyphenated where the browser can, else broken where it must) rather
+     than losing its end. */
+  .chain-wrap:not(.two-rows) .name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+    hyphens: auto;
+    overflow-wrap: anywhere;
   }
   /* A one-unit cell (a slider's): a size smaller, broken only between
      words, so "Pedal" stays whole (the user, 2026-11-05). */
@@ -1281,7 +1298,7 @@
   :global([data-cell-width='narrow']) .cell-head .name {
     font-size: 0.8125rem;
   }
-  .chain-wrap .name {
+  .chain-wrap.two-rows .name {
     font-size: 0.8125rem;
   }
 
