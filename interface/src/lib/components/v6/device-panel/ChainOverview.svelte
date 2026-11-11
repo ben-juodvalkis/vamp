@@ -306,8 +306,6 @@
    * like Live's chain: left to right, then the next row.
    */
   const ROW_UNITS = 12;
-  /** A short chain is drawn on at least this many units, so one device is not the whole width. */
-  const MIN_UNITS = 8;
   function unitsOf(cell: Cell): number {
     if (cell.kit || isMidiWheels(cell.device)) return 1;
     return cell.presetKey && controlFor(cell.presetKey)?.kind === 'slider' ? 1 : 2;
@@ -427,12 +425,23 @@
 
   /*
    * The chain has the section's height under the palette bar, one row up to
-   * `ROW_UNITS` and two past it (`chainUnitLayout`), with no ghost section
-   * of its own: the cells take the width (at least `MIN_UNITS`).
+   * `ROW_UNITS` and two past it (`chainUnitLayout`). Whatever the cells
+   * leave at the end is a + (the user, 2026-11-11): `spare`.
    */
   const layout = $derived.by(() => {
-    const laid = chainUnitLayout(drawn.map(unitsOf), 0, ROW_UNITS);
-    return laid.rows === 1 ? { ...laid, cols: Math.max(MIN_UNITS, laid.cols) } : laid;
+    const widths = drawn.map(unitsOf);
+    const sum = widths.reduce((a, w) => a + w, 0);
+    if (sum <= ROW_UNITS) {
+      let col = 0;
+      const places = widths.map((span) => {
+        const p = { row: 0, col, span };
+        col += span;
+        return p;
+      });
+      return { cols: ROW_UNITS, rows: 1, places, spare: { row: 0, col, span: ROW_UNITS - col } };
+    }
+    const laid = chainUnitLayout(widths, 0, ROW_UNITS);
+    return { ...laid, spare: laid.ghost };
   });
   const grid = $derived({ cols: layout.cols, rows: layout.rows });
 
@@ -455,13 +464,20 @@
         ? 'audio'
         : 'instrument'
   );
+  /** Two rows of chips while the chain is one row; one once it splits (the user, 2026-11-11). */
+  const paletteRows = $derived(grid.rows === 1 ? 2 : 1);
   /** Audio columns, + included: the row less the MIDI slots and the seam. */
   const audioCols = $derived(Math.max(1, paletteColumns(paletteWidth - PALETTE_SEAM - PALETTE_GAP, PALETTE_TILE_MIN, PALETTE_GAP) - MIDI_SLOTS));
   const midiSlots = $derived.by(() => {
     const midi = midiPalette(paletteKind);
     return Array.from({ length: MIDI_SLOTS }, (_, i) => midi[i] ?? null);
   });
-  const audioSlots = $derived(audioPalette(paletteKind, audioCols - 1));
+  /** Row 1 (every slot but +) then row 2: the first row never changes, the second comes and goes. */
+  const audioSlots = $derived(audioPalette(paletteKind, audioCols - 1 + (paletteRows === 2 ? audioCols : 0)));
+  function audioPlace(j: number): { col: number; row: number } {
+    const first = audioCols - 1;
+    return j < first ? { col: MIDI_SLOTS + 2 + j, row: 1 } : { col: MIDI_SLOTS + 2 + (j - first), row: 2 };
+  }
 
   /*
    * The ghost Utility (the user, 2026-11-05; ADR-482's column, back from the
@@ -791,13 +807,14 @@
       {/if}
 {/snippet}
 
-<div class="chain-wrap" class:two-rows={grid.rows > 1} class:has-utility={showGhostUtility} class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
+<div class="chain-wrap" style:--palette-h={paletteRows === 2 ? '94px' : '44px'} class:two-rows={grid.rows > 1} class:has-utility={showGhostUtility} class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
 <!-- The palette bar: MIDI effects on the left, a seam, the audio effects,
      and + last. Every chip in a fixed place. -->
 <div
   class="palette"
   bind:clientWidth={paletteWidth}
   style:--midi-cols={MIDI_SLOTS}
+  style:--palette-rows={paletteRows}
   style:--audio-cols={audioCols}
   data-debug="chain-palette"
   data-palette-kind={paletteKind}
@@ -805,12 +822,12 @@
   aria-label="Effects to add"
 >
   {#each midiSlots as slot, i (i)}
-    <div class="palette-slot" class:blank={!slot} style:grid-column={i + 1}>
+    <div class="palette-slot" class:blank={!slot} style:grid-column={i + 1} style:grid-row={1}>
       {#if slot}<RecentEffectButton recent={slot} compact label={paletteLabel(slot)} />{/if}
     </div>
   {/each}
   {#each audioSlots as fx, j (fx.fullPath)}
-    <div class="palette-slot" style:grid-column={MIDI_SLOTS + 2 + j}>
+    <div class="palette-slot" style:grid-column={audioPlace(j).col} style:grid-row={audioPlace(j).row}>
       <RecentEffectButton recent={fx} compact label={paletteLabel(fx)} />
     </div>
   {/each}
@@ -819,6 +836,7 @@
     type="button"
     class="chain-add"
     style:grid-column={MIDI_SLOTS + 1 + audioCols}
+    style:grid-row={1}
     aria-label="Add an effect"
     data-debug="chain-add"
     use:press={{ onPress: addEffect, touchAction: 'none' }}
@@ -866,6 +884,20 @@
       {@render cellBody(cell, position)}
     </div>
   {/each}
+  {#if layout.spare.span > 0}
+    <!-- The room the cells leave: a +, the browser on Effect. -->
+    <button
+      type="button"
+      class="chain-add chain-spare"
+      style:grid-column="{layout.spare.col + 1} / span {layout.spare.span}"
+      style:grid-row={layout.spare.row + 1}
+      aria-label="Add an effect"
+      data-debug="chain-spare-add"
+      use:press={{ onPress: addEffect, touchAction: 'none' }}
+    >
+      <span class="chain-add-plus" aria-hidden="true"><Plus /></span>
+    </button>
+  {/if}
   {#if padScope}
     <!-- Whose chain this is, as the grid's scope chip says it. -->
     <div class="pad-chip chain-scope-chip" aria-label="Chain of pad {padScope.note}">
@@ -909,7 +941,6 @@
     grid-template-rows: var(--palette-h) minmax(0, 1fr);
     gap: 8px;
     min-width: 0;
-    --palette-h: 44px;
   }
   /* The ghost Utility: a narrow column all the way on the right, the
      full height (the user, 2026-11-10). */
@@ -1032,11 +1063,10 @@
     min-height: 0;
     display: grid;
     grid-template-columns: repeat(var(--midi-cols, 4), minmax(0, 1fr)) 4px repeat(var(--audio-cols, 8), minmax(0, 1fr));
-    grid-template-rows: minmax(0, 1fr);
+    grid-template-rows: repeat(var(--palette-rows, 1), minmax(0, 1fr));
     gap: 6px;
   }
   .palette-slot {
-    grid-row: 1;
     min-width: 0;
     min-height: 0;
     display: grid;
@@ -1049,7 +1079,6 @@
   }
   /* + as one of the chips. */
   .palette > .chain-add {
-    grid-row: 1;
     padding: 4px;
     overflow: hidden;
   }

@@ -556,6 +556,12 @@ export const TOURS = {
 				steps: [select, { wait: 500 }]
 			})),
 			{
+				name: 'chain-palette-long',
+				description: "The chain's palette over a chain on two rows: one row of chips, the kind's extras gone",
+				scenePatch: chainOf(8),
+				steps: [openInstrument(CHAIN_DEMO_TRACK), { wait: 500 }]
+			},
+			{
 				name: 'chain-plugin',
 				description: 'Tapped the plug-in: the generic view, one slider per parameter',
 				scenePatch: chainDemo,
