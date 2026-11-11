@@ -45,6 +45,10 @@ final class Supervisor: ObservableObject {
     let pagePort: UInt16
     let fromNpm: Bool
 
+    /// Where the log ended when this app last started the child: the Vamp
+    /// window reads the start's progress from there on (nil: not started here).
+    private(set) var startLogOffset: UInt64?
+
     private var child: Process?
     /// An `npm run ipad` this app started before it crashed or was
     /// force-quit, found again at launch (its pid and start time were
@@ -234,6 +238,7 @@ final class Supervisor: ObservableObject {
         starting = Date()
 
         let log = VampLog.open()
+        startLogOffset = (try? log?.seekToEnd()) ?? nil
         let process = Process()
         if let root = repoRoot {
             // A login shell, for the PATH a Terminal would have: an app opened
@@ -442,6 +447,10 @@ final class Supervisor: ObservableObject {
     }
 
     // MARK: - Health
+
+    /// A health check now, not at the next tick: the Vamp window asks once
+    /// the page server says it is listening, rather than waiting up to 2 s.
+    func refreshHealth() async { await checkHealth() }
 
     private func checkHealth() async {
         if let pid = adopted, kill(pid, 0) != 0, state != .stopping {

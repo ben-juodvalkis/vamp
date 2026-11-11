@@ -87,3 +87,58 @@ enum SupervisorRules {
         return (exits, exits.count <= restartLimit && !pageUp)
     }
 }
+
+/// Where a start has got to, read from the child's output in the log; the
+/// Vamp window's progress screen says it and fills its bar from it.
+enum StartStep: Int, Comparable {
+    case preparing
+    case building
+    case startingServers
+    case loading
+
+    static func < (a: StartStep, b: StartStep) -> Bool { a.rawValue < b.rawValue }
+
+    var label: String {
+        switch self {
+        case .preparing: return "Starting Vamp…"
+        case .building: return "Building the interface…"
+        case .startingServers: return "Starting the bridge…"
+        case .loading: return "Loading the interface…"
+        }
+    }
+}
+
+extension SupervisorRules {
+    /// The step a line of `npm run ipad`'s output moves the start to, or nil.
+    /// The markers are scripts/setup-ipad.js's and scripts/staleness.mjs's.
+    static func startStep(after line: String) -> StartStep? {
+        if line.contains("Preparing the iPad app") { return .preparing }
+        if line.contains("Building the iPad app") { return .building }
+        if line.contains("Vite build skipped") || line.contains("Starting OSC bridge") { return .startingServers }
+        if line.contains("[PREVIEW]") && line.contains("Local:") { return .loading }
+        return nil
+    }
+
+    /// The build's own time, from "✅ Vite build complete in 9.6s".
+    static func buildSeconds(in line: String) -> Double? {
+        guard let range = line.range(of: #"Vite build complete in ([0-9.]+)s"#, options: .regularExpression) else { return nil }
+        let number = line[range].dropFirst("Vite build complete in ".count).dropLast()
+        return Double(number)
+    }
+
+    /// How full the bar is: each step owns a span of it and fills that span
+    /// over its expected time, slowing as it nears the end so a long step
+    /// never reaches the next one's span before its marker does.
+    static func startFraction(_ step: StartStep, secondsInStep: Double, buildEstimate: Double) -> Double {
+        let (from, to, expected): (Double, Double, Double) = switch step {
+        case .preparing: (0.0, 0.08, 3)
+        case .building: (0.08, 0.80, max(buildEstimate, 1))
+        case .startingServers: (0.80, 0.92, 3)
+        case .loading: (0.92, 0.99, 2)
+        }
+        // Steady to 85% of the span at the expected time, then easing toward its end.
+        let t = max(secondsInStep, 0)
+        let filled = t <= expected ? 0.85 * t / expected : 0.85 + 0.15 * (1 - exp(-(t - expected) / expected))
+        return from + (to - from) * filled
+    }
+}

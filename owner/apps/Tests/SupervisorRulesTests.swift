@@ -53,4 +53,35 @@ final class SupervisorRulesTests: XCTestCase {
         // run cleanup.sh over it.
         XCTAssertFalse(SupervisorRules.afterExit(recentExits: [], now: now, pageUp: true).restart)
     }
+
+    // MARK: - The progress screen's steps
+
+    func testTheStartsOwnOutputMovesTheSteps() {
+        XCTAssertEqual(SupervisorRules.startStep(after: "📦 Preparing the iPad app..."), .preparing)
+        XCTAssertEqual(SupervisorRules.startStep(after: "🔨 Building the iPad app — about 40 s, and only when the code has changed (inputs changed)"), .building)
+        XCTAssertEqual(SupervisorRules.startStep(after: "⚡ Vite build skipped — inputs unchanged (fingerprint 26ms)"), .startingServers)
+        XCTAssertEqual(SupervisorRules.startStep(after: "🎵 Starting OSC bridge..."), .startingServers)
+        XCTAssertEqual(SupervisorRules.startStep(after: "[PREVIEW]   ➜  Local:   http://localhost:8889/"), .loading)
+        // The banner's own "Mac: http://localhost:8889" is not the server answering.
+        XCTAssertNil(SupervisorRules.startStep(after: "   🖥️  Mac: http://localhost:8889"))
+    }
+
+    func testTheBuildTimeIsReadForNextTime() {
+        XCTAssertEqual(SupervisorRules.buildSeconds(in: "✅ Vite build complete in 9.6s"), 9.6)
+        XCTAssertNil(SupervisorRules.buildSeconds(in: "✓ built in 7ms"))
+    }
+
+    func testTheBarOnlyFillsForwardAndStaysInsideEachStep() {
+        var last = -1.0
+        for step in [StartStep.preparing, .building, .startingServers, .loading] {
+            for t in [0.0, 1, 5, 10, 30, 600] {
+                let f = SupervisorRules.startFraction(step, secondsInStep: t, buildEstimate: 10)
+                XCTAssertGreaterThanOrEqual(f, last, "\(step) at \(t) s")
+                last = f
+            }
+        }
+        XCTAssertLessThan(last, 1, "full only once the page has drawn")
+        // A slow build still leaves room for the steps after it.
+        XCTAssertLessThan(SupervisorRules.startFraction(.building, secondsInStep: 600, buildEstimate: 10), 0.80 + 1e-9)
+    }
 }
