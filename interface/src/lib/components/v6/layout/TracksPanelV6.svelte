@@ -349,6 +349,29 @@
 		return () => ro.disconnect();
 	});
 
+	/**
+	 * The pinned New track + master block's measured width, which the
+	 * scroller reserves at its right end (`--pinned-w` → scroll-padding)
+	 * so a followed strip lands beside the block, never under it. Measured,
+	 * not derived: the block is two columns plus gutters whose widths the
+	 * grid resolves, and a formula for it was off by the master's whole
+	 * column once the master joined the block (2026-10-24).
+	 */
+	let pinnedEl = $state<HTMLDivElement | null>(null);
+	let pinnedWidth = $state(0);
+
+	$effect(() => {
+		const el = pinnedEl;
+		if (!el || typeof ResizeObserver === 'undefined') return;
+		const measure = () => {
+			pinnedWidth = el.getBoundingClientRect().width;
+		};
+		measure();
+		const ro = new ResizeObserver(measure);
+		ro.observe(el);
+		return () => ro.disconnect();
+	});
+
 	function handlePanelPointerDown(e: PointerEvent) {
 		if (panelPointers.size === 0) {
 			window.addEventListener('pointerup', handlePanelPointerEnd);
@@ -386,6 +409,7 @@
 	class:is-flipped={flipLayout}
 	data-debug="tracks-panel"
 	bind:this={panelEl}
+	style={pinnedWidth > 0 ? `--pinned-w: ${pinnedWidth}px;` : ''}
 	onpointerdown={handlePanelPointerDown}
 >
 	{#if visibleTracks.length === 0}
@@ -446,6 +470,7 @@
 			     at the row's right end, two strip columns wide. -->
 			<div
 				class="pinned-cols"
+				bind:this={pinnedEl}
 				style="grid-column: {visibleTracks.length + 1} / span {PINNED_COLS}; grid-row: 1 / -1;"
 			>
 				<div class="new-track-col"><NewTrackButtons /></div>
@@ -544,11 +569,14 @@
 		flex-direction: column;
 		gap: var(--spacing-lg);
 		/* Keep a followed strip clear of the hard panel edge, and at the
-		   right-hand end clear of the New track column pinned over it.
-		   The row only scrolls once every column is at its floor, so the
-		   pinned column is then exactly --track-min-w wide. */
+		   right-hand end clear of the New track + master block pinned over
+		   it: its measured width (`--pinned-w`) plus a gap. The fallback,
+		   before the first measure, is the block at the row's floor. */
 		scroll-padding-inline: var(--spacing-lg)
-			calc(var(--track-min-w) + 2 * var(--spacing-lg));
+			calc(
+				var(--pinned-w, calc(2 * var(--track-min-w) + 2 * var(--spacing-lg))) +
+					var(--spacing-lg)
+			);
 		/* Below this width strips stop compressing and the row scrolls
 		   instead. Declared ONCE here rather than per row: the strips, the
 		   clip grid and the stop row must resolve the SAME floor or their
