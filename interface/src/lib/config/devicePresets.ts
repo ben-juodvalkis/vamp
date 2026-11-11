@@ -494,6 +494,17 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     gridSlot: false,                    // Virtual device
     color: familyScheme('glitch')       // Glitch, as its folder is (user, 2026-11-11; violet until then)
   },
+  grainDelay: {
+    // Live's Grain Delay, inserted by name for the palette chip (2026-11-11).
+    // Class measured off Live's own preset file (Core Library, Ascent.adv).
+    // No control of its own yet: its chain cell is the generic mark.
+    padScoped: true,
+    native: true,
+    defaultName: 'Grain Delay',
+    expectedClassName: 'GrainDelay',
+    gridSlot: false,
+    color: familyScheme('timeSpace')
+  },
   // Virtual Smudge Device
   chorus: {
     padScoped: true,
@@ -509,6 +520,18 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Random',
     expectedClassName: 'MidiRandom',
+    color: familyScheme('pitchSeq')
+  },
+  randomOctave: {
+    // The user's Random preset (Random Octave.adv), found by name in the
+    // effects folder (ADR-498) for the palette chip (2026-11-11). Live names
+    // the device after the file; once on a chain it is a MidiRandom, which
+    // `random` matches by class first, so its cell is Random's control.
+    padScoped: true,
+    effect: true,
+    defaultName: 'Random Octave',
+    expectedClassName: 'MidiRandom',
+    gridSlot: false,
     color: familyScheme('pitchSeq')
   },
   velocity: {

@@ -4,9 +4,8 @@
  * learns where each one is. It replaced the Recent column (ADR-484), whose
  * order changed with every effect added.
  *
- * What the palette offers depends only on the kind of track: a Drum Rack
- * (or a pad of one), another instrument, or audio. An effect already on the
- * chain stays in its slot.
+ * Every track has the same palette, but an audio track has no MIDI block.
+ * An effect already on the chain stays in its slot.
  *
  * Every entry loads as the defaults did: a Live device by name, one of
  * Vamp's effects by name from the user's effects folder (`effectSources`).
@@ -25,7 +24,7 @@ const LABELS: Record<string, string> = {
 	redux: 'Redux', gate: 'Gate', ott: 'OTT', shifter: 'Shifter', pedal: 'Pedal', roar: 'Roar',
 	guitar: 'Guitar', bass: 'Bass Amp', wah: 'Wah', delay: 'Delay', limiter: 'Limiter', eq8: 'EQ Eight',
 	toneShaper: 'Tone Shaper', comb: 'Comb', glitchLoop: 'Glitch', pitchHack: 'Pitch Hack', smudge: 'Blur',
-	octave: 'Pitch Shift', variation: 'Stutter'
+	octave: 'Pitch Shift', variation: 'Stutter', randomOctave: 'Rand Oct', grainDelay: 'Grain'
 };
 
 /** A palette entry's short name, else its device's. */
@@ -37,9 +36,7 @@ export function paletteLabel(effect: Pick<RecentEffect, 'name' | 'preset'>): str
  * The palette is laid out in family blocks (the user, 2026-11-11): each
  * family a few columns, its main effects on the first row and its others
  * under them, so when the second row goes (a chain on two rows) every
- * family keeps its main ones, and the colours read as blocks. The lead
- * block is the track's own: the MIDI effects on a MIDI track, the guitar
- * rig on an audio track, never both.
+ * family keeps its main ones, and the colours read as blocks.
  */
 export interface PaletteBlock {
 	family: string;
@@ -52,26 +49,23 @@ export interface PaletteBlock {
 
 type BlockSpec = { family: string; top: readonly string[]; bottom: readonly string[] };
 
-const LEAD: Record<PaletteKind, BlockSpec> = {
-	kit: { family: 'midi', top: ['arpeggiator', 'chance', 'velocity'], bottom: [] },
-	instrument: { family: 'midi', top: ['arpeggiator', 'chord', 'random'], bottom: ['chance', 'velocity'] },
-	audio: { family: 'guitar', top: ['guitar', 'bass', 'wah'], bottom: [] }
-};
+/**
+ * One layout on every track (the user, 2026-11-11, from the chip picker):
+ * the same blocks in the same columns, for muscle memory. Only the MIDI
+ * block goes on an audio track, and the rest stretch to fill the row.
+ */
+const BLOCKS: readonly BlockSpec[] = [
+	{ family: 'midi', top: ['randomOctave'], bottom: ['arpeggiator'] },
+	{ family: 'guitar', top: ['guitar'], bottom: ['bass'] },
+	{ family: 'tone', top: ['filter'], bottom: ['eq'] },
+	{ family: 'dynamics', top: ['squash'], bottom: ['ott'] },
+	{ family: 'distortion', top: ['drum', 'roar'], bottom: ['pedal', 'redux'] },
+	{ family: 'modulation', top: ['tremolo'], bottom: ['chorus'] },
+	{ family: 'time', top: ['echo', 'reverb'], bottom: ['comb', 'grainDelay'] },
+	{ family: 'glitch', top: ['glitchLoop', 'variation'], bottom: ['pitchHack', 'smudge'] }
+];
 
-/** The audio families after the lead block, in this order on every track. */
-function families(kind: PaletteKind): BlockSpec[] {
-	const kit = kind === 'kit';
-	return [
-		{ family: 'tone', top: ['filter', 'eq'], bottom: ['toneShaper', 'eq8'] },
-		{ family: 'dynamics', top: ['compressor', 'squash'], bottom: ['gate', 'ott'] },
-		{ family: 'distortion', top: ['saturator', kit ? 'drum' : 'pedal'], bottom: ['redux', kit ? 'pedal' : 'roar'] },
-		{ family: 'modulation', top: ['chorus', 'tremolo'], bottom: ['phaser'] },
-		{ family: 'time', top: ['echo', 'reverb'], bottom: ['delay', 'comb'] },
-		{ family: 'glitch', top: ['glitchLoop', 'variation'], bottom: ['pitchHack', 'octave'] }
-	];
-}
-
-const MIDI_KEYS = new Set(['arpeggiator', 'chance', 'velocity', 'chord', 'random']);
+const MIDI_KEYS = new Set(['arpeggiator', 'chance', 'velocity', 'chord', 'random', 'randomOctave']);
 
 function entry(key: string): RecentEffect {
 	const preset = DEVICE_PRESETS[key];
@@ -88,9 +82,9 @@ function entry(key: string): RecentEffect {
 
 const slot = (key: string) => (DEVICE_PRESETS[key] && effectAvailable(key) ? entry(key) : null);
 
-/** A kind's blocks, lead first. */
+/** The blocks for a track: all of them, but the MIDI block on an audio track. */
 export function paletteBlocks(kind: PaletteKind): PaletteBlock[] {
-	return [LEAD[kind], ...families(kind)].map(({ family, top, bottom }) => ({
+	return BLOCKS.filter((b) => !(kind === 'audio' && b.family === 'midi')).map(({ family, top, bottom }) => ({
 		family,
 		cols: Math.max(top.length, bottom.length),
 		top: top.map(slot),
