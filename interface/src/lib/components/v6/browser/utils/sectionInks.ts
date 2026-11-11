@@ -1,7 +1,7 @@
 /**
  * A color per folder of the effects Place (user, 2026-10-26: "color coding
  * by parent folder"). A folder takes the device family its name says
- * (ADR-400's eight: Distortion the distortion ink, Time the time-and-space
+ * (ADR-400's families: Distortion the distortion ink, Time the time-and-space
  * one, Tone the filter one, "Midi Effect" the note-machinery one…), so a
  * section wears the ink its devices wear on the grid; a folder whose name
  * says none takes the next family no folder has claimed, in folder order,
@@ -11,11 +11,13 @@ import { DEVICE_FAMILY_INKS, type DeviceFamily } from '$lib/config/devicePresets
 
 /** The words in a folder name that say a family, first match wins. */
 const FAMILY_WORDS: ReadonlyArray<[DeviceFamily, RegExp]> = [
-	['pitchSeq', /midi|pitch|arp|seq|note|chord/i],
+	['pitchSeq', /midi|arp|seq|note|chord/i],
+	['glitch', /glitch|stutter|buffer/i],
+	['guitar', /guitar|bass|amp\b|wah/i],
 	['timeSpace', /time|delay|echo|reverb|space|loop/i],
-	['filter', /tone|filter|eq\b|wah/i],
+	['filter', /tone|filter|eq\b/i],
 	['dynamics', /dynamic|compress|gate|level/i],
-	['distortion', /distort|drive|satur|amp\b|crush/i],
+	['distortion', /distort|drive|satur|crush/i],
 	['modulation', /mod|chorus|trem|phase|flang/i],
 	['rackVoice', /rack|voice|vocal/i],
 	['utility', /util|gain|mix|rout/i]

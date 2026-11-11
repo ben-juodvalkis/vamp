@@ -475,6 +475,11 @@
   });
   /** Row 1 (every slot but +) then row 2: the first row never changes, the second comes and goes. */
   const audioSlots = $derived(audioPalette(paletteKind, audioCols - 1 + (paletteRows === 2 ? audioCols : 0)));
+  /** A chip's ink: its device's family colour, as the cell it would become wears it. */
+  function chipInk(effect: { preset?: string }): string | undefined {
+    const preset = effect.preset ? DEVICE_PRESETS[effect.preset] : undefined;
+    return preset ? trackInk(preset.color.primary, paint) : undefined;
+  }
   function audioPlace(j: number): { col: number; row: number } {
     const first = audioCols - 1;
     return j < first ? { col: MIDI_SLOTS + 2 + j, row: 1 } : { col: MIDI_SLOTS + 2 + (j - first), row: 2 };
@@ -815,12 +820,12 @@
 >
   {#each midiSlots as slot, i (i)}
     <div class="palette-slot" class:blank={!slot} style:grid-column={i + 1} style:grid-row={1}>
-      {#if slot}<RecentEffectButton recent={slot} compact label={paletteLabel(slot)} />{/if}
+      {#if slot}<RecentEffectButton recent={slot} compact label={paletteLabel(slot)} ink={chipInk(slot)} />{/if}
     </div>
   {/each}
   {#each audioSlots as fx, j (fx.fullPath)}
     <div class="palette-slot" style:grid-column={audioPlace(j).col} style:grid-row={audioPlace(j).row}>
-      <RecentEffectButton recent={fx} compact label={paletteLabel(fx)} />
+      <RecentEffectButton recent={fx} compact label={paletteLabel(fx)} ink={chipInk(fx)} />
     </div>
   {/each}
   <!-- Add an effect: the browser on Effect, landing on this chain. -->

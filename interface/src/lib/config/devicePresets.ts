@@ -143,10 +143,17 @@ export const DEVICE_FAMILY_INKS = {
   distortion: { primary: '#ff8244', accent: '#ff9e60' },
   /** Chorus / tremolo / comb — cyclic movement. H322 magenta. */
   modulation: { primary: '#d57ce3', accent: '#e79ef3' },
-  /** Arpeggiator / pitch / sequencer / chord — note machinery. H281 violet. */
+  /** MIDI effects and the sequencer — note machinery, and nothing that
+   *  processes audio (user, 2026-11-11). H281 violet. */
   pitchSeq: { primary: '#8e90ff', accent: '#a29fff' },
   /** Instrument racks / vocal chains — sound sources. H348 rose. */
   rackVoice: { primary: '#f36fb8', accent: '#ff97cd' },
+  /** Glitch Loop / Pitch Hack / Stutter — buffer tricks (user, 2026-11-11).
+   *  H135 green, in the gap between gold and the loop signal. */
+  glitch: { primary: '#79c24a', accent: '#8cd55e' },
+  /** Guitar / Bass Amp / Wah — the guitar rig (user, 2026-11-11). H62
+   *  amber, a low-chroma wood between orange and gold. */
+  guitar: { primary: '#d38c49', accent: '#eea563' },
   /** Gain / routing — non-sound plumbing. Near-neutral grey (deviceInk-gated,
    *  never chroma-boosted); in practice overridden by trackTint. */
   utility: { primary: '#a2acb7', accent: '#b5bfcb' }
@@ -231,7 +238,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Variation',
     expectedClassName: 'BeatRepeat',
-    color: familyScheme('timeSpace')
+    color: familyScheme('glitch')       // Glitch (user, 2026-11-11)
   },
   eq: {
     padScoped: true,
@@ -390,7 +397,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Comb',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
-    color: familyScheme('dynamics')     // Gold (user, 2026-10-19): the Auto Pan view's columns read apart, not four magentas
+    color: familyScheme('timeSpace')    // A space effect, with Echo and Reverb (user, 2026-11-11; gold from 2026-10-19)
   },
   phaser: {
     padScoped: true,
@@ -398,7 +405,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Phaser',
     expectedClassName: 'PhaserNew',
     gridSlot: false,                    // Virtual device
-    color: familyScheme('rackVoice')    // Rose under the Comb's gold (user, 2026-10-19)
+    color: familyScheme('modulation')   // Cyclic movement (user, 2026-11-11; rose from 2026-10-19)
   },
   pitchHack: {
     // Creative Extensions' Max pitch-shifting delay. The .adv is a preset of
@@ -412,7 +419,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Pitch Hack',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
-    color: familyScheme('timeSpace')    // Echo and Reverb's teal (user, 2026-10-15), apart from the Pitch column's violet
+    color: familyScheme('glitch')       // Glitch (user, 2026-11-11)
   },
   glitchLoop: {
     // GlitchLoop: PitchLoop89 with built-in mod slots, built by the owner's
@@ -429,7 +436,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'GlitchLoop',
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
-    color: familyScheme('rackVoice')    // Rose (user, 2026-10-07): violet sat too close to Octave, and Comb and Phaser here are magenta
+    color: familyScheme('glitch')       // Glitch (user, 2026-11-11)
   },
   smudge: {
     // Blur is found by name in the user's effects folder (ADR-498). It is a Max freeze-looper: two voices take
@@ -451,7 +458,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     effect: true,
     defaultName: 'Guitar',
     expectedClassName: 'AudioEffectGroupDevice',
-    color: familyScheme('distortion')
+    color: familyScheme('guitar')       // The guitar rig (user, 2026-11-11)
   },
   bass: {
     // Same as Guitar: a rack, through the browser and into the chain. It was
@@ -463,9 +470,9 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     effect: true,
     defaultName: 'Bass Amp',
     expectedClassName: 'AudioEffectGroupDevice',
-    // Violet, not the Guitar's orange (2026-10-01): it shares the Guitar
-    // view, and its own ink is what tells its controls apart there.
-    color: familyScheme('pitchSeq')
+    // The Guitar's own ink since 2026-11-11 (violet from 2026-10-01, to
+    // tell its controls apart in the Guitar view they share).
+    color: familyScheme('guitar')       // The guitar rig (user, 2026-11-11)
   },
   octave: {
     // Pitch Shift: Ben's Polyphonic Pitch Shifter (2026-10-05, in place of
@@ -485,7 +492,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     aliases: ['Octave'],
     expectedClassName: 'MxDeviceAudioEffect',
     gridSlot: false,                    // Virtual device
-    color: familyScheme('pitchSeq')
+    color: familyScheme('distortion')   // With Shifter; violet is the MIDI effects' alone (user, 2026-11-11)
   },
   // Virtual Smudge Device
   chorus: {
@@ -493,7 +500,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     native: true,
     defaultName: 'Chorus',
     expectedClassName: 'Chorus2',
-    color: familyScheme('filter')       // Azure beside Auto Pan's magenta (user, 2026-10-19)
+    color: familyScheme('modulation')   // Cyclic movement (user, 2026-11-11; azure beside Auto Pan from 2026-10-19)
   },
   // Virtual Arpeggiator Devices
   random: {
@@ -511,7 +518,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Velocity',
     expectedClassName: 'MidiVelocity',
     gridSlot: false,
-    color: familyScheme('dynamics')
+    color: familyScheme('pitchSeq')     // A MIDI effect: violet, as they all are (user, 2026-11-11)
   },
   chord: {
     // MIDI effect: inserted at the head of the pad's chain (2026-09-11).
@@ -547,7 +554,7 @@ export const DEVICE_PRESETS: Record<string, DevicePresetConfig> = {
     defaultName: 'Wah',
     expectedClassName: 'AudioEffectGroupDevice',
     gridSlot: false,                    // Virtual device
-    color: familyScheme('filter')       // A wah IS a filter — function over host view
+    color: familyScheme('guitar')       // The guitar rig (user, 2026-11-11)
   },
   vocal: {
     // No control loads it: the entry is how a track's device band knows a

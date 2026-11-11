@@ -16,8 +16,9 @@
 	import { press } from '$lib/actions/press';
 
 	// Not `effect`: a variable of that name turns `$effect` into a store read.
-	// `compact`: one line, the name alone, `label` in its place when given (the chain's palette bar).
-	let { recent, compact = false, label }: { recent: RecentEffect; compact?: boolean; label?: string } = $props();
+	// `compact`: one line, the name alone, `label` in its place when given (the chain's palette bar);
+	// `ink`: the device's family colour, drawn faintly so a chip says what kind of effect it is.
+	let { recent, compact = false, label, ink }: { recent: RecentEffect; compact?: boolean; label?: string; ink?: string } = $props();
 
 	let saved = $state<PresetParams | null>(null);
 	$effect(() => {
@@ -88,6 +89,8 @@
 	type="button"
 	class="recent-effect"
 	class:compact
+	class:inked={!!ink}
+	style:--chip-ink={ink}
 	aria-label="Add {recent.name} again"
 	data-debug="chain-recent"
 	use:press={{ onPress: () => void addEffectToChain(recent), touchAction: 'none', stopPropagation: true }}
@@ -172,6 +175,17 @@
 	.recent-mark :global(svg) {
 		height: 100%;
 		width: auto;
+	}
+	/* Inked: the line and the name lean toward the family colour, a breath of
+	   it behind; still a ghost beside the chain's own cells. */
+	.recent-effect.inked {
+		border-color: color-mix(in oklab, var(--chip-ink) 40%, transparent);
+		background: color-mix(in oklab, var(--chip-ink) 6%, transparent);
+		color: color-mix(in oklab, var(--chip-ink) 55%, var(--fg-tertiary));
+	}
+	.recent-effect.inked:active {
+		background: color-mix(in oklab, var(--chip-ink) 22%, transparent);
+		color: var(--foreground);
 	}
 	/* One line, the name alone. */
 	.recent-effect.compact {
