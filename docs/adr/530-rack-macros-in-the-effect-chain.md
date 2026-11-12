@@ -1,7 +1,7 @@
 # ADR-530: A rack's visible macros, played in the effect chain
 
 ## Status
-**Accepted** (2026-11-12). Needs a Live restart for the macro count (a new
+**Accepted** (2026-11-12); its layout and "how many fit" rule superseded by ADR-532 (Live's two-row panel). Needs a Live restart for the macro count (a new
 property row); the knobs draw without it, at Live's default of eight.
 Replaces ADR-492's macro meters on a rack's cell. Builds on ADR-529.
 

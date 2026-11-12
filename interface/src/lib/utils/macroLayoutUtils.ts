@@ -207,3 +207,36 @@ export function pickerSlotAt(value: number, states: number, max: number): number
   const state = Math.round((value * (states - 1)) / max);
   return state < 0 ? 0 : state > states - 1 ? states - 1 : state;
 }
+
+/** A macro in Live's panel layout: `dim` while Live still names it "Macro N" (it maps nothing a name says). */
+export type PanelMacro = SliderControl & { dim: boolean };
+
+/**
+ * A rack's macros as Live's macro panel lays them out (ADR-532): two rows,
+ * numbered row by row — eight visible are 1–4 over 5–8, sixteen 1–8 over
+ * 9–16, one a single cell. `slots` is row-major, `rows × cols` long: every
+ * visible macro in its place, as Live draws it, those still named
+ * "Macro N" marked `dim` (Live greys an unmapped macro); null only for the
+ * place an odd count leaves empty. `visible` is the rack's visible macro
+ * count (Live's macro count button), eight while unknown.
+ */
+export function liveMacroSlots(
+  names: string[],
+  visible: number | undefined
+): { rows: number; cols: number; slots: (PanelMacro | null)[] } {
+  const n = Math.max(1, Math.min(16, typeof visible === 'number' && visible > 0 ? Math.round(visible) : 8));
+  const rows = n > 1 ? 2 : 1;
+  const cols = Math.ceil(n / rows);
+  const slots: (PanelMacro | null)[] = [];
+  for (let k = 0; k < rows * cols; k++) {
+    const idx = k + 1;
+    if (idx > n) {
+      slots.push(null);
+      continue;
+    }
+    const name = names[idx];
+    const dim = isEmptyMacroName(name);
+    slots.push({ type: 'slider', macroIndex: idx, name: dim ? `Macro ${idx}` : cleanParameterName(name!), dim });
+  }
+  return { rows, cols, slots };
+}

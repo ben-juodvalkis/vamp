@@ -64,8 +64,8 @@
   import { setContext } from 'svelte';
   import CellSize from './chain/CellSize.svelte';
   import MidiWheelsFace from './chain/MidiWheelsFace.svelte';
-  import RackFace, { type RackMacro } from './chain/RackFace.svelte';
-  import { cleanParameterName, isEmptyMacroName, isPatternRackMacroName } from '$lib/utils/macroLayoutUtils';
+  import RackFace, { type RackMacroGrid } from './chain/RackFace.svelte';
+  import { isPatternRackMacroName, liveMacroSlots } from '$lib/utils/macroLayoutUtils';
   import { PICTURE_CONTEXT } from '$lib/components/v6/browser/devicePictures';
   import type { Component } from 'svelte';
   import { FX_GRID_LAYOUT, type DeviceTypeKey } from '$lib/config/fxGridLayout';
@@ -335,24 +335,21 @@
   const VISIBLE_MACROS = 'visible_macro_count';
 
   /**
-   * A rack's visible macros, in Live's order, those Live still names
-   * "Macro N" left out (every rack view does): its face's knobs. Up to
-   * Live's visible count, eight before the row answers.
+   * A rack's visible macros as Live's macro panel lays them out
+   * (`liveMacroSlots`, ADR-532), or null when none is named (the rack keeps
+   * its mark). Up to Live's visible count, eight before the row answers.
    */
-  function macrosOf(device: DeviceRecord): RackMacro[] {
+  function macroGridOf(device: DeviceRecord): RackMacroGrid | null {
     const names = selectedTrackStore.paramNamesForDevice(device as never);
     // A pattern rack's first macro is a chooser its view draws: it keeps its mark.
-    if (isPatternRackMacroName(names[1])) return [];
+    if (isPatternRackMacroName(names[1])) return null;
     const visible = selectedTrackStore.propertyValue(device.devicePath, VISIBLE_MACROS);
-    const count = Math.min(16, typeof visible === 'number' && visible > 0 ? visible : 8);
-    const out: RackMacro[] = [];
-    for (let i = 1; i <= count && i < names.length; i++) {
-      const name = names[i];
-      if (isEmptyMacroName(name)) continue;
-      const value = selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, i)) ?? 0;
-      out.push({ index: i, name: cleanParameterName(name), value });
-    }
-    return out;
+    const grid = liveMacroSlots(names, typeof visible === 'number' ? visible : undefined);
+    return grid.slots.some((m) => m && !m.dim) ? grid : null;
+  }
+
+  function macroValue(device: DeviceRecord, index: number): number {
+    return selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, index)) ?? 0;
   }
 
   function setMacro(device: DeviceRecord, index: number, value: number) {
@@ -1062,11 +1059,12 @@
           <Music />
         {/if}
       {/snippet}
-      {@const macros = cell.foldable ? macrosOf(cell.device) : []}
-      {#if macros.length > 0}
-        <!-- A rack: its visible macros as knobs, as many as the cell holds. -->
+      {@const macroGrid = cell.foldable ? macroGridOf(cell.device) : null}
+      {#if macroGrid}
+        <!-- A rack: its visible macros as knobs, laid out as Live's panel, as much of it as the cell holds. -->
         <div class="cell-control" role="presentation"><CellSize><RackFace
-          {macros}
+          grid={macroGrid}
+          valueOf={(i) => macroValue(cell.device, i)}
           color={cell.kind === 'instrument' ? (selectedTrackScheme() ?? schemeFromInk(cell.ink)) : schemeFromInk(cell.ink)}
           onChange={(i, v) => setMacro(cell.device, i, v)}
         /></CellSize></div>

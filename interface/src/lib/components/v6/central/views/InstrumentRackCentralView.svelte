@@ -7,6 +7,7 @@
    * left for the MidiWheels device's chain cell (user, 2026-10-26).
    */
   import RackVariations from '../RackVariations.svelte';
+  import RackMacroPanel from '../RackMacroPanel.svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
@@ -68,6 +69,9 @@
   // two columns wide, every row.
   const macroColumns = $derived(layoutItems.reduce((n, item) => n + (item.kind === 'xy' ? 2 : 1), 0));
   const macroRows = $derived(macroColumns > 2 ? 2 : 1);
+  // A rack with no XY pair draws its macros as Live's panel lays them out
+  // (ADR-532); one that pairs macros into pads keeps the paired layout.
+  const hasXyPair = $derived(layoutItems.some((item) => item.kind === 'xy'));
 
   // Update all macro values in single effect
   $effect(() => {
@@ -99,6 +103,8 @@
 <div class="h-full w-full flex flex-col" data-density="compact">
   {#if instrument}
     <div class="flex-1 min-h-0 flex gap-(--central-gap) p-(--central-inset)">
+      <!-- Its macro variations down the left (ADR-531). -->
+      {#if device}<RackVariations rack={device} ink={rackInk.primary} />{/if}
       <div class="controls-panel">
         <!-- The swap pill lies across the top, over the macros. It led the
              row over the wheels (user's layout, 2026-09-16) until they left
@@ -113,7 +119,9 @@
              macros: two rows filled column by column, neighbours paired top
              over bottom. An XY pad stands in for two macros: two columns,
              every row. -->
-        {#if controlLayout.length > 0}
+        {#if device && controlLayout.length > 0 && !hasXyPair}
+          <RackMacroPanel rack={device} colorAt={ctlInk} />
+        {:else if controlLayout.length > 0}
           <div class="macro-grid" style:--macro-rows={macroRows}>
           {#each layoutItems as item, i}
             {#if item.kind === 'xy'}
@@ -151,8 +159,6 @@
             <p class="text-sm">Loading macros...</p>
           </div>
         {/if}
-        <!-- Its macro variations (ADR-531): recall, store, delete, randomize. -->
-        {#if device}<RackVariations rack={device} ink={rackInk.primary} />{/if}
       </div>
     </div>
   {:else}

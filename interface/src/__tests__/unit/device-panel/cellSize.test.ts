@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cellHeightClass, cellWidthClass, CELL_TALL_MIN, CELL_WIDTH_STEPS } from '$lib/components/v6/device-panel/chain/cellSize';
-import { rackMacroFit, RACK_MACRO_MIN } from '$lib/components/v6/device-panel/chain/RackFace.svelte';
+import { rackMacroWindow } from '$lib/components/v6/device-panel/chain/RackFace.svelte';
 import { permuteFaceLayout, PERMUTE_PITCH_FLOOR } from '$lib/components/v6/device-panel/chain/PermuteStepsFace.svelte';
 
 describe('cellWidthClass (ADR-492)', () => {
@@ -24,23 +24,30 @@ describe('cellHeightClass (ADR-492)', () => {
 	});
 });
 
-describe('rackMacroFit', () => {
-	it('draws nothing before the face is measured', () => {
-		expect(rackMacroFit(8, 0, 0).shown).toBe(0);
+describe('rackMacroWindow (ADR-532)', () => {
+	const named = (n: number) => Array.from({ length: n }, (_, i) => ({ type: 'slider' as const, macroIndex: i + 1, name: `M${i + 1}`, dim: false }));
+	const grid8 = { rows: 2, cols: 4, slots: named(8) };
+	it('shows the whole panel before the face is measured', () => {
+		expect(rackMacroWindow(grid8, 0, 0)).toEqual({ rows: 2, cols: 4, more: 0, compact: false });
 	});
-	it('shows every visible macro the face has room for, and no more', () => {
-		// A one-row chain's two-unit rack on the iPad, about 160 x 155: two rows of three.
-		expect(rackMacroFit(8, 160, 155)).toEqual({ shown: 6, rows: 2, cols: 3 });
-		expect(rackMacroFit(16, 160, 240)).toEqual({ shown: 9, rows: 3, cols: 3 });
-		// A two-row chain's, about 160 x 100: one row of three.
-		expect(rackMacroFit(8, 160, 100)).toEqual({ shown: 3, rows: 1, cols: 3 });
+	it("shows Live's two rows at full size in a tall cell", () => {
+		// A one-row chain's rack on the iPad: about 290 x 155.
+		expect(rackMacroWindow(grid8, 290, 155)).toEqual({ rows: 2, cols: 4, more: 0, compact: false });
 	});
-	it('takes as few rows as hold what it shows', () => {
-		expect(rackMacroFit(2, 160, 240)).toEqual({ shown: 2, rows: 1, cols: 2 });
-		expect(rackMacroFit(4, 160, 240)).toEqual({ shown: 4, rows: 2, cols: 2 });
+	it('shows the left columns of both rows where the cell is narrow, counting the rest', () => {
+		expect(rackMacroWindow(grid8, 150, 155)).toEqual({ rows: 2, cols: 2, more: 4, compact: false });
 	});
-	it('keeps one macro in a face smaller than one box', () => {
-		expect(rackMacroFit(8, RACK_MACRO_MIN.w - 10, RACK_MACRO_MIN.h - 10).shown).toBe(1);
+	it('keeps both rows in a short cell with compact knobs', () => {
+		// A two-row chain's rack: about 150 x 95.
+		expect(rackMacroWindow(grid8, 150, 95)).toEqual({ rows: 2, cols: 2, more: 4, compact: true });
+	});
+	it('drops to the top row only where even compact knobs cannot make two', () => {
+		expect(rackMacroWindow(grid8, 150, 60)).toEqual({ rows: 1, cols: 2, more: 6, compact: false });
+	});
+	it('counts only named macros left out, not the dim ones', () => {
+		const dim = (i: number) => ({ type: 'slider' as const, macroIndex: i, name: `Macro ${i}`, dim: true });
+		const slots = [...named(2), dim(3), dim(4), ...named(4)];
+		expect(rackMacroWindow({ rows: 2, cols: 4, slots }, 150, 155).more).toBe(2);
 	});
 });
 

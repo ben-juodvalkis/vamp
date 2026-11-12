@@ -120,6 +120,21 @@ overflow its cell: a short nested cell's glyph once covered its own header
 and swallowed the chevron's taps, so the header sits above the face and
 `.cell-face` clips.
 
+### A rack's macros, as Live's panel (ADR-530, ADR-532)
+
+A rack's cell (`chain/RackFace`) and the Audio Effect and Instrument Rack
+views (`central/RackMacroPanel`) lay out its macros by one rule,
+`liveMacroSlots` (`utils/macroLayoutUtils`): Live's macro panel, two rows
+numbered row by row, half the rack's visible macros a row (the
+`visible_macro_count` row, eight until it answers), a macro still named
+"Macro N" dim in its place. The cell shows the panel's left columns, both
+rows (compact knobs in a short cell), and "+N" counts the named macros left
+out (`rackMacroWindow`). A Pattern Rack keeps its mark; the Instrument Rack
+view keeps its XY pads for a rack that pairs macros by the "XY " prefix.
+Both rack views carry the rack's variations down the left
+(`central/RackVariations`, ADR-531): a tap recalls, a hold deletes, Store and
+Rand; names from the rack's preset file (`/api/rack-variations`).
+
 ### Parameter reads (post-ADR-359)
 
 **Read with `paramValueArmed`, not `paramValue`. No component-local `$state` shadows.**

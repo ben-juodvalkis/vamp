@@ -23,7 +23,8 @@
 
 <script lang="ts">
   /**
-   * A rack's macro variations (ADR-531), as Live's variation panel: one
+   * A rack's macro variations (ADR-531), as Live's variation panel, a
+   * column down the left of the rack's view: one
    * button per stored variation, the one last recalled lit; a tap recalls
    * it, a hold deletes it. Store keeps the macros as a new variation, Rand
    * randomizes them. Live's Python API names none of them, so the names
@@ -112,34 +113,39 @@
 </div>
 
 <style>
+  /* A column down the left of the rack's view (Ben, 2026-11-12): the caption,
+     the variations top to bottom, Store and Rand at its foot. */
   .rack-variations {
     display: flex;
-    align-items: stretch;
-    gap: var(--central-gap);
-    min-height: var(--height-touch, 44px);
+    flex-direction: column;
+    gap: 6px;
+    width: 8.5rem;
     flex: 0 0 auto;
+    min-height: 0;
   }
   .caption {
-    align-self: center;
     font-size: 0.75rem;
     color: var(--muted-foreground);
+    text-align: center;
   }
   .buttons {
     flex: 1 1 auto;
-    min-width: 0;
+    min-height: 0;
     display: flex;
+    flex-direction: column;
     gap: 6px;
-    overflow-x: auto;
+    overflow-y: auto;
   }
   .none {
-    align-self: center;
     font-size: 0.8125rem;
     color: var(--muted-foreground);
+    text-align: center;
+    padding-top: 0.5rem;
   }
   .variation,
   .action {
     min-height: var(--height-touch, 44px);
-    padding: 0 0.75rem;
+    padding: 0 0.5rem;
     border: 1px solid var(--line-strong);
     border-radius: 2px;
     background: var(--surface-well);
@@ -148,8 +154,7 @@
     white-space: nowrap;
   }
   .variation {
-    flex: 0 1 auto;
-    min-width: 3rem;
+    flex: 0 0 auto;
     overflow: hidden;
     text-overflow: ellipsis;
   }
@@ -162,6 +167,7 @@
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.375rem;
     color: var(--foreground);
   }

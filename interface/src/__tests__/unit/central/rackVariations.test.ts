@@ -24,3 +24,23 @@ describe('variationLabels (ADR-531)', () => {
 		expect(variationLabels(2, ['A', ' '])).toEqual(['A', '2']);
 	});
 });
+
+import { liveMacroSlots } from '$lib/utils/macroLayoutUtils';
+
+describe("liveMacroSlots: Live's macro panel (ADR-532)", () => {
+	const names = ['Device On', 'Drive', 'Tone', 'Macro 3', 'Macro 4', 'Mix', 'Macro 6', 'Macro 7', 'Macro 8'];
+	it('lays eight visible macros out as Live does, 1-4 over 5-8', () => {
+		const g = liveMacroSlots(names, 8);
+		expect([g.rows, g.cols]).toEqual([2, 4]);
+		expect(g.slots.map((m) => m?.macroIndex)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+		expect(g.slots.map((m) => m?.dim)).toEqual([false, false, true, true, false, true, true, true]);
+		expect(g.slots[4]?.name).toBe('Mix');
+	});
+	it('follows the visible count, eight when unknown, an odd count leaving the last place empty', () => {
+		expect(liveMacroSlots(names, undefined).cols).toBe(4);
+		const g = liveMacroSlots(names, 5);
+		expect([g.rows, g.cols, g.slots.length, g.slots[5]]).toEqual([2, 3, 6, null]);
+		expect(liveMacroSlots(names, 1)).toMatchObject({ rows: 1, cols: 1 });
+		expect(liveMacroSlots(names, 16).cols).toBe(8);
+	});
+});
