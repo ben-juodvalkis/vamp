@@ -2,8 +2,12 @@
   /** A macro the rack's face can draw: its parameter index, Live's name for it, its value 0..127. */
   export type RackMacro = { index: number; name: string; value: number };
 
-  /** The smallest box a macro's knob and its name hold in (a 36px knob, its caption). */
-  export const RACK_MACRO_MIN = { w: 48, h: 76 } as const;
+  /**
+   * The smallest box a macro's knob and its name hold in: a 36px knob and
+   * one line of name (a macro has no value text under it, so its caption
+   * keeps one line's room, `--knob-caption-h` below).
+   */
+  export const RACK_MACRO_MIN = { w: 48, h: 68 } as const;
   /** The gap between macros, px (the face's `gap`). */
   export const RACK_MACRO_GAP = 6;
 
@@ -95,10 +99,15 @@
     flex: 1 1 0;
     min-width: 0;
   }
+  /* One line of name under the knob, not the two a knob keeps for a value
+     under its name: a full-height cell then holds two rows (Ben, 2026-11-12). */
+  .macro :global(.knob.size-s) {
+    --knob-caption-h: 2rem;
+  }
   .more {
     position: absolute;
     right: 0;
-    bottom: 0;
+    top: 0;
     font-size: 0.6875rem;
     line-height: 1;
     padding: 2px 3px;

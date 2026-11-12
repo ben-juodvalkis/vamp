@@ -29,8 +29,8 @@ describe('rackMacroFit', () => {
 		expect(rackMacroFit(8, 0, 0).shown).toBe(0);
 	});
 	it('shows every visible macro the face has room for, and no more', () => {
-		// A one-row chain's two-unit rack on the iPad, about 160 x 240: 3 x 3.
-		expect(rackMacroFit(8, 160, 240)).toEqual({ shown: 8, rows: 3, cols: 3 });
+		// A one-row chain's two-unit rack on the iPad, about 160 x 155: two rows of three.
+		expect(rackMacroFit(8, 160, 155)).toEqual({ shown: 6, rows: 2, cols: 3 });
 		expect(rackMacroFit(16, 160, 240)).toEqual({ shown: 9, rows: 3, cols: 3 });
 		// A two-row chain's, about 160 x 100: one row of three.
 		expect(rackMacroFit(8, 160, 100)).toEqual({ shown: 3, rows: 1, cols: 3 });

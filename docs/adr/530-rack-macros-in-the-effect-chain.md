@@ -27,10 +27,10 @@ in the chain, as many as the cell has room for.
   a plain listened attribute of `RackDevice` (no provider). The chain
   overview holds it for every rack it draws, beside `show_devices`.
 - **How many fit:** the cell's size decides (`rackMacroFit`): as many
-  columns and rows of 48 x 76px boxes (a 36px knob and its name) as the
+  columns and rows of 48 x 68px boxes (a 36px knob and one line of name) as the
   face holds, the first macros in Live's order, the rows as few as hold
-  them; a "+N" in the corner counts the rest. On the iPad a one-row
-  chain's rack shows up to nine, a two-row chain's three. The cell keeps
+  them; a "+N" in the top corner counts the rest. On the iPad a one-row
+  chain's rack shows two rows (six), a two-row chain's one row of three. The cell keeps
   its two units; the macro count does not widen it.
 - **Instrument Racks too:** a rack that is the track's instrument draws
   its macros the same way, in the track's colour, unless it has a face of
