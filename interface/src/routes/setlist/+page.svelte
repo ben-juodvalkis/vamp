@@ -68,13 +68,14 @@
 			disabled={setlist.octave === null || setlist.octave <= -2}
 			onpointerdown={() => stepOctave(-1)}>−</button
 		>
-		<span class:shifted={!!setlist.octave}
-			>{setlist.octave === null ? '8va' : setlist.octave > 0 ? `+${setlist.octave}` : setlist.octave}</span
-		>
 		<button
 			aria-label="Octave up"
 			disabled={setlist.octave === null || setlist.octave >= 2}
 			onpointerdown={() => stepOctave(1)}>+</button
+		>
+		<!-- Over the seam, so the two buttons share the whole width. -->
+		<span class:shifted={!!setlist.octave}
+			>{setlist.octave === null ? '8va' : setlist.octave > 0 ? `+${setlist.octave}` : setlist.octave}</span
 		>
 	</div>
 
@@ -141,7 +142,8 @@
 	}
 	.octave {
 		display: grid;
-		grid-template-columns: 1fr 0.8fr 1fr;
+		grid-template-columns: 1fr 1fr;
+		position: relative;
 		gap: 3px;
 		padding: 3px;
 		border: 1px solid #00c4a8;
@@ -156,13 +158,25 @@
 		background: #003a32;
 		color: #00c4a8;
 		border-radius: 8px;
-		font-size: 5vh;
+		font-size: 4vh;
 		line-height: 1;
+		padding: 0 6%;
+	}
+	.octave button:first-child {
+		text-align: left;
+	}
+	.octave button:nth-child(2) {
+		text-align: right;
 	}
 	.octave button:disabled {
 		opacity: 0.35;
 	}
 	.octave span {
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		transform: translate(-50%, -50%);
+		pointer-events: none;
 		text-align: center;
 		color: #00c4a8;
 		font-size: 3.4vh;
