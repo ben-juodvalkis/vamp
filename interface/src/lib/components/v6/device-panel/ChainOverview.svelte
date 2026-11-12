@@ -64,7 +64,8 @@
   import { setContext } from 'svelte';
   import CellSize from './chain/CellSize.svelte';
   import MidiWheelsFace from './chain/MidiWheelsFace.svelte';
-  import RackFace from './chain/RackFace.svelte';
+  import RackFace, { type RackMacro } from './chain/RackFace.svelte';
+  import { cleanParameterName, isEmptyMacroName, isPatternRackMacroName } from '$lib/utils/macroLayoutUtils';
   import { PICTURE_CONTEXT } from '$lib/components/v6/browser/devicePictures';
   import type { Component } from 'svelte';
   import { FX_GRID_LAYOUT, type DeviceTypeKey } from '$lib/config/fxGridLayout';
@@ -330,16 +331,32 @@
 
   const presetKeyFor = (device: DeviceRecord) => effectTypeOf(device);
 
-  function macrosOf(device: DeviceRecord): { name: string; value: number }[] {
+  /** How many macros Live shows on a rack (its macro count button); subscribed for every rack drawn. */
+  const VISIBLE_MACROS = 'visible_macro_count';
+
+  /**
+   * A rack's visible macros, in Live's order, those Live still names
+   * "Macro N" left out (every rack view does): its face's knobs. Up to
+   * Live's visible count, eight before the row answers.
+   */
+  function macrosOf(device: DeviceRecord): RackMacro[] {
     const names = selectedTrackStore.paramNamesForDevice(device as never);
-    const out: { name: string; value: number }[] = [];
-    for (let i = 1; i < names.length && out.length < 8; i++) {
+    // A pattern rack's first macro is a chooser its view draws: it keeps its mark.
+    if (isPatternRackMacroName(names[1])) return [];
+    const visible = selectedTrackStore.propertyValue(device.devicePath, VISIBLE_MACROS);
+    const count = Math.min(16, typeof visible === 'number' && visible > 0 ? visible : 8);
+    const out: RackMacro[] = [];
+    for (let i = 1; i <= count && i < names.length; i++) {
       const name = names[i];
-      if (!name || /^Macro \d+$/.test(name)) continue;
+      if (isEmptyMacroName(name)) continue;
       const value = selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, i)) ?? 0;
-      out.push({ name, value: Math.max(0, Math.min(1, value / 127)) });
+      out.push({ index: i, name: cleanParameterName(name), value });
     }
     return out;
+  }
+
+  function setMacro(device: DeviceRecord, index: number, value: number) {
+    selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, index), Math.max(0, Math.min(127, value)));
   }
 
   function togglePower(cell: Cell) {
@@ -550,7 +567,10 @@
         }
       }
       for (const path of want) {
-        if (!foldRows.has(path)) foldRows.set(path, selectedTrackStore.subscribeProperty(path, SHOW_DEVICES));
+        if (foldRows.has(path)) continue;
+        // …and Live's visible macro count, which says how many knobs its face draws.
+        const releases = [SHOW_DEVICES, VISIBLE_MACROS].map((row) => selectedTrackStore.subscribeProperty(path, row));
+        foldRows.set(path, () => releases.forEach((release) => release()));
       }
     });
   });
@@ -1042,10 +1062,14 @@
           <Music />
         {/if}
       {/snippet}
-      {@const macros = cell.kind === 'rack' ? macrosOf(cell.device) : []}
+      {@const macros = cell.foldable ? macrosOf(cell.device) : []}
       {#if macros.length > 0}
-        <!-- A rack: its mark over its named macros, which fill a tall cell. -->
-        <div class="cell-face"><CellSize><RackFace {macros}>{@render mark()}</RackFace></CellSize></div>
+        <!-- A rack: its visible macros as knobs, as many as the cell holds. -->
+        <div class="cell-control" role="presentation"><CellSize><RackFace
+          {macros}
+          color={cell.kind === 'instrument' ? (selectedTrackScheme() ?? schemeFromInk(cell.ink)) : schemeFromInk(cell.ink)}
+          onChange={(i, v) => setMacro(cell.device, i, v)}
+        /></CellSize></div>
       {:else}
         <div class="mark" aria-hidden="true">{@render mark()}</div>
       {/if}

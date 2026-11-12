@@ -453,6 +453,12 @@ Key rules:
   selection made in Live; a write selects that chain, and an index the
   rack has no chain for is refused (`no chain <i>`). The chain overview
   subscribes it while the rack is unfolded, as the chain list's choice.
+- **`visible_macro_count` — how many macros a rack shows (ADR-530).**
+  Read-only int (1..16), a plain listened attribute on the same three rack
+  classes: `RackDevice.visible_macro_count`, which Live's macro count button
+  sets. The chain overview holds it for every rack it draws and draws that
+  many of the rack's macros, as many as the cell holds. A surface without
+  the row answers `property-not-allowed`; the UI then assumes Live's eight.
 - **`chain.<i>.mute` / `chain.<i>.solo` / `chain.<i>.volume` — a chain's
   activator, solo and volume (ADR-529, 3.13.0).** Writable: `0|1` for the
   switches, a float for the volume (the chain's `mixer_device.volume`,

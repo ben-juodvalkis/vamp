@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cellHeightClass, cellWidthClass, CELL_TALL_MIN, CELL_WIDTH_STEPS } from '$lib/components/v6/device-panel/chain/cellSize';
-import { rackMacrosFill } from '$lib/components/v6/device-panel/chain/RackFace.svelte';
+import { rackMacroFit, RACK_MACRO_MIN } from '$lib/components/v6/device-panel/chain/RackFace.svelte';
 import { permuteFaceLayout, PERMUTE_PITCH_FLOOR } from '$lib/components/v6/device-panel/chain/PermuteStepsFace.svelte';
 
 describe('cellWidthClass (ADR-492)', () => {
@@ -24,13 +24,23 @@ describe('cellHeightClass (ADR-492)', () => {
 	});
 });
 
-describe('rackMacrosFill (ADR-492)', () => {
-	const size = (heightClass: 'short' | 'tall' | null) => ({ width: 200, height: 0, widthClass: 'medium' as const, heightClass });
-	it('fills a tall cell with the macros and keeps them a strip otherwise', () => {
-		expect(rackMacrosFill(size('tall'))).toBe(true);
-		expect(rackMacrosFill(size('short'))).toBe(false);
-		expect(rackMacrosFill(size(null))).toBe(false);
-		expect(rackMacrosFill(null)).toBe(false);
+describe('rackMacroFit', () => {
+	it('draws nothing before the face is measured', () => {
+		expect(rackMacroFit(8, 0, 0).shown).toBe(0);
+	});
+	it('shows every visible macro the face has room for, and no more', () => {
+		// A one-row chain's two-unit rack on the iPad, about 160 x 240: 3 x 3.
+		expect(rackMacroFit(8, 160, 240)).toEqual({ shown: 8, rows: 3, cols: 3 });
+		expect(rackMacroFit(16, 160, 240)).toEqual({ shown: 9, rows: 3, cols: 3 });
+		// A two-row chain's, about 160 x 100: one row of three.
+		expect(rackMacroFit(8, 160, 100)).toEqual({ shown: 3, rows: 1, cols: 3 });
+	});
+	it('takes as few rows as hold what it shows', () => {
+		expect(rackMacroFit(2, 160, 240)).toEqual({ shown: 2, rows: 1, cols: 2 });
+		expect(rackMacroFit(4, 160, 240)).toEqual({ shown: 4, rows: 2, cols: 2 });
+	});
+	it('keeps one macro in a face smaller than one box', () => {
+		expect(rackMacroFit(8, RACK_MACRO_MIN.w - 10, RACK_MACRO_MIN.h - 10).shown).toBe(1);
 	});
 });
 

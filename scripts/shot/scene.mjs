@@ -1269,7 +1269,9 @@ export const CHAIN_DEMO_DEVICES = [
 	{
 		name: 'Dub Space',
 		className: 'AudioEffectGroupDevice',
-		params: rackParams([['Send', 96], ['Feedback', 70], ['Tone', 48], ['Wobble', 30], ['Size', 110], ['Decay', 84], ['Duck', 40], ['Mix', 64]]),
+		params: rackParams([['Send', 96], ['Feedback', 70], ['Tone', 48], ['Wobble', 30], ['Size', 110], ['Decay', 84], ['Duck', 40], ['Mix', 64], ['Width', 90], ['Pre-Delay', 20], ['Shimmer', 55], ['Output', 100]]),
+		// Twelve macros visible in Live: more than its cell holds.
+		properties: { visible_macro_count: 12 },
 		// Its chains (ADR-529), for the unfold shots.
 		chains: [
 			{ name: 'Dry', color: 0x8a8a8a, devices: [] },
@@ -1278,7 +1280,7 @@ export const CHAIN_DEMO_DEVICES = [
 		]
 	},
 	'Reverb',
-	{ name: 'Grit', className: 'AudioEffectGroupDevice', params: rackParams([['Drive', 90], ['Crush', 20], ['Tone', 70], ['Mix', 100]], { on: 0 }) },
+	{ name: 'Grit', className: 'AudioEffectGroupDevice', params: rackParams([['Drive', 90], ['Crush', 20], ['Tone', 70], ['Mix', 100]], { on: 0 }), properties: { visible_macro_count: 4 } },
 	{
 		name: 'Supermassive',
 		className: 'AuPluginDevice',
@@ -1708,6 +1710,8 @@ export const PROPERTY_DEFAULTS = Object.freeze({
 	show_devices: 0,
 	// And the chain Live shows its devices for: the first.
 	selected_chain: 0,
+	// How many macros a rack shows: Live's default, eight.
+	visible_macro_count: 8,
 	// Every Hybrid Reverb: Live's IR lists, its first IR, a fresh device's
 	// shaping (attack 0, decay at its 20 s top, size 100 %, shaping on).
 	ir_category_list: JSON.stringify(HYBRID_IR_LISTS.categories),

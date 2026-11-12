@@ -657,6 +657,16 @@ ALLOWLIST.update({
     for _cls in RACK_CHAIN_DEVICES_CLASSES
     for _key in (RACK_SHOW_DEVICES_KEY, RACK_SELECTED_CHAIN_KEY)
 })
+# How many macros the rack shows (Live's macro count button, 1..16): the
+# chain overview draws the rack's macros up to it. Read-only; Live 11+
+# listens to it on ``RackDevice`` itself.
+ALLOWLIST.update({
+    (_cls, "visible_macro_count"): PropertySpec(
+        listener_path="", attr_name="visible_macro_count", writable=False,
+        coerce_to_int=True,
+    )
+    for _cls in RACK_CHAIN_DEVICES_CLASSES
+})
 _RACK_CHAIN_FIELD_SPECS: Dict[str, PropertySpec] = {}
 
 # The rack-macro family: ``vm.macro.<name>`` on a Drum Rack, one computed

@@ -247,3 +247,17 @@ def test_selected_chain_reads_none_without_a_selection():
     rack = ShowingRack([FakeChain([])])
     comp, *_ = _component()
     assert comp.read(rack, "r", SELECTED_CHAIN_KEY) is None
+
+
+def test_visible_macro_count_is_a_read_only_row_on_every_chain_rack():
+    """The chain overview reads how many macros Live shows on a rack."""
+    from components.PropertyComponent import spec_for
+
+    for cls in ("AudioEffectGroupDevice", "InstrumentGroupDevice", "MidiEffectGroupDevice"):
+        spec = spec_for(cls, "visible_macro_count")
+        assert spec is not None
+        assert spec.attr_name == "visible_macro_count"
+        assert spec.listener_path == ""
+        assert not spec.writable
+        assert spec.computed is None
+    assert spec_for("DrumGroupDevice", "visible_macro_count") is None
