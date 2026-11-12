@@ -100,11 +100,12 @@ describe('the chain_devices row and folding', () => {
 			JSON.stringify({
 				chains: [
 					{ index: 0, name: 'Dry', color: null, mute: 0, solo: 0, devices: [] },
-					{ index: 1, name: 'Wet', color: 255, mute: 1, solo: 0, devices: [{ index: 0, class: 'Echo', name: 'Echo', type: 2, rack: 0 }] }
+					{ index: 1, name: 'Wet', color: 255, mute: 1, solo: 0, volume: 0.6, devices: [{ index: 0, class: 'Echo', name: 'Echo', type: 2, rack: 0 }] }
 				]
 			})
 		);
-		expect(chains?.[1]).toMatchObject({ name: 'Wet', color: 255, mute: true, devices: [{ className: 'Echo', rack: false }] });
+		expect(chains?.[1]).toMatchObject({ name: 'Wet', color: 255, mute: true, volume: 0.6, devices: [{ className: 'Echo', rack: false }] });
+		expect(chains?.[0].volume).toBeNull();
 		expect(parseChainDevices('not json')).toBeNull();
 		expect(parseChainDevices(undefined)).toBeNull();
 	});

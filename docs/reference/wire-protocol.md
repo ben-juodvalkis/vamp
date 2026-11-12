@@ -428,21 +428,23 @@ Key rules:
   `AudioEffectGroupDevice`, `InstrumentGroupDevice` and
   `MidiEffectGroupDevice`, provider `rack_chain_devices`, read-only, a JSON
   string: `{"chains":[{"index":0,"name":"Wet","color":<RGB int|null>,
-  "mute":0,"solo":0,"devices":[{"index":0,"class":"Hybrid","name":"Reverb",
+  "mute":0,"solo":0,"volume":0.85,"devices":[{"index":0,"class":"Hybrid","name":"Reverb",
   "type":2,"rack":0}]}]}` (`rack` 1: a rack, which unfolds in turn; past
   ~8 KB the device names are dropped). Every cold read also sends the
   rack-scoped `state/full/tree` (reason `rack-chain`). While subscribed the
   surface keeps value listeners on every parameter of every device on the
   chains (the `param/value` echo with the composed chain path) and listens
   to the rack's `chains`, each chain's `devices`, `name`, `color`, `mute`,
-  `solo` and each device's `name`. A change of shape advances the
+  `solo`, its mixer volume's value, and each device's `name`. A change of shape advances the
   generation (a pathless `state/invalidate`, reason `rack-chain`), runs the
   property channel's structural invalidate and re-sends row and bundle; a
-  rename, colour, mute or solo re-emits the row alone. Never republishes the
+  rename, colour, mute, solo or volume change re-emits the row alone. Never republishes the
   song. The chain overview subscribes it while the rack is unfolded.
-- **`chain.<i>.mute` / `chain.<i>.solo` — a chain's activator and solo
-  (ADR-529, 3.13.0).** Writable `0|1`, synthesised for the same three
-  classes; the echo is the `property/value` of the stored value, and the
+- **`chain.<i>.mute` / `chain.<i>.solo` / `chain.<i>.volume` — a chain's
+  activator, solo and volume (ADR-529, 3.13.0).** Writable: `0|1` for the
+  switches, a float for the volume (the chain's `mixer_device.volume`,
+  0..1 with 0.85 = 0 dB, clamped to its range), synthesised for the same
+  three classes; the echo is the `property/value` of the stored value, and the
   chain's own listener re-emits `chain_devices`.
 - **Read-only properties** (e.g. `sample.length`) reject writes
   with `write-rejected detail="property-read-only"`; listeners

@@ -110,3 +110,17 @@ def test_chain_mute_and_solo_write():
     assert comp.write(rack, "p", "chain.0.solo", 1)[0] is True
     assert comp.write(rack, "p", "chain.4.mute", 1)[0] is False
     assert comp.write(rack, "p", CHAIN_DEVICES_KEY, 1)[0] is False
+
+
+def test_chain_volume_reads_writes_and_follows_live():
+    rack, *_ = _rack()
+    comp, emits, _, _, advanced = _component()
+    assert chains_payload(rack)["chains"][0]["volume"] == 0.85
+    assert comp.read(rack, "p", "chain.0.volume") == 0.85
+    assert comp.write(rack, "p", "chain.0.volume", 0.5) == (True, 0.5, "")
+    assert rack.chains[0].mixer_device.volume.value == 0.5
+    assert comp.write(rack, "p", "chain.0.volume", 7)[1] == 1.0  # clamped
+    comp.subscribe(rack, "tracks/0/devices/0", CHAIN_DEVICES_KEY)
+    rack.chains[1].mixer_device.volume.value = 0.2  # Live moves it
+    assert json.loads(emits[-1][1][2])["chains"][1]["volume"] == 0.2
+    assert advanced == []

@@ -1273,7 +1273,7 @@ export const CHAIN_DEMO_DEVICES = [
 		// Its chains (ADR-529), for the unfold shots.
 		chains: [
 			{ name: 'Dry', color: 0x8a8a8a, devices: [] },
-			{ name: 'Echoes', color: 0x1aa6b7, devices: ['Echo', 'Auto Filter', { name: 'Grime', className: 'AudioEffectGroupDevice', params: rackParams([['Drive', 64], ['Tone', 80]]), chains: [{ name: 'Crush', devices: ['Saturator'] }] }] },
+			{ name: 'Echoes', color: 0x1aa6b7, volume: 0.62, devices: ['Echo', 'Auto Filter', { name: 'Grime', className: 'AudioEffectGroupDevice', params: rackParams([['Drive', 64], ['Tone', 80]]), chains: [{ name: 'Crush', devices: ['Saturator'] }] }] },
 			{ name: 'Space', color: 0xb46ad1, mute: true, devices: ['Reverb', { name: 'Mystery', className: 'MxDeviceAudioEffect', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Amount', 'Amount', 0, 1, 0.4, '']] }] }
 		]
 	},
@@ -1440,6 +1440,7 @@ function registerRackChains(registry, rackPath, chains) {
 		color: chain.color ?? null,
 		mute: chain.mute ? 1 : 0,
 		solo: chain.solo ? 1 : 0,
+		volume: chain.volume ?? 0.85,
 		devices: (chain.devices ?? []).map((entry, d) => {
 			const name = typeof entry === 'string' ? entry : entry.name;
 			const className = (typeof entry !== 'string' && entry.className) || deviceClassName(entry.like ?? name);
@@ -1463,9 +1464,18 @@ export function rackChainsValue(rackPath) {
 			color: c.color,
 			mute: c.mute,
 			solo: c.solo,
+			volume: c.volume,
 			devices: c.devices.map((d) => ({ index: d.index, class: d.className, name: d.name, type: d.type, rack: d.rack }))
 		}))
 	});
+}
+
+/** A chain's mute, solo or volume set from the UI; false for no such chain. */
+export function setRackChainField(rackPath, index, field, value) {
+	const chain = RACK_CHAINS[rackPath]?.[index];
+	if (!chain) return false;
+	chain[field] = field === 'volume' ? Math.max(0, Math.min(1, Number(value))) : Number(value) ? 1 : 0;
+	return true;
 }
 
 /** The `rack-chain` bundle's records: every chain's devices under the rack. */

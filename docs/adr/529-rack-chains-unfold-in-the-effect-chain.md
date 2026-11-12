@@ -32,8 +32,9 @@ Live.
   tree — the D/P records of every device on every chain, one level deep —
   and, while subscribed, value listeners on all of their parameters. A
   chain or device added, removed or moved advances the generation and
-  re-sends; a rename, colour, mute or solo re-emits the row. Two writable
-  rows per chain, `chain.<i>.mute` and `chain.<i>.solo`.
+  re-sends; a rename, colour, mute, solo or volume change re-emits the row.
+  Three writable rows per chain: `chain.<i>.mute`, `chain.<i>.solo` and
+  `chain.<i>.volume` (the chain's mixer volume, 0..1, 0.85 = 0 dB).
 - **The chain overview unfolds a rack the way the strips row unfolds a
   Group Track (ADR-410, ADR-413).** A rack's cell carries a chevron at the
   right end of its header bar, right while folded and down while open, as a
@@ -43,7 +44,8 @@ Live.
   below the arm with a gap and keeps its own outline; a tap on the arm folds
   the rack. Under the arm come the rack's **chain list** (a cell of rows in
   the chains' colours; a tap chooses the chain shown, the lamp is its
-  activator) when it has more than one chain, then **the chosen chain's
+  activator, and a slim fader under each name is the chain's volume — a
+  sideways drag, two fader widths for the whole range, a tick at 0 dB) when it has more than one chain, then **the chosen chain's
   devices** as ordinary cells with their usual faces; an empty chain shows
   an "Empty" place. A rack among them unfolds the same way, one step lower,
   its arm stacked under its parent's; where the unfold wraps to the chain's
@@ -70,5 +72,11 @@ Live.
   Up to 512 parameter listeners per rack.
 - The chain list's selection is local, not Live's `selected_chain`: two
   clients cannot fight over it, and Live's own view does not follow it.
-- Chain volume, pan and the chain selector's zones are not drawn; solo has
-  a write but no control yet.
+- Chain pan and the chain selector's zones are not drawn; solo has a write
+  but no control yet. Each volume frame is its own `property/set`, and Live
+  takes each as an undo step, as it does a parameter drag.
+- Works for Audio Effect, Instrument and MIDI Effect Racks alike. A device
+  inside a rack opens its own registered view when it has one; an
+  instrument inside an Instrument Rack opens the generic view, not its
+  instrument page, and a nested Instrument or MIDI Effect Rack opens the
+  generic view (the rack view reads Audio Effect Racks).

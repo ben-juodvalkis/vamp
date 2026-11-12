@@ -58,7 +58,7 @@
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import ChainListFace from './chain/ChainListFace.svelte';
-  import { CHAIN_DEVICES, chainDevicePathOf, isChainRack, rackChainsOf, rackFold, setChainSwitch, type RackChain } from '$lib/services/rackChains.svelte';
+  import { CHAIN_DEVICES, chainDevicePathOf, isChainRack, rackChainsOf, rackFold, setChainSwitch, setChainVolume, type RackChain } from '$lib/services/rackChains.svelte';
   import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
   import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
   import { setContext } from 'svelte';
@@ -252,7 +252,7 @@
         : glance.kind === 'instrument' && glance.headPath === device.devicePath;
       const kind: Cell['kind'] = isInstrument
         ? 'instrument'
-        : device.className === 'AudioEffectGroupDevice' && !presetKey
+        : isChainRack(device.className) && !presetKey
           ? 'rack'
           : device.className.startsWith('MxDevice') && !presetKey
             ? 'max'
@@ -470,7 +470,7 @@
       const nth = chosen.devices.slice(0, i).filter((x) => x.name === d.name && x.className === d.className).length;
       const presetKey = presetKeyFor(device);
       const kind: Cell['kind'] =
-        device.className === 'AudioEffectGroupDevice' && !presetKey
+        isChainRack(device.className) && !presetKey
           ? 'rack'
           : device.className.startsWith('MxDevice') && !presetKey
             ? 'max'
@@ -963,6 +963,7 @@
           selected={rackFold.chainOf(cell.inside.rackPath)}
           onSelect={(i) => rackFold.selectChain(cell.inside!.rackPath, i)}
           onMute={(i, on) => setChainSwitch(cell.inside!.rackPath, i, 'mute', on)}
+          onVolume={(i, v) => setChainVolume(cell.inside!.rackPath, i, v)}
         /></div>
       {:else if cell.kind === 'empty'}
         <div class="mark empty-chain" aria-hidden="true">Empty</div>

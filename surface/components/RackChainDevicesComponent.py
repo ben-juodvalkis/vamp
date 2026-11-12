@@ -13,7 +13,7 @@ a client:
 
 - **its value** is the chains as JSON —
   ``{"chains":[{"index":0,"name":"Wet","color":16711680,"mute":0,"solo":0,
-  "devices":[{"index":0,"class":"Hybrid","name":"Reverb","type":2,
+  "volume":0.85,"devices":[{"index":0,"class":"Hybrid","name":"Reverb","type":2,
   "rack":0}]}]}`` — ``rack`` 1 for a device that is itself a rack (the UI
   offers to unfold it; its own row is subscribed then);
 - **every cold read also sends a rack-scoped ``state/full/tree``**
@@ -24,10 +24,11 @@ a client:
   value listener feeding the mutation fan-out with its composed path, so
   ``param/value`` echoes and writes work exactly as on a top-level device.
 
-Two writable rows per chain, synthesised by ``PropertyComponent.spec_for``:
+Three writable rows per chain, synthesised by ``PropertyComponent.spec_for``:
 ``chain.<i>.mute`` and ``chain.<i>.solo`` (0/1) — Live's chain activator and
-solo. Their echo is the ``chain_devices`` row the chain's own listeners
-re-emit.
+solo — and ``chain.<i>.volume``, the chain's mixer volume (0..1, 0.85 =
+0 dB), which the row also carries as ``volume``. Their echo is the
+``chain_devices`` row the chain's own listeners re-emit.
 
 Changes are deferred ``CHAIN_CHANGE_DELAY_MS`` (listeners only mark and
 schedule; Live refuses writes and listener edits inside a notification).
@@ -70,7 +71,7 @@ MAX_CHAIN_PARAM_LISTENERS = 512
 #: Past this many bytes the row drops device names.
 CHAIN_DEVICES_BYTES_SOFT_CAP = 8000
 
-_CHAIN_FIELD_RE = re.compile(r"^chain\.(0|[1-9][0-9]{0,2})\.(mute|solo)$")
+_CHAIN_FIELD_RE = re.compile(r"^chain\.(0|[1-9][0-9]{0,2})\.(mute|solo|volume)$")
 _LOM_ERRORS = (RuntimeError, AttributeError, TypeError, ValueError)
 
 
@@ -109,6 +110,21 @@ def _flag(value) -> int:
         return 0
 
 
+def _chain_volume(chain):
+    """``chain.mixer_device.volume`` — Live's "Chain Volume", 0..1 with 0.85
+    = 0 dB (measured on the rig, 2026-09-08) — or ``None``."""
+    mixer = _read(chain, "mixer_device")
+    return None if mixer is None else _read(mixer, "volume")
+
+
+def _volume_value(chain) -> Optional[float]:
+    param = _chain_volume(chain)
+    try:
+        return None if param is None else round(float(param.value), 4)
+    except (TypeError, ValueError, RuntimeError, AttributeError):
+        return None
+
+
 def _devices_of(chain) -> List[object]:
     try:
         return list(chain.devices or ())
@@ -140,6 +156,7 @@ def chains_payload(rack) -> Dict[str, object]:
             "color": _as_int_or_none(_read(chain, "color")),
             "mute": _flag(_read(chain, "mute", False)),
             "solo": _flag(_read(chain, "solo", False)),
+            "volume": _volume_value(chain),
             "devices": devices,
         })
     return {"chains": chains}
@@ -235,6 +252,8 @@ class RackChainDevicesComponent:
         chains = safe_rack_chains(device)
         if field[0] >= len(chains):
             return None
+        if field[1] == "volume":
+            return _volume_value(chains[field[0]])
         return _flag(_read(chains[field[0]], field[1], False))
 
     def write(self, device, device_path: str, function: str, value):
@@ -245,6 +264,18 @@ class RackChainDevicesComponent:
         chains = safe_rack_chains(device)
         if index >= len(chains):
             return False, None, "no chain %d" % index
+        if attr == "volume":
+            param = _chain_volume(chains[index])
+            if param is None:
+                return False, None, "chain %d has no volume" % index
+            try:
+                v = max(float(param.min), min(float(param.max), float(value)))
+                param.value = v
+            except (TypeError, ValueError) as e:
+                return False, None, "expected a number: %s" % e
+            except _LOM_ERRORS as e:
+                return False, None, str(e)
+            return True, round(v, 4), ""
         try:
             on = bool(int(value))
         except (TypeError, ValueError):
@@ -308,6 +339,9 @@ class RackChainDevicesComponent:
             self._add(st, chain, "devices", shape)
             for attr in ("name", "color", "mute", "solo"):
                 self._add(st, chain, attr, surface_only)
+            volume = _chain_volume(chain)
+            if volume is not None:
+                self._add(st, volume, "value", surface_only)
             chain_path = compose_rack_chain_path(st.device_path, c_index)
             for d_index, device in enumerate(_devices_of(chain)):
                 self._add(st, device, "name", surface_only)

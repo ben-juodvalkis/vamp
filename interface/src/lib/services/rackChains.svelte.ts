@@ -35,8 +35,13 @@ export interface RackChain {
 	color: number | null;
 	mute: boolean;
 	solo: boolean;
+	/** Live's chain volume, 0..1 (0.85 = 0 dB), or null. */
+	volume: number | null;
 	devices: RackChainDevice[];
 }
+
+/** Live's chain volume at 0 dB (measured, 2026-09-08). */
+export const CHAIN_UNITY = 0.85;
 
 export function isChainRack(className: string): boolean {
 	return CHAIN_RACK_CLASSES.has(className);
@@ -58,6 +63,7 @@ export function parseChainDevices(raw: OSCArg | undefined): RackChain[] | null {
 				color: typeof c.color === 'number' ? c.color : null,
 				mute: c.mute === 1 || c.mute === true,
 				solo: c.solo === 1 || c.solo === true,
+				volume: typeof c.volume === 'number' ? c.volume : null,
 				devices: Array.isArray(c.devices)
 					? c.devices.map((d: Record<string, unknown>) => ({
 							index: Number(d.index),
@@ -90,6 +96,11 @@ export function chainDevicePathOf(rackPath: string, chainIndex: number, deviceIn
 /** A rack's chains as its row last said, or null before it has. */
 export function rackChainsOf(rackPath: string): RackChain[] | null {
 	return parseChainDevices(selectedTrackStore.propertyValue(rackPath, CHAIN_DEVICES));
+}
+
+/** Set a chain's volume in Live, 0..1 (0.85 = 0 dB). */
+export function setChainVolume(rackPath: string, chainIndex: number, value: number): void {
+	void selectedTrackStore.setPropertyValue(rackPath, `chain.${chainIndex}.volume`, Math.max(0, Math.min(1, value)));
 }
 
 /** Turn a chain's activator (mute) or solo on or off in Live. */

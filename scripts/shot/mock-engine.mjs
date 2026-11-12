@@ -23,6 +23,7 @@ import {
 	padChainRecords,
 	rackChainRecords,
 	rackChainsValue,
+	setRackChainField,
 	appendPadDevice,
 	deviceClassName,
 	appendTrackDevice,
@@ -769,6 +770,12 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 						// file names (its `ir_file_list` listener), measured.
 						const files = propertyName === 'ir_category_index' ? HYBRID_IR_LISTS.files[Math.round(Number(value))] : null;
 						if (files) send(ws, '/looping/v3/property/value', [devicePath, 'ir_file_list', JSON.stringify(files)]);
+						// A rack chain's switch or volume (ADR-529): the chain's
+						// listener re-emits the rack's row.
+						const field = /^chain\.(\d+)\.(mute|solo|volume)$/.exec(propertyName);
+						if (field && setRackChainField(devicePath, Number(field[1]), field[2], value)) {
+							send(ws, '/looping/v3/property/value', [devicePath, 'chain_devices', rackChainsValue(devicePath)]);
+						}
 					}
 					return;
 				}
