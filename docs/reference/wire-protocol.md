@@ -446,6 +446,13 @@ Key rules:
   fold mirrors. While subscribed its listener echoes a change made in Live;
   a write sets it, and the rack's `is_showing_chains` (Live's chain list) to
   the same value where `can_show_chains` allows (two chains or more).
+- **`selected_chain` — the chain Live shows a rack's devices for (ADR-529,
+  3.13.0).** Writable int, the chain's index, on the same three rack
+  classes, same provider: `RackDevice.View.selected_chain`. Reads nil when
+  Live names no chain of the rack. While subscribed its listener echoes a
+  selection made in Live; a write selects that chain, and an index the
+  rack has no chain for is refused (`no chain <i>`). The chain overview
+  subscribes it while the rack is unfolded, as the chain list's choice.
 - **`chain.<i>.mute` / `chain.<i>.solo` / `chain.<i>.volume` — a chain's
   activator, solo and volume (ADR-529, 3.13.0).** Writable: `0|1` for the
   switches, a float for the volume (the chain's `mixer_device.volume`,

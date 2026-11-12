@@ -58,7 +58,7 @@
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import ChainListFace from './chain/ChainListFace.svelte';
-  import { CHAIN_DEVICES, SHOW_DEVICES, chainDevicePathOf, isChainRack, rackChainsOf, rackFold, setChainSwitch, setChainVolume, type RackChain } from '$lib/services/rackChains.svelte';
+  import { CHAIN_DEVICES, SHOW_DEVICES, SELECTED_CHAIN, chainDevicePathOf, isChainRack, rackChainsOf, rackFold, setChainSwitch, setChainVolume, type RackChain } from '$lib/services/rackChains.svelte';
   import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
   import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
   import { setContext } from 'svelte';
@@ -176,7 +176,7 @@
     /** Where Live has it now. */
     path: string;
     device: DeviceRecord;
-    kind: 'instrument' | 'rack' | 'max' | 'plugin' | 'effect' | 'chains' | 'empty';
+    kind: 'instrument' | 'rack' | 'max' | 'plugin' | 'effect' | 'chains';
     presetKey: string | null;
     tile: string | null;
     ink: string;
@@ -317,8 +317,8 @@
    */
   const ROW_UNITS = 12;
   function unitsOf(cell: Cell): number {
-    if (cell.kind === 'empty') return 1;
-    if (cell.kind === 'chains') return 2;
+    // The chain list is a slider's width (the user, 2026-11-12).
+    if (cell.kind === 'chains') return 1;
     if (cell.kit || isMidiWheels(cell.device)) return 1;
     return cell.presetKey && controlFor(cell.presetKey)?.kind === 'slider' ? 1 : 2;
   }
@@ -454,10 +454,7 @@
     if (chains.length === 0) return;
     const chosen = chains[Math.min(rackFold.chainOf(rackPath), chains.length - 1)];
     const inside = { rackPath, ink, depth, chain: chosen, chains: chains.length };
-    if (chosen.devices.length === 0) {
-      out.push({ ...listCell(cell), key: `${cell.key}|c${chosen.index}|empty`, kind: 'empty', inside });
-      return;
-    }
+    // An empty chain draws nothing past the list: its row says it is chosen.
     chosen.devices.forEach((d, i) => {
       const devicePath = chainDevicePathOf(rackPath, chosen.index, d.index);
       const device: DeviceRecord = selectedTrackStore.deviceAt(devicePath) ?? {
@@ -565,7 +562,10 @@
         }
       }
       for (const path of want) {
-        if (!rackRows.has(path)) rackRows.set(path, selectedTrackStore.subscribeProperty(path, CHAIN_DEVICES));
+        if (rackRows.has(path)) continue;
+        // An open rack's chains, and which of them Live shows (the chosen chain).
+        const releases = [CHAIN_DEVICES, SELECTED_CHAIN].map((row) => selectedTrackStore.subscribeProperty(path, row));
+        rackRows.set(path, () => releases.forEach((release) => release()));
       }
     });
   });
@@ -818,7 +818,7 @@
       open(cell, true);
       return;
     }
-    if (cell.kind === 'instrument' || cell.inside || cell.kind === 'chains' || cell.kind === 'empty' || pressInFold || !chainEl) return;
+    if (cell.kind === 'instrument' || cell.inside || cell.kind === 'chains' || pressInFold || !chainEl) return;
     const node = chainEl.querySelector<HTMLElement>(`:scope > [data-cell-key="${CSS.escape(cell.key)}"]`);
     if (!node) return;
     // Where it is drawn, mid-slide included, so it lifts from under the finger.
@@ -901,7 +901,6 @@
   /** The caption under a cell's name: what the device is, where its name does not say (`deviceTypeLabel`). */
   function captionOf(cell: Cell): string | null {
     if (cell.kind === 'chains') return cell.device.name;
-    if (cell.kind === 'empty') return null;
     // Inside a rack of several chains: which chain it is on.
     if (cell.inside && cell.inside.chains > 1) return cell.inside.chain.name;
     return deviceTypeLabel(cell.device.className, cell.device.name);
@@ -957,7 +956,7 @@
            are (ADR-492), so a narrow cell's name steps down a size. -->
       <CellSize><div class="cell-head">
         <span class="head-text">
-          <span class="name" lang="en">{cell.kind === 'chains' ? 'Chains' : cell.kind === 'empty' ? cell.inside?.chain.name : cell.device.name}</span>
+          <span class="name" lang="en">{cell.kind === 'chains' ? 'Chains' : cell.device.name}</span>
           {#if caption}<span class="caption">{caption}</span>{/if}
         </span>
         {#if cell.kind === 'instrument' && !cell.inside && glance.instrumentViewType === 'operator'}<span class="head-end"><OperatorHeadAlgorithm device={cell.device} /></span>{/if}
@@ -985,8 +984,6 @@
           onMute={(i, on) => setChainSwitch(cell.inside!.rackPath, i, 'mute', on)}
           onVolume={(i, v) => setChainVolume(cell.inside!.rackPath, i, v)}
         /></div>
-      {:else if cell.kind === 'empty'}
-        <div class="mark empty-chain" aria-hidden="true">Empty</div>
       {:else if cell.kit}
         <!-- A Drum Rack: the kit's Trnsp. -->
         <div class="cell-control" role="presentation"><CellSize>
@@ -1101,8 +1098,8 @@
             rackFold.toggle(cell.path);
             return;
           }
-          // The chain list and an empty chain's place answer their own taps.
-          if (cell.kind === 'chains' || cell.kind === 'empty') return;
+          // The chain list answers its own taps.
+          if (cell.kind === 'chains') return;
           // The header is the device's switch, as a strip's name is its
           // mute; the kit's under a pad scope still leads back to the kit.
           if (pressInHead && isPowered(cell) && !(cell.kit && padScope)) togglePower(cell);
@@ -1459,10 +1456,6 @@
   }
   .chain-cell.armed {
     border-top-right-radius: 0;
-  }
-  .empty-chain {
-    font-size: 0.75rem;
-    color: var(--fg-tertiary);
   }
 
   /* The face: the cell's rest, inset from the panel's edge so its own

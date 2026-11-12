@@ -104,7 +104,8 @@ one cell, when it has two or more chains) and the chosen chain's devices,
 each an ordinary cell, all under the rack's arm (the Group Track
 panhandle, one per open rack and none per chain; a tap on it folds the
 rack). A tap on a row chooses the chain shown
-(`rackFold.chainOf` / `selectChain`, this client's, per rack), a tap on its
+(`rackFold.chainOf` / `selectChain`: Live's selected chain, the rack's
+`selected_chain` row, so it mirrors Live both ways), a tap on its
 lamp is the chain's on/off, and a drag up or down on the row is its volume.
 An open rack holds its `chain_devices` row (`services/rackChains.svelte`),
 which brings the chains and the devices' records

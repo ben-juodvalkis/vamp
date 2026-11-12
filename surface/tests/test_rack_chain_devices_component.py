@@ -127,11 +127,30 @@ def test_chain_volume_reads_writes_and_follows_live():
 
 
 class FakeRackView:
-    """``RackDevice.View``'s Show Devices toggle and its listener pair."""
+    """``RackDevice.View``'s Show Devices toggle and selected chain, each
+    with its listener pair."""
 
     def __init__(self, showing=False):
         self._showing = showing
         self.listeners = []
+        self._selected = None
+        self.chain_listeners = []
+
+    @property
+    def selected_chain(self):
+        return self._selected
+
+    @selected_chain.setter
+    def selected_chain(self, chain):
+        self._selected = chain
+        for cb in list(self.chain_listeners):
+            cb()
+
+    def add_selected_chain_listener(self, cb):
+        self.chain_listeners.append(cb)
+
+    def remove_selected_chain_listener(self, cb):
+        self.chain_listeners.remove(cb)
 
     @property
     def is_showing_chain_devices(self):
@@ -196,3 +215,35 @@ def test_show_devices_on_a_one_chain_rack_leaves_the_chain_list_alone():
     comp, *_ = _component()
     assert comp.write(rack, "r", SHOW_DEVICES_KEY, 1) == (True, 1, "")
     assert rack.view.is_showing_chain_devices is True and rack.is_showing_chains is False
+
+
+def test_selected_chain_mirrors_live_both_ways():
+    from components.RackChainDevicesComponent import SELECTED_CHAIN_KEY, SHOW_DEVICES_KEY
+    rack = ShowingRack([FakeChain([]), FakeChain([]), FakeChain([])])
+    rack.view.selected_chain = rack.chains[1]
+    comp, emits, *_ = _component()
+    assert comp.read(rack, "r", SELECTED_CHAIN_KEY) == 1
+    comp.subscribe(rack, "r", SELECTED_CHAIN_KEY)
+    comp.subscribe(rack, "r", SHOW_DEVICES_KEY)
+    # Chosen in Vamp: Live shows that chain.
+    assert comp.write(rack, "r", SELECTED_CHAIN_KEY, 2) == (True, 2, "")
+    assert rack.view.selected_chain is rack.chains[2]
+    # Chosen in Live: echoed to the client.
+    rack.view.selected_chain = rack.chains[0]
+    assert emits[-1] == ("/looping/v3/property/value", ("r", SELECTED_CHAIN_KEY, 0))
+    # A chain the rack does not have is refused and changes nothing.
+    assert comp.write(rack, "r", SELECTED_CHAIN_KEY, 5) == (False, None, "no chain 5")
+    assert comp.write(rack, "r", SELECTED_CHAIN_KEY, "x")[0] is False
+    assert rack.view.selected_chain is rack.chains[0]
+    # Each row lets go of its own listener.
+    comp.unsubscribe("r", SELECTED_CHAIN_KEY)
+    assert rack.view.chain_listeners == [] and len(rack.view.listeners) == 1
+    comp.disconnect()
+    assert rack.view.listeners == []
+
+
+def test_selected_chain_reads_none_without_a_selection():
+    from components.RackChainDevicesComponent import SELECTED_CHAIN_KEY
+    rack = ShowingRack([FakeChain([])])
+    comp, *_ = _component()
+    assert comp.read(rack, "r", SELECTED_CHAIN_KEY) is None

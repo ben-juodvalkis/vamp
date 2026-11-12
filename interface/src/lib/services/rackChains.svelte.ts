@@ -9,10 +9,10 @@
  *
  * Folding is Live's own: a rack is open while Live shows its devices (its
  * Show Devices toggle, the `show_devices` row), so the two mirror each other.
- * An open rack shows its chain list and the chosen chain's devices; which
- * chain is chosen is this client's, keyed by the rack's path.
+ * An open rack shows its chain list and the chosen chain's devices; the
+ * chosen chain is Live's selected chain (the `selected_chain` row), so that
+ * mirrors Live both ways too.
  */
-import { SvelteMap } from 'svelte/reactivity';
 import type { OSCArg } from '$lib/types/osc';
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { CHAIN_RACK_CLASSES } from '$lib/stores/v3/normalized.svelte';
@@ -121,7 +121,8 @@ export const SHOW_DEVICES = 'show_devices';
  * subscribed for the rack (the chain overview holds it for every rack it
  * draws); before its first answer the rack reads folded.
  */
-const selectedChain = new SvelteMap<string, number>();
+/** The chain Live shows a rack's devices for, by index (ADR-529). */
+export const SELECTED_CHAIN = 'selected_chain';
 
 export const rackFold = {
 	isOpen(rackPath: string): boolean {
@@ -131,11 +132,13 @@ export const rackFold = {
 	toggle(rackPath: string): void {
 		void selectedTrackStore.setPropertyValue(rackPath, SHOW_DEVICES, rackFold.isOpen(rackPath) ? 0 : 1);
 	},
-	/** The chain the rack shows: the one chosen, else the first. */
+	/** The chain the rack shows: Live's selected chain, the first before its row answers. */
 	chainOf(rackPath: string): number {
-		return selectedChain.get(rackPath) ?? 0;
+		const v = selectedTrackStore.propertyValue(rackPath, SELECTED_CHAIN);
+		return typeof v === 'number' && v >= 0 ? v : 0;
 	},
+	/** Choose the chain shown, here and in Live (the row must be subscribed: an open rack's is). */
 	selectChain(rackPath: string, chainIndex: number): void {
-		selectedChain.set(rackPath, chainIndex);
+		void selectedTrackStore.setPropertyValue(rackPath, SELECTED_CHAIN, chainIndex);
 	}
 };

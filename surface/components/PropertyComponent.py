@@ -153,6 +153,7 @@ from .RackChainNamesComponent import (
 )
 from .RackChainDevicesComponent import (
     SHOW_DEVICES_KEY as RACK_SHOW_DEVICES_KEY,
+    SELECTED_CHAIN_KEY as RACK_SELECTED_CHAIN_KEY,
     CHAIN_DEVICES_KEY as RACK_CHAIN_DEVICES_KEY,
     PROVIDER_NAME as RACK_CHAIN_DEVICES_PROVIDER,
     RACK_CLASS_NAMES as RACK_CHAIN_DEVICES_CLASSES,
@@ -646,13 +647,15 @@ ALLOWLIST.update({
     )
     for _cls in RACK_CHAIN_DEVICES_CLASSES
 })
-# Live's Show Devices toggle on the same racks, which the fold mirrors.
+# Live's Show Devices toggle on the same racks, which the fold mirrors, and
+# the chain Live shows the devices of, which the chain list's choice mirrors.
 ALLOWLIST.update({
-    (_cls, RACK_SHOW_DEVICES_KEY): PropertySpec(
-        listener_path="", attr_name=RACK_SHOW_DEVICES_KEY, writable=True,
+    (_cls, _key): PropertySpec(
+        listener_path="", attr_name=_key, writable=True,
         computed=RACK_CHAIN_DEVICES_PROVIDER,
     )
     for _cls in RACK_CHAIN_DEVICES_CLASSES
+    for _key in (RACK_SHOW_DEVICES_KEY, RACK_SELECTED_CHAIN_KEY)
 })
 _RACK_CHAIN_FIELD_SPECS: Dict[str, PropertySpec] = {}
 

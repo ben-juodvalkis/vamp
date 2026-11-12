@@ -40,10 +40,14 @@ Live.
   while folded and down while open (the rest of the bar's tap stays Device
   On). Unfolded, the rack's cell is followed by its **chain list** — one
   cell, "Chains", a row per chain in its colour — when the rack has two or
-  more chains, and then **the chosen chain's devices** as ordinary cells
-  with their usual faces (an "Empty" cell for a chain with none). A tap on
-  a row chooses the chain shown; the first is shown until one is chosen,
-  per rack, on this client. The rack's outline grows an **arm** — the
+  more chains, one unit wide (a slider's width), and then **the chosen
+  chain's devices** as ordinary cells with their usual faces (nothing for a
+  chain with none: its row in the list says it is chosen). A tap on a row
+  chooses the chain shown, and **the chosen chain is Live's selected chain**
+  (`RackDevice.View.selected_chain`, the rack's writable `selected_chain`
+  row, an index, held while the rack is open): a tap selects it in Live and
+  selecting one in Live shows it here. Measured on 12.4.25b1: settable from
+  Python, with a `selected_chain` listener; inserting a chain selects it. The rack's outline grows an **arm** — the
   Group Track panhandle (ADR-410, ADR-413) in the rack's ink — over the
   list and the devices, which hang below it with a gap and keep their own
   outlines; a tap on the arm folds the rack. There is one arm per rack,
@@ -77,7 +81,6 @@ Live.
   by path.
 - Cells inside a rack are not dragged; a drop of a top-level cell onto
   them lands at their rack's place.
-- The chosen chain is this client's, not Live's selected chain.
 
 ## Consequences
 

@@ -23,7 +23,7 @@ import {
 	type ParamRecord,
 	type TrackRecord
 } from '$lib/stores/v3/normalized.svelte';
-import { SHOW_DEVICES, parseChainDevices, rackFold } from '$lib/services/rackChains.svelte';
+import { SELECTED_CHAIN, SHOW_DEVICES, parseChainDevices, rackFold } from '$lib/services/rackChains.svelte';
 import type { OSCArg } from '$lib/types/osc';
 
 const RACK = 'tracks/1/devices/2';
@@ -118,10 +118,12 @@ describe('the chain_devices row and folding', () => {
 		expect(rackFold.isOpen(RACK)).toBe(false);
 	});
 
-	it('shows the first chain until one is chosen, per rack', () => {
+	it("shows Live's selected chain, the first before its row answers", () => {
 		expect(rackFold.chainOf(RACK)).toBe(0);
-		rackFold.selectChain(RACK, 2);
+		applyPropertyValue(RACK, SELECTED_CHAIN, 2);
 		expect(rackFold.chainOf(RACK)).toBe(2);
 		expect(rackFold.chainOf(INNER)).toBe(0);
+		applyPropertyValue(RACK, SELECTED_CHAIN, -1);
+		expect(rackFold.chainOf(RACK)).toBe(0);
 	});
 });
