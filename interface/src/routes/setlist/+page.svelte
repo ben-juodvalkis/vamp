@@ -75,7 +75,7 @@
 		>
 		<!-- Over the seam, so the two buttons share the whole width. -->
 		<span class:shifted={!!setlist.octave}
-			>{setlist.octave === null ? '8va' : setlist.octave > 0 ? `+${setlist.octave}` : setlist.octave}</span
+			>{setlist.octave ?? 0}</span
 		>
 	</div>
 
