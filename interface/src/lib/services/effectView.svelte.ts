@@ -14,6 +14,7 @@ import { matchesSlot } from '$lib/utils/deviceSlotMatch';
 import { fxChainStore, RACK_PICK } from '$lib/stores/v6/fxChainStore.svelte';
 import { centralDisplayStore } from '$lib/stores/v6/centralDisplayStore.svelte';
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
+import type { DeviceRecord } from '$lib/stores/v3/normalized.svelte';
 import { openDeviceView } from './deviceViewRouter.svelte';
 import { isViewRegistered } from '$lib/components/v6/central/viewRegistry';
 import { CHAIN_DEVICE_VIEW } from '$lib/components/v6/central/views/chainDeviceView';
@@ -69,8 +70,24 @@ const LAND_TIMEOUT_MS = 5000;
  * track's chain or the pad's than now, and show its view. A load that
  * never lands is given up after five seconds. Returns a cancel.
  */
+const RACK_CHAIN = /\/chains\/\d+$/;
+
+/** Whether a load target is a rack's chain (ADR-529), not a pad or the track. */
+export function isRackChainTarget(target: string): boolean {
+	return RACK_CHAIN.test(target);
+}
+
+/** The devices a load lands among: a rack's chain (ADR-529), a pad's chain, or the track's ('' ). */
+export function devicesAtTarget(target: string): DeviceRecord[] {
+	if (isRackChainTarget(target)) {
+		return selectedTrackStore.chainDevices(target.replace(RACK_CHAIN, '')).filter((d) => d.devicePath.startsWith(`${target}/`));
+	}
+	return target ? selectedTrackStore.padDevices(target) : selectedTrackStore.devicesByPath;
+}
+
 export function openViewWhenLanded(opts: { trackPath: string; padPath: string; name: string }): () => void {
-	const chain = () => (opts.padPath ? selectedTrackStore.padDevices(opts.padPath) : selectedTrackStore.devicesByPath);
+	const rackChain = isRackChainTarget(opts.padPath);
+	const chain = () => devicesAtTarget(opts.padPath);
 	const before = chain().filter((d) => d.name === opts.name).length;
 	let done = false;
 	const stop = $effect.root(() => {
@@ -80,7 +97,7 @@ export function openViewWhenLanded(opts: { trackPath: string; padPath: string; n
 			const device = matches.length > before ? matches[matches.length - 1] : null;
 			if (!device) return;
 			done = true;
-			openEffectView(device, { pickScope: opts.padPath || opts.trackPath, padScoped: !!opts.padPath });
+			openEffectView(device, { pickScope: (!rackChain && opts.padPath) || opts.trackPath, padScoped: !rackChain && !!opts.padPath });
 			queueMicrotask(cancel);
 		});
 	});

@@ -107,6 +107,10 @@ rack). A tap on a row chooses the chain shown
 (`rackFold.chainOf` / `selectChain`: Live's selected chain, the rack's
 `selected_chain` row, so it mirrors Live both ways), a tap on its
 lamp is the chain's on/off, and a drag up or down on the row is its volume.
+The chosen chain ends in its own + (`kind: 'add'`, `addToChain`), which
+sets `chainAddTarget` (`services/rackChains.svelte`) and opens the browser;
+`chainEffects` and the browser's effect drag load into that chain while the
+browser is up (`effectView.devicesAtTarget` watches it land).
 An open rack holds its `chain_devices` row (`services/rackChains.svelte`),
 which brings the chains and the devices' records
 (`selectedTrackStore.chainDevices`); a device inside a rack is a real device

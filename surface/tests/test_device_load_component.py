@@ -2031,3 +2031,44 @@ def test_load_into_track_replaces_the_instrument_a_track_holds():
     assert [d.name for d in track.devices] == ["Arpeggiator", "Wavetable", "Delay"]
     assert browser.calls == []
     assert (song.begins, song.ends) == (1, 1)
+
+
+# --- rack-chain-targeted loads: devicePath names a rack's chain (ADR-529) ---
+
+from tests.support.lom_fakes import FakeEffectRack
+
+
+def _rack_chain_rig():
+    """An Audio Effect Rack on track 0 with two chains, the second empty."""
+    rack = FakeEffectRack([FakeChain([FakeDevice("Delay", [FakeParam("Dry/Wet", 0.3)], type_=2, name="Delay")], name="A"), FakeChain([], name="B")])
+    track = FakeTrack([rack], "Shaker")
+    rack.canonical_parent = track
+    song = FakeSong(tracks=[track])
+    browser = StubBrowser(user_library=StubBrowserItem("User Library", children=[]))
+    rec = EmitRecorder()
+    comp = DeviceLoadComponent(song=song, browser=browser, emit=rec, user_library_base="")
+    return comp, song, rack, browser, rec
+
+
+def test_rack_chain_load_inserts_a_native_device_into_that_chain():
+    comp, song, rack, browser, rec = _rack_chain_rig()
+    comp.handle_load(_native("tracks/0/devices/0/chains/1", "Delay", "Delay"), None)
+    assert rack.chains[1].inserts == [("Delay", None)]
+    assert [d.name for d in rack.chains[1].devices] == ["Delay"]
+    assert [d.name for d in rack.chains[0].devices] == ["Delay"]  # the other chain untouched
+    assert browser.calls == [] and rec.errors() == []
+
+
+def test_rack_chain_load_refuses_a_chain_the_rack_does_not_have():
+    comp, _song, rack, _browser, rec = _rack_chain_rig()
+    comp.handle_load(_native("tracks/0/devices/0/chains/5", "Delay", "Delay"), None)
+    assert rack.chains[1].inserts == []
+    (address, code, _path, detail), = rec.errors()
+    assert code == "device-slot-invalid" and detail.endswith(";scope=tracks/0/devices/0/chains/5")
+
+
+def test_rack_chain_load_must_sit_on_the_named_track():
+    comp, _song, rack, _browser, rec = _rack_chain_rig()
+    comp.handle_load(["tracks/1", "tracks/0/devices/0/chains/1", "", "native:Delay", "Delay"], None)
+    assert rack.chains[1].inserts == []
+    assert rec.errors()[0][1] in ("device-slot-invalid", "track-not-found")

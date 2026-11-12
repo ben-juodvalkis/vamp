@@ -12,6 +12,7 @@
  * folder (ADR-498, `effectSources`).
  */
 import { addPresetToChain } from '$lib/services/deviceMoveService';
+import { chainAddTarget } from '$lib/services/rackChains.svelte';
 import { activeDrumRackScope } from '$lib/services/deviceViewRouter.svelte';
 import { openViewWhenLanded } from '$lib/services/effectView.svelte';
 import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
@@ -46,15 +47,18 @@ export function fitsSelectedTrack(effect: Pick<ChainEffect, 'kind'>): boolean {
 }
 
 /**
- * Add an effect to the selected track's chain, or the scoped pad's; its
+ * Add an effect to the selected track's chain, the scoped pad's, or the rack
+ * chain the chain's own + chose (ADR-529); its
  * view opens once Live reports the device.
  */
 export async function addEffectToChain(effect: ChainEffect): Promise<void> {
 	const trackPath = selectedTrackStore.selectedTrackPath;
 	const pad = trackHoldScope.active ? null : activeDrumRackScope();
+	// A rack's chain the chain's own + chose (ADR-529), else the pad's, else the track's.
+	const target = chainAddTarget.path ?? pad?.padPath ?? '';
 	if (!trackPath) return reportFailure(effect.name, new Error('No track selected'));
 	if (!fitsSelectedTrack(effect)) return reportFailure(effect.name, new Error('A MIDI effect goes on a MIDI track'));
-	const cancelView = openViewWhenLanded({ trackPath, padPath: pad?.padPath ?? '', name: effect.name });
+	const cancelView = openViewWhenLanded({ trackPath, padPath: target, name: effect.name });
 	try {
 		// A type loads as its tile does: one of the user's effects from the
 		// effects folder, by name (ADR-498); a Live device by name sends no file (3.12.0).
@@ -63,7 +67,7 @@ export async function addEffectToChain(effect: ChainEffect): Promise<void> {
 		if (config?.effect && !found) throw new Error('Not in your effects folder (Settings → Places)');
 		const { source, rel } = found ?? effect;
 		const file = effect.preset ? (found?.presetPath || config?.presetPath || '') : nativeClassOf(effect) ? '' : effect.fullPath;
-		await addPresetToChain(trackPath, pad?.padPath ?? '', file, source, rel);
+		await addPresetToChain(trackPath, target, file, source, rel);
 	} catch (err) {
 		cancelView();
 		logger.error('Effect load failed', { component: 'chainEffects', err });

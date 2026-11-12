@@ -58,7 +58,7 @@
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import ChainListFace from './chain/ChainListFace.svelte';
-  import { CHAIN_DEVICES, SHOW_DEVICES, SELECTED_CHAIN, chainDevicePathOf, isChainRack, rackChainsOf, rackFold, setChainSwitch, setChainVolume, type RackChain } from '$lib/services/rackChains.svelte';
+  import { CHAIN_DEVICES, SHOW_DEVICES, SELECTED_CHAIN, chainAddTarget, chainDevicePathOf, chainPathOf, isChainRack, rackChainsOf, rackFold, setChainSwitch, setChainVolume, type RackChain } from '$lib/services/rackChains.svelte';
   import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
   import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
   import { setContext } from 'svelte';
@@ -176,7 +176,7 @@
     /** Where Live has it now. */
     path: string;
     device: DeviceRecord;
-    kind: 'instrument' | 'rack' | 'max' | 'plugin' | 'effect' | 'chains';
+    kind: 'instrument' | 'rack' | 'max' | 'plugin' | 'effect' | 'chains' | 'add';
     presetKey: string | null;
     tile: string | null;
     ink: string;
@@ -318,7 +318,7 @@
   const ROW_UNITS = 12;
   function unitsOf(cell: Cell): number {
     // The chain list is a slider's width (the user, 2026-11-12).
-    if (cell.kind === 'chains') return 1;
+    if (cell.kind === 'chains' || cell.kind === 'add') return 1;
     if (cell.kit || isMidiWheels(cell.device)) return 1;
     return cell.presetKey && controlFor(cell.presetKey)?.kind === 'slider' ? 1 : 2;
   }
@@ -491,6 +491,8 @@
       };
       expand(nested, depth + 1, out);
     });
+    // The chain's own + (the user, 2026-11-12): a browser pick lands in it.
+    out.push({ ...listCell(cell), key: `${cell.key}|c${chosen.index}|add`, kind: 'add', path: chainPathOf(rackPath, chosen.index), inside });
   }
   function listCell(rack: Cell): Cell {
     return { ...rack, key: `${rack.key}|chains`, kind: 'chains', tile: null, presetKey: null, foldable: false, kit: false };
@@ -914,9 +916,21 @@
    */
   function addEffect() {
     swallowNextClick();
+    chainAddTarget.clear();
     if (padScope) drumPadScope.latch(padScope.rackPath, padScope.note);
     browserModeStore.openEffectsBrowser();
   }
+
+  /** The chain's own +: the browser on Effect, its picks into that chain (ADR-529). */
+  function addToChain(chainPath: string) {
+    swallowNextClick();
+    chainAddTarget.set(chainPath);
+    browserModeStore.openEffectsBrowser();
+  }
+  // A chain is the target only while the browser it opened is up.
+  $effect(() => {
+    if (!browserModeStore.isInstrumentPersistent) untrack(() => chainAddTarget.clear());
+  });
 
   /** `fromControl`: the press landed on the cell's control, not its frame. */
   function open(cell: Cell, fromControl = false) {
@@ -1070,6 +1084,22 @@
   bind:this={chainEl}
 >
   {#each drawn as cell, position (cell.key)}
+    {#if cell.kind === 'add'}
+    <button
+      type="button"
+      class="chain-add chain-add-inner"
+      class:targeted={chainAddTarget.path === cell.path}
+      style="--rack-ink: {cell.inside?.ink ?? cell.ink};{levelOf(cell) ? ` margin-top: ${levelOf(cell) * ARM_STEP}px;` : ''}"
+      style:grid-column={layout.places[position] ? `${layout.places[position].col + 1} / span ${layout.places[position].span}` : undefined}
+      style:grid-row={layout.places[position] ? `${layout.places[position].row + 1}` : undefined}
+      aria-label="Add an effect to {cell.inside?.chain.name || 'the chain'}"
+      data-debug="chain-add-inner"
+      data-chain-path={cell.path}
+      use:press={{ onPress: () => addToChain(cell.path), touchAction: 'none' }}
+    >
+      <span class="chain-add-plus" aria-hidden="true"><Plus /></span>
+    </button>
+    {:else}
     <div
       class="chain-cell"
       class:off={!isOn(cell)}
@@ -1112,6 +1142,7 @@
     >
       {@render cellBody(cell, position)}
     </div>
+    {/if}
   {/each}
   {#each arms as arm (arm.key)}
     <button
@@ -1262,6 +1293,19 @@
     color: var(--foreground);
   }
   .chain-add:active > span {
+    opacity: 1;
+  }
+  /* A chain's own + (ADR-529): the dashed ghost in the rack's ink, lit
+     while the browser it opened is adding to that chain. */
+  .chain-add-inner {
+    border-color: color-mix(in oklab, var(--rack-ink) 60%, var(--ghost-line-strong));
+    color: var(--rack-ink);
+  }
+  .chain-add-inner.targeted {
+    border-style: solid;
+    background: color-mix(in oklab, var(--rack-ink) 18%, transparent);
+  }
+  .chain-add-inner.targeted > span {
     opacity: 1;
   }
   /* A big +, as tall as the tile allows (the user, 2026-11-05). */

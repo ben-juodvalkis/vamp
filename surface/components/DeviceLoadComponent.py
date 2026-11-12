@@ -63,9 +63,13 @@ from .drum_vm_functions import (
 )
 from .path_resolver import (
     ResolveStatus,
+    PadRef,
     is_pad_scoped,  # pad-targeted loads, 3.8.0
+    is_rack_chain_path,  # rack-chain-targeted loads, ADR-529
     lom_id,
+    resolve_device,
     resolve_pad,
+    resolve_rack_chain,
     resolve_track,
 )
 
@@ -556,6 +560,21 @@ class DeviceLoadComponent:
             pad_ref = self._resolve_pad_target(device_path, preset_path)
             if pad_ref is None:
                 return  # error already emitted
+        elif device_path and is_rack_chain_path(device_path):
+            # ADR-529: INTO a rack's chain, the pad route with the chain for
+            # the pad (``pad`` None: the rack's selected chain is set instead).
+            if not device_path.startswith(track_path.rstrip("/") + "/devices/"):
+                self._emit_error(
+                    V3_ERROR_DEVICE_SLOT_INVALID,
+                    path=preset_path,
+                    detail="chain-not-on-track: %r is not on %r;scope=%s" % (
+                        device_path, track_path, device_path,
+                    ),
+                )
+                return
+            pad_ref = self._resolve_rack_chain_target(device_path, preset_path)
+            if pad_ref is None:
+                return  # error already emitted
         elif device_path and not self._validate_device_path(
             device_path, track,
         ):
@@ -858,6 +877,23 @@ class DeviceLoadComponent:
         )
         return None
 
+    def _resolve_rack_chain_target(self, device_path: str, preset_path: str):
+        """``…/devices/<N>/chains/<i>`` → a :class:`PadRef` with no pad (the
+        rack, its path and the chain), or ``None`` after emitting
+        ``device-slot-invalid``."""
+        r = resolve_rack_chain(self._song, device_path)
+        rack_path = device_path.rsplit("/", 2)[0]
+        rack = resolve_device(self._song, rack_path) if r.status is ResolveStatus.OK else None
+        if r.status is ResolveStatus.OK and rack is not None and rack.status is ResolveStatus.OK:
+            return PadRef(rack=rack.obj, rack_path=rack_path, note=-1, pad=None, chain=r.obj)
+        status = r if r.status is not ResolveStatus.OK else rack
+        self._emit_error(
+            V3_ERROR_DEVICE_SLOT_INVALID,
+            path=preset_path,
+            detail=f"{status.status.value}: {status.detail or ''};scope={device_path}",
+        )
+        return None
+
     def _load_into_pad(self, track, pad_ref, pad_path: str, preset_path: str, item) -> None:
         """Load ``item`` into a pad's chain, Live's own way (issue #491),
         and place it as soon as Live has inserted it (ADR-437).
@@ -903,10 +939,15 @@ class DeviceLoadComponent:
         try:
             self._song.view.selected_track = track
             try:
-                pad_ref.rack.view.selected_drum_pad = pad_ref.pad
+                if pad_ref.pad is not None:
+                    pad_ref.rack.view.selected_drum_pad = pad_ref.pad
+                else:
+                    # A rack's chain (ADR-529): Live shows, and loads beside,
+                    # the selected chain's devices.
+                    pad_ref.rack.view.selected_chain = pad_ref.chain
             except _LOM_ERRORS as e:
                 logger.warning(
-                    "DeviceLoadComponent: selected_drum_pad write raised for %s: %s",
+                    "DeviceLoadComponent: selecting the pad or chain raised for %s: %s",
                     pad_path, e,
                 )
             chain_devices = _devices_of(chain)

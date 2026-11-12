@@ -17,7 +17,7 @@ import { resolveParam, type Writes } from '$lib/components/v6/device-panel/devic
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
 import { addPresetToChain } from './deviceMoveService';
-import { openEffectView } from './effectView.svelte';
+import { devicesAtTarget, isRackChainTarget, openEffectView } from './effectView.svelte';
 import { logger } from '$lib/utils/logger';
 
 const LAND_TIMEOUT_MS = 5000;
@@ -53,7 +53,9 @@ export function startPresetDrag(opts: {
 	name: string;
 	values: Writes;
 }): PresetDrag {
-	const chain = () => (opts.padPath ? selectedTrackStore.padDevices(opts.padPath) : selectedTrackStore.devicesByPath);
+	// A pad, a rack's chain (ADR-529) or the track.
+	const rackChain = isRackChainTarget(opts.padPath);
+	const chain = () => devicesAtTarget(opts.padPath);
 	const before = chain().filter((d) => d.className === opts.className && d.name === opts.name).length;
 	let pending = opts.values;
 	const written: Record<number, number> = {};
@@ -79,7 +81,7 @@ export function startPresetDrag(opts: {
 			if (!device) return;
 			landedPath = device.devicePath;
 			// Its view follows the load, as a tap's does (`openViewWhenLanded`).
-			openEffectView(device, { pickScope: opts.padPath || opts.trackPath, padScoped: !!opts.padPath });
+			openEffectView(device, { pickScope: (!rackChain && opts.padPath) || opts.trackPath, padScoped: !rackChain && !!opts.padPath });
 			flush();
 			if (ended) dispose();
 		});

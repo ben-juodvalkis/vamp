@@ -121,6 +121,33 @@ export const SHOW_DEVICES = 'show_devices';
  * subscribed for the rack (the chain overview holds it for every rack it
  * draws); before its first answer the rack reads folded.
  */
+// ===== Adding to a chain =====
+
+let addTarget = $state<string | null>(null);
+
+/**
+ * The chain a browser pick lands in (ADR-529): set by the + at the end of an
+ * unfolded rack's chosen chain, which opens the browser; cleared when the
+ * browser closes (the chain overview watches it) or the top-level + opens it.
+ * While set, effect picks go into that chain instead of the track's.
+ */
+export const chainAddTarget = {
+	get path(): string | null {
+		return addTarget;
+	},
+	set(chainPath: string): void {
+		addTarget = chainPath;
+	},
+	clear(): void {
+		addTarget = null;
+	}
+};
+
+/** `tracks/0/devices/1/chains/2` → `tracks/0/devices/1`. */
+export function rackPathOfChain(chainPath: string): string {
+	return chainPath.replace(/\/chains\/\d+$/, '');
+}
+
 /** The chain Live shows a rack's devices for, by index (ADR-529). */
 export const SELECTED_CHAIN = 'selected_chain';
 

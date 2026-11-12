@@ -74,6 +74,7 @@
 	import BrowserWheelsFace from './BrowserWheelsFace.svelte';
 	import { startPresetDrag, type PresetDrag } from '$lib/services/presetDragLoad.svelte';
 	import { addEffectToChain, type ChainEffect } from '$lib/services/chainEffects.svelte';
+	import { chainAddTarget } from '$lib/services/rackChains.svelte';
 	import type { Writes } from '$lib/components/v6/device-panel/deviceControls';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { sectionInks } from './utils/sectionInks';
@@ -1007,10 +1008,12 @@
 		}
 		const pad = trackHoldScope.active ? null : activeDrumRackScope();
 		browserNavigationStore.loadedPresetPath = preset.path;
+		// A rack's chain the chain's own + chose (ADR-529), else the pad's, else the track's.
+		const target = chainAddTarget.path ?? pad?.padPath ?? '';
 		const [source, rel] = placeArgs(preset);
 		return startPresetDrag({
 			trackPath,
-			padPath: pad?.padPath ?? '',
+			padPath: target,
 			presetPath: preset.fullPath,
 			source,
 			rel,

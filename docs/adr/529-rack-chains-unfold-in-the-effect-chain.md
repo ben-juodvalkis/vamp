@@ -66,6 +66,14 @@ Live.
   ("Rack needs at least 2 chains to show in-line mixer", `can_show_chains`
   False); `view.is_collapsed` (the device's own fold triangle) is not
   mirrored.
+- **A chain has its own +.** After the chosen chain's devices, inside the
+  rack's arm, a + in the rack's ink opens the browser on Effect with that
+  chain as the target: picks and drags load into the chain (`device/load`
+  with the chain's path; a native device inserted by name, a file through
+  Live's browser with the chain selected and the track's insert mode beside
+  the selection, the pad route) and the device's view opens when it lands.
+  The target lasts while that browser is open; the chain overview's own +
+  at the end opens it for the track, as before.
 - **A chain row is a small fader.** The lamp at its left is the chain's
   activator (Live's chain mute), a tap there switching it; the row shows
   the chain's volume as a fill in its colour from the left edge, with a

@@ -317,6 +317,12 @@ def resolve_rack_chain(song, path: str) -> ResolveResult:
     return ResolveResult(ResolveStatus.OK, obj=chains[chain_idx])
 
 
+def is_rack_chain_path(path: str) -> bool:
+    """Whether ``path`` names a rack's chain itself (``…/chains/<M>``)."""
+    parts = _split(path)
+    return bool(parts) and len(parts) >= 4 and parts[-2] == _SEGMENT_CHAINS
+
+
 def compose_rack_chain_path(rack_path: str, chain_index: int) -> str:
     """``tracks/1/devices/2`` + 0 → ``tracks/1/devices/2/chains/0`` (3.13.0)."""
     return "%s/%s/%d" % (rack_path, _SEGMENT_CHAINS, chain_index)
