@@ -94,6 +94,23 @@ its line shows the fader. Bass rests at 0 rather than the 1.0 the preset
 stores: a cold slot at the ceiling painted the whole cell solid, which reads
 as a lit state. The rest value is only the cold read.
 
+### Racks unfold, like Group Tracks (ADR-529)
+
+An Audio Effect, Instrument or MIDI Effect Rack's cell has a fold chevron
+(right folded, down open). Open, every chain follows it: a chain cell
+(`chain/ChainStripFace`; its name a tap for the chain's on/off, a vertical
+drag anywhere on it for the chain's volume) and then that chain's devices,
+each an ordinary cell. The rack's arm runs over its chains, each chain's arm
+over its devices, nested racks a level lower (`expand`, `arms` and
+`chainHeld` in `ChainOverview`). An open rack holds its `chain_devices` row
+(`services/rackChains.svelte`), which brings the chains and the devices'
+records (`selectedTrackStore.chainDevices`); a device inside a rack is a
+real device everywhere, and a tap makes it its type's pick, so its view
+controls it (`fxGridStore.getSlot` admits a picked rack-chain device). A
+face must not overflow its cell: a short nested cell's glyph once covered
+its own header and swallowed the chevron's taps, so the header sits above
+the face and `.cell-face` clips.
+
 ### Parameter reads (post-ADR-359)
 
 **Read with `paramValueArmed`, not `paramValue`. No component-local `$state` shadows.**

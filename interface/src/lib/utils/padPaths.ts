@@ -9,9 +9,10 @@
  *   paramRef  := deviceRef "/params/" index
  *
  * `tracks/1/devices/0/pads/38/devices/1/params/4` is pad 38's second
- * device's fifth parameter. Note-keyed rather than the reserved
- * `chains/<index>`, because a rack's flat chain list re-indexes whenever
- * a pad gains a chain, while every per-pad row already keys on the note.
+ * device's fifth parameter. Note-keyed rather than `chains/<index>` (every
+ * other rack's form since 3.13.0, ADR-529), because a Drum Rack's flat chain
+ * list re-indexes whenever a pad gains a chain, while every per-pad row
+ * already keys on the note.
  */
 
 const PAD_SEGMENT = '/pads/';

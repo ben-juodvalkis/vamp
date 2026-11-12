@@ -7,11 +7,11 @@
  * the devices' records as a `rack-chain` bundle (`selectedTrackStore
  * .chainDevices`). It is subscribed while the rack is unfolded on screen.
  *
- * Folding is this client's own state, like Live's per-rack chain list:
- * which racks are open and which chain each shows. Keyed by the rack's
- * device path, so a rack that moves in Live comes back folded.
+ * Folding is this client's own state: which racks are open, keyed by the
+ * rack's device path, so a rack that moves in Live comes back folded. An
+ * open rack shows every chain.
  */
-import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+import { SvelteSet } from 'svelte/reactivity';
 import type { OSCArg } from '$lib/types/osc';
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { CHAIN_RACK_CLASSES } from '$lib/stores/v3/normalized.svelte';
@@ -111,7 +111,6 @@ export function setChainSwitch(rackPath: string, chainIndex: number, field: 'mut
 // ===== Folding =====
 
 const unfolded = new SvelteSet<string>();
-const selectedChain = new SvelteMap<string, number>();
 
 export const rackFold = {
 	isOpen(rackPath: string): boolean {
@@ -125,19 +124,11 @@ export const rackFold = {
 			unfolded.add(rackPath);
 		}
 	},
-	/** The chain the rack shows: the one chosen, else the first. */
-	chainOf(rackPath: string): number {
-		return selectedChain.get(rackPath) ?? 0;
-	},
-	selectChain(rackPath: string, chainIndex: number): void {
-		selectedChain.set(rackPath, chainIndex);
-	},
 	/** Every rack open on screen (for the subscriptions). */
 	get open(): string[] {
 		return [...unfolded];
 	},
 	clear(): void {
 		unfolded.clear();
-		selectedChain.clear();
 	}
 };

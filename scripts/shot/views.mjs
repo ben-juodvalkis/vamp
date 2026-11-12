@@ -308,22 +308,21 @@ export const TOURS = {
 			},
 			{
 				name: 'chain-rack-unfolded',
-				description: 'A rack unfolded (ADR-529): its chain list beside it, the Echoes chain chosen, its devices inline in the rack ink',
+				description: 'A rack unfolded (ADR-529): every chain a strip-like cell, its devices under the chain\'s arm, all under the rack\'s arm',
 				scenePatch: chainDemo,
 				steps: [
 					openInstrument(CHAIN_DEMO_TRACK),
-					{ click: `${chainCell(5)} .cell-fold` },
-					{ click: '[data-debug="chain-list"] [data-chain-index="1"]' }
+					{ click: `${chainCell(5)} .cell-fold` }
 				]
 			},
 			{
 				name: 'chain-rack-nested',
-				description: 'A rack inside the unfolded rack, unfolded in turn: its own chain list and devices after it',
+				description: 'A rack inside the unfolded rack, unfolded in turn: its own chain and devices after it, a level lower',
 				scenePatch: chainDemo,
 				steps: [
 					openInstrument(CHAIN_DEMO_TRACK),
 					{ click: `${chainCell(5)} .cell-fold` },
-					{ click: '[data-debug="chain-list"] [data-chain-index="1"]' },
+					{ wait: 800 },
 					{ click: `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/5/chains/1/devices/2"] .cell-fold` }
 				]
 			},
@@ -334,7 +333,6 @@ export const TOURS = {
 				steps: [
 					openInstrument(CHAIN_DEMO_TRACK),
 					{ click: `${chainCell(5)} .cell-fold` },
-					{ click: '[data-debug="chain-list"] [data-chain-index="1"]' },
 					{ click: `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/5/chains/1/devices/0"] .cell-head` },
 					{ click: `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/5/chains/1/devices/0"] .cell-head` },
 					{ click: `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/5/chains/1/devices/2"] .mark, [data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/5/chains/1/devices/2"] .cell-face` }
@@ -347,7 +345,6 @@ export const TOURS = {
 				steps: [
 					openInstrument(CHAIN_DEMO_TRACK),
 					{ click: `${chainCell(5)} .cell-fold` },
-					{ click: '[data-debug="chain-list"] [data-chain-index="2"]' },
 					{ click: `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/5/chains/2/devices/1"] .mark` }
 				]
 			},

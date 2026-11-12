@@ -116,8 +116,5 @@ describe('the chain_devices row and folding', () => {
 		expect(rackFold.open.sort()).toEqual([RACK, INNER].sort());
 		rackFold.toggle(RACK);
 		expect(rackFold.open).toEqual([]);
-		expect(rackFold.chainOf(RACK)).toBe(0);
-		rackFold.selectChain(RACK, 2);
-		expect(rackFold.chainOf(RACK)).toBe(2);
 	});
 });

@@ -36,22 +36,28 @@ Live.
   Three writable rows per chain: `chain.<i>.mute`, `chain.<i>.solo` and
   `chain.<i>.volume` (the chain's mixer volume, 0..1, 0.85 = 0 dB).
 - **The chain overview unfolds a rack the way the strips row unfolds a
-  Group Track (ADR-410, ADR-413).** A rack's cell carries a chevron at the
-  right end of its header bar, right while folded and down while open, as a
-  group strip's is (the rest of the bar's tap stays Device On). Unfolded,
-  the rack's outline grows an **arm** — the group panhandle's material in
-  the rack's ink — sideways over everything the unfold draws, which hangs
-  below the arm with a gap and keeps its own outline; a tap on the arm folds
-  the rack. Under the arm come the rack's **chain list** (a cell of rows in
-  the chains' colours; a tap chooses the chain shown, the lamp is its
-  activator, and a slim fader under each name is the chain's volume — a
-  sideways drag, two fader widths for the whole range, a tick at 0 dB) when it has more than one chain, then **the chosen chain's
-  devices** as ordinary cells with their usual faces; an empty chain shows
-  an "Empty" place. A rack among them unfolds the same way, one step lower,
-  its arm stacked under its parent's; where the unfold wraps to the chain's
-  second row the arm continues there. Folding a rack folds the racks inside
-  it. Which racks are open and which chain each shows is this client's own
-  state, keyed by the rack's path.
+  Group Track (ADR-410, ADR-413), nested.** A rack's cell carries a chevron
+  at the right end of its header bar, right while folded and down while
+  open, as a group strip's is (the rest of the bar's tap stays Device On).
+  Unfolded, **every chain** follows the rack, in order: a **chain cell**,
+  then that chain's devices as ordinary cells with their usual faces. The
+  rack's outline grows an **arm** — the group panhandle's material in the
+  rack's ink — over all its chains, and each chain cell grows its own arm,
+  in the chain's colour, over its devices; what an arm covers hangs below it
+  with a gap and keeps its own outline, so the nesting reads as the strips
+  row's groups do. A rack among the devices unfolds the same way, a level
+  lower, its arms stacked under its parents'; where the unfold wraps to the
+  chain's second row the arms continue there. A tap on a rack's arm folds
+  it; folding a rack folds the racks inside it. Which racks are open is
+  this client's own state, keyed by the rack's path.
+- **A chain cell is a small track strip.** Its header is the chain's name
+  in its colour; a tap there is the chain's activator (Live's chain mute),
+  as a tap on a strip's name mutes the track, and a switched-off chain wears
+  the bypassed look. Its body draws the chain's volume as a strip draws its
+  fader — a wash from the foot, edge ticks at the level, a hairline at 0 dB
+  — and a **vertical drag anywhere on the cell, the name included**, sets
+  the volume: relative, one cell height for the whole range, never a jump on
+  touch-down.
 - **A device inside a rack is itself everywhere it is drawn.** Its cell's
   control writes its own parameters (a device handed to a tile is never a
   ghost, so a drag can never load a second copy onto the track), and a tap
@@ -70,8 +76,11 @@ Live.
 - A rack's devices never enter the whole-song tree: an unfolded rack costs
   one row and one bundle, and its listeners exist only while it is open.
   Up to 512 parameter listeners per rack.
-- The chain list's selection is local, not Live's `selected_chain`: two
-  clients cannot fight over it, and Live's own view does not follow it.
+- A rack of many chains takes the room of all of them: the chain wraps to
+  its second row sooner and every cell narrows. Fold what is not in use.
+- An earlier cut the same day showed one chain at a time beside a chain
+  list (Live's own device view); Ben asked for every chain's devices and the
+  group grammar, and the list went.
 - Chain pan and the chain selector's zones are not drawn; solo has a write
   but no control yet. Each volume frame is its own `property/set`, and Live
   takes each as an undo step, as it does a parameter drag.
