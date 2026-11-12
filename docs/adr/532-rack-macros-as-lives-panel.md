@@ -36,7 +36,9 @@ central view, and for the variations down the left.
 - **The Instrument Rack view keeps its XY pads** where a rack pairs macros
   by the "XY " name prefix; any other rack draws Live's panel there.
 - **The variations are a column down the left** of both rack views: the
-  variation buttons top to bottom, Store and Rand at the foot.
+  variation buttons top to bottom. Store and Rand were dropped from the view
+  the same day (Ben); the surface keeps `variation.store` and
+  `variation.randomize`, unused.
 
 ## Consequences
 

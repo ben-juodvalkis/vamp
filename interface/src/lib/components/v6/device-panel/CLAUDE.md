@@ -132,8 +132,8 @@ rows (compact knobs in a short cell), and "+N" counts the named macros left
 out (`rackMacroWindow`). A Pattern Rack keeps its mark; the Instrument Rack
 view keeps its XY pads for a rack that pairs macros by the "XY " prefix.
 Both rack views carry the rack's variations down the left
-(`central/RackVariations`, ADR-531): a tap recalls, a hold deletes, Store and
-Rand; names from the rack's preset file (`/api/rack-variations`).
+(`central/RackVariations`, ADR-531): a tap recalls, a hold deletes (no Store or
+Rand); names from the rack's preset file (`/api/rack-variations`).
 
 ### Parameter reads (post-ADR-359)
 

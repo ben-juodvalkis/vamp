@@ -26,8 +26,8 @@
    * A rack's macro variations (ADR-531), as Live's variation panel, a
    * column down the left of the rack's view: one
    * button per stored variation, the one last recalled lit; a tap recalls
-   * it, a hold deletes it. Store keeps the macros as a new variation, Rand
-   * randomizes them. Live's Python API names none of them, so the names
+   * it, a hold deletes it (no Store or Rand here: Ben, 2026-11-12, though
+   * the surface keeps both verbs). Live's Python API names none of them, so the names
    * are read from the preset file the rack is named after
    * (`/api/rack-variations`), and only while it holds as many variations
    * as Live does; otherwise they are numbered.
@@ -35,8 +35,6 @@
   import { untrack } from 'svelte';
   import { press } from '$lib/actions/press';
   import { selectedTrackStore, type DeviceRecord } from '$lib/stores/v6/selectedTrackStore.svelte';
-  import Dices from '@lucide/svelte/icons/dices';
-  import Plus from '@lucide/svelte/icons/plus';
 
   interface Props {
     rack: DeviceRecord;
@@ -104,17 +102,11 @@
     {/each}
     {#if count === 0}<span class="none">None stored</span>{/if}
   </div>
-  <button type="button" class="action" data-debug="variation-store" aria-label="Store the macros as a new variation" use:press={{ onPress: () => write('variation.store', 1) }}>
-    <Plus size={16} /> Store
-  </button>
-  <button type="button" class="action" data-debug="variation-randomize" aria-label="Randomize the macros" use:press={{ onPress: () => write('variation.randomize', 1) }}>
-    <Dices size={16} /> Rand
-  </button>
 </div>
 
 <style>
   /* A column down the left of the rack's view (Ben, 2026-11-12): the caption,
-     the variations top to bottom, Store and Rand at its foot. */
+     the variations top to bottom. */
   .rack-variations {
     display: flex;
     flex-direction: column;
@@ -142,8 +134,7 @@
     text-align: center;
     padding-top: 0.5rem;
   }
-  .variation,
-  .action {
+  .variation {
     min-height: var(--height-touch, 44px);
     padding: 0 0.5rem;
     border: 1px solid var(--line-strong);
@@ -162,13 +153,5 @@
     background: var(--var-ink);
     color: var(--flat-on-fg, #111);
     border-color: var(--var-ink);
-  }
-  .action {
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.375rem;
-    color: var(--foreground);
   }
 </style>

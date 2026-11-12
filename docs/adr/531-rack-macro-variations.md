@@ -1,7 +1,7 @@
 # ADR-531: A rack's macro variations, in its central view
 
 ## Status
-**Accepted** (2026-11-12); the variations moved to a column on the left of the macros by ADR-532. Needs a Live restart (new surface rows). Builds
+**Accepted** (2026-11-12); the variations moved to a column on the left of the macros by ADR-532, which also dropped Store and Rand from the view. Needs a Live restart (new surface rows). Builds
 on ADR-529 and ADR-530.
 
 ## Context
