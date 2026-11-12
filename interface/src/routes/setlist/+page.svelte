@@ -178,8 +178,6 @@
 		grid-template-rows: repeat(4, 1fr);
 		gap: 2vh 1.3vw;
 		min-height: 0;
-		/* The right edge stays free for the chain volume. */
-		margin-right: 7.5%;
 	}
 	.empty {
 		border: 1px solid color-mix(in srgb, var(--color) 30%, #000);
