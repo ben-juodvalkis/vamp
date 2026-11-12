@@ -66,12 +66,12 @@
 		<button
 			aria-label="Octave down"
 			disabled={setlist.octave === null || setlist.octave <= -2}
-			onpointerdown={() => stepOctave(-1)}>−</button
+			onpointerdown={() => stepOctave(-1)}></button
 		>
 		<button
 			aria-label="Octave up"
 			disabled={setlist.octave === null || setlist.octave >= 2}
-			onpointerdown={() => stepOctave(1)}>+</button
+			onpointerdown={() => stepOctave(1)}></button
 		>
 		<!-- Over the seam, so the two buttons share the whole width. -->
 		<span class:shifted={!!setlist.octave}
@@ -158,15 +158,6 @@
 		background: #003a32;
 		color: #00c4a8;
 		border-radius: 8px;
-		font-size: 4vh;
-		line-height: 1;
-		padding: 0 6%;
-	}
-	.octave button:first-child {
-		text-align: left;
-	}
-	.octave button:nth-child(2) {
-		text-align: right;
 	}
 	.octave button:disabled {
 		opacity: 0.35;
