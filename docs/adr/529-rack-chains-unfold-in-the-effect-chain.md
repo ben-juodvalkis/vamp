@@ -48,8 +48,20 @@ Live.
   row's groups do. A rack among the devices unfolds the same way, a level
   lower, its arms stacked under its parents'; where the unfold wraps to the
   chain's second row the arms continue there. A tap on a rack's arm folds
-  it; folding a rack folds the racks inside it. Which racks are open is
-  this client's own state, keyed by the rack's path.
+  it.
+- **The fold mirrors Live's own, both ways.** A rack is open exactly while
+  Live shows its chain devices — the rack's Show Devices toggle,
+  `RackDevice.View.is_showing_chain_devices`, carried as the rack's
+  writable `show_devices` row, which the chain overview holds for every rack
+  it draws. Unfolding in Vamp turns Show Devices on in Live, and Live's
+  chain list (`is_showing_chains`) with it where the rack allows one;
+  folding turns both off; toggling Show Devices in Live folds or unfolds
+  the rack here through its listener. Each rack keeps its own state, nested
+  ones included, as in Live. Measured on 12.4.25b1: both properties are
+  settable from Python; `is_showing_chains` refuses on a one-chain rack
+  ("Rack needs at least 2 chains to show in-line mixer", `can_show_chains`
+  False); `view.is_collapsed` (the device's own fold triangle) is not
+  mirrored.
 - **A chain cell is a small track strip.** Its header is the chain's name
   in its colour; a tap there is the chain's activator (Live's chain mute),
   as a tap on a strip's name mutes the track, and a switched-off chain wears
@@ -76,6 +88,9 @@ Live.
 - A rack's devices never enter the whole-song tree: an unfolded rack costs
   one row and one bundle, and its listeners exist only while it is open.
   Up to 512 parameter listeners per rack.
+- Because the fold is Live's, a rack Live shows unfolded (the default for
+  many saved racks) arrives unfolded here, and folding it on the iPad folds
+  it in Live, for every client and in the saved set.
 - A rack of many chains takes the room of all of them: the chain wraps to
   its second row sooner and every cell narrows. Fold what is not in use.
 - An earlier cut the same day showed one chain at a time beside a chain

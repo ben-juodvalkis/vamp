@@ -440,6 +440,12 @@ Key rules:
   property channel's structural invalidate and re-sends row and bundle; a
   rename, colour, mute, solo or volume change re-emits the row alone. Never republishes the
   song. The chain overview subscribes it while the rack is unfolded.
+- **`show_devices` — a rack's Show Devices toggle (ADR-529, 3.13.0).**
+  Writable `0|1` on the same three rack classes, same provider: Live's
+  `RackDevice.View.is_showing_chain_devices`, which the chain overview's
+  fold mirrors. While subscribed its listener echoes a change made in Live;
+  a write sets it, and the rack's `is_showing_chains` (Live's chain list) to
+  the same value where `can_show_chains` allows (two chains or more).
 - **`chain.<i>.mute` / `chain.<i>.solo` / `chain.<i>.volume` — a chain's
   activator, solo and volume (ADR-529, 3.13.0).** Writable: `0|1` for the
   switches, a float for the volume (the chain's `mixer_device.volume`,

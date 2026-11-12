@@ -770,6 +770,11 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 						// file names (its `ir_file_list` listener), measured.
 						const files = propertyName === 'ir_category_index' ? HYBRID_IR_LISTS.files[Math.round(Number(value))] : null;
 						if (files) send(ws, '/looping/v3/property/value', [devicePath, 'ir_file_list', JSON.stringify(files)]);
+						// A rack's Show Devices (ADR-529) stays as set, as Live's would.
+						if (propertyName === 'show_devices') {
+							const table = (resolved.deviceProperties ??= {});
+							table[devicePath] = { ...table[devicePath], show_devices: Number(value) ? 1 : 0 };
+						}
 						// A rack chain's switch or volume (ADR-529): the chain's
 						// listener re-emits the rack's row.
 						const field = /^chain\.(\d+)\.(mute|solo|volume)$/.exec(propertyName);

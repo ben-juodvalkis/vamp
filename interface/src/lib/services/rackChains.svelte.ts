@@ -7,11 +7,10 @@
  * the devices' records as a `rack-chain` bundle (`selectedTrackStore
  * .chainDevices`). It is subscribed while the rack is unfolded on screen.
  *
- * Folding is this client's own state: which racks are open, keyed by the
- * rack's device path, so a rack that moves in Live comes back folded. An
- * open rack shows every chain.
+ * Folding is Live's own: a rack is open while Live shows its devices (its
+ * Show Devices toggle, the `show_devices` row), so the two mirror each other.
+ * An open rack shows every chain.
  */
-import { SvelteSet } from 'svelte/reactivity';
 import type { OSCArg } from '$lib/types/osc';
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { CHAIN_RACK_CLASSES } from '$lib/stores/v3/normalized.svelte';
@@ -110,25 +109,22 @@ export function setChainSwitch(rackPath: string, chainIndex: number, field: 'mut
 
 // ===== Folding =====
 
-const unfolded = new SvelteSet<string>();
+/** Live's Show Devices toggle on a rack, which the fold mirrors (ADR-529). */
+export const SHOW_DEVICES = 'show_devices';
 
+/**
+ * A rack is open exactly while Live shows its chain devices: unfolding in
+ * Vamp shows them in Live (and the chain list, where the rack has two or
+ * more chains), and Live's own toggle unfolds it here. The row must be
+ * subscribed for the rack (the chain overview holds it for every rack it
+ * draws); before its first answer the rack reads folded.
+ */
 export const rackFold = {
 	isOpen(rackPath: string): boolean {
-		return unfolded.has(rackPath);
+		const v = selectedTrackStore.propertyValue(rackPath, SHOW_DEVICES);
+		return v === 1 || v === true;
 	},
 	toggle(rackPath: string): void {
-		if (unfolded.has(rackPath)) {
-			// Its racks fold with it.
-			for (const p of [...unfolded]) if (p === rackPath || p.startsWith(`${rackPath}/`)) unfolded.delete(p);
-		} else {
-			unfolded.add(rackPath);
-		}
-	},
-	/** Every rack open on screen (for the subscriptions). */
-	get open(): string[] {
-		return [...unfolded];
-	},
-	clear(): void {
-		unfolded.clear();
+		void selectedTrackStore.setPropertyValue(rackPath, SHOW_DEVICES, rackFold.isOpen(rackPath) ? 0 : 1);
 	}
 };

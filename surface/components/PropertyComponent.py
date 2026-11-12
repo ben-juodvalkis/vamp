@@ -152,6 +152,7 @@ from .RackChainNamesComponent import (
     RACK_CLASS_NAME as RACK_CHAINS_CLASS_NAME,
 )
 from .RackChainDevicesComponent import (
+    SHOW_DEVICES_KEY as RACK_SHOW_DEVICES_KEY,
     CHAIN_DEVICES_KEY as RACK_CHAIN_DEVICES_KEY,
     PROVIDER_NAME as RACK_CHAIN_DEVICES_PROVIDER,
     RACK_CLASS_NAMES as RACK_CHAIN_DEVICES_CLASSES,
@@ -641,6 +642,14 @@ ALLOWLIST[(RACK_CHAINS_CLASS_NAME, RACK_CHAIN_NAMES_PROPERTY)] = PropertySpec(
 ALLOWLIST.update({
     (_cls, RACK_CHAIN_DEVICES_KEY): PropertySpec(
         listener_path="", attr_name=RACK_CHAIN_DEVICES_KEY, writable=False,
+        computed=RACK_CHAIN_DEVICES_PROVIDER,
+    )
+    for _cls in RACK_CHAIN_DEVICES_CLASSES
+})
+# Live's Show Devices toggle on the same racks, which the fold mirrors.
+ALLOWLIST.update({
+    (_cls, RACK_SHOW_DEVICES_KEY): PropertySpec(
+        listener_path="", attr_name=RACK_SHOW_DEVICES_KEY, writable=True,
         computed=RACK_CHAIN_DEVICES_PROVIDER,
     )
     for _cls in RACK_CHAIN_DEVICES_CLASSES

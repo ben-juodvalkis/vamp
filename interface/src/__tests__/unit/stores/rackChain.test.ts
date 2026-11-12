@@ -11,6 +11,7 @@ import { SvelteMap } from 'svelte/reactivity';
 import {
 	_resetForTests,
 	applyParamValue,
+	applyPropertyValue,
 	chainDevicesAt,
 	chainRackOf,
 	invalidatePaths,
@@ -22,7 +23,7 @@ import {
 	type ParamRecord,
 	type TrackRecord
 } from '$lib/stores/v3/normalized.svelte';
-import { parseChainDevices, rackFold } from '$lib/services/rackChains.svelte';
+import { SHOW_DEVICES, parseChainDevices, rackFold } from '$lib/services/rackChains.svelte';
 import type { OSCArg } from '$lib/types/osc';
 
 const RACK = 'tracks/1/devices/2';
@@ -62,7 +63,6 @@ function track(rackClass = 'AudioEffectGroupDevice'): TrackRecord {
 beforeEach(() => {
 	_resetForTests();
 	replaceTree(3, [track()]);
-	rackFold.clear();
 });
 
 describe('the rack chain map', () => {
@@ -110,11 +110,11 @@ describe('the chain_devices row and folding', () => {
 		expect(parseChainDevices(undefined)).toBeNull();
 	});
 
-	it('folds a rack with the racks inside it', () => {
-		rackFold.toggle(RACK);
-		rackFold.toggle(INNER);
-		expect(rackFold.open.sort()).toEqual([RACK, INNER].sort());
-		rackFold.toggle(RACK);
-		expect(rackFold.open).toEqual([]);
+	it('reads a rack open exactly while Live shows its devices', () => {
+		expect(rackFold.isOpen(RACK)).toBe(false);
+		applyPropertyValue(RACK, SHOW_DEVICES, 1);
+		expect(rackFold.isOpen(RACK)).toBe(true);
+		applyPropertyValue(RACK, SHOW_DEVICES, 0);
+		expect(rackFold.isOpen(RACK)).toBe(false);
 	});
 });

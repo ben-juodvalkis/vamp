@@ -58,7 +58,7 @@
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import ChainStripFace from './chain/ChainStripFace.svelte';
-  import { CHAIN_DEVICES, CHAIN_UNITY, chainDevicePathOf, chainPathOf, isChainRack, rackChainsOf, rackFold, setChainSwitch, setChainVolume, type RackChain } from '$lib/services/rackChains.svelte';
+  import { CHAIN_DEVICES, SHOW_DEVICES, CHAIN_UNITY, chainDevicePathOf, chainPathOf, isChainRack, rackChainsOf, rackFold, setChainSwitch, setChainVolume, type RackChain } from '$lib/services/rackChains.svelte';
   import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
   import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
   import { setContext } from 'svelte';
@@ -557,6 +557,24 @@
     drawn.filter((c) => c.foldable && rackFold.isOpen(c.path)).map((c) => c.path)
   );
   const rackRows = new Map<string, () => void>();
+  // Every rack drawn follows Live's Show Devices toggle, open or not, so a
+  // rack unfolded in Live unfolds here (the fold mirrors it both ways).
+  const foldRows = new Map<string, () => void>();
+  const drawnRacks = $derived(drawn.filter((c) => c.foldable).map((c) => c.path));
+  $effect(() => {
+    const want = new Set(drawnRacks);
+    untrack(() => {
+      for (const [path, release] of [...foldRows]) {
+        if (!want.has(path)) {
+          release();
+          foldRows.delete(path);
+        }
+      }
+      for (const path of want) {
+        if (!foldRows.has(path)) foldRows.set(path, selectedTrackStore.subscribeProperty(path, SHOW_DEVICES));
+      }
+    });
+  });
   $effect(() => {
     const want = new Set(openRacks);
     untrack(() => {
@@ -574,6 +592,8 @@
   onDestroy(() => {
     for (const release of rackRows.values()) release();
     rackRows.clear();
+    for (const release of foldRows.values()) release();
+    foldRows.clear();
   });
 
   /*

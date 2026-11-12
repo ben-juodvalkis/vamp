@@ -1703,6 +1703,9 @@ function pushSlots(args, trackPath, clips) {
  * kit.
  */
 export const PROPERTY_DEFAULTS = Object.freeze({
+	// Every rack's Show Devices toggle (ADR-529): folded until a step
+	// unfolds it, which the mock echoes as Live's listener would.
+	show_devices: 0,
 	// Every Hybrid Reverb: Live's IR lists, its first IR, a fresh device's
 	// shaping (attack 0, decay at its 20 s top, size 100 %, shaping on).
 	ir_category_list: JSON.stringify(HYBRID_IR_LISTS.categories),

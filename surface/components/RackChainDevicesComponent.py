@@ -24,6 +24,12 @@ a client:
   value listener feeding the mutation fan-out with its composed path, so
   ``param/value`` echoes and writes work exactly as on a top-level device.
 
+A writable ``show_devices`` row (0/1) on the same racks is Live's Show
+Devices toggle (``view.is_showing_chain_devices``), which the chain overview's
+fold mirrors both ways: its listener echoes a change made in Live, and a
+write sets it, and the rack's chain list too where Live allows one (two
+chains or more).
+
 Three writable rows per chain, synthesised by ``PropertyComponent.spec_for``:
 ``chain.<i>.mute`` and ``chain.<i>.solo`` (0/1) — Live's chain activator and
 solo — and ``chain.<i>.volume``, the chain's mixer volume (0..1, 0.85 =
@@ -58,6 +64,9 @@ logger = logging.getLogger("looping")
 
 PROVIDER_NAME = "rack_chain_devices"
 CHAIN_DEVICES_KEY = "chain_devices"
+#: Live's Show Devices toggle on a rack (``view.is_showing_chain_devices``),
+#: which the chain overview's fold mirrors both ways.
+SHOW_DEVICES_KEY = "show_devices"
 CHAIN_DEVICES_PROPERTY = CHAIN_DEVICES_KEY
 #: The racks whose chains are reached by index (a Drum Rack's are by note).
 RACK_CLASS_NAMES = ("AudioEffectGroupDevice", "InstrumentGroupDevice", "MidiEffectGroupDevice")
@@ -187,6 +196,35 @@ class _RackState:
         self.structural = False
 
 
+def read_show_devices(rack) -> Optional[int]:
+    """1 while Live shows the rack's chain devices, 0 when not, ``None`` unread."""
+    view = _read(rack, "view")
+    if view is None:
+        return None
+    value = _read(view, "is_showing_chain_devices")
+    return None if value is None else _flag(value)
+
+
+def write_show_devices(rack, on: bool) -> Tuple[bool, str]:
+    """Set Live's Show Devices toggle, and its chain list where the rack has
+    the two chains Live needs for one (measured on 12.4.25b1: a one-chain
+    rack refuses ``is_showing_chains`` with "Rack needs at least 2 chains to
+    show in-line mixer", and ``can_show_chains`` reads False)."""
+    view = _read(rack, "view")
+    if view is None:
+        return False, "rack has no view"
+    try:
+        view.is_showing_chain_devices = bool(on)
+    except _LOM_ERRORS as e:
+        return False, str(e)
+    if bool(_read(rack, "can_show_chains", False)):
+        try:
+            rack.is_showing_chains = bool(on)
+        except _LOM_ERRORS:
+            pass
+    return True, ""
+
+
 class RackChainDevicesComponent:
     """Provider behind ``chain_devices`` and ``chain.<i>.{mute,solo}``.
 
@@ -215,6 +253,9 @@ class RackChainDevicesComponent:
         self._emit_rack_chain = emit_rack_chain
         self._on_param_value_changed = on_param_value_changed
         self._states: Dict[str, _RackState] = {}
+        # rack path -> (rack, view, callback) for every rack whose Show
+        # Devices toggle a client is following.
+        self._show_watch: Dict[str, Tuple[object, object, Callable[[], None]]] = {}
         self._disconnected = False
         self._warned: Set[Tuple[str, str]] = set()
         logger.info(
@@ -225,7 +266,12 @@ class RackChainDevicesComponent:
     # --- provider API -------------------------------------------------------
 
     def subscribe(self, device, device_path: str, function: str) -> None:
-        if self._disconnected or function != CHAIN_DEVICES_KEY:
+        if self._disconnected:
+            return
+        if function == SHOW_DEVICES_KEY:
+            self._watch_show_devices(device, device_path)
+            return
+        if function != CHAIN_DEVICES_KEY:
             return
         st = self._state_for(device, device_path)
         st.subscribed = True
@@ -234,6 +280,8 @@ class RackChainDevicesComponent:
     def unsubscribe(self, device_path: str, function: str) -> None:
         if function == CHAIN_DEVICES_KEY:
             self.release(device_path)
+        elif function == SHOW_DEVICES_KEY:
+            self._unwatch_show_devices(device_path)
 
     def release(self, device_path: str) -> None:
         st = self._states.pop(device_path, None)
@@ -246,6 +294,8 @@ class RackChainDevicesComponent:
         if function == CHAIN_DEVICES_KEY:
             self._send_bundle(device_path)
             return chains_json(device)
+        if function == SHOW_DEVICES_KEY:
+            return read_show_devices(device)
         field = parse_chain_field(function)
         if field is None:
             return None
@@ -257,6 +307,13 @@ class RackChainDevicesComponent:
         return _flag(_read(chains[field[0]], field[1], False))
 
     def write(self, device, device_path: str, function: str, value):
+        if function == SHOW_DEVICES_KEY:
+            try:
+                on = bool(int(value))
+            except (TypeError, ValueError):
+                return False, None, "expected 0 or 1"
+            ok, detail = write_show_devices(device, on)
+            return (True, 1 if on else 0, "") if ok else (False, None, detail)
         field = parse_chain_field(function)
         if field is None:
             return False, None, "%s is read-only" % function
@@ -303,6 +360,40 @@ class RackChainDevicesComponent:
         for st in list(self._states.values()):
             self._detach_all(st)
         self._states.clear()
+        for path in list(self._show_watch):
+            self._unwatch_show_devices(path)
+
+    # --- Live's Show Devices toggle ----------------------------------------------
+
+    def _watch_show_devices(self, rack, device_path: str) -> None:
+        self._unwatch_show_devices(device_path)
+        view = _read(rack, "view")
+        adder = getattr(view, "add_is_showing_chain_devices_listener", None) if view is not None else None
+        if not callable(adder):
+            return
+
+        def _on_show():
+            # A read and an emit; nothing is written in the notification.
+            if self._disconnected:
+                return
+            self._safe_emit(V3_PROPERTY_VALUE_ADDRESS, (device_path, SHOW_DEVICES_KEY, read_show_devices(rack)))
+
+        try:
+            adder(_on_show)
+        except _LOM_ERRORS as e:
+            logger.debug("RackChainDevicesComponent: add_is_showing_chain_devices_listener failed: %s", e)
+            return
+        self._show_watch[device_path] = (rack, view, _on_show)
+
+    def _unwatch_show_devices(self, device_path: str) -> None:
+        entry = self._show_watch.pop(device_path, None)
+        if entry is None:
+            return
+        _rack, view, cb = entry
+        try:
+            view.remove_is_showing_chain_devices_listener(cb)
+        except Exception:
+            pass
 
     # --- state ----------------------------------------------------------------
 
@@ -462,6 +553,9 @@ class RackChainDevicesComponent:
 
 
 __all__ = [
+    "SHOW_DEVICES_KEY",
+    "read_show_devices",
+    "write_show_devices",
     "CHAIN_CHANGE_DELAY_MS",
     "CHAIN_DEVICES_KEY",
     "CHAIN_DEVICES_PROPERTY",

@@ -124,3 +124,75 @@ def test_chain_volume_reads_writes_and_follows_live():
     rack.chains[1].mixer_device.volume.value = 0.2  # Live moves it
     assert json.loads(emits[-1][1][2])["chains"][1]["volume"] == 0.2
     assert advanced == []
+
+
+class FakeRackView:
+    """``RackDevice.View``'s Show Devices toggle and its listener pair."""
+
+    def __init__(self, showing=False):
+        self._showing = showing
+        self.listeners = []
+
+    @property
+    def is_showing_chain_devices(self):
+        return self._showing
+
+    @is_showing_chain_devices.setter
+    def is_showing_chain_devices(self, v):
+        self._showing = bool(v)
+        for cb in list(self.listeners):
+            cb()
+
+    def add_is_showing_chain_devices_listener(self, cb):
+        self.listeners.append(cb)
+
+    def remove_is_showing_chain_devices_listener(self, cb):
+        self.listeners.remove(cb)
+
+
+class ShowingRack(FakeEffectRack):
+    """A rack with Live's chain list switch, which refuses on fewer than two
+    chains as Live does (measured on 12.4.25b1)."""
+
+    def __init__(self, chains):
+        super().__init__(chains)
+        self.view = FakeRackView()
+        self._showing_chains = False
+
+    @property
+    def can_show_chains(self):
+        return len(self.chains) >= 2
+
+    @property
+    def is_showing_chains(self):
+        return self._showing_chains
+
+    @is_showing_chains.setter
+    def is_showing_chains(self, v):
+        if len(self.chains) < 2:
+            raise RuntimeError("Rack needs at least 2 chains to show in-line mixer")
+        self._showing_chains = bool(v)
+
+
+def test_show_devices_mirrors_live_both_ways():
+    from components.RackChainDevicesComponent import SHOW_DEVICES_KEY
+    rack = ShowingRack([FakeChain([]), FakeChain([])])
+    comp, emits, *_ = _component()
+    assert comp.read(rack, "r", SHOW_DEVICES_KEY) == 0
+    comp.subscribe(rack, "r", SHOW_DEVICES_KEY)
+    # Unfolded from Vamp: Live shows the devices and the chain list.
+    assert comp.write(rack, "r", SHOW_DEVICES_KEY, 1) == (True, 1, "")
+    assert rack.view.is_showing_chain_devices is True and rack.is_showing_chains is True
+    # Live's own toggle echoes to the client.
+    rack.view.is_showing_chain_devices = False
+    assert emits[-1] == ("/looping/v3/property/value", ("r", SHOW_DEVICES_KEY, 0))
+    comp.unsubscribe("r", SHOW_DEVICES_KEY)
+    assert rack.view.listeners == []
+
+
+def test_show_devices_on_a_one_chain_rack_leaves_the_chain_list_alone():
+    from components.RackChainDevicesComponent import SHOW_DEVICES_KEY
+    rack = ShowingRack([FakeChain([])])
+    comp, *_ = _component()
+    assert comp.write(rack, "r", SHOW_DEVICES_KEY, 1) == (True, 1, "")
+    assert rack.view.is_showing_chain_devices is True and rack.is_showing_chains is False
