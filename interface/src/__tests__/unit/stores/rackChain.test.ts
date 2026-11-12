@@ -117,4 +117,11 @@ describe('the chain_devices row and folding', () => {
 		applyPropertyValue(RACK, SHOW_DEVICES, 0);
 		expect(rackFold.isOpen(RACK)).toBe(false);
 	});
+
+	it('shows the first chain until one is chosen, per rack', () => {
+		expect(rackFold.chainOf(RACK)).toBe(0);
+		rackFold.selectChain(RACK, 2);
+		expect(rackFold.chainOf(RACK)).toBe(2);
+		expect(rackFold.chainOf(INNER)).toBe(0);
+	});
 });

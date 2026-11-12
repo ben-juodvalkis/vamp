@@ -9,8 +9,10 @@
  *
  * Folding is Live's own: a rack is open while Live shows its devices (its
  * Show Devices toggle, the `show_devices` row), so the two mirror each other.
- * An open rack shows every chain.
+ * An open rack shows its chain list and the chosen chain's devices; which
+ * chain is chosen is this client's, keyed by the rack's path.
  */
+import { SvelteMap } from 'svelte/reactivity';
 import type { OSCArg } from '$lib/types/osc';
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
 import { CHAIN_RACK_CLASSES } from '$lib/stores/v3/normalized.svelte';
@@ -119,6 +121,8 @@ export const SHOW_DEVICES = 'show_devices';
  * subscribed for the rack (the chain overview holds it for every rack it
  * draws); before its first answer the rack reads folded.
  */
+const selectedChain = new SvelteMap<string, number>();
+
 export const rackFold = {
 	isOpen(rackPath: string): boolean {
 		const v = selectedTrackStore.propertyValue(rackPath, SHOW_DEVICES);
@@ -126,5 +130,12 @@ export const rackFold = {
 	},
 	toggle(rackPath: string): void {
 		void selectedTrackStore.setPropertyValue(rackPath, SHOW_DEVICES, rackFold.isOpen(rackPath) ? 0 : 1);
+	},
+	/** The chain the rack shows: the one chosen, else the first. */
+	chainOf(rackPath: string): number {
+		return selectedChain.get(rackPath) ?? 0;
+	},
+	selectChain(rackPath: string, chainIndex: number): void {
+		selectedChain.set(rackPath, chainIndex);
 	}
 };

@@ -94,24 +94,26 @@ its line shows the fader. Bass rests at 0 rather than the 1.0 the preset
 stores: a cold slot at the ceiling painted the whole cell solid, which reads
 as a lit state. The rest value is only the cold read.
 
-### Racks unfold, like Group Tracks (ADR-529)
+### Racks unfold, as in Live's device view (ADR-529)
 
 An Audio Effect, Instrument or MIDI Effect Rack's cell has a fold chevron
 (right folded, down open). The fold is Live's own Show Devices toggle (the
 rack's `show_devices` row, held for every rack drawn), so it mirrors Live
-both ways. Open, every chain follows it: a chain cell
-(`chain/ChainStripFace`; its name a tap for the chain's on/off, a vertical
-drag anywhere on it for the chain's volume) and then that chain's devices,
-each an ordinary cell. The rack's arm runs over its chains, each chain's arm
-over its devices, nested racks a level lower (`expand`, `arms` and
-`chainHeld` in `ChainOverview`). An open rack holds its `chain_devices` row
-(`services/rackChains.svelte`), which brings the chains and the devices'
-records (`selectedTrackStore.chainDevices`); a device inside a rack is a
-real device everywhere, and a tap makes it its type's pick, so its view
-controls it (`fxGridStore.getSlot` admits a picked rack-chain device). A
-face must not overflow its cell: a short nested cell's glyph once covered
-its own header and swallowed the chevron's taps, so the header sits above
-the face and `.cell-face` clips.
+both ways. Open, the rack is followed by its chain list (`chain/ChainListFace`,
+one cell, when it has two or more chains) and the chosen chain's devices,
+each an ordinary cell, all under the rack's arm (the Group Track
+panhandle, one per open rack and none per chain; a tap on it folds the
+rack). A tap on a row chooses the chain shown
+(`rackFold.chainOf` / `selectChain`, this client's, per rack), a tap on its
+lamp is the chain's on/off, and a drag up or down on the row is its volume.
+An open rack holds its `chain_devices` row (`services/rackChains.svelte`),
+which brings the chains and the devices' records
+(`selectedTrackStore.chainDevices`); a device inside a rack is a real device
+everywhere, and a tap makes it its type's pick, so its view controls it
+(`fxGridStore.getSlot` admits a picked rack-chain device). A face must not
+overflow its cell: a short nested cell's glyph once covered its own header
+and swallowed the chevron's taps, so the header sits above the face and
+`.cell-face` clips.
 
 ### Parameter reads (post-ADR-359)
 

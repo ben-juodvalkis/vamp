@@ -35,20 +35,20 @@ Live.
   re-sends; a rename, colour, mute, solo or volume change re-emits the row.
   Three writable rows per chain: `chain.<i>.mute`, `chain.<i>.solo` and
   `chain.<i>.volume` (the chain's mixer volume, 0..1, 0.85 = 0 dB).
-- **The chain overview unfolds a rack the way the strips row unfolds a
-  Group Track (ADR-410, ADR-413), nested.** A rack's cell carries a chevron
-  at the right end of its header bar, right while folded and down while
-  open, as a group strip's is (the rest of the bar's tap stays Device On).
-  Unfolded, **every chain** follows the rack, in order: a **chain cell**,
-  then that chain's devices as ordinary cells with their usual faces. The
-  rack's outline grows an **arm** — the group panhandle's material in the
-  rack's ink — over all its chains, and each chain cell grows its own arm,
-  in the chain's colour, over its devices; what an arm covers hangs below it
-  with a gap and keeps its own outline, so the nesting reads as the strips
-  row's groups do. A rack among the devices unfolds the same way, a level
-  lower, its arms stacked under its parents'; where the unfold wraps to the
-  chain's second row the arms continue there. A tap on a rack's arm folds
-  it.
+- **The chain overview unfolds a rack as Live's device view does.** A
+  rack's cell carries a chevron at the right end of its header bar, right
+  while folded and down while open (the rest of the bar's tap stays Device
+  On). Unfolded, the rack's cell is followed by its **chain list** — one
+  cell, "Chains", a row per chain in its colour — when the rack has two or
+  more chains, and then **the chosen chain's devices** as ordinary cells
+  with their usual faces (an "Empty" cell for a chain with none). A tap on
+  a row chooses the chain shown; the first is shown until one is chosen,
+  per rack, on this client. The rack's outline grows an **arm** — the
+  Group Track panhandle (ADR-410, ADR-413) in the rack's ink — over the
+  list and the devices, which hang below it with a gap and keep their own
+  outlines; a tap on the arm folds the rack. There is one arm per rack,
+  none per chain. A rack among the chosen chain's devices unfolds the same
+  way, a step lower, its arm stacked under its parent's.
 - **The fold mirrors Live's own, both ways.** A rack is open exactly while
   Live shows its chain devices — the rack's Show Devices toggle,
   `RackDevice.View.is_showing_chain_devices`, carried as the rack's
@@ -62,13 +62,11 @@ Live.
   ("Rack needs at least 2 chains to show in-line mixer", `can_show_chains`
   False); `view.is_collapsed` (the device's own fold triangle) is not
   mirrored.
-- **A chain cell is a small track strip.** Its header is the chain's name
-  in its colour; a tap there is the chain's activator (Live's chain mute),
-  as a tap on a strip's name mutes the track, and a switched-off chain wears
-  the bypassed look. Its body draws the chain's volume as a strip draws its
-  fader — a wash from the foot, edge ticks at the level, a hairline at 0 dB
-  — and a **vertical drag anywhere on the cell, the name included**, sets
-  the volume: relative, one cell height for the whole range, never a jump on
+- **A chain row is a small fader.** The lamp at its left is the chain's
+  activator (Live's chain mute), a tap there switching it; the row shows
+  the chain's volume as a fill in its colour from the left edge, with a
+  tick at 0 dB, and a **drag up or down anywhere on the row** sets it:
+  relative, 160 px of travel for the whole range, never a jump on
   touch-down.
 - **A device inside a rack is itself everywhere it is drawn.** Its cell's
   control writes its own parameters (a device handed to a tile is never a
@@ -79,6 +77,7 @@ Live.
   by path.
 - Cells inside a rack are not dragged; a drop of a top-level cell onto
   them lands at their rack's place.
+- The chosen chain is this client's, not Live's selected chain.
 
 ## Consequences
 
@@ -93,9 +92,12 @@ Live.
   it in Live, for every client and in the saved set.
 - A rack of many chains takes the room of all of them: the chain wraps to
   its second row sooner and every cell narrows. Fold what is not in use.
-- An earlier cut the same day showed one chain at a time beside a chain
-  list (Live's own device view); Ben asked for every chain's devices and the
-  group grammar, and the list went.
+- A cut the same day drew every chain at once in the Group Track grammar
+  (ADR-410, ADR-413): a strip-like cell per chain followed by its devices,
+  under nested arms. An empty chain read as one more device after the last,
+  and Ben wanted the chain selector back: the list returned, its sideways
+  fader becoming the row's vertical drag, and the chains' own arms went
+  (the rack's stays).
 - Chain pan and the chain selector's zones are not drawn; solo has a write
   but no control yet. Each volume frame is its own `property/set`, and Live
   takes each as an undo step, as it does a parameter drag.
