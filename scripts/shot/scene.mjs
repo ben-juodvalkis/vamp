@@ -1274,7 +1274,7 @@ export const CHAIN_DEMO_DEVICES = [
 		chains: [
 			{ name: 'Dry', color: 0x8a8a8a, devices: [] },
 			{ name: 'Echoes', color: 0x1aa6b7, devices: ['Echo', 'Auto Filter', { name: 'Grime', className: 'AudioEffectGroupDevice', params: rackParams([['Drive', 64], ['Tone', 80]]), chains: [{ name: 'Crush', devices: ['Saturator'] }] }] },
-			{ name: 'Space', color: 0xb46ad1, mute: true, devices: ['Reverb'] }
+			{ name: 'Space', color: 0xb46ad1, mute: true, devices: ['Reverb', { name: 'Mystery', className: 'MxDeviceAudioEffect', params: [['Device On', 'Device On', 0, 1, 1, ''], ['Amount', 'Amount', 0, 1, 0.4, '']] }] }
 		]
 	},
 	'Reverb',

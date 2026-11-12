@@ -34,16 +34,22 @@ Live.
   chain or device added, removed or moved advances the generation and
   re-sends; a rename, colour, mute or solo re-emits the row. Two writable
   rows per chain, `chain.<i>.mute` and `chain.<i>.solo`.
-- **The chain overview unfolds a rack as Live's device view does.** A
-  rack's cell carries a fold chevron at the right end of its header bar
-  (the bar's tap stays Device On). Unfolded, the rack's cell is followed by
-  its **chain list** (a cell of rows in the chains' colours; a tap chooses
-  the chain shown, the lamp is its activator) when it has more than one
-  chain, then **the chosen chain's devices** as ordinary cells with their
-  usual faces, in a panel tinted and banded in the rack's ink; an empty
-  chain shows an "Empty" place. A rack among them unfolds the same way.
-  Folding a rack folds the racks inside it. Which racks are open and which
-  chain each shows is this client's own state, keyed by the rack's path.
+- **The chain overview unfolds a rack the way the strips row unfolds a
+  Group Track (ADR-410, ADR-413).** A rack's cell carries a chevron at the
+  right end of its header bar, right while folded and down while open, as a
+  group strip's is (the rest of the bar's tap stays Device On). Unfolded,
+  the rack's outline grows an **arm** — the group panhandle's material in
+  the rack's ink — sideways over everything the unfold draws, which hangs
+  below the arm with a gap and keeps its own outline; a tap on the arm folds
+  the rack. Under the arm come the rack's **chain list** (a cell of rows in
+  the chains' colours; a tap chooses the chain shown, the lamp is its
+  activator) when it has more than one chain, then **the chosen chain's
+  devices** as ordinary cells with their usual faces; an empty chain shows
+  an "Empty" place. A rack among them unfolds the same way, one step lower,
+  its arm stacked under its parent's; where the unfold wraps to the chain's
+  second row the arm continues there. Folding a rack folds the racks inside
+  it. Which racks are open and which chain each shows is this client's own
+  state, keyed by the rack's path.
 - **A device inside a rack is itself everywhere it is drawn.** Its cell's
   control writes its own parameters (a device handed to a tile is never a
   ghost, so a drag can never load a second copy onto the track), and a tap

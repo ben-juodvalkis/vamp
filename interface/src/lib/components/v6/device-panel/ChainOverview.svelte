@@ -56,7 +56,7 @@
   import Plug from '@lucide/svelte/icons/plug';
   import Plus from '@lucide/svelte/icons/plus';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
-  import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import ChainListFace from './chain/ChainListFace.svelte';
   import { CHAIN_DEVICES, chainDevicePathOf, isChainRack, rackChainsOf, rackFold, setChainSwitch, type RackChain } from '$lib/services/rackChains.svelte';
   import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
@@ -586,6 +586,52 @@
   const grid = $derived({ cols: layout.cols, rows: layout.rows });
 
   /*
+   * An open rack's arm (ADR-529), a group track's panhandle (ADR-413) in
+   * the chain: the rack cell's outline continues sideways over everything
+   * its unfold drew, which hangs below the arm with a gap and keeps its own
+   * outline. One arm per row the unfold reaches; a rack inside a rack sits
+   * one step lower and its arm stacks under its parent's. A tap on an arm
+   * folds the rack.
+   */
+  const ARM_STEP = 18;
+  function levelOf(cell: Cell): number {
+    return cell.inside ? cell.inside.depth + 1 : 0;
+  }
+  const arms = $derived.by(() => {
+    const out: { key: string; path: string; name: string; ink: string; row: number; from: number; to: number; level: number; joined: boolean }[] = [];
+    drawn.forEach((cell, i) => {
+      if (!cell.foldable || cell.kind === 'chains' || !rackFold.isOpen(cell.path)) return;
+      const own = layout.places[i];
+      const under = (c: Cell) => !!c.inside && (c.inside.rackPath === cell.path || c.inside.rackPath.startsWith(`${cell.path}/`));
+      let j = i + 1;
+      while (j < drawn.length && under(drawn[j])) j++;
+      const rows = new Map<number, { from: number; to: number }>();
+      for (let k = i + 1; k < j; k++) {
+        const p = layout.places[k];
+        if (!p) continue;
+        const r = rows.get(p.row);
+        rows.set(p.row, r ? { from: Math.min(r.from, p.col), to: Math.max(r.to, p.col + p.span) } : { from: p.col, to: p.col + p.span });
+      }
+      for (const [row, { from, to }] of rows) {
+        out.push({
+          key: `${cell.key}|arm|${row}`,
+          path: cell.path,
+          name: cell.device.name,
+          ink: cell.ink,
+          row,
+          from,
+          to,
+          level: levelOf(cell),
+          joined: !!own && own.row === row && own.col + own.span === from
+        });
+      }
+    });
+    return out;
+  });
+  /** Racks whose arm grows out of their own cell: their top-right corner squares. */
+  const armedRacks = $derived(new Set(arms.filter((a) => a.joined).map((a) => a.path)));
+
+  /*
    * The palette bar (the user, 2026-11-11; `services/effectPalette`): ghost
    * effects across the top in family blocks, each family's main effects on
    * the first row and its others under them, a seam between blocks. The
@@ -896,7 +942,8 @@
         </span>
         {#if cell.kind === 'instrument' && !cell.inside && glance.instrumentViewType === 'operator'}<span class="head-end"><OperatorHeadAlgorithm device={cell.device} /></span>{/if}
         {#if cell.foldable && cell.kind !== 'chains'}
-          <!-- Fold / unfold the rack's chains (ADR-529). -->
+          <!-- Fold / unfold the rack's chains (ADR-529): right while folded,
+               down while open, as a group strip's chevron. -->
           <span
             class="cell-fold"
             role="button"
@@ -904,7 +951,7 @@
             aria-label="{rackFold.isOpen(cell.path) ? 'Fold' : 'Unfold'} {cell.device.name}"
             aria-expanded={rackFold.isOpen(cell.path)}
             data-debug="chain-fold"
-          >{#if rackFold.isOpen(cell.path)}<ChevronLeft />{:else}<ChevronRight />{/if}</span>
+          >{#if rackFold.isOpen(cell.path)}<ChevronDown />{:else}<ChevronRight />{/if}</span>
         {/if}
       </div></CellSize>
 
@@ -1014,8 +1061,9 @@
       class:instrument={cell.kind === 'instrument' && !cell.inside}
       class:inside={!!cell.inside}
       class:unfolded={cell.foldable && rackFold.isOpen(cell.path)}
+      class:armed={cell.kind !== 'chains' && armedRacks.has(cell.path)}
       class:half={layout.places[position]?.span === 1}
-      style="--cell-ink: {cell.ink};{cell.inside ? ` --rack-ink: ${cell.inside.ink};` : ''}"
+      style="--cell-ink: {cell.ink};{levelOf(cell) ? ` margin-top: ${levelOf(cell) * ARM_STEP}px;` : ''}"
       style:grid-column={layout.places[position] ? `${layout.places[position].col + 1} / span ${layout.places[position].span}` : undefined}
       style:grid-row={layout.places[position] ? `${layout.places[position].row + 1}` : undefined}
       data-cell-key={cell.key}
@@ -1046,6 +1094,21 @@
     >
       {@render cellBody(cell, position)}
     </div>
+  {/each}
+  {#each arms as arm (arm.key)}
+    <button
+      type="button"
+      class="rack-arm"
+      class:joined={arm.joined}
+      style:grid-column="{arm.from + 1} / {arm.to + 1}"
+      style:grid-row={arm.row + 1}
+      style:margin-top="{arm.level * ARM_STEP}px"
+      style="--arm-ink: {arm.ink};"
+      data-debug="rack-arm"
+      data-rack-path={arm.path}
+      aria-label="Fold {arm.name}"
+      use:press={{ onPress: () => rackFold.toggle(arm.path), touchAction: 'none' }}
+    ></button>
   {/each}
   {#if layout.spare.span > 0}
     <!-- The room the cells leave: a +, the browser on Effect. -->
@@ -1345,18 +1408,32 @@
   .chain-cell.unfolded .cell-fold {
     background: color-mix(in oklab, var(--cell-ink) 30%, transparent);
   }
-  /* Inside an unfolded rack: a band of the rack's ink across the top and
-     a tinted panel, so the rack's chain reads as the rack's. */
-  .chain-cell.inside {
-    border-color: color-mix(in oklab, var(--rack-ink) 55%, var(--cell-line));
-    background: color-mix(in oklab, var(--rack-ink) 7%, var(--card));
-    box-shadow: inset 0 3px 0 var(--rack-ink);
+  /* An open rack's arm (ADR-529): the group panhandle's material
+     (TracksPanelV6's .group-band) in the rack's ink — the rack cell's
+     outline continuing sideways, its left edge open where it joins, a
+     thin band its unfold hangs under. */
+  .rack-arm {
+    align-self: start;
+    position: relative;
+    z-index: 1;
+    height: 12px;
+    min-height: 0;
+    min-width: 0;
+    padding: 0;
+    border: 1px solid color-mix(in oklab, var(--arm-ink) 55%, transparent);
+    border-radius: var(--cell-radius);
+    background: color-mix(in oklab, var(--arm-ink) 20%, var(--card));
+    cursor: pointer;
   }
-  .chain-cell.inside.appointed {
-    box-shadow: inset 0 3px 0 var(--rack-ink), inset 0 0 0 1px var(--flat-selection);
+  /* Grown out of the rack cell: across the gap and a pixel into it, so its
+     right border is covered for the arm's height and the two are one shape. */
+  .rack-arm.joined {
+    margin-left: calc(-1 * 8px - 2px);
+    border-left: none;
+    border-radius: 0 var(--cell-radius) var(--cell-radius) 0;
   }
-  .chain-cell.unfolded {
-    border-color: color-mix(in oklab, var(--cell-ink) 55%, var(--cell-line));
+  .chain-cell.armed {
+    border-top-right-radius: 0;
   }
   .empty-chain {
     font-size: 0.75rem;

@@ -327,6 +327,30 @@ export const TOURS = {
 					{ click: `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/5/chains/1/devices/2"] .cell-fold` }
 				]
 			},
+			{
+				name: 'chain-rack-device-view',
+				description: 'A device inside an unfolded rack, tapped: its own view opens, and it is the one the view controls',
+				scenePatch: chainDemo,
+				steps: [
+					openInstrument(CHAIN_DEMO_TRACK),
+					{ click: `${chainCell(5)} .cell-fold` },
+					{ click: '[data-debug="chain-list"] [data-chain-index="1"]' },
+					{ click: `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/5/chains/1/devices/0"] .cell-head` },
+					{ click: `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/5/chains/1/devices/0"] .cell-head` },
+					{ click: `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/5/chains/1/devices/2"] .mark, [data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/5/chains/1/devices/2"] .cell-face` }
+				]
+			},
+			{
+				name: 'chain-rack-max-view',
+				description: 'A Max device inside an unfolded rack, tapped: the generic view, on that device',
+				scenePatch: chainDemo,
+				steps: [
+					openInstrument(CHAIN_DEMO_TRACK),
+					{ click: `${chainCell(5)} .cell-fold` },
+					{ click: '[data-debug="chain-list"] [data-chain-index="2"]' },
+					{ click: `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/5/chains/2/devices/1"] .mark` }
+				]
+			},
 			...[2, 4, 5, 8].map((n) => ({
 				name: `chain-len-${n}`,
 				description: `A chain of ${n} devices: one row up to five, then two rows split evenly, the + cell always last`,

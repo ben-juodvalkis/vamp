@@ -59,12 +59,12 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
     overflow-y: auto;
   }
   .chain-row {
     flex: 1 1 0;
-    min-height: 28px;
+    min-height: 20px;
     max-height: 48px;
     display: flex;
     align-items: center;
