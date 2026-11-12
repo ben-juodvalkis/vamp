@@ -453,6 +453,24 @@ Key rules:
   selection made in Live; a write selects that chain, and an index the
   rack has no chain for is refused (`no chain <i>`). The chain overview
   subscribes it while the rack is unfolded, as the chain list's choice.
+- **`variations` — a rack's macro variations (ADR-531).** Read-only JSON
+  on the three chain-rack classes, provider `rack_chain_devices`:
+  `{"count": n, "selected": i}`, `selected` -1 when none is. While
+  subscribed, Live's `variation_count` listener re-emits it; the selected
+  index has no listener in Live (measured on 12.4.25b1), so the surface
+  re-emits the row after each of its own variation writes, and a variation
+  chosen in Live's own panel is not seen until then. Live refuses to set the
+  selection back to none.
+- **`variation.recall` / `variation.delete` / `variation.store` /
+  `variation.randomize` — the variation verbs (ADR-531).** Writable, same
+  classes and provider. `recall` and `delete` take the variation's index
+  (`selected_variation_index`, then `recall_selected_variation` /
+  `delete_selected_variation`; an index the rack lacks is refused as
+  `no variation <i>`); `store` (`store_variation`) and `randomize`
+  (`randomize_macros`) take any value. The echo is the value written; the
+  `variations` row follows. Live's API names no variation: the names come
+  from the rack's preset file, over HTTP (`GET /api/rack-variations`), not
+  this wire.
 - **`visible_macro_count` — how many macros a rack shows (ADR-530).**
   Read-only int (1..16), a plain listened attribute on the same three rack
   classes: `RackDevice.visible_macro_count`, which Live's macro count button

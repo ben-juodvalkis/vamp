@@ -1271,7 +1271,7 @@ export const CHAIN_DEMO_DEVICES = [
 		className: 'AudioEffectGroupDevice',
 		params: rackParams([['Send', 96], ['Feedback', 70], ['Tone', 48], ['Wobble', 30], ['Size', 110], ['Decay', 84], ['Duck', 40], ['Mix', 64], ['Width', 90], ['Pre-Delay', 20], ['Shimmer', 55], ['Output', 100]]),
 		// Twelve macros visible in Live: more than its cell holds.
-		properties: { visible_macro_count: 12 },
+		properties: { visible_macro_count: 12, variations: '{"count":3,"selected":1}' },
 		// Its chains (ADR-529), for the unfold shots.
 		chains: [
 			{ name: 'Dry', color: 0x8a8a8a, devices: [] },

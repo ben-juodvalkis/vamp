@@ -6,6 +6,7 @@
    * swap pill's column (2026-09-16). The wheels that stood under the pill
    * left for the MidiWheels device's chain cell (user, 2026-10-26).
    */
+  import RackVariations from '../RackVariations.svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import DeviceXY from '../../device-panel/DeviceXY.svelte';
@@ -150,6 +151,8 @@
             <p class="text-sm">Loading macros...</p>
           </div>
         {/if}
+        <!-- Its macro variations (ADR-531): recall, store, delete, randomize. -->
+        {#if device}<RackVariations rack={device} ink={rackInk.primary} />{/if}
       </div>
     </div>
   {:else}

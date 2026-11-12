@@ -72,6 +72,17 @@ SHOW_DEVICES_KEY = "show_devices"
 #: The chain Live shows a rack's devices for (``view.selected_chain``), as an
 #: index into its chains: the chain overview's chosen chain, both ways.
 SELECTED_CHAIN_KEY = "selected_chain"
+#: A rack's macro variations (ADR-531): ``{"count": n, "selected": i}``,
+#: read-only, followed by Live's ``variation_count`` listener (the selected
+#: index has none; the surface re-emits it after its own writes).
+VARIATIONS_KEY = "variations"
+#: The variation verbs, each a write: recall or delete the variation at an
+#: index, store the macros as a new one, randomize the macros.
+VARIATION_RECALL_KEY = "variation.recall"
+VARIATION_STORE_KEY = "variation.store"
+VARIATION_DELETE_KEY = "variation.delete"
+VARIATION_RANDOMIZE_KEY = "variation.randomize"
+VARIATION_ACTION_KEYS = (VARIATION_RECALL_KEY, VARIATION_STORE_KEY, VARIATION_DELETE_KEY, VARIATION_RANDOMIZE_KEY)
 CHAIN_DEVICES_PROPERTY = CHAIN_DEVICES_KEY
 #: The racks whose chains are reached by index (a Drum Rack's are by note).
 RACK_CLASS_NAMES = ("AudioEffectGroupDevice", "InstrumentGroupDevice", "MidiEffectGroupDevice")
@@ -258,10 +269,52 @@ def write_selected_chain(rack, index: int) -> Tuple[bool, str]:
     return True, ""
 
 
-#: The rack-view rows a client follows by listener: key -> (listener name, reader).
+def read_variations(rack) -> Optional[str]:
+    """The rack's variations as JSON, ``{"count": n, "selected": i}``
+    (``selected`` -1 when none is), or ``None`` unread. Measured on
+    12.4.25b1: ``variation_count`` is listenable, ``selected_variation_index``
+    settable but not listenable, and Live refuses to set it back to -1."""
+    count = _as_int_or_none(_read(rack, "variation_count"))
+    if count is None:
+        return None
+    selected = _as_int_or_none(_read(rack, "selected_variation_index"))
+    return json.dumps({"count": count, "selected": -1 if selected is None else selected}, separators=(",", ":"), sort_keys=True)
+
+
+def write_variation_action(rack, key: str, value) -> Tuple[bool, object, str]:
+    """Run one variation verb on the rack: ``(ok, echo, detail)``."""
+    count = _as_int_or_none(_read(rack, "variation_count")) or 0
+    try:
+        if key in (VARIATION_RECALL_KEY, VARIATION_DELETE_KEY):
+            try:
+                index = int(value)
+            except (TypeError, ValueError):
+                return False, None, "expected a variation index"
+            if not 0 <= index < count:
+                return False, None, "no variation %d" % index
+            rack.selected_variation_index = index
+            if key == VARIATION_RECALL_KEY:
+                rack.recall_selected_variation()
+            else:
+                rack.delete_selected_variation()
+            return True, index, ""
+        if key == VARIATION_STORE_KEY:
+            rack.store_variation()
+            return True, 1, ""
+        if key == VARIATION_RANDOMIZE_KEY:
+            rack.randomize_macros()
+            return True, 1, ""
+    except _LOM_ERRORS as e:
+        return False, None, str(e)
+    return False, None, "unknown variation verb %s" % key
+
+
+#: The rack rows a client follows by listener: key -> (listener name, reader,
+#: on the rack's view rather than the rack).
 _VIEW_ROWS = {
-    SHOW_DEVICES_KEY: ("is_showing_chain_devices", read_show_devices),
-    SELECTED_CHAIN_KEY: ("selected_chain", read_selected_chain),
+    SHOW_DEVICES_KEY: ("is_showing_chain_devices", read_show_devices, True),
+    SELECTED_CHAIN_KEY: ("selected_chain", read_selected_chain, True),
+    VARIATIONS_KEY: ("variation_count", read_variations, False),
 }
 
 
@@ -347,6 +400,12 @@ class RackChainDevicesComponent:
         return _flag(_read(chains[field[0]], field[1], False))
 
     def write(self, device, device_path: str, function: str, value):
+        if function in VARIATION_ACTION_KEYS:
+            ok, echo, detail = write_variation_action(device, function, value)
+            if ok:
+                # The selected index has no listener; say what it is now.
+                self._safe_emit(V3_PROPERTY_VALUE_ADDRESS, (device_path, VARIATIONS_KEY, read_variations(device)))
+            return ok, echo, detail
         if function == SHOW_DEVICES_KEY:
             try:
                 on = bool(int(value))
@@ -414,8 +473,8 @@ class RackChainDevicesComponent:
 
     def _watch_view_row(self, rack, device_path: str, key: str) -> None:
         self._unwatch_view_row(device_path, key)
-        attr, reader = _VIEW_ROWS[key]
-        view = _read(rack, "view")
+        attr, reader, on_view = _VIEW_ROWS[key]
+        view = _read(rack, "view") if on_view else rack
         adder = getattr(view, "add_%s_listener" % attr, None) if view is not None else None
         if not callable(adder):
             return
@@ -601,6 +660,14 @@ class RackChainDevicesComponent:
 
 
 __all__ = [
+    "VARIATIONS_KEY",
+    "VARIATION_ACTION_KEYS",
+    "VARIATION_RECALL_KEY",
+    "VARIATION_STORE_KEY",
+    "VARIATION_DELETE_KEY",
+    "VARIATION_RANDOMIZE_KEY",
+    "read_variations",
+    "write_variation_action",
     "SHOW_DEVICES_KEY",
     "read_show_devices",
     "write_show_devices",

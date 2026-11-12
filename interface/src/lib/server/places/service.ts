@@ -202,7 +202,7 @@ export interface PlacesServiceOptions {
 	categoriesInline?: boolean;
 }
 
-function defaultLiveDatabaseDir(): string | null {
+export function defaultLiveDatabaseDir(): string | null {
 	const dir = configPath('liveDatabaseDir');
 	if (!dir) return null;
 	return dir.startsWith('~/') ? join(homedir(), dir.slice(2)) : dir;

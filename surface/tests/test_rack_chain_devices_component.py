@@ -261,3 +261,91 @@ def test_visible_macro_count_is_a_read_only_row_on_every_chain_rack():
         assert not spec.writable
         assert spec.computed is None
     assert spec_for("DrumGroupDevice", "visible_macro_count") is None
+
+
+class VariationRack(FakeEffectRack):
+    """A rack with Live's macro variations: snapshots of its macro values."""
+
+    def __init__(self, snapshots):
+        super().__init__([], macros=[FakeParam("Device On", 1.0), FakeParam("Drive", 10.0, 0, 127), FakeParam("Tone", 20.0, 0, 127)])
+        self.snapshots = [list(s) for s in snapshots]
+        self._selected = -1
+        self.count_listeners = []
+
+    @property
+    def variation_count(self):
+        return len(self.snapshots)
+
+    @property
+    def selected_variation_index(self):
+        return self._selected
+
+    @selected_variation_index.setter
+    def selected_variation_index(self, i):
+        if not 0 <= i < len(self.snapshots):
+            raise RuntimeError("Variation index out of range")
+        self._selected = i
+
+    def recall_selected_variation(self):
+        for p, v in zip(self.parameters[1:], self.snapshots[self._selected]):
+            p.value = v
+
+    def store_variation(self):
+        self.snapshots.append([p.value for p in self.parameters[1:]])
+        self._fire()
+
+    def delete_selected_variation(self):
+        del self.snapshots[self._selected]
+        self._selected = -1
+        self._fire()
+
+    def randomize_macros(self):
+        for p in self.parameters[1:]:
+            p.value = 99.0
+
+    def add_variation_count_listener(self, cb):
+        self.count_listeners.append(cb)
+
+    def remove_variation_count_listener(self, cb):
+        self.count_listeners.remove(cb)
+
+    def _fire(self):
+        for cb in list(self.count_listeners):
+            cb()
+
+
+def test_variations_recall_store_delete_and_randomize():
+    from components.RackChainDevicesComponent import (
+        VARIATIONS_KEY, VARIATION_DELETE_KEY, VARIATION_RANDOMIZE_KEY, VARIATION_RECALL_KEY, VARIATION_STORE_KEY,
+    )
+    rack = VariationRack([[1.0, 2.0], [100.0, 120.0]])
+    comp, emits, *_ = _component()
+    assert json.loads(comp.read(rack, "r", VARIATIONS_KEY)) == {"count": 2, "selected": -1}
+    comp.subscribe(rack, "r", VARIATIONS_KEY)
+    # Recall: the macros take the variation, and the row says which is selected.
+    assert comp.write(rack, "r", VARIATION_RECALL_KEY, 1) == (True, 1, "")
+    assert [p.value for p in rack.parameters[1:]] == [100.0, 120.0]
+    assert emits[-1] == ("/looping/v3/property/value", ("r", VARIATIONS_KEY, '{"count":2,"selected":1}'))
+    # An index the rack does not have is refused and recalls nothing.
+    assert comp.write(rack, "r", VARIATION_RECALL_KEY, 2) == (False, None, "no variation 2")
+    # Store: Live's count listener and the write both say there are three.
+    assert comp.write(rack, "r", VARIATION_STORE_KEY, 1) == (True, 1, "")
+    assert json.loads(emits[-1][1][2])["count"] == 3
+    # Delete the first.
+    assert comp.write(rack, "r", VARIATION_DELETE_KEY, 0) == (True, 0, "")
+    assert rack.snapshots == [[100.0, 120.0], [100.0, 120.0]]
+    # Randomize moves the macros.
+    assert comp.write(rack, "r", VARIATION_RANDOMIZE_KEY, 1) == (True, 1, "")
+    assert [p.value for p in rack.parameters[1:]] == [99.0, 99.0]
+    comp.unsubscribe("r", VARIATIONS_KEY)
+    assert rack.count_listeners == []
+
+
+def test_variation_rows_are_allowed_on_every_chain_rack():
+    from components.PropertyComponent import spec_for
+
+    for cls in ("AudioEffectGroupDevice", "InstrumentGroupDevice", "MidiEffectGroupDevice"):
+        assert not spec_for(cls, "variations").writable
+        for verb in ("variation.recall", "variation.store", "variation.delete", "variation.randomize"):
+            assert spec_for(cls, verb).writable
+    assert spec_for("DrumGroupDevice", "variations") is None

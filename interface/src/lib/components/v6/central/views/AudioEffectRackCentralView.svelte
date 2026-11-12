@@ -13,6 +13,7 @@
 	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 	import { glyphForName } from '$lib/config/controlGlyphMap';
 	import DeviceEmptyState from '../DeviceEmptyState.svelte';
+	import RackVariations from '../RackVariations.svelte';
 
 	// Import constants
 	import constants from '$config/constants.json';
@@ -129,6 +130,8 @@
 				{/each}
 			</div>
 		{/if}
+		<!-- Its macro variations (ADR-531): recall, store, delete, randomize. -->
+		<RackVariations rack={audioEffectRack} ink={effectiveColor.primary} />
 	</div>
 {:else}
 	<DeviceEmptyState glyph="◌" message="No Audio Effect Rack detected" color={effectiveColor.primary} />

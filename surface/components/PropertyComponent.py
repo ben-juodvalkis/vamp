@@ -154,6 +154,8 @@ from .RackChainNamesComponent import (
 from .RackChainDevicesComponent import (
     SHOW_DEVICES_KEY as RACK_SHOW_DEVICES_KEY,
     SELECTED_CHAIN_KEY as RACK_SELECTED_CHAIN_KEY,
+    VARIATIONS_KEY as RACK_VARIATIONS_KEY,
+    VARIATION_ACTION_KEYS as RACK_VARIATION_ACTION_KEYS,
     CHAIN_DEVICES_KEY as RACK_CHAIN_DEVICES_KEY,
     PROVIDER_NAME as RACK_CHAIN_DEVICES_PROVIDER,
     RACK_CLASS_NAMES as RACK_CHAIN_DEVICES_CLASSES,
@@ -656,6 +658,24 @@ ALLOWLIST.update({
     )
     for _cls in RACK_CHAIN_DEVICES_CLASSES
     for _key in (RACK_SHOW_DEVICES_KEY, RACK_SELECTED_CHAIN_KEY)
+})
+# A rack's macro variations (ADR-531): the count and the selected one,
+# read-only; and the verbs, each a write (recall / delete an index, store,
+# randomize).
+ALLOWLIST.update({
+    (_cls, RACK_VARIATIONS_KEY): PropertySpec(
+        listener_path="", attr_name=RACK_VARIATIONS_KEY, writable=False,
+        computed=RACK_CHAIN_DEVICES_PROVIDER,
+    )
+    for _cls in RACK_CHAIN_DEVICES_CLASSES
+})
+ALLOWLIST.update({
+    (_cls, _key): PropertySpec(
+        listener_path="", attr_name=_key, writable=True,
+        computed=RACK_CHAIN_DEVICES_PROVIDER,
+    )
+    for _cls in RACK_CHAIN_DEVICES_CLASSES
+    for _key in RACK_VARIATION_ACTION_KEYS
 })
 # How many macros the rack shows (Live's macro count button, 1..16): the
 # chain overview draws the rack's macros up to it. Read-only; Live 11+
