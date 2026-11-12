@@ -247,17 +247,11 @@ def test_returns_not_supported(song_basic):
     assert r.status is ResolveStatus.NOT_SUPPORTED
 
 
-def test_chains_not_supported(song_basic):
-    """chains/<N>/devices/<M>/... is grammar-reserved; Phase-1 rejects."""
+def test_chains_on_a_plain_device_not_found(song_basic):
+    """chains/<N> under a device that is not a rack: no such chain."""
     song, *_ = song_basic
     r = resolve_param(song, "tracks/0/devices/0/chains/0/devices/0/params/0")
-    assert r.status is ResolveStatus.NOT_SUPPORTED
-
-
-def test_master_chains_not_supported(song_basic):
-    song, *_ = song_basic
-    r = resolve_param(song, "master/devices/0/chains/0/devices/0/params/0")
-    assert r.status is ResolveStatus.NOT_SUPPORTED
+    assert r.status is ResolveStatus.NOT_FOUND
 
 
 # --- resolve_track ---------------------------------------------------------
@@ -758,10 +752,10 @@ def test_pad_grammar_malformed_cases(path):
     assert resolve_device(song, path).status is ResolveStatus.MALFORMED
 
 
-def test_chains_stay_reserved_beside_pads():
+def test_chains_on_a_drum_rack_are_not_reachable_by_index():
+    """A Drum Rack's chains are reached by pad note, never by index."""
     song, _, _, _ = _pad_song()
-    assert resolve_device(song, "tracks/0/devices/0/chains/0/devices/0").status is ResolveStatus.NOT_SUPPORTED
-    assert resolve_param(song, "tracks/0/devices/0/pads/36/devices/1/chains/0/devices/0/params/0").status is ResolveStatus.NOT_SUPPORTED
+    assert resolve_device(song, "tracks/0/devices/0/chains/0/devices/0").status is ResolveStatus.NOT_FOUND
 
 
 def test_resolve_pad_answers_rack_pad_and_chain():
@@ -802,3 +796,66 @@ def test_pad_path_composition_and_predicate():
     assert is_pad_scoped("tracks/1/devices/0/pads/38/devices/1/params/4")
     assert not is_pad_scoped("tracks/1/devices/0")
     assert not is_pad_scoped("")
+
+
+# --- rack chains: chains/<M>/devices/<K> (ADR-529, protocol 3.13.0) ---
+
+from components.path_resolver import (
+    compose_device_path_for,
+    compose_rack_chain_path,
+    resolve_rack_chain,
+)
+from tests.support.lom_fakes import FakeEffectRack
+
+
+def _rack_song():
+    """Track 0: an Audio Effect Rack (two chains: Reverb | Delay + a nested
+    rack holding a Redux), then a Utility."""
+    reverb = FakeDevice("Hybrid", [FakeParam("Device On", 1.0), FakeParam("Dry/Wet", 0.3)], type_=2, name="Reverb")
+    delay = FakeDevice("Delay", [FakeParam("Device On", 1.0)], type_=2)
+    redux = FakeDevice("Redux2", [FakeParam("Device On", 1.0), FakeParam("Bits", 8.0)], type_=2, name="Redux")
+    inner = FakeEffectRack([FakeChain([redux], name="Crush")], name="Inner")
+    rack = FakeEffectRack([FakeChain([reverb], name="Wet"), FakeChain([delay, inner], name="Echo")])
+    util = FakeDevice("StereoGain", [FakeParam("Device On", 1.0)], type_=2, name="Utility")
+    song = FakeSong(tracks=[FakeTrack([rack, util], "Gtr")])
+    return song, rack, reverb, delay, inner, redux
+
+
+def test_rack_chain_device_resolves():
+    song, rack, reverb, delay, inner, redux = _rack_song()
+    assert resolve_device(song, "tracks/0/devices/0/chains/0/devices/0").obj is reverb
+    assert resolve_device(song, "tracks/0/devices/0/chains/1/devices/1").obj is inner
+    r = resolve_param(song, "tracks/0/devices/0/chains/0/devices/0/params/1")
+    assert r.status is ResolveStatus.OK and r.obj is reverb.parameters[1]
+
+
+def test_rack_chain_grammar_recurses():
+    song, *_, redux = _rack_song()
+    r = resolve_param(song, "tracks/0/devices/0/chains/1/devices/1/chains/0/devices/0/params/1")
+    assert r.status is ResolveStatus.OK and r.obj is redux.parameters[1]
+
+
+def test_rack_chain_not_found_and_malformed():
+    song, *_ = _rack_song()
+    assert resolve_device(song, "tracks/0/devices/0/chains/2/devices/0").status is ResolveStatus.NOT_FOUND
+    assert resolve_device(song, "tracks/0/devices/0/chains/0/devices/3").status is ResolveStatus.NOT_FOUND
+    assert resolve_device(song, "tracks/0/devices/0/chains/0").status is ResolveStatus.MALFORMED
+    assert resolve_device(song, "tracks/0/devices/0/chains/01/devices/0").status is ResolveStatus.MALFORMED
+    assert resolve_device(song, "tracks/0/devices/1/chains/0/devices/0").status is ResolveStatus.NOT_FOUND
+
+
+def test_resolve_rack_chain():
+    song, rack, *_ = _rack_song()
+    r = resolve_rack_chain(song, "tracks/0/devices/0/chains/1")
+    assert r.status is ResolveStatus.OK and r.obj is rack.chains[1]
+    assert resolve_rack_chain(song, "tracks/0/devices/0/chains/5").status is ResolveStatus.NOT_FOUND
+    assert resolve_rack_chain(song, "tracks/0/devices/0").status is ResolveStatus.MALFORMED
+    assert compose_rack_chain_path("tracks/0/devices/0", 1) == "tracks/0/devices/0/chains/1"
+
+
+def test_compose_device_path_for_a_rack_chain_device():
+    song, rack, reverb, delay, inner, redux = _rack_song()
+    for d in song.tracks[0].devices:
+        d.canonical_parent = song.tracks[0]
+    assert compose_device_path_for(song, reverb) == "tracks/0/devices/0/chains/0/devices/0"
+    assert compose_device_path_for(song, redux) == "tracks/0/devices/0/chains/1/devices/1/chains/0/devices/0"

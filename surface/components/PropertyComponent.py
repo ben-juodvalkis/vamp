@@ -151,6 +151,12 @@ from .RackChainNamesComponent import (
 from .RackChainNamesComponent import (
     RACK_CLASS_NAME as RACK_CHAINS_CLASS_NAME,
 )
+from .RackChainDevicesComponent import (
+    CHAIN_DEVICES_KEY as RACK_CHAIN_DEVICES_KEY,
+    PROVIDER_NAME as RACK_CHAIN_DEVICES_PROVIDER,
+    RACK_CLASS_NAMES as RACK_CHAIN_DEVICES_CLASSES,
+    parse_chain_field as parse_rack_chain_field,
+)
 
 # ADR-350: Live's v3 framework hands out a fresh Python wrapper per read, so
 # ``is`` comparison against a stored handle always fails at runtime even when
@@ -628,6 +634,19 @@ ALLOWLIST[(RACK_CHAINS_CLASS_NAME, RACK_CHAIN_NAMES_PROPERTY)] = PropertySpec(
     computed=RACK_CHAINS_PROVIDER,
 )
 
+# A rack's chains and the devices on them (ADR-529, 3.13.0): read-only JSON,
+# subscribed while the rack is unfolded; its cold read also sends the rack's
+# device records as a rack-scoped tree. ``chain.<i>.mute|solo`` are
+# synthesised by ``spec_for`` below.
+ALLOWLIST.update({
+    (_cls, RACK_CHAIN_DEVICES_KEY): PropertySpec(
+        listener_path="", attr_name=RACK_CHAIN_DEVICES_KEY, writable=False,
+        computed=RACK_CHAIN_DEVICES_PROVIDER,
+    )
+    for _cls in RACK_CHAIN_DEVICES_CLASSES
+})
+_RACK_CHAIN_FIELD_SPECS: Dict[str, PropertySpec] = {}
+
 # The rack-macro family: ``vm.macro.<name>`` on a Drum Rack, one computed
 # row per name, synthesised on first sight and kept so every subscription
 # on the same name shares one spec object. ``vm.pad.<note>.<fn>`` and
@@ -643,6 +662,14 @@ def spec_for(class_name: str, property_name: str) -> Optional[PropertySpec]:
     ``None`` for anything else (→ ``property-not-allowed``)."""
     spec = ALLOWLIST.get((class_name, property_name))
     if spec is not None:
+        return spec
+    if class_name in RACK_CHAIN_DEVICES_CLASSES and parse_rack_chain_field(property_name) is not None:
+        spec = _RACK_CHAIN_FIELD_SPECS.get(property_name)
+        if spec is None:
+            spec = _RACK_CHAIN_FIELD_SPECS[property_name] = PropertySpec(
+                listener_path="", attr_name=property_name, writable=True,
+                computed=RACK_CHAIN_DEVICES_PROVIDER,
+            )
         return spec
     if class_name != DRUM_RACK_CLASS_NAME:
         return None

@@ -40,8 +40,10 @@ sceneRef    := "scenes/" index
 padRef      := deviceRef "/pads/" note                // 0..127, the DrumPad's MIDI note
 deviceRef   := padRef "/devices/" index               // drum_pads[note].chains[0].devices[index]
 
-// Rack-chain extension — reserved
-deviceRef   := deviceRef "/chains/" index "/devices/" index
+// Rack chains — protocol 3.13.0 (ADR-529). An Audio Effect, Instrument
+// or MIDI Effect Rack's chain by index, then its devices; recursive.
+chainRef    := deviceRef "/chains/" index                 // rack.chains[index]
+deviceRef   := chainRef "/devices/" index
 
 index       := digit+                                 // decimal, no leading zeros except "0"
 note        := digit+                                 // 0..127
@@ -57,13 +59,20 @@ is ~50.
 Rack:** `rack.chains` is a flat list that re-indexes whenever a pad gains
 or loses a chain, while every per-pad row the property channel already
 carries (`vm.pad.<note>.<fn>`, `vm.selectedPad`, the census) keys on the
-note. `chains/` stays reserved for Instrument and Audio Effect Racks.
+note. `chains/<index>` is every other rack's (3.13.0, ADR-529): their
+chains are a list the user orders. A Drum Rack's `chains/<i>` answers
+`path-not-found`.
 A pad's chain devices are addressable everywhere a device is —
 `param/set`, `param/query`, `property/*`, `device/select`,
 `device/move_to_*`, `device/delete` — but they **never appear in the
 whole-song tree**: they ride a pad-scoped `state/full/tree` (§2.2,
 §2.6 `vm.padChain.<note>`) that a client receives only for pads it has
 subscribed.
+
+A rack chain's devices (3.13.0) are addressable the same way and likewise
+never in the whole-song tree: they ride a rack-scoped `state/full/tree`
+(reason `rack-chain`, §2.6 `chain_devices`) that a client receives only for
+racks it has unfolded.
 
 Canonical examples:
 
@@ -96,7 +105,7 @@ Direction column: **UI→Surf** = UI sends to surface,
 
 | Address                        | Dir     | Args                                                                           | Semantics |
 | ------------------------------ | ------- | ------------------------------------------------------------------------------ | --------- |
-| `/looping/v3/state/full/tree` | Surf→UI | `reason:string, generation:int, etag:string, scope:string, tree_args...` | **3.6.0.** The whole canonical tree, one message. `reason ∈ {"accept","structural","resync","selection-change","pad-chain"}` (`pad-chain` since **3.8.0**: `scope` is a pad path and the records are the D/P of the effects on that pad's chain, no T — applied to the UI's separate pad map, never deduped, an empty bundle meaning "every effect gone"). `etag` is hex (`"0x1a2b3c4d"`). `scope` is `""` for a whole-song bundle, else the `"tracks/<N>"` or `"master"` subtree path the payload covers (`reason="selection-change"`). `tree_args` contents per §3. The four header args are **positional and always present** — a parser must never infer meaning from message length. Two bundles with the same `etag` *and* the same `generation` may be deduped on the UI side, except under `reason ∈ {"accept","resync"}` (both follow a tree wipe). |
+| `/looping/v3/state/full/tree` | Surf→UI | `reason:string, generation:int, etag:string, scope:string, tree_args...` | **3.6.0.** The whole canonical tree, one message. `reason ∈ {"accept","structural","resync","selection-change","pad-chain","rack-chain"}` (`pad-chain` since **3.8.0**: `scope` is a pad path and the records are the D/P of the effects on that pad's chain, no T — applied to the UI's separate pad map, never deduped, an empty bundle meaning "every effect gone"; `rack-chain` since **3.13.0** (ADR-529): `scope` is a rack's device path and the records are the D/P of every device on every chain of that rack under `<rack>/chains/<i>/devices/<j>`, one level deep, no T — applied to the UI's rack-chain map, never deduped). `etag` is hex (`"0x1a2b3c4d"`). `scope` is `""` for a whole-song bundle, else the `"tracks/<N>"` or `"master"` subtree path the payload covers (`reason="selection-change"`). `tree_args` contents per §3. The four header args are **positional and always present** — a parser must never infer meaning from message length. Two bundles with the same `etag` *and* the same `generation` may be deduped on the UI side, except under `reason ∈ {"accept","resync"}` (both follow a tree wipe). |
 | `/looping/v3/state/full/unchanged` | Surf→UI | `reason:string, generation:int, sessionId:string, etag:string` | **3.5.0.** Sent *instead of* the tree when the asking client declared an ETag (see §3.6) that matches the tree the surface just recomputed. The client keeps the tree it has and stamps `generation`; nothing else changes. Sent only in response to `accept` or `resync` — a push never produces one, because nobody declared anything. `sessionId` is mandatory to act on: the surface has no per-client channel (every emit fans out to every UI through the bridge), so a marker minted for one client also reaches the others and **must be ignored unless the id matches**. Applying another client's marker would advance `generation` over a stale tree — silent corruption. |
 
 Cache-clearing decisions are driven by `generation`, not `reason`.
@@ -415,6 +424,26 @@ Key rules:
   (a pad Reverb's IR subscriptions on a path that moved are torn down),
   re-emit `vm.padFx` and re-emit and re-watch every subscribed pad — it
   never republishes the song and never feeds `on_device_added`.
+- **`chain_devices` — a rack's chains (ADR-529, 3.13.0).** On
+  `AudioEffectGroupDevice`, `InstrumentGroupDevice` and
+  `MidiEffectGroupDevice`, provider `rack_chain_devices`, read-only, a JSON
+  string: `{"chains":[{"index":0,"name":"Wet","color":<RGB int|null>,
+  "mute":0,"solo":0,"devices":[{"index":0,"class":"Hybrid","name":"Reverb",
+  "type":2,"rack":0}]}]}` (`rack` 1: a rack, which unfolds in turn; past
+  ~8 KB the device names are dropped). Every cold read also sends the
+  rack-scoped `state/full/tree` (reason `rack-chain`). While subscribed the
+  surface keeps value listeners on every parameter of every device on the
+  chains (the `param/value` echo with the composed chain path) and listens
+  to the rack's `chains`, each chain's `devices`, `name`, `color`, `mute`,
+  `solo` and each device's `name`. A change of shape advances the
+  generation (a pathless `state/invalidate`, reason `rack-chain`), runs the
+  property channel's structural invalidate and re-sends row and bundle; a
+  rename, colour, mute or solo re-emits the row alone. Never republishes the
+  song. The chain overview subscribes it while the rack is unfolded.
+- **`chain.<i>.mute` / `chain.<i>.solo` — a chain's activator and solo
+  (ADR-529, 3.13.0).** Writable `0|1`, synthesised for the same three
+  classes; the echo is the `property/value` of the stored value, and the
+  chain's own listener re-emits `chain_devices`.
 - **Read-only properties** (e.g. `sample.length`) reject writes
   with `write-rejected detail="property-read-only"`; listeners
   still fire.
@@ -1629,9 +1658,11 @@ recording `sessionId` / `generation` and left the client stale.
 
 ### 5.4 supported versions
 
-`HandshakeComponent.SUPPORTED_VERSIONS = ("3.12.0", "3.11.0", "3.10.0", "3.9.0", "3.8.0",
+`HandshakeComponent.SUPPORTED_VERSIONS = ("3.13.0", "3.12.0", "3.11.0", "3.10.0", "3.9.0", "3.8.0",
 "3.7.0", "3.6.0", "3.5.0", "3.4.0", "3.3.0", "3.2.0", "3.1.0", "3.0.0")` — highest
-common version wins. 3.12.0 (2026-09-28) is `device/load`'s `native:<class>`
+common version wins. 3.13.0 (2026-11-12, ADR-529) is rack chains: the
+`chains/<i>/devices/<j>` path grammar, the `chain_devices` row and the
+`rack-chain` scoped tree; record arities are unchanged. 3.12.0 (2026-09-28) is `device/load`'s `native:<class>`
 source (§2.8): a tile names a native device instead of a preset file; arities
 are unchanged. 3.11.0 (2026-09-26) is the loads that name their Place
 (§2.8, §2.9): two optional trailing args on `prepare_for_preset` and
@@ -1640,7 +1671,7 @@ Kept in lockstep with `DebugComponent.PROTOCOL_VERSION` and
 `SurfaceHelloComponent.PROTOCOL_VERSION`.
 
 **Negotiating down is nominal for anything that reads `state/full`.**
-The web UI therefore advertises `["3.12.0"]` alone: against an older
+The web UI therefore advertises `["3.13.0"]` alone: against an older
 surface it takes a named `handshake-version-mismatch` on
 `/looping/v3/error` rather than a successful handshake followed by a
 tree that never arrives.
@@ -1726,7 +1757,7 @@ bound and components wired. No re-fire on UI reconnect.
 | `path-structural-mismatch`   | Path was valid; a structural change has invalidated it. UI should wait for the expected invalidation or issue `state/resync`. |
 | `generation-stale`           | Write arrived with a generation less than surface's current. See §4.2. |
 | `write-rejected`             | Surface refused the write for a typed reason in `detail` (`"automation-locked"`, `"param-read-only"`, `"property-read-only"`, `"property-not-allowed"`). Not retryable until the condition changes. |
-| `path-not-supported`         | Path grammar-valid but implementation doesn't support this suffix (e.g. `chains/...`, `returns/...`). |
+| `path-not-supported`         | Path grammar-valid but implementation doesn't support this suffix (e.g. `returns/...`; `chains/...` until 3.13.0). |
 | `pool-exhausted`             | GroovePoolComponent found no free groove (`unassigned-*` or orphaned `Clip_*`) and could not mint one during assign-on-first-write. |
 | `device-slot-invalid`        | `devicePath` out of range for the target track's device chain. |
 | `load-failed`                | `/device/load`, `/clip/load_file` or `/clip/swap_file` failed inside Live — any `_LOM_ERRORS` exception, empty `presetPath` (device load), a native insert Live refuses or a class it has no name for (device load, `path` `native:<class>`, `detail` `insert-refused` or `unknown-device: <class>`), or `ClipSlot.create_audio_clip` raise (clip load or swap; a swap's `detail` ends "the old file is back" or "the slot is empty"). `detail` carries exception class + truncated message, or `"empty-preset-path"`. Not retryable without fixing the underlying asset. |

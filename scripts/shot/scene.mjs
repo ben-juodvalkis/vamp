@@ -39,7 +39,7 @@ import HYBRID_IR_LISTS_JSON from './fixtures/hybrid-ir-lists.json' with { type: 
 import FIXTURE_INDEX from './fixtures/data/places/index.json' with { type: 'json' };
 import OPERATOR_DUMP from '../../docs/reference/instruments/dumps/Operator.json' with { type: 'json' };
 
-export const PROTOCOL_VERSION = '3.12.0';
+export const PROTOCOL_VERSION = '3.13.0';
 
 /**
  * Hybrid Reverb's IR names as Live lists them, read off the rig
@@ -1269,7 +1269,13 @@ export const CHAIN_DEMO_DEVICES = [
 	{
 		name: 'Dub Space',
 		className: 'AudioEffectGroupDevice',
-		params: rackParams([['Send', 96], ['Feedback', 70], ['Tone', 48], ['Wobble', 30], ['Size', 110], ['Decay', 84], ['Duck', 40], ['Mix', 64]])
+		params: rackParams([['Send', 96], ['Feedback', 70], ['Tone', 48], ['Wobble', 30], ['Size', 110], ['Decay', 84], ['Duck', 40], ['Mix', 64]]),
+		// Its chains (ADR-529), for the unfold shots.
+		chains: [
+			{ name: 'Dry', color: 0x8a8a8a, devices: [] },
+			{ name: 'Echoes', color: 0x1aa6b7, devices: ['Echo', 'Auto Filter', { name: 'Grime', className: 'AudioEffectGroupDevice', params: rackParams([['Drive', 64], ['Tone', 80]]), chains: [{ name: 'Crush', devices: ['Saturator'] }] }] },
+			{ name: 'Space', color: 0xb46ad1, mute: true, devices: ['Reverb'] }
+		]
 	},
 	'Reverb',
 	{ name: 'Grit', className: 'AudioEffectGroupDevice', params: rackParams([['Drive', 90], ['Crush', 20], ['Tone', 70], ['Mix', 100]], { on: 0 }) },
@@ -1377,7 +1383,7 @@ export function setTrackDevices(scene, trackIndex, devices) {
 	return scene;
 }
 
-function pushDevices(args, trackPath, deviceNames, deviceProperties = {}, padRacks = {}) {
+function pushDevices(args, trackPath, deviceNames, deviceProperties = {}, padRacks = {}, rackChains = RACK_CHAINS) {
 	deviceNames.forEach((entry, deviceIndex) => {
 		// A device is either a bare name or `{ name, params, properties,
 		// padChains }` — the object form lets one track's copy of a device
@@ -1398,6 +1404,9 @@ function pushDevices(args, trackPath, deviceNames, deviceProperties = {}, padRac
 		}
 		const params = (typeof entry === 'string' ? null : entry.params) ?? DEVICE_PARAMS[entry.like ?? name] ?? [];
 		pushDeviceRecords(args, devicePath, name, className, params);
+		// A rack's chains (ADR-529): `chains: [{ name, color, mute, devices }]`,
+		// answered as its `chain_devices` row and a `rack-chain` bundle.
+		if (typeof entry !== 'string' && entry.chains) registerRackChains(rackChains, devicePath, entry.chains);
 
 		// Every Drum Rack gets a pad table (issue #491): its census's pads,
 		// each with the instrument the census names for it, plus whatever
@@ -1419,6 +1428,53 @@ function pushDevices(args, trackPath, deviceNames, deviceProperties = {}, padRac
 			};
 		}
 	});
+}
+
+/** Every rack's chains by rack path (ADR-529), filled as scenes are built. */
+export const RACK_CHAINS = {};
+
+function registerRackChains(registry, rackPath, chains) {
+	registry[rackPath] = chains.map((chain, index) => ({
+		index,
+		name: chain.name,
+		color: chain.color ?? null,
+		mute: chain.mute ? 1 : 0,
+		solo: chain.solo ? 1 : 0,
+		devices: (chain.devices ?? []).map((entry, d) => {
+			const name = typeof entry === 'string' ? entry : entry.name;
+			const className = (typeof entry !== 'string' && entry.className) || deviceClassName(entry.like ?? name);
+			const params = (typeof entry === 'string' ? null : entry.params) ?? DEVICE_PARAMS[entry.like ?? name] ?? [];
+			const path = `${rackPath}/chains/${index}/devices/${d}`;
+			if (typeof entry !== 'string' && entry.chains) registerRackChains(registry, path, entry.chains);
+			const isRack = ['AudioEffectGroupDevice', 'InstrumentGroupDevice', 'MidiEffectGroupDevice'].includes(className);
+			return { index: d, name, className, params, type: className.includes('Midi') ? 4 : 2, rack: isRack ? 1 : 0 };
+		})
+	}));
+}
+
+/** A rack's `chain_devices` row value (ADR-529), or undefined. */
+export function rackChainsValue(rackPath) {
+	const chains = RACK_CHAINS[rackPath];
+	if (!chains) return undefined;
+	return JSON.stringify({
+		chains: chains.map((c) => ({
+			index: c.index,
+			name: c.name,
+			color: c.color,
+			mute: c.mute,
+			solo: c.solo,
+			devices: c.devices.map((d) => ({ index: d.index, class: d.className, name: d.name, type: d.type, rack: d.rack }))
+		}))
+	});
+}
+
+/** The `rack-chain` bundle's records: every chain's devices under the rack. */
+export function rackChainRecords(rackPath) {
+	const args = [];
+	for (const c of RACK_CHAINS[rackPath] ?? []) {
+		for (const d of c.devices) pushDeviceRecords(args, `${rackPath}/chains/${c.index}/devices/${d.index}`, d.name, d.className, d.params);
+	}
+	return args;
 }
 
 /**

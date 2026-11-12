@@ -131,7 +131,7 @@ describe('the nested path grammar', () => {
 			`${RACK}/pads/38/params/0`, // params off a pad
 			`${RACK}/pads/x/devices/1/params/0`,
 			`${RACK}/pads/200/devices/1/params/0`, // note out of range
-			`${RACK}/chains/0/devices/1/params/0`, // chains stay reserved
+			`${RACK}/chains/0/params/0`, // params off a chain
 			`${PAD}/devices/1/params/a`
 		]) {
 			expect(splitParamPath(bad).devicePath, bad).toBeNull();

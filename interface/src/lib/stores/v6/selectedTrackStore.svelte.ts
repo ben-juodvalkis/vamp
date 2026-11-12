@@ -26,7 +26,8 @@ import {
 	UNSET_GENERATION,
 	applyParamValue,
 	applyPropertyValue,
-	padDevicesAt
+	padDevicesAt,
+	chainDevicesAt
 } from '$lib/stores/v3/normalized.svelte';
 import type { DeviceRecord } from '$lib/stores/v3/normalized.svelte';
 import {
@@ -240,6 +241,11 @@ class SelectedTrackStore {
 		// The rack the chain overview last opened, while it is still on the
 		// track; else the first.
 		const picked = fxChainStore.pickFor(this.selectedTrackPath, RACK_PICK);
+		// A rack inside another rack's chain, picked in the unfolded chain (ADR-529).
+		if (picked && picked.startsWith(`${this.selectedTrackPath}/`)) {
+			const nested = this.deviceAt(picked);
+			if (nested?.className === 'AudioEffectGroupDevice') return nested;
+		}
 		let first: DeviceRecord | undefined;
 		for (const device of track.devices.values()) {
 			if (device.className !== 'AudioEffectGroupDevice') continue;
@@ -363,6 +369,18 @@ class SelectedTrackStore {
 			// is compared.
 			return record && record.className === stub.className ? record : stub;
 		});
+	}
+
+	/** Any device record on the wire by path: a track's, a pad chain's, or
+	 *  one on a rack's chain (ADR-529). */
+	deviceAt(devicePath: string): DeviceRecord | undefined {
+		return v3Store.deviceByPath.get(devicePath);
+	}
+
+	/** The devices on a rack's chains (ADR-529), from its `rack-chain`
+	 *  bundle; `[]` until the rack's `chain_devices` row has been read. */
+	chainDevices(rackPath: string): DeviceRecord[] {
+		return chainDevicesAt(rackPath);
 	}
 
 	// ===== FX GRID API =====

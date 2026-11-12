@@ -375,14 +375,12 @@ describe('splitParamPath', () => {
 			devicePath: 'master/devices/0'
 		});
 	});
-	it('rejects chain-suffixed paths as devicePath-unresolvable', () => {
-		// Chain paths are grammar-valid but not supported in Phase 1–3;
-		// they should not resolve to a devicePath under our simple walker.
+	it('splits a rack chain device path (ADR-529, 3.13.0)', () => {
 		const split = splitParamPath(
 			'tracks/0/devices/0/chains/1/devices/0/params/5'
 		);
 		expect(split.trackPath).toBe('tracks/0');
-		expect(split.devicePath).toBeNull();
+		expect(split.devicePath).toBe('tracks/0/devices/0/chains/1/devices/0');
 	});
 	it('rejects malformed trackRef', () => {
 		expect(splitParamPath('tracks/x/devices/0/params/0').trackPath).toBeNull();

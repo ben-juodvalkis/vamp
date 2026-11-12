@@ -116,8 +116,11 @@ V3_ERROR_ADDRESS = "/looping/v3/error"
 # own default, named ``rel`` — the FX tiles' loads, which no longer name a
 # preset file. Arities are unchanged; a 3.11.0 surface would answer
 # ``empty-preset-path``.
+# 2026-11-12 adds 3.13.0 (ADR-529): rack chains on the wire — the path
+# grammar's ``…/chains/<i>/devices/<j>``, the ``chain_devices`` row and the
+# ``rack-chain`` scoped tree. A 3.12.0 surface answers path-not-supported.
 SUPPORTED_VERSIONS: tuple = (
-    "3.12.0", "3.11.0", "3.10.0", "3.9.0", "3.8.0", "3.7.0", "3.6.0", "3.5.0", "3.4.0", "3.3.0", "3.2.0", "3.1.0", "3.0.0",
+    "3.13.0", "3.12.0", "3.11.0", "3.10.0", "3.9.0", "3.8.0", "3.7.0", "3.6.0", "3.5.0", "3.4.0", "3.3.0", "3.2.0", "3.1.0", "3.0.0",
 )
 
 # Handshake timeout per the [06 §2] decision above.

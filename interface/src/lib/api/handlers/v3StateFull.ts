@@ -85,7 +85,8 @@ import {
 	stampGeneration,
 	v3Store,
 	UNSET_GENERATION,
-	mergePadChain
+	mergePadChain,
+	mergeRackChain
 } from '$lib/stores/v3/normalized.svelte';
 import type { OSCArg } from '$lib/types/osc';
 import { parsePadPath } from '$lib/utils/padPaths';
@@ -110,7 +111,7 @@ const HEADER_ARITY = 4;
  * a state/full right after every handshake accept (cold-start and
  * reconnect), not fire-and-forget at bring-up. See [04 §8.5].
  */
-export type V3StateFullReason = 'accept' | 'structural' | 'resync' | 'selection-change' | 'pad-chain';
+export type V3StateFullReason = 'accept' | 'structural' | 'resync' | 'selection-change' | 'pad-chain' | 'rack-chain';
 
 function toReason(arg: OSCArg | undefined): V3StateFullReason | null {
 	if (typeof arg !== 'string') return null;
@@ -119,7 +120,8 @@ function toReason(arg: OSCArg | undefined): V3StateFullReason | null {
 		arg === 'structural' ||
 		arg === 'resync' ||
 		arg === 'selection-change' ||
-		arg === 'pad-chain'
+		arg === 'pad-chain' ||
+		arg === 'rack-chain'
 	) {
 		return arg;
 	}
@@ -231,11 +233,23 @@ export function handleV3StateFullTree(args: OSCArg[]): void {
 		reason !== 'accept' &&
 		reason !== 'resync' &&
 		reason !== 'pad-chain' &&
+		reason !== 'rack-chain' &&
 		lastApplied !== null &&
 		lastApplied.generation === generation &&
 		lastApplied.etag === etag
 	) {
 		logger.debug('v3 state/full: identical bundle, deduped', { generation, etag });
+		return;
+	}
+
+	if (reason === 'rack-chain' && scope !== undefined) {
+		// ADR-529 (3.13.0): the devices on every chain of one rack, under
+		// `<rack>/chains/<i>/devices/<j>` — D and P records with no T, into
+		// the rack's own map. Like a pad's, never recorded as a held ETag.
+		const devices = parsePadChainArgs(flat, scope, `${scope}/chains/`);
+		if (!devices) return;
+		mergeRackChain(generation, scope, devices);
+		logger.info('v3 state/full received (rack chains)', { generation, scope, devices: devices.size });
 		return;
 	}
 
@@ -506,7 +520,11 @@ export function parseV3TreeArgs(
  * `T` — a pad is not a track. Returns the devices in chain order, or
  * `null` on a malformed stream (logged; nothing applied).
  */
-export function parsePadChainArgs(args: OSCArg[], padPath: string): Map<string, DeviceRecord> | null {
+export function parsePadChainArgs(
+	args: OSCArg[],
+	padPath: string,
+	under = `${padPath}/devices/`
+): Map<string, DeviceRecord> | null {
 	const devices = new Map<string, DeviceRecord>();
 	let currentDevice: DeviceRecord | null = null;
 	let i = 0;
@@ -516,7 +534,7 @@ export function parsePadChainArgs(args: OSCArg[], padPath: string): Map<string, 
 			case 'D': {
 				const d = parseDeviceRecord(args, i);
 				if (!d) return bail('pad D record malformed', i);
-				if (!d.record.devicePath.startsWith(padPath + '/devices/')) {
+				if (!d.record.devicePath.startsWith(under)) {
 					return bail(`pad D devicePath ${d.record.devicePath} not under ${padPath}`, i);
 				}
 				devices.set(d.record.devicePath, d.record);

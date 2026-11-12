@@ -36,7 +36,7 @@ describe('LiveConnectionBanner', () => {
 	});
 
 	it('says nothing while connected', () => {
-		markAccepted('3.12.0');
+		markAccepted('3.13.0');
 		render(LiveConnectionBanner);
 		vi.advanceTimersByTime(10_000);
 		flushSync();
@@ -70,7 +70,7 @@ describe('LiveConnectionBanner', () => {
 		vi.advanceTimersByTime(5_000);
 		flushSync();
 		expect(banner()).not.toBeNull();
-		markAccepted('3.12.0');
+		markAccepted('3.13.0');
 		flushSync();
 		expect(banner()).toBeNull();
 	});

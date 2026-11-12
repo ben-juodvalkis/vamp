@@ -713,3 +713,36 @@ class FakeSong:
         if "end" in self.raise_on:
             raise RuntimeError("no end")
         self.ends += 1
+
+
+class FakeEffectRack:
+    """An Audio Effect Rack (``AudioEffectGroupDevice``, ADR-529): macros as
+    ``parameters`` (index 0 Device On), ``chains`` of ``FakeChain`` and the
+    rack's ``chains`` listener pair. ``can_have_drum_pads`` is False, as on
+    every rack that is not a Drum Rack."""
+
+    can_have_chains = True
+    can_have_drum_pads = False
+
+    def __init__(self, chains=(), name="Audio Effect Rack", class_name="AudioEffectGroupDevice", type_=2, macros=None):
+        self.class_name = class_name
+        self.name = name
+        self.type = type_
+        _next_ptr[0] += 1
+        self._live_ptr = _next_ptr[0]
+        self.canonical_parent = None
+        self.parameters = list(macros) if macros is not None else [FakeParam("Device On", 1.0, 0, 1, quantized=True)]
+        self.chains = list(chains)
+        for c in self.chains:
+            c.canonical_parent = self
+        self._chains_listeners: List = []
+
+    def add_chains_listener(self, cb):
+        self._chains_listeners.append(cb)
+
+    def remove_chains_listener(self, cb):
+        self._chains_listeners.remove(cb)
+
+    def fire_chains(self):
+        for cb in list(self._chains_listeners):
+            cb()

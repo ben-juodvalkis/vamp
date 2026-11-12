@@ -211,7 +211,9 @@ def test_v3_set_empty_path_not_found(component, emits, generation):
 # --- path-not-supported ---------------------------------------------------
 
 
-def test_v3_set_chains_not_supported(component, emits, generation):
+def test_v3_set_chain_on_a_plain_device_is_not_found(component, emits, generation):
+    """Rack chains resolve since 3.13.0 (ADR-529); a device with no chains
+    answers path-not-found."""
     component.handle_set_param_v3(
         args=(
             "tracks/0/devices/0/chains/0/devices/0/params/0",
@@ -222,7 +224,7 @@ def test_v3_set_chains_not_supported(component, emits, generation):
     assert len(emits) == 1
     _addr, args = emits[0]
     _fa, code, _path, _detail = args
-    assert code == V3_ERROR_PATH_NOT_SUPPORTED
+    assert code == V3_ERROR_PATH_NOT_FOUND
 
 
 def test_v3_set_returns_not_supported(component, emits, generation):

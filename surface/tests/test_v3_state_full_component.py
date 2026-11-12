@@ -1765,3 +1765,57 @@ def test_pad_bundle_follows_a_chain_edit(emits):
     d_paths = [args[i + 1] for i, tag in enumerate(args) if tag == "D"]
     assert d_paths == ["tracks/0/devices/0/pads/36/devices/1", "tracks/0/devices/0/pads/36/devices/2"]
     assert args[args.index("D") + 2] == "Delay"
+
+
+# --- rack-scoped bundles: reason rack-chain, scope a rack path (ADR-529) ------
+
+from tests.support.lom_fakes import FakeEffectRack
+
+
+def _rack_component(emits):
+    reverb = FakeDevice("Hybrid", [FakeParam("Device On", 1.0, 0, 1, quantized=True), FakeParam("Dry/Wet", 0.3)], type_=2, name="Reverb")
+    delay = FakeDevice("Delay", [FakeParam("Device On", 1.0, 0, 1, quantized=True)], type_=2)
+    inner = FakeEffectRack([FakeChain([FakeDevice("Redux2", [FakeParam("Device On", 1.0)], type_=2)])], name="Inner")
+    rack = FakeEffectRack([FakeChain([reverb], name="Wet"), FakeChain([delay, inner], name="Echo")])
+    song = FakeSong(tracks=[FakeTrack([rack], "Gtr")])
+    gen = _Gen()
+    gen.advance("test-setup")
+    comp = V3StateFullComponent(
+        song=song,
+        emit=lambda addr, args: emits.append((addr, args)),
+        generation_component=gen,
+        stream=FakeStream(connected=True, sink=emits),
+    )
+    return comp, rack
+
+
+def test_rack_bundle_carries_every_chains_devices_one_level_deep(emits):
+    comp, _ = _rack_component(emits)
+    comp.emit_rack_chain("tracks/0/devices/0")
+    reason, _, _, scope = _header(emits)
+    assert reason == "rack-chain" and scope == "tracks/0/devices/0"
+    args = _tree_args(emits)
+    d = [args[i + 1] for i, a in enumerate(args) if a == "D"]
+    assert d == [
+        "tracks/0/devices/0/chains/0/devices/0",
+        "tracks/0/devices/0/chains/1/devices/0",
+        "tracks/0/devices/0/chains/1/devices/1",
+    ]
+    assert "tracks/0/devices/0/chains/0/devices/0/params/1" in args
+
+
+def test_rack_bundle_is_never_memo_suppressed_and_unresolvable_emits_nothing(emits):
+    comp, _ = _rack_component(emits)
+    comp.emit_rack_chain("tracks/0/devices/0")
+    comp.emit_rack_chain("tracks/0/devices/0")
+    assert len([1 for addr, _ in emits if addr == V3_STATE_FULL_TREE_ADDRESS]) == 2
+    emits.clear()
+    comp.emit_rack_chain("tracks/0/devices/4")
+    assert emits == []
+
+
+def test_a_nested_racks_bundle_resolves_through_its_chain_path(emits):
+    comp, _ = _rack_component(emits)
+    comp.emit_rack_chain("tracks/0/devices/0/chains/1/devices/1")
+    args = _tree_args(emits)
+    assert args[1] == "tracks/0/devices/0/chains/1/devices/1/chains/0/devices/0"

@@ -261,6 +261,10 @@ from .components.RackChainNamesComponent import (
     PROVIDER_NAME as RACK_CHAINS_PROVIDER_NAME,
     RackChainNamesComponent,
 )
+from .components.RackChainDevicesComponent import (
+    PROVIDER_NAME as RACK_CHAIN_DEVICES_PROVIDER_NAME,
+    RackChainDevicesComponent,
+)
 from .components.DrumPadChainComponent import (
     DrumPadChainComponent,
     PROVIDER_NAME as DRUM_PAD_CHAIN_PROVIDER_NAME,
@@ -1449,10 +1453,22 @@ class LoopingSurface(ControlSurface):
             schedule_delayed=self._schedule_delayed,
         )
 
+        # ADR-529 (3.13.0): the chains and devices inside a rack, for the
+        # chain overview's unfold. Same narrow composite as a pad's chain.
+        self._rack_chain_devices_component = RackChainDevicesComponent(
+            emit=self._transport.send,
+            schedule_delayed=self._schedule_delayed,
+            advance_generation=self._generation_component.advance,
+            on_structural_invalidate=lambda: self._property_component.on_structural_invalidate(),
+            emit_rack_chain=self._v3_state_full_component.emit_rack_chain,
+            on_param_value_changed=_on_param_value_changed_fanout,
+        )
+
         self._property_component = PropertyComponent(
             song=self.song, emit=self._transport.send,
             schedule_delayed=self._schedule_delayed,
             computed_providers={
+                RACK_CHAIN_DEVICES_PROVIDER_NAME: self._rack_chain_devices_component,
                 DRUM_VM_PROVIDER_NAME: self._drum_vm_component,
                 DRUM_PAD_CHAIN_PROVIDER_NAME: self._drum_pad_chain_component,
                 RACK_CHAINS_PROVIDER_NAME: self._rack_chain_names_component,
@@ -3023,6 +3039,9 @@ class LoopingSurface(ControlSurface):
         if getattr(self, "_rack_chain_names_component", None) is not None:
             self._rack_chain_names_component.disconnect()
             self._rack_chain_names_component = None
+        if getattr(self, "_rack_chain_devices_component", None) is not None:
+            self._rack_chain_devices_component.disconnect()
+            self._rack_chain_devices_component = None
         if getattr(self, "_property_component", None) is not None:
             self._property_component.disconnect()
             self._property_component = None

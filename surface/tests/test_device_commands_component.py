@@ -556,8 +556,9 @@ def test_delete_errors():
     comp, _song, _rack, reverb, _util, emits = _delete_rig()
     comp.handle_delete(["tracks/0/devices/0/pads/36/devices/7"], None)
     assert emits[-1][1][:2] == (V3_DEVICE_DELETE_ADDRESS, V3_ERROR_PATH_NOT_FOUND)
+    # A Drum Rack's chains are reached by pad, never by index (ADR-529).
     comp.handle_delete(["tracks/0/devices/0/chains/0/devices/0"], None)
-    assert emits[-1][1][:2] == (V3_DEVICE_DELETE_ADDRESS, V3_ERROR_PATH_NOT_SUPPORTED)
+    assert emits[-1][1][:2] == (V3_DEVICE_DELETE_ADDRESS, V3_ERROR_PATH_NOT_FOUND)
     comp.handle_delete([], None)
     assert emits[-1][1][1] == V3_ERROR_WRITE_REJECTED
     reverb.canonical_parent = None

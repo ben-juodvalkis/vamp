@@ -101,8 +101,11 @@ from .path_resolver import (
     ResolveStatus,
     compose_chain_device_path,
     compose_param_path_under,
+    compose_rack_chain_path,
     is_pad_scoped,
+    resolve_device,
     resolve_pad,
+    safe_rack_chains,
 )
 from .TrackMetadataComponent import (  # noqa: E402
     TRACK_ROLE_DATA_KEY,
@@ -162,6 +165,11 @@ _STATE_FULL_DEBOUNCE_MS = 75
 # pad-chain subscription, and is never memo-suppressed — is
 # ``drum_vm_functions.REASON_PAD_CHAIN``, the same name the pad-chain
 # component advances the generation with.
+
+#: ADR-529 (3.13.0): a rack-scoped bundle — the devices on every chain of
+#: one Audio Effect / Instrument / MIDI Effect Rack, answering that rack's
+#: ``chain_devices`` subscription. Never memo-suppressed, like a pad's.
+REASON_RACK_CHAIN = "rack-chain"
 
 # Masks the ETag (and the generation) into OSC's signed ``i`` typetag.
 _INT31_MASK = 0x7FFFFFFF
@@ -497,6 +505,17 @@ class V3StateFullComponent:
             return
         self._publish_now(reason=REASON_PAD_CHAIN, scope=pad_path)
 
+    def emit_rack_chain(self, rack_path: str) -> None:
+        """Emit a rack-scoped ``state/full`` (ADR-529, protocol 3.13.0):
+        reason ``rack-chain``, scope the rack's device path, D and P records
+        for every device on every chain under ``…/chains/<i>/devices/<j>``.
+        A nested rack's own chains are not walked: it is subscribed on its
+        own when it is unfolded. Sent now and past the memo, as a pad's is.
+        """
+        if self._disconnected:
+            return
+        self._publish_now(reason=REASON_RACK_CHAIN, scope=rack_path)
+
     # --- core ------------------------------------------------------------
 
     def _publish(self, reason: str, scope: str = None) -> None:
@@ -581,7 +600,11 @@ class V3StateFullComponent:
             if scope is None:
                 tree_args = self._build_payload()
             else:
-                tree_args = self._build_scoped_payload(scope)
+                tree_args = (
+                    self._build_rack_payload(scope)
+                    if reason == REASON_RACK_CHAIN
+                    else self._build_scoped_payload(scope)
+                )
         except Exception as e:
             # Whole song: an empty tree is the honest answer. A scope: an
             # empty bundle is a *statement* — for a pad, "every effect
@@ -663,7 +686,7 @@ class V3StateFullComponent:
         if (
             tree_args
             and cached is not None
-            and reason not in ("accept", "resync", REASON_PAD_CHAIN)
+            and reason not in ("accept", "resync", REASON_PAD_CHAIN, REASON_RACK_CHAIN)
         ):
             logger.info(
                 "V3StateFullComponent: state/full skipped — tree "
@@ -933,6 +956,59 @@ class V3StateFullComponent:
                 out.append(_safe_float(_safe_getattr(param, "value", 0.0)))
                 out.append(_safe_str(_safe_getattr(param, "unit", "")))
         return out
+
+    def _build_rack_payload(self, rack_path: str):
+        """D and P records for the devices on every chain of one rack
+        (ADR-529). ``None`` when the path names no rack; ``[]`` for a rack
+        whose chains hold nothing."""
+        r = resolve_device(self._song, rack_path)
+        if r.status is not ResolveStatus.OK:
+            logger.info(
+                "V3StateFullComponent: rack scope %s does not resolve (%s)",
+                rack_path, r.detail,
+            )
+            return None
+        out: list = []
+        for chain_idx, chain in enumerate(safe_rack_chains(r.obj)):
+            try:
+                devices = list(chain.devices or ())
+            except _LOM_ERRORS as e:
+                logger.warning(
+                    "V3StateFullComponent: chain.devices read failed for %s chain %d: %s",
+                    rack_path, chain_idx, e,
+                )
+                continue
+            chain_path = compose_rack_chain_path(rack_path, chain_idx)
+            for device_idx, device in enumerate(devices):
+                self._device_records(out, compose_chain_device_path(chain_path, device_idx), device)
+        return out
+
+    def _device_records(self, out: list, device_path: str, device) -> None:
+        """One D record and its P records, appended to ``out``."""
+        out.append("D")
+        out.append(device_path)
+        out.append(_safe_str(_safe_getattr(device, "name", "")))
+        out.append(_safe_str(_safe_getattr(device, "class_name", "")))
+        try:
+            params = list(device.parameters)
+        except Exception as e:
+            logger.warning(
+                "V3StateFullComponent: device.parameters read failed "
+                "for %s: %s", device_path, e,
+            )
+            return
+        for param_idx, param in enumerate(params):
+            out.append("P")
+            out.append(compose_param_path_under(device_path, param_idx))
+            out.append(_safe_str(_safe_getattr(param, "name", "")))
+            out.append(_safe_str(
+                _safe_getattr(param, "display_name",
+                              _safe_getattr(param, "name", ""))
+            ))
+            out.append(_safe_float(_safe_getattr(param, "min", 0.0)))
+            out.append(_safe_float(_safe_getattr(param, "max", 1.0)))
+            out.append(_safe_float(_safe_getattr(param, "value", 0.0)))
+            out.append(_safe_str(_safe_getattr(param, "unit", "")))
 
     def _resolve_scope_track(self, scope: str):
         """Resolve a ``scope`` path string to a LOM track object.

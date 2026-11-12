@@ -114,8 +114,12 @@ import { logger } from '$lib/utils/logger';
   // Under a pad scope the slot's own answer wins: the prop is the FX
   // grid's track-level lookup.
   let device = $derived(deviceProp !== undefined && !scopeKey ? deviceProp : slot.device);
-  let isGhost = $derived(slot.state === 'ghost');
-  let isLoading = $derived(slot.state === 'loading');
+  // A device handed in is a real one (a chain cell's, a device inside a
+  // rack's chain included, ADR-529): never a ghost, whatever the track's
+  // slot says — or a drag on a rack's Reverb would load one on the track.
+  let given = $derived(!!deviceProp && !scopeKey);
+  let isGhost = $derived(!given && slot.state === 'ghost');
+  let isLoading = $derived(!given && slot.state === 'loading');
 
   // Open this device's central view — the pane inside the Drum Rack view
   // under a pad scope, the top-level device view otherwise. The router

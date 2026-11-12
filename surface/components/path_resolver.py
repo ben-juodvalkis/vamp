@@ -10,7 +10,7 @@ Resolution returns a ``ResolveResult`` enum-like return rather than
 raising: the caller (``DevicesComponent.handle_set_param_v3``) needs
 to distinguish ``path-not-found`` (path names a position that never
 existed) from ``path-not-supported`` (grammar valid but Phase-1
-doesn't ship this suffix — ``chains/...`` and ``returns/...``) from
+doesn't ship this suffix — ``returns/...``) from
 ``path-structural-mismatch`` (the path was valid at an earlier
 generation but no longer resolves). The latter is handled one level
 up: this resolver only sees the current LOM and the current path.
@@ -29,8 +29,10 @@ Grammar ([04 §2.1]):
     padRef      := deviceRef "/pads/" note              // 0..127, the DrumPad's MIDI note
     deviceRef   := padRef "/devices/" index             // drum_pads[note].chains[0].devices[index]
 
-    // Future; Phase 1 rejects with path-not-supported:
-    deviceRef   := deviceRef "/chains/" index "/devices/" index
+    // Rack chains (ADR-529, protocol 3.13.0) — an Audio Effect, Instrument
+    // or MIDI Effect Rack's chain by index, then its devices. Recursive.
+    chainRef    := deviceRef "/chains/" index           // rack.chains[index]
+    deviceRef   := chainRef "/devices/" index
 
 Indices are decimal digits, no leading zero except ``"0"``. Segment
 names are closed-enum (``tracks``, ``master``, ``returns``,
@@ -41,8 +43,7 @@ Why ``pads/<note>`` rather than the reserved ``chains/<index>`` for a
 Drum Rack: ``rack.chains`` is a flat list that re-indexes whenever a pad
 gains or loses a chain, while every per-pad row the property channel
 already carries (``vm.pad.<note>.<fn>``, ``vm.selectedPad``, the census)
-keys on the note. ``chains/`` stays reserved for Instrument and Audio
-Effect Racks.
+keys on the note. ``chains/<index>`` is for every other rack (3.13.0).
 """
 
 from __future__ import annotations
@@ -285,6 +286,42 @@ def _safe_pad_chain(device, note: int):
     return pad, chains[0]
 
 
+def safe_rack_chains(device) -> list:
+    """A rack's ``chains`` as a list — ``[]`` for a device that is not a
+    rack (``can_have_chains`` false), a Drum Rack (whose chains are reached
+    by pad note) and every LOM raise."""
+    try:
+        if not getattr(device, "can_have_chains", False):
+            return []
+        if getattr(device, "can_have_drum_pads", False):
+            return []
+        return list(device.chains or ())
+    except (RuntimeError, AttributeError, TypeError):
+        return []
+
+
+def resolve_rack_chain(song, path: str) -> ResolveResult:
+    """Resolve ``<deviceRef>/chains/<M>`` to the ``Chain`` (3.13.0)."""
+    parts = _split(path)
+    if parts is None or len(parts) < 4 or parts[-2] != _SEGMENT_CHAINS:
+        return ResolveResult(ResolveStatus.MALFORMED, detail=f"expected chains/<M> suffix: {path!r}")
+    chain_idx = _parse_index(parts[-1])
+    if chain_idx is None:
+        return ResolveResult(ResolveStatus.MALFORMED, detail=f"bad chain index: {path!r}")
+    r = resolve_device(song, "/".join(parts[:-2]))
+    if r.status is not ResolveStatus.OK:
+        return ResolveResult(r.status, detail=f"rack segment: {path!r}")
+    chains = safe_rack_chains(r.obj)
+    if chain_idx >= len(chains):
+        return ResolveResult(ResolveStatus.NOT_FOUND, detail=f"no chain {chain_idx}: {path!r}")
+    return ResolveResult(ResolveStatus.OK, obj=chains[chain_idx])
+
+
+def compose_rack_chain_path(rack_path: str, chain_index: int) -> str:
+    """``tracks/1/devices/2`` + 0 → ``tracks/1/devices/2/chains/0`` (3.13.0)."""
+    return "%s/%s/%d" % (rack_path, _SEGMENT_CHAINS, chain_index)
+
+
 def _safe_clip_slots(track) -> list:
     """Return a track's clip_slots list. Empty on any read failure."""
     try:
@@ -378,8 +415,7 @@ def _resolve_device_segment(
     that chain's devices may hold pads again. Every level is an O(1)
     list access.
 
-    Chains (``chains/<N>``, Instrument / Audio Effect Rack chains) are
-    grammar-reserved and still reject with NOT_SUPPORTED.
+    Since 3.13.0 a rack's ``chains/<N>/devices/<M>`` walks the same way.
 
     Returns ``(device, next_index, status)``.
     """
@@ -434,9 +470,25 @@ def _resolve_device_segment(
             continue
 
         if idx < len(parts) and parts[idx] == _SEGMENT_CHAINS:
-            # devices/<N>/chains/<M>/… — an Instrument / Audio Effect Rack
-            # chain: valid grammar, still reserved.
-            return None, idx, ResolveStatus.NOT_SUPPORTED
+            # devices/<N>/chains/<M>/devices/<K>… — a rack's chain (an
+            # Audio Effect, Instrument or MIDI Effect Rack; since 3.13.0,
+            # ADR-529). By chain index: these racks' chains are a list the
+            # user orders, unlike a Drum Rack's, which re-index as pads
+            # gain chains (hence ``pads/<note>`` there).
+            if idx + 1 >= len(parts):
+                return None, idx, ResolveStatus.MALFORMED
+            chain_idx = _parse_index(parts[idx + 1])
+            if chain_idx is None:
+                return None, idx, ResolveStatus.MALFORMED
+            chains = safe_rack_chains(device)
+            if chain_idx >= len(chains):
+                return None, idx + 2, ResolveStatus.NOT_FOUND
+            idx += 2
+            # A chain is a container, not a device.
+            if idx >= len(parts) or parts[idx] != _SEGMENT_DEVICES:
+                return None, idx, ResolveStatus.MALFORMED
+            container = chains[chain_idx]
+            continue
 
         return device, idx, ResolveStatus.OK
 
@@ -566,17 +618,6 @@ def resolve_param(song, path: str) -> ResolveResult:
     device, consumed, status = _resolve_device_segment(track, parts, consumed)
     if status is not ResolveStatus.OK:
         return ResolveResult(status, detail=f"device segment: {path!r}")
-
-    # If the next segment is ``chains/<N>``, the whole paramRef is
-    # grammar-valid but Phase-1-unimplemented. Report NOT_SUPPORTED
-    # rather than letting the tail parse fail as MALFORMED — the v3
-    # error code distinction matters to the UI (branch: retry at new
-    # path vs. show rack-chain-unsupported message).
-    if consumed < len(parts) and parts[consumed] == _SEGMENT_CHAINS:
-        return ResolveResult(
-            ResolveStatus.NOT_SUPPORTED,
-            detail=f"rack chains not implemented: {path!r}",
-        )
 
     # Remaining must be ``params/<K>``.
     if consumed + 2 != len(parts) or parts[consumed] != _SEGMENT_PARAMS:
@@ -864,9 +905,13 @@ def compose_device_path_for(song, device, _depth: int = 0) -> Optional[str]:
     if rack_path is None:
         return None
     note = _pad_note_of_chain(rack, parent)
-    if note is None:
+    if note is not None:
+        return compose_chain_device_path(compose_pad_path(rack_path, note), index)
+    chain_index = _index_by_handle(safe_rack_chains(rack), parent)
+    if chain_index is None:
+        # A Drum Rack pad's second chain: nothing addresses it but the rack.
         return rack_path
-    return compose_chain_device_path(compose_pad_path(rack_path, note), index)
+    return compose_chain_device_path(compose_rack_chain_path(rack_path, chain_index), index)
 
 
 def _index_by_handle(devices: list, device) -> Optional[int]:

@@ -55,6 +55,10 @@
   import Box from '@lucide/svelte/icons/box';
   import Plug from '@lucide/svelte/icons/plug';
   import Plus from '@lucide/svelte/icons/plus';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+  import ChainListFace from './chain/ChainListFace.svelte';
+  import { CHAIN_DEVICES, chainDevicePathOf, isChainRack, rackChainsOf, rackFold, setChainSwitch, type RackChain } from '$lib/services/rackChains.svelte';
   import { browserModeStore } from '$lib/stores/v6/browserModeStore.svelte';
   import { drumPadScope } from '$lib/stores/v6/drumPadScope.svelte';
   import { setContext } from 'svelte';
@@ -172,12 +176,18 @@
     /** Where Live has it now. */
     path: string;
     device: DeviceRecord;
-    kind: 'instrument' | 'rack' | 'max' | 'plugin' | 'effect';
+    kind: 'instrument' | 'rack' | 'max' | 'plugin' | 'effect' | 'chains' | 'empty';
     presetKey: string | null;
     tile: string | null;
     ink: string;
     /** The track's Drum Rack, drawn as its Trnsp, and kept first while a pad is scoped. */
     kit: boolean;
+    /** A rack Live lets the wire into (ADR-529): it folds and unfolds. */
+    foldable?: boolean;
+    /** Drawn inside an unfolded rack (ADR-529): the rack, its ink, how deep. */
+    inside?: { rackPath: string; ink: string; depth: number; chain: RackChain; chains: number };
+    /** The chain list of an unfolded rack: its chains. */
+    chains?: RackChain[];
   };
 
   const trackPath = $derived(selectedTrackStore.selectedTrackPath);
@@ -263,7 +273,8 @@
         // user, 2026-10-26, as the strip's own Permute section does); a
         // pad's chain, the pad's.
         ink: isInstrument || presetKey === 'sequencer' ? (padChain ? (padInk ?? trackColor) : trackColor) : trackInk(family, paint),
-        kit: !padChain && isInstrument && device.className === 'DrumGroupDevice'
+        kit: !padChain && isInstrument && device.className === 'DrumGroupDevice',
+        foldable: isChainRack(device.className)
       };
     })
   );
@@ -285,8 +296,6 @@
     const sig = `${device.className}|${device.name}`;
     return { key: `${sig}|${nth}`, sig, path: device.devicePath, device, kind: 'instrument', presetKey: null, tile: null, ink: trackColor, kit: true };
   });
-  /** How many cells the kit cell puts ahead of the chain's own. */
-  const kitLead = $derived(kitCell ? 1 : 0);
 
   function isOn(cell: Cell): boolean {
     return (selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(cell.device, 0)) ?? 1) > 0;
@@ -308,6 +317,8 @@
    */
   const ROW_UNITS = 12;
   function unitsOf(cell: Cell): number {
+    if (cell.kind === 'empty') return 1;
+    if (cell.kind === 'chains') return 2;
     if (cell.kit || isMidiWheels(cell.device)) return 1;
     return cell.presetKey && controlFor(cell.presetKey)?.kind === 'slider' ? 1 : 2;
   }
@@ -422,7 +433,128 @@
   /** The cells in the order to draw them: the drag's preview, else `settled`. */
   const shown = $derived((drag && arrange(cells, moved(drag.base, drag.from, drag.to))) || settled);
 
-  const drawn = $derived(kitCell ? [kitCell, ...shown] : shown);
+  /*
+   * Unfolded racks (ADR-529): after a rack's own cell, its chain list (when
+   * it has more than one chain) and the chosen chain's devices, as Live's
+   * device view shows them; a rack among those unfolds the same way. They
+   * belong to the rack: never dragged, and a drop onto one lands at the
+   * rack's place. `tops[i]` is the chain position a drawn cell stands for.
+   */
+  const MAX_DEPTH = 4;
+  function expand(cell: Cell, depth: number, out: Cell[]): void {
+    out.push(cell);
+    if (!cell.foldable || depth >= MAX_DEPTH || !rackFold.isOpen(cell.path)) return;
+    const rackPath = cell.path;
+    const chains = rackChainsOf(rackPath);
+    if (!chains) return;
+    const ink = cell.ink;
+    if (chains.length > 1) {
+      out.push({ ...listCell(cell), chains, inside: { rackPath, ink, depth, chain: chains[0], chains: chains.length } });
+    }
+    if (chains.length === 0) return;
+    const chosen = chains[Math.min(rackFold.chainOf(rackPath), chains.length - 1)];
+    const inside = { rackPath, ink, depth, chain: chosen, chains: chains.length };
+    if (chosen.devices.length === 0) {
+      out.push({ ...listCell(cell), key: `${cell.key}|c${chosen.index}|empty`, kind: 'empty', inside });
+      return;
+    }
+    chosen.devices.forEach((d, i) => {
+      const devicePath = chainDevicePathOf(rackPath, chosen.index, d.index);
+      const device: DeviceRecord = selectedTrackStore.deviceAt(devicePath) ?? {
+        devicePath,
+        name: d.name,
+        className: d.className,
+        params: new Map(),
+        properties: new Map()
+      };
+      const nth = chosen.devices.slice(0, i).filter((x) => x.name === d.name && x.className === d.className).length;
+      const presetKey = presetKeyFor(device);
+      const kind: Cell['kind'] =
+        device.className === 'AudioEffectGroupDevice' && !presetKey
+          ? 'rack'
+          : device.className.startsWith('MxDevice') && !presetKey
+            ? 'max'
+            : device.className.endsWith('PluginDevice')
+              ? 'plugin'
+              : 'effect';
+      const family = presetKey ? DEVICE_PRESETS[presetKey].color.primary : kind === 'rack' ? DEVICE_FAMILY_INKS.rackVoice.primary : DEVICE_FAMILY_INKS.utility.primary;
+      const sig = `${device.className}|${device.name}`;
+      const nested: Cell = {
+        key: `${cell.key}|c${chosen.index}|${sig}|${nth}`,
+        sig,
+        path: devicePath,
+        device,
+        kind: d.type === 1 ? 'instrument' : kind,
+        presetKey,
+        tile: null,
+        ink: trackInk(family, paint),
+        kit: false,
+        foldable: isChainRack(device.className),
+        inside
+      };
+      expand(nested, depth + 1, out);
+    });
+  }
+  function listCell(rack: Cell): Cell {
+    return { ...rack, key: `${rack.key}|chains`, kind: 'chains', tile: null, presetKey: null, foldable: false, kit: false };
+  }
+
+  const expanded = $derived.by(() => {
+    const out: Cell[] = [];
+    const tops: (number | null)[] = [];
+    if (kitCell) {
+      out.push(kitCell);
+      tops.push(null);
+    }
+    shown.forEach((cell, i) => {
+      const part: Cell[] = [];
+      expand(cell, 0, part);
+      for (const [j, c] of part.entries()) {
+        out.push(c);
+        tops.push(j === 0 ? i : null);
+      }
+    });
+    return { cells: out, tops };
+  });
+  const drawn = $derived(expanded.cells);
+
+  /** The chain position a drawn place stands for: its own, else its rack's. */
+  function topAt(drawnIndex: number): number {
+    const tops = expanded.tops;
+    for (let i = Math.min(drawnIndex, tops.length - 1); i >= 0; i--) {
+      if (tops[i] !== null) return tops[i]!;
+    }
+    return 0;
+  }
+
+  /*
+   * Each unfolded rack on screen holds its `chain_devices` row: the surface
+   * sends the chains and the devices' records and keeps their values live
+   * for as long as it is open. Diffed by path, so opening one rack never
+   * re-subscribes another.
+   */
+  const openRacks = $derived(
+    drawn.filter((c) => c.foldable && rackFold.isOpen(c.path)).map((c) => c.path)
+  );
+  const rackRows = new Map<string, () => void>();
+  $effect(() => {
+    const want = new Set(openRacks);
+    untrack(() => {
+      for (const [path, release] of [...rackRows]) {
+        if (!want.has(path)) {
+          release();
+          rackRows.delete(path);
+        }
+      }
+      for (const path of want) {
+        if (!rackRows.has(path)) rackRows.set(path, selectedTrackStore.subscribeProperty(path, CHAIN_DEVICES));
+      }
+    });
+  });
+  onDestroy(() => {
+    for (const release of rackRows.values()) release();
+    rackRows.clear();
+  });
 
   /*
    * The chain has the section's height under the palette bar, one row up to
@@ -591,10 +723,13 @@
   let pressInControl = false;
   /** The press landed on the header bar: its tap is Device On. */
   let pressInHead = false;
+  /** The press landed on a rack's fold button (ADR-529). */
+  let pressInFold = false;
   function pressDown(cell: Cell, info: DragInfo) {
     const target = info.event?.target;
-    pressInControl = target instanceof Element && target.closest('.cell-control') !== null;
-    pressInHead = target instanceof Element && target.closest('.cell-head') !== null;
+    pressInFold = target instanceof Element && target.closest('.cell-fold') !== null;
+    pressInControl = !pressInFold && target instanceof Element && target.closest('.cell-control') !== null;
+    pressInHead = !pressInFold && target instanceof Element && target.closest('.cell-head') !== null;
     if (pressInControl && cell.presetKey) fxChainStore.pick(pickScope, cell.presetKey, cell.device.devicePath);
   }
 
@@ -617,7 +752,7 @@
       open(cell, true);
       return;
     }
-    if (cell.kind === 'instrument' || !chainEl) return;
+    if (cell.kind === 'instrument' || cell.inside || cell.kind === 'chains' || cell.kind === 'empty' || pressInFold || !chainEl) return;
     const node = chainEl.querySelector<HTMLElement>(`:scope > [data-cell-key="${CSS.escape(cell.key)}"]`);
     if (!node) return;
     // Where it is drawn, mid-slide included, so it lifts from under the finger.
@@ -650,7 +785,7 @@
     // cell wherever it was picked up by.
     const x = d.chain.left + d.box.left + d.box.width / 2 + info.dx;
     const y = d.chain.top + d.box.top + d.box.height / 2 - info.dy;
-    const to = clampChainIndex({ from: d.from, to: Math.max(0, positionAt(d, x, y) - kitLead), count: d.base.length, instrument: d.instrument });
+    const to = clampChainIndex({ from: d.from, to: topAt(positionAt(d, x, y)), count: d.base.length, instrument: d.instrument });
     if (to !== null && to !== d.to) drag = { ...d, to };
   }
 
@@ -699,6 +834,10 @@
 
   /** The caption under a cell's name: what the device is, where its name does not say (`deviceTypeLabel`). */
   function captionOf(cell: Cell): string | null {
+    if (cell.kind === 'chains') return cell.device.name;
+    if (cell.kind === 'empty') return null;
+    // Inside a rack of several chains: which chain it is on.
+    if (cell.inside && cell.inside.chains > 1) return cell.inside.chain.name;
     return deviceTypeLabel(cell.device.className, cell.device.name);
   }
 
@@ -717,7 +856,7 @@
   /** `fromControl`: the press landed on the cell's control, not its frame. */
   function open(cell: Cell, fromControl = false) {
     const { device } = cell;
-    if (cell.kind === 'instrument') {
+    if (cell.kind === 'instrument' && !cell.inside) {
       // The kit cell under a pad: back to the kit — from its frame. Its
       // Trnsp is the pad's under the scope, so a touch there keeps it.
       if (cell.kit && padScope) {
@@ -752,13 +891,35 @@
            are (ADR-492), so a narrow cell's name steps down a size. -->
       <CellSize><div class="cell-head">
         <span class="head-text">
-          <span class="name" lang="en">{cell.device.name}</span>
+          <span class="name" lang="en">{cell.kind === 'chains' ? 'Chains' : cell.kind === 'empty' ? cell.inside?.chain.name : cell.device.name}</span>
           {#if caption}<span class="caption">{caption}</span>{/if}
         </span>
-        {#if cell.kind === 'instrument' && glance.instrumentViewType === 'operator'}<span class="head-end"><OperatorHeadAlgorithm device={cell.device} /></span>{/if}
+        {#if cell.kind === 'instrument' && !cell.inside && glance.instrumentViewType === 'operator'}<span class="head-end"><OperatorHeadAlgorithm device={cell.device} /></span>{/if}
+        {#if cell.foldable && cell.kind !== 'chains'}
+          <!-- Fold / unfold the rack's chains (ADR-529). -->
+          <span
+            class="cell-fold"
+            role="button"
+            tabindex="-1"
+            aria-label="{rackFold.isOpen(cell.path) ? 'Fold' : 'Unfold'} {cell.device.name}"
+            aria-expanded={rackFold.isOpen(cell.path)}
+            data-debug="chain-fold"
+          >{#if rackFold.isOpen(cell.path)}<ChevronLeft />{:else}<ChevronRight />{/if}</span>
+        {/if}
       </div></CellSize>
 
-      {#if cell.kit}
+      {#if cell.kind === 'chains' && cell.inside && cell.chains}
+        <!-- An unfolded rack's chains: a tap chooses the one shown, the dot
+             is its activator (ADR-529). -->
+        <div class="cell-face" role="presentation"><ChainListFace
+          chains={cell.chains}
+          selected={rackFold.chainOf(cell.inside.rackPath)}
+          onSelect={(i) => rackFold.selectChain(cell.inside!.rackPath, i)}
+          onMute={(i, on) => setChainSwitch(cell.inside!.rackPath, i, 'mute', on)}
+        /></div>
+      {:else if cell.kind === 'empty'}
+        <div class="mark empty-chain" aria-hidden="true">Empty</div>
+      {:else if cell.kit}
         <!-- A Drum Rack: the kit's Trnsp. -->
         <div class="cell-control" role="presentation"><CellSize>
           <DrumRackFace device={cell.device} color={selectedTrackScheme() ?? schemeFromInk(cell.ink)} />
@@ -766,7 +927,7 @@
       {:else if cell.presetKey === 'sequencer'}
         <!-- Permute: its mute and pitch steps, on this device. -->
         <div class="cell-control" role="presentation"><CellSize><PermuteStepsFace device={cell.device} color={cell.ink} /></CellSize></div>
-      {:else if !padScope && cell.kind === 'instrument' && glance.instrumentViewType && FACED_INSTRUMENTS.has(glance.instrumentViewType)}
+      {:else if !padScope && !cell.inside && cell.kind === 'instrument' && glance.instrumentViewType && FACED_INSTRUMENTS.has(glance.instrumentViewType)}
         <!-- The instrument's signature control, as its view draws it. -->
         <div class="cell-control" role="presentation"><CellSize>
           <InstrumentFace device={cell.device} type={glance.instrumentViewType} color={selectedTrackScheme() ?? schemeFromInk(cell.ink)} />
@@ -789,7 +950,7 @@
         </CellSize></div>
       {:else}
       {#snippet mark()}
-        {#if cell.kind === 'instrument'}
+        {#if cell.kind === 'instrument' && !cell.inside}
           <!-- The strip's own mark for the instrument, so the two agree. -->
           <span class="instrument-mark"><TrackDeviceView {glance} color={cell.ink} /></span>
         {:else if glyph}
@@ -850,9 +1011,11 @@
       class:dragging={drag?.key === cell.key}
       class:appointed={fxChainStore.appointed === cell.device.devicePath}
       aria-current={fxChainStore.appointed === cell.device.devicePath ? 'true' : undefined}
-      class:instrument={cell.kind === 'instrument'}
+      class:instrument={cell.kind === 'instrument' && !cell.inside}
+      class:inside={!!cell.inside}
+      class:unfolded={cell.foldable && rackFold.isOpen(cell.path)}
       class:half={layout.places[position]?.span === 1}
-      style="--cell-ink: {cell.ink};"
+      style="--cell-ink: {cell.ink};{cell.inside ? ` --rack-ink: ${cell.inside.ink};` : ''}"
       style:grid-column={layout.places[position] ? `${layout.places[position].col + 1} / span ${layout.places[position].span}` : undefined}
       style:grid-row={layout.places[position] ? `${layout.places[position].row + 1}` : undefined}
       data-cell-key={cell.key}
@@ -865,12 +1028,18 @@
         commit: 'either',
         onDown: (info) => pressDown(cell, info),
         onTap: () => {
+          if (pressInFold) {
+            rackFold.toggle(cell.path);
+            return;
+          }
+          // The chain list and an empty chain's place answer their own taps.
+          if (cell.kind === 'chains' || cell.kind === 'empty') return;
           // The header is the device's switch, as a strip's name is its
           // mute; the kit's under a pad scope still leads back to the kit.
           if (pressInHead && isPowered(cell) && !(cell.kit && padScope)) togglePower(cell);
           else open(cell, pressInControl);
         },
-        onStart: (info) => dragStart(cell, position - kitLead, info),
+        onStart: (info) => dragStart(cell, topAt(position), info),
         onMove: dragMove,
         onEnd: dragEnd
       }}
@@ -1151,6 +1320,49 @@
     align-items: center;
     gap: 4px;
   }
+  /* A rack's fold button (ADR-529): the bar's right end, a 40px target,
+     a chevron pointing where the chains open. */
+  .cell-fold {
+    flex: 0 0 40px;
+    align-self: stretch;
+    margin-right: -8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--cell-ink);
+    border-left: 1px solid var(--cell-line);
+    cursor: pointer;
+  }
+  .cell-fold :global(svg) {
+    width: 20px;
+    height: 20px;
+    stroke-width: 2;
+  }
+  .chain-wrap.two-rows .cell-fold {
+    flex-basis: 32px;
+    margin-right: -6px;
+  }
+  .chain-cell.unfolded .cell-fold {
+    background: color-mix(in oklab, var(--cell-ink) 30%, transparent);
+  }
+  /* Inside an unfolded rack: a band of the rack's ink across the top and
+     a tinted panel, so the rack's chain reads as the rack's. */
+  .chain-cell.inside {
+    border-color: color-mix(in oklab, var(--rack-ink) 55%, var(--cell-line));
+    background: color-mix(in oklab, var(--rack-ink) 7%, var(--card));
+    box-shadow: inset 0 3px 0 var(--rack-ink);
+  }
+  .chain-cell.inside.appointed {
+    box-shadow: inset 0 3px 0 var(--rack-ink), inset 0 0 0 1px var(--flat-selection);
+  }
+  .chain-cell.unfolded {
+    border-color: color-mix(in oklab, var(--cell-ink) 55%, var(--cell-line));
+  }
+  .empty-chain {
+    font-size: 0.75rem;
+    color: var(--fg-tertiary);
+  }
+
   /* The face: the cell's rest, inset from the panel's edge so its own
      frame reads as a field sunk into it. */
   .mark {

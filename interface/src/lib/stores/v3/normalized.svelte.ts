@@ -295,6 +295,22 @@ let tracks = $state<Map<string, TrackRecord>>(new SvelteMap());
  *  subscribed; the whole-song tree stays exactly 3.7.0-shaped. */
 let padDevices = $state<Map<string, Map<string, DeviceRecord>>>(new SvelteMap());
 
+/** The devices on a rack's chains (ADR-529, protocol 3.13.0), keyed by the
+ *  rack's device path and then by device path
+ *  (`tracks/2/devices/1/chains/0/devices/0`). A separate map for the same
+ *  reason as `padDevices`: a track's `devices` is its chain by index. Filled
+ *  only by `rack-chain` bundles, which answer a rack's `chain_devices`
+ *  subscription (the chain overview's unfold); a nested rack's own devices
+ *  are a map of their own, keyed by its chain path. */
+let chainDevices = $state<Map<string, Map<string, DeviceRecord>>>(new SvelteMap());
+
+/** The rack classes whose chains the wire reaches by index. */
+export const CHAIN_RACK_CLASSES: ReadonlySet<string> = new Set([
+	'AudioEffectGroupDevice',
+	'InstrumentGroupDevice',
+	'MidiEffectGroupDevice'
+]);
+
 // ============================================
 // Derived views
 // ============================================
@@ -317,10 +333,12 @@ const paramByPathView = $derived.by<Map<string, ParamRecord>>(() => {
 			}
 		}
 	}
-	for (const devices of padDevices.values()) {
-		for (const device of devices.values()) {
-			for (const param of device.params.values()) {
-				out.set(param.paramPath, param);
+	for (const map of [padDevices, chainDevices]) {
+		for (const devices of map.values()) {
+			for (const device of devices.values()) {
+				for (const param of device.params.values()) {
+					out.set(param.paramPath, param);
+				}
 			}
 		}
 	}
@@ -339,9 +357,11 @@ const deviceByPathView = $derived.by<Map<string, DeviceRecord>>(() => {
 			out.set(device.devicePath, device);
 		}
 	}
-	for (const devices of padDevices.values()) {
-		for (const device of devices.values()) {
-			out.set(device.devicePath, device);
+	for (const map of [padDevices, chainDevices]) {
+		for (const devices of map.values()) {
+			for (const device of devices.values()) {
+				out.set(device.devicePath, device);
+			}
 		}
 	}
 	return out;
@@ -404,10 +424,12 @@ export function replaceTree(
  */
 function dropPadMapsUnder(prefix: string): number {
 	let count = 0;
-	for (const [padPath, devices] of [...padDevices.entries()]) {
-		if (!padPath.startsWith(prefix)) continue;
-		for (const d of devices.values()) count += 1 + d.params.size;
-		padDevices.delete(padPath);
+	for (const map of [padDevices, chainDevices]) {
+		for (const [key, devices] of [...map.entries()]) {
+			if (!key.startsWith(prefix)) continue;
+			for (const d of devices.values()) count += 1 + d.params.size;
+			map.delete(key);
+		}
 	}
 	return count;
 }
@@ -422,6 +444,11 @@ function prunePadMapsWithoutRack(): void {
 		const pad = parsePadPath(padPath);
 		const rack = pad ? tracks.get(splitTrackPath(pad.rackPath).trackPath ?? '')?.devices.get(pad.rackPath) : undefined;
 		if (rack?.className !== 'DrumGroupDevice') padDevices.delete(padPath);
+	}
+	// A rack's chain map goes when its path no longer holds a rack. Outer
+	// racks first, so a nested rack's map goes with its parent's.
+	for (const rackPath of [...chainDevices.keys()].sort((a, b) => a.length - b.length)) {
+		if (!CHAIN_RACK_CLASSES.has(findDevice(rackPath)?.className ?? '')) chainDevices.delete(rackPath);
 	}
 }
 
@@ -519,6 +546,25 @@ export function mergePadChain(newGeneration: number, padPath: string, devices: M
 		padDevices.set(padPath, existing);
 	}
 	reconcileDevices(existing, devices);
+}
+
+/** Apply a rack-scoped bundle (ADR-529, reason `rack-chain`): the devices on
+ *  every chain of one rack, reconciled into the rack's own map. */
+export function mergeRackChain(newGeneration: number, rackPath: string, devices: Map<string, DeviceRecord>): void {
+	generation = newGeneration;
+	let existing = chainDevices.get(rackPath);
+	if (!existing) {
+		existing = new SvelteMap<string, DeviceRecord>();
+		chainDevices.set(rackPath, existing);
+	}
+	reconcileDevices(existing, devices);
+	prunePadMapsWithoutRack();
+}
+
+/** The devices on a rack's chains, in path order; `[]` before a bundle lands. */
+export function chainDevicesAt(rackPath: string): DeviceRecord[] {
+	const devices = chainDevices.get(rackPath);
+	return devices ? Array.from(devices.values()) : [];
 }
 
 /** The devices inside one pad's chain, in chain order; `[]` before a bundle lands. */
@@ -1166,8 +1212,29 @@ export function applyPropertyValue(
 	return true;
 }
 
-/** A device record by path — the track's, or a pad chain's (issue #491). */
+/** The rack whose chain `path` sits on (`…/devices/1/chains/0/devices/2` →
+ *  `…/devices/1`), the innermost one, or null. */
+export function chainRackOf(path: string): string | null {
+	const at = path.lastIndexOf('/chains/');
+	return at > 0 ? path.slice(0, at) : null;
+}
+
+function dropChainMap(rackPath: string): number {
+	const devices = chainDevices.get(rackPath);
+	if (!devices) return 0;
+	let count = 0;
+	for (const d of devices.values()) count += 1 + d.params.size;
+	chainDevices.delete(rackPath);
+	return count;
+}
+
+/** A device record by path — the track's, a pad chain's (issue #491) or a
+ *  rack chain's (ADR-529): whichever container is innermost. */
 function findDevice(devicePath: string): DeviceRecord | undefined {
+	const rackPath = chainRackOf(devicePath);
+	if (rackPath !== null && rackPath.length > (parsePadPath(devicePath)?.padPath.length ?? -1)) {
+		return chainDevices.get(rackPath)?.get(devicePath);
+	}
 	const pad = parsePadPath(devicePath);
 	if (pad) return padDevices.get(pad.padPath)?.get(devicePath);
 	const { trackPath } = splitTrackPath(devicePath);
@@ -1277,6 +1344,7 @@ export function invalidatePaths(
 export function resetTree(): void {
 	tracks = new SvelteMap();
 	padDevices = new SvelteMap();
+	chainDevices = new SvelteMap();
 	resetParamArming();
 	clearHeldEtags();
 }
@@ -1327,6 +1395,7 @@ export function resetForSurfaceRestart(): void {
 	sessionId = '';
 	tracks = new SvelteMap();
 	padDevices = new SvelteMap();
+	chainDevices = new SvelteMap();
 	resetParamArming();
 	// Load-bearing, not tidiness. The caller re-hellos immediately
 	// after this, and a hello that still declares an ETag for the tree
@@ -1345,6 +1414,7 @@ export function _resetForTests(): void {
 	surfaceInstanceId = '';
 	tracks = new SvelteMap();
 	padDevices = new SvelteMap();
+	chainDevices = new SvelteMap();
 	resetParamArming();
 	clearHeldEtags();
 }
@@ -1384,9 +1454,11 @@ export function splitParamPath(paramPath: string): {
 		const seg = head[i];
 		const idx = head[i + 1];
 		if (idx === undefined || !/^\d+$/.test(idx)) return { trackPath, devicePath: null };
-		if (i === 0 ? seg !== 'devices' : seg !== 'pads' && seg !== 'devices') {
+		if (i === 0 ? seg !== 'devices' : seg !== 'pads' && seg !== 'chains' && seg !== 'devices') {
 			return { trackPath, devicePath: null };
 		}
+		// A rack's `chains/<i>` (ADR-529) is a container as a pad is.
+		if (seg === 'chains' && head[i + 2] !== 'devices') return { trackPath, devicePath: null };
 		if (seg === 'pads' && (head[i + 2] !== 'devices' || Number(idx) > 127)) {
 			return { trackPath, devicePath: null };
 		}
@@ -1456,6 +1528,24 @@ function dropSubtree(path: string): number {
 
 	const parts = rest.split('/');
 
+	// A device on a rack's chain, or one of its params (ADR-529): drop it
+	// from the rack's map, and a nested rack's own map with it.
+	const chainRack = chainRackOf(path);
+	if (chainRack !== null && chainRack.length > (parsePadPath(path)?.padPath.length ?? -1)) {
+		const devices = chainDevices.get(chainRack);
+		if (!devices) return 0;
+		const targetDevice = path.includes('/params/') ? splitParamPath(path).devicePath : path;
+		if (!targetDevice) return 0;
+		const device = devices.get(targetDevice);
+		if (!device) return 0;
+		if (path === targetDevice) {
+			const count = 1 + device.params.size + dropPadMapsUnder(`${targetDevice}/`) + dropChainMap(targetDevice);
+			devices.delete(targetDevice);
+			return count;
+		}
+		return device.params.delete(path) ? 1 : 0;
+	}
+
 	// A pad path, a device inside a pad chain, or one of its params
 	// (issue #491): drop from the pad map, never from the track's devices.
 	const pad = parsePadPath(path);
@@ -1492,7 +1582,8 @@ function dropSubtree(path: string): number {
 
 		if (parts.length === 2) {
 			// The device — and, for a rack, every pad map under it.
-			const count = 1 + device.params.size + dropPadMapsUnder(`${devicePath}/pads/`);
+			const count =
+				1 + device.params.size + dropPadMapsUnder(`${devicePath}/pads/`) + dropPadMapsUnder(`${devicePath}/chains/`) + dropChainMap(devicePath);
 			track.devices.delete(devicePath);
 			return count;
 		}
@@ -1572,6 +1663,9 @@ export const v3Store = {
 		return deviceByPathView;
 	},
 	/** Pad path → the devices inside that pad's chain (issue #491). */
+	get chainDevices() {
+		return chainDevices;
+	},
 	get padDevices() {
 		return padDevices;
 	}

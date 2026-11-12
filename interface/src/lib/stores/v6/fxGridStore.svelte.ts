@@ -17,7 +17,7 @@ import type { PositionKey, DeviceTypeKey } from '$lib/config/fxGridLayout';
 import type { DeviceRecord } from '$lib/stores/v3/normalized.svelte';
 import { parsePadPath, scopeKeyOf } from '$lib/utils/padPaths';
 import { isTrackScopeKey, trackOfDevicePath } from '$lib/utils/trackScopePaths';
-import { setNewDeviceHook, v3Store } from '$lib/stores/v3/normalized.svelte';
+import { chainRackOf, setNewDeviceHook, v3Store } from '$lib/stores/v3/normalized.svelte';
 import { matchesSlot, pickSlotDevice } from '$lib/utils/deviceSlotMatch';
 import { fxChainStore } from './fxChainStore.svelte';
 import { effectSource } from '$lib/services/effectSources.svelte';
@@ -180,6 +180,9 @@ export class FXGridState {
 	 */
 	private registerNewDeviceHook(): void {
 		setNewDeviceHook((device) => {
+			// A device inside a rack's chain arriving because the rack was
+			// unfolded is not a load landing (ADR-529).
+			if (chainRackOf(device.devicePath) !== null) return undefined;
 			const slotKey = this.matchDeviceToSlot(device);
 			if (!slotKey) return undefined;
 			const speculative = consumeSpeculative(speculativeKey(this.scopeOfDevice(device.devicePath), slotKey));
@@ -441,8 +444,17 @@ export class FXGridState {
 
 		// Find device from the scope's chain: the track's, or the pad's —
 		// the performer's pick when the chain holds several of the type.
-		const devices = this.devicesIn(scope);
-		const device = pickSlotDevice(devices, config, fxChainStore.pickFor(scope || selectedTrackStore.selectedTrackPath, deviceType));
+		// The performer's pick may be a device inside one of the track's
+		// racks (ADR-529, a tap on it in the unfolded chain): it joins the
+		// candidates only then, so a rack's devices never become the
+		// slot's default.
+		const picked = fxChainStore.pickFor(scope || selectedTrackStore.selectedTrackPath, deviceType);
+		let devices = this.devicesIn(scope);
+		if (!scope && picked && chainRackOf(picked) !== null) {
+			const nested = v3Store.deviceByPath.get(picked);
+			if (nested) devices = [...devices, nested];
+		}
+		const device = pickSlotDevice(devices, config, picked);
 
 		return {
 			...slot,

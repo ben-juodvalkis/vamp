@@ -306,6 +306,27 @@ export const TOURS = {
 				scenePatch: chainDemo,
 				steps: [openInstrument(CHAIN_DEMO_TRACK)]
 			},
+			{
+				name: 'chain-rack-unfolded',
+				description: 'A rack unfolded (ADR-529): its chain list beside it, the Echoes chain chosen, its devices inline in the rack ink',
+				scenePatch: chainDemo,
+				steps: [
+					openInstrument(CHAIN_DEMO_TRACK),
+					{ click: `${chainCell(5)} .cell-fold` },
+					{ click: '[data-debug="chain-list"] [data-chain-index="1"]' }
+				]
+			},
+			{
+				name: 'chain-rack-nested',
+				description: 'A rack inside the unfolded rack, unfolded in turn: its own chain list and devices after it',
+				scenePatch: chainDemo,
+				steps: [
+					openInstrument(CHAIN_DEMO_TRACK),
+					{ click: `${chainCell(5)} .cell-fold` },
+					{ click: '[data-debug="chain-list"] [data-chain-index="1"]' },
+					{ click: `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/5/chains/1/devices/2"] .cell-fold` }
+				]
+			},
 			...[2, 4, 5, 8].map((n) => ({
 				name: `chain-len-${n}`,
 				description: `A chain of ${n} devices: one row up to five, then two rows split evenly, the + cell always last`,

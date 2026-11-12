@@ -23,8 +23,13 @@
 	const MAX_SLIDERS = 12;
 
 	const device = $derived.by(() => {
-		const picked = fxChainStore.pickFor(selectedTrackStore.selectedTrackPath, CHAIN_DEVICE_VIEW);
-		return selectedTrackStore.devicesByPath.find((d) => d.devicePath === picked);
+		const trackPath = selectedTrackStore.selectedTrackPath;
+		const picked = fxChainStore.pickFor(trackPath, CHAIN_DEVICE_VIEW);
+		// A device inside one of the track's racks (ADR-529) is found by path.
+		return (
+			selectedTrackStore.devicesByPath.find((d) => d.devicePath === picked) ??
+			(picked?.startsWith(`${trackPath}/`) ? selectedTrackStore.deviceAt(picked) : undefined)
+		);
 	});
 	const scheme = familyScheme('utility');
 	const color = $derived({

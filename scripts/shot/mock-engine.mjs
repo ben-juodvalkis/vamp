@@ -21,6 +21,8 @@ import {
 	vmPadFx,
 	padChainEntry,
 	padChainRecords,
+	rackChainRecords,
+	rackChainsValue,
 	appendPadDevice,
 	deviceClassName,
 	appendTrackDevice,
@@ -663,6 +665,15 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 						send(ws, '/looping/v3/property/value', [devicePath, propertyName, padChainEntry(rack, note)]);
 						sendPadChain(ws, devicePath, note);
 						return;
+					}
+					// A rack's chains (ADR-529): the row, then its devices' records.
+					if (propertyName === 'chain_devices') {
+						const chainsValue = rackChainsValue(devicePath);
+						if (chainsValue !== undefined) {
+							send(ws, '/looping/v3/property/value', [devicePath, propertyName, chainsValue]);
+							send(ws, '/looping/v3/state/full/tree', ['rack-chain', generation, SCENE_ETAG, devicePath, ...rackChainRecords(devicePath)]);
+							return;
+						}
 					}
 					const value = propertyAnswer(devicePath, propertyName);
 					if (value === undefined) {
