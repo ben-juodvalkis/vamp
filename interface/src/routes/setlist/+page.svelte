@@ -170,7 +170,8 @@
 		pointer-events: none;
 		text-align: center;
 		color: #00c4a8;
-		font-size: 3.4vh;
+		font-size: 6.5vh;
+		line-height: 1;
 	}
 	.octave span.shifted {
 		color: #ff281c;
