@@ -20,6 +20,7 @@ const GET = '/looping/v3/setlist/get';
 const SELECT_SONG = '/looping/v3/setlist/select_song';
 const SELECT_SOUND = '/looping/v3/setlist/select_sound';
 const PARAM = '/looping/v3/setlist/param';
+const OCTAVE = '/looping/v3/setlist/octave';
 const STATE = '/looping/v3/setlist/state';
 
 const POLL_MS = 1500;
@@ -50,6 +51,8 @@ export const setlist = $state({
 	sound: -1,
 	armed: 0,
 	outputKey: null as string | null,
+	/** The Octave rack's transpose, -2..2; null when the set has no Octave rack. */
+	octave: null as number | null,
 	pads: [] as SetlistPad[],
 	/** The two pads on the sound's own macros; none for a bare plug-in. */
 	soundPads: [] as SetlistPad[],
@@ -136,6 +139,7 @@ function onMessage(message: OscBusMessage): void {
 	setlist.sound = parsed.sound ?? -1;
 	setlist.outputKey = parsed.output?.key ?? null;
 	receive(parsed.output);
+	setlist.octave = typeof parsed.octave === 'number' ? parsed.octave : null;
 	setlist.pads = receivePads(parsed.pads);
 	setlist.soundPads = receivePads(parsed.soundPads);
 }
@@ -156,6 +160,12 @@ export function selectSound(index: number): void {
 function disarm(): void {
 	armedAt = 0;
 	setlist.armed = 0;
+}
+
+/** One octave up or down. Live clamps at ±2 and the reply shows where it landed. */
+export function stepOctave(delta: -1 | 1): void {
+	send(OCTAVE, [delta]);
+	askAgainUnlessAnswered();
 }
 
 /** One arrow tap: the first arms it, a second within DOUBLE_TAP_MS moves. */

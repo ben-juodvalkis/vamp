@@ -28,6 +28,10 @@ every sound at set load and returned to those values when that sound is chosen.
 
 A switch also selects the song's and the sound's chains in Live's racks, so
 Live's window shows what is playing.
+
+The MIDI Effect Rack named ``Octave`` transposes the keys: its first macro
+spreads five chains, -2 to +2 octaves, over 0..127. The page steps it one
+octave at a time, and a song or sound change returns it to 0.
 """
 
 from __future__ import annotations
@@ -44,11 +48,17 @@ V3_SETLIST_GET_ADDRESS = "/looping/v3/setlist/get"
 V3_SETLIST_SELECT_SONG_ADDRESS = "/looping/v3/setlist/select_song"
 V3_SETLIST_SELECT_SOUND_ADDRESS = "/looping/v3/setlist/select_sound"
 V3_SETLIST_PARAM_ADDRESS = "/looping/v3/setlist/param"
+V3_SETLIST_OCTAVE_ADDRESS = "/looping/v3/setlist/octave"
 V3_SETLIST_STATE_ADDRESS = "/looping/v3/setlist/state"
 
 SETLIST_TRACK_NAME = "Keys"
 _RACK_CLASS = "InstrumentGroupDevice"
 _AUDIO_RACK_CLASS = "AudioEffectGroupDevice"
+_MIDI_RACK_CLASS = "MidiEffectGroupDevice"
+OCTAVE_NAME = "Octave"
+# The Octave rack's macro 1 picks one of five chains, -2..+2 (measured
+# 2026-11-12: Live labels 0, 31.75, 63.5, 95.25 and 127 as chains 0 to 4).
+OCTAVE_RANGE = 2
 _DEVICE_ON = "Device On"
 OUTPUT_NAME = "Output"
 OUTPUT_RESET_VALUE = 64.0
@@ -181,6 +191,30 @@ class SetlistComponent:
                     return "%d/%d" % (index, parameter_index), parameter
         return None
 
+    def _octave_macro(self) -> Optional[Any]:
+        """Macro 1 of the MIDI Effect Rack named Octave on the Keys track."""
+        track = self._track()
+        if track is None:
+            return None
+        for device in track.devices:
+            if device.class_name == _MIDI_RACK_CLASS and device.name == OCTAVE_NAME:
+                parameters = list(device.parameters)
+                return parameters[1] if len(parameters) > 1 else None
+        return None
+
+    @staticmethod
+    def _octave_of(parameter: Any) -> int:
+        span = parameter.max - parameter.min
+        step = round((parameter.value - parameter.min) / span * 2 * OCTAVE_RANGE) if span else OCTAVE_RANGE
+        return int(step) - OCTAVE_RANGE
+
+    @staticmethod
+    def _set_octave(parameter: Any, octave: int) -> None:
+        octave = max(-OCTAVE_RANGE, min(OCTAVE_RANGE, octave))
+        value = parameter.min + (parameter.max - parameter.min) * (octave + OCTAVE_RANGE) / (2.0 * OCTAVE_RANGE)
+        if parameter.value != value:
+            parameter.value = value
+
     def _pads(self) -> List[dict]:
         """One entry per pair of macros with a name on either. Parameter 0 is
         Device On, so macro N is parameter N."""
@@ -285,6 +319,9 @@ class SetlistComponent:
             self._log_macros("taken as set-load values")
 
     def _reset_controls(self) -> None:
+        octave = self._octave_macro()
+        if octave is not None:
+            self._set_octave(octave, 0)
         output = self._output()
         if output is not None:
             output[1].value = OUTPUT_RESET_VALUE
@@ -324,6 +361,7 @@ class SetlistComponent:
         output = self._output()
         current_song, current_sound = self._current(songs)
         shown = songs[max(current_song, 0)] if songs else None
+        octave = self._octave_macro()
         payload = {
             "found": bool(songs),
             "songs": [split_song_name(chain.name)[0] for chain in songs],
@@ -332,6 +370,7 @@ class SetlistComponent:
             "sound": current_sound,
             "tempo": self._song.tempo,
             "output": {"key": output[0], "value": output[1].value} if output else None,
+            "octave": self._octave_of(octave) if octave is not None else None,
             "pads": self._pads(),
             "soundPads": self._sound_pads(songs, current_song, current_sound),
         }
@@ -398,6 +437,19 @@ class SetlistComponent:
         if self._disconnected or not args:
             return
         self._guarded(lambda: self._select_sound(int(args[0])))
+
+    def handle_octave(self, args, source_addr) -> None:
+        """One octave up or down: ``[step]``, +1 or -1, from what Live holds,
+        clamped to -2..+2. Answered with the state."""
+        if self._disconnected or not args:
+            return
+        self._guarded(lambda: self._step_octave(int(args[0])))
+
+    def _step_octave(self, step: int) -> None:
+        parameter = self._octave_macro()
+        if parameter is None or step not in (-1, 1):
+            return
+        self._set_octave(parameter, self._octave_of(parameter) + step)
 
     def handle_param(self, args, source_addr) -> None:
         """A slider or pad move: ``[key, value]``, with the key from the state.

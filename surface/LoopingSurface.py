@@ -87,6 +87,7 @@ from ableton.v3.control_surface.elements_base import ElementsBase
 from .components.SetlistComponent import (
     SetlistComponent,
     V3_SETLIST_GET_ADDRESS,
+    V3_SETLIST_OCTAVE_ADDRESS,
     V3_SETLIST_PARAM_ADDRESS,
     V3_SETLIST_SELECT_SONG_ADDRESS,
     V3_SETLIST_SELECT_SOUND_ADDRESS,
@@ -1459,6 +1460,7 @@ class LoopingSurface(ControlSurface):
             (V3_SETLIST_SELECT_SONG_ADDRESS, self._setlist_component.handle_select_song),
             (V3_SETLIST_SELECT_SOUND_ADDRESS, self._setlist_component.handle_select_sound),
             (V3_SETLIST_PARAM_ADDRESS, self._setlist_component.handle_param),
+            (V3_SETLIST_OCTAVE_ADDRESS, self._setlist_component.handle_octave),
         ):
             self._transport.add_handler(address, handler)
 

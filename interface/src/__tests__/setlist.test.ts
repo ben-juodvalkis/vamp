@@ -8,6 +8,7 @@ import {
 	selectSound,
 	setlist,
 	startSetlist,
+	stepOctave,
 	tapArrow
 } from '$lib/services/setlist.svelte';
 
@@ -37,6 +38,21 @@ describe('setlist', () => {
 		expect(setlist.live).toBe(true);
 		expect(setlist.songs).toEqual(state.songs);
 		expect(setlist.sound).toBe(0);
+	});
+
+	it('an octave step asks Live and shows only what Live answers', () => {
+		reply({ ...state, octave: 0 });
+		stepOctave(1);
+		expect(send).toHaveBeenCalledWith('/looping/v3/setlist/octave', [1]);
+		expect(setlist.octave).toBe(0);
+		reply({ ...state, octave: 1 });
+		expect(setlist.octave).toBe(1);
+	});
+
+	it('a set without an Octave rack shows no octave', () => {
+		reply({ ...state, octave: 1 });
+		reply(state);
+		expect(setlist.octave).toBeNull();
 	});
 
 	it('a tap on a sound asks Live and does not light it first', () => {

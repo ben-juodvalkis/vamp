@@ -112,7 +112,11 @@ def build():
         Chain(name, [Device(on=True, chains=[Chain(s, [sound_rack(s)]) for s in parts])])
         for name, parts in sounds.items()
     ]
-    midi_rack = Device(class_name="MidiEffectGroupDevice", chains=[Chain("wrong", [])])
+    midi_rack = Device(on=True, class_name="MidiEffectGroupDevice",
+                       chains=[Chain(n, []) for n in ("-2", "-1", "0", "1", "2")])
+    midi_rack.name = "Octave"
+    # Macro 1 as the rig mapped it, at 0 octaves; then the unnamed rest.
+    midi_rack.parameters += [Param("Chain Selector", 63.5)] + [Param("Macro %d" % n, 0.0) for n in range(2, 17)]
     instruments = Device(on=True, chains=songs)
     keys = Track("Keys", [midi_rack, instruments] + effect_racks())
     song = Song([Track("Other", [Device(chains=[Chain("wrong", [Device()])])]), keys])
@@ -511,3 +515,53 @@ def test_a_refused_selection_still_switches_the_sound():
     component.handle_select_song([1], None)
     assert sound(songs, 1, 0).on
     assert last_state(sent)["song"] == 1
+
+
+def octave_macro(song):
+    return song.tracks[1].devices[0].parameters[1]
+
+
+def test_octave_steps_one_at_a_time_and_stops_at_two():
+    song, _, component, sent = build()
+    component.handle_get([], None)
+    assert last_state(sent)["octave"] == 0
+    seen = []
+    for _ in range(3):
+        component.handle_octave([1], None)
+        seen.append((last_state(sent)["octave"], octave_macro(song).value))
+    assert seen == [(1, 95.25), (2, 127.0), (2, 127.0)]
+    for _ in range(5):
+        component.handle_octave([-1], None)
+    assert (last_state(sent)["octave"], octave_macro(song).value) == (-2, 0.0)
+
+
+def test_octave_reads_a_macro_moved_in_live_by_its_nearest_chain():
+    song, _, component, sent = build()
+    octave_macro(song).value = 62.0
+    component.handle_octave([-1], None)
+    assert (last_state(sent)["octave"], octave_macro(song).value) == (-1, 31.75)
+
+
+@pytest.mark.parametrize("handler,index", [("handle_select_song", 1), ("handle_select_sound", 1)])
+def test_a_song_or_sound_change_returns_octave_to_zero(handler, index):
+    song, _, component, sent = build()
+    component.handle_select_song([0], None)
+    component.handle_octave([1], None)
+    getattr(component, handler)([index], None)
+    assert (last_state(sent)["octave"], octave_macro(song).value) == (0, 63.5)
+
+
+def test_tapping_the_sound_on_keeps_the_octave():
+    song, _, component, sent = build()
+    component.handle_select_song([0], None)
+    component.handle_octave([-1], None)
+    component.handle_select_sound([0], None)
+    assert last_state(sent)["octave"] == -1
+
+
+def test_no_octave_rack_reports_none_and_a_step_changes_nothing():
+    song, _, component, sent = build()
+    song.tracks[1].devices[0].name = "Arp"
+    component.handle_octave([1], None)
+    assert last_state(sent)["octave"] is None
+    assert octave_macro(song).value == 63.5

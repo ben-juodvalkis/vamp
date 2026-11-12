@@ -110,6 +110,7 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 			'6/1': 0, '6/2': 0, '6/3': 0, '6/4': 0
 		},
 		values: {},
+		octave: 0,
 		sets: [
 			{ name: 'Joke', sounds: ['Lead', 'Organ', 'Keys'] },
 			{ name: 'Pickin Fields', sounds: ['Theremin', 'Organ', 'church organ'] },
@@ -561,16 +562,21 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 				case '/looping/v3/setlist/param':
 					setlistMock.values[args[0]] = args[1];
 					return;
+				case '/looping/v3/setlist/octave':
 				case '/looping/v3/setlist/get':
 				case '/looping/v3/setlist/select_song':
 				case '/looping/v3/setlist/select_sound': {
-					if (address.endsWith('select_song')) {
+					if (address.endsWith('octave')) {
+						setlistMock.octave = Math.max(-2, Math.min(2, setlistMock.octave + Number(args[0])));
+					} else if (address.endsWith('select_song')) {
+						setlistMock.octave = 0;
 						setlistMock.song = args[0];
 						setlistMock.sound = 0;
 						setlistMock.values = { ...setlistMock.loaded };
 					} else if (address.endsWith('select_sound')) {
 						setlistMock.song = Math.max(setlistMock.song, 0);
 						setlistMock.sound = args[0];
+						setlistMock.octave = 0;
 						setlistMock.values = { ...setlistMock.loaded };
 					}
 					const shown = setlistMock.sets[Math.max(setlistMock.song, 0)];
@@ -582,6 +588,7 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 							sounds: shown.sounds,
 							sound: setlistMock.sound,
 							output: { key: '1/1', value: setlistMock.values['1/1'] },
+							octave: setlistMock.octave,
 							soundPads: [
 								{ label: 'Delay Time', x: { key: 's/1', value: 52 }, y: { key: 's/2', value: 66 } },
 								{ label: 'HiPass', x: { key: 's/3', value: 0 }, y: { key: 's/4', value: 0 } }

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { setlist, selectSound, startSetlist, tapArrow } from '$lib/services/setlist.svelte';
+	import { setlist, selectSound, startSetlist, stepOctave, tapArrow } from '$lib/services/setlist.svelte';
 	import SongFader from './SongFader.svelte';
 	import XYPad from './XYPad.svelte';
 
@@ -62,6 +62,22 @@
 		{/each}
 	</div>
 
+	<div class="octave" class:off={setlist.octave === null}>
+		<button
+			aria-label="Octave down"
+			disabled={setlist.octave === null || setlist.octave <= -2}
+			onpointerdown={() => stepOctave(-1)}>−</button
+		>
+		<span class:shifted={!!setlist.octave}
+			>{setlist.octave === null ? '8va' : setlist.octave > 0 ? `+${setlist.octave}` : setlist.octave}</span
+		>
+		<button
+			aria-label="Octave up"
+			disabled={setlist.octave === null || setlist.octave >= 2}
+			onpointerdown={() => stepOctave(1)}>+</button
+		>
+	</div>
+
 	<div class="pads">
 		{#each SOUND_PAD_CELLS as cell}
 			{@const pad = setlist.soundPads[cell]}
@@ -86,7 +102,7 @@
 		inset: 0;
 		display: grid;
 		grid-template-columns: 12% 1fr;
-		grid-template-rows: 9.5% 1fr;
+		grid-template-rows: 9.5% 1fr 9.5%;
 		gap: 1.2vh 1vw;
 		padding: 0.5vh 0.4vw;
 		background: #000;
@@ -123,7 +139,40 @@
 	.arrows button:disabled {
 		opacity: 0.35;
 	}
+	.octave {
+		display: grid;
+		grid-template-columns: 1fr 0.8fr 1fr;
+		gap: 3px;
+		padding: 3px;
+		border: 1px solid #00c4a8;
+		border-radius: 10px;
+		align-items: center;
+	}
+	.octave.off {
+		opacity: 0.35;
+	}
+	.octave button {
+		height: 100%;
+		background: #003a32;
+		color: #00c4a8;
+		border-radius: 8px;
+		font-size: 5vh;
+		line-height: 1;
+	}
+	.octave button:disabled {
+		opacity: 0.35;
+	}
+	.octave span {
+		text-align: center;
+		color: #00c4a8;
+		font-size: 3.4vh;
+	}
+	.octave span.shifted {
+		color: #ff281c;
+	}
 	.pads {
+		grid-column: 2;
+		grid-row: 2 / 4;
 		display: grid;
 		grid-template-columns: repeat(4, 1fr);
 		grid-template-rows: repeat(4, 1fr);
