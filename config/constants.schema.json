@@ -340,10 +340,10 @@
       "properties": {
         "hiddenFromChain": {
           "type": "array",
-          "description": "Devices Vamp puts on a track for its own work and never draws as a device (chain overview cells, a strip's device band). Matched by Live's class and the name Live gives the loaded file. Read by interface/src/lib/config/hiddenDevices.ts.",
+          "description": "Devices the interface never draws as a device (chain overview cells, a strip's device band): Vamp's own, and Live's Tuner. Matched by Live's class and, where given, the name Live gives the loaded file; no deviceName hides every device of the class. Read by interface/src/lib/config/hiddenDevices.ts.",
           "items": {
             "type": "object",
-            "required": ["className", "deviceName"],
+            "required": ["className"],
             "properties": { "className": { "type": "string" }, "deviceName": { "type": "string" }, "why": { "type": "string" } }
           }
         },

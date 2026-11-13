@@ -9,11 +9,18 @@ import { isHiddenFromChain, visibleDevices } from '$lib/config/hiddenDevices';
 describe('hiddenDevices', () => {
 	it('hides every device the list names, by class and name together', () => {
 		for (const r of constants.devices.hiddenFromChain) {
-			expect(isHiddenFromChain({ className: r.className, name: r.deviceName })).toBe(true);
-			expect(isHiddenFromChain({ className: 'Saturator', name: r.deviceName })).toBe(false);
+			const name = 'deviceName' in r ? r.deviceName : 'Anything';
+			expect(isHiddenFromChain({ className: r.className, name })).toBe(true);
+			expect(isHiddenFromChain({ className: 'Saturator', name })).toBe(false);
 		}
 		expect(isHiddenFromChain({ className: 'MxDeviceAudioEffect', name: 'Vamp-Capture' })).toBe(true);
 		expect(isHiddenFromChain({ className: 'MxDeviceAudioEffect', name: 'Permute' })).toBe(false);
+	});
+
+	it('hides every Tuner, renamed or not (the user, 2026-11-13)', () => {
+		expect(isHiddenFromChain({ className: 'Tuner', name: 'Tuner' })).toBe(true);
+		expect(isHiddenFromChain({ className: 'Tuner', name: 'Gtr Tuner' })).toBe(true);
+		expect(isHiddenFromChain({ className: 'MxDeviceAudioEffect', name: 'Tuner' })).toBe(false);
 	});
 
 	it('keeps the rest in order', () => {

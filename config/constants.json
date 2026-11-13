@@ -296,6 +296,10 @@
         "className": "MxDeviceMidiEffect",
         "deviceName": "random-start",
         "why": "The Simpler view's Random slider: loaded the first time it moves, drawn only as that slider."
+      },
+      {
+        "className": "Tuner",
+        "why": "Live's Tuner, whatever it is named: kept on the track for tuning, never wanted in the chain (the user, 2026-11-13). Class as saved sets record it (<Tuner> in the .als)."
       }
     ],
     "randomStart": {
@@ -306,7 +310,7 @@
       "amountParam": "Random Amount",
       "_note": "The Simpler view's Random slider (0..100 %). Not on a track until the slider first moves: the view loads it through device/load (the Place, the path inside it), and Live puts a MIDI effect at the head of the chain, ahead of the Simpler (2026-11-01). Live names the device after the .amxd file."
     },
-    "_hiddenFromChainNote": "Devices Vamp puts on a track for its own work, which the interface never draws as a device: not a chain overview cell (the track's or a drum pad's), and never the device a strip's band shows. Matched by Live's class and the name Live gives the loaded file (a .amxd's file name). The track's device list keeps them, since views index it by chain position, and a drag in the chain moves by Live's own index, so one hidden anywhere cannot shift where a dragged device lands. interface/src/lib/config/hiddenDevices.ts reads this.",
+    "_hiddenFromChainNote": "Devices the interface never draws as a device (Vamp's own, and Live's Tuner): not a chain overview cell (the track's, a drum pad's, or inside an unfolded rack), and never the device a strip's band shows. Matched by Live's class and, where a rule names one, the name Live gives the loaded file (a .amxd's file name); a rule with no deviceName hides every device of its class. The track's device list keeps them, since views index it by chain position, and a drag in the chain moves by Live's own index, so one hidden anywhere cannot shift where a dragged device lands. interface/src/lib/config/hiddenDevices.ts reads this.",
     "midiWheels": {
       "className": "MxDeviceMidiEffect",
       "deviceName": "MidiWheels",

@@ -470,6 +470,8 @@
     const inside = { rackPath, ink, depth, chain: chosen, chains: chains.length };
     // An empty chain draws nothing past the list: its row says it is chosen.
     chosen.devices.forEach((d, i) => {
+      // A hidden device (a Tuner) is no cell inside a rack either.
+      if (isHiddenFromChain(d)) return;
       const devicePath = chainDevicePathOf(rackPath, chosen.index, d.index);
       const device: DeviceRecord = selectedTrackStore.deviceAt(devicePath) ?? {
         devicePath,
