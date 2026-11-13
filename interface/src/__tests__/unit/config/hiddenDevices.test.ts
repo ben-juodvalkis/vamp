@@ -9,7 +9,7 @@ import { isHiddenFromChain, visibleDevices } from '$lib/config/hiddenDevices';
 describe('hiddenDevices', () => {
 	it('hides every device the list names, by class and name together', () => {
 		for (const r of constants.devices.hiddenFromChain) {
-			const name = 'deviceName' in r ? r.deviceName : 'Anything';
+			const name = r.deviceName ?? 'Anything';
 			expect(isHiddenFromChain({ className: r.className, name })).toBe(true);
 			expect(isHiddenFromChain({ className: 'Saturator', name })).toBe(false);
 		}
