@@ -164,13 +164,24 @@ describe('WebSocket server wiring', () => {
 		const calls: Array<[string, unknown]> = [];
 		const recorder = {
 			start: (args: unknown) => calls.push(['start', args]),
-			stop: () => calls.push(['stop', null])
+			stop: () => calls.push(['stop', null]),
+			// Vamp for Mac's recorder (ADR-533): everything under /capture/input/.
+			onAppMessage: (send: unknown, msg: { address: string; args: unknown }) => {
+				if (!msg.address.startsWith('/capture/input/')) return false;
+				calls.push([msg.address, typeof send]);
+				return true;
+			}
 		};
 		const h = await startServer(null, recorder);
 		await sendOne(h.port, { address: '/capture/start', args: [3, 'input', '1/2'] });
 		await sendOne(h.port, { address: '/capture/stop', args: [] });
+		await sendOne(h.port, { address: '/capture/input/hello', args: ['[]'] });
 		expect(h.errors.map((e) => e.message)).toEqual([]);
-		expect(calls).toEqual([['start', [3, 'input', '1/2']], ['stop', null]]);
+		expect(calls).toEqual([
+			['start', [3, 'input', '1/2']],
+			['stop', null],
+			['/capture/input/hello', 'function']
+		]);
 		expect(h.sentToRecorder).toEqual([]);
 	});
 

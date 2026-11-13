@@ -28,6 +28,8 @@
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Vamp finds Vamp for iPad on your Wi-Fi network, to connect when the cable is out.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Vamp records your audio interface's input when you press REC with an input device chosen in Settings → Capture.</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUFeedURL</key>

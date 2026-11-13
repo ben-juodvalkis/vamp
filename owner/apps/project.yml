@@ -104,6 +104,8 @@ targets:
         LSUIElement: true
         # Finding paired iPads on Wi-Fi (ADR-504): macOS asks once.
         NSLocalNetworkUsageDescription: Vamp finds Vamp for iPad on your Wi-Fi network, to connect when the cable is out.
+        # REC on an input device Vamp for Mac records (ADR-533): macOS asks once.
+        NSMicrophoneUsageDescription: Vamp records your audio interface's input when you press REC with an input device chosen in Settings → Capture.
         NSBonjourServices:
           - _vamplink._tcp
         # Sparkle: the feed is the latest GitHub release's appcast (the repo
@@ -138,6 +140,9 @@ targets:
       - Mac/VampLog.swift
       - Mac/VampPaths.swift
       - Mac/FirstLaunch.swift
+      - Mac/InputRecorder.swift
+      - Mac/Menu/OSCEnvelope.swift
+      - Mac/Menu/Wire.swift
       - Tests
     settings:
       base:

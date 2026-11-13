@@ -90,7 +90,9 @@ if [[ -d "$SPK" ]]; then
   codesign -f -s "$SIGN_IDENTITY" -o runtime $TS "$SPK/Versions/B/Updater.app"
   codesign -f -s "$SIGN_IDENTITY" -o runtime $TS "$SPK"
 fi
-codesign --force --options runtime $TS --sign "$SIGN_IDENTITY" "$OUT"
+codesign --force --options runtime $TS \
+  --entitlements "$APPS_DIR/Config/mac.entitlements" \
+  --sign "$SIGN_IDENTITY" "$OUT"
 codesign --verify --deep --strict "$OUT"
 
 echo "✅ $OUT ($(du -sh "$OUT" | cut -f1), Node $NODE_VERSION, $(lipo -archs "$OUT/Contents/Resources/node/bin/node"))"

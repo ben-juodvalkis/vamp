@@ -534,6 +534,15 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 			if (live && handleLive(ws, address, args)) return;
 
 			switch (address) {
+				// The input devices Vamp for Mac offers (ADR-533), as the bridge
+				// relays them: an interface and the Mac's own microphone.
+				case '/capture/input/devices/query': {
+					send(ws, '/capture/input/devices', [JSON.stringify([
+						{ uid: 'AppleUSBAudioEngine:RME:Babyface Pro', name: 'Babyface Pro', inputs: 14 },
+						{ uid: 'BuiltInMicrophoneDevice', name: 'MacBook Pro Microphone', inputs: 1 }
+					])]);
+					return;
+				}
 				case '/looping/v3/handshake/hello': {
 					const offered = args.map(String);
 					if (!offered.includes(version)) {

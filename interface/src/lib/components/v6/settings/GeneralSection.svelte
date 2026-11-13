@@ -21,7 +21,15 @@
 		setFootSwitchLearn
 	} from '$lib/services/sessionCommands';
 	import { theme, resolvedTheme, themeActions, type Theme } from '$lib/stores/theme';
-	import { captureSettings, CAPTURE_CHANNELS, type CaptureSource } from '$lib/stores/v6/captureSettingsStore.svelte';
+	import {
+		captureSettings,
+		channelsFor,
+		type CaptureSource,
+		type ChannelMode,
+		type InputDevice
+	} from '$lib/stores/v6/captureSettingsStore.svelte';
+	import { captureStore } from '$lib/stores/v6/captureStore.svelte';
+	import { onMount } from 'svelte';
 	import Sun from '@lucide/svelte/icons/sun';
 	import Moon from '@lucide/svelte/icons/moon';
 	import Monitor from '@lucide/svelte/icons/monitor';
@@ -78,6 +86,24 @@
 		{ id: 'track', label: 'Track' },
 		{ id: 'input', label: 'Input' }
 	];
+	const CHANNEL_MODES: { id: ChannelMode; label: string }[] = [
+		{ id: 'stereo', label: 'Stereo' },
+		{ id: 'mono', label: 'Mono' }
+	];
+
+	// The devices Vamp for Mac offers now, with the picked one kept in the
+	// list while it is not offered (the app stopped, the interface unplugged).
+	const offered = $derived(captureStore.inputDevices);
+	const picked = $derived(captureSettings.device);
+	const pickedMissing = $derived(!!picked && !offered.some((d) => d.uid === picked.uid));
+	const deviceRows = $derived<{ device: InputDevice | null; label: string; sub: string }[]>([
+		{ device: null, label: 'Live’s input', sub: `Ext. In, through Vamp-Capture on the track` },
+		...offered.map((d) => ({ device: d, label: d.name, sub: `${d.inputs} input${d.inputs === 1 ? "" : "s"} · Vamp for Mac records it` })),
+		...(pickedMissing && picked ? [{ device: picked, label: picked.name, sub: 'Not available: Vamp for Mac is not offering it' }] : [])
+	]);
+	const channelOptions = $derived(channelsFor(captureSettings.inputs, captureSettings.mode));
+
+	onMount(() => captureStore.queryInputDevices());
 
 	// --- Foot switch ------------------------------------------------------
 	const foot = $derived(session.footSwitch);
@@ -179,26 +205,70 @@
 			{#if captureSettings.source === 'input'}
 				<div class="set-row set-row-stack">
 					<span class="set-row-main">
-						<span class="set-row-label">Input channel</span>
-						<span class="set-row-sub">The jack your mic or instrument is in, as Live numbers its inputs.</span>
+						<span class="set-row-label">Input device</span>
+						<span class="set-row-sub">Live’s own input, or an audio device Vamp for Mac records directly.</span>
 					</span>
-					<div class="set-segmented set-segmented-6" role="group" aria-label="Input channel">
-						{#each CAPTURE_CHANNELS as ch (ch)}
+					<div class="set-segmented set-segmented-list" role="group" aria-label="Input device">
+						{#each deviceRows as row (row.device?.uid ?? '')}
+							{@const on = (row.device?.uid ?? '') === captureSettings.deviceUid}
 							<button
-								class="set-segment"
-								class:on={captureSettings.channel === ch}
-								aria-pressed={captureSettings.channel === ch}
-								onclick={() => captureSettings.setChannel(ch)}
-								data-capture-channel={ch}
+								class="set-segment set-segment-device"
+								class:on
+								aria-pressed={on}
+								onclick={() => captureSettings.setDevice(row.device)}
+								data-capture-device={row.device?.uid ?? ''}
 							>
-								<span>{ch}</span>
+								<span class="set-device-name">{row.label}</span>
+								<span class="set-device-sub">{row.sub}</span>
 							</button>
 						{/each}
 					</div>
 				</div>
+				<div class="set-row set-row-stack">
+					<span class="set-row-main">
+						<span class="set-row-label">Input channel</span>
+						<span class="set-row-sub">
+							{captureSettings.mode === 'stereo' ? 'A pair of inputs, recorded as a stereo file.' : 'One input, recorded as a mono file.'}
+						</span>
+					</span>
+					<div class="set-channel-pick">
+						<div class="set-segmented set-segmented-2" role="group" aria-label="Mono or stereo">
+							{#each CHANNEL_MODES as m (m.id)}
+								<button
+									class="set-segment"
+									class:on={captureSettings.mode === m.id}
+									aria-pressed={captureSettings.mode === m.id}
+									onclick={() => captureSettings.setMode(m.id)}
+									data-capture-mode={m.id}
+								>
+									<span>{m.label}</span>
+								</button>
+							{/each}
+						</div>
+						<div class="set-segmented set-segmented-6" role="group" aria-label="Input channel">
+							{#each channelOptions as ch (ch)}
+								<button
+									class="set-segment"
+									class:on={captureSettings.channel === ch}
+									aria-pressed={captureSettings.channel === ch}
+									onclick={() => captureSettings.setChannel(ch)}
+									data-capture-channel={ch}
+								>
+									<span>{ch}</span>
+								</button>
+							{/each}
+						</div>
+					</div>
+				</div>
 			{/if}
 		</div>
-		<p class="set-note">REC puts Vamp-Capture at the end of the track it records the first time, and reuses it after. It needs Vamp Devices in Live’s Places.</p>
+		<p class="set-note">
+			{#if captureSettings.source === 'input' && captureSettings.deviceUid}
+				Vamp for Mac records this device itself, beside Live: nothing is added to the track. The take lands beside the saved set, or in Live’s temporary project.
+			{:else}
+				REC puts Vamp-Capture at the end of the track it records for the take. It needs Vamp Devices in Live’s Places.
+			{/if}
+		</p>
 	</section>
 
 	<section class="set-group" data-debug="settings-foot-switch">
@@ -284,6 +354,35 @@
 	}
 	.set-segmented-6 {
 		grid-template-columns: repeat(6, minmax(0, 1fr));
+		width: min(100%, 24rem);
+	}
+	.set-segmented-list {
+		grid-template-columns: minmax(0, 1fr);
+		width: min(100%, 24rem);
+	}
+	.set-segment-device {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0;
+		padding: var(--spacing-xs) var(--spacing-sm);
+		text-align: left;
+	}
+	.set-device-name {
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.set-device-sub {
+		font-size: 0.75rem;
+		font-weight: var(--font-weight-normal, 400);
+		opacity: 0.75;
+	}
+	.set-channel-pick {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: var(--spacing-xs);
 		width: min(100%, 24rem);
 	}
 	.set-segment {

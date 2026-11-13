@@ -18,6 +18,9 @@ final class AppState: ObservableObject {
 
     let config: AppConfig
     private let client: BridgeClient
+    /// Records an input device for REC (ADR-533), on the bridge's word.
+    private let recorder = InputRecorder()
+    private var helloTimer: Timer?
 
     init() {
         let cfg = AppConfig.shared
@@ -31,6 +34,20 @@ final class AppState: ObservableObject {
             Task { @MainActor in self?.handleMessage(message) }
         }
         client.start()
+
+        recorder.onReply = { [weak self] address, args in
+            self?.client.send(address, args)
+        }
+        // Says hello with the devices each second while the bridge listens;
+        // the bridge forgets the recorder after three missed hellos.
+        helloTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.sayCaptureHello() }
+        }
+    }
+
+    private func sayCaptureHello() {
+        guard client.accepted else { return }
+        client.send(Wire.captureInputHello, [.string(InputDevices.json(InputDevices.all()))])
     }
 
     // MARK: - Reads (for the view)
@@ -63,6 +80,8 @@ final class AppState: ObservableObject {
     private func handleConnectionChange(_ isConnected: Bool) {
         connected = isConnected
         if !isConnected {
+            // A take whose bridge is gone could not be handed on: end it.
+            recorder.stop()
             // Drop seeded values so the menu doesn't imply live state while
             // the bridge is down. They re-seed on the next handshake accept.
             serverMode = nil
@@ -78,6 +97,15 @@ final class AppState: ObservableObject {
         // the int guard below.
         if message.address == Wire.serverMode {
             if let mode = message.args.first?.stringValue { serverMode = mode }
+            return
+        }
+        if message.address == Wire.captureInputStart {
+            let a = message.args.map { $0.stringValue ?? "" }
+            if a.count >= 3 { recorder.start(folder: a[0], uid: a[1], channel: a[2]) }
+            return
+        }
+        if message.address == Wire.captureInputStop {
+            recorder.stop()
             return
         }
 

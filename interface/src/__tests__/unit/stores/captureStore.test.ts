@@ -108,7 +108,18 @@ describe('captureStore', () => {
 			captureStore.handleMessage('/capture/state', ['idle']);
 			captureStore.start(4, 'input', '1/2');
 			expect(send).toHaveBeenCalledWith('/capture/start', [4, 'input', '1/2']);
-			expect(logger.info).toHaveBeenCalledWith('CAPTURE TX: start', { trackIndex: 4, source: 'input', channel: '1/2' });
+			captureStore.start(4, 'input', '3', 'babyface-uid');
+			expect(send).toHaveBeenCalledWith('/capture/start', [4, 'input', '3', 'babyface-uid']);
+			expect(logger.info).toHaveBeenCalledWith('CAPTURE TX: start', { trackIndex: 4, source: 'input', channel: '1/2', deviceUid: '' });
+		});
+
+		it('keeps the input devices Vamp for Mac offers, dropping a bad entry', () => {
+			captureStore.handleMessage('/capture/input/devices', [
+				JSON.stringify([{ uid: 'u', name: 'Babyface Pro', inputs: 14 }, { name: 'no uid' }])
+			]);
+			expect(captureStore.inputDevices).toEqual([{ uid: 'u', name: 'Babyface Pro', inputs: 14 }]);
+			captureStore.handleMessage('/capture/input/devices', ['[]']);
+			expect(captureStore.inputDevices).toEqual([]);
 		});
 
 		it('stop() should send /capture/stop', () => {

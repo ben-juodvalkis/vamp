@@ -536,6 +536,8 @@ const INBOUND_MIDDLEWARE = {
     // must NOT be relayed to the UI (currently only save_as_request).
     pythonSurface: (msg) => {
         if (handleSaveAsRequestIfNeeded(msg)) return true;
+        // The set's path, asked for an input take Vamp for Mac records (ADR-533).
+        if (captureRecorder.onSurfaceMessage(msg)) return true;
         // show_for_swap/ack and pad_names/reply answer the swap orchestrator.
         // Both handlers are null while features.axHelper is off.
         if (drumSwap?.onSurfaceMessage(msg)) return true;

@@ -1221,6 +1221,30 @@ now; its hellos carry no track and are ignored.
 | `/capture/error` | Device/Bridge→UI | `code:string, detail:string` | A refused start. From a copy: `no-project-folder` (the set is unsaved and no temp project was named), `sfrecord-missing` (the patch has lost its `sfrecord~`), `no-ext-in` (Live offers its extra input no Ext. In), `no-input-channel` (Ext. In has no channel by that name). From the bridge, with `/capture/state idle` after it: `no-track`, `recorder-not-loaded`. The UI shows it in the error banner and ends its pending start. |
 | `/capture/meter` | Device→UI | `level:float` | 0–1 (−70 dB to 0 dB), about 15 times a second from the copy that is recording, and never while idle. |
 
+**An input device Vamp for Mac records (ADR-533).** A `/capture/start` whose
+`source` is `input` and which names a fourth argument, `device` (a Core Audio
+UID from `/capture/input/devices`), is not the Max device's: the bridge asks
+the surface where the set is saved, picks the folder as above (beside the
+`.als`, else the newest temp project; also the temp project when the surface
+does not answer within 1 s, as one that predates the query never does), and
+sends Vamp for Mac `/capture/input/start`. The app records that device's
+channel or pair itself, beside Live, into a 24-bit WAV of the device's rate;
+nothing is loaded onto the track. Its replies reach every client as the
+device's own `/capture/state`, `/capture/meter` (same scale and rate),
+`/capture/file` (the path alone) and `/capture/error`. A start with no
+`device` goes to Vamp-Capture as before. Every `/capture/input/*` from a
+client is **bridge-terminated** (`WebSocketServer.dispatchClientMessage`).
+
+| Address | Dir | Args | Semantics |
+| ------- | --- | ---- | --------- |
+| `/capture/input/hello` | App→Bridge | `devices:string` (JSON `[{uid, name, inputs}]`) | Vamp for Mac, once a second while the bridge has accepted it: every Core Audio device with inputs, `inputs` its input channels across its streams. The app is the recorder while its hellos arrive (3 s); its socket is where starts go. |
+| `/capture/input/devices` | Bridge→UI | `devices:string` (JSON, as above) | What Settings → Capture offers: sent when the app's list changes, `[]` once its hellos stop, and in answer to the query. |
+| `/capture/input/devices/query` | UI→Bridge | — | Ask for `/capture/input/devices` now (Settings sends it as it opens). |
+| `/capture/input/start` | Bridge→App | `folder:string, uid:string, channel:string` | Record `uid` into `folder`/`LOOPING_CAPTURE_<YYYYMMDD_HHMMSS>.wav`. `channel` `3/4` is a stereo pair (two neighbouring inputs, 1-based), `5` one input, recorded mono. Sent to the app's socket alone. |
+| `/capture/input/stop` | Bridge→App | — | Every client stop goes to the app as well as the device. |
+| `/capture/input/state` · `/meter` · `/file` · `/error` | App→Bridge | as `/capture/state` · `/meter` · `/file` · `/error` | Relayed to every client under the device's address. The app's error codes: `no-input-device` (the device is gone, or would not open or start; also the bridge's, with `/capture/state idle`, for a UID the app is not offering), `no-input-channel` (the device lacks that channel), `mic-denied` (macOS has not let Vamp for Mac record), `file-failed`, `no-project-folder` (the bridge's, as for the device). |
+| `/looping/v3/session/file_path/query` | Bridge→Surf | — | The set's `.als` (`Song.file_path`), `''` while unsaved; the reply comes back on this address. **Bridge-terminated**: never relayed to clients. |
+
 ### 2.16 Tone Shaper frames (Ben's Adaptive Tone Shaper, 2026-10-07)
 
 Ben's Adaptive Tone Shaper's graph in the EQ view (`ToneShaperGraph`) draws

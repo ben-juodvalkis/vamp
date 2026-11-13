@@ -328,6 +328,10 @@ from .components.SessionSettingsComponent import (
     V3_SESSION_KEY_FOLLOW_ADDRESS,
     V3_SESSION_KEY_FOLLOW_QUERY_ADDRESS,
 )
+
+# ADR-533: the set's .als, '' while unsaved (``Song.file_path``, measured on
+# Live 12.4.25b1: present, '' for an unsaved set).
+V3_SESSION_FILE_PATH_QUERY_ADDRESS = "/looping/v3/session/file_path/query"
 from .components.ServerPresenceComponent import (
     ServerPresenceComponent,
     V3_SERVER_HEARTBEAT_ADDRESS,
@@ -666,6 +670,12 @@ class LoopingSurface(ControlSurface):
         self._transport.add_handler(
             V3_SESSION_AUTO_CAPTURE_QUERY_ADDRESS,
             self._session_settings_component.handle_query_auto_capture,
+        )
+        # Where the set is saved, for a take Vamp for Mac records from an
+        # input device (ADR-533): beside the .als, or '' while unsaved.
+        # Read-only; the bridge asks before each such take.
+        self._transport.add_handler(
+            V3_SESSION_FILE_PATH_QUERY_ADDRESS, self._handle_query_file_path,
         )
 
         # Key detection (ADR-446) + Follow (ADR-447): one verb reads the
@@ -2491,6 +2501,15 @@ class LoopingSurface(ControlSurface):
         # no fallback.
 
     # --- handlers ----------------------------------------------------------
+
+    def _handle_query_file_path(self, args, source_addr):
+        """``/looping/v3/session/file_path/query`` → ``(path,)``: the set's
+        ``.als``, or ``''`` while it is unsaved or the read raises."""
+        try:
+            return (str(self.song.file_path or ""),)
+        except Exception as e:  # noqa: BLE001 — a read must never kill dispatch
+            logger.warning("file_path query failed: %s", e)
+            return ("",)
 
     def _handle_live_test(self, args, source_addr):
         """Echo ``/live/test`` with ``("ok",)`` back to the sender.

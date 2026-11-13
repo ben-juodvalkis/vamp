@@ -41,6 +41,9 @@ final class BridgeClient: NSObject, URLSessionWebSocketDelegate {
 
     private var connectedState = false
 
+    /// The bridge takes our messages now: authenticated, or it never asked.
+    var accepted: Bool { connectedState && hasSeeded }
+
     /// Called (on main) with each inbound message, `/bridge/ping` already
     /// filtered out and `/bridge/batch` already unwrapped.
     var onMessage: ((OSCMessage) -> Void)?

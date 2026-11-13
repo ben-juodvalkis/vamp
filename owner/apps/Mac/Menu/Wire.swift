@@ -41,6 +41,12 @@ enum Wire {
     // Launch-mode beacon ("dev" | "ipad"), broadcast by the bridge to WS
     // clients on connect + periodically. Drives the status line.
     static let serverMode = "/bridge/server_mode"
+
+    // This app's input recorder (ADR-533): its hello, once a second, with the
+    // input devices it offers; the bridge's start and stop for it.
+    static let captureInputHello = "/capture/input/hello"
+    static let captureInputStart = "/capture/input/start"
+    static let captureInputStop = "/capture/input/stop"
 }
 
 /// The user-facing settings, each mapping to a set address + label.

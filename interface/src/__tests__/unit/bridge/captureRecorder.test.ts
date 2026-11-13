@@ -18,7 +18,11 @@ const {
 	DEVICE_LOAD_ADDRESS,
 	DEVICE_DELETE_ADDRESS,
 	DEVICE_SOURCE,
-	DEVICE_REL
+	DEVICE_REL,
+	APP_DEVICES,
+	APP_START,
+	APP_STOP,
+	SET_PATH_QUERY
 } = nodeRequire('../../../../bridge/handlers/captureRecorder.js');
 const { createFeatureRegistry } = nodeRequire('../../../../bridge/utils/features.js');
 
@@ -227,5 +231,133 @@ describe('createCaptureRecorder', () => {
 		const { sent, recorder } = setup();
 		recorder.sendProjectFolder();
 		expect(sent).toEqual([{ address: '/capture/folder', args: [{ type: 's', value: '' }] }]);
+	});
+});
+
+describe('an input device Vamp for Mac records (ADR-533)', () => {
+	type Msg = { address: string; args: unknown[] };
+	const BABYFACE = { uid: 'AppleUSBAudioEngine:RME:Babyface Pro', name: 'Babyface Pro', inputs: 14 };
+
+	function setup(recordings = '') {
+		const features = createFeatureRegistry({}, { logger: quiet });
+		const sent: Msg[] = [];
+		const surface: Msg[] = [];
+		const clients: Msg[] = [];
+		const app: Msg[] = [];
+		const recorder = createCaptureRecorder({
+			features,
+			logger: quiet,
+			recordingsDir: recordings || join(tmpdir(), 'no-such-live-recordings-dir'),
+			sendToDevice: (msg: Msg) => sent.push(msg),
+			sendToSurface: (address: string, args: unknown[]) => surface.push({ address, args }),
+			broadcast: (address: string, args: unknown[]) => clients.push({ address, args }),
+			silenceMs: 3000,
+			setPathTimeoutMs: 1000
+		});
+		const toApp = (address: string, args: unknown[]) => app.push({ address, args });
+		const appHello = (devices: unknown[] = [BABYFACE]) =>
+			recorder.onAppMessage(toApp, { address: '/capture/input/hello', args: [JSON.stringify(devices)] });
+		return { sent, surface, clients, app, recorder, toApp, appHello };
+	}
+	const start = (channel: string, uid: string) => [3, 'input', channel, uid];
+
+	it('offers the app\'s devices to every client when they change, and none once its hellos stop', () => {
+		vi.useFakeTimers();
+		const { clients, recorder, appHello } = setup();
+		expect(appHello()).toBe(true);
+		appHello();
+		expect(clients).toEqual([{ address: APP_DEVICES, args: [JSON.stringify([BABYFACE])] }]);
+		expect(recorder.inputDevices()).toEqual([BABYFACE]);
+		vi.advanceTimersByTime(3000);
+		expect(clients.at(-1)).toEqual({ address: APP_DEVICES, args: ['[]'] });
+		expect(recorder.inputDevices()).toEqual([]);
+		recorder.dispose();
+	});
+
+	it('drops a device the app describes badly', () => {
+		const { recorder, appHello } = setup();
+		appHello([BABYFACE, { uid: '', name: 'x', inputs: 2 }, { uid: 'y', name: 'y', inputs: 0 }, 'junk']);
+		expect(recorder.inputDevices()).toEqual([BABYFACE]);
+		recorder.dispose();
+	});
+
+	it('asks the surface where the set is and starts the app beside the saved set', () => {
+		const { sent, surface, app, recorder, appHello } = setup();
+		appHello();
+		recorder.start(start('3/4', BABYFACE.uid));
+		expect(surface).toEqual([{ address: SET_PATH_QUERY, args: [] }]);
+		expect(app).toEqual([]);
+		expect(recorder.onSurfaceMessage({ address: SET_PATH_QUERY, args: [{ type: 's', value: '/Sets/Song Project/Song.als' }] })).toBe(true);
+		expect(app).toEqual([{ address: APP_START, args: ['/Sets/Song Project', BABYFACE.uid, '3/4'] }]);
+		// Live gets nothing loaded onto the track, and the Max device hears nothing.
+		expect(sent).toEqual([]);
+		expect(surface).toHaveLength(1);
+		recorder.dispose();
+	});
+
+	it('records an unsaved set, or one whose surface does not answer, into Live\'s newest temp project', () => {
+		vi.useFakeTimers();
+		const dir = mkdtempSync(join(tmpdir(), 'live-recordings-'));
+		dirs.push(dir);
+		mkdirSync(join(dir, '2026-11-13 070000 Temp Project', 'Ableton Project Info'), { recursive: true });
+		const { app, recorder, appHello } = setup(dir);
+		appHello();
+		recorder.start(start('5', BABYFACE.uid));
+		recorder.onSurfaceMessage({ address: SET_PATH_QUERY, args: [''] });
+		recorder.start(start('6', BABYFACE.uid));
+		vi.advanceTimersByTime(1000);
+		const folder = join(dir, '2026-11-13 070000 Temp Project');
+		expect(app).toEqual([
+			{ address: APP_START, args: [folder, BABYFACE.uid, '5'] },
+			{ address: APP_START, args: [folder, BABYFACE.uid, '6'] }
+		]);
+		recorder.dispose();
+	});
+
+	it('refuses a device the app is not offering, and says so to every client', () => {
+		const { clients, app, recorder, appHello } = setup();
+		recorder.start(start('1/2', BABYFACE.uid));
+		appHello();
+		recorder.start(start('1/2', 'some-other-device'));
+		const errors = clients.filter((m) => m.address === '/capture/error');
+		expect(errors.map((m) => m.args[0])).toEqual(['no-input-device', 'no-input-device']);
+		expect(app).toEqual([]);
+		recorder.dispose();
+	});
+
+	it('relays the app\'s state, meter, file and error as the device\'s own', () => {
+		const { clients, recorder, toApp } = setup();
+		recorder.onAppMessage(toApp, { address: '/capture/input/state', args: ['recording'] });
+		recorder.onAppMessage(toApp, { address: '/capture/input/meter', args: [0.5] });
+		recorder.onAppMessage(toApp, { address: '/capture/input/file', args: ['/x/LOOPING_CAPTURE_1.wav'] });
+		recorder.onAppMessage(toApp, { address: '/capture/input/error', args: ['mic-denied', 'no'] });
+		expect(clients).toEqual([
+			{ address: '/capture/state', args: ['recording'] },
+			{ address: '/capture/meter', args: [0.5] },
+			{ address: '/capture/file', args: ['/x/LOOPING_CAPTURE_1.wav'] },
+			{ address: '/capture/error', args: ['mic-denied', 'no'] }
+		]);
+		expect(recorder.onAppMessage(toApp, { address: '/capture/state', args: [] })).toBe(false);
+		recorder.dispose();
+	});
+
+	it('stops the app as well as the device, and a stop drops a start still waiting on the surface', () => {
+		const { sent, app, recorder, appHello } = setup();
+		appHello();
+		recorder.start(start('1/2', BABYFACE.uid));
+		recorder.stop();
+		recorder.onSurfaceMessage({ address: SET_PATH_QUERY, args: ['/Sets/A/A.als'] });
+		expect(app).toEqual([{ address: APP_STOP, args: [] }]);
+		expect(sent.map((m) => m.address)).toEqual(['/capture/stop']);
+		recorder.dispose();
+	});
+
+	it('still records Live\'s Ext. In through Vamp-Capture when no device is named', () => {
+		const { surface, app, recorder, appHello } = setup();
+		appHello();
+		recorder.start([3, 'input', '1/2']);
+		expect(surface[0].address).toBe(DEVICE_LOAD_ADDRESS);
+		expect(app).toEqual([]);
+		recorder.dispose();
 	});
 });

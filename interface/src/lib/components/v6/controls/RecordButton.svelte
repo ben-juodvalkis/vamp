@@ -51,7 +51,7 @@
 	let canRecord = $derived(!recorderReason);
 
 	function startRecording() {
-		captureStore.start(trackIndex, captureSettings.source, captureSettings.channel);
+		captureStore.start(trackIndex, captureSettings.source, captureSettings.channel, captureSettings.deviceUid);
 	}
 
 	function stopRecording() {

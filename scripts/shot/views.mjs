@@ -985,6 +985,20 @@ export const TOURS = {
 				firstRun: true
 			},
 			{
+				name: 'settings-capture-input',
+				description: 'Settings → General, Capture on an input: Live’s input or a device Vamp for Mac records, Stereo or Mono (ADR-533)',
+				// Opened as a first run, since the gear's path times out in the tour
+				// (2026-11-13, every gear state alike).
+				firstRun: true,
+				steps: [
+					{ click: '[data-tab="general"]' },
+					{ click: '[data-capture-source="input"]' },
+					{ click: '[data-capture-device="AppleUSBAudioEngine:RME:Babyface Pro"]' },
+					{ click: '[data-capture-mode="mono"]' },
+					{ click: '[data-capture-channel="5"]' }
+				]
+			},
+			{
 				name: 'settings-foot-learn',
 				description: 'Settings → General, the foot switch learning — "Press your pedal…"',
 				steps: [...SETTINGS_OPEN, { click: '[data-debug="foot-switch-learn"]' }]

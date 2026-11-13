@@ -633,6 +633,16 @@ function handleToneShaperWatchCmd(_ws, message, context) {
     context.toneShaper?.watch(context.clientId, typeof path === 'string' ? path : '');
 }
 
+// A send to one client, for the capture recorder to answer Vamp for Mac
+// alone. Silent on a socket that has closed (ws.send() would throw).
+function appSender(ws) {
+    return (address, args) => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ address, args, source: 'bridge' }));
+        }
+    };
+}
+
 // Address-keyed handlers (exact-match): control-plane messages that
 // don't go through the subscription/route flow.
 const ADDRESS_HANDLERS = {
@@ -678,6 +688,13 @@ function dispatchClientMessage(ws, message, context) {
                 clientId: context.clientId,
                 address: message && message.address
             });
+            return;
+        }
+
+        // Vamp for Mac's input recorder (ADR-533): its hello, its replies and
+        // a client's ask for its devices. Bridge-terminated.
+        if (context.captureRecorder && typeof message.address === 'string'
+            && context.captureRecorder.onAppMessage(appSender(ws), message)) {
             return;
         }
 
