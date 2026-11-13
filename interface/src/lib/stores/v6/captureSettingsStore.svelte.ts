@@ -1,7 +1,7 @@
 /**
- * What REC records (capture.plan.md, issue #9; ADR-533): the selected track,
- * or an audio input. Settings → Recording sets it; REC sends it with every
- * start.
+ * The external input the sidebar's REC records (ADR-533). The clip view's
+ * REC records the selected track and reads nothing here: the two are separate
+ * recorders since 2026-11-13. Settings → Recording sets it.
  *
  * An input is a device and a channel on it, mono or a stereo pair. The
  * device is either one Vamp for Mac offers (it records that device itself,
@@ -15,7 +15,6 @@
  * for Mac is not offering it.
  */
 
-export type CaptureSource = 'track' | 'input';
 export type ChannelMode = 'stereo' | 'mono';
 
 /** One input device Vamp for Mac offers (`/capture/input/devices`). */
@@ -61,7 +60,6 @@ export function switchMode(channel: string, mode: ChannelMode, inputs: number): 
 	return options.includes(want) ? want : (options[0] ?? '');
 }
 
-const SOURCE_KEY = 'captureSettings.source';
 const CHANNEL_KEY = 'captureSettings.channel';
 const DEVICE_KEY = 'captureSettings.device';
 
@@ -94,14 +92,10 @@ function readDevice(): InputDevice | null {
 	}
 }
 
-let source = $state<CaptureSource>(read(SOURCE_KEY) === 'input' ? 'input' : 'track');
 let channel = $state<string>(read(CHANNEL_KEY) || '1/2');
 let device = $state<InputDevice | null>(readDevice());
 
 export const captureSettings = {
-	get source(): CaptureSource {
-		return source;
-	},
 	get channel(): string {
 		return channel;
 	},
@@ -119,10 +113,6 @@ export const captureSettings = {
 	},
 	get mode(): ChannelMode {
 		return modeOf(channel);
-	},
-	setSource(next: CaptureSource): void {
-		source = next;
-		write(SOURCE_KEY, next);
 	},
 	setChannel(next: string): void {
 		channel = next;

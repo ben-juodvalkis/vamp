@@ -4,6 +4,7 @@
 	import { session } from '$lib/stores/session.svelte';
 	import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
 	import { vampDevicesAvailable } from '$lib/services/effectSources.svelte';
+	import { meterStore } from '$lib/stores/v3/meters.svelte';
 	import { onDestroy } from 'svelte';
 
 	// Shared record button — used both at the top of the browser rail
@@ -11,20 +12,26 @@
 	// hold-to-record / tap-toggle behavior, same optimistic latch, and the
 	// same single-dot indicator (○ idle → blinking ● while recording).
 	//
-	// REC records the selected track, or the audio interface's input
-	// (Settings → Recording), through the Vamp-Capture on that track; the
-	// bridge loads one there first if it has none (capture.plan.md).
-	//  - `meterLevel`: which meter drives the fill (capture meter vs track
-	//    meter). Defaults to the capture meter.
+	// Two separate recorders (Ben, 2026-11-13): `source="track"` records what
+	// the selected track plays (the clip view's REC, through the Vamp-Capture
+	// the bridge loads onto it); `source="input"` records the external input
+	// Settings → Recording names (the sidebar's REC; Vamp for Mac records a
+	// picked device, Vamp-Capture Live's own Ext. In). Each lights only for
+	// its own take, and is greyed while the other's runs.
+	//  - `meterLevel`: overrides what the fill follows. Otherwise it is always
+	//    live: the selected track's meter for a track REC, the input's level
+	//    for an input device, and the take's meter for Live's own input.
 	//  - `shape`: `circle` (default) fits the largest circle its cell allows;
 	//    `rect` fills the cell as a rounded rectangle. The browser rail uses
 	//    `rect` because its slot is now a half-height band — a circle there
 	//    would be sized by the SHORT axis and leave most of the 120px width
 	//    empty, shrinking the target rather than just flattening it.
 	let {
+		source,
 		meterLevel = undefined,
 		shape = 'circle'
 	}: {
+		source: 'track' | 'input';
 		meterLevel?: number;
 		shape?: 'circle' | 'rect';
 	} = $props();
@@ -38,6 +45,9 @@
 	// to record: the master is not one.
 	let recorder = $derived(bridgeStatus.feature('captureRecorder'));
 	let trackIndex = $derived(session.selectedTrackIndex);
+	// A take is running, and whose: the other REC's take greys this one.
+	let takeRunning = $derived(captureStore.state === 'recording' || captureStore.pending);
+	let mine = $derived(!captureStore.takeSource || captureStore.takeSource === source);
 	let recorderReason = $derived(
 		!recorder.available
 			? recorder.enabled
@@ -45,13 +55,21 @@
 				: 'Waiting for the bridge'
 			: trackIndex < 0
 				? 'Select a track'
-				: ''
+				: takeRunning && !mine
+					? captureStore.takeSource === 'input'
+						? 'Recording the input'
+						: 'Recording the track'
+					: ''
 	);
 
 	let canRecord = $derived(!recorderReason);
 
 	function startRecording() {
-		captureStore.start(trackIndex, captureSettings.source, captureSettings.channel, captureSettings.deviceUid);
+		if (source === 'input') {
+			captureStore.start(trackIndex, 'input', captureSettings.channel, captureSettings.deviceUid);
+		} else {
+			captureStore.start(trackIndex, 'track');
+		}
 	}
 
 	function stopRecording() {
@@ -108,21 +126,28 @@
 	// `pending` paints "recording" from the tap rather than the device's echo
 	// (~300 ms later, longer when the recorder has to load first), so a quick
 	// tap doesn't snap back to idle on release.
-	let showRecording = $derived(
-		!recorderReason && (captureStore.state === 'recording' || isHolding || captureStore.pending)
-	);
+	let showRecording = $derived(!recorderReason && ((takeRunning && mine) || isHolding));
 
-	// On an input device Vamp for Mac records (ADR-533) the fill shows that
-	// input's live level all the time, so a performer sees the source is
-	// there before pressing REC; the take's own meter takes over while it
-	// records. Otherwise the caller's meter, else the capture meter.
-	let inputDevice = $derived(captureSettings.source === 'input' ? captureSettings.deviceUid : '');
+	// The fill is always live (Ben, 2026-11-13: "the meters should always be
+	// accurate"): the selected track's meter on a track REC; on an input
+	// device, that input's level from Vamp for Mac, take or no take; on Live's
+	// own input, which nothing meters outside a take, the take's meter, which
+	// drops to zero as it ends.
+	let inputDevice = $derived(source === 'input' ? captureSettings.deviceUid : '');
 	$effect(() => captureStore.holdInputMonitor(inputDevice));
+	let trackLevel = $derived.by(() => {
+		const meter = trackIndex >= 0 ? meterStore.get(`tracks/${trackIndex}`) : undefined;
+		return meter ? Math.max(meter.left, meter.right) : 0;
+	});
 	let fillLevel = $derived(
 		meterLevel ??
-			(inputDevice && captureStore.state !== 'recording'
-				? captureStore.inputLevelFor(inputDevice, captureSettings.channel)
-				: captureStore.meterLevel)
+			(source === 'track'
+				? trackLevel
+				: inputDevice
+					? captureStore.inputLevelFor(inputDevice, captureSettings.channel)
+					: mine && captureStore.state === 'recording'
+						? captureStore.meterLevel
+						: 0)
 	);
 	let meterHeight = $derived(fillLevel * 100);
 </script>

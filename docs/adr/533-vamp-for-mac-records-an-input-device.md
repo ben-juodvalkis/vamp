@@ -54,6 +54,15 @@ a track inside Live; for an external source that reason does not apply.
   holder) and fills to the chosen channel's level (a pair's louder side),
   the take's own meter taking over while it records. The fill draws solid
   while recording, so it stays green over REC's red rather than reading tan.
+- **Two REC buttons, two recorders** (Ben, 2026-11-13: "we need two
+  recording methods separate for track capture or external"). The clip
+  view's REC always records the selected track; the sidebar's always records
+  the input Settings → Recording names (the phone's single REC records the
+  track). Settings' Track | Input switch is gone. Each button lights only for
+  its own take (`captureStore.takeSource`) and is greyed, saying which,
+  while the other's runs. Every fill is always live: the track's meter on
+  the track REC, the input's level on a device, and on Live's own input the
+  take's meter, now zeroed as the take ends (it froze on its last level).
 - **Permissions**: macOS asks once for the microphone (Info.plist's
   `NSMicrophoneUsageDescription`), the first time the picker meters a device:
   first cut asked only on the first take, so opening Vamp showed no prompt

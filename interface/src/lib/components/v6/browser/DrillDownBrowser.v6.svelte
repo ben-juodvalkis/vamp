@@ -1884,7 +1884,7 @@
 				{#if browserModeStore.isLocked}<Lock size={32} />{:else}<LockOpen size={32} />{/if}
 			</button>
 		{:else}
-			<RecordButton shape="rect" />
+			<RecordButton source="input" shape="rect" />
 		{/if}
 	</div>
 {/snippet}

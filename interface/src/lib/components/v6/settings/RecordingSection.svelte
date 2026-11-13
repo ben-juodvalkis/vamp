@@ -1,7 +1,9 @@
 <script lang="ts">
 	/**
 	 * Settings → Recording (ADR-534): everything that records or arms, in one
-	 * place. The REC button's source (ADR-533) first, then the two things
+	 * place. The two REC buttons first (the sidebar's records the input picked
+	 * here, the clip view's the track: separate since 2026-11-13, so there is
+	 * no Track | Input switch), then the two things
 	 * Live does for you: Auto Rec (the arrangement, on Play) and Auto-Arm
 	 * (the selected track). They sat in General beside the theme, with REC's
 	 * picker two groups away, and "Auto Rec" and "REC records" read as one
@@ -25,7 +27,6 @@
 	import {
 		captureSettings,
 		channelsFor,
-		type CaptureSource,
 		type ChannelMode,
 		type InputDevice
 	} from '$lib/stores/v6/captureSettingsStore.svelte';
@@ -56,10 +57,6 @@
 	}
 
 	// --- The REC button ------------------------------------------------------
-	const CAPTURE_SOURCES: { id: CaptureSource; label: string }[] = [
-		{ id: 'track', label: 'Track' },
-		{ id: 'input', label: 'Input' }
-	];
 	const CHANNEL_MODES: { id: ChannelMode; label: string }[] = [
 		{ id: 'stereo', label: 'Stereo' },
 		{ id: 'mono', label: 'Mono' }
@@ -91,8 +88,7 @@
 	}
 
 	// While the picker is up on a device, keep its levels coming.
-	const monitoring = $derived(captureSettings.source === 'input' ? captureSettings.deviceUid : '');
-	$effect(() => captureStore.holdInputMonitor(monitoring));
+	$effect(() => captureStore.holdInputMonitor(captureSettings.deviceUid));
 
 	onMount(() => captureStore.queryInputDevices());
 
@@ -113,33 +109,17 @@
 </script>
 
 <div class="set-section">
-	<p class="set-lead">What the REC button records, and what Live arms for you while you play.</p>
+	<p class="set-lead">What the two REC buttons record, and what Live arms for you while you play.</p>
 
 	<section class="set-group" data-debug="settings-capture">
 		<h3 class="set-group-title">REC button</h3>
 		<div class="set-list">
 			<div class="set-row set-row-stack">
 				<span class="set-row-main">
-					<span class="set-row-label">REC records</span>
-					<span class="set-row-sub">
-						{captureSettings.source === 'track' ? 'The selected track, after its effects.' : 'An audio input, on the selected track.'}
-					</span>
+					<span class="set-row-label">Two REC buttons</span>
+					<span class="set-row-sub">The sidebar’s REC records the input below. The clip view’s REC records the selected track, after its effects.</span>
 				</span>
-				<div class="set-segmented rec-source" style:--set-segments={2} role="group" aria-label="REC records">
-					{#each CAPTURE_SOURCES as c (c.id)}
-						<button
-							class="set-segment"
-							class:on={captureSettings.source === c.id}
-							aria-pressed={captureSettings.source === c.id}
-							onclick={() => captureSettings.setSource(c.id)}
-							data-capture-source={c.id}
-						>
-							{c.label}
-						</button>
-					{/each}
-				</div>
 			</div>
-			{#if captureSettings.source === 'input'}
 				<div class="set-subpanel">
 					<label class="set-field">
 						<span class="set-field-label">Device</span>
@@ -187,7 +167,6 @@
 						<span>{inputNote.text}</span>
 					</p>
 				</div>
-			{/if}
 		</div>
 	</section>
 
@@ -208,9 +187,6 @@
 </div>
 
 <style>
-	.rec-source {
-		width: min(100%, 14rem);
-	}
 	.rec-device {
 		width: min(100%, 22rem);
 	}

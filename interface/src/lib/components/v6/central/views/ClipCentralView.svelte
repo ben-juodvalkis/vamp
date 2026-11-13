@@ -24,7 +24,6 @@ import { logger } from '$lib/utils/logger';
 	import { sequencerStore } from '$lib/stores/v6/sequencerStore.svelte';
 	import { browser } from '$app/environment';
 	import { onDestroy } from 'svelte';
-	import { meterStore } from '$lib/stores/v3/meters.svelte';
 	import { v3Store } from '$lib/stores/v3/normalized.svelte';
 	import { rgbToHex } from '$lib/utils/formatters/trackFormatters';
 	import { selectedTrackInk, selectedTrackScheme } from '$lib/utils/selectedTrackInk';
@@ -171,12 +170,6 @@ import { logger } from '$lib/utils/logger';
 	let gainDisplay = $derived(roundGainDisplay(clipPropertiesStore.gainDisplay));
 
 
-	let trackMeterLevel = $derived.by(() => {
-		const trackIndex = session.selectedTrackIndex;
-		if (trackIndex < 0) return 0;
-		const meter = meterStore.get(`tracks/${trackIndex}`);
-		return meter?.left ?? 0;
-	});
 
 	const warpModeOptions = [
 		{ value: 0, label: 'Beats' },
@@ -679,7 +672,7 @@ import { logger } from '$lib/utils/logger';
 			     column's whole height. -->
 			<div class="stacked-btns" class:single={!axOn}>
 				<div class="btn-cell">
-					<RecordButton meterLevel={trackMeterLevel} />
+					<RecordButton source="track" />
 				</div>
 				{#if axOn}
 				<div class="btn-cell">

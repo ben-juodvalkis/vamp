@@ -59,7 +59,7 @@
 <nav class="tab-bar" aria-label="Phone tabs" data-debug="phone-tab-bar">
 	{#each left as t (t.id)}{@render tabButton(t)}{/each}
 	<div class="rec" data-debug="phone-rec">
-		<div class="rec-cell"><RecordButton /></div>
+		<div class="rec-cell"><RecordButton source="track" /></div>
 		<span class="rec-target">{recTarget}</span>
 	</div>
 	{#each right as t (t.id)}{@render tabButton(t)}{/each}

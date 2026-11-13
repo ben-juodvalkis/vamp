@@ -999,10 +999,9 @@ export const TOURS = {
 			},
 			{
 				name: 'settings-capture-input',
-				description: 'Settings → Recording, REC on an input: Live’s input or a device Vamp for Mac records, Stereo or Mono (ADR-533)',
+				description: 'Settings → Recording: the sidebar REC’s input, Live’s or a device Vamp for Mac records, Stereo or Mono (ADR-533)',
 				steps: [
 					...SETTINGS_OPEN,
-					{ click: '[data-capture-source="input"]' },
 					{ select: '[data-capture-device]', value: 'AppleUSBAudioEngine:RME:Babyface Pro' },
 					{ click: '[data-capture-mode="mono"]' },
 					{ click: '[data-capture-channel]' },
@@ -1014,7 +1013,6 @@ export const TOURS = {
 				description: 'Settings → Recording, the channel dropdown open: every input with its live level',
 				steps: [
 					...SETTINGS_OPEN,
-					{ click: '[data-capture-source="input"]' },
 					{ select: '[data-capture-device]', value: 'AppleUSBAudioEngine:RME:Babyface Pro' },
 					{ click: '[data-capture-mode="mono"]' },
 					{ click: '[data-capture-channel]' }

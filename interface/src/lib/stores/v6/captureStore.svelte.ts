@@ -35,6 +35,15 @@ let lastFile = $state<string | null>(null);
 let meterLevel = $state<number>(0);
 
 /**
+ * Which REC started the take now running: the track's (the clip view's REC)
+ * or the input's (the sidebar's). The two are separate recorders (Ben,
+ * 2026-11-13), so each button lights only for its own. Null with no take,
+ * or one this screen did not start.
+ */
+export type TakeSource = 'track' | 'input';
+let takeSource = $state<TakeSource | null>(null);
+
+/**
  * A start was sent and the device has not answered. REC paints "recording"
  * from the tap rather than the echo (~300 ms later), so a quick tap does not
  * snap back to idle; an answer of either kind — a state or an error — ends it,
@@ -157,6 +166,12 @@ function handleCaptureMessage(address: string, args: unknown[]): void {
 		if (isCaptureState(newState)) {
 			logger.info('CAPTURE STATE CHANGE:', { from: state, to: newState });
 			state = newState;
+			// The recorder sends no meter while idle: a take that ended must not
+			// leave its last level standing on the button.
+			if (newState === 'idle') {
+				meterLevel = 0;
+				takeSource = null;
+			}
 		} else {
 			logger.warn('Unknown capture state received', { state: newState });
 		}
@@ -174,6 +189,8 @@ function handleCaptureMessage(address: string, args: unknown[]): void {
 		const code = typeof args[0] === 'string' && args[0] ? args[0] : 'capture-failed';
 		const detail = typeof args[1] === 'string' ? args[1] : '';
 		settlePending();
+		meterLevel = 0;
+		if (state === 'idle') takeSource = null;
 		lastError = { code, detail, at: Date.now() };
 		logger.warn('Recorder refused', { code, detail });
 		v3ErrorBannerStore.show('recorder', '', captureErrorMessage(code, detail));
@@ -197,6 +214,7 @@ function handleCaptureMessage(address: string, args: unknown[]): void {
 function start(trackIndex: number, source: string = 'track', channel: string = '', deviceUid: string = ''): void {
 	logger.info('CAPTURE TX: start', { trackIndex, source, channel, deviceUid });
 	settlePending();
+	takeSource = source === 'input' ? 'input' : 'track';
 	pending = true;
 	pendingTimer = setTimeout(settlePending, PENDING_TIMEOUT_MS);
 	send(
@@ -282,6 +300,8 @@ function stop(): void {
 function deviceGone(): void {
 	settlePending();
 	state = 'idle';
+	meterLevel = 0;
+	takeSource = null;
 }
 
 // ===== PUBLIC API =====
@@ -305,6 +325,10 @@ export const captureStore = {
 	},
 	get lastError() {
 		return lastError;
+	},
+	/** Which REC's take is running (see `takeSource`). */
+	get takeSource() {
+		return takeSource;
 	},
 	get inputDevices() {
 		return inputDevices;
