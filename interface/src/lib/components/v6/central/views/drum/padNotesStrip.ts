@@ -68,6 +68,25 @@ export function stripSteps(win: TimeRange): { at: number; beat: boolean }[] {
 	return out;
 }
 
+/** Steps a shaded band spans: four, one beat at 16ths. */
+export const STRIP_BAND_STEPS = 4;
+
+/**
+ * The shaded bands behind the steps (2026-11-13, the user's call: "to help
+ * orient"): every other group of four steps, starting with the second, as
+ * fractions of the width — at 16ths the bar's 2nd and 4th beats.
+ */
+export function stripBands(win: TimeRange): { left: number; width: number }[] {
+	const span = win.end - win.start;
+	if (span <= 0) return [];
+	const count = Math.round(span / stripStepBeats(span));
+	const out: { left: number; width: number }[] = [];
+	for (let g = STRIP_BAND_STEPS; g < count; g += 2 * STRIP_BAND_STEPS) {
+		out.push({ left: g / count, width: Math.min(STRIP_BAND_STEPS, count - g) / count });
+	}
+	return out;
+}
+
 /**
  * The block a touch at `fraction` of the width lands on, else none. Exact,
  * not "the nearest": an empty step beside a note is a target of its own

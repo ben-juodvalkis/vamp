@@ -82,7 +82,8 @@
 		stripBlocks,
 		stripStepAt,
 		stripStepBeats,
-		stripSteps
+		stripSteps,
+		stripBands
 	} from './padNotesStrip';
 
 	interface Props {
@@ -203,6 +204,7 @@
 			: []
 	);
 	const steps = $derived(win ? stripSteps(win) : []);
+	const bands = $derived(win ? stripBands(win) : []);
 
 	let box: HTMLElement | null = $state(null);
 
@@ -390,6 +392,9 @@
 	aria-label="The pad's notes in the playing clip: drag a note up or down for its velocity, sideways to move it, tap to delete it; tap an empty step to add one, swipe to paint several"
 >
 	{#if win}
+		{#each bands as b}
+			<div class="strip-band" style="left: {b.left * 100}%; width: {b.width * 100}%;"></div>
+		{/each}
 		{#each steps as s}
 			<div class="strip-step" class:beat={s.beat} style="left: {s.at * 100}%;"></div>
 		{/each}
@@ -437,6 +442,15 @@
 		border: 1px solid var(--line-strong);
 		border-radius: var(--radius-sm);
 		background: var(--surface-well);
+	}
+	/* Every other group of four steps, faintly lifted, so a step's place in
+	   the bar reads at a glance (2026-11-13). */
+	.strip-band {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		background: color-mix(in oklab, var(--foreground) 5%, transparent);
+		pointer-events: none;
 	}
 	.strip-step {
 		position: absolute;

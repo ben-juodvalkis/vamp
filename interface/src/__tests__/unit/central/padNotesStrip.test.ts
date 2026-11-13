@@ -15,7 +15,8 @@ import {
 	stripBlockAt,
 	stripBlocks,
 	stripStepBeats,
-	stripSteps
+	stripSteps,
+	stripBands
 } from '$lib/components/v6/central/views/drum/padNotesStrip';
 
 describe('padNotesStrip — steps', () => {
@@ -30,6 +31,19 @@ describe('padNotesStrip — steps', () => {
 		expect(steps).toHaveLength(15);
 		expect(steps[3]).toEqual({ at: 0.25, beat: true });
 		expect(steps[0].beat).toBe(false);
+	});
+	it('shades every other group of four steps, starting with the second', () => {
+		// A 4/4 bar at 16ths: beats 2 and 4.
+		expect(stripBands({ start: 8, end: 12 })).toEqual([
+			{ left: 0.25, width: 0.25 },
+			{ left: 0.75, width: 0.25 }
+		]);
+		// A 3/4 bar: beat 2 alone.
+		const three = stripBands({ start: 0, end: 3 });
+		expect(three).toHaveLength(1);
+		expect(three[0].left).toBeCloseTo(1 / 3);
+		expect(three[0].width).toBeCloseTo(1 / 3);
+		expect(stripBands({ start: 0, end: 0 })).toEqual([]);
 	});
 });
 
