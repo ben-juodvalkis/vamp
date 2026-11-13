@@ -14,9 +14,13 @@
   interface Props {
     device: DeviceRecord | null;
     position: import('$lib/config/fxGridLayout').PositionKey;
+    // The palette bar's Gain chip: the meter lies flat, the drag stays up
+    // and down, and a full sweep takes CHIP_TRAVEL px since the chip is short.
+    chip?: boolean;
   }
 
-  let { device, position }: Props = $props();
+  let { device, position, chip = false }: Props = $props();
+  const CHIP_TRAVEL = 200;
 
   // The `utility` control (`deviceControls`): Gain on 0..1, drawn over the track's meter.
   const UTILITY = controlFor('utility') as SliderControl;
@@ -71,6 +75,9 @@
       title="Gain"
       labelOrientation="horizontal"
       labelSize="small"
+      orientation={chip ? 'horizontal' : 'vertical'}
+      dragAxis="vertical"
+      travel={chip ? CHIP_TRAVEL : undefined}
       {isGhost}
       {color}
       min={0}

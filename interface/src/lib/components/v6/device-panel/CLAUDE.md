@@ -68,11 +68,13 @@ never in a central view; a control's
 
 **The FX grid is gone (2026-10-26, the user's call).** The FX section is
 `ChainOverview` alone: the selected track's chain (or a scoped pad's), one
-cell per device, each drawing its tile, across the whole width and ending
-in a + one unit wide; above it the palette bar (ADR-523), a fixed set of
+cell per device, each drawing its tile, across the whole width; above it the palette bar (ADR-523), a fixed set of
 effect chips in family blocks, the same on every track
-(`services/effectPalette`, `chain/PaletteChip`); the ghost Utility a column
-at its right. The section is three equal rows on the browser rail's pitch
+(`services/effectPalette`, `chain/PaletteChip`), closed by a column of its
+own: the + (the browser on Effect) over the Gain chip, the Utility's Gain
+lying flat over the track's meter and ridden up and down, whose first drag
+loads a Utility (2026-11-13; until then the + ended the chain and the ghost
+Utility was a column at its right). One row holds 13 units. The section is three equal rows on the browser rail's pitch
 (ADR-535): the bar, always two rows of chips, is the first, level with the
 rail's Record tile, and the chain the other two (the phone keeps a fixed
 94px bar). A tap on a cell's header bar is Device On (no power button);

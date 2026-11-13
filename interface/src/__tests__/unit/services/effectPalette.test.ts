@@ -6,11 +6,11 @@ const names = (row: ({ name: string } | null)[]) => row.map((e) => e?.name ?? nu
 describe('effectPalette', () => {
 	it('is one layout on every MIDI track', () => {
 		expect(paletteBlocks('kit')).toEqual(paletteBlocks('instrument'));
-		expect(paletteBlocks('kit').map((b) => b.family)).toEqual(['midi', 'guitar', 'tone', 'dynamics', 'distortion', 'modulation', 'time', 'glitch']);
+		expect(paletteBlocks('kit').map((b) => b.family)).toEqual(['midi', 'guitar', 'tone', 'dynamics', 'distortion', 'modulation', 'glitch', 'time']);
 	});
 
 	it('drops only the MIDI block on an audio track, the rest in the same order', () => {
-		expect(paletteBlocks('audio').map((b) => b.family)).toEqual(['guitar', 'tone', 'dynamics', 'distortion', 'modulation', 'time', 'glitch']);
+		expect(paletteBlocks('audio').map((b) => b.family)).toEqual(['guitar', 'tone', 'dynamics', 'distortion', 'modulation', 'glitch', 'time']);
 		expect(paletteBlocks('audio')).toEqual(paletteBlocks('kit').slice(1));
 	});
 

@@ -311,12 +311,13 @@
   /**
    * The chain in width units (the user, 2026-11-05): a device its slider
    * draws (Gtr, Bass, a Utility, a Drum Rack's Trnsp) takes one, one with a
-   * pad or a picture two, the ghost section four. One row holds twelve, the
-   * room it had for four devices and the ghost section; past that the chain
+   * pad or a picture two. One row holds thirteen: the twelve it had, the +
+   * that ended it and the ghost Utility's column, which went up into the
+   * palette bar as chips (the user, 2026-11-13); past that the chain
    * takes two rows, as even as the cells allow (`chainUnitLayout`). Reads
    * like Live's chain: left to right, then the next row.
    */
-  const ROW_UNITS = 12;
+  const ROW_UNITS = 13;
   function unitsOf(cell: Cell): number {
     // The chain list is a slider's width (the user, 2026-11-12).
     if (cell.kind === 'chains' || cell.kind === 'add') return 1;
@@ -599,31 +600,19 @@
 
   /*
    * The chain has the section's lower two thirds, under the palette bar
-   * (ADR-535), one row up to
-   * `ROW_UNITS` and two past it (`chainUnitLayout`), and always ends in a +
-   * one unit wide, a slider's width (the user, 2026-11-11): `spare`. The
-   * cells take the rest of the width, however few there are; on two rows
-   * the + is the last cell of the second, half the chain's height.
+   * (ADR-535), one row up to `ROW_UNITS` and two past it
+   * (`chainUnitLayout`). The cells take the whole width: the + that ended
+   * the chain is a chip at the bar's right end now (the user, 2026-11-13),
+   * so the room a second row leaves widens its last cell, as a row's end
+   * always has.
    */
   const layout = $derived.by(() => {
     const widths = drawn.map(unitsOf);
-    const laid = chainUnitLayout(widths, 1, ROW_UNITS);
-    const spare = { ...laid.ghost };
+    const laid = chainUnitLayout(widths, 0, ROW_UNITS);
     const places = laid.places.map((p) => ({ ...p }));
-    // The + takes up to two units of the room its row leaves; only room
-    // past that widens the cell before it (the user, 2026-11-11: a Redux
-    // three units wide beside a one-unit + read worse than a double +).
-    const PLUS_MAX = 2;
-    if (spare.span > PLUS_MAX) {
-      const last = places.findLast((p) => p.row === spare.row);
-      if (last) {
-        const give = spare.span - PLUS_MAX;
-        last.span += give;
-        spare.col += give;
-        spare.span = PLUS_MAX;
-      }
-    }
-    return { ...laid, places, spare };
+    const last = places[places.length - 1];
+    if (last && laid.ghost.span > 0 && laid.ghost.row === last.row) last.span += laid.ghost.span;
+    return { ...laid, places };
   });
   const grid = $derived({ cols: layout.cols, rows: layout.rows });
 
@@ -697,15 +686,16 @@
   const placed = $derived.by(() => {
     const all = paletteBlocks(paletteKind);
     const room = paletteColumns(paletteWidth - all.length * (PALETTE_SEAM + PALETTE_GAP), PALETTE_TILE_MIN, PALETTE_GAP);
-    const blocks = paletteWidth > 0 ? fitBlocks(all, room) : all;
+    // The + and Gain column closes the bar, after a seam of its own.
+    const blocks = paletteWidth > 0 ? fitBlocks(all, room - 1) : all;
     let col = 1;
     const out = blocks.map((block) => {
       const start = col;
       col += block.cols + 1; // its columns, then a seam
       return { block, start };
     });
-    const template = blocks.map((b) => `repeat(${b.cols}, minmax(0, 1fr))`).join(` ${PALETTE_SEAM}px `);
-    return { blocks: out, template };
+    const template = [...blocks.map((b) => `repeat(${b.cols}, minmax(0, 1fr))`), 'minmax(0, 1fr)'].join(` ${PALETTE_SEAM}px `);
+    return { blocks: out, template, tail: col };
   });
   /** A chip's ink: its device's family colour, as the cell it would become wears it. */
   function chipInk(effect: { preset?: string }): string | undefined {
@@ -714,26 +704,14 @@
   }
 
   /*
-   * The ghost Utility (the user, 2026-11-05; ADR-482's column, back from the
-   * right sidebar): the ghost section's last column, narrow, the track's
-   * meter under a Gain fader, whose first drag adds a Utility to the chain. Shown while
-   * the chain holds none, and kept under the finger through the drag that
-   * loads one; the loaded Utility is then a cell of the chain.
+   * The Gain chip (the user, 2026-11-13; the ghost Utility column of
+   * 2026-11-05 before it): the bar's last chip under its +, the track's
+   * meter lying flat under the Utility's Gain, ridden up and down. Its
+   * first drag adds a Utility to the chain; after that it is that
+   * Utility's Gain, the same as its cell.
    */
   const UTILITY_TILE = TILE_COMPONENTS.utility;
-  const hasUtility = $derived(cells.some((c) => c.presetKey === 'utility'));
-  let utilityHeld = $state(false);
-  function holdUtility() {
-    utilityHeld = true;
-    const release = () => {
-      utilityHeld = false;
-      window.removeEventListener('pointerup', release, true);
-      window.removeEventListener('pointercancel', release, true);
-    };
-    window.addEventListener('pointerup', release, true);
-    window.addEventListener('pointercancel', release, true);
-  }
-  const showGhostUtility = $derived(!!UTILITY_TILE && (!hasUtility || utilityHeld));
+  const utilityDevice = $derived(cells.find((c) => c.presetKey === 'utility')?.device ?? null);
 
   /** The cell position under a point, by the grid's geometry at lift — not the cells, which are sliding. */
   function positionAt(d: Drag, x: number, y: number): number {
@@ -1075,9 +1053,9 @@
       {/if}
 {/snippet}
 
-<div class="chain-wrap" class:two-rows={grid.rows > 1} class:has-utility={showGhostUtility} class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
+<div class="chain-wrap" class:two-rows={grid.rows > 1} class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
 <!-- The palette bar: family blocks, a seam between them. Every chip in a
-     fixed place; the chain's own + adds anything else. -->
+     fixed place; the + at its end adds anything else, Gain under it. -->
 <div
   class="palette"
   bind:clientWidth={paletteWidth}
@@ -1096,6 +1074,22 @@
       {/each}
     {/each}
   {/each}
+  <div class="palette-slot" style:grid-column={placed.tail} style:grid-row="1">
+    <button
+      type="button"
+      class="chain-add palette-add"
+      aria-label="Add an effect"
+      data-debug="chain-add"
+      use:press={{ onPress: addEffect, touchAction: 'none' }}
+    >
+      <span class="chain-add-plus" aria-hidden="true"><Plus /></span>
+    </button>
+  </div>
+  {#if UTILITY_TILE}
+    <div class="palette-slot palette-gain" style:grid-column={placed.tail} style:grid-row="2" data-debug="chain-gain-chip">
+      <UTILITY_TILE.Tile position={UTILITY_TILE.position} device={utilityDevice} chip />
+    </div>
+  {/if}
 </div>
 <div
   class="chain"
@@ -1181,20 +1175,6 @@
       use:press={{ onPress: () => rackFold.toggle(arm.path), touchAction: 'none' }}
     ></button>
   {/each}
-  {#if layout.spare.span > 0}
-    <!-- The room the cells leave: a +, the browser on Effect. -->
-    <button
-      type="button"
-      class="chain-add chain-spare"
-      style:grid-column="{layout.spare.col + 1} / span {layout.spare.span}"
-      style:grid-row={layout.spare.row + 1}
-      aria-label="Add an effect"
-      data-debug="chain-add"
-      use:press={{ onPress: addEffect, touchAction: 'none' }}
-    >
-      <span class="chain-add-plus" aria-hidden="true"><Plus /></span>
-    </button>
-  {/if}
   {#if padScope}
     <!-- Whose chain this is, as the grid's scope chip says it. -->
     <div class="pad-chip chain-scope-chip" aria-label="Chain of pad {padScope.note}">
@@ -1202,20 +1182,6 @@
     </div>
   {/if}
 </div>
-{#if showGhostUtility && UTILITY_TILE}
-  <!-- The ghost Utility: all the way on the right, the full height, the
-       track's meter under a Gain fader; its first drag adds a Utility. -->
-  <div
-    class="ghost-utility"
-    data-debug="chain-ghost-utility"
-    role="presentation"
-    onpointerdowncapture={holdUtility}
-  >
-    <div class="cell-control" role="presentation"><CellSize>
-      <UTILITY_TILE.Tile position={UTILITY_TILE.position} />
-    </CellSize></div>
-  </div>
-{/if}
 </div>
 
 <style>
@@ -1249,26 +1215,6 @@
   :global([data-phone-layout]) .chain-wrap {
     grid-template-rows: 94px repeat(2, minmax(0, 1fr));
     row-gap: 8px;
-  }
-  /* The ghost Utility: a narrow column all the way on the right, the
-     full height (the user, 2026-11-10). */
-  .chain-wrap.has-utility {
-    grid-template-columns: minmax(0, 1fr) 72px;
-  }
-  /* The real devices' height, under the bar (the user, 2026-11-11). */
-  .chain-wrap > .ghost-utility {
-    grid-column: 2;
-    grid-row: 2 / span 2;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    min-height: 0;
-  }
-  .ghost-utility > .cell-control {
-    flex: 1 1 0;
-    min-height: 0;
-    display: flex;
-    padding: 0;
   }
   .chain-wrap.pad-scoped {
     outline: 2px solid var(--scope-ink, var(--track-ink, var(--phosphor)));
@@ -1357,6 +1303,19 @@
     aspect-ratio: 1;
     stroke-width: 1.5;
   }
+  /* The bar's + is a chip's height: its plus sized to the chip. */
+  .palette-add .chain-add-plus :global(svg) {
+    height: min(70%, 32px);
+  }
+  /* The Gain chip: the Utility's slider lying flat, filling its slot. */
+  .palette-gain {
+    display: flex;
+  }
+  .palette-gain > :global(*) {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+  }
 
   /* A cell is a panel: the strips' own surface on the page, a hairline,
      the header bar across its top and its face in the field below. */
@@ -1380,7 +1339,7 @@
   }
   /* The palette bar: the MIDI chips, a seam, the audio chips and +, one
      row of chips of one size, each placed by its slot. */
-  /* The bar runs to the right edge, over the ghost Utility's column too. */
+  /* The bar runs to the right edge, its + and Gain chips last. */
   .palette {
     grid-column: 1 / -1;
     grid-row: 1;
@@ -1688,10 +1647,10 @@
     border-color: transparent;
     border-radius: 3px;
   }
-  /* The ghost Utility: the ghosts' dashed line and no fill, not a tile's
-     slab (BaseDeviceControl's ghost is a solid-framed module; !important
-     because that rule is). */
-  :global([data-grammar='flat']) .ghost-utility :global(.device-control.device-ghost) {
+  /* The Gain chip before a Utility loads: the ghosts' dashed line and no
+     fill, not a tile's slab (BaseDeviceControl's ghost is a solid-framed
+     module; !important because that rule is). */
+  :global([data-grammar='flat']) .palette-gain :global(.device-control.device-ghost) {
     background: transparent !important;
     border: 1px dashed var(--ghost-line) !important;
     border-radius: var(--ghost-radius);

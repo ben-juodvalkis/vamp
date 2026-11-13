@@ -15,9 +15,11 @@
         // When set, the meter fill is tinted to the track color (dark at the
         // bottom → bright at the level) instead of the default green→red ramp.
         color?: string;
+        // Lying on its side: the level rises left to right.
+        horizontal?: boolean;
     }
 
-    let { trackIndex, track, topInset = 0, color }: Props = $props();
+    let { trackIndex, track, topInset = 0, color, horizontal = false }: Props = $props();
 
     // Get meter data from track object
     let meterLevel = $derived(track?.meterLevel || 0);
@@ -33,6 +35,7 @@
 
 <div
     class="meter-visualization w-full h-full"
+    class:horizontal
     style="--meter-opacity: {constants.ui.meters.opacity}; --top-inset: {topInset}px;"
 >
     <!-- Background meter display -->
@@ -82,7 +85,7 @@
         left: 0;
         width: 100%;
         background: linear-gradient(
-            to top,
+            var(--meter-dir, to top),
             color-mix(in srgb, var(--act-master), black 55%) 0%,
             var(--act-master) 70%,
             color-mix(in oklab, var(--act-master) 75%, white) 88%,
@@ -94,12 +97,20 @@
         transition: clip-path 0.1s ease-out;
     }
 
+    /* On its side: the ramp runs left to right and the level reveals it from the left. */
+    .meter-visualization.horizontal {
+        --meter-dir: to right;
+    }
+    .meter-visualization.horizontal .meter-fill {
+        clip-path: inset(0 var(--clip-top) 0 0);
+    }
+
     /* Strip meters (track color set): ambient wash → track ink → white-hot tip,
        then the hard act-rec headroom warning in the top 6%. A rising meter
        literally heats up against its own ambient wash — no extra nodes, no JS. */
     .meter-fill.tinted {
         background: linear-gradient(
-            to top,
+            var(--meter-dir, to top),
             color-mix(in srgb, var(--track-color), black 55%) 0%,
             var(--track-color) 70%,
             color-mix(in oklab, var(--track-color) 75%, white) 88%,
@@ -114,7 +125,7 @@
        Placed last so it wins over both the base ramp and .tinted. */
     .meter-fill.muted {
         background: linear-gradient(
-            to top,
+            var(--meter-dir, to top),
             color-mix(in srgb, var(--signal-dim), black 40%) 0%,
             var(--signal-dim) 100%
         );
@@ -130,7 +141,7 @@
     }
     :global([data-grammar="flat"]) .meter-fill {
         background: linear-gradient(
-            to top,
+            var(--meter-dir, to top),
             #00f758 0%,
             #00f758 72%,
             #ffd100 84%,
@@ -149,7 +160,7 @@
        no white-hot tip — one step from the ink to the warning. */
     :global([data-grammar="flat"]) .meter-fill.tinted {
         background: linear-gradient(
-            to top,
+            var(--meter-dir, to top),
             var(--track-color) 0%,
             var(--track-color) 94%,
             #ff0a0a 94%,
@@ -157,6 +168,6 @@
         );
     }
     :global([data-grammar="flat"]) .meter-fill.muted {
-        background: linear-gradient(to top, #6e6e6e 0%, #828282 100%);
+        background: linear-gradient(var(--meter-dir, to top), #6e6e6e 0%, #828282 100%);
     }
 </style>

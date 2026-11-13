@@ -40,6 +40,9 @@
     onDown?: () => void;
     isGhost?: boolean;
     orientation?: 'vertical' | 'horizontal';
+    // The axis a drag moves the value on; unset, the slider's own. A
+    // horizontal Gain chip (the chain's palette bar) still rides up and down.
+    dragAxis?: 'vertical' | 'horizontal';
     // 'auto' follows the slider's orientation. Unset: 'auto', or upright in a
     // central view, where a slider is a value box (ADR-477).
     labelOrientation?: 'vertical' | 'horizontal' | 'auto';
@@ -106,6 +109,7 @@
     onDown,
     isGhost = false,
     orientation = 'vertical',
+    dragAxis,
     labelOrientation,
     labelSize = 'large',
     labelAt = 'center',
@@ -229,12 +233,14 @@
       : `inset(0 ${off}% 0 0)`;
   });
 
+  const axis = $derived(dragAxis ?? orientation);
+
   function handlePointerDown(event: PointerEvent) {
     event.preventDefault(); // Prevent scrolling and default behavior
     isDragging = true;
 
     // Store start position and current value for relative dragging
-    startPointer = orientation === 'vertical' ? event.clientY : event.clientX;
+    startPointer = axis === 'vertical' ? event.clientY : event.clientX;
     startValue = localValue;
 
     // Store tap detection data
@@ -284,8 +290,8 @@
     if (max <= min) return;
 
     // Calculate delta from start position
-    const currentPointer = orientation === 'vertical' ? event.clientY : event.clientX;
-    const length = orientation === 'vertical' ? rect.height : rect.width;
+    const currentPointer = axis === 'vertical' ? event.clientY : event.clientX;
+    const length = axis === 'vertical' ? rect.height : rect.width;
     const size = effectiveTravel ? Math.max(length, effectiveTravel) : length;
     const delta = ((currentPointer - startPointer) / size) * sensitivity;
 
@@ -294,7 +300,7 @@
     const knobSize = effectiveTravel ? Math.max(rect.height, effectiveTravel) : rect.height;
     const normalizedDelta = knobFace
       ? -(event.clientY - tapStartY) / knobSize * sensitivity
-      : orientation === 'vertical' ? -delta : delta;
+      : axis === 'vertical' ? -delta : delta;
     const normalizedValue = (startValue - min) / (max - min);
     const newNormalizedValue = Math.max(0, Math.min(1, normalizedValue + normalizedDelta));
     const newValue = min + (newNormalizedValue * (max - min));
@@ -370,7 +376,7 @@
   >
     <!-- Meter Visualization (optional background) -->
     {#if track}
-      <MeterVisualization {trackIndex} {track} color={meterColor} />
+      <MeterVisualization {trackIndex} {track} color={meterColor} horizontal={orientation === 'horizontal'} />
     {/if}
 
     <!-- Center line indicator — only meaningful alongside a center-out fill.
