@@ -15,9 +15,8 @@
  *
  * Wire:
  *   /looping/v3/totalmix/<channel>  [db:float]
- * where <channel> ∈ { room, playback, click, phones, main }. Writes go
- * back out on `/totalmix/<channel>` with the same unit; `main` is
- * read-only.
+ * where <channel> ∈ { room, playback, click, phones, main }. The UI only
+ * reads them; the Move's knobs write through the bridge (ADR-537).
  *
  * Superseded ADR-388, which had these values coming from the standalone
  * Max Utility patch as 0..1 with no write-back path.

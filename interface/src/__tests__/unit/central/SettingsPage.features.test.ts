@@ -1,7 +1,7 @@
 /**
- * The Settings page's Move Knob switch (moved from the System view, plan.md §11) follows the bridge's `maxUtilityPatch`
+ * The Settings page's Move Knob switch (moved from the System view, plan.md §11) follows the bridge's `midiControllers`
  * switch (general-release audit §7b). The Move reaches the surface only
- * through the owner's standalone Max patch, so with the patch switched off —
+ * through the bridge's own MIDI inputs (ADR-537), so with them switched off —
  * and before the bridge has said anything — there is no Move Knob to press.
  * The other behaviour switches do not depend on it.
  */
@@ -20,7 +20,7 @@ import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
 
 const patch = (enabled: boolean) =>
 	bridgeStatus.updateFeatures(
-		JSON.stringify({ maxUtilityPatch: { enabled, available: enabled, reason: '' } })
+		JSON.stringify({ midiControllers: { enabled, available: enabled, reason: '' } })
 	);
 
 afterEach(() => {
@@ -28,7 +28,7 @@ afterEach(() => {
 	bridgeStatus.updateFeatures('{}');
 });
 
-describe('SettingsPage and the maxUtilityPatch switch', () => {
+describe('SettingsPage and the midiControllers switch', () => {
 	it('draws no Move Knob switch before the bridge has said anything', () => {
 		const { queryByText, getByText } = render(SettingsPage);
 		expect(queryByText('Move Knob')).toBeNull();

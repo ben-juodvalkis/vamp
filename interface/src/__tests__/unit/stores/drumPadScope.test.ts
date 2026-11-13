@@ -286,7 +286,7 @@ describe('drumPadScope — the pane', () => {
 
 // --- external holds (ADR-432) ---------------------------------------------
 //
-// A pad held on the Move: the Max Utility patch times it, the surface names
+// A pad held on the Move: the bridge times it (ADR-537), the surface names
 // it, and it lands here under a pointer id no browser can mint — the same
 // map as fingers, so nothing else in the store knows the difference.
 

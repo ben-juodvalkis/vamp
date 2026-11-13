@@ -16,5 +16,8 @@
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.4.0"
+  },
+  "optionalDependencies": {
+    "@julusian/midi": "3.6.1"
   }
 }

@@ -166,9 +166,12 @@ function replayTotalMixToClient(ws, totalmixLink, clientId) {
  *   whose snapshot each new client gets on connect as /bridge/features
  * @param {Object} [captureRecorder] - the recorder handler
  *   (handlers/captureRecorder.js), which takes every capture start and stop
+ * @param {Object} [midiControllers] - the bridge's MIDI controllers
+ *   (handlers/midiControllers.js, ADR-537), which take the piano pedal
+ *   setting's writes; null while `features.midiControllers` is off
  * @returns {Object} { httpServer, wss }
  */
-function createWebSocketServer(config, udpPorts, connectionStatus, metrics, healthMonitor, captureOverride, totalmixLink, axHelper = null, drumSwap = null, groupTracks = null, features = null, machine = null, captureRecorder = null, toneShaper = null) {
+function createWebSocketServer(config, udpPorts, connectionStatus, metrics, healthMonitor, captureOverride, totalmixLink, axHelper = null, drumSwap = null, groupTracks = null, features = null, machine = null, captureRecorder = null, toneShaper = null, midiControllers = null) {
 
     // Launch mode ("dev" | "ipad"), announced to each client on connect via
     // /bridge/server_mode so WS clients (e.g. the menu-bar utility) can show
@@ -275,7 +278,8 @@ function createWebSocketServer(config, udpPorts, connectionStatus, metrics, heal
             features,
             machine,
             captureRecorder,
-            toneShaper
+            toneShaper,
+            midiControllers
         });
     });
 
@@ -289,7 +293,7 @@ function createWebSocketServer(config, udpPorts, connectionStatus, metrics, heal
  * @param {Object} context - Context object with dependencies
  */
 function handleConnection(ws, request, context) {
-    const { udpPorts, connectionStatus, metrics, wss, healthMonitor, serverMode, captureOverride, totalmixLink, axHelper, drumSwap, groupTracks, features, machine, captureRecorder, toneShaper } = context;
+    const { udpPorts, connectionStatus, metrics, wss, healthMonitor, serverMode, captureOverride, totalmixLink, axHelper, drumSwap, groupTracks, features, machine, captureRecorder, toneShaper, midiControllers } = context;
 
     // Generate unique client ID
     const clientId = `client_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -466,7 +470,9 @@ function handleConnection(ws, request, context) {
             // Hands the recorder its folder ahead of a /capture/start.
             captureRecorder,
             // Remembers which Tone Shaper device this client is looking at.
-            toneShaper
+            toneShaper,
+            // Takes the Settings page's piano pedal writes (ADR-537).
+            midiControllers
         });
     });
 
@@ -695,6 +701,13 @@ function dispatchClientMessage(ws, message, context) {
         // a client's ask for its devices. Bridge-terminated.
         if (context.captureRecorder && typeof message.address === 'string'
             && context.captureRecorder.onAppMessage(appSender(ws), message)) {
+            return;
+        }
+
+        // The piano pedal setting (ADR-537): on/off and Learn.
+        // Bridge-terminated; a stray write with the switch off is dropped
+        // by the router like any unknown address.
+        if (context.midiControllers && context.midiControllers.onClientMessage(message)) {
             return;
         }
 

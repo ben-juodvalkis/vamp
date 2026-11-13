@@ -459,6 +459,9 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 		// until this arrives, so without it every capture would lose the
 		// TotalMix strip.
 		send(ws, '/bridge/features', [featuresJson]);
+		// The piano pedal setting (ADR-537), as the bridge sends it with the
+		// ping: the default CC, heard, so the Settings card draws its rig look.
+		send(ws, '/bridge/piano_pedal', [JSON.stringify({ enabled: true, cc: 67, learn: 'idle', heard: true })]);
 
 		const ping = setInterval(() => send(ws, '/bridge/ping', [Date.now()]), PING_INTERVAL_MS);
 		const beat = setInterval(

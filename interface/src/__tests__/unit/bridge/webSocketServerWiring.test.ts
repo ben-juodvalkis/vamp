@@ -208,7 +208,7 @@ describe('WebSocket server wiring', () => {
 		expect(frame, `no /bridge/features among ${frames.map((f) => f.address).join(', ')}`).toBeDefined();
 		expect(JSON.parse(String(frame?.args?.[0]))).toEqual({
 			totalmix: { enabled: true, available: false, reason: 'TotalMix not answering' },
-			maxUtilityPatch: { enabled: false, available: false, reason: '' },
+			midiControllers: { enabled: false, available: false, reason: '' },
 			expressionPedal: { enabled: false, available: false, reason: '' },
 			menubar: { enabled: false, available: false, reason: '' },
 			axHelper: { enabled: false, available: false, reason: '' },

@@ -84,11 +84,11 @@ export const VIEWS = {
 		prefs: { [P.transport]: '1' }
 	},
 	general: {
-		description: 'General edition: TotalMix, the Max Utility patch and the expression pedal switched off — no faders, the header re-divides.',
+		description: 'General edition: TotalMix, the MIDI controllers and the expression pedal switched off — no faders, the header re-divides.',
 		prefs: { [P.transport]: '1' },
 		features: {
 			totalmix: { enabled: false, available: false, reason: '' },
-			maxUtilityPatch: { enabled: false, available: false, reason: '' },
+			midiControllers: { enabled: false, available: false, reason: '' },
 			expressionPedal: { enabled: false, available: false, reason: '' }
 		}
 	},
@@ -954,13 +954,13 @@ export const TOURS = {
 			},
 			{
 				name: 'settings-controllers',
-				description: 'Settings → Controllers — the foot switch and Move’s knobs',
+				description: 'Settings → Controllers — the foot switch, the piano pedal and Move’s knob',
 				steps: [...SETTINGS_OPEN, { click: '[data-tab="controllers"]' }]
 			},
 			{
 				name: 'settings-controllers-general',
-				description: 'Settings → Controllers, Max Utility patch switched off — no Move Knob switch',
-				features: { maxUtilityPatch: { enabled: false, available: false, reason: '' } },
+				description: 'Settings → Controllers, MIDI controllers switched off — no Piano pedal or Move Knob',
+				features: { midiControllers: { enabled: false, available: false, reason: '' } },
 				steps: [...SETTINGS_OPEN, { click: '[data-tab="controllers"]' }]
 			},
 			{

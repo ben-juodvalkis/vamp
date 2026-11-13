@@ -811,9 +811,9 @@ the surface's `MidiPedalInput` converts the foot-switch CC
 (`constants.midiPedals.footSwitchCC`, **23** on
 `constants.midiPedals.channel` **10**) into tap/hold itself — including
 the tap/hold timing (`osc.footTrigger.holdThresholdMs`, 650ms). CCs on
-any other channel are not claimed and fall through to the framework. **Fallback**: the legacy Max chain
-(`owner/Max Patches/foot-trigger.js`, same 650ms timing hardcoded) fires two
-arg-free OSC wires at the surface. Both paths call the same
+any other channel are not claimed and fall through to the framework. **Second path**: the bridge's piano pedal (ADR-537;
+any MIDI input but the Move, CC 67 unless Settings saved another, the same
+650ms) fires the two arg-free OSC wires below at the surface. Both paths call the same
 `FootTriggerComponent` handlers, so the wires below remain live:
 
 | Address                  | Dir        | Args      | Semantics |
@@ -908,22 +908,22 @@ duplicate racks (append, no dedupe).
 
 ### 2.10.2 Move drum-chain volume knob and pad hold
 
-See ADR-412. Second Ableton Move encoder (CC 72 ch 1 in
-`owner/Max Patches/Max Utility 1.0.maxpat`), same hardware lane as the
-track-volume knob: Max converts the CC to OSC and fires it straight at
-the surface's UDP port (11020) — no bridge, no `trackPath`. Owned by
-`SelectedTrackComponent`. **ADR-432 (2026-09-11) adds the pad hold on
-the same lane:** `owner/Max Patches/move_pad_hold.js` on the patch's
-`midi_from_move` bus times a pad held past 300 ms and sends the first
-row below; the surface names the pad Live selected — the pad struck,
+See ADR-412. The drum-chain knob was the second Ableton Move encoder
+(CC 72 ch 1); since ADR-537 nothing sends it, and its row below stays
+because the surface still answers it. The Move reaches the surface
+through the bridge's own MIDI inputs (ADR-537, `features.midiControllers`),
+which send these wires to the surface like any bridge→surface message — no
+`trackPath`. Owned by `SelectedTrackComponent`. **ADR-432 (2026-09-11) adds
+the pad hold:** the bridge times a Move pad held past
+`ui.gestures.momentaryHoldMs` (300 ms) and sends the first row below; the surface names the pad Live selected — the pad struck,
 which Live's selection follows (measured 2026-09-11: with a Random at
 +12 before the rack every hit sounded an octave up and the selection
 stayed on the struck pad), never the raw note, whose map onto the rack's
 pages is the Move script's and moves with the page — and tells the
 interface with the second,
 where it lands on the pad scope as an external hold (momentary, never
-a latch; released on every handshake accept). Ungated: the patch is
-the switch.
+a latch; released on every handshake accept). Ungated on the surface:
+`features.midiControllers` is the switch.
 
 | Address                                                | Dir           | Args            | Semantics |
 | ------------------------------------------------------ | ------------- | --------------- | --------- |
@@ -936,7 +936,8 @@ the switch.
 See ADR-423, which supersedes ADR-388. The bridge owns the UDP
 conversation with the RME mixer; nothing else in this system addresses
 TotalMix. **Every value on this path is dB**, matching the mixer's Global
-OSC protocol and the `live.gain~` objects in the Live device. The `0..1`
+OSC protocol; the Move's TotalMix knobs (CC 75–78, ADR-537) step it 0.1 dB
+a click, from the bridge's cached level, through the same clamp. The `0..1`
 a drawn fader needs is a rendering concern and lives in
 `interface/src/lib/utils/totalmixScale.ts`.
 
@@ -946,17 +947,19 @@ four are writable; `main` mirrors the Control Room main out and is
 
 | Address                              | Dir                    | Args        | Semantics |
 | ------------------------------------ | ---------------------- | ----------- | --------- |
-| `/looping/v3/totalmix/<channel>`     | Bridge→UI, Bridge→Device | `db:float` | Current level. Emitted when the mixer reports a change, when a write is accepted (see below), and once per channel in reply to `hello`. A WS client also gets one per cached channel, sent to it alone, the moment it authenticates (on connect when the auth gate is off), so a client that reloads after the bridge started does not show empty wells. `-300` is the mixer's `-oo`. A channel the bridge has never heard from is **never** synthesised — the UI renders it empty rather than inventing a level. |
+| `/looping/v3/totalmix/<channel>`     | Bridge→UI | `db:float` | Current level. Emitted when the mixer reports a change and when a Move knob's write is accepted. A WS client also gets one per cached channel, sent to it alone, the moment it authenticates (on connect when the auth gate is off), so a client that reloads after the bridge started does not show empty wells. `-300` is the mixer's `-oo`. A channel the bridge has never heard from is **never** synthesised — the UI renders it empty rather than inventing a level. |
 | `/looping/v3/totalmix_meters`       | Bridge→UI              | `room, playback, click, phones, main` (5× `db:float`) | **2026-10-07.** The five channels' live signal meters, one frame, folded by the bridge from the mixer's `/level/<in\|pb\|out>/<n>` stream (controller 3 with *Send Level* on; ~22 per second per sounding address, `osc.totalmix.meters` maps them). A stereo pair shows its louder side; a reading older than `meterStaleMs` (300) is `-300`, because the mixer sends nothing for a silent channel. Every `meterFrameMs` (33, 30 fps), only when a value moved, to 0.1 dB. Not sent to the device, not cached, not replayed. Nothing at all with Send Level off: the strip's fill stays empty and its fader line still draws. |
-| `/totalmix/<channel>`                | Device→Bridge          | `db:float` | Write, from the Max patch on the bridge's `totalmixDevice` port. A WS client's `/totalmix/*` is unrouted and dropped (since 2026-09-27, when the transport header's faders went). Clamped to `[minDb, maxDb]` in `totalmixLink.toMixer` — the single place the clamp lives, so no writer can bypass it — then translated to the mixer's own address. A value at or below `minDb` (-65) is sent as `silenceDb` (-300), so the bottom of a fader is genuinely off rather than merely inaudible. |
-| `/totalmix/hello`                    | Device→Bridge          | (none)      | The Live device announcing itself, on `live.thisdevice`. The bridge replies with one `/looping/v3/totalmix/<channel>` per **cached** channel. Live rebuilds the device on every set load, so this is how it adopts current levels; channels never heard from are omitted, which leaves that fader's gate shut and no write reaching hardware. |
+
+The Max patch's `/totalmix/<channel>` writes and `/totalmix/hello` on
+ports 11018/11019 went with ADR-537; a WS client's `/totalmix/*` is
+unrouted and dropped (since 2026-09-27). The clamp to `[minDb, maxDb]`
+lives in `totalmixLink.toMixer`, which every write passes; a value at or
+below `minDb` (-65) is sent as `silenceDb` (-300).
 
 **The mixer never echoes a write.** TotalMix's Global OSC "Re-send
-received" is off, which is what makes a device-side echo loop structurally
-impossible — but it also means an accepted write is the **only** moment a
-device-driven change can reach anyone else. An accepted device write
-therefore fans out to the WS clients (but not back to the device, which
-would re-drive the knob that originated it).
+received" is off, so an accepted write is the **only** moment a
+knob-driven change can reach anyone else. An accepted Move knob write
+therefore fans out to the WS clients.
 
 **There is no read verb**, and an argument-less message is a *write of
 1.0* rather than a query — verified against the hardware. The bridge
@@ -1155,8 +1158,11 @@ aren't presence-gated.
 | `/looping/v3/surface/hello`           | Surf→UI | `surfaceInstanceId:string, protocolVersion:string, timestamp:int` | Fires once at every `ControlSurface.__init__`. UI uses instanceId mismatch to detect surface restart. See §5.6. |
 | `/bridge/server_mode`                 | Bridge→UI | `mode:string` | Launch mode (`"dev"`/`"ipad"`) announced to WS clients — the WebSocket-side counterpart of the surface-only `/looping/v3/server/heartbeat` `mode` arg (which never reaches WS clients). Sent once per client on connect (`WebSocketServer.handleConnection`) and re-broadcast on the 5s ping cadence for self-healing. `mode` comes from `LOOPING_SERVER_MODE`, fixed for the bridge process lifetime. Consumed by the menu-bar utility (`owner/apps (Vamp for Mac)`) for its status line; the web UI ignores it. |
 | `/bridge/ax_helper`                   | Bridge→UI | `state:string, detail:string` | **ADR-439.** The Looping AX Helper as the bridge sees it — the one process trusted with macOS Accessibility, dialed over its Unix socket (`axHelper.socketPath`). `state` is `ready`, `ax-untrusted` (the app has no Accessibility grant; `detail` names the System Settings switch) or `ax-helper-down` (no connection: not installed, not running, or restarting past a 1.5 s grace). Sent once per client on connect, on every change, and on the 5 s ping cadence. The same codes are the named errors every AX-driven reply carries (`/cmd/clip/reverse/ack [0, code, detail]`, Save As, similar-sound swap), so an AX control never silently does nothing. |
-| `/bridge/features`                    | Bridge→UI | `snapshot:string` (JSON) | **General-release audit §7b.** The bridge's feature switches, `{ <id>: { enabled, available, reason } }`, one entry per switch it knows (`totalmix`, `maxUtilityPatch`, `expressionPedal`, `menubar`, `axHelper`; `interface/bridge/utils/features.js`), plus `captureRecorder`, which is no switch: always enabled, available while the recorder device says hello (§2.15; `No recorder on Return A`, `Waiting for the recorder`), and it goes back too. `enabled` is `constants.features.<id>`, read once at bridge start — only an explicit `true` is on. `available` says what the feature drives has been seen since the bridge started (for `totalmix`: the mixer answered on either OSC controller) and never goes back; `reason` is a short why-not, written to be drawn in a control (`Waiting for TotalMix`, `TotalMix not answering`, `TotalMix config missing`, `AX helper not running`, `AX helper needs Accessibility`), empty when available or off. `axHelper` alone can go back: it tracks the helper's own state. Sent once per client on connect (ahead of auth, like `/bridge/connection_status`: which subsystems exist is layout, not the set), on every change, and on the 5 s ping cadence. The UI draws nothing for a feature until a snapshot names it (`bridgeStatus.feature()` reads an unnamed one as off), hides one that is off, and greys out one that is on but unavailable, with the reason. Outside v3 version negotiation like every `/bridge/*` frame, so no protocol bump. |
+| `/bridge/features`                    | Bridge→UI | `snapshot:string` (JSON) | **General-release audit §7b.** The bridge's feature switches, `{ <id>: { enabled, available, reason } }`, one entry per switch it knows (`totalmix`, `midiControllers`, `expressionPedal`, `menubar`, `axHelper`; `interface/bridge/utils/features.js`), plus `captureRecorder`, which is no switch: always enabled, available while the recorder device says hello (§2.15; `No recorder on Return A`, `Waiting for the recorder`), and it goes back too. `enabled` is `constants.features.<id>`, read once at bridge start — only an explicit `true` is on. `available` says what the feature drives has been seen since the bridge started (for `totalmix`: the mixer answered on either OSC controller) and never goes back; `reason` is a short why-not, written to be drawn in a control (`Waiting for TotalMix`, `TotalMix not answering`, `TotalMix config missing`, `AX helper not running`, `AX helper needs Accessibility`), empty when available or off. `axHelper` alone can go back: it tracks the helper's own state. Sent once per client on connect (ahead of auth, like `/bridge/connection_status`: which subsystems exist is layout, not the set), on every change, and on the 5 s ping cadence. The UI draws nothing for a feature until a snapshot names it (`bridgeStatus.feature()` reads an unnamed one as off), hides one that is off, and greys out one that is on but unavailable, with the reason. Outside v3 version negotiation like every `/bridge/*` frame, so no protocol bump. |
 | `/bridge/machine`                     | Bridge→UI | `snapshot:string` (JSON) | **2026-09-26 (onboarding.plan.md §3, §6.5).** The machine's values a client used to compile in: `{ paths: { instrumentsBase, m4lDevicesRoot }, totalmix: { minDb, maxDb, silenceDb } | null }`. `instrumentsBase` is what a preset path recorded before the Places is read against (`effectPresetsBase`, the folder the file tiles loaded from, left on 2026-10-26: every file tile names the Vamp Devices Place now), `m4lDevicesRoot` this checkout's `Vamp Devices` from the bridge's own location, `totalmix` the mixer's dB range (`osc.totalmix`) or null. Read once at bridge start; sent once per client on connect, after `/bridge/features`, and on the 5 s ping cadence. Until it lands the client's paths are empty and an FX tile's load answers `path-not-found`, as a missing preset always did. Outside v3 negotiation, so no protocol bump. |
+| `/bridge/piano_pedal`                 | Bridge→UI | `state:string` (JSON) | **ADR-537.** The piano pedal setting, `{ enabled, cc, learn, heard }`: `learn` is `idle`, `listening` or `timeout`; `heard` says the pedal has moved since the bridge started. On every change and on the 5 s ping, only while `features.midiControllers` is on. Saved by the bridge to `logs/piano-pedal.json`. |
+| `/bridge/piano_pedal/enabled`         | UI→Bridge | `on:int(0\|1)` | **ADR-537.** Turn the piano pedal on or off. Bridge-terminated. |
+| `/bridge/piano_pedal/learn`           | UI→Bridge | `on:int(0\|1)` | **ADR-537.** Start Learn (`1`: the next CC above 64 from any input but the Move becomes the pedal, within `midiControllers.pianoPedal.learnTimeoutMs`) or cancel it (`0`). Bridge-terminated. |
 | `/bridge/pairing`                     | Bridge→UI | `event:string` (JSON) | **ADR-491.** Pairing news for the trusted screens' Allow / Ignore banner: `{type:'request', id, name, address}` when a device asks (never its code), `{type:'resolved', id, outcome}` when the request is approved, refused or expired, so every banner for it closes. Relayed from the interface server's POST to the bridge's loopback-only, secret-checked `/pairing` route (`handlers/pairingRelay.js`); sent to authenticated clients only. Outside v3 negotiation. |
 | `/cmd/clip/reverse`                   | UI→Bridge | `clipPath:string` | **ADR-368, rebuilt on ADR-439.** Reverse the focused Session audio clip. Live's LOM has no `Clip.reverse()`, so the bridge asks the Looping AX Helper to press Clip View's own Reverse button — the helper holds the one Accessibility grant, so this works whichever terminal started `npm run dev`. Bridge-terminated: never relayed to the surface. |
 | `/cmd/clip/reverse/ack`               | Bridge→UI | `ok:int(0\|1)[, code:string, detail:string]` | `[1]` on success. On failure **`[0, code, detail]`** with a named AX code — the same vocabulary `/bridge/ax_helper` publishes (`ax-helper-down`, `ax-untrusted`, `ax-no-main-window`, `ax-control-missing`, `ax-control-disabled`, `ax-timeout`, …). This replaced the osascript copy's `[0, stderr]` when `liveAxClick.js` was deleted; `clipReverseStore.isReversing` is held until this arrives, bounded by `axHelper.requestTimeoutMs` (20 s), not by an osascript timeout. |

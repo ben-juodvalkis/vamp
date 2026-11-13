@@ -60,6 +60,13 @@ function sameFeatures(a: Record<string, FeatureState>, b: Record<string, Feature
     });
 }
 
+export interface PianoPedalState {
+    enabled: boolean;
+    cc: number;
+    learn: 'idle' | 'listening' | 'timeout';
+    heard: boolean;
+}
+
 class BridgeStatusStore {
     // Reactive state using Svelte 5 runes
     status = $state<BridgeConnectionStatus>({
@@ -71,6 +78,34 @@ class BridgeStatusStore {
 
     /** Every switch the bridge has reported, by id. Empty until it does. */
     features = $state<Record<string, FeatureState>>({});
+
+    /**
+     * The piano pedal setting (ADR-537), from `/bridge/piano_pedal`: sent on
+     * every change and with the 5 s ping while `midiControllers` is on.
+     * `cc` is -1 until the bridge has said.
+     */
+    pianoPedal = $state<PianoPedalState>({ enabled: false, cc: -1, learn: 'idle', heard: false });
+
+    updatePianoPedal(json: string) {
+        let raw: Record<string, unknown>;
+        try {
+            raw = JSON.parse(json);
+        } catch {
+            logger.warn('Unreadable /bridge/piano_pedal frame', { component: 'bridgeStatus', json });
+            return;
+        }
+        if (!raw || typeof raw !== 'object') return;
+        const learn = raw.learn === 'listening' || raw.learn === 'timeout' ? raw.learn : 'idle';
+        const next: PianoPedalState = {
+            enabled: raw.enabled === true,
+            cc: typeof raw.cc === 'number' ? raw.cc : -1,
+            learn,
+            heard: raw.heard === true
+        };
+        const cur = this.pianoPedal;
+        if (cur.enabled === next.enabled && cur.cc === next.cc && cur.learn === next.learn && cur.heard === next.heard) return;
+        this.pianoPedal = next;
+    }
 
     updateAxHelper(state: string, detail?: string) {
         const known: AxHelperState[] = ['ready', 'ax-untrusted', 'ax-helper-down'];

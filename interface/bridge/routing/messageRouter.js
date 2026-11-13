@@ -136,8 +136,8 @@ const ROUTING_RULES = [
     // is broadcast to WS clients via handleIncomingOSC (no router hop).
     { target: 'loopingRecorder', match: matchesLoopingRecorder },
     // No /totalmix/ rule since 2026-09-27: the transport header's faders
-    // were its only WS sender. The mixer is written by the Max patch over
-    // the bridge's totalmixDevice port, never through this router.
+    // were its only WS sender. The mixer is written by the Move's knobs,
+    // read by the bridge itself (ADR-537), never through this router.
     // No /midi/ rule since 2026-09-25: the on-screen wheels were its last
     // senders, and they now travel as /looping/v3/wheels/* to the surface's
     // MidiWheelsComponent. A stray /midi/* is unknown and dropped.

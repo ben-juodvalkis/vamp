@@ -3,7 +3,7 @@
  *
  * Surf → /looping/v3/drum/pad_hold  [rackPath:string, note:int, held:0|1]
  *
- * The Max Utility patch times a Move pad held past its threshold and
+ * The bridge (ADR-537) times a Move pad held past its threshold and
  * tells the surface; the surface names the pad Live selected — the pad
  * struck — on the selected track's Drum Rack, and this is what it
  * sends. It lands on the pad scope as an EXTERNAL hold: the

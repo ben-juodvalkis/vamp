@@ -76,14 +76,14 @@ describe('SettingsPage', () => {
 		bridgeStatus.updateFeatures(
 			JSON.stringify({
 				totalmix: { enabled: true, available: false, reason: 'TotalMix has not answered' },
-				maxUtilityPatch: { enabled: true, available: true, reason: '' },
+				midiControllers: { enabled: true, available: true, reason: '' },
 				expressionPedal: { enabled: false, available: false, reason: '' }
 			})
 		);
 		const { container, getByText } = render(SettingsPage);
 		expect(container.querySelector('[data-feature="totalmix"]')?.getAttribute('data-state')).toBe('unavailable');
 		expect(getByText('TotalMix has not answered')).toBeTruthy();
-		expect(container.querySelector('[data-feature="maxUtilityPatch"]')?.getAttribute('data-state')).toBe('on');
+		expect(container.querySelector('[data-feature="midiControllers"]')?.getAttribute('data-state')).toBe('on');
 		expect(container.querySelector('[data-feature="expressionPedal"]')?.getAttribute('data-state')).toBe('off');
 	});
 

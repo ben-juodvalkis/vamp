@@ -24,13 +24,13 @@ const { logger } = require('../utils/logger');
  * On 0.0.0.0, one datagram from any LAN host (or the tailnet) went around the
  * WebSocket HMAC gate entirely: `/capture/file <path>` to 11017 made every
  * client create a MIDI track and load that file, `/totalmix/*` to 11019
- * reached the mixer, and `/looping/v3/session/save_as_request` to 11021 popped
+ * (gone since ADR-537) reached the mixer, and `/looping/v3/session/save_as_request` to 11021 popped
  * Live's modal Save panel over a performance (11021 was closed first,
  * 2026-09-16; the rest followed, general-release audit §5.3, 2026-09-23).
  *
  * Every peer is on this Mac, measured 2026-09-23 rather than assumed: the Max
- * senders — `Max Utility 1.0.maxpat` → 11019, `Vamp-Recorder.amxd` → 11017
- * — all name `udpsend 127.0.0.1`; TotalMix's remote controller 3 has
+ * sender — `Vamp-Recorder.amxd` → 11017 — names `udpsend 127.0.0.1`
+ * (the Max Utility patch's 11019 went with it, ADR-537); TotalMix's remote controller 3 has
  * `OSCRemoteHost` 127.0.0.1, and lsof showed its socket connected to
  * 127.0.0.1:9003; the surface replies to `pythonSurface.host`. A peer
  * that ever moves to another machine gets its own bind: widen one endpoint,
@@ -67,16 +67,6 @@ function createUDPPorts(config) {
                 localPort: config.totalmix.localPort,
                 remoteAddress: config.totalmix.host,
                 remotePort: config.totalmix.remotePort
-            })
-        }),
-
-        // Bridge <-> the Max for Live monitor device (ADR-423)
-        ...(config.totalmixDevice && {
-            totalmixDevice: new osc.UDPPort({
-                localAddress: INBOUND_BIND_ADDRESS,
-                localPort: config.totalmixDevice.localPort,
-                remoteAddress: config.totalmixDevice.host,
-                remotePort: config.totalmixDevice.remotePort
             })
         }),
 

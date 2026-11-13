@@ -60,7 +60,7 @@ export const HYBRID_IR_LISTS = HYBRID_IR_LISTS_JSON;
  */
 export const DEFAULT_FEATURES = Object.freeze({
 	totalmix: Object.freeze({ enabled: true, available: true, reason: '' }),
-	maxUtilityPatch: Object.freeze({ enabled: true, available: true, reason: '' }),
+	midiControllers: Object.freeze({ enabled: true, available: true, reason: '' }),
 	expressionPedal: Object.freeze({ enabled: true, available: true, reason: '' }),
 	menubar: Object.freeze({ enabled: true, available: true, reason: '' }),
 	axHelper: Object.freeze({ enabled: true, available: true, reason: '' }),

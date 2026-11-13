@@ -26,11 +26,11 @@ describe('readFeatureFlags', () => {
 		expect(FEATURE_IDS).toContain('totalmix');
 	});
 
-	it('knows maxUtilityPatch, the owner\'s standalone Max patch', () => {
-		expect(FEATURE_IDS).toContain('maxUtilityPatch');
-		expect(readFeatureFlags({ features: { maxUtilityPatch: true } })).toEqual({
+	it('knows midiControllers, the owner\'s MIDI controllers', () => {
+		expect(FEATURE_IDS).toContain('midiControllers');
+		expect(readFeatureFlags({ features: { midiControllers: true } })).toEqual({
 			totalmix: false,
-			maxUtilityPatch: true,
+			midiControllers: true,
 			expressionPedal: false,
 			menubar: false,
 			axHelper: false
@@ -41,7 +41,7 @@ describe('readFeatureFlags', () => {
 		expect(FEATURE_IDS).toContain('expressionPedal');
 		expect(readFeatureFlags({ features: { expressionPedal: true } })).toEqual({
 			totalmix: false,
-			maxUtilityPatch: false,
+			midiControllers: false,
 			expressionPedal: true,
 			menubar: false,
 			axHelper: false
@@ -51,16 +51,16 @@ describe('readFeatureFlags', () => {
 	it('reads a config with no features block as every switch off', () => {
 		// The general edition's base config, and every config written before
 		// the switches existed that is not the rig's.
-		expect(readFeatureFlags({ osc: {} })).toEqual({ totalmix: false, maxUtilityPatch: false, expressionPedal: false, menubar: false, axHelper: false });
+		expect(readFeatureFlags({ osc: {} })).toEqual({ totalmix: false, midiControllers: false, expressionPedal: false, menubar: false, axHelper: false });
 	});
 
 	it('reads a missing switch as off, never as a default that turns it on', () => {
-		expect(readFeatureFlags({ features: {} })).toEqual({ totalmix: false, maxUtilityPatch: false, expressionPedal: false, menubar: false, axHelper: false });
+		expect(readFeatureFlags({ features: {} })).toEqual({ totalmix: false, midiControllers: false, expressionPedal: false, menubar: false, axHelper: false });
 	});
 
 	it('turns a subsystem on only for an explicit true', () => {
-		expect(readFeatureFlags({ features: { totalmix: true } })).toEqual({ totalmix: true, maxUtilityPatch: false, expressionPedal: false, menubar: false, axHelper: false });
-		expect(readFeatureFlags({ features: { totalmix: false } })).toEqual({ totalmix: false, maxUtilityPatch: false, expressionPedal: false, menubar: false, axHelper: false });
+		expect(readFeatureFlags({ features: { totalmix: true } })).toEqual({ totalmix: true, midiControllers: false, expressionPedal: false, menubar: false, axHelper: false });
+		expect(readFeatureFlags({ features: { totalmix: false } })).toEqual({ totalmix: false, midiControllers: false, expressionPedal: false, menubar: false, axHelper: false });
 	});
 
 	it('ignores `_`-prefixed documentation keys without a word', () => {
@@ -69,7 +69,7 @@ describe('readFeatureFlags', () => {
 			{ features: { _description: 'prose', _totalmixNote: 'more prose', totalmix: true } },
 			logger
 		);
-		expect(flags).toEqual({ totalmix: true, maxUtilityPatch: false, expressionPedal: false, menubar: false, axHelper: false });
+		expect(flags).toEqual({ totalmix: true, midiControllers: false, expressionPedal: false, menubar: false, axHelper: false });
 		expect(logger.warn).not.toHaveBeenCalled();
 	});
 
@@ -77,7 +77,7 @@ describe('readFeatureFlags', () => {
 		// "true" as a string is the likeliest hand-edit mistake; reading it as
 		// on would make the switch's type a matter of luck.
 		const logger = quietLogger();
-		expect(readFeatureFlags({ features: { totalmix: 'true' } }, logger)).toEqual({ totalmix: false, maxUtilityPatch: false, expressionPedal: false, menubar: false, axHelper: false });
+		expect(readFeatureFlags({ features: { totalmix: 'true' } }, logger)).toEqual({ totalmix: false, midiControllers: false, expressionPedal: false, menubar: false, axHelper: false });
 		expect(logger.warn).toHaveBeenCalledWith(
 			'Feature switch is not true or false; treated as off',
 			{ key: 'totalmix', value: 'true' }
@@ -86,7 +86,7 @@ describe('readFeatureFlags', () => {
 
 	it('warns about a switch it does not know rather than dropping it silently', () => {
 		const logger = quietLogger();
-		expect(readFeatureFlags({ features: { totalMix: true } }, logger)).toEqual({ totalmix: false, maxUtilityPatch: false, expressionPedal: false, menubar: false, axHelper: false });
+		expect(readFeatureFlags({ features: { totalMix: true } }, logger)).toEqual({ totalmix: false, midiControllers: false, expressionPedal: false, menubar: false, axHelper: false });
 		expect(logger.warn).toHaveBeenCalledWith(
 			'Unknown feature switch; ignored',
 			expect.objectContaining({ key: 'totalMix' })
@@ -95,8 +95,8 @@ describe('readFeatureFlags', () => {
 
 	it('reads a features block that is not an object as every switch off', () => {
 		const logger = quietLogger();
-		expect(readFeatureFlags({ features: true }, logger)).toEqual({ totalmix: false, maxUtilityPatch: false, expressionPedal: false, menubar: false, axHelper: false });
-		expect(readFeatureFlags({ features: ['totalmix'] }, logger)).toEqual({ totalmix: false, maxUtilityPatch: false, expressionPedal: false, menubar: false, axHelper: false });
+		expect(readFeatureFlags({ features: true }, logger)).toEqual({ totalmix: false, midiControllers: false, expressionPedal: false, menubar: false, axHelper: false });
+		expect(readFeatureFlags({ features: ['totalmix'] }, logger)).toEqual({ totalmix: false, midiControllers: false, expressionPedal: false, menubar: false, axHelper: false });
 		expect(logger.warn).toHaveBeenCalledTimes(2);
 	});
 });
@@ -116,7 +116,7 @@ describe('createFeatureRegistry', () => {
 		expect(features.isAvailable('totalmix')).toBe(false);
 		expect(features.snapshot()).toEqual({
 			totalmix: { enabled: true, available: false, reason: '' },
-			maxUtilityPatch: { enabled: false, available: false, reason: '' },
+			midiControllers: { enabled: false, available: false, reason: '' },
 			expressionPedal: { enabled: false, available: false, reason: '' },
 			menubar: { enabled: false, available: false, reason: '' },
 			axHelper: { enabled: false, available: false, reason: '' },
@@ -149,7 +149,7 @@ describe('createFeatureRegistry', () => {
 		expect(changes).toEqual([
 			{
 				totalmix: { enabled: true, available: true, reason: '' },
-				maxUtilityPatch: { enabled: false, available: false, reason: '' },
+				midiControllers: { enabled: false, available: false, reason: '' },
 				expressionPedal: { enabled: false, available: false, reason: '' },
 				menubar: { enabled: false, available: false, reason: '' },
 				axHelper: { enabled: false, available: false, reason: '' },
@@ -167,7 +167,7 @@ describe('createFeatureRegistry', () => {
 		expect(features.isAvailable('totalmix')).toBe(false);
 		expect(features.snapshot()).toEqual({
 			totalmix: { enabled: false, available: false, reason: '' },
-			maxUtilityPatch: { enabled: false, available: false, reason: '' },
+			midiControllers: { enabled: false, available: false, reason: '' },
 			expressionPedal: { enabled: false, available: false, reason: '' },
 			menubar: { enabled: false, available: false, reason: '' },
 			axHelper: { enabled: false, available: false, reason: '' },
@@ -205,7 +205,7 @@ describe('createFeatureRegistry', () => {
 		expect(args).toHaveLength(1);
 		expect(JSON.parse(args[0])).toEqual({
 			totalmix: { enabled: true, available: false, reason: 'TotalMix not answering' },
-			maxUtilityPatch: { enabled: false, available: false, reason: '' },
+			midiControllers: { enabled: false, available: false, reason: '' },
 			expressionPedal: { enabled: false, available: false, reason: '' },
 			menubar: { enabled: false, available: false, reason: '' },
 			axHelper: { enabled: false, available: false, reason: '' },

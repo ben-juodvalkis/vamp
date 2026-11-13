@@ -157,21 +157,14 @@ expression pedal drives depends on the kind of track under the selection
 device, its mod wheel) on a MIDI track, a wah already on the track winning
 on either —
 `docs/reference/toggles.md` has the rule, `surface/CLAUDE.md` the component.
-The Max paths below stay for the owner's rig, in the standalone Max Utility
-patch, which opens only while `features.maxUtilityPatch` is on
-(`scripts/open-max-patch.js`). Its CC 67 chain is the home-studio
-piano-pedal looper: the patch's `ctlin` hears every input on every channel,
-so a piano's pedal taps and holds with nothing else plugged in. Both routes
-call the same Python gesture handlers:
-
-- **[owner/Max Patches/foot-trigger.js](../Max%20Patches/foot-trigger.js)** —
-  reads the foot-switch input, applies a 650ms tap/hold timer, and
-  sends `/looping/v3/foot/tap` or `/looping/v3/foot/hold` directly
-  to the Python surface (UDP 11020). No bridge hop.
-- **[owner/Max Patches/midi-remap.js](../Max%20Patches/midi-remap.js)** —
-  remaps external MIDI controller inputs before they reach Live's
-  MIDI routing. (This one genuinely needs Max: it re-injects MIDI
-  into Live's track routing, which a control surface script can't.)
+The owner's other MIDI controllers need no Max (ADR-537): while
+`features.midiControllers` is on, the bridge opens every MIDI input itself
+(`interface/bridge/transport/MidiInputs.js`) and turns the Ableton Move's
+pad holds and knobs and a piano's sustain pedal (any input, any channel,
+CC set on the Settings page) into the same surface wires and TotalMix
+writes the standalone Max Utility patch used to send
+(`interface/bridge/handlers/midiControllers.js`). Max no longer opens with
+Vamp.
 
 Everything else — device observation, track metadata, clip
 properties, loop control, browser loading, track creation — is on
@@ -191,11 +184,10 @@ sub-second 7001 bootstrap below. The surface's own 11020 and 11022 bind
 
 | Send / Recv | Endpoint | Purpose |
 |---|---|---|
-| 11021 / 11020 | **Python Control Surface** | Primary backend. Surface replies to 11021; the bridge sends to 11020 only while the TCP leg below is down (ADR-489), and the Max patches and probe drivers send here always. 11021 was the first port moved to `127.0.0.1` (2026-09-16): `session/save_as_request` is bridge-terminated straight into the AX helper, so a `0.0.0.0` bind let any LAN host drive Live and Accessibility with one datagram. |
+| 11021 / 11020 | **Python Control Surface** | Primary backend. Surface replies to 11021; the bridge sends to 11020 only while the TCP leg below is down (ADR-489), and the probe drivers send here always. 11021 was the first port moved to `127.0.0.1` (2026-09-16): `session/save_as_request` is bridge-terminated straight into the AX helper, so a `0.0.0.0` bind let any LAN host drive Live and Accessibility with one datagram. |
 | 11022 (TCP) | **Python Control Surface**, stream | The surface listens; the bridge dials and redials after a Live restart (`SurfaceTcpClient.js`), and any datagram from the surface kicks a redial at once. Length-prefixed OSC both ways. Surface → bridge it carries `state/full/tree` (its only wire since 3.6.0) and the replies to frames that came in on it; bridge → surface it carries **every** message while connected — UI writes, the hello, the server heartbeat, the swap and Group hops (ADR-489). |
 | 7003 / 9003 | TotalMix FX (Global OSC) | **Only while `features.totalmix` is on** — true on the rig; off, the bridge binds none of the three TotalMix pairs, runs no bootstrap and reads no `osc.totalmix*` block (general-release audit §7b, `docs/reference/toggles.md`). **The bridge now talks to the mixer directly** (ADR-423), on OSC remote controller 3 in Global OSC mode; controller 1 keeps its legacy configuration so the cutover is reversible by one dropdown. Bridge → 7003 writes, mixer → 9003 changes plus an 811-address dump when TotalMix enables the controller. Every value is **dB**. Requires TotalMix FX 2.10+. ⚠️ There is no read verb, and an argument-less message is a *write of 1.0*, not a query. |
 | 7002 / 7001 | TotalMix FX (legacy) | Borrowed for well under a second at bridge startup and then released, to seed the level cache — Global OSC cannot be asked for current state and its dump fires on TotalMix's schedule, not the bridge's. A busy port degrades to an empty cache rather than failing. The one bridge UDP socket on all interfaces: TotalMix's controller 1 sends to `looping-studio-2.local`, which resolves to the LAN address as well as loopback. |
-| 11018 / 11019 | TotalMix M4L device | Bridge ↔ the Max for Live monitor device. The device sends `/totalmix/hello` on load and receives the cached levels back; its `live.gain~` faders and the wire both carry dB. |
 | 11017 / 11016 | Looping Recorder | Bridge ↔ the `Vamp-Recorder` M4L capture device. Opened, routed and scope-mapped by the bridge (`enhanced-osc-bridge.js:128`, `WebSocketServer.js:348`). |
 | 11030 (output only) | **Permute mute gate** → Max | **Not a bridge port.** The surface sends `/looping/permute/gate <trackIndex> <open>` from its own socket straight to a `udpreceive` inside a Max device on that track — the outbound twin of the foot-trigger row below, and the only wire in this table the bridge never sees. It exists so a device can gate **what it plays** instead of the surface writing a parameter, which costs one Live undo step per step transition. Receivers fail **open** after ~2.5 s of silence. Sole receiver today: the `Skaka Metronome Picker` inside the Skaka Metronome Rack. |
 | 11010 | Foot Trigger (input only) | Legacy/reserved. The Max foot chain fires straight at 11020; the USB-direct path (ADR-422) uses no OSC port at all — the pedal CCs arrive on the surface's MIDI input. |

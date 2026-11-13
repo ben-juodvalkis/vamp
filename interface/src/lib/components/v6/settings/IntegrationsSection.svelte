@@ -15,7 +15,7 @@
 
 	const FEATURE_ROWS: { id: string; label: string; what: string }[] = [
 		{ id: 'totalmix', label: 'TotalMix', what: 'RME TotalMix monitor faders' },
-		{ id: 'maxUtilityPatch', label: 'Max Utility patch', what: 'Ableton Move knobs and pad hold, the piano-pedal looper' },
+		{ id: 'midiControllers', label: 'MIDI controllers', what: 'Ableton Move knobs and pad hold, the piano pedal' },
 		{ id: 'expressionPedal', label: 'Expression pedal', what: 'The wah pedal and its toe switch' },
 		{ id: 'menubar', label: 'Menu-bar app', what: 'The Mac menu-bar utility' },
 		{ id: 'axHelper', label: 'AX helper', what: 'Reverse, Group, Save As and the held pad’s similar samples' },

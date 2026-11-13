@@ -22,9 +22,9 @@
           "type": "boolean",
           "description": "RME TotalMix monitor link (ADR-423): the bridge's mixer ports and startup bootstrap, and the status-strip monitor bars."
         },
-        "maxUtilityPatch": {
+        "midiControllers": {
           "type": "boolean",
-          "description": "The owner's standalone Max patch (owner/Max Patches/Max Utility 1.0.maxpat): opened by npm run dev and npm run ipad, and the System view's Move Knob switch."
+          "description": "The owner's MIDI controllers, read by the bridge (ADR-537): the Ableton Move's pad hold and knobs, the piano pedal, the Settings page's Move Knob switch and Piano pedal card."
         },
         "expressionPedal": {
           "type": "boolean",
@@ -110,17 +110,6 @@
       "type": "object",
       "description": "Timing configuration for various operations",
       "properties": {
-        "startup": {
-          "type": "object",
-          "description": "npm run ipad startup orchestration",
-          "properties": {
-            "maxPatchMinDelayAfterLiveMs": {
-              "type": "integer",
-              "minimum": 0,
-              "description": "Minimum gap between launching Ableton Live and opening the Max Utility patch, so Max initializes against a running Live"
-            }
-          }
-        },
         "oscMonitoring": {
           "type": "object",
           "properties": {

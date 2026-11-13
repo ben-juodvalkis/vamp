@@ -53,7 +53,7 @@
       "dev:bridge:ipad": "Internal: bridge with LOG_LEVEL=WARN (iPad preview mode).",
       "dev:interface": "Internal: interface dev server on :3000.",
       "preview:ipad": "Internal: production-build preview server on :8889.",
-      "open:browser / open:max": "macOS open(1) helpers used by `dev`. open:browser opens the page and the Live this Mac runs (scripts/open-live.js); open:max opens the Max Utility patch only while features.maxUtilityPatch is on."
+      "open:browser": "macOS open(1) helper used by `dev`: opens the page and the Live this Mac runs (scripts/open-live.js)."
     }
   },
   "scripts": {
@@ -67,12 +67,11 @@
     "places:diff": "npx tsx --tsconfig interface/tsconfig.json scripts/places-diff.ts",
     "install-ax-helper": "bash scripts/install-ax-helper.sh",
     "install-mac-app": "bash scripts/install-mac-app.sh",
-    "dev": "npm run validate && npm run cleanup && concurrently -n \"BRIDGE,INTERFACE,BROWSER,MENUBAR\" -c \"cyan,green,magenta,yellow\" \"npm run dev:bridge\" \"npm run dev:interface\" \"npm run open:browser && npm run open:max\" \"npm run menubar\"",
+    "dev": "npm run validate && npm run cleanup && concurrently -n \"BRIDGE,INTERFACE,BROWSER,MENUBAR\" -c \"cyan,green,magenta,yellow\" \"npm run dev:bridge\" \"npm run dev:interface\" \"npm run open:browser\" \"npm run menubar\"",
     "menubar": "./scripts/launch-menubar.sh",
     "dev:bridge": "cd interface/bridge && LOG_LEVEL=INFO LOOPING_SERVER_MODE=dev npm run dev",
     "dev:interface": "cd interface && npm run dev -- --port 3000 --host 0.0.0.0",
     "open:browser": "sleep 5 && echo \"\\n\ud83d\udda5\ufe0f  Mac: http://localhost:3000\\n\ud83d\udcf1 iPad: http://$(scutil --get LocalHostName 2>/dev/null).local:3000\\n\" && open http://localhost:3000 && node scripts/open-live.js",
-    "open:max": "sleep 6 && node scripts/open-max-patch.js",
     "ipad": "npm run validate && npm run cleanup && node scripts/setup-ipad.js",
     "setup-ipad-core": "concurrently -n \"BRIDGE,PREVIEW\" -c \"cyan,green\" --restart-tries -1 --restart-after 1500 \"npm run dev:bridge:ipad\" \"npm run preview:ipad\"",
     "prep:ipad": "npm run build:ipad",

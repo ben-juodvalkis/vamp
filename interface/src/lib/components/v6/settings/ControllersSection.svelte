@@ -2,9 +2,10 @@
 	/**
 	 * Settings → Controllers (ADR-534): the hardware you play Vamp with. The
 	 * foot switch (on/off and Learn, the surface's
-	 * `/looping/v3/session/foot_switch`) and, while the owner's Max patch is
-	 * up, Ableton Move's knobs. Both were in General; the Move switch sat
-	 * among Behavior's.
+	 * `/looping/v3/session/foot_switch`) and, while the bridge reads the
+	 * owner's MIDI controllers (`midiControllers`, ADR-537), the piano pedal
+	 * (on/off and Learn, the bridge's `/bridge/piano_pedal`) and Ableton
+	 * Move's knobs.
 	 *
 	 * Every row is its own button, echo-confirmed: it shows what the surface
 	 * says, not what was tapped. Learn's row draws its action as a button on
@@ -14,7 +15,7 @@
 	import { logger } from '$lib/utils/logger';
 	import { session } from '$lib/stores/session.svelte';
 	import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
-	import { setMoveVolumeKnob, setFootSwitchEnabled, setFootSwitchLearn } from '$lib/services/sessionCommands';
+	import { setMoveVolumeKnob, setFootSwitchEnabled, setFootSwitchLearn, setPianoPedalEnabled, setPianoPedalLearn } from '$lib/services/sessionCommands';
 
 	// --- Foot switch ---------------------------------------------------------
 	const foot = $derived(session.footSwitch);
@@ -44,10 +45,23 @@
 		setFootSwitchLearn(!footListening);
 	}
 
-	// --- Ableton Move --------------------------------------------------------
-	// The Move reaches the surface only through the owner's Max patch, so the
-	// switch exists only while that patch does (audit §7b).
-	const moveShown = $derived(bridgeStatus.isFeatureOn('maxUtilityPatch'));
+	// --- The bridge's MIDI controllers (ADR-537) ---------------------------
+	// The Move and the piano pedal reach Vamp only through the bridge's own
+	// MIDI inputs, so both exist only while that switch is on (audit §7b).
+	const moveShown = $derived(bridgeStatus.isFeatureOn('midiControllers'));
+
+	const piano = $derived(bridgeStatus.pianoPedal);
+	const pianoKnown = $derived(piano.cc >= 0);
+	const pianoListening = $derived(piano.learn === 'listening');
+	const pianoTimedOut = $derived(piano.learn === 'timeout');
+	const pianoMapping = $derived(pianoKnown ? `CC ${piano.cc} · Any input` : 'Waiting for the bridge');
+	const pianoState = $derived(
+		!piano.enabled
+			? 'Off: the pedal is ignored.'
+			: piano.heard
+				? 'Heard since Vamp started.'
+				: 'Not heard yet: press the pedal to check it.'
+	);
 	function toggleMoveKnob() {
 		logger.debug('Toggling session setting', { component: 'ControllersSection', key: 'move_volume_knob' });
 		setMoveVolumeKnob(!session.moveVolumeKnobEnabled);
@@ -107,6 +121,55 @@
 	</section>
 
 	{#if moveShown}
+		<section class="set-group" data-debug="settings-piano-pedal">
+			<h3 class="set-group-title">Piano pedal</h3>
+			<div class="set-list">
+				<button
+					class="set-row set-row-button"
+					aria-pressed={piano.enabled}
+					aria-label={`Piano pedal ${piano.enabled ? 'on' : 'off'}, ${pianoMapping}`}
+					onclick={() => setPianoPedalEnabled(!piano.enabled)}
+					data-debug="piano-pedal-toggle"
+				>
+					<span class="set-row-main">
+						<span class="set-row-label">Piano pedal</span>
+						<span class="foot-mapping" class:unlearned={!pianoKnown}>{pianoMapping}</span>
+						<span class="set-row-sub foot-state">
+							{#if piano.enabled && pianoKnown}<span class="foot-dot" class:heard={piano.heard} aria-hidden="true"></span>{/if}
+							{pianoState}
+						</span>
+					</span>
+					<span class="set-chip" class:on={piano.enabled} aria-hidden="true">{piano.enabled ? 'On' : 'Off'}</span>
+				</button>
+				<button
+					class="set-row set-row-button"
+					aria-pressed={pianoListening}
+					onclick={() => setPianoPedalLearn(!pianoListening)}
+					data-debug="piano-pedal-learn"
+					data-learn={piano.learn}
+				>
+					<span class="set-row-main">
+						{#if pianoListening}
+							<span class="set-row-label">Press your pedal…</span>
+							<span class="set-row-sub">Listening on every MIDI input but the Move.</span>
+						{:else if pianoTimedOut}
+							<span class="set-row-label">Nothing heard</span>
+							<span class="set-row-sub set-row-reason">Check the keyboard is plugged in and on, then try again.</span>
+						{:else}
+							<span class="set-row-label">Learn another CC</span>
+							<span class="set-row-sub">Tap, then press the pedal.</span>
+						{/if}
+					</span>
+					<span class="set-chip action" class:on={pianoListening} class:pulse={pianoListening} aria-hidden="true">
+						{pianoListening ? 'Cancel' : pianoTimedOut ? 'Try again' : 'Learn'}
+					</span>
+				</button>
+			</div>
+			<p class="set-note">
+				Loops from a keyboard’s pedal with nothing set up in Live: a tap and a hold work like the foot switch’s.
+			</p>
+		</section>
+
 		<section class="set-group" data-debug="settings-move">
 			<h3 class="set-group-title">Ableton Move</h3>
 			<div class="set-list">
@@ -118,7 +181,7 @@
 				>
 					<span class="set-row-main">
 						<span class="set-row-label">Move Knob</span>
-						<span class="set-row-sub">Move’s knobs set the volume of the selected track or drum chain.</span>
+						<span class="set-row-sub">Move’s knob sets the volume of the selected track.</span>
 					</span>
 					<span class="set-chip" class:on={session.moveVolumeKnobEnabled} aria-hidden="true">
 						{session.moveVolumeKnobEnabled ? 'On' : 'Off'}

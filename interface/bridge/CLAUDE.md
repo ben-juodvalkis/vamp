@@ -38,6 +38,7 @@ Browser (WS:8081) ↔ enhanced-osc-bridge.js ↔ UDP Ports ↔ Python Surface / 
 - `utils/broadcastBatcher.js` - Coalesces Surf→UI WS frames inside a short window (`BRIDGE_BATCH_WINDOW_MS`, default 10 ms). Multi-item windows ship as one `/bridge/batch` envelope; single-item windows pass through raw. Set `BRIDGE_BATCH_WINDOW_MS=0` to disable. Client-side disassembly lives in `WebSocketConnection.ts`.
 - **UI→Surf batching (2026-08-31)** — the same `/bridge/batch` envelope now also arrives in the *other* direction, tagged `source: "ui"`. The UI coalesces every `send()` in one event-loop turn (`api/connection/outboundBatcher.ts`) and flushes on a microtask, which unlike the 10 ms broadcast window adds no latency to click input. `WebSocketServer.handleBatch` unpacks it and hands each inner message to `dispatchClientMessage` — the *same* function an unbatched frame goes through, so batched and unbatched writes cannot drift apart. Two rules the unpack loop must keep: **per-item try/catch** (a shared one lets the first failure discard the rest of the frame — the bug ableton-js #142 shipped and had to go back and fix), and **no nested envelopes** (unbounded recursion on our stack, driven by a client). Both are pinned by `outboundBatchUnpack.test.ts`, which routes through real `routeMessageToUDP` onto a recording UDP port.
 - `utils/oscMessageUtils.js` - OSC message parsing and formatting
+- `transport/MidiInputs.js` + `handlers/midiControllers.js` - **The owner's MIDI controllers (ADR-537)**, only while `features.midiControllers` is on: every MIDI input on the Mac opened through `@julusian/midi` (an optional dependency, required only then; re-listed every `midiControllers.pollMs`, all reopened when the list changes), and the logic the standalone Max Utility patch used to run: Move pad hold → `/looping/v3/move/pad_hold`, Move CC 71 → `selected_track/volume_relative`, Move CC 75–78 → a 0.1 dB TotalMix nudge from the cached level (none while no level is known), and the piano pedal (any input but the Move, CC from `logs/piano-pedal.json` or 67) → `/looping/v3/foot/tap` / `hold`. The Settings page's Piano pedal card writes `/bridge/piano_pedal/{enabled,learn}`, which `WebSocketServer.dispatchClientMessage` hands to `onClientMessage`; the state goes out as `/bridge/piano_pedal` on change and with the 5 s ping. Tests: `midiControllers.test.ts` (bytes and fake timers, no CoreMIDI)
 
 ## Port Map (from config/constants.json)
 
@@ -47,9 +48,9 @@ Browser (WS:8081) ↔ enhanced-osc-bridge.js ↔ UDP Ports ↔ Python Surface / 
 | —/11022 (TCP) | Python Control Surface stream: the tree inbound, every bridge→surface message outbound while connected (ADR-489). The surface listens; the bridge dials |
 | 7003/9003 | TotalMix mixer — Global OSC, remote controller 3 (ADR-423). Only while `features.totalmix` is on |
 | 7002/7001 | TotalMix legacy — borrowed for ~1s at startup only (ADR-423). Only while `features.totalmix` is on |
-| 11018/11019 | TotalMix Max for Live device (ADR-423). Only while `features.totalmix` is on |
 | 11017/11023 | Vamp-Capture, REC's recorder: one copy per track, a start names its track (ADR-495; the old Return A recorder's 11016 is unused) |
-| 11010 | Foot Trigger (input only) |
+| 11010 | Foot Trigger (reserved, unused) |
+| (MIDI) | Every MIDI input on the Mac, read by the bridge itself (ADR-537). Only while `features.midiControllers` is on |
 | 8081 | WebSocket (browser clients) |
 
 ## Important Notes
@@ -105,18 +106,15 @@ The bridge + browser cooperate to detect and recover from the common "iPad Safar
 - **TotalMix monitor link (ADR-423)** — `handlers/totalmixLink.js` +
   `handlers/totalmixBootstrap.js`. The bridge owns the UDP conversation with
   the RME mixer and caches the last **dB** per channel for its process
-  lifetime, so a client that has just started can adopt current levels by
-  sending `/totalmix/hello`. **The set-load argument no longer applies:**
-  `b679e56` stripped the TotalMix chain out of `Track Key Controls.amxd` and
-  the hello now comes from `owner/Max Patches/Max Utility 1.0.maxpat`, a standalone
-  patch Live does not tear down. The cache is still needed — Global OSC has no
-  read verb, so a newly-opened patch has no other way to learn the levels —
-  but the reason is "the mixer cannot be asked", not "the device was rebuilt".
-  `autoCaptureOverride` above is still a genuine survives-a-set-load case. Inbound mixer traffic (including an
+  lifetime, because Global OSC has no read verb: the cache is the only way a
+  browser that connects later, or a Move knob nudging from the current level,
+  can know it. Inbound mixer traffic (including an
   811-address state dump) is filtered to five channels and re-emitted as
-  `/looping/v3/totalmix/<channel>`; the Max patch's writes on
-  `/totalmix/<channel>` (the `totalmixDevice` middleware) are clamped and
+  `/looping/v3/totalmix/<channel>`; the Move's knob writes
+  (`writeTotalMixFromHardware`, ADR-537) are clamped and
   translated to the mixer's own address space by `totalmixLink.toMixer`.
+  The Max patch's device leg (11018/11019, `/totalmix/hello`) went with
+  ADR-537.
   Browsers only read: the header's faders, the one WS writer, went on
   2026-09-27. `main` is
   read-only. Global OSC has **no read verb** — and an argument-less message
@@ -124,7 +122,7 @@ The bridge + browser cooperate to detect and recover from the common "iPad Safar
   by provoking a dump on the legacy controller, then that socket closes.
   Everything on this path is dB; `0..1` exists only to draw the UI fader.
   **All of it hangs off `features.totalmix` (general-release audit §7b):**
-  off, `totalmixLink` is null — no link, no 9003/11019 sockets (their
+  off, `totalmixLink` is null — no link, no 9003 socket (their
   entries are left out of `OSC_CONFIG`), no inbound sources, no bootstrap,
   no TotalMix config read and no TotalMix log line. Neither handler reads
   constants.json at `require` any more: the orchestrator passes the

@@ -3,7 +3,6 @@
 const { spawn } = require('child_process');
 const { displayInterfaces, getBestIPadIP } = require('./detect-interfaces.js');
 const { createStatusPage } = require('./create-status-page.js');
-const { MAX_PATCH_PATH, maxPatchEnabled } = require('./open-max-patch.js');
 const { findLiveApp } = require('./open-live.js');
 const { readFeatureFlags } = require('../interface/bridge/utils/features');
 const fs = require('fs');
@@ -12,15 +11,6 @@ const path = require('path');
 // The config, with this Mac's constants.local.json laid over it.
 const { loadConstants } = require('../interface/bridge/utils/constants');
 const constants = loadConstants();
-
-/**
- * Minimum gap between launching Live and opening the Max Utility patch. Max has
- * to initialize against a running Live; everything else about the old startup's
- * fixed sleeps is gone, but this ordering constraint is real.
- */
-const MAX_PATCH_MIN_DELAY_MS = constants.timing?.startup?.maxPatchMinDelayAfterLiveMs ?? 4000;
-
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Fire-and-forget GUI launch — detached and unref'd so it never joins our process tree.
@@ -56,19 +46,17 @@ function launch(command, args, label) {
  * about Live, the browser blocker or the menu-bar agent reads the build output,
  * so they all start now and boot underneath it.
  *
- * @returns {number} the timestamp Live was launched at, for the Max-patch floor
  */
 function launchPerformanceApps() {
     console.log('🎛️  Launching performance apps (in parallel with the build)...\n');
 
-    // Live first: it is the slowest to boot and the Max patch is timed off it.
+    // Live first: it is the slowest to boot.
     const live = findLiveApp({ configured: constants.paths?.abletonApp });
     if (live) {
         launch('open', [live.app], `🎵 Opening ${path.basename(live.app, '.app')} (${live.why})...`);
     } else {
         console.log('🎵 No Ableton Live in /Applications: install Live 12.4 Suite.');
     }
-    const abletonLaunchedAt = Date.now();
 
     // The owner's browser blocker keeps focus during performance: another
     // repo's script, run only where `paths.browserBlocker` names it.
@@ -91,13 +79,12 @@ function launchPerformanceApps() {
     }
 
     console.log('');
-    return abletonLaunchedAt;
 }
 
 /**
  * Everything that has to wait for the preview server to be listening on :8889.
  */
-async function announceReady(abletonLaunchedAt) {
+async function announceReady() {
     console.log('\n' + '='.repeat(70));
     console.log('🎉 Vamp is serving the iPad app');
 
@@ -137,25 +124,6 @@ async function announceReady(abletonLaunchedAt) {
     console.log(`\n   Bridge on port ${constants.osc.webSocket.port}, the iPad app on port 8889.`);
     console.log('   Settings → Connection on the page says whether Live has answered.');
     console.log('='.repeat(70) + '\n');
-
-    // The owner's Max patch, only while `features.maxUtilityPatch` is on: a
-    // general edition never opens Max (scripts/open-max-patch.js says why).
-    if (!maxPatchEnabled(constants)) {
-        console.log('🎛️  Max Utility patch not opened (features.maxUtilityPatch is off)');
-        return;
-    }
-
-    // The Max patch is the one thing still on a clock, and it's measured from
-    // Live's launch rather than from here. On a cold start the build has already
-    // covered the gap and this is zero; on a warm start (build skipped) it still
-    // holds the ordering.
-    const elapsed = Date.now() - abletonLaunchedAt;
-    const remaining = Math.max(0, MAX_PATCH_MIN_DELAY_MS - elapsed);
-    if (remaining > 0) {
-        console.log(`⏳ Holding ${remaining}ms for Live to initialize before opening Max...`);
-        await wait(remaining);
-    }
-    launch('open', [MAX_PATCH_PATH], '🎛️  Opening Max Utility patch...');
 }
 
 /**
@@ -199,7 +167,7 @@ async function setupiPad() {
 
     // Step 2: Launch everything that doesn't need the build — Live, blocker,
     // menu bar. These boot underneath the build rather than after it.
-    const abletonLaunchedAt = launchPerformanceApps();
+    launchPerformanceApps();
 
     // Step 3: Prepare the interface. This is the only slow step left, and Live is
     // already booting underneath it. Both halves are fingerprint-gated, so an
@@ -235,7 +203,7 @@ async function setupiPad() {
         // announcement and re-open Safari.
         if (!previewStarted && output.includes('Local:') && output.includes('8889')) {
             previewStarted = true;
-            announceReady(abletonLaunchedAt).catch((error) => {
+            announceReady().catch((error) => {
                 console.error('⚠️  Post-startup step failed:', error.message);
             });
         }

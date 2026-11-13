@@ -10,7 +10,7 @@
  * Routes messages between:
  * - Python Control Surface (primary backend for Live)
  * - MIDI Converter (pitch/mod wheel)
- * - TotalMix mixer and its Max device (ADR-423), while `features.totalmix`
+ * - TotalMix mixer (ADR-423), while `features.totalmix`
  *   is on (general-release audit §7b; utils/features.js)
  * - Vamp-Recorder capture device
  *
@@ -142,7 +142,7 @@ const { bootstrapFromLegacy } = require('./handlers/totalmixBootstrap');
 function createTotalMixLinkIfEnabled() {
     if (!features.isEnabled('totalmix')) return null;
     const blocks = constants.osc || {};
-    const missing = ['totalmix', 'totalmixDevice', 'totalmixLegacy'].filter((key) => !blocks[key]);
+    const missing = ['totalmix', 'totalmixLegacy'].filter((key) => !blocks[key]);
     if (missing.length > 0) {
         logger.error('TotalMix is switched on but its config is incomplete; the link stays down', {
             missing: missing.map((key) => `osc.${key}`)
@@ -165,15 +165,11 @@ logger.warn('Bridge process starting', { pid: process.pid });
 // Configuration
 // ============================================
 
-// The Max Utility patch is the owner's (Move, piano-pedal looper). The bridge
-// cannot see it — its one packet toward the bridge is the TotalMix device's
-// hello — so switched on reads as there, as it always did.
-if (features.isEnabled('maxUtilityPatch')) features.setAvailability('maxUtilityPatch', true);
 // The expression pedal reaches the surface as MIDI on its own Input, which the
-// bridge never sees; switched on reads as there, like the Max patch.
+// bridge never sees; switched on reads as there.
 if (features.isEnabled('expressionPedal')) features.setAvailability('expressionPedal', true);
 // The menu-bar app is launched by the start scripts and is only ever a client;
-// switched on reads as there, like the Max patch.
+// switched on reads as there, like the pedal.
 if (features.isEnabled('menubar')) features.setAvailability('menubar', true);
 
 const OSC_CONFIG = {
@@ -199,11 +195,6 @@ const OSC_CONFIG = {
             localPort: constants.osc.totalmix.localPort,
             remotePort: constants.osc.totalmix.remotePort,
             host: constants.osc.totalmix.host
-        },
-        totalmixDevice: {
-            localPort: constants.osc.totalmixDevice.localPort,
-            remotePort: constants.osc.totalmixDevice.remotePort,
-            host: constants.osc.totalmixDevice.host
         }
     }),
     webSocket: {
@@ -290,6 +281,49 @@ function sendTaggedToSurface(address, args) {
             ? { type: Number.isInteger(value) ? 'i' : 'f', value }
             : { type: 's', value: String(value) }))
     });
+}
+
+// The owner's MIDI controllers (ADR-537): the Move's pads and knobs and the
+// piano pedal, read here instead of in standalone Max. Null while
+// `features.midiControllers` is off: then no MIDI library is loaded and no
+// input opened. Available once the inputs are open.
+const { createMidiControllers, PIANO_PEDAL_ADDRESS } = require('./handlers/midiControllers');
+const { openMidiInputs } = require('./transport/MidiInputs');
+const midiControllers = createMidiControllersIfEnabled();
+
+function createMidiControllersIfEnabled() {
+    if (!features.isEnabled('midiControllers')) return null;
+    const config = constants.midiControllers;
+    if (!config) {
+        logger.error('MIDI controllers are switched on but constants.midiControllers is missing');
+        features.setAvailability('midiControllers', false, 'MIDI controller config missing');
+        return null;
+    }
+    const controllers = createMidiControllers({
+        config,
+        padHoldMs: constants.ui.gestures.momentaryHoldMs,
+        pedalHoldMs: constants.osc.footTrigger.holdThresholdMs,
+        sendToSurface: (msg) => surfaceLink.send(msg),
+        getTotalMixLevel: totalmixLink ? (channel) => totalmixLink.get(channel) : null,
+        writeTotalMix: totalmixLink ? writeTotalMixFromHardware : null,
+        onPedalState: () => broadcastBatcher.enqueue({
+            address: PIANO_PEDAL_ADDRESS, args: controllers.wireArgs(), source: 'bridge'
+        }),
+        settingsPath: path.join(require('./utils/dataPaths').dataDir('logs'), 'piano-pedal.json'),
+        logger
+    });
+    const inputs = openMidiInputs({
+        onMessage: controllers.handleMidi,
+        onReopen: controllers.inputsReset,
+        pollMs: config.pollMs,
+        logger
+    });
+    if (!inputs.ok) {
+        features.setAvailability('midiControllers', false, inputs.reason);
+        return null;
+    }
+    features.setAvailability('midiControllers', true);
+    return controllers;
 }
 
 // Create WebSocket server. The health monitor is created first with
@@ -399,7 +433,8 @@ const { httpServer, wss } = createWebSocketServer(
     features,
     machine,
     captureRecorder,
-    toneShaper);
+    toneShaper,
+    midiControllers);
 wssRef = wss;
 
 // Surf→UI broadcast batcher. Wraps the per-client fan-out so a burst
@@ -573,71 +608,37 @@ const INBOUND_MIDDLEWARE = {
         const level = totalmixLink.fromMixer(msg.address, msg.args || []);
         if (level) relayTotalMixLevel(level);
         return true;
-    },
-
-    // The Max for Live monitor device announcing itself after a set load.
-    // It holds no trustworthy state of its own, so the cached levels are
-    // replayed to it and its faders adopt them.
-    totalmixDevice: (msg) => {
-        if (msg.address === totalmixLink.HELLO_ADDRESS) {
-            replayTotalMixToDevice();
-            return true;
-        }
-        // Device-driven writes share the UI's address space and the same
-        // clamp, so they take the identical path a fader drag would.
-        const write = totalmixLink.toMixer(msg.address, msg.args || []);
-        if (write) {
-            udpPorts.totalmix?.send({
-                address: write.address,
-                args: [{ type: 'f', value: write.db }]
-            });
-            // Echo to the UI so the iPad tracks a Move knob turn. The mixer
-            // does not echo writes, so without this nothing would.
-            relayTotalMixLevel({
-                channel: write.channel,
-                db: write.db,
-                address: totalmixLink.BROADCAST_PREFIX + write.channel
-            }, { toDevice: false });
-        }
-        return true;
     }
 };
 
 /**
- * Fan one monitor level out to the UI and (optionally) the Live device.
+ * Write one monitor level from hardware (a Move knob, ADR-537): clamped and
+ * translated by the link like any write, sent to the mixer, and echoed to
+ * the UI, since the mixer does not echo writes.
  *
- * @param {{channel: string, db: number, address: string}} level
- * @param {{toDevice?: boolean}} [opts] - skip the device leg when the device
- *   is where the value came from, so a knob turn can't be re-driven by its
- *   own echo.
+ * @param {string} channel e.g. 'click'
+ * @param {number} db
  */
-function relayTotalMixLevel(level, { toDevice = true } = {}) {
-    handleIncomingOSC({ address: level.address, args: [level.db] }, 'totalmix');
-    if (toDevice) {
-        udpPorts.totalmixDevice?.send({
-            address: level.address,
-            args: [{ type: 'f', value: level.db }]
-        });
-    }
+function writeTotalMixFromHardware(channel, db) {
+    const write = totalmixLink?.toMixer(totalmixLink.WRITE_PREFIX + channel, [db]);
+    if (!write) return;
+    udpPorts.totalmix?.send({ address: write.address, args: [{ type: 'f', value: write.db }] });
+    relayTotalMixLevel({
+        channel: write.channel,
+        db: write.db,
+        address: totalmixLink.BROADCAST_PREFIX + write.channel
+    });
 }
 
 /**
- * Replay every cached level to a device that has just said hello.
+ * Send one monitor level to the UI.
  *
- * Channels never heard from are omitted rather than guessed — a fader that
- * stays put beats one that jumps to a fiction, and the device's own gate
- * stays shut until a real value arrives.
+ * @param {{channel: string, db: number, address: string}} level
  */
-function replayTotalMixToDevice() {
-    const replay = totalmixLink.helloReplay();
-    logger.info('TotalMix device hello — replaying cached levels', {
-        channels: replay.map((r) => r.address),
-        cached: replay.length
-    });
-    for (const { address, db } of replay) {
-        udpPorts.totalmixDevice?.send({ address, args: [{ type: 'f', value: db }] });
-    }
+function relayTotalMixLevel(level) {
+    handleIncomingOSC({ address: level.address, args: [level.db] }, 'totalmix');
 }
+
 
 /**
  * Seed the level cache once, at startup.
@@ -685,11 +686,8 @@ function bootstrapTotalMixLevels() {
                 channels: applied,
                 levels: totalmixLink.snapshot()
             });
-            // Push the seed at any device already listening. A device that
-            // loaded before the bridge finished starting would otherwise sit
-            // with its gates shut until something else moved.
+            // Push the seed at the browsers already connected.
             for (const { address, db } of totalmixLink.helloReplay()) {
-                udpPorts.totalmixDevice?.send({ address, args: [{ type: 'f', value: db }] });
                 handleIncomingOSC({ address, args: [db] }, 'totalmix');
             }
         })
@@ -706,7 +704,7 @@ const INBOUND_SOURCES = [
     'loopingRecorder',
     'toneShaper',
     'pythonSurface',
-    ...(totalmixLink ? ['totalmix', 'totalmixDevice'] : [])
+    ...(totalmixLink ? ['totalmix'] : [])
 ];
 
 for (const source of INBOUND_SOURCES) {
@@ -872,6 +870,15 @@ const pingTimer = setInterval(() => {
         args: machine.wireArgs(),
         source: 'bridge'
     });
+    // The piano pedal setting (ADR-537), so a client that just connected
+    // has it within one beat; changes go out as they happen.
+    if (midiControllers) {
+        broadcastBatcher.enqueue({
+            address: PIANO_PEDAL_ADDRESS,
+            args: midiControllers.wireArgs(),
+            source: 'bridge'
+        });
+    }
 }, PING_INTERVAL_MS);
 if (pingTimer.unref) pingTimer.unref();
 

@@ -22,8 +22,8 @@
  * rebuild. `/bridge/*` sits outside the v3 version negotiation, so the
  * message needs no protocol bump; it copies `/bridge/ax_helper`.
  *
- * Wired so far: `totalmix` (the Tier 1 pilot), `maxUtilityPatch` (the
- * owner's standalone Max patch: Ableton Move, piano-pedal looper),
+ * Wired so far: `totalmix` (the Tier 1 pilot), `midiControllers` (the
+ * owner's MIDI controllers, read by the bridge: Ableton Move, piano pedal),
  * `expressionPedal` (the wah pedal: its two CCs on the surface, the Pedal
  * view's Wah button), `menubar` (the owner's menu-bar app, launched by the
  * start scripts) and `axHelper` (the Accessibility helper behind Reverse,
@@ -42,7 +42,7 @@
 const { EventEmitter } = require('events');
 
 /** Every switch this bridge honours. A subsystem joins when it is gated. */
-const FEATURE_IDS = Object.freeze(['totalmix', 'maxUtilityPatch', 'expressionPedal', 'menubar', 'axHelper']);
+const FEATURE_IDS = Object.freeze(['totalmix', 'midiControllers', 'expressionPedal', 'menubar', 'axHelper']);
 
 /** In every edition: always enabled, never read from the config. */
 const BUILT_IN_IDS = Object.freeze(['captureRecorder']);

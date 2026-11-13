@@ -150,3 +150,13 @@ export function setFootSwitchEnabled(on: boolean): void {
 export function setFootSwitchLearn(on: boolean): void {
 	send(V3_SESSION_FOOT_SWITCH_LEARN_ADDRESS, [on ? 1 : 0]);
 }
+
+/** The piano pedal on or off (ADR-537). Bridge-terminated. */
+export function setPianoPedalEnabled(on: boolean): void {
+	send('/bridge/piano_pedal/enabled', [on ? 1 : 0]);
+}
+
+/** Start or cancel Learn for the piano pedal (ADR-537). Bridge-terminated. */
+export function setPianoPedalLearn(on: boolean): void {
+	send('/bridge/piano_pedal/learn', [on ? 1 : 0]);
+}

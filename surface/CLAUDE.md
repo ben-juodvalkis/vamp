@@ -40,14 +40,12 @@ device-state observation all live on the Python side after
 Phases 5–12 + the 2026-04-21 ROW 6.x sweep. AbletonOSC was
 removed in ROW 11 (2026-04-21) and the M4L observer pipeline
 was gutted to zero live handlers across pr12-5 and ROWs 6.5–6.9
-(2026-04-21). Hardware-only Max modules (`owner/Max Patches/foot-trigger.js`,
-`owner/Max Patches/midi-remap.js`) talk directly to the Python surface
-on port 11020 — they never routed through `liveAPI-v6.js`. Since
-ADR-422 the foot + wah pedal CCs also arrive **without Max at
-all**, as plain MIDI on the surface's own MIDI input port — see
-"Pedal MIDI input" below. The Utility patch's CC 67 chain stays as
-the owner's home-studio piano-pedal looper (any input, any channel;
-`foot-trigger.js`), opened only while `features.maxUtilityPatch` is on.
+(2026-04-21). Since ADR-422 the foot + wah pedal CCs arrive as plain
+MIDI on the surface's own MIDI input port — see "Pedal MIDI input"
+below. Since ADR-537 nothing on the owner's rig runs in standalone Max:
+the bridge reads the Move and the piano pedal itself (any input, any
+channel, CC 67 unless Settings saved another) while
+`features.midiControllers` is on, and sends the same wires.
 
 Address routing is controlled by `backendScope` in
 `config/constants.json`. `/looping/v3/*` goes to the Python
@@ -1106,32 +1104,31 @@ the pedal CCs itself — no Max, no OSC hop:
 - Channel + CC map live in `constants.midiPedals` (`channel` 10,
   `footSwitchCC` 23 (the seed), `wahToeSwitchCC` 21, `wahExpressionCC` 20 —
   measured off the USB pedal 2026-08-27; 67 / 82 / 11 were the retired
-  Bluetooth rig's, and CC 67 lives on in the Max Utility patch as the
-  owner's piano-pedal looper). The hold boundary is
-  `constants.osc.footTrigger.holdThresholdMs` (650) — foot-trigger.js
-  mirrors it hardcoded because Max ES5 can't read JSON. A collision
+  Bluetooth rig's, and CC 67 lives on as the bridge's piano pedal,
+  ADR-537). The hold boundary is
+  `constants.osc.footTrigger.holdThresholdMs` (650), read by both. A collision
   (the same CC on overlapping channels) keeps the first mapping (foot →
   toe → expression) with a WARN; an out-of-range `channel` falls back to
   10 with a WARN. Tests: `tests/test_midi_pedal_input.py`,
   `tests/test_foot_switch_component.py`.
 
 Don't run both paths at once for the same pedal (assign the port in
-Live *or* keep the Max patch listening to it, not both) — each press
+Live *and* learn the same CC as the bridge's piano pedal) — each press
 would fire twice. The two maps no longer overlap (23/21/20 on ch 10 vs
 67/82/11), so this only bites if you re-point one side at the other's
 CCs.
 
 ## Move encoders and pad hold (ADR-320 → ROW 5, ADR-412, ADR-432)
 
-The Ableton Move is a dumb MIDI controller here: `Max Utility
-1.0.maxpat` converts its encoder CCs (ch 1) into relative-volume OSC
-fired straight at 11020 — same no-bridge/no-`trackPath` lane as the
-wah and foot pedal. Both encoder handlers live on
+The Ableton Move is a dumb MIDI controller here: the bridge (ADR-537)
+converts its encoder CCs (ch 1) into relative-volume OSC — no
+`trackPath`. Since ADR-537 only CC 71 is sent; the CC 72 handler stays
+with nothing sending to it. Both encoder handlers live on
 `SelectedTrackComponent`, share the MIDI-relative encoding (`1` =
 +`MOVE_VOLUME_STEP`, `127` = −`MOVE_VOLUME_STEP`, 0.002/tick, clamp
 `[0,1]`) and are gated by the single `move_volume_knob` session toggle;
 the pad hold (third bullet) shares the lane and the component but is
-ungated — the patch is its switch:
+ungated — `features.midiControllers` is its switch:
 
 - **CC 71** → `/looping/v3/selected_track/volume_relative` —
   selected-track volume (`handle_relative_volume`, master supported).
@@ -1147,8 +1144,8 @@ ungated — the patch is its switch:
   INFO — performance states, not protocol errors. No success echo:
   chains aren't in the v3 tree; Live's own UI reflects the write.
 - **A pad held ≥ 300 ms** → `/looping/v3/move/pad_hold [note, held]`
-  (ADR-432, 2026-09-11) — `owner/Max Patches/move_pad_hold.js` on the patch's
-  `midi_from_move` bus times every pad note and sends `1` when a hold
+  (ADR-432, 2026-09-11) — the bridge (`handlers/midiControllers.js`,
+  ADR-537; `move_pad_hold.js` in Max until then) times every pad note and sends `1` when a hold
   crosses the threshold and `0` when that pad lifts; a plain hit sends
   nothing. The note is only a tag pairing a release with its hold.
   `handle_pad_hold` names the pad **Live selected** — the same
@@ -2031,8 +2028,8 @@ app puts it, and a path lookup in the User Library root finds the file.
   dials on its face. No code talks to it. It replaced Track Key Controls on 2026-09-28.
 - `Modulation Test.amxd` - the `live.modulate~` prototype
   `docs/plans/clip-automation-warp.plan.md` cites.
-- `Max Patches/` - the Max Utility patch and its scripts
-  (`features.maxUtilityPatch`).
+- `Max Patches/` - the retired Max Utility patch and its scripts, kept as
+  history (ADR-537 moved what was kept into the bridge).
 - `ax-helper/`, `menubar/` - the AX helper and the menubar app
   (`features.axHelper`, `features.menubar`).
 - `probes/` - the rig probes (below: "LOM probes").

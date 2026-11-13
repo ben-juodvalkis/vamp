@@ -33,6 +33,13 @@ export function handleBridgeMessage(address: string, args: OSCArg[]): void {
 		});
 		return;
 	}
+	if (address === '/bridge/piano_pedal') {
+		// One JSON argument: the piano pedal setting (ADR-537).
+		import('$lib/stores/bridgeStatus.svelte').then(({ bridgeStatus }) => {
+			bridgeStatus.updatePianoPedal(String(args[0] ?? ''));
+		});
+		return;
+	}
 	if (address === '/bridge/machine') {
 		// One JSON argument: the machine's paths and the TotalMix range
 		// (onboarding.plan.md §6.5), on connect and every 5 s.

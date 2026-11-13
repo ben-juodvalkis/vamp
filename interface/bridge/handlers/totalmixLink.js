@@ -3,22 +3,15 @@
  *
  * The bridge owns the UDP conversation with the mixer. Everything on this
  * link speaks **dB** — TotalMix's Global OSC protocol takes and reports dB
- * floats, the Max for Live device drives `live.gain~` objects which are
- * dB-native, and the iPad store holds dB. Nothing here normalises; the only
+ * floats, the Move's knobs step in dB, and the iPad store holds dB. Nothing here normalises; the only
  * place 0..1 exists is the UI's fader *rendering*, which owns that curve
  * (`interface/src/lib/utils/totalmixScale.ts`).
  *
- * Why the bridge and not the Max side: Global OSC has no read verb, so a
- * client that has just come up cannot ask the mixer anything — it can only be
- * told. This process outlives every one of them, so it caches the last dB per
- * channel and replays that the moment one says hello.
- *
- * That used to be argued as "Live tears the device down on every set load",
- * the `autoCaptureOverride.js` (ADR-405) argument. It no longer holds:
- * `b679e56` stripped the TotalMix chain out of `Track Key Controls.amxd` and
- * the hello now comes from `owner/Max Patches/Max Utility 1.0.maxpat`, a standalone
- * patch a set load does not touch. The cache is still right; only the reason
- * changed. It also filters the mixer's 811-address
+ * Why the bridge caches: Global OSC has no read verb, so a client that has
+ * just come up cannot ask the mixer anything — it can only be told. This
+ * process outlives every browser, so it caches the last dB per channel and
+ * replays it to each one as it connects, and a Move knob (ADR-537) nudges
+ * from the cached level. It also filters the mixer's 811-address
  * state dump down to the five channels anyone cares about, keeping that burst
  * out of Live's process entirely.
  *
@@ -36,11 +29,9 @@
  *   actually silent.
  */
 
-/** Outbound write address (from the UI / device) → this prefix + channel. */
+/** Outbound write address (from a Move knob) → this prefix + channel. */
 const WRITE_PREFIX = '/totalmix/';
-/** Address the device announces itself on. */
-const HELLO_ADDRESS = '/totalmix/hello';
-/** Address levels are broadcast to WS clients and the device on. */
+/** Address levels are broadcast to WS clients on. */
 const BROADCAST_PREFIX = '/looping/v3/totalmix/';
 /** Address the five live signal meters go to WS clients on, as one frame. */
 const METERS_ADDRESS = '/looping/v3/totalmix_meters';
@@ -143,7 +134,6 @@ function createTotalMixLink({ logger, config = readTotalMixConfig() } = {}) {
     let lastMeterFrame = null;
 
     return {
-        HELLO_ADDRESS,
         WRITE_PREFIX,
         BROADCAST_PREFIX,
         METERS_ADDRESS,
@@ -245,7 +235,7 @@ function createTotalMixLink({ logger, config = readTotalMixConfig() } = {}) {
         },
 
         /**
-         * Translate one outbound write from the UI or the device.
+         * Translate one outbound write (a Move knob's, ADR-537).
          *
          * @param {string} address e.g. '/totalmix/click'
          * @param {Array} args [db]
@@ -266,18 +256,15 @@ function createTotalMixLink({ logger, config = readTotalMixConfig() } = {}) {
                 return null;
             }
             // Cache the intent immediately. The mixer does not echo writes, so
-            // without this the cache would go stale the moment anyone moves a
-            // fader from the UI, and a device saying hello would be replayed a
-            // level the room is no longer at.
+            // without this the cache would go stale the moment a knob moves,
+            // and the next knob click or connecting browser would start from
+            // a level the room is no longer at.
             levels.set(channel, db);
             return { channel, db, address: CHANNELS[channel] };
         },
 
         /**
-         * Everything a freshly-loaded device needs to adopt current state.
-         *
-         * The device holds no meaningful stored values — its faders come up at
-         * whatever the set saved — so this is what makes them true. Channels
+         * Every cached level, for a browser that has just connected. Channels
          * never heard from are omitted rather than guessed: a fader that stays
          * where it is beats one that jumps to a fiction.
          *
@@ -298,7 +285,6 @@ module.exports = {
     createTotalMixLink,
     clampDb,
     parseDb,
-    HELLO_ADDRESS,
     WRITE_PREFIX,
     BROADCAST_PREFIX,
     METERS_ADDRESS
