@@ -49,7 +49,10 @@
  * `/capture/input/{state,meter,file,error}` go to every client as the
  * device's `/capture/*` would, so REC and the Simpler that follows cannot tell
  * which recorder made the take. Nothing is loaded into Live and nothing is
- * deleted after. A start with no device named still goes through Vamp-Capture
+ * deleted after. While Settings shows the picker it asks `/capture/input/monitor
+ * <uid>` every couple of seconds; the bridge passes that to the app, and the
+ * app's `/capture/input/levels <uid> <levels JSON> <access>` back to every
+ * client, for the meters. A start with no device named still goes through Vamp-Capture
  * and Live's Ext. In, as before.
  */
 
@@ -85,6 +88,10 @@ const APP_DEVICES = '/capture/input/devices';
 const APP_DEVICES_QUERY = '/capture/input/devices/query';
 const APP_START = '/capture/input/start';
 const APP_STOP = '/capture/input/stop';
+/** A page's ask for live levels of one device (`''` to stop), to the app. */
+const APP_MONITOR = '/capture/input/monitor';
+/** The app's levels for that device, to every client as they are. */
+const APP_LEVELS = '/capture/input/levels';
 const SET_PATH_QUERY = '/looping/v3/session/file_path/query';
 /** An app recorder's own replies, renamed to what the device would say. */
 const APP_RELAYED = new Map([
@@ -389,6 +396,15 @@ function createCaptureRecorder({
                 offerDevices();
                 return true;
             }
+            if (msg.address === APP_MONITOR) {
+                const uid = argValue(msg.args?.[0]);
+                app?.send(APP_MONITOR, [typeof uid === 'string' ? uid : '']);
+                return true;
+            }
+            if (msg.address === APP_LEVELS) {
+                broadcast(APP_LEVELS, (msg.args || []).map(argValue));
+                return true;
+            }
             const relayed = APP_RELAYED.get(msg.address);
             if (relayed) broadcast(relayed, (msg.args || []).map(argValue));
             return true;
@@ -438,6 +454,8 @@ module.exports = {
     APP_DEVICES,
     APP_START,
     APP_STOP,
+    APP_MONITOR,
+    APP_LEVELS,
     SET_PATH_QUERY,
     HELLO_ADDRESS,
     BYE_ADDRESS,

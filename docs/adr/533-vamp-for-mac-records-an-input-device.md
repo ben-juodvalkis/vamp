@@ -43,8 +43,17 @@ a track inside Live; for an external source that reason does not apply.
   on Live 12.4.25b1) before each take. A surface that does not answer in 1 s
   gets the temp project, which is where every take goes until Live restarts
   onto the new surface.
+- **The picker meters every input** of the chosen device, live
+  (`InputMonitor.swift`): while Settings shows it the page asks
+  `/capture/input/monitor <uid>` every 2 s, the app sends each input's level
+  15 times a second, and it closes the device 5 s after the last ask. A
+  stereo choice shows both of its inputs' meters.
 - **Permissions**: macOS asks once for the microphone (Info.plist's
-  `NSMicrophoneUsageDescription`); the notarized release signs the app with
+  `NSMicrophoneUsageDescription`), the first time the picker meters a device:
+  first cut asked only on the first take, so opening Vamp showed no prompt
+  and Vamp was absent from Privacy → Microphone (macOS lists an app only
+  once it has asked; Ben, 2026-11-13). The picker says when access is
+  denied. The notarized release signs the app with
   `com.apple.security.device.audio-input` (`Config/mac.entitlements`), which
   the hardened runtime requires.
 
@@ -59,6 +68,11 @@ a track inside Live; for an external source that reason does not apply.
   not available.
 - A device's sample rate is read as the take starts; changing it mid-take is
   not handled.
+- Measured, the monitor on the Babyface: input 2 at 0.57–0.73 (about
+  −20 dB) and the other 13 at 0, 31 reports in 2 s.
+- A checkout's Vamp for Mac is signed ad hoc and rebuilds itself on change;
+  whether macOS keeps the microphone permission across those rebuilds is
+  unmeasured.
 - Two recorders now: Vamp-Capture for tracks and Live's input, the app for
   devices.
 

@@ -20,6 +20,8 @@ final class AppState: ObservableObject {
     private let client: BridgeClient
     /// Records an input device for REC (ADR-533), on the bridge's word.
     private let recorder = InputRecorder()
+    /// Live levels of the device Settings → Capture shows, while it shows it.
+    private let monitor = InputMonitor()
     private var helloTimer: Timer?
 
     init() {
@@ -37,6 +39,11 @@ final class AppState: ObservableObject {
 
         recorder.onReply = { [weak self] address, args in
             self?.client.send(address, args)
+        }
+        monitor.onLevels = { [weak self] uid, levels, access in
+            let json = (try? JSONSerialization.data(withJSONObject: levels))
+                .flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
+            self?.client.send(Wire.captureInputLevels, [.string(uid), .string(json), .string(access)])
         }
         // Says hello with the devices each second while the bridge listens;
         // the bridge forgets the recorder after three missed hellos.
@@ -82,6 +89,7 @@ final class AppState: ObservableObject {
         if !isConnected {
             // A take whose bridge is gone could not be handed on: end it.
             recorder.stop()
+            monitor.close()
             // Drop seeded values so the menu doesn't imply live state while
             // the bridge is down. They re-seed on the next handshake accept.
             serverMode = nil
@@ -102,6 +110,10 @@ final class AppState: ObservableObject {
         if message.address == Wire.captureInputStart {
             let a = message.args.map { $0.stringValue ?? "" }
             if a.count >= 3 { recorder.start(folder: a[0], uid: a[1], channel: a[2]) }
+            return
+        }
+        if message.address == Wire.captureInputMonitor {
+            monitor.keep(uid: message.args.first?.stringValue ?? "")
             return
         }
         if message.address == Wire.captureInputStop {

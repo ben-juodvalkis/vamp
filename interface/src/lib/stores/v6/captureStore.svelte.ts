@@ -60,6 +60,31 @@ let lastError = $state<CaptureError | null>(null);
  */
 let inputDevices = $state<InputDevice[]>([]);
 
+/**
+ * Live levels of the device the picker shows (`/capture/input/levels`):
+ * one 0–1 level per input, and whether macOS lets Vamp for Mac listen.
+ */
+export interface InputLevels {
+	uid: string;
+	levels: number[];
+	access: 'granted' | 'denied' | 'undetermined';
+}
+let inputLevels = $state<InputLevels | null>(null);
+
+function parseLevels(args: unknown[]): InputLevels | null {
+	const [uid, json, access] = args;
+	if (typeof uid !== 'string') return null;
+	let levels: number[] = [];
+	try {
+		const parsed = JSON.parse(String(json));
+		if (Array.isArray(parsed)) levels = parsed.map((v) => (typeof v === 'number' ? Math.max(0, Math.min(1, v)) : 0));
+	} catch {
+		levels = [];
+	}
+	const a = access === 'denied' || access === 'undetermined' ? access : 'granted';
+	return { uid, levels, access: a };
+}
+
 function parseInputDevices(json: unknown): InputDevice[] {
 	try {
 		const list = JSON.parse(String(json));
@@ -119,6 +144,10 @@ export function captureErrorMessage(code: string, detail: string): string {
 function handleCaptureMessage(address: string, args: unknown[]): void {
 	if (address === '/capture/input/devices') {
 		inputDevices = parseInputDevices(args[0]);
+		return;
+	}
+	if (address === '/capture/input/levels') {
+		inputLevels = parseLevels(args);
 		return;
 	}
 	logger.info('CAPTURE RX:', { address, args });
@@ -185,6 +214,15 @@ function queryInputDevices(): void {
 	send('/capture/input/devices/query', []);
 }
 
+/**
+ * Ask Vamp for Mac for `uid`'s live levels (`''` to stop). The app stops on
+ * its own a few seconds after the last ask, so a picker on screen repeats it.
+ */
+function monitorInput(uid: string): void {
+	send('/capture/input/monitor', [uid]);
+	if (!uid) inputLevels = null;
+}
+
 function stop(): void {
 	logger.info('CAPTURE TX: stop');
 	settlePending();
@@ -225,9 +263,13 @@ export const captureStore = {
 	get inputDevices() {
 		return inputDevices;
 	},
+	get inputLevels() {
+		return inputLevels;
+	},
 
 	start,
 	queryInputDevices,
+	monitorInput,
 	stop,
 	deviceGone,
 

@@ -543,6 +543,16 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 					])]);
 					return;
 				}
+				// Their levels while Settings' picker asks (ADR-533): a signal on
+				// inputs 1/2 and 5, as a mic and a keyboard would show.
+				case '/capture/input/monitor': {
+					const uid = String(args[0] ?? '');
+					if (!uid) return;
+					const count = uid.includes('Babyface') ? 14 : 1;
+					const levels = Array.from({ length: count }, (_, i) => [0.72, 0.64, 0, 0, 0.45][i] ?? 0);
+					send(ws, '/capture/input/levels', [uid, JSON.stringify(levels), 'granted']);
+					return;
+				}
 				case '/looping/v3/handshake/hello': {
 					const offered = args.map(String);
 					if (!offered.includes(version)) {

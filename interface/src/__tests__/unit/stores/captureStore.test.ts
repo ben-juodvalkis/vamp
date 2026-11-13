@@ -122,6 +122,16 @@ describe('captureStore', () => {
 			expect(captureStore.inputDevices).toEqual([]);
 		});
 
+		it('keeps a device\'s live levels, clamped, and drops them when the picker stops asking', () => {
+			captureStore.handleMessage('/capture/input/levels', ['u', '[0.5, 2, -1]', 'granted']);
+			expect(captureStore.inputLevels).toEqual({ uid: 'u', levels: [0.5, 1, 0], access: 'granted' });
+			captureStore.handleMessage('/capture/input/levels', ['u', '[]', 'denied']);
+			expect(captureStore.inputLevels?.access).toBe('denied');
+			captureStore.monitorInput('');
+			expect(send).toHaveBeenCalledWith('/capture/input/monitor', ['']);
+			expect(captureStore.inputLevels).toBeNull();
+		});
+
 		it('stop() should send /capture/stop', () => {
 			captureStore.stop();
 			expect(send).toHaveBeenCalledWith('/capture/stop', []);

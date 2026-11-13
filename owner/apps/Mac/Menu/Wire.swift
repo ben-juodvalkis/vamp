@@ -47,6 +47,10 @@ enum Wire {
     static let captureInputHello = "/capture/input/hello"
     static let captureInputStart = "/capture/input/start"
     static let captureInputStop = "/capture/input/stop"
+    // Settings → Capture's meters: the page's ask (every ~2 s while the
+    // picker shows), and this app's levels for it.
+    static let captureInputMonitor = "/capture/input/monitor"
+    static let captureInputLevels = "/capture/input/levels"
 }
 
 /// The user-facing settings, each mapping to a set address + label.

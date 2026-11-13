@@ -22,6 +22,8 @@ const {
 	APP_DEVICES,
 	APP_START,
 	APP_STOP,
+	APP_MONITOR,
+	APP_LEVELS,
 	SET_PATH_QUERY
 } = nodeRequire('../../../../bridge/handlers/captureRecorder.js');
 const { createFeatureRegistry } = nodeRequire('../../../../bridge/utils/features.js');
@@ -349,6 +351,18 @@ describe('an input device Vamp for Mac records (ADR-533)', () => {
 		recorder.onSurfaceMessage({ address: SET_PATH_QUERY, args: ['/Sets/A/A.als'] });
 		expect(app).toEqual([{ address: APP_STOP, args: [] }]);
 		expect(sent.map((m) => m.address)).toEqual(['/capture/stop']);
+		recorder.dispose();
+	});
+
+	it('passes a page\'s ask for levels to the app, and the app\'s levels to every client', () => {
+		const { clients, app, recorder, appHello, toApp } = setup();
+		appHello();
+		clients.length = 0;
+		const page = () => {};
+		expect(recorder.onAppMessage(page, { address: APP_MONITOR, args: [BABYFACE.uid] })).toBe(true);
+		expect(app).toEqual([{ address: APP_MONITOR, args: [BABYFACE.uid] }]);
+		recorder.onAppMessage(toApp, { address: APP_LEVELS, args: [BABYFACE.uid, '[0.5,0]', 'granted'] });
+		expect(clients).toEqual([{ address: APP_LEVELS, args: [BABYFACE.uid, '[0.5,0]', 'granted'] }]);
 		recorder.dispose();
 	});
 

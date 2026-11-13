@@ -91,17 +91,39 @@
 		{ id: 'mono', label: 'Mono' }
 	];
 
-	// The devices Vamp for Mac offers now, with the picked one kept in the
-	// list while it is not offered (the app stopped, the interface unplugged).
+	// The devices Vamp for Mac offers, with the picked one kept while it is
+	// not offered (the app stopped, the interface unplugged).
 	const offered = $derived(captureStore.inputDevices);
 	const picked = $derived(captureSettings.device);
-	const pickedMissing = $derived(!!picked && !offered.some((d) => d.uid === picked.uid));
-	const deviceRows = $derived<{ device: InputDevice | null; label: string; sub: string }[]>([
-		{ device: null, label: 'Live’s input', sub: `Ext. In, through Vamp-Capture on the track` },
-		...offered.map((d) => ({ device: d, label: d.name, sub: `${d.inputs} input${d.inputs === 1 ? "" : "s"} · Vamp for Mac records it` })),
-		...(pickedMissing && picked ? [{ device: picked, label: picked.name, sub: 'Not available: Vamp for Mac is not offering it' }] : [])
+	const deviceChips = $derived<{ device: InputDevice | null; label: string; missing: boolean }[]>([
+		{ device: null, label: 'Live', missing: false },
+		...offered.map((d) => ({ device: d, label: d.name, missing: false })),
+		...(picked && !offered.some((d) => d.uid === picked.uid) ? [{ device: picked, label: picked.name, missing: true }] : [])
 	]);
 	const channelOptions = $derived(channelsFor(captureSettings.inputs, captureSettings.mode));
+
+	// The picked device's live levels, for the meter under each channel.
+	const levels = $derived(
+		captureStore.inputLevels?.uid === captureSettings.deviceUid ? captureStore.inputLevels : null
+	);
+	function channelLevels(ch: string): number[] {
+		const l = levels?.levels ?? [];
+		return ch.split('/').map((n) => l[Number(n) - 1] ?? 0);
+	}
+
+	// While the picker is up on a device, keep asking Vamp for Mac for its
+	// levels: the app closes the device a few seconds after the last ask.
+	const monitoring = $derived(captureSettings.source === 'input' ? captureSettings.deviceUid : '');
+	$effect(() => {
+		const uid = monitoring;
+		if (!uid) return;
+		captureStore.monitorInput(uid);
+		const timer = setInterval(() => captureStore.monitorInput(uid), 2000);
+		return () => {
+			clearInterval(timer);
+			captureStore.monitorInput('');
+		};
+	});
 
 	onMount(() => captureStore.queryInputDevices());
 
@@ -179,13 +201,11 @@
 	<section class="set-group" data-debug="settings-capture">
 		<h2 class="set-group-title">Capture</h2>
 		<div class="set-list">
-			<div class="set-row set-row-stack">
+			<div class="set-row">
 				<span class="set-row-main">
 					<span class="set-row-label">REC records</span>
 					<span class="set-row-sub">
-						{captureSettings.source === 'track'
-							? 'What the selected track plays, after its instrument and effects.'
-							: 'Your audio interface’s input, on the channel below.'}
+						{captureSettings.source === 'track' ? 'The selected track, after its effects.' : 'An audio input.'}
 					</span>
 				</span>
 				<div class="set-segmented set-segmented-2" role="group" aria-label="REC records">
@@ -203,36 +223,25 @@
 				</div>
 			</div>
 			{#if captureSettings.source === 'input'}
-				<div class="set-row set-row-stack">
-					<span class="set-row-main">
-						<span class="set-row-label">Input device</span>
-						<span class="set-row-sub">Live’s own input, or an audio device Vamp for Mac records directly.</span>
-					</span>
-					<div class="set-segmented set-segmented-list" role="group" aria-label="Input device">
-						{#each deviceRows as row (row.device?.uid ?? '')}
-							{@const on = (row.device?.uid ?? '') === captureSettings.deviceUid}
+				<div class="set-capture-input">
+					<div class="set-chips" role="group" aria-label="Input device">
+						{#each deviceChips as chip (chip.device?.uid ?? '')}
+							{@const on = (chip.device?.uid ?? '') === captureSettings.deviceUid}
 							<button
-								class="set-segment set-segment-device"
+								class="set-chip-button"
 								class:on
+								class:missing={chip.missing}
 								aria-pressed={on}
-								onclick={() => captureSettings.setDevice(row.device)}
-								data-capture-device={row.device?.uid ?? ''}
+								title={chip.missing ? `${chip.label} (not connected)` : chip.label}
+								onclick={() => captureSettings.setDevice(chip.device)}
+								data-capture-device={chip.device?.uid ?? ''}
 							>
-								<span class="set-device-name">{row.label}</span>
-								<span class="set-device-sub">{row.sub}</span>
+								{chip.label}
 							</button>
 						{/each}
 					</div>
-				</div>
-				<div class="set-row set-row-stack">
-					<span class="set-row-main">
-						<span class="set-row-label">Input channel</span>
-						<span class="set-row-sub">
-							{captureSettings.mode === 'stereo' ? 'A pair of inputs, recorded as a stereo file.' : 'One input, recorded as a mono file.'}
-						</span>
-					</span>
-					<div class="set-channel-pick">
-						<div class="set-segmented set-segmented-2" role="group" aria-label="Mono or stereo">
+					<div class="set-capture-channels">
+						<div class="set-segmented set-segmented-2 set-mode" role="group" aria-label="Mono or stereo">
 							{#each CHANNEL_MODES as m (m.id)}
 								<button
 									class="set-segment"
@@ -245,30 +254,43 @@
 								</button>
 							{/each}
 						</div>
-						<div class="set-segmented set-segmented-6" role="group" aria-label="Input channel">
+						<div class="set-channel-grid" role="group" aria-label="Input channel">
 							{#each channelOptions as ch (ch)}
 								<button
-									class="set-segment"
+									class="set-segment set-channel"
 									class:on={captureSettings.channel === ch}
 									aria-pressed={captureSettings.channel === ch}
 									onclick={() => captureSettings.setChannel(ch)}
 									data-capture-channel={ch}
 								>
 									<span>{ch}</span>
+									{#if captureSettings.deviceUid}
+										<span class="set-meters" aria-hidden="true">
+											{#each channelLevels(ch) as level, i (i)}
+												<span class="set-meter"><span class="set-meter-fill" style:width={`${level * 100}%`}></span></span>
+											{/each}
+										</span>
+									{/if}
 								</button>
 							{/each}
 						</div>
 					</div>
+					<p class="set-capture-note" data-capture-access={levels?.access ?? ''}>
+						{#if !captureSettings.deviceUid}
+							Live’s own audio input, recorded by Vamp-Capture on the track.
+						{:else if picked && !offered.some((d) => d.uid === picked.uid)}
+							Not connected, or Vamp for Mac isn’t running.
+						{:else if levels?.access === 'denied'}
+							Vamp for Mac can’t hear inputs: allow it in System Settings → Privacy &amp; Security → Microphone.
+						{:else if levels?.access === 'undetermined'}
+							Allow Vamp to use the microphone on the Mac to see levels and record.
+						{:else}
+							Recorded by Vamp for Mac, beside Live.
+						{/if}
+					</p>
 				</div>
 			{/if}
 		</div>
-		<p class="set-note">
-			{#if captureSettings.source === 'input' && captureSettings.deviceUid}
-				Vamp for Mac records this device itself, beside Live: nothing is added to the track. The take lands beside the saved set, or in Live’s temporary project.
-			{:else}
-				REC puts Vamp-Capture at the end of the track it records for the take. It needs Vamp Devices in Live’s Places.
-			{/if}
-		</p>
 	</section>
 
 	<section class="set-group" data-debug="settings-foot-switch">
@@ -352,38 +374,92 @@
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 		width: min(100%, 14rem);
 	}
-	.set-segmented-6 {
-		grid-template-columns: repeat(6, minmax(0, 1fr));
-		width: min(100%, 24rem);
-	}
-	.set-segmented-list {
-		grid-template-columns: minmax(0, 1fr);
-		width: min(100%, 24rem);
-	}
-	.set-segment-device {
+	.set-capture-input {
+		display: flex;
 		flex-direction: column;
-		align-items: flex-start;
-		gap: 0;
-		padding: var(--spacing-xs) var(--spacing-sm);
-		text-align: left;
+		align-items: stretch;
+		gap: var(--spacing-md);
+		padding: var(--spacing-md) var(--spacing-lg);
+		border-top: 1px solid var(--line-strong);
 	}
-	.set-device-name {
-		max-width: 100%;
+	.set-chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--spacing-xs);
+	}
+	.set-chip-button {
+		min-height: var(--height-touch);
+		max-width: 16rem;
+		padding: 0 var(--spacing-md, 0.75rem);
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		font-size: 0.9375rem;
+		font-weight: var(--font-weight-medium);
+		color: var(--foreground);
+		background: var(--surface-well);
+		border: 1px solid var(--line-strong);
+		border-radius: 9999px;
+		cursor: pointer;
 	}
-	.set-device-sub {
-		font-size: 0.75rem;
-		font-weight: var(--font-weight-normal, 400);
-		opacity: 0.75;
+	.set-chip-button.on {
+		background: var(--phosphor);
+		border-color: var(--phosphor);
+		color: var(--flat-on-fg);
 	}
-	.set-channel-pick {
+	.set-chip-button.missing {
+		opacity: 0.55;
+		border-style: dashed;
+	}
+	.set-capture-channels {
 		display: flex;
 		flex-direction: column;
-		align-items: flex-end;
+		align-items: stretch;
+		gap: var(--spacing-sm);
+	}
+	.set-mode {
+		width: 11rem;
+	}
+	.set-channel-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(4rem, 1fr));
 		gap: var(--spacing-xs);
-		width: min(100%, 24rem);
+	}
+	.set-channel {
+		flex-direction: column;
+		gap: 3px;
+		padding: var(--spacing-xs);
+		font-variant-numeric: tabular-nums;
+	}
+	.set-meters {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		width: 100%;
+	}
+	.set-meter {
+		display: block;
+		height: 5px;
+		border-radius: 2px;
+		background: var(--line-strong);
+		overflow: hidden;
+	}
+	.set-meter-fill {
+		display: block;
+		height: 100%;
+		background: var(--phosphor);
+		transition: width 80ms linear;
+	}
+	.set-channel.on .set-meter {
+		background: color-mix(in srgb, var(--flat-on-fg) 25%, transparent);
+	}
+	.set-channel.on .set-meter-fill {
+		background: var(--flat-on-fg);
+	}
+	.set-capture-note {
+		margin: 0;
+		font-size: 0.8125rem;
+		opacity: 0.75;
 	}
 	.set-segment {
 		display: inline-flex;
