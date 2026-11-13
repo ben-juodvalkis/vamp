@@ -37,7 +37,7 @@
     kitClassSummary,
     mappedMacroIndices,
     PAD_MIXER_FUNCTIONS,
-    padGridNotes,
+    padRackGrid,
     profileFunctions,
     profileForPadClass,
     rackMacroLayout,
@@ -157,12 +157,16 @@
   let scopeNote = $derived(vm.scopeNote);
   let selectedNote = $derived(vm.selectedNote);
 
+  // The pad grid (2026-11-13): the sixteen pads Live shows, where Live
+  // shows them, then every other pad (and a selection or hold outside
+  // Live's window) to their right — `padRackGrid`.
+  let padGrid = $derived(padRackGrid(members?.pads ?? [], vm.padScroll, [selectedNote, ...heldNotes]));
+
   // The pads on the grid that carry a Permute of their own (ADR-435), with
-  // what each is doing — the grid draws a step strip on those tiles. The
-  // notes are the grid's own rule (the clip's, Live's selection, the held).
+  // what each is doing — the grid draws a step strip on those tiles.
   const padSeqs = usePadSequencers(
     () => devicePath,
-    () => padGridNotes(clip.clipNotes, [selectedNote, ...heldNotes], members?.pads ?? [])
+    () => padGrid.slots.map((s) => s.note)
   );
   let kitSummary = $derived(kitClassSummary(members));
   let macroLayout = $derived(rackMacroLayout(members));
@@ -419,10 +423,10 @@
           <HostedSwapPill />
         </div>
         <DrumPadGrid
+          grid={padGrid}
           pads={members?.pads ?? []}
           {selectedNote}
           {heldNotes}
-          clipNotes={clip.clipNotes}
           litNotes={clip.litNotes}
           padSequencers={padSeqs.map}
           color={drumRackInk}

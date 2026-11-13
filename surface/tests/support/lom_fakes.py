@@ -301,6 +301,26 @@ class FakeRackView:
         self._pad = pad
         self.listeners: List = []
         self.is_showing_chain_devices = False
+        # Live's visible pad window: the lowest visible row of four
+        # (9 = notes 36..51, Live's default; measured 2026-11-13).
+        self._scroll = 9
+        self.scroll_listeners: List = []
+
+    @property
+    def drum_pads_scroll_position(self):
+        return self._scroll
+
+    @drum_pads_scroll_position.setter
+    def drum_pads_scroll_position(self, row):
+        self._scroll = row
+        for cb in list(self.scroll_listeners):
+            cb()
+
+    def add_drum_pads_scroll_position_listener(self, cb):
+        self.scroll_listeners.append(cb)
+
+    def remove_drum_pads_scroll_position_listener(self, cb):
+        self.scroll_listeners.remove(cb)
 
     @property
     def selected_drum_pad(self):

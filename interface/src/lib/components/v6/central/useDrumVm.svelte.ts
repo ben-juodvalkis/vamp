@@ -85,6 +85,8 @@ export interface DrumVmHandle {
 	readonly macroNames: string[];
 	/** Live's selected pad (`vm.selectedPad`), or null. */
 	readonly selectedNote: number | null;
+	/** Live's visible pad window (`vm.padScroll`, its lowest visible row), or null before a reading. Subscribed by the full view only. */
+	readonly padScroll: number | null;
 	/** Every note the controls are scoped to, latch first then press order. */
 	readonly heldNotes: number[];
 	/** The scoped pad — the last one pressed, or the latch — or null. */
@@ -122,6 +124,11 @@ export function useDrumVm(getDevicePath: () => string | undefined, options: Drum
 	const selectedNote = $derived.by(() => {
 		if (!devicePath) return null;
 		const raw = numberOrUndefined(selectedTrackStore.propertyValue(devicePath, VM.selectedPad));
+		return raw === undefined ? null : Math.round(raw);
+	});
+	const padScroll = $derived.by(() => {
+		if (!devicePath) return null;
+		const raw = numberOrUndefined(selectedTrackStore.propertyValue(devicePath, VM.padScroll));
 		return raw === undefined ? null : Math.round(raw);
 	});
 	const heldNotes = $derived(devicePath ? drumPadScope.heldNotes(devicePath) : []);
@@ -195,7 +202,7 @@ export function useDrumVm(getDevicePath: () => string | undefined, options: Drum
 		const path = devicePath;
 		const rows = options.kitFunctions
 			? [...options.kitFunctions.map((fn) => VM[fn]), VM.members, VM.selectedPad]
-			: [...VM_PROPERTIES, VM.selectedPad];
+			: [...VM_PROPERTIES, VM.selectedPad, VM.padScroll];
 		const release = rows.map((name) => selectedTrackStore.subscribeProperty(path, name));
 		return () => release.forEach((fn) => fn());
 	});
@@ -247,6 +254,7 @@ export function useDrumVm(getDevicePath: () => string | undefined, options: Drum
 		get profile() { return profile; },
 		get macroNames() { return macroNames; },
 		get selectedNote() { return selectedNote; },
+		get padScroll() { return padScroll; },
 		get heldNotes() { return heldNotes; },
 		get scopeNote() { return scopeNote; },
 		get scopedPad() { return scopedPad; },

@@ -91,7 +91,9 @@ export const VM = {
 	chainMute: 'vm.chainMute',
 	members: 'vm.members',
 	/** Live's selected pad on the rack, as a MIDI note (2026-09-08). Read, write, and re-emitted when Live's selection moves. */
-	selectedPad: 'vm.selectedPad'
+	selectedPad: 'vm.selectedPad',
+	/** Live's visible pad window (2026-11-13): the lowest visible row of four, so the pads Live shows are 4·row .. 4·row + 15. Read-only, re-emitted when Live's rack scrolls. */
+	padScroll: 'vm.padScroll'
 } as const;
 
 /**

@@ -75,16 +75,16 @@ unrelated to what you're testing.
       FX-grid Pitch slider and the clip view's ±12 buttons move
       `vm.pitch` on a rack (never the notes) and a kit whose pads are
       tuned differently stays tuned after a move
-- [ ] **The pad grid and hold-to-scope (rebuilt 2026-09-09):** the grid
-      draws **only the pads in play** — the playing clip's, Live's
-      selected pad, anything held — in their chain colours, flashing as
-      the playhead crosses them. They stack four down a column and then
-      start a second, **lowest note at the foot**, and the tiles fill the
-      height (one pad on its own is one full-height tile). With nothing
-      playing there is exactly one tile: a pad the clip does not play and
-      Live has not selected cannot be reached from here at all, which is
-      the deliberate cost of dropping the paged sixteen-tile grid — check
-      that selecting a pad in Live's own rack brings it onto the grid.
+- [ ] **The pad grid and hold-to-scope (ADR-536, 2026-11-13):** the grid
+      draws **the sixteen pads Live's rack shows, where Live shows
+      them** — rows of four, the lowest note bottom-left, empty pads as
+      dashed tiles — in their chain colours, flashing as the playhead
+      crosses them. Scroll Live's rack with its arrows: the sixteen follow
+      (needs the surface from 2026-11-13, so a Live restart). Every other
+      pad in the kit sits in columns to the right of the sixteen; the
+      grid widens and the tiles narrow as columns arrive (a 32-pad kit:
+      ~50px tiles), and on a 32-pad kit at Live's default window that is
+      Live's next page beside this one.
       Holding a pad selects it in Live and scopes every control — the
       FX-grid Pitch slider included — to that pad, **and the controls
       take that pad's colour** while the Drum and Squash tiles keep

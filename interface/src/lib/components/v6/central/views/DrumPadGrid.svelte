@@ -1,29 +1,24 @@
 <script lang="ts">
   /**
-   * DrumPadGrid — the pads in play, beside the Drum Rack controls.
+   * DrumPadGrid — the Drum Rack's pads, beside its controls.
    *
-   * **The pads in play, and only those** (2026-09-09): the playing clip's,
-   * Live's selected pad, and any pad a finger is holding. Names come from
-   * the census (`vm.members.pads`), the highlight from `vm.selectedPad`.
+   * **Live's sixteen, where Live has them** (2026-11-13, the user's call):
+   * the pads Live's rack is showing (`vm.padScroll`, its visible window),
+   * four rows of four consecutive notes, the lowest along the bottom, left
+   * to right — every one drawn, an empty pad as an empty tile, so a pad is
+   * always in the same place and the muscle memory is Live's. Every other
+   * pad the kit holds, and a selected or held pad outside the window, sits
+   * in columns to the RIGHT of the sixteen, in the same reading order; the
+   * grid widens by half of what those columns would take at full size and
+   * the tiles shrink into the rest. The geometry is `padRackGrid`; this
+   * component draws what it decides.
    *
-   * They STACK, and each column stacks **bottom-up** — the lowest note at
-   * the foot, pitch climbing as the eye does, the way a rack reads. Up to
-   * four down one column, a fifth starting a second rather than
-   * rebalancing the first, so a column keeps its length as pads arrive
-   * and a finger keeps its place (user's call, 2026-09-09;
-   * `padGridShape` / `padGridCell`). The column is exactly as wide as its
-   * columns need, which is what gives the controls beside it the rest,
-   * and the tiles fill whatever height the section has: one pad on its
-   * own is one full-height tile.
-   *
-   * This replaced Live's own pad view — four columns of consecutive
-   * notes, lowest bottom-left, sixteen to a page with two arrows, so the
-   * muscle memory would transfer. Sixteen tiles turned out to be small
-   * and cluttered and mostly pads nothing was doing anything with. What
-   * went with the paging: reaching an arbitrary pad from the interface.
-   * A pad the clip does not play and Live has not selected is not drawn,
-   * so it cannot be tapped or held; the way to it is Live's own rack, and
-   * this follows.
+   * This reverses 2026-09-09, when the grid drew only the pads in play
+   * (the playing clip's, the selection, the holds) stacked four to a
+   * column — which moved a pad whenever the clip changed, and left any
+   * other pad out of reach. Before that it was this same Live layout,
+   * paged with two arrows; now the window follows Live's own scroll and
+   * the rest of the kit is always on screen.
    *
    * HOLD SCOPES, LIFT RETURNS. Touch-down on a tile is reported at once
    * (`onPress`) and the parent selects the pad in Live and scopes its
@@ -34,10 +29,8 @@
    * The grid is never a target for a drag: `touch-action: none` and no
    * pointermove.
    *
-   * `clipNotes` are the pitches the track's playing clip uses; `litNotes`
-   * are the pads the playhead just crossed, which flash for
-   * `PAD_FLASH_MS`. Nothing playing is not a special case — the grid is
-   * then simply the selected pad.
+   * `litNotes` are the pads the playing clip's playhead just crossed, which
+   * flash for `PAD_FLASH_MS`.
    *
    * COLOUR (2026-09-08). A tile is FILLED with its pad's chain colour —
    * the colour Live paints the pad with, carried on the census as
@@ -56,57 +49,65 @@
     padTileLabels,
     padColorCss,
     padTextCss,
-    padGridShape,
-    padGridNotes,
-    padGridSlots,
-    padGridCell,
-    padRackShape,
-    padRackCell,
+    PAD_PAGE_COLUMNS,
+    type PadGridSlot,
     type VmPad
   } from '$lib/services/drumVirtualMacros';
 
   interface Props {
+    /** Where every tile goes (`padRackGrid`): Live's window, then the extras. */
+    grid: { slots: readonly PadGridSlot[]; columns: number; rows: number };
+    /** The whole kit (the census), which the labels are decided over. */
     pads: readonly VmPad[];
     /** Live's selected pad (`vm.selectedPad`), or null. */
     selectedNote?: number | null;
     /** The pads currently held on this device, in press order. */
     heldNotes?: readonly number[];
     color: DeviceColorScheme;
-    /** The pitches the track's playing clip uses, ascending; null or empty = the kit's first eight pads (`padGridNotes`). */
-    clipNotes?: readonly number[] | null;
     /** Pads the playhead just crossed (flashing). */
     litNotes?: ReadonlySet<number>;
     /** ADR-435: the pads that carry a Permute of their own, with what it is doing — drawn as a step strip on the tile. */
     padSequencers?: ReadonlyMap<number, TinySequencerState>;
-    /** Live's layout instead (the chain cell, 2026-10-28): rows this many across, the lowest along the bottom (`padRackShape`). */
-    rackColumns?: number;
     onPress?: (note: number, pointerId: number) => void;
     onRelease?: (pointerId: number, reason: MomentaryReleaseReason) => void;
   }
 
   let {
+    grid,
     pads,
     selectedNote = null,
     heldNotes = [],
     color,
-    clipNotes = null,
     litNotes = new Set<number>(),
     padSequencers = new Map<number, TinySequencerState>(),
-    rackColumns,
     onPress,
     onRelease
   }: Props = $props();
 
-  // The pads in play: the clip's, Live's selection, and every held pad —
-  // all three equals, no basis and no fallback. They stack, and each
-  // column stacks BOTTOM-UP: the lowest note at the foot of the first
-  // column, pitch climbing as the eye does. DOM order stays ascending
-  // (it is the reading order for a screen reader, and what the tests
-  // assert); `padGridCell` places each tile.
-  let notes = $derived(padGridNotes(clipNotes, [selectedNote, ...heldNotes], pads));
-  let slots = $derived(padGridSlots(pads, notes));
-  let shape = $derived(rackColumns ? padRackShape(slots.length, rackColumns) : padGridShape(slots.length));
-  const cellAt = (i: number) => (rackColumns ? padRackCell(i, shape.columns, shape.rows) : padGridCell(i, shape.rows));
+  // The extras sit past a zero-width track, so the gap either side of it
+  // doubles: Live's sixteen read as one block, the rest beside it.
+  let extraColumns = $derived(grid.columns - PAD_PAGE_COLUMNS);
+  let template = $derived(
+    extraColumns > 0
+      ? `repeat(${PAD_PAGE_COLUMNS}, minmax(0, 1fr)) 0px repeat(${extraColumns}, minmax(0, 1fr))`
+      : `repeat(${grid.columns}, minmax(0, 1fr))`
+  );
+  const columnLine = (column: number) => (column > PAD_PAGE_COLUMNS ? column + 1 : column);
+
+  // The width SPLITS THE DIFFERENCE (the user's call, 2026-11-13): Live's
+  // sixteen are four 68px columns; a kit with more pads gets a grid
+  // halfway between that and every column at 68px, so the tiles shrink
+  // but stay a finger's width (a 32-pad kit: ~50px tiles in 430px, not
+  // ~32px in 284px or 68px in 576px). The label scales with the tile.
+  const COL_W = 68;
+  const GAP = 4;
+  let gaps = $derived((grid.columns - 1 + (extraColumns > 0 ? 1 : 0)) * GAP);
+  let gridWidth = $derived.by(() => {
+    const live = PAD_PAGE_COLUMNS * COL_W + (PAD_PAGE_COLUMNS - 1) * GAP;
+    if (extraColumns <= 0) return live;
+    return Math.round((live + grid.columns * COL_W + gaps) / 2);
+  });
+  let fontPx = $derived(Math.max(9, Math.min(13, Math.round((13 * (gridWidth - gaps)) / grid.columns / COL_W))));
 
   // Labels are decided for the kit at once: shared words dropped, a name
   // that says nothing replaced by the note, a name two pads share given
@@ -139,16 +140,15 @@
   }
 </script>
 
-{#if slots.length}
+{#if grid.slots.length}
 <div
   class="pad-grid"
-  data-pads={slots.length}
-  data-columns={shape.columns}
-  style="--pad-ink: {color.primary}; --pad-columns: {shape.columns}; --pad-rows: {shape.rows};"
+  data-pads={grid.slots.length}
+  data-columns={grid.columns}
+  style="--pad-ink: {color.primary}; --pad-rows: {grid.rows}; --pad-template: {template}; --pad-font: {fontPx}px; --pad-grid-w: {gridWidth}px;"
 >
-  <div class="pad-tiles" role="group" aria-label="Pads in play">
-    {#each slots as slot, i (slot.note)}
-      {@const cell = cellAt(i)}
+  <div class="pad-tiles" role="group" aria-label="Pads">
+    {#each grid.slots as slot (slot.note)}
       <button
         type="button"
         class="pad-tile"
@@ -157,8 +157,9 @@
         class:pad-lit={litNotes.has(slot.note)}
         class:pad-empty={slot.pad === null}
         data-note={slot.note}
+        data-extra={slot.extra ? '' : undefined}
         class:pad-colored={slot.pad !== null && slot.pad.color !== null}
-        style="grid-column: {cell.column}; grid-row: {cell.row};{slot.pad &&
+        style="grid-column: {columnLine(slot.column)}; grid-row: {slot.row};{slot.pad &&
         slot.pad.color !== null
           ? ` --pad-fill: ${padColorCss(slot.pad)}; --pad-fg: ${padTextCss(slot.pad.color)};`
           : ''}"
@@ -186,20 +187,15 @@
 {/if}
 
 <style>
-  /* The column is exactly as wide as its columns need, and no wider: a
-     fixed 200px for a fixed four columns was the old paged grid's, and
-     with the grid down to the pads in play (2026-09-09) that would be
-     mostly empty. One column is 68px, two 140px, three 212px — the
-     controls beside it take whatever is left, which is the point of
-     stacking before widening. */
+  /* Live's four columns at 68px each; a kit with more pads widens it by
+     half of what its extra columns would take at full size, and the tiles
+     shrink into the rest (`gridWidth`, the user's call, 2026-11-13). */
   .pad-grid {
-    --pad-col-w: 68px;
-    --pad-grid-w: calc(var(--pad-columns, 1) * var(--pad-col-w) + (var(--pad-columns, 1) - 1) * 4px);
-    flex: 0 0 var(--pad-grid-w);
+    flex: 0 0 var(--pad-grid-w, 284px);
     /* The same figure as a width, for a host that sizes its column off the
        content rather than a flex basis — the Drum Rack's lead grid, whose
        pads column is `auto` (2026-09-16). */
-    width: var(--pad-grid-w);
+    width: var(--pad-grid-w, 284px);
     min-width: 0;
     min-height: 0;
     display: flex;
@@ -210,23 +206,18 @@
     -webkit-user-select: none;
     -webkit-touch-callout: none;
   }
-  /* Explicit rows and columns; every tile places itself (`padGridCell`),
-     which is what puts each column's lowest note on the BOTTOM row —
-     partial columns included, where an auto column flow would have left a
-     lone fifth pad at the top of its column, out of line with the note
-     beside it.
-
-     The rows are `1fr` and uncapped: the tiles fill whatever height the
-     central section gives them, so one pad on its own is one full-height
-     tile (user's call, 2026-09-09). */
+  /* Explicit rows and columns; every tile places itself (`padRackGrid`),
+     Live's way: rows of four, the lowest note bottom-left. The rows are
+     `1fr` and uncapped, so the tiles fill whatever height the central
+     section gives them. */
   .pad-tiles {
     flex: 1 1 0;
     min-height: 0;
     width: 100%;
     height: 100%;
     display: grid;
-    grid-template-rows: repeat(var(--pad-rows, 1), minmax(0, 1fr));
-    grid-template-columns: repeat(var(--pad-columns, 1), minmax(0, 1fr));
+    grid-template-rows: repeat(var(--pad-rows, 4), minmax(0, 1fr));
+    grid-template-columns: var(--pad-template);
     gap: 4px;
   }
   .pad-tile {
@@ -250,10 +241,9 @@
       background-color 110ms ease-out,
       filter 110ms ease-out;
   }
-  /* Few tiles, so each one carries a bigger label than the old sixteen
-     could. */
+  /* 13px on Live's four columns, smaller as extra columns narrow the tiles. */
   .pad-tile {
-    font-size: 13px;
+    font-size: var(--pad-font, 13px);
   }
   .pad-tile.pad-empty {
     color: var(--signal-dim);

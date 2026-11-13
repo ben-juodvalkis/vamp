@@ -1,27 +1,26 @@
 /**
  * The pad grid's geometry and the playing clip on it: which pads are
- * drawn (the clip's, the selection, the holds), how they stack, and which
- * pads the playhead just crossed.
+ * drawn (Live's visible sixteen, then the rest of the kit), where each
+ * sits, and which pads the playhead just crossed.
  */
 
 import type { VmPad } from './wire';
 
-/** Pads stack down a column before a second one starts (user's call, 2026-09-09). */
-export const PAD_COLUMN_ROWS = 4;
-
-/** Past this the grid grows rows instead, rather than out-widening the controls. */
-export const PAD_MAX_COLUMNS = 3;
-/** How many of the kit's pads the grid draws when the clip gives it none: Live's bottom two rows. */
-export const EMPTY_CLIP_PADS = 8;
+/** Live's pad view: rows of four, four rows a page (sixteen pads). */
+export const PAD_PAGE_COLUMNS = 4;
+export const PAD_PAGE_ROWS = 4;
+/** The highest scroll row Live allows: 28 shows 112..127, the last sixteen notes. */
+export const PAD_SCROLL_MAX = 28;
+/** Live's own default window when the rack has not told us (row 9: notes 36..51). */
+export const DEFAULT_PAD_SCROLL = 9;
 
 // ---------------------------------------------------------------------------
-// The playing clip on the grid (2026-09-08): only the pads it plays, and a
-// flash as each is triggered.
+// The playing clip on the grid (2026-09-08): a flash as each pad is
+// triggered.
 //
-// A drum clip's notes ARE the pads it uses, so while a clip plays the grid
-// can show just those, compacted into bigger tiles ordered by note — the
-// ones a finger wants under it — and light each one as the playhead
-// crosses one of its notes. Both ride channels the strip already has: the
+// A drum clip's notes ARE the pads it uses, so the grid lights each one as
+// the playhead crosses one of its notes (it drew only the clip's pads
+// from 2026-09-09 to 2026-11-13). Both ride channels the strip already has: the
 // cheap note blob (`clipNotesService`) and the 30 Hz playhead
 // (`playingClipsStore.position`). Live's LOM exposes no per-pad trigger
 // event and the surface never sees the track's MIDI input, so a note
@@ -36,98 +35,82 @@ export function clipPadNotes(notes: readonly { pitch: number }[]): number[] {
 	return [...set].sort((a, b) => a - b);
 }
 
-/**
- * The grid's shape for `count` pads: **stack first, widen second**
- * (user's call, 2026-09-09).
- *
- * Up to four pads are one column, in pitch order down it. A fifth starts
- * a second column rather than rebalancing the first — five reads 4 + 1,
- * not 3 + 2 — because a column that keeps its length as pads arrive is a
- * column a finger can keep its place in. Past three columns the width
- * would start eating the controls, so beyond twelve the rows grow
- * instead, which is the case that should hardly ever happen.
- */
-export function padGridShape(count: number): { columns: number; rows: number } {
-	if (count <= 0) return { columns: 0, rows: 0 };
-	if (count <= PAD_COLUMN_ROWS) return { columns: 1, rows: count };
-	const wanted = Math.ceil(count / PAD_COLUMN_ROWS);
-	// Rows stay at four while a column can be added: nine pads are 4 + 4 + 1,
-	// not the 3 + 3 + 3 a rebalance would give. Only when the width would
-	// start eating the controls do the rows grow instead.
-	if (wanted <= PAD_MAX_COLUMNS) return { columns: wanted, rows: PAD_COLUMN_ROWS };
-	return { columns: PAD_MAX_COLUMNS, rows: Math.ceil(count / PAD_MAX_COLUMNS) };
+/** One tile on the pad grid: its note, the pad there (null = Live's empty pad), and its cell. */
+export interface PadGridSlot {
+	note: number;
+	pad: VmPad | null;
+	column: number;
+	row: number;
+	/** Outside Live's visible sixteen: drawn to their right. */
+	extra: boolean;
 }
 
 /**
- * The notes the grid draws: the playing clip's pads, plus Live's selected
- * pad and every pad a finger is holding (2026-09-09).
+ * The Drum Rack view's pad grid (2026-11-13, the user's call): **the
+ * sixteen pads Live shows, where Live shows them**, and every other pad
+ * to their right.
  *
- * All three are equals here — unlike the earlier rule, where the clip's
- * notes were the basis and the rest were added to them.
+ * `scroll` is Live's own window (`vm.padScroll`, the rack view's
+ * `drum_pads_scroll_position`): the lowest visible row of four, so the
+ * window is `4·scroll .. 4·scroll + 15`, laid out as Live lays it — rows
+ * of four consecutive notes, the lowest along the bottom, left to right.
+ * All sixteen are drawn, an empty pad as an empty tile, so a pad is always
+ * in the same place. Unknown (no reading yet, or a surface from before
+ * the property) is Live's default, row 9: 36..51.
  *
- * When the clip gives the grid nothing — nothing playing, or a clip with
- * no notes — the kit's first EMPTY_CLIP_PADS pads (its lowest notes, Live's
- * bottom two rows) stand in for it (2026-10-24, the user's call; the grid
- * was the selected pad alone before, so no other pad could be reached).
+ * The extras are every pad the kit holds outside the window, plus Live's
+ * selection and any held pad there (`keep`), so a selected or held pad is
+ * never off the grid. They sit in columns to the right, in the window's
+ * own reading order — rows left to right, the lowest at the bottom — as
+ * many columns as four rows need: sixteen extras are Live's next page
+ * beside this one. Every column shares the grid's width, so the tiles
+ * shrink as columns arrive.
  *
- * A note the kit has no pad for still draws, as the empty tile it is —
- * that is what explains a ghosted control rather than hiding it.
+ * Slots come back in note order, the window first (the reading order for
+ * a screen reader, and what the tests assert); each carries its cell.
  */
-export function padGridNotes(
-	clipNotes: readonly number[] | null | undefined,
-	keep: readonly (number | null)[] = [],
-	kitPads: readonly { note: number }[] = []
-): number[] {
-	const set = new Set<number>();
-	const fromClip = (clipNotes ?? []).filter((n) => Number.isInteger(n));
-	const base =
-		fromClip.length > 0
-			? fromClip
-			: [...kitPads.map((p) => p.note)].filter((n) => Number.isInteger(n)).sort((a, b) => a - b).slice(0, EMPTY_CLIP_PADS);
-	for (const note of base) set.add(note);
-	for (const note of keep) if (note !== null && Number.isInteger(note)) set.add(note);
-	return [...set].sort((a, b) => a - b);
-}
-
-/**
- * Where the `index`-th note (ascending) sits in a grid `rows` tall:
- * columns fill **bottom-up**, so the LOWEST note is at the foot of the
- * first column and pitch climbs as the eye does (user's correction,
- * 2026-09-09 — the first cut had them upside down, lowest at the top).
- *
- * Explicit placement rather than `grid-auto-flow: column`, because an
- * auto flow fills each column from row 1 down: a lone fifth pad would
- * land at the TOP of the second column, out of line with the lowest note
- * beside it. This puts every column's first note on the bottom row,
- * partial columns included.
- */
-export function padGridCell(index: number, rows: number): { column: number; row: number } {
-	if (rows <= 0) return { column: 1, row: 1 };
-	return { column: Math.floor(index / rows) + 1, row: rows - (index % rows) };
-}
-
-/**
- * Live's own layout, for the chain overview's Drum Rack cell (user,
- * 2026-10-28): ROWS of `columns`, filled left to right, the first row at
- * the BOTTOM — the lowest four pads along the foot, as the rack draws
- * them. The cell picks four across or two by its width.
- */
-export function padRackShape(count: number, columns: number): { columns: number; rows: number } {
-	if (count <= 0 || columns <= 0) return { columns: 0, rows: 0 };
-	return { columns: Math.min(count, columns), rows: Math.ceil(count / columns) };
-}
-
-/** Where the `index`-th note (ascending) sits in `padRackShape`'s grid. */
-export function padRackCell(index: number, columns: number, rows: number): { column: number; row: number } {
-	if (columns <= 0 || rows <= 0) return { column: 1, row: 1 };
-	return { column: (index % columns) + 1, row: rows - Math.floor(index / columns) };
-}
-
-/** Each note paired with the pad that sits there, or null where the kit has none. */
-export function padGridSlots(pads: readonly VmPad[], notes: readonly number[]): { note: number; pad: VmPad | null }[] {
+export function padRackGrid(
+	pads: readonly VmPad[],
+	scroll: number | null | undefined,
+	keep: readonly (number | null)[] = []
+): { slots: PadGridSlot[]; columns: number; rows: number; first: number } {
+	const row =
+		typeof scroll === 'number' && Number.isFinite(scroll)
+			? Math.min(PAD_SCROLL_MAX, Math.max(0, Math.round(scroll)))
+			: DEFAULT_PAD_SCROLL;
+	const first = row * PAD_PAGE_COLUMNS;
+	const size = PAD_PAGE_COLUMNS * PAD_PAGE_ROWS;
 	const byNote = new Map<number, VmPad>();
 	for (const p of pads) byNote.set(p.note, p);
-	return notes.map((note) => ({ note, pad: byNote.get(note) ?? null }));
+
+	const slots: PadGridSlot[] = [];
+	for (let i = 0; i < size; i++) {
+		const note = first + i;
+		slots.push({
+			note,
+			pad: byNote.get(note) ?? null,
+			column: (i % PAD_PAGE_COLUMNS) + 1,
+			row: PAD_PAGE_ROWS - Math.floor(i / PAD_PAGE_COLUMNS),
+			extra: false
+		});
+	}
+
+	const outside = new Set<number>();
+	const inWindow = (n: number) => n >= first && n < first + size;
+	for (const p of pads) if (Number.isInteger(p.note) && !inWindow(p.note)) outside.add(p.note);
+	for (const n of keep) if (n !== null && Number.isInteger(n) && n >= 0 && n <= 127 && !inWindow(n)) outside.add(n);
+	const extras = [...outside].sort((a, b) => a - b);
+	const extraColumns = Math.ceil(extras.length / PAD_PAGE_ROWS);
+	extras.forEach((note, j) => {
+		slots.push({
+			note,
+			pad: byNote.get(note) ?? null,
+			column: PAD_PAGE_COLUMNS + (j % extraColumns) + 1,
+			row: PAD_PAGE_ROWS - Math.floor(j / extraColumns),
+			extra: true
+		});
+	});
+	return { slots, columns: PAD_PAGE_COLUMNS + extraColumns, rows: PAD_PAGE_ROWS, first };
 }
 
 /**

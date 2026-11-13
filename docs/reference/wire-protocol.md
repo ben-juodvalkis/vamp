@@ -373,6 +373,13 @@ Key rules:
   subscriber the same way. Selecting a pad triggers nothing; it moves
   Live's device view and what the Move encoder's chain-volume knob
   (ADR-412) targets.
+- **`vm.padScroll` — Live's visible pad window (2026-11-13, ADR-536).**
+  On a `DrumGroupDevice`: `int`, `rack.view.drum_pads_scroll_position`,
+  the lowest visible row of four, so the pads Live shows are
+  `4·row .. 4·row + 15` (9 → 36..51, Live's default; 0..28), or `nil`.
+  Read-only (a `set` rejects with `property-read-only`); the rack view's
+  scroll listener re-emits it when Live's rack scrolls. The Drum Rack
+  view's pad grid draws those sixteen where Live has them.
 - **`vm.pad.<note>.<fn>` — one pad (2026-09-08).** The second open-ended
   family on the channel, `DrumGroupDevice` only: `<note>` 0..127 and
   `<fn>` any function name the row family knows, a rack macro included

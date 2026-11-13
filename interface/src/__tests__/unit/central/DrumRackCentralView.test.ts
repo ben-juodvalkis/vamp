@@ -375,6 +375,8 @@ describe('DrumRackCentralView — mode from the census', () => {
 				'vm.members',
 				'vm.oscAmount',
 				'vm.oscCoarse',
+				// Live's visible pad window (2026-11-13): the grid draws what Live shows.
+				'vm.padScroll',
 				// Effect presence per pad (issue #491): what the FX grid flips its
 				// tiles on at touch-down, opened here so the pane works with the
 				// grid section off.
@@ -882,11 +884,10 @@ async function settle() {
 }
 
 describe('DrumRackCentralView — the pad grid and hold-to-scope', () => {
-	// The grid draws the pads in play (2026-09-09), so a test that wants
-	// more than one tile has to give it a clip: `mounted()` renders with
-	// KICK_SNARE_HAT playing, which puts 36 / 38 / 42 on the grid beside
-	// whatever Live has selected. That is the shape of the feature now —
-	// with nothing playing there is one tile and nothing else to hold.
+	// The grid is Live's visible sixteen, where Live has them, and every
+	// other pad to their right (2026-11-13). `mounted()` still renders with
+	// KICK_SNARE_HAT playing (36 / 38 / 42), which the flash and the pads'
+	// notes strip read; it no longer decides which tiles exist.
 	beforeEach(() => {
 		vi.clearAllMocks();
 		_resetForTests();
@@ -924,21 +925,22 @@ describe('DrumRackCentralView — the pad grid and hold-to-scope', () => {
 		return Array.from(container.querySelectorAll<HTMLElement>('.pad-tile')).map((t) => t.dataset.note);
 	}
 
-	it("draws the pads in play — the kit's first eight with nothing playing", async () => {
+	it("draws Live's sixteen in place, whatever the clip plays", async () => {
 		seed({ 'vm.members': DRUMCELL_WITH_PADS, 'vm.selectedPad': 40, 'vm.pitch': 0 });
 		const { container } = render(DrumRackCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
-		// Nothing playing: the kit's lowest eight (2026-10-24), the selection among them.
-		expect(noteList(container)).toEqual(['36', '37', '38', '39', '40', '41', '42', '43']);
+		// No `vm.padScroll` yet: Live's default window, 36..51.
+		const window16 = Array.from({ length: 16 }, (_, i) => String(36 + i));
+		expect(noteList(container)).toEqual(window16);
 		expect(tile(container, 40).classList.contains('pad-selected')).toBe(true);
-		expect(container.querySelector('.pad-grid')?.getAttribute('data-columns')).toBe('2');
+		const grid = container.querySelector('.pad-grid')!;
+		expect(grid.getAttribute('data-columns')).toBe('4');
+		expect(grid.getAttribute('data-pads')).toBe('16');
 
-		// The clip adds its own, in pitch order around the selection.
+		// A clip starting changes nothing about which tiles exist, or where.
 		playClip();
 		await settle();
-		expect(noteList(container)).toEqual(['36', '38', '40', '42']);
-		expect(container.querySelector('.pad-grid')?.getAttribute('data-pads')).toBe('4');
-		expect(container.querySelector('.pad-grid')?.getAttribute('data-columns')).toBe('1'); // four still stack
+		expect(noteList(container)).toEqual(window16);
 		expect(tile(container, 36).textContent?.trim()).toBe('Kick');
 		expect(tile(container, 38).textContent?.trim()).toBe('Snare');
 		expect(tile(container, 40).textContent?.trim()).toBe('Snare 2');
@@ -956,25 +958,28 @@ describe('DrumRackCentralView — the pad grid and hold-to-scope', () => {
 		expect(container.querySelectorAll('.vm-controls .vm-slot')).toHaveLength(7);
 	});
 
-	it('starts a second column at the fifth pad, four down the first, lowest at the foot', async () => {
-		// The user's rule: stack, then widen. Six pads are 4 + 2 — and each
-		// column reads BOTTOM-UP, so the lowest note takes the last row.
-		requestNotesMock.mockImplementation(() =>
-			Promise.resolve([36, 38, 40, 42, 44, 46].map((p, i) => midi(p, i * 0.5)))
-		);
+	it("lays the window out as Live does — rows of four, lowest bottom-left — and follows Live's scroll", async () => {
 		const { container } = await mounted({ 'vm.members': DRUMCELL_WITH_PADS, 'vm.selectedPad': 36 });
-		expect(noteList(container)).toEqual(['36', '38', '40', '42', '44', '46']); // DOM order stays ascending
 		const grid = container.querySelector('.pad-grid')!;
-		expect(grid.getAttribute('data-columns')).toBe('2');
 		expect(getComputedStyle(grid).getPropertyValue('--pad-rows').trim()).toBe('4');
 		const cell = (note: number) => {
 			const st = tile(container, note).style;
 			return `${st.gridColumn}/${st.gridRow}`;
 		};
-		expect(cell(36)).toBe('1/4'); // lowest note, foot of the first column
-		expect(cell(42)).toBe('1/1'); // fourth note, top of it
-		expect(cell(44)).toBe('2/4'); // fifth starts the second column, at ITS foot
-		expect(cell(46)).toBe('2/3');
+		expect(cell(36)).toBe('1/4'); // bottom-left
+		expect(cell(39)).toBe('4/4'); // bottom-right
+		expect(cell(40)).toBe('1/3'); // the next row up
+		expect(cell(51)).toBe('4/1'); // top-right
+
+		// Live's rack scrolls down a row: 32..47, the kit's 48..51 now extras.
+		applyPropertyValue(DEVICE, 'vm.padScroll', 8);
+		await tick();
+		expect(noteList(container).slice(0, 16)).toEqual(Array.from({ length: 16 }, (_, i) => String(32 + i)));
+		expect(tile(container, 32).classList.contains('pad-empty')).toBe(true);
+		expect(cell(36)).toBe('1/3');
+		expect(noteList(container).slice(16)).toEqual(['48', '49', '50', '51']);
+		expect(tile(container, 48).hasAttribute('data-extra')).toBe(true);
+		expect(grid.getAttribute('data-columns')).toBe('5');
 	});
 
 	it('shows no label on identically named chains, and no note names anywhere for now', async () => {
@@ -997,18 +1002,28 @@ describe('DrumRackCentralView — the pad grid and hold-to-scope', () => {
 		expect(container.querySelector('.pad-sub')).toBeNull(); // no note names anywhere
 	});
 
-	it('shows the grid on every profile, and a 32-pad kit draws only what is in play', async () => {
-		// The size of the kit stopped mattering when the paging went: a
-		// 32-pad kit draws the same handful any other does.
+	it('shows the grid on every profile, and a 32-pad kit puts its other sixteen to the right', async () => {
 		const pads32 = Array.from({ length: 32 }, (_, i) => ({ note: 36 + i, name: `P${i}`, class: 'OriginalSimpler' }));
 		const { container } = await mounted({
 			'vm.members': JSON.stringify({ ...JSON.parse(JAZZ), pads: pads32 }),
-			'vm.selectedPad': 60
+			'vm.selectedPad': 60,
+			'vm.padScroll': 9
 		});
 		expect(container.querySelector('[data-vm-mode]')?.getAttribute('data-vm-mode')).toBe('simpler');
-		expect(noteList(container)).toEqual(['36', '38', '42', '60']);
+		expect(noteList(container)).toEqual(Array.from({ length: 32 }, (_, i) => String(36 + i)));
+		const grid = container.querySelector<HTMLElement>('.pad-grid')!;
+		expect(grid.dataset.columns).toBe('8');
+		// The extras sit past a zero-width seam track, so 52 starts at line 6.
+		expect(tile(container, 52).style.gridColumn).toBe('6');
+		expect(tile(container, 52).style.gridRow).toBe('4');
+		expect(tile(container, 67).style.gridColumn).toBe('9');
+		expect(tile(container, 67).style.gridRow).toBe('1');
 		expect(tile(container, 60).classList.contains('pad-selected')).toBe(true);
-		expect(container.querySelector('.pad-pager')).toBeNull(); // no paging any more
+		// The width splits the difference: halfway between Live's four
+		// columns (284px) and eight at full size (576px), tiles ~50px.
+		expect(grid.style.getPropertyValue('--pad-grid-w')).toBe('430px');
+		expect(grid.style.getPropertyValue('--pad-font')).toBe('10px');
+		expect(container.querySelector('.pad-pager')).toBeNull();
 	});
 
 	it('a press selects the pad in Live and scopes the view; a release returns it to the kit', async () => {
@@ -1414,22 +1429,19 @@ describe('DrumRackCentralView — the playing clip on the grid', () => {
 		vi.useRealTimers();
 	});
 
-	it("draws the clip's pads with the selection, and the kit's first eight again when it stops", async () => {
+	it('reads the playing clip for the flash, and the grid stays put when it starts and stops', async () => {
 		seed({ 'vm.members': DRUMCELL_WITH_PADS, 'vm.selectedPad': 36 });
 		const { container } = render(DrumRackCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
 		const notes = () => Array.from(container.querySelectorAll<HTMLElement>('.pad-tile')).map((t) => t.dataset.note);
-		expect(notes()).toEqual(['36', '37', '38', '39', '40', '41', '42', '43']); // nothing playing: the kit's first eight
+		const window16 = Array.from({ length: 16 }, (_, i) => String(36 + i));
+		expect(notes()).toEqual(window16);
 		playClip();
 		await settle();
 		expect(requestNotesMock).toHaveBeenCalledWith('tracks/0/slots/0/clip');
-		const tiles = Array.from(container.querySelectorAll<HTMLElement>('.pad-tile'));
-		expect(tiles.map((t) => t.dataset.note)).toEqual(['36', '38', '42']);
-		expect(tiles.map((t) => t.textContent?.trim())).toEqual(['Kick', 'Snare', 'Hat Cl']); // three hats in the kit: the second word tells them apart
-		const grid = container.querySelector<HTMLElement>('.pad-grid')!;
-		expect(grid.dataset.pads).toBe('3');
-		expect(grid.dataset.columns).toBe('1'); // three still stack down one column
-		expect(container.querySelector('.pad-pager')).toBeNull();
+		expect(notes()).toEqual(window16);
+		// Three hats in the kit: the second word tells them apart.
+		expect([36, 38, 42].map((n) => tile(container, n).textContent?.trim())).toEqual(['Kick', 'Snare', 'Hat Cl']);
 		// A hold still works.
 		padPointer(tile(container, 38), 'pointerdown', 7);
 		await tick();
@@ -1437,69 +1449,43 @@ describe('DrumRackCentralView — the playing clip on the grid', () => {
 		holdPast();
 		padPointer(tile(container, 38), 'pointerup', 7);
 		await tick();
-		// Stopped: back to the kit's first eight, the selection (moved to 38
-		// by the press above, since touching a tile selects that pad in Live)
-		// among them.
 		playClip(0);
 		await settle();
-		expect(notes()).toEqual(['36', '37', '38', '39', '40', '41', '42', '43']);
+		expect(notes()).toEqual(window16);
 	});
 
-	it("draws Live's selected pad even when the clip never plays it", async () => {
-		// 41 is "Hat Op" here; the clip plays 36 / 38 / 42 only.
+	it("draws Live's selected pad outside the window to the right, and drops it when the selection comes back", async () => {
 		seed({ 'vm.members': DRUMCELL_WITH_PADS, 'vm.selectedPad': 41 });
 		const { container } = render(DrumRackCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
-		playClip();
-		await settle();
 		const notes = () => Array.from(container.querySelectorAll<HTMLElement>('.pad-tile')).map((t) => t.dataset.note);
-		expect(notes()).toEqual(['36', '38', '41', '42']); // in note order, not appended
-		expect(tile(container, 41).classList.contains('pad-selected')).toBe(true);
-		expect(container.querySelector('.pad-grid')?.getAttribute('data-pads')).toBe('4');
-
-		// Live's selection moves to another pad the clip does not play: the
-		// grid swaps which extra tile it carries, never two.
-		applyPropertyValue(DEVICE, 'vm.selectedPad', 45);
+		expect(notes()).toHaveLength(16);
+		// Live selects an empty pad above the window: it joins on the right.
+		applyPropertyValue(DEVICE, 'vm.selectedPad', 70);
 		await tick();
-		expect(notes()).toEqual(['36', '38', '42', '45']);
-		expect(tile(container, 45).classList.contains('pad-selected')).toBe(true);
-
-		// Back onto a pad the clip plays: just the clip's three again.
+		expect(notes()).toHaveLength(17);
+		expect(tile(container, 70).classList.contains('pad-selected')).toBe(true);
+		expect(tile(container, 70).classList.contains('pad-empty')).toBe(true);
+		expect(tile(container, 70).hasAttribute('data-extra')).toBe(true);
+		// Back inside the window: the extra goes.
 		applyPropertyValue(DEVICE, 'vm.selectedPad', 38);
 		await tick();
-		expect(notes()).toEqual(['36', '38', '42']);
+		expect(notes()).toHaveLength(16);
 	});
 
-	it('keeps a held pad on the grid when a clip starts under the finger', async () => {
+	it("keeps a held pad on the grid when Live's window scrolls away from it", async () => {
 		// The scoped pad owns every control while it is held, so it must not
-		// vanish because a clip that does not play it started.
-		seed({ 'vm.members': DRUMCELL_WITH_PADS, 'vm.selectedPad': 45 }); // "China", not in the clip
+		// vanish because Live's rack scrolled.
+		seed({ 'vm.members': DRUMCELL_WITH_PADS, 'vm.selectedPad': 45 });
 		const { container } = render(DrumRackCentralView, { props: { instrument: INSTRUMENT } });
 		await tick();
 		padPointer(tile(container, 45), 'pointerdown', 9);
 		await tick();
 		expect(scopeOf(container)).toBe('45');
-		// Move Live's selection off the held pad, so what keeps 45 on the
-		// grid can only be the hold.
-		applyPropertyValue(DEVICE, 'vm.selectedPad', 38);
+		applyPropertyValue(DEVICE, 'vm.padScroll', 13); // 52..67
 		await tick();
-		playClip();
-		await settle();
-		const notes = () => Array.from(container.querySelectorAll<HTMLElement>('.pad-tile')).map((t) => t.dataset.note);
-		expect(notes()).toEqual(['36', '38', '42', '45']);
 		expect(tile(container, 45).classList.contains('pad-held')).toBe(true);
-	});
-
-	it('keeps the paged view for a clip that plays sixteen or more pads', async () => {
-		requestNotesMock.mockImplementation(() =>
-			Promise.resolve(Array.from({ length: 16 }, (_, i) => midi(36 + i, i * 0.25)))
-		);
-		seed({ 'vm.members': DRUMCELL_WITH_PADS, 'vm.selectedPad': 36 });
-		const { container } = render(DrumRackCentralView, { props: { instrument: INSTRUMENT } });
-		playClip();
-		await settle();
-		expect(container.querySelectorAll('.pad-tile')).toHaveLength(16);
-		expect(container.querySelector('.pad-grid')?.getAttribute('data-compact')).toBeNull();
+		expect(tile(container, 45).hasAttribute('data-extra')).toBe(true);
 	});
 
 	it('flashes a pad as the playhead crosses one of its notes, for PAD_FLASH_MS, and follows the loop round', async () => {

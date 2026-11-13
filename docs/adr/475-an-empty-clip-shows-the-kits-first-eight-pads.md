@@ -1,7 +1,7 @@
 # ADR-475: An Empty Clip Shows the Kit's First Eight Pads
 
 ## Status
-**Accepted** (2026-10-24). No Live restart (interface only).
+**Superseded** by ADR-536 (2026-11-13): the grid is Live's visible sixteen and the rest of the kit, whatever the clip plays. Was Accepted 2026-10-24.
 
 ## Context
 The Drum Rack view's pad grid draws the pads in play: the playing clip's

@@ -279,6 +279,8 @@ from .drum_vm_functions import (
     MEMBERS_PROPERTY,
     PAD_NAME_MAX,
     PAD_PROPERTY_PREFIX,
+    PAD_SCROLL_KEY,
+    PAD_SCROLL_PROPERTY,
     PITCH_MACRO_NAMES,
     PITCH_MAX,
     PITCH_MIN,
@@ -342,6 +344,8 @@ __all__ = [
     "MEMBERS_PROPERTY",
     "PAD_NAME_MAX",
     "PAD_PROPERTY_PREFIX",
+    "PAD_SCROLL_KEY",
+    "PAD_SCROLL_PROPERTY",
     "PITCH_MACRO_NAMES",
     "PITCH_MAX",
     "PITCH_MIN",
@@ -487,6 +491,8 @@ class DrumVirtualMacroComponent:
             return self.members_json(st)
         if function == SELECTED_PAD_KEY:
             return self._selected_pad_note(st)
+        if function == PAD_SCROLL_KEY:
+            return self._pad_scroll_row(st)
         parsed = parse_pad_function(function)
         if parsed is not None:
             value = self._pad_read(st, parsed[0], parsed[1])
@@ -513,6 +519,8 @@ class DrumVirtualMacroComponent:
             return False, None, "disconnected"
         if function == MEMBERS_KEY:
             return False, None, "%s is read-only" % MEMBERS_PROPERTY
+        if function == PAD_SCROLL_KEY:
+            return False, None, "%s is read-only" % PAD_SCROLL_PROPERTY
         if not self._known(function):
             return False, None, "unknown virtual macro %r" % function
         st = self._state_for(device, device_path)
@@ -888,6 +896,7 @@ class DrumVirtualMacroComponent:
         return (
             function == MEMBERS_KEY
             or function == SELECTED_PAD_KEY
+            or function == PAD_SCROLL_KEY
             or function in FUNCTIONS
             or is_macro_function(function)
             or parse_pad_function(function) is not None
@@ -1001,6 +1010,8 @@ class DrumVirtualMacroComponent:
             return self.members_json(st)
         if function == SELECTED_PAD_KEY:
             return self._selected_pad_note(st)
+        if function == PAD_SCROLL_KEY:
+            return self._pad_scroll_row(st)
         parsed = parse_pad_function(function)
         if parsed is not None:
             return self._pad_read(st, parsed[0], parsed[1])
@@ -2125,6 +2136,13 @@ class DrumVirtualMacroComponent:
         except _LOM_ERRORS + (ValueError,):
             return None
 
+    def _pad_scroll_row(self, st: _RackState) -> Optional[int]:
+        """Live's visible pad window: the lowest visible row of four."""
+        try:
+            return int(st.device.view.drum_pads_scroll_position)
+        except _LOM_ERRORS + (ValueError,):
+            return None
+
     def _select_pad(self, st: _RackState, value) -> Tuple[bool, object, str]:
         """``vm.selectedPad`` set: select ``drum_pads[note]`` in Live and
         open the rack's Show/Hide Devices toggle, so Live shows the pad's
@@ -2155,6 +2173,7 @@ class DrumVirtualMacroComponent:
 
     def _attach_listeners(self, st: _RackState) -> None:
         self._attach_selected_pad_listener(st)
+        self._attach_pad_scroll_listener(st)
         # ``drum_pads`` / ``chains`` — plus a ``devices`` listener on every
         # populated pad chain, which is what this component gained by using
         # the shared watcher rather than its own pair. A pad's instrument
@@ -2214,6 +2233,36 @@ class DrumVirtualMacroComponent:
             return
         st.selected_pad_listener = cb
 
+    def _attach_pad_scroll_listener(self, st: _RackState) -> None:
+        """Live's rack scrolled (its arrows, a selection Live scrolls to, a
+        pad swap's ``show_for_swap``): push ``vm.padScroll`` to its
+        subscribers, so the pad grid follows the pads Live shows."""
+        if st.pad_scroll_listener is not None:
+            return
+        view = getattr(st.device, "view", None)
+        adder = getattr(view, "add_drum_pads_scroll_position_listener", None) if view is not None else None
+        if not callable(adder):
+            return
+
+        def _on_pad_scroll():
+            if self._disconnected or not self._is_held(st):
+                return
+            if PAD_SCROLL_KEY in st.subscribed:
+                self._safe_emit(
+                    V3_PROPERTY_VALUE_ADDRESS,
+                    (st.device_path, PAD_SCROLL_PROPERTY, self._pad_scroll_row(st)),
+                )
+
+        try:
+            adder(_on_pad_scroll)
+        except _LOM_ERRORS as e:
+            self._warn_once(
+                st.device_path, "listener:drum_pads_scroll_position",
+                "add_drum_pads_scroll_position_listener raised: %s" % e,
+            )
+            return
+        st.pad_scroll_listener = _on_pad_scroll
+
     def _make_selected_pad_callback(self, st: _RackState) -> Callable[[], None]:
         """Live's selection changed (a pad tapped in Live, or our own
         write landing): push the row to its subscribers. A read and an
@@ -2241,6 +2290,21 @@ class DrumVirtualMacroComponent:
                         "raised: %s", st.device_path, e,
                     )
             st.selected_pad_listener = None
+        if st.pad_scroll_listener is not None:
+            view = getattr(st.device, "view", None)
+            remover = (
+                getattr(view, "remove_drum_pads_scroll_position_listener", None)
+                if view is not None else None
+            )
+            if callable(remover):
+                try:
+                    remover(st.pad_scroll_listener)
+                except _LOM_ERRORS as e:
+                    logger.debug(
+                        "DrumVirtualMacroComponent: remove_drum_pads_scroll_position_listener "
+                        "on %s raised: %s", st.device_path, e,
+                    )
+            st.pad_scroll_listener = None
         for name, cb in st.listeners:
             remover = getattr(st.device, "remove_%s_listener" % name, None)
             if not callable(remover):

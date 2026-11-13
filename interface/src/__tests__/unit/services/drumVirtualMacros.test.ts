@@ -456,10 +456,7 @@ import {
 	padTextCss,
 	PAD_TEXT_ON_DARK,
 	PAD_TEXT_ON_LIGHT,
-	padGridShape,
-	padGridNotes,
-	padGridSlots,
-	padGridCell,
+	padRackGrid,
 	padTileLabel,
 	padTileLabels,
 	padTilePrefix,
@@ -559,75 +556,70 @@ describe('pad rows', () => {
 	});
 });
 
-describe('the pad grid layout', () => {
+describe("the pad grid: Live's sixteen, then the rest to the right (2026-11-13)", () => {
 	const pad = (note: number, name = `P${note}`) => ({ note, name, className: 'DrumCell', color: null });
+	const at = (g: ReturnType<typeof padRackGrid>, note: number) => {
+		const s = g.slots.find((x) => x.note === note);
+		return s ? `${s.column}/${s.row}` : undefined;
+	};
 
-	it('stacks up to four down one column, then starts a second', () => {
-		// The user's rule (2026-09-09): stack first, widen second. Five
-		// reads 4 + 1, not 3 + 2 — a column that keeps its length as pads
-		// arrive is a column a finger can keep its place in.
-		expect(padGridShape(1)).toEqual({ columns: 1, rows: 1 });
-		expect(padGridShape(4)).toEqual({ columns: 1, rows: 4 });
-		expect(padGridShape(5)).toEqual({ columns: 2, rows: 4 });
-		expect(padGridShape(8)).toEqual({ columns: 2, rows: 4 });
-		expect(padGridShape(9)).toEqual({ columns: 3, rows: 4 }); // 4 + 4 + 1, not 3 + 3 + 3
-		expect(padGridShape(12)).toEqual({ columns: 3, rows: 4 });
-		// Past three columns the width would start eating the controls, so
-		// the rows grow instead — the case that should hardly ever happen.
-		expect(padGridShape(16)).toEqual({ columns: 3, rows: 6 });
-		expect(padGridShape(0)).toEqual({ columns: 0, rows: 0 });
+	it("draws Live's window as Live does: rows of four, the lowest note bottom-left, empty pads too", () => {
+		const g = padRackGrid([pad(36, 'Kick'), pad(38, 'Snare')], 9);
+		expect(g.first).toBe(36);
+		expect(g.columns).toBe(4);
+		expect(g.rows).toBe(4);
+		expect(g.slots.map((s) => s.note)).toEqual(Array.from({ length: 16 }, (_, i) => 36 + i));
+		expect(at(g, 36)).toBe('1/4'); // bottom-left
+		expect(at(g, 39)).toBe('4/4'); // bottom-right
+		expect(at(g, 40)).toBe('1/3'); // next row up
+		expect(at(g, 51)).toBe('4/1'); // top-right
+		expect(g.slots.find((s) => s.note === 36)?.pad?.name).toBe('Kick');
+		expect(g.slots.find((s) => s.note === 37)?.pad).toBeNull(); // an empty pad is drawn, empty
+		expect(g.slots.every((s) => !s.extra)).toBe(true);
 	});
 
-	it('places each column bottom-up, lowest note at the foot', () => {
-		// The first cut had them upside down (user, 2026-09-09). Rows are
-		// 1-based from the top, so the FIRST note takes the LAST row.
-		const cells = (n: number, rows: number) =>
-			Array.from({ length: n }, (_, i) => padGridCell(i, rows)).map((c) => `${c.column}/${c.row}`);
-		expect(cells(4, 4)).toEqual(['1/4', '1/3', '1/2', '1/1']);
-		// A lone fifth pad sits at the FOOT of its column, in line with the
-		// lowest note beside it — not at the top, where an auto flow puts it.
-		expect(cells(5, 4)).toEqual(['1/4', '1/3', '1/2', '1/1', '2/4']);
-		expect(cells(8, 4)).toEqual(['1/4', '1/3', '1/2', '1/1', '2/4', '2/3', '2/2', '2/1']);
-		expect(cells(1, 1)).toEqual(['1/1']);
-		expect(padGridCell(0, 0)).toEqual({ column: 1, row: 1 }); // no shape yet
+	it("follows Live's scroll, and falls back to Live's default window before a reading", () => {
+		expect(padRackGrid([], 13).first).toBe(52);
+		expect(padRackGrid([], 0).first).toBe(0);
+		expect(padRackGrid([], 40).first).toBe(112); // clamped to Live's last window
+		expect(padRackGrid([], -3).first).toBe(0);
+		expect(padRackGrid([], null).first).toBe(36);
+		expect(padRackGrid([], undefined).first).toBe(36);
 	});
 
-	it('draws the pads in play: the clip, the selection and every held pad, ascending', () => {
-		// All three are equals. With no kit passed there is nothing to fall
-		// back on, so with nothing playing the grid is the selected pad.
-		expect(padGridNotes([36, 42], [60])).toEqual([36, 42, 60]);
-		expect(padGridNotes([36, 42], [38, 40])).toEqual([36, 38, 40, 42]);
-		expect(padGridNotes([36, 42], [42])).toEqual([36, 42]); // already there
-		expect(padGridNotes([36, 42], [null])).toEqual([36, 42]);
-		expect(padGridNotes(null, [60])).toEqual([60]);
-		expect(padGridNotes([], [60, null, 36])).toEqual([36, 60]);
-		expect(padGridNotes(null, [])).toEqual([]);
-		expect(padGridNotes(undefined)).toEqual([]);
-	});
+	it("puts every other pad to the right, in Live's reading order, as many columns as four rows need", () => {
+		// A 32-pad kit at Live's default: the other sixteen are Live's next
+		// page, beside this one.
+		const kit = Array.from({ length: 32 }, (_, i) => pad(36 + i));
+		const g = padRackGrid(kit, 9);
+		expect(g.columns).toBe(8);
+		expect(g.slots).toHaveLength(32);
+		expect(at(g, 52)).toBe('5/4');
+		expect(at(g, 55)).toBe('8/4');
+		expect(at(g, 56)).toBe('5/3');
+		expect(at(g, 67)).toBe('8/1');
+		expect(g.slots.filter((s) => s.extra).map((s) => s.note)).toEqual(Array.from({ length: 16 }, (_, i) => 52 + i));
 
-	it("shows the kit's first eight pads when the clip gives it none, with the selection and holds on top", () => {
-		const kit = [50, 36, 38, 40, 41, 42, 43, 44, 45, 46].map((note) => ({ note }));
-		// Nothing playing, and a clip with no notes: the eight lowest pads.
-		expect(padGridNotes(null, [], kit)).toEqual([36, 38, 40, 41, 42, 43, 44, 45]);
-		expect(padGridNotes([], [], kit)).toEqual([36, 38, 40, 41, 42, 43, 44, 45]);
-		// A selected or held pad past them joins.
-		expect(padGridNotes(null, [50], kit)).toEqual([36, 38, 40, 41, 42, 43, 44, 45, 50]);
-		// A playing clip with notes is still the grid's basis; the kit is not.
-		expect(padGridNotes([38], [], kit)).toEqual([38]);
-		// A kit of fewer than eight is all of it.
-		expect(padGridNotes(null, [], kit.slice(0, 3))).toEqual([36, 38, 50]);
-	});
-
-	it('pairs each note with its pad, and leaves a note the kit has none for empty', () => {
-		// An empty tile is what explains a ghosted control rather than
-		// hiding it.
-		const pads = [pad(36, 'Kick'), pad(42, 'Hat')];
-		expect(padGridSlots(pads, [36, 40, 42])).toEqual([
-			{ note: 36, pad: pads[0] },
-			{ note: 40, pad: null },
-			{ note: 42, pad: pads[1] }
+		// Six extras: two columns, rows of two from the bottom.
+		const six = padRackGrid([...kit.slice(0, 16), ...[60, 61, 62, 63, 64, 30].map((n) => pad(n))], 9);
+		expect(six.columns).toBe(6);
+		expect(six.slots.filter((s) => s.extra).map((s) => `${s.note}@${s.column}/${s.row}`)).toEqual([
+			'30@5/4', // below the window, still to the right, lowest first
+			'60@6/4',
+			'61@5/3',
+			'62@6/3',
+			'63@5/2',
+			'64@6/2'
 		]);
-		expect(padGridSlots([], [])).toEqual([]);
+		// One extra is one column, at the foot.
+		expect(at(padRackGrid([pad(70)], 9), 70)).toBe('5/4');
+	});
+
+	it('keeps a selected or held pad outside the window on the grid, once', () => {
+		const g = padRackGrid([pad(36), pad(60)], 9, [80, null, 60, 36, 40]);
+		expect(g.slots.filter((s) => s.extra).map((s) => s.note)).toEqual([60, 80]);
+		expect(g.slots.find((s) => s.note === 80)?.pad).toBeNull();
+		expect(g.slots).toHaveLength(18);
 	});
 });
 
@@ -837,28 +829,5 @@ describe('profileForPadClass — the row a held pad earns', () => {
 		expect(profileForPadClass('AuPluginDevice', 'full')).toBe('full');
 		expect(profileForPadClass('InstrumentGroupDevice', 'rack-macros')).toBe('rack-macros');
 		expect(profileForPadClass('DrumCell', 'macro-grid')).toBe('macro-grid');
-	});
-});
-
-describe('padRackShape / padRackCell (Live layout, 2026-10-28)', () => {
-	it('lays the first four pads along the bottom row, left to right', async () => {
-		const { padRackShape, padRackCell } = await import('$lib/services/drumVirtualMacros');
-		const shape = padRackShape(6, 4);
-		expect(shape).toEqual({ columns: 4, rows: 2 });
-		const cells = [0, 1, 2, 3, 4, 5].map((i) => padRackCell(i, shape.columns, shape.rows));
-		expect(cells).toEqual([
-			{ column: 1, row: 2 },
-			{ column: 2, row: 2 },
-			{ column: 3, row: 2 },
-			{ column: 4, row: 2 },
-			{ column: 1, row: 1 },
-			{ column: 2, row: 1 }
-		]);
-	});
-	it('two across when narrow, and fewer pads than columns stay one row', async () => {
-		const { padRackShape, padRackCell } = await import('$lib/services/drumVirtualMacros');
-		expect(padRackShape(5, 2)).toEqual({ columns: 2, rows: 3 });
-		expect(padRackCell(4, 2, 3)).toEqual({ column: 1, row: 1 });
-		expect(padRackShape(3, 4)).toEqual({ columns: 3, rows: 1 });
 	});
 });

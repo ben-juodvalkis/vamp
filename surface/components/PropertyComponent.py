@@ -116,6 +116,12 @@ from .drum_vm_functions import (
     PROVIDER_NAME as DRUM_VM_PROVIDER,
 )
 from .drum_vm_functions import (
+    PAD_SCROLL_KEY as DRUM_VM_PAD_SCROLL_KEY,
+)
+from .drum_vm_functions import (
+    PAD_SCROLL_PROPERTY as DRUM_VM_PAD_SCROLL_PROPERTY,
+)
+from .drum_vm_functions import (
     SELECTED_PAD_KEY as DRUM_VM_SELECTED_PAD_KEY,
 )
 from .drum_vm_functions import (
@@ -617,6 +623,12 @@ ALLOWLIST[(DRUM_RACK_CLASS_NAME, DRUM_VM_MEMBERS_PROPERTY)] = PropertySpec(
 # re-emitted by the rack view's own listener when Live's selection moves.
 ALLOWLIST[(DRUM_RACK_CLASS_NAME, DRUM_VM_SELECTED_PAD_PROPERTY)] = PropertySpec(
     listener_path="", attr_name=DRUM_VM_SELECTED_PAD_KEY, writable=True,
+    computed=DRUM_VM_PROVIDER,
+)
+# Live's visible pad window (2026-11-13): the lowest visible row of four,
+# read-only, re-emitted by the rack view's scroll listener.
+ALLOWLIST[(DRUM_RACK_CLASS_NAME, DRUM_VM_PAD_SCROLL_PROPERTY)] = PropertySpec(
+    listener_path="", attr_name=DRUM_VM_PAD_SCROLL_KEY, writable=False,
     computed=DRUM_VM_PROVIDER,
 )
 

@@ -77,6 +77,13 @@ MEMBERS_PROPERTY = PROPERTY_PREFIX + MEMBERS_KEY
 #: MIDI note: ``vm.selectedPad`` → int or nil. Read / write / listened.
 SELECTED_PAD_KEY = "selectedPad"
 SELECTED_PAD_PROPERTY = PROPERTY_PREFIX + SELECTED_PAD_KEY
+#: Live's visible pad window on the rack
+#: (``rack.view.drum_pads_scroll_position``): the lowest visible row of four,
+#: so the sixteen pads Live shows are ``4·row .. 4·row + 15`` (9 → 36..51,
+#: Live's default; measured 2026-11-13). ``vm.padScroll`` → int or nil.
+#: Read-only and listened: the pad grid draws the pads Live shows.
+PAD_SCROLL_KEY = "padScroll"
+PAD_SCROLL_PROPERTY = PROPERTY_PREFIX + PAD_SCROLL_KEY
 #: Per-pad rows (2026-09-08): ``vm.pad.<note>.<function>`` — one pad's
 #: value of a function, absolute, in the function's own units. The
 #: function after the note may itself be a rack macro

@@ -1359,7 +1359,12 @@ properties `vm.fx1`, `vm.fx2`, `vm.fxType`, `vm.attack`, `vm.decay`,
   `vm.selectedPad` reads / writes `rack.view.selected_drum_pad` as a
   note and the view's `add_selected_drum_pad_listener` (exists on Live
   12, verified) re-emits it, so Live → iPad and iPad → Live both work; a
-  set is echoed twice (channel + Live). `vm.pad.<note>.<fn>`
+  set is echoed twice (channel + Live). `vm.padScroll` (ADR-536) reads
+  `rack.view.drum_pads_scroll_position`, Live's visible pad window as its
+  lowest visible row of four (9 = notes 36..51, the default), read-only,
+  and `add_drum_pads_scroll_position_listener` re-emits it when Live's
+  rack scrolls (the listener exists on Live 12.4.25b1, probed 2026-11-13;
+  its firing is not yet measured on the rig). `vm.pad.<note>.<fn>`
   (`parse_pad_function`, `is_pad_property`; `PropertyComponent.spec_for`
   synthesises the row, the second open-ended family) is one pad's value,
   **absolute** in the function's units: read off the pad's first

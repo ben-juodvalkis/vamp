@@ -117,7 +117,7 @@ class _RackState:
         "pad_classes", "macro_functions", "pitch_macro", "missing", "values", "pads", "shift",
         "dirty", "listeners", "subscribed", "reseed_scheduled",
         "edits", "member_listeners", "edited", "absorb_scheduled",
-        "pad_list", "selected_pad_listener", "name_listeners", "kit_name",
+        "pad_list", "selected_pad_listener", "pad_scroll_listener", "name_listeners", "kit_name",
         "chain_watcher",
     )
 
@@ -175,6 +175,8 @@ class _RackState:
         self.pad_list: List[Dict[str, object]] = []
         # ``rack.view.add_selected_drum_pad_listener`` callback, if attached.
         self.selected_pad_listener: Optional[Callable[[], None]] = None
+        # ``rack.view.add_drum_pads_scroll_position_listener`` callback.
+        self.pad_scroll_listener: Optional[Callable[[], None]] = None
         # (instrument, callback) for every pad instrument's ``name`` listener
         # (ADR-439): a swap made in Live's own UI renames the instrument and
         # nothing else fires, so this is what re-emits the census.

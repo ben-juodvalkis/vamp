@@ -59,6 +59,7 @@ from components.DrumVirtualMacroComponent import (
     PROPERTY_PREFIX,
     PROVIDER_NAME,
     RESEED_DELAY_MS,
+    PAD_SCROLL_KEY,
     SELECTED_PAD_KEY,
     SELECTED_PAD_PROPERTY,
     STALE_READ_WINDOW_MS,
@@ -2879,6 +2880,43 @@ def test_selected_pad_listener_is_detached_on_release_and_not_stacked(comp):
     assert rack.view.listeners == []
 
 
+# --- Live's visible pad window (2026-11-13) ---------------------------------
+#
+# ``vm.padScroll`` is ``rack.view.drum_pads_scroll_position``, the lowest
+# visible row of four: the pad grid draws the sixteen pads Live shows.
+
+
+def test_pad_scroll_reads_lives_visible_row_and_follows_it(comp, emits):
+    rack = unmapped_kit(2)
+    assert comp.read(rack, PATH, PAD_SCROLL_KEY) == 9          # Live's default, 36..51
+    comp.subscribe(rack, PATH, PAD_SCROLL_KEY)
+    emits.clear()
+    rack.view.drum_pads_scroll_position = 13                   # scrolled up: 52..67
+    assert emits == [(V3_PROPERTY_VALUE_ADDRESS, (PATH, "vm.padScroll", 13))]
+    assert comp.read(rack, PATH, PAD_SCROLL_KEY) == 13
+
+
+def test_pad_scroll_is_read_only(comp):
+    rack = unmapped_kit(1)
+    ok, stored, detail = comp.write(rack, PATH, PAD_SCROLL_KEY, 4)
+    assert ok is False and stored is None and "read-only" in detail
+    assert rack.view.drum_pads_scroll_position == 9
+
+
+def test_pad_scroll_listener_is_detached_on_release_and_not_stacked(comp, emits):
+    rack = unmapped_kit(1)
+    comp.subscribe(rack, PATH, PAD_SCROLL_KEY)
+    comp.subscribe(rack, PATH, SELECTED_PAD_KEY)
+    assert len(rack.view.scroll_listeners) == 1
+    rack.fire("chains")
+    assert len(rack.view.scroll_listeners) == 1
+    comp.release(PATH)
+    assert rack.view.scroll_listeners == []
+    emits.clear()
+    rack.view.drum_pads_scroll_position = 10
+    assert emits == []
+
+
 def test_pad_row_reads_the_pads_own_value(comp):
     rack = make_rack([
         pad(36, drumcell(values={"Decay": 0.2, "Transpose": 3.0, "FX Type": 5})),
@@ -3097,6 +3135,22 @@ def test_spec_for_synthesises_pad_rows_and_lists_the_selected_pad():
     sel = ALLOWLIST[("DrumGroupDevice", "vm.selectedPad")]
     assert sel.computed == PROVIDER_NAME and sel.writable is True and sel.attr_name == "selectedPad"
     assert spec_for("OriginalSimpler", "vm.selectedPad") is None
+    scroll = ALLOWLIST[("DrumGroupDevice", "vm.padScroll")]
+    assert scroll.computed == PROVIDER_NAME and scroll.writable is False and scroll.attr_name == "padScroll"
+
+
+def test_pad_scroll_rides_the_channel_and_rejects_a_set(comp, emits, generation):
+    rack = unmapped_kit(2)
+    _song, pc = property_component(rack, emits, generation, {PROVIDER_NAME: comp})
+    pc.handle_subscribe(args=(PATH, "vm.padScroll"), source_addr=None)
+    assert values(emits, "vm.padScroll") == [(PATH, "vm.padScroll", 9)]
+    emits.clear()
+    rack.view.drum_pads_scroll_position = 8
+    assert values(emits, "vm.padScroll") == [(PATH, "vm.padScroll", 8)]
+    pc.handle_set(args=(PATH, "vm.padScroll", 3, generation.current), source_addr=None)
+    assert errors(emits) and rack.view.drum_pads_scroll_position == 8
+    pc.handle_unsubscribe(args=(PATH, "vm.padScroll"), source_addr=None)
+    assert PATH not in comp._states
 
 
 def test_pad_rows_and_the_selected_pad_ride_the_channel(comp, emits, generation):
