@@ -147,6 +147,9 @@ function createTotalMixLink({ logger, config = readTotalMixConfig() } = {}) {
         /** Snapshot of every cached level. */
         snapshot: () => Object.fromEntries(levels),
 
+        /** The writable channels' cached levels, the ones worth remembering. */
+        writableSnapshot: () => Object.fromEntries([...levels].filter(([channel]) => WRITABLE.has(channel))),
+
         /**
          * Seed the cache from the startup bootstrap.
          *
@@ -281,8 +284,40 @@ function createTotalMixLink({ logger, config = readTotalMixConfig() } = {}) {
     };
 }
 
+/**
+ * The writable levels from the last session (`logs/totalmix-levels.json`),
+ * for when the mixer cannot be read at startup (ADR-537 addendum). The
+ * legacy read on controller 1 has answered no bridge start on the rig
+ * (measured 2026-11-13), and a Move knob nudges only from a known level, so
+ * without this the knobs did nothing until a fader moved in TotalMix. The
+ * Max patch it replaced kept its own copy in its sliders the same way.
+ *
+ * @returns {Object<string, number>} channel → dB; {} when there is none
+ */
+function loadRememberedLevels(file, logger) {
+    try {
+        const data = JSON.parse(require('fs').readFileSync(file, 'utf8'));
+        return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+    } catch (e) {
+        if (e.code !== 'ENOENT') logger?.warn?.('TotalMix remembered levels unreadable', { error: e.message });
+        return {};
+    }
+}
+
+function saveRememberedLevels(file, levels, logger) {
+    try {
+        const fs = require('fs');
+        fs.mkdirSync(require('path').dirname(file), { recursive: true });
+        fs.writeFileSync(file, JSON.stringify(levels, null, 2) + '\n');
+    } catch (e) {
+        logger?.warn?.('Could not save the TotalMix levels', { error: e.message });
+    }
+}
+
 module.exports = {
     createTotalMixLink,
+    loadRememberedLevels,
+    saveRememberedLevels,
     clampDb,
     parseDb,
     WRITE_PREFIX,

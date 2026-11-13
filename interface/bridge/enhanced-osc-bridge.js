@@ -660,6 +660,21 @@ function writeTotalMixFromHardware(channel, db) {
  */
 function relayTotalMixLevel(level) {
     handleIncomingOSC({ address: level.address, args: [level.db] }, 'totalmix');
+    rememberTotalMixLevels();
+}
+
+// The writable levels, kept on disk so the next start has them when the
+// mixer cannot be read (totalmixLink.loadRememberedLevels says why). Written
+// a second after the last change, so a knob turn writes once.
+const { loadRememberedLevels, saveRememberedLevels } = require('./handlers/totalmixLink');
+const TOTALMIX_LEVELS_PATH = path.join(require('./utils/dataPaths').dataDir('logs'), 'totalmix-levels.json');
+let rememberTimer = null;
+function rememberTotalMixLevels() {
+    clearTimeout(rememberTimer);
+    rememberTimer = setTimeout(() => {
+        saveRememberedLevels(TOTALMIX_LEVELS_PATH, totalmixLink.writableSnapshot(), logger);
+    }, 1000);
+    rememberTimer.unref?.();
 }
 
 
@@ -701,12 +716,16 @@ function bootstrapTotalMixLevels() {
                 features.setAvailability('totalmix', false, 'TotalMix not answering');
             }
             const applied = totalmixLink.seed(seed);
-            if (applied.length === 0) {
+            // What the mixer could not tell, from the last session. Anything
+            // the mixer reports later replaces it.
+            const remembered = totalmixLink.seed(loadRememberedLevels(TOTALMIX_LEVELS_PATH, logger));
+            if (applied.length === 0 && remembered.length === 0) {
                 logger.info('TotalMix bootstrap: nothing seeded — cache fills on first fader move');
                 return;
             }
             logger.info('TotalMix bootstrap: seeded monitor levels', {
-                channels: applied,
+                fromMixer: applied,
+                fromLastSession: remembered,
                 levels: totalmixLink.snapshot()
             });
             // Push the seed at the browsers already connected.

@@ -144,6 +144,14 @@ describe('Move knobs', () => {
 		expect(written).toEqual([['room', -19.9], ['playback', -10.1], ['click', -14.9], ['phones', -0.1]]);
 	});
 
+	it('counts a fast turn as several clicks, as the Move sends it', () => {
+		const c = make();
+		levels = { click: -15, phones: -10 };
+		c.handleMidi(MOVE, cc(77, 3));
+		c.handleMidi(MOVE, cc(78, 126));
+		expect(written).toEqual([['click', -14.7], ['phones', -10.2]]);
+	});
+
 	it('does not drift over many clicks', () => {
 		const c = make();
 		levels = { click: -15 };

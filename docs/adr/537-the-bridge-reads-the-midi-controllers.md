@@ -70,5 +70,17 @@ optional dependency.
   logic is covered by `midiControllers.test.ts`, and the inputs were opened
   and closed on the rig with no Max patch involved.
 
+## Addendum (2026-11-13): the knobs need a level to nudge
+On the rig the TotalMix knobs did nothing. The bridge nudges only a level
+it knows, and it knew only Main: its startup read of the mixer (legacy
+controller 1) has answered no bridge start in the log, and the Global OSC
+controller reports a fader only when it moves. The Max patch had hidden
+this by keeping its own copy in its sliders. The bridge now does the same:
+it saves the writable levels to `logs/totalmix-levels.json` a second after
+any change and seeds from it whatever the mixer did not answer at startup;
+anything the mixer reports still wins. The first time, each fader has to
+move once in TotalMix. The knobs also take the Move's fast-turn values
+(2, 3, 126, 125… measured) as that many clicks, which the patch dropped.
+
 ## Tags
 `midi`, `move`, `piano-pedal`, `totalmix`, `max`, `bridge`, `feature-switch`

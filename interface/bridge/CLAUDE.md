@@ -117,6 +117,11 @@ The bridge + browser cooperate to detect and recover from the common "iPad Safar
   translated to the mixer's own address space by `totalmixLink.toMixer`.
   The Max patch's device leg (11018/11019, `/totalmix/hello`) went with
   ADR-537.
+  **The writable levels are remembered** in `logs/totalmix-levels.json`
+  (written a second after a change, `rememberTotalMixLevels`) and seed what
+  the startup read could not, which on the rig is everything: controller 1
+  has answered no bridge start. Without it the Move's knobs had no level to
+  nudge (ADR-537 addendum).
   Browsers only read: the header's faders, the one WS writer, went on
   2026-09-27. `main` is
   read-only. Global OSC has **no read verb** — and an argument-less message

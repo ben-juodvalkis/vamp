@@ -14,8 +14,8 @@
  * - **Move track-volume knob.** Its CC's raw relative value goes to
  *   `/looping/v3/selected_track/volume_relative`, as the patch sent it; the
  *   surface's `move_volume_knob` setting still decides whether it acts.
- * - **Move TotalMix knobs.** Value 1 nudges a monitor level up one step,
- *   127 down one. A channel the bridge has no level for yet is left alone:
+ * - **Move TotalMix knobs.** A relative encoder: 1..63 nudges a monitor
+ *   level up that many steps, 65..127 down (1 and 127 are one step). A channel the bridge has no level for yet is left alone:
  *   a nudge from an unknown level would be a jump to a guess.
  *
  * The piano pedal that was here moved to `handlers/pedals.js` with every
@@ -106,8 +106,12 @@ function createMidiControllers({
         }
         const channel = totalmixKnobs[String(cc)];
         if (!channel || !getTotalMixLevel || !writeTotalMix) return;
-        const step = value === 1 ? move.totalmixStepDb : value === 127 ? -move.totalmixStepDb : 0;
-        if (!step) return;
+        // A relative encoder: 1..63 up that many clicks, 65..127 down (128 −
+        // value) clicks. The Move sends 2, 3, 126, 125 when turned fast
+        // (measured 2026-11-13); the Max patch dropped those.
+        const clicks = value >= 1 && value <= 63 ? value : value >= 65 ? value - 128 : 0;
+        if (!clicks) return;
+        const step = clicks * move.totalmixStepDb;
         const current = getTotalMixLevel(channel);
         if (typeof current !== 'number' || !Number.isFinite(current)) {
             logger?.debug?.('Move TotalMix knob: no level yet, ignored', { channel });

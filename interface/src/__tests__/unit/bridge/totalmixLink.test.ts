@@ -15,7 +15,10 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { createTotalMixLink, clampDb } from '../../../../bridge/handlers/totalmixLink.js';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { createTotalMixLink, clampDb, loadRememberedLevels, saveRememberedLevels } from '../../../../bridge/handlers/totalmixLink.js';
 
 const MIN_DB = -65;
 const SILENCE_DB = -300;
@@ -260,5 +263,28 @@ describe('meters', () => {
 		expect(link.meterFrame(66)).not.toBe(null);
 		link.meterFromMixer('/level/in/1', [-30.01], 80);
 		expect(link.meterFrame(99)).toBe(null);
+	});
+});
+
+describe('remembered levels (the Move knobs after a start the mixer did not answer)', () => {
+	it('keeps the writable channels, round-trips through the file, and seeds only what is unknown', () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'totalmix-'));
+		const file = path.join(dir, 'totalmix-levels.json');
+		try {
+			expect(loadRememberedLevels(file)).toEqual({});
+			const link = createTotalMixLink();
+			link.toMixer('/totalmix/click', [-12]);
+			link.toMixer('/totalmix/phones', [-20]);
+			link.fromMixer('/output/0/volume', [-31]);
+			expect(link.writableSnapshot()).toEqual({ click: -12, phones: -20 });
+			saveRememberedLevels(file, link.writableSnapshot());
+
+			const next = createTotalMixLink();
+			next.fromMixer('/mix/pb/2/2/fader', [-9]); // the mixer answered for click
+			expect(next.seed(loadRememberedLevels(file))).toEqual(['phones']);
+			expect(next.snapshot()).toEqual({ click: -9, phones: -20 });
+		} finally {
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
 	});
 });
