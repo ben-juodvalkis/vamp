@@ -11,10 +11,11 @@
 	 * next tap records there. Every press is a new track; presses of one
 	 * kind queue in `trackPreparation`, one create at a time.
 	 *
-	 * Each also opens the browser (user, 2026-10-26): + MIDI on Instrument,
-	 * where it was left, once the track exists, and the pick lands on it (selected and
-	 * empty, so the browser's prep reuses it); + Audio on Effect, whose pick
-	 * goes on the selected track's chain, the new one.
+	 * + MIDI also opens the browser (user, 2026-10-26) on Instrument, where
+	 * it was left, once the track exists, and the pick lands on it (selected
+	 * and empty, so the browser's prep reuses it). + Audio opens nothing
+	 * (user, 2026-11-13): an audio track is for recording, and the chain's
+	 * own + is the way to its effects.
 	 */
 	import Mic from '@lucide/svelte/icons/mic';
 	import Piano from '@lucide/svelte/icons/piano';
@@ -34,7 +35,6 @@
 			// Once the track exists: the browser's own landing-pad prep then
 			// finds it, rather than racing the create into a second track.
 			if (kind === 'midi') browserModeStore.openInstrumentBrowser();
-			else browserModeStore.openEffectsBrowser();
 		} catch (err) {
 			logger.warn('New track failed', { component: 'NewTrackButtons', kind, err });
 		} finally {

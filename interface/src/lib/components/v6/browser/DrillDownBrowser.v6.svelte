@@ -2435,8 +2435,13 @@
 		flex: 1;
 		min-height: 0;
 	}
+	/* Every tile in a band starts from the touch floor and shares the rest
+	   equally, the Record slot included (the user, 2026-11-13). From a zero
+	   basis a button's padding and border (18px) came off the band before
+	   the split, so Record measured 95px beside 113px Places and the FX
+	   section's thirds had nothing to line up with. */
 	.button-group .selection-button {
-		flex: 1;
+		flex: 1 1 var(--height-touch, 44px);
 		min-height: 0;
 	}
 	/* The Places rail's floor for touch (browser-places plan §2): buttons share
@@ -2518,7 +2523,7 @@
 	/* One full share of the group, as it was before the section switches
 	   briefly took half of it. */
 	.record-button-container {
-		flex: 1 1 0;
+		flex: 1 1 var(--height-touch, 44px);
 		min-height: 0;
 		width: 100%;
 		display: flex;

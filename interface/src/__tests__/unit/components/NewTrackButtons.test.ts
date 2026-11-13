@@ -61,7 +61,7 @@ describe('NewTrackButtons', () => {
 		expect(prepareForPreset).toHaveBeenCalledTimes(2);
 	});
 
-	it('opens the browser once the track exists: + MIDI on Instrument, + Audio on Effect', async () => {
+	it('opens the browser on Instrument once a MIDI track exists, and none for + Audio', async () => {
 		vi.mocked(prepareForPreset).mockResolvedValue({ trackPath: 'tracks/3', trackIndex: 3, wasCreated: true });
 		const { getByLabelText } = render(NewTrackButtons);
 		const effects = browserModeStore.effectsOpenRequest;
@@ -72,10 +72,11 @@ describe('NewTrackButtons', () => {
 		expect(browserModeStore.instrumentOpenRequest).toBe(instruments + 1);
 		expect(browserModeStore.browseMode).toBe('midi');
 
+		// The user, 2026-11-13: + Audio no longer opens the browser.
 		await tap(getByLabelText('New Audio track'));
 		await tick();
-		expect(browserModeStore.effectsOpenRequest).toBe(effects + 1);
-		expect(browserModeStore.browseMode).toBe('effects');
+		expect(browserModeStore.effectsOpenRequest).toBe(effects);
+		expect(browserModeStore.instrumentOpenRequest).toBe(instruments + 1);
 	});
 
 	it('opens no browser when the create is refused', async () => {

@@ -596,7 +596,8 @@
   });
 
   /*
-   * The chain has the section's height under the palette bar, one row up to
+   * The chain has the section's lower two thirds, under the palette bar
+   * (ADR-535), one row up to
    * `ROW_UNITS` and two past it (`chainUnitLayout`), and always ends in a +
    * one unit wide, a slider's width (the user, 2026-11-11): `spare`. The
    * cells take the rest of the width, however few there are; on two rows
@@ -690,8 +691,6 @@
         ? 'audio'
         : 'instrument'
   );
-  /** Two rows of chips while the chain is one row; one once it splits (the user, 2026-11-11). */
-  const paletteRows = $derived(grid.rows === 1 ? 2 : 1);
   /** The blocks that fit, each placed: its first column, after the seams before it. */
   const placed = $derived.by(() => {
     const all = paletteBlocks(paletteKind);
@@ -1074,13 +1073,12 @@
       {/if}
 {/snippet}
 
-<div class="chain-wrap" style:--palette-h={paletteRows === 2 ? '94px' : '44px'} class:two-rows={grid.rows > 1} class:has-utility={showGhostUtility} class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
+<div class="chain-wrap" class:two-rows={grid.rows > 1} class:has-utility={showGhostUtility} class:pad-scoped={padScope !== null} style={padInk ? `--scope-ink: ${padInk}` : undefined}>
 <!-- The palette bar: family blocks, a seam between them. Every chip in a
      fixed place; the chain's own + adds anything else. -->
 <div
   class="palette"
   bind:clientWidth={paletteWidth}
-  style:--palette-rows={paletteRows}
   style:grid-template-columns={placed.template}
   data-debug="chain-palette"
   data-palette-kind={paletteKind}
@@ -1088,7 +1086,7 @@
   aria-label="Effects to add"
 >
   {#each placed.blocks as { block, start } (block.family)}
-    {#each [block.top, ...(paletteRows === 2 ? [block.bottom] : [])] as row, r (r)}
+    {#each [block.top, block.bottom] as row, r (r)}
       {#each Array.from({ length: block.cols }, (_, i) => row[i] ?? null) as fx, i (i)}
         <div class="palette-slot" class:blank={!fx} style:grid-column={start + i} style:grid-row={r + 1} data-family={block.family}>
           {#if fx}<PaletteChip {fx} label={paletteLabel(fx)} ink={chipInk(fx)} />{/if}
@@ -1235,9 +1233,20 @@
     height: 100%;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: var(--palette-h) minmax(0, 1fr);
-    gap: 8px;
+    /* Thirds, on the browser rail's pitch (ADR-535): the palette is the
+       first, level with the rail's first button (Record), and the chain
+       the other two, level with the two under it. Same row gap as the
+       rail's buttons, so every edge lands on one of theirs. */
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    row-gap: var(--spacing-xs);
+    column-gap: 8px;
     min-width: 0;
+  }
+  /* The phone has no rail to line up with, and a whole tab of height: the
+     palette keeps its two rows of chips at a fixed height. */
+  :global([data-phone-layout]) .chain-wrap {
+    grid-template-rows: 94px repeat(2, minmax(0, 1fr));
+    row-gap: 8px;
   }
   /* The ghost Utility: a narrow column all the way on the right, the
      full height (the user, 2026-11-10). */
@@ -1247,7 +1256,7 @@
   /* The real devices' height, under the bar (the user, 2026-11-11). */
   .chain-wrap > .ghost-utility {
     grid-column: 2;
-    grid-row: 2;
+    grid-row: 2 / span 2;
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -1266,13 +1275,15 @@
   }
   .chain {
     grid-column: 1;
-    grid-row: 2;
+    grid-row: 2 / span 2;
     min-width: 0;
     min-height: 0;
     display: grid;
     grid-template-columns: repeat(var(--chain-cols, 10), minmax(0, 1fr));
     grid-template-rows: repeat(var(--chain-rows, 2), minmax(0, 1fr));
-    gap: 8px;
+    /* A two-row chain's rows sit on the rail's second and third buttons. */
+    row-gap: var(--spacing-xs);
+    column-gap: 8px;
   }
   /* A pad's chain wears the pad's frame and chip, as the scoped grid does
      (FXGrid's .fx-scoped: drawn inside, since the section clips). */
@@ -1374,7 +1385,7 @@
     min-width: 0;
     min-height: 0;
     display: grid;
-    grid-template-rows: repeat(var(--palette-rows, 1), minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
     gap: 6px;
   }
   .palette-slot {

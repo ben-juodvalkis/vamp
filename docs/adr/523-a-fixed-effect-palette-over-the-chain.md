@@ -4,7 +4,9 @@
 **Accepted** (2026-11-11). Supersedes ADR-484 (recent effects beside
 + Effect) and its amendment ADR-497 (Live's effects fill the recents).
 Amends ADR-485 (the chain's layout) and ADR-518 (the header bar loses its
-power button). Interface only; no Live restart.
+power button). Interface only; no Live restart. The bar's height and
+one-row collapse are amended by ADR-535: the bar is a third of the
+section and always two rows.
 
 ## Context
 ADR-484 put the effects added lately beside + Effect, and ADR-497 filled
