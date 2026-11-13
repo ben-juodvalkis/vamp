@@ -40,6 +40,7 @@ afterEach(() => {
 	bridgeStatus.updateFeatures('{}');
 	captureStore.handleMessage('/capture/state', ['idle']);
 	captureSettings.setSource('track');
+	captureSettings.setDevice(null);
 	captureSettings.setChannel('1/2');
 	session.selectTrackOptimistically(0);
 	v3ErrorBannerStore.clear();
@@ -85,6 +86,24 @@ describe('RecordButton', () => {
 		const { container } = render(RecordButton);
 		await tap(container.querySelector('button')!);
 		expect(send).toHaveBeenCalledWith('/capture/start', [1, 'input', '3']);
+	});
+
+	it('on an input device, shows that input\'s live level all the time, and keeps it coming', async () => {
+		bridgeUp();
+		session.selectTrackOptimistically(1);
+		captureSettings.setSource('input');
+		captureSettings.setDevice({ uid: 'bf', name: 'Babyface Pro', inputs: 14 });
+		captureSettings.setChannel('3/4');
+		const { container, unmount } = render(RecordButton);
+		await tick();
+		expect(send).toHaveBeenCalledWith('/capture/input/monitor', ['bf']);
+		captureStore.handleMessage('/capture/input/levels', ['bf', '[0, 0, 0.25, 0.5]', 'granted']);
+		await tick();
+		const fill = container.querySelector('.meter-fill') as HTMLElement;
+		// Idle, not recording: the louder of the pair, 0.5, fills half the button.
+		expect(fill.getAttribute('style')).toContain('--clip-top: 50%');
+		unmount();
+		expect(send).toHaveBeenLastCalledWith('/capture/input/monitor', ['']);
 	});
 
 	it('is greyed out with the master selected, saying why', async () => {

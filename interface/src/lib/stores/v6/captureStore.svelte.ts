@@ -216,11 +216,57 @@ function queryInputDevices(): void {
 
 /**
  * Ask Vamp for Mac for `uid`'s live levels (`''` to stop). The app stops on
- * its own a few seconds after the last ask, so a picker on screen repeats it.
+ * its own a few seconds after the last ask, so a holder repeats it.
  */
 function monitorInput(uid: string): void {
 	send('/capture/input/monitor', [uid]);
 	if (!uid) inputLevels = null;
+}
+
+/**
+ * Who wants live levels, and of which device: Settings' picker and every REC
+ * button on an input device hold one each. One timer asks for the latest
+ * holder's device every 2 s; the last release stops the app listening.
+ */
+const MONITOR_REPEAT_MS = 2000;
+const monitorHolds: string[] = [];
+let monitorTimer: ReturnType<typeof setInterval> | null = null;
+
+function askForHeldDevice(): void {
+	const uid = monitorHolds.at(-1);
+	if (uid) send('/capture/input/monitor', [uid]);
+}
+
+/** Keep `uid`'s levels coming until the returned release is called. */
+function holdInputMonitor(uid: string): () => void {
+	if (!uid) return () => {};
+	monitorHolds.push(uid);
+	askForHeldDevice();
+	if (monitorTimer === null) monitorTimer = setInterval(askForHeldDevice, MONITOR_REPEAT_MS);
+	let released = false;
+	return () => {
+		if (released) return;
+		released = true;
+		const at = monitorHolds.lastIndexOf(uid);
+		if (at >= 0) monitorHolds.splice(at, 1);
+		if (monitorHolds.length > 0) {
+			askForHeldDevice();
+			return;
+		}
+		if (monitorTimer !== null) clearInterval(monitorTimer);
+		monitorTimer = null;
+		monitorInput('');
+	};
+}
+
+/**
+ * The live level of `channel` (`3/4` takes the louder of its two inputs) on
+ * device `uid`, from the monitor; 0 when its levels are not for that device.
+ */
+function inputLevelFor(uid: string, channel: string): number {
+	if (!uid || inputLevels?.uid !== uid) return 0;
+	const l = inputLevels.levels;
+	return Math.max(0, ...channel.split('/').map((n) => l[Number(n) - 1] ?? 0));
 }
 
 function stop(): void {
@@ -270,6 +316,8 @@ export const captureStore = {
 	start,
 	queryInputDevices,
 	monitorInput,
+	holdInputMonitor,
+	inputLevelFor,
 	stop,
 	deviceGone,
 

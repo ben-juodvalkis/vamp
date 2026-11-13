@@ -112,8 +112,18 @@
 		!recorderReason && (captureStore.state === 'recording' || isHolding || captureStore.pending)
 	);
 
-	// Fall back to the capture meter when the caller doesn't supply one.
-	let fillLevel = $derived(meterLevel ?? captureStore.meterLevel);
+	// On an input device Vamp for Mac records (ADR-533) the fill shows that
+	// input's live level all the time, so a performer sees the source is
+	// there before pressing REC; the take's own meter takes over while it
+	// records. Otherwise the caller's meter, else the capture meter.
+	let inputDevice = $derived(captureSettings.source === 'input' ? captureSettings.deviceUid : '');
+	$effect(() => captureStore.holdInputMonitor(inputDevice));
+	let fillLevel = $derived(
+		meterLevel ??
+			(inputDevice && captureStore.state !== 'recording'
+				? captureStore.inputLevelFor(inputDevice, captureSettings.channel)
+				: captureStore.meterLevel)
+	);
 	let meterHeight = $derived(fillLevel * 100);
 </script>
 
@@ -260,6 +270,12 @@
 		opacity: 0.4;
 		pointer-events: none;
 		z-index: 0;
+	}
+
+	/* Recording, the button turns red, and the 40% fill over red read as
+	   tan (Ben, 2026-11-13: "keep it green"): solid while recording. */
+	.record-button.recording .meter-fill {
+		opacity: 1;
 	}
 
 	.button-label {

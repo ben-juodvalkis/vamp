@@ -48,6 +48,12 @@ a track inside Live; for an external source that reason does not apply.
   `/capture/input/monitor <uid>` every 2 s, the app sends each input's level
   15 times a second, and it closes the device 5 s after the last ask. A
   stereo choice shows both of its inputs' meters.
+- **REC's fill shows the input all the time** (Ben, 2026-11-13: "can it
+  always show?"): with an input device picked, every REC button holds the
+  same level stream (`captureStore.holdInputMonitor`, one timer for every
+  holder) and fills to the chosen channel's level (a pair's louder side),
+  the take's own meter taking over while it records. The fill draws solid
+  while recording, so it stays green over REC's red rather than reading tan.
 - **Permissions**: macOS asks once for the microphone (Info.plist's
   `NSMicrophoneUsageDescription`), the first time the picker meters a device:
   first cut asked only on the first take, so opening Vamp showed no prompt

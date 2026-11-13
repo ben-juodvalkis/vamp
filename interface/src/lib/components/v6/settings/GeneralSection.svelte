@@ -111,19 +111,9 @@
 		return ch.split('/').map((n) => l[Number(n) - 1] ?? 0);
 	}
 
-	// While the picker is up on a device, keep asking Vamp for Mac for its
-	// levels: the app closes the device a few seconds after the last ask.
+	// While the picker is up on a device, keep its levels coming.
 	const monitoring = $derived(captureSettings.source === 'input' ? captureSettings.deviceUid : '');
-	$effect(() => {
-		const uid = monitoring;
-		if (!uid) return;
-		captureStore.monitorInput(uid);
-		const timer = setInterval(() => captureStore.monitorInput(uid), 2000);
-		return () => {
-			clearInterval(timer);
-			captureStore.monitorInput('');
-		};
-	});
+	$effect(() => captureStore.holdInputMonitor(monitoring));
 
 	onMount(() => captureStore.queryInputDevices());
 
