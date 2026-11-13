@@ -26,11 +26,13 @@
 		30A603AF85E94CB27CCEF75E /* UsbMux.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A274A47EF8CB1FB15CE2231 /* UsbMux.swift */; };
 		35986E6A3EB74EA1DD4AF866 /* Installed.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE075EDCB8FFD71D84B82266 /* Installed.swift */; };
 		423FCCB8E3EADEE803E89BBF /* VampPaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74B0495CB8AA31F268733826 /* VampPaths.swift */; };
+		45716EEF45BC473639790B17 /* PitchDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 049A00C742CE5081960236BF /* PitchDetector.swift */; };
 		4791ACCFF0040C0E1FF18D2B /* VampPaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74B0495CB8AA31F268733826 /* VampPaths.swift */; };
 		47AE04D3A8CF38C3C72B4801 /* VampPadApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DAE9F4E122B2D6291B30B4B /* VampPadApp.swift */; };
 		4BC2611245B8F4A620A02F2B /* Splice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DED6AF0A86F7612C3229FAC /* Splice.swift */; };
 		4CDCBBC50E31203C8AFD570D /* OSCEnvelope.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48DAE09A3ED042760066FDE2 /* OSCEnvelope.swift */; };
 		52D5924A409F4976681368CF /* SupervisorRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF619CFF5A80D9A062278B4C /* SupervisorRules.swift */; };
+		5C0C4659D86042070FA9000E /* PitchDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 049A00C742CE5081960236BF /* PitchDetector.swift */; };
 		5D43232B7B310D17675792F5 /* QRWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3504E0B3D0D7BB563377C6 /* QRWindow.swift */; };
 		607E3A52004476820E4C3739 /* PadLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 915CB9013A537FFC92E573BC /* PadLink.swift */; };
 		6DC8340B53F7F8A9239D76CA /* Sparkle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 52C388D89FD4A8D62CC69C6D /* Sparkle.framework */; };
@@ -79,6 +81,7 @@
 
 /* Begin PBXFileReference section */
 		02A893BE8392F15CE8413C11 /* LinkAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkAuth.swift; sourceTree = "<group>"; };
+		049A00C742CE5081960236BF /* PitchDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PitchDetector.swift; sourceTree = "<group>"; };
 		0A274A47EF8CB1FB15CE2231 /* UsbMux.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsbMux.swift; sourceTree = "<group>"; };
 		0C7164729014C9C253EBCB13 /* WifiLinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WifiLinkTests.swift; sourceTree = "<group>"; };
 		1DED6AF0A86F7612C3229FAC /* Splice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Splice.swift; sourceTree = "<group>"; };
@@ -166,6 +169,7 @@
 				FE21A0FD5BB902ABB2AE793E /* MainWindow.swift */,
 				915CB9013A537FFC92E573BC /* PadLink.swift */,
 				31F6DB32688F85B1071884DF /* PairedIPads.swift */,
+				049A00C742CE5081960236BF /* PitchDetector.swift */,
 				AA3504E0B3D0D7BB563377C6 /* QRWindow.swift */,
 				7588887B3FEC5F945688A7D6 /* Supervisor.swift */,
 				DF619CFF5A80D9A062278B4C /* SupervisorRules.swift */,
@@ -378,6 +382,7 @@
 				08F59359E9DB4DE67CFCD360 /* LinkTests.swift in Sources */,
 				4CDCBBC50E31203C8AFD570D /* OSCEnvelope.swift in Sources */,
 				E24F836EE087E1B6F9C03BD5 /* PairedIPads.swift in Sources */,
+				45716EEF45BC473639790B17 /* PitchDetector.swift in Sources */,
 				00B05AB09DDDA5C05A280322 /* Splice.swift in Sources */,
 				52D5924A409F4976681368CF /* SupervisorRules.swift in Sources */,
 				21F3F6B16514E462747028BF /* SupervisorRulesTests.swift in Sources */,
@@ -422,6 +427,7 @@
 				1D58B1CF20FD7E8B0538559A /* OSCEnvelope.swift in Sources */,
 				607E3A52004476820E4C3739 /* PadLink.swift in Sources */,
 				0B7B8FCECB1E1AB755BA819F /* PairedIPads.swift in Sources */,
+				5C0C4659D86042070FA9000E /* PitchDetector.swift in Sources */,
 				5D43232B7B310D17675792F5 /* QRWindow.swift in Sources */,
 				4BC2611245B8F4A620A02F2B /* Splice.swift in Sources */,
 				01E43854851150E2A88BD20F /* Supervisor.swift in Sources */,

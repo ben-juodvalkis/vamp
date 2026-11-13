@@ -80,6 +80,26 @@ export interface InputLevels {
 }
 let inputLevels = $state<InputLevels | null>(null);
 
+/**
+ * The tuner's pitch (`/capture/input/pitch`, ADR-539): Vamp for Mac's reading
+ * of the channel a hold asked it to tune; `hz` 0 when it hears no note.
+ */
+export interface InputPitch {
+	uid: string;
+	channel: string;
+	hz: number;
+	clarity: number;
+}
+let inputPitch = $state<InputPitch | null>(null);
+
+function parsePitch(args: unknown[]): InputPitch | null {
+	const [uid, channel, hz, clarity] = args;
+	if (typeof uid !== 'string' || typeof channel !== 'string') return null;
+	const h = Number(hz);
+	const c = Number(clarity);
+	return { uid, channel, hz: Number.isFinite(h) && h > 0 ? h : 0, clarity: Number.isFinite(c) ? c : 0 };
+}
+
 function parseLevels(args: unknown[]): InputLevels | null {
 	const [uid, json, access] = args;
 	if (typeof uid !== 'string') return null;
@@ -161,6 +181,10 @@ function handleCaptureMessage(address: string, args: unknown[]): void {
 	}
 	if (address === '/capture/input/levels') {
 		inputLevels = parseLevels(args);
+		return;
+	}
+	if (address === '/capture/input/pitch') {
+		inputPitch = parsePitch(args);
 		return;
 	}
 	logger.info('CAPTURE RX:', { address, args });
@@ -250,34 +274,45 @@ if (typeof window !== 'undefined') {
  */
 function monitorInput(uid: string): void {
 	send('/capture/input/monitor', [uid]);
-	if (!uid) inputLevels = null;
+	if (!uid) {
+		inputLevels = null;
+		inputPitch = null;
+	}
 }
 
 /**
  * Who wants live levels, and of which device: Settings' picker and every REC
- * button on an input device hold one each. One timer asks for the latest
- * holder's device every 2 s; the last release stops the app listening.
+ * button on an input device hold one each, and the tuner holds one naming
+ * the channel to tune. One timer asks for the latest holder's device every
+ * 2 s, with the channel the latest tuning holder of that device names; the
+ * last release stops the app listening.
  */
 const MONITOR_REPEAT_MS = 2000;
-const monitorHolds: string[] = [];
+const monitorHolds: { uid: string; tune: string }[] = [];
 let monitorTimer: ReturnType<typeof setInterval> | null = null;
 
 function askForHeldDevice(): void {
-	const uid = monitorHolds.at(-1);
-	if (uid) send('/capture/input/monitor', [uid]);
+	const uid = monitorHolds.at(-1)?.uid;
+	if (!uid) return;
+	const tune = monitorHolds.findLast((h) => h.uid === uid && h.tune)?.tune ?? '';
+	send('/capture/input/monitor', [uid, tune]);
 }
 
-/** Keep `uid`'s levels coming until the returned release is called. */
-function holdInputMonitor(uid: string): () => void {
+/**
+ * Keep `uid`'s levels coming until the returned release is called, and its
+ * pitch on `tune` (a channel, `'1/2'` or `'5'`) when one is named.
+ */
+function holdInputMonitor(uid: string, tune = ''): () => void {
 	if (!uid) return () => {};
-	monitorHolds.push(uid);
+	const hold = { uid, tune };
+	monitorHolds.push(hold);
 	askForHeldDevice();
 	if (monitorTimer === null) monitorTimer = setInterval(askForHeldDevice, MONITOR_REPEAT_MS);
 	let released = false;
 	return () => {
 		if (released) return;
 		released = true;
-		const at = monitorHolds.lastIndexOf(uid);
+		const at = monitorHolds.lastIndexOf(hold);
 		if (at >= 0) monitorHolds.splice(at, 1);
 		if (monitorHolds.length > 0) {
 			askForHeldDevice();
@@ -347,6 +382,9 @@ export const captureStore = {
 	},
 	get inputLevels() {
 		return inputLevels;
+	},
+	get inputPitch() {
+		return inputPitch;
 	},
 
 	start,

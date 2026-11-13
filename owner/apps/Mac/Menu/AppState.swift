@@ -45,6 +45,9 @@ final class AppState: ObservableObject {
                 .flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
             self?.client.send(Wire.captureInputLevels, [.string(uid), .string(json), .string(access)])
         }
+        monitor.onPitch = { [weak self] uid, channel, hz, clarity in
+            self?.client.send(Wire.captureInputPitch, [.string(uid), .string(channel), .double(hz), .double(clarity)])
+        }
         // Says hello with the devices each second while the bridge listens;
         // the bridge forgets the recorder after three missed hellos.
         helloTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
@@ -113,7 +116,8 @@ final class AppState: ObservableObject {
             return
         }
         if message.address == Wire.captureInputMonitor {
-            monitor.keep(uid: message.args.first?.stringValue ?? "")
+            let a = message.args.map { $0.stringValue ?? "" }
+            monitor.keep(uid: a.first ?? "", tune: a.count > 1 ? a[1] : "")
             return
         }
         if message.address == Wire.captureInputStop {

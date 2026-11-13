@@ -18,6 +18,7 @@
 	import SessionHeaderV6 from '$lib/components/v6/session/SessionHeaderV6.svelte';
 	import SceneRail from '$lib/components/v6/tracks/SceneRail.svelte';
 	import TotalMixStrip from '$lib/components/v6/looping/TotalMixStrip.svelte';
+	import InputTuner from '$lib/components/v6/controls/InputTuner.svelte';
 	import SettingsPage from '$lib/components/v6/settings/SettingsPage.svelte';
 	import { settingsStore } from '$lib/stores/v6/settingsStore.svelte';
 
@@ -123,6 +124,9 @@
 		{#if totalmixOn}
 			<TotalMixStrip unavailableReason={totalmixUnavailable} />
 		{/if}
+		<!-- Over the left sidebar, above the sidebar's REC: it tunes the
+		     input that REC records (ADR-539). -->
+		<div class="status-tuner"><InputTuner /></div>
 	</div>
 
 	<!-- Optional slim transport header (ADR-415). Independent of session
@@ -357,6 +361,16 @@
 	   column, so `click`'s bar passes under it. The clock (~14–127pt) and
 	   the battery cluster (~1270–1359pt) both fall outside the FX grid's
 	   152–1214pt band, so this ruler clears them by construction. */
+	/* The tuner sits over the left sidebar, outside the ten-column ruler:
+	   the strip's own 2px breather top and bottom, the root's 16px side. */
+	.status-tuner {
+		position: absolute;
+		top: 2px;
+		bottom: 2px;
+		left: 16px;
+		width: var(--sidebar-width);
+	}
+
 	.status-strip :global([data-channel='room']) {
 		grid-column: 1 / span 2;
 	}

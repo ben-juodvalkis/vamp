@@ -51,6 +51,8 @@ enum Wire {
     // picker shows), and this app's levels for it.
     static let captureInputMonitor = "/capture/input/monitor"
     static let captureInputLevels = "/capture/input/levels"
+    /// The tuner's pitch on the channel the monitor ask named (ADR-539).
+    static let captureInputPitch = "/capture/input/pitch"
 }
 
 /// The user-facing settings, each mapping to a set address + label.

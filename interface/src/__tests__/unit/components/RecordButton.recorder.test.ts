@@ -93,7 +93,7 @@ describe('RecordButton', () => {
 		captureSettings.setChannel('3/4');
 		const { container, unmount } = render(RecordButton, { props: { source: 'input' } });
 		await tick();
-		expect(send).toHaveBeenCalledWith('/capture/input/monitor', ['bf']);
+		expect(send).toHaveBeenCalledWith('/capture/input/monitor', ['bf', '']);
 		captureStore.handleMessage('/capture/input/levels', ['bf', '[0, 0, 0.25, 0.5]', 'granted']);
 		await tick();
 		const fill = container.querySelector('.meter-fill') as HTMLElement;

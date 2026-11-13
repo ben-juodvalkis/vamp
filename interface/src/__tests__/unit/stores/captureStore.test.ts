@@ -132,6 +132,22 @@ describe('captureStore', () => {
 			expect(captureStore.inputLevels).toBeNull();
 		});
 
+		it('asks the app to tune the channel a tuner hold names, and keeps its pitch (ADR-539)', () => {
+			const releaseRec = captureStore.holdInputMonitor('u');
+			expect(send).toHaveBeenLastCalledWith('/capture/input/monitor', ['u', '']);
+			const releaseTuner = captureStore.holdInputMonitor('u', '3/4');
+			expect(send).toHaveBeenLastCalledWith('/capture/input/monitor', ['u', '3/4']);
+			captureStore.handleMessage('/capture/input/pitch', ['u', '3/4', 110.5, 0.9]);
+			expect(captureStore.inputPitch).toEqual({ uid: 'u', channel: '3/4', hz: 110.5, clarity: 0.9 });
+			captureStore.handleMessage('/capture/input/pitch', ['u', '3/4', 0, 0]);
+			expect(captureStore.inputPitch?.hz).toBe(0);
+			releaseTuner();
+			expect(send).toHaveBeenLastCalledWith('/capture/input/monitor', ['u', '']);
+			releaseRec();
+			expect(send).toHaveBeenLastCalledWith('/capture/input/monitor', ['']);
+			expect(captureStore.inputPitch).toBeNull();
+		});
+
 		it('stop() should send /capture/stop', () => {
 			captureStore.stop();
 			expect(send).toHaveBeenCalledWith('/capture/stop', []);

@@ -103,6 +103,15 @@ export const VIEWS = {
 		shell: 'pad',
 		corners: 18
 	},
+	'pad-app-tuner': {
+		description: 'Vamp for iPad with the Babyface picked for the sidebar REC: the tuner over the sidebar reads an A string a little flat (ADR-539).',
+		prefs: {
+			'captureSettings.device': JSON.stringify({ uid: 'AppleUSBAudioEngine:RME:Babyface Pro', name: 'Babyface Pro', inputs: 14 }),
+			'captureSettings.channel': '1'
+		},
+		shell: 'pad',
+		corners: 18
+	},
 	'pad-app-general': {
 		description: 'Vamp for iPad in the general edition: no TotalMix, so the top margin is empty.',
 		prefs: {},

@@ -52,7 +52,9 @@
  * deleted after. While Settings shows the picker it asks `/capture/input/monitor
  * <uid>` every couple of seconds; the bridge passes that to the app, and the
  * app's `/capture/input/levels <uid> <levels JSON> <access>` back to every
- * client, for the meters. A start with no device named still goes through Vamp-Capture
+ * client, for the meters. A second argument names a channel to tune, and the
+ * app's `/capture/input/pitch <uid> <channel> <hz> <clarity>` goes back the
+ * same way (ADR-539). A start with no device named still goes through Vamp-Capture
  * and Live's Ext. In, as before.
  */
 
@@ -92,6 +94,11 @@ const APP_STOP = '/capture/input/stop';
 const APP_MONITOR = '/capture/input/monitor';
 /** The app's levels for that device, to every client as they are. */
 const APP_LEVELS = '/capture/input/levels';
+/**
+ * The tuner's pitch (ADR-539): `<uid> <channel> <hz> <clarity>`, for the
+ * channel a monitor ask's second argument named, to every client.
+ */
+const APP_PITCH = '/capture/input/pitch';
 /**
  * The input the sidebar's REC records, one for the rig: every screen shows
  * and sets the same (2026-11-13: kept per screen, the iPad had none while
@@ -463,11 +470,12 @@ function createCaptureRecorder({
             }
             if (msg.address === APP_MONITOR) {
                 const uid = argValue(msg.args?.[0]);
-                app?.send(APP_MONITOR, [typeof uid === 'string' ? uid : '']);
+                const tune = argValue(msg.args?.[1]);
+                app?.send(APP_MONITOR, [typeof uid === 'string' ? uid : '', typeof tune === 'string' ? tune : '']);
                 return true;
             }
-            if (msg.address === APP_LEVELS) {
-                broadcast(APP_LEVELS, (msg.args || []).map(argValue));
+            if (msg.address === APP_LEVELS || msg.address === APP_PITCH) {
+                broadcast(msg.address, (msg.args || []).map(argValue));
                 return true;
             }
             const relayed = APP_RELAYED.get(msg.address);
@@ -530,6 +538,7 @@ module.exports = {
     APP_STOP,
     APP_MONITOR,
     APP_LEVELS,
+    APP_PITCH,
     SET_PATH_QUERY,
     HELLO_ADDRESS,
     BYE_ADDRESS,

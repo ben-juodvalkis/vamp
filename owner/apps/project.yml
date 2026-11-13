@@ -141,6 +141,7 @@ targets:
       - Mac/VampPaths.swift
       - Mac/FirstLaunch.swift
       - Mac/InputRecorder.swift
+      - Mac/PitchDetector.swift
       - Mac/Menu/OSCEnvelope.swift
       - Mac/Menu/Wire.swift
       - Tests

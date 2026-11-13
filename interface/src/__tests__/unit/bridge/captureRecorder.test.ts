@@ -23,6 +23,7 @@ const {
 	APP_START,
 	APP_STOP,
 	APP_MONITOR,
+	APP_PITCH,
 	APP_LEVELS,
 	CHOICE,
 	CHOICE_SET,
@@ -363,9 +364,20 @@ describe('an input device Vamp for Mac records (ADR-533)', () => {
 		clients.length = 0;
 		const page = () => {};
 		expect(recorder.onAppMessage(page, { address: APP_MONITOR, args: [BABYFACE.uid] })).toBe(true);
-		expect(app).toEqual([{ address: APP_MONITOR, args: [BABYFACE.uid] }]);
+		expect(app).toEqual([{ address: APP_MONITOR, args: [BABYFACE.uid, ''] }]);
 		recorder.onAppMessage(toApp, { address: APP_LEVELS, args: [BABYFACE.uid, '[0.5,0]', 'granted'] });
 		expect(clients).toEqual([{ address: APP_LEVELS, args: [BABYFACE.uid, '[0.5,0]', 'granted'] }]);
+		recorder.dispose();
+	});
+
+	it('passes the tuner\'s channel to the app, and its pitch to every client (ADR-539)', () => {
+		const { clients, app, recorder, appHello, toApp } = setup();
+		appHello();
+		clients.length = 0;
+		recorder.onAppMessage(() => {}, { address: APP_MONITOR, args: [BABYFACE.uid, '3/4'] });
+		expect(app).toEqual([{ address: APP_MONITOR, args: [BABYFACE.uid, '3/4'] }]);
+		recorder.onAppMessage(toApp, { address: APP_PITCH, args: [BABYFACE.uid, '3/4', 110.2, 0.97] });
+		expect(clients).toEqual([{ address: APP_PITCH, args: [BABYFACE.uid, '3/4', 110.2, 0.97] }]);
 		recorder.dispose();
 	});
 
