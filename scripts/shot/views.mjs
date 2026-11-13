@@ -104,7 +104,7 @@ export const VIEWS = {
 		corners: 18
 	},
 	'pad-app-tuner': {
-		description: 'Vamp for iPad with the Babyface picked for the sidebar REC: the tuner over the sidebar reads an A string a little flat (ADR-539).',
+		description: 'Vamp for iPad with the Babyface picked for the sidebar REC: the tuner over the sidebar reads an A string in tune (ADR-539).',
 		prefs: {
 			'captureSettings.device': JSON.stringify({ uid: 'AppleUSBAudioEngine:RME:Babyface Pro', name: 'Babyface Pro', inputs: 14 }),
 			'captureSettings.channel': '1'

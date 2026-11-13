@@ -109,11 +109,6 @@
 		border-radius: 2px;
 		border: 1px solid var(--line);
 		background: var(--surface-well);
-		transition: background-color 0.08s linear;
-	}
-	.tuner.in-tune {
-		background: color-mix(in oklab, var(--act-play) 35%, var(--surface-well));
-		border-color: var(--act-play);
 	}
 	/* The centre line: where the needle sits in tune. */
 	.centre {
@@ -139,7 +134,10 @@
 		transition: left 0.08s linear;
 		z-index: 1;
 	}
-	.in-tune .needle {
+	/* In tune, only the needle, the centre line and the note go green: the
+	   bar itself stays the plain well (Ben: "not so intrusive"). */
+	.in-tune .needle,
+	.in-tune .centre {
 		background: var(--act-play);
 	}
 	.stale .needle {
@@ -162,6 +160,12 @@
 		user-select: none;
 		color: var(--foreground);
 		z-index: 2;
+		/* A halo of the well's colour, so the needle passing behind the
+		   note never cuts through it. */
+		text-shadow:
+			0 0 2px var(--surface-well),
+			0 0 2px var(--surface-well),
+			0 0 3px var(--surface-well);
 	}
 	.off .label,
 	.stale .label {

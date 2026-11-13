@@ -19,8 +19,9 @@ already has the input device open for the meters (ADR-533).
   note's name alone (`A`, no octave: Ben, "it doesn't need the
   integer"), a needle that sits on the centre line in tune and moves left
   flat and right sharp (±50 cents across the bar), and a ♭ or ♯ lit on the
-  side to turn the peg towards. Within 3 cents the bar and the note turn
-  green. When the string stops, the last note stays, dimmed.
+  side to turn the peg towards. Within 3 cents the needle, the centre line
+  and the note turn green; the bar stays the plain well (Ben: a green
+  bar was too intrusive). When the string stops, the last note stays, dimmed.
 - **It tunes the input the sidebar's REC records** (Settings → Recording's
   device and channel, the rig's one choice). A stereo pair is summed. Live's
   own input (no device picked) reaches nothing Vamp for Mac hears, so the

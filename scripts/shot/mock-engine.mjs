@@ -555,9 +555,9 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 					const count = uid.includes('Babyface') ? 14 : 1;
 					const levels = Array.from({ length: count }, (_, i) => [0.72, 0.64, 0, 0, 0.45][i] ?? 0);
 					send(ws, '/capture/input/levels', [uid, JSON.stringify(levels), 'granted']);
-					// The tuner's channel (ADR-539): an A string a little flat.
+					// The tuner's channel (ADR-539): an A string in tune.
 					const tune = String(args[1] ?? '');
-					if (tune) send(ws, '/capture/input/pitch', [uid, tune, 108.9, 0.96]);
+					if (tune) send(ws, '/capture/input/pitch', [uid, tune, 110.1, 0.96]);
 					return;
 				}
 				case '/looping/v3/handshake/hello': {
