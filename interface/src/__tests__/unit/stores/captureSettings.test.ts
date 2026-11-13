@@ -1,5 +1,5 @@
 /**
- * Settings → Capture's input choice (ADR-533): the channels a device offers,
+ * Settings → Recording's input choice (ADR-533): the channels a device offers,
  * mono or stereo, and where the channel lands when the mode or device moves.
  */
 import { describe, it, expect, beforeEach } from 'vitest';

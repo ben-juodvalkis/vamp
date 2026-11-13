@@ -52,7 +52,7 @@ export function firstRunSteps(input: FirstRunInput): FirstRunStep[] {
 				? m4l?.exact
 					? `Live lists it as the Place “${m4l.place}”. Permute, the on-screen wheels and REC load from it.`
 					: `In your ${m4l?.place}. Permute, the on-screen wheels and REC load from it.`
-				: `Put the Vamp Devices folder in your User Library, or add ${m4l?.path ?? 'it'} in Live’s browser with Places → Add Folder…. Permute, the on-screen wheels and REC load from it; until then they are not shown.`
+				: `Put the Vamp Devices folder in your User Library, or add ${m4l?.path ?? 'it'} in Live’s browser with Places → Add Folder…; Permute, the on-screen wheels and REC load from it; until then they are not shown.`
 		},
 		{
 			key: 'places',
@@ -63,7 +63,7 @@ export function firstRunSteps(input: FirstRunInput): FirstRunStep[] {
 				tickedCount > 0
 					? `${tickedCount} ticked. Tick more whenever you like.`
 					: 'Tick the folders the browser should show.',
-			goTo: { section: 'places', label: 'Open Places' }
+			goTo: { section: 'places', label: 'Open Library' }
 		},
 		{
 			key: 'foot',
@@ -71,9 +71,9 @@ export function firstRunSteps(input: FirstRunInput): FirstRunStep[] {
 			optional: true,
 			label: 'A foot switch, if you have one',
 			how: footLearned
-				? 'Learned. Turn it on and off under General.'
-				: 'Optional. Set your pedal as the Vamp control surface’s Input in Live’s MIDI settings, then Learn it under General.',
-			goTo: { section: 'general', label: 'Open General' }
+				? 'Learned. Turn it on and off under Controllers.'
+				: 'Set your pedal as the Vamp control surface’s Input in Live’s MIDI settings, then Learn it under Controllers.',
+			goTo: { section: 'controllers', label: 'Open Controllers' }
 		}
 	];
 }

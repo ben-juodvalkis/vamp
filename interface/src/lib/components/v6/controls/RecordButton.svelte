@@ -12,7 +12,7 @@
 	// same single-dot indicator (○ idle → blinking ● while recording).
 	//
 	// REC records the selected track, or the audio interface's input
-	// (Settings → Capture), through the Vamp-Capture on that track; the
+	// (Settings → Recording), through the Vamp-Capture on that track; the
 	// bridge loads one there first if it has none (capture.plan.md).
 	//  - `meterLevel`: which meter drives the fill (capture meter vs track
 	//    meter). Defaults to the capture meter.

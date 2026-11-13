@@ -119,19 +119,19 @@ export function captureErrorMessage(code: string, detail: string): string {
 		return 'The recorder on this track is damaged. Delete Vamp-Capture from the track and record again.';
 	}
 	if (code === 'recorder-not-loaded') {
-		return "The recorder didn't load. Check that Vamp Devices is in Live's Places (Settings → Places).";
+		return "The recorder didn't load. Check that Vamp Devices is in Live's Places (Settings → Library).";
 	}
 	if (code === 'no-track') {
 		return 'Select a track to record.';
 	}
 	if (code === 'no-input-device') {
-		return `The input device isn't available: ${detail}. Check that Vamp for Mac is running and the device is connected (Settings → Capture).`;
+		return `The input device isn't available: ${detail}. Check that Vamp for Mac is running and the device is connected (Settings → Recording).`;
 	}
 	if (code === 'mic-denied') {
 		return 'Vamp for Mac may not record audio. Allow it in System Settings → Privacy & Security → Microphone.';
 	}
 	if (code === 'no-ext-in' || code === 'no-input-channel') {
-		return `No such input: ${detail}. Check Live's audio input device, and the input channel in Settings → Capture.`;
+		return `No such input: ${detail}. Check Live's audio input device, and the input channel in Settings → Recording.`;
 	}
 	return detail ? `${code}: ${detail}` : code;
 }

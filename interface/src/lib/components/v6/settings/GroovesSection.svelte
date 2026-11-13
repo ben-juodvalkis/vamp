@@ -72,10 +72,14 @@
 	{:else if !groovesStore.listing.root}
 		<p class="set-lead">No Live app found on this Mac, so there are no groove files to list.</p>
 	{:else}
-		<div class="set-grooves-bar">
-			<p class="set-lead" aria-live="polite">
-				<strong>{groovesStore.ticked.length}</strong> of {files.length} grooves show in the Groove view. Tick as many as you
-				want: they become its tiles, in this order.
+		<p class="set-lead">
+			The tiles of the Groove view, opened by touching Q. Tick as many as you want: they become its tiles, in the order you
+			ticked them.
+		</p>
+
+		<div class="set-listbar">
+			<p class="set-listbar-count" aria-live="polite">
+				<strong>{groovesStore.ticked.length}</strong> of {files.length} in the Groove view
 				{#if groovesStore.saving}<span class="set-saving">Saving…</span>{/if}
 				{#if groovesStore.saveError}<span class="set-save-error" role="alert">Not saved: {groovesStore.saveError}</span>{/if}
 			</p>
@@ -107,25 +111,27 @@
 
 		{#each groups as g (g.id)}
 			{@const isOpen = filtering || !!open[g.id]}
+			{@const ordered = g.id === SHOWN_GROUP}
 			{#if !filtering || g.files.length}
-				<section class="set-groove-group" data-group={g.id} data-open={isOpen}>
+				<section class="set-fold" data-group={g.id} data-open={isOpen}>
 					<button
-						class="set-group-toggle"
+						class="set-fold-toggle"
 						aria-expanded={isOpen}
 						aria-controls="set-grooves-{g.id}"
 						disabled={filtering}
 						onclick={() => toggleGroup(g.id)}
 					>
-						<ChevronRight class="set-group-chevron" aria-hidden="true" />
-						<span class="set-group-name">{g.title}</span>
-						<span class="set-group-count">{countLabel(g)}</span>
+						<ChevronRight class="set-fold-chevron" aria-hidden="true" />
+						<span class="set-fold-name">{g.title}</span>
+						<span class="set-fold-count">{countLabel(g)}</span>
+						<span class="set-fold-rule" aria-hidden="true"></span>
 					</button>
 					{#if isOpen}
-						<ul class="set-groove-grid" id="set-grooves-{g.id}" data-debug="grooves-{g.id}">
-							{#each g.files as f (f.name)}
+						<ul class="set-tick-grid" id="set-grooves-{g.id}" data-debug="grooves-{g.id}">
+							{#each g.files as f, i (f.name)}
 								{@const ticked = tickedSet.has(f.name)}
-								<li class="set-groove" class:blocked={!!f.blocked} data-groove={f.name} data-ticked={ticked}>
-									<label class="set-groove-tick">
+								<li class="set-tick-card" class:absent={!!f.blocked} data-groove={f.name} data-ticked={ticked}>
+									<label class="set-tick groove-tick">
 										<input
 											type="checkbox"
 											checked={ticked}
@@ -137,17 +143,20 @@
 											aria-label={`Show ${f.name} in the Groove view`}
 										/>
 										<span class="set-check" aria-hidden="true"><Check class="set-check-icon" /></span>
-										<span class="set-groove-main">
-											<span class="set-row-label set-groove-name">{f.name}</span>
+										<span class="groove-main">
+											<span class="groove-title">
+												{#if ordered}<span class="groove-order" title="Tile {i + 1} in the Groove view">{i + 1}</span>{/if}
+												<span class="set-row-label set-tick-name">{f.name}</span>
+											</span>
 											{#if f.blocked}
-												<span class="set-groove-nopic">{f.blocked}</span>
+												<span class="groove-nopic">{f.blocked}</span>
 											{:else if f.events?.length}
-												<span class="set-groove-pic"><GroovePicture events={f.events} /></span>
+												<span class="groove-pic"><GroovePicture events={f.events} /></span>
 											{:else if f.events === null}
-												<span class="set-groove-nopic">No picture: Live’s own format</span>
+												<span class="groove-nopic">No picture: Live’s own format</span>
 											{/if}
 										</span>
-										{#if f.grid}<span class="set-groove-grid-label">{f.grid}</span>{/if}
+										{#if f.grid}<span class="groove-grid">{f.grid}</span>{/if}
 									</label>
 								</li>
 							{/each}
@@ -157,7 +166,7 @@
 			{/if}
 		{/each}
 
-		<p class="set-note">
+		<p class="set-note grooves-foot">
 			From Live’s Core Library ({groovesStore.listing.root}){#if groovesStore.listing.userRoot}
 				and your User Library ({groovesStore.listing.userRoot}){/if}. To add one of your own, extract it from a clip in
 			Live (right-click the clip → Extract Groove), then save it from the Groove Pool into your User Library’s Grooves
@@ -170,244 +179,56 @@
 	.set-grooves {
 		gap: var(--spacing-lg);
 	}
-	.set-grooves > .set-note {
+	.grooves-foot {
 		max-width: 46rem;
+		margin-top: var(--spacing-md);
 		overflow-wrap: anywhere;
 	}
-	.set-grooves-bar {
-		position: sticky;
-		top: calc(-1 * var(--spacing-xl));
-		z-index: 1;
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: var(--spacing-md) var(--spacing-xl);
-		margin: calc(-1 * var(--spacing-xl)) calc(-1 * var(--spacing-xl)) 0;
-		padding: var(--spacing-xl) var(--spacing-xl) var(--spacing-md);
-		background: var(--background);
-		border-bottom: 1px solid var(--line-strong);
-	}
-	.set-grooves-bar .set-lead {
-		flex: 1 1 22rem;
-	}
-	.set-saving {
-		margin-left: var(--spacing-sm);
-		color: var(--fg-tertiary);
-	}
-	.set-save-error {
-		display: block;
-		color: var(--act-warn);
-	}
-	.set-filter {
-		position: relative;
-		flex: 0 1 22rem;
-		min-width: 12rem;
-		display: flex;
-		align-items: center;
-	}
-	.set-filter :global(.set-filter-icon) {
-		position: absolute;
-		left: var(--spacing-md);
-		width: 1rem;
-		height: 1rem;
-		color: var(--muted-foreground);
-		pointer-events: none;
-	}
-	.set-filter input {
-		width: 100%;
-		min-height: var(--height-touch);
-		padding: 0 var(--height-touch) 0 2.25rem;
-		font-size: 1rem; /* 16px or iOS zooms the page on focus */
-		color: var(--foreground);
-		background: var(--surface-well);
-		border: 1px solid var(--line-strong);
-		border-radius: var(--radius-sm);
-		appearance: none;
-	}
-	.set-filter input::-webkit-search-cancel-button {
-		display: none;
-	}
-	.set-filter input::placeholder {
-		color: var(--fg-tertiary);
-	}
-	.set-filter input:focus-visible {
-		outline: 2px solid var(--ring);
-		outline-offset: 1px;
-	}
-	.set-filter-clear {
-		position: absolute;
-		right: 0;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: var(--height-touch);
-		height: var(--height-touch);
-		color: var(--muted-foreground);
-		background: transparent;
-		border: 0;
-		cursor: pointer;
-	}
-
-	.set-groove-group {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-sm);
-		scroll-margin-top: 6.5rem;
-	}
-	.set-group-toggle {
-		display: flex;
-		align-items: center;
-		gap: var(--spacing-sm);
-		min-height: var(--height-touch);
-		padding: 0 var(--spacing-xs);
-		background: transparent;
-		border: 0;
-		border-bottom: 1px solid var(--line-strong);
-		color: var(--foreground);
-		font-size: 0.9375rem;
-		font-weight: var(--font-weight-medium);
-		text-align: left;
-		cursor: pointer;
-	}
-	.set-group-toggle:disabled {
-		cursor: default;
-	}
-	.set-group-toggle :global(.set-group-chevron) {
-		width: 1.125rem;
-		height: 1.125rem;
-		flex-shrink: 0;
-		color: var(--muted-foreground);
-		transition: transform 0.15s ease;
-	}
-	.set-group-toggle[aria-expanded='true'] :global(.set-group-chevron) {
-		transform: rotate(90deg);
-	}
-	.set-group-count {
-		flex-shrink: 0;
-		margin-left: var(--spacing-xs);
-		font-size: 0.8125rem;
-		font-weight: 400;
-		color: var(--muted-foreground);
-		font-variant-numeric: tabular-nums;
-	}
-	.set-group-toggle:focus-visible {
-		outline: 2px solid var(--ring);
-		outline-offset: -2px;
-	}
-
-	.set-groove-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
-		gap: var(--spacing-xs);
-		list-style: none;
-		margin: 0;
-		padding: 0;
-	}
-	.set-groove {
-		min-width: 0;
-		background: var(--card);
-		border: 1px solid var(--line-strong);
-		border-radius: var(--radius-sm);
-	}
-	.set-groove-tick {
-		position: relative;
-		display: flex;
-		align-items: center;
-		gap: var(--spacing-md);
+	.groove-tick {
 		min-height: 3.5rem;
-		height: 100%;
-		padding: var(--spacing-sm) var(--spacing-md);
-		cursor: pointer;
 	}
-	.set-groove-tick input {
-		position: absolute;
-		opacity: 0;
-		width: 1px;
-		height: 1px;
-		pointer-events: none;
-	}
-	.set-check {
-		flex-shrink: 0;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 1.375rem;
-		height: 1.375rem;
-		background: var(--surface-well);
-		border: 1px solid var(--line-strong);
-		border-radius: var(--radius-sm);
-		color: transparent;
-	}
-	.set-check :global(.set-check-icon) {
-		width: 1rem;
-		height: 1rem;
-		stroke-width: 3;
-	}
-	.set-groove-tick input:checked + .set-check {
-		background: var(--phosphor);
-		border-color: var(--phosphor);
-		color: var(--flat-on-fg);
-	}
-	.set-groove.blocked .set-groove-tick {
-		cursor: not-allowed;
-	}
-	.set-groove.blocked .set-groove-name {
-		color: var(--flat-disabled-fg);
-	}
-	.set-groove-tick input:disabled + .set-check {
-		background: transparent;
-		border-style: dashed;
-	}
-	.set-groove-tick input:focus-visible + .set-check {
-		outline: 2px solid var(--ring);
-		outline-offset: 2px;
-	}
-	.set-groove-main {
+	.groove-main {
 		flex: 1 1 auto;
 		min-width: 0;
 		display: flex;
 		flex-direction: column;
 		gap: 0.375rem;
 	}
-	.set-groove-name {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
+	.groove-title {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-sm);
+		min-width: 0;
 	}
-	.set-groove-pic {
+	.groove-order {
+		flex-shrink: 0;
+		min-width: 1.375rem;
+		padding: 0 0.3125rem;
+		font-size: 0.75rem;
+		font-weight: 600;
+		line-height: 1.25rem;
+		text-align: center;
+		font-variant-numeric: tabular-nums;
+		color: var(--foreground);
+		background: var(--surface-well);
+		border: 1px solid var(--line-strong);
+		border-radius: var(--radius-sm);
+	}
+	.groove-pic {
 		display: block;
 		width: min(100%, 9.5rem);
 		--groove-pic-h: 1.125rem;
 		--groove-tick: var(--phosphor);
 	}
-	.set-groove-nopic {
+	.groove-nopic {
 		font-size: 0.75rem;
 		color: var(--fg-tertiary);
 	}
-	.set-groove-grid-label {
+	.groove-grid {
 		flex-shrink: 0;
 		align-self: flex-start;
 		font-size: 0.8125rem;
 		color: var(--muted-foreground);
 		font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-	}
-	@media (hover: hover) {
-		.set-groove:hover {
-			background: var(--secondary);
-		}
-		.set-group-toggle:not(:disabled):hover .set-group-name {
-			text-decoration: underline;
-			text-underline-offset: 3px;
-		}
-	}
-	@media (max-width: 759.98px) {
-		.set-grooves-bar {
-			top: calc(-1 * var(--spacing-lg));
-			margin: calc(-1 * var(--spacing-lg)) calc(-1 * var(--spacing-lg)) 0;
-			padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-md);
-		}
-		.set-filter {
-			flex: 1 1 100%;
-		}
 	}
 </style>

@@ -1,5 +1,5 @@
 /**
- * Settings → Places lays out a hundred-odd folders (the rig: 21 Places, the
+ * Settings → Library (id `places`) lays out a hundred-odd folders (the rig: 21 Places, the
  * User Library) and Live's categories, every Pack as one of them, in five
  * groups, ticked first, and a folder keeps
  * the group it had when the page opened, so a tick never moves the row under

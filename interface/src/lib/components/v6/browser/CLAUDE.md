@@ -388,7 +388,7 @@ source and the Phase 4 switch that chose between them.
   (`.has-plugin`, column flex) applies only to tiles that carry one.
 - **Where + Effect opens**: Live's Audio Effects category by default since
   2026-10-31 (Ben), ticked or not, cataloged and kept off the rail unless
-  ticked; or the Effects folder chosen in Settings → Places
+  ticked; or the Effects folder chosen in Settings → Library
   (`logs/effects.json`, ADR-498, 2026-11-01), else the Place
   `catalog.effectsPlace` names. Vamp's own effect tiles load their files by
   name from that same folder; a tile whose file is not there is refused

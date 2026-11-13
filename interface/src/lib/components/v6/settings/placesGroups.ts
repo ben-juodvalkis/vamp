@@ -4,7 +4,7 @@
  * lists (21 Places and the User Library on the rig), and Live's Collections,
  * in five groups:
  *
- *   In the browser     the ticked ones, whatever their kind
+ *   In the sidebar     the ticked ones, whatever their kind
  *   Live's categories  Sounds, Drums, Instruments…, and Packs, not ticked
  *   Collections        Live's colored tags, not ticked
  *   Places in Live     the sidebar Places not ticked
@@ -35,7 +35,7 @@ export interface PlacesGroup {
 }
 
 export const GROUP_TITLES: Record<PlacesGroupId, string> = {
-	shown: 'In the browser',
+	shown: 'In the sidebar',
 	categories: 'Live’s categories',
 	collections: 'Collections',
 	places: 'Places in Live',

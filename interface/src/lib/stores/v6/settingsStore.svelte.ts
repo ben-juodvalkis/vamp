@@ -5,10 +5,11 @@
  *
  * Settings is a full-page view over the whole app, opened from the gear in
  * the master track's central view, or on the Mac by Vamp for Mac's
- * "Settings…" (⌘,), which sets `#settings` on its window (ADR-520). Its sections are down a sidebar (a row of
- * tabs on a narrow window): General (Behavior, Appearance, Foot Switch),
- * Places, Connection (Live, the iPad, the features), and on a first run the
- * Setup checklist ahead of them.
+ * "Settings…" (⌘,), which sets `#settings` on its window (ADR-520). Its
+ * sections run down a sidebar in three groups (ADR-534): Play (Recording,
+ * Controllers), Browse (Library, whose id is `places`; Grooves) and System (Connection,
+ * Integrations), and on a first run the Setup checklist ahead of them. A
+ * narrow window shows the list or one section, with a way back.
  *
  * `firstRun` is the Mac's verdict, not the browser's: the server says whether
  * anything has ever been saved on this machine, and while it says no the
@@ -18,12 +19,12 @@
  * where you left it.
  */
 
-export type SettingsSection = 'setup' | 'general' | 'places' | 'grooves' | 'connection';
+export type SettingsSection = 'setup' | 'recording' | 'controllers' | 'places' | 'grooves' | 'connection' | 'integrations';
 
 function createSettingsStore() {
 	let open = $state(false);
 	let firstRun = $state(false);
-	let section = $state<SettingsSection>('general');
+	let section = $state<SettingsSection>('recording');
 
 	return {
 		get open(): boolean {
@@ -62,7 +63,10 @@ function createSettingsStore() {
 
 export const settingsStore = createSettingsStore();
 
-const SECTIONS: readonly SettingsSection[] = ['setup', 'general', 'places', 'grooves', 'connection'];
+const SECTIONS: readonly SettingsSection[] = ['setup', 'recording', 'controllers', 'places', 'grooves', 'connection', 'integrations'];
+
+/** Names an address may still carry from before ADR-534 split General up. */
+const FORMER: Readonly<Record<string, SettingsSection>> = { general: 'recording', capture: 'recording', features: 'integrations', library: 'places' };
 
 /**
  * Open Settings from an address: `#settings`, or `#settings/<section>`.
@@ -73,7 +77,8 @@ const SECTIONS: readonly SettingsSection[] = ['setup', 'general', 'places', 'gro
 export function openSettingsFromHash(hash: string): boolean {
 	const match = /^#settings(?:\/([a-z]+))?$/.exec(hash);
 	if (!match) return false;
-	const at = match[1] as SettingsSection | undefined;
-	settingsStore.openSettings(at && SECTIONS.includes(at) ? at : undefined);
+	const name = match[1];
+	const at = name && (SECTIONS.includes(name as SettingsSection) ? (name as SettingsSection) : FORMER[name]);
+	settingsStore.openSettings(at || undefined);
 	return true;
 }

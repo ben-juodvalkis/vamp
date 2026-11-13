@@ -1,13 +1,14 @@
 <script lang="ts">
 	/**
-	 * Settings → Places (onboarding.plan.md §2, §6.2, §7): every folder Live's
+	 * Settings → Library (named Places until ADR-534; its id and address are
+	 * still `places`; onboarding.plan.md §2, §6.2, §7): every folder Live's
 	 * library offers — the sidebar Places in Live's order, the User Library,
 	 * and Live's own categories (Sounds, Drums, Instruments…, from Live's
 	 * index), every installed Pack as one more, with a tick each. A ticked one is cataloged on the
 	 * Mac and becomes a button on the browser rail; a tick lands on every
 	 * client within seconds (`placesLive`).
 	 *
-	 * Laid out by `placesGroups.ts`: what is in the browser first, then the
+	 * Laid out by `placesGroups.ts`: what is in the sidebar first, then the
 	 * rest of the Places, the User Library, and the Packs folded away (81 of
 	 * them on the rig). A folder stays in the group it was in when the page
 	 * opened, so a tick never moves the row under the finger. A filter (name
@@ -63,7 +64,7 @@
 	function toggleGroup(id: PlacesGroupId, event: MouseEvent) {
 		open[id] = !open[id];
 		if (!open[id]) return;
-		const group = (event.currentTarget as HTMLElement).closest('.set-place-group');
+		const group = (event.currentTarget as HTMLElement).closest('.set-fold');
 		const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 		requestAnimationFrame(() => group?.scrollIntoView?.({ block: 'start', behavior: reduce ? 'auto' : 'smooth' }));
 	}
@@ -101,13 +102,42 @@
 	{:else if !places.listing}
 		<p class="set-lead">Reading Live’s library…</p>
 	{:else}
-		<div class="set-places-bar">
-			<p class="set-lead" aria-live="polite">
+		<p class="set-lead">
+			A ticked folder or category gets a button in the browser’s sidebar, on every screen within seconds.
+		</p>
+
+		<section class="set-group places-effects" data-debug="places-effects">
+			<h3 class="set-group-title">Effects folder</h3>
+			<div class="set-list">
+				<label class="set-row set-row-stack">
+					<span class="set-row-main">
+						<span class="set-row-label">+ Effect opens</span>
+						<span class="set-row-sub">
+							Where Vamp also looks for its own effects by name (an amp rack, a Max effect). Live’s built-in effects work
+							either way.
+						</span>
+					</span>
+					<select
+						class="set-select places-select"
+						value={effectsPlace}
+						disabled={places.saving}
+						onchange={(e) => void places.setEffectsPlace((e.currentTarget as HTMLSelectElement).value)}
+					>
+						<option value="">Live’s Audio Effects</option>
+						{#each effectsChoices as s (s.key)}
+							<option value={s.name}>{s.name}</option>
+						{/each}
+					</select>
+				</label>
+			</div>
+		</section>
+
+		<div class="set-listbar">
+			<p class="set-listbar-count" aria-live="polite">
 				{#if places.tickedCount === 0}
-					<strong>Nothing is ticked yet.</strong> Tick a category or a folder to give it a button on the browser’s rail.
+					<strong>Nothing ticked yet.</strong> Tick one to give it a button.
 				{:else}
-					<strong>{places.tickedCount}</strong> of {sources.length} show in the browser. Tick a category or a folder to give
-					it a button on the browser’s rail.
+					<strong>{places.tickedCount}</strong> of {sources.length} in the sidebar
 				{/if}
 				{#if places.saving}<span class="set-saving">Saving…</span>{/if}
 				{#if places.saveError}<span class="set-save-error" role="alert">Not saved: {places.saveError}</span>{/if}
@@ -118,7 +148,7 @@
 					<input
 						type="search"
 						bind:value={filter}
-						placeholder="Filter {sources.length} by name"
+						placeholder="Filter {sources.length} by name or path"
 						aria-label="Filter by name or path"
 						autocomplete="off"
 						autocapitalize="off"
@@ -136,29 +166,6 @@
 			{/if}
 		</div>
 
-		<div class="set-list set-effects" data-debug="places-effects">
-			<label class="set-row set-row-stack">
-				<span class="set-row-main">
-					<span class="set-row-label">Effects folder</span>
-					<span class="set-row-sub">
-						Where + Effect opens, and where Vamp looks for its own effects by name (an amp rack, a Max effect). Live’s
-						built-in effects work either way.
-					</span>
-				</span>
-				<select
-					class="set-effects-select"
-					value={effectsPlace}
-					disabled={places.saving}
-					onchange={(e) => void places.setEffectsPlace((e.currentTarget as HTMLSelectElement).value)}
-				>
-					<option value="">Live’s Audio Effects</option>
-					{#each effectsChoices as s (s.key)}
-						<option value={s.name}>{s.name}</option>
-					{/each}
-				</select>
-			</label>
-		</div>
-
 		{#if filtering && matches === 0}
 			<p class="set-lead">Nothing matches “{filter.trim()}”.</p>
 		{/if}
@@ -166,23 +173,24 @@
 		{#each groups as g (g.id)}
 			{@const isOpen = filtering || open[g.id]}
 			{#if !filtering || g.sources.length}
-				<section class="set-place-group" data-group={g.id} data-open={isOpen}>
+				<section class="set-fold" data-group={g.id} data-open={isOpen}>
 					<button
-						class="set-group-toggle"
+						class="set-fold-toggle"
 						aria-expanded={isOpen}
 						aria-controls="set-places-{g.id}"
 						disabled={filtering}
 						onclick={(e) => toggleGroup(g.id, e)}
 					>
-						<ChevronRight class="set-group-chevron" aria-hidden="true" />
-						<span class="set-group-name">{g.title}</span>
-						<span class="set-group-count">{countLabel(g)}</span>
+						<ChevronRight class="set-fold-chevron" aria-hidden="true" />
+						<span class="set-fold-name">{g.title}</span>
+						<span class="set-fold-count">{countLabel(g)}</span>
+						<span class="set-fold-rule" aria-hidden="true"></span>
 					</button>
 					{#if isOpen}
-						<ul class="set-place-grid" id="set-places-{g.id}" data-debug="places-{g.id}">
+						<ul class="set-tick-grid" id="set-places-{g.id}" data-debug="places-{g.id}">
 							{#each g.sources as s (s.key)}
-								<li class="set-place" class:absent={!s.present} data-place-key={s.key} data-ticked={s.ticked}>
-									<label class="set-place-tick">
+								<li class="set-tick-card" class:absent={!s.present} data-place-key={s.key} data-ticked={s.ticked}>
+									<label class="set-tick">
 										<input
 											type="checkbox"
 											checked={s.ticked}
@@ -191,11 +199,11 @@
 												if (places.saving) e.preventDefault();
 											}}
 											onchange={(e) => onTick(e, s)}
-											aria-label={`Show ${s.key === PACKS_KEY ? 'every installed Pack' : `${s.kind === 'category' ? 'the category ' : s.kind === 'collection' ? 'the Collection ' : ''}${s.name}`} in the browser`}
+											aria-label={`Show ${s.key === PACKS_KEY ? 'every installed Pack' : `${s.kind === 'category' ? 'the category ' : s.kind === 'collection' ? 'the Collection ' : ''}${s.name}`} in the sidebar`}
 										/>
 										<span class="set-check" aria-hidden="true"><Check class="set-check-icon" /></span>
 										<span class="set-row-main">
-											<span class="set-row-label set-place-name">{s.name}</span>
+											<span class="set-row-label set-tick-name">{s.name}</span>
 											{#if !s.present}
 												<span class="set-row-sub">Not on this Mac right now</span>
 											{:else if s.key === PACKS_KEY}
@@ -205,11 +213,11 @@
 											{:else if s.kind === 'collection'}
 												<span class="set-row-sub">A Collection in Live’s browser</span>
 											{:else}
-												<span class="set-place-path" dir="rtl"><bdi dir="ltr">{parentPath(s)}</bdi></span>
+												<span class="places-path" dir="rtl"><bdi dir="ltr">{parentPath(s)}</bdi></span>
 											{/if}
 										</span>
 										{#if s.totalItems !== null}
-											<span class="set-place-count" title="Items cataloged">{s.totalItems.toLocaleString()}</span>
+											<span class="set-tick-count" title="Items cataloged">{s.totalItems.toLocaleString()}</span>
 										{/if}
 									</label>
 								</li>
@@ -220,7 +228,7 @@
 			{/if}
 		{/each}
 
-		<p class="set-note">
+		<p class="set-note places-foot">
 			To add a folder, add it to Places in Live’s browser (Places → Add Folder…); it appears here within seconds.
 			{sourceLine}
 		</p>
@@ -231,262 +239,27 @@
 	.set-places {
 		gap: var(--spacing-lg);
 	}
-	.set-places > .set-note {
+	.places-effects {
+		max-width: 50rem;
+		margin: var(--spacing-sm) 0 var(--spacing-md);
+	}
+	.places-foot {
 		max-width: 46rem;
+		margin-top: var(--spacing-md);
 	}
-	/* The count and the filter stay put while the folders scroll under them. */
-	.set-places-bar {
-		position: sticky;
-		top: calc(-1 * var(--spacing-xl));
-		z-index: 1;
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: var(--spacing-md) var(--spacing-xl);
-		margin: calc(-1 * var(--spacing-xl)) calc(-1 * var(--spacing-xl)) 0;
-		padding: var(--spacing-xl) var(--spacing-xl) var(--spacing-md);
-		background: var(--background);
-		border-bottom: 1px solid var(--line-strong);
-	}
-	.set-effects {
-		margin-bottom: var(--spacing-md);
-	}
-	.set-effects-select {
+	.places-select {
 		flex: 0 1 16rem;
 		min-width: 10rem;
-		min-height: 2.5rem;
-		padding: 0 var(--spacing-md);
-		background: var(--secondary);
-		color: var(--foreground);
-		border: 1px solid var(--line-strong);
-		border-radius: var(--radius-md);
-		font: inherit;
-		font-size: 0.9375rem;
-	}
-	.set-places-bar .set-lead {
-		flex: 1 1 22rem;
-	}
-	.set-saving {
-		margin-left: var(--spacing-sm);
-		color: var(--fg-tertiary);
-	}
-	.set-save-error {
-		display: block;
-		color: var(--act-warn);
-	}
-	.set-filter {
-		position: relative;
-		flex: 0 1 22rem;
-		min-width: 12rem;
-		display: flex;
-		align-items: center;
-	}
-	.set-filter :global(.set-filter-icon) {
-		position: absolute;
-		left: var(--spacing-md);
-		width: 1rem;
-		height: 1rem;
-		color: var(--muted-foreground);
-		pointer-events: none;
-	}
-	.set-filter input {
-		width: 100%;
-		min-height: var(--height-touch);
-		padding: 0 var(--height-touch) 0 2.25rem;
-		font-size: 1rem; /* 16px or iOS zooms the page on focus */
-		color: var(--foreground);
-		background: var(--surface-well);
-		border: 1px solid var(--line-strong);
-		border-radius: var(--radius-sm);
-		appearance: none;
-	}
-	.set-filter input::-webkit-search-cancel-button {
-		display: none;
-	}
-	.set-filter input::placeholder {
-		color: var(--fg-tertiary);
-	}
-	.set-filter input:focus-visible {
-		outline: 2px solid var(--ring);
-		outline-offset: 1px;
-	}
-	.set-filter-clear {
-		position: absolute;
-		right: 0;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: var(--height-touch);
-		height: var(--height-touch);
-		color: var(--muted-foreground);
-		background: transparent;
-		border: 0;
-		cursor: pointer;
-	}
-
-	/* ---- Groups ---- */
-	.set-place-group {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-sm);
-		/* Clear of the sticky count-and-filter bar when scrolled to. */
-		scroll-margin-top: 6.5rem;
-	}
-	.set-group-toggle {
-		display: flex;
-		align-items: center;
-		gap: var(--spacing-sm);
-		min-height: var(--height-touch);
-		padding: 0 var(--spacing-xs);
-		background: transparent;
-		border: 0;
-		border-bottom: 1px solid var(--line-strong);
-		color: var(--foreground);
-		font-size: 0.9375rem;
-		font-weight: var(--font-weight-medium);
-		text-align: left;
-		cursor: pointer;
-	}
-	.set-group-toggle:disabled {
-		cursor: default;
-	}
-	.set-group-toggle :global(.set-group-chevron) {
-		width: 1.125rem;
-		height: 1.125rem;
-		flex-shrink: 0;
-		color: var(--muted-foreground);
-		transition: transform 0.15s ease;
-	}
-	.set-group-toggle[aria-expanded='true'] :global(.set-group-chevron) {
-		transform: rotate(90deg);
-	}
-	.set-group-name {
-		flex: 0 1 auto;
-	}
-	.set-group-count {
-		flex-shrink: 0;
-		margin-left: var(--spacing-xs);
-		font-size: 0.8125rem;
-		font-weight: 400;
-		color: var(--muted-foreground);
-		font-variant-numeric: tabular-nums;
-	}
-	.set-group-toggle:focus-visible {
-		outline: 2px solid var(--ring);
-		outline-offset: -2px;
-	}
-
-	/* ---- Folders: as many columns as fit ---- */
-	.set-place-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
-		gap: var(--spacing-xs);
-		list-style: none;
-		margin: 0;
-		padding: 0;
-	}
-	.set-place {
-		min-width: 0;
-		background: var(--card);
-		border: 1px solid var(--line-strong);
-		border-radius: var(--radius-sm);
-	}
-	.set-place-tick {
-		position: relative;
-		display: flex;
-		align-items: center;
-		gap: var(--spacing-md);
-		min-height: 3.25rem;
-		height: 100%;
-		padding: var(--spacing-sm) var(--spacing-md);
-		cursor: pointer;
-	}
-	.set-place.absent .set-place-tick {
-		cursor: not-allowed;
-	}
-	.set-place.absent .set-place-name {
-		color: var(--flat-disabled-fg);
-	}
-	/* The box is drawn, not the browser's: a white system checkbox was the
-	   brightest thing on a dark page. The input stays under it, the whole row
-	   its label. */
-	.set-place-tick input {
-		position: absolute;
-		opacity: 0;
-		width: 1px;
-		height: 1px;
-		pointer-events: none;
-	}
-	.set-check {
-		flex-shrink: 0;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 1.375rem;
-		height: 1.375rem;
-		background: var(--surface-well);
-		border: 1px solid var(--line-strong);
-		border-radius: var(--radius-sm);
-		color: transparent;
-	}
-	.set-check :global(.set-check-icon) {
-		width: 1rem;
-		height: 1rem;
-		stroke-width: 3;
-	}
-	.set-place-tick input:checked + .set-check {
-		background: var(--phosphor);
-		border-color: var(--phosphor);
-		color: var(--flat-on-fg);
-	}
-	.set-place-tick input:disabled + .set-check {
-		background: transparent;
-		border-style: dashed;
-	}
-	.set-place-tick input:focus-visible + .set-check {
-		outline: 2px solid var(--ring);
-		outline-offset: 2px;
-	}
-	.set-place-name {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
 	}
 	/* One line, cut from the START: the end of a path is what tells two
 	   folders apart. */
-	.set-place-path {
+	.places-path {
 		display: block;
 		overflow: hidden;
 		white-space: nowrap;
 		text-overflow: ellipsis;
 		text-align: left;
 		font-size: 0.75rem;
-		color: var(--muted-foreground);
-	}
-	.set-place-count {
-		flex-shrink: 0;
-		font-size: 0.75rem;
 		color: var(--fg-tertiary);
-		font-variant-numeric: tabular-nums;
-	}
-	@media (hover: hover) {
-		.set-place:not(.absent):hover {
-			background: var(--secondary);
-		}
-		.set-group-toggle:not(:disabled):hover .set-group-name {
-			text-decoration: underline;
-			text-underline-offset: 3px;
-		}
-	}
-
-	@media (max-width: 759.98px) {
-		.set-places-bar {
-			top: calc(-1 * var(--spacing-lg));
-			margin: calc(-1 * var(--spacing-lg)) calc(-1 * var(--spacing-lg)) 0;
-			padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-md);
-		}
-		.set-filter {
-			flex: 1 1 100%;
-		}
 	}
 </style>

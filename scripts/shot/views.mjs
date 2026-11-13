@@ -231,7 +231,10 @@ const SHIFTER_PARAMS = [
 const chainOf = (n) => (scene) =>
 	setTrackDevices(scene, CHAIN_DEMO_TRACK, [CHAIN_DEMO_DEVICES[0], 'Auto Filter', 'Echo', 'Reverb', CHAIN_DEMO_DEVICES[5], 'Auto Filter', CHAIN_DEMO_DEVICES[7], CHAIN_DEMO_DEVICES[8]].slice(0, n));
 const chainCell = (index) => `[data-device-path="tracks/${CHAIN_DEMO_TRACK}/devices/${index}"]`;
-const SETTINGS_OPEN = [{ click: '[data-debug="master-card"]' }, { click: '[data-debug="settings-gear"]', dom: true }];
+// The hash Vamp for Mac's "Settings…" sets (ADR-520): the gear's press action
+// answers pointers, so a DOM click() on it opened nothing (every gear state
+// timed out, 2026-11-13).
+const SETTINGS_OPEN = [{ hash: '#settings' }];
 
 // Devices with no grid tile, each opening its own view from its chain cell.
 const CHAIN_VIEW_DEVICES = [
@@ -946,35 +949,45 @@ export const TOURS = {
 		states: [
 			{
 				name: 'settings',
-				description: 'Settings → General — Behavior, Appearance, Foot Switch',
+				description: 'Settings → Recording — the REC button, Auto Rec, Auto-Arm (ADR-534)',
 				steps: SETTINGS_OPEN
 			},
 			{
-				name: 'settings-general',
-				description: 'Settings → General, Max Utility patch switched off — no Move Knob switch',
+				name: 'settings-controllers',
+				description: 'Settings → Controllers — the foot switch and Move’s knobs',
+				steps: [...SETTINGS_OPEN, { click: '[data-tab="controllers"]' }]
+			},
+			{
+				name: 'settings-controllers-general',
+				description: 'Settings → Controllers, Max Utility patch switched off — no Move Knob switch',
 				features: { maxUtilityPatch: { enabled: false, available: false, reason: '' } },
-				steps: SETTINGS_OPEN
+				steps: [...SETTINGS_OPEN, { click: '[data-tab="controllers"]' }]
 			},
 			{
 				name: 'settings-places',
-				description: 'Settings → Places — the ticked ones first, then Live’s categories',
+				description: 'Settings → Library — the effects folder, then the ticked ones first (In the sidebar), then Live’s categories',
 				steps: [...SETTINGS_OPEN, { click: '[data-tab="places"]' }]
 			},
 			{
 				name: 'settings-places-filter',
-				description: 'Settings → Places, filtered to "drum"',
+				description: 'Settings → Library, filtered to "drum"',
 				steps: [...SETTINGS_OPEN, { click: '[data-tab="places"]' }, { fill: '.set-filter input', text: 'drum' }]
 			},
 			{
 				name: 'settings-grooves',
-				description: 'Settings → Grooves — Live’s groove files, the Groove view’s first',
+				description: 'Settings → Grooves — Live’s groove files, the Groove view’s running order first',
 				steps: [...SETTINGS_OPEN, { click: '[data-tab="grooves"]' }]
 			},
 			{
 				name: 'settings-connection',
-				description: 'Settings → Connection — Live, the iPad address, the features (TotalMix unavailable)',
-				features: { totalmix: { enabled: true, available: false, reason: 'TotalMix has not answered on port 7001' } },
+				description: 'Settings → Connection — Live, the iPad address, paired devices',
 				steps: [...SETTINGS_OPEN, { click: '[data-tab="connection"]' }]
+			},
+			{
+				name: 'settings-integrations',
+				description: 'Settings → Integrations — the features (TotalMix unavailable, so it leads)',
+				features: { totalmix: { enabled: true, available: false, reason: 'TotalMix has not answered on port 7001' } },
+				steps: [...SETTINGS_OPEN, { click: '[data-tab="integrations"]' }]
 			},
 			{
 				// A first run: the Mac has saved nothing, so Settings opens by itself
@@ -986,22 +999,51 @@ export const TOURS = {
 			},
 			{
 				name: 'settings-capture-input',
-				description: 'Settings → General, Capture on an input: Live’s input or a device Vamp for Mac records, Stereo or Mono (ADR-533)',
-				// Opened as a first run, since the gear's path times out in the tour
-				// (2026-11-13, every gear state alike).
-				firstRun: true,
+				description: 'Settings → Recording, REC on an input: Live’s input or a device Vamp for Mac records, Stereo or Mono (ADR-533)',
 				steps: [
-					{ click: '[data-tab="general"]' },
+					...SETTINGS_OPEN,
 					{ click: '[data-capture-source="input"]' },
-					{ click: '[data-capture-device="AppleUSBAudioEngine:RME:Babyface Pro"]' },
+					{ select: '[data-capture-device]', value: 'AppleUSBAudioEngine:RME:Babyface Pro' },
 					{ click: '[data-capture-mode="mono"]' },
-					{ click: '[data-capture-channel="5"]' }
+					{ click: '[data-capture-channel]' },
+					{ click: '[data-capture-channel-option="1"]' }
+				]
+			},
+			{
+				name: 'settings-capture-channels',
+				description: 'Settings → Recording, the channel dropdown open: every input with its live level',
+				steps: [
+					...SETTINGS_OPEN,
+					{ click: '[data-capture-source="input"]' },
+					{ select: '[data-capture-device]', value: 'AppleUSBAudioEngine:RME:Babyface Pro' },
+					{ click: '[data-capture-mode="mono"]' },
+					{ click: '[data-capture-channel]' }
 				]
 			},
 			{
 				name: 'settings-foot-learn',
-				description: 'Settings → General, the foot switch learning — "Press your pedal…"',
-				steps: [...SETTINGS_OPEN, { click: '[data-debug="foot-switch-learn"]' }]
+				description: 'Settings → Controllers, the foot switch learning — "Press your pedal…"',
+				steps: [...SETTINGS_OPEN, { click: '[data-tab="controllers"]' }, { click: '[data-debug="foot-switch-learn"]' }]
+			},
+			{
+				name: 'settings-light',
+				description: 'Settings → Recording in the light theme',
+				theme: 'light',
+				steps: SETTINGS_OPEN
+			},
+			{
+				name: 'settings-phone-list',
+				description: 'Settings on a phone (393x852): the list of sections, the theme at its foot',
+				viewport: { width: 393, height: 852 },
+				layout: false,
+				steps: [...SETTINGS_OPEN, { click: '[data-debug="settings-back"]' }]
+			},
+			{
+				name: 'settings-phone-section',
+				description: 'Settings on a phone: one section (Library), with a way back',
+				viewport: { width: 393, height: 852 },
+				layout: false,
+				steps: [...SETTINGS_OPEN, { click: '[data-debug="settings-back"]' }, { click: '[data-tab="places"]' }]
 			}
 		]
 	}

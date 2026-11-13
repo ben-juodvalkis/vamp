@@ -1,0 +1,929 @@
+/*
+ * Settings' grammar (ADR-534): the page's shell and every section's parts,
+ * in one place. Each section used to carry its own copy of the filter, the
+ * folding group header and the drawn checkbox; they live here now, under
+ * `.set-page` so nothing leaks into the rest of the app.
+ *
+ * The look is the flat grammar's (app.css, ui-architecture.md §8.1): opaque
+ * surfaces, 1px dark edges, no shadow, mixed-case labels, Live's orange for
+ * ON and Live's blue for the selected section.
+ */
+
+/* ======================================================================
+   Shell: a sidebar column and a section column, each with a head cell in
+   the same top row, so the two heads read as one toolbar.
+   ====================================================================== */
+.set-page {
+	position: fixed;
+	inset: 0;
+	z-index: 1002;
+	display: grid;
+	grid-template-columns: 15.5rem minmax(0, 1fr);
+	grid-template-rows: auto minmax(0, 1fr);
+	padding-top: var(--edge-top);
+	background: var(--background);
+	color: var(--foreground);
+}
+.set-page:focus {
+	outline: none;
+}
+
+.set-nav-head,
+.set-head {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-md);
+	min-height: 4rem;
+	border-bottom: 1px solid var(--line-strong);
+}
+.set-nav-head {
+	grid-column: 1;
+	grid-row: 1;
+	padding: 0 var(--spacing-lg) 0 var(--spacing-xl);
+	background: var(--card);
+	border-right: 1px solid var(--line-strong);
+}
+.set-title {
+	font-size: 1.25rem;
+	font-weight: 600;
+	line-height: 1.2;
+}
+.set-head {
+	grid-column: 2;
+	grid-row: 1;
+	flex-wrap: wrap;
+	padding: var(--spacing-sm) var(--spacing-lg) var(--spacing-sm) var(--spacing-2xl);
+}
+.set-head-title {
+	flex: 1 1 10rem;
+	min-width: 0;
+	font-size: 1.25rem;
+	font-weight: 600;
+	line-height: 1.2;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.set-head-title-page {
+	display: none;
+}
+.set-head-actions {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-sm);
+	margin-left: auto;
+}
+.set-head-error {
+	font-size: 0.8125rem;
+	color: var(--act-warn);
+}
+.set-head .set-back {
+	display: none;
+}
+
+/* ---- Sidebar ---- */
+.set-nav {
+	grid-column: 1;
+	grid-row: 2;
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+	background: var(--card);
+	border-right: 1px solid var(--line-strong);
+}
+.set-tabs {
+	flex: 1 1 auto;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: var(--spacing-md) var(--spacing-md) var(--spacing-lg);
+	overflow-y: auto;
+}
+.set-tabs:focus {
+	outline: none;
+}
+.set-nav-heading {
+	padding: var(--spacing-lg) var(--spacing-md) var(--spacing-xs);
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: var(--fg-tertiary);
+}
+.set-nav-heading:first-child {
+	padding-top: var(--spacing-xs);
+}
+.set-tab {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-md);
+	min-height: var(--height-touch);
+	padding: 0 var(--spacing-md);
+	border: 0;
+	border-radius: var(--radius-sm);
+	background: transparent;
+	color: var(--foreground);
+	font-size: 0.9375rem;
+	font-weight: var(--font-weight-medium);
+	text-align: left;
+	cursor: pointer;
+}
+.set-tab[aria-selected='true'] {
+	background: var(--flat-selection);
+	color: var(--flat-selection-fg);
+}
+.set-tab .set-tab-icon {
+	width: 1.125rem;
+	height: 1.125rem;
+	flex-shrink: 0;
+	color: var(--muted-foreground);
+}
+.set-tab[aria-selected='true'] .set-tab-icon {
+	color: inherit;
+}
+.set-tab-label {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.set-tab-badge {
+	flex-shrink: 0;
+	min-width: 1.5rem;
+	padding: 0.0625rem 0.375rem;
+	border-radius: var(--radius-sm);
+	background: var(--surface-well);
+	color: var(--muted-foreground);
+	font-size: 0.75rem;
+	font-variant-numeric: tabular-nums;
+	text-align: center;
+}
+.set-tab[aria-selected='true'] .set-tab-badge {
+	background: color-mix(in srgb, var(--flat-selection-fg) 14%, transparent);
+	color: var(--flat-selection-fg);
+}
+.set-tab-dot {
+	flex-shrink: 0;
+	width: 0.625rem;
+	height: 0.625rem;
+	border-radius: 9999px;
+	border: 1.5px solid var(--muted-foreground);
+}
+.set-tab-dot[data-state='ok'] {
+	background: var(--act-play);
+	border-color: var(--act-play);
+}
+.set-tab-dot[data-state='problem'] {
+	background: var(--act-warn);
+	border-color: var(--act-warn);
+}
+.set-tab[aria-selected='true'] .set-tab-dot {
+	border-color: var(--flat-selection-fg);
+}
+.set-tab .set-tab-chevron {
+	display: none;
+}
+@media (hover: hover) {
+	.set-tab:not([aria-selected='true']):hover {
+		background: var(--secondary);
+	}
+}
+
+/* The theme sits at the foot of the sidebar: one choice, always in reach,
+   rather than a section of its own with one row in it. */
+.set-nav-foot {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-sm);
+	padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg);
+	border-top: 1px solid var(--line-strong);
+}
+.set-nav-foot-label {
+	display: flex;
+	justify-content: space-between;
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: var(--fg-tertiary);
+}
+.set-nav-foot-label span:last-child {
+	font-weight: 400;
+}
+.set-nav-foot .set-segment {
+	min-height: 2.5rem;
+	flex-direction: column;
+	gap: 0.125rem;
+	font-size: 0.75rem;
+}
+
+/* ---- Sections ---- */
+.set-panel {
+	grid-column: 2;
+	grid-row: 2;
+	min-height: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: var(--spacing-xl) var(--spacing-2xl) 4rem;
+}
+.set-panel[hidden] {
+	display: none;
+}
+/* A section reads as one column; Places and Grooves spend the width on
+   more columns of cards. */
+.set-panel > * {
+	max-width: 50rem;
+}
+.set-panel-wide > * {
+	max-width: none;
+}
+
+/* ======================================================================
+   Buttons
+   ====================================================================== */
+.set-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--spacing-sm);
+	min-height: var(--height-touch);
+	padding: 0 var(--spacing-lg);
+	font-size: 0.9375rem;
+	font-weight: var(--font-weight-medium);
+	color: var(--foreground);
+	background: var(--secondary);
+	border: 1px solid var(--line-strong);
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+	white-space: nowrap;
+}
+.set-btn-primary {
+	background: var(--phosphor);
+	border-color: var(--phosphor);
+	color: var(--flat-on-fg);
+}
+.set-btn-quiet {
+	background: transparent;
+	border-color: transparent;
+	color: var(--muted-foreground);
+}
+.set-btn-small {
+	min-height: 2.25rem;
+	padding: 0 var(--spacing-md);
+	font-size: 0.8125rem;
+}
+.set-btn:disabled {
+	color: var(--flat-disabled-fg);
+	cursor: not-allowed;
+}
+.set-btn-primary:disabled {
+	background: var(--surface-well);
+	border-color: var(--line-strong);
+}
+.set-btn .set-btn-icon,
+.set-btn-icon {
+	width: 1.125rem;
+	height: 1.125rem;
+	flex-shrink: 0;
+}
+/* The close button: a square, the corner's one way out. */
+.set-close {
+	width: var(--height-touch);
+	padding: 0;
+}
+@media (hover: hover) {
+	.set-btn:not(:disabled):not(.set-btn-primary):hover {
+		background: var(--accent);
+		color: var(--foreground);
+	}
+}
+.set-tab:focus-visible,
+.set-btn:focus-visible,
+.set-segment:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 1px;
+}
+
+/* ======================================================================
+   The sections' grammar. A section opens with a lead, then groups: a quiet
+   title over one bordered list. A row is a name, what it does, and its
+   state on the right. A switch is the whole row, so its target is the row,
+   never a small box inside it.
+   ====================================================================== */
+.set-section {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-2xl);
+}
+.set-lead {
+	font-size: 0.9375rem;
+	line-height: 1.5;
+	color: var(--muted-foreground);
+	max-width: 42rem;
+}
+.set-lead strong {
+	color: var(--foreground);
+	font-weight: var(--font-weight-medium);
+}
+.set-group {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-sm);
+}
+.set-group-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--spacing-md);
+	min-height: 1.5rem;
+}
+.set-group-title {
+	padding-inline: 0.125rem;
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: var(--muted-foreground);
+}
+.set-note {
+	padding-inline: 0.125rem;
+	font-size: 0.8125rem;
+	line-height: 1.5;
+	color: var(--muted-foreground);
+}
+.set-note strong {
+	color: var(--foreground);
+	font-weight: var(--font-weight-medium);
+}
+.set-list {
+	display: flex;
+	flex-direction: column;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	background: var(--card);
+	border: 1px solid var(--line-strong);
+	border-radius: var(--radius-md);
+	overflow: hidden;
+}
+.set-row {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-md) var(--spacing-lg);
+	min-height: 3.75rem;
+	padding: var(--spacing-md) var(--spacing-lg);
+}
+/* Not `* + *`: a row that is a button zeroes its own border, and the
+   divider must outrank that. */
+.set-list > :not(:first-child) {
+	border-top: 1px solid var(--line-strong);
+}
+.set-row-stack {
+	flex-wrap: wrap;
+}
+.set-row-button {
+	width: 100%;
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	color: inherit;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+.set-row-button:active {
+	background: var(--secondary);
+}
+.set-row-button:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: -2px;
+}
+@media (hover: hover) {
+	.set-row-button:hover {
+		background: var(--secondary);
+	}
+}
+.set-row-main {
+	flex: 1 1 14rem;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.1875rem;
+}
+.set-row-label {
+	font-size: 0.9375rem;
+	font-weight: var(--font-weight-medium);
+	color: var(--foreground);
+}
+.set-row-sub {
+	font-size: 0.8125rem;
+	line-height: 1.4;
+	color: var(--muted-foreground);
+	overflow-wrap: anywhere;
+}
+.set-row-reason {
+	color: var(--act-warn);
+}
+.set-row-detail {
+	margin-top: 0.125rem;
+	font-size: 0.75rem;
+	color: var(--fg-tertiary);
+	font-variant-numeric: tabular-nums;
+}
+
+/* A switch's state: Live's On/Off button. ON is orange, OFF a well. */
+.set-chip {
+	flex-shrink: 0;
+	min-width: 3.5rem;
+	padding: 0.3125rem 0.625rem;
+	font-size: 0.8125rem;
+	font-weight: var(--font-weight-medium);
+	text-align: center;
+	color: var(--muted-foreground);
+	background: var(--surface-well);
+	border: 1px solid var(--line-strong);
+	border-radius: var(--radius-sm);
+}
+.set-chip.on {
+	color: var(--flat-on-fg);
+	background: var(--phosphor);
+	border-color: var(--phosphor);
+}
+/* An action inside a row that is itself the button: drawn as a button so
+   it reads as one, while the whole row takes the tap. */
+.set-chip.action {
+	min-width: 6rem;
+	color: var(--foreground);
+	background: var(--secondary);
+}
+.set-chip.action.on {
+	color: var(--flat-on-fg);
+	background: var(--phosphor);
+}
+.set-chip.pulse {
+	animation: set-pulse 1.2s ease-in-out infinite;
+}
+@keyframes set-pulse {
+	50% {
+		opacity: 0.55;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.set-chip.pulse {
+		animation: none;
+	}
+}
+
+/* A read-only state: a dot and a word, no box, so it never reads as a
+   control. */
+.set-status {
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4375rem;
+	font-size: 0.8125rem;
+	font-weight: var(--font-weight-medium);
+	color: var(--muted-foreground);
+}
+.set-status-dot {
+	width: 0.5625rem;
+	height: 0.5625rem;
+	border-radius: 9999px;
+	border: 1.5px solid currentColor;
+	flex-shrink: 0;
+}
+.set-status[data-state='on'] {
+	color: var(--foreground);
+}
+.set-status[data-state='on'] .set-status-dot {
+	background: var(--act-play);
+	border-color: var(--act-play);
+}
+.set-status[data-state='waiting'] .set-status-dot {
+	border-style: dashed;
+}
+.set-status[data-state='problem'] {
+	color: var(--act-warn);
+}
+.set-status[data-state='problem'] .set-status-dot {
+	background: currentColor;
+}
+
+/* ---- Segmented choices ---- */
+.set-segmented {
+	display: grid;
+	grid-template-columns: repeat(var(--set-segments, 3), minmax(0, 1fr));
+	gap: 2px;
+	flex-shrink: 0;
+	padding: 2px;
+	background: var(--surface-well);
+	border: 1px solid var(--line-strong);
+	border-radius: var(--radius-sm);
+}
+.set-segment {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--spacing-sm);
+	min-height: calc(var(--height-touch) - 6px);
+	padding: 0 var(--spacing-md);
+	font-size: 0.9375rem;
+	font-weight: var(--font-weight-medium);
+	color: var(--muted-foreground);
+	background: transparent;
+	border: 0;
+	border-radius: var(--radius-xs);
+	cursor: pointer;
+	white-space: nowrap;
+}
+.set-segment .set-btn-icon {
+	width: 1rem;
+	height: 1rem;
+}
+.set-segment.on {
+	background: var(--phosphor);
+	color: var(--flat-on-fg);
+}
+@media (hover: hover) {
+	.set-segment:not(.on):hover {
+		background: var(--secondary);
+		color: var(--foreground);
+	}
+}
+/* A dropdown: a well with the system's own arrow. */
+.set-select {
+	min-height: var(--height-touch);
+	padding: 0 var(--spacing-md);
+	font: inherit;
+	font-size: 0.9375rem;
+	color: var(--foreground);
+	background: var(--surface-well);
+	border: 1px solid var(--line-strong);
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+}
+.set-select:disabled {
+	color: var(--flat-disabled-fg);
+	cursor: not-allowed;
+}
+.set-select:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 1px;
+}
+
+/* A labelled field inside a row's sub-panel: the name on the left, the
+   control beside it; stacked on a narrow window. */
+.set-subpanel {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-lg);
+	padding: var(--spacing-lg);
+	background: color-mix(in srgb, var(--surface-well) 45%, var(--card));
+}
+.set-field {
+	display: grid;
+	grid-template-columns: 6.5rem minmax(0, 1fr);
+	align-items: start;
+	gap: var(--spacing-md);
+}
+.set-field-label {
+	padding-top: 0.75rem;
+	font-size: 0.8125rem;
+	font-weight: var(--font-weight-medium);
+	color: var(--muted-foreground);
+}
+.set-field-body {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-sm);
+	min-width: 0;
+}
+
+/* ======================================================================
+   Long lists (Places, Grooves): a sticky toolbar with the count and a
+   filter, groups that fold, and cards with a drawn tick, as many columns
+   as fit.
+   ====================================================================== */
+.set-listbar {
+	position: sticky;
+	top: calc(-1 * var(--spacing-xl));
+	z-index: 1;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--spacing-md) var(--spacing-xl);
+	margin: 0 calc(-1 * var(--spacing-2xl));
+	padding: var(--spacing-md) var(--spacing-2xl);
+	background: var(--background);
+	border-bottom: 1px solid var(--line-strong);
+}
+.set-listbar-count {
+	flex: 1 1 16rem;
+	font-size: 0.9375rem;
+	color: var(--muted-foreground);
+}
+.set-listbar-count strong {
+	color: var(--foreground);
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+.set-saving {
+	margin-left: var(--spacing-sm);
+	color: var(--fg-tertiary);
+}
+.set-save-error {
+	display: block;
+	color: var(--act-warn);
+}
+.set-filter {
+	position: relative;
+	flex: 0 1 22rem;
+	min-width: 12rem;
+	display: flex;
+	align-items: center;
+}
+.set-filter .set-filter-icon {
+	position: absolute;
+	left: var(--spacing-md);
+	width: 1rem;
+	height: 1rem;
+	color: var(--muted-foreground);
+	pointer-events: none;
+}
+.set-filter input {
+	width: 100%;
+	min-height: var(--height-touch);
+	padding: 0 var(--height-touch) 0 2.25rem;
+	font-size: 1rem; /* 16px or iOS zooms the page on focus */
+	color: var(--foreground);
+	background: var(--surface-well);
+	border: 1px solid var(--line-strong);
+	border-radius: var(--radius-sm);
+	appearance: none;
+}
+.set-filter input::-webkit-search-cancel-button {
+	display: none;
+}
+.set-filter input::placeholder {
+	color: var(--fg-tertiary);
+}
+.set-filter input:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 1px;
+}
+.set-filter-clear {
+	position: absolute;
+	right: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: var(--height-touch);
+	height: var(--height-touch);
+	color: var(--muted-foreground);
+	background: transparent;
+	border: 0;
+	cursor: pointer;
+}
+
+.set-fold {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-sm);
+	/* Clear of the sticky toolbar when scrolled to. */
+	scroll-margin-top: 5rem;
+}
+.set-fold-toggle {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-sm);
+	min-height: var(--height-touch);
+	padding: 0 var(--spacing-xs);
+	background: transparent;
+	border: 0;
+	color: var(--foreground);
+	font-size: 0.875rem;
+	font-weight: 600;
+	text-align: left;
+	cursor: pointer;
+}
+.set-fold-toggle:disabled {
+	cursor: default;
+}
+.set-fold-toggle .set-fold-chevron {
+	width: 1rem;
+	height: 1rem;
+	flex-shrink: 0;
+	color: var(--muted-foreground);
+	transition: transform 0.15s ease;
+}
+.set-fold-toggle[aria-expanded='true'] .set-fold-chevron {
+	transform: rotate(90deg);
+}
+.set-fold-name {
+	flex: 0 1 auto;
+}
+.set-fold-count {
+	flex-shrink: 0;
+	margin-left: var(--spacing-xs);
+	padding: 0.0625rem 0.4375rem;
+	border-radius: var(--radius-sm);
+	background: var(--surface-well);
+	font-size: 0.75rem;
+	font-weight: 500;
+	color: var(--muted-foreground);
+	font-variant-numeric: tabular-nums;
+}
+.set-fold-rule {
+	flex: 1 1 auto;
+	height: 1px;
+	margin-left: var(--spacing-sm);
+	background: var(--line-strong);
+}
+.set-fold-toggle:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: -2px;
+}
+@media (hover: hover) {
+	.set-fold-toggle:not(:disabled):hover .set-fold-name {
+		text-decoration: underline;
+		text-underline-offset: 3px;
+	}
+}
+
+.set-tick-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+	gap: var(--spacing-xs);
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+.set-tick-card {
+	min-width: 0;
+	background: var(--card);
+	border: 1px solid var(--line-strong);
+	border-radius: var(--radius-sm);
+}
+.set-tick {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-md);
+	min-height: 3.25rem;
+	height: 100%;
+	padding: var(--spacing-sm) var(--spacing-md);
+	cursor: pointer;
+}
+.set-tick-card.absent .set-tick {
+	cursor: not-allowed;
+}
+.set-tick-card.absent .set-row-label {
+	color: var(--flat-disabled-fg);
+}
+/* The box is drawn, not the browser's: a white system checkbox was the
+   brightest thing on a dark page. The input stays under it, the whole card
+   its label. */
+.set-tick input {
+	position: absolute;
+	opacity: 0;
+	width: 1px;
+	height: 1px;
+	pointer-events: none;
+}
+.set-check {
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.375rem;
+	height: 1.375rem;
+	background: var(--surface-well);
+	border: 1px solid var(--line-strong);
+	border-radius: var(--radius-sm);
+	color: transparent;
+}
+.set-check .set-check-icon {
+	width: 1rem;
+	height: 1rem;
+	stroke-width: 3;
+}
+.set-tick input:checked + .set-check {
+	background: var(--phosphor);
+	border-color: var(--phosphor);
+	color: var(--flat-on-fg);
+}
+.set-tick input:disabled + .set-check {
+	background: transparent;
+	border-style: dashed;
+}
+.set-tick input:focus-visible + .set-check {
+	outline: 2px solid var(--ring);
+	outline-offset: 2px;
+}
+.set-tick-name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.set-tick-count {
+	flex-shrink: 0;
+	align-self: flex-start;
+	padding-top: 0.125rem;
+	font-size: 0.75rem;
+	color: var(--fg-tertiary);
+	font-variant-numeric: tabular-nums;
+}
+@media (hover: hover) {
+	.set-tick-card:not(.absent):hover {
+		background: var(--secondary);
+	}
+}
+
+/* ======================================================================
+   Narrow (under 760px: the Mac's half-width window, a phone): the list of
+   sections OR one section, iOS's way, with a back button in the head.
+   ====================================================================== */
+@media (max-width: 759.98px) {
+	.set-page {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.set-nav-head {
+		display: none;
+	}
+	.set-head {
+		grid-column: 1;
+		min-height: 3.5rem;
+		padding: var(--spacing-xs) var(--spacing-sm) var(--spacing-xs) var(--spacing-lg);
+	}
+	.set-nav,
+	.set-panel {
+		grid-column: 1;
+		border-right: 0;
+	}
+	.set-panel {
+		padding: var(--spacing-lg) var(--spacing-lg) 3rem;
+	}
+	.set-listbar {
+		top: calc(-1 * var(--spacing-lg));
+		margin: 0 calc(-1 * var(--spacing-lg));
+		padding: var(--spacing-md) var(--spacing-lg);
+	}
+	.set-filter {
+		flex: 1 1 100%;
+	}
+	.set-field {
+		grid-template-columns: minmax(0, 1fr);
+		gap: var(--spacing-xs);
+	}
+	.set-field-label {
+		padding-top: 0;
+	}
+
+	/* The list: every section a full-width row with a chevron. */
+	.set-page[data-narrow='list'] .set-panel {
+		display: none;
+	}
+	.set-page[data-narrow='list'] .set-head-title-section {
+		display: none;
+	}
+	.set-page[data-narrow='list'] .set-head-title-page {
+		display: inline;
+	}
+	.set-tabs {
+		padding: var(--spacing-sm) var(--spacing-lg) var(--spacing-lg);
+	}
+	.set-tab {
+		min-height: 3.25rem;
+		font-size: 1rem;
+	}
+	.set-tab[aria-selected='true'] {
+		background: transparent;
+		color: var(--foreground);
+	}
+	.set-tab[aria-selected='true'] .set-tab-icon {
+		color: var(--muted-foreground);
+	}
+	.set-tab[aria-selected='true'] .set-tab-badge {
+		background: var(--surface-well);
+		color: var(--muted-foreground);
+	}
+	.set-tab .set-tab-chevron {
+		display: block;
+		width: 1rem;
+		height: 1rem;
+		flex-shrink: 0;
+		color: var(--fg-tertiary);
+	}
+	.set-tab:active {
+		background: var(--secondary);
+	}
+
+	/* One section: the sidebar steps aside; the head grows a way back. */
+	.set-page[data-narrow='panel'] .set-nav {
+		display: none;
+	}
+	.set-page[data-narrow='panel'] .set-head .set-back {
+		display: inline-flex;
+		margin-left: calc(-1 * var(--spacing-sm));
+		padding: 0 var(--spacing-sm);
+		gap: 0;
+	}
+	.set-page[data-narrow='panel'] .set-head-title {
+		flex: 1 1 0;
+	}
+}

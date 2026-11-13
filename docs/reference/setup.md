@@ -37,7 +37,7 @@ npm run dev
 Then in Live: **Settings → Link, Tempo & MIDI → Control Surface →
 Vamp**, and add this checkout's `Vamp Devices` folder (the app's utilities) as a Place.
 Vamp's own effects are found by name in the effects folder chosen in
-Settings → Places (ADR-498). Output stays **None**; Input
+Settings → Library (ADR-498). Output stays **None**; Input
 too, unless a pedal is on USB (§5, USB pedal).
 
 If validation passes and Live's log shows
@@ -103,7 +103,7 @@ After install, in Live:
 ### USB pedal (optional, ADR-422)
 
 With a pedal on USB, the surface reads its MIDI directly. The **foot switch** is a setting:
-point the surface's Input at the pedal (steps 1–3), then **Settings → General → Foot Switch →
+point the surface's Input at the pedal (steps 1–3), then **Settings → Controllers → Foot switch →
 Learn** records its channel, CC and whether it is momentary or latching
 (`logs/foot-switch.json`). The rest of this section is the owner's **expression pedal and wah**,
 which exist only while `features.expressionPedal` is on:
@@ -335,7 +335,7 @@ Live caches Remote Script bytecode. After changing
 
 ### 9.6 `Preset browser is empty`
 
-The rail shows one button per Place ticked in **Settings → Places**; the Places themselves are
+The rail shows one button per Place ticked in **Settings → Library**; the Places themselves are
 Live's own (its sidebar, the User Library, the Packs, read from `Library.cfg`). An empty rail
 (Recent alone) means nothing is ticked, or no catalog was built.
 

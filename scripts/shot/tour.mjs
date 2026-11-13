@@ -239,7 +239,8 @@ try {
 			// clip's length, say. Runs last, on the state's own copy.
 			if (state.scenePatch) state.scenePatch(scene);
 			mock = await startMockSurface({ port: mockPort, scene, log: () => {} });
-			context = await browser.newContext({ viewport, deviceScaleFactor: scale });
+			// A state may name its own viewport (a phone-width Settings) and theme.
+			context = await browser.newContext({ viewport: state.viewport ?? viewport, deviceScaleFactor: scale });
 			// Before the page exists, so its very first socket is intercepted.
 			await mock.routePage(context);
 			await installCatalogFixtures(context, { force: !has('real-data'), firstRun: state.firstRun === true });
@@ -255,7 +256,7 @@ try {
 				},
 				// SHOT_PREFS='{"key":"value"}' lays extra localStorage over every
 				// state's own (an A/B of a UI switch across a whole tour).
-				{ prefs: { ...state.prefs, ...JSON.parse(process.env.SHOT_PREFS || '{}') }, theme }
+				{ prefs: { ...state.prefs, ...JSON.parse(process.env.SHOT_PREFS || '{}') }, theme: state.theme ?? theme }
 			);
 
 			const page = await context.newPage();
@@ -286,7 +287,9 @@ try {
 
 			// Measured before the shutter and before a hold is released, so the
 			// check sees exactly the screen the picture does.
-			const problems = checkLayout ? layoutViolations(await page.evaluate(measureLayout), state.layout) : [];
+			// `layout: false` skips it for a state with no central view to measure
+			// (the phone layout behind a phone-width Settings).
+			const problems = checkLayout && state.layout !== false ? layoutViolations(await page.evaluate(measureLayout), state.layout) : [];
 
 			// The knob audit (header): what each knob draws, before the shutter.
 			if (process.env.KNOB_AUDIT) {

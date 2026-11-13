@@ -33,6 +33,6 @@ describe('firstRunSteps', () => {
 
 	it('points each step Settings can do at its section', () => {
 		const goTo = Object.fromEntries(firstRunSteps(nothing).map((s) => [s.key, s.goTo?.section]));
-		expect(goTo).toEqual({ surface: undefined, m4l: undefined, places: 'places', foot: 'general' });
+		expect(goTo).toEqual({ surface: undefined, m4l: undefined, places: 'places', foot: 'controllers' });
 	});
 });

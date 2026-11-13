@@ -1,6 +1,6 @@
 /**
  * What REC records (capture.plan.md, issue #9; ADR-533): the selected track,
- * or an audio input. Settings → Capture sets it; REC sends it with every
+ * or an audio input. Settings → Recording sets it; REC sends it with every
  * start.
  *
  * An input is a device and a channel on it, mono or a stereo pair. The

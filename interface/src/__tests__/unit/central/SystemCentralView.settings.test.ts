@@ -62,7 +62,7 @@ describe('SettingsPage', () => {
 	it('holds the setup cards and closes', async () => {
 		settingsStore.openSettings();
 		const { getByText, getByLabelText } = render(SettingsPage);
-		for (const card of ['Behavior', 'Appearance', 'Foot Switch', 'Places', 'Features', 'Connection']) {
+		for (const card of ['REC button', 'Automatic', 'Ableton Live', 'Open on the iPad', 'Paired devices', 'Features', 'Theme']) {
 			expect(getByText(card), card).toBeTruthy();
 		}
 		const flipped = session.autoArmEnabled ? 0 : 1;
@@ -89,7 +89,7 @@ describe('SettingsPage', () => {
 
 	it('reads as the first-run checklist while the Mac has saved nothing', () => {
 		settingsStore.firstRun = true;
-		const { getByText } = render(SettingsPage);
-		expect(getByText(/set up Vamp/)).toBeTruthy();
+		const { getByRole } = render(SettingsPage);
+		expect(getByRole('heading', { level: 1, name: 'Welcome to Vamp' })).toBeTruthy();
 	});
 });

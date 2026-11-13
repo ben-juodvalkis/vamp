@@ -479,7 +479,7 @@ iPad with Developer Mode on (Settings → Privacy & Security), plugged in.
 - [ ] Safari on the phone over Wi-Fi: "Pair this device" → Ask the Mac → Live's status bar shows "Vamp: … wants to connect. Code ……" and the trusted screens show an Allow banner
 - [ ] Typing the code pairs it (page reloads into Vamp); a wrong code says how many tries are left
 - [ ] Allow on the cabled iPad pairs a second device without the code; Ignore refuses it; either clears the status bar line
-- [ ] Settings → Connection → Devices lists the phone; Forget it, reload the phone: it asks again
+- [ ] Settings → Connection → Paired devices lists the phone; Forget it, reload the phone: it asks again
 - [ ] Safari on the iPad home-screen app pairs once and stays paired across a relaunch (the 7-day cap on script cookies should not apply: to confirm)
 - [ ] The TCP leg (ADR-489) after a set load: no `no accept — resending hello` in `logs/bridge.log`
 

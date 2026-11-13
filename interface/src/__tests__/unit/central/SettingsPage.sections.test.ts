@@ -1,8 +1,9 @@
 /**
- * Settings' sections (plan.md §11): a sidebar of General, Places and
- * Connection, with Setup ahead of them on a first run. Each section is a tab
- * panel that stays mounted while hidden; the page remembers where it was
- * left. Places groups its folders and Live's categories (every Pack one of
+ * Settings' sections (plan.md §11, ADR-534): a sidebar of Recording,
+ * Controllers, Places, Grooves, Connection and Integrations, with Setup ahead
+ * of them on a first run. Each section is a tab panel that stays mounted
+ * while hidden; the page remembers where it was left, and a narrow window
+ * shows the list or one section. Places groups its folders and Live's categories (every Pack one of
  * them), filters, and saves each
  * tick as it is made. A first run ends with Finish setup (which saves) or
  * Set up later (which does not), and the checklist no longer vanishes when
@@ -78,29 +79,45 @@ function fakeMac(initial: PlacesListing) {
 const panel = (container: HTMLElement, id: string) => container.querySelector<HTMLElement>(`#set-panel-${id}`)!;
 
 beforeEach(() => {
-	settingsStore.section = 'general';
+	settingsStore.section = 'recording';
 });
 afterEach(() => {
 	cleanup();
 	vi.unstubAllGlobals();
 	settingsStore.closeSettings();
 	settingsStore.firstRun = false;
-	settingsStore.section = 'general';
+	settingsStore.section = 'recording';
 });
 
 describe('Settings sections', () => {
-	it('opens on General, and a tab shows its own section alone', async () => {
+	it('opens on Recording, and a tab shows its own section alone, named in the head', async () => {
 		fakeMac(listingWith(SOURCES));
 		const { getByRole, container } = render(SettingsPage);
-		expect(getByRole('tab', { name: /General/ }).getAttribute('aria-selected')).toBe('true');
-		expect(panel(container, 'general').hidden).toBe(false);
+		expect(getByRole('tab', { name: /Recording/ }).getAttribute('aria-selected')).toBe('true');
+		expect(panel(container, 'recording').hidden).toBe(false);
 		expect(panel(container, 'places').hidden).toBe(true);
+		expect(getByRole('heading', { level: 2 }).textContent).toContain('Recording');
 
-		await fireEvent.click(getByRole('tab', { name: /Places/ }));
-		expect(getByRole('tab', { name: /Places/ }).getAttribute('aria-selected')).toBe('true');
+		await fireEvent.click(getByRole('tab', { name: /Library/ }));
+		expect(getByRole('tab', { name: /Library/ }).getAttribute('aria-selected')).toBe('true');
 		expect(panel(container, 'places').hidden).toBe(false);
-		expect(panel(container, 'general').hidden).toBe(true);
+		expect(panel(container, 'recording').hidden).toBe(true);
 		expect(settingsStore.section).toBe('places');
+		expect(getByRole('heading', { level: 2 }).textContent).toContain('Library');
+	});
+
+	it('groups the tabs as Play, Browse and System, in that order', () => {
+		fakeMac(listingWith(SOURCES));
+		const { getAllByRole, container } = render(SettingsPage);
+		expect(getAllByRole('tab').map((t) => t.dataset.tab)).toEqual([
+			'recording',
+			'controllers',
+			'places',
+			'grooves',
+			'connection',
+			'integrations'
+		]);
+		expect([...container.querySelectorAll('.set-nav-heading')].map((h) => h.textContent)).toEqual(['Play', 'Browse', 'System']);
 	});
 
 	it('moves between tabs with the arrow keys', async () => {
@@ -108,11 +125,31 @@ describe('Settings sections', () => {
 		const { getByRole } = render(SettingsPage);
 		const list = getByRole('tablist');
 		await fireEvent.keyDown(list, { key: 'ArrowDown' });
-		expect(settingsStore.section).toBe('places');
+		expect(settingsStore.section).toBe('controllers');
 		await fireEvent.keyDown(list, { key: 'End' });
-		expect(settingsStore.section).toBe('connection');
+		expect(settingsStore.section).toBe('integrations');
 		await fireEvent.keyDown(list, { key: 'ArrowDown' });
-		expect(settingsStore.section).toBe('general');
+		expect(settingsStore.section).toBe('recording');
+	});
+
+	it('on a narrow window, the back button shows the list and a tab shows its section', async () => {
+		fakeMac(listingWith(SOURCES));
+		const { getByRole, container } = render(SettingsPage);
+		const page = container.querySelector<HTMLElement>('[data-debug="settings-page"]')!;
+		expect(page.dataset.narrow).toBe('panel');
+		await fireEvent.click(container.querySelector<HTMLElement>('[data-debug="settings-back"]')!);
+		expect(page.dataset.narrow).toBe('list');
+		await fireEvent.click(getByRole('tab', { name: /Grooves/ }));
+		expect(page.dataset.narrow).toBe('panel');
+		expect(settingsStore.section).toBe('grooves');
+	});
+
+	it('the theme is chosen at the sidebar’s foot', () => {
+		fakeMac(listingWith(SOURCES));
+		const { getByRole } = render(SettingsPage);
+		const themes = within(getByRole('group', { name: 'Theme' })).getAllByRole('button');
+		expect(themes.map((b) => b.textContent?.trim())).toEqual(['Light', 'Dark', 'Auto']);
+		expect(themes.filter((b) => b.getAttribute('aria-pressed') === 'true')).toHaveLength(1);
 	});
 
 	it('reopens where it was left', async () => {
@@ -136,33 +173,33 @@ describe('Settings sections', () => {
 	});
 });
 
-describe('Settings → Places', () => {
+describe('Settings → Library (the Places)', () => {
 	it("lists the ticked first, then Live's categories with every Pack as one tick", async () => {
 		fakeMac(listingWith(SOURCES));
 		const { container, getByRole } = render(SettingsPage);
-		await fireEvent.click(getByRole('tab', { name: /Places/ }));
+		await fireEvent.click(getByRole('tab', { name: /Library/ }));
 		await waitFor(() => expect(container.querySelector('[data-group="shown"]')).toBeTruthy());
 
 		const groups = [...container.querySelectorAll<HTMLElement>('[data-group]')].map((g) => g.dataset.group);
 		expect(groups).toEqual(['shown', 'categories', 'places', 'user-library']);
 		const shown = container.querySelector<HTMLElement>('[data-group="shown"]')!;
-		expect(within(shown).getByRole('checkbox', { name: 'Show Drum in the browser' })).toBeTruthy();
+		expect(within(shown).getByRole('checkbox', { name: 'Show Drum in the sidebar' })).toBeTruthy();
 
 		const categories = container.querySelector<HTMLElement>('[data-group="categories"]')!;
 		expect(within(categories).getAllByRole('checkbox')).toHaveLength(4);
-		expect(within(categories).getByRole('checkbox', { name: 'Show every installed Pack in the browser' })).toBeTruthy();
-		expect(within(categories).getByRole('checkbox', { name: 'Show the category Sounds in the browser' })).toBeTruthy();
+		expect(within(categories).getByRole('checkbox', { name: 'Show every installed Pack in the sidebar' })).toBeTruthy();
+		expect(within(categories).getByRole('checkbox', { name: 'Show the category Sounds in the sidebar' })).toBeTruthy();
 	});
 
 	it('filters by name', async () => {
 		fakeMac(listingWith(SOURCES));
 		const { container, getByRole, getByLabelText } = render(SettingsPage);
-		await fireEvent.click(getByRole('tab', { name: /Places/ }));
+		await fireEvent.click(getByRole('tab', { name: /Library/ }));
 		await waitFor(() => expect(getByLabelText('Filter by name or path')).toBeTruthy());
 
 		await fireEvent.input(getByLabelText('Filter by name or path'), { target: { value: 'pack' } });
 		const boxes = within(panel(container, 'places')).getAllByRole('checkbox');
-		expect(boxes.map((b) => b.getAttribute('aria-label'))).toEqual(['Show every installed Pack in the browser']);
+		expect(boxes.map((b) => b.getAttribute('aria-label'))).toEqual(['Show every installed Pack in the sidebar']);
 
 		await fireEvent.input(getByLabelText('Filter by name or path'), { target: { value: 'zzz' } });
 		expect(panel(container, 'places').textContent).toContain('Nothing matches “zzz”');
@@ -171,16 +208,16 @@ describe('Settings → Places', () => {
 	it('saves a tick as it is made, and the row stays in its group', async () => {
 		const mac = fakeMac(listingWith(SOURCES));
 		const { container, getByRole } = render(SettingsPage);
-		await fireEvent.click(getByRole('tab', { name: /Places/ }));
-		await waitFor(() => expect(getByRole('checkbox', { name: 'Show Desktop in the browser' })).toBeTruthy());
+		await fireEvent.click(getByRole('tab', { name: /Library/ }));
+		await waitFor(() => expect(getByRole('checkbox', { name: 'Show Desktop in the sidebar' })).toBeTruthy());
 
-		await fireEvent.click(getByRole('checkbox', { name: 'Show Desktop in the browser' }));
+		await fireEvent.click(getByRole('checkbox', { name: 'Show Desktop in the sidebar' }));
 		await waitFor(() => expect(mac.ticks).toHaveLength(1));
 		expect(mac.ticks[0].sort()).toEqual([`place:${LIB}/Desktop`, `place:${LIB}/Drum`].sort());
 
 		const places = container.querySelector<HTMLElement>('[data-group="places"]')!;
-		await waitFor(() => expect(within(places).getByRole('checkbox', { name: 'Show Desktop in the browser' })).toBeChecked());
-		expect(getByRole('tab', { name: /Places/ }).textContent).toContain('2');
+		await waitFor(() => expect(within(places).getByRole('checkbox', { name: 'Show Desktop in the sidebar' })).toBeChecked());
+		expect(getByRole('tab', { name: /Library/ }).textContent).toContain('2');
 	});
 });
 
@@ -217,14 +254,14 @@ describe('Settings on a first run', () => {
 		settingsStore.openSettings();
 		const { getByRole, queryByRole, getByText } = render(SettingsPage);
 
-		await fireEvent.click(getByRole('button', { name: 'Open Places' }));
+		await fireEvent.click(getByRole('button', { name: 'Open Library' }));
 		expect(settingsStore.section).toBe('places');
-		await waitFor(() => expect(getByRole('checkbox', { name: 'Show Drum in the browser' })).toBeTruthy());
-		await fireEvent.click(getByRole('checkbox', { name: 'Show Drum in the browser' }));
+		await waitFor(() => expect(getByRole('checkbox', { name: 'Show Drum in the sidebar' })).toBeTruthy());
+		await fireEvent.click(getByRole('checkbox', { name: 'Show Drum in the sidebar' }));
 		await waitFor(() => expect(settingsStore.firstRun).toBe(false));
 
 		expect(getByRole('tab', { name: /Setup/ })).toBeTruthy();
-		expect(getByText(/set up Vamp/)).toBeTruthy();
+		expect(getByRole('heading', { level: 1, name: 'Welcome to Vamp' })).toBeTruthy();
 		expect(queryByRole('button', { name: 'Set up later' })).toBeNull();
 		expect(getByRole('button', { name: 'Finish setup' })).not.toBeDisabled();
 		expect(getByRole('tab', { name: /Setup/ }).textContent).toContain('1/2');

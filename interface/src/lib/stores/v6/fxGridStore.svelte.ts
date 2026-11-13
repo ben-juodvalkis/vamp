@@ -503,7 +503,7 @@ export class FXGridState {
 		// to look rather than the slot waiting out its timeout.
 		const found = config.effect ? effectSource(config) : null;
 		if (config.effect && !found) {
-			v3ErrorBannerStore.show('preset-load-failed', config.defaultName, 'Not in your effects folder (Settings → Places)');
+			v3ErrorBannerStore.show('preset-load-failed', config.defaultName, 'Not in your effects folder (Settings → Library)');
 			return;
 		}
 		// The full path from the folder (a renamed Place is not found by name).

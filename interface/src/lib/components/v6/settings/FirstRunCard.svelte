@@ -3,10 +3,10 @@
 	 * Settings → Setup, the first-run checklist (onboarding.plan.md §7):
 	 * Settings opened by itself because the Mac has saved nothing yet. Each
 	 * step ticks itself when the app sees it done (`firstRunSteps`), a step a
-	 * section of Settings does carries a button there, and the last word is
-	 * the address to open on the iPad.
+	 * section of Settings does carries a button there, and the last step is
+	 * the address to open on the iPad, drawn as a step like the others.
 	 *
-	 * The page's header ends it: Finish setup saves the ticks as they stand,
+	 * The page's head ends it: Finish setup saves the ticks as they stand,
 	 * which ends the first run (`ticks.ts`), and closes; Set up later closes,
 	 * and the page opens again next time for as long as the Mac has saved
 	 * nothing. A tick saves too, so once one is made there is only Finish.
@@ -20,40 +20,65 @@
 
 	let {
 		steps,
+		progress,
 		addresses,
 		addressState
-	}: { steps: FirstRunStep[]; addresses: IpadAddress[]; addressState: 'loading' | 'ready' | 'failed' } = $props();
+	}: {
+		steps: FirstRunStep[];
+		progress: { done: number; total: number };
+		addresses: IpadAddress[];
+		addressState: 'loading' | 'ready' | 'failed';
+	} = $props();
+
+	const allDone = $derived(progress.done === progress.total);
 </script>
 
 <div class="set-section">
-	<p class="set-lead">
-		Nothing has been set up on this Mac yet. Each step ticks itself when the app sees it done; the ones only the Mac
-		can do are explained beside them. None of them means typing into a config file.
-	</p>
+	<div class="setup-intro">
+		<p class="set-lead">
+			Nothing has been set up on this Mac yet. Each step ticks itself when Vamp sees it done; none of them means typing into
+			a config file.
+		</p>
+		<div class="setup-progress" aria-label="{progress.done} of {progress.total} required steps done">
+			<span class="setup-progress-word">
+				{#if allDone}<strong>Ready to play.</strong> The rest is optional.{:else}<strong>{progress.done} of {progress.total}</strong> required steps done{/if}
+			</span>
+			<span class="setup-bar" aria-hidden="true">
+				<span class="setup-bar-fill" style:width={`${progress.total ? (progress.done / progress.total) * 100 : 0}%`}></span>
+			</span>
+		</div>
+	</div>
 
-	<ol class="set-list set-steps">
+	<ol class="set-list setup-steps">
 		{#each steps as step, i (step.key)}
-			<li class="set-row set-step" class:done={step.done} data-step={step.key} data-done={step.done}>
-				<span class="set-step-mark" aria-hidden="true">
-					{#if step.done}<Check class="set-step-icon" />{/if}
+			<li class="set-row setup-step" class:done={step.done} data-step={step.key} data-done={step.done}>
+				<span class="setup-mark" aria-hidden="true">
+					{#if step.done}<Check class="setup-mark-icon" />{:else}{i + 1}{/if}
 				</span>
 				<span class="set-row-main">
-					<span class="set-row-label">{i + 1}. {step.label}</span>
+					<span class="set-row-label">
+						{step.label}
+						{#if step.optional}<span class="setup-tag">Optional</span>{/if}
+					</span>
 					<span class="set-row-sub">{step.how}</span>
 				</span>
 				{#if step.goTo}
-					<button class="set-btn set-step-go" onclick={() => (settingsStore.section = step.goTo!.section)}>
+					<button class="set-btn setup-go" onclick={() => (settingsStore.section = step.goTo!.section)}>
 						{step.goTo.label}<ChevronRight class="set-btn-icon" aria-hidden="true" />
 					</button>
 				{/if}
 			</li>
 		{/each}
+		<li class="set-row setup-step setup-step-ipad" data-step="ipad">
+			<span class="setup-mark" aria-hidden="true">{steps.length + 1}</span>
+			<span class="set-row-main">
+				<span class="set-row-label">Open it on the iPad</span>
+				<div class="setup-ipad">
+					<IpadAddresses {addresses} state={addressState} />
+				</div>
+			</span>
+		</li>
 	</ol>
-
-	<section class="set-group" data-step="ipad">
-		<h2 class="set-group-title">{steps.length + 1}. Open it on the iPad</h2>
-		<IpadAddresses {addresses} state={addressState} />
-	</section>
 
 	<p class="set-note">
 		{#if settingsStore.firstRun}
@@ -67,37 +92,88 @@
 </div>
 
 <style>
-	.set-lead {
-		font-size: 0.9375rem;
-		line-height: 1.45;
+	.setup-intro {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-md);
+	}
+	.setup-progress {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-sm);
+		max-width: 28rem;
+	}
+	.setup-progress-word {
+		font-size: 0.875rem;
 		color: var(--muted-foreground);
 	}
-	.set-step {
-		align-items: flex-start;
+	.setup-progress-word strong {
+		color: var(--foreground);
+		font-weight: 600;
 	}
-	.set-step-mark {
+	.setup-bar {
+		display: block;
+		height: 6px;
+		border-radius: 3px;
+		background: var(--surface-well);
+		border: 1px solid var(--line-strong);
+		overflow: hidden;
+	}
+	.setup-bar-fill {
+		display: block;
+		height: 100%;
+		background: var(--phosphor);
+		transition: width 0.3s ease;
+	}
+	.setup-step {
+		align-items: flex-start;
+		padding-block: var(--spacing-lg);
+	}
+	.setup-mark {
 		flex-shrink: 0;
 		display: inline-flex;
-		width: 1.5rem;
-		height: 1.5rem;
+		width: 1.75rem;
+		height: 1.75rem;
 		align-items: center;
 		justify-content: center;
 		border-radius: 9999px;
 		border: 1px solid var(--line-strong);
 		background: var(--surface-well);
 		color: var(--muted-foreground);
-		margin-top: 0.0625rem;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
 	}
-	.set-step-mark :global(.set-step-icon) {
-		width: 0.875rem;
-		height: 0.875rem;
+	.setup-mark :global(.setup-mark-icon) {
+		width: 1rem;
+		height: 1rem;
+		stroke-width: 3;
 	}
-	.set-step.done .set-step-mark {
+	.setup-step.done .setup-mark {
 		background: var(--phosphor);
 		border-color: var(--phosphor);
 		color: var(--flat-on-fg);
 	}
-	.set-step-go {
+	.setup-step .set-row-label {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--spacing-sm);
+		line-height: 1.75rem;
+	}
+	.setup-step.done .set-row-label {
+		color: var(--muted-foreground);
+	}
+	.setup-tag {
+		padding: 0 0.375rem;
+		font-size: 0.6875rem;
+		font-weight: var(--font-weight-medium);
+		line-height: 1.25rem;
+		color: var(--fg-tertiary);
+		border: 1px solid var(--line-strong);
+		border-radius: var(--radius-sm);
+	}
+	.setup-go {
 		align-self: center;
 		flex-shrink: 0;
 		min-width: 11.5rem;
@@ -105,13 +181,19 @@
 		gap: var(--spacing-xs);
 		padding-inline: var(--spacing-md) var(--spacing-sm);
 	}
+	.setup-ipad {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-sm);
+		margin-top: var(--spacing-sm);
+	}
 	@media (max-width: 559.98px) {
-		.set-step {
+		.setup-step {
 			flex-wrap: wrap;
 		}
-		.set-step-go {
+		.setup-go {
 			min-width: 0;
-			margin-left: calc(1.5rem + var(--spacing-md));
+			margin-left: calc(1.75rem + var(--spacing-lg));
 		}
 	}
 </style>

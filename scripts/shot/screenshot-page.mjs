@@ -234,7 +234,12 @@ async function centreOf(page, selector, what) {
  *                                       narrow viewport draws off screen (the
  *                                       System view's gear at phone width), so
  *                                       the screen behind it can still be shot.
+ *   { hash: '#settings/places' }        set the page's location hash, as Vamp for
+ *                                       Mac's "Settings…" does (ADR-520): the
+ *                                       gear's press action answers pointers,
+ *                                       not a DOM click().
  *   { fill: selector, text }            type into a field, as a keyboard would.
+ *   { select: selector, value }         pick an option in a <select>.
  *   { wait: ms }                        let an animation (a smooth scroll) land.
  *   { drag: selector, by?: [dx, dy], keep? }   a real press-move-release in steps (keep: no release until after the capture), so
  *                                       the drag machine crosses its slop
@@ -275,8 +280,16 @@ export async function performSteps(page, steps, { log = () => {} } = {}) {
 				}
 			}, Object.entries(step.storage));
 			await page.waitForTimeout(300);
+		} else if (step.hash) {
+			log(`setting the hash ${step.hash}`);
+			await page.evaluate((hash) => (window.location.hash = hash), step.hash);
+			await page.waitForTimeout(400);
 		} else if (step.wait) {
 			await page.waitForTimeout(step.wait);
+		} else if (step.select) {
+			log(`choosing "${step.value}" in ${step.select}`);
+			await page.selectOption(step.select, step.value, { timeout: 5000 });
+			await page.waitForTimeout(300);
 		} else if (step.fill) {
 			log(`typing "${step.text}" into ${step.fill}`);
 			await page.fill(step.fill, step.text, { timeout: 5000 });
