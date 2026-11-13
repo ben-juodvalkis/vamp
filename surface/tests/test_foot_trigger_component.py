@@ -15,10 +15,9 @@ Covers the two arg-free handlers the pedal resolves to:
 - Post-disconnect handlers are no-ops for both addresses.
 
 Why no timer mocking: the tap/hold decision runs upstream of this
-component — in ``components/midi_pedal_input.py`` for the USB-direct
-MIDI path (ADR-422; timing covered by ``test_midi_pedal_input.py``)
-and in ``owner/Max Patches/foot-trigger.js`` for the legacy OSC path.
-This component only sees the resolved gesture.
+component, in the bridge (``interface/bridge/handlers/pedals.js``,
+ADR-538; timing covered by ``pedals.test.ts``). This component only
+sees the resolved gesture.
 """
 
 from __future__ import annotations

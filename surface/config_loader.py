@@ -174,26 +174,3 @@ def load():
 
     logger.info("Loaded constants from %s", path)
     return data
-
-
-def feature_on(constants, feature_id):
-    """Is ``constants.features.<feature_id>`` switched on?
-
-    The surface's half of the bridge's ``readFeatureFlags``
-    (``interface/bridge/utils/features.js``; general-release audit §7b):
-    only an explicit ``true`` is on. ``false``, a missing entry, a
-    missing ``features`` block or a non-boolean are all off, so deleting
-    a switch never quietly brings a subsystem back. The surface reads
-    each switch once, when it is built — flipping one needs the surface
-    re-created (a set load or a Live restart), like any other constant.
-    """
-    features = constants.get("features") if isinstance(constants, dict) else None
-    if not isinstance(features, dict):
-        return False
-    value = features.get(feature_id)
-    if value is not None and not isinstance(value, bool):
-        logger.warning(
-            "features.%s=%r is not true or false; treated as off",
-            feature_id, value,
-        )
-    return value is True

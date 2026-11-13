@@ -21,17 +21,15 @@ Macro 1 mapped to that device's CC 1 dial and its Macro 2 mapped to
 nothing. MidiWheels replaced both, so the pedal and the on-screen mod wheel
 share one device per track instead of stacking two CC 1 senders.
 
-Owns the two wires the pedal reaches the surface on — as plain MIDI on the
-surface's own input (ADR-422, ``MidiPedalInput``) or, from the legacy Max
-ctlin→OSC chain, fire-and-forget to UDP 11020 like
-``owner/Max Patches/foot-trigger.js``:
+Owns the two wires the pedal reaches the surface on, sent by the bridge,
+which reads the pedal from any MIDI input (ADR-538,
+``interface/bridge/handlers/pedals.js``):
 
     /looping/v3/wah/engage           # CC 21 toe-switch — load-or-step Macro 2
     /looping/v3/wah/freq  [0-127]    # CC 20 expression — sweep Macro 1
 
-(CC numbers per ``constants.midiPedals``, channel 10 on the USB pedal; the
-legacy Max chain still sends the Bluetooth rig's CC 82 / 11 down the same two
-wires.) The addresses keep their historical ``wah`` name: they are the
+(Which CCs is a user setting with Learn, seeded from ``constants.midiPedals``:
+CC 21 / CC 20 on channel 10 on the rig's USB pedal.) The addresses keep their historical ``wah`` name: they are the
 pedal's wires, whichever rack they land on.
 
 Which rack a track gets

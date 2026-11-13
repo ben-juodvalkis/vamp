@@ -77,6 +77,12 @@ ditto --norsrc --noextattr --noqtn "$ROOT/Vamp Devices" "$OUT/Contents/Resources
 find "$OUT/Contents/Resources" -name .DS_Store -delete
 
 # --- signing: the inside first, then the app around it -----------------------
+# The MIDI library's binaries (ADR-538): the bridge loads them into the signed
+# node, whose hardened runtime takes only code signed by the same team.
+find "$OUT/Contents/Resources/vamp/node_modules/@julusian/midi/prebuilds" -name '*.node' -print0 |
+  while IFS= read -r -d '' lib; do
+    codesign --force --options runtime $TS --sign "$SIGN_IDENTITY" "$lib"
+  done
 codesign --force --options runtime $TS \
   --entitlements "$APPS_DIR/Config/node.entitlements" \
   --sign "$SIGN_IDENTITY" "$OUT/Contents/Resources/node/bin/node"

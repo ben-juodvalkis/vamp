@@ -1,8 +1,8 @@
 """FootTriggerComponent — the foot pedal's two gestures.
 
-Owns the two arg-free wires the tap/hold timer resolves to — the
-surface's own ``MidiPedalInput`` for a USB pedal, or
-``owner/Max Patches/foot-trigger.js`` for the Max path:
+Owns the two arg-free wires the tap/hold timer resolves to. The timer
+is the bridge's (``interface/bridge/handlers/pedals.js``, ADR-538), which
+reads every pedal from any MIDI input:
 
     /looping/v3/foot/tap     # released within HOLD_MS of press
     /looping/v3/foot/hold    # HOLD_MS elapsed with pedal still down

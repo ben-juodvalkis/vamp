@@ -42,7 +42,7 @@ so flipping a switch or quitting the server takes effect immediately.
 | Behavior | Fires when | Gate | Owner |
 |---|---|---|---|
 | **Arm-follows-selection** — selecting a track arms it (and disarms the previously auto-armed one) | track selection changes | `auto_arm` **AND** `server_present()` | `ExclusiveArmComponent` |
-| **Foot switch → tap / hold** — the MIDI foot switch on the Looping surface's Input fires the foot gestures | a press of the learned CC | the **foot switch** setting (Settings, behind the gear in the System view: on/off + Learn; `logs/foot-switch.json`); with nothing learned and no `midiPedals.footSwitchCC` seed there is none. A latching switch taps on every stomp and never holds | `FootSwitchComponent` → `MidiPedalInput` |
+| **Loop pedal → tap / hold** — any loop pedal, on any MIDI input, fires the foot gestures (ADR-538) | a press of a learned pedal | the **loop pedal** setting (Settings → Controllers → Pedals: on/off, Learn adds a pedal, Forget; `logs/pedals.json`); with nothing learned and no `midiPedals` seed there is none. A latching pedal taps on every stomp and never holds | the bridge's `handlers/pedals.js` → `FootTriggerComponent` |
 | **Expression pedal → which rack** — the pedal's sweep and toe switch drive (and summon: toe press or full heel-to-toe rock) the **Wah** on an audio track, **MidiWheels** (its mod wheel; the Expression Pedal rack until 2026-09-25) on a MIDI track — the same device the on-screen wheels load, so one per track; a wah already on the track wins on either kind — the Pedal view's Wah button puts one on a synth track, its hold takes it off (ADR-445) | `/looping/v3/wah/{engage,freq}` gesture | automatic: `track.has_midi_input` + which rack the track carries; `devices.expressionPedal` present in `constants.json` (absent → the wah on every track, as before ADR-445) | `WahPedalComponent` |
 | **UI track create/prepare → arm** — loading a preset onto a new track arms it | track prepare/create | `auto_arm` only | `TrackPrepareComponent` |
 | **Move volume-knob** — Ableton Move encoder sets selected-track volume | `volume_relative` msg | `move_volume_knob` only | `SelectedTrackComponent` |
@@ -86,7 +86,7 @@ queryable, and re-seeded to a fresh UI on handshake.
 | `auto_arm` | `/looping/v3/session/auto_arm` | `…/auto_arm/query` | on | ✅ disk | `should_auto_arm()` |
 | `move_volume_knob` | `/looping/v3/session/move_volume_knob` | `…/move_volume_knob/query` | on | ✅ disk | `should_handle_move_volume_knob()` |
 | `auto_capture` | `/looping/v3/session/auto_capture` | `…/auto_capture/query` | launch mode (ipad→on, dev→off) | ✅ bridge-lifetime (ADR-405) | `should_auto_capture()` |
-| foot switch | `/looping/v3/session/foot_switch/enabled` (and `…/learn`) | — (state on `/looping/v3/session/foot_switch`) | seeded from `midiPedals.footSwitchCC`, else **none** | ✅ disk, `logs/foot-switch.json` | `FootSwitchComponent`, not `SessionSettingsComponent` |
+| loop pedal | `/bridge/pedals/enabled` (and `…/learn`, `…/forget`) | — (state on `/bridge/pedals`) | seeded from `midiPedals` (`footSwitchCC`, `pianoPedalCC`), else **none** | ✅ disk, `logs/pedals.json` | the bridge (`handlers/pedals.js`, ADR-538), not the surface |
 
 **Persistence.** Live reconstructs the whole Control Surface on every set
 load, so a naive in-memory toggle resets each time. `auto_arm` and
@@ -297,10 +297,10 @@ connect, on change and with the 5 s ping.
 | Switch | Off | On — unavailable until | Readers |
 |---|---|---|---|
 | `totalmix` | No TotalMix sockets (9003) and no startup bootstrap on 7001; no `osc.totalmix*` block is read; nothing about a mixer is logged. No status-strip mirror. | TotalMix answers on either OSC controller: the startup bootstrap's read of controller 1, or any packet on Global OSC (controller 3). The reason reads `Waiting for TotalMix` until the bootstrap ends, then `TotalMix not answering`; `TotalMix config missing` when the switch is on and an `osc.totalmix*` block is not. Once available it stays so: the mixer sends no heartbeat, so its going away cannot be seen. | `enhanced-osc-bridge.js` (link, ports, bootstrap); `bridgeStatus.isFeatureOn` / `unavailableReason` in `layouts/default/Layout.svelte` |
-| `midiControllers` | The bridge loads no MIDI library and opens no MIDI input (ADR-537): no Move pad hold, no Move track-volume or TotalMix knobs, no piano pedal. Settings (behind the gear in the System view) draws neither the **Piano pedal** card nor the **Move Knob** switch. Max is never opened either way: the standalone Max Utility patch it replaced is history. The on-screen pitch/mod wheels do **not** hang off it (`MidiWheels.amxd` through the surface, `/looping/v3/wheels/*`). | Once the bridge has opened the MIDI inputs; `MIDI library missing` when `@julusian/midi` is not installed, `MIDI controller config missing` without the `midiControllers` block. | `enhanced-osc-bridge.js`, `handlers/midiControllers.js`; `ControllersSection` |
+| `midiControllers` | The bridge ignores the Move's ports (ADR-537): no Move pad hold, no Move track-volume or TotalMix knobs. The pedals are not part of it: the bridge opens every MIDI input in every edition for them (ADR-538). Settings (behind the gear in the System view) draws no **Move Knob** switch. Max is never opened either way: the standalone Max Utility patch it replaced is history. The on-screen pitch/mod wheels do **not** hang off it (`MidiWheels.amxd` through the surface, `/looping/v3/wheels/*`). | Once the bridge has opened the MIDI inputs; `MIDI library missing` when `@julusian/midi` is not installed, `MIDI controller config missing` without the `midiControllers` block. | `enhanced-osc-bridge.js`, `handlers/midiControllers.js`; `ControllersSection` |
 | `menubar` | Neither `npm run dev` nor `npm run ipad` builds or launches the menu-bar app (`owner/apps (Vamp for Mac)`): `scripts/launch-menubar.sh` exits at once, and `setup-ipad.js` never calls it. Nothing else changes: the app only mirrors toggles the System view has. | Never: the app is only ever a client, so on reads as available. | `scripts/launch-menubar.sh`, `scripts/setup-ipad.js` |
 | `axHelper` | The bridge builds no helper client, dials nothing and sends no `/bridge/ax_helper`; a stray Reverse, Group or swap request is answered `ax-helper-down`; `npm run ipad` never opens Live's Save As dialog. The clip view draws no **Rev** (to Simpler takes the column) and no **Group** (Dup Trk takes the column), and a held Drum Sampler pad's pill steps the kit instead of Live's similar samples. | The helper is connected and trusted. Greyed out meanwhile, with `AX helper not running` or `AX helper needs Accessibility`; unlike the others it goes back when the helper does. | `enhanced-osc-bridge.js`; `ClipCentralView`, `useInstrumentSwap` |
-| `expressionPedal` | The surface claims neither of the wah's CCs (`midiPedals.wahToeSwitchCC` / `wahExpressionCC`), so they reach Live like any other MIDI on the port; the `/looping/v3/wah/*` OSC wires stay. The Wah has no other way to be played (its view, `WahCentralView`, opens from the chain only on a Wah the track holds). The foot switch is **not** part of it: that is a user setting (below, "Foot switch"). Read by the surface too (`config_loader.feature_on`), once, when it is built. | Never: the pedal reaches the surface as MIDI the bridge never sees, so on reads as available. | `LoopingSurface._setup_midi_pedal_input`; `PedalCentralView` |
+| `expressionPedal` | The bridge sends no wah message from the toe switch or the sweep, and the Pedals card draws no wah rows nor takes their Learn (ADR-538); the `/looping/v3/wah/*` OSC wires stay. The Wah has no other way to be played (its view, `WahCentralView`, opens from the chain only on a Wah the track holds). The loop pedal is **not** part of it: that is everyone's (below, "Pedals"). Since ADR-538 the surface does not read it. | Never: on reads as available. | the bridge's `handlers/pedals.js`; `PedalCentralView` |
 
 Still to come (`docs/plans/general-release/plan.md` §4): `pluginFx`, a
 row here once it is wired. The capture recorder is **not** a switch (decided
@@ -316,22 +316,24 @@ Two names from §7b's first list will not become switches: the Skaka view
 already appears only for a rack whose first macro reads "Pattern N", and
 Permute's Place becomes an onboarding step. (`move` folded into
 `midiControllers`: the Move reaches the surface only through the bridge's MIDI inputs.
-`footSwitch` never became a switch: any MIDI foot switch is anyone's, so it is
-a user setting with Learn — below.) The tracked `config/constants.json`
+`footSwitch` never became a switch: any MIDI pedal is anyone's, so it is
+a user setting with Learn — below, "Pedals".) The tracked `config/constants.json`
 leaves every switch off; the rig's `config/constants.local.json` turns them
 on.
 
-### Foot switch — a user setting, not a feature switch (2026-09-26)
+### Pedals — a user setting, not a feature switch (2026-09-26, ADR-538)
 
-The Settings page's **Foot Switch** card (behind the gear in the System view): on/off, what it is (`CC 23 · Ch 10`,
-`· Latch` for a latching switch), a dot filled once the pedal has been heard,
-and **Learn**. Learn takes the next CC on the Looping surface's MIDI Input as
-the switch and tells momentary (tap and hold) from latching (tap only); nothing
-within 10 s says to set the pedal as Looping's Input in Live's MIDI settings —
-the one step the app cannot take. The surface owns it (`FootSwitchComponent`),
-persists it to `logs/foot-switch.json`, and seeds it from
-`midiPedals.footSwitchCC` only when nothing is saved; with neither there is no
-foot switch at all.
+The Settings page's **Pedals** card (behind the gear in the System view,
+Controllers): the **loop pedal** — on/off, every learned pedal shown
+(`CC 23 · Ch 10`, `· Latch` for a latching one), a dot filled once one has
+been heard, **Learn** (adds a pedal: the next CC above 64 on any input but
+the Move, momentary or latching told apart by whether its release follows
+within 1.5 s) and **Forget** — and, while `expressionPedal` is on, the wah's
+**toe switch** and **sweep**, each with Learn. The bridge owns it all
+(`handlers/pedals.js`), persists it to `logs/pedals.json`, and seeds it from
+`midiPedals` only when nothing is saved; with no seed there is no pedal.
+Until ADR-538 the foot switch was the surface's (`FootSwitchComponent`,
+learned on Vamp's Input in Live) and the wah's CCs were claimed there too.
 
 ---
 

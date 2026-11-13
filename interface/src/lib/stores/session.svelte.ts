@@ -145,33 +145,6 @@ let _autoCaptureEnabled = $state(false);
 // ADR-447: the key follows the loops. Default on, like the surface's.
 let _keyFollowEnabled = $state(true);
 
-/**
- * The foot switch (`FootSwitchComponent` on the surface): a user setting with
- * Learn, from `/looping/v3/session/foot_switch`. `cc` is -1 until something
- * is learned; `channel` 0 means all 16. `learn` is `listening` while the
- * surface takes the next CC on its Input, and `timeout` when nothing came —
- * almost always because the pedal is not Looping's Input in Live's MIDI
- * settings. `heard` is whether the mapped CC has arrived since the surface
- * was built.
- */
-export interface FootSwitchState {
-  enabled: boolean;
-  channel: number;
-  cc: number;
-  mode: 'momentary' | 'latching' | '';
-  learn: 'idle' | 'listening' | 'timeout';
-  heard: boolean;
-}
-// Nothing learned, off: what the surface itself starts from with no seed.
-let _footSwitch = $state<FootSwitchState>({
-  enabled: false,
-  channel: 0,
-  cc: -1,
-  mode: '',
-  learn: 'idle',
-  heard: false
-});
-
 // Global launch quantization — Live's `song.clip_trigger_quantization`
 // enum, 0..13 (0 = None, 4 = 1 Bar, 13 = 1/32). Seeded by the surface's
 // init-emit / on-accept re-emit; `4` matches Live's own default so a
@@ -262,7 +235,6 @@ export const session = {
   get moveVolumeKnobEnabled() { return _moveVolumeKnobEnabled; },
   get autoCaptureEnabled() { return _autoCaptureEnabled; },
   get keyFollowEnabled() { return _keyFollowEnabled; },
-  get footSwitch(): FootSwitchState { return _footSwitch; },
   get clipTriggerQuantization() { return _clipTriggerQuantization; },
 
   // Groove state
@@ -941,17 +913,6 @@ export function handleKeyFollowUpdate(enabled: number | boolean): void {
   if (_keyFollowEnabled === next) return;
   _keyFollowEnabled = next;
   logger.info('SessionSettings: key_follow', { enabled: next });
-}
-
-/**
- * The foot switch's state, from
- * `/looping/v3/session/foot_switch [enabled, channel, cc, mode, learn, heard]`.
- * Anything malformed is dropped whole rather than half-applied.
- */
-export function handleFootSwitchUpdate(state: FootSwitchState | null): void {
-  if (!state) return;
-  _footSwitch = state;
-  logger.info('SessionSettings: foot_switch', { ...state });
 }
 
 /**

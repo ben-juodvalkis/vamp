@@ -141,23 +141,6 @@ def test_merge_replaces_lists_and_leaves_its_arguments_alone():
     assert base == {"a": {"list": [1, 2], "keep": 1}}
     assert local == {"a": {"list": [3]}}
 
-
-def test_feature_on_needs_an_explicit_true(caplog):
-    from config_loader import feature_on
-
-    caplog.set_level(logging.WARNING, logger="looping")
-    assert feature_on({"features": {"expressionPedal": True}}, "expressionPedal")
-    assert not feature_on({"features": {"expressionPedal": False}}, "expressionPedal")
-    assert not feature_on({"features": {}}, "expressionPedal")
-    assert not feature_on({}, "expressionPedal")
-    assert not feature_on({"features": ["expressionPedal"]}, "expressionPedal")
-    assert not feature_on(None, "expressionPedal")
-    assert not caplog.records
-    # A non-boolean is off, and says so rather than failing silently.
-    assert not feature_on({"features": {"expressionPedal": "yes"}}, "expressionPedal")
-    assert "expressionPedal" in caplog.text
-
-
 def test_installed_surface_reads_its_folders_from_vamp_paths(tmp_path, monkeypatch):
     # installer.plan.md Phase 1: a copied (not symlinked) surface finds the
     # app, data and devices folders in vamp-paths.json beside it.

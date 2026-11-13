@@ -100,30 +100,20 @@ After install, in Live:
    INFO:looping: - Vamp surface init
    ```
 
-### USB pedal (optional, ADR-422)
+### Pedals (optional, ADR-538)
 
-With a pedal on USB, the surface reads its MIDI directly. The **foot switch** is a setting:
-point the surface's Input at the pedal (steps 1–3), then **Settings → Controllers → Foot switch →
-Learn** records its channel, CC and whether it is momentary or latching
-(`logs/foot-switch.json`). The rest of this section is the owner's **expression pedal and wah**,
-which exist only while `features.expressionPedal` is on:
-
-1. In the **Vamp** Control Surface row, set **Input** to the
-   pedal's USB MIDI port. **Output** stays **None**.
-2. In the MIDI Ports list below, turn that input port's **Track** and
-   **Remote** switches **off** — otherwise the expression CC leaks
-   into armed tracks / Live's MIDI mapping.
-3. Don't leave a Max patch listening to the same port, or every press
-   fires twice.
-4. The map is the Mac's own, in `config/constants.local.json` → `midiPedals`
-   (`channel`, `wahToeSwitchCC`, `wahExpressionCC`; the owner's rig uses channel 10 and CCs
-   21 / 20), then restart Live. Set `channel: 0` to listen on all 16 channels if you
-   don't know what the pedal transmits on.
-5. Verify in `Log.txt`: `MidiPedalInput: ready (channel=10, …)` on
-   init, and `src='midi:pedal-input'` lines when pressing the pedal.
-   If init looks right but presses log nothing, the pedal is almost
-   certainly on another channel — flip to `channel: 0` to confirm
-   before hunting elsewhere.
+Plug the pedal in, on USB or through a keyboard: Vamp reads every MIDI
+input itself, so nothing is set up in Live. **Settings → Controllers →
+Pedals → Learn your pedal** records a loop pedal's channel, CC and whether
+it is momentary or latching; Learn again adds another (a foot switch and a
+piano's pedal both loop). While `features.expressionPedal` is on (the
+owner's), the same card learns the wah's toe switch and sweep. Everything
+is saved to `logs/pedals.json`; `midiPedals` in `config/constants.local.json`
+only seeds it on a Mac that has none (the owner's rig: channel 10, CC 23
+foot switch, CC 21 / 20 wah, `pianoPedalCC` 67 on any channel). A pedal
+that does nothing: the card's dot says whether Vamp has heard it since
+starting, and `logs/bridge.log` names the inputs it opened (`MIDI inputs
+open`).
 6. What the expression pedal drives depends on the selected track
    (ADR-445): the **Wah** (`Wah.adg`, at `devices.wah.presetPath` in your
    `constants.local.json`; not in the checkout since ADR-498) on

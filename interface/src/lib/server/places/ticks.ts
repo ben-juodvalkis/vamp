@@ -1,7 +1,7 @@
 /**
  * Which Places are ticked (onboarding.plan.md §2, §6.2): saved on the Mac, in
- * `<repo>/logs/places.json`, the way the surface saves the foot switch in
- * `logs/foot-switch.json`. Any client can tick one; the file is the truth.
+ * `<repo>/logs/places.json`, the way the bridge saves the pedals in
+ * `logs/pedals.json`. Any client can tick one; the file is the truth.
  *
  * **Nothing saved means a first run.** On a Mac with nothing saved the Places
  * inside `paths.sidebarRoot` are pre-ticked (the rig's seven), so the rig does

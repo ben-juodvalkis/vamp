@@ -139,23 +139,19 @@ Why a Python surface and not AbletonOSC + Max:
 
 ### 2.4 Max patches — hardware I/O only
 
-Max lives only at the hardware edge, and since ADR-422 the pedals
-don't need even that: with the pedal plugged in over USB and its port
-assigned as the Looping control surface's MIDI **Input** in Live's
-preferences, the surface's own `MidiPedalInput`
-(`surface/components/midi_pedal_input.py`) receives
-the CCs directly. The USB pedal sends everything on **MIDI channel
-10**: trigger switch **CC 23** (incl. the 650ms tap/hold timer), wah
-toe switch **CC 21**, wah expression **CC 20**. The foot switch is a user
-setting learned from the System view (`FootSwitchComponent`, persisted to
-`logs/foot-switch.json`; `midiPedals.footSwitchCC` only seeds it); the wah
-CCs live in `constants.midiPedals` and are claimed only while
-`features.expressionPedal` is on. Only those exact channel + CC pairs are
-claimed — other traffic on the port falls through to the framework. What the
-expression pedal drives depends on the kind of track under the selection
-(ADR-445): the wah on an audio track, **MidiWheels** (the on-screen wheels'
-device, its mod wheel) on a MIDI track, a wah already on the track winning
-on either —
+Nothing on the hardware edge needs Max any more. **Every pedal is read
+by the bridge from any MIDI input** (ADR-538, `interface/bridge/handlers/pedals.js`,
+in every edition): the loop pedal (one or more, each learned, into
+`/looping/v3/foot/tap` / `hold` with the 650ms tap/hold timer) and, while
+`features.expressionPedal` is on, the wah's toe switch and sweep (into
+`/looping/v3/wah/engage` / `freq`). Each is a user setting with Learn on
+the Settings page's Pedals card, saved to `logs/pedals.json` and seeded
+once from `midiPedals` (the rig's USB pedal: channel 10, CC 23 / 21 / 20;
+its piano pedal CC 67 on any channel). The surface claims no MIDI since
+then: it only answers those OSC wires. What the expression pedal drives
+depends on the kind of track under the selection (ADR-445): the wah on an
+audio track, **MidiWheels** (the on-screen wheels' device, its mod wheel)
+on a MIDI track, a wah already on the track winning on either —
 `docs/reference/toggles.md` has the rule, `surface/CLAUDE.md` the component.
 The owner's other MIDI controllers need no Max (ADR-537): while
 `features.midiControllers` is on, the bridge opens every MIDI input itself

@@ -1,7 +1,7 @@
 # ADR-422: Pedal MIDI Direct to the Control Surface (USB, no Max)
 
 ## Status
-**Accepted** (2026-08-27)
+**Superseded** by ADR-538 (2026-11-13): the bridge reads every pedal from any MIDI input, and the surface claims no MIDI. Accepted 2026-08-27.
 
 ## Context
 

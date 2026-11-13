@@ -67,11 +67,6 @@ the contract for a headless OSC-only surface.
 import logging
 import time
 
-# The host's own module — like ``ableton.v3`` below, it only exists
-# inside Live's embedded interpreter. Used for
-# ``Live.MidiMap.forward_midi_cc`` in ``build_midi_map`` (ADR-422).
-import Live
-
 from ableton.v3.control_surface import ControlSurface, ControlSurfaceSpecification
 from ableton.v3.control_surface.elements_base import ElementsBase
 
@@ -375,13 +370,7 @@ from .components.V3StateFullComponent import V3StateFullComponent
 from .components.DeviceInitComponent import DeviceInitComponent
 from .components.path_resolver import compose_track_path
 from .components.ViewComponent import ViewComponent, V3_VIEW_FOCUS_ADDRESS
-from .components.midi_pedal_input import MidiPedalInput
-from .components.FootSwitchComponent import (
-    FootSwitchComponent,
-    V3_FOOT_SWITCH_ENABLED_ADDRESS,
-    V3_FOOT_SWITCH_LEARN_ADDRESS,
-)
-from .config_loader import feature_on, load as load_constants
+from .config_loader import load as load_constants
 from .components import alc_resolver
 from .tcp_transport import TCPTransport
 from .drain_pump import (
@@ -395,11 +384,6 @@ from . import perf_profiler
 
 logger = logging.getLogger("looping")
 
-# ADR-422: source tag handed to the gesture handlers in the slot where
-# OSC delivery passes the sender's UDP address — shows up in their
-# ``src=%r`` log lines so Log.txt distinguishes MIDI-borne gestures
-# from OSC-borne ones.
-_MIDI_PEDAL_SOURCE = "midi:pedal-input"
 
 
 class LoopingElements(ElementsBase):
@@ -846,95 +830,6 @@ class LoopingSurface(ControlSurface):
             self._devices_component.handle_v3_state_resync,
         )
 
-    def _setup_midi_pedal_input(self, constants) -> None:
-        """USB-direct pedal MIDI → the existing gesture components (ADR-422).
-
-        With the pedal's USB MIDI port assigned as this surface's Input
-        in Live's preferences, its CCs arrive as plain MIDI instead of
-        through the Max ctlin→OSC bridges.
-        ``MidiPedalInput`` is the plain-Python (headless-testable)
-        translator: edge detection plus the 650ms tap/hold timer that
-        previously lived in ``owner/Max Patches/foot-trigger.js``. The
-        resolved gestures call the same ``FootTriggerComponent`` /
-        ``WahPedalComponent`` handlers the ``/looping/v3/foot/*`` and
-        ``/looping/v3/wah/*`` OSC wires call — so those wires stay live
-        as a fallback and the semantics have exactly one owner.
-
-        The foot switch is a user setting (``FootSwitchComponent``: on/off
-        and Learn, from the System view). The expression pedal and its toe
-        switch — the wah's CCs, ``constants.midiPedals`` — are claimed only
-        while ``features.expressionPedal`` is on: the wah is the owner's
-        rig, and a general edition leaves those CCs to the framework.
-
-        The framework-facing halves are the ``build_midi_map`` /
-        ``receive_midi`` overrides below. Must run after both gesture
-        components are constructed.
-        """
-        foot = getattr(self, "_foot_trigger_component", None)
-        wah = getattr(self, "_wah_pedal_component", None)
-        if not feature_on(constants, "expressionPedal"):
-            wah = None
-        self._midi_pedal_input = MidiPedalInput(
-            constants=constants,
-            on_foot_tap=(
-                None if foot is None
-                else lambda: foot.handle_tap((), _MIDI_PEDAL_SOURCE)
-            ),
-            on_foot_hold=(
-                None if foot is None
-                else lambda: foot.handle_hold((), _MIDI_PEDAL_SOURCE)
-            ),
-            on_wah_engage=(
-                None if wah is None
-                else lambda: wah.handle_engage((), _MIDI_PEDAL_SOURCE)
-            ),
-            on_wah_freq=(
-                None if wah is None
-                else lambda value: wah.handle_freq(
-                    (value,), _MIDI_PEDAL_SOURCE,
-                )
-            ),
-            on_foot_heard=self._on_foot_switch_heard,
-            schedule_delayed=self._schedule_delayed,
-        )
-        self._foot_switch_component = FootSwitchComponent(
-            emit=self._transport.send,
-            constants=constants,
-            router=self._midi_pedal_input,
-            request_midi_rebuild=self._request_midi_rebuild,
-        )
-        for address, handler in (
-            (V3_FOOT_SWITCH_ENABLED_ADDRESS,
-             self._foot_switch_component.handle_set_enabled),
-            (V3_FOOT_SWITCH_LEARN_ADDRESS,
-             self._foot_switch_component.handle_learn),
-        ):
-            self._transport.add_handler(address, handler)
-
-    def _on_foot_switch_heard(self) -> None:
-        component = getattr(self, "_foot_switch_component", None)
-        if component is not None:
-            component.on_foot_heard()
-
-    def _request_midi_rebuild(self) -> None:
-        """Ask Live to call ``build_midi_map`` again.
-
-        The foot switch's mapping and learn change which CCs this script
-        must claim, and Live only asks for the map on its own at load and
-        when the Input/Output change.
-        """
-        try:
-            rebuild = getattr(self, "request_rebuild_midi_map", None)
-            if callable(rebuild):
-                rebuild()
-            else:
-                self._c_instance.request_rebuild_midi_map()
-        except Exception as e:
-            logger.warning(
-                "MIDI map rebuild request failed: %s: %s",
-                type(e).__name__, e,
-            )
-
     def __init__(self, c_instance, *a, **k):
         super().__init__(
             c_instance=c_instance,
@@ -1257,9 +1152,6 @@ class LoopingSurface(ControlSurface):
             )
             if session_settings is not None:
                 session_settings.emit_on_accept()
-            foot_switch = getattr(self, "_foot_switch_component", None)
-            if foot_switch is not None:
-                foot_switch.emit_on_accept()
             # PR-5e1: re-emit clip/focused + 6 focused-clip property
             # values so a cold-start UI gets seeded. Mirrors the
             # SessionComponent pattern from PR-5d. Guarded for the
@@ -2062,11 +1954,9 @@ class LoopingSurface(ControlSurface):
             self._transport.add_handler(address, handler)
         self._transport.add_drain_hook(self._midi_wheels_component.flush)
 
-        # ADR-422: pedal CCs arriving on the surface's own MIDI input
-        # port (USB) feed the two components above directly — see
-        # ``_setup_midi_pedal_input``. Placed here because it captures
-        # both gesture components into its callback closures.
-        self._setup_midi_pedal_input(constants)
+        # The pedals reach these two components as OSC from the bridge,
+        # which reads every MIDI input (ADR-538); the surface claims no
+        # MIDI of its own since then.
 
         # 2026-04-23: SimplerLoadComponent — audio-clip → Simpler
         # sampling (Flow #1 from simpler-revamp.md). Unblocked by Live
@@ -2655,98 +2545,6 @@ class LoopingSurface(ControlSurface):
 
         pump.add_tick_hook(once)
 
-    # --- pedal MIDI input (ADR-422) -----------------------------------------
-
-    def build_midi_map(self, midi_map_handle):
-        """Register the pedal CCs for script forwarding.
-
-        Live only delivers MIDI to a Remote Script for messages the
-        script claims during ``build_midi_map``. With the empty element
-        tree the base class claims nothing, so without this override
-        CCs from the pedal port assigned as this surface's Input would
-        arrive at the port and go nowhere. The adapter names the exact
-        ``(channel, controller)`` pairs to claim — the foot switch on its
-        learned channel, the wah on ``midiPedals.channel`` — so the script
-        claims exactly what it will act on and leaves the rest of the port
-        to the framework. While the foot switch is learning it claims
-        every CC; ``FootSwitchComponent`` asks Live to rebuild this map
-        whenever that changes.
-        """
-        super().build_midi_map(midi_map_handle)
-        router = getattr(self, "_midi_pedal_input", None)
-        if router is None:
-            return
-        try:
-            script_handle = self._c_instance.handle()
-            for channel, cc in router.forwarded_pairs():
-                Live.MidiMap.forward_midi_cc(
-                    script_handle, midi_map_handle, channel, cc,
-                )
-        except Exception as e:
-            # A forwarding failure must not take down the rebuild for
-            # the rest of the surface — the OSC pedal path still works.
-            logger.warning(
-                "pedal MIDI forwarding failed: %s: %s",
-                type(e).__name__, e,
-            )
-
-    def receive_midi(self, midi_bytes):
-        """Route owned pedal CCs to the adapter; the rest to the base."""
-        if self._receive_pedal_midi(midi_bytes):
-            return
-        super().receive_midi(midi_bytes)
-
-    def receive_midi_chunk(self, midi_chunk):
-        """Chunked variant — newer Live builds deliver MIDI in batches.
-
-        Defined defensively: when the host dispatches chunks it calls
-        this instead of ``receive_midi``, and the base class's chunk
-        handling (where present) may not route each message through
-        ``receive_midi``, which would skip the pedal intercept. A base
-        class without the method just gets the per-message calls.
-        """
-        remaining = [
-            b for b in midi_chunk if not self._receive_pedal_midi(b)
-        ]
-        if not remaining:
-            return
-        base = getattr(super(), "receive_midi_chunk", None)
-        if base is not None:
-            base(tuple(remaining))
-        else:
-            for b in remaining:
-                super().receive_midi(b)
-
-    def _receive_pedal_midi(self, midi_bytes) -> bool:
-        """True iff ``midi_bytes`` was a pedal CC and has been handled.
-
-        The message is parsed exactly once (``parse_owned``) and the
-        result handed to ``dispatch``. Dispatch is wrapped in
-        ``component_guard`` (batches any resulting sends/tasks, same
-        context the framework gives its own MIDI dispatch) and a broad
-        except — a pedal bug must never raise into Live's MIDI
-        dispatcher and take the surface down.
-        """
-        router = getattr(self, "_midi_pedal_input", None)
-        if router is None:
-            return False
-        parsed = router.parse_owned(midi_bytes)
-        if parsed is None:
-            return False
-        try:
-            guard = getattr(self, "component_guard", None)
-            if callable(guard):
-                with guard():
-                    router.dispatch(*parsed)
-            else:
-                router.dispatch(*parsed)
-        except Exception as e:
-            logger.warning(
-                "pedal MIDI handling raised: %s: %s",
-                type(e).__name__, e,
-            )
-        return True
-
     # --- tick --------------------------------------------------------------
 
     def _tick(self):
@@ -3001,16 +2799,6 @@ class LoopingSurface(ControlSurface):
         if getattr(self, "_track_transpose_component", None) is not None:
             self._track_transpose_component.disconnect()
             self._track_transpose_component = None
-        # ADR-422: pedal MIDI input teardown — before the two gesture
-        # components it feeds, so a late ``receive_midi`` can't re-enter
-        # them mid-teardown. Plain flag flip; pending hold checks left
-        # in the scheduler become no-ops.
-        if getattr(self, "_foot_switch_component", None) is not None:
-            self._foot_switch_component.disconnect()
-            self._foot_switch_component = None
-        if getattr(self, "_midi_pedal_input", None) is not None:
-            self._midi_pedal_input.disconnect()
-            self._midi_pedal_input = None
         # Phase 9 PR-9b: FootTriggerComponent teardown. No LOM
         # listeners (writes go through SessionComponent's
         # session_record listener); ``disconnect`` only flips the

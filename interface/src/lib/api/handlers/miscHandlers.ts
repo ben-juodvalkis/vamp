@@ -33,10 +33,10 @@ export function handleBridgeMessage(address: string, args: OSCArg[]): void {
 		});
 		return;
 	}
-	if (address === '/bridge/piano_pedal') {
-		// One JSON argument: the piano pedal setting (ADR-537).
+	if (address === '/bridge/pedals') {
+		// One JSON argument: every pedal (ADR-538).
 		import('$lib/stores/bridgeStatus.svelte').then(({ bridgeStatus }) => {
-			bridgeStatus.updatePianoPedal(String(args[0] ?? ''));
+			bridgeStatus.updatePedals(String(args[0] ?? ''));
 		});
 		return;
 	}

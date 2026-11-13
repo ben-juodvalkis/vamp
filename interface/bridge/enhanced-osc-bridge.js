@@ -283,47 +283,70 @@ function sendTaggedToSurface(address, args) {
     });
 }
 
-// The owner's MIDI controllers (ADR-537): the Move's pads and knobs and the
-// piano pedal, read here instead of in standalone Max. Null while
-// `features.midiControllers` is off: then no MIDI library is loaded and no
-// input opened. Available once the inputs are open.
-const { createMidiControllers, PIANO_PEDAL_ADDRESS } = require('./handlers/midiControllers');
+// MIDI, read by the bridge itself. Every input on the Mac is opened in every
+// edition (ADR-538), for the pedals: the loop trigger and the wah, each a
+// user setting with Learn (`handlers/pedals.js`). The owner's Move (ADR-537,
+// `handlers/midiControllers.js`) rides the same inputs only while
+// `features.midiControllers` is on.
+const { createMidiControllers } = require('./handlers/midiControllers');
+const { createPedals, PEDALS_ADDRESS } = require('./handlers/pedals');
 const { openMidiInputs } = require('./transport/MidiInputs');
-const midiControllers = createMidiControllersIfEnabled();
 
-function createMidiControllersIfEnabled() {
-    if (!features.isEnabled('midiControllers')) return null;
-    const config = constants.midiControllers;
-    if (!config) {
-        logger.error('MIDI controllers are switched on but constants.midiControllers is missing');
-        features.setAvailability('midiControllers', false, 'MIDI controller config missing');
-        return null;
-    }
-    const controllers = createMidiControllers({
-        config,
+// The Move's own ports never reach a pedal (its knobs send 127 on every turn
+// down); its External Port does: a pedal or keyboard plugged into the Move
+// arrives there (measured 2026-11-13: the rig's foot switch, CC 23 ch 10).
+const movePortPrefix = constants.midiControllers?.move?.portPrefix ?? 'Ableton Move';
+const moveExternalPort = constants.midiControllers?.move?.externalPortName ?? 'Ableton Move External Port';
+const midiControllers = features.isEnabled('midiControllers') && constants.midiControllers
+    ? createMidiControllers({
+        config: constants.midiControllers,
         padHoldMs: constants.ui.gestures.momentaryHoldMs,
-        pedalHoldMs: constants.osc.footTrigger.holdThresholdMs,
         sendToSurface: (msg) => surfaceLink.send(msg),
         getTotalMixLevel: totalmixLink ? (channel) => totalmixLink.get(channel) : null,
         writeTotalMix: totalmixLink ? writeTotalMixFromHardware : null,
-        onPedalState: () => broadcastBatcher.enqueue({
-            address: PIANO_PEDAL_ADDRESS, args: controllers.wireArgs(), source: 'bridge'
-        }),
-        settingsPath: path.join(require('./utils/dataPaths').dataDir('logs'), 'piano-pedal.json'),
         logger
-    });
-    const inputs = openMidiInputs({
-        onMessage: controllers.handleMidi,
-        onReopen: controllers.inputsReset,
-        pollMs: config.pollMs,
-        logger
-    });
-    if (!inputs.ok) {
-        features.setAvailability('midiControllers', false, inputs.reason);
-        return null;
-    }
-    features.setAvailability('midiControllers', true);
-    return controllers;
+    })
+    : null;
+if (features.isEnabled('midiControllers') && !constants.midiControllers) {
+    logger.error('MIDI controllers are switched on but constants.midiControllers is missing');
+    features.setAvailability('midiControllers', false, 'MIDI controller config missing');
+}
+
+let midiReason = '';
+const pedals = createPedals({
+    sendToSurface: (msg) => surfaceLink.send(msg),
+    holdMs: constants.osc.footTrigger.holdThresholdMs,
+    wahEnabled: features.isEnabled('expressionPedal'),
+    isExcludedPort: (port) => port.startsWith(movePortPrefix) && port !== moveExternalPort,
+    midiPedals: constants.midiPedals,
+    timing: constants.midiPedals,
+    settingsPath: path.join(require('./utils/dataPaths').dataDir('logs'), 'pedals.json'),
+    onState: () => broadcastBatcher.enqueue({ address: PEDALS_ADDRESS, args: pedalsWireArgs(), source: 'bridge' }),
+    logger
+});
+
+/** The pedal state, with whether the MIDI inputs are open and why not. */
+function pedalsWireArgs() {
+    const state = pedals.state();
+    return [JSON.stringify({ ...state, available: midiReason === '', reason: midiReason })];
+}
+
+const midiInputs = openMidiInputs({
+    onMessage: (port, bytes) => {
+        midiControllers?.handleMidi(port, bytes);
+        pedals.handleMidi(port, bytes);
+    },
+    onReopen: () => {
+        midiControllers?.inputsReset();
+        pedals.inputsReset();
+    },
+    pollMs: constants.midiControllers?.pollMs ?? 2000,
+    logger
+});
+if (!midiInputs.ok) midiReason = midiInputs.reason;
+if (midiControllers) {
+    if (midiInputs.ok) features.setAvailability('midiControllers', true);
+    else features.setAvailability('midiControllers', false, midiInputs.reason);
 }
 
 // Create WebSocket server. The health monitor is created first with
@@ -434,7 +457,7 @@ const { httpServer, wss } = createWebSocketServer(
     machine,
     captureRecorder,
     toneShaper,
-    midiControllers);
+    pedals);
 wssRef = wss;
 
 // Surf→UI broadcast batcher. Wraps the per-client fan-out so a burst
@@ -870,15 +893,13 @@ const pingTimer = setInterval(() => {
         args: machine.wireArgs(),
         source: 'bridge'
     });
-    // The piano pedal setting (ADR-537), so a client that just connected
-    // has it within one beat; changes go out as they happen.
-    if (midiControllers) {
-        broadcastBatcher.enqueue({
-            address: PIANO_PEDAL_ADDRESS,
-            args: midiControllers.wireArgs(),
-            source: 'bridge'
-        });
-    }
+    // The pedal settings (ADR-538), so a client that just connected has
+    // them within one beat; changes go out as they happen.
+    broadcastBatcher.enqueue({
+        address: PEDALS_ADDRESS,
+        args: pedalsWireArgs(),
+        source: 'bridge'
+    });
 }, PING_INTERVAL_MS);
 if (pingTimer.unref) pingTimer.unref();
 

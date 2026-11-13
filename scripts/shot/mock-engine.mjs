@@ -459,9 +459,10 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 		// until this arrives, so without it every capture would lose the
 		// TotalMix strip.
 		send(ws, '/bridge/features', [featuresJson]);
-		// The piano pedal setting (ADR-537), as the bridge sends it with the
-		// ping: the default CC, heard, so the Settings card draws its rig look.
-		send(ws, '/bridge/piano_pedal', [JSON.stringify({ enabled: true, cc: 67, learn: 'idle', heard: true })]);
+		// The pedals (ADR-538), as the bridge sends them with the ping: the
+		// rig's, from the scene, so the Settings card draws its rig look.
+		const pedalsFrame = (learn = null) => JSON.stringify({ ...resolved.pedals, learn });
+		send(ws, '/bridge/pedals', [pedalsFrame()]);
 
 		const ping = setInterval(() => send(ws, '/bridge/ping', [Date.now()]), PING_INTERVAL_MS);
 		const beat = setInterval(
@@ -831,18 +832,11 @@ export function createMockEngine({ scene, log = () => {}, onInbound = null, live
 					return;
 				}
 
-				case '/looping/v3/session/foot_switch/learn':
-				case '/looping/v3/session/foot_switch/enabled': {
-					// The rig's switch from the scene, with the write applied: a
-					// learn start answers `listening` (a real surface would then
-					// wait for the pedal), a cancel `idle`, and enabled echoes.
-					const [v] = args;
-					const on = v === 1;
-					const learning = address.endsWith('/learn');
-					send(ws, '/looping/v3/session/foot_switch', [
-						learning ? 1 : on ? 1 : 0, 10, 23, 'momentary',
-						learning && on ? 'listening' : 'idle', 1
-					]);
+				case '/bridge/pedals/learn': {
+					// A learn start answers `listening` (the real bridge would
+					// then wait for the pedal); a cancel goes back to idle.
+					const [role, v] = args;
+					send(ws, '/bridge/pedals', [pedalsFrame(v === 1 ? { role, state: 'listening' } : null)]);
 					return;
 				}
 

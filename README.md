@@ -34,7 +34,7 @@ Safari over USB-C or Wi-Fi.
 - **On-screen pitch and mod wheels** for any MIDI track.
 - **Capture:** record what you just played and turn it into a Simpler instrument.
 - **Key detection:** Live's key follows the loops you are playing.
-- **A foot switch,** any MIDI footswitch, taught with Learn in Settings.
+- **A loop pedal,** any MIDI foot switch or a keyboard's pedal, on any input, taught with Learn in Settings.
 
 <p>
   <img src="docs/readme/simpler.jpg" width="49%" alt="Simpler's view: the sample waveform above pads for pitch, time, fade and gain">

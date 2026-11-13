@@ -27,9 +27,9 @@
  * `expressionPedal` (the wah pedal: its two CCs on the surface, the Pedal
  * view's Wah button), `menubar` (the owner's menu-bar app, launched by the
  * start scripts) and `axHelper` (the Accessibility helper behind Reverse,
- * Group, the held pad's similar-sample swap and the iPad Save As). The foot
- * switch is not a feature switch — it is a user setting with Learn, owned by
- * the surface (`FootSwitchComponent`). §7b lists the rest, in the order they
+ * Group, the held pad's similar-sample swap and the iPad Save As). The loop
+ * pedal is not a feature switch — it is a user setting with Learn, owned by
+ * this bridge (`handlers/pedals.js`, ADR-538). §7b lists the rest, in the order they
  * will follow; each one joins FEATURE_IDS when it is gated.
  *
  * **Built in, not switched:** `captureRecorder`, the Vamp-Capture device

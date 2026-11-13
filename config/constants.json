@@ -6,9 +6,9 @@
     "_description": "One switch per bespoke subsystem, so the same code runs as this rig and as a general edition on stock Live Suite (docs/plans/general-release/audit.md §7b). true turns a subsystem on; false, or no entry at all, turns it off -- a missing switch is never a default that quietly brings the subsystem back. The bridge reads these once at startup (interface/bridge/utils/features.js) and tells every client over /bridge/features, so flipping one needs a bridge restart and no iPad rebuild. Wired so far: totalmix, midiControllers and expressionPedal; the rest of §7b's list joins one subsystem at a time.",
     "_totalmixNote": "RME TotalMix monitor link (ADR-423). Off: the bridge binds neither 9003 nor 7001, runs no startup bootstrap and reads no osc.totalmix* block, and the UI draws no status-strip monitor bars. On: the UI shows them greyed out, with the reason, until the mixer has answered once on either OSC controller.",
     "totalmix": false,
-    "_midiControllersNote": "The owner's MIDI controllers, read by the bridge itself (ADR-537, which replaced the standalone Max patch): the Ableton Move's pad hold, track-volume knob and TotalMix knobs, and the piano pedal (a CC from any input into foot tap/hold, set in Settings). Tuned by the midiControllers block. Off: the bridge opens no MIDI input and loads no MIDI library, and Settings draws neither the Move Knob switch nor the Piano pedal card.",
+    "_midiControllersNote": "The owner's MIDI controllers, read by the bridge itself (ADR-537, which replaced the standalone Max patch): the Ableton Move's pad hold, track-volume knob and TotalMix knobs. Tuned by the midiControllers block. Off: the bridge ignores the Move's ports (the pedals still read every input) and Settings draws no Move Knob switch.",
     "midiControllers": false,
-    "_expressionPedalNote": "The expression pedal and its toe switch (midiPedals.channel, wahToeSwitchCC, wahExpressionCC) and the Wah they play: the sweep drives Wah.adg on an audio track and MidiWheels' mod wheel on a MIDI track, the toe switch loads or steps it (ADR-422, ADR-445). Off: the surface claims neither CC, so they reach Live like any other MIDI, and the Pedal view draws no Wah button. The foot switch is not part of this: it is a user setting with Learn in the System view.",
+    "_expressionPedalNote": "The expression pedal and its toe switch and the Wah they play: the sweep drives Wah.adg on an audio track and MidiWheels' mod wheel on a MIDI track, the toe switch loads or steps it (ADR-445). The bridge reads both pedals (ADR-538), learned on the Settings page's Pedals card, seeded from midiPedals. Off: the bridge sends no wah message, the Pedals card draws no wah rows, and the Pedal view draws no Wah button. The loop pedal is not part of this: it is everyone's, a user setting with Learn.",
     "expressionPedal": false,
     "_menubarNote": "Vamp for Mac (owner/apps, the VampMac target): the owner's menu-bar app, which mirrors toggles the System view already has and carries Vamp for iPad's link over the USB cable (ADR-488). Needs Xcode. Off: npm run dev and npm run ipad neither build nor launch it (scripts/launch-menubar.sh exits at once, setup-ipad.js never calls it), so the iPad app has no Mac to reach and Safari is the way in.",
     "menubar": false,
@@ -198,7 +198,7 @@
     "footTrigger": {
       "port": 11010,
       "host": "127.0.0.1",
-      "description": "Foot trigger for session recording (tap) and audio track creation (hold). The port is legacy and unused. holdThresholdMs is the tap/hold boundary for both pedal paths: the surface's MidiPedalInput (ADR-422) and the bridge's piano pedal (ADR-537).",
+      "description": "Foot trigger for session recording (tap) and audio track creation (hold). The port is legacy and unused. holdThresholdMs is the loop pedal's tap/hold boundary, read by the bridge (ADR-538).",
       "holdThresholdMs": 650
     },
     "webSocket": {
@@ -261,30 +261,26 @@
   },
 
   "midiPedals": {
-    "_description": "MIDI CC map for pedals plugged into the control surface's own MIDI input port (Live prefs → Link/Tempo/MIDI → Control Surface 'Vamp' → Input = the pedal's USB MIDI port; leave that port's Track/Remote switches off). ADR-422: replaces the Max ctlin→OSC bridges — the surface converts these CCs into the same foot tap/hold and wah engage/freq gestures the /looping/v3/foot/* and /looping/v3/wah/* OSC wires carry (both wires stay live as a fallback). Both switches press at value>=64 and release below it (standard MIDI switch convention) \u2014 so a pedal whose \"off\" is a low non-zero value (e.g. 126 on / 1 off) reads correctly. (The bridge's piano pedal, midiControllers.pianoPedal, edges at > 64.) Hold duration comes from osc.footTrigger.holdThresholdMs.",
-    "_machineNote": "The values are a Mac's own, in config/constants.local.json: channel, footSwitchCC, wahToeSwitchCC, wahExpressionCC.",
-    "_channelNote": "MIDI channel the pedal transmits on, 1-16 as labeled in Live and on the pedal. Only this channel is forwarded and parsed; anything else falls through to the framework untouched. Set to 0 for the pre-ADR-422 omni behavior (all 16 channels, mirroring Max ctlin with no channel argument) if the pedal's channel is unknown.",
-    "_footSwitchNote": "footSwitchCC only SEEDS the foot switch, on a machine that has never saved one: the foot switch is a user setting (System view → Foot Switch: on/off and Learn), persisted to logs/foot-switch.json by the surface's FootSwitchComponent, and once saved that file wins. No footSwitchCC and nothing saved is no foot switch at all. It seeds with this block's channel; Learn records the pedal's own."
+    "_description": "Every pedal is read by the bridge from any MIDI input (ADR-538; interface/bridge/handlers/pedals.js), in every edition: the loop trigger (one or more pedals into foot tap/hold), and while features.expressionPedal is on the wah's toe switch and sweep. Each is a user setting with Learn on the Settings page's Pedals card, saved to logs/pedals.json, and once saved that file wins. Both switches press at value >= 64. Hold duration comes from osc.footTrigger.holdThresholdMs. Until ADR-538 the foot switch and the wah were MIDI on the Vamp control surface's own Input in Live (ADR-422).",
+    "_machineNote": "The seeds are a Mac's own, in config/constants.local.json, read only while logs/pedals.json does not exist: footSwitchCC on channel and pianoPedalCC on any channel become loop pedals, wahToeSwitchCC and wahExpressionCC on channel the wah's. Naming none is no pedal at all, so a stranger's keyboard never loops by default. channel is 1-16, or 0 for any.",
+    "learnTimeoutMs": 10000,
+    "learnReleaseWindowMs": 1500,
+    "_learnNote": "Learn waits learnTimeoutMs for a pedal. For the loop trigger, the opposite side of 64 on the same CC within learnReleaseWindowMs is a momentary pedal's release (tap and hold); nothing is a latching pedal (a tap per stomp, no hold)."
   },
 
   "midiControllers": {
-    "_description": "The bridge's own MIDI inputs, read only while features.midiControllers is on (ADR-537; interface/bridge/handlers/midiControllers.js). Every input on the Mac is opened and the list re-checked every pollMs.",
+    "_description": "The owner's Ableton Move, read by the bridge only while features.midiControllers is on (ADR-537; interface/bridge/handlers/midiControllers.js). The bridge opens every MIDI input on the Mac in every edition, for the pedals (midiPedals), and re-checks the list every pollMs.",
     "pollMs": 2000,
     "move": {
-      "_description": "Ableton Move. Pads: a note held for ui.gestures.momentaryHoldMs sends /looping/v3/move/pad_hold (ADR-432); notes in ignoreNotes are its step buttons. Knobs, on knobChannel: trackVolumeCC's raw relative value goes to /looping/v3/selected_track/volume_relative; each totalmixKnobs CC nudges that TotalMix channel by totalmixStepDb per click (value 1 up, 127 down), only once a level is known. Every port whose name starts with portPrefix is the Move's: only portName is read, and none of them reaches the piano pedal.",
+      "_description": "Ableton Move. Pads: a note held for ui.gestures.momentaryHoldMs sends /looping/v3/move/pad_hold (ADR-432); notes in ignoreNotes are its step buttons. Knobs, on knobChannel: trackVolumeCC's raw relative value goes to /looping/v3/selected_track/volume_relative; each totalmixKnobs CC nudges that TotalMix channel by totalmixStepDb per click (value 1 up, 127 down), only once a level is known. Every port whose name starts with portPrefix is the Move's: only portName is read, and none of them reaches a pedal except externalPortName, where a device plugged into the Move arrives (the rig's foot switch, measured 2026-11-13).",
       "portName": "Ableton Move Live Port",
       "portPrefix": "Ableton Move",
+      "externalPortName": "Ableton Move External Port",
       "ignoreNotes": [16, 31],
       "knobChannel": 1,
       "trackVolumeCC": 71,
       "totalmixKnobs": { "75": "room", "76": "playback", "77": "click", "78": "phones" },
       "totalmixStepDb": 0.1
-    },
-    "pianoPedal": {
-      "_description": "A sustain-style pedal on any input but the Move, any channel: pressed above pressAbove, tap or hold at osc.footTrigger.holdThresholdMs into /looping/v3/foot/tap and /foot/hold. defaultCC applies until Settings saves one (logs/piano-pedal.json); Learn takes the next CC pressed within learnTimeoutMs.",
-      "defaultCC": 67,
-      "pressAbove": 64,
-      "learnTimeoutMs": 10000
     }
   },
 

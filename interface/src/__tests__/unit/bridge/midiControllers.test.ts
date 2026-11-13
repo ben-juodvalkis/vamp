@@ -1,16 +1,13 @@
 /**
- * The bridge's own MIDI controllers (ADR-537), which replaced the owner's
- * standalone Max patch: Move pad hold, the Move's track-volume and TotalMix
- * knobs, and the piano pedal with its saved CC and Learn.
+ * The owner's Ableton Move, read by the bridge (ADR-537), which replaced the
+ * standalone Max patch: pad hold, and the track-volume and TotalMix knobs.
+ * The pedals are `pedals.test.ts` (ADR-538).
  *
  * Targets `interface/bridge/handlers/midiControllers.js` with plain byte
  * arrays and vitest's fake timers; no CoreMIDI.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 
 import * as mod from '../../../../bridge/handlers/midiControllers.js';
 import constants from '../../../../../config/constants.json';
@@ -19,17 +16,14 @@ type Sent = { address: string; args: Array<{ type: string; value: number }> };
 type Controllers = {
 	handleMidi: (port: string, bytes: number[]) => void;
 	inputsReset: () => void;
-	onClientMessage: (msg: { address: string; args: unknown[] }) => boolean;
-	pedalState: () => { enabled: boolean; cc: number; learn: string; heard: boolean };
 };
 const { createMidiControllers } = mod as unknown as {
 	createMidiControllers: (deps: Record<string, unknown>) => Controllers;
 };
 
 const MOVE = 'Ableton Move Live Port';
-const PIANO = 'USB MIDI Device';
+const OTHER = 'USB MIDI Device';
 const PAD_MS = 300;
-const PEDAL_MS = 650;
 
 const noteOn = (note: number, vel = 100) => [0x90, note, vel];
 const noteOff = (note: number) => [0x80, note, 0];
@@ -38,22 +32,17 @@ const cc = (num: number, value: number, channel = 1) => [0xb0 + channel - 1, num
 let sent: Sent[];
 let levels: Record<string, number>;
 let written: Array<[string, number]>;
-let states: Array<Record<string, unknown>>;
-let dir: string;
 
 function make(extra: Record<string, unknown> = {}) {
 	return createMidiControllers({
 		config: constants.midiControllers,
 		padHoldMs: PAD_MS,
-		pedalHoldMs: PEDAL_MS,
 		sendToSurface: (msg: Sent) => sent.push(msg),
 		getTotalMixLevel: (ch: string) => levels[ch],
 		writeTotalMix: (ch: string, db: number) => {
 			written.push([ch, db]);
 			levels[ch] = db;
 		},
-		onPedalState: (s: Record<string, unknown>) => states.push(s),
-		settingsPath: path.join(dir, 'piano-pedal.json'),
 		...extra
 	});
 }
@@ -65,20 +54,16 @@ beforeEach(() => {
 	sent = [];
 	levels = {};
 	written = [];
-	states = [];
-	dir = fs.mkdtempSync(path.join(os.tmpdir(), 'midi-controllers-'));
 });
 
 afterEach(() => {
 	vi.useRealTimers();
-	fs.rmSync(dir, { recursive: true, force: true });
 });
 
 describe('the config the bridge reads', () => {
 	it('carries what the handler needs, and the hold times it is given', () => {
 		expect(constants.midiControllers.move.portName).toBe(MOVE);
 		expect(constants.ui.gestures.momentaryHoldMs).toBe(PAD_MS);
-		expect(constants.osc.footTrigger.holdThresholdMs).toBe(PEDAL_MS);
 	});
 });
 
@@ -111,7 +96,7 @@ describe('Move pad hold', () => {
 		c.handleMidi(MOVE, noteOn(16));
 		c.handleMidi(MOVE, noteOn(31));
 		c.handleMidi('Ableton Move User Port', noteOn(40));
-		c.handleMidi(PIANO, noteOn(40));
+		c.handleMidi(OTHER, noteOn(40));
 		vi.advanceTimersByTime(PAD_MS * 2);
 		expect(sent).toEqual([]);
 	});
@@ -178,80 +163,5 @@ describe('Move knobs', () => {
 		const c = make({ getTotalMixLevel: null, writeTotalMix: null });
 		c.handleMidi(MOVE, cc(77, 1));
 		expect(sent).toEqual([]);
-	});
-});
-
-describe('the piano pedal', () => {
-	it('taps on CC 67 from any input and any channel by default', () => {
-		const c = make();
-		c.handleMidi(PIANO, cc(67, 127, 5));
-		vi.advanceTimersByTime(100);
-		c.handleMidi(PIANO, cc(67, 0, 5));
-		expect(addresses()).toEqual([['/looping/v3/foot/tap']]);
-	});
-
-	it('holds at the hold time, and its release sends nothing more', () => {
-		const c = make();
-		c.handleMidi(PIANO, cc(67, 127));
-		vi.advanceTimersByTime(PEDAL_MS);
-		c.handleMidi(PIANO, cc(67, 0));
-		expect(addresses()).toEqual([['/looping/v3/foot/hold']]);
-	});
-
-	it('presses above 64 only, and ignores repeats while down', () => {
-		const c = make();
-		c.handleMidi(PIANO, cc(67, 64));
-		c.handleMidi(PIANO, cc(67, 65));
-		c.handleMidi(PIANO, cc(67, 100));
-		c.handleMidi(PIANO, cc(67, 10));
-		expect(addresses()).toEqual([['/looping/v3/foot/tap']]);
-	});
-
-	it('never hears the Move, whatever CC it sends', () => {
-		const c = make();
-		c.onClientMessage({ address: '/bridge/piano_pedal/learn', args: [1] });
-		c.handleMidi(MOVE, cc(75, 127));
-		expect(c.pedalState().learn).toBe('listening');
-	});
-
-	it('learns the next CC pressed, saves it, and uses it from then on', () => {
-		const c = make();
-		c.onClientMessage({ address: '/bridge/piano_pedal/learn', args: [1] });
-		c.handleMidi(PIANO, cc(64, 127));
-		expect(c.pedalState()).toMatchObject({ cc: 64, learn: 'idle', enabled: true });
-		c.handleMidi(PIANO, cc(64, 0)); // the learning press's release taps nothing
-		c.handleMidi(PIANO, cc(67, 127));
-		c.handleMidi(PIANO, cc(67, 0));
-		expect(sent).toEqual([]);
-		c.handleMidi(PIANO, cc(64, 127));
-		c.handleMidi(PIANO, cc(64, 0));
-		expect(addresses()).toEqual([['/looping/v3/foot/tap']]);
-
-		const again = make();
-		expect(again.pedalState().cc).toBe(64);
-	});
-
-	it('times Learn out, and Cancel stops it', () => {
-		const c = make();
-		c.onClientMessage({ address: '/bridge/piano_pedal/learn', args: [{ type: 'i', value: 1 }] });
-		vi.advanceTimersByTime(constants.midiControllers.pianoPedal.learnTimeoutMs);
-		expect(c.pedalState().learn).toBe('timeout');
-		c.onClientMessage({ address: '/bridge/piano_pedal/learn', args: [1] });
-		c.onClientMessage({ address: '/bridge/piano_pedal/learn', args: [0] });
-		expect(c.pedalState().learn).toBe('idle');
-		expect(states.map((s) => s.learn)).toEqual(['listening', 'timeout', 'listening', 'idle']);
-	});
-
-	it('is ignored while off, and the off is saved', () => {
-		const c = make();
-		expect(c.onClientMessage({ address: '/bridge/piano_pedal/enabled', args: [0] })).toBe(true);
-		c.handleMidi(PIANO, cc(67, 127));
-		c.handleMidi(PIANO, cc(67, 0));
-		expect(sent).toEqual([]);
-		expect(make().pedalState().enabled).toBe(false);
-	});
-
-	it('leaves other client addresses to the router', () => {
-		expect(make().onClientMessage({ address: '/looping/v3/foot/tap', args: [] })).toBe(false);
 	});
 });

@@ -40,12 +40,11 @@ device-state observation all live on the Python side after
 Phases 5–12 + the 2026-04-21 ROW 6.x sweep. AbletonOSC was
 removed in ROW 11 (2026-04-21) and the M4L observer pipeline
 was gutted to zero live handlers across pr12-5 and ROWs 6.5–6.9
-(2026-04-21). Since ADR-422 the foot + wah pedal CCs arrive as plain
-MIDI on the surface's own MIDI input port — see "Pedal MIDI input"
-below. Since ADR-537 nothing on the owner's rig runs in standalone Max:
-the bridge reads the Move and the piano pedal itself (any input, any
-channel, CC 67 unless Settings saved another) while
-`features.midiControllers` is on, and sends the same wires.
+(2026-04-21). **The surface claims no MIDI** (ADR-538): the bridge reads
+every pedal and the owner's Move from any input and sends the surface
+the same OSC wires (`/looping/v3/foot/*`, `/looping/v3/wah/*`,
+`/looping/v3/move/pad_hold`, `selected_track/volume_relative`) — see
+"Pedals" below.
 
 Address routing is controlled by `backendScope` in
 `config/constants.json`. `/looping/v3/*` goes to the Python
@@ -906,13 +905,11 @@ fired value-changed ("Visible (Not Stored)"), which is why this is a wire.
 
 ## Wah pedal and MidiWheels on MIDI tracks (WahPedalComponent, ADR-407 → ADR-445)
 
-The expression pedal reaches the surface exactly like the foot pedal — its
-MIDI arrives either USB-direct on the surface's own MIDI input
-(ADR-422, primary: **CC 21** toe-switch, **CC 20** expression, both on
-**channel 10** — see "Pedal MIDI input" below) or via a Max ctlin→OSC
-patch firing straight to 11020 (wireless/legacy fallback, still on the
-old CC 82 / CC 11) — no bridge, no generation, no `trackPath`
-either way. `WahPedalComponent` owns the two wires (their addresses keep
+The expression pedal reaches the surface exactly like the foot pedal: the
+bridge reads it from any MIDI input (ADR-538; the rig's toe switch **CC 21**
+and sweep **CC 20** on **channel 10**, learned on the Settings page) and
+sends the two wires — no generation, no `trackPath`. `WahPedalComponent`
+owns the two wires (their addresses keep
 the `wah` name) and, since ADR-445 (2026-09-19), drives **one of two
 devices by the kind of track under the selection**:
 
@@ -1031,92 +1028,18 @@ since ADR-498), compared by file name, so a wire-level track load of any
 `tests/test_wah_pedal_component.py` (the ADR-445 block at its end) and the
 wire-level head tests in `tests/test_device_load_component.py`.
 
-## Pedal MIDI input — USB-direct (ADR-422)
+## Pedals (ADR-538)
 
-With the pedal plugged in over USB and its port assigned as the
-Looping control surface's MIDI **Input** in Live's prefs (Output stays
-None; turn the port's Track/Remote switches off so the expression CC
-can't leak into armed tracks or MIDI mapping), the surface receives
-the pedal CCs itself — no Max, no OSC hop:
-
-- `components/midi_pedal_input.py` (`MidiPedalInput`) is the plain-
-  Python translator: CC parsing scoped to exact `(channel, CC)` pairs
-  (the foot switch on its own learned channel, the wah on
-  `midiPedals.channel`, 10 — other traffic isn't claimed and falls
-  through; channel `0` restores the omni parsing the old `ctlin` did), edge
-  detection (both switches split high from low at value ≥ 64 — the
-  retired Utility patch's literal `> 0` edge latched down on a pedal
-  whose "off" is a low non-zero value), and the 650ms
-  tap/hold state machine ported from `owner/Max Patches/foot-trigger.js`
-  (press debounce, hold-suppresses-tap, press-seq guard against stale
-  scheduled checks, plus a release-time clock check that keeps the
-  tap/hold boundary exact despite `schedule_message`'s ~100ms tick —
-  measured 99.44ms, see "Inbound drain" above).
-  Fully pytest-covered (`tests/test_midi_pedal_input.py`) — the Max
-  ES5 timing never was. **The two switches read those edges
-  differently.** The foot switch is momentary or latching
-  (`FootMapping.mode`, which Learn detects). Momentary: one side of 64 is
-  a press (high on most switches; Learn records `press_high` for one
-  that presses low), the other a release, and the gap between them is
-  the tap/hold timer. Latching: every stomp is a tap and there is no
-  hold — read as momentary, a latching switch made every first stomp a
-  hold. The wah
-  toe switch **latches** — one physical press flips it 0 → 127, the
-  next flips it back — so *both* edges fire engage. Edging on the
-  rising side alone advanced the wah's chain on only every other
-  press. A repeated same-side level is still collapsed into one edge,
-  so a pedal that streams its state engages once per change.
-- `LoopingSurface` owns the framework half: `build_midi_map` forwards
-  the adapter's `forwarded_pairs()` — exact `(channel, CC)` pairs — via
-  `Live.MidiMap.forward_midi_cc`, so the script claims exactly what it
-  will act on (every CC on every channel only while Learn listens) (Live only delivers MIDI a
-  script claims — the element tree is empty, so the base class claims
-  nothing) — and `receive_midi` /
-  `receive_midi_chunk` route owned CCs to the adapter inside
-  `component_guard`, everything else to the base class.
-- The resolved gestures call the **same** `FootTriggerComponent` /
-  `WahPedalComponent` OSC handlers (`source_addr="midi:pedal-input"`
-  in Log.txt), so `/looping/v3/foot/*` + `/looping/v3/wah/*` stay live
-  as the fallback path and semantics keep a single owner.
-- **The foot switch is a user setting (2026-09-26), not config.**
-  `components/FootSwitchComponent.py` owns it: on/off and **Learn** from
-  the System view's Foot Switch card, persisted to
-  `<repo>/logs/foot-switch.json` (its own file — `SessionSettingsComponent`
-  rewrites `session-settings.json` whole). Learn calls
-  `MidiPedalInput.start_learn`: the adapter forwards every CC for up to
-  10 s, takes the first as the channel + CC, and names the mode from what
-  follows — the opposite side of 64 on the same CC within 1.5 s is a
-  momentary switch's release, nothing is latching. Teaching fires no
-  gesture. Nothing heard is `timeout`, which the card turns into "set the
-  pedal as Looping's Input in Live". Every mapping change and learn
-  start/stop asks Live to rebuild the MIDI map (`_request_midi_rebuild`).
-  Wire: `/looping/v3/session/foot_switch [enabled, channel, cc, mode,
-  learn, heard]` out; `…/foot_switch/enabled [0|1]` (on with nothing
-  learned starts a learn) and `…/foot_switch/learn [0|1]` in. With nothing
-  saved it is seeded from `midiPedals.footSwitchCC`; with neither there
-  is **no** foot switch — before this a missing key fell back to CC 23, so
-  a keyboard picked as the Input fired looper taps.
-- **The wah CCs exist only while `features.expressionPedal` is on**
-  (`config_loader.feature_on`, the surface's half of the bridge's
-  `readFeatureFlags`: only an explicit `true`). Off, `LoopingSurface`
-  passes no wah callbacks, so the adapter claims neither CC; the OSC wah
-  wires stay. The general edition leaves it off.
-- Channel + CC map live in `constants.midiPedals` (`channel` 10,
-  `footSwitchCC` 23 (the seed), `wahToeSwitchCC` 21, `wahExpressionCC` 20 —
-  measured off the USB pedal 2026-08-27; 67 / 82 / 11 were the retired
-  Bluetooth rig's, and CC 67 lives on as the bridge's piano pedal,
-  ADR-537). The hold boundary is
-  `constants.osc.footTrigger.holdThresholdMs` (650), read by both. A collision
-  (the same CC on overlapping channels) keeps the first mapping (foot →
-  toe → expression) with a WARN; an out-of-range `channel` falls back to
-  10 with a WARN. Tests: `tests/test_midi_pedal_input.py`,
-  `tests/test_foot_switch_component.py`.
-
-Don't run both paths at once for the same pedal (assign the port in
-Live *and* learn the same CC as the bridge's piano pedal) — each press
-would fire twice. The two maps no longer overlap (23/21/20 on ch 10 vs
-67/82/11), so this only bites if you re-point one side at the other's
-CCs.
+The surface reads no pedal MIDI. Since 2026-11-13 the bridge reads every
+pedal from any MIDI input (`interface/bridge/handlers/pedals.js`) — the
+loop pedal's tap/hold timing, Learn, the wah's toe-switch edges — and sends
+`/looping/v3/foot/{tap,hold}` and `/looping/v3/wah/{engage,freq}` here,
+where `FootTriggerComponent` and `WahPedalComponent` keep their logic.
+Deleted with it: `MidiPedalInput` (ADR-422's USB-direct path on the
+surface's own Input), `FootSwitchComponent` and `/looping/v3/session/foot_switch*`,
+the `build_midi_map` / `receive_midi` overrides, and
+`config_loader.feature_on` (nothing here reads a feature switch now). The
+surface's Input in Live's MIDI settings can be None.
 
 ## Move encoders and pad hold (ADR-320 → ROW 5, ADR-412, ADR-432)
 

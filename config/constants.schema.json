@@ -24,7 +24,7 @@
         },
         "midiControllers": {
           "type": "boolean",
-          "description": "The owner's MIDI controllers, read by the bridge (ADR-537): the Ableton Move's pad hold and knobs, the piano pedal, the Settings page's Move Knob switch and Piano pedal card."
+          "description": "The owner's MIDI controllers, read by the bridge (ADR-537): the Ableton Move's pad hold and knobs, and the Settings page's Move Knob switch."
         },
         "expressionPedal": {
           "type": "boolean",
@@ -407,7 +407,9 @@
       "properties": {
         "_description": { "type": "string" },
         "_channelNote": { "type": "string" },
-        "_footSwitchNote": { "type": "string" },
+        "_learnNote": { "type": "string" },
+        "learnTimeoutMs": { "type": "integer", "minimum": 0, "description": "How long Learn waits for a pedal (ADR-538)" },
+        "learnReleaseWindowMs": { "type": "integer", "minimum": 0, "description": "A loop pedal whose opposite side of 64 follows within this is momentary, else latching" },
         "channel": {
           "type": "integer",
           "minimum": 0,
@@ -418,7 +420,13 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 127,
-          "description": "Seeds the foot switch on a machine with no saved setting (logs/foot-switch.json). Absent, and nothing saved, there is no foot switch; the System view's Learn sets one."
+          "description": "Seeds a loop pedal on this channel on a machine with no saved setting (logs/pedals.json, ADR-538). Absent, and nothing saved, there is none; the Pedals card's Learn adds one."
+        },
+        "pianoPedalCC": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 127,
+          "description": "Seeds a loop pedal on any channel (a keyboard's sustain or soft pedal) on a machine with no saved setting (logs/pedals.json)."
         },
         "wahToeSwitchCC": { "type": "integer", "minimum": 0, "maximum": 127 },
         "wahExpressionCC": { "type": "integer", "minimum": 0, "maximum": 127 }

@@ -60,11 +60,45 @@ function sameFeatures(a: Record<string, FeatureState>, b: Record<string, Feature
     });
 }
 
-export interface PianoPedalState {
-    enabled: boolean;
+/** One pedal: a channel (0 = any) and CC; a loop pedal also its behavior. */
+export interface Pedal {
+    channel: number;
     cc: number;
-    learn: 'idle' | 'listening' | 'timeout';
-    heard: boolean;
+    mode?: 'momentary' | 'latching';
+    pressHigh?: boolean;
+}
+export type PedalRole = 'loop' | 'wahToe' | 'wahSweep';
+
+/** `/bridge/pedals` (ADR-538): every pedal, read by the bridge from any input. */
+export interface PedalsState {
+    /** Has the bridge said anything yet? */
+    known: boolean;
+    /** The MIDI inputs are open; `reason` says why not. */
+    available: boolean;
+    reason: string;
+    /** The wah rows exist (`expressionPedal`). */
+    wah: boolean;
+    learn: { role: PedalRole; state: 'listening' | 'timeout' } | null;
+    loop: { enabled: boolean; pedals: Pedal[]; heard: boolean };
+    wahToe: { pedal: Pedal | null; heard: boolean };
+    wahSweep: { pedal: Pedal | null; heard: boolean };
+}
+
+const PEDALS_UNKNOWN: PedalsState = {
+    known: false, available: false, reason: '', wah: false, learn: null,
+    loop: { enabled: false, pedals: [], heard: false },
+    wahToe: { pedal: null, heard: false },
+    wahSweep: { pedal: null, heard: false }
+};
+
+function readPedal(raw: unknown): Pedal | null {
+    if (!raw || typeof raw !== 'object') return null;
+    const p = raw as Record<string, unknown>;
+    if (!Number.isInteger(p.channel) || !Number.isInteger(p.cc)) return null;
+    const pedal: Pedal = { channel: p.channel as number, cc: p.cc as number };
+    if (p.mode === 'momentary' || p.mode === 'latching') pedal.mode = p.mode;
+    if (typeof p.pressHigh === 'boolean') pedal.pressHigh = p.pressHigh;
+    return pedal;
 }
 
 class BridgeStatusStore {
@@ -79,32 +113,40 @@ class BridgeStatusStore {
     /** Every switch the bridge has reported, by id. Empty until it does. */
     features = $state<Record<string, FeatureState>>({});
 
-    /**
-     * The piano pedal setting (ADR-537), from `/bridge/piano_pedal`: sent on
-     * every change and with the 5 s ping while `midiControllers` is on.
-     * `cc` is -1 until the bridge has said.
-     */
-    pianoPedal = $state<PianoPedalState>({ enabled: false, cc: -1, learn: 'idle', heard: false });
+    /** Every pedal (ADR-538), from `/bridge/pedals`: on change and with the 5 s ping. */
+    pedals = $state<PedalsState>(PEDALS_UNKNOWN);
+    #pedalsJson = '';
 
-    updatePianoPedal(json: string) {
-        let raw: Record<string, unknown>;
+    updatePedals(json: string) {
+        if (json === this.#pedalsJson) return;
+        let raw: Record<string, any>;
         try {
             raw = JSON.parse(json);
         } catch {
-            logger.warn('Unreadable /bridge/piano_pedal frame', { component: 'bridgeStatus', json });
+            logger.warn('Unreadable /bridge/pedals frame', { component: 'bridgeStatus', json });
             return;
         }
         if (!raw || typeof raw !== 'object') return;
-        const learn = raw.learn === 'listening' || raw.learn === 'timeout' ? raw.learn : 'idle';
-        const next: PianoPedalState = {
-            enabled: raw.enabled === true,
-            cc: typeof raw.cc === 'number' ? raw.cc : -1,
+        const roles = ['loop', 'wahToe', 'wahSweep'];
+        const learn = raw.learn && roles.includes(raw.learn.role)
+            && (raw.learn.state === 'listening' || raw.learn.state === 'timeout')
+            ? { role: raw.learn.role as PedalRole, state: raw.learn.state as 'listening' | 'timeout' }
+            : null;
+        this.#pedalsJson = json;
+        this.pedals = {
+            known: true,
+            available: raw.available === true,
+            reason: typeof raw.reason === 'string' ? raw.reason : '',
+            wah: raw.wah === true,
             learn,
-            heard: raw.heard === true
+            loop: {
+                enabled: raw.loop?.enabled === true,
+                pedals: (Array.isArray(raw.loop?.pedals) ? raw.loop.pedals : []).map(readPedal).filter((p: Pedal | null): p is Pedal => p !== null),
+                heard: raw.loop?.heard === true
+            },
+            wahToe: { pedal: readPedal(raw.wahToe?.pedal), heard: raw.wahToe?.heard === true },
+            wahSweep: { pedal: readPedal(raw.wahSweep?.pedal), heard: raw.wahSweep?.heard === true }
         };
-        const cur = this.pianoPedal;
-        if (cur.enabled === next.enabled && cur.cc === next.cc && cur.learn === next.learn && cur.heard === next.heard) return;
-        this.pianoPedal = next;
     }
 
     updateAxHelper(state: string, detail?: string) {

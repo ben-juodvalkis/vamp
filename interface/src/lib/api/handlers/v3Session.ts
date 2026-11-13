@@ -48,10 +48,8 @@ import {
 	handleMoveVolumeKnobUpdate,
 	handleAutoCaptureUpdate,
 	handleKeyFollowUpdate,
-	handleFootSwitchUpdate,
 	handleClipTriggerQuantizationUpdate,
 	session,
-	type FootSwitchState
 } from '$lib/stores/session.svelte';
 import { toNumber, toString } from './oscTypeHelpers';
 
@@ -107,15 +105,6 @@ export const V3_SESSION_MOVE_VOLUME_KNOB_ADDRESS =
 export const V3_SESSION_AUTO_CAPTURE_ADDRESS = '/looping/v3/session/auto_capture';
 /** ADR-447: the key follows the loops (`[0|1]`, both directions; default on). */
 export const V3_SESSION_KEY_FOLLOW_ADDRESS = '/looping/v3/session/key_follow';
-/**
- * The foot switch, a user setting with Learn (surface `FootSwitchComponent`).
- * Surf→UI `[enabled, channel, cc, mode, learn, heard]`; the UI writes the two
- * sub-addresses, `enabled [0|1]` (on with nothing learned starts a learn) and
- * `learn [0|1]` (start, cancel).
- */
-export const V3_SESSION_FOOT_SWITCH_ADDRESS = '/looping/v3/session/foot_switch';
-export const V3_SESSION_FOOT_SWITCH_ENABLED_ADDRESS = '/looping/v3/session/foot_switch/enabled';
-export const V3_SESSION_FOOT_SWITCH_LEARN_ADDRESS = '/looping/v3/session/foot_switch/learn';
 
 // Legacy tempo wire — SessionComponent emits tempo on this pre-v3
 // address for wire-compat. The only non-v3 `/looping/*` address still
@@ -149,7 +138,6 @@ const V3_SESSION_ADDRESSES = new Set<string>([
 	V3_SESSION_MOVE_VOLUME_KNOB_ADDRESS,
 	V3_SESSION_AUTO_CAPTURE_ADDRESS,
 	V3_SESSION_KEY_FOLLOW_ADDRESS,
-	V3_SESSION_FOOT_SWITCH_ADDRESS,
 	LEGACY_SESSION_TEMPO_ADDRESS
 ]);
 
@@ -331,10 +319,6 @@ export function handleV3Session(address: string, args: OSCArg[]): void {
 			handleKeyFollowUpdate(toNumber(raw));
 			return;
 
-		case V3_SESSION_FOOT_SWITCH_ADDRESS:
-			handleFootSwitchUpdate(parseFootSwitch(args));
-			return;
-
 		case LEGACY_SESSION_TEMPO_ADDRESS:
 			handleSessionUpdate({
 				type: 'tempo',
@@ -343,33 +327,4 @@ export function handleV3Session(address: string, args: OSCArg[]): void {
 			});
 			return;
 	}
-}
-
-const FOOT_MODES = new Set(['momentary', 'latching', '']);
-const FOOT_LEARN_STATES = new Set(['idle', 'listening', 'timeout']);
-
-/** `[enabled, channel, cc, mode, learn, heard]` → state, or null if malformed. */
-export function parseFootSwitch(args: OSCArg[]): FootSwitchState | null {
-	if (args.length < 6) {
-		logger.warn('foot_switch: short args', { args });
-		return null;
-	}
-	const [enabled, channel, cc, mode, learn, heard] = args;
-	const state = {
-		enabled: toNumber(enabled) === 1,
-		channel: toNumber(channel),
-		cc: toNumber(cc),
-		mode: toString(mode),
-		learn: toString(learn),
-		heard: toNumber(heard) === 1
-	};
-	if (
-		!Number.isInteger(state.channel) || state.channel < 0 || state.channel > 16 ||
-		!Number.isInteger(state.cc) || state.cc < -1 || state.cc > 127 ||
-		!FOOT_MODES.has(state.mode) || !FOOT_LEARN_STATES.has(state.learn)
-	) {
-		logger.warn('foot_switch: malformed args', { args });
-		return null;
-	}
-	return state as FootSwitchState;
 }

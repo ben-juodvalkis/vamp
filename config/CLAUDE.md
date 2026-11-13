@@ -23,7 +23,7 @@ The single source of truth for the entire project, the same on every clone. Used
 
 Laid over `constants.json` by everything on the Mac: the bridge and the scripts through `interface/bridge/utils/constants.js`, the interface server through `interface/src/lib/server/runtimeConfig.ts`, the surface through `surface/config_loader.py` (a Live restart to take effect). Objects merge key by key; any other value replaces. No file is the general edition.
 
-The owner's rig holds its switches (all on), its paths (`paths.*`: the User Library, the preset folders, the Sidebar, Live's app, the browser blocker), `network.hostname` and the iPad's addresses, `audio.defaultInputChannel`, the pedal CCs (`midiPedals`), the wah (`devices.wah`) and its Places tuning (`catalog.places`). Another Mac of the owner's needs its own copy: nothing syncs it.
+The owner's rig holds its switches (all on), its paths (`paths.*`: the User Library, the preset folders, the Sidebar, Live's app, the browser blocker), `network.hostname` and the iPad's addresses, `audio.defaultInputChannel`, the pedal seeds (`midiPedals`, read only until `logs/pedals.json` exists), the wah (`devices.wah`) and its Places tuning (`catalog.places`). Another Mac of the owner's needs its own copy: nothing syncs it.
 
 ### `constants.schema.json`
 

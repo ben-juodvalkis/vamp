@@ -32,7 +32,6 @@
 	import { settingsStore, type SettingsSection } from '$lib/stores/v6/settingsStore.svelte';
 	import { handshakeState } from '$lib/stores/v3/handshakeState.svelte';
 	import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
-	import { session } from '$lib/stores/session.svelte';
 	import { theme, resolvedTheme, themeActions, type Theme } from '$lib/stores/theme';
 	import Disc from '@lucide/svelte/icons/disc';
 	import Footprints from '@lucide/svelte/icons/footprints';
@@ -99,7 +98,7 @@
 			surfaceProtocol: handshakeState.phase === 'accepted' ? handshakeState.negotiatedVersion : null,
 			m4l: places.listing?.m4lDevices ?? null,
 			tickedCount: places.tickedCount,
-			footLearned: session.footSwitch.cc >= 0
+			footLearned: bridgeStatus.pedals.loop.pedals.length > 0
 		})
 	);
 	const progress = $derived(firstRunProgress(steps));

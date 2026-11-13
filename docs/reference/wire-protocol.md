@@ -805,16 +805,13 @@ and <200ms for audio.
 
 ### 2.10 Foot trigger
 
-Two delivery paths, one owner (ADR-422). **Primary**: the pedal's USB
-MIDI port is assigned as the Looping control surface's MIDI Input, and
-the surface's `MidiPedalInput` converts the foot-switch CC
-(`constants.midiPedals.footSwitchCC`, **23** on
-`constants.midiPedals.channel` **10**) into tap/hold itself — including
-the tap/hold timing (`osc.footTrigger.holdThresholdMs`, 650ms). CCs on
-any other channel are not claimed and fall through to the framework. **Second path**: the bridge's piano pedal (ADR-537;
-any MIDI input but the Move, CC 67 unless Settings saved another, the same
-650ms) fires the two arg-free OSC wires below at the surface. Both paths call the same
-`FootTriggerComponent` handlers, so the wires below remain live:
+One path (ADR-538): the bridge reads every pedal from any MIDI input
+(`interface/bridge/handlers/pedals.js`) and fires the two arg-free wires
+below at the surface — a learned loop pedal's tap or hold, with the
+tap/hold timing (`osc.footTrigger.holdThresholdMs`, 650ms) in the bridge.
+Until ADR-538 the surface read the foot switch itself as MIDI on its own
+Input (ADR-422) and the bridge read the piano pedal (ADR-537).
+`FootTriggerComponent` owns the wires:
 
 | Address                  | Dir        | Args      | Semantics |
 | ------------------------ | ---------- | --------- | --------- |
@@ -849,15 +846,14 @@ tracks panel's New Audio / New MIDI buttons do that now.
 ### 2.10.1 Wah pedal — and MidiWheels on MIDI tracks
 
 See ADR-407 (supersedes ADR-094) and ADR-445. The expression pedal's MIDI
-(**CC 21** toe-switch, **CC 20** expression, both on **channel 10** — all
-remappable via `constants.midiPedals`; the legacy Max chain still carries
-the old CC 82 / CC 11) reaches the surface the same two ways as the foot
-trigger (ADR-422): primarily as plain MIDI on the surface's own Input port
-(`MidiPedalInput` does the edge detection), with the legacy Max ctlin→OSC
-patch as the fallback, firing straight to the surface's UDP port (11020),
-fire-and-forget, **no bridge, no generation, no `trackPath`**. Both paths
-land on the same `WahPedalComponent` handlers, and the addresses keep their
-`wah` name whichever rack they land on.
+(the rig's **CC 21** toe switch, **CC 20** expression, both on **channel
+10**; learned on the Settings page's Pedals card, seeded from
+`constants.midiPedals`) is read by the bridge from any input (ADR-538) and
+sent to the surface as the two wires below — the toe switch on either edge
+(it latches), the sweep every value — only while `features.expressionPedal`
+is on. **No generation, no `trackPath`.** They land on `WahPedalComponent`'s
+handlers, and the addresses keep their `wah` name whichever rack they land
+on.
 
 **Which rack (ADR-445, 2026-09-19).** The component picks the rack by the
 kind of track under `song.view.selected_track`: a **wah already on the
@@ -1124,9 +1120,6 @@ first emit arrives.
 | `/looping/v3/session/auto_capture/query` | UI→Surf | (any/none) | Read-only state read for `auto_capture`, identical mechanics to `auto_arm/query`: reply echoes `[0|1]` **on this same address** to the asker's source port. Note the reply reflects whatever value the surface currently holds — which, very early in a session, may be the cold-start `0` before the first heartbeat's mode seed lands. Listen on `…/auto_capture/query`. No mutation, no broadcast echo. |
 | `/looping/v3/session/key_follow` | both | `0|1` | **ADR-447 (2026-09-19).** The key follows the loops. While on, `KeyDetectComponent` re-runs the ADR-446 analysis whenever what is playing changes — driven by `PlayheadComponent`'s change hook (a launch, a stop, a clip appearing or deleted, a finished take, a moved loop, a note edit), never by listeners of its own. Launches, stops and takes coalesce into one pass ~300 ms later, note changes into one ~1.5 s later. A pass diffs what is playing against what the last one analyzed (clips by LOM identity; a clip still recording left out): a new clip, a finished take or a clip whose loop moved is an *add*; a clip gone, or one whose notes changed in pitch class or timing, a *correct*; nothing changed is no pass — Permute's octave and mute steps included. It runs only while the dev server is present (`compose_key_follow_gate`, the arm-follows-selection shape): in bare Live the key is never rewritten. It writes (`key_detect.follow_decision`): a key the loops' notes are outside of is replaced by any answer; one that still fits stays after a correct, and after an add moves on a `sure` answer, or a `plausible` one when the key is not Follow's own. Each pass broadcasts on `…/scale/detected` when something was added, re-looped or removed, when it wrote, or when the answer changed. **Who set the key:** `scale_root` / `scale_name` from any client turn Follow off before the write (§2.11); a key changed inside Live — the chooser, Push, Live's undo — is classified a tick later from `song.can_redo`: a redo waiting is Live's undo or redo and keeps Follow on (measured on the rig: `can_redo` reads True after `song.undo`, False after a fresh write), none is a hand and turns it off, unless the key is Follow's own (the redo that empties the stack). Selecting a clip is neither: Live 12 applies the selected clip's own scale to the song (measured on 12.4.15b2; any clip-cell tap selects), so a key change that comes with a selection change and equals that clip's scale keeps Follow on, and when the key it replaced was Follow's own, Follow writes it back onto the song and the clip (one undo step). Turning Follow on runs a pass at once, deciding as if everything playing were new. **On at every surface start and not persisted**: a Live restart or a set load begins with Follow on, and a lock lasts until then. |
 | `/looping/v3/session/key_follow/query` | UI→Surf | (any/none) | Read-only state read for `key_follow`, identical mechanics to `auto_arm/query`: reply echoes `[0|1]` **on this same address** to the asker's source port. |
-| `/looping/v3/session/foot_switch` | Surf→UI | `enabled:int(0\|1), channel:int(0-16), cc:int(-1..127), mode:string, learn:string, heard:int(0\|1)` | **2026-09-26.** The foot switch, a user setting (`FootSwitchComponent`): whether it is on, what it is (`channel` 0 = all 16; `cc` -1 with nothing learned; `mode` `momentary`, `latching`, or `""` with nothing learned), where Learn is (`idle`, `listening`, `timeout` — nothing arrived in 10 s, almost always because the pedal is not the Looping surface's Input in Live), and whether the mapped CC has arrived since the surface was built. On init, on handshake accept, on every change. |
-| `/looping/v3/session/foot_switch/enabled` | UI→Surf | `0\|1` | Turn the foot switch on or off; persisted to `logs/foot-switch.json`. On with nothing learned starts a learn instead. The reply is the state above. |
-| `/looping/v3/session/foot_switch/learn` | UI→Surf | `0\|1` | 1 starts (or restarts) a learn: the surface forwards every CC on its Input, takes the next as the foot switch — the opposite side of 64 on it within 1.5 s is a momentary switch's release, nothing is latching — saves it and turns it on. Teaching fires no gesture. 0 cancels. The reply is the state above. |
 
 Writing `/looping/v3/session/auto_arm [0]` while a user-manual arm
 exists is safe — the component never touches tracks it didn't
@@ -1160,9 +1153,10 @@ aren't presence-gated.
 | `/bridge/ax_helper`                   | Bridge→UI | `state:string, detail:string` | **ADR-439.** The Looping AX Helper as the bridge sees it — the one process trusted with macOS Accessibility, dialed over its Unix socket (`axHelper.socketPath`). `state` is `ready`, `ax-untrusted` (the app has no Accessibility grant; `detail` names the System Settings switch) or `ax-helper-down` (no connection: not installed, not running, or restarting past a 1.5 s grace). Sent once per client on connect, on every change, and on the 5 s ping cadence. The same codes are the named errors every AX-driven reply carries (`/cmd/clip/reverse/ack [0, code, detail]`, Save As, similar-sound swap), so an AX control never silently does nothing. |
 | `/bridge/features`                    | Bridge→UI | `snapshot:string` (JSON) | **General-release audit §7b.** The bridge's feature switches, `{ <id>: { enabled, available, reason } }`, one entry per switch it knows (`totalmix`, `midiControllers`, `expressionPedal`, `menubar`, `axHelper`; `interface/bridge/utils/features.js`), plus `captureRecorder`, which is no switch: always enabled, available while the recorder device says hello (§2.15; `No recorder on Return A`, `Waiting for the recorder`), and it goes back too. `enabled` is `constants.features.<id>`, read once at bridge start — only an explicit `true` is on. `available` says what the feature drives has been seen since the bridge started (for `totalmix`: the mixer answered on either OSC controller) and never goes back; `reason` is a short why-not, written to be drawn in a control (`Waiting for TotalMix`, `TotalMix not answering`, `TotalMix config missing`, `AX helper not running`, `AX helper needs Accessibility`), empty when available or off. `axHelper` alone can go back: it tracks the helper's own state. Sent once per client on connect (ahead of auth, like `/bridge/connection_status`: which subsystems exist is layout, not the set), on every change, and on the 5 s ping cadence. The UI draws nothing for a feature until a snapshot names it (`bridgeStatus.feature()` reads an unnamed one as off), hides one that is off, and greys out one that is on but unavailable, with the reason. Outside v3 version negotiation like every `/bridge/*` frame, so no protocol bump. |
 | `/bridge/machine`                     | Bridge→UI | `snapshot:string` (JSON) | **2026-09-26 (onboarding.plan.md §3, §6.5).** The machine's values a client used to compile in: `{ paths: { instrumentsBase, m4lDevicesRoot }, totalmix: { minDb, maxDb, silenceDb } | null }`. `instrumentsBase` is what a preset path recorded before the Places is read against (`effectPresetsBase`, the folder the file tiles loaded from, left on 2026-10-26: every file tile names the Vamp Devices Place now), `m4lDevicesRoot` this checkout's `Vamp Devices` from the bridge's own location, `totalmix` the mixer's dB range (`osc.totalmix`) or null. Read once at bridge start; sent once per client on connect, after `/bridge/features`, and on the 5 s ping cadence. Until it lands the client's paths are empty and an FX tile's load answers `path-not-found`, as a missing preset always did. Outside v3 negotiation, so no protocol bump. |
-| `/bridge/piano_pedal`                 | Bridge→UI | `state:string` (JSON) | **ADR-537.** The piano pedal setting, `{ enabled, cc, learn, heard }`: `learn` is `idle`, `listening` or `timeout`; `heard` says the pedal has moved since the bridge started. On every change and on the 5 s ping, only while `features.midiControllers` is on. Saved by the bridge to `logs/piano-pedal.json`. |
-| `/bridge/piano_pedal/enabled`         | UI→Bridge | `on:int(0\|1)` | **ADR-537.** Turn the piano pedal on or off. Bridge-terminated. |
-| `/bridge/piano_pedal/learn`           | UI→Bridge | `on:int(0\|1)` | **ADR-537.** Start Learn (`1`: the next CC above 64 from any input but the Move becomes the pedal, within `midiControllers.pianoPedal.learnTimeoutMs`) or cancel it (`0`). Bridge-terminated. |
+| `/bridge/pedals`                      | Bridge→UI | `state:string` (JSON) | **ADR-538.** Every pedal: `{ available, reason, wah, learn, loop: { enabled, pedals: [{channel, cc, mode, pressHigh}], heard }, wahToe: { pedal, heard }, wahSweep: { pedal, heard } }`. `channel` 0 is any; `mode` `momentary` or `latching`; `learn` is null or `{ role, state }` with `state` `listening` or `timeout`; `wah` says the wah rows exist (`expressionPedal`); `available` false with a `reason` when the MIDI inputs could not be opened. On every change and on the 5 s ping, in every edition. Saved by the bridge to `logs/pedals.json`. |
+| `/bridge/pedals/enabled`              | UI→Bridge | `on:int(0\|1)` | **ADR-538.** The loop pedals on or off. Bridge-terminated. |
+| `/bridge/pedals/learn`                | UI→Bridge | `role:string, on:int(0\|1)` | **ADR-538.** Start (`1`) or cancel (`0`) Learn for `loop`, `wahToe` or `wahSweep` (the wah's only while `expressionPedal` is on): the next CC from any input but the Move's own ports (its External Port counts: a pedal plugged into the Move arrives there), within `midiPedals.learnTimeoutMs`. A loop Learn adds a pedal and names it momentary when the opposite side of 64 follows within `learnReleaseWindowMs`, else latching. Bridge-terminated. |
+| `/bridge/pedals/forget`               | UI→Bridge | `role:string` | **ADR-538.** Forget a role's pedals. Bridge-terminated. |
 | `/bridge/pairing`                     | Bridge→UI | `event:string` (JSON) | **ADR-491.** Pairing news for the trusted screens' Allow / Ignore banner: `{type:'request', id, name, address}` when a device asks (never its code), `{type:'resolved', id, outcome}` when the request is approved, refused or expired, so every banner for it closes. Relayed from the interface server's POST to the bridge's loopback-only, secret-checked `/pairing` route (`handlers/pairingRelay.js`); sent to authenticated clients only. Outside v3 negotiation. |
 | `/cmd/clip/reverse`                   | UI→Bridge | `clipPath:string` | **ADR-368, rebuilt on ADR-439.** Reverse the focused Session audio clip. Live's LOM has no `Clip.reverse()`, so the bridge asks the Looping AX Helper to press Clip View's own Reverse button — the helper holds the one Accessibility grant, so this works whichever terminal started `npm run dev`. Bridge-terminated: never relayed to the surface. |
 | `/cmd/clip/reverse/ack`               | Bridge→UI | `ok:int(0\|1)[, code:string, detail:string]` | `[1]` on success. On failure **`[0, code, detail]`** with a named AX code — the same vocabulary `/bridge/ax_helper` publishes (`ax-helper-down`, `ax-untrusted`, `ax-no-main-window`, `ax-control-missing`, `ax-control-disabled`, `ax-timeout`, …). This replaced the osascript copy's `[0, stderr]` when `liveAxClick.js` was deleted; `clipReverseStore.isReversing` is held until this arrives, bounded by `axHelper.requestTimeoutMs` (20 s), not by an osascript timeout. |

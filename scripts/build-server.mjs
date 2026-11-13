@@ -11,7 +11,9 @@
  *     scripts/             the server's child scripts and open-live, bundled
  *     config/constants.json
  *     data/device-configs.json   read by the control surface
- *     node_modules/audio-decode   the one package the build leaves external, bundled
+ *     node_modules/audio-decode   a package the build leaves external, bundled
+ *     node_modules/@julusian/midi + pkg-prebuilds   the bridge's MIDI inputs
+ *                          (ADR-538): a native binary, so copied, never bundled
  *
  *   npm run build:server            then   node dist/vamp/vamp-server.mjs
  *
@@ -60,7 +62,7 @@ noteInputs(await build({
 	entryPoints: [join(root, 'interface', 'bridge', 'enhanced-osc-bridge.js')],
 	outfile: join(out, 'bridge', 'bridge.cjs'),
 	format: 'cjs',
-	external: ['bufferutil', 'utf-8-validate']
+	external: ['bufferutil', 'utf-8-validate', '@julusian/midi']
 }));
 
 // 3. The server's child scripts (run with plain Node, `childScript.ts`) and
@@ -82,6 +84,26 @@ writeFileSync(
 	join(out, 'node_modules', 'audio-decode', 'package.json'),
 	JSON.stringify({ name: 'audio-decode', type: 'module', main: 'audio-decode.js', exports: { '.': './audio-decode.js' } }) + '\n'
 );
+
+// 4b. The MIDI library the bridge reads every input through (ADR-538). Its
+// loader finds the binary beside itself at run time, which a bundle cannot
+// carry, so the package goes in as files: the JS, and the macOS binaries only
+// (package-mac-app.sh signs them). Its build-time half (src, vendor,
+// node-addon-api) stays out.
+const midiDir = join(root, 'node_modules', '@julusian', 'midi');
+const midiOut = join(out, 'node_modules', '@julusian', 'midi');
+for (const name of ['midi.js', 'binding-options.js', 'package.json', 'LICENSE', 'lib']) {
+	cpSync(join(midiDir, name), join(midiOut, name), { recursive: true });
+}
+for (const arch of ['midi-darwin-arm64', 'midi-darwin-x64']) {
+	cpSync(join(midiDir, 'prebuilds', arch), join(midiOut, 'prebuilds', arch), { recursive: true });
+}
+const prebuildsDir = join(root, 'node_modules', 'pkg-prebuilds');
+for (const name of ['bindings.js', 'package.json', 'LICENSE', 'lib']) {
+	cpSync(join(prebuildsDir, name), join(out, 'node_modules', 'pkg-prebuilds', name), { recursive: true });
+}
+bundled.add('@julusian/midi');
+bundled.add('pkg-prebuilds');
 
 // The interface build inlines what its source imports (the page's packages and
 // the server's): every bare import under interface/src, tests aside, plus the

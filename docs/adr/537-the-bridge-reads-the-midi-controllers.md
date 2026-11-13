@@ -6,7 +6,8 @@
 `features.maxUtilityPatch` switch, now `features.midiControllers`. Ends the
 Max device leg of ADR-423 (ports 11018/11019, `/totalmix/hello`,
 `/totalmix/<channel>`). Moves where ADR-432's pad hold is timed. No Live
-restart: the surface is untouched.
+restart: the surface is untouched. Its piano pedal is superseded by
+ADR-538, which moved every pedal into the bridge as one Pedals card.
 
 ## Context
 `npm run ipad` and `npm run dev` opened standalone Max on the rig only to

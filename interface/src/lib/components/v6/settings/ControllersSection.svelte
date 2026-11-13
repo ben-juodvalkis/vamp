@@ -1,67 +1,60 @@
 <script lang="ts">
 	/**
-	 * Settings → Controllers (ADR-534): the hardware you play Vamp with. The
-	 * foot switch (on/off and Learn, the surface's
-	 * `/looping/v3/session/foot_switch`) and, while the bridge reads the
-	 * owner's MIDI controllers (`midiControllers`, ADR-537), the piano pedal
-	 * (on/off and Learn, the bridge's `/bridge/piano_pedal`) and Ableton
-	 * Move's knobs.
+	 * Settings → Controllers (ADR-534): the hardware you play Vamp with.
 	 *
-	 * Every row is its own button, echo-confirmed: it shows what the surface
-	 * says, not what was tapped. Learn's row draws its action as a button on
-	 * the right (Learn, Cancel, Try again) so it reads as one; the whole row
-	 * still takes the tap.
+	 * **Pedals** (ADR-538): every pedal is read by the bridge from any MIDI
+	 * input, nothing set up in Live — the loop trigger (one or more pedals:
+	 * on/off, Learn adds one, Forget clears them) and, while the
+	 * `expressionPedal` switch is on, the wah's toe switch and sweep (Learn
+	 * each). State is `/bridge/pedals`; writes `/bridge/pedals/{enabled,
+	 * learn,forget}`. **Ableton Move**: its knob switch, while the bridge
+	 * reads the owner's Move (`midiControllers`, ADR-537).
+	 *
+	 * Every row is its own button, echo-confirmed: it shows what the bridge
+	 * or the surface says, not what was tapped. A Learn row draws its action
+	 * on the right (Learn, Cancel, Try again) so it reads as one; the whole
+	 * row still takes the tap.
 	 */
 	import { logger } from '$lib/utils/logger';
 	import { session } from '$lib/stores/session.svelte';
-	import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
-	import { setMoveVolumeKnob, setFootSwitchEnabled, setFootSwitchLearn, setPianoPedalEnabled, setPianoPedalLearn } from '$lib/services/sessionCommands';
+	import { bridgeStatus, type Pedal, type PedalRole } from '$lib/stores/bridgeStatus.svelte';
+	import { setMoveVolumeKnob, setLoopPedalsEnabled, setPedalLearn, forgetPedals } from '$lib/services/sessionCommands';
 
-	// --- Foot switch ---------------------------------------------------------
-	const foot = $derived(session.footSwitch);
-	const footLearned = $derived(foot.cc >= 0);
-	const footListening = $derived(foot.learn === 'listening');
-	const footTimedOut = $derived(foot.learn === 'timeout');
-	const footMapping = $derived(
-		footLearned
-			? `CC ${foot.cc} · ${foot.channel === 0 ? 'Any ch' : `Ch ${foot.channel}`}${foot.mode === 'latching' ? ' · Latch' : ''}`
-			: 'Not learned'
-	);
-	const footState = $derived(
-		!footLearned
-			? 'Learn one below: turning it on learns one too.'
-			: !foot.enabled
-				? 'Off: the surface ignores the pedal.'
-				: foot.heard
-					? 'Heard since Live loaded the set.'
-					: 'Not heard yet: press the pedal to check it.'
-	);
+	const pedals = $derived(bridgeStatus.pedals);
+	const loop = $derived(pedals.loop);
+	const loopLearned = $derived(loop.pedals.length > 0);
 
-	function toggleFootSwitch() {
-		setFootSwitchEnabled(!foot.enabled);
+	function describe(p: Pedal): string {
+		const ch = p.channel === 0 ? 'Any ch' : `Ch ${p.channel}`;
+		return `CC ${p.cc} · ${ch}${p.mode === 'latching' ? ' · Latch' : ''}`;
 	}
 
-	function toggleFootLearn() {
-		setFootSwitchLearn(!footListening);
+	const learning = (role: PedalRole) => pedals.learn?.role === role && pedals.learn.state === 'listening';
+	const timedOut = (role: PedalRole) => pedals.learn?.role === role && pedals.learn.state === 'timeout';
+
+	const loopState = $derived(
+		!loopLearned
+			? 'Learn one below: a foot switch or a keyboard’s pedal.'
+			: !loop.enabled
+				? 'Off: the pedals are ignored.'
+				: loop.heard
+					? 'Heard since Vamp started.'
+					: 'Not heard yet: press a pedal to check it.'
+	);
+
+	const wahRows = $derived([
+		{ role: 'wahToe' as const, label: 'Wah toe switch', what: 'Loads the wah, then steps its sound.', ...pedals.wahToe },
+		{ role: 'wahSweep' as const, label: 'Wah sweep', what: 'Sweeps the wah, or MidiWheels’ mod wheel on a synth.', ...pedals.wahSweep }
+	]);
+
+	function toggleLearn(role: PedalRole) {
+		setPedalLearn(role, !learning(role));
 	}
 
-	// --- The bridge's MIDI controllers (ADR-537) ---------------------------
-	// The Move and the piano pedal reach Vamp only through the bridge's own
-	// MIDI inputs, so both exist only while that switch is on (audit §7b).
+	// --- Ableton Move --------------------------------------------------------
+	// The Move reaches Vamp only through the bridge's own MIDI inputs, so its
+	// switch exists only while that switch is on (audit §7b).
 	const moveShown = $derived(bridgeStatus.isFeatureOn('midiControllers'));
-
-	const piano = $derived(bridgeStatus.pianoPedal);
-	const pianoKnown = $derived(piano.cc >= 0);
-	const pianoListening = $derived(piano.learn === 'listening');
-	const pianoTimedOut = $derived(piano.learn === 'timeout');
-	const pianoMapping = $derived(pianoKnown ? `CC ${piano.cc} · Any input` : 'Waiting for the bridge');
-	const pianoState = $derived(
-		!piano.enabled
-			? 'Off: the pedal is ignored.'
-			: piano.heard
-				? 'Heard since Vamp started.'
-				: 'Not heard yet: press the pedal to check it.'
-	);
 	function toggleMoveKnob() {
 		logger.debug('Toggling session setting', { component: 'ControllersSection', key: 'move_volume_knob' });
 		setMoveVolumeKnob(!session.moveVolumeKnobEnabled);
@@ -71,105 +64,110 @@
 <div class="set-section">
 	<p class="set-lead">The pedals and hardware you play Vamp with.</p>
 
-	<section class="set-group" data-debug="settings-foot-switch">
-		<h3 class="set-group-title">Foot switch</h3>
-		<div class="set-list">
-			<button
-				class="set-row set-row-button"
-				aria-pressed={foot.enabled}
-				aria-label={`Foot switch ${foot.enabled ? 'on' : 'off'}, ${footMapping}`}
-				onclick={toggleFootSwitch}
-				data-debug="foot-switch-toggle"
-			>
-				<span class="set-row-main">
-					<span class="set-row-label">Foot switch</span>
-					<span class="foot-mapping" class:unlearned={!footLearned}>{footMapping}</span>
-					<span class="set-row-sub foot-state">
-						{#if foot.enabled && footLearned}<span class="foot-dot" class:heard={foot.heard} aria-hidden="true"></span>{/if}
-						{footState}
+	<section class="set-group" data-debug="settings-pedals">
+		<h3 class="set-group-title">Pedals</h3>
+		{#if !pedals.known}
+			<p class="set-note">Waiting for Vamp’s server.</p>
+		{:else}
+			<div class="set-list">
+				{#if !pedals.available}
+					<div class="set-row" data-debug="pedals-unavailable">
+						<span class="set-row-main">
+							<span class="set-row-label">Vamp can’t read MIDI on this Mac</span>
+							<span class="set-row-sub set-row-reason">{pedals.reason || 'No MIDI inputs.'}</span>
+						</span>
+					</div>
+				{/if}
+				<button
+					class="set-row set-row-button"
+					aria-pressed={loop.enabled}
+					aria-label={`Loop pedal ${loop.enabled ? 'on' : 'off'}${loopLearned ? `, ${loop.pedals.map(describe).join(', ')}` : ', none learned'}`}
+					onclick={() => setLoopPedalsEnabled(!loop.enabled)}
+					data-debug="loop-pedal-toggle"
+				>
+					<span class="set-row-main">
+						<span class="set-row-label">Loop pedal</span>
+						<span class="pedal-mappings">
+							{#each loop.pedals as p (`${p.channel}:${p.cc}`)}
+								<span class="pedal-mapping">{describe(p)}</span>
+							{:else}
+								<span class="pedal-mapping unlearned">Not learned</span>
+							{/each}
+						</span>
+						<span class="set-row-sub pedal-state">
+							{#if loop.enabled && loopLearned}<span class="pedal-dot" class:heard={loop.heard} aria-hidden="true"></span>{/if}
+							{loopState}
+						</span>
 					</span>
-				</span>
-				<span class="set-chip" class:on={foot.enabled} aria-hidden="true">{foot.enabled ? 'On' : 'Off'}</span>
-			</button>
-			<button
-				class="set-row set-row-button"
-				aria-pressed={footListening}
-				onclick={toggleFootLearn}
-				data-debug="foot-switch-learn"
-				data-learn={foot.learn}
-			>
-				<span class="set-row-main">
-					{#if footListening}
-						<span class="set-row-label">Press your pedal…</span>
-						<span class="set-row-sub">Listening for it on Vamp’s MIDI Input.</span>
-					{:else if footTimedOut}
-						<span class="set-row-label">Nothing heard</span>
-						<span class="set-row-sub set-row-reason">Set the pedal as Vamp’s Input in Live’s MIDI settings, then try again.</span>
-					{:else}
-						<span class="set-row-label">{footLearned ? 'Learn another pedal' : 'Learn your pedal'}</span>
-						<span class="set-row-sub">Tap, then press and release the pedal.</span>
-					{/if}
-				</span>
-				<span class="set-chip action" class:on={footListening} class:pulse={footListening} aria-hidden="true">
-					{footListening ? 'Cancel' : footTimedOut ? 'Try again' : 'Learn'}
-				</span>
-			</button>
-		</div>
-		<p class="set-note">
-			Any MIDI foot switch works once it is the Vamp control surface’s Input, in Live → Settings → Link, Tempo &amp; MIDI.
-		</p>
+					<span class="set-chip" class:on={loop.enabled} aria-hidden="true">{loop.enabled ? 'On' : 'Off'}</span>
+				</button>
+				<button
+					class="set-row set-row-button"
+					aria-pressed={learning('loop')}
+					onclick={() => toggleLearn('loop')}
+					data-debug="loop-pedal-learn"
+					data-learn={pedals.learn?.role === 'loop' ? pedals.learn.state : 'idle'}
+				>
+					<span class="set-row-main">
+						{#if learning('loop')}
+							<span class="set-row-label">Press your pedal…</span>
+							<span class="set-row-sub">Listening on every MIDI input but the Move’s own.</span>
+						{:else if timedOut('loop')}
+							<span class="set-row-label">Nothing heard</span>
+							<span class="set-row-sub set-row-reason">Check the pedal is plugged in, then try again.</span>
+						{:else}
+							<span class="set-row-label">{loopLearned ? 'Add another pedal' : 'Learn your pedal'}</span>
+							<span class="set-row-sub">Tap, then press and release the pedal.</span>
+						{/if}
+					</span>
+					<span class="set-chip action" class:on={learning('loop')} class:pulse={learning('loop')} aria-hidden="true">
+						{learning('loop') ? 'Cancel' : timedOut('loop') ? 'Try again' : 'Learn'}
+					</span>
+				</button>
+				{#if loopLearned}
+					<button class="set-row set-row-button" onclick={() => forgetPedals('loop')} data-debug="loop-pedal-forget">
+						<span class="set-row-main">
+							<span class="set-row-label">Forget {loop.pedals.length === 1 ? 'this pedal' : 'these pedals'}</span>
+							<span class="set-row-sub">Then learn the one you play.</span>
+						</span>
+						<span class="set-chip action" aria-hidden="true">Forget</span>
+					</button>
+				{/if}
+				{#if pedals.wah}
+					{#each wahRows as row (row.role)}
+						<button
+							class="set-row set-row-button"
+							aria-pressed={learning(row.role)}
+							onclick={() => toggleLearn(row.role)}
+							data-debug={`${row.role === 'wahToe' ? 'wah-toe' : 'wah-sweep'}-learn`}
+							data-learn={pedals.learn?.role === row.role ? pedals.learn.state : 'idle'}
+						>
+							<span class="set-row-main">
+								<span class="set-row-label">{row.label}</span>
+								<span class="pedal-mapping" class:unlearned={!row.pedal}>{row.pedal ? describe(row.pedal) : 'Not learned'}</span>
+								{#if learning(row.role)}
+									<span class="set-row-sub">Move the pedal… listening on every input but the Move’s own.</span>
+								{:else if timedOut(row.role)}
+									<span class="set-row-sub set-row-reason">Nothing heard. Check the pedal, then try again.</span>
+								{:else}
+									<span class="set-row-sub pedal-state">
+										{#if row.pedal}<span class="pedal-dot" class:heard={row.heard} aria-hidden="true"></span>{/if}
+										{row.what}
+									</span>
+								{/if}
+							</span>
+							<span class="set-chip action" class:on={learning(row.role)} class:pulse={learning(row.role)} aria-hidden="true">
+								{learning(row.role) ? 'Cancel' : timedOut(row.role) ? 'Try again' : 'Learn'}
+							</span>
+						</button>
+					{/each}
+				{/if}
+			</div>
+			<p class="set-note">Any MIDI input works, with nothing to set up in Live.</p>
+		{/if}
 	</section>
 
 	{#if moveShown}
-		<section class="set-group" data-debug="settings-piano-pedal">
-			<h3 class="set-group-title">Piano pedal</h3>
-			<div class="set-list">
-				<button
-					class="set-row set-row-button"
-					aria-pressed={piano.enabled}
-					aria-label={`Piano pedal ${piano.enabled ? 'on' : 'off'}, ${pianoMapping}`}
-					onclick={() => setPianoPedalEnabled(!piano.enabled)}
-					data-debug="piano-pedal-toggle"
-				>
-					<span class="set-row-main">
-						<span class="set-row-label">Piano pedal</span>
-						<span class="foot-mapping" class:unlearned={!pianoKnown}>{pianoMapping}</span>
-						<span class="set-row-sub foot-state">
-							{#if piano.enabled && pianoKnown}<span class="foot-dot" class:heard={piano.heard} aria-hidden="true"></span>{/if}
-							{pianoState}
-						</span>
-					</span>
-					<span class="set-chip" class:on={piano.enabled} aria-hidden="true">{piano.enabled ? 'On' : 'Off'}</span>
-				</button>
-				<button
-					class="set-row set-row-button"
-					aria-pressed={pianoListening}
-					onclick={() => setPianoPedalLearn(!pianoListening)}
-					data-debug="piano-pedal-learn"
-					data-learn={piano.learn}
-				>
-					<span class="set-row-main">
-						{#if pianoListening}
-							<span class="set-row-label">Press your pedal…</span>
-							<span class="set-row-sub">Listening on every MIDI input but the Move.</span>
-						{:else if pianoTimedOut}
-							<span class="set-row-label">Nothing heard</span>
-							<span class="set-row-sub set-row-reason">Check the keyboard is plugged in and on, then try again.</span>
-						{:else}
-							<span class="set-row-label">Learn another CC</span>
-							<span class="set-row-sub">Tap, then press the pedal.</span>
-						{/if}
-					</span>
-					<span class="set-chip action" class:on={pianoListening} class:pulse={pianoListening} aria-hidden="true">
-						{pianoListening ? 'Cancel' : pianoTimedOut ? 'Try again' : 'Learn'}
-					</span>
-				</button>
-			</div>
-			<p class="set-note">
-				Loops from a keyboard’s pedal with nothing set up in Live: a tap and a hold work like the foot switch’s.
-			</p>
-		</section>
-
 		<section class="set-group" data-debug="settings-move">
 			<h3 class="set-group-title">Ableton Move</h3>
 			<div class="set-list">
@@ -193,9 +191,14 @@
 </div>
 
 <style>
-	.foot-mapping {
-		align-self: flex-start;
+	.pedal-mappings {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--spacing-xs);
 		margin: 0.125rem 0;
+	}
+	.pedal-mapping {
+		align-self: flex-start;
 		padding: 0.125rem 0.5rem;
 		font-size: 0.875rem;
 		font-weight: var(--font-weight-medium);
@@ -205,23 +208,23 @@
 		border: 1px solid var(--line-strong);
 		border-radius: var(--radius-sm);
 	}
-	.foot-mapping.unlearned {
+	.pedal-mapping.unlearned {
 		color: var(--muted-foreground);
 		border-style: dashed;
 	}
-	.foot-state {
+	.pedal-state {
 		display: inline-flex;
 		align-items: center;
 		gap: var(--spacing-xs);
 	}
-	.foot-dot {
+	.pedal-dot {
 		width: 0.5rem;
 		height: 0.5rem;
 		border-radius: 9999px;
 		border: 1px solid currentColor;
 		flex-shrink: 0;
 	}
-	.foot-dot.heard {
+	.pedal-dot.heard {
 		background: var(--act-play);
 		border-color: var(--act-play);
 	}

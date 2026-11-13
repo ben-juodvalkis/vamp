@@ -954,12 +954,12 @@ export const TOURS = {
 			},
 			{
 				name: 'settings-controllers',
-				description: 'Settings → Controllers — the foot switch, the piano pedal and Move’s knob',
+				description: 'Settings → Controllers — the pedals (loop, wah toe, wah sweep) and Move’s knob',
 				steps: [...SETTINGS_OPEN, { click: '[data-tab="controllers"]' }]
 			},
 			{
 				name: 'settings-controllers-general',
-				description: 'Settings → Controllers, MIDI controllers switched off — no Piano pedal or Move Knob',
+				description: 'Settings → Controllers, MIDI controllers switched off — no Move Knob',
 				features: { midiControllers: { enabled: false, available: false, reason: '' } },
 				steps: [...SETTINGS_OPEN, { click: '[data-tab="controllers"]' }]
 			},
@@ -1020,8 +1020,8 @@ export const TOURS = {
 			},
 			{
 				name: 'settings-foot-learn',
-				description: 'Settings → Controllers, the foot switch learning — "Press your pedal…"',
-				steps: [...SETTINGS_OPEN, { click: '[data-tab="controllers"]' }, { click: '[data-debug="foot-switch-learn"]' }]
+				description: 'Settings → Controllers, the loop pedal learning — "Press your pedal…"',
+				steps: [...SETTINGS_OPEN, { click: '[data-tab="controllers"]' }, { click: '[data-debug="loop-pedal-learn"]' }]
 			},
 			{
 				name: 'settings-light',

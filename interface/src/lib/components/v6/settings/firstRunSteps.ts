@@ -69,10 +69,10 @@ export function firstRunSteps(input: FirstRunInput): FirstRunStep[] {
 			key: 'foot',
 			done: footLearned,
 			optional: true,
-			label: 'A foot switch, if you have one',
+			label: 'A loop pedal, if you have one',
 			how: footLearned
 				? 'Learned. Turn it on and off under Controllers.'
-				: 'Set your pedal as the Vamp control surface’s Input in Live’s MIDI settings, then Learn it under Controllers.',
+				: 'Plug it in, then Learn it under Controllers: a foot switch or a keyboard’s pedal, on any input.',
 			goTo: { section: 'controllers', label: 'Open Controllers' }
 		}
 	];

@@ -1911,7 +1911,6 @@ export function buildDefaultScene({ trackCount = DEFAULT_TRACKS.length } = {}) {
 			'/looping/v3/session/auto_capture': [1],
 			// The rig's foot switch, seeded from midiPedals and heard:
 			// [enabled, channel, cc, mode, learn, heard].
-			'/looping/v3/session/foot_switch': [1, 10, 23, 'momentary', 'idle', 1],
 			// The clip Live is showing. Nothing in the mock ever emitted this,
 			// so `session.focusedClipPath` stayed null and the clip view's swap
 			// pill — which mounts only for a focused AUDIO clip — could not be
@@ -1935,6 +1934,24 @@ export function buildDefaultScene({ trackCount = DEFAULT_TRACKS.length } = {}) {
 		// default; a view or tour state can switch one off, or leave it on
 		// with no answer, to photograph the general edition.
 		features: structuredClone(DEFAULT_FEATURES),
+		// The pedals as the bridge publishes them (`/bridge/pedals`, ADR-538):
+		// the rig's USB foot switch and the piano pedal looping, the wah's
+		// two pedals learned.
+		pedals: {
+			available: true,
+			reason: '',
+			wah: true,
+			loop: {
+				enabled: true,
+				pedals: [
+					{ channel: 10, cc: 23, mode: 'momentary', pressHigh: true },
+					{ channel: 0, cc: 67, mode: 'momentary', pressHigh: true }
+				],
+				heard: true
+			},
+			wahToe: { pedal: { channel: 10, cc: 21 }, heard: true },
+			wahSweep: { pedal: { channel: 10, cc: 20 }, heard: false }
+		},
 		treeArgs,
 		playing,
 		permuteSteps,

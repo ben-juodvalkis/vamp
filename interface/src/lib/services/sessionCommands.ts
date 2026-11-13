@@ -26,8 +26,6 @@ import {
 	V3_SESSION_AUTO_ARM_ADDRESS,
 	V3_SESSION_AUTO_CAPTURE_ADDRESS,
 	V3_SESSION_CLIP_TRIGGER_QUANT_ADDRESS,
-	V3_SESSION_FOOT_SWITCH_ENABLED_ADDRESS,
-	V3_SESSION_FOOT_SWITCH_LEARN_ADDRESS,
 	V3_SESSION_KEY_FOLLOW_ADDRESS,
 	V3_SESSION_METRONOME_ADDRESS,
 	V3_SESSION_MOVE_VOLUME_KNOB_ADDRESS,
@@ -137,26 +135,22 @@ export function setAutoCapture(on: boolean): void {
 	send(V3_SESSION_AUTO_CAPTURE_ADDRESS, [on ? 1 : 0]);
 }
 
-/** Ableton Move's knobs set the selected track's volume (owner rig: needs the Max patch). */
+/** Ableton Move's knob sets the selected track's volume (owner rig: `features.midiControllers`). */
 export function setMoveVolumeKnob(on: boolean): void {
 	send(V3_SESSION_MOVE_VOLUME_KNOB_ADDRESS, [on ? 1 : 0]);
 }
 
-export function setFootSwitchEnabled(on: boolean): void {
-	send(V3_SESSION_FOOT_SWITCH_ENABLED_ADDRESS, [on ? 1 : 0]);
+/** The loop pedals on or off (ADR-538). Bridge-terminated. */
+export function setLoopPedalsEnabled(on: boolean): void {
+	send('/bridge/pedals/enabled', [on ? 1 : 0]);
 }
 
-/** Start (true) or cancel (false) learning the foot switch's CC. */
-export function setFootSwitchLearn(on: boolean): void {
-	send(V3_SESSION_FOOT_SWITCH_LEARN_ADDRESS, [on ? 1 : 0]);
+/** Start or cancel Learn for one pedal role (ADR-538). A loop Learn adds a pedal. */
+export function setPedalLearn(role: 'loop' | 'wahToe' | 'wahSweep', on: boolean): void {
+	send('/bridge/pedals/learn', [role, on ? 1 : 0]);
 }
 
-/** The piano pedal on or off (ADR-537). Bridge-terminated. */
-export function setPianoPedalEnabled(on: boolean): void {
-	send('/bridge/piano_pedal/enabled', [on ? 1 : 0]);
-}
-
-/** Start or cancel Learn for the piano pedal (ADR-537). Bridge-terminated. */
-export function setPianoPedalLearn(on: boolean): void {
-	send('/bridge/piano_pedal/learn', [on ? 1 : 0]);
+/** Forget a role's pedals (ADR-538). */
+export function forgetPedals(role: 'loop' | 'wahToe' | 'wahSweep'): void {
+	send('/bridge/pedals/forget', [role]);
 }
