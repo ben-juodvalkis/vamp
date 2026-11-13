@@ -24,6 +24,9 @@ const {
 	APP_STOP,
 	APP_MONITOR,
 	APP_LEVELS,
+	CHOICE,
+	CHOICE_SET,
+	CHOICE_QUERY,
 	SET_PATH_QUERY
 } = nodeRequire('../../../../bridge/handlers/captureRecorder.js');
 const { createFeatureRegistry } = nodeRequire('../../../../bridge/utils/features.js');
@@ -372,6 +375,53 @@ describe('an input device Vamp for Mac records (ADR-533)', () => {
 		recorder.start([3, 'input', '1/2']);
 		expect(surface[0].address).toBe(DEVICE_LOAD_ADDRESS);
 		expect(app).toEqual([]);
+		recorder.dispose();
+	});
+});
+
+describe('the rig\'s input choice: one for every screen, kept on disk', () => {
+	type Msg = { address: string; args: unknown[] };
+	const CHOICE_JSON = JSON.stringify({ uid: 'bf', name: 'Babyface Pro', inputs: 14, channel: '3/4' });
+
+	function setup(choicePath: string) {
+		const clients: Msg[] = [];
+		const recorder = createCaptureRecorder({
+			features: createFeatureRegistry({}, { logger: quiet }),
+			logger: quiet,
+			sendToDevice: () => {},
+			sendToSurface: () => {},
+			broadcast: (address: string, args: unknown[]) => clients.push({ address, args }),
+			choicePath
+		});
+		return { clients, recorder };
+	}
+	const page = () => {};
+
+	it('takes a screen\'s choice, tells every screen, and keeps it for the next start', () => {
+		const dir = mkdtempSync(join(tmpdir(), 'capture-choice-'));
+		dirs.push(dir);
+		const file = join(dir, 'capture-input.json');
+		const first = setup(file);
+		expect(first.recorder.onAppMessage(page, { address: CHOICE_SET, args: [CHOICE_JSON] })).toBe(true);
+		expect(first.clients).toEqual([{ address: CHOICE, args: [CHOICE_JSON] }]);
+		first.recorder.dispose();
+		// The bridge restarts: the iPad asks, and gets the Mac's choice.
+		const again = setup(file);
+		again.recorder.onAppMessage(page, { address: CHOICE_QUERY, args: [] });
+		expect(again.clients).toEqual([{ address: CHOICE, args: [CHOICE_JSON] }]);
+		again.recorder.dispose();
+	});
+
+	it('answers none before any screen sets one, and ignores a bad one', () => {
+		const dir = mkdtempSync(join(tmpdir(), 'capture-choice-'));
+		dirs.push(dir);
+		const { clients, recorder } = setup(join(dir, 'capture-input.json'));
+		recorder.onAppMessage(page, { address: '/capture/input/devices/query', args: [] });
+		expect(clients.at(-1)).toEqual({ address: CHOICE, args: [''] });
+		recorder.onAppMessage(page, { address: CHOICE_SET, args: ['{"uid":"bf","channel":"x"}'] });
+		expect(recorder.inputChoice()).toBeNull();
+		recorder.onAppMessage(page, { address: CHOICE_SET, args: ['{"uid":"","channel":"1/2"}'] });
+		expect(recorder.inputChoice()).toEqual({ uid: '', name: '', inputs: 0, channel: '1/2' });
 		recorder.dispose();
 	});
 });

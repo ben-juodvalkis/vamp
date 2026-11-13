@@ -63,6 +63,12 @@ a track inside Live; for an external source that reason does not apply.
   while the other's runs. Every fill is always live: the track's meter on
   the track REC, the input's level on a device, and on Live's own input the
   take's meter, now zeroed as the take ends (it froze on its last level).
+- **The input choice is the rig's, kept by the bridge** (2026-11-13: the
+  sidebar meter worked on the Mac and not on the iPad, because each screen
+  kept its own choice and only the Mac had picked the Babyface). Settings
+  sends it to the bridge (`/capture/input/choice/set`), which keeps it in
+  `logs/capture-input.json` and tells every screen; each screen asks on every
+  (re)connect, and keeps the last it heard for the moment before the answer.
 - **Permissions**: macOS asks once for the microphone (Info.plist's
   `NSMicrophoneUsageDescription`), the first time the picker meters a device:
   first cut asked only on the first take, so opening Vamp showed no prompt

@@ -310,6 +310,8 @@ const captureRecorder = createCaptureRecorder({
     features,
     logger,
     recordingsDir: (constants.paths || {}).liveRecordingsDir,
+    // The sidebar REC's input, one for every screen (ADR-533).
+    choicePath: require('path').join(require('./utils/dataPaths').dataDir('logs'), 'capture-input.json'),
     sendToDevice: (msg) => udpPorts.loopingRecorder?.send(msg),
     sendToSurface: sendTaggedToSurface,
     // The batcher is made further down; a refusal only ever comes later.

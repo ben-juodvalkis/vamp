@@ -13,7 +13,7 @@ import { send } from '$lib/api/simpleClient';
 import { loadCaptureIntoSimpler } from '$lib/services/clipOperations';
 import { v3ErrorBannerStore } from '$lib/stores/v6/v3ErrorBannerStore.svelte';
 import { logger } from '$lib/utils/logger';
-import type { InputDevice } from '$lib/stores/v6/captureSettingsStore.svelte';
+import { captureSettings, setChoiceSender, type InputDevice } from '$lib/stores/v6/captureSettingsStore.svelte';
 
 // ===== TYPES =====
 
@@ -155,6 +155,10 @@ function handleCaptureMessage(address: string, args: unknown[]): void {
 		inputDevices = parseInputDevices(args[0]);
 		return;
 	}
+	if (address === '/capture/input/choice') {
+		captureSettings.applyShared(args[0]);
+		return;
+	}
 	if (address === '/capture/input/levels') {
 		inputLevels = parseLevels(args);
 		return;
@@ -227,9 +231,17 @@ function start(trackIndex: number, source: string = 'track', channel: string = '
 	);
 }
 
-/** Ask the bridge which input devices Vamp for Mac offers. */
+/** Ask the bridge which input devices Vamp for Mac offers, and the rig's choice. */
 function queryInputDevices(): void {
 	send('/capture/input/devices/query', []);
+}
+
+setChoiceSender((address, args) => send(address, args as Parameters<typeof send>[1]));
+
+// Every (re)connect: the rig's input choice and devices may have changed
+// while this screen was away (`bridge-resync` fires on every open).
+if (typeof window !== 'undefined') {
+	window.addEventListener('bridge-resync', () => queryInputDevices());
 }
 
 /**

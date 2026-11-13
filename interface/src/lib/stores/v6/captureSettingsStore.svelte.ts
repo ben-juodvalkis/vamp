@@ -8,12 +8,16 @@
  * ADR-533), named by its Core Audio UID, or none (`''`): Live's own audio
  * input, Ext. In, which the track's Vamp-Capture records.
  *
- * The input belongs to the rig (which jack the mic is in), not to a track
- * or a take, so it is one setting, kept in this screen's localStorage with
- * the same guarded read/write as uiPrefsStore. The device's name and input
- * count are kept beside its UID, so the choice still reads right while Vamp
- * for Mac is not offering it.
+ * The input belongs to the rig (which jack the mic is in), not to a screen,
+ * so the bridge keeps it, one for every screen and across restarts
+ * (`/capture/input/choice`): a choice made here is sent there, and every
+ * screen takes what the bridge says (2026-11-13: kept per screen, the iPad
+ * had no device while the Mac had the Babyface). This screen's localStorage
+ * keeps the last one it heard, for the moments before the bridge answers.
+ * The device's name and input count are kept beside its UID, so the choice
+ * still reads right while Vamp for Mac is not offering it.
  */
+
 
 export type ChannelMode = 'stereo' | 'mono';
 
@@ -115,8 +119,8 @@ export const captureSettings = {
 		return modeOf(channel);
 	},
 	setChannel(next: string): void {
-		channel = next;
-		write(CHANNEL_KEY, next);
+		keep(device, next);
+		publish();
 	},
 	setMode(next: ChannelMode): void {
 		if (next === modeOf(channel)) return;
@@ -124,12 +128,59 @@ export const captureSettings = {
 	},
 	/** Pick a device (null: Live's input). A channel it lacks moves to its first. */
 	setDevice(next: InputDevice | null): void {
-		device = next;
-		write(DEVICE_KEY, JSON.stringify(next));
-		const options = channelsFor(captureSettings.inputs, modeOf(channel));
-		if (!options.includes(channel)) {
-			const fallback = options[0] ?? channelsFor(captureSettings.inputs, 'mono')[0] ?? '1';
-			captureSettings.setChannel(fallback);
+		const inputs = next?.inputs ?? LIVE_INPUTS;
+		const options = channelsFor(inputs, modeOf(channel));
+		const nextChannel = options.includes(channel)
+			? channel
+			: (options[0] ?? channelsFor(inputs, 'mono')[0] ?? '1');
+		keep(next, nextChannel);
+		publish();
+	},
+	/**
+	 * The bridge's `/capture/input/choice`: the rig's choice, which every
+	 * screen follows. `''` (none set yet) keeps this screen's own and offers
+	 * it to the bridge, so the first screen to have one sets it for the rest.
+	 */
+	applyShared(json: unknown): void {
+		let c: { uid?: unknown; name?: unknown; inputs?: unknown; channel?: unknown } | null = null;
+		try {
+			c = json ? JSON.parse(String(json)) : null;
+		} catch {
+			c = null;
 		}
+		if (!c || typeof c.channel !== 'string') {
+			if (device) publish();
+			return;
+		}
+		const shared =
+			typeof c.uid === 'string' && c.uid && typeof c.name === 'string' && Number.isInteger(c.inputs)
+				? { uid: c.uid, name: c.name, inputs: c.inputs as number }
+				: null;
+		keep(shared, c.channel);
 	}
 };
+
+/** Set this screen's copy, and remember it for the next load. */
+function keep(next: InputDevice | null, nextChannel: string): void {
+	device = next;
+	channel = nextChannel;
+	write(DEVICE_KEY, JSON.stringify(next));
+	write(CHANNEL_KEY, nextChannel);
+}
+
+/**
+ * How a choice reaches the bridge. `captureStore` hands it the client's send
+ * (`setChoiceSender`): importing the client here would close an import loop
+ * through it, which only the production server trips on.
+ */
+let sendChoice: (address: string, args: unknown[]) => void = () => {};
+export function setChoiceSender(fn: (address: string, args: unknown[]) => void): void {
+	sendChoice = fn;
+}
+
+/** Tell the bridge, which tells every screen. */
+function publish(): void {
+	sendChoice('/capture/input/choice/set', [
+		JSON.stringify(device ? { ...device, channel } : { uid: '', name: '', inputs: 0, channel })
+	]);
+}

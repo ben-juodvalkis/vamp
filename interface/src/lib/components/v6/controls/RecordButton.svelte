@@ -134,6 +134,10 @@
 	// own input, which nothing meters outside a take, the take's meter, which
 	// drops to zero as it ends.
 	let inputDevice = $derived(source === 'input' ? captureSettings.deviceUid : '');
+	// The sidebar REC follows the rig's input, whatever this screen last knew.
+	$effect(() => {
+		if (source === 'input') captureStore.queryInputDevices();
+	});
 	$effect(() => captureStore.holdInputMonitor(inputDevice));
 	let trackLevel = $derived.by(() => {
 		const meter = trackIndex >= 0 ? meterStore.get(`tracks/${trackIndex}`) : undefined;

@@ -92,6 +92,14 @@ const APP_STOP = '/capture/input/stop';
 const APP_MONITOR = '/capture/input/monitor';
 /** The app's levels for that device, to every client as they are. */
 const APP_LEVELS = '/capture/input/levels';
+/**
+ * The input the sidebar's REC records, one for the rig: every screen shows
+ * and sets the same (2026-11-13: kept per screen, the iPad had none while
+ * the Mac had the Babyface). `{uid, name, inputs, channel}`, kept on disk.
+ */
+const CHOICE = '/capture/input/choice';
+const CHOICE_SET = '/capture/input/choice/set';
+const CHOICE_QUERY = '/capture/input/choice/query';
 const SET_PATH_QUERY = '/looping/v3/session/file_path/query';
 /** An app recorder's own replies, renamed to what the device would say. */
 const APP_RELAYED = new Map([
@@ -155,6 +163,26 @@ function parseDevices(json) {
         .map(({ uid, name, inputs }) => ({ uid, name, inputs }));
 }
 
+/**
+ * A choice as the page sends it, or null when it is not one. `uid` `''` is
+ * Live's own input.
+ *
+ * @param {unknown} json
+ */
+function parseChoice(json) {
+    let c;
+    try {
+        c = JSON.parse(String(json));
+    } catch {
+        return null;
+    }
+    if (!c || typeof c !== 'object') return null;
+    const { uid, name, inputs, channel } = c;
+    if (typeof uid !== 'string' || typeof channel !== 'string' || !/^\d+(\/\d+)?$/.test(channel)) return null;
+    if (uid && (typeof name !== 'string' || !Number.isInteger(inputs) || inputs < 1)) return null;
+    return uid ? { uid, name, inputs, channel } : { uid: '', name: '', inputs: 0, channel };
+}
+
 /** An OSC arg's value, whether it came wrapped ({type, value}) or bare. */
 function argValue(arg) {
     return arg && typeof arg === 'object' && 'value' in arg ? arg.value : arg;
@@ -173,11 +201,13 @@ function argValue(arg) {
  * @param {number} [deps.loadTimeoutMs]
  * @param {number} [deps.deleteAfterMs]
  * @param {number} [deps.setPathTimeoutMs]
+ * @param {string} [deps.choicePath] where the input choice is kept; none, not kept
  */
 function createCaptureRecorder({
     features, sendToDevice, sendToSurface, broadcast, recordingsDir, logger,
     fsImpl = fs, silenceMs = SILENCE_MS, loadTimeoutMs = LOAD_TIMEOUT_MS,
-    deleteAfterMs = DELETE_AFTER_MS, setPathTimeoutMs = SET_PATH_TIMEOUT_MS
+    deleteAfterMs = DELETE_AFTER_MS, setPathTimeoutMs = SET_PATH_TIMEOUT_MS,
+    choicePath = ''
 }) {
     const tempRoot = expandHome(recordingsDir || '~/Music/Ableton/Live Recordings');
     /** track index → when its recorder last said hello */
@@ -194,6 +224,27 @@ function createCaptureRecorder({
     let app = null;
     /** Starts for the app waiting on the surface's set path, in order. */
     const pathWaiters = [];
+
+    /** The rig's input choice (see CHOICE), null until a screen sets one. */
+    let choice = null;
+    if (choicePath) {
+        try {
+            choice = parseChoice(fsImpl.readFileSync(choicePath, 'utf8'));
+        } catch {
+            choice = null;
+        }
+    }
+    function offerChoice() {
+        broadcast(CHOICE, [choice ? JSON.stringify(choice) : '']);
+    }
+    function keepChoice() {
+        if (!choicePath) return;
+        try {
+            fsImpl.writeFileSync(choicePath, JSON.stringify(choice), 'utf8');
+        } catch (err) {
+            logger?.warn?.('Could not keep the capture input choice', { choicePath, error: err.message });
+        }
+    }
 
     function offerDevices() {
         broadcast(APP_DEVICES, [app ? app.devicesJson : '[]']);
@@ -394,6 +445,20 @@ function createCaptureRecorder({
             }
             if (msg.address === APP_DEVICES_QUERY) {
                 offerDevices();
+                offerChoice();
+                return true;
+            }
+            if (msg.address === CHOICE_QUERY) {
+                offerChoice();
+                return true;
+            }
+            if (msg.address === CHOICE_SET) {
+                const next = parseChoice(argValue(msg.args?.[0]));
+                if (next) {
+                    choice = next;
+                    keepChoice();
+                }
+                offerChoice();
                 return true;
             }
             if (msg.address === APP_MONITOR) {
@@ -423,6 +488,11 @@ function createCaptureRecorder({
             return true;
         },
 
+        /** For tests: the rig's input choice. */
+        inputChoice() {
+            return choice;
+        },
+
         /** For tests: the devices Vamp for Mac offers now. */
         inputDevices() {
             return app ? app.devices : [];
@@ -450,7 +520,11 @@ module.exports = {
     createCaptureRecorder,
     newestTempProject,
     parseDevices,
+    parseChoice,
     FEATURE_ID,
+    CHOICE,
+    CHOICE_SET,
+    CHOICE_QUERY,
     APP_DEVICES,
     APP_START,
     APP_STOP,

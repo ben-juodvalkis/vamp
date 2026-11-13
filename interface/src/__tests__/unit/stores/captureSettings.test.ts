@@ -5,6 +5,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
 	captureSettings,
+	setChoiceSender,
 	channelsFor,
 	switchMode,
 	modeOf,
@@ -66,5 +67,24 @@ describe('captureSettings', () => {
 	it('lands a mono-only device on its one input', () => {
 		captureSettings.setDevice({ uid: 'one', name: 'Mono Mic', inputs: 1 });
 		expect(captureSettings.channel).toBe('1');
+	});
+});
+
+describe('the rig\'s choice, shared through the bridge', () => {
+	it('sends a choice made here, and follows the one the bridge says', () => {
+		const sent: unknown[][] = [];
+		setChoiceSender((address, args) => sent.push([address, ...args]));
+		captureSettings.setDevice({ uid: 'bf', name: 'Babyface Pro', inputs: 14 });
+		expect(sent.at(-1)?.[0]).toBe('/capture/input/choice/set');
+		expect(JSON.parse(String(sent.at(-1)?.[1]))).toMatchObject({ uid: 'bf', inputs: 14 });
+		// Another screen picks the MacBook mic, mono 1: this one follows.
+		captureSettings.applyShared(JSON.stringify({ uid: 'mic', name: 'MacBook Pro Microphone', inputs: 1, channel: '1' }));
+		expect(captureSettings.deviceUid).toBe('mic');
+		expect(captureSettings.channel).toBe('1');
+		// None set yet: this screen offers its own.
+		sent.length = 0;
+		captureSettings.applyShared('');
+		expect(sent).toHaveLength(1);
+		setChoiceSender(() => {});
 	});
 });
