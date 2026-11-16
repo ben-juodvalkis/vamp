@@ -777,12 +777,13 @@ export const TOURS = {
 			},
 			{
 				name: 'fx-reverb-eq-shaped',
-				description: 'Reverb, EQ tab: Peak 1 dragged up, Peak 2 down and higher, the Hi end switched to Cut',
+				description: 'Reverb, EQ tab: Lo dragged down to a gentler slope, Peak 1 up, Peak 2 down and higher, the Hi end switched to Cut',
 				steps: [
 					selectTrack(5),
 					openCell('Reverb'),
 					{ click: '[data-reverb-type="Hall"]' },
 					{ click: '[data-reverb-tab="eq"]' },
+					{ drag: '[data-eq-band="lo"]', by: [0, 60] },
 					{ drag: '[data-eq-band="peak1"]', by: [-20, -45] },
 					{ drag: '[data-eq-band="peak2"]', by: [40, 35] },
 					{ click: '[data-reverb-eq-types] [data-reverb-switch="43"]' }

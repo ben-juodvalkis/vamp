@@ -160,9 +160,13 @@ describe('ReverbCentralView, the EQ tab', () => {
 		const ends = [...c.querySelectorAll('[data-reverb-eq-types] [data-reverb-switch]')].map((b) => b.textContent?.trim());
 		expect(ends).toEqual(['Lo Cut', 'Hi Shelf']);
 		expect(c.querySelector('[data-reverb-eq]')?.getAttribute('aria-label')).toBe('Reverb EQ: Lo Cut 121 Hz · 18 dB');
+		// The shared group (Decay, Predelay…) gives the EQ its width; Dry/Wet stays.
+		expect(c.querySelector('[data-reverb-shared]')).toBeNull();
+		expect(c.querySelector('[data-reverb-wet]')).not.toBeNull();
 
 		await pressTap(c.querySelector('[data-reverb-tab="reverb"]')!);
 		expect(labels(c.querySelector('[data-reverb-own]'))[0]).toBe('Shape 50.0');
+		expect(c.querySelector('[data-reverb-shared]')).not.toBeNull();
 	});
 
 	it('switches an end between Cut and Shelf, and the EQ on and before the algorithm', async () => {

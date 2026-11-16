@@ -4,7 +4,7 @@
 	 * own EQ, 20 Hz to 20 kHz across, -24..+12 dB up, with a handle per band.
 	 * A press takes the nearest handle and a drag moves it relative to where
 	 * the finger landed, as every XY pad here does: across is the band's
-	 * frequency, up its gain — a cut has no gain, so it only slides. The
+	 * frequency, up its gain — a cut has no gain, so up is its slope. The
 	 * band last touched draws its own curve dashed and names itself
 	 * top-right in Live's words.
 	 */
@@ -42,7 +42,12 @@
 	// the writes behind them leave at no more than 60 Hz (issue #384).
 	let draft = $state<Record<number, number>>({});
 	let shown = $derived(
-		bands.map((b) => ({ ...b, freq: draft[b.freqIndex] ?? b.freq, gain: draft[b.gainIndex] ?? b.gain }))
+		bands.map((b) => ({
+			...b,
+			freq: draft[b.freqIndex] ?? b.freq,
+			gain: draft[b.gainIndex] ?? b.gain,
+			slope: b.slopeIndex !== null ? (draft[b.slopeIndex] ?? b.slope) : b.slope
+		}))
 	);
 
 	const HZ = Array.from({ length: 200 }, (_, i) => 20 * Math.pow(1000, i / 199));
@@ -70,7 +75,7 @@
 	// ── The gesture ────────────────────────────────────────────────────
 	let pad = $state<HTMLElement | null>(null);
 	let grabbed: EqBand | null = null;
-	let start = { freq: 0, gain: 0 };
+	let start = { freq: 0, gain: 0, slope: 0 };
 	let box = { width: 1, height: 1 };
 
 	const pending = new Map<number, number>();
@@ -106,7 +111,7 @@
 		const x = (info.downX - r.left) / r.width;
 		const y = 1 - (info.downY - r.top) / r.height;
 		grabbed = nearestBand(shown, x, y, r.width, r.height);
-		start = { freq: grabbed.freq, gain: grabbed.gain };
+		start = { freq: grabbed.freq, gain: grabbed.gain, slope: grabbed.slope };
 		onSelect(grabbed.key);
 	}
 	function move(info: DragInfo) {

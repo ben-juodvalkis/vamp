@@ -86,7 +86,7 @@ describe('the pad', () => {
 		expect(handleAt(hi).y).toBeCloseTo(dbY(12), 9);
 	});
 
-	it('a drag moves the frequency across and the gain up — but a cut only slides', () => {
+	it('a drag moves the frequency across and the gain up — on a cut, the slope', () => {
 		const [lo, peak] = eqBands(rawWith({ [HYBRID.eqLoType]: 0 }));
 		const w = 400;
 		const h = 300;
@@ -97,8 +97,15 @@ describe('the pad', () => {
 		expect(peakWrites[0][1]).toBeCloseTo(0.6, 9);
 		expect(peakWrites[1][0]).toBe(HYBRID.eqPeak1Gain);
 		expect(peakWrites[1][1]).toBeCloseTo(0.75, 9);
-		const cutWrites = dragWrites(lo, { freq: 0.2, gain: 0.5 }, across, up, w, h);
-		expect(cutWrites).toEqual([[HYBRID.eqLoFreq, expect.closeTo(0.3, 9)]]);
+		// A cut has no gain: up is its slope, the pad's height all ten steps.
+		const step = (h * (EQ_Y1 - EQ_Y0)) / 9;
+		const cutWrites = dragWrites(lo, { freq: 0.2, gain: 0.5, slope: 2 }, across, step * 3, w, h);
+		expect(cutWrites).toEqual([
+			[HYBRID.eqLoFreq, expect.closeTo(0.3, 9)],
+			[HYBRID.eqLoSlope, 5]
+		]);
+		expect(dragWrites(lo, { freq: 0.2, gain: 0.5, slope: 2 }, 0, -h, w, h)[1]).toEqual([HYBRID.eqLoSlope, 0]);
+		expect(dragWrites(lo, { freq: 0.2, gain: 0.5, slope: 2 }, 0, h, w, h)[1]).toEqual([HYBRID.eqLoSlope, 9]);
 		expect(dragWrites(peak, { freq: 0.95, gain: 0.9 }, w, h, w, h)).toEqual([
 			[HYBRID.eqPeak1Freq, 1],
 			[HYBRID.eqPeak1Gain, 1]

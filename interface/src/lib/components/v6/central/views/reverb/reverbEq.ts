@@ -177,12 +177,13 @@ export function handleAt(b: EqBand): { x: number; y: number } {
 
 /**
  * A relative drag on a band: `dx`/`dy` in px of a `width` × `height` pad
- * (dy up positive). Across moves the frequency; up moves the gain, except
- * on a cut, which has none.
+ * (dy up positive). Across moves the frequency; up moves the gain, or on a
+ * cut, which has none, its slope: steeper going up, the pad's height
+ * spanning all ten steps (2026-11-15).
  */
 export function dragWrites(
 	b: EqBand,
-	start: { freq: number; gain: number },
+	start: { freq: number; gain: number; slope?: number },
 	dx: number,
 	dy: number,
 	width: number,
@@ -190,7 +191,13 @@ export function dragWrites(
 ): [index: number, value: number][] {
 	const freq = clamp01(start.freq + dx / (width * (EQ_X1 - EQ_X0)));
 	const writes: [number, number][] = [[b.freqIndex, freq]];
-	if (b.kind !== 'cut') {
+	if (b.kind === 'cut') {
+		if (b.slopeIndex !== null) {
+			const steps = EQ_SLOPES_DB.length - 1;
+			const slope = (start.slope ?? b.slope) + (dy / (height * (EQ_Y1 - EQ_Y0))) * steps;
+			writes.push([b.slopeIndex, slopeStep(slope)]);
+		}
+	} else {
 		const db = eqGainDb(start.gain) + (dy / (height * (EQ_Y1 - EQ_Y0))) * (DB_CEIL - DB_FLOOR);
 		writes.push([b.gainIndex, clamp01((db + 12) / 24)]);
 	}

@@ -26,7 +26,9 @@
    * with a handle per band (`reverb/ReverbEqEditor`), and the group beside
    * it trades the engine's controls for what the curve does not hold: each
    * end's Cut or Shelf with its Slope or Gain, the peaks' Q, the EQ's On and
-   * Pre Algo. Freeze keeps its cell on both tabs.
+   * Pre Algo. The shared group (Decay, Size, Predelay…) leaves the EQ tab
+   * too (2026-11-15), so the curve and its knobs have the width; Freeze and
+   * Dry/Wet keep their places on both tabs.
    *
    * Every control reads its value in Live's own format at rest, from the
    * curves in `hybridReverbParams.ts` (measured on the rig): the surface
@@ -494,15 +496,15 @@
   /**
    * The knobs' size (ADR-509). Two rows of knobs a column would take large
    * ones, but two captioned 96px knobs need 316px of a 300px band, and the
-   * ~80px columns hold 70px: medium. On the EQ tab the curve keeps the width
-   * and the columns are 60px: small.
+   * ~80px columns hold 70px: medium, on both tabs since the EQ tab dropped
+   * the shared group.
    */
-  let knobSize = $derived<'s' | 'm'>(hasPicture ? 's' : 'm');
-  /** A box group `n` columns of ~60px boxes wide, as the panel was. */
-  const groupWidth = (n: number) => `calc(${n} * 60px + ${n - 1} * var(--spacing-sm))`;
+  const knobSize = 'm';
+  // The EQ tab: the curve, the EQ's own group, Dry/Wet. The reverb tab: the
+  // engine's own group, the shared group, Dry/Wet.
   let layoutColumns = $derived(
     hasPicture
-      ? `minmax(0, 1fr) auto ${groupWidth(3)} auto ${groupWidth(sharedCols)} auto 60px`
+      ? `minmax(0, 3fr) auto minmax(0, 1.5fr) auto minmax(60px, 0.6fr)`
       : `minmax(0, 3fr) auto minmax(0, ${sharedCols}fr) auto minmax(60px, 0.6fr)`
   );
   /** The EQ band last touched: lit on the curve, named in its readout. */
@@ -805,18 +807,21 @@
             {/if}
           </div>
 
-          <SectionDivider orientation="vertical" />
+          {#if panel !== 'eq'}
+            <SectionDivider orientation="vertical" />
 
-          <!-- What the device has besides its engines. -->
-          <div class="box-group" style="grid-template-columns: repeat({sharedCols}, minmax(0, 1fr));" data-reverb-shared>
-            {#each sharedCells as cell (cell.row.key + (cell.chip ? ':chip' : ''))}
-              {#if cell.chip}
-                <div class="cell chip-cell">{@render chip(cell.row.chip!.name, cell.row.chip!.index)}</div>
-              {:else}
-                {@render sliderBox(cell.row, true)}
-              {/if}
-            {/each}
-          </div>
+            <!-- What the device has besides its engines; the EQ tab gives
+                 its width to the curve. -->
+            <div class="box-group" style="grid-template-columns: repeat({sharedCols}, minmax(0, 1fr));" data-reverb-shared>
+              {#each sharedCells as cell (cell.row.key + (cell.chip ? ':chip' : ''))}
+                {#if cell.chip}
+                  <div class="cell chip-cell">{@render chip(cell.row.chip!.name, cell.row.chip!.index)}</div>
+                {:else}
+                  {@render sliderBox(cell.row, true)}
+                {/if}
+              {/each}
+            </div>
+          {/if}
 
           {#if wetRow}
             <SectionDivider orientation="vertical" />
