@@ -47,6 +47,13 @@ pixel must have fill under it (a fill is solid to the floor, a line is not).
   (`FilterCurve`, 20 Hz–20 kHz) draw it as a backdrop
   (`FaceControl`/`ToneCurvePad` `backdrop`, filled by `ControlTile` for any
   device whose class meters a spectrum).
+- **Moving like a meter** (Ben: "any kind of smoothing or anything that
+  might look nice?"): readings arrive as ~22 steps a second; the page eases
+  every band every frame, rising at once (10 ms) and falling back over
+  ~180 ms, draws one rounded outline through the bands (Catmull-Rom, its
+  handles kept inside the box), fills it with the device's ink brighter at
+  the top and edges it with a thin line (`spectrumDraw.ts`, measured 60
+  redraws a second). The frame loop stops once nothing moves.
 - **Every device on screen at once**: the page asks for each held device
   every round, and Vamp for Mac reads each on its own capture stream
   (`LiveMeterHub`, a `LiveMeterReader` per device path), so the Auto
