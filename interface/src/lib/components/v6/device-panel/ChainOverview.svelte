@@ -270,10 +270,11 @@
         kind,
         presetKey,
         tile: tileOf.get(device.devicePath) ?? null,
-        // The instrument and Permute wear the track's color (Permute: the
-        // user, 2026-10-26, as the strip's own Permute section does); a
-        // pad's chain, the pad's.
-        ink: isInstrument || presetKey === 'sequencer' ? (padChain ? (padInk ?? trackColor) : trackColor) : trackInk(family, paint),
+        // The instrument, Permute and a Utility wear the track's color
+        // (Permute: the user, 2026-10-26, as the strip's own Permute section
+        // does; a Utility, 2026-11-15, while its palette chip stays grey);
+        // a pad's chain, the pad's.
+        ink: isInstrument || presetKey === 'sequencer' || (presetKey && DEVICE_PRESETS[presetKey].trackTint) ? (padChain ? (padInk ?? trackColor) : trackColor) : trackInk(family, paint),
         kit: !padChain && isInstrument && device.className === 'DrumGroupDevice',
         foldable: isChainRack(device.className)
       };
@@ -501,7 +502,7 @@
         kind: d.type === 1 ? 'instrument' : kind,
         presetKey,
         tile: null,
-        ink: trackInk(family, paint),
+        ink: presetKey && DEVICE_PRESETS[presetKey].trackTint ? (padChain ? (padInk ?? trackColor) : trackColor) : trackInk(family, paint),
         kit: false,
         foldable: isChainRack(device.className),
         inside

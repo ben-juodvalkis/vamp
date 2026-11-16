@@ -26,6 +26,9 @@ import { logger } from '$lib/utils/logger';
     disableCentralViewOnTap?: boolean;
     /** Off by default — the top-center device micro-label (the {title} headline). */
     showHeadline?: boolean;
+    /** The palette bar's Gain chip: the family grey, never the track's ink
+     *  (the user, 2026-11-15). A loaded Utility's cell wears the track's. */
+    noTrackTint?: boolean;
     children: Snippet<[{
       device: DeviceRecord | null;
       sendParam: (paramIndex: number, value: number) => void;
@@ -40,7 +43,7 @@ import { logger } from '$lib/utils/logger';
     }]>;
   }
 
-  let { position, slotKey, device: deviceProp, title, disableCentralViewOnTap = false, showHeadline = false, children }: Props = $props();
+  let { position, slotKey, device: deviceProp, title, disableCentralViewOnTap = false, showHeadline = false, noTrackTint = false, children }: Props = $props();
 
   // Determine the key to use (position for grid devices, slotKey for virtual devices)
   const keyOrUndefined = position || slotKey;
@@ -69,7 +72,7 @@ import { logger } from '$lib/utils/logger';
   // this — deviceInk-normalized so tiles match view interiors. trackTint
   // devices (utility/gain) wear the focused track's ink instead.
   let color = $derived.by(() => {
-    if (DEVICE_PRESETS[deviceType]?.trackTint) {
+    if (DEVICE_PRESETS[deviceType]?.trackTint && !noTrackTint) {
       const ink = selectedTrackInk();
       if (ink) return schemeFromInk(ink);
     }
