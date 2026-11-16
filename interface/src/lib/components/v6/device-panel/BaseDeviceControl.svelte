@@ -15,6 +15,8 @@ import { logger } from '$lib/utils/logger';
   import { sendParam } from '$lib/services/deviceParams';
   import { readFxScope } from '$lib/components/v6/central/fxScope';
   import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
+  import { landingEffects } from '$lib/stores/v6/landingEffects.svelte';
+  import { readLanding } from './landingScope';
   import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
 
   interface Props {
@@ -127,9 +129,15 @@ import { logger } from '$lib/utils/logger';
   let given = $derived(
     !!deviceProp && (!scopeKey || (trackHeld && deviceProp.devicePath.startsWith(`${trackHoldScope.primary}/`)))
   );
-  let device = $derived(given && deviceProp ? deviceProp : slot.device);
-  let isGhost = $derived(!given && slot.state === 'ghost');
-  let isLoading = $derived(!given && slot.state === 'loading');
+  // A chain cell for an effect on its way into Live (ADR-540): no device
+  // yet, drawn loading, its writes kept on its own load's record, which
+  // writes them to the device that lands. Never the type's slot: a second
+  // Reverb's cell must not move the first.
+  const getLanding = readLanding();
+  let landing = $derived(getLanding());
+  let device = $derived(landing ? null : given && deviceProp ? deviceProp : slot.device);
+  let isGhost = $derived(!landing && !given && slot.state === 'ghost');
+  let isLoading = $derived(!!landing || (!given && slot.state === 'loading'));
 
   // Open this device's central view — the pane inside the Drum Rack view
   // under a pad scope, the top-level device view otherwise. The router
@@ -137,7 +145,8 @@ import { logger } from '$lib/utils/logger';
   // it on every drag frame (they used to swap the view 30×/sec).
   function openView() {
     appoint();
-    if (disableCentralViewOnTap) return;
+    // The type's view would show the type's slot: another copy, or a ghost.
+    if (disableCentralViewOnTap || landing) return;
     openDeviceView(deviceType, { device, color });
   }
 
@@ -156,7 +165,7 @@ import { logger } from '$lib/utils/logger';
   // central view mounted mid-drag), and a private flag here would let each
   // one re-enter the load and silently drop it. See fxGridStore.loadDevice.
   function triggerLoad() {
-    if (unscopable) return;
+    if (unscopable || landing) return;
     if (isGhost) {
       selectedTrackStore.loadFxGridDevice(key, scopeKey);
       if (trackHeld) trackHoldScope.loadOnFollowers(key);
@@ -182,12 +191,14 @@ import { logger } from '$lib/utils/logger';
   // in the scope's own slot table, so a pad load's values drain into the
   // device that arrives on the pad.
   function storePendingParam(paramIndex: number, value: number) {
+    if (landing) return landingEffects.setPending(landing, paramIndex, value);
     if (unscopable) return;
     selectedTrackStore.storePendingParam(key, paramIndex, value, scopeKey);
     if (trackHeld) trackHoldScope.storePendingOnFollowers(key, paramIndex, value);
   }
 
   function pendingValue(paramIndex: number): number | undefined {
+    if (landing) return landingEffects.pendingValue(landing, paramIndex);
     return given ? undefined : slot.pendingParams?.get(paramIndex);
   }
 

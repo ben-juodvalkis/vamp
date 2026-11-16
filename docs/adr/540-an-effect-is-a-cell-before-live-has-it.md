@@ -16,29 +16,39 @@ of it: a slot in `loading` holds a drag's values (`pendingParams`) and
 `checkLoadingCompletion` writes them to the device that arrives.
 
 ## Decision
-- **A chip for an effect the chain does not carry yet loads through that
-  type's slot** (`chainEffects.landsAsSlot` → `loadFxGridDevice`), in the
-  chain's scope: the track, a scoped pad, or a held strip's track. A type
-  the chain already holds, a file from the browser, and a load into a
-  rack's chain the chain's own + chose keep the plain `device/load`, with
-  no cell before Live answers: the slot is one per type, so a second
-  Reverb has no slot of its own to hold values for.
-- **The chain draws a landing cell for every type loading in its scope**
-  (`fxGrid.loadingTypes`, oldest first), where Live will put it: a MIDI
-  effect ahead of the instrument, anything else at the end. Its key is the
-  key the arriving device's cell takes (class, default name, which of
-  those), so the cell stays mounted when the device lands and a drag on it
-  carries on into the real device.
-- **Its control works at once.** The tile has no device and resolves the
-  loading slot: a drag's values are held as pending and shown from there
-  (`BaseDeviceControl`'s `pendingValue`, read by `ControlTile` and the
-  Reverb tile), then written to Live when the device lands.
+- **Every chip load of an effect type is a record of its own**
+  (`stores/v6/landingEffects`), started as the `device/load` leaves: its
+  track, its target (the track's chain, a scoped pad's, a held strip's
+  track, or a rack chain the chain's own + chose), its type, and the values
+  written to it so far. One per load, never per type, so a second Reverb
+  beside the first holds its own values. (The first cut, the same day, used
+  the FX grid's one slot per type and left a second copy to wait for Live.)
+- **The chain draws a ghost cell for each** (`landingEffects.inChain`,
+  oldest first), where Live will put it: a MIDI effect after the MIDI
+  effects, anything else at the end of its chain. Its key is the one the
+  arriving device's cell takes (class, default name, which of those), so
+  the cell stays mounted when the device lands and a drag on it carries on
+  into the real device.
+- **Its control works at once.** `LandingScope` tells the tile which load
+  it stands for (`landingScope` context, read by `BaseDeviceControl` and the
+  Reverb tile): no device, drawn loading, its writes kept on the record and
+  shown from there. It opens no view and loads nothing itself.
+- **The new device is found by count, not by path.** Paths are positions,
+  and an insert ahead of a device renumbers it. A load records how many of
+  its type its target held, plus the loads of that type already on their
+  way there (`before`); Live puts the new one after every other of its
+  type, so it is the matching device at index `before`. Its held values are
+  written to it and the record goes.
 - **It is a ghost until Live has it**: a dashed edge, a grey name over no
   wash, the control drawn as a ghost tile's, still showing what was set.
   It cannot be reordered, opened or switched off, and nothing else in the
   chain reorders while it is there: it has no place in Live yet.
-- A load that fails, or that Live never answers within the slot's 10 s,
-  puts the slot back to ghost and the cell goes, with its held values.
+- A load Live refuses (`/looping/v3/error` on `device/load`, by its file or
+  `native:<class>` and its pad) or never answers within 10 s drops its
+  record and the values it held; the later loads of its type there expect
+  one fewer. A pad's chain row is held while a load into it is on its way.
+- A preset file from the browser with no `DEVICE_PRESETS` type, and
+  Permute, load as before, with no ghost cell.
 
 ## Consequences
 - The chain answers a chip at once, and nothing set during the load is lost.
@@ -47,7 +57,12 @@ of it: a slot in `loading` holds a drag's values (`pendingParams`) and
   the load's undo step.
 - Not measured on the rig: whether a device Live names other than the
   preset's `defaultName` lands as a new cell (a remount, which would end a
-  drag in progress) rather than taking the landing cell's place.
+  drag in progress) rather than taking the landing cell's place, and
+  whether Live's insert position always puts the new one after every
+  other of its type (the count rule's assumption).
+- Held values are kept by the parameter index the control resolves with
+  no device to read names from; a device whose names put a parameter at
+  another index would take the value there, as a ghost tile's always did.
 
 ## Tags
 `effect-chain`, `optimistic-load`, `palette`, `ghost`

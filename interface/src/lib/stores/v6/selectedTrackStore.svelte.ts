@@ -398,11 +398,6 @@ class SelectedTrackStore {
 		return fxGrid.loadDevice(slotKey, scope);
 	}
 
-	/** The effect types loading in a scope with no device there yet (the chain's landing cells). */
-	fxGridLoadingTypes(scope = ''): DeviceTypeKey[] {
-		return fxGrid.loadingTypes(scope);
-	}
-
 	storePendingParam(slotKey: SlotKey, paramIndex: number, value: number, scope = '') {
 		fxGrid.storePendingParam(slotKey, paramIndex, value, scope);
 	}

@@ -16,7 +16,9 @@ import { chainAddTarget } from '$lib/services/rackChains.svelte';
 import { activeDrumRackScope } from '$lib/services/deviceViewRouter.svelte';
 import { openViewWhenLanded } from '$lib/services/effectView.svelte';
 import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
-import { selectedTrackStore, type SlotKey } from '$lib/stores/v6/selectedTrackStore.svelte';
+import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
+import { landingEffects } from '$lib/stores/v6/landingEffects.svelte';
+import type { DeviceTypeKey } from '$lib/config/fxGridLayout';
 import { v3Store } from '$lib/stores/v3/normalized.svelte';
 import { v3ErrorBannerStore } from '$lib/stores/v6/v3ErrorBannerStore.svelte';
 import { DEVICE_PRESETS } from '$lib/config/devicePresets';
@@ -68,14 +70,7 @@ export async function addEffectToChain(effect: ChainEffect): Promise<void> {
 	// Not under a hold: opening the view appoints the device, which would
 	// select the held track in Live.
 	const cancelView = trackHoldScope.active ? () => {} : openViewWhenLanded({ trackPath, padPath: target, name: effect.name });
-	// An effect the chain does not carry yet loads as its tile does (the
-	// slot's load): the chain draws its cell at once and the edits made on
-	// it before Live has it land with it (2026-11-16, the user's call).
-	const scope = pad?.padPath ?? trackHoldScope.scopeKey();
-	if (!chainAddTarget.path && effect.preset && landsAsSlot(effect.preset, scope)) {
-		await selectedTrackStore.loadFxGridDevice(effect.preset as SlotKey, scope);
-		return;
-	}
+	let landing: string | null = null;
 	try {
 		// A type loads as its tile does: one of the user's effects from the
 		// effects folder, by name (ADR-498); a Live device by name sends no file (3.12.0).
@@ -84,21 +79,17 @@ export async function addEffectToChain(effect: ChainEffect): Promise<void> {
 		if (config?.effect && !found) throw new Error('Not in your effects folder (Settings → Places)');
 		const { source, rel } = found ?? effect;
 		const file = effect.preset ? (found?.presetPath || config?.presetPath || '') : nativeClassOf(effect) ? '' : effect.fullPath;
+		// A type is a ghost cell in the chain at once, taking edits that land
+		// with it (ADR-540); one record per load, so a second Reverb is its own.
+		if (effect.preset && effect.preset !== 'sequencer' && config) {
+			landing = landingEffects.start({ trackPath, target, type: effect.preset as DeviceTypeKey, loadKey: file || source });
+		}
 		await addPresetToChain(trackPath, target, file, source, rel);
 	} catch (err) {
+		if (landing) landingEffects.cancel(landing);
 		cancelView();
 		logger.error('Effect load failed', { component: 'chainEffects', err });
 		reportFailure(effect.name, err);
-	}
-}
-
-/** Whether a type loads through its slot here: it has one, and the scope carries none of it yet. */
-function landsAsSlot(preset: string, scope: string): boolean {
-	if (!DEVICE_PRESETS[preset] || preset === 'sequencer') return false;
-	try {
-		return selectedTrackStore.getFxGridSlot(preset as SlotKey, scope).state === 'ghost';
-	} catch {
-		return false;
 	}
 }
 

@@ -536,6 +536,10 @@ export function handleV3Error(args: OSCArg[]): void {
 		import('$lib/stores/v6/selectedTrackStore.svelte').then(({ fxGrid }) => {
 			fxGrid.handleLoadFailed(path, scope);
 		});
+		// And the chain's ghost cell for it (ADR-540).
+		import('$lib/stores/v6/landingEffects.svelte').then(({ landingEffects }) => {
+			landingEffects.fail(path, scope);
+		});
 	}
 	// Say a refused load (2026-11-05: Guitar and Bass Amp were refused with
 	// no path and nothing on screen, so a tap looked like a miss).

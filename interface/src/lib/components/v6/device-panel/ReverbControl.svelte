@@ -4,6 +4,8 @@
   import { session } from '$lib/stores/session.svelte';
   import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
   import { readFxScope } from '$lib/components/v6/central/fxScope';
+  import { landingEffects } from '$lib/stores/v6/landingEffects.svelte';
+  import { readLanding } from './landingScope';
   import BaseDeviceControl from './BaseDeviceControl.svelte';
   import DeviceXY from './DeviceXY.svelte';
   import ReverbPortrait from '../central/views/reverb/ReverbPortrait.svelte';
@@ -29,9 +31,14 @@
   // loading), the values written to it while it loads.
   const getFxScope = readFxScope();
   const scopeKey = $derived(getFxScope()?.padPath ?? trackHoldScope.scopeKey());
-  const pending = $derived(device ? undefined : selectedTrackStore.getFxGridSlot(position, scopeKey).pendingParams);
+  // A chain cell's Reverb on its way into Live reads its own load's (ADR-540).
+  const getLanding = readLanding();
+  const landing = $derived(getLanding());
+  const pending = $derived(
+    landing ? landingEffects.get(landing)?.pending : device ? undefined : selectedTrackStore.getFxGridSlot(position, scopeKey).pendingParams
+  );
   const get = (ref: ParamRef) =>
-    device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, resolveParam(ref))) : pending?.get(resolveParam(ref));
+    device && !landing ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, resolveParam(ref))) : pending?.get(resolveParam(ref));
 
   // Reactive view of armed/store state.
   let at = $derived(REVERB.read(get));
