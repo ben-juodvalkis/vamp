@@ -14,8 +14,8 @@
  *      after every `Live 12.4.x`.
  *   3. The highest version under /Applications.
  *
- * `npm run dev` runs this as part of `open:browser`; `scripts/setup-ipad.js`
- * and `scripts/validate-setup.js` require it.
+ * Vamp no longer opens Live on startup; run this by hand to open it.
+ * `scripts/validate-setup.js` and the grooves endpoint require it.
  */
 
 const { spawn } = require('child_process');

@@ -3,7 +3,6 @@
 const { spawn } = require('child_process');
 const { displayInterfaces, getBestIPadIP } = require('./detect-interfaces.js');
 const { createStatusPage } = require('./create-status-page.js');
-const { findLiveApp } = require('./open-live.js');
 const { readFeatureFlags } = require('../interface/bridge/utils/features');
 const fs = require('fs');
 const path = require('path');
@@ -40,23 +39,14 @@ function launch(command, args, label) {
 /**
  * Everything that does NOT depend on the Vite build, started at t=0.
  *
- * This is the whole point of the reordering. Live's own cold start is tens of
- * seconds, and it used to begin only *after* the build finished and a 4s timer
- * elapsed — so a ~40s build and a ~30s Live launch ran back to back. Nothing
- * about Live, the browser blocker or the menu-bar agent reads the build output,
- * so they all start now and boot underneath it.
+ * Nothing about the browser blocker or the menu-bar agent reads the build
+ * output, so they start now and boot underneath it.
  *
  */
 function launchPerformanceApps() {
     console.log('🎛️  Launching performance apps (in parallel with the build)...\n');
 
-    // Live first: it is the slowest to boot.
-    const live = findLiveApp({ configured: constants.paths?.abletonApp });
-    if (live) {
-        launch('open', [live.app], `🎵 Opening ${path.basename(live.app, '.app')} (${live.why})...`);
-    } else {
-        console.log('🎵 No Ableton Live in /Applications: install Live 12.4 Suite.');
-    }
+    // Live is not opened here: the user opens it when they want it.
 
     // The owner's browser blocker keeps focus during performance: another
     // repo's script, run only where `paths.browserBlocker` names it.
@@ -109,7 +99,7 @@ async function announceReady() {
 
     console.log('\n📱 iPad Setup Instructions:');
     console.log('   1. Connect iPad via USB-C (recommended)');
-    console.log('   2. Live opens by itself; this Mac shows a status page with the addresses');
+    console.log('   2. Open Live yourself; this Mac shows a status page with the addresses');
     console.log('   3. Once: pick Vamp as a Control Surface in Live → Settings → Link, Tempo & MIDI');
     console.log('   4. Use status page URLs for iPad Safari connection:');
 
@@ -165,12 +155,11 @@ async function setupiPad() {
         console.log('⏳ Setup will continue, check interfaces again after startup.\n');
     }
 
-    // Step 2: Launch everything that doesn't need the build — Live, blocker,
+    // Step 2: Launch everything that doesn't need the build — blocker,
     // menu bar. These boot underneath the build rather than after it.
     launchPerformanceApps();
 
-    // Step 3: Prepare the interface. This is the only slow step left, and Live is
-    // already booting underneath it. Both halves are fingerprint-gated, so an
+    // Step 3: Prepare the interface. This is the only slow step left. Both halves are fingerprint-gated, so an
     // unchanged tree falls through in about a second.
     console.log('📦 Preparing the iPad app...\n');
     const prepCode = await prepareInterface();
