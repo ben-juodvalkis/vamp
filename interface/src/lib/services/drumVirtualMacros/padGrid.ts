@@ -114,6 +114,39 @@ export function padRackGrid(
 }
 
 /**
+ * The chain overview's Drum Rack cell (2026-11-16, the user's call, in
+ * place of the kit's Trnsp): **only the pads that have notes** — the
+ * playing clip's pitches, plus any `keep` (a held or latched pad) — laid
+ * out as Live lays pads: rows of `columns` ascending, the lowest row along
+ * the bottom, left to right. A clip note the kit has no pad for is left out.
+ */
+export function padActiveGrid(
+	pads: readonly VmPad[],
+	notes: readonly number[],
+	columns: number,
+	keep: readonly (number | null)[] = []
+): { slots: PadGridSlot[]; columns: number; rows: number } {
+	const byNote = new Map<number, VmPad>();
+	for (const p of pads) byNote.set(p.note, p);
+	const set = new Set<number>();
+	// A clip note the kit has no pad for draws nothing; a held pad always draws.
+	for (const n of notes) if (byNote.has(n)) set.add(n);
+	for (const n of keep) if (n !== null && Number.isInteger(n) && n >= 0 && n <= 127) set.add(n);
+	const sorted = [...set].sort((a, b) => a - b);
+	if (!sorted.length) return { slots: [], columns: 0, rows: 0 };
+	const cols = Math.max(1, Math.min(Math.round(columns), sorted.length));
+	const rows = Math.ceil(sorted.length / cols);
+	const slots = sorted.map((note, i) => ({
+		note,
+		pad: byNote.get(note) ?? null,
+		column: (i % cols) + 1,
+		row: rows - Math.floor(i / cols),
+		extra: false
+	}));
+	return { slots, columns: cols, rows };
+}
+
+/**
  * Which notes the playhead crossed moving from `prev` to `pos` beats,
  * inside a loop window. A backwards move is the loop wrapping: the
  * tail of the window up to its end, then its start up to `pos`.

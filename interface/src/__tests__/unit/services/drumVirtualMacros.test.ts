@@ -831,3 +831,27 @@ describe('profileForPadClass — the row a held pad earns', () => {
 		expect(profileForPadClass('DrumCell', 'macro-grid')).toBe('macro-grid');
 	});
 });
+
+import { padActiveGrid } from '$lib/services/drumVirtualMacros';
+
+describe('padActiveGrid (the chain cell: only the pads with notes)', () => {
+	const kit = [36, 38, 42, 46, 49].map((note) => ({ note, name: `P${note}`, className: 'DrumCell', color: null }));
+
+	it('draws only the clip notes and the held pad, ascending, lowest row at the bottom', () => {
+		const g = padActiveGrid(kit as never, [42, 36, 38], 2, [49]);
+		expect(g.slots.map((s) => s.note)).toEqual([36, 38, 42, 49]);
+		expect(g.columns).toBe(2);
+		expect(g.rows).toBe(2);
+		expect(g.slots.map((s) => [s.column, s.row])).toEqual([[1, 2], [2, 2], [1, 1], [2, 1]]);
+	});
+
+	it('is empty with no notes and nothing held', () => {
+		expect(padActiveGrid(kit as never, [], 4).slots).toEqual([]);
+	});
+
+	it('leaves out a clip note the kit has no pad for, and never draws more columns than pads', () => {
+		const g = padActiveGrid(kit as never, [37, 38], 4);
+		expect(g.slots.map((s) => s.note)).toEqual([38]);
+		expect(g.columns).toBe(1);
+	});
+});

@@ -15,8 +15,9 @@
    * choice is visible here too.
    *
    * A tap on a cell's header bar turns the device on and off (Device On,
-   * the user, 2026-11-11, as a tap on a strip's name mutes it); a drag
-   * from the header still reorders.
+   * the user, 2026-11-11, as a tap on a strip's name mutes it), except an
+   * instrument's, which opens its view as the rest of its cell does
+   * (2026-11-16); a drag from the header still reorders.
    * (Device On, parameter 0). A cell dragged moves the device in Live's
    * chain (`device/move`): the cell rides the finger, the others slide
    * aside to show where it will land, and the new order holds after the
@@ -805,8 +806,8 @@
    * is not; the cell's tap has no time limit and a touch's slop. Every
    * control (the user, 2026-11-10: anywhere on a cell but its header
    * button): Permute's steps toggle and open, the MIDI wheels move and
-   * open, a Drum Rack's Trnsp opens the Drum Rack view. (A kit's face was
-   * its pads until 2026-11-05, whose tap was the pad's alone.)
+   * open, a Drum Rack's active pads scope the chain to a pad (a press there is
+   * the pad's), anywhere else on the kit opens the Drum Rack view.
    */
 
   function dragStart(cell: Cell, position: number, info: DragInfo) {
@@ -996,7 +997,7 @@
           onVolume={(i, v) => setChainVolume(cell.inside!.rackPath, i, v)}
         /></div>
       {:else if cell.kit}
-        <!-- A Drum Rack: the kit's Trnsp. -->
+        <!-- A Drum Rack: the pads its playing clip has notes on. -->
         <div class="cell-control" role="presentation"><CellSize>
           <DrumRackFace device={cell.device} color={selectedTrackScheme() ?? schemeFromInk(cell.ink)} />
         </CellSize></div>
@@ -1149,7 +1150,9 @@
           if (cell.kind === 'chains') return;
           // The header is the device's switch, as a strip's name is its
           // mute; the kit's under a pad scope still leads back to the kit.
-          if (pressInHead && isPowered(cell) && !(cell.kit && padScope)) togglePower(cell);
+          // An instrument's header opens its view instead (the user,
+          // 2026-11-16): switching the voice off is never what a tap there meant.
+          if (pressInHead && isPowered(cell) && cell.kind !== 'instrument') togglePower(cell);
           else open(cell, pressInControl);
         },
         onStart: (info) => dragStart(cell, topAt(position), info),
