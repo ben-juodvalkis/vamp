@@ -123,8 +123,11 @@ targets:
         CURRENT_PROJECT_VERSION: "8"
         SPARKLE_PUBLIC_KEY: ""
         # Run locally, unsandboxed: it opens usbmuxd's socket and reads the
-        # repo's config, neither of which a sandboxed app may.
-        CODE_SIGN_IDENTITY: "-"
+        # repo's config, neither of which a sandboxed app may. Ad hoc unless
+        # Config/Local.xcconfig names a certificate (VAMP_MAC_SIGN_IDENTITY):
+        # macOS ties Accessibility and Screen Recording to the signature, and
+        # an ad hoc one changes with every rebuild (ADR-541).
+        CODE_SIGN_IDENTITY: "$(VAMP_MAC_SIGN_IDENTITY)"
         CODE_SIGN_STYLE: Manual
         ENABLE_APP_SANDBOX: NO
         ENABLE_HARDENED_RUNTIME: NO

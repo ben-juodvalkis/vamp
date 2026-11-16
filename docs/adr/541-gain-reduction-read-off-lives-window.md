@@ -62,7 +62,9 @@ What remains is the picture Live already draws. Measured on the rig
 - **Inside racks too.** Live shows a Drum Rack pad's (or rack chain's)
   devices under the rack, as `TrackDeviceChainView.Device[0].Device[1]`, so
   the ask walks levels: the track's devices, then the pad's or chain's, each
-  checked by its names. Measured on a pad's Glue (Memphis Studio + Plymouth,
+  checked by its names. Indexes come from the paths, and a device the page
+  has no record of is a `null` name, not checked: a pad's records hold its
+  effects but not its instrument, which Live shows first. Measured on a pad's Glue (Memphis Studio + Plymouth,
   pad 36): 2 to 16 dB with every kick.
 - **The page draws it** over the Glue view's Threshold and Makeup, where Live
   draws its own, on Live's 0–20 dB scale (`ReductionMeter.svelte`,
@@ -83,9 +85,13 @@ What remains is the picture Live already draws. Measured on the rig
 - Live's layout is measured, not documented: a UI zoom other than 100% or a
   redesigned Glue changes the panel's size or the pivot, and the
   meter then reads `no-needle` or wrong until re-measured.
-- A checkout's Vamp for Mac is ad-hoc signed and rebuilds itself, and macOS
-  ties Screen Recording and Accessibility to the build: expect to grant them
-  again after a rebuild that changes the app.
+- macOS ties Screen Recording and Accessibility to the app's signature. A
+  checkout's Vamp for Mac is ad hoc by default, a new signature every
+  rebuild, so the grants go stale (the row stays switched on and does
+  nothing; remove it with − and add it again). A Mac that rebuilds it names
+  its own certificate in `Config/Local.xcconfig`
+  (`VAMP_MAC_SIGN_IDENTITY = Apple Development`), and the grants then last
+  across rebuilds. The rig does.
 - Compressor, Limiter, Gate and Multiband Dynamics each need their own shape;
   until then their cells keep their pictures as they are.
 

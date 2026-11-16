@@ -10,7 +10,9 @@
  * `[index, [names…]]` per level: the track's top-level devices, then for a
  * device in a Drum Rack pad's or a rack chain's chain that chain's devices
  * (Live shows the selected pad's or chain's), so the app can tell Live's
- * device view shows what the page means.
+ * device view shows what the page means. Indexes are Live's, read off the
+ * paths, and a name the page does not know is `null`: a pad's records hold
+ * its effects, not its instrument, which Live shows first.
  *
  * The app's `/meter/reduction <devicePath> <dB> <status>` lands in
  * `readings`; `status` is `ok` or why there is no reading (ReductionReader).
@@ -54,12 +56,19 @@ export function watchArgs(devicePath: string): WatchArgs | null {
 	const trackPath = devicePath.slice(0, devicePath.indexOf('/devices/'));
 	const track = v3Store.tracks.get(trackPath);
 	if (!track) return null;
-	const levels: Array<[number, string[]]> = [];
+	const levels: Array<[number, Array<string | null>]> = [];
+	const ownIndex = (path: string) => Number(path.slice(path.lastIndexOf('/') + 1));
 	const level = (devices: DeviceRecord[], path: string): DeviceRecord | null => {
-		const index = devices.findIndex((d) => d.devicePath === path);
-		if (index < 0) return null;
-		levels.push([index, devices.map((d) => d.name)]);
-		return devices[index];
+		const device = devices.find((d) => d.devicePath === path);
+		if (!device) return null;
+		const names: Array<string | null> = [];
+		for (const d of devices) {
+			const at = ownIndex(d.devicePath);
+			while (names.length <= at) names.push(null);
+			names[at] = d.name;
+		}
+		levels.push([ownIndex(path), names]);
+		return device;
 	};
 	const top = Array.from(track.devices.values()).filter((d) => TOP_LEVEL.test(d.devicePath));
 	let device = level(top, m[1]);

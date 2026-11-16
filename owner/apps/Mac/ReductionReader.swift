@@ -23,7 +23,8 @@ final class ReductionReader: NSObject, SCStreamOutput, SCStreamDelegate {
         /// index there and the names of every device at that level, in order.
         struct Level: Equatable {
             var index: Int
-            var names: [String]
+            /// nil where the page does not know the device (a pad's instrument).
+            var names: [String?]
         }
         var devicePath: String
         /// Live's class name, which picks the meter's shape.
@@ -154,9 +155,14 @@ final class ReductionReader: NSObject, SCStreamOutput, SCStreamDelegate {
     }
 
     /// Live titles a device "name" or, renamed or a rack, "name, type"
-    /// ("Chorus, Chorus-Ensemble"); the page knows the name.
-    static func sameDevices(_ titles: [String], _ names: [String]) -> Bool {
-        titles.count == names.count && zip(titles, names).allSatisfy { $0 == $1 || $0.hasPrefix($1 + ", ") }
+    /// ("Chorus, Chorus-Ensemble"); the page knows the name, or nothing (nil)
+    /// for a device it holds no record of. Live may show more after them.
+    static func sameDevices(_ titles: [String], _ names: [String?]) -> Bool {
+        names.count <= titles.count && names.contains { $0 != nil }
+            && zip(titles, names).allSatisfy { title, name in
+                guard let name else { return true }
+                return title == name || title.hasPrefix(name + ", ")
+            }
     }
 
     private static func attribute(_ e: AXUIElement, _ name: String) -> AnyObject? {

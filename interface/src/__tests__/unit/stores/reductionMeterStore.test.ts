@@ -71,6 +71,16 @@ describe('watchArgs', () => {
 		]);
 	});
 
+	it("a pad's records hold its effects, not its instrument: Live's index from the path, null for the instrument", () => {
+		mergePadChain(4, 'tracks/1/devices/0/pads/38', new Map([
+			['tracks/1/devices/0/pads/38/devices/1', device('tracks/1/devices/0/pads/38/devices/1', 'Glue Compressor', 'GlueCompressor')]
+		]));
+		expect(watchArgs('tracks/1/devices/0/pads/38/devices/1')).toEqual([
+			'tracks/1/devices/0/pads/38/devices/1', 'GlueCompressor',
+			JSON.stringify([[0, ['Memphis Studio + Plymouth', 'Permute']], [1, [null, 'Glue Compressor']]])
+		]);
+	});
+
 	it("walks into a rack chain, counting only that chain's devices", () => {
 		expect(watchArgs('tracks/3/devices/0/chains/1/devices/1')).toEqual([
 			'tracks/3/devices/0/chains/1/devices/1', 'GlueCompressor',
@@ -80,7 +90,7 @@ describe('watchArgs', () => {
 
 	it('is null for a device with no meter or one not in the tree', () => {
 		expect(watchArgs('tracks/2/devices/0')).toBeNull();
-		expect(watchArgs('tracks/1/devices/0/pads/38/devices/0')).toBeNull();
+		expect(watchArgs('tracks/1/devices/0/pads/40/devices/0')).toBeNull();
 		expect(watchArgs('tracks/9/devices/0')).toBeNull();
 	});
 });

@@ -162,8 +162,8 @@ final class AppState: ObservableObject {
         else { return nil }
         var levels: [ReductionReader.Watch.Level] = []
         for level in raw {
-            guard level.count == 2, let index = level[0] as? Int, index >= 0, let names = level[1] as? [String] else { return nil }
-            levels.append(.init(index: index, names: names))
+            guard level.count == 2, let index = level[0] as? Int, index >= 0, let names = level[1] as? [Any] else { return nil }
+            levels.append(.init(index: index, names: names.map { $0 as? String }))
         }
         guard !levels.isEmpty else { return nil }
         return ReductionReader.Watch(devicePath: path, className: className, levels: levels)

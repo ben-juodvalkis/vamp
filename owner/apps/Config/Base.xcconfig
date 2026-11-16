@@ -2,4 +2,11 @@
 // beside this file (gitignored): DEVELOPMENT_TEAM = <your team id>. Without
 // it the Mac app and the tests still build (signed to run locally); the iPad
 // app needs a team to install on a device.
+
+// Vamp for Mac's signature: ad hoc by default. A Mac that rebuilds the app
+// from a checkout can name its own certificate in Local.xcconfig (e.g.
+// VAMP_MAC_SIGN_IDENTITY = Apple Development), so macOS keeps the app's
+// Accessibility and Screen Recording grants across rebuilds (ADR-541).
+VAMP_MAC_SIGN_IDENTITY = -
+
 #include? "Local.xcconfig"
