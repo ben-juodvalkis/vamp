@@ -117,9 +117,12 @@ export const RIDGE_COUNT = 14;
 const LOW_HZ = 60;
 const HIGH_HZ = 12000;
 export const BASE_BOTTOM = 0.09;
-const BASE_TOP = 0.5;
+// The stack fills the pad to its top edge (2026-11-15): it stopped at 0.77
+// while the Reverb view's tabs and readouts sat over the tail, and kept that
+// headroom on the tile, where nothing sits there (ADR-477).
+const BASE_TOP = 0.64;
 /** A ridge at full level rises this far above its baseline. */
-const RIDGE_AMPLITUDE = 0.27;
+const RIDGE_AMPLITUDE = 0.36;
 /** The top of the stack: the back ridge's baseline plus a full rise. */
 export const STACK_TOP = BASE_TOP + RIDGE_AMPLITUDE;
 const SAMPLES = 240;
