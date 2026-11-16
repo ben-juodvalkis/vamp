@@ -34,6 +34,8 @@
 		/** A slider's label: small and level on a grid tile, the slider's own default in a central view. */
 		labelSize?: 'small' | 'large';
 		labelOrientation?: 'vertical' | 'horizontal' | 'auto';
+		/** Where the picture's needle points instead of the control's level: the Glue's gain reduction as Live shows it (ADR-541). */
+		pictureLevel?: number;
 	}
 
 	let {
@@ -49,7 +51,8 @@
 		icon,
 		orientation = 'vertical',
 		labelSize = 'small',
-		labelOrientation = 'horizontal'
+		labelOrientation = 'horizontal',
+		pictureLevel
 	}: Props = $props();
 	/** The chain overview and the browser draw the device's picture; the FX grid does not. */
 	const pictured = getContext<boolean>(PICTURE_CONTEXT) === true;
@@ -101,9 +104,9 @@
 			     the well, and a copy clipped to the fill in the on-fill ink, so
 			     the picture reads wherever the fill has risen over it (the
 			     user, 2026-10-26). -->
-			<div class="slider-picture"><DevicePicture kind={picture} x={level} ink={color.primary} /></div>
+			<div class="slider-picture"><DevicePicture kind={picture} x={pictureLevel ?? level} ink={color.primary} /></div>
 			<div class="slider-picture slider-picture--inverse" style="clip-path: {fillClip(level, center)};">
-				<DevicePicture kind={picture} x={level} ink="var(--flat-on-fg)" />
+				<DevicePicture kind={picture} x={pictureLevel ?? level} ink="var(--flat-on-fg)" />
 			</div>
 		{/if}
 		<DeviceSlider

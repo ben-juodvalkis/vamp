@@ -10,8 +10,7 @@
    * macOS has not let Vamp for Mac read the screen. Draws nothing while the
    * `reductionMeter` switch is off.
    */
-  import { bridgeStatus } from '$lib/stores/bridgeStatus.svelte';
-  import { reductionMeterStore, STALE_MS } from '$lib/stores/v6/reductionMeterStore.svelte';
+  import { useReduction, REDUCTION_MAX_DB as MAX_DB } from './useReduction.svelte';
 
   interface Props {
     devicePath: string | undefined;
@@ -22,7 +21,6 @@
 
   let { devicePath, color, compact = false }: Props = $props();
 
-  const MAX_DB = 20;
   const TICKS = [0, 5, 10, 15, 20];
   const WHY: Record<string, string> = {
     'not-shown': "Not in Live's device view",
@@ -33,24 +31,12 @@
     'no-live': 'Live is not running'
   };
 
-  let on = $derived(bridgeStatus.isFeatureOn('reductionMeter'));
-  let now = $state(Date.now());
-
-  $effect(() => {
-    if (!on || !devicePath) return;
-    const release = reductionMeterStore.hold(devicePath);
-    const clock = setInterval(() => (now = Date.now()), 500);
-    return () => {
-      clearInterval(clock);
-      release();
-    };
-  });
-
-  let reading = $derived(devicePath ? reductionMeterStore.readingFor(devicePath) : null);
-  let fresh = $derived(reading !== null && now - reading.at < STALE_MS);
-  let ok = $derived(fresh && reading?.status === 'ok');
-  let db = $derived(ok && reading ? reading.db : 0);
-  let note = $derived(ok ? `${db.toFixed(1)} dB` : !fresh ? '' : (WHY[reading?.status ?? ''] ?? ''));
+  const reduction = useReduction(() => devicePath);
+  let on = $derived(reduction.on);
+  let ok = $derived(reduction.ok);
+  let db = $derived(reduction.db);
+  let note = $derived(ok ? `${db.toFixed(1)} dB` : (WHY[reduction.status] ?? ''));
+  let reading = $derived(reduction.status ? { status: reduction.status } : null);
 </script>
 
 {#if on}

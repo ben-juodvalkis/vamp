@@ -6,9 +6,11 @@
  * captures just the meter's panel of Live's window. This handler is the
  * relay between it and the page, the tuner's pattern (ADR-539):
  *
- * - `/meter/reduction/watch <devicePath> <index> <className> <names JSON>`
- *   from a client: the page repeats it every 2 s while it shows a device with
- *   a meter (`''` stops). It goes to Vamp for Mac alone, the socket the
+ * - `/meter/reduction/watch <devicePath> <className> <levels JSON>` from a
+ *   client, `levels` Live's device view outermost first as `[index, [names]]`
+ *   (the track's devices, then a pad's or chain's): the page repeats it every
+ *   2 s while it shows a device with a meter (`''` stops). It goes to Vamp for
+ *   Mac alone, the socket the
  *   capture recorder knows from its hellos; the app stops 5 s after the last.
  * - `/meter/reduction <devicePath> <dB> <status>` from the app goes to every
  *   client. The app sends it when the reading moves by 0.05 dB, its status
@@ -48,11 +50,10 @@ function createReductionMeter({ features, appSend, broadcast }) {
             const args = (msg.args || []).map(argValue);
             if (msg.address === WATCH_ADDRESS) {
                 const path = typeof args[0] === 'string' ? args[0] : '';
-                const index = Number.isInteger(args[1]) ? args[1] : -1;
-                const className = typeof args[2] === 'string' ? args[2] : '';
-                const names = typeof args[3] === 'string' ? args[3] : '[]';
+                const className = typeof args[1] === 'string' ? args[1] : '';
+                const levels = typeof args[2] === 'string' ? args[2] : '';
                 const send = appSend();
-                if (send) send(WATCH_ADDRESS, path && index >= 0 ? [path, index, className, names] : ['', -1, '', '[]']);
+                if (send) send(WATCH_ADDRESS, path && className && levels.startsWith('[') ? [path, className, levels] : ['', '', '[]']);
                 return true;
             }
             const [path, db, status] = args;

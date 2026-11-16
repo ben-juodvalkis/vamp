@@ -31,19 +31,19 @@ const reading = (...args: unknown[]) => ({ address: READING_ADDRESS, args });
 describe('createReductionMeter', () => {
 	it("passes the page's ask to the app alone, with its OSC wrappers unwrapped", () => {
 		const { meter, toApp, toClients } = setup(true);
-		const names = JSON.stringify(['Glue Compressor', 'Permute']);
-		expect(meter.onClientMessage(watch({ type: 's', value: 'tracks/2/devices/0' }, { type: 'i', value: 0 }, 'GlueCompressor', names))).toBe(true);
-		expect(toApp).toEqual([[WATCH_ADDRESS, ['tracks/2/devices/0', 0, 'GlueCompressor', names]]]);
+		const levels = JSON.stringify([[0, ['Glue Compressor', 'Permute']]]);
+		expect(meter.onClientMessage(watch({ type: 's', value: 'tracks/2/devices/0' }, 'GlueCompressor', { type: 's', value: levels }))).toBe(true);
+		expect(toApp).toEqual([[WATCH_ADDRESS, ['tracks/2/devices/0', 'GlueCompressor', levels]]]);
 		expect(toClients).toEqual([]);
 	});
 
 	it('an empty or malformed ask is a stop', () => {
 		const { meter, toApp } = setup(true);
 		meter.onClientMessage(watch(''));
-		meter.onClientMessage(watch('tracks/1/devices/0', 'x'));
+		meter.onClientMessage(watch('tracks/1/devices/0', 'GlueCompressor', 7));
 		expect(toApp).toEqual([
-			[WATCH_ADDRESS, ['', -1, '', '[]']],
-			[WATCH_ADDRESS, ['', -1, '', '[]']]
+			[WATCH_ADDRESS, ['', '', '[]']],
+			[WATCH_ADDRESS, ['', '', '[]']]
 		]);
 	});
 
@@ -63,7 +63,7 @@ describe('createReductionMeter', () => {
 
 	it('switched off, takes both addresses and moves nothing', () => {
 		const { meter, toApp, toClients } = setup(false);
-		expect(meter.onClientMessage(watch('tracks/2/devices/0', 0, 'GlueCompressor', '[]'))).toBe(true);
+		expect(meter.onClientMessage(watch('tracks/2/devices/0', 'GlueCompressor', '[[0, []]]'))).toBe(true);
 		expect(meter.onClientMessage(reading('tracks/2/devices/0', 3, 'ok'))).toBe(true);
 		expect(toApp).toEqual([]);
 		expect(toClients).toEqual([]);
@@ -71,7 +71,7 @@ describe('createReductionMeter', () => {
 
 	it('with no app connected, the ask goes nowhere', () => {
 		const { meter, toApp } = setup(true, false);
-		expect(meter.onClientMessage(watch('tracks/2/devices/0', 0, 'GlueCompressor', '[]'))).toBe(true);
+		expect(meter.onClientMessage(watch('tracks/2/devices/0', 'GlueCompressor', '[[0, []]]'))).toBe(true);
 		expect(toApp).toEqual([]);
 	});
 

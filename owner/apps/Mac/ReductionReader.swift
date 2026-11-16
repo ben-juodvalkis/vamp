@@ -9,22 +9,28 @@ import ScreenCaptureKit
 /// it shows a device that has a meter; the reader follows the latest ask and
 /// stops 5 s after the asks stop, as `InputMonitor` does. It finds the device
 /// in Live's device view through Accessibility
-/// (`TrackDeviceChainView.Device[n]`, checking that the view shows the
-/// track the page means: the same device names in the same order), captures
-/// only the meter's panel of Live's window with ScreenCaptureKit, and reads
-/// the needle (`ReductionMeter`).
+/// (`TrackDeviceChainView.Device[n]`, and `….Device[n].Device[k]` for a
+/// device in the chain of a rack's selected pad or chain), checking at each
+/// level that the view lists the devices the page means, captures that
+/// device of Live's window with ScreenCaptureKit, finds the meter in the
+/// picture and reads the needle (`ReductionMeter`).
 ///
 /// Live must be on the current Space: covered by other windows it still
 /// draws, but on another Space it does not (measured 2026-11-16).
 final class ReductionReader: NSObject, SCStreamOutput, SCStreamDelegate {
     struct Watch: Equatable {
+        /// One level of Live's device view, outermost first: the device's
+        /// index there and the names of every device at that level, in order.
+        struct Level: Equatable {
+            var index: Int
+            var names: [String]
+        }
         var devicePath: String
-        /// The device's index among the track's top-level devices.
-        var index: Int
         /// Live's class name, which picks the meter's shape.
         var className: String
-        /// The names of the track's top-level devices, in order.
-        var names: [String]
+        /// The track's top-level devices, then (for a device in a rack) the
+        /// devices of the pad's or chain's chain Live shows, and so on.
+        var levels: [Level]
     }
 
     /// `(devicePath, dB, status)`: dB −1 unless status is `ok`. Statuses:
@@ -130,13 +136,21 @@ final class ReductionReader: NSObject, SCStreamOutput, SCStreamDelegate {
     private func locate(_ watch: Watch) -> Located {
         guard let live = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == "com.ableton.live" })
         else { chainView = nil; return .failure("no-live") }
-        var devices = chainView.map(Self.devices(in:)) ?? []
+        var devices = chainView.map(Self.devices(in:)) ?? [:]
         if devices.isEmpty {
             chainView = Self.findChainView(AXUIElementCreateApplication(live.processIdentifier))
-            devices = chainView.map(Self.devices(in:)) ?? []
+            devices = chainView.map(Self.devices(in:)) ?? [:]
         }
-        guard Self.sameDevices(devices.map(\.title), watch.names), watch.index < devices.count else { return .failure("not-shown") }
-        return .success(devices[watch.index].frame)
+        guard !watch.levels.isEmpty else { return .failure("not-shown") }
+        var parent = "TrackDeviceChainView"
+        for level in watch.levels {
+            var titles: [String] = []
+            while let device = devices["\(parent).Device[\(titles.count)]"] { titles.append(device.title) }
+            guard Self.sameDevices(titles, level.names), level.index < titles.count else { return .failure("not-shown") }
+            parent = "\(parent).Device[\(level.index)]"
+        }
+        guard let device = devices[parent] else { return .failure("not-shown") }
+        return .success(device.frame)
     }
 
     /// Live titles a device "name" or, renamed or a rack, "name, type"
@@ -163,26 +177,38 @@ final class ReductionReader: NSObject, SCStreamOutput, SCStreamDelegate {
         return nil
     }
 
-    /// The device view's top-level devices, in order, with their screen frames.
-    private static func devices(in view: AXUIElement) -> [(title: String, frame: CGRect)] {
-        var found: [(index: Int, title: String, frame: CGRect)] = []
+    /// Every device the device view shows, at every depth, by identifier
+    /// (`TrackDeviceChainView.Device[0]`, `….Device[0].Device[1]`), with its
+    /// title and screen frame.
+    private static func devices(in view: AXUIElement) -> [String: (title: String, frame: CGRect)] {
+        var found: [String: (title: String, frame: CGRect)] = [:]
         var queue = (attribute(view, "AXChildren") as? [AXUIElement]) ?? []
         var visited = 0
-        while !queue.isEmpty, visited < 400 {
+        while !queue.isEmpty, visited < 3000 {
             let e = queue.removeFirst()
             visited += 1
-            if let id = attribute(e, "AXIdentifier") as? String,
-               id.hasPrefix("TrackDeviceChainView.Device["), id.hasSuffix("]"),
-               let index = Int(id.dropFirst("TrackDeviceChainView.Device[".count).dropLast()) {
+            if let id = attribute(e, "AXIdentifier") as? String, isDeviceIdentifier(id) {
                 var point = CGPoint.zero, size = CGSize.zero
                 if let p = attribute(e, "AXPosition") { AXValueGetValue(p as! AXValue, .cgPoint, &point) }
                 if let s = attribute(e, "AXSize") { AXValueGetValue(s as! AXValue, .cgSize, &size) }
-                found.append((index, (attribute(e, "AXTitle") as? String) ?? "", CGRect(origin: point, size: size)))
-                continue
+                found[id] = ((attribute(e, "AXTitle") as? String) ?? "", CGRect(origin: point, size: size))
             }
             if let kids = attribute(e, "AXChildren") as? [AXUIElement] { queue.append(contentsOf: kids) }
         }
-        return found.sorted { $0.index < $1.index }.map { ($0.title, $0.frame) }
+        return found
+    }
+
+    /// `TrackDeviceChainView` followed by one or more `.Device[n]`, and nothing else.
+    static func isDeviceIdentifier(_ id: String) -> Bool {
+        guard id.hasPrefix("TrackDeviceChainView.Device[") else { return false }
+        var rest = Substring(id.dropFirst("TrackDeviceChainView".count))
+        while !rest.isEmpty {
+            guard rest.hasPrefix(".Device["), let close = rest.firstIndex(of: "]") else { return false }
+            let digits = rest[rest.index(rest.startIndex, offsetBy: ".Device[".count)..<close]
+            guard !digits.isEmpty, digits.allSatisfy(\.isNumber) else { return false }
+            rest = rest[rest.index(after: close)...]
+        }
+        return true
     }
 
     // MARK: - Capturing (main thread)

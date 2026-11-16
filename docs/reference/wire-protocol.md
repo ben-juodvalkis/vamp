@@ -1265,12 +1265,13 @@ draws in its device view: it finds the device through Accessibility
 (`TrackDeviceChainView.Device[n]`) and captures only the meter's panel of
 Live's window. Bridge-terminated in both directions
 (`handlers/reductionMeter.js`), and dropped there while
-`features.reductionMeter` is off. Glue Compressor only, for now; top-level
-devices only.
+`features.reductionMeter` is off. Glue Compressor only, for now: on the
+track, in a Drum Rack pad's chain or in a rack chain (the one Live's device
+view shows, so the pad or chain Live has selected).
 
 | Address | Direction | Args | Notes |
 |---|---|---|---|
-| `/meter/reduction/watch` | UI→Bridge→App | `devicePath:string, index:int, className:string, names:string` | Read `devicePath`'s meter. `index` is its place among the track's top-level devices and `names` (JSON array) their names in order, so the app can check Live's device view shows that track. The page repeats it every 2 s while a meter is on screen and sends `'', -1, '', '[]'` when the last goes; the app stops 5 s after the last ask. The bridge sends it to the app's socket alone (the one the capture recorder knows from `/capture/input/hello`). |
+| `/meter/reduction/watch` | UI→Bridge→App | `devicePath:string, className:string, levels:string` | Read `devicePath`'s meter. `levels` (JSON) walks Live's device view from the outside in, one `[index, [names…]]` per level: the track's top-level devices, then for a device in a pad's or chain's chain that chain's devices, so the app can check Live shows what the page means (Live titles a renamed device or a rack "name, type"; either matches). The page repeats it every 2 s while a meter is on screen and sends `'', '', '[]'` when the last goes; the app stops 5 s after the last ask. The bridge sends it to the app's socket alone (the one the capture recorder knows from `/capture/input/hello`). |
 | `/meter/reduction` | App→Bridge→UI | `devicePath:string, db:float, status:string` | The reading, sent when it moves by 0.05 dB, its status changes or half a second passes; up to 30 a second. `db` is −1 unless `status` is `ok`. Statuses: `ok`, `not-shown` (Live's device view is not showing that device), `no-needle` (shown, but no needle: Live is on another Space, or the device is folded), `no-meter`, `no-accessibility`, `no-screen-recording`, `no-live`. The bridge marks the feature available on the first. |
 
 ### 2.16 Tone Shaper frames (Ben's Adaptive Tone Shaper, 2026-10-07)

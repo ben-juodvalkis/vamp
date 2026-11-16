@@ -151,15 +151,21 @@ final class AppState: ObservableObject {
         }
     }
 
-    /// `/meter/reduction/watch <devicePath> <index> <className> <names JSON>`;
-    /// nil (stop) for an empty path or a malformed ask.
+    /// `/meter/reduction/watch <devicePath> <className> <levels JSON>`, the
+    /// levels `[[index, [names…]], …]` outermost first; nil (stop) for an
+    /// empty path or a malformed ask.
     static func reductionWatch(_ args: [OSCArg]) -> ReductionReader.Watch? {
-        guard args.count >= 4, let path = args[0].stringValue, !path.isEmpty,
-              let index = args[1].intValue, index >= 0,
-              let className = args[2].stringValue,
-              let data = args[3].stringValue?.data(using: .utf8),
-              let names = try? JSONSerialization.jsonObject(with: data) as? [String]
+        guard args.count >= 3, let path = args[0].stringValue, !path.isEmpty,
+              let className = args[1].stringValue,
+              let data = args[2].stringValue?.data(using: .utf8),
+              let raw = try? JSONSerialization.jsonObject(with: data) as? [[Any]]
         else { return nil }
-        return ReductionReader.Watch(devicePath: path, index: index, className: className, names: names)
+        var levels: [ReductionReader.Watch.Level] = []
+        for level in raw {
+            guard level.count == 2, let index = level[0] as? Int, index >= 0, let names = level[1] as? [String] else { return nil }
+            levels.append(.init(index: index, names: names))
+        }
+        guard !levels.isEmpty else { return nil }
+        return ReductionReader.Watch(devicePath: path, className: className, levels: levels)
     }
 }

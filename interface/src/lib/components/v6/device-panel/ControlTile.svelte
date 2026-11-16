@@ -16,6 +16,7 @@
 	import type { ControlGlyphName } from './ControlGlyph.svelte';
 	import { controlFor, resolveParam, type Get, type ParamRef, type Writes } from './deviceControls';
 	import { isViewRegistered } from '$lib/components/v6/central/viewRegistry';
+	import ReductionNeedle from './ReductionNeedle.svelte';
 
 	interface Props {
 		/** The device type, a `DEVICE_PRESETS` key with a `deviceControls` entry. */
@@ -56,6 +57,8 @@
 	}
 
 	const control = $derived(controlFor(type));
+	/** The Glue's needle swings with the gain reduction Live shows, while there is a reading (ADR-541). */
+	let reduction = $state<number | undefined>();
 </script>
 
 {#if control}
@@ -70,6 +73,7 @@
 			{@const index = (ref: ParamRef) => resolveParam(ref, names)}
 			<!-- Before the device lands, what was written to it while it loaded. -->
 			{@const get = (ref: ParamRef) => (live ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(live, index(ref))) : pendingValue(index(ref)))}
+			{#if type === 'squash'}<ReductionNeedle devicePath={isGhost ? undefined : live?.devicePath} bind:level={reduction} />{/if}
 			<FaceControl
 				{control}
 				{get}
@@ -80,6 +84,7 @@
 				{orientation}
 				{labelSize}
 				{labelOrientation}
+				pictureLevel={type === 'squash' ? reduction : undefined}
 				onTap={() => {
 					if (!(tapLoads && isGhost)) return handleTap();
 					triggerLoad();

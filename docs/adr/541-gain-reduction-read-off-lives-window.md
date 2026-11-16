@@ -59,9 +59,16 @@ What remains is the picture Live already draws. Measured on the rig
   app stops 5 s after the last ask. A reason instead of a value when there is
   none: `not-shown`, `no-needle`, `no-accessibility`,
   `no-screen-recording`, `no-live`.
+- **Inside racks too.** Live shows a Drum Rack pad's (or rack chain's)
+  devices under the rack, as `TrackDeviceChainView.Device[0].Device[1]`, so
+  the ask walks levels: the track's devices, then the pad's or chain's, each
+  checked by its names. Measured on a pad's Glue (Memphis Studio + Plymouth,
+  pad 36): 2 to 16 dB with every kick.
 - **The page draws it** over the Glue view's Threshold and Makeup, where Live
   draws its own, on Live's 0–20 dB scale (`ReductionMeter.svelte`,
-  `reductionMeterStore`). A reading older than 1.5 s is not shown.
+  `reductionMeterStore`), and the Glue's chain cell swings its VU needle with
+  it (`ReductionNeedle.svelte`); with no reading the needle shows the
+  threshold, as before. A reading older than 1.5 s is not shown.
 - **Behind `reductionMeter`**, off by default: it asks for two macOS grants
   and needs Live on the current Space.
 
@@ -69,7 +76,8 @@ What remains is the picture Live already draws. Measured on the rig
 - Live must stay on the current Space; covered is fine. The meter says
   "Live is hidden" otherwise, rather than holding a value.
 - It reads only what Live's device view shows: the selected track's
-  top-level devices, unfolded and scrolled into view. A device elsewhere
+  devices, and the selected pad's or chain's inside a rack, unfolded and
+  scrolled into view. A device elsewhere
   reads `not-shown`. Track hold (the iPad showing a track Live has not
   selected) is one such case.
 - Live's layout is measured, not documented: a UI zoom other than 100% or a
@@ -79,7 +87,7 @@ What remains is the picture Live already draws. Measured on the rig
   ties Screen Recording and Accessibility to the build: expect to grant them
   again after a rebuild that changes the app.
 - Compressor, Limiter, Gate and Multiband Dynamics each need their own shape;
-  the Glue's chain cell has no meter yet.
+  until then their cells keep their pictures as they are.
 
 ## Tags
 ui, wire, vamp-for-mac, devices, measured
