@@ -152,7 +152,7 @@ describe('ReverbCentralView, the EQ tab', () => {
 		expect(c.querySelector('[data-reverb-eq]')).not.toBeNull();
 		expect(c.querySelector('[data-reverb-portrait]')).toBeNull();
 		expect(labels(c.querySelector('[data-reverb-own]'))).toEqual([
-			'Lo Slope 18 dB', 'Peak 1 Q 0.71', 'Peak 2 Q 0.71', 'Hi Gain 0.0 dB'
+			'Peak 1 Q 0.71', 'Peak 2 Q 0.71'
 		]);
 		const own = [...c.querySelectorAll('[data-reverb-own] [data-reverb-switch]')].map((b) => b.textContent?.trim());
 		expect(own).toEqual(['On', 'Pre Algo', 'Freeze', 'In']);
@@ -228,7 +228,7 @@ describe('ReverbCentralView, convolution', () => {
 		expect(c.querySelector('[data-reverb-switch="8"]')).toBeNull();
 		await pressTap(c.querySelector('[data-reverb-tab="eq"]')!);
 		expect(c.querySelector('[data-reverb-eq]')).not.toBeNull();
-		expect(labels(c.querySelector('[data-reverb-own]'))[1]).toBe('Peak 1 Q 0.71');
+		expect(labels(c.querySelector('[data-reverb-own]'))[0]).toBe('Peak 1 Q 0.71');
 	});
 
 	describe('Attack, Decay and Size reach Live on release only', () => {

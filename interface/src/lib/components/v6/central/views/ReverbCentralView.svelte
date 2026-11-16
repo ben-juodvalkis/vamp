@@ -24,9 +24,10 @@
    * Two tabs over the controls, as Live's device has: the algorithm's (or
    * IR) and EQ (2026-10-02). The EQ tab draws the reverb's own EQ as a curve
    * with a handle per band (`reverb/ReverbEqEditor`), and the group beside
-   * it trades the engine's controls for what the curve does not hold: each
-   * end's Cut or Shelf with its Slope or Gain, the peaks' Q, the EQ's On and
-   * Pre Algo. The shared group (Decay, Size, Predelay…) leaves the EQ tab
+   * it trades the engine's controls for what the curve does not hold: the
+   * peaks' Q, the EQ's On and Pre Algo (each end's Cut or Shelf sits under
+   * the curve, and its Slope or Gain is the handle's up and down, so the
+   * ends have no knobs since 2026-11-15). The shared group (Decay, Size, Predelay…) leaves the EQ tab
    * too (2026-11-15), so the curve and its knobs have the width; Freeze and
    * Dry/Wet keep their places on both tabs.
    *
@@ -504,7 +505,7 @@
   // engine's own group, the shared group, Dry/Wet.
   let layoutColumns = $derived(
     hasPicture
-      ? `minmax(0, 3fr) auto minmax(0, 1.5fr) auto minmax(60px, 0.6fr)`
+      ? `minmax(0, 3fr) auto minmax(0, 1fr) auto minmax(60px, 0.6fr)`
       : `minmax(0, 3fr) auto minmax(0, ${sharedCols}fr) auto minmax(60px, 0.6fr)`
   );
   /** The EQ band last touched: lit on the curve, named in its readout. */
@@ -760,9 +761,11 @@
 
           <!-- The engine's own controls, or the EQ's, as value boxes down two
                rows (ADR-477); an algorithm's Freeze in the bottom-right cell. -->
-          <div class="box-group" class:one-row={panel !== 'eq' && isConvolution} data-reverb-own>
+          <div class="box-group" class:one-row={panel !== 'eq' && isConvolution} class:eq-own={panel === 'eq'} data-reverb-own>
             {#if panel === 'eq'}
-              {#each eqRows as row (row.key)}
+              <!-- The peaks' Q: the ends' Slope or Gain is their handle's up
+                   and down on the curve. -->
+              {#each eqRows.filter((r) => r.type === undefined) as row (row.key)}
                 {@render sliderBox(row)}
               {/each}
               <div class="cell chips pair-cell">
@@ -909,13 +912,17 @@
     flex: 1 1 0;
   }
 
+  /* The last column, whichever the group has: three, or the EQ's two. */
   .pair-cell {
-    grid-column: 3;
+    grid-column: -2;
     grid-row: 1;
   }
   .freeze-cell {
-    grid-column: 3;
+    grid-column: -2;
     grid-row: 2;
+  }
+  .box-group.eq-own {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   /* Sized for a box about 60px wide: "Feedback" and "Diffusion" fit on one
