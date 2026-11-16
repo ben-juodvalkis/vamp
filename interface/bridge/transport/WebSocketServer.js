@@ -168,9 +168,11 @@ function replayTotalMixToClient(ws, totalmixLink, clientId) {
  *   (handlers/captureRecorder.js), which takes every capture start and stop
  * @param {Object} [pedals] - the bridge's pedals (handlers/pedals.js,
  *   ADR-538), which take the Settings page's pedal writes
+ * @param {Object} [reductionMeter] - the gain reduction relay
+ *   (handlers/reductionMeter.js, ADR-541)
  * @returns {Object} { httpServer, wss }
  */
-function createWebSocketServer(config, udpPorts, connectionStatus, metrics, healthMonitor, captureOverride, totalmixLink, axHelper = null, drumSwap = null, groupTracks = null, features = null, machine = null, captureRecorder = null, toneShaper = null, pedals = null) {
+function createWebSocketServer(config, udpPorts, connectionStatus, metrics, healthMonitor, captureOverride, totalmixLink, axHelper = null, drumSwap = null, groupTracks = null, features = null, machine = null, captureRecorder = null, toneShaper = null, pedals = null, reductionMeter = null) {
 
     // Launch mode ("dev" | "ipad"), announced to each client on connect via
     // /bridge/server_mode so WS clients (e.g. the menu-bar utility) can show
@@ -278,7 +280,8 @@ function createWebSocketServer(config, udpPorts, connectionStatus, metrics, heal
             machine,
             captureRecorder,
             toneShaper,
-            pedals
+            pedals,
+            reductionMeter
         });
     });
 
@@ -292,7 +295,7 @@ function createWebSocketServer(config, udpPorts, connectionStatus, metrics, heal
  * @param {Object} context - Context object with dependencies
  */
 function handleConnection(ws, request, context) {
-    const { udpPorts, connectionStatus, metrics, wss, healthMonitor, serverMode, captureOverride, totalmixLink, axHelper, drumSwap, groupTracks, features, machine, captureRecorder, toneShaper, pedals } = context;
+    const { udpPorts, connectionStatus, metrics, wss, healthMonitor, serverMode, captureOverride, totalmixLink, axHelper, drumSwap, groupTracks, features, machine, captureRecorder, toneShaper, pedals, reductionMeter } = context;
 
     // Generate unique client ID
     const clientId = `client_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -471,7 +474,9 @@ function handleConnection(ws, request, context) {
             // Remembers which Tone Shaper device this client is looking at.
             toneShaper,
             // Takes the Settings page's pedal writes (ADR-538).
-            pedals
+            pedals,
+            // Relays the gain reduction asks and readings (ADR-541).
+            reductionMeter
         });
     });
 
@@ -700,6 +705,12 @@ function dispatchClientMessage(ws, message, context) {
         // a client's ask for its devices. Bridge-terminated.
         if (context.captureRecorder && typeof message.address === 'string'
             && context.captureRecorder.onAppMessage(appSender(ws), message)) {
+            return;
+        }
+
+        // A device's gain reduction (ADR-541): the page's ask to Vamp for Mac,
+        // the app's readings to every client. Bridge-terminated.
+        if (context.reductionMeter && context.reductionMeter.onClientMessage(message)) {
             return;
         }
 

@@ -11,8 +11,9 @@
    *
    * Attack, Release and Ratio are stepped knobs stacked as Live stacks
    * them, a detent per step. Threshold and Makeup are the two large knobs
-   * in the middle, where Live has them under its gain-reduction meter (the
-   * meter is not on the wire, so it is not drawn). The chain cell's
+   * in the middle, under the gain-reduction meter, as in Live: Live puts the
+   * reduction on no wire, so Vamp for Mac reads Live's own needle and the
+   * meter shows it while the `reductionMeter` switch is on (ADR-541). The chain cell's
    * `SquashControl` moves those two together with one finger.
    *
    * Left out: Live's Sidechain column (External, Source, Mix, SC Gain). It
@@ -45,6 +46,7 @@
   import FaceSection from '../FaceSection.svelte';
   import FaceSeam from '../FaceSeam.svelte';
   import PanelEyebrow from './panel/PanelEyebrow.svelte';
+  import ReductionMeter from './panel/ReductionMeter.svelte';
 
   // The disabled/idle scheme is the neutral utility family (deviceInk-safe greys).
   const IDLE_SCHEME = { primary: '#a2acb7', secondary: 'color-mix(in oklab, var(--signal-dim) 10%, transparent)', accent: '#bbc5d1' };
@@ -196,44 +198,49 @@
 
   <FaceSection span={2}>
     {#snippet head()}<PanelEyebrow title="Compressor" color={ink.primary} />{/snippet}
-    <div class="col center" class:slot-ghost={squash.isGhost}>
-      <div class="knob">
-        <DeviceSlider
-          value={value(P.threshold)}
-          title="Threshold"
-          face="knob"
-          knobSize="xl"
-          knobFit
-          knobCaptionBelow
-          orientation="vertical"
-          min={-40}
-          max={0}
-          isGhost={squash.isGhost}
-          color={ink}
-          readout={squash.paramDisplay(P.threshold)}
-          onTap={() => squash.loadIfGhost()}
-          onInteraction={(v) => squash.sendParam(P.threshold, v)}
-        />
-      </div>
-    </div>
-    <div class="col center" class:slot-ghost={squash.isGhost}>
-      <div class="knob">
-        <DeviceSlider
-          value={value(P.output)}
-          title="Makeup"
-          face="knob"
-          knobSize="xl"
-          knobFit
-          knobCaptionBelow
-          orientation="vertical"
-          min={0}
-          max={20}
-          isGhost={squash.isGhost}
-          color={ink}
-          readout={squash.paramDisplay(P.output)}
-          onTap={() => squash.loadIfGhost()}
-          onInteraction={(v) => squash.sendParam(P.output, v)}
-        />
+    <div class="face-span-2 comp">
+      <ReductionMeter devicePath={squash.isGhost ? undefined : squash.devicePath} color={ink.primary} />
+      <div class="comp-knobs">
+        <div class="col center" class:slot-ghost={squash.isGhost}>
+          <div class="knob">
+            <DeviceSlider
+              value={value(P.threshold)}
+              title="Threshold"
+              face="knob"
+              knobSize="xl"
+              knobFit
+              knobCaptionBelow
+              orientation="vertical"
+              min={-40}
+              max={0}
+              isGhost={squash.isGhost}
+              color={ink}
+              readout={squash.paramDisplay(P.threshold)}
+              onTap={() => squash.loadIfGhost()}
+              onInteraction={(v) => squash.sendParam(P.threshold, v)}
+            />
+          </div>
+        </div>
+        <div class="col center" class:slot-ghost={squash.isGhost}>
+          <div class="knob">
+            <DeviceSlider
+              value={value(P.output)}
+              title="Makeup"
+              face="knob"
+              knobSize="xl"
+              knobFit
+              knobCaptionBelow
+              orientation="vertical"
+              min={0}
+              max={20}
+              isGhost={squash.isGhost}
+              color={ink}
+              readout={squash.paramDisplay(P.output)}
+              onTap={() => squash.loadIfGhost()}
+              onInteraction={(v) => squash.sendParam(P.output, v)}
+            />
+          </div>
+        </div>
       </div>
     </div>
   </FaceSection>
@@ -311,6 +318,22 @@
   }
   .center {
     justify-content: center;
+  }
+
+  /* The Compressor section: the gain-reduction meter across both columns,
+     Threshold and Makeup under it (ADR-541). */
+  .comp {
+    display: flex;
+    flex-direction: column;
+    gap: var(--face-gutter);
+    min-height: 0;
+  }
+  .comp-knobs {
+    flex: 1 1 0;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--face-gutter);
   }
 
   /* The filter's switch and type on one touch row. */

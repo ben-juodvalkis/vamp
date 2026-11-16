@@ -1258,6 +1258,21 @@ client is **bridge-terminated** (`WebSocketServer.dispatchClientMessage`).
 | `/capture/input/choice` | Bridge→UI | `choice:string` (JSON as above, `''` none set yet) | The rig's input choice, which every screen follows. A screen holding one of its own answers `''` by setting it. |
 | `/looping/v3/session/file_path/query` | Bridge→Surf | — | The set's `.als` (`Song.file_path`), `''` while unsaved; the reply comes back on this address. **Bridge-terminated**: never relayed to clients. |
 
+### 2.15b Gain reduction, read off Live's window (ADR-541, 2026-11-16)
+
+Live puts no gain reduction on the LOM. Vamp for Mac reads the needle Live
+draws in its device view: it finds the device through Accessibility
+(`TrackDeviceChainView.Device[n]`) and captures only the meter's panel of
+Live's window. Bridge-terminated in both directions
+(`handlers/reductionMeter.js`), and dropped there while
+`features.reductionMeter` is off. Glue Compressor only, for now; top-level
+devices only.
+
+| Address | Direction | Args | Notes |
+|---|---|---|---|
+| `/meter/reduction/watch` | UI→Bridge→App | `devicePath:string, index:int, className:string, names:string` | Read `devicePath`'s meter. `index` is its place among the track's top-level devices and `names` (JSON array) their names in order, so the app can check Live's device view shows that track. The page repeats it every 2 s while a meter is on screen and sends `'', -1, '', '[]'` when the last goes; the app stops 5 s after the last ask. The bridge sends it to the app's socket alone (the one the capture recorder knows from `/capture/input/hello`). |
+| `/meter/reduction` | App→Bridge→UI | `devicePath:string, db:float, status:string` | The reading, sent when it moves by 0.05 dB, its status changes or half a second passes; up to 30 a second. `db` is −1 unless `status` is `ok`. Statuses: `ok`, `not-shown` (Live's device view is not showing that device), `no-needle` (shown, but no needle: Live is on another Space, or the device is folded), `no-meter`, `no-accessibility`, `no-screen-recording`, `no-live`. The bridge marks the feature available on the first. |
+
 ### 2.16 Tone Shaper frames (Ben's Adaptive Tone Shaper, 2026-10-07)
 
 Ben's Adaptive Tone Shaper's graph in the EQ view (`ToneShaperGraph`) draws

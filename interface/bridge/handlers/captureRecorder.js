@@ -496,6 +496,11 @@ function createCaptureRecorder({
             return true;
         },
 
+        /** A send to Vamp for Mac's socket while its hellos arrive, else null (ADR-541). */
+        appSend() {
+            return app ? app.send : null;
+        },
+
         /** For tests: the rig's input choice. */
         inputChoice() {
             return choice;

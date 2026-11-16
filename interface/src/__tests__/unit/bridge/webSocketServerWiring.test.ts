@@ -212,6 +212,7 @@ describe('WebSocket server wiring', () => {
 			expressionPedal: { enabled: false, available: false, reason: '' },
 			menubar: { enabled: false, available: false, reason: '' },
 			axHelper: { enabled: false, available: false, reason: '' },
+			reductionMeter: { enabled: false, available: false, reason: '' },
 			captureRecorder: { enabled: true, available: false, reason: '' }
 		});
 		expect(h.errors.map((e) => e.message)).toEqual([]);

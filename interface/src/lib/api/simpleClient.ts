@@ -140,6 +140,7 @@ import {
 	V3_SELECTED_SCENE_ADDRESS
 } from './handlers/v3SelectedScene';
 import { captureStore } from '$lib/stores/v6/captureStore.svelte';
+import { reductionMeterStore, READING_ADDRESS as REDUCTION_ADDRESS } from '$lib/stores/v6/reductionMeterStore.svelte';
 import { triggeredSlotsStore } from '$lib/stores/v6/triggeredSlotsStore.svelte';
 
 // ============================================
@@ -310,6 +311,12 @@ function routeMessage(address: string, args: OSCArg[]): void {
 	// Priority 2.5: Capture Messages (/capture/*)
 	if (address.startsWith('/capture/')) {
 		captureStore.handleMessage(address, args);
+		return;
+	}
+
+	// A device's gain reduction, read off Live's window by Vamp for Mac (ADR-541).
+	if (address === REDUCTION_ADDRESS) {
+		reductionMeterStore.handleMessage(address, args);
 		return;
 	}
 

@@ -375,6 +375,16 @@ const captureRecorder = createCaptureRecorder({
     broadcast: (address, args) => broadcastBatcher.enqueue({ address, args, source: 'bridge' })
 });
 
+// A device's gain reduction, read off Live's window by Vamp for Mac (ADR-541):
+// the page's ask goes to the app the capture recorder knows, the readings to
+// every client. Behind `features.reductionMeter`.
+const { createReductionMeter } = require('./handlers/reductionMeter');
+const reductionMeter = createReductionMeter({
+    features,
+    appSend: () => captureRecorder.appSend(),
+    broadcast: (address, args) => broadcastBatcher.enqueue({ address, args, source: 'bridge' })
+});
+
 // Ben's Adaptive Tone Shaper's graph (handlers/toneShaper.js): every instance
 // in the set streams its spectrum and curve here; only the one a client
 // watches goes on to the clients.
@@ -457,7 +467,8 @@ const { httpServer, wss } = createWebSocketServer(
     machine,
     captureRecorder,
     toneShaper,
-    pedals);
+    pedals,
+    reductionMeter);
 wssRef = wss;
 
 // Surf→UI broadcast batcher. Wraps the per-client fan-out so a burst

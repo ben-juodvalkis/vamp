@@ -27,7 +27,9 @@
  * `expressionPedal` (the wah pedal: its two CCs on the surface, the Pedal
  * view's Wah button), `menubar` (the owner's menu-bar app, launched by the
  * start scripts) and `axHelper` (the Accessibility helper behind Reverse,
- * Group, the held pad's similar-sample swap and the iPad Save As). The loop
+ * Group, the held pad's similar-sample swap and the iPad Save As) and
+ * `reductionMeter` (a device's gain reduction, read off Live's window by Vamp
+ * for Mac, ADR-541). The loop
  * pedal is not a feature switch — it is a user setting with Learn, owned by
  * this bridge (`handlers/pedals.js`, ADR-538). §7b lists the rest, in the order they
  * will follow; each one joins FEATURE_IDS when it is gated.
@@ -42,7 +44,7 @@
 const { EventEmitter } = require('events');
 
 /** Every switch this bridge honours. A subsystem joins when it is gated. */
-const FEATURE_IDS = Object.freeze(['totalmix', 'midiControllers', 'expressionPedal', 'menubar', 'axHelper']);
+const FEATURE_IDS = Object.freeze(['totalmix', 'midiControllers', 'expressionPedal', 'menubar', 'axHelper', 'reductionMeter']);
 
 /** In every edition: always enabled, never read from the config. */
 const BUILT_IN_IDS = Object.freeze(['captureRecorder']);
