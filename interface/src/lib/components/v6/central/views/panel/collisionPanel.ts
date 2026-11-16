@@ -32,7 +32,11 @@ function resonatorGroup(n: 1 | 2): PanelGroup {
 		title: `Resonator ${n}`,
 		page: `res${n}`,
 		switchParam: `${r} On/Off`,
+		// The LFO tab's six columns: the type's tab takes three, the knobs pair in the rest.
+		columns: 6,
 		controls: [
+			// The object first: what is struck is the resonator's first choice.
+			{ kind: 'choice', param: `${r} Type`, title: 'Type', options: RES_TYPES },
 			{ kind: 'box', param: `${r} Decay`, title: 'Decay' },
 			{ kind: 'box', param: `${r} Material`, title: 'Material' },
 			{ kind: 'box', param: `${r} Brightness`, title: 'Bright' },
