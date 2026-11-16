@@ -375,11 +375,11 @@ const captureRecorder = createCaptureRecorder({
     broadcast: (address, args) => broadcastBatcher.enqueue({ address, args, source: 'bridge' })
 });
 
-// A device's gain reduction, read off Live's window by Vamp for Mac (ADR-541):
-// the page's ask goes to the app the capture recorder knows, the readings to
-// every client. Behind `features.reductionMeter`.
-const { createReductionMeter } = require('./handlers/reductionMeter');
-const reductionMeter = createReductionMeter({
+// What a device's panel shows in Live (a needle, a spectrum), read off Live's
+// window by Vamp for Mac (ADR-541): the page's ask goes to the app the capture
+// recorder knows, the readings to every client. Behind `features.liveMeters`.
+const { createLiveMeters } = require('./handlers/liveMeters');
+const liveMeters = createLiveMeters({
     features,
     appSend: () => captureRecorder.appSend(),
     broadcast: (address, args) => broadcastBatcher.enqueue({ address, args, source: 'bridge' })
@@ -468,7 +468,7 @@ const { httpServer, wss } = createWebSocketServer(
     captureRecorder,
     toneShaper,
     pedals,
-    reductionMeter);
+    liveMeters);
 wssRef = wss;
 
 // Surf→UI broadcast batcher. Wraps the per-client fan-out so a burst

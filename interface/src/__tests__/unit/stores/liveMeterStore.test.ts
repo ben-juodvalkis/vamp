@@ -1,6 +1,6 @@
 /**
- * The gain reduction meter's store (ADR-541): what a held device asks Vamp
- * for Mac for, when it stops asking, and what a reading lands as.
+ * The live meters' store (ADR-541): what a held device asks Vamp for Mac
+ * for, when it stops asking, and what a reading of either kind lands as.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -8,7 +8,7 @@ vi.mock('$lib/api/simpleClient', () => ({ send: vi.fn() }));
 
 import { send } from '$lib/api/simpleClient';
 import { replaceTree, mergePadChain, mergeRackChain, _resetForTests, type TrackRecord, type DeviceRecord } from '$lib/stores/v3/normalized.svelte';
-import { reductionMeterStore, watchArgs, WATCH_ADDRESS, READING_ADDRESS } from '$lib/stores/v6/reductionMeterStore.svelte';
+import { liveMeterStore, watchArgs, bandHz, WATCH_ADDRESS, REDUCTION_ADDRESS, SPECTRUM_ADDRESS, METERED_CLASSES } from '$lib/stores/v6/liveMeterStore.svelte';
 
 const sendMock = vi.mocked(send);
 const STOP = ['', '', '[]'];
@@ -30,7 +30,7 @@ function track(trackPath: string, devices: DeviceRecord[]): TrackRecord {
 beforeEach(() => {
 	vi.useFakeTimers();
 	_resetForTests();
-	reductionMeterStore.reset();
+	liveMeterStore.reset();
 	sendMock.mockClear();
 	replaceTree(1, [
 		track('tracks/2', [
@@ -95,9 +95,9 @@ describe('watchArgs', () => {
 	});
 });
 
-describe('reductionMeterStore', () => {
+describe('liveMeterStore', () => {
 	it('asks at once, every 2 s while held, and stops on release', () => {
-		const release = reductionMeterStore.hold('tracks/2/devices/1');
+		const release = liveMeterStore.hold('tracks/2/devices/1');
 		expect(sendMock).toHaveBeenCalledTimes(1);
 		expect(sendMock.mock.calls[0][0]).toBe(WATCH_ADDRESS);
 		expect(sendMock.mock.calls[0]?.[1]?.[0]).toBe('tracks/2/devices/1');
@@ -109,22 +109,50 @@ describe('reductionMeterStore', () => {
 		expect(sendMock).toHaveBeenCalledTimes(4);
 	});
 
-	it('the newest hold wins, and releasing it goes back to the one before', () => {
-		const first = reductionMeterStore.hold('tracks/2/devices/1');
-		const second = reductionMeterStore.hold('tracks/2/devices/0');
-		expect(sendMock).toHaveBeenLastCalledWith(WATCH_ADDRESS, STOP); // Operator has no meter
-		second();
-		expect(sendMock.mock.lastCall?.[1]?.[0]).toBe('tracks/2/devices/1');
-		first();
+	it('asks for every held device each round, and stops all when the last goes', () => {
+		const glue = liveMeterStore.hold('tracks/2/devices/1');
+		const bus = liveMeterStore.hold('tracks/3/devices/0/chains/1/devices/1');
+		const operator = liveMeterStore.hold('tracks/2/devices/0'); // no meter: not asked for
+		sendMock.mockClear();
+		vi.advanceTimersByTime(2000);
+		expect(sendMock.mock.calls.map((c) => c[1]?.[0])).toEqual(['tracks/2/devices/1', 'tracks/3/devices/0/chains/1/devices/1']);
+		operator();
+		bus();
+		sendMock.mockClear();
+		vi.advanceTimersByTime(2000);
+		expect(sendMock.mock.calls.map((c) => c[1]?.[0])).toEqual(['tracks/2/devices/1']);
+		glue();
 		expect(sendMock).toHaveBeenLastCalledWith(WATCH_ADDRESS, STOP);
 	});
 
 	it('keeps the latest reading per device and drops malformed ones', () => {
-		reductionMeterStore.handleMessage(READING_ADDRESS, ['tracks/2/devices/1', 12.79, 'ok']);
-		reductionMeterStore.handleMessage(READING_ADDRESS, ['tracks/2/devices/1', '4', 'ok']);
-		expect(reductionMeterStore.readingFor('tracks/2/devices/1')).toMatchObject({ db: 12.79, status: 'ok' });
-		reductionMeterStore.handleMessage(READING_ADDRESS, ['tracks/2/devices/1', -1, 'not-shown']);
-		expect(reductionMeterStore.readingFor('tracks/2/devices/1')).toMatchObject({ db: -1, status: 'not-shown' });
-		expect(reductionMeterStore.readingFor('tracks/2/devices/0')).toBeNull();
+		liveMeterStore.handleMessage(REDUCTION_ADDRESS, ['tracks/2/devices/1', 12.79, 'ok']);
+		liveMeterStore.handleMessage(REDUCTION_ADDRESS, ['tracks/2/devices/1', '4', 'ok']);
+		expect(liveMeterStore.readingFor('tracks/2/devices/1')).toMatchObject({ kind: 'reduction', values: [12.79], status: 'ok' });
+		liveMeterStore.handleMessage(REDUCTION_ADDRESS, ['tracks/2/devices/1', -1, 'not-shown']);
+		expect(liveMeterStore.readingFor('tracks/2/devices/1')).toMatchObject({ values: [], status: 'not-shown' });
+		expect(liveMeterStore.readingFor('tracks/2/devices/0')).toBeNull();
+	});
+
+	it("keeps a spectrum's bands, and drops one with a non-number band", () => {
+		const bands = Array.from({ length: 64 }, (_, i) => -60 + i / 2);
+		liveMeterStore.handleMessage(SPECTRUM_ADDRESS, ['tracks/4/devices/0', 'ok', ...bands]);
+		expect(liveMeterStore.readingFor('tracks/4/devices/0')).toMatchObject({ kind: 'spectrum', values: bands, status: 'ok' });
+		liveMeterStore.handleMessage(SPECTRUM_ADDRESS, ['tracks/4/devices/0', 'ok', -3, 'x']);
+		expect(liveMeterStore.readingFor('tracks/4/devices/0')?.values).toEqual(bands);
+	});
+});
+
+describe('the standard spectrum grid', () => {
+	it('puts 64 band centres log-spaced across 20 Hz–20 kHz', () => {
+		expect(bandHz(0)).toBeCloseTo(20 * Math.pow(1000, 0.5 / 64), 6);
+		expect(bandHz(63)).toBeCloseTo(20000 / Math.pow(1000, 0.5 / 64), 3);
+		expect(bandHz(31) * bandHz(32)).toBeCloseTo(20 * 20000, 0);
+	});
+
+	it('meters the Glue by its needle and the Auto Filter and Channel EQ by their spectrum', () => {
+		expect(METERED_CLASSES.get('GlueCompressor')).toBe('reduction');
+		expect(METERED_CLASSES.get('AutoFilter2')).toBe('spectrum');
+		expect(METERED_CLASSES.get('ChannelEq')).toBe('spectrum');
 	});
 });

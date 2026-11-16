@@ -3,21 +3,22 @@ import ApplicationServices
 import CoreMedia
 import ScreenCaptureKit
 
-/// The gain reduction a device's meter shows in Live's window (ADR-541).
+/// What a device's panel shows in Live's window that the LOM does not carry
+/// (ADR-541): a needle meter's dB, a spectrum's bands.
 ///
-/// The page asks with `/meter/reduction/watch` every couple of seconds while
-/// it shows a device that has a meter; the reader follows the latest ask and
+/// The page asks with `/meter/watch` every couple of seconds while it shows
+/// a metered device (`LiveMeterHub` keeps one reader per device); a reader follows its ask and
 /// stops 5 s after the asks stop, as `InputMonitor` does. It finds the device
 /// in Live's device view through Accessibility
 /// (`TrackDeviceChainView.Device[n]`, and `….Device[n].Device[k]` for a
 /// device in the chain of a rack's selected pad or chain), checking at each
 /// level that the view lists the devices the page means, captures that
 /// device of Live's window with ScreenCaptureKit, finds the meter in the
-/// picture and reads the needle (`ReductionMeter`).
+/// picture and reads it (`LiveMeter`: a needle's dB, a spectrum's bands).
 ///
 /// Live must be on the current Space: covered by other windows it still
 /// draws, but on another Space it does not (measured 2026-11-16).
-final class ReductionReader: NSObject, SCStreamOutput, SCStreamDelegate {
+final class LiveMeterReader: NSObject, SCStreamOutput, SCStreamDelegate {
     struct Watch: Equatable {
         /// One level of Live's device view, outermost first: the device's
         /// index there and the names of every device at that level, in order.
@@ -27,7 +28,7 @@ final class ReductionReader: NSObject, SCStreamOutput, SCStreamDelegate {
             var names: [String?]
         }
         var devicePath: String
-        /// Live's class name, which picks the meter's shape.
+        /// Live's class name, which picks the meter's kind (`LiveMeter.kinds`).
         var className: String
         /// The track's top-level devices, then (for a device in a rack) the
         /// devices of the pad's or chain's chain Live shows, and so on.
@@ -39,16 +40,31 @@ final class ReductionReader: NSObject, SCStreamOutput, SCStreamDelegate {
     /// `no-needle` (shown, but no needle in the picture: folded, or Live is
     /// on another Space), `no-meter` (a device this reader has no shape for),
     /// `no-accessibility`, `no-screen-recording`, `no-live`.
-    var onReading: ((String, Double, String) -> Void)?
+    var onReading: ((Reading) -> Void)?
+
+    /// One reading: `kind` is `reduction` (values: one dB) or `spectrum`
+    /// (values: `LiveMeter.bandCount` dB on the standard grid); values are
+    /// empty unless status is `ok`.
+    struct Reading {
+        var devicePath: String
+        var kind: String
+        var values: [Double]
+        var status: String
+    }
+
+    /// Which Live, when more than one is open: the one Vamp's surface runs in
+    /// (it listens on this port). Live 12 and 13 share one bundle identifier.
+    var surfacePort: UInt16 = 11022
 
     static let idleAfter: TimeInterval = 5
     static let fps: Int32 = 30
-    /// Pixels per point captured: 1 reads to ±0.35 dB (ReductionMeterTests)
+    /// Pixels per point captured: 1 reads to ±0.35 dB (LiveMeterTests)
     /// at a quarter of 2's pixels.
     static let scale: Double = 1
     /// A reading is sent when it moves this much, or every `heartbeat`.
     static let minimumChange = 0.05
     static let heartbeat: TimeInterval = 0.5
+    static let spectrumChange = 0.5
     /// Captured around the device's Accessibility frame, in points.
     static let margin = CGSize(width: 12, height: 40)
 
@@ -70,9 +86,11 @@ final class ReductionReader: NSObject, SCStreamOutput, SCStreamDelegate {
     private var chainView: AXUIElement?
 
     // frameQueue.
-    private var shape: ReductionMeterShape?
+    private var kind: LiveMeterKind?
     private var streamingPath = ""
-    private var lastSent = (db: -2.0, status: "", at: Date.distantPast)
+    private var lastSent = (values: [Double](), status: "", at: Date.distantPast)
+    /// The Live this reader reads: by pid, with the pids it was chosen among.
+    private var livePid: (pid: pid_t, among: Set<pid_t>)?
     private var lastFrameAt = Date.distantPast
 
     /// The page's ask: read `next`, or stop for nil.
@@ -99,8 +117,8 @@ final class ReductionReader: NSObject, SCStreamOutput, SCStreamDelegate {
     private func tick() {
         guard let watch else { return }
         if Date().timeIntervalSince(lastAsk) > Self.idleAfter { close(); return }
-        guard let shape = ReductionMeter.shapes[watch.className] else {
-            report(watch.devicePath, -1, "no-meter"); return
+        guard let kind = LiveMeter.kinds[watch.className] else {
+            report(watch.devicePath, "reduction", "no-meter"); return
         }
         if !AXIsProcessTrusted() {
             if !askedForAccessibility {
@@ -108,11 +126,11 @@ final class ReductionReader: NSObject, SCStreamOutput, SCStreamDelegate {
                 let prompt = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
                 _ = AXIsProcessTrustedWithOptions([prompt: true] as CFDictionary)
             }
-            report(watch.devicePath, -1, "no-accessibility"); return
+            report(watch.devicePath, kind.name, "no-accessibility"); return
         }
         if !CGPreflightScreenCaptureAccess() {
             if !askedForScreen { askedForScreen = true; _ = CGRequestScreenCaptureAccess() }
-            report(watch.devicePath, -1, "no-screen-recording"); return
+            report(watch.devicePath, kind.name, "no-screen-recording"); return
         }
         axQueue.async { [weak self] in
             guard let self else { return }
@@ -122,9 +140,9 @@ final class ReductionReader: NSObject, SCStreamOutput, SCStreamDelegate {
                 switch located {
                 case .failure(let status):
                     self.stopStream()
-                    self.report(watch.devicePath, -1, status)
+                    self.report(watch.devicePath, kind.name, status)
                 case .success(let device):
-                    self.follow(device, shape: shape, watch: watch)
+                    self.follow(device, kind: kind, watch: watch)
                 }
             }
         }
@@ -135,8 +153,7 @@ final class ReductionReader: NSObject, SCStreamOutput, SCStreamDelegate {
     private enum Located { case success(CGRect), failure(String) }
 
     private func locate(_ watch: Watch) -> Located {
-        guard let live = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == "com.ableton.live" })
-        else { chainView = nil; return .failure("no-live") }
+        guard let live = liveApp() else { chainView = nil; return .failure("no-live") }
         var devices = chainView.map(Self.devices(in:)) ?? [:]
         if devices.isEmpty {
             chainView = Self.findChainView(AXUIElementCreateApplication(live.processIdentifier))
@@ -152,6 +169,29 @@ final class ReductionReader: NSObject, SCStreamOutput, SCStreamDelegate {
         }
         guard let device = devices[parent] else { return .failure("not-shown") }
         return .success(device.frame)
+    }
+
+    /// The Live to read: the only one, or of several the one whose process
+    /// listens on Vamp's surface port (asked of `lsof` once per set of Lives).
+    private func liveApp() -> NSRunningApplication? {
+        let lives = NSWorkspace.shared.runningApplications.filter { $0.bundleIdentifier == "com.ableton.live" }
+        guard lives.count > 1 else { livePid = nil; return lives.first }
+        let pids = Set(lives.map(\.processIdentifier))
+        if let chosen = livePid, chosen.among == pids { return lives.first { $0.processIdentifier == chosen.pid } }
+        let lsof = Process()
+        lsof.executableURL = URL(fileURLWithPath: "/usr/sbin/lsof")
+        lsof.arguments = ["-nP", "-iTCP:\(surfacePort)", "-sTCP:LISTEN", "-t"]
+        let out = Pipe()
+        lsof.standardOutput = out
+        lsof.standardError = FileHandle.nullDevice
+        guard (try? lsof.run()) != nil else { return nil }
+        lsof.waitUntilExit()
+        let listening = Set(String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+            .split(whereSeparator: \.isNewline).compactMap { pid_t($0) })
+        guard let live = lives.first(where: { listening.contains($0.processIdentifier) }) else { return nil }
+        livePid = (live.processIdentifier, pids)
+        VampLog.line("live meters: \(lives.count) Lives open; reading pid \(live.processIdentifier), which runs Vamp's surface")
+        return live
     }
 
     /// Live titles a device "name" or, renamed or a rack, "name, type"
@@ -219,12 +259,17 @@ final class ReductionReader: NSObject, SCStreamOutput, SCStreamDelegate {
 
     // MARK: - Capturing (main thread)
 
-    private func follow(_ device: CGRect, shape: ReductionMeterShape, watch: Watch) {
+    /// The Live being read (set by `liveApp` on the AX queue; a plain read is fine).
+    private var livePidNow: pid_t? {
+        livePid?.pid ?? NSWorkspace.shared.runningApplications.first { $0.bundleIdentifier == "com.ableton.live" }?.processIdentifier
+    }
+
+    private func follow(_ device: CGRect, kind: LiveMeterKind, watch: Watch) {
         if stream != nil {
             // Frames stop when Live is on another Space; say so rather than hold the last value.
             frameQueue.async { [weak self] in
                 guard let self, Date().timeIntervalSince(self.lastFrameAt) > 1.5 else { return }
-                self.send(watch.devicePath, -1, "no-needle", force: false)
+                self.send(watch.devicePath, kind.name, [], "no-needle")
             }
         }
         guard !starting else { return }
@@ -233,9 +278,9 @@ final class ReductionReader: NSObject, SCStreamOutput, SCStreamDelegate {
             defer { self.starting = false }
             guard let content = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false),
                   let window = content.windows
-                    .filter({ $0.owningApplication?.bundleIdentifier == "com.ableton.live" && $0.windowLayer == 0 && $0.frame.contains(device) })
+                    .filter({ $0.owningApplication?.processID == self.livePidNow && $0.windowLayer == 0 && $0.frame.contains(device) })
                     .max(by: { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height })
-            else { self.stopStream(); self.report(watch.devicePath, -1, "not-shown"); return }
+            else { self.stopStream(); self.report(watch.devicePath, kind.name, "not-shown"); return }
             // The device and a margin: ScreenCaptureKit's window coordinates and
             // Accessibility's can differ by the window's origin (33 pt in a
             // full-height window), so the panel is found in the picture.
@@ -266,13 +311,13 @@ final class ReductionReader: NSObject, SCStreamOutput, SCStreamDelegate {
                     self.streamWindowID = window.windowID
                 }
                 // After any stop above: its clear is queued on frameQueue ahead of this.
-                self.frameQueue.async { self.shape = shape; self.streamingPath = watch.devicePath }
+                self.frameQueue.async { self.kind = kind; self.streamingPath = watch.devicePath }
                 if rect != self.sourceRect {
-                    VampLog.line("reduction: reading \(watch.className) at \(watch.devicePath), \(rect)")
+                    VampLog.line("live meters: reading \(watch.className) at \(watch.devicePath), \(rect)")
                 }
                 self.sourceRect = rect
             } catch {
-                VampLog.line("reduction: capture failed: \(error.localizedDescription)")
+                VampLog.line("live meters: capture failed: \(error.localizedDescription)")
                 self.stopStream()
             }
         }
@@ -283,26 +328,34 @@ final class ReductionReader: NSObject, SCStreamOutput, SCStreamDelegate {
         stream = nil
         streamWindowID = 0
         sourceRect = .zero
-        frameQueue.async { [weak self] in self?.streamingPath = ""; self?.shape = nil }
+        frameQueue.async { [weak self] in self?.streamingPath = ""; self?.kind = nil }
     }
 
     // MARK: - Frames (frameQueue)
 
     func stream(_ stream: SCStream, didOutputSampleBuffer buffer: CMSampleBuffer, of type: SCStreamOutputType) {
-        guard type == .screen, let shape, !streamingPath.isEmpty, let image = buffer.imageBuffer else { return }
+        guard type == .screen, let kind, !streamingPath.isEmpty, let image = buffer.imageBuffer else { return }
         lastFrameAt = Date()
         CVPixelBufferLockBaseAddress(image, .readOnly)
         defer { CVPixelBufferUnlockBaseAddress(image, .readOnly) }
         guard let base = CVPixelBufferGetBaseAddress(image) else { return }
-        let db = ReductionMeter.reading(
-            pixels: base.assumingMemoryBound(to: UInt8.self),
-            width: CVPixelBufferGetWidth(image), height: CVPixelBufferGetHeight(image),
-            bytesPerRow: CVPixelBufferGetBytesPerRow(image), scale: Self.scale, shape: shape)
-        if let db { send(streamingPath, db, "ok", force: false) } else { send(streamingPath, -1, "no-needle", force: false) }
+        let pixels = base.assumingMemoryBound(to: UInt8.self)
+        let width = CVPixelBufferGetWidth(image), height = CVPixelBufferGetHeight(image)
+        let bytesPerRow = CVPixelBufferGetBytesPerRow(image)
+        let values: [Double]?
+        switch kind {
+        case .needle(let shape):
+            values = LiveMeter.reading(pixels: pixels, width: width, height: height, bytesPerRow: bytesPerRow,
+                                       scale: Self.scale, shape: shape).map { [($0 * 100).rounded() / 100] }
+        case .spectrum(let shape):
+            values = LiveMeter.spectrum(pixels: pixels, width: width, height: height, bytesPerRow: bytesPerRow,
+                                        scale: Self.scale, shape: shape)
+        }
+        if let values { send(streamingPath, kind.name, values, "ok") } else { send(streamingPath, kind.name, [], "no-needle") }
     }
 
     func stream(_ stream: SCStream, didStopWithError error: Error) {
-        VampLog.line("reduction: capture stopped: \(error.localizedDescription)")
+        VampLog.line("live meters: capture stopped: \(error.localizedDescription)")
         DispatchQueue.main.async { [weak self] in
             guard let self, self.stream === stream else { return }
             self.stream = nil
@@ -311,18 +364,66 @@ final class ReductionReader: NSObject, SCStreamOutput, SCStreamDelegate {
         }
     }
 
-    /// On frameQueue: send if it changed enough, or the heartbeat is due.
-    private func send(_ path: String, _ db: Double, _ status: String, force: Bool) {
+    /// On frameQueue: send if it changed enough (a needle by 0.05 dB, any
+    /// spectrum band by 0.5 dB), its status changed, or the heartbeat is due.
+    private func send(_ path: String, _ kind: String, _ values: [Double], _ status: String) {
         let now = Date()
-        let moved = abs(db - lastSent.db) >= Self.minimumChange || status != lastSent.status
-        guard force || moved || now.timeIntervalSince(lastSent.at) >= Self.heartbeat else { return }
-        lastSent = (db, status, now)
-        let rounded = (db * 100).rounded() / 100
-        DispatchQueue.main.async { [weak self] in self?.onReading?(path, rounded, status) }
+        let threshold = kind == "spectrum" ? Self.spectrumChange : Self.minimumChange
+        let moved = status != lastSent.status || values.count != lastSent.values.count
+            || zip(values, lastSent.values).contains { abs($0 - $1) >= threshold }
+        guard moved || now.timeIntervalSince(lastSent.at) >= Self.heartbeat else { return }
+        lastSent = (values, status, now)
+        let reading = Reading(devicePath: path, kind: kind, values: values, status: status)
+        DispatchQueue.main.async { [weak self] in self?.onReading?(reading) }
     }
 
     /// On the main thread, for statuses found outside a frame.
-    private func report(_ path: String, _ db: Double, _ status: String) {
-        frameQueue.async { [weak self] in self?.send(path, db, status, force: false) }
+    private func report(_ path: String, _ kind: String, _ status: String) {
+        frameQueue.async { [weak self] in self?.send(path, kind, [], status) }
+    }
+}
+
+/// Every device the page asks about, each read by its own `LiveMeterReader`
+/// on its own capture stream (ADR-542): the chain shows several metered
+/// devices at once. Each reader stops 5 s after its own last ask; an empty
+/// ask stops them all.
+final class LiveMeterHub {
+    var onReading: ((LiveMeterReader.Reading) -> Void)?
+    var surfacePort: UInt16 = 11022
+    private var readers: [String: (reader: LiveMeterReader, lastAsk: Date)] = [:]
+    private var sweep: Timer?
+
+    func keep(_ watch: LiveMeterReader.Watch?) {
+        guard let watch else { close(); return }
+        let reader: LiveMeterReader
+        if let existing = readers[watch.devicePath] {
+            reader = existing.reader
+        } else {
+            reader = LiveMeterReader()
+            reader.surfacePort = surfacePort
+            reader.onReading = { [weak self] in self?.onReading?($0) }
+        }
+        readers[watch.devicePath] = (reader, Date())
+        reader.keep(watch)
+        if sweep == nil {
+            sweep = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.forgetIdle() }
+        }
+    }
+
+    func close() {
+        for entry in readers.values { entry.reader.close() }
+        readers.removeAll()
+        sweep?.invalidate()
+        sweep = nil
+    }
+
+    /// Drop the readers the page stopped asking about (each has closed itself).
+    private func forgetIdle() {
+        let now = Date()
+        for (path, entry) in readers where now.timeIntervalSince(entry.lastAsk) > LiveMeterReader.idleAfter + 1 {
+            entry.reader.close()
+            readers[path] = nil
+        }
+        if readers.isEmpty { sweep?.invalidate(); sweep = nil }
     }
 }

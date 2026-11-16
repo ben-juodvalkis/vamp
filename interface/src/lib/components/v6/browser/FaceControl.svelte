@@ -11,7 +11,7 @@
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
 	import type { ControlGlyphName } from '$lib/components/v6/device-panel/ControlGlyph.svelte';
 	import type { Control, Get, ParamRef, Writes } from '$lib/components/v6/device-panel/deviceControls';
-	import { getContext } from 'svelte';
+	import { getContext, type Snippet } from 'svelte';
 	import DevicePicture from './DevicePicture.svelte';
 	import { PICTURE_CONTEXT } from './devicePictures';
 
@@ -36,6 +36,8 @@
 		labelOrientation?: 'vertical' | 'horizontal' | 'auto';
 		/** Where the picture's needle points instead of the control's level: the Glue's gain reduction as Live shows it (ADR-541). */
 		pictureLevel?: number;
+		/** Drawn behind an XY pad or the tone pad, on its frequency axis: the device's spectrum as Live shows it (ADR-541). */
+		backdrop?: Snippet;
 	}
 
 	let {
@@ -52,7 +54,8 @@
 		orientation = 'vertical',
 		labelSize = 'small',
 		labelOrientation = 'horizontal',
-		pictureLevel
+		pictureLevel,
+		backdrop
 	}: Props = $props();
 	/** The chain overview and the browser draw the device's picture; the FX grid does not. */
 	const pictured = getContext<boolean>(PICTURE_CONTEXT) === true;
@@ -75,6 +78,7 @@
 	{@const at = control.read(get)}
 	{@const curve = control.curve?.(get)}
 	{#snippet xyPicture()}
+		{@render backdrop?.()}
 		{#if picture}<DevicePicture kind={picture} x={at.x} y={at.y} variant={control.pictureVariant?.(get)} ink={color.primary} />{/if}
 	{/snippet}
 	<DeviceXY
@@ -85,7 +89,7 @@
 		{isGhost}
 		rateLabel={control.label?.(get, display)}
 		rateWhileDragging={soft}
-		background={picture ? xyPicture : undefined}
+		background={picture || backdrop ? xyPicture : undefined}
 		showCurve={curve !== undefined && curve !== 'none'}
 		curveType={curve}
 		{color}
@@ -129,6 +133,7 @@
 	{@const eq = control.read(get)}
 	<ToneCurvePad
 		{title}
+		{backdrop}
 		low={eq.low}
 		mid={eq.mid}
 		midFreq={eq.midFreq}

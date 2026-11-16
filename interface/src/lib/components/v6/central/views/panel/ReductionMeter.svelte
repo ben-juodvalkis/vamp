@@ -5,12 +5,12 @@
    *
    * Live puts no reduction on the LOM; Vamp for Mac reads the needle Live
    * draws. While this is mounted it holds a watch on its device
-   * (`reductionMeterStore.hold`), and it says why when there is no reading:
+   * (`liveMeterStore.hold`), and it says why when there is no reading:
    * the device is not in Live's device view, Live is on another Space, or
    * macOS has not let Vamp for Mac read the screen. Draws nothing while the
    * `reductionMeter` switch is off.
    */
-  import { useReduction, REDUCTION_MAX_DB as MAX_DB } from './useReduction.svelte';
+  import { useLiveMeter, REDUCTION_MAX_DB as MAX_DB } from './useLiveMeter.svelte';
 
   interface Props {
     devicePath: string | undefined;
@@ -31,7 +31,7 @@
     'no-live': 'Live is not running'
   };
 
-  const reduction = useReduction(() => devicePath);
+  const reduction = useLiveMeter(() => devicePath);
   let on = $derived(reduction.on);
   let ok = $derived(reduction.ok);
   let db = $derived(reduction.db);

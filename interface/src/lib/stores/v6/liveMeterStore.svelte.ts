@@ -1,10 +1,11 @@
 /**
- * The gain reduction a device's meter shows in Live (ADR-541).
+ * What a device's panel shows in Live that the LOM does not carry (ADR-541):
+ * a needle meter's gain reduction (the Glue), a spectrum (the Auto Filter,
+ * Channel EQ). Vamp for Mac reads them off Live's window.
  *
- * Live puts no gain reduction on the LOM; Vamp for Mac reads the needle Live
- * draws in its device view. A component that shows a device's meter holds a
- * watch on it (`hold`); while any hold stands the store asks
- * `/meter/reduction/watch <devicePath> <className> <levels JSON>` every 2 s —
+ * A component that shows a device's meter holds a watch on it (`hold`); while
+ * any hold stands the store asks
+ * `/meter/watch <devicePath> <className> <levels JSON>` every 2 s —
  * the app stops 5 s after the asks stop — and the last release sends the
  * stop (`''`). `levels` walks Live's device view from the outside in, one
  * `[index, [names…]]` per level: the track's top-level devices, then for a
@@ -14,28 +15,49 @@
  * paths, and a name the page does not know is `null`: a pad's records hold
  * its effects, not its instrument, which Live shows first.
  *
- * The app's `/meter/reduction <devicePath> <dB> <status>` lands in
- * `readings`; `status` is `ok` or why there is no reading (ReductionReader).
+ * The app's `/meter/reduction <devicePath> <dB> <status>` and
+ * `/meter/spectrum <devicePath> <status> <dB × 64>` land in `readings`;
+ * `status` is `ok` or why there is no reading (LiveMeterReader). A spectrum
+ * is always on the standard grid: `SPECTRUM_BANDS` bands log-spaced from
+ * `SPECTRUM_LOW_HZ` to `SPECTRUM_HIGH_HZ`, whatever its device draws.
  */
 
 import { SvelteMap } from 'svelte/reactivity';
 import { send } from '$lib/api/simpleClient';
 import { v3Store, padDevicesAt, chainDevicesAt, type DeviceRecord } from '$lib/stores/v3/normalized.svelte';
 
-export const WATCH_ADDRESS = '/meter/reduction/watch';
-export const READING_ADDRESS = '/meter/reduction';
+export const WATCH_ADDRESS = '/meter/watch';
+export const REDUCTION_ADDRESS = '/meter/reduction';
+export const SPECTRUM_ADDRESS = '/meter/spectrum';
+export const SPECTRUM_BANDS = 64;
+export const SPECTRUM_LOW_HZ = 20;
+export const SPECTRUM_HIGH_HZ = 20000;
+/** The quietest a spectrum band reads, in dB. */
+export const SPECTRUM_FLOOR_DB = -80;
 const REPEAT_MS = 2000;
 const STOP = ['', '', '[]'];
 /** No reading for this long and the last one is stale (Live left the Space, the app quit). */
 export const STALE_MS = 1500;
 
-/** The device classes whose meter Vamp for Mac can read. */
-export const METERED_CLASSES = new Set(['GlueCompressor']);
+/** The device classes whose panel Vamp for Mac can read, and what it reads. */
+export const METERED_CLASSES = new Map<string, 'reduction' | 'spectrum'>([
+	['GlueCompressor', 'reduction'],
+	['AutoFilter2', 'spectrum'],
+	['ChannelEq', 'spectrum']
+]);
 
-export interface ReductionReading {
-	db: number;
+export interface LiveMeterReading {
+	kind: 'reduction' | 'spectrum';
+	/** One dB for a reduction, `SPECTRUM_BANDS` dB for a spectrum; empty unless `ok`. */
+	values: number[];
 	status: string;
 	at: number;
+}
+
+/** Band `i`'s centre, in Hz (geometric, on the standard grid). */
+export function bandHz(i: number): number {
+	const step = Math.log10(SPECTRUM_HIGH_HZ / SPECTRUM_LOW_HZ) / SPECTRUM_BANDS;
+	return SPECTRUM_LOW_HZ * Math.pow(10, step * (i + 0.5));
 }
 
 const TOP_LEVEL = /^(tracks\/\d+)\/devices\/(\d+)$/;
@@ -45,7 +67,7 @@ const NESTED_STEP = /\/(pads|chains)\/(\d+)\/devices\/(\d+)/g;
 
 export type WatchArgs = [devicePath: string, className: string, levels: string];
 
-const readings = new SvelteMap<string, ReductionReading>();
+const readings = new SvelteMap<string, LiveMeterReading>();
 const holds: string[] = [];
 let timer: ReturnType<typeof setInterval> | null = null;
 
@@ -83,13 +105,14 @@ export function watchArgs(devicePath: string): WatchArgs | null {
 	return [devicePath, device.className, JSON.stringify(levels)];
 }
 
+/** Ask for every held device: Vamp for Mac reads each on its own (ADR-542). */
 function ask(): void {
-	const path = holds[holds.length - 1];
-	const args = path ? watchArgs(path) : null;
-	send(WATCH_ADDRESS, args ?? STOP);
+	const asks = [...new Set(holds)].map(watchArgs).filter((a): a is WatchArgs => a !== null);
+	if (asks.length === 0) send(WATCH_ADDRESS, STOP);
+	for (const args of asks) send(WATCH_ADDRESS, args);
 }
 
-/** Watch `devicePath`'s meter while the returned release is not called. The newest hold wins. */
+/** Watch `devicePath`'s meter while the returned release is not called. Every held device is read. */
 function hold(devicePath: string): () => void {
 	if (!devicePath) return () => {};
 	holds.push(devicePath);
@@ -112,18 +135,25 @@ function hold(devicePath: string): () => void {
 }
 
 function handleMessage(address: string, args: unknown[]): void {
-	if (address !== READING_ADDRESS) return;
-	const [path, db, status] = args;
-	if (typeof path !== 'string' || typeof db !== 'number' || typeof status !== 'string') return;
-	readings.set(path, { db, status, at: Date.now() });
+	if (address === REDUCTION_ADDRESS) {
+		const [path, db, status] = args;
+		if (typeof path !== 'string' || typeof db !== 'number' || typeof status !== 'string') return;
+		readings.set(path, { kind: 'reduction', values: status === 'ok' ? [db] : [], status, at: Date.now() });
+		return;
+	}
+	if (address === SPECTRUM_ADDRESS) {
+		const [path, status, ...bands] = args;
+		if (typeof path !== 'string' || typeof status !== 'string' || !bands.every((v) => typeof v === 'number')) return;
+		readings.set(path, { kind: 'spectrum', values: bands as number[], status, at: Date.now() });
+	}
 }
 
 /** `devicePath`'s latest reading, or null when there is none. */
-function readingFor(devicePath: string): ReductionReading | null {
+function readingFor(devicePath: string): LiveMeterReading | null {
 	return readings.get(devicePath) ?? null;
 }
 
-export const reductionMeterStore = {
+export const liveMeterStore = {
 	hold,
 	readingFor,
 	handleMessage,

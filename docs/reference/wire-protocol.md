@@ -1258,21 +1258,31 @@ client is **bridge-terminated** (`WebSocketServer.dispatchClientMessage`).
 | `/capture/input/choice` | Bridge→UI | `choice:string` (JSON as above, `''` none set yet) | The rig's input choice, which every screen follows. A screen holding one of its own answers `''` by setting it. |
 | `/looping/v3/session/file_path/query` | Bridge→Surf | — | The set's `.als` (`Song.file_path`), `''` while unsaved; the reply comes back on this address. **Bridge-terminated**: never relayed to clients. |
 
-### 2.15b Gain reduction, read off Live's window (ADR-541, 2026-11-16)
+### 2.15b Live meters: a device's panel, read off Live's window (ADR-541, 2026-11-16)
 
-Live puts no gain reduction on the LOM. Vamp for Mac reads the needle Live
-draws in its device view: it finds the device through Accessibility
-(`TrackDeviceChainView.Device[n]`) and captures only the meter's panel of
-Live's window. Bridge-terminated in both directions
-(`handlers/reductionMeter.js`), and dropped there while
-`features.reductionMeter` is off. Glue Compressor only, for now: on the
-track, in a Drum Rack pad's chain or in a rack chain (the one Live's device
-view shows, so the pad or chain Live has selected).
+What a device's panel shows in Live that the LOM does not carry, read by
+Vamp for Mac off Live's window: it finds the device through Accessibility
+(`TrackDeviceChainView.Device[n]`, nested for a pad's or chain's) and
+captures that part of the window. Two kinds so far: a **needle** (the Glue's
+gain reduction) and a **spectrum** (the Auto Filter's and Channel EQ's).
+Every spectrum goes on the wire on one grid whatever its device draws: 64
+bands log-spaced from 20 Hz to 20 kHz, in dB. Bridge-terminated in both
+directions (`handlers/liveMeters.js`), and dropped there while
+`features.liveMeters` is off. Adding a device is a measured entry in
+`owner/apps/Mac/LiveMeter.swift` and the page's `METERED_CLASSES`.
 
 | Address | Direction | Args | Notes |
 |---|---|---|---|
-| `/meter/reduction/watch` | UI→Bridge→App | `devicePath:string, className:string, levels:string` | Read `devicePath`'s meter. `levels` (JSON) walks Live's device view from the outside in, one `[index, [names…]]` per level: the track's top-level devices, then for a device in a pad's or chain's chain that chain's devices, so the app can check Live shows what the page means (Live titles a renamed device or a rack "name, type"; either matches). Indexes are Live's, read off the paths; a name the page has no record of is `null` and not checked (a pad's records hold its effects, not its instrument, which Live shows first). The page repeats it every 2 s while a meter is on screen and sends `'', '', '[]'` when the last goes; the app stops 5 s after the last ask. The bridge sends it to the app's socket alone (the one the capture recorder knows from `/capture/input/hello`). |
-| `/meter/reduction` | App→Bridge→UI | `devicePath:string, db:float, status:string` | The reading, sent when it moves by 0.05 dB, its status changes or half a second passes; up to 30 a second. `db` is −1 unless `status` is `ok`. Statuses: `ok`, `not-shown` (Live's device view is not showing that device), `no-needle` (shown, but no needle: Live is on another Space, or the device is folded), `no-meter`, `no-accessibility`, `no-screen-recording`, `no-live`. The bridge marks the feature available on the first. |
+| `/meter/watch` | UI→Bridge→App | `devicePath:string, className:string, levels:string` | Read `devicePath`'s panel; `className` picks the kind. `levels` (JSON) walks Live's device view from the outside in, one `[index, [names…]]` per level: the track's top-level devices, then for a device in a pad's or chain's chain that chain's devices, so the app can check Live shows what the page means (Live titles a renamed device or a rack "name, type"; either matches). Indexes are Live's, read off the paths; a name the page has no record of is `null` and not checked (a pad's records hold its effects, not its instrument, which Live shows first). The page repeats it every 2 s while a meter is on screen and sends `'', '', '[]'` when the last goes; the app stops 5 s after the last ask. The bridge sends it to the app's socket alone (the one the capture recorder knows from `/capture/input/hello`). Every device on screen is asked for each round and read on its own capture stream; each stops 5 s after its own last ask. |
+| `/meter/reduction` | App→Bridge→UI | `devicePath:string, db:float, status:string` | A needle's reading, sent when it moves by 0.05 dB, its status changes or half a second passes; up to 30 a second. `db` is −1 unless `status` is `ok`. |
+| `/meter/spectrum` | App→Bridge→UI | `devicePath:string, status:string, db×64:float` | A spectrum's 64 bands (band `i` spans 20·1000^(i/64) to 20·1000^((i+1)/64) Hz), sent when any band moves by 0.5 dB, the status changes or half a second passes; about 22 a second on a drum loop. No bands unless `status` is `ok`. A band reads the device's floor when it is silent (Auto Filter −79, Channel EQ −57 dB). |
+
+Statuses (both kinds): `ok`, `not-shown` (Live's device view is not showing
+that device), `no-needle` (shown, but nothing readable: Live is on another
+Space, or the device is folded), `no-meter`, `no-accessibility`,
+`no-screen-recording`, `no-live`. The bridge marks the feature available on
+the first reading. With two Lives open (12 and 13 share a bundle identifier)
+the app reads the one whose process listens on `osc.pythonSurface.tcpPort`.
 
 ### 2.16 Tone Shaper frames (Ben's Adaptive Tone Shaper, 2026-10-07)
 

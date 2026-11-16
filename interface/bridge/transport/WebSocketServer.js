@@ -168,11 +168,11 @@ function replayTotalMixToClient(ws, totalmixLink, clientId) {
  *   (handlers/captureRecorder.js), which takes every capture start and stop
  * @param {Object} [pedals] - the bridge's pedals (handlers/pedals.js,
  *   ADR-538), which take the Settings page's pedal writes
- * @param {Object} [reductionMeter] - the gain reduction relay
- *   (handlers/reductionMeter.js, ADR-541)
+ * @param {Object} [liveMeters] - the live meters relay
+ *   (handlers/liveMeters.js, ADR-541)
  * @returns {Object} { httpServer, wss }
  */
-function createWebSocketServer(config, udpPorts, connectionStatus, metrics, healthMonitor, captureOverride, totalmixLink, axHelper = null, drumSwap = null, groupTracks = null, features = null, machine = null, captureRecorder = null, toneShaper = null, pedals = null, reductionMeter = null) {
+function createWebSocketServer(config, udpPorts, connectionStatus, metrics, healthMonitor, captureOverride, totalmixLink, axHelper = null, drumSwap = null, groupTracks = null, features = null, machine = null, captureRecorder = null, toneShaper = null, pedals = null, liveMeters = null) {
 
     // Launch mode ("dev" | "ipad"), announced to each client on connect via
     // /bridge/server_mode so WS clients (e.g. the menu-bar utility) can show
@@ -281,7 +281,7 @@ function createWebSocketServer(config, udpPorts, connectionStatus, metrics, heal
             captureRecorder,
             toneShaper,
             pedals,
-            reductionMeter
+            liveMeters
         });
     });
 
@@ -295,7 +295,7 @@ function createWebSocketServer(config, udpPorts, connectionStatus, metrics, heal
  * @param {Object} context - Context object with dependencies
  */
 function handleConnection(ws, request, context) {
-    const { udpPorts, connectionStatus, metrics, wss, healthMonitor, serverMode, captureOverride, totalmixLink, axHelper, drumSwap, groupTracks, features, machine, captureRecorder, toneShaper, pedals, reductionMeter } = context;
+    const { udpPorts, connectionStatus, metrics, wss, healthMonitor, serverMode, captureOverride, totalmixLink, axHelper, drumSwap, groupTracks, features, machine, captureRecorder, toneShaper, pedals, liveMeters } = context;
 
     // Generate unique client ID
     const clientId = `client_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -475,8 +475,8 @@ function handleConnection(ws, request, context) {
             toneShaper,
             // Takes the Settings page's pedal writes (ADR-538).
             pedals,
-            // Relays the gain reduction asks and readings (ADR-541).
-            reductionMeter
+            // Relays the live meters' asks and readings (ADR-541).
+            liveMeters
         });
     });
 
@@ -708,9 +708,9 @@ function dispatchClientMessage(ws, message, context) {
             return;
         }
 
-        // A device's gain reduction (ADR-541): the page's ask to Vamp for Mac,
+        // What a device's panel shows in Live (ADR-541): the page's ask to Vamp for Mac,
         // the app's readings to every client. Bridge-terminated.
-        if (context.reductionMeter && context.reductionMeter.onClientMessage(message)) {
+        if (context.liveMeters && context.liveMeters.onClientMessage(message)) {
             return;
         }
 

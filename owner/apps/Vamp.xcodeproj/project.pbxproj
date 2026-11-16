@@ -25,8 +25,7 @@
 		2E6DFB63CBCF1533389C13D0 /* LinkServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E6A855106B6835A56B03903 /* LinkServer.swift */; };
 		30A603AF85E94CB27CCEF75E /* UsbMux.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A274A47EF8CB1FB15CE2231 /* UsbMux.swift */; };
 		35986E6A3EB74EA1DD4AF866 /* Installed.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE075EDCB8FFD71D84B82266 /* Installed.swift */; };
-		37ACD7DF44DEF9E5B2A5898E /* ReductionReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF56A2F673E7F755D25FB43A /* ReductionReader.swift */; };
-		3897986A141DB96A0C241C74 /* ReductionMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4164479894B5ADD9E80B0012 /* ReductionMeter.swift */; };
+		3AE329232B8DA79D546AE585 /* LiveMeterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB2AB2CB2BF00B3ED1FD7420 /* LiveMeterTests.swift */; };
 		423FCCB8E3EADEE803E89BBF /* VampPaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74B0495CB8AA31F268733826 /* VampPaths.swift */; };
 		45716EEF45BC473639790B17 /* PitchDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 049A00C742CE5081960236BF /* PitchDetector.swift */; };
 		4791ACCFF0040C0E1FF18D2B /* VampPaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74B0495CB8AA31F268733826 /* VampPaths.swift */; };
@@ -39,7 +38,6 @@
 		607E3A52004476820E4C3739 /* PadLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 915CB9013A537FFC92E573BC /* PadLink.swift */; };
 		6DC8340B53F7F8A9239D76CA /* Sparkle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 52C388D89FD4A8D62CC69C6D /* Sparkle.framework */; };
 		6F86F4371199619823A7C1FE /* VampLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 870C5481D7B847F8CFD2D8DE /* VampLog.swift */; };
-		81C04693F1703AF9C52E2AE4 /* ReductionMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4164479894B5ADD9E80B0012 /* ReductionMeter.swift */; };
 		82074817F87A77DB97E2A305 /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DD360D6442DE26552DCA9DA /* AppConfig.swift */; };
 		87360A7F7941CF489CD2CBEC /* VampMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FF8FFE78D61C16CCE0245DE /* VampMacApp.swift */; };
 		87389378EC5C6CCDF7B6B98F /* InputMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0DD3FBDA1CCFD0CD01504A9 /* InputMonitor.swift */; };
@@ -50,13 +48,15 @@
 		9908C709C676977C6FCDCA45 /* InputRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 983320AC1ADBE546A64A7796 /* InputRecorder.swift */; };
 		9AAC9CD3B9545B11EA81AB11 /* VampLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 870C5481D7B847F8CFD2D8DE /* VampLog.swift */; };
 		9C4946FB803880E5E3BA1C69 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A908C651CE459585CE047490 /* Assets.xcassets */; };
-		B16714B3D838B384A12AD2F9 /* ReductionMeterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 302E5947AB1E4A4BE83C3388 /* ReductionMeterTests.swift */; };
+		A201EAE05490289674106663 /* LiveMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CE5B8A8EA0B43185F18BCBE /* LiveMeter.swift */; };
 		B6634C09937118C9709720F3 /* InputChannelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0D1CFE2493161D2AECC0ECF /* InputChannelsTests.swift */; };
 		B8938D47541BF7D3E76C86FC /* LinkClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B83BED9048B5F511FD8DC9C /* LinkClient.swift */; };
 		BB991C43B037500A636443C3 /* Wire.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F813656117C8E51E0B9EA5B /* Wire.swift */; };
 		BCE9C1F441DC898605D48DF5 /* LinkKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D8C5C0B5C99B83292C47263 /* LinkKeychain.swift */; };
+		BF900D0AB1EBFC9B2B4D926B /* LiveMeterReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = E93A7F46534ACEC140816328 /* LiveMeterReader.swift */; };
 		C67CCC1C16C0CE804C7E89E8 /* FirstLaunch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3992B7370DB172F788E08553 /* FirstLaunch.swift */; };
 		C8E7E75FD9BA9FFEC754678C /* LinkProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E71B2FC18F7AE4133AC5215 /* LinkProtocol.swift */; };
+		CA09CD6D981A59B271B586C0 /* LiveMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CE5B8A8EA0B43185F18BCBE /* LiveMeter.swift */; };
 		CCC23DA81A031BBB9A03F17B /* LinkProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E71B2FC18F7AE4133AC5215 /* LinkProtocol.swift */; };
 		D557640D28F7AA2E04328C3D /* FirstLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEFD5FE887B2161B36F4E7BE /* FirstLaunchTests.swift */; };
 		D884A53FED7EA3C281FDC057 /* SupervisorRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF619CFF5A80D9A062278B4C /* SupervisorRules.swift */; };
@@ -92,14 +92,13 @@
 		25B9BD3695516F19720AAA2E /* BridgeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeClient.swift; sourceTree = "<group>"; };
 		2947AB166D4E2928A980A4A7 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 		29D36ED924CFB01F92EEF64D /* VampLinkTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VampLinkTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		302E5947AB1E4A4BE83C3388 /* ReductionMeterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReductionMeterTests.swift; sourceTree = "<group>"; };
 		31F6DB32688F85B1071884DF /* PairedIPads.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairedIPads.swift; sourceTree = "<group>"; };
 		332A1156D1916DA942ADD3C0 /* SupervisorRulesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupervisorRulesTests.swift; sourceTree = "<group>"; };
 		3992B7370DB172F788E08553 /* FirstLaunch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstLaunch.swift; sourceTree = "<group>"; };
+		3CE5B8A8EA0B43185F18BCBE /* LiveMeter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveMeter.swift; sourceTree = "<group>"; };
 		3E6A855106B6835A56B03903 /* LinkServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkServer.swift; sourceTree = "<group>"; };
 		3E71B2FC18F7AE4133AC5215 /* LinkProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkProtocol.swift; sourceTree = "<group>"; };
 		3F813656117C8E51E0B9EA5B /* Wire.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Wire.swift; sourceTree = "<group>"; };
-		4164479894B5ADD9E80B0012 /* ReductionMeter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReductionMeter.swift; sourceTree = "<group>"; };
 		48DAE09A3ED042760066FDE2 /* OSCEnvelope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSCEnvelope.swift; sourceTree = "<group>"; };
 		52C388D89FD4A8D62CC69C6D /* Sparkle.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Sparkle.framework; path = Vendor/Sparkle/Sparkle.framework; sourceTree = "<group>"; };
 		74B0495CB8AA31F268733826 /* VampPaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VampPaths.swift; sourceTree = "<group>"; };
@@ -122,12 +121,13 @@
 		DF619CFF5A80D9A062278B4C /* SupervisorRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupervisorRules.swift; sourceTree = "<group>"; };
 		E0DD3FBDA1CCFD0CD01504A9 /* InputMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputMonitor.swift; sourceTree = "<group>"; };
 		E205C25310E6D86E3D913802 /* LinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkTests.swift; sourceTree = "<group>"; };
+		E93A7F46534ACEC140816328 /* LiveMeterReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveMeterReader.swift; sourceTree = "<group>"; };
 		EBA6AF1690AE6F51DC7D2B2A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		EE075EDCB8FFD71D84B82266 /* Installed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Installed.swift; sourceTree = "<group>"; };
 		EEFD5FE887B2161B36F4E7BE /* FirstLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstLaunchTests.swift; sourceTree = "<group>"; };
-		EF56A2F673E7F755D25FB43A /* ReductionReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReductionReader.swift; sourceTree = "<group>"; };
 		F0D1CFE2493161D2AECC0ECF /* InputChannelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputChannelsTests.swift; sourceTree = "<group>"; };
 		F3BB2F13DF6908B1C162FFDE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		FB2AB2CB2BF00B3ED1FD7420 /* LiveMeterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveMeterTests.swift; sourceTree = "<group>"; };
 		FE21A0FD5BB902ABB2AE793E /* MainWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindow.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -173,13 +173,13 @@
 				983320AC1ADBE546A64A7796 /* InputRecorder.swift */,
 				EE075EDCB8FFD71D84B82266 /* Installed.swift */,
 				7B83BED9048B5F511FD8DC9C /* LinkClient.swift */,
+				3CE5B8A8EA0B43185F18BCBE /* LiveMeter.swift */,
+				E93A7F46534ACEC140816328 /* LiveMeterReader.swift */,
 				FE21A0FD5BB902ABB2AE793E /* MainWindow.swift */,
 				915CB9013A537FFC92E573BC /* PadLink.swift */,
 				31F6DB32688F85B1071884DF /* PairedIPads.swift */,
 				049A00C742CE5081960236BF /* PitchDetector.swift */,
 				AA3504E0B3D0D7BB563377C6 /* QRWindow.swift */,
-				4164479894B5ADD9E80B0012 /* ReductionMeter.swift */,
-				EF56A2F673E7F755D25FB43A /* ReductionReader.swift */,
 				7588887B3FEC5F945688A7D6 /* Supervisor.swift */,
 				DF619CFF5A80D9A062278B4C /* SupervisorRules.swift */,
 				0A274A47EF8CB1FB15CE2231 /* UsbMux.swift */,
@@ -237,7 +237,7 @@
 				EEFD5FE887B2161B36F4E7BE /* FirstLaunchTests.swift */,
 				F0D1CFE2493161D2AECC0ECF /* InputChannelsTests.swift */,
 				E205C25310E6D86E3D913802 /* LinkTests.swift */,
-				302E5947AB1E4A4BE83C3388 /* ReductionMeterTests.swift */,
+				FB2AB2CB2BF00B3ED1FD7420 /* LiveMeterTests.swift */,
 				332A1156D1916DA942ADD3C0 /* SupervisorRulesTests.swift */,
 				AB8D1464A25B0B0AA5D747CA /* VampPathsTests.swift */,
 				0C7164729014C9C253EBCB13 /* WifiLinkTests.swift */,
@@ -390,11 +390,11 @@
 				08321E0D3BA1B2A0A74C1CCF /* LinkProtocol.swift in Sources */,
 				2E6DFB63CBCF1533389C13D0 /* LinkServer.swift in Sources */,
 				08F59359E9DB4DE67CFCD360 /* LinkTests.swift in Sources */,
+				A201EAE05490289674106663 /* LiveMeter.swift in Sources */,
+				3AE329232B8DA79D546AE585 /* LiveMeterTests.swift in Sources */,
 				4CDCBBC50E31203C8AFD570D /* OSCEnvelope.swift in Sources */,
 				E24F836EE087E1B6F9C03BD5 /* PairedIPads.swift in Sources */,
 				45716EEF45BC473639790B17 /* PitchDetector.swift in Sources */,
-				3897986A141DB96A0C241C74 /* ReductionMeter.swift in Sources */,
-				B16714B3D838B384A12AD2F9 /* ReductionMeterTests.swift in Sources */,
 				00B05AB09DDDA5C05A280322 /* Splice.swift in Sources */,
 				52D5924A409F4976681368CF /* SupervisorRules.swift in Sources */,
 				21F3F6B16514E462747028BF /* SupervisorRulesTests.swift in Sources */,
@@ -435,14 +435,14 @@
 				29451632DC10E6832C5F02C1 /* LinkClient.swift in Sources */,
 				C8E7E75FD9BA9FFEC754678C /* LinkProtocol.swift in Sources */,
 				09E25C1F5DB590222D21BD05 /* LinkServer.swift in Sources */,
+				CA09CD6D981A59B271B586C0 /* LiveMeter.swift in Sources */,
+				BF900D0AB1EBFC9B2B4D926B /* LiveMeterReader.swift in Sources */,
 				E652679B40A0DF1F09DA28B3 /* MainWindow.swift in Sources */,
 				1D58B1CF20FD7E8B0538559A /* OSCEnvelope.swift in Sources */,
 				607E3A52004476820E4C3739 /* PadLink.swift in Sources */,
 				0B7B8FCECB1E1AB755BA819F /* PairedIPads.swift in Sources */,
 				5C0C4659D86042070FA9000E /* PitchDetector.swift in Sources */,
 				5D43232B7B310D17675792F5 /* QRWindow.swift in Sources */,
-				81C04693F1703AF9C52E2AE4 /* ReductionMeter.swift in Sources */,
-				37ACD7DF44DEF9E5B2A5898E /* ReductionReader.swift in Sources */,
 				4BC2611245B8F4A620A02F2B /* Splice.swift in Sources */,
 				01E43854851150E2A88BD20F /* Supervisor.swift in Sources */,
 				D884A53FED7EA3C281FDC057 /* SupervisorRules.swift in Sources */,

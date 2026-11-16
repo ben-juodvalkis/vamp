@@ -54,10 +54,12 @@ enum Wire {
     /// The tuner's pitch on the channel the monitor ask named (ADR-539).
     static let captureInputPitch = "/capture/input/pitch"
 
-    // The gain reduction a device's meter shows in Live (ADR-541): the page's
-    // ask, every ~2 s while it shows the device, and this app's readings.
-    static let reductionWatch = "/meter/reduction/watch"
+    // What a device's panel shows in Live that the LOM does not carry
+    // (ADR-541): the page's ask, every ~2 s while it shows the device, and
+    // this app's readings, one address per kind of meter.
+    static let liveMeterWatch = "/meter/watch"
     static let reduction = "/meter/reduction"
+    static let spectrum = "/meter/spectrum"
 }
 
 /// The user-facing settings, each mapping to a set address + label.

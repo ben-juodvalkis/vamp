@@ -28,6 +28,9 @@ struct AppConfig {
     /// usbmux, and the Mac page server each of its streams is spliced to.
     let padDevicePort: UInt16
     let padPagePort: UInt16
+    /// `osc.pythonSurface.tcpPort`: the port Vamp's surface listens on inside
+    /// Live, which says which Live runs Vamp when two are open (ADR-541).
+    let surfaceTcpPort: UInt16
 
     /// Shared secret for the bridge's WebSocket auth challenge, if one
     /// could be read. `nil` means we cannot authenticate — the bridge
@@ -55,6 +58,7 @@ struct AppConfig {
         sourcePath: nil,
         padDevicePort: 47800,
         padPagePort: 8889,
+        surfaceTcpPort: 11022,
         wsSecret: nil
     )
 
@@ -92,6 +96,8 @@ struct AppConfig {
         let padLink = json["padLink"] as? [String: Any]
         let padDevice = (padLink?["devicePort"] as? NSNumber)?.uint16Value ?? fallback.padDevicePort
         let padPage = (padLink?["pagePort"] as? NSNumber)?.uint16Value ?? fallback.padPagePort
+        let surface = osc?["pythonSurface"] as? [String: Any]
+        let surfaceTcp = (surface?["tcpPort"] as? NSNumber)?.uint16Value ?? fallback.surfaceTcpPort
 
         return AppConfig(
             host: localhost,
@@ -100,6 +106,7 @@ struct AppConfig {
             sourcePath: url.path,
             padDevicePort: padDevice,
             padPagePort: padPage,
+            surfaceTcpPort: surfaceTcp,
             wsSecret: secret
         )
     }

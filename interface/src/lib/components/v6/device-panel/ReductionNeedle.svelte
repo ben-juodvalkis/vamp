@@ -5,7 +5,7 @@
 	 * there is no fresh one (ADR-541). Mounted inside a chain cell's snippet,
 	 * where the device it shows (a pad's, under a pad scope) is known.
 	 */
-	import { useReduction, REDUCTION_MAX_DB } from '$lib/components/v6/central/views/panel/useReduction.svelte';
+	import { useLiveMeter, REDUCTION_MAX_DB } from '$lib/components/v6/central/views/panel/useLiveMeter.svelte';
 
 	interface Props {
 		devicePath: string | undefined;
@@ -13,7 +13,7 @@
 	}
 
 	let { devicePath, level = $bindable() }: Props = $props();
-	const reduction = useReduction(() => devicePath);
+	const reduction = useLiveMeter(() => devicePath);
 
 	$effect(() => {
 		level = reduction.ok ? Math.min(reduction.db, REDUCTION_MAX_DB) / REDUCTION_MAX_DB : undefined;

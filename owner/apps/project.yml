@@ -145,7 +145,7 @@ targets:
       - Mac/FirstLaunch.swift
       - Mac/InputRecorder.swift
       - Mac/PitchDetector.swift
-      - Mac/ReductionMeter.swift
+      - Mac/LiveMeter.swift
       - Mac/Menu/OSCEnvelope.swift
       - Mac/Menu/Wire.swift
       - Tests

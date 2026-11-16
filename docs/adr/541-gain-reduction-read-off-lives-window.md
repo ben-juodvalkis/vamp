@@ -3,8 +3,10 @@
 ## Status
 **Accepted** (2026-11-16). Extends ADR-539's pattern (the page asks, Vamp
 for Mac reads, the bridge relays). The page and the bridge take it on their
-next start; Vamp for Mac once rebuilt (ADR-490). No Live restart. Behind
-the new `reductionMeter` switch.
+next start; Vamp for Mac once rebuilt (ADR-490). No Live restart. Generalized
+the same day by ADR-542 (spectra, any device): the pieces named here are now
+`LiveMeter.swift`, `LiveMeterReader.swift`, `handlers/liveMeters.js`,
+`liveMeterStore` and the `liveMeters` switch, the ask `/meter/watch`.
 
 ## Context
 Ben asked for device visualizations like gain reduction on the iPad. Live

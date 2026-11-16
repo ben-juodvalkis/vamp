@@ -22,8 +22,8 @@ final class AppState: ObservableObject {
     private let recorder = InputRecorder()
     /// Live levels of the device Settings → Capture shows, while it shows it.
     private let monitor = InputMonitor()
-    /// The gain reduction a device's meter shows in Live, while the page asks (ADR-541).
-    private let reduction = ReductionReader()
+    /// What a device's panel shows in Live (a needle, a spectrum), while the page asks (ADR-541).
+    private let liveMeters = LiveMeterHub()
     private var helloTimer: Timer?
 
     init() {
@@ -50,8 +50,14 @@ final class AppState: ObservableObject {
         monitor.onPitch = { [weak self] uid, channel, hz, clarity in
             self?.client.send(Wire.captureInputPitch, [.string(uid), .string(channel), .double(hz), .double(clarity)])
         }
-        reduction.onReading = { [weak self] path, db, status in
-            self?.client.send(Wire.reduction, [.string(path), .double(db), .string(status)])
+        liveMeters.surfacePort = cfg.surfaceTcpPort
+        liveMeters.onReading = { [weak self] reading in
+            switch reading.kind {
+            case "spectrum":
+                self?.client.send(Wire.spectrum, [.string(reading.devicePath), .string(reading.status)] + reading.values.map { .double($0) })
+            default:
+                self?.client.send(Wire.reduction, [.string(reading.devicePath), .double(reading.values.first ?? -1), .string(reading.status)])
+            }
         }
         // Says hello with the devices each second while the bridge listens;
         // the bridge forgets the recorder after three missed hellos.
@@ -98,7 +104,7 @@ final class AppState: ObservableObject {
             // A take whose bridge is gone could not be handed on: end it.
             recorder.stop()
             monitor.close()
-            reduction.close()
+            liveMeters.close()
             // Drop seeded values so the menu doesn't imply live state while
             // the bridge is down. They re-seed on the next handshake accept.
             serverMode = nil
@@ -126,8 +132,8 @@ final class AppState: ObservableObject {
             monitor.keep(uid: a.first ?? "", tune: a.count > 1 ? a[1] : "")
             return
         }
-        if message.address == Wire.reductionWatch {
-            reduction.keep(Self.reductionWatch(message.args))
+        if message.address == Wire.liveMeterWatch {
+            liveMeters.keep(Self.liveMeterWatch(message.args))
             return
         }
         if message.address == Wire.captureInputStop {
@@ -151,21 +157,21 @@ final class AppState: ObservableObject {
         }
     }
 
-    /// `/meter/reduction/watch <devicePath> <className> <levels JSON>`, the
+    /// `/meter/watch <devicePath> <className> <levels JSON>`, the
     /// levels `[[index, [names…]], …]` outermost first; nil (stop) for an
     /// empty path or a malformed ask.
-    static func reductionWatch(_ args: [OSCArg]) -> ReductionReader.Watch? {
+    static func liveMeterWatch(_ args: [OSCArg]) -> LiveMeterReader.Watch? {
         guard args.count >= 3, let path = args[0].stringValue, !path.isEmpty,
               let className = args[1].stringValue,
               let data = args[2].stringValue?.data(using: .utf8),
               let raw = try? JSONSerialization.jsonObject(with: data) as? [[Any]]
         else { return nil }
-        var levels: [ReductionReader.Watch.Level] = []
+        var levels: [LiveMeterReader.Watch.Level] = []
         for level in raw {
             guard level.count == 2, let index = level[0] as? Int, index >= 0, let names = level[1] as? [Any] else { return nil }
             levels.append(.init(index: index, names: names.map { $0 as? String }))
         }
         guard !levels.isEmpty else { return nil }
-        return ReductionReader.Watch(devicePath: path, className: className, levels: levels)
+        return LiveMeterReader.Watch(devicePath: path, className: className, levels: levels)
     }
 }

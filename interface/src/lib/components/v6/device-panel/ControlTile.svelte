@@ -17,6 +17,8 @@
 	import { controlFor, resolveParam, type Get, type ParamRef, type Writes } from './deviceControls';
 	import { isViewRegistered } from '$lib/components/v6/central/viewRegistry';
 	import ReductionNeedle from './ReductionNeedle.svelte';
+	import SpectrumFill from '$lib/components/v6/central/views/panel/SpectrumFill.svelte';
+	import { METERED_CLASSES } from '$lib/stores/v6/liveMeterStore.svelte';
 
 	interface Props {
 		/** The device type, a `DEVICE_PRESETS` key with a `deviceControls` entry. */
@@ -74,6 +76,8 @@
 			<!-- Before the device lands, what was written to it while it loaded. -->
 			{@const get = (ref: ParamRef) => (live ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(live, index(ref))) : pendingValue(index(ref)))}
 			{#if type === 'squash'}<ReductionNeedle devicePath={isGhost ? undefined : live?.devicePath} bind:level={reduction} />{/if}
+			{@const spectrumPath = !isGhost && live && METERED_CLASSES.get(live.className) === 'spectrum' ? live.devicePath : undefined}
+			{#snippet spectrum()}<SpectrumFill devicePath={spectrumPath} ink={color.primary} />{/snippet}
 			<FaceControl
 				{control}
 				{get}
@@ -85,6 +89,7 @@
 				{labelSize}
 				{labelOrientation}
 				pictureLevel={type === 'squash' ? reduction : undefined}
+				backdrop={spectrumPath ? spectrum : undefined}
 				onTap={() => {
 					if (!(tapLoads && isGhost)) return handleTap();
 					triggerLoad();

@@ -15,6 +15,7 @@
   import type { DeviceColorScheme } from '$lib/config/devicePresets';
   import FilterCurve from './FilterCurve.svelte';
   import DeviceXY from './DeviceXY.svelte';
+  import type { Snippet } from 'svelte';
 
   interface Props {
     title: string;
@@ -34,9 +35,11 @@
     onLow?: (value: number) => void;
     onHigh?: (value: number) => void;
     onMid?: (freq: number, gain: number) => void;
+    /** Drawn under the curve, on its 20 Hz–20 kHz axis: the device's spectrum as Live shows it (ADR-541). */
+    backdrop?: Snippet;
   }
 
-  let { title, low, mid, midFreq, high, isGhost = false, color, ariaLabel, curveColor, midFreqHz = (f) => Math.pow(10, 2 + f * 2), onTap, onLow, onHigh, onMid }: Props = $props();
+  let { title, low, mid, midFreq, high, isGhost = false, color, ariaLabel, curveColor, midFreqHz = (f) => Math.pow(10, 2 + f * 2), onTap, onLow, onHigh, onMid, backdrop }: Props = $props();
 
   // The curve is a picture of the three bands, ±12 dB across the range.
   let bands = $derived([
@@ -146,6 +149,7 @@
   >{title}</div>
 
   <!-- Background: Filter curve visualization (full screen) -->
+  {#if backdrop}<div class="absolute inset-0 pointer-events-none z-0">{@render backdrop()}</div>{/if}
   <div class="absolute inset-0 pointer-events-none z-0" class:opacity-60={isGhost}>
     <FilterCurve curveType="eq" {bands} {curveColor} width={200} height={200} />
   </div>
