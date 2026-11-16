@@ -189,6 +189,8 @@
     inside?: { rackPath: string; ink: string; depth: number; chain: RackChain; chains: number };
     /** The chain list of an unfolded rack: its chains. */
     chains?: RackChain[];
+    /** An effect on its way into Live: drawn, editable, not yet a device (no path to move or open). */
+    landing?: boolean;
   };
 
   // A held strip (`trackHoldScope`) shows ITS chain while the finger stays,
@@ -229,11 +231,49 @@
   const pickScope = $derived(padScope?.padPath ?? trackPath);
 
   // Devices Vamp keeps for its own work are never cells (hiddenDevices).
-  const devices = $derived(
+  const liveDevices = $derived(
     padChain
       ? padChain.map((c) => c.device)
       : visibleDevices(trackDevices).sort((a, b) => indexOf(a.devicePath) - indexOf(b.devicePath))
   );
+
+  /*
+   * Landing cells (2026-11-16, the user's call): an effect a chip asked for
+   * is a cell at once, where Live will put it — a MIDI effect ahead of the
+   * instrument, anything else at the end — and its control works before
+   * Live has it: the cell's tile resolves the type's loading slot, whose
+   * pending values are written when the device lands. Its key is the one
+   * the arriving device's cell takes, so the cell stays mounted and a drag
+   * on it carries on into the real device.
+   */
+  const landingScope = $derived(padScope?.padPath ?? trackHoldScope.scopeKey());
+  const landing = $derived(
+    selectedTrackStore.fxGridLoadingTypes(landingScope).map((type): DeviceRecord => {
+      const config = DEVICE_PRESETS[type];
+      return {
+        devicePath: `${padScope?.padPath ?? trackPath}/landing/${type}`,
+        name: config.defaultName,
+        className: config.expectedClassName,
+        params: new Map(),
+        properties: new Map()
+      };
+    })
+  );
+  const landingPaths = $derived(new Set(landing.map((d) => d.devicePath)));
+  const isMidiEffectClass = (className: string) => className.startsWith('Midi') || className === 'MxDeviceMidiEffect';
+  const devices = $derived.by(() => {
+    if (!landing.length) return liveDevices;
+    const out = [...liveDevices];
+    for (const d of landing) {
+      if (!isMidiEffectClass(d.className)) {
+        out.push(d);
+        continue;
+      }
+      const at = out.findIndex((x) => !isMidiEffectClass(x.className));
+      out.splice(at < 0 ? out.length : at, 0, d);
+    }
+    return out;
+  });
   const padInk = $derived(padScope && padScope.color !== null ? trackInk(rgbToHex(padScope.color), paintModeReactive()) : null);
   const glance = $derived(trackDeviceGlance(trackPath));
   const paint = $derived(paintModeReactive());
@@ -258,7 +298,7 @@
       const nth = all.slice(0, i).filter((d) => d.name === device.name && d.className === device.className).length;
       const presetKey = presetKeyFor(device);
       const isInstrument = padChain
-        ? padChain[i].instrument
+        ? (padChain.find((c) => c.device === device)?.instrument ?? false)
         : glance.kind === 'instrument' && glance.headPath === device.devicePath;
       const kind: Cell['kind'] = isInstrument
         ? 'instrument'
@@ -285,7 +325,8 @@
         // a pad's chain, the pad's.
         ink: isInstrument || presetKey === 'sequencer' || (presetKey && DEVICE_PRESETS[presetKey].trackTint) ? (padChain ? (padInk ?? trackColor) : trackColor) : trackInk(family, paint),
         kit: !padChain && isInstrument && device.className === 'DrumGroupDevice',
-        foldable: isChainRack(device.className)
+        foldable: isChainRack(device.className),
+        landing: landingPaths.has(device.devicePath)
       };
     })
   );
@@ -804,7 +845,7 @@
     pressInFold = target instanceof Element && target.closest('.cell-fold') !== null;
     pressInControl = !pressInFold && target instanceof Element && target.closest('.cell-control') !== null;
     pressInHead = !pressInFold && target instanceof Element && target.closest('.cell-head') !== null;
-    if (pressInControl && cell.presetKey) fxChainStore.pick(pickScope, cell.presetKey, cell.device.devicePath);
+    if (pressInControl && cell.presetKey && !cell.landing) fxChainStore.pick(pickScope, cell.presetKey, cell.device.devicePath);
   }
 
   /**
@@ -826,7 +867,9 @@
       open(cell, true);
       return;
     }
+    // Nothing reorders while an effect is landing: its cell has no place in Live yet.
     if (cell.kind === 'instrument' || cell.inside || cell.kind === 'chains' || pressInFold || !chainEl) return;
+    if (cells.some((c) => c.landing)) return;
     const node = chainEl.querySelector<HTMLElement>(`:scope > [data-cell-key="${CSS.escape(cell.key)}"]`);
     if (!node) return;
     // Where it is drawn, mid-slide included, so it lifts from under the finger.
@@ -942,8 +985,9 @@
   function open(cell: Cell, fromControl = false) {
     const { device } = cell;
     // Under a held strip the chain is edited in place: opening a view
-    // would appoint the device, and Live would select its track.
-    if (trackHoldScope.active) return;
+    // would appoint the device, and Live would select its track. A landing
+    // cell has no device to open yet; its tile opens the type's view.
+    if (trackHoldScope.active || cell.landing) return;
     if (cell.kind === 'instrument' && !cell.inside) {
       // The kit cell under a pad: back to the kit — from its frame. Its
       // Trnsp is the pad's under the scope, so a touch there keeps it.
@@ -1028,13 +1072,13 @@
         <!-- The grid's own tile, on this device. A touch here is the
              control's: it picks this device and never starts a reorder. -->
         <div class="cell-control" role="presentation"><CellSize>
-          <tile.Tile device={cell.device} position={tile.position} />
+          <tile.Tile device={cell.landing ? undefined : cell.device} position={tile.position} />
         </CellSize></div>
       {:else if controlFor(cell.presetKey)}
         <!-- No grid tile: the device's control (deviceControls), the one its
              browser preset tiles and its view draw, on this device. -->
         <div class="cell-control" role="presentation"><CellSize>
-          <ControlTile type={cell.presetKey as DeviceTypeKey} device={cell.device} />
+          <ControlTile type={cell.presetKey as DeviceTypeKey} device={cell.landing ? undefined : cell.device} />
         </CellSize></div>
       {:else}
       {#snippet mark()}
@@ -1132,6 +1176,7 @@
     <div
       class="chain-cell"
       class:off={!isOn(cell)}
+      class:landing={cell.landing}
       class:dragging={drag?.key === cell.key}
       class:appointed={fxChainStore.appointed === cell.device.devicePath}
       aria-current={fxChainStore.appointed === cell.device.devicePath ? 'true' : undefined}
@@ -1377,6 +1422,18 @@
   }
   /* Bypassed: the bar keeps its name, its wash goes and the face dims, as
      a board's tile ghosts its body when its section is off (ADR-516). */
+  /* An effect on its way into Live (2026-11-16, the user's call): a
+     ghost until Live has it — the dashed edge and grey name a ghost tile
+     wears, its control drawn as a ghost but still showing what was set. */
+  .chain-cell.landing {
+    border-style: dashed;
+  }
+  .chain-cell.landing .cell-head {
+    background: transparent;
+  }
+  .chain-cell.landing .name {
+    color: var(--muted-foreground);
+  }
   .chain-cell.off .cell-head {
     background: transparent;
   }

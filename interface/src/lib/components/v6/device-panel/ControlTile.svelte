@@ -65,16 +65,17 @@
 		title={DEVICE_PRESETS[type]?.defaultName ?? control.title}
 		disableCentralViewOnTap={disableCentralViewOnTap || !hasView}
 	>
-		{#snippet children({ device: live, sendParam, storePendingParam, triggerLoad, handleTap, isGhost, isLoading, color, openView })}
+		{#snippet children({ device: live, sendParam, storePendingParam, pendingValue, triggerLoad, handleTap, isGhost, isLoading, color, openView })}
 			{@const names = live ? selectedTrackStore.paramNamesForDevice(live) : []}
 			{@const index = (ref: ParamRef) => resolveParam(ref, names)}
-			{@const get = (ref: ParamRef) => (live ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(live, index(ref))) : undefined)}
+			<!-- Before the device lands, what was written to it while it loaded. -->
+			{@const get = (ref: ParamRef) => (live ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(live, index(ref))) : pendingValue(index(ref)))}
 			<FaceControl
 				{control}
 				{get}
 				display={(ref) => (live ? selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(live, index(ref))) : undefined)}
 				{color}
-				{isGhost}
+				isGhost={isGhost || isLoading}
 				{icon}
 				{orientation}
 				{labelSize}

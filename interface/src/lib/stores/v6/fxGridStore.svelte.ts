@@ -38,6 +38,8 @@ interface FXGridSlotState {
 	error?: string;
 	loadTimeout?: ReturnType<typeof setTimeout>;
 	pendingParams?: Map<number, number>;
+	/** When the load in flight started: the chain draws landing cells in that order. */
+	loadStartedAt?: number;
 }
 
 export interface FXGridSlot extends FXGridSlotState {
@@ -509,7 +511,7 @@ export class FXGridState {
 		// The full path from the folder (a renamed Place is not found by name).
 		const load = found ? { ...config, ...found, presetPath: found.presetPath || config.presetPath } : config;
 
-		this.patchSlot(slotKey, { loadState: 'loading', error: undefined }, scope);
+		this.patchSlot(slotKey, { loadState: 'loading', error: undefined, loadStartedAt: Date.now() }, scope);
 
 		// Clear any existing timeout to prevent leaks if loadDevice is called rapidly
 		if (slot.loadTimeout) {
@@ -581,6 +583,26 @@ export class FXGridState {
 			}
 		}
 		return out;
+	}
+
+	/**
+	 * The device types with a load in flight in a scope and no device there
+	 * yet, oldest first: the chain draws each as a cell before Live has it
+	 * (2026-11-16, the user's call), its edits held as pending values and
+	 * written when the device lands.
+	 */
+	loadingTypes(scope = ''): DeviceTypeKey[] {
+		const table = this.tableFor(scope);
+		if (!table) return [];
+		const out: [DeviceTypeKey, number][] = [];
+		for (const [key, slot] of table.entries()) {
+			if (slot.loadState !== 'loading') continue;
+			const type =
+				slotRegistry.getDeviceTypeForPosition(key as PositionKey) ??
+				(DEVICE_PRESETS[key as DeviceTypeKey] ? (key as DeviceTypeKey) : undefined);
+			if (type && !this.getSlot(type, scope).device) out.push([type, slot.loadStartedAt ?? 0]);
+		}
+		return out.sort((a, b) => a[1] - b[1]).map(([type]) => type);
 	}
 
 	checkLoadingCompletion(device: FXGridCandidateDevice) {

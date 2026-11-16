@@ -2,6 +2,8 @@
   import type { DeviceRecord } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import { session } from '$lib/stores/session.svelte';
+  import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
+  import { readFxScope } from '$lib/components/v6/central/fxScope';
   import BaseDeviceControl from './BaseDeviceControl.svelte';
   import DeviceXY from './DeviceXY.svelte';
   import ReverbPortrait from '../central/views/reverb/ReverbPortrait.svelte';
@@ -23,8 +25,13 @@
   // The `reverb` control (`deviceControls`): Decay across, Dry/Wet up. The
   // portrait below places the same Decay on the tail's time axis.
   const REVERB = controlFor('reverb') as XyControl;
+  // Before a Reverb lands (a ghost's first drag, a chain cell still
+  // loading), the values written to it while it loads.
+  const getFxScope = readFxScope();
+  const scopeKey = $derived(getFxScope()?.padPath ?? trackHoldScope.scopeKey());
+  const pending = $derived(device ? undefined : selectedTrackStore.getFxGridSlot(position, scopeKey).pendingParams);
   const get = (ref: ParamRef) =>
-    device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, resolveParam(ref))) : undefined;
+    device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, resolveParam(ref))) : pending?.get(resolveParam(ref));
 
   // Reactive view of armed/store state.
   let at = $derived(REVERB.read(get));
@@ -111,7 +118,7 @@
       xValue={decayTimeValue}
       yValue={dryWetValue}
       title={padTitle}
-      {isGhost}
+      isGhost={isGhost || isLoading}
       {color}
       background={runsIr && !isGhost && !isLoading ? irBackground : undefined}
       onTap={handleTap}

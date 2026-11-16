@@ -5,7 +5,8 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-const track = vi.hoisted(() => ({ type: 'midi' as 'midi' | 'audio' }));
+const track = vi.hoisted(() => ({ type: 'midi' as 'midi' | 'audio', slot: 'active' as string }));
+const loadSlot = vi.hoisted(() => vi.fn());
 const send = vi.hoisted(() => vi.fn());
 vi.mock('$lib/api/simpleClient', () => ({ send }));
 vi.mock('$lib/services/effectView.svelte', () => ({ openViewWhenLanded: () => () => {} }));
@@ -15,7 +16,9 @@ vi.mock('$lib/stores/v6/selectedTrackStore.svelte', () => ({
 		get trackType() {
 			return track.type;
 		},
-		selectedTrackPath: 'tracks/0'
+		selectedTrackPath: 'tracks/0',
+		getFxGridSlot: () => ({ state: track.slot }),
+		loadFxGridDevice: loadSlot
 	}
 }));
 
@@ -28,6 +31,8 @@ const SHELF = { name: 'Audio-Midi Effects', source: 'place:Audio-Midi Effects', 
 beforeEach(() => {
 	_setEffectsFolderForTests(SHELF);
 	track.type = 'midi';
+	track.slot = 'active';
+	loadSlot.mockClear();
 	send.mockClear();
 	trackHoldScope.clear();
 });
@@ -62,5 +67,12 @@ describe('adding an effect to the chain', () => {
 		trackHoldScope.press('tracks/3', 1);
 		await addEffectToChain({ name: 'Reverb', fullPath: 'default:reverb', source: 'native:Hybrid', rel: 'Reverb', kind: 'audio-effect', preset: 'reverb' });
 		expect(send).toHaveBeenCalledWith(expect.stringContaining('device/load'), ['tracks/3', '', '', 'native:Hybrid', 'Reverb']);
+	});
+
+	it('loads an effect the chain does not carry yet through its slot, so its cell is up at once', async () => {
+		track.slot = 'ghost';
+		await addEffectToChain({ name: 'Reverb', fullPath: 'default:reverb', source: 'native:Hybrid', rel: 'Reverb', kind: 'audio-effect', preset: 'reverb' });
+		expect(loadSlot).toHaveBeenCalledWith('reverb', '');
+		expect(send).not.toHaveBeenCalledWith(expect.stringContaining('device/load'), expect.anything());
 	});
 });

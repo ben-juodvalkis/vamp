@@ -33,6 +33,8 @@ import { logger } from '$lib/utils/logger';
       device: DeviceRecord | null;
       sendParam: (paramIndex: number, value: number) => void;
       storePendingParam: (paramIndex: number, value: number) => void;
+      /** A value written before the device landed, held for it: what the control shows until it does. */
+      pendingValue: (paramIndex: number) => number | undefined;
       isGhost: boolean;
       isLoading: boolean;
       triggerLoad: () => void;
@@ -185,6 +187,10 @@ import { logger } from '$lib/utils/logger';
     if (trackHeld) trackHoldScope.storePendingOnFollowers(key, paramIndex, value);
   }
 
+  function pendingValue(paramIndex: number): number | undefined {
+    return given ? undefined : slot.pendingParams?.get(paramIndex);
+  }
+
   // Pending parameters are drained by FXGridState's $effect.root watcher,
   // which fires checkLoadingCompletion() on each newly-arrived device.
 
@@ -197,7 +203,7 @@ import { logger } from '$lib/utils/logger';
   data-fx-scope={fxScope ? fxScope.note : undefined}
   style="--accent-primary: {color.primary};"
 >
-    {@render children({ device, sendParam: writeParam, storePendingParam, isGhost, isLoading, triggerLoad, handleTap, openView, color })}
+    {@render children({ device, sendParam: writeParam, storePendingParam, pendingValue, isGhost, isLoading, triggerLoad, handleTap, openView, color })}
 
   <!-- Device micro-label (§5.6 — the FX zone's instrument signature). Off by
        default; opt in per-control via showHeadline. -->

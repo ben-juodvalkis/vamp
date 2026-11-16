@@ -163,6 +163,23 @@ describe('a scoped slot', () => {
 		expect(fxGrid.loadingPadScopes()).toEqual([]);
 	});
 
+	it('names the types landing in a scope, oldest first, until each device arrives (the chain\'s landing cells)', async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1000);
+		await selectedTrackStore.loadFxGridDevice('reverb');
+		vi.setSystemTime(2000);
+		await selectedTrackStore.loadFxGridDevice('echo');
+		vi.useRealTimers();
+		expect(selectedTrackStore.fxGridLoadingTypes()).toEqual(['reverb', 'echo']);
+		expect(selectedTrackStore.fxGridLoadingTypes(PAD)).toEqual([]);
+		const setParam = vi.spyOn(selectedTrackStore, 'setParamValue').mockResolvedValue();
+		selectedTrackStore.storePendingParam('reverb', 1, 0.8);
+		replaceTree(4, [drums(true)]);
+		flushSync();
+		expect(selectedTrackStore.fxGridLoadingTypes()).toEqual(['echo']);
+		expect(setParam).toHaveBeenCalledWith(`${TRACK}/devices/1/params/1`, 0.8);
+	});
+
 	it('a failure carrying the scope resets that scope alone', async () => {
 		await selectedTrackStore.loadFxGridDevice('reverb', PAD);
 		await selectedTrackStore.loadFxGridDevice('reverb');
