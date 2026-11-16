@@ -116,11 +116,16 @@ import { logger } from '$lib/utils/logger';
   // Device can be passed as prop (backward compat) or derived from slot.
   // Under a pad scope the slot's own answer wins: the prop is the FX
   // grid's track-level lookup.
-  let device = $derived(deviceProp !== undefined && !scopeKey ? deviceProp : slot.device);
   // A device handed in is a real one (a chain cell's, a device inside a
   // rack's chain included, ADR-529): never a ghost, whatever the track's
   // slot says — or a drag on a rack's Reverb would load one on the track.
-  let given = $derived(!!deviceProp && !scopeKey);
+  // Under a track hold the chain's cells are the held track's own, so a
+  // cell's device stands as given (one inside a rack's chain too): two
+  // Compressors there are two devices, not the first one twice.
+  let given = $derived(
+    !!deviceProp && (!scopeKey || (trackHeld && deviceProp.devicePath.startsWith(`${trackHoldScope.primary}/`)))
+  );
+  let device = $derived(given && deviceProp ? deviceProp : slot.device);
   let isGhost = $derived(!given && slot.state === 'ghost');
   let isLoading = $derived(!given && slot.state === 'loading');
 

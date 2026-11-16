@@ -1,7 +1,7 @@
 /**
  * Adding an effect to the chain: the one load path the chain's palette
  * chips (ADR-523) and the browser's Effect segment share. Onto the selected
- * track's chain, or the scoped pad's, with its view opened once Live
+ * track's chain (a held strip's while one is held), or the scoped pad's, with its view opened once Live
  * reports the device. A failure is said on the error banner, the one
  * surface that outlives a closed browser.
  *
@@ -17,6 +17,7 @@ import { activeDrumRackScope } from '$lib/services/deviceViewRouter.svelte';
 import { openViewWhenLanded } from '$lib/services/effectView.svelte';
 import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
 import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
+import { v3Store } from '$lib/stores/v3/normalized.svelte';
 import { v3ErrorBannerStore } from '$lib/stores/v6/v3ErrorBannerStore.svelte';
 import { DEVICE_PRESETS } from '$lib/config/devicePresets';
 import { effectSource } from '$lib/services/effectSources.svelte';
@@ -41,9 +42,14 @@ export function nativeClassOf(effect: Pick<ChainEffect, 'source'>): string | nul
 	return effect.source.startsWith('native:') ? effect.source.slice('native:'.length) : null;
 }
 
-/** Whether an effect can go on the selected track: a MIDI effect only on a MIDI track. */
+/**
+ * Whether an effect can go on the track the chain shows (a held strip's, else
+ * the selected one): a MIDI effect only on a MIDI track.
+ */
 export function fitsSelectedTrack(effect: Pick<ChainEffect, 'kind'>): boolean {
-	return !MIDI_EFFECT_KINDS.has(effect.kind ?? 'unknown') || selectedTrackStore.trackType === 'midi';
+	if (!MIDI_EFFECT_KINDS.has(effect.kind ?? 'unknown')) return true;
+	const held = trackHoldScope.primary;
+	return held ? !!v3Store.tracks.get(held)?.hasMidiInput : selectedTrackStore.trackType === 'midi';
 }
 
 /**
@@ -52,13 +58,16 @@ export function fitsSelectedTrack(effect: Pick<ChainEffect, 'kind'>): boolean {
  * view opens once Live reports the device.
  */
 export async function addEffectToChain(effect: ChainEffect): Promise<void> {
-	const trackPath = selectedTrackStore.selectedTrackPath;
+	// A held strip's chain is the one on screen, so the effect goes there.
+	const trackPath = trackHoldScope.primary ?? selectedTrackStore.selectedTrackPath;
 	const pad = trackHoldScope.active ? null : activeDrumRackScope();
 	// A rack's chain the chain's own + chose (ADR-529), else the pad's, else the track's.
 	const target = chainAddTarget.path ?? pad?.padPath ?? '';
 	if (!trackPath) return reportFailure(effect.name, new Error('No track selected'));
 	if (!fitsSelectedTrack(effect)) return reportFailure(effect.name, new Error('A MIDI effect goes on a MIDI track'));
-	const cancelView = openViewWhenLanded({ trackPath, padPath: target, name: effect.name });
+	// Not under a hold: opening the view appoints the device, which would
+	// select the held track in Live.
+	const cancelView = trackHoldScope.active ? () => {} : openViewWhenLanded({ trackPath, padPath: target, name: effect.name });
 	try {
 		// A type loads as its tile does: one of the user's effects from the
 		// effects folder, by name (ADR-498); a Live device by name sends no file (3.12.0).

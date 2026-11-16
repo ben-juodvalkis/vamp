@@ -21,6 +21,7 @@ vi.mock('$lib/stores/v6/selectedTrackStore.svelte', () => ({
 
 import { addEffectToChain, fitsSelectedTrack } from '$lib/services/chainEffects.svelte';
 import { _setEffectsFolderForTests } from '$lib/services/effectSources.svelte';
+import { trackHoldScope } from '$lib/stores/v6/trackHoldScope.svelte';
 
 const SHELF = { name: 'Audio-Midi Effects', source: 'place:Audio-Midi Effects', devices: { Guitar: 'Guitar/Guitar.adg', 'Bass Amp': 'Guitar/Bass Amp.adg' } };
 
@@ -28,6 +29,7 @@ beforeEach(() => {
 	_setEffectsFolderForTests(SHELF);
 	track.type = 'midi';
 	send.mockClear();
+	trackHoldScope.clear();
 });
 
 describe('adding an effect to the chain', () => {
@@ -54,5 +56,11 @@ describe('adding an effect to the chain', () => {
 		expect(fitsSelectedTrack({ kind: 'audio-effect' })).toBe(true);
 		await addEffectToChain({ name: 'Arpeggiator', fullPath: 'default:arpeggiator', source: 'native:MidiArpeggiator', rel: 'Arpeggiator', kind: 'midi-effect', preset: 'arpeggiator' });
 		expect(send).not.toHaveBeenCalledWith(expect.stringContaining('device/load'), expect.anything());
+	});
+
+	it('goes onto a held strip\'s track, the chain on screen, not the selected one', async () => {
+		trackHoldScope.press('tracks/3', 1);
+		await addEffectToChain({ name: 'Reverb', fullPath: 'default:reverb', source: 'native:Hybrid', rel: 'Reverb', kind: 'audio-effect', preset: 'reverb' });
+		expect(send).toHaveBeenCalledWith(expect.stringContaining('device/load'), ['tracks/3', '', '', 'native:Hybrid', 'Reverb']);
 	});
 });

@@ -86,7 +86,6 @@
   import DrumRackFace from './chain/DrumRackFace.svelte';
   import { deviceTypeLabel } from './chain/deviceTypeLabel';
   import { schemeFromInk } from '$lib/config/devicePresets';
-  import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
   import constants from '$config/constants.json';
   import Music from '@lucide/svelte/icons/music';
   import { press } from '$lib/actions/press';
@@ -123,7 +122,7 @@
   import { trackDeviceGlance } from '$lib/components/v6/tracks/composables/useTrackDevice.svelte';
   import { rgbToHex, trackInk } from '$lib/utils/formatters/trackFormatters';
   import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-  import { selectedTrackInk } from '$lib/utils/selectedTrackInk';
+  import { v3Store } from '$lib/stores/v3/normalized.svelte';
   import TrackDeviceView from '$lib/components/v6/tracks/TrackStrip/components/TrackDeviceView.svelte';
   import type { DeviceRecord } from '$lib/stores/v3/normalized.svelte';
 
@@ -192,7 +191,14 @@
     chains?: RackChain[];
   };
 
-  const trackPath = $derived(selectedTrackStore.selectedTrackPath);
+  // A held strip (`trackHoldScope`) shows ITS chain while the finger stays,
+  // without selecting it: the cells, their inks and their tiles are the
+  // held track's (the user, 2026-11-16; the cells stayed the selected
+  // track's while the tiles in them read the held one's).
+  const trackPath = $derived(trackHoldScope.primary ?? selectedTrackStore.selectedTrackPath);
+  const chainTrack = $derived(v3Store.tracks.get(trackPath));
+  /** The devices of the track the chain shows, in Live's order. */
+  const trackDevices = $derived(chainTrack ? [...chainTrack.devices.values()] : []);
 
   // The pad the Drum Rack view has scoped, as the FX grid reads it: not
   // under a track hold, whose grid is another track's.
@@ -226,12 +232,14 @@
   const devices = $derived(
     padChain
       ? padChain.map((c) => c.device)
-      : visibleDevices([...selectedTrackStore.devicesByPath]).sort((a, b) => indexOf(a.devicePath) - indexOf(b.devicePath))
+      : visibleDevices(trackDevices).sort((a, b) => indexOf(a.devicePath) - indexOf(b.devicePath))
   );
   const padInk = $derived(padScope && padScope.color !== null ? trackInk(rgbToHex(padScope.color), paintModeReactive()) : null);
   const glance = $derived(trackDeviceGlance(trackPath));
   const paint = $derived(paintModeReactive());
-  const trackColor = $derived(selectedTrackInk() ?? 'var(--signal-dim)');
+  const trackInkOf = $derived(chainTrack ? trackInk(rgbToHex(chainTrack.color), paintModeReactive()) : null);
+  const trackColor = $derived(trackInkOf ?? 'var(--signal-dim)');
+  const trackScheme = $derived(trackInkOf ? schemeFromInk(trackInkOf) : null);
 
   /** devicePath → the grid tile that controls it, under the type-first rule and the picks. */
   const tileOf = $derived.by(() => {
@@ -291,7 +299,7 @@
    */
   const kitCell = $derived.by<Cell | null>(() => {
     if (!padChain || !padScope) return null;
-    const all = [...selectedTrackStore.devicesByPath].sort((a, b) => indexOf(a.devicePath) - indexOf(b.devicePath));
+    const all = [...trackDevices].sort((a, b) => indexOf(a.devicePath) - indexOf(b.devicePath));
     const i = all.findIndex((d) => d.devicePath === padScope.rackPath);
     if (i < 0) return null;
     const device = all[i];
@@ -680,7 +688,7 @@
   const paletteKind = $derived<PaletteKind>(
     padScope || cells.some((c) => c.kind === 'instrument' && c.device.className === 'DrumGroupDevice')
       ? 'kit'
-      : selectedTrackStore.trackType === 'audio'
+      : !chainTrack?.isFoldable && !chainTrack?.hasMidiInput && chainTrack?.hasAudioInput
         ? 'audio'
         : 'instrument'
   );
@@ -933,6 +941,9 @@
   /** `fromControl`: the press landed on the cell's control, not its frame. */
   function open(cell: Cell, fromControl = false) {
     const { device } = cell;
+    // Under a held strip the chain is edited in place: opening a view
+    // would appoint the device, and Live would select its track.
+    if (trackHoldScope.active) return;
     if (cell.kind === 'instrument' && !cell.inside) {
       // The kit cell under a pad: back to the kit — from its frame. Its
       // Trnsp is the pad's under the scope, so a touch there keeps it.
@@ -999,7 +1010,7 @@
       {:else if cell.kit}
         <!-- A Drum Rack: the pads its playing clip has notes on. -->
         <div class="cell-control" role="presentation"><CellSize>
-          <DrumRackFace device={cell.device} color={selectedTrackScheme() ?? schemeFromInk(cell.ink)} />
+          <DrumRackFace device={cell.device} color={trackScheme ?? schemeFromInk(cell.ink)} />
         </CellSize></div>
       {:else if cell.presetKey === 'sequencer'}
         <!-- Permute: its mute and pitch steps, on this device. -->
@@ -1007,7 +1018,7 @@
       {:else if !padScope && !cell.inside && cell.kind === 'instrument' && glance.instrumentViewType && FACED_INSTRUMENTS.has(glance.instrumentViewType)}
         <!-- The instrument's signature control, as its view draws it. -->
         <div class="cell-control" role="presentation"><CellSize>
-          <InstrumentFace device={cell.device} type={glance.instrumentViewType} color={selectedTrackScheme() ?? schemeFromInk(cell.ink)} />
+          <InstrumentFace device={cell.device} type={glance.instrumentViewType} color={trackScheme ?? schemeFromInk(cell.ink)} />
         </CellSize></div>
       {:else if !padScope && isMidiWheels(cell.device)}
         <!-- The pitch and mod wheels, as the instrument views draw them:
@@ -1046,7 +1057,7 @@
         <div class="cell-control" role="presentation"><CellSize><RackFace
           grid={macroGrid}
           valueOf={(i) => macroValue(cell.device, i)}
-          color={cell.kind === 'instrument' ? (selectedTrackScheme() ?? schemeFromInk(cell.ink)) : schemeFromInk(cell.ink)}
+          color={cell.kind === 'instrument' ? (trackScheme ?? schemeFromInk(cell.ink)) : schemeFromInk(cell.ink)}
           onChange={(i, v) => setMacro(cell.device, i, v)}
         /></CellSize></div>
       {:else}
