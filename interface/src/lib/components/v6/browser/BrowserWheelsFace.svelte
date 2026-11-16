@@ -5,16 +5,25 @@
 	 * live. They send to the selected MIDI track as every wheel does
 	 * (`api/midiWheels`), and the surface loads the device there on the first
 	 * touch, so playing them from the browser is how the device is added; the
-	 * tile's name still loads it as saved.
+	 * tile's name still loads it as saved. The finger's release is `onRelease`:
+	 * the browser closes then unless locked, as after any load (user,
+	 * 2026-11-16).
 	 */
 	import MidiWheelsPanel from '$lib/components/v6/midi/MidiWheelsPanel.svelte';
+
+	let { onRelease }: { onRelease?: () => void } = $props();
 
 	// Dimmed at rest, full while a finger is on it, as every live tile is
 	// (BrowserPresetFace, user 2026-11-06).
 	let touched = $state(false);
+	function release() {
+		if (!touched) return;
+		touched = false;
+		onRelease?.();
+	}
 </script>
 
-<svelte:window onpointerup={() => (touched = false)} onpointercancel={() => (touched = false)} />
+<svelte:window onpointerup={release} onpointercancel={release} />
 
 <!-- The tile's own click is a load: a press on the wheels is theirs alone. -->
 <div

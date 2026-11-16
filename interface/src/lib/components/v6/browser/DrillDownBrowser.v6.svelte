@@ -1837,7 +1837,7 @@
 			<BrowserPresetWaveform preset={p} />
 		{/if}
 		{#if wheels}
-			<BrowserWheelsFace />
+			<BrowserWheelsFace onRelease={() => handlePostLoad()} />
 		{:else if FACE_KINDS.has(p.kind ?? '') && !inactive}
 			<!-- An effect's own control at its saved values: tap loads, drag
 			     loads and sets (BrowserPresetFace). -->
