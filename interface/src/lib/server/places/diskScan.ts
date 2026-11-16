@@ -44,7 +44,7 @@ import { PLACE_SAMPLES_FOLDER, type ItemKind, type KindCounts } from '$lib/utils
 
 const COMPONENT_DIRS = ['/Library/Audio/Plug-Ins/Components', path.join(process.env.HOME ?? '', 'Library/Audio/Plug-Ins/Components')];
 /** Bump when the kind reading changes, so the per-file cache is re-read. */
-const KIND_CACHE_VERSION = 1;
+const KIND_CACHE_VERSION = 2;
 export const SAMPLES_FOLDER = PLACE_SAMPLES_FOLDER;
 
 export const PRESET_EXTENSIONS = new Set(['.adg', '.adv', '.aupreset', '.amxd']);
@@ -71,7 +71,7 @@ export interface PlaceItem {
 	patch?: string;
 	installed?: boolean;
 	peaks?: string;
-	/** A Live preset's device, as Live names it ("Drum Rack", "Wavetable"): index scans only. */
+	/** A Live preset's device, as Live names it ("Drum Rack", "Wavetable"). */
 	device?: string;
 	/** What the sound is like, from Live's tags (`indexScan.cardTags`): index scans only. */
 	tags?: string[];
@@ -95,6 +95,8 @@ export interface KindInfo {
 	kind: ItemKind;
 	au?: string;
 	patch?: string;
+	/** A Live preset's device, as Live names it (`PlaceItem.device`). */
+	device?: string;
 }
 
 export interface AuComponent {
@@ -169,21 +171,72 @@ const LIVE_INSTRUMENTS = new Set([
 	'UltraAnalog', 'LoungeLizard', 'StringStudio', 'InstrumentImpulse', 'DrumCell', 'MxDeviceInstrument'
 ]);
 
-/** Classify a Live device preset from the head of its XML. */
-export function liveDeviceKind(xml: string, ext: string): ItemKind {
+/**
+ * The name Live shows for an instrument or rack class, as Live's own index
+ * names its Built-in devices (measured from `Live-files-13003.db`,
+ * 2026-11-16). The index scan reads these from the index itself; a disk scan
+ * has no index, so it carries them. Any other class falls back to its
+ * spelled-out form, as the index scan's does (`AutoFilter2` → `Auto Filter`).
+ */
+const LIVE_DEVICE_NAMES: Record<string, string> = {
+	MultiSampler: 'Sampler', OriginalSimpler: 'Simpler', InstrumentMeld: 'Meld', Drift: 'Drift', Collision: 'Collision',
+	InstrumentVector: 'Wavetable', Operator: 'Operator', UltraAnalog: 'Analog', LoungeLizard: 'Electric',
+	StringStudio: 'Tension', InstrumentImpulse: 'Impulse', DrumCell: 'Drum Sampler', DrumSynth: 'Drum Synth',
+	DrumGroupDevice: 'Drum Rack', InstrumentGroupDevice: 'Instrument Rack',
+	AudioEffectGroupDevice: 'Audio Effect Rack', MidiEffectGroupDevice: 'MIDI Effect Rack'
+};
+
+/** A Live preset's device class: the rack's for an `.adg`, the root element's for an `.adv`. */
+function liveDeviceClass(xml: string, ext: string): string | undefined {
+	return (ext === '.adg' ? /<Device>\s*<(\w+)/ : /<Ableton\b[^>]*>\s*<(\w+)/).exec(xml)?.[1];
+}
+
+/** The kind of a Live preset whose device is `cls`. */
+function kindOfLiveClass(cls: string | undefined, ext: string): ItemKind {
+	if (!cls) return 'unknown';
 	if (ext === '.adg') {
-		const group = /<Device>\s*<(\w+)/.exec(xml)?.[1];
-		if (group === 'DrumGroupDevice') return 'drum-rack';
-		if (group === 'InstrumentGroupDevice') return 'instrument-rack';
-		if (group === 'AudioEffectGroupDevice') return 'effect-rack';
-		if (group === 'MidiEffectGroupDevice') return 'midi-effect-rack';
+		if (cls === 'DrumGroupDevice') return 'drum-rack';
+		if (cls === 'InstrumentGroupDevice') return 'instrument-rack';
+		if (cls === 'AudioEffectGroupDevice') return 'effect-rack';
+		if (cls === 'MidiEffectGroupDevice') return 'midi-effect-rack';
 		return 'unknown';
 	}
-	const device = /<Ableton\b[^>]*>\s*<(\w+)/.exec(xml)?.[1];
-	if (!device) return 'unknown';
-	if (LIVE_INSTRUMENTS.has(device)) return 'instrument';
-	if (device === 'MxDeviceMidiEffect' || device.startsWith('Midi')) return 'midi-effect';
+	if (LIVE_INSTRUMENTS.has(cls)) return 'instrument';
+	if (cls === 'MxDeviceMidiEffect' || cls.startsWith('Midi')) return 'midi-effect';
 	return 'audio-effect';
+}
+
+/**
+ * The name Live shows for the device a preset of class `cls` loads, or
+ * undefined for a Max device's preset: Live names that by its `.amxd`, which
+ * the preset's head does not carry.
+ */
+export function liveDeviceName(cls: string | undefined): string | undefined {
+	if (!cls || cls.startsWith('MxDevice')) return undefined;
+	return LIVE_DEVICE_NAMES[cls] ?? cls.replace(/\d+$/, '').replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
+/** Classify a Live device preset from the head of its XML. */
+export function liveDeviceKind(xml: string, ext: string): ItemKind {
+	return kindOfLiveClass(liveDeviceClass(xml, ext), ext);
+}
+
+/** The Live preset format before XML (Live 7 and older): a magic, then the device class as a length-prefixed name at byte 11. */
+const BINARY_PRESET_MAGIC = Buffer.from([0xab, 0x1e, 0x56, 0x78]);
+
+/** A Live preset's kind and device, from its gzipped XML or, failing that, the old binary format. */
+function readLivePreset(file: string, ext: string): KindInfo {
+	const { head } = readSlices(file, 64);
+	let cls: string | undefined;
+	if (head.subarray(0, 4).equals(BINARY_PRESET_MAGIC)) {
+		// Only an `.adv`'s binary head names its device; an old `.adg` says `GroupDevicePreset`, not which rack.
+		if (ext === '.adv' && head.length > 12) cls = /^\w+$/.exec(head.subarray(12, 12 + head[11]).toString('latin1'))?.[0];
+	} else {
+		cls = liveDeviceClass(gzipHead(file), ext);
+	}
+	const kind = kindOfLiveClass(cls, ext);
+	const device = kind === 'unknown' ? undefined : liveDeviceName(cls);
+	return device ? { kind, device } : { kind };
 }
 
 /** A Max device's type, from the four-character code at offset 8 of its header. */
@@ -208,7 +261,7 @@ export function readKind(file: string, ext: string): KindInfo {
 			const patch = id.name ? path.basename(id.name).replace(/\.aupreset$/i, '') : undefined;
 			return { kind, au: `${id.type}|${id.subtype}|${id.manufacturer}`, patch };
 		}
-		if (ext === '.adg' || ext === '.adv') return { kind: liveDeviceKind(gzipHead(file), ext) };
+		if (ext === '.adg' || ext === '.adv') return readLivePreset(file, ext);
 		if (ext === '.amxd') return { kind: maxDeviceKind(readSlices(file, 16).head) };
 		if (ext === CLIP_EXTENSION) {
 			if (readSlices(file, 4).head.equals(Buffer.from([0xab, 0x1e, 0x56, 0x78]))) return { kind: 'clip' };
@@ -401,6 +454,7 @@ export function scanPlace(root: string, placeName: string, ctx: ScanContext): Pl
 				variants: [e.name],
 				kind: info.kind
 			};
+			if (info.device) item.device = info.device;
 			if (info.au) {
 				const component = ctx.au.get(info.au);
 				item.installed = !!component;

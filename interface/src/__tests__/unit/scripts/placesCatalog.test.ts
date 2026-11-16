@@ -1,4 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import zlib from 'node:zlib';
 // The Places catalog builder lives outside interface/ (repo-root scripts/);
 // importing it is side-effect-free — main() runs only under direct invocation.
 import {
@@ -9,6 +13,7 @@ import {
 	fourCC,
 	liveDeviceKind,
 	maxDeviceKind,
+	readKind,
 	placesUnder,
 	shapePlace,
 	tintFor,
@@ -95,6 +100,30 @@ describe('reading kinds', () => {
 		expect(liveDeviceKind(device('Drift'), '.adv')).toBe('instrument');
 		expect(liveDeviceKind(device('MidiArpeggiator'), '.adv')).toBe('midi-effect');
 		expect(liveDeviceKind(device('Reverb'), '.adv')).toBe('audio-effect');
+	});
+
+	it('names the device a Live preset on disk loads, as Live names it, the old binary format too', () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vamp-kind-'));
+		try {
+			const write = (name: string, body: Buffer | string) => {
+				const file = path.join(dir, name);
+				fs.writeFileSync(file, typeof body === 'string' ? zlib.gzipSync(body) : body);
+				return file;
+			};
+			const adv = (cls: string) => `<Ableton MinorVersion="12.0">\n\t<${cls} Id="0">`;
+			expect(readKind(write('Mono Sine.adv', adv('Drift')), '.adv')).toEqual({ kind: 'instrument', device: 'Drift' });
+			expect(readKind(write('Pad.adv', adv('InstrumentVector')), '.adv')).toEqual({ kind: 'instrument', device: 'Wavetable' });
+			expect(readKind(write('Wide.adv', adv('AutoFilter2')), '.adv')).toEqual({ kind: 'audio-effect', device: 'Auto Filter' });
+			const rack = `<Ableton MinorVersion="12.0"><GroupDevicePreset><Device>\n<InstrumentGroupDevice Id="0">`;
+			expect(readKind(write('Keys.adg', rack), '.adg')).toEqual({ kind: 'instrument-rack', device: 'Instrument Rack' });
+			// A Max device's preset: Live names it by its .amxd, which the head does not carry.
+			expect(readKind(write('Poli.adv', adv('MxDeviceInstrument')), '.adv')).toEqual({ kind: 'instrument' });
+			// Live 7's binary preset, as on disk (ck.q.adv): magic, then `Operator` length-prefixed at byte 11.
+			const binary = Buffer.concat([Buffer.from([0xab, 0x1e, 0x56, 0x78, 0x03, 0x6d, 0, 0, 0, 0, 0x02, 0x08]), Buffer.from('Operator$'), Buffer.alloc(40)]);
+			expect(readKind(write('ck.q.adv', binary), '.adv')).toEqual({ kind: 'instrument', device: 'Operator' });
+		} finally {
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
 	});
 
 	it('reads a Max device’s type from its header', () => {

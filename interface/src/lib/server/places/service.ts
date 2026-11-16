@@ -80,9 +80,9 @@ const EFFECTS_LAYOUT = 3;
  * borrowed by name too; 4: a Live preset tinted by its device; 5: Genres and
  * Keyword tags too (all 2026-10-28); 6: the Packs button's Packs as
  * parts of their own; 7: a device's folder (`dfld`) read as a folder (both
- * 2026-10-31).
+ * 2026-10-31); 8: a disk scan's Live presets carry `device` too (2026-11-16).
  */
-const CATALOG_FORMAT = 7;
+const CATALOG_FORMAT = 8;
 
 export type CatalogSource = 'index' | 'disk';
 
