@@ -81,7 +81,7 @@
      * not hideable.
      */
     hidden?: readonly SamplerRowControl[];
-    /** The host's Gain, a knob beside the full-height Trnsp (`gain(true)`), a ring with its name inside where the column stacks three (`gain(true, true)`). */
+    /** The host's Gain, a knob beside the full-height Trnsp (`gain(true)`), its name under it where the column stacks three. */
     gain?: Snippet<[knob?: boolean, inside?: boolean]>;
     /** The host's Filter pad, the face's last section. */
     filter?: Snippet;
@@ -116,8 +116,6 @@
   let voiceCount = $derived((hide.has('spread') ? 0 : 1) + (hide.has('selector') ? 0 : 1));
   /** Select is a kit's control (the single Sampler hides it). */
   let showSelect = $derived(voiceCount > 0 && !hide.has('selector'));
-  /** Three knobs in the kit's column (Gain, Spread, Select): each a ring with its name inside. */
-  let knobsInside = $derived(!!gain && voiceCount === 2);
   let kitSpan = 2;
   let stageCount = $derived(2 + (hide.has('decay') ? 0 : 1) + (hide.has('sustain') ? 0 : 1));
   let sectionSpans = $derived(filter ? [kitSpan, 2, stageCount, 2] : [kitSpan, 2, stageCount]);
@@ -226,9 +224,9 @@
         </div>
       </div>
       <div class="kit-col">
-        {#if gain}{@render gain(true, knobsInside)}{/if}
-        {#if voiceCount > 0 && !hide.has('spread')}{@render slider('spread', 'Spread', 'width', spreadState, badges.spread, 0, true, knobsInside)}{/if}
-        {#if showSelect}{@render slider('selector', 'Select', 'select', selectorState, badges.selector, 0, true, knobsInside)}{/if}
+        {#if gain}{@render gain(true)}{/if}
+        {#if voiceCount > 0 && !hide.has('spread')}{@render slider('spread', 'Spread', 'width', spreadState, badges.spread, 0, true)}{/if}
+        {#if showSelect}{@render slider('selector', 'Select', 'select', selectorState, badges.selector, 0, true)}{/if}
       </div>
     </div>
   </FaceSection>
