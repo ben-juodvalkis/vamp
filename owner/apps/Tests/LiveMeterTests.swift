@@ -13,11 +13,13 @@ final class LiveMeterTests: XCTestCase {
         return s
     }()
 
-    /// A device face (light grey) with the dark panel and a needle at `db`,
-    /// in a picture `margin` points larger each side, the device `shift`
+    /// A device face (light grey, or `face`) with the dark panel (`ground`)
+    /// and a needle at `db`, in a picture `margin` points larger each side
+    /// (Live's window around the device, `outside`), the device `shift`
     /// points lower than expected (the window-origin offset).
     private func picture(db: Double, scale: Double, margin: CGSize = CGSize(width: 12, height: 40),
-                         shift: Double = 0) -> (pixels: [UInt8], width: Int, height: Int) {
+                         shift: Double = 0, face: UInt8 = 175, ground: UInt8 = 40,
+                         outside: UInt8? = nil) -> (pixels: [UInt8], width: Int, height: Int) {
         let width = Int((304 + 2 * margin.width) * scale), height = Int((190 + 2 * margin.height) * scale)
         var pixels = [UInt8](repeating: 0, count: width * height * 4)
         let ox = margin.width * scale, oy = (margin.height + shift) * scale
@@ -26,14 +28,23 @@ final class LiveMeterTests: XCTestCase {
             let i = (y * width + x) * 4
             pixels[i] = b; pixels[i + 1] = g; pixels[i + 2] = r; pixels[i + 3] = 255
         }
-        for y in 0..<height { for x in 0..<width { put(x, y, 175, 175, 175) } }
+        let around = outside ?? face
+        for y in 0..<height { for x in 0..<width { put(x, y, around, around, around) } }
+        for y in Int(oy)..<Int(oy + 190 * scale) { for x in Int(ox)..<Int(ox + 304 * scale) { put(x, y, face, face, face) } }
         // A narrow dark level meter at the device's left edge, as Live draws one.
         for y in Int(oy + 40 * scale)..<Int(oy + 180 * scale) {
             for x in Int(ox)..<Int(ox + 6 * scale) { put(x, y, 30, 30, 30) }
         }
         let panel = glue.panel
         for y in Int(oy + panel.minY * scale)..<Int(oy + panel.maxY * scale) {
-            for x in Int(ox + panel.minX * scale)..<Int(ox + panel.maxX * scale) { put(x, y, 40, 40, 40) }
+            for x in Int(ox + panel.minX * scale)..<Int(ox + panel.maxX * scale) { put(x, y, ground, ground, ground) }
+        }
+        // The scale's labels along the panel's top: light glyphs whose
+        // anti-aliased edges pass through every grey, the face's included.
+        for y in Int(oy + (panel.minY + 3) * scale)..<Int(oy + (panel.minY + 9) * scale) {
+            for x in stride(from: Int(ox + (panel.minX + 10) * scale), to: Int(ox + (panel.maxX - 10) * scale), by: Int(25 * scale)) {
+                put(x, y, 134, 134, 134); put(x + 1, y, face, face, face)
+            }
         }
         let radians = (db - glue.dbAtUp) / glue.dbPerDegree * .pi / 180
         let px = ox + glue.pivot.x * scale, py = oy + glue.pivot.y * scale
@@ -69,6 +80,18 @@ final class LiveMeterTests: XCTestCase {
         for shift in [-33.0, 0, 33] {
             let got = read(picture(db: 12.79, scale: 1, shift: shift), scale: 1)
             XCTAssertEqual(got ?? -99, 12.79, accuracy: 0.35, "shift \(shift)")
+        }
+    }
+
+    /// Live's dark themes (Follow System's at night): the face is a dark
+    /// grey itself (#363636), only a little lighter than the panel (#181818),
+    /// and the window around the device another (#3e3e3e).
+    func testReadsTheNeedleInADarkTheme() {
+        for scale in [1.0, 2.0] {
+            for db in [0.0, 8.3, 17.49] {
+                let got = read(picture(db: db, scale: scale, face: 0x36, ground: 0x18, outside: 0x3e), scale: scale)
+                XCTAssertEqual(got ?? -99, db, accuracy: scale == 1 ? 0.35 : 0.2, "scale \(scale) dB \(db)")
+            }
         }
     }
 

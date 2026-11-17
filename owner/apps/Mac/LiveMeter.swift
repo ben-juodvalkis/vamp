@@ -123,11 +123,33 @@ enum LiveMeter {
         (Int(b) - Int(r) > 60 && Int(g) - Int(r) > 50 && b > 110) || (r >= 190 && g >= 190 && b >= 190)
     }
 
-    /// Part of a panel: its dark grey (≈ 32–44), the grey ticks, labels and
-    /// fills on it, or a needle; not the lighter device face around it (≈ 170+).
+    /// The levels the device face may be in a picture (brightest channel),
+    /// commonest first: the few that each cover a good share of its middle
+    /// rows. The face is one flat colour and the one thing a panel is told
+    /// apart by: Live's meter panels are dark in every theme
+    /// (#0d0d0d–#29231f), but its face is light grey in the light themes
+    /// (#a1–#b0) and dark grey in the dark ones (#2f–#3c), which `Follow
+    /// System` switches to at sunset (measured 2026-11-16: a fixed "darker
+    /// than 150" took the whole dark face for panel). The middle rows, since
+    /// the picture's margin above and below is Live's window, not the device;
+    /// several, since a display can cover more of a small device than its face.
+    static func faceLevels(pixels: UnsafePointer<UInt8>, width: Int, height: Int, bytesPerRow: Int) -> [Int] {
+        var counts = [Int](repeating: 0, count: 256), total = 0
+        for y in stride(from: height * 3 / 10, to: height * 7 / 10, by: 2) {
+            let row = pixels + y * bytesPerRow
+            for x in stride(from: 0, to: width, by: 2) {
+                counts[Int(max(row[x * 4], row[x * 4 + 1], row[x * 4 + 2]))] += 1
+                total += 1
+            }
+        }
+        return counts.indices.filter { counts[$0] * 20 >= total }.sorted { counts[$0] > counts[$1] }.prefix(3).map { $0 }
+    }
+
+    /// Part of a panel: anything not the device face (`face`, its level), so
+    /// the panel's ground, the ticks, labels and fills on it, and a needle.
     @inline(__always)
-    static func isPanel(b: UInt8, g: UInt8, r: UInt8) -> Bool {
-        (r < 150 && g < 150 && b < 150) || isNeedle(b: b, g: g, r: r)
+    static func isPanel(b: UInt8, g: UInt8, r: UInt8, face: Int) -> Bool {
+        abs(Int(max(r, g, b)) - face) > 3 || isNeedle(b: b, g: g, r: r)
     }
 
     /// A spectrum's fill: a neutral grey above the panel's ground (≈ 33) and
@@ -141,27 +163,46 @@ enum LiveMeter {
     }
 
     /// A panel's top-left corner in a BGRA picture taken at `scale` pixels per
-    /// point, or nil when no panel-sized dark area is in it. Per row, the
-    /// longest dark run; a panel row's is about the panel's width. The longest
-    /// stack of such rows is the panel, and its runs' commonest start its left
-    /// edge (a level meter beside it is dark, but narrow).
+    /// point, or nil when no panel-sized area is in it. Per row, the longest
+    /// run that is not the device face; a panel row's is about the panel's
+    /// width. The longest stack of such rows is the panel, and its runs'
+    /// commonest start its left edge (a level meter beside it is dark, but
+    /// narrow; Live's window around the device is wide).
     static func locatePanel(
         pixels: UnsafePointer<UInt8>, width: Int, height: Int, bytesPerRow: Int,
         scale: Double, panel: CGSize
     ) -> (x: Int, y: Int)? {
+        for face in faceLevels(pixels: pixels, width: width, height: height, bytesPerRow: bytesPerRow) {
+            if let at = locatePanel(pixels: pixels, width: width, height: height, bytesPerRow: bytesPerRow,
+                                    scale: scale, panel: panel, face: face) { return at }
+        }
+        return nil
+    }
+
+    /// `locatePanel` against one face level.
+    static func locatePanel(
+        pixels: UnsafePointer<UInt8>, width: Int, height: Int, bytesPerRow: Int,
+        scale: Double, panel: CGSize, face: Int
+    ) -> (x: Int, y: Int)? {
         let panelWidth = Int(panel.width * scale)
         let need = panelWidth * 85 / 100
+        // A label's anti-aliased edge can pass through the face's level, so a
+        // run bridges that many face pixels; the face between a panel and its
+        // neighbours is wider.
+        let bridge = max(2, Int((2 * scale).rounded()))
         var best = (start: -1, length: 0), run = (start: -1, length: 0)
         var starts = [Int](repeating: -1, count: height)
         for y in 0..<height {
             let row = pixels + y * bytesPerRow
-            var longest = (start: 0, length: 0), current = (start: 0, length: 0)
+            var longest = (start: 0, length: 0), current = (start: -1, end: -1), faceRun = 0
             for x in 0..<width {
-                if isPanel(b: row[x * 4], g: row[x * 4 + 1], r: row[x * 4 + 2]) {
-                    current = current.length == 0 ? (x, 1) : (current.start, current.length + 1)
-                    if current.length > longest.length { longest = current }
-                } else {
-                    current = (0, 0)
+                if isPanel(b: row[x * 4], g: row[x * 4 + 1], r: row[x * 4 + 2], face: face) {
+                    current = current.start < 0 ? (x, x) : (current.start, x)
+                    faceRun = 0
+                    if current.end - current.start + 1 > longest.length { longest = (current.start, current.end - current.start + 1) }
+                } else if current.start >= 0 {
+                    faceRun += 1
+                    if faceRun > bridge { current = (-1, -1) }
                 }
             }
             if longest.length >= need && longest.length <= panelWidth * 13 / 10 {
@@ -174,7 +215,18 @@ enum LiveMeter {
         }
         guard best.length >= Int(panel.height * scale) / 2 else { return nil }
         let rowStarts = starts[best.start..<(best.start + best.length)].sorted()
-        return (rowStarts[rowStarts.count / 2], best.start)
+        let at = (x: rowStarts[rowStarts.count / 2], y: best.start)
+        // A panel is darker than the face in every theme. A wrong guess at the
+        // face (a display's own ground) passes the face itself off as panel.
+        var darker = 0, all = 0
+        for y in stride(from: at.y, to: min(height, at.y + Int(panel.height * scale)), by: 2) {
+            let row = pixels + y * bytesPerRow
+            for x in stride(from: at.x, to: min(width, at.x + panelWidth), by: 2) {
+                if Int(max(row[x * 4], row[x * 4 + 1], row[x * 4 + 2])) < face - 3 { darker += 1 }
+                all += 1
+            }
+        }
+        return darker * 2 > all ? at : nil
     }
 
     // MARK: - Needle
