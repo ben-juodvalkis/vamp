@@ -1,4 +1,20 @@
 <script lang="ts">
+  /**
+   * Omnisphere Central View: the plug-in's macros as the user laid them out
+   * (2026-10-12). The swap pill over four pads (Unison, Space, Filter,
+   * Vibrato: what is played), then both envelopes, Amp over Filter, then
+   * the FX switch over the Filter envelope's Amount.
+   *
+   * Ink (ADR-544): everything is the selected track's. The Amp envelope
+   * wore the theme's ON colour to tell it from the Filter's (2026-10-01);
+   * ON's colour is a lit switch's alone now, and the two envelopes are
+   * told apart by their names. An envelope's stages are knobs, each with
+   * its letter in its middle (ADR-509's A D S R): as short value boxes, a
+   * stage at its top was a solid block of the amount's colour beside the
+   * FX switch and read as a second switch that was on. A knob turns as the
+   * box moved (the same drag over the same travel), so nothing changes
+   * under a finger. Env Amt stays a box (user, 2026-11-06).
+   */
   import { press } from '$lib/actions/press';
   import { session } from '$lib/stores/session.svelte';
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
@@ -7,11 +23,9 @@
   import SectionDivider from '../SectionDivider.svelte';
   import EnvelopeGroup from './EnvelopeGroup.svelte';
   import HostedSwapPill from '../HostedSwapPill.svelte';
+  import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
-  import { deviceInk } from '$lib/utils/formatters/trackFormatters';
-  import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-  import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
-  import { familyScheme } from '$lib/config/devicePresets';
+  import { selectedAmountScheme } from '$lib/utils/selectedTrackInk';
 
   interface Props {
     instrument?: InstrumentInfo | null;
@@ -28,17 +42,8 @@
   // the v2 .find() it replaces.
   let device = $derived(selectedTrackStore.devicesByPath[deviceIndex]);
 
-  // Fallback body scheme (distortion family) — used only on cold start, plus
-  // the FX toggle + empty-state glyph. The whole view otherwise wears the
-  // focused track's ink (ADR-402): every XY pad takes omniInk, so the
-  // view reads as its track. Sections stay distinguished by their titles.
-  const omnisphereColor = familyScheme('distortion');
-
-  let omniInk = $derived(selectedTrackScheme() ?? {
-    primary: deviceInk(omnisphereColor.primary, paintModeReactive()),
-    secondary: omnisphereColor.secondary,
-    accent: deviceInk(omnisphereColor.accent, paintModeReactive())
-  });
+  // One ink (ADR-544): the selected track's, for every pad, stage and box.
+  let omniInk = $derived(selectedAmountScheme());
 
   // All parameter values as $derived - always reactive to store changes
   let vibratoXValue = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 1)) ?? 0.5 : 0.5);
@@ -49,27 +54,19 @@
   let unisonYValue = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 7)) ?? 0.5 : 0.5);
   let ambianceXValue = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 19)) ?? 0.5 : 0.5);
   let ambianceYValue = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 18)) ?? 0.5 : 0.5);
-  let eqLoValue = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 20)) ?? 0.5 : 0.5);
-  let eqMidValue = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 21)) ?? 0.5 : 0.5);
-  let eqHiValue = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 22)) ?? 0.5 : 0.5);
   let fxValue = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 24)) ?? 0 : 0);
 
-  // The two envelopes, each four plain sliders, A-D-S-R (user's call,
+  // The two envelopes, each four plain controls, A-D-S-R (user's call,
   // 2026-10-01: the drawn curve's handles were too fiddly for a finger).
   // Parameter slots: amp A-D-S-R are 8-11, filter A-D-S-R 13-16, the filter
   // envelope's amount 5.
-  const AMP_ENV = [['A', 8, 'attack'], ['D', 9, 'decay'], ['S', 10, 'sustain'], ['R', 11, 'release']] as const;
-  const FILTER_ENV = [['A', 13, 'attack'], ['D', 14, 'decay'], ['S', 15, 'sustain'], ['R', 16, 'release']] as const;
+  const AMP_ENV = [['A', 8, 'Attack'], ['D', 9, 'Decay'], ['S', 10, 'Sustain'], ['R', 11, 'Release']] as const;
+  const FILTER_ENV = [['A', 13, 'Attack'], ['D', 14, 'Decay'], ['S', 15, 'Sustain'], ['R', 16, 'Release']] as const;
   const FILTER_ENV_AMOUNT = 5;
-
-  // Color says which envelope is which (user's call, 2026-10-01): Amp wears
-  // the theme's ON orange; Filter wears the track's ink, as the rest of the
-  // view does. Both are in view since ADR-477, Amp over Filter.
-  const AMP_INK = {
-    primary: 'var(--phosphor)',
-    secondary: 'color-mix(in oklab, var(--phosphor) 10%, transparent)',
-    accent: 'var(--phosphor)'
-  };
+  const ENVELOPES = [
+    { title: 'Amp Envelope', stages: AMP_ENV },
+    { title: 'Filter Envelope', stages: FILTER_ENV }
+  ] as const;
 
   function paramValue(index: number): number {
     return device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, index)) ?? 0.5 : 0.5;
@@ -146,42 +143,33 @@
         <HostedSwapPill />
       </div>
 
-      <!-- Cols 3-4, every row: both envelopes, Amp over Filter, as value
-           boxes (ADR-477) — no switch, each box half a slider's height and
-           as fine. The Filter envelope's Amount is a knob past its stages
-           (ADR-509): an amount, not a stage. A seam between the two. -->
+      <!-- Cols 3-4, every row: both envelopes, Amp over Filter, a seam
+           between the two. A stage is a knob with its letter in its
+           middle (ADR-509), named in full for assistive tech; its value
+           takes the letter's place while a finger turns it. -->
       <div class="omni-envelopes min-w-0 min-h-0 flex flex-col gap-(--central-gap)" style="grid-column: 3 / 5; grid-row: 1 / 4;">
-        <EnvelopeGroup ink={AMP_INK.primary} title="Amp Envelope" edges="none">
-          {#each AMP_ENV as [label, index, glyph] (index)}
-            <div class="flex-1 min-w-0 h-full">
-              <DeviceSlider
-                value={paramValue(index)}
-                title={label}
-                icon={glyph}
-                orientation="vertical"
-                color={AMP_INK}
-                readout={display(index)}
-                onInteraction={(value) => writeParam(index, value)}
-              />
-            </div>
-          {/each}
-        </EnvelopeGroup>
-        <SectionDivider orientation="horizontal" ink={omniInk.primary} />
-        <EnvelopeGroup ink={omniInk.primary} title="Filter Envelope" edges="none">
-          {#each FILTER_ENV as [label, index, glyph] (index)}
-            <div class="flex-1 min-w-0 h-full">
-              <DeviceSlider
-                value={paramValue(index)}
-                title={label}
-                icon={glyph}
-                orientation="vertical"
-                color={omniInk}
-                readout={display(index)}
-                onInteraction={(value) => writeParam(index, value)}
-              />
-            </div>
-          {/each}
-        </EnvelopeGroup>
+        {#each ENVELOPES as envelope, e (envelope.title)}
+          {#if e > 0}<SectionDivider orientation="horizontal" ink={omniInk.primary} />{/if}
+          <!-- `ink` colours the group's name: a section's name is a label, not the amount's colour. -->
+          <EnvelopeGroup ink="var(--value)" title={envelope.title} edges="none">
+            {#each envelope.stages as [letter, index, name] (index)}
+              <div class="flex-1 min-w-0 h-full" data-envelope-stage={letter}>
+                <DeviceSlider
+                  value={paramValue(index)}
+                  title={name}
+                  face="knob"
+                  knobSize="m"
+                  knobFit
+                  knobCaption={false}
+                  knobMark={letter}
+                  color={omniInk}
+                  readout={display(index)}
+                  onInteraction={(value) => writeParam(index, value)}
+                />
+              </div>
+            {/each}
+          </EnvelopeGroup>
+        {/each}
       </div>
 
       <!-- Col 1, top: UNISON XY Pad -->
@@ -246,7 +234,7 @@
           <button
             class="physical-button btn-toggle omni-fx w-full h-full min-w-0 min-h-0 text-xl font-bold"
             class:active={fxIsOn}
-            style="--btn-tint: {omniInk.primary};"
+            aria-pressed={fxIsOn}
             use:press={{ onPress: () => handleFxToggle() }}
           >
             FX
@@ -268,62 +256,10 @@
           </div>
         </EnvelopeGroup>
       </div>
-
-      <!-- EQ Sliders commented out for now
-      <div class="flex gap-1 min-h-0 col-span-2">
-        <div class="flex-1">
-          <DeviceSlider
-            value={eqLoValue}
-            title="LO"
-            icon="low"
-            orientation="vertical"
-            labelOrientation="horizontal"
-            color={omnisphereColor}
-            onInteraction={(value) => {
-              if (!device) return;
-              selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, 20), value);
-            }}
-          />
-        </div>
-        <div class="flex-1">
-          <DeviceSlider
-            value={eqMidValue}
-            title="MID"
-            icon="tone"
-            orientation="vertical"
-            labelOrientation="horizontal"
-            color={omnisphereColor}
-            onInteraction={(value) => {
-              if (!device) return;
-              selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, 21), value);
-            }}
-          />
-        </div>
-        <div class="flex-1">
-          <DeviceSlider
-            value={eqHiValue}
-            title="HI"
-            icon="high"
-            orientation="vertical"
-            labelOrientation="horizontal"
-            color={omnisphereColor}
-            onInteraction={(value) => {
-              if (!device) return;
-              selectedTrackStore.setParamValue(selectedTrackStore.paramPath(device, 22), value);
-            }}
-          />
-        </div>
-      </div>
-      -->
     </div>
   {:else}
     <!-- Default state when no Omnisphere present -->
-    <div class="flex-1 flex items-center justify-center">
-      <div class="text-center">
-        <div class="text-4xl mb-4" style="color: {omniInk.primary}">🎹</div>
-        <p class="text-sm text-muted-foreground/70">Load Omnisphere to access macro controls</p>
-      </div>
-    </div>
+    <DeviceEmptyState message="Load Omnisphere to access macro controls" color={omniInk.primary} />
   {/if}
 </div>
 

@@ -2,15 +2,31 @@
   import { press } from '$lib/actions/press';
   /**
    * ArpeggiatorCentralView — the Arpeggiator's own view: Pattern (Style),
-   * Sync + Rate, Steps and Gate. Velocity, Chord, Note Chance and Random
-   * each have their own view since the chain overview (ADR-478) opens a
-   * device's view by its own type.
+   * Steps, Rate with its Sync, and Gate. Velocity, Chord, Note Chance and
+   * Random each have their own view since the chain overview (ADR-478)
+   * opens a device's view by its own type.
    *
    * Self-contained: queries its own slot state, so it renders immediately
    * with ghost/loading/active states.
    *
-   * On the face grid (ADR-510), four one-column sections of about 217px,
-   * each named on the header line: Pattern, Rate, Steps, Gate.
+   *   Pattern [the style, opens the picker] | Steps [0 1 2] |
+   *   Rate [knob over Sync] | Gate [knob]
+   *
+   * On the face grid (ADR-510), four one-column sections of about 240px,
+   * each named on the header line. Rate and Gate are what the chain cell's
+   * pad moves, so they are the lead: two knobs of one size side by side on
+   * one line (ADR-544 rollout; Steps stood between them, Rate's name beside
+   * its knob and Gate's under it), large with their names under them
+   * where the band is tall enough (`roomy`), the largest that fits with
+   * their names beside them where it is not. Sync is Rate's switch, so it sits in
+   * Rate's column, under the knob, one touch row; Gate's knob keeps the
+   * same cell, so the two line up. What the pattern runs over (the style,
+   * then how many octaves) leads, how fast and how long follows.
+   *
+   * A synced Rate is one of fourteen divisions, so it keeps its value under
+   * its name and wears a detent each; free, it is an amount and says
+   * "Free". Gate is an amount: no number at rest. The pattern's sketch and
+   * name are a setting's, not an amount's, so they are plain ink.
    *
    * NO {#if device} gate - always renders, controls handle their own state.
    * NO props required - all controls query their slots internally.
@@ -18,8 +34,6 @@
 
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
-  import { trackInk } from '$lib/utils/formatters/trackFormatters';
-  import { paintModeReactive } from '$lib/utils/paintMode.svelte';
   import FaceGrid from '../FaceGrid.svelte';
   import FaceSection from '../FaceSection.svelte';
   import FaceSeam from '../FaceSeam.svelte';
@@ -27,14 +41,8 @@
 
   const arp = useFxGridSlot('arpeggiator');
 
-  // Calibrated ink twins (GRATICULE §2.5). primary/accent normalized through
-  // trackInk; secondary (low-alpha wash) untouched. Used for all chrome styled
-  // in THIS file; child components keep receiving the raw `.color` scheme.
-  let arpInk = $derived({
-    primary: trackInk(arp.color.primary, paintModeReactive()),
-    secondary: arp.color.secondary,
-    accent: trackInk(arp.color.accent, paintModeReactive()),
-  });
+  // One ink (ADR-544): the selected track's, as the slot's scheme hands it over.
+  let arpInk = $derived(arp.color);
 
   const ARP_PARAMS = {
     DEVICE_ON: 0,    // Device On/Off (0/1)
@@ -205,6 +213,16 @@
   }
 
   let patternPickerOpen = $state(false);
+
+  // Rate's and Gate's cells are one size. On the 12.9-inch each holds a
+  // large knob with its name, and Rate's division, under it (an extra
+  // large one put the division on Sync's edge); a shorter band (a smaller
+  // iPad, more sections up) does not, and there the knobs take the largest
+  // size that fits with their names beside them, so Rate's division never
+  // runs into Sync.
+  const LEAD_ROOM = 156;
+  let leadHeight = $state(0);
+  let roomy = $derived(leadHeight >= LEAD_ROOM);
 </script>
 
 <!-- NO {#if device} gate - always render, each control handles its own state -->
@@ -214,8 +232,8 @@
   <FaceSection span={1}>
     {#snippet head()}<PanelEyebrow title="Pattern" color={arpInk.primary} />{/snippet}
     <button
-      class="pattern-button w-full h-full rounded-lg flex flex-col items-center justify-center gap-2 p-2"
-      style={`--pattern-ink: ${arpInk.primary}; opacity: ${arp.isGhost ? 'var(--opacity-ghost)' : 1}; transition: background-color var(--t-fast) var(--ease-precise), border-color var(--t-fast) var(--ease-precise), color var(--t-fast) var(--ease-precise), opacity var(--t-fast) var(--ease-precise);`}
+      class="pattern-button w-full h-full flex flex-col items-center justify-center gap-2 p-2"
+      class:slot-ghost={arp.isGhost}
       aria-label="Pattern"
       use:press={{ onPress: () => { patternPickerOpen = true; } }}
     >
@@ -232,55 +250,17 @@
           {/if}
         </svg>
       {/if}
-      <span class="pattern-name text-sm font-bold text-center px-1 leading-tight">{STYLE_LABELS[Math.round(styleValue)] ?? 'Style'}</span>
+      <span class="pattern-name text-base font-bold text-center px-1 leading-tight">{STYLE_LABELS[Math.round(styleValue)] ?? 'Style'}</span>
     </button>
   </FaceSection>
   <FaceSeam ink={arpInk.primary} />
 
-  <!-- Rate with Sync button above -->
-  <FaceSection span={1}>
-    {#snippet head()}<PanelEyebrow title="Rate" color={arpInk.primary} />{/snippet}
-    <div class="flex flex-col gap-(--face-gutter) min-h-0">
-    <!-- Sync button -->
-    <button
-      class="physical-button btn-toggle arp-caps w-full text-sm font-bold h-16 flex-none"
-      class:active={syncIsOn}
-      style="--btn-tint: {arpInk.primary};{arp.isGhost ? ' opacity: var(--opacity-ghost);' : ''}"
-      use:press={{ onPress: () => handleSyncToggle() }}
-    >
-      Sync
-    </button>
-    <!-- Rate knob -->
-    <div class="flex-1 min-h-0" class:slot-ghost={arp.isGhost}>
-      <DeviceSlider
-        value={rateValue / 13}
-        title="Rate"
-        valueText={rateDisplay ?? (syncIsOn ? RATE_LABELS[Math.round(rateValue)] : 'Free')}
-        face="knob"
-        knobSize="l"
-        icon="rate"
-        orientation="vertical"
-        labelOrientation="horizontal"
-        labelSize="small"
-        isGhost={arp.isGhost}
-        color={arp.color}
-        onInteraction={(value) => {
-          const intValue = Math.round(value * 13);
-          arp.sendParam(ARP_PARAMS.RATE, intValue);
-          arp.sendParam(ARP_PARAMS.FREE_RATE, value);
-        }}
-      />
-    </div>
-    </div>
-  </FaceSection>
-  <FaceSeam ink={arpInk.primary} />
-
-  <!-- Steps (octave repeat, 0-2 int) — segmented tabs matching SimplerCentralView's warp control -->
+  <!-- Steps (octave repeat, 0-2 int): a pick-one tab, each option a touch row. -->
   <FaceSection span={1}>
     {#snippet head()}<PanelEyebrow title="Steps" color={arpInk.primary} />{/snippet}
     <div
-      class="device-segmented grid grid-rows-3 min-h-0"
-      style="--btn-tint: {arpInk.primary}; opacity: {arp.isGhost ? 'var(--opacity-ghost)' : 1};"
+      class="device-segmented seg-grid grid grid-rows-3 min-h-0"
+      class:slot-ghost={arp.isGhost}
       role="radiogroup"
       aria-label="Steps"
     >
@@ -299,22 +279,63 @@
   </FaceSection>
   <FaceSeam ink={arpInk.primary} />
 
-  <!-- ARP Gate knob (controls arpeggiator gate parameter) -->
+  <!-- Rate, its Sync switch under it (the switch that belongs to a knob
+       sits in the knob's column). -->
+  <FaceSection span={1}>
+    {#snippet head()}<PanelEyebrow title="Rate" color={arpInk.primary} />{/snippet}
+    <div class="lead-col">
+    <div class="lead-knob" class:slot-ghost={arp.isGhost} bind:clientHeight={leadHeight}>
+      <DeviceSlider
+        value={rateValue / 13}
+        title="Rate"
+        valueText={rateDisplay ?? (syncIsOn ? RATE_LABELS[Math.round(rateValue)] : 'Free')}
+        steps={syncIsOn ? RATE_LABELS.length : undefined}
+        face="knob"
+        knobSize="l"
+        knobFit={!roomy}
+        knobCaptionBelow={roomy}
+        icon="rate"
+        orientation="vertical"
+        isGhost={arp.isGhost}
+        color={arpInk}
+        onInteraction={(value) => {
+          const intValue = Math.round(value * 13);
+          arp.sendParam(ARP_PARAMS.RATE, intValue);
+          arp.sendParam(ARP_PARAMS.FREE_RATE, value);
+        }}
+      />
+    </div>
+    <button
+      class="physical-button btn-toggle sync text-sm font-bold"
+      class:active={syncIsOn}
+      class:slot-ghost={arp.isGhost}
+      aria-pressed={syncIsOn}
+      use:press={{ onPress: () => handleSyncToggle() }}
+    >
+      Sync
+    </button>
+    </div>
+  </FaceSection>
+  <FaceSeam ink={arpInk.primary} />
+
+  <!-- Gate: the knob in the same cell as Rate's, so the two stand on one
+       line; it has no switch, and its foot stays clear. -->
   <FaceSection span={1}>
     {#snippet head()}<PanelEyebrow title="Gate" color={arpInk.primary} />{/snippet}
-    <div class="flex min-h-0" class:slot-ghost={arp.isGhost}>
+    <div class="lead-col">
+    <div class="lead-knob" class:slot-ghost={arp.isGhost}>
       <DeviceSlider
         value={gateValue / 200}
         title="Gate"
         valueText={gateDisplay}
         face="knob"
         knobSize="l"
+        knobFit={!roomy}
+        knobCaptionBelow={roomy}
         icon="notelength"
         orientation="vertical"
-        labelOrientation="horizontal"
-        labelSize="small"
         isGhost={arp.isGhost}
-        color={arp.color}
+        color={arpInk}
         onInteraction={(value) => {
           const rawValue = Math.round(value * 200);
           const bypassValue = rawValue <= 0 ? 0 : 1;
@@ -323,19 +344,22 @@
         }}
       />
     </div>
+    </div>
   </FaceSection>
   </FaceGrid>
 
   {#if patternPickerOpen}
+    <!-- The eighteen styles, one pick-one tab over the whole view. -->
     <div class="pattern-picker absolute inset-0 z-20 p-(--central-inset) flex flex-col">
-      <div class="grid grid-cols-9 grid-rows-2 gap-2 flex-1 min-h-0">
+      <div class="device-segmented seg-grid grid grid-cols-9 grid-rows-2 flex-1 min-h-0" role="radiogroup" aria-label="Pattern">
         {#each STYLE_LABELS as label, idx}
           {@const isOn = Math.round(styleValue) === idx}
           {@const glyph = STYLE_GLYPHS[idx]}
           <button
-            class="physical-button min-h-0 text-xs font-bold flex flex-col items-center justify-center text-center gap-1 px-1 py-2 overflow-hidden"
+            class="device-segment min-h-0 text-xs font-bold flex flex-col items-center justify-center text-center gap-1 px-1 py-2 overflow-hidden"
             class:active={isOn}
-            style="--btn-tint: {arpInk.primary};"
+            role="radio"
+            aria-checked={isOn}
             use:press={{ onPress: () => {
               arp.sendParam(ARP_PARAMS.STYLE, idx);
               patternPickerOpen = false;
@@ -359,56 +383,48 @@
   {/if}
 </div>
 
-<!-- Steps segmented chrome now lives in app.css as the shared .device-segmented
-     / .device-segment classes (§5.5). -->
-
 <style>
-  /* Pattern chooser: the ink that used to be inline (border + glyph colour)
-     is lifted into --pattern-ink so the flat skins can re-read it below. Same
-     three declarations, same values — Graticule is unchanged. */
+  /* The pattern chooser: a well that opens the picker, the style's sketch
+     over its name, both a setting's plain ink (ADR-544; the device's ink
+     until then). */
   .pattern-button {
-    border: 1px solid var(--pattern-ink);
-    background-color: transparent;
-    color: var(--pattern-ink);
-  }
-
-  /* Picker overlay sits on the panel surface (was inline; lifted onto the
-     class so the flat grammar can re-read it without !important). */
-  .pattern-picker {
-    background-color: var(--card);
-  }
-
-  /* The Sync toggle is authored mixed-case and up-cased here for the
-     HUD voice. */
-  .arp-caps {
-    text-transform: uppercase;
-  }
-
-  /* ---- Live skin: every arp control is a flat ControlBackground field in a
-     1px dark frame (the shared .physical-button / .device-segmented classes
-     already are); the pattern chooser drops its ink frame for the same
-     field (its eyebrow is the face's header line since ADR-510), bold
-     literals settle to medium, and the picker overlay matches the DetailViewBackground the view sits on. */
-  :global([data-grammar="flat"]) .pattern-button {
+    border: 1px solid var(--button-frame, var(--line-strong));
+    border-radius: var(--radius-sm);
     background-color: var(--surface-well);
-    border-color: var(--button-frame, var(--line-strong));
-    color: var(--foreground);
+    color: var(--label);
   }
+
+  /* Rate and Gate: a knob over one touch row, the same two rows in both
+     columns, so the knobs are one size on one line. Gate's row is empty. */
+  .lead-col {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) var(--height-touch);
+    row-gap: var(--face-gutter);
+    min-width: 0;
+    min-height: 0;
+  }
+  .lead-knob {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+  }
+  .lead-knob > :global(*) {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .sync {
+    min-height: 0;
+  }
+
+  /* The picker sits on the view's own surface. */
+  .pattern-picker {
+    background-color: var(--popover);
+  }
+
+  /* Flat grammar: bold literals settle to medium. */
   :global([data-grammar="flat"]) .pattern-name,
   :global([data-grammar="flat"]) .arp-root .physical-button,
   :global([data-grammar="flat"]) .arp-root .device-segment {
     font-weight: var(--font-weight-medium);
-  }
-  :global([data-grammar="flat"]) .arp-caps {
-    text-transform: none;
-  }
-  :global([data-grammar="flat"]) .pattern-picker {
-    background-color: var(--popover);
-  }
-  /* Hybrid: the device family keeps its voice on the chooser — glyph + name in
-     the arp ink, a whisper of it in the frame (mirrors .glass-colored). */
-  :global([data-skin="hybrid"]) .pattern-button {
-    color: var(--pattern-ink);
-    border-color: var(--button-frame, var(--line-strong));
   }
 </style>

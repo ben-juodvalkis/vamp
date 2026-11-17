@@ -20,6 +20,7 @@ import { logger } from '$lib/utils/logger';
 	import type { Component } from 'svelte';
 	import { session } from '$lib/stores/session.svelte';
 	import { v3Store } from '$lib/stores/v3/normalized.svelte';
+	import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
 
 	// The view's title line: whose it is and what it is. Read from the same
 	// records the strips and the chain draw from, so it cannot disagree.
@@ -30,8 +31,18 @@ import { logger } from '$lib/utils/logger';
 	let headDevice = $derived.by(() => {
 		const v = centralDisplayStore.view;
 		switch (v.type) {
-			case 'device':
-				return v.data?.device?.name ?? DEVICE_PRESETS[v.subType ?? '']?.defaultName ?? v.title ?? v.subType ?? '';
+			case 'device': {
+				// The device the chain picked for this view, by what Live calls
+				// it; else the preset's own name. Never the view's key
+				// ("chain-device" is a key, not a name).
+				const trackPath = selectedTrackStore.selectedTrackPath;
+				const picked = fxChainStore.pickFor(trackPath, v.subType ?? '');
+				const device = picked
+					? (selectedTrackStore.devicesByPath.find((d) => d.devicePath === picked) ??
+						(picked.startsWith(`${trackPath}/`) ? selectedTrackStore.deviceAt(picked) : undefined))
+					: undefined;
+				return device?.name ?? v.data?.device?.name ?? DEVICE_PRESETS[v.subType ?? '']?.defaultName ?? v.title ?? '';
+			}
 			case 'instrument':
 				return v.data?.instrument?.name ?? v.subType ?? 'Instrument';
 			case 'clip':

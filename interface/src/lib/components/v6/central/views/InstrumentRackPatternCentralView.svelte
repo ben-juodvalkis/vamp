@@ -23,16 +23,22 @@
    * is a literal. `patternCountFromName` survives only as the "is this a
    * pattern rack" gate, which is also how the view is routed
    * (`useTrackDevice`). No MIDI wheels and no swap pill.
+   *
+   * Ink (ADR-544): a pattern's name and its rhythm are a setting's, so
+   * plain ink, and the chosen pattern is ON's block (the names were the
+   * track's ink and the chosen one a block of it, so "chosen" and "how
+   * much" were one colour). Offbeat is a switch among five options of one
+   * set, so it alone wears a switch's lamp. The macros beside the picker
+   * are the track's ink, every one (a wheel of eight hues until then), and
+   * carry their names under them: beside a knob, in a column this narrow,
+   * "Resonance" was cut.
    */
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import { glyphForName } from '$lib/config/controlGlyphMap';
   import SectionDivider from '../SectionDivider.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
-  import { trackInk } from '$lib/utils/formatters/trackFormatters';
-  import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-  import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
-  import { getControlColor, familyScheme } from '$lib/config/devicePresets';
+  import { selectedAmountScheme } from '$lib/utils/selectedTrackInk';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import { claimSwapHost } from '../swapHost.svelte';
   import { press } from '$lib/actions/press';
@@ -111,20 +117,8 @@
   // past the list shows its label alone).
   const patternRhythms: { steps: number; hits: number[]; accents?: number[] }[] = constants.ui?.patternRhythms ?? [];
 
-  // Pattern button color — the rack theme (rackVoice rose, ADR-400;
-  // matches InstrumentRackCentralView's getControlColor(0) theme).
-  let trackScheme = $derived(selectedTrackScheme());
-  let patternInk = $derived(trackScheme ?? {
-    primary: trackInk(familyScheme('rackVoice').primary, paintModeReactive()),
-    secondary: familyScheme('rackVoice').secondary,
-    accent: trackInk(familyScheme('rackVoice').accent, paintModeReactive())
-  });
-
-  // Per-control macro palette, normalized through the calibrated ink layer.
-  const ctlInk = (i: number) => {
-    const c = getControlColor(i);
-    return { primary: trackInk(c.primary, paintModeReactive()), secondary: c.secondary, accent: trackInk(c.accent, paintModeReactive()) };
-  };
+  // One ink (ADR-544): the selected track's, for every macro and the empty state.
+  let patternInk = $derived(selectedAmountScheme());
 
   // Parameter state
   let macroValues = $state(Array(MACRO_COUNT).fill(0));
@@ -212,11 +206,10 @@
           {#each CELLS as cell}
             {#if cell.kind === 'offbeat'}
               <button
-                class="physical-button pattern-button offbeat-button"
+                class="physical-button btn-toggle pattern-button offbeat-button"
                 class:active={offbeatOn}
                 aria-pressed={offbeatOn}
                 use:press={{ onPress: handleOffbeatToggle, touchAction: 'none' }}
-                style="--btn-tint: {patternInk.primary};"
               >
                 <span class="pattern-face">Offbeat</span>
               </button>
@@ -225,7 +218,6 @@
                 class="physical-button pattern-button auto-button"
                 class:active={selectedState() === AUTO_STATE}
                 use:press={{ onPress: () => handleStateSelect(AUTO_STATE) }}
-                style="--btn-tint: {patternInk.primary};"
               >
                 <span class="pattern-face">Auto</span>
               </button>
@@ -235,7 +227,6 @@
                 class="physical-button pattern-button"
                 class:active={selectedState() === patternState(cell.pattern)}
                 use:press={{ onPress: () => handleStateSelect(patternState(cell.pattern)) }}
-                style="--btn-tint: {patternInk.primary};"
               >
                 <span class="pattern-face">
                   <span class="pattern-label">{patternLabels[cell.pattern] ?? (cell.pattern + 1)}</span>
@@ -272,15 +263,16 @@
            filled column by column. -->
       {#if controlLayout.length > 0}
         <div class="macro-grid" style="flex-grow: {macroGrow}; grid-template-rows: repeat({macroRows}, minmax(0, 1fr));">
-          {#each controlLayout as control, i}
+          {#each controlLayout as control}
             <div class="control-slot">
               <DeviceSlider
                 value={getNormalizedValue(control.macroIndex)}
                 title={control.name}
                 face="knob"
                 knobSize="l"
+                knobCaptionBelow
                 icon={glyphForName(control.name)}
-                color={ctlInk(i)}
+                color={patternInk}
                 readout={device ? selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(device, control.macroIndex)) : undefined}
                 onInteraction={(val) => handleSliderChange(control.macroIndex, val)}
               />
@@ -291,7 +283,7 @@
 
     </div>
   {:else}
-    <DeviceEmptyState glyph="🎹" message="Load an Instrument Rack with Pattern macro" color={patternInk.primary} />
+    <DeviceEmptyState message="Load an Instrument Rack with Pattern macro" color={patternInk.primary} />
   {/if}
 </div>
 
@@ -395,33 +387,11 @@
   }
 
 
-  /* ---- Live skin (flat grammar) ------------------------------------
-     Pattern buttons wear the focused track's ink (ADR-402) and keep it
-     under the flat grammar — but as label and solid fill, never as the
-     GRATICULE wash: an unselected pattern is a control field with the
-     ink as its label; the selected one is a solid block of the ink with
-     Live's ClipText (like a session slot), inside the same 1px dark
-     frame. Weights come down to medium — Live never bolds a pad. The
-     .physical-button base in app.css supplies the field / frame; this
-     block only re-routes the ink and the selected fill. Nothing below
-     applies outside [data-grammar="flat"]. */
-  :global([data-grammar="flat"]) .pattern-button {
-    font-weight: var(--font-weight-medium);
-    color: var(--btn-tint, var(--foreground));
-  }
+  /* ---- Flat grammar: a pattern is a well with its name and rhythm in
+     plain ink, the chosen one ON's block (app.css's `.physical-button`
+     and ADR-544's law draw both); weights come down to medium. */
+  :global([data-grammar="flat"]) .pattern-button,
   :global([data-grammar="flat"]) .pattern-button.active {
     font-weight: var(--font-weight-medium);
-    background: var(--btn-tint, var(--phosphor));
-    border-color: var(--btn-tint, var(--phosphor));
-    color: var(--flat-clip-text);
-  }
-  /* Light: the ink's fill envelope is too pale for TEXT on paper — pull
-     the OFF label toward the foreground (hue kept), and keep the ON
-     frame dark so the block's boundary survives at ~1:1 luminance. */
-  :global(.light[data-grammar="flat"]) .pattern-button:not(.active) {
-    color: color-mix(in oklab, var(--btn-tint, var(--foreground)) 55%, var(--foreground));
-  }
-  :global(.light[data-grammar="flat"]) .pattern-button.active {
-    border-color: var(--line-strong);
   }
 </style>

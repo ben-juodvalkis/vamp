@@ -15,15 +15,13 @@ import { logger } from '$lib/utils/logger';
 	import { uiPrefsStore } from '$lib/stores/v6/uiPrefsStore.svelte';
 	import { settingsStore } from '$lib/stores/v6/settingsStore.svelte';
 	import Settings from '@lucide/svelte/icons/settings';
-	import { trackInk } from '$lib/utils/formatters/trackFormatters';
-	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 	import { drag as dragAction, type DragInfo, type DragOptions } from '$lib/actions/drag';
 	import SectionDivider from '../SectionDivider.svelte';
 
-	// GRATICULE (§5.5): system accent calibrated through trackInk; the local
-	// --sys / --sys-dim / --sys-bg mechanism is preserved, alpha variants now
-	// layered via color-mix off the calibrated base instead of raw rgba literals.
-	let sysInk = $derived(trackInk('#ff8800', paintModeReactive()));
+	// No ink of its own (ADR-544): this is the master's view, and nothing in
+	// it is an amount. Its values are plain ink in wells and its switches
+	// ON's block. The orange it was calibrated in (`--sys`, 2026-08) coloured
+	// nothing since the flat grammar and is gone.
 
 	/**
 	 * Tempo and time-signature drag digits (ADR-427).
@@ -228,16 +226,7 @@ import { logger } from '$lib/utils/logger';
 	}
 </script>
 
-<div
-	class="h-full w-full overflow-hidden relative sys-root"
-	style="
-		--sys: {sysInk};
-		--sys-dim: color-mix(in srgb, {sysInk}, transparent 60%);
-		--sys-hover: color-mix(in srgb, {sysInk}, transparent 40%);
-		--sys-bg: color-mix(in srgb, {sysInk}, transparent 90%);
-		--sys-bg-active: color-mix(in srgb, {sysInk}, transparent 80%);
-	"
->
+<div class="h-full w-full overflow-hidden relative sys-root">
 	<!-- The gear: Settings' door, in the view's top-right corner, level with
 	     the section labels. Absolute, so it costs the grid no row and sits
 	     outside the layout check (an overlay). -->
@@ -253,9 +242,10 @@ import { logger } from '$lib/utils/logger';
 
 	<!-- Two groups in the Settings page's grammar (Ben, 2026-09-26): a quiet
 	     title over each, the transport's values in fields. Every switch is
-	     one cell that IS the switch, lit Live's orange while on and a well
+	     one cell that IS the switch, lit while on and a well
 	     while off (2026-10-19, the transport header's grammar; until then a
-	     row carried its name beside an On/Off chip). The setup that
+	     row carried its name beside an On/Off chip; ON's block and a plain
+	     name since ADR-544). The setup that
 	     used to share this row (Behavior, Appearance, Foot Switch) lives in
 	     the full-page Settings behind the gear in the corner (plan.md §11).
 	     The launch-quantization strip used to take a second row for 14
@@ -377,7 +367,7 @@ import { logger } from '$lib/utils/logger';
 			<div class="quant-modal-head">
 				<span class="sys-section-label">Launch Q</span>
 				<button
-					class="sys-toggle-box quant-close"
+					class="physical-button btn-action quant-close"
 					aria-label="Close"
 					use:press={{ onPress: () => (launchQuantOpen = false) }}
 				>
@@ -410,6 +400,8 @@ import { logger } from '$lib/utils/logger';
 	   still fit a short one. */
 	.sys-root {
 		container-type: size;
+		/* A drag digit's size; Launch Q's box is as tall. Resolved where it is used, against this container. */
+		--sys-digit: clamp(max(var(--type-min), calc(36 * var(--fluid-px))), 14cqh, 5rem);
 	}
 
 	/* ---- The Settings page's grammar (2026-09-26) ----
@@ -444,7 +436,7 @@ import { logger } from '$lib/utils/logger';
 		flex: 1 1 0;
 		min-height: 0;
 		display: flex;
-		gap: var(--spacing-xs);
+		gap: var(--spacing-sm);
 	}
 	.sys-field {
 		flex: 1 1 0;
@@ -457,7 +449,7 @@ import { logger } from '$lib/utils/logger';
 		padding: var(--spacing-xs);
 		background: var(--surface-well);
 		border: 1px solid var(--line-strong);
-		border-radius: var(--radius-md);
+		border-radius: var(--radius-sm);
 		/* The anchor for the digits' hit areas below. */
 		position: relative;
 	}
@@ -483,7 +475,7 @@ import { logger } from '$lib/utils/logger';
 	.sys-list {
 		display: flex;
 		flex-direction: column;
-		gap: var(--spacing-xs);
+		gap: var(--spacing-sm);
 		min-height: 0;
 	}
 	/* Click and Follow Key side by side, one touch row tall: sized off the
@@ -505,8 +497,8 @@ import { logger } from '$lib/utils/logger';
 		padding: 0 var(--spacing-sm);
 		background: var(--surface-well);
 		border: 1px solid var(--button-frame, var(--line-strong));
-		border-radius: var(--radius-md);
-		color: var(--muted-foreground);
+		border-radius: var(--radius-sm);
+		color: var(--label);
 		font-size: 1.125rem;
 		font-weight: var(--font-weight-medium);
 		cursor: pointer;
@@ -515,15 +507,13 @@ import { logger } from '$lib/utils/logger';
 			border-color 90ms var(--ease-precise),
 			color 90ms var(--ease-precise);
 	}
-	/* ON: the cell lit solid in Live's orange, dark text; OFF a well with
-	   its name in muted ink. */
+	/* ON is a solid block with no hue (ADR-544): paper white in dark, ink
+	   black in light. OFF a well with its name in plain ink (muted until
+	   then, which read as disabled). */
 	.sys-switch.on {
-		color: var(--flat-on-fg);
-		background: var(--phosphor);
-		border-color: var(--phosphor);
-	}
-	:global(.light[data-grammar="flat"]) .sys-switch.on {
-		border-color: var(--line-strong);
+		color: var(--on-fg);
+		background: var(--on-bg);
+		border-color: var(--on-bg);
 	}
 	.sys-switch:not(.on):active {
 		background: var(--secondary);
@@ -544,19 +534,19 @@ import { logger } from '$lib/utils/logger';
 		white-space: nowrap;
 	}
 
-	/* Shared label style */
+	/* A value's caption: its name, under it. */
 	.sys-label {
 		font-size: 0.9375rem;
-		text-transform: uppercase;
-		letter-spacing: 0.1em;
-		color: var(--sys-dim);
+		font-weight: var(--font-weight-medium);
+		color: var(--muted-foreground);
 	}
 
-	/* Large draggable digits (tempo, time sig) */
+	/* Large draggable digits (tempo, time sig): a number in plain ink, a
+	   well's hover step under it while a finger moves it. */
 	.sys-drag-digit {
-		font-size: clamp(max(var(--type-min), calc(36 * var(--fluid-px))), 14cqh, 5rem);
-		font-weight: 300;
-		color: var(--sys);
+		font-size: var(--sys-digit);
+		font-weight: var(--font-weight-regular);
+		color: var(--foreground);
 		text-align: center;
 		cursor: ns-resize;
 		padding: var(--spacing-xs) var(--spacing-xs);
@@ -566,22 +556,26 @@ import { logger } from '$lib/utils/logger';
 		line-height: 1;
 		transition: background-color 0.15s ease;
 	}
-
 	.sys-drag-digit:hover {
-		background: var(--sys-bg);
+		background: var(--surface-well);
 	}
-
 	.sys-drag-digit.active {
-		background: var(--sys-bg-active);
+		background: var(--secondary);
 	}
 
 	/* Launch Q reads at digit scale but is a tap target, not a drag —
 	   smaller type because the labels are words ("1/16T"), not numerals,
-	   and they have to survive the narrowest column this card ever gets. */
+	   and they have to survive the narrowest column this card ever gets.
+	   Its box is as tall as a digit's, so the three captions stand on one
+	   line (its caption rode 5px high until the ADR-544 rollout). */
 	.sys-value-digit {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-height: calc(var(--sys-digit) + 2 * var(--spacing-xs));
 		font-size: clamp(max(var(--type-min), calc(24 * var(--fluid-px))), 10cqh, 3.5rem);
-		font-weight: 300;
-		color: var(--sys);
+		font-weight: var(--font-weight-regular);
+		color: var(--foreground);
 		text-align: center;
 		cursor: pointer;
 		padding: var(--spacing-xs) var(--spacing-md);
@@ -592,48 +586,19 @@ import { logger } from '$lib/utils/logger';
 		white-space: nowrap;
 		transition: background-color 0.15s ease;
 	}
-
 	.sys-value-digit:hover {
-		background: var(--sys-bg);
+		background: var(--surface-well);
 	}
-
 	.sys-value-digit.active {
-		background: var(--sys-bg-active);
+		background: var(--secondary);
 	}
 
-	/* The "/" between numerator and denominator rides the dim ink wash
-	   (was inline; lifted onto the class so the flat grammar can re-read
-	   it without !important). */
+	/* The "/" between numerator and denominator. */
 	.sys-sep {
-		color: var(--sys-dim);
+		color: var(--muted-foreground);
 		font-size: clamp(max(var(--type-min), calc(24 * var(--fluid-px))), 10cqh, 3.5rem);
 		font-weight: 200;
 		line-height: 1;
-	}
-
-	/* Toggle box (metronome, filter, theme) */
-	.sys-toggle-box {
-		font-weight: 400;
-		text-transform: uppercase;
-		letter-spacing: 0.1em;
-		color: var(--sys-dim);
-		padding: var(--spacing-md) var(--spacing-lg);
-		border-radius: var(--radius-sm);
-		border: 1px solid var(--sys-dim);
-		background: transparent;
-		cursor: pointer;
-		transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
-	}
-
-	.sys-toggle-box:hover {
-		background: var(--sys-bg);
-		color: var(--sys-hover);
-		border-color: var(--sys-hover);
-	}
-
-	.sys-toggle-box:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
 	}
 
 	/* The gear: Settings' door, in the view's top-right corner (Ben,
@@ -651,7 +616,7 @@ import { logger } from '$lib/utils/logger';
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		color: var(--sys-dim);
+		color: var(--muted-foreground);
 		border: none;
 		border-radius: var(--radius-sm);
 		background: transparent;
@@ -659,9 +624,10 @@ import { logger } from '$lib/utils/logger';
 		z-index: 1;
 	}
 	.sys-gear:hover {
-		color: var(--sys);
-		background: var(--sys-bg);
+		color: var(--foreground);
+		background: var(--surface-well);
 	}
+
 	/* Launch-quantization picker. Both the backdrop and the panel are
 	   absolute inside the central view's own relative box, so the picker
 	   dims this section and nothing else — the track strips above stay
@@ -669,10 +635,11 @@ import { logger } from '$lib/utils/logger';
 	.quant-modal-backdrop {
 		position: absolute;
 		inset: 0;
-		background: rgb(0 0 0 / 0.55);
+		background: var(--scrim-strong, var(--scrim));
 		z-index: 20;
 	}
 
+	/* A slab over the scrim, in a 1px frame: no shadow (ADR-544). */
 	.quant-modal {
 		position: absolute;
 		left: 50%;
@@ -686,10 +653,9 @@ import { logger } from '$lib/utils/logger';
 		flex-direction: column;
 		gap: var(--spacing-sm);
 		padding: var(--spacing-lg);
-		border-radius: var(--radius-lg);
-		border: 1px solid var(--sys-dim);
-		background: var(--background);
-		box-shadow: 0 1.5rem 3rem rgb(0 0 0 / 0.5);
+		border-radius: var(--radius-sm);
+		border: 1px solid var(--line-strong);
+		background: var(--card);
 	}
 
 	.quant-modal:focus {
@@ -703,9 +669,11 @@ import { logger } from '$lib/utils/logger';
 		gap: var(--spacing-sm);
 	}
 
+	/* Close does one thing once: round (`.btn-action`), a touch row tall. */
 	.quant-close {
-		padding: var(--spacing-sm) var(--spacing-xl);
+		padding: 0 var(--spacing-xl);
 		font-size: 0.875rem;
+		font-weight: var(--font-weight-medium);
 		min-height: 2.75rem; /* 44px — iPad minimum touch target */
 	}
 
@@ -722,105 +690,7 @@ import { logger } from '$lib/utils/logger';
 	.quant-chip {
 		padding: var(--spacing-sm) var(--spacing-xs);
 		font-size: 1rem;
-		letter-spacing: 0.05em;
 		min-height: 3.25rem; /* comfortably over the 44px iPad minimum */
 		white-space: nowrap;
-	}
-
-	/* ---- Live skin (flat grammar) ------------------------------------
-	   The System view is Live's Preferences / transport bar: matte cards,
-	   control fields in a 1px dark frame, and the ONE idiom that carries
-	   state — OFF = field with light text, ON = solid ChosenDefault with
-	   dark text. The GRATICULE --sys orange ink washes (--sys-bg /
-	   --sys-bg-active / --sys-dim borders) step aside: nothing here is a
-	   track voice, so nothing is tinted. Labels drop the HUD upper-casing
-	   and tracking — the literals are already mixed case ("Time",
-	   "Click", "Launch Q"), the transform did the shouting. Nothing below
-	   applies outside [data-grammar="flat"]. */
-
-	/* Section labels: secondary text, normal case, no tracking. */
-	:global([data-grammar="flat"]) .sys-label {
-		text-transform: none;
-		letter-spacing: 0;
-		font-weight: var(--font-weight-medium);
-		color: var(--muted-foreground);
-	}
-
-	/* Draggable digits: a numeric field in the body foreground, regular
-	   weight — Live's tempo/time-sig display is text, not an accent —
-	   with a control-field surface while hovered / being dragged
-	   instead of the orange wash. */
-	:global([data-grammar="flat"]) .sys-drag-digit {
-		font-weight: var(--font-weight-regular);
-		color: var(--foreground);
-	}
-	:global([data-grammar="flat"]) .sys-drag-digit:hover {
-		background: var(--surface-well);
-	}
-	:global([data-grammar="flat"]) .sys-drag-digit.active {
-		background: var(--secondary);
-	}
-	/* The "/" between numerator and denominator drops the ink wash. */
-	:global([data-grammar="flat"]) .sys-sep {
-		color: var(--muted-foreground);
-	}
-
-	:global([data-grammar="flat"]) .sys-gear {
-		color: var(--muted-foreground);
-	}
-	:global([data-grammar="flat"]) .sys-gear:hover {
-		color: var(--foreground);
-		background: var(--surface-well);
-	}
-
-	/* Toggle boxes (Click, Follow Key, Header, the
-	   launch-quantization chips): the shared flat toggle. */
-	:global([data-grammar="flat"]) .sys-toggle-box {
-		text-transform: none;
-		letter-spacing: 0;
-		font-weight: var(--font-weight-medium);
-		color: var(--foreground);
-		border: 1px solid var(--button-frame, var(--line-strong));
-		background: var(--surface-well);
-	}
-	:global([data-grammar="flat"]) .sys-toggle-box:hover {
-		background: var(--secondary);
-		color: var(--foreground);
-		border-color: var(--button-frame, var(--line-strong));
-	}
-	/* Disabled = Live's idiom (ControlOffDisabledForeground on the same
-	   field), never an opacity dim. */
-	:global([data-grammar="flat"]) .sys-toggle-box:disabled {
-		opacity: 1;
-		color: var(--flat-disabled-fg);
-	}
-	:global([data-grammar="flat"]) .quant-chip {
-		letter-spacing: 0;
-	}
-
-	/* Launch Q's value carries the same flat treatment as the drag digits:
-	   body foreground text on a control field, not an accent. */
-	:global([data-grammar="flat"]) .sys-value-digit {
-		font-weight: var(--font-weight-regular);
-		color: var(--foreground);
-	}
-	:global([data-grammar="flat"]) .sys-value-digit:hover {
-		background: var(--surface-well);
-	}
-	:global([data-grammar="flat"]) .sys-value-digit.active {
-		background: var(--secondary);
-	}
-
-	/* Value fields are Live's display material: a control field in a 1px
-	   frame, same as the switches beside them. */
-	:global([data-grammar="flat"]) .sys-field {
-		border-color: var(--line-strong);
-		background: var(--surface-well);
-	}
-
-	/* The picker is Live's own modal material: a matte card in a 1px frame. */
-	:global([data-grammar="flat"]) .quant-modal {
-		background: var(--card);
-		border-color: var(--line-strong);
 	}
 </style>

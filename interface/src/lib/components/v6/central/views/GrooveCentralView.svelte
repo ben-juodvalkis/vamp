@@ -9,18 +9,27 @@
 	 * Tiles: the grooves ticked in Settings → Grooves, in tick order, laid out
 	 * by the browser's own grid solver (`computeGridLayout`): a few grooves
 	 * grow to fill the view, many hold at a finger's target (the approved
-	 * design's size) and scroll. Each shows its timing picture as a thin strip
-	 * along the top, and its name large in the middle with the grid under it
+	 * design's four across, three down for the twelve defaults) and scroll.
+	 * Each shows its timing picture as a thin strip along the top with its
+	 * grid at the strip's end, and its name large under them, on two lines
+	 * where it needs them (the grid sat under the name until the ADR-544
+	 * rollout: the title band took 40px from the view, three rows of the old
+	 * tile no longer fitted, so the third row was cut and a name's second
+	 * line with it: three tiles read "Swing 16ths")
 	 * (a user groove's `User: ` prefix dropped). The clip's current groove
-	 * is lit in the view's ink (the selected track's color, as the sliders). A tap puts the clip on that groove file
+	 * is the chosen one of a set, so it is ON's block (ADR-544; the track's
+	 * ink until then, which made "chosen" and "how much" one colour); a
+	 * tile's timing picture keeps the track's ink, as an amount's line. A tap puts the clip on that groove file
 	 * (`/looping/v3/clip/groove/set/file`; the surface keeps the clip's
 	 * Quantize and amounts), with the same focus fallback Q uses: the clip
 	 * running on the selected track.
 	 *
-	 * Sliders either side of the tiles: Random over Velocity on the left, two
-	 * value boxes in one column (ADR-477), Amount on the right —
+	 * Amounts either side of the tiles: Random over Velocity on the left, two
+	 * knobs of one size in one column (set and left, so knobs since the
+	 * ADR-544 rollout; two half-height value boxes until then, ADR-477),
+	 * and Amount on the right, the one ridden, a full-height box —
 	 * `random_amount`, `velocity_amount`, `timing_amount` on the clip's
-	 * groove, each 0-100 %, which a box reads out while it is dragged. A clip with no groove takes the
+	 * groove, each 0-100 %, which each reads out while it is dragged. A clip with no groove takes the
 	 * first tile on its first move, as Q does (`services/grooveChooser`). The lit tile's picture moves from
 	 * straight (Amount 0) to the file's pattern (Amount 100); the others show
 	 * the whole pattern. A file Live stores in its binary format has no
@@ -40,7 +49,7 @@
 	import { USER_GROOVE_PREFIX } from '$lib/types/grooves';
 	import { session } from '$lib/stores/session.svelte';
 	import { focusPlayingClipOnSelectedTrack } from '$lib/components/v6/tracks/composables/slotActions';
-	import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
+	import { selectedAmountScheme } from '$lib/utils/selectedTrackInk';
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import GroovePicture from '$lib/components/v6/clips/GroovePicture.svelte';
 	import { computeGridLayout } from '$lib/components/v6/browser/utils/drillDownModel';
@@ -57,7 +66,9 @@
 	// floors are the approved design's tile (four across, three down on the
 	// iPad), so twelve or more look exactly as they did.
 	const TILE_GAP = 12;
-	const TILE_COMFORT = { gap: TILE_GAP, minTile: 140, minTileHeight: 84, targetAspect: 1.5 };
+	// Three rows fit the band under the title band at 72px a tile; a tile that
+	// short is about 2.2 times as wide, which is what steers twelve to 4 x 3.
+	const TILE_COMFORT = { gap: TILE_GAP, minTile: 140, minTileHeight: 72, targetAspect: 2.2 };
 	let hostEl = $state<HTMLDivElement | undefined>(undefined);
 	let hostW = $state(0);
 	let hostH = $state(0);
@@ -78,9 +89,8 @@
 			: null
 	);
 	const lit = $derived(clipGrooveStore.hasGroove ? clipGrooveStore.file : '');
-	// The clip view's own fallback, for a cold start with no track record yet.
-	const FALLBACK_SCHEME = { primary: 'var(--act-quant)', secondary: 'var(--act-quant-wash)', accent: 'var(--act-quant)' } as const;
-	const scheme = $derived(selectedTrackScheme() ?? FALLBACK_SCHEME);
+	// One ink (ADR-544): the selected track's, a mid grey with none selected.
+	const scheme = $derived(selectedAmountScheme());
 	const hasClip = $derived(!!session.focusedClipPath);
 
 	/** The clip a tap or a slider writes to: the focused one, else the one running on the selected track. */
@@ -122,6 +132,9 @@
 				value={clipGrooveStore.randomAmount / 100}
 				title="Random"
 				icon="dice"
+				face="knob"
+				knobSize="m"
+				knobFit
 				color={scheme}
 				readout={percent(clipGrooveStore.randomAmount)}
 				onInteraction={(v) => write(setClipGrooveRandomAmount, v * 100)}
@@ -132,6 +145,9 @@
 				value={clipGrooveStore.velocityAmount / 100}
 				title="Velocity"
 				icon="velocity"
+				face="knob"
+				knobSize="m"
+				knobFit
 				color={scheme}
 				readout={percent(clipGrooveStore.velocityAmount)}
 				onInteraction={(v) => write(setClipGrooveVelocityAmount, v * 100)}
@@ -169,13 +185,17 @@
 						use:press={{ onPress: () => choose(g.name) }}
 						data-groove={g.name}
 					>
-						{#if g.events?.length}
-							<GroovePicture events={g.events} amount={on ? clipGrooveStore.timingAmount : 100} />
+						{#if g.events?.length || g.grid}
+							<span class="tile-head">
+								<span class="tile-pic">
+									{#if g.events?.length}
+										<GroovePicture events={g.events} amount={on ? clipGrooveStore.timingAmount : 100} />
+									{/if}
+								</span>
+								{#if g.grid}<span class="tile-grid">{g.grid}</span>{/if}
+							</span>
 						{/if}
-						<span class="tile-label">
-							<span class="tile-name">{shownName(g.name)}</span>
-							{#if g.grid}<span class="tile-grid">{g.grid}</span>{/if}
-						</span>
+						<span class="tile-name">{shownName(g.name)}</span>
 					</button>
 				{/each}
 			</div>
@@ -257,45 +277,60 @@
 	.tile {
 		display: flex;
 		flex-direction: column;
-		gap: 0.375rem;
+		gap: 0.25rem;
 		min-width: 0;
 		min-height: 0;
-		padding: 0.625rem 0.75rem;
+		padding: 0.5rem 0.75rem;
 		background: var(--surface-well);
 		border: 1px solid var(--button-frame, var(--line-strong));
 		border-radius: 2px;
-		color: var(--foreground);
+		color: var(--label);
 		font: inherit;
 		text-align: center;
 		cursor: pointer;
 		--groove-tick: var(--groove-ink);
 		/* The picture is a strip along the top; the name takes the rest. */
-		--groove-pic-h: 1rem;
+		--groove-pic-h: 0.875rem;
 	}
+	/* The clip's groove: the chosen one of a set, ON's block (ADR-544). */
 	.tile.on {
-		background: var(--groove-ink);
-		border-color: var(--groove-ink);
-		color: var(--flat-on-fg);
-		--groove-tick: var(--flat-on-fg);
-		--groove-line: color-mix(in srgb, var(--flat-on-fg) 20%, transparent);
+		background: var(--on-bg);
+		border-color: var(--on-bg);
+		color: var(--on-fg);
+		--groove-tick: var(--on-fg);
+		--groove-line: color-mix(in srgb, var(--on-fg) 20%, transparent);
 	}
 	.tile:focus-visible {
 		outline: 2px solid var(--ring);
 		outline-offset: 1px;
 	}
-	.tile-label {
-		flex: 1;
+	/* The picture, then its grid at the strip's end, on one line. */
+	.tile-head {
+		flex: none;
 		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 0.25rem;
+		align-items: flex-end;
+		gap: 0.5rem;
 		min-width: 0;
-		min-height: 0;
 	}
-	/* Large, and larger as the solver grows the tile. */
+	.tile-pic {
+		flex: 1 1 0;
+		min-width: 0;
+	}
+	.tile-grid {
+		flex: none;
+		font-size: 0.75rem;
+		line-height: 0.875rem;
+		font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+		color: var(--value);
+	}
+	.tile.on .tile-grid {
+		color: color-mix(in srgb, var(--on-fg) 75%, transparent);
+	}
+	/* Large, and larger as the solver grows the tile; two lines at most,
+	   centred in what the strip leaves. */
 	.tile-name {
-		font-size: clamp(1.25rem, calc(var(--tile-h, 0px) * 0.17), 2.25rem);
+		margin: auto 0;
+		font-size: clamp(1.0625rem, calc(var(--tile-h, 0px) * 0.25), 2.25rem);
 		font-weight: 600;
 		line-height: 1.1;
 		display: -webkit-box;
@@ -303,15 +338,6 @@
 		line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
-	}
-	.tile-grid {
-		flex: none;
-		font-size: 0.8125rem;
-		font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-		color: var(--muted-foreground);
-	}
-	.tile.on .tile-grid {
-		color: color-mix(in srgb, var(--flat-on-fg) 75%, transparent);
 	}
 
 	/* The empty state spans the tile column, its Settings button the whole

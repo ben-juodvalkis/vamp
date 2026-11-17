@@ -2,9 +2,11 @@
 	/**
 	 * The generic device view: what the chain overview opens for a device
 	 * the app has no view for — a plug-in, a Max device it does not know.
-	 * One slider per parameter Live reports (Device On aside), up to
-	 * twelve, under the device's name. A plug-in reports the parameters
-	 * configured for it in Live, which is the set a performer chose.
+	 * One knob per parameter Live reports (Device On aside), up to twelve,
+	 * under the device's name, in the grid that gives each the most room
+	 * (`KnobGrid`, ADR-509) and in the selected track's ink (ADR-544). A
+	 * plug-in reports the parameters configured for it in Live, which is
+	 * the set a performer chose.
 	 *
 	 * Shows the device the overview opened it on (its pick), so the blue
 	 * hand moving elsewhere in Live does not swap it out from under you.
@@ -13,9 +15,7 @@
 	import { fxChainStore } from '$lib/stores/v6/fxChainStore.svelte';
 	import KnobGrid from '../../device-panel/KnobGrid.svelte';
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
-	import { familyScheme } from '$lib/config/devicePresets';
-	import { trackInk } from '$lib/utils/formatters/trackFormatters';
-	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
+	import { selectedAmountScheme } from '$lib/utils/selectedTrackInk';
 	import { glyphForName } from '$lib/config/controlGlyphMap';
 	import DeviceEmptyState from '../DeviceEmptyState.svelte';
 	import { CHAIN_DEVICE_VIEW } from './chainDeviceView';
@@ -31,12 +31,8 @@
 			(picked?.startsWith(`${trackPath}/`) ? selectedTrackStore.deviceAt(picked) : undefined)
 		);
 	});
-	const scheme = familyScheme('utility');
-	const color = $derived({
-		primary: trackInk(scheme.primary, paintModeReactive()),
-		secondary: scheme.secondary,
-		accent: trackInk(scheme.accent, paintModeReactive())
-	});
+	// One ink (ADR-544): the selected track's.
+	const color = $derived(selectedAmountScheme());
 
 	const params = $derived.by(() => {
 		if (!device) return [];
@@ -88,9 +84,12 @@
 		flex-direction: column;
 		gap: var(--central-gap);
 	}
+	/* The house eyebrow, as a face's section name. */
 	.eyebrow {
 		text-align: center;
-		font-size: 0.75rem;
-		color: var(--muted-foreground);
+		font-size: 0.8125rem;
+		font-weight: var(--font-weight-medium);
+		line-height: 1rem;
+		color: var(--value);
 	}
 </style>

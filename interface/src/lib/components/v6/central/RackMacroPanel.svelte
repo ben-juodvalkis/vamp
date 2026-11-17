@@ -5,20 +5,34 @@
    * visible macros, each a knob where Live has it, one still named
    * "Macro N" drawn dim, as Live greys it. The same rule as the chain cell
    * (`liveMacroSlots`), so the two and Live agree.
+   *
+   * Every knob is the selected track's ink (ADR-544): a macro had a colour
+   * of its own from a wheel of eight, which said nothing about the macro.
+   * The knobs are one size, the largest their equal cells hold: up to four
+   * columns a cell is wide, so a knob is large with its name beside it;
+   * past four the name goes under it, where a cell is too narrow to hold
+   * "Pre-Delay" beside a knob.
    */
   import { selectedTrackStore, type DeviceRecord } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '../device-panel/DeviceSlider.svelte';
   import { glyphForName } from '$lib/config/controlGlyphMap';
   import { liveMacroSlots } from '$lib/utils/macroLayoutUtils';
   import type { DeviceColorScheme } from '$lib/config/devicePresets';
+  import { selectedAmountScheme } from '$lib/utils/selectedTrackInk';
 
   interface Props {
     rack: DeviceRecord;
-    /** A macro's colours, by its place in the panel (row-major). */
-    colorAt: (place: number) => DeviceColorScheme;
+    /**
+     * Not read: a macro has no colour of its own (ADR-544). Kept so
+     * `AudioEffectRackCentralView`, which still passes it, compiles; drop
+     * it there and here together.
+     */
+    colorAt?: (place: number) => DeviceColorScheme;
   }
 
-  let { rack, colorAt }: Props = $props();
+  let { rack }: Props = $props();
+  const ink = $derived(selectedAmountScheme());
+
 
   const MACRO_MAX = 127;
   const VISIBLE_MACROS = 'visible_macro_count';
@@ -48,10 +62,9 @@
           title={m.name}
           face="knob"
           knobSize="l"
-          knobFit
-          knobCaptionBelow
+          knobCaptionBelow={grid.cols > 4}
           icon={glyphForName(m.name)}
-          color={colorAt(k)}
+          color={ink}
           readout={selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(rack, m.macroIndex))}
           onInteraction={(v) => selectedTrackStore.setParamValue(selectedTrackStore.paramPath(rack, m.macroIndex), v * MACRO_MAX)}
         />

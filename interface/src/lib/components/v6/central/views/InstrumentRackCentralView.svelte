@@ -2,9 +2,17 @@
   /**
    * Instrument Rack Central View
    *
-   * One value box per named macro, two rows of them (ADR-477), after the
-   * swap pill's column (2026-09-16). The wheels that stood under the pill
-   * left for the MidiWheels device's chain cell (user, 2026-10-26).
+   * The rack's variations down the left when it stores any (ADR-531), then
+   * the swap pill across the top (2026-09-16) over its macros: one knob per
+   * macro as Live's macro panel lays them out (ADR-532, `RackMacroPanel`),
+   * or, for a rack that names macros "XY …", a pad for each pair beside
+   * the rest. The wheels that stood under the pill left for the MidiWheels
+   * device's chain cell (user, 2026-10-26).
+   *
+   * Every amount is the selected track's ink (ADR-544). A macro took a
+   * colour of its own from an eight-hue wheel (`getControlColor`) until
+   * then; the wheel answers with the track's ink now, so the per-macro
+   * plumbing is gone.
    */
   import RackVariations from '../RackVariations.svelte';
   import RackMacroPanel from '../RackMacroPanel.svelte';
@@ -14,10 +22,7 @@
   import { glyphForName } from '$lib/config/controlGlyphMap';
   import HostedSwapPill from '../HostedSwapPill.svelte';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
-  import { trackInk } from '$lib/utils/formatters/trackFormatters';
-  import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-  import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
-  import { getControlColor } from '$lib/config/devicePresets';
+  import { selectedAmountScheme } from '$lib/utils/selectedTrackInk';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
   import { buildMacroLayout, pairXYPrefixedMacros } from '$lib/utils/macroLayoutUtils';
 
@@ -42,15 +47,8 @@
   const MACRO_COUNT = constants.devices.audioEffectRack?.macroCount ?? 16;
   const MACRO_MAX = constants.devices.audioEffectRack?.macroRange?.max ?? 127;
 
-  // Per-control macro palette, normalized through the calibrated ink layer.
-  const ctlInk = (i: number) => {
-    const c = getControlColor(i);
-    return { primary: trackInk(c.primary, paintModeReactive()), secondary: c.secondary, accent: trackInk(c.accent, paintModeReactive()) };
-  };
-
-  // Instrument-rack base ink (purple control-color 0) for the empty-state glyph.
-  let trackScheme = $derived(selectedTrackScheme());
-  let rackInk = $derived(trackScheme ?? ctlInk(0));
+  // One ink (ADR-544): the selected track's, for every macro and the empty state.
+  let rackInk = $derived(selectedAmountScheme());
 
   // Parameter state - single array for all macros
   let macroValues = $state(Array(MACRO_COUNT).fill(0));
@@ -104,7 +102,7 @@
   {#if instrument}
     <div class="flex-1 min-h-0 flex gap-(--central-gap) p-(--central-inset)">
       <!-- Its macro variations down the left (ADR-531). -->
-      {#if device}<RackVariations rack={device} ink={rackInk.primary} />{/if}
+      {#if device}<RackVariations rack={device} />{/if}
       <div class="controls-panel">
         <!-- The swap pill lies across the top, over the macros. It led the
              row over the wheels (user's layout, 2026-09-16) until they left
@@ -120,17 +118,17 @@
              over bottom. An XY pad stands in for two macros: two columns,
              every row. -->
         {#if device && controlLayout.length > 0 && !hasXyPair}
-          <RackMacroPanel rack={device} colorAt={ctlInk} />
+          <RackMacroPanel rack={device} />
         {:else if controlLayout.length > 0}
           <div class="macro-grid" style:--macro-rows={macroRows}>
-          {#each layoutItems as item, i}
+          {#each layoutItems as item}
             {#if item.kind === 'xy'}
               <div class="control-slot xy-slot" style:grid-row="span {macroRows}">
                 <DeviceXY
                   xValue={getNormalizedValue(item.x.macroIndex)}
                   yValue={getNormalizedValue(item.y.macroIndex)}
                   title={item.title}
-                  color={ctlInk(i)}
+                  color={rackInk}
                   onInteraction={(x, y) => {
                     handleSliderChange(item.x.macroIndex, x);
                     handleSliderChange(item.y.macroIndex, y);
@@ -145,7 +143,7 @@
                   face="knob"
                   knobSize="l"
                   icon={glyphForName(item.control.name)}
-                  color={ctlInk(i)}
+                  color={rackInk}
                   readout={device ? selectedTrackStore.paramDisplay(selectedTrackStore.paramPath(device, item.control.macroIndex)) : undefined}
                   onInteraction={(val) => handleSliderChange(item.control.macroIndex, val)}
                 />
@@ -163,7 +161,7 @@
     </div>
   {:else}
     <!-- Default state when no Instrument Rack present -->
-    <DeviceEmptyState glyph="🎹" message="Load an Instrument Rack to access controls" color={rackInk.primary} />
+    <DeviceEmptyState message="Load an Instrument Rack to access controls" color={rackInk.primary} />
   {/if}
 </div>
 

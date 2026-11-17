@@ -24,8 +24,13 @@
 <script lang="ts">
   /**
    * A rack's macro variations (ADR-531), as Live's variation panel, a
-   * column down the left of the rack's view: one
-   * button per stored variation, the one last recalled lit; a tap recalls
+   * column down the left of the rack's view: one option per stored
+   * variation in one segmented tab, the one last recalled ON's block and
+   * every name plain ink (ADR-544; the names were the rack's ink and the
+   * chosen one a block of it). A few share the column's height, many keep
+   * a touch row each and scroll. A rack with none stored draws no column:
+   * it held a caption over "None stored" and nothing to press, and the
+   * macros take its width. A tap recalls
    * it, a hold deletes it (no Store or Rand here: Ben, 2026-11-12, though
    * the surface keeps both verbs). Live's Python API names none of them, so the names
    * are read from the preset file the rack is named after
@@ -38,10 +43,11 @@
 
   interface Props {
     rack: DeviceRecord;
-    ink: string;
+    /** Not read: the tab is drawn in the role tokens (ADR-544). Kept for the hosts that still pass it. */
+    ink?: string;
   }
 
-  let { rack, ink }: Props = $props();
+  let { rack }: Props = $props();
 
   const path = $derived(rack.devicePath);
   $effect(() => selectedTrackStore.subscribeProperty(path, 'variations'));
@@ -76,14 +82,15 @@
   let held = -1;
 </script>
 
-<div class="rack-variations" style="--var-ink: {ink};" role="group" aria-label="Macro variations" data-debug="rack-variations">
+{#if count > 0}
+<div class="rack-variations" role="group" aria-label="Macro variations" data-debug="rack-variations">
   <span class="caption">Variations</span>
-  <div class="buttons">
+  <div class="buttons device-segmented seg-grid">
     {#each labels as label, i (i)}
       <button
         type="button"
-        class="variation"
-        class:on={i === selected}
+        class="variation device-segment"
+        class:active={i === selected}
         aria-pressed={i === selected}
         data-variation-index={i}
         title="{label} — hold to delete"
@@ -100,9 +107,9 @@
         }}
       >{label}</button>
     {/each}
-    {#if count === 0}<span class="none">None stored</span>{/if}
   </div>
 </div>
+{/if}
 
 <style>
   /* A column down the left of the rack's view (Ben, 2026-11-12): the caption,
@@ -110,48 +117,36 @@
   .rack-variations {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--spacing-sm);
     width: 8.5rem;
     flex: 0 0 auto;
     min-height: 0;
   }
+  /* The house eyebrow, as a face's section name. */
   .caption {
-    font-size: 0.75rem;
-    color: var(--muted-foreground);
+    font-size: 0.8125rem;
+    font-weight: var(--font-weight-medium);
+    line-height: 1rem;
+    color: var(--value);
     text-align: center;
   }
+  /* One tab down the column. Its options share the height while each has a
+     touch row; more than fit keep that row and the tab scrolls. */
   .buttons {
     flex: 1 1 auto;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 6px;
     overflow-y: auto;
   }
-  .none {
-    font-size: 0.8125rem;
-    color: var(--muted-foreground);
-    text-align: center;
-    padding-top: 0.5rem;
-  }
   .variation {
-    min-height: var(--height-touch, 44px);
+    flex: 1 0 var(--height-touch, 44px);
+    max-height: 5.5rem;
     padding: 0 0.5rem;
-    border: 1px solid var(--line-strong);
-    border-radius: 2px;
-    background: var(--surface-well);
-    color: var(--var-ink);
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
+    font-weight: var(--font-weight-medium);
     white-space: nowrap;
-  }
-  .variation {
-    flex: 0 0 auto;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-  .variation.on {
-    background: var(--var-ink);
-    color: var(--flat-on-fg, #111);
-    border-color: var(--var-ink);
   }
 </style>

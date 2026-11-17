@@ -1,12 +1,19 @@
 <script lang="ts">
+  /**
+   * Komplete Kontrol Central View: the plug-in's eight parameters (Live's
+   * indices 1-8) as knobs, two rows of four, each as large as its cell
+   * holds with its name beside it (`KnobGrid`, ADR-509), in the selected
+   * track's ink (ADR-544; a cyan of its own was the cold-start fallback
+   * until then). The swap pill keeps CentralDisplay's column down the
+   * left. The wheels left for the MidiWheels device's chain cell (user,
+   * 2026-10-26).
+   */
   import { selectedTrackStore } from '$lib/stores/v6/selectedTrackStore.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import KnobGrid from '../../device-panel/KnobGrid.svelte';
   import { glyphForName } from '$lib/config/controlGlyphMap';
   import type { InstrumentInfo } from '$lib/services/instrumentService';
-  import { trackInk } from '$lib/utils/formatters/trackFormatters';
-  import { paintModeReactive } from '$lib/utils/paintMode.svelte';
-  import { selectedTrackScheme } from '$lib/utils/selectedTrackInk';
+  import { selectedAmountScheme } from '$lib/utils/selectedTrackInk';
   import DeviceEmptyState from '../DeviceEmptyState.svelte';
 
   interface Props {
@@ -23,20 +30,8 @@
   // the v2 .find() it replaces.
   let device = $derived(selectedTrackStore.devicesByPath[deviceIndex]);
 
-  // Komplete Kontrol color scheme (blue/cyan)
-  const kompleteKontrolColor = {
-    primary: '#00D4FF',
-    secondary: 'rgba(0, 212, 255, 0.1)',
-    accent: '#33DDFF'
-  };
-
-  // GRATICULE (§5.5): normalize the per-section palette through trackInk at injection.
-  let trackScheme = $derived(selectedTrackScheme());
-  let kompleteKontrolInk = $derived(trackScheme ?? {
-    primary: trackInk(kompleteKontrolColor.primary, paintModeReactive()),
-    secondary: kompleteKontrolColor.secondary,
-    accent: trackInk(kompleteKontrolColor.accent, paintModeReactive())
-  });
+  // One ink (ADR-544): the selected track's.
+  let kompleteKontrolInk = $derived(selectedAmountScheme());
 
   // All parameter values as $derived - always reactive to store changes
   let param1Value = $derived(device ? selectedTrackStore.paramValueArmed(selectedTrackStore.paramPath(device, 1)) ?? 0.5 : 0.5);
@@ -81,10 +76,6 @@
 
 <div class="h-full w-full flex flex-col" data-density="compact">
   {#if instrument}
-    <!-- The 8 parameters as value boxes in one row, tall like the Chord
-         view's (ADR-477; two rows of four until 2026-10-27, boxes twice as
-         wide as tall). The wheels left for the MidiWheels device's chain
-         cell (user, 2026-10-26). -->
     <div class="controls-panel">
       <!-- The plug-in's eight parameters as knobs, as Live draws a rack's
            macros: the grid that gives each the most room (ADR-509). -->
@@ -111,7 +102,7 @@
     </div>
   {:else}
     <!-- Default state when no Komplete Kontrol present -->
-    <DeviceEmptyState glyph="🎹" message="Load Komplete Kontrol to access controls" color={kompleteKontrolInk.primary} />
+    <DeviceEmptyState message="Load Komplete Kontrol to access controls" color={kompleteKontrolInk.primary} />
   {/if}
 </div>
 
