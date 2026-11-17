@@ -46,6 +46,11 @@
    * downward compression). Drags are relative and own their pointer, as
    * the envelope and LFO pictures do (ADR-514). The line in each block
    * reads its ratio, filled from 1 : 1 to where it stands.
+   *
+   * The scale wears its dB at the foot, so an edge's place is its
+   * reading; a block's threshold and ratio are written out in Live's
+   * words only while a finger holds that block (ADR-544: no number at
+   * rest; both stood at each edge always, in the ink, until the rollout).
    */
   import type { PanelParams } from '../panel/usePanelParams.svelte';
 
@@ -156,12 +161,20 @@
       <line class="edge" class:hot={hot === 'below-threshold'} x1={belowX} x2={belowX} y1="0" y2={h} />
       <line class="edge" class:hot={hot === 'above-threshold'} x1={aboveX} x2={aboveX} y1="0" y2={h} />
     </svg>
-    <span class="readout below" style="left: {Math.max(76, belowX - 4)}px;">
-      {params.display(name.belowThreshold) ?? `${belowDb.toFixed(1)} dB`}<br />{params.display(name.belowRatio) ?? ''}
-    </span>
-    <span class="readout above" style="left: {Math.min(w - 76, aboveX + 4)}px;">
-      {params.display(name.aboveThreshold) ?? `${aboveDb.toFixed(1)} dB`}<br />{params.display(name.aboveRatio) ?? ''}
-    </span>
+    {#each TICKS as t (t)}
+      <span class="tick-label" style="left: {xOf(t)}px;">{t}</span>
+    {/each}
+    <!-- Live's values for a block, while a finger holds it. -->
+    {#if hot?.startsWith('below')}
+      <span class="readout below" style="left: {Math.max(76, belowX - 4)}px;">
+        {params.display(name.belowThreshold) ?? `${belowDb.toFixed(1)} dB`}<br />{params.display(name.belowRatio) ?? ''}
+      </span>
+    {/if}
+    {#if hot?.startsWith('above')}
+      <span class="readout above" style="left: {Math.min(w - 76, aboveX + 4)}px;">
+        {params.display(name.aboveThreshold) ?? `${aboveDb.toFixed(1)} dB`}<br />{params.display(name.aboveRatio) ?? ''}
+      </span>
+    {/if}
   {/if}
 </div>
 
@@ -220,9 +233,21 @@
   .readout {
     position: absolute;
     top: 4px;
+    font-size: 0.75rem;
+    line-height: 0.9375rem;
+    color: var(--label);
+    white-space: nowrap;
+    pointer-events: none;
+    font-variant-numeric: tabular-nums;
+  }
+  /* The scale's dB, at the foot beside its line, clear of a ratio at the floor. */
+  .tick-label {
+    position: absolute;
+    bottom: 6px;
+    padding-left: 4px;
     font-size: 0.6875rem;
-    line-height: 0.875rem;
-    color: var(--ink);
+    line-height: 1;
+    color: var(--fg-tertiary);
     white-space: nowrap;
     pointer-events: none;
     font-variant-numeric: tabular-nums;

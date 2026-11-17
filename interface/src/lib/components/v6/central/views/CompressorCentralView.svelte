@@ -4,12 +4,27 @@
    * CompressorCentralView — the Compressor's view (slot `compressor`,
    * Compressor2).
    *
-   * Every Compressor control the app has: the sidechain source grid and
-   * its cutoff, the Makeup auto toggle with its output gain, and the
-   * Compressor module itself. Split out of the shared dynamics view
-   * (`SquashCentralView`, which also held the Glue, the Gate and the
-   * Multiband) when the FX chain overview gave every device its own view
-   * (ADR-478).
+   *   Sidechain [the sources · Cutoff]  |  Threshold [the Compressor module]
+   *   |  Output [Output / Makeup]
+   *
+   * On the face grid (ADR-510), sections [3, 2, 1], in Live's order: what
+   * the detector hears, the compression, the level out. Every Compressor
+   * control the app has: the sidechain source grid and its cutoff, the
+   * Compressor module itself (the chain cell's threshold box, which draws
+   * Live's activity view over its fill while Live is read, ADR-543), and
+   * the output gain over its Makeup auto toggle (a switch at a column's
+   * foot, as the Limiter's and the Utility's are).
+   *
+   * The module is the main gesture and stands on two columns, wide enough
+   * for the activity view's whole history (128 columns at 2px). Until
+   * ADR-544's rollout it was the last column of four, one column wide,
+   * behind a sidechain section that took half the band with its Cutoff
+   * knob floating under the sources; the Cutoff now has a column of its
+   * own beside them, the size of the Output knob.
+   *
+   * Split out of the shared dynamics view (`SquashCentralView`, which also
+   * held the Glue, the Gate and the Multiband) when the FX chain overview
+   * gave every device its own view (ADR-478).
    *
    * Self-contained: queries its own slot state, takes no props, and
    * renders through ghost/loading/active without a `{#if device}` gate.
@@ -19,6 +34,8 @@
   import CompressorControl from '../../device-panel/CompressorControl.svelte';
   import DeviceSlider from '../../device-panel/DeviceSlider.svelte';
   import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
+  import { PICTURE_CONTEXT } from '$lib/components/v6/browser/devicePictures';
+  import { setContext } from 'svelte';
   import FaceGrid from '../FaceGrid.svelte';
   import FaceSection from '../FaceSection.svelte';
   import FaceSeam from '../FaceSeam.svelte';
@@ -26,12 +43,16 @@
 
   const compressor = useFxGridSlot('compressor');
 
-  // ADR-400: the sidechain, makeup and compressor-module controls drive
-  // the COMPRESSOR (Compressor2), so they wear its own (dynamics) ink, already calibrated by the
-  // slot chokepoint — and agrees with the `CompressorControl` module
-  // beside it. The disabled/idle scheme is the neutral utility family
-  // (deviceInk-safe greys).
-  const IDLE_SCHEME = { primary: '#a2acb7', secondary: 'color-mix(in oklab, var(--signal-dim) 10%, transparent)', accent: '#bbc5d1' };
+  // The module draws its device's picture, as its chain cell does: the
+  // transfer curve, bending at the threshold, which gives way to Live's
+  // activity view while there is a reading (ADR-543). Without it the box
+  // was a blank slab of ink at a threshold near the top, where a fresh
+  // Compressor stands.
+  setContext(PICTURE_CONTEXT, true);
+
+  // One ink (ADR-544): the selected track's, as the slot hands it over. A
+  // ghost or a switched-off control dims (`isGhost`); it does not change
+  // colour (a grey scheme of its own until the rollout).
   let liveInk = $derived(compressor.color);
 
   // Mount property subscriptions inline (per useFxGridSlot contract).
@@ -173,120 +194,114 @@
 </script>
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states.
-     One face grid (ADR-510), four columns of ~224px at 1366 x 1024:
-     sidechain 2 | makeup 1 | compressor 1. The sidechain grid keeps half
-     the width (it is the one section whose content grows with the set). -->
+     One face grid (ADR-510), six columns of ~157px at 1366 x 1024:
+     sidechain 3 (the sources over two, Cutoff) | compressor 2 | output 1. -->
 <div class="comp-central-layout relative">
-<FaceGrid sections={[2, 1, 1]}>
-  <FaceSection span={2}>
+<FaceGrid sections={[3, 2, 1]}>
+  <FaceSection span={3}>
   {#snippet head()}<PanelEyebrow title="Sidechain" color={liveInk.primary} />{/snippet}
-  <!-- Sidechain Routing + Cutoff -->
+  <!-- Sidechain routing: the sources, the one section whose content grows
+       with the set. -->
   <div class="device-wrapper sidechain-section face-span-2" style={compressor.isGhost ? 'opacity: var(--opacity-ghost);' : ''}>
-    <div class="sidechain-body">
-      {#if Array.isArray(availableTypes) && availableTypes.length > 0}
-        <!-- Adaptive grid: adjusts rows/columns based on item count -->
-        <div class="sidechain-grid" style="grid-template-columns: repeat({sidechainLayout.cols}, 1fr); grid-template-rows: repeat({sidechainLayout.rows}, 1fr);">
-          {#each availableTypes as track}
-            {@const isSelected = routingMatches(inputRoutingType, track)}
-            {@const isActive = sidechainEnabled && isSelected}
-            <button
-              class="physical-button {sidechainLayout.rows > 2 ? 'text-sm' : 'text-base'} font-medium h-full whitespace-normal text-center leading-tight px-1 py-1 flex items-center justify-center"
-              class:active={isActive}
-              style="--btn-tint: {sidechainEnabled ? liveInk.primary : 'var(--muted-foreground)'};"
-              use:press={{ onPress: () => handleSidechainSelect(track) }}
-            >
-              <span class="w-full break-words">
-                {track.display_name || `Track ${track.identifier}`}
-              </span>
-            </button>
-          {/each}
-        </div>
-      {:else if compressor.isGhost}
-        <div class="flex items-center justify-center h-full">
-          <p class="text-sm text-muted-foreground">Tap to load compressor</p>
-        </div>
-      {:else}
-        <div class="flex items-center justify-center h-full">
-          <div class="text-center text-muted-foreground text-sm">
-            <p>No sidechain sources available</p>
-          </div>
-        </div>
-      {/if}
-
-      <!-- Cutoff slider (horizontal) — only "active" when sidechain is enabled -->
-      <div
-        class="cutoff-slider-wrapper"
-        style={compressor.isGhost || !sidechainEnabled ? 'opacity: var(--opacity-ghost);' : ''}
-      >
-        <DeviceSlider
-          value={cutoffValue}
-          title="Cutoff"
-          face="knob"
-          knobSize="l"
-          icon="cutoff"
-          orientation="horizontal"
-          min={CUTOFF_MIN}
-          max={CUTOFF_MAX}
-          isGhost={compressor.isGhost || !sidechainEnabled}
-          color={compressor.isGhost || !sidechainEnabled ? IDLE_SCHEME : liveInk}
-          readout={compressor.paramDisplay(CUTOFF_PARAM)}
-          onInteraction={handleCutoffChange}
-        />
+    {#if Array.isArray(availableTypes) && availableTypes.length > 0}
+      <!-- Adaptive grid: adjusts rows/columns based on item count -->
+      <div class="sidechain-grid" style="grid-template-columns: repeat({sidechainLayout.cols}, 1fr); grid-template-rows: repeat({sidechainLayout.rows}, 1fr);">
+        {#each availableTypes as track}
+          {@const isSelected = routingMatches(inputRoutingType, track)}
+          {@const isActive = sidechainEnabled && isSelected}
+          <button
+            class="physical-button {sidechainLayout.rows > 2 ? 'text-sm' : 'text-base'} font-medium h-full whitespace-normal text-center leading-tight px-1 py-1 flex items-center justify-center"
+            class:active={isActive}
+            use:press={{ onPress: () => handleSidechainSelect(track) }}
+          >
+            <span class="w-full break-words">
+              {track.display_name || `Track ${track.identifier}`}
+            </span>
+          </button>
+        {/each}
       </div>
-    </div>
+    {:else if compressor.isGhost}
+      <p class="sidechain-empty">Tap to load compressor</p>
+    {:else}
+      <p class="sidechain-empty">No sidechain sources available</p>
+    {/if}
   </div>
 
+  <!-- Cutoff: live only while the sidechain is on. Its cell leaves the
+       foot row free, so the knob stands level with Output's. -->
+  <div
+    class="device-wrapper knob-cell over-foot"
+    style={compressor.isGhost || !sidechainEnabled ? 'opacity: var(--opacity-ghost);' : ''}
+  >
+    <DeviceSlider
+      value={cutoffValue}
+      title="Cutoff"
+      face="knob"
+      knobSize="l"
+      knobFit
+      knobCaptionBelow
+      icon="cutoff"
+      orientation="horizontal"
+      min={CUTOFF_MIN}
+      max={CUTOFF_MAX}
+      isGhost={compressor.isGhost || !sidechainEnabled}
+      color={liveInk}
+      readout={compressor.paramDisplay(CUTOFF_PARAM)}
+      onInteraction={handleCutoffChange}
+    />
+  </div>
+  </FaceSection>
+  <FaceSeam />
+
+  <FaceSection span={2}>
+  {#snippet head()}<PanelEyebrow title="Threshold" color={liveInk.primary} />{/snippet}
+  <!-- Compressor Control (virtual device - handles its own slot state):
+       the threshold box. Its picture stands for its name, so the section
+       carries it. -->
+  <div class="device-wrapper compressor-wrapper face-span-2">
+    <CompressorControl device={compressor.device} />
+  </div>
   </FaceSection>
   <FaceSeam />
 
   <FaceSection span={1}>
   {#snippet head()}<PanelEyebrow title="Output" color={liveInk.primary} />{/snippet}
-  <!-- Makeup Section: Auto toggle (one touch row) + the Output knob -->
+  <!-- Makeup Section: the Output knob over its Auto toggle (one touch row) -->
   <div class="device-wrapper makeup-section">
-    <!-- Makeup Auto toggle (top) -->
-    <button
-      use:press={{ onPress: () => toggleMakeupAuto() }}
-      class="physical-button btn-toggle makeup-toggle text-lg font-bold"
-      class:active={makeupAutoEnabled}
-      class:is-ghost={compressor.isGhost}
-      style="--btn-tint: {liveInk.primary};"
-    >
-      Makeup
-    </button>
-    <!-- Makeup Gain Slider (bottom) -->
-    <div class="makeup-slider-wrapper">
+    <!-- Makeup Gain knob -->
+    <div class="device-wrapper knob-cell">
       <DeviceSlider
         value={makeupGainValue}
         title="Output"
         face="knob"
         knobSize="l"
+        knobFit
+        knobCaptionBelow
         icon="output"
         orientation="vertical"
         min={MAKEUP_GAIN_MIN}
         max={MAKEUP_GAIN_MAX}
         isGhost={compressor.isGhost}
-        color={compressor.isGhost ? IDLE_SCHEME : liveInk}
+        color={liveInk}
         readout={compressor.paramDisplay(MAKEUP_GAIN_PARAM)}
         onInteraction={handleMakeupGainChange}
       />
     </div>
-  </div>
-
-  </FaceSection>
-  <FaceSeam />
-
-  <FaceSection span={1}>
-  {#snippet head()}<PanelEyebrow title="Compressor" color={liveInk.primary} />{/snippet}
-  <!-- Compressor Control (virtual device - handles its own slot state) -->
-  <div class="device-wrapper compressor-wrapper">
-    <CompressorControl device={compressor.device} icon="compress" />
+    <!-- Makeup Auto toggle (the foot) -->
+    <button
+      use:press={{ onPress: () => toggleMakeupAuto() }}
+      class="physical-button btn-toggle makeup-toggle"
+      class:active={makeupAutoEnabled}
+    >
+      Makeup
+    </button>
   </div>
   </FaceSection>
 </FaceGrid>
 </div>
 
 <style>
-  /* sidechain | makeup | compressor, on the FaceGrid (ADR-510). */
+  /* sidechain | compressor | output, on the FaceGrid (ADR-510). */
   .comp-central-layout {
     height: 100%;
     width: 100%;
@@ -304,46 +319,49 @@
     overflow: hidden;
   }
 
-  .sidechain-body {
-    flex: 1;
+  /* No sources (or no device yet): the list's own ground, saying why it
+     is empty. */
+  .sidechain-empty {
+    flex: 1 1 0;
     display: flex;
-    flex-direction: column;
-    gap: var(--face-gutter);
-    min-height: 0;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    background: var(--surface-well);
+    font-size: 0.875rem;
+    color: var(--muted-foreground);
+    text-align: center;
   }
 
-  /* A large knob with its caption beside it: 96px + 12 (ADR-509). */
-  .cutoff-slider-wrapper {
-    flex-shrink: 0;
-    height: 6.75rem;
+  /* A knob in its cell: the largest size the cell holds (`knobFit`). */
+  .knob-cell {
+    flex: 1 1 0;
+  }
+  .knob-cell > :global(*) {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .knob-cell.over-foot {
+    margin-bottom: calc(var(--height-touch) + var(--face-gutter));
   }
 
   .makeup-section {
-    display: flex;
-    flex-direction: column;
     gap: var(--face-gutter);
   }
 
-  /* One touch row over its knob (ADR-509): the knob keeps the height. */
+  /* One touch row under its knob (ADR-509): the knob keeps the height. */
   .makeup-toggle {
     flex-shrink: 0;
     height: var(--height-touch);
     min-height: var(--height-touch);
-  }
-  /* Ghost compressor dims the toggle (was inline `opacity: 0.7`; lifted
-     onto the .is-ghost class so the flat grammar can re-read it without
-     !important). */
-  .makeup-toggle.is-ghost {
-    opacity: 0.7;
-  }
-
-  .makeup-slider-wrapper {
-    flex: 1;
-    min-height: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
   }
 
   .compressor-wrapper {
-    flex: 1;
     min-height: 0;
   }
 
@@ -352,33 +370,18 @@
     display: grid;
     grid-auto-flow: column;
     /* grid-template-columns and grid-template-rows set via inline style */
-    gap: var(--spacing-sm);
+    gap: var(--face-gutter);
     flex: 1;
-    min-height: 0;
-  }
-
-  /* Responsive button text sizing based on grid density */
-  .sidechain-grid :global(.btn) {
-    font-size: clamp(0.75rem, 2vw, 1rem);
-    padding: var(--spacing-xs) var(--spacing-sm);
     min-height: 0;
   }
 
   /* ---- Live skin (flat grammar) ------------------------------------
      The sidechain sources and the Makeup toggle are shared
-     .physical-button toggles (already flat in app.css: OFF field / ON
-     ChosenDefault); the sliders and the Compressor module carry their
-     own flat overrides. What this view adds is Tailwind `font-bold` on
-     the Makeup toggle — Live sets control text medium — and a 0.7
-     opacity dim on it while the compressor is a ghost: under the flat
-     grammar a disabled control is ControlOffDisabledForeground on the
-     same field, never an opacity dim. Nothing below applies outside
-     [data-grammar="flat"]. */
+     .physical-button toggles (flat in app.css; ON and the label's colour
+     are its two laws, ADR-544); the knobs and the Compressor module carry
+     their own flat overrides. What this view adds: Live sets control text
+     medium. Nothing below applies outside [data-grammar="flat"]. */
   :global([data-grammar="flat"]) .makeup-toggle {
     font-weight: var(--font-weight-medium);
-  }
-  :global([data-grammar="flat"]) .makeup-toggle.is-ghost {
-    opacity: 1;
-    color: var(--flat-disabled-fg);
   }
 </style>

@@ -2,28 +2,41 @@
   /**
    * EQ Eight (the `eq8` slot, 2026-11-06), Live's panel (manual §29.15):
    *
-   *   [Freq / Gain / Q] | [the curve, a dot per band] | [Band 1-8 · On] [Type]
-   *   | [Output / Scale · Adaptive Q]
+   *   EQ [the curve, a dot per band / Band 1-8]
+   *   | Band N [Type] [Freq · Gain / Q · On]
+   *   | Global [Output · Scale / Adaptive Q]
    *
-   * on one face grid (ADR-510), sections 1 · 3 · 2 · 1.
+   * on one face grid (ADR-510), ten columns, sections 4 · 4 · 2.
    *
    * Live's per-band choosers and switches under its display become one
-   * band picker and one type tab for the band selected, so each stays a
-   * touch target.
+   * band picker under the curve, as Live has them, and one type tab and
+   * one On switch for the band selected, so each stays a touch target: the
+   * band picker one touch row of eight, the types two columns of four, the
+   * lows on the left and the highs on the right, as the curve runs.
+   * (Until ADR-544's rollout the picker and the types were two small-rowed
+   * lists side by side, eight types in a column of 26px rows, and the
+   * band's knobs three captionless letters.)
+   *
+   * Every amount beside the curve is a knob of one size with its whole
+   * name (ADR-517, ADR-544): the band's Freq, Gain and Q, and the device's
+   * Output and Scale, set and left (value boxes until then, their names cut
+   * by their own fills). A switch sits in a knob's cell on the same grid.
    *
    * The curve is every band that is on, in series (`eq8Params.eq8Db`), on
    * the device's own 10 Hz - 22 kHz sweep, so a dot's X is its Frequency
-   * parameter. A press grabs the nearest dot and selects its band, which
-   * the columns beside then edit. Up and down is the gain for a shelf or a
-   * bell, as in Live; for the cuts and the notch, which have none, it is
-   * the Q (Live's Alt-drag), so a finger reaches it. The app edits each
-   * band's A half (Live's Stereo mode).
+   * parameter, over a frequency and dB scale (`eq/GraphScale`). A press
+   * grabs the nearest dot and selects its band, which the controls beside
+   * then edit. Up and down is the gain for a shelf or a bell, as in Live;
+   * for the cuts and the notch, which have none, it is the Q (Live's
+   * Alt-drag), so a finger reaches it. The app edits each band's A half
+   * (Live's Stereo mode).
    *
    * NO {#if device} gate - every control handles its own ghost state.
    */
   import FilterDotsGraph, { type GraphDot } from '$lib/components/v6/central/FilterDotsGraph.svelte';
+  import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
   import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
-  import ParamColumn from './fx/ParamColumn.svelte';
+  import GraphScale from './eq/GraphScale.svelte';
   import ParamSwitch from './fx/ParamSwitch.svelte';
   import FaceGrid from '../FaceGrid.svelte';
   import FaceSection from '../FaceSection.svelte';
@@ -50,6 +63,12 @@
   const GRAPH_DB = 24;
   const BAND_NUMBERS = Array.from({ length: EQ8_BANDS }, (_, i) => i + 1);
   const FREQS = Array.from({ length: 121 }, (_, i) => axisHz(EQ8_FREQ_RANGE, i / 120));
+  /**
+   * The types as the tab lays them, row by row: each low response beside
+   * its high twin, the bell beside the notch. Each entry is Live's type
+   * value, which is what a pick writes.
+   */
+  const TYPE_ORDER = [0, 7, 1, 6, 2, 5, 3, 4] as const;
 
   let selected = $state(3);
 
@@ -87,101 +106,131 @@
     }
   }
 
+  /** A knob on one parameter by LOM index, in its own range; a ghost draws `rest`. */
+  interface Knob {
+    index: number;
+    title: string;
+    rest: number;
+    min?: number;
+    max?: number;
+    /** The neutral value a ± parameter's arc grows from. */
+    center?: number;
+  }
+
   let band = $derived(eq8Band(selected));
   let selectedState = $derived(bands[selected - 1]);
-  let bandBoxes = $derived([
-    { index: band.freq, title: 'Freq', rest: EQ8_REST.freq[selected - 1], mark: 'F' },
-    { index: band.gain, title: 'Gain', rest: 0, min: -EQ8_GAIN_MAX, max: EQ8_GAIN_MAX, center: 0, mark: 'G' },
-    { index: band.q, title: 'Q', rest: EQ8_REST.q, mark: 'Q' }
-  ]);
-  const GLOBAL = [
-    { index: EQ8.output, title: 'Output', rest: 0, min: -12, max: 12, center: 0 },
-    { index: EQ8.scale, title: 'Scale', rest: 1, min: -2, max: 2, center: 0 }
-  ];
+  let freqKnob = $derived<Knob>({ index: band.freq, title: 'Freq', rest: EQ8_REST.freq[selected - 1] });
+  let gainKnob = $derived<Knob>({ index: band.gain, title: 'Gain', rest: 0, min: -EQ8_GAIN_MAX, max: EQ8_GAIN_MAX, center: 0 });
+  let qKnob = $derived<Knob>({ index: band.q, title: 'Q', rest: EQ8_REST.q });
+  const OUTPUT: Knob = { index: EQ8.output, title: 'Output', rest: 0, min: -12, max: 12, center: 0 };
+  const SCALE: Knob = { index: EQ8.scale, title: 'Scale', rest: 1, min: -2, max: 2, center: 0 };
   let adaptiveQ = $derived((fx.paramValue(EQ8.adaptiveQ) ?? 1) >= 0.5);
 </script>
 
-<!-- One face grid (ADR-510), seven columns of ~121px at 1366 x 1024:
-     the band's knobs 1 · the curve 3 · the band choosers 2 · Global 1. -->
+<!-- One knob in its cell, in its parameter's own range: every knob on the
+     face is this size (ADR-544). -->
+{#snippet knob(k: Knob)}
+  <div class="knob-cell">
+    <DeviceSlider
+      value={fx.paramValue(k.index) ?? k.rest}
+      title={k.title}
+      face="knob"
+      knobSize="m"
+      knobFit
+      orientation="vertical"
+      min={k.min ?? 0}
+      max={k.max ?? 1}
+      centerOrigin={k.center !== undefined}
+      centerValue={k.center}
+      isGhost={fx.isGhost}
+      color={fx.color}
+      readout={fx.paramDisplay(k.index)}
+      onInteraction={(v) => fx.sendParam(k.index, v)}
+    />
+  </div>
+{/snippet}
+
+<!-- One face grid (ADR-510), ten columns of ~91px at 1366 x 1024: the
+     curve over its band picker 4 · the band's type and knobs 4 · Global 2. -->
 <div class="face-root" data-view="eq8">
-<FaceGrid sections={[1, 3, 2, 1]}>
-  <!-- Freq, Gain and Q stacked: three medium knobs with no caption, their
-       letters saying which (a captioned medium knob needs more than a
-       third of the column). -->
-  <FaceSection span={1}>
-    {#snippet head()}<PanelEyebrow title="Band {selected}" color={fx.color.primary} />{/snippet}
-    <ParamColumn face="knob" knobSize="m" caption={false} {fx} ink={fx.color} boxes={bandBoxes} />
-  </FaceSection>
-  <FaceSeam />
-
-  <FaceSection span={3}>
+<FaceGrid sections={[4, 4, 2]}>
+  <FaceSection span={4}>
     {#snippet head()}<PanelEyebrow title="EQ" color={fx.color.primary} />{/snippet}
-    <div class="cell graph face-span-3" class:slot-ghost={fx.isGhost}>
-      <FilterDotsGraph {dots} {curves} onGrab={(i) => (selected = i + 1)} onMove={move} ariaLabel="EQ Eight bands" />
-    </div>
-  </FaceSection>
-  <FaceSeam />
-
-  <FaceSection span={2}>
-    {#snippet head()}<PanelEyebrow title="Bands" color={fx.color.primary} />{/snippet}
-    <div class="cell">
+    <div class="cell face-span-all">
+      <div class="graph" class:slot-ghost={fx.isGhost}>
+        <GraphScale axis={EQ8_FREQ_RANGE} span={GRAPH_DB}>
+          <FilterDotsGraph {dots} {curves} onGrab={(i) => (selected = i + 1)} onMove={move} ariaLabel="EQ Eight bands" />
+        </GraphScale>
+      </div>
+      <!-- The bands under the curve, as Live has them: one touch row. -->
       <ScrubTabs
         options={BAND_NUMBERS}
         selected={selected - 1}
         onSelect={(i) => (selected = i + 1)}
-        cols={2}
-        tint={fx.color.primary}
-        inked
+        cols={8}
         ghost={fx.isGhost}
         label={(b) => `Band ${b}`}
         groupLabel="Band"
         name="band"
-        style="flex: 4 1 0;"
+        class="band-row"
+        style="--scrub-font-size: 0.9375rem;"
       >
         {#snippet item(b)}
           <span class:band-off={!bands[b - 1].on}>{b}</span>
         {/snippet}
       </ScrubTabs>
-      <ParamSwitch
-        row
-        label="On"
-        on={selectedState.on}
-        tint={fx.color.primary}
-        ghost={fx.isGhost}
-        onToggle={() => fx.sendParam(band.on, selectedState.on ? 0 : 1)}
-      />
-    </div>
-    <div class="cell">
-      <ScrubTabs
-        options={EQ8_TYPES}
-        selected={selectedState.type}
-        onSelect={(i) => fx.sendParam(band.type, i)}
-        cols={1}
-        tint={fx.color.primary}
-        inked
-        ghost={fx.isGhost}
-        label={(t) => t}
-        groupLabel="Filter type"
-        name="type"
-        class="flex-1"
-      />
     </div>
   </FaceSection>
   <FaceSeam />
 
-  <FaceSection span={1}>
+  <FaceSection span={4}>
+    {#snippet head()}<PanelEyebrow title="Band {selected}" color={fx.color.primary} />{/snippet}
+    <ScrubTabs
+      options={TYPE_ORDER}
+      selected={TYPE_ORDER.indexOf(selectedState.type as (typeof TYPE_ORDER)[number])}
+      onSelect={(_, type) => fx.sendParam(band.type, type)}
+      cols={2}
+      ghost={fx.isGhost}
+      label={(type) => EQ8_TYPES[type]}
+      groupLabel="Filter type"
+      name="type"
+      class="face-span-2"
+      style="--scrub-font-size: 0.8125rem;"
+    />
+    <!-- Freq · Gain over Q · On: the band's knobs and its switch, one grid. -->
+    <div class="pairs face-span-2" class:slot-ghost={fx.isGhost}>
+      {@render knob(freqKnob)}
+      {@render knob(gainKnob)}
+      {@render knob(qKnob)}
+      <div class="switch-cell">
+        <ParamSwitch
+          row
+          label="On"
+          on={selectedState.on}
+          tint={fx.color.primary}
+          onToggle={() => fx.sendParam(band.on, selectedState.on ? 0 : 1)}
+        />
+      </div>
+    </div>
+  </FaceSection>
+  <FaceSeam />
+
+  <FaceSection span={2}>
     {#snippet head()}<PanelEyebrow title="Global" color={fx.color.primary} />{/snippet}
-    <div class="cell">
-      <div class="grow"><ParamColumn {fx} ink={fx.color} boxes={GLOBAL} /></div>
-      <ParamSwitch label="Adaptive Q" on={adaptiveQ} tint={fx.color.primary} ghost={fx.isGhost} onToggle={() => fx.sendParam(EQ8.adaptiveQ, adaptiveQ ? 0 : 1)} />
+    <div class="pairs face-span-2" class:slot-ghost={fx.isGhost}>
+      {@render knob(OUTPUT)}
+      {@render knob(SCALE)}
+      <div class="switch-cell wide">
+        <ParamSwitch row label="Adaptive Q" on={adaptiveQ} tint={fx.color.primary} onToggle={() => fx.sendParam(EQ8.adaptiveQ, adaptiveQ ? 0 : 1)} />
+      </div>
     </div>
   </FaceSection>
 </FaceGrid>
 </div>
 
 <style>
-  /* Live's order on the face grid (ADR-510): the band's dials, the curve,
-     then the band choosers and the global controls. */
+  /* Live's order on the face grid (ADR-510): the curve over its bands,
+     the selected band's controls, then the global ones. */
   .face-root {
     height: 100%;
     width: 100%;
@@ -195,15 +244,41 @@
     min-height: 0;
     min-width: 0;
   }
-
-  .grow {
-    flex: 3 1 0;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-  .grow > :global(*) {
+  .graph {
     flex: 1 1 0;
+    min-height: 0;
+  }
+  /* The band picker: one touch row under the curve. */
+  .cell > :global(.band-row) {
+    flex: 0 0 var(--height-touch);
+  }
+
+  /* Two rows of two on the face's own columns: knobs of one size, a switch
+     in a knob's cell (one touch row, centred), or across both columns. */
+  .pairs {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    row-gap: var(--face-gutter);
+    min-width: 0;
+    min-height: 0;
+  }
+  .knob-cell,
+  .switch-cell {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+  }
+  .knob-cell > :global(*) {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .switch-cell {
+    flex-direction: column;
+    justify-content: center;
+  }
+  .switch-cell.wide {
+    grid-column: 1 / -1;
   }
 
   .band-off {

@@ -1,14 +1,26 @@
 <script lang="ts">
   import { press } from '$lib/actions/press';
 	/**
-	 * Ben's Adaptive Tone Shaper's graph, as the device draws its own face
-	 * (`toneShaper.ts` has the geometry): the input's spectrum as a filled
-	 * area, the curve being applied (boosts filled above the zero line, cuts
-	 * below), the four tone handles — a press takes the nearest, a drag moves
-	 * it up and down for the level and sideways for the center, relative to
-	 * where the finger landed, as every pad here does — an Amount bar on the
-	 * right and the ZERO and ECO buttons in the top corner. The handle last
-	 * touched names itself top-left with its level and center.
+	 * Ben's Adaptive Tone Shaper's face, on the face grid (ADR-510), sections
+	 * [5, 1]:
+	 *
+	 *   Tone [the graph, a handle per tone]  |  Global [Amount / Zero · Eco]
+	 *
+	 * The graph is the device's own (`toneShaper.ts` has the geometry): the
+	 * input's spectrum as a filled area, the curve being applied (boosts
+	 * filled above the zero line, cuts below), the four tone handles — a
+	 * press takes the nearest, a drag moves it up and down for the level and
+	 * sideways for the center, relative to where the finger landed, as every
+	 * pad here does. A handle wears its center, as on the device; while a
+	 * finger holds it, it names itself top-left with its level and center
+	 * (no number at rest, ADR-544; until then the readout stood there
+	 * always, the Amount's when no handle had been touched).
+	 *
+	 * Beside the graph, as the Channel EQ's view has its Global column: the
+	 * Amount, the level that is ridden, a value box (`DeviceSlider`; a thin
+	 * bar of its own with its number under it until ADR-544, "AMT"), over
+	 * the Zero (latency) and Eco (quality) switches, one touch row (two
+	 * 22px buttons in the graph's corner until then, lit in the ink).
 	 *
 	 * The spectrum and the curve are the device's own, thirty a second
 	 * (`frame`); without one the graph is still a graph, with the handles
@@ -20,12 +32,16 @@
 	import { MIN_SEND_INTERVAL_MS } from '$lib/utils/sliderThrottle';
 	import type { DeviceColorScheme } from '$lib/config/devicePresets';
 	import type { ToneShaperFrame } from '$lib/stores/v3/toneShaper.svelte';
+	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
+	import FaceGrid from '../../FaceGrid.svelte';
+	import FaceSection from '../../FaceSection.svelte';
+	import FaceSeam from '../../FaceSeam.svelte';
+	import PanelEyebrow from '../panel/PanelEyebrow.svelte';
 	import {
 		TS_PARAM,
 		TS_BANDS,
 		TS_HANDLE,
 		TS_AMOUNT_MAX,
-		amountDrag,
 		bandHz,
 		dbY,
 		handleDrag,
@@ -59,7 +75,6 @@
 	let draft = $state<Record<number, number>>({});
 	let shownLevels = $derived(TS_HANDLE.map((_, i) => draft[TS_PARAM.levels[i]] ?? levels[i]));
 	let shownHz = $derived(TS_HANDLE.map((_, i) => draft[TS_PARAM.hz[i]] ?? hz[i]));
-	let shownAmount = $derived(draft[TS_PARAM.amount] ?? amount);
 
 	const X = (x: number) => (x * 1000).toFixed(1);
 	const Y = (y: number) => ((1 - y) * 1000).toFixed(1);
@@ -83,19 +98,18 @@
 	let boostPath = $derived(gains ? `M0 ${Y(dbY(0))}L${along(gains, (db) => Math.max(0, db))}L1000 ${Y(dbY(0))}Z` : '');
 	let cutPath = $derived(gains ? `M0 ${Y(dbY(0))}L${along(gains, (db) => Math.min(0, db))}L1000 ${Y(dbY(0))}Z` : '');
 
-	// ── The readout: the handle last touched, else Amount ──────────────
+	// ── The readout: the handle a finger holds, and only while it does ──
 	let focus = $state(-1);
 	let readout = $derived(
 		focus >= 0
 			? { name: TS_HANDLE[focus].name, value: `${levelLabel(shownLevels[focus])} dB · ${hzLabel(shownHz[focus], true)}` }
-			: { name: 'Amount', value: shownAmount.toFixed(1) }
+			: null
 	);
 
 	// ── The gesture ────────────────────────────────────────────────────
 	let pad = $state<HTMLElement | null>(null);
-	let bar = $state<HTMLElement | null>(null);
-	let grabbed = -1; // a handle, or 4 for the Amount bar
-	let start = { level: 0, hz: 0, amount: 0 };
+	let grabbed = -1; // the handle held, or none
+	let start = { level: 0, hz: 0 };
 	let box = { width: 1, height: 1 };
 
 	const pending = new Map<number, number>();
@@ -132,7 +146,7 @@
 		const y = 1 - (info.downY - r.top) / r.height;
 		grabbed = nearestHandle(shownLevels, shownHz, x, y, r.width, r.height);
 		if (grabbed >= 0) {
-			start = { level: shownLevels[grabbed], hz: shownHz[grabbed], amount: 0 };
+			start = { level: shownLevels[grabbed], hz: shownHz[grabbed] };
 			focus = grabbed;
 		}
 	}
@@ -144,22 +158,12 @@
 			[TS_PARAM.hz[grabbed], center]
 		]);
 	}
-	function barDown(info: DragInfo) {
-		if (!bar) return;
-		box = { width: info.width, height: info.height };
-		grabbed = 4;
-		start = { level: 0, hz: 0, amount: shownAmount };
-		focus = -1;
-	}
-	function barMove(info: DragInfo) {
-		if (grabbed !== 4) return;
-		queue([[TS_PARAM.amount, amountDrag(start.amount, info.dy, box.height)]]);
-	}
 	function end() {
 		if (raf !== null) cancelAnimationFrame(raf);
 		raf = null;
 		send();
 		grabbed = -1;
+		focus = -1;
 		draft = {};
 	}
 	function tap() {
@@ -173,11 +177,14 @@
 	});
 </script>
 
-<div class="ts-graph" class:ghost={isGhost} style="--ink: {color.primary};" data-toneshaper-graph>
+<div class="ts-face" class:ghost={isGhost} style="--ink: {color.primary};" data-toneshaper-graph>
+<FaceGrid sections={[5, 1]}>
+	<FaceSection span={5}>
+	{#snippet head()}<PanelEyebrow title="Tone" color={color.primary} />{/snippet}
 	<div
-		class="ts-pad"
+		class="ts-pad face-span-all"
 		role="group"
-		aria-label="Tone Shaper: {readout.name} {readout.value}"
+		aria-label={readout ? `Tone Shaper: ${readout.name} ${readout.value}` : 'Tone Shaper'}
 		bind:this={pad}
 		use:drag={{ commit: 'either', onDown: padDown, onMove: padMove, onEnd: end, onTap: tap }}
 	>
@@ -218,61 +225,66 @@
 			>{hzLabel(shownHz[i])}</span>
 		{/each}
 
-		<div class="readout">
-			<span class="readout-name">{readout.name}</span>
-			<span class="readout-value">{readout.value}</span>
-		</div>
+		{#if readout}
+			<div class="readout">
+				<span class="readout-name">{readout.name}</span>
+				<span class="readout-value">{readout.value}</span>
+			</div>
+		{/if}
+	</div>
+	</FaceSection>
+	<FaceSeam />
 
-		<!-- Latency and quality, lit when on: ZERO is the device's default. -->
-		<div class="switches">
+	<FaceSection span={1}>
+	{#snippet head()}<PanelEyebrow title="Global" color={color.primary} />{/snippet}
+	<div class="ts-side">
+		<!-- The Amount: ridden, so a value box; its number only while it moves. -->
+		<div class="ts-amount" data-ts-amount>
+			<DeviceSlider
+				value={amount}
+				title="Amount"
+				orientation="vertical"
+				min={0}
+				max={TS_AMOUNT_MAX}
+				{isGhost}
+				{color}
+				readout={amount.toFixed(1)}
+				onTap={tap}
+				onInteraction={(v) => onWrite(TS_PARAM.amount, v)}
+			/>
+		</div>
+		<!-- Latency and quality, lit when on: Zero is the device's default. -->
+		<div class="ts-switches">
 			<button
-				class="switch"
-				class:on={zero}
+				class="physical-button btn-toggle ts-switch"
+				class:active={zero}
 				aria-pressed={zero}
 				data-ts-switch="zero"
 				use:press={{ onPress: () => (isGhost ? onTap?.() : onWrite(TS_PARAM.latency, zero ? 0 : 1)) }}
-			>ZERO</button>
+			>Zero</button>
 			<button
-				class="switch"
-				class:on={eco}
+				class="physical-button btn-toggle ts-switch"
+				class:active={eco}
 				aria-pressed={eco}
 				data-ts-switch="eco"
 				use:press={{ onPress: () => (isGhost ? onTap?.() : onWrite(TS_PARAM.quality, eco ? 0 : 1)) }}
-			>ECO</button>
+			>Eco</button>
 		</div>
 	</div>
-
-	<!-- The Amount bar: filled to the amount, its value under it. -->
-	<div
-		class="ts-bar"
-		role="slider"
-		aria-label="Amount: {shownAmount.toFixed(1)}"
-		aria-valuemin="0"
-		aria-valuemax={TS_AMOUNT_MAX}
-		aria-valuenow={Math.round(shownAmount * 10) / 10}
-		data-ts-amount
-		bind:this={bar}
-		use:drag={{ commit: 'either', onDown: barDown, onMove: barMove, onEnd: end, onTap: tap }}
-	>
-		<span class="bar-label">AMT</span>
-		<div class="bar-well">
-			<div class="bar-fill" style="height: {(shownAmount / TS_AMOUNT_MAX) * 100}%;"></div>
-		</div>
-		<span class="bar-value">{shownAmount.toFixed(1)}</span>
-	</div>
+	</FaceSection>
+</FaceGrid>
 </div>
 
 <style>
-	.ts-graph {
-		display: flex;
-		gap: var(--spacing-xs);
+	.ts-face {
+		width: 100%;
 		height: 100%;
 		min-width: 0;
 		min-height: 0;
 	}
 	.ts-pad {
 		position: relative;
-		flex: 1;
+		height: 100%;
 		min-width: 0;
 		min-height: 0;
 		overflow: hidden;
@@ -289,10 +301,8 @@
 		height: 100%;
 		pointer-events: none;
 	}
-	.ts-graph.ghost svg,
-	.ts-graph.ghost .handle,
-	.ts-graph.ghost .bar-fill,
-	.ts-graph.ghost .switch {
+	.ts-face.ghost svg,
+	.ts-face.ghost .handle {
 		opacity: var(--opacity-ghost);
 	}
 
@@ -315,8 +325,9 @@
 		fill: color-mix(in oklab, var(--ink) 40%, transparent);
 		stroke: none;
 	}
+	/* A cut is the ink too, fainter: it reads on the dark well and on paper. */
 	.cut {
-		fill: color-mix(in oklab, black 35%, transparent);
+		fill: color-mix(in oklab, var(--ink) 18%, transparent);
 		stroke: none;
 	}
 	.curve {
@@ -397,64 +408,40 @@
 		color: var(--foreground);
 	}
 
-	.switches {
-		position: absolute;
-		top: 0.5rem;
-		right: 0.5rem;
-		display: flex;
-		gap: 0.25rem;
-	}
-	.switch {
-		padding: 0.125rem 0.5rem;
-		border: 1px solid var(--ink);
-		border-radius: 2px;
-		background: transparent;
-		color: var(--ink);
-		font-size: 0.6875rem;
-		font-weight: var(--font-weight-medium);
-		letter-spacing: 0.05em;
-		touch-action: manipulation;
-	}
-	.switch.on {
-		background: var(--ink);
-		color: var(--flat-on-fg);
-	}
-
-	/* The Amount bar: a well filled from the bottom, the value under it. */
-	.ts-bar {
-		flex: 0 0 2.75rem;
+	/* The Global column: the Amount box over the two switches' touch row. */
+	.ts-side {
 		display: flex;
 		flex-direction: column;
-		align-items: center;
-		gap: 0.25rem;
+		gap: var(--face-gutter);
+		min-width: 0;
 		min-height: 0;
-		user-select: none;
-		cursor: ns-resize;
 	}
-	.bar-label,
-	.bar-value {
-		font-size: 0.6875rem;
-		color: var(--fg-tertiary);
-		font-variant-numeric: tabular-nums;
-	}
-	.bar-value {
-		color: var(--foreground);
-	}
-	.bar-well {
-		position: relative;
-		flex: 1;
-		width: 100%;
+	.ts-amount {
+		flex: 1 1 0;
+		display: flex;
+		min-width: 0;
 		min-height: 0;
-		overflow: hidden;
-		background: var(--surface-well);
-		border: 1px solid var(--line-strong);
-		border-radius: var(--radius-sm);
 	}
-	.bar-fill {
-		position: absolute;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background: var(--ink);
+	.ts-amount > :global(*) {
+		flex: 1 1 0;
+		min-width: 0;
+	}
+	.ts-switches {
+		flex: 0 0 var(--height-touch);
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: var(--face-gutter);
+	}
+	.ts-switch {
+		min-width: 0;
+		min-height: 0;
+		font-size: 0.9375rem;
+		font-weight: 600;
+	}
+
+	/* ---- Flat grammar: the switches' words are medium; ON and the label's
+	   colour are app.css's (ADR-544). The pad is a well already. */
+	:global([data-grammar="flat"]) .ts-switch {
+		font-weight: var(--font-weight-medium);
 	}
 </style>

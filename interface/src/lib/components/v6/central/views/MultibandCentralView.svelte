@@ -5,7 +5,8 @@
    * The band (2026-11-08): the Mid band as Live draws it, its Below and
    * Above blocks on a dB scale (`multiband/BandDynamicsDisplay.svelte`:
    * a threshold's edge drags across, a block's ratio up and down), across
-   * six columns, then the device's Amount and Output, large. Until then
+   * six columns under its name and its two blocks', then the device's
+   * Amount and Output, large and one size. Until then
    * the face was one value box, the Mid band's Below Threshold, beside an
    * Output knob, most of the band empty; the Below Ratio alone is the
    * device's chain cell (user, 2026-10-26), and the display moves it only
@@ -56,6 +57,8 @@
       {title}
       face="knob"
       knobSize="l"
+      knobFit
+      knobCaptionBelow
       min={l}
       max={h}
       centerOrigin={bipolar}
@@ -84,7 +87,7 @@
      Amount and Output a column each. -->
 <FaceGrid sections={[6, 2]}>
   <FaceSection span={6}>
-  {#snippet head()}<PanelEyebrow title="Mid Band" color={multiband.color.primary} />{/snippet}
+  {#snippet head()}<PanelEyebrow title="Mid Band · Below · Above" color={multiband.color.primary} />{/snippet}
   <!-- A ghost's first touch loads the device (the display has no tap of its own). -->
   <div class="mb-display face-span-all" class:slot-ghost={multiband.isGhost} onpointerdowncapture={() => multiband.loadIfGhost()}>
     <BandDynamicsDisplay {params} band="Mid" ink={multiband.color.primary} sw={MID_ON} />

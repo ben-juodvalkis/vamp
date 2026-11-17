@@ -50,7 +50,11 @@ describe('the dynamics views, one per device (ADR-478)', () => {
 		const knobs = (col: string) =>
 			[...container.querySelectorAll(`[data-glue-col="${col}"] [data-face="knob"]`)].map((k) => k.getAttribute('aria-label')?.split(/[ :]/)[0]);
 		expect(knobs('filter')).toEqual(['Freq', 'Res']); // High Pass, Live's default type: no Gain
-		expect(knobs('timing')).toEqual(['Attack', 'Release', 'Ratio']);
+		expect(knobs('timing')).toEqual(['Attack', 'Release']);
+		// Ratio's three steps are a tab (ADR-544), at Live's default 4:1.
+		const ratios = [...container.querySelectorAll('[data-glue-col="timing"] [data-tab="ratio"] [role="radio"]')];
+		expect(ratios.map((r) => r.textContent?.trim())).toEqual(['2:1', '4:1', '10:1']);
+		expect(ratios.map((r) => r.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false']);
 		expect(knobs('output')).toEqual(['Range', 'Dry/Wet']);
 		for (const label of ['SC Filter', 'Threshold', 'Makeup', 'Soft']) expect(container.textContent).toContain(label);
 		expect(container.textContent).not.toContain('External');
@@ -87,7 +91,8 @@ describe('the dynamics views, one per device (ADR-478)', () => {
 		// A ghost shows Live's defaults: Stereo, every switch off.
 		expect(modes[1].getAttribute('aria-checked')).toBe('true');
 		const switches = [...container.querySelectorAll('button[aria-pressed]')];
-		expect(switches.map((b) => b.textContent?.trim())).toEqual(['Mono', 'Bass Mono', 'Invert L', 'Invert R', 'DC Filter', 'Mute']);
+		// Each under the control it belongs to (ADR-544): Width, Balance, Bass Freq, the channel tab.
+		expect(switches.map((b) => b.textContent?.trim())).toEqual(['Mono', 'Invert L', 'Invert R', 'Bass Mono', 'DC Filter', 'Mute']);
 		expect(switches.every((b) => b.getAttribute('aria-pressed') === 'false')).toBe(true);
 	});
 });

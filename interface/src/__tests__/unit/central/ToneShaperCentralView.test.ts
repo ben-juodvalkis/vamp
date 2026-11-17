@@ -94,7 +94,7 @@ describe('ToneShaperCentralView', () => {
 			himids: { level: '0.00', hz: '3500', text: '3.5k' },
 			highs: { level: '-2.50', hz: '12000', text: '12k' }
 		});
-		expect(container.querySelector('[data-ts-amount]')?.getAttribute('aria-valuenow')).toBe('7.5');
+		expect(container.querySelector('[data-ts-amount] [role="slider"]')?.getAttribute('aria-valuenow')).toBe('7.5');
 		expect(container.querySelector('[data-ts-switch="zero"]')?.getAttribute('aria-pressed')).toBe('true');
 		expect(container.querySelector('[data-ts-switch="eco"]')?.getAttribute('aria-pressed')).toBe('true');
 		expect(container.querySelector('.ts-layout')?.classList.contains('slot-ghost')).toBe(false);
@@ -113,7 +113,7 @@ describe('ToneShaperCentralView', () => {
 			himids: { level: '0.00', hz: '3500', text: '3.5k' },
 			highs: { level: '0.00', hz: '6300', text: '6.3k' }
 		});
-		expect(container.querySelector('[data-ts-amount]')?.getAttribute('aria-valuenow')).toBe('0');
+		expect(container.querySelector('[data-ts-amount] [role="slider"]')?.getAttribute('aria-valuenow')).toBe('0');
 		expect(container.querySelector('[data-ts-switch="zero"]')?.getAttribute('aria-pressed')).toBe('true');
 		expect(container.querySelector('[data-ts-switch="eco"]')?.getAttribute('aria-pressed')).toBe('false');
 		expect(container.querySelector('.spectrum')).toBeNull();
