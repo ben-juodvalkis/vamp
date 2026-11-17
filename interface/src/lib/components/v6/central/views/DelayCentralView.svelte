@@ -3,19 +3,29 @@
    * Live's Delay (the `delay` slot, 2026-11-06), its panel left to right
    * (Live 12 manual §29.11):
    *
-   *   [Left: Sync · 1 2 / 3 4 / 5 6 / 8 16 · Offset] [Right: the same]
-   *   | [Feedback · Link · Freeze] (under the channels in Live; beside them
-   *   here, where the band is short) | [the band-pass display: Freq across,
-   *   Width up · Filter]
-   *   | [LFO: Delay / Filter / Rate] | [Smoothing · Ping Pong · Dry/Wet]
+   *   [Left Sync over 1 2 / 3 4 / 5 6 / 8 16] [Link over Repitch Fade Jump
+   *   over Offset L  Offset R] [Right Sync over the same]
+   *   | [Freeze over Feedback] | [Filter over the band-pass display: Freq
+   *   across, Width up] | [LFO: Rate over Delay  Filter]
+   *   | [Ping Pong over Dry/Wet]
    *
-   * on one face grid (ADR-510), sections 2 · 1 · 2 · 1 · 1.
+   * on one face grid (ADR-510), sections 4 · 1 · 2 · 2 · 1.
+   *
+   * Re-laid for Ink (ADR-544, 2026-11-17) on two lines: every switch on
+   * one touch row along the top, over the control it switches, and the
+   * controls under it. The two channels mirror each other about what they
+   * share: Link, the Smoothing a time change is made with, and their two
+   * Offsets. That gives the sixteenths a touch row each (24px rows before)
+   * and makes every knob medium: the Offsets and the LFO's three were
+   * small, in columns of three. Feedback and Dry/Wet, the levels a set
+   * rides, are boxes the band's height; a third of it, Dry/Wet's name was
+   * cut by its own fill.
    *
    * As in Live the display is the filter's pad, so this view mounts no
    * time x feedback pad; that is the chain cell's and the browser tile's
    * control (`delay` in deviceControls). With Link on, Live sets both
    * channels from either, so both columns show and write the left's time;
-   * each Offset stays its own. Off Sync, a channel's grid is its Time box.
+   * each Offset stays its own. Off Sync, a channel's grid is its Time knob.
    * The LFO's Rate follows its rate mode; its mode, wave and Morph are not
    * drawn. Indices and labels are `delayParams.ts`, measured on the rig.
    *
@@ -25,7 +35,7 @@
   import ScrubTabs from '$lib/components/v6/device-panel/ScrubTabs.svelte';
   import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
   import ParamColumn from './fx/ParamColumn.svelte';
-  import ParamSwitch from './fx/ParamSwitch.svelte';
+  import { press } from '$lib/actions/press';
   import FaceGrid from '../FaceGrid.svelte';
   import FaceSection from '../FaceSection.svelte';
   import FaceSeam from '../FaceSeam.svelte';
@@ -58,10 +68,11 @@
   const toggle = (index: number) => fx.sendParam(index, on(index) ? 0 : 1);
 
   let linked = $derived(on(DELAY.link));
-  const LEFT = { name: 'Left', sync: DELAY.syncL, sixteenth: DELAY.sixteenthL, time: DELAY.timeL, offset: DELAY.offsetL };
-  const RIGHT = { name: 'Right', sync: DELAY.syncR, sixteenth: DELAY.sixteenthR, time: DELAY.timeR, offset: DELAY.offsetR };
+  type Channel = { name: string; side: string; sync: number; sixteenth: number; time: number; offset: number; offsetTitle: string };
+  const LEFT: Channel = { name: 'Left', side: 'left', sync: DELAY.syncL, sixteenth: DELAY.sixteenthL, time: DELAY.timeL, offset: DELAY.offsetL, offsetTitle: 'Offset L' };
+  const RIGHT: Channel = { name: 'Right', side: 'right', sync: DELAY.syncR, sixteenth: DELAY.sixteenthR, time: DELAY.timeR, offset: DELAY.offsetR, offsetTitle: 'Offset R' };
   /** Where a channel's time reads and writes: the left's while linked. */
-  let channels = $derived([LEFT, linked ? { ...LEFT, name: 'Right', offset: DELAY.offsetR } : RIGHT]);
+  let channels = $derived<Channel[]>([LEFT, linked ? { ...LEFT, name: 'Right', side: 'right', offset: DELAY.offsetR, offsetTitle: 'Offset R' } : RIGHT]);
 
   /** The display: the band-pass drawn near the top, its one dot Freq across and Width up. */
   const FREQS = Array.from({ length: 121 }, (_, i) => axisHz(DELAY_FILTER_RANGE, i / 120));
@@ -87,118 +98,138 @@
   };
   let lfo = $derived.by(() => {
     const rate = LFO_RATE[Math.round(value(DELAY.lfoMode))] ?? { index: DELAY.lfoSynced, min: 0, max: 21, rest: 4 };
-    return [
-      { index: DELAY.lfoToDelay, title: 'Delay', rest: 0 },
-      { index: DELAY.lfoToFilter, title: 'Filter', rest: 0 },
-      { ...rate, title: 'Rate' }
-    ];
+    return {
+      rate: { ...rate, title: 'Rate' },
+      toDelay: { index: DELAY.lfoToDelay, title: 'Delay', min: 0, max: 1, rest: 0 },
+      toFilter: { index: DELAY.lfoToFilter, title: 'Filter', min: 0, max: 1, rest: 0 }
+    };
   });
   const FEEDBACK = [{ index: DELAY.feedback, title: 'Feedback', rest: 0 }];
   const DRY_WET = [{ index: DELAY.dryWet, title: 'Dry/Wet', rest: 0.5 }];
 </script>
 
-<!-- One face grid (ADR-510), seven columns of ~117px at 1366 x 1024:
-     the two channels 2 · Feedback 1 · the filter display 2 · LFO 1 · Global 1. -->
+<!-- A switch on the face's top line: one touch row over what it switches. -->
+{#snippet toggleRow(label: string, lit: boolean, onToggle: () => void, place = '')}
+  <button
+    class="physical-button btn-toggle fx-switch {place}"
+    class:active={lit}
+    class:slot-ghost={fx.isGhost}
+    aria-pressed={lit}
+    use:press={{ onPress: onToggle }}
+  >{label}</button>
+{/snippet}
+
+<!-- A medium knob on one parameter in its own range (ADR-509); a ghost draws `rest`. -->
+{#snippet knob(box: { index: number; title: string; rest: number; min?: number; max?: number; center?: number }, place = '')}
+  <div class="knob-cell {place}" class:slot-ghost={fx.isGhost}>
+    <DeviceSlider
+      value={fx.paramValue(box.index) ?? box.rest}
+      title={box.title}
+      face="knob"
+      knobSize="m"
+      knobFit
+      knobCaptionBelow
+      orientation="vertical"
+      min={box.min ?? 0}
+      max={box.max ?? 1}
+      centerOrigin={box.center !== undefined}
+      centerValue={box.center}
+      isGhost={fx.isGhost}
+      color={fx.color}
+      readout={fx.paramDisplay(box.index)}
+      onInteraction={(v) => fx.sendParam(box.index, v)}
+    />
+  </div>
+{/snippet}
+
+<!-- One face grid (ADR-510), ten columns of ~86px at 1366 x 1024: the two
+     channels about what they share 4 · Feedback 1 · the filter display 2 ·
+     LFO 2 · Dry/Wet 1. Two lines: the switches, then what they switch. -->
 <div class="face-root" data-view="delay">
-<FaceGrid sections={[2, 1, 2, 1, 1]}>
-  <FaceSection span={2}>
+<FaceGrid sections={[4, 1, 2, 2, 1]}>
+  <FaceSection span={4}>
     {#snippet head()}<PanelEyebrow title="Left · Right" color={fx.color.primary} />{/snippet}
-    {#each channels as ch (ch.name)}
-      <div class="cell">
-        <ParamSwitch
-          label={on(ch.sync) ? `${ch.name} Sync` : `${ch.name} Time`}
-          on={on(ch.sync)}
-          tint={fx.color.primary}
-          ghost={fx.isGhost}
-          row
-          onToggle={() => toggle(ch.sync)}
-        />
+    <div class="face-span-all time-board">
+      {#each channels as ch (ch.name)}
+        {@render toggleRow(on(ch.sync) ? `${ch.name} Sync` : `${ch.name} Time`, on(ch.sync), () => toggle(ch.sync), `sync-${ch.side}`)}
         {#if on(ch.sync)}
           <ScrubTabs
             options={DELAY_SIXTEENTHS}
             selected={Math.round(value(ch.sixteenth))}
             onSelect={(i) => fx.sendParam(ch.sixteenth, i)}
             cols={2}
-            tint={fx.color.primary}
-            inked
             ghost={fx.isGhost}
             label={(s) => `${ch.name} ${s} sixteenths`}
             groupLabel={`${ch.name} time`}
             name={`sixteenth-${ch.name}`}
-            style="flex: 3 1 0;"
+            class="time-{ch.side}"
+            style="--scrub-font-size: 0.9375rem;"
           >
             {#snippet item(s)}{s}{/snippet}
           </ScrubTabs>
         {:else}
-          <!-- Medium: what is left of the column over Offset holds a
-               medium knob and its caption, not a large one (ADR-509). -->
-          <div class="grow" class:slot-ghost={fx.isGhost}>
-            <DeviceSlider
-              value={value(ch.time)}
-              title="Time"
-              face="knob"
-              knobSize="m"
-              orientation="vertical"
-              isGhost={fx.isGhost}
-              color={fx.color}
-              readout={fx.paramDisplay(ch.time)}
-              onInteraction={(v) => fx.sendParam(ch.time, v)}
-            />
-          </div>
+          {@render knob({ index: ch.time, title: 'Time', rest: REST[ch.time] }, `time-knob-${ch.side}`)}
         {/if}
-        <div class="offset">
-          <ParamColumn face="knob" knobSize="s" {fx} ink={fx.color} boxes={[{ index: ch.offset, title: 'Offset', rest: 0.5, center: 0.5 }]} />
-        </div>
-      </div>
-    {/each}
+      {/each}
+
+      <!-- Between the channels, what they share: Link, how a time change is
+           smoothed, and each one's Offset beside its own channel. -->
+      {@render toggleRow('Link', linked, () => toggle(DELAY.link), 'link')}
+      <ScrubTabs
+        options={DELAY_SMOOTHING}
+        selected={Math.round(value(DELAY.smoothing))}
+        onSelect={(i) => fx.sendParam(DELAY.smoothing, i)}
+        cols={3}
+        ghost={fx.isGhost}
+        label={(m) => m}
+        groupLabel="Smoothing"
+        name="smoothing"
+        class="smoothing"
+        style="--scrub-font-size: 0.8125rem; --scrub-padding: 0;"
+      />
+      {#each channels as ch (ch.name)}
+        {@render knob({ index: ch.offset, title: ch.offsetTitle, rest: 0.5, center: 0.5 }, `offset-${ch.side}`)}
+      {/each}
+    </div>
   </FaceSection>
   <FaceSeam />
 
   <FaceSection span={1}>
     {#snippet head()}<PanelEyebrow title="Feedback" color={fx.color.primary} />{/snippet}
     <div class="cell">
+      {@render toggleRow('Freeze', on(DELAY.freeze), () => toggle(DELAY.freeze))}
       <div class="grow"><ParamColumn {fx} ink={fx.color} boxes={FEEDBACK} /></div>
-      <ParamSwitch label="Link" on={linked} tint={fx.color.primary} ghost={fx.isGhost} row onToggle={() => toggle(DELAY.link)} />
-      <ParamSwitch label="Freeze" on={on(DELAY.freeze)} tint={fx.color.primary} ghost={fx.isGhost} row onToggle={() => toggle(DELAY.freeze)} />
     </div>
   </FaceSection>
   <FaceSeam />
 
   <FaceSection span={2}>
     {#snippet head()}<PanelEyebrow title="Filter" color={fx.color.primary} />{/snippet}
-    <div class="cell face-span-2" class:slot-ghost={fx.isGhost}>
-      <div class="graph">
+    <div class="cell face-span-2">
+      {@render toggleRow('Filter', filterOn, () => toggle(DELAY.filterOn))}
+      <div class="grow" class:slot-ghost={fx.isGhost}>
         <FilterDotsGraph {dots} {curves} onMove={moveFilter} ariaLabel="Delay band-pass filter" />
       </div>
-      <ParamSwitch label="Filter" on={filterOn} tint={fx.color.primary} ghost={fx.isGhost} row onToggle={() => toggle(DELAY.filterOn)} />
     </div>
   </FaceSection>
   <FaceSeam />
 
-  <!-- Three knobs stacked: small, their names beside them (ADR-509). -->
-  <FaceSection span={1}>
+  <!-- The LFO's rate over the two places it goes: three medium knobs
+       (three small ones in a column before). -->
+  <FaceSection span={2}>
     {#snippet head()}<PanelEyebrow title="LFO" color={fx.color.primary} />{/snippet}
-    <ParamColumn face="knob" knobSize="s" {fx} ink={fx.color} boxes={lfo} />
+    <div class="face-span-2 lfo-board">
+      {@render knob(lfo.rate, 'lfo-rate')}
+      {@render knob(lfo.toDelay)}
+      {@render knob(lfo.toFilter)}
+    </div>
   </FaceSection>
   <FaceSeam />
 
   <FaceSection span={1}>
-    {#snippet head()}<PanelEyebrow title="Global" color={fx.color.primary} />{/snippet}
+    {#snippet head()}<PanelEyebrow title="Output" color={fx.color.primary} />{/snippet}
     <div class="cell">
-      <ScrubTabs
-        options={DELAY_SMOOTHING}
-        selected={Math.round(value(DELAY.smoothing))}
-        onSelect={(i) => fx.sendParam(DELAY.smoothing, i)}
-        cols={1}
-        tint={fx.color.primary}
-        inked
-        ghost={fx.isGhost}
-        label={(m) => m}
-        groupLabel="Smoothing"
-        name="smoothing"
-        style="flex: 3 1 0;"
-      />
-      <ParamSwitch label="Ping Pong" on={on(DELAY.pingPong)} tint={fx.color.primary} ghost={fx.isGhost} row onToggle={() => toggle(DELAY.pingPong)} />
+      {@render toggleRow('Ping Pong', on(DELAY.pingPong), () => toggle(DELAY.pingPong))}
       <div class="grow"><ParamColumn {fx} ink={fx.color} boxes={DRY_WET} /></div>
     </div>
   </FaceSection>
@@ -207,8 +238,8 @@
 
 <style>
   /* Live's order on the face grid (ADR-510): the two channels, Feedback
-     with Link and Freeze (under the channels in Live; beside them here, the
-     band being short), the display, then the LFO and the right-hand column. */
+     with Freeze, the display, the LFO, then Ping Pong over Dry/Wet. Every
+     section is two lines: a touch row of switches, then the controls. */
   .face-root {
     height: 100%;
     width: 100%;
@@ -222,28 +253,93 @@
     min-height: 0;
     min-width: 0;
   }
-
-  .grow,
-  .graph {
-    flex: 3 1 0;
+  .grow {
+    flex: 1 1 0;
     min-height: 0;
     display: flex;
     flex-direction: column;
   }
-  .grow > :global(*),
-  .graph > :global(*) {
+  .grow > :global(*) {
     flex: 1 1 0;
   }
 
-  /* A small knob with its caption beside it (48px + 12, ADR-509): the
-     sixteenths' tab, or Time's medium knob, keeps the rest of the column. */
-  .offset {
-    flex: 0 0 3.75rem;
+  /* A switch: one touch row, its column's width. */
+  .fx-switch {
+    flex: 0 0 var(--height-touch);
     min-height: 0;
-    display: flex;
-    flex-direction: column;
+    width: 100%;
+    padding-inline: 2px;
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-medium);
   }
-  .offset > :global(*) {
+
+  .knob-cell {
+    display: flex;
+    min-height: 0;
+    min-width: 0;
+  }
+  .knob-cell > :global(*) {
     flex: 1 1 0;
+    min-width: 0;
+  }
+
+  /* The channels on the face's four columns: Left | what they share, over
+     two | Right. Three rows: the switches, Smoothing, the Offsets; a
+     channel's time (its sixteenths, or its Time knob) runs down the last two. */
+  .time-board {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: var(--height-touch) var(--height-touch) minmax(0, 1fr);
+    gap: var(--face-gutter);
+    min-height: 0;
+    min-width: 0;
+  }
+  .time-board > :global(*) {
+    min-height: 0;
+    min-width: 0;
+  }
+  .time-board > .sync-left {
+    grid-area: 1 / 1;
+  }
+  .time-board > .sync-right {
+    grid-area: 1 / 4;
+  }
+  .time-board > .link {
+    grid-area: 1 / 2 / auto / span 2;
+  }
+  .time-board > :global(.time-left) {
+    grid-area: 2 / 1 / span 2 / auto;
+  }
+  .time-board > :global(.time-right) {
+    grid-area: 2 / 4 / span 2 / auto;
+  }
+  /* Off Sync a channel's time is a knob, on the Offsets' line. */
+  .time-board > .time-knob-left {
+    grid-area: 3 / 1;
+  }
+  .time-board > .time-knob-right {
+    grid-area: 3 / 4;
+  }
+  .time-board > :global(.smoothing) {
+    grid-area: 2 / 2 / auto / span 2;
+  }
+  .time-board > .offset-left {
+    grid-area: 3 / 2;
+  }
+  .time-board > .offset-right {
+    grid-area: 3 / 3;
+  }
+
+  /* Rate over Delay and Filter, on the face's two columns. */
+  .lfo-board {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--face-gutter);
+    min-height: 0;
+    min-width: 0;
+  }
+  .lfo-board > .lfo-rate {
+    grid-column: 1 / -1;
   }
 </style>

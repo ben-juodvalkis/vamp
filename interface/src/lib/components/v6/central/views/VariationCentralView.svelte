@@ -3,15 +3,24 @@
 	/**
 	 * VariationCentralView — the Stutter slider's view: the Variation (Beat
 	 * Repeat) on its own. Stutter, the grid tile's slider (Chance, param 1),
-	 * then its controls as pick-one tabs: Interval (2), Grid (4) with the
-	 * Random amount (6) on a slider under it, Length (8); and Mode, two
-	 * switches, the routing (12) over Triplets (5). Pitch Decay (10) is not
-	 * drawn (the user's call, 2026-10-15).
+	 * under the routing switch (12); then its controls as pick-one tabs:
+	 * Interval (2), Grid (4) under Triplets (5) with the Random amount (6)
+	 * on a knob beside it, Length (8). Pitch Decay (10) is not drawn (the
+	 * user's call, 2026-10-15).
 	 *
-	 * On the face grid (ADR-510), five one-column sections, each named on
+	 * On the face grid (ADR-510), sections 1 · 1 · 2 · 1, each named on
 	 * the header line (the "Variation" title over all five and the column
-	 * heads under it were two header lines). Columns about 167px: Rnd's
-	 * large knob with its caption beside needs 192, so it is medium.
+	 * heads under it were two header lines). Columns about 185px.
+	 *
+	 * Re-laid for Ink (ADR-544, 2026-11-17). The two switches had a column
+	 * of their own, "Mode", half the band each: lit, as both are on a fresh
+	 * device, they were the view's two largest blocks. Each is one touch
+	 * row over what it governs now: the routing over Stutter, Trip over the
+	 * Grid it turns to triplets. That gives Grid's three options the row
+	 * pitch of the tabs beside them, and Rnd a column of its own where it
+	 * is a large knob (it sat under Grid's tab, medium, its name beside
+	 * it). The options' names wore the Stutter slider's ink (user,
+	 * 2026-10-15) and are labels now, the lit one on's block.
 	 *
 	 * Its own file since 2026-10-24 (the user's call). From 2026-10-15 it was
 	 * a `part` of GlitchCentralView, with which it shares no device and no
@@ -23,8 +32,6 @@
 
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import { useFxGridSlot } from '$lib/components/v6/central/useFxGridSlot.svelte';
-	import { trackInk } from '$lib/utils/formatters/trackFormatters';
-	import { paintModeReactive } from '$lib/utils/paintMode.svelte';
 	import FaceGrid from '../FaceGrid.svelte';
 	import FaceSection from '../FaceSection.svelte';
 	import FaceSeam from '../FaceSeam.svelte';
@@ -32,12 +39,9 @@
 
 	const variation = useFxGridSlot('variation');
 
-	// GRATICULE §5.5: calibrate the device's ink at injection (hue preserved).
-	let varInk = $derived({
-		primary: trackInk(variation.color.primary, paintModeReactive()),
-		secondary: variation.color.secondary,
-		accent: trackInk(variation.color.accent, paintModeReactive())
-	});
+	// The selected track's ink as the slot hands it over (ADR-544). It was
+	// put through the name-block envelope here, too pale for a line on paper.
+	let varInk = $derived(variation.color);
 
 	const CHANCE_INDEX = 1;       // float 0-1, the grid tile's slider
 	const INTERVAL_INDEX = 2;     // int 0-7
@@ -81,32 +85,41 @@
 </script>
 
 <!-- NO {#if device} gate - always render, handle ghost/loading states -->
-<div class="variation-layout relative" style="--btn-tint: {varInk.primary};">
-	<FaceGrid sections={[1, 1, 1, 1, 1]}>
+<div class="variation-layout relative">
+	<FaceGrid sections={[1, 1, 2, 1]}>
 		<FaceSection span={1}>
 			{#snippet head()}<PanelEyebrow title="Stutter" color={varInk.primary} />{/snippet}
-			<!-- Stutter: the grid tile's slider, Chance. The first drag loads the device. -->
-			<div class="device-wrapper" class:slot-ghost={variation.isGhost}>
-				<DeviceSlider
-					value={chance}
-					title="Stutter"
-					orientation="vertical"
-					labelOrientation="horizontal"
-					isGhost={variation.isGhost}
-					color={varInk}
-					min={0}
-					max={1}
-					readout={variation.paramDisplay(CHANCE_INDEX)}
-					onTap={() => variation.loadIfGhost()}
-					onInteraction={(value) => variation.sendParam(CHANCE_INDEX, value)}
-				/>
+			<!-- The routing, a switch that names its state, over Stutter: the
+			     grid tile's slider, Chance. The first drag loads the device. -->
+			<div class="var-stack" class:slot-ghost={variation.isGhost}>
+				<button
+					class="physical-button btn-toggle var-switch"
+					class:active={insertMode}
+					aria-pressed={insertMode}
+					use:press={{ onPress: () => variation.sendParam(ROUTING_INDEX, insertMode ? 0 : 1) }}
+				>{insertMode ? 'Insert' : 'Mix'}</button>
+				<div class="device-wrapper">
+					<DeviceSlider
+						value={chance}
+						title="Stutter"
+						orientation="vertical"
+						labelOrientation="horizontal"
+						isGhost={variation.isGhost}
+						color={varInk}
+						min={0}
+						max={1}
+						readout={variation.paramDisplay(CHANCE_INDEX)}
+						onTap={() => variation.loadIfGhost()}
+						onInteraction={(value) => variation.sendParam(CHANCE_INDEX, value)}
+					/>
+				</div>
 			</div>
 		</FaceSection>
-		<FaceSeam ink={varInk.primary} />
+		<FaceSeam />
 
 		<FaceSection span={1}>
 			{#snippet head()}<PanelEyebrow title="Interval" color={varInk.primary} />{/snippet}
-			<div class="var-stack device-segmented seg-grid" class:slot-ghost={variation.isGhost}>
+			<div class="var-tab device-segmented seg-grid" class:slot-ghost={variation.isGhost}>
 				{#each INTERVAL_OPTIONS as option}
 					<button
 						class="device-segment var-btn"
@@ -116,14 +129,18 @@
 				{/each}
 			</div>
 		</FaceSection>
-		<FaceSeam ink={varInk.primary} />
+		<FaceSeam />
 
-		<FaceSection span={1}>
+		<FaceSection span={2}>
 			{#snippet head()}<PanelEyebrow title="Grid" color={varInk.primary} />{/snippet}
+			<!-- Trip over the grids it turns to triplets; the grids are one tab. -->
 			<div class="var-stack" class:slot-ghost={variation.isGhost}>
-				<!-- The grids are one tab; the Rnd knob under it is not one of
-				     them. Medium with its caption beside, 88px tall (ADR-509). -->
-				<div class="var-tab device-segmented seg-grid" style="flex: {GRID_OPTIONS.length} 1 0;">
+				<button
+					class="physical-button btn-toggle var-switch"
+					class:active={triplets}
+					use:press={{ onPress: () => variation.sendParam(TRIPLETS_INDEX, triplets ? 1 : 0) }}
+				>Trip</button>
+				<div class="var-tab device-segmented seg-grid">
 					{#each GRID_OPTIONS as option}
 						<button
 							class="device-segment var-btn"
@@ -132,12 +149,19 @@
 						>{option.label}</button>
 					{/each}
 				</div>
-				<div class="flex-none h-[5.5rem] min-h-0">
+			</div>
+			<!-- Rnd, how far the grid strays: a knob, set and left, large, on
+			     the line of the controls under the switch row (ADR-509). -->
+			<div class="var-stack" class:slot-ghost={variation.isGhost}>
+				<div class="var-switch-row" aria-hidden="true"></div>
+				<div class="device-wrapper">
 					<DeviceSlider
 						value={amount / AMOUNT_MAX}
 						title="Rnd"
 						face="knob"
-						knobSize="m"
+						knobSize="l"
+						knobFit
+						knobCaptionBelow
 						orientation="horizontal"
 						labelOrientation="horizontal"
 						labelSize="small"
@@ -149,11 +173,11 @@
 				</div>
 			</div>
 		</FaceSection>
-		<FaceSeam ink={varInk.primary} />
+		<FaceSeam />
 
 		<FaceSection span={1}>
 			{#snippet head()}<PanelEyebrow title="Length" color={varInk.primary} />{/snippet}
-			<div class="var-stack device-segmented seg-grid" class:slot-ghost={variation.isGhost}>
+			<div class="var-tab device-segmented seg-grid" class:slot-ghost={variation.isGhost}>
 				{#each GATE_OPTIONS as option}
 					<button
 						class="device-segment var-btn"
@@ -163,59 +187,57 @@
 				{/each}
 			</div>
 		</FaceSection>
-		<FaceSeam ink={varInk.primary} />
-
-		<!-- Two switches, each on or off on its own: separate buttons. -->
-		<FaceSection span={1}>
-			{#snippet head()}<PanelEyebrow title="Mode" color={varInk.primary} />{/snippet}
-			<div class="var-stack" class:slot-ghost={variation.isGhost}>
-				<button
-					class="physical-button btn-toggle var-btn"
-					class:active={insertMode}
-					aria-pressed={insertMode}
-					use:press={{ onPress: () => variation.sendParam(ROUTING_INDEX, insertMode ? 0 : 1) }}
-				>{insertMode ? 'Insert' : 'Mix'}</button>
-				<button
-					class="physical-button btn-toggle var-btn"
-					class:active={triplets}
-					use:press={{ onPress: () => variation.sendParam(TRIPLETS_INDEX, triplets ? 1 : 0) }}
-				>Trip</button>
-			</div>
-		</FaceSection>
 	</FaceGrid>
 </div>
 
 <style>
-	/* The face is the FaceGrid (ADR-510): five equal columns. */
+	/* The face is the FaceGrid (ADR-510): five equal columns, Grid two. */
 	.variation-layout {
 		height: 100%;
 		width: 100%;
 	}
 
+	/* A column: its switch row, then its control. */
+	.var-stack {
+		min-height: 0;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: var(--face-gutter);
+	}
 	.device-wrapper {
+		flex: 1 1 0;
 		display: flex;
 		flex-direction: column;
 		min-height: 0;
 		min-width: 0;
 	}
-
-	.var-stack {
-		flex: 1;
+	.device-wrapper > :global(*) {
+		flex: 1 1 0;
 		min-height: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
+	}
+
+	/* The switch row: one touch row at a column's head, empty over Rnd. */
+	.var-switch,
+	.var-switch-row {
+		flex: 0 0 var(--height-touch);
+		min-height: 0;
+	}
+	.var-switch {
+		width: 100%;
+		font-size: 0.875rem;
+		font-weight: 600;
 	}
 
 	/* Interval, Grid and Length are pick-one tabs (2026-10-24): hairlines
-	   between their options, not the stack's gap. */
-	.var-stack.seg-grid {
-		gap: 1px;
-	}
+	   between their options. */
 	.var-tab {
+		flex: 1 1 0;
 		display: flex;
 		flex-direction: column;
+		gap: 1px;
 		min-height: 0;
+		min-width: 0;
 	}
 
 	.var-btn {
@@ -232,26 +254,14 @@
 		text-transform: uppercase;
 	}
 
-	/* ---- Live skin (flat grammar) ------------------------------------ */
-	/* Live sets control text medium, keeps authored case, and does not
-	   letterspace its section legends; headers are plain secondary text. */
+	/* ---- Flat grammar: control text is medium and keeps its authored
+	   case. An option's name is a label and the lit one on's block
+	   (ADR-544; app.css's law), so the view sets no colour of its own. */
 	:global([data-grammar="flat"]) .var-btn {
 		text-transform: none;
-	}
-	:global([data-grammar="flat"]) .variation-layout .physical-button {
 		font-weight: var(--font-weight-medium);
 	}
-	/* The options wear the Stutter slider's ink (user, 2026-10-15): the name
-	   in the device ink, the lit one filled with it. */
-	:global([data-skin="hybrid"]) .var-btn {
-		color: var(--btn-tint);
-	}
-	:global(.light[data-skin="hybrid"]) .var-btn {
-		color: color-mix(in oklab, var(--btn-tint) 55%, var(--foreground));
-	}
-	:global([data-grammar="flat"]) .var-btn.active {
-		background: var(--btn-tint);
-		border-color: var(--btn-tint);
-		color: var(--flat-on-fg);
+	:global([data-grammar="flat"]) .var-switch {
+		font-weight: var(--font-weight-medium);
 	}
 </style>

@@ -3,15 +3,21 @@
 	/**
 	 * EchoCentralView — what the Echo tile opens (2026-09-14).
 	 *
-	 *   [Time over Sync] [Filter  Filter]
-	 *   | [LFO Wave 2x3] [Rate over LFO Sync] [LFO > Time over LFO > Filter]
-	 *   | [Input over Output] [Feedback over Mix]
+	 *   Delay  [Sync over Time] [Filter  Filter]
+	 *   | LFO  [Wave 2x3] [LFO Sync over Rate] [the wave drawn, over LFO > Time  LFO > Filter]
+	 *   | Levels [Input over Output] [Feedback] [Mix]
 	 *
-	 * on one face grid (ADR-510), sections 3 · 3 · 2.
+	 * on one face grid (ADR-510), sections 3 · 4 · 3, in the signal's order.
 	 *
-	 * Every slider is a value box (ADR-477): the depths and levels stand in
-	 * pairs, each box half a fader's height and as fine, and the three
-	 * columns that freed went to the filter graph (two columns before).
+	 * Re-laid for Ink (ADR-544, 2026-11-17). Every knob is one size (medium:
+	 * the column holds no larger). A switch sits over the knob it switches,
+	 * one touch row, as Auto Filter's Time/Sync does. The LFO reads left to
+	 * right as its shape, its rate, and its wave drawn over the two depths
+	 * it is sent to (it was a small picture over the shapes, a large knob and
+	 * two medium ones). Feedback and Mix, the pair the Echo tile plays, are
+	 * full-height boxes: at half height a fill resting mid-range cut their
+	 * names. The filter's two dots are both the track's ink: left is the
+	 * high-pass, right the low-pass.
 	 *
 	 * Every axis of the tile has its own control here (user's call), plus
 	 * what the tile has no room for: the Sync switch, Echo's two-dot filter
@@ -23,7 +29,7 @@
 	 * hatch, as the Delay view it replaced carried. Every index and span
 	 * lives in `echoParams.ts`, shared with the tile.
 	 *
-	 * The LFO Rate is ONE slider over two parameters: it reads LFO Sync and
+	 * The LFO Rate is ONE knob over two parameters: it reads LFO Sync and
 	 * writes the free rate (Hz) or the synced rate (a note value), and its
 	 * readout is Live's own string for whichever is live.
 	 *
@@ -33,6 +39,7 @@
 	 */
 	import DeviceSlider from '$lib/components/v6/device-panel/DeviceSlider.svelte';
 	import FilterCurve from '$lib/components/v6/device-panel/FilterCurve.svelte';
+	import type { ControlGlyphName } from '$lib/components/v6/device-panel/ControlGlyph.svelte';
 	import FaceGrid from '$lib/components/v6/central/FaceGrid.svelte';
 	import FaceSection from '$lib/components/v6/central/FaceSection.svelte';
 	import FaceSeam from '$lib/components/v6/central/FaceSeam.svelte';
@@ -53,7 +60,6 @@
 		resValueFor,
 		type ParamWrite
 	} from '$lib/components/v6/device-panel/echoParams';
-	import { DEVICE_FAMILY_INKS } from '$lib/config/devicePresets';
 	import { FilterResponseCalculator } from '$lib/utils/filterResponseCalculator';
 	import { drag } from '$lib/actions';
 	import type { DragInfo } from '$lib/actions/drag';
@@ -173,13 +179,20 @@
 		{ freq: calculator.normalizedToFrequency(lpT), gain: 0, q: q(lpResT), type: 'lowpass' }
 	]);
 
-	// HP warm, LP cool — the two ends of the family wheel (ADR-400).
+	// Both dots in the track's ink (ADR-544: a second colour would mean a
+	// second owner). Which is which is where it sits: high-pass left.
 	let dots = $derived([
-		{ freq: hpT, resonance: hpResT, type: 'highpass' as const, color: DEVICE_FAMILY_INKS.distortion.primary },
-		{ freq: lpT, resonance: lpResT, type: 'lowpass' as const, color: DEVICE_FAMILY_INKS.filter.primary }
+		{ freq: hpT, resonance: hpResT, type: 'highpass' as const, color: echo.color.primary },
+		{ freq: lpT, resonance: lpResT, type: 'lowpass' as const, color: echo.color.primary }
 	]);
 
 	let graph = $state<HTMLElement | null>(null);
+	// The curve is drawn in a box of the graph's own shape, so its dots are
+	// round whatever the columns come to (a fixed 4:3 box, stretched to a
+	// taller graph, drew them as ovals).
+	const CURVE_SCALE = 1.6;
+	let graphW = $state(0);
+	let graphH = $state(0);
 	let box: DOMRect | null = null;
 	let grabbed: 'hp' | 'lp' = 'hp';
 
@@ -231,226 +244,147 @@
 {/snippet}
 
 <!-- An unloaded Echo dims as one: every control here is the one device. -->
-<!-- One face grid (ADR-510), eight columns of ~108px at 1366 x 1024:
-     Delay 3 (Time, the filter graph over two) · LFO 3 · Levels 2. -->
+<!-- One face grid (ADR-510), ten columns of ~91px at 1366 x 1024:
+     Delay 3 (Time, the filter graph over two) · LFO 4 (shapes, rate, the
+     wave over its two depths) · Levels 3 (Input over Output, Feedback, Mix). -->
+{#snippet knob(title: string, value: number, icon: ControlGlyphName, write: (t: number) => void, more: { valueText?: string; readout?: string; sensitivity?: number; onDown?: () => void } = {})}
+	<div class="knob-cell">
+		<DeviceSlider
+			{value}
+			{title}
+			valueText={more.valueText}
+			face="knob"
+			knobSize="m"
+			knobFit
+			{icon}
+			sensitivity={more.sensitivity ?? 1}
+			orientation="vertical"
+			isGhost={echo.isGhost}
+			color={echo.color}
+			readout={more.readout}
+			onTap={() => echo.loadIfGhost()}
+			onDown={more.onDown}
+			onInteraction={write}
+		/>
+	</div>
+{/snippet}
+
+{#snippet levelBox(title: string, value: number, icon: ControlGlyphName, index: number)}
+	<div class="col">
+		<DeviceSlider
+			{value}
+			{title}
+			{icon}
+			orientation="vertical"
+			isGhost={echo.isGhost}
+			color={echo.color}
+			readout={echo.paramDisplay(index)}
+			onTap={() => echo.loadIfGhost()}
+			onInteraction={(t) => echo.sendParam(index, t)}
+		/>
+	</div>
+{/snippet}
+
 <div class="echo-layout" class:slot-ghost={echo.isGhost}>
-<FaceGrid sections={[3, 3, 2]}>
+<FaceGrid sections={[3, 4, 3]}>
 	<FaceSection span={3}>
 	{#snippet head()}<PanelEyebrow title="Delay" color={echo.color.primary} />{/snippet}
-	<div class="col slider-over-switch">
-		<div class="slider-part">
-			<DeviceSlider
-				value={timeT}
-				title="Time"
-				valueText={timeLabel}
-				face="knob"
-				knobSize="l"
-				icon="delay"
-				orientation="vertical"
-				labelSize="small"
-				isGhost={echo.isGhost}
-				color={echo.color}
-				onTap={() => echo.loadIfGhost()}
-				onInteraction={(t) => send(ECHO.timeWrites(t, true))}
-			/>
-		</div>
+	<div class="col switch-over-knob">
 		<button
-			class="physical-button btn-toggle echo-switch w-full font-bold"
+			class="physical-button btn-toggle echo-switch"
 			class:active={synced}
-			style="--btn-tint: {echo.color.primary};"
 			aria-pressed={synced}
 			use:press={{ onPress: () => toggleSync() }}
 		>
 			Sync
 		</button>
+		{@render knob('Time', timeT, 'delay', (t) => send(ECHO.timeWrites(t, true)), { valueText: timeLabel })}
 	</div>
 
 	<div
 		class="col filter-graph face-span-2"
-		style="--curve-color: {echo.color.primary};"
 		role="slider"
 		aria-label="Filter: high-pass {Math.round(hpT * 100)}%, low-pass {Math.round(lpT * 100)}%"
 		aria-valuenow={Math.round(lpT * 100)}
 		tabindex="-1"
 		data-echo-filter
 		bind:this={graph}
+		bind:clientWidth={graphW}
+		bind:clientHeight={graphH}
 		use:drag={{ commit: 'immediate', onDown: filterDown, onMove: (i) => writeDot(pointAt(i)) }}
 	>
-		<FilterCurve curveType="eq" {bands} filterDots={dots} width={400} height={300} curveColor={echo.color.primary} />
+		<FilterCurve
+			curveType="eq"
+			{bands}
+			filterDots={dots}
+			width={graphW > 0 ? Math.round(graphW * CURVE_SCALE) : 400}
+			height={graphH > 0 ? Math.round(graphH * CURVE_SCALE) : 300}
+			curveColor={echo.color.primary}
+		/>
 		<span class="graph-title">Filter</span>
 	</div>
 	</FaceSection>
 	<FaceSeam />
 
-	<FaceSection span={3}>
+	<FaceSection span={4}>
 	{#snippet head()}<PanelEyebrow title="LFO" color={echo.color.primary} />{/snippet}
-	<div class="col wave-col">
-		<div class="wave-pic">
-			<LfoGraph params={lfoPicture} shape={ECHO_LFO_WAVES[lfoWave]} rate="Rate" ink={echo.color.primary} interactive={false} />
-		</div>
-		<ScrubTabs
-			options={ECHO_LFO_WAVES}
-			selected={lfoWave}
-			onSelect={(i) => echo.sendParam(ECHO_LFO.wave, i)}
-			cols={WAVE_COLS}
-			tint={echo.color.primary}
-			label={(w) => `LFO wave ${w}`}
-			name="echo-lfo-wave"
-			style="flex: 1.4 1 0; min-height: 0; --scrub-padding: 4px;"
-		>
-			{#snippet item(w)}{@render waveGlyph(w)}{/snippet}
-		</ScrubTabs>
-	</div>
+	<!-- The six shapes, one tab the column's height: two columns of three. -->
+	<ScrubTabs
+		options={ECHO_LFO_WAVES}
+		selected={lfoWave}
+		onSelect={(i) => echo.sendParam(ECHO_LFO.wave, i)}
+		cols={WAVE_COLS}
+		label={(w) => `LFO wave ${w}`}
+		name="echo-lfo-wave"
+		style="--scrub-padding: 4px;"
+	>
+		{#snippet item(w)}{@render waveGlyph(w)}{/snippet}
+	</ScrubTabs>
 
-	<div class="col slider-over-switch" data-echo-lfo>
-		<div class="slider-part">
-			<DeviceSlider
-				value={lfoRate}
-				title="Rate"
-				valueText={lfoLabel}
-				face="knob"
-				knobSize="l"
-				icon="rate"
-				orientation="vertical"
-				labelSize="small"
-				isGhost={echo.isGhost}
-				color={echo.color}
-				onTap={() => echo.loadIfGhost()}
-				onInteraction={(t) => send([lfoRateWrite(lfoSynced, t)])}
-			/>
-		</div>
+	<div class="col switch-over-knob" data-echo-lfo>
 		<button
-			class="physical-button btn-toggle echo-switch w-full font-bold"
+			class="physical-button btn-toggle echo-switch"
 			class:active={lfoSynced}
-			style="--btn-tint: {echo.color.primary};"
 			aria-pressed={lfoSynced}
 			use:press={{ onPress: () => toggleLfoSync() }}
 		>
 			LFO Sync
 		</button>
+		{@render knob('Rate', lfoRate, 'rate', (t) => send([lfoRateWrite(lfoSynced, t)]), { valueText: lfoLabel })}
 	</div>
 
-	<!-- The LFO's two depths, Time over Filter: a pair of knobs (ADR-509). -->
-	<div class="col box-pair">
-		<div class="box">
-			<DeviceSlider
-				value={lfoToTime}
-				title="LFO > Time"
-				face="knob"
-				knobSize="m"
-				icon="lfo"
-				orientation="vertical"
-				labelSize="small"
-				isGhost={echo.isGhost}
-				color={echo.color}
-				readout={echo.paramDisplay(ECHO_LFO.toTime)}
-				onTap={() => echo.loadIfGhost()}
-				onInteraction={(t) => echo.sendParam(ECHO_LFO.toTime, t)}
-			/>
+	<!-- The wave as it runs (ADR-514), as many cycles as its rate, over the
+	     two depths it is sent to: Time and Filter, on the face's columns. -->
+	<div class="face-span-2 picture-over-knobs">
+		<div class="wave-pic">
+			<LfoGraph params={lfoPicture} shape={ECHO_LFO_WAVES[lfoWave]} rate="Rate" ink={echo.color.primary} interactive={false} />
 		</div>
-		<div class="box">
-			<DeviceSlider
-				value={lfoToFilter}
-				title="LFO > Filter"
-				face="knob"
-				knobSize="m"
-				icon="cutoff"
-				orientation="vertical"
-				labelSize="small"
-				isGhost={echo.isGhost}
-				color={echo.color}
-				readout={echo.paramDisplay(ECHO_LFO.toFilter)}
-				onTap={() => echo.loadIfGhost()}
-				onInteraction={(t) => echo.sendParam(ECHO_LFO.toFilter, t)}
-			/>
-		</div>
+		{@render knob('LFO > Time', lfoToTime, 'lfo', (t) => echo.sendParam(ECHO_LFO.toTime, t), { readout: echo.paramDisplay(ECHO_LFO.toTime) })}
+		{@render knob('LFO > Filter', lfoToFilter, 'cutoff', (t) => echo.sendParam(ECHO_LFO.toFilter, t), { readout: echo.paramDisplay(ECHO_LFO.toFilter) })}
 	</div>
-
 	</FaceSection>
 	<FaceSeam />
 
-	<FaceSection span={2}>
+	<FaceSection span={3}>
 	{#snippet head()}<PanelEyebrow title="Levels" color={echo.color.primary} />{/snippet}
-	<!-- The levels in two pairs: Input over Output (Input drags Output the
-	     other way) as knobs, then Feedback over Mix, the pair the Echo tile
-	     plays, as boxes (ADR-509). -->
-	<div class="col box-pair">
-		<div class="box">
-			<DeviceSlider
-				value={input}
-				title="Input"
-				face="knob"
-				knobSize="m"
-				icon="gain"
-				sensitivity={GAIN_SENSITIVITY}
-				orientation="vertical"
-				labelSize="small"
-				isGhost={echo.isGhost}
-				color={echo.color}
-				readout={echo.paramDisplay(ECHO.inputGain)}
-				onTap={() => echo.loadIfGhost()}
-				onDown={inputDown}
-				onInteraction={inputMoved}
-			/>
-		</div>
-		<div class="box">
-			<DeviceSlider
-				value={output}
-				title="Output"
-				face="knob"
-				knobSize="m"
-				icon="output"
-				sensitivity={GAIN_SENSITIVITY}
-				orientation="vertical"
-				labelSize="small"
-				isGhost={echo.isGhost}
-				color={echo.color}
-				readout={echo.paramDisplay(ECHO.outputGain)}
-				onTap={() => echo.loadIfGhost()}
-				onInteraction={(t) => echo.sendParam(ECHO.outputGain, fullValue(ECHO.outputGain, t))}
-			/>
-		</div>
+	<!-- Input over Output, set and left (Input drags Output the other way):
+	     knobs. Then Feedback and Mix, the pair the Echo tile plays: boxes,
+	     each the band's height (ADR-509, ADR-544). -->
+	<div class="col knob-pair">
+		{@render knob('Input', input, 'gain', inputMoved, { readout: echo.paramDisplay(ECHO.inputGain), sensitivity: GAIN_SENSITIVITY, onDown: inputDown })}
+		{@render knob('Output', output, 'output', (t) => echo.sendParam(ECHO.outputGain, fullValue(ECHO.outputGain, t)), { readout: echo.paramDisplay(ECHO.outputGain), sensitivity: GAIN_SENSITIVITY })}
 	</div>
-
-	<div class="col box-pair">
-		<div class="box">
-			<DeviceSlider
-				value={feedback}
-				title="Feedback"
-				icon="feedback"
-				orientation="vertical"
-				labelSize="small"
-				isGhost={echo.isGhost}
-				color={echo.color}
-				readout={echo.paramDisplay(ECHO.feedback)}
-				onTap={() => echo.loadIfGhost()}
-				onInteraction={(t) => echo.sendParam(ECHO.feedback, t)}
-			/>
-		</div>
-		<div class="box">
-			<DeviceSlider
-				value={mix}
-				title="Mix"
-				icon="mix"
-				orientation="vertical"
-				labelSize="small"
-				isGhost={echo.isGhost}
-				color={echo.color}
-				readout={echo.paramDisplay(ECHO.mix)}
-				onTap={() => echo.loadIfGhost()}
-				onInteraction={(t) => echo.sendParam(ECHO.mix, t)}
-			/>
-		</div>
-	</div>
+	{@render levelBox('Feedback', feedback, 'feedback', ECHO.feedback)}
+	{@render levelBox('Mix', mix, 'mix', ECHO.mix)}
 	</FaceSection>
 </FaceGrid>
 </div>
 
 <style>
 	/* The face is the FaceGrid (ADR-510): Delay (Time, the filter graph
-	   over two columns) | LFO (wave, rate, depths) | levels, eight equal
-	   columns. A column of ~108px holds Time's and Rate's large knobs
-	   (96px + 8) over their switches, and the pairs' medium ones. */
+	   over two columns) | LFO (shapes, rate, the wave over its depths) |
+	   Levels, ten equal columns. A column of ~91px holds a medium knob
+	   (70px + 8) and no larger, so every knob here is medium. */
 	.echo-layout {
 		height: 100%;
 		width: 100%;
@@ -458,50 +392,53 @@
 	}
 
 	.col {
+		display: flex;
+		flex-direction: column;
+		gap: var(--face-gutter);
 		min-height: 0;
 		min-width: 0;
 		height: 100%;
 	}
-
-	/* The LFO's wave drawn over its six shapes (ADR-514). */
-	.wave-col {
-		display: flex;
-		flex-direction: column;
-		gap: var(--face-gutter);
-	}
-	.wave-pic {
+	.col > :global(.device-slider) {
 		flex: 1 1 0;
 		min-height: 0;
 	}
 
-	/* Two value boxes in one column, each half its height (ADR-477). */
-	.box-pair {
-		display: flex;
-		flex-direction: column;
-		gap: var(--face-gutter);
-	}
-	.box {
+	/* A knob's cell: an equal share of whatever stacks it. */
+	.knob-cell {
 		flex: 1 1 0;
+		display: flex;
 		min-height: 0;
+		min-width: 0;
+	}
+	.knob-cell > :global(*) {
+		flex: 1 1 0;
+		min-width: 0;
 	}
 
-	/* A slider over its switch: the Drum Buss view's Trim-over-Comp shape. */
-	.slider-over-switch {
-		display: flex;
-		flex-direction: column;
-		gap: var(--face-gutter);
-	}
-	.slider-part {
-		flex: 1 1 0;
-		min-height: 0;
-	}
-	/* A knob's switch: a pill one touch row tall under it (ADR-509). */
+	/* A knob's switch: one touch row over it, the column's width (ADR-544). */
 	.echo-switch {
 		flex: 0 0 var(--height-touch);
-		align-self: center;
-		width: min(100%, 6.5rem);
-		font-size: 0.9375rem;
-		text-transform: uppercase;
+		min-height: 0;
+		width: 100%;
+		font-size: 0.875rem;
+		font-weight: var(--font-weight-medium);
+	}
+
+	/* The wave over its two depths: the face's two columns, two equal rows,
+	   so the depths sit level with Output, the lower knob of the pair. */
+	.picture-over-knobs {
+		display: grid;
+		grid-template-columns: subgrid;
+		grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+		gap: var(--face-gutter);
+		min-height: 0;
+		min-width: 0;
+	}
+	.wave-pic {
+		grid-column: 1 / -1;
+		min-height: 0;
+		min-width: 0;
 	}
 
 	/* LFO Wave: two columns of three, a ScrubTabs. */
@@ -519,29 +456,15 @@
 		background: var(--surface-well);
 		cursor: crosshair;
 	}
+	/* The graph's name is a label (ADR-544), not the curve's colour. */
 	.graph-title {
 		position: absolute;
 		top: 0.5rem;
 		left: 0.75rem;
 		font-size: 0.8125rem;
 		font-weight: var(--font-weight-medium);
-		color: var(--curve-color);
+		color: var(--label);
 		pointer-events: none;
 		user-select: none;
-	}
-
-	:global([data-grammar="flat"]) .echo-switch {
-		font-weight: var(--font-weight-medium);
-		text-transform: none;
-	}
-	/* One ink for the view: a lit switch wears the Echo's own teal rather
-	   than the house --phosphor, as the Drum Buss view's Comp does. */
-	:global([data-grammar="flat"]) .echo-switch.active {
-		background: var(--btn-tint);
-		border-color: var(--btn-tint);
-		color: var(--flat-on-fg);
-	}
-	:global([data-grammar="flat"]) .echo-switch:not(.active) {
-		color: color-mix(in srgb, var(--btn-tint) 72%, var(--foreground));
 	}
 </style>
