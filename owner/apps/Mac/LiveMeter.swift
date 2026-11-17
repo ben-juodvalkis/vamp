@@ -2,13 +2,15 @@ import CoreGraphics
 import Foundation
 
 /// What Live draws in a device's panel that the LOM does not carry, read off
-/// Live's window (ADR-541): a **needle** (the Glue's gain reduction) or a
-/// **spectrum** (the Auto Filter's). Each device class names its kind and
+/// Live's window (ADR-541): a **needle** (the Glue's gain reduction), a
+/// **spectrum** (the Auto Filter's) or an **activity** view (the
+/// Compressor's, ADR-543). Each device class names its kind and
 /// the measured geometry; the readers below are pure, so the tests can feed
 /// them pictures. Adding a device is a measured entry in `kinds`.
 enum LiveMeterKind: Equatable {
     case needle(NeedleShape)
     case spectrum(SpectrumShape)
+    case activity(ActivityShape)
 
     /// The panel the kind draws in, in points; only its size is used to find
     /// it in a picture (`LiveMeter.locatePanel`).
@@ -16,14 +18,16 @@ enum LiveMeterKind: Equatable {
         switch self {
         case .needle(let s): return s.panel.size
         case .spectrum(let s): return s.panel
+        case .activity(let s): return s.panel
         }
     }
 
-    /// The wire name of what it reads: `reduction` or `spectrum`.
+    /// The wire name of what it reads: `reduction`, `spectrum` or `activity`.
     var name: String {
         switch self {
         case .needle: return "reduction"
         case .spectrum: return "spectrum"
+        case .activity: return "activity"
         }
     }
 }
@@ -70,6 +74,19 @@ struct SpectrumShape: Equatable {
     var labelColumns: Double = 0
 }
 
+/// An activity view: the signal's level over time as a grey fill rising
+/// from the floor, a line (the gain reduction, orange) and the threshold (a
+/// cyan line across), scrolling right to left, between two rules across the
+/// display. Read as heights, 0 at the floor and 1 at the top: Live's own
+/// scale (+6 dB at the top, −∞ at the floor, not linear in dB), so a
+/// drawing of them is Live's picture.
+struct ActivityShape: Equatable {
+    /// The display with its frame, in points (found by its dark ground).
+    let panel: CGSize
+    /// Columns sent, evenly across the display.
+    var columns: Int = 128
+}
+
 enum LiveMeter {
     /// Measured on Live 13.0b25 at 100% zoom (2026-11-16).
     static let kinds: [String: LiveMeterKind] = [
@@ -96,7 +113,12 @@ enum LiveMeter {
             panel: CGSize(width: 239, height: 81),
             hzAtLeft: 20, pointsPerDecade: 79.5,
             dbAtTop: 9, pointsPerDb: 1, height: 66, floorDb: -57,
-            labelColumns: 22))
+            labelColumns: 22)),
+        // The Compressor in its activity view, measured on Live 13.0b25 (ADR-543): the display between its
+        // two rules is 262 × 128 pt; the threshold line sits at +6 dB at the
+        // top, 0 dB 19 pt down, −6 at 39, −24 at 90, −41 at 110 and −∞ on the
+        // floor (128): Live's scale, which the heights keep.
+        "Compressor2": .activity(ActivityShape(panel: CGSize(width: 266, height: 173)))
     ]
 
     // MARK: - The standard spectrum grid
@@ -313,5 +335,77 @@ enum LiveMeter {
             let db = shape.dbAtTop - Double(best) / scale / shape.pointsPerDb
             return max(shape.floorDb, min(shape.dbAtTop, (db * 10).rounded() / 10))
         }
+    }
+    // MARK: - Activity
+
+    /// An activity view's heights in a BGRA picture holding its display, or
+    /// nil when it holds none: the threshold, then `columns` heights of the
+    /// signal's fill, then `columns` of the line (−1 where a column has none).
+    /// The graph is the space between the display's two rules, the longest
+    /// gap between neutral rows drawn straight across it.
+    static func activity(
+        pixels: UnsafePointer<UInt8>, width: Int, height: Int, bytesPerRow: Int,
+        scale: Double, shape: ActivityShape, panelAt: (x: Int, y: Int)? = nil
+    ) -> [Double]? {
+        guard let origin = panelAt ?? locatePanel(pixels: pixels, width: width, height: height,
+                                                  bytesPerRow: bytesPerRow, scale: scale, panel: shape.panel)
+        else { return nil }
+        let pw = Int(shape.panel.width * scale), ph = Int(shape.panel.height * scale)
+        func px(_ x: Int, _ y: Int) -> (r: Int, g: Int, b: Int) {
+            let p = pixels + y * bytesPerRow + x * 4
+            return (Int(p[2]), Int(p[1]), Int(p[0]))
+        }
+        let ys = max(0, origin.y - ph / 4)..<min(height, origin.y + ph + ph / 4)
+        let xs = max(0, origin.x + pw / 10)..<min(width, origin.x + pw * 9 / 10)
+        guard !xs.isEmpty else { return nil }
+        // A rule: one row of one neutral grey straight across, lighter than
+        // the ground, and unlike the rows on either side of it (a loud stretch
+        // fills rows edge to edge too, but row after row of them).
+        var rules: [Int] = []
+        for y in ys where y > 0 && y < height - 1 {
+            let first = px(xs.lowerBound, y)
+            guard max(first.r, first.g, first.b) - min(first.r, first.g, first.b) <= 4, first.g > 40 else { continue }
+            func same(_ p: (r: Int, g: Int, b: Int)) -> Bool { abs(p.r - first.r) <= 3 && abs(p.g - first.g) <= 3 && abs(p.b - first.b) <= 3 }
+            guard xs.allSatisfy({ same(px($0, y)) }) else { continue }
+            let unlike = xs.count * 8 / 10
+            if xs.filter({ !same(px($0, y - 1)) }).count >= unlike && xs.filter({ !same(px($0, y + 1)) }).count >= unlike {
+                rules.append(y)
+            }
+        }
+        var top = -1, bottom = -1
+        for (a, b) in zip(rules, rules.dropFirst()) where b - a > bottom - top { top = a; bottom = b }
+        guard top >= 0, bottom - top >= ph / 2 else { return nil }
+        // The rule's own run gives the graph's sides.
+        let level = px(xs.lowerBound, top)
+        func onRule(_ x: Int) -> Bool { let p = px(x, top); return abs(p.g - level.g) <= 3 && abs(p.r - level.r) <= 3 }
+        var x0 = xs.lowerBound, x1 = xs.lowerBound
+        while x0 > 0 && onRule(x0 - 1) { x0 -= 1 }
+        while x1 < width - 1 && onRule(x1 + 1) { x1 += 1 }
+        let floorRow = bottom - 1, topRow = top + 1
+        let span = Double(max(1, floorRow - topRow))
+        func heightOf(_ y: Int) -> Double { ((Double(floorRow - y) / span) * 1000).rounded() / 1000 }
+        func isFill(_ p: (r: Int, g: Int, b: Int)) -> Bool {
+            max(p.r, p.g, p.b) - min(p.r, p.g, p.b) <= 6 && p.g >= 60 && p.g < 160
+        }
+        func isLine(_ p: (r: Int, g: Int, b: Int)) -> Bool { p.r > 140 && p.r - p.b > 80 && p.g > 70 }
+        func isThreshold(_ p: (r: Int, g: Int, b: Int)) -> Bool { p.b > 150 && p.g > 120 && p.b - p.r > 90 }
+        var fills: [Double] = [], lines: [Double] = [], thresholds: [Int] = []
+        let n = shape.columns, w = Double(x1 - x0 + 1)
+        for i in 0..<n {
+            let x = min(x1, x0 + Int((Double(i) + 0.5) * w / Double(n)))
+            var fill = 0.0, line = -1.0, sawThreshold = i % 16 != 8
+            for y in topRow...floorRow {
+                let p = px(x, y)
+                if line < 0 && isLine(p) { line = heightOf(y) }
+                // A fill is solid below its top; the zero line's dots are not.
+                if fill == 0 && isFill(p) && y < floorRow && isFill(px(x, y + 1)) { fill = heightOf(y) }
+                if !sawThreshold && isThreshold(p) { thresholds.append(y); sawThreshold = true }
+                if fill > 0 && line >= 0 && sawThreshold { break }
+            }
+            fills.append(fill)
+            lines.append(line)
+        }
+        let threshold = thresholds.isEmpty ? -1 : heightOf(thresholds.sorted()[thresholds.count / 2])
+        return [threshold] + fills + lines
     }
 }

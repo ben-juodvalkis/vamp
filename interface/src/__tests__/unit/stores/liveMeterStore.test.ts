@@ -8,7 +8,7 @@ vi.mock('$lib/api/simpleClient', () => ({ send: vi.fn() }));
 
 import { send } from '$lib/api/simpleClient';
 import { replaceTree, mergePadChain, mergeRackChain, _resetForTests, type TrackRecord, type DeviceRecord } from '$lib/stores/v3/normalized.svelte';
-import { liveMeterStore, watchArgs, bandHz, WATCH_ADDRESS, REDUCTION_ADDRESS, SPECTRUM_ADDRESS, METERED_CLASSES } from '$lib/stores/v6/liveMeterStore.svelte';
+import { liveMeterStore, watchArgs, bandHz, WATCH_ADDRESS, REDUCTION_ADDRESS, SPECTRUM_ADDRESS, ACTIVITY_ADDRESS, METERED_CLASSES, activityTrace } from '$lib/stores/v6/liveMeterStore.svelte';
 
 const sendMock = vi.mocked(send);
 const STOP = ['', '', '[]'];
@@ -141,6 +141,25 @@ describe('liveMeterStore', () => {
 		liveMeterStore.handleMessage(SPECTRUM_ADDRESS, ['tracks/4/devices/0', 'ok', -3, 'x']);
 		expect(liveMeterStore.readingFor('tracks/4/devices/0')?.values).toEqual(bands);
 	});
+
+	it("keeps an activity view's heights, and reads them as threshold, fill and line", () => {
+		const values = [0.297, 0.47, 0.2, 0, 0.85, -1, 0.75];
+		liveMeterStore.handleMessage(ACTIVITY_ADDRESS, ['tracks/1/devices/1', 'ok', ...values]);
+		const reading = liveMeterStore.readingFor('tracks/1/devices/1');
+		expect(reading).toMatchObject({ kind: 'activity', values, status: 'ok' });
+		expect(activityTrace(reading!.values)).toEqual({ threshold: 0.297, fill: [0.47, 0.2, 0], line: [0.85, null, 0.75] });
+	});
+});
+
+describe('activityTrace', () => {
+	it('is null for values that do not split into threshold, fill and line', () => {
+		expect(activityTrace([])).toBeNull();
+		expect(activityTrace([0.3, 0.1, 0.2, 0.4])).toBeNull();
+	});
+
+	it('has no threshold where Live drew none, and clamps heights to the box', () => {
+		expect(activityTrace([-1, 1.2, -0.1])).toEqual({ threshold: null, fill: [1], line: [null] });
+	});
 });
 
 describe('the standard spectrum grid', () => {
@@ -154,5 +173,6 @@ describe('the standard spectrum grid', () => {
 		expect(METERED_CLASSES.get('GlueCompressor')).toBe('reduction');
 		expect(METERED_CLASSES.get('AutoFilter2')).toBe('spectrum');
 		expect(METERED_CLASSES.get('ChannelEq')).toBe('spectrum');
+		expect(METERED_CLASSES.get('Compressor2')).toBe('activity');
 	});
 });

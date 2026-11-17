@@ -36,8 +36,14 @@
 		labelOrientation?: 'vertical' | 'horizontal' | 'auto';
 		/** Where the picture's needle points instead of the control's level: the Glue's gain reduction as Live shows it (ADR-541). */
 		pictureLevel?: number;
-		/** Drawn behind an XY pad or the tone pad, on its frequency axis: the device's spectrum as Live shows it (ADR-541). */
+		/**
+		 * Drawn behind an XY pad or the tone pad, on its frequency axis: the
+		 * device's spectrum as Live shows it (ADR-541); over a slider's fill:
+		 * the Compressor's activity (ADR-543).
+		 */
 		backdrop?: Snippet;
+		/** The device's picture gives way: a live backdrop shows it already. */
+		pictureHidden?: boolean;
 	}
 
 	let {
@@ -55,11 +61,12 @@
 		labelSize = 'small',
 		labelOrientation = 'horizontal',
 		pictureLevel,
-		backdrop
+		backdrop,
+		pictureHidden = false
 	}: Props = $props();
 	/** The chain overview and the browser draw the device's picture; the FX grid does not. */
 	const pictured = getContext<boolean>(PICTURE_CONTEXT) === true;
-	const picture = $derived(pictured && control.kind !== 'eq' ? control.picture : undefined);
+	const picture = $derived(pictured && control.kind !== 'eq' && !pictureHidden ? control.picture : undefined);
 	// Over a picture the title would sit on it (user, 2026-10-26: "the label
 	// doesn't clash with the icon"); where pictures draw, the device is named
 	// above the control already (the chain cell's head, the tile's name band).
@@ -103,6 +110,7 @@
 	     level at full ink, so a value at 0 still shows a slider (Pedal's
 	     Drive, 2026-10-26: a bare tile before). -->
 	<div class="slider-face" class:soft style="--level: {level}; --level-ink: {color.primary};">
+		{#if backdrop}<div class="slider-backdrop">{@render backdrop()}</div>{/if}
 		{#if picture}
 			<!-- Two layers, as the slider draws its label: the device's ink on
 			     the well, and a copy clipped to the fill in the on-fill ink, so
@@ -161,6 +169,13 @@
 	.slider-face > :global(*) {
 		flex: 1 1 auto;
 		min-width: 0;
+	}
+	/* A live backdrop over the slider's fill (the Compressor's activity), never taking a touch. */
+	.slider-backdrop {
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		pointer-events: none;
 	}
 	/* The picture over the slider's fill, faint, never taking a touch. */
 	.slider-picture {

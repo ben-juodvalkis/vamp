@@ -1,8 +1,8 @@
 import XCTest
 
 /// ADR-541: what Live draws in a device's panel, read back from a picture of
-/// the device and a margin around it: the Glue's needle and the Auto Filter's
-/// spectrum.
+/// the device and a margin around it: the Glue's needle, the Auto Filter's
+/// spectrum and the Compressor's activity view (ADR-543).
 final class LiveMeterTests: XCTestCase {
     private let glue: NeedleShape = {
         guard case .needle(let s) = LiveMeter.kinds["GlueCompressor"]! else { fatalError() }
@@ -173,5 +173,66 @@ final class LiveMeterTests: XCTestCase {
         XCTAssertEqual(LiveMeter.bandEdges(0).low, 20, accuracy: 0.001)
         XCTAssertEqual(LiveMeter.bandEdges(LiveMeter.bandCount - 1).high, 20000, accuracy: 0.01)
         XCTAssertEqual(LiveMeter.bandEdges(10).high, LiveMeter.bandEdges(11).low, accuracy: 1e-9)
+    }
+    // MARK: - Activity (ADR-543)
+
+    private let compressor: ActivityShape = {
+        guard case .activity(let s) = LiveMeter.kinds["Compressor2"]! else { fatalError() }
+        return s
+    }()
+
+    /// The Compressor's display as Live 13 draws it in a dark theme, at 1x:
+    /// a 61 frame, the 23 ground, rules at 54 around a 128 pt graph, the
+    /// signal's fill (73) rising `fillAt(x)` of the graph, the orange line at
+    /// `lineAt(x)`, the zero line's dots and the cyan threshold.
+    private func activityPicture(fillAt: (Double) -> Double, lineAt: (Double) -> Double, threshold: Double)
+        -> (pixels: [UInt8], width: Int, height: Int) {
+        let width = 310, height = 240
+        var px = [UInt8](repeating: 47, count: width * height * 4)
+        func put(_ x: Int, _ y: Int, _ v: (UInt8, UInt8, UInt8)) {
+            let i = (y * width + x) * 4
+            px[i] = v.2; px[i + 1] = v.1; px[i + 2] = v.0; px[i + 3] = 255
+        }
+        for y in 40..<215 { for x in 20..<286 { put(x, y, (61, 61, 61)) } }
+        for y in 44..<213 { for x in 22..<284 { put(x, y, (23, 23, 23)) } }
+        let top = 63, floorRow = 192
+        for x in 22..<284 { put(x, top, (54, 54, 54)); put(x, floorRow + 1, (54, 54, 54)) }
+        func row(_ h: Double) -> Int { floorRow - Int((h * Double(floorRow - top - 1)).rounded()) }
+        for x in 22..<284 {
+            let t = Double(x - 22) / 261
+            if x % 2 == 0 { put(x, row(0.85), (62, 62, 62)) }
+            let f = fillAt(t)
+            if f > 0 { for y in row(f)...floorRow { put(x, y, (73, 73, 73)) } }
+            put(x, row(threshold), (0, 186, 206))
+            put(x, row(lineAt(t)), (243, 152, 75))
+        }
+        return (px, width, height)
+    }
+
+    func testReadsTheActivityViewAsHeights() {
+        let p = activityPicture(fillAt: { $0 < 0.5 ? 0.47 : 0.1 }, lineAt: { $0 < 0.5 ? 0.75 : 0.85 }, threshold: 0.297)
+        let v = p.pixels.withUnsafeBufferPointer {
+            LiveMeter.activity(pixels: $0.baseAddress!, width: p.width, height: p.height, bytesPerRow: p.width * 4,
+                               scale: 1, shape: compressor)
+        }
+        guard let v else { return XCTFail("no reading") }
+        let n = compressor.columns
+        XCTAssertEqual(v.count, 1 + 2 * n)
+        XCTAssertEqual(v[0], 0.297, accuracy: 0.01)
+        XCTAssertEqual(v[1 + 10], 0.47, accuracy: 0.01)
+        XCTAssertEqual(v[1 + n - 10], 0.1, accuracy: 0.01)
+        XCTAssertEqual(v[1 + n + 10], 0.75, accuracy: 0.01)
+        XCTAssertEqual(v[1 + n + n - 10], 0.85, accuracy: 0.01)
+    }
+
+    func testASilentActivityViewIsAnEmptyFill() {
+        let p = activityPicture(fillAt: { _ in 0 }, lineAt: { _ in 0.85 }, threshold: 0.6)
+        let v = p.pixels.withUnsafeBufferPointer {
+            LiveMeter.activity(pixels: $0.baseAddress!, width: p.width, height: p.height, bytesPerRow: p.width * 4,
+                               scale: 1, shape: compressor)
+        }
+        guard let v else { return XCTFail("no reading") }
+        XCTAssertEqual(v[0], 0.6, accuracy: 0.01)
+        XCTAssertEqual(Array(v[1...compressor.columns]), Array(repeating: 0, count: compressor.columns))
     }
 }

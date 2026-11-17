@@ -60,6 +60,7 @@ enum Wire {
     static let liveMeterWatch = "/meter/watch"
     static let reduction = "/meter/reduction"
     static let spectrum = "/meter/spectrum"
+    static let activity = "/meter/activity"
 }
 
 /// The user-facing settings, each mapping to a set address + label.

@@ -1,7 +1,8 @@
 /**
  * What a device's panel shows in Live that the LOM does not carry (ADR-541):
  * a needle meter's gain reduction (the Glue), a spectrum (the Auto Filter,
- * Channel EQ). Vamp for Mac reads them off Live's window.
+ * Channel EQ), an activity view (the Compressor's, ADR-543). Vamp for Mac
+ * reads them off Live's window.
  *
  * A component that shows a device's meter holds a watch on it (`hold`); while
  * any hold stands the store asks
@@ -16,7 +17,9 @@
  * its effects, not its instrument, which Live shows first.
  *
  * The app's `/meter/reduction <devicePath> <dB> <status>` and
- * `/meter/spectrum <devicePath> <status> <dB × 64>` land in `readings`;
+ * `/meter/spectrum <devicePath> <status> <dB × 64>` and
+ * `/meter/activity <devicePath> <status> <threshold> <fill × N> <line × N>`
+ * (heights 0..1 up Live's own scale; −1 where there is none) land in `readings`;
  * `status` is `ok` or why there is no reading (LiveMeterReader). A spectrum
  * is always on the standard grid: `SPECTRUM_BANDS` bands log-spaced from
  * `SPECTRUM_LOW_HZ` to `SPECTRUM_HIGH_HZ`, whatever its device draws.
@@ -29,6 +32,7 @@ import { v3Store, padDevicesAt, chainDevicesAt, type DeviceRecord } from '$lib/s
 export const WATCH_ADDRESS = '/meter/watch';
 export const REDUCTION_ADDRESS = '/meter/reduction';
 export const SPECTRUM_ADDRESS = '/meter/spectrum';
+export const ACTIVITY_ADDRESS = '/meter/activity';
 export const SPECTRUM_BANDS = 64;
 export const SPECTRUM_LOW_HZ = 20;
 export const SPECTRUM_HIGH_HZ = 20000;
@@ -39,16 +43,23 @@ const STOP = ['', '', '[]'];
 /** No reading for this long and the last one is stale (Live left the Space, the app quit). */
 export const STALE_MS = 1500;
 
+export type MeterKind = 'reduction' | 'spectrum' | 'activity';
+
 /** The device classes whose panel Vamp for Mac can read, and what it reads. */
-export const METERED_CLASSES = new Map<string, 'reduction' | 'spectrum'>([
+export const METERED_CLASSES = new Map<string, MeterKind>([
 	['GlueCompressor', 'reduction'],
 	['AutoFilter2', 'spectrum'],
-	['ChannelEq', 'spectrum']
+	['ChannelEq', 'spectrum'],
+	['Compressor2', 'activity']
 ]);
 
 export interface LiveMeterReading {
-	kind: 'reduction' | 'spectrum';
-	/** One dB for a reduction, `SPECTRUM_BANDS` dB for a spectrum; empty unless `ok`. */
+	kind: MeterKind;
+	/**
+	 * One dB for a reduction, `SPECTRUM_BANDS` dB for a spectrum, the
+	 * threshold then the fill's and the line's heights for an activity view
+	 * (`activityTrace`); empty unless `ok`.
+	 */
 	values: number[];
 	status: string;
 	at: number;
@@ -141,11 +152,33 @@ function handleMessage(address: string, args: unknown[]): void {
 		readings.set(path, { kind: 'reduction', values: status === 'ok' ? [db] : [], status, at: Date.now() });
 		return;
 	}
-	if (address === SPECTRUM_ADDRESS) {
-		const [path, status, ...bands] = args;
-		if (typeof path !== 'string' || typeof status !== 'string' || !bands.every((v) => typeof v === 'number')) return;
-		readings.set(path, { kind: 'spectrum', values: bands as number[], status, at: Date.now() });
+	if (address === SPECTRUM_ADDRESS || address === ACTIVITY_ADDRESS) {
+		const [path, status, ...values] = args;
+		if (typeof path !== 'string' || typeof status !== 'string' || !values.every((v) => typeof v === 'number')) return;
+		const kind = address === SPECTRUM_ADDRESS ? 'spectrum' : 'activity';
+		readings.set(path, { kind, values: values as number[], status, at: Date.now() });
 	}
+}
+
+export interface ActivityTrace {
+	/** The threshold line's height, or null when there is none. */
+	threshold: number | null;
+	/** The signal's height per column, oldest first. */
+	fill: number[];
+	/** The gain-reduction line's height per column, null where it has none. */
+	line: Array<number | null>;
+}
+
+/** An activity reading's values as its three parts, or null when they don't split evenly. */
+export function activityTrace(values: readonly number[]): ActivityTrace | null {
+	const n = (values.length - 1) / 2;
+	if (values.length < 3 || !Number.isInteger(n)) return null;
+	const h = (v: number) => Math.min(1, Math.max(0, v));
+	return {
+		threshold: values[0] < 0 ? null : h(values[0]),
+		fill: values.slice(1, 1 + n).map(h),
+		line: values.slice(1 + n).map((v) => (v < 0 ? null : h(v)))
+	};
 }
 
 /** `devicePath`'s latest reading, or null when there is none. */

@@ -13,7 +13,10 @@
  * - The app's readings go to every client, one address per kind:
  *   `/meter/reduction <devicePath> <dB> <status>` and
  *   `/meter/spectrum <devicePath> <status> <dB × 64>` (the standard grid,
- *   20 Hz–20 kHz log-spaced). The app sends them when they move, their
+ *   20 Hz–20 kHz log-spaced) and
+ *   `/meter/activity <devicePath> <status> <threshold> <fill × N> <line × N>`
+ *   (an activity view's heights, 0..1 up Live's own scale, ADR-543). The
+ *   app sends them when they move, their
  *   status changes, or half a second passes.
  *
  * Behind the `liveMeters` switch: off, all of it is dropped here. Available
@@ -24,6 +27,7 @@ const FEATURE_ID = 'liveMeters';
 const WATCH_ADDRESS = '/meter/watch';
 const REDUCTION_ADDRESS = '/meter/reduction';
 const SPECTRUM_ADDRESS = '/meter/spectrum';
+const ACTIVITY_ADDRESS = '/meter/activity';
 const STOP = ['', '', '[]'];
 
 function argValue(arg) {
@@ -59,7 +63,7 @@ function createLiveMeters({ features, appSend, broadcast }) {
          */
         onClientMessage(msg) {
             const { address } = msg;
-            if (address !== WATCH_ADDRESS && address !== REDUCTION_ADDRESS && address !== SPECTRUM_ADDRESS) return false;
+            if (address !== WATCH_ADDRESS && address !== REDUCTION_ADDRESS && address !== SPECTRUM_ADDRESS && address !== ACTIVITY_ADDRESS) return false;
             if (!features.isEnabled(FEATURE_ID)) return true;
             const args = (msg.args || []).map(argValue);
             if (address === WATCH_ADDRESS) {
@@ -82,4 +86,4 @@ function createLiveMeters({ features, appSend, broadcast }) {
     };
 }
 
-module.exports = { createLiveMeters, FEATURE_ID, WATCH_ADDRESS, REDUCTION_ADDRESS, SPECTRUM_ADDRESS };
+module.exports = { createLiveMeters, FEATURE_ID, WATCH_ADDRESS, REDUCTION_ADDRESS, SPECTRUM_ADDRESS, ACTIVITY_ADDRESS };

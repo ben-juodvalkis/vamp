@@ -14,7 +14,7 @@
     "menubar": false,
     "_axHelperNote": "The Looping AX Helper (ADR-439), the one process that drives Live's own UI through macOS Accessibility, installed by npm run install-ax-helper. Off: the bridge dials no helper, and the UI draws no Reverse or Group button, a held Drum Sampler pad steps the kit rather than Live's similar samples, and npm run ipad never opens Live's Save As dialog. On: those are greyed out, with the reason, while the helper is not running or has no Accessibility grant.",
     "axHelper": false,
-    "_liveMetersNote": "What a device's panel shows in Live that the LOM does not carry (ADR-541): the Glue's gain reduction, the Auto Filter's and Channel EQ's spectrum. Vamp for Mac reads Live's window, through Accessibility and Screen Recording, so it needs both grants and Live on the current Space (covered is fine). Off: the bridge drops the asks and readings and nothing draws a meter.",
+    "_liveMetersNote": "What a device's panel shows in Live that the LOM does not carry (ADR-541): the Glue's gain reduction, the Auto Filter's and Channel EQ's spectrum, the Compressor's activity view (ADR-543). Vamp for Mac reads Live's window, through Accessibility and Screen Recording, so it needs both grants and Live on the current Space (covered is fine). Off: the bridge drops the asks and readings and nothing draws a meter.",
     "liveMeters": false
   },
 

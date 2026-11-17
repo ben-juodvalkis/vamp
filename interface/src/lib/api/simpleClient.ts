@@ -140,7 +140,7 @@ import {
 	V3_SELECTED_SCENE_ADDRESS
 } from './handlers/v3SelectedScene';
 import { captureStore } from '$lib/stores/v6/captureStore.svelte';
-import { liveMeterStore, REDUCTION_ADDRESS, SPECTRUM_ADDRESS } from '$lib/stores/v6/liveMeterStore.svelte';
+import { liveMeterStore, REDUCTION_ADDRESS, SPECTRUM_ADDRESS, ACTIVITY_ADDRESS } from '$lib/stores/v6/liveMeterStore.svelte';
 import { triggeredSlotsStore } from '$lib/stores/v6/triggeredSlotsStore.svelte';
 
 // ============================================
@@ -316,7 +316,7 @@ function routeMessage(address: string, args: OSCArg[]): void {
 
 	// What a device's panel shows in Live (a needle, a spectrum), read off
 	// Live's window by Vamp for Mac (ADR-541).
-	if (address === REDUCTION_ADDRESS || address === SPECTRUM_ADDRESS) {
+	if (address === REDUCTION_ADDRESS || address === SPECTRUM_ADDRESS || address === ACTIVITY_ADDRESS) {
 		liveMeterStore.handleMessage(address, args);
 		return;
 	}

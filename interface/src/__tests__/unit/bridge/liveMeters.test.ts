@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { createRequire } from 'module';
 
 const nodeRequire = createRequire(import.meta.url);
-const { createLiveMeters, WATCH_ADDRESS, REDUCTION_ADDRESS, SPECTRUM_ADDRESS } = nodeRequire('../../../../bridge/handlers/liveMeters.js');
+const { createLiveMeters, WATCH_ADDRESS, REDUCTION_ADDRESS, SPECTRUM_ADDRESS, ACTIVITY_ADDRESS } = nodeRequire('../../../../bridge/handlers/liveMeters.js');
 const { createFeatureRegistry } = nodeRequire('../../../../bridge/utils/features.js');
 
 const quiet = { warn() {}, info() {} };
@@ -62,6 +62,12 @@ describe('createLiveMeters', () => {
 			[SPECTRUM_ADDRESS, ['tracks/2/devices/0', 'ok', ...bands]],
 			[SPECTRUM_ADDRESS, ['tracks/2/devices/0', 'not-shown']]
 		]);
+	});
+
+	it("sends an activity view's heights to every client", () => {
+		const { meters, toClients } = setup(true);
+		meters.onClientMessage(msg(ACTIVITY_ADDRESS, 'tracks/1/devices/1', 'ok', 0.297, 0.47, 0.85));
+		expect(toClients).toEqual([[ACTIVITY_ADDRESS, ['tracks/1/devices/1', 'ok', 0.297, 0.47, 0.85]]]);
 	});
 
 	it('drops a reading with the wrong types', () => {

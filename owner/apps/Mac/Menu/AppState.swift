@@ -55,6 +55,8 @@ final class AppState: ObservableObject {
             switch reading.kind {
             case "spectrum":
                 self?.client.send(Wire.spectrum, [.string(reading.devicePath), .string(reading.status)] + reading.values.map { .double($0) })
+            case "activity":
+                self?.client.send(Wire.activity, [.string(reading.devicePath), .string(reading.status)] + reading.values.map { .double($0) })
             default:
                 self?.client.send(Wire.reduction, [.string(reading.devicePath), .double(reading.values.first ?? -1), .string(reading.status)])
             }

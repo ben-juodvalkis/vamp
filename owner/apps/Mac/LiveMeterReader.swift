@@ -42,9 +42,10 @@ final class LiveMeterReader: NSObject, SCStreamOutput, SCStreamDelegate {
     /// `no-accessibility`, `no-screen-recording`, `no-live`.
     var onReading: ((Reading) -> Void)?
 
-    /// One reading: `kind` is `reduction` (values: one dB) or `spectrum`
-    /// (values: `LiveMeter.bandCount` dB on the standard grid); values are
-    /// empty unless status is `ok`.
+    /// One reading: `kind` is `reduction` (values: one dB), `spectrum`
+    /// (values: `LiveMeter.bandCount` dB on the standard grid) or `activity`
+    /// (values: the threshold's height, then the fill's and the line's per
+    /// column, `LiveMeter.activity`); values are empty unless status is `ok`.
     struct Reading {
         var devicePath: String
         var kind: String
@@ -65,6 +66,8 @@ final class LiveMeterReader: NSObject, SCStreamOutput, SCStreamDelegate {
     static let minimumChange = 0.05
     static let heartbeat: TimeInterval = 0.5
     static let spectrumChange = 0.5
+    /// An activity view scrolls every frame: any height moving a pixel's worth.
+    static let activityChange = 0.004
     /// Captured around the device's Accessibility frame, in points.
     static let margin = CGSize(width: 12, height: 40)
 
@@ -350,6 +353,9 @@ final class LiveMeterReader: NSObject, SCStreamOutput, SCStreamDelegate {
         case .spectrum(let shape):
             values = LiveMeter.spectrum(pixels: pixels, width: width, height: height, bytesPerRow: bytesPerRow,
                                         scale: Self.scale, shape: shape)
+        case .activity(let shape):
+            values = LiveMeter.activity(pixels: pixels, width: width, height: height, bytesPerRow: bytesPerRow,
+                                        scale: Self.scale, shape: shape)
         }
         if let values { send(streamingPath, kind.name, values, "ok") } else { send(streamingPath, kind.name, [], "no-needle") }
     }
@@ -368,7 +374,7 @@ final class LiveMeterReader: NSObject, SCStreamOutput, SCStreamDelegate {
     /// spectrum band by 0.5 dB), its status changed, or the heartbeat is due.
     private func send(_ path: String, _ kind: String, _ values: [Double], _ status: String) {
         let now = Date()
-        let threshold = kind == "spectrum" ? Self.spectrumChange : Self.minimumChange
+        let threshold = kind == "spectrum" ? Self.spectrumChange : kind == "activity" ? Self.activityChange : Self.minimumChange
         let moved = status != lastSent.status || values.count != lastSent.values.count
             || zip(values, lastSent.values).contains { abs($0 - $1) >= threshold }
         guard moved || now.timeIntervalSince(lastSent.at) >= Self.heartbeat else { return }

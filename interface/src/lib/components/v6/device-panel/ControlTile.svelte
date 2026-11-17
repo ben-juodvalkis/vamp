@@ -18,6 +18,7 @@
 	import { isViewRegistered } from '$lib/components/v6/central/viewRegistry';
 	import ReductionNeedle from './ReductionNeedle.svelte';
 	import SpectrumFill from '$lib/components/v6/central/views/panel/SpectrumFill.svelte';
+	import ActivityTrace from '$lib/components/v6/central/views/panel/ActivityTrace.svelte';
 	import { METERED_CLASSES } from '$lib/stores/v6/liveMeterStore.svelte';
 
 	interface Props {
@@ -61,6 +62,8 @@
 	const control = $derived(controlFor(type));
 	/** The Glue's needle swings with the gain reduction Live shows, while there is a reading (ADR-541). */
 	let reduction = $state<number | undefined>();
+	/** The Compressor's activity has a reading: it stands in for the device's picture (ADR-543). */
+	let activityLive = $state(false);
 </script>
 
 {#if control}
@@ -78,6 +81,8 @@
 			{#if type === 'squash'}<ReductionNeedle devicePath={isGhost ? undefined : live?.devicePath} bind:level={reduction} />{/if}
 			{@const spectrumPath = !isGhost && live && METERED_CLASSES.get(live.className) === 'spectrum' ? live.devicePath : undefined}
 			{#snippet spectrum()}<SpectrumFill devicePath={spectrumPath} ink={color.primary} />{/snippet}
+			{@const activityPath = !isGhost && live && METERED_CLASSES.get(live.className) === 'activity' ? live.devicePath : undefined}
+			{#snippet activity()}<ActivityTrace devicePath={activityPath} ink={color.primary} bind:live={activityLive} />{/snippet}
 			<FaceControl
 				{control}
 				{get}
@@ -89,7 +94,8 @@
 				{labelSize}
 				{labelOrientation}
 				pictureLevel={type === 'squash' ? reduction : undefined}
-				backdrop={spectrumPath ? spectrum : undefined}
+				backdrop={spectrumPath ? spectrum : activityPath ? activity : undefined}
+				pictureHidden={activityPath !== undefined && activityLive}
 				onTap={() => {
 					if (!(tapLoads && isGhost)) return handleTap();
 					triggerLoad();
