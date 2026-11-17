@@ -223,7 +223,7 @@
           {#if badges.pitch}{@render heldBadge(badges.pitch)}{/if}
         </div>
       </div>
-      <div class="kit-col">
+      <div class="kit-col kit-knobs">
         {#if gain}{@render gain(true)}{/if}
         {#if voiceCount > 0 && !hide.has('spread')}{@render slider('spread', 'Spread', 'width', spreadState, badges.spread, 0, true)}{/if}
         {#if showSelect}{@render slider('selector', 'Select', 'select', selectorState, badges.selector, 0, true)}{/if}
@@ -364,6 +364,19 @@
     flex: 1 1 0;
     min-height: 0;
     min-width: 0;
+  }
+  /* Three knobs stacked in one column: the height is what binds, so the
+     names space them (no gap) and each keeps only its name's line under
+     the ring, not KnobFace's roomier reserve. */
+  .kit-knobs {
+    gap: 0;
+  }
+  .kit-knobs :global(.knob) {
+    --knob-caption-h: calc(var(--knob-title-fs) * 1.15 + 0.5rem);
+  }
+  .kit-knobs :global(.knob-body) {
+    gap: 0.125rem;
+    padding-block: 0.125rem;
   }
   .envelope-host {
     display: grid;
