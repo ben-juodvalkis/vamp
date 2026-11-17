@@ -37,14 +37,26 @@ the zero line's dots 54–62.
   Live writes the reduction's number ("−4.07 dB") in the same orange at the
   display's foot, and where a column's line went unread the first orange
   below was that text, a spike to the floor (Ben: "weird spikes"; 41 of 102
-  readings had one, in columns 107–123). A column with no orange within a
-  quarter of the graph of the last is a gap, which the page fills.
+  readings had one, in columns 107–123). It is followed through every pixel
+  column, then sampled: under heavy compression (a −43 dB threshold) the
+  line falls a third of the graph in a stroke one pixel wide, which sampled
+  columns stepped over, losing the line for a few columns at each hit (Ben:
+  "weird jitters now at current threshold"). A tall run of orange is a fall
+  and reads as where it falls to; a pixel column with no orange within a
+  third of the graph of the last is a gap, which the page fills.
+- **The threshold is its cyan's weighted centre**, blended rows included:
+  a line between two rows read one row, then the other.
 - **The page scrolls smoothly**: Live scrolls its display in steps (a column
   or none per reading), which drawn as they came read as jerky.
-  `activityScroll` keeps one history, finds each reading's scroll (0–6
-  columns: a drum loop repeats, so a long shift would match the previous
-  hit), measures the rate (≈ 26 columns a second here) and moves the
-  drawing's head on at it, three columns behind the newest. A box shows as
+  Live also scrolls by less than one of the reader's columns, so a reading
+  lands up to half a column off the last; redrawn whole, the picture
+  jittered. `activityScroll` keeps one history, finds each reading's scroll
+  (0–6 columns, by fill and line: a drum loop repeats, so a long shift would
+  match the previous hit), adds only the columns scrolled in (the newest
+  held back, as Live may still be drawing it) and never rewrites one it
+  holds; it measures the rate (≈ 26 columns a second here) and moves the
+  drawing's head on at it, three columns behind the newest. The threshold
+  line moves only when it moves by more than a pixel of Live's. A box shows as
   many of the newest columns as it has room for at 2 px each, so a narrow
   cell shows the last few seconds rather than every hit squeezed to a spike.
 - **On the page**: `ActivityTrace` draws it over the Compressor's threshold

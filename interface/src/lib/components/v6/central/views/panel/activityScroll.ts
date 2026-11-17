@@ -3,11 +3,15 @@
  * the tests can drive it.
  *
  * Live scrolls its display in steps, a column or none per reading, at odd
- * moments; drawn as it arrives the picture jerks. `ActivityScroll` keeps the
- * columns in one running history, finds how far each reading has scrolled
- * since the last (`shiftBetween`), measures the rate, and gives the drawing
- * a head that moves on at that rate between readings, so the page scrolls
- * at Live's speed without its steps.
+ * moments, and by less than one of the reader's columns at a time, so a
+ * reading lands up to half a column off the last. Drawn as it arrives the
+ * picture jerks and jitters. `ActivityScroll` keeps the columns in one
+ * running history, finds how far each reading has scrolled since the last
+ * (`shiftBetween`), adds only the columns it scrolled in, the newest held
+ * back (Live may still be drawing it), and never rewrites a column it
+ * holds; it measures the rate and gives the drawing a head that moves on at
+ * that rate between readings, so the page scrolls at Live's speed without
+ * its steps.
  */
 
 /** The furthest one reading is looked for to have scrolled, in columns. */
@@ -21,13 +25,17 @@ const HISTORY = 1024;
  * that lines their overlap up best. Small shifts only: a drum loop repeats,
  * and a long shift would line up with the previous hit.
  */
-export function shiftBetween(prev: readonly number[], next: readonly number[]): number {
+export function shiftBetween(prev: readonly number[], next: readonly number[], prevLine: readonly number[] = [], nextLine: readonly number[] = []): number {
 	const n = Math.min(prev.length, next.length);
+	const lines = prevLine.length === n && nextLine.length === n;
 	let best = 0;
 	let bestCost = Infinity;
 	for (let s = 0; s <= Math.min(MAX_SHIFT, n - 1); s++) {
 		let cost = 0;
-		for (let i = 0; i < n - s; i++) cost += Math.abs(prev[i + s] - next[i]);
+		for (let i = 0; i < n - s; i++) {
+			cost += Math.abs(prev[i + s] - next[i]);
+			if (lines) cost += Math.abs(prevLine[i + s] - nextLine[i]);
+		}
 		cost /= n - s;
 		// Ties go to the smaller shift: a still picture is not a scroll.
 		if (cost < bestCost - 1e-6) {
@@ -65,22 +73,23 @@ export class ActivityScroll {
 	rate = 0;
 	private lastAt = 0;
 	private lastFill: number[] = [];
+	private lastLine: number[] = [];
 	private rateFrom: { at: number; total: number } | null = null;
 
 	/** Take a reading at `now` (ms). */
 	push(fill: readonly number[], line: readonly number[], now: number): void {
 		if (this.lastFill.length !== fill.length) {
-			this.fill = [...fill];
-			this.line = [...line];
-			this.total = fill.length;
+			this.fill = fill.slice(0, -1);
+			this.line = line.slice(0, -1);
+			this.total = this.fill.length;
 			this.head = this.total - LAG_COLUMNS;
 			this.rateFrom = { at: now, total: this.total };
 		} else {
-			const s = shiftBetween(this.lastFill, fill);
-			// The overlap takes the newest reading's values; the new columns go on the end.
-			const keep = this.fill.length - (fill.length - s);
-			this.fill = [...this.fill.slice(0, keep), ...fill];
-			this.line = [...this.line.slice(0, keep), ...line];
+			const s = shiftBetween(this.lastFill, fill, this.lastLine, line);
+			// Only the columns scrolled in, the newest held back; what is held stays.
+			const end = fill.length - 1;
+			this.fill.push(...fill.slice(end - s, end));
+			this.line.push(...line.slice(end - s, end));
 			this.total += s;
 			if (this.fill.length > HISTORY) {
 				this.fill = this.fill.slice(-HISTORY);
@@ -94,6 +103,7 @@ export class ActivityScroll {
 			}
 		}
 		this.lastFill = [...fill];
+		this.lastLine = [...line];
 		this.lastAt = now;
 	}
 

@@ -198,13 +198,17 @@ final class LiveMeterTests: XCTestCase {
         let top = 63, floorRow = 192
         for x in 22..<284 { put(x, top, (54, 54, 54)); put(x, floorRow + 1, (54, 54, 54)) }
         func row(_ h: Double) -> Int { floorRow - Int((h * Double(floorRow - top - 1)).rounded()) }
+        var lastLine: Int?
         for x in 22..<284 {
             let t = Double(x - 22) / 261
             if x % 2 == 0 { put(x, row(0.85), (62, 62, 62)) }
             let f = fillAt(t)
             if f > 0 { for y in row(f)...floorRow { put(x, y, (73, 73, 73)) } }
             put(x, row(threshold), (0, 186, 206))
-            put(x, row(lineAt(t)), (243, 152, 75))
+            // Live joins the line's steps with a stroke straight down or up.
+            let r = row(lineAt(t))
+            for y in min(r, lastLine ?? r)...max(r, lastLine ?? r) { put(x, y, (243, 152, 75)) }
+            lastLine = r
         }
         // Live's reduction number ("-4.07 dB"), in the line's orange at the foot.
         if readout { for y in 170..<180 { for x in 230..<275 where (x + y) % 3 == 0 { put(x, y, (243, 152, 75)) } } }
@@ -253,5 +257,22 @@ final class LiveMeterTests: XCTestCase {
         guard let v else { return XCTFail("no reading") }
         let line = v[(1 + compressor.columns)...]
         XCTAssertTrue(line.allSatisfy { $0 < 0 || $0 > 0.8 }, "a line reading off the number: \(line.filter { $0 >= 0 && $0 <= 0.8 })")
+    }
+
+    func testFollowsTheLineThroughADeepAttack() {
+        // Heavy compression: the line falls from 0.85 to 0.4 in one step, then recovers.
+        let p = activityPicture(fillAt: { _ in 0.3 }, lineAt: { t in
+            let k = (t * 8).truncatingRemainder(dividingBy: 1)
+            return k < 0.05 ? 0.85 : 0.4 + 0.45 * min(1, (k - 0.05) / 0.9)
+        }, threshold: 0.13, readout: true)
+        let v = p.pixels.withUnsafeBufferPointer {
+            LiveMeter.activity(pixels: $0.baseAddress!, width: p.width, height: p.height, bytesPerRow: p.width * 4,
+                               scale: 1, shape: compressor)
+        }
+        guard let v else { return XCTFail("no reading") }
+        let line = Array(v[(1 + compressor.columns)...])
+        XCTAssertEqual(line.filter { $0 < 0 }.count, 0, "lost the line")
+        XCTAssertEqual(line.min() ?? 0, 0.4, accuracy: 0.03)
+        XCTAssertEqual(v[0], 0.13, accuracy: 0.01)
     }
 }

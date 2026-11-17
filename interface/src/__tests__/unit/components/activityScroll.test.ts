@@ -32,14 +32,22 @@ describe('fillGaps', () => {
 });
 
 describe('ActivityScroll', () => {
-	it('keeps one history, a reading adding only the columns it scrolled in', () => {
+	it('keeps one history, a reading adding only the columns it scrolled in, the newest held back', () => {
 		const s = new ActivityScroll();
 		s.push(loop(0, 10), loop(0, 10), 0);
+		expect(s.total).toBe(9);
 		s.push(loop(2, 10), loop(2, 10), 33);
-		expect(s.total).toBe(12);
-		expect(s.fill.length).toBe(12);
-		expect(s.at(s.fill, 11)).toBeCloseTo(loop(2, 10)[9], 6);
+		expect(s.total).toBe(11);
+		expect(s.at(s.fill, 10)).toBeCloseTo(loop(2, 10)[8], 6);
 		expect(s.at(s.fill, 0)).toBeCloseTo(loop(0, 10)[0], 6);
+	});
+
+	it('never rewrites a column it holds: a reading half a column off moves nothing already drawn', () => {
+		const s = new ActivityScroll();
+		s.push(loop(0, 30), loop(0, 30), 0);
+		const before = [...s.fill];
+		s.push(loop(0, 30).map((v) => v + 0.01), loop(0, 30), 33);
+		expect(s.fill).toEqual(before);
 	});
 
 	it('moves the head on at the measured rate, smoothly, never past the newest column', () => {

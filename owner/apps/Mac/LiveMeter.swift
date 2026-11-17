@@ -389,38 +389,68 @@ enum LiveMeter {
         }
         // Orange, its blended edge included (≈ 154 101 54 where it straddles two rows).
         func isLine(_ p: (r: Int, g: Int, b: Int)) -> Bool { p.r >= 90 && p.r - p.b >= p.r * 2 / 5 && p.g > p.b && p.r > p.g }
-        func isThreshold(_ p: (r: Int, g: Int, b: Int)) -> Bool { p.b > 150 && p.g > 120 && p.b - p.r > 90 }
-        var fills: [Double] = [], lines: [Double] = [], thresholds: [Int] = []
+        var fills: [Double] = [], lines: [Double] = []
         let n = shape.columns, w = Double(x1 - x0 + 1)
         // The line is followed column to column: Live writes the reduction's
         // number in the same orange at the display's foot, apart from the line.
-        let reach = max(3, (floorRow - topRow) / 4)
+        // A column's orange comes in runs; an attack is one tall run (the line
+        // falling), which reads as where it falls to. The run nearest the
+        // last column's row is the line, within a third of the graph; lost
+        // for a few pixels, the topmost run is taken afresh.
+        let reach = max(3, (floorRow - topRow) / 3)
+        // The line, followed through every pixel column (a fall is a stroke one
+        // pixel wide, which sampled columns can step over), then sampled.
+        var lineAtX = [Int?](repeating: nil, count: x1 - x0 + 1)
         var lineRow: Int?
-        for i in 0..<n {
-            let x = min(x1, x0 + Int((Double(i) + 0.5) * w / Double(n)))
-            var fill = 0.0, sawThreshold = i % 16 != 8
-            var runs: [Int] = []
+        var lost = 0
+        for x in x0...x1 {
+            var runs: [(start: Int, end: Int)] = []
             var inRun = false
             for y in topRow...floorRow {
-                let p = px(x, y)
-                let orange = isLine(p)
-                if orange && !inRun { runs.append(y) }
+                let orange = isLine(px(x, y))
+                if orange { if inRun { runs[runs.count - 1].end = y } else { runs.append((y, y)) } }
                 inRun = orange
-                // A fill is solid below its top; the zero line's dots are not.
-                if fill == 0 && isFill(p) && y < floorRow && isFill(px(x, y + 1)) { fill = heightOf(y) }
-                if !sawThreshold && isThreshold(p) { thresholds.append(y); sawThreshold = true }
             }
             var row: Int?
-            if let prev = lineRow {
-                row = runs.min { abs($0 - prev) < abs($1 - prev) }.flatMap { abs($0 - prev) <= reach ? $0 : nil }
+            if let prev = lineRow, lost < 6 {
+                func distance(_ r: (start: Int, end: Int)) -> Int {
+                    prev >= r.start - 2 && prev <= r.end + 2 ? 0 : min(abs(r.start - prev), abs(r.end - prev))
+                }
+                if let best = runs.min(by: { distance($0) < distance($1) }), distance(best) <= reach {
+                    // A stroke of a row or two is the line where it is; a tall one, where it goes.
+                    row = best.end - best.start < 3 ? best.start : abs(best.end - prev) > abs(best.start - prev) ? best.end : best.start
+                }
             } else {
-                row = runs.first
+                row = runs.first?.start
             }
-            if let row { lineRow = row }
-            fills.append(fill)
-            lines.append(row.map(heightOf) ?? -1)
+            if let row { lineRow = row; lost = 0 } else { lost += 1 }
+            lineAtX[x - x0] = row
         }
-        let threshold = thresholds.isEmpty ? -1 : heightOf(thresholds.sorted()[thresholds.count / 2])
+        // Where the threshold line is: the centre of its cyan, its blended rows
+        // weighed in, so a line between two rows does not flicker between them.
+        var thresholdCentres: [Double] = []
+        for i in 0..<n {
+            let x = min(x1, x0 + Int((Double(i) + 0.5) * w / Double(n)))
+            var fill = 0.0
+            var cyanWeight = 0.0, cyanSum = 0.0
+            let sampleThreshold = i % 8 == 4
+            for y in topRow...floorRow {
+                let p = px(x, y)
+                // A fill is solid below its top; the zero line's dots are not.
+                if fill == 0 && isFill(p) && y < floorRow && isFill(px(x, y + 1)) { fill = heightOf(y) }
+                if sampleThreshold && p.b - p.r > 40 && p.g - p.r > 30 {
+                    let weight = Double(p.b - max(p.r, 23))
+                    cyanWeight += weight; cyanSum += weight * Double(y)
+                }
+                if fill > 0 && !sampleThreshold { break }
+            }
+            if sampleThreshold && cyanWeight > 0 { thresholdCentres.append(cyanSum / cyanWeight) }
+            fills.append(fill)
+            lines.append(lineAtX[x - x0].map(heightOf) ?? -1)
+        }
+        guard !thresholdCentres.isEmpty else { return [-1] + fills + lines }
+        let centre = thresholdCentres.sorted()[thresholdCentres.count / 2]
+        let threshold = ((Double(floorRow) - centre) / span * 1000).rounded() / 1000
         return [threshold] + fills + lines
     }
 }

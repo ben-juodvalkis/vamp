@@ -85,7 +85,8 @@
 			line = '';
 			return;
 		}
-		threshold = t.threshold;
+		// The threshold moves only when it moves by more than a pixel of Live's.
+		if (t.threshold === null || threshold === null || Math.abs(t.threshold - threshold) > 0.01) threshold = t.threshold;
 		scroll.push(t.fill, fillGaps(t.line), performance.now());
 		if (frame === null) frame = requestAnimationFrame(tick);
 	});
