@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { pitchOn } from '$lib/utils/pitch';
 import { logger } from '$lib/utils/logger';
 	import { clipPropertiesStore } from '$lib/stores/v6/clipPropertiesStore.svelte';
 	import { clipReverseStore } from '$lib/stores/clipReverse.svelte';
@@ -393,6 +394,8 @@ import { logger } from '$lib/utils/logger';
 				<DeviceSlider
 					value={chance}
 					title="Chance"
+					face={pitchOn ? 'knob' : 'slider'}
+					knobSize="l"
 					icon="chance"
 					color={trackScheme}
 					onInteraction={(val) => permuteDevice
@@ -424,6 +427,8 @@ import { logger } from '$lib/utils/logger';
 				<DeviceSlider
 					value={temperature}
 					title="Temp"
+					face={pitchOn ? 'knob' : 'slider'}
+					knobSize="l"
 					icon="temperature"
 					color={trackScheme}
 					onInteraction={(val) => {

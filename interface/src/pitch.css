@@ -200,8 +200,35 @@ html[data-pitch] [style*='--seq-color'] {
 html[data-pitch] .clip-central-root .btn {
 	flex-direction: column;
 	gap: 6px;
-	border-radius: var(--radius-sm) !important;
 	border-color: var(--ctl-edge);
+}
+/* The house rule stands (2026-11-07, and Ben at stop 1): what does
+   something once is round, a switch is a rectangle with a lamp. The round
+   one now holds its mark over its word. */
+html[data-pitch] .clip-central-root .btn.btn-action {
+	flex: none;
+	width: min(100cqw, 100cqh);
+	height: min(100cqw, 100cqh);
+	min-width: 0;
+	padding: 0;
+	gap: 2px;
+}
+html[data-pitch] .clip-central-root .btn.btn-action svg {
+	width: 2.25rem;
+	height: 2.25rem;
+}
+/* Temp and Chance are set once (Ben): two knobs in one column, where
+   they were two full-height boxes. MIDI only; audio's Gain is ridden. */
+html[data-pitch] .clip-central-root .outer:not(.audio):not(.one-row) {
+	grid-template-columns: repeat(3, 1fr) auto repeat(3, 1fr);
+}
+html[data-pitch] .clip-central-root .outer:not(.audio):not(.one-row) .col-2 {
+	grid-column: 7;
+	grid-row: 1;
+}
+html[data-pitch] .clip-central-root .outer:not(.audio):not(.one-row) .col-1 {
+	grid-column: 7;
+	grid-row: 2;
 }
 html[data-pitch] .clip-central-root .btn-toggle[data-word]::before {
 	content: attr(data-word);
