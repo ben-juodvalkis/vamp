@@ -63,7 +63,8 @@
 	// the time it reverses, and how much of it you hear. The rest set its
 	// character, as knobs, one to a column (ADR-509). `steps` marks a whole
 	// number that is not about a centre (Int Var, 0..24 st), so it keeps its
-	// value as Coarse and Cents do; the writes are the same either way.
+	// value as Coarse does (semitones, `discrete`); Cents is a fine amount
+	// and shows none at rest. The writes are the same either way.
 	const REVERSE = { title: 'Reverse', param: PITCH_HACK.reverse };
 	const MIX = { title: 'Mix', param: PITCH_HACK.mix };
 	const KNOBS: { title: string; param: Param; steps?: number }[] = [
@@ -88,6 +89,7 @@
 		max={param.max}
 		centerOrigin={param.min < 0 && param.max > 0}
 		centerValue={param.min < 0 && param.max > 0 ? 0 : undefined}
+		discrete={title === 'Coarse' ? true : undefined}
 		isGhost={pitchHack.isGhost}
 		color={inkScheme}
 		readout={pitchHack.paramDisplay(param.index)}

@@ -231,7 +231,6 @@
       justify-content: start;
       align-items: center;
       gap: 0.625rem;
-      padding-left: 0.5rem;
     }
   }
   /* Its size's diameter, less only what a small cell cannot hold: the
