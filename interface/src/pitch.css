@@ -144,7 +144,6 @@ html[data-pitch] .label-small .slider-value {
 html[data-pitch] .xy-container {
 	--xy-tint: var(--amount) !important;
 	--xy-border: var(--ctl-edge) !important;
-	--xy-cross: var(--amount);
 	background: var(--surface-well);
 }
 html[data-pitch] .xy-container .center-title,
@@ -156,11 +155,6 @@ html[data-pitch] .xy-handle::before {
 	height: 14px;
 	background: var(--amount);
 	box-shadow: 0 0 0 2px var(--surface-well);
-}
-/* A chain cell is small: the dot alone, as today. */
-html[data-pitch] .chain-cell .xy-cross,
-html[data-pitch] .chain-cell .xy-val {
-	display: none;
 }
 /* A knob with no value under its name keeps one caption line, not two:
    the room goes to the knob. */
