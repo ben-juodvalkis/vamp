@@ -156,16 +156,17 @@ html[data-pitch] .xy-handle::before {
 	background: var(--amount);
 	box-shadow: 0 0 0 2px var(--surface-well);
 }
-/* A knob with no value under its name keeps one caption line, not two:
-   the room goes to the knob. */
-html[data-pitch] .knob:not(:has(.knob-value-text)) {
+/* Every knob reserves one caption line, the name's, so the knobs of a
+   group are one size (Ben): a discrete knob's value sits under its name
+   in the room the cell has left. */
+html[data-pitch] .knob {
 	--knob-caption-h: 2rem;
 }
-html[data-pitch] .knob.size-s:not(:has(.knob-value-text)) {
+html[data-pitch] .knob.size-s {
 	--knob-caption-h: 1.75rem;
 }
-html[data-pitch] .knob.size-l:not(:has(.knob-value-text)),
-html[data-pitch] .knob.size-xl:not(:has(.knob-value-text)) {
+html[data-pitch] .knob.size-l,
+html[data-pitch] .knob.size-xl {
 	--knob-caption-h: 2.25rem;
 }
 /* A value box that draws its own label (Reverb's Dry/Wet) follows the

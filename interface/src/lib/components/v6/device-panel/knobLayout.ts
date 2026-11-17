@@ -44,7 +44,16 @@ export const KNOB_PX: Record<KnobSize, number> = { s: 48, m: 70, l: 96, xl: 128 
 const BESIDE_MIN_W = 144;
 
 /** The height a caption under a knob takes, gaps and padding included (KnobFace's `--knob-caption-h`). */
-const CAPTION_PX: Record<KnobSize, number> = { s: 44, m: 50, l: 54, xl: 58 };
+const CAPTION_TWO_LINES: Record<KnobSize, number> = { s: 44, m: 50, l: 54, xl: 58 };
+/**
+ * PITCH (stop 1): a continuous knob shows its name and no value at rest, so
+ * its caption is one line (pitch.css's `--knob-caption-h`), and the room goes
+ * to the knob: a cell that held a small knob over two lines holds a medium
+ * one over one. Read off <html> so this module stays free of the stores.
+ */
+const CAPTION_ONE_LINE: Record<KnobSize, number> = { s: 28, m: 32, l: 36, xl: 36 };
+const CAPTION_PX: Record<KnobSize, number> =
+	typeof document !== 'undefined' && document.documentElement.dataset.pitch ? CAPTION_ONE_LINE : CAPTION_TWO_LINES;
 
 const SIZES_DOWN: readonly KnobSize[] = ['xl', 'l', 'm', 's'];
 
